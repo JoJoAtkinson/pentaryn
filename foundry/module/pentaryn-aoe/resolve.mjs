@@ -19,7 +19,8 @@
  */
 
 import {
-  MODULE, aoeFlags, buildRows, fillSave, matchSave, applicableRows, allApplied, newestRegion, multiplierFor
+  MODULE, aoeFlags, buildRows, fillSave, matchSave, applicableRows, allApplied, newestRegion, multiplierFor,
+  supersedes, carefulTargets, protectRows, carefulApplies, carefulStale
 } from "./core.mjs";
 import { setting } from "./settings.mjs";
 import { on, guard, claimMessage } from "./hooks.mjs";
@@ -73,6 +74,7 @@ export function describeToken(token) {
     hpMax: actor?.system?.attributes?.hp?.max ?? 0,
     hpValue: actor?.system?.attributes?.hp?.value ?? 0,
     hidden: !!token.hidden,
+    disposition: token.disposition ?? null,
     handle: isHandle(token),
     isHandleActor: !!aoeFlags(actor).handleActor || token.actorId === handleActor()?.id,
     isPile: isPile(token),
@@ -171,7 +173,10 @@ export async function resolve(messageOrId, { regionId = undefined } = {}) {
   const dc = activity.save.dc?.value;
   const onSave = message.system?.onSave ?? activity.damage?.onSave ?? "half";
   const casterActorId = activity.actor?.id ?? null;
-  const rows = buildRows(tokens.map(describeToken), { casterActorId });
+  const described = tokens.map(describeToken);
+  const rows = buildRows(described, { casterActorId });
+  const usage = usageIdOf(message);
+  const careful = await carefulFor(activity.actor, described, { casterActorId, usage, scene, onSave, rows });
 
   const res = {
     activity: activity.uuid,
@@ -180,8 +185,9 @@ export async function resolve(messageOrId, { regionId = undefined } = {}) {
     region: region?.id ?? null,
     regions: candidates.map(r => ({ id: r.id, name: r.name })),
     scene: scene?.id ?? null,
-    usage: usageIdOf(message),
+    usage,
     ability, dc, onSave,
+    careful,
     damages: damagesOf(message),
     request: null,
     created: message.timestamp ?? Date.now(),
@@ -194,7 +200,7 @@ export async function resolve(messageOrId, { regionId = undefined } = {}) {
   await supersedeOlder(message, res);
 
   await rollNpcSaves(message.id);
-  if (setting("promptPlayers") && rows.some(r => r.kind === "manual" && r.apply)) {
+  if (setting("promptPlayers") && rows.some(r => r.kind === "manual" && r.apply && !r.save)) {
     await postRequest(message, activity, res);
   }
   if (setting("autoApplyNpc")) {
@@ -204,12 +210,53 @@ export async function resolve(messageOrId, { regionId = undefined } = {}) {
   return aoeFlags(game.messages.get(message.id)).resolution;
 }
 
-/** An earlier Damage click on the same activity and area greys out: it can no longer Apply. */
+/**
+ * An earlier Damage click on the same activity and area greys out: it can no longer Apply. So does
+ * an earlier one from the same usage card whose area has gone since (S16).
+ */
 async function supersedeOlder(message, res) {
-  const older = game.messages.filter(m => m.id !== message.id && !aoeFlags(m).resolution?.superseded
-    && aoeFlags(m).resolution?.activity === res.activity && aoeFlags(m).resolution?.region === res.region
+  const older = game.messages.filter(m => m.id !== message.id && supersedes(aoeFlags(m).resolution, res)
     && (m.timestamp ?? 0) <= (message.timestamp ?? Infinity));
   for (const m of older) await mutate(m.id, r => { r.superseded = true; return r; });
+}
+
+/* -------------------------------------------- */
+/*  Careful Spell                               */
+/* -------------------------------------------- */
+
+/** The combat turn an actor's Careful Spell belongs to ("combatId:round:combatantId"), or null out of combat. */
+export function carefulKey(actor) {
+  const combat = game.combats?.find?.(c => c.started && c.combatants.some(cb => cb.actor === actor || cb.actorId === actor?.id));
+  return combat ? `${combat.id}:${combat.round}:${combat.combatant?.id ?? combat.turn}` : null;
+}
+
+/**
+ * The caster used Careful Spell for this cast: mark their side's rows (up to the CHA mod) as an
+ * automatic success with no damage on a half-on-save spell, and bind the use to this usage card.
+ * @returns {Promise<{names: string[], max: number}|null>}
+ */
+async function carefulFor(caster, described, { casterActorId, usage, scene, onSave, rows }) {
+  if (!caster || !setting("carefulSpell")) return null;
+  const flag = aoeFlags(caster).careful;
+  if (!carefulApplies(flag, { now: Date.now(), combatKey: carefulKey(caster), usage })) return null;
+  const own = caster.token ?? caster.getActiveTokens?.(false, true)?.find(tk => tk.parent === scene) ?? null;
+  const max = Math.max(1, Number(caster.system?.abilities?.cha?.mod) || 1);
+  const ids = carefulTargets(described, { casterActorId, casterDisposition: own?.disposition ?? CONST.TOKEN_DISPOSITIONS.FRIENDLY, max });
+  protectRows(rows, ids, onSave);
+  if (usage && !flag.usage) await caster.update({ [`flags.${MODULE}.careful.usage`]: usage }).catch(() => null);
+  return { names: rows.filter(r => r.protected).map(r => r.name), max };
+}
+
+/** On the caster's client: Careful Spell was used, the next save spell's area protects their side. */
+async function onCarefulUsed(activity) {
+  if (!setting("carefulSpell")) return;
+  const item = activity?.item;
+  if ((item?.system?.identifier || "") !== "careful-spell") return;
+  const actor = activity.actor;
+  if (!actor?.isOwner) return;
+  await actor.update({ [`flags.${MODULE}.careful`]: { at: Date.now(), key: carefulKey(actor), usage: null } });
+  const max = Math.max(1, Number(actor.system?.abilities?.cha?.mod) || 1);
+  ui.notifications?.info?.(t("Careful.Armed", { n: max }));
 }
 
 /* -------------------------------------------- */
@@ -223,7 +270,7 @@ async function rollOne(row, res, scene) {
   const rolls = await actor.rollSavingThrow({ ability: res.ability, target: res.dc }, { configure: false }, {
     // dnd5e 6 passes this to core as messageMode; a legacy "gmroll" would silently become public.
     rollMode: foundry.dice.Roll._mapLegacyRollMode(setting("npcSaveRollMode")),
-    data: { speaker: ChatMessage.getSpeaker({ actor, scene, token }), system: saveSystem(res) }
+    data: { speaker: ChatMessage.getSpeaker({ actor, scene, token }), system: saveSystem(res), flags: { [MODULE]: { npcSave: true } } }
   });
   const roll = rolls?.[0];
   if (!roll) return null;
@@ -238,7 +285,7 @@ export async function rollNpcSaves(messageId, { rowIds = null, force = false } =
   const scene = game.scenes.get(res.scene);
   const results = {};
   for (const row of res.rows) {
-    if (row.kind !== "auto" || row.applied) continue;
+    if (row.kind !== "auto" || row.applied || row.protected) continue;
     if (rowIds && !rowIds.includes(row.id)) continue;
     if (row.save && !force) continue;
     results[row.id] = await rollOne(row, res, scene);
@@ -269,7 +316,7 @@ export async function handleSaveRequest(actor, request, data, { event } = {}) {
 }
 
 async function postRequest(message, activity, res) {
-  const manual = res.rows.filter(r => r.kind === "manual" && r.apply);
+  const manual = res.rows.filter(r => r.kind === "manual" && r.apply && !r.save);
   if (!manual.length) return null;
   const label = abilityLabel(res.ability);
   const content = res.onSave === "half" ? t("Request.Half") : res.onSave === "none" ? t("Request.None") : "";
@@ -413,6 +460,20 @@ const isAbilitySave = message => message?.type === "save" && (message.system?.ty
 
 export function installResolve() {
   CONFIG.DND5E.requests[REQUEST_HANDLER] = handleSaveRequest;
+
+  on("dnd5e.postUseActivity", guard("postUseActivity(careful)", (activity) => onCarefulUsed(activity)));
+
+  // A Careful Spell armed for a turn of a combat that is now gone can never apply: clear it.
+  on("deleteCombat", guard("deleteCombat(careful)", async (combat) => {
+    if (!game.users.activeGM?.isSelf) return;
+    const done = new Set();
+    for (const c of combat.combatants ?? []) {
+      const actor = c.actor;
+      if (!actor || done.has(actor.uuid)) continue;
+      done.add(actor.uuid);
+      if (carefulStale(aoeFlags(actor).careful, combat.id)) await actor.unsetFlag(MODULE, "careful");
+    }
+  }));
 
   on("createChatMessage", guard("createChatMessage", async (message) => {
     if (!game.users.activeGM?.isSelf) return;

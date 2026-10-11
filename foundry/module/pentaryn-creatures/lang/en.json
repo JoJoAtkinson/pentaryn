@@ -14,6 +14,10 @@
       "showStrip": {
         "name": "Show the \"Your creatures\" strip",
         "hint": "Portraits of the tokens you control on this scene, above the hotbar, once you have more than one. Click to select and pan to one, double-click to open its sheet."
+      },
+      "floatOverHud": {
+        "name": "Strip floats above the Combat HUD",
+        "hint": "While the Combat HUD is open it covers the hotbar, and the strip sat behind its bars. With this on the strip moves up to sit just above the HUD, so its portraits can be clicked. Off: it stays above the hotbar."
       }
     }
   }

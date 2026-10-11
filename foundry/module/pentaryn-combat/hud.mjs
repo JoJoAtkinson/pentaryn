@@ -14,11 +14,14 @@ import * as core from "./combat-core.mjs";
 import { setting, riderMode, setRiderMode } from "./settings.mjs";
 import {
   weaponsOf, featuresOf, countFor, multiattackOf, usesMultiattack, combatContext, turnOf, newTurn, attackActivityOf,
-  unarmedStrike, focusLeft, turnSettled, setPrimaryId, chosenWeapon
+  unarmedStrike, focusLeft, turnSettled, setPrimaryId, chosenWeapon, featureItem
 } from "./shapes.mjs";
 import { runSwings, runFollowUp, fullAttackPlan, running, abortFor, registerTargetPicker } from "./sequence.mjs";
 import { pickWeapon } from "./strip.mjs";
 import { riderDiceFor, isReckless, setReckless } from "./riders.mjs";
+// Turn flow (special actions, Opportunity Attack, Esc, death saves, portrait, follow): its own hooks.
+// Imported here, not listed in module.json, so a world relaunch is not needed to load it.
+import { placeOpenDrawers } from "./turnflow.mjs";
 
 const MOD = core.MOD;
 const ARGON = "enhancedcombathud";
@@ -36,6 +39,70 @@ function dropTooltip() {
     game.tooltip?.deactivate?.();
     if (ui.ARGON?._tooltip) ui.ARGON._tooltip = null;
   } catch { /* never let tooltip hygiene break a click */ }
+}
+
+/** Argon's hover tooltip, when it belongs to this button. */
+function ownTooltip(button) {
+  const t = ui.ARGON?._tooltip;
+  return t && t._triggerElement === button?.element ? t : null;
+}
+
+/**
+ * Area 2 (A0/A4): a tooltip open while the turn flag changed (a swing by hand, a swing of the
+ * sequence) kept its old numbers ("2 of 2" after a hand swing) until the next hover. Re-render it
+ * in place with fresh data.
+ */
+function refreshOwnTooltip(button) {
+  const t = ownTooltip(button);
+  if (!t || !setting("fullAttack")) return;
+  Promise.resolve(button.getTooltipData()).then(data => {
+    if (!data || ui.ARGON?._tooltip !== t) return;
+    t._tooltipData = data;
+    return t.render();
+  }).catch(() => null);
+}
+
+/**
+ * Argon commented out its own mouseleave (core's TooltipManager closes an un-annotated trigger's
+ * tooltip only once the pointer enters another element), so ours closed late or not at all and
+ * lingered over the roll window. Our buttons close their own tooltip on leave.
+ */
+function bindTooltipLeave(button) {
+  const el = button?.element;
+  if (!el || el._pcLeave) return;
+  el._pcLeave = true;
+  el.addEventListener("mouseleave", () => { if (ownTooltip(button)) dropTooltip(); });
+}
+
+/**
+ * Area 10: Argon's own buttons (Action Surge, a weapon slot) never close their hover tooltip (Argon
+ * commented its mouseleave out), so it stayed on screen after a click, a bar re-render or a turn
+ * change. Any Argon tooltip closes once the pointer is over something that is neither its button nor
+ * the tooltip itself, or once its button has left the page. A locked (pinned) tooltip stays.
+ * Pure bug fix, no setting.
+ */
+function dropStrayTooltip(target = null) {
+  try {
+    const t = ui.ARGON?._tooltip;
+    if (!t || t._locked) return;
+    const trigger = t._triggerElement;
+    const gone = !trigger?.isConnected;
+    const away = target instanceof Node && !trigger?.contains?.(target) && !game.tooltip?.tooltip?.contains?.(target)
+      && !t.element?.contains?.(target);
+    if (!gone && !away) return;
+    t._destroy?.(true);
+    if (ui.ARGON._tooltip === t) ui.ARGON._tooltip = null;
+    if (game.tooltip?.element === trigger || gone) game.tooltip?.deactivate?.();
+  } catch { /* never let tooltip hygiene break anything */ }
+}
+document.addEventListener("pointerover", (ev) => { if (ui.ARGON?._tooltip) dropStrayTooltip(ev.target); }, { capture: true, passive: true });
+
+// A roll window (or the manual-dice Roll Resolution window) opening drops any Argon hover tooltip:
+// it sat on top of the window it opened. Usability Area 3: also every dnd5e dialog (Rage's and
+// Divine Smite's usage dialog) and the activity chooser (Lay on Hands: Heal / Remove Poison) — the
+// Rage / Flurry / Monk's Focus tooltip covered their confirm button.
+for (const hook of ["renderRollConfigurationDialog", "renderRollResolver", "renderDialog5e", "renderActivityChoiceDialog", "renderDialogV2"]) {
+  Hooks.on(hook, () => { if (ui.ARGON?._tooltip && setting("fullAttack")) dropTooltip(); });
 }
 
 function paintBadge(button, left) {
@@ -61,7 +128,18 @@ function applyButtons(panel, next, fresh) {
   }
   panel._buttons = next;
   for (const b of fresh) b.render();
+  // Argon never attaches a panel that had no buttons when the HUD was built (a Rogue or Barbarian has no
+  // Special-activation item), so our Sneak Attack / Reckless toggles sat in a detached panel (usability re-run, U-3-7).
+  if (next.length && !panel.element.isConnected) {
+    const main = ui.ARGON?.components?.main ?? [];
+    const after = main.slice(main.indexOf(panel) + 1).find(p => p?.element?.isConnected);
+    const before = after?.element ?? main.findLast?.(p => p?.element?.isConnected)?.element?.nextSibling ?? null;
+    const host = after?.element.parentElement ?? main.find(p => p?.element?.isConnected)?.element.parentElement;
+    if (host) host.insertBefore(panel.element, before);
+  }
   panel.updateVisibility();
+  // A button added in front (Pole Strike, Off-hand) moves the others: an open drawer follows its own.
+  placeOpenDrawers(panel);
 }
 
 function itemButtonClass(panel) {
@@ -136,15 +214,69 @@ function argonPickerOn() {
   try { return !!game.settings.get(ARGON, "rangepicker"); } catch { return false; }
 }
 
+/** Release this user's targets (the sequence restores them if the pick is then cancelled). */
+function releaseTargets() {
+  if (!game.user.targets.size) return;
+  if (canvas.tokens?.setTargets) canvas.tokens.setTargets([], { mode: "replace" });
+  else for (const t of [...game.user.targets]) t.setTarget(false, { releaseOthers: false });
+}
+
 registerTargetPicker(async (activity) => {
   const C = argonClasses();
   if (!C || !argonPickerOn() || !ui.ARGON?._token) return undefined;
+  // "New target" means a new one. With Argon's rangepickerclear off (U-R-1: a pre-set target is
+  // kept for weapons clicked by hand) its picker would see the old target, call 1/1 done and end at
+  // once, so the swing would go to the old target. Clear first, whatever that setting says.
+  releaseTargets();
   const probe = new C.PickerProbe({ activity });
   let picked = false;
   probe._onLeftClick = async () => { picked = true; };
   await probe._onPreLeftClick(new MouseEvent("mouseup", { button: 0 }));
   return picked && game.user.targets.size > 0;
 });
+
+/* ── Argon's Target Picker Tutorial (U-R-2, setting skipPickerGuide) ─────── */
+// Argon shows a one-time "Target Picker Tutorial" dialog (Confirm to continue) the first time a
+// browser opens its picker, usually mid-combat. Its flag is a client setting, so every client marks
+// it seen on ready. The tutorial's one tip a player needs at the moment of picking, right-click
+// cancels, goes on Argon's own cursor label instead (CSS ::after, styles/combat.css).
+
+const GUIDE_KEY = `${ARGON}.targetPickerGuideShown`;
+
+function applyPickerGuide() {
+  const on = !!setting("skipPickerGuide");
+  try {
+    document.body.classList.toggle("pentaryn-combat-picker-cue", on);
+    if (on) document.body.style.setProperty("--pentaryn-combat-picker-cue", JSON.stringify(T("PENTARYN_COMBAT.Hud.PickerCue")));
+  } catch { /* no body yet */ }
+  if (!on || !game.settings.settings.has(GUIDE_KEY)) return;
+  try {
+    if (!game.settings.get(ARGON, "targetPickerGuideShown")) game.settings.set(ARGON, "targetPickerGuideShown", true);
+  } catch (err) { console.warn(`${MOD} | marking Argon's picker tutorial seen failed`, err); }
+}
+
+Hooks.once("ready", applyPickerGuide);
+
+/**
+ * Area 2 (A2): Argon's "0/1 Targets" label is created empty at the page's top-left and only moves
+ * (and gets its text) on the first mousemove, so a player who had not moved yet saw the cue pinned
+ * in the corner. Place it at the pointer (where the HUD button was clicked) with a starting text.
+ */
+let pointer = null;
+document.addEventListener("pointermove", (ev) => { pointer = { x: ev.clientX, y: ev.clientY }; }, { capture: true, passive: true });
+document.addEventListener("pointerdown", (ev) => { pointer = { x: ev.clientX, y: ev.clientY }; }, { capture: true, passive: true });
+Hooks.once("ready", () => new MutationObserver((records) => {
+  if (!document.body.classList.contains("pentaryn-combat-picker-cue")) return;
+  for (const r of records) for (const n of r.addedNodes) {
+    if (!(n instanceof HTMLElement) || !n.classList.contains("ech-target-picker")) continue;
+    if (pointer && !n.style.left) { n.style.left = `${pointer.x + 20}px`; n.style.top = `${pointer.y}px`; }
+    if (!n.textContent) n.textContent = T("PENTARYN_COMBAT.Hud.PickerStart");
+  }
+}).observe(document.body, { childList: true }));
+// The first change from the default creates the Setting document; later ones update it.
+for (const hook of ["createSetting", "updateSetting"]) {
+  Hooks.on(hook, (s) => { if (s?.key === `${MOD}.skipPickerGuide`) applyPickerGuide(); });
+}
 
 /* ── components ──────────────────────────────────────────────────────────── */
 
@@ -185,10 +317,18 @@ function argonClasses() {
       const first = this.hudActor.items.get(st.plan.swings[0]?.weaponId ?? st.weaponId);
       const act = attackActivityOf(first);
       const names = st.plan.swings.map(s => this.hudActor.items.get(s.weaponId)?.name).filter(Boolean);
-      const what = st.ma ? names.join(", ") : T("PENTARYN_COMBAT.Hud.WithWeapon", { weapon: first?.name ?? "—" });
+      // Main swings of the Attack action ("2 of 2"), the Nick swing named on its own ("+ Nick: Dagger").
+      const sum = core.planSummary(st.plan.swings, st.ma ? st.plan.count : st.count);
+      const nick = sum.extras.find(x => x.kind === "nick");
+      const nickName = nick ? this.hudActor.items.get(nick.weaponId)?.name ?? "" : "";
+      const mainName = this.hudActor.items.get(sum.mainIds[0] ?? st.weaponId)?.name ?? first?.name ?? "—";
+      const what = st.ma ? names.join(", ")
+        : nick ? T("PENTARYN_COMBAT.Hud.WithNick", { weapon: mainName, nick: nickName })
+        : T("PENTARYN_COMBAT.Hud.WithWeapon", { weapon: mainName });
+      const left = T("PENTARYN_COMBAT.Hud.SwingsLeft", { left: sum.left, total: sum.total });
       return {
         title: T("PENTARYN_COMBAT.FullAttack"),
-        subtitle: T("PENTARYN_COMBAT.Hud.SwingsLeft", { left: st.plan.swings.length, total: st.count }),
+        subtitle: nick ? T("PENTARYN_COMBAT.Hud.PlusNick", { left, weapon: nickName }) : left,
         description: `<p>${T("PENTARYN_COMBAT.Hud.FullAttackText", { what })}</p>`,
         details: [
           { label: T("PENTARYN_COMBAT.Hud.ToHit"), value: act?.labels?.toHit ?? "—" },
@@ -202,6 +342,12 @@ function argonClasses() {
     refresh() {
       const st = this.state;
       paintBadge(this, st.ctx.inCombat ? st.plan.swings.length : st.count);
+      refreshOwnTooltip(this);
+    }
+
+    async activateTooltipListeners() {
+      await super.activateTooltipListeners();
+      bindTooltipLeave(this);
     }
 
     async _renderInner() {
@@ -246,6 +392,7 @@ function argonClasses() {
     }
 
     get hasTooltip() { return true; }
+    async activateTooltipListeners() { await super.activateTooltipListeners(); bindTooltipLeave(this); }
     // A greyed button (Flurry with no Focus) warns at once: no target picker first.
     get targets() { return this.followUp.disabled || game.user.targets.size || running() ? 0 : 1; }
     get ranges() {
@@ -287,6 +434,7 @@ function argonClasses() {
       if (active) this.element.classList.add("pentaryn-combat-active");
     }
     get hasTooltip() { return !!this._tip; }
+    async activateTooltipListeners() { await super.activateTooltipListeners(); bindTooltipLeave(this); }
     async getTooltipData() { return { title: this.label ?? "", description: `<p>${this._tip}</p>`, classes: TT }; }
     async _onLeftClick() { dropTooltip(); await this._run?.(); }
   }
@@ -410,10 +558,12 @@ function followUpsNow(actor, bonusPanel) {
   const turn = turnOf(actor);
   const features = featuresOf(actor);
   const focus = focusLeft(actor);
+  const pam = features.has("polearm-master") ? featureItem(actor, "polearm-master") : null;
   const list = core.followUps({
     turn, weapons, features,
     enhancedDualWielding: !!actor.getFlag?.("dnd5e", "enhancedDualWielding"),
-    bonusFree, focus, unarmedId: unarmed?.id ?? null, isOwnTurn: ctx.isOwnTurn
+    bonusFree, focus, unarmedId: unarmed?.id ?? null, isOwnTurn: ctx.isOwnTurn,
+    poleStrikeId: pam && attackActivityOf(pam) ? pam.id : null
   });
   // Usability (area 3, C3): Flurry with no Focus left stays on the bar, greyed with its reason, instead of
   // vanishing — a player who sees Martial Arts but no Flurry wonders whether the feature broke.
@@ -478,11 +628,31 @@ function composeBonusBar(panel, actor) {
   if (!fu.length) {
     panel._pcFuSeen = { actor: actor.uuid, keys: new Set() };
     if (kept.length !== panel._buttons.length) applyButtons(panel, kept, []);
+    hideDuplicateSlots(panel, fu, actor);
     return;
   }
   const fresh = fu.map(f => new C.FollowUpButton({ hudActor: actor, followUp: f }));
   applyButtons(panel, [...fresh, ...kept], fresh);
   pulseNew(panel, actor, fresh);
+  hideDuplicateSlots(panel, fu, actor);
+}
+
+/**
+ * Area 2 (A7): with "Off-hand: Longsword" offered, Argon's own off-hand weapon-set slot for the
+ * same Longsword sat next to it as a second, plain "Longsword" button. It is hidden while ours is
+ * offered (ours presets the Offhand mode and spends the Bonus pip) and back as soon as it isn't.
+ * The slot is filled after the bar composes, so its own render re-checks too (hook below).
+ */
+function hideDuplicateSlots(panel, fu, actor = null) {
+  const offered = (fu ?? []).filter(f => f.kind === "offhand").map(f => f.weaponId);
+  // Usability Area 3 (B7): once Nick (or the Bonus off-hand attack) used the Light property's extra
+  // attack, Argon's plain off-hand slot stayed and invited a second, illegal one; it hides too.
+  const turn = actor ? turnOf(actor) : null;
+  for (const b of panel?._buttons ?? []) {
+    if (!b?._isWeaponSet || !b.element) continue;
+    const id = b.item?.id ?? null;
+    b.element.classList.toggle("pentaryn-combat-dup", core.hideOffhandSlot({ turn, slotId: id, offered }));
+  }
 }
 
 /**
@@ -497,8 +667,13 @@ function pulseNew(panel, actor, buttons) {
   if (!prev) return;
   for (const b of buttons) {
     if (prev.has(keyOf(b)) || b.followUp.disabled) continue;
-    b.element.classList.add("pentaryn-combat-new");
-    setTimeout(() => b.element.classList.remove("pentaryn-combat-new"), 4000);
+    // Usability Area 3: 4 s ended with the chat pop-ups and was missed; it now pulses until the
+    // pointer reaches the bar, or 12 s.
+    const el = b.element;
+    el.classList.add("pentaryn-combat-new");
+    const stop = () => el.classList.remove("pentaryn-combat-new");
+    setTimeout(stop, 12000);
+    panel.element?.addEventListener?.("pointerenter", stop, { once: true });
   }
 }
 
@@ -609,12 +784,13 @@ function rerender(labels = ["DND5E.Action", "DND5E.BonusAction", "DND5E.Special"
     if (!queued) return;
     const now = queued;
     queued = null;
+    if (!ui.ARGON?._actor) return;   // the HUD was unbound meanwhile: Argon's panels would render with no actor
     for (const label of now) {
       const p = mainPanel(label);
       if (!p?.render) continue;
       forgetButtons(p);
       Promise.resolve(p.render())
-        .then(() => refillWeaponSlots(p))
+        .then(() => { dropStrayTooltip(); return refillWeaponSlots(p); })
         .catch(err => console.warn(`${MOD} | ${label} re-render`, err));
     }
   }, 60);
@@ -632,16 +808,30 @@ function refreshAll() {
 Hooks.on("updateActor", (actor, changes) => {
   if (actor !== ui.ARGON?._actor) return;
   if (!foundry.utils.hasProperty(changes, `flags.${MOD}`)) return;
+  // Your turn began and the Reaction came back (Argon itself relights it only at a new round).
+  if (foundry.utils.getProperty(changes, `flags.${MOD}.reaction`) === null && setting("spellPips")) {
+    const reaction = mainPanel("DND5E.Reaction");
+    if (reaction?.isActionUsed) { reaction.isActionUsed = false; reaction.updateActionUse(); }
+  }
   refreshAll();
   // Follow-ups appear as soon as they are earned (also mid-sequence: Hew after a crit on swing 1);
   // a bar is rebuilt only when what it shows changed.
   checkBars(actor);
+  recheckSlots(actor);
 });
+
+/** Nick spent leaves the Bonus bar's buttons unchanged, so its off-hand slot is re-checked on its own. */
+function recheckSlots(actor) {
+  try {
+    const bonus = mainPanel("DND5E.BonusAction");
+    if (bonus && setting("followUps")) hideDuplicateSlots(bonus, followUpsNow(actor, bonus).filter(f => !f.free), actor);
+  } catch { /* the next render re-checks */ }
+}
 
 // The last swing's flag write can land after the sequence ended; re-check once it has.
 Hooks.on("pentarynCombat.sequenceEnd", (actor) => {
   if (!actor || actor !== ui.ARGON?._actor) return;
-  turnSettled(actor).then(() => { refreshAll(); checkBars(actor); });
+  turnSettled(actor).then(() => { refreshAll(); checkBars(actor); recheckSlots(actor); });
 });
 
 Hooks.on("updateCombat", (combat, changes) => {
@@ -683,6 +873,67 @@ Hooks.on("pentarynCombat.bonusSpent", (actor) => {
   bonus.updateActionUse();
 });
 
+// A Bonus-action feature or spell used on your turn (Rage, Steady Aim, Divine Smite…): Argon's item
+// buttons never spent its pip (setting bonusPip; the turn flag was written in combat.mjs).
+Hooks.on("pentarynCombat.bonusAction", (actor) => {
+  if (!setting("bonusPip") || actor !== ui.ARGON?._actor || !combatContext(actor).inCombat) return;
+  const bonus = mainPanel("DND5E.BonusAction");
+  if (!bonus) return;
+  bonus.isActionUsed = true;
+  bonus.updateActionUse();
+});
+
+// A spell or feature that is an Action (Fire Bolt, Fireball, Magic): Argon's item buttons never spent its
+// single Action pip (usability Area 5 re-run, S5). With 2+ swings our own pips already count it.
+Hooks.on("pentarynCombat.otherAction", (actor) => {
+  if (!setting("spellPips") || actor !== ui.ARGON?._actor || !combatContext(actor).inCombat) return;
+  const action = mainPanel("DND5E.Action");
+  if (!action || action._pentarynPips?.()) return;
+  action.isActionUsed = true;
+  action.updateActionUse();
+});
+
+// A Reaction (Counterspell, Shield…), on any turn (S14).
+Hooks.on("pentarynCombat.reaction", (actor) => {
+  if (!setting("spellPips") || actor !== ui.ARGON?._actor) return;
+  const reaction = mainPanel("DND5E.Reaction");
+  if (!reaction) return;
+  reaction.isActionUsed = true;
+  reaction.updateActionUse();
+});
+
+/**
+ * A re-bound HUD builds new panels with every pip lit, and Argon lights every pip at a new round
+ * (S5: "the Bonus pip display reset by itself"). Repaint Argon's own Action / Bonus / Reaction pips
+ * from the turn flag and the Reaction flag.
+ */
+function restorePips(actor) {
+  if (!setting("spellPips") || !actor || actor !== ui.ARGON?._actor) return;
+  const ctx = combatContext(actor);
+  if (!ctx.inCombat) return;
+  const reaction = mainPanel("DND5E.Reaction");
+  if (reaction && core.reactionSpent(actor.getFlag(MOD, "reaction"), ctx.combat?.id) && !reaction.isActionUsed) {
+    reaction.isActionUsed = true;
+    reaction.updateActionUse();
+  }
+  if (!ctx.isOwnTurn) return;
+  const spent = core.spentPips(turnOf(actor));
+  const action = mainPanel("DND5E.Action");
+  if (action && !action._pentarynPips?.() && spent.action && !action.isActionUsed) { action.isActionUsed = true; action.updateActionUse(); }
+  const bonus = mainPanel("DND5E.BonusAction");
+  if (bonus && spent.bonus && !bonus.isActionUsed) { bonus.isActionUsed = true; bonus.updateActionUse(); }
+}
+
+Hooks.on("renderActionPanelArgonComponent", (panel) => {
+  if (!["DND5E.Action", "DND5E.BonusAction", "DND5E.Reaction"].includes(panel?.label)) return;
+  try { restorePips(ui.ARGON?._actor); } catch { /* never break Argon's render */ }
+});
+// Argon's own updateCombat handler (registered after ours) relights every pip at a new round.
+Hooks.on("updateCombat", (combat, changes) => {
+  if (!("round" in changes)) return;
+  setTimeout(() => { try { restorePips(ui.ARGON?._actor); } catch { /* HUD closed */ } }, 0);
+});
+
 // An off-hand swing clicked through Argon's weapon slot made Argon grey the Action pip (the weapon's
 // activation is `action`); give it back when no Action was taken. A sequence swing never greyed it.
 Hooks.on("pentarynCombat.offhand", (actor, { bySequence = false } = {}) => {
@@ -699,6 +950,13 @@ Hooks.on("pentarynCombat.offhand", (actor, { bySequence = false } = {}) => {
 // Pole Strike inside Argon's "Use Feature" drawer: gated when the drawer's buttons render.
 Hooks.on("renderItemButtonArgonComponent", (button, element, actor) => {
   try { gatePoleStrike(button, actor ?? ui.ARGON?._actor); } catch { /* never break Argon's render */ }
+  try {
+    if (!button?._isWeaponSet || !setting("followUps")) return;
+    const bonus = mainPanel("DND5E.BonusAction");
+    const a = actor ?? ui.ARGON?._actor;
+    if (!bonus || !a || !bonus._buttons?.includes(button)) return;
+    hideDuplicateSlots(bonus, followUpsNow(a, bonus).filter(f => !f.free), a);
+  } catch { /* never break Argon's render */ }
 });
 
 // A shift or revert (a new body) ends a running sequence.

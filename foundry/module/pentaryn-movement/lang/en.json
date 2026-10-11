@@ -32,6 +32,10 @@
       "cleared": {
         "off": "The GM turned ghost movement off. Your tokens are stopped by walls again.",
         "combat": "A fight started: ghost movement is off. Your tokens are stopped by walls again."
+      },
+      "back": {
+        "combat": "The fight is over: ghost movement is available again. Click the ghost button under the Ruler to use it.",
+        "off": "The GM allows ghost movement again. Click the ghost button under the Ruler to use it."
       }
     },
     "settings": {

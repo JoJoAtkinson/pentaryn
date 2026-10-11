@@ -13,7 +13,7 @@
  */
 
 import * as core from "./combat-core.mjs";
-import { attackActivityOf, weaponsOf, weaponShape, updateTurn, focusLeft, flurryActivity, unarmedStrike } from "./shapes.mjs";
+import { attackActivityOf, weaponsOf, weaponShape, updateTurn, focusLeft, flurryActivity, unarmedStrike, turnOf } from "./shapes.mjs";
 import * as strip from "./strip.mjs";
 import { quickMode } from "./settings.mjs";
 
@@ -23,9 +23,28 @@ const T = (key, data) => (data ? game.i18n.format(key, data) : game.i18n.localiz
 let current = null;            // the running sequence on this client (one at a time)
 let tag = null;                // { activityUuid, kind } for the attack roll in flight
 
-/** The kind our sequence assigned to the attack roll now in flight for this activity, if any. */
+/**
+ * A kind announced for this activity's NEXT attack roll by a button outside the sequence (the
+ * Reaction bar's Opportunity Attack). dnd5e starts that roll after `activity.use()` returns, without
+ * awaiting it, so a tag around the click would be gone by then. Read (and dropped) in
+ * dnd5e.preRollAttackV2; stale after two minutes.
+ */
+const expected = new Map();     // activityUuid → { kind, at }
+
+export function expectRoll(activityUuid, kind) {
+  if (activityUuid) expected.set(activityUuid, { kind, at: Date.now() });
+}
+
+export function forgetRoll(activityUuid) {
+  expected.delete(activityUuid);
+}
+
+/** The kind our sequence (or an expectRoll) assigned to the attack roll now in flight for this activity, if any. */
 export function taggedKind(activityUuid) {
-  return tag && tag.activityUuid === activityUuid ? tag.kind : null;
+  if (tag && tag.activityUuid === activityUuid) return tag.kind;
+  const e = expected.get(activityUuid);
+  if (e && Date.now() - e.at < 120000) return e.kind;
+  return null;
 }
 
 export function running() {
@@ -116,6 +135,19 @@ async function settleDamage(w, { limitMs = 120000 } = {}) {
 
 /* ── the loop ────────────────────────────────────────────────────────────── */
 
+/**
+ * The Nick swing a swap's new main weapon earns (Area 10: swapping onto the Dagger kept the planned
+ * "Nick: Dagger" swing, three Dagger swings). null = keep the old plan (a Multiattack sequence).
+ */
+function swapExtras(actor, weaponId) {
+  try {
+    const weapons = weaponsOf(actor);
+    const main = weapons.find(w => w.id === weaponId);
+    if (!main) return null;
+    return core.extraSwings({ main, weapons, turn: turnOf(actor), enhancedDualWielding: !!actor.getFlag?.("dnd5e", "enhancedDualWielding") });
+  } catch { return null; }
+}
+
 function stripContext() {
   const s = current.state;
   const swing = s.swings[Math.min(s.index, s.swings.length - 1)];
@@ -129,8 +161,22 @@ function stripContext() {
     target: targetName(),
     quick: quickMode(),
     title: current.title,
-    weapons: current.swappable ? weaponsOf(current.actor).filter(core.canSwing) : []
+    // What a closed roll leaves unspent (Flurry's Focus is already paid).
+    note: core.pausedNote({ kinds: s.swings.map(x => x.kind), paid: current.paid }),
+    weapons: current.swappable ? weaponsOf(current.actor).filter(core.canSwing).map(w => swapTile(current.actor, w)) : []
   };
+}
+
+/** A pause-bar weapon tile: name, icon and what it does ("+6 · 1d8 + 3 Slashing"). */
+function swapTile(actor, w) {
+  let stats = "";
+  try {
+    const act = attackActivityOf(actor.items.get(w.id));
+    const dmg = act?.labels?.damage ?? act?.labels?.damages ?? [];
+    const damage = (Array.isArray(dmg) ? dmg : []).map(d => d.label ?? d.formula).filter(Boolean).join(" + ");
+    stats = [act?.labels?.toHit ?? "", damage].filter(Boolean).join(" · ");
+  } catch { /* the name alone */ }
+  return { id: w.id, name: w.name, img: w.img, stats };
 }
 
 function render() {
@@ -146,9 +192,10 @@ function render() {
  * @param {string} [opts.title]      the strip's heading ("Full Attack", "Flurry of Blows" …)
  * @param {Map} [opts.origins]       itemId → usage message id already posted (Flurry's card)
  * @param {boolean} [opts.swappable=true]
+ * @param {boolean} [opts.paid=false]  a cost was already paid before swing 1 (Flurry's Focus Point)
  * @returns {Promise<{rolled: number, status: string}>}
  */
-export async function runSwings(actor, swings, { event = null, title = null, origins = null, swappable = true } = {}) {
+export async function runSwings(actor, swings, { event = null, title = null, origins = null, swappable = true, paid = false } = {}) {
   if (current) {
     ui.notifications.warn(T("PENTARYN_COMBAT.Strip.AlreadyRunning"));
     return { rolled: 0, status: "busy" };
@@ -163,6 +210,7 @@ export async function runSwings(actor, swings, { event = null, title = null, ori
     origins: new Map(origins ?? []),
     title: title ?? T("PENTARYN_COMBAT.FullAttack"),
     swappable,
+    paid,
     abort: false,
     lastAdv: null
   };
@@ -180,7 +228,7 @@ export async function runSwings(actor, swings, { event = null, title = null, ori
       if (current.state.status === "paused") {
         const choice = await strip.waitChoice(stripContext());
         if (current.abort || !choice || choice.type === "stop") { dispatch({ type: "stop" }); break; }
-        if (choice.type === "swap") dispatch({ type: "swap", weaponId: choice.weaponId });
+        if (choice.type === "swap") dispatch({ type: "swap", weaponId: choice.weaponId, extras: swapExtras(actor, choice.weaponId) });
         if (choice.type === "retarget") {
           const swing = current.state.swings[current.state.index];
           const act = attackActivityOf(actor.items.get(swing.weaponId));
@@ -305,9 +353,10 @@ export async function runFollowUp(actor, f, { event = null } = {}) {
     Hooks.callAll("pentarynCombat.bonusSpent", actor, "flurry");
     const n = f.count ?? 2;
     const swings = Array.from({ length: n }, () => ({ weaponId: unarmed.id, mode: null, kind: "bonus" }));
-    return runSwings(actor, swings, { event, title: label, origins: new Map([[unarmed.id, res.message?.id]]), swappable: false });
+    return runSwings(actor, swings, { event, title: label, origins: new Map([[unarmed.id, res.message?.id]]), swappable: false, paid: true });
   }
-  if (f.kind === "martial-arts" || f.kind === "hew") {
+  // Pole Strike: the Polearm Master item's own attack activity (its usage card, its 1d4 Bludgeoning).
+  if (f.kind === "martial-arts" || f.kind === "hew" || f.kind === "pole-strike") {
     const out = await runSwings(actor, [{ weaponId: f.weaponId, mode: null, kind: "bonus" }], { event, title: label, swappable: false });
     if (out.rolled) {
       await updateTurn(actor, t => core.recordFollowUp(t, f.kind));

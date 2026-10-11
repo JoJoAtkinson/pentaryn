@@ -19,12 +19,21 @@ export const DEFAULTS = {
   promptPlayers: true,
   autoDamageOnHit: true,
   autoApplySelf: true,
-  highlightUnapplied: true
+  highlightUnapplied: true,
+  // usability Area 5 re-run (sorcerer)
+  carefulSpell: true,
+  refundCancelledArea: true,
+  playerStatus: true,
+  // usability Area 6 re-run (wizard)
+  untargetedSelf: true,
+  noSpellStacking: true,
+  aimSelfAreas: true
 };
 
 const BOOLS = [
   "handleTokens", "removeAreaButton", "instantCleanup", "concentrationCleanup",
-  "resolveSaves", "autoApplyNpc", "promptPlayers", "autoDamageOnHit", "autoApplySelf", "highlightUnapplied"
+  "resolveSaves", "autoApplyNpc", "promptPlayers", "autoDamageOnHit", "autoApplySelf", "highlightUnapplied",
+  "carefulSpell", "refundCancelledArea", "playerStatus", "untargetedSelf", "noSpellStacking", "aimSelfAreas"
 ];
 
 export function registerSettings() {

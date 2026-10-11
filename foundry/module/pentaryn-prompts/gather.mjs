@@ -2,7 +2,7 @@
  * pentaryn-prompts — the one-call context export (plan §5), the manifest ring, list and show.
  */
 
-import { MODULE, VERSION, buildView, renderGather, codedError, idCompare } from "./geometry-core.mjs";
+import { MODULE, VERSION, buildView, renderGather, codedError, idCompare, sceneRefs, CURRENT_SCENE } from "./geometry-core.mjs";
 import { sceneModel, promptTokens, resolveItemEmbeds } from "./model.mjs";
 import { promptText } from "./markers.mjs";
 import { renderCrops } from "./crops.mjs";
@@ -33,18 +33,23 @@ export function resolveScene(ref) {
 
 function pickScenes(scenes, from) {
   let list;
-  if (scenes === "current") {
-    const s = canvas?.scene ?? game.scenes.viewed ?? game.scenes.active;
-    if (!s) throw codedError("SCENE_UNKNOWN", "no scene is being viewed");
-    list = [s];
-  } else if (Array.isArray(scenes)) {
-    list = scenes.map(r => {
-      const s = resolveScene(r);
-      if (!s) throw codedError("SCENE_UNKNOWN", String(r));
-      return s;
-    });
-  } else {
+  const refs = sceneRefs(scenes);
+  if (refs === "all") {
     list = scenesInNavOrder().filter(s => promptTokens(s).length > 0);
+  } else {
+    const seen = new Set();
+    list = [];
+    for (const r of refs) {
+      let s;
+      if (r === CURRENT_SCENE) {
+        s = canvas?.scene ?? game.scenes.viewed ?? game.scenes.active;
+        if (!s) throw codedError("SCENE_UNKNOWN", "no scene is being viewed");
+      } else {
+        s = resolveScene(r);
+        if (!s) throw codedError("SCENE_UNKNOWN", String(r));
+      }
+      if (!seen.has(s.id)) { seen.add(s.id); list.push(s); }
+    }
   }
   if (from) {
     const start = list.findIndex(s => s.id === from);

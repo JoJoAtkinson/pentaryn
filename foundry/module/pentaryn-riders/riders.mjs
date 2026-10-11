@@ -43,8 +43,11 @@ import * as core from "./riders-core.mjs";
 import "./rituals.mjs";
 // Concentration summons leave when concentration ends; the break button gets its label (setting `concentrationSummons`).
 import "./concentration.mjs";
-// Argon tidy-ups: shared-uses badges (Metamagic ↔ Font of Magic) refresh; panels collapse for area placement.
+// Argon tidy-ups: shared-uses badges (Metamagic ↔ Font of Magic) refresh; panels collapse for area placement;
+// no target picker on Metamagic; spell tooltips computed with the spell's own roll data.
 import "./argon-tidy.mjs";
+// Cast flow: a summon keeps the sidebar tab and says how to place; restoring a slot opens on the highest spent level.
+import "./cast-flow.mjs";
 
 const MOD = core.MOD;
 const QUERY = `${MOD}.battleMedic`;

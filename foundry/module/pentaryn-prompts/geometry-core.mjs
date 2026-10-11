@@ -12,7 +12,7 @@
 export const MODULE = "pentaryn-prompts";
 
 /** The code's own version: `status().version` prints it (game.modules can lag until a rescan). Kept equal to module.json by the suite. */
-export const VERSION = "0.4.1";
+export const VERSION = "0.4.3";
 
 /** Built kinds that are creatures; the hostile ones make encounters and chain into packs (§13). */
 export const CREATURE_KINDS = Object.freeze(["npc", "character", "creature"]);
@@ -1141,6 +1141,33 @@ export function panelSplit(rels, { rows = 12, unseenWithinFt = 60 } = {}) {
   const seen = rels.filter(r => r.los === "LOS").sort(byNear);
   const unseen = rels.filter(r => r.los !== "LOS" && r.ft <= unseenWithinFt).sort(byNear);
   return { shown: seen.slice(0, rows), more: seen.slice(rows), unseen, total: seen.length };
+}
+
+/**
+ * The out-of-sight rows blocked only by a door, for a line above the panel's fold (usability Area 9,
+ * P-9-b: the door showed only as a tag inside the collapsed "Out of sight" list). Each row needs
+ * `name`, `ft`, `bearing`, `los`. Returns null when no door is in the way.
+ * @returns {{list: string[], extra: number}|null}
+ */
+export function behindDoor(unseen, { max = 3 } = {}) {
+  const hits = (unseen ?? []).filter(r => r?.los === "door" || r?.los === "secret door");
+  if (!hits.length) return null;
+  const label = r => `${r.name} (${fmtNum(r.ft)} ft${r.bearing ? ` ${r.bearing}` : ""}${r.los === "secret door" ? ", secret door" : ""})`;
+  const list = hits.slice(0, Math.max(1, max)).map(label);
+  return { list, extra: hits.length - list.length };
+}
+
+/**
+ * Normalise gather's `scenes` argument. `"current"` (alone or as a list entry, any case) means the
+ * scene being viewed; a single id or name string is a one-scene list; null/"all" is every scene with
+ * a prompt. The module API threw `SCENE_UNKNOWN: current` for `["current"]` (usability Area 9, P-9-c).
+ * @returns {"all"|Array<string|object|symbol>} with CURRENT_SCENE standing for the viewed scene
+ */
+export const CURRENT_SCENE = Symbol("current scene");
+export function sceneRefs(scenes) {
+  if (scenes == null || scenes === "" || (typeof scenes === "string" && scenes.trim().toLowerCase() === "all")) return "all";
+  const list = Array.isArray(scenes) ? scenes : [scenes];
+  return list.map(r => typeof r === "string" && r.trim().toLowerCase() === "current" ? CURRENT_SCENE : r);
 }
 
 /** `20 ft · close · NE` (plus `· hidden`). */

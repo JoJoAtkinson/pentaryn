@@ -627,3 +627,10 @@ Module `pentaryn-prompts` **0.4.0** installed and enabled (lookup 0.3.0 beside i
 
 - UX playtest passed; LLM evals 8/8/7 (round 2) and 8/9/7 (round 3); both rounds' follow-ups shipped in 0.3.0 and 0.4.0 (plan §13–§14).
 - New sessions need a Claude Code restart (or `/mcp` reconnect) to see `mcp__foundry__prompt-markers`.
+
+## Usability re-run, Area 9 prompt markers (2026-10-11)
+
+Drag, P, Shift+P, size chip, gather, dry run, replace and the `character` build all passed; players
+see no marker (canvas, sidebar). Nothing in the world was left behind (ZZ Arena, actors, user and
+journals deleted; Drow Prison active and paused). Details: `context/plans/usability-changes-2026-10.md`
+section "Area 9 re-run".

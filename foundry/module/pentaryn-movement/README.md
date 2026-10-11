@@ -76,7 +76,8 @@ matches the current position. It never looks at walls. *Verify live as a player.
   combat, does.
 - When ghost stops being allowed (a fight starts, or the GM turns it off), each player's button is
   **switched off**, with a toast. It does not come back by itself after the fight; the player
-  clicks it again. During the fight the button stays visible but dimmed, with a small swords
+  clicks it again. When it is allowed again (the fight ends, or the GM turns it back on), a second
+  toast says so once (0.1.2, usability Area 8 L7). During the fight the button stays visible but dimmed, with a small swords
   badge, and clicking it explains why it's off.
 
 ## Console (`game.pentaryn.movement`)

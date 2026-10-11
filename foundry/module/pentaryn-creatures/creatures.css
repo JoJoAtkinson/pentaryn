@@ -49,3 +49,11 @@
   border: none;
   pointer-events: none;
 }
+
+/* Floated above the Combat HUD while it is up (creatures.mjs placeStrip; usability Area 6 re-run). */
+#pentaryn-creatures.pcr-floating {
+  position: fixed;
+  margin: 0;
+  z-index: 70;
+  max-width: calc(100vw - 16px);
+}

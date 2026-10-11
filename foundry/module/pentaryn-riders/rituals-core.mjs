@@ -60,3 +60,33 @@ export function adeptRituals(spells) {
     .sort((a, b) => (a.s.level - b.s.level) || String(a.item?.name).localeCompare(String(b.item?.name)))
     .map(({ item }) => item);
 }
+
+/* ── Longer casts (usability Area 6 re-run, W7) ─────────────────────────── */
+
+/** Argon files a spell by its first activity: these casting times are on no bar. */
+export const LONG_ACTIVATIONS = Object.freeze(["minute", "hour", "day"]);
+
+/**
+ * Spells whose casting time puts them on none of Argon's bars (Animate Dead: 1 minute), for a
+ * "Longer casts" group on the Action bar's Cast Spell panel. The same castable filter as Argon's:
+ * with "prepared only", at-will, innate and pact spells and prepared spells. Spells an item grants
+ * (cachedFor) and Ritual-Adept-only rituals (their own group) are left out.
+ * @param {Array<{item: any, s: object, activations: string[]}>} entries  spellInfo plus activation types, in activity order
+ * @param {{preparedOnly?: boolean}} [opts]
+ * @returns {any[]} the items, by level then name
+ */
+export function longCasts(entries, { preparedOnly = true } = {}) {
+  return (entries ?? [])
+    .filter(({ s, activations }) => {
+      if (!s || s.type !== "spell" || s.cachedFor) return false;
+      // Argon files a spell under its FIRST activity's activation only (its getActivationType), so
+      // Animate Dead (1 minute, then a bonus-action "Mentally Command") is on no bar either.
+      const first = (activations ?? [])[0];
+      if (!LONG_ACTIVATIONS.includes(first)) return false;
+      if (isAdeptOnlyRitual(s)) return false;
+      if (!preparedOnly) return true;
+      return ["atwill", "innate", "pact"].includes(s.method) || s.prepared > 0;
+    })
+    .sort((a, b) => (a.s.level - b.s.level) || String(a.item?.name).localeCompare(String(b.item?.name)))
+    .map(({ item }) => item);
+}

@@ -22,5 +22,8 @@
   "PENTARYN_SENSES.Light.Douse": "Put it out",
   "PENTARYN_SENSES.Light.HoodLower": "Lower the hood",
   "PENTARYN_SENSES.Light.HoodRaise": "Raise the hood",
+  "PENTARYN_SENSES.Light.HoodLowered": "{actor} lowers the hood of the {item}.",
+  "PENTARYN_SENSES.Light.HoodRaised": "{actor} raises the hood of the {item}.",
+  "PENTARYN_SENSES.Light.Outshone": "Lit, but your {item} gives more light, so this one adds nothing now. Click to put it out.",
   "PENTARYN_SENSES.Light.ActivityName": "Light"
 }

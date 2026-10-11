@@ -5,7 +5,7 @@
  * Synthetic fixtures only.
  */
 
-const { spellInfo, isRitualAdept, isAdeptOnlyRitual, adeptRituals, RITUAL_ADEPT_SOURCE } = await import("../rituals-core.mjs");
+const { spellInfo, isRitualAdept, isAdeptOnlyRitual, adeptRituals, RITUAL_ADEPT_SOURCE, longCasts } = await import("../rituals-core.mjs");
 
 let pass = 0;
 const failures = [];
@@ -55,6 +55,26 @@ check("18 sorted by level then name, filtered",
   ]).map(s => s.name),
   ["Alarm", "Identify", "Gentle Repose", "Leomund's Tiny Hut", "Phantom Steed"]);
 check("19 empty", adeptRituals([]), []);
+
+/* ── longCasts (Area 6 re-run, W7) ─────────────────────────────────────── */
+const L = (name, level, acts, { prepared = 1, method = "spell", ritual = false, cachedFor = null } = {}) => ({
+  item: { name }, s: { type: "spell", level, method, prepared, ritual, sourceClass: "wizard", cachedFor }, activations: acts
+});
+const longs = [
+  L("Animate Dead", 3, ["minute", "bonus"]),
+  L("Create Undead", 6, ["minute", "minute", "bonus"]),
+  L("Magic Jar", 6, ["minute", "action"], { prepared: 0 }),
+  L("Fireball", 3, ["action"]),
+  L("Identify", 1, ["minute"], { prepared: 0, ritual: true }),
+  L("Find Familiar", 1, ["hour"], { prepared: 1, ritual: true }),
+  L("Ring's stored spell", 3, ["minute"], { cachedFor: ".Item.x.Activity.y" }),
+  L("Innate Teleport Circle", 5, ["minute"], { prepared: 0, method: "innate" })
+];
+check("20 long casts: Animate Dead (minute first, a bonus activity after) and the other castable minute/hour spells",
+  longCasts(longs).map(i => i.name), ["Find Familiar", "Animate Dead", "Innate Teleport Circle", "Create Undead"]);
+check("21 not prepared-only (a sorcerer): unprepared long casts too, never an Adept-only ritual",
+  longCasts(longs, { preparedOnly: false }).map(i => i.name), ["Find Familiar", "Animate Dead", "Innate Teleport Circle", "Create Undead", "Magic Jar"]);
+check("22 nothing long → empty", longCasts([L("Fireball", 3, ["action"])]), []);
 
 if (failures.length) {
   console.error(`rituals-core: ${pass} passed, ${failures.length} FAILED\n${failures.join("\n")}`);

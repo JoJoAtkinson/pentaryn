@@ -6,7 +6,7 @@
  */
 
 const { MODULE, LIGHT_FLAG, isPlayerCreature, readOurLight, switchedOff, lightUpdate, ownerShouldSee, stripEntries,
-  shouldShowStrip, stripSignature } = await import("../creatures-core.mjs");
+  shouldShowStrip, stripSignature, stripDock } = await import("../creatures-core.mjs");
 
 let pass = 0;
 const failures = [];
@@ -131,6 +131,12 @@ check("non-array → hidden", shouldShowStrip(null), false);
 check("signature stable", stripSignature(entries) === stripSignature(stripEntries(scene, { characterId: "a-pc" })), true);
 check("signature changes on rename", stripSignature(entries) === stripSignature(stripEntries(scene.map(t => t.id === "eye" ? { ...t, name: "Eye" } : t), { characterId: "a-pc" })), false);
 check("moving does not change signature (no x/y in it)", stripSignature(stripEntries([{ ...T("a"), x: 1 }])) === stripSignature(stripEntries([{ ...T("a"), x: 900 }])), true);
+
+/* stripDock (usability Area 6 re-run, W8) */
+check("HUD up: float 8px above its top, left-aligned", stripDock({ top: 700, left: 300, width: 900, height: 120 }, 900), { bottom: 208, left: 300 });
+check("HUD hidden or absent: stay docked", [stripDock(null, 900), stripDock({ top: 700, left: 0, width: 0, height: 0 }, 900)], [null, null]);
+check("HUD collapsed below the window: stay docked", stripDock({ top: 950, left: 300, width: 900, height: 120 }, 900), null);
+check("left edge never under 8px", stripDock({ top: 700, left: -20, width: 900, height: 120 }, 900).left, 8);
 
 console.log(`pentaryn-creatures core: ${pass} passed, ${failures.length} failed`);
 if (failures.length) { console.log(failures.join("\n")); process.exit(1); }

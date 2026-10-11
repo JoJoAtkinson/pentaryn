@@ -37,7 +37,8 @@ Every marker token is forced hidden, sightless and `flags.dnd5e.lockSize` on cre
 - **P** places a marker of your client's default size under the cursor (always snapped);
   **Shift+P** opens the marker under the cursor.
 - **Esc** saves and closes · **⌘/Ctrl+Enter** saves and closes · **Shift+Esc** puts the text back
-  as it was when the dialog opened · **Enter** is a newline. Typing autosaves after 600 ms.
+  as it was when the dialog opened (on a freshly dropped marker that is empty, so the marker is
+  removed; the footer says so) · **Enter** is a newline. Typing autosaves after 600 ms.
 - **Type straight away.** From the drop (or P, double-click, HUD button) until the box has focus,
   keys are held by `typeahead.mjs` (a capturing `keydown` on `window`, ahead of core's hotkeys) and
   land in the box when it opens — they never reach the ruler, compendium or module hotkeys. ⌘/Ctrl
@@ -55,6 +56,8 @@ Every marker token is forced hidden, sightless and `flags.dnd5e.lockSize` on cre
 - **Size chips** swap the marker for the other size actor centred on the same point, text carried.
 - **Side panel**: what this marker can see (unlimited darkvision through walls, doors as they stand,
   light ignored), nearest first; collapsed *Out of sight (within 60 ft)* with `door` / `wall` tags.
+  Anything blocked only by a door is also named above the list ("Behind a closed door: Nilonim
+  Vrinn (10 ft W)", up to 3, 0.4.2).
   Click pans, ⌘-click opens the sheet / dialog. It redraws (250 ms debounce) when a wall or door on
   the scene changes, or a token or note is placed, moved or removed (0.4.1).
 - Hover a marker: its full text, size and how many things it sees (under any open window).
@@ -75,7 +78,8 @@ Every marker token is forced hidden, sightless and `flags.dnd5e.lockSize` on cre
 | `status()` | `{version, listed, npcBridge, party, specDir, doubleClick, markers}` — `party` is the world setting or `"none set"`; `version` is the running code's own constant (`VERSION` in geometry-core.mjs, kept equal to module.json by the suite); `listed` is what `game.modules` says, which lags until a world rescan; `npcBridge` = the bridge's npc handlers are there |
 | `open(tokenOrId)` · `place(size?)` · `ensureMarkers()` · `model(sceneId)` · `manifests()` · `version` | |
 
-`scenes`: `"all"` (default: scenes holding prompts, nav order) · `"current"` · `[id or name, …]`.
+`scenes`: `"all"` (default: scenes holding prompts, nav order) · `"current"` · `[id or name, …]` (a
+list may hold `"current"`; a single id or name string is a one-scene list, 0.4.2).
 `crops`: `"auto"` (one scene with a background image or tiles → on; a blank scene → skipped, said in a `<crops>` line and `cropsNote`) · `true`/`"on"` · `false`/`"off"`. `cropsAs`: `"files"` (the API
 default: uploaded to `Data/pentaryn-prompts-crops/<call>/E1.webp`, `path` returned, no base64 in an
 eval-js result) or `"base64"` (what the queries — the bridge — get, turned into MCP images).
@@ -133,6 +137,10 @@ args as above. Errors are `Error("<CODE>: detail")`: `TEXT_CHANGED`, `MARKER_GON
   `CONFIG.DND5E.focusTypes` item as `DEFAULTED` unless `items` names one, a tool type → the tool the
   character is proficient in) or the wealth; a caster with nothing to cast through gets a WARN
   (`focusMissing`). Choice titles ending in *Choice* also answer to the bare title (`titleForms`).
+  A Monk's weapons get Martial Arts' own enchantment (its "Master Simple Weapon" / "Master Light
+  Martial Weapon" activities through dnd5e's `applyEnchantment`; dnd5e's `canEnchant` picks the
+  weapons), so the Quarterstaff rolls DEX and the Martial Arts die from the first swing; the dry run
+  names them in a note (0.4.3, usability Area 10).
 - `npc` — `{npc, features, patch}` (`npc.mjs`, pure half `npc-core.mjs`), **built by this module**
   since 0.3.0, so it works through eval-js too: `npc` is the dnd5e-create-npc arguments, `features`
   the dnd5e-add-feature arguments without `actorIdentifier` (+ `recharge`). Every field is checked and
@@ -219,7 +227,9 @@ centre.
 
 ## Status and known limits (2026-10-10)
 
-0.4.1 (usability run 2026-10: panel refresh, MARKER_GONE says why, honest `remaining`, the over-5
+0.4.3 (usability Area 10 fixer pass: a built Monk's weapons get the Martial Arts enchantment).
+0.4.2 (usability Area 9 fixer pass: `"current"` inside a `scenes` list, the door line above the
+panel's fold, the footer says ⇧Esc removes a new marker). 0.4.1 (usability run 2026-10: panel refresh, MARKER_GONE says why, honest `remaining`, the over-5
 dry-run guard counts every requested replacement, `character.folder`). 0.4.0 (eval round 3, plan §14) synced into `pentaryn` and verified live 2026-10-10 with the rebuilt
 bridge fork. `status().version` says which code is loaded.
 Still open: the gaps listed in the playbook's "Known gaps" (feat-fixed ASI, starting-equipment hygiene, unsuffixed levelled keys, custom traits missing from `<built>`, `system.ability` not a dnd5e 6 weapon field); `replace` prefers `id` over `markerId`; door lines and LOS ignore Levels and wall heights.

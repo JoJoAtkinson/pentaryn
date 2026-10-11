@@ -20,7 +20,29 @@ export const DEFAULTS = Object.freeze({
   offhandModeReset: true,  // a main-hand swing never inherits Offhand from the last roll
   offhandPip: true,        // an off-hand swing spends the Bonus pip, not the Action pip
   seedWeaponSets: true,    // empty Argon weapon set 1/2 filled once for PCs (never overwrites)
-  multiattack: true        // Full Attack for NPC / Wild Shape Multiattack
+  multiattack: true,       // Full Attack for NPC / Wild Shape Multiattack
+  skipPickerGuide: true,   // mark Argon's one-time Target Picker Tutorial as seen; "right-click cancels" on its cursor label
+  // turn flow (turnflow.mjs, usability re-run Area 1)
+  specialActions: true,    // Argon's Dash/Disengage/Dodge/Hide/Ready/Shove spend the Action; Dash adds Speed; Dodge ends; Hide rolls
+  reactionSlot: true,      // Reaction bar weapon = "Opportunity Attack", spends the Reaction, not a swing
+  escRollDialog: true,     // Esc closes a dnd5e roll dialog without clicking into it first
+  tidyCancelledAttacks: true, // a cancelled attack roll deletes its own empty usage card
+  deathSaveDamage: true,   // damage at 0 HP adds a Death Saving Throw failure (two on a crit)
+  portraitConditions: true, // status conditions (Prone, Poisoned, Dodging…) on the HUD portrait
+  hudFollows: true,        // the HUD follows the one token left selected and your combatant's turn
+  clearTargetsAfterTurn: true, // a player's targets are released when their turn ends
+  // usability Area 2, fixer pass 2
+  dockRollDialogs: true,   // during a Full Attack each roll window sits just above the swing strip, named "swing i of n"
+  scrollingTextGuard: true, // background tab: no floating canvas text, no chat-card pop-ups; a double destroy is ignored (core errors)
+  // usability Area 3 re-run, fixer pass 2
+  bonusPip: true,          // a Bonus-action feature or spell (Rage, Steady Aim, Divine Smite, Lay on Hands…) spends the Bonus pip
+  selfEffects: true,       // a self-only feature with one effect (Rage) switches its effect on when used (no Apply click)
+  steadyAim: true,         // Steady Aim gives a "Steady Aim" effect: next attack defaults to Advantage, Speed 0, gone after that attack
+  drawerNearButton: true,  // Argon's drawers (Use Feature, Cast Spell…) open above their own button, not at the HUD's far left
+  // usability Area 5 re-run
+  spellPips: true,         // a spell or feature used from the HUD spends its Action / Reaction pip; pips survive a HUD re-bind
+  quickenedSpell: true,    // Quickened Spell makes the next 1-Action spell this turn spend the Bonus pip, not the Action
+  helperTokenControl: true // your token is selected again when an area handle or a summon you held is deleted
 });
 
 export function registerSettings() {
@@ -31,7 +53,8 @@ export function registerSettings() {
       hint: `PENTARYN_COMBAT.Setting.${key}.Hint`,
       scope: "world", config: true, type: Boolean, default: value,
       // Argon builds its bars once per render; the next HUD render picks the change up.
-      onChange: () => { try { ui.ARGON?.render?.(); } catch { /* HUD closed */ } }
+      // Only a bound HUD: with no actor Argon's panels throw "reading 'system' of null".
+      onChange: () => { try { if (ui.ARGON?._actor) ui.ARGON.render(); } catch { /* HUD closed */ } }
     });
   }
 }

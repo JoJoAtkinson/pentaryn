@@ -5,7 +5,7 @@
       "WithWeapon": "{weapon}",
       "SwingsLeft": "{left} of {total} swings left this turn",
       "FullAttackText": "Attacks with {what}, one swing after another. Each swing opens the normal attack roll (Normal / Advantage / Disadvantage, or your own dice), and damage follows as usual.",
-      "FullAttackHint": "Left-click: attack. Right-click: pick another weapon. Esc on a roll pauses; Esc again stops. Clicking a weapon by hand still works and counts.",
+      "FullAttackHint": "Left-click: attack. Enter rolls Normal in each roll window; tick Quick on the bar above the HUD to roll the rest without windows. Right-click: pick another weapon. Esc on a roll pauses; Esc again stops. Clicking a weapon by hand still works and counts.",
       "ToHit": "To hit",
       "Swings": "Swings",
       "NoSwingsLeft": "No swings left in your Attack action this turn. You can still click a weapon by hand if the GM allows it.",
@@ -14,7 +14,11 @@
       "BonusAction": "Bonus Action",
       "NewTurn": "New turn",
       "NewTurnHint": "Out of combat there is no turn order: click to start a fresh turn (swings, Sneak Attack and follow-ups available again).",
-      "PoleStrikeGated": "Pole Strike opens after you take the Attack action with a Quarterstaff, Spear or Heavy weapon with Reach."
+      "PoleStrikeGated": "Pole Strike opens after you take the Attack action with a Quarterstaff, Spear or Heavy weapon with Reach.",
+      "PickerCue": " · right-click cancels",
+      "WithNick": "{weapon}, then {nick} as the free Nick attack",
+      "PlusNick": "{left}, + Nick: {weapon}",
+      "PickerStart": "Click a creature to target"
     },
     "FollowUp": {
       "offhand": "Off-hand: {weapon}",
@@ -22,26 +26,29 @@
       "flurry": "Flurry of Blows",
       "martial-arts": "Martial Arts strike",
       "hew": "Hew: {weapon}",
-      "NoFocus": "No Focus Points left for Flurry of Blows."
+      "NoFocus": "No Focus Points left for Flurry of Blows.",
+      "pole-strike": "Pole Strike"
     },
     "FollowUpText": {
       "offhand": "The Light property's extra attack, as a Bonus Action. Your ability modifier isn't added to its damage unless it is negative (or you have Two-Weapon Fighting).",
       "nick": "Nick: the Light extra attack made as part of the Attack action, so it costs no Bonus Action. Once per turn.",
       "flurry": "Spend 1 Focus Point and make {n} Unarmed Strikes as a Bonus Action. Each strike opens its own attack roll.",
       "martial-arts": "One Unarmed Strike as a Bonus Action.",
-      "hew": "Great Weapon Master: you scored a Critical Hit or dropped a creature to 0 HP — one more attack with the same weapon as a Bonus Action."
+      "hew": "Great Weapon Master: you scored a Critical Hit or dropped a creature to 0 HP — one more attack with the same weapon as a Bonus Action.",
+      "pole-strike": "Polearm Master: you took the Attack action with a Quarterstaff, Spear or Heavy weapon with Reach — one attack with its other end (1d4 Bludgeoning) as a Bonus Action."
     },
     "Kind": {
       "nick": "Nick",
       "offhand": "Off-hand",
       "bonus": "Bonus Action",
-      "main": "Attack"
+      "main": "Attack",
+      "pole-strike": "Bonus Action"
     },
     "Strip": {
       "SwingOf": "Swing {i} of {n}",
       "NoTarget": "no target",
       "Targets": "{n} targets",
-      "Paused": "Paused — the roll was closed. Resume, pick a new target or another weapon, or Stop (Esc). Swings you don't take stay on your Action pips.",
+      "Paused": "Paused — the roll was closed. Resume, pick a new target or another weapon, or Stop (Esc).",
       "Resume": "Resume",
       "Retarget": "New target",
       "Adv": "Adv",
@@ -50,11 +57,26 @@
       "Quick": "Quick",
       "QuickHint": "After the first swing, roll the rest without the dialog (same Normal / Advantage / Disadvantage). Manual dice still ask for each roll.",
       "Stop": "Stop",
-      "StopHint": "End the Full Attack here. Swings not taken stay available.",
+      "StopHint": "End the Full Attack here. With a roll window open, that roll still counts if you roll it, and no further window opens. Swings not taken stay available.",
       "SwapHint": "Use {weapon} for the remaining swings",
       "PickTarget": "Target a creature for the next swing (Stop cancels).",
       "AlreadyRunning": "A Full Attack is already running — finish or stop it first.",
-      "NoWeapon": "That weapon is no longer available."
+      "NoWeapon": "That weapon is no longer available.",
+      "KeysPaused": "Esc = Stop",
+      "SwingTag": "swing {i} of {n}",
+      "SwingTagWeapon": "{weapon}, swing {i} of {n}",
+      "PausedNote": {
+        "main": "Swings you don't take stay on your Action pips.",
+        "flurry": "Your Focus Point is already spent: Resume to take the strikes it paid for.",
+        "bonus": "Nothing is spent until you roll: your Bonus Action is still free."
+      },
+      "KeysAction": "Enter = {action} · Esc = pause",
+      "Action": {
+        "normal": "Normal",
+        "advantage": "Advantage",
+        "disadvantage": "Disadvantage",
+        "critical": "Critical Hit"
+      }
     },
     "Picker": {
       "Title": "Full Attack with…",
@@ -142,6 +164,78 @@
       "recklessToggle": {
         "Name": "Reckless Attack toggle",
         "Hint": "A 'Reckless Attack: On/Off' button on the Special bar for Barbarians: it applies the Reckless effect (Advantage on Strength attacks until your next turn), which Frenzy's hint reads. Off: no button; apply Reckless by hand."
+      },
+      "skipPickerGuide": {
+        "Name": "Skip Argon's Target Picker Tutorial",
+        "Hint": "Nobody gets Argon's one-time Target Picker Tutorial on their first attack (it cost a Confirm click mid-combat); instead the '0/1 Targets' label at the cursor says 'right-click cancels'. Off: the label is Argon's own; a browser that has not yet seen the tutorial sees it once."
+      },
+      "specialActions": {
+        "Name": "Dash, Disengage, Dodge and Hide do what they say",
+        "Hint": "Argon's built-in action buttons spend your Action (and the swing pips); Dash adds your Speed for the turn; Disengage shows on you for the turn; Dodge ends at the start of your next turn; Hide rolls Stealth against DC 15 and keeps Hiding only on a success. Off: Argon posts its card and nothing else."
+      },
+      "reactionSlot": {
+        "Name": "Opportunity Attack on the Reaction bar",
+        "Hint": "The weapon on the Reaction bar reads 'Opportunity Attack: <weapon>' and spends your Reaction, never one of your Attack action's swings. Off: Argon's plain weapon slot, which spends your Action on your own turn."
+      },
+      "escRollDialog": {
+        "Name": "Esc closes a roll window",
+        "Hint": "Esc closes a dnd5e roll window straight away, without clicking into it first. Off: click the window, then Esc."
+      },
+      "tidyCancelledAttacks": {
+        "Name": "Remove the card of a cancelled attack",
+        "Hint": "If you close an attack's roll window without rolling, its empty use card is removed from chat (only when nothing was spent). Off: the card stays."
+      },
+      "deathSaveDamage": {
+        "Name": "Damage at 0 HP is a death save failure",
+        "Hint": "A character who takes damage at 0 Hit Points gets a Death Saving Throw failure, two from a Critical Hit (PHB). Massive damage is whispered to the GM, never applied. Off: the GM edits the tally."
+      },
+      "portraitConditions": {
+        "Name": "Conditions on the HUD portrait",
+        "Hint": "Prone, Poisoned, Grappled, Dodging and other conditions show on the Argon portrait, with the rules text on hover; right-click removes one as usual. Off: the portrait shows only effects with a duration."
+      },
+      "hudFollows": {
+        "Name": "HUD follows your token",
+        "Hint": "When your creature's turn starts, the HUD switches to it; clicking one token of a selected group switches the HUD to that token. Off: toggle Argon to switch."
+      },
+      "clearTargetsAfterTurn": {
+        "Name": "Release targets when your turn ends",
+        "Hint": "Your targets are released when your turn ends, so your next attack never goes to last turn's creature by mistake. Off: targets stay until you change them."
+      },
+      "dockRollDialogs": {
+        "Name": "Roll windows above the swing bar",
+        "Hint": "During a Full Attack or follow-up, each roll window (and the manual-dice window) sits just above the swing bar, at the same height every swing, and its title says which swing it is. The bar's Adv / Dis / Quick / Stop stay visible. Off: windows open in the middle of the screen."
+      },
+      "scrollingTextGuard": {
+        "Name": "Background tab: no floating text, no chat pop-ups",
+        "Hint": "A browser tab in the background skips the floating damage numbers and the chat-card pop-ups (nobody sees them; they piled up and logged core errors when the scene changed, a card was deleted or the tab came back). The chat tab's unread pip still lights. Off: core behaviour."
+      },
+      "bonusPip": {
+        "Name": "Bonus-action features spend the Bonus pip",
+        "Hint": "Rage, Steady Aim, Divine Smite, Lay on Hands, a Bonus-action spell: used on your turn, they grey the Bonus pip and close Off-hand / Flurry / Hew for the turn. Argon spent nothing for them. Off: Argon's default."
+      },
+      "selfEffects": {
+        "Name": "Self effects switch on when used",
+        "Hint": "A feature that only affects you and has one effect (Rage) switches that effect on when used, through dnd5e's own Apply. Off: click Apply on its chat card."
+      },
+      "steadyAim": {
+        "Name": "Steady Aim sets up Advantage",
+        "Hint": "Using Steady Aim adds a 'Steady Aim' effect: the next attack's roll window opens on Advantage and your Speed is 0; it is removed after that attack or at the end of your turn. Off: only the chat card; click Advantage yourself."
+      },
+      "drawerNearButton": {
+        "Name": "Drawers open by their button",
+        "Hint": "Argon's Use Feature / Cast Spell drawers open just above the button that opened them instead of at the HUD's far left. Off: Argon's position."
+      },
+      "spellPips": {
+        "Name": "Spells spend their Action and Reaction pips",
+        "Hint": "Fire Bolt, Fireball or Magic used from the HUD greys the Action pip; Counterspell or Shield greys the Reaction pip (on any turn, back at the start of your turn). A re-bound HUD or a new round keeps the pips that were spent. Argon spent nothing for spells. Off: Argon's default."
+      },
+      "quickenedSpell": {
+        "Name": "Quickened Spell makes the next spell a Bonus Action",
+        "Hint": "After you use Quickened Spell on your turn, the next spell with a casting time of an Action spends the Bonus pip instead of the Action pip, so the Action stays free (for a cantrip). Off: Quickened Spell only spends its points."
+      },
+      "helperTokenControl": {
+        "Name": "Your token comes back when a helper token goes",
+        "Hint": "When an area handle you dragged, or a summon you had selected (Flaming Sphere), is deleted and nothing else is selected, your caster's token is selected again, so the HUD stays up. Off: nothing is selected and the HUD closes."
       }
     },
     "Reckless": {
@@ -156,6 +250,28 @@
         "on": "On (now): Advantage on Strength attack rolls until your next turn starts; attacks against you have Advantage. Click to turn it off (a misclick)."
       },
       "On": "Reckless Attack: on until the start of your next turn."
+    },
+    "Turn": {
+      "OA": "Opportunity Attack: {weapon}",
+      "NoActionLeft": "You have already used your Action this turn. {action} was posted anyway; check with your GM.",
+      "Effect": {
+        "dash": "Dash",
+        "disengage": "Disengage"
+      },
+      "EffectText": {
+        "dash": "Extra movement equal to your Speed for this turn (PHB: Dash). Ends at the end of your turn.",
+        "disengage": "Your movement doesn't provoke Opportunity Attacks for the rest of this turn (PHB: Disengage). Ends at the end of your turn."
+      },
+      "Hidden": "Stealth {total} vs DC 15: you are hidden. Your total is the DC to find you.",
+      "NotHidden": "Stealth {total} vs DC 15: not hidden.",
+      "HideCancelled": "Hide cancelled: no Stealth roll, not hidden.",
+      "DeathFail": "{name} takes damage at 0 Hit Points: a Death Saving Throw failure ({n} of 3).",
+      "DeathFailCrit": "{name} takes a Critical Hit at 0 Hit Points: two Death Saving Throw failures ({n} of 3).",
+      "Massive": "{name} took {amount} damage, at or over their Hit Point maximum ({max}). By the PHB (Massive Damage / Damage at 0 Hit Points) the character dies. Not applied: set their Death Saving Throw failures to 3 if you rule it so.",
+      "SteadyAim": "Steady Aim",
+      "SteadyAimText": "Advantage on your next attack roll this turn (the roll window opens on Advantage). Your Speed is 0 until the end of the turn. Ends after that attack, or at the end of your turn.",
+      "SteadyAimOn": "Steady Aim: your next attack defaults to Advantage; Speed 0 this turn.",
+      "QuickenedCast": "Quickened: {spell} is your Bonus Action. Your Action is still free."
     }
   }
 }

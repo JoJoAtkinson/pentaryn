@@ -4,7 +4,7 @@
  * MARKER_GONE row has no misleading "(markerDeleted=false)". Called from run.mjs.
  */
 
-export async function run({ check, ok }) {
+export async function run({ check, ok, core }) {
   const R = await import("../readback-core.mjs");
 
   /* ── the dry-run guard counts every requested replacement ───────────── */
@@ -34,5 +34,28 @@ export async function run({ check, ok }) {
     ok("readback: other failures keep the markerDeleted note", other.includes("(markerDeleted=false)"));
     const dry = R.renderReplace({ dryRun: true, call: "pm-x", rows: [{ id: "p1", label: "p1", ok: false, code: "CALL_UNKNOWN", error: "CALL_UNKNOWN: pm-x" }], remaining: {} });
     ok("readback: failed dry run says remaining unknown", dry.includes("remaining: unknown") && !dry.includes("remaining: none"));
+  }
+  /* ── Area 9 fixer pass: "current" inside a scenes list (P-9-c) ──────── */
+  {
+    const C = core.CURRENT_SCENE;
+    check("scenes: default → all", core.sceneRefs(undefined), "all");
+    check("scenes: 'all' → all", core.sceneRefs("all"), "all");
+    ok("scenes: 'current' → [current]", core.sceneRefs("current").length === 1 && core.sceneRefs("current")[0] === C);
+    ok("scenes: ['current'] → [current]", core.sceneRefs(["current"])[0] === C);
+    ok("scenes: ['Current '] any case", core.sceneRefs(["Current "])[0] === C);
+    const mixed = core.sceneRefs(["abc123", "current"]);
+    ok("scenes: mixed keeps the id and marks current", mixed[0] === "abc123" && mixed[1] === C);
+    check("scenes: one name string → one-scene list", core.sceneRefs("ZZ Arena"), ["ZZ Arena"]);
+  }
+
+  /* ── Area 9 fixer pass: a closed door above the fold (P-9-b) ────────── */
+  {
+    check("door: none → null", core.behindDoor([{ name: "A", ft: 10, bearing: "W", los: "wall" }]), null);
+    check("door: empty → null", core.behindDoor([]), null);
+    check("door: one", core.behindDoor([{ name: "Nilonim Vrinn", ft: 10, bearing: "W", los: "door" }, { name: "B", ft: 5, bearing: "N", los: "wall" }]),
+      { list: ["Nilonim Vrinn (10 ft W)"], extra: 0 });
+    check("door: secret door says so", core.behindDoor([{ name: "C", ft: 15, bearing: "", los: "secret door" }]).list, ["C (15 ft, secret door)"]);
+    const many = core.behindDoor([1, 2, 3, 4, 5].map(i => ({ name: `N${i}`, ft: i * 5, bearing: "E", los: "door" })));
+    check("door: capped at 3 with extra", [many.list.length, many.extra], [3, 2]);
   }
 }

@@ -15,7 +15,11 @@ const {
   followUps, poleStrikeOpen,
   TURN_RIDERS, riderByKey, ridersFor, riderEligibility, riderDice, damageBonuses, parseMultiattack, multiattackPlan,
   overridePlan, weaponSetSeed, shouldSeed, hintCodes, pickCombat,
-  tidyDiceCount, recklessChanges, isRecklessEffect, RECKLESS_CHANGE
+  tidyDiceCount, recklessChanges, isRecklessEffect, RECKLESS_CHANGE,
+  SPECIAL_ACTIONS, specialActionOf, actionsLeft, recordSpecialAction, dashChanges, expiringAt, damageAtZero,
+  portraitExtras, orphanUsage, planSummary, dockRect, swingTag,
+  recordBonusAction, turnBoundary, pausedNote, steadyAimChanges, steadyAimAfterAttack, hideOffhandSlot, drawerLeft,
+  pipFor, recordQuickened, recordQuickenedCast, spentPips, reactionSpent
 } = core;
 
 let pass = 0;
@@ -412,6 +416,218 @@ check("253 Reckless: an effect that already has it is not doubled",
 check("254 Reckless: other changes kept", recklessChanges([{ key: "system.x", value: 2 }]).map(c => c.key), ["system.x", RECKLESS_CHANGE.key]);
 check("255 Reckless effect test", [isRecklessEffect({ name: "Reckless" }), isRecklessEffect({ name: "Reckless Attack" }),
   isRecklessEffect({ name: "Reckless", disabled: true }), isRecklessEffect({ name: "Rage" }), isRecklessEffect(null)], [true, true, false, false, false]);
+
+/* ── Area 1 re-run: turn flow (turnflow.mjs) ──────────────────────────────── */
+
+const NAMES = { dash: "Dash", disengage: "Disengage", dodge: "Dodge", hide: "Hide", ready: "Ready", shove: "Shove" };
+check("256 special action by label", ["Dash", "dodge", "Hide ", "Ready", "Shove", "Disengage"].map(l => specialActionOf(l, NAMES)),
+  ["dash", "dodge", "hide", "ready", "shove", "disengage"]);
+check("257 not a special action / empty", [specialActionOf("Longsword", NAMES), specialActionOf("", NAMES), specialActionOf(null, NAMES)], [null, null, null]);
+check("258 localized names are used", specialActionOf("Spurt", { ...NAMES, dash: "Spurt" }), "dash");
+check("259 six actions", SPECIAL_ACTIONS.length, 6);
+const tFresh = freshTurn("k");
+check("260 fresh turn: one Action left", actionsLeft(tFresh, 2), 1);
+check("261 one swing of two: the Attack action is begun", actionsLeft(recordSwing(tFresh, { kind: "main" }), 2), 0);
+check("262 Action Surge after two swings: one Action left", actionsLeft(recordSurge(recordSwing(recordSwing(tFresh, { kind: "main" }), { kind: "main" })), 2), 1);
+check("263 Dodge taken: none left", actionsLeft(recordOtherAction(tFresh), 2), 0);
+check("264 off-hand swing does not use the Action", actionsLeft(recordSwing(tFresh, { kind: "offhand" }), 2), 1);
+check("265 garbage turn reads as fresh", actionsLeft(null, 0), 1);
+check("266 Dash/Dodge/Ready record another Action", ["dash", "dodge", "ready", "disengage", "hide"].map(k => otherActionsOf(recordSpecialAction(tFresh, k))), [1, 1, 1, 1, 1]);
+check("267 Shove is one swing of the Attack action", [recordSpecialAction(tFresh, "shove").attackAction.swings, otherActionsOf(recordSpecialAction(tFresh, "shove"))], [1, 0]);
+check("268 Dash adds every speed above 0", dashChanges({ walk: 30, fly: 0, swim: 15, climb: null, burrow: "x", units: "ft" }),
+  [{ key: "system.attributes.movement.walk", type: "add", value: 30 }, { key: "system.attributes.movement.swim", type: "add", value: 15 }]);
+check("269 Dash with no movement data", dashChanges(undefined), []);
+const fx = [
+  { id: "d", statuses: ["dodging"] }, { id: "dash", statuses: [], until: "turnEnd" }, { id: "dis", until: "turnEnd" },
+  { id: "prone", statuses: ["prone"] }, { id: "rage", statuses: [], until: null }
+];
+check("270 turn start ends Dodge only", expiringAt(fx, "turnStart"), ["d"]);
+check("271 turn end ends Dash and Disengage", expiringAt(fx, "turnEnd"), ["dash", "dis"]);
+check("272 nothing / garbage", [expiringAt([], "turnEnd"), expiringAt(null, "turnStart"), expiringAt([null], "turnEnd")], [[], [], []]);
+check("273 damage at 0 HP: one failure", damageAtZero({ hp: 0, max: 44, amount: 7, failures: 0 }), { failures: 1, massive: false });
+check("274 crit at 0 HP: two failures", damageAtZero({ hp: 0, max: 44, amount: 7, failures: 0, critical: true }), { failures: 2, massive: false });
+check("275 capped at 3", damageAtZero({ hp: 0, max: 44, amount: 7, failures: 2, critical: true }), { failures: 3, massive: false });
+check("276 already dead: no change", damageAtZero({ hp: 0, max: 44, amount: 7, failures: 3 }), { failures: null, massive: false });
+check("277 temp HP absorbs it all: no failure", damageAtZero({ hp: 0, temp: 10, max: 44, amount: 7, failures: 0 }), { failures: null, massive: false });
+check("278 temp HP absorbs part: failure", damageAtZero({ hp: 0, temp: 5, max: 44, amount: 7, failures: 1 }), { failures: 2, massive: false });
+check("279 at 0 HP and damage ≥ max: massive flagged, failure still counted", damageAtZero({ hp: 0, max: 20, amount: 20, failures: 0 }), { failures: 1, massive: true });
+check("280 above 0: never a failure; remainder ≥ max is massive (PHB example 6 HP, max 12, 18 dmg)",
+  [damageAtZero({ hp: 6, max: 12, amount: 18 }), damageAtZero({ hp: 6, max: 12, amount: 17 })], [{ failures: null, massive: true }, { failures: null, massive: false }]);
+check("281 monsters, healing and zero ignored", [damageAtZero({ isCharacter: false, hp: 0, amount: 5 }), damageAtZero({ hp: 0, amount: -5 }), damageAtZero({ hp: 0, amount: 0 })],
+  [{ failures: null, massive: false }, { failures: null, massive: false }, { failures: null, massive: false }]);
+const pe = [
+  { uuid: "prone", active: true, temporary: false, statuses: ["prone"] },
+  { uuid: "bless", active: true, temporary: true, statuses: [] },
+  { uuid: "dodging", active: true, temporary: false, statuses: ["dodging"] },
+  { uuid: "off", active: false, temporary: false, statuses: ["poisoned"] },
+  { uuid: "hidden", active: true, temporary: false, concealed: true, statuses: ["x"] },
+  { uuid: "passive", active: true, temporary: false, statuses: [] }
+];
+check("282 portrait adds active status-only effects", portraitExtras(pe), ["prone", "dodging"]);
+check("283 portrait extras on nothing", [portraitExtras([]), portraitExtras(null)], [[], []]);
+check("284 orphan usage card: mine, fresh, nothing rolled or spent", orphanUsage({ mine: true, ageMs: 2000, rolled: false, consumed: false }), true);
+check("285 kept: someone else's / rolled / consumed / sequence / old",
+  [orphanUsage({ mine: false, ageMs: 1, rolled: false, consumed: false }), orphanUsage({ mine: true, ageMs: 1, rolled: true, consumed: false }),
+   orphanUsage({ mine: true, ageMs: 1, rolled: false, consumed: true }), orphanUsage({ mine: true, ageMs: 1, rolled: false, consumed: false, sequence: true }),
+   orphanUsage({ mine: true, ageMs: 10 * 60 * 1000, rolled: false, consumed: false }), orphanUsage({})], [false, false, false, false, false, false]);
+
+/* ── usability Area 2, fixer pass 2: Nick partner, plan summary, dialog dock ─ */
+
+// A5 shape: Fighter 5 (Dual Wielder) with Longsword, Shortsword and Dagger all equipped.
+const a5 = [longsword, shortsword, dagger];
+check("290 Nick partner preferred over a Dual-Wielder longsword (matches the Full Attack plan)",
+  followUps({ turn: after("shortsword", "shortsword"), weapons: a5, enhancedDualWielding: true }),
+  [{ kind: "nick", weaponId: "dagger", free: true }, { kind: "offhand", weaponId: "longsword" }]);
+check("291 …and it is the same weapon extraSwings plans", extraSwings({ main: shortsword, weapons: a5, enhancedDualWielding: true }),
+  [{ weaponId: "dagger", mode: "offhand", kind: "nick" }]);
+check("292 Dual Wielder after Nick: the Bonus-action attack stays (a separate extra attack)",
+  followUps({ turn: recordSwing(after("shortsword"), { kind: "nick", weaponId: "dagger" }), weapons: a5, enhancedDualWielding: true }),
+  [{ kind: "offhand", weaponId: "longsword" }]);
+check("293 Dual Wielder after the Bonus off-hand: Nick still free",
+  followUps({ turn: recordSwing(after("shortsword"), { kind: "offhand", weaponId: "longsword" }), weapons: a5, enhancedDualWielding: true }),
+  [{ kind: "nick", weaponId: "dagger", free: true }]);
+check("294 no Dual Wielder: Nick partner preferred over another Light weapon, one Light attack only",
+  followUps({ turn: after("shortsword"), weapons: [shortsword, W("hatchet", { light: true }), dagger] }),
+  [{ kind: "nick", weaponId: "dagger", free: true }]);
+check("295 no Dual Wielder: Bonus off-hand used → no Nick either",
+  followUps({ turn: recordSwing(after("shortsword"), { kind: "offhand", weaponId: "hatchet" }), weapons: [shortsword, W("hatchet", { light: true }), dagger] }), []);
+check("296 Dual Wielder, Nick dagger only: Nick and Off-hand both with the dagger",
+  followUps({ turn: after("shortsword"), weapons: [shortsword, dagger], enhancedDualWielding: true }),
+  [{ kind: "nick", weaponId: "dagger", free: true }, { kind: "offhand", weaponId: "dagger" }]);
+check("297 Dual Wielder, Bonus used: Nick only", followUps({ turn: after("shortsword"), weapons: a5, enhancedDualWielding: true, bonusFree: false }),
+  [{ kind: "nick", weaponId: "dagger", free: true }]);
+
+const nickPlan = planSequence({ weaponId: "shortsword", count: 2, extras: [{ weaponId: "dagger", mode: "offhand", kind: "nick" }] });
+check("298 plan summary for a Nick pair: 2 of 2 + Nick dagger (never 3 of 2)", planSummary(nickPlan, 2),
+  { left: 2, total: 2, mainIds: ["shortsword"], extras: [{ kind: "nick", weaponId: "dagger" }] });
+check("299 plan summary after one hand swing", planSummary(planSequence({ weaponId: "longsword", count: 2, done: 1 }), 2),
+  { left: 1, total: 2, mainIds: ["longsword"], extras: [] });
+check("300 plan summary: Rogue 1 swing + Nick", planSummary(planSequence({ weaponId: "shortsword", count: 1, extras: [{ weaponId: "scimitar", kind: "nick" }] }), 1),
+  { left: 1, total: 1, mainIds: ["shortsword"], extras: [{ kind: "nick", weaponId: "scimitar" }] });
+check("301 plan summary of nothing", [planSummary([], 2), planSummary(null, 0)],
+  [{ left: 0, total: 2, mainIds: [], extras: [] }, { left: 0, total: 0, mainIds: [], extras: [] }]);
+
+check("302 dock: bottom edge just above the strip, centred", dockRect({ stripTop: 700, height: 300, width: 400, viewW: 1400, viewH: 900 }), { left: 500, top: 392 });
+check("303 dock: a taller window keeps the same bottom edge", dockRect({ stripTop: 700, height: 520, width: 400, viewW: 1400, viewH: 900 }).top + 520, 692);
+check("304 dock: never above the screen top", dockRect({ stripTop: 300, height: 600, width: 400, viewW: 1400, viewH: 900 }).top, 8);
+check("305 dock: a dragged window's left/bottom is reused", dockRect({ stripTop: 700, height: 300, width: 400, viewW: 1400, viewH: 900, last: { left: 100, bottom: 500 } }),
+  { left: 100, top: 200 });
+check("306 dock: clamped inside the viewport", dockRect({ stripTop: 700, height: 300, width: 400, viewW: 1400, viewH: 900, last: { left: 1300, bottom: 2000 } }),
+  { left: 992, top: 592 });
+check("307 dock: no strip measured → above the bottom edge", dockRect({ height: 100, width: 100, viewW: 1000, viewH: 800 }), { left: 450, top: 692 });
+check("308 swing tag only while running", [swingTag({ weapon: "Longsword", current: 2, total: 3, status: "running" }), swingTag({ current: 1, total: 2, status: "paused" })],
+  [{ weapon: "Longsword", i: 2, n: 3, kind: "main" }, null]);
+
+/* ── usability Area 3 re-run, fixer pass 2 ─────────────────────────────────── */
+
+check("309 a Bonus-action feature (Rage) spends the Bonus Action", recordBonusAction(freshTurn(K)).bonusUsed, true);
+check("310 …and nothing else", { ...recordBonusAction(after("glaive")), bonusUsed: false }, after("glaive"));
+check("311 after Rage: no Off-hand, no Hew, no Flurry", followUps({ turn: recordBonusAction(after("shortsword")), weapons: [shortsword, W("hatchet", { light: true })],
+  features: ["monks-focus", "martial-arts"], focus: 3, unarmedId: "unarmed" }), []);
+check("312 Pole Strike button after a glaive swing", followUps({ turn: after("glaive"), weapons: [glaive], poleStrikeId: "pam" }),
+  [{ kind: "pole-strike", weaponId: "pam" }]);
+check("313 no Pole Strike button before attacking / without the feat / once used / Bonus spent",
+  [followUps({ turn: freshTurn(K), weapons: [glaive], poleStrikeId: "pam" }), followUps({ turn: after("glaive"), weapons: [glaive] }),
+   followUps({ turn: recordFollowUp(after("glaive"), "pole-strike"), weapons: [glaive], poleStrikeId: "pam" }),
+   followUps({ turn: after("glaive"), weapons: [glaive], poleStrikeId: "pam", bonusFree: false })], [[], [], [], []]);
+check("314 combat start: round 0 → 1 on the same combatant begins its turn",
+  turnBoundary({ round: 0, turn: 0, combatantId: "a" }, { round: 1, turn: 0, combatantId: "a" }), { ended: null, began: "a" });
+check("315 next turn", turnBoundary({ round: 1, turn: 0, combatantId: "a" }, { round: 1, turn: 1, combatantId: "b" }), { ended: "a", began: "b" });
+check("316 a lone combatant's next round ends and begins its turn", turnBoundary({ round: 1, turn: 0, combatantId: "a" }, { round: 2, turn: 0, combatantId: "a" }),
+  { ended: "a", began: "a" });
+check("317 nothing moved", turnBoundary({ round: 2, turn: 1, combatantId: "b" }, { round: 2, turn: 1, combatantId: "b" }), { ended: null, began: null });
+check("318 pause note: Full Attack / Flurry (Focus paid) / one Bonus follow-up",
+  [pausedNote({ kinds: ["main", "main", "nick"] }), pausedNote({ kinds: ["bonus", "bonus"], paid: true }), pausedNote({ kinds: ["offhand"] }), pausedNote({})],
+  ["main", "flurry", "bonus", "main"]);
+check("319 Steady Aim: advantage for every ability, every Speed 0", [steadyAimChanges().length, steadyAimChanges()[1], steadyAimChanges()[6]],
+  [11, { key: "system.abilities.dex.attack.roll.mode", type: "add", value: 1 }, { key: "system.attributes.movement.walk", type: "override", value: 0 }]);
+check("320 Argon's off-hand slot: shown before, hidden as a duplicate, hidden after Nick or the off-hand attack",
+  [hideOffhandSlot({ turn: after("shortsword"), slotId: "dagger" }), hideOffhandSlot({ turn: after("shortsword"), slotId: "dagger", offered: ["dagger"] }),
+   hideOffhandSlot({ turn: recordSwing(after("shortsword"), { kind: "nick", weaponId: "dagger" }), slotId: "dagger" }),
+   hideOffhandSlot({ turn: recordSwing(after("shortsword"), { kind: "offhand", weaponId: "dagger" }), slotId: "dagger" }),
+   hideOffhandSlot({ turn: null, slotId: null })], [false, true, true, true, false]);
+check("321 drawer above its button, kept inside the row", [drawerLeft({ buttonLeft: 700, hudLeft: 300, hudWidth: 900, panelWidth: 300 }),
+  drawerLeft({ buttonLeft: 1100, hudLeft: 300, hudWidth: 900, panelWidth: 300 }), drawerLeft({ buttonLeft: 100, hudLeft: 300, hudWidth: 900, panelWidth: 300 }),
+  drawerLeft({ buttonLeft: 700, hudLeft: 300, hudWidth: 500, panelWidth: 800 })], [400, 600, 0, 0]);
+
+check("323 drawer on a scaled HUD (Argon at 0.424): above the button, never under the portrait",
+  [drawerLeft({ buttonLeft: 600, hudLeft: 15, hudWidth: 1333, panelWidth: 570, minLeft: 223, scale: 0.424 }),
+   drawerLeft({ buttonLeft: 1300, hudLeft: 15, hudWidth: 1333, panelWidth: 570, minLeft: 223, scale: 0.424 }),
+   drawerLeft({ buttonLeft: 100, hudLeft: 15, hudWidth: 1333, panelWidth: 570, minLeft: 223, scale: 0.424 }),
+   drawerLeft({ buttonLeft: 886, hudLeft: 15, hudWidth: 900, panelWidth: 1200, minLeft: 223, scale: 0.424 }),
+   drawerLeft({ buttonLeft: 886, hudLeft: 15, hudWidth: 1333, panelWidth: 570, minLeft: 223, scale: 0 })],
+  [1380, 1800, 491, 491, 763]);
+
+check("322 Steady Aim after its attack: Speed 0 stays in combat, all gone out of combat",
+  [steadyAimAfterAttack(steadyAimChanges(), { inCombat: true }).map(c => c.key.split(".").pop()), steadyAimAfterAttack(steadyAimChanges())],
+  [["walk", "fly", "swim", "climb", "burrow"], null]);
+
+/* ── usability Area 5 re-run: spells spend their pip; Quickened Spell ─────── */
+
+check("341 which pip: an Action spell, a Bonus spell, a Reaction, a special/none",
+  [pipFor({ activation: "action", isSpell: true, inCombat: true }), pipFor({ activation: "bonus", isSpell: true, inCombat: true }),
+   pipFor({ activation: "reaction", isSpell: true, inCombat: true }), pipFor({ activation: "special", inCombat: true }), pipFor({ activation: null, inCombat: true })],
+  ["action", "bonus", "reaction", null, null]);
+check("342 out of combat no pip; off your turn only a Reaction counts",
+  [pipFor({ activation: "action", isSpell: true }), pipFor({ activation: "action", isSpell: true, inCombat: true, isOwnTurn: false }),
+   pipFor({ activation: "reaction", inCombat: true, isOwnTurn: false })], [null, null, "reaction"]);
+check("343 Quickened: the next 1-Action spell is the Bonus Action; a non-spell Action is not",
+  [pipFor({ activation: "action", isSpell: true, quickened: true, inCombat: true }), pipFor({ activation: "action", isSpell: false, quickened: true, inCombat: true })],
+  ["bonus", "action"]);
+check("344 Quickened is waiting, then the cast spends the Bonus Action and clears it",
+  [recordQuickened(freshTurn(K)).quickened, recordQuickenedCast(recordQuickened(freshTurn(K))).quickened,
+   recordQuickenedCast(recordQuickened(freshTurn(K))).bonusUsed, otherActionsOf(recordQuickenedCast(recordQuickened(freshTurn(K))))],
+  [true, false, true, 0]);
+check("345 a fresh turn and an old flag read as not quickened", [freshTurn(K).quickened, readTurn({ key: K }, K).quickened], [false, false]);
+check("346 spent pips after a rebind: none / an Action spell / a Bonus spell / Action Surge left one Action",
+  [spentPips(freshTurn(K)), spentPips(recordOtherAction(freshTurn(K))), spentPips(recordBonusAction(freshTurn(K))),
+   spentPips(recordOtherAction(recordSurge(freshTurn(K)))), spentPips(after("glaive"))],
+  [{ action: false, bonus: false }, { action: true, bonus: false }, { action: false, bonus: true }, { action: false, bonus: false }, { action: true, bonus: false }]);
+check("347 the Reaction stays spent in the combat it was taken in, until cleared",
+  [reactionSpent({ combatId: "c1" }, "c1"), reactionSpent({ combatId: "c1" }, "c2"), reactionSpent(null, "c1"), reactionSpent({ combatId: "c1" }, null)],
+  [true, false, false, false]);
+check("348 a deleted combat's turn and Reaction flags are stale; another combat's and the out-of-combat turn are not",
+  [core.staleCombatFlags({ turn: { key: "c1:3:cb2" }, reaction: { combatId: "c1" } }, "c1"),
+   core.staleCombatFlags({ turn: { key: "c2:1:cb1" }, reaction: { combatId: "c2" } }, "c1"),
+   core.staleCombatFlags({ turn: { key: "nocombat" }, reaction: null }, "c1"),
+   core.staleCombatFlags({ turn: { key: "c10:1:x" } }, "c1"),
+   core.staleCombatFlags({}, "c1"), core.staleCombatFlags(null, "c1"), core.staleCombatFlags({ turn: { key: "c1:1:x" } }, null)],
+  [["turn", "reaction"], [], [], [], [], [], []]);
+
+/* ── usability Area 10 fixer pass ─────────────────────────────────────────── */
+
+check("349 orphan turn / Reaction flags: a combat that no longer exists; live, out-of-combat and garbled flags stay",
+  [core.orphanCombatFlags({ turn: { key: "gone:3:cb" }, reaction: { combatId: "gone" } }, ["live"]),
+   core.orphanCombatFlags({ turn: { key: "live:1:cb" }, reaction: { combatId: "live" } }, ["live"]),
+   core.orphanCombatFlags({ turn: { key: "nocombat" }, reaction: null }, []),
+   core.orphanCombatFlags({ turn: { key: "live:1:cb" }, reaction: { combatId: "gone" } }, new Set(["live"])),
+   core.orphanCombatFlags({ turn: { key: "junk" } }, []), core.orphanCombatFlags(null, []), core.orphanCombatFlags({}, null)],
+  [["turn", "reaction"], [], [], ["reaction"], [], [], []]);
+{
+  const plan = planSequence({ weaponId: "shortsword", count: 2, extras: [{ weaponId: "dagger" }] });
+  let x = sequenceReducer(null, { type: "start", swings: plan });
+  x = sequenceReducer(x, { type: "cancel" });
+  const toDagger = sequenceReducer(x, { type: "swap", weaponId: "dagger", extras: [] });
+  check("350 swap onto the Nick weapon drops its planned Nick swing (no Dagger x3)", toDagger.swings.map(y => [y.weaponId, y.kind]),
+    [["dagger", "main"], ["dagger", "main"]]);
+  const toScim = sequenceReducer(x, { type: "swap", weaponId: "scimitar", extras: [{ weaponId: "dagger", mode: "offhand", kind: "nick" }] });
+  check("351 swap to another Light weapon keeps a Nick swing with the partner it earns", toScim.swings.map(y => [y.weaponId, y.kind]),
+    [["scimitar", "main"], ["scimitar", "main"], ["dagger", "nick"]]);
+  check("352 swap without extras keeps the old plan (follow-ups, callers that don't replan)",
+    sequenceReducer(x, { type: "swap", weaponId: "dagger" }).swings.map(y => y.weaponId), ["dagger", "dagger", "dagger"]);
+  let y = sequenceReducer(null, { type: "start", swings: plan });
+  y = sequenceReducer(sequenceReducer(y, { type: "rolled" }), { type: "rolled" });
+  check("353 paused on the Nick swing itself: a swap changes nothing", sequenceReducer(y, { type: "swap", weaponId: "scimitar", extras: [] }).swings.map(z => z.weaponId),
+    ["shortsword", "shortsword", "dagger"]);
+  const rolledNick = { index: 2, swings: [{ weaponId: "a", kind: "nick" }, { weaponId: "b", kind: "main" }, { weaponId: "b", kind: "main" }] };
+  check("354 a Nick swing already rolled: no second one is planned", core.replanExtras(rolledNick, [{ weaponId: "c" }]).map(z => z.weaponId), ["a", "b", "b"]);
+}
+check("355 clampToView: a window below the bottom edge moves up; one that fits stays",
+  [core.clampToView({ left: 1500, top: 900, width: 400, height: 300, viewW: 1600, viewH: 1000 }),
+   core.clampToView({ left: 100, top: 100, width: 400, height: 300, viewW: 1600, viewH: 1000 }),
+   core.clampToView({ left: -20, top: -5, width: 400, height: 300, viewW: 1600, viewH: 1000 }),
+   core.clampToView({ left: 0, top: 0, width: 400, height: 300, viewW: 0, viewH: 0 })],
+  [{ left: 1192, top: 692 }, null, { left: 8, top: 8 }, null]);
 
 /* ── report ───────────────────────────────────────────────────────────────── */
 

@@ -70,7 +70,7 @@ import { subjectFacts } from "./facts.mjs";
 import {
   rollableLore, loreOfferable, loreOutcome, tierOf, studyOffsetOf, STUDY_OFFSET_FLAG, LORE_FLAG,
   planStep, identificationLadder, identifiedKey, holdResolved, combineAdvantage,
-  ATTR_BELIEFS_SETTING, KNOWLEDGE_SETTING, REGISTRY_SETTING, touchesFlagScope
+  ATTR_BELIEFS_SETTING, KNOWLEDGE_SETTING, REGISTRY_SETTING, touchesFlagScope, tablePCs, switchLabels
 } from "./known-core.mjs";
 
 const { ApplicationV2 } = foundry.applications.api;
@@ -157,10 +157,28 @@ export class InspectPreview extends ApplicationV2 {
     return [{ id: "hypo", name: "Hypothetical character" }, ...this.playerCharacters().map(a => ({ id: a.id, name: a.name }))];
   }
 
-  /** The table's PCs — `rollerOptions` without the hypothetical row. */
+  /**
+   * The table's PCs — `rollerOptions` without the hypothetical row. The rule is known-core's
+   * `tablePCs` (assigned characters; no transformed copies, piles or markers); this only reads
+   * the documents into its plain shape.
+   */
   playerCharacters() {
-    return game.actors.filter(a => a.type === "character" && !game.itempiles?.API?.isValidItemPile?.(a)
-      && !/marker|crowd|hotspot/i.test(a.name));
+    const users = (game.users?.contents ?? []).map(u => ({ id: u.id, isGM: u.isGM, characterId: u.character?.id ?? null }));
+    const players = (game.users?.contents ?? []).filter(u => !u.isGM);
+    const actors = game.actors.filter(a => a.type === "character");
+    const rows = actors.map(a => ({
+      id: a.id,
+      name: a.name,
+      type: a.type,
+      pile: !!game.itempiles?.API?.isValidItemPile?.(a),
+      polymorphed: a.getFlag?.("dnd5e", "isPolymorphed") === true,
+      playerOwnerIds: players.filter(u => a.testUserPermission(u, "OWNER")).map(u => u.id)
+    }));
+    const keep = new Set(tablePCs(rows, users).map(r => r.id));
+    const pcs = actors.filter(a => keep.has(a.id));
+    const labels = switchLabels(pcs.map(a => a.name));
+    this.pcLabels = new Map(pcs.map((a, i) => [a.id, labels[i]]));
+    return pcs;
   }
 
   /**
@@ -509,7 +527,7 @@ export class InspectPreview extends ApplicationV2 {
    */
   switchState(spec, pc) {
     const st = factStatus(spec, pc);
-    const name = firstName(pc.name);
+    const name = this.pcLabels?.get(pc.id) ?? firstName(pc.name);
     const rolled = st.total != null ? f("known.share.rolled", { total: st.total, dc: st.dc ?? "?" }) : "";
     const tier = spec.ns === "kind" && st.tier != null ? f("known.share.sw.tier", { tier: st.tier }) : "";
     const by = st.from && st.from !== "gm" ? game.actors.get(st.from)?.name ?? null : null;

@@ -801,6 +801,41 @@ function focusWarning(actor, cls) {
   return `no ${miss.label} — the ${cls.name} casts through one: pass startingEquipment: "A"${opts}`;
 }
 
+/**
+ * A Monk's weapons through Martial Arts' own enchant activities ("Master Simple Weapon", "Master
+ * Light Martial Weapon"; dnd5e's applyEnchantment, the same as using them from the sheet). Without
+ * it a new Monk's Quarterstaff rolled STR and its own die until the player found that activity
+ * (usability Area 10, U-3-15). dnd5e's canEnchant decides which weapons qualify; a weapon already
+ * enchanted, and natural weapons (Unarmed Strike), are left alone. The dry run names them.
+ */
+async function enchantMartialArts(actor, report, ghost) {
+  const ma = actor.items.find(i => i.system?.identifier === "martial-arts");
+  if (!ma) return [];
+  const acts = [...(ma.system?.activities ?? [])].filter(a => a.type === "enchant" && typeof a.canEnchant === "function");
+  if (!acts.length) return [];
+  const done = [];
+  for (const w of actor.items.filter(i => i.type === "weapon" && i.system?.type?.value !== "natural")) {
+    if (w.effects?.some?.(e => e.isAppliedEnchantment)) continue;
+    let act = null;
+    try { act = acts.find(a => a.canEnchant(w) === true) ?? null; } catch { act = null; }
+    const profile = act?.availableEnchantments?.[0]?._id ?? act?.effects?.[0]?._id ?? null;
+    if (!act || !profile) continue;
+    if (!ghost) {
+      try {
+        if (!(await act.applyEnchantment(profile, w, { strict: false }))) continue;
+      } catch (err) {
+        report.warnings.push(`Martial Arts enchantment on ${w.name} failed: ${err?.message ?? err}`);
+        continue;
+      }
+    }
+    done.push(w.name);
+  }
+  if (done.length) {
+    (report.notes ??= []).push(`Martial Arts enchantment ${ghost ? "to apply" : "applied"}: ${done.join(", ")} (DEX and the Martial Arts die)`);
+  }
+  return done;
+}
+
 /* ── build ─────────────────────────────────────────────────────────────── */
 
 /**
@@ -850,6 +885,7 @@ async function runBuild(actor, w, resolved, report, ghost) {
   }
   const focus = focusWarning(actor, cls);
   if (focus) report.warnings.push(focus);
+  report.enchanted = await enchantMartialArts(actor, report, ghost);
 
   actor.reset();
   report.summary = summarise(actor);

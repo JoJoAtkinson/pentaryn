@@ -26,7 +26,7 @@ import {
   weaponShape, weaponsOf, featuresOf, countFor, multiattackOf, combatContext, turnOf, updateTurn, newTurn, attackActivityOf,
   chosenWeapon
 } from "./shapes.mjs";
-import { taggedKind, runSwings, runFollowUp, fullAttackPlan, running, abortFor } from "./sequence.mjs";
+import { taggedKind, forgetRoll, runSwings, runFollowUp, fullAttackPlan, running, abortFor } from "./sequence.mjs";
 import { installRiders, report as riderReport, rollRider, offersFor, isReckless, setReckless } from "./riders.mjs";
 import { installOffhand, resetOffhandMode, seedAll, seedWeaponSets } from "./offhand.mjs";
 
@@ -61,7 +61,10 @@ function kindOf(activity, attackMode) {
 
 function onPreRollAttack(config) {
   const activity = config?.subject;
-  if (activity?.type === "attack" && activity.uuid) lastTag.set(activity.uuid, taggedKind(activity.uuid));
+  if (activity?.type === "attack" && activity.uuid) {
+    lastTag.set(activity.uuid, taggedKind(activity.uuid));
+    forgetRoll(activity.uuid);            // an expectRoll covers one roll only
+  }
 }
 
 async function onPostRollAttack(rolls, { subject } = {}) {
@@ -108,6 +111,44 @@ async function onPostUseActivity(activity) {
     if (ctx.inCombat && ctx.isOwnTurn) await updateTurn(actor, core.recordSurge);
     return;
   }
+  // Quickened Spell (usability Area 5 re-run, S5): the next 1-Action spell this turn is the Bonus Action.
+  if (ident === "quickened-spell") {
+    const ctx = combatContext(actor);
+    if (setting("quickenedSpell") && ctx.inCombat && ctx.isOwnTurn) await updateTurn(actor, core.recordQuickened);
+    return;
+  }
+  // A Reaction (Counterspell, Shield, Hellish Rebuke…) spends the Reaction pip on any turn: Argon's
+  // item buttons, which every spell in Cast Spell is, never spent it (usability Area 5 re-run, S14).
+  if (activity.activation?.type === "reaction") {
+    if (!setting("spellPips") || (activity.type === "attack" && weaponLike(activity))) return;
+    const ctx = combatContext(actor);
+    if (core.pipFor({ activation: "reaction", inCombat: ctx.inCombat, isOwnTurn: ctx.isOwnTurn }) !== "reaction") return;
+    await actor.setFlag(MOD, "reaction", { combatId: ctx.combat?.id ?? null }).catch(() => null);
+    Hooks.callAll("pentarynCombat.reaction", actor, activity);
+    return;
+  }
+  // A 1-Action spell after Quickened Spell: the Bonus Action, not an Action.
+  if (activity.activation?.type === "action" && item?.type === "spell" && setting("quickenedSpell")) {
+    const ctx = combatContext(actor);
+    const pip = core.pipFor({ activation: "action", isSpell: true, quickened: !!turnOf(actor).quickened, inCombat: ctx.inCombat, isOwnTurn: ctx.isOwnTurn });
+    if (pip === "bonus") {
+      await updateTurn(actor, core.recordQuickenedCast);
+      ui.notifications?.info?.(game.i18n.format("PENTARYN_COMBAT.Turn.QuickenedCast", { spell: item.name }));
+      Hooks.callAll("pentarynCombat.bonusAction", actor, activity);
+      return;
+    }
+  }
+  // A Bonus-action feature or spell (Rage, Steady Aim, Divine Smite, Lay on Hands…) spends the
+  // Bonus Action: Argon spends its pip only for buttons bound to an activity, and an item button
+  // (most features) never did (usability Area 3). A Bonus-action attack is counted on its roll.
+  if (activity.activation?.type === "bonus") {
+    if (!setting("bonusPip") || (activity.type === "attack" && weaponLike(activity))) return;
+    const ctx = combatContext(actor);
+    if (!ctx.inCombat || !ctx.isOwnTurn) return;
+    await updateTurn(actor, core.recordBonusAction);
+    Hooks.callAll("pentarynCombat.bonusAction", actor, activity);
+    return;
+  }
   if (activity.activation?.type !== "action") return;
   if (activity.type === "attack" && weaponLike(activity)) return;   // counted on the roll
   if (/^multiattack\b/i.test(item?.name ?? "")) return;
@@ -120,6 +161,8 @@ async function onPostUseActivity(activity) {
     return;
   }
   await updateTurn(actor, core.recordOtherAction);
+  // Argon's single Action pip (an actor with one swing): its item buttons never spent it (Area 5 re-run, S5).
+  Hooks.callAll("pentarynCombat.otherAction", actor, activity);
 }
 
 /** Hew: a creature one of my swings this turn targeted dropped to 0 HP. */
@@ -216,7 +259,11 @@ Hooks.once("init", () => {
 Hooks.once("setup", () => {
   Hooks.on("dnd5e.preRollAttackV2", (config) => { try { onPreRollAttack(config); } catch (err) { console.warn(`${MOD} | swing tag skipped`, err); } });
   Hooks.on("dnd5e.postRollAttack", (rolls, data) => { onPostRollAttack(rolls, data).catch(err => console.warn(`${MOD} | swing count failed`, err)); });
-  Hooks.on("dnd5e.postUseActivity", (activity) => { onPostUseActivity(activity).catch(err => console.warn(`${MOD} | action count failed`, err)); });
+  Hooks.on("dnd5e.postUseActivity", (activity, usage, results) => {
+    // An area spell whose placement was cancelled was not cast (pentaryn-aoe refunds it): no pip, no Action.
+    if (usage?.create?.measuredTemplate && activity?.target?.template?.type && !(results?.templates?.length) && canvas?.scene) return;
+    onPostUseActivity(activity).catch(err => console.warn(`${MOD} | action count failed`, err));
+  });
   Hooks.on("dnd5e.preRollDamageV2", (config) => { try { onPreRollDamage(config); } catch (err) { console.warn(`${MOD} | weapon bonus skipped`, err); } });
   Hooks.on("updateActor", onUpdateActor);
   installRiders();

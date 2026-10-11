@@ -163,6 +163,14 @@ DOM it hooks (`.sidebar > .card`, the inventory `.attunement` counter, the
 aria-label reads `DND5E.EFFECT.Suppressed.Hint`, because 6.0 removed
 `DND5E.EffectUnavailableInfo`.
 
+**Item tooltip guard (0.2.1, U-8-5).** dnd5e 6.0.6 positions an item tooltip a frame
+after its content loads (`Tooltips5e#_positionItemTooltip` → `game.tooltip._setAnchor`).
+If the hovered row was re-rendered away in that frame (a take, an attune, a light),
+core has already dropped the anchor and every such hover logged *Cannot read properties
+of null (reading 'getBoundingClientRect')*. On `ready` the module wraps that method to
+skip when there is no anchor. Adjustment row `dnd5e-item-tooltip-anchor`; retire it when
+dnd5e checks `game.tooltip.element` itself.
+
 ## Install
 
 ```

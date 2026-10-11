@@ -352,6 +352,72 @@ adjustments:
     retire_class: guarded
     check: make foundry-combat-check
 
+  - id: combat-argon-special-actions
+    packages: [enhancedcombathud-dnd5e, core]
+    modules: [pentaryn-combat]
+    files: [foundry/module/pentaryn-combat/turnflow.mjs]
+    markers: ["wrapSpecial", "createChatMessage", "combatTurnChange"]
+    what: wraps the _onLeftClick of Argon dnd5e's Dash / Disengage / Dodge / Hide / Ready / Shove buttons per instance to spend the Action pip and the swing pips, add a Dash (Speed) / Disengage effect for the turn, keep Dodging on, roll Stealth DC 15 for Hide; the active GM deletes Dodging at its owner's turn start and those effects at turn end (setting specialActions)
+    why: Argon passes a temporary Item with no activation to consumeActionEconomy, so nothing was spent; its Dash / Disengage only post a card; v14 status effects have no duration, so Dodging never ended
+    native_when: Argon dnd5e spends the Action for its special actions and applies Dash movement / timed Dodge, or dnd5e ships Dash / Dodge / Disengage / Hide as activities with effects
+    retire_class: guarded
+    check: make foundry-combat-check
+
+  - id: combat-argon-reaction-slot
+    packages: [enhancedcombathud-dnd5e]
+    modules: [pentaryn-combat]
+    files: [foundry/module/pentaryn-combat/turnflow.mjs, foundry/module/pentaryn-combat/sequence.mjs]
+    markers: ["wrapReactionSlot", "expectRoll"]
+    what: 'the Reaction bar''s weapon-set slot gets an instance label "Opportunity Attack: <weapon>" and a wrapped _onLeftClick that tags the next attack roll as a reaction, gives back the Action pip Argon spent and spends the Reaction pip (setting reactionSlot)'
+    why: Argon spends the weapon's own activation (the Action) on your own turn, and pentaryn counted the swing against the Attack action
+    native_when: Argon labels the reaction weapon as an Opportunity Attack and spends the Reaction for it
+    retire_class: guarded
+    check: make foundry-combat-check
+
+  - id: combat-argon-portrait-conditions
+    packages: [enhancedcombathud, core]
+    modules: [pentaryn-combat]
+    files: [foundry/module/pentaryn-combat/turnflow.mjs]
+    markers: ["patchPortrait", "PortraitPanel"]
+    what: wraps CONFIG.ARGON.PORTRAIT.PortraitPanel.prototype.getEffects to add active status-only effects (Prone, Poisoned, Dodging…) with the condition's rules page as the tooltip (setting portraitConditions)
+    why: Argon lists actor.temporaryEffects, and v14's isTemporary no longer counts an effect with statuses but no duration
+    native_when: Argon's portrait lists status conditions again
+    retire_class: safe
+    check: make foundry-combat-check
+
+  - id: combat-argon-hud-follows
+    packages: [enhancedcombathud, core]
+    modules: [pentaryn-combat]
+    files: [foundry/module/pentaryn-combat/turnflow.mjs]
+    markers: ["ui.ARGON.bind", "token.control({ releaseOthers: true })"]
+    what: binds Argon to the one token left controlled after a group release, and controls a player's own combatant's token at its turn start when Argon is on (setting hudFollows); a player's targets are released when their turn ends (setting clearTargetsAfterTurn)
+    why: clicking one token of a selected group never fires controlToken(true) for it, so Argon stayed on another token; Argon does not follow the turn
+    native_when: Argon follows the active combatant / the remaining controlled token
+    retire_class: guarded
+    check: make foundry-combat-check
+
+  - id: combat-dnd5e-roll-dialog-esc
+    packages: [dnd5e, core]
+    modules: [pentaryn-combat]
+    files: [foundry/module/pentaryn-combat/turnflow.mjs]
+    markers: ["roll-configuration", "closeAttackRollConfigurationDialog"]
+    what: Esc closes a dnd5e roll-configuration dialog whose autofocused button holds focus (setting escRollDialog); closing an attack roll dialog unrolled deletes its own usage card when nothing was consumed and nothing rolled under it (setting tidyCancelledAttacks)
+    why: core's KeyboardManager ignores keybindings while a form button has focus, and dnd5e posts the usage card before the attack dialog opens
+    native_when: dnd5e's roll dialog stops autofocusing a button, or posts the usage card only after the roll
+    retire_class: safe
+    check: make foundry-combat-check
+
+  - id: combat-dnd5e-damage-at-zero
+    packages: [dnd5e]
+    modules: [pentaryn-combat]
+    files: [foundry/module/pentaryn-combat/turnflow.mjs]
+    markers: ["dnd5e.preApplyDamage", "death.failure"]
+    what: dnd5e.preApplyDamage adds one Death Saving Throw failure (two from a crit) to a character at 0 HP taking damage, and whispers massive damage to the GM (setting deathSaveDamage)
+    why: dnd5e 6.0.6 does not apply the PHB's Damage at 0 Hit Points rule
+    native_when: dnd5e applies death save failures for damage at 0 HP
+    retire_class: safe
+    check: make foundry-combat-check
+
   - id: riders-argon-ritual-adept-list
     packages: [enhancedcombathud, enhancedcombathud-dnd5e, dnd5e]
     modules: [pentaryn-riders]
@@ -379,7 +445,7 @@ adjustments:
     modules: [pentaryn-riders]
     files: [foundry/module/pentaryn-riders/argon-tidy.mjs]
     markers: ["collapseAllPanels", "dnd5e.preCreateMeasuredTemplate"]
-    what: calls ui.ARGON.collapseAllPanels() on dnd5e.preCreateMeasuredTemplate, so an open Cast Spell panel is closed before the area follows the mouse
+    what: calls ui.ARGON.collapseAllPanels() on dnd5e.preCreateMeasuredTemplate and dnd5e.preSummon (Area 6 re-run), so an open Cast Spell panel is closed before the area or summon follows the mouse
     why: the open panel covered the battlefield and swallowed the placement click (it cast the spell button behind it)
     native_when: Argon collapses its panels (or hides the HUD) during dnd5e area placement, or dnd5e minimises it like a sheet
     retire_class: safe
@@ -406,3 +472,477 @@ adjustments:
     native_when: dnd5e tracks summoned tokens as concentration dependents (flags.dnd5e.dependents / dependentOn on tokens), or labels its card buttons
     retire_class: guarded
     check: make foundry-riders-check
+
+  - id: combat-core-scrolling-text-guard
+    packages: [core]
+    modules: [pentaryn-combat]
+    files: [foundry/module/pentaryn-combat/turnflow.mjs]
+    markers: ["createScrollingText", "PreciseText"]
+    what: InterfaceCanvasGroup#createScrollingText returns at once in a hidden tab, and PreciseText#destroy is a no-op on an already-destroyed text (setting scrollingTextGuard)
+    why: core 14.369 destroys a floating text a second time when a canvas redraw tore the layer down while the text's animation waited (a background tab gets no frames), logging "Cannot read properties of null (reading 'off')" in bursts on the GM tab
+    native_when: core checks text.destroyed before destroying in createScrollingText, or skips floating text while the document is hidden
+    retire_class: safe
+    check: make foundry-combat-check
+
+  - id: combat-dnd5e-roll-dialog-dock
+    packages: [dnd5e, core]
+    modules: [pentaryn-combat]
+    files: [foundry/module/pentaryn-combat/strip.mjs]
+    markers: ["renderRollConfigurationDialog", "renderRollResolver"]
+    what: while a Full Attack / follow-up runs, dnd5e roll-configuration windows and core's RollResolver are placed with their bottom edge just above the swing strip (a window the player drags sets the place for the next) and their title gains "swing i of n" (setting dockRollDialogs)
+    why: the windows opened centred, covered the strip's Adv / Dis / Quick / Stop and moved their Normal button between swings; neither names the swing
+    native_when: dnd5e lets the roll config pass a window position and subtitle (dialog.options.position / window.subtitle) that the sequence could set per swing
+    retire_class: safe
+    check: make foundry-combat-check
+
+  - id: combat-argon-offhand-slot-dup
+    packages: [enhancedcombathud, enhancedcombathud-dnd5e]
+    modules: [pentaryn-combat]
+    files: [foundry/module/pentaryn-combat/hud.mjs]
+    markers: ["hideDuplicateSlots", "_isWeaponSet"]
+    what: hides Argon's Bonus-bar weapon-set slot while our Off-hand follow-up for the same weapon is offered, and once Nick or the off-hand attack used the Light extra attack this turn (setting followUps)
+    why: the bar showed a plain "Longsword" next to our Off-hand Longsword button, a duplicate-looking button that does not preset Offhand
+    native_when: Argon's off-hand slot presets the Offhand attack mode and appears only after a Light attack
+    retire_class: safe
+    check: make foundry-combat-check
+
+  - id: combat-argon-picker-cue-position
+    packages: [enhancedcombathud]
+    modules: [pentaryn-combat]
+    files: [foundry/module/pentaryn-combat/hud.mjs]
+    markers: ["ech-target-picker", "MutationObserver"]
+    what: places Argon's new "0/1 Targets" cursor label at the last pointer position with a starting text (setting skipPickerGuide)
+    why: Argon creates the label empty at the page's top-left and moves it only on the first mousemove, so the cue sat in the corner
+    native_when: Argon's TargetPicker positions and fills its label in init()
+    retire_class: safe
+    check: make foundry-combat-check
+
+  - id: combat-argon-tooltip-refresh
+    packages: [enhancedcombathud]
+    modules: [pentaryn-combat]
+    files: [foundry/module/pentaryn-combat/hud.mjs]
+    markers: ["refreshOwnTooltip", "bindTooltipLeave"]
+    what: our HUD buttons re-render an open Argon tooltip when the turn flag changes, close it on mouseleave, and any Argon tooltip closes when a roll window opens
+    why: Argon builds the tooltip once on mouseenter and its own mouseleave is commented out, so the Full Attack tooltip showed stale counts and lingered over the roll window
+    native_when: Argon closes tooltips on mouseleave and refreshes tooltip data on component re-render
+    retire_class: safe
+    check: make foundry-combat-check
+
+  - id: combat-argon-item-button-bonus-pip
+    packages: [enhancedcombathud-dnd5e, dnd5e]
+    modules: [pentaryn-combat]
+    files: [foundry/module/pentaryn-combat/combat.mjs, foundry/module/pentaryn-combat/hud.mjs]
+    markers: ["pentarynCombat.bonusAction", "recordBonusAction"]
+    what: a Bonus-action activity that is not an attack (Rage, Steady Aim, Divine Smite, Lay on Hands, a Bonus-action spell), used on your own turn in combat, marks the turn's Bonus Action used and greys Argon's Bonus pip (setting bonusPip)
+    why: Argon dnd5e's DND5eItemButton._onLeftClick calls consumeActionEconomy only for activity-bound buttons; an item button returns item.use() early and spends no pip, so the Bonus pip stayed 1/1 and Off-hand / Flurry / Hew stayed on offer after Rage
+    native_when: Argon dnd5e spends the action economy after item.use() as it does after activity.use()
+    retire_class: safe
+    check: make foundry-combat-check
+
+  - id: combat-dnd5e-self-effect-apply
+    packages: [dnd5e]
+    modules: [pentaryn-combat]
+    files: [foundry/module/pentaryn-combat/turnflow.mjs]
+    markers: ["effect-application", "_applyEffectToActor"]
+    what: after a self-target activity with exactly one applicable effect is used (Rage), its effect is applied to the user through dnd5e's own EffectApplicationElement#_applyEffectToActor, as the chat card's Apply would (setting selfEffects)
+    why: Rage took a third click (Apply on the card) to switch its effect on; Frenzy's and the GM's view of the rage depend on it
+    native_when: dnd5e applies self-target activity effects automatically on use
+    retire_class: guarded
+    check: make foundry-combat-check
+
+  - id: combat-dnd5e-steady-aim-effect
+    packages: [dnd5e]
+    modules: [pentaryn-combat]
+    files: [foundry/module/pentaryn-combat/turnflow.mjs, foundry/module/pentaryn-combat/combat-core.mjs]
+    markers: ["steadyAimChanges", "steady-aim"]
+    what: using Steady Aim adds a "Steady Aim" effect (every ability's attack.roll.mode +1, every Speed 0), removed after the next attack roll or at the end of the turn (setting steadyAim)
+    why: the PHB Steady Aim item has no effect; the player had to remember to click Advantage and Speed 0 was not shown
+    native_when: the PHB Steady Aim item carries an effect that grants Advantage on the next attack and sets Speed 0
+    retire_class: safe
+    check: make foundry-combat-check
+
+  - id: combat-argon-drawer-near-button
+    packages: [enhancedcombathud]
+    modules: [pentaryn-combat]
+    files: [foundry/module/pentaryn-combat/turnflow.mjs]
+    markers: ["renderButtonPanelButtonArgonComponent", "drawerLeft"]
+    what: each Argon drawer panel's toggle is wrapped per instance and the open drawer gets a `left` that puts it above its own button, kept inside the action row (setting drawerNearButton)
+    why: Argon's .features-container is absolutely placed at margin-left 0, so Use Feature / Cast Spell opened ~370 px from their Bonus-bar button, partly under the portrait
+    native_when: Argon positions a drawer relative to the button that opened it
+    retire_class: safe
+    check: make foundry-combat-check
+
+  - id: combat-core-chat-notify-hidden-tab
+    packages: [core]
+    modules: [pentaryn-combat]
+    files: [foundry/module/pentaryn-combat/turnflow.mjs]
+    markers: ["ChatLog", "notify"]
+    what: ChatLog#notify posts no chat-card pop-up while the document is hidden; core's unread pip lights instead (setting scrollingTextGuard)
+    why: core 14.369 #postNotification awaits an animation that a hidden tab does not finish; a card deleted meanwhile leaves querySelector null and logs "Cannot set properties of null (setting 'hidden')" in bursts on the GM tab
+    native_when: core's #postNotification checks the pop-up element still exists, or skips pop-ups while the document is hidden
+    retire_class: safe
+    check: make foundry-combat-check
+
+  - id: combat-core-roll-resolver-focus
+    packages: [core]
+    modules: [pentaryn-combat]
+    files: [foundry/module/pentaryn-combat/turnflow.mjs]
+    markers: ["renderRollResolver", "firstEmptyBox"]
+    what: the RollResolver's first empty box is focused on render, and a digit typed with no field focused while a resolver is open goes into it, never to core keybindings (setting dockRollDialogs)
+    why: the resolver's autofocus did not always hold, so manual dice typed on the canvas fired pentaryn-ties' digit hotkeys
+    native_when: core's RollResolver keeps focus on its first unfilled input
+    retire_class: safe
+    check: make foundry-combat-check
+
+  - id: core-token-swap-no-animation
+    packages: [core, dnd5e]
+    modules: [pentaryn-transform]
+    files: [foundry/module/pentaryn-transform/transform.mjs, foundry/module/pentaryn-transform/transform-core.mjs]
+    markers: ["isBodySwap", "settleTokens"]
+    what: a token update that swaps the body (dnd5e transformInto / revertOriginalForm, or our restore of tokens on other scenes) gets animate:false in preUpdateToken, and the actor's tokens are stopAnimation({reset:true})-settled before dnd5e reads them
+    why: core's Token#animateFrame writes in-flight animation values back onto the TokenDocument; in a tab whose canvas is not ticking the animation never ends, so the document kept the first form's art/size after a chain of shifts and dnd5e saved those stale prepared values as previousTokenData (Area 4 D4)
+    native_when: core stops writing animation state into the TokenDocument's prepared data, or dnd5e swaps tokens with animate:false and reads previousTokenData from _source
+    retire_class: guarded
+    check: make foundry-transform-check
+
+  - id: combat-argon-pip-settle
+    packages: [enhancedcombathud]
+    modules: [pentaryn-combat]
+    files: [foundry/module/pentaryn-combat/turnflow.mjs]
+    markers: ["_pcSettles"]
+    what: Argon's ActionPanel.prototype.updateActionUse runs a second time whenever its first run rebuilt the pips, so every caller (Argon's own updateActor handler included) leaves the used pips greyed
+    why: updateActionUse rebuilds the pip elements when their count changed (an empty container mid-render) and then marks the old, detached list; after Starry Form the Bonus pip stayed lit with isActionUsed true (Area 4 D5)
+    native_when: Argon marks the pips it just built (re-reads the container's children after rebuilding)
+    retire_class: safe
+    check: make foundry-combat-check
+
+  - id: aoe-argon-handle-bind
+    packages: [enhancedcombathud]
+    modules: [pentaryn-aoe]
+    files: [foundry/module/pentaryn-aoe/areas.mjs, foundry/module/pentaryn-aoe/core.mjs]
+    markers: ["guardArgonBind", "isHandleTarget"]
+    what: an instance wrap of ui.ARGON.bind ignores an area handle token (or the handle actor), so the HUD stays on the caster while a player drags a spell area
+    why: dragging a handle controls it and Argon's controlToken hook bound the HUD to the handle actor (a 0/0 HP skull bar); the caster had to click their own token again (Area 4 D10)
+    native_when: Argon offers a filter for which tokens it binds to, or skips tokens whose actor has no HP / is flagged as a prop
+    retire_class: safe
+    check: make foundry-aoe-check
+
+  - id: aoe-core-region-delete-update-race
+    packages: [core]
+    modules: [pentaryn-aoe]
+    files: [foundry/module/pentaryn-aoe/areas.mjs, foundry/module/pentaryn-aoe/core.mjs]
+    markers: ["stillListing"]
+    what: when a spell-area region is deleted, its handle token is deleted only after core's active-GM `_regions` update has dropped the region from it (polled, at most 1.5 s)
+    why: core's RegionDocument._onDeleteOperation sends a noHook `_regions` update for every token inside the deleted region; deleting the handle first made the server log "undefined id [...] does not exist in the EmbeddedCollection" (Area 4 D10)
+    native_when: core skips the `_regions` update for tokens being deleted in the same tick, or tolerates an update to a just-deleted token
+    retire_class: safe
+    check: make foundry-aoe-check
+
+  # usability Area 5 re-run (sorcerer), fixer pass
+  - id: combat-argon-item-button-spell-pips
+    packages: [enhancedcombathud-dnd5e, dnd5e]
+    modules: [pentaryn-combat]
+    files: [foundry/module/pentaryn-combat/combat.mjs, foundry/module/pentaryn-combat/hud.mjs, foundry/module/pentaryn-combat/turnflow.mjs]
+    markers: ["pentarynCombat.otherAction", "pentarynCombat.reaction", "restorePips"]
+    what: an Action spell or feature used on your turn greys Argon's single Action pip, a Reaction (Counterspell, Shield) greys the Reaction pip on any turn and comes back at the start of your turn, and a re-bound HUD or a new round repaints the pips the turn flag says were spent (setting spellPips)
+    why: Argon dnd5e's DND5eItemButton._onLeftClick calls consumeActionEconomy only for activity-bound buttons; every spell in Cast Spell is an item button, so Fire Bolt, Fireball, Scorching Ray and Counterspell spent no pip, and Argon relights pips only per round
+    native_when: Argon dnd5e spends the action economy after item.use() as it does after activity.use(), and restores pips on bind
+    retire_class: safe
+    check: make foundry-combat-check
+
+  - id: combat-quickened-spell-bonus-pip
+    packages: [dnd5e]
+    modules: [pentaryn-combat]
+    files: [foundry/module/pentaryn-combat/combat.mjs, foundry/module/pentaryn-combat/combat-core.mjs]
+    markers: ["quickened-spell", "recordQuickenedCast"]
+    what: 'using Quickened Spell on your turn makes the next 1-Action spell spend the Bonus pip and leave the Action free, with a "Quickened: X is your Bonus Action" notice (setting quickenedSpell)'
+    why: dnd5e 6.0.6's Quickened Spell is a bare utility that spends 2 points; the cast's activation stays "action", so nothing linked the two (usability Area 5, S5)
+    native_when: dnd5e applies Metamagic to the next cast (an activation override on the usage)
+    retire_class: guarded
+    check: make foundry-combat-check
+
+  - id: combat-helper-token-control
+    packages: [core, enhancedcombathud]
+    modules: [pentaryn-combat]
+    files: [foundry/module/pentaryn-combat/turnflow.mjs]
+    markers: ["ownedTokenOf", "helperTokenControl"]
+    what: when an area handle or a summoned token you had selected is deleted and nothing else is selected, your caster's token (the HUD's token, else the summoner, else your character) is selected again, so the HUD stays up
+    why: Token#destroy releases the token and Argon's controlToken hook closes the HUD when nothing is left selected; after Apply removed a dragged Fireball handle, or a Flaming Sphere left with its concentration, the player had no HUD and no selection (Area 5 S3, S13)
+    native_when: Argon keeps or re-binds the HUD to the previous token when the bound or controlled token is deleted
+    retire_class: safe
+    check: make foundry-combat-check
+
+  - id: aoe-careful-spell-protected-rows
+    packages: [dnd5e]
+    modules: [pentaryn-aoe]
+    files: [foundry/module/pentaryn-aoe/resolve.mjs, foundry/module/pentaryn-aoe/core.mjs, foundry/module/pentaryn-aoe/tray.mjs]
+    markers: ["carefulFor", "protectRows", "carefulTargets"]
+    what: after Careful Spell, the caster's next save spell's tray marks up to CHA mod of their side (same disposition, PCs first, not the caster) as protected — automatic success, 0 damage on a half-on-save spell, no request card; bound to that usage card so a re-roll keeps it (setting carefulSpell)
+    why: dnd5e 6.0.6's Careful Spell is a bare utility that spends a point; the ally still got a request card, held the area open and took half damage unless the GM edited the row (Area 5 S4)
+    native_when: dnd5e implements Careful Spell on the save workflow
+    retire_class: guarded
+    check: make foundry-aoe-check
+
+  - id: aoe-supersede-same-usage
+    packages: [dnd5e]
+    modules: [pentaryn-aoe]
+    files: [foundry/module/pentaryn-aoe/resolve.mjs, foundry/module/pentaryn-aoe/core.mjs]
+    markers: ["supersedes("]
+    what: a new damage roll supersedes an older tray of the same activity when the area is the same OR when both came from the same usage card (the area was removed in between)
+    why: a Fireball re-rolled from its card after Apply had removed the area made a second live tray (superseded false) beside the old one, so the GM could apply both (Area 5 S16)
+    native_when: never (pentaryn-aoe's own tray)
+    retire_class: safe
+    check: make foundry-aoe-check
+
+  - id: aoe-player-status-line
+    packages: [dnd5e, core]
+    modules: [pentaryn-aoe]
+    files: [foundry/module/pentaryn-aoe/tray.mjs, foundry/module/pentaryn-aoe/resolve.mjs]
+    markers: ["decoratePlayer", "npcSave"]
+    what: players see one line under their own save-spell damage card (waiting for the GM / applied / re-rolled), and the GM-only monster save rolls pentaryn-aoe makes are hidden from players' chat (html.hidden, as dnd5e hides summarised cards) instead of showing "privately rolled" rows (setting playerStatus)
+    why: the caster saw only the damage total and four "Gamemaster privately rolled some dice ?" rows per Fireball, with nothing saying the GM had to apply (Area 5 S2, S15, S16)
+    native_when: core offers a setting to hide private rolls from non-recipients
+    retire_class: safe
+    check: make foundry-aoe-check
+
+  - id: dnd5e-cancelled-area-refund
+    packages: [dnd5e]
+    modules: [pentaryn-aoe, pentaryn-combat]
+    files: [foundry/module/pentaryn-aoe/refund.mjs, foundry/module/pentaryn-aoe/core.mjs, foundry/module/pentaryn-combat/combat.mjs]
+    markers: ["placementCancelled", "activity.refund"]
+    what: when an area spell's placement is cancelled (Escape, right-click) after it spent a slot, charges or uses, the caster's client refunds through Activity#refund(deltas) (the card's Refund button), deletes the concentration it began and the usage card, and returns false from dnd5e.postUseActivity; pentaryn-combat counts no Action for it (setting refundCancelledArea)
+    why: dnd5e 6 consumes before the area follows the mouse; a cancelled Fireball still spent its 3rd-level slot or a Wand of Fireballs charge (Area 5 S2, S10)
+    native_when: dnd5e defers consumption until the area is placed, or refunds on a cancelled placement
+    retire_class: guarded
+    check: make foundry-aoe-check
+
+  - id: argon-metamagic-no-picker
+    packages: [enhancedcombathud-dnd5e]
+    modules: [pentaryn-riders]
+    files: [foundry/module/pentaryn-riders/argon-tidy.mjs, foundry/module/pentaryn-riders/table-core.mjs]
+    markers: ["skipsTargetPicker", "METAMAGIC"]
+    what: a Metamagic option's Argon button reads `targets` null (per instance), so clicking Careful Spell goes straight to dnd5e with no Target Picker
+    why: Careful Spell's activity targets "5 creatures"; Argon's picker sat at "1/5 Targets" and finished only at 5 targets or after a hidden "-" key, and the targets fed nothing (Area 5 S4); pentaryn-aoe now chooses in the tray
+    native_when: Argon lets the picker finish with fewer targets (Enter), or dnd5e marks such targets as optional
+    retire_class: safe
+    check: make foundry-riders-check
+
+  - id: argon-tooltip-item-rolldata
+    packages: [enhancedcombathud-dnd5e, core]
+    modules: [pentaryn-riders]
+    files: [foundry/module/pentaryn-riders/argon-tidy.mjs]
+    markers: ["_prItemRollData", "tooltipItems"]
+    what: while an Argon button builds its tooltip, TextEditor.enrichHTML for that item gets rollData = item.getRollData()
+    why: Argon enriches descriptions with relativeTo only, so inline rolls lose @item data — Scorching Ray's "Total Rays" read 1 instead of 3 (Area 5 S5)
+    native_when: Argon passes rollData (item.getRollData()) to enrichHTML
+    retire_class: safe
+    check: make foundry-riders-check
+
+  - id: dnd5e-summon-keeps-sidebar
+    packages: [core, dnd5e]
+    modules: [pentaryn-riders]
+    files: [foundry/module/pentaryn-riders/cast-flow.mjs]
+    markers: ["dnd5e.preSummon", "changeSidebarTab"]
+    what: between dnd5e.preSummon and postSummon the sidebar goes back to the tab it had (and collapses again) if it jumped to Actors, and a notice says "Click the map to place X"
+    why: the first summon from a compendium profile imports the creature through WorldCollection#importFromCompendium, which ends in directory.activate() and flipped the player's sidebar to Actors; the placement then waited with no prompt (Area 5 S13)
+    native_when: core's importFromCompendium takes an option not to activate the directory, or dnd5e's TokenPlacement shows a hint
+    retire_class: safe
+    check: make foundry-riders-check
+
+  - id: dnd5e-restore-slot-default
+    packages: [dnd5e]
+    modules: [pentaryn-riders]
+    files: [foundry/module/pentaryn-riders/cast-flow.mjs, foundry/module/pentaryn-riders/table-core.mjs]
+    markers: ["restoreSlotScaling"]
+    what: an activity that restores a spell slot at a chosen level with a flat cost (Pearl of Power) opens its level slider on the highest spent slot at or below its cap; Font of Magic (cost grows with level) is left alone
+    why: the slider opened at 1st level, so restoring a 3rd-level slot took an extra click (Area 5 S11)
+    native_when: dnd5e defaults restore-slot scaling to an expended level
+    retire_class: safe
+    check: make foundry-riders-check
+
+  - id: aoe-untargeted-touch-self
+    packages: [dnd5e]
+    modules: [pentaryn-aoe]
+    files: [foundry/module/pentaryn-aoe/core.mjs, foundry/module/pentaryn-aoe/effects.mjs]
+    markers: ["untargeted-self"]
+    what: a usage card with one effect from a touch/self-range activity for one willing creature, cast with nothing targeted, auto-applies to the caster (setting untargetedSelf)
+    why: Mage Armor cast at nobody spent the slot and applied nothing, and a player has no effects tray to fix it (Area 6 re-run W1)
+    native_when: dnd5e applies a self-castable effect to the caster when no target is chosen
+    retire_class: safe
+    check: make foundry-aoe-check
+
+  - id: aoe-same-spell-no-stack
+    packages: [dnd5e]
+    modules: [pentaryn-aoe]
+    files: [foundry/module/pentaryn-aoe/core.mjs, foundry/module/pentaryn-aoe/effects.mjs]
+    markers: ["sameSpellEffect"]
+    what: a preCreateActiveEffect hook deletes an enabled effect of the same name copied from the same spell (identifier) when a new copy from another source is created, instead of stacking (setting noSpellStacking)
+    why: Shield from a slot and then from a Ring of Spell Storing gave +10 AC; dnd5e refreshes only effects copied from the same source effect (Area 6 re-run W2)
+    native_when: dnd5e's effect application dedupes by spell rather than by source effect
+    retire_class: safe
+    check: make foundry-aoe-check
+
+  - id: aoe-self-area-aim
+    packages: [core, dnd5e]
+    modules: [pentaryn-aoe]
+    files: [foundry/module/pentaryn-aoe/aim.mjs, foundry/module/pentaryn-aoe/core.mjs]
+    markers: ["aimFromCaster", "placeRegions"]
+    what: wraps RegionLayer.prototype.placeRegions to pass an onMove for a Self-range cone or line armed by dnd5e.preCreateMeasuredTemplate; the origin stays on the caster's token edge and points at the pointer (setting aimSelfAreas)
+    why: dnd5e 6 placed Cone of Cold with its point at the click and rotation 0, away from the caster (Area 6 re-run W13)
+    native_when: dnd5e's TemplatePlacement anchors Self-range cones and lines to the caster
+    retire_class: guarded
+    check: make foundry-aoe-check
+
+  - id: dnd5e-summon-place-default
+    packages: [dnd5e]
+    modules: [pentaryn-riders]
+    files: [foundry/module/pentaryn-riders/cast-flow.mjs, foundry/module/pentaryn-riders/table-core.mjs]
+    markers: ["placeSummonsDefault", "_prPlaceDefault"]
+    what: a wrap of SummonActivity.prototype._prepareUsageConfig ticks Place Summons when placing is possible and the caller left it unset; dnd5e.preUseActivity drops leftover targets from a self-only activity's card (setting castDefaults)
+    why: Summon Undead and Animate Dead ship with summon.prompt off, so every cast needed an extra tick before the profile choice showed; Shield's card named a stale target (Area 6 re-run W2, W7, W9)
+    native_when: dnd5e defaults Place Summons on, or the PHB items set summon.prompt
+    retire_class: safe
+    check: make foundry-riders-check
+
+  - id: dnd5e-usage-dialog-first-click
+    packages: [dnd5e]
+    modules: [pentaryn-riders]
+    files: [foundry/module/pentaryn-riders/cast-flow.mjs]
+    markers: ["prFirstClick"]
+    what: a capture mousedown on an ActivityUsageDialog Use button with a field focused commits the field (blur, dnd5e re-renders) and presses the re-rendered Use button once
+    why: typing a scaling amount (Ward Takes Damage) and clicking Use only committed the value; a second click was needed (Area 6 re-run W4)
+    native_when: dnd5e's usage dialog stops re-rendering on every change, or submits on Use after a pending change
+    retire_class: safe
+    check: make foundry-riders-check
+
+  - id: dnd5e-summon-wildcard-preview
+    packages: [dnd5e]
+    modules: [pentaryn-riders]
+    files: [foundry/module/pentaryn-riders/cast-flow.mjs]
+    markers: ["_prWildcard"]
+    what: wraps SummonActivity.prototype.getPlacement so a wildcard prototype token image ("skeleton-*.webp") previews as one real image (or the portrait)
+    why: TokenPlacement drew the prototype's literal wildcard path, an Invalid Asset console error per preview on every client (Area 6 re-run W7)
+    native_when: dnd5e's TokenPlacement resolves random token images for the preview
+    retire_class: safe
+    check: make foundry-riders-check
+
+  - id: riders-arcane-recovery-picker
+    packages: [dnd5e]
+    modules: [pentaryn-riders]
+    files: [foundry/module/pentaryn-riders/cast-flow.mjs, foundry/module/pentaryn-riders/table-core.mjs]
+    markers: ["arcaneRecoveryDialog"]
+    what: after Arcane Recovery is used, the owner picks spent slots of level 1-5 in a dialog that enforces half the Wizard level (rounded up) and writes them (setting arcaneRecovery)
+    why: dnd5e only rolls "combined spell levels"; the player had to set slot pips on the sheet by hand, about 9 clicks (Area 6 re-run W5)
+    native_when: dnd5e gives Arcane Recovery a slot-recovery activity or picker
+    retire_class: safe
+    check: make foundry-riders-check
+
+  - id: riders-argon-long-casts
+    packages: [enhancedcombathud-dnd5e]
+    modules: [pentaryn-riders]
+    files: [foundry/module/pentaryn-riders/rituals.mjs, foundry/module/pentaryn-riders/rituals-core.mjs]
+    markers: ["longCasts"]
+    what: the Action bar's Cast Spell panel gets a "Longer casts" group of castable spells whose first activity is cast in minutes or hours (setting longCasts)
+    why: Argon files a spell by its first activity's activation, so Animate Dead (1 minute) was on no bar (Area 6 re-run W7)
+    native_when: Argon dnd5e lists minute/hour spells on a bar
+    retire_class: safe
+    check: make foundry-riders-check
+
+  - id: dnd5e-concentration-auto-break
+    packages: [dnd5e]
+    modules: [pentaryn-riders]
+    files: [foundry/module/pentaryn-riders/concentration.mjs, foundry/module/pentaryn-riders/table-core.mjs]
+    markers: ["concentrationResult"]
+    what: a failed concentration save (dnd5e's canBreakConcentration) ends the concentration on the roller's client and marks the card broken, unless the creature can still turn the failure (Legendary Resistance, Indomitable, Mind Sharpener, Bardic Inspiration); the card shows "DC n · Failed/Success" (setting concentrationAutoBreak)
+    why: dnd5e 6 only offers a Break Concentration button and shows no DC; the summons stayed until the player found the button (Area 6 re-run W9)
+    native_when: dnd5e ends concentration on a failed save, or shows the DC and outcome on the card
+    retire_class: guarded
+    check: make foundry-riders-check
+
+  - id: senses-light-pick-collapse-hud
+    packages: [enhancedcombathud]
+    modules: [pentaryn-senses]
+    files: [foundry/module/pentaryn-senses/light.mjs]
+    markers: ["collapseAllPanels"]
+    what: the Light cantrip's "Pick a target" closes Argon's open panels before waiting for the map click
+    why: the open Cast Spell panel covered the map and the pick click opened Hypnotic Pattern instead (Area 6 re-run W10)
+    native_when: Argon collapses its panels when a canvas pick starts
+    retire_class: safe
+    check: make foundry-senses-check
+
+  - id: creatures-strip-over-argon
+    packages: [enhancedcombathud]
+    modules: [pentaryn-creatures]
+    files: [foundry/module/pentaryn-creatures/creatures.mjs, foundry/module/pentaryn-creatures/creatures-core.mjs]
+    markers: ["stripDock", ".extended-combat-hud"]
+    what: while Argon's HUD is up, the Your creatures strip floats just above the HUD's action bar instead of sitting behind it (setting floatOverHud)
+    why: the strip sat behind the HUD's bars and a click on a summon's portrait hit Projected Ward (Area 6 re-run W8)
+    native_when: Argon leaves room above the hotbar, or the strip moves into Argon itself
+    retire_class: safe
+    check: make foundry-creatures-check
+
+  - id: portals-teleport-default-and-spread
+    packages: [core]
+    modules: [pentaryn-portals]
+    files: [foundry/module/pentaryn-portals/portals.mjs, foundry/module/pentaryn-portals/portals-core.mjs]
+    markers: ["preferTeleport", "spreadArrival"]
+    what: the core Teleport Token confirm opens with Teleport focused (setting teleportDefault); a PC who arrives through a portal on an occupied square is moved by the GM to the nearest free one (setting spreadArrivals)
+    why: DialogV2.confirm defaults to Don't Teleport; two PCs crossing together plus one already there stacked on one square (Area 6 re-run W7)
+    native_when: core's teleport confirm defaults to Teleport, or core spreads teleported tokens
+    retire_class: safe
+    check: make foundry-portals-check
+
+  - id: combat-core-scrolling-text-teardown
+    packages: [core]
+    modules: [pentaryn-combat]
+    files: [foundry/module/pentaryn-combat/turnflow.mjs]
+    markers: ["Object.hasOwn(P.prototype, \"y\")"]
+    what: PreciseText gets own x/y accessors that ignore a write once the text is destroyed (transform null), so a floating text torn down mid-animation logs nothing (setting scrollingTextGuard)
+    why: 156 identical "reading 'position'" TypeErrors in one burst on the GM tab from CanvasAnimation#updateAttribute setting y on destroyed scrolling texts after a scene change (Area 6 re-run console)
+    native_when: core's CanvasAnimation skips destroyed parents, or InterfaceCanvasGroup#createScrollingText ends its animations on tear-down
+    retire_class: safe
+    check: make foundry-combat-check
+
+  - id: dnd5e-item-tooltip-anchor
+    packages: [dnd5e]
+    modules: [pentaryn-attunement]
+    files: [foundry/module/pentaryn-attunement/attunement.mjs]
+    markers: ["_positionItemTooltip"]
+    what: Tooltips5e#_positionItemTooltip is wrapped on ready to return when game.tooltip.element is null (the hovered row was re-rendered away before the deferred positioning frame)
+    why: dnd5e 6.0.6 calls game.tooltip._setAnchor a frame after the tooltip content loads; a sheet re-render in between (take, attune, light) leaves no anchor and logged "Cannot read properties of null (reading 'getBoundingClientRect')" on the player tab (Area 8 re-run)
+    native_when: dnd5e checks game.tooltip.element (or the tooltip's active state) before positioning an item tooltip
+    retire_class: safe
+    check: make foundry-attunement-check
+
+  - id: combat-argon-drawer-restore-place
+    packages: [enhancedcombathud]
+    modules: [pentaryn-combat]
+    files: [foundry/module/pentaryn-combat/turnflow.mjs, foundry/module/pentaryn-combat/hud.mjs]
+    markers: ["placeOpenDrawers"]
+    what: a drawer Argon reopens from its saved panel state during a bar re-render is placed above its button on the next frame, and every bar recomposition re-places the open drawers of its buttons (setting drawerNearButton)
+    why: ButtonPanel.restoreState calls toggle(true) inside Argon's own render, before our per-instance toggle wrapper exists, so a drawer open across a re-render (Pole Strike appearing) sat detached at the HUD's far left (Area 10, U-10-1)
+    native_when: Argon positions a drawer relative to its button, or re-runs placement after restoreState
+    retire_class: safe
+    check: make foundry-combat-check
+
+  - id: combat-argon-stray-tooltip
+    packages: [enhancedcombathud]
+    modules: [pentaryn-combat]
+    files: [foundry/module/pentaryn-combat/hud.mjs]
+    markers: ["dropStrayTooltip"]
+    what: a capture pointerover listener closes any unlocked Argon tooltip once the pointer is over neither its trigger nor the tooltip, or once its trigger has left the page (also checked after a bar re-render)
+    why: Argon's own buttons (Action Surge, weapon slots) never close their tooltip because Argon's mouseleave handler is commented out, so tooltips lingered after clicks, re-renders and turn changes (Area 10, U-10-1)
+    native_when: Argon closes tooltips on mouseleave and when a component re-renders
+    retire_class: safe
+    check: make foundry-combat-check
+
+  - id: combat-argon-movement-redraw
+    packages: [enhancedcombathud, enhancedcombathud-dnd5e]
+    modules: [pentaryn-combat]
+    files: [foundry/module/pentaryn-combat/turnflow.mjs]
+    markers: ["redrawMovement", "queueMovement"]
+    what: Argon's MovementHud.updateMovement is called 50 ms after an Active Effect on the HUD's actor is created, updated or deleted, after a Speed edit, and on every turn change
+    why: Argon redraws the movement readout only on token movement-history updates, so a Dash effect (and its end) left the readout at the old maximum (Area 10, U-10-3)
+    native_when: Argon's movement HUD re-renders on actor or effect updates
+    retire_class: safe
+    check: make foundry-combat-check

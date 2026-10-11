@@ -122,3 +122,18 @@ export function shouldShowStrip(entries) {
 export function stripSignature(entries) {
   return (entries ?? []).map(e => `${e.id}|${e.name}|${e.img}|${e.rank}`).join("\n");
 }
+
+/**
+ * Where the strip floats while the Combat HUD (Argon) is up, or null to stay docked above the
+ * hotbar. The HUD covers the hotbar area, and the docked strip sat behind its action bars: a click
+ * meant for a summon's portrait landed on Projected Ward (usability Area 6 re-run, W8). Floated,
+ * the strip sits `gap` px above the HUD's top edge, left-aligned with it.
+ * @param {{top:number,left:number,width:number,height:number}|null} hud  the HUD's action bar rect
+ * @param {number} viewH  window.innerHeight
+ * @returns {{bottom:number,left:number}|null}
+ */
+export function stripDock(hud, viewH, { gap = 8 } = {}) {
+  if (!hud || !(hud.height > 0) || !(hud.width > 0) || !(viewH > 0)) return null;
+  if (hud.top >= viewH) return null;                       // collapsed off-screen
+  return { bottom: Math.round(Math.max(0, viewH - hud.top + gap)), left: Math.round(Math.max(8, hud.left)) };
+}

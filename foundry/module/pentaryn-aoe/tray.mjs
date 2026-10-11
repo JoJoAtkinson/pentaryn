@@ -10,8 +10,9 @@
  * section.icon-row, then <damage-application>; this tray goes right after the native one.
  */
 
-import { aoeFlags, MULTIPLIERS } from "./core.mjs";
+import { aoeFlags, MULTIPLIERS, playerStatus } from "./core.mjs";
 import { on, guard } from "./hooks.mjs";
+import { setting } from "./settings.mjs";
 import { applyRows, rollNpcSaves, rollForPlayer, pingPlayers, setRow, resolve } from "./resolve.mjs";
 
 const esc = s => foundry.utils.escapeHTML(String(s ?? ""));
@@ -30,6 +31,9 @@ function preview(row, res, message = null) {
 }
 
 function saveCell(row) {
+  if (row.protected) {
+    return `<span class="pa-pass" data-tooltip="${esc(t("Careful.RowTip"))}"><i class="fa-solid fa-shield-halved" inert></i> ${esc(t("Careful.Row"))}</span>`;
+  }
   if (!row.save) {
     return row.kind === "manual"
       ? `<span class="pa-wait" data-tooltip="${esc(t("Tray.WaitingTip"))}"><i class="fa-solid fa-hourglass-half" inert></i> ${esc(t("Tray.Waiting"))}</span>`
@@ -73,6 +77,7 @@ export function trayHTML(res, message = null) {
       <span class="pa-src">${esc(res.region ? t("Tray.FromArea") : t("Tray.FromTargets"))}</span>${picker}
     </div>
     ${res.superseded ? `<p class="pa-superseded">${esc(t("Tray.Superseded"))}</p>` : ""}
+    ${res.careful?.names?.length ? `<p class="pa-careful"><i class="fa-solid fa-shield-halved" inert></i> ${esc(t("Careful.Head", { names: res.careful.names.join(", ") }))}</p>` : ""}
     ${body}
     <div class="pa-buttons">
       <button type="button" data-pa="reroll-all" ${res.superseded ? "disabled" : ""}><i class="fa-solid fa-dice-d20" inert></i> ${esc(t("Tray.RerollAll"))}</button>
@@ -81,8 +86,31 @@ export function trayHTML(res, message = null) {
     </div>`;
 }
 
+/**
+ * Players: one status line under their own save-spell damage card (waiting / applied / re-rolled),
+ * with no monster numbers; the GM's privately rolled monster saves are hidden instead of showing as
+ * "Gamemaster privately rolled some dice" rows (usability Area 5 re-run, S2/S15/S16).
+ */
+function decoratePlayer(message, html) {
+  if (!setting("playerStatus")) return;
+  if (aoeFlags(message).npcSave && !message.isContentVisible) {
+    html.hidden = true;   // dnd5e hides its own summarised cards the same way
+    html.classList.add("pa-hidden-npc-save");
+    return;
+  }
+  const status = playerStatus(aoeFlags(message).resolution);
+  if (!status || !message.isAuthor) return;
+  const host = html.querySelector(".message-content") ?? html;
+  host.querySelector(".pa-status")?.remove();
+  const p = document.createElement("p");
+  p.className = `pa-status pa-status-${status}`;
+  const icon = { waiting: "fa-hourglass-half", applied: "fa-check", superseded: "fa-rotate" }[status];
+  p.innerHTML = `<i class="fa-solid ${icon}" inert></i> ${esc(t(`Status.${status}`))}`;
+  host.append(p);
+}
+
 function decorate(message, html) {
-  if (!game.user.isGM) return;
+  if (!game.user.isGM) return decoratePlayer(message, html);
   const res = aoeFlags(message).resolution;
   if (!res) return;
   const host = html.querySelector(".message-content") ?? html;

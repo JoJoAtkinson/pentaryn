@@ -179,6 +179,15 @@ function renderOffer(message, html) {
     b.className = "pentaryn-combat-rider";
     b.dataset.rider = o.rider.key;
     b.dataset.tooltip = hintText(o);
+    // Usability Area 3 (B2): the hint was fixed when the card rendered, so an ally who stepped in
+    // beside the target afterwards still read "?". It is worked out again as the pointer arrives
+    // (before core's tooltip reads it).
+    b.addEventListener("pointerenter", () => {
+      try {
+        const now = offersFor(message).offers.find(x => x.rider.key === o.rider.key);
+        if (now) b.dataset.tooltip = hintText(now);
+      } catch { /* the render-time hint stays */ }
+    });
     b.innerHTML = `<i class="fa-solid fa-plus"></i> ${T(`PENTARYN_COMBAT.Rider.Name.${o.rider.key}`)} ${o.dice}`;
     if (o.auto) b.classList.add("pentaryn-combat-eligible");
     b.addEventListener("click", ev => { ev.preventDefault(); ev.stopPropagation(); rollRider(message, o.rider.key); });
@@ -316,14 +325,15 @@ function renderAutoNote(message, html) {
     const live = turn?.riders?.[a.key] === `auto:${a.attack}`;
     const name = T(`PENTARYN_COMBAT.Rider.Name.${a.key}`);
     const undo = live && (actor?.isOwner || game.user.isGM)
-      ? ` <a data-undo="${a.key}" data-tooltip="${T("PENTARYN_COMBAT.Rider.UndoHint")}">${T("PENTARYN_COMBAT.Rider.Undo")}</a>` : "";
+      ? ` <button type="button" class="pentaryn-combat-undo" data-undo="${a.key}" data-tooltip="${T("PENTARYN_COMBAT.Rider.UndoHint")}"><i class="fa-solid fa-rotate-left"></i> ${T("PENTARYN_COMBAT.Rider.Undo")}</button>` : "";
     return `+ ${name} ${a.dice}${undo}`;
   });
   note.innerHTML = parts.join(" · ");
   note.addEventListener("click", async ev => {
-    const a = ev.target.closest("a[data-undo]");
+    const a = ev.target.closest("[data-undo]");
     if (!a || !actor) return;
     ev.preventDefault();
+    ev.stopPropagation();
     const key = a.dataset.undo;
     const entry = auto.find(x => x.key === key);
     // Only this card's own auto rider, this turn: an Undo link left on an earlier turn's card must
@@ -389,7 +399,7 @@ function rerenderCards(actor) {
     // Only cards that can change: this turn's attack cards (offer on/off) and cards that currently
     // show one of our buttons or an Undo (so an earlier turn's card loses it). Re-rendering the
     // actor's last 40 cards on every swing was needless chat churn.
-    const showing = (id) => !!document.querySelector(`[data-message-id="${id}"] .pentaryn-combat-riders, [data-message-id="${id}"] .pentaryn-combat-auto a[data-undo]`);
+    const showing = (id) => !!document.querySelector(`[data-message-id="${id}"] .pentaryn-combat-riders, [data-message-id="${id}"] .pentaryn-combat-auto [data-undo]`);
     for (const m of game.messages.contents.slice(-40)) {
       if (!["attack", "damage"].includes(m.type)) continue;
       const a = attackActivity(m)?.actor ?? m.getAssociatedActor?.();

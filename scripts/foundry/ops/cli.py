@@ -42,9 +42,10 @@ def build_parser() -> argparse.ArgumentParser:
                     help="print the handoff URL instead of opening the default browser")
     lg.add_argument("--no-prompt", action="store_true",
                     help="never show a picker; take the defaults (for scripts)")
-    lg.add_argument("--host", choices=login_mod.LOOPBACK_HOSTS,
-                    help="browser-facing host; 127.0.0.1 gives a player tab its own session "
-                         "beside the GM's localhost tab (default: the host in FOUNDRY_URL)")
+    lg.add_argument("--host", type=login_mod.loopback_host, metavar="HOST",
+                    help="browser-facing loopback host: localhost, 127.0.0.1 or <name>.localhost "
+                         "(e.g. zz1.localhost); any name but the GM's gives a player tab its own "
+                         "session beside the GM's localhost tab (default: the host in FOUNDRY_URL)")
     add("down", "Quit Foundry gracefully.")
     add("status", "Foundry, tunnel, and what players actually get.")
     add("lock-check", "Fail if an auto-update run holds the lock.")

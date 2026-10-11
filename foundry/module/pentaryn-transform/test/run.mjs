@@ -14,7 +14,7 @@ const {
   isRevertData, returnLabel, durationSeconds, formatDuration, isExpired, usesLeft, useSyncUpdates,
   carriedConditions, pickRunner, withArticle, formatCR, formSummary, planBonusBar, frontRowItems,
   pruneFavorites, endedInForm, attributeSync, withoutOrigin, grantsFly, shiftBlock, planWithout, CONSTELLATIONS, STARRY_LIGHT,
-  STARRY_SECONDS, constellationOfActivity, starryEffectData, starryBlock, coveredPanel, formTempHP, hpText
+  STARRY_SECONDS, constellationOfActivity, starryEffectData, starryBlock, coveredPanel, formTempHP, hpText, isBodySwap
 } = core;
 
 let pass = 0;
@@ -420,6 +420,17 @@ check("140 blocks", [
   starryBlock({ shifted: true }), starryBlock({ incapacitated: true }), starryBlock({ usesLeft: 0 }),
   starryBlock({ usesLeft: 0, spends: false }), starryBlock({ usesLeft: 2 }), starryBlock({ usesLeft: null })
 ], ["shifted", "incapacitated", "noUses", null, null, null]);
+
+check("141 body swap: a new actor, dnd5e's swap flags, wrapped values; not a move or the same actor", [
+  isBodySwap({ actorId: "form1", width: 2 }, { actorId: "talo" }),
+  isBodySwap({ actorId: "talo" }, { actorId: "talo" }),
+  isBodySwap({ x: 100, y: 200 }, { actorId: "talo" }),
+  isBodySwap({ "flags.dnd5e.previousTokenData": { texture: {} } }, { actorId: "talo" }),
+  isBodySwap({ flags: { dnd5e: { previousActorData: {} } } }, { actorId: "talo" }),
+  isBodySwap({ actorId: { op: "talo" } }, { actorId: "form1", unwrap: v => (v && typeof v === "object" && "op" in v ? v.op : v) }),
+  isBodySwap({ flags: { "pentaryn-senses": {} } }, { actorId: "talo" }),
+  isBodySwap(null)
+], [true, false, false, true, true, true, false, false]);
 
 /* ── report ───────────────────────────────────────────────────────────────── */
 

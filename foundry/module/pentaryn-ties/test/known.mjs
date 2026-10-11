@@ -18,6 +18,8 @@
  */
 
 import {
+  tablePCs,
+  switchLabels,
   touchesFlagScope,
   KNOWN_NOTES_MAX,
   KNOWN_NAME_MAX,
@@ -131,6 +133,55 @@ const resolve = id => WORLD[id] ?? null;
 
 export function register({ t, eq, ok }) {
   /* ── hook keys: which flattened update keys wake the live windows ─────────── */
+
+  /* ── the inspect window's PC roster (share switches, Simulate roller) ─────── */
+
+  t("tablePCs: assigned characters only; a player's other characters, piles, markers and polymorphed copies stay out", () => {
+    const users = [
+      { id: "gm", isGM: true, characterId: null },
+      { id: "uC", isGM: false, characterId: "caven" },
+      { id: "uT", isGM: false, characterId: "talo" },
+      { id: "uZ", isGM: false, characterId: "zz1" }
+    ];
+    const pc = (id, name, playerOwnerIds, extra = {}) => ({ id, name, type: "character", playerOwnerIds, ...extra });
+    const actors = [
+      pc("caven", "Caven Calderon", ["uC"]),
+      pc("allo", "Caven Calderon (Allosaurus)", ["uC"], { polymorphed: true }),
+      pc("talo", "Talo", ["uT"]),
+      pc("zz1", "ZZ Fighter 5", ["uZ"]),
+      pc("zz2", "ZZ Rogue 5", ["uZ"]),
+      pc("zz3", "ZZ druid scratch", []),
+      pc("pile", "Talo's Items", [], { pile: true }),
+      pc("mk", "Hotspot · Look (template)", []),
+      { id: "npc", name: "Vesh", type: "npc", playerOwnerIds: [] }
+    ];
+    eq(tablePCs(actors, users).map(a => a.id), ["caven", "talo", "zz1"]);
+  });
+
+  t("tablePCs: a player with no assigned character keeps every character they own", () => {
+    const users = [{ id: "uM", isGM: false, characterId: null }, { id: "uC", isGM: false, characterId: "caven" }];
+    const actors = [
+      { id: "caven", name: "Caven", type: "character", playerOwnerIds: ["uC"] },
+      { id: "m1", name: "Marrith", type: "character", playerOwnerIds: ["uM"] },
+      { id: "m2", name: "Marrith's hireling", type: "character", playerOwnerIds: ["uM"] }
+    ];
+    eq(tablePCs(actors, users).map(a => a.id), ["caven", "m1", "m2"]);
+  });
+
+  t("tablePCs: a world with no players set up still lists its characters (never an empty row)", () => {
+    const actors = [
+      { id: "a", name: "Ballad Quinn", type: "character", playerOwnerIds: [] },
+      { id: "b", name: "Copy", type: "character", playerOwnerIds: [], polymorphed: true }
+    ];
+    eq(tablePCs(actors, [{ id: "gm", isGM: true }]).map(a => a.id), ["a"]);
+    eq(tablePCs(), []);
+  });
+
+  t("switchLabels: first names, whole names only where two share one", () => {
+    eq(switchLabels(["Caven Calderon", "Talo", "Marrith Ashcroft"]), ["Caven", "Talo", "Marrith"]);
+    eq(switchLabels(["Caven Calderon", "Caven Brightwater", "Talo"]), ["Caven Calderon", "Caven Brightwater", "Talo"]);
+    eq(switchLabels(["Sergeant Vesh, Night Sergeant"]), ["Sergeant"]);
+  });
 
   t("touchesFlagScope: a write under the scope, a legacy wipe, and the 14.369 operator wipe", () => {
     eq(touchesFlagScope("flags.pentaryn-ties.granted.x", "pentaryn-ties"), true);

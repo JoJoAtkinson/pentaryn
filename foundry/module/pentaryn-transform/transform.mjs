@@ -11,7 +11,7 @@
 import {
   MODULE_ID, EFFECT_ID, activitiesOf, isWildShapeActivity, stripForForm, isRevertData, returnLabel,
   durationSeconds, formatDuration, isExpired, usesLeft, useSyncUpdates, carriedConditions, endedInForm,
-  attributeSync, pruneFavorites, shiftBlock, pickRunner, withArticle, formTempHP, withoutOrigin
+  attributeSync, pruneFavorites, shiftBlock, pickRunner, withArticle, formTempHP, withoutOrigin, isBodySwap
 } from "./transform-core.mjs";
 
 const T = (key, data) => (data ? game.i18n.format(key, data) : game.i18n.localize(key));
@@ -48,6 +48,33 @@ const T = (key, data) => (data ? game.i18n.format(key, data) : game.i18n.localiz
     };
     wrapped.pentarynUnwrapped = true;
     TD._preUpdateOperation = wrapped;
+  }
+}
+
+/* ── body swaps never animate (Area 4 live run, D4) ──────────────────────── */
+// Core animates a token update and, on every frame, writes the animation's in-flight values back
+// onto the TokenDocument (Token#animateFrame: mergeObject(this.document, animationData)). In a tab
+// whose canvas is not ticking (the GM tab sits in the background at this table) a transform's
+// animation never completes, so the document kept showing the FIRST form's art and size after a
+// chain of shifts, and dnd5e, which reads previousTokenData from those prepared values, saved them
+// for the revert. A body swap (transform/revert) now never animates, on every client: animate:false
+// makes core stop the token's animations and re-sync from the fresh document instead.
+// Adjustment row core-token-swap-no-animation.
+{
+  const Ops = foundry.data?.operators;
+  const unwrap = (v) => (Ops?.DataFieldOperator && v instanceof Ops.DataFieldOperator ? Ops.DataFieldOperator.get(v) : v);
+  Hooks.on("preUpdateToken", (doc, changes, options) => {
+    try {
+      if (options?.animate === false) return;
+      if (isBodySwap(changes, { actorId: doc?._source?.actorId ?? doc?.actorId ?? null, unwrap })) options.animate = false;
+    } catch (err) { console.warn(`${MODULE_ID} | body-swap animation guard skipped`, err); }
+  });
+}
+
+/** Re-prepare this actor's tokens from their source and end their animations, before dnd5e reads them. */
+function settleTokens(actor) {
+  for (const t of actor?.getActiveTokens?.(false, false) ?? []) {
+    try { t.stopAnimation?.({ reset: true }); } catch (err) { console.warn(`${MODULE_ID} | settling ${t.name} failed`, err); }
   }
 }
 
@@ -216,7 +243,7 @@ async function restoreTokensElsewhere(form) {
       delete u.y;
       return u;
     });
-    await scene.updateEmbeddedDocuments("Token", updates, { diff: false, recursive: false });
+    await scene.updateEmbeddedDocuments("Token", updates, { diff: false, recursive: false, animate: false });
   }
 }
 
@@ -265,6 +292,7 @@ export async function revert(actor, { quiet = false, reason = "manual" } = {}) {
     const sourceEffectIds = (sourceUuid ? fromUuidSync(sourceUuid)?.effects?.map(e => e.id) : null) ?? [];
 
     if (!actor.isToken) await restoreTokensElsewhere(actor);
+    settleTokens(actor);
 
     const result = await actor.revertOriginalForm({ renderSheet: false });
     const back = result instanceof Actor ? result : (result?.actor ?? null);
@@ -473,6 +501,7 @@ async function doShift(host, activity, profileId, uuid) {
   const before = new Set(game.actors.filter(a => a.getFlag("dnd5e", "originalActor") === host.id).map(a => a.id));
   let form = null;
   try {
+    settleTokens(host);
     await host.transformInto(source, activity.settings, { renderSheet: false });
     if (token) form = token.actor?.isPolymorphed ? token.actor : null;
     else form = game.actors.find(a => a.isPolymorphed && a.getFlag("dnd5e", "originalActor") === host.id

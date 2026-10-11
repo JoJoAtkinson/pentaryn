@@ -17,7 +17,7 @@
  * its caster) gets no handle: re-attaching it to a handle would leave it behind when the caster moves.
  */
 
-import { MODULE, aoeFlags, centreOf, regionFromSpell, regionOfActivity, isTemplateRegion, attachedToOther, handleVertical } from "./core.mjs";
+import { MODULE, aoeFlags, centreOf, regionFromSpell, regionOfActivity, isTemplateRegion, attachedToOther, handleVertical, stillListing, isHandleTarget } from "./core.mjs";
 import { setting } from "./settings.mjs";
 import { on, guard } from "./hooks.mjs";
 
@@ -215,9 +215,19 @@ export async function removeArea(regions, scene = canvas.scene) {
 
 async function deleteHandlesOf(region) {
   const scene = region.parent;
-  const ids = scene.tokens.filter(tk => isHandle(tk) && aoeFlags(tk).region === region.id
-    && tk.canUserModify(game.user, "delete")).map(tk => tk.id);
-  if (ids.length) await scene.deleteEmbeddedDocuments("Token", ids.filter(id => scene.tokens.has(id)));
+  const handles = () => scene.tokens.filter(tk => isHandle(tk) && aoeFlags(tk).region === region.id
+    && tk.canUserModify(game.user, "delete"));
+  if (!handles().length) return;
+  // Core's active GM drops the deleted region from every token inside it (an update of `_regions`,
+  // sent with noHook) right after the deletion. The handle sits inside its own region, so deleting
+  // it first made that update fail on the server ("does not exist", Area 4 D10). Wait for it (≤1.5 s).
+  const until = Date.now() + 1500;
+  while (game.users.activeGM && Date.now() < until
+    && stillListing(handles().map(tk => ({ id: tk.id, _regions: tk._source._regions })), region.id).length) {
+    await new Promise(r => setTimeout(r, 100));
+  }
+  const ids = handles().map(tk => tk.id).filter(id => scene.tokens.has(id));
+  if (ids.length) await scene.deleteEmbeddedDocuments("Token", ids);
 }
 
 /**
@@ -408,4 +418,23 @@ export async function readyAreas({ sweepOnReady = true } = {}) {
     await sweep(canvas.scene);
     on("canvasReady", guard("canvasReady", c => game.users.activeGM?.isSelf && sweep(c.scene)));
   }
+}
+
+/**
+ * Argon never binds to an area handle. Dragging a handle controls it, Argon bound its HUD to it
+ * (the handle actor: a 0/0 HP skull bar) and the caster had to click their own token again
+ * (Area 4, D10). The HUD now stays on whatever it showed. Argon's controlToken hook calls
+ * `this.bind(token)`, so an instance wrap of `bind` covers it. Adjustment row aoe-argon-handle-bind.
+ */
+export function guardArgonBind() {
+  const hud = ui.ARGON;
+  if (!hud?.bind || hud.bind._aoeGuard) return !!hud?.bind?._aoeGuard;
+  const own = hud.bind;
+  const guarded = function (target, ...rest) {
+    try { if (target && isHandleTarget(target)) return Promise.resolve(); } catch { /* bind as usual */ }
+    return own.call(this, target, ...rest);
+  };
+  guarded._aoeGuard = true;
+  hud.bind = guarded;
+  return true;
 }

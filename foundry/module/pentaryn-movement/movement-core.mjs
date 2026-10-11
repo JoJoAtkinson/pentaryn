@@ -118,6 +118,16 @@ export function wishToClear({ policy, combatActive, wish } = {}) {
   return allowed ? null : reason;
 }
 
+/**
+ * After a fight (or the GM) switched a player's ghost off, tell them once when it is allowed again
+ * (usability Area 8, L7: the button stays off after the fight and is easy to forget). Nothing is
+ * switched back on by itself. `cleared` is the reason it was switched off on this client, or null.
+ */
+export function ghostBack({ cleared, policy, combatActive, wish } = {}) {
+  if (!cleared || wish) return false;
+  return ghostAllowed({ policy, combatActive }).allowed;
+}
+
 /* -------------------------------------------- */
 /*  Owned on top                                */
 /* -------------------------------------------- */

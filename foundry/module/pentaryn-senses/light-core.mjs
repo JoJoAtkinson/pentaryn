@@ -123,22 +123,38 @@ export function strongest(lights) {
   return best;
 }
 
+/** Each item that gives light now, with the light it gives: [{ id, light }]. */
+function lightEntries(items) {
+  const out = [];
+  for (const item of items ?? []) {
+    if (!item || (item.system?.quantity ?? 1) <= 0) continue;
+    const f = flagsOf(item);
+    if (isObj(f.light)) out.push({ id: item.id ?? null, light: f.light });
+    else if (f.lit === true) {
+      const l = lightFor(profileFor(item), { hooded: f.hooded === true });
+      if (l) out.push({ id: item.id ?? null, light: l });
+    }
+  }
+  return out;
+}
+
 /**
  * The light an actor's items give: a shard's fixed `light` flag always counts; a torch, lamp or
  * lantern counts while `lit`. Items with quantity 0 count for nothing.
  */
 export function carriedLightOf(items) {
-  const lights = [];
-  for (const item of items ?? []) {
-    if (!item || (item.system?.quantity ?? 1) <= 0) continue;
-    const f = flagsOf(item);
-    if (isObj(f.light)) lights.push(f.light);
-    else if (f.lit === true) {
-      const l = lightFor(profileFor(item), { hooded: f.hooded === true });
-      if (l) lights.push(l);
-    }
-  }
-  return strongest(lights);
+  return strongest(lightEntries(items).map(e => e.light));
+}
+
+/**
+ * Which item's light the token shows (the one carriedLightOf picks), or null. With a torch and a
+ * hooded lantern both lit, only one of them lights the token; the sheet marks the other so the
+ * player can see why lowering the hood changed nothing (usability Area 8, L5).
+ */
+export function lightingItemId(items) {
+  const entries = lightEntries(items);
+  const best = strongest(entries.map(e => e.light));
+  return best ? (entries.find(e => e.light === best)?.id ?? null) : null;
 }
 
 export const isLit = item => flagsOf(item).lit === true;

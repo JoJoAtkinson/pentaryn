@@ -15,7 +15,7 @@
 
 import {
   MODULE, SIZE_KEYS, SIZE_BY_KEY, normalisePrompt, nameplate, preview, stripHtml, distanceLine, dialogPosition,
-  footprintLabel
+  footprintLabel, behindDoor
 } from "./geometry-core.mjs";
 import { markerSizeOfToken, promptText, markerActor, art, EMPTY_TINT, FULL_TINT } from "./markers.mjs";
 import { panelFor, resolveItemEmbeds } from "./model.mjs";
@@ -178,7 +178,8 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
       footprint: footprintLabel(size, tok?.parent?.grid?.distance ?? 5),
       sizes: SIZE_KEYS.map(k => ({ key: k, active: k === size, title: footprintLabel(k, tok?.parent?.grid?.distance ?? 5) })),
       placeholder: t("dialog.placeholder"),
-      hint: t("dialog.hint"),
+      // a fresh marker is removed by ⇧Esc (its text goes back to empty), so say so (P-9-a)
+      hint: t(this.#fresh && setting("deleteEmptyOnClose", true) ? "dialog.hintFresh" : "dialog.hint"),
       deleteLabel: t("dialog.delete"),
       panelLoading: t("panel.loading")
     };
@@ -482,9 +483,14 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
     const shown = p.shown.map(r => row(r)).join("") + p.more.map(r => row(r, true)).join("");
     const more = p.more.length ? `<button type="button" class="pp-more" data-action="more">${esc(t("panel.more", { n: p.more.length }))}</button>` : "";
     const empty = p.total ? "" : `<p class="pp-empty">${esc(t("panel.nobody"))}</p>`;
+    // a door in the way is the thing Joe designs around: say it above the fold (P-9-b)
+    const door = behindDoor(p.unseen.map(r => ({ ...r, name: r.item.isPrompt ? `Prompt · ${r.item.size}` : r.item.name })));
+    const doorLine = door
+      ? `<p class="pp-door"><i class="fa-solid fa-door-closed"></i> ${esc(t("panel.behindDoor", { list: door.list.join(", ") + (door.extra ? ` +${door.extra}` : "") }))}</p>`
+      : "";
     const unseen = p.unseen.length
       ? `<details class="pp-out"><summary>${esc(t("panel.outOfSight", { ft: setting("unseenWithinFt", 60), n: p.unseen.length }))}</summary><ol class="pp-rows">${p.unseen.map(r => row(r, false, true)).join("")}</ol></details>`
       : "";
-    box.innerHTML = `${head}${warn}${empty}<ol class="pp-rows">${shown}</ol>${more}${unseen}`;
+    box.innerHTML = `${head}${warn}${doorLine}${empty}<ol class="pp-rows">${shown}</ol>${more}${unseen}`;
   }
 }

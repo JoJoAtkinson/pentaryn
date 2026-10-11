@@ -88,6 +88,10 @@ they are looking at.
   there.
 - The selected token's portrait has an orange glow.
 - **Client setting: Show the "Your creatures" strip**, default on.
+- **Over the Combat HUD (usability Area 6 re-run, U-6-12):** while Argon's HUD is up it covers the
+  hotbar, so the strip floats 8 px above the HUD's action bar, left-aligned with it, and drops back
+  above the hotbar when the HUD closes (re-checked twice a second while the strip exists). World
+  setting **Strip floats above the Combat HUD** (`floatOverHud`), default on.
 
 ## Console (`game.pentaryn.creatures`)
 

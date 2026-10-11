@@ -638,3 +638,66 @@ def test_world_ordering_parses_foundrys_javascript_date():
 def test_world_ordering_survives_a_missing_or_unparseable_date():
     assert login._last_played("") == login._last_played("not a date")
     assert login._last_played("").year == 1, "unknown dates must sort last, not raise"
+
+
+# ── vtt-login --host: which browser-facing names may receive a session ────────
+
+@pytest.mark.parametrize("host", ["localhost", "127.0.0.1", "zz1.localhost", "ZZ12.Localhost", "a-b.localhost"])
+def test_loopback_host_accepts_loopback_names(host):
+    assert login.loopback_host(host) == host.lower()
+
+
+@pytest.mark.parametrize("host", ["example.com", "localhost.example.com", "zz1.localhost.evil.com",
+                                  "a.b.localhost", "-x.localhost", ".localhost", "10.0.0.5", ""])
+def test_loopback_host_refuses_anything_that_can_leave_the_machine(host):
+    with pytest.raises(ValueError):
+        login.loopback_host(host)
+
+
+def test_cli_accepts_a_localhost_label_and_rejects_a_real_host():
+    assert cli.build_parser().parse_args(["login", "--host", "zz3.localhost"]).host == "zz3.localhost"
+    with pytest.raises(SystemExit):
+        cli.build_parser().parse_args(["login", "--host", "example.com"])
+
+
+def test_a_localhost_label_binds_the_handoff_to_ipv4_loopback():
+    assert login._bind_address("zz1.localhost") == "127.0.0.1"
+    assert login._bind_address("127.0.0.1") == "127.0.0.1"
+    assert login._bind_address("localhost") == "localhost"
+
+
+def test_handoff_on_a_localhost_label_sets_the_cookie_for_that_name(monkeypatch):
+    """The whole hop, minus Foundry: the ticket URL names the label, a request to it gets the
+    cookie and a redirect into that label's /game. No session is real; nothing is opened."""
+    import threading
+    import urllib.request
+
+    seen = {}
+    monkeypatch.setattr(login, "_say", lambda msg: seen.setdefault("url", msg.split()[-1]))
+    monkeypatch.setattr(login, "HANDOFF_TIMEOUT", 10.0)
+    result = {}
+    th = threading.Thread(target=lambda: result.setdefault(
+        "ok", login._handoff("fake-session", "zz9.localhost", "http://zz9.localhost:30000/game", False)))
+    th.start()
+    for _ in range(100):
+        if "url" in seen:
+            break
+        time.sleep(0.05)
+    url = seen["url"]
+    assert url.startswith("http://zz9.localhost:")
+
+    class NoRedirect(urllib.request.HTTPRedirectHandler):
+        def redirect_request(self, *a, **k):
+            return None
+
+    # resolve the label the way the browser does (always loopback), without trusting the OS
+    req = urllib.request.Request(url.replace("zz9.localhost", "127.0.0.1"), headers={"Host": url.split("/")[2]})
+    try:
+        urllib.request.build_opener(NoRedirect).open(req, timeout=5)
+        raise AssertionError("expected a 302")
+    except urllib.error.HTTPError as exc:
+        assert exc.code == 302
+        assert exc.headers["Location"] == "http://zz9.localhost:30000/game"
+        assert exc.headers["Set-Cookie"].startswith("session=fake-session;")
+    th.join(5)
+    assert result.get("ok") is True

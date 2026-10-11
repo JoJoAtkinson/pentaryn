@@ -8,6 +8,7 @@
  *   attacks.mjs  Part C  auto damage on hit
  *   effects.mjs  Part D  a spell's effects go on you when you are its only target; unapplied trays light up
  *   escape.mjs   Part E  Escape cancels a spell-area placement on the first press, even with a sheet open
+ *   refund.mjs   Part F  a cancelled placement gives back the slot / charge it spent
  *   core.mjs            pure helpers (node-tested in test/run.mjs)
  *
  * dnd5e 6 only (0.3.0). Part E now cancels core's RegionLayer#placeRegions placement (dnd5e 6
@@ -22,12 +23,14 @@
 import { MODULE } from "./core.mjs";
 import { registerSettings, migrateSettings, setting } from "./settings.mjs";
 import { hookIds, offAll } from "./hooks.mjs";
-import { installAreas, readyAreas, areasFor, spellAreas, handleFor, removeArea, sweep, ensureHandleActor, createHandle } from "./areas.mjs";
+import { installAreas, readyAreas, areasFor, spellAreas, handleFor, removeArea, sweep, ensureHandleActor, createHandle, guardArgonBind } from "./areas.mjs";
 import { installResolve, resolve, applyRows, rollNpcSaves, rollForPlayer, pingPlayers, setRow, REQUEST_HANDLER } from "./resolve.mjs";
 import { installTray } from "./tray.mjs";
 import { installAttacks } from "./attacks.mjs";
 import { installEffects, selfApply, pendingFor, cardEffects } from "./effects.mjs";
 import { registerEscape, disableEscape, activePlacement } from "./escape.mjs";
+import { installRefund } from "./refund.mjs";
+import { installAim } from "./aim.mjs";
 
 let installed = false;
 
@@ -62,6 +65,8 @@ function installHooks() {
   installTray();
   installAttacks();
   installEffects();
+  installRefund();
+  installAim();
 }
 
 /**
@@ -73,6 +78,7 @@ export async function install({ sweepOnReady = true } = {}) {
   registerEscape();
   installHooks();
   publish();
+  guardArgonBind();
   await migrateSettings();
   await readyAreas({ sweepOnReady });
   return api;
@@ -93,6 +99,8 @@ if (!globalThis.__pentarynAoeHot) {
     // Deferred a tick: pentaryn-importer's ready hook (it sorts after "aoe") replaces
     // game.pentaryn with a frozen object, which would drop a key published synchronously here.
     setTimeout(publish, 0);
+    // Argon makes ui.ARGON in its own ready hook; a tick later it exists whatever the load order.
+    setTimeout(() => { if (!guardArgonBind()) Hooks.once("canvasReady", guardArgonBind); }, 0);
     migrateSettings().catch(err => console.error(`${MODULE} | settings migration`, err));
     readyAreas().catch(err => console.error(`${MODULE} | ready`, err));
   });

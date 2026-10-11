@@ -508,6 +508,15 @@ All fields are optional; the default is an orange flame (`.pt-item-mark` in `sty
 - Blind Study rolls pass their roll mode through `foundry.dice.Roll._mapLegacyRollMode`. dnd5e 6 hands `rollMode` to core as the `messageMode`, which only accepts the new keys (`blind`, `gm`, `public`, `self`); the legacy `"blindroll"` was silently replaced by the client default, so the Study card and its Dice So Nice animation would have gone public. Registered as `dnd5e-legacy-roll-modes` in `foundry/adjustments.yml`.
 - `module.json` now requires dnd5e 6.0+ (verified 6.0.6). Nothing else changed for 6: sheet selectors, `details.race`/`background` and the `rollSkill` signature are the same in 6.0.6, and the Dice So Nice `skip` flag still holds.
 
+## 0.19.4 (2026-10-10, usability run, Area 7 re-run)
+
+- **The inspect window's Share switches are the table's PCs only** (`tablePCs` in `known-core.mjs`,
+  fixtured in `test/known.mjs`): each player's assigned character, plus every character of a player
+  who has not picked one. Transformed copies (dnd5e `isPolymorphed`, e.g. "Caven Calderon
+  (Allosaurus)") are left out, so a share can no longer land on a form that vanishes on revert.
+  Two PCs with one first name show their whole names. The same list feeds the Simulate roller.
+  U-7-3 in `context/plans/usability-changes-2026-10.md`.
+
 ## 0.19.3 (2026-10-10, usability run)
 
 - **Fixed: a closer look from a non-active scene rolled nothing.** `canReach` (the one reach rule,

@@ -864,6 +864,7 @@ Hooks.once("init", () => {
 // "importer", so publishing synchronously gets wiped. Defer a tick (as
 // pentaryn-dropbin does), then rebuild the namespace rather than assign into it.
 Hooks.once("ready", () => setTimeout(() => {
+  guardItemTooltipPosition();
   const api = { report, computeSlots, stash, releaseAway, away: awayOf };
   const current = game.pentaryn;
   if (current && !Object.isExtensible(current)) game.pentaryn = { ...current, attunement: api };
@@ -873,6 +874,26 @@ Hooks.once("ready", () => setTimeout(() => {
   }
   console.log(`${MODULE} | ready`);
 }, 0));
+
+/**
+ * dnd5e 6.0.6 `Tooltips5e#_positionItemTooltip` runs a frame after an item tooltip's content
+ * loads and calls `game.tooltip._setAnchor`, which reads `game.tooltip.element`. When the row
+ * under the pointer was re-rendered away in between (a sheet refresh after a take, an attune,
+ * a light), core has already deactivated the tooltip and that element is null, so every such
+ * hover logged "Cannot read properties of null (reading 'getBoundingClientRect')" (Area 8 run).
+ * With no anchor there is nothing to position: skip. Registered as `dnd5e-item-tooltip-anchor`.
+ */
+function guardItemTooltipPosition() {
+  const proto = game.dnd5e?.tooltips ? Object.getPrototypeOf(game.dnd5e.tooltips) : null;
+  const original = proto?._positionItemTooltip;
+  if (typeof original !== "function" || original.pentarynGuarded) return;
+  const guarded = function (...args) {
+    if (!game.tooltip?.element || !this.tooltip) return;
+    return original.apply(this, args);
+  };
+  guarded.pentarynGuarded = true;
+  proto._positionItemTooltip = guarded;
+}
 
 // One hook for both sheets. `renderBaseActorSheet` fires for every subclass,
 // because Foundry walks the inheritance chain dispatching render<ClassName>.

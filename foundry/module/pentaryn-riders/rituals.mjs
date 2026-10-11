@@ -21,7 +21,14 @@
  *    Nothing in Argon's files is edited. Registered in foundry/adjustments.yml
  *    (argon-ritual-adept-list).
  *
- * Setting: pentaryn-riders.rituals (world, default on) turns both off.
+ * 3. Longer casts (usability Area 6 re-run, W7). Argon puts a spell on a bar only when one of its
+ *    activities is an action, bonus action, reaction or special. Animate Dead (1 minute) was on no
+ *    bar, so a player could start it only from the sheet. The Action bar's Cast Spell panel gets a
+ *    "Longer casts" group: castable spells (Argon's own prepared filter) whose casting time is
+ *    minutes or hours and that no bar shows. Any character, not only wizards. Setting
+ *    pentaryn-riders.longCasts (world, default on). Row riders-argon-long-casts.
+ *
+ * Setting: pentaryn-riders.rituals (world, default on) turns 1 and 2 off.
  */
 
 import * as rit from "./rituals-core.mjs";
@@ -32,6 +39,10 @@ const WRAPPED = Symbol.for(`${MOD}.ritualsWrapped`);
 
 function enabled() {
   try { return game.settings.get(MOD, "rituals") !== false; } catch { return false; }
+}
+
+function longEnabled() {
+  try { return game.settings.get(MOD, "longCasts") !== false; } catch { return false; }
 }
 
 function hasRitualAdept(actor) {
@@ -47,6 +58,11 @@ Hooks.once("init", () => {
   game.settings.register(MOD, "rituals", {
     name: "PENTARYN_RIDERS.settings.rituals.name",
     hint: "PENTARYN_RIDERS.settings.rituals.hint",
+    scope: "world", config: true, type: Boolean, default: true
+  });
+  game.settings.register(MOD, "longCasts", {
+    name: "PENTARYN_RIDERS.settings.longCasts.name",
+    hint: "PENTARYN_RIDERS.settings.longCasts.hint",
     scope: "world", config: true, type: Boolean, default: true
   });
 });
@@ -69,19 +85,33 @@ Hooks.on("dnd5e.preUseActivity", (activity, usageConfig) => {
 function addRituals(button) {
   if (Object.hasOwn(button, DONE)) return;
   button[DONE] = true;
-  if (!enabled() || button.type !== "spell" || !Array.isArray(button._spells)) return;
+  if (button.type !== "spell" || !Array.isArray(button._spells)) return;
   if (button._parent?.label !== "DND5E.Action") return;
   const actor = button.actor;
-  if (actor?.type !== "character" || !button.showPreparedOnly || !hasRitualAdept(actor)) return;
-  const spells = rit.adeptRituals(actor.items.filter(i => i.type === "spell"));
-  if (!spells.length) return;
+  if (actor?.type !== "character") return;
   const Btn = button._spells.flatMap(c => c.buttons ?? [])[0]?.constructor;
   if (!Btn) return;
-  button._spells.push({
-    label: game.i18n.localize("PENTARYN_RIDERS.rituals.group"),
-    buttons: spells.map(item => new Btn({ item })),
-    uses: { max: Infinity, value: Infinity }
-  });
+  const all = actor.items.filter(i => i.type === "spell");
+  if (enabled() && button.showPreparedOnly && hasRitualAdept(actor)) {
+    const spells = rit.adeptRituals(all);
+    if (spells.length) button._spells.push({
+      label: game.i18n.localize("PENTARYN_RIDERS.rituals.group"),
+      buttons: spells.map(item => new Btn({ item })),
+      uses: { max: Infinity, value: Infinity }
+    });
+  }
+  // 3. Longer casts (Animate Dead's 1 minute is on no bar at all).
+  if (longEnabled()) {
+    const long = rit.longCasts(all.map(item => ({
+      item, s: rit.spellInfo(item),
+      activations: [...(item.system?.activities ?? [])].map(a => a?.activation?.type).filter(Boolean)
+    })), { preparedOnly: !!button.showPreparedOnly });
+    if (long.length) button._spells.push({
+      label: game.i18n.localize("PENTARYN_RIDERS.rituals.longGroup"),
+      buttons: long.map(item => new Btn({ item })),
+      uses: { max: Infinity, value: Infinity }
+    });
+  }
 }
 
 Hooks.once("ready", () => {

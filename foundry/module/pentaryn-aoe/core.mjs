@@ -269,14 +269,68 @@ export function regionOfActivity(flags5e, activityUuid) {
  * (Guidance's 18 skills, Fire Shield's warm or chill, Aspect of the Wilds), and applying all of
  * them would be wrong. Those stay in the tray for someone to pick.
  */
-export function selfApplyReason({ casterUuid = null, targetUuids = [], affectsType = null, activityType = null, effectCount = 0 } = {}) {
+export function selfApplyReason({ casterUuid = null, targetUuids = [], affectsType = null, activityType = null, effectCount = 0, rangeUnits = null, untargeted = false } = {}) {
   if (!casterUuid || effectCount !== 1) return null;
   if (activityType === "enchant") return null;
   if (affectsType === "self") return "self-only";
-  const unique = [...new Set((targetUuids ?? []).filter(Boolean))];
-  if (unique.length !== 1 || unique[0] !== casterUuid) return null;
   if (activityType === "attack" || activityType === "save") return null;
+  const unique = [...new Set((targetUuids ?? []).filter(Boolean))];
+  // usability Area 6 re-run (W1): Mage Armor cast with nothing targeted spent the slot and applied
+  // nothing, and a player has no tray to fix it. A touch (or self-range) spell for one willing
+  // creature, cast at nobody, means the caster. `untargeted` is the setting that allows it.
+  if (!unique.length) {
+    return untargeted && UNTARGETED_AFFECTS.has(affectsType) && UNTARGETED_RANGES.has(rangeUnits) ? "untargeted-self" : null;
+  }
+  if (unique.length !== 1 || unique[0] !== casterUuid) return null;
   return "targeted-self";
+}
+
+/** Who an untargeted touch spell may default to the caster for (dnd5e target.affects.type). */
+const UNTARGETED_AFFECTS = new Set(["creature", "willing", "ally"]);
+/** Only a touch (or self) range: a ranged buff cast at nobody is a mistake to ask about, not a guess. */
+const UNTARGETED_RANGES = new Set(["touch", "self"]);
+
+/**
+ * The same spell's effect already on the actor, to replace rather than stack (2024 PHB, Combining
+ * Magical Effects: the effects of the same spell cast more than once don't combine). Shield cast
+ * from a slot and then from a Ring of Spell Storing gave +10 AC: dnd5e refreshes an effect only
+ * when it came from the same source effect, and the ring's Shield is another item.
+ * @param {{name: string, spell: string|null}} incoming  the effect's name and its spell's identifier
+ * @param {{id: string, name: string, spell: string|null, disabled?: boolean}[]} existing
+ * @returns {string|null} the id of the effect to replace
+ */
+export function sameSpellEffect(incoming, existing = []) {
+  if (!incoming?.spell || !incoming.name) return null;
+  const hit = (existing ?? []).find(e => e && !e.disabled && e.spell === incoming.spell && e.name === incoming.name);
+  return hit?.id ?? null;
+}
+
+/**
+ * Aim a cone or line whose range is Self (Cone of Cold, Burning Hands, Lightning Bolt) from the
+ * caster toward the pointer. Core's placement puts the shape's origin under the pointer with
+ * rotation 0 (east), so the area left the caster entirely (usability Area 6 re-run, W13). The
+ * origin is where the line from the token's centre toward the pointer leaves the token's box, so
+ * the caster is not inside their own cone (PHB: a Cone's point of origin isn't in its area).
+ * @param {{x:number,y:number}} centre   the caster token's centre (px)
+ * @param {number} halfW                 half the token's width (px)
+ * @param {number} halfH                 half the token's height (px)
+ * @param {{x:number,y:number}} pointer  the pointer (px)
+ * @returns {{x:number, y:number, rotation:number}}  rotation in degrees, 0 = east, clockwise
+ */
+export function aimFromCaster(centre, halfW, halfH, pointer) {
+  const dx = (pointer?.x ?? centre.x) - centre.x, dy = (pointer?.y ?? centre.y) - centre.y;
+  if (!dx && !dy) return { x: centre.x + halfW, y: centre.y, rotation: 0 };
+  const ax = Math.abs(dx), ay = Math.abs(dy);
+  const t = Math.min(ax ? halfW / ax : Infinity, ay ? halfH / ay : Infinity);
+  let rotation = Math.atan2(dy, dx) * 180 / Math.PI;
+  if (rotation < 0) rotation += 360;
+  const r = v => Math.round(v * 1000) / 1000;
+  return { x: r(centre.x + dx * t), y: r(centre.y + dy * t), rotation: r(rotation) };
+}
+
+/** Is this a Self-range cone or line that should be aimed from its caster? */
+export function aimsFromCaster({ rangeUnits = null, templateType = null } = {}) {
+  return rangeUnits === "self" && ["cone", "line", "ray"].includes(templateType);
 }
 
 /**
@@ -291,4 +345,115 @@ export function pendingEffects(effectIds, appliedIds = [], { ageMs = 0, maxAgeMs
   const ids = [...new Set(effectIds ?? [])].filter(Boolean);
   if (ids.some(id => done.has(id))) return [];
   return ids;
+}
+
+/**
+ * Handle tokens that still list a just-deleted region in their `_regions`. Core's active GM drops
+ * the region from every token inside it with one update right after the deletion; a handle deleted
+ * before that update lands made the server log "undefined id [...] does not exist in the
+ * EmbeddedCollection" (Area 4 live run, D10). The handle is deleted once this is empty.
+ * @param {{id: string, _regions?: string[]}[]} tokens  source views of the handle tokens
+ * @param {string} regionId
+ * @returns {string[]}  ids still waiting
+ */
+export function stillListing(tokens, regionId) {
+  return (tokens ?? []).filter(t => Array.isArray(t?._regions) && t._regions.includes(regionId)).map(t => t.id);
+}
+
+/** Is this Argon bind target (a Token, a TokenDocument or an Actor) one of our area handles? */
+export function isHandleTarget(target, module = MODULE) {
+  const doc = target?.document ?? target;
+  const flag = (d) => !!d?.flags?.[module]?.handle;
+  return flag(doc) || flag(doc?.token) || (!!doc?.flags?.[module]?.handleActor);
+}
+
+/* -------------------------------------------- */
+/*  Usability Area 5 re-run (sorcerer)          */
+/* -------------------------------------------- */
+
+/**
+ * Does a newer resolution make an older one stale? The same activity and the same area (a moved
+ * area re-rolled, S3), or a re-roll from the same usage card after its area was removed (S16: the
+ * older 5-row tray stayed live beside the new 1-row one, so the GM could have applied both).
+ * @param {{activity?: string, region?: string|null, usage?: string|null, superseded?: boolean}} older
+ * @param {{activity?: string, region?: string|null, usage?: string|null}} newer
+ */
+export function supersedes(older, newer) {
+  if (!older || !newer || older.superseded || older.activity !== newer.activity) return false;
+  if (older.region === newer.region) return true;
+  return !!newer.usage && older.usage === newer.usage;
+}
+
+/**
+ * Careful Spell (PHB 2024): "choose a number of those creatures up to your Charisma modifier
+ * (minimum of one creature). A chosen creature automatically succeeds on its saving throw against the
+ * spell, and it takes no damage if it would normally take half damage on a successful save."
+ * We choose for the player: the caster's side (same token disposition) in the area, player
+ * characters first, never the caster; the GM can change any row in the tray.
+ * @param {object[]} tokens  describeToken() shapes, plus `disposition`
+ * @param {{casterActorId?: string|null, casterDisposition?: number|null, max?: number}} o
+ * @returns {string[]}  token ids
+ */
+export function carefulTargets(tokens, { casterActorId = null, casterDisposition = null, max = 1 } = {}) {
+  if (casterDisposition === null || casterDisposition === undefined) return [];
+  const n = Math.max(1, Math.floor(Number(max) || 1));
+  const side = (tokens ?? []).filter(t => isCreature(t) && t.baseActorId !== casterActorId && t.disposition === casterDisposition && !t.hidden);
+  side.sort((a, b) => Number(!!b.hasPlayerOwner) - Number(!!a.hasPlayerOwner));
+  return side.slice(0, n).map(t => t.id);
+}
+
+/** Mark rows protected by Careful Spell: an automatic success, and no damage where a success halves it. */
+export function protectRows(rows, ids, onSave) {
+  const set = new Set(ids ?? []);
+  for (const row of rows ?? []) {
+    if (!set.has(row.id) || row.caster) continue;
+    row.protected = true;
+    row.save = { total: null, success: true, messageId: null, careful: true };
+    const m = multiplierFor(true, onSave);
+    row.multiplier = m === 0.5 ? 0 : m;
+  }
+  return rows;
+}
+
+/**
+ * Is a Careful Spell use still waiting for this cast? In combat: the same turn it was used on.
+ * Out of combat: ten minutes. Bound to the first usage card it protected, so re-rolling that card
+ * keeps the protection and a later, different spell does not get it.
+ * @param {{at?: number, key?: string|null, usage?: string|null}|null} flag
+ * @param {{now?: number, combatKey?: string|null, usage?: string|null, maxAgeMs?: number}} o
+ */
+/**
+ * A Careful Spell use bound to a combat turn ("combatId:round:combatant") of a combat that was
+ * deleted: it can never apply again, so it is cleared (usability Area 9 found one on Marrith).
+ * An out-of-combat use (no key) expires by time and is left alone.
+ */
+export function carefulStale(flag, combatId) {
+  return !!(combatId && flag && typeof flag === "object" && typeof flag.key === "string" && flag.key.startsWith(`${combatId}:`));
+}
+
+export function carefulApplies(flag, { now = 0, combatKey = null, usage = null, maxAgeMs = 10 * 60 * 1000 } = {}) {
+  if (!flag || typeof flag !== "object") return false;
+  if (flag.usage && flag.usage !== usage) return false;
+  if (flag.key) return flag.key === combatKey;
+  return Number.isFinite(flag.at) && now - flag.at <= maxAgeMs;
+}
+
+/**
+ * Was an area spell's placement cancelled (Escape, right-click) after its slot or charge was spent?
+ * dnd5e 6 consumes before the area follows the mouse and offers only a Refund button on the card.
+ * @param {{wanted?: boolean, placed?: number, canPlace?: boolean, consumed?: boolean}} o
+ */
+export function placementCancelled({ wanted = false, placed = 0, canPlace = true, consumed = false } = {}) {
+  return !!wanted && !!canPlace && !(Number(placed) > 0) && !!consumed;
+}
+
+/**
+ * What the caster's own damage card tells a player about the GM-only tray (no NPC numbers).
+ * @returns {"waiting"|"applied"|"superseded"|null}
+ */
+export function playerStatus(res) {
+  if (!res) return null;
+  if (res.superseded) return "superseded";
+  if (!res.rows?.some(r => r.apply)) return null;
+  return allApplied(res.rows) ? "applied" : "waiting";
 }

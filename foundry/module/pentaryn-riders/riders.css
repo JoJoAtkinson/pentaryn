@@ -54,3 +54,16 @@
 #tooltip .ech-tooltip {
   pointer-events: none;
 }
+
+/* Concentration save result line (concentration.mjs part 3). */
+.chat-message p.pr-conc-result {
+  margin: 0.25rem 0 0;
+  text-align: center;
+  font-weight: bold;
+}
+.chat-message p.pr-conc-result.failure { color: var(--dnd5e-color-failure, #b0261c); }
+.chat-message p.pr-conc-result.success { color: var(--dnd5e-color-success, #1a7a33); }
+
+/* Arcane Recovery picker (cast-flow.mjs part 6). */
+.pr-ar-total { text-align: right; font-weight: bold; }
+.pr-ar-total.over { color: var(--dnd5e-color-failure, #b0261c); }

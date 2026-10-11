@@ -93,7 +93,8 @@ summon is skipped and a small prompt asks **Where does the light go?**
   light) and the glow moves with the token, including to another scene through a portal.
 - **Pick a target**: the cursor becomes a crosshair and a notice says what to do. Click any token
   (it glows and carries the light) or any square (a light sits there and respects walls).
-  Right-click or Esc cancels. A token you can't see counts as the square under it.
+  Right-click or Esc cancels. A token you can't see counts as the square under it. An open Combat
+  HUD panel closes first, so the click reaches the map (U-6-11).
 - **Not now**: nothing happens. The chat card keeps **On me · Pick a target · End light** as icons
   in its action row (in place of the Summon icon; hover for the label), so you can aim, move or end
   the light later from the card.
@@ -119,8 +120,11 @@ posts one chat line, in the chat mode the user has picked (a GM on "GM only" sta
 does the same thing and **uses nothing up**; the PHB activities would otherwise burn a lantern's
 single use or destroy a candle. A lit item lights its carrier through the carried-light path
 above: drop it in a pile and the carrier goes dark, and whoever picks it up glows. A lit
-**hooded lantern** also gets a hood button, which drops it to bright 0 / dim 5 and back. Items
-stay lit until put out; they do not burn down.
+**hooded lantern** also gets a hood button, which drops it to bright 0 / dim 5 and back, and
+posts a chat line like lighting does (U-8-3). Only the **strongest** lit item lights the token; any
+other lit item's flame is drawn dimmer, without the glow, and its tooltip names the item that
+outshines it (so a hood lowered while a torch burns visibly changes nothing, and the sheet says
+why; U-8-3). Items stay lit until put out; they do not burn down.
 
 | Item (dnd5e identifier) | Bright / Dim (ft) |
 |---|---|
@@ -138,7 +142,9 @@ its own profile in `flags.pentaryn-senses.lightItem`.
 `await game.pentaryn.senses.setupLight()` gives every Torch (world items, actors, unlinked
 tokens) a **Light** utility activity (`psLightToggle000`, one action, nothing consumed,
 `flags.pentaryn-senses.lightToggle`). It returns how many items it changed. Lamps, lanterns and
-candles already have their own Light activity. Torches added later need another run.
+candles already have their own Light activity. A Torch created later (bought, looted, dragged in)
+gets the activity from the active GM at once (`createItem`, U-6-16), so another run is only needed
+for torches that existed while no GM was online.
 
 **GM ready sweep** (after the carried-light sweep): reconciles every Light item that has a flag,
 puts out any spell light whose item no longer exists, and deletes the old floor tokens the PHB

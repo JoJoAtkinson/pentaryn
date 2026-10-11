@@ -27,7 +27,7 @@
  */
 
 import { summonerActorId, playerOwners, isScenery, partySelection, followersOf, ringSpots, wallBlocker,
-  hasDestination, withoutDestination } from "./portals-core.mjs";
+  hasDestination, withoutDestination, crowded, assignSpots, partyPreview } from "./portals-core.mjs";
 
 const MODULE = "pentaryn-portals";
 const SNAP_DIR = "assets/tokens/custom/portals";
@@ -86,9 +86,26 @@ function decorate(app, element) {
   } else {
     wrap.innerHTML = cardHTML(dests[0]);
     content.append(wrap);
+    plainQuestion(app, behavior, content, dests[0]);
   }
   root.classList.add("pentaryn-portal-dialog");
   app.setPosition?.({ width: Math.max(app.position?.width ?? 0, 460), height: "auto" });
+}
+
+/**
+ * Core asks "Teleport ZZ Fighter 5 to Passage → Drow Prison in Drow City — Fighting Pit
+ * (set-piece)?": the region's GM name and the scene's full name. With the card right below, say
+ * "Teleport ZZ Fighter 5 to The Fighting Pit?" using the card's title (usability Area 8, L6).
+ * A GM-written custom question (the behavior's dialog text) is left alone.
+ */
+function plainQuestion(app, behavior, content, card) {
+  if (behavior.system?.dialog?.revealed) return;
+  const p = content.querySelector(":scope > p");
+  if (!p) return;
+  const tokenId = (app?.id ?? "").slice((app?.id ?? "").lastIndexOf("-") + 1);
+  const token = behavior.parent?.parent?.tokens?.get(tokenId);
+  const who = token?.name;
+  p.textContent = who ? `Teleport ${who} to ${card.title}?` : `Teleport to ${card.title}?`;
 }
 
 /* -------------------------------------------- */
@@ -208,6 +225,13 @@ function injectConfig(app, element) {
  */
 
 let badgeLayer = null;
+/**
+ * Bumped by every draw and by canvas teardown. drawBadges awaits each badge's texture; a scene
+ * activation (canvasTearDown → badgeLayer = null) or a second draw (a region hook, canvasReady) in
+ * that gap left the first draw adding to a null layer: "Cannot read properties of null (reading
+ * 'addChild')" on the player client (usability Area 9). A draw that is no longer the latest stops.
+ */
+let drawRun = 0;
 const badges = []; // { region, x, y, r, cards, sprite }
 /** Region uuids this client has seen in sight, so a badge stays once found even before fog saves. */
 const seen = new Set();
@@ -235,13 +259,16 @@ function destinationsOf(region) {
 }
 
 async function drawBadges() {
+  const run = ++drawRun;
   try { badgeLayer?.destroy({ children: true }); } catch {}
+  badgeLayer = null;
   badges.length = 0;
   if (!canvas?.ready || !canvas.scene || !canvas.interface) return;
-  badgeLayer = new PIXI.Container();
-  badgeLayer.eventMode = "none";
-  badgeLayer.zIndex = 1000;
-  canvas.interface.addChild(badgeLayer);
+  const layer = badgeLayer = new PIXI.Container();
+  layer.eventMode = "none";
+  layer.zIndex = 1000;
+  canvas.interface.addChild(layer);
+  const stale = () => run !== drawRun || layer.destroyed || !canvas?.ready;
   const g = canvas.grid.size;
   for (const region of canvas.scene.regions) {
     const dests = destinationsOf(region);
@@ -295,7 +322,8 @@ async function drawBadges() {
       mv.anchor.set(0.5); mv.position.set(-r * 0.72, -r * 0.72);
       c.addChild(sq, mv);
     }
-    badgeLayer.addChild(c);
+    if (stale()) { try { c.destroy({ children: true }); } catch {} return; }
+    layer.addChild(c);
     badges.push({ region, x, y, r, revealed, bounds: b, sprite: c, cards: dests.map(d => cardFor(d.region)) });
   }
   refreshBadgeSight();
@@ -502,6 +530,7 @@ function recordOf(t) {
   try { pile = !!(a && game.itempiles?.API?.isValidItemPile?.(a)); } catch {}
   return {
     id: t.id,
+    name: t.name,
     actorId: a?.id ?? t.actorId ?? null,
     type: a?.type ?? null,
     linked: !!t.actorLink,
@@ -510,6 +539,8 @@ function recordOf(t) {
     owners: playerOwners(a?.ownership, gmIds),
     summoner: summonerActorId(a?.getFlag?.("dnd5e", "summon.origin")),
     polymorphed: !!a?.getFlag?.("dnd5e", "isPolymorphed"),
+    // pentaryn-aoe's area handle: owned by everyone, its area stays put (usability Area 8, L11).
+    handle: !!(t.flags?.["pentaryn-aoe"]?.handle || a?.flags?.["pentaryn-aoe"]?.handleActor),
     doc: t
   };
 }
@@ -519,12 +550,15 @@ function recordOf(t) {
  * or a PC summoned (skeletons, familiars, Arcane Eye, steeds, transformed forms). Never item
  * piles, Markers or crowd.
  */
-function partyTokens(scene) {
-  return partySelection(scene.tokens.map(recordOf)).map(r => r.doc);
+function partyRecords(scene) {
+  return partySelection(scene.tokens.map(recordOf));
 }
 
-/** Snapped top-left positions for `toks`, filled outward from (cx, cy) on `dest`. */
-function landingPlaces(dest, toks, cx, cy) {
+/**
+ * Snapped top-left positions for `toks`, filled outward from (cx, cy) on `dest`. With `party`
+ * (the partySelection records for `toks`, same order) each follower lands beside its PC.
+ */
+function landingPlaces(dest, toks, cx, cy, party = null) {
   const g = dest.grid.size;
   // Skip squares a wall cuts off from the landing (the pit wall, a cell's bars). Tested against
   // the destination's wall documents, because that scene may not be on the canvas.
@@ -534,7 +568,10 @@ function landingPlaces(dest, toks, cx, cy) {
   const standing = dest.tokens.filter(t => !moving.has(t.id))
     .map(t => ({ x: t.x, y: t.y, w: t.width * g, h: t.height * g }));
   const occupied = (x, y) => standing.some(s => x >= s.x && x < s.x + s.w && y >= s.y && y < s.y + s.h);
-  const spots = ringSpots(cx, cy, g, toks.length, { blocked: wallBlocker(walls), occupied });
+  const grouped = party?.length === toks.length;
+  // A few spare squares let a follower pick one touching its PC rather than the next in the ring.
+  const ring = ringSpots(cx, cy, g, toks.length + (grouped ? 8 : 0), { blocked: wallBlocker(walls), occupied });
+  const spots = grouped ? assignSpots(ring, party) : ring;
   return toks.map((t, i) => {
     const w = t.width * g, h = t.height * g;
     const s = dest.grid.getSnappedPoint({ x: spots[i].x - w / 2, y: spots[i].y - h / 2 }, { mode: CONST.GRID_SNAPPING_MODES.TOP_LEFT_VERTEX });
@@ -544,27 +581,51 @@ function landingPlaces(dest, toks, cx, cy) {
 
 /** GM: move tokens to another scene around (cx, cy). Plain create + delete, no `replacements`, so
  *  this never re-triggers the follow hook below. */
-async function carryTo(toks, dest, cx, cy) {
+async function carryTo(toks, dest, cx, cy, party = null) {
   if (!toks.length) return;
   const from = toks[0].parent;
-  const places = landingPlaces(dest, toks, cx, cy);
+  const places = landingPlaces(dest, toks, cx, cy, party);
   const data = toks.map((t, i) => ({ ...t.toObject(), ...places[i] }));
   await dest.createEmbeddedDocuments("Token", data, { keepId: true });
   await from.deleteEmbeddedDocuments("Token", toks.map(t => t.id));
 }
 
-async function teleportParty(destRegion) {
+/**
+ * GM: who is about to move, before anything moves (usability Area 8, L11: an everyone-owned
+ * scenery token joined the party silently). → true to go ahead.
+ */
+async function confirmParty(party, title) {
+  if (!setting("confirmPartyTeleport")) return true;
+  if (!party.length) {
+    ui.notifications.warn("Teleport party: nobody on this scene counts as the party.");
+    return false;
+  }
+  const rows = partyPreview(party).map(r => `<li>${esc(r.name)}${r.follower
+    ? ` <span class="pp-follows">${r.leaderName ? `lands beside ${esc(r.leaderName)}` : "follower"}</span>` : ""}</li>`).join("");
+  return foundry.applications.api.DialogV2.confirm({
+    window: { title: "Teleport party", icon: "fa-solid fa-person-walking-arrow-right" },
+    content: `<p>Move ${party.length === 1 ? "this token" : `these ${party.length} tokens`} to <strong>${esc(title)}</strong>?</p>
+      <ul class="pp-party">${rows}</ul>`,
+    yes: { label: "Teleport", icon: "fa-solid fa-check", default: true },
+    no: { label: "Cancel" },
+    rejectClose: false
+  }).catch(() => false);
+}
+
+async function teleportParty(destRegion, { confirm = true } = {}) {
   if (!game.user.isGM || !destRegion) return;
   const from = canvas.scene;
   const dest = destRegion.parent;
-  const toks = partyTokens(from);
+  const party = partyRecords(from);
+  if (confirm && !(await confirmParty(party, cardFor(destRegion).title))) return;
+  const toks = party.map(r => r.doc);
   const b = destRegion.bounds;
   const cx = b.x + b.width / 2, cy = b.y + b.height / 2;
   if (dest === from) {
-    const places = landingPlaces(dest, toks, cx, cy);
+    const places = landingPlaces(dest, toks, cx, cy, party);
     await from.updateEmbeddedDocuments("Token", toks.map((t, i) => ({ _id: t.id, ...places[i] })), { teleport: true, animate: false });
   } else {
-    await carryTo(toks, dest, cx, cy);
+    await carryTo(toks, dest, cx, cy, party);
     dest.pullUsers(game.users.filter(u => !u.isGM && u.active));
     await dest.view();
   }
@@ -599,6 +660,25 @@ function cameThroughPortal(token, destScene) {
   });
 }
 
+/**
+ * A PC that lands on someone (usability Area 6 re-run, W7: two PCs crossing together plus one
+ * already there all stood on the one landing square) steps to the nearest free square around it.
+ * GM, after core's teleport created the token. Setting spreadArrivals.
+ */
+async function spreadArrival(arrived) {
+  if (!setting("spreadArrivals")) return arrived;
+  const dest = arrived.parent;
+  const g = dest.grid.size;
+  const box = t => ({ x: t.x, y: t.y, w: t.width * g, h: t.height * g });
+  const others = dest.tokens.filter(t => t.id !== arrived.id && !t.hidden && !t.flags?.["pentaryn-aoe"]?.handle).map(box);
+  if (!crowded(box(arrived), others)) return arrived;
+  const cx = arrived.x + arrived.width * g / 2, cy = arrived.y + arrived.height * g / 2;
+  const [place] = landingPlaces(dest, [arrived], cx, cy);
+  if (!place || (place.x === arrived.x && place.y === arrived.y)) return arrived;
+  await arrived.update(place, { teleport: true, animate: false });
+  return arrived;
+}
+
 async function bringFollowers(scene, deleted, replacements) {
   const leaders = [];
   for (const t of deleted) {
@@ -609,6 +689,7 @@ async function bringFollowers(scene, deleted, replacements) {
     const r = recordOf(t);
     if (r.type !== "character" && !r.polymorphed) continue;       // only a PC brings company
     if (!cameThroughPortal(t, arrived.parent)) continue;
+    try { await spreadArrival(arrived); } catch (err) { console.warn(`${MODULE} | arrival spread skipped`, err); }
     leaders.push({ record: r, arrived });
   }
   if (!leaders.length) return;
@@ -831,10 +912,45 @@ for (const h of ["createRegion", "updateRegion", "deleteRegion", "createRegionBe
 }
 Hooks.on("canvasReady", () => { bindBoard(); drawBadges(); });
 Hooks.on("sightRefresh", () => { if (badges.length && !game.user.isGM) refreshBadgeSight(); });
-Hooks.on("canvasTearDown", () => { hideTip(); closeMenu(); badges.length = 0; badgeLayer = null; });
+Hooks.on("canvasTearDown", () => { hideTip(); closeMenu(); drawRun++; badges.length = 0; badgeLayer = null; });
 
 Hooks.on("renderDialogV2", (app, element) => {
   try { decorate(app, element); } catch (err) { console.warn(`${MODULE} | dialog decoration skipped`, err); }
+  try { preferTeleport(app, element); } catch (err) { console.warn(`${MODULE} | dialog focus skipped`, err); }
+});
+
+/**
+ * The teleport question opens on Teleport, not Don't Teleport (usability Area 6 re-run, W7). Core's
+ * DialogV2.confirm makes "no" the default (autofocus, Enter); a player who walked onto a portal
+ * meant to use it. Esc and the X still decline. Setting teleportDefault.
+ */
+function preferTeleport(app, element) {
+  if (!setting("teleportDefault") || !behaviorOf(app)) return;
+  const root = element instanceof HTMLElement ? element : element?.[0];
+  const yes = root?.querySelector('button[data-action="yes"]');
+  if (!yes || yes.disabled) return;
+  root.querySelector('button[data-action="no"]')?.removeAttribute("autofocus");
+  yes.setAttribute("autofocus", "");
+  requestAnimationFrame(() => { if (yes.isConnected && !yes.disabled) yes.focus(); });
+}
+
+/* Settings (usability Area 6 re-run). */
+// Plain English: this module ships no language file (adding one changes module.json, a restart).
+const SETTINGS = {
+  teleportDefault: { default: true, name: "Teleport is the default answer",
+    hint: "The teleport question opens with Teleport focused (Enter teleports). Off: core's default, Don't Teleport." },
+  spreadArrivals: { default: true, name: "Arrivals step off an occupied square",
+    hint: "A player character who comes through a portal onto a square someone already stands on moves to the nearest free square around it (the GM's client does it)." },
+  confirmPartyTeleport: { default: true, name: "Confirm a party teleport",
+    hint: "The GM's Teleport party first lists who will move (each follower beside its PC) and asks. Off: it moves at once." }
+};
+function setting(key) {
+  try { return game.settings.get(MODULE, key); } catch { return SETTINGS[key]?.default; }
+}
+Hooks.once("init", () => {
+  for (const [key, s] of Object.entries(SETTINGS)) {
+    game.settings.register(MODULE, key, { name: s.name, hint: s.hint, scope: "world", config: true, type: Boolean, default: s.default });
+  }
 });
 Hooks.on("renderRegionConfig", (app, element) => {
   try { injectConfig(app, element); } catch (err) { console.warn(`${MODULE} | config injection skipped`, err); }
@@ -843,7 +959,7 @@ Hooks.on("renderRegionConfig", (app, element) => {
 // pentaryn-importer replaces game.pentaryn with a frozen object in its own ready hook; defer a
 // tick and rebuild rather than assign (same as pentaryn-dropbin / -attunement).
 Hooks.once("ready", () => setTimeout(() => {
-  const api = { snapshot, cardFor, teleportParty, lookAt, open: PortalCard.open, redraw: drawBadges };
+  const api = { snapshot, cardFor, teleportParty, lookAt, open: PortalCard.open, redraw: drawBadges, spreadArrival };
   const current = game.pentaryn;
   if (current && !Object.isExtensible(current)) game.pentaryn = { ...current, portals: api };
   else { game.pentaryn ??= {}; game.pentaryn.portals = api; }

@@ -15,11 +15,11 @@ files are never edited; the bars are recomposed from `render*ArgonComponent` hoo
 |---|---|---|
 | Action bar, first button | **Full Attack** (badge = swings left) — only for characters with 2+ swings (Extra Attack…), a Nick pair, or an NPC/form with a parseable Multiattack | Left: every swing, one roll dialog each. Right: pick another weapon (remembered). |
 | Action pips | **2 → 1 → 0** for a character with Extra Attack — also when a weapon is clicked by hand | — |
-| Above the HUD while it runs | the **swing strip**: "Swing 2 of 3 · Longsword → Goblin", Adv / Dis for the next swing, Quick, Stop | Esc on a roll **pauses**: Resume / New target / another weapon / Stop. Esc again stops. |
-| Bonus bar, after the Attack action | **Off-hand: Dagger**, **Hew: Greatsword** (after a crit or a kill), **Flurry of Blows**, **Martial Arts strike** — only what the character qualifies for right now | one click → the roll dialog |
+| Above the HUD while it runs | the **swing strip**: "Swing 2 of 3 · Longsword → Goblin", Adv / Dis for the next swing, Quick, Stop, "Enter = Normal · Esc = pause"; the roll windows sit just above it | Esc on a roll **pauses**: Resume / New target / another weapon (tiles show to-hit · damage) / Stop. Esc again stops. |
+| Bonus bar, after the Attack action | **Off-hand: Dagger**, **Hew: Greatsword** (after a crit or a kill), **Pole Strike** (after a glaive / quarterstaff / spear swing), **Flurry of Blows**, **Martial Arts strike** — only what the character qualifies for right now; a new one pulses until the pointer reaches the bar. Argon's own off-hand weapon slot hides while **Off-hand** offers the same weapon, and once Nick or the off-hand attack used the Light extra attack. With Dual Wielder the Off-hand attack stays next to Nick (PHB: two separate extra attacks) | one click → the roll dialog |
 | Special bar | **Nick: Scimitar** (free, once per turn), **Sneak Attack: Ask / Auto** toggle, **New turn** (out of combat only) | one click |
 | Attack card in chat | **+ Sneak Attack 3d6** (also Frenzy, Colossus Slayer, Divine Strike) — roller and GM only, once per turn; tooltip shows advantage ✓ / ally beside the target ? / no disadvantage ✓ | one click → damage card, crit carried, weapon's damage type, no type picker |
-| Damage card in Auto mode | "+ Sneak Attack 3d6 · **Undo**" | Undo gives the once-per-turn back after a miss |
+| Damage card in Auto mode | "+ Sneak Attack 3d6 [**Undo**]" (a button, 0.2.2) | Undo gives the once-per-turn back after a miss |
 
 **Action Surge** (its feature used on your turn) adds a second Attack action's swings: the pips
 widen 2 → 4 and Full Attack offers the next two.
@@ -42,6 +42,9 @@ ignore the cards; nothing is applied without the GM's damage tray.
 | Off-hand after attacking | 4 + change Attack Mode in the dialog | 2 |
 | Rogue swing + Sneak Attack | ~6 + a 13-type picker | 3 (weapon, dialog, + Sneak) — 2 in Auto |
 | Monk Flurry | ≈6 | 3 (Flurry, dialog, dialog) |
+| Pole Strike after a glaive swing | 4 (drawer, tile, activity chooser, dialog) | 2 (Pole Strike, dialog) |
+| Rage | 3 (Rage, usage dialog, Apply on the card) | 2 (Rage, usage dialog) |
+| Steady Aim then the attack at Advantage | 4 + remember to click Advantage | 3 (Steady Aim, weapon, Enter — the window opens on Advantage) |
 
 ## Adjustments — what each setting changes and how to turn it off
 
@@ -52,7 +55,7 @@ the HUD as it was before this module for that behaviour. The playtest case is fr
 |---|---|---|---|
 | `fullAttack` | Full Attack button + swing strip + weapon picker | no button | A1–A6, G1–G2 |
 | `swingPips` | Action pips = swings left (instance getter override) | Argon's single pip | A1, A4, A6 |
-| `followUps` | Off-hand / Nick / Flurry / Martial Arts / Hew buttons | no extra buttons | A5, A7, C1–C2, E1 |
+| `followUps` | Off-hand / Nick / Flurry / Martial Arts / Hew / Pole Strike buttons | no extra buttons | A5, A7, C1–C2, E1, E2 |
 | `gateFollowUps` | Pole Strike greyed (tooltip says when it opens; a click warns) until the Attack action with a Quarterstaff, Spear or Heavy+Reach weapon | Pole Strike always live | E2 |
 | `riderOffers` | "+ Sneak Attack" on attack cards, Auto toggle, turn-key stamp on attack messages | use the feature items by hand | B1–B5, D1 |
 | `recklessToggle` | "Reckless Attack: On/Off" on a Barbarian's Special bar: applies the PHB item's Reckless effect plus native Advantage on Strength attacks (`system.abilities.str.attack.roll.mode` +1), until the start of the next turn; Frenzy's hint reads it | no button; apply Reckless by hand | D1 |
@@ -61,6 +64,30 @@ the HUD as it was before this module for that behaviour. The playtest case is fr
 | `offhandPip` | off-hand roll greys the Bonus pip and gives the Action pip back | Argon greys the Action pip | A7 |
 | `seedWeaponSets` | once, for characters whose `flags.enhancedcombathud.weaponSets` was never written: set 1 melee + Light off-hand, set 2 ranged | nothing seeded (already-seeded flags stay; clear one with a right-click on the slot) | H1 |
 | `multiattack` | NPCs and Wild Shape forms get Full Attack from Multiattack | Multiattack card only | G1–G2 |
+| `skipPickerGuide` | every client marks Argon's one-time Target Picker Tutorial as seen on load (client setting `enhancedcombathud.targetPickerGuideShown`); Argon's "0/1 Targets" cursor label gains "· right-click cancels" | the label is Argon's own; an unseen browser gets the tutorial once (reset per browser with `game.settings.set("enhancedcombathud","targetPickerGuideShown",false)`) | U-R-2 |
+| `specialActions` | Argon's Dash / Disengage / Dodge / Hide / Ready / Shove spend the Action pip and the swing pips (Shove is one swing); **Dash** adds an effect "Dash" (+ each Speed, for this turn); **Disengage** an effect "Disengage" (this turn); **Dodge** keeps Dodging on and it ends at the start of your next turn; **Hide** rolls Stealth vs DC 15 and keeps Hiding only on a success; a warning (never a block) when no Action is left. The active GM removes Dodging at its owner's turn start and our Dash / Disengage at turn end | Argon posts its card, nothing spent, Dodging never ends | U-1-4 |
+| `reactionSlot` | the Reaction bar's weapon reads **Opportunity Attack: Longsword**, spends the Reaction pip, gives back the Action pip Argon took on your own turn, and is never counted as an Attack-action swing | Argon's plain weapon slot | U-1-5 |
+| `escRollDialog` | Esc closes a dnd5e roll window at once (its autofocused button used to swallow Esc) | click the window first | U-1-6 |
+| `tidyCancelledAttacks` | closing an attack's roll window unrolled deletes its own usage card (only yours, under 5 min old, nothing consumed, nothing rolled under it, no Full Attack running) | the card stays | U-1-6 |
+| `deathSaveDamage` | a character taking damage at 0 HP gets a Death Saving Throw failure, two from a crit (a chat line says so); massive damage is whispered to the GM, never applied | the GM edits the tally | U-1-7 |
+| `portraitConditions` | status conditions (Prone, Poisoned, Grappled, Dodging, Hiding …) on the Argon portrait, hover = the PHB condition page; right-click removes as usual | Argon shows only effects with a duration (v14) | U-1-8 |
+| `hudFollows` | the HUD switches to your creature when its turn starts (players, Argon on), and to the one token left selected after you click one of a selected group. At combat start it checks again once Argon's own start-of-combat bind is done; a token that can't be selected right now (another layer or tool active) is bound to the HUD directly instead of leaving nothing selected (0.2.2) | toggle Argon to switch | U-1-9, U-10-2 |
+| `clearTargetsAfterTurn` | a player's targets are released when their turn ends (the U-R-1 stale-target cost) | targets stay | U-1-10 |
+| `dockRollDialogs` | while a Full Attack / follow-up runs, each roll window (and the manual-dice Roll Resolution window) sits with its bottom edge just above the swing strip, at the same height every swing (a window you drag sets the place for the next), and its title reads "… · Longsword, swing 2 of 3"; the window's default button keeps the focus (also after **New target** and after **Stop**), so the strip's "Enter = Normal" is true; the Roll Resolution box is focused and a digit typed with nothing focused goes into it (never to a hotkey). Outside a sequence a roll window is only kept inside the screen (Lay on Hands' Healing roll) | windows open centred, over the strip; digits may reach the canvas | U-2-3, U-3-13, U-10-4 |
+| `scrollingTextGuard` | a background tab starts no floating canvas text and posts no chat-card pop-ups (the chat tab's unread pip lights instead), and a second destroy of a floating text is ignored, and so is moving one that was destroyed mid-animation (core logged "reading 'off'", "setting 'hidden'" and "reading 'position'" bursts on the GM tab) | core behaviour | U-2-6, U-3-14, U-6-15 |
+| `bonusPip` | a Bonus-action feature or spell that is not an attack (Rage, Steady Aim, Divine Smite, Lay on Hands, Healing Word…), used on your turn in combat, greys the Bonus pip and marks the turn's Bonus Action used, so Off-hand / Flurry / Hew close (Argon spent nothing for item buttons) | the pip stays lit | U-3-8 |
+| `selfEffects` | a feature that affects only you and has exactly one effect (Rage) switches it on when used, through dnd5e's own Apply code | click Apply on its card | U-3-9 |
+| `steadyAim` | Steady Aim adds an effect "Steady Aim": every attack roll mode +1 (the roll window opens on Advantage) and Speed 0; after the next attack only the Speed 0 stays, gone at the end of your turn (out of combat: gone after the attack) | only the card; click Advantage yourself | U-3-10 |
+| `drawerNearButton` | Argon's drawers (Use Feature, Cast Spell…) open above the button that opened them, inside the action row, and stay above it when the bar is rebuilt with the drawer open (Pole Strike appearing; 0.2.2) | Argon's far-left position | U-3-11, U-10-1 |
+| `spellPips` | an Action spell or feature used from the HUD (Fire Bolt, Fireball, Magic) greys Argon's single Action pip; a Reaction (Counterspell, Shield) greys the Reaction pip on any turn and it comes back at the start of your turn; a re-bound HUD or a new round repaints the pips that were spent | spells spend no pip | U-5-8 |
+| `quickenedSpell` | after Quickened Spell on your turn, the next 1-Action spell spends the Bonus pip (notice "Quickened: X is your Bonus Action") and the Action stays free | Quickened only spends points | U-5-9 |
+| `helperTokenControl` | when an area handle you dragged or a summon you had selected is deleted and nothing else is selected, your caster's token is selected again, so the HUD stays up | nothing selected, the HUD closes | U-5-10 |
+
+**Argon setting this module is tuned for:** *Target Picker - Clear Targets*
+(`enhancedcombathud.rangepickerclear`) **off**, Argon's default. A target set with **T** before
+clicking a weapon by hand then goes straight to the roll dialog. With it on, every hand click
+clears the target and waits on "0/1 Targets" (U-R-1). Full Attack's **New target** clears the
+target itself, so it works either way.
 
 Per player (user flags, not settings): **Quick** (`flags.pentaryn-combat.quick`, the strip's
 checkbox) and **rider Ask/Auto** (`flags.pentaryn-combat.riders.<key>`, the Special-bar toggle).
@@ -69,12 +96,16 @@ checkbox) and **rider Ask/Auto** (`flags.pentaryn-combat.riders.<key>`, the Spec
 
 | Where | Key | When |
 |---|---|---|
-| actor | `flags.pentaryn-combat.turn` | each swing / rider / follow-up / Action Surge — `{key: "combat:round:combatantId", …}` — the combat is the started one the actor is in, not merely the one this client views (U-4-0) — `{attackAction, riders, followUps, nick, bonusUsed, otherActions, surges}`; self-invalidating (another turn's key reads as fresh). Always written whole (v14 `_replace`): a plain `setFlag` merges nested objects and carried last turn's used Sneak Attack into every later turn |
+| actor | `flags.pentaryn-combat.turn` | each swing / rider / follow-up / Action Surge — `{key: "combat:round:combatantId", …}` — the combat is the started one the actor is in, not merely the one this client views (U-4-0) — `{attackAction, riders, followUps, nick, bonusUsed, otherActions, surges}`; self-invalidating (another turn's key reads as fresh). Always written whole (v14 `_replace`): a plain `setFlag` merges nested objects and carried last turn's used Sneak Attack into every later turn. Removed by the active GM when its combat is deleted (0.2.1; the out-of-combat `nocombat` turn stays) |
+| actor | `flags.pentaryn-combat.reaction` | `{combatId}` when a Reaction is taken in combat; set to null at the actor's turn start, removed when that combat is deleted (0.2.1) |
+| actor | (sweep) | the active GM removes every world actor's `turn` / `reaction` flag whose combat no longer exists, on load and 1.5 s after any combat is deleted (0.2.2; a combat deleted with no GM online, or before 0.2.1, left them for good) |
 | actor | `flags.pentaryn-combat.last.weapon` | after a Full Attack / weapon pick |
 | actor (character) | `flags.enhancedcombathud.weaponSets` | once, only if never written (`seedWeaponSets`) |
 | item | `flags.dnd5e.last.<activity>.attackMode` | reset to main-hand after an off-hand roll |
 | attack message | `flags.pentaryn-combat.turnKey`, `.swing` | every attack roll / every sequence swing |
 | damage message | `flags.pentaryn-combat.auto` / `.rider` | an auto rider / a rider roll |
+| actor effect | "Dash" / "Disengage", `flags.pentaryn-combat.{until: "turnEnd", special}`, `flags.dnd5e.isTemporary` | Argon's Dash / Disengage on your turn; deleted at your turn end |
+| actor | `system.attributes.death.failure` | damage at 0 HP (`deathSaveDamage`) |
 
 Optional overrides on an actor: `flags.pentaryn-combat.attacks` (integer swing count),
 `.multiattack` (`[{item, count}]`), `.pactWeapon` on a weapon (Thirsting Blade).
@@ -96,17 +127,24 @@ await game.pentaryn.combat.seedAll()        // GM: seed empty weapon sets now
 
 ## Known gaps
 
-- **Argon's built-in Dash / Disengage / Dodge / Help / Hide buttons** (when the actor has no such
-  item) post a plain chat card and fire no dnd5e hook, so for an Extra Attack character they don't
-  zero the swing pips; the player just doesn't press Full Attack. An item-backed action (any
-  activity with an Action cost) does zero them.
+- **A Cunning Action or Step of the Wind Dash / Disengage** (an item of the actor's, Bonus action) runs
+  through dnd5e and gets no Dash effect; add the movement by hand. (Argon's own item-less Dash /
+  Disengage / Dodge / Hide / Ready / Shove are handled by `specialActions` and spend the pips, confirmed
+  live in Area 10; Argon's movement readout now follows the Dash effect, 0.2.2.)
+- **No Opportunity Attack prompt** when an enemy leaves reach: the player clicks the Reaction weapon.
 - **Bladesinger / Valor Bard "replace one attack with a cantrip"** is not modelled: the cantrip counts
   as another Action and zeroes the remaining swings (clicking the weapon by hand still works).
-- **A swing strip swap onto the Nick weapon** keeps the planned Nick swing; the GM arbitrates.
-- **Rewinding the tracker** to an earlier turn reads as a fresh turn (swings and Sneak Attack back).
+- **Rewinding the tracker.** The actor keeps one turn flag. Rewinding to a turn of the same actor with
+  nothing done on a later turn restores that turn (swings and Sneak Attack as spent); once the actor
+  has acted on a later turn, rewinding to the earlier one reads as a fresh turn. (A pause-bar swap
+  onto the Nick weapon no longer keeps the planned Nick swing: the swap replans it, 0.2.2.)
 
 - **Divine Smite crit carry** is native and unchanged: the smite rolls its own card; on a crit pick
-  Critical in its dialog.
+  Critical in its dialog. It now spends the Bonus pip (`bonusPip`).
+- **A Monk weapon rolls STR** until the Martial Arts "Master Simple Weapon" enchantment is applied
+  to it once. A Monk built by the prompt-markers `character` helper gets it on every qualifying weapon
+  (pentaryn-prompts 0.4.3, U-10-6); a hand-built or imported Monk's player applies it from the
+  Martial Arts card.
 - **TWF / GWM via native rule effects** (`fixFeats`) is report-only until a live check proves a
   conditioned `damage:bonus` change works in 6.0.6; the `weaponBonuses` fallback does it meanwhile.
   With it on, don't also click GWM's own "Heavy Weapon Damage" button.
@@ -122,5 +160,5 @@ await game.pentaryn.combat.seedAll()        // GM: seed empty weapon sets now
 and weapon picker DOM · `hud.mjs` Argon bars · `riders.mjs` once-per-turn riders · `offhand.mjs`
 mode reset, weapon-set seed · `settings.mjs`.
 
-`make foundry-combat-check` (parse, imports, i18n, 198 fixtures) · `make foundry-combat-sync` to install.
+`make foundry-combat-check` (parse, imports, i18n, 298 fixtures) · `make foundry-combat-sync` to install.
 Registry rows `combat-*` in `foundry/adjustments.yml`.

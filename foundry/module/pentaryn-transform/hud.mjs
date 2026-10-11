@@ -501,6 +501,10 @@ function composeBonusBar(panel, actor) {
     if (act) {
       const ab = new ItemBtn({ item: act, inActionPanel: true });
       ab.element.classList.add("pentaryn-starry-act");
+      if (c === "chalice") {
+        ab.element.classList.add("pentaryn-starry-chalice");
+        ab.element.classList.toggle("pentaryn-chalice-ready", chaliceReady.has(actor.uuid));
+      }
       fresh.push(ab);
       next.push(ab);
     }
@@ -704,3 +708,54 @@ function onStarryChange(effect) {
   setTimeout(dropStaleTooltip, 50);
 }
 for (const h of ["createActiveEffect", "updateActiveEffect", "deleteActiveEffect"]) Hooks.on(h, onStarryChange);
+
+/* ── Chalice: offered when it is earned (Area 4, D6) ─────────────────────── */
+// "Whenever you cast a spell using a spell slot that restores Hit Points to a creature, you or
+// another creature within 30 feet of you can regain Hit Points equal to 1d8 + WIS" (2024 PHB). The
+// Chalice button sat beside Starry Form with nothing saying the second heal was there to take, so it
+// was missed. After such a spell, the Chalice button pulses until it is used or a minute passes.
+// The player still clicks it and rolls (own dice stay possible); nothing is rolled for them.
+
+const chaliceReady = new Map();   // actor uuid → timer
+
+function paintChalice(actor) {
+  if (actor !== ui.ARGON?._actor) return;
+  const on = chaliceReady.has(actor.uuid);
+  for (const el of document.querySelectorAll(".extended-combat-hud .pentaryn-starry-chalice")) {
+    el.classList.toggle("pentaryn-chalice-ready", on);
+  }
+}
+
+function setChalice(actor, on) {
+  clearTimeout(chaliceReady.get(actor.uuid));
+  if (on) chaliceReady.set(actor.uuid, setTimeout(() => { chaliceReady.delete(actor.uuid); paintChalice(actor); }, 60_000));
+  else chaliceReady.delete(actor.uuid);
+  paintChalice(actor);
+}
+
+/** A leveled spell cast with a slot that has a healing activity part. */
+function earnsChalice(activity, usageConfig) {
+  const item = activity?.item;
+  if (item?.type !== "spell" || !(Number(item.system?.level) > 0)) return false;
+  if (usageConfig?.consume?.spellSlot === false) return false;
+  if (activity.type === "heal") return true;
+  const parts = activity.damage?.parts ?? [];
+  return parts.some(p => (p.types instanceof Set ? [...p.types] : (p.types ?? [])).some(t => t === "healing" || t === "temphp"));
+}
+
+Hooks.on("dnd5e.postUseActivity", (activity, usageConfig) => {
+  try {
+    const actor = activity?.actor;
+    if (!actor || constellationOf(actor) !== "chalice") return;
+    if (activity.item?.id === starryItem(actor)?.id && activity.id === constellationActivity(actor, "chalice")?.id) {
+      setChalice(actor, false);
+      return;
+    }
+    if (earnsChalice(activity, usageConfig)) setChalice(actor, true);
+  } catch (err) { console.warn(`${MODULE_ID} | Chalice offer skipped`, err); }
+});
+
+// Starry Form ended or changed constellation: no Chalice to take.
+Hooks.on("deleteActiveEffect", (effect) => {
+  if (effect?.getFlag?.(MODULE_ID, "starry") && effect.parent instanceof Actor) setChalice(effect.parent, false);
+});

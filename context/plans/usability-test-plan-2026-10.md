@@ -27,7 +27,7 @@ how a module works → its README under `foundry/module/pentaryn-*/`.
 
 Every case has the same shape:
 
-- **Actor** — who clicks (a player on a `127.0.0.1:30000` tab, or Joe on the GM tab).
+- **Actor** — who clicks (a player on a `zz<n>.localhost:30000` tab, or Joe on the GM tab).
 - **Goal** — one sentence, in the player's words.
 - **Steps** — the exact path through HUD / sheet / chat / canvas. A step in `[brackets]` is a
   decision the player must know to make; those are what we count as "knowledge the HUD does not
@@ -62,8 +62,11 @@ run the real handlers; see `pentaryn.md` 2026-10-07) and counts them; the GM tab
 
 ## 1. Ground rules for the whole run
 
-1. **One GM client** (`localhost:30000/game`). Player tabs on `127.0.0.1:30000`, closed when the
-   area ends. The GM bridge tab is never closed. Tunnel down; updater paused.
+1. **One GM client** (`localhost:30000/game`). Player tabs on `zz<n>.localhost:30000` (one name per
+   player tab, so each has its own cookie jar), closed when the area ends. Open them with
+   `make login USER_NAME=<user> LOGIN_HOST=zz<n>.localhost NO_OPEN=1` and open the printed URL in
+   that tab. **Never type a user password into `/join`** (the permission classifier refuses it, and
+   Area 7's whole player half was lost to that; U-7-2). The GM bridge tab is never closed. Tunnel down; updater paused.
 2. **No commits, no branch switches.** Edits to `foundry/module/pentaryn-*` go through
    `make foundry-<module>-check` / `-sync` and a Foundry restart when `module.json` changed.
 3. **Real PCs are read-only** except where a case says otherwise, and then: snapshot first, diff
@@ -107,9 +110,21 @@ run the real handlers; see `pentaryn.md` 2026-10-07) and counts them; the GM tab
     ```
 
     Areas 4–6 (a real PC each) swap `want` for that PC's name. The player tab is opened with
-    `make login USER_NAME=<tester> LOGIN_HOST=127.0.0.1 NO_OPEN=1` (U-1-2), never a one-off script.
+    `make login USER_NAME=<tester> LOGIN_HOST=zz<n>.localhost NO_OPEN=1` (U-1-2, U-7-2), never a
+    one-off script and never a typed password.
     Area 1's *baseline* run (T1–T3) must come before any other melee area has run on the shared
     actors; if that order is lost, say so in the report rather than measuring on top of another run.
+11. **Fixture and GM-side habits (added after the Area 1 re-run, U-1-11).** The tester user has an
+    assigned character (`ZZ Tester` → ZZ Fighter 5), as every real player does: without one, core
+    opens the User Configuration dialog at login and selects *every* owned token on each scene load,
+    so the first drag moves the whole group and the HUD sticks to one token. Before an area, give
+    its spellcasters full slots (the Paladin was found at 0). To unpause for the players, use
+    `game.togglePause(false, {broadcast: true})`: without `broadcast` only the GM tab unpauses and
+    the players keep the Paused banner (v14; the old `true` second argument still works with a
+    deprecation warning). To take a temporary owner off an actor, use the `remove-actor-ownership`
+    tool, or write the whole map: `const o = {...a.ownership}; delete o[id]; await a.update({ownership: o},
+    {diff: false, recursive: false})`. v14 rejects every partial form on `ownership`
+    (`ownership.-=<id>`, `_del`, `null`) with "ownership: is not a mapping" (U-7-2's notes).
 
 ---
 
@@ -147,12 +162,19 @@ password `talo`, `character` = Talo). Add `OWNER` for that user on every ZZ acto
 `Talo — summons & forms` folder actors; `character` stays Talo (never changed); ZZ ownership is added
 to ZZ actors only, and they are deleted, so nothing on a real actor changes. Record the user's
 `character` id and Talo's ownership map in the pre-run snapshot to diff. `pentaryn-journal` makes no
-new journal (no new user). Player tab: `127.0.0.1:30000`, user Talo; to act as a ZZ character,
+new journal (no new user). Player tab: `zz<n>.localhost:30000`, user Talo; to act as a ZZ character,
 select its token (Argon follows the controlled token). Never touch Talo's own token on `ZZ Arena`
 except in Area 4. Fallback if Talo is in use in Area 4 at the same time: areas never overlap, so
 none. (Superseded text elsewhere in this plan that says `ZZ Tester` means this user; if Joe prefers a
 throwaway account, create `ZZ Tester` TRUSTED/`zz` and delete it plus `Player Journals/ZZ Tester's
 Journal` in Z.)
+
+**Logging in (U-8-6).** `ZZ Tester` already exists (an earlier run made it; case Z deletes it), and
+the areas run as that user. Its password does not matter and is never read, typed or reset:
+`make login USER_NAME="ZZ Tester" LOGIN_HOST=zz<n>.localhost NO_OPEN=1` signs in through the admin
+session with no user password (§1 rule 1). The `talo`/`zz` values above are history, not login
+instructions; the Area 8 re-run tried them and then reset the user's password, which only case Z's
+delete undoes.
 
 ### Shared kit rules
 
@@ -275,8 +297,8 @@ the spec's (§13) so the build stage can tick them. **Not concurrently with** ar
 | **A4** | player | "I already swung once by hand, now the rest" | weapon click (1) → picker (1) → dialog (1) → Full Attack (1) → dialog (1) | 5 | one at a time ✓ by construction | the Full Attack badge must now say **1**; a player who does not notice would expect 2 | the button offers the remaining swing only; pips 1 → 0 |
 | **A5** | player | "Shortsword twice plus the Nick dagger" | (Fighter 5 with Shortsword + Dagger in set 1) Full Attack (1) → 3 dialogs (3) | 4 | undo: Stop after swing 2 leaves the Nick swing on the Free bar as **Nick: Dagger** | the third swing being a different weapon with no `@mod` on damage — the strip must name it; no Bonus pip spent | 3 attack cards; dagger damage `1d4` flat; Bonus pip free; Nick gone from the Free bar afterwards; next turn it is back |
 | **A6** | player | "Three / four swings" | ZZ Fighter 11 then 20: Full Attack (1) + N dialogs | 1 + N | quick mode (§5.7) on: 2 clicks | the fourth dialog in a row feels like a lot — this is where quick mode earns its place; note the tester's reaction | badge and pips match N; threading intact |
-| **A7** | player | "Off-hand scimitar after my Attack action" (Dual Wielder, no TWF) | Full Attack or one weapon click → **Off-hand: Scimitar** appears on the Bonus bar → click (1) → dialog (1) | **2** | one at a time: the native Attack Mode = Offhand in the dialog still works and is counted; undo: cancel the dialog, button stays | the button must not be there *before* the Attack action; the dialog's mode is pre-set to Offhand — does the player notice or care? | damage `1d6` flat, no `@mod`; **Bonus** pip spent, Action pip untouched; next longsword click defaults to one-handed (mode reset, `offhandModeReset`) |
-| **A8** | player | same, with Two-Weapon Fighting (ZZ Fighter 5 TWF) | as A7 | 2 | — | nothing new visible; this is a numbers check | damage `1d6 + 3` via the native rule effect written by `fixFeats()` (or the riders fallback); the card's formula shows the mod once |
+| **A7** | player | "Off-hand longsword after my Attack action" (Dual Wielder, no TWF). Setup (U-2-4): **Shortsword + Longsword** equipped, Dagger and Scimitar unequipped. The 2024 rule needs a *Light* weapon in the Attack action, and a Scimitar is Nick (a free Nick attack, not a Bonus one) | one Shortsword click (or Full Attack) → **Off-hand: Longsword** appears on the Bonus bar (Argon's plain Longsword slot hides while it is offered) → click (1) → dialog (1) | **2** | one at a time: the native Attack Mode = Offhand in the dialog still works and is counted; undo: cancel the dialog, button stays | the button must not be there *before* the Attack action; the dialog's mode is pre-set to Offhand — does the player notice or care? | damage `1d8` flat, no `@mod`; **Bonus** pip spent, Action pip untouched; next longsword click defaults to one-handed (mode reset, `offhandModeReset`) |
+| **A8** | player | same, with Two-Weapon Fighting (ZZ Fighter 5 TWF) | as A7 | 2 | — | nothing new visible; this is a numbers check | damage `1d8 + 3` via the native rule effect written by `fixFeats()` (or the riders fallback); the card's formula shows the mod once |
 | **A9** | player | "I crit on swing 1" | as A1 until a 19–20 lands (Champion); GM may force it with a fixed roll on the GM tab for the ZZ actor | 3 | own dice: type 20 in the resolver | the auto-damage card must show doubled dice on *that* swing only | swing 1 damage crit, swing 2 normal |
 | **A10** | player | "Quick mode" | user flag on → Full Attack (1) → one dialog (1) → swing 2 rolls itself | 2 | own dice: the resolver still appears per swing (configure:false skips the dialog, not the resolver) | the player cannot pick Advantage on swing 2 — the toggle on the strip must be discoverable; where is quick mode turned on? (Free bar toggle or settings?) | two swings, one dialog, mode reused |
 | **A11** | player | "Stop after one swing and cast a cantrip instead" (Bladesinger-style, §4) | Full Attack (1) → dialog (1) → strip **Stop** (1) → spell panel cantrip (1) | 4 | — | after Stop, the pip must still show 1 swing left so the player understands the cantrip replaces it; the cantrip use then zeroes it | the sequence ends, no stray dialog; pips consistent |
@@ -331,7 +353,7 @@ default for a rogue; a Bonus-bar flash when a follow-up appears; the Reckless At
 **Needs:** **Talo (real)**, snapshot first (HP 99, 3 Wild Shape uses, Cosmic Omen 1 spent,
 concentrating on Summon Elemental — record and restore all of it). Talo's token placed on
 `ZZ Arena` (not the Prison one: place a fresh token, delete it after) in a scratch combat with 2
-goblins. The **Talo** player tab (`127.0.0.1`, password per `pentaryn.md`). Multiattack NPC tokens
+goblins. The **Talo** player tab (`make login USER_NAME=Talo LOGIN_HOST=zz<n>.localhost`, U-7-2). Multiattack NPC tokens
 for G2. **Not concurrently with** areas 7 and 8. Every row ends with Talo's state restored; the
 whole area ends with the snapshot diff.
 
@@ -398,7 +420,7 @@ snapshot (HP, AC, every slot level, Arcane Ward / Ring / Arcane Recovery uses, e
 restore to fixed numbers: on 2026-10-10 he was already at HP 75/86, AC 15 (Mage Armor only),
 slots L1 2/4 · L2 0/3 · L3 0/3 · L4 0/3 · L5 1/2 · L6 0/1, Arcane Ward 29/29 spent, Ring 3/5,
 Arcane Recovery 1/1. Fresh token on `ZZ Arena`, scratch combat with goblins and the Ogre; the
-**Caven** player tab (`make login USER_NAME=<Caven's player> LOGIN_HOST=127.0.0.1`, U-1-2); the
+**Caven** player tab (`make login USER_NAME=<Caven's player> LOGIN_HOST=zz<n>.localhost`, U-1-2, U-7-2); the
 Fighter as an ally for Projected Ward; **a torch for W11** (Caven owns none: drop one Torch from
 `ZZ Footlocker` onto Caven and delete it on restore, or run W11 on ZZ Fighter 5). **Not concurrently with** 7 and 8.
 Also exercises `pentaryn-creatures`, `-portals` (follow rule) and `-senses` (Light).
@@ -429,15 +451,20 @@ present), summons tokens and any imported compendium copies deleted, light flags
 
 ## Area 7 — Attributes, knowledge and the no-leak sweep (`pentaryn-ties`, journals, secrets)
 
-**Needs:** all three real PCs on Drow Prison (read-only placement, their real tokens), the prison
+**Needs:** all three real PCs on Drow Prison, the prison
 NPCs (Nilonim, Vesh, Nalveth, the jailers), all three player tabs one at a time, the GM tab for
 blind rolls. Record each PC's `granted` / `studied` / `known` / `failed` flags first; reset with the
 calls in `attributes.md` after every row that rolls. **Not concurrently with** 4, 5, 6.
 
+*Setup correction (U-7-2):* the PCs' real tokens are on *Surface — Kharg's Adit*, not Drow Prison,
+and that is a campaign scene: place **temporary** tokens of Caven, Marrith and Talo on Drow Prison
+(flag them `zzTemp`) near Nalveth and delete them at the end. Nilonim Vrinn has no Drow Prison token
+either (he is on ZZ Arena and Molten Ward): place a temporary one for K4 the same way (P-7-d).
+
 | id | Actor | Goal | Steps | Budget | Flexibility | Confusion risks | Pass |
 |---|---|---|---|---|---|---|---|
 | **K1** | Caven tab | "What do I know about Talo?" | double-click Talo's token → **What I know about them** (2) | 2 | — | the double-click menu vs the hotkey **4**; the Look window's "nothing learned" vs "nothing yet" reading the same (known) | the Look window shows only the story-given facts (none for Talo); the empty-state line seen for real |
-| **K2** | Caven tab + GM | "Take a closer look at Talo" | double-click → **Take a closer look** (2) → blind rolls happen on the GM | 2 | own dice: **cannot** — blind rolls are rolled for you by design; confirm the chat says only "privately rolled some dice" and the player is told this once (the handout line) | the player wants to roll; rate the explanation; a failed rung ends the inspect silently or with the written half-truth | Lone Peak 100 % lands, Groundstruck ~50 %, one rung per roll, failure final; the player tab shows no number; reset after |
+| **K2** | Caven tab + GM | "Take a closer look at Talo" | double-click → **Take a closer look** (2) → blind rolls happen on the GM | 2 | own dice: **cannot** — blind rolls are rolled for you by design; confirm the chat says only "privately rolled some dice" and the player is told this once (the handout line) | the player wants to roll; rate the explanation; a failed rung ends the inspect silently or with the written half-truth | Lone Peak 100 % lands, Groundstruck ~50 %, one roll per rung (one gesture climbs every rung until the first failure, by design), failure final; an attribute whose stage-1 roll ever failed (Caven: Star Druids) is not rolled again after `resetInspection`, by design; the player tab shows no number; reset after |
 | **K3** | Marrith tab | "Inspect Caven" (all told) | as K2 | 2 | — | nothing to roll — does the window say so, or does it look broken? | the three shared facts shown, no roll |
 | **K4** | Talo tab | "Study Nilonim: what is this?" | hover + **5** / the HUD eye → Study (1–2) | 2 | own dice: no (blind) | **5** is a hotkey nobody told the player about; the HUD eye path must exist for it too — rate | one knowledge check per creature kind, ever; the Known tab gets a page; the real lock reset after |
 | **K5** | Talo tab | "A fact from my Known tab" | sheet → Known tab → a lore row's roll button (1) | 1 | own dice: this one *is* the player's own roll — is it? Check whether Known-tab rolls go through the resolver | the failed-roll message ("you failed") tells them they failed, not what (known) — rate | roll posted, success/failure filed, failure text delivered if written |
@@ -445,7 +472,7 @@ calls in `attributes.md` after every row that rolls. **Not concurrently with** 4
 | **K7** | GM | "Simulate rolls" | flask → Simulate (1) | 1 | — | writes nothing | preview only; flags unchanged |
 | **K8** | Caven tab | "Ties: 8, 7, 6 on a token" | hover Nalveth → **8** → tie cards; **7**; **6** add a tie | 1 each | — | three more hotkeys (Joe's rule: "no hotkeys a player has to be told about") — every one must also be reachable from the HUD or the double-click menu; list which are not (ledger candidate: menu items) | each works; the menu-equivalent exists or is logged |
 | **K9** | Caven tab | "Open my journal, add the letter" | the Letter pin → **Add to my journal** (1) | 1 | — | the GM can read every player's journal (known) | the entry copied, 0 secret sentences, highlighted on open |
-| **K10** | **No-leak sweep**, each player tab | "Can I see anything I shouldn't?" | with the tab open: (a) the GM presses **9** on an NPC → the description card must not reach the tab; (b) the GM's Study roll (K4) → no number; (c) NPC saves from S2/W13 replayed → totals hidden; (d) the prompt markers from area 9 → not on the canvas, not in the sidebar; (e) another PC's story pin → invisible; (f) the Attributes tab on the sheet → absent; (g) the hidden Fighting Pit lights → off; (h) the Encounters journals → absent | 0 | — | — | every item invisible; the console-only exposure (journal text in `game.journal`) is noted as the accepted limit, not a fail (Joe: console readers are fine) |
+| **K10** | **No-leak sweep**, each player tab | "Can I see anything I shouldn't?" | with the tab open: (a) the GM presses **9** on an NPC → the description card must not reach the tab; (b) the GM's Study roll (K4) → no number; (c) NPC saves from S2/W13 replayed → totals hidden; (d) the prompt markers from area 9 → not on the canvas, not in the sidebar; (e) another PC's story pin → invisible; (f) the Attributes tab on the sheet → lists only what that PC was told or worked out, with a "nothing yet" line, and no offers or DCs (the tab is present for players; "absent" was wrong); (g) the hidden Fighting Pit lights → off; (h) the Encounters journals → absent | 0 | — | — | every item invisible; the console-only exposure (journal text in `game.journal`) is noted as the accepted limit, not a fail (Joe: console readers are fine) |
 | **K11** | Caven tab | "Hotkey 4 on a real keypress" | hover Talo → press **4** | 1 | — | the key reaching the handler from a real keypress was never seen | the Look window opens |
 
 **Restore:** every PC's ties flags to the recorded state; the shares undone (`S.unshare` or the
@@ -466,7 +493,7 @@ concurrently with** any other area that logs in the same tester user (U-1-1 pref
 
 | id | Actor | Goal | Steps | Budget | Flexibility | Confusion risks | Pass |
 |---|---|---|---|---|---|---|---|
-| **L1** | Fighter | "Loot the footlocker" | walk adjacent (1) → double-click the pile (1) → **Loot all** (1) | 3 | undo: the ledger (`game.pentaryn.dropbin.list()`) lets the GM put it back | the `distance: 1` rule — a player 10 ft away gets what? (Item Piles' own message); Loot all greyed with no tooltip (known) | everything in the Fighter's inventory, the pile empty, the ledger rows written |
+| **L1** | Fighter | "Loot the footlocker" | walk adjacent (1) → double-click the pile (1) → **Loot all** (1) | 3 | undo: the GM drags the items back onto the pile (Item Piles); the drop-bin ledger records only items *leaving* a character, so a loot writes no row (U-8-6, P-8-e) | the `distance: 1` rule — a player 10 ft away gets what? (Item Piles' own message); Loot all greyed with no tooltip (known) | everything in the Fighter's inventory, the pile empty, the chat card "<name> picked up …" lists it |
 | **L2** | Fighter | "Loot a corpse" | kill the goblin (combat on, 3 clicks) → the eye badge and Dead overlay appear → double-click (1) → take the scimitar (1) | 2 after the kill | — | the GM converting it needs the GM online; healing it back reverts | lootable, items taken, revive button on the GM HUD works |
 | **L3** | Fighter | "Take one item, not all" | open the pile → drag one item to the sheet (1) | 1 | — | Item Piles' own UI | one item moves, the rest stay |
 | **L4** | Fighter (tester) | "My staff comes back attuned; I can swap attunements" | Setup (GM, eval, 0 player clicks): give the ZZ character three attuned magic items, the middle one a copy of Talo's Staff (`toObject()` of his item, never moved), then `game.pentaryn.attunement.stash(actor, ZZ Footlocker, [staffId])` → the strip shows the broken-chain slot in position 2. Player: open the footlocker and take the Staff (1–2) → it arrives attuned and equipped **in slot 2** (not appended, no 4th slot); right-click a slot to unattune (1); drag an item onto the empty slot (1) | 1 each | — | the strip hides when the sidebar is collapsed (known); over the cap only warns | attuned, equipped, broken-chain badge gone, the item back in its own slot, `getFlag("pentaryn-attunement","slots")` has no duplicate id; Talo untouched |
@@ -493,12 +520,12 @@ spec file under `Data/pentaryn-prompts-specs/` deleted afterwards. Players never
 
 | id | Actor | Goal | Steps | Budget | Flexibility | Confusion risks | Pass |
 |---|---|---|---|---|---|---|---|
-| **PM1** | GM | "Drop a marker and type what should be there" | drag `Prompt · medium` from the folder (1) → the box opens → type → **Cmd/Ctrl+Enter** (1) | 2 | undo: **Shift+Esc** reverts the text | the typed-before-the-box-opens buffer (does early typing land?); Esc saves (unusual — rate whether Joe expects Esc to cancel) | the hidden sightless token with the text in its flag |
+| **PM1** | GM | "Drop a marker and type what should be there" | drag `Prompt · mid` from the folder (1) → the box opens → type → **Cmd/Ctrl+Enter** (1) | 2 | undo: **Shift+Esc** reverts the text; on a fresh drop that removes the new marker, and the footer says so (U-9-9) | the typed-before-the-box-opens buffer (does early typing land?); Esc saves (unusual — rate whether Joe expects Esc to cancel) | the hidden sightless token with the text in its flag |
 | **PM2** | GM | "Place at the cursor with P; open with Shift+P" | hover → **P** (1) → type → **Esc** (1); hover it → **Shift+P** (1) | 2 + 1 | — | hotkeys are fine for the GM (Joe's rule is about players) | placed and reopened |
-| **PM3** | GM | "Change its size; read what it sees" | size chip (1) → the side panel lists visible tokens/walls; edit a wall while the box is open | 1 | — | the side panel does not refresh on a wall edit while open (known) — confirm and rate | size swapped (new marker id — `MARKER_GONE` on a stale replace), panel correct after reopen |
+| **PM3** | GM | "Change its size; read what it sees" | size chip (1) → the side panel lists visible tokens/walls; edit a wall while the box is open | 1 | — | the side panel redraws on a wall or door edit while open (0.4.1; confirmed in the 2026-10-11 run, U-9-11) — rate how quickly | size swapped (new marker id — `MARKER_GONE` on a stale replace), panel follows the wall edit without a reopen |
 | **PM4** | GM + Claude | "Gather, dry run, replace" | `prompt-markers gather` → write the spec → `replace` with `dryRun` → `replace` | one MCP call each | undo: the dry run is the undo | more than 5 replacements need a dry run first (known); `replace` prefers `id` over `markerId` | the markers replaced by the real things; `MARKER_GONE` / `BAD_SPEC` messages readable |
 | **PM5** | GM + Claude | "Build a level-5 character from a marker" | a marker "ZZ Prompt Fighter, Fighter 5, human, longsword" → `character` kind → dry run → replace | 2 MCP calls | — | the dry run builds on an unsaved actor through dnd5e's own advancement; the result lands in which folder? (must be `ZZ usability` by spec option, or moved) | a usable Fighter 5 (compare with the hand-built ZZ Fighter 5: same HP, to-hit); deleted in Z |
-| **PM6** | GM | "Doors and Levels" | a marker behind the door → the panel's door line | 0 | — | Levels ignored (known) | door line shown; recorded |
+| **PM6** | GM | "Doors and Levels" | a marker behind the door → the panel's door line | 0 | — | Levels ignored (known) | "Behind a closed door: …" shown above the fold (U-9-10), and the `door` tag in *Out of sight*; recorded |
 | **PM7** | Caven tab (from area 7's K10-d, or here) | "Players see nothing" | with a marker on the viewed scene | 0 | — | — | not on the canvas, not in the sidebar, not in the tracker |
 
 ---
@@ -529,7 +556,7 @@ Run once at the very end (and partially after any area that was interrupted).
    points, Hit Dice, effects, concentration, ties flags, attunement bonds, `flags.pentaryn-*`). The
    only allowed difference is the documented `enhancedcombathud.weaponSets` seed (H1), and only if
    Joe keeps `seedWeaponSets` on. Anything else is restored by hand and logged.
-9. **Tabs:** every `127.0.0.1` tab closed; one GM client.
+9. **Tabs:** every player tab (`zz<n>.localhost`, `127.0.0.1`) closed; one GM client.
 10. **Docs:** results file written; ledger complete; this plan's status updated; `pentaryn.md`
     gets a dated entry (what was seeded on the PCs, which settings changed, which items were fixed —
     Revivify, the cantrip WIS, anything else).

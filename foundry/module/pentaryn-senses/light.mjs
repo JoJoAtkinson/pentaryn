@@ -21,7 +21,7 @@
  */
 
 import {
-  MODULE, SPELL_LIGHT, profileFor, profileKey, isLit, isHooded, isLightSpellData, isLightToggle,
+  MODULE, SPELL_LIGHT, profileFor, profileKey, isLit, isHooded, isLightSpellData, isLightToggle, lightingItemId,
   readSpellCast, readSpellLight, castFlag, planSpellLight, spellLightUpdate, restoredLight,
   sourcesUnder, isPHBLightActorSource, torchActivityData, TORCH_ACTIVITY_ID, PHB_LIGHT_ACTOR
 } from "./light-core.mjs";
@@ -185,6 +185,9 @@ export function pick() {
     return Promise.resolve(null);
   }
   state.picking?.cancel();
+  // An open Combat HUD panel (Cast Spell) covers the map; the pick click landed on a spell behind
+  // it (usability Area 6 re-run, W10). Close Argon's panels first, as Argon does for another panel.
+  try { ui.ARGON?.collapseAllPanels?.(); } catch (e) { warn("collapse HUD panels", e); }
   const view = canvas.app?.view ?? canvas.app?.canvas;
   return new Promise(resolve => {
     let done = false;
@@ -258,9 +261,14 @@ export async function toggle(item) {
   }
   const lit = !isLit(item);
   await item.update(lit ? { [LIT]: true } : { [LIT]: false, [HOODED]: false });
+  await announce(item, lit ? "PENTARYN_SENSES.Light.Lights" : "PENTARYN_SENSES.Light.Douses");
+  return lit;
+}
+
+/** One chat line about a carried light, "{actor} lights the {item}." */
+async function announce(item, key) {
   const actor = item.actor;
-  const text = L(lit ? "PENTARYN_SENSES.Light.Lights" : "PENTARYN_SENSES.Light.Douses",
-    { actor: esc(actor?.name ?? ""), item: esc(item.name) });
+  const text = L(key, { actor: esc(actor?.name ?? ""), item: esc(item.name) });
   try {
     // The chat mode the user picked applies, as on dnd5e's own cards: a GM on "GM only" lighting a
     // hidden NPC's lantern must not announce it to the table.
@@ -271,7 +279,6 @@ export async function toggle(item) {
   } catch (e) {
     warn("chat", e);
   }
-  return lit;
 }
 
 /** Lower or raise a hooded lantern's hood (bright 0 / dim 5 while lowered). */
@@ -280,6 +287,8 @@ export async function hood(item) {
   if (!item?.isOwner || !profileFor(item)?.hooded) return false;
   const hooded = !isHooded(item);
   await item.update({ [HOODED]: hooded });
+  // The table hears the hood too (usability Area 8, L5: lowering it posted nothing).
+  await announce(item, hooded ? "PENTARYN_SENSES.Light.HoodLowered" : "PENTARYN_SENSES.Light.HoodRaised");
   return hooded;
 }
 
@@ -292,25 +301,31 @@ export async function setup() {
     ui.notifications.warn("pentaryn-senses: setupLight is GM-only.");
     return 0;
   }
-  const data = torchActivityData(L("PENTARYN_SENSES.Light.ActivityName"));
   let n = 0;
   for (const item of allItems({ worldItems: true })) {
-    if (profileKey(item) !== "torch" || !item.system?.activities) continue;
-    const has = item.system.activities.has?.(TORCH_ACTIVITY_ID)
-      || [...item.system.activities.values()].some(a => a?.flags?.[MODULE]?.lightToggle === true);
-    if (has) continue;
-    try {
-      const sort = item.system.activities.size
-        ? Math.max(...[...item.system.activities.values()].map(a => a.sort ?? 0)) + CONST.SORT_INTEGER_DENSITY
-        : 0;
-      await item.update({ [`system.activities.${TORCH_ACTIVITY_ID}`]: { ...data, sort } });
-      n++;
-    } catch (e) {
-      warn(`setup ${item.uuid}`, e);
-    }
+    if (await ensureTorchActivity(item)) n++;
   }
   console.info(`${MODULE} | setupLight: ${n} torch item(s) given a Light activity`);
   return n;
+}
+
+/** One torch item: add the Light activity if it has none. → true when it was added. */
+async function ensureTorchActivity(item) {
+  if (profileKey(item) !== "torch" || !item?.system?.activities) return false;
+  const has = item.system.activities.has?.(TORCH_ACTIVITY_ID)
+    || [...item.system.activities.values()].some(a => a?.flags?.[MODULE]?.lightToggle === true);
+  if (has) return false;
+  try {
+    const data = torchActivityData(L("PENTARYN_SENSES.Light.ActivityName"));
+    const sort = item.system.activities.size
+      ? Math.max(...[...item.system.activities.values()].map(a => a.sort ?? 0)) + CONST.SORT_INTEGER_DENSITY
+      : 0;
+    await item.update({ [`system.activities.${TORCH_ACTIVITY_ID}`]: { ...data, sort } });
+    return true;
+  } catch (e) {
+    warn(`setup ${item.uuid}`, e);
+    return false;
+  }
 }
 
 /* -------------------------------------------- */
@@ -608,6 +623,9 @@ function decorateSheet(app, element) {
   const actor = app?.actor ?? app?.document;
   const root = element instanceof HTMLElement ? element : element?.[0];
   if (!actor?.items || !root) return;
+  // With two lights lit only the strongest shows on the token; the other flame is drawn dimmer and
+  // says so (usability Area 8, L5: torch + hooded lantern, the hood seemed to do nothing).
+  const lighting = lightingItemId(actor.items);
   for (const li of root.querySelectorAll("li[data-item-id]")) {
     const item = actor.items.get(li.dataset.itemId);
     if (!item || !profileFor(item)) continue;
@@ -618,8 +636,11 @@ function decorateSheet(app, element) {
     const locked = !item.isOwner;
     const cell = document.createElement("div");
     cell.className = "ps-light-controls";
-    cell.append(rowButton(`ps-light-toggle${lit ? " lit" : ""}`, "fa-solid fa-fire",
-      L(lit ? "PENTARYN_SENSES.Light.Douse" : "PENTARYN_SENSES.Light.LightIt"), locked, () => toggle(item)));
+    const winner = lit && lighting && lighting !== item.id ? actor.items.get(lighting) : null;
+    const tip = winner ? L("PENTARYN_SENSES.Light.Outshone", { item: esc(winner.name) })
+      : L(lit ? "PENTARYN_SENSES.Light.Douse" : "PENTARYN_SENSES.Light.LightIt");
+    cell.append(rowButton(`ps-light-toggle${lit ? " lit" : ""}${winner ? " outshone" : ""}`, "fa-solid fa-fire",
+      tip, locked, () => toggle(item)));
     if (lit && profileFor(item)?.hooded) {
       const hooded = isHooded(item);
       cell.append(rowButton(`ps-light-hood${hooded ? " hooded" : ""}`, hooded ? "fa-solid fa-eye" : "fa-solid fa-eye-slash",
@@ -723,6 +744,14 @@ function install() {
   on("renderBaseActorSheet", decorateSheet);
   on("renderTokenHUD", injectHUD);
   on("canvasTearDown", () => state.picking?.cancel());
+
+  // A Torch that arrives after setupLight (bought, looted, dragged from a compendium) gets its
+  // Light activity at once, from the GM (usability Area 6 re-run, W11: it had no flame button
+  // until setupLight() was run again).
+  on("createItem", (item) => {
+    if (!isGM()) return;
+    ensureTorchActivity(item).catch(e => warn("torch on create", e));
+  });
 
   // GM side: the item flag is the desired state; tokens and ambient lights follow it.
   on("updateItem", (item, changes) => {

@@ -294,14 +294,21 @@ function rerenderControls(force = false) {
  * Policy, combat, wish or scene changed: clear a stale wish, then redraw the button and the tokens
  * if what the button shows has changed.
  */
+let clearedBy = null; // why this client last switched the player's ghost off ("combat" | "off")
 async function refresh() {
   try {
     const reason = game.user.isGM ? null
       : core.wishToClear({ policy: policy(), combatActive: combatActive(), wish: wish() });
     if (reason) {
       ui.notifications.info(`PENTARYN_MOVEMENT.notify.cleared.${reason}`, { localize: true });
+      clearedBy = reason;
       await game.settings.set(MOD, "ghost", false); // its onChange calls refresh again
       return;
+    }
+    if (wish()) clearedBy = null;
+    else if (!game.user.isGM && core.ghostBack({ cleared: clearedBy, policy: policy(), combatActive: combatActive(), wish: wish() })) {
+      ui.notifications.info(`PENTARYN_MOVEMENT.notify.back.${clearedBy}`, { localize: true });
+      clearedBy = null;
     }
     // Combat updates fire every turn; only a real change of state redraws anything.
     if (!rerenderControls()) return;

@@ -4,9 +4,10 @@
  *
  * A "token record" is a plain object the Foundry side builds from a TokenDocument:
  *
- *   { id, actorId, type, linked, pile, excluded, hidden,
+ *   { id, actorId, type, linked, pile, excluded, hidden, handle,
  *     owners:   string[]   non-GM user ids with OWNER on the token's actor (explicit, not default),
- *     summoner: string|null actor id from flags.dnd5e.summon.origin ("Actor.<id>.Item.<id>") }
+ *     summoner: string|null actor id from flags.dnd5e.summon.origin ("Actor.<id>.Item.<id>"),
+ *     handle:   boolean      a pentaryn-aoe area handle (the token a spell area is attached to) }
  */
 
 export const OWNER = 3;
@@ -35,8 +36,12 @@ export function isScenery({ name = "", folders = [] } = {}) {
 /** A player character: a linked `character` token that is not an item pile. */
 export const isPC = t => t.type === "character" && t.linked && !t.pile;
 
-/** Never carried along: piles, markers, crowd, other PCs. */
-const carriable = t => !t.pile && !t.excluded && !isPC(t);
+/**
+ * Never carried along: piles, markers, crowd, other PCs, and area handles. A handle is owned by
+ * every player (so anyone can drag the area) but its area stays on the old scene; carried, it
+ * arrived alone as a stray "Circle of Death (Caven)" (usability Area 8, L11).
+ */
+const carriable = t => !t.pile && !t.excluded && !t.handle && !isPC(t);
 
 /**
  * GM "Teleport party": every PC, plus every token a player owns or a PC summoned.
@@ -49,6 +54,77 @@ export function partySelection(records) {
   const followers = records.filter(t => carriable(t)
     && (t.owners.length > 0 || (t.summoner && pcActors.has(t.summoner))));
   return [...pcs, ...followers];
+}
+
+/**
+ * The PC a follower should land beside: the PC who summoned it, else the first PC that one of its
+ * owners also owns. Null when none (it lands wherever there is room).
+ * @param {object} follower  @param {object[]} pcs  records, in party order
+ * @returns {string|null} the PC record's id
+ */
+export function leaderOf(follower, pcs) {
+  if (follower.summoner) {
+    const pc = pcs.find(p => p.actorId === follower.summoner);
+    if (pc) return pc.id;
+  }
+  const owners = new Set(follower.owners ?? []);
+  return pcs.find(p => (p.owners ?? []).some(u => owners.has(u)))?.id ?? null;
+}
+
+/**
+ * Hand out landing spots so each follower lands next to its PC (usability Area 8, L11: the
+ * Elemental Spirit landed in the ring by order, away from its druid). PCs take the free spot
+ * nearest the centre (`spots` comes centre-first from ringSpots); a follower takes the free spot
+ * nearest its leader's. Every party member gets one of `spots`; there must be as many spots.
+ * @param {{x:number,y:number}[]} spots   centre-first
+ * @param {object[]} party                partySelection output (PCs first)
+ * @returns {{x:number,y:number}[]}       a spot per party member, in party order
+ */
+export function assignSpots(spots, party) {
+  const free = spots.map((s, i) => ({ ...s, i }));
+  const take = idx => free.splice(idx, 1)[0];
+  const pcs = party.filter(isPC);
+  const at = new Map();
+  const out = new Array(party.length);
+  // Group: each PC, then its followers; followers with no leader last.
+  const order = [];
+  const lead = party.map(t => (isPC(t) ? null : leaderOf(t, pcs)));
+  for (const [i, t] of party.entries()) {
+    if (!isPC(t)) continue;
+    order.push(i);
+    for (const [j] of party.entries()) if (lead[j] === t.id) order.push(j);
+  }
+  for (const [j, t] of party.entries()) if (!isPC(t) && !lead[j]) order.push(j);
+  // ringSpots pads a boxed-in landing with copies of the centre; a copy is a last resort.
+  const used = new Set();
+  const key = s => `${s.x},${s.y}`;
+  for (const i of order) {
+    if (!free.length) break;
+    const anchor = lead[i] ? at.get(lead[i]) : null;
+    let idx = 0, best = Infinity;
+    free.forEach((s, k) => {
+      const near = anchor ? Math.max(Math.abs(s.x - anchor.x), Math.abs(s.y - anchor.y)) * 1e6 + Math.hypot(s.x - anchor.x, s.y - anchor.y) : k;
+      const d = (used.has(key(s)) ? 1e15 : 0) + near;
+      if (d < best) { best = d; idx = k; }
+    });
+    const { x, y } = take(idx);
+    used.add(key({ x, y }));
+    out[i] = { x, y };
+    if (isPC(party[i])) at.set(party[i].id, { x, y });
+  }
+  for (let i = 0; i < out.length; i++) out[i] ??= { ...(spots[0] ?? { x: 0, y: 0 }) };
+  return out;
+}
+
+/**
+ * The GM's preview line before a party teleport: who goes, PCs first, each follower after the PC
+ * it lands beside. → [{ id, name, follower: boolean, leaderName: string|null }]
+ */
+export function partyPreview(party) {
+  const pcs = party.filter(isPC);
+  const nameOf = id => pcs.find(p => p.id === id)?.name ?? null;
+  return party.map(t => ({ id: t.id, name: t.name ?? t.id, follower: !isPC(t),
+    leaderName: isPC(t) ? null : nameOf(leaderOf(t, pcs)) }));
 }
 
 /**
@@ -125,4 +201,15 @@ export function hasDestination(stored, uuid, toAbsolute) {
 /** `stored` without whichever entry (relative or absolute) leads to `uuid`. */
 export function withoutDestination(stored, uuid, toAbsolute) {
   return [...(stored ?? [])].filter(u => (toAbsolute(u) ?? u) !== uuid);
+}
+
+/**
+ * Does a token that just arrived share a square with someone already there? (usability Area 6
+ * re-run, W7: two PCs crossing at once, plus the Fighter already there, all stood on the one
+ * landing square.) Boxes are {x, y, w, h} in pixels; touching edges do not count.
+ * @param {{x:number,y:number,w:number,h:number}} box
+ * @param {{x:number,y:number,w:number,h:number}[]} others
+ */
+export function crowded(box, others = []) {
+  return (others ?? []).some(o => box.x < o.x + o.w && o.x < box.x + box.w && box.y < o.y + o.h && o.y < box.y + box.h);
 }

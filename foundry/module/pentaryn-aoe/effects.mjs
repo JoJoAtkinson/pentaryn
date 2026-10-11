@@ -6,7 +6,9 @@
  * changed: nothing said the effect was still waiting. This file:
  *
  *  - auto-applies a usage card's one effect to the caster when the card's only target is the caster,
- *    or the activity can only affect its user (Shield). A card with several effects is a choice
+ *    or the activity can only affect its user (Shield), or (setting untargetedSelf) a touch spell for
+ *    one willing creature was cast with nothing targeted (Mage Armor, usability Area 6 re-run W1).
+ *    The same spell's effect from another source is replaced, not stacked (setting noSpellStacking). A card with several effects is a choice
  *    (Guidance's skills) and is left in the tray. The active GM's client does the write, so a
  *    player who can't write still gets it; with no GM online, the casting client does it itself.
  *  - records what was applied on the message (flags.pentaryn-aoe.effectsApplied), and adds a
@@ -21,7 +23,7 @@
  * not duplicated, so a later press of the tray's own Apply refreshes the same effect.
  */
 
-import { MODULE, aoeFlags, selfApplyReason, pendingEffects } from "./core.mjs";
+import { MODULE, aoeFlags, selfApplyReason, pendingEffects, sameSpellEffect } from "./core.mjs";
 import { setting } from "./settings.mjs";
 import { on, guard, claimMessage } from "./hooks.mjs";
 
@@ -109,6 +111,37 @@ async function applyEffect(message, effect, actor) {
   return ActiveEffect.implementation.create(data, { parent: actor });
 }
 
+/**
+ * The same spell from another source (Shield from a slot, then from a Ring of Spell Storing) is
+ * replaced, not stacked (setting noSpellStacking; usability Area 6 re-run W2). dnd5e refreshes only
+ * an effect copied from the same source effect, and three paths copy a card's effect onto an actor
+ * (this file, pentaryn-combat's self effects, the tray's Apply), so this sits on the creation
+ * itself: a new effect copied from a spell's effect removes an enabled one of the same name copied
+ * from the same spell. Runs on the creating client only (preCreate).
+ */
+function onPreCreateEffect(effect) {
+  if (!setting("noSpellStacking")) return;
+  const actor = effect?.parent;
+  if (actor?.documentName !== "Actor" || !effect._stats?.duplicateSource) return;
+  const spell = spellOf(effect);
+  if (!spell) return;
+  const old = sameSpellEffect({ name: effect.name, spell },
+    actor.effects.filter(e => e.id !== effect.id).map(e => ({ id: e.id, name: e.name, disabled: e.disabled, spell: spellOf(e) })));
+  if (old) actor.effects.get(old)?.delete().catch(err => console.warn(`${MODULE} | replace ${effect.name}`, err));
+}
+
+/** The spell identifier an applied effect came from (its source effect's item, else its origin). */
+function spellOf(effect) {
+  for (const uuid of [effect._stats?.duplicateSource, effect.origin]) {
+    if (!uuid) continue;
+    let doc = null;
+    try { doc = fromUuidSync(uuid, { strict: false }); } catch { doc = null; }
+    const item = doc?.documentName === "Item" ? doc : doc?.parent?.documentName === "Item" ? doc.parent : null;
+    if (item?.type === "spell") return item.system?.identifier || item.name;
+  }
+  return null;
+}
+
 /** Record applied effect ids on the message (if this user may), and locally either way. */
 async function markApplied(message, ids, extra = {}) {
   const live = game.messages.get(message.id) ?? message;
@@ -130,7 +163,9 @@ async function selfReason(message, effects = null) {
     targetUuids: (message.system?.targets ?? []).map(targetActorUuid),
     affectsType: activity?.target?.affects?.type ?? null,
     activityType: activity?.type ?? message.system?.activity?.type ?? null,
-    effectCount: effects.length
+    effectCount: effects.length,
+    rangeUnits: activity?.range?.units ?? null,
+    untargeted: !!setting("untargetedSelf")
   });
 }
 
@@ -271,4 +306,5 @@ export function installEffects() {
     await selfApply(message);
   }));
   on("dnd5e.renderChatMessage", guard("renderChatMessage(effects)", decorate));
+  on("preCreateActiveEffect", guard("preCreateActiveEffect(noStacking)", onPreCreateEffect));
 }

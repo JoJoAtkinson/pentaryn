@@ -11,7 +11,9 @@
 const {
   centreOf, multiplierFor, isCreature, rowKind, buildRows, fillSave, applicableRows, allApplied,
   matchSave, shouldAutoDamage, newestRegion, aoeFlags, regionFromSpell, regionOfActivity, selfApplyReason,
-  pendingEffects, isTemplateRegion, attachedTokenId, attachedToOther, handleVertical, placementInProgress
+  pendingEffects, isTemplateRegion, attachedTokenId, attachedToOther, handleVertical, placementInProgress,
+  stillListing, isHandleTarget, supersedes, carefulTargets, protectRows, carefulApplies, placementCancelled, playerStatus,
+  sameSpellEffect, aimFromCaster, aimsFromCaster
 } = await import("../core.mjs");
 
 let pass = 0;
@@ -202,6 +204,32 @@ check("enchant activity → never", selfApplyReason({ casterUuid: me, targetUuid
 check("unknown caster → nothing", selfApplyReason({ casterUuid: null, targetUuids: [me], effectCount: 1 }), null);
 check("Guidance on me (18 skills to choose from) → leave it", selfApplyReason({ casterUuid: me, targetUuids: [me], affectsType: "willing", activityType: "utility", effectCount: 18 }), null);
 check("Fire Shield (self-only, warm or chill) → leave it", selfApplyReason({ casterUuid: me, targetUuids: [], affectsType: "self", activityType: "utility", effectCount: 2 }), null);
+// usability Area 6 re-run (W1): a touch spell for one willing creature, cast at nobody
+check("Mage Armor (touch, willing), nothing targeted, setting on → me", selfApplyReason({ casterUuid: me, targetUuids: [], affectsType: "willing", activityType: "utility", effectCount: 1, rangeUnits: "touch", untargeted: true }), "untargeted-self");
+check("same with the setting off → leave it", selfApplyReason({ casterUuid: me, targetUuids: [], affectsType: "willing", activityType: "utility", effectCount: 1, rangeUnits: "touch", untargeted: false }), null);
+check("a ranged buff cast at nobody (Haste, 30 ft) → leave it", selfApplyReason({ casterUuid: me, targetUuids: [], affectsType: "willing", activityType: "utility", effectCount: 1, rangeUnits: "ft", untargeted: true }), null);
+check("an untargeted touch spell for an enemy → leave it", selfApplyReason({ casterUuid: me, targetUuids: [], affectsType: "enemy", activityType: "utility", effectCount: 1, rangeUnits: "touch", untargeted: true }), null);
+check("an untargeted touch save spell → leave it", selfApplyReason({ casterUuid: me, targetUuids: [], affectsType: "creature", activityType: "save", effectCount: 1, rangeUnits: "touch", untargeted: true }), null);
+check("Mage Armor targeted at a friend is still the friend's", selfApplyReason({ casterUuid: me, targetUuids: ["Actor.mar"], affectsType: "willing", activityType: "utility", effectCount: 1, rangeUnits: "touch", untargeted: true }), null);
+
+/* ── sameSpellEffect (W2: Shield twice) ──────────────────────────────────── */
+const fx = [{ id: "a", name: "Imperceptible Barrier", spell: "shield" }, { id: "b", name: "Mage Armor", spell: "mage-armor" }, { id: "c", name: "Blessed", spell: "bless", disabled: true }];
+check("Shield again from the ring replaces the slot's Shield", sameSpellEffect({ name: "Imperceptible Barrier", spell: "shield" }, fx), "a");
+check("another spell's effect is kept", sameSpellEffect({ name: "Imperceptible Barrier", spell: "other" }, fx), null);
+check("a disabled copy is not replaced", sameSpellEffect({ name: "Blessed", spell: "bless" }, fx), null);
+check("not from a spell (a potion) → never", sameSpellEffect({ name: "Mage Armor", spell: null }, fx), null);
+
+/* ── aimFromCaster (W13: Self cones from the caster) ──────────────────────── */
+const C = { x: 150, y: 150 };
+check("pointer due east → origin on the right edge, rotation 0", aimFromCaster(C, 50, 50, { x: 600, y: 150 }), { x: 200, y: 150, rotation: 0 });
+check("pointer due south → bottom edge, 90°", aimFromCaster(C, 50, 50, { x: 150, y: 900 }), { x: 150, y: 200, rotation: 90 });
+check("pointer north-west → the corner, 225°", aimFromCaster(C, 50, 50, { x: 0, y: 0 }), { x: 100, y: 100, rotation: 225 });
+check("pointer on the token's centre → east, never NaN", aimFromCaster(C, 50, 50, { x: 150, y: 150 }), { x: 200, y: 150, rotation: 0 });
+check("a Large caster's edge is a square further out", aimFromCaster({ x: 200, y: 200 }, 100, 100, { x: 200, y: 0 }), { x: 200, y: 100, rotation: 270 });
+check("Self cone and line aim; ranged cone, Self circle, emanation do not",
+  [aimsFromCaster({ rangeUnits: "self", templateType: "cone" }), aimsFromCaster({ rangeUnits: "self", templateType: "line" }),
+   aimsFromCaster({ rangeUnits: "ft", templateType: "cone" }), aimsFromCaster({ rangeUnits: "self", templateType: "circle" }),
+   aimsFromCaster({ rangeUnits: "self", templateType: "emanation" })], [true, true, false, false, false]);
 
 /* ── pendingEffects (D2 highlight) ───────────────────────────────────────── */
 check("nothing applied → all pending", pendingEffects(["e1", "e2"], []), ["e1", "e2"]);
@@ -236,6 +264,73 @@ check("duplicates and blanks dropped", pendingEffects(["e1", "e1", "", null], []
   game.socket = {};
   check("no socket id → act (single-client behaviour)", await claimMessage({ id: "x" }, "resolve"), true);
   delete globalThis.game; delete globalThis.foundry;
+}
+
+/* ── deleting a handle after core's _regions update (Area 4, D10) ─────────── */
+check("a handle still listing the deleted region waits; others go at once",
+  stillListing([{ id: "h1", _regions: ["r1", "r2"] }, { id: "h2", _regions: ["r2"] }, { id: "h3" }], "r1"), ["h1"]);
+check("nothing listed → nothing to wait for", stillListing([], "r1"), []);
+
+/* ── Argon never binds to an area handle (Area 4, D10) ─────────────────────── */
+check("handle token, its document, its actor; a creature is not",
+  [isHandleTarget({ document: { flags: { "pentaryn-aoe": { handle: true } } } }),
+   isHandleTarget({ flags: { "pentaryn-aoe": { handle: "regionId" } } }),
+   isHandleTarget({ flags: { "pentaryn-aoe": { handleActor: true } } }),
+   isHandleTarget({ document: { flags: { dnd5e: {} } } }), isHandleTarget(null)],
+  [true, true, true, false, false]);
+
+/* ── usability Area 5 re-run (sorcerer) ─────────────────────────────────── */
+check("supersede: same area (a moved Fireball), same card after its area went (S16); not another cast or spell",
+  [supersedes({ activity: "a", region: "r1", usage: "u1" }, { activity: "a", region: "r1", usage: "u2" }),
+   supersedes({ activity: "a", region: "r1", usage: "u1" }, { activity: "a", region: null, usage: "u1" }),
+   supersedes({ activity: "a", region: "r1", usage: "u1" }, { activity: "a", region: "r2", usage: "u2" }),
+   supersedes({ activity: "a", region: "r1", usage: null }, { activity: "a", region: null, usage: null }),
+   supersedes({ activity: "b", region: "r1", usage: "u1" }, { activity: "a", region: "r1", usage: "u1" }),
+   supersedes({ activity: "a", region: "r1", usage: "u1", superseded: true }, { activity: "a", region: "r1", usage: "u1" })],
+  [true, true, false, false, false, false]);
+const crowd = [
+  { id: "pc", baseActorId: "f", actorType: "character", hpMax: 30, disposition: 1, hasPlayerOwner: true },
+  { id: "me", baseActorId: "caster", actorType: "character", hpMax: 98, disposition: 1, hasPlayerOwner: true },
+  { id: "npcAlly", baseActorId: "g", actorType: "npc", hpMax: 10, disposition: 1, hasPlayerOwner: false },
+  { id: "gob", baseActorId: "h", actorType: "npc", hpMax: 7, disposition: -1, hasPlayerOwner: false },
+  { id: "hid", baseActorId: "i", actorType: "character", hpMax: 7, disposition: 1, hidden: true },
+  { id: "h", handle: true, actorType: "npc", hpMax: 1, disposition: 1 }
+];
+check("Careful: the caster's side, PCs first, never the caster, a foe, a hidden token or a handle; up to CHA mod (min 1)",
+  [carefulTargets([...crowd].reverse(), { casterActorId: "caster", casterDisposition: 1, max: 5 }),
+   carefulTargets(crowd, { casterActorId: "caster", casterDisposition: 1, max: 1 }),
+   carefulTargets(crowd, { casterActorId: "caster", casterDisposition: 1, max: 0 }),
+   carefulTargets(crowd, { casterActorId: "caster", casterDisposition: null, max: 5 })],
+  [["pc", "npcAlly"], ["pc"], ["pc"], []]);
+const prot = protectRows([{ id: "pc", kind: "manual", save: null, multiplier: null, apply: true }, { id: "gob", kind: "auto", save: null, multiplier: null, apply: true },
+  { id: "me", caster: true, save: null, multiplier: null }], ["pc", "me"], "half");
+check("Careful: a protected row auto-succeeds and takes 0 of a half-on-save spell; the caster and others untouched",
+  prot.map(r => [r.id, !!r.protected, r.save?.success ?? null, r.multiplier]), [["pc", true, true, 0], ["gob", false, null, null], ["me", false, null, null]]);
+check("Careful on a no-damage-on-save spell is still 0",
+  protectRows([{ id: "pc", save: null, multiplier: null }], ["pc"], "none")[0].multiplier, 0);
+check("protected rows get no request card and answer no save",
+  [prot.filter(r => r.kind === "manual" && r.apply && !r.save).length,
+   matchSave({ ability: "dex", request: "q", rows: prot }, { requestId: "q", actorUuid: undefined, tokenId: "pc" })], [0, -1]);
+check("Careful waits for this turn's cast, bound to its card; out of combat for ten minutes",
+  [carefulApplies({ key: "c:1:x" }, { combatKey: "c:1:x" }), carefulApplies({ key: "c:1:x" }, { combatKey: "c:2:x" }),
+   carefulApplies({ key: "c:1:x", usage: "u1" }, { combatKey: "c:1:x", usage: "u1" }), carefulApplies({ key: "c:1:x", usage: "u1" }, { combatKey: "c:1:x", usage: "u2" }),
+   carefulApplies({ at: 1000 }, { now: 1000 + 60000 }), carefulApplies({ at: 1000 }, { now: 1000 + 11 * 60000 }), carefulApplies(null, {})],
+  [true, false, true, false, true, false, false]);
+check("placement cancelled after a spend → refund; placed, nothing spent, or no placement offered → no",
+  [placementCancelled({ wanted: true, placed: 0, consumed: true }), placementCancelled({ wanted: true, placed: 1, consumed: true }),
+   placementCancelled({ wanted: true, placed: 0, consumed: false }), placementCancelled({ wanted: false, consumed: true }),
+   placementCancelled({ wanted: true, canPlace: false, consumed: true })], [true, false, false, false, false]);
+check("player status line: waiting, applied, superseded, nothing to say",
+  [playerStatus({ rows: [{ apply: true, applied: false }] }), playerStatus({ rows: [{ apply: true, applied: true }, { apply: false }] }),
+   playerStatus({ superseded: true, rows: [] }), playerStatus({ rows: [] }), playerStatus(null)],
+  ["waiting", "applied", "superseded", null, null]);
+
+{
+  const { carefulStale } = await import("../core.mjs");
+  check("Careful armed for a deleted combat's turn is stale; another combat's or an out-of-combat use is not",
+    [carefulStale({ key: "c1:2:x", at: 1 }, "c1"), carefulStale({ key: "c2:2:x" }, "c1"), carefulStale({ key: "c10:1:x" }, "c1"),
+     carefulStale({ at: 1000, key: null }, "c1"), carefulStale(null, "c1"), carefulStale({ key: "c1:1:x" }, null)],
+    [true, false, false, false, false, false]);
 }
 
 console.log(`pentaryn-aoe core: ${pass} passed, ${failures.length} failed`);

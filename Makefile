@@ -76,7 +76,7 @@ vtt-down: vtt-lock-check tunnel-down foundry-down
 # Start the app, launch the world, and land in it as GM — no dropdown, no password.
 # Not folded into vtt-up: that one runs unattended from the updater, where popping a
 # browser window open would be wrong. See scripts/foundry/ops/login.py.
-# A player tab beside the GM's: make login USER_NAME=Talo LOGIN_HOST=127.0.0.1 (NO_OPEN=1 prints the URL).
+# A player tab beside the GM's: make login USER_NAME=Talo LOGIN_HOST=zz1.localhost (or 127.0.0.1; NO_OPEN=1 prints the URL).
 vtt-login login:
 	@$(OPS) login $(if $(USER_NAME),--user "$(USER_NAME)") $(if $(WORLD),--world "$(WORLD)") $(if $(LOGIN_HOST),--host "$(LOGIN_HOST)") $(if $(NO_OPEN),--no-open)
 

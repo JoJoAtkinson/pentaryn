@@ -34,10 +34,44 @@
       "concentrationSummons": {
         "name": "Concentration summons leave with concentration",
         "hint": "When a caster's concentration ends (dropped, broken, or a new concentration spell), the tokens that spell summoned (Flaming Sphere, Summon Dragon...) are removed from the map by the GM's client. Summons without concentration are never touched. Turn off to clean them up by hand."
+      },
+      "longCasts": {
+        "name": "Longer casts on the Combat HUD",
+        "hint": "Spells with a casting time of a minute or more (Animate Dead, Create Undead) are on none of the Combat HUD's bars. This adds a 'Longer casts' group to the Action bar's Cast Spell panel, for any character. Turn off to reach them from the sheet only."
+      },
+      "concentrationAutoBreak": {
+        "name": "A failed concentration save ends concentration",
+        "hint": "When a concentration save fails, the concentration ends at once (and its summons with it), as the card's Break Concentration button would. Kept as a button when the creature could still turn the failure around (Legendary Resistance, Indomitable, a Mind Sharpener, Bardic Inspiration). The save card also shows the DC and whether it failed."
+      },
+      "castDefaults": {
+        "name": "Summons start with Place Summons ticked",
+        "hint": "A summon spell's dialog opens with 'Place Summons' ticked and its creature choice showing (Summon Undead and Animate Dead ship with it off); untick it to cast without placing. A self-only spell's card (Shield) also leaves out creatures you had targeted earlier."
+      },
+      "arcaneRecovery": {
+        "name": "Arcane Recovery picks its slots",
+        "hint": "After a wizard uses Arcane Recovery, a small window lists their spent slots of level 1 to 5, opening on the highest ones that fit the PHB budget (half the Wizard level, rounded up). Recover restores them. Turn off to restore slots on the sheet by hand."
       }
     },
     "rituals": {
-      "group": "Rituals (no slot)"
+      "group": "Rituals (no slot)",
+      "longGroup": "Longer casts (1 min+)"
+    },
+    "summon": {
+      "place": "Click the map to place {name}. Right-click or Escape cancels."
+    },
+    "concentration": {
+      "failed": "DC {dc} · Failed",
+      "failedEnded": "DC {dc} · Failed: concentration ended",
+      "success": "DC {dc} · Success: still concentrating"
+    },
+    "arcaneRecovery": {
+      "title": "Arcane Recovery",
+      "intro": "Choose spent spell slots to recover: up to {cap} levels combined, none of level 6 or higher.",
+      "recover": "Recover",
+      "cancel": "Not now",
+      "total": "{used} of {cap} levels",
+      "done": "{name} recovers spell slots by studying the spellbook: {slots}.",
+      "none": "Arcane Recovery: no spent slots of level 1 to 5 to recover."
     }
   }
 }

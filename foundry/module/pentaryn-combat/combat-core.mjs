@@ -18,6 +18,11 @@
  *   damageBonuses                                Two-Weapon Fighting / Great Weapon Master (fallback path)
  *   parseMultiattack                             NPC / Wild Shape Multiattack text → a swing plan
  *   weaponSetSeed                                Argon's weapon set 1/2 for a PC whose flag is empty
+ *   specialActionOf / actionsLeft / dashChanges  Argon's Dash, Disengage, Dodge, Hide, Ready, Shove (turnflow.mjs)
+ *   expiringAt                                   Dodge / Dash / Disengage ending at a turn boundary
+ *   damageAtZero                                 a Death Saving Throw failure for damage taken at 0 HP
+ *   portraitExtras / orphanUsage                 conditions on the HUD portrait; a cancelled attack's empty card
+ *   pipFor / spentPips / reactionSpent           which pip a spell or feature spends; Quickened Spell
  */
 
 export const MOD = "pentaryn-combat";
@@ -209,8 +214,10 @@ export function sequenceReducer(state, action) {
     }
     case "swap": {     // a different weapon for every MAIN swing not yet rolled
       if (!state || (state.status !== "running" && state.status !== "paused") || !action.weaponId) return state;
+      const mainLeft = state.swings.some((s, i) => i >= state.index && s.kind === "main");
       const swings = state.swings.map((s, i) => (i >= state.index && s.kind === "main" ? { ...s, weaponId: action.weaponId, mode: null } : s));
-      return { ...state, swings };
+      // `extras` (Area 10): the Nick swing the new main weapon earns replaces the planned one.
+      return { ...state, swings: mainLeft ? replanExtras({ ...state, swings }, action.extras ?? null) : swings };
     }
     case "stop":
       if (!state || state.status === "done") return state;
@@ -264,7 +271,8 @@ export function freshTurn(key) {
     bonusUsed: false,
     otherAction: false,   // kept for readers of older flags; otherActions is the count
     otherActions: 0,      // non-Attack Actions taken this turn (Magic, Dash via an item, a spell attack…)
-    surges: 0             // Action Surge uses this turn: each is one more Action
+    surges: 0,            // Action Surge uses this turn: each is one more Action
+    quickened: false      // Quickened Spell used: the next 1-Action spell is the Bonus Action
   };
 }
 
@@ -315,6 +323,16 @@ export function recordSwing(turn, { kind, weaponId = null, crit = false, melee =
 export function recordFollowUp(turn, kind, { bonus = true } = {}) {
   const t = readTurn(turn, turn?.key);
   return { ...t, bonusUsed: bonus ? true : t.bonusUsed, followUps: t.followUps.includes(kind) ? t.followUps : [...t.followUps, kind] };
+}
+
+/**
+ * A Bonus-action feature that is not an attack (Rage, Steady Aim, Divine Smite, Lay on Hands, a
+ * Bonus-action spell) spent this turn's Bonus Action. Argon spends its pip only for buttons bound to
+ * an activity; an item button (most features) ran `item.use()` and spent nothing (usability Area 3).
+ */
+export function recordBonusAction(turn) {
+  const t = readTurn(turn, turn?.key);
+  return { ...t, bonusUsed: true };
 }
 
 /** A creature one of this turn's swings hit dropped to 0 HP. */
@@ -390,10 +408,11 @@ export function pipState({ count = 1, turn = null, inCombat = false } = {}) {
  * @param {number|null} [p.focus]        Monk Focus left (null = no Focus pool)
  * @param {string|null} [p.unarmedId]
  * @param {boolean} [p.isOwnTurn=true]
+ * @param {string|null} [p.poleStrikeId]  the Polearm Master item (its Pole Strike attack), if any
  * @returns {{kind: string, weaponId?: string, count?: number, free?: boolean}[]}
  */
 export function followUps({ turn, weapons = [], features = [], enhancedDualWielding = false, bonusFree = true,
-  focus = null, unarmedId = null, isOwnTurn = true } = {}) {
+  focus = null, unarmedId = null, isOwnTurn = true, poleStrikeId = null } = {}) {
   const t = turn ?? freshTurn("nocombat");
   const feats = features instanceof Set ? features : new Set(features);
   const out = [];
@@ -403,12 +422,23 @@ export function followUps({ turn, weapons = [], features = [], enhancedDualWield
   const bonusOk = bonusFree && !t.bonusUsed;
 
   // Light (and Dual Wielder): after attacking with a Light weapon, a different qualifying weapon.
+  // PHB 2024: the Light property gives ONE extra attack (Bonus Action); Nick moves that one into the
+  // Attack action. Dual Wielder's Enhanced Dual Wielding is a SECOND, separate extra attack (Bonus
+  // Action, any one-handed melee weapon). So: a Nick partner is preferred for the Light attack —
+  // the same weapon Full Attack's plan (extraSwings) picks — and with Dual Wielder the Bonus-action
+  // attack stays on offer next to Nick, preferably with a weapon other than the Nick one.
   const lightUsed = used.find(lightTrigger);
-  if (lightUsed && !t.followUps.includes("offhand") && !t.nick) {
-    const second = partnerWeapon(weapons, lightUsed.id, w => offhandCapable(w, { enhancedDualWielding }));
-    if (second) {
-      if (nickCapable(second, { enhancedDualWielding })) out.push({ kind: "nick", weaponId: second.id, free: true });
-      else if (bonusOk) out.push({ kind: "offhand", weaponId: second.id });
+  if (lightUsed) {
+    const nick = partnerWeapon(weapons, lightUsed.id, w => nickCapable(w, { enhancedDualWielding }));
+    const offhandUsed = t.followUps.includes("offhand");
+    const lightSpent = !!t.nick || (offhandUsed && !enhancedDualWielding);
+    if (nick && !t.nick && !(offhandUsed && !enhancedDualWielding)) out.push({ kind: "nick", weaponId: nick.id, free: true });
+    if (bonusOk && !offhandUsed && (enhancedDualWielding || (!lightSpent && !nick))) {
+      const qualifies = w => offhandCapable(w, { enhancedDualWielding });
+      const second = (nick && enhancedDualWielding
+        ? partnerWeapon(weapons.filter(w => w.id !== nick.id), lightUsed.id, qualifies)
+        : null) ?? partnerWeapon(weapons, lightUsed.id, qualifies);
+      if (second) out.push({ kind: "offhand", weaponId: second.id });
     }
   }
 
@@ -428,6 +458,13 @@ export function followUps({ turn, weapons = [], features = [], enhancedDualWield
     const wid = (a.crit && a.critWeapon) || (a.kill && a.killWeapon) || null;
     const w = wid ? byId.get(wid) : null;
     if (w && w.melee) out.push({ kind: "hew", weaponId: w.id });
+  }
+
+  // Pole Strike (Polearm Master): after the Attack action with a Quarterstaff, Spear or Heavy+Reach
+  // weapon, one attack with the weapon's other end as a Bonus Action (usability Area 3: 4 clicks
+  // through the Use Feature drawer and its activity chooser → 1 button).
+  if (bonusOk && poleStrikeId && !t.followUps.includes("pole-strike") && poleStrikeOpen({ turn: t, weapons })) {
+    out.push({ kind: "pole-strike", weaponId: poleStrikeId });
   }
   return out;
 }
@@ -747,4 +784,385 @@ export function shouldSeed(flag) {
 /** Which hint lines a rider's checks produce: [{key, ok}] → ["advantage:yes", "ally:unknown", …]. */
 export function hintCodes(checks = []) {
   return checks.map(c => `${c.key}:${c.ok === true ? "yes" : c.ok === false ? "no" : "unknown"}`);
+}
+
+/* ── turn flow (Area 1 re-run): Argon's special actions, expiry, death saves, portrait ───── */
+
+/** Argon dnd5e's six built-in action buttons, by key. */
+export const SPECIAL_ACTIONS = Object.freeze(["dash", "disengage", "dodge", "hide", "ready", "shove"]);
+
+/**
+ * Which special action a button is, from its label and the localized names ({dash: "Dash", …}).
+ * @returns {string|null}
+ */
+export function specialActionOf(label, names = {}) {
+  const l = normalizeName(label ?? "");
+  if (!l) return null;
+  for (const key of SPECIAL_ACTIONS) if (normalizeName(names?.[key] ?? key) === l) return key;
+  return null;
+}
+
+/**
+ * Actions still free this turn: 1 + Action Surges, minus other Actions taken, minus Attack actions
+ * begun (a Fighter 5 who swung once has begun one Attack action: `count` = 2 swings per action).
+ */
+export function actionsLeft(turn, count = 1) {
+  const swings = Number(turn?.attackAction?.swings) || 0;
+  const per = Math.max(1, Number(count) || 1);
+  return Math.max(0, 1 + (Number(turn?.surges) || 0) - otherActionsOf(turn) - Math.ceil(swings / per));
+}
+
+/** The turn after a special action: Shove (2024: an Unarmed Strike option) is one swing, the rest an Action. */
+export function recordSpecialAction(turn, kind) {
+  if (kind === "shove") return recordSwing(turn, { kind: "main", melee: true });
+  return recordOtherAction(turn);
+}
+
+/**
+ * Dash (PHB 2024): extra movement this turn equal to your Speed after modifiers; a Fly or Swim Speed
+ * may be used instead, so every speed above 0 gets its own value added.
+ * @param {object} movement  system.attributes.movement (prepared)
+ */
+export function dashChanges(movement = {}) {
+  const out = [];
+  for (const k of ["walk", "fly", "swim", "climb", "burrow"]) {
+    const v = Number(movement?.[k]);
+    if (Number.isFinite(v) && v > 0) out.push({ key: `system.attributes.movement.${k}`, type: "add", value: v });
+  }
+  return out;
+}
+
+/**
+ * Effect ids to remove at one of an actor's turn boundaries. Dodge (status "dodging", however it was
+ * applied) lasts until the start of your next turn; our Dash and Disengage effects carry
+ * `until: "turnEnd"` (the current turn only).
+ * @param {{id: string, statuses?: string[], until?: string|null}[]} effects
+ * @param {"turnStart"|"turnEnd"} event
+ */
+export function expiringAt(effects = [], event) {
+  return (effects ?? []).filter(e => e && (
+    (event === "turnStart" && (e.statuses ?? []).includes("dodging")) || (!!e.until && e.until === event)
+  )).map(e => e.id);
+}
+
+/**
+ * Damage at 0 Hit Points (PHB 2024): any damage while at 0 HP is one Death Saving Throw failure, two
+ * from a Critical Hit. "Massive" flags the instant-death cases for the GM (damage at 0 HP that equals
+ * or exceeds the HP maximum; or the remainder past 0 HP doing so), which this never applies itself.
+ * Temporary Hit Points absorb first. Characters only: a monster dies at 0 HP.
+ * @returns {{failures: number|null, massive: boolean}}  failures = the new tally, or null for no change
+ */
+export function damageAtZero({ isCharacter = true, hp = 0, temp = 0, max = 0, amount = 0, failures = 0, critical = false } = {}) {
+  const none = { failures: null, massive: false };
+  const dmg = Number(amount) || 0;
+  if (!isCharacter || dmg <= 0) return none;
+  const through = dmg - Math.min(Math.max(0, Number(temp) || 0), dmg);
+  if (through <= 0) return none;
+  const hpNow = Number(hp) || 0;
+  const hpMax = Number(max) || 0;
+  if (hpNow > 0) return { failures: null, massive: hpMax > 0 && through - hpNow >= hpMax };
+  const had = Number(failures) || 0;
+  if (had >= 3) return none;
+  return { failures: Math.min(3, had + (critical ? 2 : 1)), massive: hpMax > 0 && through >= hpMax };
+}
+
+/**
+ * Effects the HUD portrait should show beyond Argon's own (it lists `temporaryEffects`, and v14 no
+ * longer counts a status-only effect such as Prone or Poisoned as temporary).
+ * @param {{uuid: string, active: boolean, temporary: boolean, concealed?: boolean, statuses?: string[]}[]} effects
+ * @returns {string[]} uuids
+ */
+export function portraitExtras(effects = []) {
+  return (effects ?? []).filter(e => e && e.active && !e.temporary && !e.concealed && (e.statuses ?? []).length).map(e => e.uuid);
+}
+
+/**
+ * A usage card left behind by a cancelled attack roll: posted by this user moments ago, nothing rolled
+ * under it, nothing consumed, no sequence still threading swings under it.
+ */
+export function orphanUsage({ mine = false, ageMs = Infinity, rolled = true, consumed = true, sequence = false } = {}) {
+  return !!mine && ageMs >= 0 && ageMs < 5 * 60 * 1000 && !rolled && !consumed && !sequence;
+}
+
+/* ── usability run, Area 2 (fixer pass 2) ─────────────────────────────────── */
+
+/**
+ * What the Full Attack tooltip says about a plan: main swings left of the Attack action's count, and
+ * the extra swings (Nick) by weapon, so a Nick pair reads "2 of 2 swings left, + Nick: Dagger" and
+ * never "3 of 2".
+ * @param {{weaponId: string, kind: string}[]} swings  fullAttackPlan().swings
+ * @param {number} count                               the Attack action's swings
+ * @returns {{left: number, total: number, mainIds: string[], extras: {kind: string, weaponId: string}[]}}
+ */
+export function planSummary(swings = [], count = 0) {
+  const list = Array.isArray(swings) ? swings.filter(Boolean) : [];
+  const main = list.filter(s => (s.kind ?? "main") === "main");
+  return {
+    left: main.length,
+    total: Math.max(Number(count) || 0, main.length),
+    mainIds: [...new Set(main.map(s => s.weaponId).filter(Boolean))],
+    extras: list.filter(s => (s.kind ?? "main") !== "main").map(s => ({ kind: s.kind, weaponId: s.weaponId }))
+  };
+}
+
+/**
+ * Where a roll window goes while a Full Attack runs: its bottom edge just above the swing strip, so
+ * the strip (Adv / Dis / Quick / Stop) is never under it and the window's buttons sit at the same
+ * height for every swing, however tall the window is. A window the player dragged sets `last`
+ * (its left and bottom edge) for the next ones. Clamped to the viewport.
+ * @returns {{left: number, top: number}}
+ */
+export function dockRect({ stripTop = null, height = 0, width = 0, viewW = 0, viewH = 0, gap = 8, last = null } = {}) {
+  const h = Math.max(0, Number(height) || 0);
+  const w = Math.max(0, Number(width) || 0);
+  const bottom = Number.isFinite(last?.bottom) ? last.bottom : (Number.isFinite(stripTop) ? stripTop - gap : viewH - gap);
+  const left0 = Number.isFinite(last?.left) ? last.left : (viewW - w) / 2;
+  const top = Math.max(gap, Math.min(Math.round(bottom - h), Math.round(viewH - h - gap)));
+  const left = Math.max(gap, Math.min(Math.round(left0), Math.round(viewW - w - gap)));
+  return { left, top };
+}
+
+/** The roll window's title tag while a sequence runs: "Longsword · swing 2 of 3" (null when idle). */
+export function swingTag({ weapon = null, current = null, total = null, kind = "main", status = null } = {}) {
+  if (status !== "running" || !current || !total) return null;
+  return { weapon: weapon ?? "", i: current, n: total, kind: kind ?? "main" };
+}
+
+/* ── usability Area 3 re-run (fixer pass 2) ───────────────────────────────── */
+
+/**
+ * Which combatants' turns a combat update ended and began. Core's combatTurnChange passes the
+ * previous and current {round, turn, combatantId}; when combat starts, the first combatant was
+ * already "current" in round 0, so comparing combatants alone saw no change and the HUD did not
+ * follow (round 1 stayed on whoever the HUD showed).
+ * @returns {{ended: string|null, began: string|null}}  combatant ids (null = none)
+ */
+export function turnBoundary(previous = {}, current = {}) {
+  const prevId = previous?.combatantId ?? null;
+  const curId = current?.combatantId ?? null;
+  const prevRound = Number(previous?.round) || 0;
+  const curRound = Number(current?.round) || 0;
+  const starting = prevRound === 0 && curRound >= 1;
+  if (!starting && prevId === curId && prevRound === curRound) return { ended: null, began: null };
+  if (!starting && prevId === curId) return { ended: prevId, began: curId };    // a lone combatant's next round
+  return { ended: starting ? null : prevId, began: curId };
+}
+
+/**
+ * The pause bar's second sentence: what the closed roll left unspent. A Full Attack's swings stay on
+ * the Action pips; Flurry of Blows already spent its Focus Point (its card was posted before the first
+ * strike); a single Bonus-action follow-up spends nothing until it is rolled.
+ * @returns {"main"|"flurry"|"bonus"}
+ */
+export function pausedNote({ kinds = [], paid = false } = {}) {
+  const list = (Array.isArray(kinds) ? kinds : []).filter(Boolean);
+  if (paid) return "flurry";
+  if (list.length && list.every(k => k !== "main" && k !== "nick")) return "bonus";
+  return "main";
+}
+
+/**
+ * Steady Aim (PHB 2024): Advantage on your next attack roll this turn; your Speed is 0 until the end
+ * of the turn. As native dnd5e 6 changes: every ability's attack roll mode +1 (the dialog then defaults
+ * to Advantage), and each Speed set to 0.
+ */
+export function steadyAimChanges() {
+  return [
+    ...["str", "dex", "con", "int", "wis", "cha"].map(a => ({ key: `system.abilities.${a}.attack.roll.mode`, type: "add", value: 1 })),
+    ...["walk", "fly", "swim", "climb", "burrow"].map(k => ({ key: `system.attributes.movement.${k}`, type: "override", value: 0 }))
+  ];
+}
+
+/**
+ * Steady Aim after its attack: the Advantage is used, the Speed 0 lasts to the end of the turn. In
+ * combat the effect keeps only its Speed changes (the turn-end sweep removes it); out of combat there
+ * is no turn end, so it goes (null = delete).
+ * @returns {object[]|null}
+ */
+export function steadyAimAfterAttack(changes = [], { inCombat = false } = {}) {
+  if (!inCombat) return null;
+  const left = (changes ?? []).filter(c => !/\.attack\.roll\.mode$/.test(c?.key ?? ""));
+  return left.length ? left : null;
+}
+
+/**
+ * Argon's off-hand weapon-set slot on the Bonus bar: hidden while our "Off-hand: X" offers the same
+ * weapon (U-2-8), and once the Light property's extra attack was made this turn (Nick, or the
+ * Bonus-action off-hand attack) unless our Off-hand button offers that slot's weapon — the plain
+ * slot invited a second, illegal off-hand attack (usability Area 3, B7).
+ */
+export function hideOffhandSlot({ turn = null, slotId = null, offered = [] } = {}) {
+  if (!slotId) return false;
+  const ids = new Set(offered ?? []);
+  if (ids.has(slotId)) return true;
+  const t = turn ?? {};
+  return !!t.nick || (t.followUps ?? []).includes("offhand");
+}
+
+/**
+ * Where Argon's drawer (Use Feature, Cast Spell, Wild Shape, Starry Form) opens: above its own
+ * button, kept inside the HUD's action row. Argon opens every drawer at the row's far left, up to
+ * ~370 px from the button and under the portrait.
+ *
+ * Every input is a SCREEN measurement (getBoundingClientRect). Argon scales the whole HUD with a CSS
+ * transform (0.424 on a 1600 px window, less on a narrower one), so a screen distance is divided by
+ * `scale` to become the drawer's own `left`. Mixing the two (the drawer's unscaled offsetWidth with
+ * the row's scaled width) pinned every wide drawer at 0, under the portrait (Area 4 live run, D1).
+ *
+ * @param {object} m
+ * @param {number} m.buttonLeft  the button's left edge
+ * @param {number} m.hudLeft     the left edge of the element `left` is measured from (the drawer's offsetParent)
+ * @param {number} m.hudWidth    how far right of hudLeft the drawer may reach
+ * @param {number} m.panelWidth  the drawer's width
+ * @param {number} [m.minLeft]   the drawer never starts left of this (the action row, right of the portrait)
+ * @param {number} [m.scale=1]   the HUD's scale (screen px per CSS px)
+ * @returns {number}  the drawer's `left` in its own CSS px
+ */
+export function drawerLeft({ buttonLeft = 0, hudLeft = 0, hudWidth = 0, panelWidth = 0, minLeft = null, scale = 1 } = {}) {
+  const n = (v) => Number(v) || 0;
+  const origin = n(hudLeft);
+  const lo = Math.max(origin, minLeft === null || minLeft === undefined ? origin : n(minLeft));
+  const hi = Math.max(lo, origin + n(hudWidth) - n(panelWidth));
+  const x = Math.max(lo, Math.min(n(buttonLeft), hi));
+  const k = n(scale) > 0 ? n(scale) : 1;
+  return Math.round((x - origin) / k);
+}
+
+/* ── usability Area 5 re-run: spells spend their pip; Quickened Spell ─────── */
+
+/**
+ * Which pip a used activity spends (Argon's item buttons, every spell from Cast Spell, spent none:
+ * usability Area 5 re-run, S5/S14). Quickened Spell (PHB 2024: "change the casting time to a Bonus
+ * Action for this casting") turns the next 1-Action spell into the Bonus Action.
+ * Off your own turn in combat an Action-or-Bonus use is not counted (a Readied spell is the GM's
+ * call); a Reaction is counted on any turn.
+ *
+ * @param {object} p
+ * @param {string|null} p.activation   activity.activation.type
+ * @param {boolean} [p.isSpell=false]  the item is a spell (a wand's or scroll's cast counts too)
+ * @param {boolean} [p.quickened=false] Quickened Spell is waiting on this turn
+ * @param {boolean} [p.inCombat=false]
+ * @param {boolean} [p.isOwnTurn=true]
+ * @returns {"action"|"bonus"|"reaction"|null}
+ */
+export function pipFor({ activation = null, isSpell = false, quickened = false, inCombat = false, isOwnTurn = true } = {}) {
+  if (!inCombat) return null;
+  if (activation === "reaction") return "reaction";
+  if (!isOwnTurn) return null;
+  if (activation === "action") return isSpell && quickened ? "bonus" : "action";
+  if (activation === "bonus") return "bonus";
+  return null;
+}
+
+/** Quickened Spell was used: the next 1-Action spell this turn is the Bonus Action. */
+export function recordQuickened(turn) {
+  const t = readTurn(turn, turn?.key);
+  return { ...t, quickened: true };
+}
+
+/** The Quickened spell was cast: it spent the Bonus Action, not an Action. */
+export function recordQuickenedCast(turn) {
+  const t = readTurn(turn, turn?.key);
+  return { ...t, quickened: false, bonusUsed: true };
+}
+
+/**
+ * What Argon's own single Action / Bonus pips should show after the HUD is rebuilt (a re-bind made
+ * new panels with every pip lit, although this turn's flag says they were spent).
+ * @returns {{action: boolean, bonus: boolean}}  true = spent
+ */
+export function spentPips(turn) {
+  return { action: actionsLeft(turn, 1) <= 0, bonus: !!turn?.bonusUsed };
+}
+
+/**
+ * Is the Reaction still spent? It is recorded with the combat it was taken in and cleared when the
+ * actor's own turn starts (2024 PHB: "you regain it at the start of your next turn").
+ * @param {{combatId?: string}|null} flag
+ * @param {string|null} combatId  the actor's current combat
+ */
+export function reactionSpent(flag, combatId) {
+  return !!(flag && combatId && flag.combatId === combatId);
+}
+
+/**
+ * Which of an actor's per-combat flags belong to a combat that was just deleted: the turn flag (its
+ * key is "combatId:round:turn") and the Reaction record. They are inert once the combat is gone, but
+ * they stayed on the PCs for good (usability Area 9 found them on Caven, Talo and Marrith). The
+ * out-of-combat turn ("nocombat") is never touched.
+ * @param {{turn?: {key?: string}|null, reaction?: {combatId?: string}|null}} flags
+ * @param {string|null} combatId
+ * @returns {string[]} flag keys to unset ("turn", "reaction")
+ */
+export function staleCombatFlags(flags, combatId) {
+  if (!combatId || !flags || typeof flags !== "object") return [];
+  const out = [];
+  const key = flags.turn?.key;
+  if (typeof key === "string" && key.startsWith(`${combatId}:`)) out.push("turn");
+  if (flags.reaction && typeof flags.reaction === "object" && flags.reaction.combatId === combatId) out.push("reaction");
+  return out;
+}
+
+/* ── usability Area 10 (melee build-review live checks), fixer pass ──────── */
+
+/**
+ * Flags left by a combat that no longer exists. `staleCombatFlags` runs when a combat is deleted,
+ * but a combat deleted while no GM was connected, or before that cleanup existed, left its turn and
+ * Reaction flags on the PCs for good (Area 10: Marrith carried a turn flag from a long-gone combat).
+ * The active GM sweeps the world's actors with this on load and after every combat deletion.
+ * The out-of-combat turn ("nocombat") is never touched.
+ * @param {{turn?: {key?: string}|null, reaction?: {combatId?: string}|null}} flags
+ * @param {Iterable<string>} liveIds  the ids of every combat in the world
+ * @returns {string[]} flag keys to unset ("turn", "reaction")
+ */
+export function orphanCombatFlags(flags, liveIds = []) {
+  if (!flags || typeof flags !== "object") return [];
+  const live = new Set(liveIds ?? []);
+  const out = [];
+  const key = flags.turn?.key;
+  if (typeof key === "string" && key !== "nocombat" && key.includes(":")) {
+    const id = key.slice(0, key.indexOf(":"));
+    if (id && !live.has(id)) out.push("turn");
+  }
+  const r = flags.reaction;
+  if (r && typeof r === "object" && typeof r.combatId === "string" && r.combatId && !live.has(r.combatId)) out.push("reaction");
+  return out;
+}
+
+/**
+ * A pause-bar weapon swap's Nick swing (PHB 2024). The Light property's extra attack is made with a
+ * DIFFERENT Light weapon, and Nick lets it be part of the Attack action. Swapping the main swings
+ * onto the Dagger used to keep the planned "Nick: Dagger" swing, so the Dagger swung three times
+ * (Area 10). The swap now replaces the unrolled Nick swing with what the new main weapon earns
+ * (`extraSwings` for it): another Nick weapon, or none.
+ * @param {{index: number, swings: object[]}} state
+ * @param {object[]|null} extras  extraSwings() for the new main weapon; null keeps the old plan
+ * @returns {object[]} the new swing list
+ */
+export function replanExtras(state, extras) {
+  const swings = state?.swings ?? [];
+  if (!Array.isArray(extras)) return swings;
+  const index = state?.index ?? 0;
+  const kept = swings.filter((s, i) => i < index || s.kind !== "nick");
+  // A Nick swing already rolled this sequence means the Light extra attack is spent: nothing new.
+  if (swings.some((s, i) => i < index && s.kind === "nick")) return kept;
+  return [...kept, ...extras.map(x => ({ weaponId: x.weaponId, mode: x.mode ?? "offhand", kind: x.kind ?? "nick" }))];
+}
+
+/**
+ * Keep a window on screen. A roll window opened outside a Full Attack (Lay on Hands' Healing roll)
+ * was placed partly below the viewport's bottom edge (Area 10). Returns the moved position, or
+ * null when it already fits.
+ * @returns {{left: number, top: number}|null}
+ */
+export function clampToView({ left = 0, top = 0, width = 0, height = 0, viewW = 0, viewH = 0, margin = 8 } = {}) {
+  const w = Math.max(0, Number(width) || 0);
+  const h = Math.max(0, Number(height) || 0);
+  const l0 = Number(left) || 0;
+  const t0 = Number(top) || 0;
+  if (!viewW || !viewH) return null;
+  const l = Math.max(margin, Math.min(l0, viewW - w - margin));
+  const t = Math.max(margin, Math.min(t0, viewH - h - margin));
+  const L = Math.round(l), Tp = Math.round(t);
+  return (L === Math.round(l0) && Tp === Math.round(t0)) ? null : { left: L, top: Tp };
 }

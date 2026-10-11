@@ -68,7 +68,9 @@ ROLE_LABEL = {4: "Gamemaster", 3: "Assistant", 2: "Player", 1: "Trusted"}
 
 
 def _say(msg: str) -> None:
-    print(f"  {msg}")
+    # flushed: with NO_OPEN the handoff URL is the line someone is waiting to read, and a run in
+    # the background (stdout to a file) otherwise holds it in the buffer until the 90 s are up
+    print(f"  {msg}", flush=True)
 
 
 # ── Picking things ───────────────────────────────────────────────────────────
@@ -325,7 +327,7 @@ def _handoff(session_id: str, host: str, game_url: str, open_browser: bool) -> b
         def log_message(self, *args):                        # noqa: D102
             pass    # the default handler logs to stderr and the request path is a ticket
 
-    srv = http.server.ThreadingHTTPServer((host, 0), Handler)
+    srv = http.server.ThreadingHTTPServer((_bind_address(host), 0), Handler)
     srv.daemon_threads = True
     port = srv.server_address[1]
     threading.Thread(target=srv.serve_forever, daemon=True).start()
@@ -348,6 +350,33 @@ def _handoff(session_id: str, host: str, game_url: str, open_browser: bool) -> b
 # cookie host from ``localhost`` (RFC 6265 keys on the name), so a player tab there keeps its own
 # session beside the GM's ``localhost`` tab in the same browser — the usability-test setup.
 LOOPBACK_HOSTS = ("localhost", "127.0.0.1")
+# ``<label>.localhost`` too (RFC 6761 §6.3: always loopback; Chrome resolves it itself). Each
+# label is its own cookie jar, so parallel player tabs (``zz1.localhost``, ``zz2.localhost`` …)
+# never knock each other off. The test run's house rule puts every player tab on one of these;
+# until this accepted them, the only way in was typing a user password into /join (2026-10, Area 7).
+_LOCALHOST_LABEL = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.localhost$")
+
+
+def loopback_host(host: str) -> str:
+    """``host`` lower-cased if it is a loopback name this command may hand a session to.
+
+    For ``argparse`` (``type=``): raises ``ValueError`` otherwise, which it reports as an
+    invalid choice. Only names that can never leave the machine pass, because the handoff
+    URL carries a single-use ticket to an admin-flagged session.
+    """
+    name = (host or "").strip().lower()
+    if name in LOOPBACK_HOSTS or _LOCALHOST_LABEL.match(name):
+        return name
+    raise ValueError(f"{host!r} is not a loopback host "
+                     f"({', '.join(LOOPBACK_HOSTS)} or <name>.localhost)")
+
+
+def _bind_address(host: str) -> str:
+    """Where the handoff server listens for ``host``: a ``*.localhost`` name binds to
+    ``127.0.0.1`` rather than trusting the OS resolver with a name it may not know (macOS
+    answers ``::1`` first; the server is IPv4). The browser still uses the name, so the
+    cookie lands on that name's jar."""
+    return "127.0.0.1" if host.endswith(".localhost") else host
 
 
 def login(user: str | None = None, world: str | None = None,
@@ -355,14 +384,19 @@ def login(user: str | None = None, world: str | None = None,
           host: str | None = None) -> int:
     """Start whatever is not running, then put the browser inside the world.
 
-    ``host`` picks the browser-facing loopback name (``127.0.0.1`` for a player tab next to
-    the GM's ``localhost`` one); the admin calls still go to ``cfg.FOUNDRY_URL``.
+    ``host`` picks the browser-facing loopback name (``127.0.0.1`` or ``<name>.localhost`` for
+    a player tab next to the GM's ``localhost`` one); the admin calls still go to
+    ``cfg.FOUNDRY_URL``.
     """
     base_url = cfg.FOUNDRY_URL
     parts = urllib.parse.urlsplit(base_url)
-    if host and host not in LOOPBACK_HOSTS:
-        _say(f"✗ --host must be one of {', '.join(LOOPBACK_HOSTS)}")
-        return FAIL
+    if host:
+        try:
+            host = loopback_host(host)
+        except ValueError as exc:
+            _say(f"✗ --host: {exc}")
+            return FAIL
+    player_tab = bool(host) and host != (parts.hostname or "localhost")
     host = host or parts.hostname or "localhost"
     game_base = f"{parts.scheme}://{host}" + (f":{parts.port}" if parts.port else "")
     # An explicit --world AND --user is a fully specified request; don't interrupt it.
@@ -407,6 +441,7 @@ def login(user: str | None = None, world: str | None = None,
         return FAIL
 
     _say(f"✓ logged in as {who.get('name')} at {game_base}/game")
-    if service._tunnel_pid() is None:
+    # a player tab on its own loopback name is a local test session; the tunnel is not its business
+    if not player_tab and service._tunnel_pid() is None:
         _say("  ▸ players still need the tunnel: make tunnel-up")
     return OK

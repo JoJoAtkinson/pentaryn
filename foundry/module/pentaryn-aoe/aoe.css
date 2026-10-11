@@ -62,3 +62,8 @@ effect-application.pentaryn-aoe-unapplied > .card-tray > label::after {
   opacity: 0.85;
 }
 .chat-card .pentaryn-aoe-applied i { margin-right: 2px; }
+
+/* usability Area 5 re-run: Careful Spell in the tray; the caster's status line */
+.pentaryn-aoe-tray .pa-careful { margin: 2px 0 4px; font-size: var(--font-size-12, 12px); }
+.chat-message .pa-status { margin: 4px 0 0; font-size: var(--font-size-12, 12px); font-style: italic; opacity: 0.85; }
+.chat-message .pa-status i { margin-right: 4px; }

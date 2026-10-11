@@ -14,7 +14,9 @@
 | `resolve.mjs` | B | GM `createChatMessage` trigger, NPC saves, request card (`CONFIG.DND5E.requests["pentaryn-aoe.save"]`), `applyRows` |
 | `tray.mjs` | B | GM-only tray in `dnd5e.renderChatMessage`, right after the native `<damage-application>` |
 | `attacks.mjs` | C | `dnd5e.postRollAttack` → `rollDamage` on a hit |
-| `effects.mjs` | D | self-cast auto-apply (`createChatMessage` on the active GM, or the caster's client when no GM is on) and the "Not applied yet" highlight on an Effects tray |
+| `effects.mjs` | D | self-cast auto-apply (`createChatMessage` on the active GM, or the caster's client when no GM is on), also for a touch spell for one willing creature cast at nobody (`untargetedSelf`; U-6-3), and the "Not applied yet" highlight on an Effects tray. A new copy of a spell's effect replaces an enabled one of the same name from the same spell instead of stacking (`preCreateActiveEffect`, `noSpellStacking`; U-6-4) |
+| `refund.mjs` | F | a cancelled placement (Escape, right-click) refunds the slot / charges through `Activity#refund`, ends the concentration it began and deletes the card (`refundCancelledArea`) |
+| `aim.mjs` | G | a Self-range cone or line (Cone of Cold, Lightning Bolt) keeps its point on the caster's token edge and turns toward the mouse while placing: `dnd5e.preCreateMeasuredTemplate` arms it, a wrap of `RegionLayer.prototype.placeRegions` passes core's `onMove` (`aimSelfAreas`; U-6-5) |
 | `escape.mjs` | E | PRIORITY Escape keybinding: cancels core's region placement (`canvas.regions._cancelPlacement`) before core's dismiss closes the open windows |
 
 **dnd5e 6 only (0.3.0).** Chat data is read from typed messages: `message.type` (`usage`, `attack`,
@@ -38,6 +40,17 @@ an unknown name such as the old `gmroll` into the client default, public. A stor
 rewritten once on the active GM's ready (`settings.migrateSettings`). The native outcomes cover only
 recorded or selected targets, so "everyone inside the area", the NPC auto-rolls and the confirm
 tray stay ours.
+
+Part B, sorcerer additions (usability Area 5 re-run). **Careful Spell** (`carefulSpell`): using it
+writes `flags.pentaryn-aoe.careful` `{at, key, usage}` on the caster (key = the combat turn, else a
+10-minute window; a combat-turn flag is removed by the active GM when that combat is deleted, 0.3.1). The caster's next save spell's resolution marks up to CHA mod of the caster's
+side (same token disposition, player characters first, never the caster, never a hidden token) as
+`protected`: an automatic success and ×0 on a half-on-save spell, no request card. The flag binds to
+that usage card, so re-rolling the card keeps the protection and another spell does not get it. The
+GM can change any row. **Superseding** now also covers a re-roll from the same usage card after its
+area has gone (`core.supersedes`). **Players' chat** (`playerStatus`): the caster's own damage card
+gets one line (waiting for the GM / applied / re-rolled) and the GM-only monster save rolls this
+module makes carry `flags.pentaryn-aoe.npcSave` and are hidden (`html.hidden`) on player clients.
 
 Part D, in short. A usage card's effects go onto the caster when the card's only target is the
 caster, or its activity affects only `self` (Shield). Attack and save activities targeted at

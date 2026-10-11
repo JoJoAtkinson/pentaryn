@@ -3,7 +3,8 @@
     "dialog": {
       "title": "Prompt",
       "placeholder": "What goes here? A few words is enough. Enter for a new line.",
-      "hint": "Esc saves · ⌘⏎ saves · ⇧Esc undoes",
+      "hint": "Esc saves · ⌘⏎ saves · ⇧Esc puts the text back",
+      "hintFresh": "Esc saves · ⌘⏎ saves · ⇧Esc removes this new marker",
       "delete": "Delete",
       "removedEmpty": "Prompt marker removed (empty).",
       "saveFailed": "The prompt could not be saved; see the console.",
@@ -15,6 +16,7 @@
       "inSight": "In sight · {n}",
       "nobody": "Sees nothing.",
       "more": "+{n} more",
+      "behindDoor": "Behind a closed door: {list}",
       "outOfSight": "Out of sight (within {ft} ft) · {n}",
       "empty": "(empty)",
       "builtFrom": "Built from:"

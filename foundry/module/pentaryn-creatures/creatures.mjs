@@ -15,7 +15,7 @@
 
 import * as core from "./creatures-core.mjs";
 
-const { MODULE, isPlayerCreature, lightUpdate, ownerShouldSee, stripEntries, shouldShowStrip, stripSignature } = core;
+const { MODULE, isPlayerCreature, lightUpdate, ownerShouldSee, stripEntries, shouldShowStrip, stripSignature, stripDock } = core;
 const L = (k, data) => (data ? game.i18n.format(`PENTARYN_CREATURES.${k}`, data) : game.i18n.localize(`PENTARYN_CREATURES.${k}`));
 
 const isWriter = () => game.users?.activeGM?.isSelf === true;
@@ -227,6 +227,24 @@ function render() {
     el.replaceChildren(...build(entries));
   }
   markControlled();
+  placeStrip();
+}
+
+/* The strip floats above the Combat HUD while the HUD is up (usability Area 6 re-run, W8): docked
+   above the hotbar it sat behind Argon's action bars, so clicks went to the bar instead. */
+let dockTimer = null;
+function placeStrip() {
+  const el = stripEl();
+  if (!el) { clearInterval(dockTimer); dockTimer = null; return; }
+  const bar = document.querySelector(".extended-combat-hud .action-hud") ?? document.querySelector(".extended-combat-hud");
+  const r = bar && bar.offsetParent !== null ? bar.getBoundingClientRect() : null;
+  const dock = setting("floatOverHud", true) ? stripDock(r, window.innerHeight) : null;
+  el.classList.toggle("pcr-floating", !!dock);
+  el.style.bottom = dock ? `${dock.bottom}px` : "";
+  el.style.left = dock ? `${dock.left}px` : "";
+  // Argon opens, closes and re-renders without a hook we can rely on: look again twice a second
+  // while the strip exists (one rect read).
+  dockTimer ??= setInterval(placeStrip, 500);
 }
 
 function build(entries) {
@@ -318,6 +336,11 @@ Hooks.once("init", () => {
     hint: "PENTARYN_CREATURES.settings.ownerSees.hint",
     scope: "world", config: true, type: Boolean, default: true,
     onChange: (v) => { ownerSeesOn = v !== false; refreshTokenVisibility(); }
+  });
+  game.settings.register(MODULE, "floatOverHud", {
+    name: "PENTARYN_CREATURES.settings.floatOverHud.name",
+    hint: "PENTARYN_CREATURES.settings.floatOverHud.hint",
+    scope: "world", config: true, type: Boolean, default: true
   });
   game.settings.register(MODULE, "showStrip", {
     name: "PENTARYN_CREATURES.settings.showStrip.name",

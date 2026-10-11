@@ -7,7 +7,7 @@
 const core = await import("../light-core.mjs");
 const {
   MODULE, DARK, SPELL_LIGHT, LIGHT_PROFILES, slug, profileKey, profileFor, lightFor, strongest,
-  carriedLightOf, isLit, isHooded, isLightSpellData, isLightToggle, readSpellCast, castFlag,
+  carriedLightOf, lightingItemId, isLit, isHooded, isLightSpellData, isLightToggle, readSpellCast, castFlag,
   readSpellLight, planSpellLight, spellLightUpdate, restoredLight, sourcesUnder,
   isPHBLightActorSource, torchActivityData, TORCH_ACTIVITY_ID
 } = core;
@@ -74,6 +74,15 @@ check("lit torch beats shard", carriedLightOf([shard, torchOn]).dim, 40);
 check("hooded lantern 0/5 loses to shard", carriedLightOf([lanternShut, shard]).dim, 15);
 check("quantity 0 torch gives nothing", carriedLightOf([item("Torch", { quantity: 0, f: { lit: true } })]), null);
 check("a shard flag wins over `lit` on the same item", carriedLightOf([item("Torch", { f: { light: { bright: 1, dim: 2 }, lit: true } })]), { bright: 1, dim: 2 });
+/* lightingItemId: which item lights the token (usability Area 8, L5) */
+const withId = (it, id) => Object.assign(Object.create(it), { id });
+const tOn = withId(torchOn, "torch1"), lOpen = withId(item("Lantern, Hooded", { type: "equipment", identifier: "lantern-hooded", f: { lit: true } }), "lant1");
+const lShut = withId(lanternShut, "lant1"), sh = withId(shard, "shard1");
+check("lighting item: nothing lit → null", lightingItemId([withId(torchOff, "t0")]), null);
+check("lighting item: torch + hooded lantern → torch", lightingItemId([lShut, tOn]), "torch1");
+check("lighting item: torch + open lantern → lantern (60 beats 40)", lightingItemId([tOn, lOpen]), "lant1");
+check("lighting item: hooded lantern loses to a shard", lightingItemId([lShut, sh]), "shard1");
+check("lighting item agrees with carriedLightOf", carriedLightOf([lShut, tOn]).dim, 40);
 check("isLit / isHooded", [isLit(torchOn), isLit(torchOff), isHooded(lanternShut)], [true, false, true]);
 
 /* ── isLightSpellData / isLightToggle ───────────────────────────────────── */

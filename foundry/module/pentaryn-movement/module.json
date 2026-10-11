@@ -2,7 +2,7 @@
   "id": "pentaryn-movement",
   "title": "Pentaryn Movement",
   "description": "Players' own tokens draw on top for them (client-side: their tokens take the click when tokens overlap; nothing is written to the scene). A ghost button in the token tools lets a player move their own tokens through walls and creatures, reusing core's unconstrained-movement constrain options (ignoreWalls, ignoreCost, and dnd5e's ignoreTokens); their tokens look see-through while it is on. The GM governs it with a world setting (Off / Exploration only / Always allowed; Exploration only switches it off while a combat is running on the scene) and a toolbar button that flips it off and back. Exposes game.pentaryn.movement.",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "compatibility": { "minimum": "14", "verified": "14" },
   "authors": [{ "name": "Joseph Atkinson" }],
   "relationships": {

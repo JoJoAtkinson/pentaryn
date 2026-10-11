@@ -8,7 +8,7 @@
 
 const core = await import("../movement-core.mjs");
 const { POLICIES, DEFAULT_POLICY, normalizePolicy, combatOnScene, ghostAllowed, ghostFor, constrainFor,
-  playerTool, gmTool, flipPolicy, wishToClear, RAISE, ownedRank, meshSort, compareTokens,
+  playerTool, gmTool, flipPolicy, wishToClear, ghostBack, RAISE, ownedRank, meshSort, compareTokens,
   pinsUnderTokens } = core;
 
 let pass = 0;
@@ -106,6 +106,14 @@ check("flip off while already off keeps memory", flipPolicy("off", "always", fal
   s = flipPolicy(s.policy, s.last, true);
   check("round trip keeps always", s.policy, "always");
 }
+
+/* ── ghostBack (usability Area 8, L7) ───────────────────────────────────── */
+check("fight over → tell the player", ghostBack({ cleared: "combat", policy: "exploration", combatActive: false, wish: false }), true);
+check("fight still on → quiet", ghostBack({ cleared: "combat", policy: "exploration", combatActive: true, wish: false }), false);
+check("never cleared → quiet", ghostBack({ cleared: null, policy: "exploration", combatActive: false, wish: false }), false);
+check("already back on → quiet", ghostBack({ cleared: "combat", policy: "exploration", combatActive: false, wish: true }), false);
+check("GM allows again → tell", ghostBack({ cleared: "off", policy: "always", combatActive: true, wish: false }), true);
+check("GM still off → quiet", ghostBack({ cleared: "off", policy: "off", combatActive: false, wish: false }), false);
 
 /* ── wishToClear ─────────────────────────────────────────────────────────── */
 check("no wish → nothing to clear", wishToClear({ policy: "off", combatActive: true, wish: false }), null);
