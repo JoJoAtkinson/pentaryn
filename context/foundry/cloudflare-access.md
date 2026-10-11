@@ -52,7 +52,9 @@ one of them **cannot get in**.
 
 1. **Google** — console.cloud.google.com → (project "My First Project") → **Google Auth
    Platform → Audience** → *Test users* → **+ Add users** → type the Gmail, Enter → **Save**.
-   Cap: 100 users, counted over the app's lifetime.
+   Cap: 100 users, counted over the app's lifetime. **Save often needs a second click** — the
+   first only takes focus off the email box and the panel stays open. Check the email shows in
+   the *Test users* table and the "N users (N test…)" count went up before moving on.
 2. **Cloudflare** — Cloudflare One → **Access controls → Policies** → `vtt-players` → *Include:
    Emails* → add the Gmail → **Save**. (Or: Applications → `vtt` → Edit → click the policy.)
 
