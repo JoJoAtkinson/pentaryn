@@ -754,6 +754,20 @@ def test_a_lineage_cut_at_the_cap_keeps_same_line_snapshots_newer(two_hosts, tty
     assert _state(two_hosts, "boss")["based_on"] == last
 
 
+def test_restoring_a_diverged_snapshot_never_lets_coalescing_drop_the_only_copy(
+        two_hosts, tty, small_cap):
+    """The Mac explicitly takes boss's diverged newest. Its world was unchanged since
+    Saturday's snapshot, so the restore makes no safety copy — and then the Mac's next
+    backup must not coalesce Saturday away: nothing else holds that session."""
+    saturday, b2 = _mac_saturday_vs_boss_addon_tests(two_hosts, tty)
+    with two_hosts.use("mac"):
+        assert boot.main(["choose", "--from", "latest"]) == 0
+    assert _journal(two_hosts, "mac") == "addon test 2"
+    _play(two_hosts, "mac", "sunday on boss's world")       # inside the coalesce window
+    names = {p.name for p in (two_hosts.cloud / "world-backups").iterdir()}
+    assert saturday in names
+
+
 def test_a_sidecar_never_holds_non_strict_json(two_hosts, tty, small_cap):
     """An older sidecar without origin_before reads as unbounded; restoring it and
     backing up again must not write `Infinity` anywhere."""

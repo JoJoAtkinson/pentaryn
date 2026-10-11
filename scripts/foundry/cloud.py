@@ -827,7 +827,8 @@ def _backup(st: Storage, reason: str, *, safety: bool = False,
     # Coalescing: note the snapshot this one may replace, but write the new one FIRST and
     # only then delete the old. A safety copy never coalesces in either direction.
     keep_name = protect.name if protect else None
-    superseded = None if safety else _coalesce_target(existing, me, keep_name)
+    contained = {state.based_on, *state.lineage} - {None}
+    superseded = None if safety else _coalesce_target(existing, me, keep_name, contained)
 
     tmp = tmp_dir() / name
     last = newest(own(existing, me)) or newest(existing)
@@ -894,13 +895,19 @@ def _backup(st: Storage, reason: str, *, safety: bool = False,
     return snap
 
 
-def _coalesce_target(existing: list[Snapshot], me: str,
-                     protect: str | None = None) -> Snapshot | None:
+def _coalesce_target(existing: list[Snapshot], me: str, protect: str | None = None,
+                     contained: set[str] | None = None) -> Snapshot | None:
     """This host's newest regular snapshot, if young enough to be replaced. Never another
-    host's, never an untagged one, never a safety copy, never `protect`."""
+    host's, never an untagged one, never a safety copy, never `protect` — and only one
+    the new snapshot's tree contains (`contained`: its based-on and lineage). After a
+    restore of another line, this host's newest may be the only copy of a session the
+    restore replaced (no safety copy was made: it was already in the cloud); replacing
+    it with a snapshot of the other line would lose that session."""
     mine = [s for s in own(existing, me) if not s.safety]
     last = newest(mine)
     if last is None or last.name == protect:
+        return None
+    if contained is not None and last.name not in contained:
         return None
     age_days = (time.time() - last.mtime) / 86400
     return last if age_days < COALESCE_WINDOW_DAYS else None

@@ -172,6 +172,22 @@ def test_coalesce_replaces_only_this_hosts_newest_within_five_days(two_hosts):
     assert len([n for n in names if n.endswith("-mac.tar.gz")]) == 1
 
 
+@pytest.mark.parametrize("record", ["none", "other-line"])
+def test_own_newest_the_tree_does_not_contain_is_never_coalesced(two_hosts, record):
+    """After a restore of another line (or with no record at all), this host's newest may
+    be the only copy of a session the tree no longer holds: never replace it."""
+    c = two_hosts.cloud
+    mine = _put(c, f"world-{_stamp(1)}-fvtt14.369-mac.tar.gz", age_days=1).name
+    theirs = _put(c, f"world-{_stamp(0.5)}-fvtt14.369-boss.tar.gz", age_days=0.5).name
+    if record == "other-line":
+        _based_on(two_hosts, "mac", theirs)
+    with two_hosts.use("mac"):
+        cloud.backup("manual")
+    names = _names(c)
+    assert {mine, theirs} <= set(names)
+    assert len([n for n in names if n.endswith("-mac.tar.gz")]) == 2
+
+
 def test_no_own_snapshot_means_nothing_is_coalesced(two_hosts):
     c = two_hosts.cloud
     theirs = _put(c, f"world-{_stamp(0.5)}-fvtt14.369-boss.tar.gz", age_days=0.5).name
