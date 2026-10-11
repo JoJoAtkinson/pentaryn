@@ -643,9 +643,17 @@ def test_failed_upload_leaves_the_temp_tar_and_names_it(two_hosts, monkeypatch, 
         cloud.backup("shutdown")
     err = capsys.readouterr().err
     [left] = list((two_hosts.data["mac"] / ".pentaryn-tmp").glob("world-*-mac.tar.gz"))
-    assert str(left) in err and "rclone copyto" in err
+    assert str(left) in err and "the next backup retries it" in err
     assert cloud.snapshots(cloud.store()) == []
     assert bootstate.load().based_on is None  # nothing recorded for a failed upload
+    # still queued: the next backup uploads it (and records it) before anything else
+    from scripts.foundry import uploadq
+    assert [j.name for j in uploadq.pending()] == [left.name]
+    del fake.fail_always["copyto"]
+    with two_hosts.use("mac"):
+        assert cloud.backup("manual") == 0
+    assert [s.name for s in cloud.snapshots(cloud.store())] == [left.name]
+    assert bootstate.load().based_on == left.name and not left.exists()
 
 
 def _cloud_down(fake):

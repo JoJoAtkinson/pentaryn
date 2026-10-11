@@ -33,7 +33,7 @@ Where this one and `foundry-vtt.md` overlap — the actors import pipeline and i
 
 | I want to… | Do |
 | ---------- | -- |
-| Play tonight | `make vtt-up` → players at <https://vtt.atjoseph.com> → `make vtt-down` after |
+| Play tonight | `make vtt-up` → players at <https://vtt.atjoseph.com> → `make vtt-down` after (returns at once; the snapshot uploads in the background — `make foundry-cloud` shows it, and don't sleep the laptop until it says done; `WAIT=1` waits instead) |
 | Get **yourself** into the world, no dropdown, no typed password | `make login` — §2's login box |
 | Know if anything's running | `make vtt` — Foundry, tunnel pid, and public reachability, three separate probes |
 | Add art (tokens/maps/tiles/portraits/audio) | Drop `<kind>-<nn>.zip` in `OneDrive/DnD/foundry/assets/`, then `make foundry-assets` (or just `make vtt-up`) |
@@ -164,7 +164,7 @@ pack (`pentaryn-seafoot-maps.scenes` is unlocked in both worlds).
 
 ```
 make vtt-up      foundry-boot → foundry-backup-safe → foundry-assets-safe → foundry-up → tunnel-up
-make vtt-down    tunnel-down → foundry-down → foundry-backup REASON=shutdown
+make vtt-down    tunnel-down → foundry-down → foundry-backup REASON=shutdown BACKGROUND=1   (WAIT=1: no BACKGROUND)
 make vtt         status only (alias: vtt-status)
 ```
 
@@ -180,6 +180,24 @@ The order is not arbitrary. Each step needs the previous one's state:
 
 `vtt-down` reverses it exactly: close the public surface first, stop the app, *then* snapshot —
 because the snapshot is the step that requires "stopped".
+
+**The upload runs in the background.** `vtt-down` builds the tar while Foundry is stopped (that
+part needs "stopped", so it finishes before the command returns), then hands the ~3 GB upload to
+a detached process and prints one line: the name, `make foundry-cloud` for progress, and *don't
+sleep the laptop until it finishes* (on the Mac `caffeinate` holds off idle sleep while it runs,
+but closing the lid still sleeps). `make vtt-down WAIT=1` is the old blocking behaviour. The
+queue, the locks and the status file live in `FOUNDRY_DATA/.pentaryn-tmp/`
+([`uploadq.py`](../../scripts/foundry/uploadq.py)); the uploader's own output is `upload.log`
+there, and each upload adds `cloud-upload` lines (queued, uploading, done/failed) to
+`foundry/logs/ops-YYYY-MM.jsonl`.
+
+| While an upload is running or queued… | What happens |
+| ------------------------------------- | ------------ |
+| `make foundry-cloud` | First line: `upload  in progress: <name>`, or `pending: <name>` (not running — interrupted), or `last: <name> done/FAILED` |
+| `make vtt-up` | The boot step **keeps local** without asking (the cloud does not show this world's newest state yet). The pre-launch backup skips while an upload runs; an interrupted one is restarted in the background, so the launch never waits for it |
+| A second `make vtt-down` | Unchanged world → nothing new is built. Changed → a new tar is queued **behind** the first, based on it; both go up in order. Never a duplicate |
+| `make foundry-backup`, `foundry-restore`, `FROM=latest\|<name>`, the updater | Wait for the running upload ("waiting for the background upload of …"), upload anything still queued, then do their own work — so the based-on record is never stale and a restore is never overwritten by an upload finishing after it |
+| The upload fails or the machine sleeps/crashes | The tar and its job stay queued in `.pentaryn-tmp/`; the based-on record has **not** moved. The next backup of any kind (or `make vtt-down`) retries it; a `.partial` left in the cloud is swept after a day as before |
 
 | Target | Does |
 | ------ | ---- |
@@ -318,7 +336,7 @@ OneDrive/DnD/foundry/
 | `make foundry-backup` | ⬆ up | Tars `Data/worlds` + `Config` + `Data/modules` (**~2.5–3.2 GB** — `Data/modules` is ~2.7 GB of premium map art) in `FOUNDRY_DATA/.pentaryn-tmp/`, uploads it as `<name>.partial`, renames, size-checks. Keeps **10 per host** (plus that host's last 3 restore `.safety` copies, counted apart); a snapshot within 5 days of this host's newest **replaces** it; skips when the local tree digest is unchanged |
 | `make foundry-backup-safe` | ⬆ up | Same, `--if-stopped` — the lifecycle variant |
 | `make foundry-restore` | manual | No `SNAP` → lists every host's snapshots (name, host, UTC time, version, size). `SNAP=<name>` (any host's, or `major-release/`) → download, **archive current state first**, clear, extract; demands you type `restore` |
-| `make foundry-cloud` | — | Status: storage (rclone/folder + root), host and role, what this world is based on, newest per host, untagged count |
+| `make foundry-cloud` | — | Status: this host's background upload (in progress / pending / last result), storage (rclone/folder + root), host and role, what this world is based on, newest per host, untagged count |
 | `make foundry-prune-untagged` | manual | Lists the untagged (pre-2026-10-11) snapshots and deletes them **only** on a typed `delete`. Nothing else ever deletes them |
 
 Kinds are fixed: `tokens · maps · tiles · portraits · audio`. Anything else is refused by name.
@@ -388,13 +406,16 @@ Restore `.safety` copies and `major-release/` are never offered as "newer".
   after a restore, this host's next backup digest-skips instead of re-uploading 3 GB.
 - **A `.partial` is never a snapshot.** Uploads land as `<name>.partial` and are renamed when
   complete; one older than 24 h is swept as a crash leftover (younger ones may be the other
-  machine mid-upload). A failed upload leaves the tar in `FOUNDRY_DATA/.pentaryn-tmp/` and prints
-  the `rclone copyto` that finishes it. The temp dir needs ~2× a snapshot free; backup checks.
+  machine mid-upload). A failed upload leaves the tar **queued** in `FOUNDRY_DATA/.pentaryn-tmp/`
+  and the next backup retries it before anything else. The temp dir needs ~2× a snapshot free;
+  backup checks.
+- **The based-on record moves only when an upload completes**, background or not.
 - **Packs are append-only.** Never edit a published zip; add `<kind>-<nn+1>.zip`. A zip whose hash
   changed after extraction is **refused with a message**, not silently re-applied.
 - **One folder per pack**, so cross-pack collisions are structurally impossible.
 - **Filenames kebab-case at extraction only** — never rename inside an extracted pack.
-- **Backup and restore hard-refuse while Foundry is running.**
+- **Backup and restore hard-refuse while Foundry is running.** (The background *upload* of an
+  already-built tar does not care: it reads only the tar.)
 - **Art never goes in git.** OneDrive holds the bytes; `foundry/assets-manifest.json` holds the
   inventory and is committed.
 - **Only the primary runs the tunnel and the updater.** On the alt `tunnel-up` prints why and

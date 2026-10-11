@@ -41,6 +41,12 @@ that size:
   ``major-release/`` and never pruned.
 - Uploads land as ``<name>.partial`` and are renamed when complete; a ``.partial`` is
   never a snapshot, and one older than a day is swept as a crash leftover.
+- A backup is two halves: **build** the tar (needs Foundry stopped) and **upload** it.
+  ``make vtt-down`` builds, then hands the upload to a detached ``upload-pending``
+  process and returns (``scripts/foundry/uploadq.py`` is the queue between them);
+  ``WAIT=1`` and every other caller do both halves before returning. Either way the
+  based-on record moves only when the upload completes, and a failed or crashed
+  upload stays queued for the next backup to retry.
 
 Systems (132 MB) are mirrored per version and shared by both hosts (the same version is
 the same bytes); the last ``KEEP_SYSTEM_MIRRORS`` versions are kept.
@@ -53,17 +59,20 @@ import hashlib
 import json
 import math
 import re
+import os
 import shutil
+import subprocess
 import sys
 import tarfile
 import tempfile
 import time
 import zipfile
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from scripts.foundry import bootstate, host
+from scripts.foundry import bootstate, host, uploadq
 from scripts.foundry import storage as storage_mod
 from scripts.foundry.storage import JUNK_NAMES, Entry, Storage, StorageError
 
@@ -99,7 +108,8 @@ KEEP_SYSTEM_MIRRORS = 3
 STALE_PARTIAL_SECONDS = 24 * 3600
 
 # Where tars are built and downloads land: on the data volume, outside SNAPSHOT_PATHS.
-TMP_DIRNAME = ".pentaryn-tmp"
+# The upload queue (uploadq.py) lives there too.
+TMP_DIRNAME = uploadq.TMP_DIRNAME
 
 # A pack zip is `<kind>-<nn>.zip`. Append-only: published zips are never edited.
 ZIP_NAME = re.compile(r"^([a-z][a-z0-9-]*)-(\d{2})\.zip$")
@@ -736,21 +746,37 @@ def adopt_legacy_marker(st: Storage, state: bootstate.BootState) -> bootstate.Bo
     return state
 
 
-def backup(reason: str = "manual", if_stopped: bool = False) -> int:
+def backup(reason: str = "manual", if_stopped: bool = False, background: bool = False) -> int:
     """`if_stopped` is for lifecycle hooks: skip quietly rather than fail the target.
     `make vtt-up` on an already-running server is normal, and must not abort there —
     and neither must a cloud that is down: the pre-launch snapshot is then a warning
-    (naming any tar left on disk), exit 0, and `make vtt-down` tries again."""
+    (naming any tar left on disk), exit 0, and `make vtt-down` tries again. Nor must an
+    upload this host is still running in the background: that one holds this world.
+
+    `background` is `make vtt-down`'s: build the tar now, upload it from a detached
+    process (`upload-pending`), return at once."""
     if server_running():
         if if_stopped:
             log("Foundry already running — skipping the pre-launch snapshot")
             return 0
         die("Foundry is running — stop it first (a live LevelDB cannot be copied consistently)")
+    if background:
+        return _backup_background(ensure_cloud(), reason)
     if not if_stopped:
-        _backup(ensure_cloud(), reason)
+        with _exclusive():
+            _backup(ensure_cloud(), reason)
         return 0
     try:
-        _backup(ensure_cloud(), reason)
+        with _exclusive(wait=False) as got:
+            if not got:
+                log(f"a background upload is in progress ({uploadq.in_flight() or 'a snapshot'})"
+                    " — skipping the pre-launch snapshot; that upload holds this world")
+                return 0
+            if uploadq.pending():
+                # An upload that never finished (a crash, a sleep): retry it from the
+                # background too — the launch must not wait ~3 GB for it.
+                return _backup_background(ensure_cloud(), reason)
+            _backup(ensure_cloud(), reason)
     except (StorageError, SystemExit) as exc:
         if isinstance(exc, SystemExit) and exc.code in (0, None):
             raise
@@ -775,47 +801,94 @@ def _in_cloud(st: Storage, name: str, existing: list[Snapshot]) -> bool:
         return False
 
 
+# ── The two halves: build a tar (stopped world), upload it (any time later) ───
+
+@contextmanager
+def _exclusive(wait: bool = True):
+    """Both queue locks, build then upload (uploadq.py). Yields whether they were got;
+    with `wait`, says what it is waiting for and blocks until they are."""
+    def waiting_build():
+        log("waiting for another snapshot build or restore on this machine to finish...")
+
+    def waiting_upload():
+        name = uploadq.read_status().get("name") or "a snapshot"
+        log(f"waiting for the background upload of {name} to finish "
+            "(make foundry-cloud shows it)...")
+    with uploadq.lock(uploadq.BUILD_LOCK, wait=wait, on_wait=waiting_build) as built:
+        if not built:
+            yield False
+            return
+        with uploadq.lock(uploadq.UPLOAD_LOCK, wait=wait, on_wait=waiting_upload) as up:
+            yield up
+
+
 def _backup(st: Storage, reason: str, *, safety: bool = False,
             protect: Snapshot | None = None) -> Snapshot | None:
-    """The snapshot uploaded, or None when skipped (unchanged, or nothing to archive).
+    """Build and upload, blocking. The snapshot uploaded, or None when skipped
+    (unchanged, or nothing to archive). The caller holds both locks (`_exclusive`).
+
+    Anything still queued from an earlier background upload goes up first, so the
+    based-on record this run extends is the real one.
 
     `protect` is the snapshot a restore is about to extract: this run must not delete it
     (neither coalescing nor pruning may remove the state the based-on record is about to
     point at), and an unchanged tree it already contains needs no safety copy."""
+    _drain(st)
+    job = _build(st, reason, safety=safety, protect=protect)
+    if job is None:
+        return None
+    try:
+        return _run_job(st, job)
+    except StorageError as exc:
+        die(f"upload failed: {exc}\n"
+            f"    the snapshot is still on disk: {job.tar}\n"
+            "    it stays queued: the next backup retries it (make foundry-backup)")
+
+
+def _build(st: Storage, reason: str, *, safety: bool = False,
+           protect: Snapshot | None = None) -> uploadq.Job | None:
+    """Build this tree's tar in tmp and queue it; None when there is nothing to build.
+    The caller holds BUILD_LOCK.
+
+    With jobs already queued (an upload not finished yet), the tree's effective based-on
+    is the newest queued one: an unchanged tree builds nothing, a changed one is queued
+    behind it, extending it."""
+    uploadq.sweep_building()
+    queued = uploadq.pending()  # before the state: a job finishing now then reads as recorded
     state = adopt_legacy_marker(st, bootstate.load())
     digest = snapshot_digest()
     try:
         existing = snapshots(st, WORLD_BACKUPS)
     except StorageError as exc:
         die(f"cannot list {WORLD_BACKUPS}/: {exc}")
-    if state.digest == digest:
-        # Unchanged since the last upload or restore — but "skip" is only safe while that
-        # snapshot still exists. Coalescing, pruning or prune-untagged (on either machine)
-        # may have deleted it, and then this tree has no cloud copy at all.
-        if state.based_on and _in_cloud(st, state.based_on, existing):
-            log("no change since the last snapshot — skipped")
+    if queued:
+        parent = queued[-1].name
+        if queued[-1].digest == digest:
+            log(f"no change since {parent} — its upload has not finished yet")
             return None
-        if (safety and protect is not None and state.based_on
-                and descends(st, protect, state.based_on, state.based_on_mtime) is True):
-            log(f"no change since {state.based_on}, which {protect.name} contains — "
-                "no safety copy needed")
-            return None
-        log(f"no change since {state.based_on or 'the last snapshot'}, but it is no longer "
-            "in the cloud — uploading this state again")
+    else:
+        parent = state.based_on
+        if state.digest == digest:
+            # Unchanged since the last upload or restore — but "skip" is only safe while
+            # that snapshot still exists. Coalescing, pruning or prune-untagged (on either
+            # machine) may have deleted it, and then this tree has no cloud copy at all.
+            if state.based_on and _in_cloud(st, state.based_on, existing):
+                log("no change since the last snapshot — skipped")
+                return None
+            if (safety and protect is not None and state.based_on
+                    and descends(st, protect, state.based_on, state.based_on_mtime) is True):
+                log(f"no change since {state.based_on}, which {protect.name} contains — "
+                    "no safety copy needed")
+                return None
+            log(f"no change since {state.based_on or 'the last snapshot'}, but it is no "
+                "longer in the cloud — uploading this state again")
     if not tree_has_world():
         log("no local world to snapshot — skipped")
         return None
 
     me = host.host_name()
-    keep = host.keep_snapshots()
-
-    # Before writing anything: if the installed generation has moved on since this host's
-    # last backup, its newest snapshot from the OLD generation is the last state that still
-    # runs on it. Preserve it now, while it is still inside the rolling window.
-    promote_major_release(st, existing)
-
     core = core_version()
-    taken = {s.name for s in existing}
+    taken = {s.name for s in existing} | {j.name for j in queued}
     when = datetime.now(timezone.utc)
     while True:  # a name is an identity (based_on, keep-local): never reuse one
         stamp = when.strftime("%Y-%m-%d-%H%M%S")
@@ -823,12 +896,6 @@ def _backup(st: Storage, reason: str, *, safety: bool = False,
         if name not in taken:
             break
         when += timedelta(seconds=1)
-
-    # Coalescing: note the snapshot this one may replace, but write the new one FIRST and
-    # only then delete the old. A safety copy never coalesces in either direction.
-    keep_name = protect.name if protect else None
-    contained = {state.based_on, *state.lineage} - {None}
-    superseded = None if safety else _coalesce_target(existing, me, keep_name, contained)
 
     tmp = tmp_dir() / name
     last = newest(own(existing, me)) or newest(existing)
@@ -838,33 +905,95 @@ def _backup(st: Storage, reason: str, *, safety: bool = False,
             die(f"only {_mb(free)} free on {tmp.parent} — a snapshot is ~{_mb(last.size)} and "
                 "is built locally before upload; free at least twice that")
 
-    with tarfile.open(tmp, "w:gz") as tar:
-        for rel in SNAPSHOT_PATHS:
-            src = data_root() / rel
-            if src.exists():
-                tar.add(src, arcname=rel)
-    size = tmp.stat().st_size
-    ancestors, ancestor_mtimes, origin = next_lineage(state)
-    log(f"uploading {name} ({_mb(size)}, {reason}) to {st.root}...")
+    # Built under a `.building` name and renamed, then the job file written last: a job
+    # file always means a complete tar.
+    building = tmp.with_name(tmp.name + uploadq.BUILDING_SUFFIX)
     try:
-        # The sidecar first: by the time the snapshot's name appears, its lineage exists.
-        st.write_text(parent_rel(WORLD_BACKUPS, name), json.dumps(
-            {"parent": state.based_on, "ancestors": ancestors,
-             "ancestor_mtimes": ancestor_mtimes, "origin_before": _finite(origin),
-             "host": me}, allow_nan=False) + "\n")
-        st.upload(tmp, f"{WORLD_BACKUPS}/{name}")
-    except StorageError as exc:
-        die(f"upload failed: {exc}\n"
-            f"    the snapshot is still on disk: {tmp}\n"
-            f"    finish it by hand: rclone copyto \"{tmp}\" {st.root}/{WORLD_BACKUPS}/{name}")
-    tmp.unlink(missing_ok=True)
+        with tarfile.open(building, "w:gz") as tar:
+            for rel in SNAPSHOT_PATHS:
+                src = data_root() / rel
+                if src.exists():
+                    tar.add(src, arcname=rel)
+        os.replace(building, tmp)
+    except BaseException:
+        building.unlink(missing_ok=True)
+        raise
+    job = uploadq.Job(name=name, reason=reason, digest=digest, parent=parent, host=me,
+                      size=tmp.stat().st_size, created=time.time(), safety=safety,
+                      protect=protect.name if protect else None)
+    job.save()
+    return job
 
-    entry = next((e for e in st.ls(WORLD_BACKUPS) if e.name == name), None)
-    snap = parse_snapshot(entry or Entry(name, size, time.time()), WORLD_BACKUPS)
-    state.record_snapshot(name, me, snap.mtime, digest, by="backup", lineage=ancestors,
-                          lineage_mtimes=ancestor_mtimes, origin_before=_finite(origin),
-                          keep_local=None)
-    log(f"snapshot → {name} ({_mb(size)}, {reason})")
+
+def _upload_job(st: Storage, job: uploadq.Job, protect: str | None = None) -> Snapshot | None:
+    """Upload one queued tar and do everything that follows it: lineage sidecar,
+    `.partial` copy and rename, the based-on record, coalescing, pruning, system
+    mirrors. The caller holds UPLOAD_LOCK. Safe to re-run after a crash at any point:
+    a snapshot already in the cloud at the right size is not uploaded again.
+
+    The record moves only here, and only when this machine's based-on is still the one
+    the tar was built to extend (`job.parent`) — otherwise the snapshot is uploaded with
+    an unknown lineage and the record is left alone.
+
+    `protect` (beside the job's own) is a snapshot a restore waiting on this upload is
+    about to download: neither coalescing nor pruning may take it away first."""
+    me = host.host_name()
+    keep_names = {job.protect, protect} - {None}
+    try:
+        existing = snapshots(st, WORLD_BACKUPS)
+    except StorageError as exc:
+        raise StorageError(f"cannot list {WORLD_BACKUPS}/: {exc}") from exc
+    there = next((s for s in existing if s.name == job.name), None)
+    others = [s for s in existing if s.name != job.name]
+    if there is None and not job.tar.is_file():
+        log(f"✗ {job.name}: its tar is gone from {tmp_dir()} — dropping it from the queue")
+        job.file.unlink(missing_ok=True)
+        return None
+
+    # Before writing anything: if the installed generation has moved on since this host's
+    # last backup, its newest snapshot from the OLD generation is the last state that still
+    # runs on it. Preserve it now, while it is still inside the rolling window.
+    promote_major_release(st, others)
+
+    state = bootstate.load()
+    linked = state.based_on == job.parent
+    if linked:
+        ancestors, ancestor_mtimes, origin = next_lineage(state)
+        contained = {state.based_on, *state.lineage} - {None}
+    else:
+        ancestors, ancestor_mtimes, origin = None, None, None
+        contained = set()
+        log(f"⚠ this machine's based-on record is {state.based_on or 'empty'}, not "
+            f"{job.parent or 'empty'} as when {job.name} was built — uploading it with an "
+            "unknown lineage, and not recording it")
+
+    # Coalescing: note the snapshot this one may replace, but write the new one FIRST and
+    # only then delete the old. A safety copy never coalesces in either direction.
+    superseded = (None if job.safety
+                  else _coalesce_target(others, me, None, contained))
+    if superseded is not None and superseded.name in keep_names:
+        superseded = None
+
+    size = job.size
+    # The sidecar first: by the time the snapshot's name appears, its lineage exists.
+    st.write_text(parent_rel(WORLD_BACKUPS, job.name), json.dumps(
+        {"parent": job.parent, "ancestors": ancestors,
+         "ancestor_mtimes": ancestor_mtimes, "origin_before": _finite(origin),
+         "host": me}, allow_nan=False) + "\n")
+    if there is None or there.size != size:
+        log(f"uploading {job.name} ({_mb(size)}, {job.reason}) to {st.root}...")
+        st.upload(job.tar, f"{WORLD_BACKUPS}/{job.name}")
+    else:
+        log(f"{job.name} is already in the cloud (an earlier attempt got that far)")
+
+    entry = next((e for e in st.ls(WORLD_BACKUPS) if e.name == job.name), None)
+    snap = parse_snapshot(entry or Entry(job.name, size, time.time()), WORLD_BACKUPS)
+    if linked:
+        state.record_snapshot(job.name, me, snap.mtime, job.digest, by="backup",
+                              lineage=ancestors, lineage_mtimes=ancestor_mtimes,
+                              origin_before=_finite(origin), keep_local=None)
+    job.drop()
+    log(f"snapshot → {job.name} ({_mb(size)}, {job.reason})")
     # The shared digest marker is retired: the digest is local now (bootstate). Only the
     # primary — the Mac, which wrote it — may delete it, and only once it has backed up
     # (so its first boot has already had the chance to adopt it). The alt backing up
@@ -881,7 +1010,8 @@ def _backup(st: Storage, reason: str, *, safety: bool = False,
         log(f"replaced {superseded.name} ({age_days:.1f} days old, inside the "
             f"{COALESCE_WINDOW_DAYS}-day window)")
 
-    mine = [s for s in own(snapshots(st, WORLD_BACKUPS), me) if s.name != keep_name]
+    keep = host.keep_snapshots()
+    mine = [s for s in own(snapshots(st, WORLD_BACKUPS), me) if s.name not in keep_names]
     regular = [s for s in mine if not s.safety]
     safeties = [s for s in mine if s.safety]
     for stale in regular[:-keep] + safeties[:-KEEP_SAFETY_COPIES]:
@@ -893,6 +1023,176 @@ def _backup(st: Storage, reason: str, *, safety: bool = False,
 
     mirror_systems(st)
     return snap
+
+
+# ── The background half: the queue's uploader ────────────────────────────────
+
+# Where the uploader's ops-log lines go; the detached process gets its parent's folder
+# through --log-dir, so a test's tmp log folder reaches it too.
+_LOG_DIR: Path | None = None
+
+
+def _ops_event(state: str, job: uploadq.Job, **extra) -> None:
+    """One line in foundry/logs/ops-YYYY-MM.jsonl; never fails an upload."""
+    try:
+        from scripts.foundry.ops import config as cfg
+        from scripts.foundry.ops.out import append_jsonl, now_iso
+        ts = now_iso()
+        folder = _LOG_DIR or cfg.OPS_LOG_DIR
+        append_jsonl(folder / f"ops-{ts[:7]}.jsonl", {
+            "ts": ts, "cmd": "cloud-upload", "host": job.host, "state": state,
+            "snapshot": job.name, "reason": job.reason, "bytes": job.size, **extra})
+    except Exception:  # noqa: BLE001
+        pass
+
+
+def _run_job(st: Storage, job: uploadq.Job, protect: str | None = None) -> Snapshot | None:
+    """`_upload_job` with the status file and the ops log kept. Raises on failure (the
+    job stays queued), after recording the failure."""
+    t0 = time.time()
+    uploadq.write_status(state="uploading", name=job.name, reason=job.reason,
+                         size=job.size, started=t0)
+    _ops_event("uploading", job)
+    try:
+        snap = _upload_job(st, job, protect)
+    except (StorageError, SystemExit) as exc:
+        if isinstance(exc, SystemExit) and exc.code in (0, None):
+            raise
+        err = str(exc) if isinstance(exc, StorageError) else f"see {tmp_dir() / uploadq.LOG_FILE}"
+        uploadq.write_status(state="failed", name=job.name, reason=job.reason,
+                             size=job.size, started=t0, finished=time.time(), error=err)
+        _ops_event("failed", job, error=err, seconds=round(time.time() - t0, 1))
+        raise
+    uploadq.write_status(state="done", name=job.name, reason=job.reason, size=job.size,
+                         started=t0, finished=time.time())
+    _ops_event("done", job, seconds=round(time.time() - t0, 1))
+    return snap
+
+
+def _drain(st: Storage, protect: str | None = None) -> None:
+    """Upload everything queued, oldest first, blocking. The caller holds UPLOAD_LOCK.
+    A failure dies: what is queued is a world state the cloud does not have yet.
+    `protect`: a snapshot about to be restored, kept from coalescing and pruning."""
+    seen: set[str] = set()
+    while (jobs := uploadq.pending()):
+        job = jobs[0]
+        if job.name in seen:
+            die(f"{job.name} stays queued after its upload — check {tmp_dir()}")
+        seen.add(job.name)
+        log(f"an earlier snapshot is still queued — uploading {job.name} first")
+        try:
+            _run_job(st, job, protect)
+        except StorageError as exc:
+            die(f"the queued upload of {job.name} failed again: {exc}\n"
+                f"    it is still on disk: {job.tar} — the next backup retries it")
+
+
+def finish_uploads() -> None:
+    """Wait for any running upload and upload anything still queued (the boot step,
+    before an explicit FROM= restore)."""
+    with _exclusive():
+        _drain(ensure_cloud())
+
+
+def upload_in_flight() -> str | None:
+    """The snapshot this host has queued or is uploading right now, else None."""
+    try:
+        return uploadq.in_flight()
+    except OSError:
+        return None
+
+
+def _backup_background(st: Storage, reason: str) -> int:
+    """Build the tar now (Foundry is stopped), queue it, and start the detached
+    uploader. Waits only for another build; never for a running upload — a new tar
+    queues behind it, extending it."""
+    def waiting_build():
+        log("waiting for another snapshot build or restore on this machine to finish...")
+    with uploadq.lock(uploadq.BUILD_LOCK, on_wait=waiting_build):
+        job = _build(st, reason)
+    queued = uploadq.pending()
+    if not queued:
+        return 0
+    head = job or queued[-1]
+    if job is not None:
+        _ops_event("queued", job)
+    # Always start one: an uploader already running may be past its last look at the
+    # queue. A second one waits for the lock and finds nothing left — never a duplicate.
+    _spawn_uploader()
+    what = "uploading" if job is not None else "retrying the unfinished upload of"
+    log(f"▸ {what} {head.name} ({_mb(head.size)}) in the background — progress: "
+        "make foundry-cloud. Don't sleep the laptop until it finishes.")
+    return 0
+
+
+def _spawn_uploader() -> int:
+    """Start `upload-pending` detached (own session, no terminal), its output appended to
+    .pentaryn-tmp/upload.log. On a Mac, `caffeinate -i -w` keeps idle sleep away while it
+    runs (closing the lid still sleeps). Returns its pid."""
+    from scripts.foundry.ops import config as cfg
+    logfile = tmp_dir() / uploadq.LOG_FILE
+    try:
+        if logfile.stat().st_size > 2_000_000:
+            logfile.unlink()
+    except OSError:
+        pass
+    argv = [sys.executable, "-u", "-m", "scripts.foundry.cloud", "upload-pending",
+            "--log-dir", str(_LOG_DIR or cfg.OPS_LOG_DIR)]
+    with logfile.open("ab") as out:
+        out.write(f"\n── {datetime.now(timezone.utc):%Y-%m-%d %H:%M:%S} UTC  "
+                  "upload-pending\n".encode())
+        out.flush()
+        proc = subprocess.Popen(argv, cwd=str(REPO_ROOT), stdin=subprocess.DEVNULL,
+                                stdout=out, stderr=subprocess.STDOUT,
+                                start_new_session=True, close_fds=True)
+    caf = shutil.which("caffeinate")
+    if caf:
+        try:
+            subprocess.Popen([caf, "-i", "-w", str(proc.pid)], stdin=subprocess.DEVNULL,
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                             start_new_session=True)
+        except OSError:
+            pass
+    return proc.pid
+
+
+def upload_pending() -> int:
+    """The detached uploader: take the upload lock (waiting for any other), upload every
+    queued job oldest first, re-reading the queue after each so a tar queued meanwhile
+    goes up too. 1 on the first failure — that job and the rest stay queued."""
+    with uploadq.lock(uploadq.UPLOAD_LOCK):
+        if not uploadq.pending():
+            return 0
+        try:
+            st = ensure_cloud()
+        except SystemExit as exc:
+            if exc.code in (0, None):
+                raise
+            job = uploadq.pending()[0]
+            uploadq.write_status(state="failed", name=job.name, reason=job.reason,
+                                 size=job.size, finished=time.time(),
+                                 error="the cloud is unreachable")
+            _ops_event("failed", job, error="the cloud is unreachable")
+            return 1
+        seen: set[str] = set()
+        while (jobs := uploadq.pending()):
+            job = jobs[0]
+            if job.name in seen:
+                print(f"  ✗ {job.name} stays queued after its upload — check {tmp_dir()}",
+                      file=sys.stderr)
+                return 1
+            seen.add(job.name)
+            try:
+                _run_job(st, job)
+            except (StorageError, SystemExit) as exc:
+                if isinstance(exc, SystemExit) and exc.code in (0, None):
+                    raise
+                if isinstance(exc, StorageError):
+                    print(f"  ✗ upload of {job.name} failed: {exc}", file=sys.stderr)
+                print(f"    it is still on disk: {job.tar} — the next backup (or "
+                      "make vtt-down) retries it", file=sys.stderr)
+                return 1
+    return 0
 
 
 def _coalesce_target(existing: list[Snapshot], me: str, protect: str | None = None,
@@ -1035,9 +1335,19 @@ def _fix_foreign_data_path(root: Path, kept: dict) -> None:
 def restore_snapshot(st: Storage, snap: Snapshot, reason: str = "manual") -> None:
     """resolve → download → safety backup → clear → extract. Nothing local is touched
     until the chosen bytes are on this disk, and the safety backup protects `snap` from
-    its own pruning, so the based-on record never names a snapshot this restore deleted."""
+    its own pruning, so the based-on record never names a snapshot this restore deleted.
+
+    Holds both queue locks throughout, and uploads anything still queued first: a
+    background upload finishing after the extract would record the old world as this
+    machine's based-on."""
     if server_running():
         die("Foundry is running — stop it first")
+    with _exclusive():
+        _drain(st, protect=snap.name)
+        _restore_locked(st, snap, reason)
+
+
+def _restore_locked(st: Storage, snap: Snapshot, reason: str) -> None:
     local_tar = tmp_dir() / snap.name
     log(f"downloading {snap.name} ({_mb(snap.size)}, {snap.host_label})...")
     try:
@@ -1171,7 +1481,39 @@ def prune_untagged(yes: bool = False) -> int:
     return 0
 
 
+def _upload_lines() -> list[str]:
+    """What `make foundry-cloud` says about this host's queue: running, stuck, last."""
+    try:
+        jobs = uploadq.pending()
+        running = uploadq.busy(uploadq.UPLOAD_LOCK)
+        s = uploadq.read_status()
+    except OSError:
+        return []
+    lines = []
+    name = s.get("name")
+    if running:
+        cur = name or (jobs[0].name if jobs else "a snapshot")
+        started = s.get("started")
+        lines.append(f"in progress: {cur}"
+                     + (f" (started {_utc(started)})" if started else "")
+                     + f" — don't sleep the laptop until it finishes; "
+                       f"log: {tmp_dir() / uploadq.LOG_FILE}")
+        lines += [f"queued: {j.name} ({_mb(j.size)})" for j in jobs if j.name != cur]
+        return lines
+    for j in jobs:
+        lines.append(f"pending: {j.name} ({_mb(j.size)}) — not uploading (interrupted?); "
+                     "the next backup or make vtt-down retries it (now: make foundry-backup)")
+    if name and s.get("state") == "done":
+        lines.append(f"last: {name} done {_utc(s.get('finished') or s.get('updated') or 0)}")
+    elif name and s.get("state") == "failed":
+        lines.append(f"last: {name} FAILED {_utc(s.get('finished') or s.get('updated') or 0)}"
+                     f": {s.get('error') or '?'}")
+    return lines
+
+
 def status() -> int:
+    for line in _upload_lines():
+        log(f"upload       {line}")
     st = ensure_cloud()
     m = load_manifest()
     me = host.host_name()
@@ -1216,6 +1558,11 @@ def main(argv: list[str] | None = None) -> int:
     b.add_argument("--reason", default="manual")
     b.add_argument("--if-stopped", action="store_true",
                    help="skip instead of failing when the server is up")
+    b.add_argument("--background", action="store_true",
+                   help="build the tar now, upload it from a detached process (vtt-down)")
+    u = sub.add_parser("upload-pending",
+                       help="upload every queued snapshot (what --background starts)")
+    u.add_argument("--log-dir", default=None, help="the ops-log folder (default foundry/logs)")
     r = sub.add_parser("restore", help="list snapshots, or restore one")
     r.add_argument("--snapshot", default=None)
     r.add_argument("--yes", action="store_true")
@@ -1228,7 +1575,12 @@ def main(argv: list[str] | None = None) -> int:
         if args.cmd == "assets":
             return unpack_assets(args.dry_run, args.if_reachable)
         if args.cmd == "backup":
-            return backup(args.reason, args.if_stopped)
+            return backup(args.reason, args.if_stopped, args.background)
+        if args.cmd == "upload-pending":
+            global _LOG_DIR
+            if args.log_dir:
+                _LOG_DIR = Path(args.log_dir)
+            return upload_pending()
         if args.cmd == "restore":
             return restore(args.snapshot, args.yes)
         if args.cmd == "prune-untagged":
