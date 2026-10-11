@@ -57,7 +57,8 @@ class Decision:
     remember_keep_local: str | None = None   # the snapshot declined with "k"
     remember_keep_local_mtime: float | None = None
     # How the offered snapshot relates to this world. "newer": take it is the default.
-    # "unknown": no based-on record and the local files are newer than it — local is.
+    # "unknown": cannot tell — no based-on record and the local files are newer than it,
+    #            or a pending notice no lineage links to this world — local is.
     # "diverged": it does not contain what this world is based on — local is.
     relation: str = "newer"
     based_on: str | None = None              # this world's based-on, for the wording
@@ -102,8 +103,11 @@ def notice_line(newest: Snapshot, state: bootstate.BootState, relation: str = "n
                 is_newest: bool = True) -> str:
     based = state.based_on or "an unknown snapshot"
     if relation == "unknown":
-        how = ("may be newer than this world (cannot tell: no record of what it is based "
-               "on, and its files changed after that snapshot)")
+        how = ("may be newer than this world (cannot tell: "
+               + (f"no lineage links it to {state.based_on}, which this world is based on)"
+                  if state.based_on else
+                  "no record of what it is based on, and its files changed after that "
+                  "snapshot)"))
     elif relation == "diverged":
         how = (f"is newer but diverged — does not contain {based}, which this world is "
                "based on")
@@ -202,9 +206,11 @@ def decide(from_: str | None, interactive: bool, *, st=None, adopt: bool = True)
         p = next((s for s in rolling if s.name == state.pending_newer), None)
         if p is not None and p.name not in contains:
             offer = p
-            relation = ("diverged" if cloud.descends(st, p, state.based_on,
-                                                     state.based_on_mtime) is False
-                        else "newer")
+            # Only a lineage that proves p contains this world makes it "newer"; when it
+            # cannot tell (the notice was itself "cannot tell", or no record decides it),
+            # taking an older snapshot must never be the Enter default.
+            d = cloud.descends(st, p, state.based_on, state.based_on_mtime)
+            relation = {False: "diverged", True: "newer"}.get(d, "unknown")
         else:
             clear = True
     if offer is None:
@@ -239,7 +245,10 @@ def _prompt(newest: Snapshot, rolling: list[Snapshot], state: bootstate.BootStat
               if s.name != newest.name][:MAX_OTHERS]
     local_default = relation != "newer"
     print()
-    if relation == "unknown":
+    if relation == "unknown" and state.based_on:
+        say(f"▸ cannot tell how this cloud snapshot relates to {state.based_on}, which this "
+            "machine's world is based on; keeping local is the default:")
+    elif relation == "unknown":
         say("▸ cannot tell which is newer: this machine has no record of which snapshot its "
             "world is based on, and its files changed after the newest cloud snapshot:")
     elif relation == "diverged":

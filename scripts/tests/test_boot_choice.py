@@ -162,6 +162,30 @@ def test_pending_snapshot_taken_with_l_at_the_next_terminal(two_hosts, tty):
     assert st["based_on"] == m1 and st["pending_newer"] is None
 
 
+def test_cannot_tell_notice_stays_local_default_after_the_hosts_own_backup(two_hosts, tty,
+                                                                           capsys):
+    """A first no-terminal boot on a world with no record, edited after the cloud's newest:
+    "cannot tell". The backup after it must not turn that older snapshot into the Enter
+    default at the next terminal boot (found on the Mac's first rclone boot, 2026-10-11)."""
+    m0 = _play(two_hosts, "mac", "morning snapshot")
+    f = two_hosts.data["boss"] / "Data/worlds/w/journal.txt"
+    f.write_text("afternoon play test")
+    t = time.time() + 10_000
+    os.utime(f, (t, t))
+    tty(False)
+    with two_hosts.use("boss"):
+        assert boot.choose() == 0                           # "cannot tell": boots local
+    assert _state(two_hosts, "boss")["pending_newer"] == m0
+    _play(two_hosts, "boss", "afternoon play test, backed up")
+    capsys.readouterr()
+    asked = tty(True, [""])
+    with two_hosts.use("boss"):
+        assert boot.choose() == 0
+    assert len(asked) == 1 and "Enter = local" in asked[0]
+    assert "cannot tell how this cloud snapshot relates" in capsys.readouterr().out
+    assert _journal(two_hosts, "boss") == "afternoon play test, backed up"
+
+
 @pytest.mark.parametrize("how", ["notice-then-backup", "k-then-edits"])
 def test_primary_is_not_offered_a_diverged_alt_snapshot_as_the_default(two_hosts, tty, capsys,
                                                                        how):
