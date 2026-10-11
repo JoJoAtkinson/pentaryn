@@ -60,12 +60,19 @@ export async function stash(owner, container, itemIds, { tag, currency = false, 
   });
   const made = await container.createEmbeddedDocuments("Item", creates);
   // Foundry drops a document that fails validation without throwing: never delete an original
-  // whose copy may not exist (items-journal-10).
+  // whose copy may not exist (items-journal-10). The copies the container did accept stay there,
+  // bonded to the owner, so each item now exists twice: the Error names their ids (message and
+  // `err.created`) for the caller to clean up. Nothing is rolled back.
   const accepted = made?.length ?? 0;
   if (accepted !== creates.length) {
+    const msg = `${MODULE} | stash: container accepted ${accepted}/${creates.length}; originals NOT deleted`;
     console.error(`${MODULE} | stash: container accepted ${accepted}/${creates.length}; originals NOT deleted`,
       { owner: owner.id, container: container.id });
-    throw new Error(`${MODULE} | stash: container accepted ${accepted}/${creates.length}; originals NOT deleted`);
+    const created = (made ?? []).map(d => d?.id ?? d?._id ?? null);
+    const err = new Error(created.length
+      ? `${msg}; copies left in container ${container.id}: ${created.join(", ")}` : msg);
+    err.created = created;
+    throw err;
   }
   await owner.deleteEmbeddedDocuments("Item", [...ids].filter(id => owner.items.has(id)));
   const update = { [`flags.${MODULE}.${AWAY_FLAG}`]: away, [`flags.${MODULE}.${SLOTS}`]: slots };

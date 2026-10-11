@@ -19,7 +19,8 @@ Declared changes:
 - **D-A3** CSS classes `.pentaryn-over-cap` → `.pentaryn-attunement-over-cap`,
   `.pentaryn-away-tip` → `.pentaryn-attunement-away-tip` (C37). Visual-neutral.
 - **D-A4** `stash()` refuses to delete the owner's items, logs an error and rejects when the
-  container accepted fewer copies than asked (items-journal-10).
+  container accepted fewer copies than asked (items-journal-10). The copies it did accept stay in
+  the container, bonded; the rejection names their ids (in the message and as `err.created`).
 - A failing tooltip-guard install warns `tooltip guard skipped` and no longer stops the API publish
   (items-journal-39).
 - A bonded item's bond is cleared with `_del` instead of the deprecated `-=bond` key.

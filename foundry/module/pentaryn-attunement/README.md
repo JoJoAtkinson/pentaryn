@@ -74,7 +74,7 @@ Also `game.modules.get("pentaryn-attunement").api`, published at `ready` (frozen
 | `report(target?, { quiet? })` | Actor, id or name; defaults to the controlled token | `{ actor, value, max, over, slots, rows }`, or `undefined` (+ a warn) when no actor; prints a table unless `quiet` | no | no |
 | `computeSlots(actor)` | Actor, or id / uuid / exact name | `{ slots, max, value, over }`; `null` for a name that matches nothing | no | no |
 | `away(actor)` | as above | `[{ key, name, img }]` | no | no |
-| `stash(owner, container, itemIds, { tag?, currency?, detail? })` | Actors and item ids | the number of items created; with `detail`, `{ count, created, away }`. Rejects, deleting nothing, if the container accepted fewer copies than asked | yes | no |
+| `stash(owner, container, itemIds, { tag?, currency?, detail? })` | Actors and item ids | the number of items created; with `detail`, `{ count, created, away }`. Rejects, deleting nothing, if the container accepted fewer copies than asked; the error names the copies it left there (`err.created`) | yes | no |
 | `releaseAway(actor, key)` | Actor, away key | `setFlag`'s promise | yes | no |
 | `inspect(ref, { sceneId?, base? })` | any actor ref (throws `NOT_FOUND` / `AMBIGUOUS`) | `{ actor, slots, max, value, over, away, bonds, counts }`, plain JSON; `counts` = dnd5e's value, away, the strip's value and `mismatch` | no | no |
 | `selftest()` | — | `{ ok, checks }` | no | no |
