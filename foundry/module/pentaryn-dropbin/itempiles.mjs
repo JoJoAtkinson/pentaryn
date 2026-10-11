@@ -19,7 +19,7 @@
  */
 
 import {
-  MODULE, LOCK_SOUND, lockedContainer, pileFlags, isPileFlagged, planLockSounds, planEyesNeedView,
+  MODULE, LOCK_SOUND, lockedContainer, pileFlags, isPileFlagged, pinnedEntryIds, planLockSounds, planEyesNeedView,
 } from "./dropbin-core.mjs";
 
 /** The module log (set by install). */
@@ -197,12 +197,13 @@ const isPileActor = id => isPileFlagged(game.actors.get(id));
  * its journal must not also sit in the players' Journal sidebar where they can
  * read the binding incantation without ever walking to the plaque. Anything
  * pinned to a scene Note is hidden; a genuine handout, which has no pin, stays.
+ *
+ * One render walks every scene's notes once (items-journal-24), on the first row it checks: the
+ * GM, and a render with no rows, never build the set.
  */
-function isNotePinnedJournal(id) {
-  for (const scene of game.scenes) for (const note of scene.notes) {
-    if (note.entryId === id) return true;
-  }
-  return false;
+function pinnedJournalTest() {
+  let pinned = null;
+  return id => (pinned ??= pinnedEntryIds(game.scenes)).has(id);
 }
 
 /** ready: the three lock hooks, a repaint of the player's sidebar, then the GM backfills. */
@@ -257,7 +258,7 @@ export function install(reg, ctx) {
   log = ctx.log;
   ctx.onReady(() => armAttunementRepair(reg), "attunement repair");
   reg.on("renderActorDirectory", (app, el) => hideRowsFromDirectory(app, el, isPileActor), { label: "actor directory" });
-  reg.on("renderJournalDirectory", (app, el) => hideRowsFromDirectory(app, el, isNotePinnedJournal), { label: "journal directory" });
+  reg.on("renderJournalDirectory", (app, el) => hideRowsFromDirectory(app, el, pinnedJournalTest()), { label: "journal directory" });
   ctx.onReady(() => armLocks(reg), "locks");
 }
 
