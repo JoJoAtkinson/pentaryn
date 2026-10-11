@@ -31,6 +31,28 @@ import { flagOf } from "./shared.mjs";
 let SESSION = null;
 const session = () => (SESSION ??= foundry.utils.randomID());
 
+/** Sleep on the global timer at call time (tests drive it with `mock.timers`). */
+const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+/**
+ * **The one claim protocol** (ties-39): stake, let the server broadcast whichever stake landed last,
+ * read it back. True only on the client whose stake survived.
+ *
+ * `settleMs` is long enough for the other client's write to arrive and be broadcast back, and short
+ * enough that nobody at the table reads it as lag. The loser never rolls, so the cost is paid once.
+ * Facts on the setting plane, facts on the flag plane and inspections all stake through here; each
+ * keeps its own release twin (`releaseFact`, `releaseClaim`, `releaseInspect`).
+ *
+ * @param {{ write: () => Promise<*>, readBack: () => *, token: *, settleMs?: number,
+ *   sleep?: (ms: number) => Promise<void> }} spec
+ * @returns {Promise<boolean>}
+ */
+export async function stakeAndConfirm({ write, readBack, token, settleMs = 250, sleep = wait }) {
+  await write();
+  await sleep(settleMs);
+  return readBack() === token;
+}
+
 /**
  * Stake the ledger row before the dice fall. Returns false for the client that lost.
  *
@@ -44,9 +66,11 @@ const session = () => (SESSION ??= foundry.utils.randomID());
 export async function claimFact(fact, characterId, now) {
   if (fact.ns === "attr") {
     const mine = session();
-    await putBelief(fact, characterId, { text: "", total: null, when: now, delivered: null, claim: mine });
-    await new Promise(resolve => setTimeout(resolve, 250));
-    return readBelief(fact, characterId)?.claim === mine;
+    return stakeAndConfirm({
+      write: () => putBelief(fact, characterId, { text: "", total: null, when: now, delivered: null, claim: mine }),
+      readBack: () => readBelief(fact, characterId)?.claim,
+      token: mine
+    });
   }
   return claimRoll(fact.ledger, characterId, now, fact.beliefKey);
 }
@@ -63,14 +87,14 @@ export async function releaseFact(fact, characterId) {
 
 async function claimRoll(ledger, characterId, now, key = KIND_KEY) {
   const mine = session();
-  await ledger.update(
-    { [`flags.${MODULE}.${BELIEFS_FLAG}.${characterId}.${key}`]: { claim: mine, when: now } },
-    { render: false }
-  );
-  // long enough for the other client's write to arrive and be broadcast back; short enough that
-  // nobody at the table reads it as lag. The loser never rolls, so the cost is paid once.
-  await new Promise(resolve => setTimeout(resolve, 250));
-  return flagOf(ledger, BELIEFS_FLAG)?.[characterId]?.[key]?.claim === mine;
+  return stakeAndConfirm({
+    write: () => ledger.update(
+      { [`flags.${MODULE}.${BELIEFS_FLAG}.${characterId}.${key}`]: { claim: mine, when: now } },
+      { render: false }
+    ),
+    readBack: () => flagOf(ledger, BELIEFS_FLAG)?.[characterId]?.[key]?.claim,
+    token: mine
+  });
 }
 
 /**
@@ -107,10 +131,13 @@ const INSPECT_SESSION = foundry.utils.randomID();
 
 export async function claimInspect(subject, characterId) {
   const mine = inspectSession();
-  await subject.update({ [`flags.${MODULE}.${BELIEFS_FLAG}.${characterId}.${INSPECT_CLAIM_KEY}`]: { claim: mine } }, { render: false });
-  await new Promise(r => setTimeout(r, 250));
+  const won = await stakeAndConfirm({
+    write: () => subject.update({ [`flags.${MODULE}.${BELIEFS_FLAG}.${characterId}.${INSPECT_CLAIM_KEY}`]: { claim: mine } }, { render: false }),
+    readBack: () => flagOf(subject, BELIEFS_FLAG)?.[characterId]?.[INSPECT_CLAIM_KEY]?.claim,
+    token: mine
+  });
   // return the TOKEN on success, so the caller can release exactly what it took
-  return flagOf(subject, BELIEFS_FLAG)?.[characterId]?.[INSPECT_CLAIM_KEY]?.claim === mine ? mine : null;
+  return won ? mine : null;
 }
 
 export async function releaseInspect(subject, characterId, token = null) {
