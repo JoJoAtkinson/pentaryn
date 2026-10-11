@@ -313,6 +313,7 @@ def test_import_instructions_survive_their_own_js_braces():
 
 # ── config sanity ─────────────────────────────────────────────────────────────
 
+@pytest.mark.repo
 def test_repo_root_points_at_the_repo():
     assert (cfg.REPO_ROOT / "Makefile").exists()
     assert (cfg.REPO_ROOT / "scripts/foundry/ops/cli.py").exists()
@@ -324,6 +325,7 @@ def test_actors_url_matches_the_staged_world_path():
     assert cfg.ACTORS_STAGED.name == "actors.json"
 
 
+@pytest.mark.repo
 def test_declared_modules_exist_on_disk():
     for name, spec in cfg.MODULES.items():
         assert spec.src.is_dir(), f"{name}: no module at {spec.src}"
@@ -417,64 +419,42 @@ def test_pick_world_menu_defaults_to_the_running_world(monkeypatch):
     assert "running" in seen["options"][seen["default_index"]][0]
 
 
-class _FakeStatus:
-    def __init__(self, active, world, users=0):
-        self.active, self.world, self.users = active, world, users
+# FoundryAdmin stand-in: the shared `fake_admin` fixture in conftest.py.
 
 
-class _FakeAdmin:
-    def __init__(self, status):
-        self._status = status
-        self.launched = []
-        self.deactivated = False
-
-    def status(self):
-        return self._status
-
-    def deactivate_world(self):
-        self.deactivated = True
-        return True
-
-    def launch_world(self, world):
-        self.launched.append(world)
-
-    def wait_for_world(self, world, timeout=0):
-        pass
-
-
-def test_ensure_world_does_nothing_when_the_right_world_is_already_up():
-    fa = _FakeAdmin(_FakeStatus(True, "space-journey"))
+def test_ensure_world_does_nothing_when_the_right_world_is_already_up(fake_admin):
+    fa = fake_admin(True, "space-journey")
     login._ensure_world(fa, "space-journey", prompt=False)
     assert not fa.deactivated and not fa.launched
 
 
-def test_ensure_world_refuses_to_drop_connected_players_unattended():
+def test_ensure_world_refuses_to_drop_connected_players_unattended(fake_admin):
     """Switching worlds disconnects everyone. Without a terminal to confirm at, that
     must be an error rather than something that just happens."""
-    fa = _FakeAdmin(_FakeStatus(True, "ardenhaven", users=3))
+    fa = fake_admin(True, "ardenhaven", users=3)
     with pytest.raises(RuntimeError, match="3 user"):
         login._ensure_world(fa, "space-journey", prompt=False)
     assert not fa.deactivated
 
 
-def test_ensure_world_switches_when_confirmed(monkeypatch):
+def test_ensure_world_switches_when_confirmed(monkeypatch, fake_admin):
     monkeypatch.setattr(login, "_choose", lambda *a, **k: True)
     monkeypatch.setattr(login.time, "sleep", lambda *_: None)
-    fa = _FakeAdmin(_FakeStatus(True, "ardenhaven", users=2))
+    fa = fake_admin(True, "ardenhaven", users=2)
     login._ensure_world(fa, "space-journey", prompt=True)
     assert fa.deactivated and fa.launched == ["space-journey"]
 
 
-def test_ensure_world_leaves_the_live_world_alone_when_declined(monkeypatch):
+def test_ensure_world_leaves_the_live_world_alone_when_declined(monkeypatch, fake_admin):
     monkeypatch.setattr(login, "_choose", lambda *a, **k: False)
-    fa = _FakeAdmin(_FakeStatus(True, "ardenhaven", users=2))
+    fa = fake_admin(True, "ardenhaven", users=2)
     with pytest.raises(RuntimeError, match="staying in"):
         login._ensure_world(fa, "space-journey", prompt=True)
     assert not fa.deactivated and not fa.launched
 
 
-def test_ensure_world_launches_when_nothing_is_running():
-    fa = _FakeAdmin(_FakeStatus(False, None))
+def test_ensure_world_launches_when_nothing_is_running(fake_admin):
+    fa = fake_admin(False, None)
     login._ensure_world(fa, "space-journey", prompt=False)
     assert not fa.deactivated and fa.launched == ["space-journey"]
 

@@ -876,6 +876,7 @@ def test_cost_line():
 
 # ── registry ─────────────────────────────────────────────────────────────────
 
+@pytest.mark.repo
 def test_the_real_registry_matches_the_code():
     """`make foundry-adjustments-check`, as a test: a refactor that orphans a row fails CI."""
     reg = adj_mod.load()
@@ -1144,6 +1145,7 @@ def test_exposure_matches_code_not_prose(tmp_path):
     assert reg.exposure("wall-height", root=tmp_path) == ["scripts/foundry/other.py"]
 
 
+@pytest.mark.repo
 def test_real_exposure_has_no_known_false_positives():
     reg = adj_mod.load()
     for pkg in ("multi-token-edit", "scene-packer", "mad-endlesswiz"):
@@ -1160,6 +1162,7 @@ def test_real_exposure_has_no_known_false_positives():
 # as the Levels package id. Output today:
 #   reg.exposure("levels") == ['foundry/module/pentaryn-prompts/geometry-core.mjs']
 # The scanner is wrong, not this test: remove the marker when id_pattern is fixed.
+@pytest.mark.repo
 @pytest.mark.xfail(strict=True, reason="levels exposure false positive (template literal)")
 def test_real_exposure_levels_has_no_false_positive():
     assert adj_mod.load().exposure("levels") == []
@@ -1322,6 +1325,7 @@ def test_killed_after_a_finished_run_does_nothing(state_dir, monkeypatch):
     assert state_dir.read_status()["outcome"] == "done" and sent == []
 
 
+@pytest.mark.repo
 def test_watchdog_stays_quiet_after_a_wrapper_kill():
     text = (Path(esc.REPO_ROOT) / "automation/bin/vtt-update-watchdog.sh").read_text()
     assert '[ "$PHASE" = "killed" ]' in text
@@ -1357,6 +1361,7 @@ MAKE_CHECKS_PIN = [
 ]
 
 
+@pytest.mark.repo
 def test_make_checks_pinned(monkeypatch):
     monkeypatch.setattr(esc, "_MAKE_TARGETS", None)
     assert esc.make_checks() == MAKE_CHECKS_PIN

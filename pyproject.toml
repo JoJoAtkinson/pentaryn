@@ -54,6 +54,7 @@ select = ["E", "F", "I"]
 [tool.pytest.ini_options]
 markers = [
     "integration: marks tests as integration tests (uses real API tokens, costs money)",
+    "repo: reads live repo state (real registry, module tree, automation); deselect with -m 'not repo' on a partial checkout or snapshot",
 ]
 testpaths = ["scripts/tests", "scripts/foundry/blueprint/tests"]
 python_files = ["test_*.py"]
