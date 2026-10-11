@@ -17,6 +17,11 @@ working out why someone can't get past the Google sign-in to `vtt.atjoseph.com`.
 > account that is on the whitelist. Players need **no Cloudflare account** — they see a normal
 > "Sign in with Google" screen, then Foundry's `/join`.
 
+> ⚠️ **Adding a person = TWO lists, every time.** Their Gmail must go on **(1) Google's test
+> users** *and* **(2) Cloudflare's `vtt-players` policy**. Either one alone and they're locked
+> out, with an error that doesn't say which list is missing. Removing a person = take them off
+> both. Steps: [Whitelist a player](#whitelist-a-player-two-places-both-required).
+
 ## How the pieces fit
 
 ```

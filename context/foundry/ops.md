@@ -19,7 +19,7 @@ status: active
 | You want to… | Playbook |
 | ------------ | -------- |
 | Start/stop the server, the tunnel, sync assets, restore a world, install a module, check what's exposed | **this one** |
-| Whitelist a player's Gmail, the Google login in front of the tunnel | [`cloudflare-access.md`](cloudflare-access.md) |
+| Whitelist a player's Gmail (**two lists: Google test users + Cloudflare policy**), the Google login in front of the tunnel | [`cloudflare-access.md`](cloudflare-access.md) |
 | Build world *content* — actor generation from `actions.jsonl`, the importer module, the write paths that fail silently, Gates 0–4 | [`foundry-vtt.md`](../plans/foundry-content-pipeline.md) |
 | Complete hand-drawn walls | [`foundry-wall-autocomplete.md`](../plans/foundry-wall-autocomplete.md) |
 | Extend the MCP bridge's tool surface | [`mcp-fork.md`](mcp-fork.md) · design history: [`foundry-mcp-fork.md`](../plans/foundry-mcp-fork.md) |
