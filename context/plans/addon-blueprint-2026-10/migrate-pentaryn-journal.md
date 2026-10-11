@@ -338,6 +338,7 @@ Step 1 ~0.75 day (relay and ensure flows need careful stubs), steps 2–6 ~1 day
 | Adjustments rows appended to `adjustments-batch.md` | `itempiles-journal-preview-copy` (D2 prefix rule) — **landed `cd414590`** (wave 2 integration; C47 passes, 87.5 %) |
 | §5.9.4 review hits | `createUser`/ready two-tab duplicate journal (and folder); `ensureAll`'s sequential create loop (C59 pattern) — not fixed, out of scope as in the audit (every remedy moves a frozen glue pin); Open for Joe W2-J4, see the deviation note below |
 | Still failing, and why | C03, C07, C09, C37 (+ C06w warn): the Wave 7 `module.json` batch (step 9). C47: the adjustments row (step 7, batched). C51: `folderName` has no label — adding one moves the frozen `settings-register` pin (Open for Joe). C56: the relay is still assigned by hand (wrapped by `relayed`, so C30 passes): the kit's `registerQueries` drops the query context, so a manifest relay row cannot see the sender (kit gap, returned to the integrator) |
+| Wave 2 close (code phase) | After integration **87.5 %** (C47 cleared by `cd414590`; fails C03, C07, C09, C37: Wave 7; C51: W2-J1; C56: W2-J2 / kit 1.0.3). At `f8fb7377`: 94 node:test cases + 81 legacy green. Coverage, module files (lines / branches / funcs): 77.7 / 75.2 / 73.0 → 95.3 / 82.2 / 88.5. Open for Joe: W2-J1–J4. Live phase: [`wave-2-live-plan.md`](wave-2-live-plan.md). Record: [`wave-2-report.md`](wave-2-report.md) §Per module |
 
 **Deviations from this guide, and why.**
 - Step 3: `folderName` kept unlabelled — the guide's lang keys would change the frozen register pin.

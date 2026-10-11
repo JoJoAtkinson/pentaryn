@@ -445,6 +445,7 @@ walls half of **-10** (8a).
 | `module.json` edits appended to `wave7-restart-batch.md` | returned to the integrator (shared file): [`wave-2-report.md`](wave-2-report.md) walls "Integrator handoff" — the Batch 1 walls row's code column, and a **replacement** for the wave-1 `description` ledger row (target `context/foundry/walls.md`, "fixture corpus" wording), so the batch holds one instruction per edit |
 | Adjustments rows appended to `adjustments-batch.md` | none needed (no patch, no third-party package) |
 | Still failing, and why | **C07** (`flags.pentaryn` and the flag-scope DATA migration: Wave 7 batch) and **C51** (literal English labels: the key switch needs `languages` and an edit to the frozen glue (a) register pin, wave-2-report W2-WALLS-1). Warnings: C02 (minimum 13, Wave 7), C10 (`core/engine.mjs` 1122 > 600, by design §4), C36 (the 8 literal-English strings, Wave 7). |
+| Wave 2 close (code phase) | Unchanged **95.6 %** after integration (fails C07, C51). At `f8fb7377`: 200 green + 1 todo (the Wave 7 `module.json` cite, `edc7489a`). Coverage, module files (lines / branches / funcs): 94.7 / 86.1 / 92.9 → 97.5 / 92.4 / 96.8. Sync and live check wait on W2-L1 ([`wave-2-live-plan.md`](wave-2-live-plan.md) §9). Record: [`wave-2-report.md`](wave-2-report.md) §Per module |
 
 **Departures from the steps above (all recorded in the commit messages).**
 

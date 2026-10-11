@@ -705,3 +705,4 @@ once S5 has landed, as long as they stay out of the same files in the same commi
 | `module.json` edits appended to `wave7-restart-batch.md` | no (step not reached) |
 | Adjustments rows appended to `adjustments-batch.md` | no (step not reached) |
 | Still failing, and why | C07 C09 C12 C15 C16 C18 C20 C21 C22 C24 C27 C28 C34 C35 C37 C40 C41 C44 C45 C47 C48 — the guide's steps 2+ have not run. Frozen tests: the checkpoint's assertions and goldens are untouched since the checkpoint (see wave-1-report §Frozen tests). |
+| Wave 2 (kit 1.0.2, code phase; not migrated) | re-vendored `ac307386`, local logger stub removed `d0948f91`, frozen-root guard copy retired `de2dad7a` [declared]. Tests green at `f8fb7377`; conformance unchanged. Not yet synced: [`wave-2-live-plan.md`](wave-2-live-plan.md) (W2-L2) |

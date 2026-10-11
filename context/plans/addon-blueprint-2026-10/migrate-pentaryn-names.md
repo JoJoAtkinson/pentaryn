@@ -440,6 +440,7 @@ Shared-file edits for their owners (not applied here):
 | Adjustments rows appended to `adjustments-batch.md` | n/a — none |
 | Fixed outside the migration | **PT3-9** (play test, [`wave-1-playtest.md`](wave-1-playtest.md)) on `fix/playtest-2026-10-11`: `5277d616` (fixture `game.combats`), `f57cd997` **[declared]** (combatant relabel, `test/combatants.test.mjs`, 5 tests), `6ce6ad65` (README, CHANGELOG); 0.1.0 → 0.1.1; still 100.0 % (44/44); 50 node:test. No frozen test or golden changed |
 | Still failing, and why | nothing. Tests: 45 node:test, all pass; coverage of module code 100 / 98.2 / 100 (line/branch/funcs, lib and test excluded, lcov records merged per file; 99.7 / 96.8 / 92.0 unmerged; was 0) |
+| Wave 2 (kit 1.0.2, code phase) | re-vendored `993677e3` [declared]: the frozen-root pin flipped (J10; `glue.test.mjs` + `golden/root.json`). 50 tests green at `f8fb7377`; conformance unchanged. Not yet synced: [`wave-2-live-plan.md`](wave-2-live-plan.md) (W2-L2). Note: pentaryn-write refuses `names.sync` until W2-B4 |
 
 ### Rollback drill (2026-10-11)
 
