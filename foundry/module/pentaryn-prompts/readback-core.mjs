@@ -14,6 +14,13 @@
  *   creates: […], warnings: […], defaults: […], sheet?}` — a character's `sheet` is its preview's.
  */
 
+const ordinal = n => `${n}${[, "st", "nd", "rd"][n % 100 > 10 && n % 100 < 14 ? 0 : n % 10] ?? "th"}`;
+
+/** `[{key, level, value, max}]` → `1st 4/4, 2nd 3/3, pact 2/2 (3rd)` (PT2-2). */
+function slotsText(slots) {
+  return slots.map(r => (r.key === "pact" ? `pact ${r.value}/${r.max} (${ordinal(r.level)})` : `${ordinal(r.level)} ${r.value}/${r.max}`)).join(", ");
+}
+
 /** A character's sheet numbers (character.mjs `summarise`) as one line. */
 export function sheetLine(s) {
   if (!s) return null;
@@ -28,7 +35,8 @@ export function sheetLine(s) {
     `saves ${(s.saves ?? []).join(",")}; skills ${(s.skills ?? []).join(",")}; speed ${s.speed}` +
     `${s.darkvision ? `, darkvision ${s.darkvision}` : ""}; size ${s.size}` +
     `${s.languages?.length ? `; languages ${s.languages.join(", ")}` : ""}` +
-    `${s.feats?.length ? `; feats ${s.feats.join(", ")}` : ""}.${sc}`;
+    `${s.feats?.length ? `; feats ${s.feats.join(", ")}` : ""}.${sc}` +
+    (s.slots?.length ? `${sc ? ";" : ""} slots ${slotsText(s.slots)}` : "");
 }
 
 /** One readback line per encounter built into: XP now against the party budget. */

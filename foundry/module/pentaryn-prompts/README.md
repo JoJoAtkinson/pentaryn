@@ -140,7 +140,10 @@ args as above. Errors are `Error("<CODE>: detail")`: `TEXT_CHANGED`, `MARKER_GON
   A Monk's weapons get Martial Arts' own enchantment (its "Master Simple Weapon" / "Master Light
   Martial Weapon" activities through dnd5e's `applyEnchantment`; dnd5e's `canEnchant` picks the
   weapons), so the Quarterstaff rolls DEX and the Martial Arts die from the first swing; the dry run
-  names them in a note (0.4.3, usability Area 10).
+  names them in a note (0.4.3, usability Area 10). A new character starts with every spell slot full
+  (leveled and pact, `system.spells.<key>.value = max` as dnd5e's long rest does, in the same write as
+  full HP; the dry run's ghost too), and the `sheet:` line ends `slots 1st 4/4, 2nd 3/3` /
+  `slots pact 2/2 (3rd)` (0.4.4, play test PT2-2: they were 0/4).
 - `npc` — `{npc, features, patch}` (`npc.mjs`, pure half `npc-core.mjs`), **built by this module**
   since 0.3.0, so it works through eval-js too: `npc` is the dnd5e-create-npc arguments, `features`
   the dnd5e-add-feature arguments without `actorIdentifier` (+ `recharge`). Every field is checked and
