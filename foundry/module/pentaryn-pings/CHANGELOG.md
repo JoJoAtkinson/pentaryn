@@ -2,7 +2,7 @@
 
 ## 0.1.1 — 2026-10-11 (fix/playtest-2026-10-11; also ships the wave-1 rebuild below)
 
-- Fix PT3-2: a player's ping on a scene the GM is not viewing is recorded again. The
+- Fix PT3-2: a player's ping on a scene the GM is not viewing is now recorded (it never was: the bug predates wave 1). The
   `userActivity` listener read `data.ping.x/y` and `data.sceneId`; core v14 sends
   `{cursor: {x, y}, ping: {scene, pull, style, zoom}}`, so the socket path recorded nothing.
   It now records `data.cursor` on `data.ping.scene` (falling back to the viewed scene). A ping
