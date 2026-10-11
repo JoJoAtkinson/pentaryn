@@ -859,19 +859,15 @@ Hooks.once("init", () => {
 
 });
 
-// pentaryn-importer replaces game.pentaryn with a FROZEN object in its own ready
-// hook, and ready hooks run in module-id order — "attunement" sorts before
-// "importer", so publishing synchronously gets wiped. Defer a tick (as
-// pentaryn-dropbin does), then rebuild the namespace rather than assign into it.
+// Published one tick after ready (publishing synchronously is a declared step of
+// the migration). The importer merges into game.pentaryn and nothing freezes it
+// since its keystone (items-journal-1), so the old frozen-root guard is gone
+// (kit 1.0.2, J10): the API is assigned into the plain root.
 Hooks.once("ready", () => setTimeout(() => {
   guardItemTooltipPosition();
   const api = { report, computeSlots, stash, releaseAway, away: awayOf };
-  const current = game.pentaryn;
-  if (current && !Object.isExtensible(current)) game.pentaryn = { ...current, attunement: api };
-  else {
-    game.pentaryn ??= {};
-    game.pentaryn.attunement = api;
-  }
+  game.pentaryn ??= {};
+  game.pentaryn.attunement = api;
   console.log(`${MODULE} | ready`);
 }, 0));
 
