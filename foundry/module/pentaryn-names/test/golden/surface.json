@@ -1,0 +1,11 @@
+{
+  "contract": "string",
+  "describe": "function",
+  "relabel": "relabel",
+  "settings": "function",
+  "shortName": "shortName",
+  "sync": "sync",
+  "trace": "trace",
+  "uninstall": "uninstall",
+  "version": "string"
+}

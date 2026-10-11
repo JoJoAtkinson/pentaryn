@@ -6,16 +6,21 @@
  *
  * Files, in load order:
  *   names-core.mjs     PURE constants, HOOKS ({}), the relabel rules and the token planner
+ *   api-manifest.mjs   PURE data: the three legacy API rows
  *   rename.mjs         the feature: preUpdateActor / updateActor, and sync()
  *   lib/*.mjs          vendored kit — never edited here (scripts/foundry/blueprint/vendor.py)
  *
  * Lifecycle: module body → features install (migrating module: synchronously, so the hooks are
- * registered in today's order) · ready → publish.
+ * registered in today's order) · ready → build the API (a manifest drift throws here) and
+ * publish it on module.api and game.pentaryn.names.
  */
 
-import { MODULE, relabel, shortName } from "./names-core.mjs";
+import { MODULE, NS, relabel, shortName } from "./names-core.mjs";
+import { MANIFEST } from "./api-manifest.mjs";
+import { buildApi } from "./lib/api.mjs";
 import { makeLog } from "./lib/log.mjs";
 import { hookRegistry } from "./lib/hooks.mjs";
+import { publishNamespace, publishedOf } from "./lib/publish.mjs";
 import * as rename from "./rename.mjs";
 
 /** Features in load order. */
@@ -36,15 +41,17 @@ function uninstall() {
   reg.offAll();
 }
 
-// pentaryn-importer creates and FREEZES game.pentaryn, so rebuild it rather than assign into it.
 function onReady() {
-  const api = { sync: rename.sync, relabel, shortName };
-  const current = game.pentaryn;
-  if (current && !Object.isExtensible(current)) game.pentaryn = { ...current, names: api };
-  else {
-    game.pentaryn ??= {};
-    game.pentaryn.names = api;
-  }
+  const api = buildApi(MANIFEST, { sync: rename.sync, relabel, shortName }, {
+    members: { uninstall, trace: () => log.traces() },
+    extras: () => ({
+      hooks: reg.ids().map(h => ({ name: h.name, label: h.label })),
+      events: {},
+      published: publishedOf(NS),
+    }),
+  });
+  // publishNamespace rebuilds a frozen game.pentaryn (pentaryn-importer) rather than assigning into it.
+  publishNamespace(NS, api, { moduleId: MODULE });
 }
 
 install();

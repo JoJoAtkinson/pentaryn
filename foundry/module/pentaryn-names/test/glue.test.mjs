@@ -11,7 +11,7 @@
 //   golden/rename.json         — the effect log of one rename. No step may change it (step 7 keeps the
 //                                toast text byte-identical; its optional console line is [declared]).
 //   golden/root.json           — game.pentaryn under four load orders (subprocesses). No step may change it.
-//   "module.api is undefined"  — flips at step 5 ([declared] N-D2, SF2).
+//   "module.api"               — flipped at step 5 ([declared] N-D2, SF2): canonical now.
 //   transform-creatures-33 (unhandled rejection) — flipped at step 4 ([declared] N-D1): logged now.
 //   KNOWN transform-creatures-38 (sync needs a document) — flips at step 6 ([declared] N-D3).
 import { mock, test } from "node:test";
@@ -87,10 +87,13 @@ test("ready publishes game.pentaryn.names ⊇ sync, relabel, shortName (golden/l
   assert.deepEqual(Object.keys(game.pentaryn), ["names"], "a fresh root holds only names");
 });
 
-// [declared] at guide step 5 (N-D2): kit publish makes module.api canonical. Live agrees today (SF2).
-test("module.api is undefined today (flips at step 5, N-D2)", () => {
-  assert.equal(game.modules.get(MODULE).api, undefined);
-  assert.equal(LIVE.moduleApi, "undefined");
+// [declared] guide step 5 (N-D2): kit publish makes module.api canonical and game.pentaryn.names the
+// same object; both ready hooks fire. Before step 5 module.api was undefined (live 2026-10-11, SF2).
+test("module.api is game.pentaryn.names, and both ready hooks fired (flipped at step 5, N-D2)", () => {
+  assert.equal(game.modules.get(MODULE).api, api);
+  assert.equal(LIVE.moduleApi, "undefined", "the live golden predates step 5");
+  const emitted = F.calls.filter(c => c.op === "Hooks.callAll").map(c => c.name);
+  assert.deepEqual(emitted, [`${MODULE}.ready`, "pentaryn.ready"]);
 });
 
 test("game.pentaryn under four load orders (golden/root.json; subprocess per order)", () => {
