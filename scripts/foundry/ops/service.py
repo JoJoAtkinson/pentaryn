@@ -184,6 +184,14 @@ def _tunnel_pid() -> int | None:
 
 
 def tunnel_up() -> int:
+    # The tunnel publishes this machine's Foundry as vtt.atjoseph.com; only the primary
+    # does that (design §8). On the alt this is a loud no-op, not a failure: "Foundry up,
+    # no tunnel" is exactly what the alt is for, so `vtt-up` still succeeds there.
+    try:
+        host.require_primary("the tunnel", "tunnel-up", log=_say)
+    except host.NotPrimary as exc:
+        _say(f"▸ tunnel NOT started — {exc}")
+        return OK
     cfg.RUN_DIR.mkdir(parents=True, exist_ok=True)
     if (pid := _tunnel_pid()) is not None:
         _say(f"▸ tunnel already up (pid {pid})")
