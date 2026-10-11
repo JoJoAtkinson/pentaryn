@@ -116,6 +116,44 @@ export function combatOnScene(combats, sceneId) {
 }
 
 /**
+ * Every scene id where combatOnScene(combats, id) is true, as a Set — one pass over the combats
+ * instead of one per token (finding -19).
+ */
+export function combatSceneIds(combats) {
+  const out = new Set();
+  for (const c of combats ?? []) {
+    if (!c || !c.active) continue;
+    const where = Array.isArray(c.combatantSceneIds) ? c.combatantSceneIds : [];
+    if (c.sceneId) {
+      if (c.started || where.length > 0) out.add(c.sceneId);
+    } else {
+      for (const id of where) if (id) out.add(id);
+    }
+  }
+  return out;
+}
+
+/**
+ * The ghost inputs that are the same for every token on this client, read once and kept until a
+ * setting or a combat changes (finding -19). `isGM` is kept for completeness; the glue passes the
+ * live value to ghostForCtx.
+ */
+export function buildGhostContext({ isGM, policy, wish, ownedOnTop, combats } = {}) {
+  return Object.freeze({
+    isGM: !!isGM, policy: normalizePolicy(policy), wish: !!wish, ownedOnTop,
+    combatScenes: combatSceneIds(combats)
+  });
+}
+
+/** ghostFor() for one token from a ghost context: equal to ghostFor() over the live inputs. */
+export function ghostForCtx(ctx, { isOwner, sceneId, isGM = ctx?.isGM } = {}) {
+  return ghostFor({
+    isGM, policy: ctx?.policy, wish: ctx?.wish, isOwner,
+    combatActive: !!sceneId && !!ctx?.combatScenes?.has(sceneId)
+  });
+}
+
+/**
  * May players ghost at all, given the GM policy and whether a combat is running here?
  * Returns { allowed, reason } where reason is "off" | "combat" | null.
  */

@@ -15,6 +15,8 @@ manifest); the kit is vendored. What a player or GM can notice:
   (never shown).
 - **[declared]** errors in the `refreshToken` and `renderSceneControls` hooks are warned once per
   session instead of swallowed silently (console only).
+- Performance: the per-token paths (drag, arrow keys, token refresh, the layer sort) read the
+  settings and the combats once per change instead of once per token (F-M1).
 
 ## 0.1.2 — 2026-10-11
 

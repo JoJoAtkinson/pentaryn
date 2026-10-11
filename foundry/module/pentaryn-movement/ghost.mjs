@@ -38,18 +38,33 @@ export function combatActive(sceneId = canvas?.scene?.id) {
   return core.combatOnScene(combatSummaries(), sceneId);
 }
 
+/**
+ * The per-token hot paths (the drag and keyboard wraps, refreshToken, the layer sort) read the
+ * settings and the combats through this cache instead of once per token (finding -19). It is
+ * dropped BEFORE the refresh is queued by everything that can change it: the three settings'
+ * onChange, the six combat hooks and canvasReady. isGM and ownership are read live per call.
+ * The once-per-refresh paths (status, the toolbar, refresh itself) keep reading live.
+ */
+let ghostContext = null;
+function context() {
+  return (ghostContext ??= core.buildGhostContext({
+    policy: setting("ghostPolicy"), wish: setting("ghost"), ownedOnTop: setting("ownedOnTop"),
+    combats: combatSummaries()
+  }));
+}
+function invalidate() {
+  ghostContext = null;
+}
+
 /** Ghost in effect for this placeable (Token) on this client? */
 export function ghostFor(token) {
   const doc = token?.document;
   if (!doc) return false;
-  return core.ghostFor({
-    isGM: game.user.isGM, policy: policy(), wish: wish(), isOwner: !!doc.isOwner,
-    combatActive: combatActive(doc.parent?.id)
-  });
+  return core.ghostForCtx(context(), { isGM: game.user.isGM, isOwner: !!doc.isOwner, sceneId: doc.parent?.id });
 }
 
 export function ownedRankOf(token) {
-  return core.ownedRank({ isGM: game.user.isGM, enabled: setting("ownedOnTop"), isOwner: !!token?.document?.isOwner });
+  return core.ownedRank({ isGM: game.user.isGM, enabled: context().ownedOnTop, isOwner: !!token?.document?.isOwner });
 }
 
 /** Every setting key with its scope, so a console reader never has to guess one (finding -23). */
@@ -323,9 +338,9 @@ const COMBAT_HOOKS = ["createCombat", "updateCombat", "deleteCombat", "createCom
 export function install(reg, ctx) {
   feature = ctx;
   log = ctx.log;
-  ctx.onSettingChange("ghostPolicy", () => queueRefresh());
-  ctx.onSettingChange("ghost", () => queueRefresh());
-  ctx.onSettingChange("ownedOnTop", () => refreshTokens());
+  ctx.onSettingChange("ghostPolicy", () => { invalidate(); queueRefresh(); });
+  ctx.onSettingChange("ghost", () => { invalidate(); queueRefresh(); });
+  ctx.onSettingChange("ownedOnTop", () => { invalidate(); refreshTokens(); });
 
   if (ctx.late) patchAll();
   else reg.once("setup", patchAll, { guard: false, label: "setup: wrap drag and keyboard" });
@@ -340,7 +355,8 @@ export function install(reg, ctx) {
   }, { guard: false, label: "renderSceneControls: combat badge" });
 
   reg.on("drawTokenLayer", layer => installLayerSort(layer), { guard: false, label: "drawTokenLayer: owned-on-top sort" });
-  reg.on("canvasReady", () => { installLayerSort(); queueRefresh(); }, { guard: false, label: "canvasReady: sort and refresh" });
+  reg.on("canvasReady", () => { invalidate(); installLayerSort(); queueRefresh(); }, { guard: false, label: "canvasReady: sort and refresh" });
+  // hot: ghost context (settings and combats read once, see context())
   reg.on("refreshToken", (token, flags) => {
     try { onRefreshToken(token, flags); }
     catch (err) { log.warnOnce("refreshToken", "refreshToken (further errors suppressed)", err); }
@@ -357,7 +373,7 @@ export function install(reg, ctx) {
     if (canvas?.tokens?.objects) canvas.tokens.objects.sortDirty = true;
   }, { guard: false, label: "updateToken: sort/elevation re-sort" });
 
-  for (const h of COMBAT_HOOKS) reg.on(h, () => queueRefresh(), { guard: false, label: `${h}: refresh` });
+  for (const h of COMBAT_HOOKS) reg.on(h, () => { invalidate(); queueRefresh(); }, { guard: false, label: `${h}: refresh` });
 
   if (ctx.late) {
     installLayerSort();
@@ -376,6 +392,7 @@ export function install(reg, ctx) {
 /** Undo the three patches and drop session state (hooks are removed by the entry's reg.offAll()). */
 export function uninstall() {
   queueRefresh.cancel?.();
+  invalidate();
   for (const h of [dragHandle, keyboardHandle, sortPatch?.handle]) h?.unwrap();
   dragHandle = keyboardHandle = sortPatch = null;
   dragPatched = keyboardPatched = false;
