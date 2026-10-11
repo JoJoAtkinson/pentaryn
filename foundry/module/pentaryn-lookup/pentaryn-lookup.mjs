@@ -11,52 +11,14 @@
 
 import {
   LIMITS, searchBooks, findPage, renderPage, monsterDigest, toPlainText, embeddedTableUuids, renderTable,
-  BOOKSETS, EDITIONS, MONSTER_PACKS, resolveBookIds, missingPackError, tidy,
+  BOOKSETS, EDITIONS, MONSTER_PACKS, resolveBookIds, missingPackError,
   monsterQuery, matchMonster, monsterRow, sortMonsters, pageMonsters, listFor as listForIn, knownLists,
+  foundFromDoc,
 } from "./lookup-core.mjs";
-
-// Stripped page text, memoized by page uuid. The book packs are read-only and LevelDB
-// locks them while Foundry runs, so invalidation is "never". ~3 MB ceiling across every
-// pack; it makes the second search of a session near-instant.
-const textCache = new Map();
-
-/**
- * `game.packs` -> the plain shape lookup-core wants.
- *
- * `getDocuments()` rather than `getIndex({fields})`: the index does NOT reliably
- * populate nested fields. Measured 2026-08-22 on v14.367 (2 of 47 PHB entries filled,
- * the rest `{}`) and again 2026-10-10 on v14.369: the server answers correctly, but
- * core `CompendiumCollection#indexDocument` rebuilds an entry with
- * `getProperty(source, "pages.name")` whenever a document enters the cache, which
- * reads through the `pages` array as undefined and leaves `pages: {}` /
- * `{text: {}}`. So the index is right or wrong depending on who called
- * `getDocuments()` first — 47/47 one call, 0/47 the next. `getDocuments()` is
- * ~150 ms for the whole PHB and is simply correct.
- *
- * `doc.pages` is an EmbeddedCollection: iterate it, use `.size`, never `.length`.
- */
-async function loadBooks(ids) {
-  const books = [];
-  const missing = [];
-  for (const id of ids) {
-    const pack = game.packs.get(id);
-    if (!pack) { missing.push(id); continue; }
-    const docs = [];
-    for (const doc of await pack.getDocuments()) {
-      const pages = [];
-      for (const page of doc.pages) {
-        const uuid = `${id}:${doc.id}:${page.id}`;
-        let html = page.text?.content ?? "";
-        if (textCache.has(uuid)) html = textCache.get(uuid);
-        else { textCache.set(uuid, html); }
-        pages.push({ id: page.id, name: page.name, html });
-      }
-      docs.push({ id: doc.id, name: doc.name, pages });
-    }
-    books.push({ id, label: pack.metadata.label, edition: EDITIONS[id], docs });
-  }
-  return { books, missing };
-}
+import {
+  loadBooks, readPageDoc, readTable, findSpell, spellRegistry, readIndex, readDocument, packSummary, worldInfo,
+  featureTexts,
+} from "./packs-adapter.mjs";
 
 // ── the API ──────────────────────────────────────────────────────────────────
 
@@ -77,16 +39,9 @@ async function page(ref, opts = {}) {
 
   // UUID path — what search() hands back, so "give me hit #2 in full" is one call.
   if (raw.startsWith("Compendium.")) {
-    const doc = await fromUuid(raw).catch(() => null);
-    if (!doc) return { error: `no document at ${raw}` };
-    const parent = doc.parent ?? doc;
-    const packId = doc.pack ?? parent.pack;
-    const pack = game.packs.get(packId);
-    const found = {
-      book: { id: packId, label: pack?.metadata?.label ?? packId, edition: EDITIONS[packId] },
-      doc: { id: parent.id, name: parent.name },
-      page: { id: doc.id, name: doc.name, html: doc.text?.content ?? "" },
-    };
+    const read = await readPageDoc(raw);
+    if (!read) return { error: `no document at ${raw}` };
+    const found = foundFromDoc(read);
     return withTables(renderPage(found, opts), found, opts);
   }
 
@@ -103,30 +58,16 @@ async function withTables(out, found, opts) {
   if (!uuids.length) return out;
   const tables = [];
   for (const u of uuids) {
-    const t = await fromUuid(u).catch(() => null);
+    const t = await readTable(u);
     if (!t) { tables.push({ uuid: u, error: "not found" }); continue; }
-    tables.push(renderTable({ name: t.name, formula: t.formula, uuid: u,
-      results: t.results.contents.map(r => ({ range: r.range, description: r.description, name: r.name, text: r.text })) }));
+    tables.push(renderTable(t));
   }
   return { ...out, tables };
 }
 
 // ── spell lists (dnd5e's registry; the "Class Spell Lists" pages are empty shells) ──
 
-/** A spell document by uuid or name: PHB first, then the 2024 SRD. */
-async function findSpell(ref) {
-  const s = String(ref ?? "").trim();
-  if (s.startsWith("Compendium.")) return fromUuid(s).catch(() => null);
-  for (const id of ["dnd-players-handbook.spells", "dnd5e.spells24", "dnd5e.spells"]) {
-    const pack = game.packs.get(id);
-    if (!pack) continue;
-    const hit = (await pack.getIndex()).find(e => e.name.toLowerCase() === s.toLowerCase());
-    if (hit) return pack.getDocument(hit._id);
-  }
-  return null;
-}
-
-const listFor = (type, identifier) => listForIn(dnd5e.registry, type, identifier);
+const listFor = (type, identifier) => listForIn(spellRegistry(), type, identifier);
 
 /**
  * Is a spell on a class's list (or a subclass's: `{type: "subclass"}`)?
@@ -136,7 +77,7 @@ async function onList(spell, cls, { type = "class" } = {}) {
   const doc = await findSpell(spell);
   if (!doc) return { notFound: true, spell, hint: "spell names are the book's English names" };
   const list = listFor(type, cls);
-  const known = knownLists(dnd5e.registry);
+  const known = knownLists(spellRegistry());
   if (!list) return { spell: doc.name, uuid: doc.uuid, level: doc.system.level, list: `${type}:${cls}`, onList: null,
     hint: `no such list; known: ${known.join(", ")}` };
   return { spell: doc.name, uuid: doc.uuid, level: doc.system.level, list: `${type}:${cls}`, onList: list.has(doc) };
@@ -145,7 +86,7 @@ async function onList(spell, cls, { type = "class" } = {}) {
 /** The names on a class list, optionally one spell level: `spellList("cleric", {level: 3})`. */
 async function spellList(cls, { type = "class", level = null } = {}) {
   const list = listFor(type, cls);
-  if (!list) return { error: `no ${type} list "${cls}"`, known: knownLists(dnd5e.registry) };
+  if (!list) return { error: `no ${type} list "${cls}"`, known: knownLists(spellRegistry()) };
   // the registry holds a uuid per contributing pack (PHB and the 2024 SRD both list Aid):
   // read levels from each pack's index, keep one entry per name, the owned book first
   const byPack = new Map();
@@ -158,8 +99,7 @@ async function spellList(cls, { type = "class", level = null } = {}) {
   const packs = [...byPack.keys()].sort((a, b) => (b.startsWith("dnd-players-handbook") ? 1 : 0) - (a.startsWith("dnd-players-handbook") ? 1 : 0));
   const seen = new Set(), out = [];
   for (const id of packs) {
-    const pack = game.packs.get(id);
-    const idx = pack ? await pack.getIndex({ fields: ["system.level"] }) : null;
+    const idx = await readIndex(id, ["system.level"]);
     for (const [u, docId] of byPack.get(id)) {
       const e = idx?.get(docId);
       const name = e?.name ?? u, lvl = e?.system?.level ?? null;
@@ -184,32 +124,19 @@ async function monster(name, opts = {}) {
   if (!wanted) return { error: "monster(name) needs a name" };
   const tried = [];
   for (const packId of MONSTER_PACKS) {
-    const pack = game.packs.get(packId);
-    if (!pack) continue;
+    const idx = await readIndex(packId);
+    if (!idx) continue;
     tried.push(packId);
-    const idx = await pack.getIndex();
     const entry = idx.find(e => e.name.toLowerCase() === wanted.toLowerCase())
                ?? idx.find(e => e.name.toLowerCase().includes(wanted.toLowerCase()));
     if (!entry) continue;
-    const actor = await pack.getDocument(entry._id);
+    const actor = await readDocument(packId, entry._id);
     const out = monsterDigest({
       name: actor.name, id: actor.id, packId, system: actor.system,
       items: actor.items.map(i => ({ name: i.name, type: i.type })),
     });
     if (opts.text) {
-      out.features = [];
-      for (const i of actor.items) {
-        const html = i.system?.description?.value ?? "";
-        let enriched = html;
-        try {
-          enriched = await foundry.applications.ux.TextEditor.implementation.enrichHTML(html,
-            { rollData: i.getRollData?.() ?? actor.getRollData(), relativeTo: i, secrets: true });
-        } catch { /* fall back to the raw text; toPlainText still strips the enrichers */ }
-        const act = i.system?.activities?.contents?.[0]?.activation?.type ?? i.system?.activation?.type ?? null;
-        const rch = i.system?.uses?.recovery?.find?.(r => r.period === "recharge");
-        out.features.push({ name: i.name, type: i.type, activation: act || null,
-          recharge: rch ? `${rch.formula ?? "6"}-6` : null, text: tidy(toPlainText(enriched)) });
-      }
+      out.features = await featureTexts(actor);
       out.languages = [...(actor.system.traits?.languages?.value ?? [])];
       out.speed = actor.system.attributes?.movement?.walk ?? null;
     }
@@ -229,9 +156,8 @@ async function monsters(q = {}) {
   const query = monsterQuery(q);
   const seen = new Set(), out = [];
   for (const id of query.packIds) {
-    const pack = game.packs.get(id);
-    if (!pack) continue;
-    const idx = await pack.getIndex({ fields: ["type", "system.details.cr", "system.traits.size", "system.details.type.value", "system.details.type.subtype"] });
+    const idx = await readIndex(id, ["type", "system.details.cr", "system.traits.size", "system.details.type.value", "system.details.type.subtype"]);
+    if (!idx) continue;
     for (const e of idx) {
       if (!matchMonster(e, query)) continue;
       if (seen.has(e.name)) continue;
@@ -249,7 +175,7 @@ async function monsters(q = {}) {
  */
 async function names(kind = null) {
   const out = { classes: [], subclasses: {}, species: [], backgrounds: [], feats: {} };
-  const read = async (id, fields) => { const p = game.packs.get(id); return p ? p.getIndex({ fields }) : []; };
+  const read = async (id, fields) => (await readIndex(id, fields)) ?? [];
   for (const e of await read("dnd-players-handbook.classes", ["type", "system.identifier", "system.classIdentifier"])) {
     if (e.type === "class") out.classes.push(e.name);
     if (e.type === "subclass") (out.subclasses[e.system?.classIdentifier ?? "?"] ??= []).push(e.name);
@@ -278,15 +204,13 @@ async function packs() {
   const known = [...new Set([...BOOKSETS.all, ...BOOKSETS["2014"], ...MONSTER_PACKS])];
   const rows = [];
   for (const id of known) {
-    const pack = game.packs.get(id);
-    if (!pack) { rows.push({ id, present: false }); continue; }
-    const idx = await pack.getIndex();
-    rows.push({ id, present: true, label: pack.metadata.label,
-                type: pack.documentName, entries: idx.size,
+    const p = await packSummary(id);
+    if (!p) { rows.push({ id, present: false }); continue; }
+    rows.push({ id, present: true, label: p.label,
+                type: p.type, entries: p.entries,
                 edition: EDITIONS[id] ?? "2024" });
   }
-  return { world: game.world.id, foundry: game.version,
-           system: `${game.system.id} ${game.system.version}`, packs: rows };
+  return { ...worldInfo(), packs: rows };
 }
 
 /**

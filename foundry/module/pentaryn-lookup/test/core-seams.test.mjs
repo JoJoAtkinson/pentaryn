@@ -133,3 +133,31 @@ test("resolveBookIds and missingPackError keep today's answers", () => {
 test("tidy closes the spaces enriched roll text leaves", () => {
   assert.equal(core.tidy("+4 , reach 5 ft . Two ( 2 ) attacks"), "+4, reach 5 ft. Two (2) attacks");
 });
+
+// ── step 4: the plain-data seams the adapter feeds (prompts-lookup-1, -5 move halves) ──
+
+test("foundFromDoc: a JournalEntryPage renders exactly as today's inline object did", () => {
+  const f = core.foundFromDoc({ documentName: "JournalEntryPage", id: "g", name: "Cover", html: "<p>Half cover</p>",
+    pack: "p.c", parent: { id: "d", name: "Combat" }, packLabel: "PHB" });
+  assert.deepEqual(core.renderPage(f),
+    { book: "PHB", journal: "Combat", page: "Cover", uuid: "Compendium.p.c.JournalEntry.d.JournalEntryPage.g", text: "Half cover" });
+});
+
+test("foundFromDoc: a parentless JournalEntry stands as its own journal, with empty text", () => {
+  const out = core.renderPage(core.foundFromDoc({ documentName: "JournalEntry", id: "d", name: "Combat", html: "", pack: "p.c", parent: null }));
+  assert.equal(out.text, "");
+  assert.equal(out.journal, out.page);
+  assert.equal(out.book, "p.c");
+  assert.equal("edition" in out, false);
+});
+
+test("foundFromDoc: the 2014 pack's edition comes from EDITIONS", () => {
+  const out = core.renderPage(core.foundFromDoc({ id: "g", name: "G", html: "x", pack: "dnd5e.rules", parent: { id: "d", name: "D" }, packLabel: "SRD" }));
+  assert.equal(out.edition, "2014");
+});
+
+test("toBook: today's plain-book shape, pages iterated with for…of (a Set has no .length)", () => {
+  assert.deepEqual(
+    core.toBook("p", "L", undefined, [{ id: "d", name: "D", pages: new Set([{ id: "g", name: "G", text: { content: "<p>a</p>" } }, { id: "h", name: "H", text: null }]) }]),
+    { id: "p", label: "L", edition: undefined, docs: [{ id: "d", name: "D", pages: [{ id: "g", name: "G", html: "<p>a</p>" }, { id: "h", name: "H", html: "" }] }] });
+});

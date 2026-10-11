@@ -38,6 +38,9 @@ export const EDITIONS = { "dnd5e.rules": "2014" };
 export const MONSTER_PACKS = ["dnd-monster-manual.actors", "dnd5e.actors24",
                               "dnd-players-handbook.actors", "dnd-dungeon-masters-guide.actors"];
 
+/** Where onList() looks a spell up by name: the PHB first, then the 2024 SRD, then the 2014 SRD. */
+export const SPELL_PACKS = ["dnd-players-handbook.spells", "dnd5e.spells24", "dnd5e.spells"];
+
 /** `opts.books` → pack ids: an array as given, a BOOKSETS name, else the rules set. */
 export function resolveBookIds(books) {
   if (!books) return BOOKSETS.rules;
@@ -222,6 +225,34 @@ export function capPayload(result, maxBytes = LIMITS.payloadBytes) {
   setNote();
   while (out.hits.length > 1 && size(out) > maxBytes) { out.hits.pop(); setNote(); }
   return out;
+}
+
+// ── plain books (the adapter feeds Foundry documents through these) ──────────
+/**
+ * A compendium's journal entries → the plain book every search reads. `docs` and each `pages` are
+ * iterated with for…of (a live `doc.pages` is an EmbeddedCollection: `.size`, never `.length`).
+ */
+export function toBook(id, label, edition, docs) {
+  const out = [];
+  for (const doc of docs ?? []) {
+    const pages = [];
+    for (const page of doc.pages ?? []) pages.push({ id: page.id, name: page.name, html: page.text?.content ?? "" });
+    out.push({ id: doc.id, name: doc.name, pages });
+  }
+  return { id, label, edition, docs: out };
+}
+
+/**
+ * One document read by UUID → the `{ book, doc, page }` renderPage takes. `parent` is the page's
+ * journal entry; a document with no parent (a JournalEntry, Actor, Item UUID) stands as its own.
+ */
+export function foundFromDoc({ id, name, html, pack, parent, packLabel, edition = EDITIONS[pack] }) {
+  const p = parent ?? { id, name };
+  return {
+    book: { id: pack, label: packLabel ?? pack, edition },
+    doc: { id: p.id, name: p.name },
+    page: { id, name, html: html ?? "" },
+  };
 }
 
 // ── one page ─────────────────────────────────────────────────────────────────
