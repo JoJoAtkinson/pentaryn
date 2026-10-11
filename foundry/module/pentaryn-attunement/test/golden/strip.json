@@ -1,0 +1,197 @@
+{
+  "tag": "DIV",
+  "className": "pentaryn-attunement over-cap",
+  "listeners": [
+    "click",
+    "contextmenu",
+    "dragover",
+    "dragleave",
+    "drop"
+  ],
+  "children": [
+    {
+      "tag": "H3",
+      "className": "icon",
+      "innerHTML": "\n    <i class=\"fas fa-sun\" inert></i>\n    <span class=\"roboto-upper\">DND5E.Attuned</span>\n    <span class=\"count\"><span class=\"value\">4</span><span class=\"separator\">&sol;</span><span class=\"max\">3</span></span>\n  "
+    },
+    {
+      "tag": "UL",
+      "className": "unlist slots",
+      "children": [
+        {
+          "tag": "LI",
+          "className": "attunement-slot away",
+          "dataset": {
+            "slot": "0",
+            "awayKey": "k1",
+            "tooltip": "<div class=\"pentaryn-away-tip\"><strong>Staff &lt;of&gt; Woods</strong><p>Still attuned, but not on Talo. Its power is dormant until it is back in hand.</p></div>",
+            "tooltipDirection": "RIGHT"
+          },
+          "attrs": {
+            "aria-label": "Staff <of> Woods — Still attuned, but not on Talo. Its power is dormant until it is back in hand."
+          },
+          "children": [
+            {
+              "tag": "FIGURE",
+              "children": [
+                {
+                  "tag": "IMG",
+                  "src": "staff.webp",
+                  "alt": "Staff <of> Woods"
+                },
+                {
+                  "tag": "I",
+                  "className": "fa-solid fa-link-slash away-badge",
+                  "attrs": {
+                    "inert": ""
+                  }
+                },
+                {
+                  "tag": "BUTTON",
+                  "className": "deletion-control unbutton",
+                  "dataset": {
+                    "action": "release"
+                  },
+                  "attrs": {
+                    "aria-label": "End Attunement"
+                  },
+                  "type": "button",
+                  "innerHTML": "<i class=\"fas fa-circle-xmark\" inert></i>"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "tag": "LI",
+          "className": "attunement-slot",
+          "dataset": {
+            "slot": "1",
+            "itemId": "itemRing00000001",
+            "tooltip": "\n    <section class=\"loading\" data-uuid=\"Actor.actorStrp0000001.Item.itemRing00000001\"><i class=\"fas fa-spinner fa-spin-pulse\"></i></section>\n  ",
+            "tooltipClass": "dnd5e2 dnd5e-tooltip item-tooltip themed theme-light",
+            "tooltipDirection": "RIGHT"
+          },
+          "attrs": {
+            "aria-label": "Ring — DND5E.AttunementAttuned"
+          },
+          "children": [
+            {
+              "tag": "FIGURE",
+              "children": [
+                {
+                  "tag": "IMG",
+                  "className": "gold-icon",
+                  "src": "ring.webp",
+                  "alt": "Ring"
+                },
+                {
+                  "tag": "BUTTON",
+                  "className": "deletion-control unbutton",
+                  "dataset": {
+                    "action": "unattune"
+                  },
+                  "attrs": {
+                    "aria-label": "DND5E.ContextMenuActionUnattune"
+                  },
+                  "type": "button",
+                  "innerHTML": "<i class=\"fas fa-circle-xmark\" inert></i>"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "tag": "LI",
+          "className": "attunement-slot suppressed",
+          "dataset": {
+            "slot": "2",
+            "itemId": "itemClk000000001",
+            "tooltip": "\n    <section class=\"loading\" data-uuid=\"Actor.actorStrp0000001.Item.itemClk000000001\"><i class=\"fas fa-spinner fa-spin-pulse\"></i></section>\n  ",
+            "tooltipClass": "dnd5e2 dnd5e-tooltip item-tooltip themed theme-light",
+            "tooltipDirection": "RIGHT"
+          },
+          "attrs": {
+            "aria-label": "Cloak — DND5E.AttunementAttuned, DND5E.EFFECT.Suppressed.Hint"
+          },
+          "children": [
+            {
+              "tag": "FIGURE",
+              "children": [
+                {
+                  "tag": "IMG",
+                  "className": "gold-icon",
+                  "src": "cloak.webp",
+                  "alt": "Cloak"
+                },
+                {
+                  "tag": "I",
+                  "className": "fa-solid fa-ban suppressed-badge",
+                  "attrs": {
+                    "inert": ""
+                  }
+                },
+                {
+                  "tag": "BUTTON",
+                  "className": "deletion-control unbutton",
+                  "dataset": {
+                    "action": "unattune"
+                  },
+                  "attrs": {
+                    "aria-label": "DND5E.ContextMenuActionUnattune"
+                  },
+                  "type": "button",
+                  "innerHTML": "<i class=\"fas fa-circle-xmark\" inert></i>"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "tag": "LI",
+          "className": "attunement-slot overflow",
+          "dataset": {
+            "slot": "3",
+            "itemId": "itemRod000000001",
+            "tooltip": "\n    <section class=\"loading\" data-uuid=\"Actor.actorStrp0000001.Item.itemRod000000001\"><i class=\"fas fa-spinner fa-spin-pulse\"></i></section>\n  ",
+            "tooltipClass": "dnd5e2 dnd5e-tooltip item-tooltip themed theme-light",
+            "tooltipDirection": "RIGHT"
+          },
+          "attrs": {
+            "aria-label": "Rod — DND5E.AttunementAttuned"
+          },
+          "children": [
+            {
+              "tag": "FIGURE",
+              "children": [
+                {
+                  "tag": "IMG",
+                  "className": "gold-icon",
+                  "src": "rod.webp",
+                  "alt": "Rod"
+                },
+                {
+                  "tag": "BUTTON",
+                  "className": "deletion-control unbutton",
+                  "dataset": {
+                    "action": "unattune"
+                  },
+                  "attrs": {
+                    "aria-label": "DND5E.ContextMenuActionUnattune"
+                  },
+                  "type": "button",
+                  "innerHTML": "<i class=\"fas fa-circle-xmark\" inert></i>"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "tag": "P",
+      "className": "over-cap-note roboto-upper",
+      "textContent": "1 over the limit"
+    }
+  ]
+}
