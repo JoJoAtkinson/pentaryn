@@ -10,7 +10,7 @@ import { MODULE, mayWrite } from "../ties-api.mjs";
 import { attrFactKey, LORE_FLAG, loreFactKey, loreOfferable, rollableLore } from "../known-core.mjs";
 import { applyStudy } from "./apply.mjs";
 import { kindActorOf, studiedOf, studyStateFor } from "./resolve.mjs";
-import { CHANNEL, esc, f, SITUATIONAL_MAX, SITUATIONAL_MIN, STUDY, t } from "./shared.mjs";
+import { CHANNEL, esc, f, log, SITUATIONAL_MAX, SITUATIONAL_MIN, STUDY, t } from "./shared.mjs";
 import { readFlag } from "../lib/flags.mjs";
 
 /* -------------------------------------------- */
@@ -166,8 +166,12 @@ export function attrOffersFor(character, subject) {
  * policy that drifts. The only per-namespace part is which name goes in the dialog.
  */
 async function requestFact(character, subject, spec, label) {
-  if (!mayWrite()) return false; // the playerAccess kill switch, checked on both ends
-  if (!character?.isOwner || !subject) return false;
+  const refused = reason => {
+    log.debug$?.("request refused", { reason, characterId: character?.id ?? null, subjectId: subject?.id ?? null, ns: spec?.ns ?? null });
+    return false;
+  };
+  if (!mayWrite()) return refused("playerAccess"); // the playerAccess kill switch, checked on both ends
+  if (!character?.isOwner || !subject) return refused(character?.isOwner ? "no subject" : "not the owner");
 
   /*
    * No active GM, no roll — and nothing queues. A blind, arbitrated roll needs an arbiter;

@@ -69,9 +69,13 @@ const MIRROR = "mirror-reverse";
  * is no GM online to ask.
  */
 export function requestMirror({ source, target }) {
-  if (!source || !target || source.id === target.id) return false;
-  if (target.isOwner) return false; // they can write it themselves; no need to ask
-  if (!game.users?.activeGM) return false; // nobody home — their own side still saved
+  const skip = reason => {
+    log.debug$?.("mirror not requested", { reason, sourceId: source?.id ?? null, targetId: target?.id ?? null });
+    return false;
+  };
+  if (!source || !target || source.id === target.id) return skip("no pair");
+  if (target.isOwner) return skip("target owned: written directly"); // they can write it themselves; no need to ask
+  if (!game.users?.activeGM) return skip("no active GM"); // nobody home — their own side still saved
   // ids only: everything else is re-derived by the GM from documents it can see itself
   // no sender id: the server stamps the authenticated one on for us
   game.socket.emit(CHANNEL, { action: MIRROR, sourceId: source.id, targetId: target.id });
@@ -92,7 +96,8 @@ async function applyMirror(payload, senderId) {
   const user = game.users?.get(senderId);
   const source = game.actors?.get(payload?.sourceId);
   const target = game.actors?.get(payload?.targetId);
-  if (!user || !source || !target || source.id === target.id) return;
+  const drop = reason => log.debug$?.("relay dropped", { reason, senderId, sourceId: payload?.sourceId ?? null, targetId: payload?.targetId ?? null });
+  if (!user || !source || !target || source.id === target.id) return drop("unknown sender, actor or self pair");
 
   // the sender must actually own the side they claim to be writing from
   if (source.testUserPermission(user, "OWNER") !== true) {
@@ -100,8 +105,8 @@ async function applyMirror(payload, senderId) {
     return;
   }
   // and the GM's own kill-switch has to mean what its hint promises
-  if (!mayWrite(user)) return;
-  if (!target.isOwner) return; // even the GM cannot write what it does not own
+  if (!mayWrite(user)) return drop("playerAccess");
+  if (!target.isOwner) return drop("target not owned"); // even the GM cannot write what it does not own
 
   /*
    * A player may write any flag content they like onto their own actor, including a tie
@@ -120,7 +125,7 @@ async function applyMirror(payload, senderId) {
 
   // the forward text comes off the actor, never off the wire
   const mine = read(source).find(x => x.id === target.id);
-  if (!mine) return; // they did not actually save their own side; nothing to mirror
+  if (!mine) return drop("no forward row"); // they did not actually save their own side; nothing to mirror
 
   const theirs = read(target);
   const rev = theirs.find(x => x.id === source.id);

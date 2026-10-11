@@ -689,7 +689,7 @@ export class TieDialog extends ApplicationV2 {
      * player was never shown the other side to begin with — a line of chat about it would
      * only describe a thing they cannot act on. The window closing is the receipt.
      */
-    void mirrored;
+    log.debug$?.("tie saved", { sourceId: source.id, targetId: target.id, mirrored });
 
     return true;
   }

@@ -68,13 +68,17 @@ import { readFlag } from "../lib/flags.mjs";
  *     when something was found cannot be watched.
  */
 export async function inspect(character, subject) {
-  if (!mayWrite()) return false;
-  if (!character?.isOwner || !subject) return false;
+  const refused = reason => {
+    log.debug$?.("inspect refused", { reason, characterId: character?.id ?? null, subjectId: subject?.id ?? null });
+    return false;
+  };
+  if (!mayWrite()) return refused("playerAccess");
+  if (!character?.isOwner || !subject) return refused(character?.isOwner ? "no subject" : "not the owner");
   if (!game.users?.activeGM) {
     ui.notifications.warn(t("known.study.notify.noGM"));
     return false;
   }
-  if (!combatAllows(character)) return false;
+  if (!combatAllows(character)) return refused("one inspection per combatant per round");
 
   /*
    * ⚠ The stub is posted HERE, by the client that made the gesture — not by the GM handler.
@@ -221,7 +225,8 @@ async function runCascade(character, subject, release = []) {
   const grants = {};
   let held = false;
 
-  for (let guard = 0; guard < 24; guard++) {
+  let guard = 0;
+  for (; guard < 24; guard++) {
     const step = planStep({
       registry: reg(),
       carried: attributeIdsOf(subject, kindActorOf),
@@ -311,6 +316,7 @@ async function runCascade(character, subject, release = []) {
     }
   }
 
+  if (guard === 24) log.debug$?.("cascade stopped at its 24-step guard", { characterId: character.id, subjectId: subject.id });
   await commitGrants(character, grants);
   if (held) await promptCascadeDeliver(character, subject);
   return true;
