@@ -47,7 +47,15 @@ let guard = (label, fn) => fn;
 
 export function setEditing(region, on) {
   if (on) editing.add(region.uuid); else editing.delete(region.uuid);
-  if (canvas?.ready) drawBadges();
+  if (canvas?.ready) redrawNow();
+}
+
+/**
+ * A fire-and-forget draw (edit toggle, canvasReady): nothing awaits it, so a failed draw warns
+ * `pentaryn-portals | badge redraw failed` instead of an unattributed rejection (-27).
+ */
+function redrawNow() {
+  drawBadges().catch(err => log?.warn("badge redraw failed", err));
 }
 
 export async function drawBadges() {
@@ -295,10 +303,10 @@ export function install(reg, ctx) {
   guard = reg.guard;
   configureCardApp({ setEditing, guard: reg.guard });
   queueDraw = foundry.utils.debounce(() => {
-    if (canvas?.ready) drawBadges().catch(err => log.warn("badge redraw failed", err));
+    if (canvas?.ready) redrawNow();
   }, REDRAW_MS);
   for (const h of REGION_HOOKS) reg.on(h, () => { if (canvas?.ready) queueDraw(); }, { guard: false, label: "badges redraw" });
-  reg.on("canvasReady", () => { bindBoard(); drawBadges(); }, { guard: false, label: "badges draw" });
+  reg.on("canvasReady", () => { bindBoard(); redrawNow(); }, { guard: false, label: "badges draw" });
   // hot: badges — refreshBadgeSight walks only the badge list, never the scene
   reg.on("sightRefresh", () => { if (badges.length && !game.user.isGM) refreshBadgeSight(); }, { guard: false, label: "badges sight" });
   reg.on("canvasTearDown", onCanvasTearDown, { guard: false, label: "badges teardown" });
