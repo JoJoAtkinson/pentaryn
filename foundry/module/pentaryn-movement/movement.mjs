@@ -408,8 +408,9 @@ for (const h of ["createCombat", "updateCombat", "deleteCombat", "createCombatan
   Hooks.on(h, () => queueRefresh());
 }
 
-// pentaryn-importer replaces game.pentaryn with a frozen object in its own ready hook; defer a
-// tick and rebuild rather than assign (same as pentaryn-journal / -portals / -dropbin).
+// Published one tick after ready (publishing synchronously is a declared step of the migration). The
+// importer merges into game.pentaryn and nothing freezes it since its keystone (items-journal-1), so
+// the old frozen-root guard is gone (kit 1.0.2, J10): the API is assigned into the plain root.
 Hooks.once("ready", () => setTimeout(() => {
   const api = {
     status,
@@ -427,7 +428,6 @@ Hooks.once("ready", () => setTimeout(() => {
     pinsUnderTokens,
     core
   };
-  const current = game.pentaryn;
-  if (current && !Object.isExtensible(current)) game.pentaryn = { ...current, movement: api };
-  else { game.pentaryn ??= {}; game.pentaryn.movement = api; }
+  game.pentaryn ??= {};
+  game.pentaryn.movement = api;
 }, 0));
