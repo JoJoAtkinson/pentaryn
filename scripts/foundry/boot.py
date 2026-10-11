@@ -235,11 +235,30 @@ def decide(from_: str | None, interactive: bool, *, st=None, adopt: bool = True)
                         newest=is_newest)
 
     # 10.
-    return _prompt(offer, rolling, state, warning, relation)
+    return _prompt(offer, rolling, state, warning, relation, st=st)
+
+
+def _bundle_line(st, snap: Snapshot) -> str | None:
+    """What a restore of `snap` would download beyond the world tar (module bundles §3.8);
+    None for a full snapshot or any failure — a cost estimate never stops a boot."""
+    if st is None:
+        return None
+    try:
+        cost = cloud.restore_cost(st, snap)
+        if cost is None:
+            return None
+        _world, n, size = cost
+        if n == 0:
+            return "(every bundle is already on this machine)"
+        word = "bundle" if n == 1 else "bundles"
+        every = "all " if n == getattr(cost, "total", None) and n > 1 else ""
+        return f"+ {every}{n} {word} ({_gb(size)}) to fetch"
+    except Exception:  # noqa: BLE001
+        return None
 
 
 def _prompt(newest: Snapshot, rolling: list[Snapshot], state: bootstate.BootState,
-            warning: str | None, relation: str = "newer") -> Decision:
+            warning: str | None, relation: str = "newer", *, st=None) -> Decision:
     """Ask about `newest` — the snapshot on offer (normally the newest in the cloud)."""
     others = [s for s in sorted(rolling, key=lambda s: (s.mtime, s.name), reverse=True)
               if s.name != newest.name][:MAX_OTHERS]
@@ -262,6 +281,9 @@ def _prompt(newest: Snapshot, rolling: list[Snapshot], state: bootstate.BootStat
     print()
     say(f"    cloud    {newest.name}   {newest.host_label}   {_utc(newest.mtime)}   "
         f"{newest.core or '?'}   {_gb(newest.size)}")
+    extra = _bundle_line(st, newest)
+    if extra:
+        say(f"    {extra}")
     if state.based_on:
         say(f"    local    based on {state.based_on}   {state.based_on_host or 'untagged'}   "
             f"{_utc(state.based_on_mtime)}")
