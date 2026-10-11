@@ -47,3 +47,23 @@ test("prompts-lookup-10: findItem/notFound/suggest live in packs-adapter; charac
   const ch = await import("../character-adapter.mjs");
   for (const k of ["findItem", "notFound", "suggest"]) assert.equal(ch[k], packs[k], k);
 });
+
+test("prompts-lookup-24: tokenDataFrom — toObject minus _id, x/y (snapped on request), extra as given", async () => {
+  const { tokenDataFrom } = await import("../tokens-adapter.mjs");
+  const made = [];
+  const actor = {
+    getTokenDocument: async (pos, opts) => (made.push([pos, opts.parent]),
+      { toObject: () => ({ _id: "z", name: "A", x: pos.x, y: pos.y, width: 1, flags: {} }), getSnappedPosition: p => ({ x: p.x + 1, y: p.y + 2 }) }),
+  };
+  const scene = { id: "s" };
+  assert.deepEqual(await tokenDataFrom(actor, scene, { at: { x: 10, y: 20 } }), { name: "A", x: 10, y: 20, width: 1, flags: {} });
+  assert.deepEqual(made[0], [{ x: 10, y: 20 }, scene]);
+  assert.deepEqual(await tokenDataFrom(actor, scene, { at: { x: 10, y: 20 }, snap: true }), { name: "A", x: 11, y: 22, width: 1, flags: {} });
+  const swap = await tokenDataFrom(actor, scene, { at: { x: 10.5, y: 20.5 }, x: 11, y: 21, extra: { elevation: 0, level: null } });
+  assert.deepEqual(swap, { name: "A", x: 11, y: 21, width: 1, flags: {}, elevation: 0, level: null });
+  assert.equal(Object.hasOwn(swap, "level"), true, "a null level passed is an own property");
+  const plain = await tokenDataFrom(actor, scene, { at: { x: 1, y: 2, mode: "same" }, extra: { hidden: false } });
+  assert.equal("level" in plain, false, "no level unless passed");
+  assert.equal("mode" in plain, false);
+  await assert.rejects(tokenDataFrom({}, scene, { at: { x: 0, y: 0 } }), { message: "a.getTokenDocument is not a function" });
+});

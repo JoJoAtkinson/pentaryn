@@ -11,6 +11,7 @@ import { SIZE_BY_KEY } from "./geometry-core.mjs";
 import { DROP_WINDOW_MS, matchesDrop } from "./core/drop.mjs";
 import { isPromptToken, markerActor, markerSizeOfActor } from "./markers-adapter.mjs";
 import { cancel as cancelTyping, start as startTyping } from "./typeahead-adapter.mjs";
+import { tokenDataFrom } from "./tokens-adapter.mjs";
 import { settingStrict } from "./settings.mjs";
 import { PromptDialog } from "./dialog.mjs";
 import { hideTip } from "./tip-ui.mjs";
@@ -30,12 +31,8 @@ export async function placeAtCursor(sizeKey, { ticket = null } = {}) {
   const g = canvas.grid.size;
   const w = SIZE_BY_KEY[size].w * g;
   const m = canvas.mousePosition;
-  const td = await actor.getTokenDocument({ x: m.x - w / 2, y: m.y - w / 2 }, { parent: canvas.scene });
-  const snapped = td.getSnappedPosition({ x: m.x - w / 2, y: m.y - w / 2 });
-  const data = td.toObject();
-  delete data._id;
-  Object.assign(data, { x: snapped.x, y: snapped.y, elevation: canvas.level?.elevation?.base ?? 0 });
-  if (canvas.level?.id) data.level = canvas.level.id;
+  const data = await tokenDataFrom(actor, canvas.scene, { at: { x: m.x - w / 2, y: m.y - w / 2 }, snap: true,
+    extra: { elevation: canvas.level?.elevation?.base ?? 0, ...(canvas.level?.id ? { level: canvas.level.id } : {}) } });
   let tok;
   try {
     [tok] = await canvas.scene.createEmbeddedDocuments("Token", [data], { pentarynPrompts: { placed: true } });

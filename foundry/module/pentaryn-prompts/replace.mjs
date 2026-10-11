@@ -29,6 +29,7 @@ import { resolveCharacter, buildCharacter, previewCharacter, findItem, notFound 
 import { checkNpc, createNpc } from "./npc-adapter.mjs";
 import { fixAttunement } from "./build-core.mjs";
 import { specFileUrl } from "./core/text.mjs";
+import { tokenDataFrom } from "./tokens-adapter.mjs";
 import { renderReplace, planRow, resultRow, sheetLine, createdText, needsDryRun, goneMessage } from "./readback-core.mjs";
 import { KINDS, SPEC_DIR } from "./prompts-core.mjs";
 import { SIZE_WORDS, parseCr } from "./core/size.mjs";
@@ -359,11 +360,8 @@ async function planOne(e) {
           "prototypeToken.flags.dnd5e.lockSize": true,
           [`flags.${MODULE}.provenance`]: prov
         });
-        const td = await actor.getTokenDocument({ x: pos.x, y: pos.y }, { parent: scene });
-        const data = td.toObject();
-        delete data._id;
-        Object.assign(data, { x: pos.x, y: pos.y, width: size, height: size, hidden, name: spec.name ?? w.name });
-        if (marker.level) data.level = marker.level;
+        const data = await tokenDataFrom(actor, scene, { at: pos,
+          extra: { width: size, height: size, hidden, name: spec.name ?? w.name, ...(marker.level ? { level: marker.level } : {}) } });
         foundry.utils.setProperty(data, "texture.src", icon);
         foundry.utils.setProperty(data, "flags.item-piles.data", merged);
         foundry.utils.setProperty(data, "flags.dnd5e.lockSize", true);
@@ -461,11 +459,7 @@ function estimateXp({ spec, w, ref, npc }) {
 /** The placed token's data from an actor: position, hidden, lockSize, level, name, art, ring. */
 async function tokenData(a, e, prov, { pos, hidden, lockSize, ring = e.spec.ring }) {
   const { spec, scene, marker } = e;
-  const td = await a.getTokenDocument({ x: pos.x, y: pos.y }, { parent: scene });
-  const data = td.toObject();
-  delete data._id;
-  Object.assign(data, { x: pos.x, y: pos.y, hidden });
-  if (marker.level) data.level = marker.level;
+  const data = await tokenDataFrom(a, scene, { at: pos, extra: { hidden, ...(marker.level ? { level: marker.level } : {}) } });
   if (spec.name) data.name = spec.name;
   if (spec.img) foundry.utils.setProperty(data, "texture.src", spec.img);
   if (spec.disposition) {

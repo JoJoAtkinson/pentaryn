@@ -20,6 +20,7 @@ import {
 import { markerSizeOfToken, promptText, markerActor, art, EMPTY_TINT, FULL_TINT } from "./markers-adapter.mjs";
 import { panelFor, resolveItemEmbeds } from "./scene-adapter.mjs";
 import { cancel as cancelTyping, start as startTyping, take as takeTyped } from "./typeahead-adapter.mjs";
+import { tokenDataFrom } from "./tokens-adapter.mjs";
 import { setting } from "./settings.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -372,10 +373,9 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
     const g = scene.dimensions.size;
     const cx = tok.x + tok.width * g / 2, cy = tok.y + tok.height * g / 2;
     const w = SIZE_BY_KEY[size].w * g;
-    const td = await actor.getTokenDocument({ x: cx - w / 2, y: cy - w / 2 }, { parent: scene });
-    const data = td.toObject();
-    delete data._id;
-    Object.assign(data, { x: Math.round(cx - w / 2), y: Math.round(cy - w / 2), elevation: tok.elevation, level: tok.level });
+    // elevation and level copied unconditionally (a null level stays an own property)
+    const data = await tokenDataFrom(actor, scene, { at: { x: cx - w / 2, y: cy - w / 2 },
+      x: Math.round(cx - w / 2), y: Math.round(cy - w / 2), extra: { elevation: tok.elevation, level: tok.level } });
     foundry.utils.setProperty(data, `flags.${MODULE}.prompt`, this.#saved);
     foundry.utils.setProperty(data, `flags.${MODULE}.updatedAt`, Date.now());
     // a replace still holding the old id can say "resized (now marker X)" instead of a bare MARKER_GONE
