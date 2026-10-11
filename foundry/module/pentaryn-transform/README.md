@@ -66,7 +66,8 @@ refunds the use. API: `game.pentaryn.transform.starry.{assume, end, active, cons
 ## Playtest fixes (0.3.3, wave-1 play test PT3)
 
 - **Return without a revert item (PT3-3).** A druid whose form carries no item flagged
-  `revert` still gets "Return to {name}" (the druid's portrait, highlighted) on the Bonus bar; it
+  `revert` still gets "Return to {name}" (the druid's portrait, highlighted) on the Bonus bar of a
+  Wild Shape form (not a Polymorph spell's form, which is not ended as a Bonus Action); it
   runs the same path as the item (`returnToNormal`: bonus pip, then `revert`). A form with the item
   shows only the item.
 - **Starry Form never in a beast form (PT3-4).** Stripped by identity (identifier `starry-form`,

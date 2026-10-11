@@ -117,7 +117,7 @@ export function forms(actor) {
 }
 
 /** True for a form made by the Wild Shape preset. */
-function isWildShapeForm(actor) {
+export function isWildShapeForm(actor) {
   return !!actor?.isPolymorphed && actor.getFlag("dnd5e", "transformOptions")?.preset === "wildshape";
 }
 

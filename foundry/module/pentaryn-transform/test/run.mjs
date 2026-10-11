@@ -443,6 +443,10 @@ check("151 shifted with Talo's revert item → that item, no synthesized duplica
     .filter(p => p.revert || p.item === RV).length, 1);
 check("152 normal form never synthesizes a Return",
   planBonusBar([{ kind: "weaponSet" }], { revertIds: [], shifted: false, hasWildShape: true }).some(p => p.revert), false);
+check("157 a Polymorph form (ownReturn false) gets no synthesized Return; a revert item still shows",
+  [planBonusBar([{ kind: "weaponSet" }], { revertIds: [], shifted: true, revertId: null, hasWildShape: true, ownReturn: false }).some(p => p.revert),
+   planBonusBar([{ kind: "weaponSet" }, { kind: "item", id: RV }], { revertIds: [RV], shifted: true, revertId: RV, hasWildShape: true, ownReturn: false })
+     .some(p => p.item === RV)], [false, true]);
 
 // PT3-4: Starry Form never goes into a beast form, even when its "Consume Wild Shape" target is not
 // the druid's Wild Shape id (a compendium id, a stale id): the PHB takes it "rather than shape-shifting".

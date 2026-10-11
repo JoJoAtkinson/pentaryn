@@ -184,6 +184,15 @@ test("PT3-3: Talo's hand-made revert item keeps working and no Return is synthes
   assert.equal(back[0].item?.id, "returnNormal001", "it is the item's own button");
 });
 
+test("PT3-3: a druid under Polymorph (not Wild Shape) gets no synthesized Return — the spell is not a Bonus Action to end", (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const { wolf } = world();
+  wolf.flags.dnd5e.transformOptions = { preset: "polymorph" };
+  const panel = bonusPanel(wolf);
+  F.fire("renderActionPanelArgonComponent", panel, panel.element, wolf);
+  assert.equal(returnButtons(panel).length, 0);
+});
+
 /* ── PT3-4 ───────────────────────────────────────────────────────────────── */
 
 test("PT3-4: a carried Starry Form never shows on the Bonus bar in a beast form", (t) => {

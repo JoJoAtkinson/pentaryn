@@ -392,16 +392,17 @@ export function formSummary(f) {
  * @param {{ kind: "weaponSet"|"item"|"split"|"other", id?: string, ids?: string[] }[]} slots
  *        Argon's buttons in order; `item`/`split` carry the item ids they show
  * @param {{ wildShapeId: string|null, revertIds: string[], shifted: boolean, revertId: string|null,
- *           hasWildShape: boolean, starryId?: string|null }} ctx
+ *           hasWildShape: boolean, starryId?: string|null, ownReturn?: boolean }} ctx
  *        wildShapeId: the Wild Shape item on THIS actor (null when shifted, it is stripped);
  *        revertId: the revert item to show while shifted (none: a synthesized Return,
- *        `{ revert: true }`, takes its place); hasWildShape: whether the
+ *        `{ revert: true }`, takes its place when `ownReturn` — a Wild Shape form, not a
+ *        Polymorph spell); hasWildShape: whether the
  *        original can Wild Shape at all; starryId: the Starry Form item, replaced by the module's
  *        own Starry Form button right after Wild Shape (normal form only)
  * @returns {({ keep: number } | { item: string, highlight?: boolean } | { revert: true, highlight: true } | { wildshape: true } | { starry: true })[]}
  *          keep = index into `slots`; item = a fresh full-size button for that item id
  */
-export function planBonusBar(slots, { wildShapeId = null, revertIds = [], shifted = false, revertId = null, hasWildShape = false, starryId = null } = {}) {
+export function planBonusBar(slots, { wildShapeId = null, revertIds = [], shifted = false, revertId = null, hasWildShape = false, starryId = null, ownReturn = true } = {}) {
   const reverts = new Set(revertIds);
   const ours = id => id === wildShapeId || reverts.has(id) || (!!starryId && id === starryId);
   const out = [];
@@ -440,7 +441,8 @@ export function planBonusBar(slots, { wildShapeId = null, revertIds = [], shifte
   }
   const front = [];
   // No hand-made revert item on this form: a Return button of the module's own (PT3-3).
-  front.push(revertId ? { item: revertId, highlight: true } : { revert: true, highlight: true });
+  if (revertId) front.push({ item: revertId, highlight: true });
+  else if (ownReturn) front.push({ revert: true, highlight: true });
   if (hasWildShape) front.push({ wildshape: true });
   const ws = slots.findIndex(s => s.kind === "weaponSet");
   const at = ws < 0 ? 0 : out.findIndex(o => o.keep === ws) + 1;

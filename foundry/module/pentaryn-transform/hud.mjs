@@ -14,7 +14,7 @@ import {
   MODULE_ID, EFFECT_ID, activitiesOf, isWildShapeActivity, usesLeft, durationSeconds, formatDuration,
   formSummary, planBonusBar, planWithout, frontRowItems, coveredPanel, hpText, returnLabel, CONSTELLATIONS, STARRY_SECONDS
 } from "./transform-core.mjs";
-import { shift, forms, wildShapeActivity, original, isRevertItem, bonusUsedNow, returnToNormal } from "./transform.mjs";
+import { shift, forms, wildShapeActivity, original, isRevertItem, bonusUsedNow, returnToNormal, isWildShapeForm } from "./transform.mjs";
 import {
   STARRY_EFFECT_ID, starryItem, wildShapeItemOf, hasTwinkling, activeStarry, constellationOf, starrySecondsLeft,
   constellationLabel, constellationImg, constellationText, constellationActivity, assumeStarry, endStarry
@@ -523,6 +523,7 @@ function composeBonusBar(panel, actor) {
     revertIds: revertItems.map(i => i.id),
     shifted,
     revertId: shifted ? (revertItems[0]?.id ?? null) : null,
+    ownReturn: isWildShapeForm(actor),          // a Polymorph spell is not ended as a Bonus Action
     hasWildShape,
     starryId: starry?.id ?? null
   });
