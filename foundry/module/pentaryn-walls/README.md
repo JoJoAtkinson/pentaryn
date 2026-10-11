@@ -19,7 +19,7 @@ attach the API.
 
 **The compiled engine is on by default.** *Game Settings → Wall Autocomplete → Engine
 backend* toggles between Automatic / Compiled / JavaScript. Both produce identical geometry —
-verified against the same 44 fixtures — so the setting only affects speed. A missing or
+verified against the same fixture corpus (`test/fixtures/corpus.mjs`) — so the setting only affects speed. A missing or
 unloadable `.wasm` degrades to JavaScript automatically; every run reports which engine it
 used and how long it took.
 
@@ -157,8 +157,9 @@ pair with the outer's and bridge the two.
 | --- | --- |
 | `wall-engine.mjs` | The engine. Pure geometry — no Foundry APIs, no globals, no I/O. |
 | `pentaryn-walls.mjs` | Glue: read the scene, call the engine, commit in two batches, report. |
-| `test/fixtures.mjs` | The corpus — the design doc's traces plus the adversarial cases. |
-| `test/run.mjs` | Runner. No dependencies. `--backend=<name>` to validate another backend. |
+| `test/fixtures/corpus.mjs` | The corpus — the design doc's traces plus the adversarial cases. |
+| `test/run.mjs` | The gate (`node:test`): every fixture on every available backend, plus the engine goldens and the glue tests. No dependencies. |
+| `test/corpus.mjs` | Manual corpus runner: `-v`, a fixture-name substring, `--backend=<name>` to validate another backend. |
 | `test/bench.mjs` | Scaling curve across registered backends. |
 | `backends.mjs` | Backend registry + `compare()`, the identity check. |
 
@@ -166,8 +167,8 @@ Because the engine is a pure function of the input coordinates, effectively all 
 testable with Foundry not running:
 
 ```bash
-node foundry/module/pentaryn-walls/test/run.mjs        # or `make foundry-walls-test`
-node foundry/module/pentaryn-walls/test/run.mjs -v D1  # one fixture, with its mutation log
+node foundry/module/pentaryn-walls/test/run.mjs           # or `make foundry-walls-test`
+node foundry/module/pentaryn-walls/test/corpus.mjs -v D1  # one fixture, with its mutation log
 ```
 
 ---
@@ -192,7 +193,7 @@ These are the reasons to trust it on a scene you have drawn by hand:
 ## Compiled backend (side-by-side)
 
 **Built and on by default.** `wall-engine.wasm` is a Rust port compiled to
-`wasm32-unknown-unknown`, ~12x faster than the JS engine and passing all 44 fixtures.
+`wasm32-unknown-unknown`, ~12x faster than the JS engine and passing the whole fixture corpus (except the two Levels fixtures — it ignores wall levels today, senses-walls-cursors-2).
 
     rooms   walls in   js       wasm
     10x10   400        106 ms   11 ms
@@ -213,7 +214,7 @@ What exists now:
 ```bash
 make foundry-walls-bench          # scaling curve, all registered backends
 make foundry-walls-bench N=20     # extend the sweep
-node test/run.mjs --backend=js    # run all 44 fixtures against a named backend
+node test/corpus.mjs --backend=js # run the whole corpus against a named backend
 ```
 
 `backends.mjs` holds the registry. A backend is `{name, run(walls, opts), available()}`
@@ -255,7 +256,7 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh   # then: rustup 
 yields the same walls. C/C++ compilers contract `a*b+c` into FMA and reorder float
 expressions by default, and `-ffast-math` is worse — either can change a result in the last
 bits, which is enough to flip a tolerance comparison. Build with `-ffp-contract=off` and no
-fast-math. The 44 fixtures will catch a divergence, but expect to spend the time on flags.
+fast-math. The fixture corpus will catch a divergence, but expect to spend the time on flags.
 
 **Not recommended: a C++ round-trip over HTTP/IPC.** It needs a server process alongside
 Foundry and reintroduces a real bridge — the one cost this design currently doesn't pay.
