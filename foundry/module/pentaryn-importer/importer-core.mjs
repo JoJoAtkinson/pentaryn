@@ -311,6 +311,24 @@ function getPath(object, key) {
   return target;
 }
 
+/**
+ * slug → the FIRST actor that carries it (the one `Array.find` used to return), skipping falsy
+ * slugs. Built once per run instead of scanning every world actor per manifest entry
+ * (items-journal-7). `slugOf` reads the slug; the adapter passes `foundry.utils.getProperty` for live
+ * Documents, the default is `getPath` (the same body) for plain objects.
+ * @param {Iterable<object>} actors
+ * @param {(actor: object) => *} [slugOf]
+ * @returns {Map<*, object>}
+ */
+function indexBySlug(actors, slugOf = actor => getPath(actor, `flags.${FLAG_SCOPE}.slug`)) {
+  const index = new Map();
+  for (const actor of actors) {
+    const slug = slugOf(actor);
+    if (slug && !index.has(slug)) index.set(slug, actor);
+  }
+  return index;
+}
+
 /* -------------------------------------------------------------------------------------------- */
 /*  Version gate rules (CONTRACT.md §1.1)                                                         */
 /* -------------------------------------------------------------------------------------------- */
@@ -545,6 +563,6 @@ function assertionMessage({ slug, action, activityId, path, expected, actual, hi
 export {
   FLAG_SCOPE, CONTRACT_ID, DEFAULT_TIMEOUT_MS, FORMULA_OK, FORMULA_GLOBS, FORMULA_PATTERNS,
   STRIPPED_KEYS, STRIPPED_ACTOR_KEYS, STRIPPED_ITEM_KEYS, PentarynError, PentarynAbort, PentarynAssertionError,
-  isPlainObject, normalise, cloneJson, walkStrings, walkLeaves, getPath, versionProblems, lintFormulas,
+  isPlainObject, normalise, cloneJson, walkStrings, walkLeaves, getPath, indexBySlug, versionProblems, lintFormulas,
   preparePayload, toUpdatePayload, toCreatePayload, valuesMatch, assertionMessage,
 };

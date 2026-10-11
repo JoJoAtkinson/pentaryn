@@ -91,8 +91,6 @@ GM). A thrown `PentarynAssertionError` means the batch is partial. Per-actor fai
 
 - A second `import()` while one is running is refused on the same tab only; the bridge tab and a
   browser GM tab can still overlap. Run imports from one place.
-- Each manifest entry scans every world actor for its slug (`items-journal-7`); fine at today's
-  sizes.
 - The payloads still use the dnd5e 5.3 shapes (`movement.walk`, `init.bonus`); dnd5e 6 migrates
   them until 7.0. Moving them is the `@2` contract bump.
 - The module cannot delete `actors.json` itself (Foundry has no client file-delete API).

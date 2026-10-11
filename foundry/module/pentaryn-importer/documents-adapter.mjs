@@ -11,7 +11,7 @@
 
 import {
   CONTRACT_ID, DEFAULT_TIMEOUT_MS, FLAG_SCOPE, MODULE, PentarynAbort, PentarynAssertionError,
-  assertionMessage, isPlainObject, lintFormulas, valuesMatch, versionProblems, walkLeaves
+  assertionMessage, indexBySlug, isPlainObject, lintFormulas, valuesMatch, versionProblems, walkLeaves
 } from "./importer-core.mjs";
 import { makeLog } from "./lib/log.mjs";
 
@@ -389,16 +389,16 @@ function runExpectedAssertions(actor, expected, slug) {
 /* -------------------------------------------------------------------------------------------- */
 
 /**
- * Find the Actor this slug owns.
+ * Every world Actor by the slug it owns, first one wins (as `game.actors.find` did per entry before
+ * items-journal-7). Built once per run; the run adds the Actors it creates.
  *
  * NOT `getFlag` — see the header note: `Document#getFlag` throws for a scope that is not an
  * active package id, and "pentaryn" is not this module's id.
  *
- * @param {string} slug
- * @returns {Actor|undefined}
+ * @returns {Map<string, Actor>}
  */
-function findActorBySlug(slug) {
-  return game.actors.find(a => foundry.utils.getProperty(a, `flags.${FLAG_SCOPE}.slug`) === slug);
+function indexActorsBySlug() {
+  return indexBySlug(game.actors, a => foundry.utils.getProperty(a, `flags.${FLAG_SCOPE}.slug`));
 }
 
 /** @param {Document} doc @returns {string|undefined} */
@@ -531,6 +531,6 @@ function reportSummary({ counts, created, updated, skipped, failed, dryRun, url,
 export {
   TAG, log, shout, refuse, failAssertion, fetchJsonWithTimeout, moduleExpectations,
   assertVersionGate, assertNoBadFormulas, assertValue, assertPrototypeToken, assertActivityIdsSurvived,
-  runExpectedAssertions, findActorBySlug, storedHash, isManagedItem, replaceItems, stampContentHash,
+  runExpectedAssertions, indexActorsBySlug, storedHash, isManagedItem, replaceItems, stampContentHash,
   reportSummary
 };

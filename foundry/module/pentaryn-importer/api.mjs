@@ -10,7 +10,7 @@ import {
 } from "./importer-core.mjs";
 import {
   TAG, assertActivityIdsSurvived, assertNoBadFormulas, assertPrototypeToken, assertVersionGate,
-  failAssertion, fetchJsonWithTimeout, findActorBySlug, log, refuse, replaceItems, reportSummary,
+  failAssertion, fetchJsonWithTimeout, indexActorsBySlug, log, refuse, replaceItems, reportSummary,
   runExpectedAssertions, shout, stampContentHash, storedHash
 } from "./documents-adapter.mjs";
 import { MANIFEST } from "./api-manifest.mjs";
@@ -128,6 +128,7 @@ async function importOnce({ path, dryRun, only, force, timeout, unmanagedItems }
   let selected = 0;
 
   const ActorClass = getDocumentClass("Actor");
+  const bySlug = indexActorsBySlug();
 
   for (const entry of manifest.actors) {
     /** @type {ReturnType<typeof preparePayload>} */
@@ -147,7 +148,7 @@ async function importOnce({ path, dryRun, only, force, timeout, unmanagedItems }
     const incomingHash = foundry.utils.getProperty(entry, `flags.${FLAG_SCOPE}.contentHash`);
 
     try {
-      const existing = findActorBySlug(slug);
+      const existing = bySlug.get(slug);
 
       // ── skip on unchanged content (§9.2) ─────────────────────────────────────────────────────
       // Two strings compared. The module never recomputes the hash: a canonical-JSON
@@ -174,6 +175,7 @@ async function importOnce({ path, dryRun, only, force, timeout, unmanagedItems }
       } else {
         actor = await ActorClass.create(toCreatePayload(data), { renderSheet: false });
         if (!actor) throw new Error("Actor.create returned nothing");
+        bySlug.set(slug, actor);                 // a later entry with the same slug updates it
         created.push(slug);
       }
 
