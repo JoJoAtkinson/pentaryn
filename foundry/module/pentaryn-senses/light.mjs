@@ -21,40 +21,23 @@
  */
 
 import {
-  MODULE, SPELL_LIGHT, profileFor, profileKey, isLit, isHooded, isLightSpellData, isLightToggle, lightingItemId,
+  MODULE, FLAGS, SPELL_LIGHT, profileFor, profileKey, isLit, isHooded, isLightSpellData, isLightToggle,
   readSpellCast, readSpellLight, castFlag, planSpellLight, spellLightUpdate, restoredLight,
   sourcesUnder, isPHBLightActorSource, torchActivityData, TORCH_ACTIVITY_ID, PHB_LIGHT_ACTOR,
-  collectSources, litByIn, esc, unsetPath
+  esc, unsetPath
 } from "./senses-core.mjs";
 import { coreRollMode } from "./settings.mjs";
 import { isActiveGM, isAnyGM } from "./lib/election.mjs";
+import { realItem, itemFrom, casterToken, allItems, litBy, anyLitBy, allSources, findToken } from "./light-adapter.mjs";
+import { bindActions, cancelPick, decorateCard, decorateSheet, injectHUD, pick, prompt } from "./light-ui.mjs";
 
-const CAST = `flags.${MODULE}.lightCast`;
-const LIT = `flags.${MODULE}.lit`;
-const HOODED = `flags.${MODULE}.hooded`;
-const SPELL = `flags.${MODULE}.spellLight`;
+const { lightCast: CAST, lit: LIT, hooded: HOODED, spellLight: SPELL } = FLAGS;
 const DEBOUNCE_MS = 250;
-const PICK_TIMEOUT_MS = 60_000;
 
-const state = { hooks: [], timers: new Map(), chain: Promise.resolve(), picking: null, reg: null, ctx: null };
+const state = { hooks: [], timers: new Map(), chain: Promise.resolve(), reg: null, ctx: null };
 
 const warn = (label, err) => console.warn(`${MODULE} | light ${label}`, err);
 const L = (key, data) => (data ? game.i18n.format(key, data) : game.i18n.localize(key));
-
-/** The live item behind an activity (dnd5e hands hooks a clone of the item). */
-function realItem(item) {
-  if (!item) return null;
-  return item.actor?.items?.get(item.id) ?? fromUuidSync(item.uuid, { strict: false }) ?? item;
-}
-
-function itemFrom(uuid) {
-  try {
-    const doc = fromUuidSync(uuid, { strict: false });
-    return doc?.documentName === "Item" ? doc : null;
-  } catch {
-    return null;
-  }
-}
 
 /* -------------------------------------------- */
 /*  Casting (any client that owns the item)     */
@@ -108,15 +91,6 @@ export async function end(item) {
   return true;
 }
 
-/** The caster's token on the scene being viewed: a controlled one first. */
-function casterToken(actor) {
-  const scene = canvas?.scene;
-  if (!actor || !scene) return null;
-  if (actor.isToken) return actor.token?.parent === scene ? actor.token : null;
-  const mine = scene.tokens.filter(t => t.actorId === actor.id);
-  return mine.find(t => t.object?.controlled) ?? mine.find(t => t.actorLink) ?? mine[0] ?? null;
-}
-
 export async function onMe(item) {
   item = realItem(item);
   if (!canvas?.scene) return ui.notifications.warn(L("PENTARYN_SENSES.Light.NoScene"));
@@ -129,116 +103,6 @@ export async function pickAndCast(item) {
   const target = await pick();
   if (target) return cast(item, target);
   return false;
-}
-
-/** The "Where does the light go?" prompt, right after the cast. */
-export async function prompt(item) {
-  item = realItem(item);
-  if (!item?.isOwner) return;
-  const DialogV2 = foundry.applications.api.DialogV2;
-  const choice = await DialogV2.wait({
-    window: { title: L("PENTARYN_SENSES.Light.Title"), icon: "fa-solid fa-lightbulb" },
-    content: `<p>${esc(L("PENTARYN_SENSES.Light.Where"))}</p>`,
-    buttons: [
-      { action: "me", label: L("PENTARYN_SENSES.Light.OnMe"), icon: "fa-solid fa-user", default: true },
-      { action: "pick", label: L("PENTARYN_SENSES.Light.Pick"), icon: "fa-solid fa-crosshairs" },
-      { action: "cancel", label: L("PENTARYN_SENSES.Light.NotNow"), icon: "fa-solid fa-xmark" }
-    ],
-    rejectClose: false
-  });
-  if (choice === "me") return onMe(item);
-  if (choice === "pick") return pickAndCast(item);
-}
-
-/* -------------------------------------------- */
-/*  The picker                                  */
-/* -------------------------------------------- */
-
-/**
- * The top-most token a player can see under a canvas point, else that square's centre.
- * A pentaryn-aoe area handle is not a creature (it sits at every area's centre and dies with the
- * area): clicking it lights the square.
- */
-function hitAt(p) {
-  const hits = (canvas.tokens?.placeables ?? []).filter(t => t.visible && t.bounds?.contains(p.x, p.y)
-    && !t.document?.flags?.["pentaryn-aoe"]?.handle);
-  hits.sort((a, b) => ((a.document.elevation ?? 0) - (b.document.elevation ?? 0)) || ((a.document.sort ?? 0) - (b.document.sort ?? 0)));
-  const top = hits.at(-1);
-  if (top) return { scene: canvas.scene.id, token: top.document.id };
-  const c = canvas.grid?.getCenterPoint?.(p) ?? p;
-  return { scene: canvas.scene.id, x: Math.round(c.x), y: Math.round(c.y) };
-}
-
-/**
- * Click a token or a square. → {scene, token} | {scene, x, y} | null (right-click, Esc, 60 s, or the
- * scene changing). Listens in the capture phase on window so the token layer never sees the click.
- */
-export function pick() {
-  if (!canvas?.ready || !canvas.scene) {
-    ui.notifications.warn(L("PENTARYN_SENSES.Light.NoScene"));
-    return Promise.resolve(null);
-  }
-  state.picking?.cancel();
-  // An open Combat HUD panel (Cast Spell) covers the map; the pick click landed on a spell behind
-  // it (usability Area 6 re-run, W10). Close Argon's panels first, as Argon does for another panel.
-  try { ui.ARGON?.collapseAllPanels?.(); } catch (e) { warn("collapse HUD panels", e); }
-  const view = canvas.app?.view ?? canvas.app?.canvas;
-  return new Promise(resolve => {
-    let done = false;
-    const swallow = ev => { if (ev.target === view) { ev.stopImmediatePropagation(); ev.preventDefault(); } };
-    const swallowOnce = (type) => {
-      const fn = ev => { swallow(ev); window.removeEventListener(type, fn, true); };
-      window.addEventListener(type, fn, true);
-      setTimeout(() => window.removeEventListener(type, fn, true), 800);
-    };
-    const finish = (result) => {
-      if (done) return;
-      done = true;
-      window.removeEventListener("pointerdown", onDown, true);
-      window.removeEventListener("keydown", onKey, true);
-      view?.classList.remove("ps-picking");
-      document.body.classList.remove("ps-picking");
-      clearTimeout(timer);
-      try {
-        if (note) (note.remove ? note.remove() : ui.notifications.remove(note));
-      } catch (e) {
-        warn("pick note", e);
-      }
-      if (state.picking === handle) state.picking = null;
-      resolve(result);
-    };
-    const onDown = ev => {
-      if (ev.target !== view) return;
-      ev.stopImmediatePropagation();
-      ev.preventDefault();
-      swallowOnce("pointerup");
-      if (ev.button === 2) {
-        swallowOnce("contextmenu");
-        return finish(null);
-      }
-      if (ev.button !== 0) return;
-      try {
-        finish(hitAt(canvas.canvasCoordinatesFromClient({ x: ev.clientX, y: ev.clientY })));
-      } catch (e) {
-        warn("pick", e);
-        finish(null);
-      }
-    };
-    const onKey = ev => {
-      if (ev.key !== "Escape") return;
-      ev.stopImmediatePropagation();
-      ev.preventDefault();
-      finish(null);
-    };
-    const handle = { cancel: () => finish(null) };
-    state.picking = handle;
-    window.addEventListener("pointerdown", onDown, true);
-    window.addEventListener("keydown", onKey, true);
-    view?.classList.add("ps-picking");
-    document.body.classList.add("ps-picking");
-    const note = ui.notifications.info(L("PENTARYN_SENSES.Light.PickHint"), { permanent: true });
-    const timer = setTimeout(() => finish(null), PICK_TIMEOUT_MS);
-  });
 }
 
 /* -------------------------------------------- */
@@ -325,33 +189,6 @@ async function ensureTorchActivity(item) {
 /* -------------------------------------------- */
 /*  GM reconcile                                */
 /* -------------------------------------------- */
-
-/** Every item the GM can reach: world actors', unlinked tokens' synthetic actors', world items. */
-function allItems({ worldItems = false } = {}) {
-  const out = [];
-  for (const a of game.actors ?? []) out.push(...a.items);
-  for (const s of game.scenes ?? []) for (const t of s.tokens) {
-    if (!t.actorLink && t.actor) out.push(...t.actor.items);
-  }
-  if (worldItems) out.push(...(game.items ?? []));
-  return out;
-}
-
-/** Every Token and AmbientLight on every scene lit by this source. */
-const litBy = source => litByIn(game.scenes ?? [], source);
-const anyLitBy = source => litBy(source).length > 0;
-
-const allSources = () => collectSources(game.scenes ?? []);
-
-function findToken(id, hint) {
-  const first = game.scenes.get(hint)?.tokens.get(id);
-  if (first) return first;
-  for (const s of game.scenes) {
-    const t = s.tokens.get(id);
-    if (t) return t;
-  }
-  return null;
-}
 
 async function tellOwners(item, key) {
   try {
@@ -487,7 +324,9 @@ async function tidyOldSummons() {
       let from = null;
       try {
         from = fromUuidSync(origin, { strict: false });
-      } catch { /* unresolvable */ }
+      } catch (e) {
+        state.ctx?.log.debug("summon origin unresolvable", e);
+      }
       const spell = from?.documentName === "Item" ? from : from?.item ?? null;
       const base = game.actors.get(t.actorId);
       const phb = isPHBLightActorSource(base?._stats?.compendiumSource) || isPHBLightActorSource(base?.flags?.core?.sourceId);
@@ -500,166 +339,6 @@ async function tidyOldSummons() {
     }
   }
   return removed;
-}
-
-/* -------------------------------------------- */
-/*  The spell card                              */
-/* -------------------------------------------- */
-
-/** An action-row entry shaped like dnd5e 6's own (templates/chat/parts/card-buttons.hbs). */
-function cardButton(icon, label, act) {
-  const li = document.createElement("li");
-  const b = document.createElement("button");
-  b.type = "button";
-  b.className = "icon";
-  b.dataset.psLight = act;
-  b.dataset.tooltip = label;
-  b.setAttribute("aria-label", label);
-  b.innerHTML = `<i class="${icon}" inert></i>`;
-  li.append(b);
-  return li;
-}
-
-/** The card's action row (`section.icon-row` holding a plain `ul.unlist`, not the pill rows). */
-function actionList(root) {
-  for (const ul of root.querySelectorAll("section.icon-row > ul.unlist")) {
-    if (!ul.classList.contains("pills")) return ul;
-  }
-  return null;
-}
-
-function decorateCard(message, html) {
-  if (!message || message.type !== "usage") return;
-  const uuid = message.system?.item?.uuid;
-  if (!uuid) return;
-  const item = itemFrom(uuid);
-  if (!isLightSpellData(item)) return;
-  const root = html instanceof HTMLElement ? html : html?.[0];
-  if (!root) return;
-  // The PHB Light's summon button (not groupable, so it keeps data-action): drop it with its <li>.
-  root.querySelectorAll('[data-action="placeSummons"]').forEach(b => (b.closest("li") ?? b).remove());
-  let list = actionList(root);
-  if (list && !list.children.length) {
-    list.closest("section.icon-row")?.remove();
-    list = null;
-  }
-  if (!item.isOwner) return;
-  if (!list) {
-    const content = root.querySelector(".chat-card") ?? root.querySelector(".message-content");
-    if (!content) return;
-    const section = document.createElement("section");
-    section.className = "icon-row";
-    const lead = document.createElement("i");
-    lead.className = "fa-solid fa-fw fa-circle-play";
-    lead.setAttribute("aria-label", L("DND5E.CHATMESSAGE.Row.Actions"));
-    list = document.createElement("ul");
-    list.className = "unlist";
-    section.append(lead, list);
-    content.append(section);
-  }
-  if (list.querySelector("[data-ps-light]")) return;
-  const row = [
-    cardButton("fa-solid fa-user", L("PENTARYN_SENSES.Light.OnMe"), "me"),
-    cardButton("fa-solid fa-crosshairs", L("PENTARYN_SENSES.Light.Pick"), "pick"),
-    cardButton("fa-solid fa-lightbulb-slash", L("PENTARYN_SENSES.Light.End"), "end")
-  ];
-  for (const li of row) {
-    const b = li.firstElementChild;
-    b.addEventListener("click", ev => {
-      ev.preventDefault();
-      ev.stopPropagation();
-      const live = itemFrom(uuid);
-      if (!live) return;
-      const act = b.dataset.psLight;
-      const p = act === "me" ? onMe(live) : act === "pick" ? pickAndCast(live) : end(live);
-      Promise.resolve(p).catch(e => warn(`card ${act}`, e));
-    });
-    list.append(li);
-  }
-}
-
-/* -------------------------------------------- */
-/*  Inventory row: flame (and hood)             */
-/* -------------------------------------------- */
-
-function rowButton(cls, icon, tip, disabled, onClick) {
-  const b = document.createElement("button");
-  b.type = "button";
-  b.className = `unbutton config-button item-control ${cls}`;
-  b.dataset.tooltip = tip;
-  b.setAttribute("aria-label", tip);
-  b.innerHTML = `<i class="${icon}" inert></i>`;
-  if (disabled) b.setAttribute("aria-disabled", "true");
-  b.addEventListener("click", ev => {
-    ev.preventDefault();
-    ev.stopPropagation();
-    if (disabled) return;
-    Promise.resolve(onClick()).catch(e => warn("row button", e));
-  });
-  return b;
-}
-
-function decorateSheet(app, element) {
-  const actor = app?.actor ?? app?.document;
-  const root = element instanceof HTMLElement ? element : element?.[0];
-  if (!actor?.items || !root) return;
-  // With two lights lit only the strongest shows on the token; the other flame is drawn dimmer and
-  // says so (usability Area 8, L5: torch + hooded lantern, the hood seemed to do nothing).
-  const lighting = lightingItemId(actor.items);
-  for (const li of root.querySelectorAll("li[data-item-id]")) {
-    const item = actor.items.get(li.dataset.itemId);
-    if (!item || !profileFor(item)) continue;
-    const row = li.querySelector(":scope > .item-row") ?? li;
-    const name = row.querySelector(":scope > .item-name");
-    if (!name || row.querySelector(":scope > .ps-light-controls")) continue;
-    const lit = isLit(item);
-    const locked = !item.isOwner;
-    const cell = document.createElement("div");
-    cell.className = "ps-light-controls";
-    const winner = lit && lighting && lighting !== item.id ? actor.items.get(lighting) : null;
-    const tip = winner ? L("PENTARYN_SENSES.Light.Outshone", { item: esc(winner.name) })
-      : L(lit ? "PENTARYN_SENSES.Light.Douse" : "PENTARYN_SENSES.Light.LightIt");
-    cell.append(rowButton(`ps-light-toggle${lit ? " lit" : ""}${winner ? " outshone" : ""}`, "fa-solid fa-fire",
-      tip, locked, () => toggle(item)));
-    if (lit && profileFor(item)?.hooded) {
-      const hooded = isHooded(item);
-      cell.append(rowButton(`ps-light-hood${hooded ? " hooded" : ""}`, hooded ? "fa-solid fa-eye" : "fa-solid fa-eye-slash",
-        L(hooded ? "PENTARYN_SENSES.Light.HoodRaise" : "PENTARYN_SENSES.Light.HoodLower"), locked, () => hood(item)));
-    }
-    name.after(cell);
-  }
-}
-
-/* -------------------------------------------- */
-/*  Token HUD: End light                        */
-/* -------------------------------------------- */
-
-function injectHUD(app, element) {
-  const doc = app?.object?.document ?? app?.document ?? null;
-  const sl = readSpellLight(doc);
-  if (!sl) return;
-  const item = itemFrom(sl.source);
-  if (!isAnyGM() && !item?.isOwner) return;
-  const root = element instanceof HTMLElement ? element : element?.[0];
-  const col = root?.querySelector(".col.right") ?? root?.querySelector(".right");
-  if (!col || col.querySelector(".ps-light-end")) return;
-  const tip = L("PENTARYN_SENSES.Light.End");
-  const btn = document.createElement("button");
-  btn.type = "button";
-  btn.className = "control-icon ps-light-end";
-  btn.dataset.tooltip = tip;
-  btn.setAttribute("aria-label", tip);
-  btn.innerHTML = `<i class="fa-solid fa-lightbulb-slash"></i>`;
-  btn.addEventListener("click", ev => {
-    ev.preventDefault();
-    ev.stopPropagation();
-    (async () => {
-      if (item?.isOwner) await end(item);
-      else if (isAnyGM()) run(sl.source); // the item is gone: put the orphan out
-      app.render?.();
-    })().catch(e => warn("hud click", e));
-  });
-  col.appendChild(btn);
 }
 
 /* -------------------------------------------- */
@@ -695,7 +374,7 @@ export function uninstall() {
   for (const id of state.hooks.splice(0)) state.reg?.off(id);
   for (const t of state.timers.values()) clearTimeout(t);
   state.timers.clear();
-  state.picking?.cancel();
+  cancelPick();
 }
 
 export const api = {
@@ -708,13 +387,14 @@ export function install(reg, ctx) {
   state.reg = reg;
   state.ctx = ctx;
   ctx.expose({ lightApi: api });
+  bindActions({ cast, end, onMe, pickAndCast, toggle, hood, run });
 
   on("dnd5e.preUseActivity", onUse);
   on("dnd5e.postUseActivity", onUsed);
   on("dnd5e.renderChatMessage", decorateCard);
   on("renderBaseActorSheet", decorateSheet);
   on("renderTokenHUD", injectHUD);
-  on("canvasTearDown", () => state.picking?.cancel());
+  on("canvasTearDown", () => cancelPick());
 
   // A Torch that arrives after setupLight (bought, looted, dragged from a compendium) gets its
   // Light activity at once, from the GM (usability Area 6 re-run, W11: it had no flame button
