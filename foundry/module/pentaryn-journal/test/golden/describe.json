@@ -336,7 +336,8 @@
     "writes": [
       "flags.pentaryn-journal.kind",
       "flags.pentaryn-journal.userId",
-      "flags.pentaryn-journal.source"
+      "flags.pentaryn-journal.source",
+      "flags.pentaryn-journal.claims.ensure"
     ],
     "reads": [
       "flags.item-piles.data"

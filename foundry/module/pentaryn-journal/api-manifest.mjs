@@ -139,7 +139,8 @@ export const MANIFEST = Object.freeze({
     },
   ],
   flags: {
-    writes: ["flags.pentaryn-journal.kind", "flags.pentaryn-journal.userId", "flags.pentaryn-journal.source"],
+    writes: ["flags.pentaryn-journal.kind", "flags.pentaryn-journal.userId", "flags.pentaryn-journal.source",
+      "flags.pentaryn-journal.claims.ensure"],
     reads: ["flags.item-piles.data"],
   },
   unlisted: CORE_NAMES.map(n => `core.${n}`),
