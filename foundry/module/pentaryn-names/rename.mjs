@@ -40,7 +40,8 @@ export function install(reg, ctx) {
   // Act only on the client that made the change, never on names' own prototype write.
   reg.on("updateActor", (actor, changes, options, userId) => {
     if (userId !== game.user.id || options.pentarynNames || !options.pentarynOldName) return;
-    sync(actor, options.pentarynOldName, actor.name);
+    const from = options.pentarynOldName, to = actor.name;
+    sync(actor, from, to).catch(err => ctx.log.warn("relabel after rename failed", { actor: actor.uuid, from, to }, err));
   }, { label: "updateActor: relabel" });
 }
 

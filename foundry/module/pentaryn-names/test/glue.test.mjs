@@ -12,7 +12,7 @@
 //                                toast text byte-identical; its optional console line is [declared]).
 //   golden/root.json           — game.pentaryn under four load orders (subprocesses). No step may change it.
 //   "module.api is undefined"  — flips at step 5 ([declared] N-D2, SF2).
-//   KNOWN transform-creatures-33 (unhandled rejection) — flips at step 4 ([declared] N-D1).
+//   transform-creatures-33 (unhandled rejection) — flipped at step 4 ([declared] N-D1): logged now.
 //   KNOWN transform-creatures-38 (sync needs a document) — flips at step 6 ([declared] N-D3).
 import { mock, test } from "node:test";
 import assert from "node:assert/strict";
@@ -304,17 +304,18 @@ test("KNOWN transform-creatures-38: api.sync with an id, uuid or name rejects Ty
   assert.deepEqual(effects(F.calls), []);
 });
 
-// KNOWN: transform-creatures-33 — sync() runs fire-and-forget from updateActor with no catch: a failed
-// actor or scene write becomes an unhandled rejection, no `pentaryn-names |` line, no toast. Counted
-// in a subprocess (node:test fails any test that leaks a rejection). Flipped by guide step 4
-// ([declared] N-D1: counter 0, one console.warn "pentaryn-names | relabel after rename failed").
-test("KNOWN transform-creatures-33: a failed relabel write is an unhandled rejection with no module line", () => {
+// [declared] guide step 4 (N-D1, transform-creatures-33): a failed relabel write after a rename is
+// caught and logged — no unhandled rejection, one console.warn "pentaryn-names | relabel after
+// rename failed", still no toast. Counted in a subprocess (node:test fails any test that leaks a
+// rejection, so the old behaviour could only be seen there).
+test("transform-creatures-33: a failed relabel write is logged once with the module prefix, never unhandled", () => {
   for (const [which, reason] of [["reject-actor", "Error: ZZ actor update refused"], ["reject-scene", "Error: ZZ scene update refused"]]) {
     const r = spawnSync(process.execPath, [PROBE, which], { encoding: "utf8" });
     assert.equal(r.status, 0, `${which}: ${r.stderr}`);
     const o = JSON.parse(r.stdout.trim().split("\n").at(-1));
-    assert.deepEqual(o.rejections, [reason], which);
-    assert.deepEqual(o.lines.filter(l => l.slice(1).some(a => typeof a === "string" && a.startsWith(`${MODULE} |`))), [], which);
+    assert.deepEqual(o.rejections, [], which);
+    const ours = o.lines.filter(l => l.slice(1).some(a => typeof a === "string" && a.startsWith(`${MODULE} |`)));
+    assert.deepEqual(ours, [["warn", `${MODULE} | relabel after rename failed`, { actor: `Actor.${IDS.bob}`, from: "Bob", to: "Rob" }, reason]], which);
     assert.deepEqual(o.effects.filter(c => c.op === "notify"), [], `${which}: no toast`);
     assert.equal(o.hookErrors, 0, `${which}: Foundry's Hooks never sees it (the handler returned before the rejection)`);
   }
