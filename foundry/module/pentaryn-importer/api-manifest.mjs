@@ -39,9 +39,10 @@ export const MANIFEST = Object.freeze({
       ],
       doc: "Upsert the generated NPCs from worlds/<world>/actors.json. Run { dryRun: true } first. "
         + "A thrown PentarynAbort means nothing was written (version gate, @ref lint, malformed entry, "
-        + "fetch, non-GM); a thrown PentarynAssertionError means a readback failed and the batch is "
-        + "partial (actors before it were written). Per-actor write failures do not throw: they come "
-        + "back as { ok: false, failed: [{ slug, error }] }.",
+        + "fetch, non-GM, a bad option, an import already running on this tab); a thrown "
+        + "PentarynAssertionError means a readback failed and the batch is partial (actors before it "
+        + "were written). Per-actor write failures do not throw: they come back as "
+        + "{ ok: false, failed: [{ slug, error }] }.",
     },
     {
       path: "selftest",
