@@ -285,12 +285,12 @@ test("spreadArrival: alone, beside someone (edges touch), a hidden or token-flag
   assert.deepEqual(W.callsSince(n, ["update"]), []);
 });
 
-test("spreadArrival: an occupant that is an aoe handle only by its actor flag still counts", async () => {
-  // KNOWN: (-43) disagrees with recordOf; D-P6 makes spreadArrival ignore it too.
+test("spreadArrival: an occupant that is an aoe handle only by its actor flag no longer counts [declared D-P6]", async () => {
+  // [declared] D-P6 (-43): spreadArrival and recordOf now agree (isAoeHandle); it moved the PC before
   const arrived = arrivalScene({ name: "Spirit Guardians (Caven)", actorId: "HANDLEA" });
   const n = F.calls.length;
   await S.spreadArrival(arrived);
-  assert.equal(W.callsSince(n, ["update"]).length, 1);
+  assert.equal(W.callsSince(n, ["update"]).length, 0);
 });
 
 /* ── summons follow ───────────────────────────────────────────────────── */

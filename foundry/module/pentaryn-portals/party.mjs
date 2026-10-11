@@ -12,7 +12,7 @@
  * also deletes with `replacements`, and does not drag anything along.
  */
 
-import { crowded, followersOf, tokenBox } from "./portals-core.mjs";
+import { crowded, followersOf, isAoeHandle, tokenBox } from "./portals-core.mjs";
 import { carryTo, destinationsOf, gmUserIds, landingPlaces, recordOf } from "./scene-adapter.mjs";
 import { setting } from "./settings.mjs";
 import { PARTY_ROWS } from "./api-manifest.mjs";
@@ -43,7 +43,8 @@ export async function spreadArrival(arrived) {
   const dest = arrived.parent;
   const g = dest.grid.size;
   const box = t => tokenBox(t, g);
-  const others = dest.tokens.filter(t => t.id !== arrived.id && !t.hidden && !t.flags?.["pentaryn-aoe"]?.handle).map(box);
+  // An aoe area handle is invisible scaffolding, flagged on its token or only on its actor (-43).
+  const others = dest.tokens.filter(t => t.id !== arrived.id && !t.hidden && !isAoeHandle(t.flags, t.actor?.flags)).map(box);
   if (!crowded(box(arrived), others)) return arrived;
   const cx = arrived.x + arrived.width * g / 2, cy = arrived.y + arrived.height * g / 2;
   const [place] = landingPlaces(dest, [arrived], cx, cy);
