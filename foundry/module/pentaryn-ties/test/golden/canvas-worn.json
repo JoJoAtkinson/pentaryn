@@ -157,7 +157,7 @@
     "label": "updateToken with a flag change queues a badge paint; the frame paints it",
     "out": 2,
     "calls": [],
-    "pixi": 4,
+    "pixi": 16,
     "cards": {
       "tag": "DIV",
       "id": "pentaryn-ties-cards"

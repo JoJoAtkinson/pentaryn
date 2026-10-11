@@ -11,23 +11,55 @@
   },
   {
     "id": "Graphics2",
-    "call": "toJSON",
+    "call": "set eventMode",
     "args": [
-      "0"
+      "none"
     ]
   },
   {
     "id": "Graphics2",
-    "call": "toJSON",
+    "call": "set zIndex",
     "args": [
-      "__proxy"
+      1000
+    ]
+  },
+  {
+    "id": "Interface1",
+    "call": "addChild",
+    "args": [
+      "<Graphics2>"
     ]
   },
   {
     "id": "Graphics2",
-    "call": "Symbol(Symbol.toPrimitive)",
+    "call": "clear",
+    "args": []
+  },
+  {
+    "id": "Graphics2",
+    "call": "moveTo",
     "args": [
-      "string"
+      50,
+      40
+    ]
+  },
+  {
+    "id": "Graphics2",
+    "call": "lineTo",
+    "args": [
+      1050,
+      50
+    ]
+  },
+  {
+    "id": "Graphics2",
+    "call": "stroke",
+    "args": [
+      {
+        "width": 2.1999999999999997,
+        "color": 3066944,
+        "alpha": 0.5
+      }
     ]
   }
 ]

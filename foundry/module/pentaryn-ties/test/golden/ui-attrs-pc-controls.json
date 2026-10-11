@@ -109,6 +109,44 @@
       ]
     },
     {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-add-btn",
+      "dataset": {
+        "action": "lore-add"
+      },
+      "events": [
+        "click"
+      ],
+      "delegated": true
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn pt-del",
+      "dataset": {
+        "action": "attr-delete",
+        "id": "guild"
+      },
+      "events": [
+        "click"
+      ],
+      "delegated": true
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "action": "attr-unlink",
+        "id": "guild"
+      },
+      "events": [
+        "click"
+      ],
+      "delegated": true
+    },
+    {
       "nth": 1,
       "tag": "DIV",
       "className": "pt-summary pt-attr-summary",
@@ -116,6 +154,21 @@
         "click",
         "keydown"
       ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn pt-lore-btn",
+      "dataset": {
+        "action": "attr-learned",
+        "attr": "city",
+        "lore": "c1",
+        "tooltip": "Hand “Walls” over now. No roll — you have already decided."
+      },
+      "events": [
+        "click"
+      ],
+      "delegated": true
     },
     {
       "nth": 0,
@@ -287,6 +340,57 @@
       ]
     },
     {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn pt-del",
+      "dataset": {
+        "action": "lore-remove",
+        "id": "c1"
+      },
+      "events": [
+        "click"
+      ],
+      "delegated": true
+    },
+    {
+      "nth": 1,
+      "tag": "BUTTON",
+      "className": "pt-add-btn",
+      "dataset": {
+        "action": "lore-add"
+      },
+      "events": [
+        "click"
+      ],
+      "delegated": true
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn pt-del",
+      "dataset": {
+        "action": "attr-delete",
+        "id": "city"
+      },
+      "events": [
+        "click"
+      ],
+      "delegated": true
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "action": "attr-unlink",
+        "id": "city"
+      },
+      "events": [
+        "click"
+      ],
+      "delegated": true
+    },
+    {
       "nth": 2,
       "tag": "DIV",
       "className": "pt-summary pt-attr-summary",
@@ -294,6 +398,32 @@
         "click",
         "keydown"
       ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "action": "attr-author",
+        "id": "type:humanoid"
+      },
+      "events": [
+        "click"
+      ],
+      "delegated": true
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "action": "attr-unlink",
+        "id": "type:humanoid"
+      },
+      "events": [
+        "click"
+      ],
+      "delegated": true
     },
     {
       "nth": 3,
@@ -306,12 +436,126 @@
     },
     {
       "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "action": "attr-author",
+        "id": "size:med"
+      },
+      "events": [
+        "click"
+      ],
+      "delegated": true
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "action": "attr-unlink",
+        "id": "size:med"
+      },
+      "events": [
+        "click"
+      ],
+      "delegated": true
+    },
+    {
+      "nth": 0,
       "tag": "INPUT",
       "className": "pt-attr-search",
       "events": [
         "input",
         "focus"
       ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-chip pt-chip-on",
+      "dataset": {
+        "action": "world-filter",
+        "filter": "all"
+      },
+      "events": [
+        "click"
+      ],
+      "delegated": true
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-chip",
+      "dataset": {
+        "action": "world-filter",
+        "filter": "unknown"
+      },
+      "events": [
+        "click"
+      ],
+      "delegated": true
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-chip",
+      "dataset": {
+        "action": "world-filter",
+        "filter": "pending"
+      },
+      "events": [
+        "click"
+      ],
+      "delegated": true
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-chip",
+      "dataset": {
+        "action": "world-filter",
+        "filter": "failed"
+      },
+      "events": [
+        "click"
+      ],
+      "delegated": true
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-chip pt-chip-quiet",
+      "dataset": {
+        "action": "world-collapse"
+      },
+      "events": [
+        "click"
+      ],
+      "delegated": true
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-chip pt-chip-quiet",
+      "dataset": {
+        "action": "world-expand"
+      },
+      "events": [
+        "click"
+      ],
+      "delegated": true
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-twisty",
+      "dataset": {
+        "action": "world-toggle"
+      },
+      "events": [
+        "click"
+      ],
+      "delegated": true
     },
     {
       "nth": 0,
@@ -1141,6 +1385,53 @@
       }
     },
     {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-add-btn",
+      "dataset": {
+        "action": "lore-add"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-add-btn",
+        "parent": "pt-add-bar"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn pt-del",
+      "dataset": {
+        "action": "attr-delete",
+        "id": "guild"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-textbtn pt-del",
+        "parent": "pt-detail-actions"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "action": "attr-unlink",
+        "id": "guild"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-textbtn",
+        "parent": "pt-detail-actions"
+      }
+    },
+    {
       "nth": 1,
       "tag": "DIV",
       "className": "pt-summary pt-attr-summary",
@@ -1162,6 +1453,23 @@
       "after": {
         "className": "pt-summary pt-attr-summary",
         "parent": "pt-row pt-attr-row"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn pt-lore-btn",
+      "dataset": {
+        "action": "attr-learned",
+        "attr": "city",
+        "lore": "c1",
+        "tooltip": "Hand “Walls” over now. No roll — you have already decided."
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-textbtn pt-lore-btn"
       }
     },
     {
@@ -2615,6 +2923,69 @@
       }
     },
     {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn pt-del",
+      "dataset": {
+        "action": "lore-remove",
+        "id": "c1"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-textbtn pt-del",
+        "parent": "pt-detail-actions"
+      }
+    },
+    {
+      "nth": 1,
+      "tag": "BUTTON",
+      "className": "pt-add-btn",
+      "dataset": {
+        "action": "lore-add"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-add-btn",
+        "parent": "pt-add-bar"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn pt-del",
+      "dataset": {
+        "action": "attr-delete",
+        "id": "city"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-textbtn pt-del",
+        "parent": "pt-detail-actions"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "action": "attr-unlink",
+        "id": "city"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-textbtn",
+        "parent": "pt-detail-actions"
+      }
+    },
+    {
       "nth": 2,
       "tag": "DIV",
       "className": "pt-summary pt-attr-summary",
@@ -2639,6 +3010,38 @@
       }
     },
     {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "action": "attr-author",
+        "id": "type:humanoid"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-textbtn",
+        "parent": "pt-detail-actions"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "action": "attr-unlink",
+        "id": "type:humanoid"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-textbtn",
+        "parent": "pt-detail-actions"
+      }
+    },
+    {
       "nth": 3,
       "tag": "DIV",
       "className": "pt-summary pt-attr-summary",
@@ -2660,6 +3063,38 @@
       "after": {
         "className": "pt-summary pt-attr-summary",
         "parent": "pt-row pt-attr-row"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "action": "attr-author",
+        "id": "size:med"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-textbtn",
+        "parent": "pt-detail-actions"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "action": "attr-unlink",
+        "id": "size:med"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-textbtn",
+        "parent": "pt-detail-actions"
       }
     },
     {
@@ -2686,6 +3121,115 @@
         "className": "pt-attr-search",
         "parent": "pt-add-bar pt-attr-add",
         "value": ""
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-chip pt-chip-on",
+      "dataset": {
+        "action": "world-filter",
+        "filter": "all"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-chip pt-chip-on",
+        "parent": "pt-world-filter"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-chip",
+      "dataset": {
+        "action": "world-filter",
+        "filter": "unknown"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-chip",
+        "parent": "pt-world-filter"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-chip",
+      "dataset": {
+        "action": "world-filter",
+        "filter": "pending"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-chip",
+        "parent": "pt-world-filter"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-chip",
+      "dataset": {
+        "action": "world-filter",
+        "filter": "failed"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-chip",
+        "parent": "pt-world-filter"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-chip pt-chip-quiet",
+      "dataset": {
+        "action": "world-collapse"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-chip pt-chip-quiet",
+        "parent": "pt-world-filter"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-chip pt-chip-quiet",
+      "dataset": {
+        "action": "world-expand"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-chip pt-chip-quiet",
+        "parent": "pt-world-filter"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-twisty",
+      "dataset": {
+        "action": "world-toggle"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-twisty",
+        "parent": "pt-world-row"
       }
     },
     {

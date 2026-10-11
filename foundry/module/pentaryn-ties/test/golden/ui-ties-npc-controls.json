@@ -170,6 +170,17 @@
     },
     {
       "nth": 0,
+      "tag": "SELECT",
+      "dataset": {
+        "action": "set-kind"
+      },
+      "events": [
+        "click"
+      ],
+      "delegated": true
+    },
+    {
+      "nth": 0,
       "tag": "DIV",
       "className": "pt-summary pt-lore-summary",
       "events": [
@@ -245,6 +256,31 @@
       "events": [
         "change"
       ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn pt-del",
+      "dataset": {
+        "action": "lore-remove",
+        "id": "l1"
+      },
+      "events": [
+        "click"
+      ],
+      "delegated": true
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-add-btn",
+      "dataset": {
+        "action": "lore-add"
+      },
+      "events": [
+        "click"
+      ],
+      "delegated": true
     }
   ],
   "rows": [
@@ -725,6 +761,20 @@
     },
     {
       "nth": 0,
+      "tag": "SELECT",
+      "dataset": {
+        "action": "set-kind"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "parent": "pt-field",
+        "value": "zzKind0000000001"
+      }
+    },
+    {
+      "nth": 0,
       "tag": "DIV",
       "className": "pt-summary pt-lore-summary",
       "type": "click",
@@ -975,6 +1025,37 @@
       "after": {
         "parent": "pt-field pt-field-notes",
         "value": "zz typed miss"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn pt-del",
+      "dataset": {
+        "action": "lore-remove",
+        "id": "l1"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-textbtn pt-del",
+        "parent": "pt-detail-actions"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-add-btn",
+      "dataset": {
+        "action": "lore-add"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-add-btn",
+        "parent": "pt-add-bar"
       }
     }
   ]

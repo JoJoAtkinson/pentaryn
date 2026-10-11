@@ -1,7 +1,8 @@
 /**
  * A generic "press every control" harness for the ties UI (wave 3 checkpoint). Mount a surface (its
- * HTML parsed by the fake DOM, then its own bind), inventory every node that got a listener, and for
- * each listener: mount afresh, find the node by its path, fire the event with a plausible payload
+ * HTML parsed by the fake DOM, then its own bind), inventory every node that got a listener — plus
+ * every button or `data-action` node without one, clicked so a delegated handler up the tree can
+ * answer — and for each: mount afresh, find the node by its signature, fire the event with a plausible payload
  * (a typed value, the next option, a toggled box, Enter), let promises and the mocked timers run out,
  * and record what it did — the ordered effect log, console lines, rerender requests.
  *
@@ -34,7 +35,10 @@ export function listenersIn(root) {
       const nth = seen.get(sig) ?? 0;
       seen.set(sig, nth + 1);
       const events = Object.keys(c.listeners).filter(k => c.listeners[k].length);
-      if (events.length) out.push({ sig, nth, tag: c.tagName, className: c.className || undefined, dataset: Object.keys(c.dataset).length ? { ...c.dataset } : undefined, name: c.name, events });
+      // a control with no listener of its own is clicked too: a delegated handler up the tree may own it
+      const actionable = !events.length && (c.dataset.action || c.dataset.act || c.tagName === "BUTTON");
+      if (events.length || actionable)
+        out.push({ sig, nth, tag: c.tagName, className: c.className || undefined, dataset: Object.keys(c.dataset).length ? { ...c.dataset } : undefined, name: c.name, events: events.length ? events : ["click"], ...(actionable ? { delegated: true } : {}) });
       walk(c);
     }
   };

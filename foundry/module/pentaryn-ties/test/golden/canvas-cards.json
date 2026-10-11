@@ -594,7 +594,7 @@
     "label": "wires painted (one frame)",
     "out": 1,
     "calls": [],
-    "pixi": 4,
+    "pixi": 8,
     "cards": {
       "tag": "DIV",
       "id": "pentaryn-ties-cards",

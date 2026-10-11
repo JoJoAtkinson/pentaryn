@@ -11,6 +11,21 @@
     },
     {
       "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn pt-lore-btn",
+      "dataset": {
+        "action": "attr-learned",
+        "attr": "city",
+        "lore": "c1",
+        "tooltip": "Hand “zz typed label” over now. No roll — you have already decided."
+      },
+      "events": [
+        "click"
+      ],
+      "delegated": true
+    },
+    {
+      "nth": 0,
       "tag": "INPUT",
       "dataset": {
         "attrField": "title",
@@ -179,6 +194,57 @@
       ]
     },
     {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn pt-del",
+      "dataset": {
+        "action": "lore-remove",
+        "id": "c1"
+      },
+      "events": [
+        "click"
+      ],
+      "delegated": true
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-add-btn",
+      "dataset": {
+        "action": "lore-add"
+      },
+      "events": [
+        "click"
+      ],
+      "delegated": true
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn pt-del",
+      "dataset": {
+        "action": "attr-delete",
+        "id": "city"
+      },
+      "events": [
+        "click"
+      ],
+      "delegated": true
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "action": "attr-unlink",
+        "id": "city"
+      },
+      "events": [
+        "click"
+      ],
+      "delegated": true
+    },
+    {
       "nth": 1,
       "tag": "DIV",
       "className": "pt-summary pt-attr-summary",
@@ -188,6 +254,32 @@
       ]
     },
     {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "action": "attr-author",
+        "id": "type:humanoid"
+      },
+      "events": [
+        "click"
+      ],
+      "delegated": true
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "action": "attr-unlink",
+        "id": "type:humanoid"
+      },
+      "events": [
+        "click"
+      ],
+      "delegated": true
+    },
+    {
       "nth": 2,
       "tag": "DIV",
       "className": "pt-summary pt-attr-summary",
@@ -195,6 +287,32 @@
         "click",
         "keydown"
       ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "action": "attr-author",
+        "id": "kind:zzKind0000000001"
+      },
+      "events": [
+        "click"
+      ],
+      "delegated": true
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "action": "attr-unlink",
+        "id": "kind:zzKind0000000001"
+      },
+      "events": [
+        "click"
+      ],
+      "delegated": true
     },
     {
       "nth": 0,
@@ -229,6 +347,23 @@
       "after": {
         "className": "pt-summary pt-attr-summary",
         "parent": "pt-row pt-attr-row"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn pt-lore-btn",
+      "dataset": {
+        "action": "attr-learned",
+        "attr": "city",
+        "lore": "c1",
+        "tooltip": "Hand “zz typed label” over now. No roll — you have already decided."
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-textbtn pt-lore-btn"
       }
     },
     {
@@ -962,6 +1097,69 @@
       }
     },
     {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn pt-del",
+      "dataset": {
+        "action": "lore-remove",
+        "id": "c1"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-textbtn pt-del",
+        "parent": "pt-detail-actions"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-add-btn",
+      "dataset": {
+        "action": "lore-add"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-add-btn",
+        "parent": "pt-add-bar"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn pt-del",
+      "dataset": {
+        "action": "attr-delete",
+        "id": "city"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-textbtn pt-del",
+        "parent": "pt-detail-actions"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "action": "attr-unlink",
+        "id": "city"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-textbtn",
+        "parent": "pt-detail-actions"
+      }
+    },
+    {
       "nth": 1,
       "tag": "DIV",
       "className": "pt-summary pt-attr-summary",
@@ -986,6 +1184,38 @@
       }
     },
     {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "action": "attr-author",
+        "id": "type:humanoid"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-textbtn",
+        "parent": "pt-detail-actions"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "action": "attr-unlink",
+        "id": "type:humanoid"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-textbtn",
+        "parent": "pt-detail-actions"
+      }
+    },
+    {
       "nth": 2,
       "tag": "DIV",
       "className": "pt-summary pt-attr-summary",
@@ -1007,6 +1237,38 @@
       "after": {
         "className": "pt-summary pt-attr-summary",
         "parent": "pt-row pt-attr-row"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "action": "attr-author",
+        "id": "kind:zzKind0000000001"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-textbtn",
+        "parent": "pt-detail-actions"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "action": "attr-unlink",
+        "id": "kind:zzKind0000000001"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-textbtn",
+        "parent": "pt-detail-actions"
       }
     },
     {

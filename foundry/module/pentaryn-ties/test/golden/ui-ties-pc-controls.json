@@ -300,6 +300,29 @@
       "events": [
         "click"
       ]
+    },
+    {
+      "nth": 0,
+      "tag": "SELECT",
+      "dataset": {
+        "action": "set-kind"
+      },
+      "events": [
+        "click"
+      ],
+      "delegated": true
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-add-btn",
+      "dataset": {
+        "action": "lore-add"
+      },
+      "events": [
+        "click"
+      ],
+      "delegated": true
     }
   ],
   "rows": [
@@ -1325,6 +1348,35 @@
           "opts": true
         }
       ],
+      "console": [],
+      "after": {
+        "className": "pt-add-btn",
+        "parent": "pt-add-bar"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "SELECT",
+      "dataset": {
+        "action": "set-kind"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "parent": "pt-field",
+        "value": ""
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-add-btn",
+      "dataset": {
+        "action": "lore-add"
+      },
+      "type": "click",
+      "calls": [],
       "console": [],
       "after": {
         "className": "pt-add-btn",

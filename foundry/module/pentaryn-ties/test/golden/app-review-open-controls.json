@@ -138,6 +138,43 @@
     {
       "nth": 0,
       "tag": "INPUT",
+      "className": "pt-review-sel",
+      "dataset": {
+        "act": "select"
+      },
+      "events": [
+        "click"
+      ],
+      "delegated": true
+    },
+    {
+      "nth": 0,
+      "tag": "CODE",
+      "className": "pt-review-id",
+      "dataset": {
+        "act": "copy-id",
+        "tooltip": "Copy id"
+      },
+      "events": [
+        "click"
+      ],
+      "delegated": true
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-review-sign",
+      "dataset": {
+        "act": "review"
+      },
+      "events": [
+        "click"
+      ],
+      "delegated": true
+    },
+    {
+      "nth": 0,
+      "tag": "INPUT",
       "dataset": {
         "field": "title"
       },
@@ -227,6 +264,43 @@
       "events": [
         "click"
       ]
+    },
+    {
+      "nth": 1,
+      "tag": "INPUT",
+      "className": "pt-review-sel",
+      "dataset": {
+        "act": "select"
+      },
+      "events": [
+        "click"
+      ],
+      "delegated": true
+    },
+    {
+      "nth": 1,
+      "tag": "CODE",
+      "className": "pt-review-id",
+      "dataset": {
+        "act": "copy-id",
+        "tooltip": "Copy id"
+      },
+      "events": [
+        "click"
+      ],
+      "delegated": true
+    },
+    {
+      "nth": 1,
+      "tag": "BUTTON",
+      "className": "pt-review-sign",
+      "dataset": {
+        "act": "review"
+      },
+      "events": [
+        "click"
+      ],
+      "delegated": true
     },
     {
       "nth": 1,
@@ -320,6 +394,44 @@
       "events": [
         "click"
       ]
+    },
+    {
+      "nth": 2,
+      "tag": "INPUT",
+      "className": "pt-review-sel",
+      "dataset": {
+        "act": "select"
+      },
+      "events": [
+        "click"
+      ],
+      "delegated": true
+    },
+    {
+      "nth": 2,
+      "tag": "CODE",
+      "className": "pt-review-id",
+      "dataset": {
+        "act": "copy-id",
+        "tooltip": "Copy id"
+      },
+      "events": [
+        "click"
+      ],
+      "delegated": true
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn pt-review-quiet",
+      "dataset": {
+        "act": "unreview",
+        "tooltip": "Withdraw your sign-off — moves it back to the top"
+      },
+      "events": [
+        "click"
+      ],
+      "delegated": true
     },
     {
       "nth": 2,
@@ -686,6 +798,175 @@
     {
       "nth": 0,
       "tag": "INPUT",
+      "className": "pt-review-sel",
+      "dataset": {
+        "act": "select"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "update",
+          "documentName": "User",
+          "uuid": "User.gmUser0000000001",
+          "changes": {
+            "flags.pentaryn-ties.attrSelected": []
+          }
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-review-sel",
+        "parent": "pt-review-summary",
+        "value": "",
+        "checked": false
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "CODE",
+      "className": "pt-review-id",
+      "dataset": {
+        "act": "copy-id",
+        "tooltip": "Copy id"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "clipboard",
+          "text": "guild"
+        },
+        {
+          "op": "notify",
+          "level": "info",
+          "message": "Copied to clipboard."
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-review-id",
+        "parent": "pt-review-line"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-review-sign",
+      "dataset": {
+        "act": "review"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "settings.set",
+          "id": "pentaryn-ties.attributes",
+          "value": [
+            {
+              "id": "city",
+              "title": "Vel",
+              "category": "City",
+              "icon": null,
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": null,
+              "dc": 12,
+              "skill": "his",
+              "reveal": "<p>From Vel.</p>",
+              "miss": "<p>An accent.</p>",
+              "hold": null,
+              "lore": [
+                {
+                  "id": "c1",
+                  "label": "Walls",
+                  "dc": 11,
+                  "skill": "his",
+                  "text": "<p>Three rings.</p>",
+                  "miss": "",
+                  "hold": null
+                }
+              ],
+              "source": null,
+              "bonuses": [],
+              "createdAt": 1,
+              "modifiedAt": 2,
+              "reviewedAt": 3,
+              "touched": [],
+              "reviewedSnapshot": {
+                "title": "Vel",
+                "dc": 12
+              }
+            },
+            {
+              "id": "guild",
+              "title": "Salt Guild",
+              "category": "Guild",
+              "icon": null,
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": "city",
+              "dc": 15,
+              "skill": "inv",
+              "reveal": "<p>Guild hands.</p>",
+              "miss": "",
+              "hold": null,
+              "lore": [],
+              "source": null,
+              "bonuses": [],
+              "createdAt": null,
+              "modifiedAt": 5,
+              "reviewedAt": 1790000000000,
+              "touched": [],
+              "reviewedSnapshot": {
+                "title": "Salt Guild",
+                "category": "Guild",
+                "whenKnown": "enables",
+                "whenCarried": "inherit",
+                "secret": true,
+                "parent": "city",
+                "dc": 15,
+                "skill": "inv",
+                "reveal": "<p>Guild hands.</p>",
+                "miss": "",
+                "hold": null,
+                "lore": []
+              }
+            },
+            {
+              "id": "diary",
+              "title": "Caven's diary",
+              "category": "personal",
+              "icon": null,
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": null,
+              "dc": 15,
+              "skill": "his",
+              "reveal": "<p>Kept a diary.</p>",
+              "miss": "",
+              "hold": null,
+              "lore": [],
+              "source": null,
+              "bonuses": [],
+              "createdAt": null,
+              "modifiedAt": null,
+              "reviewedAt": null,
+              "touched": [],
+              "reviewedSnapshot": null
+            }
+          ]
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-review-sign",
+        "parent": "pt-review-summary"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "INPUT",
       "dataset": {
         "field": "title"
       },
@@ -733,7 +1014,7 @@
             },
             {
               "id": "guild",
-              "title": "zz typed title",
+              "title": "Salt Guild",
               "category": "Guild",
               "icon": null,
               "whenKnown": "enables",
@@ -749,16 +1030,27 @@
               "source": null,
               "bonuses": [],
               "createdAt": null,
-              "modifiedAt": 1790000000000,
-              "reviewedAt": null,
-              "touched": [
-                "dc"
-              ],
-              "reviewedSnapshot": null
+              "modifiedAt": 5,
+              "reviewedAt": 1790000000000,
+              "touched": [],
+              "reviewedSnapshot": {
+                "title": "Salt Guild",
+                "category": "Guild",
+                "whenKnown": "enables",
+                "whenCarried": "inherit",
+                "secret": true,
+                "parent": "city",
+                "dc": 15,
+                "skill": "inv",
+                "reveal": "<p>Guild hands.</p>",
+                "miss": "",
+                "hold": null,
+                "lore": []
+              }
             },
             {
               "id": "diary",
-              "title": "Caven's diary",
+              "title": "zz typed title",
               "category": "personal",
               "icon": null,
               "whenKnown": "enables",
@@ -774,7 +1066,7 @@
               "source": null,
               "bonuses": [],
               "createdAt": null,
-              "modifiedAt": null,
+              "modifiedAt": 1790000000000,
               "reviewedAt": null,
               "touched": [],
               "reviewedSnapshot": null
@@ -838,9 +1130,9 @@
             },
             {
               "id": "guild",
-              "title": "zz typed title",
-              "category": "zz typed category",
-              "icon": "icons/sundries/flags/banner-standard-brown.webp",
+              "title": "Salt Guild",
+              "category": "Guild",
+              "icon": null,
               "whenKnown": "enables",
               "whenCarried": "inherit",
               "secret": true,
@@ -854,18 +1146,29 @@
               "source": null,
               "bonuses": [],
               "createdAt": null,
-              "modifiedAt": 1790000000000,
-              "reviewedAt": null,
-              "touched": [
-                "dc"
-              ],
-              "reviewedSnapshot": null
+              "modifiedAt": 5,
+              "reviewedAt": 1790000000000,
+              "touched": [],
+              "reviewedSnapshot": {
+                "title": "Salt Guild",
+                "category": "Guild",
+                "whenKnown": "enables",
+                "whenCarried": "inherit",
+                "secret": true,
+                "parent": "city",
+                "dc": 15,
+                "skill": "inv",
+                "reveal": "<p>Guild hands.</p>",
+                "miss": "",
+                "hold": null,
+                "lore": []
+              }
             },
             {
               "id": "diary",
-              "title": "Caven's diary",
-              "category": "personal",
-              "icon": null,
+              "title": "zz typed title",
+              "category": "zz typed category",
+              "icon": "icons/sundries/flags/banner-standard-brown.webp",
               "whenKnown": "enables",
               "whenCarried": "inherit",
               "secret": true,
@@ -879,7 +1182,7 @@
               "source": null,
               "bonuses": [],
               "createdAt": null,
-              "modifiedAt": null,
+              "modifiedAt": 1790000000000,
               "reviewedAt": null,
               "touched": [],
               "reviewedSnapshot": null
@@ -943,15 +1246,15 @@
             },
             {
               "id": "guild",
-              "title": "zz typed title",
-              "category": "zz typed category",
-              "icon": "icons/sundries/flags/banner-standard-brown.webp",
+              "title": "Salt Guild",
+              "category": "Guild",
+              "icon": null,
               "whenKnown": "enables",
               "whenCarried": "inherit",
               "secret": true,
               "parent": "city",
               "dc": 15,
-              "skill": "his",
+              "skill": "inv",
               "reveal": "<p>Guild hands.</p>",
               "miss": "",
               "hold": null,
@@ -959,24 +1262,35 @@
               "source": null,
               "bonuses": [],
               "createdAt": null,
-              "modifiedAt": 1790000000000,
-              "reviewedAt": null,
-              "touched": [
-                "dc"
-              ],
-              "reviewedSnapshot": null
+              "modifiedAt": 5,
+              "reviewedAt": 1790000000000,
+              "touched": [],
+              "reviewedSnapshot": {
+                "title": "Salt Guild",
+                "category": "Guild",
+                "whenKnown": "enables",
+                "whenCarried": "inherit",
+                "secret": true,
+                "parent": "city",
+                "dc": 15,
+                "skill": "inv",
+                "reveal": "<p>Guild hands.</p>",
+                "miss": "",
+                "hold": null,
+                "lore": []
+              }
             },
             {
               "id": "diary",
-              "title": "Caven's diary",
-              "category": "personal",
-              "icon": null,
+              "title": "zz typed title",
+              "category": "zz typed category",
+              "icon": "icons/sundries/flags/banner-standard-brown.webp",
               "whenKnown": "enables",
               "whenCarried": "inherit",
               "secret": true,
               "parent": null,
               "dc": 15,
-              "skill": "his",
+              "skill": "arc",
               "reveal": "<p>Kept a diary.</p>",
               "miss": "",
               "hold": null,
@@ -984,7 +1298,7 @@
               "source": null,
               "bonuses": [],
               "createdAt": null,
-              "modifiedAt": null,
+              "modifiedAt": 1790000000000,
               "reviewedAt": null,
               "touched": [],
               "reviewedSnapshot": null
@@ -995,7 +1309,7 @@
       "console": [],
       "after": {
         "parent": "pt-review-field",
-        "value": "his"
+        "value": "arc"
       }
     },
     {
@@ -1048,15 +1362,15 @@
             },
             {
               "id": "guild",
-              "title": "zz typed title",
-              "category": "zz typed category",
-              "icon": "icons/sundries/flags/banner-standard-brown.webp",
+              "title": "Salt Guild",
+              "category": "Guild",
+              "icon": null,
               "whenKnown": "enables",
               "whenCarried": "inherit",
               "secret": true,
               "parent": "city",
-              "dc": 7,
-              "skill": "his",
+              "dc": 15,
+              "skill": "inv",
               "reveal": "<p>Guild hands.</p>",
               "miss": "",
               "hold": null,
@@ -1064,24 +1378,35 @@
               "source": null,
               "bonuses": [],
               "createdAt": null,
-              "modifiedAt": 1790000000000,
-              "reviewedAt": null,
-              "touched": [
-                "dc"
-              ],
-              "reviewedSnapshot": null
+              "modifiedAt": 5,
+              "reviewedAt": 1790000000000,
+              "touched": [],
+              "reviewedSnapshot": {
+                "title": "Salt Guild",
+                "category": "Guild",
+                "whenKnown": "enables",
+                "whenCarried": "inherit",
+                "secret": true,
+                "parent": "city",
+                "dc": 15,
+                "skill": "inv",
+                "reveal": "<p>Guild hands.</p>",
+                "miss": "",
+                "hold": null,
+                "lore": []
+              }
             },
             {
               "id": "diary",
-              "title": "Caven's diary",
-              "category": "personal",
-              "icon": null,
+              "title": "zz typed title",
+              "category": "zz typed category",
+              "icon": "icons/sundries/flags/banner-standard-brown.webp",
               "whenKnown": "enables",
               "whenCarried": "inherit",
               "secret": true,
               "parent": null,
-              "dc": 15,
-              "skill": "his",
+              "dc": 7,
+              "skill": "arc",
               "reveal": "<p>Kept a diary.</p>",
               "miss": "",
               "hold": null,
@@ -1089,7 +1414,7 @@
               "source": null,
               "bonuses": [],
               "createdAt": null,
-              "modifiedAt": null,
+              "modifiedAt": 1790000000000,
               "reviewedAt": null,
               "touched": [],
               "reviewedSnapshot": null
@@ -1153,15 +1478,51 @@
             },
             {
               "id": "guild",
+              "title": "Salt Guild",
+              "category": "Guild",
+              "icon": null,
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": "city",
+              "dc": 15,
+              "skill": "inv",
+              "reveal": "<p>Guild hands.</p>",
+              "miss": "",
+              "hold": null,
+              "lore": [],
+              "source": null,
+              "bonuses": [],
+              "createdAt": null,
+              "modifiedAt": 5,
+              "reviewedAt": 1790000000000,
+              "touched": [],
+              "reviewedSnapshot": {
+                "title": "Salt Guild",
+                "category": "Guild",
+                "whenKnown": "enables",
+                "whenCarried": "inherit",
+                "secret": true,
+                "parent": "city",
+                "dc": 15,
+                "skill": "inv",
+                "reveal": "<p>Guild hands.</p>",
+                "miss": "",
+                "hold": null,
+                "lore": []
+              }
+            },
+            {
+              "id": "diary",
               "title": "zz typed title",
               "category": "zz typed category",
               "icon": "icons/sundries/flags/banner-standard-brown.webp",
               "whenKnown": "enables",
               "whenCarried": "inherit",
               "secret": true,
-              "parent": "city",
+              "parent": null,
               "dc": 7,
-              "skill": "his",
+              "skill": "arc",
               "reveal": "zz typed reveal",
               "miss": "",
               "hold": null,
@@ -1170,31 +1531,6 @@
               "bonuses": [],
               "createdAt": null,
               "modifiedAt": 1790000000000,
-              "reviewedAt": null,
-              "touched": [
-                "dc"
-              ],
-              "reviewedSnapshot": null
-            },
-            {
-              "id": "diary",
-              "title": "Caven's diary",
-              "category": "personal",
-              "icon": null,
-              "whenKnown": "enables",
-              "whenCarried": "inherit",
-              "secret": true,
-              "parent": null,
-              "dc": 15,
-              "skill": "his",
-              "reveal": "<p>Kept a diary.</p>",
-              "miss": "",
-              "hold": null,
-              "lore": [],
-              "source": null,
-              "bonuses": [],
-              "createdAt": null,
-              "modifiedAt": null,
               "reviewedAt": null,
               "touched": [],
               "reviewedSnapshot": null
@@ -1258,15 +1594,51 @@
             },
             {
               "id": "guild",
+              "title": "Salt Guild",
+              "category": "Guild",
+              "icon": null,
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": "city",
+              "dc": 15,
+              "skill": "inv",
+              "reveal": "<p>Guild hands.</p>",
+              "miss": "",
+              "hold": null,
+              "lore": [],
+              "source": null,
+              "bonuses": [],
+              "createdAt": null,
+              "modifiedAt": 5,
+              "reviewedAt": 1790000000000,
+              "touched": [],
+              "reviewedSnapshot": {
+                "title": "Salt Guild",
+                "category": "Guild",
+                "whenKnown": "enables",
+                "whenCarried": "inherit",
+                "secret": true,
+                "parent": "city",
+                "dc": 15,
+                "skill": "inv",
+                "reveal": "<p>Guild hands.</p>",
+                "miss": "",
+                "hold": null,
+                "lore": []
+              }
+            },
+            {
+              "id": "diary",
               "title": "zz typed title",
               "category": "zz typed category",
               "icon": "icons/sundries/flags/banner-standard-brown.webp",
               "whenKnown": "enables",
               "whenCarried": "inherit",
               "secret": true,
-              "parent": "city",
+              "parent": null,
               "dc": 7,
-              "skill": "his",
+              "skill": "arc",
               "reveal": "zz typed reveal",
               "miss": "zz typed miss",
               "hold": null,
@@ -1275,31 +1647,6 @@
               "bonuses": [],
               "createdAt": null,
               "modifiedAt": 1790000000000,
-              "reviewedAt": null,
-              "touched": [
-                "dc"
-              ],
-              "reviewedSnapshot": null
-            },
-            {
-              "id": "diary",
-              "title": "Caven's diary",
-              "category": "personal",
-              "icon": null,
-              "whenKnown": "enables",
-              "whenCarried": "inherit",
-              "secret": true,
-              "parent": null,
-              "dc": 15,
-              "skill": "his",
-              "reveal": "<p>Kept a diary.</p>",
-              "miss": "",
-              "hold": null,
-              "lore": [],
-              "source": null,
-              "bonuses": [],
-              "createdAt": null,
-              "modifiedAt": null,
               "reviewedAt": null,
               "touched": [],
               "reviewedSnapshot": null
@@ -1324,7 +1671,7 @@
       "calls": [
         {
           "op": "clipboard",
-          "text": "guild"
+          "text": "diary"
         },
         {
           "op": "notify",
@@ -1349,7 +1696,7 @@
       "calls": [
         {
           "op": "clipboard",
-          "text": "zz typed title — id: guild — category: zz typed category\nparent: Vel (city)\nchildren: none\ncarriers (1): ZZ Brakka\nfacts: none\nreview: unreviewed (touched: dc)"
+          "text": "zz typed title — id: diary — category: zz typed category\nparent: root\nchildren: none\ncarriers (1): ZZ Caven\nfacts: none\nreview: unreviewed"
         },
         {
           "op": "notify",
@@ -1387,6 +1734,68 @@
     {
       "nth": 1,
       "tag": "INPUT",
+      "className": "pt-review-sel",
+      "dataset": {
+        "act": "select"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "update",
+          "documentName": "User",
+          "uuid": "User.gmUser0000000001",
+          "changes": {
+            "flags.pentaryn-ties.attrSelected": []
+          }
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-review-sel",
+        "parent": "pt-review-summary",
+        "value": "",
+        "checked": false
+      }
+    },
+    {
+      "nth": 1,
+      "tag": "CODE",
+      "className": "pt-review-id",
+      "dataset": {
+        "act": "copy-id",
+        "tooltip": "Copy id"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "clipboard",
+          "text": "guild"
+        },
+        {
+          "op": "notify",
+          "level": "info",
+          "message": "Copied to clipboard."
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-review-id",
+        "parent": "pt-review-line"
+      }
+    },
+    {
+      "tag": "BUTTON",
+      "className": "pt-review-sign",
+      "dataset": {
+        "act": "review"
+      },
+      "nth": 1,
+      "type": "click",
+      "missing": true
+    },
+    {
+      "nth": 1,
+      "tag": "INPUT",
       "dataset": {
         "field": "title"
       },
@@ -1395,13 +1804,13 @@
         {
           "op": "notify",
           "level": "warn",
-          "message": "“zz typed title” (guild) already has that name. Attribute names are unique, ignoring case and accents. Title not changed."
+          "message": "“zz typed title” (diary) already has that name. Attribute names are unique, ignoring case and accents. Title not changed."
         }
       ],
       "console": [],
       "after": {
         "parent": "pt-review-field",
-        "value": "Caven's diary"
+        "value": "Salt Guild"
       }
     },
     {
@@ -1454,42 +1863,53 @@
             },
             {
               "id": "guild",
-              "title": "zz typed title",
+              "title": "Salt Guild",
               "category": "zz typed category",
               "icon": "icons/sundries/flags/banner-standard-brown.webp",
               "whenKnown": "enables",
               "whenCarried": "inherit",
               "secret": true,
               "parent": "city",
-              "dc": 7,
-              "skill": "his",
-              "reveal": "zz typed reveal",
-              "miss": "zz typed miss",
+              "dc": 15,
+              "skill": "inv",
+              "reveal": "<p>Guild hands.</p>",
+              "miss": "",
               "hold": null,
               "lore": [],
               "source": null,
               "bonuses": [],
               "createdAt": null,
               "modifiedAt": 1790000000000,
-              "reviewedAt": null,
-              "touched": [
-                "dc"
-              ],
-              "reviewedSnapshot": null
+              "reviewedAt": 1790000000000,
+              "touched": [],
+              "reviewedSnapshot": {
+                "title": "Salt Guild",
+                "category": "zz typed category",
+                "whenKnown": "enables",
+                "whenCarried": "inherit",
+                "secret": true,
+                "parent": "city",
+                "dc": 15,
+                "skill": "inv",
+                "reveal": "<p>Guild hands.</p>",
+                "miss": "",
+                "hold": null,
+                "lore": []
+              }
             },
             {
               "id": "diary",
-              "title": "Caven's diary",
+              "title": "zz typed title",
               "category": "zz typed category",
               "icon": "icons/sundries/flags/banner-standard-brown.webp",
               "whenKnown": "enables",
               "whenCarried": "inherit",
               "secret": true,
               "parent": null,
-              "dc": 15,
-              "skill": "his",
-              "reveal": "<p>Kept a diary.</p>",
-              "miss": "",
+              "dc": 7,
+              "skill": "arc",
+              "reveal": "zz typed reveal",
+              "miss": "zz typed miss",
               "hold": null,
               "lore": [],
               "source": null,
@@ -1559,42 +1979,53 @@
             },
             {
               "id": "guild",
-              "title": "zz typed title",
+              "title": "Salt Guild",
               "category": "zz typed category",
               "icon": "icons/sundries/flags/banner-standard-brown.webp",
               "whenKnown": "enables",
               "whenCarried": "inherit",
               "secret": true,
               "parent": "city",
-              "dc": 7,
-              "skill": "arc",
-              "reveal": "zz typed reveal",
-              "miss": "zz typed miss",
+              "dc": 15,
+              "skill": "his",
+              "reveal": "<p>Guild hands.</p>",
+              "miss": "",
               "hold": null,
               "lore": [],
               "source": null,
               "bonuses": [],
               "createdAt": null,
               "modifiedAt": 1790000000000,
-              "reviewedAt": null,
-              "touched": [
-                "dc"
-              ],
-              "reviewedSnapshot": null
+              "reviewedAt": 1790000000000,
+              "touched": [],
+              "reviewedSnapshot": {
+                "title": "Salt Guild",
+                "category": "zz typed category",
+                "whenKnown": "enables",
+                "whenCarried": "inherit",
+                "secret": true,
+                "parent": "city",
+                "dc": 15,
+                "skill": "his",
+                "reveal": "<p>Guild hands.</p>",
+                "miss": "",
+                "hold": null,
+                "lore": []
+              }
             },
             {
               "id": "diary",
-              "title": "Caven's diary",
+              "title": "zz typed title",
               "category": "zz typed category",
               "icon": "icons/sundries/flags/banner-standard-brown.webp",
               "whenKnown": "enables",
               "whenCarried": "inherit",
               "secret": true,
               "parent": null,
-              "dc": 15,
-              "skill": "his",
-              "reveal": "<p>Kept a diary.</p>",
-              "miss": "",
+              "dc": 7,
+              "skill": "arc",
+              "reveal": "zz typed reveal",
+              "miss": "zz typed miss",
               "hold": null,
               "lore": [],
               "source": null,
@@ -1611,7 +2042,7 @@
       "console": [],
       "after": {
         "parent": "pt-review-field",
-        "value": "arc"
+        "value": "his"
       }
     },
     {
@@ -1621,7 +2052,109 @@
         "field": "dc"
       },
       "type": "change",
-      "calls": [],
+      "calls": [
+        {
+          "op": "settings.set",
+          "id": "pentaryn-ties.attributes",
+          "value": [
+            {
+              "id": "city",
+              "title": "Vel",
+              "category": "City",
+              "icon": null,
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": null,
+              "dc": 12,
+              "skill": "his",
+              "reveal": "<p>From Vel.</p>",
+              "miss": "<p>An accent.</p>",
+              "hold": null,
+              "lore": [
+                {
+                  "id": "c1",
+                  "label": "Walls",
+                  "dc": 11,
+                  "skill": "his",
+                  "text": "<p>Three rings.</p>",
+                  "miss": "",
+                  "hold": null
+                }
+              ],
+              "source": null,
+              "bonuses": [],
+              "createdAt": 1,
+              "modifiedAt": 2,
+              "reviewedAt": 3,
+              "touched": [],
+              "reviewedSnapshot": {
+                "title": "Vel",
+                "dc": 12
+              }
+            },
+            {
+              "id": "guild",
+              "title": "Salt Guild",
+              "category": "zz typed category",
+              "icon": "icons/sundries/flags/banner-standard-brown.webp",
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": "city",
+              "dc": 7,
+              "skill": "his",
+              "reveal": "<p>Guild hands.</p>",
+              "miss": "",
+              "hold": null,
+              "lore": [],
+              "source": null,
+              "bonuses": [],
+              "createdAt": null,
+              "modifiedAt": 1790000000000,
+              "reviewedAt": 1790000000000,
+              "touched": [],
+              "reviewedSnapshot": {
+                "title": "Salt Guild",
+                "category": "zz typed category",
+                "whenKnown": "enables",
+                "whenCarried": "inherit",
+                "secret": true,
+                "parent": "city",
+                "dc": 7,
+                "skill": "his",
+                "reveal": "<p>Guild hands.</p>",
+                "miss": "",
+                "hold": null,
+                "lore": []
+              }
+            },
+            {
+              "id": "diary",
+              "title": "zz typed title",
+              "category": "zz typed category",
+              "icon": "icons/sundries/flags/banner-standard-brown.webp",
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": null,
+              "dc": 7,
+              "skill": "arc",
+              "reveal": "zz typed reveal",
+              "miss": "zz typed miss",
+              "hold": null,
+              "lore": [],
+              "source": null,
+              "bonuses": [],
+              "createdAt": null,
+              "modifiedAt": 1790000000000,
+              "reviewedAt": null,
+              "touched": [],
+              "reviewedSnapshot": null
+            }
+          ]
+        }
+      ],
       "console": [],
       "after": {
         "parent": "pt-review-field",
@@ -1635,7 +2168,109 @@
         "field": "reveal"
       },
       "type": "change",
-      "calls": [],
+      "calls": [
+        {
+          "op": "settings.set",
+          "id": "pentaryn-ties.attributes",
+          "value": [
+            {
+              "id": "city",
+              "title": "Vel",
+              "category": "City",
+              "icon": null,
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": null,
+              "dc": 12,
+              "skill": "his",
+              "reveal": "<p>From Vel.</p>",
+              "miss": "<p>An accent.</p>",
+              "hold": null,
+              "lore": [
+                {
+                  "id": "c1",
+                  "label": "Walls",
+                  "dc": 11,
+                  "skill": "his",
+                  "text": "<p>Three rings.</p>",
+                  "miss": "",
+                  "hold": null
+                }
+              ],
+              "source": null,
+              "bonuses": [],
+              "createdAt": 1,
+              "modifiedAt": 2,
+              "reviewedAt": 3,
+              "touched": [],
+              "reviewedSnapshot": {
+                "title": "Vel",
+                "dc": 12
+              }
+            },
+            {
+              "id": "guild",
+              "title": "Salt Guild",
+              "category": "zz typed category",
+              "icon": "icons/sundries/flags/banner-standard-brown.webp",
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": "city",
+              "dc": 7,
+              "skill": "his",
+              "reveal": "zz typed reveal",
+              "miss": "",
+              "hold": null,
+              "lore": [],
+              "source": null,
+              "bonuses": [],
+              "createdAt": null,
+              "modifiedAt": 1790000000000,
+              "reviewedAt": 1790000000000,
+              "touched": [],
+              "reviewedSnapshot": {
+                "title": "Salt Guild",
+                "category": "zz typed category",
+                "whenKnown": "enables",
+                "whenCarried": "inherit",
+                "secret": true,
+                "parent": "city",
+                "dc": 7,
+                "skill": "his",
+                "reveal": "zz typed reveal",
+                "miss": "",
+                "hold": null,
+                "lore": []
+              }
+            },
+            {
+              "id": "diary",
+              "title": "zz typed title",
+              "category": "zz typed category",
+              "icon": "icons/sundries/flags/banner-standard-brown.webp",
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": null,
+              "dc": 7,
+              "skill": "arc",
+              "reveal": "zz typed reveal",
+              "miss": "zz typed miss",
+              "hold": null,
+              "lore": [],
+              "source": null,
+              "bonuses": [],
+              "createdAt": null,
+              "modifiedAt": 1790000000000,
+              "reviewedAt": null,
+              "touched": [],
+              "reviewedSnapshot": null
+            }
+          ]
+        }
+      ],
       "console": [],
       "after": {
         "parent": "pt-review-field",
@@ -1649,7 +2284,109 @@
         "field": "miss"
       },
       "type": "change",
-      "calls": [],
+      "calls": [
+        {
+          "op": "settings.set",
+          "id": "pentaryn-ties.attributes",
+          "value": [
+            {
+              "id": "city",
+              "title": "Vel",
+              "category": "City",
+              "icon": null,
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": null,
+              "dc": 12,
+              "skill": "his",
+              "reveal": "<p>From Vel.</p>",
+              "miss": "<p>An accent.</p>",
+              "hold": null,
+              "lore": [
+                {
+                  "id": "c1",
+                  "label": "Walls",
+                  "dc": 11,
+                  "skill": "his",
+                  "text": "<p>Three rings.</p>",
+                  "miss": "",
+                  "hold": null
+                }
+              ],
+              "source": null,
+              "bonuses": [],
+              "createdAt": 1,
+              "modifiedAt": 2,
+              "reviewedAt": 3,
+              "touched": [],
+              "reviewedSnapshot": {
+                "title": "Vel",
+                "dc": 12
+              }
+            },
+            {
+              "id": "guild",
+              "title": "Salt Guild",
+              "category": "zz typed category",
+              "icon": "icons/sundries/flags/banner-standard-brown.webp",
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": "city",
+              "dc": 7,
+              "skill": "his",
+              "reveal": "zz typed reveal",
+              "miss": "zz typed miss",
+              "hold": null,
+              "lore": [],
+              "source": null,
+              "bonuses": [],
+              "createdAt": null,
+              "modifiedAt": 1790000000000,
+              "reviewedAt": 1790000000000,
+              "touched": [],
+              "reviewedSnapshot": {
+                "title": "Salt Guild",
+                "category": "zz typed category",
+                "whenKnown": "enables",
+                "whenCarried": "inherit",
+                "secret": true,
+                "parent": "city",
+                "dc": 7,
+                "skill": "his",
+                "reveal": "zz typed reveal",
+                "miss": "zz typed miss",
+                "hold": null,
+                "lore": []
+              }
+            },
+            {
+              "id": "diary",
+              "title": "zz typed title",
+              "category": "zz typed category",
+              "icon": "icons/sundries/flags/banner-standard-brown.webp",
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": null,
+              "dc": 7,
+              "skill": "arc",
+              "reveal": "zz typed reveal",
+              "miss": "zz typed miss",
+              "hold": null,
+              "lore": [],
+              "source": null,
+              "bonuses": [],
+              "createdAt": null,
+              "modifiedAt": 1790000000000,
+              "reviewedAt": null,
+              "touched": [],
+              "reviewedSnapshot": null
+            }
+          ]
+        }
+      ],
       "console": [],
       "after": {
         "parent": "pt-review-field",
@@ -1692,7 +2429,7 @@
       "calls": [
         {
           "op": "clipboard",
-          "text": "zz typed title — id: guild — category: zz typed category\nparent: Vel (city)\nchildren: none\ncarriers (1): ZZ Brakka\nfacts: none\nreview: unreviewed (touched: dc)"
+          "text": "Salt Guild — id: guild — category: zz typed category\nparent: Vel (city)\nchildren: none\ncarriers (1): ZZ Brakka\nfacts: none\nreview: reviewed"
         },
         {
           "op": "notify",
@@ -1730,6 +2467,176 @@
     {
       "nth": 2,
       "tag": "INPUT",
+      "className": "pt-review-sel",
+      "dataset": {
+        "act": "select"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "update",
+          "documentName": "User",
+          "uuid": "User.gmUser0000000001",
+          "changes": {
+            "flags.pentaryn-ties.attrSelected": []
+          }
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-review-sel",
+        "parent": "pt-review-summary",
+        "value": "",
+        "checked": false
+      }
+    },
+    {
+      "nth": 2,
+      "tag": "CODE",
+      "className": "pt-review-id",
+      "dataset": {
+        "act": "copy-id",
+        "tooltip": "Copy id"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "clipboard",
+          "text": "city"
+        },
+        {
+          "op": "notify",
+          "level": "info",
+          "message": "Copied to clipboard."
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-review-id",
+        "parent": "pt-review-line"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn pt-review-quiet",
+      "dataset": {
+        "act": "unreview",
+        "tooltip": "Withdraw your sign-off — moves it back to the top"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "settings.set",
+          "id": "pentaryn-ties.attributes",
+          "value": [
+            {
+              "id": "city",
+              "title": "Vel",
+              "category": "City",
+              "icon": null,
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": null,
+              "dc": 12,
+              "skill": "his",
+              "reveal": "<p>From Vel.</p>",
+              "miss": "<p>An accent.</p>",
+              "hold": null,
+              "lore": [
+                {
+                  "id": "c1",
+                  "label": "Walls",
+                  "dc": 11,
+                  "skill": "his",
+                  "text": "<p>Three rings.</p>",
+                  "miss": "",
+                  "hold": null
+                }
+              ],
+              "source": null,
+              "bonuses": [],
+              "createdAt": 1,
+              "modifiedAt": 2,
+              "reviewedAt": 3,
+              "touched": [],
+              "reviewedSnapshot": {
+                "title": "Vel",
+                "dc": 12
+              }
+            },
+            {
+              "id": "guild",
+              "title": "Salt Guild",
+              "category": "zz typed category",
+              "icon": "icons/sundries/flags/banner-standard-brown.webp",
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": "city",
+              "dc": 7,
+              "skill": "his",
+              "reveal": "zz typed reveal",
+              "miss": "zz typed miss",
+              "hold": null,
+              "lore": [],
+              "source": null,
+              "bonuses": [],
+              "createdAt": null,
+              "modifiedAt": 1790000000000,
+              "reviewedAt": null,
+              "touched": [],
+              "reviewedSnapshot": {
+                "title": "Salt Guild",
+                "category": "zz typed category",
+                "whenKnown": "enables",
+                "whenCarried": "inherit",
+                "secret": true,
+                "parent": "city",
+                "dc": 7,
+                "skill": "his",
+                "reveal": "zz typed reveal",
+                "miss": "zz typed miss",
+                "hold": null,
+                "lore": []
+              }
+            },
+            {
+              "id": "diary",
+              "title": "zz typed title",
+              "category": "zz typed category",
+              "icon": "icons/sundries/flags/banner-standard-brown.webp",
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": null,
+              "dc": 7,
+              "skill": "arc",
+              "reveal": "zz typed reveal",
+              "miss": "zz typed miss",
+              "hold": null,
+              "lore": [],
+              "source": null,
+              "bonuses": [],
+              "createdAt": null,
+              "modifiedAt": 1790000000000,
+              "reviewedAt": null,
+              "touched": [],
+              "reviewedSnapshot": null
+            }
+          ]
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-textbtn pt-review-quiet",
+        "parent": "pt-review-summary"
+      }
+    },
+    {
+      "nth": 2,
+      "tag": "INPUT",
       "dataset": {
         "field": "title"
       },
@@ -1738,7 +2645,7 @@
         {
           "op": "notify",
           "level": "warn",
-          "message": "“zz typed title” (guild) already has that name. Attribute names are unique, ignoring case and accents. Title not changed."
+          "message": "“zz typed title” (diary) already has that name. Attribute names are unique, ignoring case and accents. Title not changed."
         }
       ],
       "console": [],
@@ -1817,7 +2724,7 @@
             },
             {
               "id": "guild",
-              "title": "zz typed title",
+              "title": "Salt Guild",
               "category": "zz typed category",
               "icon": "icons/sundries/flags/banner-standard-brown.webp",
               "whenKnown": "enables",
@@ -1825,7 +2732,7 @@
               "secret": true,
               "parent": "city",
               "dc": 7,
-              "skill": "arc",
+              "skill": "his",
               "reveal": "zz typed reveal",
               "miss": "zz typed miss",
               "hold": null,
@@ -1835,24 +2742,35 @@
               "createdAt": null,
               "modifiedAt": 1790000000000,
               "reviewedAt": null,
-              "touched": [
-                "dc"
-              ],
-              "reviewedSnapshot": null
+              "touched": [],
+              "reviewedSnapshot": {
+                "title": "Salt Guild",
+                "category": "zz typed category",
+                "whenKnown": "enables",
+                "whenCarried": "inherit",
+                "secret": true,
+                "parent": "city",
+                "dc": 7,
+                "skill": "his",
+                "reveal": "zz typed reveal",
+                "miss": "zz typed miss",
+                "hold": null,
+                "lore": []
+              }
             },
             {
               "id": "diary",
-              "title": "Caven's diary",
+              "title": "zz typed title",
               "category": "zz typed category",
               "icon": "icons/sundries/flags/banner-standard-brown.webp",
               "whenKnown": "enables",
               "whenCarried": "inherit",
               "secret": true,
               "parent": null,
-              "dc": 15,
-              "skill": "his",
-              "reveal": "<p>Kept a diary.</p>",
-              "miss": "",
+              "dc": 7,
+              "skill": "arc",
+              "reveal": "zz typed reveal",
+              "miss": "zz typed miss",
               "hold": null,
               "lore": [],
               "source": null,
@@ -1942,7 +2860,7 @@
             },
             {
               "id": "guild",
-              "title": "zz typed title",
+              "title": "Salt Guild",
               "category": "zz typed category",
               "icon": "icons/sundries/flags/banner-standard-brown.webp",
               "whenKnown": "enables",
@@ -1950,7 +2868,7 @@
               "secret": true,
               "parent": "city",
               "dc": 7,
-              "skill": "arc",
+              "skill": "his",
               "reveal": "zz typed reveal",
               "miss": "zz typed miss",
               "hold": null,
@@ -1960,24 +2878,35 @@
               "createdAt": null,
               "modifiedAt": 1790000000000,
               "reviewedAt": null,
-              "touched": [
-                "dc"
-              ],
-              "reviewedSnapshot": null
+              "touched": [],
+              "reviewedSnapshot": {
+                "title": "Salt Guild",
+                "category": "zz typed category",
+                "whenKnown": "enables",
+                "whenCarried": "inherit",
+                "secret": true,
+                "parent": "city",
+                "dc": 7,
+                "skill": "his",
+                "reveal": "zz typed reveal",
+                "miss": "zz typed miss",
+                "hold": null,
+                "lore": []
+              }
             },
             {
               "id": "diary",
-              "title": "Caven's diary",
+              "title": "zz typed title",
               "category": "zz typed category",
               "icon": "icons/sundries/flags/banner-standard-brown.webp",
               "whenKnown": "enables",
               "whenCarried": "inherit",
               "secret": true,
               "parent": null,
-              "dc": 15,
-              "skill": "his",
-              "reveal": "<p>Kept a diary.</p>",
-              "miss": "",
+              "dc": 7,
+              "skill": "arc",
+              "reveal": "zz typed reveal",
+              "miss": "zz typed miss",
               "hold": null,
               "lore": [],
               "source": null,
@@ -2067,7 +2996,7 @@
             },
             {
               "id": "guild",
-              "title": "zz typed title",
+              "title": "Salt Guild",
               "category": "zz typed category",
               "icon": "icons/sundries/flags/banner-standard-brown.webp",
               "whenKnown": "enables",
@@ -2075,7 +3004,7 @@
               "secret": true,
               "parent": "city",
               "dc": 7,
-              "skill": "arc",
+              "skill": "his",
               "reveal": "zz typed reveal",
               "miss": "zz typed miss",
               "hold": null,
@@ -2085,24 +3014,35 @@
               "createdAt": null,
               "modifiedAt": 1790000000000,
               "reviewedAt": null,
-              "touched": [
-                "dc"
-              ],
-              "reviewedSnapshot": null
+              "touched": [],
+              "reviewedSnapshot": {
+                "title": "Salt Guild",
+                "category": "zz typed category",
+                "whenKnown": "enables",
+                "whenCarried": "inherit",
+                "secret": true,
+                "parent": "city",
+                "dc": 7,
+                "skill": "his",
+                "reveal": "zz typed reveal",
+                "miss": "zz typed miss",
+                "hold": null,
+                "lore": []
+              }
             },
             {
               "id": "diary",
-              "title": "Caven's diary",
+              "title": "zz typed title",
               "category": "zz typed category",
               "icon": "icons/sundries/flags/banner-standard-brown.webp",
               "whenKnown": "enables",
               "whenCarried": "inherit",
               "secret": true,
               "parent": null,
-              "dc": 15,
-              "skill": "his",
-              "reveal": "<p>Kept a diary.</p>",
-              "miss": "",
+              "dc": 7,
+              "skill": "arc",
+              "reveal": "zz typed reveal",
+              "miss": "zz typed miss",
               "hold": null,
               "lore": [],
               "source": null,
@@ -2192,7 +3132,7 @@
             },
             {
               "id": "guild",
-              "title": "zz typed title",
+              "title": "Salt Guild",
               "category": "zz typed category",
               "icon": "icons/sundries/flags/banner-standard-brown.webp",
               "whenKnown": "enables",
@@ -2200,7 +3140,7 @@
               "secret": true,
               "parent": "city",
               "dc": 7,
-              "skill": "arc",
+              "skill": "his",
               "reveal": "zz typed reveal",
               "miss": "zz typed miss",
               "hold": null,
@@ -2210,24 +3150,35 @@
               "createdAt": null,
               "modifiedAt": 1790000000000,
               "reviewedAt": null,
-              "touched": [
-                "dc"
-              ],
-              "reviewedSnapshot": null
+              "touched": [],
+              "reviewedSnapshot": {
+                "title": "Salt Guild",
+                "category": "zz typed category",
+                "whenKnown": "enables",
+                "whenCarried": "inherit",
+                "secret": true,
+                "parent": "city",
+                "dc": 7,
+                "skill": "his",
+                "reveal": "zz typed reveal",
+                "miss": "zz typed miss",
+                "hold": null,
+                "lore": []
+              }
             },
             {
               "id": "diary",
-              "title": "Caven's diary",
+              "title": "zz typed title",
               "category": "zz typed category",
               "icon": "icons/sundries/flags/banner-standard-brown.webp",
               "whenKnown": "enables",
               "whenCarried": "inherit",
               "secret": true,
               "parent": null,
-              "dc": 15,
-              "skill": "his",
-              "reveal": "<p>Kept a diary.</p>",
-              "miss": "",
+              "dc": 7,
+              "skill": "arc",
+              "reveal": "zz typed reveal",
+              "miss": "zz typed miss",
               "hold": null,
               "lore": [],
               "source": null,
@@ -2317,7 +3268,7 @@
             },
             {
               "id": "guild",
-              "title": "zz typed title",
+              "title": "Salt Guild",
               "category": "zz typed category",
               "icon": "icons/sundries/flags/banner-standard-brown.webp",
               "whenKnown": "enables",
@@ -2325,7 +3276,7 @@
               "secret": true,
               "parent": "city",
               "dc": 7,
-              "skill": "arc",
+              "skill": "his",
               "reveal": "zz typed reveal",
               "miss": "zz typed miss",
               "hold": null,
@@ -2335,24 +3286,35 @@
               "createdAt": null,
               "modifiedAt": 1790000000000,
               "reviewedAt": null,
-              "touched": [
-                "dc"
-              ],
-              "reviewedSnapshot": null
+              "touched": [],
+              "reviewedSnapshot": {
+                "title": "Salt Guild",
+                "category": "zz typed category",
+                "whenKnown": "enables",
+                "whenCarried": "inherit",
+                "secret": true,
+                "parent": "city",
+                "dc": 7,
+                "skill": "his",
+                "reveal": "zz typed reveal",
+                "miss": "zz typed miss",
+                "hold": null,
+                "lore": []
+              }
             },
             {
               "id": "diary",
-              "title": "Caven's diary",
+              "title": "zz typed title",
               "category": "zz typed category",
               "icon": "icons/sundries/flags/banner-standard-brown.webp",
               "whenKnown": "enables",
               "whenCarried": "inherit",
               "secret": true,
               "parent": null,
-              "dc": 15,
-              "skill": "his",
-              "reveal": "<p>Kept a diary.</p>",
-              "miss": "",
+              "dc": 7,
+              "skill": "arc",
+              "reveal": "zz typed reveal",
+              "miss": "zz typed miss",
               "hold": null,
               "lore": [],
               "source": null,
@@ -2442,7 +3404,7 @@
             },
             {
               "id": "guild",
-              "title": "zz typed title",
+              "title": "Salt Guild",
               "category": "zz typed category",
               "icon": "icons/sundries/flags/banner-standard-brown.webp",
               "whenKnown": "enables",
@@ -2450,7 +3412,7 @@
               "secret": true,
               "parent": "city",
               "dc": 7,
-              "skill": "arc",
+              "skill": "his",
               "reveal": "zz typed reveal",
               "miss": "zz typed miss",
               "hold": null,
@@ -2460,24 +3422,35 @@
               "createdAt": null,
               "modifiedAt": 1790000000000,
               "reviewedAt": null,
-              "touched": [
-                "dc"
-              ],
-              "reviewedSnapshot": null
+              "touched": [],
+              "reviewedSnapshot": {
+                "title": "Salt Guild",
+                "category": "zz typed category",
+                "whenKnown": "enables",
+                "whenCarried": "inherit",
+                "secret": true,
+                "parent": "city",
+                "dc": 7,
+                "skill": "his",
+                "reveal": "zz typed reveal",
+                "miss": "zz typed miss",
+                "hold": null,
+                "lore": []
+              }
             },
             {
               "id": "diary",
-              "title": "Caven's diary",
+              "title": "zz typed title",
               "category": "zz typed category",
               "icon": "icons/sundries/flags/banner-standard-brown.webp",
               "whenKnown": "enables",
               "whenCarried": "inherit",
               "secret": true,
               "parent": null,
-              "dc": 15,
-              "skill": "his",
-              "reveal": "<p>Kept a diary.</p>",
-              "miss": "",
+              "dc": 7,
+              "skill": "arc",
+              "reveal": "zz typed reveal",
+              "miss": "zz typed miss",
               "hold": null,
               "lore": [],
               "source": null,
@@ -2567,7 +3540,7 @@
             },
             {
               "id": "guild",
-              "title": "zz typed title",
+              "title": "Salt Guild",
               "category": "zz typed category",
               "icon": "icons/sundries/flags/banner-standard-brown.webp",
               "whenKnown": "enables",
@@ -2575,7 +3548,7 @@
               "secret": true,
               "parent": "city",
               "dc": 7,
-              "skill": "arc",
+              "skill": "his",
               "reveal": "zz typed reveal",
               "miss": "zz typed miss",
               "hold": null,
@@ -2585,24 +3558,35 @@
               "createdAt": null,
               "modifiedAt": 1790000000000,
               "reviewedAt": null,
-              "touched": [
-                "dc"
-              ],
-              "reviewedSnapshot": null
+              "touched": [],
+              "reviewedSnapshot": {
+                "title": "Salt Guild",
+                "category": "zz typed category",
+                "whenKnown": "enables",
+                "whenCarried": "inherit",
+                "secret": true,
+                "parent": "city",
+                "dc": 7,
+                "skill": "his",
+                "reveal": "zz typed reveal",
+                "miss": "zz typed miss",
+                "hold": null,
+                "lore": []
+              }
             },
             {
               "id": "diary",
-              "title": "Caven's diary",
+              "title": "zz typed title",
               "category": "zz typed category",
               "icon": "icons/sundries/flags/banner-standard-brown.webp",
               "whenKnown": "enables",
               "whenCarried": "inherit",
               "secret": true,
               "parent": null,
-              "dc": 15,
-              "skill": "his",
-              "reveal": "<p>Kept a diary.</p>",
-              "miss": "",
+              "dc": 7,
+              "skill": "arc",
+              "reveal": "zz typed reveal",
+              "miss": "zz typed miss",
               "hold": null,
               "lore": [],
               "source": null,
@@ -2692,7 +3676,7 @@
             },
             {
               "id": "guild",
-              "title": "zz typed title",
+              "title": "Salt Guild",
               "category": "zz typed category",
               "icon": "icons/sundries/flags/banner-standard-brown.webp",
               "whenKnown": "enables",
@@ -2700,7 +3684,7 @@
               "secret": true,
               "parent": "city",
               "dc": 7,
-              "skill": "arc",
+              "skill": "his",
               "reveal": "zz typed reveal",
               "miss": "zz typed miss",
               "hold": null,
@@ -2710,24 +3694,35 @@
               "createdAt": null,
               "modifiedAt": 1790000000000,
               "reviewedAt": null,
-              "touched": [
-                "dc"
-              ],
-              "reviewedSnapshot": null
+              "touched": [],
+              "reviewedSnapshot": {
+                "title": "Salt Guild",
+                "category": "zz typed category",
+                "whenKnown": "enables",
+                "whenCarried": "inherit",
+                "secret": true,
+                "parent": "city",
+                "dc": 7,
+                "skill": "his",
+                "reveal": "zz typed reveal",
+                "miss": "zz typed miss",
+                "hold": null,
+                "lore": []
+              }
             },
             {
               "id": "diary",
-              "title": "Caven's diary",
+              "title": "zz typed title",
               "category": "zz typed category",
               "icon": "icons/sundries/flags/banner-standard-brown.webp",
               "whenKnown": "enables",
               "whenCarried": "inherit",
               "secret": true,
               "parent": null,
-              "dc": 15,
-              "skill": "his",
-              "reveal": "<p>Kept a diary.</p>",
-              "miss": "",
+              "dc": 7,
+              "skill": "arc",
+              "reveal": "zz typed reveal",
+              "miss": "zz typed miss",
               "hold": null,
               "lore": [],
               "source": null,
@@ -2817,7 +3812,7 @@
             },
             {
               "id": "guild",
-              "title": "zz typed title",
+              "title": "Salt Guild",
               "category": "zz typed category",
               "icon": "icons/sundries/flags/banner-standard-brown.webp",
               "whenKnown": "enables",
@@ -2825,7 +3820,7 @@
               "secret": true,
               "parent": "city",
               "dc": 7,
-              "skill": "arc",
+              "skill": "his",
               "reveal": "zz typed reveal",
               "miss": "zz typed miss",
               "hold": null,
@@ -2835,24 +3830,35 @@
               "createdAt": null,
               "modifiedAt": 1790000000000,
               "reviewedAt": null,
-              "touched": [
-                "dc"
-              ],
-              "reviewedSnapshot": null
+              "touched": [],
+              "reviewedSnapshot": {
+                "title": "Salt Guild",
+                "category": "zz typed category",
+                "whenKnown": "enables",
+                "whenCarried": "inherit",
+                "secret": true,
+                "parent": "city",
+                "dc": 7,
+                "skill": "his",
+                "reveal": "zz typed reveal",
+                "miss": "zz typed miss",
+                "hold": null,
+                "lore": []
+              }
             },
             {
               "id": "diary",
-              "title": "Caven's diary",
+              "title": "zz typed title",
               "category": "zz typed category",
               "icon": "icons/sundries/flags/banner-standard-brown.webp",
               "whenKnown": "enables",
               "whenCarried": "inherit",
               "secret": true,
               "parent": null,
-              "dc": 15,
-              "skill": "his",
-              "reveal": "<p>Kept a diary.</p>",
-              "miss": "",
+              "dc": 7,
+              "skill": "arc",
+              "reveal": "zz typed reveal",
+              "miss": "zz typed miss",
               "hold": null,
               "lore": [],
               "source": null,
@@ -2942,7 +3948,7 @@
             },
             {
               "id": "guild",
-              "title": "zz typed title",
+              "title": "Salt Guild",
               "category": "zz typed category",
               "icon": "icons/sundries/flags/banner-standard-brown.webp",
               "whenKnown": "enables",
@@ -2950,7 +3956,7 @@
               "secret": true,
               "parent": "city",
               "dc": 7,
-              "skill": "arc",
+              "skill": "his",
               "reveal": "zz typed reveal",
               "miss": "zz typed miss",
               "hold": null,
@@ -2960,24 +3966,35 @@
               "createdAt": null,
               "modifiedAt": 1790000000000,
               "reviewedAt": null,
-              "touched": [
-                "dc"
-              ],
-              "reviewedSnapshot": null
+              "touched": [],
+              "reviewedSnapshot": {
+                "title": "Salt Guild",
+                "category": "zz typed category",
+                "whenKnown": "enables",
+                "whenCarried": "inherit",
+                "secret": true,
+                "parent": "city",
+                "dc": 7,
+                "skill": "his",
+                "reveal": "zz typed reveal",
+                "miss": "zz typed miss",
+                "hold": null,
+                "lore": []
+              }
             },
             {
               "id": "diary",
-              "title": "Caven's diary",
+              "title": "zz typed title",
               "category": "zz typed category",
               "icon": "icons/sundries/flags/banner-standard-brown.webp",
               "whenKnown": "enables",
               "whenCarried": "inherit",
               "secret": true,
               "parent": null,
-              "dc": 15,
-              "skill": "his",
-              "reveal": "<p>Kept a diary.</p>",
-              "miss": "",
+              "dc": 7,
+              "skill": "arc",
+              "reveal": "zz typed reveal",
+              "miss": "zz typed miss",
               "hold": null,
               "lore": [],
               "source": null,
@@ -3033,7 +4050,7 @@
       "calls": [
         {
           "op": "clipboard",
-          "text": "Vel — id: city — category: zz typed category\nparent: root\nchildren: zz typed title (guild)\ncarriers (1): ZZ Brakka\nfacts: zz typed [c1]\nreview: reviewed"
+          "text": "Vel — id: city — category: zz typed category\nparent: root\nchildren: Salt Guild (guild)\ncarriers (1): ZZ Brakka\nfacts: zz typed [c1]\nreview: reviewed"
         },
         {
           "op": "notify",

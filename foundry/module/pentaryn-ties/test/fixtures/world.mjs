@@ -284,41 +284,55 @@ export async function bootWorld({
   const view = new FakeElement("canvas");
   const placeables = tokens.map(spec => makePlaceable(F, { ...spec, scene }));
   for (const p of placeables) scene.tokens.set(p.document.id, p.document);
-  // a PIXI that records: every Graphics/Text/Container call lands on F.pixi
+  // a PIXI that records: every Graphics/Text/Container call lands on F.pixi (other objects by id)
   F.pixi = [];
-  const rec = (kind, id) =>
-    new Proxy(
-      { kind, id, children: [], destroyed: false, position: { set: (x, y) => F.pixi.push({ id, call: "position.set", args: [x, y] }) }, anchor: { set: v => F.pixi.push({ id, call: "anchor.set", args: [v] }) } },
-      {
-        get(target, prop) {
-          if (prop in target) return target[prop];
-          if (prop === "then") return undefined;
-          return (...args) => {
-            F.pixi.push({ id, call: String(prop), args: F.plain(args) });
-            if (prop === "addChild") target.children.push(args[0]);
-            if (prop === "removeChildren") return target.children.splice(0);
-            if (prop === "destroy") target.destroyed = true;
-            return target.__proxy;
-          };
-        },
-        set(target, prop, value) {
-          target[prop] = value;
-          return true;
-        },
-      }
-    );
   let pixiSeq = 0;
+  const argsOf = args => F.plain(args.map(a => (a && a.__rec ? `<${a.id}>` : a)));
   const make = kind => {
-    const p = rec(kind, `${kind}${++pixiSeq}`);
-    p.__proxy = p;
-    F.pixi.push({ id: p.id, call: "new", args: [] });
-    return p;
+    const id = `${kind}${++pixiSeq}`;
+    const target = {
+      __rec: true,
+      kind,
+      id,
+      children: [],
+      destroyed: false,
+      position: { set: (x, y) => F.pixi.push({ id, call: "position.set", args: [x, y] }) },
+      anchor: { set: v => F.pixi.push({ id, call: "anchor.set", args: [v] }) },
+    };
+    const proxy = new Proxy(target, {
+      get(t, prop) {
+        if (typeof prop === "symbol" || prop === "toJSON" || prop === "then") return undefined;
+        if (prop in t) return t[prop];
+        return (...args) => {
+          F.pixi.push({ id, call: prop, args: argsOf(args) });
+          if (prop === "addChild") t.children.push(args[0]);
+          if (prop === "removeChildren") return t.children.splice(0);
+          if (prop === "destroy") t.destroyed = true;
+          return proxy;
+        };
+      },
+      set(t, prop, value) {
+        t[prop] = value;
+        F.pixi.push({ id, call: `set ${String(prop)}`, args: argsOf([value]) });
+        return true;
+      },
+    });
+    F.pixi.push({ id, call: "new", args: [] });
+    return proxy;
   };
   globalThis.PIXI = {
     VERSION: "8.0.0",
-    Container: function Container() { return make("Container"); },
-    Graphics: function Graphics() { return make("Graphics"); },
-    Text: function Text(opts) { const t = make("Text"); F.pixi.push({ id: t.id, call: "text", args: F.plain([opts]) }); return t; },
+    Container: function Container() {
+      return make("Container");
+    },
+    Graphics: function Graphics() {
+      return make("Graphics");
+    },
+    Text: function Text(opts) {
+      const t = make("Text");
+      F.pixi.push({ id: t.id, call: "text", args: F.plain([opts]) });
+      return t;
+    },
   };
   const iface = make("Interface");
 
