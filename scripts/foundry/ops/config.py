@@ -241,7 +241,8 @@ MODULES = {
     ),
     "names": ModuleSpec(
         "pentaryn-names",
-        check=(*_STATIC, *_BLUEPRINT),
+        # node-test: test/run.mjs runs the characterisation suites (names guide; C39).
+        check=(*_STATIC, "node-test", *_BLUEPRINT),
         after_sync=(
             "First install: restart Foundry (module.json is read at startup), then reload.",
             "Rename an actor: token labels that were its name (or the part before the",
@@ -371,9 +372,8 @@ MODULES = {
     ),
     "pings": ModuleSpec(
         "pentaryn-pings",
-        # Static gates only until its migration adds test/run.mjs (pings guide step 9 then
-        # adds node-test; C39).
-        check=(*_STATIC, *_BLUEPRINT),
+        # node-test: test/run.mjs runs the characterisation suites (pings guide step 9; C39).
+        check=(*_STATIC, "node-test", *_BLUEPRINT),
         after_sync=(
             "First install: restart Foundry (module.json is read at startup), enable",
             "'Pentaryn Ping Log', then reload the GM tab (GM clients are the only writers).",
