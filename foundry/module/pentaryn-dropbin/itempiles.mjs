@@ -18,7 +18,9 @@
  * registers inside an async `ready`, after the pack indexes load, so attunement's runs first.
  */
 
-import { MODULE, LOCK_SOUND, lockedContainer, planLockSounds, planEyesNeedView } from "./dropbin-core.mjs";
+import {
+  MODULE, LOCK_SOUND, lockedContainer, pileFlags, isPileFlagged, planLockSounds, planEyesNeedView,
+} from "./dropbin-core.mjs";
 
 /** The module log (set by install). */
 let log = null;
@@ -105,7 +107,7 @@ async function armAttunementRepair(reg) {
  */
 function lockedContainerData(target) {
   const actor = target?.actor ?? target;
-  const data = lockedContainer(actor?.getFlag?.("item-piles", "data"));
+  const data = lockedContainer(pileFlags(actor));
   return data ? { actor, data } : null;
 }
 
@@ -128,7 +130,7 @@ function announceLocked(actor, { playSound }) {
  */
 async function ensureLockSounds() {
   if (!game.user.isGM) return;
-  const plan = planLockSounds(game.actors, game.scenes, LOCK_SOUND, { flagsOf: d => d.getFlag("item-piles", "data") });
+  const plan = planLockSounds(game.actors, game.scenes, LOCK_SOUND);
   let patched = 0;
   for (const { _id, ...changes } of plan.actorUpdates) {
     await game.actors.get(_id).update(changes);
@@ -186,7 +188,9 @@ function hideRowsFromDirectory(app, element, isSecret) {
   }
 }
 
-const isPileActor = id => !!game.actors.get(id)?.getFlag("item-piles", "data")?.enabled;
+// Plain flag reads (pileFlags), not getFlag("item-piles", …): getFlag throws when Item Piles is not an
+// active package, which would break every player's sidebar render (items-journal-23).
+const isPileActor = id => isPileFlagged(game.actors.get(id));
 
 /**
  * A readable behind an eye pin is meant to be found by looking at the thing, so
