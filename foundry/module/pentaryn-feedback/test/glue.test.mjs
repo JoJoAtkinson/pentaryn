@@ -399,6 +399,36 @@ test("a failed queue write tells the player and leaves nothing half-done", async
   assert.equal(F.calls.slice(before).filter(c => c.op === "query").length, 0);
 });
 
+test("a failed queue write does not start the reporter's 5 s gap: an immediate retry goes through", async () => {
+  refill();
+  F.become({ userId: IDS.player });
+  const update = player.update;
+  try {
+    player.update = async () => { throw new Error("socket closed"); };
+    assert.equal((await api.submit({ text: "will not queue" })).ok, false);
+    player.update = update;
+    const retry = await api.submit({ text: "will not queue" });
+    assert.equal(retry.ok, true, `the retry was refused: ${retry.reason}`);
+    assert.deepEqual(await api.submit({ text: "and again" }), { ok: false, code: "REFUSED", reason: "wait 5 s between reports" },
+      "the successful retry does start the gap");
+  } finally {
+    player.update = update;
+    F.become({ userId: IDS.gm });
+  }
+});
+
+test("two submits in the same tick: the second is refused while the first is still writing", async () => {
+  refill();
+  F.become({ userId: IDS.player });
+  try {
+    const [a, b] = await Promise.all([api.submit({ text: "double" }), api.submit({ text: "click" })]);
+    assert.equal(a.ok, true);
+    assert.deepEqual(b, { ok: false, code: "REFUSED", reason: "wait 5 s between reports" });
+  } finally {
+    F.become({ userId: IDS.gm });
+  }
+});
+
 test("no GM online: the report waits on the player's own flag (cap 5, oldest dropped) and is filed when a GM connects", async () => {
   refill();
   F.gm.active = false;

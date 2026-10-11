@@ -122,7 +122,11 @@ export function install(reg, ctx) {
     if (since < LIMITS.submitGapMs) {
       return refuse("REFUSED", `wait ${Math.ceil((LIMITS.submitGapMs - since) / 1000)} s between reports`);
     }
-    lastSubmit.set(user.id, Date.now());
+    // reserve the gap now so a double-click cannot slip a second report past it while this one is
+    // writing; give it back if the write fails, so a failed submit does not hold the player off
+    const prevSubmit = lastSubmit.get(user.id);
+    const reserved = Date.now();
+    lastSubmit.set(user.id, reserved);
 
     // 1. queue on my own User document (adds the report, drops the oldest past the cap)
     const queue = { ...queueOf(user), [report.id]: report };
@@ -132,6 +136,10 @@ export function install(reg, ctx) {
     try {
       await user.update(update);
     } catch (err) {
+      if (lastSubmit.get(user.id) === reserved) {
+        if (prevSubmit === undefined) lastSubmit.delete(user.id);
+        else lastSubmit.set(user.id, prevSubmit);
+      }
       log.error("queue the report", err);
       log.notify("error", _loc("PENTARYN_FEEDBACK.Notify.Failed", { reason: err?.message ?? String(err) }));
       return toFail(err);
