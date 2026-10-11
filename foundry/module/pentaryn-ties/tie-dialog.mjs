@@ -23,11 +23,12 @@
  * does not happen for them, and the dialog says so instead of pretending it did.
  */
 
-import { NOTES_MAX, read, write, clampStance, clampStrength, mayWrite, baseActorOf } from "./ties-api.mjs";
+import { read, write, baseActorOf } from "./ties-adapter.mjs";
+import { mayWrite } from "./settings.mjs";
 
 export { baseActorOf };
 import { pips, stanceSelect } from "./editor.mjs";
-import { MODULE, resolveMirror } from "./ties-core.mjs";
+import { MODULE, resolveMirror, NOTES_MAX, clampStance, clampStrength } from "./ties-core.mjs";
 import { esc } from "./core/html.mjs";
 import { makeLog } from "./lib/log.mjs";
 

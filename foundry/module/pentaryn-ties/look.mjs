@@ -64,7 +64,8 @@
  * GM behaviour is unchanged by this file.
  */
 
-import { MODULE, mayWrite } from "./ties-api.mjs";
+import { MODULE } from "./ties-core.mjs";
+import { mayWrite } from "./settings.mjs";
 import { kindActorOf } from "./study.mjs";
 import { grantCard, grantedHead } from "./known.mjs";
 import { subjectFacts } from "./facts.mjs";

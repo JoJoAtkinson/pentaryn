@@ -4,7 +4,7 @@
  * Split out of study.mjs (S4b, ties-35); study.mjs re-exports this file's public names.
  */
 
-import { MODULE } from "../ties-api.mjs";
+import { MODULE } from "../ties-core.mjs";
 import { BUBBLE, esc, f, log } from "./shared.mjs";
 import { send } from "../socket-adapter.mjs";
 

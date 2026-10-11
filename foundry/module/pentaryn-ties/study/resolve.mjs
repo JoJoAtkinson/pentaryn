@@ -6,7 +6,7 @@
  */
 
 import { attributeLore, describeAttribute } from "../attributes.mjs";
-import { MODULE } from "../ties-api.mjs";
+import { MODULE } from "../ties-core.mjs";
 import {
   attrFactKey,
   BELIEFS_FLAG,

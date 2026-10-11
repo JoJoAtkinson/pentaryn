@@ -30,7 +30,8 @@
  * GM who wants *this* orc not to count as `type:humanoid`.
  */
 
-import { MODULE, baseActorOf } from "./ties-api.mjs";
+import { MODULE } from "./ties-core.mjs";
+import { baseActorOf } from "./ties-adapter.mjs";
 import { readFlag } from "./lib/flags.mjs";
 import {
   REGISTRY_SETTING,

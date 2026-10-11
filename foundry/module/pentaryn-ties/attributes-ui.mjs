@@ -19,7 +19,7 @@
  * what an actor was.
  */
 
-import { MODULE } from "./ties-api.mjs";
+import { MODULE } from "./ties-core.mjs";
 import {
   registry,
   describeAttribute,

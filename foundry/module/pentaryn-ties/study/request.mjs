@@ -6,7 +6,8 @@
  */
 
 import { attributeIdsOf, attributeLore, describeAttribute } from "../attributes.mjs";
-import { MODULE, mayWrite } from "../ties-api.mjs";
+import { MODULE } from "../ties-core.mjs";
+import { mayWrite } from "../settings.mjs";
 import { attrFactKey, LORE_FLAG, loreFactKey, loreOfferable, rollableLore } from "../known-core.mjs";
 import { applyStudy } from "./apply.mjs";
 import { kindActorOf, studiedOf, studyStateFor } from "./resolve.mjs";

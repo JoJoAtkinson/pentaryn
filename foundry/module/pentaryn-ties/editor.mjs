@@ -17,20 +17,8 @@
  * touches it. See `context/plans/foundry-npc-ties-gui.md`.
  */
 
-import {
-  MODULE,
-  STANCES,
-  NOTES_MAX,
-  read,
-  inbound,
-  presentActorIds,
-  write,
-  removeTie,
-  clampStance,
-  clampStrength,
-  stanceOf,
-  stanceLabel
-} from "./ties-api.mjs";
+import { MODULE, STANCES, NOTES_MAX, clampStance, clampStrength, stanceOf } from "./ties-core.mjs";
+import { read, inbound, presentActorIds, write, removeTie, stanceLabel } from "./ties-adapter.mjs";
 import { authoringHTML, bindAuthoring } from "./authoring.mjs";
 import { esc } from "./core/html.mjs";
 import { makeLog } from "./lib/log.mjs";

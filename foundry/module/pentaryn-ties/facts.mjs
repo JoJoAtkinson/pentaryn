@@ -15,7 +15,7 @@
  * outcomes is what lets that window be identical for a success, a failure and a held rung.
  */
 
-import { MODULE } from "./ties-api.mjs";
+import { MODULE } from "./ties-core.mjs";
 import { attributeIdsOf, registry } from "./attributes.mjs";
 import { kindActorOf } from "./study.mjs";
 import { factOrder, LORE_FLAG } from "./known-core.mjs";

@@ -32,7 +32,7 @@
  * constructor throws. Use doc: context/foundry/attribute-review.md.
  */
 
-import { MODULE } from "./ties-api.mjs";
+import { MODULE } from "./ties-core.mjs";
 import {
   registry,
   attributeIdsOf,

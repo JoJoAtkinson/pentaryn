@@ -22,9 +22,9 @@
  * Client-side only, like everything else here. Nothing crosses the socket.
  */
 
-import { MODULE, read, stanceOf, stanceLabel } from "./ties-api.mjs";
+import { MODULE, stanceOf } from "./ties-core.mjs";
 import { readWorn } from "./worn.mjs";
-import { canSee } from "./ties-adapter.mjs";
+import { canSee, read, stanceLabel } from "./ties-adapter.mjs";
 import { makeLog } from "./lib/log.mjs";
 import { PIN_SETTING, setting } from "./settings.mjs";
 

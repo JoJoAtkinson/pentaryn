@@ -25,7 +25,7 @@
  * Client-side only, like the rest of the module. Nothing crosses the socket.
  */
 
-import { MODULE } from "./ties-api.mjs";
+import { MODULE } from "./ties-core.mjs";
 
 const t = (k, d) => game.i18n.localize(`PENTARYN_TIES.${k}`) || d;
 

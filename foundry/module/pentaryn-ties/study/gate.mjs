@@ -5,7 +5,7 @@
  */
 
 import { attributeLore, describeAttribute } from "../attributes.mjs";
-import { MODULE } from "../ties-api.mjs";
+import { MODULE } from "../ties-core.mjs";
 import { rolledMiss } from "../core/rules.mjs";
 import {
   ATTR_BELIEFS_SETTING,

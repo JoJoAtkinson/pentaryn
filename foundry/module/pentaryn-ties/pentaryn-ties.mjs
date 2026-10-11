@@ -21,9 +21,9 @@
  * (S8); until then the published object below is the reference.
  */
 
-import { MODULE } from "./ties-core.mjs";
+import { MODULE, STANCES } from "./ties-core.mjs";
 import { registerSettings, onKeys, setting, mayWrite } from "./settings.mjs";
-import { inspectorFor } from "./ties-adapter.mjs";
+import { inspectorFor, inbound, migrateLegacy, read, removeTie, setNotes, setTie } from "./ties-adapter.mjs";
 import { closeAll, restorePinned } from "./popups.mjs";
 import { toggle as toggleDescription, close as closeDescription } from "./describe.mjs";
 import { TiesEditor } from "./editor.mjs";
@@ -31,7 +31,6 @@ import { openTieDialogFor } from "./tie-dialog.mjs";
 import { openPreview } from "./preview.mjs";
 import { openLook } from "./look.mjs";
 import { openReview } from "./review-ui.mjs";
-import { inbound, migrateLegacy, read, removeTie, setNotes, setTie, STANCES } from "./ties-api.mjs";
 import {
   addKnown, categoriesFor, fileHovered, hideKnown, notebookActor, openAddPicker, openKnownEntry,
   readKnown, removeKnown, setKnownField

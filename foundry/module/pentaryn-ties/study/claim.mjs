@@ -5,7 +5,7 @@
  * Split out of study.mjs (S4b, ties-35); study.mjs re-exports this file's public names.
  */
 
-import { MODULE } from "../ties-api.mjs";
+import { MODULE } from "../ties-core.mjs";
 import { INSPECT_CLAIM_KEY } from "../core/rules.mjs";
 import { BELIEFS_FLAG, KIND_KEY } from "../known-core.mjs";
 import { putBelief, readBelief } from "./apply.mjs";

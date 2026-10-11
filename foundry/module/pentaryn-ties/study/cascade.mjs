@@ -6,7 +6,9 @@
  */
 
 import { attributeIdsOf, describeAttribute, knowledge, setKnowledge } from "../attributes.mjs";
-import { canReach, mayWrite, MODULE } from "../ties-api.mjs";
+import { MODULE } from "../ties-core.mjs";
+import { canReach } from "../ties-adapter.mjs";
+import { mayWrite } from "../settings.mjs";
 import { CONCEAL_FLAG, concealFor, isIdentKey } from "../core/rules.mjs";
 import {
   BELIEFS_FLAG,

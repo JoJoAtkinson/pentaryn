@@ -27,7 +27,7 @@
  * is absent, a malformed one is absent, an over-long note is truncated.
  */
 
-import { MODULE, NOTES_MAX, clampNotes } from "./ties-api.mjs";
+import { MODULE, NOTES_MAX, clampNotes } from "./ties-core.mjs";
 import { esc } from "./core/html.mjs";
 import { makeLog } from "./lib/log.mjs";
 

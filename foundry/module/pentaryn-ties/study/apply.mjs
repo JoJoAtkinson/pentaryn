@@ -5,7 +5,8 @@
  * Split out of study.mjs (S4b, ties-35); study.mjs re-exports this file's public names.
  */
 
-import { canReach, mayWrite, MODULE } from "../ties-api.mjs";
+import { MODULE } from "../ties-core.mjs";
+import { canReach } from "../ties-adapter.mjs";
 import {
   ATTR_BELIEFS_SETTING,
   BELIEFS_FLAG,
@@ -25,7 +26,7 @@ import { promptDeliver } from "./gate.mjs";
 import { beliefsOf, resolveFact, stackingRule, studiedOf } from "./resolve.mjs";
 import { esc, f, log, SITUATIONAL_MAX, SITUATIONAL_MIN } from "./shared.mjs";
 import { readFlag } from "../lib/flags.mjs";
-import { setting } from "../settings.mjs";
+import { setting, mayWrite } from "../settings.mjs";
 
 /* -------------------------------------------- */
 /*  GM side                                     */

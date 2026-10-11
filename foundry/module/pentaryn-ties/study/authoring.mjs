@@ -6,7 +6,7 @@
  */
 
 import { describeAttribute } from "../attributes.mjs";
-import { MODULE } from "../ties-api.mjs";
+import { MODULE } from "../ties-core.mjs";
 import { rolledMiss } from "../core/rules.mjs";
 import {
   KIND_KEY,

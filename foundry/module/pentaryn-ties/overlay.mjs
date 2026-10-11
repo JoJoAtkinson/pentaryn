@@ -42,9 +42,9 @@
  * documents and would sync to every connected client.
  */
 
-import { MODULE, read } from "./ties-api.mjs";
+import { MODULE } from "./ties-core.mjs";
 import { anyTransient, closeTransient, live as liveCards, reflow, setOnChange, show } from "./popups.mjs";
-import { canSee } from "./ties-adapter.mjs";
+import { canSee, read } from "./ties-adapter.mjs";
 import { makeLog } from "./lib/log.mjs";
 import { setting } from "./settings.mjs";
 

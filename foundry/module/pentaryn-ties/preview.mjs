@@ -60,7 +60,7 @@
  * was before the player view existed — still read-only, still random, still Reroll.
  */
 
-import { MODULE } from "./ties-api.mjs";
+import { MODULE } from "./ties-core.mjs";
 import { attributeIdsOf, describeAttribute, attributeLore, registry, knowledge } from "./attributes.mjs";
 import {
   kindActorOf, studySkillFor, studyStateFor, composeStudyPayload, factStatus, shareFact, forgetFact

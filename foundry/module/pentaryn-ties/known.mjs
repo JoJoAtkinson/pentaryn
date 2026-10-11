@@ -26,9 +26,10 @@
  * knows the other, and a change to the row idiom lands on both.
  */
 
-import { MODULE, baseActorOf, mayWrite } from "./ties-api.mjs";
+import { MODULE } from "./ties-core.mjs";
+import { mayWrite } from "./settings.mjs";
 import { readFlag } from "./lib/flags.mjs";
-import { canSee } from "./ties-adapter.mjs";
+import { canSee, baseActorOf } from "./ties-adapter.mjs";
 import {
   KNOWN_FLAG,
   KNOWN_CATEGORIES_FLAG,

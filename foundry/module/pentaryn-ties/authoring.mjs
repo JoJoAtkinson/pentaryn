@@ -28,7 +28,7 @@
  * value is authored content that exists nowhere else, not a lock.
  */
 
-import { MODULE } from "./ties-api.mjs";
+import { MODULE } from "./ties-core.mjs";
 import { LORE_FLAG, readLore, KIND_OF_FLAG, STUDY_TIERS_FLAG } from "./known-core.mjs";
 import { loreEditorHTML, bindLoreEditor } from "./lore.mjs";
 import { beliefs, deliver, reset, kindActorOf, setKindOf } from "./study.mjs";

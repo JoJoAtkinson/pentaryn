@@ -7,7 +7,7 @@
  * Split out of study.mjs (S4b, ties-35); study.mjs re-exports this file's public names.
  */
 
-import { MODULE } from "../ties-api.mjs";
+import { MODULE } from "../ties-core.mjs";
 import { makeLog } from "../lib/log.mjs";
 
 /** The conduit's one logger: every line reads `pentaryn-ties | …`, as the console lines it replaced. */

@@ -53,8 +53,9 @@
  * stands alone — the next Save from anyone on that pair completes it.
  */
 
-import { MODULE, read, write, clampStance, clampStrength, mayWrite, canReach } from "./ties-api.mjs";
-import { seedReverse } from "./ties-core.mjs";
+import { read, write, canReach } from "./ties-adapter.mjs";
+import { mayWrite } from "./settings.mjs";
+import { seedReverse, MODULE, clampStance, clampStrength } from "./ties-core.mjs";
 import { listen, send } from "./socket-adapter.mjs";
 import { makeLog } from "./lib/log.mjs";
 
