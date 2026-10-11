@@ -12,11 +12,16 @@
  * The personal journal is reached through `ctx.exposed` (personal.mjs), never an import.
  */
 
-import { MODULE, findSaved, isMine, isPersonal, placeFrom, planSave, singlePage, status } from "./journal-core.mjs";
+import { MODULE, escapeHTML, findSaved, isMine, isPersonal, placeFrom, planSave, singlePage, status } from "./journal-core.mjs";
 import { setting, whenChanged } from "./settings.mjs";
 import { descriptorsFor, isEyeReadable, targetFor as targetForApp } from "./sources-adapter.mjs";
 
-const esc = s => foundry.utils.escapeHTML(String(s ?? ""));
+/**
+ * The bar's own strings are escaped with core.escapeHTML (items-journal-32): rendered text is the same
+ * as Foundry's escaper, only an apostrophe is spelled `&#39;` instead of `&#x27;` in innerHTML. The
+ * item image inside a saved body keeps Foundry's escaper (sources-adapter.mjs: that body is hashed).
+ */
+const barEsc = escapeHTML;
 /** A player-facing warning toast (not a console line). */
 const toast = msg => ui.notifications.warn(msg);
 const targetFor = app => targetForApp(app, { gmButton: setting("gmButton") });
@@ -151,21 +156,21 @@ function sinceText(ts) {
 
 function fillBar(app, bar, target) {
   if (busy.has(app)) {
-    bar.innerHTML = `<button type="button" class="pj-add" disabled><i class="fa-solid fa-spinner fa-spin"></i> <span>${esc(game.i18n.localize("PENTARYN_JOURNAL.adding"))}</span></button>`;
+    bar.innerHTML = `<button type="button" class="pj-add" disabled><i class="fa-solid fa-spinner fa-spin"></i> <span>${barEsc(game.i18n.localize("PENTARYN_JOURNAL.adding"))}</span></button>`;
     return;
   }
   const { st, saved } = savedStatus(target);
-  const add = `<button type="button" class="pj-add" data-pj="add"><i class="fa-solid fa-book-medical"></i> <span>${esc(game.i18n.localize("PENTARYN_JOURNAL.add"))}</span></button>`;
+  const add = `<button type="button" class="pj-add" data-pj="add"><i class="fa-solid fa-book-medical"></i> <span>${barEsc(game.i18n.localize("PENTARYN_JOURNAL.add"))}</span></button>`;
   if (st === "saved") {
     const when = saved?.flags?.[MODULE]?.source?.updatedAt ?? saved?.flags?.[MODULE]?.source?.savedAt;
-    bar.innerHTML = `<button type="button" class="pj-open" data-pj="open"><i class="fa-solid fa-book-open"></i> <span>${esc(game.i18n.localize("PENTARYN_JOURNAL.saved"))} · ${esc(game.i18n.localize("PENTARYN_JOURNAL.open"))}</span></button>`
-      + (when ? `<span class="pj-hint">${esc(game.i18n.format("PENTARYN_JOURNAL.hint.saved", { when: sinceText(when) }))}</span>` : "");
+    bar.innerHTML = `<button type="button" class="pj-open" data-pj="open"><i class="fa-solid fa-book-open"></i> <span>${barEsc(game.i18n.localize("PENTARYN_JOURNAL.saved"))} · ${barEsc(game.i18n.localize("PENTARYN_JOURNAL.open"))}</span></button>`
+      + (when ? `<span class="pj-hint">${barEsc(game.i18n.format("PENTARYN_JOURNAL.hint.saved", { when: sinceText(when) }))}</span>` : "");
   } else if (st === "changed") {
-    bar.innerHTML = `<button type="button" class="pj-update" data-pj="add"><i class="fa-solid fa-rotate"></i> <span>${esc(game.i18n.localize("PENTARYN_JOURNAL.update"))}</span></button>`
-      + `<button type="button" class="pj-open" data-pj="open"><i class="fa-solid fa-book-open"></i> <span>${esc(game.i18n.localize("PENTARYN_JOURNAL.open"))}</span></button>`
-      + `<span class="pj-hint">${esc(game.i18n.localize("PENTARYN_JOURNAL.hint.changed"))}</span>`;
+    bar.innerHTML = `<button type="button" class="pj-update" data-pj="add"><i class="fa-solid fa-rotate"></i> <span>${barEsc(game.i18n.localize("PENTARYN_JOURNAL.update"))}</span></button>`
+      + `<button type="button" class="pj-open" data-pj="open"><i class="fa-solid fa-book-open"></i> <span>${barEsc(game.i18n.localize("PENTARYN_JOURNAL.open"))}</span></button>`
+      + `<span class="pj-hint">${barEsc(game.i18n.localize("PENTARYN_JOURNAL.hint.changed"))}</span>`;
   } else {
-    bar.innerHTML = add + `<span class="pj-hint">${esc(game.i18n.localize("PENTARYN_JOURNAL.hint.add"))}</span>`;
+    bar.innerHTML = add + `<span class="pj-hint">${barEsc(game.i18n.localize("PENTARYN_JOURNAL.hint.add"))}</span>`;
   }
 }
 
