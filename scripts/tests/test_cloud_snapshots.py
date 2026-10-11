@@ -1730,10 +1730,12 @@ def test_referenced_bundles_raises_on_an_unreadable_or_malformed_sidecar(two_hos
     bad = f"world-{_stamp(2)}-fvtt14.369-boss.tar.gz"
     _hand_snapshot(c, good, sidecar=_bundled_sidecar({"a": _bundle("module", "a")}))
     _hand_snapshot(c, bad, sidecar=_bundled_sidecar({"b": _bundle("module", "b")}))
+    real = storage.FolderStorage.read_text
     _unreadable(monkeypatch, bad)
     with pytest.raises(storage.StorageError):
         cloud.referenced_bundles(cloud.store())
-    monkeypatch.undo()
+    # never monkeypatch.undo(): it would also undo the fixtures' cloud isolation
+    monkeypatch.setattr(storage.FolderStorage, "read_text", real)
     side = _bundled_sidecar({"b": "not-a-bundle.tar.gz"})   # says bundled, cannot be read as one
     (c / "world-backups" / f"{bad}{cloud.PARENT_SUFFIX}").write_text(json.dumps(side))
     with pytest.raises(storage.StorageError):
@@ -1986,3 +1988,22 @@ def test_bundles_gc_command_refuses_on_an_unreadable_sidecar(two_hosts, monkeypa
         cloud.main(["bundles-gc", "--yes"])
     assert "nothing was deleted" in capsys.readouterr().err
     assert old.exists()
+
+
+def test_status_reads_each_sidecar_once(two_hosts, monkeypatch):
+    c = two_hosts.cloud
+    for i in range(3):
+        _hand_snapshot(c, f"world-{_stamp(i + 1)}-fvtt14.369-boss.tar.gz", age_days=i + 1,
+                       sidecar=_bundled_sidecar({f"a{i}": _bundle("module", f"a{i}")}))
+        (c / "bundles" / _bundle("module", f"a{i}")).write_bytes(b"x")
+    reads: list[str] = []
+    real = storage.FolderStorage.read_text
+
+    def spy(self, rel):
+        reads.append(rel)
+        return real(self, rel)
+    monkeypatch.setattr(storage.FolderStorage, "read_text", spy)
+    with two_hosts.use("mac"):
+        cloud.status()
+    sidecars = [r for r in reads if r.endswith(cloud.PARENT_SUFFIX)]
+    assert len(sidecars) == len(set(sidecars)) == 3
