@@ -162,6 +162,7 @@ async function restoreResult(n, target = null) {
 
   const obj = foundry.utils.duplicate(entry.item);
   delete obj._id;
+  // {restoring: true} tags our own restore for other modules; nothing reads it today (items-journal-27)
   const [made] = await actor.createEmbeddedDocuments("Item", [obj], { [MODULE]: { restoring: true } });
   return { ok: true, item: made, actor };
 }

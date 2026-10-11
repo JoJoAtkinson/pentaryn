@@ -98,6 +98,8 @@ export function shouldCaptureDelete({ userId, selfId, actor, characterType, isPi
   if (!actor || actor.documentName !== "Actor") return false;
   if (actor.type !== characterType) return false;     // characters only
   if (isPile?.(actor)) return false;                   // piles are not losses
+  // Never true in practice (items-journal-27): restore() tags its CREATE with {restoring: true}, and a
+  // create never reaches preDeleteItem. Kept as the documented tag on our own restores (no consumer).
   if (options?.[MODULE]?.restoring) return false;
   return true;
 }
