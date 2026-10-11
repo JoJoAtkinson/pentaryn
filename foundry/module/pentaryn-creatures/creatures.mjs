@@ -14,12 +14,11 @@
 // Exposes game.pentaryn.creatures.
 
 import * as core from "./creatures-core.mjs";
+import { onSettingChange, registerSettings, setting } from "./settings.mjs";
 
 const { MODULE, isPlayerCreature, lightUpdate, ownerShouldSee, stripEntries, shouldShowStrip, stripSignature, stripDock, isItemPile, isAoeHandle } = core;
-const L = (k, data) => (data ? game.i18n.format(`PENTARYN_CREATURES.${k}`, data) : game.i18n.localize(`PENTARYN_CREATURES.${k}`));
 
 const isWriter = () => game.users?.activeGM?.isSelf === true;
-const setting = (key, fallback) => { try { return game.settings.get(MODULE, key); } catch { return fallback; } };
 
 /* -------------------------------------------- */
 /*  Token summaries for the pure core           */
@@ -81,7 +80,7 @@ async function flush() {
 /** Bring one scene's tokens in line (or only `ids`). Returns how many tokens were written. */
 async function syncScene(scene, ids = null) {
   if (!isWriter()) return 0;
-  const radius = Number(setting("lightRadius", 5)) || 0;
+  const radius = Number(setting("lightRadius")) || 0;
   const updates = [];
   for (const t of scene.tokens) {
     if (ids && !ids.has(t.id)) continue;
@@ -200,7 +199,7 @@ function mount() {
   if (el?.isConnected) return el;
   el = document.createElement("nav");
   el.id = STRIP_ID;
-  el.setAttribute("aria-label", L("label"));
+  el.setAttribute("aria-label", _loc("PENTARYN_CREATURES.label"));
   el.addEventListener("click", onClick);
   el.addEventListener("dblclick", onDoubleClick);
   const bottom = document.getElementById("ui-bottom");
@@ -212,7 +211,7 @@ function mount() {
 }
 
 function render() {
-  const enabled = !game.user.isGM && setting("showStrip", true);
+  const enabled = !game.user.isGM && setting("showStrip");
   const entries = enabled && canvas?.ready ? list() : [];
   if (!shouldShowStrip(entries)) {
     stripEl()?.remove();
@@ -237,7 +236,7 @@ function placeStrip() {
   if (!el) { clearInterval(dockTimer); dockTimer = null; return; }
   const bar = document.querySelector(".extended-combat-hud .action-hud") ?? document.querySelector(".extended-combat-hud");
   const r = bar && bar.offsetParent !== null ? bar.getBoundingClientRect() : null;
-  const dock = setting("floatOverHud", true) ? stripDock(r, window.innerHeight) : null;
+  const dock = setting("floatOverHud") ? stripDock(r, window.innerHeight) : null;
   el.classList.toggle("pcr-floating", !!dock);
   el.style.bottom = dock ? `${dock.bottom}px` : "";
   el.style.left = dock ? `${dock.left}px` : "";
@@ -249,9 +248,9 @@ function placeStrip() {
 function build(entries) {
   const label = document.createElement("span");
   label.className = "pcr-label";
-  label.textContent = L("label");
+  label.textContent = _loc("PENTARYN_CREATURES.label");
   const out = [label];
-  const hint = L("hint");
+  const hint = _loc("PENTARYN_CREATURES.hint");
   for (const e of entries) {
     const b = document.createElement("button");
     b.type = "button";
@@ -322,36 +321,16 @@ Hooks.on("controlToken", () => markControlled());
 /*  Settings, patch, API                        */
 /* -------------------------------------------- */
 
-Hooks.once("init", () => {
-  game.settings.register(MODULE, "lightRadius", {
-    name: "PENTARYN_CREATURES.settings.lightRadius.name",
-    hint: "PENTARYN_CREATURES.settings.lightRadius.hint",
-    scope: "world", config: true, type: Number, default: 5,
-    range: { min: 0, max: 30, step: 0.5 },
-    onChange: () => { if (isWriter()) syncAll().catch(err => console.warn(`${MODULE} | light sync failed`, err)); }
-  });
-  game.settings.register(MODULE, "ownerSees", {
-    name: "PENTARYN_CREATURES.settings.ownerSees.name",
-    hint: "PENTARYN_CREATURES.settings.ownerSees.hint",
-    scope: "world", config: true, type: Boolean, default: true,
-    onChange: (v) => { ownerSeesOn = v !== false; refreshTokenVisibility(); }
-  });
-  game.settings.register(MODULE, "floatOverHud", {
-    name: "PENTARYN_CREATURES.settings.floatOverHud.name",
-    hint: "PENTARYN_CREATURES.settings.floatOverHud.hint",
-    scope: "world", config: true, type: Boolean, default: true
-  });
-  game.settings.register(MODULE, "showStrip", {
-    name: "PENTARYN_CREATURES.settings.showStrip.name",
-    hint: "PENTARYN_CREATURES.settings.showStrip.hint",
-    scope: "client", config: true, type: Boolean, default: true,
-    onChange: () => { lastSig = null; scheduleRender(); }
-  });
-});
+// Setting reactions (the rows live in settings.mjs).
+onSettingChange("lightRadius", () => { if (isWriter()) syncAll().catch(err => console.warn(`${MODULE} | light sync failed`, err)); });
+onSettingChange("ownerSees", (v) => { ownerSeesOn = v !== false; refreshTokenVisibility(); });
+onSettingChange("showStrip", () => { lastSig = null; scheduleRender(); });
+
+Hooks.once("init", () => registerSettings());
 
 // Before the canvas first draws, so the first frame already uses the override.
 Hooks.once("setup", () => {
-  ownerSeesOn = setting("ownerSees", true) !== false;
+  ownerSeesOn = setting("ownerSees") !== false;
   patchVisibility();
 });
 
