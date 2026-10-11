@@ -56,11 +56,24 @@ def test_sanitize(raw, want):
     assert host.sanitize(raw) == want
 
 
-def test_default_host_is_the_sanitised_short_hostname(monkeypatch):
+def test_default_host_off_the_mac_is_the_sanitised_short_hostname(monkeypatch):
     monkeypatch.delenv("PENTARYN_HOST")
-    monkeypatch.setattr(host.socket, "gethostname", lambda: "Joe's Mac.local")
-    assert host.host_name() == "joe-s-mac"
+    monkeypatch.setattr(host.platform, "system", lambda: "Linux")
+    monkeypatch.setattr(host.socket, "gethostname", lambda: "BOSS.tailnet.ts.net")
+    assert host.host_name() == "boss"
+    monkeypatch.setattr(host.socket, "gethostname", lambda: "Joe's PC.local")
+    assert host.host_name() == "joe-s-pc"
     assert host.host_is_default()
+
+
+def test_the_mac_with_no_configuration_is_still_the_primary(monkeypatch):
+    """Existing Mac behaviour is unchanged by default: tunnel and updater still run."""
+    monkeypatch.delenv("PENTARYN_HOST")
+    monkeypatch.delenv("PENTARYN_PRIMARY_HOST")
+    monkeypatch.setattr(host.platform, "system", lambda: "Darwin")
+    monkeypatch.setattr(host.socket, "gethostname", lambda: "Joes-MacBook-Pro.local")
+    assert (host.host_name(), host.role()) == ("mac", "primary")
+    host.require_primary("the tunnel")
 
 
 @pytest.mark.parametrize("bad", ["untagged", "latest", "local", "14", "14.369", "",

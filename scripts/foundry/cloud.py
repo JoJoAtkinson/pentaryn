@@ -894,8 +894,7 @@ def status() -> int:
     state = bootstate.load()
     log(f"cloud        {st.kind}  {st.root}")
     log(f"host         {me}  ({host.role()}; primary is {host.primary_host()})"
-        + ("  ⚠ PENTARYN_HOST unset — using the sanitised hostname" if host.host_is_default()
-           else ""))
+        + ("  (PENTARYN_HOST unset — platform default)" if host.host_is_default() else ""))
     log(f"based on     {state.based_on or 'unknown'}"
         + (f"  (keeping local over {state.keep_local_until_newer_than})"
            if state.keep_local_until_newer_than else ""))

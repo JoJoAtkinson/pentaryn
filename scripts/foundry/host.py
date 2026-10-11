@@ -157,14 +157,21 @@ def validate_host(name: str) -> str:
 
 
 def host_is_default() -> bool:
-    """True when PENTARYN_HOST is unset and the sanitised hostname is being used."""
+    """True when PENTARYN_HOST is unset and a default (mac / the hostname) is in use."""
     return not get("PENTARYN_HOST")
 
 
 def host_name() -> str:
+    """PENTARYN_HOST, else `mac` on macOS, else the sanitised short hostname.
+
+    The macOS default is `mac` — the default PENTARYN_PRIMARY_HOST — so the Mac with no
+    env file is the primary exactly as before (tunnel and updater unchanged), and its
+    snapshots are tagged `-mac`."""
     explicit = get("PENTARYN_HOST")
     if explicit:
         return validate_host(explicit)
+    if is_mac():
+        return DEFAULT_PRIMARY
     fallback = sanitize(socket.gethostname().split(".")[0]) or "host"
     try:
         return validate_host(fallback)
@@ -413,7 +420,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if cmd == "show":
             print(f"  host         {host_name()}"
-                  + ("   (PENTARYN_HOST unset — sanitised hostname)" if host_is_default() else ""))
+                  + ("   (PENTARYN_HOST unset — the platform default)" if host_is_default() else ""))
             print(f"  role         {role()}   (primary host: {primary_host()})")
             print(f"  data         {foundry_data()}")
             print(f"  app          {foundry_app_root()}   (Foundry {core_version()})")
