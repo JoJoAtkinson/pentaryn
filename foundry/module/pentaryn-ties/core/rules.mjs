@@ -47,3 +47,21 @@ export const INSPECT_CLAIM_KEY = "#inspect";
  * (`lore:<subject>:#idmiss-<attr>`) is not one.
  */
 export const isIdentKey = key => String(key ?? "").endsWith(`:${MEMBER_FACT}`);
+
+/* ── concealment (ties-9 part 3) ──────────────────────────────────────────── */
+
+/**
+ * How much an actor's concealment raises the DC to identify one attribute on it — never printed.
+ * `raw` is the `conceal` flag: a number for every attribute, or `{ default, <attrId>: n }`. Clamped to
+ * 0–20 and rounded; anything that is not a number reads as 0. The one copy of the clamp the
+ * cascade (study) and the GM's inspect preview both use.
+ */
+export function concealFor(raw, attrId) {
+  if (typeof raw === "number") return Math.max(0, Math.min(20, Math.round(raw)));
+  return Math.max(0, Math.min(20, Math.round(Number(raw?.[attrId] ?? raw?.default ?? 0) || 0)));
+}
+
+/* ── names (ties-15) ──────────────────────────────────────────────────────── */
+
+/** "Caven Ashwell" → "Caven", "Talo, the Quiet" → "Talo"; a blank name → "" ; null → "?". */
+export const firstName = name => String(name ?? "").trim().split(/[\s,]/)[0] || String(name ?? "?");

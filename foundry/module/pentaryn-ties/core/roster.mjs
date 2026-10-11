@@ -4,6 +4,8 @@
  * Pure: no Foundry global (split out of known-core.mjs, which re-exports this file — S4, ties-36).
  */
 
+import { firstName } from "./rules.mjs";
+
 /**
  * **The table's player characters** — who the GM's inspect window gives a Share switch (and a
  * Simulate roller row) to. Plain data in, so it is fixture-tested (`test/known.mjs`):
@@ -39,8 +41,7 @@ export function tablePCs(actors = [], users = []) {
  * (two "Caven" switches told the GM nothing about which was which).
  */
 export function switchLabels(names = []) {
-  const first = n => String(n ?? "").trim().split(/[\s,]/)[0] || String(n ?? "?");
   const count = new Map();
-  for (const n of names) count.set(first(n), (count.get(first(n)) ?? 0) + 1);
-  return names.map(n => (count.get(first(n)) > 1 ? String(n ?? "?").trim() || "?" : first(n)));
+  for (const n of names) count.set(firstName(n), (count.get(firstName(n)) ?? 0) + 1);
+  return names.map(n => (count.get(firstName(n)) > 1 ? String(n ?? "?").trim() || "?" : firstName(n)));
 }

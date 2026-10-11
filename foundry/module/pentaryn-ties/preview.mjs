@@ -72,7 +72,7 @@ import {
   planStep, identificationLadder, identifiedKey, holdResolved, combineAdvantage,
   ATTR_BELIEFS_SETTING, KNOWLEDGE_SETTING, REGISTRY_SETTING, touchesFlagScope, tablePCs, switchLabels
 } from "./known-core.mjs";
-import { CONCEAL_FLAG } from "./core/rules.mjs";
+import { CONCEAL_FLAG, concealFor, firstName } from "./core/rules.mjs";
 
 const { ApplicationV2 } = foundry.applications.api;
 
@@ -92,9 +92,6 @@ const PROF = { none: 0, prof: 1, expert: 2 };
 
 const t = k => game.i18n.localize(`PENTARYN_TIES.${k}`);
 const f = (k, data) => game.i18n.format(`PENTARYN_TIES.${k}`, data);
-
-/** "Caven Ashwell" → "Caven", "Talo, the Quiet" → "Talo". */
-const firstName = name => String(name ?? "").trim().split(/[\s,]/)[0] || String(name ?? "?");
 
 /** Debounce for live refreshes: a share or a cascade lands as several writes in a burst. */
 const LIVE_MS = 150;
@@ -211,11 +208,7 @@ export class InspectPreview extends ApplicationV2 {
     let rule = "raw";
     try { rule = game.settings.get(MODULE, "advantageStacking") === "net" ? "net" : "raw"; } catch { /* unborn */ }
 
-    const conceal = id => {
-      const raw = flagOf(subject, CONCEAL_FLAG);
-      if (typeof raw === "number") return Math.max(0, Math.min(20, Math.round(raw)));
-      return Math.max(0, Math.min(20, Math.round(Number(raw?.[id] ?? raw?.default ?? 0) || 0)));
-    };
+    const conceal = id => concealFor(flagOf(subject, CONCEAL_FLAG), id);
     const reach = new Map(); // attr id → chance of having identified it
     const priorOf = id => {
       const ladder = identificationLadder(id, reg);

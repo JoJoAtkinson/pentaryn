@@ -131,3 +131,29 @@ test("ties-14: no file outside core/ builds a fact key or tests the #id suffix b
     .filter(h => !h.file.startsWith("core/"));
   assert.deepEqual(hits, []);
 });
+
+/* ── ties-9 part 3: concealFor; ties-15: firstName ───────────────────────── */
+
+test("ties-9: concealFor — the guide's table, and the two copies it replaced", async () => {
+  const { concealFor } = await import("../core/rules.mjs");
+  const cases = [[8, "x", 8], [{ x: 10 }, "x", 10], [{ default: 3 }, "y", 3], [25, "x", 20], [-4, "x", 0], ["abc", "x", 0], [null, "x", 0], [{ x: "7" }, "x", 7], [undefined, "x", 0], [{ x: 2.5 }, "x", 3], [{ y: 9, default: 1 }, "x", 1], [{ x: null, default: 4 }, "x", 4]];
+  // the verbatim body both study.mjs concealmentFor and preview.mjs conceal carried at the checkpoint
+  const legacy = (raw, id) => {
+    if (typeof raw === "number") return Math.max(0, Math.min(20, Math.round(raw)));
+    return Math.max(0, Math.min(20, Math.round(Number(raw?.[id] ?? raw?.default ?? 0) || 0)));
+  };
+  for (const [raw, id, want] of cases) {
+    assert.equal(concealFor(raw, id), want, JSON.stringify([raw, id]));
+    assert.equal(concealFor(raw, id), legacy(raw, id));
+  }
+  assert.ok(Number.isNaN(concealFor(NaN, "x")) && Number.isNaN(legacy(NaN, "x")), "a NaN number stays NaN, as before");
+});
+
+test("ties-15: firstName — one copy for the roster's switchLabels and the inspect window", async () => {
+  const { firstName } = await import("../core/rules.mjs");
+  const { switchLabels } = await import("../known-core.mjs");
+  const cases = [["Caven Calderon", "Caven"], ["Sergeant Vesh, Night Sergeant", "Sergeant"], ["  Talo ", "Talo"], ["", ""], [null, "?"], [undefined, "?"], ["Talo, the Quiet", "Talo"]];
+  for (const [n, want] of cases) assert.equal(firstName(n), want, JSON.stringify(n));
+  assert.deepEqual(switchLabels(["Caven Calderon", "Caven Ashwell", "Talo"]), ["Caven Calderon", "Caven Ashwell", "Talo"]);
+  assert.deepEqual(switchLabels(["Caven Calderon", "Talo, the Quiet"]), ["Caven", "Talo"]);
+});

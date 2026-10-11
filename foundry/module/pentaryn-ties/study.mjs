@@ -47,7 +47,7 @@
 
 import { attributeLore, describeAttribute, attributeIdsOf, knowledge, setKnowledge, clearKnowledge } from "./attributes.mjs";
 import { MODULE, mayWrite, canReach } from "./ties-api.mjs";
-import { rolledMiss, isIdentKey, CONCEAL_FLAG, INSPECT_CLAIM_KEY } from "./core/rules.mjs";
+import { rolledMiss, isIdentKey, CONCEAL_FLAG, INSPECT_CLAIM_KEY, concealFor } from "./core/rules.mjs";
 import {
   KNOWN_FLAG,
   GRANTED_FLAG,
@@ -2081,9 +2081,7 @@ export async function deliverHeldIdentifications(character, subject) {
 /** Concealment: raises the DC without ever appearing in the printed one. */
 const concealmentFor = (subject, attrId) => {
   try {
-    const raw = subject?.getFlag(MODULE, CONCEAL_FLAG);
-    if (typeof raw === "number") return Math.max(0, Math.min(20, Math.round(raw)));
-    return Math.max(0, Math.min(20, Math.round(Number(raw?.[attrId] ?? raw?.default ?? 0) || 0)));
+    return concealFor(subject?.getFlag(MODULE, CONCEAL_FLAG), attrId);
   } catch {
     return 0;
   }
