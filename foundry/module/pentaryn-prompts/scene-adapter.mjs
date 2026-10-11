@@ -7,9 +7,10 @@
 
 import {
   MODULE, SIZE_BY_KEY, DND_SIZE_WIDTH, HEX_RULE, makeRel, testPoints, dedupeSquares, occupiedSquares, atFeet, stripHtml,
-  panelSplit, isSeen, crXp, lightText, ownTextUuid
+  panelSplit, crXp, lightText, ownTextUuid
 } from "./geometry-core.mjs";
 import { FOLDER_NAME, markerSizeOf, promptText } from "./core/markers.mjs";
+import { panelRels, seenCount } from "./core/placement.mjs";
 import { wallSegmentsOf } from "./core/walls.mjs";
 import { makeSight, heightWarning } from "./sight-adapter.mjs";
 import { isStockLore } from "./build-core.mjs";
@@ -330,16 +331,7 @@ export function promptTokens(scene) {
 export function panelFor(tokenDoc, { rows = 12, unseenWithinFt = 60 } = {}) {
   const scene = tokenDoc.parent;
   const model = sceneModel(scene, { builtWithoutProvenance: true });
-  const key = `Token.${tokenDoc.id}`;
-  const rels = [];
-  for (const it of model.items) {
-    if (it.key === key) continue;
-    const r = model.rel(key, it.key);
-    if (!r) continue;
-    // the door/wall pass only for what the "Out of sight" list can show
-    const los = isSeen(r) ? "LOS" : r.ft <= unseenWithinFt ? r.los : "blocked";
-    rels.push({ ft: r.ft, bearing: r.bearing, los, key: it.key, item: it });
-  }
+  const rels = panelRels(model.items, model.rel, `Token.${tokenDoc.id}`, unseenWithinFt);
   const split = panelSplit(rels, { rows, unseenWithinFt });
   const d = scene.dimensions;
   return {
@@ -349,9 +341,15 @@ export function panelFor(tokenDoc, { rows = 12, unseenWithinFt = 60 } = {}) {
   };
 }
 
-/** For the hover tooltip: how many things the marker sees. */
+/** For the hover tooltip: how many things the marker sees (no door/wall pass: prompts-lookup-7). */
 export function seesCount(tokenDoc) {
-  try { return panelFor(tokenDoc, { rows: 0 }).total; } catch { return null; }
+  try {
+    const model = sceneModel(tokenDoc.parent, { builtWithoutProvenance: true });
+    return seenCount(model.items, model.rel, `Token.${tokenDoc.id}`);
+  } catch (err) {
+    log.debug("seesCount", err);
+    return null;
+  }
 }
 
 /* ── @Embed resolution (descriptions that are only an embed of a compendium page) ── */

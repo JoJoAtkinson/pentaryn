@@ -5,6 +5,7 @@
 
 import { band } from "./grid.mjs";
 import { DND_SIZE_WIDTH, fmtNum } from "./size.mjs";
+import { isSeen } from "./sight.mjs";
 
 /* ── Placement (plan §6.2), in squares and pixels ────────────────────────── */
 
@@ -35,6 +36,35 @@ export function needsLockSize(w, dndSize) {
 }
 
 /* ── Side panel rows ─────────────────────────────────────────────────────── */
+
+/**
+ * The side panel's relations from one item (`key`) to every other item the relation table reaches:
+ * distance, bearing and sight. The door/wall pass (`r.los`) runs only for what the "Out of sight"
+ * list can show (within `unseenWithinFt`); everything else further out is "blocked".
+ */
+export function panelRels(items, rel, key, unseenWithinFt = 60) {
+  const rels = [];
+  for (const it of items) {
+    if (it.key === key) continue;
+    const r = rel(key, it.key);
+    if (!r) continue;
+    const los = isSeen(r) ? "LOS" : r.ft <= unseenWithinFt ? r.los : "blocked";
+    rels.push({ ft: r.ft, bearing: r.bearing, los, key: it.key, item: it });
+  }
+  return rels;
+}
+
+/**
+ * How many items `key` sees — panelSplit(panelRels(…)).total without the door/wall pass, which the
+ * hover tip's count never prints (prompts-lookup-7).
+ */
+export function seenCount(items, rel, key) {
+  let n = 0;
+  for (const it of items) {
+    if (it.key !== key && isSeen(rel(key, it.key))) n++;
+  }
+  return n;
+}
 
 /**
  * Split relations for the panel: in sight (LOS) nearest first, and the out-of-sight ones within
