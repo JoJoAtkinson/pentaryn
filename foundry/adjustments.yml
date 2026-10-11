@@ -968,3 +968,36 @@ adjustments:
     native_when: dnd5e's usage dialog submits on Enter
     retire_class: safe
     check: make foundry-combat-check
+
+  - id: pings-core-ping-handle
+    packages: [core]
+    modules: [pentaryn-pings]
+    files: [foundry/module/pentaryn-pings/capture.mjs]
+    markers: ["handlePing", "__pentarynPatched"]
+    what: wraps ControlsLayer.prototype.handlePing through wrapMethod (marker __pentarynPatched) to record every ping drawn on this GM client; the original still runs with the same arguments
+    why: Foundry keeps no ping history; handlePing is the only place a locally drawn ping is visible, and it is patched on the prototype because canvas layers are rebuilt on every scene change
+    native_when: core keeps a ping history or fires a ping hook
+    retire_class: guarded
+    check: make foundry-pings-check
+
+  - id: core-pings-user-activity-socket
+    packages: [core]
+    modules: [pentaryn-pings]
+    files: [foundry/module/pentaryn-pings/capture.mjs]
+    markers: ["userActivity"]
+    what: listens on core's private userActivity socket event and records data.ping from other clients
+    why: pings on scenes the GM is not viewing never reach ControlsLayer#handlePing
+    native_when: core exposes a public ping hook or event carrying user, scene and position
+    retire_class: guarded
+    check: make foundry-pings-check
+
+  - id: core-board-cursor-vars
+    packages: [core]
+    modules: [pentaryn-cursors]
+    files: [foundry/module/pentaryn-cursors/board.mjs]
+    markers: ["currentCursor", "_placementContext", "setCursor"]
+    what: sets the --cursor-* variables inline on #board for the active tool, re-applies a blanked board cursor by clearing renderer.events.currentCursor and calling setCursor, and reads canvas.regions._placementContext to tell when a spell-area preview is live
+    why: core has no per-tool cursor and no public flag for a region placement in progress; setCursor writes only when its mode changes, so a blanked cursor stays blank unless currentCursor is reset
+    native_when: core sets a cursor per scene tool, or exposes a public placement-in-progress flag and a cursor refresh
+    retire_class: guarded
+    check: make foundry-cursors-check

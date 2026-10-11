@@ -37,9 +37,9 @@ flags rows the guides named with the module prefix although they are not patches
 | Module | Row id | Kind | Files | Markers | C32 | Source |
 |---|---|---|---|---|---|---|
 | importer | `dnd5e-importer-gate` (existing) | files move | `importer-core.mjs`, `documents-adapter.mjs` (+ keep `scripts/foundry/build_actors.py`) | `targetSystemVersion` | ok | importer step 4 (same change set as 4a) — **landed** with 4a on `migrate/wave-1` |
-| pings | `pings-core-ping-handle` | new, **patch** | `capture.mjs` | `handlePing`, `__pentarynPatched` | ok (wrapMethod names it) | pings step 4 |
-| pings | `pings-core-user-activity-socket` | new, not a patch | `capture.mjs` | `userActivity` | **fails** — interim id `core-pings-user-activity-socket` | pings step 4 |
-| cursors | `core-board-cursor-vars` | new, not a patch | `board.mjs` | `currentCursor`, `_placementContext`, `setCursor` | ok | cursors step 10 (aoe's file added when aoe leaves WAIT) |
+| pings | `pings-core-ping-handle` | new, **patch** | `capture.mjs` | `handlePing`, `__pentarynPatched` | ok (wrapMethod names it) | pings step 4 — **landed** (wave 1 integration, `check: make foundry-pings-check`) |
+| pings | `core-pings-user-activity-socket` (was `pings-core-user-activity-socket`) | new, not a patch | `capture.mjs` | `userActivity` | ok (package prefix per D2) | pings step 4 — **landed** (wave 1 integration) |
+| cursors | `core-board-cursor-vars` | new, not a patch | `board.mjs` | `currentCursor`, `_placementContext`, `setCursor` | ok | cursors step 10 — **landed** (wave 1 integration); aoe's file added when aoe leaves WAIT |
 | movement | `movement-drag-constrain-ghost` | new, **patch** | `ghost.mjs` (`movement.mjs` if the batch lands before S4) | `_getDragConstrainOptions`, `__pentarynMovement` | ok | movement S2 |
 | movement | `movement-keyboard-constrain-ghost` | new, **patch** | same | `_prepareKeyboardMovementUpdates` | ok | movement S2 |
 | movement | `movement-layer-sort-owned` | new, **patch** | same | `sortChildren`, `_lastSortedIndex` | ok | movement S2 |
@@ -89,7 +89,7 @@ flags rows the guides named with the module prefix although they are not patches
 | riders | `dnd5e-chat-message-types` (existing) | widen files | `+ foundry/module/pentaryn-riders/concentration.mjs` (save-message reads, combat-riders-16 ext.) | unchanged | ok | riders S8 (re-anchor 2026-10-11) |
 | aoe | `aoe-argon-handle-bind` (existing) | files move, **patch** (S6 `wrapMethod` names it) | `argon.mjs`, `core.mjs` | `guardArgonBind`, `isHandleTarget`, `_aoeGuard` | ok | aoe ADJ |
 | aoe | `aoe-core-region-delete-update-race` (**renamed `core-region-delete-handle-race`**, D2 `df661e0`) (existing) | not a patch | `areas.mjs`, `core.mjs` | unchanged | **fails** — rename `core-region-delete-handle-race` (aoe decision §6.1) or D2 | aoe ADJ |
-| aoe | `core-region-placement-escape` (existing) | widen | `+ foundry/module/pentaryn-cursors/cursors.mjs`; `modules: [pentaryn-aoe, pentaryn-cursors]` | unchanged | ok | aoe ADJ (-39) |
+| aoe | `core-region-placement-escape` (existing) | widen | `+ foundry/module/pentaryn-cursors/board.mjs` (the `_placementContext` read moved out of `cursors.mjs` in the cursors rebuild); `modules: [pentaryn-aoe, pentaryn-cursors]` | unchanged | ok | aoe ADJ (-39) |
 | aoe | `itempiles-aoe-skip-piles` | new | `scene-adapter.mjs` | `isValidItemPile`, `item-piles` | ok | aoe ADJ |
 | aoe | `dnd5e-chat-message-types`, `dnd5e-legacy-roll-modes`, `dnd5e-token-size-lock` (existing) | files move | `messages-adapter.mjs`, `scene-adapter.mjs`, `settings.mjs` | unchanged | ok | aoe ADJ |
 | aoe | `aoe-self-area-aim` (existing since 17275c9) | **patch** (S6 `wrapMethod` names it, finding -44) | unchanged (`aim.mjs`, `core.mjs`) | `aimFromCaster`, `placeRegions`, + `aimWrapped` | ok once -44 lands; **fails** today | aoe ADJ, S6 |
