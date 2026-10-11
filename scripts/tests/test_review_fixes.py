@@ -233,3 +233,36 @@ def test_rclone_touch_never_creates(two_hosts, monkeypatch):
     [argv] = [a for a in fake.calls if a[1] == "touch"]
     assert "--no-create" in argv
     assert not (two_hosts.cloud / "bundles" / "module@gone@1@0123456789abcdef.tar.gz").exists()
+
+
+# ── DL5/R1: extras a world-less restore left go up with the next backup ──────
+
+def test_the_backup_after_a_worldless_restore_that_left_extras_uploads_them(two_hosts):
+    import shutil
+    c = two_hosts.cloud
+    _install(two_hosts.data["mac"])
+    with two_hosts.use("mac"):
+        cloud.backup("shutdown")
+    [s1] = _names(c)
+    boss = two_hosts.data["boss"]
+    shutil.rmtree(boss / "Data/worlds")
+    make_module(boss / "Data/modules", "boss-only", version="0.1")
+    with two_hosts.use("boss"):
+        cloud.restore(s1, yes=True)
+        cloud.backup("pre-launch", if_stopped=True)
+    [sb] = [n for n in _names(c) if n.endswith("-boss.tar.gz")]
+    side = json.loads((c / "world-backups" / f"{sb}{cloud.PARENT_SUFFIX}").read_text())
+    assert side["modules"]["boss-only"] in _bundle_names(c)
+
+
+def test_a_restore_that_left_nothing_behind_still_skips_the_next_backup(two_hosts, capsys):
+    _install(two_hosts.data["mac"])
+    with two_hosts.use("mac"):
+        cloud.backup("shutdown")
+    [s1] = _names(two_hosts.cloud)
+    _edit(two_hosts.data["boss"], "boss's own")
+    with two_hosts.use("boss"):
+        cloud.restore(s1, yes=True)
+        capsys.readouterr()
+        cloud.backup("pre-launch", if_stopped=True)
+    assert "no change since the last snapshot — skipped" in capsys.readouterr().out

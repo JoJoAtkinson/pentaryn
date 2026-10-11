@@ -216,10 +216,6 @@ def test_dl4_a_torn_sidecar_aborts_gc_instead_of_sweeping_its_bundles(two_hosts)
 
 # ── DL5: extras a no-world restore left are folded into the recorded digest ───
 
-@pytest.mark.xfail(strict=True, reason="DL5: after a no-world restore leaves extras, the recorded "
-                   "digest covers them but the based-on snapshot's manifest does not; the next "
-                   "restore skips its safety copy (unchanged tree) and rmtree's them — no "
-                   "retained snapshot references them, and the healed bundle is swept in 7 days")
 def test_dl5_extras_left_by_a_no_world_restore_are_never_removed_without_a_cloud_reference(
         two_hosts):
     c = two_hosts.cloud

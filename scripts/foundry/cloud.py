@@ -1723,7 +1723,12 @@ def restore_snapshot(st: Storage, snap: Snapshot, reason: str = "manual") -> Non
         except Exception as exc:  # noqa: BLE001
             die(f"extract of {snap.name} failed part-way: {exc}\n    {back}")
         anc = read_lineage(st, snap)
-        bootstate.load().record_snapshot(snap.name, snap.host, snap.mtime, snapshot_digest(),
+        # The digest of what `snap` holds — its world, as now on disk, and ITS manifest —
+        # not of the local tree: extras a world-less restore left in place are not in
+        # that manifest, so the next backup differs, uploads, and its manifest references
+        # them before any later restore may remove them (review DL5/R1, §1 #9).
+        digest = snapshot_digest(f.manifest) if f.manifest is not None else snapshot_digest()
+        bootstate.load().record_snapshot(snap.name, snap.host, snap.mtime, digest,
                                          by=f"restore:{reason}",
                                          lineage=list(anc.names) if anc else [],
                                          lineage_mtimes=list(anc.mtimes) if anc else [],

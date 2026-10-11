@@ -130,9 +130,6 @@ def _legacy_tar(path, files: dict[str, bytes]):
 
 # ── R1: extras left on a world-less restore are lost at the next restore ─────────────
 
-@pytest.mark.xfail(strict=True, reason="R1: a world-less restore records the based-on digest "
-                   "over a tree that holds extras the based-on snapshot does not name; the next "
-                   "safety copy is skipped and the next restore removes them with no cloud copy")
 @pytest.mark.parametrize("mac_coalesces", [False, True])
 def test_R1_extras_left_by_a_worldless_restore_survive_the_next_restore(two_hosts, monkeypatch,
                                                                        mac_coalesces):
