@@ -261,7 +261,7 @@ gap-fill pass (2026-10-10).
 | Id | Change | File | Needed by | Status |
 |---|---|---|---|---|
 | K1 | `wrapMethod` getter route (`kind: "getter"`) — `Token#isVisible` is a getter | `patch.mjs` | creatures step 5 | **landed** kit 1.0.1, `patch.test` |
-| K2 | `buildApi` refuses reserved names at the **top level only** (D1 option A) | `api.mjs:31-37` | ties S8 | D1 decided (rename + aliases); top-level `describe` stays reserved until ties' B1 — open |
+| K2 | `buildApi` refuses reserved names at the **top level only** (D1 option A) | `api.mjs:32-38` | ties S8 | D1 decided (rename + aliases); top-level `describe` stays reserved until ties' B1 — open |
 | K3 | `guarded(fn, { sender: "any" })` and pass core's `{user}` ctx as 2nd arg | `queries.mjs` | riders S6 | **landed** kit 1.0.1, `queries.test` |
 | K4 | `relayed(fn, { activeGM: true })` player-relay helper; manifest row `relay: true` | `queries.mjs` | journal C30 | **landed** kit 1.0.1 (C30 accepts `relayed(`) |
 | K5 | `buildApi` freezes a **copy**, never the module's own tables or an ES module namespace (which throws) | `api.mjs` | ties (G7), journal, creatures, combat, riders | **landed** kit 1.0.1, `api.test` |

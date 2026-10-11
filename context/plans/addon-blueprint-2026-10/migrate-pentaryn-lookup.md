@@ -393,7 +393,7 @@ one file at a time. Agents commit each characterisation checkpoint (review happe
   module.json batch).
 - `CHANGELOG.md`: 0.2.0 and 0.3.0 from git history, plus an "Unreleased — blueprint migration" entry.
 - Outside the module (fix-phase scope): replace "41 fixtures" in
-  `context/foundry/rules-lookup.md:78` and the `scripts/foundry/ops/config.py:154` comment with
+  `context/foundry/rules-lookup.md:78` and the `scripts/foundry/ops/config.py:217` comment with
   "run `node test/run.mjs`". Add a "What comes back" table there.
 - Absorbs: prompts-lookup-26, C44, C45.
 - Char. test: none (docs). `conformance.py --module lookup` passes C44 and C45.
