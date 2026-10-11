@@ -1,7 +1,7 @@
 ---
 title: "Rules and monster lookup — the owned books, live"
 status: active
-last_modified: 2026-10-10
+last_modified: 2026-10-11
 tags: [context, foundry, rules, monsters, compendium, srd]
 ---
 
@@ -54,6 +54,29 @@ await game.pentaryn.rules.selftest()                    // assert the assumption
 await game.pentaryn.rules.onList("Fireball", "cleric")  // {onList: false, uuid, level} — class spell lists
 await game.pentaryn.rules.spellList("cleric", {level: 3}) // the names on a list, one entry per spell
 ```
+
+#### What comes back
+
+**Every read returns an object, never a bare array — `search()` is `{…, hits: [...]}`, so iterate
+`.hits`.** A miss is an answer (`{error}` or `{notFound, …, hint}`), never a throw. The live contract
+is `game.pentaryn.rules.describe()`; this table is its `returns` column.
+
+| Call | Returns |
+|---|---|
+| `search(q, opts?)` | `{ query, books, total, shown, hits: [{ book, journal, page, uuid, matches, snippet, edition? }], note?, truncated?, warning? }` \| `{ error }` — `total` counts every matching page, `shown` the hits returned |
+| `page(nameOrUuid, opts?)` | `{ book, journal, page, uuid, text, edition?, truncated?, totalChars?, nextOffset?, warning?, tables?: [...] }` \| `{ journal, page, uuid, raw }` \| `{ notFound, name, closest, hint }` \| `{ error }` — a UUID that is not a page (a whole JournalEntry) adds `warning` |
+| `monster(name, opts?)` | `{ name, pack, uuid, cr, ac, hp, size, type, features: [{ name, type }], warning? }` (with `{text: true}`, features carry `activation`, `recharge`, `text`, plus `languages`, `speed`) \| `{ notFound, name, searched, hint }` \| `{ error }` |
+| `monsters(q)` | `{ count, shown, monsters: [{ name, cr, size, type, uuid, pack }], hint? }` — iterate `.monsters` |
+| `names(kind?)` | `{ classes, subclasses: { <class>: [] }, species, backgrounds, feats: { origin, general, … } }`, or one of those keys |
+| `packs()` | `{ world, foundry, system, packs: [{ id, present, label?, type?, entries?, edition? }] }` |
+| `onList(spell, cls, opts?)` | `{ spell, uuid, level, list, onList: true \| false }` \| `{ …, onList: null, hint }` \| `{ notFound, spell, hint }` |
+| `spellList(cls, opts?)` | `{ list, count, spells: [{ name, level, uuid }] }` \| `{ error, known }` |
+| `selftest()` | `{ ok, passed, failed, checks: [{ label, ok, detail }] }` |
+| `toPlainText(html)` | `string` |
+
+The same reads are GM-only `CONFIG.queries` (`pentaryn-lookup.search`, `.page`, `.monster`,
+`.monsters`, `.names`, `.onList`, `.spellList`, `.packs`) with named-field payloads; a player sender
+gets `NOT_GM`. The module README lists the payloads.
 
 `page()` also returns the page's **embedded roll tables** as `tables: [{name, formula, uuid,
 rows: ["1-20 …"]}]` — the DMG's "Artifacts" page is four tables and almost no prose; without them
