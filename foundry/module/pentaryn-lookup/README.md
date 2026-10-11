@@ -2,7 +2,7 @@
 created: 2026-08-22
 last_modified: 2026-10-10
 tags: ["foundry", "vtt", "module", "rules", "compendium"]
-status: shipped — 0.2.0
+status: shipped — 0.3.0
 ---
 
 # `pentaryn-lookup`
@@ -50,9 +50,9 @@ Two files, and the split is the whole point.
 | File | Role |
 |---|---|
 | `lookup-core.mjs` | **Pure.** No Foundry, no `game`, no DOM. HTML stripping, enricher normalization, snippet centring, per-page dedupe, UUID assembly, payload capping, the monster digest. Everything that can be wrong. |
-| `pentaryn-lookup.mjs` | **The adapter**, deliberately ~60 lines. `game.packs.get()` → `getDocuments()` → plain data → core. If a Foundry bump breaks this module, this is the only file to re-verify. |
+| `pentaryn-lookup.mjs` | **The adapter** — thin glue (the API wrappers, spell lists, monsters, selftest and publish; the logic stays in core). `game.packs.get()` → `getDocuments()` → plain data → core. If a Foundry bump breaks this module, this is the only file to re-verify. |
 
-`node test/run.mjs` — 41 fixtures, no dependencies. Fixtures are synthetic HTML built
+`node test/run.mjs` — no dependencies; it prints its own pass count. Fixtures are synthetic HTML built
 to trip each trap, not real book text: the licensed content does not belong in this
 repo, and prose that happens to be authentic proves less than prose designed to break
 things.
