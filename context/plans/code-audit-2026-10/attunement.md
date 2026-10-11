@@ -41,6 +41,10 @@ Applied on `migrate/wave-2` with the blueprint migration (detail: the migration 
 -11 hooks [declared] `07920a8f`, listeners [declared] `0d0c2199` · -12 `b1ff1cde` (`wouldExceed`; the divergence stays a KNOWN pin; `countMismatch` is in
 `inspect().counts`, `d7a8ae2f`) · -13 `03f417f0` · -14 step 1 `b1ff1cde` (step 2 waits for Wave 7) · -16 `d7a8ae2f` · -17 `885f3423`, `10459870` ·
 -39 a `b1ff1cde`, b [declared] `e1adc21c`, c `5f3bf2d5` (C33 pattern: integrator).
+Standalone pass (wave 2): -10 success audit line [declared] `7cf1a4f1` (shortfall naming `73180dfd`; rollback is W2-A2) ·
+-17 optional README/API parity check `6402b3fb` · -12 `report()` `countMismatch`: not added — `golden/report.json` freezes
+report()'s return; the diagnostic lives in `inspect().counts.mismatch` · -39 `_positionItemTooltip` in `privateInternalPatterns`:
+returned to the integrator (shared `packages.json`) · -14 step 2 rides on the Wave 7 `module.json` batch.
 
 ## Findings index
 
