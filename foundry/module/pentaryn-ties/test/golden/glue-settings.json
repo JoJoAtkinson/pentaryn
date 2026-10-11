@@ -1,0 +1,111 @@
+{
+  "pentaryn-ties.macroCreated": {
+    "scope": "world",
+    "config": false,
+    "type": "Boolean",
+    "default": false,
+    "namespace": "pentaryn-ties",
+    "key": "macroCreated",
+    "onChange": "undefined"
+  },
+  "pentaryn-ties.playerAccess": {
+    "name": "PENTARYN_TIES.settings.playerAccess",
+    "hint": "PENTARYN_TIES.settings.playerAccessHint",
+    "scope": "world",
+    "config": true,
+    "type": "Boolean",
+    "default": true,
+    "namespace": "pentaryn-ties",
+    "key": "playerAccess",
+    "onChange": "undefined"
+  },
+  "pentaryn-ties.holdDefault": {
+    "name": "PENTARYN_TIES.settings.holdDefault",
+    "hint": "PENTARYN_TIES.settings.holdDefaultHint",
+    "scope": "world",
+    "config": true,
+    "type": "Boolean",
+    "default": false,
+    "namespace": "pentaryn-ties",
+    "key": "holdDefault",
+    "onChange": "undefined"
+  },
+  "pentaryn-ties.attributes": {
+    "scope": "world",
+    "config": false,
+    "type": "Array",
+    "default": [],
+    "namespace": "pentaryn-ties",
+    "key": "attributes",
+    "onChange": "undefined"
+  },
+  "pentaryn-ties.attributeBeliefs": {
+    "scope": "world",
+    "config": false,
+    "type": "Object",
+    "default": {},
+    "namespace": "pentaryn-ties",
+    "key": "attributeBeliefs",
+    "onChange": "undefined"
+  },
+  "pentaryn-ties.attributeKnowledge": {
+    "scope": "world",
+    "config": false,
+    "type": "Object",
+    "default": {},
+    "namespace": "pentaryn-ties",
+    "key": "attributeKnowledge",
+    "onChange": "undefined"
+  },
+  "pentaryn-ties.advantageStacking": {
+    "name": "PENTARYN_TIES.settings.advantageStacking",
+    "hint": "PENTARYN_TIES.settings.advantageStackingHint",
+    "scope": "world",
+    "config": true,
+    "type": "String",
+    "choices": {
+      "raw": "PENTARYN_TIES.settings.advantageRaw",
+      "net": "PENTARYN_TIES.settings.advantageNet"
+    },
+    "default": "raw",
+    "namespace": "pentaryn-ties",
+    "key": "advantageStacking",
+    "onChange": "undefined"
+  },
+  "pentaryn-ties.nearDistance": {
+    "name": "PENTARYN_TIES.settings.nearDistance",
+    "hint": "PENTARYN_TIES.settings.nearDistanceHint",
+    "scope": "world",
+    "config": true,
+    "type": "Number",
+    "range": {
+      "min": 1,
+      "max": 20,
+      "step": 1
+    },
+    "default": 4,
+    "namespace": "pentaryn-ties",
+    "key": "nearDistance",
+    "onChange": "undefined"
+  },
+  "pentaryn-ties.pinnedCards": {
+    "scope": "client",
+    "config": false,
+    "type": "Array",
+    "default": [],
+    "namespace": "pentaryn-ties",
+    "key": "pinnedCards",
+    "onChange": "undefined"
+  },
+  "pentaryn-ties.sheetTab": {
+    "name": "PENTARYN_TIES.settings.sheetTab",
+    "hint": "PENTARYN_TIES.settings.sheetTabHint",
+    "scope": "client",
+    "config": true,
+    "type": "Boolean",
+    "default": true,
+    "namespace": "pentaryn-ties",
+    "key": "sheetTab",
+    "onChange": "undefined"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "name": "ptAttrReview",
+  "title": "PENTARYN_TIES.review.control",
+  "icon": "fa-solid fa-tags",
+  "button": true,
+  "order": 60,
+  "visible": true,
+  "onChange": "function"
+}

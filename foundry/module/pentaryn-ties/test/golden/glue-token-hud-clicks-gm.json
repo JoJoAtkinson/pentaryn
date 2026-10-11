@@ -1,0 +1,97 @@
+[
+  {
+    "button": "control-icon pt-tie-btn",
+    "seen": [
+      "preventDefault",
+      "stopPropagation"
+    ],
+    "disabled": false,
+    "calls": [
+      {
+        "op": "app.render",
+        "app": "TieDialog",
+        "opts": true
+      }
+    ],
+    "console": []
+  },
+  {
+    "button": "control-icon pt-preview-btn",
+    "seen": [
+      "preventDefault",
+      "stopPropagation"
+    ],
+    "disabled": false,
+    "calls": [
+      {
+        "op": "app.render",
+        "app": "InspectPreview",
+        "opts": true
+      }
+    ],
+    "console": []
+  },
+  {
+    "button": "control-icon pt-inspect-btn",
+    "seen": [
+      "preventDefault",
+      "stopPropagation"
+    ],
+    "disabled": true,
+    "calls": [
+      {
+        "op": "ChatMessage.create",
+        "data": {
+          "content": "<p class=\"pt-study-stub\">ZZ Caven studies ZZ Brakka.</p>",
+          "speaker": {
+            "alias": "ZZ Caven",
+            "actor": "zzPc000000000001"
+          }
+        }
+      },
+      {
+        "op": "socket.emit",
+        "args": [
+          "module.pentaryn-ties",
+          {
+            "action": "scope-bubble",
+            "tokenId": "zzTokPc000000001",
+            "sceneId": "zzScene000000001",
+            "text": "ZZ Caven gives a second stranger the once-over. People do notice being measured."
+          }
+        ]
+      },
+      {
+        "op": "ChatMessage.create",
+        "data": {
+          "content": "<p class=\"pt-tempo-line\">ZZ Caven gives a second stranger the once-over. People do notice being measured.</p>",
+          "style": 3,
+          "speaker": {
+            "alias": "ZZ Caven",
+            "actor": "zzPc000000000001"
+          }
+        }
+      }
+    ],
+    "console": []
+  },
+  {
+    "button": "control-icon pt-worn-btn",
+    "seen": [
+      "preventDefault",
+      "stopPropagation"
+    ],
+    "disabled": false,
+    "calls": [
+      {
+        "op": "DialogV2.wait",
+        "title": "Worn — Token zzTokNpc00000001",
+        "buttons": [
+          "set",
+          "cancel"
+        ]
+      }
+    ],
+    "console": []
+  }
+]
