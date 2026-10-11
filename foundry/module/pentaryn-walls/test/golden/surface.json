@@ -1,4 +1,5 @@
 {
+  "analyze": "analyze",
   "backends": "available",
   "contract": "string",
   "describe": "function",

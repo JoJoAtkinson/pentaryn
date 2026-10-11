@@ -111,6 +111,16 @@ async function run({sceneId, ...opts} = {}) {
 }
 
 /**
+ * The engine's answer for a scene with no side effect at all: no chat card, no pings, no console
+ * output, no writes (senses-walls-cursors-33). For the console and the MCP bridge.
+ */
+async function analyze({sceneId, ...opts} = {}) {
+  const scene = targetScene(sceneId);
+  const {result, backend, ms} = evaluate(scene, opts);
+  return {sceneId: scene.id, sceneName: scene.name, backend, ms, ...result};
+}
+
+/**
  * Undo a run: delete the walls it created and restore the length of any wall it trimmed or
  * welded. **One run at a time, most recent first** — every mutation is stamped with the
  * run's timestamp, so repeated undos peel back run by run rather than wiping the lot. Pass
@@ -196,7 +206,7 @@ let log = null;
 
 export function install(reg, ctx) {
   log = ctx.log;
-  ctx.expose({...exclusiveActions, makeMacro, keybindingGuard});
+  ctx.expose({...exclusiveActions, makeMacro, analyze, keybindingGuard});
 }
 
 /** Release the busy flag (a hot patch re-wires; an in-flight run settles on its own). */

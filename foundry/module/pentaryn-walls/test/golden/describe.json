@@ -109,6 +109,27 @@
       "doc": "Create (or reuse) the 'Walls: <action>' script macro and put it on the hotbar."
     },
     {
+      "path": "analyze",
+      "params": [
+        {
+          "name": "opts",
+          "optional": true,
+          "type": "{ sceneId?, backend?, runId?, gridSize?, gapMax?, cornerMax?, extMax?, trim? }",
+          "doc": "sceneId defaults to the viewed scene; backend overrides the setting; the rest are engine tolerances"
+        }
+      ],
+      "returns": "{ sceneId, sceneName, backend, ms, ...{ creates, updates, refusals, lints, log, report } }",
+      "gm": true,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "throws": [
+        "Error"
+      ],
+      "since": "0.2.0",
+      "doc": "What preview() computes, with no side effect: no chat card, no pings, no console output, no writes. Adds the scene, the backend that ran and its time in ms."
+    },
+    {
       "path": "runEngine",
       "params": [
         {

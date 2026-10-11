@@ -67,6 +67,16 @@ export const MANIFEST = Object.freeze({
       doc: "Create (or reuse) the 'Walls: <action>' script macro and put it on the hotbar.",
     },
     {
+      path: "analyze",
+      params: [SCENE_OPTS],
+      returns: `{ sceneId, sceneName, backend, ms, ...${ENGINE_RESULT} }`,
+      gm: true, writes: false,
+      throws: ["Error"],
+      since: "0.2.0",
+      doc: "What preview() computes, with no side effect: no chat card, no pings, no console output, "
+        + "no writes. Adds the scene, the backend that ran and its time in ms.",
+    },
+    {
       path: "runEngine",
       params: [
         { name: "walls", type: "{ _id, c, door, sight, move, light, sound, dir, levels, flags }[]" },

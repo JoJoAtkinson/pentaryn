@@ -20,6 +20,7 @@ export function buildApiFor(ctx) {
     run: (...args) => ex.run(...args),
     undo: (...args) => ex.undo(...args),
     makeMacro: (...args) => ex.makeMacro(...args),
+    analyze: (...args) => ex.analyze(...args),
     runEngine,
     backends: available,
   }, {
