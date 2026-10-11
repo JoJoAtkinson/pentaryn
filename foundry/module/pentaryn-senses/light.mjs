@@ -26,6 +26,7 @@ import {
   sourcesUnder, isPHBLightActorSource, torchActivityData, TORCH_ACTIVITY_ID, PHB_LIGHT_ACTOR,
   collectSources, litByIn, esc, unsetPath
 } from "./senses-core.mjs";
+import { coreRollMode } from "./settings.mjs";
 
 const CAST = `flags.${MODULE}.lightCast`;
 const LIT = `flags.${MODULE}.lit`;
@@ -267,7 +268,7 @@ async function announce(item, key) {
     // hidden NPC's lantern must not announce it to the table.
     const data = { speaker: ChatMessage.getSpeaker({ actor }), content: `<p>${text}</p>` };
     if (typeof ChatMessage.applyMode === "function") ChatMessage.applyMode(data);
-    else ChatMessage.applyRollMode(data, game.settings.get("core", "rollMode"));
+    else ChatMessage.applyRollMode(data, coreRollMode());
     await ChatMessage.create(data);
   } catch (e) {
     warn("chat", e);

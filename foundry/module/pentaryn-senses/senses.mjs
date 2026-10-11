@@ -13,7 +13,8 @@ import "./chain.mjs";
 import { api as lightApi } from "./light.mjs";
 import { MODULE, carriedLightOf, itemLightUpdate } from "./senses-core.mjs";
 // The one-shot reset of the darkvision sight our retired sync stored (dnd5e 6 senseVisionSync).
-import { registerSightReset, resetSight } from "./migrate.mjs";
+import { resetSight } from "./migrate.mjs";
+import { registerSettings } from "./settings.mjs";
 
 const pending = new Map();
 
@@ -89,7 +90,7 @@ for (const verb of ["create", "update", "delete"]) {
 // A token placed from a stale prototype, or before this module existed.
 Hooks.on("createToken", (token) => { if (token.actor) schedule(token.actor); });
 
-Hooks.once("init", registerSightReset);
+Hooks.once("init", () => registerSettings());
 
 Hooks.once("ready", () => {
   const api = { syncLight, carriedLight, resetSight, light: lightApi, setupLight: lightApi.setup, syncAll: async () => {
