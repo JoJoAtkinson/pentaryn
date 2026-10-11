@@ -52,6 +52,13 @@ test("the API object is frozen; settings() reports the store rows by size", () =
   assert.equal(s.playerAccess, true);
 });
 
+test("S9 / B11: published through the kit — module.api is canonical, the alias is the same object, both ready hooks fired once", () => {
+  assert.equal(game.modules.get("pentaryn-ties").api, game.pentaryn.ties);
+  const fired = F.calls.filter(c => c.op === "Hooks.callAll" && /ready$/.test(c.name)).map(c => c.name);
+  assert.deepEqual(fired, ["pentaryn-ties.ready", "pentaryn.ready"]);
+  assert.deepEqual(game.pentaryn.namespaces(), ["ties"]);
+});
+
 test("uninstall(): no ties hook and no document listener is left", () => {
   document.removeEventListener = function (type, fn, capture) {
     const i = this.listeners.findIndex(l => l.type === type && l.fn === fn && l.capture === (capture === true));

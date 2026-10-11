@@ -21,7 +21,7 @@
  * (S8); until then the published object below is the reference.
  */
 
-import { MODULE } from "./ties-core.mjs";
+import { MODULE, NS } from "./ties-core.mjs";
 import { registerSettings, onKeys, setting, mayWrite } from "./settings.mjs";
 import { inspectorFor, migrateLegacy } from "./ties-adapter.mjs";
 import { restorePinned } from "./popups.mjs";
@@ -34,6 +34,7 @@ import { inspect } from "./study.mjs";
 import { buildApiFor } from "./api.mjs";
 import { makeLog } from "./lib/log.mjs";
 import { hookRegistry } from "./lib/hooks.mjs";
+import { publishNamespace } from "./lib/publish.mjs";
 import * as conduit from "./conduit.mjs";
 import * as tokenHud from "./token-hud.mjs";
 import * as lookMenu from "./look-menu.mjs";
@@ -115,14 +116,14 @@ function onInit() {
 
 /**
  * Build the API from the manifest (a drift throws here, inside the "publish api" step) and publish it
- * under `game.pentaryn.ties`. The root is a plain object every module assigns into: the importer
- * merges into it and nothing freezes it since its keystone (items-journal-1), so the old frozen-root
- * guard is gone (kit 1.0.2, J10). A frozen root now throws here.
+ * through the kit: `game.modules.get("pentaryn-ties").api` is canonical, `game.pentaryn.ties` the
+ * alias, then `pentaryn-ties.ready` and `pentaryn.ready` fire (B11 [declared]). `when: "ready"` is
+ * true: this runs synchronously inside the ready handler before its first await. A frozen
+ * `game.pentaryn` (nothing freezes it since the importer's keystone) throws here, as it did.
  */
 function publishAPI() {
   ctx.api = buildApiFor(ctx);
-  game.pentaryn ??= {};
-  game.pentaryn.ties = ctx.api;
+  publishNamespace(NS, ctx.api, { moduleId: MODULE });
 }
 
 /** Each step is independent — one failure must not silently skip the others. */
