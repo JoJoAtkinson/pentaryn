@@ -35,14 +35,15 @@ export function applyTooltip(el, item) {
  * @param {number} index
  * @param {boolean} overflow  This slot sits past `attunement.max`.
  * @param {boolean} editable
+ * @param {Map<string, object>} [awayByKey]  the actor's away entries by key (built once per strip)
  * @returns {HTMLElement}
  */
-export function buildSlot(actor, itemId, index, overflow, editable) {
+export function buildSlot(actor, itemId, index, overflow, editable, awayByKey) {
   const li = document.createElement("li");
   li.className = "attunement-slot";
   li.dataset.slot = String(index);
 
-  if (itemId?.startsWith?.(AWAY)) return buildAwaySlot(actor, itemId.slice(AWAY.length), index, overflow, editable, li);
+  if (itemId?.startsWith?.(AWAY)) return buildAwaySlot(actor, itemId.slice(AWAY.length), index, overflow, editable, li, awayByKey);
 
   const item = itemId ? actor.items.get(itemId) : null;
 
@@ -101,8 +102,8 @@ export function buildSlot(actor, itemId, index, overflow, editable) {
  * broken-chain badge, and a plain tooltip that names it and says why it is
  * dormant — deliberately not where it is: players read this sheet.
  */
-export function buildAwaySlot(actor, key, index, overflow, editable, li) {
-  const entry = awayOf(actor).find(a => a.key === key);
+export function buildAwaySlot(actor, key, index, overflow, editable, li, awayByKey = awayIndex(actor)) {
+  const entry = awayByKey.get(key);
   li.classList.add("away");
   if (overflow) li.classList.add("overflow");
   li.dataset.awayKey = key;
@@ -136,13 +137,26 @@ export function buildAwaySlot(actor, key, index, overflow, editable, li) {
 }
 
 /**
+ * The actor's away entries by key; the first entry wins for a repeated key, as a `find` would.
+ * @param {Actor} actor
+ * @returns {Map<string, object>}
+ */
+export function awayIndex(actor) {
+  const byKey = new Map();
+  for (const a of awayOf(actor)) if (!byKey.has(a.key)) byKey.set(a.key, a);
+  return byKey;
+}
+
+/**
  * Build the whole strip.
  * @param {Actor} actor
  * @param {boolean} editable
+ * @param {ReturnType<computeSlots>} [state]  the render's one computeSlots result (items-journal-13)
  * @returns {HTMLElement}
  */
-export function buildStrip(actor, editable) {
-  const { slots, max, value, over } = computeSlots(actor);
+export function buildStrip(actor, editable, state = computeSlots(actor)) {
+  const { slots, max, value, over } = state;
+  const awayByKey = awayIndex(actor);
 
   const root = document.createElement("div");
   root.className = "pentaryn-attunement";
@@ -159,7 +173,7 @@ export function buildStrip(actor, editable) {
 
   const ul = document.createElement("ul");
   ul.className = "unlist slots";
-  slots.forEach((id, i) => ul.append(buildSlot(actor, id, i, i >= max, editable)));
+  slots.forEach((id, i) => ul.append(buildSlot(actor, id, i, i >= max, editable, awayByKey)));
   root.append(ul);
 
   if (over) {
@@ -178,11 +192,12 @@ export function buildStrip(actor, editable) {
  * NPC sheet, which does not get the strip.
  * @param {Actor} actor
  * @param {HTMLElement} root
+ * @param {ReturnType<computeSlots>} [state]  the render's one computeSlots result (items-journal-13)
  */
-export function decorateCounter(actor, root) {
+export function decorateCounter(actor, root, state) {
   const el = root.querySelector('[data-application-part="inventory"] .attunement');
   if (!el) return;
-  const { over } = computeSlots(actor);
+  const { over } = state ?? computeSlots(actor);
   el.classList.toggle("pentaryn-over-cap", over);
 }
 
@@ -193,9 +208,10 @@ export function decorateCounter(actor, root) {
  * @param {ActorSheet} app
  * @param {HTMLElement} root
  * @param {(strip: HTMLElement, actor: Actor, editable: boolean) => void} wire
+ * @param {ReturnType<computeSlots>} [state]  the render's one computeSlots result (items-journal-13)
  * @returns {HTMLElement|null}  the strip, or null when there is no card
  */
-export function mountStrip(app, root, wire) {
+export function mountStrip(app, root, wire, state) {
   const actor = app.actor;
   const sidebar = root.querySelector(".sidebar");
   const card = sidebar?.querySelector(":scope > .card");
@@ -208,7 +224,7 @@ export function mountStrip(app, root, wire) {
   sidebar.querySelectorAll(":scope > .pentaryn-attunement").forEach(n => n.remove());
 
   const editable = app.isEditable && actor.isOwner;
-  const strip = buildStrip(actor, editable);
+  const strip = buildStrip(actor, editable, state ?? computeSlots(actor));
   wire(strip, actor, editable);
   card.after(strip);
   return strip;

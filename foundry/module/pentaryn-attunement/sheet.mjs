@@ -169,10 +169,12 @@ function onRenderSheet(app, element) {
   // Vehicles and groups inherit the same base and have no attunement schema.
   if (!actor?.system?.attributes?.attunement) return;
   try {
-    decorateCounter(actor, element);
+    // One reconciliation per render, shared by the counter and the strip (items-journal-13).
+    const state = computeSlots(actor);
+    decorateCounter(actor, element, state);
     // NPC sidebars are a different organism — trait pills, no card, no
     // favourites. They keep the decorated counter and the enforcement hooks.
-    if (actor.type === "character") mountStrip(app, element, activate);
+    if (actor.type === "character") mountStrip(app, element, activate, state);
   } catch (err) {
     console.error(`${MODULE} | render failed`, err);
   }
