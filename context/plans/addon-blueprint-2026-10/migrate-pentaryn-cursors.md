@@ -356,6 +356,7 @@ location first (paths parameterised). The step changes no runtime file.
   - Credits can stay as a trailing section.
 - New `CHANGELOG.md` (0.2.0, plus 0.3.0 for this migration).
 - Give cursors its own routing row in `context/foundry/README.md`; it is currently bundled at `:67`.
+  **Landed** in `720486e` (standalone pass, cursors half of -27): do not add it again.
 
 Tests before: none at runtime. C44 is the gate.
 
@@ -462,8 +463,9 @@ Departures from the step text, each so a frozen file stays untouched:
 guide; handed back as an exact edit list): step 7 (`tools/build.mjs` and `assets/src/` →
 `scripts/foundry/cursors/`, `--check-sources` + pytest, -35 alt-* half and the cursors half of
 -28), step 8's `DESIGN.md` → `context/plans/cursors-design.md` and the own routing row in
-`context/foundry/README.md` (-35 DESIGN half, cursors half of -27), step 10's row (already listed in
-`adjustments-batch.md`; the aoe widening row there must name `board.mjs`, not `cursors.mjs`), and
+`context/foundry/README.md` (-35 DESIGN half, cursors half of -27; the routing row has since landed
+in `720486e`), step 10's row (since landed in `4825fae`; the aoe widening row in
+`adjustments-batch.md` already names `board.mjs`), and
 step 11 (already in `wave7-restart-batch.md`). The README still points at `DESIGN.md`, `tools/` and
 `assets/src/` in the module until those moves land, then its four references change with them.
 
