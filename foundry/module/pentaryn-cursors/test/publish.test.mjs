@@ -41,18 +41,29 @@ test("extensible {x:1} → the same object gains cursors", async () => {
   F.restore();
 });
 
-test("frozen {x:1} → a NEW object with x and cursors; the old one untouched", async () => {
+// [declared] kit 1.0.2 (J10), flipped from "frozen {x:1} → a NEW object with x and cursors; the old one
+// untouched": nothing freezes game.pentaryn since the importer's keystone (c0c3f97), so the kit's
+// frozen-root guard is gone and a frozen root is refused — ready's publish throws, Foundry's Hooks
+// reports it, and the root is left exactly as it was.
+test("frozen {x:1} → refused: the root is left as it was and the throw is reported by Hooks", async () => {
   const root = Object.freeze({ x: 1 });
-  const F = await boot(root);
-  assert.notEqual(game.pentaryn, root);
-  assert.equal(game.pentaryn.x, 1);
-  legacyFloor(game.pentaryn.cursors);
-  assert.deepEqual(Object.keys(game.pentaryn), ["x", "cursors"]);
+  const { warn, error } = console;
+  const lines = [];
+  console.warn = (...a) => lines.push(["warn", String(a[0])]);
+  console.error = (...a) => lines.push(["error", a[0] instanceof Error ? a[0].message : String(a[0])]);
+  let F;
+  try {
+    F = await boot(root);
+  } finally {
+    console.warn = warn;
+    console.error = error;
+  }
+  assert.equal(game.pentaryn, root);
   assert.deepEqual(Object.keys(root), ["x"]);
   assert.ok(Object.isFrozen(root));
-  // the published refresh drives this boot's board
-  F.setTool("tokens", "target");
-  assert.equal(game.pentaryn.cursors.refresh(), "target");
-  assert.equal(F.el.dataset.pentarynCursor, "target");
+  assert.equal(F.hookErrors.length, 1);
+  assert.equal(F.hookErrors[0].hook, "ready");
+  assert.match(F.hookErrors[0].error.message, /object is not extensible/);
+  assert.equal(lines.length, 2, "one warn and one error line, as Foundry's Hooks.#call logs");
   F.restore();
 });
