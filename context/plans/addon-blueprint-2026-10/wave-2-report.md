@@ -323,8 +323,41 @@ pre-existing warnings). `foundry-adjustments-check` 96 rows OK.
 - Live goldens (`scripts/foundry/live-goldens/`) for lookup, movement, walls, attunement, journal and
   dropbin do not exist; each "before" run must be taken on the deployed build before the L-session
   syncs. Not written here: an untested live script is worse than none.
-- lookup, noticed by its lanes: `names("constructor")` returns a junk one-key object (an
-  `Object.hasOwn` guard, [declared]); `NAME_SOURCES` is frozen one level deep (harmless today).
+- lookup, noticed by its lanes: `names("constructor")` returned a junk one-key object (landed:
+  `055586bb`, below); `NAME_SOURCES` is frozen one level deep (harmless today).
+
+## Integration review (2026-10-11)
+
+A second pass over `wave-2-base..HEAD` (and the fork's `pentaryn..HEAD`), code phase only. Checked:
+no commit carries `foundry/logs/**` or a secret; no commit touches two modules' trees or another
+lane's plan/audit files except the integration commit `bbcdd721`; every commit ends with the
+session trailers; each frozen test or golden changed after its module's checkpoint changed in a
+`[declared]` commit or as an import/path-only move (lookup's legacy suite became `core.test.mjs`
+cases in `f0f70ea8`, 43 → 43); no `.only`, and every new test that schedules a timer runs on
+`mock.timers`.
+
+| Commit | Fix |
+|---|---|
+| `3df15e0f` | transform's `test/kit/foundry-stub.mjs` came in at kit 1.0.1 with the `fix/playtest-2026-10-11` merge (`931203a5`); re-vendored byte-identical to 1.0.2. module-check never compared it: transform has no `kit.lock.json` |
+| `055586bb` | lookup [declared]: `names("constructor")` (any `Object.prototype` word) is an unknown kind and answers everything, via `Object.hasOwn` (the follow-up listed above); new `test/names-kind.test.mjs`, 135 tests |
+| `7c2aef7b` | `context/foundry/mcp-fork.md`: the bridge plan's P9 second half — the `pentaryn-read`/`-write` table, `fork.applyRecharge`, `timedOut`, the fork's coded `NOT_GM` and `guardBridgeQueries`, kit 1.0.2 in the contracts table. Marked "wave-2 build" |
+| fork `213c6c3` | `pentaryn-read`'s description named `rules` as eval-js only; lookup gains `describe()` in this wave, so it now names ties, combat, prompts |
+
+**Per-commit module sweep** (each commit's tree via `git archive`, `node test/run.mjs` for every
+module it touches, every module on a `foundry/lib` change; 271 runs): red only at walls `9b37264b`
+(`test/backends.test.mjs` matched its own source; fixed forward in `28dd5667`) and pings
+`466a3a4f`, `a18872c9` (the PT3-2 repro-first commits on `fix/playtest-2026-10-11`, green from
+`7a8701df`). Add these to the known red commits beside the two ranges above.
+
+**Gates after the review:** every module's `test/run.mjs` exits 0 (lookup 135); `pytest -q` 913
+passed, 2 skipped, 3 xfailed; `foundry-modules-check` 19/19; `foundry-lib-check` 82/82;
+`check-context` OK; `foundry-adjustments-check` OK. Fork: server vitest 275, module vitest 43,
+both typechecks, `fork-footprint.sh` green.
+
+**Noted, not changed:** `eslint` on the fork's new `src/fork` files reports 3 errors
+(`prefer-template` in `action-log.ts:68` and `pentaryn-write.ts:71`; `no-misused-promises` on the
+`setInterval(async …)` moved from `index.ts` into `tool-list-watch.ts:39`, whose body is already
+inside try/catch). Style only; lint is not a gate here and upstream files carry dozens.
 
 ## Open for Joe
 
