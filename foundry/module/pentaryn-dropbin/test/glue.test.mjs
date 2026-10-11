@@ -171,9 +171,9 @@ test("drop capture as a player with socketlib: one executeAsGM('record', entry)"
   assert.deepEqual([relays[0].data.reason, relays[0].data.quantity, relays[0].data.pileUuid, relays[0].data.userId], ["drop", 3, "Scene.x.Token.y", PLAYER]);
 });
 
-// KNOWN: items-journal-18 — two drops in one call race the read-modify-write: with a store that lands its
-// writes a tick later, both get #2. Flipped by guide step 8 [declared] (serialised appends).
-test("KNOWN items-journal-18: two concurrent drops of different items both get the same number", async () => {
+// items-journal-18 — two drops in one call raced the read-modify-write (both got #2). Flipped by guide step 8
+// [declared] (serialised appends): numbered consecutively in submission order.
+test("items-journal-18: two concurrent drops of different items are numbered #2 and #3", async () => {
   const realSet = game.settings.set.bind(game.settings);
   game.settings.set = (ns, key, value) => new Promise(r => setTimeout(() => r(realSet(ns, key, value)), 0));
   const lines = await withConsole(async () => {
@@ -184,7 +184,7 @@ test("KNOWN items-journal-18: two concurrent drops of different items both get t
     for (let i = 0; i < 20; i++) { mock.timers.tick(0); await flush(); }
   });
   game.settings.set = realSet;
-  assert.deepEqual(lines, [["log", "pentaryn-dropbin | #2 drop: Rope from Ann"], ["log", "pentaryn-dropbin | #2 drop: Lamp from Ann"]]);
+  assert.deepEqual(lines, [["log", "pentaryn-dropbin | #2 drop: Rope from Ann"], ["log", "pentaryn-dropbin | #3 drop: Lamp from Ann"]]);
 });
 
 test("preDeleteItem: a character's own delete is captured; a restore-flagged one is not (the flag is dead today)", async () => {

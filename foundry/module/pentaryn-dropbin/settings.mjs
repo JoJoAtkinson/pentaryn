@@ -6,7 +6,7 @@
  * empties the log and keeps the counter, so a ledger number is never reused.
  */
 
-import { MODULE } from "./dropbin-core.mjs";
+import { MODULE, DEDUPE_MS, appendEntry } from "./dropbin-core.mjs";
 import { defineSettings, settingReader, settingsSnapshot as snapshot } from "./lib/settings.mjs";
 
 /** @type {import("./lib/settings.mjs").SettingRow[]} */
@@ -43,6 +43,27 @@ export function readLog() {
     console.warn(`${MODULE} | could not read the ledger`, err);
     return [];
   }
+}
+
+/**
+ * One queue for both keys (items-journal-18): every append reads the counter and the log, decides,
+ * and writes inside one task, so two appends on this client never read the same counter. Created
+ * on first use (foundry.utils.Semaphore), once per page.
+ */
+let ledgerQueue = null;
+const queue = () => (ledgerQueue ??= new foundry.utils.Semaphore(1));
+
+/**
+ * Append `entry` to the ledger, serialised. Resolves `{ n, log, duplicate }`: on a duplicate of
+ * the tail (same key within `dedupeMs`) nothing is written and `n` is the tail's. A failed write
+ * rejects this caller only; later appends still run.
+ */
+export function appendLedger(entry, dedupeMs = DEDUPE_MS) {
+  return queue().add(async () => {
+    const r = appendEntry(readLog(), setting("counter") ?? 0, entry, dedupeMs);
+    if (!r.duplicate) await writeLedger({ n: r.n, log: r.log });
+    return r;
+  });
 }
 
 /** Write the counter, then the log (in that order, each awaited). */

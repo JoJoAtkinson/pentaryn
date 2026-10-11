@@ -20,10 +20,10 @@
  */
 
 import {
-  MODULE, DIR, FILE, DEDUPE_MS, duplicateOfTail, makeEntry, normaliseDeltas, listLast, findEntry, searchLog,
+  MODULE, DIR, FILE, DEDUPE_MS, makeEntry, normaliseDeltas, listLast, findEntry, searchLog,
   briefOf, shouldCaptureDelete, restoreTarget,
 } from "./dropbin-core.mjs";
-import { setting, readLog, writeLedger, clearLog } from "./settings.mjs";
+import { readLog, appendLedger, clearLog } from "./settings.mjs";
 import { dropHook, actorClassType, isValidItemPile } from "./piles.mjs";
 import { registerRecord, hasSocket, executeAsGM, resetSocket } from "./socketlib-adapter.mjs";
 
@@ -50,16 +50,8 @@ async function writeMirror(log) {
  */
 async function recordAsGM(entry) {
   if (!game.user.isGM) return null;
-  const log = readLog();
-
-  const tail = duplicateOfTail(log, entry, DEDUPE_MS);
-  if (tail) return tail.n;
-
-  const n = (setting("counter") ?? 0) + 1;
-  const row = { n, ...entry };
-  log.push(row);
-
-  await writeLedger({ n, log });
+  const { n, log, duplicate } = await appendLedger(entry, DEDUPE_MS);
+  if (duplicate) return n;
   await writeMirror(log);
 
   console.log(`${MODULE} | #${n} ${entry.reason}: ${entry.itemName} from ${entry.fromActorName}`);
