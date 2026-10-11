@@ -19,6 +19,7 @@
 
 import { MODULE, QUERY, flagsOf, isPersonal, validateEnsure } from "./journal-core.mjs";
 import { setting } from "./settings.mjs";
+import { relayed } from "./lib/queries.mjs";
 
 const OWN = () => CONST.DOCUMENT_OWNERSHIP_LEVELS;
 /** A player-facing warning toast (not a console line). */
@@ -137,15 +138,20 @@ async function ensurePersonalJournal() {
 }
 
 /**
- * The relay, registered at init on every client (the sender's client needs the name too). `user` is
- * the sender as the server knows it; the payload is not read at all.
+ * The player relay, registered at init on every client (the sender's client needs the name too),
+ * through the kit's `relayed`: any sender, and only the active GM's client runs it — any other
+ * answers `NOT_GM: this client is not the active GM`. `user` is the sender as the server knows it;
+ * the payload is not read at all, and the only journal it can make is the sender's own.
+ *
+ * Still assigned here rather than through a manifest row (C56): the kit's registerQueries does not
+ * pass the query context (the sender) to the implementation yet (wave-2 report, kit gap).
  */
 export function registerRelay() {
-  CONFIG.queries[QUERY] = async (_data, { user } = {}) => {
-    if (!game.user.isGM || !game.users.activeGM?.isSelf) throw new Error("not the active GM");
+  CONFIG.queries[QUERY] = relayed(async (_data, { user } = {}) => {
     const j = await ensureFor(user);
+    ctx?.log.info("ensure (relay)", { uuid: j.uuid, ids: [j.id], by: game.user.id, for: user?.id ?? null });
     return { entryId: j.id };
-  };
+  });
 }
 
 export function install(reg, context) {
