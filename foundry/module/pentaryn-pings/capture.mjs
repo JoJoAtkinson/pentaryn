@@ -19,7 +19,7 @@
 import { DEDUPE_MS, FLUSH_MS, MODULE, appendCapped, capLimit, isDuplicate } from "./pings-core.mjs";
 import { maxSetting, readLog, writeLog } from "./settings.mjs";
 import { isAnyGM } from "./lib/election.mjs";
-import { wrapMethod } from "./lib/patch.mjs";
+import { unwrapAll, wrapMethod } from "./lib/patch.mjs";
 
 /** Session state. `buffer` mirrors the store, so a burst of pings costs one write, not five. */
 let log = null;
@@ -109,9 +109,26 @@ function patchControlsLayer() {
   return true;
 }
 
+/** Entry body, every client: keep the module's log. Registers no hook (golden/hooks.json). */
+export function install(reg, ctx) {
+  log = ctx.log;
+}
+
+/**
+ * Undo start(): unwrap handlePing (this module's kit copy holds only that patch), stop listening on
+ * userActivity, drop the buffer and a pending flush (pings not yet written, ≤ FLUSH_MS, are lost).
+ */
+export function uninstall() {
+  unwrapAll();
+  if (listener) game.socket?.off?.("userActivity", listener);
+  listener = null;
+  clearTimeout(flushTimer);
+  flushTimer = null;
+  buffer = null;
+}
+
 /** ready, GM clients: read the store into the buffer, wrap handlePing, listen on userActivity. */
-export function start(deps) {
-  log = deps.log;
+export function start() {
   buffer = readLog({ log });
   patchControlsLayer();
 
