@@ -71,8 +71,8 @@ The table is generated from each `module.json`, the module's code and its
 | `combat` | `pentaryn-combat` | 0.2.5 | not migrated | — (no describe golden yet) | [README](../../foundry/module/pentaryn-combat/README.md) |
 | `creatures` | `pentaryn-creatures` | 0.1.1 | not migrated | — (no describe golden yet) | [README](../../foundry/module/pentaryn-creatures/README.md) |
 | `cursors` | `pentaryn-cursors` | 0.2.0 | small tier | `refresh`, `current`, `keyFor`, `status` | [README](../../foundry/module/pentaryn-cursors/README.md) |
-| `dropbin` | `pentaryn-dropbin` | 0.2.2 | full tier | `corpses.sync`, `corpses.toCorpse`, `corpses.fromCorpse`, `corpses.isDead`, `corpses.revive`, `corpses.paintEye`, `corpses.paintAllEyes`, `corpses.migrateLegacyEyes` … (+11) | [README](../../foundry/module/pentaryn-dropbin/README.md) |
-| `feedback` | `pentaryn-feedback` | 0.1.0 | full tier | `open`, `submit`, `ingest`, `list`, `get`, `resolve` | [`feedback.md`](feedback.md) · [README](../../foundry/module/pentaryn-feedback/README.md) |
+| `dropbin` | `pentaryn-dropbin` | 0.2.3 | full tier | `corpses.sync`, `corpses.toCorpse`, `corpses.fromCorpse`, `corpses.isDead`, `corpses.revive`, `corpses.paintEye`, `corpses.paintAllEyes`, `corpses.migrateLegacyEyes` … (+11) | [README](../../foundry/module/pentaryn-dropbin/README.md) |
+| `feedback` | `pentaryn-feedback` | 0.1.1 | full tier | `open`, `submit`, `ingest`, `list`, `get`, `resolve` | [`feedback.md`](feedback.md) · [README](../../foundry/module/pentaryn-feedback/README.md) |
 | `importer` | `pentaryn-importer` | 1.1.0 | full tier | `import` | [`importer.md`](importer.md) · [README](../../foundry/module/pentaryn-importer/README.md) |
 | `journal` | `pentaryn-journal` | 0.1.0 | full tier | `personal`, `add`, `status`, `open`, `shouldShowBar`, `ensure`, `ensureAll`, `report` … (+3) | [README](../../foundry/module/pentaryn-journal/README.md) |
 | `rules` | `pentaryn-lookup` | 0.3.0 | full tier | `search`, `page`, `monster`, `monsters`, `names`, `packs`, `onList`, `spellList` … (+1) | [README](../../foundry/module/pentaryn-lookup/README.md) |
@@ -80,7 +80,7 @@ The table is generated from each `module.json`, the module's code and its
 | `names` | `pentaryn-names` | 0.1.1 | small tier | — (no describe golden yet) | [README](../../foundry/module/pentaryn-names/README.md) |
 | `pings` | `pentaryn-pings` | 0.1.1 | small tier | — (no describe golden yet) | [README](../../foundry/module/pentaryn-pings/README.md) |
 | `portals` | `pentaryn-portals` | 0.4.4 | not migrated | — (no describe golden yet) | [README](../../foundry/module/pentaryn-portals/README.md) |
-| `prompts` | `pentaryn-prompts` | 0.4.4 | full tier | — (no describe golden yet) | [README](../../foundry/module/pentaryn-prompts/README.md) |
+| `prompts` | `pentaryn-prompts` | 0.4.5 | full tier | — (no describe golden yet) | [README](../../foundry/module/pentaryn-prompts/README.md) |
 | `riders` | `pentaryn-riders` | 0.2.0 | not migrated | — (no describe golden yet) | [README](../../foundry/module/pentaryn-riders/README.md) |
 | `chain`, `senses` | `pentaryn-senses` | 0.4.1 | not migrated | — (no describe golden yet) | [README](../../foundry/module/pentaryn-senses/README.md) |
 | `ties` | `pentaryn-ties` | 0.19.4 | full tier | — (no describe golden yet) | [README](../../foundry/module/pentaryn-ties/README.md) |
