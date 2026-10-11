@@ -1,0 +1,265 @@
+{
+  "res": {
+    "changed": [
+      "name Ogre Chief",
+      "size huge",
+      "art",
+      "biography",
+      "hp 80",
+      "ac 15",
+      "cr 3",
+      "speed 35",
+      "disposition neutral",
+      "system.attributes.movement.climb",
+      "type humanoid (giant kin)",
+      "languages common + custom Ogrish",
+      "removed 2",
+      "added Chief's blade, Rope, Totem, Brute, Roar, Stomp, Grit",
+      "Fire Breath recharge 5-6",
+      "Fire Breath updated"
+    ],
+    "warnings": [
+      "removeItems: no \"Glaive\" on Ogre Chief",
+      "addItems: no \"Nothing here\"",
+      "recharge: no \"Lightning Breath\" on Ogre Chief",
+      "itemUpdates: no \"Wing\" on Ogre Chief"
+    ]
+  },
+  "calls": [
+    {
+      "op": "update",
+      "documentName": "Actor",
+      "uuid": "Actor.actorPatched0001",
+      "changes": {
+        "name": "Ogre Chief",
+        "prototypeToken.name": "Ogre Chief",
+        "system.traits.size": "huge",
+        "prototypeToken.width": 3,
+        "prototypeToken.height": 3,
+        "img": "ogre.webp",
+        "prototypeToken.texture.src": "ogre.webp",
+        "system.details.biography.value": "<p>Big.</p>",
+        "system.attributes.hp.max": 80,
+        "system.attributes.hp.value": 80,
+        "system.attributes.hp.formula": "8d12+24",
+        "system.attributes.ac.calc": "flat",
+        "system.attributes.ac.flat": 15,
+        "system.details.cr": 3,
+        "system.attributes.movement.walk": 35,
+        "prototypeToken.disposition": 0,
+        "system.attributes.movement.climb": 20,
+        "system.details.type.value": "humanoid",
+        "system.details.type.subtype": "giant kin",
+        "system.traits.languages.value": [
+          "common"
+        ],
+        "system.traits.languages.custom": "Ogrish"
+      }
+    },
+    {
+      "op": "deleteEmbeddedDocuments",
+      "type": "Item",
+      "data": [
+        "itScimitar000001",
+        "itClaw0000000001"
+      ]
+    },
+    {
+      "op": "createEmbeddedDocuments",
+      "type": "Item",
+      "data": [
+        {
+          "name": "Chief's blade",
+          "type": "weapon",
+          "system": {
+            "quantity": 1,
+            "equipped": true,
+            "magical": true
+          },
+          "flags": {}
+        },
+        {
+          "name": "Rope",
+          "type": "loot",
+          "system": {
+            "quantity": 3
+          },
+          "flags": {}
+        },
+        {
+          "name": "Totem",
+          "type": "equipment",
+          "system": {
+            "description": {
+              "value": "requires attunement"
+            },
+            "attunement": "required",
+            "quantity": 2
+          }
+        },
+        {
+          "name": "Brute",
+          "type": "feat",
+          "img": "icons/svg/aura.svg",
+          "system": {
+            "type": {
+              "value": "monster"
+            },
+            "description": {
+              "value": "<p>Hits hard.</p>"
+            }
+          }
+        },
+        {
+          "name": "Roar",
+          "type": "feat",
+          "img": "icons/svg/aura.svg",
+          "system": {
+            "type": {
+              "value": "monster"
+            },
+            "description": {
+              "value": ""
+            },
+            "uses": {
+              "max": "1",
+              "spent": 0,
+              "recovery": [
+                {
+                  "period": "recharge",
+                  "formula": "5",
+                  "type": "recoverAll"
+                }
+              ]
+            },
+            "activities": {
+              "<rid>": {
+                "_id": "<rid>",
+                "type": "utility",
+                "activation": {
+                  "type": "action"
+                },
+                "consumption": {
+                  "targets": [
+                    {
+                      "type": "itemUses",
+                      "target": "",
+                      "value": "1"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Stomp",
+          "type": "feat",
+          "img": "icons/svg/aura.svg",
+          "system": {
+            "type": {
+              "value": "monster"
+            },
+            "description": {
+              "value": ""
+            },
+            "uses": {
+              "max": "2",
+              "spent": 0,
+              "recovery": [
+                {
+                  "period": "sr",
+                  "type": "recoverAll"
+                }
+              ]
+            },
+            "activities": {
+              "<rid>": {
+                "_id": "<rid>",
+                "type": "utility",
+                "activation": {
+                  "type": "bonus"
+                },
+                "consumption": {
+                  "targets": [
+                    {
+                      "type": "itemUses",
+                      "target": "",
+                      "value": "1"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Grit",
+          "type": "feat",
+          "img": "icons/svg/aura.svg",
+          "system": {
+            "type": {
+              "value": "monster"
+            },
+            "description": {
+              "value": ""
+            },
+            "uses": {
+              "max": "1",
+              "spent": 0,
+              "recovery": [
+                {
+                  "period": "day",
+                  "type": "recoverAll"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "op": "updateEmbeddedDocuments",
+      "type": "Item",
+      "data": [
+        {
+          "_id": "itBreath00000001",
+          "system.uses": {
+            "max": "1",
+            "spent": 0,
+            "recovery": [
+              {
+                "period": "recharge",
+                "formula": "5",
+                "type": "recoverAll"
+              }
+            ]
+          },
+          "system.activities.actA.consumption.targets": [
+            {
+              "type": "material",
+              "target": "x",
+              "value": "2"
+            },
+            {
+              "type": "itemUses",
+              "target": "",
+              "value": "1"
+            }
+          ],
+          "system.activities.actB.consumption.targets": [
+            {
+              "type": "itemUses",
+              "target": "",
+              "value": "1"
+            }
+          ]
+        },
+        {
+          "_id": "itBreath00000001",
+          "system.range.value": 30
+        }
+      ]
+    }
+  ]
+}

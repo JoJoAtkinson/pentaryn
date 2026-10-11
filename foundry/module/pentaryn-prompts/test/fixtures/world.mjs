@@ -437,3 +437,40 @@ export function addScene(F, { id, name, tokens = [], walls = [], notes = [], lig
   F.game.scenes.set(scene.id, scene);
   return sceneApi(F, scene);
 }
+
+/**
+ * A compendium pack of Items: `getIndex()` (logged on `F.calls`), `getDocument(id)` → an `Item`
+ * instance with `uuid` `Compendium.<pack>.Item.<_id>`. Also wires `game.items.fromCompendium`
+ * (a clone without `_id`) and `fromUuid` / `fromUuidSync` for those uuids. → the pack.
+ */
+export function addItemPack(F, id, entries, { type = "Item" } = {}) {
+  const docs = new Map();
+  for (const e of entries) {
+    const doc = Object.assign(Object.create(globalThis.Item.prototype), {
+      documentName: "Item", id: e._id, _id: e._id, name: e.name, type: e.type, system: structuredClone(e.system ?? {}),
+      uuid: `Compendium.${id}.Item.${e._id}`, pack: id, toObject() { const { uuid, pack, ...o } = structuredClone({ ...this }); return o; }
+    });
+    docs.set(e._id, doc);
+  }
+  const pack = {
+    collection: id, metadata: { id, type },
+    getIndex: async opts => {
+      F.calls.push({ op: "pack.getIndex", pack: id, fields: opts?.fields ?? null });
+      return entries.map(e => ({ _id: e._id, name: e.name, type: e.type, uuid: `Compendium.${id}.Item.${e._id}` }));
+    },
+    getDocument: async docId => docs.get(docId) ?? null
+  };
+  F.game.packs.set(id, pack);
+  F.game.items.fromCompendium = doc => {
+    const o = structuredClone({ name: doc.name, type: doc.type, system: doc.system ?? {}, flags: doc.flags ?? {} });
+    return o;
+  };
+  const prevAsync = globalThis.fromUuid, prevSync = globalThis.fromUuidSync;
+  const find = uuid => {
+    const m = /^Compendium\.(.+)\.Item\.([^.]+)$/.exec(String(uuid));
+    return m && m[1] === id ? docs.get(m[2]) ?? null : undefined;
+  };
+  globalThis.fromUuid = async uuid => { const d = find(uuid); return d === undefined ? prevAsync(uuid) : d; };
+  globalThis.fromUuidSync = uuid => { const d = find(uuid); return d === undefined ? prevSync(uuid) : d; };
+  return pack;
+}

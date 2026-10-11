@@ -1,0 +1,134 @@
+{
+  "log": [
+    [
+      "createNpcActor",
+      {
+        "name": "<temp>",
+        "creatureType": "giant",
+        "creatureSubtype": "",
+        "size": "large",
+        "alignment": "",
+        "cr": "2",
+        "hpAverage": 59,
+        "hpFormula": "7d10+21",
+        "acMode": "flat",
+        "acValue": 11,
+        "abilities": {
+          "str": 19,
+          "dex": 8,
+          "con": 16,
+          "int": 5,
+          "wis": 7,
+          "cha": 7
+        },
+        "savingThrows": [],
+        "walkSpeed": 30,
+        "flySpeed": 0,
+        "swimSpeed": 0,
+        "climbSpeed": 0,
+        "burrowSpeed": 0,
+        "hover": false,
+        "darkvision": 0,
+        "blindsight": 0,
+        "tremorsense": 0,
+        "truesight": 0,
+        "specialSenses": "",
+        "skills": [],
+        "damageImmunities": [],
+        "damageResistances": [],
+        "damageVulnerabilities": [],
+        "conditionImmunities": [],
+        "languages": [
+          "common",
+          "giant"
+        ],
+        "languagesCustom": "grunts; Ogrish",
+        "biography": "",
+        "sourceBook": "",
+        "sourcePage": "",
+        "sourceRules": "2014"
+      }
+    ],
+    [
+      "addPassiveFeatureToActor",
+      {
+        "featureType": "passive",
+        "featureName": "Brute",
+        "description": "Hits hard.",
+        "sourceRules": "2014",
+        "sourceBook": "",
+        "sourcePage": "",
+        "actorIdentifier": "<actor id>"
+      }
+    ],
+    [
+      "addAttackToActor",
+      {
+        "featureType": "attack",
+        "featureName": "Greatclub",
+        "description": "",
+        "activationType": "action",
+        "attackType": "melee",
+        "weaponClass": "natural",
+        "attackBonus": 0,
+        "proficient": true,
+        "equipped": true,
+        "reachFt": 5,
+        "damageParts": [
+          {
+            "number": 2,
+            "denomination": 8,
+            "type": "bludgeoning"
+          }
+        ],
+        "properties": [],
+        "sourceRules": "2014",
+        "sourceBook": "",
+        "sourcePage": "",
+        "effectiveAbility": "str",
+        "actorIdentifier": "<actor id>"
+      }
+    ],
+    [
+      "addSpellsToActor",
+      {
+        "featureType": "spells",
+        "spellNames": [
+          "fire bolt",
+          "Shield",
+          "Fireball",
+          "Shiel"
+        ],
+        "compendiumPacks": [
+          "dnd5e.spells"
+        ],
+        "actorIdentifier": "<actor id>"
+      }
+    ]
+  ],
+  "owned": [
+    {
+      "type": "Actor",
+      "id": "<actor id>",
+      "name": "Ogre"
+    }
+  ],
+  "warnings": [
+    "spells (4): \"Fireball\" is not in dnd5e.spells (nearest: Fire Bolt) — the real run skips it",
+    "spells (4): \"Shiel\" is not in dnd5e.spells (nearest: Shield) — the real run skips it",
+    "npc.languages: Ogrish not a dnd5e language; kept as custom text",
+    "kept as is",
+    "Brute: description trimmed"
+  ],
+  "notes": [
+    "feature \"Greatclub\" not added: Greatclub: no such ability",
+    "spells not added: Fireball, Shiel (typo)"
+  ],
+  "actor": "Ogre",
+  "writes": [
+    {
+      "name": "Ogre",
+      "prototypeToken.name": "Ogre"
+    }
+  ]
+}
