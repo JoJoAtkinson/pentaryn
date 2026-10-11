@@ -43,7 +43,8 @@ export function combatActive(sceneId = canvas?.scene?.id) {
  * settings and the combats through this cache instead of once per token (finding -19). It is
  * dropped BEFORE the refresh is queued by everything that can change it: the three settings'
  * onChange, the six combat hooks and canvasReady. isGM and ownership are read live per call.
- * The once-per-refresh paths (status, the toolbar, refresh itself) keep reading live.
+ * The once-per-refresh paths (status, the toolbar, refresh itself) keep reading live; refresh
+ * reads once and shares it across its rules.
  */
 let ghostContext = null;
 function context() {
@@ -271,10 +272,12 @@ async function onGmFlip(active) {
   }
 }
 
+/** policy, combat on the viewed scene and wish, read live once (one combat scan). */
+const liveState = () => ({ policy: policy(), combatActive: combatActive(), wish: wish() });
+
 let lastToolKey = null;
-function rerenderControls(force = false) {
-  const p = policy();
-  const key = JSON.stringify([p, core.playerTool({ isGM: game.user.isGM, policy: p, combatActive: combatActive(), wish: wish() })]);
+function rerenderControls(force = false, now = liveState()) {
+  const key = JSON.stringify([now.policy, core.playerTool({ isGM: game.user.isGM, ...now })]);
   if (!force && key === lastToolKey) return false;
   lastToolKey = key;
   if (ui.controls?.rendered) ui.controls.render({ reset: true });
@@ -300,24 +303,25 @@ function markBlocked(element) {
 let clearedBy = null; // why this client last switched the player's ghost off ("combat" | "off")
 async function refresh() {
   try {
-    const reason = game.user.isGM ? null
-      : core.wishToClear({ policy: policy(), combatActive: combatActive(), wish: wish() });
+    // One live read serves every rule below: nothing awaits between them (finding -19).
+    const now = liveState();
+    const reason = game.user.isGM ? null : core.wishToClear(now);
     if (reason) {
       ui.notifications.info(NOTIFY_CLEARED[reason], { localize: true });
       clearedBy = reason;
       await game.settings.set(MODULE, "ghost", false); // its onChange calls refresh again
       return;
     }
-    if (wish()) clearedBy = null;
+    if (now.wish) clearedBy = null;
     else if (!game.user.isGM) {
-      const key = core.ghostBackKey({ cleared: clearedBy, policy: policy(), combatActive: combatActive(), wish: wish() });
+      const key = core.ghostBackKey({ cleared: clearedBy, ...now });
       if (key) {
         ui.notifications.info(key, { localize: true });
         clearedBy = null;
       }
     }
     // Combat updates fire every turn; only a real change of state redraws anything.
-    if (!rerenderControls()) return;
+    if (!rerenderControls(false, now)) return;
     canvas?.tokens?.recalculatePlannedMovementPaths?.();
     refreshTokens();
   } catch (err) {

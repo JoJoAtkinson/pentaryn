@@ -126,3 +126,11 @@ test("each setting's onChange drops the cache (policy, wish, owned-on-top)", asy
   assert.equal(c.mesh.sort, 1, "owned-on-top off: no lift");
   await settle();
 });
+
+test("one debounced refresh scans the combats once, not once per rule it asks", async () => {
+  await settle();                                    // whatever the last test queued has run
+  F.fire("updateCombat");                            // a turn change: nothing the button shows changes
+  reads.combats = 0;
+  await settle();
+  assert.equal(reads.combats, 1, "wishToClear, ghostBackKey and the button key share one read");
+});
