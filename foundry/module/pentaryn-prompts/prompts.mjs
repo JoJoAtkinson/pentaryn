@@ -10,7 +10,7 @@
 import { MODULE, VERSION, SIZE_KEYS, SIZE_BY_KEY, footprintLabel, codedError } from "./geometry-core.mjs";
 import { ensureMarkers, onPreCreateToken, isPromptToken, markerSizeOfToken, markerSizeOfActor, markerActor, promptText } from "./markers-adapter.mjs";
 import { PromptDialog } from "./dialog.mjs";
-import * as Typeahead from "./typeahead.mjs";
+import { cancel as cancelTyping, setOrphanSink, start as startTyping } from "./typeahead-adapter.mjs";
 import { sceneModel, seesCount } from "./scene-adapter.mjs";
 import { gather, crops, list, show } from "./gather.mjs";
 import { DROP_WINDOW_MS, matchesDrop } from "./core/drop.mjs";
@@ -27,7 +27,7 @@ const log = makeLog(MODULE);
 
 function onPlaceKey() {
   if (!game.user?.isGM || !canvas?.ready) return false;
-  placeAtCursor(null, { ticket: Typeahead.start() });   // capture from the key press on
+  placeAtCursor(null, { ticket: startTyping() });   // capture from the key press on
   return true;
 }
 
@@ -40,8 +40,8 @@ function onEditKey() {
 
 /** The P key: a marker of the client's default size under the cursor, snapped, dialog open. */
 async function placeAtCursor(sizeKey, { ticket = null } = {}) {
-  ticket ??= Typeahead.start();   // the API path too: keys typed while the token is created are held
-  const giveUp = () => { if (ticket !== null) Typeahead.cancel(ticket); return null; };
+  ticket ??= startTyping();   // the API path too: keys typed while the token is created are held
+  const giveUp = () => { if (ticket !== null) cancelTyping(ticket); return null; };
   if (!game.user?.isGM || !canvas?.ready || !canvas.scene) return giveUp();
   const size = SIZE_BY_KEY[sizeKey] ? sizeKey : settingStrict("defaultSize");
   const actor = markerActor(size);
@@ -81,7 +81,7 @@ function onDropCanvasData(_canvas, data, event) {
     // keys typed from this instant on belong to the box this drop opens (typeahead.mjs); a second
     // drop before the first box opens gets its own ticket, so each box keeps its own words
     const d = { actorId: actor.id, sceneId: canvas?.scene?.id ?? null, x: data.x, y: data.y,
-      clientX: event?.clientX ?? null, clientY: event?.clientY ?? null, t: Date.now(), ticket: Typeahead.start() };
+      clientX: event?.clientX ?? null, clientY: event?.clientY ?? null, t: Date.now(), ticket: startTyping() };
     pendingDrops.push(d);
     // a drop core refused never makes a token: its ticket times out in typeahead; forget it here too
     setTimeout(() => {
@@ -262,7 +262,7 @@ Hooks.on("updateToken", (doc, changes) => { if (MOVED.some(k => k in (changes ??
 
 Hooks.once("setup", () => patchDoubleClick());
 // text no open claimed: into the open box, else a toast (typeahead.mjs's own toast is the no-sink fallback)
-Typeahead.setOrphanSink(text => PromptDialog.takeOrphan(text) || orphanToast(text));
+setOrphanSink(text => PromptDialog.takeOrphan(text) || orphanToast(text));
 
 Hooks.once("ready", async () => {
   // Published one tick after ready (the publish timing is a declared step of the migration). The

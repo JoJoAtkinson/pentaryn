@@ -13,7 +13,7 @@ const CORES = ["geometry-core", "build-core", "npc-core", "readback-core"];
 const GLUE = ["markers", "model", "los", "crops", "gather", "replace", "patch", "character", "npc", "typeahead", "dialog", "prompts"];
 /** Import paths only: the golden keeps each file's old name; guide step 10 renamed the adapters. */
 const PATH = { markers: "markers-adapter", model: "scene-adapter", los: "sight-adapter", crops: "crops-adapter",
-  patch: "actor-patch-adapter", character: "character-adapter", npc: "npc-adapter" };
+  patch: "actor-patch-adapter", character: "character-adapter", npc: "npc-adapter", typeahead: "typeahead-adapter" };
 
 test("core exports (geometry-core 83, build-core 33, npc-core 14, readback-core 10) load with no Foundry", async () => {
   const out = {};

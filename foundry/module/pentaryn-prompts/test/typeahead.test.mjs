@@ -11,7 +11,7 @@ const L = {};
 const toasts = [];
 globalThis.window = { addEventListener: (type, fn) => (L[type] = fn), removeEventListener: type => delete L[type] };
 globalThis.ui = { notifications: { warn: s => toasts.push(s) } };
-const T = await import("../typeahead.mjs");
+const T = await import("../typeahead-adapter.mjs");
 
 /** A keyboard event; returns whether the module swallowed it. */
 function key(type, k, o = {}) {

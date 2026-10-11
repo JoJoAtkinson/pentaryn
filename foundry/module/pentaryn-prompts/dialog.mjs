@@ -19,7 +19,7 @@ import {
 } from "./geometry-core.mjs";
 import { markerSizeOfToken, promptText, markerActor, art, EMPTY_TINT, FULL_TINT } from "./markers-adapter.mjs";
 import { panelFor, resolveItemEmbeds } from "./scene-adapter.mjs";
-import * as Typeahead from "./typeahead.mjs";
+import { cancel as cancelTyping, start as startTyping, take as takeTyped } from "./typeahead-adapter.mjs";
 import { setting } from "./settings.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -111,14 +111,14 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
    * Everything before the first await runs synchronously, so capture starts with the gesture.
    */
   static async open(tokenDoc, { fresh = false, clientX = null, clientY = null, ticket = null } = {}) {
-    ticket ??= Typeahead.start();
-    if (!game.user?.isGM || !tokenDoc || !markerSizeOfToken(tokenDoc)) { Typeahead.cancel(ticket); return null; }
+    ticket ??= startTyping();
+    if (!game.user?.isGM || !tokenDoc || !markerSizeOfToken(tokenDoc)) { cancelTyping(ticket); return null; }
 
     const cur = PromptDialog.current;
     if (cur && !cur.#closing && cur.edits(tokenDoc)) {
       cur.bringToFront();
       cur.#ticket ??= ticket;
-      if (cur.#ticket !== ticket) Typeahead.cancel(ticket);
+      if (cur.#ticket !== ticket) cancelTyping(ticket);
       if (cur.rendered) cur.#focus();
       return cur;
     }
@@ -128,7 +128,7 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
     if (prior.length) {
       await Promise.all(prior.map(a => a.#finishing));
       tokenDoc = tokenDoc.parent?.tokens.get(tokenDoc.id) ?? null;
-      if (!tokenDoc) { Typeahead.cancel(ticket); return null; }
+      if (!tokenDoc) { cancelTyping(ticket); return null; }
     }
 
     const app = new PromptDialog();
@@ -150,7 +150,7 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
       console.error(`${MODULE} | the prompt dialog failed to render`, err);
       PromptDialog.#live.delete(app);
       if (PromptDialog.current === app) PromptDialog.current = null;
-      if (app.#ticket !== null) { Typeahead.cancel(app.#ticket); app.#ticket = null; }
+      if (app.#ticket !== null) { cancelTyping(app.#ticket); app.#ticket = null; }
       return null;
     }
     return app;
@@ -223,7 +223,7 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
     ta.focus({ preventScroll: true });
     let close = null;
     if (this.#ticket !== null) {
-      const got = Typeahead.take(this.#ticket);
+      const got = takeTyped(this.#ticket);
       this.#ticket = null;
       if (got.text) {
         ta.value += got.text;
@@ -334,7 +334,7 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
       clearTimeout(this.#timer);
       let text = this.#currentText();
       if (this.#ticket !== null) {          // closed before it ever had focus: keep what was typed
-        text += Typeahead.take(this.#ticket).text;
+        text += takeTyped(this.#ticket).text;
         this.#ticket = null;
       }
       if (PromptDialog.current === this) PromptDialog.current = null;

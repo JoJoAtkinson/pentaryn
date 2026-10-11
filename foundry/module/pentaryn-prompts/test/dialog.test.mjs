@@ -17,7 +17,7 @@ const F = await installWorld();
 await captureConsole(() => import("../prompts.mjs"));
 F.fire("init");
 const { PromptDialog } = await import("../dialog.mjs");
-const T = await import("../typeahead.mjs");
+const T = await import("../typeahead-adapter.mjs");
 
 const m1 = () => F.s1.tokens.get("m1");
 const ta = app => app.element.querySelector("textarea[name=prompt]");

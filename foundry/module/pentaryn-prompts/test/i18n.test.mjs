@@ -36,7 +36,7 @@ test("no prefix wrapper: nothing builds a PENTARYN_PROMPTS key from a template",
 test("the orphan toast (through the entry's sink) reads as before; a long text is cut at 120", async t => {
   const F = await installWorld();
   await captureConsole(() => import("../prompts.mjs"));
-  const T = await import("../typeahead.mjs");
+  const T = await import("../typeahead-adapter.mjs");
   const type = text => {
     for (const k of text) {
       for (const l of F.dom.window.listeners.keydown ?? []) {
