@@ -85,10 +85,11 @@ test("items-journal-10: a container that accepts nothing: err.created is empty, 
 });
 
 // [declared] items-journal-10 remainder (console only): a successful stash leaves one audit line —
-// how many copies, which container, and the copies' names — so a confiscation run through eval-js
+// how many copies, which container, the copies' ids and names, and who ran it (playbook §5.1) — so a confiscation run through eval-js
 // can be read back from the console. The writes are unchanged (the test above, golden/stash.json).
-test("items-journal-10: a successful stash logs one prefixed info line with the count and names", async () => {
+test("items-journal-10: a successful stash logs one prefixed info line with the count, copy ids, names and by", async () => {
   const box = makeActor(F, { id: "actorBoxS0000005", name: "Box Five" });
+  box.createEmbeddedDocuments = async (type, data) => data.map((d, i) => ({ id: `copyS000000000${i}`, name: d.name }));
   const who = owner("actorSafe0000005");
   const infos = [];
   const keep = console.info;
@@ -99,7 +100,9 @@ test("items-journal-10: a successful stash logs one prefixed info line with the 
     console.info = keep;
   }
   assert.deepEqual(infos, [["pentaryn-attunement | stash: 2 moved to Box Five",
-    { owner: "actorSafe0000005", container: "actorBoxS0000005", names: ["Cloak (Talo)", "Torch (Talo)"] }]]);
+    { owner: "actorSafe0000005", container: "actorBoxS0000005", ids: ["copyS0000000000", "copyS0000000001"],
+      names: ["Cloak (Talo)", "Torch (Talo)"], by: F.game.user.id }]]);
+  assert.equal(typeof F.game.user.id, "string");
 });
 
 test("items-journal-10: a refused stash logs no info line", async () => {

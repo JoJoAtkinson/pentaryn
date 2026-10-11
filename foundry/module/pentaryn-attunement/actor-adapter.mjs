@@ -78,13 +78,15 @@ export async function stash(owner, container, itemIds, { tag, currency = false, 
   const update = { [`flags.${MODULE}.${AWAY_FLAG}`]: away, [`flags.${MODULE}.${SLOTS}`]: slots };
   if (currency) for (const k of Object.keys(owner.system.currency ?? {})) update[`system.currency.${k}`] = 0;
   await owner.update(update);
-  // Audit line for a write across two actors (kit convention: info), read back after an eval-js run.
+  const created = (made ?? []).map(d => d?.id ?? d?._id ?? null);
+  // Audit line for a cross-user write (playbook §5.1: info, with the ids written and `by`), read
+  // back after an eval-js run.
   console.info(`${MODULE} | stash: ${creates.length} moved to ${container.name}`,
-    { owner: owner.id, container: container.id, names: creates.map(c => c.name) });
+    { owner: owner.id, container: container.id, ids: created, names: creates.map(c => c.name), by: game.user?.id ?? null });
   if (!detail) return creates.length;
   return {
     count: creates.length,
-    created: (made ?? []).map(d => d?.id ?? d?._id ?? null),
+    created,
     away: away.slice(awayBefore).map(a => a.key),
   };
 }
