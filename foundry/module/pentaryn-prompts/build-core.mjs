@@ -260,12 +260,6 @@ export function flattenLanguages(tree, out = {}) {
   return out;
 }
 
-/**
- * Language words → dnd5e keys: `["Common", "goblin", "Thieves' Cant"]` → `{keys: ["common", "goblin",
- * "cant"], unknown: []}`. A word matches a key or its label, case and punctuation ignored.
- * `flat` is `flattenLanguages(CONFIG.DND5E.languages)`; a localisation key as label is matched on
- * its last segment too.
- */
 /** Words people write for a dnd5e language that are neither its key nor its label. */
 export const LANGUAGE_ALIASES = Object.freeze({
   elven: "elvish", elf: "elvish", dwarven: "dwarvish", dwarf: "dwarvish", orcish: "orc", gnomic: "gnomish", gnome: "gnomish",
@@ -273,6 +267,12 @@ export const LANGUAGE_ALIASES = Object.freeze({
   deepspeech: "deep", sylvan: "sylvan", infernal: "infernal"
 });
 
+/**
+ * Language words → dnd5e keys: `["Common", "goblin", "Thieves' Cant"]` → `{keys: ["common", "goblin",
+ * "cant"], unknown: []}`. A word matches a key or its label, case and punctuation ignored.
+ * `flat` is `flattenLanguages(CONFIG.DND5E.languages)`; a localisation key as label is matched on
+ * its last segment too.
+ */
 export function languageKeys(words, flat) {
   const norm = s => String(s ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
   const table = Object.entries(flat ?? {}).map(([k, label]) => ({ k, n: [norm(k), norm(label), norm(String(label).split(".").pop())] }));
