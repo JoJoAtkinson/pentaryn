@@ -6,6 +6,11 @@
  * refusal positions are what `compare()` checks, and the diagnostic strings are cheap to
  * produce in JS if ever needed.
  *
+ * What it does not reproduce (senses-walls-cursors-3; `canonical(r, {extended: true})` shows the
+ * first two): the `rule` stamp on updates (always "X1" here), Levels (a scene with any levels runs
+ * on the JS engine instead, senses-walls-cursors-2), the `kind`/`rule`/`sources` flags on creates,
+ * and the mutation `log` (always []). None of these change the walls written.
+ *
  * Import for the side effect of registering:  `import "./backend-wasm.mjs";`
  * It is safe to import when the module has not been built — `available()` just stays false.
  */

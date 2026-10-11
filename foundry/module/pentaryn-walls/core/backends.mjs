@@ -10,7 +10,7 @@
  * the same shape `runEngine` returns.
  */
 
-import {runEngine, wallCategory} from "./engine.mjs";
+import {FLAG_SCOPE, runEngine, wallCategory} from "./engine.mjs";
 
 const REGISTRY = new Map();
 
@@ -35,16 +35,31 @@ register({name: "js", run: runEngine});
 /*  Comparison                                  */
 /* -------------------------------------------- */
 
-/** Canonical, order-independent form of a result's mutations, for exact comparison. */
-export function canonical(result) {
+/**
+ * Canonical, order-independent form of a result's mutations, for exact comparison: coordinates,
+ * wall kind and refusal positions. `compare()` gates on exactly these three.
+ *
+ * `{extended: true}` adds two diagnostic fields compare() does NOT gate on (senses-walls-cursors-3):
+ * `createLevels` (each create's segment with its levels) and `updateRules` (each update's id with
+ * the rule stamped on it). The wasm backend stamps every update "X1" — it does not reproduce the
+ * rule, nor the kind/sources flags or the log (see backend-wasm.mjs) — so `updateRules` can differ
+ * between backends while the geometry agrees.
+ */
+export function canonical(result, {extended = false} = {}) {
   const seg = c => {
     const [a, b, x, y] = c;
     return (a < x || (a === x && b < y)) ? `${a},${b},${x},${y}` : `${x},${y},${a},${b}`;
   };
-  return {
+  const out = {
     creates: result.creates.map(c => `${seg(c.c)}:${wallCategory(c)}`).sort(),
     updates: result.updates.map(u => `${u._id}:${seg(u.c)}`).sort(),
     refusals: result.refusals.map(r => `${r.at[0]},${r.at[1]}`).sort()
+  };
+  if (!extended) return out;
+  return {
+    ...out,
+    createLevels: result.creates.map(c => `${seg(c.c)}:${JSON.stringify([...(c.levels ?? [])].sort())}`).sort(),
+    updateRules: result.updates.map(u => `${u._id}:${u.flags?.[FLAG_SCOPE]?.rule ?? null}`).sort()
   };
 }
 

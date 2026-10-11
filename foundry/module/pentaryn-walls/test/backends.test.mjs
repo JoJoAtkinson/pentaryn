@@ -45,3 +45,35 @@ test("senses-walls-cursors-37: a copy without the .wasm loads js only and report
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test("senses-walls-cursors-3: canonical(r, {extended}) adds createLevels/updateRules, order-independent", async () => {
+  const r = {
+    creates: [{ c: [100, 0, 0, 0], levels: ["L2", "L1"] }, { c: [0, 0, 0, 100] }],
+    updates: [{ _id: "b", c: [5, 5, 1, 1], flags: { "wall-autocomplete": { rule: "W1" } } }, { _id: "a", c: [1, 1, 2, 2] }],
+    refusals: [],
+  };
+  const plain = core.canonical(r);
+  const ext = core.canonical(r, { extended: true });
+  assert.deepEqual(Object.keys(plain), ["creates", "updates", "refusals"]);
+  assert.deepEqual({ creates: ext.creates, updates: ext.updates, refusals: ext.refusals }, plain);
+  assert.deepEqual(ext.createLevels, ['0,0,0,100:[]', '0,0,100,0:["L1","L2"]']);
+  assert.deepEqual(ext.updateRules, ["a:null", "b:W1"]);
+  const reversed = { ...r, creates: [...r.creates].reverse(), updates: [...r.updates].reverse() };
+  assert.deepEqual(core.canonical(reversed, { extended: true }), ext);
+});
+
+test("senses-walls-cursors-3: over the corpus, levels agree across backends; rule drift is what backend-drift.json records", async () => {
+  const { readJSON } = await import("./kit/harness.mjs");
+  const { runCorpus } = await import("./fixtures/runner.mjs");
+  await core.wasmReady;
+  const js = runCorpus(core.get("js").run), wasm = runCorpus(core.get("wasm").run);
+  const ruleDrift = [];
+  for (let i = 0; i < js.length; i++) {
+    if (!js[i].res) continue;
+    const a = core.canonical(js[i].res, { extended: true }), b = core.canonical(wasm[i].res, { extended: true });
+    assert.deepEqual(b.createLevels, a.createLevels, js[i].name);
+    if (JSON.stringify(a.updateRules) !== JSON.stringify(b.updateRules)) ruleDrift.push(js[i].name);
+  }
+  const drift = readJSON(new URL("test/golden/backend-drift.json", ROOT));
+  assert.deepEqual(ruleDrift, Object.keys(drift).filter(k => drift[k].updateRules));
+});
