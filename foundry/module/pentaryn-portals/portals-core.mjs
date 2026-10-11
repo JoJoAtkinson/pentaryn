@@ -43,7 +43,14 @@ export function playerOwners(ownership, gmIds = []) {
     .map(([id]) => id);
 }
 
-/** Marker and crowd actors: GM scenery, never part of the party. */
+/**
+ * Marker and crowd actors: GM scenery, never part of the party. A name containing "(crowd)" or
+ * starting "Marker" + optional space + "·", or a folder starting Crowd / Markers / Temp Markers.
+ *
+ * One of three different "is this scaffolding?" rules (finding -38; pentaryn-prompts'
+ * scene-adapter isScaffold and pentaryn-aoe's core isCreature are the others) — compared in
+ * context/foundry/markers.md, "Who checks for Markers and crowd". Not merged on purpose.
+ */
 export function isScenery({ name = "", folders = [] } = {}) {
   if (/\(crowd\)/i.test(name) || /^Marker\s*·/.test(name)) return true;
   return folders.some(f => /^(Crowd\b|Markers\b|Temp Markers\b)/i.test(String(f ?? "")));
