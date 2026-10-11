@@ -185,6 +185,20 @@ function toSeg(w, idx) {
 }
 
 /**
+ * A working copy of a segment list with `idx` equal to each segment's array position. The rules
+ * address segments as `segs[s.idx]`, so every list the engine works on must come through here.
+ * `c` is copied: the engine mutates coordinates in place and must never reach its input.
+ */
+function reindex(segs) {
+  return segs.map((s, i) => ({...s, c: [...s.c], idx: i}));
+}
+
+/** Wall documents → an indexed working segment list (one level group, or the whole set). */
+function toSegs(walls) {
+  return reindex(walls.map(toSeg));
+}
+
+/**
  * Foundry's own wall categories, mirroring `getWallCategory()`
  * (APP/client/documents/wall.mjs:76-89). Order of the tests matters. Exported as `wallCategory`:
  * the one copy of this rule (canonical() and the fixture corpus use it too).
@@ -882,12 +896,12 @@ function diagnose(v, segs, verts, cfg, ambiguous) {
  */
 export function lintOnly(walls, opts = {}) {
   const cfg = resolveConfig(opts);
-  return lint(walls.map(toSeg).map((s, i) => ({...s, c: [...s.c], idx: i})), cfg);
+  return lint(toSegs(walls), cfg);
 }
 
 export function analyze(walls, opts = {}) {
   const cfg = resolveConfig(opts);
-  const segs = walls.map(toSeg).map((s, i) => ({...s, c: [...s.c], idx: i}));
+  const segs = toSegs(walls);
   const lints = lint(segs, cfg);
   const verts = buildGraph(segs, cfg);
   const amb = ambiguousAnchors(enumerate(segs, verts, cfg));
@@ -927,7 +941,7 @@ export function runEngine(walls, opts = {}) {
   let lints = [], iterations = 0, componentReport = [];
 
   for (const [levelKey, group] of byLevel) {
-    const segs = group.map((s, i) => ({...s, c: [...s.c], idx: i}));
+    const segs = reindex(group);
     lints = lints.concat(lint(segs, cfg));
 
     let verts = buildGraph(segs, cfg);
