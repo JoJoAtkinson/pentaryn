@@ -1942,6 +1942,209 @@
       "sideEffects": [],
       "legacy": true,
       "doc": "Entries awaiting the GM's sign-off."
+    },
+    {
+      "path": "attributes.effective",
+      "params": [
+        {
+          "name": "actor",
+          "type": "Actor"
+        }
+      ],
+      "returns": "string[]",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "since": "0.20.0",
+      "doc": "attributes.ids WITH the kind pointer (kind:<id>), as the sheet, the cascade and the planner see it (ties-5)."
+    },
+    {
+      "path": "attributes.ofEffective",
+      "params": [
+        {
+          "name": "actor",
+          "type": "Actor"
+        },
+        {
+          "name": "opts",
+          "type": "{ viewer }",
+          "optional": true
+        }
+      ],
+      "returns": "[record]",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "since": "0.20.0",
+      "doc": "attributes.of WITH the kind pointer, as the sheet sees it (ties-5)."
+    },
+    {
+      "path": "attributes.tree",
+      "params": [
+        {
+          "name": "character",
+          "type": "Actor",
+          "doc": "a player character"
+        },
+        {
+          "name": "opts",
+          "type": "{ forGM, kindResolver }",
+          "optional": true
+        }
+      ],
+      "returns": "[node]",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "since": "0.20.0",
+      "doc": "A character's world-knowledge tree (a player's view contracts away what they do not know; forGM shows failed/unknown)."
+    },
+    {
+      "path": "attributes.branch",
+      "params": [
+        {
+          "name": "attrId",
+          "type": "string"
+        },
+        {
+          "name": "character",
+          "type": "Actor",
+          "optional": true
+        },
+        {
+          "name": "opts",
+          "type": "{ forGM }",
+          "optional": true
+        }
+      ],
+      "returns": "[node]",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "since": "0.20.0",
+      "doc": "Everything beneath one attribute, flat (GM-gated by forGM)."
+    },
+    {
+      "path": "attributes.describeId",
+      "params": [
+        {
+          "name": "attrId",
+          "type": "string"
+        }
+      ],
+      "returns": "record",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "since": "0.20.0",
+      "doc": "One attribute's record by exact id (a derived id gets its derived record; lookup also takes a title)."
+    },
+    {
+      "path": "study.factStatus",
+      "params": [
+        {
+          "name": "spec",
+          "type": "{ ns, subjectId, factId?, attrId? }",
+          "doc": "one fact: ns kind | lore | attr"
+        },
+        {
+          "name": "character",
+          "type": "Actor",
+          "doc": "a player character"
+        }
+      ],
+      "returns": "\"passed\"|\"told\"|\"held\"|\"failed\"|\"locked\"|\"none\"",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "since": "0.20.0",
+      "doc": "Same as study.whoKnows (its own name, ties-6)."
+    },
+    {
+      "path": "study.shareFact",
+      "params": [
+        {
+          "name": "spec",
+          "type": "{ ns, subjectId, factId?, attrId? }",
+          "doc": "one fact: ns kind | lore | attr"
+        },
+        {
+          "name": "recipients",
+          "type": "Actor[]"
+        },
+        {
+          "name": "opts",
+          "type": "{ from, notify }",
+          "optional": true
+        }
+      ],
+      "returns": "Promise<*>",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "flags.pentaryn-ties.beliefs",
+        "flags.pentaryn-ties.granted"
+      ],
+      "since": "0.20.0",
+      "doc": "Same as study.share (its own name, ties-6)."
+    },
+    {
+      "path": "study.forgetFact",
+      "params": [
+        {
+          "name": "spec",
+          "type": "{ ns, subjectId, factId?, attrId? }",
+          "doc": "one fact: ns kind | lore | attr"
+        },
+        {
+          "name": "character",
+          "type": "Actor",
+          "doc": "a player character"
+        }
+      ],
+      "returns": "Promise<*>",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "flags.pentaryn-ties.beliefs",
+        "flags.pentaryn-ties.granted"
+      ],
+      "since": "0.20.0",
+      "doc": "Same as study.forget (its own name, ties-6)."
+    },
+    {
+      "path": "study.identified",
+      "params": [
+        {
+          "name": "subject",
+          "type": "Actor",
+          "doc": "the creature or person studied"
+        },
+        {
+          "name": "character",
+          "type": "Actor",
+          "doc": "a player character"
+        },
+        {
+          "name": "attrId",
+          "type": "string"
+        }
+      ],
+      "returns": "{ settled, carries, held, record? }",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "since": "0.20.0",
+      "doc": "Has this character identified this attribute on this creature? (identifiedState on its beliefs ledger, ties-6)"
     }
   ],
   "queries": [],

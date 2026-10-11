@@ -26,16 +26,31 @@ import {
   registry, attributesOf, attributeIdsOf, derivedFor, resolveAttribute, describeRef, ensureAttribute,
   createAttribute, updateAttribute, deleteAttribute, linkAttribute, unlinkAttribute, searchAttributes, knowledge,
   knownWorld, grantKnowledge, brokenAncestry, repairAncestry, staleCarriers, selectedAttributes, selectAttributes,
-  deselectAttributes, clearSelection, reviewAttribute, unreviewAttribute, unreviewedAttributes, describeAttribute
+  deselectAttributes, clearSelection, reviewAttribute, unreviewAttribute, unreviewedAttributes, describeAttribute, knowledgeTree, branchOf
 } from "./attributes.mjs";
 import {
-  BELIEFS_FLAG, GRANTED_FLAG, LORE_FLAG, readGranted, readLore, visibleAttributesFor
+  BELIEFS_FLAG, GRANTED_FLAG, LORE_FLAG, identifiedState, readGranted, readLore, visibleAttributesFor
 } from "./known-core.mjs";
 import { CONCEAL_FLAG } from "./core/rules.mjs";
 import { buildApi, maxDepth, toPlain } from "./lib/api.mjs";
 import { readFlag } from "./lib/flags.mjs";
 import { publishedOf } from "./lib/publish.mjs";
 import { refOf, resolveRef } from "./lib/resolve.mjs";
+
+/** attributes.ids with the kind pointer — the id list the sheet, the cascade and the planner use (ties-5). */
+function effective(actor) {
+  return attributeIdsOf(actor, kindActorOf);
+}
+
+/** attributes.of with the kind pointer (ties-5). */
+function ofEffective(actor, opts = {}) {
+  return attributesOf(actor, kindActorOf, opts);
+}
+
+/** Has `character` identified `attrId` on `subject`? (identifiedState over the subject's ledger, ties-6) */
+function identified(subject, character, attrId) {
+  return identifiedState(readFlag(subject, MODULE, BELIEFS_FLAG) ?? {}, character?.id ?? "", attrId);
+}
 
 /** Data and domain paths: the same functions the hand-built object published. */
 const IMPL = {
@@ -117,6 +132,17 @@ const IMPL = {
   "attributes.review": reviewAttribute,
   "attributes.unreview": unreviewAttribute,
   "attributes.unreviewed": unreviewedAttributes,
+
+  // additive (0.20.0)
+  "attributes.effective": effective,
+  "attributes.ofEffective": ofEffective,
+  "attributes.tree": knowledgeTree,
+  "attributes.branch": branchOf,
+  "attributes.describeId": describeAttribute,
+  "study.factStatus": factStatus,
+  "study.shareFact": shareFact,
+  "study.forgetFact": forgetFact,
+  "study.identified": identified,
 };
 
 /**

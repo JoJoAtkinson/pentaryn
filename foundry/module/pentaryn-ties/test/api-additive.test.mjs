@@ -1,0 +1,50 @@
+/**
+ * ties-5 / ties-6: the additive API paths. Each new name is a reference to (or a thin, named wrapper
+ * over) the internal it publishes, and the existing paths are unchanged (attributes.ids keeps its
+ * no-kind-pointer contract).
+ */
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { bootWorld } from "./fixtures/world.mjs";
+
+const PC = "zzPc000000000001";
+const GOB = "zzNpc00000000001";
+const KIND = "zzKind0000000001";
+const F = await bootWorld({
+  actors: [
+    { id: PC, name: "ZZ Caven", type: "character" },
+    { id: KIND, name: "ZZ Goblin (kind)" },
+    { id: GOB, name: "ZZ Goblin", flags: { "pentaryn-ties": { kindOf: KIND, beliefs: { [PC]: { "attr:species:goblin:#id": { text: "A goblin.", total: 18, when: 5, delivered: 6 } } } } } },
+  ],
+});
+const T = () => game.pentaryn.ties;
+const A = await import("../attributes.mjs");
+const S = await import("../study.mjs");
+const K = await import("../known-core.mjs");
+const get = id => game.actors.get(id);
+
+test("ties-5: ids keeps its contract (no kind pointer); effective adds kind:<id>, and is otherwise ids", () => {
+  const ids = T().attributes.ids(get(GOB));
+  const eff = T().attributes.effective(get(GOB));
+  assert.equal(ids.includes(`kind:${KIND}`), false);
+  assert.equal(eff.includes(`kind:${KIND}`), true);
+  assert.deepEqual(eff.filter(x => !x.startsWith("kind:")), ids);
+  assert.deepEqual(T().attributes.ofEffective(get(GOB)).map(r => r.id), A.attributesOf(get(GOB), S.kindActorOf).map(r => r.id));
+});
+
+test("ties-6: the published internals are the internals", () => {
+  assert.equal(T().attributes.tree, A.knowledgeTree);
+  assert.equal(T().attributes.branch, A.branchOf);
+  assert.equal(T().attributes.describeId, A.describeAttribute);
+  assert.equal(T().study.factStatus, S.factStatus);
+  assert.equal(T().study.factStatus, T().study.whoKnows);
+  assert.equal(T().study.shareFact, T().study.share);
+  assert.equal(T().study.forgetFact, T().study.forget);
+});
+
+test("ties-6: study.identified is identifiedState over the subject's ledger", () => {
+  const want = K.identifiedState(get(GOB).flags["pentaryn-ties"].beliefs, PC, "species:goblin");
+  assert.deepEqual(T().study.identified(get(GOB), get(PC), "species:goblin"), want);
+  assert.equal(want.carries, true);
+  assert.deepEqual(T().study.identified(get(GOB), get(PC), "type:undead"), { settled: false, carries: false, held: false });
+});
