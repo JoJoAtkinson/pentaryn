@@ -130,3 +130,51 @@ per sample (`n` samples). Round trips include the script's own 10 ms polling.
 | SF13 | prompts | The gather's `chars` default has three sources: the world setting `gatherChars` = 400 (registered default 400), `gather.mjs`'s fallback `setting("gatherChars", 160)`, and `renderGather`'s default 400. Live uses 400. | Tests call `renderGather(view)` (400). | D6 unifies these. Today's 160 fallback is reachable only if the setting read throws. |
 | SF14 | prompts | The call id is a 16-bit FNV hash (`pm-xxxx`) of scene + marker + prompt text only, so `chars` 400 and 160 give the same call. The ring de-duplicates by call, so the second gather replaced the first manifest. | — | Pin it: a re-gather with other options overwrites the earlier manifest. |
 | SF15 | prompts | A dnd5e 6.0.6 npc created bare is CR 1 (XP 200), AC 10, and its token is hostile; the marker token gets `hidden`, `lockSize`, tint `#ffffff` and nameplate `✎ <first 40 chars>…` from `preCreateToken`. | Fixtures set these explicitly. | No gap; recorded for the glue stubs. |
+
+## After Stage 0 (2026-10-11, integration)
+
+Scored with `./.venv/bin/python scripts/foundry/blueprint/conformance.py --json` at the integration
+commit that added C53–C61 (playbook §5.9). Three columns so the moves can be told apart:
+
+- **Wave start**: the table above (rules C01–C52, before any lane).
+- **Stage 0, C01–C52**: after lanes A, B and C (kit vendored and checkpoints for six modules; D2, D4
+  and D7 scorer changes), same rule set — the like-for-like move.
+- **Stage 0, C01–C61**: the same tree with the async rules. C53, C55, C56 and C58 are fail-class
+  and pass when a module has nothing to check (no veto listener, query, `CONFIG.queries` write or
+  `serialStore`), so most modules gain 4 passes and their percentage rises without a code change.
+  C57 is n/a without a module socket channel. C54, C59, C60 and C61 are warnings and never move
+  the score.
+
+| Module | Wave start | Stage 0, C01–C52 | Stage 0, C01–C61 | New-rule hits |
+|---|---|---|---|---|
+| aoe | 45.2 % (19/42) | 45.2 % (19/42) | **50.0 % (23/46)** | C59 warn |
+| attunement | 56.4 % (22/39) | 64.1 % (25/39) | **67.4 % (29/43)** | — |
+| combat | 45.2 % (19/42) | 45.2 % (19/42) | **50.0 % (23/46)** | C59 warn |
+| creatures | 53.7 % (22/41) | 53.7 % (22/41) | **57.8 % (26/45)** | — |
+| cursors | 53.7 % (22/41) | 53.7 % (22/41) | **57.8 % (26/45)** | — |
+| dropbin | 50.0 % (21/42) | 57.1 % (24/42) | **60.9 % (28/46)** | C59 warn |
+| importer | 63.9 % (23/36) | 63.9 % (23/36) | **67.5 % (27/40)** | C59 warn |
+| journal | 46.3 % (19/41) | 56.1 % (23/41) | **57.8 % (26/45)** | C56 fail |
+| lookup | 64.9 % (24/37) | 73.0 % (27/37) | **75.6 % (31/41)** | — |
+| movement | 53.7 % (22/41) | 63.4 % (26/41) | **66.7 % (30/45)** | — |
+| names | 64.1 % (25/39) | 64.1 % (25/39) | **67.4 % (29/43)** | C59 warn |
+| pings | 62.2 % (23/37) | 62.2 % (23/37) | **65.9 % (27/41)** | — |
+| portals | 51.3 % (20/39) | 53.8 % (21/39) | **58.1 % (25/43)** | C59 warn |
+| prompts | 50.0 % (21/42) | 54.8 % (23/42) | **56.5 % (26/46)** | C56 fail, C59 warn |
+| riders | 45.2 % (19/42) | 45.2 % (19/42) | **47.8 % (22/46)** | C56 fail, C59 warn |
+| senses | 43.9 % (18/41) | 46.3 % (19/41) | **51.1 % (23/45)** | C59 warn |
+| ties | 43.9 % (18/41) | 50.0 % (21/42) | **55.3 % (26/47)** | C59 warn |
+| transform | 48.8 % (20/41) | 48.8 % (20/41) | **53.3 % (24/45)** | C59 warn |
+| walls | 60.5 % (23/38) | 68.4 % (26/38) | **71.4 % (30/42)** | — |
+
+New-rule hits, for the module guides (all existing behaviour, none fixed here):
+
+- **C56 fail** — hand-written `CONFIG.queries`: journal `journal.mjs:547`, prompts `prompts.mjs:272-277`
+  (five `guarded` rows), riders `riders.mjs:640`. Each goes through manifest `query: true` /
+  `relay: true` rows when that module's API step lands.
+- **C59 warn** (per-document await in a loop) — aoe, combat, dropbin, importer, names, portals,
+  prompts, riders, senses, ties, transform; review each at that module's refactor (some are
+  deliberate sequencing).
+- C53, C54, C55, C57, C58, C60 and C61: no hits. Both existing `.query(` callers pass `timeout: 8000`;
+  the two `createItem`/`createChatMessage` writers (attunement, riders) use the initiator gate
+  `userId !== game.user.id`, which C61 accepts as one client.
