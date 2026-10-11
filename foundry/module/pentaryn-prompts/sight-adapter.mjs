@@ -12,26 +12,15 @@
  * warning is logged once.
  *
  * Levels / wall heights: not modelled (the gather prints a WARN when a scene has them). The place
- * to filter edges by elevation is `wallsFor` below.
+ * to filter edges by elevation is core/walls.mjs `wallSegmentsOf`.
  */
 
-import { MODULE, classifyBlocked, rayPasses, wallSegment } from "./geometry-core.mjs";
+import { MODULE, classifyBlocked, rayPasses } from "./geometry-core.mjs";
+import { wallSegmentsOf } from "./core/walls.mjs";
+import { makeLog } from "./lib/log.mjs";
 
-let warned = false;
+const log = makeLog(MODULE);
 
-/** Plain wall segments on a level (walls with no level set count on every level). */
-function wallsFor(scene, levelId) {
-  const out = [];
-  const dpx = scene.dimensions?.distancePixels ?? (scene.dimensions.size / (scene.grid?.distance || 5));
-  for (const w of scene.walls ?? []) {
-    const lv = w.levels;
-    if (levelId && lv?.size && !lv.has(levelId)) continue;
-    // TODO(levels): filter by wall-height flags against the observer's elevation here.
-    out.push(wallSegment({ id: w.id, c: w.c, sight: w.sight, dir: w.dir, door: w.door, ds: w.ds,
-      threshold: (w.threshold?.sight ?? 0) * dpx }));
-  }
-  return out;
-}
 
 /** Does this scene have wall heights or more than one level (LOS here ignores both)? */
 export function heightWarning(scene) {
@@ -59,7 +48,7 @@ export function makeSight(scene) {
   let core = !!backend?.testCollision;
   const cache = new Map();
   const walls = id => {
-    if (!cache.has(id)) cache.set(id, wallsFor(scene, id));
+    if (!cache.has(id)) cache.set(id, wallSegmentsOf(scene, { levelId: id }));
     return cache.get(id);
   };
   const levelOf = A => (A.level && scene.levels?.get?.(A.level)) || scene.firstLevel || null;
@@ -84,10 +73,7 @@ export function makeSight(scene) {
         return false;
       } catch (err) {
         core = false;   // this scene model falls back for good; one warning per page
-        if (!warned) {
-          console.warn(`${MODULE} | core sight test failed, using the plain wall test`, err);
-          warned = true;
-        }
+        log.warnOnce("core sight", "core sight test failed, using the plain wall test", err);
       }
     }
     const segs = walls(level?.id ?? null);

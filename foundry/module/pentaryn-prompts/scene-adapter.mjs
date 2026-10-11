@@ -7,9 +7,10 @@
 
 import {
   MODULE, SIZE_BY_KEY, DND_SIZE_WIDTH, HEX_RULE, makeRel, testPoints, dedupeSquares, occupiedSquares, atFeet, stripHtml,
-  panelSplit, isSeen, crXp, wallSegment, lightText, ownTextUuid
+  panelSplit, isSeen, crXp, lightText, ownTextUuid
 } from "./geometry-core.mjs";
-import { markerSizeOfToken, promptText, FOLDER_NAME } from "./markers-adapter.mjs";
+import { FOLDER_NAME, markerSizeOf, promptText } from "./core/markers.mjs";
+import { wallSegmentsOf } from "./core/walls.mjs";
 import { makeSight, heightWarning } from "./sight-adapter.mjs";
 import { isStockLore } from "./build-core.mjs";
 import { settingReader } from "./lib/settings.mjs";
@@ -198,7 +199,7 @@ export function sceneItems(scene, { builtWithoutProvenance = true } = {}) {
   });
 
   for (const tok of scene.tokens) {
-    const size = markerSizeOfToken(tok);
+    const size = markerSizeOf(tok, game.actors);
     if (size) {
       items.push({ ...base(tok, tokenGeometry(tok, g)), isPrompt: true, size, rank: SIZE_BY_KEY[size].rank,
         text: promptText(tok), updatedAt: tok.flags?.[MODULE]?.updatedAt ?? null, name: tok.name,
@@ -289,12 +290,11 @@ export function sceneMeta(scene) {
   const warn = heightWarning(scene);
   // doors for the door lines in the overview, and every sight-blocking wall so a door line only puts
   // on a side what can see the doorway (the pure wall test; Levels/heights not modelled, as los.mjs)
-  const doors = [], walls = [];
-  const dpx = d.distancePixels ?? (d.size / (scene.grid?.distance || 5));
+  const doors = [];
   for (const w of scene.walls ?? []) {
     if (w.door) doors.push({ id: w.id, c: [...w.c], door: w.door, ds: w.ds, sight: w.sight ?? 20 });
-    if (w.sight) walls.push(wallSegment({ id: w.id, c: w.c, sight: w.sight, dir: w.dir, door: w.door, ds: w.ds, threshold: (w.threshold?.sight ?? 0) * dpx }));
   }
+  const walls = wallSegmentsOf(scene, { sightOnly: true });
   return {
     key: scene.id, name: scene.name, nav: scene.navName || "", gridFt, doors, walls,
     squares, mapFt: [Math.round(d.sceneWidth / d.size * gridFt), Math.round(d.sceneHeight / d.size * gridFt)],
@@ -320,7 +320,7 @@ export function sceneModel(scene, opts = {}) {
 
 /** Prompt markers on a scene (token documents). */
 export function promptTokens(scene) {
-  return scene.tokens.filter(t => !!markerSizeOfToken(t));
+  return scene.tokens.filter(t => !!markerSizeOf(t, game.actors));
 }
 
 /**

@@ -1,0 +1,5 @@
+{ "allow": [
+  { "from": "character-adapter.mjs", "to": "packs-adapter.mjs", "why": "character builder resolves items through the pack lookup (adapter stack)" },
+  { "from": "actor-patch-adapter.mjs", "to": "packs-adapter.mjs", "why": "patch addItems resolves items through the pack lookup (adapter stack)" },
+  { "from": "scene-adapter.mjs", "to": "sight-adapter.mjs", "why": "the scene model's sight pass is core's collision test (adapter stack); los stays its own file because the per-file surface golden pins it" }
+] }

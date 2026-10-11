@@ -1,40 +1,21 @@
 /**
- * pentaryn-prompts — the six marker actors.
+ * pentaryn-prompts — the six marker actors: find them, create and repair them, hide new marker tokens.
  *
- * The flag `flags.pentaryn-prompts.marker = "<size>"` on the actor (and its prototype, so every
- * placed token carries it too) is what makes something a prompt marker. Never the name.
+ * ADAPTER (game.actors, Folder, Actor, CONST). What makes a marker, as plain data, is core/markers.mjs.
  */
 
-import { MODULE, SIZES, SIZE_BY_KEY, nameplate, normalisePrompt } from "./geometry-core.mjs";
+import { MODULE, SIZES, nameplate, normalisePrompt } from "./geometry-core.mjs";
+import { FOLDER_NAME, EMPTY_TINT, FULL_TINT, art, actorName, markerSizeOf, markerSizeOfActor, promptText } from "./core/markers.mjs";
 
-export const FOLDER_NAME = "Prompt Markers";
-export const EMPTY_TINT = "#ff6b6b";
-export const FULL_TINT = "#ffffff";
+// the pure half lives in core/markers.mjs; re-exported for every importer of this file
+export { FOLDER_NAME, EMPTY_TINT, FULL_TINT, art, actorName, markerSizeOfActor, promptText };
 
-export const art = sizeKey => `modules/${MODULE}/assets/marker-${sizeKey}.webp`;
-export const actorName = sizeKey => `Prompt · ${sizeKey}`;
-
-/** The marker size of an actor, or null. */
-export function markerSizeOfActor(actor) {
-  const v = actor?.flags?.[MODULE]?.marker;
-  return SIZE_BY_KEY[v] ? v : null;
-}
-
-/** The marker size of a token document, from its own flag or its actor's, or null. */
+/** The marker size of a token document, from its own flag or its world actor's, or null. */
 export function markerSizeOfToken(tok) {
-  if (!tok) return null;
-  const own = tok.flags?.[MODULE]?.marker;
-  if (SIZE_BY_KEY[own]) return own;
-  const actor = tok.actorId ? game.actors?.get(tok.actorId) : null;
-  return markerSizeOfActor(actor);
+  return markerSizeOf(tok, game.actors);
 }
 
 export const isPromptToken = tok => !!markerSizeOfToken(tok);
-
-/** The prompt text on a marker token ("" when none). */
-export function promptText(tok) {
-  return normalisePrompt(tok?.flags?.[MODULE]?.prompt ?? "");
-}
 
 /** The world actor for a marker size. */
 export function markerActor(sizeKey) {
