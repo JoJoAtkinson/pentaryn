@@ -51,7 +51,9 @@ async function syncLight(actor, { index = null } = {}) {
   if (!actor || actor.pack) return 0;
   let count = 0;
   const light = carriedLight(actor);
-  const proto = lightUpdate(actor.prototypeToken, light);
+  // An unlinked token's synthetic actor has no prototype of its own (its ActorDelta has no
+  // prototypeToken): only its tokens are synced, each from its own items.
+  const proto = actor.isToken ? null : lightUpdate(actor.prototypeToken, light);
   if (proto) {
     const u = {};
     for (const [k, v] of Object.entries(proto)) u[`prototypeToken.${k}`] = v;

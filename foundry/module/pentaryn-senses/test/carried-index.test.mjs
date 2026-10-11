@@ -90,3 +90,14 @@ test("syncLight with the index == the legacy plan, 100 seeded worlds; a token de
   assert.ok(writes > 50, `the seeds exercise writes (${writes})`);
   await settle(mock);
 });
+
+test("[declared S-13] a synthetic (unlinked-token) actor: no prototype write; its tokens still sync from their own items", async () => {
+  const tok = game.scenes.get("scnCellar0000001").tokens.get("tokGob0000000001");
+  const synthetic = tok.actor;
+  assert.equal(synthetic.isToken, true);
+  synthetic.prototypeToken = { light: { bright: 0, dim: 0 }, flags: {} };   // what an old sync would have compared against
+  const mark = F.calls.length;
+  const n = await S().syncLight(synthetic);
+  assert.equal(n, 0, "converged: the goblin token already shows its own torch");
+  assert.deepEqual(since(mark).filter(c => c.op === "update" && c.documentName === "Actor"), []);
+});
