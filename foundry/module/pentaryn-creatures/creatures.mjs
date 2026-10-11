@@ -15,107 +15,28 @@
 
 import * as core from "./creatures-core.mjs";
 import { onSettingChange, registerSettings, setting } from "./settings.mjs";
+import { isProp, summarize } from "./tokens-adapter.mjs";
+import { hookRegistry } from "./lib/hooks.mjs";
+import { makeLog } from "./lib/log.mjs";
+import * as light from "./light.mjs";
 
-const { MODULE, isPlayerCreature, lightUpdate, ownerShouldSee, stripEntries, shouldShowStrip, stripSignature, stripDock, isItemPile, isAoeHandle } = core;
+const { MODULE, isPlayerCreature, ownerShouldSee, stripEntries, shouldShowStrip, stripSignature, stripDock } = core;
 
-const isWriter = () => game.users?.activeGM?.isSelf === true;
+const log = makeLog(MODULE);
+const reg = hookRegistry(MODULE, log);
+const ctx = {
+  log,
+  reg,
+  setting,
+  onSettingChange,
+  exposed: {},
+  expose(accessors) {
+    Object.assign(ctx.exposed, accessors);
+  },
+};
 
-/* -------------------------------------------- */
-/*  Token summaries for the pure core           */
-/* -------------------------------------------- */
-
-function isPile(t) {
-  return isItemPile(t.flags, t.actor?.flags);
-}
-
-/** A prop, not a creature: pentaryn-aoe's spell-area handle is an `npc` every player owns (`default: OWNER`). */
-function isProp(t) {
-  return isAoeHandle(t.flags, t.actor?.flags);
-}
-
-/** A plain summary of a TokenDocument, as seen by `user`. */
-function summarize(t, user = game.user) {
-  const a = t.actor;
-  return {
-    id: t.id,
-    name: t.name,
-    img: t.texture?.src,
-    actorImg: a?.img,
-    actorId: a ? (t.actorId || a.id) : null,
-    originalActorId: a?.flags?.dnd5e?.originalActor ?? null,
-    actorType: a?.type,
-    hasPlayerOwner: a?.hasPlayerOwner === true,
-    isOwner: user.isSelf ? t.isOwner : t.testUserPermission(user, "OWNER"),
-    hidden: t.hidden === true,
-    isPile: isPile(t),
-    isProp: isProp(t)
-  };
-}
-
-/* -------------------------------------------- */
-/*  1. Creature light (active GM writes)        */
-/* -------------------------------------------- */
-
-const queued = new Map();   // sceneId -> Set<tokenId> | "all"
-let flushTimer = null;
-
-function queue(scene, tokenId = null) {
-  if (!scene || !isWriter()) return;
-  const cur = queued.get(scene.id);
-  if (tokenId === null || cur === "all") queued.set(scene.id, "all");
-  else (cur ?? queued.set(scene.id, new Set()).get(scene.id)).add(tokenId);
-  clearTimeout(flushTimer);
-  flushTimer = setTimeout(flush, 200);
-}
-
-async function flush() {
-  const jobs = [...queued.entries()];
-  queued.clear();
-  for (const [sceneId, ids] of jobs) {
-    const scene = game.scenes.get(sceneId);
-    if (scene) await syncScene(scene, ids === "all" ? null : ids).catch(err => console.warn(`${MODULE} | light sync failed on ${scene.name}`, err));
-  }
-}
-
-/** Bring one scene's tokens in line (or only `ids`). Returns how many tokens were written. */
-async function syncScene(scene, ids = null) {
-  if (!isWriter()) return 0;
-  const radius = Number(setting("lightRadius")) || 0;
-  const updates = [];
-  for (const t of scene.tokens) {
-    if (ids && !ids.has(t.id)) continue;
-    const u = lightUpdate(t, { qualifies: isPlayerCreature(summarize(t)), radius });
-    if (u) updates.push({ _id: t.id, ...u });
-  }
-  if (updates.length) await scene.updateEmbeddedDocuments("Token", updates);
-  return updates.length;
-}
-
-async function syncAll() {
-  let n = 0;
-  for (const scene of game.scenes) n += await syncScene(scene);
-  return n;
-}
-
-// Changes that can turn the light on or off. A token that only moved is skipped.
-const LIGHT_KEYS = ["light", "actorId", "actorLink", "delta", "flags"];
-
-Hooks.on("createToken", (doc) => queue(doc.parent, doc.id));
-Hooks.on("updateToken", (doc, changes) => {
-  if (LIGHT_KEYS.some(k => k in (changes ?? {}))) queue(doc.parent, doc.id);
-});
-Hooks.on("updateActor", (actor, changes) => {
-  if (!isWriter() || !changes || !("ownership" in changes || "type" in changes)) return;
-  if (actor.isToken) return queue(actor.token?.parent, actor.token?.id);
-  for (const scene of game.scenes) for (const t of scene.tokens) if (t.actorId === actor.id) queue(scene, t.id);
-});
-// A user promoted to GM, or removed, changes who counts as a player owner.
-for (const h of ["createUser", "updateUser", "deleteUser"]) {
-  Hooks.on(h, (_user, changes) => {
-    if (h === "updateUser" && !("role" in (changes ?? {}))) return;
-    if (isWriter()) for (const scene of game.scenes) queue(scene);
-  });
-}
+light.install(reg, ctx);
+const { syncScene, syncAll } = ctx.exposed;
 
 /* -------------------------------------------- */
 /*  2. Owners always see their own tokens       */
@@ -322,7 +243,6 @@ Hooks.on("controlToken", () => markControlled());
 /* -------------------------------------------- */
 
 // Setting reactions (the rows live in settings.mjs).
-onSettingChange("lightRadius", () => { if (isWriter()) syncAll().catch(err => console.warn(`${MODULE} | light sync failed`, err)); });
 onSettingChange("ownerSees", (v) => { ownerSeesOn = v !== false; refreshTokenVisibility(); });
 onSettingChange("showStrip", () => { lastSig = null; scheduleRender(); });
 
@@ -335,7 +255,7 @@ Hooks.once("setup", () => {
 });
 
 Hooks.once("ready", () => {
-  if (isWriter()) syncAll().catch(err => console.warn(`${MODULE} | light sync failed`, err));
+  ctx.exposed.syncAllQuietly();
   scheduleRender();
 });
 
