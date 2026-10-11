@@ -15,7 +15,6 @@ import { sceneModel, seesCount } from "./model.mjs";
 import { gather, crops, list, show, manifests } from "./gather.mjs";
 import { replace, replaceMany, SPEC_DIR } from "./replace.mjs";
 
-const t = (key, data) => (data ? game.i18n.format(`PENTARYN_PROMPTS.${key}`, data) : game.i18n.localize(`PENTARYN_PROMPTS.${key}`));
 
 /* ── settings + keybindings ──────────────────────────────────────────────── */
 
@@ -81,7 +80,7 @@ async function placeAtCursor(sizeKey, { ticket = null } = {}) {
   if (!game.user?.isGM || !canvas?.ready || !canvas.scene) return giveUp();
   const size = SIZE_BY_KEY[sizeKey] ? sizeKey : game.settings.get(MODULE, "defaultSize");
   const actor = markerActor(size);
-  if (!actor) { ui.notifications?.warn(t("dialog.noActor", { size })); return giveUp(); }
+  if (!actor) { ui.notifications?.warn(_loc("PENTARYN_PROMPTS.dialog.noActor", { size })); return giveUp(); }
   const g = canvas.grid.size;
   const w = SIZE_BY_KEY[size].w * g;
   const m = canvas.mousePosition;
@@ -195,7 +194,7 @@ function onRenderTokenHUD(app, element) {
     const root = element instanceof HTMLElement ? element : element?.[0];
     const col = root?.querySelector(".col.right") ?? root?.querySelector(".right");
     if (!col || col.querySelector(".pp-hud-btn")) return;
-    const label = t("hud.edit");
+    const label = _loc("PENTARYN_PROMPTS.hud.edit");
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "control-icon pp-hud-btn";
@@ -238,7 +237,7 @@ function onHoverToken(token, hovered) {
   tip.className = "pentaryn-prompts-tip";
   const shown = text.length > 600 ? `${text.slice(0, 600).trimEnd()}…` : text;
   const esc = foundry.utils.escapeHTML;
-  tip.innerHTML = `<div class="pp-tip-text">${shown ? esc(shown).replace(/\n/g, "<br>") : `<em>${esc(t("panel.empty"))}</em>`}</div>
+  tip.innerHTML = `<div class="pp-tip-text">${shown ? esc(shown).replace(/\n/g, "<br>") : `<em>${esc(_loc("PENTARYN_PROMPTS.panel.empty"))}</em>`}</div>
     <div class="pp-tip-meta">${esc(`${size} · ${footprintLabel(size, canvas.scene?.grid?.distance ?? 5)}`)} · <span data-sees>…</span></div>`;
   tip.style.left = `${Math.round(c.x + 12)}px`;
   tip.style.top = `${Math.round(c.y)}px`;
@@ -249,8 +248,14 @@ function onHoverToken(token, hovered) {
     if (tip !== mine) return;
     const n = seesCount(doc);
     const el = mine.querySelector("[data-sees]");
-    if (el) el.textContent = n === null ? "" : t("hud.sees", { n });
+    if (el) el.textContent = n === null ? "" : _loc("PENTARYN_PROMPTS.hud.sees", { n });
   }, 0);
+}
+
+/** The orphan toast, localised: the words typed before a box opened that no box took. */
+function orphanToast(text) {
+  ui.notifications?.warn(_loc("PENTARYN_PROMPTS.typeahead.orphan", { text: text.trim().slice(0, 120) }));
+  return true;
 }
 
 /* ── queries (GM-guarded on the sender, plan §10) ───────────────────────── */
@@ -308,7 +313,8 @@ for (const h of ["createWall", "updateWall", "deleteWall", "createToken", "delet
 Hooks.on("updateToken", (doc, changes) => { if (MOVED.some(k => k in (changes ?? {}))) refreshPanels(doc); });
 
 Hooks.once("setup", () => patchDoubleClick());
-Typeahead.setOrphanSink(text => PromptDialog.takeOrphan(text));
+// text no open claimed: into the open box, else a toast (typeahead.mjs's own toast is the no-sink fallback)
+Typeahead.setOrphanSink(text => PromptDialog.takeOrphan(text) || orphanToast(text));
 
 Hooks.once("ready", async () => {
   // Published one tick after ready (the publish timing is a declared step of the migration). The

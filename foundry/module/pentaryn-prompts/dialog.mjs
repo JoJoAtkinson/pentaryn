@@ -22,7 +22,6 @@ import { panelFor, resolveItemEmbeds } from "./model.mjs";
 import * as Typeahead from "./typeahead.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
-const t = (key, data) => (data ? game.i18n.format(`PENTARYN_PROMPTS.${key}`, data) : game.i18n.localize(`PENTARYN_PROMPTS.${key}`));
 
 const setting = (key, fallback) => {
   try { return game.settings.get(MODULE, key) ?? fallback; } catch { return fallback; }
@@ -94,7 +93,7 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
 
   get title() {
     const tok = this.token;
-    return `${t("dialog.title")} · ${tok ? markerSizeOfToken(tok) : ""}`;
+    return `${_loc("PENTARYN_PROMPTS.dialog.title")} · ${tok ? markerSizeOfToken(tok) : ""}`;
   }
 
   /** Does this dialog edit that token? */
@@ -177,11 +176,11 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
       size,
       footprint: footprintLabel(size, tok?.parent?.grid?.distance ?? 5),
       sizes: SIZE_KEYS.map(k => ({ key: k, active: k === size, title: footprintLabel(k, tok?.parent?.grid?.distance ?? 5) })),
-      placeholder: t("dialog.placeholder"),
+      placeholder: _loc("PENTARYN_PROMPTS.dialog.placeholder"),
       // a fresh marker is removed by ⇧Esc (its text goes back to empty), so say so (P-9-a)
-      hint: t(this.#fresh && setting("deleteEmptyOnClose", true) ? "dialog.hintFresh" : "dialog.hint"),
-      deleteLabel: t("dialog.delete"),
-      panelLoading: t("panel.loading")
+      hint: this.#fresh && setting("deleteEmptyOnClose", true) ? _loc("PENTARYN_PROMPTS.dialog.hintFresh") : _loc("PENTARYN_PROMPTS.dialog.hint"),
+      deleteLabel: _loc("PENTARYN_PROMPTS.dialog.delete"),
+      panelLoading: _loc("PENTARYN_PROMPTS.panel.loading")
     };
   }
 
@@ -310,7 +309,7 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
       this.#saved = norm;
     }).catch(err => {
       console.error(`${MODULE} | saving the prompt failed`, err);
-      ui.notifications?.error(t("dialog.saveFailed"));
+      ui.notifications?.error(_loc("PENTARYN_PROMPTS.dialog.saveFailed"));
     });
     return this.#saving;
   }
@@ -324,7 +323,7 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
     if (tok && this.#fresh && !this.#saved && setting("deleteEmptyOnClose", true)) {
       this.#deleted = true;
       await tok.delete();
-      ui.notifications?.info(t("dialog.removedEmpty"));
+      ui.notifications?.info(_loc("PENTARYN_PROMPTS.dialog.removedEmpty"));
     }
   }
 
@@ -371,7 +370,7 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
     if (!tok || !SIZE_BY_KEY[size] || size === markerSizeOfToken(tok)) return;
     await this.#save();
     const actor = markerActor(size);
-    if (!actor) { ui.notifications?.warn(t("dialog.noActor", { size })); return; }
+    if (!actor) { ui.notifications?.warn(_loc("PENTARYN_PROMPTS.dialog.noActor", { size })); return; }
     const scene = tok.parent;
     const g = scene.dimensions.size;
     const cx = tok.x + tok.width * g / 2, cy = tok.y + tok.height * g / 2;
@@ -449,7 +448,7 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
       await resolveItemEmbeds([...p.shown, ...p.more, ...p.unseen].map(r => r.item));
     } catch (err) {
       console.warn(`${MODULE} | side panel failed`, err);
-      if (box.isConnected) box.innerHTML = `<p class="pp-empty">${esc(t("panel.failed"))}</p>`;
+      if (box.isConnected) box.innerHTML = `<p class="pp-empty">${esc(_loc("PENTARYN_PROMPTS.panel.failed"))}</p>`;
       return;
     }
     box = this.element?.querySelector("[data-panel]");
@@ -463,14 +462,14 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
       if (it.isPrompt) {
         img = `<img src="${esc(art(it.size))}" alt="">`;
         line1 = `Prompt · ${it.size}`;
-        line3 = it.text ? esc(preview(it.text, chars)) : `<em>${esc(t("panel.empty"))}</em>`;
+        line3 = it.text ? esc(preview(it.text, chars)) : `<em>${esc(_loc("PENTARYN_PROMPTS.panel.empty"))}</em>`;
       } else {
         img = it.kind === "light" ? `<i class="fa-solid fa-lightbulb"></i>`
           : it.img ? `<img src="${esc(it.img)}" alt="">` : `<i class="fa-solid fa-location-dot"></i>`;
         line1 = it.name;
         const desc = stripHtml(it.description ?? "");
         line3 = desc ? esc(preview(desc, chars))
-          : it.prov?.prompt ? esc(`${t("panel.builtFrom")} "${preview(it.prov.prompt, chars)}"`) : "";
+          : it.prov?.prompt ? esc(`${_loc("PENTARYN_PROMPTS.panel.builtFrom")} "${preview(it.prov.prompt, chars)}"`) : "";
       }
       const line2 = distanceLine(r, { hidden: !!it.hidden && !it.isPrompt }) + (unseen ? ` · ${r.los}` : "");
       return `<li class="pp-row${extra ? " pp-extra" : ""}${unseen ? " pp-unseen" : ""}" data-action="row" data-key="${esc(it.key)}">
@@ -478,18 +477,18 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
         <span class="pp-lines"><span class="pp-l1">${esc(line1)}</span><span class="pp-l2">${esc(line2)}</span>${line3 ? `<span class="pp-l3">${line3}</span>` : ""}</span>
       </li>`;
     };
-    const head = `<header class="pp-head"><span>${esc(t("panel.inSight", { n: p.total }))}</span><span class="pp-map">${p.mapFt[0]} × ${p.mapFt[1]} ft</span></header>`;
+    const head = `<header class="pp-head"><span>${esc(_loc("PENTARYN_PROMPTS.panel.inSight", { n: p.total }))}</span><span class="pp-map">${p.mapFt[0]} × ${p.mapFt[1]} ft</span></header>`;
     const warn = (p.warn ?? []).map(w => `<p class="pp-warn">${esc(w)}</p>`).join("");
     const shown = p.shown.map(r => row(r)).join("") + p.more.map(r => row(r, true)).join("");
-    const more = p.more.length ? `<button type="button" class="pp-more" data-action="more">${esc(t("panel.more", { n: p.more.length }))}</button>` : "";
-    const empty = p.total ? "" : `<p class="pp-empty">${esc(t("panel.nobody"))}</p>`;
+    const more = p.more.length ? `<button type="button" class="pp-more" data-action="more">${esc(_loc("PENTARYN_PROMPTS.panel.more", { n: p.more.length }))}</button>` : "";
+    const empty = p.total ? "" : `<p class="pp-empty">${esc(_loc("PENTARYN_PROMPTS.panel.nobody"))}</p>`;
     // a door in the way is the thing Joe designs around: say it above the fold (P-9-b)
     const door = behindDoor(p.unseen.map(r => ({ ...r, name: r.item.isPrompt ? `Prompt · ${r.item.size}` : r.item.name })));
     const doorLine = door
-      ? `<p class="pp-door"><i class="fa-solid fa-door-closed"></i> ${esc(t("panel.behindDoor", { list: door.list.join(", ") + (door.extra ? ` +${door.extra}` : "") }))}</p>`
+      ? `<p class="pp-door"><i class="fa-solid fa-door-closed"></i> ${esc(_loc("PENTARYN_PROMPTS.panel.behindDoor", { list: door.list.join(", ") + (door.extra ? ` +${door.extra}` : "") }))}</p>`
       : "";
     const unseen = p.unseen.length
-      ? `<details class="pp-out"><summary>${esc(t("panel.outOfSight", { ft: setting("unseenWithinFt", 60), n: p.unseen.length }))}</summary><ol class="pp-rows">${p.unseen.map(r => row(r, false, true)).join("")}</ol></details>`
+      ? `<details class="pp-out"><summary>${esc(_loc("PENTARYN_PROMPTS.panel.outOfSight", { ft: setting("unseenWithinFt", 60), n: p.unseen.length }))}</summary><ol class="pp-rows">${p.unseen.map(r => row(r, false, true)).join("")}</ol></details>`
       : "";
     box.innerHTML = `${head}${warn}${doorLine}${empty}<ol class="pp-rows">${shown}</ol>${more}${unseen}`;
   }
