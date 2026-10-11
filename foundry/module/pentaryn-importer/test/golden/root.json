@@ -1,0 +1,104 @@
+{
+  "fresh": {
+    "keys": [
+      "import",
+      "moduleId",
+      "contract",
+      "_internals"
+    ],
+    "frozen": true,
+    "internalsFrozen": true,
+    "internals": [
+      "fetchJsonWithTimeout",
+      "lintFormulas",
+      "valuesMatch",
+      "normalise"
+    ],
+    "contract": "pentaryn/actors.json@1",
+    "moduleId": "pentaryn-importer"
+  },
+  "aoeBefore": {
+    "keys": [
+      "import",
+      "moduleId",
+      "contract",
+      "_internals"
+    ],
+    "frozen": true,
+    "importIsFunction": true
+  },
+  "attunementAfter": {
+    "keys": [
+      "import",
+      "moduleId",
+      "contract",
+      "_internals",
+      "attunement"
+    ],
+    "frozen": false,
+    "importIsFunction": true
+  },
+  "attunementBefore": {
+    "keys": [
+      "import",
+      "moduleId",
+      "contract",
+      "_internals"
+    ],
+    "frozen": true,
+    "importIsFunction": true
+  },
+  "kitAfter": {
+    "atReady": {
+      "keys": [
+        "import",
+        "moduleId",
+        "contract",
+        "_internals",
+        "zz"
+      ],
+      "frozen": false,
+      "importIsFunction": true
+    },
+    "afterTick": {
+      "keys": [
+        "import",
+        "moduleId",
+        "contract",
+        "_internals",
+        "zz"
+      ],
+      "frozen": false,
+      "importIsFunction": true
+    },
+    "namespaces": [
+      "zz"
+    ]
+  },
+  "kitBefore": {
+    "atReady": {
+      "keys": [
+        "import",
+        "moduleId",
+        "contract",
+        "_internals"
+      ],
+      "frozen": true,
+      "importIsFunction": true
+    },
+    "afterTick": {
+      "keys": [
+        "import",
+        "moduleId",
+        "contract",
+        "_internals",
+        "zz"
+      ],
+      "frozen": false,
+      "importIsFunction": true
+    },
+    "namespaces": [
+      "zz"
+    ]
+  }
+}

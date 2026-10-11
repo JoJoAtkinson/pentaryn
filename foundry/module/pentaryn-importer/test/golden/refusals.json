@@ -1,0 +1,149 @@
+{
+  "gateMinor": {
+    "name": "PentarynAbort",
+    "message": "VERSION GATE FAILED — nothing was imported.\n  • targetSystemVersion is \"5.3\" but the installed dnd5e is 6.0.6 (major.minor 6.0). dnd5e minor releases move the activity schema; refusing.\n  • targetSystemVersion is \"5.3\" but module.json expects \"6.0\".",
+    "toasts": [
+      [
+        "error",
+        "[pentaryn-importer] VERSION GATE FAILED — nothing was imported.\n  • targetSystemVersion is \"5.3\" but the installed dnd5e is 6.0.6 (major.minor 6.0). dnd5e minor releases move the activity schema; refusing.\n  • targetSystemVersion is \"5.3\" but module.json expects \"6.0\".",
+        {
+          "permanent": true,
+          "console": false
+        }
+      ]
+    ],
+    "fetched": 1
+  },
+  "gateEmpty": {
+    "name": "PentarynAbort",
+    "message": "VERSION GATE FAILED — nothing was imported.\n  • $contract is undefined, expected \"pentaryn/actors.json@1\". Regenerate with a build_actors.py that speaks this contract version.\n  • targetSystem is undefined but this world runs \"dnd5e\".\n  • targetSystem is undefined but module.json expects \"dnd5e\".\n  • targetSystemVersion is undefined but the installed dnd5e is 6.0.6 (major.minor 6.0). dnd5e minor releases move the activity schema; refusing.\n  • targetSystemVersion is undefined but module.json expects \"6.0\".\n  • generation is undefined but this Foundry is generation 14 (14.369).\n  • generation is undefined but module.json expects 14.\n  • `actors` is missing or is not an array.",
+    "toasts": [
+      [
+        "error",
+        "[pentaryn-importer] VERSION GATE FAILED — nothing was imported.\n  • $contract is undefined, expected \"pentaryn/actors.json@1\". Regenerate with a build_actors.py that speaks this contract version.\n  • targetSystem is undefined but this world runs \"dnd5e\".\n  • targetSystem is undefined but module.json expects \"dnd5e\".\n  • targetSystemVersion is undefined but the installed dnd5e is 6.0.6 (major.minor 6.0). dnd5e minor releases move the activity schema; refusing.\n  • targetSystemVersion is undefined but module.json expects \"6.0\".\n  • generation is undefined but this Foundry is generation 14 (14.369).\n  • generation is undefined but module.json expects 14.\n  • `actors` is missing or is not an array.",
+        {
+          "permanent": true,
+          "console": false
+        }
+      ]
+    ],
+    "fetched": 1
+  },
+  "gateModuleJson": {
+    "name": "PentarynAbort",
+    "message": "VERSION GATE FAILED — nothing was imported.\n  • module.json declares contract \"pentaryn/actors.json@0\" but this code implements \"pentaryn/actors.json@1\" — module.json and pentaryn-importer.mjs are out of step.\n  • targetSystem is \"dnd5e\" but module.json expects \"pf2e\".\n  • generation is 14 but module.json expects 13.",
+    "toasts": [
+      [
+        "error",
+        "[pentaryn-importer] VERSION GATE FAILED — nothing was imported.\n  • module.json declares contract \"pentaryn/actors.json@0\" but this code implements \"pentaryn/actors.json@1\" — module.json and pentaryn-importer.mjs are out of step.\n  • targetSystem is \"dnd5e\" but module.json expects \"pf2e\".\n  • generation is 14 but module.json expects 13.",
+        {
+          "permanent": true,
+          "console": false
+        }
+      ]
+    ],
+    "fetched": 1
+  },
+  "noModuleFlags": {
+    "name": "PentarynAbort",
+    "message": "module.json is missing flags.pentaryn — the installed copy of pentaryn-importer is not the one this code was shipped with. Re-run `make foundry-sync`.",
+    "toasts": [],
+    "fetched": 1
+  },
+  "lint": {
+    "name": "PentarynAbort",
+    "message": "@ref LINT FAILED — 1 formula field(s) contain something other than digits, dice and arithmetic. dnd5e would accept these at validation and roll them as ZERO. Nothing was imported.\n  • a → system.attributes.hp.formula = \"@x\"",
+    "toasts": [
+      [
+        "error",
+        "[pentaryn-importer] @ref LINT FAILED — 1 formula field(s) contain something other than digits, dice and arithmetic. dnd5e would accept these at validation and roll them as ZERO. Nothing was imported.\n  • a → system.attributes.hp.formula = \"@x\"",
+        {
+          "permanent": true,
+          "console": false
+        }
+      ]
+    ],
+    "fetched": 1
+  },
+  "noSlug": {
+    "name": "PentarynAbort",
+    "message": "An actor entry (name \"Nameless\") has no flags.pentaryn.slug. The slug is the upsert key; refusing the run rather than creating an unmatched Actor.",
+    "toasts": [
+      [
+        "error",
+        "[pentaryn-importer] An actor entry (name \"Nameless\") has no flags.pentaryn.slug. The slug is the upsert key; refusing the run rather than creating an unmatched Actor.",
+        {
+          "permanent": true,
+          "console": false
+        }
+      ]
+    ],
+    "fetched": 1
+  },
+  "nullEntry": {
+    "name": "TypeError",
+    "message": "Cannot read properties of null (reading 'expected')",
+    "toasts": [
+      [
+        "error",
+        "[pentaryn-importer] Cannot read properties of null (reading 'expected')",
+        {
+          "permanent": true,
+          "console": false
+        }
+      ]
+    ],
+    "fetched": 1
+  },
+  "notGM": {
+    "name": "PentarynAbort",
+    "message": "Refusing to import: only a GM can create or update world Actors.",
+    "toasts": [
+      [
+        "error",
+        "[pentaryn-importer] Refusing to import: only a GM can create or update world Actors.",
+        {
+          "permanent": true,
+          "console": false
+        }
+      ]
+    ],
+    "fetched": 0
+  },
+  "unmanagedItems": {
+    "name": "PentarynAbort",
+    "message": "unmanagedItems must be \"keep\" or \"delete\", got \"purge\"",
+    "toasts": [],
+    "fetched": 0
+  },
+  "fetch404": {
+    "name": "PentarynAbort",
+    "message": "HTTP 404 Not Found for /worlds/w/actors.json. Is the file under Data/? Run `make foundry-sync` first.",
+    "toasts": [],
+    "fetched": 1
+  },
+  "fetchHtml": {
+    "name": "PentarynAbort",
+    "message": "/worlds/w/actors.json did not contain JSON (<V8 JSON.parse message>). First 120 characters: \"<!DOCTYPE html><html><head><title>Foundry Virtual Tabletop</title></head></html>\"",
+    "toasts": [],
+    "fetched": 1
+  },
+  "fetchNetwork": {
+    "name": "PentarynAbort",
+    "message": "Network error fetching /worlds/w/actors.json: Failed to fetch",
+    "toasts": [],
+    "fetched": 1
+  },
+  "timeoutDefault": {
+    "name": "PentarynAbort",
+    "message": "Timed out after 15000 ms fetching /worlds/w/actors.json",
+    "toasts": [],
+    "fetched": 1
+  },
+  "timeoutCustom": {
+    "name": "PentarynAbort",
+    "message": "Timed out after 50 ms fetching /worlds/w/actors.json",
+    "toasts": [],
+    "fetched": 1
+  }
+}

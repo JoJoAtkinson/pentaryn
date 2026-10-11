@@ -1,0 +1,32 @@
+{
+  "ok": true,
+  "path": "worlds/w/actors.json",
+  "url": "/worlds/w/actors.json",
+  "dryRun": true,
+  "manifest": {
+    "generator": "build_actors.py",
+    "generatorVersion": "1.0.0",
+    "generatedAt": "2026-10-10T00:00:00Z",
+    "sourceRevision": "abc1234",
+    "skippedRows": 0
+  },
+  "counts": {
+    "total": 0,
+    "selected": 0,
+    "created": 0,
+    "updated": 0,
+    "skipped": 0,
+    "failed": 0,
+    "assertions": 0
+  },
+  "created": [],
+  "updated": [],
+  "skipped": [],
+  "failed": [],
+  "deleteJson": {
+    "required": false,
+    "path": "worlds/w/actors.json",
+    "url": "/worlds/w/actors.json",
+    "note": "Foundry has no client-side file-delete API, so this module cannot remove the file. `make foundry-import` deletes it for you (and `make foundry-clean` does it on its own). Until then it is world-readable over the tunnel."
+  }
+}

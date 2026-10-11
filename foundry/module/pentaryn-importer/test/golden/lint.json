@@ -1,0 +1,318 @@
+[
+  {
+    "input": [
+      [
+        {
+          "flags": {
+            "pentaryn": {
+              "slug": "s"
+            }
+          },
+          "system": {
+            "attributes": {
+              "movement": {
+                "walk": "ft",
+                "hover": "yes",
+                "units": "ft"
+              }
+            }
+          }
+        }
+      ]
+    ],
+    "out": [
+      {
+        "slug": "s",
+        "path": "system.attributes.movement.walk",
+        "value": "ft"
+      }
+    ]
+  },
+  {
+    "input": [
+      [
+        {
+          "flags": {
+            "pentaryn": {
+              "slug": "s"
+            }
+          },
+          "system": {
+            "attributes": {
+              "hp": {
+                "formula": 5
+              },
+              "init": {
+                "bonus": "@prof"
+              }
+            }
+          }
+        }
+      ]
+    ],
+    "out": [
+      {
+        "slug": "s",
+        "path": "system.attributes.init.bonus",
+        "value": "@prof"
+      }
+    ]
+  },
+  {
+    "input": [
+      [
+        {
+          "flags": {
+            "pentaryn": {
+              "slug": "s"
+            }
+          },
+          "items": [
+            {
+              "system": {
+                "uses": {
+                  "max": "@prof",
+                  "recovery": [
+                    {
+                      "formula": "1d4"
+                    },
+                    {
+                      "formula": "@x"
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    ],
+    "out": [
+      {
+        "slug": "s",
+        "path": "items.0.system.uses.max",
+        "value": "@prof"
+      },
+      {
+        "slug": "s",
+        "path": "items.0.system.uses.recovery.1.formula",
+        "value": "@x"
+      }
+    ]
+  },
+  {
+    "input": [
+      [
+        {
+          "flags": {
+            "pentaryn": {
+              "slug": "s"
+            }
+          },
+          "items": [
+            {
+              "system": {
+                "activities": {
+                  "a1": {
+                    "damage": {
+                      "parts": [
+                        {
+                          "bonus": "2",
+                          "custom": {
+                            "formula": "@mod"
+                          }
+                        }
+                      ]
+                    },
+                    "save": {
+                      "dc": {
+                        "formula": "8+@prof"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ]
+    ],
+    "out": [
+      {
+        "slug": "s",
+        "path": "items.0.system.activities.a1.damage.parts.0.custom.formula",
+        "value": "@mod"
+      },
+      {
+        "slug": "s",
+        "path": "items.0.system.activities.a1.save.dc.formula",
+        "value": "8+@prof"
+      }
+    ]
+  },
+  {
+    "input": [
+      [
+        {
+          "flags": {
+            "pentaryn": {
+              "slug": "s"
+            }
+          },
+          "items": [
+            {
+              "system": {
+                "activities": {
+                  "a1": {
+                    "consumption": {
+                      "targets": [
+                        {
+                          "value": "3−1"
+                        }
+                      ]
+                    },
+                    "target": {
+                      "template": {
+                        "size": ""
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ]
+    ],
+    "out": [
+      {
+        "slug": "s",
+        "path": "items.0.system.activities.a1.consumption.targets.0.value",
+        "value": "3−1"
+      }
+    ]
+  },
+  {
+    "input": [
+      [
+        {
+          "name": "Named",
+          "system": {
+            "attributes": {
+              "hp": {
+                "formula": "@x"
+              }
+            }
+          }
+        }
+      ]
+    ],
+    "out": [
+      {
+        "slug": "Named",
+        "path": "system.attributes.hp.formula",
+        "value": "@x"
+      }
+    ]
+  },
+  {
+    "input": [
+      [
+        {
+          "system": {
+            "attributes": {
+              "hp": {
+                "formula": "@x"
+              }
+            }
+          }
+        }
+      ]
+    ],
+    "out": [
+      {
+        "slug": "<unnamed>",
+        "path": "system.attributes.hp.formula",
+        "value": "@x"
+      }
+    ]
+  },
+  {
+    "input": [
+      [
+        {
+          "flags": {
+            "pentaryn": {
+              "slug": 5
+            }
+          },
+          "system": {
+            "attributes": {
+              "hp": {
+                "formula": "@x"
+              }
+            }
+          }
+        }
+      ]
+    ],
+    "out": [
+      {
+        "slug": 5,
+        "path": "system.attributes.hp.formula",
+        "value": "@x"
+      }
+    ]
+  },
+  {
+    "input": [
+      [
+        null,
+        {
+          "flags": {
+            "pentaryn": {
+              "slug": "t"
+            }
+          },
+          "system": {
+            "attributes": {
+              "hp": {
+                "formula": "d"
+              }
+            }
+          }
+        }
+      ]
+    ],
+    "out": []
+  },
+  {
+    "input": [
+      [
+        {
+          "flags.pentaryn.slug": "literal",
+          "system": {
+            "attributes": {
+              "hp": {
+                "formula": "@x"
+              }
+            }
+          }
+        }
+      ]
+    ],
+    "out": [
+      {
+        "slug": "literal",
+        "path": "system.attributes.hp.formula",
+        "value": "@x"
+      }
+    ]
+  },
+  {
+    "input": [
+      null
+    ],
+    "threw": "actors is not iterable"
+  }
+]

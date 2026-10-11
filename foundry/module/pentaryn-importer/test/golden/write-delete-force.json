@@ -1,0 +1,190 @@
+{
+  "result": {
+    "ok": true,
+    "path": "worlds/w/actors.json",
+    "url": "/worlds/w/actors.json",
+    "dryRun": false,
+    "manifest": {
+      "generator": "build_actors.py",
+      "generatorVersion": "1.0.0",
+      "generatedAt": "2026-10-10T00:00:00Z",
+      "sourceRevision": "abc1234",
+      "skippedRows": 0
+    },
+    "counts": {
+      "total": 2,
+      "selected": 2,
+      "created": 0,
+      "updated": 2,
+      "skipped": 0,
+      "failed": 0,
+      "assertions": 0
+    },
+    "created": [],
+    "updated": [
+      "alpha",
+      "charlie"
+    ],
+    "skipped": [],
+    "failed": [],
+    "deleteJson": {
+      "required": true,
+      "path": "worlds/w/actors.json",
+      "url": "/worlds/w/actors.json",
+      "note": "Foundry has no client-side file-delete API, so this module cannot remove the file. `make foundry-import` deletes it for you (and `make foundry-clean` does it on its own). Until then it is world-readable over the tunnel."
+    }
+  },
+  "writes": [
+    {
+      "op": "prototypeToken.update",
+      "uuid": "Actor.actor00000000001",
+      "changes": {
+        "name": "ALPHA",
+        "width": 1
+      }
+    },
+    {
+      "op": "update.options",
+      "uuid": "Actor.actor00000000001",
+      "options": {
+        "render": false
+      }
+    },
+    {
+      "op": "update",
+      "documentName": "Actor",
+      "uuid": "Actor.actor00000000001",
+      "changes": {
+        "name": "ALPHA",
+        "type": "npc",
+        "system": {
+          "attributes": {
+            "hp": {
+              "max": 9,
+              "formula": "2d8"
+            }
+          }
+        },
+        "flags": {
+          "pentaryn": {
+            "slug": "alpha",
+            "sources": [
+              "MM"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "op": "deleteEmbeddedDocuments",
+      "uuid": "Actor.actor00000000001",
+      "type": "Item",
+      "names": [
+        "Bite",
+        "Breath",
+        "Hand Axe"
+      ],
+      "options": {
+        "render": false
+      }
+    },
+    {
+      "op": "createEmbeddedDocuments",
+      "uuid": "Actor.actor00000000001",
+      "type": "Item",
+      "names": [
+        "Bite"
+      ],
+      "options": {
+        "render": false,
+        "keepId": false
+      }
+    },
+    {
+      "op": "reset",
+      "uuid": "Actor.actor00000000001"
+    },
+    {
+      "op": "update.options",
+      "uuid": "Actor.actor00000000001",
+      "options": {
+        "render": false
+      }
+    },
+    {
+      "op": "update",
+      "documentName": "Actor",
+      "uuid": "Actor.actor00000000001",
+      "changes": {
+        "flags": {
+          "pentaryn": {
+            "contentHash": "sha256:alpha-new"
+          }
+        }
+      }
+    },
+    {
+      "op": "prototypeToken.update",
+      "uuid": "Actor.actor00000000004",
+      "changes": {
+        "name": "CHARLIE",
+        "width": 1
+      }
+    },
+    {
+      "op": "update.options",
+      "uuid": "Actor.actor00000000004",
+      "options": {
+        "render": false
+      }
+    },
+    {
+      "op": "update",
+      "documentName": "Actor",
+      "uuid": "Actor.actor00000000004",
+      "changes": {
+        "name": "CHARLIE",
+        "type": "npc",
+        "system": {
+          "attributes": {
+            "hp": {
+              "max": 9,
+              "formula": "2d8"
+            }
+          }
+        },
+        "flags": {
+          "pentaryn": {
+            "slug": "charlie",
+            "sources": [
+              "MM"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "op": "reset",
+      "uuid": "Actor.actor00000000004"
+    },
+    {
+      "op": "update.options",
+      "uuid": "Actor.actor00000000004",
+      "options": {
+        "render": false
+      }
+    },
+    {
+      "op": "update",
+      "documentName": "Actor",
+      "uuid": "Actor.actor00000000004",
+      "changes": {
+        "flags": {
+          "pentaryn": {
+            "contentHash": "sha256:charlie-new"
+          }
+        }
+      }
+    }
+  ]
+}

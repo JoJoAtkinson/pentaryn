@@ -1,0 +1,63 @@
+{
+  ":625 assertValue (actor path)": {
+    "message": "READBACK ASSERTION FAILED — aborting the whole run.\n  where:    actor \"s625\"\n  path:     system.attributes.hp.max\n  expected: 10\n  actual:   9\n  hint:     Resolved with foundry.utils.getProperty against the prepared Actor.",
+    "writes": [
+      "Actor.create",
+      "reset"
+    ]
+  },
+  ":668 prototype token strip": {
+    "message": "READBACK ASSERTION FAILED — aborting the whole run.\n  where:    actor \"s668\"\n  path:     prototypeToken.vaule\n  expected: 3\n  actual:   undefined\n  hint:     The key is absent from the saved document — Foundry STRIPPED it. Check the spelling against PrototypeToken's accepted key set (CONTRACT.md §3.3).",
+    "writes": [
+      "Actor.create",
+      "reset"
+    ]
+  },
+  ":701 activity ids regenerated": {
+    "message": "READBACK ASSERTION FAILED — aborting the whole run.\n  where:    actor \"s701\" → item \"bite\"\n  path:     system.activities\n  expected: [\"biteAttack000001\"]\n  actual:   [\"regen00000000014\"]\n  hint:     Foundry regenerated the activity ids instead of honouring the supplied `_id`s (CONTRACT.md U7). Every `expected` activity lookup is now unresolvable; §8.2 rule 3 must switch to resolving activities by name.",
+    "writes": [
+      "Actor.create",
+      "createEmbeddedDocuments",
+      "reset"
+    ]
+  },
+  ":746 expected item missing": {
+    "message": "READBACK ASSERTION FAILED — aborting the whole run.\n  where:    actor \"s746\" → item \"claw\"\n  path:     flags.pentaryn.action\n  expected: \"claw\"\n  actual:   [\"bite\"]\n  hint:     No embedded Item on the Actor carries this action flag.",
+    "writes": [
+      "Actor.create",
+      "createEmbeddedDocuments",
+      "reset"
+    ]
+  },
+  ":794 expected activity missing": {
+    "message": "READBACK ASSERTION FAILED — aborting the whole run.\n  where:    actor \"s794\" → item \"bite\" → activity nope\n  path:     system.activities\n  expected: \"nope\"\n  actual:   [\"biteAttack000001\"]\n  hint:     Activity id not present on the saved Item — see CONTRACT.md U7.",
+    "writes": [
+      "Actor.create",
+      "createEmbeddedDocuments",
+      "reset"
+    ]
+  },
+  ":894 Item silently dropped": {
+    "message": "READBACK ASSERTION FAILED — aborting the whole run.\n  where:    actor \"s894\"\n  path:     actor.items (createEmbeddedDocuments)\n  expected: \"2 Item(s): Bite, Breath\"\n  actual:   \"1 Item(s): Bite\"\n  hint:     Foundry DROPPED 1 Item(s) without raising. Missing: Breath. Check the dropped Item's `type` and `system` against CONTRACT.md §3.",
+    "writes": [
+      "Actor.create",
+      "createEmbeddedDocuments"
+    ]
+  },
+  ":1110 payload Item without an action": {
+    "message": "READBACK ASSERTION FAILED — aborting the whole run.\n  where:    actor \"s1110a\" → item \"(no flags.pentaryn.action in payload)\"\n  path:     flags.pentaryn.action\n  expected: undefined\n  actual:   [null]\n  hint:     The PAYLOAD item carries no `flags.pentaryn.action`. The generator must emit one on every Item — it is the upsert key for the embedded-Item replace (CONTRACT.md §4.2).",
+    "writes": [
+      "Actor.create",
+      "createEmbeddedDocuments",
+      "reset"
+    ]
+  },
+  ":1110 action flag stripped": {
+    "message": "READBACK ASSERTION FAILED — aborting the whole run.\n  where:    actor \"s1110b\" → item \"bite\"\n  path:     flags.pentaryn.action\n  expected: \"bite\"\n  actual:   [null]\n  hint:     Payload item has no matching embedded Item — it was dropped, or Foundry STRIPPED `flags.pentaryn.action`. Either way the Item is unaddressable: the next run cannot recognise it as managed and will leave it behind as hand-added.",
+    "writes": [
+      "Actor.create",
+      "createEmbeddedDocuments",
+      "reset"
+    ]
+  }
+}
