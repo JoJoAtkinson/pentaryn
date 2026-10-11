@@ -7,7 +7,7 @@
  * `install()` exposes the actions on `ctx.exposed`; api.mjs and the keybindings call them there.
  */
 
-import {MODULE, FLAG_SCOPE, get as getBackend, reportHtml, undoHtml, exclusive} from "./walls-core.mjs";
+import {MODULE, FLAG_SCOPE, get as getBackend, planUndo, reportHtml, undoHtml, exclusive} from "./walls-core.mjs";
 import {setting} from "./settings.mjs";
 
 function targetScene(sceneId) {
@@ -111,28 +111,18 @@ async function run({sceneId, ...opts} = {}) {
 async function undo({sceneId, all = false} = {}) {
   const scene = targetScene(sceneId);
 
-  const stamped = scene.walls.filter(w => w.getFlag(FLAG_SCOPE, "run"));
-  if (!stamped.length) {
+  // Plain data, never getFlag: "wall-autocomplete" is no package id, so Foundry 14's getFlag
+  // throws for it (senses-walls-cursors-1). planUndo reads the flags from toObject().
+  const plan = planUndo(scene.walls.map(w => ({...w.toObject(), _id: w.id})), {all});
+  if (!plan.stamped) {
     ui.notifications.info("Wall autocomplete: nothing of mine on this scene to undo.");
     return {deleted: 0, restored: 0, run: null};
   }
-  const latest = stamped.map(w => w.getFlag(FLAG_SCOPE, "run")).sort().at(-1);
-  const targets = all ? stamped : stamped.filter(w => w.getFlag(FLAG_SCOPE, "run") === latest);
-
-  const generated = [], restores = [];
-  for (const wall of targets) {
-    // `generated` means the engine created it; a `priorC` without it means the engine only
-    // shortened a wall the user drew, which must be restored rather than deleted.
-    if (wall.getFlag(FLAG_SCOPE, "generated")) generated.push(wall.id);
-    else {
-      const prior = wall.getFlag(FLAG_SCOPE, "priorC");
-      if (prior) restores.push({_id: wall.id, c: prior, [`flags.-=${FLAG_SCOPE}`]: null});
-    }
-  }
+  const {generated, latest, remaining} = plan;
+  const restores = plan.restores.map(r => ({...r, [`flags.${FLAG_SCOPE}`]: _del}));
   if (restores.length) await scene.updateEmbeddedDocuments("Wall", restores);
   if (generated.length) await scene.deleteEmbeddedDocuments("Wall", generated);
 
-  const remaining = new Set(stamped.map(w => w.getFlag(FLAG_SCOPE, "run"))).size - 1;
   ChatMessage.create({
     content: undoHtml({generated: generated.length, restored: restores.length, all, latest, remaining}),
     whisper: ChatMessage.getWhisperRecipients("GM").map(u => u.id)

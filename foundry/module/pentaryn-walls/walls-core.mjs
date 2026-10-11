@@ -91,6 +91,37 @@ export function undoHtml({generated, restored, all, latest, remaining}) {
 }
 
 /**
+ * Which walls an undo touches. Reads the run stamps from PLAIN wall data (`toObject()`), never
+ * `getFlag`, which throws for the non-package scope "wall-autocomplete" (senses-walls-cursors-1).
+ *
+ * The latest run is the greatest `run` stamp by string order (ISO timestamps sort by time). A
+ * stamped wall marked `generated` is deleted; one with only a `priorC` was a user wall the run
+ * trimmed or welded, and gets its coordinates back. `remaining` counts the other runs still applied.
+ *
+ * @param {{_id?: string, id?: string, flags?: object}[]} walls
+ * @param {{all?: boolean}} [opts]  all: every run, not just the latest
+ * @returns {{stamped: number, latest: string|null, generated: string[], restores: {_id: string, c: number[]}[], remaining: number}}
+ *   restores carry only `_id` and `c`; the caller adds the flag deletion.
+ */
+export function planUndo(walls, {all = false} = {}) {
+  const flag = (w, key) => w.flags?.[FLAG_SCOPE]?.[key];
+  const stamped = walls.filter(w => flag(w, "run"));
+  if (!stamped.length) return {stamped: 0, latest: null, generated: [], restores: [], remaining: 0};
+  const latest = stamped.map(w => flag(w, "run")).sort().at(-1);
+  const targets = all ? stamped : stamped.filter(w => flag(w, "run") === latest);
+  const generated = [], restores = [];
+  for (const w of targets) {
+    if (flag(w, "generated")) generated.push(w._id ?? w.id);
+    else {
+      const prior = flag(w, "priorC");
+      if (prior) restores.push({_id: w._id ?? w.id, c: [...prior]});
+    }
+  }
+  const remaining = new Set(stamped.map(w => flag(w, "run"))).size - 1;
+  return {stamped: stamped.length, latest, generated, restores, remaining};
+}
+
+/**
  * One call at a time. `exclusive(fn, {onBusy, lock})` returns a function that runs `fn` and
  * resolves to its result — or, while a previous call holding the same `lock` is still pending,
  * calls `onBusy()` and returns `null` without running. The lock is released when the call settles,

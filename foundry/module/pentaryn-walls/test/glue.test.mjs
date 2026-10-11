@@ -134,14 +134,21 @@ test("(f) run(): updates before creates, then the chat card", async () => {
   assert.match(since(from, "ChatMessage.create")[0].data.content, /^<p><strong>Wall autocomplete — S<\/strong><\/p><p>Committed /);
 });
 
-// KNOWN: senses-walls-cursors-1 — undo() reads run stamps with getFlag("wall-autocomplete", …), a scope
-// that is no active package, so Foundry 14 throws. Flipped by guide step 8a [declared] (planUndo).
-test("KNOWN senses-walls-cursors-1: (g) undo() on a scene with walls rejects with the inactive-scope error", async () => {
+// [declared] senses-walls-cursors-1 (guide step 8a, W-1), flipped from "KNOWN senses-walls-cursors-1:
+// (g) undo() on a scene with walls rejects with the inactive-scope error": undo() reads the run
+// stamps from toObject() through planUndo, never getFlag("wall-autocomplete", …), so it works.
+test("(g) undo() on a scene with a stamped wall deletes it, posts the card and toasts", async () => {
   const stamped = makeScene(F, { id: "sceneStamp00001", name: "Stamped", walls: [
     { _id: "a", c: [0, 0, 100, 0], flags: { "wall-autocomplete": { run: "2026-01-01T00:00:00Z", generated: true } } },
   ] });
-  await assert.rejects(game.pentaryn.walls.undo({ sceneId: stamped.id }),
-    { message: 'Flag scope "wall-autocomplete" is not valid or not currently active' });
+  const from = mark();
+  assert.deepEqual(await game.pentaryn.walls.undo({ sceneId: stamped.id }), { deleted: 1, restored: 0, run: "2026-01-01T00:00:00Z" });
+  assert.deepEqual(since(from).filter(c => /EmbeddedDocuments$/.test(c.op)).map(c => [c.op, c.type, c.data]), [
+    ["deleteEmbeddedDocuments", "Wall", ["a"]],
+  ]);
+  assert.equal(since(from, "ChatMessage.create")[0].data.content,
+    "<p><strong>Wall autocomplete — undo</strong></p><p>Removed 1 generated wall and restored 0 trimmed walls from the run at 2026-01-01T00:00:00Z.</p>");
+  assert.deepEqual(since(from, "notify").map(c => [c.level, c.message]), [["info", "Undid 1 created, 0 restored."]]);
 });
 
 test("(g) undo() on a scene with no walls: the empty answer and the info toast", async () => {
