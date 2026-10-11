@@ -96,3 +96,14 @@ test("the timeout orphan: the sink first (true = taken), else onOrphan; whitespa
   assert.equal(log.orphans.length, 2);
   assert.deepEqual(T.take(999), { text: "", close: null });
 });
+
+test("DP5: blur() forgets every swallowed code", () => {
+  const { T, ev } = rig();
+  const a = T.start();
+  T.keyDown(ev("w", { code: "KeyW" }));
+  T.keyDown(ev("q", { code: "KeyQ" }));
+  T.take(a);
+  T.blur();
+  assert.equal(T.keyUp("KeyW"), false);
+  assert.equal(T.keyUp("KeyQ"), false);
+});

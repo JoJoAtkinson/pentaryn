@@ -102,13 +102,14 @@ test("the 3,500 ms orphan: a toast, or the sink, or nothing for whitespace; take
   for (const c of ["Space", "KeyZ"]) key("keyup", "", { code: c });   // drain swallowed codes
 });
 
-test("KNOWN (prompts-lookup-32): a keyup after window blur is still swallowed; there is no uninstall", t => {
+test("[declared] DP5 (prompts-lookup-32 item 2): window blur clears the swallowed set; KNOWN: there is no uninstall", t => {
   t.mock.timers.enable({ apis: ["setTimeout"] });
   const a = T.start();
   key("keydown", "w", { code: "KeyW" });
   T.take(a);
-  // no blur handler clears the set (step 16 / DP5 flips this row)
-  assert.equal("blur" in L, false);
-  assert.equal(key("keyup", "w", { code: "KeyW" }), true);
+  // a blur handler clears the set (was KNOWN: "blur" in L was false and this keyup was swallowed)
+  assert.equal(typeof L.blur, "function");
+  L.blur({});
+  assert.equal(key("keyup", "w", { code: "KeyW" }), false);
   assert.equal("uninstall" in T, false);
 });

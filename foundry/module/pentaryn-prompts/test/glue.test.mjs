@@ -16,9 +16,10 @@ const F = await installWorld();
 const imported = await captureConsole(() => import("../prompts.mjs"));
 const { PromptDialog } = await import("../dialog.mjs");
 
-test("import: prints nothing, adds one capturing keyup listener to window", () => {
+test("import: prints nothing, adds one capturing keyup listener and (DP5) one blur listener to window", () => {
   assert.deepEqual(imported.out, []);
-  assert.deepEqual(Object.keys(F.dom.window.listeners), ["keyup"]);
+  assert.deepEqual(Object.keys(F.dom.window.listeners), ["keyup", "blur"]);
+  assert.equal(F.dom.window.listeners.blur.length, 1);
   assert.equal(F.dom.window.listeners.keyup.length, 1);
   assert.equal(F.dom.window.listeners.keyup[0].capture, true);
 });

@@ -44,5 +44,7 @@ function onKeyUp(ev) {
 
 // keyup is always watched: a key pressed while capturing may be released after capture ends
 window.addEventListener("keyup", onKeyUp, true);
+// a key released while the window is away never sends its keyup: forget what was swallowed
+window.addEventListener("blur", () => T.blur());
 
 export const { start, take, cancel, isCapturing, setOrphanSink } = T;

@@ -98,6 +98,14 @@ export function createTypeahead({ setTimer, clearTimer, timeoutMs = 3500, onOrph
       return true;
     },
 
+    /**
+     * The window lost focus (Cmd-Tab away mid-key): its keyups will never come, so forget every
+     * swallowed code — the next press of that key reaches Foundry (prompts-lookup-32 item 2).
+     */
+    blur() {
+      swallowedUps.clear();
+    },
+
     /** A keyup: → true exactly once for a code whose keydown was swallowed (swallow its release too). */
     keyUp(code) {
       if (!swallowedUps.has(code)) return false;
