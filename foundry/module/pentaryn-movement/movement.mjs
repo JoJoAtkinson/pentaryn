@@ -35,22 +35,17 @@
  */
 
 import * as core from "./movement-core.mjs";
+import {
+  CSS, GHOST_ALPHA, GM_CLIP_KEYS, GM_ICONS, GM_KEYS, GM_TOOL, MODULE, NOTIFY_BACK, NOTIFY_BLOCKED, NOTIFY_CLEARED,
+  TOOL, TOOL_CLIP_KEYS, TOOL_KEYS
+} from "./movement-core.mjs";
+import { onSettingChange, registerSettings, setting } from "./settings.mjs";
 import { defineAccessor, wrapMethod } from "./lib/patch.mjs";
 
-const MOD = core.MODULE;
-const TOOL = "pentarynGhost";
-const GM_TOOL = "pentarynGhostPolicy";
-const GHOST_ALPHA = 0.55;
-
 /* -------------------------------------------- */
-/*  Settings (read defensively)                 */
+/*  Settings (read defensively: setting() falls back to the row default) */
 /* -------------------------------------------- */
 
-const DEFAULTS = { ghostPolicy: core.DEFAULT_POLICY, ghostPolicyLast: core.DEFAULT_POLICY, ghost: false, ownedOnTop: true };
-
-function setting(key) {
-  try { return game.settings.get(MOD, key); } catch { return DEFAULTS[key]; }
-}
 const policy = () => core.normalizePolicy(setting("ghostPolicy"));
 const wish = () => !!setting("ghost");
 
@@ -93,15 +88,10 @@ function ownedRankOf(token) {
 
 /** Everything a console reader needs to see why ghost is or isn't on. */
 function status() {
-  const p = policy();
-  const combat = combatActive();
-  const allowed = core.ghostAllowed({ policy: p, combatActive: combat });
-  return {
-    policy: p, combatOnScene: combat, allowed: allowed.allowed, reason: allowed.reason,
-    wish: wish(), ghost: !game.user.isGM && allowed.allowed && wish(),
-    ownedOnTop: !!setting("ownedOnTop"),
-    patched: { drag: !!dragPatched, keyboard: !!keyboardPatched }
-  };
+  return core.statusFrom({
+    policy: policy(), combat: combatActive(), wish: wish(), isGM: game.user.isGM,
+    ownedOnTop: setting("ownedOnTop"), patched: { drag: dragPatched, keyboard: keyboardPatched }
+  });
 }
 
 /* -------------------------------------------- */
@@ -115,46 +105,34 @@ let keyboardPatched = false;
 function patchDrag() {
   const proto = CONFIG.Token?.objectClass?.prototype;
   if (typeof proto?._getDragConstrainOptions !== "function") {
-    console.warn(`${MOD} | no Token#_getDragConstrainOptions; ghost drag disabled`);
+    console.warn(`${MODULE} | no Token#_getDragConstrainOptions; ghost drag disabled`);
     return false;
   }
-  wrapMethod(MOD, {
+  wrapMethod(MODULE, {
     target: proto, name: "_getDragConstrainOptions", label: "Token#_getDragConstrainOptions",
     marker: "__pentarynMovement", adjustments: "movement-drag-constrain-ghost",
   }, function (wrapped, ...args) {
     const base = wrapped(...args);
     try { return ghostFor(this) ? core.constrainFor(base, true) : base; }
-    catch (err) { console.warn(`${MOD} | drag constrain skipped`, err); return base; }
+    catch (err) { console.warn(`${MODULE} | drag constrain skipped`, err); return base; }
   });
   return true;
-}
-
-/** The keyboard result's private shape: result[1].movement[id].constrainOptions, mutated in place. */
-function ghostKeyboardMovement(result, objects, isGhost) {
-  const movement = result?.[1]?.movement;
-  if (movement) {
-    for (const o of objects ?? []) {
-      const m = movement[o?.id];
-      if (m && isGhost(o)) m.constrainOptions = core.constrainFor(m.constrainOptions, true);
-    }
-  }
-  return result;
 }
 
 /** Wrap TokenLayer#_prepareKeyboardMovementUpdates: arrow keys ghost too. */
 function patchKeyboard() {
   const proto = CONFIG.Canvas?.layers?.tokens?.layerClass?.prototype;
   if (typeof proto?._prepareKeyboardMovementUpdates !== "function") {
-    console.warn(`${MOD} | no TokenLayer#_prepareKeyboardMovementUpdates; ghost arrow keys disabled`);
+    console.warn(`${MODULE} | no TokenLayer#_prepareKeyboardMovementUpdates; ghost arrow keys disabled`);
     return false;
   }
-  wrapMethod(MOD, {
+  wrapMethod(MODULE, {
     target: proto, name: "_prepareKeyboardMovementUpdates", label: "TokenLayer#_prepareKeyboardMovementUpdates",
     marker: "__pentarynMovement", adjustments: "movement-keyboard-constrain-ghost",
   }, function (wrapped, objects, ...rest) {
     const result = wrapped(objects, ...rest);
-    try { ghostKeyboardMovement(result, objects, ghostFor); }
-    catch (err) { console.warn(`${MOD} | keyboard constrain skipped`, err); }
+    try { core.ghostKeyboardMovement(result, objects, ghostFor); }
+    catch (err) { console.warn(`${MODULE} | keyboard constrain skipped`, err); }
     return result;
   });
   return true;
@@ -192,7 +170,7 @@ function installLayerSort(layer = canvas?.tokens) {
     sortPatch = null;
   }
   if (!objects.sortChildren?.__pentarynMovement) {
-    const handle = defineAccessor(MOD, objects, "sortChildren",
+    const handle = defineAccessor(MODULE, objects, "sortChildren",
       { value: sortTokenObjects, writable: true, enumerable: true },
       { marker: "__pentarynMovement", adjustments: "movement-layer-sort-owned", label: "TokenLayer.objects#sortChildren" });
     sortPatch = { objects, handle };
@@ -221,12 +199,6 @@ function refreshTokens() {
 /*  Toolbar                                     */
 /* -------------------------------------------- */
 
-const GM_ICONS = {
-  off: "fa-solid fa-road-barrier",
-  exploration: "fa-solid fa-person-hiking",
-  always: "fa-solid fa-person-walking-dashed-line-arrow-right"
-};
-
 function toolclip(heading, paragraphs) {
   const SC = foundry.applications.ui.SceneControls;
   return { heading, items: SC.buildToolclipItems(paragraphs.map(paragraph => ({ paragraph }))) };
@@ -243,12 +215,12 @@ function addTools(controls) {
     tools[TOOL] = {
       name: TOOL,
       order: 4.5,
-      title: `PENTARYN_MOVEMENT.tool.${pt.state}`,
+      title: TOOL_KEYS[pt.state],
       icon: "fa-solid fa-ghost",
       toggle: true,
       active: pt.active,
       onChange: (_event, active) => onPlayerToggle(active),
-      toolclip: toolclip(`PENTARYN_MOVEMENT.tool.${pt.state}`, ["PENTARYN_MOVEMENT.tool.clip.what", `PENTARYN_MOVEMENT.tool.clip.${pt.state}`, "PENTARYN_MOVEMENT.tool.clip.vision"])
+      toolclip: toolclip(TOOL_KEYS[pt.state], [TOOL_CLIP_KEYS.what, TOOL_CLIP_KEYS[pt.state], TOOL_CLIP_KEYS.vision])
     };
   }
 
@@ -257,12 +229,12 @@ function addTools(controls) {
     tools[GM_TOOL] = {
       name: GM_TOOL,
       order: 4.6,
-      title: `PENTARYN_MOVEMENT.gm.${gt.state}`,
+      title: GM_KEYS[gt.state],
       icon: GM_ICONS[gt.state],
       toggle: true,
       active: gt.active,
       onChange: (_event, active) => onGmFlip(active),
-      toolclip: toolclip(`PENTARYN_MOVEMENT.gm.${gt.state}`, ["PENTARYN_MOVEMENT.gm.clip.what", "PENTARYN_MOVEMENT.gm.clip.modes", "PENTARYN_MOVEMENT.gm.clip.combat"])
+      toolclip: toolclip(GM_KEYS[gt.state], GM_CLIP_KEYS)
     };
   }
 }
@@ -272,15 +244,15 @@ async function onPlayerToggle(active) {
     if (active) {
       const { allowed, reason } = core.ghostAllowed({ policy: policy(), combatActive: combatActive() });
       if (!allowed) {
-        ui.notifications.warn(`PENTARYN_MOVEMENT.notify.blocked.${reason}`, { localize: true });
-        await game.settings.set(MOD, "ghost", false);
+        ui.notifications.warn(NOTIFY_BLOCKED[reason], { localize: true });
+        await game.settings.set(MODULE, "ghost", false);
         rerenderControls(true);
         return;
       }
     }
-    await game.settings.set(MOD, "ghost", !!active);
+    await game.settings.set(MODULE, "ghost", !!active);
   } catch (err) {
-    console.warn(`${MOD} | ghost toggle failed`, err);
+    console.warn(`${MODULE} | ghost toggle failed`, err);
   }
 }
 
@@ -288,11 +260,11 @@ async function onGmFlip(active) {
   if (!game.user.isGM) return;
   try {
     const next = core.flipPolicy(policy(), setting("ghostPolicyLast"), !!active);
-    if (next.last !== setting("ghostPolicyLast")) await game.settings.set(MOD, "ghostPolicyLast", next.last);
-    await game.settings.set(MOD, "ghostPolicy", next.policy);
-    ui.notifications.info(game.i18n.localize(`PENTARYN_MOVEMENT.gm.${next.policy}`));
+    if (next.last !== setting("ghostPolicyLast")) await game.settings.set(MODULE, "ghostPolicyLast", next.last);
+    await game.settings.set(MODULE, "ghostPolicy", next.policy);
+    ui.notifications.info(game.i18n.localize(GM_KEYS[next.policy]));
   } catch (err) {
-    console.warn(`${MOD} | policy flip failed`, err);
+    console.warn(`${MODULE} | policy flip failed`, err);
   }
 }
 
@@ -320,14 +292,14 @@ async function refresh() {
     const reason = game.user.isGM ? null
       : core.wishToClear({ policy: policy(), combatActive: combatActive(), wish: wish() });
     if (reason) {
-      ui.notifications.info(`PENTARYN_MOVEMENT.notify.cleared.${reason}`, { localize: true });
+      ui.notifications.info(NOTIFY_CLEARED[reason], { localize: true });
       clearedBy = reason;
-      await game.settings.set(MOD, "ghost", false); // its onChange calls refresh again
+      await game.settings.set(MODULE, "ghost", false); // its onChange calls refresh again
       return;
     }
     if (wish()) clearedBy = null;
     else if (!game.user.isGM && core.ghostBack({ cleared: clearedBy, policy: policy(), combatActive: combatActive(), wish: wish() })) {
-      ui.notifications.info(`PENTARYN_MOVEMENT.notify.back.${clearedBy}`, { localize: true });
+      ui.notifications.info(NOTIFY_BACK[clearedBy], { localize: true });
       clearedBy = null;
     }
     // Combat updates fire every turn; only a real change of state redraws anything.
@@ -335,7 +307,7 @@ async function refresh() {
     canvas?.tokens?.recalculatePlannedMovementPaths?.();
     refreshTokens();
   } catch (err) {
-    console.warn(`${MOD} | refresh failed`, err);
+    console.warn(`${MODULE} | refresh failed`, err);
   }
 }
 const queueRefresh = foundry.utils.debounce(() => refresh(), 50);
@@ -360,32 +332,10 @@ function pinsUnderTokens(scene = canvas?.scene) {
 /*  Hooks                                       */
 /* -------------------------------------------- */
 
-Hooks.once("init", () => {
-  game.settings.register(MOD, "ghostPolicy", {
-    name: "PENTARYN_MOVEMENT.settings.policy.name",
-    hint: "PENTARYN_MOVEMENT.settings.policy.hint",
-    scope: "world", config: true, type: String, default: core.DEFAULT_POLICY,
-    choices: {
-      off: "PENTARYN_MOVEMENT.settings.policy.off",
-      exploration: "PENTARYN_MOVEMENT.settings.policy.exploration",
-      always: "PENTARYN_MOVEMENT.settings.policy.always"
-    },
-    onChange: () => queueRefresh()
-  });
-  game.settings.register(MOD, "ghostPolicyLast", {
-    scope: "world", config: false, type: String, default: core.DEFAULT_POLICY
-  });
-  game.settings.register(MOD, "ghost", {
-    scope: "client", config: false, type: Boolean, default: false,
-    onChange: () => queueRefresh()
-  });
-  game.settings.register(MOD, "ownedOnTop", {
-    name: "PENTARYN_MOVEMENT.settings.ownedOnTop.name",
-    hint: "PENTARYN_MOVEMENT.settings.ownedOnTop.hint",
-    scope: "client", config: true, type: Boolean, default: true,
-    onChange: () => refreshTokens()
-  });
-});
+onSettingChange("ghostPolicy", () => queueRefresh());
+onSettingChange("ghost", () => queueRefresh());
+onSettingChange("ownedOnTop", () => refreshTokens());
+Hooks.once("init", () => registerSettings());
 
 // Token5e and TokenLayer5e are in CONFIG by now (the system's init ran first).
 Hooks.once("setup", () => {
@@ -394,7 +344,7 @@ Hooks.once("setup", () => {
 });
 
 Hooks.on("getSceneControlButtons", controls => {
-  try { addTools(controls); } catch (err) { console.warn(`${MOD} | toolbar skipped`, err); }
+  try { addTools(controls); } catch (err) { console.warn(`${MODULE} | toolbar skipped`, err); }
 });
 
 Hooks.on("renderSceneControls", (_app, element) => {
@@ -402,7 +352,7 @@ Hooks.on("renderSceneControls", (_app, element) => {
     const btn = (element ?? ui.controls?.element)?.querySelector?.(`button.tool[data-tool="${TOOL}"]`);
     if (!btn) return;
     const pt = core.playerTool({ isGM: game.user.isGM, policy: policy(), combatActive: combatActive(), wish: wish() });
-    btn.classList.toggle("pm-blocked", pt.state === "combat");
+    btn.classList.toggle(CSS.blocked, pt.state === "combat");
   } catch {}
 });
 
@@ -442,8 +392,8 @@ Hooks.once("ready", () => setTimeout(() => {
     setPolicy: async value => {
       if (!game.user.isGM) throw new Error("GM only");
       const p = core.normalizePolicy(value);
-      if (p !== "off") await game.settings.set(MOD, "ghostPolicyLast", p);
-      return game.settings.set(MOD, "ghostPolicy", p);
+      if (p !== "off") await game.settings.set(MODULE, "ghostPolicyLast", p);
+      return game.settings.set(MODULE, "ghostPolicy", p);
     },
     pinsUnderTokens,
     core
