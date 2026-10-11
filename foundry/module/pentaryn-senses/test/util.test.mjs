@@ -72,3 +72,29 @@ test("publish guard: no root, an extensible root, a frozen root", () => {
   assert.deepEqual(g3.pentaryn, { other: 1, senses: api });
   assert.equal(Object.isExtensible(g3.pentaryn), true);
 });
+
+// Added at guide step 2 (findings -18, -10 light half): the runtime helpers in core/util.mjs equal
+// the oracles row for row; core/ids.mjs defines MODULE once and FLAGS as full paths.
+test("core/util esc and unsetPath equal the oracles; FLAGS are the module's paths", async () => {
+  const core = await import("../senses-core.mjs");
+  for (const s of ['<a href="x">\'&"</a>', null, undefined, 0, "&amp;", "plain", "Ünïcode <b>"]) assert.equal(core.esc(s), esc(s));
+  const saved = Object.getOwnPropertyDescriptor(globalThis, "_del");
+  try {
+    for (const del of [undefined, { del: true }]) {
+      if (del) globalThis._del = del;
+      else delete globalThis._del;
+      for (const p of ["flags.pentaryn-senses.chain", "flags.pentaryn-senses.spellLight", "a"]) {
+        assert.deepEqual(core.unsetPath(p), unset(p));
+      }
+    }
+    const SENTINEL = { s: 1 };
+    assert.deepEqual(core.unsetPath("flags.x.y", SENTINEL), { "flags.x.y": SENTINEL }, "an injected deletion wins");
+  } finally {
+    if (saved) Object.defineProperty(globalThis, "_del", saved);
+    else delete globalThis._del;
+  }
+  assert.equal(core.MODULE, "pentaryn-senses");
+  assert.equal(Object.isFrozen(core.FLAGS), true);
+  for (const [k, v] of Object.entries(core.FLAGS)) assert.equal(v, `flags.pentaryn-senses.${k}`);
+  assert.deepEqual(Object.keys(core.FLAGS), ["light", "lit", "hooded", "lightItem", "lightToggle", "itemLight", "itemLightPrior", "spellLight", "lightCast", "chain"]);
+});

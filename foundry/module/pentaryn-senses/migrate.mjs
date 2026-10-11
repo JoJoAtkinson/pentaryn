@@ -9,7 +9,9 @@
 //
 // The pure half (planSightReset and friends) loads without Foundry; test/migrate.mjs proves it.
 
-export const MODULE = "pentaryn-senses";
+import { MODULE } from "./core/ids.mjs";
+
+export { MODULE };
 export const SIGHT_RESET = "sightReset";
 /** The setting value once the reset has run in this world. */
 export const SIGHT_RESET_DONE = 1;

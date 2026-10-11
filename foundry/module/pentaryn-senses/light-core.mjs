@@ -9,7 +9,7 @@
  * Foundry's `dim` is the OUTER radius, so dim = bright + the rules' extra dim ring.
  */
 
-import { MODULE } from "./chain-core.mjs";
+import { MODULE } from "./core/ids.mjs";
 export { MODULE };
 
 /** A light that gives nothing. Written when a carried or spell light ends with nothing before it. */

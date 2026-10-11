@@ -7,7 +7,9 @@
  * The flag lives on the CHAINED token. One chain per chained token; an anchor can hold several.
  */
 
-export const MODULE = "pentaryn-senses";
+import { MODULE } from "./core/ids.mjs";
+
+export { MODULE };
 export const CHAIN_FLAG = "chain";
 
 /** The chain flag on a token document (or plain {flags}), sanitised, or null. Never throws. */

@@ -25,6 +25,7 @@ import {
   readSpellCast, readSpellLight, castFlag, planSpellLight, spellLightUpdate, restoredLight,
   sourcesUnder, isPHBLightActorSource, torchActivityData, TORCH_ACTIVITY_ID, PHB_LIGHT_ACTOR
 } from "./light-core.mjs";
+import { esc, unsetPath } from "./core/util.mjs";
 
 const CAST = `flags.${MODULE}.lightCast`;
 const LIT = `flags.${MODULE}.lit`;
@@ -37,15 +38,7 @@ const state = { hooks: [], timers: new Map(), chain: Promise.resolve(), picking:
 
 const warn = (label, err) => console.warn(`${MODULE} | light ${label}`, err);
 const L = (key, data) => (data ? game.i18n.format(key, data) : game.i18n.localize(key));
-const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 const isGM = () => !!game.users?.activeGM?.isSelf;
-
-/** `{path: delete}` in the v14 form, falling back to the older "-=" key. */
-function unset(path) {
-  if (globalThis._del) return { [path]: globalThis._del };
-  const i = path.lastIndexOf(".");
-  return { [`${path.slice(0, i)}.-=${path.slice(i + 1)}`]: null };
-}
 
 /** The live item behind an activity (dnd5e hands hooks a clone of the item). */
 function realItem(item) {
@@ -416,7 +409,7 @@ async function reconcile(source) {
     const t = game.scenes.get(r.scene)?.tokens.get(r.id);
     if (!t) continue;
     if (!byScene.has(r.scene)) byScene.set(r.scene, []);
-    byScene.get(r.scene).push({ _id: t.id, light: restoredLight(t), ...unset(SPELL) });
+    byScene.get(r.scene).push({ _id: t.id, light: restoredLight(t), ...unsetPath(SPELL) });
   }
   const touchedActors = new Set();
   for (const [sid, updates] of byScene) {

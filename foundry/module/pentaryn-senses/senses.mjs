@@ -11,7 +11,7 @@ import "./glow.mjs";
 import "./chain.mjs";
 // The Light cantrip and lit torches/lamps/lanterns (LIGHT-DESIGN.md). Its GM sweep runs after ours.
 import { api as lightApi } from "./light.mjs";
-import { DARK, carriedLightOf } from "./light-core.mjs";
+import { DARK, MODULE, carriedLightOf } from "./senses-core.mjs";
 // The one-shot reset of the darkvision sight our retired sync stored (dnd5e 6 senseVisionSync).
 import { registerSightReset, resetSight } from "./migrate.mjs";
 
@@ -29,8 +29,6 @@ function isWriter() {
 // (flags.pentaryn-senses.lit); the brightest carried light wins. A token lit by the Light cantrip
 // (flags.pentaryn-senses.spellLight) is left to light.mjs until the spell ends.
 
-const SCOPE = "pentaryn-senses";
-
 /** The light the actor's carried items give, or null: a shard always, a torch while lit. */
 function carriedLight(actor) {
   return carriedLightOf(actor?.items ?? []);
@@ -42,22 +40,22 @@ function carriedLight(actor) {
  * in flags.pentaryn-senses.itemLightPrior and comes back when the carried light goes, not DARK.
  */
 function lightUpdate(doc, light) {
-  if (doc.flags?.[SCOPE]?.spellLight) return null; // the Light cantrip owns this token's light until it ends
-  const lit = doc.flags?.[SCOPE]?.itemLight === true;
-  const PRIOR = `flags.${SCOPE}.itemLightPrior`;
+  if (doc.flags?.[MODULE]?.spellLight) return null; // the Light cantrip owns this token's light until it ends
+  const lit = doc.flags?.[MODULE]?.itemLight === true;
+  const PRIOR = `flags.${MODULE}.itemLightPrior`;
   if (light) {
     const own = doc.light?.toObject?.() ?? doc.light ?? {};
     const current = foundry.utils.flattenObject(own);
     const want = foundry.utils.flattenObject(light);
     const same = Object.entries(want).every(([k, v]) => current[k] === v);
     if (same && lit) return null;
-    const u = { light, [`flags.${SCOPE}.itemLight`]: true };
+    const u = { light, [`flags.${MODULE}.itemLight`]: true };
     if (!lit && ((Number(own.bright) || 0) > 0 || (Number(own.dim) || 0) > 0)) u[PRIOR] = foundry.utils.deepClone(own);
     return u;
   }
   if (!lit) return null;
-  const prior = doc.flags?.[SCOPE]?.itemLightPrior;
-  const u = { light: foundry.utils.deepClone(prior ?? DARK), [`flags.${SCOPE}.itemLight`]: false };
+  const prior = doc.flags?.[MODULE]?.itemLightPrior;
+  const u = { light: foundry.utils.deepClone(prior ?? DARK), [`flags.${MODULE}.itemLight`]: false };
   if (prior !== undefined) u[PRIOR] = globalThis._del ?? null;
   return u;
 }
@@ -124,8 +122,8 @@ Hooks.once("ready", () => {
     game.pentaryn.senses = api;
   }
   if (isWriter()) resetSight()
-    .catch(e => console.warn(`${SCOPE} | sight reset`, e))
+    .catch(e => console.warn(`${MODULE} | sight reset`, e))
     .then(() => api.syncAll())
     .then(() => (game.users.activeGM?.isSelf ? lightApi.sweep() : null))
-    .catch(e => console.warn(`${SCOPE} | ready sweep`, e));
+    .catch(e => console.warn(`${MODULE} | ready sweep`, e));
 });
