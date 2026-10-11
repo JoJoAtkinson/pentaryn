@@ -876,3 +876,11 @@ def test_stage_refuses_a_missing_world_and_leaves_dst_alone(staged_paths, monkey
     (spec.dst / "keep.mjs").write_text("live")
     assert pipeline.stage() == 1
     assert (spec.dst / "keep.mjs").read_text() == "live"
+
+
+@pytest.mark.repo
+def test_ties_suite_is_gated():
+    """python-tooling-7: `make foundry-ties-check` runs ties' own suite."""
+    spec = cfg.MODULES["ties"]
+    assert "node-test" in spec.check
+    assert (spec.src / "test/run.mjs").is_file()

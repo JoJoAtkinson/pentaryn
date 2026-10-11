@@ -171,7 +171,9 @@ _BLUEPRINT = ("vendor", "conformance")
 MODULES = {
     "ties": ModuleSpec(
         "pentaryn-ties",
-        check=(*_STATIC, *_BLUEPRINT),
+        # node-test: test/run.mjs (the blueprint's fixed body) runs the converted suites and
+        # the legacy known/look/reach ones (python-tooling-7).
+        check=(*_STATIC, "node-test", *_BLUEPRINT),
         after_sync=(
             "Already enabled? A browser RELOAD (F5) is enough — .mjs and .css are",
             "served fresh. But module.json is read once at STARTUP, so the version",
