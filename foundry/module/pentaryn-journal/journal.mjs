@@ -33,6 +33,7 @@
  */
 
 import * as core from "./journal-core.mjs";
+import { registerSettings, setting, whenChanged } from "./settings.mjs";
 
 const { MODULE, QUERY } = core;
 const OWN = () => CONST.DOCUMENT_OWNERSHIP_LEVELS;
@@ -57,7 +58,7 @@ function personalsOf(userId) {
 function personal(user = game.user) { return personalsOf(user?.id)[0] ?? null; }
 
 function folderName() {
-  return game.settings.get(MODULE, "folderName") || game.i18n.localize("PENTARYN_JOURNAL.folder");
+  return setting("folderName") || game.i18n.localize("PENTARYN_JOURNAL.folder");
 }
 function findFolder() {
   const name = folderName();
@@ -171,7 +172,7 @@ function shouldShowBar(entry, user = game.user) {
     get isPersonal() { return isPersonal(entry); },
     get inPack() { return !!entry.pack; },
     get isGM() { return user.isGM; },
-    get gmButton() { return game.settings.get(MODULE, "gmButton"); },
+    get gmButton() { return setting("gmButton"); },
     get observer() { return entry.testUserPermission(user, "OBSERVER"); },
     get owner() { return entry.testUserPermission(user, "OWNER"); },
   });
@@ -208,7 +209,7 @@ function shouldShowItemBar(src, user = game.user) {
     get hasSource() { return !!src; },
     get canInspectItems() { return pileData(src.pile)?.canInspectItems; },
     get isGM() { return user.isGM; },
-    get gmButton() { return game.settings.get(MODULE, "gmButton"); },
+    get gmButton() { return setting("gmButton"); },
     get observer() { return src.pile.testUserPermission(user, "OBSERVER"); },
     get owner() { return src.pile.testUserPermission(user, "OWNER"); },
   });
@@ -532,7 +533,7 @@ function applySinglePage(app) {
   const entry = app.document;
   const on = core.singlePage({
     get isGM() { return game.user.isGM; },
-    get setting() { return game.settings.get(MODULE, "singlePageReadables"); },
+    get setting() { return setting("singlePageReadables"); },
     get isPersonal() { return isPersonal(entry); },
     get isEyeReadable() { return isEyeReadable(entry); },
     get visiblePages() { return entry.pages.filter(p => p.testUserPermission(game.user, "LIMITED")).length; },
@@ -544,22 +545,13 @@ function applySinglePage(app) {
 /*  Hooks                                       */
 /* -------------------------------------------- */
 
+whenChanged("gmButton", () => refreshBars());
+whenChanged("singlePageReadables", () => {
+  for (const a of foundry.applications.instances.values()) if (a.rendered && a.document?.documentName === "JournalEntry") applySinglePage(a);
+});
+
 Hooks.once("init", () => {
-  game.settings.register(MODULE, "gmButton", {
-    name: "PENTARYN_JOURNAL.settings.gmButton.name",
-    hint: "PENTARYN_JOURNAL.settings.gmButton.hint",
-    scope: "world", config: true, type: Boolean, default: false,
-    onChange: () => refreshBars()
-  });
-  game.settings.register(MODULE, "singlePageReadables", {
-    name: "PENTARYN_JOURNAL.settings.singlePage.name",
-    hint: "PENTARYN_JOURNAL.settings.singlePage.hint",
-    scope: "world", config: true, type: Boolean, default: true,
-    onChange: () => { for (const a of foundry.applications.instances.values()) if (a.rendered && a.document?.documentName === "JournalEntry") applySinglePage(a); }
-  });
-  game.settings.register(MODULE, "folderName", {
-    scope: "world", config: false, type: String, default: "Player Journals"
-  });
+  registerSettings();
 
   // The relay. `user` is the sender as the server knows it; the payload is not read at all.
   CONFIG.queries[QUERY] = async (_data, { user } = {}) => {
