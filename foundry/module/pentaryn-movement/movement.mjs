@@ -35,6 +35,7 @@
  */
 
 import * as core from "./movement-core.mjs";
+import { defineAccessor, wrapMethod } from "./lib/patch.mjs";
 
 const MOD = core.MODULE;
 const TOOL = "pentarynGhost";
@@ -117,16 +118,27 @@ function patchDrag() {
     console.warn(`${MOD} | no Token#_getDragConstrainOptions; ghost drag disabled`);
     return false;
   }
-  if (proto._getDragConstrainOptions.__pentarynMovement) return true;
-  const original = proto._getDragConstrainOptions;
-  function patched(...args) {
-    const base = original.apply(this, args);
+  wrapMethod(MOD, {
+    target: proto, name: "_getDragConstrainOptions", label: "Token#_getDragConstrainOptions",
+    marker: "__pentarynMovement", adjustments: "movement-drag-constrain-ghost",
+  }, function (wrapped, ...args) {
+    const base = wrapped(...args);
     try { return ghostFor(this) ? core.constrainFor(base, true) : base; }
     catch (err) { console.warn(`${MOD} | drag constrain skipped`, err); return base; }
-  }
-  patched.__pentarynMovement = true;
-  proto._getDragConstrainOptions = patched;
+  });
   return true;
+}
+
+/** The keyboard result's private shape: result[1].movement[id].constrainOptions, mutated in place. */
+function ghostKeyboardMovement(result, objects, isGhost) {
+  const movement = result?.[1]?.movement;
+  if (movement) {
+    for (const o of objects ?? []) {
+      const m = movement[o?.id];
+      if (m && isGhost(o)) m.constrainOptions = core.constrainFor(m.constrainOptions, true);
+    }
+  }
+  return result;
 }
 
 /** Wrap TokenLayer#_prepareKeyboardMovementUpdates: arrow keys ghost too. */
@@ -136,23 +148,15 @@ function patchKeyboard() {
     console.warn(`${MOD} | no TokenLayer#_prepareKeyboardMovementUpdates; ghost arrow keys disabled`);
     return false;
   }
-  if (proto._prepareKeyboardMovementUpdates.__pentarynMovement) return true;
-  const original = proto._prepareKeyboardMovementUpdates;
-  function patched(objects, ...rest) {
-    const result = original.call(this, objects, ...rest);
-    try {
-      const movement = result?.[1]?.movement;
-      if (movement) {
-        for (const o of objects ?? []) {
-          const m = movement[o?.id];
-          if (m && ghostFor(o)) m.constrainOptions = core.constrainFor(m.constrainOptions, true);
-        }
-      }
-    } catch (err) { console.warn(`${MOD} | keyboard constrain skipped`, err); }
+  wrapMethod(MOD, {
+    target: proto, name: "_prepareKeyboardMovementUpdates", label: "TokenLayer#_prepareKeyboardMovementUpdates",
+    marker: "__pentarynMovement", adjustments: "movement-keyboard-constrain-ghost",
+  }, function (wrapped, objects, ...rest) {
+    const result = wrapped(objects, ...rest);
+    try { ghostKeyboardMovement(result, objects, ghostFor); }
+    catch (err) { console.warn(`${MOD} | keyboard constrain skipped`, err); }
     return result;
-  }
-  patched.__pentarynMovement = true;
-  proto._prepareKeyboardMovementUpdates = patched;
+  });
   return true;
 }
 
@@ -173,10 +177,26 @@ function sortTokenObjects() {
 }
 sortTokenObjects.__pentarynMovement = true;
 
+/**
+ * The sort is an instance property on the layer's objects container (a new container per canvas
+ * draw), recorded through the kit so describe().patches lists it. Only the live container keeps
+ * the record: a new draw drops the previous one, so the patch list stays one entry long. A sort
+ * someone else put over ours is replaced, as it always was.
+ */
+let sortPatch = null; // { objects, handle }
 function installLayerSort(layer = canvas?.tokens) {
   const objects = layer?.objects;
   if (!objects) return;
-  if (!objects.sortChildren?.__pentarynMovement) objects.sortChildren = sortTokenObjects;
+  if (sortPatch && (sortPatch.objects !== objects || !objects.sortChildren?.__pentarynMovement)) {
+    sortPatch.handle.unwrap();
+    sortPatch = null;
+  }
+  if (!objects.sortChildren?.__pentarynMovement) {
+    const handle = defineAccessor(MOD, objects, "sortChildren",
+      { value: sortTokenObjects, writable: true, enumerable: true },
+      { marker: "__pentarynMovement", adjustments: "movement-layer-sort-owned", label: "TokenLayer.objects#sortChildren" });
+    sortPatch = { objects, handle };
+  }
   objects.sortDirty = true;
 }
 
