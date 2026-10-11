@@ -46,9 +46,12 @@ import * as hudButton from "./hud-button.mjs";
 import * as tooltip from "./tooltip.mjs";
 import * as panels from "./panels.mjs";
 import * as patches from "./patches.mjs";
+import * as cache from "./cache.mjs";
 
 /** Features in today's hook order (golden/hooks.json). */
 const FEATURES = [typeahead, markerGuard, placement, hudButton, tooltip, panels, patches];
+/** Features installed at `ready`: their hooks only matter once the canvas is up. */
+const LATE = [cache];
 
 const log = makeLog(MODULE);
 const reg = hookRegistry(MODULE, log);
@@ -78,7 +81,7 @@ function install() {
 
 /** Remove every hook and feature state. */
 function uninstall() {
-  for (const feature of [...FEATURES].reverse()) feature.uninstall();
+  for (const feature of [...FEATURES, ...LATE].reverse()) feature.uninstall();
   reg.offAll();
 }
 
@@ -98,6 +101,7 @@ function onInit() {
  * (a frozen root) still lets them be ensured.
  */
 function onReady() {
+  for (const feature of LATE) feature.install(reg, ctx);
   try {
     ctx.api = buildApiFor(ctx);
   } catch (err) {

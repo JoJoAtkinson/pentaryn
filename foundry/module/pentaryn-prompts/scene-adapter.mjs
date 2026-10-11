@@ -11,6 +11,7 @@ import {
 } from "./geometry-core.mjs";
 import { FOLDER_NAME, markerSizeOf, promptText } from "./core/markers.mjs";
 import { panelRels, seenCount } from "./core/placement.mjs";
+import { sceneCache } from "./core/cache.mjs";
 import { wallSegmentsOf } from "./core/walls.mjs";
 import { makeSight, heightWarning } from "./sight-adapter.mjs";
 import { isStockLore } from "./build-core.mjs";
@@ -333,6 +334,15 @@ export function sceneModel(scene, opts = {}) {
   return { ...meta, items, rel };
 }
 
+/**
+ * The hover tip's model of a scene: built once and reused until the cache feature sees a change on
+ * that scene ([declared] DP8). The panel stores what it builds; gather and api.model build fresh.
+ */
+function cachedModel(scene) {
+  const opts = { builtWithoutProvenance: true };
+  return sceneCache.get(scene.id, opts, () => sceneModel(scene, opts));
+}
+
 /** Prompt markers on a scene (token documents). */
 export function promptTokens(scene) {
   return scene.tokens.filter(t => !!markerSizeOf(t, game.actors));
@@ -344,7 +354,10 @@ export function promptTokens(scene) {
  */
 export function panelFor(tokenDoc, { rows = 12, unseenWithinFt = 60 } = {}) {
   const scene = tokenDoc.parent;
-  const model = sceneModel(scene, { builtWithoutProvenance: true });
+  // the panel always builds fresh (a door shut, an actor renamed: never a stale panel) and leaves
+  // what it built for the hover tip
+  const opts = { builtWithoutProvenance: true };
+  const model = sceneCache.put(scene.id, opts, sceneModel(scene, opts));
   const rels = panelRels(model.items, model.rel, `Token.${tokenDoc.id}`, unseenWithinFt);
   const split = panelSplit(rels, { rows, unseenWithinFt });
   const d = scene.dimensions;
@@ -358,7 +371,7 @@ export function panelFor(tokenDoc, { rows = 12, unseenWithinFt = 60 } = {}) {
 /** For the hover tooltip: how many things the marker sees (no door/wall pass: prompts-lookup-7). */
 export function seesCount(tokenDoc) {
   try {
-    const model = sceneModel(tokenDoc.parent, { builtWithoutProvenance: true });
+    const model = cachedModel(tokenDoc.parent);
     return seenCount(model.items, model.rel, `Token.${tokenDoc.id}`);
   } catch (err) {
     log.debug("seesCount", err);

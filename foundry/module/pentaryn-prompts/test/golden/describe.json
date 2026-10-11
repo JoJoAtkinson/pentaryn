@@ -473,6 +473,118 @@
     {
       "name": "setup",
       "label": "setup: double-click opens the box"
+    },
+    {
+      "name": "createToken",
+      "label": "createToken: scene-model cache"
+    },
+    {
+      "name": "updateToken",
+      "label": "updateToken: scene-model cache"
+    },
+    {
+      "name": "deleteToken",
+      "label": "deleteToken: scene-model cache"
+    },
+    {
+      "name": "createWall",
+      "label": "createWall: scene-model cache"
+    },
+    {
+      "name": "updateWall",
+      "label": "updateWall: scene-model cache"
+    },
+    {
+      "name": "deleteWall",
+      "label": "deleteWall: scene-model cache"
+    },
+    {
+      "name": "createNote",
+      "label": "createNote: scene-model cache"
+    },
+    {
+      "name": "updateNote",
+      "label": "updateNote: scene-model cache"
+    },
+    {
+      "name": "deleteNote",
+      "label": "deleteNote: scene-model cache"
+    },
+    {
+      "name": "createAmbientLight",
+      "label": "createAmbientLight: scene-model cache"
+    },
+    {
+      "name": "updateAmbientLight",
+      "label": "updateAmbientLight: scene-model cache"
+    },
+    {
+      "name": "deleteAmbientLight",
+      "label": "deleteAmbientLight: scene-model cache"
+    },
+    {
+      "name": "createTile",
+      "label": "createTile: scene-model cache"
+    },
+    {
+      "name": "updateTile",
+      "label": "updateTile: scene-model cache"
+    },
+    {
+      "name": "deleteTile",
+      "label": "deleteTile: scene-model cache"
+    },
+    {
+      "name": "createRegion",
+      "label": "createRegion: scene-model cache"
+    },
+    {
+      "name": "updateRegion",
+      "label": "updateRegion: scene-model cache"
+    },
+    {
+      "name": "deleteRegion",
+      "label": "deleteRegion: scene-model cache"
+    },
+    {
+      "name": "updateScene",
+      "label": "updateScene: scene-model cache"
+    },
+    {
+      "name": "deleteScene",
+      "label": "deleteScene: scene-model cache"
+    },
+    {
+      "name": "updateActor",
+      "label": "updateActor: scene-model cache"
+    },
+    {
+      "name": "createItem",
+      "label": "createItem: scene-model cache"
+    },
+    {
+      "name": "updateItem",
+      "label": "updateItem: scene-model cache"
+    },
+    {
+      "name": "deleteItem",
+      "label": "deleteItem: scene-model cache"
+    },
+    {
+      "name": "updateFolder",
+      "label": "updateFolder: scene-model cache"
+    },
+    {
+      "name": "updateJournalEntry",
+      "label": "updateJournalEntry: scene-model cache"
+    },
+    {
+      "name": "updateJournalEntryPage",
+      "label": "updateJournalEntryPage: scene-model cache"
+    },
+    {
+      "name": "updateSetting",
+      "label": "updateSetting: scene-model cache"
     }
   ],
   "patches": [

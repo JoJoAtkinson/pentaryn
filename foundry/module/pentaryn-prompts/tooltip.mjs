@@ -8,8 +8,8 @@ import { isPromptToken } from "./markers-adapter.mjs";
 import { PromptDialog } from "./dialog.mjs";
 import { hideTip, showTip, tipFor } from "./tip-ui.mjs";
 
-// hot: hoverToken fires per hover; the sight count is deferred a tick (seesCount builds the scene
-// model — prompts-lookup-7/-8 are the cache work)
+// hot: ModelCache — hoverToken fires per hover; the sight count is deferred a tick and reads the
+// cached scene model (prompts-lookup-8) without the door/wall pass (prompts-lookup-7)
 function onHoverToken(token, hovered) {
   if (!game.user?.isGM) return;
   if (!hovered || !isPromptToken(token.document)) { if (!hovered && tipFor() === token.id) hideTip(); return; }
