@@ -4,7 +4,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { installFoundry } from "./kit/foundry-stub.mjs";
-import { manifestOf } from "./kit/harness.mjs";
+import { manifestOf, pinJSON } from "./kit/harness.mjs";
 import { installLookupWorld } from "./fixtures/packs.mjs";
 import { MODULE } from "../lookup-core.mjs";
 import { hookRegistry } from "../lib/hooks.mjs";
@@ -13,6 +13,13 @@ import { makeLog } from "../lib/log.mjs";
 const ROOT = new URL("..", import.meta.url);
 const F = await installFoundry({ modules: [MODULE] });
 installLookupWorld(F);
+await import("../pentaryn-lookup.mjs");
+const atLoad = F.hooks.slice();
+const quiet = console.log;
+console.log = () => {};
+F.fire("ready");
+console.log = quiet;
+const api = game.modules.get(MODULE).api;
 
 /** Feature files are exactly the entry's `import * as X from "./f.mjs"` targets (blueprint D12). */
 function featureFiles() {
@@ -44,4 +51,18 @@ test("books.install registers no hook and contributes impl only (rows live in th
   assert.deepEqual(Object.keys(out.impl).sort(),
     ["monster", "monsters", "names", "onList", "packs", "page", "search", "spellList"]);
   books.uninstall();
+});
+
+test("registration manifest equals golden/hooks.json", () => {
+  pinJSON("hooks", F.hooks.slice(0, atLoad.length), import.meta.url);
+});
+
+test("only lifecycle hooks are registered at module scope; the registry holds none", () => {
+  assert.ok(atLoad.every(h => ["init", "setup", "ready"].includes(h.name)), JSON.stringify(atLoad));
+  assert.deepEqual(api.describe().hooks, []);
+});
+
+test("uninstall() leaves no hook registered by the module's registry", () => {
+  api.uninstall();
+  assert.deepEqual(api.describe().hooks, []);
 });
