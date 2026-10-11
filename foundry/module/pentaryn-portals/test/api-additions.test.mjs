@@ -85,13 +85,16 @@ test("unlink(ref, { to }): drops the entry (relative or absolute), counts the be
   let n = F.calls.length;
   const dry = await api().unlink(P.fork, { to: P.cell.uuid, dryRun: true });
   assert.deepEqual([dry.ok, dry.dryRun, dry.removed], [true, true, 1]);
-  assert.deepEqual(W.callsSince(n, ["update"]), []);
+  assert.deepEqual(W.callsSince(n, ["update", "updateEmbedded"]), []);
   const out = await api().unlink(P.fork, { to: P.cell.uuid });
   assert.deepEqual([out.ok, out.removed], [true, 1]);
-  assert.deepEqual(W.callsSince(n, ["update"]).map(c => [c.uuid, c.changes]), [[P.bFork.uuid, { "system.destinations": [P.pitGate.uuid] }]]);
+  // [declared] C59: one batched write through the region (was one update per behaviour).
+  assert.deepEqual(W.callsSince(n, ["update", "updateEmbedded"]).map(c => [c.op, c.parent, c.updates]),
+    [["updateEmbedded", P.fork.uuid, [{ _id: P.bFork.id, "system.destinations": [P.pitGate.uuid] }]]]);
+  assert.deepEqual([...P.bFork.system.destinations], [P.pitGate.uuid]);
   n = F.calls.length;
   assert.equal((await api().unlink(P.passage, { to: P.cell })).removed, 0, "does not lead there: nothing to drop");
-  assert.deepEqual(W.callsSince(n, ["update"]), []);
+  assert.deepEqual(W.callsSince(n, ["update", "updateEmbedded"]), []);
 });
 
 test("badges(): what is drawn on this client, plain JSON", async () => {
@@ -120,4 +123,16 @@ test("D-P5: teleportParty answers { moved, cancelled }; a cancelled confirm → 
   F.become({ userId: P1 });
   assert.equal(await api().teleportParty(to, { confirm: false }), undefined, "a player: nothing, as before");
   F.become({ userId: GM });
+});
+
+test("[declared] C59: unlink from a region with two behaviours leading there is one write for both", async () => {
+  const P = places(W, "U59");
+  const second = W.behavior(P.fork, { id: "BhvForkU59b", destinations: [P.cell.uuid, P.stair.uuid] });
+  const n = F.calls.length;
+  const out = await api().unlink(P.fork, { to: P.cell.uuid });
+  assert.deepEqual([out.ok, out.removed], [true, 2]);
+  const writes = W.callsSince(n, ["update", "updateEmbedded"]);
+  assert.deepEqual(writes.map(c => [c.op, c.parent, c.updates.map(u => u._id)]), [["updateEmbedded", P.fork.uuid, [P.bFork.id, second.id]]]);
+  assert.deepEqual([...second.system.destinations], [P.stair.uuid]);
+  assert.deepEqual(W.callsSince(n, ["Hooks.callAll"]).map(x => x.name), ["updateRegionBehavior", "updateRegionBehavior"], "hooks still fire per behaviour");
 });

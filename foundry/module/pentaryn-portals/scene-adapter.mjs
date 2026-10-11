@@ -327,10 +327,12 @@ export function behaviorsLeadingTo(from, dest) {
  * behavior. → how many behaviors changed.
  */
 export async function unlinkRegion(from, dest) {
-  let changed = 0;
+  const updates = [];
   for (const b of teleportBehaviors(from)) {
     const next = withoutDestination(b.system.destinations, dest.uuid, toAbsolute(b));
-    if (next.length !== b.system.destinations.size) { await b.update({ "system.destinations": next }); changed++; }
+    if (next.length !== b.system.destinations.size) updates.push({ _id: b.id, "system.destinations": next });
   }
-  return changed;
+  // One batched write for every behaviour that changes (C59).
+  if (updates.length) await from.updateEmbeddedDocuments("RegionBehavior", updates);
+  return updates.length;
 }

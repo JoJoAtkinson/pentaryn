@@ -171,7 +171,9 @@ test("unlink: removes the destination (relative or absolute entry) from every be
   const c = app.element.querySelector(".window-content");
   let n = F.calls.length;
   await c.querySelector(`.ppt-editcard[data-uuid="${Q.cell.uuid}"] [data-act="unlink"]`).click();
-  assert.deepEqual(W.callsSince(n, ["update"]).map(x => [x.uuid, x.changes]), [[Q.bFork.uuid, { "system.destinations": [Q.pitGate.uuid] }]]);
+  // [declared] C59: one batched write through the region (was one update per behaviour).
+  assert.deepEqual(W.callsSince(n, ["update", "updateEmbedded"]).map(x => [x.op, x.parent, x.updates]),
+    [["updateEmbedded", Q.fork.uuid, [{ _id: Q.bFork.id, "system.destinations": [Q.pitGate.uuid] }]]]);
   assert.equal(W.callsSince(n, ["app.render"]).length, 1);
   await app.close();
 });
