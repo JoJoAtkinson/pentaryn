@@ -1,0 +1,30 @@
+[
+  {
+    "kind": "once",
+    "name": "init"
+  },
+  {
+    "kind": "on",
+    "name": "getSceneControlButtons"
+  },
+  {
+    "kind": "on",
+    "name": "renderSceneControls"
+  },
+  {
+    "kind": "on",
+    "name": "activateCanvasLayer"
+  },
+  {
+    "kind": "on",
+    "name": "canvasReady"
+  },
+  {
+    "kind": "on",
+    "name": "canvasTearDown"
+  },
+  {
+    "kind": "once",
+    "name": "ready"
+  }
+]

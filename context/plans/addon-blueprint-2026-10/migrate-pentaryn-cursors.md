@@ -192,6 +192,48 @@ empty at review.
    **Checkpoint:** commit the diff (tests, goldens, `lib/`, `test/kit/`, the additive core
    constants) as the checkpoint (review happens at merge).
 
+#### Step 1 record (2026-10-11, wave 1)
+
+Step 0: `wait.json` null; `git diff ee505c2..HEAD` empty for the module (no drift); live score 57.8 %
+(26/45, scored as full). Baseline: `node test/run.mjs` 84 passed, nothing red, nothing fixed.
+
+What the checkpoint holds, and where it departs from the recipe above (each departure keeps a later
+step from having to touch a frozen test):
+
+| Item | As built |
+|---|---|
+| Vendor | `vendor.py sync cursors --tier small --kit settings,api` → errors, log, hooks, publish, resolve, settings, api; `kit.lock.json` `"tier": "small"`. Its own commit before the checkpoint. |
+| `core.test.mjs` | Every old check through `checkJSON`, plus `VERSION`/identity constants and the live golden's `keyForTable`. **"source exists" accepts `assets/src/<src>` or `scripts/foundry/cursors/src/<src>`**, so step 7's move stays green without editing the test; step 7 still adds its own `--check-sources` pytest. |
+| `i18n.test.mjs` | Compares **flattened** keys, so today's flat file and step 9's nested file both pass; both strings pinned verbatim. It does not import `settings.mjs` (does not exist yet) and does not assert one nested root (C34 fails today; step 9). |
+| `glue.test.mjs` | Cases (a)–(h) and (j), plus: tool → key through `renderSceneControls` / `activateCanvasLayer`, `apply()`'s two-part short-circuit (same key **and** dataset), the spell-area preview listeners (aoe and back, GM region drag is not aoe), `canvas.ready` false, no board element, the `canvas.app.view` fallback, canvasReady's tick-later resync, a new preview container per draw. Legacy API keys are a **floor** (`in`), never an exact list; `module.api` is not pinned (SF2) — both so step 6 (C-1) passes unchanged. |
+| `golden/hooks.json` | `hookSequence(F.hooks)` — **consecutive identical rows collapse.** Step 5 as written registers two `once ready` listeners (board's attach, then the entry's publish) where today there is one; collapsed, the golden is the same seven rows before and after. A third `once ready` placed anywhere but next to the other would still show. |
+| `publish.test.mjs` (new) | Case (i): absent / extensible `{x:1}` / frozen `{x:1}`, each a fresh stub plus a `?order=N` copy of the entry, checked after ready **plus a tick**. |
+| `live.test.mjs` (new) | SF8 fidelity: `CSS.supports` true, the five tool switches driven through the wrapped tool `onChange` (as `ui.controls.activate` does live) read back exactly `.state/live-goldens/before/cursors.json` `tools` (copied to `test/fixtures/live-before.json`); the image-set probe runs once with the live probe string. |
+| `imageset.test.mjs` (new) | Coverage gap: a throwing `CSS.supports` → plain `url()` values, probed once. |
+| Fixtures | `test/fixtures/board.mjs`: #board (`CANVAS`, `style.cursor` `var(--cursor-default)`), `events.setCursor` recording `currentCursor` at the call, preview container, recording `MutationObserver`. |
+| Mutation spot-check | Eight one-line mutations of `cursors.mjs` (drop the `currentCursor = null`, resync now instead of a tick later, wrap toggle/button tools, drop the `WRAPPED` check, drop `childRemoved`, change a warn text, `scope: "world"`, drop the `enabled()` gate in resync) each turned the suite red. |
+
+Quirks pinned as-is (documented behaviour, not bugs; no audit id, no KNOWN row):
+- a `setCursor` that throws inside resync leaves `events.currentCursor` null (`resync failed` warned);
+- with the setting off, a blanked `#board` cursor is not repaired (resync is gated on `enabled()`);
+- `refresh()` with no board element returns null and clears `current()` but leaves the old board's vars;
+- a throw inside the five `Hooks.on` handlers is Foundry's (`Error thrown in hooked function`), never
+  `pentaryn-cursors | …` — the reason step 5 registers with `guard: false`.
+
+**Known-bug todos: none.** Findings -30, -31, -32 and -35 are hardening, structure, an additive API and
+docs; none is a defect in today's behaviour, and this guide has no `KNOWN:` row.
+
+Coverage (gap finder only; `node --test --experimental-test-coverage` over the inner `test/**/*.test.mjs`):
+
+| File | Before (line / branch / funcs) | After |
+|---|---|---|
+| `cursors-core.mjs` | 100 / 96.77 / 100 | 100 / 100 / 100 |
+| `cursors.mjs` | not loaded by any test (0) | 100 / 97.65 / 100 (glue + imageset) |
+
+The two branches left are `cursors.mjs:151` (extensible vs frozen root), which `publish.test.mjs`
+covers. Node 26 merges coverage of the `?order=N` copies badly, so a whole-suite run prints a lower,
+order-dependent figure for `cursors.mjs`; measure per file.
+
 ### Step 2 — pure helpers for the internals probe and status (additive) · absorbs: the pure halves of -30, -32
 
 Add to `cursors-core.mjs`:
@@ -245,7 +287,9 @@ matches the other guides.
 in the old order, and the entry's `once init` and `once ready` go around them. Today `once init` is
 first, so in the entry body call `Hooks.once("init", onInit)` **before** `install()`. Today the
 publish runs inside `once ready`, which is last, so register `Hooks.once("ready", onReady)` **after**
-`install()`. `golden/hooks.json` must not change. If it does, the step is wrong.
+`install()`. `golden/hooks.json` must not change. If it does, the step is wrong. (The golden collapses
+consecutive identical rows — Step 1 record — so board's `once ready` directly followed by the
+entry's `once ready` pins as the one `once ready` of today. Keep them adjacent and last.)
 
 Tests before: all of glue (a)–(j) and `golden/hooks.json`.
 

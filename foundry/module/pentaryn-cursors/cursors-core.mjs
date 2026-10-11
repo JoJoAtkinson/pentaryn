@@ -5,6 +5,14 @@
 // build script rasterises from it and writes cursors.css; the module and README read it.
 
 export const MODULE = "pentaryn-cursors";
+export const SHORT = "cursors";
+export const NS = "cursors";
+export const VERSION = "0.2.0";
+export const CONTRACT = "pentaryn-cursors/api@1";
+export const I18N = "PENTARYN_CURSORS";
+export const CSS = "pcur-";
+/** Hooks this module emits: none. */
+export const HOOKS = Object.freeze({});
 
 /** Drawing tools that place a shape. Drawings `select` is not one of them. */
 export const DRAW_TOOLS = Object.freeze(["rect", "ellipse", "polygon", "freehand", "text"]);

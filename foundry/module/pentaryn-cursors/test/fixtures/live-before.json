@@ -1,0 +1,93 @@
+{
+  "_source": ".state/live-goldens/before/cursors.json (2026-10-11, before; scripts/foundry/live-goldens/cursors.js on the GM tab, Chrome)",
+  "env": {
+    "keys": [
+      "target",
+      "ruler",
+      "aoe",
+      "note",
+      "draw"
+    ],
+    "boardId": "board",
+    "boardTag": "CANVAS",
+    "route": "/modules/pentaryn-cursors",
+    "imageSetSupported": true,
+    "rootVarDefault": "default",
+    "enabled": true
+  },
+  "tools": [
+    {
+      "control": "tokens",
+      "tool": "select",
+      "current": null,
+      "dataset": null,
+      "styleCursor": "var(--cursor-default)",
+      "vars": {
+        "--cursor-default": null,
+        "--cursor-default-down": null,
+        "--cursor-pointer": null,
+        "--cursor-pointer-down": null
+      }
+    },
+    {
+      "control": "tokens",
+      "tool": "target",
+      "current": "target",
+      "dataset": "target",
+      "styleCursor": "var(--cursor-default)",
+      "vars": {
+        "--cursor-default": "image-set(url(\"/modules/pentaryn-cursors/assets/cursors/target.png\") 1x, url(\"/modules/pentaryn-cursors/assets/cursors/target@2x.png\") 2x) 16 16, crosshair",
+        "--cursor-default-down": "image-set(url(\"/modules/pentaryn-cursors/assets/cursors/target.png\") 1x, url(\"/modules/pentaryn-cursors/assets/cursors/target@2x.png\") 2x) 16 16, crosshair",
+        "--cursor-pointer": "image-set(url(\"/modules/pentaryn-cursors/assets/cursors/target-pointer.png\") 1x, url(\"/modules/pentaryn-cursors/assets/cursors/target-pointer@2x.png\") 2x) 16 16, crosshair",
+        "--cursor-pointer-down": "image-set(url(\"/modules/pentaryn-cursors/assets/cursors/target-pointer.png\") 1x, url(\"/modules/pentaryn-cursors/assets/cursors/target-pointer@2x.png\") 2x) 16 16, crosshair"
+      }
+    },
+    {
+      "control": "tokens",
+      "tool": "ruler",
+      "current": "ruler",
+      "dataset": "ruler",
+      "styleCursor": "var(--cursor-default)",
+      "vars": {
+        "--cursor-default": "image-set(url(\"/modules/pentaryn-cursors/assets/cursors/ruler.png\") 1x, url(\"/modules/pentaryn-cursors/assets/cursors/ruler@2x.png\") 2x) 25 6, cell",
+        "--cursor-default-down": "image-set(url(\"/modules/pentaryn-cursors/assets/cursors/ruler.png\") 1x, url(\"/modules/pentaryn-cursors/assets/cursors/ruler@2x.png\") 2x) 25 6, cell",
+        "--cursor-pointer": "image-set(url(\"/modules/pentaryn-cursors/assets/cursors/ruler-pointer.png\") 1x, url(\"/modules/pentaryn-cursors/assets/cursors/ruler-pointer@2x.png\") 2x) 25 6, cell",
+        "--cursor-pointer-down": "image-set(url(\"/modules/pentaryn-cursors/assets/cursors/ruler-pointer.png\") 1x, url(\"/modules/pentaryn-cursors/assets/cursors/ruler-pointer@2x.png\") 2x) 25 6, cell"
+      }
+    },
+    {
+      "control": "notes",
+      "tool": "journal",
+      "current": "note",
+      "dataset": "note",
+      "styleCursor": "var(--cursor-default)",
+      "vars": {
+        "--cursor-default": "image-set(url(\"/modules/pentaryn-cursors/assets/cursors/note.png\") 1x, url(\"/modules/pentaryn-cursors/assets/cursors/note@2x.png\") 2x) 16 28, copy",
+        "--cursor-default-down": "image-set(url(\"/modules/pentaryn-cursors/assets/cursors/note.png\") 1x, url(\"/modules/pentaryn-cursors/assets/cursors/note@2x.png\") 2x) 16 28, copy",
+        "--cursor-pointer": "image-set(url(\"/modules/pentaryn-cursors/assets/cursors/note-pointer.png\") 1x, url(\"/modules/pentaryn-cursors/assets/cursors/note-pointer@2x.png\") 2x) 16 28, copy",
+        "--cursor-pointer-down": "image-set(url(\"/modules/pentaryn-cursors/assets/cursors/note-pointer.png\") 1x, url(\"/modules/pentaryn-cursors/assets/cursors/note-pointer@2x.png\") 2x) 16 28, copy"
+      }
+    },
+    {
+      "control": "drawings",
+      "tool": "rect",
+      "current": "draw",
+      "dataset": "draw",
+      "styleCursor": "var(--cursor-default)",
+      "vars": {
+        "--cursor-default": "image-set(url(\"/modules/pentaryn-cursors/assets/cursors/draw.png\") 1x, url(\"/modules/pentaryn-cursors/assets/cursors/draw@2x.png\") 2x) 3 28, crosshair",
+        "--cursor-default-down": "image-set(url(\"/modules/pentaryn-cursors/assets/cursors/draw.png\") 1x, url(\"/modules/pentaryn-cursors/assets/cursors/draw@2x.png\") 2x) 3 28, crosshair",
+        "--cursor-pointer": "image-set(url(\"/modules/pentaryn-cursors/assets/cursors/draw-pointer.png\") 1x, url(\"/modules/pentaryn-cursors/assets/cursors/draw-pointer@2x.png\") 2x) 3 28, crosshair",
+        "--cursor-pointer-down": "image-set(url(\"/modules/pentaryn-cursors/assets/cursors/draw-pointer.png\") 1x, url(\"/modules/pentaryn-cursors/assets/cursors/draw-pointer@2x.png\") 2x) 3 28, crosshair"
+      }
+    }
+  ],
+  "keyForTable": [
+    null,
+    "target",
+    "ruler",
+    "note",
+    "draw",
+    "aoe"
+  ]
+}
