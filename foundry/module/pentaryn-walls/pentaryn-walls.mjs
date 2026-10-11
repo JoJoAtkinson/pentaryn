@@ -12,11 +12,10 @@
  * See context/plans/foundry-wall-autocomplete.md.
  */
 
-import {runEngine, FLAG_SCOPE} from "./wall-engine.mjs";
-import {get as getBackend, available} from "./backends.mjs";
+import {
+  MODULE, runEngine, FLAG_SCOPE, get as getBackend, available, readyLine, reportHtml, undoHtml, exclusive
+} from "./walls-core.mjs";
 import {ready as wasmReady} from "./backend-wasm.mjs";  // registers "wasm"; loads async
-
-const MODULE_ID = "pentaryn-walls";
 
 function targetScene(sceneId) {
   const scene = sceneId ? game.scenes.get(sceneId) : canvas?.scene;
@@ -38,7 +37,7 @@ function readWalls(scene) {
  * is absent — a missing or unloadable .wasm must degrade to slower, never to broken.
  */
 function pickBackend(requested) {
-  const want = requested ?? game.settings.get(MODULE_ID, "backend");
+  const want = requested ?? game.settings.get(MODULE, "backend");
   if (want !== "auto") {
     const b = getBackend(want);
     if (b?.available()) return b;
@@ -67,37 +66,13 @@ function evaluate(scene, opts = {}) {
 /* -------------------------------------------- */
 
 function report(scene, result, {committed, backend, ms}) {
-  const {report: r, refusals, lints} = result;
-  const lines = [];
-  lines.push(`<p><strong>Wall autocomplete — ${scene.name}</strong></p>`);
-  lines.push(`<p>${committed ? "Committed" : "<em>Preview — nothing was written.</em>"} ` +
-             `${r.created} wall${r.created === 1 ? "" : "s"} created, ${r.moved} moved, ` +
-             `${r.iterations} pass${r.iterations === 1 ? "" : "es"} in ${Math.round(ms)} ms ` +
-             `<span style="opacity:.6">(${backend})</span>.</p>`);
-
-  const closed = r.components.filter(c => c.closed).length;
-  lines.push(`<p>${r.components.length} component${r.components.length === 1 ? "" : "s"}: ` +
-             `${closed} closed (inert), ${r.components.length - closed} still open.</p>`);
-
-  if (lints.length) {
-    lines.push(`<p><strong>Lint</strong></p><ul>` +
-      lints.map(l => `<li><code>${l.code}</code> ${l.msg}</li>`).join("") + `</ul>`);
-  }
-  if (refusals.length) {
-    lines.push(`<p><strong>Refused ${refusals.length} — finish these by hand</strong></p><ul>` +
-      refusals.map(x => `<li>(${x.at[0]}, ${x.at[1]}) &mdash; ${x.why}</li>`).join("") + `</ul>`);
-  }
-  // The tolerances are echoed every run so the one fuzzy part of the engine stays visible.
-  lines.push(`<p style="opacity:.7;font-size:.9em">grid ${r.config.gridSize}px &middot; ` +
-             `weld ${r.config.weldEps}px &middot; collinear ${r.config.collEps}px &middot; ` +
-             `pin ${r.config.pinEps}px &middot; gap/corner/reach ${r.config.gapMax}/${r.config.cornerMax}/${r.config.extMax} squares</p>`);
-
+  const {refusals} = result;
   ChatMessage.create({
-    content: lines.join(""),
+    content: reportHtml(scene.name, result, {committed, backend, ms}),
     whisper: ChatMessage.getWhisperRecipients("GM").map(u => u.id)
   });
 
-  console.group(`${MODULE_ID} — ${scene.name}`);
+  console.group(`${MODULE} — ${scene.name}`);
   console.table(result.log.map(l => ({pass: l.iter, rule: l.rule, walls: JSON.stringify(l.walls)})));
   if (refusals.length) console.table(refusals.map(x => ({at: `${x.at[0]},${x.at[1]}`, wall: x.wall, why: x.why})));
   console.groupEnd();
@@ -166,12 +141,7 @@ async function undo({sceneId, all = false} = {}) {
 
   const remaining = new Set(stamped.map(w => w.getFlag(FLAG_SCOPE, "run"))).size - 1;
   ChatMessage.create({
-    content: `<p><strong>Wall autocomplete — undo</strong></p>` +
-      `<p>Removed ${generated.length} generated wall${generated.length === 1 ? "" : "s"} and ` +
-      `restored ${restores.length} trimmed wall${restores.length === 1 ? "" : "s"} ` +
-      `${all ? "(everything)" : `from the run at ${latest}`}.</p>` +
-      (!all && remaining > 0
-        ? `<p style="opacity:.7">${remaining} earlier run${remaining === 1 ? "" : "s"} still applied — undo again to peel back further.</p>` : ""),
+    content: undoHtml({generated: generated.length, restored: restores.length, all, latest, remaining}),
     whisper: ChatMessage.getWhisperRecipients("GM").map(u => u.id)
   });
   ui.notifications.info(`Undid ${generated.length} created, ${restores.length} restored.`);
@@ -204,7 +174,7 @@ async function makeMacro(action = "preview", slot) {
 // Keybindings MUST be registered during `init` — ClientKeybindings#register throws
 // afterwards (client/helpers/interaction/client-keybindings.mjs:156).
 Hooks.once("init", () => {
-  game.settings.register(MODULE_ID, "backend", {
+  game.settings.register(MODULE, "backend", {
     name: "Engine backend",
     hint: "Automatic uses the compiled (WASM) engine when it loads, falling back to JavaScript. " +
           "Both produce identical geometry — verified against the same 44 fixtures — so this " +
@@ -215,18 +185,20 @@ Hooks.once("init", () => {
 
   // One run at a time. On a large scene a run takes a moment, and a held or double-tapped
   // key would otherwise start a second pass over geometry the first is still committing.
-  let busy = false;
-  const guard = fn => () => {
-    if (busy) { ui.notifications.warn("Wall autocomplete is already running."); return true; }
-    busy = true;
-    Promise.resolve(fn()).catch(err => {
-      console.error(`${MODULE_ID} |`, err);
-      ui.notifications.error(`Wall autocomplete: ${err.message}`, {permanent: true});
-    }).finally(() => { busy = false; });
-    return true;
+  const lock = {busy: false};
+  const onBusy = () => ui.notifications.warn("Wall autocomplete is already running.");
+  const guard = fn => {
+    const once = exclusive(fn, {onBusy, lock});
+    return () => {
+      once()?.catch(err => {
+        console.error(`${MODULE} |`, err);
+        ui.notifications.error(`Wall autocomplete: ${err.message}`, {permanent: true});
+      });
+      return true;
+    };
   };
 
-  game.keybindings.register(MODULE_ID, "run", {
+  game.keybindings.register(MODULE, "run", {
     name: "Wall autocomplete: run",
     hint: "Complete the walls on the current scene. Reversible — undo removes exactly this run.",
     editable: [{key: "KeyW", modifiers: ["Alt"]}],
@@ -235,7 +207,7 @@ Hooks.once("init", () => {
   });
 
   // Bound now that undo is run-scoped and restores trimmed walls rather than deleting them.
-  game.keybindings.register(MODULE_ID, "undo", {
+  game.keybindings.register(MODULE, "undo", {
     name: "Wall autocomplete: undo last run",
     hint: "Remove the walls the last run created and restore any it trimmed. Press again to peel back the run before it.",
     editable: [{key: "KeyZ", modifiers: ["Alt"]}],
@@ -243,7 +215,7 @@ Hooks.once("init", () => {
     onDown: guard(undo)
   });
 
-  game.keybindings.register(MODULE_ID, "preview", {
+  game.keybindings.register(MODULE, "preview", {
     name: "Wall autocomplete: preview",
     hint: "Report what would be built without writing anything.",
     editable: [{key: "KeyW", modifiers: ["Alt", "Shift"]}],
@@ -268,7 +240,5 @@ Hooks.once("ready", async () => {
   if (!game.user.isGM) return;
   await wasmReady;          // settled by now in practice; awaited so the log line is accurate
   publishAPI();
-  console.log(`${MODULE_ID} | ready — backends: ${available().map(b => b.name).join(", ")}. ` +
-              `Alt+W run, Alt+Z undo, Alt+Shift+W preview. ` +
-              `API: game.pentaryn.walls.preview() / .run() / .undo() / .makeMacro()`);
+  console.log(`${MODULE} | ${readyLine(available().map(b => b.name))}`);
 });
