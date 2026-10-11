@@ -378,5 +378,7 @@ MODULES = {
     ),
     # The actor pipeline stages this one, not module-sync, so it is not in the CLI's
     # module list — but the static gates are free and it is real code, so it gets them.
-    "importer": ModuleSpec("pentaryn-importer", check=(*_STATIC, *_BLUEPRINT)),
+    # node-test: test/run.mjs (the blueprint's fixed body) runs the characterisation suites
+    # (importer guide step 1.11, items-journal-2; C39).
+    "importer": ModuleSpec("pentaryn-importer", check=(*_STATIC, "node-test", *_BLUEPRINT)),
 }
