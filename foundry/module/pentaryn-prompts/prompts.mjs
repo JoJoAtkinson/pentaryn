@@ -32,6 +32,8 @@ import { replace, replaceMany } from "./replace.mjs";
 import { registerSettings, registerKeybindings, keybindingRows, setting, manifests } from "./settings.mjs";
 import { makeLog } from "./lib/log.mjs";
 import { hookRegistry } from "./lib/hooks.mjs";
+import { registerQueries } from "./lib/queries.mjs";
+import { MANIFEST } from "./api-manifest.mjs";
 import * as typeahead from "./typeahead.mjs";
 import * as markerGuard from "./marker-guard.mjs";
 import * as placement from "./placement.mjs";
@@ -72,36 +74,13 @@ function uninstall() {
   reg.offAll();
 }
 
-/* ── queries (GM-guarded on the sender, plan §10) ───────────────────────── */
-
-/**
- * Wrap a handler so it runs only for a GM. Core's query dispatch passes `{user}` (the sender);
- * the bridge's own socket path calls handlers with no context, from the GM's browser itself.
- */
-function guarded(fn) {
-  return async (data, qctx) => {
-    const sender = qctx?.user ?? null;
-    if (sender && !sender.isGM) throw codedError("NOT_GM", `${sender.name} is not a GM`);
-    if (!game.user?.isGM) throw codedError("NOT_GM", "this client is not a GM");
-    return fn(data ?? {});
-  };
-}
-
-function registerQueries() {
-  CONFIG.queries[`${MODULE}.list`] = guarded(() => list());
-  // the bridge turns base64 crops into MCP image blocks; direct API calls get file paths instead
-  CONFIG.queries[`${MODULE}.gather`] = guarded(data => gather({ cropsAs: "base64", ...data }));
-  CONFIG.queries[`${MODULE}.crops`] = guarded(data => crops({ cropsAs: "base64", ...data }));
-  CONFIG.queries[`${MODULE}.replace`] = guarded(data => replaceMany(data));
-  CONFIG.queries[`${MODULE}.show`] = guarded(data => show(data));
-}
-
 /* ── lifecycle ──────────────────────────────────────────────────────────── */
 
 function onInit() {
   registerSettings();
   registerKeybindings(keybindingRows({ place: placement.onPlaceKey, edit: placement.onEditKey }), { log });
-  registerQueries();
+  // GM-guarded on the sender and the receiver (kit guarded); a query before the publish is NOT_READY
+  registerQueries(MANIFEST, () => ctx.api, { log });
 }
 
 async function onReady() {
@@ -133,6 +112,7 @@ async function onReady() {
       }),
       version: VERSION
     };
+    ctx.api = api;
     game.pentaryn ??= {};
     game.pentaryn.prompts = api;
   }, 0);

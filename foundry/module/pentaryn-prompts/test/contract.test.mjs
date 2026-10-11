@@ -5,16 +5,16 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { contractDrift, forkQueries, forkSource } from "./kit/harness.mjs";
 import { MODULE, GATHER_CHARS } from "../geometry-core.mjs";
+import { MANIFEST } from "../api-manifest.mjs";
+import { queryNameOf } from "../lib/queries.mjs";
 
 const TOOL = "packages/mcp-server/src/fork/tools/prompt-markers.ts";
 
-/** The queries this module registers (prompts.mjs `CONFIG.queries[\`${MODULE}.x\`] = …`), until describe() exists. */
+/** The queries this module registers: the manifest's query rows (kit registerQueries, guide step 13). */
 function registeredQueries() {
-  const src = readFileSync(new URL("../prompts.mjs", import.meta.url), "utf8");
-  return [...src.matchAll(/CONFIG\.queries\[`\$\{MODULE\}\.([A-Za-z]+)`\]\s*=/g)].map(m => `${MODULE}.${m[1]}`).sort();
+  return MANIFEST.rows.filter(r => r.query).map(r => queryNameOf(MANIFEST, r)).sort();
 }
 
 test("every query the fork sends is registered by the module", t => {
