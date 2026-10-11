@@ -6,14 +6,14 @@ import assert from "node:assert/strict";
 import { readJSON } from "./kit/harness.mjs";
 
 const { ghostBack, ghostBackKey, POLICIES } = core;
-const BACK = "PENTARYN_MOVEMENT.notify.back.";
+const { NOTIFY_BACK: BACK } = core;
 
 test("finding -42's table", () => {
   const rows = [
-    [{ cleared: "combat", policy: "exploration", combatActive: false, wish: false }, `${BACK}combat`],
-    [{ cleared: "combat", policy: "always", combatActive: true, wish: false }, `${BACK}off`],
-    [{ cleared: "off", policy: "always", combatActive: true, wish: false }, `${BACK}off`],
-    [{ cleared: "off", policy: "exploration", combatActive: false, wish: false }, `${BACK}off`],
+    [{ cleared: "combat", policy: "exploration", combatActive: false, wish: false }, BACK.combat],
+    [{ cleared: "combat", policy: "always", combatActive: true, wish: false }, BACK.off],
+    [{ cleared: "off", policy: "always", combatActive: true, wish: false }, BACK.off],
+    [{ cleared: "off", policy: "exploration", combatActive: false, wish: false }, BACK.off],
     [{ cleared: "off", policy: "off", combatActive: false, wish: false }, null],
     [{ cleared: null, policy: "always", combatActive: false, wish: false }, null],
     [{ cleared: "combat", policy: "always", combatActive: false, wish: true }, null],
@@ -31,7 +31,8 @@ test("ghostBackKey is non-null exactly when ghostBack is true, for every known r
   assert.equal(ghostBackKey(), null);
 });
 
-test("every key it returns exists in lang/en.json", () => {
+test("its keys are the literal NOTIFY_BACK keys, and each exists in lang/en.json", () => {
+  assert.deepEqual(Object.keys(BACK), ["combat", "off"]);
   const lang = readJSON(new URL("../lang/en.json", import.meta.url));
   for (const key of Object.values(core.NOTIFY_BACK)) {
     const v = key.split(".").reduce((o, k) => o?.[k], lang);
