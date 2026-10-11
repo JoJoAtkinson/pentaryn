@@ -10,6 +10,7 @@
  * core.test never changes.
  */
 import * as legacy from "./legacy-pings.mjs";
+import * as core from "../../pings-core.mjs";
 
 /** A scene that reproduces `offset` through legacy imageOffset: valid while offset is a multiple of g. */
 function sceneFor({ offset, gridSize } = {}) {
@@ -33,4 +34,4 @@ export const oracle = {
   recentOf: (list, ...n) => legacy.recent(list, ...n),
 };
 
-export const IMPLS = [["oracle", oracle]];
+export const IMPLS = [["oracle", oracle], ["core", core]];

@@ -40,10 +40,12 @@
  * attempting the write would throw on every ping.
  */
 
-const MODULE = "pentaryn-pings";
+import {
+  DEDUPE_MS, FLUSH_MS, MODULE, appendCapped, capLimit, decorate as decorateRecord, imageOffset, isDuplicate, recentOf,
+} from "./pings-core.mjs";
+
 const LOG = "log";
 const MAX = "max";
-const DEDUPE_MS = 400;
 
 /** In-memory mirror, so a burst of pings costs one database write, not five. */
 let buffer = null;
@@ -62,8 +64,7 @@ function readSetting() {
 }
 
 function cap() {
-  const n = Number(game.settings.get(MODULE, MAX));
-  return Number.isFinite(n) && n > 0 ? Math.min(n, 500) : 50;
+  return capLimit(game.settings.get(MODULE, MAX));
 }
 
 function scheduleFlush() {
@@ -76,7 +77,7 @@ function scheduleFlush() {
     } catch (err) {
       console.warn(`${MODULE} | could not persist the log`, err);
     }
-  }, 250);
+  }, FLUSH_MS);
 }
 
 /**
@@ -95,20 +96,10 @@ function record(userId, sceneId, x, y) {
   const t = nowMs();
 
   // de-dupe: the same ping can arrive via both capture paths
-  const recent = buffer[buffer.length - 1];
-  if (
-    recent &&
-    recent.userId === userId &&
-    recent.sceneId === sceneId &&
-    recent.x === px &&
-    recent.y === py &&
-    t - recent.t < DEDUPE_MS
-  ) {
-    return;
-  }
+  if (isDuplicate(buffer[buffer.length - 1], { userId, sceneId, x: px, y: py }, t, DEDUPE_MS)) return;
 
   const scene = game.scenes.get(sceneId);
-  buffer.push({
+  const rec = {
     t,
     userId,
     userName: game.users.get(userId)?.name ?? userId,
@@ -116,45 +107,25 @@ function record(userId, sceneId, x, y) {
     sceneName: scene?.name ?? null,
     x: px,
     y: py
-  });
-
-  const limit = cap();
-  if (buffer.length > limit) buffer = buffer.slice(-limit);
+  };
+  buffer = appendCapped(buffer, rec, cap());
 
   scheduleFlush();
 }
 
-/**
- * The scene padding offset — canvas coordinates minus this gives a pixel offset
- * into the background image. Foundry rounds the padding up to a whole grid
- * square, which is why this is not simply `width * padding`.
- */
-function imageOffset(scene) {
-  if (!scene) return { x: 0, y: 0 };
-  const g = scene.grid?.size ?? 100;
+/** The plain scene fields core's imageOffset/decorate need; an unknown scene → no offset, grid 100. */
+function sceneInfo(sceneId) {
+  const scene = game.scenes.get(sceneId);
+  const gridSize = scene?.grid?.size;
   return {
-    x: Math.ceil((scene.width * scene.padding) / g) * g,
-    y: Math.ceil((scene.height * scene.padding) / g) * g
+    offset: imageOffset(scene ? { width: scene.width, height: scene.height, padding: scene.padding, gridSize } : null),
+    gridSize,
   };
 }
 
 function decorate(rec) {
   if (!rec) return null;
-  const scene = game.scenes.get(rec.sceneId);
-  const off = imageOffset(scene);
-  const g = scene?.grid?.size ?? 100;
-  return {
-    ...rec,
-    canvas: { x: rec.x, y: rec.y },
-    image: { x: rec.x - off.x, y: rec.y - off.y },
-    gridSquare: {
-      i: Math.floor((rec.x - off.x) / g),
-      j: Math.floor((rec.y - off.y) / g)
-    },
-    /** Top-left of the grid square, i.e. what a snapped token's x/y would be. */
-    snapped: { x: Math.floor(rec.x / g) * g, y: Math.floor(rec.y / g) * g },
-    age: `${Math.round((nowMs() - rec.t) / 1000)}s ago`
-  };
+  return decorateRecord(rec, sceneInfo(rec.sceneId), nowMs());
 }
 
 function patchControlsLayer() {
@@ -220,7 +191,7 @@ Hooks.once("ready", () => {
 
   const api = {
     last: () => decorate(readSetting().at(-1)),
-    recent: (n = 10) => readSetting().slice(-n).reverse().map(decorate),
+    recent: (n = 10) => recentOf(readSetting(), n).map(decorate),
     all: () => readSetting().map(decorate),
     clear: async () => {
       buffer = [];
