@@ -340,3 +340,68 @@ def test_no_loop_bound_object_outlives_its_call():
     shared = [v for v in vars(dnd_roller).values()
               if isinstance(v, (asyncio.Lock, httpx.AsyncClient))]
     assert shared == []
+
+
+# ── dnd-roller-flock: two server processes share one cache file ──
+# Every Claude session runs its own dnd-scripts server, and each loads quant_numbers.bin at
+# import. _draw_lock is per process, so without a file lock both processes drew the same
+# cached numbers and each rewrote the file from its own copy. Two real processes here, both
+# loading the same 100-number cache at import (HOME points at tmp), released together, each
+# drawing 50 d100s; no fetch can happen (both fetchers refuse).
+_TWO_PROCESSES = r"""
+import json, sys, time
+from pathlib import Path
+sys.path.insert(0, sys.argv[1])
+tmp, me = Path(sys.argv[2]), sys.argv[3]
+from scripts import dnd_roller as d       # loads $HOME/.cache/dnd_roller/quant_numbers.bin
+assert d._CACHE_FILE == tmp / ".cache" / "dnd_roller" / "quant_numbers.bin", d._CACHE_FILE
+assert len(d._number_cache) == 100, len(d._number_cache)
+
+async def no_fetch(count=1024):
+    raise RuntimeError("quantumnumbers must not be reached")
+
+def no_fallback(count):
+    raise RuntimeError("random.org must not be reached")
+
+d._fetch_from_quantumnumbers = no_fetch
+d._fetch_from_random_org_sync = no_fallback
+(tmp / f"ready-{me}").touch()
+while not (tmp / "go").exists():
+    time.sleep(0.005)
+rolls = []
+for _ in range(5):
+    rolls += json.loads(d.roll_dice(10, 100))["rolls"]
+print(json.dumps(rolls))
+"""
+
+
+def test_two_processes_never_draw_the_same_cached_number(tmp_path):
+    import os
+    import struct
+    import subprocess
+    import sys
+    import time
+    repo = Path(dnd_roller.__file__).resolve().parents[1]
+    cache = tmp_path / ".cache" / "dnd_roller" / "quant_numbers.bin"
+    cache.parent.mkdir(parents=True)
+    cache.write_bytes(b"".join(struct.pack("H", n) + b"\x00" for n in range(100)))
+    env = {**os.environ, "HOME": str(tmp_path)}
+    procs = [subprocess.Popen([sys.executable, "-c", _TWO_PROCESSES, str(repo), str(tmp_path), me],
+                              env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+             for me in ("a", "b")]
+    try:
+        deadline = time.monotonic() + 30
+        while not all((tmp_path / f"ready-{me}").exists() for me in ("a", "b")):
+            assert all(p.poll() is None for p in procs), [p.communicate() for p in procs]
+            assert time.monotonic() < deadline, "children never loaded the cache"
+            time.sleep(0.01)
+        (tmp_path / "go").touch()
+        outs = [p.communicate(timeout=30) for p in procs]
+    finally:
+        for p in procs:
+            p.kill()
+    assert [p.returncode for p in procs] == [0, 0], outs
+    a, b = (json.loads(out.strip().splitlines()[-1]) for out, _ in outs)
+    assert len(a) == len(b) == 50
+    assert sorted(r - 1 for r in a + b) == list(range(100)), (a, b)
+    assert not cache.exists()   # the shared pool is used up, not rewritten from a stale copy
