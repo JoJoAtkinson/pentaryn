@@ -32,15 +32,20 @@ new one selected, glowing gold and marked **New**. A toast confirms the save.
 - **Console (`game.pentaryn.journal`):**
   - For anyone:
     - `personal(user?)` returns the user's journal.
-    - `add(entry | page | item)` does the same as the button.
-    - `status(doc)` returns `none` / `partial` / `saved` / `changed`.
+    - `add(entry | page | item)` does the same as the button. Returns `{journal, pageIds, created, updated}`,
+      or `null` when there is no bar for that document, no journal, nothing visible, or it is too large.
+    - `status(doc)` returns `none` / `partial` / `saved` / `changed`, or `null` when there is no bar for it.
     - `open(pageId?)` opens the user's journal.
     - `shouldShowBar(entry, user?)` says whether that user gets the bar.
+    - `report()` (not gated; it returns ids, names and counts only) lists users, journal ids, page counts,
+      duplicates and journals at the root: `{folder, users: [{user, userId, isGM, journalId, pages, duplicates}], atRoot}`.
     - `core` is the pure module.
   - For the GM only:
-    - `ensure(user)` creates that user's journal.
-    - `ensureAll()` creates every player's journal and moves strays into the folder.
-    - `report()` lists users, journal ids, page counts, duplicates and journals at the root.
+    - `ensure(user)` creates that user's journal (rejects `GM only` elsewhere).
+    - `ensureAll()` creates every player's journal and moves strays into the folder (`null` for a player).
+- **Settings:** `gmButton` (world, default off) shows the bar to the GM for testing; `singlePageReadables`
+  (world, default on) is the single-page eye feature below; `folderName` (world, hidden, default
+  `Player Journals`) names the folder the personal journals live in.
 - **Duplicates:** the oldest journal wins, and `report()` lists the rest. Delete the extras by hand after moving any pages you want to keep.
 - **Tests:** `node test/run.mjs`. The fixtures are synthetic on purpose, because `test/` is published with the module and every client can fetch it.
 
