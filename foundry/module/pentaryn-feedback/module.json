@@ -44,7 +44,7 @@
       "tier": "full",
       "namespace": "feedback",
       "flagScope": "pentaryn-feedback",
-      "cssPrefix": "pf-",
+      "cssPrefix": "pfb-",
       "generation": 14,
       "afterSync": [
         "First install: restart Foundry (module.json is read at startup), enable 'Pentaryn Feedback', then reload.",
