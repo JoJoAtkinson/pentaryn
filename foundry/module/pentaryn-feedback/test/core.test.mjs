@@ -282,6 +282,21 @@ test("mergeDraft: only the given fields change; blank text keeps the typed text"
   assert.deepEqual(core.mergeDraft(undefined, undefined), { category: "bug", text: "" });
 });
 
+test("admit: a burst of 5, then one per 5 s; a refusal says how long to wait", () => {
+  let b = null;
+  for (let i = 0; i < LIMITS.queueMax; i++) {
+    const a = core.admit(b, 1000);
+    assert.equal(a.ok, true, `burst ${i}`);
+    b = a.bucket;
+  }
+  const no = core.admit(b, 1000);
+  assert.deepEqual([no.ok, no.wait], [false, LIMITS.submitGapMs]);
+  const half = core.admit(no.bucket, 1000 + LIMITS.submitGapMs / 2);
+  assert.deepEqual([half.ok, half.wait], [false, LIMITS.submitGapMs / 2]);
+  assert.equal(core.admit(half.bucket, 1000 + LIMITS.submitGapMs).ok, true);
+  assert.equal(core.admit({ tokens: "x" }, 5).ok, true, "a junk bucket starts full");
+});
+
 test("validateReport: a good report passes; each broken field is named", () => {
   assert.deepEqual(core.validateReport(sample()), { ok: true });
   const broken = [

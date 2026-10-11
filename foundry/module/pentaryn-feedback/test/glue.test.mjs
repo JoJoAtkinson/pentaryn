@@ -35,6 +35,8 @@ const player = game.users.get(IDS.player);
 const player2 = game.users.get(IDS.player2);
 const queueOf = user => user.flags?.[MODULE]?.queue ?? {};
 const lastAction = () => actionsOf().at(-1);
+/** Let the reporter's 5 s gap and the GM's filing bucket (5 at once, then one per 5 s) fully refill. */
+const refill = () => mock.timers.tick(LIMITS.queueMax * LIMITS.submitGapMs);
 const clearRings = () => {
   // the rings are module state; the recorder's uninstall/install is the only reset, so tests read deltas
   return actionsOf().length;
@@ -380,6 +382,7 @@ test("submit refuses empty text without writing anything (and says so); dryRun b
 });
 
 test("a failed queue write tells the player and leaves nothing half-done", async () => {
+  refill();
   F.become({ userId: IDS.player });
   const update = player.update;
   player.update = async () => { throw new Error("socket closed"); };
@@ -397,11 +400,12 @@ test("a failed queue write tells the player and leaves nothing half-done", async
 });
 
 test("no GM online: the report waits on the player's own flag (cap 5, oldest dropped) and is filed when a GM connects", async () => {
+  refill();
   F.gm.active = false;
   F.become({ userId: IDS.player });
   const ids = [];
   for (let i = 0; i < 6; i++) {
-    mock.timers.tick(1000);
+    mock.timers.tick(LIMITS.submitGapMs);
     const r = await api.submit({ text: `offline ${i}` });
     assert.equal(r.status, "queued");
     ids.push(r.id);
@@ -421,6 +425,7 @@ test("no GM online: the report waits on the player's own flag (cap 5, oldest dro
 });
 
 test("a GM timeout also leaves the report queued (never lost)", async () => {
+  refill();
   F.holder.gmOffline = true;
   F.become({ userId: IDS.player });
   const r = await api.submit({ text: "socket hiccup" });
@@ -433,6 +438,7 @@ test("a GM timeout also leaves the report queued (never lost)", async () => {
 });
 
 test("updateUser on the active GM files a queue entry written by a player (the socket-order safety net)", async () => {
+  refill();
   const report = queuedReport("viaupdateuser001", { t: Date.now(), text: "via updateUser" });
   await player.update({ [`flags.${MODULE}.queue.${report.id}`]: report });
   await settle(10);
@@ -441,6 +447,7 @@ test("updateUser on the active GM files a queue entry written by a player (the s
 });
 
 test("a resend of a report already on disk never overwrites it (a status Joe set survives)", async () => {
+  refill();
   const path = `pentaryn-feedback/${WORLD}/viaupdateuser001.json`;
   mem.files.get(path).status = "resolved";
   const report = queuedReport("viaupdateuser001", { t: Date.now(), text: "resent" });
@@ -452,6 +459,7 @@ test("a resend of a report already on disk never overwrites it (a status Joe set
 });
 
 test("a malformed queue entry is refused and dropped (it would block the queue forever)", async () => {
+  refill();
   const lines = consoleLines.length;
   await player.update({ [`flags.${MODULE}.queue.badbadbadbadbad1`]: { id: "badbadbadbadbad1", text: "no schema" } });
   await settle(10);
@@ -461,6 +469,7 @@ test("a malformed queue entry is refused and dropped (it would block the queue f
 });
 
 test("the folder is always this world's: a report claiming another world is filed here, its world id corrected", async () => {
+  refill();
   const report = { ...queuedReport("otherworld000001", { t: Date.now(), text: "wrong world" }), world: { id: "someone-elses", title: "Theirs" } };
   await player.update({ [`flags.${MODULE}.queue.${report.id}`]: report });
   await settle(10);
@@ -477,6 +486,42 @@ test("two GM tabs: the tab that finds the entry already gone from the queue stil
   assert.deepEqual(r, { ok: true, filed: [], refused: [], done: [id] });
 });
 
+test("rate limit, reporter side: a second report within 5 s is refused with a toast; dryRun is not limited", async () => {
+  refill();
+  F.become({ userId: IDS.player });
+  try {
+    assert.equal((await api.submit({ text: "first" })).ok, true);
+    const before = F.calls.length;
+    const second = await api.submit({ text: "second" });
+    assert.deepEqual(second, { ok: false, code: "REFUSED", reason: "wait 5 s between reports" });
+    assert.deepEqual(F.calls.slice(before).filter(c => c.op === "notify").map(c => c.message), ["Could not save the report: wait 5 s between reports"]);
+    assert.equal(F.calls.slice(before).filter(c => c.op === "update").length, 0, "nothing queued");
+    assert.equal((await api.submit({ text: "dry" }, { dryRun: true })).ok, true);
+    mock.timers.tick(LIMITS.submitGapMs);
+    assert.equal((await api.submit({ text: "third" })).ok, true);
+  } finally {
+    F.become({ userId: IDS.gm });
+  }
+});
+
+test("rate limit, GM side: a flag written directly with 7 reports files 5, holds 2 on the queue, and files them once the bucket refills", async () => {
+  refill();
+  const lines = consoleLines.length;
+  const update = {};
+  const ids = Array.from({ length: 7 }, (_, i) => `burst00000000${String(i).padStart(3, "0")}`);
+  for (const id of ids) update[`flags.${MODULE}.queue.${id}`] = queuedReport(id, { t: Date.now(), text: `burst ${id}` });
+  await player.update(update);                    // what a script skipping api.submit can do
+  await settle(10);
+  const onDisk = ids.filter(id => mem.files.has(`pentaryn-feedback/${WORLD}/${id}.json`));
+  assert.equal(onDisk.length, LIMITS.queueMax);
+  assert.equal(Object.keys(queueOf(player)).length, 2, "the rest wait on the flag, never dropped");
+  assert.ok(consoleLines.slice(lines).some(([lvl, l]) => lvl === "warn" && l.includes("holding 2 report(s) from Caven's player")));
+  mock.timers.tick(2 * LIMITS.submitGapMs);
+  await api.ingest({ userId: IDS.player });
+  assert.deepEqual(queueOf(player), {});
+  assert.ok(ids.every(id => mem.files.has(`pentaryn-feedback/${WORLD}/${id}.json`)));
+});
+
 test("ingest on a client that is not the active GM is refused", async () => {
   F.become({ userId: IDS.player });
   assert.deepEqual(await api.ingest({ userId: IDS.player }), { ok: false, code: "NOT_GM", reason: "only the active GM files reports" });
@@ -485,6 +530,7 @@ test("ingest on a client that is not the active GM is refused", async () => {
 });
 
 test("filed and queued events fire with the report", async () => {
+  refill();
   const seen = [];
   const a = Hooks.on(`${MODULE}.queued`, r => seen.push(["queued", r.id]));
   const b = Hooks.on(`${MODULE}.filed`, r => seen.push(["filed", r.id]));

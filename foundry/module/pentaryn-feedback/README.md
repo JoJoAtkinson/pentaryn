@@ -108,8 +108,13 @@ wraps stay in place after `uninstall()` and record nothing until the next instal
 - The **active GM** files a user's queue on that query, on `updateUser` (a new queue key), on
   `userConnected`, and at `ready` (every user). Per tab, one ingest per user at a time.
 - **Two GM tabs** (bridge + browser) both file: each looks for the file first and uploads only if it
-  is missing; both write the same id, built from the queued report, so the second write is harmless
-  and a resend never resets a status Joe already set. Both delete the same flag keys.
+  is missing; both write the same bytes (no per-tab `receivedAt`: it is `null`, the file's mtime is
+  the filing time) under `game.world.id` (never the payload's world), so the second write is harmless
+  and a resend never resets a status Joe already set. Both delete the same flag keys, and a tab that
+  finds the entry already gone answers `done`.
+- **Rate limits**: a client queues at most one report per user per 5 s (`REFUSED`, with a toast);
+  the GM tab files at most 5 per user at once, then one per 5 s (core `admit`). Reports over that
+  stay on the queue and a timer files them when the bucket refills.
 - **Status edits** happen on both sides: the Python `feedback_resolve` (under `flock`) and the GM
   `resolve()`. They are not coordinated with each other — the last writer in the same second wins.
 

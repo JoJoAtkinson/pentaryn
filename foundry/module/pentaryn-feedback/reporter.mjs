@@ -18,7 +18,7 @@
  */
 
 import {
-  FLAG_SCOPE, LIMITS, MODULE, QUEUE_KEY, buildReport, categoryOf, draftFrom, fitReport,
+  FLAG_SCOPE, LIMITS, MODULE, QUEUE_KEY, admit, buildReport, categoryOf, draftFrom, fitReport,
   normaliseReport, parseBugCommand, queueTrim, reportPath, userFields, validateReport,
 } from "./feedback-core.mjs";
 import { ReportDialog } from "./dialog.mjs";
@@ -34,6 +34,12 @@ const queuePath = id => `flags.${FLAG_SCOPE}.${QUEUE_KEY}.${id}`;
 
 /** userId → the tail of that user's ingest chain (one ingest per user at a time, per tab). */
 const chains = new Map();
+/** userId → that user's filing bucket on this GM tab (core `admit`). */
+const buckets = new Map();
+/** userId → the timer that retries a queue held back by the bucket. */
+const retries = new Map();
+/** userId → when this client last queued a report as that user (the reporter's own gap). */
+const lastSubmit = new Map();
 
 /** The reports waiting on a user's flag: `{ [id]: report }`. */
 export function queueOf(user) {
@@ -112,6 +118,11 @@ export function install(reg, ctx) {
     const v = validateReport(report);
     if (!v.ok) return refuse("BAD_ARGS", v.reason);
     if (dryRun) return ok({ dryRun: true, id: report.id, report });
+    const since = Date.now() - (lastSubmit.get(user.id) ?? -Infinity);
+    if (since < LIMITS.submitGapMs) {
+      return refuse("REFUSED", `wait ${Math.ceil((LIMITS.submitGapMs - since) / 1000)} s between reports`);
+    }
+    lastSubmit.set(user.id, Date.now());
 
     // 1. queue on my own User document (adds the report, drops the oldest past the cap)
     const queue = { ...queueOf(user), [report.id]: report };
@@ -163,6 +174,7 @@ export function install(reg, ctx) {
     const queue = queueOf(user);
     const filed = [];
     const refused = [];
+    const held = [];
     const del = {};
     const who = userFields({ ...plainUser(user), character: user.character ? { id: user.character.id, name: user.character.name } : null });
     for (const [id, report] of Object.entries(queue)) {
@@ -183,7 +195,15 @@ export function install(reg, ctx) {
       try {
         path = reportPath(g.game.world.id, safe.id);
         // look first: a resend after a timeout must not reset a status already set
-        if (!(await store().exists(path))) await store().put(path, safe);
+        if (!(await store().exists(path))) {
+          const a = admit(buckets.get(user.id), Date.now());
+          buckets.set(user.id, a.bucket);
+          if (!a.ok) {
+            held.push(id);              // stays queued; filed when the bucket refills
+            continue;
+          }
+          await store().put(path, safe);
+        }
       } catch (err) {
         refused.push({ id, reason: err?.message ?? String(err) });
         log.error(`file report ${id}`, err);
@@ -200,7 +220,22 @@ export function install(reg, ctx) {
       ctx.emit("filed", safe);
     }
     if (Object.keys(del).length) await user.update(del);   // one write for the whole queue
+    if (held.length) {
+      log.warn(`holding ${held.length} report(s) from ${user.name}: over ${LIMITS.queueMax} in a row`);
+      retryLater(user, admit(buckets.get(user.id), Date.now()).wait);
+    }
     return { filed, refused };
+  }
+
+  /** Run the user's ingest again once the bucket has a token (one timer per user). */
+  function retryLater(user, wait) {
+    if (retries.has(user.id) || typeof g.setTimeout !== "function") return;
+    const timer = g.setTimeout(() => {
+      retries.delete(user.id);
+      if (isActiveGM()) void ingestUser(user).catch(err => log.error("ingest", err));
+    }, Math.max(wait, 50));
+    timer?.unref?.();
+    retries.set(user.id, timer);
   }
 
   /**
@@ -269,4 +304,8 @@ function plainUser(u) {
 
 export function uninstall() {
   chains.clear();
+  for (const timer of retries.values()) globalThis.clearTimeout?.(timer);
+  retries.clear();
+  buckets.clear();
+  lastSubmit.clear();
 }

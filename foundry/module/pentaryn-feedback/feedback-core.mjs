@@ -60,7 +60,8 @@ export const LIMITS = Object.freeze({
   chatMax: 10,
   windowsMax: 20,
   tokensMax: 10,
-  queueMax: 5,         // reports waiting on the User flag
+  queueMax: 5,         // reports waiting on the User flag; also the GM's filing burst per user
+  submitGapMs: 5000,   // one report per user per 5 s: the reporter's client, and the GM's refill rate
   bytes: 262144,       // one report, serialised
   renderThrottleMs: 2000,
   persistMs: 1000,     // the rings are copied to sessionStorage at most this often
@@ -539,6 +540,18 @@ export function worldDir(worldId) {
 export function queueTrim(queue, max = LIMITS.queueMax) {
   const entries = Object.entries(queue ?? {}).sort(([, a], [, b]) => (a?.t ?? 0) - (b?.t ?? 0));
   return entries.slice(0, Math.max(0, entries.length - max)).map(([id]) => id);
+}
+
+/**
+ * The GM's per-user filing budget, a token bucket: `burst` reports at once (a queue filed when a GM
+ * comes online), then one per `refillMs`. Pure: returns the next bucket and, when refused, how long
+ * to wait. A script that skips the reporter's own gap can still not fill the disk or the toasts.
+ */
+export function admit(bucket, now, { burst = LIMITS.queueMax, refillMs = LIMITS.submitGapMs } = {}) {
+  const b = bucket && Number.isFinite(bucket.tokens) && Number.isFinite(bucket.t) ? bucket : { tokens: burst, t: now };
+  const tokens = Math.min(burst, b.tokens + Math.max(0, now - b.t) / refillMs);
+  if (tokens >= 1) return { ok: true, bucket: { tokens: tokens - 1, t: now }, wait: 0 };
+  return { ok: false, bucket: { tokens, t: now }, wait: Math.ceil((1 - tokens) * refillMs) };
 }
 
 /* ── status ───────────────────────────────────────────────────────────────── */
