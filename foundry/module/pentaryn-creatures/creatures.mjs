@@ -15,7 +15,7 @@
 
 import * as core from "./creatures-core.mjs";
 
-const { MODULE, isPlayerCreature, lightUpdate, ownerShouldSee, stripEntries, shouldShowStrip, stripSignature, stripDock } = core;
+const { MODULE, isPlayerCreature, lightUpdate, ownerShouldSee, stripEntries, shouldShowStrip, stripSignature, stripDock, isItemPile, isAoeHandle } = core;
 const L = (k, data) => (data ? game.i18n.format(`PENTARYN_CREATURES.${k}`, data) : game.i18n.localize(`PENTARYN_CREATURES.${k}`));
 
 const isWriter = () => game.users?.activeGM?.isSelf === true;
@@ -26,13 +26,12 @@ const setting = (key, fallback) => { try { return game.settings.get(MODULE, key)
 /* -------------------------------------------- */
 
 function isPile(t) {
-  const a = t.actor;
-  return !!(t.flags?.["item-piles"]?.data?.enabled || a?.flags?.["item-piles"]?.data?.enabled);
+  return isItemPile(t.flags, t.actor?.flags);
 }
 
 /** A prop, not a creature: pentaryn-aoe's spell-area handle is an `npc` every player owns (`default: OWNER`). */
 function isProp(t) {
-  return !!(t.flags?.["pentaryn-aoe"]?.handle || t.actor?.flags?.["pentaryn-aoe"]?.handleActor);
+  return isAoeHandle(t.flags, t.actor?.flags);
 }
 
 /** A plain summary of a TokenDocument, as seen by `user`. */
