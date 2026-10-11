@@ -186,6 +186,7 @@ def test_every_subcommand_routes(monkeypatch):
                "module_new", "module_vendor", "module_conformance"):
         monkeypatch.setattr(cli.modules, fn, lambda *a, **k: 0)
     monkeypatch.setattr(cli.login_mod, "login", lambda *a, **k: 0)
+    monkeypatch.setattr(cli.index, "main", lambda *a, **k: 0)
 
     for name in names:
         argv = [name]

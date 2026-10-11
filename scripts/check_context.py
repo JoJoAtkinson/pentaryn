@@ -5,6 +5,8 @@
 2. A routing table that points at a file which no longer exists is worse than no table.
 3. A context file with no "Read this when:" line can't be aborted early by a reader who
    arrived by grep rather than through the index.
+4. The generated Module APIs table (context/foundry/README.md) lags the modules it lists
+   (python-tooling-36; scripts/foundry/ops/index.py).
 
 Run: make check-context
 """
@@ -67,12 +69,26 @@ def check_read_this_when(warnings: list[str]) -> None:
             )
 
 
+def check_module_index(errors: list[str]) -> None:
+    """The generated Module APIs table in context/foundry/README.md matches the modules."""
+    if str(ROOT) not in sys.path:
+        sys.path.insert(0, str(ROOT))
+    from scripts.foundry.ops import index
+
+    if not index.is_current():
+        errors.append(
+            "context/foundry/README.md: the Module APIs table is stale (a module was added, "
+            "renamed, re-versioned or migrated) — run: make foundry-module-index"
+        )
+
+
 def main() -> int:
     errors: list[str] = []
     warnings: list[str] = []
     check_claude_md_length(errors)
     check_links(errors)
     check_read_this_when(warnings)
+    check_module_index(errors)
 
     for w in warnings:
         print(f"  warning: {w}")

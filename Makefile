@@ -203,7 +203,7 @@ foundry-walls-bench: ; @$(OPS) walls-bench $(N)
 
 # ─── Addon blueprint: the shared kit, the generator, the scorer ──────────
 # Playbook: context/foundry/addon-blueprint.md. M=<short> picks one module.
-.PHONY: foundry-lib-check foundry-lib-vendor foundry-module-new foundry-conformance
+.PHONY: foundry-lib-check foundry-lib-vendor foundry-module-new foundry-conformance foundry-module-index
 # The kit's own suite (foundry/lib).
 foundry-lib-check:  ; @cd $(ROOT) && node foundry/lib/test/run.mjs
 # Re-vendor the kit into every migrated module (those with lib/kit.lock.json), or M=<short>.
@@ -212,6 +212,8 @@ foundry-lib-vendor: ; @$(OPS) module-vendor sync $(if $(M),$(M),--all)
 foundry-module-new:
 	@$(if $(M),,$(error M=<short> is required))$(if $(TITLE),,$(error TITLE="Pentaryn <Title>" is required))
 	@$(OPS) module-new $(M) --title "$(TITLE)" --tier $(if $(TIER),$(TIER),full) $(ARGS)
+# Regenerate the Module APIs table in context/foundry/README.md (check-context fails when stale).
+foundry-module-index: ; @$(OPS) module-index
 # Score against rules C01–C52: every module, or M=<short>; MD=1 for the markdown table.
 foundry-conformance: ; @$(OPS) module-conformance $(if $(M),--module $(M),) $(if $(MD),--markdown,)
 

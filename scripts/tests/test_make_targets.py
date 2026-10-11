@@ -68,6 +68,7 @@ def test_every_registered_module_has_a_check_target(module):
     ("foundry-lib-check", "node foundry/lib/test/run.mjs"),
     ("foundry-lib-vendor", "module-vendor sync --all"),
     ("foundry-conformance", "module-conformance"),
+    ("foundry-module-index", "module-index"),
     ("test", "pytest -q"),
 ])
 def test_new_targets(target, expect):

@@ -20,7 +20,7 @@ import argparse
 import json
 import sys
 
-from . import bridge, config as cfg, login as login_mod, modules, pipeline, service
+from . import bridge, config as cfg, index, login as login_mod, modules, pipeline, service
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -101,6 +101,9 @@ def build_parser() -> argparse.ArgumentParser:
                                      "[--module m…] [--json|--markdown] (conformance.py)")
     mcon.add_argument("args", nargs=argparse.REMAINDER, help=rest)
 
+    midx = add("module-index", "Regenerate the Module APIs table in context/foundry/README.md.")
+    midx.add_argument("--check", action="store_true", help="exit 1 when the table is stale; write nothing")
+
     add("walls-wasm", "Build the compiled (WASM) wall engine.")
     bench = add("walls-bench", "Scaling curve for the wall engine.")
     bench.add_argument("grid", nargs="?", help="grid size to extend the sweep to")
@@ -150,6 +153,7 @@ def main(argv: list[str] | None = None) -> int:
     if c == "module-new":    return modules.module_new(args.args)
     if c == "module-vendor": return modules.module_vendor(args.args)
     if c == "module-conformance": return modules.module_conformance(args.args)
+    if c == "module-index":  return index.main(check=args.check)
     if c == "walls-wasm":    return modules.walls_wasm()
     if c == "walls-bench":   return modules.walls_bench(args.grid)
 
