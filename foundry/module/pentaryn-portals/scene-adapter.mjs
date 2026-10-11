@@ -268,12 +268,17 @@ export async function confirmParty(party, title) {
   }).catch(err => { deps.log?.warn("party confirm failed", err); return false; });
 }
 
+/**
+ * GM: move the party on canvas.scene to `destRegion`'s centre. → `{ moved, cancelled }` (moved =
+ * tokens moved; cancelled = the GM said no, or nobody counts as party); undefined for a player or
+ * no region.
+ */
 export async function teleportParty(destRegion, { confirm = true } = {}) {
   if (!game.user.isGM || !destRegion) return;
   const from = canvas.scene;
   const dest = destRegion.parent;
   const party = partyRecords(from);
-  if (confirm && !(await confirmParty(party, cardFor(destRegion).title))) return;
+  if (confirm && !(await confirmParty(party, cardFor(destRegion).title))) return { moved: 0, cancelled: true };
   const toks = party.map(r => r.doc);
   const b = destRegion.bounds;
   const cx = b.x + b.width / 2, cy = b.y + b.height / 2;
@@ -286,6 +291,7 @@ export async function teleportParty(destRegion, { confirm = true } = {}) {
     await dest.view();
   }
   ui.notifications.info(`${toks.length} party token${toks.length === 1 ? "" : "s"} moved to ${cardFor(destRegion).title}.`);
+  return { moved: toks.length, cancelled: false };
 }
 
 /* -------------------------------------------- */

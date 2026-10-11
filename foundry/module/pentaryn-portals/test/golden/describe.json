@@ -61,7 +61,7 @@
           "doc": "confirm: false skips the GM's confirm dialog"
         }
       ],
-      "returns": "undefined",
+      "returns": "{ moved, cancelled } | undefined (not a GM, or no region)",
       "gm": true,
       "writes": true,
       "query": false,

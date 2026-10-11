@@ -108,3 +108,16 @@ test("badges(): what is drawn on this client, plain JSON", async () => {
   assert.deepEqual(JSON.parse(JSON.stringify(list)), list);
   F.canvas.ready = false;
 });
+
+test("D-P5: teleportParty answers { moved, cancelled }; a cancelled confirm → { moved: 0, cancelled: true }", async () => {
+  const s = W.scene({ id: "DP5", name: "Hall", tokens: [{ id: "dp5t", name: "Mover" }] });
+  const to = W.region(s, { id: "DP5To", name: "To", bounds: { x: 500, y: 500, width: 100, height: 100 } });
+  F.canvas.scene = s;
+  W.confirm = false;
+  assert.deepEqual(await api().teleportParty(to), { moved: 0, cancelled: true }, "nobody counts as party: the empty-party warn");
+  W.confirm = true;
+  assert.deepEqual(await api().teleportParty(to, { confirm: false }), { moved: 0, cancelled: false });
+  F.become({ userId: P1 });
+  assert.equal(await api().teleportParty(to, { confirm: false }), undefined, "a player: nothing, as before");
+  F.become({ userId: GM });
+});

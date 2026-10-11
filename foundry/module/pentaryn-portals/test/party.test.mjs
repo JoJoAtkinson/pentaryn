@@ -208,14 +208,14 @@ test("teleportParty, one token: singular toast; confirm on by default asks first
   assert.equal(ops(n)[2].message, "1 party token moved to Great Hall.");
 });
 
-test("teleportParty, another scene: carry, pull the active players, view it, toast; returns undefined", async () => {
+test("teleportParty, another scene: carry, pull the active players, view it, toast; returns { moved, cancelled } [declared D-P5]", async () => {
   const H = hall();
   F.canvas.scene = H.s;
   game.users.get(P2).active = false;
   const n = F.calls.length;
   const out = await S.teleportParty(H.pitGate, { confirm: false });
   game.users.get(P2).active = true;
-  assert.equal(out, undefined);
+  assert.deepEqual(out, { moved: 5, cancelled: false });
   const seen = ops(n);
   assert.deepEqual(seen.map(c => c.op), ["createEmbedded", "deleteEmbedded", "pullUsers", "scene.view", "notify"]);
   assert.deepEqual(seen[2].users, [P1]);
