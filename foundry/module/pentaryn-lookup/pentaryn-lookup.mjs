@@ -13,12 +13,15 @@ import {
   LIMITS, searchBooks, findPage, renderPage, monsterDigest, toPlainText, embeddedTableUuids, renderTable,
   BOOKSETS, EDITIONS, MONSTER_PACKS, resolveBookIds, missingPackError,
   monsterQuery, matchMonster, monsterRow, sortMonsters, pageMonsters, listFor as listForIn, knownLists,
-  foundFromDoc,
+  foundFromDoc, MODULE,
 } from "./lookup-core.mjs";
 import {
   loadBooks, readPageDoc, readTable, findSpell, spellRegistry, readIndex, readDocument, packSummary, worldInfo,
   featureTexts,
 } from "./packs-adapter.mjs";
+import { makeLog } from "./lib/log.mjs";
+
+const log = makeLog(MODULE);
 
 // ── the API ──────────────────────────────────────────────────────────────────
 
@@ -39,7 +42,7 @@ async function page(ref, opts = {}) {
 
   // UUID path — what search() hands back, so "give me hit #2 in full" is one call.
   if (raw.startsWith("Compendium.")) {
-    const read = await readPageDoc(raw);
+    const read = await readPageDoc(raw, log);
     if (!read) return { error: `no document at ${raw}` };
     const found = foundFromDoc(read);
     return withTables(renderPage(found, opts), found, opts);
@@ -58,7 +61,7 @@ async function withTables(out, found, opts) {
   if (!uuids.length) return out;
   const tables = [];
   for (const u of uuids) {
-    const t = await readTable(u);
+    const t = await readTable(u, log);
     if (!t) { tables.push({ uuid: u, error: "not found" }); continue; }
     tables.push(renderTable(t));
   }
@@ -67,14 +70,15 @@ async function withTables(out, found, opts) {
 
 // ── spell lists (dnd5e's registry; the "Class Spell Lists" pages are empty shells) ──
 
-const listFor = (type, identifier) => listForIn(spellRegistry(), type, identifier);
+const listFor = (type, identifier) => listForIn(spellRegistry(), type, identifier,
+  err => log.debug("spell-list registry read failed", { type, identifier }, err));
 
 /**
  * Is a spell on a class's list (or a subclass's: `{type: "subclass"}`)?
  * → `{spell, uuid, level, list, onList}`; `onList` null when the list is unknown.
  */
 async function onList(spell, cls, { type = "class" } = {}) {
-  const doc = await findSpell(spell);
+  const doc = await findSpell(spell, log);
   if (!doc) return { notFound: true, spell, hint: "spell names are the book's English names" };
   const list = listFor(type, cls);
   const known = knownLists(spellRegistry());
@@ -136,7 +140,7 @@ async function monster(name, opts = {}) {
       items: actor.items.map(i => ({ name: i.name, type: i.type })),
     });
     if (opts.text) {
-      out.features = await featureTexts(actor);
+      out.features = await featureTexts(actor, log);
       out.languages = [...(actor.system.traits?.languages?.value ?? [])];
       out.speed = actor.system.attributes?.movement?.walk ?? null;
     }

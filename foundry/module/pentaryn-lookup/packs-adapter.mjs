@@ -3,7 +3,9 @@
  * `dnd5e.registry` and `TextEditor.enrichHTML` in, plain data out. Every rule that can be subtly
  * wrong lives in lookup-core.mjs; this file only fetches.
  *
- * May import core and lib (C16). Each function reads its globals at call time.
+ * May import core and lib (C16). Each function reads its globals at call time. A read that fails is
+ * answered as "nothing there" (the shapes callers already handle) and traced through the caller's
+ * `log` at debug level: `CONFIG.debug["pentaryn-lookup"] = true` shows it (prompts-lookup-34).
  */
 
 import { EDITIONS, SPELL_PACKS, tidy, toBook, toPlainText } from "./lookup-core.mjs";
@@ -51,8 +53,8 @@ export async function loadBooks(ids) {
  * A `Compendium.…` UUID → foundFromDoc's input, or null when nothing is there (a rejected read is
  * null too). A document with no parent (a JournalEntry UUID) stands as its own parent.
  */
-export async function readPageDoc(raw) {
-  const doc = await fromUuid(raw).catch(() => null);
+export async function readPageDoc(raw, log = null) {
+  const doc = await fromUuid(raw).catch(err => (log?.debug("fromUuid failed", { uuid: raw }, err), null));
   if (!doc) return null;
   const parent = doc.parent ?? doc;
   const packId = doc.pack ?? parent.pack;
@@ -64,17 +66,17 @@ export async function readPageDoc(raw) {
 }
 
 /** A RollTable by UUID → renderTable's input, or null when it cannot be read. */
-export async function readTable(uuid) {
-  const t = await fromUuid(uuid).catch(() => null);
+export async function readTable(uuid, log = null) {
+  const t = await fromUuid(uuid).catch(err => (log?.debug("fromUuid failed", { uuid }, err), null));
   if (!t) return null;
   return { name: t.name, formula: t.formula, uuid,
     results: t.results.contents.map(r => ({ range: r.range, description: r.description, name: r.name, text: r.text })) };
 }
 
 /** A spell document by uuid or name: PHB first, then the 2024 SRD (SPELL_PACKS order). */
-export async function findSpell(ref) {
+export async function findSpell(ref, log = null) {
   const s = String(ref ?? "").trim();
-  if (s.startsWith("Compendium.")) return fromUuid(s).catch(() => null);
+  if (s.startsWith("Compendium.")) return fromUuid(s).catch(err => (log?.debug("fromUuid failed", { uuid: s }, err), null));
   for (const id of SPELL_PACKS) {
     const pack = game.packs.get(id);
     if (!pack) continue;
@@ -118,7 +120,7 @@ export function worldInfo() {
  * Each feature's rules text, enriched the way the sheet shows it (`[[lookup @name]]` → the
  * creature's name, `[[/attack]]` → "+4", `[[/damage]]` → "5 (1d6 + 2)"), as plain text.
  */
-export async function featureTexts(actor) {
+export async function featureTexts(actor, log = null) {
   const features = [];
   for (const i of actor.items) {
     const html = i.system?.description?.value ?? "";
@@ -126,7 +128,10 @@ export async function featureTexts(actor) {
     try {
       enriched = await foundry.applications.ux.TextEditor.implementation.enrichHTML(html,
         { rollData: i.getRollData?.() ?? actor.getRollData(), relativeTo: i, secrets: true });
-    } catch { /* fall back to the raw text; toPlainText still strips the enrichers */ }
+    } catch (err) {
+      // fall back to the raw text; toPlainText still strips the enrichers
+      log?.debug("enrichHTML failed", { item: i.uuid }, err);
+    }
     const act = i.system?.activities?.contents?.[0]?.activation?.type ?? i.system?.activation?.type ?? null;
     const rch = i.system?.uses?.recovery?.find?.(r => r.period === "recharge");
     features.push({ name: i.name, type: i.type, activation: act || null,
