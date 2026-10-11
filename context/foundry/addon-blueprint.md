@@ -687,8 +687,10 @@ game.settings.set(MODULE, "worldX", 1) /* world-scoped, in Hooks.once("init") */
 
 - [ ] Every `pre*` listener is sync; vetoes are `return false` (and the hook is a `call`, not a
       `callAll`); none is gated on the active GM.
-- [ ] Every `create*/update*/delete*` listener that writes has `isActiveGM()` (or the module's pinned
-      predicate) and, where two GM tabs matter, a claim.
+- [ ] Every `create*/update*/delete*` listener that writes has `isActiveGM()`, the initiator gate
+      (`userId !== game.user.id`) or the module's pinned predicate and, where two tabs on one account
+      matter, a claim. Both gates pick one user: the initiator gate passes in every tab of the user
+      who made the change, so a GM-made change runs in the MCP bridge tab and a GM browser tab.
 - [ ] No `await <doc>.update/create/delete/setFlag(` inside a loop where a batch call exists.
 - [ ] One `serialStore` per key, at module scope; multi-client keys use `anyGM: false` + relay, and
       the relayed write is idempotent or request-keyed.
@@ -925,7 +927,7 @@ both Warnings and Manual.
 | C58 | fail | one `serialStore` per key across the module |
 | C59 | warn+manual | `await <doc>.update/create/delete/setFlag/unsetFlag(` inside a loop body (batch it) |
 | C60 | warn | no `async` listener or `await` in a hot-hook handler unless it defers via `perFrame`/`debounce`/`coalesce` |
-| C61 | warn+manual | a writing `create*/update*/delete*` listener has an active-GM gate, the initiator gate (`userId !== game.user.id`) or a claim (an any-GM gate alone → manual); the write and the gate are looked for in the listener and the functions it calls by name, in its file or the module files it imports |
+| C61 | warn+manual | a writing `create*/update*/delete*` listener has an active-GM gate, the initiator gate (`userId !== game.user.id`) or a claim (an any-GM gate alone → manual). The active-GM and initiator gates pick one *user*, not one tab: every tab of that user passes, so where two tabs on one account matter the review checks for a claim (§5.9.4); the write and the gate are looked for in the listener and the functions it calls by name, in its file or the module files it imports |
 
 ## 12. Wiring status
 

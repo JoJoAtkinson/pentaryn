@@ -1399,8 +1399,10 @@ HOOK_REG = re.compile(r"(?<![\w$])(?:Hooks|reg|ctx\.reg)\.(?:on|once)\(\s*\x01(\
 VETOABLE = re.compile(r"^(?:[\w-]+\.)?pre[A-Z]")
 PRE_DOC = re.compile(r"^pre(?:Create|Update|Delete)[A-Z]\w*$")
 DOC_EVENT = re.compile(r"^(?:create|update|delete)[A-Z]\w*$")
-# one client: the active GM, a runner pick, or the initiator (`userId !== game.user.id` — the hook's
-# userId is the client that made the change, so exactly one tab passes)
+# one USER, not one tab: the active GM, a runner pick, or the initiator (`userId !== game.user.id` —
+# the hook's userId is the user who made the change, so every tab of that user passes, e.g. the MCP
+# bridge tab and a GM browser tab). Like isActiveGM, it needs a claim where two tabs on one account
+# matter; C61 accepts all of these and leaves the two-tab question to the manual review (§5.9.4)
 ACTIVE_GATE = re.compile(r"(?<![\w$])(?:isActiveGM|isActiveGMOrLoneGM|pickRunner)\(|activeGM\b"
                          r"|(?<![\w$])\w*[uU]serId\s*!==?\s*game\.(?:userId|user\.id)\b"
                          r"|game\.(?:userId|user\.id)\s*!==?\s*\w*[uU]serId\b")

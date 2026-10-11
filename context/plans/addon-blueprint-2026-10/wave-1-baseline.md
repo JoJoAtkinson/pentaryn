@@ -178,4 +178,8 @@ New-rule hits, for the module guides (all existing behaviour, none fixed here):
   the first count (11 modules, with names and senses) wrongly flagged those.
 - C53, C54, C55, C57, C58, C60 and C61: no hits. Both existing `.query(` callers pass `timeout: 8000`;
   the two `createItem`/`createChatMessage` writers (attunement, riders) use the initiator gate
-  `userId !== game.user.id`, which C61 accepts as one client.
+  `userId !== game.user.id`, which C61 accepts. That gate picks one *user*, not one tab (the 4373c04
+  message's "counts as one client" means one user): every tab of the initiating user passes, so a
+  GM-made change runs those reactions in both the MCP bridge tab and a GM browser tab. Like
+  `isActiveGM`, it needs a claim where two tabs on one account matter; review this at the attunement
+  and riders refactors (§5.9.4).
