@@ -71,8 +71,8 @@ because a `url()` inside a custom property resolves against the page where `var(
 that is also why there is no `.css` file. `image-set()` 1×/2× is used only where `CSS.supports`
 accepts it in `cursor`.
 
-Core internals it relies on (adjustments row `core-board-cursor-vars`, pending in the adjustments
-batch; it takes the package prefix because it is not a `wrapMethod` patch):
+Core internals it relies on (adjustments row `core-board-cursor-vars` in `foundry/adjustments.yml`;
+it takes the package prefix because it is not a `wrapMethod` patch):
 
 - `canvas.app.renderer.events.currentCursor` / `setCursor` — the resync (see Pitfalls).
 - `canvas.regions._placementContext` — the spell-area check. Both must hold: the context **and**
