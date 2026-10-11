@@ -100,7 +100,7 @@ function registerCapture(reg) {
       } catch (err) {
         console.warn(`${MODULE} | drop capture failed`, err);
       }
-    }, { guard: false, label: "drop capture" });
+    }, { label: "drop capture" });
   }
 
   // 2. deleted straight off a character sheet — capture BEFORE it is unreachable
@@ -113,7 +113,7 @@ function registerCapture(reg) {
     } catch (err) {
       console.warn(`${MODULE} | delete capture failed`, err);
     }
-  }, { guard: false, label: "delete capture" });
+  }, { label: "delete capture" });
 }
 
 /* ----------------------------------------------------------------------- API */
@@ -173,7 +173,7 @@ export function install(reg, ctx) {
   } else {
     reg.once("socketlib.ready", () => {
       registerRecord(recordAsGM);
-    }, { guard: false, label: "socketlib.ready" });
+    }, { label: "socketlib.ready" });
   }
   ctx.onReady(() => {
     registerCapture(reg);

@@ -314,7 +314,7 @@ function addHudButtons(app, element) {
 
 /** Registration order (golden/hooks.json): conversion, eye painting, migration, the GM HUD. */
 export function install(reg, ctx) {
-  const on = (name, fn, label) => reg.on(name, fn, { guard: false, label });
+  const on = (name, fn, label) => reg.on(name, fn, { label });
   on("updateActor", onActorHp, "corpse: hp");
   for (const h of ["createActiveEffect", "deleteActiveEffect", "updateActiveEffect"]) on(h, onEffect, `corpse: ${h}`);
   on("drawToken", paintEye, "eye: draw");

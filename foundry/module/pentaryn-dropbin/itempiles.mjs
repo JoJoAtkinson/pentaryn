@@ -76,7 +76,7 @@ function repairAttunement(item) {
 /** ready: index the packs, THEN register the repair (after attunement's load-time preCreateItem). */
 async function armAttunementRepair(reg) {
   await loadAttunementIndex();
-  reg.on("preCreateItem", repairAttunement, { guard: false, label: "attunement repair" });
+  reg.on("preCreateItem", repairAttunement, { label: "attunement repair" });
   if (game.user.isGM) console.log(`${MODULE} | attunement repair armed — ${attunementByName.size} items indexed`);
 }
 
@@ -209,7 +209,7 @@ async function armLocks(reg) {
     if (!hit) return;
     announceLocked(hit.actor, { playSound: true });
     return false;                       // cancels the render — this is the actual lock
-  }, { guard: false, label: "lock: interface" });
+  }, { label: "lock: interface" });
 
   // Item Piles has a "force open default sheet" keybind — Left Ctrl out of the
   // box — and holding it makes the module stand aside entirely, so a Ctrl-click
@@ -224,7 +224,7 @@ async function armLocks(reg) {
     if (!hit) return;
     announceLocked(hit.actor, { playSound: true });
     return false;
-  }, { guard: false, label: "lock: actor sheet" });
+  }, { label: "lock: actor sheet" });
 
   // The canvas double-click already refuses and plays lockedSound itself; all
   // this adds is the words. PRE_RATTLE is local to the clicking client, unlike
@@ -232,7 +232,7 @@ async function armLocks(reg) {
   reg.on("item-piles-preRattleItemPile", (actor) => {
     if (game.user.isGM) return;
     announceLocked(actor, { playSound: false });
-  }, { guard: false, label: "lock: rattle" });
+  }, { label: "lock: rattle" });
 
   // The directory hooks above were registered at load time, but the sidebar has
   // already painted by now — repaint it once so the first render is filtered too.
@@ -252,8 +252,8 @@ async function armLocks(reg) {
 export function install(reg, ctx) {
   log = ctx.log;
   ctx.onReady(() => armAttunementRepair(reg), "attunement repair");
-  reg.on("renderActorDirectory", (app, el) => hideRowsFromDirectory(app, el, isPileActor), { guard: false, label: "actor directory" });
-  reg.on("renderJournalDirectory", (app, el) => hideRowsFromDirectory(app, el, isNotePinnedJournal), { guard: false, label: "journal directory" });
+  reg.on("renderActorDirectory", (app, el) => hideRowsFromDirectory(app, el, isPileActor), { label: "actor directory" });
+  reg.on("renderJournalDirectory", (app, el) => hideRowsFromDirectory(app, el, isNotePinnedJournal), { label: "journal directory" });
   ctx.onReady(() => armLocks(reg), "locks");
 }
 

@@ -55,7 +55,7 @@ const ctx = {
   /** Run `fn` at `ready`, or now when the world is already ready (a hot re-import). */
   onReady(fn, label) {
     if (isReady()) return void fn();
-    reg.once("ready", fn, { guard: false, label });
+    reg.once("ready", fn, { label });
   },
   publish,
   uninstall,
@@ -88,5 +88,5 @@ function uninstall() {
 
 for (const feature of BEFORE_INIT) feature.install(reg, ctx);
 if (isReady()) onInit();
-else reg.once("init", onInit, { guard: false, label: "init" });
+else reg.once("init", onInit, { label: "init" });
 for (const feature of AFTER_INIT) feature.install(reg, ctx);

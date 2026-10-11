@@ -82,7 +82,7 @@ export function install(reg) {
   reg.once("i18nInit", () => {
     const added = fillMissingKeys(game.i18n.translations, game.i18n._fallback);
     if (added.length) console.log(`${MODULE} | Item Piles i18n shim added ${added.join(", ")}`);
-  }, { guard: false, label: "i18n shim" });
+  }, { label: "i18n shim" });
 }
 
 /** Nothing to undo: keys added to the translations stay until the next load. */
