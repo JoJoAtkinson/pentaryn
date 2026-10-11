@@ -456,10 +456,11 @@ must be empty on every refactor commit (steps 3-6, 8, 10). Steps 7 and 9 add gol
 
 | | |
 |---|---|
-| Live score after the migration | not migrated yet — **75.6 % (31/41)** today (wave start in [`wave-1-baseline.md`](wave-1-baseline.md)), `conformance.py --module lookup --markdown`, 2026-10-11 |
-| Date | 2026-10-11 (wave 1: checkpoint only (wave 1 Stage 0 lane); the refactor is workflow 2) |
-| Commits (Joe-approved) | characterisation: `88bd90d` (kit), `a532b3e` (checkpoint) · refactor: none yet · other: `034f048` (README drift, prompts-lookup-26; docs test), `35d439b`/`a532b3e` (suite red range, see wave-1-report) |
-| Declared changes handed to the live-test workflow | none |
-| `module.json` edits appended to `wave7-restart-batch.md` | no (step not reached) |
-| Adjustments rows appended to `adjustments-batch.md` | no (step not reached) |
-| Still failing, and why | C07 C12 C24 C27 C28 C40 C41 C44 C45 C48 — the guide's steps 2+ have not run. Frozen tests: the checkpoint's assertions and goldens are untouched since the checkpoint (see wave-1-report §Frozen tests). |
+| Live score after the migration | **97.7 % (42/43)** — `conformance.py --module lookup --markdown`, 2026-10-11 on `migrate/wave-2` (was 75.6 % at wave start). Only C07 fails (Wave 7 `module.json` batch W1); C02 stays a warning until then |
+| Date | 2026-10-11 (workflow 2, code phase; nothing live touched) |
+| Commits | characterisation: `88bd90d` (kit), `a532b3e` (checkpoint), `0412589a` (step-3 oracle) · refactor: `0e5d1f95` (3), `9c1a1a68` (4), `ef578313` (5), `39419daa` (6), `830f2fa2` (8), `f0f70ea8` (10), `90d294e0` (11) · declared: `abb4ae75` (7, DL1 + DL2 first half), `2afb4d4b` (9, DL2 queries), `b98745c1` (12, DL5), `91ee5c9d` (13, DL3), `10053c27` (DL4) · kit bump: `51695e7d`, `e6b66580` (J10) |
+| Audit ids → commits | prompts-lookup-6 `0e5d1f95` · -9 (twin comment) `0e5d1f95` · -4 move `0e5d1f95`, guard `91ee5c9d` · -5 seam `9c1a1a68`, warning `10053c27` · -1 seam `9c1a1a68`, cache `b98745c1` · -34 `ef578313` · -2 `abb4ae75` · -3 and mcp-fork-24 `2afb4d4b` · -26 `90d294e0` (README; the outside-module half landed in wave 1) · -28 pinned at the checkpoint · mcp-fork-20 needs the integrator's module-index regeneration |
+| Declared changes handed to the live-test workflow | DL1 frozen API + LIMITS copy · DL2 `module.api`, ready hooks, kit members, eight GM-only queries at `init` · DL3 registry guard · DL4 non-page `warning` · DL5 per-session book cache. Live checks in §5 (session L2) |
+| `module.json` edits appended to `wave7-restart-batch.md` | not by this lane (shared file): W1 returned to the integrator |
+| Adjustments rows appended to `adjustments-batch.md` | n/a — none (the `indexDocument` source read is noted in the README) |
+| Still failing, and why | C07 (W1, restart batch). Tests: 121 node:test cases, all pass (the 43 legacy cases converted in step 10). Frozen tests: only declared flips — glue.test hook pin and `golden/hooks.json` (step 9), api.test KNOWN-1 (DL5) and KNOWN-4 (DL3), legacy-api's JournalEntry-UUID row (DL4). Coverage (gap finder, unmerged): every module file 100 % lines except the entry (the drift-refusal branch is untested) |

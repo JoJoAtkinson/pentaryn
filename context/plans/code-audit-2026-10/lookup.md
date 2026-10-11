@@ -53,6 +53,12 @@ A new lookup method today takes four steps:
 
 What is unclear: the adapter now holds real logic (monsters filtering, names grouping, spellList dedupe) that by the module's own rule belongs in the core. Pack-id tables (BOOKSETS, MONSTER_PACKS, the spell pack order in findSpell, the monsters default packs) are spread across the adapter. Finding prompts-lookup-6 moves these into a tested core.
 
+> **Status 2026-10-11 (workflow 2, branch `migrate/wave-2`):** every finding below is applied —
+> -6 `0e5d1f95`; -4 `0e5d1f95` + `91ee5c9d` [declared DL3]; -5 `9c1a1a68` + `10053c27` [declared DL4];
+> -1 `9c1a1a68` + `b98745c1` [declared DL5]; -34 `ef578313`; -2 `abb4ae75` [declared DL1/DL2];
+> -3 `2afb4d4b` [declared DL2]; -26 `90d294e0` (README; the routing/config half landed in wave 1).
+> The record is the guide's Result row (`../addon-blueprint-2026-10/migrate-pentaryn-lookup.md`).
+
 ## Findings index
 
 | Id | Category | Impact | Effort | Title |
