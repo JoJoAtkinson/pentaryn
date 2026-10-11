@@ -253,22 +253,15 @@ Hooks.once("init", () => {
 });
 
 /**
- * Publish the API without assuming `game.pentaryn` is ours to extend.
- * pentaryn-importer creates and FREEZES that namespace in its own ready hook, and
- * module ready-hooks fire in alphabetical order of module id — "pentaryn-walls" sorts
- * after "pentaryn-importer", so by the time we get here the object is frozen and a bare
- * `game.pentaryn.walls = …` throws in strict mode (esmodules always are). That takes
- * the rest of this hook down with it, so the module silently has no API and no log
- * line. Rebuild the object instead — the same guard dropbin, pings and ties all carry.
+ * Publish the API under `game.pentaryn.walls`. The root is a plain object every module
+ * assigns into: the importer merges into it and nothing freezes it since its keystone
+ * (items-journal-1), so the old frozen-root guard is gone (kit 1.0.2, J10). A frozen root
+ * now throws here and the ready hook stops before its log line.
  */
 function publishAPI() {
   const api = {preview, run, undo, makeMacro, runEngine, backends: available};
-  const current = game.pentaryn;
-  if (current && !Object.isExtensible(current)) game.pentaryn = { ...current, walls: api };
-  else {
-    game.pentaryn ??= {};
-    game.pentaryn.walls = api;
-  }
+  game.pentaryn ??= {};
+  game.pentaryn.walls = api;
 }
 
 Hooks.once("ready", async () => {

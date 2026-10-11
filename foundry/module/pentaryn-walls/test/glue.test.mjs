@@ -57,14 +57,19 @@ test("(a) init registers the backend setting and three keybindings, exactly as t
   ]);
 });
 
-test("(b)+(d) ready as GM on a frozen root: a new root with x and walls; one console line", async () => {
-  game.pentaryn = Object.freeze({ x: 1 });
+// [declared] kit 1.0.2 (J10), flipped from "(b)+(d) ready as GM on a frozen root: a new root with x and
+// walls": the importer merges into an extensible root since its keystone (c0c3f97), so the frozen-root
+// guard copy is gone and the root the importer leaves is assigned into, never rebuilt.
+test("(b)+(d) ready as GM on an extensible root {x:1}: the same root gains walls; one console line", async () => {
+  const root = { x: 1 };
+  game.pentaryn = root;
   const from = mark();
   await withConsole(F, async () => {
     F.fire("ready");
     await wasmReady;
     await flush();
   });
+  assert.equal(game.pentaryn, root, "assigned into, never rebuilt");
   assert.equal(game.pentaryn.x, 1);
   const api = game.pentaryn.walls;
   const legacy = ["preview", "run", "undo", "makeMacro", "runEngine", "backends"];
