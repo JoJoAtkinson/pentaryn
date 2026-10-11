@@ -167,6 +167,12 @@ commit that added C53–C61 (playbook §5.9). Three columns so the moves can be 
 | transform | 48.8 % (20/41) | 48.8 % (20/41) | **53.3 % (24/45)** | C59 warn |
 | walls | 60.5 % (23/38) | 68.4 % (26/38) | **71.4 % (30/42)** | — |
 
+Stage 0 verification re-score (at 16f5af2, `conformance.py --json`): all 19 modules match the
+C01–C61 column exactly (score, passed/total and the C56 hits). The make error from
+`make foundry-conformance` is the scorer's documented exit 1 while any module fails a fail-class
+rule. That is expected until Stage 5 and does not mean a regression. The J3 advisory gate is
+`make foundry-<m>-check`, which stays green (checked: lookup, attunement).
+
 New-rule hits, for the module guides (all existing behaviour, none fixed here):
 
 - **C56 fail** — hand-written `CONFIG.queries`: journal `journal.mjs:547`, prompts `prompts.mjs:272-277`
