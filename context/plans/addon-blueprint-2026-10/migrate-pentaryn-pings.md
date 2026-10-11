@@ -359,13 +359,61 @@ Live smoke after sync: as GM, ping the canvas, wait 1 s, `game.pentaryn.pings.la
 | 9-10 wiring / restart batch | batched |
 | **Total** | **S/M, ≈ 1 day** plus one checkpoint, one adjustments-batch item, one restart item |
 
+## Step 1 record (2026-10-11, wave 1)
+
+- Step 0: not on WAIT; `git diff ee505c2 -- foundry/module/pentaryn-pings` empty; live score before
+  65.9 % (27/41, scored as full: no lock yet).
+- Kit commit **8c0c461** (`vendor.py sync pings --tier small --kit settings,api,patch,election`, fixed
+  `test/run.mjs`, `LEGACY = []`); checkpoint **d85e653** — `test/` only; `pings.mjs` untouched.
+  Score after: **75.0 % (30/40) as small**; still failing C07, C11, C21, C22, C32, C39 (the ModuleSpec
+  has no `node-test`, step 9), C40 (i18n.test, step 10), C41, C44, C45 — each cleared by the step named in §1.
+- Suite: `node test/run.mjs` — 38 tests in 7 files (core 12, glue 18, glue-player 2, glue-root 2,
+  glue-nopatch 1, glue-layers 1, glue-layers-config 1): 37 pass, 1 todo (the -39 target, below).
+  Coverage of `pings.mjs` (line / branch / funcs): **0 / 0 / 0 before** (no tests) →
+  **100 / 98.57 / 100 after**, measured with
+  `node --test --experimental-test-coverage --test-coverage-exclude='test/**' --test-coverage-exclude='lib/**' --test-skip-pattern='second module instance' "test/**/*.test.mjs"`.
+  The one open branch (`:170`, the `__pentarynPatched` early return) is covered by the skipped
+  re-import test; with it included the tool reports 47.7 / 33.3 / 18.8, because the
+  `pings.mjs?second-instance` import counts as a second copy of the file whose functions mostly never run.
+  A mutation pass over 20 hand mutants of `pings.mjs` left one survivor, and it is equivalent:
+  `snapped` computed from the image offset gives the same value, because the offset is always a whole
+  number of grid squares.
+- Goldens: `hooks.json` ([once init, once ready]), `legacy-surface.json` (asserted as a subset),
+  `record.json` (the live golden's `lastAfter` and leading key list, reproduced on the stub).
+- Deviations from the plan text:
+  - core.test runs every table over `test/fixtures/impls.mjs`, which adapts the verbatim oracle to the
+    step-2 core signatures (`isDuplicate(last, rec, now, windowMs)`, `capLimit`, `appendCapped`,
+    `imageOffset({width, height, padding, gridSize})`, `decorate(rec, {offset, gridSize}, now)`,
+    `recentOf`). Step 2 appends `["core", core]` there; the frozen test text never changes.
+  - SF3 replaces the plan's fixed row "`recent(1)` is still empty before the flush". The read lag
+    depends on state, so it is pinned twice: no lag before the first flush (the buffer *is* the cached
+    setting array) and lag after one (the flush stores a copy). `fixtures/world.mjs` wraps
+    `settings.set` to store a structured copy and always seeds the log. Because the no-lag case
+    depends on it, core.test also pins that `appendCapped` pushes in place under the cap and returns
+    a fresh slice when it trims. Step 2 must keep that.
+  - To keep the -39 flip to one named pin, every decorate assertion except one checks the leading
+    12 keys only. The exception is "pin transform-creatures-39: decorate has no numeric age"
+    (core.test). Step 6 deletes that pin and drops the `todo` flag from the "transform-creatures-39
+    target" test beside it.
+  - Extra glue processes beyond the plan: ControlsLayer lookup order (foundry → globalThis → CONFIG),
+    no-handlePing warn, GM gate inside `record` and the flush, a non-array stored log, a cap
+    ceiling of 900 → 500, and padding that rounds up (a 2100×1100 scene with no grid field).
+- Quirks pinned as-is (transform-creatures-36): `recent(0)` returns everything, `recent(-1)` drops the
+  oldest record, `snapped` uses square-grid maths on a hex scene, and a fractional `max` below 1 never
+  trims. Pinned as KNOWN (transform-creatures-39): read lag after a flush, and no namespace on player
+  clients. A ping is recorded even when core will not draw it (SF4).
+- Constraints the frozen glue tests put on steps 3-5: `settings.register` options must stay
+  byte-for-byte (no extra keys from `defineSettings`), the player client must have no listeners left
+  after ready, and the re-import test relies on the marker early return staying at the call site
+  (step 4).
+
 ## Result (fill when done)
 
 | | |
 |---|---|
 | Live score after the migration | ___ % (___ / ___ fail-class rules) — `conformance.py --module pings --markdown` |
 | Date | ____-__-__ |
-| Commits (Joe-approved) | characterisation: ______ · refactor: ______ · standalone: ______ |
+| Commits (Joe-approved) | characterisation: d85e653 (kit 8c0c461) · refactor: ______ · standalone: ______ |
 | Declared changes handed to the live-test workflow | ______ (session L__) |
 | `module.json` edits appended to `wave7-restart-batch.md` | yes / no |
 | Adjustments rows appended to `adjustments-batch.md` | yes / no |
