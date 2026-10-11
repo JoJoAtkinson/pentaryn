@@ -47,8 +47,8 @@ Sonnet step that does not match its expectation **stops and hands to Opus**; it 
 | Group | Modules | Goldens | Default |
 |---|---|---|---|
 | A — wave-2 migrations | lookup, movement, attunement, journal, dropbin | wave-2 scripts | deploy |
-| A′ — walls | walls (switched off in Joe's world) | `walls.js` returns `skipped` while inactive | **hold** until Joe re-enables walls (W2-L1); then §9 |
-| B — kit 1.0.2 re-vendor (J10 guard retired), plus the PT fixes merged from `fix/playtest-2026-10-11` | names, pings, cursors, importer, ties, prompts | wave-1 scripts | deploy if Joe takes W2-L2 (default yes: one restart covers them) |
+| A′ — walls | walls (switched off in Joe's world) | `walls.js` returns `skipped` while inactive | **not deployed**: Joe (2026-10-11, W2-L1) keeps walls off on purpose; no sync, no live check. §9 applies only if he re-enables it |
+| B — kit 1.0.2 re-vendor (J10 guard retired), plus the PT fixes merged from `fix/playtest-2026-10-11` | names, pings, cursors, importer, ties, prompts | wave-1 scripts | **deploy** — Joe took W2-L2's default on 2026-10-11: one restart covers them |
 | B′ — play-test fixes only | transform, combat | none (boot probe + the play-test LIVE CHECKs) | with W2-L2; otherwise they follow [`wave-1-playtest.md`](wave-1-playtest.md) §Deploy |
 
 The deploy set is every module of the chosen groups **whose tree differs from what is deployed**:

@@ -88,7 +88,7 @@ settings were copied on disk with classic-level while both worlds were closed.
 
 | Module | Reason |
 |---|---|
-| `pentaryn-walls` | Joe's instruction: do not activate the custom walls add-on. `false` in `core.moduleConfiguration`; `game.pentaryn.walls` absent |
+| `pentaryn-walls` | Joe's instruction: do not activate the custom walls add-on. `false` in `core.moduleConfiguration`; `game.pentaryn.walls` absent. Migrated in wave 2, never live-tested, off in the world: do not sync or live-check it (W2-L1, 2026-10-11) |
 | "Auto map generator" | No such module exists. The only generator is the bridge's ComfyUI `generate-map` tool: zero calls in the logs, rejected in [`plans/foundry-mcp-fork.md`](plans/foundry-mcp-fork.md). Nothing to switch off |
 
 **Log audit:** no add-on bugged out. Error logs were 0 bytes; the only failures were bridge
