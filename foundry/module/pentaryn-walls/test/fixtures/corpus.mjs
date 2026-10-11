@@ -2,7 +2,7 @@
  * Fixture corpus for the wall-autocomplete engine.
  *
  * Every fixture is a set of wall documents plus an expectation. The traces from
- * playbooks/foundry-wall-autocomplete.md §6 are here verbatim, alongside the adversarial
+ * context/plans/foundry-wall-autocomplete.md §6 are here verbatim, alongside the adversarial
  * cases that must *refuse* rather than guess.
  *
  * Wall shorthand: w(x0,y0,x1,y1, extra) — solid unless `extra` says otherwise.
