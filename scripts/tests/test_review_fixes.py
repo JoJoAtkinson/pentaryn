@@ -150,3 +150,86 @@ def test_gc_over_rclone_marks_a_snapshot_whose_sidecar_is_lost_from_its_tar_head
     assert only in _bundle_names(c)
     heads = [a for a in fake.calls if a[1] == "cat" and "--count" in a]
     assert heads and all(a[-len(storage.COMMON_FLAGS) - 1].endswith(sb) for a in heads)
+
+
+# ── DL2: each half of the cross-host fix holds on its own ────────────────────
+
+def _dl2_race(two_hosts, monkeypatch):
+    """test_review_dataloss DL2's scenario: an old, unreferenced boss-only bundle; during
+    the Mac's GC mark BOSS runs a whole backup that reuses it. Returns (bundle, boss's
+    new snapshot)."""
+    c = two_hosts.cloud
+    boss = _install(two_hosts.data["boss"])
+    make_module(boss / "Data/modules", "boss-only", version="0.1")
+    with two_hosts.use("boss"):
+        cloud.backup("shutdown")
+    [sb] = _names(c)
+    (c / "world-backups" / sb).unlink()
+    (c / "world-backups" / f"{sb}{cloud.PARENT_SUFFIX}").unlink()
+    [only] = [n for n in _bundle_names(c) if n.startswith("module@boss-only@")]
+    _install(two_hosts.data["mac"])
+    with two_hosts.use("mac"):
+        cloud.backup("shutdown")
+    for p in (c / "bundles").iterdir():
+        t = time.time() - 30 * DAY
+        os.utime(p, (t, t))
+    _edit(boss, "boss comes back")
+    real = cloud._read_sidecar
+    raced = []
+
+    def mark_while_boss_backs_up(st, snap):
+        if not raced:
+            raced.append(1)
+            with two_hosts.use("boss"):
+                cloud.backup("shutdown")
+        return real(st, snap)
+    monkeypatch.setattr(cloud, "_read_sidecar", mark_while_boss_backs_up)
+    with two_hosts.use("mac"):
+        cloud.bundles_gc_cmd(yes=True)
+    monkeypatch.setattr(cloud, "_read_sidecar", real)
+    assert raced
+    return only
+
+
+def test_dl2_the_remark_alone_spares_a_bundle_the_other_hosts_new_snapshot_reuses(
+        two_hosts, monkeypatch, capsys):
+    monkeypatch.setattr(cloud, "_refresh_reused", lambda *a, **k: None)
+    only = _dl2_race(two_hosts, monkeypatch)
+    assert only in _bundle_names(two_hosts.cloud)
+    assert "a snapshot that landed during this sweep" in capsys.readouterr().out
+
+
+def test_dl2_the_refreshed_mtime_alone_spares_a_bundle_the_other_hosts_snapshot_reuses(
+        two_hosts, monkeypatch, capsys):
+    monkeypatch.setattr(cloud, "_remark", lambda st, seen: (lambda: set()))
+    only = _dl2_race(two_hosts, monkeypatch)
+    assert only in _bundle_names(two_hosts.cloud)
+    assert "reused bundle(s) older than 3.5 days" in capsys.readouterr().out
+    assert time.time() - (two_hosts.cloud / "bundles" / only).stat().st_mtime < 3600
+
+
+def test_reused_bundles_named_by_this_hosts_own_based_on_are_not_touched(two_hosts,
+                                                                       monkeypatch):
+    c = two_hosts.cloud
+    mac = _install(two_hosts.data["mac"])
+    with two_hosts.use("mac"):
+        cloud.backup("shutdown")
+    for p in (c / "bundles").iterdir():
+        t = time.time() - 30 * DAY
+        os.utime(p, (t, t))
+    touched: list[str] = []
+    monkeypatch.setattr(storage.FolderStorage, "touch",
+                        lambda self, rel: touched.append(rel))
+    _edit(mac, "a session")
+    with two_hosts.use("mac"):
+        cloud.backup("shutdown")
+    assert touched == []
+
+
+def test_rclone_touch_never_creates(two_hosts, monkeypatch):
+    fake = _rclone(two_hosts, monkeypatch)
+    rc = storage.get()
+    rc.touch("bundles/module@gone@1@0123456789abcdef.tar.gz")
+    [argv] = [a for a in fake.calls if a[1] == "touch"]
+    assert "--no-create" in argv
+    assert not (two_hosts.cloud / "bundles" / "module@gone@1@0123456789abcdef.tar.gz").exists()

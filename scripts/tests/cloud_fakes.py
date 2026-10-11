@@ -1,7 +1,7 @@
 """A fake `rclone` for the cloud tests: no binary, no network, no config.
 
 :class:`FakeRclone` is called exactly like ``subprocess.run`` and implements the verbs
-``RcloneStorage`` uses — ``lsjson cat rcat copyto moveto deletefile mkdir listremotes``,
+``RcloneStorage`` uses — ``lsjson cat rcat copyto moveto deletefile touch mkdir listremotes``,
 and ``cat --count N`` (binary, the first N bytes) — against a temp folder. ``fake:<path>`` maps to ``<base>/<path>``; anything else is a local
 path. It records every argv and refuses any argv carrying ``--config`` or a token-ish flag or value, so a
 flag change is a visible test diff and a leak is a test failure.
@@ -152,6 +152,16 @@ class FakeRclone:
         if not p.is_file():
             return self._done(argv, 4, "", "error: object not found")
         p.unlink()
+        return self._done(argv, 0)
+
+    def _touch(self, argv, pos, _in):
+        p = self._path(pos[0])
+        if not p.is_file():
+            if "--no-create" in argv:
+                return self._done(argv, 0)
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.write_bytes(b"")
+        os.utime(p, None)
         return self._done(argv, 0)
 
     def _mkdir(self, argv, pos, _in):

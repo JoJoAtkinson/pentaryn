@@ -928,6 +928,7 @@ def _backup(st: Storage, reason: str, *, safety: bool = False,
         # Bundles, then the sidecar, then the snapshot: by the time the snapshot's name
         # appears, its lineage and every bundle its manifest names exist.
         bundles.upload_missing(st, staged, have)
+        _refresh_reused(st, manifest, have, staged, state, existing)
         st.write_text(parent_rel(WORLD_BACKUPS, name), json.dumps(
             {"parent": state.based_on, "ancestors": ancestors,
              "ancestor_mtimes": ancestor_mtimes, "origin_before": _finite(origin),
@@ -995,6 +996,38 @@ def _backup(st: Storage, reason: str, *, safety: bool = False,
            "restore safety copies" if safeties else ""))
     _gc_after_backup(st)
     return snap
+
+
+def _refresh_reused(st: Storage, manifest: dict, have: dict[str, Entry],
+                    staged: dict[str, Path], state: bootstate.BootState,
+                    existing: list[Snapshot]) -> None:
+    """Before the sidecar: every bundle this snapshot reuses whose cloud mtime is past half
+    the GC grace gets its mtime set to now (storage.touch), so the other host's GC — whose
+    mark may have been taken before this snapshot's sidecar exists — sees it as young
+    and leaves it (§3.7; review DL2). Skipped for the bundles this host's own based-on
+    snapshot names while it is still listed: only this host deletes that one, and only
+    after the new snapshot has landed, so they are referenced throughout."""
+    now = time.time()
+    old = sorted(n for n in bundles.manifest_names(manifest)
+                 if n in have and n not in staged
+                 and now - have[n].mtime > bundles.GC_GRACE_SECONDS / 2)
+    if not old:
+        return
+    me = host.host_name()
+    base = next((s for s in existing if s.name == state.based_on and s.host == me), None)
+    if base is not None:
+        try:
+            kind, m = _read_sidecar(st, base)
+        except StorageError:
+            kind, m = "absent", None
+        if kind == "bundled" and m is not None:
+            safe = bundles.manifest_names(m)
+            old = [n for n in old if n not in safe]
+    for n in old:
+        st.touch(f"{bundles.BUNDLES}/{n}")
+    if old:
+        log(f"refreshed {len(old)} reused bundle(s) older than "
+            f"{bundles.GC_GRACE_SECONDS / 2 / 86400:g} days, so no GC sweeps them meanwhile")
 
 
 class _Incomplete(Exception):
@@ -1074,6 +1107,16 @@ def referenced_bundles(st: Storage) -> set[str]:
     return _mark(st)[0]
 
 
+def _remark(st: Storage, seen: set[str]):
+    """GC's second look, right before it deletes: list both folders again and read the
+    sidecars of the tagged snapshots that landed since the first mark (`seen`). Closes
+    the cross-host race in which the other host's whole backup — listing an old bundle,
+    reusing it, writing its sidecar and tar, verifying — runs while this mark reads ~25
+    sidecars; the reused bundle's refreshed mtime (_refresh_reused) closes the rest."""
+    frozen = frozenset(seen)
+    return lambda: _mark(st, frozen)[0]
+
+
 def _mark(st: Storage, skip: frozenset[str] = frozenset()
           ) -> tuple[set[str], set[str]]:
     """(referenced bundle names, the snapshots read) over fresh listings; snapshots named
@@ -1149,13 +1192,13 @@ def _gc_after_backup(st: Storage) -> None:
     """Sweep the bundles no retained snapshot references (after the grace period). Never
     fatal: the snapshot is already recorded; any failure is one warning line."""
     try:
-        refs = referenced_bundles(st)
+        refs, seen = _mark(st)
     except StorageError as exc:
         print(f"  ⚠ bundle GC skipped: cannot read every snapshot's manifest ({exc}) — "
               "nothing was deleted", file=sys.stderr)
         return
     try:
-        swept = bundles.gc(st, referenced=refs)
+        swept = bundles.gc(st, referenced=refs, recheck=_remark(st, seen))
     except StorageError as exc:
         print(f"  ⚠ bundle GC stopped part-way: {exc} — the next backup sweeps the rest",
               file=sys.stderr)
@@ -1886,12 +1929,12 @@ def bundles_gc_cmd(yes: bool = False) -> int:
     """`cloud bundles-gc [--yes]`: the GC sweep by hand. A dry run unless `yes`."""
     st = ensure_cloud()
     try:
-        refs = referenced_bundles(st)
+        refs, seen = _mark(st)
         have = bundles.listing(st, fresh=True)
     except StorageError as exc:
         die(f"cannot read every snapshot's manifest — nothing was deleted: {exc}")
     try:
-        doomed = bundles.gc(st, referenced=refs, dry_run=not yes)
+        doomed = bundles.gc(st, referenced=refs, dry_run=not yes, recheck=_remark(st, seen))
     except StorageError as exc:
         die(f"the sweep stopped part-way: {exc} — rerun it")
     now = time.time()

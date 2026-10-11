@@ -122,9 +122,6 @@ def test_dl1_verify_sees_a_bundle_swept_mid_backup_over_rclone(two_hosts, monkey
 
 # ── DL2: mark → sweep is not atomic across hosts ─────────────────────────────
 
-@pytest.mark.xfail(strict=True, reason="DL2: GC marks from a world-backups listing taken before "
-                   "the other host's snapshot landed and sweeps after that host's verify passed; "
-                   "a reused bundle older than the grace is deleted under a retained snapshot")
 def test_dl2_gc_on_one_host_never_sweeps_a_bundle_the_other_hosts_new_snapshot_reuses(
         two_hosts, monkeypatch):
     c = two_hosts.cloud

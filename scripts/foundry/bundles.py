@@ -512,18 +512,31 @@ def fetch(st: Storage, names: Iterable[str], dest_dir: Path,
 
 
 def gc(st: Storage, *, referenced: set[str], grace: float = GC_GRACE_SECONDS,
-       dry_run: bool = False, now: float | None = None) -> list[str]:
+       dry_run: bool = False, now: float | None = None,
+       recheck: Callable[[], set[str]] | None = None) -> list[str]:
     """Sweep: delete every listed bundle no retained snapshot references and older than
     ``grace`` seconds (by its listing mtime); return the names (sorted). A name that does
     not parse as a bundle (a stray file) is never touched; ``.partial`` is never listed.
     A file already gone (the other host swept it) is not an error. ``dry_run`` deletes
     nothing and returns what would go. ``referenced`` is the caller's mark phase —
-    computing it must abort the run, not shrink, when a manifest cannot be read (§3.7)."""
+    computing it must abort the run, not shrink, when a manifest cannot be read (§3.7).
+
+    ``recheck`` (not on a dry run) is called once, after the sweep listing and before the
+    first delete, and returns more referenced names: the mark is not atomic across hosts,
+    so the caller re-marks the snapshots that landed while it was marking (a snapshot of
+    the other host that reuses an old bundle). Raising there deletes nothing."""
     now = time.time() if now is None else now
     have = listing(st, fresh=True)
     doomed = sorted(n for n, e in have.items()
                     if parse_bundle(n) is not None and n not in referenced
                     and now - e.mtime > grace)
+    if doomed and recheck is not None and not dry_run:
+        late = recheck()
+        spared = [n for n in doomed if n in late]
+        if spared:
+            log(f"kept {len(spared)} bundle(s) a snapshot that landed during this sweep "
+                "references")
+            doomed = [n for n in doomed if n not in late]
     total = sum(have[n].size for n in doomed)
     if dry_run:
         if doomed:

@@ -77,6 +77,7 @@ class Storage(Protocol):
     def upload(self, src: Path, rel: str) -> None: ...
     def copy(self, src_rel: str, dst_rel: str) -> None: ...
     def delete(self, rel: str) -> None: ...
+    def touch(self, rel: str) -> None: ...
     def mkdirs(self) -> None: ...
     def refresh(self, sub: str) -> None: ...
 
@@ -218,6 +219,15 @@ class FolderStorage:
         except OSError as exc:
             raise StorageError(f"cannot delete {rel}: {exc}", verb="deletefile") from exc
 
+    def touch(self, rel: str) -> None:
+        """Set the file's mtime to now; a file that is not there is left not there."""
+        try:
+            os.utime(self._p(rel), None)
+        except FileNotFoundError:
+            return
+        except OSError as exc:
+            raise StorageError(f"cannot touch {rel}: {exc}", verb="touch") from exc
+
     def mkdirs(self) -> None:
         try:
             for sub in SUBFOLDERS:
@@ -239,7 +249,7 @@ Runner = Callable[..., "subprocess.CompletedProcess"]
 COMMON_FLAGS = ("--retries", "3", "--low-level-retries", "10",
                 "--contimeout", "30s", "--timeout", "120s")
 TIMEOUTS = {"lsjson": 60.0, "cat": 60.0, "rcat": 60.0, "moveto": 120.0, "copy": 300.0,
-            "deletefile": 60.0, "mkdir": 60.0, "listremotes": 10.0}
+            "deletefile": 60.0, "touch": 60.0, "mkdir": 60.0, "listremotes": 10.0}
 # rclone exit codes: 3 = directory not found, 4 = file not found.
 NOT_FOUND_CODES = (3, 4)
 _NOT_FOUND_TEXT = ("not found", "doesn't exist", "does not exist")
@@ -502,6 +512,16 @@ class RcloneStorage:
         self._invalidate(rel)
         if proc.returncode != 0 and not self._not_found(proc):
             raise self._fail("deletefile", rel, proc)
+
+    def touch(self, rel: str) -> None:
+        """``rclone touch --no-create``: the cloud file's modification time becomes now (the
+        listing's mtime, which the bundle GC's grace reads); a file that is not there is
+        not created."""
+        proc = self._run("touch", "--no-create", self._r(_check_rel(rel)),
+                         timeout=self.timeouts["touch"], what=rel)
+        self._invalidate(rel)
+        if proc.returncode != 0 and not self._not_found(proc):
+            raise self._fail("touch", rel, proc)
 
     def mkdirs(self) -> None:
         for sub in SUBFOLDERS:
