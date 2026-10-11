@@ -13,7 +13,7 @@
  */
 
 import { crowded, followersOf, tokenBox } from "./portals-core.mjs";
-import { carryTo, destinationsOf, landingPlaces, recordOf } from "./scene-adapter.mjs";
+import { carryTo, destinationsOf, gmUserIds, landingPlaces, recordOf } from "./scene-adapter.mjs";
 import { setting } from "./settings.mjs";
 import { PARTY_ROWS } from "./api-manifest.mjs";
 
@@ -54,12 +54,13 @@ export async function spreadArrival(arrived) {
 
 export async function bringFollowers(scene, deleted, replacements) {
   const leaders = [];
+  const gmIds = gmUserIds();
   for (const t of deleted) {
     const newUuid = replacements[t.id];
     let arrived = newUuid ? fromUuidSync(newUuid) : null;
     if (!arrived && newUuid) arrived = await fromUuid(newUuid).catch(() => null);
     if (!arrived || arrived.parent === scene) continue;           // same scene: not a portal hop
-    const r = recordOf(t);
+    const r = recordOf(t, { gmIds });
     if (r.type !== "character" && !r.polymorphed) continue;       // only a PC brings company
     if (!cameThroughPortal(t, arrived.parent)) continue;
     try { await spreadArrival(arrived); } catch (err) { log.warn("arrival spread skipped", err); }
@@ -67,7 +68,7 @@ export async function bringFollowers(scene, deleted, replacements) {
   }
   if (!leaders.length) return;
   const gone = new Set(deleted.map(t => t.id));
-  const remaining = scene.tokens.filter(t => !gone.has(t.id)).map(recordOf);
+  const remaining = scene.tokens.filter(t => !gone.has(t.id)).map(t => recordOf(t, { gmIds }));
   // Each PC's own company lands around that PC. Then, if several PCs went through together to
   // one scene, whatever they co-own (a shared steed) lands around the first of them.
   const passes = leaders.map(l => ({ group: [l.record], arrived: l.arrived }));

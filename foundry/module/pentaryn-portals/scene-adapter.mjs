@@ -166,9 +166,19 @@ export function folderNames(actor) {
   return out;
 }
 
-export function recordOf(t) {
+/** The GM users' ids, once per pass (finding -36: recordOf used to scan the users per token). */
+export const gmUserIds = () => game.users.filter(u => u.isGM).map(u => u.id);
+
+/**
+ * The plain record the party rules read (portals-core). Pass `{ gmIds }` when building many: the
+ * second argument is an options object, so `tokens.map(recordOf)` (an index there) still works.
+ *
+ * Item Piles: `isValidItemPile(actor)` with no flag fallback, unlike pentaryn-aoe's resolve.mjs
+ * (token document, falls back to flags). Deliberate: aoe excludes creatures and tolerates a false
+ * positive; portals must never leave a pile-PC behind. Unifying them is a decision for Joe.
+ */
+export function recordOf(t, { gmIds = gmUserIds() } = {}) {
   const a = t.actor;
-  const gmIds = game.users.filter(u => u.isGM).map(u => u.id);
   let pile = false;
   try { pile = !!(a && game.itempiles?.API?.isValidItemPile?.(a)); } catch (err) { deps.log?.debug("item piles check", err); }
   return {
@@ -194,7 +204,8 @@ export function recordOf(t) {
  * piles, Markers or crowd.
  */
 export function partyRecords(scene) {
-  return partySelection(scene.tokens.map(recordOf));
+  const gmIds = gmUserIds();
+  return partySelection(scene.tokens.map(t => recordOf(t, { gmIds })));
 }
 
 /**
