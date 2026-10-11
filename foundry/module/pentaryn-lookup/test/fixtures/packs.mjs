@@ -2,7 +2,7 @@
  * Synthetic compendium packs for the glue and API characterisation (guide step 2).
  *
  * Shapes follow what the entry reads from Foundry: `game.packs.get(id)` → `{ metadata.label,
- * documentName, getDocuments(), getIndex(), getDocument(id) }`; a JournalEntry's `pages` is an
+ * documentName, locked, getDocuments(), getIndex(), getDocument(id) }`; a JournalEntry's `pages` is an
  * iterable collection with `.size` and no `.length` (an EmbeddedCollection live). Index entries
  * carry `_id` (never `id`), as Foundry's index does. Not real book text — see books.mjs.
  *
@@ -19,12 +19,13 @@ function keyed(list, key) {
   return c;
 }
 
-function makePack(id, { label, documentName, docs = [], index = null }) {
+function makePack(id, { label, documentName, docs = [], index = null, locked = true }) {
   const idx = keyed(index ?? docs.map(d => ({ _id: d.id, name: d.name })), "_id");
   const pack = {
     collection: id,
     metadata: { id, label },
     documentName,
+    locked,   // module and system packs are locked by default (CompendiumCollection#locked)
     calls: { getDocuments: 0, getIndex: [] },
     async getDocuments() {
       pack.calls.getDocuments += 1;

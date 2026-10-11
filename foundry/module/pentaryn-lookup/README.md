@@ -121,9 +121,11 @@ answer the same read, so the first answer is right.
 
 - `getIndex({ fields })` cannot be trusted for journal `pages.*` (first trap): book text comes
   from `getDocuments()` (~150 ms for the whole PHB). Actor index fields are reliable.
-- Book packs are loaded once per session and cached with their plain text (`packs-adapter.mjs`
-  `bookCache`); `uninstall()` clears it. A pack changed under a running world (it cannot be
-  while LevelDB holds it) needs `uninstall()` or a reload to be seen.
+- Locked book packs are loaded once per session and cached with their plain text
+  (`packs-adapter.mjs` `bookCache`); `uninstall()` clears it. Unlocked packs are never cached:
+  a world compendium (unlocked by default) or a pack whose edit lock a GM toggled off is read
+  on every call, and unlocking a cached pack drops its entry. LevelDB only guards packs against
+  edits from outside Foundry, not in-app edits.
 - `doc.pages` and `actor.items` are EmbeddedCollections: iterate, `.size`, never `.length`.
 - A param named `ref` is resolved as an actor by the kit unless its row says `resolve: false`;
   `page` is the only one, and no other lookup param may be named `ref`.

@@ -11,11 +11,15 @@
 import { EDITIONS, SPELL_PACKS, tidy, toBook, toPlainText } from "./lookup-core.mjs";
 
 /**
- * The plain books, one load per pack per session: pack id → Promise<book> (the promise, so two
- * calls on a cold cache share one getDocuments()). The book packs are read-only and LevelDB locks
- * them while Foundry runs, so nothing invalidates an entry but clearBookCache() (books.uninstall).
- * A missing pack is never cached (checked on every call); a failed load is dropped, so the next
- * call retries. Memory: the books' HTML plus their plain text.
+ * The plain books, one load per LOCKED pack per session: pack id → Promise<book> (the promise, so two
+ * calls on a cold cache share one getDocuments()). Only a pack whose `locked` is true is cached:
+ * LevelDB keeps a running world's packs safe from edits outside Foundry, but not from edits inside
+ * it, and an unlocked pack (a world compendium by default, or a module/system pack whose edit lock a
+ * GM toggled off) can change under the running world. An unlocked pack is read on every call, as
+ * before DL5, and a cached entry whose pack is no longer locked is dropped. Otherwise nothing
+ * invalidates an entry but clearBookCache() (books.uninstall). A missing pack is never cached
+ * (checked on every call); a failed load is dropped, so the next call retries. Memory: the locked
+ * books' HTML plus their plain text.
  */
 const bookCache = new Map();
 
@@ -23,10 +27,17 @@ export function clearBookCache() {
   bookCache.clear();
 }
 
+const readBook = (id, pack) =>
+  pack.getDocuments().then(docs => toBook(id, pack.metadata.label, EDITIONS[id], docs));
+
 function cachedBook(id, pack) {
+  if (pack.locked !== true) {
+    bookCache.delete(id);
+    return readBook(id, pack);
+  }
   let p = bookCache.get(id);
   if (!p) {
-    p = pack.getDocuments().then(docs => toBook(id, pack.metadata.label, EDITIONS[id], docs));
+    p = readBook(id, pack);
     bookCache.set(id, p);
     p.catch(() => { if (bookCache.get(id) === p) bookCache.delete(id); });
   }

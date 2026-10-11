@@ -67,3 +67,61 @@ test("uninstall() empties the cache: the next search reloads", async () => {
   await rules.search("cover");
   assert.deepEqual(delta(before), present.map(() => 1));
 });
+
+// Review fix: only a locked pack is cached. An unlocked pack (a world compendium, or a module pack a
+// GM unlocked) can be edited in the running world, so it is read on every call, as before DL5.
+test("an unlocked pack is read on every call; a locked one once", async () => {
+  rules.uninstall();
+  const pack = world.packs.get(PHB);
+  const other = present.filter(id => id !== PHB).map(id => world.packs.get(id));
+  pack.locked = false;
+  try {
+    const before = pack.calls.getDocuments;
+    const others = other.map(p => p.calls.getDocuments);
+    await rules.search("cover", { books: [PHB] });
+    await rules.search("cover", { books: [PHB] });
+    await rules.page("Study");
+    assert.equal(pack.calls.getDocuments - before, 3);
+    await rules.search("cover");
+    await rules.search("cover");
+    assert.equal(pack.calls.getDocuments - before, 5);
+    assert.deepEqual(other.map((p, i) => p.calls.getDocuments - others[i]), other.map(() => 1));
+  } finally {
+    pack.locked = true;
+  }
+});
+
+test("an unlocked pack's edits are seen on the next call", async () => {
+  rules.uninstall();
+  const pack = world.packs.get(PHB);
+  pack.locked = false;
+  const real = pack.getDocuments;
+  try {
+    const first = await rules.search("cover", { books: [PHB] });
+    assert.ok(first.total > 0);
+    pack.getDocuments = async () => { pack.calls.getDocuments += 1; return []; };
+    assert.equal((await rules.search("cover", { books: [PHB] })).total, 0);
+  } finally {
+    pack.getDocuments = real;
+    pack.locked = true;
+  }
+});
+
+test("a cached pack that is unlocked is dropped and re-read; relocked, it caches again", async () => {
+  rules.uninstall();
+  const pack = world.packs.get(PHB);
+  const before = pack.calls.getDocuments;
+  await rules.search("cover", { books: [PHB] });
+  await rules.search("cover", { books: [PHB] });
+  assert.equal(pack.calls.getDocuments - before, 1);
+  pack.locked = false;
+  try {
+    await rules.search("cover", { books: [PHB] });
+    assert.equal(pack.calls.getDocuments - before, 2);
+  } finally {
+    pack.locked = true;
+  }
+  await rules.search("cover", { books: [PHB] });
+  await rules.search("cover", { books: [PHB] });
+  assert.equal(pack.calls.getDocuments - before, 3);
+});
