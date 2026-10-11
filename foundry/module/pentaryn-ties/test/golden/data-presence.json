@@ -1,0 +1,15 @@
+{
+  "viaDocument": "zzActorA00000001",
+  "viaActorId": "zzActorB00000001",
+  "unknown": null,
+  "none": null,
+  "gm": [
+    "zzActorA00000001",
+    "zzActorB00000001",
+    "zzActorC00000001"
+  ],
+  "player": [
+    "zzActorA00000001",
+    "zzActorC00000001"
+  ]
+}

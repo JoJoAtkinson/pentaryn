@@ -1,0 +1,51 @@
+[
+  {
+    "label": "both blank",
+    "rev": {
+      "word": "",
+      "notes": ""
+    },
+    "out": {
+      "word": "debtor",
+      "notes": "owes us"
+    }
+  },
+  {
+    "label": "word blank",
+    "rev": {
+      "word": " ",
+      "notes": "theirs"
+    },
+    "out": {
+      "word": "debtor",
+      "notes": "theirs"
+    }
+  },
+  {
+    "label": "notes blank",
+    "rev": {
+      "word": "theirs",
+      "notes": ""
+    },
+    "out": {
+      "word": "theirs",
+      "notes": "owes us"
+    }
+  },
+  {
+    "label": "both written",
+    "rev": {
+      "word": "theirs",
+      "notes": "their notes"
+    },
+    "out": null
+  },
+  {
+    "label": "already equal",
+    "rev": {
+      "word": "debtor",
+      "notes": "owes us"
+    },
+    "out": null
+  }
+]

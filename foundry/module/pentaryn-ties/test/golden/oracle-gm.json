@@ -1,0 +1,38 @@
+[
+  {
+    "isGM": true,
+    "activeGM": "self",
+    "legacy": true,
+    "kit": true
+  },
+  {
+    "isGM": true,
+    "activeGM": "other",
+    "legacy": false,
+    "kit": false
+  },
+  {
+    "isGM": true,
+    "activeGM": null,
+    "legacy": false,
+    "kit": false
+  },
+  {
+    "isGM": false,
+    "activeGM": "self",
+    "legacy": false,
+    "kit": true
+  },
+  {
+    "isGM": false,
+    "activeGM": "other",
+    "legacy": false,
+    "kit": false
+  },
+  {
+    "isGM": false,
+    "activeGM": null,
+    "legacy": false,
+    "kit": false
+  }
+]

@@ -1,0 +1,29 @@
+[
+  {
+    "label": "notes omitted keeps prev",
+    "out": {
+      "word": "rival",
+      "notes": "their paragraph",
+      "stance": -1,
+      "strength": 4
+    }
+  },
+  {
+    "label": "notes given overwrites",
+    "out": {
+      "word": "rival",
+      "notes": "mine now",
+      "stance": -1,
+      "strength": 4
+    }
+  },
+  {
+    "label": "no prev row",
+    "out": {
+      "word": "rival",
+      "notes": "",
+      "stance": 0,
+      "strength": 3
+    }
+  }
+]

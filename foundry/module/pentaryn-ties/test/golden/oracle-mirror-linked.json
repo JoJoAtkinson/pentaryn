@@ -1,0 +1,51 @@
+[
+  {
+    "args": [
+      "",
+      "x"
+    ],
+    "out": true
+  },
+  {
+    "args": [
+      "  ",
+      "x"
+    ],
+    "out": true
+  },
+  {
+    "args": [
+      "x",
+      "x"
+    ],
+    "out": true
+  },
+  {
+    "args": [
+      " x ",
+      "x"
+    ],
+    "out": true
+  },
+  {
+    "args": [
+      "y",
+      "x"
+    ],
+    "out": false
+  },
+  {
+    "args": [
+      null,
+      null
+    ],
+    "out": true
+  },
+  {
+    "args": [
+      "x",
+      null
+    ],
+    "out": false
+  }
+]
