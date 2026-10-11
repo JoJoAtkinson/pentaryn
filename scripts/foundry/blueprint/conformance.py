@@ -1410,8 +1410,9 @@ DEFER = re.compile(r"(?<![\w$.])(?:perFrame|coalesce)\(|(?<![\w$])debounce\(")
 # delete takes nothing or an options object)
 DOC_WRITE = re.compile(r"\.(?:update|create)\(|\.delete\(\s*(?:\)|\{)|\.(?:set|unset)Flag\("
                        r"|(?:update|create|delete)(?:Embedded)?Documents\(|settings\.set\(|\.write\(")
-LOOP_AWAIT_METHODS = {"update", "create", "delete", "setFlag", "unsetFlag", "createEmbeddedDocuments",
-                      "updateEmbeddedDocuments", "deleteEmbeddedDocuments"}
+# per-document writes only: the *EmbeddedDocuments calls are the batch §5.9 prescribes ("one
+# parent.updateEmbeddedDocuments per group of writes"), so a per-parent loop of them passes
+LOOP_AWAIT_METHODS = {"update", "create", "delete", "setFlag", "unsetFlag"}
 QUERY_RECEIVERS = {"gm", "user", "activeGM", "recipient", "target", "owner"}
 
 

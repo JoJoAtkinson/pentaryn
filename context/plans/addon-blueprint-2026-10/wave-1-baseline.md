@@ -157,12 +157,12 @@ commit that added C53–C61 (playbook §5.9). Three columns so the moves can be 
 | journal | 46.3 % (19/41) | 56.1 % (23/41) | **57.8 % (26/45)** | C56 fail |
 | lookup | 64.9 % (24/37) | 73.0 % (27/37) | **75.6 % (31/41)** | — |
 | movement | 53.7 % (22/41) | 63.4 % (26/41) | **66.7 % (30/45)** | — |
-| names | 64.1 % (25/39) | 64.1 % (25/39) | **67.4 % (29/43)** | C59 warn |
+| names | 64.1 % (25/39) | 64.1 % (25/39) | **67.4 % (29/43)** | — |
 | pings | 62.2 % (23/37) | 62.2 % (23/37) | **65.9 % (27/41)** | — |
 | portals | 51.3 % (20/39) | 53.8 % (21/39) | **58.1 % (25/43)** | C59 warn |
 | prompts | 50.0 % (21/42) | 54.8 % (23/42) | **56.5 % (26/46)** | C56 fail, C59 warn |
 | riders | 45.2 % (19/42) | 45.2 % (19/42) | **47.8 % (22/46)** | C56 fail, C59 warn |
-| senses | 43.9 % (18/41) | 46.3 % (19/41) | **51.1 % (23/45)** | C59 warn |
+| senses | 43.9 % (18/41) | 46.3 % (19/41) | **51.1 % (23/45)** | — |
 | ties | 43.9 % (18/41) | 50.0 % (21/42) | **55.3 % (26/47)** | C59 warn |
 | transform | 48.8 % (20/41) | 48.8 % (20/41) | **53.3 % (24/45)** | C59 warn |
 | walls | 60.5 % (23/38) | 68.4 % (26/38) | **71.4 % (30/42)** | — |
@@ -172,9 +172,10 @@ New-rule hits, for the module guides (all existing behaviour, none fixed here):
 - **C56 fail** — hand-written `CONFIG.queries`: journal `journal.mjs:547`, prompts `prompts.mjs:272-277`
   (five `guarded` rows), riders `riders.mjs:640`. Each goes through manifest `query: true` /
   `relay: true` rows when that module's API step lands.
-- **C59 warn** (per-document await in a loop) — aoe, combat, dropbin, importer, names, portals,
-  prompts, riders, senses, ties, transform; review each at that module's refactor (some are
-  deliberate sequencing).
+- **C59 warn** (per-document await in a loop) — aoe, combat, dropbin, importer, portals, prompts,
+  riders, ties, transform; review each at that module's refactor (some are deliberate sequencing).
+  A per-parent loop that awaits `parent.*EmbeddedDocuments` is the batch §5.9 prescribes and passes;
+  the first count (11 modules, with names and senses) wrongly flagged those.
 - C53, C54, C55, C57, C58, C60 and C61: no hits. Both existing `.query(` callers pass `timeout: 8000`;
   the two `createItem`/`createChatMessage` writers (attunement, riders) use the initiator gate
   `userId !== game.user.id`, which C61 accepts as one client.

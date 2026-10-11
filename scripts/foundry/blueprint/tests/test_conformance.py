@@ -536,6 +536,8 @@ C59_CASES = [
     ("for (const t of tokens) { u.push({ _id: t.id }); }\nawait scene.updateEmbeddedDocuments('Token', u);", "pass"),
     ("for (const t of tokens) { if (!(await claimDocument(t, 'k'))) continue; }", "pass"),
     ("for (const t of tokens) { await sleep(1); }", "pass"),
+    ("for (const scene of game.scenes) { await scene.updateEmbeddedDocuments('Token', u); }", "pass"),
+    ("for (const s of scenes) { await s.deleteEmbeddedDocuments('Wall', ids); }", "pass"),
 ]
 
 
