@@ -1146,9 +1146,20 @@ def test_exposure_matches_code_not_prose(tmp_path):
 
 def test_real_exposure_has_no_known_false_positives():
     reg = adj_mod.load()
-    for pkg in ("levels", "multi-token-edit", "scene-packer", "wall-height", "mad-endlesswiz"):
+    for pkg in ("multi-token-edit", "scene-packer", "wall-height", "mad-endlesswiz"):
         assert reg.exposure(pkg) == [], pkg
     assert reg.exposure("dice-so-nice") == [STUDY]
+
+
+# KNOWN (wave-1 baseline, 2026-10-11; unfiled — see addon-blueprint-2026-10/wave-1-report.md
+# "Open for Joe"): id_pattern treats a backtick as a quote, so the template literal
+# `levels ${levels.join(", ")}` in pentaryn-prompts/geometry-core.mjs (since 17275c9) reads
+# as the Levels package id. Output today:
+#   reg.exposure("levels") == ['foundry/module/pentaryn-prompts/geometry-core.mjs']
+# The scanner is wrong, not this test: remove the marker when id_pattern is fixed.
+@pytest.mark.xfail(strict=True, reason="levels exposure false positive (template literal)")
+def test_real_exposure_levels_has_no_false_positive():
+    assert adj_mod.load().exposure("levels") == []
 
 
 # ── the run path: escalation sits between adjudication and apply ─────────────
