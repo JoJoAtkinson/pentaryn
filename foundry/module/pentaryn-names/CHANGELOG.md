@@ -15,6 +15,9 @@ Declared changes:
   `game.modules.get("pentaryn-names").api`; `pentaryn-names.ready` and `pentaryn.ready` fire (N-D2).
 - `sync` accepts an actor id, UUID or whole name as well as an Actor; an ambiguous name returns
   `fail("AMBIGUOUS")` (N-D3, transform-creatures-38).
+- `sync` given a token, placeable, token id or uuid, or a token's synthetic actor relabels the
+  BASE actor's prototype token. Before, it resolved to the synthetic actor, whose prototype write
+  Foundry drops, yet counted and toasted it (review of N-D3).
 
 ## 0.1.0 — before the blueprint
 

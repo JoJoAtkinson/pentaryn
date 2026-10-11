@@ -3,12 +3,14 @@
  * labels (prototype token and every placed token of that actor, on every scene).
  *
  * GLUE, one feature: `install(reg, ctx)` registers the two actor hooks through the registry;
- * `uninstall()` has no state to drop. `sync` is also published as the legacy API row.
+ * `uninstall()` has no state to drop. `syncRef` is the legacy API row `sync`.
  * The old name is captured in preUpdateActor on every client; only the client that made the
  * change (`userId === game.user.id`) writes, and only to tokens it may edit.
  */
 
 import { planTokenRelabels, relabel } from "./names-core.mjs";
+import { CODES, errorCode, toFail } from "./lib/errors.mjs";
+import { resolveRef } from "./lib/resolve.mjs";
 
 /** Relabel the prototype token and every placed token of `actor`. Returns how many labels changed. */
 export async function sync(actor, oldName, newName) {
@@ -29,6 +31,25 @@ export async function sync(actor, oldName, newName) {
   }
   if (count) ui.notifications.info(_loc("PENTARYN_NAMES.Synced", { name: newName, count }));
   return count;
+}
+
+/**
+ * The API row `sync`: resolve `ref` to the BASE actor, then `sync`. A token, a placeable, a token id
+ * or a token's synthetic actor all mean the world actor, because Foundry routes a synthetic actor's
+ * update to its ActorDelta, which has no prototypeToken — the prototype relabel would be dropped
+ * while still counted. Legacy row: a miss reaches `sync` as null and rejects with a TypeError; a
+ * coded resolve error (AMBIGUOUS, BAD_ARGS) comes back as fail(code, reason), writing nothing.
+ */
+export function syncRef(ref, oldName, newName) {
+  let actor;
+  try {
+    actor = resolveRef(ref, "actor", { base: true, required: false });
+  } catch (err) {
+    if (errorCode(err, CODES)) return toFail(err);
+    throw err;
+  }
+  if (actor?.isToken) actor = game.actors.get(actor.token?.actorId) ?? null;
+  return sync(actor, oldName, newName);
 }
 
 export function install(reg, ctx) {

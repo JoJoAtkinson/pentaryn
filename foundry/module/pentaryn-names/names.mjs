@@ -42,7 +42,8 @@ function uninstall() {
 }
 
 function onReady() {
-  const api = buildApi(MANIFEST, { sync: rename.sync, relabel, shortName }, {
+  // The arrow keeps the published function's name "sync" (golden/surface.json).
+  const api = buildApi(MANIFEST, { sync: (ref, oldName, newName) => rename.syncRef(ref, oldName, newName), relabel, shortName }, {
     members: { uninstall, trace: () => log.traces() },
     extras: () => ({
       hooks: reg.ids().map(h => ({ name: h.name, label: h.label })),
