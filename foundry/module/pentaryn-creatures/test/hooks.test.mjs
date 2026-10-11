@@ -78,3 +78,23 @@ test("uninstall() leaves no hook, no strip, no dock poll, no wrap and no queued 
   await drain();
   assert.deepEqual([W.D.byId, W.D.queries, W.writes], [[], [], []], "no timer fires afterwards");
 });
+
+test("hot patch: after uninstall(), re-importing the entry re-wires hooks, the wrap, the strip and a new API", async () => {
+  const before = F.hooks.length;
+  await import("../creatures.mjs?v=2");
+  const api2 = F.game.modules.get(MODULE).api;
+  assert.notEqual(api2, api, "a new API object");
+  assert.equal(F.game.pentaryn.creatures, api2);
+  assert.deepEqual(F.hooks.slice(before).map(h => `${h.kind}:${h.name}`), [
+    "on:createToken", "on:updateToken", "on:updateActor", "on:createUser", "on:updateUser", "on:deleteUser",
+    "on:canvasReady", "on:createToken", "on:deleteToken", "on:updateToken", "on:updateActor", "on:updateUser",
+    "on:controlToken",
+  ], "the feature hooks again; no lifecycle hooks (they already fired), the wrap is applied at once");
+  assert.equal(api2.patchedWith(), "direct");
+  assert.notEqual(Object.getOwnPropertyDescriptor(W.TokenClass.prototype, "isVisible").get, W.coreGetter);
+  mock.timers.tick(60);
+  await drain();
+  assert.ok(W.strip(), "the strip is drawn again");
+  api2.uninstall();
+  assert.deepEqual(F.listeners(), {});
+});
