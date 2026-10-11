@@ -11,38 +11,24 @@
  *   → hovering Piet, the card over Brellin reads "understudy".
  */
 
-export const MODULE = "pentaryn-ties";
-export const FLAG = "ties";
-export const LEGACY_SCOPE = "world"; // pre-module data lived on flags.world.ties
+import { stanceOf, clampStance, clampStrength, clampNotes, clampWord, FLAG, LEGACY_SCOPE, MODULE } from "./ties-core.mjs";
 
-export const STANCES = [
-  { value: 2, key: "devoted", hex: 0x2ecc40, css: "#2ecc40" },
-  { value: 1, key: "friendly", hex: 0x6ab04c, css: "#6ab04c" },
-  { value: 0, key: "neutral", hex: 0x9aa0a6, css: "#9aa0a6" },
-  { value: -1, key: "wary", hex: 0xe1a53a, css: "#e1a53a" },
-  { value: -2, key: "hostile", hex: 0xe74c3c, css: "#e74c3c" }
-];
-
-export const STRENGTHS = [5, 4, 3, 2, 1];
-
-/**
- * Notes are free prose, so cap them. Flags ride along on every actor update; an
- * accidental paste of a whole session log would bloat the document forever.
- */
-export const NOTES_MAX = 4000;
-
-/**
- * And a cap on the one-word label. It is meant to be a word; nothing enforced that, so a
- * pasted paragraph — or a relayed one — could ride along on every actor update forever.
- */
-export const WORD_MAX = 120;
-
-const num = (v, d) => (Number.isFinite(Number(v)) ? Math.round(Number(v)) : d);
-export const clampStance = v => Math.max(-2, Math.min(2, num(v, 0)));
-export const clampStrength = v => Math.max(1, Math.min(5, num(v, 3)));
-export const clampNotes = v => (typeof v === "string" ? v.slice(0, NOTES_MAX) : "");
-export const clampWord = v => (typeof v === "string" ? v.trim().slice(0, WORD_MAX) : "");
-export const stanceOf = v => STANCES.find(s => s.value === clampStance(v)) ?? STANCES[2];
+// The pure constants and clamps live in ties-core.mjs (S3); re-exported here so every importer and
+// console macro that reads them from ties-api.mjs keeps working.
+export {
+  MODULE,
+  FLAG,
+  LEGACY_SCOPE,
+  STANCES,
+  STRENGTHS,
+  NOTES_MAX,
+  WORD_MAX,
+  clampStance,
+  clampStrength,
+  clampNotes,
+  clampWord,
+  stanceOf
+} from "./ties-core.mjs";
 
 export function stanceLabel(v) {
   const s = stanceOf(v);
