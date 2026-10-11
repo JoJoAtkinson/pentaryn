@@ -485,16 +485,30 @@ def listing(st: Storage, *, fresh: bool = False) -> dict[str, Entry]:
     return {e.name: e for e in st.ls(BUNDLES)}
 
 
-def upload_missing(st: Storage, staged: dict[str, Path], have: dict[str, Entry]) -> list[str]:
+def upload_missing(st: Storage, staged: dict[str, Path], have: dict[str, Entry], *,
+                   rebuild: Callable[[str], Path | None] | None = None) -> list[str]:
     """Upload each staged bundle whose name is not in ``have``, in name order; return the
     names uploaded. A name the other host uploaded since ``have`` was listed is simply
     overwritten — the same name is the same content (§1 #2). A failure raises
-    :class:`StorageError`; only that bundle's ``.partial`` can be left behind."""
+    :class:`StorageError`; only that bundle's ``.partial`` can be left behind.
+
+    A staged tar that is gone from disk (another queued job's cleanup, a hand delete) is
+    rebuilt by ``rebuild(name)`` — from the live folder, when its fingerprint still
+    matches — and the new path replaces its entry in ``staged`` (so the caller's cleanup
+    covers it); without one, or when it returns None, that is a :class:`StorageError`,
+    never a bare ``FileNotFoundError`` that would escape every caller's handler."""
     up = []
     for name in sorted(staged):
         if name in have:
             continue
         src = Path(staged[name])
+        if not src.is_file():
+            new = rebuild(name) if rebuild is not None else None
+            if new is None:
+                raise StorageError(f"the staged tar of bundle {name} is gone ({src}) and the "
+                                   "local folder no longer matches it — rerun the backup",
+                                   verb="copyto")
+            src = staged[name] = Path(new)
         log(f"uploading bundle {name} ({_gb(src.stat().st_size)})")
         st.upload(src, f"{BUNDLES}/{name}")
         up.append(name)

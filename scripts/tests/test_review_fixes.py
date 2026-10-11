@@ -379,3 +379,36 @@ def test_an_unbundled_destination_is_moved_aside_whole_and_named(two_hosts, caps
     else:
         assert kept.read_text().startswith("a stray file")
     assert (dest / "module.json").is_file()                  # the snapshot's tools is in
+
+
+# ── M1/M2: staged tars — gone is a StorageError or a rebuild; mtime is fresh ──
+
+def _staged(two_hosts, tmp_path):
+    from scripts.foundry import bundles
+    _install(two_hosts.data["mac"])
+    with two_hosts.use("mac"):
+        loc = bundles.local_inventory()["module/tools"]
+    return loc, bundles.build(loc, tmp_path / "staging")
+
+
+def test_upload_missing_raises_storage_error_when_a_staged_tar_is_gone(two_hosts, tmp_path):
+    from scripts.foundry import bundles
+    loc, tar = _staged(two_hosts, tmp_path)
+    tar.unlink()
+    with two_hosts.use("mac"), pytest.raises(storage.StorageError, match="staged tar"):
+        bundles.upload_missing(cloud.store(), {loc.name: tar}, {})
+
+
+def test_upload_missing_rebuilds_a_gone_staged_tar_and_replaces_its_entry(two_hosts,
+                                                                           tmp_path):
+    from scripts.foundry import bundles
+    loc, tar = _staged(two_hosts, tmp_path)
+    tar.unlink()
+    rebuilt: list = []
+    staged = {loc.name: tar}
+    with two_hosts.use("mac"):
+        up = bundles.upload_missing(cloud.store(), staged, {},
+                                    rebuild=cloud._rebuilder(rebuilt))
+    assert up == [loc.name] and staged[loc.name] == rebuilt[0] != tar
+    assert loc.name in _bundle_names(two_hosts.cloud)
+

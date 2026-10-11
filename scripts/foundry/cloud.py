@@ -924,10 +924,11 @@ def _backup(st: Storage, reason: str, *, safety: bool = False,
         + (f" with {len(staged)} new bundle(s) "
            f"({_mb(sum(p.stat().st_size for p in staged.values()))})" if staged else "")
         + "...")
+    rebuilt: list[Path] = []
     try:
         # Bundles, then the sidecar, then the snapshot: by the time the snapshot's name
         # appears, its lineage and every bundle its manifest names exist.
-        bundles.upload_missing(st, staged, have)
+        bundles.upload_missing(st, staged, have, rebuild=_rebuilder(rebuilt))
         _refresh_reused(st, manifest, have, staged, state, existing)
         st.write_text(parent_rel(WORLD_BACKUPS, name), json.dumps(
             {"parent": state.based_on, "ancestors": ancestors,
@@ -935,14 +936,15 @@ def _backup(st: Storage, reason: str, *, safety: bool = False,
              "host": me, "bundled": 1, "modules": manifest["modules"],
              "systems": manifest["systems"]}, allow_nan=False) + "\n")
         st.upload(tmp, f"{WORLD_BACKUPS}/{name}")
-    except StorageError as exc:
+    except (StorageError, _Incomplete) as exc:
+        for p in rebuilt:
+            p.unlink(missing_ok=True)
         bundle_lines = "".join(f"\n    a bundle is still on disk: {p}"
                                for p in staged.values() if p.exists())
         die(f"upload failed: {exc}\n"
             f"    the snapshot is still on disk: {tmp}{bundle_lines}\n"
             f"    rerun the backup (bundles already uploaded are not sent again), or finish "
             f"it by hand: rclone copyto \"{tmp}\" {st.root}/{WORLD_BACKUPS}/{name}")
-    rebuilt: list[Path] = []
     try:
         # The snapshot's name is up: every bundle its manifest names must still be there
         # (the other host's GC may have swept one between the listing and now).
@@ -1075,22 +1077,41 @@ def _verify_bundles(st: Storage, name: str, manifest: dict, staged: dict[str, Pa
     rclone a cached one would never show what the other host swept meanwhile."""
     now = bundles.listing(st, fresh=True)
     lost = sorted(n for n in bundles.manifest_names(manifest) if n not in now)
-    live = None
+    rebuild = _rebuilder(rebuilt)
     for n in lost:
         src = staged.get(n)
         if src is None or not src.exists():
-            ref = bundles.parse_bundle(n)
-            if live is None:
-                live = bundles.local_inventory(cache=False, warn=lambda _m: None)
-            loc = live.get(ref.key)
-            if loc is None or loc.name != n:
+            src = rebuild(n)
+            if src is None:
+                ref = bundles.parse_bundle(n)
                 raise _Incomplete(
                     f"{ref.kind} {ref.id}: its bundle {n} vanished from the cloud and the "
                     f"local folder changed since — snapshot {name} is incomplete")
-            src = bundles.build(loc, tmp_dir() / bundles.STAGING)
-            rebuilt.append(src)
         log(f"bundle {n} vanished from the cloud during this backup — uploading it again")
         st.upload(src, f"{bundles.BUNDLES}/{n}")
+
+
+def _rebuilder(rebuilt: list[Path]):
+    """`rebuild(name)`: the bundle `name` built again from the live folder when that
+    folder's fingerprint still matches it (the inventory re-hashed, no cache, once per
+    rebuilder), else None. Each tar built is appended to `rebuilt` for the caller to
+    delete."""
+    live: dict | None = None
+
+    def rebuild(n: str) -> Path | None:
+        nonlocal live
+        ref = bundles.parse_bundle(n)
+        if ref is None:
+            return None
+        if live is None:
+            live = bundles.local_inventory(cache=False, warn=lambda _m: None)
+        loc = live.get(ref.key)
+        if loc is None or loc.name != n:
+            return None
+        src = bundles.build(loc, tmp_dir() / bundles.STAGING)
+        rebuilt.append(src)
+        return src
+    return rebuild
 
 
 def referenced_bundles(st: Storage) -> set[str]:
