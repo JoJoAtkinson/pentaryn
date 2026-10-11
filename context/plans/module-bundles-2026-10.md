@@ -713,4 +713,11 @@ the end (suite, `make check-context`, `make -n` targets) as the memory rule says
 
 | Design said | Built | Why |
 | --- | --- | --- |
-| | | |
+| S1: `Fingerprint` a frozen dataclass | `typing.NamedTuple(fp, files, bytes)` | Same fields and equality; also unpacks. `Ref`/`Local` are frozen dataclasses as designed — note `Local(...) != Ref(...)` even with equal names (dataclass `__eq__` checks the class); compare `.name` across them (S1, `ac892ccf`) |
+| S1: `fingerprint(root)` | `fingerprint(root, *, files=None)` | `local_inventory` walks once for the stat signature and passes that walk in, so the sig and the hash always describe the same file set (S1) |
+| S1: `extract` = `rmtree` the old folder, then `os.rename` the staged one in | Old folder renamed aside to `.pentaryn-tmp/extract/.old-<id>`, staged one renamed in, aside removed; on a failed second rename the old folder is renamed back. Refuses a symlinked destination. Keyword `seed_cache=True` | No window where a crash loses the old module with the new one not yet in place; staging still left clean either way (S1) |
+| S1: `TMP_DIRNAME` from `cloud` | `bundles.TMP_DIRNAME = ".pentaryn-tmp"` (duplicated) | `bundles` must not import `cloud`; S3 may make `cloud.TMP_DIRNAME = bundles.TMP_DIRNAME` (S1) |
+| S1: tar members "mtimes preserved" | mtimes preserved (PAX keeps sub-second floats); uid/gid zeroed, uname/gname blank; the folder itself is the first member `<id>`, then sorted `<id>/<rel>` | Owner names of one host mean nothing on the other; `filter='data'` ignores them anyway (S1) |
+| S1: cache semantics | Entries for folders no longer present are dropped on each inventory; the cache is rewritten only when it changed; a failed cache write is one warning line, never fatal; `cache=False` neither reads nor writes it | Keeps the file small; the cache only ever costs time (S1) |
+| S1: `bundle_name` | Also raises `ValueError` for an unknown kind, an id with `@`/`/`/empty, or an fp that is not 16 lowercase hex; sanitises the version | A bad name can never be built; `local_inventory` warns about `@` folders before this is reached (S1) |
+| S1: inventory rules | A top-level symlink to a *file* is ignored silently (only symlinked folders warn); a `module.json` that parses but is not a JSON object (e.g. a list) is treated like non-JSON (version `0`, warned); warnings read `⚠ Data/modules/<name> skipped: …` | §3.3 talks about folders; a non-object manifest has no `version` to read (S1) |
