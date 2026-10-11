@@ -7,9 +7,11 @@ bundle named ``<kind>@<id>@<version>@<fp>.tar.gz``, where ``fp`` is a content fi
 that ignores what a Foundry launch rewrites on its own (LevelDB housekeeping), so an
 untouched module keeps its name across launches and across hosts.
 
-This module has no cloud I/O of its own in this stage: it fingerprints, names, inventories,
-builds and extracts. It imports :mod:`host` and :mod:`storage` only — never ``cloud`` — so
-``cloud`` can import it.
+The local half fingerprints, names, inventories, builds and extracts; the cloud half
+(:func:`listing`, :func:`upload_missing`, :func:`fetch`, :func:`gc`) goes through a
+:class:`storage.Storage` only — the ``.partial`` upload, the rename and the size check are
+the storage layer's, never repeated here. It imports :mod:`host` and :mod:`storage` only —
+never ``cloud`` — so ``cloud`` can import it.
 """
 
 from __future__ import annotations
@@ -20,12 +22,13 @@ import os
 import re
 import shutil
 import tarfile
+import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, NamedTuple
+from typing import Callable, Iterable, NamedTuple
 
 from scripts.foundry import host
-from scripts.foundry.storage import JUNK_NAMES
+from scripts.foundry.storage import JUNK_NAMES, Entry, Storage, StorageError
 
 BUNDLES = "bundles"                       # the cloud subfolder (flat, shared by both hosts)
 ROOTS = {"module": "Data/modules", "system": "Data/systems"}
@@ -435,3 +438,94 @@ def extract(tar: Path, kind: str, id: str, data_root: Path, *, seed_cache: bool 
             entries = _load_cache(cache_path)
             entries[ref.key] = _entry(_walk(dest), ref.fp, ref.version)
             _save_cache(cache_path, entries)
+
+
+# ── the cloud half (§3.2, §3.7, §6) ──────────────────────────────────────────
+
+def _gb(n: int) -> str:
+    return f"{n / 1e9:.2f} GB"
+
+
+def listing(st: Storage) -> dict[str, Entry]:
+    """Every visible entry in the cloud's ``bundles/``, keyed by name. All names — a stray
+    file included; callers filter with :func:`parse_bundle`. ``.partial`` uploads in
+    progress are never listed (the storage layer hides them)."""
+    return {e.name: e for e in st.ls(BUNDLES)}
+
+
+def upload_missing(st: Storage, staged: dict[str, Path], have: dict[str, Entry]) -> list[str]:
+    """Upload each staged bundle whose name is not in ``have``, in name order; return the
+    names uploaded. A name the other host uploaded since ``have`` was listed is simply
+    overwritten — the same name is the same content (§1 #2). A failure raises
+    :class:`StorageError`; only that bundle's ``.partial`` can be left behind."""
+    up = []
+    for name in sorted(staged):
+        if name in have:
+            continue
+        src = Path(staged[name])
+        log(f"uploading bundle {name} ({_gb(src.stat().st_size)})")
+        st.upload(src, f"{BUNDLES}/{name}")
+        up.append(name)
+    return up
+
+
+def fetch(st: Storage, names: Iterable[str], dest_dir: Path,
+          have: dict[str, Entry]) -> dict[str, Path]:
+    """Download the named bundles into ``dest_dir``; each file's size must equal its
+    listing's. Every name missing from ``have`` is named in one :class:`StorageError`
+    before anything is downloaded. On any failure every file this call downloaded is
+    removed, so a caller never sees a half-fetched set."""
+    names = list(dict.fromkeys(names))
+    missing = [n for n in names if n not in have]
+    if missing:
+        raise StorageError(f"{len(missing)} bundle(s) not in the cloud's {BUNDLES}/: "
+                           + ", ".join(missing), verb="lsjson")
+    if not names:
+        return {}
+    dest_dir = Path(dest_dir)
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    got: dict[str, Path] = {}
+    try:
+        for name in names:
+            dest = dest_dir / name
+            got[name] = dest           # registered first, so a half download is removed too
+            st.download(f"{BUNDLES}/{name}", dest)
+            size = dest.stat().st_size
+            if size != have[name].size:
+                raise StorageError(
+                    f"bundle {name} arrived with {size} B, the listing said "
+                    f"{have[name].size} B (re-uploaded meanwhile? rerun)", verb="copyto")
+    except BaseException:
+        for p in got.values():
+            try:
+                p.unlink(missing_ok=True)
+            except OSError:
+                pass
+        raise
+    return got
+
+
+def gc(st: Storage, *, referenced: set[str], grace: float = GC_GRACE_SECONDS,
+       dry_run: bool = False, now: float | None = None) -> list[str]:
+    """Sweep: delete every listed bundle no retained snapshot references and older than
+    ``grace`` seconds (by its listing mtime); return the names (sorted). A name that does
+    not parse as a bundle (a stray file) is never touched; ``.partial`` is never listed.
+    A file already gone (the other host swept it) is not an error. ``dry_run`` deletes
+    nothing and returns what would go. ``referenced`` is the caller's mark phase —
+    computing it must abort the run, not shrink, when a manifest cannot be read (§3.7)."""
+    now = time.time() if now is None else now
+    have = listing(st)
+    doomed = sorted(n for n, e in have.items()
+                    if parse_bundle(n) is not None and n not in referenced
+                    and now - e.mtime > grace)
+    total = sum(have[n].size for n in doomed)
+    if dry_run:
+        if doomed:
+            log(f"would sweep {len(doomed)} bundle(s) ({_gb(total)}) no retained snapshot "
+                "references")
+        return doomed
+    for n in doomed:
+        st.delete(f"{BUNDLES}/{n}")
+    if doomed:
+        log(f"swept {len(doomed)} bundle(s) ({_gb(total)}) no retained snapshot references")
+    return doomed
