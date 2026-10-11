@@ -500,8 +500,9 @@ listener. The active GM is a **user, not a tab** — and in this setup two tabs 
   - MUST: a key more than one client may write uses `anyGM: false` — the active GM *user*
     (`activeGM.isSelf`, `lib/settings.mjs:161`); **two tabs on that account still race**. Other
     clients reach it through a `relay: true` query.
-  - MUST: a relayed store write is idempotent, takes a claim first, or is keyed by a request id —
-    the relay arrives in every GM tab (below), so a bare `counter + 1` counts twice.
+  - MUST: a relayed store write is idempotent or keyed by a request id — the relay arrives in every
+    GM tab (below), so a bare `counter + 1` counts twice. A claim picks the writer but the losing
+    tab answers first (§5.9.2), so use one only when the sender needs no result.
   - SHOULD: `await store.flush()` in tests and before `uninstall`.
 
 **Queries (`CONFIG.queries`, `User#query`)**
@@ -520,8 +521,10 @@ listener. The active GM is a **user, not a tab** — and in this setup two tabs 
   With the bridge tab and a GM browser tab open, the handler runs in both (both are
   `activeGM.isSelf`), and a fast rejection from one tab (e.g. `NOT_READY` before it published) beats
   a slower success from the other. MUST: a query handler that writes is idempotent **across
-  concurrent tabs** — look-before-create is not enough, both tabs look before either creates — or
-  takes a `claimDocument` claim first.
+  concurrent tabs** — look-before-create is not enough, both tabs look before either creates. Make
+  the write itself idempotent (a deterministic `_id`, §5.9.2) or request-keyed. A claim alone does
+  not do it: the losing tab answers before the winner has written, so the sender gets the loser's
+  answer (§5.9.2).
 - Without `timeout` the server releases a query only when the **sender** disconnects
   (`e.once("disconnect",u)` on the sender's socket); a recipient tab closing mid-query hangs it
   forever. MUST: every `.query(…)`/`User.queryMany(…)` passes `{ timeout }` (C55; `queryMany` is
@@ -613,19 +616,38 @@ reg.on("preUpdateToken", (token, changes) => {
 }, { label: "lock" });
 ```
 
-Player → GM write through a relay query (manifest row `{ path: "ensure", relay: true }`):
+Player → GM write through a relay query (manifest row `{ path: "ensure", relay: true }`). The
+create is idempotent by a deterministic `_id`, with no claim, so every GM tab can answer and every
+answer is right:
 ```js
 const r = await queryGM(`${MODULE}.ensure`, { actorId });       // any client; timeout defaults to 10000
+// r.journalId is set; the create's broadcast brings the document to the sender's game.journal
 async function ensure({ actorId }, { user }) {                  // wrapped by relayed; runs in EVERY GM tab
   const actor = game.actors.get(actorId);
   if (!actor?.testUserPermission(user, "OWNER")) return fail("REFUSED", actorId);
-  // the losing tab answers too, and the first answer wins: it returns the same shape, never a refusal
-  if (!(await claimDocument(actor, "ensure", { scope: MODULE }))) return ok({ journal: findFor(actorId) ?? null });
-  return ok({ journal: findFor(actorId) ?? await JournalEntry.create(/* … */) });
+  const _id = actorId;              // deterministic: one journal per actor, reusing the actor's id
+  if (!game.journal.has(_id)) {     // both tabs may get here; both send the same create
+    await JournalEntry.create({ _id, name: `${actor.name}'s journal` /* data from inputs only */ }, { keepId: true });
+  }
+  return ok({ journalId: _id });    // each tab answers after its own create resolved: the journal exists
 }
 ```
+A world-document create with `keepId` and an `_id` that already exists **replaces** that document
+(probed on v14.369: two concurrent creates both resolve and one document remains, holding the later
+data). So the data must be built from the request alone — both tabs must send the same thing — and
+the look-first check keeps a later call from overwriting the user's edits. A deleted journal is
+recreated by the next call.
 
-Shared value, one store (still needs the relay to be idempotent or claimed — two GM tabs race):
+Why not a claim here: the losing tab's `claimDocument` resolves after its settle delay while the
+winner still has its create round trip ahead, so the loser answers first and the sender gets the
+loser's answer. A claim also suits only a one-time job. **A `claimDocument` key is single-use per
+document**: the flag `flags.<scope>.claims.<key>` is never cleared, so once it is set, every later
+claim on that document with that key stands down in every tab, including after a reload, when the
+tabs have new socket ids. Claim with a fixed key only on a document that is itself the one-time event
+(a new chat message, a new combat), never for a repeatable request on a long-lived document such as
+an actor.
+
+Shared value, one store (the relay must still be idempotent or request-keyed — two GM tabs race):
 ```js
 const ledger = serialStore(MODULE, ["counter", "log"], { anyGM: false });   // module scope, once
 await ledger.write(({ counter, log }) =>                                    // keyed by request id:
@@ -669,10 +691,12 @@ game.settings.set(MODULE, "worldX", 1) /* world-scoped, in Hooks.once("init") */
       predicate) and, where two GM tabs matter, a claim.
 - [ ] No `await <doc>.update/create/delete/setFlag(` inside a loop where a batch call exists.
 - [ ] One `serialStore` per key, at module scope; multi-client keys use `anyGM: false` + relay, and
-      the relayed write is idempotent, claimed or request-keyed.
+      the relayed write is idempotent or request-keyed.
 - [ ] No world/user `game.settings.set` reachable before `ready`.
 - [ ] Every `.query(`/`queryMany(` passes `timeout`; `CONFIG.queries` is touched only by the kit.
-- [ ] Query handlers that write are idempotent across concurrent tabs or claim first.
+- [ ] Query handlers that write are idempotent across concurrent tabs (a deterministic `_id` or a
+      request key). A claimed handler cannot return what the winning tab creates, and a
+      `claimDocument` key is single-use per document.
 - [ ] `relayed` handlers check `ctx.user` ownership; `guarded` handlers do not assume a full GM
       (Assistants pass) or a present `ctx.user` (the bridge has none).
 - [ ] Module socket channel equals `module.<id>` and the manifest says `socket: true`; no reliance on
