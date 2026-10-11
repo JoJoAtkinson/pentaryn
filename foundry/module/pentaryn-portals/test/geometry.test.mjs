@@ -1,9 +1,10 @@
 // Finding aoe-movement-portals-26's hand-computed tables (guide S2), pinned on the ORACLE: verbatim
 // copies of the glue's pure logic at the checkpoint (fixtures/legacy-geometry.mjs). Bare node, no
-// Foundry stub. S2 moves this logic into portals-core.mjs and checks the core against the oracle.
+// Foundry stub. S2 moved this logic into portals-core.mjs; the second half checks core = oracle.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import * as oracle from "./fixtures/legacy-geometry.mjs";
+import * as core from "../portals-core.mjs";
 
 const SHAPES = () => [
   { type: "rectangle", x: 100, y: 200, width: 100, height: 100 },
@@ -65,4 +66,62 @@ test("oracle cardFor: a blank title falls back to the nav name; no scene → reg
   assert.deepEqual(oracle.cardFor({ uuid: "U", name: "R", flags: { "pentaryn-portals": { title: "  " } }, parent: { navName: "Pit", thumb: "t.webp" } }),
     { uuid: "U", title: "Pit", img: "t.webp", description: "" });
   assert.deepEqual(oracle.cardFor({ uuid: "U", name: "R" }), { uuid: "U", title: "R", img: "icons/svg/door-exit.svg", description: "" });
+});
+
+/* ── S2: the core agrees with the oracle ─────────────────────────────── */
+
+test("core translateShapes = oracle (tables and a toObject-shaped copy); input untouched", () => {
+  for (const [sx, sy] of [[50, -25], [0, 0], [-100, 300], [0.5, 1e6]]) {
+    const input = SHAPES();
+    assert.deepEqual(core.translateShapes(input, sx, sy), oracle.translateShapes(SHAPES(), sx, sy));
+    assert.deepEqual(input, SHAPES());
+  }
+  assert.deepEqual(core.translateShapes([], 1, 1), []);
+});
+
+test("core cropWindow = oracle on interior, clamped and odd-size windows", () => {
+  const cases = [CROP, { ...CROP, cx: 200, cy: 100 }, { ...CROP, cx: 4200, cy: 3100 }, { ...CROP, squaresWide: 6, squaresHigh: 6 },
+    { ...CROP, natural: { w: 4000, h: 2000 }, dims: { ...CROP.dims, sceneWidth: 2000, sceneHeight: 1000, size: 140 } }];
+  for (const c of cases) assert.deepEqual(core.cropWindow(c), oracle.cropWindow(c));
+  assert.equal(core.cropWindow({ ...CROP, outW: 240 }).outH, 150, "outW is a parameter (default 480)");
+});
+
+test("core blockingWallCoords / tokenBox / occupiedBy = oracle", () => {
+  assert.deepEqual(core.blockingWallCoords(WALLS), oracle.blockingWallCoords(WALLS));
+  assert.deepEqual(core.blockingWallCoords([]), []);
+  const t = { x: 100, y: 200, width: 2, height: 1 };
+  assert.deepEqual(core.tokenBox(t, 100), oracle.tokenBox(t, 100));
+  const boxes = [{ x: 100, y: 200, w: 200, h: 100 }, { x: 0, y: 0, w: 50, h: 50 }];
+  const a = core.occupiedBy(boxes), b = oracle.occupiedBy(boxes);
+  for (const [x, y] of [[100, 200], [299, 299], [300, 200], [0, 0], [49, 49], [50, 0], [-1, 0]]) assert.equal(a(x, y), b(x, y), `${x},${y}`);
+});
+
+test("core dialogIdParts: one parse for the behaviour uuid and the token id (= both old parses)", () => {
+  for (const id of [ID, "dialog-Scene.S.Region.R.RegionBehavior.B-", "dialog-Scene.A.Region.B.RegionBehavior.C-tok-9"]) {
+    assert.deepEqual(core.dialogIdParts(id), { behaviorUuid: oracle.behaviorUuidFromDialogId(id), tokenId: oracle.tokenIdFromDialogId(id) });
+    assert.equal(core.behaviorUuidFromDialogId(id), oracle.behaviorUuidFromDialogId(id));
+  }
+  for (const id of ["dialog-abc", "x-Scene.S.Region.R.RegionBehavior.B-t", "", undefined]) {
+    assert.equal(core.dialogIdParts(id), null, String(id));
+    assert.equal(core.behaviorUuidFromDialogId(id), null);
+  }
+});
+
+test("core samplePoints = oracle, grid size passed in", () => {
+  for (const b of [{ x: 0, y: 0, width: 100, height: 100 }, { x: 0, y: 0, width: 40, height: 200 }, { x: 37, y: -5, width: 300, height: 70 }]) {
+    for (const g of [100, 50, 140]) assert.deepEqual(core.samplePoints(b, g), oracle.samplePoints(b, g));
+  }
+});
+
+test("core cardData = oracle cardFor over the same region", () => {
+  const regions = [
+    { uuid: "U", name: "R", flags: { "pentaryn-portals": { title: "  " } }, parent: { navName: "Pit", thumb: "t.webp" } },
+    { uuid: "U", name: "R" },
+    { uuid: "U", name: "R", flags: { "pentaryn-portals": { title: " T ", img: " i.webp ", description: " d\n " } }, parent: { name: "S" } },
+    { uuid: "U", name: "R", parent: { navName: "", name: "Scene name", thumb: null } },
+  ];
+  for (const r of regions) {
+    assert.deepEqual(core.cardData({ flags: r.flags?.["pentaryn-portals"], uuid: r.uuid, sceneNavName: r.parent?.navName,
+      sceneName: r.parent?.name, sceneThumb: r.parent?.thumb, regionName: r.name }), oracle.cardFor(r));
+  }
 });

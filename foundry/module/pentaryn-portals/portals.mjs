@@ -28,38 +28,25 @@
 
 import { summonerActorId, playerOwners, isScenery, partySelection, followersOf, ringSpots, wallBlocker,
   hasDestination, withoutDestination, crowded, assignSpots, partyPreview } from "./portals-core.mjs";
+import { MODULE, SNAP_DIR, esc, cardData, cardHTML, dialogIdParts, translateShapes, cropWindow, blockingWallCoords,
+  tokenBox, occupiedBy, samplePoints as samplePointsAt } from "./portals-core.mjs";
 
-const MODULE = "pentaryn-portals";
-const SNAP_DIR = "assets/tokens/custom/portals";
-const esc = s => foundry.utils.escapeHTML(String(s ?? ""));
-
-/** Card data for one destination region, with fallbacks. */
+/** Card data for one destination region, with fallbacks (core cardData). */
 function cardFor(region) {
-  const f = region?.flags?.[MODULE] ?? {};
   const scene = region?.parent;
-  return {
+  return cardData({
+    flags: region?.flags?.[MODULE],
     uuid: region.uuid,
-    title: f.title?.trim() || scene?.navName || scene?.name || region.name,
-    img: f.img?.trim() || scene?.thumb || "icons/svg/door-exit.svg",
-    description: f.description?.trim() || ""
-  };
-}
-
-function cardHTML(c, { radio = false, checked = false } = {}) {
-  // Plain text with line breaks: the GM writes it in a textarea, players only read it.
-  const desc = c.description ? `<p class="pp-desc">${esc(c.description).replace(/\n/g, "<br>")}</p>` : "";
-  const body = `<img class="pp-thumb" src="${esc(c.img)}" alt="">
-    <div class="pp-text"><h4>${esc(c.title)}</h4>${desc}</div>`;
-  if (!radio) return `<div class="pp-card">${body}</div>`;
-  return `<label class="pp-card pp-choice"><input type="radio" name="destination" value="${esc(c.uuid)}" ${checked ? "checked" : ""}>${body}</label>`;
+    sceneNavName: scene?.navName, sceneName: scene?.name, sceneThumb: scene?.thumb,
+    regionName: region.name
+  });
 }
 
 /** The core dialog's id is `dialog-<behaviorUuid>-<tokenId>`. */
 function behaviorOf(app) {
-  const id = app?.id ?? "";
-  if (!id.startsWith("dialog-") || !id.includes(".RegionBehavior.")) return null;
-  const uuid = id.slice("dialog-".length, id.lastIndexOf("-"));
-  const behavior = fromUuidSync(uuid);
+  const parts = dialogIdParts(app?.id ?? "");
+  if (!parts) return null;
+  const behavior = fromUuidSync(parts.behaviorUuid);
   return behavior?.type === "teleportToken" ? behavior : null;
 }
 
@@ -102,7 +89,7 @@ function plainQuestion(app, behavior, content, card) {
   if (behavior.system?.dialog?.revealed) return;
   const p = content.querySelector(":scope > p");
   if (!p) return;
-  const tokenId = (app?.id ?? "").slice((app?.id ?? "").lastIndexOf("-") + 1);
+  const tokenId = dialogIdParts(app?.id ?? "")?.tokenId;
   const token = behavior.parent?.parent?.tokens?.get(tokenId);
   const who = token?.name;
   p.textContent = who ? `Teleport ${who} to ${card.title}?` : `Teleport to ${card.title}?`;
@@ -139,24 +126,15 @@ async function snapshot(regionOrUuid, { squaresWide = 8, squaresHigh = 5 } = {})
     i.onerror = reject;
     i.src = src;
   });
-  const d = scene.dimensions;
-  const sx = img.naturalWidth / d.sceneWidth;          // image px per canvas px
-  const sy = img.naturalHeight / d.sceneHeight;
-  const g = d.size;
-  let w = squaresWide * g * sx, h = squaresHigh * g * sy;
-  let x = (cx - d.sceneX) * sx - w / 2, y = (cy - d.sceneY) * sy - h / 2;
-  x = Math.max(0, Math.min(img.naturalWidth - w, x));
-  y = Math.max(0, Math.min(img.naturalHeight - h, y));
-
-  const OUT_W = 480, OUT_H = Math.round(OUT_W * h / w);
+  const { x, y, w, h, outW, outH, mx, my, markR } = cropWindow({
+    cx, cy, dims: scene.dimensions, natural: { w: img.naturalWidth, h: img.naturalHeight }, squaresWide, squaresHigh });
   const c = document.createElement("canvas");
-  c.width = OUT_W; c.height = OUT_H;
+  c.width = outW; c.height = outH;
   const ctx = c.getContext("2d");
-  ctx.drawImage(img, x, y, w, h, 0, 0, OUT_W, OUT_H);
+  ctx.drawImage(img, x, y, w, h, 0, 0, outW, outH);
   // Mark the arrival square so the thumbnail says *where*, not just *what*.
-  const mx = ((cx - d.sceneX) * sx - x) * OUT_W / w, my = ((cy - d.sceneY) * sy - y) * OUT_H / h;
   ctx.strokeStyle = "rgba(255,255,255,0.85)"; ctx.lineWidth = 3;
-  ctx.beginPath(); ctx.arc(mx, my, Math.max(10, g * sx * OUT_W / w * 0.45), 0, Math.PI * 2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(mx, my, markR, 0, Math.PI * 2); ctx.stroke();
 
   const blob = await new Promise(r => c.toBlob(r, "image/webp", 0.88));
   const name = `${scene.id}-${region.id}.webp`;
@@ -329,15 +307,8 @@ async function drawBadges() {
   refreshBadgeSight();
 }
 
-/** Sample points of a region's square(s): the centre, plus a point a quarter-square in from each corner. */
-function samplePoints(b) {
-  const q = Math.min(canvas.grid.size / 4, b.width / 4, b.height / 4);
-  return [
-    { x: b.x + b.width / 2, y: b.y + b.height / 2 },
-    { x: b.x + q, y: b.y + q }, { x: b.x + b.width - q, y: b.y + q },
-    { x: b.x + q, y: b.y + b.height - q }, { x: b.x + b.width - q, y: b.y + b.height - q }
-  ];
-}
+/** Sample points of a region's square(s) on the viewed canvas (core samplePoints). */
+const samplePoints = b => samplePointsAt(b, canvas.grid.size);
 
 /** Players: show a badge only once its square has been in sight or explored. */
 function refreshBadgeSight() {
@@ -482,13 +453,7 @@ async function moveRegion(region, dx, dy) {
   const snapped = scene.grid.getSnappedPoint({ x: ox + dx, y: oy + dy }, { mode: CONST.GRID_SNAPPING_MODES.TOP_LEFT_VERTEX });
   const sx = snapped.x - ox, sy = snapped.y - oy;
   if (!sx && !sy) return drawBadges();
-  const shapes = region.shapes.map(sh => {
-    const o = sh.toObject?.() ?? foundry.utils.deepClone(sh);
-    if (Array.isArray(o.points)) o.points = o.points.map((v, i) => v + (i % 2 ? sy : sx));
-    if ("x" in o && o.x != null) o.x += sx;
-    if ("y" in o && o.y != null) o.y += sy;
-    return o;
-  });
+  const shapes = translateShapes(region.shapes.map(sh => sh.toObject?.() ?? foundry.utils.deepClone(sh)), sx, sy);
   await region.update({ shapes });
   const tiles = scene.tiles.filter(t => t.flags?.pentaryn?.travel?.regionId === region.id);
   if (tiles.length) await scene.updateEmbeddedDocuments("Tile", tiles.map(t => ({ _id: t.id, x: t.x + sx, y: t.y + sy })));
@@ -562,12 +527,10 @@ function landingPlaces(dest, toks, cx, cy, party = null) {
   const g = dest.grid.size;
   // Skip squares a wall cuts off from the landing (the pit wall, a cell's bars). Tested against
   // the destination's wall documents, because that scene may not be on the canvas.
-  const walls = dest.walls.filter(w => w.move > 0 && !(w.door > 0 && w.ds === 1)).map(w => w.c);
+  const walls = blockingWallCoords(dest.walls);
   // Don't land on someone already standing there (the PC who just arrived, a guard).
   const moving = new Set(toks.map(t => t.id));
-  const standing = dest.tokens.filter(t => !moving.has(t.id))
-    .map(t => ({ x: t.x, y: t.y, w: t.width * g, h: t.height * g }));
-  const occupied = (x, y) => standing.some(s => x >= s.x && x < s.x + s.w && y >= s.y && y < s.y + s.h);
+  const occupied = occupiedBy(dest.tokens.filter(t => !moving.has(t.id)).map(t => tokenBox(t, g)));
   const grouped = party?.length === toks.length;
   // A few spare squares let a follower pick one touching its PC rather than the next in the ring.
   const ring = ringSpots(cx, cy, g, toks.length + (grouped ? 8 : 0), { blocked: wallBlocker(walls), occupied });
@@ -669,7 +632,7 @@ async function spreadArrival(arrived) {
   if (!setting("spreadArrivals")) return arrived;
   const dest = arrived.parent;
   const g = dest.grid.size;
-  const box = t => ({ x: t.x, y: t.y, w: t.width * g, h: t.height * g });
+  const box = t => tokenBox(t, g);
   const others = dest.tokens.filter(t => t.id !== arrived.id && !t.hidden && !t.flags?.["pentaryn-aoe"]?.handle).map(box);
   if (!crowded(box(arrived), others)) return arrived;
   const cx = arrived.x + arrived.width * g / 2, cy = arrived.y + arrived.height * g / 2;
