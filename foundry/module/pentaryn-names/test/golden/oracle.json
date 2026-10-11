@@ -1,0 +1,425 @@
+{
+  "shortName": [
+    {
+      "args": [
+        "Glubbek, Kuo-toa Net-Mender"
+      ],
+      "out": "Glubbek",
+      "type": "string"
+    },
+    {
+      "args": [
+        null
+      ],
+      "out": "",
+      "type": "string"
+    },
+    {
+      "args": [
+        " A , b"
+      ],
+      "out": "A",
+      "type": "string"
+    },
+    {
+      "args": [
+        "<undefined>"
+      ],
+      "out": "",
+      "type": "string"
+    },
+    {
+      "args": [
+        42
+      ],
+      "out": "42",
+      "type": "string"
+    },
+    {
+      "args": [
+        ","
+      ],
+      "out": "",
+      "type": "string"
+    },
+    {
+      "args": [
+        ""
+      ],
+      "out": "",
+      "type": "string"
+    },
+    {
+      "args": [
+        "   "
+      ],
+      "out": "",
+      "type": "string"
+    },
+    {
+      "args": [
+        "Bob"
+      ],
+      "out": "Bob",
+      "type": "string"
+    },
+    {
+      "args": [
+        "Bob,"
+      ],
+      "out": "Bob",
+      "type": "string"
+    },
+    {
+      "args": [
+        " Bob , x"
+      ],
+      "out": "Bob",
+      "type": "string"
+    },
+    {
+      "args": [
+        "a,b,c"
+      ],
+      "out": "a",
+      "type": "string"
+    },
+    {
+      "args": [
+        "  Glubbek  ,  Elder  "
+      ],
+      "out": "Glubbek",
+      "type": "string"
+    },
+    {
+      "args": [
+        "Bob\t, X"
+      ],
+      "out": "Bob",
+      "type": "string"
+    },
+    {
+      "args": [
+        0
+      ],
+      "out": "0",
+      "type": "string"
+    },
+    {
+      "args": [
+        false
+      ],
+      "out": "false",
+      "type": "string"
+    },
+    {
+      "args": [
+        {}
+      ],
+      "out": "[object Object]",
+      "type": "string"
+    },
+    {
+      "args": [
+        [
+          "x",
+          "y"
+        ]
+      ],
+      "out": "x",
+      "type": "string"
+    }
+  ],
+  "relabel": [
+    {
+      "args": [
+        "Bob",
+        "Bob",
+        "Rob"
+      ],
+      "out": "Rob",
+      "type": "string"
+    },
+    {
+      "args": [
+        "Glubbek",
+        "Glubbek, Net-Mender",
+        "Brakka, Elder"
+      ],
+      "out": "Brakka",
+      "type": "string"
+    },
+    {
+      "args": [
+        "Glubbek, Net-Mender",
+        "Glubbek, Net-Mender",
+        "Brakka, Elder"
+      ],
+      "out": "Brakka, Elder",
+      "type": "string"
+    },
+    {
+      "args": [
+        "Fishface",
+        "Glubbek, Net-Mender",
+        "X"
+      ],
+      "out": null,
+      "type": "null"
+    },
+    {
+      "args": [
+        "Bob",
+        "Bob, ",
+        "X"
+      ],
+      "out": "X",
+      "type": "string"
+    },
+    {
+      "args": [
+        "",
+        ",x",
+        "y"
+      ],
+      "out": "y",
+      "type": "string"
+    },
+    {
+      "args": [
+        " Bob ",
+        " Bob ",
+        "Rob"
+      ],
+      "out": "Rob",
+      "type": "string"
+    },
+    {
+      "args": [
+        "Bob",
+        " Bob , x",
+        "R"
+      ],
+      "out": "R",
+      "type": "string"
+    },
+    {
+      "args": [
+        "Bob",
+        " Bob ",
+        "Rob"
+      ],
+      "out": "Rob",
+      "type": "string"
+    },
+    {
+      "args": [
+        "Glubbek",
+        "Glubbek",
+        "Brakka, Elder"
+      ],
+      "out": "Brakka, Elder",
+      "type": "string"
+    },
+    {
+      "args": [
+        "Glub",
+        "Glubbek",
+        "Brakka"
+      ],
+      "out": null,
+      "type": "null"
+    },
+    {
+      "args": [
+        "Glubbek",
+        "Glubbek, Net-Mender",
+        "Brakka"
+      ],
+      "out": "Brakka",
+      "type": "string"
+    },
+    {
+      "args": [
+        "Glubbek, Net-Mender",
+        "Glubbek, Net-Mender",
+        "Brakka"
+      ],
+      "out": "Brakka",
+      "type": "string"
+    },
+    {
+      "args": [
+        "Bob",
+        "Bob, Old",
+        "Bob, New"
+      ],
+      "out": "Bob",
+      "type": "string"
+    },
+    {
+      "args": [
+        "bob",
+        "Bob",
+        "Rob"
+      ],
+      "out": null,
+      "type": "null"
+    },
+    {
+      "args": [
+        null,
+        "Bob",
+        "Rob"
+      ],
+      "out": null,
+      "type": "null"
+    },
+    {
+      "args": [
+        "<undefined>",
+        "<undefined>",
+        "Rob"
+      ],
+      "out": "Rob",
+      "type": "string"
+    },
+    {
+      "args": [
+        null,
+        null,
+        "Rob"
+      ],
+      "out": "Rob",
+      "type": "string"
+    },
+    {
+      "args": [
+        "",
+        "",
+        "Rob"
+      ],
+      "out": "Rob",
+      "type": "string"
+    },
+    {
+      "args": [
+        "Bob",
+        "Bob",
+        "<undefined>"
+      ],
+      "out": "<undefined>",
+      "type": "undefined"
+    },
+    {
+      "args": [
+        "Bob",
+        "Bob, X",
+        null
+      ],
+      "out": "",
+      "type": "string"
+    },
+    {
+      "args": [
+        "Bob",
+        "Bob, X",
+        42
+      ],
+      "out": "42",
+      "type": "string"
+    },
+    {
+      "args": [
+        "42",
+        42,
+        "x"
+      ],
+      "out": "x",
+      "type": "string"
+    }
+  ],
+  "plan": [
+    {
+      "name": "guide table (transform-creatures-32)",
+      "out": [
+        {
+          "_id": "t1",
+          "name": "Rob"
+        }
+      ],
+      "type": "object"
+    },
+    {
+      "name": "sibling synthetic tokens",
+      "out": [
+        {
+          "_id": "g1",
+          "name": "Goblin Boss"
+        },
+        {
+          "_id": "g2",
+          "name": "Goblin Boss"
+        }
+      ],
+      "type": "object"
+    },
+    {
+      "name": "full, short, nickname and already-renamed labels",
+      "out": [
+        {
+          "_id": "f",
+          "name": "Brakka, Elder"
+        },
+        {
+          "_id": "s",
+          "name": "Brakka"
+        }
+      ],
+      "type": "object"
+    },
+    {
+      "name": "short form unchanged by the rename is skipped",
+      "out": [
+        {
+          "_id": "f",
+          "name": "Bob, New"
+        }
+      ],
+      "type": "object"
+    },
+    {
+      "name": "no tokens",
+      "out": [],
+      "type": "object"
+    },
+    {
+      "name": "every token locked",
+      "out": [],
+      "type": "object"
+    },
+    {
+      "name": "a token with no actorId never matches",
+      "out": [],
+      "type": "object"
+    },
+    {
+      "name": "order is token order",
+      "out": [
+        {
+          "_id": "z",
+          "name": "Rob"
+        },
+        {
+          "_id": "a",
+          "name": "Rob, Y"
+        },
+        {
+          "_id": "m",
+          "name": "Rob"
+        }
+      ],
+      "type": "object"
+    }
+  ]
+}

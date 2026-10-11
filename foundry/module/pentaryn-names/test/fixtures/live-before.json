@@ -1,0 +1,108 @@
+{
+  "_source": "live golden .state/live-goldens/before/names.json, 2026-10-11 (Foundry 14.369, world pentaryn) — the deterministic `golden` part, copied verbatim; timings and cleanup dropped",
+  "surface": [
+    "relabel",
+    "shortName",
+    "sync"
+  ],
+  "moduleApi": "undefined",
+  "rename": {
+    "before": {
+      "actor": "ZZ Glubbek, Golden Net-Mender",
+      "proto": "ZZ Glubbek, Golden Net-Mender",
+      "tokens": [
+        {
+          "id": "<tokFull>",
+          "name": "ZZ Glubbek, Golden Net-Mender",
+          "actorLink": false,
+          "synthetic": true
+        },
+        {
+          "id": "<tokShort>",
+          "name": "ZZ Glubbek",
+          "actorLink": false,
+          "synthetic": true
+        }
+      ]
+    },
+    "after": {
+      "actor": "ZZ Brakka, Golden Elder",
+      "proto": "ZZ Brakka, Golden Elder",
+      "tokens": [
+        {
+          "id": "<tokFull>",
+          "name": "ZZ Brakka, Golden Elder",
+          "actorLink": false,
+          "synthetic": true
+        },
+        {
+          "id": "<tokShort>",
+          "name": "ZZ Brakka",
+          "actorLink": false,
+          "synthetic": true
+        }
+      ]
+    },
+    "toastCount": 1,
+    "toasts": [
+      "Token labels updated to \"ZZ Brakka, Golden Elder\" (3)."
+    ]
+  },
+  "noop": {
+    "after": {
+      "actor": "ZZ Brakka, Golden Elder",
+      "proto": "ZZ Brakka, Golden Elder",
+      "tokens": [
+        {
+          "id": "<tokFull>",
+          "name": "ZZ Brakka, Golden Elder",
+          "actorLink": false,
+          "synthetic": true
+        },
+        {
+          "id": "<tokShort>",
+          "name": "ZZ Brakka",
+          "actorLink": false,
+          "synthetic": true
+        }
+      ]
+    },
+    "toastCount": 0
+  },
+  "nickname": {
+    "after": {
+      "actor": "ZZ Glubbek, Golden Net-Mender",
+      "proto": "ZZ Glubbek, Golden Net-Mender",
+      "tokens": [
+        {
+          "id": "<tokFull>",
+          "name": "ZZ Glubbek, Golden Net-Mender",
+          "actorLink": false,
+          "synthetic": true
+        },
+        {
+          "id": "<tokShort>",
+          "name": "Fishface",
+          "actorLink": false,
+          "synthetic": true
+        }
+      ]
+    },
+    "toastCount": 1,
+    "toasts": [
+      "Token labels updated to \"ZZ Glubbek, Golden Net-Mender\" (2)."
+    ]
+  },
+  "helpers": {
+    "shortName": [
+      "Glubbek",
+      "",
+      "A"
+    ],
+    "relabel": [
+      "Rob",
+      "Brakka",
+      null
+    ]
+  }
+}

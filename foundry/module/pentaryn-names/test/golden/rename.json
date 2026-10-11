@@ -1,0 +1,76 @@
+{
+  "effects": [
+    {
+      "op": "update",
+      "documentName": "Actor",
+      "uuid": "Actor.actorBob00000001",
+      "changes": {
+        "name": "Rob"
+      }
+    },
+    {
+      "op": "update",
+      "documentName": "Actor",
+      "uuid": "Actor.actorBob00000001",
+      "changes": {
+        "prototypeToken.name": "Rob"
+      }
+    },
+    {
+      "op": "updateEmbeddedDocuments",
+      "uuid": "Scene.sceneOne00000001",
+      "embeddedName": "Token",
+      "updates": [
+        {
+          "_id": "tokA1000000000001",
+          "name": "Rob"
+        }
+      ],
+      "options": {}
+    },
+    {
+      "op": "updateEmbeddedDocuments",
+      "uuid": "Scene.sceneTwo00000001",
+      "embeddedName": "Token",
+      "updates": [
+        {
+          "_id": "tokA2000000000001",
+          "name": "Rob"
+        }
+      ],
+      "options": {}
+    },
+    {
+      "op": "notify",
+      "level": "info",
+      "message": "Token labels updated to \"Rob\" (3)."
+    }
+  ],
+  "asked": [
+    {
+      "token": "tokA1000000000001",
+      "user": "gmUser0000000001",
+      "action": "update"
+    },
+    {
+      "token": "tokLocked00000001",
+      "user": "gmUser0000000001",
+      "action": "update"
+    },
+    {
+      "token": "tokNick0000000001",
+      "user": "gmUser0000000001",
+      "action": "update"
+    },
+    {
+      "token": "tokA2000000000001",
+      "user": "gmUser0000000001",
+      "action": "update"
+    },
+    {
+      "token": "tokBobby000000001",
+      "user": "gmUser0000000001",
+      "action": "update"
+    }
+  ]
+}
