@@ -191,12 +191,12 @@ test("de-duplication across both capture paths: same user, scene and rounded poi
   const n0 = W.stored().length;
   layer.handlePing(player, { x: 1200, y: 900 }, { scene: ALPHA });
   mock.timers.tick(399);
-  W.emitSocket("userActivity", PLAYER, { sceneId: ALPHA, ping: { x: 1200.4, y: 899.6 } });
+  W.emitSocket("userActivity", PLAYER, { cursor: { x: 1200.4, y: 899.6 }, ping: { scene: ALPHA } });
   mock.timers.tick(1);
   await drain();
   assert.equal(W.stored().length, n0 + 1, "socket copy of the same ping dropped");
 
-  W.emitSocket("userActivity", PLAYER, { sceneId: ALPHA, ping: { x: 1200, y: 900 } });   // 400 ms after the first
+  W.emitSocket("userActivity", PLAYER, { cursor: { x: 1200, y: 900 }, ping: { scene: ALPHA } });   // 400 ms after the first
   mock.timers.tick(250);
   await drain();
   assert.equal(W.stored().length, n0 + 2, "window is t - last.t < 400");
@@ -254,17 +254,64 @@ test("handlePing argument handling: default options, scene and user fallbacks, u
   ]);
 });
 
-test("userActivity: sceneId fallback, malformed payloads ignored without a throw or a warning", async () => {
+test("userActivity: ping.scene fallback, malformed payloads ignored without a throw or a warning", async () => {
   mock.timers.tick(1000);
   const n0 = W.stored().length;
-  W.emitSocket("userActivity", PLAYER, { ping: { x: 7, y: 8 } });
-  W.emitSocket("userActivity", PLAYER, { sceneId: BETA, ping: { x: 9, y: 8 } });
-  for (const data of [null, undefined, {}, { ping: null }, { ping: { x: "a", y: 1 } }, { ping: { x: 1 } }, { cursor: { x: 1, y: 1 } }]) {
+  W.emitSocket("userActivity", PLAYER, { cursor: { x: 7, y: 8 }, ping: {} });
+  W.emitSocket("userActivity", PLAYER, { cursor: { x: 9, y: 8 }, ping: { scene: BETA } });
+  // [declared] PT3-2: the pre-fix shape {sceneId, ping:{x,y}} is not what core sends; it is now ignored
+  for (const data of [null, undefined, {}, { ping: null }, { cursor: { x: "a", y: 1 }, ping: {} }, { cursor: { x: 1 }, ping: {} }, { cursor: { x: 1, y: 1 } }, { sceneId: BETA, ping: { x: 1, y: 1 } }]) {
     assert.doesNotThrow(() => W.emitSocket("userActivity", PLAYER, data));
   }
   mock.timers.tick(250);
   await drain();
   assert.deepEqual(W.stored().slice(n0).map(r => [r.sceneId, r.x, r.y]), [[ALPHA, 7, 8], [BETA, 9, 8]]);
+  assert.deepEqual(lines(), []);
+});
+
+test("PT3-2: a player's ping on a scene the GM is not viewing is recorded from core's v14 payload (SF6)", async () => {
+  mock.timers.tick(1000);
+  W.pings.length = 0;
+  const n0 = W.stored().length;
+  W.corePing(PLAYER, { x: 640.4, y: 480.6 }, BETA);          // GM views ALPHA
+  W.corePing(PLAYER, { x: 1500, y: 1100 }, HEX, { pull: true });
+  mock.timers.tick(250);
+  await drain();
+  assert.equal(W.pings.length, 0, "core drew nothing: not the viewed scene");
+  assert.deepEqual(W.stored().slice(n0).map(r => [r.userId, r.userName, r.sceneId, r.sceneName, r.x, r.y]), [
+    [PLAYER, "Rook", BETA, "Beta", 640, 481],
+    [PLAYER, "Rook", HEX, "Hex", 1500, 1100],
+  ]);
+  assert.deepEqual(lines(), []);
+});
+
+test("PT3-2: a player's ping on the scene the GM IS viewing is drawn and recorded once (handlePing + socket dedupe)", async () => {
+  mock.timers.tick(1000);
+  W.pings.length = 0;
+  const n0 = W.stored().length;
+  assert.equal(await W.corePing(PLAYER, { x: 1300.2, y: 700.7 }, ALPHA), "drawn");
+  assert.equal(W.pings.length, 1, "core drew it through the wrapped handlePing");
+  assert.deepEqual(W.pings[0].position, { x: 1300.2, y: 700.7 });
+  mock.timers.tick(250);
+  await drain();
+  assert.deepEqual(W.stored().slice(n0).map(r => [r.userId, r.sceneId, r.x, r.y]), [[PLAYER, ALPHA, 1300, 701]]);
+  assert.deepEqual(lines(), []);
+});
+
+test("PT3-2: core-shaped payloads without a usable cursor are ignored without a throw or a warning", async () => {
+  mock.timers.tick(1000);
+  const n0 = W.stored().length;
+  for (const data of [
+    { ping: { scene: BETA } },
+    { cursor: null, ping: { scene: BETA } },
+    { cursor: { x: "1", y: 2 }, ping: { scene: BETA } },
+    { cursor: { x: 1 }, ping: { scene: BETA } },
+  ]) {
+    assert.doesNotThrow(() => W.emitSocket("userActivity", PLAYER, data));
+  }
+  mock.timers.tick(250);
+  await drain();
+  assert.equal(W.stored().length, n0);
   assert.deepEqual(lines(), []);
 });
 
@@ -359,7 +406,7 @@ test("GM gate: no record while the client user is not a GM, and a flush due then
   layer.handlePing(gm, { x: 1, y: 1 }, { scene: ALPHA });
   F.become({ userId: PLAYER });
   layer.handlePing(gm, { x: 2, y: 2 }, { scene: ALPHA });
-  W.emitSocket("userActivity", PLAYER, { sceneId: ALPHA, ping: { x: 3, y: 3 } });
+  W.emitSocket("userActivity", PLAYER, { cursor: { x: 3, y: 3 }, ping: { scene: ALPHA } });
   mock.timers.tick(250);
   await drain();
   assert.equal(W.log().length, before, "flush skipped on a non-GM client");
@@ -383,7 +430,7 @@ test("failure texts: capture throw in the wrap, capture throw on the socket, wri
   try {
     assert.equal(await layer.handlePing(gm, { x: 5, y: 5 }, { scene: BETA }), "drawn");
     assert.equal(W.pings.length, 1, "the original still runs after a capture throw");
-    assert.doesNotThrow(() => W.emitSocket("userActivity", GM, { sceneId: BETA, ping: { x: 6, y: 6 } }));
+    assert.doesNotThrow(() => W.emitSocket("userActivity", GM, { cursor: { x: 6, y: 6 }, ping: { scene: BETA } }));
   } finally {
     F.game.users.get = get;
   }

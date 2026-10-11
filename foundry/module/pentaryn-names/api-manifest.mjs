@@ -23,10 +23,11 @@ export const MANIFEST = Object.freeze({
       gm: false,
       writes: true,
       legacy: true,
-      sideEffects: ["Actor.update prototypeToken.name", "Scene.updateEmbeddedDocuments Token", "ui.notifications.info"],
+      sideEffects: ["Actor.update prototypeToken.name", "Scene.updateEmbeddedDocuments Token", "Combat.updateEmbeddedDocuments Combatant (GM only)", "ui.notifications.info"],
       throws: ["TypeError"],
       doc: "Relabel the prototype token and every placed token of the actor this user can edit, where the "
-        + "label was the old name or its part before the first comma. Returns the number of labels changed. "
+        + "label was the old name or its part before the first comma; on a GM client also the actor's combatants, by "
+        + "the same rule. Returns the number of token labels changed (combatants are not counted). "
         + "ref: an Actor, a token or placeable, a UUID, a 16-character id or a whole name (exact, then "
         + "case-insensitive; never a substring); a token or a token's synthetic actor means its base actor. "
         + "An ambiguous name returns fail(\"AMBIGUOUS\"); a ref that matches nothing rejects with a "

@@ -24,6 +24,7 @@
  *     it, and an observed token with sight would let them see what the body "sees".
  *   - Players get OBSERVER on the token's own actor delta, never on the base actor, so no stat
  *     block in the sidebar is exposed. Item Piles cannot render a pile for a user without it.
+ *     The delta's own map is remembered and put back on revival (null: the base actor's again).
  */
 
 import { MODULE, showEye, eyePlacement } from "./loot-core.mjs";
@@ -60,6 +61,11 @@ const ourCorpse = t => !!t.flags?.[MODULE]?.corpse;
 
 async function toCorpse(tokenDoc) {
   if (isPile(tokenDoc)) return;
+  // The delta's own ownership before death (usually null: inherit the base actor), for a revival.
+  // Already our corpse (Item Piles reverted the pile, the body is still dead): its delta is our
+  // OBSERVER map, so keep the map saved at the first death (none saved: a pre-fix corpse, null).
+  const ownership = ourCorpse(tokenDoc) ? (tokenDoc.flags[MODULE].ownership ?? null)
+    : foundry.utils.deepClone(tokenDoc.delta?.ownership ?? null);
   await API().turnTokensIntoItemPiles([tokenDoc], {
     pileSettings: { type: "pile", distance: 1, deleteWhenEmpty: false, closed: false, locked: false,
       displayOne: false, showItemName: false, overrideSingleItemScale: false },
@@ -69,7 +75,7 @@ async function toCorpse(tokenDoc) {
   // Players observe the body, and an observed token with sight is a vision source for a player
   // with nothing selected: a dead drow would keep lighting its room. Remember it for a revival.
   await fresh.update({ [`flags.${MODULE}.corpse`]: true, [`flags.${MODULE}.sight`]: !!fresh.sight.enabled,
-    "sight.enabled": false, "delta.ownership": { default: OBSERVER } });
+    [`flags.${MODULE}.ownership`]: ownership, "sight.enabled": false, "delta.ownership": { default: OBSERVER } });
   // Dead as core's full-body overlay. The "lootable" eye is not a document: every client draws
   // it on top of the token (paintEye below) while the body still holds something.
   await deadAsOverlay(fresh.actor);
@@ -98,7 +104,21 @@ async function fromCorpse(tokenDoc) {
   await removeLegacyEye(fresh.actor);
   const sight = fresh.flags?.[MODULE]?.sight ?? fresh.sight.enabled;
   await fresh.update({ [`flags.${MODULE}.-=corpse`]: null, [`flags.${MODULE}.-=sight`]: null,
-    "sight.enabled": sight, "delta.ownership": {} });
+    [`flags.${MODULE}.-=ownership`]: null, "sight.enabled": sight,
+    "delta.ownership": revivedOwnership(fresh.flags?.[MODULE]?.ownership) });
+}
+
+/**
+ * The delta ownership a revived body gets back (PT3-1). The update is recursive, so `{}` merged
+ * into the corpse's `{default: OBSERVER}` changed nothing and every player kept the sheet. `null`
+ * replaces the map (the delta inherits the base actor again: corpses made before the map was saved
+ * get this too). A saved map is written whole with its `default`, which overwrites the corpse's
+ * OBSERVER; its other keys are the only ones the corpse map has. No `{recursive: false}`: on a
+ * token update that would replace all of `delta` and `flags`, not just the ownership.
+ */
+function revivedOwnership(saved) {
+  if (!saved || typeof saved !== "object") return null;
+  return { ...saved, default: saved.default ?? CONST.DOCUMENT_OWNERSHIP_LEVELS.NONE };
 }
 
 async function sync(actor) {

@@ -432,11 +432,56 @@ check("141 body swap: a new actor, dnd5e's swap flags, wrapped values; not a mov
   isBodySwap(null)
 ], [true, false, false, true, true, true, false, false]);
 
+/* ── play-test fixes (fix/playtest-2026-10-11) ────────────────────────────── */
+
+// PT3-3: a druid with no hand-made revert item still gets "Return to <name>" while shifted.
+check("150 shifted, no revert item → a synthesized Return, highlighted, before Change Form",
+  planBonusBar([{ kind: "weaponSet" }, { kind: "other" }], { revertIds: [], shifted: true, revertId: null, hasWildShape: true }),
+  [{ keep: 0 }, { revert: true, highlight: true }, { wildshape: true }, { keep: 1 }]);
+check("151 shifted with Talo's revert item → that item, no synthesized duplicate",
+  planBonusBar([{ kind: "weaponSet" }, { kind: "item", id: RV }], { revertIds: [RV], shifted: true, revertId: RV, hasWildShape: true })
+    .filter(p => p.revert || p.item === RV).length, 1);
+check("152 normal form never synthesizes a Return",
+  planBonusBar([{ kind: "weaponSet" }], { revertIds: [], shifted: false, hasWildShape: true }).some(p => p.revert), false);
+check("157 a Polymorph form (ownReturn false) gets no synthesized Return; a revert item still shows",
+  [planBonusBar([{ kind: "weaponSet" }], { revertIds: [], shifted: true, revertId: null, hasWildShape: true, ownReturn: false }).some(p => p.revert),
+   planBonusBar([{ kind: "weaponSet" }, { kind: "item", id: RV }], { revertIds: [RV], shifted: true, revertId: RV, hasWildShape: true, ownReturn: false })
+     .some(p => p.item === RV)], [false, true]);
+
+// PT3-4: Starry Form never goes into a beast form, even when its "Consume Wild Shape" target is not
+// the druid's Wild Shape id (a compendium id, a stale id): the PHB takes it "rather than shape-shifting".
+const starryOddTarget = feat("starryOddTgt001", "Starry Form", "class", {
+  ...act("so1", "utility", "bonus", [{ type: "itemUses", target: "compendiumWSid01" }]),
+  ...act("so2", "attack", "bonus")
+}, { system: { identifier: "starry-form" } });
+check("153 Starry Form stripped by identity when its target is not this druid's Wild Shape", stripReason(starryOddTarget, ctx), "starry-form");
+check("154 Starry Form stripped by name without an identifier",
+  stripReason(feat("starryNoIdent01", "Starry Form", "class", act("sn1", "utility", "bonus")), ctx), "starry-form");
+check("155 keepInForm still wins over Starry Form", stripReason(feat("starryKept00001", "Starry Form", "class",
+  act("sk1", "utility", "bonus"), { flags: { [MODULE_ID]: { keepInForm: true } }, system: { identifier: "starry-form" } }), ctx), null);
+check("156 a beast feature named like it is not stripped (not the host's)",
+  stripForForm([starryOddTarget], { wildShapeIds: [WS], hostItemIds: [] }).stripped, []);
+
 /* ── report ───────────────────────────────────────────────────────────────── */
 
 if (failures.length) {
   console.log(`✗ pentaryn-transform core: ${failures.length} failed, ${pass} passed`);
   console.log(failures.join("\n"));
-  process.exit(1);
+} else {
+  console.log(`✓ pentaryn-transform core: ${pass} passed`);
 }
-console.log(`✓ pentaryn-transform core: ${pass} passed`);
+
+// The node:test files (test/*.test.mjs, Foundry stubbed through test/kit/), one process per file —
+// what the blueprint's fixed run.mjs body does; guide step 1 replaces this whole file with it.
+const { readdirSync } = await import("node:fs");
+const { spawnSync } = await import("node:child_process");
+const { fileURLToPath } = await import("node:url");
+const testFiles = readdirSync(new URL(".", import.meta.url)).filter(f => f.endsWith(".test.mjs")).sort().map(f => `test/${f}`);
+let glueStatus = 0;
+if (testFiles.length) {
+  glueStatus = spawnSync(process.execPath, ["--test", "--test-reporter=dot", ...testFiles],
+    { stdio: "inherit", cwd: fileURLToPath(new URL("..", import.meta.url)) }).status ?? 1;
+  console.log(glueStatus === 0 ? `✓ pentaryn-transform node:test (${testFiles.length} file${testFiles.length === 1 ? "" : "s"}) passed`
+    : `✗ pentaryn-transform node:test failed (exit ${glueStatus})`);
+}
+if (failures.length || glueStatus !== 0) process.exit(1);

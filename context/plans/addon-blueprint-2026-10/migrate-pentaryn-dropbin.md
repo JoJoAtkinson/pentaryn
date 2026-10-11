@@ -412,8 +412,9 @@ steps 9–11 ~0.5 day. **~3 days.**
 |---|---|
 | Live score after the migration | not migrated yet — **60.9 % (28/46)** today (wave start in [`wave-1-baseline.md`](wave-1-baseline.md)), `conformance.py --module dropbin --markdown`, 2026-10-11 |
 | Date | 2026-10-11 (wave 1: checkpoint only (wave 1 Stage 0 lane); the refactor is workflow 2) |
-| Commits (Joe-approved) | characterisation: `6c33e7a` (kit), `4b53345` (checkpoint) · refactor: none yet · other: none |
+| Commits (Joe-approved) | characterisation: `6c33e7a` (kit), `4b53345` (checkpoint) · refactor: none yet · other: `ed02570`, `938c43e` PT3-1 fix (below) |
 | Declared changes handed to the live-test workflow | none |
 | `module.json` edits appended to `wave7-restart-batch.md` | no (step not reached) |
 | Adjustments rows appended to `adjustments-batch.md` | no (step not reached) |
 | Still failing, and why | C07 C09 C12 C17 C18 C21 C22 C24 C26 C27 C28 C29 C35 C40 C41 C44 C45 C47 — the guide's steps 2+ have not run. Frozen tests: the checkpoint's assertions and goldens are untouched since the checkpoint (see wave-1-report §Frozen tests). |
+| Fixed outside the migration | **PT3-1** (play test, [`wave-1-playtest.md`](wave-1-playtest.md)) fixed on `fix/playtest-2026-10-11`, `ed02570`, 0.2.1 → 0.2.2: a revived corpse kept `delta.ownership {default: OBSERVER}` (the recursive `{}` write in `fromCorpse` was a no-op), so players could open the enemy's sheet. `toCorpse` now saves the delta's own map in a new token flag `flags.pentaryn-dropbin.ownership` (usually `null`) and `fromCorpse` writes it back (`null` for none or a pre-fix corpse), then unsets the flag; a corpse re-piled after Item Piles reverted it keeps the map saved at its first death (review, `938c43e`). For step 5/6: the flag joins `corpse`/`sight` in *Data written* and `inspect(ref)`; the tests are in `test/corpses.test.mjs` (new; the checkpoint's tests and goldens unchanged) and drive `corpses.toCorpse/fromCorpse/revive`, which stay API contribution rows. D-D1's `describe().version` is now `0.2.2`. |

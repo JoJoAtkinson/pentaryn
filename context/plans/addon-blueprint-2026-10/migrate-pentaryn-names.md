@@ -318,9 +318,10 @@ planner output so its answer becomes a deliberate change.
 | N-D2 | 5 | API frozen; gains `version/contract/describe/settings/trace/uninstall`; published on `module.api`; `pentaryn-names.ready` fires | `game.pentaryn.names.describe()`; `game.modules.get("pentaryn-names").api === game.pentaryn.names` | live smoke only |
 | N-D3 | 6 | `sync` accepts an id/uuid/exact name; ambiguous name on a write returns `fail` | `game.pentaryn.names.sync("<actorId>", "Old", "New")` | live smoke only |
 | N-D4 | 7 (opt.) | toast also logged to console | console only | no |
+| PT3-9 | fix | **[declared]**, fixed on `fix/playtest-2026-10-11` (`f57cd997`, 0.1.0 → 0.1.1): a rename also relabels the actor's combatants, in every encounter, by the token rule (old name or its short form; a custom name is left alone); GM clients only, same initiator gate as the tokens, one batch per combat; not counted or toasted. Before, the tracker kept the old name until reload (Foundry prepares an empty combatant name from its token once) | GM: two unlinked Goblins in combat, one renamed "Boss" in the tracker; rename the base actor — the plain combatant follows, "Boss" stays. A player's own rename leaves the tracker as is | no — live smoke |
 | N-L1 | — | **intended (Joe, 2026-10-11, J14)**, not a change: renaming a base actor relabels every synthetic (unlinked) token that carries its `actorId` | two unlinked Goblins, rename the base actor | no — kept; the frozen tests' `KNOWN` label on this pin (core.test.mjs, fixtures/tables.mjs) now means intended behaviour, not a bug |
 
-Live smoke after sync: `describe().version === "0.1.0"`, every `describe().methods[].path` is a
+Live smoke after sync: `describe().version === "0.1.1"` (was `"0.1.0"` before PT3-9), every `describe().methods[].path` is a
 function, rename a test actor and see the toast.
 
 ## 6. Decisions and risks
@@ -437,6 +438,7 @@ Shared-file edits for their owners (not applied here):
 | Declared changes handed to the live-test workflow | N-D1..N-D3 deployed 2026-10-11 (sync + restart); live golden: only the N-D2 surface/`module.api` differ, rename/noop/nickname/toast identical. The actor-ref form of `sync` was not exercised live (open in wave-1-report J17). N-D4 not taken (J15); N-L1 kept as intended (J14, Joe 2026-10-11) |
 | `module.json` edits appended to `wave7-restart-batch.md` | landed directly in 170f003 (integration), live since the 12:01 restart |
 | Adjustments rows appended to `adjustments-batch.md` | n/a — none |
+| Fixed outside the migration | **PT3-9** (play test, [`wave-1-playtest.md`](wave-1-playtest.md)) on `fix/playtest-2026-10-11`: `5277d616` (fixture `game.combats`), `f57cd997` **[declared]** (combatant relabel, `test/combatants.test.mjs`, 5 tests), `6ce6ad65` (README, CHANGELOG); 0.1.0 → 0.1.1; still 100.0 % (44/44); 50 node:test. No frozen test or golden changed |
 | Still failing, and why | nothing. Tests: 45 node:test, all pass; coverage of module code 100 / 98.2 / 100 (line/branch/funcs, lib and test excluded, lcov records merged per file; 99.7 / 96.8 / 92.0 unmerged; was 0) |
 
 ### Rollback drill (2026-10-11)

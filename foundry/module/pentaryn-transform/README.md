@@ -63,6 +63,22 @@ refunds the use. API: `game.pentaryn.transform.starry.{assume, end, active, cons
   (`point.x.almostEqual is not a function`), so a form standing in a Region could not return.
   `TokenDocument._preUpdateOperation` is wrapped to unwrap scalar operators first.
 
+## Playtest fixes (0.3.3, wave-1 play test PT3)
+
+- **Return without a revert item (PT3-3).** A druid whose form carries no item flagged
+  `revert` still gets "Return to {name}" (the druid's portrait, highlighted) on the Bonus bar of a
+  Wild Shape form (not a Polymorph spell's form, which is not ended as a Bonus Action); it
+  runs the same path as the item (`returnToNormal`: bonus pip, then `revert`). A form with the item
+  shows only the item.
+- **Starry Form never in a beast form (PT3-4).** Stripped by identity (identifier `starry-form`,
+  else the name; reason `starry-form`) even when its Consume Wild Shape target is not this druid's
+  Wild Shape id, and dropped from the Bonus bar of any form that still carries it.
+- **Escape closes the Wild Shape / Starry Form picker (PT3-6)** when no target picker is up (same
+  keybinding); with nothing open it still reaches core.
+- **Every Wild Shape revert says so in chat (PT3-7).** A revert this module did not start (the
+  sheet's Restore Transformation, the sidebar, a macro) posts the "returns to normal form" line via
+  `dnd5e.revertOriginalForm`; the module's own revert posts its line once, as before.
+
 ## Playtest fixes (0.3.1)
 
 - **Argon's target picker** ("0/1 Targets") is cancelled when the HUD's token changes body (any
@@ -187,8 +203,8 @@ Actors without Wild Shape or a revert item are left exactly as Argon builds them
 
 ## Setup facts
 
-- The revert item is an ordinary class feature with one bonus-action utility activity and no
-  consumption. Keep it a `feat` so the Wild Shape preset (`keep: feats`) carries it onto the form.
+- The revert item is optional (without it the HUD adds its own Return button). If used, it is an
+  ordinary class feature with one bonus-action utility activity and no consumption. Keep it a `feat` so the Wild Shape preset (`keep: feats`) carries it onto the form.
 - Players need `ACTOR_CREATE` (Trusted at this table) and `dnd5e.allowPolymorphing` to shift, and
   ownership of the form actors the profiles point at. Reverting needs only ownership.
 - Transform updates tokens on the **viewed** scene only (dnd5e), so a shift needs the druid's token

@@ -154,7 +154,7 @@ function mainPanel(label) {
   return ui.ARGON?.components?.main?.find?.(p => p.label === label) ?? null;
 }
 
-const TT = ["pentaryn-tt"];
+const TT = ["pentaryn-tt", "pentaryn-combat-tt"];   // shared tooltip layout + combat's own (subtitle wrap, PT1-6)
 
 /* ── which weapon, how many swings ───────────────────────────────────────── */
 

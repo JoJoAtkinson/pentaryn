@@ -140,7 +140,10 @@ args as above. Errors are `Error("<CODE>: detail")`: `TEXT_CHANGED`, `MARKER_GON
   A Monk's weapons get Martial Arts' own enchantment (its "Master Simple Weapon" / "Master Light
   Martial Weapon" activities through dnd5e's `applyEnchantment`; dnd5e's `canEnchant` picks the
   weapons), so the Quarterstaff rolls DEX and the Martial Arts die from the first swing; the dry run
-  names them in a note (0.4.3, usability Area 10).
+  names them in a note (0.4.3, usability Area 10). A new character starts with every spell slot full
+  (leveled and pact, `system.spells.<key>.value = max` as dnd5e's long rest does, in the same write as
+  full HP; the dry run's ghost too), and the `sheet:` line ends `slots 1st 4/4, 2nd 3/3` /
+  `slots pact 2/2 (3rd)` (0.4.4, play test PT2-2: they were 0/4).
 - `npc` — `{npc, features, patch}` (`npc.mjs`, pure half `npc-core.mjs`), **built by this module**
   since 0.3.0, so it works through eval-js too: `npc` is the dnd5e-create-npc arguments, `features`
   the dnd5e-add-feature arguments without `actorIdentifier` (+ `recharge`). Every field is checked and
@@ -220,6 +223,8 @@ built members (`+ built t4 "Skrag", t5 "Grek"`) and their XP. `<built>` carries 
 `Items:` (the item's real name, rarity, `unidentified, shows as "…"`, attunement — read from the item
 source, since dnd5e's derived data of an unidentified item hides both) or a creature's notable `Carries:`, the
 provenance `note` as `Why:`, and the description cut at a sentence (`previewSentences`, `gatherChars` 400).
+A description is printed once per actor: further unlinked tokens of that actor with the same text say
+`Description: same as t4 "Goblin"` (0.4.4, play test PT2-5); a token whose text differs prints its own.
 
 Not modelled: wall heights / Levels elevations (the gather prints a `WARN` line). Hex grids count
 hexes (cube distance over core's occupied offsets); notes, lights and tiles occupy the hex under their
@@ -227,6 +232,8 @@ centre.
 
 ## Status and known limits (2026-10-10)
 
+0.4.4 (wave 1 play-test fixes, branch fix/playtest-2026-10-11: PT2-2 a new character's spell slots
+start full; PT2-5 gather prints one description per actor).
 0.4.3 (usability Area 10 fixer pass: a built Monk's weapons get the Martial Arts enchantment).
 0.4.2 (usability Area 9 fixer pass: `"current"` inside a `scenes` list, the door line above the
 panel's fold, the footer says ⇧Esc removes a new marker). 0.4.1 (usability run 2026-10: panel refresh, MARKER_GONE says why, honest `remaining`, the over-5

@@ -6,6 +6,16 @@
   publish throws into Foundry's hook error report and leaves the root as it was. Nothing freezes the
   root since the importer's keystone, so a live world sees no difference.
 
+## 0.1.1 — 2026-10-11 (play-test fix, fix/playtest-2026-10-11)
+
+Declared change:
+
+- PT3-9: a rename also relabels the actor's combatants, in every encounter, whose name was the old
+  name or its part before the first comma (the token rule); a custom combatant name is left alone.
+  GM clients only (a player may not change a combatant's name), same gate as the token relabel,
+  one batch write per combat. `sync`'s return value and the toast still count token labels only.
+  Before, the combat tracker kept the old name until reload.
+
 ## 0.1.0 — 2026-10-11 (migrated to the addon blueprint)
 
 Structure (no behaviour change): pure core `names-core.mjs`, the `rename.mjs` feature, the entry

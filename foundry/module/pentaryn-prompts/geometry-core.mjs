@@ -12,7 +12,7 @@
 export const MODULE = "pentaryn-prompts";
 
 /** The code's own version: `status().version` prints it (game.modules can lag until a rescan). Kept equal to module.json by the suite. */
-export const VERSION = "0.4.3";
+export const VERSION = "0.4.4";
 
 /** The gather description length: the setting's registered default, gather's fallback and renderGather's default (D6). */
 export const GATHER_CHARS = 400;
@@ -705,6 +705,9 @@ export function renderGather(view, { chars = GATHER_CHARS } = {}) {
   L.push(`<prompt_markers call="${attr(view.call)}" scenes="${c.scenes}" prompts="${c.prompts}" built="${c.built}" encounters="${c.encounters}" alone="${c.alone}">`);
   L.push("<legend>", LEGEND, "</legend>");
   L.push(partyLine(view));
+  // PT2-5: one description per actor — the unlinked tokens of one actor share its biography, so
+  // the first prints it and the rest point at it (`actorId` + text → that first built id and name)
+  const described = new Map();
 
   for (const sc of view.scenes) {
     L.push("");
@@ -768,7 +771,7 @@ export function renderGather(view, { chars = GATHER_CHARS } = {}) {
         if (printed.has(tid)) { L.push(`<built id="${tid}" see="above"/>`); continue; }
         printed.add(tid);
         L.push(...renderBuilt(view.built[tid], chars, e.shared.includes(tid)
-          ? sc.encounters.filter(x => x.built.includes(tid)).map(x => x.id) : null));
+          ? sc.encounters.filter(x => x.built.includes(tid)).map(x => x.id) : null, described));
       }
       L.push("</encounter>");
     }
@@ -779,7 +782,7 @@ export function renderGather(view, { chars = GATHER_CHARS } = {}) {
     }
     if (sc.contextOnly.length) {
       L.push("", "<context_only>");
-      for (const tid of sc.contextOnly) L.push(...renderBuilt(view.built[tid], chars, null));
+      for (const tid of sc.contextOnly) L.push(...renderBuilt(view.built[tid], chars, null, described));
       L.push("</context_only>");
     }
     L.push("</scene>");
@@ -828,7 +831,7 @@ function renderPrompt(p, unseenFt = 60) {
   return out;
 }
 
-function renderBuilt(t, chars, sharedWith) {
+function renderBuilt(t, chars, sharedWith, described = null) {
   const out = [];
   const bits = [`id="${t.id}"`, `kind="${t.kind}"`, `name="${attr(t.name)}"`];
   const type = t.classes?.length ? classLabel(t.classes, t.species) : t.type;
@@ -850,7 +853,15 @@ function renderBuilt(t, chars, sharedWith) {
   if (t.prov?.note) out.push(`Why: ${preview(t.prov.note, 240)}`);
   if (t.items?.length) out.push(`${t.kind === "hotspot" ? "Items" : "Carries"}: ${itemsText(t.items)}`);
   if (t.light) out.push(`Light: ${t.light}`);
-  if (t.description) out.push(`Description: ${builtDescription(t.description, chars, t.actorId ?? t.docId ?? t.id)}`);
+  if (t.description) {
+    const key = t.actorId ? `${t.actorId}\n${t.description}` : null;
+    const first = key ? described?.get(key) : null;
+    if (first) out.push(`Description: same as ${first.id} "${attr(first.name)}"`);
+    else {
+      if (key) described?.set(key, { id: t.id, name: t.name });
+      out.push(`Description: ${builtDescription(t.description, chars, t.actorId ?? t.docId ?? t.id)}`);
+    }
+  }
   out.push("</built>");
   return out;
 }

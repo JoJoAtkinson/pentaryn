@@ -81,7 +81,7 @@ Emits no events of its own (`HOOKS` is empty). Registers only `init` and `ready`
 | Adjustments row | What | Why |
 |---|---|---|
 | `pings-core-ping-handle` | wraps `ControlsLayer.prototype.handlePing` through `wrapMethod`, marker `__pentarynPatched` | the only place a ping drawn on this client is visible. On the prototype: layers are rebuilt on every scene change |
-| `core-pings-user-activity-socket` | `game.socket.on("userActivity", …)` — core's private socket event | pings from clients on scenes the GM is not viewing never reach `handlePing` |
+| `core-pings-user-activity-socket` | `game.socket.on("userActivity", …)` — core's private socket event; core v14 sends `{cursor: {x, y}, ping: {scene, …}}`, recorded as `cursor` on `ping.scene` | pings from clients on scenes the GM is not viewing never reach `handlePing` |
 
 The two paths overlap, so a record that repeats the last one (same user, scene and rounded point,
 less than 400 ms later) is dropped.

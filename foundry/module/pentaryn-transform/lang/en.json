@@ -3,7 +3,7 @@
     "Keybinding": {
       "CancelPicker": {
         "Name": "Cancel the HUD's target picker",
-        "Hint": "While the Argon HUD is waiting for a target (\"0/1 Targets\"), this key cancels the attack instead of opening the game menu."
+        "Hint": "While the Argon HUD is waiting for a target (\"0/1 Targets\"), this key cancels the attack; while the Wild Shape or Starry Form picker is open, it closes the picker. Either way it does not open the game menu."
       }
     },
     "NotTransformed": "{name} is already in their normal form.",
