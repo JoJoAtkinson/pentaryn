@@ -247,7 +247,7 @@ browser must reload too, not just the player's.
 Two things to know about that module:
 
 - It is **not** wired into a `make` target. Edit `foundry/module/pentaryn-dropbin/` in the repo,
-  then `cp` the changed files to `$FOUNDRY_DATA/modules/pentaryn-dropbin/` by hand.
+  then `cp` the changed files to `$FOUNDRY_DATA/Data/modules/pentaryn-dropbin/` by hand.
 - Its manifest said `"socket": false` while the code called `socketlib.registerModule`, so
   socketlib refused and `socketlib.ready` threw on every load. Fixed to `true` in the repo and in
   the installed copy — but **module manifests are read at world launch**, so it needs a world

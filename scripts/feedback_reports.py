@@ -48,7 +48,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from scripts.foundry.ops.config import FOUNDRY_DATA  # noqa: E402
+from scripts.foundry.ops.config import FOUNDRY_DATA_DIR  # noqa: E402
 
 SCHEMA_VERSION = 1
 STATUSES = ("open", "triaged", "resolved", "wontfix")
@@ -56,13 +56,13 @@ CATEGORIES = ("bug", "defect", "feature")
 ROLES = {0: "none", 1: "player", 2: "trusted", 3: "assistant GM", 4: "GM"}
 _ID = re.compile(r"^[A-Za-z0-9]{1,16}$")
 _FULL_ID = re.compile(r"^[A-Za-z0-9]{16}$")
-_DEFAULT_DIR = FOUNDRY_DATA / "pentaryn-feedback"
+_DEFAULT_DIR = FOUNDRY_DATA_DIR / "pentaryn-feedback"
 _BY = "claude-code"
 _ERRORS_IN_FULL = 10
 
 
 def feedback_dir() -> Path:
-    """`$PENTARYN_FEEDBACK_DIR`, else Foundry's Data/pentaryn-feedback (scripts/foundry/ops/config.py's root)."""
+    """`$PENTARYN_FEEDBACK_DIR`, else Foundry's Data/pentaryn-feedback (scripts/foundry/ops/config.py's FOUNDRY_DATA_DIR)."""
     env = os.environ.get("PENTARYN_FEEDBACK_DIR", "").strip()
     return Path(os.path.expanduser(env)) if env else _DEFAULT_DIR
 

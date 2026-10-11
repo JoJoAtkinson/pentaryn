@@ -18,7 +18,7 @@ footprint, so small's bubble is drawn noticeably smaller (and the actor also set
 
 Writes 512x512 RGBA webp into foundry/module/pentaryn-prompts/assets/marker-<size>.webp, which is
 what the marker actors point at (modules/pentaryn-prompts/assets/...). `--data` also copies them to
-$FOUNDRY_DATA/assets/tokens/custom/markers/prompt-<size>.webp beside the colour/number markers.
+$FOUNDRY_DATA/Data/assets/tokens/custom/markers/prompt-<size>.webp beside the colour/number markers.
 """
 
 from __future__ import annotations
