@@ -25,11 +25,12 @@ export const MANIFEST = Object.freeze({
       legacy: true,
       sideEffects: ["Actor.update prototypeToken.name", "Scene.updateEmbeddedDocuments Token", "ui.notifications.info"],
       throws: ["TypeError"],
-      doc: "ref: an Actor, a token or placeable, a UUID, a 16-character id or a whole name (exact, then "
-        + "case-insensitive; never a substring); an ambiguous name returns fail(\"AMBIGUOUS\"), and a ref that "
-        + "matches nothing rejects with a TypeError (legacy). Relabel the prototype token and every placed token of the actor this user can edit, where the label "
-        + "was the old name or its part before the first comma. Returns the number of labels changed. "
-        + "A rename through actor.update already relabels on the renaming client — call this only to repair.",
+      doc: "Relabel the prototype token and every placed token of the actor this user can edit, where the "
+        + "label was the old name or its part before the first comma. Returns the number of labels changed. "
+        + "ref: an Actor, a token or placeable, a UUID, a 16-character id or a whole name (exact, then "
+        + "case-insensitive; never a substring). An ambiguous name returns fail(\"AMBIGUOUS\"); a ref that "
+        + "matches nothing rejects with a TypeError (legacy). A rename through actor.update already "
+        + "relabels on the renaming client — call this only to repair.",
     },
     {
       path: "relabel",
