@@ -1,8 +1,9 @@
 /**
  * Pentaryn Movement — settings. The only file outside lib/ that calls game.settings.register/get.
  *
- * Four rows, in the order they have always been registered. Labels are full literal keys (the i18n
- * gate proves each one). A row's onChange calls whatever the feature registered for that key with
+ * Four rows, in the order they have always been registered. Every row carries full literal label
+ * keys, the two hidden ones too (D-M3; never shown, since config: false rows do not render), so the
+ * i18n gate proves each one. A row's onChange calls whatever the feature registered for that key with
  * onSettingChange(); the feature does that during its synchronous install, before `init`.
  */
 
@@ -33,10 +34,14 @@ export const SETTINGS = Object.freeze([
   },
   {
     key: "ghostPolicyLast", scope: "world", config: false, type: String, default: DEFAULT_POLICY,
+    name: "PENTARYN_MOVEMENT.settings.ghostPolicyLast.name",
+    hint: "PENTARYN_MOVEMENT.settings.ghostPolicyLast.hint",
     doc: "The mode the GM toolbar button restores when it is switched back on (exploration or always).",
   },
   {
     key: "ghost", scope: "client", config: false, type: Boolean, default: false,
+    name: "PENTARYN_MOVEMENT.settings.ghost.name",
+    hint: "PENTARYN_MOVEMENT.settings.ghost.hint",
     onChange: value => handlers.ghost?.(value),
     doc: "This player's ghost button (their wish); in effect only while the policy allows it. Client scope.",
   },

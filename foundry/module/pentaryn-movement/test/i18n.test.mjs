@@ -29,9 +29,12 @@ test("every key in the core maps exists", () => {
   for (const m of maps) for (const key of Object.values(m)) assert.ok(key in keys, key);
 });
 
-test("every SETTINGS label and choice key that is set exists", () => {
+test("every SETTINGS row has literal name and hint keys that exist; choice keys exist", () => {
   for (const row of SETTINGS) {
-    for (const field of ["name", "hint"]) if (row[field] !== undefined) assert.ok(row[field] in keys, `${row.key}.${field}`);
+    for (const field of ["name", "hint"]) {
+      assert.equal(typeof row[field], "string", `${row.key}.${field} must be a literal`);
+      assert.ok(row[field] in keys, `${row.key}.${field}`);
+    }
     for (const v of Object.values(row.choices ?? {})) assert.ok(v in keys, v);
   }
   const policy = SETTINGS.find(r => r.key === "ghostPolicy");

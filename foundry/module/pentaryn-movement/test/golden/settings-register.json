@@ -21,8 +21,8 @@
     "type": "String",
     "default": "exploration",
     "choices": null,
-    "name": null,
-    "hint": null,
+    "name": "PENTARYN_MOVEMENT.settings.ghostPolicyLast.name",
+    "hint": "PENTARYN_MOVEMENT.settings.ghostPolicyLast.hint",
     "onChange": false
   },
   {
@@ -32,8 +32,8 @@
     "type": "Boolean",
     "default": false,
     "choices": null,
-    "name": null,
-    "hint": null,
+    "name": "PENTARYN_MOVEMENT.settings.ghost.name",
+    "hint": "PENTARYN_MOVEMENT.settings.ghost.hint",
     "onChange": true
   },
   {

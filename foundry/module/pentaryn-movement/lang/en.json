@@ -49,6 +49,14 @@
       "ownedOnTop": {
         "name": "Show my own tokens on top",
         "hint": "Your own tokens are drawn above everyone else's, and take the click when tokens overlap. Only on your screen; nothing on the map changes for anyone else."
+      },
+      "ghostPolicyLast": {
+        "name": "Ghost movement mode to restore",
+        "hint": "Hidden. The mode (Exploration only or Always allowed) the GM toolbar button restores when it is switched back on."
+      },
+      "ghost": {
+        "name": "My ghost button",
+        "hint": "Hidden. Whether this player's ghost button is on; it only works while the GM allows ghost movement."
       }
     }
   }
