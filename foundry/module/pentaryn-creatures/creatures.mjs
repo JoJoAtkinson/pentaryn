@@ -13,24 +13,27 @@
  *   strip.mjs            UI: the strip's DOM, the Combat HUD dock
  *   creature-strip.mjs   feature: when the strip redraws
  *   owner-sees.mjs       feature: the Token#isVisible wrap
+ *   api-manifest.mjs     PURE API rows (describe() reads them)
+ *   api.mjs              implementations over ctx.exposed, buildApiFor(ctx)
  *   lib/*.mjs            vendored kit — never edited here (scripts/foundry/blueprint/vendor.py)
  *
  * Lifecycle: the light and strip features install synchronously in this body (where their
  * module-scope Hooks.on calls always ran, so listener order is unchanged) · init → settings ·
  * setup → owner-sees wraps Token#isVisible · ready → the active GM syncs every light, the strip
- * draws, then the API is published as game.pentaryn.creatures.
+ * draws, then the API is built (a drift throw stops there) and published synchronously as
+ * game.modules.get("pentaryn-creatures").api and game.pentaryn.creatures.
  *
  * Hot patch RE-RUNS THE WIRING ONLY: `game.pentaryn.creatures.uninstall()`, then
  * `await import("/modules/pentaryn-creatures/creatures.mjs?v=2")`. Any edit to another file needs
  * a reload.
  */
 
-import * as core from "./creatures-core.mjs";
-import { MODULE, isPlayerCreature } from "./creatures-core.mjs";
+import { MODULE, NS } from "./creatures-core.mjs";
 import { onSettingChange, registerSettings, setting } from "./settings.mjs";
-import { summarize } from "./tokens-adapter.mjs";
+import { buildApiFor } from "./api.mjs";
 import { hookRegistry } from "./lib/hooks.mjs";
 import { makeLog } from "./lib/log.mjs";
+import { publishNamespace } from "./lib/publish.mjs";
 import * as light from "./light.mjs";
 import * as creatureStrip from "./creature-strip.mjs";
 import * as ownerSees from "./owner-sees.mjs";
@@ -71,25 +74,16 @@ function onReadyStartup() {
   ctx.exposed.scheduleRender();
 }
 
+/** Build the API first (a drift throw stops here with one clear line), then publish it. */
 function onReadyPublish() {
-  // pentaryn-importer replaces game.pentaryn with a frozen object in its own ready hook; defer a
-  // tick and rebuild rather than assign (same as pentaryn-journal / -portals).
-  setTimeout(() => {
-    const x = ctx.exposed;
-    const api = {
-      list: x.list,
-      render: x.render,
-      syncScene: x.syncScene,
-      syncAll: x.syncAll,
-      isCreature: (tokenDoc) => isPlayerCreature(summarize(tokenDoc)),
-      ownerSees: x.ownerSees,
-      patchedWith: x.patchedWith,
-      core
-    };
-    const current = game.pentaryn;
-    if (current && !Object.isExtensible(current)) game.pentaryn = { ...current, creatures: api };
-    else { game.pentaryn ??= {}; game.pentaryn.creatures = api; }
-  }, 0);
+  let api;
+  try {
+    api = buildApiFor(ctx);
+  } catch (err) {
+    log.error("API manifest drift — not published", err);
+    return;
+  }
+  publishNamespace(NS, api, { moduleId: MODULE });
 }
 
 // Registration order is the module's historic one (golden/hooks.json): the light's and the strip's

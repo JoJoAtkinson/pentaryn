@@ -1,0 +1,88 @@
+/**
+ * Pentaryn Creatures — the API manifest. PURE DATA: node imports it without a Foundry stub,
+ * describe() reports it, and buildApi() refuses to load when it and api.mjs drift apart.
+ *
+ * Every published path from before the migration keeps its signature (`legacy: true`); no row's
+ * first param is named `ref`, so none is resolved by the kit. `core` (the pure module) is published
+ * unlisted, as a frozen copy.
+ */
+
+import { CONTRACT, MODULE, NS, VERSION } from "./creatures-core.mjs";
+
+export const MANIFEST = Object.freeze({
+  module: MODULE,
+  namespace: NS,
+  version: VERSION,
+  contract: CONTRACT,
+  flagScope: MODULE,
+  rows: [
+    {
+      path: "list",
+      params: [
+        { name: "user", type: "User", optional: true, doc: "default: this client's user" },
+        { name: "scene", type: "Scene", optional: true, doc: "default: the viewed scene" },
+      ],
+      returns: "{ id, name, img, rank }[]",
+      gm: false, writes: false, legacy: true,
+      doc: "What that user's \"Your creatures\" strip shows on a scene: their own tokens, their character "
+        + "(or its Wild Shape form) first as rank 0, other characters rank 1, the rest rank 2. GM-hidden tokens, "
+        + "Item Piles piles and pentaryn-aoe area handles are left out. [] without a scene.",
+    },
+    {
+      path: "render",
+      params: [],
+      returns: "void",
+      gm: false, writes: false, legacy: true,
+      doc: "Redraw this client's strip now (always rebuilds). A GM client never shows a strip.",
+    },
+    {
+      path: "syncScene",
+      params: [
+        { name: "scene", type: "Scene" },
+        { name: "ids", type: "Set<string>", optional: true, doc: "only these token ids; default every token" },
+      ],
+      returns: "Promise<number>",
+      gm: true, writes: true, legacy: true,
+      sideEffects: ["token light.bright/light.dim", "flags.pentaryn-creatures.light"],
+      doc: "Bring one scene's creature lights in line now; resolves to how many tokens were written. Active GM "
+        + "client only (0 elsewhere). ids must be a Set today.",
+    },
+    {
+      path: "syncAll",
+      params: [],
+      returns: "Promise<number>",
+      gm: true, writes: true, legacy: true,
+      sideEffects: ["token light.bright/light.dim", "flags.pentaryn-creatures.light"],
+      doc: "syncScene over every scene; resolves to how many tokens were written. Active GM client only (0 elsewhere).",
+    },
+    {
+      path: "isCreature",
+      params: [{ name: "tokenDoc", type: "TokenDocument" }],
+      returns: "boolean",
+      gm: false, writes: false, legacy: true,
+      doc: "Does this token get the creature light: a player-owned npc that is not an Item Piles pile or an "
+        + "aoe area handle? Never a PC or its Wild Shape form.",
+    },
+    {
+      path: "ownerSees",
+      params: [{ name: "token", type: "Token placeable" }],
+      returns: "boolean",
+      gm: false, writes: false, legacy: true,
+      doc: "Would the owner override draw this token on this client when core says it is not visible? Always "
+        + "false on a GM client. Needs the placeable today (a TokenDocument answers false).",
+    },
+    {
+      path: "patchedWith",
+      params: [],
+      returns: "\"libWrapper\" | \"direct\" | null",
+      gm: false, writes: false, legacy: true,
+      doc: "How Token#isVisible was wrapped on this client: libWrapper, directly on the prototype, or null when "
+        + "the getter was not found (owners-see-their-own is off).",
+    },
+  ],
+  flags: {
+    writes: ["flags.pentaryn-creatures.light"],
+    reads: ["flags.pentaryn-aoe.handle", "flags.pentaryn-aoe.handleActor", "flags.item-piles.data.enabled", "flags.dnd5e.originalActor"],
+  },
+  unlisted: ["core"],
+});

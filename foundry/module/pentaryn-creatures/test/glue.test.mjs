@@ -1,7 +1,9 @@
 // Glue characterisation on the active GM's client (guide step 1). The unchanged entry is loaded as
 // Foundry would, init/setup/ready are fired, and its effects are pinned: the 17-row hook manifest,
 // the four settings.register option objects, the light writer (ready sync, the 200 ms debounced queue,
-// which changes queue, the GM gate, the failure texts), the deferred publish and the legacy API.
+// which changes queue, the GM gate, the failure texts), the publish and the legacy API.
+// [declared] C-D2 (guide step 7): the API is published through the kit AT ready (was one tick
+// later), frozen, with the kit members, on module.api as well as game.pentaryn.creatures.
 // Timers are mocked; nothing waits on a real clock.
 //
 // Separate processes: glue-player.test.mjs (a player client: owner-sees, the strip, the dock),
@@ -126,10 +128,11 @@ test("setup: lib-wrapper active without its global → Token#isVisible replaced 
   assert.deepEqual(F.calls, [], "setup only reads ownerSees");
 });
 
-test("ready (active GM): one write per scene, summons only, no options argument (KNOWN -27); publish waits a tick", async () => {
+test("ready (active GM): one write per scene, summons only, no options argument (KNOWN -27); published at ready", async () => {
   W.reads.length = 0;
   F.fire("ready");
-  assert.equal(F.game.pentaryn, undefined, "not published synchronously at ready");
+  assert.equal(typeof api(), "object", "[declared] C-D2: published synchronously at ready");
+  assert.equal(F.game.modules.get(MODULE).api, api(), "[declared] C-D2: module.api is the same API");
   await drain();
   assert.deepEqual(writes(), [
     { scene: ALPHA, type: "Token", updates: [lit("tImp"), lit("tEye"), lit("tHid")], argc: 2 },
@@ -139,9 +142,6 @@ test("ready (active GM): one write per scene, summons only, no options argument 
   assert.deepEqual(W.tok("tImp").light, { bright: 5, dim: 5 });
   assert.deepEqual(W.tok("tImp").flags[MODULE], { light: { bright: 5, dim: 5 } });
   assert.deepEqual(W.tok("tTorch").light, { bright: 20, dim: 40 }, "own torch left alone");
-  await tick(0);
-  assert.equal(typeof api(), "object", "published one tick after ready");
-  assert.equal(F.game.modules.get(MODULE).api, undefined, "no module.api");
 });
 
 test("KNOWN transform-creatures-27: our own write re-queues itself and a second pass writes nothing", async () => {
@@ -166,10 +166,13 @@ test("legacy surface ⊇ golden/legacy-surface.json; core is the module namespac
   const legacyKeys = pinJSON("legacy-surface", ["core", "isCreature", "list", "ownerSees", "patchedWith", "render", "syncAll", "syncScene"], import.meta.url);
   const keys = Object.keys(api());
   for (const k of legacyKeys) assert.ok(keys.includes(k), k);
-  assert.deepEqual(keys, ["list", "render", "syncScene", "syncAll", "isCreature", "ownerSees", "patchedWith", "core"]);
-  for (const k of keys.filter(k => k !== "core")) assert.equal(typeof api()[k], "function", k);
+  const LEGACY = ["list", "render", "syncScene", "syncAll", "isCreature", "ownerSees", "patchedWith", "core"];
+  assert.deepEqual(keys.slice(0, LEGACY.length), LEGACY);
+  // [declared] C-D2: the kit members follow the legacy keys
+  assert.deepEqual(keys.slice(LEGACY.length), ["version", "contract", "settings", "trace", "uninstall", "describe"]);
+  for (const k of LEGACY.filter(k => k !== "core")) assert.equal(typeof api()[k], "function", k);
   assert.equal(api().core.lightUpdate, core.lightUpdate);
-  assert.equal(Object.isFrozen(api()), false);
+  assert.equal(Object.isFrozen(api()), true, "[declared] C-D2: frozen");
   assert.equal(api().patchedWith(), "direct");
 });
 

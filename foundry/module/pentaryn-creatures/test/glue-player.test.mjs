@@ -85,14 +85,12 @@ test("ownerSees onChange: off stops the override and refreshes every placeable; 
   assert.equal(W.p("tImp").isVisible, true, "anything but false is on");
 });
 
-test("ready (player): no light writes, no syncAll; strip after 60 ms; publish after one tick", async () => {
+test("ready (player): no light writes, no syncAll; strip after 60 ms; published at ready ([declared] C-D2)", async () => {
   W.reads.length = 0;
   F.fire("ready");
   await drain();
   assert.equal(W.strip(), null, "nothing drawn synchronously");
-  assert.equal(F.game.pentaryn, undefined);
-  await tick(0);
-  assert.equal(typeof api(), "object");
+  assert.equal(typeof api(), "object", "[declared] C-D2: published synchronously at ready");
   assert.equal(api().patchedWith(), "direct");
   await tick(59);
   assert.equal(W.strip(), null);
