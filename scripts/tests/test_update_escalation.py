@@ -1146,8 +1146,11 @@ def test_exposure_matches_code_not_prose(tmp_path):
 
 def test_real_exposure_has_no_known_false_positives():
     reg = adj_mod.load()
-    for pkg in ("multi-token-edit", "scene-packer", "wall-height", "mad-endlesswiz"):
+    for pkg in ("multi-token-edit", "scene-packer", "mad-endlesswiz"):
         assert reg.exposure(pkg) == [], pkg
+    # Not a false positive: prompts' sight test reads the package's own flag scope,
+    # `w.flags?.["wall-height"]` (776a865), so this exposure is real.
+    assert reg.exposure("wall-height") == ["foundry/module/pentaryn-prompts/los.mjs"]
     assert reg.exposure("dice-so-nice") == [STUDY]
 
 
