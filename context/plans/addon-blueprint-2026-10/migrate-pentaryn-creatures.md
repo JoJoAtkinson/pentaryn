@@ -462,13 +462,48 @@ stays drawn; `game.pentaryn.creatures.status().patchedWith` is `"libWrapper"` or
 | 10 Wave 7 | batched |
 | **Total** | **M, ≈ 2 days** plus checkpoint, K1, adjustments batch, restart item; §4 fixes ≈ 0.5 day more |
 
+## Checkpoint (wave 3, 2026-10-11)
+
+- **Re-anchor (step 0):** `git diff 4e64f47..wave-3-base -- foundry/module/pentaryn-creatures` is
+  empty, so every line number in this guide still holds. aoe's `isHandleTarget` is unchanged at
+  `pentaryn-aoe/core.mjs:364-368`. `wait.json` is empty (D9). The scorer has grown to 45 fail-class
+  rules: at `wave-3-base` it gives **57.8 % (26/45)**, failing C07 C09 C14 C18 C20 C21 C22 C26 C27
+  C28 C32 C35 C37 C40 C41 C43 C44 C45 C47 (warn C06w C10).
+- **Kit:** `6d36df2` vendors kit 1.0.2 (full + patch, patch-libwrapper, election) and adds the fixed
+  `test/run.mjs`. It renames `test/run.mjs` to `test/core-legacy.mjs` with the content unchanged
+  (73 checks) and lists it in `LEGACY`.
+- **Checkpoint: `6e4c7d7`** (`test(creatures): characterisation checkpoint`). Files:
+  `test/{core,glue,glue-player,glue-libwrapper,glue-libwrapper-throws,glue-nogetter,glue-ready-fail,publish}.test.mjs`,
+  `test/fixtures/{world,dom,legacy-creatures}.mjs`, and
+  `test/golden/{hooks,legacy-surface,strip,senses-handoff}.json`. Step 1's list is covered in full.
+  Deviations from step 1:
+  - `golden/strip.json` does not pin the nav's own class list, because step 6 adds the inert `pcr-strip` class.
+  - The KNOWN -25 render is counted by `showStrip` reads.
+  - The interval is counted by `document.querySelector` and `getElementById` calls.
+- **Coverage:**
+  - Before: core 100 / 97.00 / 100 (line / branch / funcs); `creatures.mjs` was not loaded.
+  - After, every file except `publish.test`: `creatures.mjs` 100 / 98.36 / 100 and core 100 / 98.06 / 100.
+  - Node does not merge `publish.test`'s `?query` instances into the report. Its frozen-root branch (:378) is still pinned by assertion.
+  - Branches left uncovered:
+    - `L`'s `format` branch (:19). Nothing calls it with data, and step 3 deletes it.
+    - Core :111 and :123. These were already uncovered at baseline.
+- **Score after the checkpoint:** 64.4 % (29/45). This clears C14, C20 and C43.
+- **Todo pins** (`test.todo`, the target of each KNOWN row):
+  - -25 `stripMayChange`
+  - -26 fixed window
+  - -27 options flag
+  - -29 `warnOnce`
+  - -31 syncScene array/id
+  - -31 ownerSees(TokenDocument)
+  - -40 no poll without Argon or with `floatOverHud` off
+
 ## Result (fill when done)
 
 | | |
 |---|---|
 | Live score after the migration | ___ % (___ / ___ fail-class rules) — `conformance.py --module creatures --markdown` |
 | Date | ____-__-__ |
-| Commits (Joe-approved) | characterisation: ______ · refactor: ______ · standalone: ______ |
+| Commits (Joe-approved) | characterisation: `6d36df2` (kit) + `6e4c7d7` (checkpoint) · refactor: ______ · standalone: ______ |
 | Declared changes handed to the live-test workflow | ______ (session L__) |
 | `module.json` edits appended to `wave7-restart-batch.md` | yes / no |
 | Adjustments rows appended to `adjustments-batch.md` | yes / no |
