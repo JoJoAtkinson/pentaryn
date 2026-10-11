@@ -1144,6 +1144,7 @@ def promote_major_release(st: Storage, existing: list[Snapshot] | None = None) -
     me = host.host_name()
     current = generation(core_version())
     mine = own(existing if existing is not None else snapshots(st, WORLD_BACKUPS), me)
+    _repair_preserved_sidecars(st, me, mine)
     last = newest(mine)
     if not current or last is None:
         return None
@@ -1157,16 +1158,56 @@ def promote_major_release(st: Storage, existing: list[Snapshot] | None = None) -
     preserved = snapshots(st, MAJOR_RELEASES)
     if any(s.host == me and generation(s.core) == previous for s in preserved):
         return None  # this host's copy of that generation is already preserved
+    # The sidecar FIRST: a crash between the two copies leaves an orphan sidecar (harmless,
+    # and the next backup promotes again), never a preserved tar without its manifest.
+    _copy_preserved_sidecar(st, source)
     st.copy(source.rel, f"{MAJOR_RELEASES}/{source.name}")
-    try:
-        sidecar = st.read_text(parent_rel(WORLD_BACKUPS, source.name))
-        if sidecar:
-            st.write_text(parent_rel(MAJOR_RELEASES, source.name), sidecar)
-    except StorageError:
-        pass
     log(f"Foundry {previous} → {current}: preserved {source.name} in major-release/ "
         f"({_mb(source.size)}, never pruned)")
     return source
+
+
+def _copy_preserved_sidecar(st: Storage, source: Snapshot) -> bool:
+    """Copy `source`'s sidecar (lineage + bundle manifest) into major-release/: read, then
+    write, the write tried twice. A failure is a loud warning, never silent: GC then
+    reads the preserved tar's own marker (referenced_bundles), so its bundles stay marked
+    and the copy stays restorable — only its lineage is lost."""
+    try:
+        sidecar = st.read_text(parent_rel(WORLD_BACKUPS, source.name))
+    except StorageError as exc:
+        _lifecycle_warning(f"could not read the sidecar of {source.name} to preserve it", exc,
+                           "the preserved copy's own marker names its bundles")
+        return False
+    if not sidecar:
+        return False
+    err: StorageError | None = None
+    for _attempt in range(2):
+        try:
+            st.write_text(parent_rel(MAJOR_RELEASES, source.name), sidecar)
+            return True
+        except StorageError as exc:
+            err = exc
+    _lifecycle_warning(f"could not copy the sidecar of {source.name} to {MAJOR_RELEASES}/",
+                       err, "the preserved copy's own marker names its bundles; the next "
+                       "backup copies the sidecar again while its source is still kept")
+    return False
+
+
+def _repair_preserved_sidecars(st: Storage, me: str, mine: list[Snapshot]) -> None:
+    """This host's preserved snapshots whose sidecar copy failed at promotion: copy it now
+    while the source is still in the rolling window (one major-release/ listing, which
+    the backup reads anyway). Best effort — the preserved tar's marker still names its
+    bundles for GC."""
+    rolling = {s.name for s in mine}
+    try:
+        names = {e.name for e in st.ls(MAJOR_RELEASES)}
+    except StorageError:
+        return
+    for kept in snapshots(st, MAJOR_RELEASES):
+        if (kept.host == me and kept.name in rolling
+                and f"{kept.name}{PARENT_SUFFIX}" not in names
+                and _copy_preserved_sidecar(st, kept)):
+            log(f"copied the missing sidecar of {MAJOR_RELEASES}/{kept.name}")
 
 
 # ── Restore ──────────────────────────────────────────────────────────────────

@@ -1,0 +1,111 @@
+"""Tests for the fixes to the adversarial review of module bundles (plan §14, "review fixes").
+
+The review's own repros live in test_review_dataloss.py and test_review_restore_boot.py;
+this file pins the mechanisms each fix added, so a later change cannot quietly undo one.
+Nothing here touches the network, rclone, OneDrive or Foundry: the cloud is the fake folder
+(conftest.two_hosts) or FakeRclone over it.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import time
+
+import pytest
+
+from bundle_fakes import make_module
+from scripts.foundry import cloud, storage
+
+DAY = 86400
+
+
+def _install(root):
+    mods = root / "Data/modules"
+    make_module(mods, "maps", version="2.0.0", packs=2, extra={"art/big.webp": b"map art " * 512})
+    make_module(mods, "tools", version="1.1", packs=1)
+    return root
+
+
+_bump = [0]
+
+
+def _edit(root, text):
+    f = root / "Data/worlds/w/journal.txt"
+    f.write_text(text)
+    _bump[0] += 5
+    t = time.time() + _bump[0]
+    os.utime(f, (t, t))
+
+
+def _names(c, sub="world-backups"):
+    return sorted(p.name for p in (c / sub).iterdir() if p.name.endswith(".tar.gz"))
+
+
+def _bundle_names(c):
+    return sorted(p.name for p in (c / "bundles").iterdir())
+
+
+# ── DL3: promotion copies the sidecar first, loudly, and repairs it later ────
+
+def _promote(two_hosts, monkeypatch, *, fail_sidecar: bool, coalesce: bool = True):
+    """The Mac backs up on 13.351, then on 14.369: the first snapshot is promoted."""
+    c = two_hosts.cloud
+    mac = _install(two_hosts.data["mac"])
+    two_hosts.set_core("mac", "13.351")
+    with two_hosts.use("mac"):
+        cloud.backup("shutdown")
+    [old] = _names(c)
+    order: list[str] = []
+    real_write, real_copy = storage.FolderStorage.write_text, storage.FolderStorage.copy
+
+    def write(self, rel, text):
+        if rel.startswith("major-release/"):
+            order.append(rel)
+            if fail_sidecar:
+                raise storage.StorageError("rcat: connection reset", verb="rcat")
+        return real_write(self, rel, text)
+
+    def copy(self, src, dst):
+        order.append(dst)
+        return real_copy(self, src, dst)
+    monkeypatch.setattr(storage.FolderStorage, "write_text", write)
+    monkeypatch.setattr(storage.FolderStorage, "copy", copy)
+    if not coalesce:
+        monkeypatch.setattr(cloud, "COALESCE_WINDOW_DAYS", 0)
+    two_hosts.set_core("mac", "14.369")
+    _edit(mac, "on 14")
+    with two_hosts.use("mac"):
+        cloud.backup("shutdown")
+    monkeypatch.setattr(storage.FolderStorage, "write_text", real_write)
+    monkeypatch.setattr(storage.FolderStorage, "copy", real_copy)
+    return old, order
+
+
+def test_promotion_writes_the_sidecar_before_the_tar(two_hosts, monkeypatch):
+    old, order = _promote(two_hosts, monkeypatch, fail_sidecar=False)
+    assert order == [f"major-release/{old}{cloud.PARENT_SUFFIX}", f"major-release/{old}"]
+
+
+def test_a_failed_sidecar_copy_at_promotion_is_a_warning_not_silence(two_hosts, monkeypatch,
+                                                                      capsys):
+    capsys.readouterr()
+    old, order = _promote(two_hosts, monkeypatch, fail_sidecar=True)
+    err = capsys.readouterr().err
+    assert f"could not copy the sidecar of {old}" in err, err
+    assert order.count(f"major-release/{old}{cloud.PARENT_SUFFIX}") == 2      # tried twice
+    assert (two_hosts.cloud / "major-release" / old).exists()                # still preserved
+
+
+def test_the_next_backup_copies_a_missing_preserved_sidecar_while_its_source_is_kept(
+        two_hosts, monkeypatch, capsys):
+    c = two_hosts.cloud
+    old, _ = _promote(two_hosts, monkeypatch, fail_sidecar=True, coalesce=False)
+    side = c / "major-release" / f"{old}{cloud.PARENT_SUFFIX}"
+    assert not side.exists() and old in _names(c)
+    _edit(two_hosts.data["mac"], "later on 14")
+    capsys.readouterr()
+    with two_hosts.use("mac"):
+        cloud.backup("shutdown")
+    assert json.loads(side.read_text())["bundled"] == 1
+    assert "copied the missing sidecar" in capsys.readouterr().out
