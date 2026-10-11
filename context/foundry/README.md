@@ -99,7 +99,7 @@ The table is generated from each `module.json`, the module's code and its
 | Attributes, what a study reveals, turning backstory into discoverables | [`attributes.md`](attributes.md) |
 | Reviewing attributes, "the selected attributes", what Claude changed | [`attribute-review.md`](attribute-review.md) |
 | New in-house module, or bringing an existing one up to the blueprint — kit, tiers, conformance, the migration order | [`addon-blueprint.md`](addon-blueprint.md) · order and per-module guides: [`../plans/addon-blueprint-2026-10/README.md`](../plans/addon-blueprint-2026-10/README.md) |
-| Day-to-day server ops — start/stop, tunnel, OneDrive sync and the boot choice between the Mac and BOSS (`host.py`), module install | [`ops.md`](ops.md) |
+| Day-to-day server ops — start/stop, tunnel, OneDrive sync and the boot choice between the Mac and BOSS (`host.py`), module install, world snapshots (rclone to OneDrive, ~2.5–3.3 GB each; `make vtt-down` uploads in the background, `make foundry-cloud` shows progress) | [`ops.md`](ops.md) |
 | Who can reach vtt.atjoseph.com — the Google login, whitelisting a player's Gmail (**two lists: Google test users + Cloudflare policy**), session length | [`cloudflare-access.md`](cloudflare-access.md) |
 | Adding or changing an MCP bridge tool (`mcp__foundry__*`), the fork repo, its build, logs and upstream footprint | [`mcp-fork.md`](mcp-fork.md) |
 | "Put X here" / "replace the red one" — anything naming a spot on a map | [`markers.md`](markers.md) |
@@ -259,7 +259,7 @@ keep showing the *host's* own relationships. See [`../plans/foundry-npc-ties.md`
 - `foundry/CONTRACT.md` — the `actors.json` generator ⇄ importer contract
 - `foundry/assets-manifest.json`, `foundry/roll20-maps.json`
 - `foundry/module/` — in-house modules: `pentaryn-ties`, `-walls`, `-importer`,
-  `-pings`, `-dropbin`, `-attunement`, `-lookup`, `-transform` (Wild Shape and Starry Form on the Argon Bonus bar: pick a form, Return/Change Form, use count; revert from an item; blocks stacked transforms), `-names` (actor rename carries to token labels;
+  `-pings`, `-dropbin`, `-attunement`, `-lookup`, `-feedback` (player bug/defect/feature reports, [`feedback.md`](feedback.md)), `-prompts`, `-journal`, `-combat`, `-transform` (Wild Shape and Starry Form on the Argon Bonus bar: pick a form, Return/Change Form, use count; revert from an item; blocks stacked transforms), `-names` (actor rename carries to token labels;
   nicknames kept), `-cursors` (tool cursors), `-movement` (ghost toggle, owned-on-top), `-creatures` (creature light, Your creatures strip), `-riders` (Elemental Adept/Affinity, Battle Medic, Hit Dice -/+), `-portals`, `-aoe` (draggable/deletable spell areas, area saves with a GM Apply, damage on hit), `-senses` (token vision follows sheet Darkvision; an item flagged
   `flags.pentaryn-senses.light` lights its carrier; `glow.mjs` adds the wandering
   "Broken glow" light animation; `chain.mjs` draws an iron chain between two tokens, GM Token

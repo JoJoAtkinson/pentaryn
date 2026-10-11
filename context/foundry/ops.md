@@ -333,7 +333,7 @@ OneDrive/DnD/foundry/
 | ------ | --------- | ------------ |
 | `make foundry-boot` | ⬇ maybe | **The boot choice** (below). Part of `vtt-up` and `foundry-up`; `FROM=latest\|local\|<name>` decides without asking |
 | `make foundry-assets` | ⬇ down | Unpacks any new `<kind>-<nn>.zip` into `Data/assets/<kind>/<kind>-<nn>/`. Tracked in `foundry/assets-manifest.json` (sha256, bytes, mtime); a zip whose size and mtime match is skipped **without a download** |
-| `make foundry-backup` | ⬆ up | Tars `Data/worlds` + `Config` + `Data/modules` (**~2.5–3.2 GB** — `Data/modules` is ~2.7 GB of premium map art) in `FOUNDRY_DATA/.pentaryn-tmp/`, uploads it as `<name>.partial`, renames, size-checks. Keeps **10 per host** (plus that host's last 3 restore `.safety` copies, counted apart); a snapshot within 5 days of this host's newest **replaces** it; skips when the local tree digest is unchanged |
+| `make foundry-backup` | ⬆ up | Tars `Data/worlds` + `Config` + `Data/modules` (**~2.5–3.3 GB** — `Data/modules` is ~2.7 GB of premium map art; the first rclone snapshot, 2026-10-11, was 3.24 GB) in `FOUNDRY_DATA/.pentaryn-tmp/`, uploads it as `<name>.partial`, renames, size-checks. Keeps **10 per host** (plus that host's last 3 restore `.safety` copies, counted apart); a snapshot within 5 days of this host's newest **replaces** it; skips when the local tree digest is unchanged |
 | `make foundry-backup-safe` | ⬆ up | Same, `--if-stopped` — the lifecycle variant |
 | `make foundry-restore` | manual | No `SNAP` → lists every host's snapshots (name, host, UTC time, version, size). `SNAP=<name>` (any host's, or `major-release/`) → download, **archive current state first**, clear, extract; demands you type `restore` |
 | `make foundry-cloud` | — | Status: this host's background upload (in progress / pending / last result), storage (rclone/folder + root), host and role, what this world is based on, newest per host, untagged count |
@@ -455,6 +455,10 @@ The Mac needs no file at all. `python -m scripts.foundry.host show` prints what 
 
 Until this is done the Mac keeps using the OneDrive app's folder, exactly as before; the day it
 is done, the Mac switches to rclone on its own (`make foundry-cloud` shows which).
+
+**Done on the Mac 2026-10-11:** `make foundry-cloud` reads `rclone onedrive:DnD/foundry`, and the
+first Mac snapshot over rclone is `world-2026-10-11-212143-fvtt14.369-mac.tar.gz`. BOSS's
+`onedrive:` remote works too; BOSS's go-live is still to do (rclone plan §15).
 
 1. `brew install rclone` (already present: `/opt/homebrew/bin/rclone`).
 2. `rclone config`, then:
