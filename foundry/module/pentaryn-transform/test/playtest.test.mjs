@@ -207,3 +207,29 @@ test("PT3-6: Escape closes an open Change Form picker instead of reaching the ga
   assert.equal(action.onDown(), false, "closed: the next Escape falls through again");
   picker.remove();
 });
+
+/* ── PT3-7 ───────────────────────────────────────────────────────────────── */
+
+test("PT3-7: the sheet's Restore Transformation posts the return line, once", async () => {
+  const { wolf } = world();
+  await wolf.revertOriginalForm();                         // BaseActorSheet#restoreTransformation
+  assert.equal(chat.length, 1);
+  assert.match(chat[0].content, /Talo<\/strong> returns to normal form/);
+  assert.equal(chat[0].speaker.alias, "Talo");
+});
+
+test("PT3-7: the module's own revert still posts exactly one line, and a quiet one none", async () => {
+  let { wolf } = world();
+  await revert(wolf);
+  assert.equal(chat.length, 1);
+  ({ wolf } = world());
+  await revert(wolf, { quiet: true });
+  assert.equal(chat.length, 0, "quiet (Change Form) stays quiet");
+});
+
+test("PT3-7: a non-Wild-Shape transform's sheet revert posts nothing", async () => {
+  const { wolf } = world();
+  wolf.flags.dnd5e.transformOptions = { preset: "polymorph" };
+  await wolf.revertOriginalForm();
+  assert.equal(chat.length, 0);
+});
