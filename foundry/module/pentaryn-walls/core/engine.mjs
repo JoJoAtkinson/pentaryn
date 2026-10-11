@@ -478,13 +478,16 @@ function isOutward(v, q) {
   return dot(sub(q, v.p), outward(v)) > 0;
 }
 
-/** Every non-degenerate segment is an obstacle — including inert components. */
-function obstacles(segs, exclude = new Set()) {
-  return segs.filter(s => !isDegenerate(s) && !exclude.has(s.idx));
-}
+/*
+ * Obstacles. Every non-degenerate segment is an obstacle — including inert components. The scans
+ * below walk `segs` in place and skip degenerate and excluded segments inline instead of building
+ * a filtered copy per call (pathClear runs per F1 pair and F2 leg). They keep `segs` order, so the
+ * strict `<` tie-breaks pick the same segment as before (senses-walls-cursors-5).
+ */
 
 function pathClear(a, b, segs, exclude) {
-  for (const s of obstacles(segs, exclude)) {
+  for (const s of segs) {
+    if (isDegenerate(s) || exclude.has(s.idx)) continue;
     if (blocksOpen(a, b, segA(s), segB(s))) return false;
   }
   return true;
@@ -550,7 +553,9 @@ function enumerate(segs, verts, cfg) {
   // this rule can never fire twice on the same endpoint.
   for (const v of dang) {
     let best = null;
-    for (const s of obstacles(segs, new Set([v.ends[0].seg.idx]))) {
+    const own = v.ends[0].seg.idx;
+    for (const s of segs) {
+      if (s.idx === own || isDegenerate(s)) continue;
       const f = foot(v.p, segA(s), segB(s));
       if (!f || f.t <= 0 || f.t >= 1) continue;
       const d2 = dist2(v.p, f.point);
@@ -566,12 +571,12 @@ function enumerate(segs, verts, cfg) {
   }
 
   // F1 — collinear gap fill. The strongest evidence there is: two segments on one line.
+  const coll2 = cfg.collEps * cfg.collEps;
   for (let i = 0; i < dang.length; i++) {
     for (let j = i + 1; j < dang.length; j++) {
       const a = dang[i], b = dang[j];
       const A = a.ends[0].seg, B = b.ends[0].seg;
       if (A.idx === B.idx) continue;
-      const coll2 = cfg.collEps * cfg.collEps;
       const onA = distToLine2(segA(B), segA(A), segB(A)) <= coll2 && distToLine2(segB(B), segA(A), segB(A)) <= coll2;
       const onB = distToLine2(segA(A), segA(B), segB(B)) <= coll2 && distToLine2(segB(A), segA(B), segB(B)) <= coll2;
       if (!onA || !onB) continue;
@@ -685,9 +690,10 @@ function enumerate(segs, verts, cfg) {
  */
 function castRay(v, segs, cfg) {
   const d = outward(v);
-  const ex = new Set([v.ends[0].seg.idx]);
+  const own = v.ends[0].seg.idx;
   let best = null;
-  for (const s of obstacles(segs, ex)) {
+  for (const s of segs) {
+    if (s.idx === own || isDegenerate(s)) continue;
     const r = d, sVec = sub(segB(s), segA(s));
     const denom = cross(r, sVec);
     if (denom === 0) continue;                        // parallel — F1's job, not E1's
@@ -712,7 +718,8 @@ function castRay(v, segs, cfg) {
   const coll2 = band * band;
   const dLen2 = dot(d, d);
   const ahead = [v.p[0] + d[0], v.p[1] + d[1]];
-  for (const s of obstacles(segs, ex)) {
+  for (const s of segs) {
+    if (s.idx === own || isDegenerate(s)) continue;
     if (cross(d, sub(segB(s), segA(s))) !== 0) continue;
     if (distToLine2(segA(s), v.p, ahead) > coll2) continue;
     const t0 = dot(sub(segA(s), v.p), d) / dLen2, t1 = dot(sub(segB(s), v.p), d) / dLen2;

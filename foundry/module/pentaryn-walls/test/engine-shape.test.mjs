@@ -25,3 +25,28 @@ test("senses-walls-cursors-6: no entry point mutates its input walls", () => {
     assert.equal(JSON.stringify(fx.walls), before, fx.name);
   }
 });
+
+/** Count Array#filter calls and Set constructions while `fn` runs (the engine resolves both at call time). */
+function allocations(fn) {
+  const counts = { filter: 0, set: 0 };
+  const RealSet = globalThis.Set;
+  const filter = Array.prototype.filter;
+  Array.prototype.filter = function (...args) { counts.filter++; return filter.apply(this, args); };
+  globalThis.Set = class extends RealSet { constructor(...args) { super(...args); counts.set++; } };
+  try {
+    fn();
+  } finally {
+    Array.prototype.filter = filter;
+    globalThis.Set = RealSet;
+  }
+  return counts;
+}
+
+test("senses-walls-cursors-5: no per-call obstacle copy in the hot scans (allocation counter)", () => {
+  assert.doesNotMatch(ENGINE, /function obstacles\(/);
+  // Before the change: rooms(5) made 987 filter calls and 1161 Sets; rooms(10) 3967 and 4721.
+  const five = allocations(() => runEngine(rooms(5), { gridSize: 100, runId: "c" }));
+  const ten = allocations(() => runEngine(rooms(10), { gridSize: 100, runId: "c" }));
+  assert.ok(five.filter <= 107 && five.set <= 761, JSON.stringify(five));
+  assert.ok(ten.filter <= 407 && ten.set <= 3121, JSON.stringify(ten));
+});
