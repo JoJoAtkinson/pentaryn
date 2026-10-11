@@ -266,8 +266,18 @@ export async function moveRegion(region, dx, dy) {
 /* -------------------------------------------- */
 
 const REGION_HOOKS = ["createRegion", "updateRegion", "deleteRegion", "createRegionBehavior", "updateRegionBehavior", "deleteRegionBehavior"];
+/** Region writes come in bursts (a spell template: create, aoe's ownership and attachment writes). */
+const REDRAW_MS = 50;
 
-function onCanvasTearDown() { hideTip(); closeMenu(); drawRun++; badges.length = 0; badgeLayer = null; }
+/**
+ * Finding -24, change 2 (the generation guard, change 1, shipped in U-9-6): the six region hooks
+ * share one trailing 50 ms redraw, so a burst draws once. setEditing, canvasReady and the API's
+ * redraw() stay immediate. No relevance filter: a badge shows its DESTINATION's card, so a write
+ * to a region on another scene can change a badge here. Created at install (foundry.utils).
+ */
+let queueDraw = null;
+
+function onCanvasTearDown() { queueDraw?.cancel(); hideTip(); closeMenu(); drawRun++; badges.length = 0; badgeLayer = null; }
 
 /** The API rows this feature contributes (api-manifest BADGE_ROWS). */
 export const contribution = () => ({ rows: BADGE_ROWS, impl: { open: PortalCard.open, redraw: drawBadges, badges: listBadges } });
@@ -284,7 +294,10 @@ export function install(reg, ctx) {
   log = ctx.log;
   guard = reg.guard;
   configureCardApp({ setEditing, guard: reg.guard });
-  for (const h of REGION_HOOKS) reg.on(h, () => { if (canvas?.ready) drawBadges(); }, { guard: false, label: "badges redraw" });
+  queueDraw = foundry.utils.debounce(() => {
+    if (canvas?.ready) drawBadges().catch(err => log.warn("badge redraw failed", err));
+  }, REDRAW_MS);
+  for (const h of REGION_HOOKS) reg.on(h, () => { if (canvas?.ready) queueDraw(); }, { guard: false, label: "badges redraw" });
   reg.on("canvasReady", () => { bindBoard(); drawBadges(); }, { guard: false, label: "badges draw" });
   // hot: badges — refreshBadgeSight walks only the badge list, never the scene
   reg.on("sightRefresh", () => { if (badges.length && !game.user.isGM) refreshBadgeSight(); }, { guard: false, label: "badges sight" });
