@@ -47,22 +47,26 @@ test("two un-awaited API calls: the second is null, the first resolves to the en
 
 test("a throwing action releases the lock for the next caller", async () => {
   await assert.rejects(api.preview({ sceneId: "noSuchScene0000" }), /no scene/);
-  assert.notEqual(api.preview(), null);
-  await withConsole(F, flush);
+  const next = api.preview();
+  assert.notEqual(next, null);
+  await withConsole(F, () => next);   // settle it here, so the lock is free for the next test
 });
 
 test("the chat card is awaited: preview resolves after ChatMessage.create settles", async () => {
   let settle;
   const create = ChatMessage.create;
   ChatMessage.create = data => { F.calls.push({ op: "ChatMessage.create", data }); return new Promise(r => { settle = r; }); };
-  let done = false;
-  const p = withConsole(F, () => api.preview({ runId: "d" })).then(() => { done = true; });
-  await flush();
-  assert.equal(done, false);
-  settle({});
-  await p;
-  assert.equal(done, true);
-  ChatMessage.create = create;
+  try {
+    let done = false;
+    const p = withConsole(F, () => api.preview({ runId: "d" })).then(() => { done = true; });
+    await flush();
+    assert.equal(done, false);
+    settle({});
+    await p;
+    assert.equal(done, true);
+  } finally {
+    ChatMessage.create = create;
+  }
 });
 
 test("a failing chat card is logged with the module prefix and never rejects the action", async () => {
