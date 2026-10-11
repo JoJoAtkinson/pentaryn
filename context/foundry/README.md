@@ -68,18 +68,18 @@ The table is generated from each `module.json`, the module's code and its
 |---|---|---|---|---|---|
 | `aoe` | `pentaryn-aoe` | 0.3.1 | not migrated | — (no describe golden yet) | [`aoe.md`](aoe.md) · [README](../../foundry/module/pentaryn-aoe/README.md) |
 | `attunement` | `pentaryn-attunement` | 0.2.1 | full tier | — (no describe golden yet) | [README](../../foundry/module/pentaryn-attunement/README.md) |
-| `combat` | `pentaryn-combat` | 0.2.4 | not migrated | — (no describe golden yet) | [README](../../foundry/module/pentaryn-combat/README.md) |
+| `combat` | `pentaryn-combat` | 0.2.5 | not migrated | — (no describe golden yet) | [README](../../foundry/module/pentaryn-combat/README.md) |
 | `creatures` | `pentaryn-creatures` | 0.1.1 | not migrated | — (no describe golden yet) | [README](../../foundry/module/pentaryn-creatures/README.md) |
 | `cursors` | `pentaryn-cursors` | 0.2.0 | small tier | `refresh`, `current`, `keyFor`, `status` | [README](../../foundry/module/pentaryn-cursors/README.md) |
-| `dropbin` | `pentaryn-dropbin` | 0.2.1 | full tier | — (no describe golden yet) | [README](../../foundry/module/pentaryn-dropbin/README.md) |
+| `dropbin` | `pentaryn-dropbin` | 0.2.2 | full tier | — (no describe golden yet) | [README](../../foundry/module/pentaryn-dropbin/README.md) |
 | `importer` | `pentaryn-importer` | 1.1.0 | full tier | `import` | [`importer.md`](importer.md) · [README](../../foundry/module/pentaryn-importer/README.md) |
 | `journal` | `pentaryn-journal` | 0.1.0 | full tier | — (no describe golden yet) | [README](../../foundry/module/pentaryn-journal/README.md) |
 | `rules` | `pentaryn-lookup` | 0.3.0 | full tier | — (no describe golden yet) | [README](../../foundry/module/pentaryn-lookup/README.md) |
 | `movement` | `pentaryn-movement` | 0.1.2 | full tier | — (no describe golden yet) | [README](../../foundry/module/pentaryn-movement/README.md) |
-| `names` | `pentaryn-names` | 0.1.0 | small tier | — (no describe golden yet) | [README](../../foundry/module/pentaryn-names/README.md) |
-| `pings` | `pentaryn-pings` | 0.1.0 | small tier | — (no describe golden yet) | [README](../../foundry/module/pentaryn-pings/README.md) |
+| `names` | `pentaryn-names` | 0.1.1 | small tier | — (no describe golden yet) | [README](../../foundry/module/pentaryn-names/README.md) |
+| `pings` | `pentaryn-pings` | 0.1.1 | small tier | — (no describe golden yet) | [README](../../foundry/module/pentaryn-pings/README.md) |
 | `portals` | `pentaryn-portals` | 0.4.4 | not migrated | — (no describe golden yet) | [README](../../foundry/module/pentaryn-portals/README.md) |
-| `prompts` | `pentaryn-prompts` | 0.4.3 | full tier | — (no describe golden yet) | [README](../../foundry/module/pentaryn-prompts/README.md) |
+| `prompts` | `pentaryn-prompts` | 0.4.4 | full tier | — (no describe golden yet) | [README](../../foundry/module/pentaryn-prompts/README.md) |
 | `riders` | `pentaryn-riders` | 0.2.0 | not migrated | — (no describe golden yet) | [README](../../foundry/module/pentaryn-riders/README.md) |
 | `chain`, `senses` | `pentaryn-senses` | 0.4.1 | not migrated | — (no describe golden yet) | [README](../../foundry/module/pentaryn-senses/README.md) |
 | `ties` | `pentaryn-ties` | 0.19.4 | full tier | — (no describe golden yet) | [README](../../foundry/module/pentaryn-ties/README.md) |
