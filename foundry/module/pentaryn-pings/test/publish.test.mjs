@@ -95,7 +95,7 @@ test("uninstall() unwraps handlePing, stops listening, drops a pending flush; a 
   await drain();
   assert.equal(W.log().length, writes, "the pending flush was dropped");
   await layer.handlePing(F.game.users.get(GM), { x: 11, y: 11 }, { scene: ALPHA });
-  W.emitSocket("userActivity", GM, { sceneId: ALPHA, ping: { x: 12, y: 12 } });
+  W.emitSocket("userActivity", GM, { cursor: { x: 12, y: 12 }, ping: { scene: ALPHA } });
   mock.timers.tick(1000);
   await drain();
   assert.equal(W.log().length, writes, "nothing is captured once uninstalled");
