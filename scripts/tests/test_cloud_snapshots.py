@@ -1478,3 +1478,511 @@ def test_updater_world_restore_does_not_need_the_system_bundle(two_hosts):
     assert not (mac / "Data/worlds/w/journal.txt").exists()      # the snapshot's world
     assert (mac / "Data/systems/dnd5e/dnd5e.mjs").read_text() == "the new system\n"
     assert rec.steps == [f"restored worlds/Config/modules from {snap.name}"]
+
+
+# ── S4: disk checks, verify-after-upload, healing, GC, listing, status, commands ──
+# (module-bundles-2026-10 §3.5 steps 3/4/6/7, §3.7, §3.8, §6)
+
+def _disk(monkeypatch, free):
+    monkeypatch.setattr(cloud.shutil, "disk_usage",
+                        lambda p: shutil._ntuple_diskusage(10**12, 10**12 - free, free))
+
+
+def _age(path, days):
+    t = time.time() - days * DAY
+    os.utime(path, (t, t))
+
+
+def _bundle(kind, id, fp="0123456789abcdef", version="1"):
+    return f"{kind}@{id}@{version}@{fp}.tar.gz"
+
+
+def _hand_snapshot(cloud_dir, name, *, sub="world-backups", age_days=1.0, sidecar=None):
+    """A snapshot put by hand, with an optional sidecar (a dict, or raw text)."""
+    _put(cloud_dir, name, age_days=age_days, sub=sub)
+    if sidecar is not None:
+        text = sidecar if isinstance(sidecar, str) else json.dumps(sidecar)
+        (cloud_dir / sub / f"{name}{cloud.PARENT_SUFFIX}").write_text(text)
+
+
+def _bundled_sidecar(modules=None, systems=None, host="boss"):
+    return {"parent": None, "ancestors": [], "ancestor_mtimes": [], "origin_before": 1.0,
+            "host": host, "bundled": 1, "modules": modules or {}, "systems": systems or {}}
+
+
+def _unreadable(monkeypatch, *names):
+    """FolderStorage.read_text raises for the sidecars of `names`."""
+    real = storage.FolderStorage.read_text
+
+    def flaky(self, rel):
+        if any(rel.endswith(f"/{n}{cloud.PARENT_SUFFIX}") for n in names):
+            raise storage.StorageError(f"cannot read {rel}: I/O error", verb="cat")
+        return real(self, rel)
+    monkeypatch.setattr(storage.FolderStorage, "read_text", flaky)
+
+
+# disk checks (§3.5 step 4, §3.6 step 3)
+
+def test_backup_disk_check_counts_the_missing_bundles_and_names_both_numbers(
+        two_hosts, monkeypatch, capsys):
+    mac = _install(two_hosts.data["mac"])
+    with two_hosts.use("mac"):
+        inv = bundles.local_inventory()
+    need = 64 * 10**6 + sum(loc.bytes for loc in inv.values())   # no own snapshot yet
+    _disk(monkeypatch, 2 * need - 1)
+    with two_hosts.use("mac"), pytest.raises(SystemExit):
+        cloud.backup("shutdown")
+    err = capsys.readouterr().err
+    assert "free at least twice that" in err
+    assert cloud._mb(2 * need - 1) in err and cloud._mb(need) in err
+    assert f"{len(inv)} new bundle(s)" in err
+    assert _names(two_hosts.cloud) == [] and _bundle_names(two_hosts.cloud) == []
+    assert _tmp_files(mac) == []
+    _disk(monkeypatch, 2 * need)
+    with two_hosts.use("mac"):
+        assert cloud.backup("shutdown") == 0
+
+
+def test_backup_disk_check_uses_this_hosts_newest_regular_snapshot(two_hosts, monkeypatch,
+                                                                    capsys):
+    _put(two_hosts.cloud, f"world-{_stamp(9)}-fvtt14.369-mac.tar.gz", age_days=9,
+         data=b"x" * 10**6)
+    _put(two_hosts.cloud, f"world-{_stamp(8)}-fvtt14.369-boss.tar.gz", age_days=8,
+         data=b"x" * (3 * 10**6))                            # another host's: not counted
+    with two_hosts.use("mac"):
+        inv = bundles.local_inventory()
+    need = 10**6 + sum(loc.bytes for loc in inv.values())
+    _disk(monkeypatch, 2 * need - 1)
+    with two_hosts.use("mac"), pytest.raises(SystemExit):
+        cloud.backup("shutdown")
+    assert cloud._mb(need) in capsys.readouterr().err
+    _disk(monkeypatch, 2 * need)
+    with two_hosts.use("mac"):
+        assert cloud.backup("shutdown") == 0
+
+
+def test_restore_disk_check_dies_with_both_numbers_and_touches_nothing(two_hosts, monkeypatch,
+                                                                       capsys):
+    snap, boss = _refusal_setup(two_hosts)
+    s = cloud.find_snapshot(cloud.store(), snap)
+    side = _sidecar(two_hosts.cloud, snap)
+    with two_hosts.use("boss"):
+        have = bundles.listing(cloud.store())
+        local = {v.name for v in bundles.local_inventory().values()}
+    needed = [n for n in list(side["modules"].values()) + list(side["systems"].values())
+              if n not in local]
+    need = s.size + sum(have[n].size for n in needed)
+    _disk(monkeypatch, 2 * need - 1)
+    downloads = []
+    real = storage.FolderStorage.download
+
+    def spy(self, rel, dest):
+        downloads.append(rel)
+        return real(self, rel, dest)
+    monkeypatch.setattr(storage.FolderStorage, "download", spy)
+    _refused(two_hosts, snap, boss, capsys, cloud._mb(2 * need - 1), cloud._mb(need),
+             "free at least twice that")
+    assert downloads == []                                  # checked before any download
+
+
+# verify-after-upload (§3.5 step 6)
+
+def _lose_on_world_upload(monkeypatch, cloud_dir, prefix, also=None):
+    """Patch FolderStorage.upload: just before the world tar goes up, delete the bundle
+    whose name starts with `prefix` from the cloud (the other host's GC) and run `also`."""
+    real = storage.FolderStorage.upload
+    lost: list[str] = []
+
+    def racing(self, src, rel):
+        if rel.startswith("world-backups/") and not lost:
+            [p] = [p for p in (cloud_dir / "bundles").iterdir() if p.name.startswith(prefix)]
+            lost.append(p.name)
+            p.unlink()
+            if also:
+                also(p.name)
+        return real(self, src, rel)
+    monkeypatch.setattr(storage.FolderStorage, "upload", racing)
+    return lost
+
+
+def test_verify_reuploads_a_vanished_bundle_from_its_staged_tar(two_hosts, monkeypatch, capsys):
+    mac = _install(two_hosts.data["mac"])
+    seen = _uploads(monkeypatch)
+    lost = _lose_on_world_upload(monkeypatch, two_hosts.cloud, "module@maps@")
+    with two_hosts.use("mac"):
+        assert cloud.backup("shutdown") == 0
+        st = bootstate.load()
+    [name] = lost
+    assert name in _bundle_names(two_hosts.cloud)
+    assert _bundle_uploads(seen).count(name) == 2
+    assert st.based_on == _newest(two_hosts.cloud)
+    assert _tmp_files(mac) == []
+    assert "vanished" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("how", ["staged-tar-removed", "never-staged"])
+def test_verify_rebuilds_a_vanished_bundle_from_the_live_folder(two_hosts, monkeypatch, how):
+    mac = _install(two_hosts.data["mac"])
+    staging = mac / cloud.TMP_DIRNAME / bundles.STAGING
+    if how == "never-staged":                    # it was in the cloud at the listing
+        with two_hosts.use("mac"):
+            cloud.backup("shutdown")
+        _edit(mac, "a session")
+    seen = _uploads(monkeypatch)
+    lost = _lose_on_world_upload(
+        monkeypatch, two_hosts.cloud, "module@tools@",
+        also=lambda n: (staging / n).unlink(missing_ok=True))
+    with two_hosts.use("mac"):
+        assert cloud.backup("shutdown") == 0
+        st = bootstate.load()
+    [name] = lost
+    assert name in _bundle_names(two_hosts.cloud)
+    assert _bundle_uploads(seen).count(name) == (2 if how == "staged-tar-removed" else 1)
+    assert st.based_on == _newest(two_hosts.cloud)
+    assert _tmp_files(mac) == []
+    # the rebuilt bundle is a real archive of the module
+    with tarfile.open(two_hosts.cloud / "bundles" / name) as tar:
+        assert "tools/module.json" in tar.getnames()
+
+
+def test_verify_dies_naming_the_module_when_its_folder_changed_meanwhile(two_hosts,
+                                                                        monkeypatch, capsys):
+    mac = _install(two_hosts.data["mac"])
+    with two_hosts.use("mac"):
+        cloud.backup("shutdown")
+        first = bootstate.load()
+    _edit(mac, "a session")
+
+    def edit_tools(_name):
+        (mac / "Data/modules/tools/scripts/main.js").write_text("// changed mid-backup\n")
+    _lose_on_world_upload(monkeypatch, two_hosts.cloud, "module@tools@", also=edit_tools)
+    capsys.readouterr()
+    with two_hosts.use("mac"), pytest.raises(SystemExit):
+        cloud.backup("shutdown")
+    err = capsys.readouterr().err
+    assert "tools" in err and "vanished from the cloud and the local folder changed since" in err
+    assert "is incomplete" in err
+    with two_hosts.use("mac"):
+        after = bootstate.load()
+    assert (after.based_on, after.digest) == (first.based_on, first.digest)   # nothing recorded
+    assert _names(two_hosts.cloud) == [first.based_on]      # the incomplete one is gone
+    assert _tmp_files(mac) == []
+
+
+# healing (§3.5 step 3)
+
+def test_healing_uploads_a_hand_deleted_bundle_and_still_skips(two_hosts, monkeypatch, capsys):
+    mac = _install(two_hosts.data["mac"])
+    with two_hosts.use("mac"):
+        cloud.backup("shutdown")
+    before = _names(two_hosts.cloud)
+    [maps] = [n for n in _bundle_names(two_hosts.cloud) if n.startswith("module@maps@")]
+    (two_hosts.cloud / "bundles" / maps).unlink()
+    seen = _uploads(monkeypatch)
+    capsys.readouterr()
+    with two_hosts.use("mac"):
+        assert cloud.backup("shutdown") == 0
+    out = capsys.readouterr().out
+    assert "uploaded 1 bundle(s) the cloud had lost" in out
+    assert "no change since the last snapshot — skipped" in out
+    assert _bundle_uploads(seen) == [maps] and not any(
+        r.startswith("world-backups/") for r in seen)
+    assert maps in _bundle_names(two_hosts.cloud) and _names(two_hosts.cloud) == before
+    assert _tmp_files(mac) == []
+
+
+def test_an_unchanged_tree_with_every_bundle_present_uploads_nothing(two_hosts, monkeypatch,
+                                                                     capsys):
+    _install(two_hosts.data["mac"])
+    with two_hosts.use("mac"):
+        cloud.backup("shutdown")
+    seen = _uploads(monkeypatch)
+    with two_hosts.use("mac"):
+        cloud.backup("shutdown")
+    assert seen == [] and "had lost" not in capsys.readouterr().out
+
+
+# referenced_bundles + GC (§3.7)
+
+def test_referenced_bundles_counts_safety_and_major_release_ignores_full_era(two_hosts):
+    c = two_hosts.cloud
+    a, b, s, sysb = (_bundle("module", "a"), _bundle("module", "b"), _bundle("module", "s"),
+                     _bundle("system", "dnd5e"))
+    _hand_snapshot(c, f"world-{_stamp(1)}-fvtt14.369-boss.tar.gz",
+                   sidecar=_bundled_sidecar({"a": a}, {"dnd5e": sysb}))
+    _hand_snapshot(c, f"world-{_stamp(2)}-fvtt14.369-mac.safety.tar.gz",
+                   sidecar=_bundled_sidecar({"s": s}, host="mac"))
+    _hand_snapshot(c, f"world-{_stamp(40)}-fvtt13.351-mac.tar.gz", sub="major-release",
+                   sidecar=_bundled_sidecar({"b": b}, host="mac"))
+    full = _bundled_sidecar({"x": _bundle("module", "x")}, host="mac")
+    del full["bundled"]                                      # the full era: lineage only
+    _hand_snapshot(c, f"world-{_stamp(3)}-fvtt14.369-mac.tar.gz", sidecar=full)
+    _hand_snapshot(c, f"world-{_stamp(4)}-fvtt14.369-boss.tar.gz")        # no sidecar
+    _hand_snapshot(c, "world-2026-08-01-120000.tar.gz",                     # untagged
+                   sidecar=_bundled_sidecar({"u": _bundle("module", "u")}))
+    assert cloud.referenced_bundles(cloud.store()) == {a, b, s, sysb}
+
+
+def test_referenced_bundles_raises_on_an_unreadable_or_malformed_sidecar(two_hosts,
+                                                                         monkeypatch):
+    c = two_hosts.cloud
+    good = f"world-{_stamp(1)}-fvtt14.369-boss.tar.gz"
+    bad = f"world-{_stamp(2)}-fvtt14.369-boss.tar.gz"
+    _hand_snapshot(c, good, sidecar=_bundled_sidecar({"a": _bundle("module", "a")}))
+    _hand_snapshot(c, bad, sidecar=_bundled_sidecar({"b": _bundle("module", "b")}))
+    _unreadable(monkeypatch, bad)
+    with pytest.raises(storage.StorageError):
+        cloud.referenced_bundles(cloud.store())
+    monkeypatch.undo()
+    side = _bundled_sidecar({"b": "not-a-bundle.tar.gz"})   # says bundled, cannot be read as one
+    (c / "world-backups" / f"{bad}{cloud.PARENT_SUFFIX}").write_text(json.dumps(side))
+    with pytest.raises(storage.StorageError):
+        cloud.referenced_bundles(cloud.store())
+
+
+def test_an_unreadable_sidecar_aborts_gc_and_deletes_nothing(two_hosts, monkeypatch, capsys):
+    c = two_hosts.cloud
+    other = f"world-{_stamp(1)}-fvtt14.369-boss.tar.gz"
+    _hand_snapshot(c, other, sidecar=_bundled_sidecar({"a": _bundle("module", "a")}))
+    orphan = c / "bundles" / _bundle("module", "orphan")
+    orphan.write_bytes(b"old")
+    _age(orphan, 30)
+    _unreadable(monkeypatch, other)
+    with two_hosts.use("mac"):
+        assert cloud.backup("shutdown") == 0                 # the backup itself succeeds
+        assert bootstate.load().based_on == _newest(c)
+    err = capsys.readouterr().err
+    assert "bundle GC skipped" in err and "nothing was deleted" in err
+    assert orphan.exists()
+
+
+def test_gc_after_a_backup_sweeps_only_old_unreferenced_bundles(two_hosts, capsys):
+    c = two_hosts.cloud
+    old_orphan = c / "bundles" / _bundle("module", "gone", fp="00000000000000aa")
+    young_orphan = c / "bundles" / _bundle("module", "new", fp="00000000000000bb")
+    stray = c / "bundles" / "notes.txt"
+    for p in (old_orphan, young_orphan, stray):
+        p.write_bytes(b"x" * 1000)
+    _age(old_orphan, 8)
+    _age(young_orphan, 6)
+    _age(stray, 30)
+    _install(two_hosts.data["mac"])
+    with two_hosts.use("mac"):
+        cloud.backup("shutdown")
+    for p in (c / "bundles").iterdir():
+        _age(p, 30)                                         # referenced ones too: still kept
+    _age(young_orphan, 6)
+    _edit(two_hosts.data["mac"], "again")
+    with two_hosts.use("mac"):
+        cloud.backup("shutdown")
+        refs = bundles.manifest_names(bundles.manifest(bundles.local_inventory()))
+    assert not old_orphan.exists()
+    assert young_orphan.exists() and stray.exists()
+    assert refs <= set(_bundle_names(c))
+    assert "swept 1 bundle(s)" in capsys.readouterr().out
+
+
+def test_prune_then_gc_after_grace_sweeps_only_what_the_pruned_snapshot_referenced(
+        two_hosts, monkeypatch):
+    monkeypatch.setenv("PENTARYN_KEEP_SNAPSHOTS", "1")
+    c = two_hosts.cloud
+    mac = _install(two_hosts.data["mac"])
+    with two_hosts.use("mac"):
+        cloud.backup("shutdown")
+    [s1] = _names(c)
+    v1 = _sidecar(c, s1)["modules"]["tools"]
+    _age(c / "world-backups" / s1, 6)                       # outside the coalescing window
+    (mac / "Data/modules/tools/scripts/main.js").write_text("// v2\n")
+    _edit(mac, "s2")
+    with two_hosts.use("mac"):
+        cloud.backup("shutdown")
+    [s2] = _names(c)
+    assert s2 != s1                                         # s1 pruned (keep = 1)
+    v2 = _sidecar(c, s2)["modules"]["tools"]
+    assert v1 != v2 and v1 in _bundle_names(c)              # unreferenced, but young
+    for p in (c / "bundles").iterdir():
+        _age(p, 8)
+    _edit(mac, "s3")
+    with two_hosts.use("mac"):
+        cloud.backup("shutdown")
+    left = set(_bundle_names(c))
+    assert v1 not in left
+    [s3] = _names(c)
+    assert bundles.manifest_names(_sidecar(c, s3)) == left  # everything else kept
+
+
+def test_gc_never_runs_on_a_skipped_backup(two_hosts, monkeypatch):
+    _install(two_hosts.data["mac"])
+    with two_hosts.use("mac"):
+        cloud.backup("shutdown")
+    calls = []
+    monkeypatch.setattr(bundles, "gc", lambda *a, **k: calls.append(1) or [])
+    with two_hosts.use("mac"):
+        cloud.backup("shutdown")                            # unchanged → skipped
+    assert calls == []
+
+
+# restore_cost, listing column, status, the bundles commands (§3.6, §3.8)
+
+def test_restore_cost_counts_what_this_machine_lacks(two_hosts):
+    _install(two_hosts.data["mac"])
+    (two_hosts.data["mac"] / "Data/modules/tools/scripts/main.js").write_text("// mac\n")
+    with two_hosts.use("mac"):
+        cloud.backup("shutdown")
+        inv = bundles.local_inventory()
+    snap = cloud.find_snapshot(cloud.store(), _newest(two_hosts.cloud))
+    have = bundles.listing(cloud.store())
+    boss = two_hosts.data["boss"]
+    shutil.rmtree(boss / "Data/modules")
+    with two_hosts.use("boss"):
+        cost = cloud.restore_cost(cloud.store(), snap)
+    assert tuple(cost) == (snap.size, len(inv), sum(have[v.name].size for v in inv.values()))
+    assert cost.total == len(inv)
+    _install(boss)
+    with two_hosts.use("boss"):
+        before = _tree_hash(boss)
+        w, n, b = cloud.restore_cost(cloud.store(), snap)
+        assert _tree_hash(boss) == before                   # planning writes nothing
+    # boss now has maps and dnd5e at the snapshot's fingerprints, an older tools, no m
+    lacking = (inv["module/tools"].name, inv["module/m"].name)
+    assert (w, n, b) == (snap.size, 2, sum(have[x].size for x in lacking))
+
+
+def test_restore_cost_is_none_for_a_full_snapshot_or_a_cloud_failure(two_hosts, monkeypatch):
+    name = f"world-{_stamp(2)}-fvtt14.369.tar.gz"
+    _legacy_tar(two_hosts.cloud / "world-backups" / name, _LEGACY)
+    st = cloud.store()
+    assert cloud.restore_cost(st, cloud.find_snapshot(st, name)) is None
+    _install(two_hosts.data["mac"])
+    with two_hosts.use("mac"):
+        cloud.backup("shutdown")
+    snap = cloud.find_snapshot(st, _newest(two_hosts.cloud))
+    _unreadable(monkeypatch, snap.name)
+    assert cloud.restore_cost(st, snap) is None
+
+
+def test_restore_listing_marks_each_snapshot_full_or_bundled(two_hosts, monkeypatch, capsys):
+    c = two_hosts.cloud
+    _install(two_hosts.data["mac"])
+    with two_hosts.use("mac"):
+        cloud.backup("shutdown")
+    bundled = _newest(c)
+    full = _bundled_sidecar(host="boss")
+    del full["bundled"]
+    full_name = f"world-{_stamp(3)}-fvtt14.369-boss.tar.gz"
+    _hand_snapshot(c, full_name, age_days=3, sidecar=full)
+    untagged = "world-2026-08-01-120000.tar.gz"
+    _hand_snapshot(c, untagged, age_days=70)
+    broken = f"world-{_stamp(2)}-fvtt14.369-boss.tar.gz"
+    _hand_snapshot(c, broken, age_days=2, sidecar=_bundled_sidecar())
+    _unreadable(monkeypatch, broken)
+    capsys.readouterr()
+    assert cloud.restore(None) == 0
+    rows = {line.split()[0]: line.split() for line in capsys.readouterr().out.splitlines()
+            if line.strip().startswith("world-")}
+    assert rows[bundled][2] == "bundled"
+    assert rows[full_name][2] == "full" and rows[untagged][2] == "full"
+    assert rows[broken][2] == "?"
+    assert rows[bundled][1] == "mac" and rows[untagged][1] == "untagged"
+
+
+def _status_line(capsys, prefix="bundles"):
+    out = capsys.readouterr().out
+    [line] = [l.strip() for l in out.splitlines() if l.strip().startswith(prefix + " ")]
+    return line
+
+
+def test_status_shows_the_bundle_line(two_hosts, capsys):
+    c = two_hosts.cloud
+    mac = _install(two_hosts.data["mac"])
+    with two_hosts.use("mac"):
+        cloud.status()
+        assert _status_line(capsys) == (
+            "bundles      0 in the cloud; local: 3 modules + 1 system, 4 not yet uploaded")
+        cloud.backup("shutdown")
+        total = sum(p.stat().st_size for p in (c / "bundles").iterdir())
+        capsys.readouterr()
+        cloud.status()
+        assert _status_line(capsys) == (
+            f"bundles      4 in the cloud ({cloud._mb(total)}); "
+            "local: 3 modules + 1 system, all in the cloud")
+    orphan = c / "bundles" / _bundle("module", "gone")
+    orphan.write_bytes(b"x" * 2000)
+    make_module(mac / "Data/modules", "fresh")
+    with two_hosts.use("mac"):
+        cloud.status()
+        assert _status_line(capsys) == (
+            f"bundles      5 in the cloud ({cloud._mb(total + 2000)}); 1 unreferenced "
+            f"({cloud._mb(2000)}, swept after 7 days); local: 4 modules + 1 system, "
+            "1 not yet uploaded")
+
+
+def test_bundles_command_lists_local_and_unreferenced(two_hosts, capsys):
+    c = two_hosts.cloud
+    mac = _install(two_hosts.data["mac"])
+    with two_hosts.use("mac"):
+        cloud.backup("shutdown")
+        inv = bundles.local_inventory()
+    make_module(mac / "Data/modules", "fresh", version="0.3")
+    orphan = c / "bundles" / _bundle("module", "gone", version="9")
+    orphan.write_bytes(b"x" * 2000)
+    _age(orphan, 3)
+    capsys.readouterr()
+    with two_hosts.use("mac"):
+        assert cloud.main(["bundles"]) == 0
+    out = capsys.readouterr().out
+    rows = {l.split()[1]: l.split() for l in out.splitlines()
+            if l.split()[:1] in (["module"], ["system"])}
+    tools = inv["module/tools"]
+    assert rows["tools"][:4] == ["module", "tools", "1.1", tools.fp] and rows["tools"][-1] == "yes"
+    assert rows["dnd5e"][0] == "system" and rows["dnd5e"][-1] == "yes"
+    assert rows["fresh"][2] == "0.3" and rows["fresh"][-1] == "no"
+    assert orphan.name in out and "3.0 days" in out
+
+
+def test_bundles_gc_command_is_a_dry_run_unless_yes(two_hosts, capsys):
+    c = two_hosts.cloud
+    _install(two_hosts.data["mac"])
+    with two_hosts.use("mac"):
+        cloud.backup("shutdown")
+    old = c / "bundles" / _bundle("module", "old")
+    young = c / "bundles" / _bundle("module", "young")
+    old.write_bytes(b"x" * 3000)
+    young.write_bytes(b"x" * 5000)
+    _age(old, 10)
+    _age(young, 2)
+    for p in (c / "bundles").iterdir():
+        if p not in (old, young):
+            _age(p, 30)                                     # referenced: never swept
+    capsys.readouterr()
+    with two_hosts.use("mac"):
+        assert cloud.main(["bundles-gc"]) == 0
+    out = capsys.readouterr().out
+    assert old.name in out and young.name not in out and "would sweep 1 bundle(s)" in out
+    assert cloud._mb(3000) in out and "--yes" in out
+    assert old.exists() and young.exists()
+    with two_hosts.use("mac"):
+        assert cloud.main(["bundles-gc", "--yes"]) == 0
+    out = capsys.readouterr().out
+    assert "swept 1 bundle(s)" in out and cloud._mb(3000) in out
+    assert not old.exists() and young.exists()
+    with two_hosts.use("mac"):
+        refs = bundles.manifest_names(bundles.manifest(bundles.local_inventory()))
+    assert refs <= set(_bundle_names(c))
+    with two_hosts.use("mac"):
+        assert cloud.main(["bundles-gc", "--yes"]) == 0
+    assert "0 bundle(s)" in capsys.readouterr().out
+
+
+def test_bundles_gc_command_refuses_on_an_unreadable_sidecar(two_hosts, monkeypatch, capsys):
+    c = two_hosts.cloud
+    other = f"world-{_stamp(1)}-fvtt14.369-boss.tar.gz"
+    _hand_snapshot(c, other, sidecar=_bundled_sidecar({"a": _bundle("module", "a")}))
+    old = c / "bundles" / _bundle("module", "old")
+    old.write_bytes(b"x")
+    _age(old, 30)
+    _unreadable(monkeypatch, other)
+    with two_hosts.use("mac"), pytest.raises(SystemExit):
+        cloud.main(["bundles-gc", "--yes"])
+    assert "nothing was deleted" in capsys.readouterr().err
+    assert old.exists()
