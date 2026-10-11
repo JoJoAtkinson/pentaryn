@@ -72,7 +72,7 @@ function report(scene, result, {committed, backend, ms}) {
 
   // Transient markers only — a Drawing or Note would persist and turn a report into state.
   for (const x of refusals) {
-    try { canvas.ping({x: x.at[0], y: x.at[1]}); } catch { /* pings are a nicety */ }
+    try { canvas.ping({x: x.at[0], y: x.at[1]}); } catch (err) { log?.debug("ping", err); }   // a nicety
   }
 }
 
@@ -185,7 +185,11 @@ function keybindingGuard(fn) {
 /*  Feature lifecycle                           */
 /* -------------------------------------------- */
 
+/** The module's logger, set at install (debug lines are gated by CONFIG.debug["pentaryn-walls"]). */
+let log = null;
+
 export function install(reg, ctx) {
+  log = ctx.log;
   ctx.expose({preview, run, undo, makeMacro, keybindingGuard});
 }
 
