@@ -268,6 +268,52 @@ test("userActivity: sceneId fallback, malformed payloads ignored without a throw
   assert.deepEqual(lines(), []);
 });
 
+test("PT3-2: a player's ping on a scene the GM is not viewing is recorded from core's v14 payload (SF6)", async () => {
+  mock.timers.tick(1000);
+  W.pings.length = 0;
+  const n0 = W.stored().length;
+  W.corePing(PLAYER, { x: 640.4, y: 480.6 }, BETA);          // GM views ALPHA
+  W.corePing(PLAYER, { x: 1500, y: 1100 }, HEX, { pull: true });
+  mock.timers.tick(250);
+  await drain();
+  assert.equal(W.pings.length, 0, "core drew nothing: not the viewed scene");
+  assert.deepEqual(W.stored().slice(n0).map(r => [r.userId, r.userName, r.sceneId, r.sceneName, r.x, r.y]), [
+    [PLAYER, "Rook", BETA, "Beta", 640, 481],
+    [PLAYER, "Rook", HEX, "Hex", 1500, 1100],
+  ]);
+  assert.deepEqual(lines(), []);
+});
+
+test("PT3-2: a player's ping on the scene the GM IS viewing is drawn and recorded once (handlePing + socket dedupe)", async () => {
+  mock.timers.tick(1000);
+  W.pings.length = 0;
+  const n0 = W.stored().length;
+  assert.equal(await W.corePing(PLAYER, { x: 1300.2, y: 700.7 }, ALPHA), "drawn");
+  assert.equal(W.pings.length, 1, "core drew it through the wrapped handlePing");
+  assert.deepEqual(W.pings[0].position, { x: 1300.2, y: 700.7 });
+  mock.timers.tick(250);
+  await drain();
+  assert.deepEqual(W.stored().slice(n0).map(r => [r.userId, r.sceneId, r.x, r.y]), [[PLAYER, ALPHA, 1300, 701]]);
+  assert.deepEqual(lines(), []);
+});
+
+test("PT3-2: core-shaped payloads without a usable cursor are ignored without a throw or a warning", async () => {
+  mock.timers.tick(1000);
+  const n0 = W.stored().length;
+  for (const data of [
+    { ping: { scene: BETA } },
+    { cursor: null, ping: { scene: BETA } },
+    { cursor: { x: "1", y: 2 }, ping: { scene: BETA } },
+    { cursor: { x: 1 }, ping: { scene: BETA } },
+  ]) {
+    assert.doesNotThrow(() => W.emitSocket("userActivity", PLAYER, data));
+  }
+  mock.timers.tick(250);
+  await drain();
+  assert.equal(W.stored().length, n0);
+  assert.deepEqual(lines(), []);
+});
+
 test("readers decorate with each scene's offset; hex scene gets square-grid snapped; recent(0) is everything", async () => {
   await api().clear();
   mock.timers.tick(1000);
