@@ -12,6 +12,10 @@ import {
 import { markerSizeOfToken, promptText, FOLDER_NAME } from "./markers.mjs";
 import { makeSight, heightWarning } from "./los.mjs";
 import { isStockLore } from "./build-core.mjs";
+import { settingReader } from "./lib/settings.mjs";
+
+/** core's own setting (C23 allows core's); 0 (equidistant) when unreadable, as before. */
+const coreSetting = settingReader("core", [{ key: "gridDiagonals", default: 0 }]);
 
 /** dnd5e size → the marker size rank used for ordering (tiny 0 … grg 5). */
 const DND_RANK = { tiny: 0, sm: 1, med: 2, lg: 3, huge: 4, grg: 5 };
@@ -290,7 +294,7 @@ export function sceneMeta(scene) {
 export function sceneModel(scene, opts = {}) {
   const items = sceneItems(scene, opts);
   const meta = sceneMeta(scene);
-  const rule = (() => { try { return game.settings.get("core", "gridDiagonals"); } catch { return 0; } })();
+  const rule = coreSetting("gridDiagonals");
   const rel = makeRel(items, {
     gridSize: scene.dimensions.size, gridFt: meta.gridFt, rule: scene.grid?.isHexagonal ? HEX_RULE : rule,
     gridless: !!scene.grid?.isGridless, sight: makeSight(scene)

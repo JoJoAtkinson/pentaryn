@@ -20,12 +20,9 @@ import {
 import { markerSizeOfToken, promptText, markerActor, art, EMPTY_TINT, FULL_TINT } from "./markers.mjs";
 import { panelFor, resolveItemEmbeds } from "./model.mjs";
 import * as Typeahead from "./typeahead.mjs";
+import { setting } from "./settings.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
-
-const setting = (key, fallback) => {
-  try { return game.settings.get(MODULE, key) ?? fallback; } catch { return fallback; }
-};
 
 const esc = s => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 

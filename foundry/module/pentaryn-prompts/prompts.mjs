@@ -7,70 +7,29 @@
  * context/foundry/prompt-markers.md.
  */
 
-import { MODULE, VERSION, GATHER_CHARS, SIZE_KEYS, SIZE_BY_KEY, footprintLabel, codedError } from "./geometry-core.mjs";
+import { MODULE, VERSION, SIZE_KEYS, SIZE_BY_KEY, footprintLabel, codedError } from "./geometry-core.mjs";
 import { ensureMarkers, onPreCreateToken, isPromptToken, markerSizeOfToken, markerSizeOfActor, markerActor, promptText } from "./markers.mjs";
 import { PromptDialog } from "./dialog.mjs";
 import * as Typeahead from "./typeahead.mjs";
 import { sceneModel, seesCount } from "./model.mjs";
-import { gather, crops, list, show, manifests } from "./gather.mjs";
+import { gather, crops, list, show } from "./gather.mjs";
+import { registerSettings, registerKeybindings, keybindingRows, setting, settingStrict, manifests } from "./settings.mjs";
 import { replace, replaceMany, SPEC_DIR } from "./replace.mjs";
 
 
-/* ── settings + keybindings ──────────────────────────────────────────────── */
+/* ── keybindings (rows in settings.mjs) ──────────────────────────────────── */
 
-function registerSettings() {
-  const num = (key, def, range) => game.settings.register(MODULE, key, {
-    name: `PENTARYN_PROMPTS.settings.${key}.name`, hint: `PENTARYN_PROMPTS.settings.${key}.hint`,
-    scope: "world", config: true, type: Number, default: def, range
-  });
-  num("panelRows", 12, { min: 3, max: 40, step: 1 });
-  num("panelChars", 90, { min: 30, max: 300, step: 10 });
-  num("gatherChars", GATHER_CHARS, { min: 60, max: 1200, step: 20 });
-  num("unseenWithinFt", 60, { min: 0, max: 300, step: 5 });
-  num("cropMaxPerCall", 6, { min: 0, max: 12, step: 1 });
-  num("cropLongSidePx", 768, { min: 256, max: 1568, step: 64 });
-  game.settings.register(MODULE, "cropsDefault", {
-    name: "PENTARYN_PROMPTS.settings.cropsDefault.name", hint: "PENTARYN_PROMPTS.settings.cropsDefault.hint",
-    scope: "world", config: true, type: String, default: "auto",
-    choices: { auto: "PENTARYN_PROMPTS.settings.cropsDefault.auto", on: "PENTARYN_PROMPTS.settings.cropsDefault.on", off: "PENTARYN_PROMPTS.settings.cropsDefault.off" }
-  });
-  game.settings.register(MODULE, "party", {
-    name: "PENTARYN_PROMPTS.settings.party.name", hint: "PENTARYN_PROMPTS.settings.party.hint",
-    scope: "world", config: true, type: String, default: ""
-  });
-  game.settings.register(MODULE, "deleteEmptyOnClose", {
-    name: "PENTARYN_PROMPTS.settings.deleteEmptyOnClose.name", hint: "PENTARYN_PROMPTS.settings.deleteEmptyOnClose.hint",
-    scope: "world", config: true, type: Boolean, default: true
-  });
-  game.settings.register(MODULE, "defaultSize", {
-    name: "PENTARYN_PROMPTS.settings.defaultSize.name", hint: "PENTARYN_PROMPTS.settings.defaultSize.hint",
-    scope: "client", config: true, type: String, default: "mid",
-    choices: Object.fromEntries(SIZE_KEYS.map(k => [k, k]))
-  });
-  // the manifest ring (plan §6.4): never shown, written by gather on the GM client
-  game.settings.register(MODULE, "lastCalls", { scope: "world", config: false, type: Array, default: [] });
+function onPlaceKey() {
+  if (!game.user?.isGM || !canvas?.ready) return false;
+  placeAtCursor(null, { ticket: Typeahead.start() });   // capture from the key press on
+  return true;
 }
 
-function registerKeybindings() {
-  game.keybindings.register(MODULE, "place", {
-    name: "PENTARYN_PROMPTS.keybind.place", hint: "PENTARYN_PROMPTS.keybind.placeHint",
-    editable: [{ key: "KeyP" }], restricted: true,
-    onDown: () => {
-      if (!game.user?.isGM || !canvas?.ready) return false;
-      placeAtCursor(null, { ticket: Typeahead.start() });   // capture from the key press on
-      return true;
-    }
-  });
-  game.keybindings.register(MODULE, "edit", {
-    name: "PENTARYN_PROMPTS.keybind.edit", hint: "PENTARYN_PROMPTS.keybind.editHint",
-    editable: [{ key: "KeyP", modifiers: ["Shift"] }], restricted: true,
-    onDown: () => {
-      const tok = canvas?.tokens?.hover;
-      if (!tok || !isPromptToken(tok.document)) return false;
-      PromptDialog.open(tok.document);
-      return true;
-    }
-  });
+function onEditKey() {
+  const tok = canvas?.tokens?.hover;
+  if (!tok || !isPromptToken(tok.document)) return false;
+  PromptDialog.open(tok.document);
+  return true;
 }
 
 /** The P key: a marker of the client's default size under the cursor, snapped, dialog open. */
@@ -78,7 +37,7 @@ async function placeAtCursor(sizeKey, { ticket = null } = {}) {
   ticket ??= Typeahead.start();   // the API path too: keys typed while the token is created are held
   const giveUp = () => { if (ticket !== null) Typeahead.cancel(ticket); return null; };
   if (!game.user?.isGM || !canvas?.ready || !canvas.scene) return giveUp();
-  const size = SIZE_BY_KEY[sizeKey] ? sizeKey : game.settings.get(MODULE, "defaultSize");
+  const size = SIZE_BY_KEY[sizeKey] ? sizeKey : settingStrict("defaultSize");
   const actor = markerActor(size);
   if (!actor) { ui.notifications?.warn(_loc("PENTARYN_PROMPTS.dialog.noActor", { size })); return giveUp(); }
   const g = canvas.grid.size;
@@ -286,7 +245,7 @@ function registerQueries() {
 
 Hooks.once("init", () => {
   registerSettings();
-  registerKeybindings();
+  registerKeybindings(keybindingRows({ place: onPlaceKey, edit: onEditKey }));
   registerQueries();
 });
 
@@ -344,7 +303,7 @@ Hooks.once("ready", async () => {
         version: VERSION, listed: game.modules.get(MODULE)?.version ?? null,
         npcBridge: typeof CONFIG.queries?.["foundry-mcp-bridge.createNpcActor"] === "function",
         // the world's party for encounter budgets; blank = none, and a gather says so (never guess one)
-        party: (() => { try { return game.settings.get(MODULE, "party") || "none set"; } catch { return "none set"; } })(),
+        party: setting("party", "none set") || "none set",
         specDir: `${SPEC_DIR}/ (under the Foundry Data dir; replaceMany({specFile: "${SPEC_DIR}/<name>.json"}))`,
         doubleClick: clickPatchedWith, markers: SIZE_KEYS.map(k => [k, markerActor(k)?.id ?? null])
       }),

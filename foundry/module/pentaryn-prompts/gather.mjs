@@ -7,12 +7,8 @@ import { sceneModel, promptTokens, resolveItemEmbeds } from "./model.mjs";
 import { promptText } from "./markers.mjs";
 import { renderCrops } from "./crops.mjs";
 import { cropsDecision } from "./build-core.mjs";
+import { setting, manifests, manifestFor, storeManifest } from "./settings.mjs";
 
-const RING = 5;
-
-const setting = (key, fallback) => {
-  try { return game.settings.get(MODULE, key) ?? fallback; } catch { return fallback; }
-};
 
 /** Scenes in navigation order, then name — the order s# follows. */
 export function scenesInNavOrder() {
@@ -59,23 +55,9 @@ function pickScenes(scenes, from) {
   return list;
 }
 
-/* ── The manifest ring (hidden world setting `lastCalls`) ───────────────── */
+/* ── The manifest ring lives in settings.mjs (hidden world setting `lastCalls`) ── */
 
-export function manifests() {
-  const v = setting("lastCalls", []);
-  return Array.isArray(v) ? v : [];
-}
-
-export function manifestFor(call) {
-  return manifests().find(m => m?.call === call) ?? null;
-}
-
-async function storeManifest(manifest) {
-  if (!game.user?.isGM) return;
-  const ring = manifests().filter(m => m?.call !== manifest.call);
-  ring.unshift(manifest);
-  await game.settings.set(MODULE, "lastCalls", ring.slice(0, RING));
-}
+export { manifests, manifestFor };
 
 /* ── gather ─────────────────────────────────────────────────────────────── */
 

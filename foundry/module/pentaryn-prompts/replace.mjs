@@ -22,7 +22,7 @@ import {
   xpBudget, difficulty, crXp, lightText as lightWords
 } from "./geometry-core.mjs";
 import { markerSizeOfToken, promptText } from "./markers.mjs";
-import { manifestFor } from "./gather.mjs";
+import { manifestFor } from "./settings.mjs";
 import { promptTokens, actorXp, provenanceOf } from "./model.mjs";
 import { checkPatch, applyPatch, patchSize, ringData } from "./patch.mjs";
 import { resolveCharacter, buildCharacter, previewCharacter, findItem, notFound } from "./character.mjs";

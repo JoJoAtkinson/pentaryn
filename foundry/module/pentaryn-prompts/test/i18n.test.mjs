@@ -56,3 +56,13 @@ test("the orphan toast (through the entry's sink) reads as before; a long text i
   t.mock.timers.tick(3500);
   assert.equal(toasts().at(-1), `Typed before a prompt box opened and not used: "${"x".repeat(120)}"`);
 });
+
+test("C51: every SETTINGS and keybinding row carries literal name/hint keys present in lang/en.json", async () => {
+  const { SETTINGS, keybindingRows } = await import("../settings.mjs");
+  const labelled = [...SETTINGS.filter(r => !r.store), ...keybindingRows({ place: () => true, edit: () => true })];
+  assert.equal(labelled.length, 12);
+  for (const row of labelled) {
+    for (const k of [row.name, row.hint]) assert.ok(keys.has(k), `${row.key}: ${k}`);
+    for (const v of Object.values(row.choices ?? {})) if (v.startsWith("PENTARYN_PROMPTS.")) assert.ok(keys.has(v), v);
+  }
+});
