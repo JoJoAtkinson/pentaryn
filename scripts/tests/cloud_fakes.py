@@ -3,7 +3,7 @@
 :class:`FakeRclone` is called exactly like ``subprocess.run`` and implements the verbs
 ``RcloneStorage`` uses — ``lsjson cat rcat copyto moveto deletefile mkdir listremotes`` —
 against a temp folder. ``fake:<path>`` maps to ``<base>/<path>``; anything else is a local
-path. It records every argv and refuses any argv carrying ``--config`` or ``token``, so a
+path. It records every argv and refuses any argv carrying ``--config`` or a token-ish flag or value, so a
 flag change is a visible test diff and a leak is a test failure.
 """
 
@@ -73,7 +73,9 @@ class FakeRclone:
         argv = list(argv)
         self.calls.append(argv)
         assert "--config" not in argv, f"--config passed: {argv}"
-        assert not any("token" in a.lower() for a in argv), f"token in argv: {argv}"
+        # A pack named tokens-01.zip is fine; a token-ish flag or value never is.
+        assert not any(("token" in a.lower() and a.startswith("-")) or "_token" in a.lower()
+                       or "bearer" in a.lower() for a in argv), f"token in argv: {argv}"
         verb = argv[1]
         if verb in self.hang:
             if timeout is not None:

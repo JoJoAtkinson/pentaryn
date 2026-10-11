@@ -135,3 +135,84 @@ def fake_data(monkeypatch, tmp_path_factory, fake_cloud):
     monkeypatch.setenv("FOUNDRY_DATA", str(root))
     monkeypatch.setenv("PENTARYN_BOOT_STATE", str(root / "pentaryn-boot.json"))
     return root
+
+
+class TwoHosts:
+    """Two machines — `mac` (primary) and `boss` (alt) — sharing one fake cloud.
+
+    `with hosts.use("boss"):` swaps FOUNDRY_DATA, PENTARYN_HOST, the state file and the app
+    root (its core version) for the block. Foundry is never "running" unless a test says."""
+
+    def __init__(self, monkeypatch, tmp_path_factory, cloud):
+        import os as _os
+        self._env = _os.environ
+        self.cloud = cloud
+        self.data, self.apps, self.core = {}, {}, {}
+        for name in ("mac", "boss"):
+            self.data[name] = make_data_root(tmp_path_factory.mktemp(f"data-{name}"))
+            self.apps[name] = tmp_path_factory.mktemp(f"app-{name}")
+            self.set_core(name, "14.369")
+        for key in ("FOUNDRY_DATA", "PENTARYN_HOST", "PENTARYN_BOOT_STATE", "FOUNDRY_APP_ROOT"):
+            monkeypatch.setenv(key, self._env.get(key, ""))
+        monkeypatch.setenv("PENTARYN_PRIMARY_HOST", "mac")
+        self._activate("mac")
+
+    def set_core(self, name: str, version: str) -> None:
+        import json as _json
+        gen, build = version.split(".")
+        (self.apps[name] / "package.json").write_text(_json.dumps(
+            {"version": f"{version}.0", "release": {"generation": int(gen), "build": int(build)}}))
+        self.core[name] = version
+
+    def state_file(self, name: str):
+        return self.data[name] / "pentaryn-boot.json"
+
+    def _activate(self, name: str) -> None:
+        self._env["FOUNDRY_DATA"] = str(self.data[name])
+        self._env["PENTARYN_HOST"] = name
+        self._env["PENTARYN_BOOT_STATE"] = str(self.state_file(name))
+        self._env["FOUNDRY_APP_ROOT"] = str(self.apps[name])
+        self.current = name
+
+    def use(self, name: str):
+        import contextlib
+
+        @contextlib.contextmanager
+        def block():
+            prev = self.current
+            self._activate(name)
+            try:
+                yield self.data[name]
+            finally:
+                self._activate(prev)
+        return block()
+
+
+@pytest.fixture
+def two_hosts(monkeypatch, tmp_path_factory, fake_cloud):
+    from scripts.foundry import host as host_mod
+    monkeypatch.setattr(host_mod, "is_running", lambda port=None: False)
+    return TwoHosts(monkeypatch, tmp_path_factory, fake_cloud)
+
+
+@pytest.fixture
+def tty(monkeypatch):
+    """`tty(interactive, answers)` — the boot prompt's terminal: isatty and input()."""
+    def make(interactive: bool, answers: list[str] | None = None):
+        from scripts.foundry import boot
+        queue = list(answers or [])
+        asked: list[str] = []
+
+        def fake_input(prompt=""):
+            asked.append(prompt)
+            if not queue:
+                raise EOFError
+            ans = queue.pop(0)
+            if ans is KeyboardInterrupt:
+                raise KeyboardInterrupt
+            return ans
+
+        monkeypatch.setattr(boot, "_isatty", lambda: interactive)
+        monkeypatch.setattr("builtins.input", fake_input)
+        return asked
+    return make
