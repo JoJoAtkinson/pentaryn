@@ -28,7 +28,7 @@ Module APIs) · the design history → [`../plans/foundry-mcp-fork.md`](../plans
 | `packages/mcp-server/src/fork/index.ts` | builds the registry; one `registerX(registry, client, logger)` per tool |
 | `packages/mcp-server/src/fork/registry.ts` | `ForkRegistry`: register, dispatch, tool filter, action log |
 | `packages/mcp-server/src/fork/content.ts` | `__mcpContent` passthrough (image blocks) |
-| `packages/mcp-server/src/fork/tools/*.ts` | the tools: `eval-js`, `prompt-markers` (+ its vitest) |
+| `packages/mcp-server/src/fork/tools/*.ts` | the tools: `eval-js`, `prompt-markers`, and (wave-2 build) `pentaryn-read` / `pentaryn-write` over the one template in `pentaryn-call.ts` (each + its vitest) |
 | `packages/foundry-module/src/fork/handlers.ts` | the bridge module's own browser-side queries (`foundry-mcp-bridge.fork.*`) |
 
 ## Adding a server-side tool
@@ -55,15 +55,51 @@ handler two ways: the bridge calls `handler(data)` from this GM's own client, an
 calls `handler(data, {user})` on behalf of **another** user — and every player holds `QUERY_USER`.
 So every handler is one of two named contracts (audit mcp-fork-24); never write a third:
 
-| Contract | Use for | In a pentaryn module (kit 1.0.1, `foundry/lib/queries.mjs`) | In the fork |
+| Contract | Use for | In a pentaryn module (kit 1.0.2, `foundry/lib/queries.mjs`) | In the fork |
 |---|---|---|---|
-| **GM-only query** | anything an MCP tool calls; anything that writes as the GM | `guarded(fn)` — rejects a non-GM sender and a non-GM running client with `NOT_GM` (`"<name> is not a GM"`, `"this client is not a GM"`) | `requireGM(ctx)` in `handlers.ts` (same two checks; plain `Error`) |
+| **GM-only query** | anything an MCP tool calls; anything that writes as the GM | `guarded(fn)` — rejects a non-GM sender and a non-GM running client with `NOT_GM` (`"<name> is not a GM"`, `"this client is not a GM"`) | `requireGM(ctx)` in `handlers.ts` (same two checks). From the wave-2 build it throws the coded form (`NOT_GM: Access denied: …`, `code: "NOT_GM"`), and upstream's own `foundry-mcp-bridge.*` handlers get the sender check too (`guardBridgeQueries`) |
 | **Player relay** | a player's client asking the GM to do something it may not | `relayed(fn, { activeGM: true })` — any sender, runs only on the active GM's client (`NOT_GM: this client is not the active GM`); the handler checks the sender (`ctx.user`) owns what it touches | — |
 
 A module declares which one per API row: a manifest row with `relay: true` registers through
 `relayed`, every other query row through `guarded` — see
 [`addon-blueprint.md` §5.1a](addon-blueprint.md#51a-manifest-row-reference). Error codes are part
 of the contract: LLM tooling matches on `NOT_GM`, not on the prose.
+
+## `pentaryn-read` and `pentaryn-write` (wave-2 build)
+
+Typed calls into a blueprint module's manifest, so a `game.pentaryn.<ns>.<path>` call needs no
+`eval-js` (D14; design: [`../plans/addon-blueprint-2026-10/wave-2-bridge-plan.md`](../plans/addon-blueprint-2026-10/wave-2-bridge-plan.md) §2–§3).
+Both send one fixed script through the GM-guarded `foundry-mcp-bridge.fork.eval` query; the only
+variable part is a JSON literal, so no JavaScript is built from caller strings. In the GM tab it
+reads `game.pentaryn[ns].describe()` on every call and routes on the row.
+
+| Tool | Args | Runs | Action-log line (`mcp-<YYYY-MM>.jsonl`) |
+|---|---|---|---|
+| `pentaryn-read` | `{ns, path, ref?, opts?, timeoutMs?}`; `{ns: "*", path: "describe" \| "inspect"}` for the root | rows that declare `writes: false`, plus the kit's `describe` / `inspect` / `selftest` | compact: `{ts, tool, ns, path, ref, ok, code?, ms, client?}` — no args, no result (W2-B2 open: same file as the writes) |
+| `pentaryn-write` | the same, plus `dryRun?` | rows with `writes: true` only | a write line with the args, `ok`, `code`, `summary` (`<ns>.<path> [ref] [(dry run)] — ok\|<code>`) and `ids` |
+
+- **Arguments map onto the row's `params`:** a param named `ref` takes `ref`; `opts` / `options`
+  takes `opts`; any other param takes `opts[<its name>]` (`rules.search(query, opts)` →
+  `{opts: {query: "grapple", limit: 3}}`). Leftover opts keys, or a `ref` on a row without one,
+  are `BAD_ARGS`.
+- **Refusals are values** `{ok: false, ns, path, code, reason}`, never a throw for an expected
+  case. `NOT_FOUND` lists what exists (`namespaces`, or `paths` + `writes`); a read row on the
+  write tool (or the reverse, or a row with no `writes` key on the read tool) is `BAD_ARGS`; a
+  module's coded error (`AMBIGUOUS`, `NOT_GM`, `REFUSED`, `CONFLICT`, …) keeps its code.
+- **`dryRun`** reaches only a row that declares one (`row.dryRun === true`, or a param whose type
+  or doc names `dryRun`, e.g. `importer.import`); any other write row refuses it with `BAD_ARGS`
+  rather than running for real.
+- **A param that needs a live Document** (`journal.add(doc)`, `attunement.stash(owner, …)`,
+  `names.sync`) is refused with `BAD_ARGS: … needs a live Document — eval-js only`.
+- Results come back plain: Documents → `{_document, _id, name, uuid}`, depth ≤ 12, arrays ≤ 200.
+  A namespace without `describe()` (not yet migrated) is `NOT_FOUND`: `eval-js` only.
+
+## Other fork queries (wave-2 build)
+
+| Query | Called by | What |
+|---|---|---|
+| `foundry-mcp-bridge.fork.eval` | `eval-js`, the D14 tools | runs the script; on a timeout the result carries `timedOut: true` and a note that the script may still be running — re-read state before retrying |
+| `foundry-mcp-bridge.fork.applyRecharge` | `dnd5e-add-feature`'s `recharge` (2–6) | gives the feature Recharge n–6 (`src/fork/recharge.ts`); resolves the actor exactly, and an `itemId` never falls back to a name. The outcome rides on the add-feature action-log line |
 
 ## Build, restart, verify
 
@@ -105,7 +141,7 @@ by itself.
   timeoutMs}` as `args`; the script itself is only in the eval log.
 - `eval-<YYYY-MM>.jsonl` (wave-2 build; `eval.jsonl` keeps everything before it and is left in
   place) — one line per `eval-js` call: `{ts, purpose, script (never truncated), ok, phase, error?,
-  ms, client?}`. Phases: `complete`, `runtime`, `compile` (from Foundry); `transport` — the call
+  timedOut?, ms, client?}`. Phases: `complete`, `runtime`, `compile` (from Foundry); `transport` — the call
   never reached Foundry; `args` — `eval-js` rejected its own arguments and sent nothing.
 - `client: {pid, ppid}` — the MCP wrapper process that made the call (one per Claude session) and
   its parent; a wrapper older than the wave-2 build sends none.
