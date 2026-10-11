@@ -9,6 +9,9 @@
 // nothing (the GM is viewing another scene). Captured: last() straight after the call (before the
 // 250 ms flush) and after it, a same-spot repeat inside 400 ms (dedupe), and Foundry's own
 // scene.dimensions next to the module's imageOffset arithmetic.
+// `lastImmediateIsScratch` depends on world state, not on the code: true while the module's buffer
+// still aliases the array game.settings.get returns (before the first flush and below the cap),
+// false after (wave-1-baseline.md SF3). Compare it across runs only with the ring in the same state.
 //
 // ⚠ Side effect that cannot be undone from outside the module: the scratch pings (1 + N timing
 // pings) stay in the world's ping ring (setting pentaryn-pings.log, capped at `max`), labelled with
