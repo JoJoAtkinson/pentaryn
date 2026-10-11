@@ -15,8 +15,9 @@
 - New: `game.modules.get("pentaryn-importer").api` = `game.pentaryn.importer` with `describe()` and
   `selftest()`; the `pentaryn-importer.ready` and `pentaryn.ready` hooks fire (`items-journal-5`).
 - Internals: split into `importer-core.mjs` (pure), `documents-adapter.mjs`, `api-manifest.mjs`,
-  `api.mjs`; one `refuse`/`failAssertion` path for every refusal (`items-journal-2`, `-3`); a node
-  suite gates the module (`make foundry-importer-check`).
+  `api.mjs`; one `refuse`/`failAssertion` path for every refusal (`items-journal-2`, `-3`); one slug
+  index per run instead of a world-actor scan per manifest entry (`items-journal-7`); a node suite
+  gates the module (`make foundry-importer-check`).
 
 ## 1.1.0 — 2026-10-10
 
