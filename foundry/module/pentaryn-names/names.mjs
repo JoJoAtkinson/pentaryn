@@ -2,18 +2,9 @@
 //
 // A label follows the rename only if it was derived from the old name: the full name, or the
 // part before the first comma. Anything else is a nickname the GM chose and is left alone.
+// The rules live in names-core.mjs.
 
-/** "Glubbek, Kuo-toa Net-Mender" -> "Glubbek". */
-function shortName(name) {
-  return String(name ?? "").split(",")[0].trim();
-}
-
-/** The new label for a token, or null when the token's label is a nickname. */
-function relabel(label, oldName, newName) {
-  if (label === oldName) return newName;
-  if (label === shortName(oldName) && shortName(oldName) !== oldName) return shortName(newName);
-  return null;
-}
+import { planTokenRelabels, relabel, shortName } from "./names-core.mjs";
 
 async function sync(actor, oldName, newName) {
   let count = 0;
@@ -23,12 +14,9 @@ async function sync(actor, oldName, newName) {
     count++;
   }
   for (const scene of game.scenes) {
-    const updates = [];
-    for (const t of scene.tokens) {
-      if (t.actorId !== actor.id || !t.canUserModify(game.user, "update")) continue;
-      const label = relabel(t.name, oldName, newName);
-      if (label !== null && label !== t.name) updates.push({ _id: t.id, name: label });
-    }
+    const updates = planTokenRelabels([...scene.tokens], {
+      actorId: actor.id, oldName, newName, canEdit: t => t.canUserModify(game.user, "update"),
+    });
     if (updates.length) {
       await scene.updateEmbeddedDocuments("Token", updates);
       count += updates.length;
