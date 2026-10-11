@@ -798,3 +798,11 @@ with tests, so this list is what changed relative to the build record above.
 | 7 | The Linux app-root default was `resources/app`, but the Node.js build (v12 on) has the app at the top level | Probes `~/foundryvtt`, then `~/foundryvtt/resources/app`. §11's example is corrected. Not yet checked against BOSS's real install |
 | 8 | "Keep local" was matched by name only | Also matched by the declined snapshot's mtime (`keep_local_mtime`) |
 | 9 | `.safety` copies counted toward the 10 per host | They are counted separately, with a cap of 3 per host (`KEEP_SAFETY_COPIES`) |
+
+A second review found one new defect, caused by the fix for #5, and two minor issues.
+
+| # | Found | Fixed |
+| --- | --- | --- |
+| 10 | A snapshot taken with no `based_on` record wrote `"ancestors": []`, which read as "known, no ancestors". After a legacy snapshot L that BOSS took and a Mac with no record, every later Mac snapshot reached BOSS as "diverged", with Enter = local | That sidecar writes `"ancestors": null`. Every chain carries `origin_before`, the listing mtime of its unknown root: no record, a legacy snapshot, an adopted marker, or the part cut at `LINEAGE_CAP`. `BootState.lineage_origin_before` keeps it. `descends()` is None, never False, for a `based_on` at or before that edge |
+| 11 | `foundry-down` on Linux with the port live, no pid and no `PENTARYN_STOP_CMD` printed "stopped" without doing anything | It prints that Foundry is running but cannot be stopped from here, and fails (`host.can_request_stop()`) |
+| 12 | The pre-restore safety copy re-uploaded an unchanged ~3 GB tree when the snapshot being restored already contained its `based_on` | `_backup(protect=<Snapshot>)` skips the safety copy when `descends(target, based_on)` is True |
