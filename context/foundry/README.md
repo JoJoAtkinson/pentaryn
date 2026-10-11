@@ -72,7 +72,7 @@ The table is generated from each `module.json`, the module's code and its
 | `creatures` | `pentaryn-creatures` | 0.1.1 | not migrated | — (no describe golden yet) | [README](../../foundry/module/pentaryn-creatures/README.md) |
 | `cursors` | `pentaryn-cursors` | 0.2.0 | not migrated | — (no describe golden yet) | [README](../../foundry/module/pentaryn-cursors/README.md) |
 | `dropbin` | `pentaryn-dropbin` | 0.2.1 | full tier | — (no describe golden yet) | [README](../../foundry/module/pentaryn-dropbin/README.md) |
-| `importer` | `pentaryn-importer` | 1.1.0 | full tier | `import` | [README](../../foundry/module/pentaryn-importer/README.md) |
+| `importer` | `pentaryn-importer` | 1.1.0 | full tier | `import` | [`importer.md`](importer.md) · [README](../../foundry/module/pentaryn-importer/README.md) |
 | `journal` | `pentaryn-journal` | 0.1.0 | full tier | — (no describe golden yet) | [README](../../foundry/module/pentaryn-journal/README.md) |
 | `rules` | `pentaryn-lookup` | 0.3.0 | full tier | — (no describe golden yet) | [README](../../foundry/module/pentaryn-lookup/README.md) |
 | `movement` | `pentaryn-movement` | 0.1.2 | full tier | — (no describe golden yet) | [README](../../foundry/module/pentaryn-movement/README.md) |
@@ -115,6 +115,7 @@ The table is generated from each `module.json`, the module's code and its
 | Finding one battlemap out of ~1,750 | [`map-library.md`](map-library.md) |
 | The unattended Saturday updater — before touching it | [`automated-updates.md`](automated-updates.md) |
 | Running the updater as an operator — commands, setup, retention | [`../../automation/README.md`](../../automation/README.md) |
+| Importing the generated NPCs — `make foundry-import`, Gate 2, "the import refused" — `pentaryn-importer` | [`importer.md`](importer.md) · internals: [`../../foundry/module/pentaryn-importer/README.md`](../../foundry/module/pentaryn-importer/README.md) |
 | The `actors.json` generator ⇄ importer contract | [`../../foundry/CONTRACT.md`](../../foundry/CONTRACT.md) |
 | **Changing** how any of this was built — design docs, migration records | [`../plans/`](../plans/) |
 

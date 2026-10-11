@@ -127,8 +127,8 @@ async function fetchJsonWithTimeout(path, { timeout = DEFAULT_TIMEOUT_MS, ...ini
 /**
  * The module's own declared expectations, from `module.json` → `flags.pentaryn`.
  * Gating against these as well as against the live game catches a stale module copy in
- * `Data/modules/` — `make foundry-sync` copies rather than symlinks (playbook D8), so staleness
- * is a real and otherwise invisible failure.
+ * `Data/modules/` — `make foundry-sync` copies rather than symlinks (D8 in
+ * context/plans/foundry-content-pipeline.md), so staleness is a real and otherwise invisible failure.
  * @returns {{contract: string, targetSystem: string, targetSystemVersion: string, generation: number}}
  */
 function moduleExpectations() {
@@ -411,8 +411,8 @@ const isManagedItem = item => foundry.utils.getProperty(item, `flags.${FLAG_SCOP
  * Replace the Actor's managed embedded Items.
  *
  * The Actor is NEVER deleted and recreated — token documents on scenes hold the Actor id, and
- * recreating orphans every placed token (playbook, Stage 2). Items are cheap and hold no external
- * references, so they are wholesale replaced rather than diffed.
+ * recreating orphans every placed token (Stage 2 of context/plans/foundry-content-pipeline.md).
+ * Items are cheap and hold no external references, so they are wholesale replaced, not diffed.
  *
  * Items the GM added by hand (no `flags.pentaryn.action`) are left alone by default. CONTRACT.md
  * §4.2 says the embedded Item set is replaced "wholesale"; in practice that only ever means the
@@ -492,8 +492,8 @@ async function stampContentHash(actor, hash) {
 }
 
 /**
- * One clear block in the console. Deliberately the console, not a UI — the playbook's Stage 2
- * brief is "no UI".
+ * One clear block in the console. Deliberately the console, not a UI: the Stage 2 brief in
+ * context/plans/foundry-content-pipeline.md is "no UI".
  * @param {object} report
  */
 function reportSummary({ counts, created, updated, skipped, failed, dryRun, url, manifest }) {

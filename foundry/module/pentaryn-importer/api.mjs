@@ -232,8 +232,8 @@ export async function importActors(options = {}) {
 
   reportSummary({ counts, created, updated, skipped, failed, dryRun, url, manifest });
 
-  // §12 / playbook Stage 2: Data/ is served over HTTP with no authentication and is public while
-  // the tunnel is up. Foundry's client API has no file-delete (FilePicker exposes only browse,
+  // §12 / Stage 2 of context/plans/foundry-content-pipeline.md: Data/ is served over HTTP with no
+  // authentication and is public while the tunnel is up. Foundry's client API has no file-delete (FilePicker exposes only browse,
   // upload, createDirectory and configurePath — client/applications/apps/file-picker.mjs), so the
   // importer cannot remove it itself.
   //

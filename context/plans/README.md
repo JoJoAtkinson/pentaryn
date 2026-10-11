@@ -20,6 +20,7 @@ lore authoring → [`../world/README.md`](../world/README.md)
 | Plan | Built what | Status |
 |---|---|---|
 | [`foundry-content-pipeline.md`](foundry-content-pipeline.md) | Repo content → Foundry documents (actors, scenes, walls, lights) | partly executed — see its own status line |
+| [`foundry-importer-verification.md`](foundry-importer-verification.md) | How `pentaryn-importer` 1.0 was verified, and what was left for Gate 2 | history |
 | [`foundry-npc-ties.md`](foundry-npc-ties.md) | The `pentaryn-ties` module | shipped |
 | [`foundry-npc-ties-gui.md`](foundry-npc-ties-gui.md) | The ties sheet GUI — read rows, the tie dialog, inbound view | shipped through 0.10.0; iterations 3–4 in build |
 | [`foundry-encounter-log.md`](foundry-encounter-log.md) | Known list / Study rolls / Past Encounters tabs in `pentaryn-ties` | phase 1 built; rest proposed |

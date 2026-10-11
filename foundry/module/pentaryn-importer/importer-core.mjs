@@ -11,7 +11,7 @@
  * described NPC Actors into the live world.
  *
  * The full data contract is `foundry/CONTRACT.md`. Section references (§n) below point at it.
- * The rationale for the pipeline shape is `playbooks/foundry-vtt.md` (D3, D8, D10).
+ * The rationale for the pipeline shape is `context/plans/foundry-content-pipeline.md` (D3, D8, D10).
  *
  * Design rules this file obeys, in order of importance:
  *
@@ -139,7 +139,7 @@ const FORMULA_OK = /^[0-9d+\-*/(). ]*$/;
  *
  * Note `system.attributes.movement.*` is deliberately expanded to the formula subkeys only:
  * that block also carries `hover` (boolean) and `units` ("ft"), and "ft" would fail FORMULA_OK.
-*
+ *
  * DEFERRED to contract @2 (do not move piecemeal): `init.bonus` and `movement.<type>` are the
  * legacy 5.3 shapes. dnd5e 6.0 migrates them to `init.roll.bonus` / `movement.speeds.<type>` on
  * create and update (common.mjs:85, movement-field.mjs:56-59; shims until 7.0). Moving them here
@@ -242,8 +242,10 @@ const isPlainObject = value => (value !== null) && (typeof value === "object") &
 const normalise = value => String(value).trim().replace(/\s+/g, " ");
 
 /**
- * Deep-clone plain JSON. `foundry.utils.deepClone` handles this, but the payload is pure JSON so
- * structuredClone is both faster and free of Foundry's special-casing.
+ * Deep-clone plain JSON with a JSON round-trip (`JSON.parse(JSON.stringify(…))`). The payload is pure
+ * JSON, so this is exact for it — and it is what the contentHash and the strip lists were built
+ * against: `undefined` keys vanish and a Date becomes its ISO string. Do NOT swap in
+ * `structuredClone` (it keeps both) or `foundry.utils.deepClone`; either would change payloads.
  * @template T @param {T} value @returns {T}
  */
 const cloneJson = value => JSON.parse(JSON.stringify(value));

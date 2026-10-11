@@ -1,262 +1,188 @@
 ---
 created: 2026-08-10
-last_modified: 2026-10-10
+last_modified: 2026-10-11
 tags: ["foundry", "vtt", "module", "dnd5e"]
-status: draft
+status: active
 ---
 
-# `pentaryn-importer`
+# Pentaryn Importer (`pentaryn-importer`)
 
-Stage 2 of the Foundry pipeline. Reads the `actors.json` produced by Stage 1
-(`scripts/foundry/build_actors.py`) and upserts the NPC Actors it describes into the live
-`ardenhaven` world.
+**Read this when:** you are changing or calling `pentaryn-importer`. **Not this file:** running an
+import at the table → [`context/foundry/importer.md`](../../../context/foundry/importer.md) · the data
+contract → [`foundry/CONTRACT.md`](../../CONTRACT.md) · why the pipeline looks like this →
+[`context/plans/foundry-content-pipeline.md`](../../../context/plans/foundry-content-pipeline.md)
+(D3, D8, D10) · how every addon is built → [`context/foundry/addon-blueprint.md`](../../../context/foundry/addon-blueprint.md)
 
-- **Contract:** [`foundry/CONTRACT.md`](../../CONTRACT.md) — normative; this module implements the
-  "Importer (Stage 2) MUST" checklist in §12.
-- **Why the pipeline looks like this:** [`context/plans/foundry-content-pipeline.md`](../../../context/plans/foundry-content-pipeline.md)
-  (D3, D8, D10).
-- **Target:** Foundry **v14** · dnd5e **6.0** (verified 6.0.6) — module 1.1.0, generator 1.0.1.
-  The version gate refuses any `actors.json` whose `targetSystemVersion` is not the live
-  dnd5e `major.minor`, so after the 6.0 upgrade rebuild with `make foundry-actors` before
-  importing. The payload shapes are still the 5.3 ones on purpose — see
-  [CONTRACT §1.2](../../CONTRACT.md) (dnd5e 6 migrates them until 7.0; moving them is the
-  `@2` contract bump).
+Stage 2 of the Foundry pipeline. Reads the `actors.json` that Stage 1
+(`scripts/foundry/build_actors.py`) wrote, and upserts the NPC Actors it describes into the live
+world. Target: Foundry **v14** · dnd5e **6.0** (verified 6.0.6). The payload shapes are still the
+5.3 ones on purpose ([CONTRACT §1.2](../../CONTRACT.md): dnd5e 6 migrates them until 7.0; moving
+them is the `@2` contract bump). Tier `full`; no UI, no settings, one hook (`ready`).
 
-No UI. No settings. One hook (`ready`), used only to attach the API.
+## What the player sees
 
----
+Nothing. The importer is GM-only and console-first. A GM sees permanent error toasts when an import
+is refused or a readback fails, an info toast with the counts after a real run, and a permanent
+"delete `Data/<path>`" toast after a successful one. Players never see a toast.
 
-## Install
+## Settings
 
-`make foundry-sync` **copies** the module into `Data/modules/` — copy, not symlink (playbook D8).
-Until that target exists, the manual equivalent is:
+n/a — registers none.
 
-```bash
-FOUNDRY_DATA=~/Library/Application\ Support/FoundryVTT/Data
-rm -rf "$FOUNDRY_DATA/modules/pentaryn-importer"
-cp -R foundry/module/pentaryn-importer "$FOUNDRY_DATA/modules/"
-```
+## API — game.pentaryn.importer
 
-Then enable **Pentaryn Importer** in *Game Settings → Manage Modules* and reload.
+Canonical: `game.modules.get("pentaryn-importer").api`; `game.pentaryn.importer` is the same object.
+Ask it: `game.pentaryn.importer.describe()` (offline: `test/golden/describe.json`).
 
-> Because it is a copy, a stale module in `Data/modules/` is a real failure mode. The version gate
-> defends against it: `module.json`'s `flags.pentaryn` block is checked against both the JSON
-> manifest and the live game, so a copy that predates a contract change refuses to run rather than
-> importing something subtly wrong.
+| Method / member | GM | Writes | Returns |
+|---|---|---|---|
+| `import(options)` | yes | Actors, Items, `flags.pentaryn.*` | `ImportResult`; **throws** on a refusal (below) |
+| `selftest()` | — | — | `{ ok, checks }` |
+| `moduleId`, `actorsContract`, `_internals` | — | — | the module id, `"pentaryn/actors.json@1"`, the four helpers below |
 
-### 🔴 Back up before the first import
-
-```bash
-make vtt-down    # LevelDB is single-writer; Foundry must be stopped
-cp -R ~/Library/Application\ Support/FoundryVTT/Data/worlds/ardenhaven ~/backups/ardenhaven-$(date +%F)
-```
-
----
-
-## Use
-
-`actors.json` has to be reachable over HTTP, which means it has to be under `Data/`, which means
-it is **world-readable over the tunnel while Foundry is up** — `express.static(paths.data)` serves
-the whole Data directory with no authentication. Hence **copy in → import → delete**:
-
-**Run `make foundry-import`.** It does all three steps — stages the file, waits while you run the
-import in Foundry's console, then deletes and verifies:
-
-```bash
-make foundry-import
-```
-
-The three steps it wraps, for reference:
-
-```bash
-# 1. copy in
-cp foundry/build/actors.json ~/Library/Application\ Support/FoundryVTT/Data/worlds/ardenhaven/
-```
-
-```js
-// 2. import — in the Foundry console (F12), as GM
-await game.pentaryn.import();
-```
-
-```bash
-# 3. delete, and prove it
-rm ~/Library/Application\ Support/FoundryVTT/Data/worlds/ardenhaven/actors.json
-curl -s -o /dev/null -w '%{http_code}\n' https://vtt.atjoseph.com/worlds/ardenhaven/actors.json   # expect 404
-```
-
-The module **cannot** do step 3 itself: Foundry's client API has no file-delete. `FilePicker`
-exposes `browse`, `upload`, `createDirectory` and `configurePath` and nothing else
-(`client/applications/apps/file-picker.mjs`).
-
-So the deleting agent is **`make foundry-import`** (CONTRACT.md §12, *"Deleting `actors.json` —
-who actually does it"*), and it `rm`s the staged file whether or not you report the import
-succeeded. What the module contributes is a backstop for an import run by hand: it returns
-`result.deleteJson = {required, path, url, note}` and raises a **permanent** toast. If you see
-that toast and did not come through `make foundry-import`, run `make foundry-clean` now.
-
-### Options
+**The legacy root keys.** At `ready` the importer also *merges* `import`, `moduleId`, `contract`
+(the actors.json contract, `pentaryn/actors.json@1`) and `_internals` (frozen:
+`fetchJsonWithTimeout`, `lintFormulas`, `valuesMatch`, `normalise`) into `game.pentaryn`. So
+`await game.pentaryn.import()` and `make foundry-import`'s instructions keep working. The root is
+never replaced or frozen, so every other module's namespace survives in either load order. On the
+namespace, `contract` is the API contract `pentaryn-importer/api@1`, so the actors.json one is
+`actorsContract` there.
 
 ```js
 await game.pentaryn.import({
-  path: "worlds/ardenhaven/actors.json",  // default: worlds/<current world id>/actors.json
-  dryRun: false,        // true → gate, lint and report; write nothing
-  only: null,           // e.g. ["skeleton"] — Gate 2's "import one NPC"
-  force: false,         // true → ignore contentHash and rewrite every selected actor
-  timeout: 15000,       // fetch timeout, ms
-  unmanagedItems: "keep" // or "delete" — what to do with Items a GM added by hand
+  path: "worlds/<world>/actors.json", // default: worlds/<game.world.id>/actors.json
+  dryRun: false,          // true → gate, lint and report; write nothing
+  only: null,             // e.g. ["skeleton"] — restrict to these slugs
+  force: false,           // true → ignore contentHash and rewrite every selected actor
+  timeout: 15000,         // fetch timeout, ms
+  unmanagedItems: "keep"  // or "delete" — what to do with Items a GM added by hand
 });
 ```
 
-### Gate 2, step by step
+The result is `{ ok, path, url, dryRun, manifest, counts: { total, selected, created, updated,
+skipped, failed, assertions }, created, updated, skipped, failed: [{ slug, error }], deleteJson }`.
+`deleteJson.required` is `true` only after a non-dry run with zero failures; a run that left work
+undone should be re-run against the same file.
 
-```js
-// 1. one NPC, dry first
-await game.pentaryn.import({ only: ["skeleton"], dryRun: true });
-await game.pentaryn.import({ only: ["skeleton"] });
-//    → readback assertions run automatically; any mismatch throws PentarynAssertionError
+**Two failure channels** (the row is `legacy: true`; kept, not reshaped):
 
-// 2. prove abort-on-first-mismatch works — hand-edit one `expected` value in the copied
-//    actors.json (e.g. labels.toHit "+4" → "+9") and re-import with force
-await game.pentaryn.import({ only: ["skeleton"], force: true });
-//    → expect PentarynAssertionError naming actor, item, activity, path, expected and actual
+| Signal | Meaning | Scope |
+|---|---|---|
+| throws `PentarynAbort` | version gate, `@ref` lint, missing or malformed file, non-GM, missing slug, bad option, fetch failure | whole run; **nothing was written** |
+| throws `PentarynAssertionError` | a readback mismatch (CONTRACT §8.3) | whole run; actors earlier in the batch **were** written |
+| `{ ok: false, failed: [...] }` | a `ValidationError` or similar from one Actor | that actor only |
 
-// 3. prototype token, by eye as well as by assertion
-game.actors.getName("Skeleton").prototypeToken   // vision, bars, size, disposition
+Every assertion failure names the actor slug, item action, activity id, path, expected and actual,
+as a permanent toast and a `console.error`.
 
-// 4. full import, then idempotence
-await game.pentaryn.import();
-const again = await game.pentaryn.import();
-console.assert(again.counts.created === 0 && again.counts.updated === 0, "not idempotent");
-```
+**For an LLM.** Always run `{ dryRun: true }` first and read `created`/`updated`/`skipped`. A thrown
+`PentarynAbort` means nothing was written: fix the cause and re-run. A thrown
+`PentarynAssertionError` means a partial batch: report it, do not retry blindly. Do not call
+`import()` again while one is running (it is not re-entrant yet, `items-journal-4`).
 
-### Return value
+## Data written
 
-```jsonc
-{
-  "ok": true,
-  "path": "worlds/ardenhaven/actors.json",
-  "url": "/worlds/ardenhaven/actors.json",
-  "dryRun": false,
-  "manifest": { "generator": "…", "generatorVersion": "1.0.1", "generatedAt": "…",
-                "sourceRevision": "9a4199f", "skippedRows": 27 },
-  "counts": { "total": 19, "selected": 19, "created": 19, "updated": 0,
-              "skipped": 0, "failed": 0, "assertions": 412 },
-  "created": ["…"], "updated": [], "skipped": [], "failed": [],
-  "deleteJson": { "required": true, "path": "worlds/ardenhaven/actors.json", "url": "…", "note": "…" }
-}
-```
+| What | How |
+|---|---|
+| world Actors | created, or **updated in place** — never deleted and recreated (placed tokens hold the id) |
+| embedded Items | the managed ones (those with `flags.pentaryn.action`) are deleted and recreated; hand-added Items are kept unless `unmanagedItems: "delete"` |
+| `flags.pentaryn.*` | the generator's **contract scope** (slug, contentHash, action, sources … — CONTRACT §9.2), written as ordinary document data. It is not this module's id and is **never migrated**: moving it would change every slug lookup and contentHash (decision D5) |
+| `flags.pentaryn.contentHash` | stamped **last**, after the Items are written and every assertion passed, so an interrupted run is retried |
 
-`deleteJson.required` is `true` only after a non-dry run with **zero failures** — a run that left
-work undone should be re-run against the same file, so it does not ask for the file to be removed.
+Never written on an update: `img`, `prototypeToken.texture`, `system.attributes.hp.value` (GM work,
+and a wounded token must not heal mid-session). Nothing goes to world settings.
 
----
+Each guarantee is an active check: `{cache: "no-cache"}` on the fetch (`express.static` would serve
+the previous build); the three-way version gate (JSON, `module.json` `flags.pentaryn`, live game),
+which lists every mismatch and refuses the whole run; the `@ref` lint over the exact FormulaField
+paths (an unknown `@term` rolls as zero with no signal); the prototype-token strip detector against
+saved source data; the Item count and identity checks (`createEmbeddedDocuments` drops an invalid
+Item without throwing); the activity-id check (contract U7); and the displayed-label readback
+(`labels.toHit`, `labels.save`, `labels.damage.N.formula`, `item.labels.recharge`). An unchanged
+`contentHash` is skipped; the module compares two strings and never recomputes the hash (canonical
+JSON differs between Python and JS).
 
-## What it guarantees, and how
+## Flags other modules read
 
-Every failure mode in this stack is silent, so each guarantee is an active check rather than an
-absence of errors.
+n/a — no other module reads `flags.pentaryn.*`; the generator writes them and the importer reads
+them back.
 
-| Guarantee | Mechanism |
-| --- | --- |
-| Never imports stale JSON | `fetchJsonWithTimeout(path, {cache: "no-cache"})`. `Data/` is served by `express.static`, which sets ETag/Last-Modified; without `no-cache` the browser serves the previous build from memory cache and the import "succeeds" against the wrong file. |
-| Never imports against the wrong system or generation | Three-way version gate (§1.1): the JSON manifest, `module.json`'s `flags.pentaryn`, and the live `game.system` / `game.release`. All mismatches are listed at once, then the **whole run** aborts — never a subset. |
-| No formula rolls as zero | `@ref` lint (§10) over the exact FormulaField path set, on the fetched JSON. dnd5e replaces unknown `@terms` with `1` at validation and `0` at evaluation, so a typo passes validation and rolls as zero with no runtime signal. Whitelist is empty by design. |
-| Placed tokens survive | Actors are **updated**, never deleted and recreated. Only embedded Items are replaced (`deleteEmbeddedDocuments` + `createEmbeddedDocuments`). |
-| GM work survives | `img`, `prototypeToken.texture` and `system.attributes.hp.value` are stripped from every update payload. Hand-added Items (no `flags.pentaryn.action`) are left in place by default. |
-| Silent key-stripping is caught | `assertPrototypeToken` compares every leaf the payload asked for against the saved **source** data. A key Foundry dropped reads back as `undefined`, exactly like the `"vaule"` probe in Gate 0. |
-| A silently dropped Item is caught | `createEmbeddedDocuments` returns only what it actually created — an Item that fails validation is omitted from the array **without throwing**. `replaceItems` asserts `created.length === itemsData.length` and names the missing Item(s). |
-| An unaddressable Item is caught | After the write, every payload Item must be findable by its `flags.pentaryn.action`. No match ⇒ the Item was dropped or the flag was stripped, and the next run would no longer recognise it as managed. This never silently skips: `expected` blocks (§8) are not exhaustive, so a missed Item has no other check standing behind it. |
-| Deterministic activity ids survive | `assertActivityIdsSurvived` checks each supplied 16-char id is present in the saved `ActivityCollection`. This is contract **U7**; if it ever fails, the message says what has to change (§8.2 rule 3 → resolve by name). |
-| Displayed numbers are the baked numbers | Readback assertions compare `activity.labels.toHit`, `labels.save`, `labels.damage.N.formula` and `item.labels.recharge` — what the sheet and chat card show, after every bonus has had its chance to apply. Recomputing `bonus + mod + prof` in the assert would agree with the bug. |
-| One bad actor doesn't kill the run | Per-actor `try/catch`; failures collected into a per-slug report. **Assertion** failures are deliberately excluded — they mean the silent-strip mode is live and nothing in the batch can be trusted, so they abort. |
-| An interrupted run is safe | `flags.pentaryn.contentHash` is stamped **last**, after items are written and every assertion has passed. A run that dies half-way leaves the old hash, so the actor is retried next time instead of being skipped forever. |
+## Events
 
-### Idempotence
+| Hook | Args | When |
+|---|---|---|
+| `pentaryn-importer.ready` | `(api)` | the API is published (kit `publishNamespace`) |
+| `pentaryn.ready` | `("importer", api, { when })` | the same, on the shared hook |
 
-An actor whose stored `flags.pentaryn.contentHash` equals the incoming one is skipped. The module
-**never recomputes** the hash — the generator is the sole producer and the module compares two
-strings (§9.2). Computing it on both sides would need canonical JSON in Python *and* JS, and they
-disagree by default (`json.dumps(1.0)` is `"1.0"`, `JSON.stringify(1.0)` is `"1"`, and
-`prototypeToken.width` is `0.5` for tiny creatures) — which would present as "every actor always
-differs" and silently destroy idempotence.
+Emits nothing of its own. Listens to: `ready` only (pinned in `test/golden/hooks.json`).
 
----
+## Patches and adjustments
 
-## Deviations from `CONTRACT.md`, and things to know
+Patches nothing. One `foundry/adjustments.yml` row: `dnd5e-importer-gate` (the dnd5e minor this
+code and `build_actors.py` target; markers `targetSystemVersion`, `TARGET_SYSTEM_VERSION` in
+`importer-core.mjs`, `documents-adapter.mjs` and `scripts/foundry/build_actors.py`).
 
-**1. `getFlag("pentaryn", …)` would throw — reads go through `getProperty`.**
-§9.2 shows `actor?.getFlag("pentaryn", "contentHash")`. `Document#getFlag` validates the scope
-against `ClientDatabaseBackend#getFlagScopes()`
-(`common/abstract/document.mjs:947` → `client/data/client-backend.mjs:646`), which returns
-`["core", "world", game.system.id, ...activeModuleIds]`. `"pentaryn"` is none of those — this
-module's id is `pentaryn-importer`. All flag **reads** therefore use
-`foundry.utils.getProperty(doc, "flags.pentaryn.…")`.
+## Two sessions / who writes
 
-Flag **writes** are unaffected: `flags` is a `DocumentFlagsField` whose only key constraint is
-`BasePackage.validateId`, i.e. `/^[A-Za-z0-9-_]+$/` (`common/data/fields.mjs:4002`). Flags are
-written as ordinary document data, never via `setFlag`.
+Only the GM tab that calls `import()` writes; nothing runs by itself. A player calling it gets a
+`PentarynAbort`. Two overlapping calls are not refused yet (`items-journal-4`, a declared
+hardening still to come): await one before starting another.
 
-**2. Hand-added Items are kept, not deleted.**
-§4.2 says the embedded Item set is replaced "wholesale". In practice that only ever means the
-*generated* set — a freshly created Actor has no others — so the default deletes only Items
-carrying `flags.pentaryn.action` and warns about anything else it found. Pass
-`unmanagedItems: "delete"` for the literal reading.
+## Extending
 
-**3. `flags.pentaryn` merges rather than replaces on update.**
-`ObjectField._updateDiff` (`common/data/fields.mjs:1937`) does `mergeObject`, not assignment. That
-is what makes the hash-stamped-last design work, but the corollary is that a `flags.pentaryn` key
-dropped by a future contract revision lingers on existing Actors until they are rebuilt.
+1. A contract change goes into `foundry/CONTRACT.md` first, then the generator, then here.
+2. A pure rule (a FormulaField glob, a strip key, a gate rule) → `importer-core.mjs`, with a row in
+   the tables of `test/core.test.mjs` (which also run against the oracle) or `test/version-gate.test.mjs`.
+3. Anything that reads a live Document, toasts or writes → `documents-adapter.mjs`; the run order →
+   `api.mjs` `importActors`.
+4. A new API member → a row in `api-manifest.mjs`, its implementation in `api.mjs`, then
+   `GOLDEN_UPDATE=1 node --test test/api.test.mjs` and review the `describe`/`surface` diff.
 
----
+## Pitfalls
 
-## Errors
+- **`getFlag("pentaryn", …)` throws.** `Document#getFlag` only accepts `core`, `world`, the system
+  id and active module ids; `"pentaryn"` is none of those. Reads go through
+  `foundry.utils.getProperty(doc, "flags.pentaryn.…")`; writes are plain document data, never `setFlag`.
+- **`FLAG_SCOPE` (`"pentaryn"`) is not the module id** (`pentaryn-importer`). `flagScope` in the
+  manifest is the module id; `flags.pentaryn.*` is the generator's contract scope.
+- **`cloneJson` is a JSON round-trip on purpose.** Never "optimise" it to `structuredClone` or
+  `deepClone`: they keep `undefined` and Dates and would change the payloads.
+- **`flags.pentaryn` merges on update** (`ObjectField._updateDiff` → `mergeObject`), which is what
+  makes the hash-stamped-last design work; a key dropped by a later contract lingers until rebuilt.
+- **A stale copy in `Data/modules/` is a real failure mode** (sync copies, never symlinks); the
+  version gate checks `module.json`'s `flags.pentaryn` to catch it, so keep those keys intact.
+- **`Data/` is public over the tunnel.** A staged `actors.json` is world-readable until it is
+  deleted; the module cannot delete it (Foundry has no client file-delete). `make foundry-import`
+  deletes it on every exit; after a hand run, `make foundry-clean`.
+- **`getPath` vs `getProperty`.** The core's `getPath` reads the manifest's plain JSON only; every
+  read of a live Document keeps `foundry.utils.getProperty`.
 
-| Class | Meaning | Scope |
-| --- | --- | --- |
-| `PentarynAbort` | Version gate, `@ref` lint, missing/malformed file, non-GM, missing slug | Whole run; **nothing was written** |
-| `PentarynAssertionError` | A readback mismatch (§8.3) | Whole run; earlier actors in the batch *were* written |
-| anything else | A `ValidationError` or similar from one Actor | That actor only; collected into `result.failed` |
+## Files
 
-Every assertion failure names actor slug, item action, activity id, path, expected and actual, and
-appears both as a permanent toast and as a `console.error`.
+| File | Role |
+|---|---|
+| `pentaryn-importer.mjs` | entry: the `ready` publish (legacy root merge + `publishNamespace`) |
+| `importer-core.mjs` | pure: constants, error classes, lint, payload shaping, `versionProblems`, the design note |
+| `documents-adapter.mjs` | Foundry glue: fetch, gate/lint refusals, readback assertions, writes, summary, the logger |
+| `api-manifest.mjs` | the API rows (pure data) |
+| `api.mjs` | `importActors`, `buildApiFor`, `legacyRoot`, `selftest` |
+| `lib/` | the vendored kit (tier full) — never edited here |
 
----
+## Tests
 
-## Changelog
+From this folder: `node test/run.mjs` (also `make foundry-importer-check`). `core.test` runs every
+table against the verbatim oracle (`test/fixtures/legacy-importer.mjs`) and the core;
+`glue.test` and `write.test` load the entry under the kit's Foundry stub and pin toasts, console
+lines, results and Document writes; `hooks`, `api`, `i18n`, `version-gate` and `sites` cover the
+rest. One golden at a time: `GOLDEN_UPDATE=1 node --test test/<file>.test.mjs`, then read the diff.
 
-- **1.1.0** (2026-10-10) — retarget to dnd5e 6.0: `module.json` `targetSystemVersion` `"6.0"`,
-  dnd5e compatibility minimum 6.0.0 / verified 6.0.6. No code change; generator 1.0.1 emits
-  byte-identical actors (same `contentHash`), so a re-import after the upgrade changes nothing.
-- **1.0.0** (2026-08-10) — first release, dnd5e 5.3.
+## Sync
 
-## Verification status
-
-This module was written against the **installed** artefacts — Foundry v14.365 under
-`/Applications/Foundry Virtual Tabletop.app/`, and dnd5e 5.3.3 recovered from
-`dnd5e-compiled.mjs.map`'s `sourcesContent`. Every API it depends on is cited with a file and line
-number in the header comment of `pentaryn-importer.mjs`.
-
-It has **not** been run against a live Foundry. It was exercised against an offline simulation of
-the document API, which confirmed: dry run, create, idempotent skip, forced update, version-gate
-refusal, `@ref` lint refusal, abort-on-first-assertion-mismatch, prototype-token strip detection,
-one `ValidationError` failing a single actor without aborting the run, and — with the actor's
-`expected` block set to `null`, so nothing else could catch it — both silent-Item failures:
-`createEmbeddedDocuments` returning fewer documents than it was given, and an Item whose
-`flags.pentaryn.action` came back stripped. That simulation is not a
-substitute for Gate 2 — it cannot reproduce Foundry's actual cleaning, dnd5e's actual label
-derivation, or the `attack.flat` behaviour that is the whole point of the exercise.
-
-Unverified until Gate 2, in rough order of consequence:
-
-1. **U7** — that Foundry honours supplied activity `_id`s. The reading is strong (`readonly` makes
-   the *initialised* property non-writable, `common/abstract/data.mjs:491`; it does not strip
-   source data; and dnd5e skips auto-creating activities when the source already has some,
-   `module/data/item/templates/activities.mjs:256`) — but Gate 0's write probe is what settles it,
-   and `assertActivityIdsSurvived` catches it if the reading is wrong.
-2. That `actor.reset()` is sufficient to repopulate every `.labels` before the assertions read
-   them. Traced: `reset()` → `_initialize()` → `_safePrepareData()` → `prepareData()` →
-   `prepareDerivedData()` → `this.items.forEach(i => i.prepareFinalAttributes())`
-   (dnd5e `module/documents/actor/actor.mjs:308`) → `system.prepareFinalData()` →
-   `prepareFinalActivityData` → `activity.prepareFinalData()`.
-3. Whether `{render: false}` on the embedded-document operations interacts badly with an open NPC
-   sheet. It should only suppress a re-render; close the sheets during a big import anyway.
+The importer is **not** deployed by `module-sync`; it ships with the actor pipeline:
+`make foundry-sync WORLD=<world>` (ops `stage`) rebuilds `actors.json`, copies this folder into
+`Data/modules/` and **stages `actors.json` into the world**, so always follow it with
+`make foundry-clean WORLD=<world>`, or use `make foundry-import WORLD=<world>`, which deletes and
+verifies for you. The pipeline's default world is not necessarily yours: pass `WORLD`. Then reload
+Foundry (a `module.json` change needs a restart). Smoke: `game.pentaryn.importer.selftest().ok`.
+Deploy and rollback steps for a migration:
+[`context/plans/addon-blueprint-2026-10/migrate-pentaryn-importer.md`](../../../context/plans/addon-blueprint-2026-10/migrate-pentaryn-importer.md) §9.
