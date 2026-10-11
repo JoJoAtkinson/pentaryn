@@ -610,3 +610,38 @@ compares the Python and JS status tables).
   <https://foundryvtt.com/packages/asc-session-title-suggestions> ·
   <https://foundryvtt.com/packages/simple-requests> · <https://foundryvtt.com/packages/player-approval> ·
   <https://foundryvtt.com/packages/sch-customize> · <https://foundryvtt.com/packages/mrkb-chat-enhancements>
+
+## Live test checklist (run after play testing)
+
+Nothing in this module has run in Foundry yet. Do these in order, on a world you can afford to
+poke at. Branch `feature/pentaryn-feedback` must be merged (or checked out) in the main checkout
+first.
+
+1. **Sync.** `make foundry-feedback-sync` (runs the static gates, then installs the module into
+   Foundry's `Data/modules`). Never run it mid-session.
+2. **Restart Foundry** (module.json is read at startup, and this is a first install), enable
+   "Pentaryn Feedback" in the world's module list, reload every client.
+3. **Self-test as the GM**, with a scene open: `game.pentaryn.feedback.selftest()` returns every
+   check ok.
+4. **GM files one of each category.** Click the bug icon in the token tools (or type `/bug`).
+   Hover Feature, Bug and Defect and read the tooltips; confirm Bug is preselected. File one
+   Bug, one Defect, one Feature, each with a short text.
+5. **Check the files landed:**
+   `ls ~/Library/Application\ Support/FoundryVTT/Data/pentaryn-feedback/<world>/` shows three
+   `<id>.json` files.
+6. **Player path (second browser, logged in as a player).** Do a few things first (open a sheet,
+   roll, move a token), then file one of each category. Confirm each shows a "filed" toast and
+   a new file appears.
+7. **Offline path.** Log the GM out, have a player file one (toast says queued), log the GM back
+   in: the file appears and the player's flag queue is emptied.
+8. **Process them with the MCP tools** from Claude Code, one at a time:
+   - `feedback_list` shows the six-plus reports, oldest first.
+   - `feedback_next` renders the oldest open one: who, scene, text, context, timeline of the
+     player's recent actions. Check the timeline matches what the player did in step 6.
+   - Fix or decide, then `feedback_resolve` (status `triaged`, `resolved` or `wontfix`, with a
+     note); repeat `feedback_next` until it reports none open.
+9. **Rate limit and size cap** (optional): file several reports quickly and confirm the
+   rate-limit notice appears rather than a flood of files.
+
+If something fails, `game.pentaryn.feedback.selftest()` output plus the browser console is the
+first thing to look at; the per-module `afterSync` lines in `module.json` are the same steps.
