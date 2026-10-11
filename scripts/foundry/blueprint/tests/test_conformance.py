@@ -402,3 +402,14 @@ def test_r1_c32_patch_rows_take_the_module_prefix_non_patch_rows_the_package_pre
     r = c32()
     assert r["status"] == "fail"
     assert any("wrapMethod names row 'core-wrap'" in x and "rone-" in x for x in r["detail"])
+
+
+def test_r7_d4_c03_counts_dnd5e_ignore_tokens(tmp_path):
+    """D4: movement keeps its dnd5e relationship; `ignoreTokens` is dnd5e's Token5e movement option."""
+    d = tmp_path / "pentaryn-moves"
+    write(d, {"module.json": json.dumps({"id": "pentaryn-moves", "esmodules": ["m.mjs"],
+                                         "relationships": {"systems": [{"id": "dnd5e", "type": "system"}]}}),
+              "m.mjs": "export const ghost = o => Object.assign(o, { ignoreWalls: true, ignoreTokens: true });\n"})
+    assert status(conformance.score_dir(d), "C03") == "pass"
+    (d / "m.mjs").write_text("export const ghost = o => Object.assign(o, { ignoreWalls: true });\n")
+    assert status(conformance.score_dir(d), "C03") == "fail"
