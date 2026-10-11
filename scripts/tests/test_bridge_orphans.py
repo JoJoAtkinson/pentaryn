@@ -203,16 +203,12 @@ def test_scan_classifies_canned_ps_output(canned):
     assert _summary(bridge_mod.scan()) == SCAN_PIN
 
 
-@pytest.mark.xfail(strict=True, raises=ValueError,
-                   reason="python-tooling-37 pin: today the unguarded int(ppid) raises")
 def test_scan_skips_a_malformed_ppid_row(canned):
     """python-tooling-37 [declared]: a row whose ppid is not an int is skipped, not fatal."""
     canned(PS_ROWS[:2] + [MALFORMED_ROW] + PS_ROWS[2:])
     assert _summary(bridge_mod.scan()) == SCAN_PIN
 
 
-@pytest.mark.xfail(strict=True,
-                   reason="python-tooling-37 pin: today one `ps -p` per live parent")
 def test_scan_asks_ps_for_parent_names_once(canned):
     """python-tooling-37: one `ps` for the table, one for every name, three `lsof` — the
     count no longer grows with the number of bridge processes."""
