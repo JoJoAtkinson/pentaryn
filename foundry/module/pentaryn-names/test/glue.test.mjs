@@ -13,7 +13,7 @@
 //   golden/root.json           — game.pentaryn under four load orders (subprocesses). No step may change it.
 //   "module.api"               — flipped at step 5 ([declared] N-D2, SF2): canonical now.
 //   transform-creatures-33 (unhandled rejection) — flipped at step 4 ([declared] N-D1): logged now.
-//   KNOWN transform-creatures-38 (sync needs a document) — flips at step 6 ([declared] N-D3).
+//   transform-creatures-38 (sync needs a document) — flipped at step 6 ([declared] N-D3): refs resolve.
 import { mock, test } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
@@ -296,14 +296,27 @@ test("api.sync(actor, old, new) returns the count and writes as the hook path do
   assert.deepEqual(F.calls.filter(c => c.op === "notify"), [], "no toast when nothing changed");
 });
 
-// KNOWN: transform-creatures-38 — sync dereferences actor.prototypeToken, so an id, uuid or name
-// rejects with a TypeError and writes nothing. Flipped by guide step 6 ([declared] N-D3).
-test("KNOWN transform-creatures-38: api.sync with an id, uuid or name rejects TypeError", async () => {
-  reset(F);
-  for (const ref of [IDS.bob, `Actor.${IDS.bob}`, "Bob"]) {
-    await assert.rejects(api.sync(ref, "Bob", "Rob"), TypeError, ref);
+// [declared] guide step 6 (N-D3, transform-creatures-38): sync's first argument is resolved at the
+// API boundary (kit resolveRef, exact match only). Before, an id, uuid or name rejected with a
+// TypeError because sync dereferenced actor.prototypeToken. A miss still reaches sync as null and
+// rejects with that TypeError (legacy row); an ambiguous name returns fail("AMBIGUOUS"), writing nothing.
+test("transform-creatures-38: api.sync resolves an id, uuid or exact name; a miss still rejects TypeError", async () => {
+  for (const ref of [IDS.bob, `Actor.${IDS.bob}`]) {
+    reset(F);
+    assert.equal(await api.sync(ref, "Bob", "Rob"), 3, ref);
+    assert.deepEqual(effects(F.calls).map(c => c.op), ["update", "updateEmbeddedDocuments", "updateEmbeddedDocuments", "notify"], ref);
+    assert.equal(effects(F.calls)[0].uuid, `Actor.${IDS.bob}`, ref);
   }
-  await assert.rejects(api.sync(null, "Bob", "Rob"), TypeError);
+  reset(F);
+  assert.equal(await api.sync(OLD, OLD, NEW), 3, "an exact, unique name resolves");
+  assert.equal(effects(F.calls)[0].uuid, `Actor.${IDS.glubbek}`);
+  reset(F);
+  const ambiguous = await api.sync("Bob", "Bob", "Rob");
+  assert.equal(ambiguous.ok, false);
+  assert.equal(ambiguous.code, "AMBIGUOUS", "two actors are named Bob");
+  for (const ref of ["Bo", "ZZ Glubbek", null]) {
+    await assert.rejects(async () => api.sync(ref, "Bob", "Rob"), TypeError, `no substring match: ${ref}`);
+  }
   assert.deepEqual(effects(F.calls), []);
 });
 
