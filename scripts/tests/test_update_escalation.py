@@ -1339,3 +1339,27 @@ def test_a_malformed_policy_never_crashes_the_run(block, on):
     assert adjudicate.spec(policy).model == adjudicate.MODEL
     assert report.spec(policy).model == report.MODEL
     esc.wrapper_timeout(policy)
+
+
+# ── make_checks: pinned before python-tooling-2 step (a) moves it off the Makefile ──
+
+# The literal make_checks() returned on 2026-10-11 by scraping the Makefile. Step (a)
+# derives the same set from ops config.MODULES; walls (target foundry-walls-test) is still
+# absent and admin-check still present until step (b), which changes this pin on purpose.
+MAKE_CHECKS_PIN = [
+    "make foundry-adjustments-check", "make foundry-admin-check", "make foundry-aoe-check",
+    "make foundry-attunement-check", "make foundry-combat-check",
+    "make foundry-creatures-check", "make foundry-cursors-check",
+    "make foundry-dropbin-check", "make foundry-journal-check", "make foundry-lookup-check",
+    "make foundry-movement-check", "make foundry-names-check", "make foundry-portals-check",
+    "make foundry-prompts-check", "make foundry-riders-check", "make foundry-senses-check",
+    "make foundry-ties-check", "make foundry-transform-check",
+]
+
+
+def test_make_checks_pinned(monkeypatch):
+    monkeypatch.setattr(esc, "_MAKE_TARGETS", None)
+    assert esc.make_checks() == MAKE_CHECKS_PIN
+    assert esc.checks_for(["foundry/module/pentaryn-walls/wall-engine.mjs",
+                           "foundry/module/pentaryn-ties/look.mjs"]) == [
+        "make foundry-adjustments-check", "make foundry-ties-check"]
