@@ -67,3 +67,58 @@ def test_every_real_row_validates_and_builds():
         spec = {k: v for k, v in row.items() if k not in ("npc", "action", "updated_at")}
         assert cdb.validate_spec(spec) == [], where
         ba.ItemBuilder(row, {}).build()            # raises BuildError on a grammar gap
+
+
+def test_validator_types_equal_build_row_types():
+    assert set(cdb.ACTION_TYPES) == set(ba.ROW_TYPES)
+
+
+def test_public_vocabulary_mirrors_the_private_sets():
+    assert cdb.ACTION_TYPES == cdb._VALID_TYPES
+    assert cdb.SLOT_REFRESH == cdb._VALID_SLOT_REFRESH
+    assert cdb.DICE_RE is cdb._DICE_SPEC_RE
+
+
+GOOD = {
+    "multiattack": {"type": "multiattack", "narration": "two swings", "attacks": [
+        {"name": "Claw", "to_hit_bonus": 5, "damage": "2d6", "damage_type": "slashing"}]},
+    "single_attack": {"type": "single_attack", "narration": "one swing", "attacks": [
+        {"name": "Sword", "to_hit_bonus": 6, "damage": "1d10", "damage_type": "slashing"}]},
+    "area": {**_area("8d6"), "area": "20-ft cone",
+             "save": {"dc": 15, "ability": "dex", "on_save": "half"}},
+    "utility": {"type": "utility", "narration": "sneaks off",
+                "roll": {"dice": "1d20", "modifier": 8, "label": "Stealth"}},
+    "reaction": {"type": "reaction", "narration": "counterstrike",
+                 "damage": {"dice": "2d8", "type": "force"},
+                 "attacker_save": {"dc": 14, "ability": "dex", "on_save": "half"}},
+}
+
+# KNOWN (python-tooling-45, same finding, found while pinning it on 2026-10-11): two more
+# shapes validate_spec accepts and the build refuses — an area string without the
+# hyphen ("20ft cone": `unparseable area`) and a save with no `on_save` (KeyError).
+KNOWN_UNBUILDABLE_SPECS = {
+    "area '20ft cone'": _area("8d6"),
+    "attacker_save without on_save": {"type": "reaction", "narration": "counterstrike",
+                                      "damage": {"dice": "2d8", "type": "force"},
+                                      "attacker_save": {"dc": 14, "ability": "dex"}},
+}
+
+
+@pytest.mark.parametrize("label", sorted(KNOWN_UNBUILDABLE_SPECS))
+def test_known_specs_validate_but_do_not_build(label):
+    spec = KNOWN_UNBUILDABLE_SPECS[label]
+    assert cdb.validate_spec(spec) == []
+    with pytest.raises((ba.BuildError, KeyError)):
+        ba.ItemBuilder({"npc": "zz-test", "action": "act", **spec}, {}).build()
+
+
+@pytest.mark.parametrize("rtype", ba.ROW_TYPES)
+def test_every_row_type_validates_and_builds(rtype):
+    spec = GOOD[rtype]
+    assert cdb.validate_spec(spec) == []
+    ba.ItemBuilder({"npc": "zz-test", "action": "act", **spec}, {}).build()
+
+
+def test_unknown_row_type_is_refused_by_the_build():
+    with pytest.raises(ba.BuildError, match="unknown row type"):
+        ba.ItemBuilder({"npc": "zz", "action": "a", "type": "nope", "narration": "n"}, {}).build()

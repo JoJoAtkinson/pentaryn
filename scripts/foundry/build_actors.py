@@ -103,6 +103,11 @@ REFRESH_TO_PERIOD = {
 
 ON_SAVE = {"half": "half", "no damage": "none", "none": "none", "full": "full"}
 
+# Every actions.jsonl `type` this stage builds (ItemBuilder.build dispatches on it).
+# The validator's own list is combat_actions_db.ACTION_TYPES; a test holds them equal
+# (python-tooling-45).
+ROW_TYPES = ("single_attack", "multiattack", "area", "utility", "reaction")
+
 ABILITY_LABELS = {
     "str": "Strength", "dex": "Dexterity", "con": "Constitution",
     "int": "Intelligence", "wis": "Wisdom", "cha": "Charisma",
@@ -739,7 +744,7 @@ class ItemBuilder:
             "utility": self._build_utility,
             "reaction": self._build_reaction,
         }
-        if self.rtype not in builders:
+        if self.rtype not in ROW_TYPES:
             raise BuildError(f"{self.where}: unknown row type {self.rtype!r}")
         builders[self.rtype]()
         self._credit_activation_condition()
