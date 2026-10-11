@@ -15,7 +15,7 @@
  * which is why the client records it.
  */
 
-import { DIALOG_ID, LIMITS, MODULE, changedKeys, chatEntry, clip, errorEntry, historyMax, isDupError, messageOf, redact, ringPush } from "./feedback-core.mjs";
+import { DIALOG_ID, LIMITS, MODULE, QUIET_APPS, QUIET_APP_PATTERN, changedKeys, chatEntry, clip, errorEntry, historyMax, isDupError, messageOf, redact, ringPush } from "./feedback-core.mjs";
 import { wrapMethod } from "./lib/patch.mjs";
 
 /** Document types whose own-user create/update/delete are recorded. */
@@ -27,11 +27,6 @@ const CONSOLE_PATCHES = Object.freeze([
   { name: "warn", marker: "__pentarynFeedback_warn", adjustments: "feedback-console-warn" },
 ]);
 
-/** Application classes whose render/close is noise (or is this module's own dialog). */
-const SKIP_APPS = new Set(["ChatLog", "SceneControls", "Hotbar", "Players", "Notifications", "ReportDialog", "SceneNavigation",
-  "MainMenu", "Pause", "Sidebar", "CombatTracker"]);
-/** Sidebar directories re-render on every document change; opening one is the `tab` entry. */
-const SKIP_APP_PATTERN = /Directory$/;
 /** Generic base classes AppV2 also fires render hooks for: listen once, on the base, and skip these names. */
 const BASE_APPS = new Set(["ApplicationV2", "Application", "HandlebarsApplication", "DocumentSheetV2", "ActorSheetV2", "ItemSheetV2"]);
 
@@ -102,7 +97,7 @@ export function install(reg, ctx) {
   /* ── windows ───────────────────────────────────────────────────────── */
   const appRow = (op, app) => {
     const cls = app?.constructor?.name ?? "";
-    if (!cls || SKIP_APPS.has(cls) || BASE_APPS.has(cls) || SKIP_APP_PATTERN.test(cls)) return null;
+    if (!cls || QUIET_APPS.has(cls) || BASE_APPS.has(cls) || QUIET_APP_PATTERN.test(cls)) return null;
     const id = app?.id ?? app?.appId ?? null;
     if (id === DIALOG_ID) return null;
     return { kind: "app", op, cls: clip(cls, 60), id: clip(id), title: redact(app?.title ?? "", LIMITS.title) };

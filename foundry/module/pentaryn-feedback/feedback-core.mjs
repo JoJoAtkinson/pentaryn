@@ -28,6 +28,15 @@ export const QUEUE_KEY = "queue";
 /** The dialog's application id (the click recorder skips its own window). */
 export const DIALOG_ID = "pentaryn-feedback-report";
 
+/**
+ * Application classes that are Foundry's own UI (or this module's dialog), not a window the player
+ * opened: the recorder skips their render/close and the snapshot leaves them off the window list.
+ */
+export const QUIET_APPS = Object.freeze(new Set(["ChatLog", "SceneControls", "Hotbar", "Players", "Notifications",
+  "ReportDialog", "SceneNavigation", "MainMenu", "Pause", "Sidebar", "CombatTracker"]));
+/** Sidebar directories re-render on every document change; opening one is the recorder's `tab` entry. */
+export const QUIET_APP_PATTERN = /Directory$/;
+
 /** Events this module emits. New names are `pentaryn-<short>.<camelEvent>`; pre-hooks are vetoable. */
 export const HOOKS = Object.freeze({
   filed: Object.freeze({ name: "pentaryn-feedback.filed", pre: false, args: "(report)" }),

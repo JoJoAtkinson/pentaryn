@@ -7,7 +7,7 @@ import { installClient } from "./fixtures/world.mjs";
 
 await installClient();
 const { dirChain, fileStore, splitPath } = await import("../files-adapter.mjs");
-const { attachSummary, snapshot, windowRow } = await import("../snapshot-adapter.mjs");
+const { attachSummary, openWindows, snapshot, windowRow } = await import("../snapshot-adapter.mjs");
 
 function fakeServer() {
   const disk = new Map();
@@ -134,4 +134,25 @@ test("buildReport: a failed list section ({ error }) becomes [] with sectionErro
   assert.deepEqual(validateReport(report), { ok: true });
   const filed = normaliseReport(report, { user: { id: "u1", name: "P" } });
   assert.deepEqual(filed.sectionErrors, { windows: "instances broke", modules: "modules broke" });
+});
+
+test("openWindows: the player's framed windows, newest 20 — never core's UI panels, directories, frameless apps or our dialog", () => {
+  const make = (cls, props = {}) => Object.assign(new ({ [cls]: class {} })[cls](), props);
+  const chat = make("ChatLog", { id: "chat" });
+  const players = make("Players", { id: "players" });
+  const hud = make("TokenHUD", { id: "hud", hasFrame: false });
+  const actors = make("ActorDirectory", { id: "actors" });
+  const mine = make("ReportDialog", { id: "pentaryn-feedback-report" });
+  const sidebarSingleton = make("SomeUiPanel", { id: "panel" });
+  const sheets = Array.from({ length: 25 }, (_, i) => make("ActorSheet5eCharacter", { id: `sheet-${i}`, title: `Sheet ${i}`, hasFrame: true }));
+  const legacy = make("LegacyApp", { appId: 7, title: "Old window" });
+  const apps = new Map([chat, players, hud, actors, mine, sidebarSingleton, ...sheets].map(a => [a.id, a]));
+  const g = { ...globalThis, foundry: { ...foundry, applications: { ...foundry.applications, instances: apps } },
+    ui: { ...ui, chat, players, panel: sidebarSingleton, windows: { 7: legacy } } };
+  const ids = openWindows(g).map(a => a.id ?? a.appId);
+  assert.deepEqual(ids, [...sheets.map(s => s.id), 7]);
+  const snap = snapshot({ g });
+  assert.equal(snap.windows.length, 20);
+  assert.equal(snap.windows[0].id, "sheet-6", "the newest 20 are kept, not the first");
+  assert.deepEqual(snap.windows.at(-1), { id: "7", cls: "LegacyApp", title: "Old window" });
 });

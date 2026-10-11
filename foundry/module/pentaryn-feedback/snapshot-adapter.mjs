@@ -12,7 +12,9 @@
  * journal text.
  */
 
-import { LIMITS, chatEntry, clip, messageOf, redact, userFields } from "./feedback-core.mjs";
+import {
+  DIALOG_ID, LIMITS, QUIET_APPS, QUIET_APP_PATTERN, chatEntry, clip, messageOf, redact, userFields,
+} from "./feedback-core.mjs";
 
 const section = fn => {
   try {
@@ -58,6 +60,30 @@ export function windowRow(app) {
 }
 
 /**
+ * The windows the player opened, oldest first: every rendered ApplicationV2 (core's instances map,
+ * which also holds core's UI panels, inserted first) and every V1 window, minus frameless
+ * apps, the `ui.*` singletons (sidebar, chat, combat tracker, players, hotbar, controls, navigation,
+ * notifications, pause), QUIET_APPS, sidebar directories and this module's own dialog. An app whose
+ * check throws is kept, so windowRow's per-row guard records the error.
+ */
+export function openWindows(g = globalThis) {
+  const singletons = new Set(Object.values(g.ui ?? {}).filter(v => v && typeof v === "object"));
+  const v2 = [...(g.foundry?.applications?.instances?.values?.() ?? [])];
+  const v1 = Object.values(g.ui?.windows ?? {});
+  return [...new Set([...v2, ...v1])].filter(app => {
+    try {
+      if (!app || singletons.has(app)) return false;
+      if (app.hasFrame === false || app.options?.window?.frame === false) return false;
+      const cls = app.constructor?.name ?? "";
+      if (QUIET_APPS.has(cls) || QUIET_APP_PATTERN.test(cls)) return false;
+      return (app.id ?? null) !== DIALOG_ID;
+    } catch (err) {
+      return true;
+    }
+  });
+}
+
+/**
  * The live context. `g` is injectable for tests.
  * @returns {{ world, user, scene, tokens, combat, windows, modules, client, chat }}
  */
@@ -85,11 +111,7 @@ export function snapshot({ g = globalThis } = {}) {
         started: !!c.started, sceneId: c.scene?.id ?? c.scene ?? null,
       };
     }),
-    windows: section(() => {
-      const v2 = [...(g.foundry?.applications?.instances?.values?.() ?? [])];
-      const v1 = Object.values(g.ui?.windows ?? {});
-      return [...v2, ...v1].slice(0, LIMITS.windowsMax).map(row(windowRow, { id: "", cls: "?", title: "" }));
-    }),
+    windows: section(() => openWindows(g).slice(-LIMITS.windowsMax).map(row(windowRow, { id: "", cls: "?", title: "" }))),
     modules: section(() => {
       const out = [];
       for (const m of game.modules?.values?.() ?? []) {
