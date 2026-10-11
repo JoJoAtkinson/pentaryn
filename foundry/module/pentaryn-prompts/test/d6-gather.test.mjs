@@ -1,6 +1,6 @@
 /**
  * D6 [declared]: one gather description length (GATHER_CHARS = 400) and a cut mark that says where
- * the full text is: `… (cut, full text: get-character-entity <id>)`, the actor's id when the built
+ * the full text is: `… (cut, full text: get-character <id>)`, the actor's id when the built
  * thing has one, else its document's id.
  */
 import { test } from "node:test";
@@ -16,9 +16,9 @@ test("builtDescription: uncut text is unchanged; a sentence cut and a word cut b
   assert.equal(builtDescription("Short. Whole.", 400, "a1"), "Short. Whole.");
   assert.equal(builtDescription("<a>\nb", 100, "a1"), "<a> / b");
   assert.equal(builtDescription("One two. Three four five six. Seven eight nine ten eleven.", 40, "a1"),
-    "One two. Three four five six. … (cut, full text: get-character-entity a1)");
+    "One two. Three four five six. … (cut, full text: get-character a1)");
   assert.equal(builtDescription("alpha beta gamma delta epsilon zeta eta theta", 20, "a1"),
-    "alpha beta gamma … (cut, full text: get-character-entity a1)");
+    "alpha beta gamma … (cut, full text: get-character a1)");
 });
 
 test("renderGather names the actor id when the built token has one, else the document id", () => {
@@ -30,7 +30,7 @@ test("renderGather names the actor id when the built token has one, else the doc
   const text = renderGather(buildView([F.sceneOf("c", "Cave", items, [])]).view);
   const lines = text.split("\n").filter(l => l.startsWith("Description: "));
   assert.equal(lines.length, 2);
-  assert.ok(lines.some(l => l.endsWith("… (cut, full text: get-character-entity zzActorOgre00001)")), lines.join("\n"));
-  assert.ok(lines.some(l => l.endsWith("… (cut, full text: get-character-entity docnote)")), lines.join("\n"));
+  assert.ok(lines.some(l => l.endsWith("… (cut, full text: get-character zzActorOgre00001)")), lines.join("\n"));
+  assert.ok(lines.some(l => l.endsWith("… (cut, full text: get-character docnote)")), lines.join("\n"));
   assert.ok(lines.every(l => l.length <= "Description: ".length + GATHER_CHARS + 60));
 });

@@ -611,14 +611,14 @@ export function previewSentences(text, n) {
 /**
  * A built thing's description for the gather: `previewSentences`, and when that shortened it, the
  * cut mark is replaced by where the full text is (D6):
- * `… (cut, full text: get-character-entity <id>)`. `id` is the actor's id (the document's for a note).
+ * `… (cut, full text: get-character <id>)`. `id` is the actor's id (the document's for a note).
  */
 export function builtDescription(text, n, id) {
   const full = previewSentences(text, 0);
   const shown = previewSentences(text, n);
   if (shown === full) return shown;
   const body = shown.replace(/\s*(\[\.\.\.\]|\.\.\.)$/, "");
-  return `${body} … (cut, full text: get-character-entity ${id})`;
+  return `${body} … (cut, full text: get-character ${id})`;
 }
 
 /**
