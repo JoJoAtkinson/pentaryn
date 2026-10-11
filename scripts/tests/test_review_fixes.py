@@ -412,3 +412,37 @@ def test_upload_missing_rebuilds_a_gone_staged_tar_and_replaces_its_entry(two_ho
     assert up == [loc.name] and staged[loc.name] == rebuilt[0] != tar
     assert loc.name in _bundle_names(two_hosts.cloud)
 
+
+def test_a_staged_tar_built_days_ago_lands_with_a_fresh_cloud_mtime(two_hosts, tmp_path):
+    from scripts.foundry import bundles
+    loc, tar = _staged(two_hosts, tmp_path)
+    t = time.time() - 9 * DAY
+    os.utime(tar, (t, t))                       # a queued job that waited nine days
+    with two_hosts.use("mac"):
+        bundles.upload_missing(cloud.store(), {loc.name: tar}, {})
+    landed = two_hosts.cloud / "bundles" / loc.name
+    assert time.time() - landed.stat().st_mtime < 3600
+
+
+def test_a_bundle_that_vanishes_before_the_sidecar_is_back_before_the_sidecar(two_hosts,
+                                                                              monkeypatch):
+    c = two_hosts.cloud
+    mac = _install(two_hosts.data["mac"])
+    with two_hosts.use("mac"):
+        cloud.backup("shutdown")
+    [maps] = [n for n in _bundle_names(c) if n.startswith("module@maps@")]
+    _edit(mac, "a session")
+    order: list[str] = []
+    real_up, real_write = storage.FolderStorage.upload, storage.FolderStorage.write_text
+    monkeypatch.setattr(storage.FolderStorage, "upload",
+                        lambda self, src, rel: (order.append(rel), real_up(self, src, rel))[1])
+    monkeypatch.setattr(storage.FolderStorage, "write_text",
+                        lambda self, rel, text: (order.append(rel),
+                                                 real_write(self, rel, text))[1])
+    monkeypatch.setattr(cloud, "_refresh_reused",
+                        lambda *a, **k: (c / "bundles" / maps).unlink())   # GC, right then
+    with two_hosts.use("mac"):
+        assert cloud.backup("shutdown") == 0
+    side = next(i for i, r in enumerate(order) if r.endswith(cloud.PARENT_SUFFIX))
+    assert order.index(f"bundles/{maps}") < side
+    assert maps in _bundle_names(c)

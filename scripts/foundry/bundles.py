@@ -496,7 +496,8 @@ def upload_missing(st: Storage, staged: dict[str, Path], have: dict[str, Entry],
     rebuilt by ``rebuild(name)`` — from the live folder, when its fingerprint still
     matches — and the new path replaces its entry in ``staged`` (so the caller's cleanup
     covers it); without one, or when it returns None, that is a :class:`StorageError`,
-    never a bare ``FileNotFoundError`` that would escape every caller's handler."""
+    never a bare ``FileNotFoundError`` that would escape every caller's handler. Each tar's
+    mtime is set to now just before its upload (:func:`fresh_mtime`)."""
     up = []
     for name in sorted(staged):
         if name in have:
@@ -509,10 +510,22 @@ def upload_missing(st: Storage, staged: dict[str, Path], have: dict[str, Entry],
                                    "local folder no longer matches it — rerun the backup",
                                    verb="copyto")
             src = staged[name] = Path(new)
+        fresh_mtime(src)
         log(f"uploading bundle {name} ({_gb(src.stat().st_size)})")
         st.upload(src, f"{BUNDLES}/{name}")
         up.append(name)
     return up
+
+
+def fresh_mtime(tar: Path) -> None:
+    """Set a staged tar's mtime to now before it is uploaded. rclone (and copy2) carry the
+    local mtime into the cloud listing, which is the clock the GC grace reads: a tar built
+    days ago (a queued job that waited) would land already past the grace, sweepable by
+    the other host before its snapshot's sidecar names it (review M2)."""
+    try:
+        os.utime(tar, None)
+    except OSError as exc:
+        raise StorageError(f"cannot touch the staged tar {tar}: {exc}", verb="copyto") from exc
 
 
 def fetch(st: Storage, names: Iterable[str], dest_dir: Path,

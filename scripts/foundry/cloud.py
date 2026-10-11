@@ -930,6 +930,9 @@ def _backup(st: Storage, reason: str, *, safety: bool = False,
         # appears, its lineage and every bundle its manifest names exist.
         bundles.upload_missing(st, staged, have, rebuild=_rebuilder(rebuilt))
         _refresh_reused(st, manifest, have, staged, state, existing)
+        # A first look before the sidecar names them (fresh listing): what vanished since
+        # `have` goes up again now; the look after the world tar closes the rest.
+        _verify_bundles(st, name, manifest, staged, rebuilt)
         st.write_text(parent_rel(WORLD_BACKUPS, name), json.dumps(
             {"parent": state.based_on, "ancestors": ancestors,
              "ancestor_mtimes": ancestor_mtimes, "origin_before": _finite(origin),
@@ -1088,6 +1091,7 @@ def _verify_bundles(st: Storage, name: str, manifest: dict, staged: dict[str, Pa
                     f"{ref.kind} {ref.id}: its bundle {n} vanished from the cloud and the "
                     f"local folder changed since — snapshot {name} is incomplete")
         log(f"bundle {n} vanished from the cloud during this backup — uploading it again")
+        bundles.fresh_mtime(src)
         st.upload(src, f"{bundles.BUNDLES}/{n}")
 
 
