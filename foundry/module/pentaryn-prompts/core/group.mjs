@@ -7,6 +7,11 @@ import { isSeen } from "./sight.mjs";
 
 /* ── Grouping ────────────────────────────────────────────────────────────── */
 
+/** Two things link into one encounter at this distance (ft) with sight; the LEGEND says so. */
+export const LINK_FT = 30;
+/** Linked this close (ft) with sight, inside an encounter: a formation. */
+export const FORMATION_FT = 15;
+
 
 /**
  * Single-linkage grouping (plan §4.4, §13).
@@ -33,7 +38,7 @@ import { isSeen } from "./sight.mjs";
  * unordered; `creatures` are the group's built creatures, `foes` its hostile ones (a single prompt
  * with a foe is an encounter; one beside a neutral villager or a chest is not).
  */
-export function groupScene(prompts, built, rel, { linkFt = 30, formationFt = 15, creature = null, disposition = null } = {}) {
+export function groupScene(prompts, built, rel, { linkFt = LINK_FT, formationFt = FORMATION_FT, creature = null, disposition = null } = {}) {
   // Distance first: a relation's sight is lazy (see makeRel), so a pair beyond `max` never pays for
   // a sight test, and the reverse direction is only tested when the forward one is blocked.
   const linked = (a, b, max) => {

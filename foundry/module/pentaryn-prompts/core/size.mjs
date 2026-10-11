@@ -39,3 +39,18 @@ export function footprintSquares(w, h = w) {
 export function fmtNum(n) {
   return Number.isInteger(n) ? String(n) : String(Math.round(n * 100) / 100);
 }
+
+/** Size words a spec may use → the dnd5e size key (replace's npc size, patch.size). */
+export const SIZE_WORDS = Object.freeze({ tiny: "tiny", small: "sm", sm: "sm", medium: "med", med: "med", large: "lg", lg: "lg",
+  huge: "huge", gargantuan: "grg", grg: "grg" });
+
+/** The player-character subset (2024 species are tiny to large): no huge, no gargantuan. */
+export const PC_SIZE_WORDS = Object.freeze({ tiny: "tiny", small: "sm", sm: "sm", medium: "med", med: "med", large: "lg", lg: "lg" });
+
+/** "1/4" | 0.25 | "3" → a number, or null. */
+export function parseCr(cr) {
+  if (cr === null || cr === undefined || cr === "") return null;
+  const m = /^\s*(\d+)\s*\/\s*(\d+)\s*$/.exec(String(cr));
+  const n = m ? Number(m[1]) / Number(m[2]) : Number(cr);
+  return Number.isFinite(n) ? n : null;
+}

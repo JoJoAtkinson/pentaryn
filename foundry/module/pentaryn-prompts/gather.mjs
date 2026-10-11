@@ -6,7 +6,7 @@ import { MODULE, VERSION, GATHER_CHARS, buildView, renderGather, codedError, idC
 import { sceneModel, promptTokens, resolveItemEmbeds } from "./model.mjs";
 import { promptText } from "./markers.mjs";
 import { renderCrops } from "./crops.mjs";
-import { cropsDecision } from "./build-core.mjs";
+import { cropsDecision } from "./core/text.mjs";
 import { setting, manifests, manifestFor, storeManifest } from "./settings.mjs";
 import { CROP_DIR } from "./prompts-core.mjs";
 import { makeLog } from "./lib/log.mjs";

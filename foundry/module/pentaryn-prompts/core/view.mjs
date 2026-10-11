@@ -5,7 +5,7 @@
 
 import { doorLines } from "./doors.mjs";
 import { DIAGONALS, bearing, dedupeSquares, gaplessDistanceFt, occupiedSquares, squareDistanceFt } from "./grid.mjs";
-import { assignIds, groupScene } from "./group.mjs";
+import { FORMATION_FT, LINK_FT, assignIds, groupScene } from "./group.mjs";
 import { atFeet } from "./placement.mjs";
 import { classifyBlocked, isSeen, rayPasses, wallSegment } from "./sight.mjs";
 import { callId, idCompare, stripHtml, textHash } from "./text.mjs";
@@ -27,7 +27,7 @@ export const CREATURE_KINDS = Object.freeze(["npc", "character", "creature"]);
  *
  * Returns `{ view, manifest }`; `manifest.at` is left for the caller to stamp.
  */
-export function buildView(scenes, { unseenWithinFt = 60, linkFt = 30, formationFt = 15, next = null, party = null,
+export function buildView(scenes, { unseenWithinFt = 60, linkFt = LINK_FT, formationFt = FORMATION_FT, next = null, party = null,
   partySource = null, cropsNote = null } = {}) {
   const prepared = scenes.map(sc => {
     const byKey = new Map(sc.items.map(it => [it.key, it]));

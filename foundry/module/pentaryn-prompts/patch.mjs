@@ -27,6 +27,7 @@
 
 import { DND_SIZE_WIDTH, codedError } from "./geometry-core.mjs";
 import { PATCH_KEYS } from "./prompts-core.mjs";
+import { SIZE_WORDS } from "./core/size.mjs";
 import { findItem, notFound } from "./character.mjs";
 import { flattenLanguages, languageKeys, fixAttunement } from "./build-core.mjs";
 
@@ -43,8 +44,7 @@ function languageTable() {
   return flattenLanguages(globalThis.CONFIG?.DND5E?.languages ?? {});
 }
 
-export const SIZE_WORDS = { tiny: "tiny", small: "sm", sm: "sm", medium: "med", med: "med", large: "lg", lg: "lg",
-  huge: "huge", gargantuan: "grg", grg: "grg" };
+export { SIZE_WORDS };
 
 const PER = { day: "day", lr: "lr", sr: "sr", long: "lr", short: "sr", dawn: "dawn" };
 const ACTIVATIONS = ["action", "bonus", "reaction", "special", "minute", "hour"];

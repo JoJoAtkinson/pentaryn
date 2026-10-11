@@ -6,6 +6,10 @@
  * the lookup order for per-advancement choices. character.mjs is the Foundry half.
  */
 
+// moved to core/text.mjs (gather's crop decision, replace's spec-file path); re-exported for existing importers
+import { cropsDecision, specFileUrl } from "./core/text.mjs";
+export { cropsDecision, specFileUrl };
+
 export const ABILITIES = Object.freeze(["str", "dex", "con", "int", "wis", "cha"]);
 export const STANDARD_ARRAY = Object.freeze([15, 14, 13, 12, 10, 8]);
 /** 2024 PHB point-buy cost per score, 27 points. */
@@ -450,33 +454,4 @@ export function focusMissing(classId, items, focusTypes = {}) {
  */
 export function isStockLore(html) {
   return /@Embed\[Compendium\.(?:dnd-monster-manual|dnd-players-handbook|dnd-dungeon-masters-guide|dnd5e)\./.test(String(html ?? ""));
-}
-
-/**
- * Crops on `"auto"`: only for scenes with something to look at (a background image or tiles). A
- * blank grey scene's crop is ~800 tokens of nothing. → `{want, note}`.
- */
-export function cropsDecision(crops, scenes) {
-  const list = scenes ?? [];
-  if (crops === true || crops === "on") return { want: true, note: null };
-  if (crops === false || crops === "off") return { want: false, note: "crops: off" };
-  if (list.length !== 1) return { want: false, note: "crops: off for a multi-scene gather (crops: true to render)" };
-  if (!list[0].hasArt) return { want: false, note: "crops: skipped — the scene has no background image or tiles, a crop would be blank" };
-  return { want: true, note: null };
-}
-
-/**
- * A replace spec file's path → the Data-relative path Foundry serves it at: a Data-relative path
- * (`pentaryn-prompts-specs/pm-0e38.json`) as it is, an absolute one under `…/FoundryVTT/Data/`
- * trimmed to it, anything else (a scratchpad, /tmp) null — the browser can only read the Data dir.
- */
-export function specFileUrl(path) {
-  let p = String(path ?? "").trim();
-  if (!p) return null;
-  const m = /\/FoundryVTT\/Data\/(.+)$/.exec(p);
-  if (m) p = m[1];
-  else if (p.startsWith("/") || p.startsWith("~") || /^[A-Za-z]:[\\/]/.test(p)) return null;
-  p = p.replace(/^(\.\/)+/, "");
-  if (p.split("/").includes("..")) return null;
-  return p;
 }

@@ -20,6 +20,7 @@ import {
   checkChoiceKeys, nearestNames, defaultLanguagePicks, areLanguageKeys, fixAttunement, problemsText,
   startingEquipmentPlan, focusMissing
 } from "./build-core.mjs";
+import { PC_SIZE_WORDS } from "./core/size.mjs";
 import { makeLog } from "./lib/log.mjs";
 
 export const CHARACTER_FOLDER = "Foundry MCP Characters";
@@ -376,13 +377,12 @@ export async function resolveCharacter(w) {
   return { docs, level, abilities: v.abilities, size, warnings, planWarnings: unanswered, defaults, spells, gear, starting };
 }
 
-const SIZE_WORDS = { tiny: "tiny", small: "sm", sm: "sm", medium: "med", med: "med", large: "lg", lg: "lg" };
 
 function sizeChoice(w, itemName, adv) {
-  if (w.size) return SIZE_WORDS[String(w.size).toLowerCase()] ?? null;
+  if (w.size) return PC_SIZE_WORDS[String(w.size).toLowerCase()] ?? null;
   if (!adv) return null;
   const hit = lookupChoice(w.choices, { item: itemName, title: adv.title, level: 0, type: "Size" });
-  return hit ? (SIZE_WORDS[String(hit[1]).toLowerCase()] ?? null) : null;
+  return hit ? (PC_SIZE_WORDS[String(hit[1]).toLowerCase()] ?? null) : null;
 }
 
 /* ── the headless advancement run ──────────────────────────────────────── */

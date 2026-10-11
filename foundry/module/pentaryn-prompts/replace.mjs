@@ -27,9 +27,11 @@ import { promptTokens, actorXp, provenanceOf } from "./model.mjs";
 import { checkPatch, applyPatch, patchSize, ringData } from "./patch.mjs";
 import { resolveCharacter, buildCharacter, previewCharacter, findItem, notFound } from "./character.mjs";
 import { checkNpc, createNpc } from "./npc.mjs";
-import { fixAttunement, specFileUrl } from "./build-core.mjs";
+import { fixAttunement } from "./build-core.mjs";
+import { specFileUrl } from "./core/text.mjs";
 import { renderReplace, planRow, resultRow, sheetLine, createdText, needsDryRun, goneMessage } from "./readback-core.mjs";
 import { KINDS, SPEC_DIR } from "./prompts-core.mjs";
+import { SIZE_WORDS, parseCr } from "./core/size.mjs";
 import { makeLog } from "./lib/log.mjs";
 
 const log = makeLog(MODULE);
@@ -38,7 +40,6 @@ export { KINDS, SPEC_DIR };
 export const EYE = "assets/tokens/custom/props/icon-eye.webp";
 export const HOTSPOT_TEMPLATE = "Hotspot · Look (template)";
 export const CREATURE_FOLDER = "Foundry MCP Creatures";
-const NPC_SIZE = { tiny: "tiny", small: "sm", sm: "sm", medium: "med", med: "med", large: "lg", lg: "lg", huge: "huge", gargantuan: "grg", grg: "grg" };
 const DRY_RUN_OVER = 5;
 const TYPES = ["Token", "Note", "AmbientLight", "Tile"];
 
@@ -200,7 +201,7 @@ async function planOne(e) {
       const { notes: patchNotes, defaults: patchDefaults } = await checkPatch(w.patch);
       if (patchDefaults.length) plan.defaults = [...(plan.defaults ?? []), ...patchDefaults];
       const psize = patchSize(w.patch);
-      const dndSize = psize ?? ref?.system?.traits?.size ?? NPC_SIZE[String(w.npc?.size ?? "").toLowerCase()] ?? "med";
+      const dndSize = psize ?? ref?.system?.traits?.size ?? SIZE_WORDS[String(w.npc?.size ?? "").toLowerCase()] ?? "med";
       const tw = psize ? DND_SIZE_WIDTH[psize] : (ref?.prototypeToken?.width ?? DND_SIZE_WIDTH[dndSize] ?? 1);
       const th = psize ? tw : (ref?.prototypeToken?.height ?? tw);
       const ring = ringData(spec.ring, null);
@@ -440,14 +441,6 @@ function checkLightConfig(cfg, where) {
 }
 
 
-/** "1/4" | 0.25 | "3" → a number, or null. */
-function crNumber(cr) {
-  if (cr === null || cr === undefined || cr === "") return null;
-  const m = /^\s*(\d+)\s*\/\s*(\d+)\s*$/.exec(String(cr));
-  const n = m ? Number(m[1]) / Number(m[2]) : Number(cr);
-  return Number.isFinite(n) ? n : null;
-}
-
 /**
  * What a planned creature will add to its encounter's budget, for the dry run's encounter lines:
  * its CR's XP when it will stand hostile (the spec's, the patch's or the source's disposition), else 0.
@@ -459,7 +452,7 @@ function estimateXp({ spec, w, ref, npc }) {
     : ref ? (ref.prototypeToken?.disposition ?? D.HOSTILE) === D.HOSTILE : true;
   if (!hostile) return 0;
   if (ref?.type && ref.type !== "npc") return 0;
-  const cr = crNumber(w.patch?.cr) ?? crNumber(npc?.cr) ?? crNumber(ref?.system?.details?.cr);
+  const cr = parseCr(w.patch?.cr) ?? parseCr(npc?.cr) ?? parseCr(ref?.system?.details?.cr);
   if (cr === null) return 0;
   const set = Number(ref?.system?.details?.xp?.value);
   return w.patch?.cr === undefined && Number.isFinite(set) && set > 0 ? set : crXp(cr);

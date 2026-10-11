@@ -26,3 +26,35 @@ test("the barrel re-exports public names only: a core helper (fmtNum) stays insi
   assert.equal("fmtNum" in geo, false);
   assert.equal(geo.footprintLabel, size.footprintLabel);
 });
+
+test("prompts-lookup-9: one size-word table and one CR parser in core/size.mjs", async () => {
+  const { SIZE_WORDS, PC_SIZE_WORDS, parseCr } = await import("../core/size.mjs");
+  // replace's old NPC_SIZE, verbatim, as the oracle
+  const NPC_SIZE = { tiny: "tiny", small: "sm", sm: "sm", medium: "med", med: "med", large: "lg", lg: "lg", huge: "huge", gargantuan: "grg", grg: "grg" };
+  for (const w of ["tiny", "small", "sm", "medium", "med", "large", "lg", "huge", "gargantuan", "grg", "Huge", "x", ""]) {
+    assert.equal(SIZE_WORDS[w.toLowerCase()] ?? null, NPC_SIZE[w.toLowerCase()] ?? null, w);
+  }
+  assert.equal(PC_SIZE_WORDS.huge, undefined);
+  assert.equal(PC_SIZE_WORDS.gargantuan, undefined);
+  assert.equal(PC_SIZE_WORDS.small, "sm");
+  assert.deepEqual(["1/4", 0.25, "3", 3, "", null, undefined, "x", " 1 / 2 ", "1/8"].map(parseCr),
+    [0.25, 0.25, 3, 3, null, null, null, null, 0.5, 0.125]);
+  const patch = await import("../patch.mjs");
+  assert.equal(patch.SIZE_WORDS, SIZE_WORDS);
+});
+
+test("prompts-lookup-21: LINK_FT and FORMATION_FT name the grouping distances the LEGEND prints", async () => {
+  const { LINK_FT, FORMATION_FT } = await import("../core/group.mjs");
+  const { LEGEND } = await import("../geometry-core.mjs");
+  assert.deepEqual([LINK_FT, FORMATION_FT], [30, 15]);
+  const lines = LEGEND.split("\n");
+  assert.equal(lines[6], "Encounter E# = linked by <=30 ft with LOS; a hostile built creature in it brings its pack (the hostile built creatures linked the same way).");
+  assert.equal(lines[7], "Formation = linked by <=15 ft with LOS, inside an encounter.");
+});
+
+test("cropsDecision and specFileUrl live in core/text.mjs; build-core re-exports the same functions", async () => {
+  const text = await import("../core/text.mjs");
+  const build = await import("../build-core.mjs");
+  assert.equal(build.cropsDecision, text.cropsDecision);
+  assert.equal(build.specFileUrl, text.specFileUrl);
+});

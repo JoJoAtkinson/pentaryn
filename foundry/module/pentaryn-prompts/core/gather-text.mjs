@@ -3,6 +3,7 @@
  * PURE (split out of geometry-core.mjs, which re-exports the public names): no Foundry global.
  */
 
+import { FORMATION_FT, LINK_FT } from "./group.mjs";
 import { fmtNum, footprintLabel } from "./size.mjs";
 import { builtDescription, idCompare, isoDate, normalisePrompt, preview, relationText, sortRelations } from "./text.mjs";
 import { parseParty, xpBudget } from "./xp.mjs";
@@ -19,8 +20,8 @@ export const LEGEND = [
   "LOS = clear sight line through walls with unlimited darkvision (light ignored).",
   "door = blocked only by a closed door (secret doors say \"secret door\"). wall = no sight line.",
   "Bearing = compass on the map, north is up. at = feet from the map's top-left corner.",
-  "Encounter E# = linked by <=30 ft with LOS; a hostile built creature in it brings its pack (the hostile built creatures linked the same way).",
-  "Formation = linked by <=15 ft with LOS, inside an encounter.",
+  `Encounter E# = linked by <=${LINK_FT} ft with LOS; a hostile built creature in it brings its pack (the hostile built creatures linked the same way).`,
+  `Formation = linked by <=${FORMATION_FT} ft with LOS, inside an encounter.`,
   "elev = elevation in ft when not 0. Door lines: each door near a prompt, its state, and who can see it from which side.",
   "Images (if any) are set dressing: what the room looks like. Distances and LOS come from this text, never from the picture."
 ].join("\n");
