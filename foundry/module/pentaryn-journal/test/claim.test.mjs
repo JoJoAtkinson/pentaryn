@@ -3,6 +3,7 @@
 // does not block; no socket id → the direct path.
 import { mock, test } from "node:test";
 import assert from "node:assert/strict";
+import { makeUser } from "./kit/foundry-stub.mjs";
 import { P1, P2, journalWorld } from "./fixtures/world.mjs";
 import * as core from "../journal-core.mjs";
 
@@ -55,4 +56,21 @@ test("no socket id: the direct path (no stamp written)", async () => {
   const out = await relay({}, { user });
   assert.deepEqual(out, { entryId: journalsOf(P2)[0].id });
   assert.deepEqual(F.calls.slice(from).filter(c => c.op === "update" && c.documentName === "User"), []);
+});
+
+test("the claim stamp cannot be written (no permission): warn once and answer by the direct path", async () => {
+  F.become({ socketId: "socket-gm-1" });
+  const user = makeUser({ id: "player0000000009", name: "Rae" });
+  game.users.set(user.id, user);
+  Object.defineProperty(user, "update", { value: async () => { throw new Error("You may not update this User"); } });
+  const warns = [];
+  const keep = console.warn;
+  console.warn = (...a) => warns.push(a[0]);
+  try {
+    const out = await relay({}, { user });
+    assert.deepEqual(out, { entryId: journalsOf(user.id)[0].id });
+  } finally {
+    console.warn = keep;
+  }
+  assert.deepEqual(warns, ["pentaryn-journal | ensure (relay): could not stamp the claim — answering without it"]);
 });

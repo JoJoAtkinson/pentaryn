@@ -162,7 +162,13 @@ async function relayEnsure(user) {
   const me = game.socket?.id ?? null;
   if (!me || !user?.id || user.isGM || personal(user)) return ensureFor(user);   // nothing to race for
   const mine = flagPath(MODULE, `${CLAIM}.${me}`);
-  await user.update({ [mine]: Date.now() });
+  try {
+    await user.update({ [mine]: Date.now() });
+  } catch (err) {
+    // e.g. an Assistant GM who may not update Users: answer as before rather than not at all
+    ctx?.log.warn("ensure (relay): could not stamp the claim — answering without it", err);
+    return ensureFor(user);
+  }
   try {
     if (claimWinner(readFlag(user, MODULE, CLAIM), me, Date.now(), CLAIM_STALE_MS)) return await ensureFor(user);
     ctx?.log.debug("ensure (relay): another GM tab claimed it — waiting for its journal", { user: user.id });
