@@ -75,6 +75,22 @@ test("parseBugCommand: /bug with and without text; anything else is null", () =>
   for (const [input, want] of table) assert.deepEqual(core.parseBugCommand(input), want, JSON.stringify(input));
 });
 
+test("parseBugCommand: Foundry 14's ProseMirror chat input sends HTML — parse its text content", () => {
+  const table = [
+    ["<p>/bug ZZ live check</p>", { text: "ZZ live check" }],
+    ["<p>/bug</p>", { text: "" }],
+    ["<p>/BUG Loot all<br>failed</p>", { text: "Loot all\nfailed" }],
+    ["<p>/bug first line</p><p>second line</p>", { text: "first line\nsecond line" }],
+    ["<p>/bug a &amp; b &lt;c&gt; &quot;d&quot; &#39;e&#39;&nbsp;f</p>", { text: "a & b <c> \"d\" 'e' f" }],
+    ["<p>/bug <strong>bold</strong> text</p>", { text: "bold text" }],
+    ["<p>/bugs everywhere</p>", null],
+    ["<p>hello /bug</p>", null],
+    ["<p>/roll 1d20</p>", null],
+    ["/bug plain text keeps a <tag> as typed", { text: "plain text keeps a <tag> as typed" }],
+  ];
+  for (const [input, want] of table) assert.deepEqual(core.parseBugCommand(input), want, JSON.stringify(input));
+});
+
 test("clip: caps with an ellipsis; null and undefined → empty; non-strings stringified", () => {
   assert.equal(core.clip("abcdef", 4), "abc…");
   assert.equal(core.clip("abcd", 4), "abcd");

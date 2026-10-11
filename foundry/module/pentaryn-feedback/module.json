@@ -2,7 +2,7 @@
   "id": "pentaryn-feedback",
   "title": "Pentaryn Feedback",
   "description": "A bug button in the left toolbar: players file a bug, defect or feature request with their recent actions and the live game context attached; the GM stores it as a file the repo's MCP tools read one at a time.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "compatibility": {
     "minimum": "14",
     "verified": "14.369"

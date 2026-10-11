@@ -13,7 +13,7 @@
 export const MODULE = "pentaryn-feedback";
 export const SHORT = "feedback";
 export const NS = "feedback";
-export const VERSION = "0.1.0";                       // === module.json version (core.test pins it)
+export const VERSION = "0.1.1";                       // === module.json version (core.test pins it)
 export const CONTRACT = "pentaryn-feedback/api@1";   // bump the major on a published-shape change
 export const I18N = "PENTARYN_FEEDBACK";
 export const CSS = "pfb-";
@@ -228,9 +228,34 @@ export function mergeDraft(current, next = {}) {
   return out;
 }
 
-/** `/bug`, `/bug <text>` → `{ text }`; anything else → null. Case-insensitive, `/bugs` is not it. */
+const ENTITIES = { amp: "&", lt: "<", gt: ">", quot: "\"", apos: "'", nbsp: " " };
+
+/**
+ * A chat line's plain text. Foundry 14's chat input is a ProseMirror editor, so the `chatMessage`
+ * hook gets `<p>…</p>` HTML; core's ChatLog.parse reads the text content the same way (`<br>` →
+ * newline). Paragraphs become lines; tags drop; the common entities decode. A line that does not
+ * start with a tag is plain text (a macro's or an older client's `/bug a <b>`) and passes through.
+ */
+export function chatText(message) {
+  const s = String(message ?? "");
+  if (!/^\s*</.test(s)) return s;
+  return s
+    .replace(/<br\b[^>]*>/gi, "\n")
+    .replace(/<\/p>\s*<p\b[^>]*>/gi, "\n")
+    .replace(/<[^>]*>/g, "")
+    .replace(/&(?:#(\d+)|#x([0-9a-f]+)|([a-z]+));/gi, (all, dec, hex, name) => {
+      if (dec) return String.fromCodePoint(Number(dec));
+      if (hex) return String.fromCodePoint(parseInt(hex, 16));
+      return ENTITIES[name.toLowerCase()] ?? all;
+    });
+}
+
+/**
+ * `/bug`, `/bug <text>` → `{ text }`; anything else → null. Case-insensitive, `/bugs` is not it.
+ * Takes plain text or the chat input's HTML (see chatText).
+ */
 export function parseBugCommand(message) {
-  const m = /^\s*\/bug(?:\s+([\s\S]*))?$/i.exec(String(message ?? ""));
+  const m = /^\s*\/bug(?:\s+([\s\S]*))?$/i.exec(chatText(message));
   return m ? { text: (m[1] ?? "").trim() } : null;
 }
 
