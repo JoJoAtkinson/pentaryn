@@ -16,6 +16,7 @@ never ``cloud`` — so ``cloud`` can import it.
 
 from __future__ import annotations
 
+import gzip
 import hashlib
 import json
 import os
@@ -23,6 +24,7 @@ import re
 import shutil
 import tarfile
 import time
+import zlib
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Iterable, NamedTuple
@@ -383,6 +385,30 @@ def _check_members(tar_name: str, id: str, names: list[str]) -> None:
                 or ".." in parts or "\\" in n):
             raise ValueError(f"{tar_name}: member {n!r} is outside {id}/ — refused, "
                              f"nothing extracted")
+
+
+def read_all(tar: Path) -> list[str]:
+    """Read a .tar.gz end to end — every member header, every data byte, the gzip CRC at
+    the end — and return the member names. Raises ValueError naming the damage (not
+    gzip, a corrupt deflate stream, a CRC mismatch, a cut-short tar), so a restore can
+    refuse a bad download before it touches anything local. One sequential pass."""
+    tar = Path(tar)
+    try:
+        with gzip.open(tar, "rb") as g:
+            with tarfile.open(fileobj=g, mode="r|") as tf:
+                names = [m.name for m in tf]
+            while g.read(CHUNK):
+                pass
+    except (tarfile.TarError, OSError, EOFError, zlib.error) as exc:
+        raise ValueError(f"{tar.name} is damaged: {exc}") from exc
+    return names
+
+
+def verify(tar: Path, kind: str, id: str) -> None:
+    """A downloaded bundle is whole and holds only `<id>` and `<id>/…`: read_all, then the
+    member check extract does. Raises ValueError."""
+    _check_id(kind, id)
+    _check_members(Path(tar).name, id, read_all(tar))
 
 
 def extract(tar: Path, kind: str, id: str, data_root: Path, *, seed_cache: bool = True

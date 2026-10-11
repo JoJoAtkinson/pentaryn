@@ -266,3 +266,60 @@ def test_a_restore_that_left_nothing_behind_still_skips_the_next_backup(two_host
         capsys.readouterr()
         cloud.backup("pre-launch", if_stopped=True)
     assert "no change since the last snapshot — skipped" in capsys.readouterr().out
+
+
+# ── R2: a downloaded bundle is read end to end before anything is touched ────
+
+def _gz_tar(path, files: dict[str, bytes]):
+    import io
+    import tarfile
+    with tarfile.open(path, "w:gz") as tar:
+        for rel, data in files.items():
+            info = tarfile.TarInfo(rel)
+            info.size = len(data)
+            tar.addfile(info, io.BytesIO(data))
+    return path
+
+
+def test_read_all_names_the_members_of_a_whole_archive(tmp_path):
+    from scripts.foundry import bundles
+    p = _gz_tar(tmp_path / "a.tar.gz", {"x/1": b"one", "x/2": os.urandom(4096)})
+    assert bundles.read_all(p) == ["x/1", "x/2"]
+
+
+@pytest.mark.parametrize("where", ["middle", "crc"])
+def test_read_all_refuses_a_damaged_archive_of_the_same_size(tmp_path, where):
+    from scripts.foundry import bundles
+    p = _gz_tar(tmp_path / "a.tar.gz", {"x/big": os.urandom(256 * 1024)})
+    data = bytearray(p.read_bytes())
+    i = len(data) // 2 if where == "middle" else len(data) - 6     # inside the CRC32
+    data[i] ^= 0xFF
+    p.write_bytes(bytes(data))
+    with pytest.raises(ValueError, match="damaged"):
+        bundles.read_all(p)
+
+
+def test_verify_refuses_a_member_outside_the_bundles_folder(tmp_path):
+    from scripts.foundry import bundles
+    p = _gz_tar(tmp_path / "b.tar.gz", {"tools/module.json": b"{}", "maps/evil.js": b"x"})
+    with pytest.raises(ValueError, match="outside tools/"):
+        bundles.verify(p, "module", "tools")
+
+
+def test_a_bundle_holding_another_folder_is_refused_before_the_world_is_touched(
+        two_hosts, capsys):
+    c = two_hosts.cloud
+    _install(two_hosts.data["mac"])
+    with two_hosts.use("mac"):
+        cloud.backup("shutdown")
+    [s1] = _names(c)
+    [tools] = [n for n in _bundle_names(c) if n.startswith("module@tools@")]
+    _gz_tar(c / "bundles" / tools, {"tools/module.json": b"{}", "maps/evil.js": b"x"})
+    boss = two_hosts.data["boss"]
+    _edit(boss, "boss's own session")
+    capsys.readouterr()
+    with two_hosts.use("boss"), pytest.raises(SystemExit):
+        cloud.restore(s1, yes=True)
+    err = capsys.readouterr().err
+    assert "nothing local was touched" in err and tools in err, err
+    assert (boss / "Data/worlds/w/journal.txt").read_text() == "boss's own session"

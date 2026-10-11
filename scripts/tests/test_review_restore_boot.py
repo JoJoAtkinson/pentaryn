@@ -174,8 +174,6 @@ def test_R1_extras_left_by_a_worldless_restore_survive_the_next_restore(two_host
 
 # ── R2: a corrupt bundle of the right size fails the restore part-way ────────────────
 
-@pytest.mark.xfail(strict=True, reason="R2: fetch_snapshot verifies a bundle only by size; a "
-                   "corrupt bundle is found by bundles.extract after the world was cleared")
 def test_R2_a_corrupt_bundle_is_refused_before_anything_local_is_touched(two_hosts, capsys):
     """S3 made a corrupt world gzip a refusal ("§6 nothing local touched for every bad
     download"); a bundle gets only the size check. A same-size corrupt bundle (a zeroed

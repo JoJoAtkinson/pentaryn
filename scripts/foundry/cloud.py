@@ -1491,7 +1491,10 @@ def fetch_snapshot(st: Storage, snap: Snapshot, *, systems: bool = True) -> Fetc
                                f"cloud says {snap.size} B — nothing local was touched")
         try:
             marked, in_tar = _read_marker(local_tar)
-        except (tarfile.TarError, OSError, EOFError, zlib.error) as exc:
+            # the whole stream, not just its first member: a corruption deeper in would
+            # otherwise surface in apply_snapshot, after the clear (review R2)
+            bundles.read_all(local_tar)
+        except (tarfile.TarError, OSError, EOFError, zlib.error, ValueError) as exc:
             raise RestoreError(f"{snap.name} is not a readable snapshot — nothing local was "
                                f"touched: {exc}") from exc
         why = None
@@ -1518,6 +1521,18 @@ def fetch_snapshot(st: Storage, snap: Snapshot, *, systems: bool = True) -> Fetc
             except StorageError as exc:
                 raise RestoreError(f"fetching the bundles of {snap.name} failed — nothing "
                                    f"local was touched: {exc}") from exc
+            # A size match is not a whole archive (a zeroed OneDrive block, a bad sync):
+            # read each one end to end and check its members now, while nothing local has
+            # been touched — bundles.extract would find it after the world was cleared.
+            for key, name in sorted(f.needed.items()):
+                try:
+                    bundles.verify(f.bundle_tars[name], *key.split("/", 1))
+                except ValueError as exc:
+                    raise RestoreError(
+                        f"bundle {name} of {snap.name} is not usable — nothing local was "
+                        f"touched: {exc}\n    rerun (a bad download), or delete it from the "
+                        f"cloud's {bundles.BUNDLES}/: the next backup on a machine that has "
+                        f"{key} uploads it again") from exc
     except BaseException:
         discard_fetched(f)
         raise
