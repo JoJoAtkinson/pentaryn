@@ -305,6 +305,19 @@ def test_ensure_cloud_sweeps_stale_bundle_partials_only(fake_cloud):
     assert not old.exists() and young.exists() and done.exists()
 
 
+def test_ensure_cloud_rewrites_a_stale_readme_that_describes_bundles(fake_cloud):
+    from scripts.foundry import cloud
+    (fake_cloud / "README.txt").write_text("the old text, system mirrors and 3 GB snapshots\n")
+    cloud.ensure_cloud()
+    text = (fake_cloud / "README.txt").read_text()
+    assert text == cloud.README_TEXT
+    assert "bundles/" in text and "module@<id>@<version>@<fingerprint>.tar.gz" in text
+    assert "~45 MB" in text and "2.5-3.2 GB" not in text
+    assert "lineage and bundle manifest" in text
+    legacy = text[text.index("system-backup/"):]
+    assert "legacy" in legacy.splitlines()[0].lower()
+
+
 # ── PENTARYN_CLOUD selection (§1.8) ─────────────────────────────────────────
 
 def test_select_a_path_is_a_folder(tmp_path):
