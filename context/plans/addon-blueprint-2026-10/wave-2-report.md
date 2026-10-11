@@ -163,6 +163,36 @@ relay row's impl receives `ctx.user`. Then journal needs a published row for the
    still says "no describe golden yet", and D-J6 changed `describe()` (the `inspect` row).
 4. Kit 1.0.3: the `registerQueries` gap above (then W2-J2).
 
+## bridge lane — review fixes (2026-10-11)
+
+Ten review defects, fixed in the fork worktree (`migrate/wave-2`) and here, one commit each, code
+phase only (nothing built or deployed; the fork changes ship with the next bridge build):
+
+- `d5ba3c4` the D14 template tests run fork.eval on fake timers and assert no timer is left.
+- `6f598fb` [declared] pentaryn-write refuses `dryRun` on a row without one (BAD_ARGS
+  `<ns>.<path> has no dry run`): `walls.run` with `dryRun:true` used to run for real. A row
+  declares a dry run by `row.dryRun === true` (not in kit 1.0.2, W2-B3) or a param whose type or
+  doc names `dryRun` (importer.import).
+- `a79f5f3` [declared] pentaryn-read runs only rows with `writes === false` (fail closed).
+- `a6fb891` [declared] a call that would fill a param needing a live Document is BAD_ARGS
+  ('eval-js only') before it runs: attunement.stash/releaseAway, journal.add/status/statusFor/
+  shouldShowBar/ensure, movement.ghostFor, names.sync (W2-B4). Checked against all nine real
+  manifests.
+- `b8f540f` [declared] a coded query error (NOT_GM from a non-GM bridge tab) keeps its code.
+- `81f8bb4` [declared] recharge resolves its actor exactly (id, exact name, token id, then the
+  created actor's id) and an `itemId` never falls back to a same-named feature. add-feature sends
+  `actorId` beside `actorIdentifier`, not instead of it: a synthetic token actor shares its base
+  actor's id, so the id alone would move a token-id recharge onto the world actor.
+- `9c845d1` [declared] the recharge outcome rides on the add-feature call's own action-log line
+  (`recharge`, with `client` and sanitised args); no second ActionLog.
+- `7f6680a` FORK.md's settings.ts row is one row again; `d77c496` `fork:` markers on the new
+  upstream hunks, index.ts/add-feature.ts/data-access.ts in the marker table.
+- `3fff41d0` [declared] **new finding dnd-roller-flock** (outside python-tooling-51's in-process
+  scope): each dnd-scripts server process loaded `quant_numbers.bin` at import and rewrote it from
+  its own copy, so two sessions drew the same numbers. Draws now hold an flock on
+  `quant_numbers.bin.lock` and re-read the file when another process changed it; a two-process
+  test pins it (red before the fix).
+
 ## Open for Joe
 
 | # | Item | From | What is needed |
@@ -180,3 +210,5 @@ relay row's impl receives `ctx.user`. Then journal needs a published row for the
 | W2-J2 | journal C56 after the kit gap is fixed: `registerQueries` resolves a query row against the published API, so the relay needs a **published method** returning `{entryId}` (the frozen relay pin) — e.g. a row `ensureOwn` (`queryName: "ensure"`, `relay: true`, `query: true`; the query name the player sends is unchanged). That is a new API member. | journal lane | accept the new member once the kit forwards the sender, or keep the hand-wired `relayed` (C56 stays failing) |
 | W2-J3 | journal -40 is fixed claim first, but not with `lib/election.mjs`: `claimDocument`'s 750 ms settle timer would hang the frozen single-tab relay pin under mocked timers, and its claim key is single-use per document while the sender's User is long-lived. The fix stamps `flags.pentaryn-journal.claims.ensure.<socketId>` on the sender's User; the first stamp in server order wins (a tab gets every earlier stamp before its own reply), the loser waits up to 7 s for the winner's journal and answers with it, each tab removes its stamp (its own key only: `claims.ensure` stays as an empty object, so the D-J5 live check looks for no socket-id keys, not for an absent flag). One extra User update per player's first relayed ensure. | journal lane | accept (default), or ask for the deterministic-`_id` alternative (§5.9.2; it needs a folder `_id` too and moves the frozen relay create-data pin) |
 | W2-J4 | journal §5.9.4 hits outside items-journal-40 (review; the audit scoped them out, `code-audit-2026-10/journal.md` -40 last paragraph): (a) the `createUser` listener and the ready `ensureAll` (`personal.mjs` `install`) create a JournalEntry, and maybe the `Player Journals` Folder, behind only `game.user.isGM && game.users.activeGM?.isSelf` — true in **every tab** of the GM account — while `gmInflight`/`folderInflight` are per tab. With the MCP bridge tab and a GM browser tab open, a new User gets **two** personal journals (and two folders when the folder is missing); the same when both tabs reach `ready` together after a restart while a player has no journal. Duplicates stay visible in `report().users[].duplicates`; `personal()` uses the oldest, so nothing breaks, but the player owns a stray journal. (b) `ensureAll` awaits one `ensureFor` create per player in a loop (the C59 pattern; C59's scan misses it because the `await` is on `ensureFor`). Not fixed in this wave: every remedy moves a **frozen glue pin** — `glue.test.mjs` pins `createUser` creating at once and `ensureAll` as one `JournalEntry.create` per player. Remedies: createUser → `claimDocument(user, "journal")` (fits: a new User is a one-time event, so the single-use key is right; the 750 ms settle delays the create); ready → deterministic `_id`s (journal `_id` = the user's id, a fixed folder `_id`, `keepId`, look first; §5.9.2) — this also covers createUser; (b) → one `JournalEntry.createDocuments` for every missing player (folder first), keeping `gmInflight` for the per-user path. | journal lane (review) | fix as [declared] commits (one per remedy, each flipping its named glue pin), or keep the audit's out-of-scope decision (default: accept and document; duplicates are reported, not lost) |
+| W2-B3 | Kit row field `dryRun: true` (in the `ApiRow` typedef and `describe()`), so a row says it takes a dry run. pentaryn-write already honours `row.dryRun === true`; until the kit emits it, the template accepts a dry run only on a row whose param type or doc names `dryRun` (importer.import today), and refuses it elsewhere (`6f598fb`). | kit lane (bridge review) | yes → kit bump adds the field and importer's row sets it; no → keep the param-text rule |
+| W2-B4 | `names.sync(ref, oldName, newName)` resolves a string ref itself (its row doc says so), but its `ref` param is `resolve: false` with no `type`, so pentaryn-write now refuses it as "needs a live Document — eval-js only" (`a6fb891`). A row needs a manifest signal that it resolves strings itself: either a kit field (e.g. a param `resolve: "self"`), or now, with no kit change, a `type` naming the string forms on that param (`"Actor\|Token\|uuid\|id\|exact name"`, as attunement's ACTOR param has), which the template already honours. The second edits names' `describe` golden. | kit lane / names (bridge review) | pick one; until then names.sync goes through eval-js |
