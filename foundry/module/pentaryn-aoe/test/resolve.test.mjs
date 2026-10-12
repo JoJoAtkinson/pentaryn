@@ -140,6 +140,20 @@ test("setRow: tick and multiplier override; an applied row is not edited", async
   await R.setRow("dmgFireball00004", "noSuchRow0000001", { apply: false });
 });
 
+test("[declared] aoe-edge-7: setRow with a multiplier that is not one of the tray's (null, '', 'abc', 3) leaves the row unchanged and warns", async () => {
+  const before = structuredClone(resOf("dmgFireball00004").rows[1]);
+  for (const bad of [null, "", "abc", 3, Infinity, undefined, true]) {
+    out.length = 0;
+    assert.equal(await R.setRow("dmgFireball00004", IDS.g2, { multiplier: bad, apply: false }), null, String(bad));
+    assert.deepEqual(resOf("dmgFireball00004").rows[1], before, `row untouched for ${String(bad)}`);
+    assert.deepEqual(lines(), [`warn: ${MODULE} | setRow multiplier`], String(bad));
+  }
+  out.length = 0;
+  await R.setRow("dmgFireball00004", IDS.g2, { multiplier: "0.25" });   // a valid one still lands
+  assert.deepEqual(resOf("dmgFireball00004").rows[1], before);
+  assert.deepEqual(lines(), []);
+});
+
 test("applyRows: only ticked, resolved, unapplied rows; HP recorded; safe to repeat (golden/apply.json)", async () => {
   reset();
   const out1 = await R.applyRows("dmgFireball00004");

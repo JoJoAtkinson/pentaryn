@@ -114,7 +114,7 @@ export const FEATURE_ROWS = Object.freeze({
       { gm: true, writes: true, nullWhen: "no resolution", sideEffects: ["ChatMessage (whisper)"] }),
     legacy("setRow", [MESSAGE_ID, p("rowId", "string"), p("changes", "{ apply?, multiplier?, protected? }")], "Promise<object|null>",
       "GM edit of one unapplied row (tick, multiplier, Careful Spell protection; unprotected, a row gets back its own save, a monster row with none is rolled). Returns the updated resolution.",
-      { gm: true, writes: true, nullWhen: "no resolution", sideEffects: [...WRITES_RESOLUTION, "ChatMessage (save roll, unprotected monster row)"] }),
+      { gm: true, writes: true, nullWhen: "no resolution, or a multiplier not in 0/0.25/0.5/1/2 (row unchanged, logged)", sideEffects: [...WRITES_RESOLUTION, "ChatMessage (save roll, unprotected monster row)"] }),
   ],
   effects: [
     legacy("selfApply", [MESSAGE, p("opts", "{ force? }", { optional: true, doc: "force: ignore the autoApplySelf setting and the claim" })], "Promise<{ reason, actor, effects }|null>",

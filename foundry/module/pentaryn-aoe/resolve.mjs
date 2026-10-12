@@ -20,7 +20,7 @@
 
 import {
   MODULE, RECENT_MESSAGES, aoeFlags, buildRows, fillSave, matchSave, applicableRows, allApplied, newestRegion,
-  supersedes, isHandle, isTemplateRegion, hydrateDamages, protectRows, unprotectRow, areaLocked
+  supersedes, isHandle, isTemplateRegion, hydrateDamages, protectRows, unprotectRow, areaLocked, MULTIPLIERS
 } from "./core.mjs";
 import { setting } from "./settings.mjs";
 import { claimMessage } from "./lib/election.mjs";
@@ -478,11 +478,17 @@ async function cleanupInstant(res) {
  * player row waits again.
  */
 export async function setRow(messageId, rowId, changes) {
+  if ("multiplier" in changes) {   // aoe-edge-7: null/'' used to land as ×0, 'abc' as NaN
+    const v = changes.multiplier;
+    const m = (typeof v === "number" || (typeof v === "string" && v.trim() !== "")) ? Number(v) : NaN;
+    if (!MULTIPLIERS.includes(m)) { log.warn("setRow multiplier", { messageId, rowId, multiplier: v }); return null; }
+    changes = { ...changes, multiplier: m };
+  }
   const out = await mutate(messageId, r => {
     const row = r.rows.find(x => x.id === rowId);
     if (!row || row.applied) return r;
     if ("apply" in changes) row.apply = !!changes.apply;
-    if ("multiplier" in changes) { row.multiplier = Number(changes.multiplier); row.overridden = true; }
+    if ("multiplier" in changes) { row.multiplier = changes.multiplier; row.overridden = true; }
     if ("protected" in changes && !r.superseded) {
       if (changes.protected) protectRows([row], [row.id], r.onSave);
       else unprotectRow(row);

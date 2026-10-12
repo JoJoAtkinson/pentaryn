@@ -470,7 +470,7 @@
         "flags.pentaryn-aoe.resolution",
         "ChatMessage (save roll, unprotected monster row)"
       ],
-      "nullWhen": "no resolution",
+      "nullWhen": "no resolution, or a multiplier not in 0/0.25/0.5/1/2 (row unchanged, logged)",
       "legacy": true,
       "doc": "GM edit of one unapplied row (tick, multiplier, Careful Spell protection; unprotected, a row gets back its own save, a monster row with none is rolled). Returns the updated resolution."
     },

@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **A bad multiplier no longer lands on a tray row** (declared, aoe-edge-7): `setRow` turned a
+  null or blank multiplier into ×0 and `'abc'` into NaN. A multiplier that is not one of the
+  tray's (0, 0.25, 0.5, 1, 2) now leaves the row unchanged (tick included), logs
+  `pentaryn-aoe | setRow multiplier` at warn and returns null. The tray's select only sends valid
+  values, so nothing changes at the table. README API row and the manifest's `nullWhen` say so.
 - **Two GM tabs no longer log or abort on each other's deletes** (declared, aoe-edge-4): with the
   MCP bridge tab and a GM browser tab both open, the losing tab's delete of a handle, of a
   concentration spell's areas or of a sweep's orphan handles was refused "does not exist", logged

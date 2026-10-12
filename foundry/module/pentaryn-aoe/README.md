@@ -101,7 +101,7 @@ row with its params, returns and null cases (`api-manifest.mjs`). Kit members: `
 | `rollNpcSaves(messageId, { rowIds?, force? })` | `Promise<resolution \| null>` | GM; a monster whose save fails to roll is logged (`npcSave`, naming the row) and left unrolled for a re-roll, and the saves that landed are kept |
 | `rollForPlayer(messageId, rowId, { event? })` | `Promise<Roll[] \| null>` | GM |
 | `pingPlayers(messageId)` | `Promise<ChatMessage \| Notification \| null>` | GM; the info toast when nobody waits |
-| `setRow(messageId, rowId, { apply?, multiplier? })` | `Promise<resolution \| null>` | GM |
+| `setRow(messageId, rowId, { apply?, multiplier? })` | `Promise<resolution \| null>` | GM; a multiplier that is not one of the tray's (0, 0.25, 0.5, 1, 2) leaves the row unchanged, logs `setRow multiplier` and returns null |
 | `selfApply(messageOrId, { force? })` | `Promise<{ reason, actor, effects } \| null>` | the applier client; `force` skips the setting and the claim; an unknown id → null |
 | `pendingFor(message, { effects? })` | `Promise<string[]>` | any |
 | `cardEffects(message)` | `Promise<ActiveEffect[]>` | any |
