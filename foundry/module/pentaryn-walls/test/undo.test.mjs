@@ -49,7 +49,7 @@ test("round trip: a run's creates are what undo deletes and its updates what it 
     const res = runEngine(fx.walls, { gridSize: 100, runId: "r1" });
     const plan = planUndo(applied(fx.walls, res));
     assert.equal(plan.generated.length, res.creates.length, fx.name);
-    assert.equal(plan.restores.length, res.updates.filter(u => u.flags?.["wall-autocomplete"]?.priorC).length, fx.name);
+    assert.equal(plan.restores.length, res.updates.filter(u => u.flags?.["wall-autocomplete"]?.moves?.r1).length, fx.name);
     if (res.creates.length || res.updates.length) assert.equal(plan.latest, "r1", fx.name);
   }
   const [first] = FIXTURES;
@@ -79,4 +79,67 @@ test("glue: undo restores a trimmed wall with a _del flag deletion and deletes t
   assert.match(chat, /1 earlier run still applied — undo again to peel back further/);
   const all = await withConsole(F, () => game.pentaryn.walls.undo({ sceneId: scene.id, all: true }));
   assert.deepEqual(all, { deleted: 2, restored: 1, run: "all" });
+});
+
+// walls-edge-2: a later run that moves a generated wall must not take over its run stamp. Each
+// wall keeps the run that created it, plus `moves.<run>` = the coordinates each run first moved it from.
+const R1 = "2026-01-01T00:00:00Z", R2 = "2026-01-02T00:00:00Z";
+const snapFx = () => FIXTURES.find(f => f.name === "endpoint just off a diagonal snaps rather than extends");
+/** The fixture with its stub turned into a wall run 1 generated. */
+const afterRun1 = () => snapFx().walls.map(w => w._id === "stub"
+  ? { ...w, flags: { "wall-autocomplete": { generated: true, run: R1, rule: "F2" } } } : w);
+
+test("walls-edge-2: undoing run 2 restores a run-1 wall it moved; undoing run 1 then deletes it", () => {
+  const before = afterRun1();
+  const res = runEngine(before, { gridSize: 100, runId: R2 });
+  assert.equal(res.updates.length, 1, "run 2 moves the run-1 stub");
+  const scene = applied(before, res);
+  const stub = scene.find(w => w._id === "stub");
+  const plan2 = planUndo(scene);
+  assert.equal(plan2.latest, R2);
+  assert.deepEqual(plan2.generated, [], "run 2 created nothing — the run-1 wall is not deleted");
+  assert.deepEqual(plan2.restores, [{ _id: "stub", c: before.find(w => w._id === "stub").c }]);
+  assert.equal(plan2.remaining, 1, "run 1 is still applied");
+  // Undo run 2 as the glue does: restore c, drop moves.<R2>; the creating run stays.
+  const after2 = scene.map(w => w === stub ? { ...w, c: plan2.restores[0].c,
+    flags: { "wall-autocomplete": { ...w.flags["wall-autocomplete"], moves: {} } } } : w);
+  const plan1 = planUndo(after2);
+  assert.equal(plan1.latest, R1);
+  assert.deepEqual(plan1.generated, ["stub"]);
+  assert.equal(plan1.remaining, 0);
+});
+
+test("walls-edge-2: a user wall moved by two runs peels back one run at a time; all=true restores the first prior", () => {
+  const wall = { _id: "u", c: [0, 0, 30, 0], flags: { "wall-autocomplete": {
+    run: R1, rule: "X1", priorC: [0, 0, 80, 0],          // legacy flat stamp from run 1
+    moves: { [R2]: [0, 0, 50, 0] } } } };                  // run 2's entry
+  assert.deepEqual(planUndo([wall]).restores, [{ _id: "u", c: [0, 0, 50, 0] }]);
+  assert.equal(planUndo([wall]).remaining, 1);
+  assert.deepEqual(planUndo([wall], { all: true }).restores, [{ _id: "u", c: [0, 0, 80, 0] }]);
+});
+
+test("walls-edge-2: a run stamps moves.<run> and never the flat run/priorC on an update; an existing entry is kept", () => {
+  const before = afterRun1();
+  const [u] = runEngine(before, { gridSize: 100, runId: R2 }).updates;
+  const f = u.flags["wall-autocomplete"];
+  assert.equal(f.run, undefined, "an update never rewrites the creating run");
+  assert.equal(f.priorC, undefined);
+  assert.deepEqual(Object.keys(f.moves), [R2]);
+  const again = before.map(w => w._id === "stub"
+    ? { ...w, flags: { "wall-autocomplete": { ...w.flags["wall-autocomplete"], moves: { [R2]: [1, 2, 3, 4] } } } } : w);
+  const [u2] = runEngine(again, { gridSize: 100, runId: R2 }).updates;
+  assert.equal(u2.flags["wall-autocomplete"].moves?.[R2], undefined, "the run's first prior is never overwritten");
+});
+
+test("walls-edge-2: a run id with a '.' is stamped dot-free, so moves.<run> is one flag key", () => {
+  const res = runEngine(afterRun1(), { gridSize: 100, runId: "2026-01-02T00:00:00.123Z" });
+  assert.deepEqual(Object.keys(res.updates[0].flags["wall-autocomplete"].moves), ["2026-01-02T00:00:00,123Z"]);
+});
+
+test("walls-edge-2: the wasm backend stamps the same shape", async () => {
+  await wasmReady;
+  const { get } = await import("../walls-core.mjs");
+  const before = afterRun1();
+  const [u] = get("wasm").run(before, { gridSize: 100, runId: R2 }).updates;
+  assert.deepEqual(u.flags["wall-autocomplete"], { rule: "X1", moves: { [R2]: before.find(w => w._id === "stub").c } });
 });

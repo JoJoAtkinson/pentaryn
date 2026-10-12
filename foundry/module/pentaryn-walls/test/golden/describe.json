@@ -46,12 +46,12 @@
         "Wall update batch",
         "Wall create batch",
         "ChatMessage (GM whisper)",
-        "flags.wall-autocomplete.{generated,run,rule,priorC}"
+        "flags.wall-autocomplete.{generated,run,rule,moves}"
       ],
       "throws": [
         "Error"
       ],
-      "doc": "Complete the scene's walls: one update batch (trims/welds), one create batch, then the chat card. Every write is stamped with the run id so undo() can peel it back. One at a time: while preview/run/undo is running, another call warns and returns null."
+      "doc": "Complete the scene's walls: one update batch (trims/welds), one create batch, then the chat card. A created wall is stamped with the run id; a trimmed or welded one gets moves.<run id> = its prior coordinates, so undo() can peel runs back one at a time. One at a time: while preview/run/undo is running, another call warns and returns null."
     },
     {
       "path": "undo",
@@ -71,13 +71,13 @@
         "Wall delete batch",
         "Wall update batch",
         "ChatMessage (GM whisper)",
-        "flags.pentaryn-walls and flags.wall-autocomplete deleted on restored walls"
+        "flags.pentaryn-walls and flags.wall-autocomplete: the undone run's moves entry deleted on restored walls, or the whole stamp once no run is left"
       ],
       "throws": [
         "Error"
       ],
       "legacy": true,
-      "doc": "Undo the latest run on a scene (or all of them): delete the walls it created and restore those it trimmed. Stamps are read under both scopes; a restored wall loses its stamp under each scope it carries. One at a time: while preview/run/undo is running, another call warns and returns null."
+      "doc": "Undo the latest run on a scene (or all of them): delete the walls it created and restore those it trimmed. A generated wall is deleted only by undoing the run that created it; a wall a later run moved gets that run's prior coordinates back. Stamps are read under both scopes. One at a time: while preview/run/undo is running, another call warns and returns null."
     },
     {
       "path": "makeMacro",
@@ -181,7 +181,7 @@
       "flags.wall-autocomplete.generated",
       "flags.wall-autocomplete.run",
       "flags.wall-autocomplete.rule",
-      "flags.wall-autocomplete.priorC"
+      "flags.wall-autocomplete.moves"
     ],
     "reads": [
       "flags.pentaryn-walls.keepOpen",
@@ -191,7 +191,9 @@
       "flags.pentaryn-walls.run",
       "flags.wall-autocomplete.run",
       "flags.pentaryn-walls.priorC",
-      "flags.wall-autocomplete.priorC"
+      "flags.wall-autocomplete.priorC",
+      "flags.pentaryn-walls.moves",
+      "flags.wall-autocomplete.moves"
     ]
   },
   "errors": [

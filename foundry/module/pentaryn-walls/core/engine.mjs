@@ -81,6 +81,27 @@ export function stampOf(w) {
   return legacy ? {...legacy, ...current} : current;
 }
 
+/**
+ * A run id as stamped: `.` becomes `,` (ISO 8601 allows either before the fraction), so the id is
+ * ONE flag key in `moves.<run>` and in undo's `flags.<scope>.moves.<run>` deletion path.
+ */
+export const runKey = id => String(id ?? "run").replaceAll(".", ",");
+
+/**
+ * A wall's run history (walls-edge-2), read under every scope. `created` is the run that built a
+ * generated wall — kept for good, later runs never rewrite it. `moves` maps each run that trimmed,
+ * welded or moved the wall to the coordinates that run first found it at. The legacy flat stamp
+ * still reads: a non-generated wall's `run` + `priorC` is that run's move.
+ * @returns {{generated: boolean, created: string|null, moves: Object<string, number[]|null>}}
+ */
+export function historyOf(w) {
+  const s = stampOf(w);
+  const generated = s.generated === true;
+  const moves = (!generated && s.run) ? {[s.run]: s.priorC ?? null} : {};
+  for (const scope of [...READ_SCOPES].reverse()) Object.assign(moves, w?.flags?.[scope]?.moves);
+  return {generated, created: generated ? (s.run ?? null) : null, moves};
+}
+
 /** The solid preset — every generated wall is this. APP/client/canvas/layers/walls.mjs:370 */
 export const SOLID = Object.freeze({light: 20, move: 20, sight: 20, sound: 20, door: 0, ds: 0, dir: 0});
 
@@ -195,6 +216,7 @@ function toSeg(w, idx) {
     threshold: w.threshold ?? null,
     levels: w.levels ?? [],
     keepOpen: flags.keepOpen === true,
+    movedIn: Object.keys(historyOf(w).moves),
     isNew: false,
     dirty: false
   };
@@ -955,7 +977,7 @@ export function analyze(walls, opts = {}) {
  */
 export function runEngine(walls, opts = {}) {
   const cfg = resolveConfig(opts);
-  const runId = opts.runId ?? "run";
+  const runId = runKey(opts.runId);
   const all = walls.map(toSeg);
 
   // P0 — partition by `levels`. Walls on different levels never interact; edges are
@@ -1104,9 +1126,11 @@ export function runEngine(walls, opts = {}) {
         // Deliberately NOT `...stamp`: that carries `generated: true`, and a hand-drawn wall
         // the engine merely welded or trimmed is not generated. Undo checks `generated`
         // first, so conflating the two made undo DELETE the user's own walls instead of
-        // restoring their length.
+        // restoring their length. Nor `run`: a generated wall keeps the run that created it, and
+        // this run's prior goes under `moves.<run>` — the first one only (walls-edge-2).
         updates.push({_id: s.id, c: s.c,
-                      flags: {[FLAG_SCOPE]: {run: runId, rule: s.rule, priorC: s.priorC}}});
+                      flags: {[FLAG_SCOPE]: {rule: s.rule,
+                                             ...(s.movedIn.includes(runId) ? {} : {moves: {[runId]: s.priorC}})}}});
       }
     }
   }

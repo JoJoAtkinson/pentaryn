@@ -6,6 +6,12 @@
 (`flagScope` stays `wall-autocomplete`), `languages`, `minimum: "14"`, `verified: "14.369"` and the
 description fix; the flag-scope migration is **parked** while walls stays off (Joe).
 
+- **[declared] Undo keeps each run's history** (`walls-edge-2`): a later run that trimmed or moved a
+  generated wall overwrote its `run`/`priorC` stamp, so undoing run 2 deleted run 1's wall. A created
+  wall now keeps its creating `run`; every trim/weld/move writes `moves.<run>` = the prior coordinates
+  (first per run, never overwritten), on both backends. Undo restores each wall with a
+  `moves.<latest>` entry and deletes only walls the latest run created; legacy flat stamps still undo.
+  Run ids are stamped with `,` for the `.` so `moves.<run>` is one flag key.
 - **[declared] Refusal pings stay on the GM's screen** (`walls-edge-1`): each refused endpoint is
   drawn locally with `canvas.controls.drawPing(…, {style: PULSE})` instead of `canvas.ping`, which
   broadcast to every player and, with Alt+Shift held from the preview key, became a pull that

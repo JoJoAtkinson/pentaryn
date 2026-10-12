@@ -42,10 +42,11 @@ export const MANIFEST = Object.freeze({
       returns: `${ENGINE_RESULT} | null`,
       gm: true, writes: true,
       sideEffects: ["Wall update batch", "Wall create batch", "ChatMessage (GM whisper)",
-        "flags.wall-autocomplete.{generated,run,rule,priorC}"],
+        "flags.wall-autocomplete.{generated,run,rule,moves}"],
       throws: ["Error"],
       doc: "Complete the scene's walls: one update batch (trims/welds), one create batch, then the chat card. "
-        + "Every write is stamped with the run id so undo() can peel it back." + BUSY,
+        + "A created wall is stamped with the run id; a trimmed or welded one gets moves.<run id> = its prior "
+        + "coordinates, so undo() can peel runs back one at a time." + BUSY,
     },
     {
       path: "undo",
@@ -53,10 +54,12 @@ export const MANIFEST = Object.freeze({
       returns: "{ deleted, restored, run } | null",
       gm: true, writes: true, legacy: true,
       sideEffects: ["Wall delete batch", "Wall update batch", "ChatMessage (GM whisper)",
-        "flags.pentaryn-walls and flags.wall-autocomplete deleted on restored walls"],
+        "flags.pentaryn-walls and flags.wall-autocomplete: the undone run's moves entry deleted on restored walls, "
+          + "or the whole stamp once no run is left"],
       throws: ["Error"],
       doc: "Undo the latest run on a scene (or all of them): delete the walls it created and restore those it trimmed. "
-        + "Stamps are read under both scopes; a restored wall loses its stamp under each scope it carries." + BUSY,
+        + "A generated wall is deleted only by undoing the run that created it; a wall a later run moved gets that "
+        + "run's prior coordinates back. Stamps are read under both scopes." + BUSY,
     },
     {
       path: "makeMacro",
@@ -100,8 +103,8 @@ export const MANIFEST = Object.freeze({
   ],
   flags: {
     writes: ["flags.wall-autocomplete.generated", "flags.wall-autocomplete.run",
-      "flags.wall-autocomplete.rule", "flags.wall-autocomplete.priorC"],
-    reads: ["keepOpen", "generated", "run", "priorC"].flatMap(underEveryScope),
+      "flags.wall-autocomplete.rule", "flags.wall-autocomplete.moves"],
+    reads: ["keepOpen", "generated", "run", "priorC", "moves"].flatMap(underEveryScope),
   },
   unlisted: [],
 });

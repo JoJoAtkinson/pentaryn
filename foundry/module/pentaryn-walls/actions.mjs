@@ -7,7 +7,7 @@
  * `install()` exposes the actions on `ctx.exposed`; api.mjs and the keybindings call them there.
  */
 
-import {MODULE, READ_SCOPES, get as getBackend, planUndo, reportHtml, undoHtml, exclusive} from "./walls-core.mjs";
+import {MODULE, get as getBackend, planUndo, undoDrops, reportHtml, undoHtml, exclusive} from "./walls-core.mjs";
 import {setting} from "./settings.mjs";
 
 /**
@@ -156,11 +156,12 @@ async function undo({sceneId, all = false} = {}) {
     return {deleted: 0, restored: 0, run: null};
   }
   const {generated, latest, remaining} = plan;
-  // A restore deletes the stamp under every scope the wall carries one in.
+  // A restore deletes the undone run's entry, or the whole stamp under every scope the wall
+  // carries one in once no run is left on it (walls-edge-2).
   const byId = new Map(walls.map(w => [w._id, w]));
   const restores = plan.restores.map(r => ({
     ...r,
-    ...Object.fromEntries(READ_SCOPES.filter(s => byId.get(r._id)?.flags?.[s]).map(s => [`flags.${s}`, _del]))
+    ...Object.fromEntries(undoDrops(byId.get(r._id), latest, {all}).map(k => [k, _del]))
   }));
   if (restores.length) await scene.updateEmbeddedDocuments("Wall", restores);
   if (generated.length) await scene.deleteEmbeddedDocuments("Wall", generated);

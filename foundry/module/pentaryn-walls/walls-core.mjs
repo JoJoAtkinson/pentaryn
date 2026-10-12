@@ -9,13 +9,15 @@
  */
 
 import {
-  snapResolution, resolveConfig, FLAG_SCOPE, READ_SCOPES, stampOf, SOLID, lintOnly, analyze, runEngine, wallCategory
+  snapResolution, resolveConfig, FLAG_SCOPE, READ_SCOPES, stampOf, historyOf, runKey, SOLID, lintOnly, analyze, runEngine,
+  wallCategory
 } from "./core/engine.mjs";
 import { register, get, list, available, canonical, compare } from "./core/backends.mjs";
 import { MODULE_SCOPE, LEGACY_SCOPE, MIGRATION_VERSION, planScopeMigration } from "./core/migrate.mjs";
 
 export {
-  snapResolution, resolveConfig, FLAG_SCOPE, READ_SCOPES, stampOf, SOLID, lintOnly, analyze, runEngine, wallCategory,
+  snapResolution, resolveConfig, FLAG_SCOPE, READ_SCOPES, stampOf, historyOf, runKey, SOLID, lintOnly, analyze,
+  runEngine, wallCategory,
   register, get, list, available, canonical, compare,
   MODULE_SCOPE, LEGACY_SCOPE, MIGRATION_VERSION, planScopeMigration,
 };
@@ -95,36 +97,61 @@ export function undoHtml({generated, restored, all, latest, remaining}) {
       ? `<p style="opacity:.7">${remaining} earlier ${plural(remaining, "run")} still applied — undo again to peel back further.</p>` : "");
 }
 
+/** Every run id in a wall's history: its creating run, then each run that moved it. */
+const runsOf = h => [...(h.created ? [h.created] : []), ...Object.keys(h.moves)];
+
 /**
  * Which walls an undo touches. Reads the run stamps from PLAIN wall data (`toObject()`), never
  * `getFlag`, which throws for the non-package scope "wall-autocomplete" (senses-walls-cursors-1).
- * Stamps are read under every READ_SCOPES scope (stampOf), so a migrated wall undoes the same.
+ * Stamps are read under every READ_SCOPES scope (historyOf), so a migrated wall undoes the same.
  *
- * The latest run is the greatest `run` stamp by string order (ISO timestamps sort by time). A
- * stamped wall marked `generated` is deleted; one with only a `priorC` was a user wall the run
- * trimmed or welded, and gets its coordinates back. `remaining` counts the other runs still applied.
+ * Per-run history (walls-edge-2): the latest run is the greatest run id across every wall's
+ * creating `run` and `moves` keys (string order; ISO timestamps sort by time). A generated wall
+ * is deleted only when the latest run created it; any wall with a `moves[latest]` entry gets those
+ * coordinates back — so undoing run 2 restores a run-1 wall run 2 moved, rather than deleting it.
+ * `all` deletes every generated wall and restores every other one to its earliest run's prior.
+ * `remaining` counts the other distinct runs still applied. Legacy flat stamps read as before.
  *
  * @param {{_id?: string, id?: string, flags?: object}[]} walls
  * @param {{all?: boolean}} [opts]  all: every run, not just the latest
  * @returns {{stamped: number, latest: string|null, generated: string[], restores: {_id: string, c: number[]}[], remaining: number}}
- *   restores carry only `_id` and `c`; the caller adds the flag deletion.
+ *   restores carry only `_id` and `c`; the caller adds the flag deletion (undoDrops).
  */
 export function planUndo(walls, {all = false} = {}) {
-  const flag = (w, key) => stampOf(w)[key];
-  const stamped = walls.filter(w => flag(w, "run"));
+  const stamped = walls.map(w => ({w, h: historyOf(w)})).filter(({h}) => runsOf(h).length);
   if (!stamped.length) return {stamped: 0, latest: null, generated: [], restores: [], remaining: 0};
-  const latest = stamped.map(w => flag(w, "run")).sort().at(-1);
-  const targets = all ? stamped : stamped.filter(w => flag(w, "run") === latest);
+  const ids = new Set(stamped.flatMap(({h}) => runsOf(h)));
+  const latest = [...ids].sort().at(-1);
   const generated = [], restores = [];
-  for (const w of targets) {
-    if (flag(w, "generated")) generated.push(w._id ?? w.id);
-    else {
-      const prior = flag(w, "priorC");
-      if (prior) restores.push({_id: w._id ?? w.id, c: [...prior]});
-    }
+  for (const {w, h} of stamped) {
+    const id = w._id ?? w.id;
+    if (all ? h.generated : h.created === latest) { generated.push(id); continue; }
+    const from = all ? Object.keys(h.moves).sort()[0] : latest;
+    const prior = from !== undefined && Object.hasOwn(h.moves, from) ? h.moves[from] : null;
+    if (prior) restores.push({_id: id, c: [...prior]});
   }
-  const remaining = new Set(stamped.map(w => flag(w, "run"))).size - 1;
-  return {stamped: stamped.length, latest, generated, restores, remaining};
+  return {stamped: stamped.length, latest, generated, restores, remaining: ids.size - 1};
+}
+
+/**
+ * The flag paths an undo deletes from a wall it restores. Once no run is left on the wall, its whole
+ * stamp under each scope it carries one in; otherwise only that run's entry — `moves.<run>`, or the
+ * legacy flat `run` + `priorC` — so the runs before it still undo (walls-edge-2).
+ * @param {{flags?: object}} w  plain wall data
+ * @param {string} run  the run being undone
+ * @param {{all?: boolean}} [opts]
+ * @returns {string[]} dotted update keys, each to be set to the deletion operator
+ */
+export function undoDrops(w, run, {all = false} = {}) {
+  const scopes = READ_SCOPES.filter(s => w?.flags?.[s]);
+  const h = historyOf(w);
+  if (all || runsOf(h).every(r => r === run)) return scopes.map(s => `flags.${s}`);
+  return scopes.flatMap(s => {
+    const f = w.flags[s];
+    if (f.moves && Object.hasOwn(f.moves, run)) return [`flags.${s}.moves.${run}`];
+    if (!h.generated && f.run === run) return [`flags.${s}.run`, `flags.${s}.priorC`];
+    return [];
+  });
 }
 
 /**

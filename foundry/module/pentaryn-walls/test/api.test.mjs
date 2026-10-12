@@ -73,7 +73,7 @@ test("the flags contract names the (pre-migration) scope it writes and both scop
   const d = api.describe();
   assert.equal(d.flagScope, "wall-autocomplete");
   const both = k => [`flags.pentaryn-walls.${k}`, `flags.wall-autocomplete.${k}`];
-  assert.deepEqual(d.flags.reads, ["keepOpen", "generated", "run", "priorC"].flatMap(both));
+  assert.deepEqual(d.flags.reads, ["keepOpen", "generated", "run", "priorC", "moves"].flatMap(both));
   assert.ok(d.flags.writes.includes("flags.wall-autocomplete.run"));
 });
 

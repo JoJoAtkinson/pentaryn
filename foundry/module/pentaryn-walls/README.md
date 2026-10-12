@@ -65,14 +65,18 @@ winning):
 
 | Key | On | Meaning |
 |---|---|---|
-| `run` | created and updated walls | the run id (an ISO timestamp); undo peels back the latest |
-| `generated` | created walls | `true`: undo deletes it |
+| `run` | created walls | the run that created it (an ISO timestamp, `.` written `,`); later runs never rewrite it |
+| `generated` | created walls | `true`: undoing its creating run deletes it |
 | `rule`, `kind`, `sources` | created walls (js engine) | which rule built it and from what |
-| `rule`, `priorC` | updated walls | the rule, and the coordinates undo restores |
+| `moves.<run>` | updated walls | per run that trimmed, welded or moved it: the coordinates that run first found it at |
+| `rule` | updated walls | the rule of the latest move |
 
-Undo restores with `{"flags.<scope>": _del}` for each scope the wall carries a stamp in
-(`pentaryn-walls`, `wall-autocomplete`; needs Foundry 14). Nothing in world
-settings besides `backend`.
+Undo takes the latest run id across every `run` and `moves` key: it deletes the walls that run
+created and gives every wall with a `moves.<run>` entry those coordinates back — so undoing run 2
+restores a run-1 wall that run 2 moved instead of deleting it (walls-edge-2). It then deletes
+`flags.<scope>.moves.<run>`, or the whole stamp (`{"flags.<scope>": _del}` for each scope the wall
+carries one in; needs Foundry 14) once no run is left on the wall. Older stamps — a flat `run` +
+`priorC` on an updated wall — still undo. Nothing in world settings besides `backend`.
 
 ## Flags other modules read
 
@@ -151,7 +155,7 @@ make foundry-walls-bench [N=20]                           # scaling curve, every
 - `test/core.test.mjs`, `test/core-render.test.mjs`, `test/undo.test.mjs`,
   `test/engine-shape.test.mjs`, `test/backends.test.mjs`, `test/scopes.test.mjs`,
   `test/migrate.test.mjs` — the pure core and the migration.
-- `test/glue.test.mjs` (and `glue-*.test.mjs`), `test/hooks.test.mjs`, `test/api.test.mjs`,
+- `test/glue.test.mjs` (and `glue-*.test.mjs`, `undo-history.test.mjs`), `test/hooks.test.mjs`, `test/api.test.mjs`,
   `test/features.test.mjs`, `test/settings.test.mjs`, `test/i18n.test.mjs` — the Foundry side
   against the kit stub.
 
