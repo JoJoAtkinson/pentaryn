@@ -319,7 +319,3 @@ def preview_findings(preview: dict | None) -> tuple[set[str], dict[str, str]]:
             elif name in NOTEWORTHY_AVAILABILITY:
                 notes[pkg_id] = name
     return blocked, notes
-
-
-def _preview_blockers(preview: dict | None) -> set[str]:
-    return preview_findings(preview)[0]

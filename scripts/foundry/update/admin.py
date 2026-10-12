@@ -56,7 +56,6 @@ directly: ``loginAsUser`` (the smoke test's GM login) and the world deactivate â
 from __future__ import annotations
 
 import json
-import re
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -664,14 +663,6 @@ def installed_version(pkg_type: str, pkg_id: str) -> str | None:
     except (OSError, json.JSONDecodeError):
         return None
     return None if v is None else str(v)
-
-
-def installed_manifest(pkg_type: str, pkg_id: str) -> dict | None:
-    path = PACKAGE_DIR[pkg_type] / pkg_id / MANIFEST_NAME[pkg_type]
-    try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return None
 
 
 def wait_for_package_version(pkg_type: str, pkg_id: str, expected: str,

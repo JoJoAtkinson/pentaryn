@@ -42,9 +42,6 @@ EFFORT = "medium"
 TIMEOUT_SECONDS = 600
 BUDGET_USD = 1.50
 
-# Kept for anything that imported it; the command itself is built in llm.py.
-DENIED_TOOLS = llm.DENIED_TOOLS
-
 SYSTEM_RULES = """\
 You are grading Foundry VTT package updates for an unattended 06:00 Saturday job.
 

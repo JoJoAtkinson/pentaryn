@@ -36,7 +36,6 @@ MODEL = "opus"
 EFFORT = "medium"
 TIMEOUT_SECONDS = 600
 BUDGET_USD = 0.50
-DENIED_TOOLS = llm.DENIED_TOOLS
 
 IPV4 = re.compile(r"\b\d{1,3}(?:\.\d{1,3}){3}\b")
 # IPv6 in two precise alternatives rather than one loose "hex groups separated by
