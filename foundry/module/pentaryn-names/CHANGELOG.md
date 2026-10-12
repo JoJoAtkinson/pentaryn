@@ -5,6 +5,9 @@
 - [declared] Kit 1.0.2 (wave 2, J10): a frozen `game.pentaryn` is no longer rebuilt; the `ready`
   publish throws into Foundry's hook error report and leaves the root as it was. Nothing freezes the
   root since the importer's keystone, so a live world sees no difference.
+- [declared] names-edge-1 (+rob-1, final review 2026-10-12): renaming an unlinked token's synthetic
+  actor relabels only that token (and, GM, its combatants). Before, it relabelled every sibling token
+  of the base actor on every scene and sent, counted and toasted a prototype write Foundry dropped.
 
 ## 0.1.1 — 2026-10-11 (play-test fix, fix/playtest-2026-10-11)
 

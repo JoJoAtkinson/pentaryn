@@ -1,6 +1,7 @@
 /**
  * Pentaryn Token Name Sync — the rename feature: an actor rename carries through to its token
- * labels (prototype token and every placed token of that actor, on every scene).
+ * labels (prototype token and every placed token of that actor, on every scene). Renaming an
+ * unlinked token's synthetic actor relabels only that token (names-edge-1).
  *
  * GLUE, one feature: `install(reg, ctx)` registers the two actor hooks through the registry;
  * `uninstall()` has no state to drop. `syncRef` is the legacy API row `sync`.
@@ -18,6 +19,7 @@ import { resolveRef } from "./lib/resolve.mjs";
  * Returns how many TOKEN labels changed; combatant names are not counted or toasted.
  */
 export async function sync(actor, oldName, newName) {
+  if (actor.isToken) return syncToken(actor, oldName, newName);
   let count = 0;
   const proto = relabel(actor.prototypeToken.name, oldName, newName);
   if (proto !== null && proto !== actor.prototypeToken.name) {
@@ -26,6 +28,20 @@ export async function sync(actor, oldName, newName) {
   }
   count += await relabelEmbedded(game.scenes, "tokens", "Token", t => t.canUserModify(game.user, "update"), actor, oldName, newName);
   if (game.user.isGM) await relabelCombatants(actor, oldName, newName);
+  if (count) ui.notifications.info(_loc("PENTARYN_NAMES.Synced", { name: newName, count }));
+  return count;
+}
+
+/**
+ * names-edge-1: a synthetic (unlinked token) actor was renamed, so only its own token follows, and
+ * (GM only) that token's combatants. It carries the base actor's id, so the base-actor pass would
+ * relabel every sibling token, and its prototype write would go to the ActorDelta, which drops it.
+ */
+async function syncToken(actor, oldName, newName) {
+  const tok = actor.token;
+  const scenes = tok?.parent ? [tok.parent] : [];
+  const count = await relabelEmbedded(scenes, "tokens", "Token", t => t.id === tok.id && t.canUserModify(game.user, "update"), actor, oldName, newName);
+  if (game.user.isGM) await relabelEmbedded(game.combats, "combatants", "Combatant", c => c.tokenId === tok.id, actor, oldName, newName);
   if (count) ui.notifications.info(_loc("PENTARYN_NAMES.Synced", { name: newName, count }));
   return count;
 }

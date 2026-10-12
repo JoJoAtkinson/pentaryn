@@ -5,7 +5,8 @@
 how this module was migrated → `context/plans/addon-blueprint-2026-10/migrate-pentaryn-names.md`
 
 Renaming an actor renames its token labels to match: the prototype token and every placed token of
-that actor, on every scene — and, on a GM client, its combatants in every encounter. Exposes
+that actor, on every scene — and, on a GM client, its combatants in every encounter. Renaming an
+unlinked token's own actor (its synthetic actor) renames only that token. Exposes
 `game.pentaryn.names`.
 
 ## What the player sees
@@ -90,6 +91,9 @@ initiator gate); both send the same names, so the second write changes nothing. 
   token of it whose label matches — two `Goblin` tokens both become `Goblin Boss`. This is intended
   (N-L1, Joe 2026-10-11): a base-actor rename is a rename of the creature, so its copies follow; give
   one a nickname first to keep it apart.
+- Renaming an unlinked token's **synthetic** actor (from that token's sheet) relabels only that
+  token and, on a GM client, its combatants; its siblings and the base actor's prototype token are
+  left alone, and the toast counts that one token (names-edge-1, Joe 2026-10-12).
 - A combatant whose name Foundry derived from its token (empty source name) is written the new
   name explicitly: Foundry prepares that name once and a token rename does not re-prepare it, so
   without the write the tracker keeps the old label until reload (PT3-9). From then on the
@@ -112,7 +116,7 @@ initiator gate); both send the same names, so the second write changes nothing. 
 | `names.mjs` | entry (esmodules[0]): wiring, publish |
 | `names-core.mjs` | pure constants and rules: `shortName`, `relabel`, `planTokenRelabels` |
 | `api-manifest.mjs` | pure data: the three legacy API rows |
-| `rename.mjs` | the feature: the two actor hooks and `sync()` (tokens, then GM-only combatants) |
+| `rename.mjs` | the feature: the two actor hooks and `sync()` (tokens, then GM-only combatants; a synthetic actor's own token only) |
 | `lang/en.json` | the toast text |
 | `lib/` | vendored kit (`lib/kit.lock.json`) |
 | `test/` | node:test suites, goldens, fixtures (`legacy-names.mjs` is the verbatim oracle), vendored test kit |
