@@ -20,6 +20,15 @@ Foundry world id **`pentaryn`**, title **Pentaryn**, dnd5e 5.3.3 on core 14.369 
 `modern` (2024). This is Joe's main Pentaryn world build. First use: a 3200 A.F. Underdark
 one-shot with PCs Marrith, Caven and Talo (built to level 12, 2026-10-04).
 
+## Backups — per-module bundles live (2026-10-12)
+
+Backups are now a ~19 MB world snapshot plus shared module/system bundles in OneDrive
+`DnD/foundry/bundles/` (how they work: [`foundry/ops.md`](foundry/ops.md) §3). The confirmed
+snapshot from go-live is `world-2026-10-12-030832-fvtt14.369-mac.tar.gz`, which names 46
+bundles. Evidence: [`plans/module-bundles-acceptance-2026-10-11.md`](plans/module-bundles-acceptance-2026-10-11.md).
+The old full snapshot is kept in `DnD/foundry/pre-bundles-2026-10/` until Joe deletes it. BOSS
+has not booted from bundles yet.
+
 ## 2026-10 update (2026-10-10)
 
 Attended update after the unattended 10-03 run crashed partway. Plan and rationale:

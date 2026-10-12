@@ -4,6 +4,64 @@
 Mac, or the name of the snapshot that go-live ended on (S_ok, §J). Not for operating backups:
 that is `context/foundry/ops.md` §3.
 
+## Result (for Joe)
+
+**The snapshot to move forward with:** `world-2026-10-12-030832-fvtt14.369-mac.tar.gz` (S_ok,
+§J) in `onedrive:DnD/foundry/world-backups/`. It is an 18.9 MB world tar (18,919,427 B) plus a
+4 KB `.parent` sidecar, and it names **46 bundles** (45 modules + the dnd5e 6.0.6 system,
+3.32 GB). All 46 are in `bundles/`. Restored from nothing into an empty folder, it came back
+byte-identical to the live Mac tree. The only differences were the `options.json` data path and
+one `desktop.ini` junk file, which bundles never carry.
+
+**Outcome:** every test that ran passed. Two planned checks could not run as written, and one
+part of the design is still unproven. All three are listed below, so read this as "confirmed,
+with stated gaps" and not as a clean sweep.
+
+| Test | What it proved | Time |
+|---|---|---|
+| First bundled backup (§C) | All 45 modules + dnd5e uploaded once as 46 bundles (3.32 GB), then a 20.9 MB world tar. The old 3.24 GB full snapshot was replaced, as designed | 23 min 11 s |
+| Skip check (§C′) | An unchanged tree uploads nothing | seconds |
+| Save test (§D) | A journal written in live Foundry was inside the downloaded cloud snapshot. **0 new bundles**: starting and stopping Foundry does not count as a module change | 1 min 39 s |
+| Changed module only (§E) | A new scratch module gave exactly 1 new bundle. Changing a file without changing the version gave exactly 1 more. Deleting it gave 0 | ~2 min each |
+| Old bundles kept (§E, H1) | The v1 and v2 scratch bundles both stay in the cloud, and both restore to the right content | — |
+| GC dry run (§E) | Deletes nothing that is referenced or younger than 7 days | seconds |
+| Clean-room restore (§G, §J) | S_final, and then S_ok itself, restored into an empty data root: 10,016–10,019 files byte-identical, 46/46 fingerprints match | 7 min 57 s / 7 min 43 s |
+| Older snapshot restore (§H) | **Not run as written.** S_probe2 was coalesced away by the next backup, as designed, so no older bundled snapshot existed to restore. Substitutes: the old bundle versions were fetched and extracted (H1), and a differential restore fetched only the one changed module, 0.3 MB (H2) | 55 s (H2) |
+| In-place dress rehearsal + boot (§I) | Restoring over the real Mac data fetched 0 bundles and left all 45 modules unchanged; the world is identical. Foundry booted FROM=local with 0 console errors, and the PCs and all pentaryn-* modules were present | 67 s + boot |
+
+**Not proven live:**
+- A restore that *removes* local modules the snapshot does not list while a local world exists
+  (Q3). The house rules allowed no restore that deletes local modules. Unit tests cover it, and
+  only the no-world case (extras left in place) ran live.
+- BOSS, the second host's first boot (plan §15 E).
+
+**Fallback copy.** The old full snapshot (3.24 GB plus its `.parent`, hashes verified) is in
+`onedrive:DnD/foundry/pre-bundles-2026-10/`. Nothing automatic touches it. Once you are happy,
+delete it with:
+
+```
+rclone purge onedrive:DnD/foundry/pre-bundles-2026-10
+```
+
+**`system-backup/` is retired.** Nothing writes to it any more, because dnd5e is now a bundle.
+It is still in OneDrive and can be deleted by hand whenever you like
+(`rclone purge onedrive:DnD/foundry/system-backup`).
+
+**Housekeeping that happens on its own.** The two scratch-module bundles (tiny) are unreferenced.
+The first backup on or after 2026-10-19 sweeps them.
+
+**Later: BOSS (plan §15 E, F).**
+1. BOSS's checkout goes on the merged main **first**, because old code must never restore a
+   bundled snapshot.
+2. ≥ 8 GB free under `FOUNDRY_DATA`.
+3. `make vtt-up` on BOSS. Enter fetches S_ok's world and all 46 bundles (~3.5 GB, once).
+4. Open a seafoot map and a Monster Manual entry, and check the dnd5e version.
+5. `make vtt-down` on BOSS should upload the world and 0 bundles.
+6. Hand BOSS's Claude the addendum (§10 step 7).
+
+After BOSS has proven the bundles, any untagged full snapshots still around can go with
+`make foundry-prune-untagged`. As of this run there are none left.
+
 Evidence record for the go-live of per-module backup bundles
 ([module-bundles-2026-10.md](module-bundles-2026-10.md) §10, §15). History, not instructions.
 
