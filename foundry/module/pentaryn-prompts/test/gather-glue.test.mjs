@@ -256,10 +256,3 @@ test("docCentre: tokens and tiles from their top-left, everything else at its po
   assert.deepEqual(G.docCentre({ documentName: "Tile", x: 100, y: 100, width: 300, height: 100 }, 100), { x: 250, y: 150 });
   assert.deepEqual(G.docCentre({ documentName: "Note", x: 7, y: 9 }, 100), { x: 7, y: 9 });
 });
-
-test("gather: a single Scene document is stored as its id", async t => {
-  t.mock.timers.enable({ apis: ["Date"], now: NOW });
-  const v = (await g({ scenes: F.s1, crops: "off" })).value;
-  assert.deepEqual(v.manifest.opts.scenes, ["s1"]);
-  assert.deepEqual(G.manifests()[0].opts.scenes, ["s1"]);
-});

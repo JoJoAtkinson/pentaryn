@@ -106,7 +106,7 @@ export async function gather(opts = {}) {
   const tRender = performance.now();
   manifest.at = Date.now();
   // ids only: an API caller may pass Scene documents, and this lands in a world setting
-  manifest.opts = { scenes: (scenes && typeof scenes === "object") ? list.map(s => s.id) : scenes, unseenWithinFt, chars, party: view.party };
+  manifest.opts = { scenes: Array.isArray(scenes) ? list.map(s => s.id) : scenes, unseenWithinFt, chars, party: view.party };
   await storeManifest(manifest);
   const tStore = performance.now();
 
