@@ -426,3 +426,41 @@ def test_the_lock_is_released_when_the_install_fails_py_ops_ac_1(module, monkeyp
         modules.install(module.src, module.dst)
     with open(_lock_path(module), "a") as fh:
         fcntl.flock(fh, fcntl.LOCK_EX | fcntl.LOCK_NB)
+
+
+# ── a symlinked Data/modules/<id> (EC-8) ─────────────────────────────────────────────────────
+
+def test_a_dangling_symlink_at_the_destination_is_replaced_ec_8(module, tmp_path):
+    """`dst.exists()` follows links, so a dangling `Data/modules/<id>` link was neither set aside
+    nor treated as missing, and `rename(new, dst)` crashed onto it (EC-8)."""
+    module.dst.parent.mkdir(parents=True)
+    module.dst.symlink_to(tmp_path / "gone")
+    modules.install(module.src, module.dst)
+    assert not module.dst.is_symlink() and _installed(module.dst) == _tree(module.src)
+    assert _staged(modules.staging_dir(module.dst)) == [], "the set-aside link does not linger"
+
+
+def test_a_symlinked_install_is_replaced_and_its_target_kept_ec_8(module, tmp_path):
+    """A link to a real folder is set aside and unlinked — never rmtree'd through — and it does
+    not linger in staging to break the next run (EC-8)."""
+    target = tmp_path / "elsewhere"
+    target.mkdir()
+    (target / "zz.mjs").write_text("someone else's tree")
+    module.dst.parent.mkdir(parents=True)
+    module.dst.symlink_to(target)
+    modules.install(module.src, module.dst)
+    assert not module.dst.is_symlink() and _installed(module.dst) == _tree(module.src)
+    assert (target / "zz.mjs").read_text() == "someone else's tree"
+    assert _staged(modules.staging_dir(module.dst)) == []
+    modules.install(module.src, module.dst)
+    assert _installed(module.dst) == _tree(module.src)
+
+
+def test_a_symlink_left_in_staging_is_cleared_ec_8(module, tmp_path):
+    staging = modules.staging_dir(module.dst)
+    staging.mkdir(parents=True)
+    (staging / "pentaryn-zz.new").symlink_to(tmp_path / "gone")
+    (staging / "pentaryn-zz.old").symlink_to(tmp_path / "gone")
+    modules.install(module.src, module.dst)
+    assert _staged(staging) == []
+    assert _installed(module.dst) == _tree(module.src)

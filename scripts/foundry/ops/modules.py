@@ -615,32 +615,43 @@ def install(src: Path, dst: Path, *, cmd: str = "module-sync") -> dict:
             fcntl.flock(lock, fcntl.LOCK_UN)
 
 
+def _remove(path: Path) -> None:
+    """Delete a staging leftover: a symlink is unlinked (never followed), a folder rmtree'd (EC-8)."""
+    if path.is_symlink():
+        path.unlink(missing_ok=True)
+    else:
+        shutil.rmtree(path, ignore_errors=True)
+
+
 def _install_locked(src: Path, dst: Path, staging: Path, cmd: str) -> dict:
-    """`install`'s body, run while it holds `staging/<id>.lock`."""
+    """`install`'s body, run while it holds `staging/<id>.lock`.
+
+    `dst` is tested with `os.path.lexists`, so a symlink there — dangling or not — is set aside
+    and unlinked like a folder rather than crashing the swap; its target is never touched (EC-8)."""
     new, old = staging / f"{dst.name}.new", staging / f"{dst.name}.old"
-    if not dst.exists() and old.is_dir():
+    if not os.path.lexists(dst) and old.is_dir():
         dst.parent.mkdir(parents=True, exist_ok=True)
         os.rename(old, dst)  # a run died mid-swap: the previous good install was set aside
     for leftover in (new, old):
-        shutil.rmtree(leftover, ignore_errors=True)
+        _remove(leftover)
     try:
         shutil.copytree(src, new)
         record = _stamp(src, new)
         (new / SYNC_STAMP).write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
     except BaseException:
-        shutil.rmtree(new, ignore_errors=True)
+        _remove(new)
         raise
     dst.parent.mkdir(parents=True, exist_ok=True)
     try:
-        if dst.exists():
+        if os.path.lexists(dst):
             os.rename(dst, old)
         os.rename(new, dst)
     except BaseException:
         # `old` was cleared above, so it exists only if this run set `dst` aside
-        if not dst.exists() and old.is_dir():
+        if not os.path.lexists(dst) and os.path.lexists(old):
             os.rename(old, dst)
         raise
-    shutil.rmtree(old, ignore_errors=True)
+    _remove(old)
     _ops_log(cmd, record, dst)
     return record
 
