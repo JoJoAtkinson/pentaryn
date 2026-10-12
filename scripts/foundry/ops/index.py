@@ -75,9 +75,11 @@ def module_row(module_dir: Path) -> dict:
     manifest = _json(module_dir / "module.json") or {}
     flags = (manifest.get("flags") or {}).get("pentaryn") or {}
     describe = _json(module_dir / "test/golden/describe.json")
-    namespaces = ([flags["namespace"]] if flags.get("namespace")
-                  else [describe["namespace"]] if describe and describe.get("namespace")
-                  else published_namespaces(module_dir))
+    primary = ([flags["namespace"]] if flags.get("namespace")
+               else [describe["namespace"]] if describe and describe.get("namespace")
+               else [])
+    # Plus any literal name the code publishes: an alias (senses' `chain`) has no golden of its own.
+    namespaces = sorted(set(primary) | set(published_namespaces(module_dir)))
     api = None
     if describe is not None:
         api = [m["path"] for m in describe.get("methods") or []
