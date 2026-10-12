@@ -150,8 +150,8 @@ function wrapReactionSlot(btn) {
     if (activity?.uuid) expectRoll(activity.uuid, "reaction");
     let used = false;
     const hook = temp.on("dnd5e.postUseActivity", (a) => { if (a?.uuid && a.uuid === activity?.uuid) used = true; }, "Opportunity Attack: was it used");
-    try { await own.call(btn, event); } finally { temp.off("dnd5e.postUseActivity", hook); }
-    if (!used) { forgetRoll(activity?.uuid); return; }
+    try { await own.call(btn, event); } finally { temp.off("dnd5e.postUseActivity", hook); if (!used) forgetRoll(activity?.uuid); }
+    if (!used) return;
     // Argon spends the weapon's own activation (the Action) on your own turn: give it back, spend the Reaction.
     if (action && action.isActionUsed !== actionWas) { action.isActionUsed = actionWas; paint(action); }
     if (reaction && combatContext(actor).inCombat) { reaction.isActionUsed = true; paint(reaction); }

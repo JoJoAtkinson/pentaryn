@@ -207,6 +207,22 @@ test("the Reaction slot's click with no use (cancelled) forgets the tag and spen
   assert.equal(F.listeners("dnd5e.postUseActivity"), 2, "its temporary hook is gone (setup's and turnflow's remain)");
 });
 
+test("the Reaction slot's click that throws (no use) still forgets the tag", async () => {
+  onTurn(fig);
+  const slot = new A.DND5eItemButton({ item: fig.items.get("dagger0000000001"), isWeaponSet: true });
+  const act = [...fig.items.get("dagger0000000001").system.activities.values()][0];
+  slot._activity = act;
+  Object.defineProperty(slot, "actor", { get: () => fig });
+  const reaction = new A.ActionPanel({ label: "DND5E.Reaction", buttons: [slot] });
+  A.ARGON.components.main = [new A.ActionPanel({ label: "DND5E.Action" }), reaction];
+  slot._onLeftClick = async () => { throw new Error("argon"); };
+  F.Hooks.callAll("renderActionPanelArgonComponent", reaction, reaction.element, fig);
+  await assert.rejects(slot._onLeftClick({}), /argon/);
+  assert.equal(seq.taggedKind(act.uuid), null);
+  assert.equal(reaction.isActionUsed, false);
+  assert.equal(F.listeners("dnd5e.postUseActivity"), 2, "its temporary hook is gone (setup's and turnflow's remain)");
+});
+
 test("turn boundaries on the GM: sweeps at turn end / start, the Reaction back, drawers closed (golden/turnflow-boundary.json)", async () => {
   reset(fig, rog, brb);
   await fig.createEmbeddedDocuments("ActiveEffect", [{ name: "Dash", flags: { [MODULE]: { until: "turnEnd", special: "dash" } } }]);
