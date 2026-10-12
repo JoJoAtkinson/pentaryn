@@ -225,3 +225,14 @@ allowlist. Reverts: none.
 
 **Foundry state.** Up, world `pentaryn` loaded, exactly one GM tab (Gamemaster) answering `get-world-info`; no
 restart, no fork rebuild.
+
+**Relaunch reality check (15:05Z).** The deployed folders were still the pre-merge code: each
+`.pentaryn-sync.json` read git 380a5348 (synced 07:46Z) and `diff -r` against main differed, so the 14:33Z
+sync above had not landed. Redone in full: before-goldens on the deployed 380a5348 code, rollback copies
+re-checked (identical to the deployed folders), `make foundry-{lookup,pings,names}-sync` (FROM=local,
+PENTARYN_NONINTERACTIVE=1) at 15:06Z — stamps now git 13de13f8, `diff -r` against main clean — one GM-tab
+reload. Probe: lookup (`rules`) 0.3.0, pings 0.1.1, names 0.1.1 equal `module.json`, every described path a
+function, lookup `selftest().ok` true, no console.error since the reload. Goldens written to
+`.state/live-goldens/INT-1427/{before,after}/<m>.json`; `diff.mjs before after` without `--declared` exits 0
+for all three (shared identical, cleanups clean; the pings noise did not appear). No ZZ leftovers. Reverts:
+none. Foundry up, world `pentaryn`, one GM tab answering `get-world-info`; no restart, no fork rebuild.
