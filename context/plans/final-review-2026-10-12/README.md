@@ -199,3 +199,29 @@ localStorage to `.state/live-goldens/INT-1417/{before,after}/<m>.json` and the s
 allowlist. Reverts: none.
 
 **Foundry state.** Up, world `pentaryn` loaded, exactly one GM tab (Gamemaster) answering `get-world-info`; no restart, no fork rebuild. Pushed main; review worktrees for dropbin, journal and creatures removed (branches kept).
+
+## Integration INT-1427
+
+| Area | Status | Merge SHA | Revert SHA | Synced modules | Reason |
+|---|---|---|---|---|---|
+| lookup | merged | 2839e3de | — | lookup | — |
+| pings | merged | 57790465 | — | pings | — |
+| names | merged | d693144d | — | names | — |
+
+**Gates.** On main at d693144d: `foundry-modules-check` (all 20 modules), `foundry-lib-check`, `check-context`
+(OK, 5 warnings), `make test` (1626 passed, 2 skipped, 5 xfailed). No `module.json`, lang or fork file changed, so
+no restart and no fork rebuild.
+
+**Deploy.** Rollback copies of the three deployed folders (git 380a5348) in `.state/live-rollback/INT-1427/`.
+Before-goldens ran on the deployed pre-merge code in the one GM tab, `make foundry-{lookup,pings,names}-sync`
+(FROM=local) at 14:33Z (stamps now git d693144d), one GM-tab reload. Probe: lookup 0.3.0, pings 0.1.1, names 0.1.1
+equal `module.json`, every described method a function, lookup `selftest().ok` true, no pentaryn errors in the
+feedback ring, no ZZ leftovers.
+
+**Goldens.** Before and after kept in the GM tab's localStorage and diffed in page (deep compare of `golden`,
+`cleanup`, and lookup `env`; the scratch keys then removed): 0 differences for all three, cleanups clean
+(pings `pingLogRestored` true, `pingScratchLeft` 0). The known pings run-to-run noise did not appear. No
+allowlist. Reverts: none.
+
+**Foundry state.** Up, world `pentaryn` loaded, exactly one GM tab (Gamemaster) answering `get-world-info`; no
+restart, no fork rebuild.
