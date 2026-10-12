@@ -185,16 +185,7 @@ MODULES = {
         # node-test: test/run.mjs (the blueprint's fixed body) runs the converted suites and
         # the legacy known/look/reach ones (python-tooling-7).
         check=(*_STATIC, "node-test", *_BLUEPRINT),
-        after_sync=(
-            "Already enabled? A browser RELOAD (F5) is enough — .mjs and .css are",
-            "served fresh. But module.json is read once at STARTUP, so the version",
-            "in Manage Modules stays stale until you restart. Don't trust it to tell",
-            "you whether the new code is live; check the behaviour.",
-            "First install, or a new file in module.json:",
-            "  make vtt-down && make vtt-up",
-            "then enable 'Pentaryn NPC Ties' in Manage Modules and reload.",
-            "Key defaults to 8 — rebind in Configure Controls → Ties.",
-        ),
+        # after_sync comes from module.json flags.pentaryn.afterSync (Wave 7 batch).
     ),
     "walls": ModuleSpec(
         "pentaryn-walls",
