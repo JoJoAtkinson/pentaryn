@@ -61,6 +61,9 @@
   leading `CR` on either value (`"CR 1/2 to 2"` = `"1/2-2"`); a `cr` that still names no bound
   answers the unfiltered list with `warning: "cr not understood: <cr> — use '3', '1/4' or '1/2-2'"`
   (joined to a `packs` warning with "; ") instead of silently returning everything (lookup-edge-5).
+- [declared] An empty `books: []` or `packs: []` is the same as leaving it out: `search`/`page`
+  read the rules set instead of answering `compendium pack(s) not found:  —`, and `monsters` lists
+  the default packs instead of answering 0 silently (lookup-edge-6).
 
 ## 0.3.0 — 2026-10-10
 

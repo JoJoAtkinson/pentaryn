@@ -102,3 +102,28 @@ test("EXT-3: packs() lists exactly KNOWN_PACKS, the spell and name packs include
   assert.deepEqual(ids, core.KNOWN_PACKS);
   for (const id of [...core.SPELL_PACKS, ...Object.values(core.NAME_SOURCES).map(s => s.pack)]) assert.ok(ids.includes(id), id);
 });
+
+// lookup-edge-6 [declared]: `books: []` loaded no pack and answered `compendium pack(s) not found:  —`
+// (an empty list), and `packs: []` listed nothing and answered 0 silently. Now an empty array is treated
+// as absent: books answers the rules set, packs the default monster list, neither with a warning.
+test("lookup-edge-6: resolveBooks([]) / resolveBookIds([]) answer the rules set", () => {
+  assert.deepEqual(core.resolveBooks([]), { ids: BOOKSETS.rules });
+  assert.deepEqual(core.resolveBookIds([]), BOOKSETS.rules);
+});
+
+test("lookup-edge-6: monsterQuery({packs: []}) uses the default packs, no warning", () => {
+  const q = monsterQuery({ packs: [] });
+  assert.deepEqual(q.packIds, [...MONSTER_LIST_PACKS]);
+  assert.equal("warning" in q, false);
+});
+
+test("lookup-edge-6: search/page with books: [] answer as with books omitted", async () => {
+  assert.deepEqual(await rules.search("cover", { books: [] }), await rules.search("cover"));
+  assert.deepEqual(await rules.page("Cover (SRD)", { books: [] }), await rules.page("Cover (SRD)"));
+});
+
+test("lookup-edge-6: monsters({packs: []}) answers the default list, not 0", async () => {
+  const out = await rules.monsters({ packs: [] });
+  assert.ok(out.count > 0, JSON.stringify(out));
+  assert.deepEqual(out, await rules.monsters({}));
+});

@@ -49,9 +49,10 @@ export const SPELL_PACKS = ["dnd-players-handbook.spells", "dnd5e.spells24", "dn
 /**
  * `opts.books` → `{ids, warning?}`: an array as given, a BOOKSETS name its set, any other string with a
  * dot one pack id; anything else is the rules set with a warning, so a typo is not answered silently (R5).
+ * An empty array is absent: the rules set (lookup-edge-6).
  */
 export function resolveBooks(books) {
-  if (!books) return { ids: BOOKSETS.rules };
+  if (!books || (Array.isArray(books) && !books.length)) return { ids: BOOKSETS.rules };
   if (Array.isArray(books)) return { ids: books };
   const s = String(books);
   if (Object.hasOwn(BOOKSETS, s)) return { ids: BOOKSETS[s] };
@@ -457,7 +458,8 @@ export function monsterQuery(q = {}) {
   const name = q.name ? String(q.name).toLowerCase() : null;
   const limit = Math.max(1, Math.min(Number(q.limit) || 40, 200));
   // R5: a string is one pack id (not its characters); a number or object is ignored, with a warning.
-  const packs = q.packs ?? null;
+  // lookup-edge-6: an empty array is absent — the default list, not 0.
+  const packs = Array.isArray(q.packs) && !q.packs.length ? null : q.packs ?? null;
   const usable = packs === null || typeof packs === "string" || Array.isArray(packs);
   const packIds = typeof packs === "string" ? [packs] : Array.isArray(packs) ? packs : [...MONSTER_LIST_PACKS];
   const warning = [usable ? null : "packs ignored: expected a pack id or an array", crWarning].filter(Boolean).join("; ");
