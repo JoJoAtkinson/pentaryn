@@ -206,9 +206,7 @@ export function computeSlots(actor) {
  */
 export function homeSlots(slots, awayId, itemId) {
   if (!slots.includes(awayId)) return slots;
-  const out = slots.map(id => (id === itemId) ? null : (id === awayId) ? itemId : id);
-  while ((out.length > 0) && (out.at(-1) === null)) out.pop();
-  return out;
+  return trimSlots(slots.map(id => (id === itemId) ? null : (id === awayId) ? itemId : id));
 }
 
 /**
