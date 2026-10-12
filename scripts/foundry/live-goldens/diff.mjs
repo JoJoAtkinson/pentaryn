@@ -9,7 +9,8 @@
 // explained), every path under golden.declared that differs (expected: check it against the
 // declared change named in the script header), the timings side by side, and both cleanups.
 // Exit 0 when golden.shared is equal and both cleanups left nothing behind, 1 otherwise,
-// 2 on bad input. A wave-1 golden (names, pings, cursors, importer, ties, prompts) has no
+// 2 on bad input — a run that `skipped` or has no object `golden` is bad input, never
+// identical. A wave-1 golden (names, pings, cursors, importer, ties, prompts) has no
 // shared/declared split: its whole `golden` is compared as shared, and its declared changes
 // (wave-1-report.md "Live goldens") are read off the shared list by hand.
 // A cleanup is judged by top-level key name only: `<thing>Left` above 0, `<thing>Restored === false`,
@@ -103,9 +104,14 @@ function main(argv) {
     before = load(beforePath); after = load(afterPath);
     if (declaredPath) globs = readDeclared(declaredPath);
   } catch (e) { console.error(`bad input: ${e.message}`); return 2; }
-  if (!before?.golden || !after?.golden) {
-    console.error(`no golden in ${!before?.golden ? beforePath : afterPath}${(before?.skipped || after?.skipped) ? ` (skipped: ${before?.skipped ?? after?.skipped})` : ""}`);
-    return 2;
+  // A skipped run is never "identical": its golden is empty, so name the skip and stop (LG-R3).
+  const skipped = v => v?.skipped != null && v.skipped !== false;
+  for (const [v, p] of [[before, beforePath], [after, afterPath]]) {
+    if (skipped(v)) { console.error(`skipped: ${typeof v.skipped === "string" ? v.skipped : JSON.stringify(v.skipped)} (${p})`); return 2; }
+  }
+  // A golden must be an object (LG-R2); anything else is bad input, naming the file.
+  for (const [v, p] of [[before, beforePath], [after, afterPath]]) {
+    if (v?.golden === null || typeof v?.golden !== "object") { console.error(`no golden object in ${p}`); return 2; }
   }
   console.log(`# ${after.module ?? before.module}`);
   console.log(`env before: ${show(before.env)}`);

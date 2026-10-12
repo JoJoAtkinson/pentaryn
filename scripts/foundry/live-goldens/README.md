@@ -18,8 +18,9 @@ node scripts/foundry/live-goldens/diff.mjs --declared declared.txt before.json a
 ```
 
 Exit 0 when `golden.shared` is equal (or every difference is declared) and both cleanups are clean,
-1 otherwise, 2 on bad input. `--declared` takes one path glob per line (`#` comments) or a JSON
-array: `*` stays inside one segment, `**` crosses segments, `[` `]` are literal — so
+1 otherwise, 2 on bad input. A run that `skipped` (either side) prints `skipped: <reason>` and
+exits 2, as does a `golden` that is not an object — a skip never diffs as identical.
+`--declared` takes one path glob per line (`#` comments) or a JSON array: `*` stays inside one segment, `**` crosses segments, `[` `]` are literal — so
 `stash.chest[*]`, `stash.chest[*].*` and `purseHome` each cover only what they spell. A glob that
 matched nothing is named. Keep the globs to what the wave's plan declares.
 
