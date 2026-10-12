@@ -278,20 +278,28 @@ function onEffect(effect) {
  * (vision, fog, GM-hidden) and goes away when the token is destroyed.
  */
 const EYE_KEY = "pdLootEye";
-const eyeState = { tex: null, loading: null };
+// `failed` remembers a load that came back empty or rejected: no reload (and no warning) per paint
+// until canvasReady clears it (dropbin-R8).
+const eyeState = { tex: null, loading: null, failed: false };
 
 function eyeTexture() {
   const tx = eyeState.tex;
   if (tx && !tx.destroyed && tx.baseTexture && !tx.baseTexture.destroyed) return tx;
   eyeState.tex = null;
-  if (!eyeState.loading) {
+  if (!eyeState.loading && !eyeState.failed) {
     const load = foundry.canvas?.loadTexture ?? globalThis.loadTexture;
     eyeState.loading = Promise.resolve(load?.(EYE))
       .then(tex => { eyeState.tex = tex ?? null; if (!tex) console.warn(`${MODULE} | eye texture missing: ${EYE}`); })
       .catch(err => console.warn(`${MODULE} | eye texture`, err))
-      .finally(() => { eyeState.loading = null; if (eyeState.tex) paintAllEyes(); });
+      .finally(() => { eyeState.loading = null; eyeState.failed = !eyeState.tex; if (eyeState.tex) paintAllEyes(); });
   }
   return null;
+}
+
+/** canvasReady: forget a failed eye-texture load, then repaint (which tries the load once more). */
+function onCanvasReady() {
+  eyeState.failed = false;
+  paintAllEyes();
 }
 
 function wantsEye(doc) {
@@ -440,7 +448,7 @@ export function install(reg, ctx) {
   for (const h of ["createActiveEffect", "deleteActiveEffect", "updateActiveEffect"]) on(h, onEffect, `corpse: ${h}`);
   on("drawToken", token => paintEye(token), "eye: draw");
   on("refreshToken", token => paintEye(token, { cached: true }), "eye: refresh"); // hot: reuses the cached answer, no Item Piles query
-  on("canvasReady", paintAllEyes, "eye: canvas");
+  on("canvasReady", onCanvasReady, "eye: canvas");
   on("updateToken", doc => { if (doc.parent === canvas?.scene) paintEye(doc.object); }, "eye: token");
   // Taking items out of a corpse changes its synthetic actor's items/currency, not the token.
   on("updateActor", paintEyesOf, "eye: actor");

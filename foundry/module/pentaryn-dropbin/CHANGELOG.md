@@ -91,6 +91,9 @@ Declared changes:
   (`pentaryn-dropbin | revive failed for <token>`) and one warn toast ("Could not revive <token>. See
   the console."), and the HUD stays open; it was an unhandled, unprefixed rejection with nothing on
   screen.
+- dropbin-R8: a failed eye-texture load (missing file or a rejected load) is remembered; no eye
+  shows and the console warns once per attempt, and the load is tried again only on the next
+  `canvasReady`. It was retried, and warned, on every eye paint (every animation frame).
 
 Added: `list(n, { brief })`, `restoreResult`, `inspect`, `selftest` (items-journal-28).
 - A restore another module refuses (a `preCreateItem` veto) is `{ ok: false, reason: "not-created" }`

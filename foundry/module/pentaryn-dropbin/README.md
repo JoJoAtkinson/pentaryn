@@ -20,7 +20,9 @@ the dnd5e 6 rarity keys).
 - **On the body:** the Dead skull as core's **full-body overlay**, and an **eye badge** in the
   token's top-right corner while the body still holds something. Every client draws the eye on the
   token itself; it is not a document. It disappears when the body is emptied or revived, and hides
-  with the token (out of sight, under fog, GM-hidden).
+  with the token (out of sight, under fog, GM-hidden). If the eye image fails to load, no eye shows
+  and the console says `pentaryn-dropbin | eye texture …` once; it is tried again on the next scene
+  load (canvasReady), not on every frame.
 - **GM token HUD on a corpse:** *Open character sheet (GM)* (Item Piles otherwise takes over the
   double-click) and *Revive (1 HP)*. A Revive that fails leaves the HUD open with one warning toast
   (details in the console as `pentaryn-dropbin | revive failed for <token>`).
