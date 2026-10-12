@@ -113,6 +113,13 @@ def test_argon_kit_vendors_with_its_package(tmp_path):
         vendor.sync(bare, extra=["argon-kit"])
 
 
+def test_refusal_names_the_kit_file_with_its_ext(tmp_path):
+    # a CSS kit file is named argon-tooltip.css in the refusal, not argon-tooltip.mjs (wave-4 riders lane)
+    bare = make_module(tmp_path, "pentaryn-bare")
+    with pytest.raises(vendor.VendorError, match=r"^argon-tooltip\.css names enhancedcombathud"):
+        vendor.sync(bare, extra=["argon-tooltip"])
+
+
 def test_module_json_is_never_touched(tmp_path):
     d = make_module(tmp_path, tier="full")
     before = (d / "module.json").read_bytes()
