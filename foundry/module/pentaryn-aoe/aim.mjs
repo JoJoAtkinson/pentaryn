@@ -90,9 +90,14 @@ export function install(reg, ctx) {
   reg.on("dnd5e.preCreateMeasuredTemplate", reg.guardSwallowAsync("preCreateMeasuredTemplate(aim)", onPreCreate), { guard: false, label: "preCreateMeasuredTemplate(aim)" });
 }
 
-/** A pending aim is dropped. The placeRegions wrap stays (KNOWN -44; D-A7 unwraps it). */
+/**
+ * A pending aim is dropped and core's own placeRegions comes back ([declared] D-A7, -44), so a
+ * hot-patched copy wraps it again with its own state instead of standing down behind this one's.
+ */
 export function uninstall() {
   armed = null;
+  placement?.unwrap();
+  placement = null;
 }
 
 // Test seam (characterisation checkpoint): tests import this through test/fixtures/seams.mjs only,

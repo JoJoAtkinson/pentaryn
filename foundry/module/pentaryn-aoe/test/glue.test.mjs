@@ -249,8 +249,8 @@ test("uninstall(): every on() hook off, Escape slot emptied, request handler del
   assert.equal(CONFIG.DND5E.requests[`${MODULE}.save`], undefined);
 });
 
-test("KNOWN -44: uninstall() leaves RegionLayer.prototype.placeRegions wrapped (D-A7 flips this)", () => {
-  assert.notEqual(F.RegionLayer.prototype.placeRegions, F.origPlace);
+test("[declared] D-A7 -44: uninstall() restores RegionLayer.prototype.placeRegions", () => {
+  assert.equal(F.RegionLayer.prototype.placeRegions, F.origPlace);
 });
 
 test("hot patch: a copy imported with __pentarynAoeHot registers nothing at module scope", async () => {

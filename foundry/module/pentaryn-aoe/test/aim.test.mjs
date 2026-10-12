@@ -119,16 +119,20 @@ test("a new preCreate disarms first; aimSelfAreas off arms nothing", async () =>
   await game.settings.set(MODULE, "aimSelfAreas", true);
 });
 
-test("KNOWN -44: after offAll, a hot-patched copy registers its own hook but the OLD wrap reads the old armed → no onMove", async () => {
+test("[declared] D-A7 -44: after uninstall, a hot-patched copy wraps placeRegions again with its own state → it aims", async () => {
+  S.aim.uninstall();
   S.hooks.offAll();
+  assert.equal(RegionLayer.prototype.placeRegions, orig, "core's own placeRegions is back");
   const B = await freshAim(2);
   B.installAim();
   arm(selfCone());
   assert.deepEqual(B.armed()?.tokenId, caster.id, "the copy armed its own state");
-  assert.equal(place().options.onMove, undefined, "today: Self cones stop aiming after a hot patch");
+  assert.equal(typeof place().options.onMove, "function", "Self cones keep aiming after a hot patch");
+  B.uninstall();
+  S.hooks.offAll();
 });
 
-test("-44 a hot-patched copy aims after uninstall (D-A7)", { todo: "S6 routes the wrap through wrapMethod and unwraps in uninstall" }, async () => {
+test("-44 a hot-patched copy aims after uninstall (D-A7)", async () => {
   const B = await freshAim(3);
   B.installAim();
   arm(selfCone());
