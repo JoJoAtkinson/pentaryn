@@ -14,6 +14,9 @@ import { planTokenRelabels, relabel } from "./names-core.mjs";
 import { CODES, errorCode, fail, toFail } from "./lib/errors.mjs";
 import { resolveRef } from "./lib/resolve.mjs";
 
+/** The module logger, set by `install` (ctx.log). */
+let log = null;
+
 /**
  * Relabel the prototype token and every placed token of `actor`, then (GM only) its combatants.
  * Returns how many TOKEN labels changed; combatant names are not counted or toasted.
@@ -27,7 +30,7 @@ export async function sync(actor, oldName, newName) {
     count++;
   }
   count += await relabelEmbedded(game.scenes, "tokens", "Token", t => t.canUserModify(game.user, "update"), actor, oldName, newName);
-  if (game.user.isGM) await relabelCombatants(actor, oldName, newName);
+  if (game.user.isGM) await guardCombatants(actor, oldName, newName, () => relabelCombatants(actor, oldName, newName));
   if (count) ui.notifications.info(_loc("PENTARYN_NAMES.Synced", { name: newName, count }));
   return count;
 }
@@ -41,7 +44,7 @@ async function syncToken(actor, oldName, newName) {
   const tok = actor.token;
   const scenes = tok?.parent ? [tok.parent] : [];
   const count = await relabelEmbedded(scenes, "tokens", "Token", t => t.id === tok.id && t.canUserModify(game.user, "update"), actor, oldName, newName);
-  if (game.user.isGM) await relabelEmbedded(game.combats, "combatants", "Combatant", c => c.tokenId === tok.id, actor, oldName, newName);
+  if (game.user.isGM) await guardCombatants(actor, oldName, newName, () => relabelEmbedded(game.combats, "combatants", "Combatant", c => c.tokenId === tok.id, actor, oldName, newName));
   if (count) ui.notifications.info(_loc("PENTARYN_NAMES.Synced", { name: newName, count }));
   return count;
 }
@@ -55,6 +58,18 @@ async function syncToken(actor, oldName, newName) {
  */
 async function relabelCombatants(actor, oldName, newName) {
   await relabelEmbedded(game.combats, "combatants", "Combatant", () => true, actor, oldName, newName);
+}
+
+/**
+ * names-edge-3: the GM-only combatant pass is its own write; a refusal is logged once and the
+ * rename carries on, so the token toast still shows and sync resolves with the token count.
+ */
+async function guardCombatants(actor, from, to, pass) {
+  try {
+    await pass();
+  } catch (err) {
+    log?.warn("relabel combatants after rename failed", { actor: actor.uuid, from, to }, err);
+  }
 }
 
 /**
@@ -98,6 +113,7 @@ export async function syncRef(ref, oldName, newName) {
 }
 
 export function install(reg, ctx) {
+  log = ctx.log;
   // Capture the old name before it is overwritten, keyed by actor id: one Actor.updateDocuments
   // batch shares its options across every actor in it (names-ac-2).
   reg.on("preUpdateActor", (actor, changes, options) => {

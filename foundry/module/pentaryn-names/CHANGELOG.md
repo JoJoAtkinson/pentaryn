@@ -20,6 +20,11 @@
   change). `fail("BAD_ARGS")`, `fail("AMBIGUOUS")` and an uncoded resolve error now arrive through the
   returned Promise (resolved, or rejected for the error) like the count and the legacy `TypeError`;
   before, a coded failure came back as a plain object and an uncoded one threw synchronously.
+- [declared] names-edge-3 (final review 2026-10-12): on a GM client a refused combatant write is
+  logged once (`pentaryn-names | relabel combatants after rename failed`, `{actor, from, to}`, the
+  error) and the rename carries on: the token toast still shows and `sync` resolves with the token
+  count. Before, it skipped the toast, rejected `sync`, and the hook logged the generic
+  "relabel after rename failed".
 
 ## 0.1.1 — 2026-10-11 (play-test fix, fix/playtest-2026-10-11)
 

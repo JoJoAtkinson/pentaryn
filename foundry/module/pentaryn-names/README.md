@@ -77,6 +77,9 @@ travels in the update options. Only that client (`userId === game.user.id`) writ
 A GM rename runs in every tab of that GM (the MCP bridge tab and a browser tab both pass the
 initiator gate); both send the same names, so the second write changes nothing. A failed write is logged as
 `pentaryn-names | relabel after rename failed` with `{actor, from, to}` and the error; no toast.
+A refused combatant write (GM only) is logged once as `pentaryn-names | relabel combatants after
+rename failed` with `{actor, from, to}` and the error, and the rename carries on: the token toast
+still shows and `sync` resolves with the token count (names-edge-3).
 
 ## Extending
 
