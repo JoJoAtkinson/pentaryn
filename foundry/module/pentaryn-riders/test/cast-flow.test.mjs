@@ -330,6 +330,19 @@ test("Arcane Recovery: no spent slot 1–5 → a notice and no dialog; the setti
   assert.deepEqual(W.takeLog().filter(l => l.op === "DialogV2.wait"), []);
 });
 
+test("arcaneRecoveryDialog (cast-flow's export) called directly: same dialog, returns the choice", async () => {
+  const { arcaneRecoveryDialog } = await import("../cast-flow.mjs");
+  const lvl1 = makeActor({ name: "Novice", ownership: { default: 3 }, system: { spells: { spell1: { level: 1, value: 0, max: 2 } } }, items: [
+    { id: "noviceclass00001", name: "Wizard", type: "class", system: { identifier: "wizard", levels: 1 } },
+  ] });
+  W.answer = d => ({ total: d.element.querySelector(".pr-ar-total").textContent, l1: 1 });
+  const out = await arcaneRecoveryDialog(lvl1);
+  W.answer = () => "cancel";
+  assert.deepEqual(out, { 1: 1 });
+  assert.equal(lvl1.system.spells.spell1.value, 1);
+  assert.equal(await arcaneRecoveryDialog(makeActor({ name: "Nobody" })), null);
+});
+
 test("Arcane Recovery: a failing dialog and a throw are warned", async () => {
   W.take();
   await useRecovery(() => { throw new Error("dialog broke"); });

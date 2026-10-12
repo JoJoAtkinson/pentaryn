@@ -205,7 +205,21 @@ test("preview: core.transformFormula with dnd5e's damage types", () => {
   assert.equal(api.preview("8d6", { rollType: "fire", types: ["fire"], modifier: "min2", bonus: { value: 4, label: "Elemental Affinity", type: "fire" } }), "8d6min2 + 4[Elemental Affinity]");
   assert.equal(api.preview("2d8[cold] + 1d6[fire]", { rollType: "cold", types: ["fire"], modifier: "min2" }), "2d8[cold] + 1d6min2[fire]");
   assert.equal(api.preview("1d8 + 3", { rollType: "healing", modifier: "r1" }), "1d8r1 + 3");
+  assert.equal(api.preview("1d8 + (2d4[fire]) + @abilities.wis.mod", { rollType: "fire", modifier: "min2" }), "1d8min2 + (2d4[fire]) + @abilities.wis.mod", "groups and @references are left alone");
+  assert.equal(api.preview("2d6min3 + 1d4rr1", { rollType: "fire", modifier: "min2" }), "2d6min3 + 1d4rr1min2");
+  assert.equal(api.preview("1d4rr1", { rollType: "healing", modifier: "r1" }), "1d4rr1");
 });
+
+// KNOWN (found at the checkpoint, preview/parseFormula only — the live riders edit real terms):
+// a die modifier whose argument is an @reference ("1d8x@mod=8", Sorcerous Burst's explode) is split
+// by the string tokenizer — "x" is read as the die's modifier and "@mod=8" as a separate term —
+// so the new modifier lands between them: "1d8xmin2@mod=8", not a valid formula.
+test("KNOWN parseFormula: a modifier with an @reference argument is split; preview inserts min2 inside it", () => {
+  assert.equal(api.preview("1d8x@mod=8", { rollType: "force", modifier: "min2" }), "1d8xmin2@mod=8");
+  assert.deepEqual(api.core.parseFormula("1d8x@mod=8").map(t => t.kind), ["die", "other"]);
+});
+
+test.todo("parseFormula keeps a die modifier's @reference argument with its modifier (preview gives \"1d8x@mod=8min2\" or leaves the die alone)");
 
 test("KNOWN combat-riders-12: a name string is not resolved (report → [], setType → [])", async () => {
   assert.deepEqual(api.report("Ilsa Vantrel"), []);
