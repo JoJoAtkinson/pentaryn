@@ -506,10 +506,11 @@ def _extract_mcp_tool_literal(source: str, *, path: Path,
     except SyntaxError as exc:
         raise ValueError(f"syntax error: {exc.msg} (line {exc.lineno})") from exc
 
-    # Collect all MCP_TOOL* variables
+    # Exactly MCP_TOOL / MCP_TOOLS, as on the in-process path and in the README: a
+    # helper such as MCP_TOOL_NAMES or MCP_TOOL_SCHEMA is ignored (py-mcp-ext-3).
     mcp_tool_vars: dict[str, ast.AST] = {}
     for target_id, node_value in _top_level_assignments(module):
-        if target_id.startswith("MCP_TOOL"):
+        if target_id in ("MCP_TOOL", "MCP_TOOLS"):
             mcp_tool_vars[target_id] = node_value
     
     if not mcp_tool_vars:
@@ -531,33 +532,14 @@ def _extract_mcp_tool_literal(source: str, *, path: Path,
         else:
             raise ValueError("MCP_TOOLS must be a list of tool dicts or a single tool dict")
     
-    # If there's an MCP_TOOL (singular) variable, use it
-    if "MCP_TOOL" in mcp_tool_vars:
-        try:
-            value = ast.literal_eval(mcp_tool_vars["MCP_TOOL"])
-        except Exception as exc:
-            raise ValueError("MCP_TOOL must be a literal dict (no function calls or dynamic expressions)") from exc
-        if not isinstance(value, dict):
-            raise ValueError("MCP_TOOL must be a dict")
-        return value
-    
-    # If there are multiple MCP_TOOL_<name> variables, collect them all
-    tool_list = []
-    for var_name in sorted(mcp_tool_vars.keys()):
-        if var_name in ("MCP_TOOL", "MCP_TOOLS"):
-            continue  # Already handled
-        try:
-            value = ast.literal_eval(mcp_tool_vars[var_name])
-        except Exception as exc:
-            raise ValueError(f"{var_name} must be a literal dict (no function calls or dynamic expressions)") from exc
-        if not isinstance(value, dict):
-            raise ValueError(f"{var_name} must be a dict")
-        tool_list.append(value)
-    
-    if tool_list:
-        return {"tools": tool_list}
-    
-    return None
+    # Otherwise it is the MCP_TOOL (singular) variable
+    try:
+        value = ast.literal_eval(mcp_tool_vars["MCP_TOOL"])
+    except Exception as exc:
+        raise ValueError("MCP_TOOL must be a literal dict (no function calls or dynamic expressions)") from exc
+    if not isinstance(value, dict):
+        raise ValueError("MCP_TOOL must be a dict")
+    return value
 
 
 def _normalize_input_schema(raw: Any) -> dict[str, Any]:

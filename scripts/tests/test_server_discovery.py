@@ -806,3 +806,39 @@ def test_py_mcp_rob_8_system_exit_at_import_is_skipped_and_discovery_continues(t
     assert "_mcp_script_a_exits_rob8" not in sys.modules
     assert "_mcp_script_b_raises_rob8" not in sys.modules
     assert "_mcp_script_c_inproc_rob8" in sys.modules
+
+
+# ---------------------------------------------------------------------------
+# py-mcp-ext-3 (MNT-5): the AST path matches exactly MCP_TOOL / MCP_TOOLS
+# ---------------------------------------------------------------------------
+
+def test_py_mcp_ext_3_mcp_tool_prefixed_helpers_are_ignored(tmp_path):
+    """py-mcp-ext-3: the AST path collected every name starting with MCP_TOOL, so a
+    helper like MCP_TOOL_NAMES (a list) or MCP_TOOL_SCHEMA (a call) turned the script
+    into a discovery failure, and an undocumented MCP_TOOL_<name> dict shape was
+    registered. Now only MCP_TOOL and MCP_TOOLS count, as on the in-process path and
+    in the README: helpers are ignored, a helper-only script is a plain 'no MCP_TOOL'."""
+    repo = _make_repo(tmp_path)
+    scripts = repo / "scripts"
+    (scripts / "a_names_ext3.py").write_text(
+        'MCP_TOOL_NAMES = ["x", "y"]\n'
+        'MCP_TOOL = {"name": "ext3_tool", "description": "d"}\n', encoding="utf-8")
+    (scripts / "b_schema_ext3.py").write_text(
+        'def build():\n    return {}\n'
+        'MCP_TOOL_SCHEMA = build()\n'
+        'MCP_TOOLS = [{"name": "ext3_listed", "description": "d"}]\n', encoding="utf-8")
+    (scripts / "c_helper_only_ext3.py").write_text(
+        'MCP_TOOL_NAMES = ["x"]\n', encoding="utf-8")
+    (scripts / "d_named_ext3.py").write_text(
+        'MCP_TOOL_FOO = {"name": "ext3_undocumented", "description": "d"}\n', encoding="utf-8")
+
+    result = server.discover_tools(repo_root=repo)
+
+    names = {r.tool.name for r in result.tools}
+    assert {"ext3_tool", "ext3_listed"} <= names
+    assert "ext3_undocumented" not in names
+    reasons = {path.name: reason for path, reason in result.skipped}
+    assert "a_names_ext3.py" not in reasons
+    assert "b_schema_ext3.py" not in reasons
+    assert reasons["c_helper_only_ext3.py"] == server._NO_TOOL
+    assert reasons["d_named_ext3.py"] == server._NO_TOOL
