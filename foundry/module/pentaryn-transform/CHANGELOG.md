@@ -4,6 +4,9 @@
 
 ## Unreleased
 
+- **A form tile's tooltip and right-click on a compendium form** (the Monster Manual Wolf, Cat, Giant
+  Badger) load the beast first: `fromUuidSync` gives only the pack's index entry, and the hover threw
+  `src.items is not iterable`, so no CR/AC/speeds/attacks tooltip and no sheet (PT TF-1, [declared]).
 - **`inspect(ref)` on a shifted linked druid** reads the form that is out (`shifted: true`, the time
   left), the same answer as inspecting the form; before, the druid's name answered `shifted: false`
   (PT TF-3, [declared]).

@@ -40,6 +40,19 @@ function recoveryText(item) {
   return recoveryLines(item.system.uses?.recovery, CONFIG.DND5E.limitedUsePeriods ?? {}, _loc("PENTARYN_TRANSFORM.Hud.All"));
 }
 
+/**
+ * A form's beast as a full document. `form.actor` (fromUuidSync) is only the pack's index entry for
+ * a compendium form that is not loaded yet — no `items`, no `sheet` — so load it then (PT TF-1).
+ * @returns {Promise<object|null>}
+ */
+async function formSource(form) {
+  const near = form.actor ?? fromUuidSync(form.uuid);
+  if (typeof near?.items?.[Symbol.iterator] === "function") return near;
+  let doc = null;
+  try { doc = await fromUuid(form.uuid); } catch { doc = null; }
+  return typeof doc?.items?.[Symbol.iterator] === "function" ? doc : null;
+}
+
 /* ── components ──────────────────────────────────────────────────────────── */
 
 /**
@@ -73,7 +86,7 @@ export function argonClasses() {
     get hasTooltip() { return true; }
 
     async getTooltipData() {
-      const src = this.form.actor ?? fromUuidSync(this.form.uuid);
+      const src = await formSource(this.form);
       if (!src) return { title: this.form.name, description: "" };
       const f = formSummary(summaryFromSource(src, CONFIG.DND5E));
       return {
@@ -97,7 +110,7 @@ export function argonClasses() {
     }
 
     async _onRightClick(event) {
-      (this.form.actor ?? fromUuidSync(this.form.uuid))?.sheet?.render(true);
+      (await formSource(this.form))?.sheet?.render(true);
     }
   }
 

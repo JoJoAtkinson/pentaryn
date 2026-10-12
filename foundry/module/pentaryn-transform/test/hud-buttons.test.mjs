@@ -138,6 +138,26 @@ test("FormTile tooltip: the beast summarised (golden/tooltip-formtile.json); an 
   assert.equal(lost.hasTooltip, true);
 });
 
+test("FormTile tooltip on a compendium form (PT TF-1): fromUuidSync gives the index entry (no items, no sheet), so the tile loads the document", async () => {
+  const { talo, wolfSrc } = fresh();
+  const { ws } = await bonus(talo);
+  const expected = await tiles(ws)[0].getTooltipData();
+  const baseSync = globalThis.fromUuidSync;
+  const indexEntry = { _id: wolfSrc.id, uuid: wolfSrc.uuid, name: wolfSrc.name, img: wolfSrc.img, type: "npc", system: { details: { cr: 1 } } };
+  Object.defineProperty(globalThis, "fromUuidSync", { value: uuid => (uuid === wolfSrc.uuid ? indexEntry : baseSync(uuid)), configurable: true, writable: true });
+  try {
+    const { ws: ws2 } = await bonus(talo);
+    const tile = tiles(ws2)[0];
+    assert.equal(tile.form.actor, indexEntry, "the picker resolved the form to the index entry, as Foundry does");
+    assert.deepEqual(await tile.getTooltipData(), expected, "the summary of the loaded beast, no TypeError");
+    F.calls.length = 0;
+    await tile._onRightClick({});
+    assert.deepEqual(F.calls.filter(c => c.op === "sheet.render").map(c => c.actor), [wolfSrc.id], "right-click opens the loaded beast's sheet");
+  } finally {
+    Object.defineProperty(globalThis, "fromUuidSync", { value: baseSync, configurable: true, writable: true });
+  }
+});
+
 test("FormTile tooltip normalisation: item-level labels, a non-array damage, an unknown size/type, recovery fallbacks", async () => {
   const { talo } = fresh();
   const odd = F.W.beast("oddBeast00000001", "Odd Beast", {
