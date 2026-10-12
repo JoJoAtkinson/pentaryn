@@ -43,8 +43,8 @@ ordinary ability. Requires dnd5e 6 (verified 6.0.6) on Foundry v14.
 ## Settings
 
 n/a for world or client settings. One keybinding: **Cancel the HUD's target picker** (`Escape`,
-PRIORITY; Configure Controls). Reads two others' settings: dnd5e's Allow Polymorphing (a player
-shift needs it, and `ACTOR_CREATE`), and pentaryn-combat's `fullAttack` / `multiattack` (below).
+PRIORITY; Configure Controls). Reads dnd5e's Allow Polymorphing (a player shift needs it, and
+`ACTOR_CREATE`); pentaryn-combat's Full Attack choice comes through its API (below).
 
 ## API — game.pentaryn.transform
 
@@ -93,8 +93,9 @@ the actor gets `{ actor }` only. Kit members: `describe()`, `version`, `contract
   only while pentaryn-senses is active. A cross-module contract test is drafted for
   `scripts/tests/` (transform-creatures-21).
 - **pentaryn-combat** → transform: the Action bar drops the text-only Multiattack when combat's Full
-  Attack runs it (U-4-1). Today transform reads combat's `fullAttack` / `multiattack` settings and
-  `game.pentaryn.combat.multiattack(actor)` (C23, adjustments row `transform-reads-combat-multiattack`).
+  Attack runs it (U-4-1), asking combat's published `coversMultiattack(actor)` (an item id or null);
+  no combat setting is read. Without that method (combat off, not yet published, older) the button
+  stays; a throw warns once.
 - **transform → pentaryn-combat:** combat's tooltips use the `pentaryn-tt` classes, styled by the
   kit's `lib/argon-tooltip.css`, which `styles/transform.css` imports (D7).
 - Transform reads dnd5e's `flags.dnd5e.originalActor`, `isPolymorphed`, `transformOptions`,

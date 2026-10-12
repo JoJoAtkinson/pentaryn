@@ -1,7 +1,7 @@
 /**
  * Pentaryn Transform — settings. The only file outside lib/ that reads game.settings or registers a
- * keybinding. The module has no world settings of its own: one keybinding (Escape) and two reads of
- * other packages' settings.
+ * keybinding. The module has no world settings of its own: one keybinding (Escape) and one read of
+ * dnd5e's.
  *
  * Every row carries LITERAL `name` and `hint` keys (C51): the i18n gate sees them.
  */
@@ -48,15 +48,6 @@ export function registerKeybindings({ onDown }) {
 /** dnd5e's "Allow Polymorphing" world setting (players may transform). */
 export function dnd5eAllowsPolymorphing() {
   return game.settings.get("dnd5e", "allowPolymorphing");
-}
-
-/**
- * One of pentaryn-combat's settings (`fullAttack`, `multiattack`) — C23's documented coupling until
- * transform reads combat's published coversMultiattack (transform-creatures-13 step 3). Throws
- * when the setting is not registered, as game.settings.get does.
- */
-export function combatSetting(key) {
-  return game.settings.get("pentaryn-combat", key);
 }
 
 /** The live value; the row default when unregistered or unreadable (no rows today). */

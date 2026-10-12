@@ -19,6 +19,13 @@ commit and handed to the live test:
 - **Guarded hooks (T-D8):** a throwing listener logs `pentaryn-transform | <label>`.
 - **CSS (T-D4):** own classes renamed `ptf-*`; the compact tooltip rules come from the kit's
   `lib/argon-tooltip.css` (D7), imported by `styles/transform.css`.
+- **Combat coupling (-13):** the Multiattack button beside Full Attack is dropped on combat's own
+  answer, `coversMultiattack(actor)`, instead of reading combat's settings.
+- **Performance (T-D6, T-D7, -1, -10, -23, C59):** world-time fallbacks scan only where the runner
+  can be; the pointermove check arms only for a stale tooltip; the runner test skips the owner
+  scan with a GM connected; spent HUD buttons are pruned; forms resolve once; ended effects go in
+  one batch. The Starry light flag is removed with `_del` on pentaryn-senses' scope (§5.8).
+- The Argon helpers are the kit's `lib/argon-kit.mjs` (-12), shared with pentaryn-combat.
 - `WILDSHAPE-DESIGN.md` moved to `context/plans/wildshape-hud-design.md` (history).
 
 ## 0.3.3 — play-test fixes (wave-1 play test PT3)

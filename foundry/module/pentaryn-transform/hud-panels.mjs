@@ -13,10 +13,11 @@
 
 import {
   MODULE, EFFECT_ID, activitiesOf, isWildShapeActivity, planBonusBar, planWithout, frontRowItems, coveredPanel,
-  hpText, portraitText, earnsChalice, coveredMultiattackId, formatDuration, pruneDisconnected
+  hpText, portraitText, earnsChalice, formatDuration, pruneDisconnected
 } from "./transform-core.mjs";
 import { makeLog } from "./lib/log.mjs";
-import { combatSetting, registerKeybindings } from "./settings.mjs";
+import { registerKeybindings } from "./settings.mjs";
+import { apiOf } from "./lib/publish.mjs";
 import { wildShapeActivity, original, isRevertItem, bonusUsedNow, isWildShapeForm } from "./wildshape-adapter.mjs";
 import {
   STARRY_EFFECT_ID, starryItem, activeStarry, constellationOf, starrySecondsLeft, constellationActivity
@@ -119,16 +120,16 @@ function composeBonusBar(panel, actor) {
 }
 
 /**
- * U-4-1: the form's Multiattack item when pentaryn-combat's Full Attack already runs it (Full Attack
- * shown for this form, its Multiattack parsed from that item), so the text-only Multiattack button
- * beside Full Attack can go. null = keep it (module off, a setting off, an unparsed Multiattack).
+ * U-4-1: the form's Multiattack item when pentaryn-combat's Full Attack already runs it, so the
+ * text-only Multiattack button beside Full Attack can go — combat's own published answer,
+ * coversMultiattack(actor) (transform-creatures-13 step 3; its fullAttack / multiattack settings and
+ * the parsed Multiattack are combat's business). null = keep it (combat off or not yet published, a
+ * setting off, an unparsed Multiattack); a failing call warns once and keeps it.
  */
 function multiattackCoveredByFullAttack(actor) {
   try {
     if (!game.modules.get("pentaryn-combat")?.active) return null;
-    if (!combatSetting("fullAttack") || !combatSetting("multiattack")) return null;
-    const ma = game.pentaryn?.combat?.multiattack?.(actor);
-    return coveredMultiattackId({ active: true, fullAttack: true, multiattack: true, ma, hasItem: id => !!actor.items.get(id) });
+    return apiOf("pentaryn-combat")?.coversMultiattack?.(actor) ?? null;
   } catch (err) {
     log.warnOnce("combat-multiattack", "combat multiattack read failed", err);
     return null;

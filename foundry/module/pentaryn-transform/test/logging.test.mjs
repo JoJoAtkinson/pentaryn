@@ -84,7 +84,9 @@ test("tooltip hygiene failing: still swallowed; a debug line with debug on", () 
 test("-13 part 1: a failing read of pentaryn-combat's multiattack warns once (text pinned), the button stays", async () => {
   const { talo } = fresh();
   const wolf = await T.shift(talo, "p1");
-  game.modules.get("pentaryn-combat").active = true;      // its settings are not registered: the read throws
+  const combat = game.modules.get("pentaryn-combat");
+  combat.active = true;
+  combat.api = { coversMultiattack: () => { throw new Error("combat changed"); } };
   F.console.length = 0;
   const run = () => {
     const p = F.A.panel("DND5E.Action", [new F.A.DND5eItemButton({ item: null, isWeaponSet: true })]);
@@ -94,5 +96,6 @@ test("-13 part 1: a failing read of pentaryn-combat's multiattack warns once (te
   assert.deepEqual(run(), [null, "mmBite0000000001", "mmMultiattack001"]);
   assert.deepEqual(run(), [null, "mmBite0000000001", "mmMultiattack001"]);
   assert.deepEqual(F.console.map(c => c.slice(0, 2)), [["warn", "pentaryn-transform | combat multiattack read failed"]], "once");
-  game.modules.get("pentaryn-combat").active = false;
+  delete combat.api;
+  combat.active = false;
 });

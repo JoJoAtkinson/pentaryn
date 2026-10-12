@@ -172,25 +172,24 @@ test("Action bar: not shifted → untouched; nothing to add or drop → only upd
   assert.ok(q._buttons[0].element.classList.contains("ptf-hidden"));
 });
 
-test("Action bar with pentaryn-combat: Multiattack is dropped only when Full Attack runs it (U-4-1); its settings are read directly (C23)", async () => {
+test("[declared] -13 Action bar with pentaryn-combat: Multiattack is dropped only when combat's coversMultiattack(actor) names it (U-4-1; no settings read, C23)", async () => {
   const { talo } = fresh();
   const wolf = await T.shift(talo, "p1");
   const run = () => { const p = A.panel("DND5E.Action", [slot()]); fire(p, wolf); return bar(p).map(b => b.item); };
+  const combat = game.modules.get("pentaryn-combat");
   assert.deepEqual(run(), [null, "mmBite0000000001", "mmMultiattack001"], "combat inactive");
-  game.modules.get("pentaryn-combat").active = true;
-  assert.deepEqual(run(), [null, "mmBite0000000001", "mmMultiattack001"], "KNOWN (-13): settings unregistered → the read throws, silently null");
-  game.settings.register("pentaryn-combat", "fullAttack", { default: true });
-  game.settings.register("pentaryn-combat", "multiattack", { default: true });
-  game.pentaryn.combat = { multiattack: () => ({ source: "mmMultiattack001", total: 2 }) };
+  combat.active = true;
+  assert.deepEqual(run(), [null, "mmBite0000000001", "mmMultiattack001"], "active but not published yet (no module.api)");
+  const seen = [];
+  combat.api = { coversMultiattack: actor => { seen.push(actor); return "mmMultiattack001"; } };
   assert.deepEqual(run(), [null, "mmBite0000000001"]);
-  game.pentaryn.combat = { multiattack: () => ({ source: "flag", total: 2 }) };
+  assert.equal(seen[0], wolf, "asked about the form actor itself");
+  combat.api = { coversMultiattack: () => null };                  // a setting off, a flag override, one swing
   assert.deepEqual(run(), [null, "mmBite0000000001", "mmMultiattack001"]);
-  game.pentaryn.combat = { multiattack: () => ({ source: "mmMultiattack001", total: 2 }) };
-  await game.settings.set("pentaryn-combat", "fullAttack", false);
+  combat.api = {};                                                  // an older combat without the method
   assert.deepEqual(run(), [null, "mmBite0000000001", "mmMultiattack001"]);
-  await game.settings.set("pentaryn-combat", "fullAttack", true);
-  delete game.pentaryn.combat;
-  game.modules.get("pentaryn-combat").active = false;
+  delete combat.api;
+  combat.active = false;
 });
 
 /* ── the Special bar and the Reaction slot ────────────────────────────────── */
