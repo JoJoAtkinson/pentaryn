@@ -123,8 +123,8 @@ stops being allowed; only a GM writes the world settings.
 2. A label → a literal key in one of core's key maps (`TOOL_KEYS`, `NOTIFY_*`, …) and `lang/en.json`.
 3. A hook → `reg.on(...)` inside `install()` in `ghost.mjs` (order matters: re-pin `hooks.json`
    only as a declared change).
-4. A setting → a row in `settings.mjs` with literal `name`/`hint`; react to it through
-   `ctx.onSettingChange(key, fn)`.
+4. A setting → a row in `settings.mjs` with literal `name`/`hint` and `onChange: forward(key)`;
+   react to it through `ctx.onSettingChange(key, fn)`.
 5. An API method → a row in `api-manifest.mjs` + its implementation in `api.mjs`, then
    `GOLDEN_UPDATE=1 node --test test/api.test.mjs` and review the diff.
 
