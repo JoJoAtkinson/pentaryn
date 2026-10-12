@@ -627,6 +627,26 @@ def test_c50_reads_the_kit_registrar_ready_body(tmp_path):
     assert status(conformance.score_dir(d), "C50") == "fail"
 
 
+def test_c50_follows_a_named_publisher_called_from_another_files_ready_body(tmp_path):
+    """dropbin's shape: the entry's `function publish()` is called from a feature's
+    `ctx.onReady(() => {…})` — the publish is in the ready tick, so `when` stays "ready"."""
+    d = tmp_path / "pentaryn-led"
+    entry = ('import { publishNamespace } from "./lib/publish.mjs";\nconst api = {};\n'
+             'export function publish() {\n  publishNamespace("led", api, { moduleId: "pentaryn-led" });\n}\n')
+    feature = 'export function install(reg, ctx) {\n  ctx.onReady(() => {\n  hook();\n  ctx.publish();\n  }, "x");\n}\n'
+    write(d, {"module.json": json.dumps({"id": "pentaryn-led", "esmodules": ["led.mjs"]}),
+              "led.mjs": entry, "ledger.mjs": feature})
+    assert status(conformance.score_dir(d), "C50") == "pass"
+    # an await before the call makes it late: then the publish must record `when`
+    (d / "ledger.mjs").write_text(feature.replace("ctx.onReady(() => {", "ctx.onReady(async () => {"))
+    assert status(conformance.score_dir(d), "C50") == "fail"
+    (d / "ledger.mjs").write_text(feature.replace("  hook();\n", "  await hook();\n"))
+    assert status(conformance.score_dir(d), "C50") == "fail"
+    # nobody calls it from a ready body: late, unrecorded
+    (d / "ledger.mjs").write_text('export function install(reg, ctx) { reg.on("canvasReady", () => ctx.publish()); }\n')
+    assert status(conformance.score_dir(d), "C50") == "fail"
+
+
 # ── C62: a Document param the kit does not resolve names its string forms (FX item 5) ────────
 # The bridge (pentaryn-call.ts needsDoc) refuses a call that fills such a param with BAD_ARGS
 # "eval-js only" unless its `type` names uuid / id / name / string; senses.inspect's ref

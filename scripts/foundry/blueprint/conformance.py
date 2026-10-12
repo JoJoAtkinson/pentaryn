@@ -1329,6 +1329,27 @@ def ready_bodies(src) -> list[tuple[bool, int, int]]:
     return out
 
 
+def on_ready_bodies(src) -> list[tuple[bool, int, int]]:
+    """`ready_bodies` plus the entry-ctx helper form `ctx.onReady(() => {…})` (dropbin: the helper
+    runs `fn` at once when the world is ready, else registers it with `reg.once("ready", …)`)."""
+    code = src.code
+    out = list(ready_bodies(src))
+    for rm in re.finditer(r"(?<![\w$])(?:[\w$]+\.)?onReady\(\s*(async\s*)?\(\)\s*=>\s*\{", code):
+        s = rm.end() - 1
+        out.append((bool(rm.group(1)), s, match_paren(code, s)))
+    return out
+
+
+def _enclosing_function(code: str, i: int) -> tuple[str, bool, int] | None:
+    """(name, is_async, body open) of the innermost `function NAME(…) {…}` holding offset `i`."""
+    best = None
+    for fm in re.finditer(r"(async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\([^)]*\)\s*\{", code):
+        s = fm.end() - 1
+        if s < i < match_paren(code, s) and (best is None or s > best[2]):
+            best = (fm.group(2), bool(fm.group(1)), s)
+    return best
+
+
 # a role gate before the publish in the synchronous ready body: `if (!isAnyGM()) return;`,
 # `if (!game.user.isGM) return`, an active-GM check — then when: "ready:gm" (or "ready:<role>") is allowed
 ROLE_GATE = re.compile(r"(?<![\w$])(?:isAnyGM|isActiveGM|isActiveGMOrLoneGM)\(|\.isGM\b|activeGM\b")
@@ -1348,10 +1369,26 @@ def c50(m):
                 when = src.strings[int(wm.group(1))].value
             sync = False
             gated = False
+            inside = False
             for is_async, s, e in ready_bodies(src):
                 if s < mm.start() < e:
+                    inside = True
                     sync = not is_async and "await" not in code[s:mm.start()]
                     gated = ROLE_GATE.search(code[s:mm.start()]) is not None
+            if not inside:
+                # A named publisher (`function publish() {… publishNamespace(…) …}`) called, before
+                # any await, from a synchronous ready body in any module file (dropbin: the ledger's
+                # `ctx.onReady(() => { …; ctx.publish(); })`) publishes in the ready tick too.
+                fn = _enclosing_function(code, mm.start())
+                if fn and not fn[1] and "await" not in code[fn[2]:mm.start()]:
+                    call = re.compile(rf"(?<![\w$])(?:[\w$]+\.)?{re.escape(fn[0])}\(")
+                    pre_gate = ROLE_GATE.search(code[fn[2]:mm.start()]) is not None
+                    for other in m.files.values():
+                        for is_async, s, e in on_ready_bodies(other):
+                            cm = call.search(other.code, s, e)
+                            if cm and not is_async and "await" not in other.code[s:cm.start()]:
+                                sync = True
+                                gated = pre_gate or ROLE_GATE.search(other.code[s:cm.start()]) is not None
             calls.append((rel, src.line_of(mm.start()), when, sync, gated))
     if not calls:
         return na("publishNamespace not used yet")
