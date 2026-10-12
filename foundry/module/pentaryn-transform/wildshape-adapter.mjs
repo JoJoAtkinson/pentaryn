@@ -470,7 +470,7 @@ export async function doShift(host, activity, profileId, uuid) {
 
 /* ── ending without a click ──────────────────────────────────────────────── */
 
-/** True on exactly one client for this actor: the active GM, else the first active owner. */
+/** True for exactly one user for this actor (the active GM, else the first active owner), in every tab of that user (README "Two sessions"). */
 export function isRunner(actor) {
   const activeGMId = game.users.activeGM?.id ?? null;
   // A connected GM always wins pickRunner: no owner scan (transform-creatures-1).
