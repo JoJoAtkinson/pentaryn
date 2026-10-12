@@ -27,7 +27,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Callable
 
-from scripts.foundry.update import llm
+from scripts.foundry.update import llm, risk
 
 # Model and effort come from `llm.adjudicator` in update-policy.yml; these are the
 # defaults when it is absent. Effort is set explicitly — Opus 5.5 defaults to medium, and
@@ -41,9 +41,6 @@ MODEL = "opus"
 EFFORT = "medium"
 TIMEOUT_SECONDS = 600
 BUDGET_USD = 1.50
-
-# Kept for anything that imported it; the command itself is built in llm.py.
-DENIED_TOOLS = llm.DENIED_TOOLS
 
 SYSTEM_RULES = """\
 You are grading Foundry VTT package updates for an unattended 06:00 Saturday job.
@@ -84,7 +81,7 @@ def _candidate_block(decision: dict, upstream: dict) -> str:
     notes = upstream.get("notes") or []
     if notes:
         rendered = "\n".join(
-            f"  --- {n.get('version')} ({n.get('published', '')[:10]}) ---\n"
+            f"  --- {n.get('version')} ({str(n.get('published') or '')[:10]}) ---\n"
             f"  {(n.get('body') or '(no body)').strip()[:2500]}"
             for n in notes[:6]
         )
@@ -198,8 +195,5 @@ def apply_verdicts(plan: dict, verdicts: list[Verdict], error: str | None,
         "verdicts": [{"id": v.id, "verdict": v.verdict, "rationale": v.rationale}
                      for v in verdicts],
     }
-    plan["buckets"] = {
-        bucket: [d["id"] for d in plan["decisions"] if d["bucket"] == bucket]
-        for bucket in ("auto", "review", "hold")
-    }
+    plan["buckets"] = risk.bucket_index(plan["decisions"])
     return plan

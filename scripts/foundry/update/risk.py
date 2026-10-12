@@ -10,10 +10,11 @@ Three buckets:
 
 ``auto``    apply without asking. Patch/minor bumps whose compatibility and
             relationships all check out against what is installed.
-``review``  hand to Claude with the release notes. Major bumps, packages never seen
-            before, and anything Foundry's own compatibility preview flagged.
+``review``  hand to Claude with the release notes. Major bumps and packages never
+            seen before.
 ``hold``    do not apply; report it. Core generation changes, anything that would
-            need a core upgrade we are not doing, anything unresolvable.
+            need a core upgrade we are not doing, anything Foundry's own
+            compatibility preview blocks, anything unresolvable.
 
 "Never seen before" is tracked in ``.state/vtt-update.seen.json``. A module Joe
 installed on Thursday should not silently auto-update on Saturday before anyone has
@@ -36,6 +37,12 @@ POLICY_PATH = REPO_ROOT / "foundry" / "update-policy.yml"
 SEEN_PATH = REPO_ROOT / ".state" / "vtt-update.seen.json"
 
 AUTO, REVIEW, HOLD, SKIP = "auto", "review", "hold", "skip"
+
+
+def bucket_index(decisions) -> dict:
+    """The plan's ``buckets`` map: decision ids per bucket, keys in auto/review/hold order."""
+    return {b: [d["id"] for d in decisions or [] if d.get("bucket") == b]
+            for b in (AUTO, REVIEW, HOLD)}
 
 # Foundry's PACKAGE_AVAILABILITY_CODES, from common/constants.mjs. It vends these as
 # INTEGERS, not names — an earlier version of this file matched only on strings, which
@@ -318,7 +325,3 @@ def preview_findings(preview: dict | None) -> tuple[set[str], dict[str, str]]:
             elif name in NOTEWORTHY_AVAILABILITY:
                 notes[pkg_id] = name
     return blocked, notes
-
-
-def _preview_blockers(preview: dict | None) -> set[str]:
-    return preview_findings(preview)[0]

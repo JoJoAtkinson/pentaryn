@@ -142,12 +142,13 @@ export function exclusive(fn, {onBusy, lock = {busy: false}} = {}) {
       return null;
     }
     lock.busy = true;
+    const gen = lock.gen = (lock.gen ?? 0) + 1;
     let out;
     try {
       out = Promise.resolve(fn(...args));
     } catch (err) {
       out = Promise.reject(err);
     }
-    return out.finally(() => { lock.busy = false; });
+    return out.finally(() => { if (lock.gen === gen) lock.busy = false; });
   };
 }
