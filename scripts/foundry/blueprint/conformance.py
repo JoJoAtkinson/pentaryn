@@ -1509,6 +1509,23 @@ def _expr_end(code: str, i: int) -> int:
     return i
 
 
+def _call_args(code: str, open_paren: int) -> list[str]:
+    """The top-level arguments of the call whose `(` is at `open_paren`."""
+    close, args, i = match_paren(code, open_paren), [], open_paren + 1
+    while i < close:
+        end = min(_expr_end(code, i), close)
+        if code[i:end].strip():
+            args.append(code[i:end])
+        i = end + 1
+    return args
+
+
+def _has_timeout(code: str, open_paren: int, opts_at: int) -> bool:
+    """The options argument (index `opts_at`) of the call at `open_paren` names a timeout."""
+    args = _call_args(code, open_paren)
+    return len(args) > opts_at and bool(re.search(r"\btimeout\b", args[opts_at]))
+
+
 def _arrow_body(code: str, q: int) -> str:
     if q < len(code) and code[q] == "{":
         return code[q:match_paren(code, q) + 1]
@@ -1630,12 +1647,10 @@ def c55(m):
                 if last not in ("db", "sql", "index", "pool", "client"):
                     unknown.append(f"{where} {recv}.query( — is the receiver a User?")
                 continue
-            args = code[mm.end() - 1:match_paren(code, mm.end() - 1) + 1]
-            if not re.search(r"\btimeout\b", args):
+            if not _has_timeout(code, mm.end() - 1, 2):
                 detail.append(f"{where} {recv}.query( without timeout")
         for mm in re.finditer(r"(?<![\w$])(?:User\.)?queryMany\(", code):
-            args = code[mm.end() - 1:match_paren(code, mm.end() - 1) + 1]
-            if not re.search(r"\btimeout\b", args):
+            if not _has_timeout(code, mm.end() - 1, 3):
                 detail.append(f"{rel}:{src.line_of(mm.start())} queryMany( without timeout")
     if detail:
         return bad(detail + unknown)

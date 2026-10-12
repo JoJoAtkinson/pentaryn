@@ -469,6 +469,9 @@ C55_CASES = [
     ('await queryGM("x.y", {});', "pass"),                                       # kit default
     ('await db.query("select 1");', "pass"),                                     # not a User
     ('await thing.query("x");', "manual"),                                       # unknown receiver
+    ('await gm.query("x.y", { timeout: 5 });', "fail"),                          # timeout in the data arg
+    ('await User.queryMany([gm], "x.y", { timeout: 5 });', "fail"),              # timeout in the data arg
+    ('await gm.query("x.y", {}, opts);', "fail"),                                # unproven options (as before)
 ]
 
 
