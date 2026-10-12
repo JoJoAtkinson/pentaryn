@@ -857,3 +857,24 @@ def test_py_blueprint_perf_1_a_full_run_loads_the_registry_and_manifests_once(tm
     assert after == before
     assert len(loads) == 1, loads
     assert reads.count("module.json") <= 2 * 4, reads.count("module.json")
+
+
+def test_pyb_e6_strict_gate_matches_the_full_detail_list_and_display_caps_it(tmp_path, monkeypatch):
+    # PYB-E6: a rule returns every finding; the gate's `match` runs on all of them, so a synthetic
+    # "… N more" line can neither block a row whose real findings all match nor hide findings past
+    # a cap. Truncation is display-only (to_markdown, through _capped); --json carries the full list.
+    core = "".join(f"export const v{i} = game.x{i};\n" for i in range(20))
+    d = _tiny(tmp_path, files={"one-core.mjs": core})
+    row = {"reason": "why", "decision": "who", "until": "when", "match": [r"^one-core\.mjs:\d+ game\.x"]}
+    monkeypatch.setattr(conformance, "EXCEPTIONS", {"pentaryn-one": {"C11": row}})
+    report = conformance.score_dir(d)
+    c11 = next(r for r in report["results"] if r["id"] == "C11")
+    assert c11["status"] == "fail" and len(c11["detail"]) == 20, c11["detail"]
+    assert not any("more" in x for x in c11["detail"])
+    assert "C11" not in report["blocking"] and report["accepted"] == {"C11": "why"} and not report["unmatched"]
+    c11["detail"] = [f"f{i}" for i in range(20)]     # short findings: the 400-char line cap stays out of it
+    md = conformance.to_markdown([report], title="t")
+    line = next(ln for ln in md.splitlines() if ln.startswith("- **C11**"))
+    assert "… 8 more" in line
+    assert conformance._capped(["a", "b", "c"], 2) == ["a", "b", "… 1 more"]
+    assert conformance._capped(["a", "b"], 2) == ["a", "b"]

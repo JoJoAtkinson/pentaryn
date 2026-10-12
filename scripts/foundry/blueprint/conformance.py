@@ -371,6 +371,12 @@ def na(why):
     return "n/a", [why]
 
 
+def _capped(detail: list[str], n: int = 12) -> list[str]:
+    """The first `n` findings and a "… N more" line, for display only (to_markdown). Rules return
+    every finding: the strict gate's `match` runs on the full list, and --json carries it (PYB-E6)."""
+    return list(detail[:n]) + ([f"… {len(detail) - n} more"] if len(detail) > n else [])
+
+
 @rule("C01", "fail", "module.json id == folder name")
 def c01(m):
     return ok() if m.manifest.get("id") == m.dir.name else bad([f"id {m.manifest.get('id')!r} ≠ folder {m.dir.name!r}"])
@@ -560,7 +566,7 @@ def c11(m):
         for rx in (CORE_GLOBAL, CORE_FOUNDRY):
             for mm in rx.finditer(code):
                 detail.append(f"{rel}:{m.files[rel].line_of(mm.start())} {code[mm.start():mm.start() + 24].strip()}")
-    return ok() if not detail else bad(detail[:12] + ([f"… {len(detail) - 12} more"] if len(detail) > 12 else []))
+    return ok() if not detail else bad(detail)
 
 
 @rule("C12", "fail", "MODULE defined once; no MOD / MODULE_ID / SCOPE")
@@ -587,7 +593,7 @@ def c13(m):
 @rule("C14", "fail", "lib/kit.lock.json present and vendor.py check passes")
 def c14(m):
     problems = vendor.check(m.dir)
-    return ok() if not problems else bad(problems[:8])
+    return ok() if not problems else bad(problems)
 
 
 @rule("C15", "fail", "`import * as` only for feature files (from the entry) and core/ barrels")
@@ -654,7 +660,7 @@ def c17(m):
         for mm in re.finditer(r"(?<![\w$.])Hooks\.(on|once)\(", code):
             if depth_at(code, mm.start()) == 0:
                 detail.append(f"{rel}:{m.files[rel].line_of(mm.start())} Hooks.{mm.group(1)}")
-    return ok() if not detail else bad(detail[:12] + ([f"… {len(detail) - 12} more"] if len(detail) > 12 else []))
+    return ok() if not detail else bad(detail)
 
 
 @rule("C18", "fail", "every feature file exports install and uninstall")
@@ -718,7 +724,7 @@ def c19(m):
             if not lit.plain and (name == "${}." or name.startswith("${}")):
                 continue
             detail.append(f"{rel}:{lit.line} emits {name!r}")
-    return ok() if not detail else bad(sorted(set(detail))[:12])
+    return ok() if not detail else bad(sorted(set(detail)))
 
 
 @rule("C20", "fail", "test/golden/hooks.json exists (full: hooks.test pins it; small: glue.test pins it)")
@@ -738,7 +744,7 @@ def c20(m):
 def c21(m):
     detail = [f"{rel}:{m.files[rel].line_of(mm.start())}" for rel in m.files if rel.split("/")[-1] != "settings.mjs"
               for mm in re.finditer(r"game\.settings\??\.(register|get)\(", m.code(rel))]
-    return ok() if not detail else bad(detail[:12] + ([f"… {len(detail) - 12} more"] if len(detail) > 12 else []))
+    return ok() if not detail else bad(detail)
 
 
 @rule("C22", "fail", "SETTINGS exported when any setting is registered")
@@ -765,7 +771,7 @@ def c23(m):
 def c24(m):
     detail = [f"{rel}:{m.files[rel].line_of(mm.start())}" for rel in m.files
               for mm in re.finditer(r"catch\s*(?:\([^)]*\))?\s*\{\s*\}", m.code(rel))]
-    return ok() if not detail else bad(detail[:12] + ([f"… {len(detail) - 12} more"] if len(detail) > 12 else []))
+    return ok() if not detail else bad(detail)
 
 
 @rule("C25", "fail", "every console.* line carries the `<module> |` prefix (or the file logs through makeLog)")
@@ -778,7 +784,7 @@ def c25(m):
             if lit and (" | " in text or text.startswith(f"{m.id} |") or text.startswith("${} |")):
                 continue
             detail.append(f"{rel}:{src.line_of(mm.start())} console.{mm.group(1)} without the prefix")
-    return ok() if not detail else bad(detail[:12] + ([f"… {len(detail) - 12} more"] if len(detail) > 12 else []))
+    return ok() if not detail else bad(detail)
 
 
 def _publishes(m: Module, rel: str, call: str) -> bool:
@@ -940,7 +946,7 @@ def c32(m):
                                   f"its package's prefix (core-, dnd5e-, argon-, …; D2)")
     elif m.registry_error:
         detail.insert(0, registry_failure(m.registry_error))     # first, so the cap below never hides it
-    return ok() if not detail else bad(detail[:14] + ([f"… {len(detail) - 14} more"] if len(detail) > 14 else []))
+    return ok() if not detail else bad(detail)
 
 
 def _remap(row: adj.Adjustment, m: Module) -> adj.Adjustment:
@@ -975,7 +981,7 @@ def c33(m):
     rows = [r.id for r in (m.registry.rows if m.registry else []) if m.id in r.modules]
     if not hits:
         return na("no private-internal access found")
-    return "manual", hits[:10] + [f"rows for this module: {', '.join(rows) or 'none'}"]
+    return "manual", hits + [f"rows for this module: {', '.join(rows) or 'none'}"]
 
 
 @rule("C34", "fail", "lang/en.json nested with one root PENTARYN_<SHORT>")
@@ -1075,7 +1081,7 @@ def c37(m):
                 continue
             if not any(a in sel for a in allowed):
                 detail.append(f"{css.relative_to(m.dir).as_posix()}: {sel[:60]}")
-    return ok() if not detail else bad(detail[:10] + ([f"… {len(detail) - 10} more"] if len(detail) > 10 else []))
+    return ok() if not detail else bad(detail)
 
 
 @rule("C37w", "warn", "!important count")
@@ -1192,7 +1198,7 @@ def c44(m):
         detail.append("no **Read this when:** line")
     if re.search(r"\b\d+\s+(fixtures|cases|checks|assertions)\b", text):
         detail.append("hard-coded fixture count")
-    return ok() if not detail else bad(detail[:8] + ([f"… {len(detail) - 8} more"] if len(detail) > 8 else []))
+    return ok() if not detail else bad(detail)
 
 
 @rule("C45", "fail", "CHANGELOG.md exists")
@@ -1304,7 +1310,7 @@ def c49(m):
             if n:
                 hot = "// hot:" in m.raw.get(rel, "")
                 found.append(f"{rel}:{src.line_of(mm.start())} {name} ×{n}{'' if hot else ' (no // hot: comment)'}")
-    return ok() if not found else ("warn", found[:10])
+    return ok() if not found else ("warn", found)
 
 
 def ready_bodies(src) -> list[tuple[bool, int, int]]:
@@ -1787,7 +1793,7 @@ def c59(m):
                                  f"(via {cm.group(1)}())")
                     break
     found = sorted(set(found), key=found.index)
-    return ok() if not found else ("warn", found[:15])
+    return ok() if not found else ("warn", found)
 
 
 @rule("C60", "warn", "no async listener or await in a hot-hook handler (defer via perFrame/debounce/coalesce)")
@@ -1818,7 +1824,7 @@ def c61(m):
             continue
         why = "any-GM gate only (runs in every GM tab)" if ROLE_GATE.search(scope) else "no gate"
         found.append(f"{ls.rel}:{ls.line} {ls.name} — {why}")
-    return ok() if not found else ("warn", found[:15])
+    return ok() if not found else ("warn", found)
 
 # C62 mirrors the bridge's needsDoc (foundry-vtt-mcp packages/mcp-server/src/fork/tools/
 # pentaryn-call.ts): a param with one of these kinds, or named `ref`, that the kit does not resolve
@@ -1862,7 +1868,7 @@ def c62(m):
             why = "a non-first ref" if is_ref and i else "resolve:false" if p.get("resolve") is False else "not the first ref"
             found.append(f"{row.get('path')}({p.get('name')}) kind {p.get('kind') or 'ref'}, {why}, "
                          f"type {type_text or '(none)'!s} — add uuid|id|exact name, or say eval-js only")
-    return ok() if not found else bad(found[:15])
+    return ok() if not found else bad(found)
 
 
 # ── scoring ──────────────────────────────────────────────────────────────────
@@ -1996,7 +2002,7 @@ def to_markdown(reports: list[dict], *, title: str) -> str:
         lines.append("")
         for res in r["results"]:
             if res["status"] in ("fail", "warn"):
-                detail = "; ".join(res["detail"])[:400].replace("|", "\\|")
+                detail = "; ".join(_capped(res["detail"]))[:400].replace("|", "\\|")
                 lines.append(f"- **{res['id']}** {res['status']}: {detail}")
         lines.append("")
     return "\n".join(lines)
