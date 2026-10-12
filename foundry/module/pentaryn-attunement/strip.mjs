@@ -20,7 +20,7 @@ import { AWAY, awayOf, computeSlots, shortName } from "./attunement-core.mjs";
  * @param {HTMLElement} el
  * @param {Item} item
  */
-export function applyTooltip(el, item) {
+function applyTooltip(el, item) {
   el.dataset.tooltip = `
     <section class="loading" data-uuid="${item.uuid}"><i class="fas fa-spinner fa-spin-pulse"></i></section>
   `;
@@ -35,15 +35,15 @@ export function applyTooltip(el, item) {
  * @param {number} index
  * @param {boolean} overflow  This slot sits past `attunement.max`.
  * @param {boolean} editable
- * @param {Map<string, object>} [awayByKey]  the actor's away entries by key (built once per strip)
+ * @param {Map<string, object>} awayByKey  the actor's away entries by key (built once per strip)
  * @returns {HTMLElement}
  */
-export function buildSlot(actor, itemId, index, overflow, editable, awayByKey) {
+function buildSlot(actor, itemId, index, overflow, editable, awayByKey) {
   const li = document.createElement("li");
   li.className = "attunement-slot";
   li.dataset.slot = String(index);
 
-  if (itemId?.startsWith?.(AWAY)) return buildAwaySlot(actor, itemId.slice(AWAY.length), index, overflow, editable, li, awayByKey);
+  if (itemId?.startsWith?.(AWAY)) return buildAwaySlot(actor, itemId.slice(AWAY.length), overflow, editable, li, awayByKey);
 
   const item = itemId ? actor.items.get(itemId) : null;
 
@@ -101,8 +101,15 @@ export function buildSlot(actor, itemId, index, overflow, editable, awayByKey) {
  * A slot held by an attuned item that is not on the actor. Greyed, with a
  * broken-chain badge, and a plain tooltip that names it and says why it is
  * dormant — deliberately not where it is: players read this sheet.
+ * @param {Actor} actor
+ * @param {string} key
+ * @param {boolean} overflow
+ * @param {boolean} editable
+ * @param {HTMLElement} li  the slot element buildSlot made
+ * @param {Map<string, object>} awayByKey  the actor's away entries by key (built once per strip)
+ * @returns {HTMLElement}
  */
-export function buildAwaySlot(actor, key, index, overflow, editable, li, awayByKey = awayIndex(actor)) {
+function buildAwaySlot(actor, key, overflow, editable, li, awayByKey) {
   const entry = awayByKey.get(key);
   li.classList.add("away");
   if (overflow) li.classList.add("overflow");
@@ -143,7 +150,7 @@ export function buildAwaySlot(actor, key, index, overflow, editable, li, awayByK
  * @param {Actor} actor
  * @returns {Map<string, object>}
  */
-export function awayIndex(actor) {
+function awayIndex(actor) {
   const byKey = new Map();
   for (const a of awayOf(actor)) if (!byKey.has(a.key)) byKey.set(a.key, a);
   return byKey;

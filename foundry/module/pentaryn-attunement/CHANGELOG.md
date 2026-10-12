@@ -4,6 +4,11 @@
 
 The version stays 0.3.0 until the next `module.json` restart batch (code only: sync + reload).
 
+- **[declared] M6:** `strip.mjs` drops `buildAwaySlot`'s unused `index` parameter and its
+  `awayByKey = awayIndex(actor)` default (its one caller, buildSlot, always passes the strip's away index), and
+  `applyTooltip`, `buildSlot`, `buildAwaySlot` and `awayIndex` are module-private (only
+  `buildStrip`, `decorateCounter` and `mountStrip` stay exported). No change in play.
+  `test/strip.test.mjs`.
 - **[declared] M4:** the `actor-adapter.mjs` header and the README "Extending" section now say the
   adapter holds the shared writes (`stash`, `releaseAway`, `writeSlots`, the `serial` lane) and the
   third-party reads, and that the features write their own hook-driven updates (`sheet.mjs`

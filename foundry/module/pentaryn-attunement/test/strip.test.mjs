@@ -8,6 +8,7 @@ import { pinJSON } from "./kit/harness.mjs";
 import { attunementWorld, addItem, makeActor, MOD } from "./fixtures/world.mjs";
 import { El, domEvent, installDocument, serialise, sheetElement } from "./fixtures/dom.mjs";
 import { makeDoc } from "./kit/foundry-stub.mjs";
+import { readFileSync } from "node:fs";
 
 const F = await attunementWorld();
 installDocument();
@@ -301,4 +302,12 @@ test("away slot aria-label is plain text: no undefined, no entities", () => {
   assert.equal(label, " — Still attuned, but not on D'Arcy. Its power is dormant until it is back in hand.");
   assert.ok(!label.includes("undefined"));
   assert.ok(!label.includes("&#x27;"));
+});
+
+test("M6: strip.mjs exports only buildStrip, decorateCounter, mountStrip; buildAwaySlot has no index param or default", async () => {
+  const strip = await import("../strip.mjs");
+  assert.deepEqual(Object.keys(strip).sort(), ["buildStrip", "decorateCounter", "mountStrip"]);
+  const src = readFileSync(new URL("../strip.mjs", import.meta.url), "utf8");
+  const sig = src.match(/function buildAwaySlot\(([^)]*)\)/)?.[1];
+  assert.equal(sig, "actor, key, overflow, editable, li, awayByKey");
 });
