@@ -31,3 +31,12 @@ test("no paragraph is repeated (M9: the 'Per player' paragraph appeared twice)",
   const seen = new Set();
   for (const p of paras) { assert.equal(seen.has(p), false, p.slice(0, 80)); seen.add(p); }
 });
+
+test("ext-11: the 'follow-up kind' recipe names both HUD branches, and they exist in code", () => {
+  const row = section("Extending").split("\n").find(l => l.startsWith("- **A follow-up kind:**")) ?? "";
+  for (const s of ["getTooltipData", "hud/buttons-ui.mjs", "hideDuplicateSlots", "hud/bars.mjs"]) assert.ok(row.includes(s), s);
+  const ui = readFileSync(new URL("../hud/buttons-ui.mjs", import.meta.url), "utf8");
+  const bars = readFileSync(new URL("../hud/bars.mjs", import.meta.url), "utf8");
+  assert.match(ui, /async getTooltipData\(\)[\s\S]*core\.keyFor\("FollowUpText", k === "offhand" && this\.followUp\.via/);
+  assert.match(bars, /function hideDuplicateSlots\(/);
+});

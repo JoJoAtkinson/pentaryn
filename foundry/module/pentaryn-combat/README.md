@@ -192,7 +192,7 @@ A deleted combat's cleanup runs in both, idempotently: an effect already gone is
 
 - **A setting:** a `SETTINGS` row (key, literal Name/Hint, doc), the two lang keys, `setting(key)` where it applies.
 - **A turn rider:** a `TURN_RIDERS` row in `core/turn-riders.mjs`, its `Rider.Name/Rule` keys in `I18N_KEYS` and lang.
-- **A follow-up kind:** `core/followups.mjs` `followUps`, a `runFollowUp` branch in `sequence.mjs`, its `FollowUp*` keys.
+- **A follow-up kind:** `core/followups.mjs` `followUps`, a `runFollowUp` branch in `sequence.mjs`, its `FollowUp*` keys; a `via`-specific tooltip text needs its branch in `FollowUpButton.getTooltipData` (`hud/buttons-ui.mjs`, like `offhand-dual-wielder`), and a kind that duplicates an Argon weapon-set slot needs `hideDuplicateSlots` (`hud/bars.mjs`, today `offhand` only).
 - **A special action:** `SPECIAL_ACTIONS` / `recordSpecialAction` in `core/turnflow.mjs`, its `AFTER` row in `turnflow/action-buttons.mjs` (`swing` / `onTurn` / `always`; a test checks every kind has one).
 
 **Which riders module?** Once-per-turn attack-card riders (Sneak Attack, Frenzy, Colossus Slayer, Divine
