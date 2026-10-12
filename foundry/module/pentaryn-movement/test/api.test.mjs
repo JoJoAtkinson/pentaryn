@@ -94,3 +94,28 @@ test("uninstall() leaves no hook and no patch behind; a hot re-import re-wires a
   assert.equal(again.selftest().ok, true, JSON.stringify(again.selftest().checks));
   mock.timers.tick(60);
 });
+
+test("after uninstall() a setting change reaches no feature handler", async () => {
+  const live = game.modules.get(MODULE).api;
+  live.uninstall();
+  const from = F.calls.length;
+  await game.settings.set(MODULE, "ghostPolicy", "off");
+  await game.settings.set(MODULE, "ghost", true);
+  await game.settings.set(MODULE, "ownedOnTop", false);
+  mock.timers.tick(60);
+  const after = op => F.calls.slice(from).filter(c => c.op === op);
+  assert.deepEqual(after("controls.render"), []);
+  assert.deepEqual(after("setAllRenderFlags"), []);
+  await game.settings.set(MODULE, "ghostPolicy", "exploration");
+  await game.settings.set(MODULE, "ghost", false);
+  await game.settings.set(MODULE, "ownedOnTop", true);
+  mock.timers.tick(60);
+  assert.deepEqual(after("controls.render"), []);
+  assert.deepEqual(after("setAllRenderFlags"), []);
+
+  await import("../movement.mjs?v=3");
+  const again = game.modules.get(MODULE).api;
+  assert.notEqual(again, live);
+  assert.equal(again.selftest().ok, true, JSON.stringify(again.selftest().checks));
+  mock.timers.tick(60);
+});

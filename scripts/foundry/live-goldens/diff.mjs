@@ -1,9 +1,9 @@
 #!/usr/bin/env node
-// Compare a wave-2 live golden's "before" and "after" runs (the JSON string a
+// Compare a live golden's "before" and "after" runs (the JSON string a
 // scripts/foundry/live-goldens/<m>.js eval-js call returned, saved as a file).
 //
-//   node scripts/foundry/live-goldens/diff.mjs .state/live-goldens/wave2/before/lookup.json \
-//                                              .state/live-goldens/wave2/after/lookup.json
+//   node scripts/foundry/live-goldens/diff.mjs .state/live-goldens/<wave>/before/lookup.json \
+//                                              .state/live-goldens/<wave>/after/lookup.json
 //
 // Prints: env (versions), every path under golden.shared that differs (a regression until
 // explained), every path under golden.declared that differs (expected: check it against the
@@ -12,6 +12,8 @@
 // 2 on bad input. A wave-1 golden (names, pings, cursors, importer, ties, prompts) has no
 // shared/declared split: its whole `golden` is compared as shared, and its declared changes
 // (wave-1-report.md "Live goldens") are read off the shared list by hand.
+// A cleanup is judged by top-level key name only: `<thing>Left` above 0, `<thing>Restored === false`,
+// or a string containing `REFUSED` / `NOT ` fails; any other key (nested objects too) is only printed.
 //
 //   diff.mjs --declared <file> <before.json> <after.json>
 //
@@ -19,10 +21,12 @@
 // `#` comments and blank lines ignored; or a JSON array of globs). A shared difference whose path
 // matches a glob is listed as declared and does not fail the diff, so an all-declared diff exits 0.
 // Globs match the whole path as printed: `*` is any run within one segment (never `.`, `[` or
-// `]`), `**` is anything, `?` one character; `[` and `]` are literal. So `stash.chest[*]` covers
-// `stash.chest[2]` but not `stash.chest[0].name` (that is `stash.chest[*].*`), and `purseHome`
-// covers only `purseHome` itself (`purseHome.**` the rest). A glob that matched nothing is named.
-import { readFileSync } from "node:fs";
+// `]`), `**` is anything, `?` one character other than `.`; `[` and `]` are literal. So
+// `stash.chest[*]` covers `stash.chest[2]` but not `stash.chest[0].name` (that is
+// `stash.chest[*].*`), and `purseHome` covers only `purseHome` itself (`purseHome.**` the rest).
+// A glob that matched nothing is named.
+import { readFileSync, realpathSync } from "node:fs";
+import { pathToFileURL } from "node:url";
 
 function load(path) {
   let v = JSON.parse(readFileSync(path, "utf8"));
@@ -129,7 +133,7 @@ function main(argv) {
 
   const declared = diffPaths(before.golden.declared ?? {}, after.golden.declared ?? {});
   console.log(`\n## declared — ${declared.length} difference(s), each must match a declared change`);
-  for (const [p, a, b] of declared) console.log(`  ${p}\n    before ${show(a)}\n    after  ${show(b)}`);
+  declared.forEach(row);
 
   console.log("\n## timings (median ms per call)");
   const names = [...new Set([...Object.keys(before.timings ?? {}), ...Object.keys(after.timings ?? {})])];
@@ -146,4 +150,8 @@ function main(argv) {
   return failing.length || bad.length ? 1 : 0;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) process.exit(main(process.argv.slice(2)));
+const isMain = (() => {
+  try { return !!process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href; }
+  catch { return false; }
+})();
+if (isMain) process.exit(main(process.argv.slice(2)));
