@@ -108,6 +108,11 @@ test("inspect opts.as: a user without OBSERVER sees the identity only; the owner
   assert.equal(api.inspect("Talo", { as: IDS.gm }).wildShape.itemId, IDS.ws);
 });
 
+test("inspect(ref, null) answers as inspect(ref)", () => {
+  fresh();
+  assert.deepEqual(api.inspect("Talo", null), api.inspect("Talo"));
+});
+
 test("every patch record names an adjustments row; no settings; selftest passes on a healthy load", () => {
   const d = api.describe();
   assert.deepEqual(d.patches.map(p => [p.label, p.adjustments]), [["TokenDocument._preUpdateOperation", "transform-preupdate-unwrap"]]);
