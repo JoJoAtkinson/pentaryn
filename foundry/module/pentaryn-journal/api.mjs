@@ -99,9 +99,9 @@ function selftest(ctx) {
   return { ok: checks.every(c => c.ok), checks: checks.map(c => ({ detail: null, ...c })) };
 }
 
-/** `core.<name>` for exactly the names published before the migration (`core.MOD` = MODULE). */
+/** `core.<name>` for exactly the names published before the migration (`core.MOD` is journal-core's own alias of MODULE). */
 function coreMembers() {
-  return Object.fromEntries(CORE_NAMES.map(n => [`core.${n}`, n === "MOD" ? core.MODULE : core[n]]));
+  return Object.fromEntries(CORE_NAMES.map(n => [`core.${n}`, core[n]]));
 }
 
 /** Build the frozen API. Throws (at ready, in node too) when manifest and implementations drift. */
