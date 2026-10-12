@@ -1,0 +1,27 @@
+{
+  "title": "Starry Form: Archer",
+  "subtitle": "Active",
+  "description": "<p>Now and as a Bonus Action on later turns: a luminous arrow at one creature within 60 ft — +9 to hit, 2d8 + 5 Radiant.</p>",
+  "details": [
+    {
+      "label": "Uses",
+      "value": "0 / 3"
+    },
+    {
+      "label": "Time left",
+      "value": "8 minutes"
+    },
+    {
+      "label": "Light",
+      "value": "Bright 10 ft, Dim 10 ft more"
+    },
+    {
+      "label": "Cost",
+      "value": "Bonus Action"
+    }
+  ],
+  "footerText": "Click to change constellation (Twinkling Constellations: free, at the start of your turn) or end it.",
+  "classes": [
+    "pentaryn-tt"
+  ]
+}

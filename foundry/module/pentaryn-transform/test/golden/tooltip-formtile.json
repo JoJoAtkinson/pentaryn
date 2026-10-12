@@ -1,0 +1,81 @@
+[
+  {
+    "title": "Dire Wolf",
+    "subtitle": "CR 1 Large Beast",
+    "description": "",
+    "details": [
+      {
+        "label": "AC",
+        "value": "14"
+      },
+      {
+        "label": "Speed",
+        "value": "50 ft"
+      },
+      {
+        "label": "Senses",
+        "value": "Darkvision 60 ft"
+      },
+      {
+        "label": "Bite",
+        "value": "+5, 2d6 + 3 Piercing"
+      }
+    ],
+    "propertiesLabel": "PENTARYN_TRANSFORM.Hud.Traits",
+    "properties": [
+      {
+        "label": "Pack Tactics",
+        "secondary": true
+      }
+    ],
+    "footerText": "Click to shift. Right-click opens the beast's sheet.",
+    "classes": [
+      "pentaryn-tt",
+      "pentaryn-tt-list"
+    ]
+  },
+  {
+    "title": "Brown Bear",
+    "subtitle": "CR 1 Large Beast",
+    "description": "",
+    "details": [
+      {
+        "label": "AC",
+        "value": "11"
+      },
+      {
+        "label": "Speed",
+        "value": "40 ft, climb 30 ft"
+      },
+      {
+        "label": "Claw",
+        "value": "—"
+      }
+    ],
+    "propertiesLabel": "PENTARYN_TRANSFORM.Hud.Traits",
+    "properties": [],
+    "footerText": "Click to shift. Right-click opens the beast's sheet.",
+    "classes": [
+      "pentaryn-tt",
+      "pentaryn-tt-list"
+    ]
+  },
+  {
+    "title": "Ape",
+    "subtitle": "CR 1/2 Beast",
+    "description": "",
+    "details": [
+      {
+        "label": "AC",
+        "value": "—"
+      }
+    ],
+    "propertiesLabel": "PENTARYN_TRANSFORM.Hud.Traits",
+    "properties": [],
+    "footerText": "Click to shift. Right-click opens the beast's sheet.",
+    "classes": [
+      "pentaryn-tt",
+      "pentaryn-tt-list"
+    ]
+  }
+]

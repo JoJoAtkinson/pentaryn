@@ -1,0 +1,27 @@
+{
+  "title": "Starry Form",
+  "subtitle": "Spends a Wild Shape use",
+  "description": "<p>Bonus Action: glow with a constellation instead of shape-shifting, for 10 minutes. Ends early if you dismiss it, are Incapacitated, or Wild Shape.</p>",
+  "details": [
+    {
+      "label": "Uses",
+      "value": "2 / 3"
+    },
+    {
+      "label": "Duration",
+      "value": "10 minutes"
+    },
+    {
+      "label": "Light",
+      "value": "Bright 10 ft, Dim 10 ft more"
+    },
+    {
+      "label": "Cost",
+      "value": "Bonus Action"
+    }
+  ],
+  "footerText": "Click to pick a constellation. Right-click opens the feature.",
+  "classes": [
+    "pentaryn-tt"
+  ]
+}

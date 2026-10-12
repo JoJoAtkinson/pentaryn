@@ -1,0 +1,150 @@
+[
+  {
+    "input": [
+      {
+        "effects": {
+          "contents": [
+            {
+              "name": "Starry Form",
+              "changes": []
+            },
+            {
+              "name": "Starry Form: Dragon",
+              "changes": []
+            },
+            {
+              "name": "Dragon (Twinkling)",
+              "changes": [
+                {
+                  "key": "system.attributes.movement.fly",
+                  "value": "20"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "dragon",
+      true
+    ],
+    "out": "Dragon (Twinkling)"
+  },
+  {
+    "input": [
+      {
+        "effects": {
+          "contents": [
+            {
+              "name": "Starry Form",
+              "changes": []
+            },
+            {
+              "name": "Starry Form: Dragon",
+              "changes": []
+            },
+            {
+              "name": "Dragon (Twinkling)",
+              "changes": [
+                {
+                  "key": "system.attributes.movement.fly",
+                  "value": "20"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "dragon",
+      false
+    ],
+    "out": "Starry Form: Dragon"
+  },
+  {
+    "input": [
+      {
+        "effects": {
+          "contents": [
+            {
+              "name": "Dragon",
+              "changes": [
+                {
+                  "key": "system.attributes.movement.speeds.fly"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "dragon",
+      false
+    ],
+    "out": "Dragon"
+  },
+  {
+    "input": [
+      {
+        "effects": {
+          "contents": [
+            {
+              "name": "Starry Form",
+              "changes": []
+            },
+            {
+              "name": "Starry Form: Dragon",
+              "changes": []
+            },
+            {
+              "name": "Dragon (Twinkling)",
+              "changes": [
+                {
+                  "key": "system.attributes.movement.fly",
+                  "value": "20"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "archer",
+      false
+    ],
+    "out": "Starry Form"
+  },
+  {
+    "input": [
+      {
+        "effects": {
+          "contents": [
+            {
+              "name": "starry form",
+              "changes": []
+            }
+          ]
+        }
+      },
+      "chalice",
+      false
+    ],
+    "out": "starry form"
+  },
+  {
+    "input": [
+      {
+        "effects": {
+          "contents": []
+        }
+      },
+      "archer",
+      true
+    ],
+    "out": null
+  },
+  {
+    "input": [
+      null,
+      "dragon",
+      true
+    ],
+    "out": null
+  }
+]

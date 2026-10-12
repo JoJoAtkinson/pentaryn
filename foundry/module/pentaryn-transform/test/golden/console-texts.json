@@ -1,0 +1,142 @@
+[
+  [
+    "hud.mjs",
+    "error",
+    "HUD composition failed"
+  ],
+  [
+    "hud.mjs",
+    "warn",
+    "Chalice offer skipped"
+  ],
+  [
+    "hud.mjs",
+    "warn",
+    "Escape-cancels-target-picker keybinding not registered"
+  ],
+  [
+    "hud.mjs",
+    "warn",
+    "cancelling Argon's target picker failed"
+  ],
+  [
+    "hud.mjs",
+    "warn",
+    "portrait HP failed"
+  ],
+  [
+    "hud.mjs",
+    "warn",
+    "portrait line failed"
+  ],
+  [
+    "starry.mjs",
+    "error",
+    "starry form failed"
+  ],
+  [
+    "starry.mjs",
+    "warn",
+    "ending starry form failed"
+  ],
+  [
+    "starry.mjs",
+    "warn",
+    "ending starry form failed"
+  ],
+  [
+    "starry.mjs",
+    "warn",
+    "starry light off failed"
+  ],
+  [
+    "transform.mjs",
+    "error",
+    "shaping the form failed"
+  ],
+  [
+    "transform.mjs",
+    "error",
+    "shaping the token form failed"
+  ],
+  [
+    "transform.mjs",
+    "error",
+    "shift failed"
+  ],
+  [
+    "transform.mjs",
+    "error",
+    "transform failed"
+  ],
+  [
+    "transform.mjs",
+    "log",
+    "not carried into the form:"
+  ],
+  [
+    "transform.mjs",
+    "warn",
+    "auto-revert failed"
+  ],
+  [
+    "transform.mjs",
+    "warn",
+    "body-swap animation guard skipped"
+  ],
+  [
+    "transform.mjs",
+    "warn",
+    "change form failed"
+  ],
+  [
+    "transform.mjs",
+    "warn",
+    "chat line failed"
+  ],
+  [
+    "transform.mjs",
+    "warn",
+    "chat line failed"
+  ],
+  [
+    "transform.mjs",
+    "warn",
+    "ending ${effect.name} on ${host.name} failed"
+  ],
+  [
+    "transform.mjs",
+    "warn",
+    "ending Starry Form failed"
+  ],
+  [
+    "transform.mjs",
+    "warn",
+    "long rest after revert failed"
+  ],
+  [
+    "transform.mjs",
+    "warn",
+    "revert failed"
+  ],
+  [
+    "transform.mjs",
+    "warn",
+    "settling ${t.name} failed"
+  ],
+  [
+    "transform.mjs",
+    "warn",
+    "short rest on the form failed"
+  ],
+  [
+    "transform.mjs",
+    "warn",
+    "short rest on the original failed"
+  ],
+  [
+    "transform.mjs",
+    "warn",
+    "sweep failed"
+  ]
+]

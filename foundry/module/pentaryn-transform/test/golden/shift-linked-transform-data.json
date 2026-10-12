@@ -1,0 +1,235 @@
+{
+  "name": "Talo (Dire Wolf)",
+  "img": "direWolfSrc00001.webp",
+  "type": "character",
+  "items": [
+    {
+      "documentName": "Item",
+      "id": "clsDruid0000001",
+      "name": "Druid",
+      "system": {
+        "levels": 12,
+        "hd": {
+          "spent": 2
+        },
+        "activities": {}
+      },
+      "flags": {},
+      "ownership": {
+        "default": 0
+      },
+      "_id": "clsDruid0000001",
+      "type": "class"
+    },
+    {
+      "documentName": "Item",
+      "id": "cureWounds000001",
+      "name": "Cure Wounds",
+      "system": {
+        "level": 1,
+        "uses": {
+          "max": 0,
+          "spent": 0
+        },
+        "activities": {
+          "cw1": {
+            "id": "cw1",
+            "_id": "cw1",
+            "type": "heal",
+            "activation": {
+              "type": "action"
+            },
+            "consumption": {
+              "targets": []
+            }
+          }
+        }
+      },
+      "flags": {},
+      "ownership": {
+        "default": 0
+      },
+      "_id": "cureWounds000001",
+      "type": "spell"
+    },
+    {
+      "documentName": "Item",
+      "id": "fireBolt00000001",
+      "name": "Fire Bolt",
+      "system": {
+        "level": 0,
+        "activities": {
+          "fb1": {
+            "id": "fb1",
+            "_id": "fb1",
+            "type": "attack",
+            "activation": {
+              "type": "action"
+            }
+          }
+        }
+      },
+      "flags": {},
+      "ownership": {
+        "default": 0
+      },
+      "_id": "fireBolt00000001",
+      "type": "spell"
+    },
+    {
+      "documentName": "Item",
+      "id": "mmBite0000000001",
+      "name": "Bite",
+      "system": {
+        "type": {
+          "value": "natural"
+        },
+        "description": {
+          "value": ""
+        },
+        "activities": {
+          "bite1": {
+            "id": "bite1",
+            "_id": "bite1",
+            "type": "attack",
+            "activation": {
+              "type": "action"
+            },
+            "labels": {
+              "toHit": "+5",
+              "damage": [
+                {
+                  "label": "2d6 + 3 Piercing"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "flags": {},
+      "ownership": {
+        "default": 0
+      },
+      "_id": "mmBite0000000001",
+      "type": "weapon",
+      "img": "bite.webp",
+      "labels": {
+        "toHit": "+5",
+        "damages": [
+          {
+            "label": "2d6 + 3 Piercing"
+          }
+        ]
+      }
+    },
+    {
+      "documentName": "Item",
+      "id": "mmPackTactics001",
+      "name": "Pack Tactics",
+      "system": {
+        "type": {
+          "value": "monster"
+        },
+        "description": {
+          "value": "<p>Advantage with an ally.</p>"
+        },
+        "activities": {}
+      },
+      "flags": {},
+      "ownership": {
+        "default": 0
+      },
+      "_id": "mmPackTactics001",
+      "type": "feat"
+    },
+    {
+      "documentName": "Item",
+      "id": "mmMultiattack001",
+      "name": "Multiattack",
+      "system": {
+        "type": {
+          "value": "monster"
+        },
+        "description": {
+          "value": "<p>Two bites.</p>"
+        },
+        "activities": {
+          "ma1": {
+            "id": "ma1",
+            "_id": "ma1",
+            "type": "utility",
+            "activation": {
+              "type": "action"
+            }
+          }
+        }
+      },
+      "flags": {},
+      "ownership": {
+        "default": 0
+      },
+      "_id": "mmMultiattack001",
+      "type": "feat"
+    }
+  ],
+  "effects": [
+    {
+      "_id": "pentarynWildShp0",
+      "name": "Wild Shape: Dire Wolf",
+      "img": "direWolfSrc00001.webp",
+      "transfer": false,
+      "disabled": false,
+      "duration": {
+        "value": 21600,
+        "units": "seconds",
+        "expiry": null
+      },
+      "start": {
+        "time": 0
+      },
+      "description": "<p>Return to Talo is a Bonus Action. The form ends at 0 HP, when Incapacitated, or after 6 hours.</p><p><strong>Pack Tactics.</strong> Advantage with an ally. (enriched)</p>",
+      "flags": {
+        "pentaryn-transform": {
+          "wildshape": true
+        }
+      }
+    }
+  ],
+  "system": {
+    "attributes": {
+      "hp": {
+        "value": 99,
+        "max": 99,
+        "temp": 12
+      }
+    },
+    "favorites": [
+      {
+        "type": "item",
+        "id": ".Item.cureWounds000001"
+      },
+      {
+        "type": "skill",
+        "id": "arc"
+      }
+    ]
+  },
+  "flags": {
+    "dnd5e": {
+      "originalActor": "taloActor0000001",
+      "isPolymorphed": true,
+      "transformOptions": {
+        "preset": "wildshape"
+      }
+    },
+    "pentaryn-transform": {
+      "wildshape": {
+        "original": "taloActor0000001",
+        "source": "Actor.direWolfSrc00001",
+        "profile": "p1",
+        "endsAt": 21600,
+        "carried": []
+      }
+    }
+  }
+}

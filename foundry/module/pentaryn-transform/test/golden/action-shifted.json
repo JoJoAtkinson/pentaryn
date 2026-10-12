@@ -1,0 +1,44 @@
+[
+  {
+    "cls": "DND5eItemButton",
+    "label": "Bite",
+    "item": "mmBite0000000001",
+    "classes": "pentaryn-hidden",
+    "rendered": 0
+  },
+  {
+    "cls": "DND5eItemButton",
+    "label": "Bite",
+    "item": "mmBite0000000001",
+    "classes": "",
+    "rendered": 1
+  },
+  {
+    "cls": "DND5eItemButton",
+    "label": "Multiattack",
+    "item": "mmMultiattack001",
+    "classes": "",
+    "rendered": 1
+  },
+  {
+    "cls": "DND5eItemButton",
+    "label": "Cure Wounds",
+    "item": "cureWounds000001",
+    "classes": "",
+    "rendered": 0
+  },
+  {
+    "cls": "ButtonPanelButton",
+    "label": null,
+    "item": null,
+    "classes": "",
+    "rendered": 0
+  },
+  {
+    "cls": "ButtonPanelButton",
+    "label": null,
+    "item": null,
+    "classes": "",
+    "rendered": 0
+  }
+]

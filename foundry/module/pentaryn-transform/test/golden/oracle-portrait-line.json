@@ -1,0 +1,68 @@
+[
+  {
+    "input": [
+      {
+        "ws": {
+          "name": "Wild Shape: Dire Wolf"
+        },
+        "endsAt": 21700
+      }
+    ],
+    "out": "PENTARYN_TRANSFORM.Hud.PortraitLeft|Wild Shape: Dire Wolf|6 hours"
+  },
+  {
+    "input": [
+      {
+        "ws": {
+          "name": "Wild Shape: Dire Wolf"
+        },
+        "endsAt": null
+      }
+    ],
+    "out": "Wild Shape: Dire Wolf"
+  },
+  {
+    "input": [
+      {
+        "ws": {
+          "name": "Wild Shape: Dire Wolf"
+        },
+        "endsAt": 50
+      }
+    ],
+    "out": "PENTARYN_TRANSFORM.Hud.PortraitLeft|Wild Shape: Dire Wolf|0 minutes"
+  },
+  {
+    "input": [
+      {
+        "ws": null,
+        "starry": {
+          "name": "Starry Form: Archer"
+        },
+        "starryLeft": 540
+      }
+    ],
+    "out": "PENTARYN_TRANSFORM.Hud.PortraitLeft|Starry Form: Archer|9 minutes"
+  },
+  {
+    "input": [
+      {
+        "ws": null,
+        "starry": {
+          "name": "Starry Form: Archer"
+        },
+        "starryLeft": null
+      }
+    ],
+    "out": "Starry Form: Archer"
+  },
+  {
+    "input": [
+      {
+        "ws": null,
+        "starry": null
+      }
+    ],
+    "out": null
+  }
+]

@@ -1,0 +1,30 @@
+[
+  {
+    "cls": "DND5eItemButton",
+    "label": null,
+    "item": null,
+    "classes": "",
+    "rendered": 0
+  },
+  {
+    "cls": "WildShapeButton",
+    "label": "PENTARYN_TRANSFORM.Hud.WildShape",
+    "item": null,
+    "classes": "",
+    "rendered": 1
+  },
+  {
+    "cls": "StarryFormButton",
+    "label": "Starry Form",
+    "item": "starryForm000001",
+    "classes": "",
+    "rendered": 1
+  },
+  {
+    "cls": "SplitButton",
+    "label": null,
+    "item": null,
+    "classes": "",
+    "rendered": 0
+  }
+]

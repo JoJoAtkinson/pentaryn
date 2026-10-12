@@ -1,0 +1,42 @@
+[
+  {
+    "input": [
+      [
+        {
+          "period": "lr",
+          "type": "recoverAll"
+        },
+        {
+          "period": "sr",
+          "type": "formula",
+          "formula": "1"
+        }
+      ]
+    ],
+    "out": "Long Rest: all · Short Rest: 1"
+  },
+  {
+    "input": [
+      [
+        {
+          "period": "dawn",
+          "type": "formula",
+          "formula": ""
+        }
+      ]
+    ],
+    "out": "dawn: 1"
+  },
+  {
+    "input": [
+      []
+    ],
+    "out": ""
+  },
+  {
+    "input": [
+      null
+    ],
+    "out": ""
+  }
+]

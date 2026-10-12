@@ -1,0 +1,66 @@
+[
+  {
+    "input": [
+      {
+        "spent": 2
+      }
+    ],
+    "out": {
+      "system.uses.spent": 1
+    }
+  },
+  {
+    "input": [
+      {
+        "spent": 1
+      }
+    ],
+    "out": {
+      "system.uses.spent": 0
+    }
+  },
+  {
+    "input": [
+      {
+        "spent": 0
+      }
+    ],
+    "out": null
+  },
+  {
+    "input": [
+      {
+        "spent": -1
+      }
+    ],
+    "out": null
+  },
+  {
+    "input": [
+      {
+        "spent": "1"
+      }
+    ],
+    "out": null
+  },
+  {
+    "input": [
+      {}
+    ],
+    "out": null
+  },
+  {
+    "input": [
+      null
+    ],
+    "out": null
+  },
+  {
+    "input": [
+      {
+        "spent": null
+      }
+    ],
+    "out": null
+  }
+]

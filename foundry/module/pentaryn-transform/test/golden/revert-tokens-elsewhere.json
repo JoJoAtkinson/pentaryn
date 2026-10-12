@@ -1,0 +1,33 @@
+[
+  {
+    "op": "scene.updateEmbedded",
+    "scene": "sceneOther000001",
+    "type": "Token",
+    "updates": [
+      {
+        "name": "Talo (before)",
+        "actorId": "taloActor0000001",
+        "actorLink": true,
+        "width": 2,
+        "height": 1,
+        "texture": {
+          "src": "talo.webp"
+        },
+        "sight": {
+          "enabled": true
+        },
+        "parent": "sceneOther000001",
+        "_id": "tokOther00000001",
+        "elevation": 10,
+        "hidden": true,
+        "rotation": 90,
+        "level": "lvl2"
+      }
+    ],
+    "options": {
+      "diff": false,
+      "recursive": false,
+      "animate": false
+    }
+  }
+]

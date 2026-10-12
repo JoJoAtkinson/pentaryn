@@ -1,0 +1,16 @@
+[
+  {
+    "cls": "DND5eItemButton",
+    "label": "Wild Companion",
+    "item": "wildCompanion001",
+    "classes": "",
+    "rendered": 1
+  },
+  {
+    "cls": "DND5eItemButton",
+    "label": "Spellcasting",
+    "item": "spellcasting0001",
+    "classes": "",
+    "rendered": 0
+  }
+]

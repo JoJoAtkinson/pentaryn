@@ -1,0 +1,39 @@
+[
+  [
+    {
+      "documentName": "ActiveEffect",
+      "id": "sfBaseEffect0001",
+      "name": "Starry Form: Archer",
+      "system": {},
+      "flags": {
+        "core": {
+          "keep": true
+        },
+        "pentaryn-transform": {
+          "starry": {
+            "constellation": "archer"
+          }
+        }
+      },
+      "ownership": {
+        "default": 0
+      },
+      "_id": "pentarynStarry00",
+      "img": "icons/weapons/bows/bow-ornamental-gold-blue.webp",
+      "changes": [],
+      "statuses": [],
+      "transfer": false,
+      "disabled": false,
+      "duration": {
+        "value": 600,
+        "units": "seconds",
+        "expiry": null
+      },
+      "start": {
+        "time": 50
+      },
+      "description": "<p>Now and as a Bonus Action on later turns: a luminous arrow at one creature within 60 ft — +9 to hit, 2d8 + 5 Radiant.</p><p>Ends after 10 minutes, if you are Incapacitated, if you dismiss it, or if you use Wild Shape.</p>",
+      "origin": "Actor.taloActor0000001.Item.starryForm000001"
+    }
+  ]
+]
