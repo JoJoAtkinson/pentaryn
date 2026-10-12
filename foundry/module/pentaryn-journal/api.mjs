@@ -92,7 +92,7 @@ function selftest(ctx) {
   const checks = [
     { label: "published as module.api", ok: game.modules.get(core.MODULE)?.api === ctx.api },
     { label: `game.pentaryn.${core.NS} is this API`, ok: game.pentaryn?.[core.NS] === ctx.api },
-    { label: "settings readable", ok: typeof setting("gmButton") === "boolean" && typeof setting("singlePageReadables") === "boolean" },
+    { label: "settings readable", ok: SETTINGS.filter(r => r.type === Boolean).every(r => typeof setting(r.key) === "boolean") },
     { label: "relay query registered", ok: typeof CONFIG.queries?.[core.QUERY] === "function" },
     { label: "hooks registered", ok: ctx.reg.ids().length > 0, detail: ctx.reg.ids().length },
   ];
