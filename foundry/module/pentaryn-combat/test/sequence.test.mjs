@@ -574,14 +574,14 @@ test("fullAttackPlan: weapon plans, Nick extras, Multiattack picks and turns", a
   assert.deepEqual(rows.rogueNick.swings.map(s => s.kind), ["main", "nick"]);
 });
 
-test("KNOWN combat-riders-22: Multiattack + Action Surge — two swings done, a surge: the plan is empty", () => {
+test("combat-riders-22 [declared] (was KNOWN): Multiattack + Action Surge — two swings done, a surge: the surge's run is planned", () => {
   const ma = { plan: [{ itemId: "bite", count: 2 }], groups: [{ count: 2, choices: ["bite"] }], total: 2 };
   const t = { key: "c1:1:cb2", attackAction: { swings: 2, weapons: ["bite"] }, surges: 1, otherActions: 0, riders: {}, followUps: [] };
-  // KNOWN: Multiattack ignores Action Surge
-  assert.deepEqual(seq.fullAttackPlan(gob, { multiattack: ma, count: 2, inCombat: true, turn: t }), { swings: [], count: 2, left: 0, weaponId: "bite" });
+  assert.deepEqual(seq.fullAttackPlan(gob, { multiattack: ma, count: 2, inCombat: true, turn: t }), {
+    swings: [{ weaponId: "bite", mode: null, kind: "main" }, { weaponId: "bite", mode: null, kind: "main" }], count: 2, left: 2, weaponId: "bite" });
 });
 
-test("Multiattack + Action Surge: the surge's Attack action gets its own two swings", { todo: "combat-riders-22 bug half (guide §4): flips the KNOWN pin above" }, () => {
+test("Multiattack + Action Surge: the surge's Attack action gets its own two swings", () => {
   const ma = { plan: [{ itemId: "bite", count: 2 }], groups: [{ count: 2, choices: ["bite"] }], total: 2 };
   const t = { key: "c1:1:cb2", attackAction: { swings: 2, weapons: ["bite"] }, surges: 1, otherActions: 0, riders: {}, followUps: [] };
   assert.equal(seq.fullAttackPlan(gob, { multiattack: ma, count: 2, inCombat: true, turn: t }).swings.length, 2);

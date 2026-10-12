@@ -138,7 +138,9 @@ export function replanExtras(state, extras) {
 /**
  * The swings a Full Attack would make right now, for the button's badge and for start. Pure: the
  * caller passes the actor's weapon shapes and its Enhanced Dual Wielding flag.
- * KNOWN (combat-riders-22): Multiattack ignores Action Surge — a surged turn plans nothing here.
+ * Multiattack: each Attack action this turn (1 + Action Surges − other Actions) is one run of the
+ * Multiattack, so after the first run's swings a surge plans the whole Multiattack again
+ * (combat-riders-22, [declared]; it used to plan nothing while the pips showed swings left).
  * @returns {{swings: object[], count: number, left: number, weaponId: string|null}}
  */
 export function fullAttackPlanFrom({ weapons = [], weaponId = null, turn = null, inCombat = false, multiattack = null, count = 1, pick = null, enhancedDualWielding = false } = {}) {
@@ -146,7 +148,9 @@ export function fullAttackPlanFrom({ weapons = [], weaponId = null, turn = null,
     const plan = pick ? multiattackPlan(multiattack, { pick }) : multiattack.plan;
     const total = plan.reduce((s, r) => s + r.count, 0);
     const done = inCombat ? (turn?.attackAction?.swings ?? 0) : 0;
-    const swings = inCombat && attackActions(turn) === 0 ? [] : planSequence({ multiattack: plan, done });
+    const left = inCombat ? swingsLeft(total, turn, { inCombat }) : total;
+    const swings = (inCombat && attackActions(turn) === 0) || left <= 0 ? []
+      : planSequence({ multiattack: plan, done: total ? done % total : 0 }).slice(0, left);
     return { swings, count: total, left: swings.length, weaponId: plan[0]?.itemId ?? null };
   }
   const main = weapons.find(w => w.id === weaponId) ?? null;

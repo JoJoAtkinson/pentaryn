@@ -108,13 +108,13 @@ test("areaPlacementSkipped equals the old inline expression over all 16 combinat
   assert.equal(core.areaPlacementSkipped(), false);
 });
 
-test("fullAttackPlanFrom (core) as recorded; KNOWN: Multiattack ignores Action Surge (combat-riders-22)", () => {
+test("fullAttackPlanFrom (core) as recorded; the Multiattack + Action Surge row as fixed (combat-riders-22)", () => {
   const ma = { plan: [{ itemId: "bite", count: 2 }], total: 2, groups: [{ count: 2, choices: ["bite"] }] };
   const key = "c1:1:cb1";
   let turn = core.recordSwing(core.recordSwing(core.freshTurn(key), { kind: "main", weaponId: "bite" }), { kind: "main", weaponId: "bite" });
   turn = core.recordSurge(turn);
-  // KNOWN: two swings made and one Action Surge: the pips show two more, the plan is empty.
-  assert.deepEqual(core.fullAttackPlanFrom({ multiattack: ma, turn, inCombat: true, count: 2 }), { swings: [], count: 2, left: 0, weaponId: "bite" });
+  // combat-riders-22 [declared]: two swings made and one Action Surge: the pips show two more, and the plan has them.
+  assert.equal(core.fullAttackPlanFrom({ multiattack: ma, turn, inCombat: true, count: 2 }).swings.length, 2);
   assert.deepEqual(core.pipState({ count: 2, turn, inCombat: true }), { max: 4, current: 2 });
   const fresh = core.fullAttackPlanFrom({ multiattack: ma, turn: core.freshTurn(key), inCombat: true, count: 2 });
   assert.equal(fresh.swings.length, 2);
@@ -123,7 +123,7 @@ test("fullAttackPlanFrom (core) as recorded; KNOWN: Multiattack ignores Action S
   const pc = shapes.fullAttackPlanOf(rog, { weaponId: "scimitar00000001", turn: core.freshTurn(key), inCombat: true, count: 2 });
   assert.deepEqual(pc, legacy.fullAttackPlan(rog, { weaponId: "scimitar00000001", turn: core.freshTurn(key), inCombat: true, count: 2 }));
   for (const a of [fighter(), rogue({ id: "rogue00000000002" }), wolf()]) {
-    for (const opts of [{}, { inCombat: true, count: 2, turn: core.freshTurn(key) }, { multiattack: shapes.multiattackOf(a), inCombat: true, turn }]) {
+    for (const opts of [{}, { inCombat: true, count: 2, turn: core.freshTurn(key) }, { multiattack: shapes.multiattackOf(a), inCombat: true, turn: core.freshTurn(key) }]) {
       const w = shapes.weaponsOf(a)[0]?.id ?? null;
       assert.deepEqual(shapes.fullAttackPlanOf(a, { weaponId: w, ...opts }), legacy.fullAttackPlan(a, { weaponId: w, ...opts }), `${a.name} ${JSON.stringify(Object.keys(opts))}`);
     }
@@ -154,4 +154,19 @@ test("followUpsFor(actor, { bonusFree }) equals the legacy followUpsNow oracle w
     await shapes.updateTurn(a, t => core.recordSwing(t, { kind: "nick", weaponId: light }));
     check(`${a.name}'s turn after Nick`);
   }
+});
+
+test("combat-riders-22: a Multiattack plan follows the Attack actions left (surges, other Actions), capped by the swings left", () => {
+  const ma = { plan: [{ itemId: "bite", count: 2 }, { itemId: "claw", count: 1 }], total: 3, groups: [] };
+  const t = (swings, surges = 0, otherActions = 0) => ({ ...core.freshTurn("k"), attackAction: { ...core.freshTurn("k").attackAction, swings }, surges, otherActions });
+  const plan = (turn, inCombat = true) => core.fullAttackPlanFrom({ multiattack: ma, turn, inCombat, count: 3 }).swings.map(s => s.weaponId);
+  assert.deepEqual(plan(t(0)), ["bite", "bite", "claw"]);
+  assert.deepEqual(plan(t(1)), ["bite", "claw"], "the rest of the first run (unchanged)");
+  assert.deepEqual(plan(t(3)), [], "no surge: nothing left (unchanged)");
+  assert.deepEqual(plan(t(3, 1)), ["bite", "bite", "claw"], "a surge: the whole Multiattack again");
+  assert.deepEqual(plan(t(4, 1)), ["bite", "claw"]);
+  assert.deepEqual(plan(t(6, 1)), []);
+  assert.deepEqual(plan(t(0, 0, 1)), [], "the Action went elsewhere");
+  assert.deepEqual(plan(t(3, 1, 1)), [], "the surge went elsewhere");
+  assert.deepEqual(plan(t(5), false), ["bite", "bite", "claw"], "out of combat: the whole Multiattack");
 });
