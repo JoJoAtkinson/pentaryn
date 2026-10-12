@@ -210,6 +210,21 @@ test("updateToken/deleteToken: the HUD's token changing body cancels an open pic
   ui.ARGON._token = null;
 });
 
+test("updateToken moving the HUD token never queries the DOM for the target picker", () => {
+  const hudDoc = { id: "tok", object: { controlled: false } };
+  ui.ARGON._token = { document: hudDoc, id: "tok" };
+  const real = document.querySelector;
+  let asked = 0;
+  document.querySelector = function (sel) { if (sel === ".ech-target-picker") asked++; return real.call(this, sel); };
+  try {
+    Hooks.callAll("updateToken", hudDoc, { x: 100 }, {}, "u");
+  } finally {
+    document.querySelector = real;
+    ui.ARGON._token = null;
+  }
+  assert.equal(asked, 0);
+});
+
 /* ── lookups ──────────────────────────────────────────────────────────────── */
 
 test("isRevertItem: only a strict true flag", () => {

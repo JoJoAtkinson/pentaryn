@@ -39,8 +39,8 @@ const log = makeLog(MODULE);
 
 /** The HUD's token became another body (a shift, a revert, a token swap): its pending pick is stale. */
 function onTokenBody(doc, changes) {
-  if (!pickerOpen()) return;
   if (!("actorId" in (changes ?? {})) && !("name" in (changes ?? {})) && changes !== null) return;
+  if (!pickerOpen()) return;
   const hudToken = hudTokenDoc() ?? null;
   if (doc === hudToken || doc?.object?.controlled) cancelTargetPicker();
 }
