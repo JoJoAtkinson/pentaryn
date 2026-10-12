@@ -222,7 +222,15 @@ def pending() -> list[Job]:
             jobs.append(Job(**known))
         except (OSError, ValueError, TypeError):
             continue
-    return sorted(jobs, key=lambda j: (j.created or 0.0, j.name))
+    return sorted(jobs, key=lambda j: (_created_key(j.created), j.name))
+
+
+def _created_key(created) -> float:
+    """A job's `created` as a sort key: a real number as is, anything else (null, a
+    string from a hand-edited or foreign job file) as 0.0 — sorted first, never dropped."""
+    if isinstance(created, (int, float)) and not isinstance(created, bool):
+        return float(created)
+    return 0.0
 
 
 def _default(f):

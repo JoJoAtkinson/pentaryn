@@ -782,3 +782,25 @@ def test_tmp_dirname_has_one_source():
     cloud.tmp_dir() is uploadq.tmp_dir(), one scratch directory."""
     assert cloud.TMP_DIRNAME == bundles.TMP_DIRNAME == uploadq.TMP_DIRNAME
     assert cloud.tmp_dir() == uploadq.tmp_dir()
+
+
+@pytest.mark.parametrize("bad", ["2026-10-11", None, "missing"])
+def test_a_job_with_a_non_numeric_created_still_loads_and_sorts(two_hosts, bad):
+    """Review R4: a job file whose `created` is a string sorted against a numeric one
+    crashed pending() (str < float). Every job still loads — a null/missing/string
+    created sorts as 0.0, first — so in_flight() keeps protecting its world."""
+    with two_hosts.use("mac"):
+        def job(name, created):
+            data = {"name": name, "reason": "shutdown", "digest": "d", "parent": None,
+                    "host": "mac", "size": 1, "created": created,
+                    "safety": False, "protect": None}
+            if created == "missing":
+                del data["created"]
+            (uploadq.tmp_dir() / f"{name}{uploadq.JOB_SUFFIX}").write_text(
+                json.dumps(data))
+        job("world-b.tar.gz", time.time())
+        job("world-a.tar.gz", bad)
+        assert [j.name for j in uploadq.pending()] == ["world-a.tar.gz", "world-b.tar.gz"]
+        assert uploadq.in_flight() == "world-b.tar.gz"           # the newest, as before
+        (uploadq.tmp_dir() / f"world-b.tar.gz{uploadq.JOB_SUFFIX}").unlink()
+        assert uploadq.in_flight() == "world-a.tar.gz"           # still protected alone
