@@ -13,11 +13,11 @@
  */
 
 import * as core from "./combat-core.mjs";
-import { attackActivityOf, weaponsOf, weaponShape, updateTurn, focusLeft, flurryActivity, unarmedStrike, turnOf } from "./shapes.mjs";
-import * as strip from "./strip.mjs";
+import { MODULE } from "./combat-core.mjs";
+import { attackActivityOf, weaponsOf, updateTurn, focusLeft, flurryActivity, unarmedStrike, turnOf } from "./shapes.mjs";
+import { choose, hide, onceCancel, picking, show, update, waitChoice } from "./strip.mjs";
 import { quickMode, setting } from "./settings.mjs";
 
-const MOD = core.MOD;
 const T = (key, data) => (data ? game.i18n.format(key, data) : game.i18n.localize(key));
 
 let current = null;            // the running sequence on this client (one at a time)
@@ -66,7 +66,7 @@ async function pickTarget(activity) {
     try {
       const r = await picker(activity);
       if (r !== undefined) return r;
-    } catch (err) { console.warn(`${MOD} | Argon target picker failed`, err); }
+    } catch (err) { console.warn(`${MODULE} | Argon target picker failed`, err); }
   }
   return new Promise(resolve => {
     ui.notifications.info(T("PENTARYN_COMBAT.Strip.PickTarget"));
@@ -75,7 +75,7 @@ async function pickTarget(activity) {
       Hooks.off("targetToken", id);
       resolve(true);
     });
-    strip.onceCancel(() => { Hooks.off("targetToken", id); resolve(false); });
+    onceCancel(() => { Hooks.off("targetToken", id); resolve(false); });
   });
 }
 
@@ -87,7 +87,7 @@ function restoreTargets(before) {
     const ids = before.filter(t => t?.document && t.scene?.id === canvas.scene?.id).map(t => t.id);
     if (canvas.tokens?.setTargets) canvas.tokens.setTargets(ids, { mode: "replace" });
     else before.forEach((t, i) => t.setTarget(true, { releaseOthers: i === 0 }));
-  } catch (err) { console.warn(`${MOD} | target restore failed`, err); }
+  } catch (err) { console.warn(`${MODULE} | target restore failed`, err); }
 }
 
 function targetName() {
@@ -180,7 +180,7 @@ function swapTile(actor, w) {
 }
 
 function render() {
-  if (current) strip.update(stripContext());
+  if (current) update(stripContext());
 }
 
 /**
@@ -218,7 +218,7 @@ function tidyOrigins(ids) {
       mine: msg.author?.id === game.user.id, ageMs: Date.now() - (msg.timestamp ?? 0), rolled,
       consumed: core.deltasConsumed(msg.system?.deltas), sequence: false
     });
-    if (orphan) msg.delete().catch(err => console.warn(`${MOD} | tidy usage card`, err));
+    if (orphan) msg.delete().catch(err => console.warn(`${MODULE} | tidy usage card`, err));
   }
 }
 
@@ -255,10 +255,10 @@ export async function runSwings(actor, swings, { event = null, title = null, ori
     created: new Set()      // usage cards this sequence posted (Flurry's own card is passed in, not ours)
   };
   const dispatch = (action) => { current.state = core.sequenceReducer(current.state, action); render(); };
-  strip.show(stripContext(), {
+  show(stripContext(), {
     onAdv: (value) => dispatch({ type: "adv", value }),
-    onStop: () => { dispatch({ type: "stop" }); closeSwingWindow(); strip.choose({ type: "stop" }); },
-    onQuick: async (on) => { await game.user.setFlag(MOD, "quick", !!on); render(); }
+    onStop: () => { dispatch({ type: "stop" }); closeSwingWindow(); choose({ type: "stop" }); },
+    onQuick: async (on) => { await game.user.setFlag(MODULE, "quick", !!on); render(); }
   });
 
   try {
@@ -266,16 +266,16 @@ export async function runSwings(actor, swings, { event = null, title = null, ori
       if (current.abort) { dispatch({ type: "stop" }); break; }
 
       if (current.state.status === "paused") {
-        const choice = await strip.waitChoice(stripContext());
+        const choice = await waitChoice(stripContext());
         if (current.abort || !choice || choice.type === "stop") { dispatch({ type: "stop" }); break; }
         if (choice.type === "swap") dispatch({ type: "swap", weaponId: choice.weaponId, extras: swapExtras(actor, choice.weaponId) });
         if (choice.type === "retarget") {
           const swing = current.state.swings[current.state.index];
           const act = attackActivityOf(actor.items.get(swing.weaponId));
           const before = [...game.user.targets];
-          strip.picking(true);
+          picking(true);
           let picked;
-          try { picked = await pickTarget(act); } finally { strip.picking(false); }
+          try { picked = await pickTarget(act); } finally { picking(false); }
           if (current.abort || current.state.status === "stopped") continue;
           // Picker cancelled (right-click): stay paused on the old target, don't roll at nobody.
           if (!picked) { restoreTargets(before); render(); continue; }
@@ -323,7 +323,7 @@ export async function runSwings(actor, swings, { event = null, title = null, ori
       const message = {
         data: {
           ...(origin ? { system: { origin } } : {}),
-          flags: { [MOD]: { swing: { i: s.index + 1, n: s.swings.length, kind: swing.kind } } }
+          flags: { [MODULE]: { swing: { i: s.index + 1, n: s.swings.length, kind: swing.kind } } }
         }
       };
 
@@ -348,13 +348,13 @@ export async function runSwings(actor, swings, { event = null, title = null, ori
   } finally {
     const first = current?.state?.swings?.[0];
     if (first?.kind === "main" && actor.isOwner && actor.items.get(first.weaponId)) {
-      actor.setFlag(MOD, "last.weapon", first.weaponId).catch(() => null);
+      actor.setFlag(MODULE, "last.weapon", first.weaponId).catch(() => null);
     }
     const created = [...(current?.created ?? [])];
     current = null;
     // After dnd5e has posted any last attack (and the tidy hook's own 250 ms look).
-    if (created.length) setTimeout(() => { try { tidyOrigins(created); } catch (err) { console.warn(`${MOD} | tidy usage card`, err); } }, 400);
-    strip.hide();
+    if (created.length) setTimeout(() => { try { tidyOrigins(created); } catch (err) { console.warn(`${MODULE} | tidy usage card`, err); } }, 400);
+    hide();
     // The bars re-check their follow-ups (Off-hand, Hew, Nick…) once the last swing's flag lands.
     Hooks.callAll("pentarynCombat.sequenceEnd", actor);
   }
@@ -366,7 +366,7 @@ export function abortFor(actor) {
   if (!actor || current.actor === actor || current.actor?.uuid === actor?.uuid) {
     current.abort = true;
     closeSwingWindow();
-    strip.choose({ type: "stop" });
+    choose({ type: "stop" });
   }
 }
 
@@ -434,4 +434,3 @@ export function fullAttackPlan(actor, { weaponId = null, turn = null, inCombat =
   return { swings, count, left, weaponId };
 }
 
-export { weaponShape };

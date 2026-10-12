@@ -11,6 +11,7 @@
 //   Special bar  Nick (free), "Sneak Attack: ask/auto" toggle, "Reckless Attack: on/off", "New turn" out of combat
 
 import * as core from "./combat-core.mjs";
+import { MODULE } from "./combat-core.mjs";
 import { setting, riderMode, setRiderMode } from "./settings.mjs";
 import {
   weaponsOf, featuresOf, countFor, multiattackOf, usesMultiattack, combatContext, turnOf, newTurn, attackActivityOf,
@@ -23,7 +24,6 @@ import { riderDiceFor, isReckless, setReckless } from "./riders.mjs";
 // Imported here, not listed in module.json, so a world relaunch is not needed to load it.
 import { placeOpenDrawers } from "./turnflow.mjs";
 
-const MOD = core.MOD;
 const ARGON = "enhancedcombathud";
 const T = (key, data) => (data ? game.i18n.format(key, data) : game.i18n.localize(key));
 const FALLBACK_IMG = "icons/skills/melee/blade-tips-triple-steel.webp";
@@ -167,7 +167,7 @@ function fullAttackState(actor) {
   const ctx = combatContext(actor);
   const turn = turnOf(actor);
   const ma = multiattack(actor);
-  const pick = ma ? { "*": actor.getFlag(MOD, "last")?.weapon ?? null } : null;
+  const pick = ma ? { "*": actor.getFlag(MODULE, "last")?.weapon ?? null } : null;
   const weaponId = ma ? null : chosenWeapon(actor);
   const count = ma ? ma.total : countFor(actor, weaponId);
   const plan = fullAttackPlan(actor, { weaponId, turn, inCombat: ctx.inCombat, multiattack: ma, count, pick });
@@ -204,7 +204,7 @@ async function chooseWeapon(actor) {
   }
   if (tiles.length < 2) return tiles[0]?.id ?? null;
   const id = await pickWeapon(tiles, { title: T("PENTARYN_COMBAT.Picker.Title") });
-  if (id) await actor.setFlag(MOD, "last.weapon", id);
+  if (id) await actor.setFlag(MODULE, "last.weapon", id);
   return id;
 }
 
@@ -252,7 +252,7 @@ function applyPickerGuide() {
   if (!on || !game.settings.settings.has(GUIDE_KEY)) return;
   try {
     if (!game.settings.get(ARGON, "targetPickerGuideShown")) game.settings.set(ARGON, "targetPickerGuideShown", true);
-  } catch (err) { console.warn(`${MOD} | marking Argon's picker tutorial seen failed`, err); }
+  } catch (err) { console.warn(`${MODULE} | marking Argon's picker tutorial seen failed`, err); }
 }
 
 Hooks.once("ready", applyPickerGuide);
@@ -275,7 +275,7 @@ Hooks.once("ready", () => new MutationObserver((records) => {
 }).observe(document.body, { childList: true }));
 // The first change from the default creates the Setting document; later ones update it.
 for (const hook of ["createSetting", "updateSetting"]) {
-  Hooks.on(hook, (s) => { if (s?.key === `${MOD}.skipPickerGuide`) applyPickerGuide(); });
+  Hooks.on(hook, (s) => { if (s?.key === `${MODULE}.skipPickerGuide`) applyPickerGuide(); });
 }
 
 /* ── components ──────────────────────────────────────────────────────────── */
@@ -359,7 +359,7 @@ function argonClasses() {
       dropTooltip();
       const actor = this.hudActor;
       // Nothing remembered and no weapon set: ask once which weapon (the choice is remembered).
-      if (!actor.getFlag(MOD, "last")?.weapon && !setPrimaryId(actor) && !multiattack(actor)) {
+      if (!actor.getFlag(MODULE, "last")?.weapon && !setPrimaryId(actor) && !multiattack(actor)) {
         const candidates = weaponsOf(actor).filter(core.canSwing);
         if (candidates.length > 1 && !(await chooseWeapon(actor))) return;
       }
@@ -745,7 +745,7 @@ Hooks.on("renderActionPanelArgonComponent", (panel, element, actor) => {
     else if (panel?.label === "DND5E.BonusAction") composeBonusBar(panel, a);
     else if (panel?.label === "DND5E.Special") composeSpecialBar(panel, a);
   } catch (err) {
-    console.error(`${MOD} | HUD composition failed`, err);
+    console.error(`${MODULE} | HUD composition failed`, err);
   }
 });
 
@@ -795,7 +795,7 @@ function rerender(labels = ["DND5E.Action", "DND5E.BonusAction", "DND5E.Special"
       forgetButtons(p);
       Promise.resolve(p.render())
         .then(() => { dropStrayTooltip(); return refillWeaponSlots(p); })
-        .catch(err => console.warn(`${MOD} | ${label} re-render`, err));
+        .catch(err => console.warn(`${MODULE} | ${label} re-render`, err));
     }
   }, 60);
 }
@@ -811,9 +811,9 @@ function refreshAll() {
 
 Hooks.on("updateActor", (actor, changes) => {
   if (actor !== ui.ARGON?._actor) return;
-  if (!foundry.utils.hasProperty(changes, `flags.${MOD}`)) return;
+  if (!foundry.utils.hasProperty(changes, `flags.${MODULE}`)) return;
   // Your turn began and the Reaction came back (Argon itself relights it only at a new round).
-  if (foundry.utils.getProperty(changes, `flags.${MOD}.reaction`) === null && setting("spellPips")) {
+  if (foundry.utils.getProperty(changes, `flags.${MODULE}.reaction`) === null && setting("spellPips")) {
     const reaction = mainPanel("DND5E.Reaction");
     if (reaction?.isActionUsed) { reaction.isActionUsed = false; reaction.updateActionUse(); }
   }
@@ -865,7 +865,7 @@ Hooks.on("pentarynCombat.usage", (activity, kind) => {
     const action = mainPanel("DND5E.Action");
     if (action?._pentarynPips?.()) return;        // our pips count this actor's swings
     DND5eItemButton?.consumeActionEconomy?.(activity);
-  } catch (err) { console.warn(`${MOD} | action economy`, err); }
+  } catch (err) { console.warn(`${MODULE} | action economy`, err); }
 });
 
 // Out of combat Argon shows no pips and never resets them, so nothing is marked there.
@@ -916,7 +916,7 @@ function restorePips(actor) {
   const ctx = combatContext(actor);
   if (!ctx.inCombat) return;
   const reaction = mainPanel("DND5E.Reaction");
-  if (reaction && core.reactionSpent(actor.getFlag(MOD, "reaction"), ctx.combat?.id) && !reaction.isActionUsed) {
+  if (reaction && core.reactionSpent(actor.getFlag(MODULE, "reaction"), ctx.combat?.id) && !reaction.isActionUsed) {
     reaction.isActionUsed = true;
     reaction.updateActionUse();
   }

@@ -18,11 +18,11 @@
 //   enterUses             Enter in a usage window's number box (Lay on Hands' points) uses the ability
 
 import * as core from "./combat-core.mjs";
+import { MODULE } from "./combat-core.mjs";
 import { setting } from "./settings.mjs";
 import { combatContext, turnOf, updateTurn, countFor, chosenWeapon } from "./shapes.mjs";
 import { expectRoll, forgetRoll, running } from "./sequence.mjs";
 
-const MOD = core.MOD;
 const T = (key, data) => (data ? game.i18n.format(key, data) : game.i18n.localize(key));
 
 function mainPanel(label) {
@@ -56,13 +56,13 @@ async function addTurnEffect(actor, kind, img) {
     transfer: false,
     origin: actor.uuid,
     system: { changes },
-    flags: { [MOD]: { until: "turnEnd", special: kind }, dnd5e: { isTemporary: true } }
+    flags: { [MODULE]: { until: "turnEnd", special: kind }, dnd5e: { isTemporary: true } }
   }]);
 }
 
 /** Dash adds your Speed after modifiers; a second Dash this turn adds the same again, not double. */
 function dashBase(actor) {
-  const earlier = actor.effects.find(e => e.getFlag(MOD, "special") === "dash");
+  const earlier = actor.effects.find(e => e.getFlag(MODULE, "special") === "dash");
   const had = earlier?.system?.changes;
   if (Array.isArray(had) && had.length) return had.map(c => ({ key: c.key, type: c.type ?? "add", value: c.value }));
   return core.dashChanges(actor.system?.attributes?.movement ?? {});
@@ -70,7 +70,7 @@ function dashBase(actor) {
 
 async function rollHide(actor) {
   let rolls = null;
-  try { rolls = await actor.rollSkill({ skill: "ste", target: 15 }); } catch (err) { console.warn(`${MOD} | Hide roll`, err); }
+  try { rolls = await actor.rollSkill({ skill: "ste", target: 15 }); } catch (err) { console.warn(`${MODULE} | Hide roll`, err); }
   const roll = Array.isArray(rolls) ? rolls[0] : rolls;
   const total = roll?.total;
   const hidden = Number.isFinite(total) && total >= 15;
@@ -118,7 +118,7 @@ function wrapSpecial(btn) {
       if (!left && !shoveOk) ui.notifications.warn(T("PENTARYN_COMBAT.Turn.NoActionLeft", { action: btn.label }));
     }
     await own.call(btn, event);
-    try { await afterSpecial(actor, kind, btn); } catch (err) { console.warn(`${MOD} | ${kind}`, err); }
+    try { await afterSpecial(actor, kind, btn); } catch (err) { console.warn(`${MODULE} | ${kind}`, err); }
   };
 }
 
@@ -171,7 +171,7 @@ Hooks.on("renderActionPanelArgonComponent", (panel) => {
       if (panel.label === "DND5E.Reaction") wrapReactionSlot(b);
       if (panel.label === "DND5E.Action") for (const x of [b, b?.button1, b?.button2]) wrapSpecial(x);
     }
-  } catch (err) { console.warn(`${MOD} | turn-flow buttons`, err); }
+  } catch (err) { console.warn(`${MODULE} | turn-flow buttons`, err); }
 });
 
 /* ── turn boundaries: Dodge / Dash / Disengage end; targets; the HUD follows ── */
@@ -180,8 +180,8 @@ async function sweep(actor, event) {
   const on = { specialActions: setting("specialActions"), reckless: setting("recklessToggle") };
   if (!actor?.effects || (!on.specialActions && !on.reckless)) return;
   const ids = core.expiringAt(actor.effects.map(e => ({
-    id: e.id, statuses: [...(e.statuses ?? [])], until: e.getFlag?.(MOD, "until") ?? null,
-    reckless: !!e.getFlag?.(MOD, "reckless") || core.isRecklessEffect(e)
+    id: e.id, statuses: [...(e.statuses ?? [])], until: e.getFlag?.(MODULE, "until") ?? null,
+    reckless: !!e.getFlag?.(MODULE, "reckless") || core.isRecklessEffect(e)
   })), event, on);
   if (ids.length) await actor.deleteEmbeddedDocuments("ActiveEffect", ids);
 }
@@ -204,10 +204,10 @@ Hooks.on("combatTurnChange", (combat, previous, current) => {
   const prior = ended ? combat.combatants.get(ended) ?? null : null;
   const next = began ? combat.combatants.get(began) ?? null : null;
   if (game.users.activeGM?.isSelf) {
-    sweep(prior?.actor, "turnEnd").catch(err => console.warn(`${MOD} | turn-end sweep`, err));
-    sweep(next?.actor, "turnStart").catch(err => console.warn(`${MOD} | turn-start sweep`, err));
+    sweep(prior?.actor, "turnEnd").catch(err => console.warn(`${MODULE} | turn-end sweep`, err));
+    sweep(next?.actor, "turnStart").catch(err => console.warn(`${MODULE} | turn-start sweep`, err));
     // The Reaction comes back at the start of your turn (combat.mjs records it; hud.mjs relights the pip).
-    if (next?.actor?.getFlag?.(MOD, "reaction")) next.actor.setFlag(MOD, "reaction", null).catch(() => null);
+    if (next?.actor?.getFlag?.(MODULE, "reaction")) next.actor.setFlag(MODULE, "reaction", null).catch(() => null);
   }
   closeDrawersOf([prior?.actor, next?.actor]);
   if (game.user.isGM) return;
@@ -240,7 +240,7 @@ function followTo(token) {
   let canSelect = false;
   try { canSelect = !!(token.layer?.active && token.isInteractable && token._canControl?.(game.user)); } catch { canSelect = false; }
   if (canSelect && token.control({ releaseOthers: true })) return;
-  try { ui.ARGON?.bind?.(token); } catch (err) { console.warn(`${MOD} | HUD follow`, err); }
+  try { ui.ARGON?.bind?.(token); } catch (err) { console.warn(`${MODULE} | HUD follow`, err); }
 }
 
 // A combat that ends mid-turn leaves nobody's turn to end it on. Its turn and Reaction flags go too:
@@ -254,13 +254,13 @@ Hooks.on("deleteCombat", (combat) => {
     done.add(actor.uuid);
     sweep(actor, "turnEnd").then(() => sweep(actor, "turnStart"))
       .then(() => clearCombatFlags(actor, combat.id))
-      .catch(err => console.warn(`${MOD} | end-of-combat cleanup`, err));
+      .catch(err => console.warn(`${MODULE} | end-of-combat cleanup`, err));
   }
 });
 
 async function clearCombatFlags(actor, combatId) {
-  const stale = core.staleCombatFlags({ turn: actor.getFlag?.(MOD, "turn"), reaction: actor.getFlag?.(MOD, "reaction") }, combatId);
-  for (const key of stale) await actor.unsetFlag(MOD, key);
+  const stale = core.staleCombatFlags({ turn: actor.getFlag?.(MODULE, "turn"), reaction: actor.getFlag?.(MODULE, "reaction") }, combatId);
+  for (const key of stale) await actor.unsetFlag(MODULE, key);
 }
 
 /**
@@ -273,15 +273,15 @@ async function sweepOrphanFlags() {
   const live = game.combats.map(c => c.id);
   let n = 0;
   for (const actor of game.actors) {
-    const keys = core.orphanCombatFlags({ turn: actor.getFlag?.(MOD, "turn"), reaction: actor.getFlag?.(MOD, "reaction") }, live);
-    for (const key of keys) { await actor.unsetFlag(MOD, key); n++; }
+    const keys = core.orphanCombatFlags({ turn: actor.getFlag?.(MODULE, "turn"), reaction: actor.getFlag?.(MODULE, "reaction") }, live);
+    for (const key of keys) { await actor.unsetFlag(MODULE, key); n++; }
   }
   return n;
 }
 
-Hooks.once("ready", () => { sweepOrphanFlags().catch(err => console.warn(`${MOD} | orphan flag sweep`, err)); });
+Hooks.once("ready", () => { sweepOrphanFlags().catch(err => console.warn(`${MODULE} | orphan flag sweep`, err)); });
 Hooks.on("deleteCombat", () => {
-  setTimeout(() => sweepOrphanFlags().catch(err => console.warn(`${MOD} | orphan flag sweep`, err)), 1500);
+  setTimeout(() => sweepOrphanFlags().catch(err => console.warn(`${MODULE} | orphan flag sweep`, err)), 1500);
 });
 
 // Clicking one token of a selected group releases the others but never "controls" the clicked one
@@ -324,9 +324,9 @@ Hooks.on("deleteToken", (doc) => {
         if (!back && origin) back = ownedTokenOf(fromUuidSync(origin, { strict: false })?.actor);
         if (!back) back = ownedTokenOf(game.user.character);
         if (back && !back.destroyed && back.isOwner) back.control({ releaseOthers: true });
-      } catch (err) { console.warn(`${MOD} | helper token control`, err); }
+      } catch (err) { console.warn(`${MODULE} | helper token control`, err); }
     }, 0);
-  } catch (err) { console.warn(`${MOD} | helper token control`, err); }
+  } catch (err) { console.warn(`${MODULE} | helper token control`, err); }
 });
 
 /* ── roll dialogs: Esc, and the card a cancelled attack leaves ───────────── */
@@ -404,9 +404,9 @@ Hooks.on("closeAttackRollConfigurationDialog", (app) => {
         mine: msg.author?.id === game.user.id, ageMs: Date.now() - (msg.timestamp ?? 0), rolled,
         consumed: core.deltasConsumed(msg.system?.deltas), sequence: !!running()
       });
-      if (!keep) msg.delete().catch(err => console.warn(`${MOD} | tidy usage card`, err));
+      if (!keep) msg.delete().catch(err => console.warn(`${MODULE} | tidy usage card`, err));
     }, 250);
-  } catch (err) { console.warn(`${MOD} | tidy usage card`, err); }
+  } catch (err) { console.warn(`${MODULE} | tidy usage card`, err); }
 });
 
 /* ── damage at 0 HP ──────────────────────────────────────────────────────── */
@@ -433,7 +433,7 @@ Hooks.on("dnd5e.preApplyDamage", (actor, amount, updates, options) => {
         whisper: game.users.filter(u => u.isGM).map(u => u.id)
       }).catch(() => {});
     }
-  } catch (err) { console.warn(`${MOD} | damage at 0 HP`, err); }
+  } catch (err) { console.warn(`${MODULE} | damage at 0 HP`, err); }
 });
 
 /* ── conditions on the HUD portrait ──────────────────────────────────────── */
@@ -474,7 +474,7 @@ function patchPortrait() {
         const e = all.find(x => x.uuid === uuid);
         list.push({ img: e.img, name: e.name, uuid, tooltip: await tooltipFor(e) });
       }
-    } catch (err) { console.warn(`${MOD} | portrait conditions`, err); }
+    } catch (err) { console.warn(`${MODULE} | portrait conditions`, err); }
     return list;
   };
 }
@@ -535,7 +535,7 @@ Hooks.once("init", () => {
       wrapped._pentaryn = true;
       G.prototype.createScrollingText = wrapped;
     }
-  } catch (err) { console.warn(`${MOD} | scrolling text guard`, err); }
+  } catch (err) { console.warn(`${MODULE} | scrolling text guard`, err); }
 });
 
 /* ── a background tab posts no chat-card pop-ups (setting scrollingTextGuard) ── */
@@ -559,7 +559,7 @@ Hooks.once("init", () => {
     };
     wrapped._pentaryn = true;
     C.prototype.notify = wrapped;
-  } catch (err) { console.warn(`${MOD} | chat pop-up guard`, err); }
+  } catch (err) { console.warn(`${MODULE} | chat pop-up guard`, err); }
 });
 
 /* ── manual dice: the Roll Resolution box takes the digits ───────────────── */
@@ -640,7 +640,7 @@ async function applySelfEffect(activity, results) {
 // roll window opens on Advantage) and Speed 0. It goes after the next attack roll, and at the end of
 // the turn (the turn-end sweep, `until: "turnEnd"`).
 
-const isSteadyAim = (e) => e?.getFlag?.(MOD, "special") === "steady-aim";
+const isSteadyAim = (e) => e?.getFlag?.(MODULE, "special") === "steady-aim";
 
 async function steadyAim(activity) {
   if (!setting("steadyAim")) return;
@@ -655,14 +655,14 @@ async function steadyAim(activity) {
     transfer: false,
     origin: item.uuid,
     system: { changes: core.steadyAimChanges() },
-    flags: { [MOD]: { until: "turnEnd", special: "steady-aim" }, dnd5e: { isTemporary: true } }
+    flags: { [MODULE]: { until: "turnEnd", special: "steady-aim" }, dnd5e: { isTemporary: true } }
   }]);
   ui.notifications.info(T("PENTARYN_COMBAT.Turn.SteadyAimOn"));
 }
 
 Hooks.on("dnd5e.postUseActivity", (activity, usageConfig, results) => {
-  applySelfEffect(activity, results).catch(err => console.warn(`${MOD} | self effect`, err));
-  steadyAim(activity).catch(err => console.warn(`${MOD} | Steady Aim`, err));
+  applySelfEffect(activity, results).catch(err => console.warn(`${MODULE} | self effect`, err));
+  steadyAim(activity).catch(err => console.warn(`${MODULE} | Steady Aim`, err));
 });
 
 // The attack Steady Aim was for has been rolled: the Advantage is used; Speed 0 lasts to the turn's end.
@@ -673,7 +673,7 @@ Hooks.on("dnd5e.postRollAttack", (rolls, { subject } = {}) => {
   for (const e of actor.effects.filter(isSteadyAim)) {
     const left = core.steadyAimAfterAttack(e.system?.changes ?? [], { inCombat });
     const done = left ? (left.length === e.system.changes.length ? null : e.update({ "system.changes": left.map(c => ({ key: c.key, type: c.type ?? "override", value: c.value })) })) : e.delete();
-    done?.catch?.(err => console.warn(`${MOD} | Steady Aim end`, err));
+    done?.catch?.(err => console.warn(`${MODULE} | Steady Aim end`, err));
   }
 });
 
@@ -808,7 +808,7 @@ Hooks.once("ready", () => {
     };
     settled._pcSettles = true;
     proto.updateActionUse = settled;
-  } catch (err) { console.warn(`${MOD} | Argon pip settle not installed`, err); }
+  } catch (err) { console.warn(`${MODULE} | Argon pip settle not installed`, err); }
 });
 
 /* ── Argon's movement readout follows your Speed (Area 10) ───────────────── */

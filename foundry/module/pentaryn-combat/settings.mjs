@@ -7,7 +7,7 @@
  * throws inside a render because of a missing setting.
  */
 
-import { MOD } from "./combat-core.mjs";
+import { MODULE } from "./combat-core.mjs";
 
 export const DEFAULTS = Object.freeze({
   fullAttack: true,        // Full Attack button + swing strip
@@ -49,8 +49,8 @@ export const DEFAULTS = Object.freeze({
 
 export function registerSettings() {
   for (const [key, value] of Object.entries(DEFAULTS)) {
-    if (game.settings.settings.has(`${MOD}.${key}`)) continue;
-    game.settings.register(MOD, key, {
+    if (game.settings.settings.has(`${MODULE}.${key}`)) continue;
+    game.settings.register(MODULE, key, {
       name: `PENTARYN_COMBAT.Setting.${key}.Name`,
       hint: `PENTARYN_COMBAT.Setting.${key}.Hint`,
       scope: "world", config: true, type: Boolean, default: value,
@@ -64,7 +64,7 @@ export function registerSettings() {
 /** Read a setting; the default if it is unregistered or unreadable. */
 export function setting(key) {
   try {
-    return game.settings.get(MOD, key);
+    return game.settings.get(MODULE, key);
   } catch {
     return DEFAULTS[key];
   }
@@ -74,18 +74,18 @@ export function setting(key) {
 
 /** Quick mode: swings after the first skip the dialog and reuse its Normal/Adv/Dis. Off by default. */
 export function quickMode() {
-  return !!game.user?.getFlag?.(MOD, "quick");
+  return !!game.user?.getFlag?.(MODULE, "quick");
 }
 
 export async function setQuickMode(on) {
-  return game.user?.setFlag?.(MOD, "quick", !!on);
+  return game.user?.setFlag?.(MODULE, "quick", !!on);
 }
 
 /** "ask" (default) or "auto" for one rider key. */
 export function riderMode(key) {
-  return game.user?.getFlag?.(MOD, `riders.${key}`) === "auto" ? "auto" : "ask";
+  return game.user?.getFlag?.(MODULE, `riders.${key}`) === "auto" ? "auto" : "ask";
 }
 
 export async function setRiderMode(key, mode) {
-  return game.user?.setFlag?.(MOD, `riders.${key}`, mode === "auto" ? "auto" : "ask");
+  return game.user?.setFlag?.(MODULE, `riders.${key}`, mode === "auto" ? "auto" : "ask");
 }

@@ -299,8 +299,8 @@ test("forced failures: the console texts (golden/counting-console.json)", async 
 });
 
 test("fixFeats: report only; apply is refused with the reason", async () => {
-  const api = await import("../combat.mjs");
-  assert.equal(api.attackActivityOf(fig.items.get("longsword0000001")).id, "longsword0000001", "the dead re-export still answers");
+  const entry = await import("../combat.mjs");
+  assert.equal(entry.attackActivityOf, undefined, "the dead re-export is gone (combat-riders-34, guide S3)");
   F.fire("ready");
   mock.timers.tick(0);
   await drain();

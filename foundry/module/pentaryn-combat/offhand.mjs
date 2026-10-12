@@ -15,10 +15,10 @@
  */
 
 import * as core from "./combat-core.mjs";
+import { MODULE } from "./combat-core.mjs";
 import { weaponsOf } from "./shapes.mjs";
 import { setting } from "./settings.mjs";
 
-const MOD = core.MOD;
 const ARGON = "enhancedcombathud";
 
 /** Put a weapon's remembered attack mode back to main-hand after an off-hand roll. */
@@ -54,7 +54,7 @@ export async function seedWeaponSets(actor) {
   const seed = core.weaponSetSeed(weaponsOf(actor));
   if (!seed) return null;
   await actor.setFlag(ARGON, "weaponSets", seed);
-  console.info(`${MOD} | weapon sets seeded for ${actor.name}`, seed);
+  console.info(`${MODULE} | weapon sets seeded for ${actor.name}`, seed);
   return seed;
 }
 
@@ -66,7 +66,7 @@ export async function seedAll() {
     try {
       const seed = await seedWeaponSets(actor);
       if (seed) out.push({ actor: actor.name, seed });
-    } catch (err) { console.warn(`${MOD} | weapon-set seed failed for ${actor.name}`, err); }
+    } catch (err) { console.warn(`${MODULE} | weapon-set seed failed for ${actor.name}`, err); }
   }
   return out;
 }

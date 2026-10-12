@@ -16,10 +16,10 @@
  */
 
 import * as core from "./combat-core.mjs";
+import { MODULE } from "./combat-core.mjs";
 import { featuresOf, featureItem, weaponShape, activitiesOf, combatContext, turnOf, updateTurn, rollAdvantage, allyAdjacent, tokenOf } from "./shapes.mjs";
 import { setting, riderMode } from "./settings.mjs";
 
-const MOD = core.MOD;
 const T = (key, data) => (data ? game.i18n.format(key, data) : game.i18n.localize(key));
 
 /* ── facts about an attack message ───────────────────────────────────────── */
@@ -85,7 +85,7 @@ export async function setReckless(actor, on) {
     name: T("PENTARYN_COMBAT.Reckless.Effect"),
     img: item?.img ?? "icons/skills/melee/strike-axe-blood-red.webp",
     duration: { value: 6, units: "seconds", expiry: "turnStart" }
-  }, { transfer: false, disabled: false, origin: item?.uuid ?? null, [`flags.${MOD}.reckless`]: true }, { inplace: false });
+  }, { transfer: false, disabled: false, origin: item?.uuid ?? null, [`flags.${MODULE}.reckless`]: true }, { inplace: false });
   delete data._id;
   data.name = /^reckless/i.test(data.name ?? "") ? data.name : T("PENTARYN_COMBAT.Reckless.Effect");
   // Foundry v14 / dnd5e 6 keep an effect's changes in `system.changes` (top-level `changes` is ignored).
@@ -162,7 +162,7 @@ function hintText(o) {
 function renderOffer(message, html) {
   if (!setting("riderOffers") || message?.type !== "attack" || !html?.querySelector) return;
   html.querySelector(".pentaryn-combat-riders")?.remove();
-  const stamp = message.getFlag?.(MOD, "turnKey");
+  const stamp = message.getFlag?.(MODULE, "turnKey");
   if (!stamp) return;
   const { actor, offers } = offersFor(message);
   if (!actor || !(game.user.isGM || message.isAuthor || actor.isOwner)) return;
@@ -220,7 +220,7 @@ export async function rollRider(message, key) {
   if (!rider || !actor?.isOwner) return null;
   const turnKey = combatContext(actor).key;
   // A button left on an earlier turn's card: that swing's turn is over (and this turn's use is not its to spend).
-  const stamp = message.getFlag?.(MOD, "turnKey");
+  const stamp = message.getFlag?.(MODULE, "turnKey");
   if (stamp && stamp !== turnKey) {
     ui.notifications.info(T("PENTARYN_COMBAT.Rider.Stale"));
     return null;
@@ -241,9 +241,9 @@ export async function rollRider(message, key) {
     const targets = message._source?.system?.targets ?? null;
     const system = { ...(origin ? { origin } : {}), ...(targets?.length ? { targets } : {}) };
     const rolls = await act.rollDamage(
-      { isCritical: !!message.rolls?.[0]?.isCritical, [MOD]: { rider: key, narrow: type } },
+      { isCritical: !!message.rolls?.[0]?.isCritical, [MODULE]: { rider: key, narrow: type } },
       { configure: false },
-      { data: { ...(Object.keys(system).length ? { system } : {}), flags: { [MOD]: { rider: key, attack: message.id } } } }
+      { data: { ...(Object.keys(system).length ? { system } : {}), flags: { [MODULE]: { rider: key, attack: message.id } } } }
     );
     if (!rolls?.length) return null;
     await updateTurn(actor, t => core.setRider(t, key, "used"));
@@ -255,8 +255,8 @@ export async function rollRider(message, key) {
 
 /** Narrow a rider roll's damage type and tidy its "(2)d6" die count (our own calls only). */
 function narrowType(config) {
-  if (!config?.[MOD]?.rider) return;
-  const t = config[MOD].narrow;
+  if (!config?.[MODULE]?.rider) return;
+  const t = config[MODULE].narrow;
   for (const r of config.rolls ?? []) {
     if (Array.isArray(r.parts)) {
       r.parts = r.parts.map(p => core.tidyDiceCount(p, ref => Roll.replaceFormulaData(ref, r.data ?? {})));
@@ -306,7 +306,7 @@ export function autoRiders(config, message) {
     applied.push({ key: o.rider.key, dice: o.dice, attack: attackMsg.id });
   }
   if (applied.length) {
-    foundry.utils.setProperty(message, `data.flags.${MOD}.auto`, applied);
+    foundry.utils.setProperty(message, `data.flags.${MODULE}.auto`, applied);
     for (const a of applied) updateTurn(actor, t => core.setRider(t, a.key, `auto:${a.attack}`));
   }
   return applied;
@@ -314,14 +314,14 @@ export function autoRiders(config, message) {
 
 /** The "+ Sneak Attack 3d6 · Undo" note on an auto damage card. */
 function renderAutoNote(message, html) {
-  const auto = message?.getFlag?.(MOD, "auto");
+  const auto = message?.getFlag?.(MODULE, "auto");
   if (!auto?.length || message.type !== "damage" || !html?.querySelector) return;
   html.querySelector(".pentaryn-combat-auto")?.remove();
   const note = document.createElement("p");
   note.className = "supplement pentaryn-combat-auto";
   const actor = message.getAssociatedActor?.() ?? game.actors.get(message.speaker?.actor);
   const turn = actor ? turnOf(actor) : null;
-  const undone = message.getFlag?.(MOD, "undone") ?? [];
+  const undone = message.getFlag?.(MODULE, "undone") ?? [];
   const parts = auto.map(a => {
     const live = turn?.riders?.[a.key] === `auto:${a.attack}`;
     const name = T(`PENTARYN_COMBAT.Rider.Name.${a.key}`);
@@ -358,8 +358,8 @@ function renderAutoNote(message, html) {
     await updateTurn(actor, t => (t.riders?.[key] === `auto:${entry.attack}` ? core.setRider(t, key, null) : t));
     // Mark the card (its author or the GM can write it): the note re-renders struck through.
     if (message.isOwner) {
-      const was = message.getFlag(MOD, "undone") ?? [];
-      if (!was.includes(key)) await message.setFlag(MOD, "undone", [...was, key]).catch(err => console.warn(`${MOD} | undo mark`, err));
+      const was = message.getFlag(MODULE, "undone") ?? [];
+      if (!was.includes(key)) await message.setFlag(MODULE, "undone", [...was, key]).catch(err => console.warn(`${MODULE} | undo mark`, err));
     }
     ui.notifications.info(T("PENTARYN_COMBAT.Rider.Undone", { name: T(`PENTARYN_COMBAT.Rider.Name.${a.dataset.undo}`) }));
   });
@@ -379,7 +379,7 @@ function aoeAutoDamage() {
 }
 
 function renderSwingDamage(message, html) {
-  if (message?.type !== "attack" || !message.getFlag?.(MOD, "swing") || aoeAutoDamage() || !html?.querySelector) return;
+  if (message?.type !== "attack" || !message.getFlag?.(MODULE, "swing") || aoeAutoDamage() || !html?.querySelector) return;
   html.querySelector(".pentaryn-combat-damage")?.remove();
   const activity = attackActivity(message);
   if (!activity?.actor?.isOwner || !activity.damage?.parts?.length && !activity.item?.system?.damage?.base) return;
@@ -421,8 +421,8 @@ function rerenderCards(actor) {
       if (!["attack", "damage"].includes(m.type)) continue;
       const a = attackActivity(m)?.actor ?? m.getAssociatedActor?.();
       if (!a || !uuids.has(a.uuid)) continue;
-      const current = m.type === "attack" && m.getFlag?.(MOD, "turnKey") === combatContext(a).key;
-      if (!current && !showing(m.id) && !m.getFlag?.(MOD, "auto")) continue;
+      const current = m.type === "attack" && m.getFlag?.(MODULE, "turnKey") === combatContext(a).key;
+      if (!current && !showing(m.id) && !m.getFlag?.(MODULE, "auto")) continue;
       try { ui.chat?.updateMessage?.(m); } catch { /* popped out */ }
     }
   }, 50);
@@ -460,8 +460,8 @@ export function report(actorOrName) {
       key: r.key, dice: riderDiceFor(actor, r), activity: !!riderActivity(actor, r),
       modeForMe: riderMode(r.key)
     })),
-    turn: actor.getFlag(MOD, "turn") ?? null,
-    lastWeapon: actor.getFlag(MOD, "last")?.weapon ?? null
+    turn: actor.getFlag(MODULE, "turn") ?? null,
+    lastWeapon: actor.getFlag(MODULE, "last")?.weapon ?? null
   }));
   console.table(rows.map(r => ({ actor: r.actor, riders: r.riders.map(x => `${x.key} ${x.dice} (${x.modeForMe})`).join(", ") || "—", turn: r.turn?.key ?? "—" })));
   return rows;
@@ -474,22 +474,22 @@ export function installRiders() {
   Hooks.on("dnd5e.preRollAttackV2", (config, dialog, message) => {
     try {
       const actor = config?.subject?.actor;
-      if (actor) foundry.utils.setProperty(message, `data.flags.${MOD}.turnKey`, combatContext(actor).key);
-    } catch (err) { console.warn(`${MOD} | turn stamp skipped`, err); }
+      if (actor) foundry.utils.setProperty(message, `data.flags.${MODULE}.turnKey`, combatContext(actor).key);
+    } catch (err) { console.warn(`${MODULE} | turn stamp skipped`, err); }
   });
   Hooks.on("dnd5e.preRollDamageV2", (config, dialog, message) => {
-    try { narrowType(config); } catch (err) { console.warn(`${MOD} | rider type skipped`, err); }
-    try { autoRiders(config, message); } catch (err) { console.warn(`${MOD} | auto rider skipped`, err); }
+    try { narrowType(config); } catch (err) { console.warn(`${MODULE} | rider type skipped`, err); }
+    try { autoRiders(config, message); } catch (err) { console.warn(`${MODULE} | auto rider skipped`, err); }
   });
   Hooks.on("dnd5e.renderChatMessage", (message, html) => {
-    try { renderOffer(message, html); } catch (err) { console.warn(`${MOD} | rider offer skipped`, err); }
-    try { renderAutoNote(message, html); } catch (err) { console.warn(`${MOD} | rider note skipped`, err); }
-    try { renderSwingDamage(message, html); } catch (err) { console.warn(`${MOD} | swing damage button skipped`, err); }
+    try { renderOffer(message, html); } catch (err) { console.warn(`${MODULE} | rider offer skipped`, err); }
+    try { renderAutoNote(message, html); } catch (err) { console.warn(`${MODULE} | rider note skipped`, err); }
+    try { renderSwingDamage(message, html); } catch (err) { console.warn(`${MODULE} | swing damage button skipped`, err); }
   });
   Hooks.on("combatTurnChange", () => rerenderShowing());
   Hooks.on("deleteCombat", () => rerenderShowing());
   Hooks.on("updateActor", (actor, changes) => {
-    if (foundry.utils.hasProperty(changes, `flags.${MOD}.turn`) || foundry.utils.hasProperty(changes, `flags.${MOD}.-=turn`)) rerenderCards(actor);
+    if (foundry.utils.hasProperty(changes, `flags.${MODULE}.turn`) || foundry.utils.hasProperty(changes, `flags.${MODULE}.-=turn`)) rerenderCards(actor);
   });
   // Reckless on/off changes Frenzy's offer and hint on this turn's cards.
   for (const hook of ["createActiveEffect", "deleteActiveEffect", "updateActiveEffect"]) {

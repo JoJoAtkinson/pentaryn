@@ -4,8 +4,8 @@
  */
 
 import * as core from "./combat-core.mjs";
+import { MODULE } from "./combat-core.mjs";
 
-const MOD = core.MOD;
 
 /* ── items ───────────────────────────────────────────────────────────────── */
 
@@ -63,7 +63,7 @@ export function weaponShape(item) {
     attackActivity: atk?.id ?? null,
     natural,
     unarmed,
-    pactWeapon: !!item.getFlag?.(MOD, "pactWeapon"),
+    pactWeapon: !!item.getFlag?.(MODULE, "pactWeapon"),
     ability: atk?.ability || sys._typeAbilityMod || null
   };
 }
@@ -119,7 +119,7 @@ export function setPrimaryId(actor) {
 export function chosenWeapon(actor) {
   return core.defaultWeapon({
     weapons: weaponsOf(actor),
-    remembered: actor?.getFlag?.(MOD, "last")?.weapon ?? null,
+    remembered: actor?.getFlag?.(MODULE, "last")?.weapon ?? null,
     setPrimary: setPrimaryId(actor)
   });
 }
@@ -141,7 +141,7 @@ function rollFormula(actor, formula) {
 export function multiattackOf(actor) {
   if (!actor) return null;
   const items = actor.items?.contents ?? [];
-  const override = core.overridePlan(actor.getFlag?.(MOD, "multiattack"), items.map(i => i.id));
+  const override = core.overridePlan(actor.getFlag?.(MODULE, "multiattack"), items.map(i => i.id));
   if (override) return { plan: override, total: override.reduce((s, r) => s + r.count, 0), groups: override.map(r => ({ count: r.count, choices: [r.itemId] })), source: "flag" };
   const ma = items.find(i => /^multiattack\b/i.test(i.name ?? ""));
   if (!ma) return null;
@@ -163,7 +163,7 @@ export function countFor(actor, weaponId = null) {
   const ma = usesMultiattack(actor) ? multiattackOf(actor) : null;
   return core.attackCount({
     features: featuresOf(actor),
-    override: actor.getFlag?.(MOD, "attacks"),
+    override: actor.getFlag?.(MODULE, "attacks"),
     multiattack: ma
   }, w ? weaponShape(w) : null);
 }
@@ -202,7 +202,7 @@ export function combatContext(actor) {
 
 export function turnOf(actor) {
   const { key } = combatContext(actor);
-  return core.readTurn(actor?.getFlag?.(MOD, "turn"), key);
+  return core.readTurn(actor?.getFlag?.(MODULE, "turn"), key);
 }
 
 const writeChains = new Map();
@@ -214,9 +214,9 @@ const writeChains = new Map();
  * "==" key) replaces the value instead.
  */
 function writeTurn(actor, value) {
-  const path = `flags.${MOD}.turn`;
+  const path = `flags.${MODULE}.turn`;
   const replace = globalThis._replace ?? foundry.data?.operators?.ForcedReplacement?.create;
-  return actor.update(replace ? { [path]: replace(value) } : { [`flags.${MOD}.==turn`]: value });
+  return actor.update(replace ? { [path]: replace(value) } : { [`flags.${MODULE}.==turn`]: value });
 }
 
 /**
@@ -233,7 +233,7 @@ export function updateTurn(actor, fn) {
     if (!after || JSON.stringify(after) === JSON.stringify(before)) return before;
     await writeTurn(actor, after);
     return after;
-  }).catch(err => { console.warn(`${MOD} | turn flag write failed`, err); return null; });
+  }).catch(err => { console.warn(`${MODULE} | turn flag write failed`, err); return null; });
   writeChains.set(id, next);
   return next;
 }

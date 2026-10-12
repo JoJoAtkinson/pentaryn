@@ -109,11 +109,11 @@ test("import graph: both entries reach every non-test .mjs; DFS order as recorde
   assert.deepEqual(Object.entries(graph).filter(([, deps]) => deps.includes("turnflow.mjs")).map(([f]) => f), ["hud.mjs"]);
 });
 
-test("dead exports as today (combat-riders-34): combat.mjs re-exports attackActivityOf, sequence.mjs weaponShape; nobody imports either", async () => {
+test("dead exports gone (combat-riders-34, guide S3): no re-export of attackActivityOf or weaponShape; nobody imports the entry", async () => {
   const graph = importGraph(ROOT, { exclude: ["lib/", "test/"] });
   assert.deepEqual(Object.entries(graph).filter(([, deps]) => deps.includes("combat.mjs")).map(([f]) => f), []);
-  assert.deepEqual(sourceScan(ROOT, /export \{ attackActivityOf \}/).map(h => `${h.file}:${h.line}`), ["combat.mjs:279"]);
-  assert.deepEqual(sourceScan(ROOT, /export \{ weaponShape \}/).map(h => `${h.file}:${h.line}`), ["sequence.mjs:437"]);
+  assert.deepEqual(sourceScan(ROOT, /export \{ attackActivityOf \}/).map(h => `${h.file}:${h.line}`), []);
+  assert.deepEqual(sourceScan(ROOT, /export \{ weaponShape \}/).map(h => `${h.file}:${h.line}`), []);
   assert.deepEqual(sourceScan(ROOT, /import[^;]*weaponShape[^;]*from "\.\/sequence\.mjs"/), []);
 });
 
