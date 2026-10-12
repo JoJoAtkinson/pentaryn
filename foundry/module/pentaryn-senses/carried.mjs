@@ -135,12 +135,17 @@ async function syncAll() {
   return n;
 }
 
-/** Coalesce bursts into one sync per actor. */
+/**
+ * Coalesce bursts into one sync per actor. [declared senses-R1] Keyed by uuid: an unlinked token's
+ * synthetic actor shares its base actor's id, and each keeps its own timer (and syncs only itself).
+ * A pack actor is never synced, so it is never scheduled.
+ */
 function schedule(actor) {
-  if (!actor || actor.documentName !== "Actor" || !isActiveGMOrLoneGM()) return;
-  clearTimeout(pending.get(actor.id));
-  pending.set(actor.id, setTimeout(() => {
-    pending.delete(actor.id);
+  if (!actor || actor.documentName !== "Actor" || actor.pack || !isActiveGMOrLoneGM()) return;
+  const key = actor.uuid;
+  clearTimeout(pending.get(key));
+  pending.set(key, setTimeout(() => {
+    pending.delete(key);
     // a failed write is logged with the module and the actor, never left as an unhandled rejection (-15)
     syncLight(actor).catch(e => log?.warn(`carried light ${actor.name} (${actor.id})`, e));
   }, DEBOUNCE_MS));

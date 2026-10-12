@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- **[declared senses-R1] A token's own actor no longer cancels its base actor's carried-light sync**
+  (final review 2026-10-12): the 250 ms carried-light debounce is keyed by `actor.uuid`, not
+  `actor.id`, so an unlinked token's synthetic actor and its world actor each keep their own timer,
+  and a pack actor is never scheduled. Each sync still targets exactly the actor scheduled (a
+  synthetic never syncs, or writes, its base actor's prototype). Goldens unchanged. Re-lands the two
+  schedule tests from 489d30a8 in `test/carried-edges.test.mjs` plus a pin that a synthetic-only
+  schedule writes no `prototypeToken`.
+
 - **[declared senses-EXT-4] Which light sources get a Light activity is one list** (final review
   2026-10-12): `setupLight()` and the torch-on-create hook now test membership in the frozen
   `ACTIVITY_PROFILES` list in `core/light.mjs` (today `["torch"]`, exported through the core barrel)
