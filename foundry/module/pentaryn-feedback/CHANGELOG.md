@@ -2,6 +2,12 @@
 
 ## Unreleased — 2026-10-12 (W3L live-check fix; `module.json` stays 0.1.2, code-only sync)
 
+- **[declared] Escape closes a dialog opened while the last one was still closing**
+  (feedback-async-1): `open()` during the old dialog's close animation built a new dialog, and the
+  old close then deleted the new one's `foundry.applications.instances` entry, so Escape no longer
+  closed it. `ReportDialog.close()` now keeps its promise and `open()` waits for it before deciding
+  whether to reuse or build. The node stub closes synchronously, so the glue test models Foundry's
+  async close; still wants one live check (bug button, Escape, bug button mid-fade, Escape).
 - **[declared] A null argument gets a fail(), not a TypeError** (feedback-rob-2): `submit(null)`,
   `submit(draft, null)`, `ingest(null)` and `resolve(null)` threw while destructuring despite "never
   throws"; each entry now treats null as `{}`, so the call answers BAD_ARGS / NOT_GM / NOT_FOUND.

@@ -181,6 +181,51 @@ test("two open() calls racing the first render share one dialog and keep both dr
   await app.close();
 });
 
+test("feedback-async-1: opening while the previous dialog is closing keeps the new dialog's instances entry", async () => {
+  // Foundry's close is async (the minimise animation): `rendered` goes false at once, but the
+  // instances entry is deleted and _onClose runs only when it finishes. The stub closes at once, so
+  // model Foundry here: render registers in foundry.applications.instances, close waits on a gate.
+  const Base = Object.getPrototypeOf(ReportDialog);
+  const { render, close } = Base.prototype;
+  let release;
+  const gate = new Promise(r => { release = r; });
+  Base.prototype.render = async function (...args) {
+    const out = await render.apply(this, args);
+    foundry.applications.instances.set(this.id, this);
+    return out;
+  };
+  Base.prototype.close = async function () {
+    this.rendered = false;
+    await gate;
+    foundry.applications.instances.delete(this.id);
+    this._onClose?.({});
+    return this;
+  };
+  try {
+    await api.open({ text: "first" });
+    const first = ReportDialog.current;
+    const closing = first.close();                     // Escape: the old dialog starts closing
+    const opening = api.open({ text: "second" });      // the bug button, mid-animation
+    await settle();
+    release();
+    await Promise.all([closing, opening]);
+    await settle();
+    const second = ReportDialog.current;
+    assert.ok(second && second !== first, "a new dialog once the old one has closed");
+    assert.ok(second.rendered);
+    assert.match(second.html, />second<\/textarea>/);
+    assert.equal(foundry.applications.instances.get(DIALOG_ID), second,
+      "the old close must not delete the new dialog's instances entry (Escape closes it)");
+    await second.close();
+    assert.equal(foundry.applications.instances.has(DIALOG_ID), false);
+    assert.equal(ReportDialog.current, null);
+  } finally {
+    Base.prototype.render = render;
+    Base.prototype.close = close;
+    foundry.applications.instances.delete(DIALOG_ID);
+  }
+});
+
 /* ── the recorder ────────────────────────────────────────────────────── */
 
 test("recorder: scene, tool (only on change), tab, control, own target", () => {

@@ -3,7 +3,8 @@
  *
  * DOM only; every decision comes from core (`draftFrom`, CATEGORIES). `buildHTML(view)` is a plain
  * function of already-localised strings, so node tests pin the markup without a DOM. One dialog at
- * a time: `ReportDialog.open()` re-renders and focuses the existing one.
+ * a time: `ReportDialog.open()` re-renders and focuses the existing one, and first waits for a
+ * closing one to finish so the old close cannot delete the new dialog's instances entry.
  *
  * Layout: intro · Bug / Defect / Feature radio labels (each with `data-tooltip` = its help text,
  * Bug checked by default) · the selected category's help repeated as a hint line (touch screens
@@ -81,6 +82,9 @@ export class ReportDialog extends ApplicationV2 {
   /** The first render while it is in flight, so a second open() waits for it instead of building a twin. */
   #opening = null;
 
+  /** The close while it is in flight, so open() waits for it to leave foundry.applications.instances. */
+  #closing = null;
+
   static DEFAULT_OPTIONS = {
     id: DIALOG_ID,
     classes: ["pentaryn-feedback", `${CSS}dialog`],
@@ -106,6 +110,7 @@ export class ReportDialog extends ApplicationV2 {
 
   /** Open (or refresh and focus) the dialog. Resolves once it is rendered. */
   static async open(opts) {
+    await ReportDialog.current?.#closing?.catch(() => {});
     let existing = ReportDialog.current;
     if (existing && !existing.rendered && existing.#opening) {
       await existing.#opening.catch(() => {});
@@ -159,6 +164,17 @@ export class ReportDialog extends ApplicationV2 {
 
   focusText() {
     this.element?.querySelector?.('textarea[name="text"]')?.focus();
+  }
+
+  /** Foundry's close is async (it deletes the instances entry at the end); keep it for open(). */
+  async close(options) {
+    const closing = super.close(options);
+    this.#closing = closing;
+    try {
+      return await closing;
+    } finally {
+      if (this.#closing === closing) this.#closing = null;
+    }
   }
 
   _onClose(options) {
