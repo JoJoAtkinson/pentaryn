@@ -657,7 +657,8 @@
         {
           "name": "subject",
           "type": "Actor|Token|id|uuid|exact name",
-          "doc": "the creature or person studied"
+          "doc": "the creature or person studied",
+          "resolve": false
         }
       ],
       "returns": "{ kind, available, spent, content, … }",
@@ -1004,7 +1005,8 @@
         {
           "name": "subject",
           "type": "Actor|Token|id|uuid|exact name",
-          "doc": "the creature or person studied"
+          "doc": "the creature or person studied",
+          "resolve": false
         }
       ],
       "returns": "[{ id, label, skill, dc, available, … }]",
@@ -2160,7 +2162,8 @@
         {
           "name": "subject",
           "type": "Actor|Token|id|uuid|exact name",
-          "doc": "the creature or person studied"
+          "doc": "the creature or person studied",
+          "resolve": false
         }
       ],
       "returns": "[{ group, key, ns, attrId, icon, source, text }]",

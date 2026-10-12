@@ -27,6 +27,8 @@ const ACTOR = "Actor";
 const READ_REF = { name: "ref", kind: "actor", type: "Actor|Token|id|uuid|exact name", resolve: false, doc: "a token reads its world actor" };
 const CHAR = p("character", ACTOR, "a player character");
 const SUBJ = p("subject", ACTOR, "the creature or person studied");
+/** A legacy read's second argument that api.mjs resolves the same way as READ_REF (resolving(fn, 2), ext-5). */
+const SUBJ_REF = { ...SUBJ, type: READ_REF.type, resolve: false };
 const ATTR = p("attr", "string", "an attribute id or title (id wins; a miss is refused, never created)");
 const SPEC = p("spec", "{ ns, subjectId, factId?, attrId? }", "one fact: ns kind | lore | attr");
 const row = (path, params, returns, doc, { gm = false, writes = false, ...rest } = {}) =>
@@ -135,7 +137,7 @@ export const MANIFEST = Object.freeze({
     row("known.notebook", [], "Actor|null", "The notebook this client writes into (selected, assigned or owned character)."),
 
     /* ── the study conduit ── */
-    row("study.state", [READ_REF, { ...SUBJ, type: "Actor|Token|id|uuid|exact name" }], "{ kind, available, spent, content, … }", "The kind study's state as the sheet draws it."),
+    row("study.state", [READ_REF, SUBJ_REF], "{ kind, available, spent, content, … }", "The kind study's state as the sheet draws it."),
     row("study.request", [CHAR, SUBJ], "Promise<boolean>", "Player gesture: ask to study what this is (opens the study dialog)."),
     row("study.as", [CHAR, SUBJ, opt("opts", "{ mode, situational, loreId, attrId }")], "Promise<boolean>",
       "GM: throw a study check by hand (same handler, same writes as a player's request).",
@@ -160,7 +162,7 @@ export const MANIFEST = Object.freeze({
       "GM: un-spend a study — the honest do-over.", { gm: true, writes: true, sideEffects: [`${F}.beliefs`, `${F}.studied`] }),
     row("study.studied", [p("actor", ACTOR)], "{ kind, lore }", "The player-side `studied` hints (a UI hint, not the lock)."),
     row("study.fact", [SPEC], "object|null", "The conduit's resolve seam: one fact's skill, DC, ledger and text."),
-    row("study.lore", [READ_REF, { ...SUBJ, type: "Actor|Token|id|uuid|exact name" }], "[{ id, label, skill, dc, available, … }]", "That actor's lore rows as the character's sheet sees them."),
+    row("study.lore", [READ_REF, SUBJ_REF], "[{ id, label, skill, dc, available, … }]", "That actor's lore rows as the character's sheet sees them."),
     row("study.askLore", [CHAR, SUBJ, p("loreId", "string")], "Promise<boolean>", "Player gesture: roll one lore row."),
     row("study.askAttr", [CHAR, SUBJ, p("attrId", "string"), p("loreId", "string")], "Promise<boolean>", "Player gesture: roll one attribute-lore row."),
     row("study.attrOffers", [CHAR, SUBJ], "[{ attrId, rows }]", "The attribute lore this subject offers the character."),
@@ -251,7 +253,7 @@ export const MANIFEST = Object.freeze({
       writes: true, sideEffects: [`${F}.beliefs`, `${F}.granted`], since: "0.20.0", doc: "Same as study.share (its own name, ties-6)." },
     { path: "study.forgetFact", params: [SPEC, CHAR], returns: "Promise<*>", gm: true, writes: true,
       sideEffects: [`${F}.beliefs`, `${F}.granted`], since: "0.20.0", doc: "Same as study.forget (its own name, ties-6)." },
-    { path: "study.knowsAbout", params: [{ ...READ_REF, name: "ref", doc: "the character" }, { ...SUBJ, type: "Actor|Token|id|uuid|exact name" }],
+    { path: "study.knowsAbout", params: [{ ...READ_REF, name: "ref", doc: "the character" }, SUBJ_REF],
       returns: "[{ group, key, ns, attrId, icon, source, text }]", gm: false, writes: false, since: "0.20.0",
       doc: "What this character has learned about this subject: the granted cards that pass the secrecy gate, in the Look window's order (ties-8)." },
     { path: "study.loreRows", params: [p("actor", ACTOR)], returns: "[{ id, label, dc, skill, text, miss, hold }]", gm: true, writes: false,

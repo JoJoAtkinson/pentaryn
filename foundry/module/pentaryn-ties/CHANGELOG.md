@@ -80,6 +80,12 @@ Docs (declared, no table-visible change): README Extending's study-namespace bul
 fact-key helpers a new namespace must touch — `factKeyOf`, `parseFactKey`, `factOrder`, `knowsAbout`
 and `resolveFact` — pinned by `test/review-extending-ns.test.mjs`. ext-3.
 
+API description (declared, no table-visible change): the subject argument of `study.state`,
+`study.lore` and `study.knowsAbout` is marked `resolve: false` in `describe()`, as their first argument
+already was — api.mjs resolves a token, id, uuid or exact name there itself. `test/api-kit.test.mjs`
+now fails if a read param that takes an id is unmarked, or if any `resolve: false` position answers
+differently for the actor's id than for the Actor. ext-5.
+
 Fixed (declared): the chat cards — the "… studies …" stub, the tempo line and the GM's share
 whisper — name every creature by its **token** name, never its actor name, so a GM-only world actor
 name cannot reach player chat. The token is found on any scene, not only the one the posting
