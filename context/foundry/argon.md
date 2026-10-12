@@ -80,15 +80,26 @@ Read from `CONFIG.ARGON` at render time (Argon keeps its dnd5e classes closure-p
 | Call | Module | Why |
 |---|---|---|
 | `bind(token)` | combat `turnflow/boundaries.mjs` | the HUD follows the one token left selected, and your combatant at turn start (`argon-combat-hud-follows`) |
-| `collapseAllPanels()` | riders `argon.mjs`, transform `form-picker.mjs`, senses `argon.mjs` | close an open panel before an area/summon placement, a form swap, or the Light cantrip's Pick a target (`argon-collapse-on-area-placement`, `argon-light-pick-collapse-panels`) |
+| `collapseAllPanels()` | riders `argon.mjs`, transform `form-picker.mjs`, senses `argon.mjs`, combat `argon.mjs` `closeDrawersOf` | close an open panel before an area/summon placement, a form swap, the Light cantrip's Pick a target, or at a turn boundary (`argon-collapse-on-area-placement`, `argon-light-pick-collapse-panels`, `argon-combat-drawer-turn-close`) |
 | `render()` | combat `argon.mjs` `renderHud` | re-render a bound HUD after a combat setting changes |
 | `_tooltip` (read; set to `null`) | combat `argon.mjs`, transform `argon.mjs`, kit `lib/argon-kit.mjs` `dropTooltip` | refresh or drop a stale hover tooltip (`argon-combat-tooltip-refresh`, `argon-combat-stray-tooltip`, `argon-tooltip-clear`) |
-| `_actor`, `_token`, `itemButtons`, `components` (read) | combat, transform, riders | which actor/token the HUD shows; re-render buttons that spend shared uses (`argon-shared-uses-badge`) |
+| `_actor`, `_token`, `itemButtons`, `components`, `enabled` (read) | combat, transform, riders (`itemButtons`) | which actor/token the HUD shows and whether it is on; re-render buttons that spend shared uses (`argon-shared-uses-badge`) |
+| `_itemButtons` (**write**: `delete`) and `Hooks.off("argon-onSetChangeUpdateItem", …)` | combat `hud/bars.mjs` `forgetButtons` | before a bar re-renders, drop the old buttons, drawer panels and weapon-set slot hooks Argon never disposes (`argon-combat-rerender-cleanup`) |
+| `_hudState` (**write**: each saved panel's `visible = false`) | combat `argon.mjs` `closeDrawersOf` | at a turn boundary, forget the open drawers so Argon does not restore them on the next render (`argon-combat-drawer-turn-close`) |
 | a synthetic right-button `mouseup` | transform `argon.mjs` | cancel Argon's target picker before a form swap (`argon-target-picker-cancel`) |
 | `MovementHud.updateMovement` | combat `turnflow/movement.mjs` | redraw the movement readout after an effect or Speed change (`argon-combat-movement-redraw`) |
 
+The §1 listeners also carry these rows: combat `hud/bars.mjs` — the duplicate off-hand slot
+(`argon-combat-offhand-slot-dup`), the Bonus, Action and Reaction pips (`argon-combat-item-button-bonus-pip`,
+`argon-combat-item-button-spell-pips`) and re-placing restored drawers (`argon-combat-drawer-restore-place`);
+transform `hud-panels.mjs` — the bonus-used mark after a rebuild (`argon-bonus-used-tracking`) and the
+portrait HP (`argon-portrait-hp`). combat `hud/picker.mjs` watches the DOM (a `MutationObserver` for
+`.ech-target-picker`) to place Argon's targets cue (`argon-combat-picker-cue-position`), and combat
+`turnflow/helper-token.mjs` reselects your caster so the HUD stays up (`core-combat-helper-token-control`).
+
 Data, not code: combat seeds `flags.enhancedcombathud.weaponSets` once per character whose flag
-was never written (`argon-combat-weapon-set-seed`). creatures only asks
+was never written (`argon-combat-weapon-set-seed`), and reads Argon's own `alwaysOn` setting
+(`settings.mjs` `argonSetting`) to decide whether the HUD follows. creatures only asks
 `game.modules.get("enhancedcombathud")?.active` to float the Your creatures strip above the HUD
 (`argon-creatures-strip-float`).
 
