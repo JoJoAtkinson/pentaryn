@@ -96,6 +96,17 @@ test("-10 latestResolution: the newest live tray, optionally on one scene", () =
   assert.equal(api.latestResolution({ sceneId: "current" }).messageId, msg.id);
 });
 
+test('-10 latestResolution "current" with no viewed scene → null', () => {
+  const saved = F.canvas.scene;
+  try {
+    F.canvas.scene = null;
+    assert.equal(api.latestResolution({ sceneId: "current" }), null);
+    assert.equal(api.latestResolution().messageId, msg.id);
+  } finally {
+    F.canvas.scene = saved;
+  }
+});
+
 test("-10 isHandle: core.isHandleTarget", () => {
   assert.equal(api.isHandle(ctx.s.tokens.get(IDS.handle)), true);
   assert.equal(api.isHandle(ctx.s.tokens.get(IDS.g1)), false);
