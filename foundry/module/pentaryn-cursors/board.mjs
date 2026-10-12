@@ -80,7 +80,11 @@ function guardBoard() {
   }).observe(el, { attributes: true, attributeFilter: ["style"] });
 }
 
-/** Is a spell-area placement following the mouse? (dnd5e 6: core RegionLayer#placeRegions; see placementActive.) */
+/**
+ * Is a spell-area placement following the mouse? (dnd5e 6: core RegionLayer#placeRegions; see placementActive.)
+ * pentaryn-aoe reads the same `_placementContext` to ask "can it be cancelled?" (core.placementInProgress);
+ * keep the two separate. One adjustments row covers both: core-region-placement-escape (-39).
+ */
 function previewActive() {
   const layer = canvas?.regions;
   return placementActive(layer?.preview?.children, layer?._placementContext?.preview);
