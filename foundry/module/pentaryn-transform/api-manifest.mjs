@@ -82,6 +82,15 @@ export const MANIFEST = Object.freeze({
         + "user ref answers with that user's view (without OBSERVER on the actor: { actor } only).",
     },
     {
+      path: "formImage",
+      params: [{ name: "opts", type: "{ uuid: string }", doc: "the beast Actor's uuid (a Wild Shape profile's)" }],
+      returns: "Promise<string|null> — the token image path", gm: false, writes: false, query: true, relay: true,
+      nullWhen: "the uuid is not an Actor; the beast has no image at all",
+      doc: "The token image a Wild Shape form of this beast gets, the same every time: its concrete prototype token "
+        + "image; for a wildcard, the first matching file in sorted order; else its portrait. Also a relay query "
+        + "(active GM answers): a player who may not browse files gets the image a GM would.",
+    },
+    {
       path: "selftest", params: [],
       returns: "{ ok, checks: [{ label, ok, detail }] }", gm: false, writes: false, since: "0.4.0",
       doc: "Live smoke checks after a sync.",

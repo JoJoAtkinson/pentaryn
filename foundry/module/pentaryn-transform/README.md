@@ -20,6 +20,11 @@ ordinary ability. Requires dnd5e 6 (verified 6.0.6) on Foundry v14.
 - A shift spends the use only when it happens (a failed shift refunds it). Each shift and revert
   posts one chat line instead of a dnd5e card — including a revert from the sheet, the sidebar or a
   macro. The sheet still works: Wild Shape → Use opens dnd5e's form dialog, then shifts at once.
+- The form's token image is the same every time, never random and never the placeholder
+  (wildcard-art, Joe's ruling): the beast's own token image; for wildcard token art (the Monster
+  Manual Wolf, Cat), the first matching file in sorted order; if none resolves, the beast's portrait.
+  A player who may not browse files gets the image from the active GM (the `formImage` relay); with
+  no GM online, the portrait.
 - The portrait line reads `Wild Shape: Dire Wolf · 5 hours 59 minutes left`; the form's effect
   (`Wild Shape: Dire Wolf`) is larger, with a gold ring, and its tooltip has the time left.
   HP with temp HP reads `99+12 / 99`.
@@ -62,6 +67,7 @@ The legacy methods take an Actor document (not a ref) and keep their old shapes.
 | `original(actor)` | the actor a form was made from | a linked form whose original is gone | — | — |
 | `isRevertItem(item)` | boolean | — | — | — |
 | `sweepSpentForms()` | — | not the active GM | yes | yes |
+| `formImage({ uuid })` | the token image a form of that beast gets | not an Actor; no image at all | — | — |
 | `starry.assume(actor, "archer"\|"chalice"\|"dragon")` | boolean | shifted, incapacitated, no uses, no feature | — | yes |
 | `starry.end(actor, { quiet, reason })` | boolean | no Starry Form up | — | yes |
 | `starry.active(actor)` / `starry.constellation(actor)` | the effect / the constellation | none up | — | — |
@@ -75,6 +81,10 @@ constellation, secondsLeft } | null, forms: [{ id, name }] }`. `opts.as` a user 
 the actor gets `{ actor }` only. A linked druid that is in a form answers for the form (the body that
 is out): `inspect("Talo")` and `inspect(<the form>)` give the same read. Kit members: `describe()`, `version`, `contract`, `settings()`,
 `trace()`, `uninstall()`.
+
+`formImage` is also the module's one query, `pentaryn-transform.formImage` (a relay row: any sender,
+the active GM answers; read-only). A player's shift asks it when the beast's token art is a wildcard
+the player may not list (core's wildcard listing needs `FILES_BROWSE` or ownership of the beast).
 
 ## Data written
 

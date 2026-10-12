@@ -4,6 +4,13 @@
 
 ## Unreleased
 
+- **A Wild Shape form's token image is the same every time (wildcard-art, Joe's ruling; PT TF-1/TF-2/
+  D7-1).** A beast with wildcard token art (the Monster Manual Wolf, Cat) gave a random file to a GM
+  and, to a player who may not browse files, no image at all (the mystery-man token and "Invalid
+  Asset"). Now the form gets the beast's concrete token image; for a wildcard, the first matching file
+  in sorted order (a player asks the active GM through the new `formImage` relay row); if none
+  resolves, the beast's portrait. dnd5e is handed a copy of the beast with that one image, so linked
+  and unlinked druids alike get it ([declared]).
 - **Starry Form counts combat time only (D8, Joe's ruling).** Out of combat there are no turns to
   track, so the form stays on and world time does not count; in combat it counts down by combat time
   to its 10 minutes, for a linked druid and an unlinked token druid alike. Before, Foundry's world

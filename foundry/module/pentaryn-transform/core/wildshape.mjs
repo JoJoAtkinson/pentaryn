@@ -461,3 +461,28 @@ export function shapingPlan({ meta, source, items, effects, keepWildShape = fals
   };
   return { keep, stripped, renames, effect, flag };
 }
+
+/**
+ * True for a wildcard token image path: a `*` in it (core's randomImg pattern). A `?` is left alone:
+ * it is also a URL's query mark.
+ */
+export function isWildcardPath(src) {
+  return typeof src === "string" && src.includes("*");
+}
+
+/**
+ * The token image a Wild Shape form gets, the same every time (wildcard-art, Joe's ruling): the
+ * beast's concrete prototype token image; for a wildcard, the first matching file in sorted order;
+ * if none resolves, the beast's portrait. Never a random pick, never the placeholder.
+ *
+ * @param {{ src?: string|null, wildcard?: boolean, images?: string[], portrait?: string|null }} args
+ *        src: the prototype token's texture.src; wildcard: randomImg or a wildcard path; images: the
+ *        files the wildcard matches, in any order
+ * @returns {string|null}  null when the beast has no image at all
+ */
+export function pickFormImage({ src = null, wildcard = false, images = [], portrait = null } = {}) {
+  const real = s => typeof s === "string" && s !== "" && !isWildcardPath(s);
+  if (!wildcard && real(src)) return src;
+  const first = (Array.isArray(images) ? images : []).filter(real).sort()[0];
+  return first ?? (real(portrait) ? portrait : null);
+}

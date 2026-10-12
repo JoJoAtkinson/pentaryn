@@ -82,7 +82,22 @@
   [
     "wildshape-adapter.mjs",
     "debug",
+    "asking the GM for the form image failed"
+  ],
+  [
+    "wildshape-adapter.mjs",
+    "debug",
+    "form image: no such document"
+  ],
+  [
+    "wildshape-adapter.mjs",
+    "debug",
     "traits enrichment failed"
+  ],
+  [
+    "wildshape-adapter.mjs",
+    "debug",
+    "wildcard token images failed"
   ],
   [
     "wildshape-adapter.mjs",
@@ -103,6 +118,16 @@
     "wildshape-adapter.mjs",
     "warn",
     "ending Starry Form failed"
+  ],
+  [
+    "wildshape-adapter.mjs",
+    "warn",
+    "form token image failed"
+  ],
+  [
+    "wildshape-adapter.mjs",
+    "warn",
+    "form token image not applied"
   ],
   [
     "wildshape-adapter.mjs",

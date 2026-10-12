@@ -30,7 +30,9 @@ const ADDED_S3 = ["STARRY_IMG", "canRunAny", "constellationImgOf", "coveredMulti
   "wildShapeActivityOf", "worldTimeCandidates"];
 // 8.6 (wildshape-adapter under its size cap): the pure half of shaping the form.
 const ADDED_86 = ["shapingPlan"];
-const ADDED = [...ADDED_S2, ...ADDED_S3, ...ADDED_86];
+// wildcard-art: the form's token image, the same every time.
+const ADDED_WILDCARD_ART = ["isWildcardPath", "pickFormImage"];
+const ADDED = [...ADDED_S2, ...ADDED_S3, ...ADDED_86, ...ADDED_WILDCARD_ART];
 
 test("export list of transform-core.mjs (step 2's barrel must re-export every name)", () => {
   const names = Object.keys(core).sort();

@@ -1,6 +1,7 @@
 {
   "contract": "string",
   "describe": "function",
+  "formImage": "formImage",
   "forms": "forms",
   "inspect": "inspect",
   "isRevertItem": "isRevertItem",

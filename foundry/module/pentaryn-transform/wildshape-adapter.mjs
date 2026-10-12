@@ -14,9 +14,11 @@
 import {
   MODULE, activitiesOf, isWildShapeActivity, shapingPlan, durationSeconds, formatDuration,
   usesLeft, useSyncUpdates, carriedConditions, endedInForm, attributeSync, shiftBlock, runnerIs, withArticle,
-  formTempHP, withoutOrigin, pruneFavorites, findWildShapeItem, wildShapeActivityOf, refundUpdate, formEntries
+  formTempHP, withoutOrigin, pruneFavorites, findWildShapeItem, wildShapeActivityOf, refundUpdate, formEntries,
+  isWildcardPath, pickFormImage
 } from "./transform-core.mjs";
 import { makeLog } from "./lib/log.mjs";
+import { queryGM } from "./lib/queries.mjs";
 import { dnd5eAllowsPolymorphing } from "./settings.mjs";
 
 const log = makeLog(MODULE);
@@ -407,6 +409,65 @@ async function shapeTokenForm(form, source, meta) {
   await form.update(update);
 }
 
+/* ── the form's token image (wildcard-art) ───────────────────────────────── */
+
+/** True for a beast whose prototype token names a wildcard (dnd5e would pick one of its files at random). */
+function hasWildcardToken(source) {
+  const proto = source?.prototypeToken;
+  return !!proto?.randomImg || isWildcardPath(proto?.texture?.src);
+}
+
+/**
+ * The token image a Wild Shape form of `source` gets, the same every time (pickFormImage). Listing a
+ * wildcard's files needs FILES_BROWSE or ownership of the beast (core's requestTokenImages); a player
+ * without either asks the active GM (the `formImage` relay row), and with no GM gets the portrait.
+ * @returns {Promise<string|null>}
+ */
+export async function formImage(source) {
+  const src = source?.prototypeToken?.texture?.src ?? null;
+  const wildcard = hasWildcardToken(source);
+  let images = [];
+  if (wildcard && (game.user.isGM || game.user.can?.("FILES_BROWSE") || source.isOwner)) {
+    images = await source.getTokenImages().catch(err => {
+      log.debug("wildcard token images failed", { source: source.uuid }, err);
+      return [];
+    });
+  } else if (wildcard && source?.uuid) {
+    const img = await queryGM(`${MODULE}.formImage`, { uuid: source.uuid }, { timeout: 5000 }).catch(err => {
+      log.debug("asking the GM for the form image failed", { source: source.uuid }, err?.message ?? err);
+      return null;
+    });
+    if (img) images = [img];
+  }
+  return pickFormImage({ src, wildcard, images, portrait: source?.img ?? null });
+}
+
+/** The relay row: `formImage` for an Actor uuid, on the GM's client (null when it is no Actor). */
+export async function formImageFor({ uuid } = {}) {
+  if (typeof uuid !== "string" || !uuid) return null;
+  const source = await fromUuid(uuid).catch(err => {
+    log.debug("form image: no such document", { uuid }, err?.message ?? err);
+    return null;
+  });
+  return source?.documentName === "Actor" ? formImage(source) : null;
+}
+
+/**
+ * `source`, or for a wildcard beast a copy whose prototype token names its one image, so dnd5e copies
+ * that image onto the form and its tokens (linked and unlinked alike) and never picks one at random.
+ */
+async function withFormImage(source) {
+  if (!hasWildcardToken(source)) return source;              // dnd5e copies a concrete image as it is
+  const img = await formImage(source).catch(err => { log.warn("form token image failed", err); return null; });
+  if (!img) return source;
+  try {
+    return source.clone({ prototypeToken: { randomImg: false, texture: { src: img } } }, { keepId: true });
+  } catch (err) {
+    log.warn("form token image not applied", err);
+    return source;
+  }
+}
+
 /** Transform `host` into the profile's source; refunds the use when the shift does not happen. */
 export async function doShift(host, activity, profileId, uuid) {
   const itemId = activity.item.id;
@@ -424,6 +485,7 @@ export async function doShift(host, activity, profileId, uuid) {
     return null;
   }
   const seconds = durationSeconds(activity.duration);
+  const shape = await withFormImage(source);
   // Snapshot the druid now: for an unlinked token, `host` IS the form once transformInto returns.
   const meta = metaFor(host, {
     profile: profileId, wildShapeId: itemId, seconds, traitsHtml: await traitsHtml(source).catch(err => {
@@ -442,7 +504,7 @@ export async function doShift(host, activity, profileId, uuid) {
   let form = null;
   try {
     settleTokens(host);
-    await host.transformInto(source, activity.settings, { renderSheet: false });
+    await host.transformInto(shape, activity.settings, { renderSheet: false });
     if (token) form = token.actor?.isPolymorphed ? token.actor : null;
     else form = game.actors.find(a => a.isPolymorphed && a.getFlag("dnd5e", "originalActor") === host.id
       && !before.has(a.id)) ?? null;
