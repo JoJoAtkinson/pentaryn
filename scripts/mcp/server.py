@@ -658,7 +658,10 @@ def discover_tools(*, repo_root: Path) -> DiscoveryResult:
     # cold-start latency by skipping unrelated heavy imports (pandas, PIL, etc.)
     # when only a focused tool surface is needed (e.g. combat-runner).
     # Modules without a MCP_GROUPS declaration are skipped when a filter is active.
+    # "all" is the same as unset (py-mcp-ext-6): it used to drop every ungrouped module.
     group_filter = os.environ.get("DND_MCP_TOOLS_GROUP", "").strip()
+    if group_filter == "all":
+        group_filter = ""
 
     for path in _candidate_scripts(scripts_dir):
         try:

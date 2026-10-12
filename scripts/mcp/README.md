@@ -28,6 +28,7 @@ Quirks worth knowing before you call something — SRD source filters, v1-slug v
 Set `DND_MCP_TOOLS_GROUP=combat` and only modules whose top-level `MCP_GROUPS` list contains
 that group are loaded — a cold-start speed-up for a session that needs dice and stat blocks
 but not the lore and timeline surface. Nothing sets it automatically; it is opt-in.
+`all` is the same as unset; any other name loads only modules whose `MCP_GROUPS` lists it.
 
 ## Error channels
 

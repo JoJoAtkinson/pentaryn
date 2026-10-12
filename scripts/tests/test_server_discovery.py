@@ -204,6 +204,17 @@ def test_annotated_mcp_groups_passes_the_group_filter(tmp_path, monkeypatch):
     assert "sample_subproc" in {r.tool.name for r in result.tools}, result.skipped
 
 
+def test_group_all_is_the_same_as_unset(tmp_path, monkeypatch):
+    """py-mcp-ext-6: DND_MCP_TOOLS_GROUP=all loaded only modules that listed "all"
+    (53 of 65 live) — a module with no MCP_GROUPS was dropped. "all" means no filter."""
+    monkeypatch.setenv("DND_MCP_TOOLS_GROUP", "all")
+    repo = _make_repo(tmp_path)
+    (repo / "scripts" / "ungrouped.py").write_text(_AST_ONLY_MODULE, encoding="utf-8")
+
+    result = server.discover_tools(repo_root=repo)
+    assert "sample_subproc" in {r.tool.name for r in result.tools}, result.skipped
+
+
 # ---------------------------------------------------------------------------
 # python-tooling-27: discovery cost and the startup skip report
 # ---------------------------------------------------------------------------
