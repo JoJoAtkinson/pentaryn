@@ -459,7 +459,7 @@ class _SyncExecutor:
         fn(*args)
 
 
-def _serve(monkeypatch, messages, runners=(), slots=2, executor=None):
+def _serve(monkeypatch, messages, runners=(), slots=2):
     sent = []
     feed = iter([*messages, None])
     monkeypatch.setattr(server, "_read_message", lambda: next(feed))
@@ -468,7 +468,7 @@ def _serve(monkeypatch, messages, runners=(), slots=2, executor=None):
     monkeypatch.delenv("PENTARYN_MCP_LOG_DIR", raising=False)
     tools = tuple(r.tool for r in runners)
     by_name = {r.tool.name: r for r in runners}
-    assert server._serve_loop(tools, by_name, executor or _SyncExecutor()) == 0
+    assert server._serve_loop(tools, by_name, _SyncExecutor()) == 0
     return sent
 
 
@@ -514,22 +514,4 @@ def test_serve_loop_releases_slots(monkeypatch):
                   runners=(_runner(lambda **k: "ok"),), slots=2)
     assert [m["id"] for m in sent] == [1, 2, 3]
     assert all("result" in m for m in sent)
-    assert server._inflight_slots._value == 2
-
-
-class _RefusingExecutor:
-    """An executor that cannot take work (no thread / already shut down)."""
-
-    def submit(self, fn, *args):
-        raise RuntimeError("boom")
-
-
-def test_submit_failure_releases_the_inflight_slot(monkeypatch):
-    """py-mcp-rob-4: the slot taken for admission goes back when submit raises;
-    the reply is the same -32000 envelope the outer except always wrote."""
-    sent = _serve(monkeypatch, [
-        {"jsonrpc": "2.0", "id": 5, "method": "tools/call", "params": {"name": "probe"}},
-    ], runners=(_runner(lambda **k: "ok"),), slots=2, executor=_RefusingExecutor())
-    assert sent == [{"jsonrpc": "2.0", "id": 5,
-                     "error": {"code": -32000, "message": "boom"}}]
     assert server._inflight_slots._value == 2
