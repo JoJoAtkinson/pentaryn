@@ -138,6 +138,8 @@ Needed:
 
 **Category:** Performance gains · **Impact:** medium · **Effort:** M
 
+**Status (wave 3, branch `migrate/wave-3`, 2026-10-11):** done `e61d90df` — memo keyed on the setting value's identity, clone on return
+
 **Where:** `foundry/module/pentaryn-ties/attributes.mjs:169`
 
 **Anchor:** `export function registry() {`
@@ -159,6 +161,8 @@ test/attributes.mjs with stub game.settings over a 300-entry registry fixture an
 ### ties-24 — Worn badges: rAF scheduled on players' clients and full PIXI rebuild every frame
 
 **Category:** Performance gains · **Impact:** medium · **Effort:** M
+
+**Status (wave 3, branch `migrate/wave-3`, 2026-10-11):** items 1–2 done [declared] B7 half `697b7330` (`badgePlan`, players schedule no frame); item 3 (diff instead of rebuild) not done — open
 
 **Where:** `foundry/module/pentaryn-ties/worn.mjs:144`
 
@@ -182,6 +186,8 @@ test/worn.mjs (node, no PIXI): badgePlan with fake placeables {id,document:{x,y,
 
 **Category:** Performance gains · **Impact:** low · **Effort:** M
 
+**Status (wave 3, branch `migrate/wave-3`, 2026-10-11):** done `3d0adb60`
+
 **Where:** `foundry/module/pentaryn-ties/known-core.mjs:1915` (snapshot :1874; moved by U-7-3's insert at :1801)
 
 **Anchor:** `export function planStep({`
@@ -203,6 +209,8 @@ test/known.mjs: first add idempotence fixtures eq(readBeliefs(readBeliefs(x)),re
 ### ties-21 — runCascade recomputes loop-invariant inputs each iteration
 
 **Category:** Performance gains · **Impact:** low · **Effort:** S
+
+**Status (wave 3, branch `migrate/wave-3`, 2026-10-11):** done `acca4b22`
 
 **Where:** `foundry/module/pentaryn-ties/study.mjs:1821`
 
@@ -226,6 +234,8 @@ Extract cascadeInputs(subject,character,fixed) seam. In a stub world with a 3-ru
 
 **Category:** Performance gains · **Impact:** low · **Effort:** S
 
+**Status (wave 3, branch `migrate/wave-3`, 2026-10-11):** done `5a3c9e8b`
+
 **Where:** `foundry/module/pentaryn-ties/editor.mjs:425`
 
 **Anchor:** `  const replies = new Map(inbound(actor).filter(r => r.mutual).map(r => [r.id, r]));`
@@ -247,6 +257,8 @@ test/editor.mjs with look.mjs stubs (game.user.isGM true) and game.actors.conten
 ### ties-23 — Known tab reads and clamps the registry once per notebook entry
 
 **Category:** Performance gains · **Impact:** low · **Effort:** S
+
+**Status (wave 3, branch `migrate/wave-3`, 2026-10-11):** done `ccdbc09f`
 
 **Where:** `foundry/module/pentaryn-ties/known.mjs:658`
 
@@ -270,6 +282,8 @@ test/look.mjs Marrith world: count game.settings.get(MODULE,'attributes') calls 
 
 **Category:** Performance gains · **Impact:** low · **Effort:** S
 
+**Status (wave 3, branch `migrate/wave-3`, 2026-10-11):** done [declared] B7 `ff8f3242`
+
 **Where:** `foundry/module/pentaryn-ties/overlay.mjs:186`
 
 **Anchor:** `export function drawWires() {`
@@ -291,6 +305,8 @@ test/overlay.mjs with a counting requestAnimationFrame stub and canvas {ready:tr
 ### ties-26 — Sheet injection runs twice per actor-sheet render
 
 **Category:** Performance gains · **Impact:** low · **Effort:** S
+
+**Status (wave 3, branch `migrate/wave-3`, 2026-10-11):** done [declared] B7 half `ade1a595`
 
 **Where:** `foundry/module/pentaryn-ties/pentaryn-ties.mjs:1008`
 
@@ -314,6 +330,8 @@ Node test with a Hooks stub recording handlers: fire the four handlers in chain 
 
 **Category:** Performance gains · **Impact:** low · **Effort:** S
 
+**Status (wave 3, branch `migrate/wave-3`, 2026-10-11):** done `f3a707a4`
+
 **Where:** `foundry/module/pentaryn-ties/attributes-ui.mjs:303`
 
 **Anchor:** `export function personalCluesHTML(entry) {`
@@ -335,6 +353,8 @@ Stub world with 3 actors carrying a 'personal' entry: HTML identical with and wi
 ### ties-28 — GM Ties tab: kind picker scans all actors twice with literal flag names
 
 **Category:** Performance gains · **Impact:** low · **Effort:** S
+
+**Status (wave 3, branch `migrate/wave-3`, 2026-10-11):** done `6a97fae5`
 
 **Where:** `foundry/module/pentaryn-ties/authoring.mjs:54`
 
@@ -360,6 +380,8 @@ Stub world (5 NPCs, 2 with kindOf pointing at one, 1 with studyTiers): authoring
 
 **Category:** Maintainability gains · **Impact:** high · **Effort:** S
 
+**Status (wave 3, branch `migrate/wave-3`, 2026-10-11):** open, handed to the integrator: the gate edit is in `scripts/foundry/ops/config.py` (shared file; exact edit in the wave-3 ties return)
+
 **Where:** `scripts/foundry/ops/config.py:117`
 
 **Anchor:** `        check=_STATIC,`
@@ -382,6 +404,8 @@ scripts/tests/test_foundry_ops.py: add test_ties_runs_node_suite asserting 'node
 
 **Category:** Maintainability gains · **Impact:** medium · **Effort:** L
 
+**Status (wave 3, branch `migrate/wave-3`, 2026-10-11):** done `29560557` (export pin), `e688e96f` (split behind `study.mjs`)
+
 **Where:** `foundry/module/pentaryn-ties/study.mjs:2`
 
 **Anchor:** ` * The study conduit — the GM's client throws the roll and hands back one string.`
@@ -403,6 +427,8 @@ test/study-surface.mjs, run BEFORE the split: with stubs (foundry.utils.randomID
 ### ties-36 — Split known-core.mjs (2433 lines) into core/ files behind the same barrel
 
 **Category:** Maintainability gains · **Impact:** medium · **Effort:** M
+
+**Status (wave 3, branch `migrate/wave-3`, 2026-10-11):** done `c9276cb8` (split behind `known-core.mjs`)
 
 **Where:** `foundry/module/pentaryn-ties/known-core.mjs:2`
 
@@ -436,6 +462,8 @@ Create foundry/module/pentaryn-ties/core/ (known, study, lore, attributes, ledge
 
 **Category:** Defragmentation · **Impact:** medium · **Effort:** S
 
+**Status (wave 3, branch `migrate/wave-3`, 2026-10-11):** done `44c8d9ea`, `8920256f` — `ties-core.mjs` `mirrorLinked` / `resolveMirror` / `seedReverse`
+
 **Where:** `foundry/module/pentaryn-ties/tie-dialog.mjs:671`
 
 **Anchor:** `      const resolve = (box, seeded, mineNow, revNow, prevMine) => {`
@@ -457,6 +485,8 @@ New test/ties-core.mjs. First copy the current closures into the test as `ref` i
 ### ties-13 — Flat-roll miss predicate duplicated in four places (narrowed from six)
 
 **Category:** Defragmentation · **Impact:** medium · **Effort:** M
+
+**Status (wave 3, branch `migrate/wave-3`, 2026-10-11):** done `f1e4891a` — `core/rules.mjs` `rolledMiss` at the four sites
 
 **Where:** `foundry/module/pentaryn-ties/study.mjs:1346`
 
@@ -480,6 +510,8 @@ In test/known.mjs add a matrix of ~12 recs (legacy no-pass with total below/at/a
 
 **Category:** Defragmentation · **Impact:** medium · **Effort:** S
 
+**Status (wave 3, branch `migrate/wave-3`, 2026-10-11):** done `b4479e1a`
+
 **Where:** `foundry/module/pentaryn-ties/study.mjs:1900`
 
 **Anchor:** ``     if (pass && !hold && text.trim()) grants[`attr:${attrId}:${MEMBER_FACT}`] = { text, when: now, icon: entry.icon, source: entry.title }; ``
@@ -501,6 +533,8 @@ test/known.mjs: eq(identifiedKey('species:human'),'attr:species:human:#id'); isI
 ### ties-15 — Module-local util.mjs for helpers copied across ties files
 
 **Category:** Defragmentation · **Impact:** medium · **Effort:** M
+
+**Status (wave 3, branch `migrate/wave-3`, 2026-10-11):** done without a util.mjs: `firstName` / `concealFor` `f6de047c`, flag reads `b0cbfeea` (kit `readFlag`), `canSee` `1d7f327d` (ties-adapter), `esc` `372071ed` (core/html.mjs), `t` / `f` `607bc494` (`_loc`)
 
 **Where:** `foundry/module/pentaryn-ties/editor.mjs:35`
 
@@ -532,6 +566,8 @@ New test/util.mjs: eq(esc(`<a href="x">'&"</a>`),'&lt;a href=&quot;x&quot;&gt;&#
 
 **Category:** Defragmentation · **Impact:** medium · **Effort:** M
 
+**Status (wave 3, branch `migrate/wave-3`, 2026-10-11):** done `3efd5a15` — `bindRowToggle` / `makeOpenState` in core/html.mjs
+
 **Where:** `foundry/module/pentaryn-ties/known.mjs:745`
 
 **Anchor:** `  root.querySelectorAll('[data-action="toggle"]').forEach(head => {`
@@ -553,6 +589,8 @@ test/row-ui.mjs with a tiny fake element (classList Set, attrs Map, listeners, f
 ### ties-17 — Granted-card markup duplicated between the Attributes tab and the Known tab
 
 **Category:** Defragmentation · **Impact:** low · **Effort:** S
+
+**Status (wave 3, branch `migrate/wave-3`, 2026-10-11):** done `a5150027`
 
 **Where:** `foundry/module/pentaryn-ties/attributes-ui.mjs:115`
 
@@ -576,6 +614,8 @@ test/look.mjs harness: fixtures [], [one grant with icon+source], [two grants]; 
 
 **Category:** Defragmentation · **Impact:** low · **Effort:** S
 
+**Status (wave 3, branch `migrate/wave-3`, 2026-10-11):** done `3efd5a15`
+
 **Where:** `foundry/module/pentaryn-ties/editor.mjs:172`
 
 **Anchor:** `  const preview = hasNotes`
@@ -597,6 +637,8 @@ Extend test/look.mjs stubs: before refactor snapshot editor.mjs buildHTML(actor)
 ### ties-39 — The 'two GM sessions' claim protocol is implemented three times
 
 **Category:** Defragmentation · **Impact:** low · **Effort:** S
+
+**Status (wave 3, branch `migrate/wave-3`, 2026-10-11):** done `0eb4f394` — `stakeAndConfirm`
 
 **Where:** `foundry/module/pentaryn-ties/study.mjs:159`
 
@@ -620,6 +662,8 @@ Node test with injected immediate sleep and stub write/readBack: readBack equals
 
 **Category:** Defragmentation · **Impact:** low · **Effort:** S
 
+**Status (wave 3, branch `migrate/wave-3`, 2026-10-11):** done `691f89e1` — `LiveHooks` in ties-adapter
+
 **Where:** `foundry/module/pentaryn-ties/look.mjs:265`
 
 **Anchor:** `  watch() {`
@@ -642,6 +686,8 @@ Stub Hooks.on/off recording registrations; construct each window (stub Applicati
 
 **Category:** Defragmentation · **Impact:** low · **Effort:** S
 
+**Status (wave 3, branch `migrate/wave-3`, 2026-10-11):** done `34c9144c`
+
 **Where:** `foundry/module/pentaryn-ties/popups.mjs:339`
 
 **Anchor:** `export function restorePinned() {`
@@ -663,6 +709,8 @@ test/popups.mjs with a minimal DOM fake (document.createElement/getElementById s
 ### ties-42 — Dead exports, dead CSS and dead branches
 
 **Category:** Defragmentation · **Impact:** low · **Effort:** S
+
+**Status (wave 3, branch `migrate/wave-3`, 2026-10-11):** done `3b9976ba`, `b0785d60`, `d3fb7630`; the exports the frozen tests call (`knowsOf`, `hasFailed`, `hasAttributes`, `knowsIncludingCarried`) and the pinned barrel names (`rungsFor`, `IDENT_FLAG`, `STRENGTHS`, `candidates`) stay, marked @deprecated
 
 **Where:** `foundry/module/pentaryn-ties/attributes.mjs:1229`
 
@@ -688,6 +736,8 @@ Before deleting, run the export-surface snapshots (ties-35/36) and grep test/*.m
 
 **Category:** Logging / auditability gains · **Impact:** medium · **Effort:** S
 
+**Status (wave 3, branch `migrate/wave-3`, 2026-10-11):** done `0ff23728` — debug lines gated on `CONFIG.debug["pentaryn-ties"]`
+
 **Where:** `foundry/module/pentaryn-ties/study.mjs:783`
 
 **Anchor:** `async function requestFact(character, subject, spec, label) {`
@@ -709,6 +759,8 @@ Stub console.warn/debug collectors. Characterise current refusal text by calling
 ### ties-34 — Contract-mandated empty catches give no trace when debugging
 
 **Category:** Logging / auditability gains · **Impact:** low · **Effort:** S
+
+**Status (wave 3, branch `migrate/wave-3`, 2026-10-11):** done `4312f33a` (`log.swallow`), `b0cbfeea`
 
 **Where:** `foundry/module/pentaryn-ties/facts.mjs:23`
 
@@ -734,6 +786,8 @@ test/util.mjs: quiet('x',()=>{throw new Error('e')},[]) returns [] and logs noth
 
 **Category:** Hardening · **Impact:** high · **Effort:** S
 
+**Status (wave 3, branch `migrate/wave-3`, 2026-10-11):** done at the wave-1 checkpoint (`test/fields.test.mjs`); untouched this wave
+
 **Where:** `foundry/module/pentaryn-ties/known-core.mjs:1439`
 
 **Anchor:** `     * ⚠ Decision 23's field, and the one station that erases it for the WHOLE registry if missed:`
@@ -755,6 +809,8 @@ These are the tests; they must pass on today's code (characterisation) and fail 
 ### ties-29 — Private core API in the blind roll, called after the claim with no release on throw
 
 **Category:** Hardening · **Impact:** medium · **Effort:** S
+
+**Status (wave 3, branch `migrate/wave-3`, 2026-10-11):** done [declared] B4 `c31bd116`, golden `c9f3e284`
 
 **Where:** `foundry/module/pentaryn-ties/study.mjs:906`
 
@@ -778,6 +834,8 @@ test/study-roll.mjs with stub foundry.dice.Roll: with `_mapLegacyRollMode: m => 
 
 **Category:** Hardening · **Impact:** medium · **Effort:** S
 
+**Status (wave 3, branch `migrate/wave-3`, 2026-10-11):** done [declared] B5 `77be499b` — one kit `serialStore` per store (`settings.mjs`); a player write still returns `false` (the `null` variant in the guide was not taken)
+
 **Where:** `foundry/module/pentaryn-ties/attributes.mjs:1033`
 
 **Anchor:** `export async function setKnowledge(rows) {`
@@ -799,6 +857,8 @@ Stub game.settings with an async set resolving after 10ms and updating a store. 
 ### ties-31 — Session-lifetime maps that are never pruned
 
 **Category:** Hardening · **Impact:** low · **Effort:** S
+
+**Status (wave 3, branch `migrate/wave-3`, 2026-10-11):** done `43c4c6a5`
 
 **Where:** `foundry/module/pentaryn-ties/study.mjs:1709`
 
@@ -822,6 +882,8 @@ Export test-only _sizes() getters. combatAllows for combat c1 rounds 1-3 -> 3 ke
 
 **Category:** Hardening · **Impact:** low · **Effort:** S
 
+**Status (wave 3, branch `migrate/wave-3`, 2026-10-11):** done [declared] B6 `f7aa8929`, golden `8bf658c6`
+
 **Where:** `foundry/module/pentaryn-ties/describe.mjs:91`
 
 **Anchor:** `    <img class="pt-describe-art" src="${art}" alt="" />`
@@ -843,6 +905,8 @@ Extract describeContent(art,body): 'icons/x.webp' gives the same string as now; 
 ### ties-46 — Inspect window's PC roster (U-7-3) is not refreshed when a player picks a character or ownership changes
 
 **Category:** Hardening · **Impact:** low · **Effort:** S
+
+**Status (wave 3, branch `migrate/wave-3`, 2026-10-11):** done [declared-lite] `28b913e2`, golden `313c7df8`
 
 **Where:** `foundry/module/pentaryn-ties/preview.mjs:165`
 
@@ -874,6 +938,8 @@ The ties-40 hook-list test gains `updateUser` in preview's expected list (this o
 
 **Category:** Extendability · **Impact:** high · **Effort:** M
 
+**Status (wave 3, branch `migrate/wave-3`, 2026-10-11):** done `5c5821f4` — `api-manifest.mjs` + kit `buildApi`; `describe()` / `help()` from the kit
+
 **Where:** `foundry/module/pentaryn-ties/pentaryn-ties.mjs:310`
 
 **Anchor:** `function publishAPI() {`
@@ -896,6 +962,8 @@ New test/api.mjs. BEFORE refactor: import pentaryn-ties.mjs with stubs (Hooks ca
 
 **Category:** Extendability · **Impact:** medium · **Effort:** S
 
+**Status (wave 3, branch `migrate/wave-3`, 2026-10-11):** partly: the GM election is the kit's `isActiveGM` (`4502d41f`) and both callers register through `socket-adapter.mjs` `listen()`; one `game.socket.on` per caller is kept (merging them flips three frozen socket pins) — open
+
 **Where:** `foundry/module/pentaryn-ties/relay.mjs:152`
 
 **Anchor:** `  game.socket.on(CHANNEL, async (payload, senderId) => {`
@@ -917,6 +985,8 @@ Stub game.socket.on capturing listeners and game.users.activeGM. First character
 ### ties-45 — No stated layering or file map; 21 flat files with implicit dependency rules
 
 **Category:** Extendability · **Impact:** medium · **Effort:** S
+
+**Status (wave 3, branch `migrate/wave-3`, 2026-10-11):** done `0d28d169` (features), `a029b6b9` (`test/graph-allow.json`), `c5b5fb7b` (file map in the README)
 
 **Where:** `foundry/module/pentaryn-ties/pentaryn-ties.mjs:34`
 
@@ -942,6 +1012,8 @@ Record today's edges as test/snapshots/import-graph.json; the check passes on to
 
 **Category:** LLM interface · **Impact:** high · **Effort:** M
 
+**Status (wave 3, branch `migrate/wave-3`, 2026-10-11):** done `7cb9e4f9` — published as `inspect(ref, { as })` (the guide's name for the dossier), with `selftest()`
+
 **Where:** `foundry/module/pentaryn-ties/pentaryn-ties.mjs:310`
 
 **Anchor:** `function publishAPI() {`
@@ -963,6 +1035,8 @@ New test/dossier.mjs reusing test/look.mjs stub world (move StubActor/game.actor
 ### ties-4 — API calls need Actor documents; add a ref resolver at the API boundary
 
 **Category:** LLM interface · **Impact:** high · **Effort:** S
+
+**Status (wave 3, branch `migrate/wave-3`, 2026-10-11):** done [declared] B2 `468c4eee`, golden `1693599c` — the legacy actor reads resolve id / name / uuid / token to the world actor
 
 **Where:** `foundry/module/pentaryn-ties/ties-api.mjs:60`
 
@@ -986,6 +1060,8 @@ New test/asactor.mjs with stub game.actors {get,getName,contents} and stub fromU
 
 **Category:** LLM interface · **Impact:** high · **Effort:** S
 
+**Status (wave 3, branch `migrate/wave-3`, 2026-10-11):** done `bf44258f` (+ `attributes.tree/branch/describeId`, `study.factStatus/shareFact/forgetFact/identified`); attributes.md step 5 not edited here (shared doc)
+
 **Where:** `foundry/module/pentaryn-ties/pentaryn-ties.mjs:417`
 
 **Anchor:** `      whoKnows: Study.factStatus,`
@@ -1007,6 +1083,8 @@ Once the API snapshot test exists (ties-7), assert every pre-existing key path s
 ### ties-8 — Extract knowsAbout(character, subject) from the Look window and publish it
 
 **Category:** LLM interface · **Impact:** high · **Effort:** S
+
+**Status (wave 3, branch `migrate/wave-3`, 2026-10-11):** done `fbc7c696` — `facts.mjs` `knowsAbout`, published `study.knowsAbout`; Look HTML byte-identical
 
 **Where:** `foundry/module/pentaryn-ties/look.mjs:153`
 
@@ -1030,6 +1108,8 @@ test/look.mjs (existing Caven/Marrith world): snapshot new LookWindow(marrith,ca
 
 **Category:** LLM interface · **Impact:** high · **Effort:** M
 
+**Status (wave 3, branch `migrate/wave-3`, 2026-10-11):** done — parts 1, 2, 4 `1d660cc8`; part 3 (`concealFor`) `f6de047c`
+
 **Where:** `foundry/module/pentaryn-ties/attributes-ui.mjs:713`
 
 **Anchor:** `  for (const btn of box.querySelectorAll("[data-action='attr-learned']")) {`
@@ -1052,6 +1132,8 @@ known-core fixture concealFor: (8,'x')->8, ({x:10},'x')->10, ({default:3},'y')->
 
 **Category:** LLM interface · **Impact:** medium · **Effort:** S
 
+**Status (wave 3, branch `migrate/wave-3`, 2026-10-11):** done `bf44258f` — `attributes.effective` / `attributes.ofEffective`
+
 **Where:** `foundry/module/pentaryn-ties/pentaryn-ties.mjs:427`
 
 **Anchor:** `      of: Attributes.attributesOf,`
@@ -1073,6 +1155,8 @@ Stub world (test/stubs.mjs): actor G with flags kindOf 'K' and K in game.actors.
 ### ties-10 — Ledger rows return locale-string dates only; add numeric siblings
 
 **Category:** LLM interface · **Impact:** medium · **Effort:** S
+
+**Status (wave 3, branch `migrate/wave-3`, 2026-10-11):** done [declared] B3 `5b47b528`, goldens `9bbca55a`
 
 **Where:** `foundry/module/pentaryn-ties/study.mjs:1415`
 
@@ -1098,6 +1182,8 @@ Stub actor with flags.pentaryn-ties.beliefs {pc:{kind:{text:'t',tier:20,total:21
 
 **Category:** Documentation / skills · **Impact:** medium · **Effort:** M
 
+**Status (wave 3, branch `migrate/wave-3`, 2026-10-11):** done `c5b5fb7b` — README in use-doc order, CHANGELOG, design notes to the migration guide's appendix
+
 **Where:** `foundry/module/pentaryn-ties/README.md:501`
 
 **Anchor:** `## 0.19.1 (2026-10-10, Foundry 14.369)`
@@ -1119,6 +1205,8 @@ Doc test in test/run.mjs: regex every `game.pentaryn.ties.[\w.]+` and S./A.-pref
 ### ties-44 — Hard-coded English UI strings bypass lang/en.json and the i18n gate
 
 **Category:** Documentation / skills · **Impact:** low · **Effort:** S
+
+**Status (wave 3, branch `migrate/wave-3`, 2026-10-11):** done `607bc494` (`_loc` everywhere) and [declared] `a337f1fb` (the last literals; i18n key-count pin 473 → 533)
 
 **Where:** `foundry/module/pentaryn-ties/pentaryn-ties.mjs:755`
 
