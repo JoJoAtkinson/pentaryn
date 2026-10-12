@@ -135,60 +135,114 @@ function spellName(region) {
   return region.name;
 }
 
+/** A template region that has no handle yet and may get one (not an emanation, not in flight here). */
+const wantsHandle = region => isTemplateRegion(region) && !attachedElsewhere(region) && !pending.has(region.id) && !handleFor(region);
+
+/**
+ * A region's handle token data and the level it was placed on (null: none given). The handle's id
+ * IS the region's id (tokens and regions are separate collections). Two clients logged in as the
+ * same user — the GM bridge tab plus a GM browser tab — both create it; the server serialises
+ * creates and refuses a second token with an existing _id, so exactly one wins.
+ */
+function handleData(region, actor) {
+  const scene = region.parent;
+  const shape = region.shapes?.[0];
+  const { x, y } = centreOf(shape, { gridSize: scene.grid.size });
+  const half = (scene.grid.size * 0.5) / 2;
+  const authorId = Object.entries(region.ownership ?? {}).find(([k, v]) => k !== "default" && v === OWNER)?.[0];
+  const who = game.users.get(authorId)?.name ?? game.user.name;
+  const proto = actor.prototypeToken.toObject();
+  // Never the prepared region.elevation.bottom: a dnd5e 6 region has none, which prepares as
+  // -Infinity and fails Token validation (core.handleVertical).
+  const { level, elevation } = handleVertical({
+    regionLevels: region._source?.levels ?? region.levels ?? [],
+    sceneHasLevel: id => !!scene.levels?.has?.(id),
+    sourceBottom: region._source?.elevation?.bottom ?? null,
+    levelBase: id => scene.levels?.get?.(id)?.elevation?.base
+  });
+  const data = {
+    ...proto,
+    _id: region.id,
+    actorId: actor.id,
+    x: Math.round(x - half),
+    y: Math.round(y - half),
+    elevation,
+    ...(level ? { level } : {}),
+    hidden: !!region.hidden,
+    name: `${spellName(region)} (${who})`,
+    flags: { ...(proto.flags ?? {}), dnd5e: { ...(proto.flags?.dnd5e ?? {}), lockSize: true }, [MODULE]: { handle: true, region: region.id } }
+  };
+  return { data, level };
+}
+
+/** The region change that attaches it to its handle token. */
+function attachUpdate(token, level) {
+  const update = { attachment: { token: token.id }, [`flags.${MODULE}.handle`]: token.id };
+  // A region with no level (placed under 5.3.3) joins the handle's; a dnd5e 6 region keeps the
+  // level it was placed on, which the handle was created on above.
+  if (token.level && !level) update.levels = [token.level];
+  return update;
+}
+
 /** Create the handle token for a template region and attach the region to it. */
 export async function createHandle(region) {
-  if (!isTemplateRegion(region) || attachedElsewhere(region) || pending.has(region.id) || handleFor(region)) return null;
+  if (!wantsHandle(region)) return null;
   const actor = handleActor();
   if (!actor) return null;
-  const scene = region.parent;
   pending.add(region.id);
   try {
-    const shape = region.shapes?.[0];
-    const { x, y } = centreOf(shape, { gridSize: scene.grid.size });
-    const half = (scene.grid.size * 0.5) / 2;
-    const authorId = Object.entries(region.ownership ?? {}).find(([k, v]) => k !== "default" && v === OWNER)?.[0];
-    const who = game.users.get(authorId)?.name ?? game.user.name;
-    const proto = actor.prototypeToken.toObject();
-    // Never the prepared region.elevation.bottom: a dnd5e 6 region has none, which prepares as
-    // -Infinity and fails Token validation (core.handleVertical).
-    const { level, elevation } = handleVertical({
-      regionLevels: region._source?.levels ?? region.levels ?? [],
-      sceneHasLevel: id => !!scene.levels?.has?.(id),
-      sourceBottom: region._source?.elevation?.bottom ?? null,
-      levelBase: id => scene.levels?.get?.(id)?.elevation?.base
-    });
-    // The handle's id IS the region's id (tokens and regions are separate collections). Two
-    // clients logged in as the same user — the GM bridge tab plus a GM browser tab — both pass
-    // `userId === game.user.id` and both used to create a handle, leaving an orphan twin. The
-    // server serialises creates and rejects a second token with an existing _id, so exactly
-    // one wins; the loser's error is swallowed below.
+    const { data, level } = handleData(region, actor);
     let token;
     try {
-      [token] = await scene.createEmbeddedDocuments("Token", [{
-        ...proto,
-        _id: region.id,
-        actorId: actor.id,
-        x: Math.round(x - half),
-        y: Math.round(y - half),
-        elevation,
-        ...(level ? { level } : {}),
-        hidden: !!region.hidden,
-        name: `${spellName(region)} (${who})`,
-        flags: { ...(proto.flags ?? {}), dnd5e: { ...(proto.flags?.dnd5e ?? {}), lockSize: true }, [MODULE]: { handle: true, region: region.id } }
-      }], { keepId: true });
+      [token] = await region.parent.createEmbeddedDocuments("Token", [data], { keepId: true });
     } catch (err) {
       if (alreadyExists(err)) return null;   // the other client won
       throw err;
     }
     if (!token) return null;
-    const update = { attachment: { token: token.id }, [`flags.${MODULE}.handle`]: token.id };
-    // A region with no level (placed under 5.3.3) joins the handle's; a dnd5e 6 region keeps the
-    // level it was placed on, which the handle was created on above.
-    if (token.level && !level) update.levels = [token.level];
-    await region.update(update);
+    await region.update(attachUpdate(token, level));
     return token;
   } finally {
     pending.delete(region.id);
+  }
+}
+
+/**
+ * The sweep's handles ([declared] AC-7): every missing handle in ONE Token create (keepId), then
+ * every attachment in ONE Region update. A second GM session that made one of them first gets the
+ * whole create refused ("already exists"): the rest are then created one by one, that refusal
+ * swallowed per id, and every handle that exists is attached (the same values the other session
+ * writes). Returns the handle tokens this client created.
+ */
+async function createHandles(scene, regions) {
+  const actor = handleActor();
+  const todo = actor ? regions.filter(wantsHandle) : [];
+  if (!todo.length) return [];
+  for (const r of todo) pending.add(r.id);
+  try {
+    const rows = todo.map(region => ({ region, ...handleData(region, actor) }));
+    let made;
+    try {
+      made = await scene.createEmbeddedDocuments("Token", rows.map(r => r.data), { keepId: true });
+    } catch (err) {
+      if (!alreadyExists(err)) throw err;
+      made = [];
+      for (const { data } of rows) {
+        try {
+          made.push(...await scene.createEmbeddedDocuments("Token", [data], { keepId: true }));
+        } catch (e) {
+          if (!alreadyExists(e)) throw e;   // the other session made this one
+        }
+      }
+    }
+    const updates = rows.flatMap(({ region, level }) => {
+      const token = scene.tokens.get(region.id);
+      return token ? [{ _id: region.id, ...attachUpdate(token, level) }] : [];
+    });
+    if (updates.length) await scene.updateEmbeddedDocuments("Region", updates);
+    return made.filter(Boolean);
+  } finally {
+    for (const r of todo) pending.delete(r.id);
   }
 }
 
@@ -228,8 +282,8 @@ async function deleteHandlesOf(region) {
 
 /**
  * Repair one scene (active GM): delete handles whose region is gone, give template regions the
- * shared ownership and a handle if they have none. Returns what it did (orphans another GM
- * session deleted first are not counted).
+ * shared ownership and a handle if they have none (all in one create + one attach, AC-7). Returns
+ * what it did (orphans another GM session deleted first, and handles it made first, are not counted).
  */
 export async function sweep(scene = canvas.scene) {
   const out = { orphansDeleted: 0, ownershipFixed: 0, handlesCreated: 0, sizeLocked: 0 };
@@ -250,10 +304,9 @@ export async function sweep(scene = canvas.scene) {
     await scene.updateEmbeddedDocuments("Region", unshared);
     out.ownershipFixed = unshared.length;
   }
-  for (const r of scene.regions.filter(isTemplateRegion)) {
-    if (setting("handleTokens") && !attachedElsewhere(r) && !handleFor(r) && r.shapes.length === 1) {
-      if (await createHandle(r)) out.handlesCreated++;
-    }
+  if (setting("handleTokens")) {
+    const bare = scene.regions.filter(r => isTemplateRegion(r) && r.shapes.length === 1);
+    out.handlesCreated = (await createHandles(scene, bare)).length;
   }
   return out;
 }

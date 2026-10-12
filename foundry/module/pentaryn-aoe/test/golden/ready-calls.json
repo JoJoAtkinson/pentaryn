@@ -152,14 +152,17 @@
     }
   },
   {
-    "op": "update",
+    "op": "updateEmbedded",
+    "parent": "Scene.SceneReady000001",
     "documentName": "Region",
-    "uuid": "Scene.SceneReady000001.Region.regionBare000001",
-    "changes": {
-      "attachment": {
-        "token": "regionBare000001"
-      },
-      "flags.pentaryn-aoe.handle": "regionBare000001"
-    }
+    "updates": [
+      {
+        "_id": "regionBare000001",
+        "attachment": {
+          "token": "regionBare000001"
+        },
+        "flags.pentaryn-aoe.handle": "regionBare000001"
+      }
+    ]
   }
 ]

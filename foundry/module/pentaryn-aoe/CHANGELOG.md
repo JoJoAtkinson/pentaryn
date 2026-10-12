@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- **The sweep makes a scene's missing handles in one go** (declared, AC-7): it created each
+  missing area handle with its own Token create and its own Region update — two round trips per
+  template region. It now creates every missing handle in one Token create (keepId) and attaches
+  them all in one Region update. If another GM tab made one of them first, the rest are created one
+  by one (that "already exists" refusal swallowed per id) and every handle is still attached.
+  `golden/ready-calls.json`'s attachment write is now one `updateEmbedded`. Pinned by
+  `test/sweep-batch.test.mjs`.
 - **Changing the area is no longer undone by a save landing at the same moment** (declared,
   AC-6): `resolve()` wrote the new area's resolution straight to the damage message, outside the
   per-message write queue, so a write already running on the old area (an NPC save, a row change)
