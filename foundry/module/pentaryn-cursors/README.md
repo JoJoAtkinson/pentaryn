@@ -78,7 +78,7 @@ it takes the package prefix because it is not a `wrapMethod` patch):
 - `canvas.regions._placementContext` — the spell-area check. Both must hold: the context **and**
   its preview Region in `canvas.regions.preview` (`placementActive` in core), because a GM
   drag-drawing a region fills the container without a context, and on cancel the preview leaves
-  while the context is still set. Shared with aoe's `placementInProgress` (aoe-movement-portals-39).
+  while the context is still set. Shared with aoe's `placementInProgress` (adjustments row `core-region-placement-escape`, finding aoe-movement-portals-39).
 - Every scene control's and modal tool's `onChange` is wrapped in `getSceneControlButtons`
   (switching tool inside a control does not re-render the controls). The wrap runs the original,
   then `refresh()`; a `Symbol.for("pentaryn-cursors.wrapped")` marker stops a second wrap.
