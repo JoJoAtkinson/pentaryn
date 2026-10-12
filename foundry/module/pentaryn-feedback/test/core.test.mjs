@@ -210,6 +210,23 @@ test("userFields: plain user identity, character optional", () => {
     { id: "g", name: "GM", role: 4, isGM: true, character: null });
 });
 
+test("userFieldsOf: a User document's plain fields; null → the empty user", () => {
+  assert.deepEqual(core.userFieldsOf(null), core.userFields({}));
+  assert.deepEqual(core.userFieldsOf(undefined), core.userFields({}));
+  const user = { id: "u1", name: "Caven", role: 1, isGM: false, extra: "ignored", character: { id: "a1", name: "Caven", type: "character" } };
+  // the construction reporter.mjs used before userFieldsOf existed
+  const old = u => core.userFields({ id: u?.id, name: u?.name, role: u?.role, isGM: u?.isGM,
+    character: u.character ? { id: u.character.id, name: u.character.name } : null });
+  assert.deepEqual(core.userFieldsOf(user), old(user));
+  assert.deepEqual(core.userFieldsOf({ ...user, character: null }), old({ ...user, character: null }));
+  assert.equal(core.userFieldsOf({ ...user, character: { id: null, name: "Ghost" } }).character, null);
+  // the snapshot's old ref() path clipped the name once before userFields clipped it again
+  const long = "x".repeat(200);
+  assert.equal(core.userFieldsOf({ ...user, character: { id: "a1", name: long } }).character.name,
+    core.clip(core.clip(long)));
+  assert.equal(core.clip(core.clip(long)), core.clip(long));
+});
+
 const ID = "k3Yx9Qp2LmN7aB4c";
 const sample = (extra = {}) => core.buildReport({
   id: ID, t: Date.UTC(2026, 9, 11, 19, 2, 11),

@@ -366,6 +366,14 @@ export function userFields({ id, name, role, isGM, character } = {}) {
   };
 }
 
+/** userFields() from a User document itself (or null → the empty user). Reads only its argument. */
+export function userFieldsOf(u) {
+  return userFields({
+    id: u?.id, name: u?.name, role: u?.role, isGM: u?.isGM,
+    character: u?.character ? { id: u.character.id, name: u.character.name } : null,
+  });
+}
+
 /** A snapshot section that failed: `{ error: "…" }` and nothing else. */
 const failed = v => !!v && typeof v === "object" && !Array.isArray(v) && typeof v.error === "string"
   && Object.keys(v).length === 1;
