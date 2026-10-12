@@ -12,6 +12,11 @@ The version stays 0.3.0 until the next `module.json` restart batch (code only: s
 - **[declared] ATT-AC-2:** two bonded Coin Purses taken in one batch both pay (gp 10 + 5 + 3 = 18,
   was 13). Payouts run in turn on a per-actor chain keyed `actor.uuid + ":coin"`, separate from the
   slot hand-back chain, so hand-back timing is unchanged and a lone purse pays in the same ticks.
+- **[declared] ATT-ROB-2:** `stash` keys the bond on the owner's uuid (`bond.actor`), and the bond
+  restore and hand-back match on it (`isBondOwner`). Unlinked tokens share their base actor's id, so
+  an item stashed from token A used to come home equipped, and lose its bond, on token B or the base
+  actor. Now only token A gets it back; elsewhere only the tag goes and the bond stays. A legacy bond
+  holding the bare id still matches on the id, as before.
 
 ## 0.3.0 — 2026-10-12 (Wave 7 restart batch, wave 5; kit 1.1.0)
 

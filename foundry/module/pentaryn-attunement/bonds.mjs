@@ -11,7 +11,7 @@
  * an async ready, so restoreBond runs first. Moving this install to setup would change that order.
  */
 
-import { AWAY, AWAY_FLAG, BOND, MODULE, SLOTS, awayOf, bondChanges, computeSlots, homeSlots, t, wouldExceed } from "./attunement-core.mjs";
+import { AWAY, AWAY_FLAG, BOND, MODULE, SLOTS, awayOf, bondChanges, computeSlots, homeSlots, isBondOwner, t, wouldExceed } from "./attunement-core.mjs";
 import { isPileActor } from "./actor-adapter.mjs";
 import { claimDocument } from "./lib/election.mjs";
 import { flagPath } from "./lib/flags.mjs";
@@ -54,7 +54,7 @@ function restoreBond(item, data, options) {
   // Into another container (box to box): leave it tagged.
   if (isPileActor(actor)) return;
 
-  const changes = bondChanges(bond, { actorId: actor.id, awayKeys: awayOf(actor).map(a => a.key), fallbackName: item.name });
+  const changes = bondChanges(bond, { actorId: actor.id, actorUuid: actor.uuid, awayKeys: awayOf(actor).map(a => a.key), fallbackName: item.name });
   // A purse copied inside another actor's 750 ms claim window carries that tab's stamp; left in
   // place, every tab here reads the claim as held by someone else and nobody pays (W2-A1).
   if (item.getFlag?.(MODULE, "claims")?.coinBack) changes[`flags.${MODULE}.claims.coinBack`] = _del;
@@ -95,7 +95,7 @@ async function onCreateItemBond(item, options, userId) {
     }, ":coin");
   }
 
-  if (actor.id !== bond.actor) return;
+  if (!isBondOwner(bond, actor)) return;
   // Home for good: the bond has done its job. Anywhere else it stays, so the
   // item still knows its way back if it is handed over later.
   await item.update({ [flagPath(MODULE, BOND)]: _del });
