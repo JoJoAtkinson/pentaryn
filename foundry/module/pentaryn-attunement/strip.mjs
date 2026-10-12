@@ -74,15 +74,7 @@ function buildSlot(actor, itemId, index, overflow, editable, awayByKey) {
     fig.append(badge);
   }
 
-  if (editable) {
-    const rm = document.createElement("button");
-    rm.type = "button";
-    rm.className = "deletion-control unbutton";
-    rm.dataset.action = "unattune";
-    rm.setAttribute("aria-label", game.i18n.localize("DND5E.ContextMenuActionUnattune"));
-    rm.innerHTML = `<i class="fas fa-circle-xmark" inert></i>`;
-    fig.append(rm);
-  }
+  if (editable) fig.append(removeButton("unattune", game.i18n.localize("DND5E.ContextMenuActionUnattune")));
 
   li.append(fig);
   applyTooltip(li, item);
@@ -95,6 +87,22 @@ function buildSlot(actor, itemId, index, overflow, editable, awayByKey) {
     : `${item.name} — ${game.i18n.localize("DND5E.AttunementAttuned")}`);
 
   return li;
+}
+
+/**
+ * The slot's ✕ button, shared by filled and away slots.
+ * @param {string} action  the data-action the listeners dispatch on
+ * @param {string} label   the localized aria-label
+ * @returns {HTMLButtonElement}
+ */
+function removeButton(action, label) {
+  const rm = document.createElement("button");
+  rm.type = "button";
+  rm.className = "deletion-control unbutton";
+  rm.dataset.action = action;
+  rm.setAttribute("aria-label", label);
+  rm.innerHTML = `<i class="fas fa-circle-xmark" inert></i>`;
+  return rm;
 }
 
 /**
@@ -124,15 +132,7 @@ function buildAwaySlot(actor, key, overflow, editable, li, awayByKey) {
   badge.className = "fa-solid fa-link-slash away-badge";
   badge.setAttribute("inert", "");
   fig.append(badge);
-  if (editable) {
-    const rm = document.createElement("button");
-    rm.type = "button";
-    rm.className = "deletion-control unbutton";
-    rm.dataset.action = "release";
-    rm.setAttribute("aria-label", _loc("PENTARYN_ATTUNEMENT.Release"));
-    rm.innerHTML = `<i class="fas fa-circle-xmark" inert></i>`;
-    fig.append(rm);
-  }
+  if (editable) fig.append(removeButton("release", _loc("PENTARYN_ATTUNEMENT.Release")));
   li.append(fig);
 
   const name = foundry.utils.escapeHTML(entry?.name ?? "");

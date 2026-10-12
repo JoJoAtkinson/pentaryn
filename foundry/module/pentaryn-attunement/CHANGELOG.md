@@ -4,6 +4,11 @@
 
 The version stays 0.3.0 until the next `module.json` restart batch (code only: sync + reload).
 
+- **[declared] M7:** `strip.mjs` builds the slot ✕ button through one private
+  `removeButton(action, label)` helper, used by filled slots (`unattune`) and away slots (`release`)
+  with the same class, `data-action`, `aria-label` and icon in the same order (was: the same seven lines
+  written twice). The strip's DOM is unchanged (`golden/strip.json` untouched); no change in play.
+  `test/strip.test.mjs`.
 - **[declared] M6:** `strip.mjs` drops `buildAwaySlot`'s unused `index` parameter and its
   `awayByKey = awayIndex(actor)` default (its one caller, buildSlot, always passes the strip's away index), and
   `applyTooltip`, `buildSlot`, `buildAwaySlot` and `awayIndex` are module-private (only

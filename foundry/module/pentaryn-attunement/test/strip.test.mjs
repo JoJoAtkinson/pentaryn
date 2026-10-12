@@ -311,3 +311,11 @@ test("M6: strip.mjs exports only buildStrip, decorateCounter, mountStrip; buildA
   const sig = src.match(/function buildAwaySlot\(([^)]*)\)/)?.[1];
   assert.equal(sig, "actor, key, overflow, editable, li, awayByKey");
 });
+
+test("M7: the slot ✕ button is built once, by a private removeButton(action, label), for filled and away slots", () => {
+  const src = readFileSync(new URL("../strip.mjs", import.meta.url), "utf8");
+  assert.equal(src.match(/createElement\("button"\)/g)?.length ?? 0, 1);
+  assert.match(src, /^function removeButton\(action, label\)/m);
+  assert.equal(src.match(/removeButton\("unattune", /g)?.length ?? 0, 1);
+  assert.equal(src.match(/removeButton\("release", /g)?.length ?? 0, 1);
+});
