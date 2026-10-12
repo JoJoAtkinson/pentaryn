@@ -25,7 +25,9 @@ const ADDED_S8 = ["areaPlacementSkipped", "fullAttackPlanFrom"];
 const ADDED_29 = ["pruneOlder"];
 // §4 combat-riders-37's named timer delays.
 const ADDED_37 = ["DELAYS"];
-const ADDED = [...ADDED_S2, ...ADDED_S4, ...ADDED_S8, ...ADDED_29, ...ADDED_37];
+// Wave 2 ext-8: the one builder for our until-turn-end effects (Dash, Disengage, Steady Aim).
+const ADDED_EXT8 = ["turnEffectData"];
+const ADDED = [...ADDED_S2, ...ADDED_S4, ...ADDED_S8, ...ADDED_29, ...ADDED_37, ...ADDED_EXT8];
 
 test("export surface (golden/core-exports.json): 81 names", () => {
   const names = Object.keys(core).sort();

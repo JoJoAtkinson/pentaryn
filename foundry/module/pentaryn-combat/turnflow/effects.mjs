@@ -52,15 +52,15 @@ async function steadyAim(activity) {
   const item = activity?.item;
   const ident = item?.system?.identifier || core.slugify(item?.name ?? "");
   if (!actor?.isOwner || ident !== "steady-aim" || actor.effects.some(isSteadyAim)) return;
-  await actor.createEmbeddedDocuments("ActiveEffect", [{
+  await actor.createEmbeddedDocuments("ActiveEffect", [core.turnEffectData({
+    module: MODULE,
+    kind: "steady-aim",
     name: _loc("PENTARYN_COMBAT.Turn.SteadyAim"),
     img: item.img || "icons/svg/target.svg",
-    description: `<p>${_loc("PENTARYN_COMBAT.Turn.SteadyAimText")}</p>`,
-    transfer: false,
-    origin: item.uuid,
-    system: { changes: core.steadyAimChanges() },
-    flags: { [MODULE]: { until: "turnEnd", special: "steady-aim" }, dnd5e: { isTemporary: true } }
-  }]);
+    description: _loc("PENTARYN_COMBAT.Turn.SteadyAimText"),
+    changes: core.steadyAimChanges(),
+    origin: item.uuid
+  })]);
   ui.notifications.info(_loc("PENTARYN_COMBAT.Turn.SteadyAimOn"));
 }
 

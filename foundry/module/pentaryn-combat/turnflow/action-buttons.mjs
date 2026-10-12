@@ -43,15 +43,15 @@ function swingsPerAction(actor) {
 }
 
 async function addTurnEffect(actor, kind, img, changes = []) {
-  await actor.createEmbeddedDocuments("ActiveEffect", [{
+  await actor.createEmbeddedDocuments("ActiveEffect", [core.turnEffectData({
+    module: MODULE,
+    kind,
     name: _loc(core.keyFor("Turn.Effect", kind)),
     img: img || "icons/svg/wingfoot.svg",
-    description: `<p>${_loc(core.keyFor("Turn.EffectText", kind))}</p>`,
-    transfer: false,
-    origin: actor.uuid,
-    system: { changes },
-    flags: { [MODULE]: { until: "turnEnd", special: kind }, dnd5e: { isTemporary: true } }
-  }]);
+    description: _loc(core.keyFor("Turn.EffectText", kind)),
+    changes,
+    origin: actor.uuid
+  })]);
 }
 
 /** Dash adds your Speed after modifiers; a second Dash this turn adds the same again, not double. */
