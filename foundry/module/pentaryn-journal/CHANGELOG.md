@@ -19,6 +19,9 @@
   (`scene.update({notes})`) now refreshes which journals open as one page; before, only the Note
   hooks and Scene create/delete forgot the pinned-journal cache, though the docs said a Scene update
   did too. Scene updates that don't change `notes` keep the cache.
+- **[declared] journal-async-1:** with two GM tabs open (the MCP bridge and a browser), `ready`'s
+  `ensureAll` and the `createUser` hook no longer make the folder and each new player's journal twice:
+  they take the relay's per-tab claim, so one tab creates and the other waits for its journal.
 
 ## Unreleased (blueprint migration, wave 2)
 

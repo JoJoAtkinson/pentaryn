@@ -82,12 +82,16 @@ function ensureFor(user) {
   return p;
 }
 
-/** GM: a journal for every player, and any journal a player made at the root moved into the folder. */
+/**
+ * GM: a journal for every player, and any journal a player made at the root moved into the folder.
+ * Each player goes through relayEnsure's claim, so with two GM tabs only one creates (journal-async-1);
+ * the folder exists before any losing tab moves on, as the winner makes it before the journal.
+ */
 async function ensureAll() {
   if (!game.user.isGM) return null;
   const players = game.users.filter(u => !u.isGM);
   for (const u of players) {
-    try { await ensureFor(u); } catch (err) { ctx.log.warn(`ensure failed for ${u.name}`, err); }
+    try { await relayEnsure(u); } catch (err) { ctx.log.warn(`ensure failed for ${u.name}`, err); }
   }
   const stray = atRootJournals();
   if (stray.length) {
@@ -156,8 +160,9 @@ const LOSER_WAIT_MS = 7_000;
 const POLL_MS = 50;
 
 /**
- * The query reaches every tab of the active GM's account (the MCP bridge tab and a GM browser tab
- * are both activeGM.isSelf), and both would look before either create lands. So, when there is a
+ * The query — and ready's ensureAll and the createUser hook (journal-async-1) — reaches every tab of
+ * the active GM's account (the MCP bridge tab and a GM browser tab are both activeGM.isSelf), and
+ * both would look before either create lands. So, when there is a
  * journal to make, each tab stamps its socket id on the sender's User; the first stamp in the
  * server's order wins (core.claimWinner) and runs ensureFor. The loser does not answer early — the
  * server keeps the first answer — it waits for the winner's journal to arrive and answers with that.
@@ -221,7 +226,7 @@ export function install(reg, context) {
 
   reg.on("createUser", user => {
     if (!game.user.isGM || !game.users.activeGM?.isSelf || user.isGM) return;
-    ensureFor(user).catch(err => ctx.log.warn(`ensure failed for ${user.name}`, err));
+    relayEnsure(user).catch(err => ctx.log.warn(`ensure failed for ${user.name}`, err));   // one tab creates (journal-async-1)
   }, { label: "createUser: ensure (active GM)" });
 
   ctx.expose({ personal, personalsOf, ensurePersonalJournal, ensureFor, ensureAll, report, findFolder });

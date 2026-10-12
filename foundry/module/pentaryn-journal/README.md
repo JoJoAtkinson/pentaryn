@@ -74,7 +74,7 @@ Published at `ready` on `game.modules.get("pentaryn-journal").api` and `game.pen
 |---|---|
 | `JournalEntry.flags.pentaryn-journal` | `{kind: "personal", userId}` — how a personal journal is found (never by name) |
 | `JournalEntryPage.flags.pentaryn-journal.source` | `{kind, key, entryId, entryName, pageName, place, noteText, savedAt, worldTime, hash, updatedAt?}`; `key` is the dedup key, `hash` drives *Update my copy* |
-| `User.flags.pentaryn-journal.claims.ensure.<socketId>` | a timestamp, only while a GM tab answers a player's relayed ensure; that key is removed right after, leaving `claims.ensure` an empty object (the parent is never deleted: that would race another tab's stamp). A stamp left by a tab that died mid-claim stays, and is ignored after 60 s |
+| `User.flags.pentaryn-journal.claims.ensure.<socketId>` | a timestamp, only while a GM tab makes a player's journal (a relayed ensure, `ensureAll` or `createUser`); that key is removed right after, leaving `claims.ensure` an empty object (the parent is never deleted: that would race another tab's stamp). A stamp left by a tab that died mid-claim stays, and is ignored after 60 s |
 | Folder `Player Journals` | created by the active GM |
 
 ## Flags other modules read
@@ -96,6 +96,8 @@ No patches. One third-party dependency: Item Piles shows a non-owner an unsaved 
 
 - **The copy** is written by the player's own client, into a journal that player owns.
 - **Personal journals** are created by the active GM's client: on `ready` (`ensureAll`) and on `createUser`.
+  Both run in every tab of the GM's account, so they take the same claim as the relay below: one tab
+  creates each player's journal (and the folder), the other waits for it.
   Players cannot create journals (TRUSTED+) or folders (ASSISTANT+); do **not** grant `JOURNAL_CREATE`.
 - **The player relay** `pentaryn-journal.ensure` (a v14 user query): the sender may be a player; the
   active GM's client does the write; the payload is ignored; the query can create only the sender's own
