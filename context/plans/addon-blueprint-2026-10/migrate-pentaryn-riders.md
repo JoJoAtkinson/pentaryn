@@ -590,8 +590,74 @@ Verified as neutral in the steps:
 |---|---|
 | Live score after the migration | ___ % (___ / ___ fail-class rules) — `conformance.py --module riders --markdown` |
 | Date | ____-__-__ |
-| Commits (Joe-approved) | characterisation: ______ · refactor: ______ · standalone: ______ |
+| Commits (Joe-approved) | characterisation: `67fe16a3` (wave 4 checkpoint, see below) · refactor: ______ · standalone: ______ |
 | Declared changes handed to the live-test workflow | ______ (session L__) |
 | `module.json` edits appended to `wave7-restart-batch.md` | yes / no |
 | Adjustments rows appended to `adjustments-batch.md` | yes / no |
 | Still failing, and why | ______ |
+
+## Checkpoint (wave 4, 2026-10-11)
+
+**Checkpoint: `67fe16a39b865804a157138326700763112bb4e2`** (`test(riders): characterisation
+checkpoint`, branch `migrate/wave-4`). From this commit on, every assertion and golden under
+`foundry/module/pentaryn-riders/test/` is frozen: during S2–S10 only import paths may change, and a
+known-bug fix flips one named pin in its own `[declared]` commit.
+
+**Re-anchor.** `git diff 28ccc87..HEAD -- foundry/module/pentaryn-riders` was empty at `wave-4-base`
+(`a5a1a906`), so every §1–§5 anchor above still holds. The live score at the base was **47.8 %
+(22/46)** with the rule set grown since §1: **C56** (hand-written `CONFIG.queries` assignment,
+riders.mjs:640) fails, and **C59** warns on the per-item writes at riders.mjs:556, 571 and 573
+(§5.9 batch rule; `setType`/`retireManual` loop `setFlag`/`deleteActivity`). Both are cleared by S6
+(the relay through the kit) and noted for S6/S7; neither changes a step.
+
+**What the checkpoint is** (7 commits, `d7bb2a9d`..`67fe16a3`, test/ only, no module file touched):
+- Layout (S1): `test/kit/` byte-identical to `foundry/lib/test-kit` 1.0.2; `run.mjs` →
+  `core-fixtures.mjs` minus its two trailing imports; the fixed `run.mjs` with
+  `LEGACY = [core-fixtures, rituals, table]`. **Not done here:** `vendor.py sync pentaryn-riders
+  --tier full --kit patch` (it writes `lib/`, outside this lane's paths) — the refactor lane runs it
+  first; it rewrites `test/kit/` identically.
+- Fixtures: `fixtures/world.mjs` (synthetic sorcerer / druid / healer / NPC / two-class wizard / a
+  no-Hit-Dice actor, dice terms, Roll, ChatMessage, SummonActivity, Argon's ButtonPanelButton,
+  TextEditor, DialogV2), `fixtures/dom.mjs` (portals' no-jsdom DOM + `[attr^=v]`, `after`, `blur`).
+- node:test files (121 pass, 8 todo): `hooks` (golden/hooks.json = the 23 non-lifecycle rows, in
+  §2.2 order; lifecycle pinned by effect only), `glue` (golden/settings.json, the relay query,
+  hdControls onChange, the four ready wraps, golden/surface-legacy.json as a ⊆ check), `glue-bare`,
+  `glue-ready-fail` (one ready step failing must not stop the others or the publish — the folded
+  S5 `ready` must keep that), `publish`, `publish-frozen`, `api` (report/featuresOf/setType/
+  retireManual/installBattleMedic/Hit Dice kernels/preview oracles), `battle-medic` (veto reasons,
+  runner, relay oracle with the four refusals verbatim), `rolls` (golden/rolls.json, card note,
+  tray preset), `hd-sheet`, `rituals-glue`, `concentration`, `argon-tidy` and `cast-flow`
+  (combat-riders-39's recipe for all five hand patches), `core` (export surfaces ⊆ check, purity,
+  frozen exports, the 200-message once-per-casting oracle), `i18n` (41 keys, the 21 prefix-built
+  keys, placeholders). LEGACY: riders-core 103, rituals-core 22, table-core 39.
+- Pinned so the refactor cannot change them silently: the warn texts of every hook's catch, the
+  before-`init` reader behaviour (six try/catch readers → `false`; `enabled`/`hdControls` throw
+  into their hook's warn), and the three comment-only catches of combat-riders-40 printing nothing
+  (S3 may add `debug` lines; no warn/error).
+
+**KNOWN pins and their todo targets** (each flips in one `[declared]` commit after the structural
+refactor):
+| Pin | File | Target (todo) |
+|---|---|---|
+| W2-K1 frozen `game.pentaryn` is replaced by a copy | `publish-frozen.test` | S6 `publishNamespace`: a frozen root throws a TypeError |
+| combat-riders-12 a name/id/UUID string is not resolved | `api.test` | legacy rows resolve Actor/Token/UUID/id/exact name (§4) |
+| combat-riders-23 a status-less effect still takes stamped tokens | `concentration.test` | `isConcentration` early return (§4, D-r2) |
+| combat-riders-41 two GM tabs heal twice, two Hit Dice | `battle-medic.test` | claim-first relay: one heal, one die, same result in both tabs |
+| combat-riders-27 audit lines | `battle-medic.test` (todo only; relay console output deliberately unpinned) | S6: one info on success, one warn per refusal |
+| METAMAGIC is a mutable Set | `core.test` | S6: nothing mutable reachable from `api.core` |
+| S2 constants | `core.test` (todo only) | `MODULE` + version constant (C41 still fails until S2 writes that test) |
+| **new:** `parseFormula` splits a die modifier's @reference argument — `preview("1d8x@mod=8", {modifier:"min2"})` gives `"1d8xmin2@mod=8"` | `api.test` | `preview`/`transformFormula` only (the live riders edit real terms); a small standalone fix, not in the audit |
+Also pinned, no todo (additive later, guide §4 row -12): `battleMedic(healer, ACTOR)` warns "no Hit
+Dice" for the actor's name.
+
+**Coverage** (wave-3 report method: `node --test --experimental-test-coverage` over every
+`*.test.mjs`, lcov per file, the module's own 8 files, `lib/` and `test/` excluded):
+- before (setup baseline, the old self-running suites only): 3 of 8 files ever loaded
+  (the three cores, 99.64 / 86.60 / 96.00 on those); 828 of 2197 module lines;
+- checkpoint, node:test only: **99.00 / 86.64 / 97.72** (L / B / F), 8 of 8 files; riders.mjs,
+  rituals.mjs, concentration.mjs, argon-tidy.mjs and cast-flow.mjs 100 % lines.
+
+**Gates at the checkpoint:** `node test/run.mjs` green twice; `make foundry-riders-check` exit 0
+(vendor and conformance gates skip: no `lib/kit.lock.json` yet); `pytest -q` 1199 passed, 2
+skipped, 3 xfailed (= baseline); conformance **54.3 % (25/46)** — C20, C40, C43 now pass.
+
