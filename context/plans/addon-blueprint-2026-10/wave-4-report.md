@@ -181,3 +181,43 @@ Gates after `79e29f8d`: `node test/run.mjs` 173 pass, 0 todo, LEGACY 103 / 22 / 
 - Optional: `foundry/adjustments.yml` `dnd5e-chat-message-types` could add the marker
   `registry.messages` with `foundry/module/pentaryn-riders/shapes.mjs` in `files` (riders now reads
   dnd5e's message registry); the fallback keeps riders working if dnd5e drops it.
+
+## combat — migration lane (2026-10-11)
+
+Guide S2–S14 plus the §4 standalone fixes, on `migrate/wave-4` from checkpoint `6e802ebb`; code phase
+only, nothing live. **argon-kit** (8.6) was written first: `87be8cd4` (`foundry/lib/argon-kit.mjs`,
+its test, kit.json no longer defers it); combat vendors and uses it (`eaff3e00`, `3a29eb4f`); riders and
+transform can adopt it from that commit. Conformance 50.0 % (base) → 58.7 % (checkpoint) → **91.7 %
+(44/48)**, 93.8 % once the S13 adjustments edits land. node:test 237 pass / 0 fail / 0 todo (179 at the
+checkpoint, 4 todo), the legacy core suite's fixtures pass, every `modules.check_report('combat')`
+gate green. Coverage (node:test, module files): 99.71 / 87.83 / 98.45 L / B / F (checkpoint 99.78 /
+87.01 / 98.92). The commit list and deviations are in the guide's Result.
+
+**Known red commits.** `e45b8484`…`1514cd22`: the i18n gate (it scans tests) failed on two not-a-key
+strings in the S4 key-table test; node:test was green throughout; fixed in `1514cd22` (the test moved
+to its own file, strings built at run time). `c69a5e22`: its own new test was red (the card's author);
+fixed in `1992dadb`. `91dd98db`…: `foundry/adjustments.yml` rows still name the moved files until the
+integrator's S13 batch lands (as for every lane's files moves).
+
+## Open for Joe — combat (migration lane, 2026-10-11)
+
+| # | Item | Default | Why |
+|---|---|---|---|
+| W4-C2 | combat-riders-1 (memoise the HUD's per-actor reads per task) | **leave it** for now | Tried and reverted: two frozen hud.test pins mutate the actor and read again in the same task, and a per-task memo returns the stale value. A cache keyed on the actor's data version is a design change, not a mechanical one |
+| W4-C3 | C23 / C21: combat still reads `pentaryn-aoe.autoDamageOnHit` with `game.settings.get` | **keep the direct read** | aoe now publishes a kit `settings()` member, but only at `ready`; Foundry renders the chat log before `ready`, so the C23-clean `apiOf("pentaryn-aoe").settings()` read would show a per-swing Damage button on every swing card rendered at load. An aoe event or an earlier publish would let combat switch |
+| W4-C4 | combat-riders-36 rest (read aoe's own refund decision) | **wait for aoe** | aoe publishes no refund event or member yet (its `HOOKS` is empty); add `pentaryn-aoe.refunded` (or a `placementCancelled` member) in aoe first |
+| W4-C5 | hud's listeners on the events stay on the legacy `pentarynCombat.*` names until `pentaryn-combat 0.4.0` | **keep** | emit fires both names, so each runs once; moving them now flips hud.test's 15 legacy-name simulations; move them in the release that drops the legacy names |
+| W4-C6 | D7 tooltip CSS: `lib/argon-tooltip.css` is vendored but not loaded | **load it in the Wave 7 batch** (module.json `styles`) | then transform-creatures-14 step 2 needs no hand copy; until then combat's `pentaryn-tt` class is still styled only by transform.css |
+| — | isAoeHandle oracle pin (portals / creatures copies) | follow-up | needs migrate/wave-3 code (overnight plan §2); combat's own `shapes.isAoeHandle` is pinned only against its old inline expression |
+
+**Live checks for the gated live phase (combat).** After `make foundry-combat-sync` + reload:
+`game.pentaryn.combat.describe().version` equals module.json; `selftest().ok`; `inspect("<a PC>")` depth
+≤ 4. W2-K1: `game.modules.get("pentaryn-combat").api === game.pentaryn.combat` right at ready. B2: a
+Full Attack, the Off-hand pip, the Bonus pip and a sequence's end each act once; a macro on
+`pentarynCombat.usage` still fires once per swing. D-c2: `plan("<name>")` works, `plan()` returns null.
+D-c3: the Sneak Attack auto note and offer button look as before. D-c4: the target-picker label sits at
+the pointer. -22: an NPC with Multiattack that uses Action Surge gets its second set of swings. W4-C1:
+press Dis while swing 1's window is open, roll it — swing 2 opens on Disadvantage. -38: deleting a
+combat clears every combatant's turn / Reaction flags (one update per actor in the console). D-c1:
+console only. Argon render order (four listeners across combat and transform) unchanged: watch the
+Action bar after a Wild Shape.

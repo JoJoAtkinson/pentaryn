@@ -7,6 +7,8 @@ tags: [foundry, modules, blueprint, migration, pentaryn-combat]
 
 # Migrating `pentaryn-combat` to the addon blueprint
 
+> **Migrated in the wave-4 code phase (2026-10-11, `migrate/wave-4`): see Result.** Nothing is live yet.
+
 > **WAIT lifted 2026-10-11** (D9: live usability work finished; `wait.json` is empty). The WAIT wording below is history; the re-anchor step still applies.
 
 > **Re-anchored again for wave 4 (2026-10-11, base `a5a1a906`):** since 28ccc87 only PT1-6 touched the
@@ -706,13 +708,25 @@ the prototype as well.
 
 | | |
 |---|---|
-| Live score after the migration | ___ % (___ / ___ fail-class rules) — `conformance.py --module combat --markdown` |
-| Date | ____-__-__ |
-| Commits (Joe-approved) | characterisation: **`6e802ebb`** (runner + test kit `12e86e58` before it) · refactor: ______ · standalone: ______ |
-| Declared changes handed to the live-test workflow | ______ (session L__) |
-| `module.json` edits appended to `wave7-restart-batch.md` | yes / no |
-| Adjustments rows appended to `adjustments-batch.md` | yes / no |
-| Still failing, and why | ______ |
+| Live score after the migration | 91.7 % (44 / 48 fail-class rules) on `migrate/wave-4` — `conformance.py --module pentaryn-combat --markdown`; 93.8 % (45 / 48) once the S13 adjustments edits land (checked on a snapshot copy) |
+| Date | 2026-10-11 (code phase; nothing live) |
+| Commits | argon-kit `87be8cd4` (written first, 8.6) · vendor `eaff3e00` · S2 `49750dbc` · S3 `796b1bc1` · S4 `e45b8484` · S5 `33faf80b` · S6a `91dd98db` · S6c `8a29ed7f` · S6b `3a29eb4f` · S6d `bb0d66fd` · S8 `7d386862` (+ `7c3dbf90` followUpsFor) · S7 [declared W2-K1] `d54ad23d` · S9 [declared B2] `cac1b85b` · S10 `ea181b22` · S11 [declared D-c1] `0fea9208`, [declared D-c2] `26cdb801` · S12 `1514cd22` · S14 `b936d9f6`, `df18b89f` · C10 split `e723fb44` · standalone: -22 [declared] `f709a285`, W4-C1 [declared] `affd3273`, -33 [declared D-c3] `de84b8a5`, -35 [declared D-c4] `9448deea`, -29 `3fc1643c`, -2 `c69a5e22` + `1992dadb`, -37 `87366619`, -38 [declared] `06755b88`, -10 `1ba641d2` |
+| Declared changes handed to the live-test workflow | W2-K1, B2, D-c1, D-c2, D-c3, D-c4, -22 surge fix, W4-C1, -38 (wave-4 report, combat live checks) |
+| `module.json` edits appended to `wave7-restart-batch.md` | no — returned to the integrator (shared file): flags.pentaryn, version 0.3.0, compatibility.verified, styles += `lib/argon-tooltip.css` |
+| Adjustments rows appended to `adjustments-batch.md` | no — returned to the integrator (shared file); the exact `foundry/adjustments.yml` edits were checked on a copy (0 problems) |
+| Still failing, and why | C07 (module.json, Wave 7); C21 + C23 (`turn-riders.mjs` reads pentaryn-aoe's `autoDamageOnHit`: aoe's kit `settings()` is published at ready, but chat cards first render before ready, so the C23-clean read answers wrong at load — Open for Joe); C32 until the S13 adjustments edits land. Warnings: C10 `turn-riders.mjs` 520/500, C36 three rider hint fragments (intentional), C37w one `!important` (B5) |
+
+**Wave 4 code phase (2026-10-11).** Deviations from the steps above, each recorded in its commit:
+weapon-bonus stays in `counting.mjs` (it reads counting's `lastTag`); the docking state stays in
+`strip.mjs` and `roll-dock.mjs` owns its four registrations; `offhand.mjs` keeps the seed (an adapter
+may not import `shapes.mjs`); `turnflow/boundaries.mjs` keeps the end-of-combat cleanup and orphan
+sweep (one hook-name order); the pip handlers live in `hud/pips-bar.mjs` but `hud/bars.mjs` registers
+them; hud's listeners stay on the legacy `pentarynCombat.*` names until `until` (emit fires both);
+the core barrel imports and re-exports by name (the scanner sees no edge in `export * from`); C23 is
+not taken (above). Frozen-test changes: import / file paths only, the S2/S4/S8 additive core-surface
+deltas, layout goldens (emits, graph, module-scope hooks, i18n templates and literal keys), the S3
+dead-export pins, strip.test importing the entry, and the named pins of each `[declared]` commit.
+combat-riders-1 (memoise per task) was tried and reverted: two frozen hud.test pins read stale values.
 
 **S1 checkpoint (wave 4, 2026-10-11): `6e802ebb`** — `test(combat): characterisation checkpoint`, on
 `migrate/wave-4`; tests and goldens only (no `lib/`: the kit is vendored by the kit step, C14 still
