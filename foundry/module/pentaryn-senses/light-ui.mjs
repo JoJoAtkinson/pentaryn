@@ -14,7 +14,7 @@ const PICK_TIMEOUT_MS = 60_000;
 
 const local = { picking: null };
 
-/** light.mjs's actions: { cast, end, onMe, pickAndCast, toggle, hood, run }. */
+/** light.mjs's actions: { end, onMe, pickAndCast, toggle, hood, run }. */
 let actions = null;
 
 /** Called by light.mjs's install(). */

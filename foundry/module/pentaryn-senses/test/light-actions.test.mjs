@@ -54,7 +54,7 @@ test("senses-EXT-2: the prompt's buttons and the card's row both come from LIGHT
 
   // each card button runs the handler its row names
   const ran = [];
-  const spy = Object.fromEntries(["onMe", "pickAndCast", "end", "cast", "toggle", "hood", "run"]
+  const spy = Object.fromEntries(["onMe", "pickAndCast", "end", "toggle", "hood", "run"]
     .map(h => [h, () => { ran.push(h); }]));
   bindActions(spy);
   for (const b of card.querySelectorAll("[data-ps-light]")) b.click();

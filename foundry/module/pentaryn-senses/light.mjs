@@ -502,7 +502,7 @@ export function install(reg, ctx) {
   state.reg = reg;
   state.ctx = ctx;
   ctx.expose({ light: exposed });
-  bindActions({ cast, end, onMe, pickAndCast, toggle, hood, run });
+  bindActions({ end, onMe, pickAndCast, toggle, hood, run });
 
   on("dnd5e.preUseActivity", onUse);
   on("dnd5e.postUseActivity", onUsed);

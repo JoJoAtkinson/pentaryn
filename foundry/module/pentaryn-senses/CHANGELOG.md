@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **[declared senses-M9] light-ui is handed only the actions it calls** (final review
+  2026-10-12): `install()` no longer binds `cast` into light-ui (the UI reaches a cast through
+  onMe and pickAndCast), and light-ui.mjs's comment listing the bound actions matches. No
+  behaviour change. New `test/light-ui-bind.test.mjs`.
+
 - **[declared senses-M6] MODULE comes from one place** (final review 2026-10-12): the barrel
   imports `MODULE` from `core/ids.mjs`; the dead `export { MODULE }` re-exports in `core/light`,
   `core/chain` and `core/migrate` are gone (and `core/migrate`'s now-unused import). Same id, no
