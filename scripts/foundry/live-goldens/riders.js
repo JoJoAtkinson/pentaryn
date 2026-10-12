@@ -12,7 +12,8 @@
 //   - `golden.declared`: S6 (kit surface, `module.api`, frozen, contract, describe rows and patches),
 //     W2-K1 (publishNamespace), -12 / D-r3 (legacy rows resolve a name, id or uuid; a miss answers
 //     null — before, a string runs as an actor with no items: `[]`), the parseFormula `@` argument
-//     fix (`preview("1d8x@mod=8")`), the METAMAGIC Set no longer reachable mutable, and the
+//     fix (`preview("1d8x@mod=8")`: before `1d8xmin2@mod=8`, after `1d8x@mod=8`), whether `api.core` is frozen
+//     and which Sets it exposes, and the
 //     after-only rows inspect() and selftest().
 // What it never does: Battle Medic itself (it needs a target, a chat roll and possibly the relay;
 // live check 3/4 in the wave-4 live plan), arcaneRecovery (a dialog), any chat message.
@@ -99,7 +100,8 @@ try {
     keys: keysOf(R), moduleApi: mod?.api === R ? "same" : typeof mod?.api, frozen: Object.isFrozen(R),
     rootFrozen: Object.isFrozen(game.pentaryn), contract: R.contract ?? null, describe: described,
     added: Object.fromEntries(ADDED.map(k => [k, typeof R[k]])),
-    rulesFrozen: Object.isFrozen(R.rules), metamagicMutable: R.core?.METAMAGIC instanceof Set && !Object.isFrozen(R.core.METAMAGIC)
+    rulesFrozen: Object.isFrozen(R.rules), coreFrozen: Object.isFrozen(R.core),
+    coreSets: Object.entries(R.core ?? {}).filter(([, v]) => v instanceof Set).map(([k]) => k).sort()
   };
 
   // ── preview(): the pure formula rewrite ──────────────────────────────────────
