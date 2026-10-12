@@ -49,3 +49,17 @@ test("an unknown rider key with markup is text in the note's name, live and Undo
   assert.equal(b.innerHTML.includes("<img"), false, b.innerHTML);
   assert.equal(b.querySelector("img"), null);
 });
+
+test("the live Undo button's data-undo carries a crafted key as one attribute value, read back unchanged", async () => {
+  const { combatContext } = await import("../shapes.mjs");
+  const key = 'sneak-attack" onmouseover="alert(1)';
+  rog.flags[MODULE] = { turn: { key: combatContext(rog).key, riders: { [key]: "auto:atk5" } } };
+  try {
+    const msg = makeMessage({ type: "damage", speaker: { actor: rog.id }, author: F.game.user, rolls: [],
+      flags: { [MODULE]: { auto: [{ key, dice: "3d6", attack: "atk5" }] } } });
+    const btn = render(msg).querySelector(".pentaryn-combat-auto [data-undo]");
+    assert.ok(btn, "the live branch renders the Undo button");
+    assert.equal(btn.getAttribute("onmouseover"), null);
+    assert.equal(btn.dataset.undo, key);
+  } finally { delete rog.flags[MODULE]; }
+});

@@ -43,6 +43,7 @@ test("two quick updateTurn calls apply in order; afterwards no chain is left and
   assert.equal(t2.attackAction.swings, 2);
   assert.equal(writes.length, 2);
   await drain();
+  assert.notEqual(shapes.turnSettled(a), p2, "the settled chain is forgotten (turnSettled no longer hands it back)");
   let settled = false;
   shapes.turnSettled(a).then(() => { settled = true; });
   await Promise.resolve();
