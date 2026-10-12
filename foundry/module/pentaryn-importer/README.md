@@ -21,9 +21,14 @@ them is the `@2` contract bump). Tier `full`; no UI, no settings, one hook (`rea
 
 ## What the player sees
 
-Nothing. The importer is GM-only and console-first. A GM sees permanent error toasts when an import
-is refused or a readback fails, an info toast with the counts after a real run, and a permanent
-"delete `Data/<path>`" toast after a successful one. Players never see a toast.
+Nothing. The importer is GM-only and console-first. A GM sees a permanent error toast when the
+version gate or the @ref lint refuses a run, when a non-GM calls it, when an entry cannot be
+prepared (e.g. a missing slug), and when a readback fails; an info toast with the counts after a
+real run; and a permanent "delete `Data/<path>`" toast after a successful one. Players never see
+a toast. Some refusals throw a `PentarynAbort` with **no** toast — read `err.code` /
+`err.message`: a fetch failure (missing file, HTML body, network error, timeout), a bad option
+(`BAD_ARGS`), a `module.json` without `flags.pentaryn`, and a call while an import is already
+running (`CONFLICT`).
 
 ## Settings
 
