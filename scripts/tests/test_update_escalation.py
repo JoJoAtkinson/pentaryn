@@ -1186,6 +1186,18 @@ def test_exposure_matches_code_not_prose(tmp_path):
     assert reg.exposure("wall-height", root=tmp_path) == ["scripts/foundry/other.py"]
 
 
+def test_exposure_cache_is_per_root(tmp_path):
+    roots = {}
+    for name in ("a", "b"):
+        mod = tmp_path / name / "foundry/module/pentaryn-x"
+        mod.mkdir(parents=True)
+        (mod / f"{name}.mjs").write_text('flags["dice-so-nice"] = {};\n')
+        roots[name] = tmp_path / name
+    reg = adj_mod.Registry()
+    assert reg.exposure("dice-so-nice", root=roots["a"]) == ["foundry/module/pentaryn-x/a.mjs"]
+    assert reg.exposure("dice-so-nice", root=roots["b"]) == ["foundry/module/pentaryn-x/b.mjs"]
+
+
 @pytest.mark.repo
 def test_real_exposure_has_no_known_false_positives():
     reg = adj_mod.load()
