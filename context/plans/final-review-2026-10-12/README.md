@@ -197,3 +197,5 @@ localStorage to `.state/live-goldens/INT-1417/{before,after}/<m>.json` and the s
 `diff.mjs before after` without `--declared` exits 0 for all three (shared identical, cleanups clean):
 `golden.shared`, `golden.declared` and env all empty for the three modules, cleanups clean, no ZZ leftovers. No
 allowlist. Reverts: none.
+
+**Foundry state.** Up, world `pentaryn` loaded, exactly one GM tab (Gamemaster) answering `get-world-info`; no restart, no fork rebuild. Pushed main; review worktrees for dropbin, journal and creatures removed (branches kept).
