@@ -182,7 +182,7 @@ function renderOffer(message, html) {
     });
     b.innerHTML = `<i class="fa-solid fa-plus"></i> ${_loc(core.keyFor("Rider.Name", o.rider.key))} ${esc(o.dice)}`;
     if (o.auto) b.classList.add("pentaryn-combat-eligible");
-    b.addEventListener("click", ev => { ev.preventDefault(); ev.stopPropagation(); rollRider(message, o.rider.key); });
+    b.addEventListener("click", ev => { ev.preventDefault(); ev.stopPropagation(); rollRider(message, o.rider.key).catch(err => log.warn("rider roll", err)); });
     row.append(b);
   }
   const content = html.querySelector(".message-content") ?? html;
@@ -352,22 +352,24 @@ function renderAutoNote(message, html) {
     if (!a || !actor) return;
     ev.preventDefault();
     ev.stopPropagation();
-    const key = a.dataset.undo;
-    const entry = auto.find(x => x.key === key);
-    // Only this card's own auto rider, this turn: an Undo link left on an earlier turn's card must
-    // not give back the rider spent on the current turn.
-    if (!entry || turnOf(actor).riders?.[key] !== `auto:${entry.attack}`) {
-      ui.notifications.info(_loc("PENTARYN_COMBAT.Rider.Stale"));
-      return;
-    }
-    autoApplied.delete(riderOnce(actor, key));
-    await updateTurn(actor, t => (t.riders?.[key] === `auto:${entry.attack}` ? core.setRider(t, key, null) : t));
-    // Mark the card (its author or the GM can write it): the note re-renders struck through.
-    if (message.isOwner) {
-      const was = message.getFlag(MODULE, "undone") ?? [];
-      if (!was.includes(key)) await message.setFlag(MODULE, "undone", [...was, key]).catch(err => log.warn("undo mark", err));
-    }
-    ui.notifications.info(_loc("PENTARYN_COMBAT.Rider.Undone", { name: _loc(core.keyFor("Rider.Name", a.dataset.undo)) }));
+    try {
+      const key = a.dataset.undo;
+      const entry = auto.find(x => x.key === key);
+      // Only this card's own auto rider, this turn: an Undo link left on an earlier turn's card must
+      // not give back the rider spent on the current turn.
+      if (!entry || turnOf(actor).riders?.[key] !== `auto:${entry.attack}`) {
+        ui.notifications.info(_loc("PENTARYN_COMBAT.Rider.Stale"));
+        return;
+      }
+      autoApplied.delete(riderOnce(actor, key));
+      await updateTurn(actor, t => (t.riders?.[key] === `auto:${entry.attack}` ? core.setRider(t, key, null) : t));
+      // Mark the card (its author or the GM can write it): the note re-renders struck through.
+      if (message.isOwner) {
+        const was = message.getFlag(MODULE, "undone") ?? [];
+        if (!was.includes(key)) await message.setFlag(MODULE, "undone", [...was, key]).catch(err => log.warn("undo mark", err));
+      }
+      ui.notifications.info(_loc("PENTARYN_COMBAT.Rider.Undone", { name: _loc(core.keyFor("Rider.Name", a.dataset.undo)) }));
+    } catch (err) { log.warn("rider undo", err); }
   });
   const content = html.querySelector(".message-content") ?? html;
   const row = content.querySelector(":scope > section.icon-row");
@@ -397,15 +399,17 @@ function renderSwingDamage(message, html) {
   b.addEventListener("click", async ev => {
     ev.preventDefault();
     ev.stopPropagation();
-    const roll = message.rolls?.[0];
-    const ammoId = message.system?.ammunition;
-    const origin = message._source?.system?.origin ?? null;
-    await activity.rollDamage({
-      event: ev,
-      isCritical: !!roll?.isCritical,
-      attackMode: message.system?.mode ?? roll?.options?.attackMode,
-      ammunition: ammoId ? activity.actor.items.get(ammoId) : undefined
-    }, {}, origin ? { data: { system: { origin } } } : {});
+    try {
+      const roll = message.rolls?.[0];
+      const ammoId = message.system?.ammunition;
+      const origin = message._source?.system?.origin ?? null;
+      await activity.rollDamage({
+        event: ev,
+        isCritical: !!roll?.isCritical,
+        attackMode: message.system?.mode ?? roll?.options?.attackMode,
+        ammunition: ammoId ? activity.actor.items.get(ammoId) : undefined
+      }, {}, origin ? { data: { system: { origin } } } : {});
+    } catch (err) { log.warn("swing damage", err); }
   });
   row.append(b);
   (html.querySelector(".message-content") ?? html).append(row);
