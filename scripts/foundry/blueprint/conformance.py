@@ -553,7 +553,7 @@ def c10(m):
     for rel, text in m.raw.items():
         role = role_of(m, rel, feats)
         cap = SIZE_CAPS["entry"] if role == "entry" else SIZE_CAPS["core"] if role == "core" else \
-            SIZE_CAPS["api"] if rel.split("/")[-1] == "api.mjs" else SIZE_CAPS["other"]
+            SIZE_CAPS["api"] if role == "api" else SIZE_CAPS["other"]
         n = text.count("\n") + 1
         if n > cap:
             over.append(f"{rel} {n}/{cap}")

@@ -978,3 +978,16 @@ def test_py_blueprint_ac_9_hot_hooks_match_by_prefix_from_packages_json(tmp_path
         assert status(conformance.score_dir(d), "C49") == "warn", hook
         report = one(tmp_path / f"{hook}-async", f'reg.on("{hook}", async (t) => {{ await paint(t); }});')
         assert res(report, "C60")["status"] == "warn", hook
+
+
+def test_py_blueprint_maint_10_c10_api_cap_follows_the_api_role(tmp_path):
+    """py-blueprint-MAINT-10: C10 keys the 300-line api cap on the api ROLE (role_of), so a
+    `<short>-api.mjs` gets the same cap as `api.mjs` instead of the 500-line default."""
+    body = "export const x = 1;\n" * 349                                      # 350 lines
+    for name in ("api.mjs", "wid-api.mjs"):
+        report = one(tmp_path / name, 'import "./' + name + '";\n', extra={name: body})
+        r = res(report, "C10")
+        assert r["status"] == "warn", (name, r)
+        assert f"{name} 350/300" in r["detail"], r["detail"]
+    report = one(tmp_path / "glue", 'import "./wid.mjs";\n', extra={"wid.mjs": body})
+    assert res(report, "C10")["status"] == "pass"                            # other files keep 500
