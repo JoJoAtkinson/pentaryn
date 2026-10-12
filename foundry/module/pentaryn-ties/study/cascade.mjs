@@ -25,7 +25,7 @@ import {
   STUDY_RUNGS
 } from "../known-core.mjs";
 import { applyPlayerWrites, postStub, putBelief, throwBlind } from "./apply.mjs";
-import { claimInspect, dropBeliefRow, releaseInspect } from "./claim.mjs";
+import { beliefRowsDrop, claimInspect, dropBeliefRow, releaseInspect } from "./claim.mjs";
 import { composeStudyPayload } from "./compose.mjs";
 import {
   beliefsOf,
@@ -359,8 +359,17 @@ async function runCascade(character, subject, release = []) {
 /** One identification row, at its own path so nobody else's record is in the payload. */
 export async function writeIdentification(subject, characterId, attrId, rec) {
   await subject.update(
-    {
-      [`flags.${MODULE}.${BELIEFS_FLAG}.${characterId}.${identifiedKey(attrId)}`]: {
+    identificationRows([[characterId, attrId, rec]]),
+    { render: false } // GM-plane data: it must never repaint a sheet mid-gesture
+  );
+}
+
+/** The update `writeIdentification` makes, for any number of `[characterId, attrId, rec]` rows (AC-5). */
+export function identificationRows(rows) {
+  return Object.fromEntries(
+    rows.map(([characterId, attrId, rec]) => [
+      `flags.${MODULE}.${BELIEFS_FLAG}.${characterId}.${identifiedKey(attrId)}`,
+      {
         text: rec.text ?? "",
         tier: null,
         total: rec.total ?? null,
@@ -371,8 +380,7 @@ export async function writeIdentification(subject, characterId, attrId, rec) {
         ...(rec.from ? { from: rec.from } : {}),
         ...(rec.from && rec.prior ? { prior: rec.prior } : {})
       }
-    },
-    { render: false } // GM-plane data: it must never repaint a sheet mid-gesture
+    ])
   );
 }
 
@@ -611,6 +619,15 @@ export async function resetInspection(character, subject) {
   const attrIds = Object.keys(mine)
     .map(k => (isIdentKey(k) ? parseFactKey(k)?.subject : null))
     .filter(Boolean);
-  for (const id of attrIds) await resetIdentification(character, subject, id);
+  // AC-5: every rung in ONE subject update, every miss line in ONE character update, ONE notification
+  const dropped = attrIds.filter(id => mine[identifiedKey(id)]);
+  const change = beliefRowsDrop(subject, character.id, dropped.map(identifiedKey));
+  if (!change) return attrIds.length;
+  await subject.update(change, { render: false });
+  const granted = readGranted(readFlag(character, MODULE, GRANTED_FLAG));
+  const misses = dropped.map(id => identMissKey(subject.id, id)).filter(k => granted[k]);
+  if (misses.length) await character.update(Object.fromEntries(misses.map(k => [`flags.${MODULE}.${GRANTED_FLAG}.${k}`, _del])));
+  const attr = new Intl.ListFormat(game.i18n?.lang || "en", { type: "conjunction" }).format(dropped.map(id => describeAttribute(id).title));
+  ui.notifications.info(_loc("PENTARYN_TIES.known.inspect.resetDone", { character: character.name, subject: subject.name, attr }));
   return attrIds.length;
 }

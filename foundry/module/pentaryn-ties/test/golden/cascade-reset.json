@@ -63,90 +63,6 @@
           "documentName": "Actor",
           "uuid": "Actor.zzNpc00000000001",
           "changes": {
-            "flags.pentaryn-ties.beliefs.zzPc000000000001.attr:kin:#id": "<_del>"
-          }
-        },
-        {
-          "op": "Hooks.callAll",
-          "name": "updateActor"
-        },
-        {
-          "op": "notify",
-          "level": "info",
-          "message": "ZZ Caven may work out Kin on ZZ Brakka again."
-        },
-        {
-          "op": "Hooks.call",
-          "name": "preUpdateActor"
-        },
-        {
-          "op": "update",
-          "documentName": "Actor",
-          "uuid": "Actor.zzNpc00000000001",
-          "changes": {
-            "flags.pentaryn-ties.beliefs.zzPc000000000001.attr:city:#id": "<_del>"
-          }
-        },
-        {
-          "op": "Hooks.callAll",
-          "name": "updateActor"
-        },
-        {
-          "op": "notify",
-          "level": "info",
-          "message": "ZZ Caven may work out Vel on ZZ Brakka again."
-        },
-        {
-          "op": "Hooks.call",
-          "name": "preUpdateActor"
-        },
-        {
-          "op": "update",
-          "documentName": "Actor",
-          "uuid": "Actor.zzNpc00000000001",
-          "changes": {
-            "flags.pentaryn-ties.beliefs.zzPc000000000001.attr:guild:#id": "<_del>"
-          }
-        },
-        {
-          "op": "Hooks.callAll",
-          "name": "updateActor"
-        },
-        {
-          "op": "notify",
-          "level": "info",
-          "message": "ZZ Caven may work out Salt Guild on ZZ Brakka again."
-        },
-        {
-          "op": "Hooks.call",
-          "name": "preUpdateActor"
-        },
-        {
-          "op": "update",
-          "documentName": "Actor",
-          "uuid": "Actor.zzNpc00000000001",
-          "changes": {
-            "flags.pentaryn-ties.beliefs.zzPc000000000001.attr:cult:#id": "<_del>"
-          }
-        },
-        {
-          "op": "Hooks.callAll",
-          "name": "updateActor"
-        },
-        {
-          "op": "notify",
-          "level": "info",
-          "message": "ZZ Caven may work out Quiet Cult on ZZ Brakka again."
-        },
-        {
-          "op": "Hooks.call",
-          "name": "preUpdateActor"
-        },
-        {
-          "op": "update",
-          "documentName": "Actor",
-          "uuid": "Actor.zzNpc00000000001",
-          "changes": {
             "flags.pentaryn-ties.beliefs.zzPc000000000001": "<_del>"
           }
         },
@@ -157,7 +73,7 @@
         {
           "op": "notify",
           "level": "info",
-          "message": "ZZ Caven may work out Dockhands on ZZ Brakka again."
+          "message": "ZZ Caven may work out Kin, Vel, Salt Guild, Quiet Cult, and Dockhands on ZZ Brakka again."
         }
       ],
       "console": []

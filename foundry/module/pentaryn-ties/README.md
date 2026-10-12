@@ -157,7 +157,8 @@ are GM-written; the registry queues its writes one at a time.
 - **Never nest the registry's queued writes** — a queued write that awaits another waits on itself.
 - **`Actor#update` merges.** Deleting a ledger row needs core's `_del` value, never the v14-deprecated `-=key`; writing the
   object back without the key does nothing. Drop a beliefs row only through `dropBeliefRow` (study/claim.mjs), which
-  removes the whole flag when the last row goes instead of leaving `beliefs: {}` behind.
+  removes the whole flag when the last row goes instead of leaving `beliefs: {}` behind; several of one
+  character's rows go in one update through its `beliefRowsDrop` (AC-5).
 - **`Number(null)` is 0.** Nullable numbers go through `numOrNull`; a "rolled 0" is a different lie.
 - **`isVisible`, never `visible`.** On v14 `Token#visible` is true for walled-off and hidden tokens.
 - **A setting read before `init`** returns the row default through `setting()`; `mayWrite` refuses instead.

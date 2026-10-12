@@ -123,8 +123,10 @@ async function claimRoll(ledger, characterId, now, key = KIND_KEY) {
  * `ties`, `known` and `worn` with it.
  */
 export function dropRow(base, ownerId, key, owned) {
-  const rest = Object.keys(owned ?? {}).filter(k => k !== key);
-  return rest.length ? { [`${base}.${ownerId}.${key}`]: _del } : { [`${base}.${ownerId}`]: _del };
+  // `key` may be a list (AC-5): every row in one change, or the owner's entry when none is left
+  const gone = [key].flat();
+  const rest = Object.keys(owned ?? {}).filter(k => !gone.includes(k));
+  return rest.length ? Object.fromEntries(gone.map(k => [`${base}.${ownerId}.${k}`, _del])) : { [`${base}.${ownerId}`]: _del };
 }
 
 /**
@@ -142,15 +144,27 @@ export function dropRow(base, ownerId, key, owned) {
  * question you cannot answer by looking.
  */
 export async function dropBeliefRow(ledger, characterId, key) {
-  const all = readFlag(ledger, MODULE, BELIEFS_FLAG) ?? {};
-  if (!all[characterId]?.[key]) return false;
-  const others = Object.keys(all[characterId]).filter(k => k !== key);
-  const rest = Object.keys(all).filter(k => k !== characterId);
-  const base = flagPath(MODULE, BELIEFS_FLAG);
-  // the whole flag goes with core's `_del` too (ES-6), and quietly, like every other row drop
-  const change = !others.length && !rest.length ? { [base]: _del } : dropRow(base, characterId, key, all[characterId]);
+  const change = beliefRowsDrop(ledger, characterId, key);
+  if (!change) return false;
+  // quietly, like every other row drop
   await ledger.update(change, { render: false });
   return true;
+}
+
+/**
+ * The change `dropBeliefRow` writes, for one key or a list of them (AC-5: `resetInspection` drops
+ * every rung in one update). Only rows that are there are dropped; null when none is.
+ */
+export function beliefRowsDrop(ledger, characterId, keys) {
+  const all = readFlag(ledger, MODULE, BELIEFS_FLAG) ?? {};
+  const mine = all[characterId] ?? {};
+  const gone = [keys].flat().filter(k => mine[k]);
+  if (!gone.length) return null;
+  const others = Object.keys(mine).filter(k => !gone.includes(k));
+  const rest = Object.keys(all).filter(k => k !== characterId);
+  const base = flagPath(MODULE, BELIEFS_FLAG);
+  // the whole flag goes with core's `_del` too (ES-6)
+  return !others.length && !rest.length ? { [base]: _del } : dropRow(base, characterId, gone, mine);
 }
 
 /** Un-stake it — only ever called by the client that won, and only when no roll happened. */

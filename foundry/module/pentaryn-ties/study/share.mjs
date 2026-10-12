@@ -39,7 +39,7 @@ import {
   shareStatus
 } from "../known-core.mjs";
 import { applyPlayerWrites, knownListWith, putBelief } from "./apply.mjs";
-import { applyInspect, grantKind, writeIdentification } from "./cascade.mjs";
+import { applyInspect, grantKind, identificationRows, writeIdentification } from "./cascade.mjs";
 import { dropBeliefRow } from "./claim.mjs";
 import { factFrom, reset, rowMissed } from "./gate.mjs";
 import { beliefsOf, identDcOf, kindActorOf, reg, resolveFact, studyStateFor, studyTiersOf } from "./resolve.mjs";
@@ -248,15 +248,14 @@ export async function shareFact(spec, recipients, { from = null, notify = true }
       })
       .filter(Boolean);
     if (rows.length) await setKnowledge(rows); // one call: the setting is rewritten whole
-    for (const pc of pcs) {
-      await writeIdentification(subject, pc.id, attrId, {
-        text,
-        total: null,
-        when: now,
-        delivered: now,
-        from: fromId,
-        prior: priorFor.get(pc.id) ?? null
-      });
+    // AC-5: every recipient's row in ONE subject update, every recipient's grant in ONE batch
+    await subject.update(
+      identificationRows(
+        pcs.map(pc => [pc.id, attrId, { text, total: null, when: now, delivered: now, from: fromId, prior: priorFor.get(pc.id) ?? null }])
+      ),
+      { render: false }
+    );
+    const grants = pcs.map(pc => {
       const granted = readGranted(readFlag(pc, MODULE, GRANTED_FLAG));
       granted[identifiedKey(attrId)] = {
         text: text.slice(0, GRANTED_TEXT_MAX),
@@ -264,12 +263,10 @@ export async function shareFact(spec, recipients, { from = null, notify = true }
         icon: entry.icon,
         source: sourceBy(entry.title)
       };
-      await pc.update({
-        [`flags.${MODULE}.${KNOWN_FLAG}`]: knownListWith(pc, subject, now),
-        [`flags.${MODULE}.${GRANTED_FLAG}`]: granted
-      });
-      out.shared.push(pc.id);
-    }
+      return { _id: pc.id, [`flags.${MODULE}.${KNOWN_FLAG}`]: knownListWith(pc, subject, now), [`flags.${MODULE}.${GRANTED_FLAG}`]: granted };
+    });
+    await Actor.implementation.updateDocuments(grants); // by id: the world actor, where ties data lives
+    out.shared.push(...pcs.map(pc => pc.id));
   } else if (fact) {
     // a SECRET attribute's lore renders under this creature only once they have placed him in it
     // (`visibleAttributesFor`) — written all the same, but the GM is told where it will show

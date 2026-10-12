@@ -124,6 +124,12 @@ creature (a reset, a released claim, Forget, an identification do-over) removes 
 `beliefs` flag instead of leaving an empty `beliefs: {}` behind. Every beliefs-row drop now goes
 through one helper, `dropBeliefRow` (study/claim.mjs). ES-7, M10.
 
+Fixed (declared): a GM **Share** of an identification to several characters writes every recipient's
+row in one update of the creature and every recipient's card in one batch (`Actor.updateDocuments`),
+not two writes per recipient; **Reset inspection** clears every rung in one update of the creature and
+one of the character, and posts **one** notification naming every attribute ("… may work out Kin, Vel,
+and Dockhands on … again.") instead of one per rung. The rows written are the same. AC-5.
+
 ## 0.19.4 (2026-10-10, usability run, Area 7 re-run)
 
 - **The inspect window's Share switches are the table's PCs only** (`tablePCs`): each player's

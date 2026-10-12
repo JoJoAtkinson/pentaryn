@@ -211,6 +211,26 @@ export async function bootWorld({
 
   globalThis.Actor = Actor;
   F.Actor = Actor;
+  /*
+   * `Actor.implementation.updateDocuments` (AC-5): ONE logged write for the batch; each actor still
+   * runs its pre/update hooks and takes its changes, through the stub's own `update`, whose per-document
+   * `update` line is dropped so the log shows the one batch call Foundry would make.
+   */
+  Actor.implementation = Actor;
+  Actor.updateDocuments = async (updates = [], options = {}) => {
+    F.calls.push({ op: "Actor.updateDocuments", updates: F.plain(updates) });
+    const out = [];
+    for (const { _id, ...changes } of updates) {
+      const doc = F.game.actors.get(_id);
+      if (!doc) continue;
+      const mark = F.calls.length;
+      await doc.update(changes, options);
+      const i = F.calls.findIndex((c, n) => n >= mark && c.op === "update" && c.uuid === doc.uuid);
+      if (i >= 0) F.calls.splice(i, 1);
+      out.push(doc);
+    }
+    return out;
+  };
   globalThis.Macro = { create: async data => F.calls.push({ op: "Macro.create", data: F.plain(data) }) };
   globalThis.ChatMessage = {
     create: async data => {

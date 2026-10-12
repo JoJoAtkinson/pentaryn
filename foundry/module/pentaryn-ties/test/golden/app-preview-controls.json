@@ -263,36 +263,37 @@
           }
         },
         {
-          "op": "update",
-          "documentName": "Actor",
-          "uuid": "Actor.zzPc000000000001",
-          "changes": {
-            "flags.pentaryn-ties.known": [
-              {
-                "id": "zzNpc00000000001",
-                "name": "ZZ Brakka",
-                "category": "sentient",
-                "notes": "",
-                "imposter": null,
-                "hidden": false,
-                "when": 1790000000000
-              }
-            ],
-            "flags.pentaryn-ties.granted": {
-              "attr:city:#id": {
-                "text": "From Vel.",
-                "when": 1700000000000,
-                "icon": null,
-                "source": "Vel"
-              },
-              "attr:guild:#id": {
-                "text": "<p>Guild hands.</p>",
-                "when": 1790000000000,
-                "icon": "icons/sundries/flags/banner-standard-green.webp",
-                "source": "Salt Guild"
+          "op": "Actor.updateDocuments",
+          "updates": [
+            {
+              "_id": "zzPc000000000001",
+              "flags.pentaryn-ties.known": [
+                {
+                  "id": "zzNpc00000000001",
+                  "name": "ZZ Brakka",
+                  "category": "sentient",
+                  "notes": "",
+                  "imposter": null,
+                  "hidden": false,
+                  "when": 1790000000000
+                }
+              ],
+              "flags.pentaryn-ties.granted": {
+                "attr:city:#id": {
+                  "text": "From Vel.",
+                  "when": 1700000000000,
+                  "icon": null,
+                  "source": "Vel"
+                },
+                "attr:guild:#id": {
+                  "text": "<p>Guild hands.</p>",
+                  "when": 1790000000000,
+                  "icon": "icons/sundries/flags/banner-standard-green.webp",
+                  "source": "Salt Guild"
+                }
               }
             }
-          }
+          ]
         },
         {
           "op": "ChatMessage.create",
