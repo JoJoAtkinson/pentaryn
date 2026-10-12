@@ -66,7 +66,7 @@ function actionSig(actor) {
 
 function bonusSig(actor, panel) {
   const gate = setting("gateFollowUps") ? core.poleStrikeOpen({ turn: turnOf(actor), weapons: weaponsOf(actor) }) : null;
-  const fu = setting("followUps") ? followUpsNow(actor, panel).filter(f => !f.free).map(f => [f.kind, f.weaponId, f.count ?? null, f.disabled ?? null]) : [];
+  const fu = setting("followUps") ? bonusFollowUps(actor, panel).map(f => [f.kind, f.weaponId, f.count ?? null, f.disabled ?? null]) : [];
   return JSON.stringify([gate, fu]);
 }
 
@@ -74,7 +74,7 @@ function bonusSig(actor, panel) {
 const turnTouched = (turn) => !!(turn.attackAction.swings || Object.keys(turn.riders).length || turn.followUps.length || turn.nick);
 
 function specialSig(actor) {
-  const fu = setting("followUps") ? followUpsNow(actor, mainPanel("DND5E.BonusAction")).filter(f => f.free).map(f => [f.kind, f.weaponId]) : [];
+  const fu = setting("followUps") ? freeFollowUps(actor).map(f => [f.kind, f.weaponId]) : [];
   const riders = setting("riderOffers") ? core.ridersFor(featuresOf(actor)).filter(r => r.auto).map(r => [r.key, riderMode(r.key)]) : [];
   const turn = turnOf(actor);
   const touched = turnTouched(turn);
@@ -121,6 +121,10 @@ function followUpsNow(actor, bonusPanel) {
   const bonusFree = !combatContext(actor).inCombat || !bonusPanel || bonusPanel.currentActions !== 0;
   return followUpsFor(actor, { bonusFree });
 }
+
+/** The follow-ups that cost a bonus action (the Bonus bar's) and the free ones (the Special bar's). */
+function bonusFollowUps(actor, bonusPanel) { return followUpsNow(actor, bonusPanel).filter(f => !f.free); }
+function freeFollowUps(actor) { return followUpsNow(actor, mainPanel("DND5E.BonusAction")).filter(f => f.free); }
 
 /**
  * Polearm Master's Pole Strike (its bonus-action attack activity). Not the feat as a whole: its
@@ -171,7 +175,7 @@ function composeBonusBar(panel, actor) {
   if (!setting("followUps")) return;
   const C = argonClasses();
   if (!C) return;
-  const fu = followUpsNow(actor, panel).filter(f => !f.free);
+  const fu = bonusFollowUps(actor, panel);
   const kept = panel._buttons.filter(b => !(b instanceof C.FollowUpButton));
   if (!fu.length) {
     panel._pcFuSeen = { actor: actor.uuid, keys: new Set() };
@@ -232,7 +236,7 @@ function composeSpecialBar(panel, actor) {
   const kept = panel._buttons.filter(b => !(b instanceof C.FollowUpButton) && !(b instanceof C.CommandButton));
   const fresh = [];
   if (setting("followUps")) {
-    for (const f of followUpsNow(actor, mainPanel("DND5E.BonusAction")).filter(x => x.free)) fresh.push(new C.FollowUpButton({ hudActor: actor, followUp: f }));
+    for (const f of freeFollowUps(actor)) fresh.push(new C.FollowUpButton({ hudActor: actor, followUp: f }));
   }
   if (setting("riderOffers")) {
     for (const r of core.ridersFor(featuresOf(actor))) {
@@ -372,7 +376,7 @@ const onActorUpdated = (actor, changes) => {
 function recheckSlots(actor) {
   try {
     const bonus = mainPanel("DND5E.BonusAction");
-    if (bonus && setting("followUps")) hideDuplicateSlots(bonus, followUpsNow(actor, bonus).filter(f => !f.free), actor);
+    if (bonus && setting("followUps")) hideDuplicateSlots(bonus, bonusFollowUps(actor, bonus), actor);
   } catch (err) { log.debug("off-hand slot re-check (the next render re-checks)", err); }
 }
 
@@ -411,7 +415,7 @@ const onItemButtonRendered = (button, element, actor) => {
     const bonus = mainPanel("DND5E.BonusAction");
     const a = actor ?? ui.ARGON?._actor;
     if (!bonus || !a || !bonus._buttons?.includes(button)) return;
-    hideDuplicateSlots(bonus, followUpsNow(a, bonus).filter(f => !f.free), a);
+    hideDuplicateSlots(bonus, bonusFollowUps(a, bonus), a);
   } catch (err) { log.debug("off-hand slot check", err); }   // never break Argon's render
 };
 
