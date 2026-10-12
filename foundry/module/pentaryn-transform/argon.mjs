@@ -11,6 +11,15 @@ import { dropTooltip as dropArgonTooltip } from "./lib/argon-kit.mjs";
 
 const log = makeLog(MODULE);
 
+/* ── Argon's private HUD state ──────────────────────────────────────────── */
+// The raw optional chains: no `?? null`, so callers comparing against them see what they always saw.
+
+export const hudActor = () => ui.ARGON?._actor;
+export const hudTokenDoc = () => ui.ARGON?._token?.document;
+export const hudTokenId = () => ui.ARGON?._token?.id;
+export const hudPortrait = () => ui.ARGON?.components?.portrait;
+export const hudPanel = label => ui.ARGON?.components?.main?.find(p => p.label === label);
+
 /* ── tooltips ────────────────────────────────────────────────────────────── */
 // Argon shows its tooltips through Foundry's TooltipManager, anchored to the hovered button. Every
 // shift and revert rebuilds the HUD, so that button leaves the DOM without a pointerleave and the

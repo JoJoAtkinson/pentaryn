@@ -119,7 +119,10 @@ Every wrap is in `patches.mjs`, through the kit's `wrapMethod`, listed by `descr
 Non-patch rows: `argon-shared-uses-badge`, `argon-collapse-on-area-placement`,
 `argon-tooltip-click-through` (CSS on Argon's `#tooltip`), `dnd5e-concentration-summons`,
 `dnd5e-concentration-auto-break`, `dnd5e-summon-keeps-sidebar`, `dnd5e-restore-slot-default`,
-`dnd5e-usage-dialog-first-click`, `dnd5e-chat-message-types`. Nothing in Argon's files is edited.
+`dnd5e-usage-dialog-first-click`, `dnd5e-chat-message-types`, `argon-riders-long-casts`,
+`dnd5e-riders-arcane-recovery-picker`, `dnd5e-riders-damage-tray-preset`,
+`dnd5e-riders-roll-term-riders`, `dnd5e-riders-sheet-hit-dice`, `core-riders-query-battle-medic`.
+Nothing in Argon's files is edited.
 
 ## Two sessions / who writes
 

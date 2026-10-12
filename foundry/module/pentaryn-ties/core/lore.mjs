@@ -180,7 +180,11 @@ export const loreOfferable = row => {
   return !isBlankProse(clampLoreRow(row).text);
 };
 
-/** Just the rows a player may be offered — the affordance list, never the storage list. */
+/**
+ * The rows that can resolve a fact (`loreRollable`): the storage list minus junk, unlabelled rows
+ * and rows with neither pass nor miss text. NOT the offer list — a player is offered
+ * `loreOfferable` rows only.
+ */
 export const rollableLore = rows => readLore(rows).filter(loreRollable);
 
 /** The stored array. Junk rows vanish; duplicate ids keep the first, which is the authored one. */

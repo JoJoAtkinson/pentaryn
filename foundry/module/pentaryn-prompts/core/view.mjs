@@ -21,11 +21,14 @@ export const CREATURE_KINDS = Object.freeze(["npc", "character", "creature"]);
  *
  * `scenes`: in output order, each
  *   { key, name, nav, mapFt, squares, gridFt, regions, levels, warn, notes, dims,
+ *     doors?: [{ id, c, door, ds, sight }], walls?, doorReach?(member, point, door) (→ doorLines),
  *     items: [{ key, id, docName, isPrompt, size, rank, rect: {x, y, w, h}, centre, atFt, regions,
- *               text, updatedAt, kind, name, type, hidden, prov, description }],
- *     rel(aKey, bKey) → { ft, bearing, los } }
+ *               text, updatedAt, kind, name, type, hidden, prov, description, elevation?, points?,
+ *               disposition?, stats?, classes?, species?, items?, xp?, light?, actorId?, ownTextUuid? }],
+ *     rel(aKey, bKey) → { ft, bearing, los, seen } }
  *
- * Returns `{ view, manifest }`; `manifest.at` is left for the caller to stamp.
+ * Returns `{ view, manifest, ids }` (`ids`: assignIds' output); `manifest.at` is left for the caller
+ * to stamp. `view` is the shape `renderGather` documents.
  */
 export function buildView(scenes, { unseenWithinFt = 60, linkFt = LINK_FT, formationFt = FORMATION_FT, next = null, party = null,
   partySource = null, cropsNote = null } = {}) {

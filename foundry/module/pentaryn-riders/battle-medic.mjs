@@ -18,9 +18,7 @@ import {
 import { settingRaw } from "./settings.mjs";
 import { guarded } from "./lib/queries.mjs";
 import { flagPath, readFlag } from "./lib/flags.mjs";
-import { HEALER, hdPools, hdSummary, isBattleMedic, itemInfo, spendHitDie, withLegacyActor } from "./shapes.mjs";
-
-const QUERY = `${MODULE}.battleMedic`;
+import { HEALER, RELAY_QUERY, hdPools, hdSummary, isBattleMedic, itemInfo, spendHitDie, withLegacyActor } from "./shapes.mjs";
 
 /* The relay's claim (combat-riders-41, core/relay.mjs). */
 const CLAIM_STALE_MS = 60_000;   // a stamp older than this is a tab that died mid-claim
@@ -85,7 +83,7 @@ async function runBattleMedic(healer, token) {
       const gm = game.users.activeGM;
       if (!gm) throw new Error("no GM");
       // requestId: every GM tab receives the query; the first to claim it heals (combat-riders-41)
-      result = await gm.query(QUERY, {
+      result = await gm.query(RELAY_QUERY, {
         healerUuid: healer.uuid, targetUuid: target.uuid, faces: pool.faces, amount, requestId: foundry.utils.randomID()
       }, { timeout: 8000 });
     }
@@ -170,7 +168,7 @@ async function installBattleMedic(actor, { replace = true } = {}) {
  * context (the sender) to a manifest row's implementation yet (W2-J2).
  */
 export function registerRelay() {
-  CONFIG.queries[QUERY] = guarded(relay, { sender: "any" });
+  CONFIG.queries[RELAY_QUERY] = guarded(relay, { sender: "any" });
 }
 
 /**

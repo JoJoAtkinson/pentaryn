@@ -1039,6 +1039,15 @@ export function register({ t, eq, ok }) {
     eq(attrNameKey("x".repeat(70) + "a") === attrNameKey("x".repeat(70) + "b"), false);
   });
 
+  t("attrIdOf is attrNameKey cut at 64", () => {
+    // decision 18's uniqueness rule needs the id fold and the name fold to be the same fold
+    const long = "Éléonore's — Ünïque, Çhâteau-Façade! ".repeat(2) + "Ñ".repeat(10);
+    eq(attrNameKey(long).length > 64, true);
+    for (const t of ["Yéllowstone", "Yellow Stone", long, "", null]) {
+      eq(attrIdOf(t), attrNameKey(t).slice(0, 64), `${String(t).slice(0, 12)}: `);
+    }
+  });
+
   t("resolveAttrRef: an id, a name, or an entry — one rule everywhere", () => {
     const reg = [
       { id: "ashfallcompany", title: "Ashfall Company" },

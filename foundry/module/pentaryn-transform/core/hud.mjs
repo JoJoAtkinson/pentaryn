@@ -162,16 +162,6 @@ export function coveredPanel(panelItemIds, frontIds) {
 /* ── hit points ──────────────────────────────────────────────────────────── */
 
 /**
- * Temporary Hit Points don't stack: on assuming a form the druid keeps the better of what they had
- * and what Wild Shape grants (dnd5e's preset always overwrites with the grant).
- */
-export function formTempHP(hostTemp, grantTemp) {
-  const a = Math.max(0, Number(hostTemp) || 0);
-  const b = Math.max(0, Number(grantTemp) || 0);
-  return Math.max(a, b);
-}
-
-/**
  * The portrait's HP figures. Argon prints value + temp over max ("111/99"), which reads as more HP
  * than the druid has; with temp HP this gives "99+12" over "99".
  *

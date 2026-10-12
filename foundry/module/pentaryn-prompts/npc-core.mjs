@@ -55,7 +55,7 @@ function apply(raw, spec, where) {
   const errors = [];
   const args = {};
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return { args, errors: [`${where} must be an object`] };
-  const extra = Object.keys(raw).filter(k => !(k in spec));
+  const extra = Object.keys(raw).filter(k => !Object.hasOwn(spec, k));
   if (extra.length) errors.push(`${where}: unknown key(s) ${extra.join(", ")} (known: ${Object.keys(spec).join(", ")})`);
   for (const [k, f] of Object.entries(spec)) {
     let v = raw[k];

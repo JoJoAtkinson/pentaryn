@@ -342,13 +342,15 @@ export function sceneModel(scene, opts = {}) {
   return { ...meta, items, rel };
 }
 
+/** The panel stores and the hover tip reads under this key (core/cache.mjs keys by JSON.stringify(opts)). */
+const PANEL_OPTS = Object.freeze({ builtWithoutProvenance: true });
+
 /**
  * The hover tip's model of a scene: built once and reused until the cache feature sees a change on
  * that scene ([declared] DP8). The panel stores what it builds; gather and api.model build fresh.
  */
 function cachedModel(scene) {
-  const opts = { builtWithoutProvenance: true };
-  return sceneCache.get(scene.id, opts, () => sceneModel(scene, opts));
+  return sceneCache.get(scene.id, PANEL_OPTS, () => sceneModel(scene, PANEL_OPTS));
 }
 
 /** Prompt markers on a scene (token documents). */
@@ -364,14 +366,12 @@ export function panelFor(tokenDoc, { rows = 12, unseenWithinFt = 60 } = {}) {
   const scene = tokenDoc.parent;
   // the panel always builds fresh (a door shut, an actor renamed: never a stale panel) and leaves
   // what it built for the hover tip
-  const opts = { builtWithoutProvenance: true };
-  const model = sceneCache.put(scene.id, opts, sceneModel(scene, opts));
+  const model = sceneCache.put(scene.id, PANEL_OPTS, sceneModel(scene, PANEL_OPTS));
   const rels = panelRels(model.items, model.rel, `Token.${tokenDoc.id}`, unseenWithinFt);
   const split = panelSplit(rels, { rows, unseenWithinFt });
-  const d = scene.dimensions;
   return {
     ...split,
-    mapFt: [Math.round(d.sceneWidth / d.size * model.gridFt), Math.round(d.sceneHeight / d.size * model.gridFt)],
+    mapFt: [...model.mapFt],
     warn: model.warn
   };
 }

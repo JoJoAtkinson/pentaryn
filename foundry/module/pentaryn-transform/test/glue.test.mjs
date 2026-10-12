@@ -210,6 +210,21 @@ test("updateToken/deleteToken: the HUD's token changing body cancels an open pic
   ui.ARGON._token = null;
 });
 
+test("updateToken moving the HUD token never queries the DOM for the target picker", () => {
+  const hudDoc = { id: "tok", object: { controlled: false } };
+  ui.ARGON._token = { document: hudDoc, id: "tok" };
+  const real = document.querySelector;
+  let asked = 0;
+  document.querySelector = function (sel) { if (sel === ".ech-target-picker") asked++; return real.call(this, sel); };
+  try {
+    Hooks.callAll("updateToken", hudDoc, { x: 100 }, {}, "u");
+  } finally {
+    document.querySelector = real;
+    ui.ARGON._token = null;
+  }
+  assert.equal(asked, 0);
+});
+
 /* ── lookups ──────────────────────────────────────────────────────────────── */
 
 test("isRevertItem: only a strict true flag", () => {
@@ -304,6 +319,19 @@ test("markBonusUsed / bonusUsedNow: per token and turn, in the started combat wh
   combat.combatant = { tokenId: "x" };
   T.markBonusUsed(talo);
   assert.equal(T.bonusUsedNow(tokenId), true, "no current turn for the token: the old mark stays");
+  game.combat = null;
+  game.combats.clear();
+});
+
+test("markBonusUsed: a druid with two tokens marks the one whose turn it is", () => {
+  const t0 = F.W.makeToken({ id: "druidToken000000", name: "Druid", actorId: "druidActor000000" });
+  const t1 = F.W.makeToken({ id: "druidToken000001", name: "Druid", actorId: "druidActor000000" });
+  const druid = F.W.makeActor({ id: "druidActor000000", tokens: [t0, t1] });
+  const combat = { id: "cmb2", started: true, round: 1, turn: 0, combatant: { tokenId: t1.id } };
+  game.combats.set("cmb2", combat);
+  T.markBonusUsed(druid);
+  assert.equal(T.bonusUsedNow(t1.id), true, "the second token's turn is marked");
+  assert.equal(T.bonusUsedNow(t0.id), false);
   game.combat = null;
   game.combats.clear();
 });
