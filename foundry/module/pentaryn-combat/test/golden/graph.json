@@ -32,15 +32,11 @@
       "shapes.mjs"
     ],
     "hud.mjs": [
-      "combat-core.mjs",
       "context.mjs",
-      "lib/log.mjs",
+      "hud/bars.mjs",
+      "hud/picker.mjs",
+      "hud/tooltips.mjs",
       "patches.mjs",
-      "sequence.mjs",
-      "settings.mjs",
-      "shapes.mjs",
-      "strip.mjs",
-      "turn-riders.mjs",
       "turnflow/action-buttons.mjs",
       "turnflow/boundaries.mjs",
       "turnflow/death.mjs",
@@ -51,6 +47,37 @@
       "turnflow/manual-dice.mjs",
       "turnflow/movement.mjs",
       "turnflow/portrait.mjs"
+    ],
+    "hud/bars.mjs": [
+      "argon.mjs",
+      "combat-core.mjs",
+      "hud/buttons-ui.mjs",
+      "lib/log.mjs",
+      "sequence.mjs",
+      "settings.mjs",
+      "shapes.mjs",
+      "turn-riders.mjs",
+      "turnflow/drawers.mjs"
+    ],
+    "hud/buttons-ui.mjs": [
+      "argon.mjs",
+      "combat-core.mjs",
+      "sequence.mjs",
+      "settings.mjs",
+      "shapes.mjs",
+      "strip.mjs"
+    ],
+    "hud/picker.mjs": [
+      "argon.mjs",
+      "combat-core.mjs",
+      "hud/buttons-ui.mjs",
+      "lib/log.mjs",
+      "sequence.mjs",
+      "settings.mjs"
+    ],
+    "hud/tooltips.mjs": [
+      "argon.mjs",
+      "settings.mjs"
     ],
     "offhand.mjs": [
       "combat-core.mjs",
@@ -174,8 +201,12 @@
     "turnflow/death.mjs",
     "turnflow/boundaries.mjs",
     "turnflow/action-buttons.mjs",
-    "turn-riders.mjs",
     "patches.mjs",
+    "hud/tooltips.mjs",
+    "hud/picker.mjs",
+    "hud/buttons-ui.mjs",
+    "hud/bars.mjs",
+    "turn-riders.mjs",
     "context.mjs",
     "lib/hooks.mjs",
     "combat.mjs",

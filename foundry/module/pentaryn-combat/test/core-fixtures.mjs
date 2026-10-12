@@ -721,7 +721,7 @@ check("367 a stopped sequence's card with nothing rolled and nothing consumed is
   // set, so without max-content it would wrap at half width; and translate(-50%, …) keeps it centred.
   ok("383 …sized to its text (width: max-content, not the half-width shrink-to-fit) and centred (translate(-50%, …))",
     decl("width") === "max-content" && /^translate\(\s*-50%\s*,/.test(decl("transform") ?? ""));
-  const tt = read("hud.mjs").match(/const TT = \[([^\]]*)\]/)?.[1] ?? "";
+  const tt = read("hud/buttons-ui.mjs").match(/const TT = \[([^\]]*)\]/)?.[1] ?? "";
   ok("382 …and hud.mjs puts that class on its tooltips, beside the shared pentaryn-tt",
     /"pentaryn-tt"/.test(tt) && /"pentaryn-combat-tt"/.test(tt));
 }
