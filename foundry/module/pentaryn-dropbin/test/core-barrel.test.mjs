@@ -69,3 +69,13 @@ test("isActiveGMSelf: true only on the active GM user's client", () => {
   assert.equal(core.isActiveGMSelf({ activeGM: { isSelf: false } }), false);
   assert.equal(core.isActiveGMSelf({ activeGM: { isSelf: true } }), true);
 });
+
+test("isOurCorpse / hasNoLoot tables", () => {
+  const M = "pentaryn-dropbin";
+  assert.equal(core.isOurCorpse({ flags: { [M]: { corpse: true } } }), true);
+  assert.equal(core.isOurCorpse({ flags: {} }), false);
+  assert.equal(core.hasNoLoot({ flags: { [M]: { noLoot: true } }, actor: null }), true, "token flag");
+  assert.equal(core.hasNoLoot({ flags: {}, actor: { flags: { [M]: { noLoot: true } } } }), true, "actor flag only");
+  assert.equal(core.hasNoLoot({ flags: {}, actor: { flags: {} } }), false, "neither");
+  assert.equal(core.hasNoLoot({ flags: {}, actor: null }), false, "no actor");
+});

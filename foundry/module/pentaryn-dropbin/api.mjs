@@ -18,13 +18,13 @@ const ownFlags = doc => doc?.flags?.[core.MODULE] ?? {};
 /** One token's corpse state (plain data). */
 function tokenRow(token, isDead) {
   const f = ownFlags(token);
-  const corpse = !!f.corpse;
+  const corpse = core.isOurCorpse(token);
   return {
     token: refOf(token),
     actor: refOf(token.actor),
     dead: !!isDead(token.actor),
     corpse,
-    noLoot: !!(f.noLoot || ownFlags(token.actor).noLoot),
+    noLoot: core.hasNoLoot(token),
     pile: core.pileFlags(token),
     saved: corpse ? { sight: f.sight ?? null, ownership: f.ownership ?? null } : null,
   };
@@ -63,7 +63,7 @@ function inspect(ref, opts, isDead) {
   if (actor.isToken && actor.token) return toPlain(tokenRow(actor.token, isDead));
   const corpses = [];
   for (const scene of scenesFor(sceneId)) {
-    for (const t of scene.tokens) if (t.actorId === actor.id && ownFlags(t).corpse) corpses.push(tokenRow(t, isDead));
+    for (const t of scene.tokens) if (t.actorId === actor.id && core.isOurCorpse(t)) corpses.push(tokenRow(t, isDead));
   }
   return toPlain({ actor: refOf(actor), dead: !!isDead(actor), noLoot: !!ownFlags(actor).noLoot, pile: core.pileFlags(actor), corpses });
 }

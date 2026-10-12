@@ -28,7 +28,7 @@
  *     The delta's own map is remembered and put back on revival (null: the base actor's again).
  */
 
-import { MODULE, showEye, eyePlacement, needsRedraw, isActiveGMSelf } from "./dropbin-core.mjs";
+import { MODULE, showEye, eyePlacement, needsRedraw, isActiveGMSelf, isOurCorpse as ourCorpse, hasNoLoot as noLoot } from "./dropbin-core.mjs";
 import { api as itemPilesApi, isValidItemPile, isItemPileEmpty, turnTokensIntoItemPiles, revertTokensFromItemPiles } from "./piles.mjs";
 
 const OBSERVER = CONST.DOCUMENT_OWNERSHIP_LEVELS.OBSERVER;
@@ -39,10 +39,6 @@ const isGMRunner = () => isActiveGMSelf(game.users);
 function tokensOf(actor) {
   if (actor.isToken) return [actor.token].filter(Boolean);
   return actor.getActiveTokens(false, true);
-}
-
-function noLoot(tokenDoc) {
-  return !!(tokenDoc.flags?.[MODULE]?.noLoot || tokenDoc.actor?.flags?.[MODULE]?.noLoot);
 }
 
 function isDead(actor) {
@@ -58,7 +54,6 @@ function eligible(tokenDoc) {
 }
 
 const isPile = isValidItemPile;
-const ourCorpse = t => !!t.flags?.[MODULE]?.corpse;
 
 async function toCorpse(tokenDoc) {
   if (isPile(tokenDoc)) return;
