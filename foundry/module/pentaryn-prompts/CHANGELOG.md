@@ -64,6 +64,9 @@ cssPrefix `pp-`, afterSync). Each **[declared]** change goes to the live check.
   `@Embed` that does not resolve, a hex `getOffset` that throws, and the character build's
   `fromUuid`, spell/item lookup, class spell list, `createWithContents` and `canEnchant`
   fallbacks. What each falls back to is unchanged.
+- **[declared] (R5-note):** an `@Embed` whose lookup throws (a compendium not yet loaded) is no
+  longer remembered as blank for the rest of the page — the next panel render tries it again. A
+  document that really is empty is still cached.
 - Internals: `prompts-core.mjs`; `geometry-core.mjs` split into `core/*.mjs` behind the barrel;
   settings, keybindings and the manifest ring in `settings.mjs`; adapters (markers, scene, sight,
   crops, packs, character, actor-patch, npc, tokens, typeahead); features through the kit's hook

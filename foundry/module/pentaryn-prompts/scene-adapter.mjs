@@ -395,16 +395,20 @@ export function seesCount(tokenDoc) {
 const EMBED_RE = /@Embed\[([^\]\s]+)[^\]]*\](\{[^}]*\})?/g;
 const embedCache = new Map();
 
-/** The HTML an `@Embed[uuid …]` stands for: a journal page's text, an item's or actor's description. */
+/**
+ * The HTML an `@Embed[uuid …]` stands for: a journal page's text, an item's or actor's description.
+ * Only a resolved lookup is cached (a genuine empty included); a throw (a pack not yet loaded) shows
+ * blank this time and is tried again on the next render (R5-note).
+ */
 async function embedHtml(uuid) {
   if (embedCache.has(uuid)) return embedCache.get(uuid);
-  let html = "";
+  let html;
   try {
     const doc = await fromUuid(uuid);
     html = doc?.text?.content ?? doc?.system?.description?.value ?? doc?.system?.details?.biography?.value
       ?? doc?.pages?.contents?.[0]?.text?.content ?? "";
     if (/@Embed\[/.test(html)) html = html.replace(EMBED_RE, "");   // one level only: no recursion loops
-  } catch (err) { log.debug(`@Embed ${uuid} not resolved (shown blank)`, err); html = ""; }
+  } catch (err) { log.debug(`@Embed ${uuid} not resolved (shown blank)`, err); return ""; }
   embedCache.set(uuid, html);
   return html;
 }

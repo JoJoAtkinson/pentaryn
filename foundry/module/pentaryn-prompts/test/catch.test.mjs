@@ -69,6 +69,31 @@ test("R5 (DP9): an @Embed that fails to resolve prints a debug line only with de
   }
 });
 
+test("R5-note: a failed @Embed is not cached as blank — the next render tries again; a genuine empty stays cached", async () => {
+  const prev = globalThis.fromUuid;
+  const calls = { flaky: 0, empty: 0 };
+  globalThis.fromUuid = async uuid => {
+    if (uuid === "Compendium.x.y.JournalEntryPage.flaky") {
+      calls.flaky++;
+      if (calls.flaky === 1) throw new Error("pack not loaded");
+      return { text: { content: "<p>loaded now</p>" } };
+    }
+    if (uuid === "Compendium.x.y.JournalEntryPage.blank") { calls.empty++; return { text: { content: "" } }; }
+    return prev(uuid);
+  };
+  try {
+    assert.equal(await M.resolveEmbeds("@Embed[Compendium.x.y.JournalEntryPage.flaky]"), "");
+    assert.equal(await M.resolveEmbeds("@Embed[Compendium.x.y.JournalEntryPage.flaky]"), "<p>loaded now</p>");
+    assert.equal(await M.resolveEmbeds("@Embed[Compendium.x.y.JournalEntryPage.flaky]"), "<p>loaded now</p>");
+    assert.equal(calls.flaky, 2);
+    assert.equal(await M.resolveEmbeds("@Embed[Compendium.x.y.JournalEntryPage.blank]"), "");
+    assert.equal(await M.resolveEmbeds("@Embed[Compendium.x.y.JournalEntryPage.blank]"), "");
+    assert.equal(calls.empty, 1);
+  } finally {
+    globalThis.fromUuid = prev;
+  }
+});
+
 test("R5 (DP9): a hex grid whose getOffset throws keeps the item's squares and prints a debug line only with debug on", async () => {
   const grid = { distance: 5, size: 100, isHexagonal: true, isGridless: false,
     getOffset() { throw new Error("no offset"); }, offsetToCube: o => ({ q: o.i, r: o.j }) };
