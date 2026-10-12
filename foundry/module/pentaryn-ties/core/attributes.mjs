@@ -55,9 +55,9 @@ export const childrenOf = (id, registry) => asIndex(registry).kids.get(typeof id
  * One attribute and everything beneath it, as a nested tree.
  *
  * `state(id)` is injected so this stays pure: the caller decides what "known", "failed" or
- * "unknown" mean and this only arranges them. Depth is capped because a hand-edited registry can
- * contain a cycle (nothing refuses one — see `ancestorsOf`), and a browser that recurses forever
- * is worse than one that stops.
+ * "unknown" mean and this only arranges them. A cycle (reachable only by hand-editing the setting —
+ * `updateAttribute` refuses one) stops at the repeat via `seen`; the depth cap is a runaway
+ * backstop only (TREE_DEPTH_MAX).
  */
 export function subtreeOf(id, registry, { state = () => null, icon = null, depth = 0, seen = new Set(), index = null } = {}) {
   const key = typeof id === "string" ? id.trim() : "";
