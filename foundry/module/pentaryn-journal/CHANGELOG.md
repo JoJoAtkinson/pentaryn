@@ -57,6 +57,10 @@
   every redraw: `sanitize` is remembered per item as it is per page (`sanitizeMemo`, keyed by the
   item's uuid, `_stats.modifiedTime`, its identified flag and the embed label; an item without a
   modification time is never cached). The `updateItem` refresh rule (`needsItemRefresh`) is unchanged.
+- **[declared] journal-perf-4:** a refresh pass over the open bars looks up the player's journal
+  once and hands its pages to every bar, instead of once per open bar. A window's own render still
+  looks it up itself. The lookup happens on the first bar that needs it, so a pass with no bar to fill
+  does none.
 
 ## Unreleased (blueprint migration, wave 2)
 

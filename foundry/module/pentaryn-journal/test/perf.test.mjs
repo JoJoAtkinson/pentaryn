@@ -176,3 +176,41 @@ test("savedStatus stops at the first saved source", async () => {
     reg.offAll();
   }
 });
+
+test("journal-perf-4: one refresh pass looks up the personal journal once, not once per open bar", async () => {
+  const { hookRegistry } = await import("../lib/hooks.mjs");
+  const { makeLog } = await import("../lib/log.mjs");
+  const bar = await import("../bar.mjs");
+  const log = makeLog("pentaryn-journal");
+  const reg = hookRegistry("pentaryn-journal", log);
+  let lookups = 0;
+  const ctx = { log, reg, exposed: { personal: () => { lookups++; return null; } }, expose(a) { Object.assign(ctx.exposed, a); } };
+  bar.install(reg, ctx);
+  F.become({ userId: P1 });
+  const JES = F.foundry.applications.sheets.journal.JournalEntrySheet;
+  try {
+    const apps = [1, 2, 3].map(i => {
+      const entry = makeDoc("JournalEntry", { id: `readable0000002${i}`, name: `Hall ${i}`, ownership: { default: 2 } });
+      const page = makeDoc("JournalEntryPage", { id: `page00000000002${i}`, name: "P", type: "text", sort: 1,
+        ownership: { default: 2 }, text: { content: `<p>${i}</p>` } }, { parent: entry });
+      Object.defineProperty(entry, "pages", { value: new StubCollection([page]), enumerable: false });
+      const app = Object.setPrototypeOf(fakeApp(entry), JES.prototype);
+      F.foundry.applications.instances.set(`perf4-${i}`, app);
+      return app;
+    });
+    const reads = apps.map(a => a.reads);
+    lookups = 0;
+    ctx.exposed.refreshBars();
+    mock.timers.tick(100);
+    assert.deepEqual(apps.map(a => a.reads), reads.map(r => r + 1), "every open bar is redrawn");
+    assert.equal(lookups, 1, "one personal() per refresh pass");
+    lookups = 0;
+    F.fire("renderJournalEntrySheet", apps[0], null, {}, {});
+    assert.ok(lookups >= 1, "a render hook still looks the journal up itself");
+  } finally {
+    F.foundry.applications.instances.clear();
+    F.become({ userId: GM });
+    bar.uninstall();
+    reg.offAll();
+  }
+});

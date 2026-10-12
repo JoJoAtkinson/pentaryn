@@ -170,7 +170,7 @@ function applyHighlight(app, element, options) {
 
 const busy = new WeakSet();
 
-/** `pages`: the user's journal pages, when the caller already has them (one personal() per action). */
+/** `pages`: the user's journal pages, when the caller already has them (one personal() per action or refresh pass). */
 function savedStatus(target, pages = ctx.exposed.personal()?.pages.contents ?? []) {
   const sources = descriptorsFor(target);
   const st = status(pages, sources);
@@ -238,13 +238,15 @@ async function onBarClick(app, ev) {
  * Put the bar on a window, refresh it, or take it off (no target, or no page this user can see).
  * Idempotent; called on every render.
  * It is a footer on the window ROOT, after .window-content, so part re-renders never touch it.
+ * `userPages`: () → the user's journal pages, looked up once per refreshBarsNow pass (journal-perf-4);
+ * the render hooks leave it out and savedStatus looks them up.
  */
-function decorate(app) {
+function decorate(app, userPages) {
   const root = app?.element;
   if (!(root instanceof HTMLElement)) return;
   let bar = root.querySelector(":scope > .pj-bar");
   const target = targetFor(app);
-  const shown = target && !busy.has(app) ? savedStatus(target) : null;
+  const shown = target && !busy.has(app) ? savedStatus(target, userPages?.()) : null;
   // No page this user can see: a bar there would add nothing, so it is hidden too (journal-EC-3).
   if (!target || shown?.sources.length === 0) {
     barKind.delete(app);
@@ -275,9 +277,11 @@ function openBarKinds() {
 }
 
 function refreshBarsNow() {
+  let pages;   // looked up on the first bar that needs it, then shared by the rest of the pass
+  const userPages = () => (pages ??= ctx.exposed.personal()?.pages.contents ?? []);
   for (const app of foundry.applications.instances.values()) {
     if (!app.rendered) continue;
-    try { decorate(app); } catch (err) { ctx.log.warn("bar refresh skipped", err); }
+    try { decorate(app, userPages); } catch (err) { ctx.log.warn("bar refresh skipped", err); }
   }
 }
 /** Every bar, 100 ms after the last of a burst of changes (created in install: needs foundry). */
