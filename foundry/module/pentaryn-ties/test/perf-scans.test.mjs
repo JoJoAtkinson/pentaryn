@@ -149,3 +149,31 @@ test("ties-28: the GM's kind picker walks the world's actors once", async () => 
   assert.match(html, /ZZ Ghoul/, "the picker lists the kind the others point at");
   assert.equal(scans, 1);
 });
+
+test("perf-2: beliefs() resolves the kind pointer once, however many kind rows the ledger holds", async () => {
+  const Study = await import("../study.mjs");
+  const row = c => ({ text: "A ghoul.", tier: 15, total: 18, when: W + c, delivered: W + c + 1 });
+  /** `game.actors.get` reads reached from `kindActorOf` called by `beliefs`, for a kind ledger of `n` characters' rows. */
+  const kindReads = async n => {
+    const ledger = Object.fromEntries([PC, NPC, NPC3].slice(0, n).map((c, i) => [c, { kind: row(i) }]));
+    await get(KIND).setFlag("pentaryn-ties", "beliefs", ledger);
+    const real = game.actors.get;
+    let reads = 0;
+    let rows = [];
+    game.actors.get = function (...args) {
+      if (calledFrom("kindActorOf", "beliefs")) reads++;
+      return real.apply(this, args);
+    };
+    try {
+      rows = Study.beliefs(get(NPC2));
+    } finally {
+      game.actors.get = real;
+      await get(KIND).unsetFlag("pentaryn-ties", "beliefs");
+    }
+    assert.equal(rows.filter(r => r.ns === "kind").length, n, "every kind row is listed");
+    return reads;
+  };
+  const one = await kindReads(1);
+  assert.ok(one > 0, "the kind pointer is resolved from beliefs()");
+  assert.equal(await kindReads(3), one, "a loop invariant: resolved once, above the ledger loop");
+});
