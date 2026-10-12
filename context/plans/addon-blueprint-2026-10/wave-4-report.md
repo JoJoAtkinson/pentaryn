@@ -87,3 +87,56 @@ resolved by S2 (VERSION). 8.5: the sweep's region writes and the Careful clean-u
    id `pentarynAoeHndl0`. On the existing world the old actor is kept (found by flag).
 6. 8.5: on a scene with several pre-module template regions, `sweep(canvas.scene)` shares them in
    one Region update.
+
+## Open for Joe — riders (migration lane, 2026-10-11)
+
+Migrated offline (guide S2–S9 + the declared fixes); 47.8 % → **89.6 % (43/48)**; the guide's
+Result has the commit list. Defaults apply if Joe says nothing.
+
+| # | Item | Default | Why |
+|---|---|---|---|
+| W4-R1 | Riders' patch rows renamed to the D2 shape (`riders-summon-place-default`, `riders-summon-wildcard-preview`, `riders-argon-tooltip-item-rolldata`, `riders-argon-metamagic-no-picker`) and the two non-patch `riders-` rows to `dnd5e-riders-arcane-recovery-picker` / `argon-riders-long-casts` | **take the renames** (integrator edits below) | D2 was decided after the guide; the attunement precedent dropped the package prefix the same way |
+| W4-R2 | Once-per-casting guard index (guide §4, no finding id) | **not built** | An index needs a chat-message hook (flips the frozen `golden/hooks.json`) or goes stale on delete-plus-create; the scan runs only on attack damage rolls |
+| W4-R3 | C59: `setType`, `retireManual`, `installBattleMedic` write one item / activity at a time | **leave** | One-off GM setup commands; batching moves frozen per-item write pins (W3-SE2 precedent) |
+| W4-R4 | C56: the Battle Medic relay is a hand `CONFIG.queries` assignment (through `guarded`) | **keep until the kit forwards the sender** | Same kit gap as journal (W2-J2) |
+| W4-R5 | D7 for riders (`#tooltip` selectors → `lib/argon-tooltip.css`) | **after combat's argon-kit lands** | combat's 8.6 is in progress on this branch |
+| W4-R6 | Version bump 0.2.0 → 0.3.0 for the CHANGELOG's "Unreleased" | **bump in the Wave 7 batch**, with `riders-core.mjs` `VERSION` in the same commit | `VERSION === module.json` is pinned (constants.test) |
+
+### Integrator: riders shared-file edits (exact)
+
+`foundry/adjustments.yml` (rows today at :145-154, :421-470, :719-739, :796-861):
+- `argon-tooltip-item-rolldata` → id `riders-argon-tooltip-item-rolldata`, `files: [foundry/module/pentaryn-riders/patches.mjs]`, `markers: ["_prItemRollData", "tooltipItems", "_prTooltip"]`.
+- `argon-metamagic-no-picker` → id `riders-argon-metamagic-no-picker`, `files: [foundry/module/pentaryn-riders/patches.mjs, foundry/module/pentaryn-riders/table-core.mjs]`, `markers: ["skipsTargetPicker", "METAMAGIC", "_prTargets"]`.
+- `dnd5e-summon-place-default` → id `riders-summon-place-default`, `files: [foundry/module/pentaryn-riders/patches.mjs, foundry/module/pentaryn-riders/table-core.mjs]` (markers unchanged).
+- `dnd5e-summon-wildcard-preview` → id `riders-summon-wildcard-preview`, `files: [foundry/module/pentaryn-riders/patches.mjs]` (markers unchanged).
+- `riders-argon-ritual-adept-list`: `files: [foundry/module/pentaryn-riders/rituals.mjs, foundry/module/pentaryn-riders/patches.mjs]`.
+- `argon-shared-uses-badge`: `files: [foundry/module/pentaryn-riders/argon.mjs]`.
+- `argon-collapse-on-area-placement`: `files: [foundry/module/pentaryn-riders/argon-tidy.mjs, foundry/module/pentaryn-riders/argon.mjs]`.
+- `riders-arcane-recovery-picker` → id `dnd5e-riders-arcane-recovery-picker`; `riders-argon-long-casts` → id `argon-riders-long-casts` (files, markers unchanged).
+- `dnd5e-chat-message-types`: replace `foundry/module/pentaryn-riders/riders.mjs` in `files` with `damage-riders.mjs`, `card-note.mjs`, `concentration.mjs` (same folder).
+- New (combat-riders-16 riders half; not patches, so package prefixes): `dnd5e-riders-damage-tray-preset` (`tray-preset.mjs`; `getTargetOptions`, `dnd5e.preCalculateDamage`), `dnd5e-riders-roll-term-riders` (`damage-riders.mjs`; `postDamageRollConfiguration`, `resetFormula`), `dnd5e-riders-sheet-hit-dice` (`hd-sheet.mjs`; `meter.hit-dice`, `renderCharacterActorSheet`), `core-riders-query-battle-medic` (`battle-medic.mjs`; `CONFIG.queries`). Each: `modules: [pentaryn-riders]`, `check: make foundry-riders-check`, `retire_class: safe`, what/why/native_when from guide S8.
+- Until these land, `test_the_real_registry_matches_the_code` and `make foundry-adjustments-check` are red for the four riders rows above (plus the aoe/combat lanes' own moves).
+
+Wave 7 restart batch (`wave7-restart-batch.md` riders row; `module.json`):
+`flags.pentaryn = { tier: "full", namespace: "riders", flagScope: "pentaryn-riders", cssPrefix: "pr-", generation: 14 }`;
+`relationships.recommends` enhancedcombathud + enhancedcombathud-dnd5e with the guide S10 reasons;
+`styles: ["styles/riders.css"]` + `git mv riders.css styles/riders.css`; `compatibility.verified: "14.369"`;
+`version: "0.3.0"` together with `riders-core.mjs` `VERSION = "0.3.0"` (W4-R6).
+
+`context/foundry/README.md`: re-run `make foundry-module-index` (riders' row: full tier, its methods);
+replace the "Table-feedback modules" mention of riders with a routing row to the riders README.
+Combat README and `context/foundry/melee.md`: mirror riders' "Which riders module?" table
+(combat-riders-17 step 2).
+
+### Live checks for the gated live phase (riders)
+
+1. Reload; `game.pentaryn.riders.selftest().ok`; `game.modules.get("pentaryn-riders").api === game.pentaryn.riders`;
+   `describe().patches` lists four, six after an Argon item button renders.
+2. Fireball as Marrith: `min2` and `+CHA`, the card note, a fire-resistant target's tray starts ignored.
+3. D-r1: Battle Medic on an unowned target, GM online, heals; no GM → the noGM warning.
+4. -41: Battle Medic from a player with the bridge tab and a GM browser tab open → one heal, one Hit Die;
+   the patient's `flags.pentaryn-riders.relay.<id>.claims` is empty afterwards.
+5. -12: `game.pentaryn.riders.report("Esren")` returns her rows; `report("Nobody")` → `null`.
+6. -23: Summon Beast, drop concentration → the beast goes; Dodge ending removes nothing.
+7. D-r5: Place Summons opens ticked; Animate Dead previews a real skeleton image; Careful Spell has no
+   target picker; Scorching Ray's tooltip says 3 rays; a failed concentration save still ends concentration.
