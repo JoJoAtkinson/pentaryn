@@ -18,7 +18,7 @@
  */
 
 import { MODULE, STANCES, NOTES_MAX, clampStance, clampStrength, stanceOf } from "./ties-core.mjs";
-import { read, inbound, presentActorIds, write, removeTie, stanceLabel } from "./ties-adapter.mjs";
+import { read, inbound, presentActorIds, editTie, removeTie, stanceLabel } from "./ties-adapter.mjs";
 import { authoringHTML, bindAuthoring } from "./authoring-ui.mjs";
 import { esc, bindRowToggle, makeOpenState, notesPreview, notesProse, wordCell } from "./core/html.mjs";
 import { makeLog } from "./lib/log.mjs";
@@ -442,14 +442,9 @@ export function bind(root, actor, rerender = () => {}) {
   root.querySelectorAll(".pt-row:not([data-inbound])").forEach(row => {
     const id = row.dataset.id;
 
-    const saveField = async (field, value) => {
-      const list = read(actor);
-      const entry = list.find(x => x.id === id);
-      if (!entry) return null;
-      entry[field] = value;
-      await write(actor, list);
-      return entry;
-    };
+    // read-modify-write inside the actor's queue, so a quick second edit reads the first one's
+    // result instead of undoing it (ties-ui-ACC-3)
+    const saveField = (field, value) => editTie(actor, id, field, value);
 
     /*
      * Word, stance and notes change what the summary says but not where the row sits, so

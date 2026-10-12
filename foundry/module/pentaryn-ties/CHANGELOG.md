@@ -37,6 +37,10 @@ Fixed (declared): key 5 (or `known.open`) on a **hidden** Known entry opens its 
 showing nothing — that one entry is un-hidden (as its Unhide button would) and the Known tab repaints
 in place, so an already-open sheet shows it too. Other hidden entries stay hidden. ties-ui-E2.
 
+Fixed (declared): two quick edits on one sheet no longer undo each other — a word then a strength pip,
+a field then a Remove, two Known fields in a row. Each actor's ties and Known writes run one at a time,
+reading the list after the previous save landed (`serial` in `ties-adapter.mjs`). ties-ui-ACC-3.
+
 Fixed (declared): the stance chip (the dot plus its word) looks like a chip again, not a filter
 button — the GM's filter and tab buttons (Attributes world filter, Review tabs and filters) are now
 `pt-filter-chip` / `pt-filter-chip-on` / `pt-filter-chip-quiet`, so `.pt-chip` is the stance chip's

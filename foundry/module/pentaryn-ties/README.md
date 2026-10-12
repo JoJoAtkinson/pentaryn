@@ -132,7 +132,8 @@ bridge tab and a browser), and both are the active GM, so the conduit **stakes a
 (`stakeAndConfirm` in `study/claim.mjs`: write a token, wait 250 ms, read it back) and only the winning
 tab rolls. The relay needs no claim: it only fills blanks or removes one row, so a second application changes nothing. The
 stub card and the tempo bubble are posted by the client that made the gesture. World-setting stores
-are GM-written; the registry queues its writes one at a time.
+are GM-written; the registry queues its writes one at a time, and so does each actor's ties and Known
+array (`serial(actorId, fn)` in `ties-adapter.mjs` — read inside `fn`, after the previous write landed).
 
 ## Extending
 
@@ -150,7 +151,8 @@ are GM-written; the registry queues its writes one at a time.
 
 - **An unlinked token's actor is not the actor.** Ties data lives on the world actor (`baseActorOf`);
   writing through `token.actor` lands on the token's delta and is lost to every other token.
-- **Never nest the registry's queued writes** — a queued write that awaits another waits on itself.
+- **Never nest the registry's queued writes**, nor one actor's `serial` writes — a queued write that
+  awaits another on the same queue waits on itself.
 - **`Actor#update` merges.** Deleting a ledger row needs the deletion syntax (`dropRow`); writing the
   object back without the key does nothing.
 - **`Number(null)` is 0.** Nullable numbers go through `numOrNull`; a "rolled 0" is a different lie.

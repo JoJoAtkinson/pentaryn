@@ -8,7 +8,7 @@
 
 import { MODULE } from "./ties-core.mjs";
 import { readFlag } from "./lib/flags.mjs";
-import { baseActorOf } from "./ties-adapter.mjs";
+import { baseActorOf, serial } from "./ties-adapter.mjs";
 import {
   KNOWN_FLAG,
   KNOWN_CATEGORIES_FLAG,
@@ -77,12 +77,18 @@ export function readKnown(actor) {
 /**
  * `render: false` for the same reason ties writes are: a plain setFlag re-renders the sheet,
  * which destroys the injected tab mid-edit. Callers repaint deliberately.
+ *
+ * Every Known write runs in the actor's queue (`serial`, shared with the ties writes —
+ * ties-ui-ACC-3). The helpers below do their READ inside the queue too; a caller that read the list
+ * itself and passes it here only gets the ordering, so prefer a helper.
  */
-export async function writeKnown(actor, list, { render = false } = {}) {
+async function writeKnownNow(actor, list, { render = false } = {}) {
   if (!actor?.isOwner) return false; // the server would refuse it anyway; fail quietly
   await actor.update({ [`flags.${MODULE}.${KNOWN_FLAG}`]: toStoredKnown(list) }, { render });
   return true;
 }
+
+export const writeKnown = (actor, list, opts) => serial(actor?.id, () => writeKnownNow(actor, list, opts));
 
 /**
  * File someone. Returns the entry, or null if it was already there — the caller decides
@@ -94,27 +100,31 @@ export async function writeKnown(actor, list, { render = false } = {}) {
 export async function addKnown(actor, target, { now = Date.now() } = {}) {
   const subject = target instanceof Actor ? target : game.actors?.get(target);
   if (!actor?.isOwner || !subject || subject.id === actor.id) return null;
-  const list = readKnown(actor);
-  if (list.some(e => e.id === subject.id)) return null;
-  const entry = makeKnownEntry({
-    id: subject.id,
-    name: subject.name,
-    actorType: subject.type,
-    creatureType: subject.system?.details?.type?.value ?? null,
-    now
+  return serial(actor.id, async () => {
+    const list = readKnown(actor);
+    if (list.some(e => e.id === subject.id)) return null;
+    const entry = makeKnownEntry({
+      id: subject.id,
+      name: subject.name,
+      actorType: subject.type,
+      creatureType: subject.system?.details?.type?.value ?? null,
+      now
+    });
+    await writeKnownNow(actor, [...list, entry]);
+    return entry;
   });
-  await writeKnown(actor, [...list, entry]);
-  return entry;
 }
 
 /** Change one field on one entry. No-op if the entry is gone. */
 export async function setKnownField(actor, id, field, value) {
   if (!["category", "notes"].includes(field)) return false;
-  const list = readKnown(actor);
-  const entry = list.find(e => e.id === id);
-  if (!entry) return false;
-  entry[field] = value;
-  return writeKnown(actor, list);
+  return serial(actor?.id, () => {
+    const list = readKnown(actor);
+    const entry = list.find(e => e.id === id);
+    if (!entry) return false;
+    entry[field] = value;
+    return writeKnownNow(actor, list);
+  });
 }
 
 /**
@@ -124,9 +134,11 @@ export async function setKnownField(actor, id, field, value) {
  * wrote down stays written down; hiding just gets it out of the way.
  */
 export async function hideKnown(actor, id, hidden = true) {
-  const list = readKnown(actor);
-  if (!list.some(e => e.id === id)) return false;
-  return writeKnown(actor, list.map(e => (e.id === id ? { ...e, hidden: !!hidden } : e)));
+  return serial(actor?.id, () => {
+    const list = readKnown(actor);
+    if (!list.some(e => e.id === id)) return false;
+    return writeKnownNow(actor, list.map(e => (e.id === id ? { ...e, hidden: !!hidden } : e)));
+  });
 }
 
 /**
@@ -136,9 +148,11 @@ export async function hideKnown(actor, id, hidden = true) {
  * player's record cannot be lost and the GM is never asked to recover one.
  */
 export async function removeKnown(actor, id) {
-  const list = readKnown(actor);
-  if (!list.some(e => e.id === id)) return false;
-  return writeKnown(actor, list.filter(e => e.id !== id));
+  return serial(actor?.id, () => {
+    const list = readKnown(actor);
+    if (!list.some(e => e.id === id)) return false;
+    return writeKnownNow(actor, list.filter(e => e.id !== id));
+  });
 }
 
 /** The canvas-side half of `pickNotebook` — the `baseActorOf` walk, then the pure rule. */

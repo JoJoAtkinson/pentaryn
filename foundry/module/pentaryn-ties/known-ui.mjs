@@ -42,7 +42,7 @@ import { studyStateFor, requestStudy, kindDialog, loreStateFor, requestLore, kin
 import { attributeIdsOf, registry as registryOf } from "./attributes.mjs";
 import { esc, bindRowToggle, makeOpenState, notesPreview, notesProse } from "./core/html.mjs";
 import { makeLog } from "./lib/log.mjs";
-import { categoriesFor, categoryLabel, readKnown, writeKnown, addKnown, setKnownField, notebookActor } from "./known-data.mjs";
+import { categoriesFor, categoryLabel, readKnown, hideKnown, addKnown, setKnownField, notebookActor } from "./known-data.mjs";
 
 // the data half moved to known-data.mjs (S12); its public names are still reachable here
 export {
@@ -188,7 +188,7 @@ export async function fileHovered(token = canvas?.tokens?.hover ?? null) {
  */
 export async function openKnownEntry(actor, id) {
   const list = readKnown(actor);
-  const unhid = !!list.find(e => e.id === id)?.hidden && (await writeKnown(actor, list.map(e => (e.id === id ? { ...e, hidden: false } : e))));
+  const unhid = !!list.find(e => e.id === id)?.hidden && (await hideKnown(actor, id, false));
   setExpanded(actor.id, id, true);
   const sheet = actor?.sheet;
   if (!sheet) return false;
@@ -752,10 +752,10 @@ export function bindKnown(root, actor, rerender = () => {}) {
    */
   root.querySelectorAll('[data-action="hide"]').forEach(btn => {
     btn.addEventListener("click", async () => {
-      const list = readKnown(actor);
-      const entry = list.find(e => e.id === btn.dataset.id);
+      const entry = readKnown(actor).find(e => e.id === btn.dataset.id);
       if (!entry) return;
-      await writeKnown(actor, list.map(e => (e.id === entry.id ? { ...e, hidden: !e.hidden } : e)));
+      // the button says Hide or Unhide from this paint; the write reads the list in the actor's queue
+      await hideKnown(actor, entry.id, !entry.hidden);
       setExpanded(actor.id, btn.dataset.id, false);
       rerender();
     });

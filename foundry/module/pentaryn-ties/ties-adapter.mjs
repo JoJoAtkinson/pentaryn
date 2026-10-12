@@ -218,8 +218,48 @@ const toStored = list =>
   }));
 
 /**
+ * **One actor's ties and Known writes run one at a time** (ties-ui-ACC-3). Each edit reads the
+ * actor's whole array, changes one row and writes the whole array back, and the local copy only
+ * changes when the server answers — so two edits inside one round trip (a word then a strength pip,
+ * a field then a Remove) would each read the old array and the second would silently undo the
+ * first. Put the READ inside `fn`: it then runs after the previous write on that actor has landed.
+ * Keyed by actor id, so different actors never wait on each other. ⚠ Never call a serialised
+ * function from inside another on the same actor — it would wait on itself. `fn` runs even if the
+ * previous one threw; its own result or throw is returned.
+ */
+const chains = new Map();
+export function serial(actorId, fn) {
+  const key = actorId ?? "";
+  const run = (chains.get(key) ?? Promise.resolve()).then(fn);
+  const tail = run.catch(() => {});
+  chains.set(key, tail);
+  tail.then(() => {
+    if (chains.get(key) === tail) chains.delete(key);
+  });
+  return run;
+}
+
+/**
+ * Change one field of one edge — read and write inside the actor's queue. Returns the edited
+ * entry, or null when the edge is gone.
+ */
+export function editTie(actor, targetId, field, value) {
+  if (!actor || !targetId) return Promise.resolve(null);
+  return serial(actor.id, async () => {
+    const list = read(actor);
+    const entry = list.find(t => t.id === targetId);
+    if (!entry) return null;
+    entry[field] = value;
+    await write(actor, list);
+    return entry;
+  });
+}
+
+/**
  * `render: false` is load-bearing. A plain setFlag re-renders the actor sheet, which destroys the
  * injected Ties tab mid-edit (focus loss, and the tab deactivates). Callers repaint deliberately.
+ *
+ * Unqueued: a read-modify-write goes through `serial(actor.id, …)` around both halves (see above).
  */
 export async function write(actor, list, { render = false } = {}) {
   if (!actor) return false;
@@ -247,7 +287,7 @@ export async function setTie(actor, targetActor, { word = "", notes, stance = 0,
   if (!actor || !targetActor || actor.id === targetActor.id) return false;
   const { reciprocal = true, reverseWord = word, reverseStance = stance, reverseNotes } = opts;
 
-  const upsert = async (from, to, w, st, nt) => {
+  const upsert = (from, to, w, st, nt) => serial(from?.id, async () => {
     if (!from?.isOwner) return false; // a player's mirror lands on an actor they can't write
     const list = read(from);
     const prev = list.find(t => t.id === to.id);
@@ -261,7 +301,7 @@ export async function setTie(actor, targetActor, { word = "", notes, stance = 0,
       strength
     });
     return write(from, kept);
-  };
+  });
   // Report what actually happened. Returning a flat `true` after silently skipping an
   // unwritable side would tell a caller the edge exists when it doesn't.
   const wrote = await upsert(actor, targetActor, word, stance, notes);
@@ -272,24 +312,21 @@ export async function setTie(actor, targetActor, { word = "", notes, stance = 0,
 /** Set just the notes on an existing edge. No-op if the edge isn't there. */
 export async function setNotes(actor, targetId, notes = "") {
   if (!actor || !targetId) return false;
-  const list = read(actor);
-  const entry = list.find(t => t.id === targetId);
-  if (!entry) return false;
-  entry.notes = clampNotes(notes);
-  await write(actor, list);
-  return true;
+  return !!(await editTie(actor, targetId, "notes", clampNotes(notes)));
 }
 
-/** Remove an edge. `bothWays` also removes the mirror. */
+/** Remove an edge. `bothWays` also removes the mirror. Each side's read happens in its actor's queue. */
 export async function removeTie(actor, targetId, { bothWays = true } = {}) {
   if (!actor || !targetId) return false;
-  const removed = await write(actor, read(actor).filter(t => t.id !== targetId));
+  const removed = await serial(actor.id, () => write(actor, read(actor).filter(t => t.id !== targetId)));
   if (bothWays) {
     const other = game.actors?.get(targetId);
-    const mirror = other?.isOwner ? read(other) : [];
-    // only write if there is actually a mirror to remove — a no-op write still fires an update
-    if (other && mirror.some(t => t.id === actor.id)) {
-      await write(other, mirror.filter(t => t.id !== actor.id));
+    if (other) {
+      await serial(other.id, async () => {
+        const mirror = other.isOwner ? read(other) : [];
+        // only write if there is actually a mirror to remove — a no-op write still fires an update
+        if (mirror.some(t => t.id === actor.id)) await write(other, mirror.filter(t => t.id !== actor.id));
+      });
     }
   }
   return removed;
