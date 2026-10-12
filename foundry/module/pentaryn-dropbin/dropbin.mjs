@@ -17,11 +17,12 @@
  *   itempiles.mjs        FEATURE: attunement repair, container locks, directory filters, in-view rule
  *   lib/*.mjs            vendored kit — never edited here (scripts/foundry/blueprint/vendor.py)
  *
- * Lifecycle: module body → corpses, loot and the shim install; `init` → settings; then the ledger
- * and the Item Piles patches install — synchronously, in this order, so every listener keeps its
- * place against other modules (golden/hooks.json). ready → the ledger arms its capture hooks, then
- * the API is built and published at once on module.api and game.pentaryn.dropbin (D2); the patches
- * arm theirs.
+ * Lifecycle: module body → corpses, loot and the shim install; the `init` listener (settings) is
+ * registered; then the ledger and the Item Piles patches install — all synchronously, in this
+ * order, so every listener keeps its place against other modules (golden/hooks.json). ready, in
+ * registration order: the corpse eye migration; the ledger (capture hooks, then the API is built
+ * and published on module.api and game.pentaryn.dropbin, D2); then the Item Piles patches
+ * (attunement repair, then locks and the GM backfills).
  *
  * Hot patch RE-RUNS THE WIRING ONLY: `game.pentaryn.dropbin.uninstall()`, then
  * `await import("/modules/pentaryn-dropbin/dropbin.mjs?v=2")`. Any edit to another file needs a reload.
