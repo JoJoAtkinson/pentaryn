@@ -47,6 +47,9 @@ cssPrefix `pp-`, afterSync). Each **[declared]** change goes to the live check.
   gone (its row keeps its replacement and WARNs `marker <id> was already gone before the delete`);
   if the delete still throws, each marker is deleted on its own and a refusal fails only that row
   (`markerDeleted=false`, WARN `marker <id> not deleted: …`).
+- **[declared] A keyless keydown no longer throws in the type-ahead** (prompts-core-R4): an event
+  whose `key` is not a string (synthetic or some IME/accessibility events) is swallowed while a
+  note is capturing, exactly as a composing key is, and the typed text is left as it was.
 - `ensureMarkers` repairs every drifted actor in one batch update. A hot re-import after
   `uninstall()` re-wires and republishes at once.
 - Console only (DP9): a core token API that throws warns once; swallowed failures log at debug
