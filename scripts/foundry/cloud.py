@@ -866,6 +866,7 @@ def _backup(st: Storage, reason: str, *, safety: bool = False,
         have = bundles.listing(st, fresh=True)
     except StorageError as exc:
         die(f"cannot list {bundles.BUNDLES}/: {exc}")
+    _sweep_staging(manifest, have)
     if state.digest == digest:
         # Unchanged since the last upload or restore — but "skip" is only safe while that
         # snapshot still exists. Coalescing, pruning or prune-untagged (on either machine)
@@ -1037,6 +1038,38 @@ def _refresh_reused(st: Storage, manifest: dict, have: dict[str, Entry],
 
 class _Incomplete(Exception):
     """A bundle the new snapshot names is gone from the cloud and cannot be rebuilt."""
+
+
+def _sweep_staging(manifest: dict, have: dict[str, Entry]) -> None:
+    """Remove the staged bundle tars an earlier backup left behind (review PL1).
+
+    A backup that failed part-way keeps its staged tars on disk; its rerun stages only
+    what the cloud still lacks, so the tars of the bundles that did land were never
+    removed. Before anything is staged, a staged tar goes when the cloud already holds its
+    bundle (it is reused, never sent again) or when this tree's manifest no longer names
+    it (the folder changed since); what remains is exactly what this run stages again
+    (rebuilt in place) and deletes after its upload. Top-level bundle tars only: a
+    `.building` is a build in progress or a crash (uploadq.sweep_building's job after the
+    merge), and a folder there (per-job staging, after the merge) is not this run's."""
+    d = tmp_dir() / bundles.STAGING
+    try:
+        entries = sorted(d.iterdir())
+    except OSError:
+        return
+    wanted = bundles.manifest_names(manifest)
+    gone = []
+    for p in entries:
+        if (p.is_symlink() or not p.is_file() or bundles.parse_bundle(p.name) is None
+                or (p.name not in have and p.name in wanted)):
+            continue
+        try:
+            p.unlink()
+        except OSError:
+            continue
+        gone.append(p.name)
+    if gone:
+        log(f"removed {len(gone)} bundle tar(s) an earlier backup left in {d} (in the cloud "
+            "already, or no longer this machine's)")
 
 
 def _check_backup_disk(where: Path, world: int, missing: list) -> None:

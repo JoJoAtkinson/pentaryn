@@ -683,3 +683,49 @@ def test_a_bundle_that_vanishes_before_the_sidecar_is_back_before_the_sidecar(tw
     side = next(i for i, r in enumerate(order) if r.endswith(cloud.PARENT_SUFFIX))
     assert order.index(f"bundles/{maps}") < side
     assert maps in _bundle_names(c)
+
+
+# ── PL1: a backup removes the staged tars an earlier failed one left ─────────
+
+def test_pl1_the_staging_sweep_removes_only_tars_this_run_will_not_stage(two_hosts, capsys):
+    from scripts.foundry import bundles
+    mac = _install(two_hosts.data["mac"])
+    with two_hosts.use("mac"):
+        inv = bundles.local_inventory()
+        staging = mac / cloud.TMP_DIRNAME / bundles.STAGING
+        keep = bundles.build(inv["module/maps"], staging).name      # the cloud lacks it
+        landed = bundles.build(inv["module/tools"], staging).name   # the cloud has it
+        stale = bundles.bundle_name("module", "tools", "1.0", "0" * 16)
+        (staging / stale).write_bytes(b"an older tools")            # the folder changed since
+        (staging / f"{keep}.building").write_bytes(b"a build in progress")
+        (staging / "notes.txt").write_text("not a bundle\n")
+        (staging / "job-1").mkdir()
+        (staging / "job-1" / landed).write_bytes(b"a queued job's own staging")
+        capsys.readouterr()
+        cloud._sweep_staging(bundles.manifest(inv),
+                             {landed: storage.Entry(landed, 1, time.time())})
+    left = sorted(p.relative_to(staging).as_posix() for p in staging.rglob("*") if p.is_file())
+    assert left == sorted([keep, f"{keep}.building", "notes.txt", f"job-1/{landed}"])
+    assert "removed 2 bundle tar(s)" in capsys.readouterr().out
+
+
+def test_pl1_a_rerun_after_the_folder_changed_leaves_no_staged_tar(two_hosts, monkeypatch):
+    from scripts.foundry import bundles
+    mac = _install(two_hosts.data["mac"])
+    real = storage.FolderStorage.upload
+    fail = [True]
+
+    def flaky(self, src, rel):
+        if fail[0]:
+            fail[0] = False
+            raise storage.StorageError("upload failed: connection reset", verb="copyto")
+        return real(self, src, rel)
+    monkeypatch.setattr(storage.FolderStorage, "upload", flaky)
+    with two_hosts.use("mac"), pytest.raises(SystemExit):
+        cloud.backup("shutdown")                   # nothing landed; both bundles staged
+    staging = mac / cloud.TMP_DIRNAME / bundles.STAGING
+    assert any(p.name.startswith("module@tools@") for p in staging.iterdir())
+    (mac / "Data/modules/tools/scripts/main.js").write_text("// changed since\n")
+    with two_hosts.use("mac"):
+        assert cloud.backup("shutdown") == 0       # old tools tar: no longer this tree's
+    assert list(staging.iterdir()) == []

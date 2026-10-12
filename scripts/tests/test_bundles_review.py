@@ -56,10 +56,10 @@ def _bundle_names(cloud_dir):
 
 # ── PL1: staged bundle tars from a failed upload are never cleaned up ─────────
 
-@pytest.mark.xfail(strict=True, reason="PL1: a rerun stages only what the cloud still lacks, "
-                   "so the tars staged by a failed run for bundles that did land stay in "
-                   ".pentaryn-tmp/bundles/ forever")
 def test_PL1_a_successful_rerun_leaves_no_staged_bundle_tars(two_hosts, monkeypatch):
+    """PL1 (fixed): a rerun stages only what the cloud still lacks, so the tars a failed run
+    staged for bundles that did land stayed in .pentaryn-tmp/bundles/ forever. The backup
+    now removes them before it stages (cloud._sweep_staging)."""
     mac = _install(two_hosts.data["mac"])
     real = storage.FolderStorage.upload
     fail = [True]
