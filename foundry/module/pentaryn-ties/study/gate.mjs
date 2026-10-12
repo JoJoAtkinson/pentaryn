@@ -247,7 +247,7 @@ export async function reset(character, subject, loreId = null, attrId = null) {
 
   await putBelief(fact, character.id, null);
   if (studiedOf(character)[fact.axis][fact.lockKey]) {
-    await character.update({ [`flags.${MODULE}.${STUDIED_FLAG}.${fact.axis}.-=${fact.lockKey}`]: null });
+    await character.update({ [`flags.${MODULE}.${STUDIED_FLAG}.${fact.axis}.${fact.lockKey}`]: _del });
   }
   /*
    * Nothing already in their notebook is removed — not their notes, and not the grant.

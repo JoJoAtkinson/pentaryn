@@ -110,8 +110,11 @@ const skillLabel = s => CONFIG.DND5E?.skills?.[s]?.label ?? s;
 
 const PROF = { none: 0, prof: 1, expert: 2 };
 
-/** Subject/kind actor changes that touch ONLY the ledger — patch the switches, no re-render. */
-const LEDGER_ONLY = new RegExp(`^(_id$|_stats\\.|flags\\.${MODULE.replace(/[-.]/g, "\\$&")}\\.(-=)?beliefs(\\.|$))`);
+/**
+ * Subject/kind actor changes that touch ONLY the ledger — patch the switches, no re-render. A row
+ * deletion is a `_del` value on a beliefs path, so its flattened key is the path itself (ES-6).
+ */
+export const LEDGER_ONLY = new RegExp(`^(_id$|_stats\\.|flags\\.${MODULE.replace(/[-.]/g, "\\$&")}\\.beliefs(\\.|$))`);
 
 export class InspectPreview extends ApplicationV2 {
   static DEFAULT_OPTIONS = {

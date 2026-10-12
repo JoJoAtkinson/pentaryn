@@ -143,7 +143,7 @@ test("Look window: _replaceHTML paints once per change; live refresh on the char
   await settle(Promise.resolve());
   const noVisibleChange = F.calls.slice(mark).filter(c => c.op === "app.render").length;
   const m2 = F.calls.length;
-  await get(PC).update({ [`flags.pentaryn-ties.granted.-=lore:${NPC}:l1`]: null });
+  await get(PC).update({ [`flags.pentaryn-ties.granted.lore:${NPC}:l1`]: _del });
   mock.timers.tick(200);
   await settle(Promise.resolve());
   const changed = F.calls.slice(m2).filter(c => c.op === "app.render").length;

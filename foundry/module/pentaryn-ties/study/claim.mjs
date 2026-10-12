@@ -117,14 +117,14 @@ async function claimRoll(ledger, characterId, now, key = KIND_KEY) {
  * on a roll the handler would still refuse. That is worse than not resetting at all, because
  * the refusal is a message a plain failure never produces.
  *
- * Foundry's deletion syntax is the `-=` prefix on the key being removed, and it is the only
- * thing that works here. `{recursive: false}` is NOT the fix and is actively dangerous: applied
+ * Delete the key with core's `_del` value (`{ [path]: _del }`, a `ForcedDeletion`); the `-=key`
+ * prefix did the same job but is deprecated in v14 (ES-6). `{recursive: false}` is NOT the fix and is actively dangerous: applied
  * to `{"flags.pentaryn-ties.beliefs": {…}}` it replaces the whole **`flags`** object and takes
  * `ties`, `known` and `worn` with it.
  */
 export function dropRow(base, ownerId, key, owned) {
   const rest = Object.keys(owned ?? {}).filter(k => k !== key);
-  return rest.length ? { [`${base}.${ownerId}.-=${key}`]: null } : { [`${base}.-=${ownerId}`]: null };
+  return rest.length ? { [`${base}.${ownerId}.${key}`]: _del } : { [`${base}.${ownerId}`]: _del };
 }
 
 /** Un-stake it — only ever called by the client that won, and only when no roll happened. */

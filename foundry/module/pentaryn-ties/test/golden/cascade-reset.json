@@ -13,7 +13,7 @@
           "documentName": "Actor",
           "uuid": "Actor.zzNpc00000000001",
           "changes": {
-            "flags.pentaryn-ties.beliefs.zzPc000000000002.-=attr:city:#id": null
+            "flags.pentaryn-ties.beliefs.zzPc000000000002.attr:city:#id": "<_del>"
           }
         },
         {
@@ -29,7 +29,7 @@
           "documentName": "Actor",
           "uuid": "Actor.zzPc000000000002",
           "changes": {
-            "flags.pentaryn-ties.granted.-=lore:zzNpc00000000001:#idmiss-city": null
+            "flags.pentaryn-ties.granted.lore:zzNpc00000000001:#idmiss-city": "<_del>"
           }
         },
         {
@@ -63,7 +63,7 @@
           "documentName": "Actor",
           "uuid": "Actor.zzNpc00000000001",
           "changes": {
-            "flags.pentaryn-ties.beliefs.zzPc000000000001.-=attr:kin:#id": null
+            "flags.pentaryn-ties.beliefs.zzPc000000000001.attr:kin:#id": "<_del>"
           }
         },
         {
@@ -84,7 +84,7 @@
           "documentName": "Actor",
           "uuid": "Actor.zzNpc00000000001",
           "changes": {
-            "flags.pentaryn-ties.beliefs.zzPc000000000001.-=attr:city:#id": null
+            "flags.pentaryn-ties.beliefs.zzPc000000000001.attr:city:#id": "<_del>"
           }
         },
         {
@@ -105,7 +105,7 @@
           "documentName": "Actor",
           "uuid": "Actor.zzNpc00000000001",
           "changes": {
-            "flags.pentaryn-ties.beliefs.zzPc000000000001.-=attr:guild:#id": null
+            "flags.pentaryn-ties.beliefs.zzPc000000000001.attr:guild:#id": "<_del>"
           }
         },
         {
@@ -126,7 +126,7 @@
           "documentName": "Actor",
           "uuid": "Actor.zzNpc00000000001",
           "changes": {
-            "flags.pentaryn-ties.beliefs.zzPc000000000001.-=attr:cult:#id": null
+            "flags.pentaryn-ties.beliefs.zzPc000000000001.attr:cult:#id": "<_del>"
           }
         },
         {
@@ -147,7 +147,7 @@
           "documentName": "Actor",
           "uuid": "Actor.zzNpc00000000001",
           "changes": {
-            "flags.pentaryn-ties.beliefs.-=zzPc000000000001": null
+            "flags.pentaryn-ties.beliefs.zzPc000000000001": "<_del>"
           }
         },
         {

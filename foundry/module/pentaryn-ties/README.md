@@ -155,7 +155,7 @@ are GM-written; the registry queues its writes one at a time.
 - **An unlinked token's actor is not the actor.** Ties data lives on the world actor (`baseActorOf`);
   writing through `token.actor` lands on the token's delta and is lost to every other token.
 - **Never nest the registry's queued writes** — a queued write that awaits another waits on itself.
-- **`Actor#update` merges.** Deleting a ledger row needs the deletion syntax (`dropRow`); writing the
+- **`Actor#update` merges.** Deleting a ledger row needs core's `_del` value (`dropRow`), never the v14-deprecated `-=key`; writing the
   object back without the key does nothing.
 - **`Number(null)` is 0.** Nullable numbers go through `numOrNull`; a "rolled 0" is a different lie.
 - **`isVisible`, never `visible`.** On v14 `Token#visible` is true for walled-off and hidden tokens.

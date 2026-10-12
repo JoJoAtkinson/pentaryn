@@ -326,7 +326,7 @@ export async function forgetFact(spec, character) {
   const prior = st.belief?.prior ?? null;
   const dropGrant = async () => {
     if (readGranted(readFlag(character, MODULE, GRANTED_FLAG))[st.key])
-      await character.update({ [`flags.${MODULE}.${GRANTED_FLAG}.-=${st.key}`]: null });
+      await character.update({ [`flags.${MODULE}.${GRANTED_FLAG}.${st.key}`]: _del });
   };
 
   if (spec.ns === "ident") {

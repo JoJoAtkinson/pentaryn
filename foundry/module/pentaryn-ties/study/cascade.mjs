@@ -599,7 +599,7 @@ export async function resetIdentification(character, subject, attrId) {
   // a do-over takes back the failure line that roll handed them, if it handed one (2026-10-08)
   const missKey = identMissKey(subject.id, attrId);
   if (readGranted(readFlag(character, MODULE, GRANTED_FLAG))[missKey])
-    await character.update({ [`flags.${MODULE}.${GRANTED_FLAG}.-=${missKey}`]: null });
+    await character.update({ [`flags.${MODULE}.${GRANTED_FLAG}.${missKey}`]: _del });
 
   ui.notifications.info(
     _loc("PENTARYN_TIES.known.inspect.resetDone", { character: character.name, subject: subject.name, attr: describeAttribute(attrId).title })
