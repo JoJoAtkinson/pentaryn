@@ -88,3 +88,25 @@ test("ties-19: the clamped registry is memoised on the setting's value; callers 
     game.settings.get = get;
   }
 });
+
+test("ties-22: one Ties-tab paint (build, then bind) scans the world's actors for inbound ties once", async () => {
+  const { buildHTML, bind } = await import("../editor.mjs");
+  const { el } = await import("./fixtures/dom.mjs");
+  const actor = game.actors.get("zzNpc00000000001");
+  const coll = game.actors;
+  const desc = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(coll), "contents") ?? Object.getOwnPropertyDescriptor(coll, "contents");
+  let scans = 0;
+  const real = () => (desc.get ? desc.get.call(coll) : desc.value);
+  Object.defineProperty(coll, "contents", { get: () => (scans++, real()), configurable: true });
+  try {
+    const html = buildHTML(actor);
+    const root = el("div");
+    root.innerHTML = html;
+    const before = scans;
+    bind(root.firstElementChild ?? root, actor, () => {});
+    assert.equal(scans - before, 0, "bind reuses the build's inbound rows");
+    assert.ok(before >= 1);
+  } finally {
+    delete coll.contents;
+  }
+});

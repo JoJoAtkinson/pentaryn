@@ -55,6 +55,9 @@ export function artFor(tie) {
  * row you were editing. Purely cosmetic state; nothing is lost if it resets.
  */
 const expanded = new Map(); // actorId -> Set(tieId)
+
+/** The inbound rows the last buildHTML read for an actor, for the bind that follows it (ties-22). */
+const lastInbound = new WeakMap();
 const expandedFor = actorId => expanded.get(actorId) ?? new Set();
 function setExpanded(actorId, tieId, open) {
   const set = expanded.get(actorId) ?? new Set();
@@ -327,6 +330,7 @@ export function buildHTML(actor) {
    * that already names them; only the asymmetries get a section of their own.
    */
   const inb = inbound(actor);
+  lastInbound.set(actor, inb); // bind reads this rather than scanning every actor again (ties-22)
   const replies = new Map(inb.filter(r => r.mutual).map(r => [r.id, r]));
   const orphans = inb.filter(r => !r.mutual);
 
@@ -409,7 +413,10 @@ export function bind(root, actor, rerender = () => {}) {
   // the GM authoring section — a no-op for a player, gated inside rather than here
   bindAuthoring(root, actor, rerender);
   const canEdit = actor.isOwner === true;
-  const replies = new Map(inbound(actor).filter(r => r.mutual).map(r => [r.id, r]));
+  // the build that ran just before this bind already scanned every actor for this (ties-22)
+  const inb = lastInbound.get(actor) ?? inbound(actor);
+  lastInbound.delete(actor);
+  const replies = new Map(inb.filter(r => r.mutual).map(r => [r.id, r]));
 
   /* ── expand / collapse: the whole summary, by mouse or keyboard ──────── */
 
