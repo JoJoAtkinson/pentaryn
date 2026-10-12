@@ -339,6 +339,19 @@ test("transform-creatures-38: api.sync resolves an id, uuid or exact name; a mis
   assert.deepEqual(effects(F.calls), []);
 });
 
+// Characterisation (README sync row): a ref that is not an actor, token, placeable or string is
+// refused at the API boundary by the kit's resolveRef with fail("BAD_ARGS"), writing nothing.
+test("api.sync given a ref of the wrong kind returns fail(\"BAD_ARGS\") and writes nothing", async () => {
+  for (const ref of [42, {}, { documentName: "Item", id: "x" }]) {
+    reset(F);
+    const r = await api.sync(ref, "Bob", "Rob");
+    assert.equal(r.ok, false, JSON.stringify(ref));
+    assert.equal(r.code, "BAD_ARGS", JSON.stringify(ref));
+    assert.equal(typeof r.reason, "string", JSON.stringify(ref));
+    assert.deepEqual(effects(F.calls), [], JSON.stringify(ref));
+  }
+});
+
 // [declared] guide step 4 (N-D1, transform-creatures-33): a failed relabel write after a rename is
 // caught and logged — no unhandled rejection, one console.warn "pentaryn-names | relabel after
 // rename failed", still no toast. Counted in a subprocess (node:test fails any test that leaks a
