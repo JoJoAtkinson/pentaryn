@@ -177,3 +177,22 @@ test("K8: describe() lists a row's queryName and relay flag", () => {
   assert.equal(d.methods.find(m => m.path === "ensure").relay, true);
   assert.equal("queryName" in d.methods.find(m => m.path === "inspect"), false);
 });
+
+test("kit 1.1.0 (W2-B3): describe() lists a row's dryRun flag only when set", () => {
+  const M = { ...MANIFEST, rows: [...MANIFEST.rows,
+    { path: "bulk", params: [{ name: "opts", optional: true }], returns: "ok|fail", gm: true, writes: true, dryRun: true, doc: "" }] };
+  const d = describe(M);
+  assert.equal(d.methods.find(m => m.path === "bulk").dryRun, true);
+  assert.equal("dryRun" in d.methods.find(m => m.path === "inspect"), false);
+});
+
+test("kit 1.1.0 (W2-B4): a first ref with resolve:\"self\" reaches the function raw, and describe() keeps the marker", () => {
+  let seen;
+  const M = { ...MANIFEST, rows: [
+    { path: "sync", params: [{ name: "ref", kind: "actor", resolve: "self" }, { name: "name", type: "string" }],
+      returns: "number", gm: false, writes: true, doc: "resolves its own ref" }] };
+  const api = buildApi(M, { sync: (ref, name) => { seen = ref; return name; } });
+  assert.equal(api.sync("Some Name", "x"), "x");
+  assert.equal(seen, "Some Name", "the kit did not resolve it");
+  assert.equal(describe(M).methods[0].params[0].resolve, "self");
+});

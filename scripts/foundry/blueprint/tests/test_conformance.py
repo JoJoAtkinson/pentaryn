@@ -654,6 +654,8 @@ C62_CASES = [
     ({"name": "doc", "type": "JournalEntry", "resolve": False}, "pass"),                           # no kind: out of scope
     ({"name": "query", "type": "string"}, "pass"),
     ({"name": "x", "kind": "identifier", "resolve": False}, "pass"),                               # not a Document kind
+    ({"name": "ref", "kind": "actor", "resolve": "self"}, "pass"),                                # kit 1.1.0: names.sync (W2-B4)
+    ({"name": "owner", "kind": "actor", "type": "Actor", "resolve": "self"}, "pass"),              # the function resolves strings
 ]
 
 

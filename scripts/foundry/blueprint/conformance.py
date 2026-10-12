@@ -1750,7 +1750,9 @@ def c61(m):
 # C62 mirrors the bridge's needsDoc (foundry-vtt-mcp packages/mcp-server/src/fork/tools/
 # pentaryn-call.ts): a param with one of these kinds, or named `ref`, that the kit does not resolve
 # (only a FIRST `ref` without resolve:false is) is refused over pentaryn-read/-write unless its
-# `type` names a string form. Scope: a Document `kind` or a `ref` (a bare `type: "Actor"` with no
+# `type` names a string form. Kit 1.1.0's `resolve: "self"` marker (W2-B4) passes anywhere: the
+# function resolves a uuid/id/exact name itself. The bridge honours it on a first `ref` today (its
+# test is `resolve !== false`); a non-first param carrying it is a recorded fork follow-up. Scope: a Document `kind` or a `ref` (a bare `type: "Actor"` with no
 # kind is a live-Document param by design and is left alone).
 DOC_KINDS = ("actor", "token", "item", "scene", "user", "journal", "message", "macro", "region",
              "combat", "table", "folder", "playlist")
@@ -1759,7 +1761,7 @@ EVAL_JS_ONLY = re.compile(r"eval-js[ -]only", re.I)
 
 
 @rule("C62", "fail", "a Document param the kit does not resolve names its string forms in `type` "
-                     "(uuid/id/name) or says eval-js only")
+                     "(uuid/id/name), carries resolve:\"self\", or says eval-js only")
 def c62(m):
     path = m.dir / "test/golden/describe.json"
     if not path.exists():
@@ -1776,6 +1778,8 @@ def c62(m):
             if is_ref and i == 0 and p.get("resolve") is not False:
                 continue                                     # the kit resolves it per call
             if not (is_ref or p.get("kind") in DOC_KINDS):
+                continue
+            if p.get("resolve") == "self":                   # kit 1.1.0 (W2-B4): the function resolves strings
                 continue
             type_text = p.get("type") if isinstance(p.get("type"), str) else ""
             if any(w in STRING_FORMS for w in re.split(r"[^a-z0-9_]+", type_text.lower())):

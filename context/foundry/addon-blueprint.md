@@ -295,13 +295,14 @@ The manifest (`api-manifest.mjs`) is pure data. **Manifest-level fields:**
 | Field | Type | Meaning |
 |---|---|---|
 | `path` | string | dotted path under the namespace (`"store.list"`); no reserved name at any depth (§5.1) |
-| `params` | `{name, kind?, type?, optional?, resolve?, doc?}[]` | a first param named `ref` is resolved per call (`kind`: `actor` default, `token`, `user`, …; `resolve: false` opts out). A param with a Document `kind`, or a `ref`, that the kit does **not** resolve must name its string forms in `type` (`"Actor\|uuid\|id\|exact name"`) when the function resolves strings itself, or say `eval-js only` in its (or the row's) `doc`: the bridge refuses it over `pentaryn-read`/`-write` otherwise (C62) |
+| `params` | `{name, kind?, type?, optional?, resolve?, doc?}[]` | a first param named `ref` is resolved per call (`kind`: `actor` default, `token`, `user`, …; `resolve: false` opts out). A param with a Document `kind`, or a `ref`, that the kit does **not** resolve must say how a string reaches it: `resolve: "self"` (kit 1.1.0) when the function resolves a uuid, id or exact name itself, or its string forms in `type` (`"Actor\|uuid\|id\|exact name"`), or `eval-js only` in its (or the row's) `doc`: the bridge refuses it over `pentaryn-read`/`-write` otherwise (C62) |
 | `returns` | string | the shape, in words or TS-ish (`"{ ok, checks }"`) |
 | `gm` | boolean | GM-only |
 | `writes` | boolean | changes world data → returns `ok()/fail()`, accepts `dryRun` when bulk; the fork routes it to `pentaryn-write` (D14) |
 | `query` | boolean | also registered as `CONFIG.queries["<id>.<queryName ?? path>"]` |
 | `queryName` | string | the query name when it differs from `path` (kit 1.0.1, K8) |
 | `relay` | boolean | register through `relayed` (any sender, active-GM receiver) instead of `guarded` (kit 1.0.1, K4) |
+| `dryRun` | boolean | the row takes a dry run (`opts.dryRun`); the bridge's `pentaryn-write` forwards its `dryRun` only to such a row (kit 1.1.0, W2-B3) |
 | `wire` | `data => data` | fills query-payload defaults before the call (prompts' `cropsAs: "base64"`) |
 | `sideEffects` | string[] | flag paths / documents written |
 | `nullWhen` | string | when a legacy read returns null instead of throwing |
@@ -314,7 +315,7 @@ The manifest (`api-manifest.mjs`) is pure data. **Manifest-level fields:**
 **`describe()` keys** (both tiers; a small module has the same keys with empty lists):
 `module, namespace, version, contract, flagScope, kit, published, methods, queries, settings,
 events, hooks, patches, flags {writes, reads}, errors`. `methods[]` carries `path, params, returns,
-gm, writes, query, sideEffects, doc` plus `queryName, relay, nullWhen, throws, legacy, since` when
+gm, writes, query, sideEffects, doc` plus `queryName, relay, dryRun, nullWhen, throws, legacy, since` when
 set. The goldens normalise away `version`, `kit`, `published` and patch routes.
 
 **`inspect(ref, { as })`** — read-only, plain JSON, depth ≤ 4. With no `as` it answers as the
@@ -932,7 +933,7 @@ both Warnings and Manual.
 | C59 | warn+manual | `await <doc>.update/create/delete/setFlag/unsetFlag(` inside a loop body (batch it) |
 | C60 | warn | no `async` listener or `await` in a hot-hook handler unless it defers via `perFrame`/`debounce`/`coalesce` |
 | C61 | warn+manual | a writing `create*/update*/delete*` listener has an active-GM gate, the initiator gate (`userId !== game.user.id`) or a claim (an any-GM gate alone → manual). The active-GM and initiator gates pick one *user*, not one tab: every tab of that user passes, so where two tabs on one account matter the review checks for a claim (§5.9.4); the write and the gate are looked for in the listener and the functions it calls by name, in its file or the module files it imports |
-| C62 | fail | a manifest param with a Document `kind` (`actor token item scene user journal message macro region combat table folder playlist`), or a `ref`, that the kit does not resolve (`resolve: false`, or not the first param) names a string form in `type` (`uuid`, `id`, `name`, `string`), or its `doc` or the row's says `eval-js only`. Read from `test/golden/describe.json` (n/a without one). Mirrors the bridge's `needsDoc` (`pentaryn-call.ts`): without it the row is refused live as "eval-js only" (senses.inspect, W3L) |
+| C62 | fail | a manifest param with a Document `kind` (`actor token item scene user journal message macro region combat table folder playlist`), or a `ref`, that the kit does not resolve (`resolve: false`, or not the first param) names a string form in `type` (`uuid`, `id`, `name`, `string`), carries `resolve: "self"` (kit 1.1.0), or its `doc` or the row's says `eval-js only`. Read from `test/golden/describe.json` (n/a without one). Mirrors the bridge's `needsDoc` (`pentaryn-call.ts`): without it the row is refused live as "eval-js only" (senses.inspect, W3L) |
 
 ## 12. Wiring status
 
