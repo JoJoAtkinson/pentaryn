@@ -1395,6 +1395,41 @@ def test_killed_after_a_finished_run_does_nothing(state_dir, monkeypatch):
     assert state_dir.read_status()["outcome"] == "done" and sent == []
 
 
+def test_recover_service_leaves_a_live_run_alone(state_dir, monkeypatch, capsys):
+    """AC-1: the watchdog calls recover-service after 20 min of status silence, but a
+    long phase with no heartbeat is not a dead run. While the lock owner's pid is alive,
+    recover-service must not touch the entry state (world + tunnel stay where the run
+    put them); the wrapper's backstop (`cli killed`) is the path for a hung run."""
+    from scripts.foundry.update import apply, cli
+    state_dir.EntryState(foundry_up=True, tunnel_up=True, active_world="w").write()
+    state_dir.LOCK_DIR.mkdir()
+    (state_dir.LOCK_DIR / "owner.json").write_text(json.dumps({"pid": os.getpid()}))
+    restored = []
+    monkeypatch.setattr(apply, "restore_service", lambda e, m: restored.append(e))
+    assert cli.main(["recover-service"]) == 0
+    assert restored == [] and state_dir.ENTRY_PATH.exists() and state_dir.LOCK_DIR.is_dir()
+    assert f"run {os.getpid()} still alive — not restoring service" in capsys.readouterr().out
+
+
+def test_recover_service_restores_after_a_dead_run(state_dir, monkeypatch):
+    from scripts.foundry.update import apply, cli
+    state_dir.EntryState(foundry_up=True, tunnel_up=True, active_world="w").write()
+    state_dir.LOCK_DIR.mkdir()
+    (state_dir.LOCK_DIR / "owner.json").write_text(json.dumps({"pid": _dead_pid()}))
+    restored = []
+    monkeypatch.setattr(apply, "restore_service", lambda e, m: restored.append(e))
+    assert cli.main(["recover-service"]) == 0
+    assert restored and not state_dir.LOCK_DIR.exists()
+
+
+@pytest.mark.repo
+def test_watchdog_does_not_claim_a_restore_for_a_live_run():
+    """AC-1: when recover-service declines (the run is still alive), the watchdog must
+    not send "Service has been restored"."""
+    text = (Path(esc.REPO_ROOT) / "automation/bin/vtt-update-watchdog.sh").read_text()
+    assert "still alive" in text
+
+
 @pytest.mark.repo
 def test_watchdog_stays_quiet_after_a_wrapper_kill():
     text = (Path(esc.REPO_ROOT) / "automation/bin/vtt-update-watchdog.sh").read_text()

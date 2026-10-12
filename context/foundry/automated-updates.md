@@ -402,7 +402,11 @@ the 06:12 watchdog with nothing left to notice it. And whoever kills the run now
 up after it: on a 143/137 exit the wrapper runs `cli killed`, which marks the status
 `failed`/`killed`, restores service from the entry state, removes the lock if its owner is
 dead (`make vtt-up` refuses while it exists) and notifies. The watchdog stays quiet about
-a `killed` run; its own dead-run path now also removes a dead owner's lock.
+a `killed` run; its own dead-run path now also removes a dead owner's lock. And it only
+*suspects* death (20 min of status silence), so `recover-service` checks first: while the
+lock owner's pid is alive it prints `run <pid> still alive — not restoring service`, leaves
+world, tunnel and entry state alone, and the watchdog sends "update run is slow" instead of
+"died". A hung-but-alive run is the backstop's to clean up (`cli killed`).
 
 **Adjustments registry.** `foundry/adjustments.yml`: `packages`, `modules`, `files`,
 `markers` (strings that must still be in the files), `what`, `why`, `native_when`,

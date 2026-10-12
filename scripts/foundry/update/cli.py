@@ -223,9 +223,21 @@ def cmd_admin_configure(args) -> int:
 
 
 def cmd_recover_service(args) -> int:
-    """Put world + tunnel back after a run that died. What the watchdog calls."""
+    """Put world + tunnel back after a run that died. What the watchdog calls.
+
+    The watchdog's only evidence of death is 20 minutes of status silence, and a long
+    phase can be silent that long while alive. So a live lock owner wins: nothing is
+    touched, and a hung-but-alive run is the wrapper's backstop's job (``cli killed``)."""
     from scripts.foundry.update import apply as apply_mod, state
 
+    pid = state.Lock(state.LOCK_DIR).owner().get("pid")
+    try:
+        alive = pid is not None and state._pid_alive(int(pid))
+    except (TypeError, ValueError):
+        alive = False
+    if alive:
+        print(f"  run {pid} still alive — not restoring service")
+        return 0
     entry = state.EntryState.read()
     messages: list[str] = []
     if state.release_if_owner_dead():
