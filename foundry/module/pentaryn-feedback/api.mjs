@@ -53,7 +53,7 @@ function actorOfString(ref) {
 /** Summaries of the reports these users filed, oldest first, the last 20; null when unreadable. */
 async function reportsBy(userIds) {
   try {
-    return (await readAll()).map(x => x.report)
+    return (await readAll())
       .filter(r => userIds.has(r?.user?.id))
       .sort((a, b) => (a.t ?? 0) - (b.t ?? 0))
       .slice(-20)
@@ -110,7 +110,7 @@ async function readAll() {
   const out = [];
   for (const path of await store().list(worldDir(game.world.id))) {
     const r = await store().get(path);
-    if (r && typeof r === "object") out.push({ path, report: r });
+    if (r && typeof r === "object") out.push(r);
   }
   return out;
 }
@@ -132,7 +132,7 @@ async function find(id) {
 async function list({ status = "open", limit = 50 } = {}) {
   if (!isGM()) throw codedError("NOT_GM", "only a GM lists reports");
   if (status !== "all" && !STATUSES.includes(status)) throw codedError("BAD_ARGS", `status ${status}`);
-  const rows = (await readAll()).map(x => x.report)
+  const rows = (await readAll())
     .filter(r => status === "all" || r.status === status)
     .sort((a, b) => (a.t ?? 0) - (b.t ?? 0));
   const n = Number.isFinite(limit) && limit > 0 ? Math.floor(limit) : 50;
