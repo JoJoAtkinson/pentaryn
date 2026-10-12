@@ -53,3 +53,15 @@ test("each core file imports bare, with no Foundry global, in a fresh process", 
     assert.equal(r.status, 0, `${f}: ${r.stderr}`);
   }
 });
+
+test("graph-allow.json: every allowed edge is a live import (a stale allowance is removed, not kept)", () => {
+  const allow = JSON.parse(readFileSync(new URL("./graph-allow.json", import.meta.url), "utf8")).allow;
+  const stale = allow.filter(e => !(graph[e.from] ?? []).includes(e.to)).map(e => `${e.from} → ${e.to}`);
+  assert.deepEqual(stale, []);
+  assert.ok(allow.every(e => typeof e.why === "string" && e.why.length > 20), "every allowance says why");
+});
+
+test("nothing imports the entry", () => {
+  const into = Object.entries(graph).filter(([, deps]) => deps.includes("pentaryn-ties.mjs")).map(([f]) => f);
+  assert.deepEqual(into, []);
+});

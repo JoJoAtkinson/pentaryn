@@ -1,0 +1,155 @@
+{
+  "doc": "Import edges allowed despite the direction table (use-doc §2, context/foundry/addon-blueprint.md). Each entry: {\"from\": \"a.mjs\", \"to\": \"b.mjs\", \"why\": \"…\"}. Every entry is a debt. Written from the post-S12 scorer output and reviewed against the guide's five groups (migrate-pentaryn-ties.md §2.2): api → domain, features → domain, ui → domain, ui → ui shared widgets, ui → relay.",
+  "allow": [
+    {
+      "from": "api.mjs",
+      "to": "known-data.mjs",
+      "why": "the published Known data paths (known.read/add/set/hide/remove/categories/notebook). gap G1: the blueprint has no 'domain' role for Foundry-aware, non-UI logic; attributes.mjs, study.mjs (study/*), facts.mjs, known-data.mjs and relay.mjs score as glue"
+    },
+    {
+      "from": "api.mjs",
+      "to": "study.mjs",
+      "why": "the published study.* paths are the conduit's own functions. gap G1: the blueprint has no 'domain' role for Foundry-aware, non-UI logic; attributes.mjs, study.mjs (study/*), facts.mjs, known-data.mjs and relay.mjs score as glue"
+    },
+    {
+      "from": "api.mjs",
+      "to": "attributes.mjs",
+      "why": "the published attributes.* paths are the attribute layer's own functions. gap G1: the blueprint has no 'domain' role for Foundry-aware, non-UI logic; attributes.mjs, study.mjs (study/*), facts.mjs, known-data.mjs and relay.mjs score as glue"
+    },
+    {
+      "from": "conduit.mjs",
+      "to": "relay.mjs",
+      "why": "the conduit feature registers the relay's socket action at ready. gap G1: the blueprint has no 'domain' role for Foundry-aware, non-UI logic; attributes.mjs, study.mjs (study/*), facts.mjs, known-data.mjs and relay.mjs score as glue"
+    },
+    {
+      "from": "conduit.mjs",
+      "to": "study.mjs",
+      "why": "the conduit feature registers the study socket actions and clears the tempo state. gap G1: the blueprint has no 'domain' role for Foundry-aware, non-UI logic; attributes.mjs, study.mjs (study/*), facts.mjs, known-data.mjs and relay.mjs score as glue"
+    },
+    {
+      "from": "look-menu.mjs",
+      "to": "study.mjs",
+      "why": "the look menu's 'take a closer look' starts an inspection (study.inspect). gap G1: the blueprint has no 'domain' role for Foundry-aware, non-UI logic; attributes.mjs, study.mjs (study/*), facts.mjs, known-data.mjs and relay.mjs score as glue"
+    },
+    {
+      "from": "token-hud.mjs",
+      "to": "study.mjs",
+      "why": "the HUD eye starts an inspection (study.inspect). gap G1: the blueprint has no 'domain' role for Foundry-aware, non-UI logic; attributes.mjs, study.mjs (study/*), facts.mjs, known-data.mjs and relay.mjs score as glue"
+    },
+    {
+      "from": "attributes-ui.mjs",
+      "to": "attributes.mjs",
+      "why": "the Attributes tab renders and writes the attribute layer. gap G1: the blueprint has no 'domain' role for Foundry-aware, non-UI logic; attributes.mjs, study.mjs (study/*), facts.mjs, known-data.mjs and relay.mjs score as glue"
+    },
+    {
+      "from": "attributes-ui.mjs",
+      "to": "study.mjs",
+      "why": "the Attributes tab reads kind pointers and lore state, and releases held rungs. gap G1: the blueprint has no 'domain' role for Foundry-aware, non-UI logic; attributes.mjs, study.mjs (study/*), facts.mjs, known-data.mjs and relay.mjs score as glue"
+    },
+    {
+      "from": "authoring-ui.mjs",
+      "to": "study.mjs",
+      "why": "the GM authoring block reads beliefs and sets the kind pointer. gap G1: the blueprint has no 'domain' role for Foundry-aware, non-UI logic; attributes.mjs, study.mjs (study/*), facts.mjs, known-data.mjs and relay.mjs score as glue"
+    },
+    {
+      "from": "known-ui.mjs",
+      "to": "study.mjs",
+      "why": "the Known tab draws and starts studies. gap G1: the blueprint has no 'domain' role for Foundry-aware, non-UI logic; attributes.mjs, study.mjs (study/*), facts.mjs, known-data.mjs and relay.mjs score as glue"
+    },
+    {
+      "from": "known-ui.mjs",
+      "to": "attributes.mjs",
+      "why": "the Known tab reads carried attributes and the registry. gap G1: the blueprint has no 'domain' role for Foundry-aware, non-UI logic; attributes.mjs, study.mjs (study/*), facts.mjs, known-data.mjs and relay.mjs score as glue"
+    },
+    {
+      "from": "known-ui.mjs",
+      "to": "known-data.mjs",
+      "why": "the Known tab's markup over its own data half (split in S12). gap G1: the blueprint has no 'domain' role for Foundry-aware, non-UI logic; attributes.mjs, study.mjs (study/*), facts.mjs, known-data.mjs and relay.mjs score as glue"
+    },
+    {
+      "from": "look-app.mjs",
+      "to": "study.mjs",
+      "why": "the Look window resolves the kind pointer. gap G1: the blueprint has no 'domain' role for Foundry-aware, non-UI logic; attributes.mjs, study.mjs (study/*), facts.mjs, known-data.mjs and relay.mjs score as glue"
+    },
+    {
+      "from": "look-app.mjs",
+      "to": "facts.mjs",
+      "why": "the Look window reads the subject's fact order. gap G1: the blueprint has no 'domain' role for Foundry-aware, non-UI logic; attributes.mjs, study.mjs (study/*), facts.mjs, known-data.mjs and relay.mjs score as glue"
+    },
+    {
+      "from": "preview-app.mjs",
+      "to": "attributes.mjs",
+      "why": "the GM inspect window reads the registry and knowledge. gap G1: the blueprint has no 'domain' role for Foundry-aware, non-UI logic; attributes.mjs, study.mjs (study/*), facts.mjs, known-data.mjs and relay.mjs score as glue"
+    },
+    {
+      "from": "preview-app.mjs",
+      "to": "study.mjs",
+      "why": "the GM inspect window composes, shares and forgets facts. gap G1: the blueprint has no 'domain' role for Foundry-aware, non-UI logic; attributes.mjs, study.mjs (study/*), facts.mjs, known-data.mjs and relay.mjs score as glue"
+    },
+    {
+      "from": "preview-app.mjs",
+      "to": "facts.mjs",
+      "why": "the GM inspect window reads the subject's fact order. gap G1: the blueprint has no 'domain' role for Foundry-aware, non-UI logic; attributes.mjs, study.mjs (study/*), facts.mjs, known-data.mjs and relay.mjs score as glue"
+    },
+    {
+      "from": "review-ui.mjs",
+      "to": "attributes.mjs",
+      "why": "the review panel edits the registry. gap G1: the blueprint has no 'domain' role for Foundry-aware, non-UI logic; attributes.mjs, study.mjs (study/*), facts.mjs, known-data.mjs and relay.mjs score as glue"
+    },
+    {
+      "from": "review-ui.mjs",
+      "to": "study.mjs",
+      "why": "the review panel resolves kind pointers. gap G1: the blueprint has no 'domain' role for Foundry-aware, non-UI logic; attributes.mjs, study.mjs (study/*), facts.mjs, known-data.mjs and relay.mjs score as glue"
+    },
+    {
+      "from": "attributes-ui.mjs",
+      "to": "lore-ui.mjs",
+      "why": "the lore-row editor widget. no shared-widget role: ui files reuse each other's markup helpers (ties-16/17/18 shrink this group)"
+    },
+    {
+      "from": "authoring-ui.mjs",
+      "to": "lore-ui.mjs",
+      "why": "the lore-row editor widget. no shared-widget role: ui files reuse each other's markup helpers (ties-16/17/18 shrink this group)"
+    },
+    {
+      "from": "editor.mjs",
+      "to": "authoring-ui.mjs",
+      "why": "the GM authoring block inside the Ties tab. no shared-widget role: ui files reuse each other's markup helpers (ties-16/17/18 shrink this group)"
+    },
+    {
+      "from": "editor.mjs",
+      "to": "tie-dialog.mjs",
+      "why": "the tab's Add and row-edit buttons open the tie dialog (dynamic import). no shared-widget role: ui files reuse each other's markup helpers (ties-16/17/18 shrink this group)"
+    },
+    {
+      "from": "known-ui.mjs",
+      "to": "tie-dialog.mjs",
+      "why": "the Add… picker reuses the dialog's targetCandidates (dynamic import). no shared-widget role: ui files reuse each other's markup helpers (ties-16/17/18 shrink this group)"
+    },
+    {
+      "from": "look-app.mjs",
+      "to": "known-ui.mjs",
+      "why": "grantCard / grantedHead: the Known tab's card markup. no shared-widget role: ui files reuse each other's markup helpers (ties-16/17/18 shrink this group)"
+    },
+    {
+      "from": "preview-app.mjs",
+      "to": "known-ui.mjs",
+      "why": "grantCard / grantedHead: the Known tab's card markup. no shared-widget role: ui files reuse each other's markup helpers (ties-16/17/18 shrink this group)"
+    },
+    {
+      "from": "review-ui.mjs",
+      "to": "attributes-ui.mjs",
+      "why": "personalCluesHTML: the Attributes tab's clue rows. no shared-widget role: ui files reuse each other's markup helpers (ties-16/17/18 shrink this group)"
+    },
+    {
+      "from": "tie-dialog.mjs",
+      "to": "editor.mjs",
+      "why": "pips / stanceSelect: the Ties tab's controls. no shared-widget role: ui files reuse each other's markup helpers (ties-16/17/18 shrink this group)"
+    },
+    {
+      "from": "tie-dialog.mjs",
+      "to": "relay.mjs",
+      "why": "Save asks a GM to write the reverse side (requestMirror, dynamic import). gap G1: the blueprint has no 'domain' role for Foundry-aware, non-UI logic; attributes.mjs, study.mjs (study/*), facts.mjs, known-data.mjs and relay.mjs score as glue"
+    }
+  ]
+}
