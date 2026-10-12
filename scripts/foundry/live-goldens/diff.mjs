@@ -12,6 +12,8 @@
 // 2 on bad input. A wave-1 golden (names, pings, cursors, importer, ties, prompts) has no
 // shared/declared split: its whole `golden` is compared as shared, and its declared changes
 // (wave-1-report.md "Live goldens") are read off the shared list by hand.
+// A cleanup is judged by top-level key name only: `<thing>Left` above 0, `<thing>Restored === false`,
+// or a string containing `REFUSED` / `NOT ` fails; any other key (nested objects too) is only printed.
 //
 //   diff.mjs --declared <file> <before.json> <after.json>
 //

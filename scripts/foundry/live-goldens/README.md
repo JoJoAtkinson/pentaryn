@@ -18,6 +18,11 @@ array: `*` stays inside one segment, `**` crosses segments, `[` `]` are literal 
 `stash.chest[*]`, `stash.chest[*].*` and `purseHome` each cover only what they spell. A glob that
 matched nothing is named. Keep the globs to what the wave's plan declares.
 
+**Cleanup keys.** `diff.mjs` judges a `cleanup` by its top-level key names only. Report leftovers
+as `<thing>Left: <count>` (fails above 0) and restores as `<thing>Restored: <boolean>` (fails when
+`false`); a top-level string containing `REFUSED` or `NOT ` also fails. Any other key — nested
+objects included — is printed but never judged.
+
 ## Known run-to-run noise
 
 Two runs of the same code can differ here; it is not a regression.

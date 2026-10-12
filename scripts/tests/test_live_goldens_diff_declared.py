@@ -178,3 +178,19 @@ def test_a_declared_block_difference_is_listed(tmp_path):
     assert r.returncode == 0, r.stdout + r.stderr
     same = _write(tmp_path, before=before, after=before)
     assert same.returncode == r.returncode, same.stdout
+
+
+@pytest.mark.parametrize("cleanup, code", [
+    ({"fooLeft": 1}, 1),
+    ({"barRestored": False}, 1),
+    ({"x": "NOT done"}, 1),
+    ({"restored": {"tool": "x"}}, 0),
+    ({"fooLeft": 0}, 0),
+])
+def test_cleanup_key_rule_is_what_the_readme_says(tmp_path, cleanup, code):
+    # README "Cleanup keys": a top-level `<thing>Left` above 0, `<thing>Restored: false`, or a
+    # string holding REFUSED / "NOT " fails; anything else (nested objects too) is printed only.
+    after = json.loads(json.dumps(BEFORE))
+    after["cleanup"] = cleanup
+    r = _write(tmp_path, after=after)
+    assert r.returncode == code, r.stdout + r.stderr
