@@ -105,8 +105,12 @@ test("import graph: both entries reach every non-test .mjs; DFS order as recorde
   const order = [...reachable(graph, ["combat.mjs", "hud.mjs"])];
   pinJSON("graph", { graph, order }, import.meta.url);
   assert.deepEqual([...order].filter(f => !f.startsWith("lib/")).sort(), sourceFiles(ROOT), "every own file (the vendored lib/ is reached too since S4)");
-  assert.deepEqual(graph["hud.mjs"].includes("turnflow.mjs"), true, "turnflow is reached only through hud.mjs");
-  assert.deepEqual(Object.entries(graph).filter(([, deps]) => deps.includes("turnflow.mjs")).map(([f]) => f), ["hud.mjs"]);
+  // Guide S6c split turnflow.mjs into turnflow/*.mjs features that hud.mjs installs: each is still
+  // reached only through hud.mjs, never from combat.mjs's graph.
+  const turnflow = Object.keys(graph).filter(f => f.startsWith("turnflow/"));
+  assert.ok(turnflow.length > 0);
+  for (const f of turnflow) assert.ok(graph["hud.mjs"].includes(f), `hud.mjs installs ${f}`);
+  assert.deepEqual([...reachable(graph, ["combat.mjs"])].filter(f => f.startsWith("turnflow/")), [], "turnflow is reached only through hud.mjs");
 });
 
 test("dead exports gone (combat-riders-34, guide S3): no re-export of attackActivityOf or weaponShape; nobody imports the entry", async () => {

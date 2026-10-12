@@ -2,6 +2,7 @@
   "graph": {
     "argon.mjs": [
       "combat-core.mjs",
+      "lib/argon-kit.mjs",
       "lib/log.mjs"
     ],
     "combat-core.mjs": [],
@@ -32,13 +33,24 @@
     ],
     "hud.mjs": [
       "combat-core.mjs",
+      "context.mjs",
       "lib/log.mjs",
+      "patches.mjs",
       "sequence.mjs",
       "settings.mjs",
       "shapes.mjs",
       "strip.mjs",
       "turn-riders.mjs",
-      "turnflow.mjs"
+      "turnflow/action-buttons.mjs",
+      "turnflow/boundaries.mjs",
+      "turnflow/death.mjs",
+      "turnflow/dialogs.mjs",
+      "turnflow/drawers.mjs",
+      "turnflow/effects.mjs",
+      "turnflow/helper-token.mjs",
+      "turnflow/manual-dice.mjs",
+      "turnflow/movement.mjs",
+      "turnflow/portrait.mjs"
     ],
     "offhand.mjs": [
       "combat-core.mjs",
@@ -46,6 +58,12 @@
       "lib/log.mjs",
       "settings.mjs",
       "shapes.mjs"
+    ],
+    "patches.mjs": [
+      "combat-core.mjs",
+      "lib/log.mjs",
+      "lib/patch.mjs",
+      "settings.mjs"
     ],
     "roll-dock.mjs": [
       "strip.mjs"
@@ -76,31 +94,93 @@
       "settings.mjs",
       "shapes.mjs"
     ],
-    "turnflow.mjs": [
+    "turnflow/action-buttons.mjs": [
+      "argon.mjs",
       "combat-core.mjs",
       "lib/log.mjs",
       "sequence.mjs",
       "settings.mjs",
       "shapes.mjs"
+    ],
+    "turnflow/boundaries.mjs": [
+      "argon.mjs",
+      "combat-core.mjs",
+      "lib/log.mjs",
+      "settings.mjs"
+    ],
+    "turnflow/death.mjs": [
+      "combat-core.mjs",
+      "lib/log.mjs",
+      "settings.mjs"
+    ],
+    "turnflow/dialogs.mjs": [
+      "combat-core.mjs",
+      "lib/log.mjs",
+      "sequence.mjs",
+      "settings.mjs"
+    ],
+    "turnflow/drawers.mjs": [
+      "argon.mjs",
+      "combat-core.mjs",
+      "lib/log.mjs",
+      "settings.mjs"
+    ],
+    "turnflow/effects.mjs": [
+      "combat-core.mjs",
+      "lib/log.mjs",
+      "settings.mjs",
+      "shapes.mjs"
+    ],
+    "turnflow/helper-token.mjs": [
+      "combat-core.mjs",
+      "lib/log.mjs",
+      "settings.mjs"
+    ],
+    "turnflow/manual-dice.mjs": [
+      "combat-core.mjs",
+      "lib/log.mjs",
+      "settings.mjs"
+    ],
+    "turnflow/movement.mjs": [
+      "combat-core.mjs",
+      "lib/log.mjs"
+    ],
+    "turnflow/portrait.mjs": [
+      "combat-core.mjs",
+      "lib/log.mjs",
+      "lib/patch.mjs",
+      "settings.mjs"
     ]
   },
   "order": [
     "hud.mjs",
-    "turnflow.mjs",
-    "shapes.mjs",
-    "lib/log.mjs",
-    "combat-core.mjs",
+    "turnflow/portrait.mjs",
     "settings.mjs",
     "lib/settings.mjs",
+    "combat-core.mjs",
+    "lib/patch.mjs",
+    "lib/log.mjs",
+    "turnflow/movement.mjs",
+    "turnflow/manual-dice.mjs",
+    "turnflow/helper-token.mjs",
+    "turnflow/effects.mjs",
+    "shapes.mjs",
+    "turnflow/drawers.mjs",
+    "argon.mjs",
+    "lib/argon-kit.mjs",
+    "turnflow/dialogs.mjs",
     "sequence.mjs",
     "strip.mjs",
+    "turnflow/death.mjs",
+    "turnflow/boundaries.mjs",
+    "turnflow/action-buttons.mjs",
     "turn-riders.mjs",
+    "patches.mjs",
+    "context.mjs",
+    "lib/hooks.mjs",
     "combat.mjs",
     "roll-dock.mjs",
     "offhand.mjs",
-    "lib/hooks.mjs",
-    "counting.mjs",
-    "context.mjs",
-    "argon.mjs"
+    "counting.mjs"
   ]
 }

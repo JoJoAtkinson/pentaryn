@@ -28,7 +28,7 @@ const combat = makeCombat({ id: "c1", entries: [fig, rog, brb, gob].map((a, i) =
 await import("../combat.mjs");
 await import("../hud.mjs");
 const seq = await import("../sequence.mjs");
-const turnflow = await import("../turnflow.mjs");
+const turnflow = await import("../turnflow/drawers.mjs");
 const portraitBefore = { has: Object.hasOwn(A.PortraitPanel.prototype, "_pcConditions") };
 F.fire("init");
 F.fire("setup");
