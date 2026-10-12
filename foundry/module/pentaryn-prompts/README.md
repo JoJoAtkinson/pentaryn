@@ -202,6 +202,9 @@ not idempotent across tabs — keep calling it through the bridge. The side pane
   its own file or `core/`, not into a pinned file's exports.
 - The scene-model cache is off until `ready` installs the cache feature; gather never uses it.
 - Type-ahead's `keyup` listener is installed at import and never removed (no uninstall yet).
+- Console: the `gather <call>: …` summary always prints. `CONFIG.debug["pentaryn-prompts"] = true`
+  adds gather's phase split with the stored manifest's size, and one `replace <call>: …` line per
+  `replaceMany` (dry runs too). Texts: `core/log-lines.mjs`.
 
 ## Files
 

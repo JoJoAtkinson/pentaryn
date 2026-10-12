@@ -36,7 +36,9 @@ cssPrefix `pp-`, afterSync). Each **[declared]** change goes to the live check.
 - `ensureMarkers` repairs every drifted actor in one batch update. A hot re-import after
   `uninstall()` re-wires and republishes at once.
 - Console only (DP9): a core token API that throws warns once; swallowed failures log at debug
-  behind `CONFIG.debug["pentaryn-prompts"]`.
+  behind `CONFIG.debug["pentaryn-prompts"]`. With debug on, gather also prints where its time went
+  (model, embeds, render, store, crops) and the stored manifest's size, and every `replaceMany`
+  prints one summary line (prompts-lookup-18); the always-on gather line is unchanged.
 - Internals: `prompts-core.mjs`; `geometry-core.mjs` split into `core/*.mjs` behind the barrel;
   settings, keybindings and the manifest ring in `settings.mjs`; adapters (markers, scene, sight,
   crops, packs, character, actor-patch, npc, tokens, typeahead); features through the kit's hook

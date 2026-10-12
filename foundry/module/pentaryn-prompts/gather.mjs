@@ -10,6 +10,7 @@ import { cropsDecision } from "./core/text.mjs";
 import { pageScenes } from "./core/paging.mjs";
 import { setting, manifests, manifestFor, storeManifest } from "./settings.mjs";
 import { CROP_DIR } from "./prompts-core.mjs";
+import { gatherLogLine, gatherPhaseLine } from "./core/log-lines.mjs";
 import { makeLog } from "./lib/log.mjs";
 
 const log = makeLog(MODULE);
@@ -91,18 +92,22 @@ export async function gather(opts = {}) {
   // Page by prompt count: always at least one scene, never past maxPrompts after the first.
   const page = pageScenes(list.map(countOf), maxPrompts);
   const models = list.slice(0, page.take).map(s => sceneModel(s, { builtWithoutProvenance }));
+  const tModel = performance.now();
   const next = page.next === null ? null : list[page.next].id;
   // a compendium monster's biography is often only `@Embed[<page>]`: print the page's words instead
   await Promise.all(models.map(m => resolveItemEmbeds(m.items)));
+  const tEmbeds = performance.now();
 
   // crops only where there is a picture: a scene with no background image or tiles crops to grey
   const cropPlan = cropsDecision(crops, models.map(m => ({ hasArt: sceneHasArt(game.scenes.get(m.key)) })));
   const { view, manifest } = buildView(models, { unseenWithinFt, next, party, partySource, cropsNote: cropPlan.note });
   const text = renderGather(view, { chars });
+  const tRender = performance.now();
   manifest.at = Date.now();
   // ids only: an API caller may pass Scene documents, and this lands in a world setting
   manifest.opts = { scenes: Array.isArray(scenes) ? list.map(s => s.id) : scenes, unseenWithinFt, chars, party: view.party };
   await storeManifest(manifest);
+  const tStore = performance.now();
 
   const wantCrops = cropPlan.want;
   let images = [];
@@ -112,8 +117,12 @@ export async function gather(opts = {}) {
     images = await renderCrops(manifest, ids, { longSide: setting("cropLongSidePx", 768) });
     if (cropsAs === "files") images = await cropsToFiles(manifest.call, images);
   }
-  const ms = Math.round(performance.now() - t0);
-  console.log(`${MODULE} | gather ${manifest.call}: ${view.counts.prompts} prompts on ${view.counts.scenes} scene(s), ${images.length} crop(s), ${ms} ms`);
+  const tEnd = performance.now();
+  const ms = Math.round(tEnd - t0);
+  console.log(`${MODULE} | ${gatherLogLine({ call: manifest.call, prompts: view.counts.prompts, scenes: view.counts.scenes, crops: images.length, ms })}`);
+  // where the time went and the manifest's stored size: built only with CONFIG.debug on
+  log.debug$?.(gatherPhaseLine({ call: manifest.call, bytes: new TextEncoder().encode(JSON.stringify(manifest)).length,
+    phases: { model: tModel - t0, embeds: tEmbeds - tModel, render: tRender - tEmbeds, store: tStore - tRender, crops: tEnd - tStore } }));
   return { call: manifest.call, text, counts: view.counts, manifest, crops: images, next, ms, version: VERSION,
     party: view.party ?? null, partySource: view.partySource ?? null, cropsNote: cropPlan.note };
 }

@@ -33,6 +33,7 @@ import { tokenDataFrom } from "./tokens-adapter.mjs";
 import { renderReplace, planRow, resultRow, sheetLine, createdText, needsDryRun, goneMessage } from "./readback-core.mjs";
 import { KINDS, SPEC_DIR } from "./prompts-core.mjs";
 import { SIZE_WORDS, parseCr } from "./core/size.mjs";
+import { replaceLogLine } from "./core/log-lines.mjs";
 import { makeLog } from "./lib/log.mjs";
 
 const log = makeLog(MODULE);
@@ -582,6 +583,16 @@ function remainingFor(scenes) {
   return Object.fromEntries([...scenes].map(s => [s.id, promptTokens(s).length]));
 }
 
+/** The replace summary (prompts-lookup-18): a debug line, built only with CONFIG.debug on. */
+function logSummary({ call, dryRun, rows, remaining, t0 }) {
+  const debug = log.debug$;
+  if (!debug) return;
+  const ok = rows.filter(r => r.ok).length;
+  debug(replaceLogLine({ call, dryRun, ok, failed: rows.length - ok, ms: Math.round(performance.now() - t0),
+    created: rows.reduce((n, r) => n + (r.created?.length ?? 0), 0),
+    left: Object.values(remaining).reduce((n, v) => n + v, 0) }));
+}
+
 /**
  * Replace markers. `input` is `{call?, replacements, dryRun?, force?, skipDryRun?, party?}` or an
  * array of replacements (then `opts` carries call/dryRun/force).
@@ -589,6 +600,7 @@ function remainingFor(scenes) {
  * `text` is the readback the MCP tool prints, line for line.
  */
 export async function replaceMany(input, opts = {}) {
+  const t0 = performance.now();
   let args = Array.isArray(input) ? { ...opts, replacements: input } : { ...(input ?? {}), ...opts };
   if (args.specFile) args = await withSpecFile(args);
   const { replacements, call = null, dryRun = false, force = false } = args;
@@ -618,6 +630,7 @@ export async function replaceMany(input, opts = {}) {
     const remaining = remainingFor(scenes);
     const callOut = call ?? entries.find(e => e.call)?.call ?? null;
     const encounters = encounterEstimate(entries, args);
+    logSummary({ call: callOut, dryRun: true, rows, remaining, t0 });
     return { dryRun: true, call: callOut, text: renderReplace({ dryRun: true, call: callOut, rows, remaining, encounters }),
       results: rows, remaining, encounters };
   }
@@ -694,6 +707,7 @@ export async function replaceMany(input, opts = {}) {
   for (const r of results) { delete r._actorId; delete r._tokenId; }
   const remaining = remainingFor(scenes);
   const callOut = call ?? entries.find(e => e.call)?.call ?? null;
+  logSummary({ call: callOut, dryRun: false, rows: results, remaining, t0 });
   return { dryRun: false, call: callOut, text: renderReplace({ dryRun: false, call: callOut, rows: results, remaining, encounters }),
     results, remaining, encounters };
 }
