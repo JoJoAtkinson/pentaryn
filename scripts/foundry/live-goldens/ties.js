@@ -1,6 +1,7 @@
 // Live golden — pentaryn-ties. Body of an async function for the foundry `eval-js` MCP tool
 // (paste the file as `script`, timeoutMs 60000). GM client only. Returns a JSON string of
-// { module, golden, timings, cleanup }: `golden` is deterministic (ids normalised, timestamps
+// { module, golden, timings, cleanup } (or { module, skipped } when the attribute registry is
+// empty): `golden` is deterministic (ids normalised, timestamps
 // dropped), `timings` are medians of N runs (performance.now) — the performance baseline.
 //
 // What it exercises (the real glue, no stubs):
@@ -68,6 +69,8 @@ try {
   const reg = T.attributes.list();
   const entry = [...reg].sort((a, b) => a.id.localeCompare(b.id))[0];
   out.golden.registry = { count: reg.length, picked: entry ? { id: entry.id, title: entry.title, category: entry.category, parent: entry.parent ?? null } : null };
+  // an empty registry has nothing to link: skip before the ZZ actor exists (LG-E6)
+  if (!entry) { out.skipped = "attribute registry is empty"; return JSON.stringify(out); }
 
   actor = await Actor.create({ name: "ZZ Golden Ties Subject", type: "npc", system: { traits: { size: "med" }, details: { type: { value: "humanoid" } } } });
   tag(actor.id, "actor");

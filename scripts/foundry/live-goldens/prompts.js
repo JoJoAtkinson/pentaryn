@@ -1,8 +1,8 @@
 // Live golden — pentaryn-prompts. Body of an async function for the foundry `eval-js` MCP tool
 // (paste the file as `script`, timeoutMs 60000). GM client only. Returns a JSON string of
 // { module, golden, timings, cleanup } (or { module, skipped } when game.pentaryn.prompts or its
-// settings are missing): `golden` is deterministic (ids normalised, timestamps
-// and dates dropped), `timings` are medians of N runs (performance.now) — the performance baseline.
+// settings are missing, or the world has no `mid` prompt marker): `golden` is deterministic (ids
+// normalised, timestamps and dates dropped), `timings` are medians of N runs (performance.now) — the performance baseline.
 //
 // What it exercises (the real glue, no stubs): prompts.status(); then a ZZ scratch scene (Foundry's
 // default padding, grid 100) holding one `mid` prompt marker (a token of the world's marker actor,
@@ -72,12 +72,14 @@ try {
   out.golden.surface = Object.keys(P).sort();
   out.golden.moduleApi = typeof game.modules.get(MOD)?.api;
   out.golden.settings = { gatherChars: game.settings.get(MOD, "gatherChars"), cropsDefault: game.settings.get(MOD, "cropsDefault"), unseenWithinFt: game.settings.get(MOD, "unseenWithinFt"), party: game.settings.get(MOD, "party") };
+  // no `mid` marker (or its actor is gone): nothing to place, skip before the scene exists (LG-E6)
+  const mid = game.actors.get((status.markers ?? []).find(([k]) => k === "mid")?.[1]);
+  if (!mid) { out.skipped = "no mid prompt marker in this world"; return JSON.stringify(out); }
 
   scene = await Scene.create({ name: "ZZ live-goldens prompts", width: 2000, height: 1500, grid: { size: 100 } });
   actor = await Actor.create({ name: "ZZ Varr the Ash-Keeper", type: "npc", system: { details: { biography: { value: BIO } } } });
   tag(scene.id, "scene"); tag(actor.id, "actor");
   const d = scene.dimensions;
-  const mid = game.actors.get(status.markers.find(([k]) => k === "mid")[1]);
   const mTok = (await mid.getTokenDocument({ x: d.sceneX + 500, y: d.sceneY + 500, flags: { [MOD]: { prompt: PROMPT } } })).toObject();
   const bTok = (await actor.getTokenDocument({ x: d.sceneX + 700, y: d.sceneY + 500 })).toObject();
   delete mTok._id; delete bTok._id;
