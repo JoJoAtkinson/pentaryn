@@ -692,6 +692,7 @@ function enumerate(segs, verts, cfg) {
   // carrier until it hits something. Fires last, which is why the shell always closes first.
   for (const v of dang) {
     const hit = castRay(v, segs, cfg);
+    rayOf.set(v, hit);
     if (hit && !hit.refusal) {
       out.push({rule: "E1", cost: Math.sqrt(dist2(v.p, hit.H)), lex: [v.p, hit.H], anchors: [v.key],
                 act: {kind: "create", walls: [[...v.p, ...hit.H]], srcs: [v.ends[0].seg]}});
@@ -700,6 +701,14 @@ function enumerate(segs, verts, cfg) {
 
   return out;
 }
+
+/**
+ * The last ray enumerate cast from each vertex, so the refusal sweep does not cast it again.
+ * Keyed weakly, not as a vertex property: move acts carry the vertex and get JSON.stringify'd.
+ * Cannot go stale — vertices are fresh per buildGraph and segs do not change between the
+ * final enumerate and diagnose.
+ */
+const rayOf = new WeakMap();
 
 /**
  * Cast the outward ray from a dangling endpoint and find the nearest obstacle contact.
@@ -895,7 +904,7 @@ function diagnose(v, segs, verts, cfg, ambiguous) {
       }
     }
   }
-  const ray = castRay(v, segs, cfg);
+  const ray = rayOf.get(v) ?? castRay(v, segs, cfg);
   // F1's "aligned but too far" and E1's "an aligned wall lies along this line" are the same
   // finding seen from two rules. Say it once.
   if (ray?.refusal && !reasons.some(r => {
