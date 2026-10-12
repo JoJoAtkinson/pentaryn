@@ -31,11 +31,8 @@ import { argonClasses, liveButtons, TT } from "./form-picker.mjs";
 
 const log = makeLog(MODULE);
 
-/* ── tooltips ────────────────────────────────────────────────────────────── */
-// Argon shows its tooltips through Foundry's TooltipManager, anchored to the hovered button. Every
-// shift and revert rebuilds the HUD, so that button leaves the DOM without a pointerleave and the
-// tooltip stayed on screen until the mouse found another tooltipped element. Any tooltip whose
-// anchor is gone is dropped: after each HUD render, and on the next pointer move.
+/* ── the target picker: cancelled when the HUD's token changes body, and on Escape ── */
+// Tooltip hygiene lives in argon.mjs.
 
 /** The HUD's token became another body (a shift, a revert, a token swap): its pending pick is stale. */
 function onTokenBody(doc, changes) {
