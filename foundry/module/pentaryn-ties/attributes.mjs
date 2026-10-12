@@ -71,7 +71,7 @@ import {
   attrFactKey
 } from "./known-core.mjs";
 import { makeLog } from "./lib/log.mjs";
-import { setting } from "./settings.mjs";
+import { setting, knowledgeStore } from "./settings.mjs";
 
 const log = makeLog(MODULE);
 
@@ -1033,13 +1033,16 @@ export const hasFailed = (character, attrId) => failedAttribute(knowledge(), cha
  */
 export async function setKnowledge(rows) {
   if (!game.user?.isGM || !rows?.length) return false;
-  const all = knowledge();
-  for (const { characterId, attrId, failed = false, via = "roll", when = 0, pending = false, overFailed = false } of rows) {
-    if (!characterId || !attrId) continue;
-    all[characterId] ??= {};
-    all[characterId][attrId] = { when, failed, via, pending, ...(overFailed ? { overFailed: true } : {}) };
-  }
-  await game.settings.set(MODULE, KNOWLEDGE_SETTING, all);
+  // queued (ties-30): the read happens inside the queue, so a concurrent write is never lost
+  await knowledgeStore().write(raw => {
+    const all = readKnowledge(raw);
+    for (const { characterId, attrId, failed = false, via = "roll", when = 0, pending = false, overFailed = false } of rows) {
+      if (!characterId || !attrId) continue;
+      all[characterId] ??= {};
+      all[characterId][attrId] = { when, failed, via, pending, ...(overFailed ? { overFailed: true } : {}) };
+    }
+    return all;
+  });
   return true;
 }
 
@@ -1055,15 +1058,21 @@ export async function setKnowledge(rows) {
  */
 export async function clearKnowledge(characterId, attrId) {
   if (!game.user?.isGM || !characterId || !attrId) return false;
-  const all = knowledge();
-  const row = all[characterId]?.[attrId];
-  if (row?.via !== "shared") return false;
-  // a share laid over a failed roll gives the failure back — forgetting is not a free re-roll
-  if (row.overFailed) all[characterId][attrId] = { when: row.when, failed: true, via: "roll", pending: false };
-  else delete all[characterId][attrId];
-  if (!Object.keys(all[characterId]).length) delete all[characterId];
-  await game.settings.set(MODULE, KNOWLEDGE_SETTING, all);
-  return true;
+  if (knowledge()[characterId]?.[attrId]?.via !== "shared") return false;
+  // queued (ties-30), and re-checked inside the queue: a write that landed first decides
+  let cleared = false;
+  await knowledgeStore().write(raw => {
+    const all = readKnowledge(raw);
+    const row = all[characterId]?.[attrId];
+    if (row?.via !== "shared") return all;
+    // a share laid over a failed roll gives the failure back — forgetting is not a free re-roll
+    if (row.overFailed) all[characterId][attrId] = { when: row.when, failed: true, via: "roll", pending: false };
+    else delete all[characterId][attrId];
+    if (!Object.keys(all[characterId]).length) delete all[characterId];
+    cleared = true;
+    return all;
+  });
+  return cleared;
 }
 
 /**

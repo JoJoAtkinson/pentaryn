@@ -40,3 +40,58 @@ test("a roll that throws after the claim releases it: the error surfaces, the fa
   F.rolls.push(18);
   assert.equal(await settle(Study.studyAs(pc, get(NPC), { loreId: "l1" })), true);
 });
+
+/* ── ties-30: the knowledge and attribute-belief stores are serialised ─────── */
+
+async function withSlowSettings(fn) {
+  const set = game.settings.set.bind(game.settings);
+  game.settings.set = async (...args) => {
+    await new Promise(r => setTimeout(r, 10)); // a server round trip, on the mocked timer
+    return set(...args);
+  };
+  try {
+    return await fn();
+  } finally {
+    game.settings.set = set;
+  }
+}
+
+test("ties-30: two concurrent setKnowledge calls both land (each reads inside the queue)", async () => {
+  const A = await import("../attributes.mjs");
+  await withSlowSettings(() =>
+    settle(Promise.all([
+      A.setKnowledge([{ characterId: "a", attrId: "x", via: "grant", when: 1 }]),
+      A.setKnowledge([{ characterId: "b", attrId: "y", via: "grant", when: 2 }]),
+    ]))
+  );
+  const k = A.knowledge();
+  assert.ok(k.a?.x && k.b?.y, JSON.stringify(k));
+});
+
+test("ties-30: a clearKnowledge racing a setKnowledge loses neither", async () => {
+  const A = await import("../attributes.mjs");
+  await settle(A.setKnowledge([{ characterId: "c", attrId: "z", via: "shared", when: 3 }]));
+  const [, cleared] = await withSlowSettings(() =>
+    settle(Promise.all([
+      A.setKnowledge([{ characterId: "d", attrId: "w", via: "grant", when: 4 }]),
+      A.clearKnowledge("c", "z"),
+    ]))
+  );
+  const k = A.knowledge();
+  assert.equal(cleared, true);
+  assert.equal(k.c?.z, undefined);
+  assert.ok(k.d?.w);
+});
+
+test("ties-30: two concurrent attribute-belief writes both land", async () => {
+  const Apply = await import("../study/apply.mjs");
+  const fact = id => ({ ns: "attr", factKey: `attr:guild:${id}` });
+  await withSlowSettings(() =>
+    settle(Promise.all([
+      Apply.putBelief(fact("r1"), "pc1", { text: "one", total: 15, when: 1, delivered: 1 }),
+      Apply.putBelief(fact("r2"), "pc2", { text: "two", total: 16, when: 2, delivered: 2 }),
+    ]))
+  );
+  assert.equal(Apply.readBelief(fact("r1"), "pc1")?.text, "one");
+  assert.equal(Apply.readBelief(fact("r2"), "pc2")?.text, "two");
+});

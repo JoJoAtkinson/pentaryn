@@ -26,7 +26,7 @@ import { promptDeliver } from "./gate.mjs";
 import { beliefsOf, resolveFact, stackingRule, studiedOf } from "./resolve.mjs";
 import { esc, log, SITUATIONAL_MAX, SITUATIONAL_MIN } from "./shared.mjs";
 import { readFlag } from "../lib/flags.mjs";
-import { setting, mayWrite } from "../settings.mjs";
+import { setting, mayWrite, attrBeliefsStore } from "../settings.mjs";
 
 /* -------------------------------------------- */
 /*  GM side                                     */
@@ -321,22 +321,25 @@ export async function putBelief(fact, characterId, record) {
    */
   if (!game.user?.isGM) return;
   const key = `${fact.factKey}:${characterId}`;
-  const all = readAttrBeliefs(setting(ATTR_BELIEFS_SETTING));
-  if (record === null) delete all[key];
-  else
-    all[key] = {
-      text: record.text ?? "",
-      tier: null,
-      total: record.total ?? null,
-      when: record.when ?? 0,
-      delivered: record.delivered ?? null,
-      claim: record.claim ?? null,
-      sources: record.sources ?? null,
-      ...(typeof record.pass === "boolean" ? { pass: record.pass } : {}),
-      ...(record.from ? { from: record.from } : {}),
-      ...(record.from && record.prior ? { prior: record.prior } : {})
-    };
-  await game.settings.set(MODULE, ATTR_BELIEFS_SETTING, all);
+  // queued (ties-30): the read happens inside the queue, so a share racing a roll loses nothing
+  await attrBeliefsStore().write(raw => {
+    const all = readAttrBeliefs(raw);
+    if (record === null) delete all[key];
+    else
+      all[key] = {
+        text: record.text ?? "",
+        tier: null,
+        total: record.total ?? null,
+        when: record.when ?? 0,
+        delivered: record.delivered ?? null,
+        claim: record.claim ?? null,
+        sources: record.sources ?? null,
+        ...(typeof record.pass === "boolean" ? { pass: record.pass } : {}),
+        ...(record.from ? { from: record.from } : {}),
+        ...(record.from && record.prior ? { prior: record.prior } : {})
+      };
+    return all;
+  });
 }
 
 async function writeBelief(fact, characterId, record) {

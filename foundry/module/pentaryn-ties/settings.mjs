@@ -13,7 +13,7 @@
 
 import { MODULE, I18N } from "./ties-core.mjs";
 import { REGISTRY_SETTING, ATTR_BELIEFS_SETTING, KNOWLEDGE_SETTING } from "./known-core.mjs";
-import { defineKeybindings, defineSettings, settingReader, settingsSnapshot as snapshot } from "./lib/settings.mjs";
+import { defineKeybindings, defineSettings, serialStore, settingReader, settingsSnapshot as snapshot } from "./lib/settings.mjs";
 
 /** Where dragged cards were left — per browser, so two people at one table don't fight over it. */
 export const PIN_SETTING = "pinnedCards";
@@ -188,6 +188,18 @@ function registerClientState({ key, scope, config, type, default: value }) {
   if (game.settings.settings?.has?.(`${MODULE}.${key}`)) return;
   game.settings.register(MODULE, key, { scope, config, type, default: value });
 }
+
+/*
+ * The two whole-value stores more than one writer touches at once (ties-30): world knowledge (a
+ * cascade, a share and a GM grant can land together) and attribute-lore beliefs. Each is ONE
+ * serialStore for the module (C58), made on first use — its queue needs Foundry's Semaphore, which a
+ * bare-node import of this file does not have. A queued write reads the setting INSIDE the queue,
+ * so the second of two writes sees the first. ⚠ Never await one queued write from inside another
+ * on the same store: it would wait on itself.
+ */
+const stores = {};
+export const knowledgeStore = () => (stores.knowledge ??= serialStore(MODULE, KNOWLEDGE_SETTING));
+export const attrBeliefsStore = () => (stores.attrBeliefs ??= serialStore(MODULE, ATTR_BELIEFS_SETTING));
 
 /** The live value; the row default when unregistered or unreadable (before init, a hot patch). */
 export const setting = settingReader(MODULE, [...SETTINGS, ...CLIENT_STATE]);
