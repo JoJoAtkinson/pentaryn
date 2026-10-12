@@ -394,6 +394,27 @@ def test_cache_false_neither_reads_nor_writes(fake_data, counting):
     assert not (fake_data / bundles.CACHE_FILENAME).exists()
 
 
+def test_inventory_signs_each_folder_once(modules_root, fake_data, monkeypatch):
+    make_module(modules_root, "alpha")
+    make_module(modules_root, "beta")
+    calls: list[int] = []
+    real = bundles._sig
+
+    def counted(files):
+        calls.append(len(files))
+        return real(files)
+
+    monkeypatch.setattr(bundles, "_sig", counted)
+    first = _inv()
+    assert len(calls) == len(first) == 3
+    cache = fake_data / bundles.CACHE_FILENAME
+    before = cache.read_bytes()
+    calls.clear()
+    assert _inv() == first
+    assert len(calls) == 3
+    assert cache.read_bytes() == before
+
+
 def test_cache_drops_removed_modules(modules_root, fake_data):
     make_module(modules_root, "gone")
     _inv()
