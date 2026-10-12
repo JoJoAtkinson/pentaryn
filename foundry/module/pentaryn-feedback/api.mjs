@@ -78,7 +78,7 @@ async function inspect(ref, ctx, { as } = {}) {
   const self = users.find(u => u.id === game.user?.id);
   const visible = users.filter(sees);
   const pending = visible.length || !users.length ? visible.flatMap(u => ctx.exposed.pending?.(u) ?? []) : null;
-  const reports = canRead ? await reportsBy(new Set(users.map(u => u.id))) : null;
+  const reports = canRead ? (users.length ? await reportsBy(new Set(users.map(u => u.id))) : []) : null;
   return toPlain({
     ...(actor ? { actor, users } : { user: users[0] }),
     pending,

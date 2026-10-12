@@ -8,6 +8,7 @@ import { MODULE, normaliseReport } from "../feedback-core.mjs";
 import { MANIFEST } from "../api-manifest.mjs";
 import { SETTINGS } from "../settings.mjs";
 import { buildApi, surfaceOf } from "../lib/api.mjs";
+import { codedError } from "../lib/errors.mjs";
 
 const T0 = Date.UTC(2026, 9, 11, 20, 0, 0);
 mock.timers.enable({ apis: ["Date"], now: T0 });
@@ -181,6 +182,25 @@ test("inspect(Actor): the actor's owning non-GM users, their pending ids and rep
 
   const root = await game.pentaryn.inspect(IDS.caven);
   assert.deepEqual(root.feedback.users.map(u => u.id), [IDS.player], "the root inspect no longer gets BAD_ARGS");
+});
+
+test("inspect(Actor) with no player reads no report file and gives reports: [] even when the store is broken", async () => {
+  seed();
+  const goblin = game.actors.get(IDS.goblin);
+  const counts = { list: 0, get: 0 };
+  try {
+    useStore({
+      ...mem,
+      list: dir => { counts.list++; return mem.list(dir); },
+      get: path => { counts.get++; return mem.get(path); },
+    });
+    assert.deepEqual((await api.inspect(goblin)).reports, []);
+    assert.deepEqual(counts, { list: 0, get: 0 }, "no players → no report reads");
+    useStore({ ...mem, get: async () => { throw codedError("INTERNAL", "HTTP 500"); } });
+    assert.deepEqual((await api.inspect(goblin)).reports, [], "the promised empty list, not null");
+  } finally {
+    useStore(mem);
+  }
 });
 
 // 2026-10-12 live check (W3L): over the MCP bridge a ref is a string, so pentaryn-read
