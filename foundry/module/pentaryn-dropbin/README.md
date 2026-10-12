@@ -79,7 +79,8 @@ published at `ready`. Ask it: `game.pentaryn.dropbin.describe()` (offline: `test
 | `selftest()` | — | — | `{ ok, checks }` |
 
 `target` is an Actor (a synthetic token actor too), a TokenDocument (its actor), an actor id or
-exact name, or an Actor/Token UUID; with no target, the actor the item left. A target given that
+exact name, or an Actor/Token UUID; with no target, the actor the item left — an unlinked token's
+own actor while that token still exists, otherwise the base actor. A target given that
 does not resolve is refused (`no-actor`, the "cannot find an actor" toast), never the original
 actor. `inspect`'s `ref` is a token (uuid, id or exact name — never a substring) or an Actor. An entry is
 `{n, t, iso, reason: "drop" | "delete", userId, userName, fromActorId, fromActorName, fromActorUuid,

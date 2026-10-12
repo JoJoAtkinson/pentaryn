@@ -52,6 +52,9 @@ Declared changes:
   UUID) is refused as `no-actor` with the "cannot find an actor" toast; it restored onto the actor
   the item left and reported success. A target may now also be a TokenDocument (its actor) or an
   Actor/Token UUID; only no target falls back to the actor the item left.
+- dropbin-R4: with no target, an item that left an unlinked token is restored onto that token's
+  own (synthetic) actor while the token still exists; it went to the base actor in the sidebar.
+  Once the token is gone it falls back to the base actor.
 - dropbin-EC-2: the tail dedupe also matches the lost item's source `_id` and the entry's
   `pileUuid`, so a second, distinct same-named item lost from the same actor within 2 s is its own
   entry (it was dropped as a duplicate); one event seen on two clients is still one entry. Stored

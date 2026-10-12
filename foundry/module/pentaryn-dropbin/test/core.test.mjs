@@ -212,3 +212,23 @@ test("restore target resolution: an Actor, a TokenDocument, an id, name or UUID;
   assert.equal(core("Actor.b", { fromUuid: undefined }), null, "no fromUuid: a UUID does not resolve");
   assert.equal(restoreTarget(null, { fromActorId: "gone" }, { isActor, actors }), null);
 });
+
+test("dropbin-R4: with no target, the synthetic token actor the item left (by fromActorUuid) comes before the base actor", () => {
+  const base = { id: "a", name: "Goblin" }, synth = { id: "a", name: "Goblin", isToken: true }, other = { id: "b", name: "Bo" };
+  const actors = { get: id => ({ a: base, b: other })[id] ?? undefined, getName: () => undefined };
+  const isActor = x => x === base || x === synth || x === other;
+  const live = { "Scene.s.Token.t.Actor.a": synth, "Actor.a": base, "Scene.s.Token.u": { documentName: "Token", actor: synth } };
+  const fromUuid = u => live[u] ?? null;
+  const e = uuid => ({ fromActorId: "a", fromActorUuid: uuid });
+  const r = (entry, deps = {}) => restoreTarget(null, entry, { isActor, actors, fromUuid, ...deps });
+  assert.equal(r(e("Scene.s.Token.t.Actor.a")), synth, "the token still exists: its synthetic actor");
+  assert.equal(r(e("Scene.s.Token.u")), synth, "a Token UUID resolves to its actor");
+  assert.equal(r(e("Actor.a")), base, "a linked actor is the world actor");
+  assert.equal(r(e("Scene.s.Token.gone.Actor.a")), base, "the token is gone: the base actor");
+  assert.equal(r(e(null)), base, "an old entry with no uuid: the base actor");
+  assert.equal(r(e("Scene.s.Token.t.Actor.a"), { fromUuid: () => { throw new Error("bad uuid"); } }), base, "a throwing fromUuidSync falls back");
+  assert.equal(r(e("Scene.s.Token.t.Actor.a"), { fromUuid: () => ({ documentName: "Scene" }) }), base, "a non-actor falls back");
+  assert.equal(r(e("Scene.s.Token.t.Actor.a"), { fromUuid: undefined }), base, "no fromUuid: the base actor");
+  assert.equal(restoreTarget(undefined, e("Scene.s.Token.t.Actor.a"), { isActor, actors, fromUuid }), synth);
+  assert.equal(restoreTarget(other, e("Scene.s.Token.t.Actor.a"), { isActor, actors, fromUuid }), other, "an explicit target still wins");
+});
