@@ -39,6 +39,11 @@ REPO_MODULE_SRC = REPO_ROOT / "foundry" / "module"
 # Modules built in this repo. Their source of truth is `foundry/module/`, never upstream.
 LOCAL_PREFIX = "pentaryn-"
 
+# The game system this tooling runs. Chosen by id, never "the first system installed":
+# scan() sorts by id, so a second system (a5e, say) would otherwise be stashed,
+# version-compared and recovered in dnd5e's place (EC-2).
+SYSTEM_ID = "dnd5e"
+
 
 def sync_hint(pkg_id: str) -> str:
     """The make target that puts a repo module into Data/ (python-tooling-9).

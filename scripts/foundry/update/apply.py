@@ -547,11 +547,12 @@ def _run_locked(result: RunResult, run_id: str, *, dry: bool, force: bool,
             recover.tunnel_down(REPO_ROOT)
 
         packages = inventory.scan()
-        system = next((p for p in packages if p.type == "system"), None)
+        system = next((p for p in packages
+                       if p.type == "system" and p.id == inventory.SYSTEM_ID), None)
 
         if not dry:
             status.set_phase("backup")
-            snapshot, _ = back_up(system.id if system else "dnd5e",
+            snapshot, _ = back_up(system.id if system else inventory.SYSTEM_ID,
                                   system.version if system else "")
             result.snapshot = snapshot.name
         else:
