@@ -1151,16 +1151,18 @@ def test_real_exposure_has_no_known_false_positives():
     for pkg in ("multi-token-edit", "scene-packer", "mad-endlesswiz"):
         assert reg.exposure(pkg) == [], pkg
     # Not a false positive: prompts' sight test reads the package's own flag scope,
-    # `w.flags?.["wall-height"]` (776a865), so this exposure is real.
-    assert reg.exposure("wall-height") == ["foundry/module/pentaryn-prompts/los.mjs"]
+    # `w.flags?.["wall-height"]` (776a865, now sight-adapter.mjs), and its API manifest declares
+    # the read (`flags.reads: ["flags.wall-height", ...]`) — both are real exposure.
+    assert reg.exposure("wall-height") == ["foundry/module/pentaryn-prompts/api-manifest.mjs",
+                                           "foundry/module/pentaryn-prompts/sight-adapter.mjs"]
     assert reg.exposure("dice-so-nice") == [STUDY]
 
 
 # KNOWN (wave-1 baseline, 2026-10-11; unfiled — see addon-blueprint-2026-10/wave-1-report.md
 # "Open for Joe"): id_pattern treats a backtick as a quote, so the template literal
-# `levels ${levels.join(", ")}` in pentaryn-prompts/geometry-core.mjs (since 17275c9) reads
-# as the Levels package id. Output today:
-#   reg.exposure("levels") == ['foundry/module/pentaryn-prompts/geometry-core.mjs']
+# `levels ${levels.join(", ")}` in pentaryn-prompts/core/gather-text.mjs (since 17275c9;
+# geometry-core.mjs before wave 3) reads as the Levels package id. Output today:
+#   reg.exposure("levels") == ['foundry/module/pentaryn-prompts/core/gather-text.mjs']
 # The scanner is wrong, not this test: remove the marker when id_pattern is fixed.
 @pytest.mark.repo
 @pytest.mark.xfail(strict=True, reason="levels exposure false positive (template literal)")
