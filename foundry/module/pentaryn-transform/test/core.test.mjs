@@ -21,8 +21,15 @@ test("core loads with no Foundry globals present", () => {
   }
 });
 
+// Guide step 2's explicit additive delta: the blueprint constants. The checkpoint golden stays the 39 names.
+const ADDED_S2 = ["CONTRACT", "CSS", "FLAG_SCOPE", "HOOKS", "I18N", "MODULE", "NS", "SHORT", "VERSION"];
+const ADDED = [...ADDED_S2];
+
 test("export list of transform-core.mjs (step 2's barrel must re-export every name)", () => {
-  pinJSON("core-exports", Object.keys(core).sort().map(k => [k, typeof core[k]]), file);
+  const names = Object.keys(core).sort();
+  pinJSON("core-exports", names.filter(n => !ADDED.includes(n)).map(k => [k, typeof core[k]]), file);
+  for (const n of ADDED) assert.ok(names.includes(n), n);
+  assert.equal(names.length, 39 + ADDED.length);
 });
 
 test("constants: MODULE_ID is the manifest id; EFFECT_ID, Starry constants", () => {
@@ -44,7 +51,7 @@ test("manifest today: version 0.3.3, generation 14, flagScope 'transform' (C07, 
   assert.equal(m.compatibility.minimum, "13");
 });
 
-test("VERSION === module.json version", { todo: "transform-core has no VERSION until guide step 2 (the barrel)" }, () => {
+test("VERSION === module.json version", () => {
   assert.equal(core.VERSION, manifestOf(ROOT).version);
 });
 
