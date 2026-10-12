@@ -6,7 +6,7 @@
 // must survive the move to failAssertion/refuse unchanged.
 //
 // Pins and the steps that may touch them: golden/write-console.json — step 4b ([declared] console prefix,
-// D-I2) only. golden/write-*.json otherwise — no step may change them.
+// D-I2) and importer-R1 ([declared] malformedLater key) only. golden/write-*.json otherwise — no step may change them.
 import { mock, test } from "node:test";
 import assert from "node:assert/strict";
 import { installFoundry } from "./kit/foundry-stub.mjs";
@@ -156,6 +156,15 @@ test("unmanagedItems:'delete' removes hand-added Items too; force rewrites an un
     ["warn", "[pentaryn-importer] Import done. Delete Data/worlds/w/actors.json — it is served publicly.", { permanent: true }],
   ]);
   pinJSON("write-delete-force", { result: o.result, writes: o.writes }, import.meta.url);
+});
+
+test("importer-R1: a malformed entry after a good one refuses the whole run before anything is written", async () => {
+  const o = await run("malformedLater", [npc("a"), { name: "Nameless" }]);
+  assert.equal(o.error?.name, "PentarynAbort");
+  assert.match(o.error.message, /has no flags\.pentaryn\.slug/);
+  assert.deepEqual(o.writes, [], "no Actor created, updated or hash-stamped (README: nothing was written)");
+  assert.equal(game.actors.find(a => a.flags.pentaryn?.slug === "a"), undefined);
+  assert.deepEqual(o.toasts, [["error", `[pentaryn-importer] ${o.error.message}`, { permanent: true, console: false }]]);
 });
 
 /* ── the seven assertion sites (items-journal-3) ──────────────────────────────────────────────── */

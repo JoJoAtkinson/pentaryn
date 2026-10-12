@@ -130,18 +130,22 @@ async function importOnce({ path, dryRun, only, force, timeout, unmanagedItems }
   const ActorClass = getDocumentClass("Actor");
   const bySlug = indexActorsBySlug();
 
+  // Prepare every entry before the first write (importer-R1): a malformed entry anywhere in the
+  // file refuses the whole run, so a thrown PentarynAbort still means nothing was written.
+  /** @type {ReturnType<typeof preparePayload>[]} */
+  const preparedAll = [];
   for (const entry of manifest.actors) {
-    /** @type {ReturnType<typeof preparePayload>} */
-    let prepared;
     try {
-      prepared = preparePayload(entry);
+      preparedAll.push(preparePayload(entry));
     } catch (cause) {
       // A malformed entry is a contract violation, not a per-actor hiccup.
       shout(cause.message);
       throw cause;
     }
+  }
 
-    const { data, items, expected, slug } = prepared;
+  for (const [index, entry] of manifest.actors.entries()) {
+    const { data, items, expected, slug } = preparedAll[index];
     if (onlySet && !onlySet.has(slug)) continue;
     selected++;
 

@@ -169,6 +169,28 @@
       "pentaryn-importer | DELETE THIS NOW: Data/worlds/w/actors.json is public while the tunnel is up."
     ]
   ],
+  "malformedLater": [
+    [
+      "log",
+      "pentaryn-importer | fetching /worlds/w/actors.json (cache: no-cache, timeout 15000 ms)"
+    ],
+    [
+      "log",
+      "pentaryn-importer | version gate passed — contract pentaryn/actors.json@1, dnd5e 6.0.6, Foundry generation 14"
+    ],
+    [
+      "log",
+      "pentaryn-importer | @ref lint clean across 2 actor(s)"
+    ],
+    [
+      "log",
+      "pentaryn-importer | manifest ok — generator build_actors.py@1.0.0, built 2026-10-10T00:00:00Z from abc1234, 2 actor(s), 0 skipped row(s)"
+    ],
+    [
+      "error",
+      "pentaryn-importer | An actor entry (name \"Nameless\") has no flags.pentaryn.slug. The slug is the upsert key; refusing the run rather than creating an unmatched Actor."
+    ]
+  ],
   "site :625 assertValue (actor path)": [
     [
       "log",

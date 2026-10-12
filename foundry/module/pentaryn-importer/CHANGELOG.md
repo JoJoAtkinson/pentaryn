@@ -13,6 +13,10 @@
 
 `module.json` stays 1.1.0 until the Wave 7 restart batch adds the blueprint keys.
 
+- **[declared] A malformed entry anywhere in `actors.json` refuses the whole run before any write**
+  (`importer-R1`): every entry is prepared first, so a missing slug or a null entry after a good one
+  no longer leaves the earlier actors created and hash-stamped. A thrown `PentarynAbort` again means
+  nothing was written.
 - **[declared] `game.pentaryn` is merged into, never replaced or frozen** (`items-journal-1`). Every
   module's namespace survives whichever order the modules load in; `import`, `moduleId`, `contract`
   and the frozen `_internals` stay on the root.
