@@ -155,6 +155,18 @@ def test_placeholder_values_with_braces_render_verbatim(runners, tmp_path):
     )
     assert json.loads(r.run(arguments={"q": "a {b} }{ {0}"})) == ["a {b} }{ {0}"]
 
+
+@pytest.mark.repo
+def test_build_argv_direct(runners):
+    """argv is built without spawning a process: the KNOWN -49 zone drop, and a bare
+    placeholder keeps its slot even when the value is empty."""
+    assert runners["check_lore_links"]._build_argv({"zone": "x"}) == []
+    r = server.ToolRunner(tool=server.Tool(name="t", description="", input_schema={}),
+                          script_path=Path("t.py"), argv_template=("--a", "{v}"),
+                          bool_flags={}, value_flags={})
+    assert r._build_argv({"v": ""}) == ["--a", ""]
+
+
 def test_known_timeline_key_output_can_leave_the_repo(tmp_path, monkeypatch):
     """KNOWN python-tooling-49: a ../ output resolves outside REPO_ROOT (nothing is written
     here; the builder is stubbed). The fix refuses it."""

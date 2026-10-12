@@ -282,11 +282,12 @@ class ToolRunner:
             if isinstance(result, str):
                 return result
             return json.dumps(result, indent=2, ensure_ascii=False)
+        return self._run_subprocess(self._build_argv(arguments))
 
+    def _build_argv(self, arguments: dict[str, Any]) -> list[str]:
         # Only braces in the template token are interpreted; argument values are substituted
         # verbatim. A template token with a stray non-placeholder brace raises at format time
         # (only KeyError is mapped to Missing required argument).
-        python = _python_bin()
         argv: list[str] = []
         fmt_args: dict[str, str] = {}
         for key, value in arguments.items():
@@ -305,9 +306,7 @@ class ToolRunner:
                     and token.count("{") == 1
                 )
                 rendered = token.format(**fmt_args)
-                if is_placeholder:
-                    argv.append(rendered.strip())
-                elif rendered.strip():
+                if is_placeholder or rendered.strip():
                     argv.append(rendered.strip())
         except KeyError as exc:
             raise ValueError(f"Missing required argument: {exc.args[0]}") from exc
@@ -333,7 +332,10 @@ class ToolRunner:
             if not rendered:
                 continue
             argv.extend([self.value_flags[key], rendered])
+        return argv
 
+    def _run_subprocess(self, argv: list[str]) -> str:
+        python = _python_bin()
         # Wall-clock timeout protects against a hung child pinning a worker
         # forever; subprocess.run raises subprocess.TimeoutExpired on overrun
         # and DOES kill the child (the wait happens in the subprocess module).
