@@ -53,6 +53,8 @@ export class FakeElement {
   get className() { return this.getAttribute("class") ?? ""; }
   set className(v) { this.setAttribute("class", v); }
   get name() { return this.getAttribute("name") ?? ""; }
+  get type() { return this.getAttribute("type") ?? ""; }
+  set type(v) { this.setAttribute("type", v); }
   get src() { return this.getAttribute("src") ?? ""; }
   set src(v) { this.setAttribute("src", v); }
   get disabled() { return this.hasAttribute("disabled"); }
@@ -106,6 +108,12 @@ export class FakeElement {
   appendChild(n) { this.append(n); return n; }
   prepend(...nodes) { this.childNodes.unshift(...nodes.map(n => this._adopt(n))); }
   remove() { this.parentNode?._drop(this); }
+  after(...nodes) {
+    const p = this.parentNode;
+    if (!p) return;
+    const adopted = nodes.map(n => p._adopt(n));
+    p.childNodes.splice(p.childNodes.indexOf(this) + 1, 0, ...adopted);
+  }
   replaceWith(n) {
     const p = this.parentNode;
     if (!p) return;
