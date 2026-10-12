@@ -702,3 +702,32 @@ def test_py_mcp_ext_5_no_hand_built_envelopes():
             if isinstance(node, ast.Constant) and node.value == "dnd-scripts":
                 offenders.append((fn.name, node.lineno))
     assert offenders == []
+
+
+# ---------------------------------------------------------------------------
+# py-mcp-rob-3: group-filter exclusions are one summary line, not startup failures
+# ---------------------------------------------------------------------------
+
+def test_py_mcp_rob_3_group_exclusions_are_one_summary_line(tmp_path, monkeypatch, capsys):
+    """py-mcp-rob-3: under DND_MCP_TOOLS_GROUP every excluded script was listed one per
+    line as a startup failure. Now they collapse into one count line naming the group;
+    a real failure in a grouped module is still listed. --list-tools still lists each."""
+    monkeypatch.setenv("DND_MCP_TOOLS_GROUP", "combat")
+    repo = _make_repo(tmp_path)
+    (repo / "scripts" / "lore_a.py").write_text(_AST_ONLY_MODULE, encoding="utf-8")
+    (repo / "scripts" / "lore_b.py").write_text(
+        'MCP_GROUPS = ["lore"]\n' + _INPROC_MODULE, encoding="utf-8")
+    (repo / "scripts" / "broken.py").write_text(
+        'MCP_GROUPS = ["combat"]\n' + _BROKEN_TOOL, encoding="utf-8")
+
+    err = _startup_stderr(monkeypatch, capsys, repo)
+    assert "[mcp-server] 2 script(s) excluded by DND_MCP_TOOLS_GROUP=combat" in err
+    assert "lore_a.py" not in err and "lore_b.py" not in err
+    assert "[mcp-server] 1 script(s) skipped at discovery:" in err
+    assert "broken.py: invalid MCP_TOOL" in err
+
+    monkeypatch.setattr(sys, "argv", ["server.py", "--list-tools"])
+    assert server.main() == 0
+    out = capsys.readouterr().out
+    assert "lore_a.py: group filter excludes" in out
+    assert "lore_b.py: group filter excludes" in out

@@ -610,6 +610,11 @@ def _tools_from_mcp_tool(*, path: Path, mcp_tool: dict[str, Any]) -> list[ToolRu
 # at startup, never listed: it was ~100 lines of noise around the one line that mattered.
 _NO_TOOL = "no MCP_TOOL"
 
+# The skip-reason prefix for a script the DND_MCP_TOOLS_GROUP filter left out (py-mcp-rob-3).
+# A deliberate exclusion, not a failure: startup gives it one count line; --list-tools
+# still shows each script with its groups.
+_GROUP_EXCLUDED = "group filter excludes"
+
 
 def _candidate_scripts(scripts_dir: Path) -> list[Path]:
     """Every .py under scripts/ that could declare a tool, in discovery order (sorted by
@@ -698,7 +703,7 @@ def discover_tools(*, repo_root: Path) -> DiscoveryResult:
         if group_filter:
             module_groups = _read_top_level_string_list(source, "MCP_GROUPS", tree=tree)
             if group_filter not in module_groups:
-                skipped.append((path, f"group filter excludes (DND_MCP_TOOLS_GROUP={group_filter!r}, module groups={module_groups})"))
+                skipped.append((path, f"{_GROUP_EXCLUDED} (DND_MCP_TOOLS_GROUP={group_filter!r}, module groups={module_groups})"))
                 continue
 
         # Two discovery paths: a script with a top-level MCP_HANDLERS assignment is
@@ -777,13 +782,19 @@ def _report_skipped(discovery: DiscoveryResult) -> None:
     """Startup stderr (python-tooling-27). A running client only sees discovery.tools via
     tools/list; a real skip (import failure, invalid MCP_TOOL, duplicate name, missing
     handler, …) is otherwise invisible, so each one is listed and lands in the MCP host's
-    server log. Scripts that declare no tool are one count line."""
-    failures = [(p, why) for p, why in discovery.skipped if why != _NO_TOOL]
-    benign = len(discovery.skipped) - len(failures)
+    server log. Scripts that declare no tool, and scripts the group filter excluded
+    (py-mcp-rob-3), are one count line each."""
+    excluded = sum(why.startswith(_GROUP_EXCLUDED) for _, why in discovery.skipped)
+    failures = [(p, why) for p, why in discovery.skipped
+                if why != _NO_TOOL and not why.startswith(_GROUP_EXCLUDED)]
+    benign = len(discovery.skipped) - len(failures) - excluded
     if failures:
         sys.stderr.write(f"[mcp-server] {len(failures)} script(s) skipped at discovery:\n")
         for path, reason in failures:
             sys.stderr.write(f"  - {path.name}: {reason}\n")
+    if excluded:
+        group = os.environ.get("DND_MCP_TOOLS_GROUP", "").strip()
+        sys.stderr.write(f"[mcp-server] {excluded} script(s) excluded by DND_MCP_TOOLS_GROUP={group}\n")
     if benign:
         sys.stderr.write(f"[mcp-server] {benign} script(s) without an MCP_TOOL (helpers, tests)\n")
     sys.stderr.flush()

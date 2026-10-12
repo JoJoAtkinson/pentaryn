@@ -29,6 +29,9 @@ Set `DND_MCP_TOOLS_GROUP=combat` and only modules whose top-level `MCP_GROUPS` l
 that group are loaded — a cold-start speed-up for a session that needs dice and stat blocks
 but not the lore and timeline surface. Nothing sets it automatically; it is opt-in.
 `all` is the same as unset; any other name loads only modules whose `MCP_GROUPS` lists it.
+At startup the left-out scripts are one stderr line, `[mcp-server] N script(s) excluded by
+DND_MCP_TOOLS_GROUP=<name>`, so only real failures are listed one per line; `--list-tools`
+still names each excluded script and its groups.
 
 ## Error channels
 
