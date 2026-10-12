@@ -173,10 +173,10 @@ test("listeners: releasing an away slot asks first; a yes drops the away entry",
   assert.deepEqual(F.calls.slice(from).filter(c => c.op === "update").map(c => c.changes), [{ "flags.pentaryn-attunement.away": [] }]);
 });
 
-test("listeners: drag over marks the slot; a drop attunes into that slot", async () => {
+test("listeners: drag over marks the slot; a drop attunes into that slot, rendering once (perf-1)", async () => {
   const actor = overCapCharacter("actorStrp0000009");
   const amulet = addItem(F, actor, { id: "itemAmlt00000001", name: "Amulet", system: { attunement: "required", attuned: false } });
-  actor.updateEmbeddedDocuments = async (type, updates) => { F.calls.push({ op: "updateEmbeddedDocuments", type, updates }); };
+  actor.updateEmbeddedDocuments = async (type, updates, options) => { F.calls.push({ op: "updateEmbeddedDocuments", type, updates, options }); };
   const { strip } = render(actor);
   const hole = slotsOf(strip)[2];       // the Cloak's slot (index 2)
   const over = domEvent(hole);
@@ -197,6 +197,31 @@ test("listeners: drag over marks the slot; a drop attunes into that slot", async
     [{ _id: "itemClk000000001", "system.attuned": false }, { _id: "itemAmlt00000001", "system.attuned": true }],
     { "flags.pentaryn-attunement.slots": ["away:k1", "itemRing00000001", "itemAmlt00000001", "itemRod000000001"] },
   ]);
+  // perf-1: the item write does not re-render; the slot-flag write renders once with both states final.
+  assert.deepEqual(writes[0].options, { [MOD]: { swapFrom: "itemClk000000001" }, render: false });
+});
+
+test("perf-1: re-attuning into the slot it still holds (flag unchanged) keeps the item write's render", async () => {
+  const actor = makeActor(F, {
+    id: "actorPerf0000001", name: "Same Slot", attunement: { value: 1, max: 3 },
+    flags: { [MOD]: { slots: ["itemPfA000000001", "itemPfB000000001"] } },
+    items: [
+      { id: "itemPfA000000001", name: "Ring", system: { attunement: "required", attuned: true } },
+      { id: "itemPfB000000001", name: "Rod", system: { attunement: "required", attuned: false } },
+    ],
+  });
+  actor.isOwner = true;
+  const rod = actor.items.get("itemPfB000000001");
+  actor.updateEmbeddedDocuments = async (type, updates, options) => { F.calls.push({ op: "updateEmbeddedDocuments", type, updates, options }); };
+  const { strip } = render(actor);
+  assert.ok(slotsOf(strip)[1].classList.contains("empty"), "the ✕ left the Rod's slot as a hole");
+  foundry.applications.ux = { TextEditor: { implementation: { getDragEventData: () => ({ type: "Item", uuid: rod.uuid }) } } };
+  globalThis.Item = { implementation: { fromDropData: async () => rod } };
+  const from = F.calls.length;
+  await strip.listeners.drop[0](domEvent(slotsOf(strip)[1]));
+  const writes = F.calls.slice(from).filter(c => c.op === "updateEmbeddedDocuments");
+  assert.deepEqual(writes.map(c => c.updates), [[{ _id: "itemPfB000000001", "system.attuned": true }]]);
+  assert.deepEqual(writes[0].options, {}, "the flag write is a no-op, so the item write must render");
 });
 
 test("EC-3: a drop onto a filled slot at the cap is a swap: no WouldExceed warn", async () => {

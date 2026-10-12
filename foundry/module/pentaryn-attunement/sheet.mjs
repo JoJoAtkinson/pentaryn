@@ -7,7 +7,7 @@
  * handler without patching anything.
  */
 
-import { AWAY, MODULE, awayOf, computeSlots, safe } from "./attunement-core.mjs";
+import { AWAY, MODULE, SLOTS, awayOf, computeSlots, safe, trimSlots } from "./attunement-core.mjs";
 import { releaseAway, serial, writeSlots } from "./actor-adapter.mjs";
 import { decorateCounter, mountStrip } from "./strip.mjs";
 
@@ -48,6 +48,12 @@ async function attuneNow(actor, item, index) {
 
   // A drop onto a filled slot is a swap: the over-cap warning subtracts the occupant (EC-3).
   const options = occupant ? { [MODULE]: { swapFrom: occupant } } : {};
+  // The item write skips its re-render so the sheet draws once, on the slot-flag write, with both
+  // states final (perf-1). If that flag write is a no-op (the item still holds this slot from an ✕)
+  // Foundry renders nothing for it, so the item write keeps its render.
+  const stored = actor.getFlag(MODULE, SLOTS);
+  const flagChanges = JSON.stringify(trimSlots(next)) !== JSON.stringify(Array.isArray(stored) ? stored : null);
+  if (flagChanges) options.render = false;
   if (updates.length) await actor.updateEmbeddedDocuments("Item", updates, options);
   await writeSlots(actor, next);
 }

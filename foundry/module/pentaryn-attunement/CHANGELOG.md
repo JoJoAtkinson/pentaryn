@@ -4,6 +4,11 @@
 
 The version stays 0.3.0 until the next `module.json` restart batch (code only: sync + reload).
 
+- **[declared] perf-1:** a drop onto a slot re-renders the sheet once. The write order stays
+  (items, then the slot flag, so preUpdateItem and the `swapFrom` swap still fire), but the item
+  write passes `render: false`, so the sheet no longer first draws the new item in the wrong hole.
+  When the slot flag would not change (the item still holds that slot after an ✕), the item write
+  keeps its render, as that flag write renders nothing. `test/strip.test.mjs`.
 - **[declared] M11:** `restoreBond` (preCreateItem) no longer writes `options["pentaryn-attunement"].bond`.
   Nothing read that tag, and the batch's shared options namespace now holds only the over-cap
   count (`pending`) and `swapFrom`; the unused `data`/`options` parameters are gone.
