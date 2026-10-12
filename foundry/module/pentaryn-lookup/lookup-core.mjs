@@ -43,7 +43,10 @@ export const MONSTER_PACKS = ["dnd-monster-manual.actors", "dnd5e.actors24",
 /** Where monsters() lists from when no `packs` is given: the Monster Manual, then the 2024 SRD. */
 export const MONSTER_LIST_PACKS = Object.freeze(["dnd-monster-manual.actors", "dnd5e.actors24"]);
 
-/** Where onList() looks a spell up by name: the PHB first, then the 2024 SRD, then the 2014 SRD. */
+/**
+ * Where onList() looks a spell up by name: the PHB first, then the 2024 SRD, then the 2014 SRD.
+ * The first entry must stay the pack OWNED_SPELL_PREFIX names (core-seams pins it, EXT-6).
+ */
 export const SPELL_PACKS = ["dnd-players-handbook.spells", "dnd5e.spells24", "dnd5e.spells"];
 
 /**
@@ -522,7 +525,10 @@ export function knownLists(registry, onError = null) {
   catch (err) { onError?.(err); return []; }
 }
 
-/** The owned book's spell packs sort before any other contributor (the 2024 SRD lists Aid too). */
+/**
+ * The owned book's spell packs sort before any other contributor (the 2024 SRD lists Aid too).
+ * Must name the pack SPELL_PACKS[0] is (core-seams pins it, EXT-6).
+ */
 export const OWNED_SPELL_PREFIX = "dnd-players-handbook";
 
 /**

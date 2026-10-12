@@ -68,6 +68,8 @@
   Monster Manual creature the filter drops is no longer replaced by the 2024 SRD's same-named copy
   (e.g. a CR the SRD's copy has but the MM's does not); a later pack adds only names the earlier
   packs lack (lookup-edge-7).
+- `SPELL_PACKS` and `OWNED_SPELL_PREFIX` each name the other in their comment, and a core-seams
+  test pins `SPELL_PACKS[0]` to the owned book; no runtime change (EXT-6).
 
 ## 0.3.0 — 2026-10-10
 

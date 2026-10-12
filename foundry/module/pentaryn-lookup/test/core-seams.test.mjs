@@ -6,6 +6,7 @@ import assert from "node:assert/strict";
 import * as core from "../lookup-core.mjs";
 import * as oracle from "./fixtures/legacy-monsters.mjs";
 import { manifestOf } from "./kit/harness.mjs";
+import { readFileSync } from "node:fs";
 
 const CR_INPUTS = ["1/4", 0.25, "3", 3, "", null, undefined, "x", " 1 / 2 ", "1/8"];
 const CR_WANT = [0.25, 0.25, 3, 3, null, null, null, null, 0.5, 0.125];
@@ -220,4 +221,16 @@ test("nonPageWarning: none for a page; the documented text for any other kind", 
   assert.equal(core.nonPageWarning("Compendium.p.c.JournalEntry.d", "JournalEntry"),
     "Compendium.p.c.JournalEntry.d is a JournalEntry, not a JournalEntryPage — pass a page UUID from search()");
   assert.match(core.nonPageWarning("Compendium.p.a.Actor.x", "Actor"), /is a Actor, not a JournalEntryPage/);
+});
+
+// ── EXT-6: the preferred spell pack is named in two places; they must agree ──
+
+test("SPELL_PACKS[0] is the owned book OWNED_SPELL_PREFIX names, and each constant cross-links the other (EXT-6)", () => {
+  assert.ok(core.SPELL_PACKS[0].startsWith(core.OWNED_SPELL_PREFIX),
+    `${core.SPELL_PACKS[0]} does not start with ${core.OWNED_SPELL_PREFIX}`);
+  const src = readFileSync(new URL("../lookup-core.mjs", import.meta.url), "utf8");
+  const docs = {};
+  for (const m of src.matchAll(/\/\*\*((?:(?!\*\/)[\s\S])*)\*\/\s*export const (\w+)/g)) docs[m[2]] = m[1];
+  assert.match(docs.SPELL_PACKS ?? "", /OWNED_SPELL_PREFIX/);
+  assert.match(docs.OWNED_SPELL_PREFIX ?? "", /SPELL_PACKS/);
 });
