@@ -489,3 +489,15 @@ whole `~/pentaryn-restore-test/`.
     live, by design: the house rules allowed no restore that would delete local modules.
   - The dress rehearsal (Q6, I).
 - **Not proven live:** BOSS. The second host's first boot (plan §10 step 5) is still to come.
+
+## Q3 — extras removed after a safety copy: PASS (2026-10-12 ~03:24Z, scratch only)
+
+The normal `make foundry-restore SNAP=world-2026-10-12-030832-fvtt14.369-mac.tar.gz` ran against a scratch data root: an rsync copy of the live Config, Data/worlds, Data/modules, Data/systems and pentaryn-boot.json, plus an extra module `zz-q3-extra`. Settings: FOUNDRY_DATA=scratch, PENTARYN_CLOUD=a scratch FolderStorage seeded from the cloud, PENTARYN_HOST=zz-q3, FOUNDRY_PORT=39993. The live Foundry, the real data root and OneDrive were not written.
+
+The restore:
+- took the safety copy `world-2026-10-12-032420-fvtt14.369-zz-q3.safety.tar.gz`, which uploaded exactly one new bundle, `module@zz-q3-extra@0.0.1@326a37c2a3eddb42`; its manifest lists 46 modules including it;
+- then reported `modules: 0 installed, 45 unchanged, 1 removed; systems: all 1 unchanged`.
+
+Afterwards, zz-q3-extra was gone, the 8,349 other module files were unchanged (name, size, mtime and inode), and Data/worlds matched the snapshot exactly.
+
+Restoring the safety copy into a second scratch root with no world fetched only that bundle (`1 installed, 45 unchanged`) and returned the canary file byte for byte. Logs: scratchpad/q3/meta/.
