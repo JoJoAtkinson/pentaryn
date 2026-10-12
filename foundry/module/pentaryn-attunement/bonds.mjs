@@ -57,7 +57,9 @@ function restoreBond(item, data, options) {
   const changes = bondChanges(bond, { actorId: actor.id, actorUuid: actor.uuid, awayKeys: awayOf(actor).map(a => a.key), fallbackName: item.name });
   // A purse copied inside another actor's 750 ms claim window carries that tab's stamp; left in
   // place, every tab here reads the claim as held by someone else and nobody pays (W2-A1).
-  if (item.getFlag?.(MODULE, "claims")?.coinBack) changes[`flags.${MODULE}.claims.coinBack`] = _del;
+  const claims = item.getFlag?.(MODULE, "claims");
+  if (claims?.coinBack) changes[`flags.${MODULE}.claims.coinBack`] = _del;
+  if (claims?.home) changes[`flags.${MODULE}.claims.home`] = _del;   // the same, for a hand-back (ATT-AC-1-residual)
   item.updateSource(changes);
   if (options) options[MODULE] = { bond };
 }
@@ -66,8 +68,8 @@ function restoreBond(item, data, options) {
  * After the item exists: hand its slot back and say so. Only on the client that
  * created it — one user, but every tab of that user (the MCP bridge tab and a GM
  * browser tab both pass the userId gate). The coin purse is therefore claimed
- * first, so exactly one tab pays (W2-A1); the slot hand-back writes the same
- * values from either tab and needs no claim.
+ * first, so exactly one tab pays (W2-A1); the slot hand-back is claimed the same
+ * way (key `home`), so exactly one tab hands each item back (ATT-AC-1-residual).
  */
 async function onCreateItemBond(item, options, userId) {
   if (userId !== game.user.id) return;
@@ -96,9 +98,13 @@ async function onCreateItemBond(item, options, userId) {
   }
 
   if (!isBondOwner(bond, actor)) return;
+  // One tab per item, as the purse: two tabs each running their own chain could interleave a batch's
+  // actor writes and leave a phantom away slot (ATT-AC-1-residual). An item already home re-reads as {}.
+  const won = await claimDocument(item, "home", { scope: MODULE, reread: d => d.parent?.items?.get?.(d.id) ?? {} });
+  if (!won) return;
   // Home for good: the bond has done its job. Anywhere else it stays, so the
-  // item still knows its way back if it is handed over later.
-  await item.update({ [flagPath(MODULE, BOND)]: _del });
+  // item still knows its way back if it is handed over later. The claim goes with it.
+  await item.update({ [flagPath(MODULE, BOND)]: _del, [`flags.${MODULE}.claims.home`]: _del });
   // A take-all brings several bonded items home in one batch: each hand-back reads the away list
   // and slots, so it waits for the previous one's actor write (ATT-AC-1).
   return serial(actor, async () => {
@@ -113,7 +119,7 @@ async function onCreateItemBond(item, options, userId) {
   });
 }
 
-/** Per-actor tails of in-flight hand-backs and, apart (`:coin`), coin purses. Local to this tab; two tabs still race (recorded). */
+/** Per-actor tails of in-flight hand-backs and, apart (`:coin`), coin purses. Local to this tab; the claims keep a second tab out. */
 const tails = new Map();
 
 /**

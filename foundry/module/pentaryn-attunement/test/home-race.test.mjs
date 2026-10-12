@@ -44,6 +44,8 @@ test("two bonded items home in one batch: both away entries consumed, each in it
   F.fire("createItem", staff, {}, GM);
   F.fire("createItem", ring, {}, GM);
   await drain(queue);
+  mock.timers.tick(750);                        // [declared] ATT-AC-1-residual: each hand-back is claimed first
+  await drain(queue);
 
   assert.deepEqual(awayOf(actor), []);
   assert.deepEqual(actor.getFlag(MOD, "slots"), ["itemStaff0000002", "itemRing00000002"]);
@@ -73,4 +75,58 @@ test("ATT-AC-2: two coin purses in one batch: both pay", async () => {
 
   assert.equal(actor.system.currency.gp, 18);
   assert.equal(F.calls.slice(from).filter(c => c.op === "delete" && c.documentName === "Item").length, 2);
+});
+
+// ATT-AC-1-residual: README "Two sessions / who writes". The MCP bridge tab and a GM browser tab both pass
+// createItem's userId gate, and each keeps its own hand-back chain (a second module instance here, so its
+// `tails` is its own). [declared] Each returning item is claimed (kit claimDocument, key `home`) so exactly
+// one tab clears the bond and hands the slot back: one actor write and one toast per item, no phantom away slot.
+test("[declared] ATT-AC-1-residual: two GM tabs, two bonded items home in one batch — one hand-back per item", async () => {
+  const handlers = {};
+  const tabB = await import("../bonds.mjs?tab=browser");
+  tabB.install({ on: (name, fn) => { handlers[name] = fn; } });
+
+  const actor = makeActor(F, { id: "actorTwoTab00001", name: "Talo Twotab",
+    flags: { [MOD]: { away: [{ key: "t1", name: "Staff", img: "i" }, { key: "t2", name: "Ring", img: "i" }], slots: ["away:t1", "away:t2"] } } });
+  const bond = (key, name) => ({ actor: actor.uuid, key, name, equipped: true, attuned: true, attunement: "required" });
+  const staff = addItem(F, actor, { id: "itemStaffTwoTab1", name: "Staff", system: { attuned: true }, flags: { [MOD]: { bond: bond("t1", "Staff") } } });
+  const ring = addItem(F, actor, { id: "itemRingTwoTab01", name: "Ring", system: { attuned: true }, flags: { [MOD]: { bond: bond("t2", "Ring") } } });
+  const queue = [];
+  for (const doc of [actor, staff, ring]) deferWrites(doc, queue);
+  const from = F.calls.length;
+
+  try {
+    F.become({ socketId: "socket-bridge" });
+    F.fire("createItem", staff, {}, GM);
+    F.fire("createItem", ring, {}, GM);
+    F.become({ socketId: "socket-browser" });
+    handlers.createItem(staff, {}, GM);
+    handlers.createItem(ring, {}, GM);
+    for (let i = 0; i < 3; i++) {
+      await drain(queue);
+      mock.timers.tick(750);
+    }
+    await drain(queue);
+  } finally {
+    F.become({ socketId: "socket-gm-1" });
+  }
+
+  assert.deepEqual(awayOf(actor), [], "no phantom away slot");
+  assert.deepEqual(actor.getFlag(MOD, "slots"), ["itemStaffTwoTab1", "itemRingTwoTab01"]);
+  assert.equal(F.calls.slice(from).filter(c => c.op === "update" && c.documentName === "Actor").length, 2, "one hand-back write per item");
+  assert.equal(F.calls.slice(from).filter(c => c.op === "notify").length, 2, "one toast per item");
+  assert.equal(staff.getFlag(MOD, "bond"), undefined);
+  assert.equal(staff.flags[MOD].claims?.home, undefined, "the winner clears its claim with the bond");
+});
+
+test("[declared] ATT-AC-1-residual: preCreateItem clears a stale claims.home copied with the item", () => {
+  // An item copied inside another tab's 750 ms hand-back window carries that tab's stamp; left in place,
+  // every tab reads the claim as held, nobody hands the slot back and the bond never clears.
+  const actor = makeActor(F, { id: "actorStaleHome01", name: "Stale Home", flags: { [MOD]: { away: [{ key: "sh", name: "Staff", img: "i" }] } } });
+  const bond = { actor: actor.uuid, key: "sh", name: "Staff", equipped: true, attuned: true, attunement: "required" };
+  const item = addItem(F, null, { id: "itemStaleHome001", name: "Staff (Stale)", flags: { [MOD]: { bond, claims: { home: "socket-gone" } } } });
+  item.parent = actor;
+  const from = F.calls.length;
+  F.fireCall("preCreateItem", item, {}, {});
+  assert.equal(F.calls.slice(from).filter(c => c.op === "updateSource").at(-1)?.changes["flags.pentaryn-attunement.claims.home"], "<_del>");
 });

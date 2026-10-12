@@ -151,9 +151,13 @@ test("createItem (own user, bond, home): bond cleared, away/slots written, BackI
   const from = mark();
   F.fire("createItem", staff, {}, GM);
   await flush();
+  mock.timers.tick(750);                      // [declared] ATT-AC-1-residual: one tab claims the hand-back
+  await flush();
   const seq = since(from).filter(c => ["update", "notify"].includes(c.op)).map(c => (c.op === "notify" ? ["notify", c.message] : ["update", c.documentName, c.changes]));
   assert.deepEqual(seq, [
-    ["update", "Item", { "flags.pentaryn-attunement.bond": "<_del>" }],   // [declared] v14 hygiene: _del, not -=
+    ["update", "Item", { "flags.pentaryn-attunement.claims.home": "socket-gm-1" }],
+    // [declared] v14 hygiene: _del, not -=; ATT-AC-1-residual: the claim is cleared in the same write
+    ["update", "Item", { "flags.pentaryn-attunement.bond": "<_del>", "flags.pentaryn-attunement.claims.home": "<_del>" }],
     ["update", "Actor", { "flags.pentaryn-attunement.away": [], "flags.pentaryn-attunement.slots": ["itemStaff0000001", "itemCloak0000001"] }],
     ["notify", "Staff is back with Talo Home — attunement restored."],
   ]);

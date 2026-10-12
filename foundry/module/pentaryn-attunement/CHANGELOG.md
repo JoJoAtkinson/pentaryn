@@ -4,6 +4,13 @@
 
 The version stays 0.3.0 until the next `module.json` restart batch (code only: sync + reload).
 
+- **[declared] ATT-AC-1-residual:** an item coming home is claimed (kit `claimDocument`, key
+  `flags.pentaryn-attunement.claims.home` on the item, 750 ms settle) before the bond is cleared and
+  the slot handed back, as the coin purse is. The MCP bridge tab and a GM browser tab each kept their
+  own hand-back chain, so a two-item batch could write the actor twice per item and leave a phantom
+  away slot; now one tab hands each item back (one write, one toast). The winner deletes the claim in
+  the same update that deletes the bond; `restoreBond` clears a stale `claims.home` copied with an
+  item. The slot lights up about 750 ms later than before.
 - **[declared] W2-A1 follow-up:** `restoreBond` (preCreateItem, non-pile actor) clears a stale
   `flags.pentaryn-attunement.claims.coinBack`. A purse copied inside another actor's 750 ms claim
   window carried that tab's socket stamp, so every tab on the new actor read the claim as held and

@@ -2,10 +2,12 @@
 // actor's id, so an item stashed from token A came home "attuned and equipped" on token B or the base
 // actor, and lost its bond there. [declared] Bonds are now keyed on the actor's uuid; a legacy bond holding
 // the bare id is still read as before.
-import { test } from "node:test";
+import { mock, test } from "node:test";
 import assert from "node:assert/strict";
 import { GM, MOD, addItem, attunementWorld, makeActor } from "./fixtures/world.mjs";
 import { awayOf, bondChanges, isBondOwner } from "../attunement-core.mjs";
+
+mock.timers.enable({ apis: ["setTimeout"] });   // the hand-back's 750 ms claim (ATT-AC-1-residual)
 
 const F = await attunementWorld();
 await import("../attunement.mjs");
@@ -73,7 +75,9 @@ test("ATT-ROB-2: token A's cloak created on token A comes home attuned and equip
   mark = since(0).length;
   F.fire("createItem", held, {}, GM);
   await flush();
-  assert.deepEqual(since(mark, "update").map(c => c.documentName), ["Item", "Actor"]);
+  mock.timers.tick(750);                      // [declared] ATT-AC-1-residual: the hand-back is claimed first
+  await flush();
+  assert.deepEqual(since(mark, "update").map(c => c.documentName), ["Item", "Item", "Actor"]);
   assert.deepEqual(awayOf(tokA), []);
 });
 
