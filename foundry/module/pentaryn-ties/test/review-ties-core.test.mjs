@@ -5,6 +5,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { bootWorld } from "./fixtures/world.mjs";
+import { clampAttribute, readRegistry, resolveAttrRef } from "../known-core.mjs";
 
 const PLAYER = "zzPlayerUser0001";
 const PC = "zzReviewPc000001";
@@ -46,4 +47,11 @@ test("selectAttributes with null opts adds like omitted opts (writes never throw
   const out = await A().select(["guild"], null);
   assert.equal(out.ok, true);
   assert.deepEqual(out.ids, (await A().select(["guild"])).ids);
+});
+
+test("clampAttribute keeps a kind: actor id verbatim", () => {
+  const KIND = "kind:AbC123def456GHI7";
+  assert.equal(clampAttribute({ id: KIND, title: "Goblin" }).id, KIND);
+  assert.equal(readRegistry([{ id: KIND }])[0].id, KIND);
+  assert.equal(resolveAttrRef(KIND, readRegistry([{ id: KIND, title: "Goblin" }])).id, KIND);
 });
