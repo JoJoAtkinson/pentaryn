@@ -1064,3 +1064,22 @@ def test_the_fork_has_a_use_doc_and_routes_to_it():
     assert any("**Read this when:**" in line for line in head)
     for index in ("CLAUDE.md", "context/foundry/README.md"):
         assert "mcp-fork.md" in (cfg.REPO_ROOT / index).read_text(encoding="utf-8"), index
+
+
+# ── a corrupt tunnel pidfile never names a process group ──────────────────────
+# os.kill(0, sig) signals our own process group and os.kill(-1, sig) every process the
+# user owns, so a pidfile holding 0 or a negative number must read as "no tunnel".
+
+@pytest.mark.parametrize("content", ["0", "-1"])
+def test_tunnel_pid_rejects_non_positive_pids(monkeypatch, tmp_path, capsys, content):
+    pidfile = tmp_path / "cf.pid"
+    pidfile.write_text(content)
+    monkeypatch.setattr(cfg, "CF_PID", pidfile)
+    calls = []
+    monkeypatch.setattr(service.os, "kill", lambda pid, sig: calls.append((pid, sig)))
+
+    assert service._tunnel_pid() is None
+    assert service.tunnel_down() == 0
+    assert "tunnel already down" in capsys.readouterr().out
+    assert not [c for c in calls if c[0] <= 0]
+    assert not [c for c in calls if c[1] == 15]

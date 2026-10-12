@@ -203,6 +203,8 @@ def _tunnel_pid() -> int | None:
         pid = int(cfg.CF_PID.read_text().strip())
     except (OSError, ValueError):
         return None
+    if pid <= 0:   # os.kill(0|-n, …) would signal a whole process group, not one process
+        return None
     try:
         os.kill(pid, 0)
     except OSError:
