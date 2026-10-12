@@ -78,11 +78,21 @@ function skipped(facts, target) {
   return null;
 }
 
+/** The last save() on this client; the next one waits for it, settled either way (double-save). */
+let saving = Promise.resolve();
+
 /**
- * Copy a target into the current user's journal and open it on the result.
+ * Copy a target into the current user's journal and open it on the result. Calls on this client run
+ * one at a time, so a second quick save plans from the page the first wrote instead of copying again.
  * @returns {Promise<{journal, pageIds: string[], created: number, updated: number}|null>}
  */
-async function save(target, { near } = {}) {
+function save(target, opts) {
+  const run = saving.then(() => saveNow(target, opts));
+  saving = run.catch(() => {});
+  return run;
+}
+
+async function saveNow(target, { near } = {}) {
   lastSkip = null;
   const journal = await ctx.exposed.ensurePersonalJournal();
   if (!journal) return skipped({ journal }, target);

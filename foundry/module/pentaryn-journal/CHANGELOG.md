@@ -12,6 +12,9 @@
   bar stuck there: the redraw is inside the click's try, so the player gets the "failed" warning and
   the button comes back. A throwing bar click (including "open") is logged as a warning, not an
   unhandled rejection.
+- **[declared] double-save:** two quick saves (two clicks in different windows, or overlapping
+  `add()` calls) no longer make two copies: saves on one client run one at a time, so the second sees
+  the first's page and answers it instead of creating another.
 
 ## Unreleased (blueprint migration, wave 2)
 
