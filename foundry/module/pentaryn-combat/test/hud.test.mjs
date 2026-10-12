@@ -515,6 +515,9 @@ test("other triggers: sequenceEnd, a new turn/round (aborting a stale sequence),
   await drain();
   F.Hooks.callAll("updateToken", toks[fig.id].document, { x: 5 });
   assert.equal(seq.running().abort, false);
+  // edge-2: another creature's token becoming another body leaves this sequence running
+  F.Hooks.callAll("updateToken", toks[rog.id].document, { actorId: "other" });
+  assert.equal(seq.running().abort, false, "edge-2: another token's shape change does not abort");
   F.Hooks.callAll("updateToken", toks[fig.id].document, { actorId: "other" });
   assert.equal(seq.running().abort, true);
   release(null);
