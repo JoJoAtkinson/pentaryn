@@ -35,6 +35,10 @@
       "singlePage": {
         "name": "Eye readables open as a single page",
         "hint": "When an eye's journal has only one page, players don't see the page list or the page arrows. Turn off if you add multi-page eyes later. Personal journals always show their list."
+      },
+      "folderName": {
+        "name": "Personal journals folder",
+        "hint": "The folder every player's personal journal is kept in. Hidden; set it from the console. Empty uses the default name."
       }
     }
   }

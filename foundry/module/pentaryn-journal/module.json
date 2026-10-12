@@ -3,12 +3,30 @@
   "title": "Pentaryn Player Journal",
   "description": "An 'Add to my journal' bar under every eye readable (a journal opened from a scene pin, its image popout, or an item opened from an eye pile). Clicking it copies what the player was shown, with GM secrets stripped, embeds turned into links and relative links made absolute, into their own personal journal. That journal then opens on the new entry, glowing among all their others. One journal per user, made by the GM client (or through a native user query to the active GM). Exposes game.pentaryn.journal.",
   "version": "0.1.0",
-  "compatibility": { "minimum": "14", "verified": "14" },
+  "compatibility": { "minimum": "14", "verified": "14.369" },
   "authors": [{ "name": "Joseph Atkinson" }],
+  "relationships": {
+    "systems": [{ "id": "dnd5e", "type": "system", "compatibility": { "minimum": "6.0", "verified": "6.0.6" } }],
+    "recommends": [{ "id": "item-piles", "type": "module", "reason": "the bar on items opened from eye piles" }]
+  },
   "esmodules": ["journal.mjs"],
-  "styles": ["journal.css"],
+  "styles": ["styles/journal.css"],
   "languages": [{ "lang": "en", "name": "English", "path": "lang/en.json" }],
   "socket": false,
   "protected": false,
-  "flags": { "pentaryn": { "flagScope": "journal", "generation": 14 } }
+  "flags": {
+    "pentaryn": {
+      "tier": "full",
+      "namespace": "journal",
+      "flagScope": "pentaryn-journal",
+      "cssPrefix": "pj-",
+      "generation": 14,
+      "afterSync": [
+        "First install: restart Foundry (module.json is read at startup), enable 'Pentaryn Player Journal', then reload.",
+        "Players get an 'Add to my journal' bar on every eye readable.",
+        "GM prep (optional, also runs on GM ready): game.pentaryn.journal.ensureAll()",
+        "Test from your own client: Settings → Pentaryn Player Journal → Show the Add button to the GM"
+      ]
+    }
+  }
 }

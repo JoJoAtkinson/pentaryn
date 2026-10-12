@@ -266,12 +266,7 @@ MODULES = {
         # node-test: sanitize() is what keeps GM secrets out of a player-owned copy; it is proved
         # on synthetic fixtures before anything reaches Data/.
         check=(*_STATIC, "node-test", *_BLUEPRINT),
-        after_sync=(
-            "First install: restart Foundry (module.json is read at startup), enable 'Pentaryn Player Journal', then reload.",
-            "Players get an 'Add to my journal' bar on every eye readable.",
-            "GM prep (optional, also runs on GM ready): game.pentaryn.journal.ensureAll()",
-            "Test from your own client: Settings → Pentaryn Player Journal → Show the Add button to the GM",
-        ),
+        # after_sync comes from module.json flags.pentaryn.afterSync (Wave 7 batch).
     ),
     "aoe": ModuleSpec(
         "pentaryn-aoe",

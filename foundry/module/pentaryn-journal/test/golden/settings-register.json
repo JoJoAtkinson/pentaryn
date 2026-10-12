@@ -25,8 +25,8 @@
     "config": false,
     "type": "String",
     "default": "Player Journals",
-    "name": null,
-    "hint": null,
+    "name": "PENTARYN_JOURNAL.settings.folderName.name",
+    "hint": "PENTARYN_JOURNAL.settings.folderName.hint",
     "onChange": false
   }
 ]
