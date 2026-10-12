@@ -28,7 +28,7 @@ import { setting } from "./settings.mjs";
 import { claimMessage } from "./lib/election.mjs";
 import { makeLog } from "./lib/log.mjs";
 import { FEATURE_ROWS } from "./api-manifest.mjs";
-import { cardEffects, recordedTarget, spellOf } from "./messages-adapter.mjs";
+import { cardEffects, messageFrom, recordedTarget, spellOf } from "./messages-adapter.mjs";
 
 const esc = s => foundry.utils.escapeHTML(String(s ?? ""));
 
@@ -70,6 +70,7 @@ function appliedIds(message) {
  * creature the card targeted (covers a GM who applied it some other way).
  */
 export async function pendingFor(message, { effects = null } = {}) {
+  message = messageFrom(message);
   // A settled card never lights up (pendingEffects says so too); answer before resolving its
   // effects, which on dnd5e 6 is an async fromUuid per card (a pack fetch for dnd5e.effects).
   if (Date.now() - (message?.timestamp ?? 0) > HIGHLIGHT_MAX_AGE) return [];

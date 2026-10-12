@@ -19,7 +19,7 @@
  */
 
 import {
-  MODULE, aoeFlags, buildRows, fillSave, matchSave, applicableRows, allApplied, newestRegion,
+  MODULE, RECENT_MESSAGES, aoeFlags, buildRows, fillSave, matchSave, applicableRows, allApplied, newestRegion,
   supersedes, isHandle, isTemplateRegion, hydrateDamages
 } from "./core.mjs";
 import { setting } from "./settings.mjs";
@@ -320,7 +320,7 @@ async function onSaveMessage(message) {
     created: message.timestamp ?? Date.now()
   };
   // Newest open resolution first; only a handful of recent messages are ever candidates.
-  const recent = game.messages.contents.slice(-60).reverse().filter(m => aoeFlags(m).resolution && !aoeFlags(m).resolution.superseded);
+  const recent = game.messages.contents.slice(-RECENT_MESSAGES).reverse().filter(m => aoeFlags(m).resolution && !aoeFlags(m).resolution.superseded);
   for (const m of recent) {
     const res = aoeFlags(m).resolution;
     const idx = matchSave(res, info, { createdAfter: m.timestamp ?? 0 });

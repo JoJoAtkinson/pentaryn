@@ -80,6 +80,15 @@ test("-14 pendingFor: ['e1'] with one fetch; an old card → [] with no fetch; r
   assert.deepEqual(await E.pendingFor(card({ effects: [] })), []);
 });
 
+test("cardEffects and pendingFor accept a message id (ChatMessage|id)", async () => {
+  const c = card({ effects: [armorFx], id: "msgByIdCard00001" });
+  assert.deepEqual((await E.cardEffects(c)).map(e => e.id), [armorFx.id]);
+  assert.deepEqual((await E.cardEffects(c.id)).map(e => e.id), [armorFx.id]);
+  assert.deepEqual(await E.pendingFor(c.id), [armorFx.id]);
+  assert.deepEqual(await E.cardEffects("noSuchMessage000"), []);
+  assert.deepEqual(await E.pendingFor("noSuchMessage000"), []);
+});
+
 /* ── self-apply ──────────────────────────────────────────────────────────────────────────────── */
 
 test("selfReason over the card shapes (golden/self-reason.json)", async () => {
