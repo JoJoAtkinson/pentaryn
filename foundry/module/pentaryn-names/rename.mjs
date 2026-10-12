@@ -24,15 +24,7 @@ export async function sync(actor, oldName, newName) {
     await actor.update({ "prototypeToken.name": proto }, { pentarynNames: true });
     count++;
   }
-  for (const scene of game.scenes) {
-    const updates = planTokenRelabels([...scene.tokens], {
-      actorId: actor.id, oldName, newName, canEdit: t => t.canUserModify(game.user, "update"),
-    });
-    if (updates.length) {
-      await scene.updateEmbeddedDocuments("Token", updates);
-      count += updates.length;
-    }
-  }
+  count += await relabelEmbedded(game.scenes, "tokens", "Token", t => t.canUserModify(game.user, "update"), actor, oldName, newName);
   if (game.user.isGM) await relabelCombatants(actor, oldName, newName);
   if (count) ui.notifications.info(_loc("PENTARYN_NAMES.Synced", { name: newName, count }));
   return count;
@@ -46,10 +38,24 @@ export async function sync(actor, oldName, newName) {
  * name (common/documents/combatant.mjs:76-85). One batch write per combat.
  */
 async function relabelCombatants(actor, oldName, newName) {
-  for (const combat of game.combats) {
-    const updates = planTokenRelabels([...combat.combatants], { actorId: actor.id, oldName, newName, canEdit: () => true });
-    if (updates.length) await combat.updateEmbeddedDocuments("Combatant", updates);
+  await relabelEmbedded(game.combats, "combatants", "Combatant", () => true, actor, oldName, newName);
+}
+
+/**
+ * The shared loop: for each parent in turn, plan the relabels of its `collection` with the token
+ * rule and write them in ONE batch `updateEmbeddedDocuments(embeddedName, …)`; parents with nothing
+ * to change are not written. Returns how many documents were relabelled.
+ */
+async function relabelEmbedded(parents, collection, embeddedName, canEdit, actor, oldName, newName) {
+  let n = 0;
+  for (const p of parents) {
+    const updates = planTokenRelabels([...p[collection]], { actorId: actor.id, oldName, newName, canEdit });
+    if (updates.length) {
+      await p.updateEmbeddedDocuments(embeddedName, updates);
+      n += updates.length;
+    }
   }
+  return n;
 }
 
 /**
