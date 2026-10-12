@@ -40,7 +40,7 @@ import {
 } from "./known-core.mjs";
 import { studyStateFor, requestStudy, kindDialog, loreStateFor, requestLore, kindActorOf, grantKind as releaseKind } from "./study.mjs";
 import { attributeIdsOf, registry as registryOf } from "./attributes.mjs";
-import { esc } from "./core/html.mjs";
+import { esc, bindRowToggle, makeOpenState, notesPreview, notesProse } from "./core/html.mjs";
 import { makeLog } from "./lib/log.mjs";
 import { categoriesFor, categoryLabel, readKnown, writeKnown, addKnown, setKnownField, notebookActor } from "./known-data.mjs";
 
@@ -76,21 +76,17 @@ const FALLBACK_ART = "icons/svg/mystery-man.svg";
  * both a tie to Wat Harrow and a Known entry about him. Sharing `editor.mjs`'s Map would
  * make those two rows one piece of state: open his tie, and his notebook page is open too.
  */
-const expanded = new Map(); // actorId -> Set(entryId)
+const expanded = makeOpenState(); // actorId -> Set(entryId)
 const shownHidden = new Set();
 const showingHidden = actorId => shownHidden.has(actorId);
 const setShowHidden = (actorId, on) => (on ? shownHidden.add(actorId) : shownHidden.delete(actorId));
 
-const expandedFor = actorId => expanded.get(actorId) ?? new Set();
-function setExpanded(actorId, id, open) {
-  const set = expanded.get(actorId) ?? new Set();
-  open ? set.add(id) : set.delete(id);
-  set.size ? expanded.set(actorId, set) : expanded.delete(actorId);
-}
+const expandedFor = expanded.of;
+const setExpanded = expanded.set;
 
 /** Drop a deleted actor's row state; nothing else holds a reference to it. */
 export function forgetKnownActor(actorId) {
-  expanded.delete(actorId);
+  expanded.forget(actorId);
   shownHidden.delete(actorId); // ties-31: a deleted actor's "show hidden" toggle goes with it
 }
 
@@ -242,9 +238,7 @@ function summary(entry, { open, canEdit }) {
   const name = `<span class="pt-name${entry.missing ? " pt-missing" : ""}">${esc(
     entry.name || _loc("PENTARYN_TIES.row.missingName")
   )}</span>`;
-  const preview = hasNotes
-    ? `<span class="pt-note-preview">${esc(entry.notes)}</span>`
-    : `<span class="pt-note-preview pt-note-none"><em>${esc(_loc("PENTARYN_TIES.known.notesEmpty"))}</em></span>`;
+  const preview = notesPreview(entry.notes, _loc("PENTARYN_TIES.known.notesEmpty"));
 
   return `<div class="pt-summary" role="button" tabindex="0" aria-expanded="${open}"
       data-action="toggle" data-tooltip="${esc(_loc(canEdit ? "PENTARYN_TIES.known.expandEdit" : "PENTARYN_TIES.known.expandRead"))}"
@@ -427,9 +421,7 @@ function detail(entry, { canEdit, categories, isGM, study, grants, lore }) {
   const controls = studyControls(entry, { canEdit, isGM, study });
 
   if (!canEdit) {
-    const prose = entry.notes.trim()
-      ? `<div class="pt-notes-prose">${esc(entry.notes)}</div>`
-      : `<div class="pt-notes-prose pt-note-none"><em>${esc(_loc("PENTARYN_TIES.known.notesEmpty"))}</em></div>`;
+    const prose = notesProse(entry.notes, _loc("PENTARYN_TIES.known.notesEmpty"));
     return `<div class="pt-detail">
       ${controls}
       ${prose}
@@ -613,22 +605,8 @@ export function bindKnown(root, actor, rerender = () => {}) {
     const row = head.closest(".pt-row");
     const wrap = row?.querySelector(".pt-detail-wrap");
     if (!wrap) return;
-    const toggle = () => {
-      const open = wrap.hasAttribute("hidden");
-      wrap.toggleAttribute("hidden", !open);
-      row.classList.toggle("pt-open", open);
-      head.setAttribute("aria-expanded", String(open));
-      setExpanded(actor.id, row.dataset.id, open);
-      // straight to the prose: unlike a tie row there is no word to name first, and the
-      // notes ARE the entry
-      if (open) wrap.querySelector('[data-field="notes"]')?.focus();
-    };
-    head.addEventListener("click", toggle);
-    head.addEventListener("keydown", ev => {
-      if (ev.key !== "Enter" && ev.key !== " ") return;
-      ev.preventDefault(); // Space would scroll the panel instead
-      toggle();
-    });
+    // straight to the prose: unlike a tie row there is no word to name first, and the notes ARE the entry
+    bindRowToggle(head, row, { wrap, onToggle: open => setExpanded(actor.id, row.dataset.id, open), focus: '[data-field="notes"]' });
   });
 
   // a click inside the detail must not bubble up and collapse the row being typed in
@@ -774,20 +752,7 @@ export function bindKnown(root, actor, rerender = () => {}) {
 function bindSummary(head, row, actor) {
   const wrap = row?.querySelector(".pt-detail-wrap");
   if (!head || !wrap) return; // a repaint that produced nothing must not take the tab down
-  const toggle = () => {
-    const open = wrap.hasAttribute("hidden");
-    wrap.toggleAttribute("hidden", !open);
-    row.classList.toggle("pt-open", open);
-    head.setAttribute("aria-expanded", String(open));
-    setExpanded(actor.id, row.dataset.id, open);
-    if (open) wrap.querySelector('[data-field="notes"]')?.focus();
-  };
-  head.addEventListener("click", toggle);
-  head.addEventListener("keydown", ev => {
-    if (ev.key !== "Enter" && ev.key !== " ") return;
-    ev.preventDefault();
-    toggle();
-  });
+  bindRowToggle(head, row, { wrap, onToggle: open => setExpanded(actor.id, row.dataset.id, open), focus: '[data-field="notes"]' });
 }
 
 /**

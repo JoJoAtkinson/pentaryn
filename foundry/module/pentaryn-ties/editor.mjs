@@ -20,7 +20,7 @@
 import { MODULE, STANCES, NOTES_MAX, clampStance, clampStrength, stanceOf } from "./ties-core.mjs";
 import { read, inbound, presentActorIds, write, removeTie, stanceLabel } from "./ties-adapter.mjs";
 import { authoringHTML, bindAuthoring } from "./authoring-ui.mjs";
-import { esc } from "./core/html.mjs";
+import { esc, bindRowToggle, makeOpenState, notesPreview, notesProse, wordCell } from "./core/html.mjs";
 import { makeLog } from "./lib/log.mjs";
 
 const log = makeLog(MODULE);
@@ -54,16 +54,12 @@ export function artFor(tie) {
  * mutation repaints the whole block — without this, changing a stance would slam shut the
  * row you were editing. Purely cosmetic state; nothing is lost if it resets.
  */
-const expanded = new Map(); // actorId -> Set(tieId)
+const expanded = makeOpenState(); // actorId -> Set(tieId)
 
 /** The inbound rows the last buildHTML read for an actor, for the bind that follows it (ties-22). */
 const lastInbound = new WeakMap();
-const expandedFor = actorId => expanded.get(actorId) ?? new Set();
-function setExpanded(actorId, tieId, open) {
-  const set = expanded.get(actorId) ?? new Set();
-  open ? set.add(tieId) : set.delete(tieId);
-  set.size ? expanded.set(actorId, set) : expanded.delete(actorId);
-}
+const expandedFor = expanded.of;
+const setExpanded = expanded.set;
 
 /**
  * Whatever key actually opens the tie dialog. Hardcoding "6" in the hint was a lie the
@@ -77,7 +73,7 @@ function addTieKey() {
 
 /** Drop a deleted actor's row state; nothing else holds a reference to it. */
 export function forgetActor(actorId) {
-  expanded.delete(actorId);
+  expanded.forget(actorId);
 }
 
 export function stanceSelect(value, { field = "stance" } = {}) {
@@ -159,13 +155,9 @@ function summary(tie, { open, canEdit, reply = null }) {
    * hidden one costs a click per row per lookup. Clamped to one line by CSS, and hidden by
    * CSS while the row is open, so expanding is a class toggle rather than a repaint.
    */
-  const preview = hasNotes
-    ? `<span class="pt-note-preview">${esc(tie.notes)}</span>`
-    : `<span class="pt-note-preview pt-note-none"><em>${esc(_loc("PENTARYN_TIES.row.notesEmpty"))}</em></span>`;
+  const preview = notesPreview(tie.notes, _loc("PENTARYN_TIES.row.notesEmpty"));
 
-  const word = tie.word
-    ? `<span class="pt-word${stance.value ? ` pt-${stance.key}` : ""}">${esc(tie.word)}</span>`
-    : `<span class="pt-word pt-noword">${esc(stanceLabel(tie.stance))}</span>`;
+  const word = wordCell(tie.word, stanceLabel(tie.stance), stance.value ? ` pt-${stance.key}` : "");
 
   /*
    * The whole summary is one button. The ask was "clicking anywhere on the item makes it
@@ -187,12 +179,8 @@ function summary(tie, { open, canEdit, reply = null }) {
 /** Their half of a mutual pair, read-only, GM only — with a door to edit it properly. */
 function theirSide(reply) {
   if (!reply) return "";
-  const word = reply.word
-    ? `<span class="pt-word">${esc(reply.word)}</span>`
-    : `<span class="pt-word pt-noword">${esc(stanceLabel(reply.stance))}</span>`;
-  const prose = reply.notes.trim()
-    ? `<div class="pt-notes-prose">${esc(reply.notes)}</div>`
-    : `<div class="pt-notes-prose pt-note-none"><em>${esc(_loc("PENTARYN_TIES.row.notesEmpty"))}</em></div>`;
+  const word = wordCell(reply.word, stanceLabel(reply.stance));
+  const prose = notesProse(reply.notes, _loc("PENTARYN_TIES.row.notesEmpty"));
   return `<div class="pt-their-side">
     <div class="pt-their-head">
       <span class="pt-their-title">${esc(_loc("PENTARYN_TIES.reply.heading", { name: reply.name }))}</span>
@@ -220,9 +208,7 @@ function detail(tie, { canEdit, reply = null }) {
       </button>`;
 
   if (!canEdit) {
-    const prose = tie.notes.trim()
-      ? `<div class="pt-notes-prose">${esc(tie.notes)}</div>`
-      : `<div class="pt-notes-prose pt-note-none"><em>${esc(_loc("PENTARYN_TIES.row.notesEmpty"))}</em></div>`;
+    const prose = notesProse(tie.notes, _loc("PENTARYN_TIES.row.notesEmpty"));
     return `<div class="pt-detail">
       ${prose}
       <div class="pt-detail-actions">${openSheet}</div>
@@ -277,15 +263,9 @@ function tieRow(tie, { open, canEdit, reply = null }) {
  */
 function inboundRow(row, { open }) {
   const s = stanceOf(row.stance);
-  const word = row.word
-    ? `<span class="pt-word${s.value ? ` pt-${s.key}` : ""}">${esc(row.word)}</span>`
-    : `<span class="pt-word pt-noword">${esc(stanceLabel(row.stance))}</span>`;
-  const preview = row.notes.trim()
-    ? `<span class="pt-note-preview">${esc(row.notes)}</span>`
-    : `<span class="pt-note-preview pt-note-none"><em>${esc(_loc("PENTARYN_TIES.row.notesEmpty"))}</em></span>`;
-  const prose = row.notes.trim()
-    ? `<div class="pt-notes-prose">${esc(row.notes)}</div>`
-    : `<div class="pt-notes-prose pt-note-none"><em>${esc(_loc("PENTARYN_TIES.row.notesEmpty"))}</em></div>`;
+  const word = wordCell(row.word, stanceLabel(row.stance), s.value ? ` pt-${s.key}` : "");
+  const preview = notesPreview(row.notes, _loc("PENTARYN_TIES.row.notesEmpty"));
+  const prose = notesProse(row.notes, _loc("PENTARYN_TIES.row.notesEmpty"));
 
   return `<li class="pt-row pt-inbound${open ? " pt-open" : ""}" data-id="${esc(row.id)}" data-inbound="1">
     <div class="pt-summary" role="button" tabindex="0" aria-expanded="${open}" data-action="toggle"
@@ -424,22 +404,7 @@ export function bind(root, actor, rerender = () => {}) {
     const row = head.closest(".pt-row");
     const wrap = row?.querySelector(".pt-detail-wrap");
     if (!wrap) return;
-
-    const toggle = () => {
-      const open = wrap.hasAttribute("hidden");
-      wrap.toggleAttribute("hidden", !open);
-      row.classList.toggle("pt-open", open);
-      head.setAttribute("aria-expanded", String(open));
-      setExpanded(actor.id, row.dataset.id, open);
-      if (open) wrap.querySelector('[data-field="word"]')?.focus();
-    };
-
-    head.addEventListener("click", toggle);
-    head.addEventListener("keydown", ev => {
-      if (ev.key !== "Enter" && ev.key !== " ") return;
-      ev.preventDefault(); // Space would scroll the panel instead
-      toggle();
-    });
+    bindRowToggle(head, row, { wrap, onToggle: open => setExpanded(actor.id, row.dataset.id, open), focus: '[data-field="word"]' });
   });
 
   // A click inside the detail must not bubble to the summary and collapse the row you are
@@ -577,22 +542,9 @@ export function bind(root, actor, rerender = () => {}) {
 function bindSummary(head, row, actor) {
   const wrap = row.querySelector(".pt-detail-wrap");
   if (!wrap) return;
-  const toggle = () => {
-    const open = wrap.hasAttribute("hidden");
-    wrap.toggleAttribute("hidden", !open);
-    row.classList.toggle("pt-open", open);
-    head.setAttribute("aria-expanded", String(open));
-    setExpanded(actor.id, row.dataset.id, open);
-    // same behaviour as the full bind's toggle; without it a row behaves differently
-    // depending on whether its summary happened to be repainted since the last render
-    if (open) wrap.querySelector('[data-field="word"]')?.focus();
-  };
-  head.addEventListener("click", toggle);
-  head.addEventListener("keydown", ev => {
-    if (ev.key !== "Enter" && ev.key !== " ") return;
-    ev.preventDefault();
-    toggle();
-  });
+  // the same toggle as the full bind's; without it a row behaves differently depending on
+  // whether its summary happened to be repainted since the last render
+  bindRowToggle(head, row, { wrap, onToggle: open => setExpanded(actor.id, row.dataset.id, open), focus: '[data-field="word"]' });
 }
 
 /** Standalone window — the fallback host, and the one the header button opens. */

@@ -40,19 +40,15 @@ import {
   LORE_DC_MIN,
   LORE_DC_MAX
 } from "./known-core.mjs";
-import { esc } from "./core/html.mjs";
+import { esc, bindRowToggle, makeOpenState } from "./core/html.mjs";
 
 /** Which rows are expanded, keyed by the mount's own id — cosmetic, never persisted. */
-const open = new Map();
-
-const openFor = key => {
-  if (!open.has(key)) open.set(key, new Set());
-  return open.get(key);
-};
+const open = makeOpenState();
+const openFor = open.live;
 
 /** Drop one mount's open rows — a deleted actor's `lore:<id>` (ties-31). */
 export function forgetLoreKey(key) {
-  open.delete(key);
+  open.forget(key);
 }
 
 /** Test-only: how many mounts the open-row map holds (ties-31). */
@@ -196,21 +192,10 @@ export function bindLoreEditor(root, { rows, save, key = "lore", rerender }) {
   // expand / collapse — the ties row idiom, click anywhere on the summary
   for (const el of section.querySelectorAll(".pt-lore-summary")) {
     const li = el.closest(".pt-row");
-    const toggle = () => {
-      const id = li.dataset.id;
-      const wrap = li.querySelector(".pt-detail-wrap");
-      const nowOpen = !li.classList.contains("pt-open");
-      li.classList.toggle("pt-open", nowOpen);
-      wrap.hidden = !nowOpen;
-      if (nowOpen) expanded.add(id);
-      else expanded.delete(id);
-    };
-    el.addEventListener("click", toggle);
-    el.addEventListener("keydown", ev => {
-      if (ev.key === "Enter" || ev.key === " ") {
-        ev.preventDefault();
-        toggle();
-      }
+    bindRowToggle(el, li, {
+      mode: "class",
+      wrap: () => li.querySelector(".pt-detail-wrap"),
+      onToggle: nowOpen => (nowOpen ? expanded.add(li.dataset.id) : expanded.delete(li.dataset.id))
     });
   }
 

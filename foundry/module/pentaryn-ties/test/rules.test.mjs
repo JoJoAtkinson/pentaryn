@@ -157,3 +157,58 @@ test("ties-15: firstName — one copy for the roster's switchLabels and the insp
   assert.deepEqual(switchLabels(["Caven Calderon", "Caven Ashwell", "Talo"]), ["Caven Calderon", "Caven Ashwell", "Talo"]);
   assert.deepEqual(switchLabels(["Caven Calderon", "Talo, the Quiet"]), ["Caven", "Talo"]);
 });
+
+/* ── ties-16 / ties-18: the row fragments and the row toggle, once, in core/html ── */
+
+test("ties-18: notesPreview / notesProse / wordCell write the markup each copy wrote", async () => {
+  const { notesPreview, notesProse, wordCell } = await import("../core/html.mjs");
+  assert.equal(notesPreview("owes <us>", "—"), '<span class="pt-note-preview">owes &lt;us&gt;</span>');
+  assert.equal(notesPreview("  ", "No notes"), '<span class="pt-note-preview pt-note-none"><em>No notes</em></span>');
+  assert.equal(notesProse("a", "e"), '<div class="pt-notes-prose">a</div>');
+  assert.equal(notesProse("", "e"), '<div class="pt-notes-prose pt-note-none"><em>e</em></div>');
+  assert.equal(wordCell("debtor", "Wary", " pt-wary"), '<span class="pt-word pt-wary">debtor</span>');
+  assert.equal(wordCell("", "Wary"), '<span class="pt-word pt-noword">Wary</span>');
+});
+
+test("ties-16: bindRowToggle — both modes, click / Enter / Space / other keys, focus and the open-state callback", async () => {
+  const { bindRowToggle } = await import("../core/html.mjs");
+  const el = () => {
+    const attrs = new Map();
+    const cls = new Set();
+    const listeners = {};
+    return {
+      attrs, cls, listeners, hidden: false, focused: 0,
+      hasAttribute: k => attrs.has(k),
+      toggleAttribute(k, on) { on ? attrs.set(k, "") : attrs.delete(k); },
+      setAttribute(k, v) { attrs.set(k, v); },
+      classList: { toggle: (c, on) => (on ? cls.add(c) : cls.delete(c)), contains: c => cls.has(c) },
+      addEventListener(t, fn) { (listeners[t] ??= []).push(fn); },
+      querySelector() { return { focus: () => this.focused++ }; },
+    };
+  };
+  const fire = (node, type, ev = {}) => node.listeners[type].forEach(fn => fn({ preventDefault() { ev.prevented = true; }, ...ev }));
+  // "attr" mode (Ties, Known)
+  const head = el(), row = el(), wrap = el();
+  wrap.attrs.set("hidden", "");
+  const seen = [];
+  bindRowToggle(head, row, { wrap, onToggle: o => seen.push(o), focus: "[data-field=word]" });
+  fire(head, "click");
+  assert.deepEqual([wrap.hasAttribute("hidden"), row.cls.has("pt-open"), head.attrs.get("aria-expanded"), wrap.focused], [false, true, "true", 1]);
+  const enter = { key: "Enter" };
+  fire(head, "keydown", enter);
+  assert.equal(enter.prevented, true);
+  assert.deepEqual([wrap.hasAttribute("hidden"), row.cls.has("pt-open")], [true, false]);
+  fire(head, "keydown", { key: " " });
+  fire(head, "keydown", { key: "a" });
+  assert.deepEqual(seen, [true, false, true]);
+  // "class" mode (lore, attributes)
+  const h2 = el(), r2 = el(), w2 = el();
+  const seen2 = [];
+  bindRowToggle(h2, r2, { mode: "class", wrap: () => w2, onToggle: o => seen2.push(o) });
+  fire(h2, "click");
+  assert.deepEqual([r2.cls.has("pt-open"), w2.hidden], [true, false]);
+  fire(h2, "click");
+  assert.deepEqual([r2.cls.has("pt-open"), w2.hidden], [false, true]);
+  assert.deepEqual(seen2, [true, false]);
+  assert.equal(h2.attrs.has("aria-expanded"), false, "class mode sets no aria-expanded, as the lore rows never did");
+});

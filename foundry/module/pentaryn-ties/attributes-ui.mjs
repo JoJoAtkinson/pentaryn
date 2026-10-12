@@ -45,7 +45,7 @@ import { grantedRegion } from "./known-ui.mjs";
 // facts are handed over by the GM via "Mark as learned", never rolled for from the player's side.
 import { kindActorOf, attrLoreStateFor, releaseHeldAttribute } from "./study.mjs";
 import { grantsForEntry, GRANTED_FLAG, HELP_SCALE, CARRIED_SCALE, helpFor, rollableLore, LORE_FLAG } from "./known-core.mjs";
-import { esc } from "./core/html.mjs";
+import { esc, bindRowToggle, makeOpenState } from "./core/html.mjs";
 
 /** The help-scale labels (literal keys, so the i18n gate sees each one). */
 const HELP_LABEL = Object.freeze({
@@ -70,11 +70,8 @@ const FILTER_LABEL = Object.freeze({
 export const ATTR_TAB_ID = "attributes";
 
 /** Which rows are expanded, per actor — cosmetic, never persisted. */
-const expanded = new Map();
-const openFor = id => {
-  if (!expanded.has(id)) expanded.set(id, new Set());
-  return expanded.get(id);
-};
+const expanded = makeOpenState();
+const openFor = expanded.live;
 
 /**
  * Tree navigation state, per character: which branches the user has explicitly toggled, and which
@@ -92,7 +89,7 @@ const toggledFor = id => {
 
 /** Drop a deleted actor's cosmetic state — open rows, toggled branches, the filter (ties-31). */
 export function forgetAttributesActor(actorId) {
-  expanded.delete(actorId);
+  expanded.forget(actorId);
   worldToggled.delete(actorId);
   worldFilter.delete(actorId);
 }
@@ -694,20 +691,10 @@ export function bindAttributes(root, actor, rerender = () => {}) {
 
   for (const head of box.querySelectorAll(".pt-attr-summary")) {
     const li = head.closest(".pt-row");
-    const toggle = () => {
-      const wrap = li.querySelector(".pt-detail-wrap");
-      const nowOpen = !li.classList.contains("pt-open");
-      li.classList.toggle("pt-open", nowOpen);
-      wrap.hidden = !nowOpen;
-      if (nowOpen) open.add(li.dataset.id);
-      else open.delete(li.dataset.id);
-    };
-    head.addEventListener("click", toggle);
-    head.addEventListener("keydown", ev => {
-      if (ev.key === "Enter" || ev.key === " ") {
-        ev.preventDefault();
-        toggle();
-      }
+    bindRowToggle(head, li, {
+      mode: "class",
+      wrap: () => li.querySelector(".pt-detail-wrap"),
+      onToggle: nowOpen => (nowOpen ? open.add(li.dataset.id) : open.delete(li.dataset.id))
     });
   }
 
