@@ -1682,24 +1682,78 @@ def _move_aside(keys: list[str]) -> list[str]:
     """Move each folder to REPLACED_DIRNAME/<UTC stamp>/<its relpath>; return the lines."""
     if not keys:
         return []
-    root = data_root()
-    stamp = datetime.now(timezone.utc).strftime("%Y-%m-%d-%H%M%S")
-    base = root / REPLACED_DIRNAME / stamp
-    out = []
+    rels = []
     for key in keys:
         kind, id = key.split("/", 1)
-        rel = f"{bundles.ROOTS[kind]}/{id}"
+        rels.append(f"{bundles.ROOTS[kind]}/{id}")
+    return _move_aside_rels(
+        rels, f"not a bundle — no {'/'.join(sorted(set(bundles.MANIFEST_FILE.values())))} "
+              "— so no snapshot holds it")
+
+
+def _aside_stamp() -> str:
+    return datetime.now(timezone.utc).strftime("%Y-%m-%d-%H%M%S")
+
+
+def _move_aside_rels(rels: list[str], why: str, stamp: str | None = None) -> list[str]:
+    """Move each `rel` under the data root (a folder, a file or a link — moved as itself,
+    never followed) to REPLACED_DIRNAME/<UTC stamp>/<rel>; log and return the lines."""
+    root = data_root()
+    stamp = stamp or _aside_stamp()
+    base = root / REPLACED_DIRNAME / stamp
+    out = []
+    for rel in rels:
         (base / rel).parent.mkdir(parents=True, exist_ok=True)
         shutil.move(str(root / rel), str(base / rel))
         out.append(f"{rel} → {REPLACED_DIRNAME}/{stamp}/{rel}")
-    log(f"moved aside (not a bundle — no {'/'.join(sorted(set(bundles.MANIFEST_FILE.values())))}"
-        f" — so no snapshot holds it): " + "; ".join(out))
+    if out:
+        log(f"moved aside ({why}): " + "; ".join(out))
     return out
+
+
+def _clear_keeping(target: Path, keep: list[Path]) -> None:
+    """Clear `target` (Data/modules, for a full restore) except the entries in `keep`,
+    which no bundle and so no bundled safety copy holds: they stay in place (review DL8).
+    Links are removed as links, never followed."""
+    held = {p.name for p in keep}
+    for p in sorted(target.iterdir()):
+        if p.name in held:
+            continue
+        if p.is_dir() and not p.is_symlink():
+            shutil.rmtree(p)
+        else:
+            p.unlink()
+    rel = target.relative_to(data_root()).as_posix()
+    log(f"cleared {rel}, keeping in place what is not a bundle (no snapshot holds it): "
+        + ", ".join(sorted(held)))
+
+
+def _keep_filter(keep: list[Path]):
+    """tarfile's "data" filter, plus: the first member the snapshot has at or under a kept
+    entry's name moves that entry aside first (_move_aside_rels), so a full snapshot's
+    module never lands inside, over or through it."""
+    prefix = bundles.ROOTS["module"] + "/"
+    pending = {p.name: f"{prefix}{p.name}" for p in keep}
+    stamp = _aside_stamp()
+
+    def guard(member: tarfile.TarInfo, dest: str):
+        name = member.name
+        while name.startswith("./"):
+            name = name[2:]
+        if name.startswith(prefix):
+            child = name[len(prefix):].split("/", 1)[0]
+            if child in pending:
+                _move_aside_rels([pending.pop(child)], "not a bundle, so no snapshot holds "
+                                 "it, and the snapshot brings the same name", stamp)
+        return tarfile.data_filter(member, dest)
+    return guard
 
 
 def apply_snapshot(f: Fetched, *, systems: bool = True) -> None:
     """Make this machine the snapshot. Full: clear worlds/Config/modules and extract (as
-    before bundles). Bundled: clear worlds/Config, extract the world tar, put each needed
+    before bundles) — except what in Data/modules is not a bundle, which no bundled safety
+    copy holds: it stays, or is moved aside to REPLACED_DIRNAME when the snapshot brings
+    the same name. Bundled: clear worlds/Config, extract the world tar, put each needed
     bundle in place, leave unchanged modules untouched, remove the extras — unless there
     was no local world (nothing in the cloud references them then): those are left and
     listed. Both keep this machine's KEEP_LOCAL_CONFIG files and fix a foreign dataPath.
@@ -1735,12 +1789,21 @@ def apply_snapshot(f: Fetched, *, systems: bool = True) -> None:
         had_world = tree_has_world()
         kept = {rel: (root / rel).read_bytes() for rel in KEEP_LOCAL_CONFIG
                 if (root / rel).is_file()}
+        # A full snapshot replaces Data/modules whole, but the safety copy just taken is
+        # bundled: a folder the inventory skips (no module.json, hidden, '@', a link) or a
+        # loose file there has no copy anywhere. It stays in place — moved aside only if
+        # the snapshot brings the same name (review DL8). A bundled restore never clears
+        # Data/modules: it removes only inventory extras, which the safety copy holds.
+        mods = root / bundles.ROOTS["module"]
+        keep = [] if bundled or mods.is_symlink() else bundles.unbundled("module", root)
         for rel in (WORLD_PATHS if bundled else SNAPSHOT_PATHS):
             target = root / rel
-            if target.exists():
+            if keep and target == mods:
+                _clear_keeping(target, keep)
+            elif target.exists():
                 shutil.rmtree(target)
                 log(f"cleared {rel}")
-        tar.extractall(root, members=members, filter="data")
+        tar.extractall(root, members=members, filter=_keep_filter(keep) if keep else "data")
     for rel, data in kept.items():
         (root / rel).parent.mkdir(parents=True, exist_ok=True)
         (root / rel).write_bytes(data)

@@ -337,11 +337,12 @@ def _legacy_full_tar(path, src_root):
                 tar.add(src_root / rel, arcname=rel)
 
 
-@pytest.mark.xfail(strict=True, reason="DL8: a full (legacy) restore rmtree's Data/modules; the "
-                   "safety copy is now bundled, so a hidden/manifest-less/symlinked folder there "
-                   "(which the old full safety copy held) is lost with no copy")
 def test_dl8_a_full_restore_never_loses_a_folder_the_safety_copy_could_not_hold(two_hosts,
                                                                             tmp_path):
+    """DL8 (fixed): a full (legacy) restore rmtree'd Data/modules; the safety copy is now
+    bundled, so a hidden/manifest-less/symlinked folder there (which the old full safety
+    copy held) was lost with no copy. apply_snapshot now keeps what is not a bundle in
+    place (bundles.unbundled), moving it aside only when the snapshot brings that name."""
     c = two_hosts.cloud
     legacy_src = _install(tmp_path / "legacy")
     (legacy_src / "Data/worlds/w").mkdir(parents=True)

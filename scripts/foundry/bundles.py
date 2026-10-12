@@ -232,6 +232,37 @@ def _entry(files, fp: str, version: str) -> dict:
 
 # ── the inventory (§3.3) ─────────────────────────────────────────────────────
 
+def _skip_reason(kind: str, path: Path) -> str | None:
+    """Why `path`, a direct child of the kind's root, is not a bundle: a warning line (a
+    symlinked, hidden, '@'-named or manifest-less folder — skipped), "" (ignored silently:
+    a loose file, a link to a file, junk), or None — it is a bundle."""
+    name, where = path.name, f"{ROOTS[kind]}/{path.name}"
+    if path.is_symlink():
+        return f"⚠ {where} skipped: a symlinked folder is not bundled" if path.is_dir() else ""
+    if not path.is_dir():
+        return ""
+    if name.startswith("."):
+        return f"⚠ {where} skipped: a hidden folder is not bundled"
+    if "@" in name:
+        return f"⚠ {where} refused: a {kind} folder name may not contain '@'"
+    if not (path / MANIFEST_FILE[kind]).is_file():
+        return f"⚠ {where} skipped: no {MANIFEST_FILE[kind]}"
+    return None
+
+
+def unbundled(kind: str, data_root: Path) -> list[Path]:
+    """Every direct child of the kind's root under `data_root` that no bundle holds — the
+    folders the inventory skips, links, loose files — junk and AppleDouble names aside;
+    sorted. A bundled snapshot (or safety copy) holds none of them, so a restore that
+    clears the root must keep them (review DL8)."""
+    root = Path(data_root) / ROOTS[kind]
+    try:
+        children = sorted(root.iterdir())
+    except (FileNotFoundError, NotADirectoryError):
+        return []
+    return [p for p in children if not _junk(p.name) and _skip_reason(kind, p) is not None]
+
+
 def local_inventory(*, cache: bool = True, warn: Callable[[str], None] | None = None,
                     save: bool = True) -> dict[str, Local]:
     """Every module and system on this machine that is a bundle, keyed "<kind>/<id>".
@@ -257,23 +288,13 @@ def local_inventory(*, cache: bool = True, warn: Callable[[str], None] | None = 
             entries = sorted(it, key=lambda e: e.name)
         for e in entries:
             name, where = e.name, f"{rel_root}/{e.name}"
-            if e.is_symlink():
-                if e.is_dir():
-                    say(f"⚠ {where} skipped: a symlinked folder is not bundled")
-                continue
-            if not e.is_dir(follow_symlinks=False):
-                continue
-            if name.startswith("."):
-                say(f"⚠ {where} skipped: a hidden folder is not bundled")
-                continue
-            if "@" in name:
-                say(f"⚠ {where} refused: a {kind} folder name may not contain '@'")
-                continue
             path = Path(e.path)
-            mf = path / MANIFEST_FILE[kind]
-            if not mf.is_file():
-                say(f"⚠ {where} skipped: no {MANIFEST_FILE[kind]}")
+            why = _skip_reason(kind, path)
+            if why is not None:
+                if why:
+                    say(why)
                 continue
+            mf = path / MANIFEST_FILE[kind]
             try:
                 meta = json.loads(mf.read_text(encoding="utf-8"))
             except (OSError, ValueError):

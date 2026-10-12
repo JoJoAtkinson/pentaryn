@@ -833,3 +833,110 @@ def test_dl7_upload_one_accepts_superseded_and_raises_anything_else(two_hosts, t
     monkeypatch.setattr(storage.FolderStorage, "upload", broken)
     with pytest.raises(storage.StorageError, match="connection reset"):
         bundles.upload_one(cloud.store(), src, "module@m@1@0123456789abcdef.tar.gz")
+
+
+# ── DL8: a full restore keeps what no bundle holds ───────────────────────────
+
+def _full_tar(path, files: dict[str, bytes], *, age_days: float = 0):
+    """A legacy (full, untagged) snapshot: no marker, worlds + Config + modules."""
+    import io
+    import tarfile
+    with tarfile.open(path, "w:gz") as tar:
+        for name, data in sorted(files.items()):
+            info = tarfile.TarInfo(name)
+            info.size, info.mtime = len(data), int(time.time())
+            tar.addfile(info, io.BytesIO(data))
+    if age_days:
+        t = time.time() - age_days * DAY
+        os.utime(path, (t, t))
+    return path
+
+
+_LEGACY_NAME = "world-2026-10-01-120000-fvtt14.369.tar.gz"
+_LEGACY_WORLD = {"Data/worlds/w/world.json": b'{"id": "w"}\n', "Config/options.json": b"{}\n"}
+
+
+def _dev_checkout(tmp_path):
+    outside = tmp_path / "dev-checkout"
+    outside.mkdir()
+    (outside / "module.json").write_text('{"id": "dev", "version": "0.1"}')
+    return outside
+
+
+def test_dl8_a_full_restore_keeps_every_shape_the_inventory_skips_in_place(two_hosts,
+                                                                          tmp_path):
+    from scripts.foundry import bundles
+    c = two_hosts.cloud
+    _full_tar(c / "world-backups" / _LEGACY_NAME, {
+        **_LEGACY_WORLD,
+        "Data/modules/old-maps/module.json": b'{"id": "old-maps", "version": "1"}',
+        "Data/modules/old-maps/art.webp": b"old art"}, age_days=10)
+    mac = _install(two_hosts.data["mac"])
+    mods = mac / "Data/modules"
+    (mods / "scratch").mkdir()                                  # no module.json
+    (mods / "scratch/ideas.md").write_text("only copy\n")
+    (mods / ".hidden").mkdir()
+    (mods / ".hidden/x.txt").write_text("hidden\n")
+    (mods / "a@b").mkdir()                                      # refused name
+    (mods / "a@b/module.json").write_text('{"id": "a@b"}')
+    outside = _dev_checkout(tmp_path)
+    (mods / "dev").symlink_to(outside, target_is_directory=True)
+    (mods / "notes.txt").write_text("loose\n")
+    with two_hosts.use("mac"):
+        assert {p.name for p in bundles.unbundled("module", mac)} == {
+            "scratch", ".hidden", "a@b", "dev", "notes.txt"}
+    _edit(mac, "local work")
+    with two_hosts.use("mac"):
+        cloud.restore(_LEGACY_NAME, yes=True)
+    assert (mods / "scratch/ideas.md").read_text() == "only copy\n"
+    assert (mods / ".hidden/x.txt").read_text() == "hidden\n"
+    assert (mods / "a@b/module.json").is_file()
+    assert (mods / "dev").is_symlink() and (outside / "module.json").is_file()
+    assert (mods / "notes.txt").read_text() == "loose\n"
+    assert (mods / "old-maps/art.webp").read_bytes() == b"old art"     # the snapshot's
+    assert not (mods / "maps").exists() and not (mods / "tools").exists()
+    assert any(n.startswith("module@maps@") for n in _bundle_names(c))  # the safety copy's
+    assert not (mac / cloud.REPLACED_DIRNAME).exists()
+
+
+def test_dl8_a_full_restore_moves_aside_what_the_snapshot_brings_under_the_same_name(
+        two_hosts, tmp_path, capsys):
+    c = two_hosts.cloud
+    _full_tar(c / "world-backups" / _LEGACY_NAME, {
+        **_LEGACY_WORLD,
+        "Data/modules/scratch/module.json": b'{"id": "scratch", "version": "1"}',
+        "Data/modules/scratch/new.js": b"// the snapshot's\n",
+        "Data/modules/dev/module.json": b'{"id": "dev", "version": "0.0"}'}, age_days=10)
+    mac = _install(two_hosts.data["mac"])
+    mods = mac / "Data/modules"
+    (mods / "scratch").mkdir()
+    (mods / "scratch/ideas.md").write_text("only copy\n")
+    outside = _dev_checkout(tmp_path)
+    (mods / "dev").symlink_to(outside, target_is_directory=True)
+    _edit(mac, "local work")
+    capsys.readouterr()
+    with two_hosts.use("mac"):
+        cloud.restore(_LEGACY_NAME, yes=True)
+    out = capsys.readouterr().out
+    assert (mods / "scratch/new.js").is_file() and not (mods / "scratch/ideas.md").exists()
+    [kept] = list((mac / cloud.REPLACED_DIRNAME).glob("*/Data/modules/scratch/ideas.md"))
+    assert kept.read_text() == "only copy\n"
+    assert not (mods / "dev").is_symlink()                      # the snapshot's real folder
+    assert json.loads((mods / "dev/module.json").read_text())["version"] == "0.0"
+    [link] = list((mac / cloud.REPLACED_DIRNAME).glob("*/Data/modules/dev"))
+    assert link.is_symlink() and link.resolve() == outside.resolve()
+    assert json.loads((outside / "module.json").read_text())["version"] == "0.1"
+    assert "the snapshot brings the same name" in out, out
+
+
+def test_dl8_the_updaters_full_extract_keeps_what_no_bundle_holds(two_hosts, tmp_path):
+    mac = _install(two_hosts.data["mac"])
+    (mac / "Data/modules/scratch").mkdir()
+    (mac / "Data/modules/scratch/ideas.md").write_text("only copy\n")
+    tar = _full_tar(tmp_path / "w.tar.gz", {
+        **_LEGACY_WORLD, "Data/modules/old/module.json": b'{"id": "old", "version": "1"}'})
+    with two_hosts.use("mac"):
+        cloud.extract_snapshot(tar, systems=False)
+    assert (mac / "Data/modules/scratch/ideas.md").read_text() == "only copy\n"
+    assert (mac / "Data/modules/old/module.json").is_file()
+    assert not (mac / "Data/modules/maps").exists()
