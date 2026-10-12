@@ -70,9 +70,13 @@ function computeState(actor) {
   const on = { multiattackOn: setting("multiattack") };
   const count = ma ? ma.total : countFor(actor, weaponId, on);
   const plan = fullAttackPlanOf(actor, { weaponId, turn, inCombat: ctx.inCombat, multiattack: ma, count, pick });
-  const weapons = weaponsOf(actor);
-  const nick = !ma && weaponId ? core.extraSwings({ main: weapons.find(w => w.id === weaponId), weapons, turn,
-    enhancedDualWielding: !!actor.getFlag?.("dnd5e", "enhancedDualWielding") }).length : 0;
+  // perf-3: only a weapon-chosen (non-Multiattack) actor scans its weapons for a Nick swing.
+  let nick = 0;
+  if (!ma && weaponId) {
+    const weapons = weaponsOf(actor);
+    nick = core.extraSwings({ main: weapons.find(w => w.id === weaponId), weapons, turn,
+      enhancedDualWielding: !!actor.getFlag?.("dnd5e", "enhancedDualWielding") }).length;
+  }
   // The pips count the Attack action's swings with any weapon: a Loading crossbow alone gives 1, but
   // a Fighter 5 holding one still has a second swing to make with something else.
   const pipCount = ma ? ma.total : Math.max(count, countFor(actor, null, on));

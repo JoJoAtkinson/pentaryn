@@ -299,6 +299,26 @@ test("perf-2: one burst works the follow-ups out once (the Bonus and Special sig
   F.calls.length = 0;
 });
 
+test("perf-3: a Multiattack actor never scans its weapons, so a malformed attack item leaves its pips on the Multiattack total", async () => {
+  onTurn(wlf);
+  reset(wlf);
+  const { fullAttackState } = await import("../hud/buttons-ui.mjs");
+  const h = buildHud(wlf);
+  fire(h.action, wlf);
+  const sys = wlf.items.get("bite").system;
+  const props = sys.properties;
+  sys.properties = { lgt: true };   // not iterable: a weapon shape of the Bite throws
+  try {
+    const st = fullAttackState(wlf);
+    assert.deepEqual([st.ma?.total, st.pipCount, st.worth], [2, 2, true]);
+    assert.deepEqual([h.action.maxActions, h.action._pentarynPips()], [2, true], "the Multiattack's pips, not Argon's single one");
+  } finally {
+    sys.properties = props;
+  }
+  reset(wlf);
+  F.calls.length = 0;
+});
+
 test("Full Attack clicks: runs the plan; asks for a weapon once when nothing is remembered; warns with no swings left", async () => {
   onTurn(fig);
   reset(fig);
