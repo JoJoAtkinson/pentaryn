@@ -61,6 +61,12 @@ Fixed (declared): an **inspection that stops on a held rung** hands back its `#i
 the GM's "A check came in" Deliver/Later dialog opens, so the creature no longer carries a claim row for
 that character while the GM decides. AC-1.
 
+Fixed (declared): two GM sessions (one GM signed in twice) finishing **different attribute facts** in
+the same instant no longer revert each other's rows. The attribute-belief ledger is one setting
+rewritten whole, so `putBelief` now confirms its write like a claim: it waits 250 ms, re-reads the
+ledger and, when its row is missing or different (a reset: present again), re-applies that one row on
+the fresh value so both sessions' rows survive. An uncontested write is still one write. AC-2.
+
 ## 0.19.4 (2026-10-10, usability run, Area 7 re-run)
 
 - **The inspect window's Share switches are the table's PCs only** (`tablePCs`): each player's

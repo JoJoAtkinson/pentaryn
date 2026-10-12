@@ -8,7 +8,7 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { bootWorld } from "./fixtures/world.mjs";
+import { bootWorld, settle } from "./fixtures/world.mjs";
 
 const PC = "zzPc000000000001";
 const NPC = "zzNpc00000000001";
@@ -41,7 +41,7 @@ const { promptDeliver } = await import("../study/gate.mjs");
 
 /** The meta line of the hold prompt the GM sees for this held row ("Later" is answered). */
 async function holdMeta(fact, record) {
-  await putBelief(fact, PC, record);
+  await settle(putBelief(fact, PC, record)); // the attr plane confirms its write (AC-2)
   const mark = F.calls.length;
   F.dialogs.push(false);
   await promptDeliver(game.actors.get(PC), fact);
