@@ -147,10 +147,10 @@
       true
     ],
     "out": {
-      "value": 1,
-      "key": "friendly",
-      "hex": 6991948,
-      "css": "#6ab04c"
+      "value": 0,
+      "key": "neutral",
+      "hex": 10133670,
+      "css": "#9aa0a6"
     }
   },
   {

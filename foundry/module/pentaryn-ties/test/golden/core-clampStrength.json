@@ -9,7 +9,7 @@
     "input": [
       null
     ],
-    "out": 1
+    "out": 3
   },
   {
     "input": [
@@ -75,19 +75,19 @@
     "input": [
       ""
     ],
-    "out": 1
+    "out": 3
   },
   {
     "input": [
       true
     ],
-    "out": 1
+    "out": 3
   },
   {
     "input": [
       []
     ],
-    "out": 1
+    "out": 3
   },
   {
     "input": [
