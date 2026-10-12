@@ -1515,8 +1515,15 @@ def _arrow_body(code: str, q: int) -> str:
     return code[q:_expr_end(code, q)]
 
 
+# The kit's own listener wrappers (lib/hooks.mjs): handler_at reads the function they wrap.
+GUARD_WRAP = re.compile(r"(?:ctx\.)?reg\.guard(?:SwallowAsync)?\(\s*\x01\d+\x01\s*,\s*")
+
+
 def handler_at(code: str, pos: int, *, _depth: int = 0) -> tuple[bool, str | None, str | None]:
-    """(is_async, body, unresolved identifier) of the function expression or name at `pos`."""
+    """(is_async, body, unresolved identifier) of the function expression or name at `pos`,
+    seen through reg.guard / reg.guardSwallowAsync."""
+    if _depth == 0 and (g := GUARD_WRAP.match(code, pos)):
+        pos = g.end()
     am = re.match(r"async\b\s*", code[pos:])
     is_async = bool(am)
     p = pos + (am.end() if am else 0)

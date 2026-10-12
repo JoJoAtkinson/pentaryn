@@ -440,6 +440,9 @@ C53_CASES = [
     ('reg.on("updateActor", async (a) => { await a.x(); });', "pass"),          # not vetoable
     ('reg.on("preUpdateActor", elsewhere);', "pass"),                            # unresolved: noted only
     ('myHooks.on("preUpdateActor", async () => {});', "pass"),                  # lookbehind
+    ('reg.on("preUpdateActor", reg.guardSwallowAsync("x", async (a) => { return false; }), { guard: false });',
+     "fail"),                                                                    # through the kit's wrapper
+    ('reg.on("preUpdateActor", reg.guard("x", (a) => false));', "pass"),
 ]
 
 
@@ -579,6 +582,7 @@ C61_CASES = [
      'async function react(a) { await a.update({ x: 1 }); }', "pass"),
     ('reg.on("updateActor", (a) => { void note(a); });\n'
      'function note(a) { seen.set(a.id, 1); }', "pass"),                                  # helper writes nothing
+    ('reg.on("updateActor", reg.guard("x", (a) => { a.update({}); }));', "warn"),          # through reg.guard
 ]
 
 
