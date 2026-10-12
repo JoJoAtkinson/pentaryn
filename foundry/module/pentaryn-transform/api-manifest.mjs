@@ -119,7 +119,10 @@ export const STARRY_ROWS = Object.freeze([
     returns: "Promise<boolean> — whether the form is now up with that constellation", gm: false, writes: true,
     sideEffects: [STARRY, LIGHT, "the Wild Shape item's uses"],
     doc: "Take on Starry Form with this constellation (one Wild Shape use), or with Twinkling Constellations change "
-      + "it for free while the form is up. false (with a warning) when shifted, incapacitated or out of uses.",
+      + "it for free while the form is up. false (with a warning) when shifted, incapacitated or out of uses, "
+      + "or when the druid has no Starry Form feature or consume activity; false (silently) for an unknown "
+      + "constellation or no actor, while a call is already in progress for this druid, or when the "
+      + "activity's use is refused.",
   },
   {
     path: "starry.end", legacy: true,

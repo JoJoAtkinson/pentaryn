@@ -4,6 +4,11 @@
 
 ## Unreleased
 
+- **`starry.assume`'s describe() doc lists every way it answers false (M6, defect wave 2).** Besides
+  shifted, incapacitated and out of uses, it now names a druid with no Starry Form feature or consume
+  activity (warns), an unknown constellation or no actor, a call already in progress for this druid,
+  and the activity's use refused (all silent). Doc only; no behaviour change ([declared];
+  golden/describe.json: the one row's doc).
 - **Starry Form's combat clock looks the form up once per druid per tick (perf-2, defect wave 2).**
   `onWorldTime` found the effect, then `tickStarry`, `maybeEnd` and `endStarry` each looked it up
   again. The tick now hands the one effect down: `tickStarry(actor, dt, effect)` and the new

@@ -42,6 +42,14 @@ test("drift fails at build: a row without an implementation; legacy rows publish
   assert.ok(Object.isFrozen(api) && Object.isFrozen(api.starry));
 });
 
+test("M6 starry.assume's doc names every false path assumeStarry has", () => {
+  const doc = STARRY_ROWS.find(r => r.path === "starry.assume").doc;
+  for (const phrase of ["shifted", "incapacitated", "out of uses", "no Starry Form feature or consume activity",
+    "unknown constellation", "no actor", "already in progress", "refused"]) {
+    assert.ok(doc.includes(phrase), `doc mentions "${phrase}"`);
+  }
+});
+
 test("describe() equals golden/describe.json (version, kit, published and patch routes excluded)", () => {
   pinJSON("describe", normaliseDescribe(api.describe()), import.meta.url);
 });
