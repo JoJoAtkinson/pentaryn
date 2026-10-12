@@ -1,8 +1,9 @@
 // Pentaryn Tool Cursors — pure rules. No Foundry globals: test/*.test.mjs and scripts/foundry/cursors/build.mjs import this.
 //
 // keyFor() maps the active scene control + tool (and whether a spell-area placement is following the
-// mouse) to a cursor key, or null for the plain system arrow. KEYS is the cursor set from context/plans/cursors-design.md: the
-// build script rasterises from it and writes cursors.css; the module and README read it.
+// mouse) to a cursor key, or null for the plain system arrow. KEYS is the cursor set from context/plans/cursors-design.md:
+// scripts/foundry/cursors/build.mjs rasterises assets/cursors/<key>[-pointer].svg/.png/@2x.png from it; board.mjs sets the
+// four variables inline through cursorValues() (no stylesheet); the module and README read it.
 
 export const MODULE = "pentaryn-cursors";
 export const SHORT = "cursors";
@@ -19,7 +20,7 @@ export const DRAW_TOOLS = Object.freeze(["rect", "ellipse", "polygon", "freehand
 
 /**
  * The set. `hotspot` is the design value in CSS px on the 32×32 cursor; the build recomputes it
- * from the fitted glyph and fails on drift > 1 px. `fallback` is the keyword used if the image
+ * from the fitted glyph and fails unless it equals this value exactly. `fallback` is the keyword used if the image
  * fails to load (never `auto`: a dropped image must still look "not the arrow").
  * `extreme` tells the build which glyph extreme the hotspot sits on.
  */

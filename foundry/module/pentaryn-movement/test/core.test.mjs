@@ -1,4 +1,4 @@
-// Core checks (guide S1): the 89 legacy checks of test/legacy-core.mjs as node:test cases, with the
+// Core checks (guide S1): the 89 core checks ported from the pre-migration self-running suite, as node:test cases, with the
 // legacy JSON-equality semantics (key order counts). movement-core.mjs is imported first and bare:
 // no Foundry globals exist in this file, which is the purity proof.
 import * as core from "../movement-core.mjs";

@@ -92,7 +92,9 @@ async function report(scene, result, {committed, backend, ms}) {
 
   // Transient markers only — a Drawing or Note would persist and turn a report into state.
   for (const x of refusals) {
-    try { canvas.ping({x: x.at[0], y: x.at[1]}); } catch (err) { log?.debug("ping", err); }   // a nicety
+    // canvas.ping is async in Foundry 14: a rejection reaches the same debug line as a throw. Not awaited.
+    try { Promise.resolve(canvas.ping({x: x.at[0], y: x.at[1]})).catch(err => log?.debug("ping", err)); }
+    catch (err) { log?.debug("ping", err); }   // a nicety
   }
   await posted;
 }
