@@ -40,6 +40,10 @@ cssPrefix `pp-`, afterSync). Each **[declared]** change goes to the live check.
   `BAD_SPEC: patch.disposition: hostile|neutral|friendly|secret`, checked after every other patch
   field so a second bad field keeps its own message. The real run now refuses it at plan time, so
   nothing is imported, copied or stamped first (no cleanup line, no `discarded` entry).
+- **[declared] The dialog's side panel escapes with `foundry.utils.escapeHTML`** (M17), as the tip
+  does, instead of a private helper: an apostrophe now reads `&#x27;` in the panel's HTML. Every
+  panel attribute is double-quoted, so this is consistency, not a hole; nothing changes on screen,
+  and the `dialog-panel` golden (no apostrophe in its fixture) is byte-identical.
 - **[declared] `markerActorIds` is retired from `markers-adapter.mjs`** (M16): nothing called it;
   `markerActor(size)` still finds each of the six, and `api.status()` lists them through it.
 - **[declared] The type-ahead orphan toast is localised on every path** (M12): the adapter's

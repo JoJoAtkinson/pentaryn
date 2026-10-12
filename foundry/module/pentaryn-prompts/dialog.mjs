@@ -27,7 +27,7 @@ import { makeLog } from "./lib/log.mjs";
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 const log = makeLog(MODULE);
 
-const esc = s => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+const esc = s => foundry.utils.escapeHTML(String(s ?? ""));
 
 const AUTOSAVE_MS = 600;
 const FOCUS_GUARD_MS = 1200;
