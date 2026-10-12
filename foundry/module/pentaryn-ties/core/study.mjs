@@ -62,7 +62,10 @@ export function studyOffsetOf(raw) {
   return Math.max(STUDY_OFFSET_MIN, Math.min(STUDY_OFFSET_MAX, n));
 }
 
-/** The rungs for one kind, shifted. `[25,20,15,0]` at offset 0. */
+/**
+ * The rungs for one kind, shifted. `[25,20,15,0]` at offset 0.
+ * @deprecated Unused (ties-42); kept one release because the known-core.mjs barrel has always exported it.
+ */
 export const rungsFor = offset =>
   STUDY_RUNGS.map(r => (r === 0 ? 0 : r + (typeof offset === "number" ? offset : 0)));
 

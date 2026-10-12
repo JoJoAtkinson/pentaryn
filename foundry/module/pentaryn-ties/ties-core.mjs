@@ -34,7 +34,7 @@ export const STANCES = [
   { value: -2, key: "hostile", hex: 0xe74c3c, css: "#e74c3c" }
 ];
 
-/** Unused by the module (ties-42); kept one release because ties-api.mjs has always exported it. */
+/** @deprecated Unused by the module (ties-42); kept one release because ties-api.mjs has always exported it. */
 export const STRENGTHS = [5, 4, 3, 2, 1];
 
 /**

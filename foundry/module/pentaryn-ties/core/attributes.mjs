@@ -227,7 +227,10 @@ export const MEMBER_FACT = "#id";
 /** Per-character world knowledge — which attributes this character knows *exist*. */
 export const KNOWLEDGE_SETTING = "attributeKnowledge";
 
-/** Per-creature identifications ride the shipped `beliefs` flag on the subject actor. */
+/**
+ * Per-creature identifications ride the shipped `beliefs` flag on the subject actor.
+ * @deprecated Unused — use BELIEFS_FLAG (ties-42); kept one release because the known-core.mjs barrel exports it.
+ */
 export const IDENT_FLAG = BELIEFS_FLAG;
 
 /**

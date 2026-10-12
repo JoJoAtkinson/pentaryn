@@ -1502,21 +1502,6 @@
  */
 .pt-inspect-btn i { pointer-events: none; }
 
-/* the failed-branch marker: GM-only, and it must never render on a player's view */
-.pentaryn-ties .pt-attr-row.pt-attr-failed .pt-attr-title {
-  opacity: 0.55;
-  text-decoration: line-through;
-}
-
-.pentaryn-ties .pt-attr-failed-tag {
-  flex: 0 0 auto;
-  font-size: var(--font-size-11, 11px);
-  padding: 0.05rem 0.3rem;
-  border-radius: 3px;
-  background: color-mix(in srgb, var(--pt-hostile) 20%, transparent);
-  border: 1px solid var(--pt-hostile);
-}
-
 /* the invalid-ancestry banner — Joe's Q1 error, GM-visible and actionable */
 .pentaryn-ties .pt-ancestry-warning {
   margin: 0.4rem 0;
@@ -1710,7 +1695,7 @@
 .pt-inspect-preview blockquote { margin: 0.2rem 0 0.2rem 1.6rem; padding: 0.25rem 0.5rem; border-left: 3px solid; }
 .pt-inspect-preview blockquote.pv-true { border-color: #3c8d40; }
 .pt-inspect-preview blockquote.pv-false { border-color: #b03a2e; font-style: italic; }
-.pt-inspect-preview .pv-silent, .pt-inspect-preview .pv-skip { opacity: 0.6; font-style: italic; margin-left: 1.6rem; }
+.pt-inspect-preview .pv-silent { opacity: 0.6; font-style: italic; margin-left: 1.6rem; }
 .pt-inspect-preview .pv-dim { opacity: 0.45; }
 .pt-inspect-preview .pv-locked { font-size: 0.8em; color: #b03a2e; font-weight: normal; }
 .pt-inspect-preview .pv-free { font-size: 0.85em; opacity: 0.75; }
@@ -1736,7 +1721,6 @@
 .pt-inspect-preview .pv-sw-failed .pv-slider { border-color: rgba(176,58,46,0.85); box-shadow: 0 0 0 1px rgba(176,58,46,0.25); }
 .pt-inspect-preview .pv-sw-busy { opacity: 0.6; pointer-events: none; }
 .pt-inspect-preview .pv-share-all { margin-left: auto; width: auto; font-size: 0.8em; line-height: 1.4; padding: 0 0.5rem; }
-.pt-inspect-preview .pv-kind-text summary { cursor: pointer; font-size: 0.85em; }
 
 /* ── Attribute Review panel (review-ui.mjs) ─────────────────────────────── */
 
@@ -1765,7 +1749,6 @@
 .pentaryn-attr-review .pt-review-sort { flex: 0 0 auto; width: auto; }
 .pentaryn-attr-review .pt-review-spacer { flex: 1 1 auto; }
 .pentaryn-attr-review .pt-review-counts { margin: 0; font-weight: 600; }
-.pentaryn-attr-review .pt-review-hint { margin: 0; font-size: var(--font-size-11, 11px); opacity: 0.7; }
 
 .pentaryn-attr-review .pt-review-list { list-style: none; margin: 0.3rem 0 0; padding: 0; display: grid; gap: 0.4rem; }
 .pentaryn-attr-review .pt-review-row {

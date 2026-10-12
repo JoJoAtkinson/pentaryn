@@ -29,7 +29,7 @@
  */
 
 import { MODULE } from "./ties-core.mjs";
-import { LORE_FLAG, readLore, KIND_OF_FLAG, STUDY_TIERS_FLAG } from "./known-core.mjs";
+import { LORE_FLAG, KIND_OF_FLAG, STUDY_TIERS_FLAG } from "./known-core.mjs";
 import { loreEditorHTML, bindLoreEditor } from "./lore-ui.mjs";
 import { beliefs, deliver, reset, kindActorOf, setKindOf, writeLoreRows } from "./study.mjs";
 import { esc } from "./core/html.mjs";
@@ -183,6 +183,3 @@ export function bindAuthoring(root, actor, rerender = () => {}) {
     });
   }
 }
-
-/** Does this actor carry anything phase 4 authored? Used to decide whether to draw a hint. */
-export const hasLore = actor => readLore(actor?.getFlag?.(MODULE, LORE_FLAG)).length > 0;

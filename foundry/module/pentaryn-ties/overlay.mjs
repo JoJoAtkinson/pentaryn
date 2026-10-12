@@ -253,15 +253,6 @@ export function clear() {
 }
 
 /**
- * Asked of the cards, not of a flag — for the same reason the two key handlers are.
- * Answers about TRANSIENT cards only and ignores `mode`, so it is true after either key.
- */
-export function isShowing(actorId) {
-  if (!anyTransient()) return false;
-  return !actorId || state.actorId === actorId;
-}
-
-/**
  * The ties on this actor whose token this client can actually see, grouped one entry per
  * PERSON rather than per token. Somebody standing on the map twice is still one connection
  * and still one card.

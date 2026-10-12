@@ -302,6 +302,9 @@ export async function removeTie(actor, targetId, { bothWays = true } = {}) {
  * Actor document to every client regardless of permission (the sidebar merely hides them),
  * so an unfiltered dropdown would hand a player the name of every NPC in the world. A player
  * may only tie to someone they can already see; the GM sees everyone.
+ *
+ * @deprecated Unused by the module (ties-42 — the dialog has its own pickers); kept one release
+ * because ties-api.mjs has always exported it.
  */
 export function candidates(actor) {
   const taken = new Set(read(actor).map(t => t.id));

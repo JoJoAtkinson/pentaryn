@@ -550,7 +550,7 @@ async function commitNow(ref, patch, { review = false } = {}) {
   } else merged.touched = clampTouched([...list[i].touched, ...diff]);
   list[i] = merged;
   if (!(await saveRegistry(list))) return fail("writeFailed");
-  return { ok: true, entry: merged, ...(diff.length ? { changed: diff } : { unchanged: true }) };
+  return { ok: true, entry: merged, changed: diff }; // diff is non-empty here: the empty case returned above
 }
 
 /* -------------------------------------------- */
