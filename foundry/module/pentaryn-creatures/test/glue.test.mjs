@@ -1,6 +1,6 @@
 // Glue characterisation on the active GM's client (guide step 1). The unchanged entry is loaded as
 // Foundry would, init/setup/ready are fired, and its effects are pinned: the 17-row hook manifest,
-// the four settings.register option objects, the light writer (ready sync, the 200 ms debounced queue,
+// the four settings.register option objects, the light writer (ready sync, the 200 ms fixed-window queue,
 // which changes queue, the GM gate, the failure texts), the publish and the legacy API.
 // [declared] C-D2 (guide step 7): the API is published through the kit AT ready (was one tick
 // later), frozen, with the kit members, on module.api as well as game.pentaryn.creatures.
@@ -10,7 +10,7 @@
 // glue-libwrapper*.test.mjs and glue-nogetter.test.mjs (the other patch paths), publish.test.mjs
 // (game.pentaryn root shapes).
 //
-// KNOWN rows (pinned as they are; each has its target as a todo test at the end):
+// KNOWN rows (all fixed; each pin is the test named after the row):
 //   transform-creatures-26  FIXED [declared]: the queue flushes 200 ms after the first change, never pushed back
 //   transform-creatures-27  FIXED [declared]: our light writes carry {pentarynCreatures: true} (argc 3) and
 //                           the updateToken hook skips them — no second, no-op pass
@@ -242,7 +242,7 @@ test("createToken queues that token on its scene; flush writes only the queued i
   F.fire("createToken", W.tok("tEye"), {}, GM);
   await tick(200);
   assert.deepEqual(writes(), [{ scene: ALPHA, type: "Token", updates: [lit("tEye")], argc: 3 }]);
-  await tick(200);   // -27's echo pass
+  await tick(200);   // let the window close
   F.fire("createToken", W.tok("tImpB"), {}, GM);
   F.fire("createToken", W.tok("tImp"), {}, GM);
   await tick(200);
@@ -399,5 +399,3 @@ test("controlToken with no strip on the page does nothing", () => {
   F.fire("controlToken", W.p("tImp"), true);
   assert.equal(W.strip(), null);
 });
-
-/* ── the targets of the KNOWN rows (guide §4 and step 7) ─────────────────── */

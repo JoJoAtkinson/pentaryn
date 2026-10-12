@@ -87,7 +87,7 @@ inert in play. Nothing in `inspect` is GM-only.
 
 | Where | Shape | Written by |
 |---|---|---|
-| actor `flags.pentaryn-attunement.slots` | `(itemId \| "away:<key>" \| null)[]`, trailing holes trimmed | a drop onto a slot; `stash`; an item coming home |
+| actor `flags.pentaryn-attunement.slots` | `(itemId \| "away:<key>" \| null)[]`; trailing holes trimmed by a drop and by an item coming home; `stash` writes the reconciled order padded to `max` (`computeSlots()` re-pads on read, so both forms render the same) | a drop onto a slot; `stash`; an item coming home |
 | actor `flags.pentaryn-attunement.away` | `[{ key, name, img }]` | `stash`; `releaseAway`; an item coming home |
 | item `flags.pentaryn-attunement.bond` | `{ actor, key, name, equipped, attuned, attunement, currency? }` | `stash` (on the copies); cleared (`_del`) when the item is home |
 
@@ -170,7 +170,9 @@ node test/run.mjs        # from this folder
 `slots.test` holds the slot fixtures (stale flags, deleted items, duplicates, corrupt flag types,
 over cap, non-default `max`, away entries, coming home) and the proficiency-map patch; `glue.test`,
 `hooks.test`, `api.test`, `strip.test` (a minimal DOM), `listeners`, `hook-errors`, `perf`,
-`stash-safety` and `guard-failure` pin the wiring. Goldens in `test/golden/`.
+`stash-safety` and `guard-failure` pin the wiring; `core-meta` holds the core's identity (it loads
+with no Foundry globals, constants agree with `module.json`, `trimSlots`), `docs` guards this
+README, and `i18n` checks `STRINGS` ↔ `lang/en.json` parity. Goldens in `test/golden/`.
 
 ## Sync
 

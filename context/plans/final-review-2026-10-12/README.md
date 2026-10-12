@@ -137,3 +137,102 @@ the dnd-scripts server picks it up at the next session start) both run. `make lo
 printed the URL and then timed out waiting for a browser to collect it, as designed when nothing
 navigates (the existing GM tab was kept, not replaced); py-ops' only `login.py` change is the
 `_choose` range check. Reverts: none. main was already on origin at d4b3a09e.
+
+## Integration INT-1405
+
+| Area | Status | Merge SHA | Revert SHA | Synced modules | Reason |
+|---|---|---|---|---|---|
+| attunement | merged | 14cbb9b3 | — | attunement | — |
+| portals | merged | 4ba5f7e2 | — | portals | — |
+| feedback | merged | 6294260f | — | feedback | — |
+
+**Gates.** On main at 6294260f: `foundry-modules-check` (all 20 modules pass), `foundry-lib-check`,
+`check-context` (OK, 5 warnings), `make test` (1626 passed, 2 skipped, 5 xfailed). No `module.json`,
+lang or fork file changed, so no restart and no fork rebuild. One CSS line left portals
+(`.ppt-app .ppt-edit`, a selector nothing renders; the edit cards are `.ppt-editcard`), which a
+reload picks up.
+
+**Deploy.** This record comes from a relaunch, which checked what was really in place first. The first
+attempt (14:09–14:11Z) took the rollback copies
+`.state/live-rollback/INT-1405/` (pre-merge builds: attunement git 991cee3e, portals and feedback
+380a5348), ran the before-goldens on the deployed pre-merge code, synced all three modules at
+14:10:21–24Z (git 6294260f) and reloaded the one GM tab at 14:10:27Z. The relaunch did not reload
+again. The tab had loaded after the sync, and post-merge-only exports (`feedback-core.isReportId`,
+`LIST_KEYS`, `attunement-core.PROFICIENCY_CATEGORIES`, `shortName`) are present in the running
+build. The before-goldens are confirmed as pre-merge behaviour: each one's `golden.shared` is
+identical to an independent earlier run (`wave5/after-fix3/attunement.recheck.json`,
+`wave5/after/portals.run2.json`).
+
+**Probe.** attunement 0.3.0, portals 0.5.0 and feedback 0.1.2 each equal `module.json`. Every
+described path is a function (7, 12 and 8). `selftest().ok` is true for attunement and feedback
+(portals has no selftest). There are no console errors since the load: feedback's error ring holds
+only Foundry deprecation warnings, and the tab console is clean. `get-world-info` answers with only
+the Gamemaster active, and the tunnel is down.
+
+**Goldens.** The relaunch made fresh after-runs at 14:14Z into `.state/live-goldens/INT-1405/after/`.
+The first attempt's after-files are kept as `*.attempt1.json`. `diff.mjs before after` was run without
+`--declared`, and for both attunement and portals shared is identical, cleanup is clean and the exit
+code is 0. Feedback has no live golden. Every ZZ fixture was deleted (no ZZ actors, scenes, items or
+journals are left). Reverts: none.
+
+## Integration INT-1417
+
+| Area | Status | Merge SHA | Revert SHA | Synced modules | Reason |
+|---|---|---|---|---|---|
+| dropbin | merged | 20fdd703 | — | dropbin | — |
+| journal | merged | 856f416b | — | journal | — |
+| creatures | merged | 6fa95f4b | — | creatures | — |
+
+**Gates.** On main at 6fa95f4b: `foundry-modules-check`, `foundry-lib-check`, `check-context` (OK, 5 warnings),
+`make test` (1626 passed, 2 skipped, 5 xfailed). No `module.json`, lang or fork file changed, so no restart and
+no fork rebuild.
+
+**Deploy.** Rollback copies of the three deployed folders (git 380a5348) in `.state/live-rollback/INT-1417/`.
+Before-goldens ran on the deployed pre-merge code in the one GM tab, `make foundry-{dropbin,journal,creatures}-sync`
+(FROM=local) at 14:23Z, one GM-tab reload. Probe: dropbin 0.2.3, journal 0.1.0, creatures 0.1.1 equal `module.json`,
+every described path a function, `selftest().ok` true for dropbin and journal (creatures has none).
+
+**Goldens.** Before and after diffed in page, then (relaunch reality check, 14:26Z) exported from the GM tab's
+localStorage to `.state/live-goldens/INT-1417/{before,after}/<m>.json` and the scratch keys removed;
+`diff.mjs before after` without `--declared` exits 0 for all three (shared identical, cleanups clean):
+`golden.shared`, `golden.declared` and env all empty for the three modules, cleanups clean, no ZZ leftovers. No
+allowlist. Reverts: none.
+
+**Foundry state.** Up, world `pentaryn` loaded, exactly one GM tab (Gamemaster) answering `get-world-info`; no restart, no fork rebuild. Pushed main; review worktrees for dropbin, journal and creatures removed (branches kept).
+
+## Integration INT-1427
+
+| Area | Status | Merge SHA | Revert SHA | Synced modules | Reason |
+|---|---|---|---|---|---|
+| lookup | merged | 2839e3de | — | lookup | — |
+| pings | merged | 57790465 | — | pings | — |
+| names | merged | d693144d | — | names | — |
+
+**Gates.** On main at d693144d: `foundry-modules-check` (all 20 modules), `foundry-lib-check`, `check-context`
+(OK, 5 warnings), `make test` (1626 passed, 2 skipped, 5 xfailed). No `module.json`, lang or fork file changed, so
+no restart and no fork rebuild.
+
+**Deploy.** Rollback copies of the three deployed folders (git 380a5348) in `.state/live-rollback/INT-1427/`.
+Before-goldens ran on the deployed pre-merge code in the one GM tab, `make foundry-{lookup,pings,names}-sync`
+(FROM=local) at 14:33Z (stamps now git d693144d), one GM-tab reload. Probe: lookup 0.3.0, pings 0.1.1, names 0.1.1
+equal `module.json`, every described method a function, lookup `selftest().ok` true, no pentaryn errors in the
+feedback ring, no ZZ leftovers.
+
+**Goldens.** Before and after kept in the GM tab's localStorage and diffed in page (deep compare of `golden`,
+`cleanup`, and lookup `env`; the scratch keys then removed): 0 differences for all three, cleanups clean
+(pings `pingLogRestored` true, `pingScratchLeft` 0). The known pings run-to-run noise did not appear. No
+allowlist. Reverts: none.
+
+**Foundry state.** Up, world `pentaryn` loaded, exactly one GM tab (Gamemaster) answering `get-world-info`; no
+restart, no fork rebuild.
+
+**Relaunch reality check (15:05Z).** The deployed folders were still the pre-merge code: each
+`.pentaryn-sync.json` read git 380a5348 (synced 07:46Z) and `diff -r` against main differed, so the 14:33Z
+sync above had not landed. Redone in full: before-goldens on the deployed 380a5348 code, rollback copies
+re-checked (identical to the deployed folders), `make foundry-{lookup,pings,names}-sync` (FROM=local,
+PENTARYN_NONINTERACTIVE=1) at 15:06Z — stamps now git 13de13f8, `diff -r` against main clean — one GM-tab
+reload. Probe: lookup (`rules`) 0.3.0, pings 0.1.1, names 0.1.1 equal `module.json`, every described path a
+function, lookup `selftest().ok` true, no console.error since the reload. Goldens written to
+`.state/live-goldens/INT-1427/{before,after}/<m>.json`; `diff.mjs before after` without `--declared` exits 0
+for all three (shared identical, cleanups clean; the pings noise did not appear). No ZZ leftovers. Reverts:
+none. Foundry up, world `pentaryn`, one GM tab answering `get-world-info`; no restart, no fork rebuild.

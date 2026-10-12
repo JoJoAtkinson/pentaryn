@@ -16,7 +16,7 @@ F.fire("init");
 F.fire("setup");
 F.fire("ready");
 const { surfaceOf } = await import("../lib/api.mjs");
-const { VERSION, CONTRACT, NS } = await import("../names-core.mjs");
+const { VERSION, CONTRACT, NS, HOOKS } = await import("../names-core.mjs");
 const api = game.pentaryn.names;
 
 test("the published API is frozen, versioned and pinned (golden/surface.json)", () => {
@@ -42,6 +42,8 @@ test("describe(): the three legacy rows in order, the hooks names listens to, no
   ]);
   assert.deepEqual([d.module, d.namespace, d.flagScope], [MODULE, NS, MODULE]);
   assert.deepEqual([d.events, d.settings, d.queries, d.patches], [[], [], [], []]);
+  // describe().events is the HOOKS table (names-core.mjs), not a literal that could drift from it.
+  assert.deepEqual(d.events.map(e => e.key), Object.keys(HOOKS));
   assert.equal(d.published.when, "ready");
   assert.deepEqual(api.settings(), {});
 });

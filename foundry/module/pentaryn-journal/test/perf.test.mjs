@@ -113,3 +113,40 @@ test("updateItem refreshes nothing while only entry bars are open, and the bars 
   F.foundry.applications.instances.clear();
   F.become({ userId: GM });
 });
+
+test("savedStatus stops at the first saved source", async () => {
+  const { hookRegistry } = await import("../lib/hooks.mjs");
+  const { makeLog } = await import("../lib/log.mjs");
+  const bar = await import("../bar.mjs");
+  const log = makeLog("pentaryn-journal");
+  const reg = hookRegistry("pentaryn-journal", log);
+  const ctx = { log, reg, exposed: {}, expose(a) { Object.assign(ctx.exposed, a); } };
+  bar.install(reg, ctx);
+  F.become({ userId: P1 });
+  try {
+    const entry = makeDoc("JournalEntry", { id: "readable00000013", name: "Hall", ownership: { default: 2 } });
+    const pages = [1, 2, 3].map(i => makeDoc("JournalEntryPage", { id: `page00000000001${i}`, name: `P${i}`, type: "text",
+      sort: i, ownership: { default: 2 }, text: { content: `<p>${i}</p>` } }, { parent: entry }));
+    Object.defineProperty(entry, "pages", { value: new StubCollection(pages), enumerable: false });
+    const target = { kind: "entry", entry };
+    const sources = A.descriptorsFor(target);
+    assert.equal(sources.length, 3);
+    const copy = { id: "copy000000000013", flags: { "pentaryn-journal": { source: { key: sources[0].key, hash: core.hashOf(sources[0]) } } } };
+    const journalPages = [copy];
+    let finds = 0;
+    const find = journalPages.find;
+    journalPages.find = function (...a) { finds++; return find.apply(this, a); };
+    core.status(journalPages, sources);
+    const byStatus = finds;
+    finds = 0;
+    const r = ctx.exposed.savedStatus(target, journalPages);
+    assert.equal(r.st, "partial");
+    assert.equal(r.saved, copy, "the first saved source's copy");
+    assert.deepEqual(r.sources, sources);
+    assert.equal(finds - byStatus, 1, "one scan after status(), not one per source");
+  } finally {
+    F.become({ userId: GM });
+    bar.uninstall();
+    reg.offAll();
+  }
+});

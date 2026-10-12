@@ -2,9 +2,10 @@
  * Pentaryn Creatures — the API manifest. PURE DATA: node imports it without a Foundry stub,
  * describe() reports it, and buildApi() refuses to load when it and api.mjs drift apart.
  *
- * Every published path from before the migration keeps its signature (`legacy: true`); no row's
- * first param is named `ref`, so none is resolved by the kit. `core` (the pure module) is published
- * unlisted, as a frozen copy.
+ * Every published path from before the migration keeps its signature (`legacy: true`) and takes
+ * raw arguments. Only `inspect` (0.1.1) names its first param `ref`, which the kit resolves to a
+ * TokenDocument (with `opts.sceneId`; NOT_FOUND / AMBIGUOUS). `core` (the pure module) is
+ * published unlisted, as a frozen copy.
  */
 
 import { CONTRACT, MODULE, NS, VERSION } from "./creatures-core.mjs";
