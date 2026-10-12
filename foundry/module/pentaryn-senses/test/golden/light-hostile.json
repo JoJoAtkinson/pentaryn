@@ -118,7 +118,7 @@
                         "type": "button",
                         "data": {
                           "psLight": "me",
-                          "tooltip": "On me"
+                          "tooltipText": "On me"
                         },
                         "attrs": {
                           "aria-label": "On me"
@@ -136,7 +136,7 @@
                         "type": "button",
                         "data": {
                           "psLight": "pick",
-                          "tooltip": "Pick a target"
+                          "tooltipText": "Pick a target"
                         },
                         "attrs": {
                           "aria-label": "Pick a target"
@@ -154,7 +154,7 @@
                         "type": "button",
                         "data": {
                           "psLight": "end",
-                          "tooltip": "End light"
+                          "tooltipText": "End light"
                         },
                         "attrs": {
                           "aria-label": "End light"

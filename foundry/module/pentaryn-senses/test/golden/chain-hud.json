@@ -8,7 +8,7 @@
         "class": "control-icon ps-chain-btn",
         "type": "button",
         "data": {
-          "tooltip": "Break chain"
+          "tooltipText": "Break chain"
         },
         "attrs": {
           "aria-label": "Break chain"
@@ -56,7 +56,7 @@
         "class": "control-icon ps-chain-btn",
         "type": "button",
         "data": {
-          "tooltip": "Chain to Stake"
+          "tooltipText": "Chain to Stake"
         },
         "attrs": {
           "aria-label": "Chain to Stake"

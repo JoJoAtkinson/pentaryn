@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- **[declared senses-edge-3] Button tips are plain text, set one way** (final review 2026-10-12):
+  every senses button (Token HUD Break chain / Chain to <target> / End light, the spell card's
+  Light row, the inventory flame and hood) sets its tip through `setTip()` in the new pure `core/hud-dom.mjs` (through the core barrel):
+  the plain string goes to `data-tooltip-text` (Foundry 14 shows it as text) and to `aria-label`,
+  and `data-tooltip` is no longer set. The Outshone tip no longer HTML-escapes the winning item's
+  name (`&amp;` showed on screen and in the screen reader), and the Chain to <target> tip no longer
+  puts the token's raw name where Foundry parses HTML. Goldens: `tooltip` becomes `tooltipText` in
+  chain-hud, light-card, light-hostile, light-hud, light-sheet and player-sheet-card (values
+  unchanged). New `test/hud-tips.test.mjs`.
+
 - **[declared senses-edge-4] A hand-authored shard light is applied once, not on every sync** (final
   review 2026-10-12): the carried-light "already applied" check now compares the item's
   `flags.pentaryn-senses.light` as Foundry stores it (`new foundry.data.LightData(light).toObject()`:

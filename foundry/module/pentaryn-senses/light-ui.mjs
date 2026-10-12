@@ -5,7 +5,7 @@
  * bindActions() (a UI file never imports a feature).
  */
 
-import { MODULE, profileFor, isLit, isHooded, isLightSpellData, lightingItemId, readSpellLight, esc } from "./senses-core.mjs";
+import { MODULE, profileFor, isLit, isHooded, isLightSpellData, lightingItemId, readSpellLight, esc, setTip } from "./senses-core.mjs";
 import { realItem, itemFrom } from "./light-adapter.mjs";
 import { collapseArgonPanels } from "./argon.mjs";
 import { isAnyGM } from "./lib/election.mjs";
@@ -153,8 +153,7 @@ function cardButton(icon, label, act) {
   b.type = "button";
   b.className = "icon";
   b.dataset.psLight = act;
-  b.dataset.tooltip = label;
-  b.setAttribute("aria-label", label);
+  setTip(b, label);
   b.innerHTML = `<i class="${icon}" inert></i>`;
   li.append(b);
   return li;
@@ -222,8 +221,7 @@ function rowButton(cls, icon, tip, disabled, onClick) {
   const b = document.createElement("button");
   b.type = "button";
   b.className = `unbutton config-button item-control ${cls}`;
-  b.dataset.tooltip = tip;
-  b.setAttribute("aria-label", tip);
+  setTip(b, tip);
   b.innerHTML = `<i class="${icon}" inert></i>`;
   if (disabled) b.setAttribute("aria-disabled", "true");
   b.addEventListener("click", ev => {
@@ -253,7 +251,7 @@ export function decorateSheet(app, element) {
     const cell = document.createElement("div");
     cell.className = "ps-light-controls";
     const winner = lit && lighting && lighting !== item.id ? actor.items.get(lighting) : null;
-    const tip = winner ? _loc("PENTARYN_SENSES.Light.Outshone", { item: esc(winner.name) })
+    const tip = winner ? _loc("PENTARYN_SENSES.Light.Outshone", { item: winner.name })
       : _loc(lit ? "PENTARYN_SENSES.Light.Douse" : "PENTARYN_SENSES.Light.LightIt");
     cell.append(rowButton(`ps-light-toggle${lit ? " lit" : ""}${winner ? " outshone" : ""}`, "fa-solid fa-fire",
       tip, locked, () => actions.toggle(item)));
@@ -283,8 +281,7 @@ export function injectHUD(app, element) {
   const btn = document.createElement("button");
   btn.type = "button";
   btn.className = "control-icon ps-light-end";
-  btn.dataset.tooltip = tip;
-  btn.setAttribute("aria-label", tip);
+  setTip(btn, tip);
   btn.innerHTML = `<i class="fa-solid fa-lightbulb-slash"></i>`;
   btn.addEventListener("click", ev => {
     ev.preventDefault();

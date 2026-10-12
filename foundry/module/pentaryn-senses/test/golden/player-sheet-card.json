@@ -22,7 +22,7 @@
                 "class": "unbutton config-button item-control ps-light-toggle",
                 "type": "button",
                 "data": {
-                  "tooltip": "Light it"
+                  "tooltipText": "Light it"
                 },
                 "attrs": {
                   "aria-label": "Light it",

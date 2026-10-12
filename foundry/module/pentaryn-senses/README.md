@@ -167,7 +167,7 @@ made first (a square, an old summon token) counts as done.
 | File | Role |
 |---|---|
 | `senses.mjs` | entry: wiring only |
-| `senses-core.mjs` | pure barrel: constants; re-exports `core/` (`ids`, `util`, `chain`, `light`, `migrate`, `glow`, `inspect`) |
+| `senses-core.mjs` | pure barrel: constants; re-exports `core/` (`ids`, `util`, `hud-dom`, `chain`, `light`, `migrate`, `glow`, `inspect`) |
 | `settings.mjs` | `SETTINGS` and the setting readers |
 | `api-manifest.mjs`, `api.mjs` | API rows; their bindings, `inspect`, `light.status` |
 | `carried.mjs`, `light.mjs`, `chain.mjs`, `glow.mjs`, `migrate.mjs` | features |

@@ -21,7 +21,7 @@
  */
 
 import {
-  MODULE, FLAGS, readChain, chainPairs, linksTouching, chainThickness, resolveTokenRef, linkSpriteSpecs, unsetPath,
+  MODULE, FLAGS, readChain, chainPairs, linksTouching, chainThickness, resolveTokenRef, linkSpriteSpecs, unsetPath, setTip,
 } from "./senses-core.mjs";
 import { isAnyGM } from "./lib/election.mjs";
 
@@ -254,8 +254,7 @@ function hudButton(col, cls, icon, tip, onClick) {
   const btn = document.createElement("button");
   btn.type = "button";
   btn.className = `control-icon ${cls}`;
-  btn.dataset.tooltip = tip;
-  btn.setAttribute("aria-label", tip);
+  setTip(btn, tip);
   btn.innerHTML = `<i class="${icon}"></i>`;
   btn.addEventListener("click", ev => {
     ev.preventDefault();
