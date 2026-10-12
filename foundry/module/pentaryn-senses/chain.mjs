@@ -77,7 +77,7 @@ function forgetPairs(doc) {
 export async function link(chained, anchor) {
   if (!isAnyGM()) return false;
   const c = docOf(chained), a = docOf(anchor);
-  if (!c?.update || !a?.id || c.id === a.id || c.parent !== a.parent) return false;
+  if (!c?.update || !a?.id || c.id === a.id || c.parent !== a.parent || c.documentName !== "Token" || a.documentName !== "Token") return false;
   await c.update({ [`flags.${MODULE}.${CHAIN_FLAG}`]: { anchor: a.id } });
   return true;
 }
