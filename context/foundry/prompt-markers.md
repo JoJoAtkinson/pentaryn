@@ -400,7 +400,9 @@ secret. `note` is one line on **why** this choice — it is stamped into provena
 2. **Real run** — the same call without `dryRun`. Actors and journals are made per replacement
    (an `npc`: the actor, then each feature), then everything is placed in one batch per scene,
    provenance stamped (`flags.pentaryn-prompts.provenance`), markers deleted only after their
-   replacement exists.
+   replacement exists. A marker someone deleted mid-run keeps its replacement (`WARN: marker <id>
+   was already gone…`); a marker whose delete is refused stays, `markerDeleted=false` with a WARN —
+   every other marker on the scene is still deleted.
 3. **Readback** — one line per prompt: what was created (type, name, id, position) and
    `markerDeleted=true|false`; under it the `patched:` list, a character's `sheet:` (abilities,
    HP, AC, PB, spell DC, saves, skills, speed, darkvision, size, languages, feats, spell counts vs limits,

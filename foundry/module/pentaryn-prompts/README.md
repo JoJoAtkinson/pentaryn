@@ -127,7 +127,10 @@ Results are flat rows (strings, numbers, booleans, lists of strings), built by `
 `text` is the readback the MCP tool prints. Placement: same footprint → the marker's own x/y; other
 creature footprints centred and snapped; hotspots and tiles centred unsnapped; notes and lights on the
 centre. Every created document, actor and journal carries the provenance. A failed replacement keeps
-its marker, and what this module created for it is deleted again (`discarded`).
+its marker, and what this module created for it is deleted again (`discarded`). The replaced markers
+on a scene go in one delete; a marker already gone (another GM deleted it mid-run) is left out and
+its row keeps its replacement with a WARN saying so, and if the delete still fails each marker is
+deleted on its own, so a refusal leaves only that row `markerDeleted=false` with a WARN naming it.
 
 ### The gather, briefly
 

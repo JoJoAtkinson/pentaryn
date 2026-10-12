@@ -666,6 +666,37 @@ async function releaseClaims(entries) {
   }
 }
 
+/** Add a WARN line to a replacement's row. */
+function warnRow(e, line) {
+  e.report = { ...(e.report ?? {}), warnings: [...(e.report?.warnings ?? []), line] };
+}
+
+/**
+ * Delete the replaced markers on one scene (prompts-core-AC-2): skip-and-report, no rollback. A
+ * marker already gone (another GM deleted it mid-run) is left out and its row says so; if the
+ * batch still throws, each marker is deleted on its own, so one refusal fails only its own row.
+ */
+async function deleteMarkers(scene, done) {
+  const live = [];
+  for (const e of done) {
+    if (scene.tokens.get(e.marker.id)) live.push(e);
+    else warnRow(e, `marker ${e.marker.id} was already gone before the delete (the replacement was kept)`);
+  }
+  if (!live.length) return;
+  try {
+    await scene.deleteEmbeddedDocuments("Token", live.map(e => e.marker.id));
+    return;
+  } catch (err) {
+    log.warn(`marker delete failed on ${scene.name}`, err);   // then one at a time, below
+  }
+  for (const e of live) {
+    if (!scene.tokens.get(e.marker.id)) continue;
+    try { await scene.deleteEmbeddedDocuments("Token", [e.marker.id]); } catch (err) {
+      warnRow(e, `marker ${e.marker.id} not deleted: ${err?.message ?? err}`);
+    }
+  }
+}
+
 /** replaceMany past argument checks: `entries` resolved (and, for a real run, queued on its scenes). */
 async function replaceResolved(args, entries, t0) {
   const { call = null, dryRun = false, force = false } = args;
@@ -734,14 +765,7 @@ async function replaceResolved(args, entries, t0) {
         } else { res.entry.ok = false; res.entry.code = "CREATE_FAILED"; res.entry.error = `CREATE_FAILED: ${res.error}`; }
       }
     }
-    const dead = entries.filter(e => e.ok && e.scene === scene && (e.created?.some(c => !c.also) || e.spec.with.kind === "none")).map(e => e.marker.id);
-    if (dead.length) {
-      try {
-        await scene.deleteEmbeddedDocuments("Token", dead);
-      } catch (err) {
-        log.warn(`marker delete failed on ${scene.name}`, err);
-      }
-    }
+    await deleteMarkers(scene, entries.filter(e => e.ok && e.scene === scene && (e.created?.some(c => !c.also) || e.spec.with.kind === "none")));
   }
 
   // 3. A replacement that failed after step 1 created its actor/journal: take those back out.

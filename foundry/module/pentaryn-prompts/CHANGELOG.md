@@ -42,6 +42,11 @@ cssPrefix `pp-`, afterSync). Each **[declared]** change goes to the live check.
   claimed with the kit's `claimDocument` (`flags.pentaryn-prompts.claims.replace`, about 0.75 s per
   run) before anything is built, and a marker another GM tab holds fails that row only. A failed
   row's claim is taken off its marker; `force` takes over a stale one. `lib/election.mjs` vendored.
+- **[declared] One vanished marker no longer leaves the scene's other markers behind**
+  (prompts-core-AC-2): skip-and-report, no rollback. The marker delete leaves out a marker already
+  gone (its row keeps its replacement and WARNs `marker <id> was already gone before the delete`);
+  if the delete still throws, each marker is deleted on its own and a refusal fails only that row
+  (`markerDeleted=false`, WARN `marker <id> not deleted: …`).
 - `ensureMarkers` repairs every drifted actor in one batch update. A hot re-import after
   `uninstall()` re-wires and republishes at once.
 - Console only (DP9): a core token API that throws warns once; swallowed failures log at debug
