@@ -68,8 +68,8 @@ n/a — patches nothing.
 
 ## Two sessions / who writes
 
-Every client remembers the old name in `preUpdateActor`; only the client that made the rename
-(`userId === game.user.id`) writes, and it skips tokens it cannot edit
+The renaming client records the old name in `preUpdateActor` (pre-hooks run only there); it
+travels in the update options. Only that client (`userId === game.user.id`) writes, and it skips tokens it cannot edit
 (`canUserModify(game.user, "update")`). Combatants are written only when that client is a GM
 (`game.user.isGM`, Assistants included): a player's rename relabels its tokens but leaves the tracker.
 A GM rename runs in every tab of that GM (the MCP bridge tab and a browser tab both pass the

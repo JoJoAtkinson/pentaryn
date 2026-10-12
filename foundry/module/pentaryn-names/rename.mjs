@@ -4,8 +4,9 @@
  *
  * GLUE, one feature: `install(reg, ctx)` registers the two actor hooks through the registry;
  * `uninstall()` has no state to drop. `syncRef` is the legacy API row `sync`.
- * The old name is captured in preUpdateActor on every client; only the client that made the
- * change (`userId === game.user.id`) writes, and only to tokens it may edit.
+ * preUpdateActor runs only on the client that made the rename (§5.9.1) and records the old name
+ * in the operation options, which travel with the update to every client; only that client
+ * (`userId === game.user.id`) writes, and only to tokens it may edit.
  */
 
 import { planTokenRelabels, relabel } from "./names-core.mjs";
