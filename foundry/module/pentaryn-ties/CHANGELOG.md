@@ -83,6 +83,11 @@ Fixed (declared): README's Extending recipe for **a new study namespace** no lon
 `gate.mjs`, `share.mjs` and `authoring.mjs` too, and points at the seam note in `study/resolve.mjs`
 as the kept list. Docs only; no behaviour changed. EXT-3.
 
+Fixed (declared): an **inspection whose next rung is automatic** (no roll — the inspector carries the
+attribute and it reads `auto`) now takes the `#inspect` claim before writing anything, just as a rolled
+rung does, so with one GM signed in twice only the session that wins the claim writes the ledger rows
+and hands over the grant. A cascade with nothing to do still takes no claim. AC-3.
+
 ## 0.19.4 (2026-10-10, usability run, Area 7 re-run)
 
 - **The inspect window's Share switches are the table's PCs only** (`tablePCs`): each player's

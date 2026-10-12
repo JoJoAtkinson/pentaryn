@@ -202,14 +202,14 @@ async function guardedCascade(character, subject) {
  */
 async function runCascade(character, subject, release = []) {
   /*
-   * The claim is taken **lazily** — on the first rung that actually needs dice, and never for a
-   * gesture that rolls nothing.
+   * The claim is taken **lazily** — on the first rung that writes anything (a roll or a grant),
+   * and never for a gesture that reaches `done` without a step.
    *
    * Measured: the claim costs ~1.2s (two actor writes plus the arbitration wait) while a
    * chat-less roll costs 6ms. Taking it up-front made *every* inspection a three-second gesture,
    * including the overwhelmingly common one where the subject carries nothing secret or everything
    * is already settled. Arbitration exists to stop two GM sessions of one account both rolling —
-   * so a gesture with nothing to roll has nothing to arbitrate.
+   * or writing — so a gesture with nothing to roll or grant has nothing to arbitrate.
    *
    * ⚠ Safe against the timing channel: the stub is already posted before any of this, and it is
    * the only guaranteed observable. A slow fruitless cascade and a fast one both end in silence,
@@ -269,10 +269,15 @@ async function runCascade(character, subject, release = []) {
     const now = Date.now();
     const hold = holdResolved(entry.hold, holdDefault());
 
+    /*
+     * AC-3: claim before the first write of ANY kind — a grant writes ledger rows and a grant just
+     * as a roll does, so a grant-only rung taken unclaimed was performed by every GM tab.
+     */
+    if (!(await claim())) break; // another GM session has this pair; roll and write nothing
+
     let pass = true;
     let total = null;
     if (step.roll) {
-      if (!(await claim())) break; // another GM session has this pair; roll nothing
       const fact = {
         skill: entry.skill,
         dc: entry.dc + concealmentFor(subject, attrId),

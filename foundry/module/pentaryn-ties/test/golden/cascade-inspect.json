@@ -15,6 +15,24 @@
           }
         },
         {
+          "op": "Hooks.call",
+          "name": "preUpdateActor"
+        },
+        {
+          "op": "update",
+          "documentName": "Actor",
+          "uuid": "Actor.zzNpc00000000001",
+          "changes": {
+            "flags.pentaryn-ties.beliefs.zzPc000000000001.#inspect": {
+              "claim": "gmUser0000000001:rid0000000000001"
+            }
+          }
+        },
+        {
+          "op": "Hooks.callAll",
+          "name": "updateActor"
+        },
+        {
           "op": "settings.set",
           "id": "pentaryn-ties.attributeKnowledge",
           "value": {
@@ -45,24 +63,6 @@
               "delivered": 1790000000000,
               "claim": null,
               "sources": null
-            }
-          }
-        },
-        {
-          "op": "Hooks.callAll",
-          "name": "updateActor"
-        },
-        {
-          "op": "Hooks.call",
-          "name": "preUpdateActor"
-        },
-        {
-          "op": "update",
-          "documentName": "Actor",
-          "uuid": "Actor.zzNpc00000000001",
-          "changes": {
-            "flags.pentaryn-ties.beliefs.zzPc000000000001.#inspect": {
-              "claim": "gmUser0000000001:rid0000000000001"
             }
           }
         },
