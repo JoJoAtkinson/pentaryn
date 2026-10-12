@@ -278,6 +278,27 @@ def test_mac_request_stop_is_osascript_quit(monkeypatch, runs):
     assert runs == [["osascript", "-e", 'quit app "Foundry Virtual Tabletop"']]
 
 
+def test_mac_stop_forces_when_osascript_quit_times_out(monkeypatch):
+    """EC-3: a hung `osascript` quit must not escape as TimeoutExpired — request_stop says
+    False and stop() falls through to force_stop (pkill)."""
+    monkeypatch.setattr(host.platform, "system", lambda: "Darwin")
+    monkeypatch.delenv("PENTARYN_STOP_CMD", raising=False)
+    calls = []
+
+    def fake_run(argv, *a, **kw):
+        calls.append(list(argv))
+        if argv[0] == "osascript":
+            raise subprocess.TimeoutExpired(argv, kw.get("timeout", 30))
+        return subprocess.CompletedProcess(argv, 0, "", "")
+
+    monkeypatch.setattr(host.subprocess, "run", fake_run)
+    assert host.request_stop() is False
+    calls.clear()
+    host.stop(timeout=0)
+    assert calls[0][0] == "osascript"
+    assert calls[1] == ["pkill", "-f", "MacOS/Foundry Virtual Tabletop"]
+
+
 def test_is_running_probes_the_configured_port(monkeypatch):
     seen = []
 

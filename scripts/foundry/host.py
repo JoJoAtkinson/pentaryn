@@ -377,8 +377,11 @@ def request_stop() -> bool:
     if cmd:
         return subprocess.run(["bash", "-c", cmd]).returncode == 0
     if is_mac():
-        return subprocess.run(["osascript", "-e", f'quit app "{MAC_APP_NAME}"'],
-                              capture_output=True, text=True, timeout=30).returncode == 0
+        try:
+            return subprocess.run(["osascript", "-e", f'quit app "{MAC_APP_NAME}"'],
+                                  capture_output=True, text=True, timeout=30).returncode == 0
+        except subprocess.TimeoutExpired:
+            return False  # a hung quit is not delivered — stop() forces instead
     p = pid()
     if p is None:
         return True
