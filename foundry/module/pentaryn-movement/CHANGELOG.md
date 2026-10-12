@@ -38,7 +38,8 @@ manifest); the kit is vendored. What a player or GM can notice:
   own tokens on top" in one tab now takes effect in the other tab as well, instead of that tab
   carrying on with the old value until something else redrew it (movement-edge-3, movement-async-2).
 - **[declared]** `combatActive(null)` now answers for the viewed scene, as `status({ sceneId: null })`
-  already did, instead of always answering `false` (movement-edge-4).
+  already did, instead of always answering `false`. `status()` given an argument that names no
+  scene (`""`, or `{ sceneId: 42 }` / `{}`) still answers no combat with `sceneId: null` (movement-edge-4).
 - **[declared]** `pinsUnderTokens` respects Foundry 14 scene levels: a pin shown only on other
   levels than a token's is no longer reported under it; a pin shown on every level, or a token with
   no level, pairs as before (movement-edge-5).

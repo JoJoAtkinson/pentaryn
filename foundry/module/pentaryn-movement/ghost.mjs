@@ -89,7 +89,9 @@ function status(opts = {}) {
   const sceneId = scene == null ? (canvas?.scene?.id ?? null) : sceneIdOf(scene);
   return {
     ...core.statusFrom({
-      policy: policy(), combat: combatActive(sceneId), wish: wish(), isGM: game.user.isGM,
+      // Not combatActive(sceneId): there null means the viewed scene, and a junk argument that
+      // resolved to null here must answer no combat, not the viewed scene's (movement-edge-4).
+      policy: policy(), combat: core.combatOnScene(combatSummaries(), sceneId), wish: wish(), isGM: game.user.isGM,
       ownedOnTop: setting("ownedOnTop"), patched: { drag: dragPatched, keyboard: keyboardPatched }
     }),
     sceneId,

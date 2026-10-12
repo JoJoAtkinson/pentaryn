@@ -87,3 +87,19 @@ test("movement-edge-4: combatActive(null) and status({ sceneId: null }) both mea
     game.combats.contents = [];
   }
 });
+
+test("movement-edge-4: status() with an argument that names no scene answers no combat, not the viewed scene's", () => {
+  game.combats.contents = [combat({ sceneId: SCENE })];
+  try {
+    for (const junk of ["", { sceneId: "" }, { sceneId: 42 }, { sceneId: {} }, { sceneId: { id: 7 } }]) {
+      const s = api.status(junk);
+      assert.equal(s.sceneId, null, JSON.stringify(junk));
+      assert.equal(s.combatOnScene, false, JSON.stringify(junk));
+      assert.equal(s.reason, null, JSON.stringify(junk));
+    }
+    assert.equal(api.status({ sceneId: null }).combatOnScene, true, "explicit null still means the viewed scene");
+    assert.equal(api.status().combatOnScene, true);
+  } finally {
+    game.combats.contents = [];
+  }
+});
