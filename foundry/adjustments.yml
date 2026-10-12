@@ -145,7 +145,7 @@ adjustments:
   - id: dnd5e-chat-message-types
     packages: [dnd5e]
     modules: [pentaryn-aoe, pentaryn-senses, pentaryn-riders]
-    files: [foundry/module/pentaryn-aoe/resolve.mjs, foundry/module/pentaryn-aoe/attacks.mjs, foundry/module/pentaryn-aoe/areas.mjs, foundry/module/pentaryn-aoe/effects.mjs, foundry/module/pentaryn-senses/light.mjs, foundry/module/pentaryn-riders/riders.mjs]
+    files: [foundry/module/pentaryn-aoe/resolve.mjs, foundry/module/pentaryn-aoe/attacks.mjs, foundry/module/pentaryn-aoe/areas.mjs, foundry/module/pentaryn-aoe/effects.mjs, foundry/module/pentaryn-senses/light-ui.mjs, foundry/module/pentaryn-riders/riders.mjs]
     markers: ["message.type", "system.targets", "system.origin", "getAssociatedActivity"]
     what: reads message.type ("usage" / "attack" / "damage" / "save") and message.system.{activity,item,targets,origin,onSave,ability,mode,ammunition} on dnd5e 6 chat messages, plus message.getAssociatedActivity() and message.system.getEffects(); replaces the 5.x flags.dnd5e.roll / .activity / .item / .originatingMessage reads (renamed from dnd5e-chat-card-flags on the 6.0.6 port)
     why: the only way to find the usage / attack / damage message an area, save, effect or rider belongs to
@@ -884,7 +884,7 @@ adjustments:
   - id: argon-light-pick-collapse-panels
     packages: [enhancedcombathud]
     modules: [pentaryn-senses]
-    files: [foundry/module/pentaryn-senses/light.mjs]
+    files: [foundry/module/pentaryn-senses/argon.mjs]
     markers: ["collapseAllPanels"]
     what: the Light cantrip's "Pick a target" closes Argon's open panels before waiting for the map click
     why: the open Cast Spell panel covered the map and the pick click opened Hypnotic Pattern instead (Area 6 re-run W10)
@@ -1179,3 +1179,59 @@ adjustments:
     native_when: Item Piles offers a create-pile-from-template API that takes the images, description and lock state
     retire_class: never
     check: make foundry-prompts-check
+
+  # pentaryn-senses (wave 3 blueprint migration, 2026-10-11; finding senses-walls-cursors-29).
+  - id: core-light-animation-shader
+    packages: [core]
+    modules: [pentaryn-senses]
+    files: [foundry/module/pentaryn-senses/glow.mjs]
+    markers: ["TorchIlluminationShader", "lightAnimations"]
+    what: the Broken glow light animation subclasses core's TorchIlluminationShader (foundry.canvas.rendering.shaders), splices its own fragment shader and registers itself in CONFIG.Canvas.lightAnimations
+    why: core has no API for a custom light animation; the shader class and the lightAnimations table are the only way in
+    native_when: n/a — a custom animation always rides on core's shader classes
+    retire_class: never
+    check: make foundry-senses-check
+
+  - id: core-token-preview-private
+    packages: [core]
+    modules: [pentaryn-senses]
+    files: [foundry/module/pentaryn-senses/chain.mjs]
+    markers: ["_preview"]
+    what: a chain is drawn to a dragged token's live position by reading the private Token#_preview (the drag preview) and its mesh
+    why: core exposes no public accessor for where a token is drawn mid-drag
+    native_when: core offers a public drag-preview or drawn-position accessor
+    retire_class: guarded
+    check: make foundry-senses-check
+
+  - id: core-primary-sort-layers
+    packages: [core]
+    modules: [pentaryn-senses]
+    files: [foundry/module/pentaryn-senses/chain.mjs]
+    markers: ["SORT_LAYERS"]
+    what: chain sprites sort just under tokens (PrimaryCanvasGroup.SORT_LAYERS.TOKENS - 1, falling back to 699)
+    why: the chain must draw above tiles and below the tokens it joins; core has no named slot for it
+    native_when: n/a
+    retire_class: safe
+    check: make foundry-senses-check
+
+  - id: dnd5e-light-summon-suppress
+    packages: [dnd5e]
+    modules: [pentaryn-senses]
+    files: [foundry/module/pentaryn-senses/light.mjs, foundry/module/pentaryn-senses/light-ui.mjs]
+    markers: ["create.summons", "placeSummons"]
+    what: casting the Light cantrip sets usageConfig.create.summons = false (dnd5e.preUseActivity) and the usage card drops the PHB Light's placeSummons button; senses places its own light instead
+    why: the PHB Light activity summons a light token; senses lights the target or a square itself, so dnd5e's summon would be a second light
+    native_when: n/a — tracks dnd5e's usage-config and chat-card shapes
+    retire_class: guarded
+    check: make foundry-senses-check
+
+  - id: core-teleport-replacements
+    packages: [core]
+    modules: [pentaryn-senses]
+    files: [foundry/module/pentaryn-senses/light.mjs]
+    markers: ["replacements"]
+    what: when core's teleport deletes a token with options.replacements (its id changed on another scene), the active GM moves the Light cast's token pointer to the new token
+    why: a lit token that teleports would otherwise lose its Light; core says where it went only through deleteToken's replacements option
+    native_when: n/a
+    retire_class: guarded
+    check: make foundry-senses-check
