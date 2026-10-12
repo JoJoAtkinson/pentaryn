@@ -12,6 +12,16 @@
 // 2 on bad input. A wave-1 golden (names, pings, cursors, importer, ties, prompts) has no
 // shared/declared split: its whole `golden` is compared as shared, and its declared changes
 // (wave-1-report.md "Live goldens") are read off the shared list by hand.
+//
+//   diff.mjs --declared <file> <before.json> <after.json>
+//
+// `--declared` names an allowlist of golden.shared paths the wave declared (one glob per line,
+// `#` comments and blank lines ignored; or a JSON array of globs). A shared difference whose path
+// matches a glob is listed as declared and does not fail the diff, so an all-declared diff exits 0.
+// Globs match the whole path as printed: `*` is any run within one segment (never `.`, `[` or
+// `]`), `**` is anything, `?` one character; `[` and `]` are literal. So `stash.chest[*]` covers
+// `stash.chest[2]` but not `stash.chest[0].name` (that is `stash.chest[*].*`), and `purseHome`
+// covers only `purseHome` itself (`purseHome.**` the rest). A glob that matched nothing is named.
 import { readFileSync } from "node:fs";
 
 function load(path) {
@@ -30,6 +40,38 @@ export function diffPaths(a, b, path = "") {
   return keys.flatMap(k => diffPaths(a[k], b[k], Array.isArray(a) ? `${path}[${k}]` : (path ? `${path}.${k}` : k)));
 }
 
+/** A path glob → RegExp (see the header). */
+export function globToRegExp(glob) {
+  let re = "";
+  for (let i = 0; i < glob.length; i++) {
+    const c = glob[i];
+    if (c === "*" && glob[i + 1] === "*") { re += ".*"; i++; }
+    else if (c === "*") re += "[^.\\[\\]]*";
+    else if (c === "?") re += "[^.]";
+    else re += c.replace(/[.+^${}()|[\]\\]/g, "\\$&");
+  }
+  return new RegExp(`^${re}$`);
+}
+
+/** The allowlist file → globs. */
+export function readDeclared(path) {
+  const text = readFileSync(path, "utf8");
+  if (text.trimStart().startsWith("[")) return JSON.parse(text).map(String);
+  return text.split(/\r?\n/).map(l => l.trim()).filter(l => l && !l.startsWith("#"));
+}
+
+/** Split [path, a, b] rows into declared (a glob matches) and undeclared, and name unused globs. */
+export function partition(rows, globs) {
+  const pats = globs.map(g => [g, globToRegExp(g)]);
+  const used = new Set(), declared = [], undeclared = [];
+  for (const row of rows) {
+    const hits = pats.filter(([, re]) => re.test(row[0])).map(([g]) => g);
+    hits.forEach(g => used.add(g));
+    (hits.length ? declared : undeclared).push(row);
+  }
+  return { declared, undeclared, unused: globs.filter(g => !used.has(g)) };
+}
+
 const show = v => { const s = JSON.stringify(v); return s === undefined ? "undefined" : (s.length > 160 ? `${s.slice(0, 157)}...` : s); };
 
 /** Cleanup values that mean something was left behind. */
@@ -43,10 +85,20 @@ export function leftovers(cleanup = {}) {
   return bad;
 }
 
-function main([beforePath, afterPath]) {
-  if (!beforePath || !afterPath) { console.error("usage: diff.mjs <before.json> <after.json>"); return 2; }
-  let before, after;
-  try { before = load(beforePath); after = load(afterPath); } catch (e) { console.error(`bad input: ${e.message}`); return 2; }
+function main(argv) {
+  const args = [...argv];
+  let declaredPath = null;
+  const at = args.indexOf("--declared");
+  if (at >= 0) { declaredPath = args[at + 1]; args.splice(at, 2); }
+  const [beforePath, afterPath] = args;
+  if (!beforePath || !afterPath || (at >= 0 && !declaredPath)) {
+    console.error("usage: diff.mjs [--declared <globs-file>] <before.json> <after.json>"); return 2;
+  }
+  let before, after, globs = null;
+  try {
+    before = load(beforePath); after = load(afterPath);
+    if (declaredPath) globs = readDeclared(declaredPath);
+  } catch (e) { console.error(`bad input: ${e.message}`); return 2; }
   if (!before?.golden || !after?.golden) {
     console.error(`no golden in ${!before?.golden ? beforePath : afterPath}${(before?.skipped || after?.skipped) ? ` (skipped: ${before?.skipped ?? after?.skipped})` : ""}`);
     return 2;
@@ -58,8 +110,22 @@ function main([beforePath, afterPath]) {
   const split = g => ("shared" in g || "declared" in g) ? g : { shared: g, declared: {} };
   before.golden = split(before.golden); after.golden = split(after.golden);
   const shared = diffPaths(before.golden.shared ?? {}, after.golden.shared ?? {});
-  console.log(`\n## shared — ${shared.length ? `${shared.length} DIFFERENCE(S): regression until explained` : "identical"}`);
-  for (const [p, a, b] of shared) console.log(`  ${p}\n    before ${show(a)}\n    after  ${show(b)}`);
+  const row = ([p, a, b]) => console.log(`  ${p}\n    before ${show(a)}\n    after  ${show(b)}`);
+  let failing = shared;
+  if (!globs) {
+    console.log(`\n## shared — ${shared.length ? `${shared.length} DIFFERENCE(S): regression until explained` : "identical"}`);
+    shared.forEach(row);
+  } else {
+    const part = partition(shared, globs);
+    failing = part.undeclared;
+    console.log(`\n## shared — ${shared.length ? `${shared.length} DIFFERENCE(S): ` : "identical: "}` +
+      `${part.declared.length} declared by ${declaredPath}, ${part.undeclared.length} undeclared` +
+      (part.undeclared.length ? " (regression until explained)" : ""));
+    part.undeclared.forEach(row);
+    if (part.declared.length) console.log(`\n### shared, declared (${part.declared.length})`);
+    part.declared.forEach(row);
+    if (part.unused.length) console.log(`\n  note: declared glob(s) matched nothing: ${part.unused.join(", ")}`);
+  }
 
   const declared = diffPaths(before.golden.declared ?? {}, after.golden.declared ?? {});
   console.log(`\n## declared — ${declared.length} difference(s), each must match a declared change`);
@@ -77,7 +143,7 @@ function main([beforePath, afterPath]) {
   const bad = [...leftovers(before.cleanup).map(x => `before ${x}`), ...leftovers(after.cleanup).map(x => `after ${x}`)];
   console.log(`\n## cleanup — ${bad.length ? bad.join("; ") : "clean"}`);
   console.log(`  before ${show(before.cleanup)}\n  after  ${show(after.cleanup)}`);
-  return shared.length || bad.length ? 1 : 0;
+  return failing.length || bad.length ? 1 : 0;
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) process.exit(main(process.argv.slice(2)));
