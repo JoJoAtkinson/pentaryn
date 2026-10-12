@@ -40,6 +40,10 @@ cssPrefix `pp-`, afterSync). Each **[declared]** change goes to the live check.
   `BAD_SPEC: patch.disposition: hostile|neutral|friendly|secret`, checked after every other patch
   field so a second bad field keeps its own message. The real run now refuses it at plan time, so
   nothing is imported, copied or stamped first (no cleanup line, no `discarded` entry).
+- **[declared] A misshapen patch field is refused by the dry run** (R3): `removeItems` must be a
+  list of item names or ids, `itemUpdates` a list of `{item, set: {...}}`, `set` an object of
+  paths, `hp` a number or `{max, formula}`, and `ac`, `cr` (fractions allowed) and `speed` must
+  read as numbers. Each `BAD_SPEC` names the shape wanted; a valid patch runs as before.
 - **[declared] A failed save never deletes a marker's words** (R1): a fresh marker whose text did
   not save stays on the scene (red tint, the save-failed toast) instead of being removed as empty,
   and a size chip whose save failed does not swap, so the swap never carries stale text.

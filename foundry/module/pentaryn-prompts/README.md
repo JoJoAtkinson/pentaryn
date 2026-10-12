@@ -111,7 +111,10 @@ row in replace), `NOT_GM` (every query), `CREATE_FAILED` (replace rows) and `DRY
   actor, imported into `Foundry MCP Creatures`), plus `patch` (`actor-patch-adapter.mjs`, keys
   `PATCH_KEYS`): name, size, img, biography, hp, ac, cr (fractions read as numbers), speed,
   disposition (hostile|neutral|friendly|secret), `removeItems`, `addItems` (by name / uuid / inline `{data}`), `traits`, `recharge`,
-  `itemUpdates`, `set`, `creatureType`, `languages` (words → dnd5e keys). A type change without
+  `itemUpdates`, `set`, `creatureType`, `languages` (words → dnd5e keys). The dry run refuses a
+  misshapen field with `BAD_SPEC` naming the shape wanted (`removeItems` a list of names/ids,
+  `itemUpdates` `[{item, set}]`, `set` an object, `hp` a number or `{max, formula}`, `ac`/`cr`/`speed`
+  numbers). A type change without
   `languages` clears the inherited ones; inline items whose text requires attunement are marked so.
 - `npc` — `{npc, features, patch}`, built here through the bridge module's own handlers
   (`CONFIG.queries["foundry-mcp-bridge.createNpcActor"]`), every field checked as the

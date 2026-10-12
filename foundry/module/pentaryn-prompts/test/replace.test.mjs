@@ -307,7 +307,7 @@ test("prompts-lookup-9: npc size words and patch.SIZE_WORDS agree; the npc footp
   });
 });
 
-test("crNumber through the dry run's XP estimate: '1/4' 0.25 '3' 3 ' 1 / 2 ' '1/8' read; '' null undefined 'x' fall back to the actor's CR", async t => {
+test("crNumber through the dry run's XP estimate: '1/4' 0.25 '3' 3 ' 1 / 2 ' '1/8' read; undefined falls back to the actor's CR; [declared] R3 '' null 'x' are refused", async t => {
   t.mock.timers.enable({ apis: ["Date"], now: NOW });
   marker("c1", "mid", 1600, 2400, "c");
   marker("c2", "mid", 1800, 2400, "c's friend");
@@ -316,10 +316,11 @@ test("crNumber through the dry run's XP estimate: '1/4' 0.25 '3' 3 ' 1 / 2 ' '1/
   const xp = [];
   for (const cr of ["1/4", 0.25, "3", 3, "", null, undefined, "x", " 1 / 2 ", "1/8"]) {
     const r = await run({ call: g.call, replacements: [{ id: pid, with: { kind: "actor", actorId: "actorGuard000001", copy: true, patch: { cr, disposition: "hostile" } } }], dryRun: true });
-    xp.push(r.encounters.find(e => e.xp !== undefined)?.xp ?? null);
+    xp.push(r.encounters.find(e => e.xp !== undefined)?.xp ?? r.results[0].error ?? null);
   }
-  // the guard's own CR is 1/8 (25 XP)
-  assert.deepEqual(xp, [50, 50, 700, 700, 25, 25, 25, 25, 100, 25]);
+  // the guard's own CR is 1/8 (25 XP); a CR that does not read as a number is BAD_SPEC (R3; was the actor's CR)
+  const bad = v => `BAD_SPEC: patch.cr: a number or a fraction like "1/2", got ${v}`;
+  assert.deepEqual(xp, [50, 50, 700, 700, bad(""), bad(null), 25, bad("x"), 100, 25]);
   F.s1.tokens.delete("c1");
   F.s1.tokens.delete("c2");
 });

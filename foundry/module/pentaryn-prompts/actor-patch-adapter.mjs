@@ -53,6 +53,31 @@ const ACTIVATIONS = ["action", "bonus", "reaction", "special", "minute", "hour"]
 const rechargeUses = n => ({ max: "1", spent: 0, recovery: [{ period: "recharge", formula: String(n), type: "recoverAll" }] });
 const useOne = () => ({ type: "itemUses", target: "", value: "1" });
 const isRechargeDie = v => Number.isInteger(v) && v >= 2 && v <= 6;
+/** A number, or a string that reads as one (what applyPatch's Number() writes). */
+const isNum = v => (typeof v === "number" || (typeof v === "string" && v.trim() !== "")) && Number.isFinite(Number(v));
+const isPlain = o => o !== null && typeof o === "object" && !Array.isArray(o);
+const isRef = v => typeof v === "string" && v.trim() !== "";
+const isHp = hp => isNum(hp) || (isPlain(hp) && isNum(hp.max) && (hp.formula === undefined || typeof hp.formula === "string"));
+
+/** The shape checks for the fields applyPatch writes as given (R3); first failure throws BAD_SPEC. */
+function checkShapes(patch) {
+  const bad = msg => { throw codedError("BAD_SPEC", `patch.${msg}`); };
+  if (patch.hp !== undefined && !isHp(patch.hp)) bad(`hp: a number, or {max: <number>, formula: "8d12+24"}`);
+  if (patch.ac !== undefined && !isNum(patch.ac)) bad(`ac: a number (flat AC), got ${patch.ac}`);
+  if (patch.cr !== undefined && !((typeof patch.cr === "number" || typeof patch.cr === "string") && parseCr(patch.cr) !== null)) {
+    bad(`cr: a number or a fraction like "1/2", got ${patch.cr}`);
+  }
+  if (patch.speed !== undefined && !isNum(patch.speed)) bad(`speed: a number (walking feet), got ${patch.speed}`);
+  if (patch.set !== undefined && !(isPlain(patch.set) && Object.keys(patch.set).every(k => k !== ""))) {
+    bad(`set: an object of {"system.path": value}`);
+  }
+  if (patch.removeItems !== undefined && !(Array.isArray(patch.removeItems) && patch.removeItems.every(isRef))) {
+    bad(`removeItems: a list of item names or ids, e.g. ["Scimitar"]`);
+  }
+  if (patch.itemUpdates !== undefined && !(Array.isArray(patch.itemUpdates) && patch.itemUpdates.every(u => isPlain(u) && isRef(u.item) && isPlain(u.set)))) {
+    bad(`itemUpdates: a list of {item: <name or id>, set: {"system.x": value}}`);
+  }
+}
 
 /** The dnd5e size key a patch asks for, or null. Throws BAD_SPEC on a word it does not know. */
 export function patchSize(patch) {
@@ -78,6 +103,7 @@ export async function checkPatch(patch) {
   const extra = Object.keys(patch).filter(k => !known.includes(k));
   if (extra.length) throw codedError("BAD_SPEC", `patch: unknown key(s) ${extra.join(", ")} (known: ${known.join(", ")})`);
   patchSize(patch);
+  checkShapes(patch);
   const notes = [];
   const defaults = [];
   if (patch.creatureType !== undefined) {
