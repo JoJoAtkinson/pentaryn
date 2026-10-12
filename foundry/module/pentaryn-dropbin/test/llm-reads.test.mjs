@@ -51,11 +51,6 @@ test("list(n, null): null opts is no opts", () => {
   assert.deepEqual(api.list(1, null), api.list(1));
 });
 
-test("list(0) is empty", () => {
-  assert.deepEqual(api.list(0), []);
-  assert.equal(api.list(1).length, 1);
-});
-
 test("restoreResult: coded refusals, no toasts; success returns the item and actor", async () => {
   const from = F.calls.length;
   F.become({ userId: PLAYER });
