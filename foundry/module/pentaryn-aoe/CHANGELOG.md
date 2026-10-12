@@ -6,6 +6,10 @@
   are made with `autoRotate: false` (`preMoveToken`). Core's `tokenAutoRotate` turned the dragged
   handle to face its path, and the attached region turned with it (a cone aimed south-east swung
   north). Row `core-token-auto-rotate-handle`.
+- **Two quick Apply clicks damage each row once** (declared, review aoe-edge-1, 2026-10-12):
+  `applyRows` calls for one tray are serialised in the tab, so the second skips the rows the first
+  applied (each row used to take the damage twice). A rejection still reaches its caller; an Apply
+  stuck for 10 s (`APPLY_WAIT_MS`) no longer holds later ones back.
 
 ## 0.4.0 — 2026-10-12 (migrated to the addon blueprint, wave 4; released by the Wave 7 restart batch)
 

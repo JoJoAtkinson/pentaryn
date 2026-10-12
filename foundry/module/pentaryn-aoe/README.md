@@ -161,6 +161,9 @@ pass `activeGM.isSelf` and `userId === game.user.id`.
   { scope })` — each candidate stamps its socket id, waits 750 ms, and only the last writer acts.
 - **Everything else** on a broadcast hook runs where `activeGM.isSelf` (concentration cleanup, the
   ready sweep, the Careful clean-up on `deleteCombat`, the delete backstop); each is idempotent.
+- **Apply** (`applyRows`): overlapping calls for one tray in one tab run one after another, so
+  the later one skips the rows the earlier one applied; a later call stops waiting on an Apply
+  stuck for 10 s (`APPLY_WAIT_MS`). Two tabs applying the same tray at once are not coordinated.
 
 ## Extending
 

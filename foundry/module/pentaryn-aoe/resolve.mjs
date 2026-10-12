@@ -372,8 +372,33 @@ export async function pingPlayers(messageId) {
 /*  Apply                                       */
 /* -------------------------------------------- */
 
-/** Apply damage for ticked, resolved, unapplied rows (all of them, or rowIds). Safe to repeat. */
-export async function applyRows(messageId, rowIds = null) {
+/** How long a queued Apply waits for an earlier, stuck Apply on the same tray before it runs anyway. */
+export const APPLY_WAIT_MS = 10_000;
+const applying = new Map();
+
+/** `promise` settled, or `ms` passed, whichever is first; never rejects. */
+function settledOrAfter(promise, ms) {
+  let timer;
+  const wait = new Promise(r => { timer = setTimeout(r, ms); });
+  return Promise.race([promise.then(() => {}, () => {}), wait]).finally(() => clearTimeout(timer));
+}
+
+/**
+ * Apply damage for ticked, resolved, unapplied rows (all of them, or rowIds). Safe to repeat.
+ * aoe-edge-1: overlapping calls for one message in this tab run one after another, so the later
+ * one sees the earlier one's rows as applied. A rejection still reaches its own caller; an earlier
+ * Apply stuck for APPLY_WAIT_MS stops holding the later ones back.
+ */
+export function applyRows(messageId, rowIds = null) {
+  const prev = applying.get(messageId);
+  const run = () => applyRowsNow(messageId, rowIds);
+  const next = prev ? settledOrAfter(prev, APPLY_WAIT_MS).then(run) : run();
+  applying.set(messageId, next);
+  next.then(() => {}, () => {}).finally(() => { if (applying.get(messageId) === next) applying.delete(messageId); });
+  return next.then(v => v);
+}
+
+async function applyRowsNow(messageId, rowIds) {
   if (!game.user.isGM) { why("apply", messageId, "not a GM"); return null; }
   const message = game.messages.get(messageId);
   const res = aoeFlags(message).resolution;
@@ -462,4 +487,4 @@ export function uninstall() {
 
 // Test seam (characterisation checkpoint): tests import this through test/fixtures/seams.mjs only,
 // so the blueprint refactor edits that shim, not the frozen tests. Not part of the API.
-export const _internals = { tokensForTargets, keysOnly, saveSystem, damagesOf, supersedeOlder, rollOne, postRequest, onSaveMessage, cleanupInstant, isAbilitySave, queues };
+export const _internals = { tokensForTargets, keysOnly, saveSystem, damagesOf, supersedeOlder, rollOne, postRequest, onSaveMessage, cleanupInstant, isAbilitySave, queues, applying };
