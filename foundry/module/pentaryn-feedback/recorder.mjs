@@ -29,8 +29,8 @@ import { wrapMethod } from "./lib/patch.mjs";
 /** Document types whose own-user create/update/delete are recorded. */
 export const DOC_TYPES = Object.freeze(["Actor", "Item", "Token", "Combat", "Combatant", "ActiveEffect", "Scene", "JournalEntry"]);
 
-/** The console wraps, one adjustments row each (foundry/adjustments.yml). */
-const CONSOLE_PATCHES = Object.freeze([
+/** The console wraps, one adjustments row each (foundry/adjustments.yml); selftest reads them via ctx.exposed. */
+export const CONSOLE_PATCHES = Object.freeze([
   { name: "error", marker: "__pentarynFeedback_error", adjustments: "feedback-console-error" },
   { name: "warn", marker: "__pentarynFeedback_warn", adjustments: "feedback-console-warn" },
 ]);
@@ -336,7 +336,7 @@ export function install(reg, ctx) {
     ctx.log.debug("no Notifications#notify to record");
   }
 
-  ctx.expose({ actions: actionsOf, errors: errorsOf });
+  ctx.expose({ actions: actionsOf, errors: errorsOf, consolePatches: () => CONSOLE_PATCHES });
 }
 
 export function uninstall() {

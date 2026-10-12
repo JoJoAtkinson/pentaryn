@@ -36,7 +36,7 @@ Ask it: `game.pentaryn.feedback.describe()` (offline: `test/golden/describe.json
 | Method | GM | Writes | Returns |
 |---|---|---|---|
 | `inspect(ref, { as })` | — | — | async. A user ref → `{ user, pending, reports, actions, errors }`; an Actor or Token (what the root `game.pentaryn.inspect` passes) → `{ actor, users, pending, reports, actions, errors }` for its players (non-GM owners and whoever has it as their character; none → empty lists, not an error). `pending` (queued ids) for a GM or that user only; `reports` (summaries, oldest first, last 20) on a GM client only; the rings only for the calling user |
-| `selftest()` | — | — | `{ ok, checks }` — published, bug button present, recorder installed, console wrap matches the setting |
+| `selftest()` | — | — | `{ ok, checks }` — published, bug button present, recorder installed, each console wrap (error, warn) present exactly when `captureConsole` is on |
 | `open({ category, text })` | — | — | opens the dialog pre-filled |
 | `submit({ category, text }, { dryRun })` | — | own User flag | `{ ok, id, status: "filed" \| "queued" }` / `fail` |
 | `ingest({ userId, ids })` | active GM | report files, the user's flag | `{ ok, filed, refused, done }` — the relay query |

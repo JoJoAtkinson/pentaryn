@@ -2,9 +2,9 @@
  * Pentaryn Feedback — the API: implementations for the manifest rows, inspect(), selftest().
  *
  * GLUE. May import core, adapters, settings and lib — never a feature file. Feature state reaches
- * this file through `ctx.exposed`: the recorder's rings (`actions`, `errors`) and the reporter's
- * doors (`open`, `submit`, `ingest`, `pending`). The GM reads (`list`, `get`) and `resolve` work on
- * the report files through the shared file store.
+ * this file through `ctx.exposed`: the recorder's rings (`actions`, `errors`) and console wraps
+ * (`consolePatches`), and the reporter's doors (`open`, `submit`, `ingest`, `pending`). The GM
+ * reads (`list`, `get`) and `resolve` work on the report files through the shared file store.
  */
 
 import { HOOKS, MODULE, NS, STATUSES, applyStatus, summaryOf, worldDir } from "./feedback-core.mjs";
@@ -92,12 +92,15 @@ function selftest(ctx) {
   const tools = ui.controls?.controls?.tokens?.tools ?? {};
   const wrapped = patches().filter(p => p.moduleId === MODULE).map(p => p.adjustments);
   const consoleOn = ctx.setting("captureConsole") === true;
+  // every console wrap the recorder owns (its CONSOLE_PATCHES) → is its adjustments row recorded?
+  const consoleWraps = (ctx.exposed.consolePatches?.() ?? []).map(p => [`console.${p.name}`, wrapped.includes(p.adjustments)]);
   const checks = [
     { label: "published as module.api", ok: game.modules.get(MODULE)?.api === ctx.api },
     { label: `game.pentaryn.${NS} is this API`, ok: game.pentaryn?.[NS] === ctx.api },
     { label: "bug button in the token controls", ok: !!tools.feedback, detail: tools.feedback ? null : "open a scene (the toolbar is built at canvas ready)" },
     { label: "recorder installed", ok: typeof ctx.exposed.actions === "function", detail: ctx.exposed.actions?.().length ?? null },
-    { label: "console wrap matches captureConsole", ok: wrapped.includes("feedback-console-error") === consoleOn, detail: consoleOn },
+    { label: "console wraps match captureConsole", ok: consoleWraps.length > 0 && consoleWraps.every(([, on]) => on === consoleOn),
+      detail: { captureConsole: consoleOn, wraps: Object.fromEntries(consoleWraps) } },
     { label: "hooks registered", ok: ctx.reg.ids().length > 0, detail: ctx.reg.ids().length },
   ];
   return { ok: checks.every(c => c.ok), checks: checks.map(c => ({ detail: null, ...c })) };

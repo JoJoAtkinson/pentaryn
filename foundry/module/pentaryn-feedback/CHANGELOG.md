@@ -11,6 +11,12 @@
   finite `t` outside the Date range passed `validateReport` and then threw in `normaliseReport`,
   so every later ingest of that user failed. `validateReport` now refuses such a `t`, and ingest
   drops any entry that cannot be normalised with a `refused report` warning and files the rest.
+- **[declared] selftest checks both console wraps** (feedback-EXT-2): it hard-coded
+  `feedback-console-error` and never looked at `console.warn`. The recorder now exports
+  `CONSOLE_PATCHES` and exposes it as `ctx.exposed.consolePatches`; the check, renamed
+  "console wraps match captureConsole", passes only when every wrap's adjustments row is present
+  exactly when `captureConsole` is on, and its detail is `{ captureConsole, wraps: { "console.error",
+  "console.warn" } }` (each true when wrapped). describe() is unchanged.
 
 ## 0.1.2 — 2026-10-11 (live-check fix)
 

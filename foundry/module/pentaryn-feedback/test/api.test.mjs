@@ -301,3 +301,23 @@ test("selftest passes on a healthy load once the toolbar exists", () => {
   ui.controls.controls = {};
   assert.equal(api.selftest().ok, false, "no toolbar yet → the check says so");
 });
+
+test("feedback-EXT-2: selftest checks every console wrap, not only console.error", async () => {
+  const { CONSOLE_PATCHES } = await import("../recorder.mjs");
+  const { wrapMethod } = await import("../lib/patch.mjs");
+  const controls = { tokens: { tools: {} } };
+  F.fire("getSceneControlButtons", controls);
+  ui.controls.controls = controls;
+  const consoleCheck = () => api.selftest().checks.find(c => c.label === "console wraps match captureConsole");
+  assert.deepEqual(CONSOLE_PATCHES.map(p => p.adjustments), ["feedback-console-error", "feedback-console-warn"]);
+  assert.equal(consoleCheck()?.ok, true);
+  assert.deepEqual(consoleCheck().detail, { captureConsole: true, wraps: { "console.error": true, "console.warn": true } });
+  const spec = { target: console, ...CONSOLE_PATCHES.find(p => p.name === "warn"), label: "console.warn" };
+  wrapMethod(MODULE, spec, () => {}).unwrap();                  // the existing handle: drop the warn wrap
+  assert.equal(consoleCheck().ok, false, "a missing console.warn wrap fails the check");
+  assert.deepEqual(consoleCheck().detail.wraps, { "console.error": true, "console.warn": false });
+  assert.equal(api.selftest().ok, false);
+  wrapMethod(MODULE, spec, (wrapped, ...args) => wrapped(...args));
+  assert.equal(consoleCheck().ok, true);
+  ui.controls.controls = {};
+});
