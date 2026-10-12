@@ -33,7 +33,7 @@ export const onBonusSpent = (actor) => {
 };
 
 // A Bonus-action feature or spell used on your turn (Rage, Steady Aim, Divine Smite…): Argon's item
-// buttons never spent its pip (setting bonusPip; the turn flag was written in combat.mjs).
+// buttons never spent its pip (setting bonusPip; the turn flag was written in counting.mjs).
 export const onBonusAction = (actor) => {
   if (!setting("bonusPip") || actor !== ui.ARGON?._actor || !combatContext(actor).inCombat) return;
   const bonus = mainPanel("DND5E.BonusAction");

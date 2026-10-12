@@ -183,7 +183,7 @@ export function argonClasses() {
     }
   }
 
-  /** One follow-up (Off-hand, Nick, Flurry, Martial Arts, Hew). */
+  /** One follow-up (Off-hand, Nick, Flurry, Martial Arts, Hew, Pole Strike). */
   class FollowUpButton extends ItemButton {
     constructor({ hudActor, followUp }) {
       const w = hudActor.items.get(followUp.weaponId);

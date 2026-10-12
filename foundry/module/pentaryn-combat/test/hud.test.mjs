@@ -1,4 +1,4 @@
-// hud.mjs, the Argon bars (guide S6b: hud/{bars,buttons,pips,picker,tooltips}.mjs + argon.mjs).
+// hud.mjs, the Argon bars (guide S6b: hud/{bars,buttons-ui,pips-bar,picker,tooltips}.mjs + argon.mjs).
 // A fake Argon HUD (fixtures/argon.mjs) is rendered through every renderActionPanelArgonComponent
 // listener in registration order (turnflow's, hud's bars, hud's pips), as Argon fires them, and the
 // resulting bars are pinned (golden/argon-bars.json), with the tooltips, the pips, the clicks, the

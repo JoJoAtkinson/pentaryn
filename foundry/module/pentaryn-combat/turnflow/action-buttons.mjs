@@ -33,9 +33,6 @@ function paint(panel) {
 }
 
 /* ── Argon's six built-in actions ────────────────────────────────────────── */
-// Argon dnd5e calls consumeActionEconomy(this.item) with a temporary Item that has no activation, so
-// no pip was ever spent; Dash and Disengage only posted a card; Dodge's status never ended; Hide
-// rolled nothing.
 
 function specialNames() {
   return Object.fromEntries(core.SPECIAL_ACTIONS.map(k => [k, game.i18n.localize(`enhancedcombathud-dnd5e.items.${k}.name`)]));

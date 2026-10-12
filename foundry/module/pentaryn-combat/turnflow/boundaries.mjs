@@ -44,7 +44,7 @@ const onTurnChange = (combat, previous, current) => {
   if (game.users.activeGM?.isSelf) {
     sweep(prior?.actor, "turnEnd").catch(err => log.warn("turn-end sweep", err));
     sweep(next?.actor, "turnStart").catch(err => log.warn("turn-start sweep", err));
-    // The Reaction comes back at the start of your turn (combat.mjs records it; hud.mjs relights the pip).
+    // The Reaction comes back at the start of your turn (counting.mjs records it; hud/bars.mjs onActorUpdated relights the pip).
     if (next?.actor?.getFlag?.(MODULE, "reaction")) next.actor.setFlag(MODULE, "reaction", null).catch(err => { log.debug("Reaction reset", err); return null; });
   }
   closeDrawersOf([prior?.actor, next?.actor], { enabled: setting("drawerNearButton") });

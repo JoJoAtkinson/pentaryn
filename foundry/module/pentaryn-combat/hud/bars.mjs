@@ -322,7 +322,7 @@ async function refillWeaponSlots(panel) {
   for (const s of slots) await s._onSetChange(data);
 }
 
-/** Re-render some bars of the HUD (debounced): a turn-flag write lands as several updates. */
+/** Re-render some bars of the HUD (batched): a turn-flag write lands as several updates. */
 function rerender(labels = ["DND5E.Action", "DND5E.BonusAction", "DND5E.Special"]) {
   queued = new Set([...(queued ?? []), ...labels]);
   setTimeout(() => {
