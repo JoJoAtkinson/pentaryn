@@ -8,7 +8,7 @@
  */
 
 import { MODULE, cardHTML, esc } from "./portals-core.mjs";
-import { cardFor, destinationsOf, linkRegions, lookAt, snapshot, teleportBehaviors, unlinkRegion } from "./scene-adapter.mjs";
+import { cardFor, destinationsOf, linkPair, lookAt, snapshot, teleportBehaviors, unlinkRegion } from "./scene-adapter.mjs";
 import { flagPath } from "./lib/flags.mjs";
 
 const deps = { setEditing: () => {}, guard: (label, fn) => fn };
@@ -132,8 +132,7 @@ export class PortalCard extends foundry.applications.api.ApplicationV2 {
       if (!uuid) return;
       const dest = fromUuidSync(uuid);
       const twoWay = content.querySelector('[data-act="twoway"]')?.checked;
-      await linkRegions(region, dest);
-      if (twoWay) await linkRegions(dest, region);
+      await linkPair(region, dest, twoWay);
       this.render();
     }));
   }

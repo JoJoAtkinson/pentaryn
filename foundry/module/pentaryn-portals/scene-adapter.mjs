@@ -322,6 +322,12 @@ export async function linkRegions(from, to) {
   }]);
 }
 
+/** The card's Add a destination and api.link(): from → to, and back when twoWay. */
+export async function linkPair(from, to, twoWay = false) {
+  await linkRegions(from, to);
+  if (twoWay) await linkRegions(to, from);
+}
+
 /** The enabled teleport behaviors of `from` that lead to `dest` (a relative or absolute entry). */
 export function behaviorsLeadingTo(from, dest) {
   return teleportBehaviors(from).filter(b => hasDestination(b.system.destinations, dest.uuid, toAbsolute(b)));
