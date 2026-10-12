@@ -578,6 +578,11 @@ function reportSummary({ counts, created, updated, skipped, failed, dryRun, url,
   if (skipped.length) log.info("skipped      ", skipped.join(", "), "(contentHash unchanged)");
   if (failed.length) {
     log.warn("failed       ", failed.length);
+    // through the kit logger too (importer-R8), so the failures are not only in the table
+    for (const { slug, error } of failed) {
+      log.warn(`failed ${slug}: ${error}`);
+      log.trace("import.failed", { slug, error });
+    }
     console.table(failed);
   }
   console.groupEnd();

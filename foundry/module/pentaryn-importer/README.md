@@ -85,6 +85,9 @@ undone should be re-run against the same file.
 
 Every assertion failure names the actor slug, item action, activity id, path, expected and actual,
 as a permanent toast and a `console.error`.
+Each per-actor failure is a `console.warn` line `pentaryn-importer | failed <slug>: <error>` (and,
+with `CONFIG.debug["pentaryn-importer"] = true`, an `import.failed` row in `trace()`) before the
+summary's `console.table` (`importer-R8`).
 
 **For an LLM.** Always run `{ dryRun: true }` first and read `created`/`updated`/`skipped`. The
 dry run's split is the real run's, a slug repeated in the file included (`importer-EC5`): the

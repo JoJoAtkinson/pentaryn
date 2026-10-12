@@ -13,6 +13,11 @@
 
 `module.json` stays 1.1.0 until the Wave 7 restart batch adds the blueprint keys.
 
+- **[declared] Each failed slug is logged through the kit logger** (`importer-R8`): the end-of-run
+  summary writes one `pentaryn-importer | failed <slug>: <error>` warn line per failure before the
+  `console.table` (kept, with the group), and with debug on `trace()` carries an `import.failed`
+  row `{ slug, error }`. golden/write-console.json carries the new line; golden/console.json has no
+  failing run and is unchanged.
 - **[declared] Two GM tabs importing the same new slug no longer both create it** (`importer-AC-2`):
   a new actor is created with a slug-derived `_id` (`idForSlug` in importer-core, 16 chars of
   [A-Za-z0-9]) and `keepId`, so the server refuses the second create; that tab reports

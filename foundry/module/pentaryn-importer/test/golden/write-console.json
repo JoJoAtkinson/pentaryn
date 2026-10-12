@@ -95,6 +95,10 @@
       1
     ],
     [
+      "warn",
+      "pentaryn-importer | failed echo: Actor validation errors: echo"
+    ],
+    [
       "table",
       [
         {

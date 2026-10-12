@@ -6,7 +6,8 @@
 // must survive the move to failAssertion/refuse unchanged.
 //
 // Pins and the steps that may touch them: golden/write-console.json — step 4b ([declared] console prefix,
-// D-I2) and importer-R1 ([declared] malformedLater key) only. golden/write-full.json — importer-AC-2
+// D-I2), importer-R1 ([declared] malformedLater key) and importer-R8 ([declared] a `failed <slug>: <error>`
+// warn per failure in "full") only. golden/write-full.json — importer-AC-2
 // ([declared] a create carries `_id: idForSlug(slug)` and `keepId`) only. golden/write-*.json otherwise — no step may change them.
 import { mock, test } from "node:test";
 import assert from "node:assert/strict";
@@ -147,6 +148,14 @@ test("a full import: create, update in place, skip unchanged, a per-actor failur
   pinJSON("write-full", { result: o.result, writes: o.writes, toasts: o.toasts }, import.meta.url);
 });
 
+test("importer-R8: each failed slug is its own log.warn line, before the console.table", () => {
+  const lines = consoleGolden.full;
+  const warn = lines.findIndex(l => l[0] === "warn" && l[1] === "pentaryn-importer | failed echo: Actor validation errors: echo");
+  assert.notEqual(warn, -1, "a `failed <slug>: <error>` warn line through the kit logger");
+  assert.ok(warn < lines.findIndex(l => l[0] === "table"), "the per-slug warn comes before the table");
+  assert.ok(lines.some(l => l[0] === "table"), "the table stays for the console reader");
+});
+
 test("unmanagedItems:'delete' removes hand-added Items too; force rewrites an unchanged actor", async () => {
   const o = await run("deleteForce", [npc("alpha", { items: [bite] }), npc("charlie")], { unmanagedItems: "delete", force: true });
   assert.equal(o.error, null);
@@ -228,4 +237,19 @@ test("importer-R5: activities on an Item type without system.activities fail the
     assert.match(o.error.message, hint);
     assert.doesNotMatch(o.error.message, /TypeError|Cannot read properties/);
   }
+});
+
+test("importer-R8: with debug on, trace() carries each failed slug", async () => {
+  CONFIG.debug ??= {};
+  CONFIG.debug["pentaryn-importer"] = true;
+  W.K.failCreate.add("r8-fail");
+  try {
+    await run("r8Trace", [npc("r8-fail")]);
+  } finally {
+    delete CONFIG.debug["pentaryn-importer"];
+    W.K.failCreate.delete("r8-fail");
+    delete consoleGolden.r8Trace;
+  }
+  const rows = game.pentaryn.importer.trace().filter(t => t.op === "import.failed").map(t => t.data);
+  assert.deepEqual(rows, [{ slug: "r8-fail", error: "Actor validation errors: r8-fail" }]);
 });
