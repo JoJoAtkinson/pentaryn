@@ -34,6 +34,9 @@ const log = makeLog(MODULE);
  */
 const esc = v => foundry.utils.escapeHTML(String(v));
 
+/** Decision trace (combat-riders-10): api.trace() reads it; recorded only with CONFIG.debug["pentaryn-combat"]. */
+let trace = () => undefined;
+
 /* ── facts about an attack message ───────────────────────────────────────── */
 
 /**
@@ -153,8 +156,8 @@ function renderOffer(message, html) {
   // combat-riders-2: who may see it and whether the stamp is this turn's, before the offers are
   // worked out (offersFor reads every token on the canvas for the ally check).
   const actor = attackActivity(message)?.actor;
-  if (!actor || !(game.user.isGM || message.isAuthor || actor.isOwner)) return;
-  if (stamp !== combatContext(actor).key) return;
+  if (!actor || !(game.user.isGM || message.isAuthor || actor.isOwner)) return trace("offer", { message: message.id, why: actor ? "not yours to see" : "no actor" });
+  if (stamp !== combatContext(actor).key) return trace("offer", { message: message.id, why: "an earlier turn's card" });
   const { offers } = offersFor(message);
   // In Auto mode an eligible swing gets the dice in its damage roll; no button for it.
   const show = offers.filter(o => o.offer && !(o.auto && riderMode(o.rider.key) === "auto"));
@@ -292,10 +295,14 @@ export function autoRiders(config, message) {
   const { offers } = offersFor(attackMsg);
   const applied = [];
   for (const o of offers) {
-    if (!o.auto || o.state || riderMode(o.rider.key) !== "auto" || !o.dice) continue;
+    if (!o.auto || o.state || riderMode(o.rider.key) !== "auto" || !o.dice) {
+      trace("auto rider", { rider: o.rider.key, applied: false, why: !o.auto ? "not eligible" : o.state ? `already ${o.state}` : !o.dice ? "no dice" : "ask mode" });
+      continue;
+    }
     const once = `${actor.uuid}|${o.rider.key}|${combatContext(actor).key}`;
     if (Date.now() - (autoApplied.get(once) ?? 0) < AUTO_GUARD_MS) continue;
     autoApplied.set(once, Date.now());
+    trace("auto rider", { rider: o.rider.key, applied: true, dice: o.dice, attack: attackMsg.id });
     config.rolls[0].parts.push(`${o.dice}`);
     applied.push({ key: o.rider.key, dice: o.dice, attack: attackMsg.id });
   }
@@ -467,7 +474,8 @@ export function report(actorOrName) {
 
 const opts = label => ({ label });   // guarded (S11, D-c1): a throw is logged with the label; return values pass through
 
-export function install(reg) {
+export function install(reg, ctx) {
+  if (ctx?.log) trace = (op, data) => ctx.log.trace(op, data);
   registerHooks(reg);
   return { impl: { offers: offersFor, rollRider, reckless: isReckless, setReckless, report } };
 }

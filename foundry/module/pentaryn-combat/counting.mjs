@@ -22,6 +22,9 @@ const log = makeLog(MODULE);
 /** The module's events (core HOOKS rows, legacy name too): ctx.emit once installed. */
 let emit = emitter(MODULE, HOOKS, { log, version: VERSION });
 
+/** Decision trace (combat-riders-10): api.trace() reads it; recorded only with CONFIG.debug["pentaryn-combat"]. */
+let trace = () => undefined;
+
 /* ── counting swings (every attack roll, sequence or by hand) ─────────────── */
 
 /**
@@ -61,6 +64,7 @@ async function onPostRollAttack(rolls, { subject } = {}) {
   // A spell attack is the Magic action, not the Attack action: counted once per cast in
   // onPostUseActivity (Scorching Ray's three rays are one action), never per roll here.
   const swing = isWeaponAttack(activity) ? kindOf(activity, attackMode) : null;
+  trace("swing", { actor: actor.uuid, activity: activity.uuid, kind: swing?.kind ?? "not a weapon attack", tagged: swing?.tagged ?? null, key: swing?.ctx?.key ?? null });
 
   await resetOffhandMode(activity, attackMode, { enabled: setting("offhandModeReset") }).catch(err => log.warn("mode reset failed", err));
 
@@ -90,13 +94,16 @@ async function onPostUseActivity(activity) {
   if (!actor) return;
   const item = activity.item;
   const ident = item?.system?.identifier || core.slugify(item?.name ?? "");
+  const why = (branch) => trace("use", { actor: actor.uuid, activity: activity.uuid, branch });
   if (ident === "action-surge") {
+    why("Action Surge");
     const ctx = combatContext(actor);
     if (ctx.inCombat && ctx.isOwnTurn) await updateTurn(actor, core.recordSurge);
     return;
   }
   // Quickened Spell (usability Area 5 re-run, S5): the next 1-Action spell this turn is the Bonus Action.
   if (ident === "quickened-spell") {
+    why("Quickened Spell");
     const ctx = combatContext(actor);
     if (setting("quickenedSpell") && ctx.inCombat && ctx.isOwnTurn) await updateTurn(actor, core.recordQuickened);
     return;
@@ -107,6 +114,7 @@ async function onPostUseActivity(activity) {
     if (!setting("spellPips") || (activity.type === "attack" && isWeaponAttack(activity))) return;
     const ctx = combatContext(actor);
     if (core.pipFor({ activation: "reaction", inCombat: ctx.inCombat, isOwnTurn: ctx.isOwnTurn }) !== "reaction") return;
+    why("Reaction");
     await actor.setFlag(MODULE, "reaction", { combatId: ctx.combat?.id ?? null }).catch(err => { log.debug("Reaction flag", err); return null; });
     emit("reaction", actor, activity);
     return;
@@ -116,6 +124,7 @@ async function onPostUseActivity(activity) {
     const ctx = combatContext(actor);
     const pip = core.pipFor({ activation: "action", isSpell: true, quickened: !!turnOf(actor).quickened, inCombat: ctx.inCombat, isOwnTurn: ctx.isOwnTurn });
     if (pip === "bonus") {
+      why("quickened cast: Bonus Action");
       await updateTurn(actor, core.recordQuickenedCast);
       ui.notifications?.info?.(game.i18n.format("PENTARYN_COMBAT.Turn.QuickenedCast", { spell: item.name }));
       emit("bonusAction", actor, activity);
@@ -129,21 +138,24 @@ async function onPostUseActivity(activity) {
     if (!setting("bonusPip") || (activity.type === "attack" && isWeaponAttack(activity))) return;
     const ctx = combatContext(actor);
     if (!ctx.inCombat || !ctx.isOwnTurn) return;
+    why("Bonus Action");
     await updateTurn(actor, core.recordBonusAction);
     emit("bonusAction", actor, activity);
     return;
   }
   if (activity.activation?.type !== "action") return;
-  if (activity.type === "attack" && isWeaponAttack(activity)) return;   // counted on the roll
-  if (/^multiattack\b/i.test(item?.name ?? "")) return;
+  if (activity.type === "attack" && isWeaponAttack(activity)) return why("weapon attack: counted on the roll");
+  if (/^multiattack\b/i.test(item?.name ?? "")) return why("Multiattack: the Attack action itself");
   const ctx = combatContext(actor);
   if (!ctx.inCombat || !ctx.isOwnTurn) return;
   // Unarmed Strike's Grapple / Shove (a save activity) replaces one attack of the Attack action
   // (2024 PHB) — one swing, not a whole other Action.
   if (item?.type === "weapon" && weaponShape(item).unarmed && activity.type !== "attack") {
+    why("Grapple / Shove: one swing");
     await updateTurn(actor, t => core.recordSwing(t, { kind: "main", weaponId: item.id, melee: true }));
     return;
   }
+  why("another Action");
   await updateTurn(actor, core.recordOtherAction);
   // Argon's single Action pip (an actor with one swing): its item buttons never spent it (Area 5 re-run, S5).
   emit("otherAction", actor, activity);
@@ -185,11 +197,15 @@ const opts = label => ({ label });   // guarded (S11, D-c1): a throw is logged w
 
 export function install(reg, ctx) {
   if (ctx?.emit) emit = ctx.emit;
+  if (ctx?.log) trace = (op, data) => ctx.log.trace(op, data);
   reg.on("dnd5e.preRollAttackV2", (config) => { try { onPreRollAttack(config); } catch (err) { log.warn("swing tag skipped", err); } }, opts("swing tag"));
   reg.on("dnd5e.postRollAttack", (rolls, data) => { onPostRollAttack(rolls, data).catch(err => log.warn("swing count failed", err)); }, opts("swing count"));
   reg.on("dnd5e.postUseActivity", (activity, usage, results) => {
     // An area spell whose placement was cancelled was not cast (pentaryn-aoe refunds it): no pip, no Action.
-    if (core.areaPlacementSkipped({ wanted: usage?.create?.measuredTemplate, hasArea: activity?.target?.template?.type, placed: results?.templates?.length, onScene: canvas?.scene })) return;
+    if (core.areaPlacementSkipped({ wanted: usage?.create?.measuredTemplate, hasArea: activity?.target?.template?.type, placed: results?.templates?.length, onScene: canvas?.scene })) {
+      trace("use", { activity: activity?.uuid ?? null, branch: "area placement cancelled: not cast" });
+      return;
+    }
     onPostUseActivity(activity).catch(err => log.warn("action count failed", err));
   }, opts("action count"));
   reg.on("dnd5e.preRollDamageV2", (config) => { try { onPreRollDamage(config); } catch (err) { log.warn("weapon bonus skipped", err); } }, opts("weapon bonus"));
