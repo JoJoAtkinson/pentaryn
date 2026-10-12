@@ -30,3 +30,29 @@ export function isBodySwap(changes, { actorId = null, unwrap = v => v } = {}) {
   }
   return false;
 }
+
+/**
+ * Core v14's non-recursive token update (dnd5e's transform/revert swap) wraps every root key in a
+ * ForcedReplacement operator; region tests and waypoint inference then read the raw operator. For
+ * a scalar field (or null) the operator means exactly "set this value", so it is unwrapped in
+ * place; object fields (texture, sight, ring, flags, delta) keep their operators. The caller keeps
+ * the `recursive === false` test and hands the same operation on to core (transform-creatures-5).
+ *
+ * @param {{ updates?: object[] }} operation           mutated in place
+ * @param {{ isForced: (v) => boolean, valueOf: (v) => * }} ops  the operator test and unwrap
+ * @returns {number}  how many keys were unwrapped
+ */
+export function unwrapForcedScalars(operation, { isForced, valueOf }) {
+  let n = 0;
+  for (const u of operation?.updates ?? []) {
+    for (const [k, v] of Object.entries(u ?? {})) {
+      if (!isForced(v)) continue;
+      const plain = valueOf(v);
+      if (plain === null || typeof plain !== "object") {
+        u[k] = plain;
+        n += 1;
+      }
+    }
+  }
+  return n;
+}

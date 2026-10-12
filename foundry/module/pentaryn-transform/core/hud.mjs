@@ -3,7 +3,7 @@
  * plans, Hit Point text. Plain data in, plain data out.
  */
 
-import { activitiesOf } from "./wildshape.mjs";
+import { activitiesOf, formatDuration } from "./wildshape.mjs";
 
 /* ── text ────────────────────────────────────────────────────────────────── */
 
@@ -210,4 +210,120 @@ export function planWithout(slots, dropIds) {
     out.push({ keep: index });
   });
   return changed ? out : null;
+}
+
+/* ── seams the HUD glue reads through (transform-creatures-6, -10, -11, -13) ── */
+
+/**
+ * A beast source → the normalised summary formSummary() takes (its tile tooltip).
+ * @param {object} src  the source actor (live or source-shaped): system, items
+ * @param {{ actorSizes: object, creatureTypes: object }} cfg  CONFIG.DND5E's two label maps
+ */
+export function summaryFromSource(src, cfg) {
+  const s = src.system;
+  const attacks = [];
+  const traits = [];
+  for (const item of src.items) {
+    const acts = activitiesOf(item);
+    const attack = acts.find(a => a.type === "attack");
+    if (item.type === "weapon" || attack) {
+      const a = attack ?? acts[0];
+      const dmg = a?.labels?.damage ?? item.labels?.damages ?? [];
+      attacks.push({
+        name: item.name,
+        toHit: a?.labels?.toHit ?? item.labels?.toHit ?? "",
+        damage: (Array.isArray(dmg) ? dmg : []).map(d => d.label ?? d.formula).filter(Boolean).join(" + ")
+      });
+    } else if (item.type === "feat" && item.system.type?.value === "monster" && !acts.length) {
+      traits.push(item.name);                 // passive only: Multiattack and Web are front-row buttons
+    }
+  }
+  return {
+    cr: s.details?.cr,
+    sizeLabel: cfg.actorSizes[s.traits?.size]?.label ?? "",
+    typeLabel: cfg.creatureTypes[s.details?.type?.value]?.label ?? s.details?.type?.value ?? "",
+    ac: s.attributes?.ac?.value,
+    movement: s.attributes?.movement ?? {},
+    units: s.attributes?.movement?.units || "ft",
+    senses: s.attributes?.senses?.ranges ?? {},
+    attacks, traits
+  };
+}
+
+/**
+ * "Long Rest: all · Short Rest: 1" from an item's `system.uses.recovery`.
+ * @param {{ period, type, formula }[]} recovery
+ * @param {object} periods    CONFIG.DND5E.limitedUsePeriods
+ * @param {string} allLabel   the localized word for "recover all"
+ */
+export function recoveryLines(recovery, periods, allLabel) {
+  return (recovery ?? []).map(r => {
+    const when = periods[r.period]?.label ?? r.period;
+    const what = r.type === "recoverAll" ? allLabel : (r.formula || "1");
+    return `${when}: ${what}`;
+  }).join(" · ");
+}
+
+/**
+ * The portrait line's data while a form or Starry Form is up: `{ what, left }` (left a duration
+ * text, or null when the end time is unknown), or null for no line. The glue localizes it.
+ * @param {{ ws: { name }|null, endsAt?: number|null, starry: { name }|null, starryLeft?: number|null, worldTime: number }} o
+ */
+export function portraitText({ ws = null, endsAt = null, starry = null, starryLeft, worldTime = 0 } = {}) {
+  if (ws) return { what: ws.name, left: Number.isFinite(endsAt) ? formatDuration(endsAt - worldTime) : null };
+  if (starry) return { what: starry.name, left: starryLeft !== null ? formatDuration(starryLeft) : null };
+  return null;
+}
+
+/**
+ * The Chalice is earned by a leveled spell cast with a slot whose activity heals (a heal activity,
+ * or a healing / temp HP damage part).
+ * @param {object} activity     { type, item: { type, system: { level } }, damage: { parts: [{ types }] } }
+ * @param {object} usageConfig  { consume: { spellSlot } }
+ */
+export function earnsChalice(activity, usageConfig) {
+  const item = activity?.item;
+  if (item?.type !== "spell" || !(Number(item.system?.level) > 0)) return false;
+  if (usageConfig?.consume?.spellSlot === false) return false;
+  if (activity.type === "heal") return true;
+  const parts = activity.damage?.parts ?? [];
+  return parts.some(p => (p.types instanceof Set ? [...p.types] : (p.types ?? [])).some(t => t === "healing" || t === "temphp"));
+}
+
+/**
+ * U-4-1: the form's Multiattack item id when pentaryn-combat's Full Attack runs it, else null (keep
+ * the text-only Multiattack button). Inputs are what the glue read from combat.
+ * @param {{ active: boolean, fullAttack: boolean, multiattack: boolean, ma: { source, total }|null, hasItem: (id) => boolean }} o
+ */
+export function coveredMultiattackId({ active, fullAttack, multiattack, ma, hasItem }) {
+  if (!active) return null;
+  if (!fullAttack || !multiattack) return null;
+  if (!ma || ma.source === "flag" || (ma.total ?? 0) < 2 || !hasItem(ma.source)) return null;
+  return ma.source;
+}
+
+/**
+ * Drop the buttons that left the DOM after rendering (a panel was built) from a live-button set;
+ * never-rendered ones stay, as refreshLive leaves them (transform-creatures-10).
+ * @param {Set<{ element: { isConnected: boolean }, panel?: object }>} set  mutated
+ * @returns {number}  how many were dropped
+ */
+export function pruneDisconnected(set) {
+  let n = 0;
+  for (const x of set) {
+    if (!x.element?.isConnected && x.panel) {
+      set.delete(x);
+      n += 1;
+    }
+  }
+  return n;
+}
+
+/**
+ * Does a pointer move need the stale-tooltip check? Only when a tooltip is up, its anchor has left
+ * the DOM, and no check is queued yet (transform-creatures-11).
+ * @param {{ anchor: { isConnected: boolean }|null, queued: boolean }} o
+ */
+export function shouldQueueStaleCheck({ anchor = null, queued = false } = {}) {
+  return !!anchor && !anchor.isConnected && !queued;
 }

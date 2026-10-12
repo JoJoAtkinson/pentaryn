@@ -21,21 +21,25 @@ import {
   activitiesOf, isWildShapeActivity, findWildShapeItem, isStarryFormData, stripReason,
   stripForForm, pruneFavorites, isRevertData, returnLabel, durationSeconds, formatDuration,
   isExpired, usesLeft, useSyncUpdates, carriedConditions, withoutOrigin, endedInForm,
-  attributeSync, shiftBlock, pickRunner
+  attributeSync, shiftBlock, pickRunner,
+  wildShapeActivityOf, formEntries, refundUpdate, runnerIs, canRunAny, worldTimeCandidates, shapeStatus
 } from "./core/wildshape.mjs";
 
 import {
   withArticle, formatCR, formSummary, planBonusBar, frontRowItems, coveredPanel, formTempHP,
-  hpText, planWithout
+  hpText, planWithout,
+  summaryFromSource, recoveryLines, portraitText, earnsChalice, coveredMultiattackId, pruneDisconnected, shouldQueueStaleCheck
 } from "./core/hud.mjs";
 
 import {
   CONSTELLATIONS, STARRY_LIGHT, STARRY_SECONDS, constellationOfActivity, starryEffectData,
-  grantsFly, starryBlock
+  grantsFly, starryBlock,
+  STARRY_IMG, isGenericActivityImg, constellationImgOf, pickStarryBase, secondsLeft, starryEndKey
 } from "./core/starry.mjs";
 
 import {
-  isBodySwap
+  isBodySwap,
+  unwrapForcedScalars
 } from "./core/bodyswap.mjs";
 
 export const SHORT = "transform";
@@ -55,19 +59,23 @@ export {
   activitiesOf, isWildShapeActivity, findWildShapeItem, isStarryFormData, stripReason,
   stripForForm, pruneFavorites, isRevertData, returnLabel, durationSeconds, formatDuration,
   isExpired, usesLeft, useSyncUpdates, carriedConditions, withoutOrigin, endedInForm,
-  attributeSync, shiftBlock, pickRunner
+  attributeSync, shiftBlock, pickRunner,
+  wildShapeActivityOf, formEntries, refundUpdate, runnerIs, canRunAny, worldTimeCandidates, shapeStatus
 };
 
 export {
   withArticle, formatCR, formSummary, planBonusBar, frontRowItems, coveredPanel, formTempHP,
-  hpText, planWithout
+  hpText, planWithout,
+  summaryFromSource, recoveryLines, portraitText, earnsChalice, coveredMultiattackId, pruneDisconnected, shouldQueueStaleCheck
 };
 
 export {
   CONSTELLATIONS, STARRY_LIGHT, STARRY_SECONDS, constellationOfActivity, starryEffectData,
-  grantsFly, starryBlock
+  grantsFly, starryBlock,
+  STARRY_IMG, isGenericActivityImg, constellationImgOf, pickStarryBase, secondsLeft, starryEndKey
 };
 
 export {
-  isBodySwap
+  isBodySwap,
+  unwrapForcedScalars
 };

@@ -322,3 +322,94 @@ export function pickRunner({ activeGMId = null, ownerIds = [] } = {}) {
   return [...ownerIds].sort()[0] ?? null;
 }
 
+/** The Wild Shape activity among these items (the first item owning one), or null (transform-creatures-3). */
+export function wildShapeActivityOf(items) {
+  const item = findWildShapeItem(items);
+  return item ? activitiesOf(item).find(isWildShapeActivity) ?? null : null;
+}
+
+/**
+ * The known forms from the activity's profiles: `[{ id, name, uuid, actor }]`, the actor resolved
+ * once per profile (transform-creatures-23); an empty profile name falls back to the actor's, then "?".
+ * @param {{ _id, name, uuid }[]} profiles
+ * @param {(uuid: string) => object|null} resolve
+ */
+export function formEntries(profiles, resolve) {
+  return (profiles ?? []).map(p => {
+    const actor = resolve(p.uuid) ?? null;
+    return { id: p._id, name: p.name || actor?.name || "?", uuid: p.uuid, actor };
+  });
+}
+
+/**
+ * Giving one use back: the item update, or null when nothing was spent (spent not a finite number
+ * above 0 — a string "1" stays non-refundable, as before). transform-creatures-4.
+ * @param {{ spent?: number }} uses
+ * @returns {{ "system.uses.spent": number }|null}
+ */
+export function refundUpdate(uses) {
+  const spent = uses?.spent;
+  return Number.isFinite(spent) && spent > 0 ? { "system.uses.spent": spent - 1 } : null;
+}
+
+/** True when `selfId` is the runner pickRunner elects (transform-creatures-1). */
+export function runnerIs(selfId, who) {
+  return pickRunner(who) === selfId;
+}
+
+/**
+ * Can this client be the runner for ANY actor? Not while another user is the active GM: the GM
+ * always wins pickRunner. With no active GM, possibly (an owner). transform-creatures-2.
+ * @param {{ activeGMId: string|null, selfId: string }} who
+ */
+export function canRunAny({ activeGMId = null, selfId } = {}) {
+  return !activeGMId || activeGMId === selfId;
+}
+
+/**
+ * The actors the world-time fallback checks for an expired Wild Shape: every world actor, then the
+ * unlinked tokens' actors on the viewed scene (transform-creatures-22; Starry keeps world actors).
+ * @param {Iterable<object>} actors
+ * @param {Iterable<{ actorLink: boolean, actor: object|null }>} sceneTokens
+ */
+export function worldTimeCandidates(actors, sceneTokens) {
+  const out = [...(actors ?? [])];
+  for (const t of sceneTokens ?? []) if (!t.actorLink && t.actor) out.push(t.actor);
+  return out;
+}
+
+/**
+ * One druid's shape state as plain JSON (transform-creatures-17, the API's inspect). Every input is
+ * plain data the glue read; nothing here touches a document.
+ *
+ * @param {{ actor: object, original?: object|null, shifted?: boolean, wildShapeForm?: boolean,
+ *   formName?: string|null, flag?: { profile?, source?, endsAt? }|null, worldTime?: number,
+ *   wildShape?: { itemId: string, uses?: { max?, spent? } }|null, forms?: { id, name }[],
+ *   starry?: { constellation: string, secondsLeft: number|null }|null }} input
+ * @returns {{ actor, original, shifted, wildShapeForm, form, wildShape, starry, forms }}
+ */
+export function shapeStatus({ actor = null, original = null, shifted = false, wildShapeForm = false, formName = null,
+  flag = null, worldTime = 0, wildShape = null, forms = [], starry = null } = {}) {
+  const endsAt = Number.isFinite(flag?.endsAt) ? flag.endsAt : null;
+  const max = Number(wildShape?.uses?.max);
+  return {
+    actor,
+    original: original ?? null,
+    shifted: !!shifted,
+    wildShapeForm: !!wildShapeForm,
+    form: shifted ? {
+      name: formName ?? null,
+      profileId: flag?.profile ?? null,
+      sourceUuid: flag?.source ?? null,
+      endsAt,
+      secondsLeft: endsAt === null ? null : endsAt - worldTime
+    } : null,
+    wildShape: wildShape ? {
+      itemId: wildShape.itemId ?? null,
+      usesLeft: usesLeft(wildShape.uses),
+      max: Number.isFinite(max) && max > 0 ? max : null
+    } : null,
+    starry: starry ? { constellation: starry.constellation ?? null, secondsLeft: starry.secondsLeft ?? null } : null,
+    forms: (forms ?? []).map(f => ({ id: f.id, name: f.name }))
+  };
+}

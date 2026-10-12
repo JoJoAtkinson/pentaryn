@@ -23,7 +23,12 @@ test("core loads with no Foundry globals present", () => {
 
 // Guide step 2's explicit additive delta: the blueprint constants. The checkpoint golden stays the 39 names.
 const ADDED_S2 = ["CONTRACT", "CSS", "FLAG_SCOPE", "HOOKS", "I18N", "MODULE", "NS", "SHORT", "VERSION"];
-const ADDED = [...ADDED_S2];
+// Guide step 3's: the pure seams (-1, -2, -3, -4, -5, -6, -7, -10, -11, -13, -17, -22, -23).
+const ADDED_S3 = ["STARRY_IMG", "canRunAny", "constellationImgOf", "coveredMultiattackId", "earnsChalice", "formEntries",
+  "isGenericActivityImg", "pickStarryBase", "portraitText", "pruneDisconnected", "recoveryLines", "refundUpdate", "runnerIs",
+  "secondsLeft", "shapeStatus", "shouldQueueStaleCheck", "starryEndKey", "summaryFromSource", "unwrapForcedScalars",
+  "wildShapeActivityOf", "worldTimeCandidates"];
+const ADDED = [...ADDED_S2, ...ADDED_S3];
 
 test("export list of transform-core.mjs (step 2's barrel must re-export every name)", () => {
   const names = Object.keys(core).sort();

@@ -82,3 +82,49 @@ export function starryBlock({ shifted = false, incapacitated = false, usesLeft =
   if (spends && usesLeft === 0) return "noUses";
   return null;
 }
+
+/** A constellation's own picture when its activity has none of its own. */
+export const STARRY_IMG = Object.freeze({
+  archer: "icons/weapons/bows/bow-ornamental-gold-blue.webp",
+  chalice: "icons/magic/holy/chalice-glowing-yellow-blue.webp",
+  dragon: "icons/creatures/reptiles/dragon-winged-blue.webp"
+});
+
+/** True for an image nobody chose: empty, the mystery man, or dnd5e's generic activity icon. */
+export function isGenericActivityImg(img) {
+  return !img || img.includes("mystery-man") || img.startsWith("systems/dnd5e/icons/svg/activity");
+}
+
+/**
+ * The constellation's picture: the activity's own image if someone set one, else the fixed one,
+ * else the feature item's (transform-creatures-7).
+ */
+export function constellationImgOf(img, itemImg, c) {
+  return isGenericActivityImg(img) ? (STARRY_IMG[c] ?? itemImg) : img;
+}
+
+/**
+ * The feature's effect a constellation brings: for the Dragon, the one granting flight with
+ * Twinkling Constellations (else the one without), else the first Dragon effect; otherwise the
+ * effect named exactly "Starry Form". null for none (transform-creatures-7).
+ * @param {object[]} effects  the feature item's effects
+ */
+export function pickStarryBase(effects, c, twinkling) {
+  const list = effects ?? [];
+  if (c === "dragon") {
+    const dragons = list.filter(e => /dragon/i.test(e.name));
+    return (twinkling ? dragons.find(grantsFly) : dragons.find(e => !grantsFly(e))) ?? dragons[0] ?? null;
+  }
+  return list.find(e => /^starry form$/i.test(e.name)) ?? null;
+}
+
+/** Seconds left: start + seconds - now (negative once past), or null unless both are finite. */
+export function secondsLeft({ start, seconds, now }) {
+  if (!Number.isFinite(start) || !Number.isFinite(seconds)) return null;
+  return start + seconds - now;
+}
+
+/** The chat line for a Starry Form ending, by reason: StarryIncapacitated, StarryExpired, StarryEnd. */
+export function starryEndKey(reason) {
+  return reason === "incapacitated" ? "StarryIncapacitated" : (reason === "expired" ? "StarryExpired" : "StarryEnd");
+}
