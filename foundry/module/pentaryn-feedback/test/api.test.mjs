@@ -2,6 +2,7 @@
 // shape, the relay and GM-only query contracts, and list/get/resolve against an in-memory store.
 import { mock, test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { maxDepth, normaliseDescribe, pinJSON } from "./kit/harness.mjs";
 import { IDS, WORLD, installClient, memoryStore, queuedReport, settle } from "./fixtures/world.mjs";
 import { CATEGORY_KEYS, FLAG_SCOPE, MODULE, QUEUE_KEY, STATUSES, STORE_DIR, normaliseReport } from "../feedback-core.mjs";
@@ -68,6 +69,15 @@ test("manifest strings match core tables (categories, statuses, report file, que
   const queue = `flags.${FLAG_SCOPE}.${QUEUE_KEY}`;
   assert.deepEqual(MANIFEST.flags.writes, [queue]);
   for (const s of strings.filter(s => s.startsWith("flags."))) assert.equal(s, queue);
+});
+
+test("manifest derives those strings from core, never repeats them as literals (feedback-EXT-1-followup)", () => {
+  const src = readFileSync(new URL("../api-manifest.mjs", import.meta.url), "utf8");
+  const inUnion = k => [`'${k}'|`, `|'${k}'`];
+  for (const literal of [`Data/${STORE_DIR}/`, `flags.${FLAG_SCOPE}.${QUEUE_KEY}`, ...CATEGORY_KEYS.flatMap(inUnion),
+    ...STATUSES.flatMap(inUnion)]) {
+    assert.ok(!src.includes(literal), `api-manifest.mjs spells ${literal} out; build it from feedback-core.mjs`);
+  }
 });
 
 test("describe() equals golden/describe.json (version, kit, published and patch routes excluded)", () => {

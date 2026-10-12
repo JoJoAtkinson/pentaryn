@@ -2,6 +2,11 @@
 
 ## Unreleased — 2026-10-12 (W3L live-check fix; `module.json` stays 0.1.2, code-only sync)
 
+- **[declared] The API manifest builds its strings from core** (feedback-EXT-1-followup): the
+  report-file path, queue flag and the category/status unions in `api-manifest.mjs` were literals;
+  they now come from `STORE_DIR`, `FLAG_SCOPE`, `QUEUE_KEY`, `CATEGORY_KEYS` and `STATUSES`, so a
+  core rename can no longer leave describe() stale. `golden/describe.json` is byte-identical; a
+  source test refuses the literals coming back.
 - **[declared] A hot patch mid-filing no longer files a report twice** (feedback-async-4):
   `uninstall()` cleared the per-user ingest chains while one could still be writing, so the
   re-install's `ready` ingest read the same queue entry and uploaded it again (a second toast,
