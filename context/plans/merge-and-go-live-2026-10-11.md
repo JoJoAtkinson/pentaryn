@@ -256,3 +256,114 @@ Player's Journal" is gone too. Rollback copies: `.state/live-rollback/W3L/` (wor
 - feedback 0.1.2 has an "Unreleased" CHANGELOG entry (`c18b74ec`), so the version bump waits for
   the next restart batch.
 - For Joe: the wave-3 §8 table checks, and W2-B2 confirmation (§7).
+
+## W4L — wave 4 + fixes batch 1 live (overnight)
+
+Wave 4 (riders, aoe, combat, transform get the blueprint kit: `describe()`, frozen api, contract
+`pentaryn-<m>/api@1`), fixes batch 1 (`fix/overnight-2026-10-12`: senses `syncAll` batching, the
+importer and pings golden fixes, `make foundry-importer-install`, conformance rule C62) and a
+comment-only cursors change went live together on the Mac (FROM=local, tunnel down, one GM tab,
+world `pentaryn`). One Foundry restart: no `module.json` changed, but aoe's `lang/en.json`,
+combat's and transform's `styles/*.css` and the new `lib/argon-tooltip.css` did.
+
+**Merged**
+- pentaryn `migrate/wave-4`: `ff42b1d2` (origin/main `6969aa91` merged in: module index
+  regenerated, `adjustments.yml` keeps both sides, the contract test repointed to senses'
+  `core/light.mjs`), `72c495c1` (`fix/overnight-2026-10-12` merged in, clean), `ef7300a4` (bug
+  fix, below). Merged into main no-ff as **`272f62fc`** (tree identical to `ef7300a4`, no
+  `foundry/logs` hunks).
+- Fork `migrate/wave-4`: `5cce276` (origin/pentaryn `2fd6eb0` merged in), `f533f34`
+  (pentaryn-read description: every module namespace publishes `describe()`, only the chain alias
+  has none; a unit test checks it names none of combat, riders, transform, aoe, ties, prompts).
+  Merged into `pentaryn` no-ff as **`7712417`**. Diff vs `2fd6eb0`: 2 files, both in
+  `packages/mcp-server`.
+
+**Bug found and fixed (`ef7300a4`).** `scripts/tests/test_foundry_ops.py::test_every_subcommand_routes`
+left `pipeline.install_importer` unstubbed (from `fd84e1d7`, fixes batch 1), so every full pytest
+run installed `pentaryn-importer` into the live Data folder while Foundry ran. Proved by bisecting
+on the stamp's mtime. The code digest was unchanged (`db5d4d5b…`), so only the stamp's `git` field
+moved. The fix stubs it and makes `pipeline.install` / `modules.install` raise in that test; the
+guard fails before and passes after, and the pytest run on main left the stamp's mtime untouched.
+
+**Deployed** (sync stamps `272f62fc`, dirty false, `make foundry-<m>-sync` from main): riders 0.2.0,
+aoe 0.3.1, combat 0.2.5, transform 0.3.3, senses 0.4.1, cursors 0.2.0 (version numbers unchanged;
+every `module.json` identical to its rollback copy). walls not synced. Importer not re-synced (code
+identical). Bridge: `build:shared`, typecheck, tests, `build:server`, `fork-footprint.sh`; no
+`build:foundry` and no copy into `Data/modules/foundry-mcp-bridge` (packages/foundry-module
+unchanged, live plan §4.3). Backend `kill -9` (pid 91021 → 43353). Bridge module still
+0.8.3-pentaryn.2. The backend serves the new pentaryn-read text; the wrapper logged "tools/list
+changed; notified the client" at 06:05:40Z.
+
+**Gates.** pytest 1523 passed / 2 skipped / 6 xfailed (on the branch and again on main); all 20
+modules' node tests pass (walls keeps its 1 todo); every `make foundry-<m>-check` 0;
+`foundry-modules-check`, `foundry-lib-check`, `check-context` (5 old warnings),
+`foundry-adjustments-check`, `vendor.py check --all` green. Conformance: the fail sets equal the
+baseline (riders C07 C09 C37 C56; aoe C07 C09 C37; combat C07 C21 C23; transform C07 C37), plus
+attunement's known C62. Fork: server vitest 282/282, module 49/49, typecheck 0, footprint passes.
+
+**Goldens** (`.state/live-goldens/wave4/`, before and after, each twice, in order aoe, riders,
+combat, transform, senses, cursors; run1 vs run2 shared identical on both sides; diff.mjs
+before → after exits 0 for all six, cleanup clean). Declared differences match wave-4 live plan §6:
+- riders: 13 paths, 4 patches, 1 query; the `previewAtArgument` @ fix; `legacyRefs` filled.
+- aoe: 24 paths, 17 settings; `inspectHandle` has the expected shape; handles settled on a hidden tab.
+- combat: 25 paths, 7 events, 8 patches, 30 settings; `planNoActor` TypeError → "null"; the
+  ByName/ByUuid refs now equal the shared count, plan and weapons (3).
+- transform: 13 paths, 1 patch; `inspect` returns plain JSON. No forms difference (`796fdf63`
+  counts as declared).
+- senses: only the scratch AmbientLight id differs (it differs run to run before, too).
+- cursors: identical.
+- pings (after only): `pingLogRestored` true, scratch records 0, on a hidden tab; shared equals
+  the wave-3 after run. importer (after only): `publishOrder` is top level, outside `golden`.
+- No timing call flagged.
+
+**Boot probe** (`probes.json` vs `probes-before.json`): pentaryn-read `{ns:"*",path:"describe"}`
+answers for 19 namespaces, all kit 1.0.2 (walls absent). The four wave-4 modules are active,
+`moduleApi` "same", versionMatches, frozen, `notFunctions []`, contract `pentaryn-<m>/api@1`;
+selftest ok for riders, transform, combat (aoe has none). rootFrozen false, chainAlias "same" with
+no `describe()`, as designed. Every other module equals the before probe. Tooltip CSS: 22
+`.pentaryn-tt` rules (11 before), from combat's and transform's own `@import`ed
+`lib/argon-tooltip.css`, each fetched once. Console from the Cmd-Shift-R reload: no errors, only
+third-party v13 deprecations; `debug.2026-10-12.log` has no error lines.
+
+**Live checks** (`reads.md`): wave-4 live plan §7 rows 1–10 pass with the npc "ZZ Wave4 Reader"
+(deleted): each module's paths equal its `test/golden/describe.json`; the four inspects return
+plain JSON; combat plan has 2 swings, `coversMultiattack` gives the Multiattack id, riderMode
+"ask"; transform forms → BAD_ARGS (live Document, eval-js only); the four write dryRuns →
+BAD_ARGS "no dry run", nothing changed; wrong-tool calls → BAD_ARGS, unknown ns → NOT_FOUND.
+Fixes batch 1: senses `syncAll` on the converged world returns 0; a ZZ torch actor with 2 linked
+tokens set to 0/0 returns 3 (one Actor update of 1, one token batch of 2; both tokens 20/40),
+rerun 0. D7: removing transform's import from the CSSOM leaves combat's `.ech-tooltip.pentaryn-tt`
+styled (pointer-events none, 340px, 2-column grid); removing both falls back to Argon's defaults;
+both restored. Bridge smoke: get-world-info, list-characters, get-character, list-scenes,
+search-compendium, read-only eval-js, describe/selftest on the four, feedback.submit dryRun, the
+refusals. The two-GM-tab checks (W4-L2) were skipped. §8 table checks need Joe's eyes.
+
+**Fixes:** none needed in the live loop (no fix round, no `W4L-fix/`).
+
+**Pushes:** pentaryn main `6969aa91..272f62fc`, then this record. Fork `pentaryn`
+`2fd6eb0..7712417`. No reverts.
+
+**Exit state (verified):** Foundry up (FROM=local), tunnel down, updater paused, world `pentaryn`,
+only the Gamemaster active, one Foundry tab (localhost), `get-world-info` answers. Zero ZZ
+documents or chat lines, 0 combats. Rollback copies: `.state/live-rollback/W4L/` (world, Config,
+the 6 modules, the bridge, the old fork dist, fork commit `2fd6eb0` in README.txt).
+
+**Follow-ups**
+- Cherry-pick `ef7300a4` onto `fix/overnight-2026-10-12`; until then a pytest run from that branch
+  reinstalls the live importer. Optional hardening: an autouse conftest fixture that points the
+  Foundry Data modules dir at `tmp_path` for every test.
+- Wave-4 live plan §5: the top-level `tooltipRules` flag is always false on Foundry 14 (module CSS
+  is nested in `@import`/`@layer`); replace it with the recursive `.pentaryn-tt` count (22 after).
+  Drop `argonKitScripts` (`document.scripts` never lists an ES-module import).
+- Wave-4 live plan §6: transform's `starry`/`starryKeys` were already present on 0.3.3 (the
+  "absent → …" row is stale); combat `coreKeys` rose 81 → 95 (turnflow/hud splits).
+- senses golden: normalise `inspectCarrier.lightSpells[0].litBy[0]` and `lightStatus.litBy[0].id`
+  (raw random ids give 2 declared differences in a before-vs-before self-diff).
+- The overnight lane template asked for `build:foundry` plus a bridge copy; live plan §4.3 says a
+  server-side-only fork diff needs neither. Make the template agree.
+- For Joe: attunement fails C62 (`stash`, `releaseAway` take live Actors; an eval-js-only marker is
+  the fix — your call). D8 / tc-22, observed only: on the world-time fallback, a lapsed Starry Form
+  ends on a linked druid but not on an unlinked token druid; core's own expiry path needs a real
+  clock advance. D7: look at the real Argon HUD tooltips at the table. A third-party update dialog
+  for "Argon - Combat HUD" is open on the GM tab, left alone. Run `/mcp` in long-running sessions
+  to pick up the new pentaryn-read description.
