@@ -70,7 +70,7 @@ import { grantCard, grantedHead } from "./known-ui.mjs";
 import { subjectFacts } from "./facts.mjs";
 import {
   rollableLore, loreOfferable, loreOutcome, tierOf, studyOffsetOf, STUDY_OFFSET_FLAG, LORE_FLAG,
-  planStep, identificationLadder, identifiedKey, holdResolved, combineAdvantage,
+  planStep, identificationLadder, indexRegistry, identifiedKey, holdResolved, combineAdvantage,
   ATTR_BELIEFS_SETTING, KNOWLEDGE_SETTING, REGISTRY_SETTING, touchesFlagScope, tablePCs, switchLabels
 } from "./known-core.mjs";
 import { CONCEAL_FLAG, concealFor, firstName } from "./core/rules.mjs";
@@ -205,6 +205,7 @@ export class InspectPreview extends ApplicationV2 {
     const pc = this.roller !== "hypo" ? game.actors.get(this.roller) : null;
     const characterId = pc?.id ?? "#preview";
     const reg = registry();
+    const regIndex = indexRegistry(reg); // one index per simulation, not one per rung (ties-20)
     const regById = new Map(reg.map(e => [e.id, e]));
     const carried = attributeIdsOf(subject, kindActorOf);
     // visible = not a question to the planner: no registry entry, or an entry that is not secret
@@ -221,7 +222,7 @@ export class InspectPreview extends ApplicationV2 {
     const conceal = id => concealFor(readFlag(subject, MODULE, CONCEAL_FLAG), id);
     const reach = new Map(); // attr id → chance of having identified it
     const priorOf = id => {
-      const ladder = identificationLadder(id, reg);
+      const ladder = identificationLadder(id, regIndex);
       const i = ladder.indexOf(id);
       return i > 0 ? reach.get(ladder[i - 1]) ?? 1 : 1;
     };
