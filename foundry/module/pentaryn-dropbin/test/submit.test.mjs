@@ -4,6 +4,7 @@
 import { mock, test } from "node:test";
 import assert from "node:assert/strict";
 import { GM, PLAYER, addScene, dropbinWorld, makeActor } from "./fixtures/world.mjs";
+import { el } from "./fixtures/dom.mjs";
 
 mock.timers.enable({ apis: ["setTimeout"] });
 
@@ -78,5 +79,27 @@ test("the hp hook's Dead toggle on a revived corpse warns on failure instead of 
     await flush();
   });
   assert.deepEqual(lines[0], ["pentaryn-dropbin | revive: could not clear Dead on Goblin", "Error: no permission"]);
+  assert.deepEqual(unhandled, []);
+});
+
+// dropbin-R7 [declared]: the HUD Revive button's rejection was unhandled and unprefixed (the HUD
+// stayed open, nothing on screen). Now: one prefixed console warning, one warn toast, HUD left open.
+test("dropbin-R7: a failed HUD Revive warns once with the module prefix and one toast, never unhandled", async () => {
+  const gob = makeActor(F, { id: "actorGob00000002", name: "Goblin", type: "npc" });
+  const scene = addScene(F, { id: "sceneTwo00000001", tokens: [{ id: "tokGob0000000002", name: "Goblin Corpse", actorId: gob.id, flags: { [MOD]: { corpse: true } } }] });
+  const tok = scene.tokens.get("tokGob0000000002");
+  Object.assign(gob, { statuses: new Set(["dead"]), toggleStatusEffect: async () => { throw new Error("no permission"); } });
+  const right = el("div", { className: "col right" });
+  let closed = 0;
+  F.fire("renderTokenHUD", { object: { document: tok }, close() { closed++; } }, el("div", { children: [right] }));
+  const from = F.calls.length;
+  const lines = await warnings(async () => {
+    right.querySelector(".pd-corpse-revive").click();
+    await flush();
+  });
+  assert.deepEqual(lines, [["pentaryn-dropbin | revive failed for Goblin Corpse", "Error: no permission"]]);
+  assert.deepEqual(F.calls.slice(from).filter(c => c.op === "notify").map(c => [c.level, c.message]),
+    [["warn", "Could not revive Goblin Corpse. See the console."]]);
+  assert.equal(closed, 0, "the HUD stays open on a failure");
   assert.deepEqual(unhandled, []);
 });

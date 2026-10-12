@@ -22,7 +22,8 @@ the dnd5e 6 rarity keys).
   token itself; it is not a document. It disappears when the body is emptied or revived, and hides
   with the token (out of sight, under fog, GM-hidden).
 - **GM token HUD on a corpse:** *Open character sheet (GM)* (Item Piles otherwise takes over the
-  double-click) and *Revive (1 HP)*.
+  double-click) and *Revive (1 HP)*. A Revive that fails leaves the HUD open with one warning toast
+  (details in the console as `pentaryn-dropbin | revive failed for <token>`).
 - **Ownership:** players get OBSERVER on the token's own actor delta while it is a corpse (Item
   Piles needs it), never on the base actor. A revival gives back the delta map saved at death
   (none saved: the base actor's again). Sight is off on a corpse and restored on revival.

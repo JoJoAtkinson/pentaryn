@@ -79,6 +79,10 @@ Declared changes:
   is not a TokenDocument (`sync`: an Actor); they threw raw TypeErrors. A failed corpse-flag write in
   `toCorpse` reverts the pile it just made and rejects, instead of leaving a pile no revival undoes.
   Without Item Piles the hp/effect hooks no longer queue a sync at all.
+- dropbin-R7: a failed HUD *Revive* is one console warning
+  (`pentaryn-dropbin | revive failed for <token>`) and one warn toast ("Could not revive <token>. See
+  the console."), and the HUD stays open; it was an unhandled, unprefixed rejection with nothing on
+  screen.
 
 Added: `list(n, { brief })`, `restoreResult`, `inspect`, `selftest` (items-journal-28).
 - A restore another module refuses (a `preCreateItem` veto) is `{ ok: false, reason: "not-created" }`

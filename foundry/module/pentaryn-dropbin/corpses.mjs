@@ -372,7 +372,11 @@ function addHudButtons(app, element) {
     b.addEventListener("click", ev => { ev.preventDefault(); ev.stopPropagation(); fn(); });
     col.prepend(b);
   };
-  mk("pd-corpse-revive", "fa-heart-pulse", _loc("PENTARYN_DROPBIN.corpse.revive"), async () => { await revive(tokenDoc); app.close(); });
+  // dropbin-R7: a failed Revive warns (prefixed) and toasts once; the HUD stays open
+  mk("pd-corpse-revive", "fa-heart-pulse", _loc("PENTARYN_DROPBIN.corpse.revive"), () => revive(tokenDoc).then(() => app.close(), err => {
+    console.warn(`${MODULE} | revive failed for ${tokenDoc.name}`, err);
+    ui.notifications.warn(_loc("PENTARYN_DROPBIN.corpse.reviveFailed", { name: tokenDoc.name }));
+  }));
   mk("pd-corpse-sheet", "fa-user", _loc("PENTARYN_DROPBIN.corpse.sheet"), () => tokenDoc.actor?.sheet.render(true, { focus: true, bypassItemPiles: true }));
 }
 
