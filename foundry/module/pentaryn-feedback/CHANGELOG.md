@@ -7,6 +7,10 @@
   and an actor's name `NOT_FOUND: user <name>`. A string ref is still a user first; otherwise an
   Actor/Token uuid, or an actor id or exact name, means that actor's players. The manifest `ref` type
   adds `uuid` and its doc says so (describe() golden updated for those two strings).
+- **[declared] One bad queue entry no longer blocks a player's queue for good** (rob-1/EC-1): a
+  finite `t` outside the Date range passed `validateReport` and then threw in `normaliseReport`,
+  so every later ingest of that user failed. `validateReport` now refuses such a `t`, and ingest
+  drops any entry that cannot be normalised with a `refused report` warning and files the rest.
 
 ## 0.1.2 — 2026-10-11 (live-check fix)
 

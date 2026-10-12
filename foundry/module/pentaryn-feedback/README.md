@@ -107,6 +107,9 @@ wraps stay in place after `uninstall()` and record nothing until the next instal
   then `queryGM("pentaryn-feedback.ingest", { userId, ids }, { timeout: 10000 })`.
 - The **active GM** files a user's queue on that query, on `updateUser` (a new queue key), on
   `userConnected`, and at `ready` (every user). Per tab, one ingest per user at a time.
+- A queue entry that fails `validateReport` (including a `t` no Date can hold) or cannot be
+  normalised is **dropped** with a `refused report` warning, and the rest of the queue is filed; a
+  failed upload instead stays queued for the next ingest.
 - **Two GM tabs** (bridge + browser) both file: each looks for the file first and uploads only if it
   is missing; both write the same bytes (no per-tab `receivedAt`: it is `null`, the file's mtime is
   the filing time) under `game.world.id` (never the payload's world), so the second write is harmless

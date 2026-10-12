@@ -521,6 +521,43 @@ test("a malformed queue entry is refused and dropped (it would block the queue f
   assert.ok(consoleLines.slice(lines).some(([lvl, l]) => lvl === "warn" && l.startsWith(`${MODULE} | refused report badbadbadbadbad1`)));
 });
 
+test("rob-1/EC-1: an entry whose t is outside the Date range is refused and dropped; the rest of the queue is filed", async () => {
+  refill();
+  const lines = consoleLines.length;
+  const bad = queuedReport("badtimestamp0001", { t: 1700000000000, text: "bad t" });
+  bad.t = 1e20;                             // finite, but no Date can hold it
+  const good = queuedReport("goodbehindbad001", { t: Date.now(), text: "queued behind the bad one" });
+  await player.update({ [`flags.${MODULE}.queue`]: { [bad.id]: bad, [good.id]: good } });
+  await settle(10);
+  assert.deepEqual(queueOf(player), {}, "neither entry is left blocking the queue");
+  assert.equal(mem.files.has(`pentaryn-feedback/${WORLD}/${bad.id}.json`), false);
+  assert.ok(mem.files.has(`pentaryn-feedback/${WORLD}/${good.id}.json`), "the entry behind it is filed");
+  assert.ok(consoleLines.slice(lines).some(([lvl, l]) => lvl === "warn" && l.startsWith(`${MODULE} | refused report ${bad.id}`)));
+});
+
+test("rob-1/EC-1: if normalising one entry throws, that entry is dropped with a warning and the rest is filed", async () => {
+  refill();
+  const lines = consoleLines.length;
+  const boom = queuedReport("normalisethrows1", { t: Date.now() + 1, text: "normalise throws" });
+  const good = queuedReport("goodbehindboom01", { t: Date.now(), text: "queued behind it" });
+  const proto = Date.prototype;
+  const iso = proto.toISOString;
+  proto.toISOString = function () {
+    if (this.getTime() === boom.t) throw new RangeError("Invalid time value");
+    return iso.call(this);
+  };
+  try {
+    await player.update({ [`flags.${MODULE}.queue`]: { [boom.id]: boom, [good.id]: good } });
+    await settle(10);
+  } finally {
+    proto.toISOString = iso;
+  }
+  assert.deepEqual(queueOf(player), {}, "the failing entry is not left to block the queue");
+  assert.equal(mem.files.has(`pentaryn-feedback/${WORLD}/${boom.id}.json`), false);
+  assert.ok(mem.files.has(`pentaryn-feedback/${WORLD}/${good.id}.json`), "the entry behind it is filed");
+  assert.ok(consoleLines.slice(lines).some(([lvl, l]) => lvl === "warn" && l.startsWith(`${MODULE} | refused report ${boom.id}`) && l.includes("Invalid time value")));
+});
+
 test("the folder is always this world's: a report claiming another world is filed here, its world id corrected", async () => {
   refill();
   const report = { ...queuedReport("otherworld000001", { t: Date.now(), text: "wrong world" }), world: { id: "someone-elses", title: "Theirs" } };

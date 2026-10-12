@@ -362,6 +362,13 @@ test("validateReport: a good report passes; each broken field is named", () => {
   }
 });
 
+test("validateReport (rob-1/EC-1): a finite t outside the Date range is refused, not passed on to normaliseReport", () => {
+  for (const t of [1e16, -1e16, 1e20, Number.MAX_VALUE]) {
+    assert.deepEqual(core.validateReport({ ...sample(), t }), { ok: false, reason: "t must be a timestamp" }, `t = ${t}`);
+  }
+  assert.deepEqual(core.validateReport({ ...sample(), t: 8.64e15 }), { ok: true }, "the last valid Date still passes");
+});
+
 test("LIST_KEYS covers every list section plus the two rings", () => {
   assert.deepEqual(new Set(core.LIST_KEYS), new Set(["actions", "errors", ...core.LIST_SECTIONS]));
   assert.equal(core.validateReport({ ...sample(), chat: "x", windows: "y" }).reason, "chat must be a list");

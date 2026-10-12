@@ -485,7 +485,8 @@ export function validateReport(report) {
   if (!report || typeof report !== "object" || Array.isArray(report)) return { ok: false, reason: "not an object" };
   if (report.schemaVersion !== SCHEMA_VERSION) return { ok: false, reason: `schemaVersion ${report.schemaVersion} is not ${SCHEMA_VERSION}` };
   if (!isReportId(report.id)) return { ok: false, reason: "id must be 16 letters or digits" };
-  if (!Number.isFinite(report.t)) return { ok: false, reason: "t must be a timestamp" };
+  // finite but past ±8.64e15 ms is no Date: normaliseReport's toISOString would throw (rob-1/EC-1)
+  if (!Number.isFinite(report.t) || Number.isNaN(new Date(report.t).getTime())) return { ok: false, reason: "t must be a timestamp" };
   if (!CATEGORY_KEYS.includes(report.category)) return { ok: false, reason: `category must be one of ${CATEGORY_KEYS.join(", ")}` };
   if (typeof report.text !== "string" || !report.text.trim()) return { ok: false, reason: "text is empty" };
   if (report.text.length > LIMITS.text) return { ok: false, reason: `text is over ${LIMITS.text} characters` };
