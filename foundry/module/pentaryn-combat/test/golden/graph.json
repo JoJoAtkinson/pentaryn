@@ -19,7 +19,19 @@
       "lib/argon-kit.mjs",
       "lib/log.mjs"
     ],
-    "combat-core.mjs": [],
+    "combat-core.mjs": [
+      "core/count.mjs",
+      "core/damage.mjs",
+      "core/followups.mjs",
+      "core/identity.mjs",
+      "core/layout.mjs",
+      "core/multiattack.mjs",
+      "core/sequence.mjs",
+      "core/turn-riders.mjs",
+      "core/turn.mjs",
+      "core/turnflow.mjs",
+      "core/weapons.mjs"
+    ],
     "combat.mjs": [
       "api.mjs",
       "argon.mjs",
@@ -40,6 +52,32 @@
       "lib/log.mjs",
       "settings.mjs"
     ],
+    "core/count.mjs": [],
+    "core/damage.mjs": [],
+    "core/followups.mjs": [
+      "core/turn.mjs",
+      "core/weapons.mjs"
+    ],
+    "core/identity.mjs": [],
+    "core/layout.mjs": [],
+    "core/multiattack.mjs": [
+      "core/identity.mjs"
+    ],
+    "core/sequence.mjs": [
+      "core/multiattack.mjs",
+      "core/turn.mjs",
+      "core/weapons.mjs"
+    ],
+    "core/turn-riders.mjs": [],
+    "core/turn.mjs": [
+      "core/followups.mjs",
+      "core/turnflow.mjs"
+    ],
+    "core/turnflow.mjs": [
+      "core/identity.mjs",
+      "core/turn.mjs"
+    ],
+    "core/weapons.mjs": [],
     "counting.mjs": [
       "combat-core.mjs",
       "lib/hooks.mjs",
@@ -212,6 +250,17 @@
     "settings.mjs",
     "lib/settings.mjs",
     "combat-core.mjs",
+    "core/weapons.mjs",
+    "core/turnflow.mjs",
+    "core/turn.mjs",
+    "core/followups.mjs",
+    "core/identity.mjs",
+    "core/turn-riders.mjs",
+    "core/sequence.mjs",
+    "core/multiattack.mjs",
+    "core/layout.mjs",
+    "core/damage.mjs",
+    "core/count.mjs",
     "lib/patch.mjs",
     "lib/log.mjs",
     "turnflow/movement.mjs",

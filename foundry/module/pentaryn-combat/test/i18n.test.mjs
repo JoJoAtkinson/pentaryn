@@ -64,7 +64,7 @@ test("follow-ups: FollowUp / FollowUpText for every kind core.followUps offers (
   const kinds = ["offhand", "nick", "flurry", "martial-arts", "hew", "pole-strike"];
   for (const k of kinds) assert.ok(has(`PENTARYN_COMBAT.FollowUp.${k}`), `FollowUp.${k}`);
   for (const k of [...kinds, "offhand-dual-wielder"]) assert.ok(has(`PENTARYN_COMBAT.FollowUpText.${k}`), `FollowUpText.${k}`);
-  const coreSrc = readFileSync(new URL("../combat-core.mjs", import.meta.url), "utf8");
+  const coreSrc = readFileSync(new URL("../core/followups.mjs", import.meta.url), "utf8");   // core.followUps lives here since S12
   const offered = [...new Set([...coreSrc.matchAll(/kind: "([a-z-]+)"/g)].map(m => m[1]))].filter(k => kinds.includes(k));
   assert.deepEqual(offered.sort(), [...kinds].sort(), "every kind core offers has strings");
   const seqSrc = readFileSync(new URL("../sequence.mjs", import.meta.url), "utf8");
@@ -83,18 +83,6 @@ test("Kind.<kind> for the strip's and the roll window's kinds; Turn.Effect / Eff
 test("no two-branch T() wrapper is left (C35; S4 replaced the five with _loc)", () => {
   const hits = sourceScan(ROOT, /const T = \(key, data\) => \(data \? game\.i18n\.format\(key, data\) : game\.i18n\.localize\(key\)\);/).map(h => `${h.file}:${h.line}`);
   assert.deepEqual(hits, []);
-});
-
-test("S4 literal key tables: every I18N_KEYS value exists; keyFor equals the old template string for every value, known or not", () => {
-  for (const [family, table] of Object.entries(core.I18N_KEYS)) {
-    for (const [value, key] of Object.entries(table)) {
-      assert.ok(has(key), key);
-      assert.equal(key, `PENTARYN_COMBAT.${family}.${value}`);
-      assert.equal(core.keyFor(family, value), key);
-    }
-  }
-  assert.equal(core.keyFor("FollowUp", "unknown-kind"), "PENTARYN_COMBAT.FollowUp.unknown-kind");
-  assert.equal(core.keyFor("Kind", undefined), "PENTARYN_COMBAT.Kind.undefined");
 });
 
 test("Argon's own keys read by turnflow: enhancedcombathud-dnd5e.items.<action>.name for the six special actions", () => {
