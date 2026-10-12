@@ -42,6 +42,9 @@
   longer surfaces as a bare TypeError. `ensureAll` leaves stray journals at the root when the folder
   could not be made, and the player relay rejects `NOT_CREATED: the journal could not be created`, so
   the player's query fails with a named reason (they still get the "tell the GM" warning).
+- **[declared] journal-rob-6:** if the journal window fails to open after a save, the copy is no longer
+  reported as failed: the error is a console warning (`open after save failed`), the player still gets
+  the added/updated toast, and `add()` answers the saved page instead of rejecting.
 
 ## Unreleased (blueprint migration, wave 2)
 

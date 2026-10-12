@@ -51,6 +51,8 @@ Published at `ready` on `game.modules.get("pentaryn-journal").api` and `game.pen
     `NOT_FOUND`, two throw `AMBIGUOUS`. Left out, it is the calling user.
   - `add(entry | page | item)` → what the button does: `{journal, pageIds, created, updated}`, or `null`
     when there is no bar for that document, no journal, nothing visible, or it is too large.
+    If the journal window then fails to open, the copy still stands: a console warning
+    (`open after save failed`), the added/updated toast, and the result as usual.
   - `status(doc)` → `none` / `partial` / `saved` / `changed`, or `null` when there is no bar for it.
   - `open(pageId?)` opens the user's journal; `shouldShowBar(entry, userRef?)` says whether that user gets the bar.
   - `report()` (not gated; it returns ids, names and counts only) →

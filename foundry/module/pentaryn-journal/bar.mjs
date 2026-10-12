@@ -109,7 +109,8 @@ async function saveNow(target, { near } = {}) {
   if (plan.update.length) await journal.updateEmbeddedDocuments("JournalEntryPage", plan.update);
   const pageId = created[0]?.id ?? plan.update[0]?._id ?? plan.existing[0];
   const fresh = created.length > 0;
-  await openSaved(journal, pageId, { justAdded: fresh, near });
+  // The copy exists now: a window that will not open must not turn that into a failed save (journal-rob-6).
+  try { await openSaved(journal, pageId, { justAdded: fresh, near }); } catch (err) { ctx.log.warn("open after save failed", err); }
   const name = journal.pages.get(pageId)?.name ?? "";
   if (fresh) ui.notifications.info(game.i18n.format("PENTARYN_JOURNAL.notify.added", { name }));
   else if (plan.update.length) ui.notifications.info(game.i18n.format("PENTARYN_JOURNAL.notify.updated", { name }));
