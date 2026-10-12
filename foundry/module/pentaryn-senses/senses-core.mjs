@@ -32,7 +32,7 @@ export {
 
 export const SHORT = "senses";
 export const NS = "senses";
-export const VERSION = "0.4.1";                       // === module.json version (core.test pins it)
+export const VERSION = "0.5.0";                       // === module.json version (core.test pins it)
 export const CONTRACT = "pentaryn-senses/api@1";      // bump the major on a published-shape change
 export const I18N = "PENTARYN_SENSES";
 export const CSS = "ps-";

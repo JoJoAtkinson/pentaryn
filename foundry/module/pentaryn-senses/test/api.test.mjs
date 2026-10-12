@@ -47,7 +47,7 @@ test("rows ↔ implementations: every row path is a published function, nothing 
   const KIT = ["version", "contract", "settings", "trace", "uninstall", "describe"];
   const paths = Object.keys(surfaceOf(S)).filter(p => !KIT.includes(p) && !p.startsWith("light.SPELL_LIGHT") && p !== "light.PHB_LIGHT_ACTOR");
   assert.deepEqual(paths.sort(), MANIFEST.rows.map(r => r.path).sort());
-  assert.equal(S.version, "0.4.1");
+  assert.equal(S.version, "0.5.0");
   assert.equal(S.contract, "pentaryn-senses/api@1");
   assert.deepEqual(S.settings(), { sightReset: { store: true, size: null } });
   assert.deepEqual(S.trace(), []);

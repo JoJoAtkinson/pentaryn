@@ -2,7 +2,7 @@
   "id": "pentaryn-senses",
   "title": "Pentaryn Senses",
   "description": "Lights, glow and chains for dnd5e 6. Token vision from the sheet's senses is dnd5e's own now (senseVisionSync); this module only resets, once per world, the darkvision sight its retired 0.3 sync stored on tokens, so a removed sense really goes dark (setting pentaryn-senses.sightReset, active GM, on ready). Lights carried by items (flags.pentaryn-senses.light) light whoever carries them and go dark when the item leaves. Torches, lamps, lanterns and candles get a Light/Douse button on the inventory row (flags.pentaryn-senses.lit), hooded lanterns a hood. The Light cantrip lights a token or a square instead of summoning a floor token (\"On me\" / \"Pick a target\" on cast, and On me / Pick a target / End as icons in the spell card's action row). Adds the \"Broken glow (wandering)\" light animation (pentaryn-brokenglow), whose size and brightness ride a wave that never repeats, and token chains drawn between two tokens. Writes run on the active GM's client only. Exposes game.pentaryn.senses.",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "compatibility": {
     "minimum": "14",
     "verified": "14.369"

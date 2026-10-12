@@ -11,7 +11,7 @@
 export const MODULE = "pentaryn-attunement";
 export const SHORT = "attunement";
 export const NS = "attunement";
-export const VERSION = "0.2.1";                              // === module.json version (core-meta.test pins it)
+export const VERSION = "0.3.0";                              // === module.json version (core-meta.test pins it)
 export const CONTRACT = "pentaryn-attunement/api@1";         // bump the major on a published-shape change
 export const I18N = "PENTARYN_ATTUNEMENT";
 export const CSS = "pentaryn-attunement-";
