@@ -119,6 +119,11 @@ Fixed (declared): `study.preview(null)` (no token hovered or selected) still war
 token to preview." but now returns `null`, as the manifest's `Promise<InspectPreview|null>` says, instead
 of the warning's notification object. ties-ui-M9.
 
+Fixed (declared, no table-visible change): four re-exports nobody imported are gone — `WORN_FLAG`/`readWorn`
+from `worn.mjs`, `PIN_SETTING` from `popups.mjs`, `baseActorOf` from `tie-dialog.mjs`, `SELECTION_FLAG`
+from `review-ui.mjs`; import them from their homes (`ties-adapter.mjs`, `settings.mjs`, `attributes.mjs`).
+`popups.mjs` imports `ties-adapter.mjs` once. The public API is unchanged. ties-ui-M5.
+
 ## 0.19.4 (2026-10-10, usability run, Area 7 re-run)
 
 - **The inspect window's Share switches are the table's PCs only** (`tablePCs`): each player's

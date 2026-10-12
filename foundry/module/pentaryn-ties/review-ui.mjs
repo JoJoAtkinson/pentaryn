@@ -42,8 +42,7 @@ import {
   reviewAttribute,
   unreviewAttribute,
   selectionIds,
-  selectAttributes,
-  SELECTION_FLAG
+  selectAttributes
 } from "./attributes.mjs";
 import { kindActorOf } from "./study.mjs";
 import { personalCluesHTML } from "./attributes-ui.mjs";
@@ -764,4 +763,3 @@ export class AttributeReview extends ApplicationV2 {
 }
 
 export const openReview = () => AttributeReview.open();
-export { SELECTION_FLAG };

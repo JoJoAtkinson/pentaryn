@@ -28,8 +28,6 @@
 
 import { read, write, baseActorOf } from "./ties-adapter.mjs";
 import { mayWrite } from "./settings.mjs";
-
-export { baseActorOf };
 import { pips, stanceSelect } from "./editor.mjs";
 import { MODULE, resolveMirror, NOTES_MAX, clampStance, clampStrength } from "./ties-core.mjs";
 import { esc } from "./core/html.mjs";

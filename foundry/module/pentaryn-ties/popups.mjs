@@ -23,15 +23,13 @@
  */
 
 import { MODULE, stanceOf } from "./ties-core.mjs";
-import { readWorn } from "./ties-adapter.mjs";
-import { canSee, read, stanceLabel } from "./ties-adapter.mjs";
+import { canSee, read, readWorn, stanceLabel } from "./ties-adapter.mjs";
 import { makeLog } from "./lib/log.mjs";
 import { PIN_SETTING, setting, mayWrite } from "./settings.mjs";
 
 const log = makeLog(MODULE);
 
 const LAYER_ID = "pentaryn-ties-cards";
-export { PIN_SETTING }; // the setting row lives in settings.mjs (CLIENT_STATE)
 const FALLBACK_ART = "icons/svg/mystery-man.svg";
 
 /** key `${sourceActorId}:${tieId}` -> { el, pinned, sourceId, tieId, anchor, colour } */
