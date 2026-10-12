@@ -41,7 +41,7 @@ import {
 import { applyPlayerWrites, knownListWith, putBelief } from "./apply.mjs";
 import { applyInspect, concealmentFor, grantKind, writeIdentification } from "./cascade.mjs";
 import { dropRow } from "./claim.mjs";
-import { factFrom, pending, reset, rowMissed } from "./gate.mjs";
+import { factFrom, reset, rowMissed } from "./gate.mjs";
 import { beliefsOf, kindActorOf, reg, resolveFact, studyStateFor, studyTiersOf } from "./resolve.mjs";
 import { esc, INSPECT } from "./shared.mjs";
 import { readFlag } from "../lib/flags.mjs";

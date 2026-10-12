@@ -25,10 +25,8 @@ import {
   STUDY_RUNGS
 } from "../known-core.mjs";
 import { applyPlayerWrites, postStub, putBelief, throwBlind } from "./apply.mjs";
-import { beliefs } from "./authoring.mjs";
 import { claimInspect, dropRow, releaseInspect } from "./claim.mjs";
 import { composeStudyPayload } from "./compose.mjs";
-import { pending } from "./gate.mjs";
 import {
   beliefsOf,
   holdDefault,
