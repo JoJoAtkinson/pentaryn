@@ -95,9 +95,6 @@ target itself, so it works either way.
 Per player (user flags, not settings): **Quick** (`flags.pentaryn-combat.quick`, the strip's
 checkbox) and **rider Ask/Auto** (`flags.pentaryn-combat.riders.<key>`, the Special-bar toggle).
 
-Per player (user flags, not settings): **Quick** (`flags.pentaryn-combat.quick`, the strip's checkbox)
-and **rider Ask/Auto** (`flags.pentaryn-combat.riders.<key>`, the Special-bar toggle).
-
 ## API — game.pentaryn.combat
 
 Built from `api-manifest.mjs` by the kit, frozen, published at `ready` (`game.modules.get("pentaryn-combat").api`
@@ -136,7 +133,7 @@ CONFIG.debug["pentaryn-combat"] = true; game.pentaryn.combat.trace();   // why a
 
 | Where | Key | When |
 |---|---|---|
-| actor | `flags.pentaryn-combat.turn` | each swing / rider / follow-up / Action Surge — `{key: "combat:round:combatantId", …}` — the combat is the started one the actor is in, not merely the one this client views (U-4-0) — `{attackAction, riders, followUps, nick, bonusUsed, otherActions, surges}`; self-invalidating (another turn's key reads as fresh). Always written whole (v14 `_replace`): a plain `setFlag` merges nested objects and carried last turn's used Sneak Attack into every later turn. Removed by the active GM when its combat is deleted (0.2.1; the out-of-combat `nocombat` turn stays) |
+| actor | `flags.pentaryn-combat.turn` | each swing / rider / follow-up / Action Surge — `{key: "combat:round:combatantId", …}` — the combat is the started one the actor is in, not merely the one this client views (U-4-0) — `{attackAction, riders, followUps, nick, bonusUsed, otherActions, surges, quickened}`; self-invalidating (another turn's key reads as fresh). Always written whole (v14 `_replace`): a plain `setFlag` merges nested objects and carried last turn's used Sneak Attack into every later turn. Removed by the active GM when its combat is deleted (0.2.1; the out-of-combat `nocombat` turn stays) |
 | actor | `flags.pentaryn-combat.reaction` | `{combatId}` when a Reaction is taken in combat; set to null at the actor's turn start, removed when that combat is deleted (0.2.1) |
 | actor | (sweep) | the active GM removes every world actor's `turn` / `reaction` flag whose combat no longer exists, on load and 1.5 s after any combat is deleted (0.2.2; a combat deleted with no GM online, or before 0.2.1, left them for good) |
 | actor | `flags.pentaryn-combat.last.weapon` | after a Full Attack / weapon pick |
