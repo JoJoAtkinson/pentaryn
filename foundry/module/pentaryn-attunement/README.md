@@ -123,7 +123,9 @@ reads `DND5E.EFFECT.Suppressed.Hint`.
   user, but in **every tab** of that user (the MCP bridge tab and a GM browser tab both, for a
   GM-made change). The slot hand-back writes the same values from either tab. The coin purse is
   claimed first (kit `claimDocument`, key `coinBack` on the purse item, 750 ms settle), so exactly
-  one tab pays and deletes it; a purse already gone stands down (W2-A1).
+  one tab pays and deletes it; a purse already gone stands down (W2-A1). Several purses in one
+  batch pay in turn on a per-actor coin chain, apart from the hand-backs, so each adds to the last
+  total (ATT-AC-2).
 - Sheet drops and `stash` write from the client that calls them.
 
 ## Extending

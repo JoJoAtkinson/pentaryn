@@ -9,6 +9,9 @@ The version stays 0.3.0 until the next `module.json` restart batch (code only: s
   window carried that tab's socket stamp, so every tab on the new actor read the claim as held and
   stood down — the coin was never paid. Now the purse is claimed afresh and pays once. A purse
   arriving in an Item Piles pile keeps its stamp (it never pays there).
+- **[declared] ATT-AC-2:** two bonded Coin Purses taken in one batch both pay (gp 10 + 5 + 3 = 18,
+  was 13). Payouts run in turn on a per-actor chain keyed `actor.uuid + ":coin"`, separate from the
+  slot hand-back chain, so hand-back timing is unchanged and a lone purse pays in the same ticks.
 
 ## 0.3.0 — 2026-10-12 (Wave 7 restart batch, wave 5; kit 1.1.0)
 

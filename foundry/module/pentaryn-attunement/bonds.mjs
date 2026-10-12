@@ -84,12 +84,15 @@ async function onCreateItemBond(item, options, userId) {
     // already gone (paid by the other tab) re-reads as {} and stands down.
     const won = await claimDocument(item, "coinBack", { scope: MODULE, reread: d => d.parent?.items?.get?.(d.id) ?? {} });
     if (!won) return;
-    const update = {};
-    for (const [k, v] of Object.entries(bond.currency)) update[`system.currency.${k}`] = (actor.system.currency?.[k] ?? 0) + v;
-    await actor.update(update);
-    await item.delete();
-    ui.notifications.info(t("CoinBack", { actor: actor.name }));
-    return;
+    // Two purses in one batch each add onto the other's write, not the same read (ATT-AC-2). Their own
+    // chain, so a purse never waits on a hand-back. Item Piles' own currency write is outside any chain.
+    return serial(actor, async () => {
+      const update = {};
+      for (const [k, v] of Object.entries(bond.currency)) update[`system.currency.${k}`] = (actor.system.currency?.[k] ?? 0) + v;
+      await actor.update(update);
+      await item.delete();
+      ui.notifications.info(t("CoinBack", { actor: actor.name }));
+    }, ":coin");
   }
 
   if (actor.id !== bond.actor) return;
@@ -110,16 +113,16 @@ async function onCreateItemBond(item, options, userId) {
   });
 }
 
-/** Per-actor tail of in-flight hand-backs. Local to this tab; two tabs still race (recorded). */
+/** Per-actor tails of in-flight hand-backs and, apart (`:coin`), coin purses. Local to this tab; two tabs still race (recorded). */
 const tails = new Map();
 
 /**
- * Run `step` after the actor's previous hand-back settles. Uncontended, it runs synchronously, so a
- * lone item home takes the same ticks as before. Returns `step`'s own promise: a rejection still
- * reaches the reg's labelled catch, while the stored tail swallows it so the next step still runs.
+ * Run `step` after the actor's previous step in the same `lane` settles. Uncontended, it runs
+ * synchronously, so a lone item home takes the same ticks as before. Returns `step`'s own promise: a
+ * rejection still reaches the reg's labelled catch, while the stored tail swallows it so the next step still runs.
  */
-function serial(actor, step) {
-  const key = actor.uuid;
+function serial(actor, step, lane = "") {
+  const key = actor.uuid + lane;
   const prev = tails.get(key);
   const run = prev ? prev.then(step) : step();
   const tail = run.catch(() => {});
@@ -168,7 +171,7 @@ export function install(reg) {
   reg.on("createItem", onCreateItemBond, { label: "createItem: bond return" });
 }
 
-/** Session state: the hand-back tails. */
+/** Session state: the hand-back and coin-purse tails. */
 export function uninstall() {
   tails.clear();
 }
