@@ -64,6 +64,10 @@ redrawing acts on the fact it was drawn for — the redraw builds its fact list 
 swaps them in only once finished, so a click or a switch refresh mid-redraw reads the previous,
 consistent set instead of a half-built one. ties-ui-ACC-2.
 
+Fixed (declared): the GM's **Attributes** tab finds who carries each personal attribute in one walk
+of the world's actors per paint (built only if a personal row asks), instead of one walk per personal
+row; the "Clues on …" lines are byte-identical. ties-ui-perf-2.
+
 Fixed (declared): the chat cards — the "… studies …" stub, the tempo line and the GM's share
 whisper — name every creature by its **token** name, never its actor name, so a GM-only world actor
 name cannot reach player chat. The token is found on any scene, not only the one the posting

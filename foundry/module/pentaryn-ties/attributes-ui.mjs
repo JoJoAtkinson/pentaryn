@@ -336,7 +336,28 @@ export function personalCluesHTML(entry, carriersOf = null) {
   return `<div class="pt-clues-box">${lines.join("")}</div>`;
 }
 
-function detail(row, { actor, isGM, viewer }) {
+/**
+ * id → the world actors carrying it, in one walk of `game.actors` — the same actors, in the same
+ * order, as `personalCluesHTML`'s own walk. A paint builds it at most once (ties-ui-perf-2).
+ */
+function carrierMap() {
+  const map = new Map();
+  for (const a of game.actors?.contents ?? []) {
+    let ids;
+    try {
+      ids = new Set(attributeIdsOf(a, kindActorOf));
+    } catch {
+      continue;
+    }
+    for (const id of ids) {
+      if (!map.has(id)) map.set(id, []);
+      map.get(id).push(a);
+    }
+  }
+  return map;
+}
+
+function detail(row, { actor, isGM, viewer, carriersOf }) {
   const grants = grantedRegion(grantsFor(viewer, row.id)); // the Known tab's own region (ties-17)
   const offers = offersBlock(viewer, actor, row.id);
 
@@ -355,7 +376,7 @@ function detail(row, { actor, isGM, viewer }) {
   return `<div class="pt-detail pt-attr-detail">
     ${grants}
     ${offers}
-    ${personalCluesHTML(row)}
+    ${personalCluesHTML(row, carriersOf)}
     ${
       row.authored
         ? `<div class="pt-fields pt-attr-fields">
@@ -637,6 +658,9 @@ export function buildAttributesHTML(actor, viewer = null) {
   // One registry read per paint, and only if an authored row asks: it cannot change mid-paint.
   let regList = null;
   const regOnce = () => (regList ??= registry());
+  // Who carries what, for the personal rows' clue lines: one world walk per paint, only if one asks.
+  let carriers = null;
+  const carriersOf = id => (carriers ??= carrierMap()).get(id) ?? [];
 
   const body = rows.length
     ? `<ul class="pt-list pt-attr-list">${rows
@@ -646,7 +670,8 @@ export function buildAttributesHTML(actor, viewer = null) {
             <div class="pt-detail-wrap"${open.has(r.id) ? "" : " hidden"}>${detail(r, {
               actor,
               isGM,
-              viewer: who
+              viewer: who,
+              carriersOf
             })}</div>
           </li>`
         )

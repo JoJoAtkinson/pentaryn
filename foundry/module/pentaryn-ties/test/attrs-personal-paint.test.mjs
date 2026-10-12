@@ -76,3 +76,11 @@ test("ties-ui-perf-2: an Attributes tab with personal attributes — markup pinn
   assert.equal((html.pc.match(/pt-clues-box/g) ?? []).length, 3, "each personal row on the PC draws its clue rows");
 });
 
+test("ties-ui-perf-2: one Attributes-tab paint walks the world's actors once for every personal row", () => {
+  let html = "";
+  const perRow = actorScans("personalCluesHTML", () => (html = AUI.buildAttributesHTML(get(PC))));
+  assert.equal((html.match(/pt-clues-box/g) ?? []).length, 3, "three personal rows drew");
+  assert.equal(perRow, 0, "personalCluesHTML reads the paint's carriersOf map, not the world");
+  assert.equal(actorScans("carrierMap", () => AUI.buildAttributesHTML(get(PC))), 1, "the id → carriers map is built once per paint");
+  assert.equal(actorScans("carrierMap", () => AUI.buildAttributesHTML(get(NPC2))), 1);
+});
