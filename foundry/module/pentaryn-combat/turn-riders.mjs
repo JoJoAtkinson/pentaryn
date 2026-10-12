@@ -300,7 +300,7 @@ export function autoRiders(config, message) {
       continue;
     }
     const once = `${actor.uuid}|${o.rider.key}|${combatContext(actor).key}`;
-    if (Date.now() - (autoApplied.get(once) ?? 0) < AUTO_GUARD_MS) continue;
+    if (Date.now() - (autoApplied.get(once) ?? 0) < AUTO_GUARD_MS) { trace("auto rider", { rider: o.rider.key, applied: false, why: "4 s guard" }); continue; }
     autoApplied.set(once, Date.now());
     trace("auto rider", { rider: o.rider.key, applied: true, dice: o.dice, attack: attackMsg.id });
     config.rolls[0].parts.push(`${o.dice}`);
