@@ -134,7 +134,8 @@ and the four patches above get their own rows (`adjustments-batch.md`, dropbin s
   locally. A relay that reaches a GM tab still loading (before `ready`) is held and recorded at
   `ready`, in arrival order; the player's relay resolves with its number then — DB-AC-2. Appends on one client are serialised and coalesced (one counter + log write per burst).
   Two tabs of one GM account both record a drop and both receive a relay; they compute the same
-  row, and the tail dedupe (same item, actor, quantity within 2 s) catches the sequential case.
+  row, and the tail dedupe (same item name and source `_id`, actor, quantity and pile within 2 s) catches the
+  sequential case; a second, distinct same-named item lost within 2 s is its own entry (dropbin-EC-2).
 - **Corpses:** conversion, revival and the legacy migration run where `activeGM.isSelf` — every
   tab of the active GM account (see the wave-2 report, W2-D1).
 - **Ready backfills** (lock sounds, in-view rule): the active GM user — every tab on that account

@@ -20,8 +20,12 @@ export const MIRROR_DEBOUNCE_MS = 2000;
 /** The ready line's size hint: the ledger as JSON, in whole KB (at least 1 when not empty). */
 export const ledgerKB = log => (log.length ? Math.max(1, Math.round(JSON.stringify(log).length / 1024)) : 0);
 
-/** The four fields that identify one loss: reason, item name, the actor it left, the quantity. */
-export const dedupeKey = e => `${e.reason}|${e.itemName}|${e.fromActorId}|${e.quantity}`;
+/**
+ * The fields that identify one loss: reason, item name, the actor it left, the quantity, the item
+ * source's _id and the pile it went to (dropbin-EC-2) — so a second same-named item lost within
+ * DEDUPE_MS is its own entry, while one event seen on two clients is still one.
+ */
+export const dedupeKey = e => `${e.reason}|${e.itemName}|${e.fromActorId}|${e.quantity}|${e.item?._id ?? ""}|${e.pileUuid ?? ""}`;
 
 /** The log's last entry when `entry` repeats it within `dedupeMs`, else null. */
 export function duplicateOfTail(log, entry, dedupeMs = DEDUPE_MS) {

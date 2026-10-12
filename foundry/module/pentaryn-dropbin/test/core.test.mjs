@@ -28,7 +28,16 @@ for (const [label, M] of IMPLS) {
   });
 
   test(`${label}: dedupeKey`, () => {
-    assert.equal(M.dedupeKey({ reason: "drop", itemName: "Sword", fromActorId: "a", quantity: 2 }), "drop|Sword|a|2");
+    const x = { reason: "drop", itemName: "Sword", fromActorId: "a", quantity: 2 };
+    const sourced = { ...x, item: { _id: "i1" }, pileUuid: "Scene.s.Token.p" };
+    // declared (dropbin-EC-2): the core adds the item source's _id and the pileUuid; the oracle did not
+    if (label === "oracle") {
+      assert.equal(M.dedupeKey(x), "drop|Sword|a|2");
+      assert.equal(M.dedupeKey(sourced), "drop|Sword|a|2");
+    } else {
+      assert.equal(M.dedupeKey(x), "drop|Sword|a|2||");
+      assert.equal(M.dedupeKey(sourced), "drop|Sword|a|2|i1|Scene.s.Token.p");
+    }
   });
 
   test(`${label}: normaliseDeltas, listLast, findEntry, searchLog`, () => {

@@ -18,13 +18,26 @@ test("VERSION === module.json version; MODULE is loot-core's", () => {
   assert.deepEqual([core.SHORT, core.NS, core.I18N, core.CSS], ["dropbin", "dropbin", "PENTARYN_DROPBIN", "pd-"]);
 });
 
-test("duplicateOfTail agrees with the oracle's tail test", () => {
-  const log = [{ n: 1, t: 0, reason: "drop", itemName: "A", fromActorId: "a", quantity: 1 }];
-  const e = (t, itemName = "A") => ({ t, reason: "drop", itemName, fromActorId: "a", quantity: 1 });
+test("duplicateOfTail agrees with the oracle's tail test where the item source and pile match (dropbin-EC-2 declared the rest)", () => {
+  const log = [{ n: 1, t: 0, reason: "drop", itemName: "A", fromActorId: "a", quantity: 1, pileUuid: "P", item: { _id: "i" } }];
+  const e = (t, itemName = "A") => ({ t, reason: "drop", itemName, fromActorId: "a", quantity: 1, pileUuid: "P", item: { _id: "i" } });
   for (const x of [e(1999), e(2000), e(2001), e(0, "B")]) {
     assert.equal(!!core.duplicateOfTail(log, x), oracle.isDuplicateOfTail(log, x), JSON.stringify(x));
   }
   assert.equal(core.duplicateOfTail([], e(0)), null);
+});
+
+test("dedupe keys on the item's source _id and pileUuid: a distinct same-named loss within 2 s is a second entry (dropbin-EC-2)", () => {
+  const e = (t, _id, pileUuid = null) => ({ t, reason: "drop", itemName: "Dagger", fromActorId: "a", quantity: 1, pileUuid, item: { _id, name: "Dagger" } });
+  const log = [{ n: 1, ...e(0, "i1", "Scene.s.Token.p1") }];
+  assert.equal(core.duplicateOfTail(log, e(500, "i2", "Scene.s.Token.p1")), null, "another Dagger, same pile: a real second loss");
+  assert.equal(core.duplicateOfTail(log, e(500, "i1", "Scene.s.Token.p2")), null, "a second pile: a real second loss");
+  assert.equal(core.duplicateOfTail(log, e(500, "i1", "Scene.s.Token.p1")), log[0], "the same event seen twice: one entry");
+  assert.equal(oracle.isDuplicateOfTail(log, e(500, "i2", "Scene.s.Token.p1")), true, "the oracle dropped the second Dagger (EC-2)");
+  const del = (t, _id) => ({ t, reason: "delete", itemName: "Potion", fromActorId: "a", quantity: 1, pileUuid: null, item: { _id } });
+  const r = core.appendEntry(core.appendEntry([], 0, del(0, "p1")).log, 1, del(100, "p2"));
+  assert.deepEqual([r.n, r.duplicate, r.log.length], [2, false, 2], "two Potions deleted within 2 s: two entries");
+  assert.equal(core.appendEntry(r.log, 2, del(200, "p2")).duplicate, true, "the second Potion relayed again: one entry");
 });
 
 test("appendEntry: number counter + 1, never mutates; a duplicate returns the tail's n", () => {
