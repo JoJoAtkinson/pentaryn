@@ -731,7 +731,8 @@ export class InspectPreview extends ApplicationV2 {
       }
       if (actor.type !== "character") return;
       const flat = Object.keys(foundry.utils.flattenObject(changes ?? {}));
-      if (flat.some(k => k === "name" || touchesFlagScope(k, MODULE)))
+      // ties-46: an ownership change can move a character onto (or off) the table's PC roster
+      if (flat.some(k => k === "name" || k === "ownership" || k.startsWith("ownership.") || touchesFlagScope(k, MODULE)))
         this.queueLive(false);
     };
     const onRoster = actor => {
@@ -748,7 +749,11 @@ export class InspectPreview extends ApplicationV2 {
       ["updateSetting", onSetting],
       ["createSetting", onSetting],
       ["deleteSetting", onSetting],
-      ["updateToken", onToken]
+      ["updateToken", onToken],
+      // ties-46: a player picking (or changing) their character, or a role change, reshapes the roster
+      ["updateUser", (user, changes = {}) => {
+        if ("character" in (changes ?? {}) || "role" in (changes ?? {})) this.queueLive(false);
+      }]
     ];
     this.live.start(hooks);
   }

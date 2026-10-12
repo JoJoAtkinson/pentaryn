@@ -115,7 +115,7 @@ test("B7 / ties-24 (before): a player's canvasReady still schedules a worn-badge
   assert.deepEqual({ queued: queued >= 1, painted: F.pixi.length - p0 }, { queued: true, painted: 0 });
 });
 
-test("ties-46 (before): the inspect preview's live hooks — no updateUser, no ownership watch", async () => {
+test("ties-46 [declared, flipped]: the inspect preview's live hooks gain updateUser (before: no updateUser, no ownership watch)", async () => {
   const { InspectPreview } = await import("../preview-app.mjs");
   const pv = new InspectPreview(get(NPC));
   const before = F.hooks.length;
@@ -123,7 +123,7 @@ test("ties-46 (before): the inspect preview's live hooks — no updateUser, no o
   const added = F.hooks.slice(before).map(h => `${h.kind}:${h.name}`);
   pv._onClose({});
   pinJSON("declared-ties46-preview-hooks", added, import.meta.url);
-  assert.ok(!added.includes("on:updateUser"));
+  assert.ok(added.includes("on:updateUser"));
 });
 
 /* ── obvious bugs found while characterising: the intended behaviour, as todo ─────────────────── */

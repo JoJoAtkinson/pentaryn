@@ -59,3 +59,27 @@ test("the Look window's live hooks: today's list, all removed on close", () => {
   assert.deepEqual(added, ["updateActor", "createSetting", "updateSetting", "deleteSetting", "updateToken", "deleteActor"]);
   assert.deepEqual(F.listeners(), before);
 });
+
+test("ties-46: the preview refreshes its roster when a player picks a character, or ownership changes", async () => {
+  const pv = new InspectPreview(game.actors.get(NPC));
+  let renders = 0;
+  pv.mode = "player";
+  Object.defineProperty(pv, "rendered", { get: () => true, configurable: true });
+  pv.refreshSwitches = () => false;
+  pv.liveRender = () => renders++;
+  pv._onFirstRender({}, {});
+  const tick = () => mock.timers.tick(150);
+  F.fire("updateUser", game.users.get(PLAYER), { character: PC });
+  tick();
+  assert.equal(renders, 1, "a character pick");
+  F.fire("updateUser", game.users.get(PLAYER), { avatar: "x.webp" });
+  tick();
+  assert.equal(renders, 1, "an avatar change does nothing");
+  F.fire("updateActor", game.actors.get(PC), { ownership: { [PLAYER]: 3 } });
+  tick();
+  assert.equal(renders, 2, "an ownership change on a character");
+  F.fire("updateActor", game.actors.get(PC), { system: { attributes: { hp: { value: 3 } } } });
+  tick();
+  assert.equal(renders, 2, "an hp change does nothing");
+  pv._onClose({});
+});
