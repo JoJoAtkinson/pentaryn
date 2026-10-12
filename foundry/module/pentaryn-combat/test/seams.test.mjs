@@ -2,9 +2,9 @@
 // oracles in fixtures/legacy-combat.mjs, or the old inline expression copied here).
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { makeMessage, setupWorld } from "./fixtures/world.mjs";
+import { makeCombat, makeMessage, makeToken, setupWorld } from "./fixtures/world.mjs";
 import * as legacy from "./fixtures/legacy-combat.mjs";
-import { fighter, rogue, wolf } from "./fixtures/actors.mjs";
+import { fighter, monk, rogue, slayer, wolf } from "./fixtures/actors.mjs";
 
 const W = await setupWorld();
 const { F, doc } = W;
@@ -129,4 +129,29 @@ test("fullAttackPlanFrom (core) as recorded; KNOWN: Multiattack ignores Action S
     }
   }
   assert.deepEqual(pc.swings.map(x => [x.weaponId, x.kind]), [["scimitar00000001", "main"], ["scimitar00000001", "main"], ["dagger0000000002", "nick"]]);
+});
+
+test("followUpsFor(actor, { bonusFree }) equals the legacy followUpsNow oracle with and without a panel (combat-riders-11)", async () => {
+  const cast = [fighter({ id: "fuFighter0000001" }), rogue({ id: "fuRogue000000001" }), monk({ focus: 0, id: "fuMonk0000000000" }),
+    monk({ focus: 2, id: "fuMonk2000000000" }), slayer({ id: "fuSlayer00000001" })];
+  const toks = cast.map((a, i) => makeToken(a, { id: `fuTok${i}`.padEnd(16, "0"), x: i * 2 }));
+  const check = (label) => {
+    for (const a of cast) {
+      for (const panel of [undefined, { currentActions: 1 }, { currentActions: 0 }]) {
+        const free = !shapes.combatContext(a).inCombat || !panel || panel.currentActions !== 0;
+        assert.deepEqual(shapes.followUpsFor(a, { bonusFree: free }), legacy.followUpsNow(a, panel), `${label} ${a.name} ${JSON.stringify(panel)}`);
+      }
+    }
+  };
+  check("out of combat, no swings");
+  const c = makeCombat({ id: "fuCombat00000001", entries: cast.map((a, i) => ({ id: `fuCb${i}`.padEnd(16, "0"), actor: a, token: toks[i] })) });
+  check("in combat, first combatant's turn");
+  for (const [i, a] of cast.entries()) {
+    c.turn = i;
+    const light = shapes.weaponsOf(a).find(w => w.light)?.id ?? null;
+    if (light) await shapes.updateTurn(a, t => core.recordSwing(t, { kind: "main", weaponId: light }));
+    check(`${a.name}'s turn after a Light main swing`);
+    await shapes.updateTurn(a, t => core.recordSwing(t, { kind: "nick", weaponId: light }));
+    check(`${a.name}'s turn after Nick`);
+  }
 });

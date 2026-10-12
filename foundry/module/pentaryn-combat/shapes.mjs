@@ -393,3 +393,35 @@ export function riderDiceFor(actor, rider) {
   const scale = rider.scale ? actor?.system?.scale?.[rider.scale[0]]?.[rider.scale[1]] : null;
   return core.riderDice(rider, scale);
 }
+
+/**
+ * The follow-ups (Off-hand, Nick, Flurry, Martial Arts, Hew, Pole Strike) this actor qualifies for
+ * right now, as the Bonus and Special bars offer them (combat-riders-11). `bonusFree`: the Bonus
+ * Action is not spent — the HUD reads Argon's Bonus pip, inspect() the turn flag.
+ */
+export function followUpsFor(actor, { bonusFree = true } = {}) {
+  const ctx = combatContext(actor);
+  const weapons = weaponsOf(actor);
+  const unarmed = unarmedStrike(actor);
+  const turn = turnOf(actor);
+  const features = featuresOf(actor);
+  const focus = focusLeft(actor);
+  const pam = features.has("polearm-master") ? featureItem(actor, "polearm-master") : null;
+  const list = core.followUps({
+    turn, weapons, features,
+    enhancedDualWielding: !!actor.getFlag?.("dnd5e", "enhancedDualWielding"),
+    bonusFree, focus, unarmedId: unarmed?.id ?? null, isOwnTurn: ctx.isOwnTurn,
+    poleStrikeId: pam && attackActivityOf(pam) ? pam.id : null
+  });
+  // Which rule each Off-hand is (Light property or Dual Wielder), for its tooltip (U-10-12).
+  for (const f of list) {
+    if (f.kind === "offhand") f.via = core.offhandVia({ weapon: weapons.find(w => w.id === f.weaponId) ?? null, turn, offered: list });
+  }
+  // Usability (area 3, C3): Flurry with no Focus left stays on the bar, greyed with its reason, instead of
+  // vanishing — a player who sees Martial Arts but no Flurry wonders whether the feature broke.
+  if (ctx.isOwnTurn && unarmed && features.has("monks-focus") && (focus ?? 0) < 1 && bonusFree && !turn.bonusUsed
+    && !turn.followUps.includes("flurry") && !turn.followUps.includes("martial-arts")) {
+    list.unshift({ kind: "flurry", weaponId: unarmed.id, count: features.has("heightened-focus") ? 3 : 2, disabled: "focus" });
+  }
+  return list;
+}

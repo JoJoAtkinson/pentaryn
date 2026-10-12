@@ -18,7 +18,7 @@ import * as core from "../combat-core.mjs";
 import { MODULE } from "../combat-core.mjs";
 import { makeLog } from "../lib/log.mjs";
 import { setting, riderMode, setRiderMode } from "../settings.mjs";
-import { weaponsOf, featuresOf, combatContext, turnOf, newTurn, attackActivityOf, unarmedStrike, focusLeft, turnSettled, featureItem, isReckless, riderDiceFor } from "../shapes.mjs";
+import { weaponsOf, featuresOf, combatContext, turnOf, newTurn, turnSettled, isReckless, riderDiceFor, followUpsFor } from "../shapes.mjs";
 import { applyButtons, dropStrayTooltip, itemButtonClass, mainPanel, protoDescriptor, settlePips } from "../argon.mjs";
 import { FALLBACK_IMG, argonClasses, fullAttackState, liveButtons, wireButtons } from "./buttons-ui.mjs";
 import { running, abortFor } from "../sequence.mjs";
@@ -112,33 +112,10 @@ function composeActionBar(panel, actor) {
 /* ── the Bonus and Special bars ──────────────────────────────────────────── */
 
 function followUpsNow(actor, bonusPanel) {
-  const ctx = combatContext(actor);
-  const weapons = weaponsOf(actor);
-  const unarmed = unarmedStrike(actor);
   // Argon resets its Bonus pip only on a new combat round: out of combat it would stay spent forever
   // (and "New turn" can't clear it), so out of combat only the turn flag says whether Bonus is free.
-  const bonusFree = !ctx.inCombat || !bonusPanel || bonusPanel.currentActions !== 0;
-  const turn = turnOf(actor);
-  const features = featuresOf(actor);
-  const focus = focusLeft(actor);
-  const pam = features.has("polearm-master") ? featureItem(actor, "polearm-master") : null;
-  const list = core.followUps({
-    turn, weapons, features,
-    enhancedDualWielding: !!actor.getFlag?.("dnd5e", "enhancedDualWielding"),
-    bonusFree, focus, unarmedId: unarmed?.id ?? null, isOwnTurn: ctx.isOwnTurn,
-    poleStrikeId: pam && attackActivityOf(pam) ? pam.id : null
-  });
-  // Which rule each Off-hand is (Light property or Dual Wielder), for its tooltip (U-10-12).
-  for (const f of list) {
-    if (f.kind === "offhand") f.via = core.offhandVia({ weapon: weapons.find(w => w.id === f.weaponId) ?? null, turn, offered: list });
-  }
-  // Usability (area 3, C3): Flurry with no Focus left stays on the bar, greyed with its reason, instead of
-  // vanishing — a player who sees Martial Arts but no Flurry wonders whether the feature broke.
-  if (ctx.isOwnTurn && unarmed && features.has("monks-focus") && (focus ?? 0) < 1 && bonusFree && !turn.bonusUsed
-    && !turn.followUps.includes("flurry") && !turn.followUps.includes("martial-arts")) {
-    list.unshift({ kind: "flurry", weaponId: unarmed.id, count: features.has("heightened-focus") ? 3 : 2, disabled: "focus" });
-  }
-  return list;
+  const bonusFree = !combatContext(actor).inCombat || !bonusPanel || bonusPanel.currentActions !== 0;
+  return followUpsFor(actor, { bonusFree });
 }
 
 /**
