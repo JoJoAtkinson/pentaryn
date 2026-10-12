@@ -11,6 +11,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { bootWorld, settle } from "./fixtures/world.mjs";
+import { StubCollection } from "./kit/foundry-stub.mjs";
 
 const PC = "zzPc000000000001";
 const PC2 = "zzPc000000000002";
@@ -18,6 +19,7 @@ const NPC = "zzNpc00000000001";
 const NPC2 = "zzNpc00000000002";
 const NPC3 = "zzNpc00000000003";
 const NPC4 = "zzNpc00000000004";
+const NPC5 = "zzNpc00000000005";
 const PLAYER = "zzPlayerUser0001";
 
 const F = await bootWorld({
@@ -28,11 +30,15 @@ const F = await bootWorld({
     {
       id: NPC,
       name: "ZZ Lich Vorath",
-      flags: { "pentaryn-ties": { lore: [{ id: "l1", label: "Debts", dc: 12, skill: "ins", text: "<p>Owes.</p>", miss: "" }] } },
+      flags: { "pentaryn-ties": { lore: [
+        { id: "l1", label: "Debts", dc: 12, skill: "ins", text: "<p>Owes.</p>", miss: "" },
+        { id: "l2", label: "Haunts", dc: 12, skill: "ins", text: "<p>The crypt.</p>", miss: "" },
+      ] } },
     },
     { id: NPC2, name: "ZZ Second Secret" },
     { id: NPC3, name: "ZZ Off Scene Secret", prototypeToken: { name: "A stranger" } },
     { id: NPC4, name: "ZZ Tokenless" },
+    { id: NPC5, name: "ZZ Far Secret", prototypeToken: { name: "ZZ Far Secret" } },
   ],
   tokens: [
     { id: "zzTokPc000000001", actorId: PC, name: "Caven", x: 0, y: 0 },
@@ -42,10 +48,30 @@ const F = await bootWorld({
   ],
 });
 const Study = await import("../study.mjs");
-const { postStub } = await import("../study/apply.mjs");
+const { postStub, applyStudy } = await import("../study/apply.mjs");
 const get = id => game.actors.get(id);
 const cardsSince = mark => F.calls.slice(mark).filter(c => c.op === "ChatMessage.create").map(c => c.data);
-const SECRETS = /ZZ (Lich|Second Secret|Off Scene|Caven Full|Wren Full)/;
+const SECRETS = /ZZ (Lich|Second Secret|Off Scene|Far Secret|Caven Full|Wren Full)/;
+
+/** A scene the GM client can be looking at that is not the active one (`canvas.scene` ≠ active). */
+const addScene = (id, tokens = []) => {
+  const scene = { id, active: false, tokens: new StubCollection(tokens) };
+  game.scenes.set(id, scene);
+  return scene;
+};
+const EMPTY = addScene("zzScene000000002");
+addScene("zzScene000000003", [{ id: "zzTokFar00000001", actorId: NPC5, name: "Cloaked rider" }]);
+
+/** Run `fn` with this client's canvas on `scene`, then put it back. */
+async function viewing(scene, fn) {
+  const was = canvas.scene;
+  canvas.scene = scene;
+  try {
+    return await fn();
+  } finally {
+    canvas.scene = was;
+  }
+}
 
 test("name-leak: the closer-look stub and the tempo line name creatures by their token names", async () => {
   const mark = F.calls.length;
@@ -90,4 +116,31 @@ test("name-leak: an unlinked token's own name wins; prototype name off scene; ac
   assert.match(texts[0], /Caven studies Masked guard\./);
   assert.match(texts[1], /Caven studies A stranger\./);
   assert.match(texts[2], /Caven studies ZZ Tokenless\./);
+});
+
+test("name-leak: a GM client looking at another scene still names by token (the Study stub and the share whisper)", async () => {
+  const mark = F.calls.length;
+  const ok = await viewing(EMPTY, () => settle(applyStudy({ characterId: PC, subjectId: NPC, ns: "lore", factId: "l1" }, game.user.id)));
+  assert.equal(ok, true, "the study applied");
+  const res = await viewing(EMPTY, () => settle(Study.shareFact({ ns: "lore", subjectId: NPC, factId: "l2" }, [get(PC2)])));
+  assert.deepEqual(res.shared, [PC2]);
+  const cards = cardsSince(mark);
+  const stub = cards.find(c => c.content.includes("studies"));
+  const whisper = cards.find(c => c.whisper?.length);
+  assert.ok(stub, "the stub was posted");
+  assert.ok(whisper, "the whisper was posted");
+  assert.match(stub.content, /Caven studies Hooded figure\./);
+  assert.equal(stub.speaker.alias, "Caven");
+  assert.match(whisper.content, /Wren has learned something about Hooded figure\./);
+  for (const c of cards) {
+    assert.doesNotMatch(c.content, SECRETS, "no actor name in a card's text");
+    if (c.speaker?.alias != null) assert.doesNotMatch(c.speaker.alias, SECRETS, "no actor name as the speaker");
+  }
+});
+
+test("name-leak: a token on a scene nobody is viewing beats the prototype and actor names", async () => {
+  const mark = F.calls.length;
+  await postStub(get(PC), get(NPC5));
+  const [card] = cardsSince(mark);
+  assert.match(card.content, /Caven studies Cloaked rider\./);
 });

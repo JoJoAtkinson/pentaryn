@@ -30,20 +30,30 @@ export const clampSituational = v => Math.max(SITUATIONAL_MIN, Math.min(SITUATIO
 
 /**
  * The token a chat card names `actor` by: an unlinked token's own document, else the first token
- * of that actor on the scene in view, else null.
+ * of that actor on this client's scene, then the active scene, then any scene; else null.
+ *
+ * ⚠ Every scene, not just `canvas.scene`: the Study stub and the share whisper post from the
+ * arbiter GM's client, whose canvas is wherever the GM happened to be looking (the `canReach`
+ * lesson, usability run Area 7 K2). Stopping at it leaked the actor name whenever the GM tab sat
+ * on another scene.
  */
 export function cardToken(actor) {
   if (!actor) return null;
   if (actor.token) return actor.token;
-  const scene = canvas?.scene ?? game.scenes?.viewed ?? null;
-  return scene?.tokens?.find?.(t => t.actorId === actor.id) ?? null;
+  const first = scene => scene?.tokens?.find?.(t => t.actorId === actor.id) ?? null;
+  const scenes = [canvas?.scene, game.scenes?.active, ...(game.scenes?.contents ?? [])];
+  for (const scene of scenes) {
+    const token = first(scene);
+    if (token) return token;
+  }
+  return null;
 }
 
 /**
  * **The name a chat card may print for a creature** — its TOKEN name, never its actor name
  * (TIE-3). Joe's ruling: the token name is public, and a world actor's name can be GM-only
- * ("ZZ Lich Vorath" behind "Hooded figure"). The prototype token's name stands in when none is on
- * the scene; the actor name only when there is no token at all.
+ * ("ZZ Lich Vorath" behind "Hooded figure"). The prototype token's name stands in when the actor
+ * has no token on any scene; the actor name only when there is no token at all.
  */
 export const cardName = actor => cardToken(actor)?.name || actor?.prototypeToken?.name || actor?.name || "";
 

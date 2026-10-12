@@ -35,8 +35,9 @@ the sheet — leaving the box now saves a pending autosave at once instead of dr
 
 Fixed (declared): the chat cards — the "… studies …" stub, the tempo line and the GM's share
 whisper — name every creature by its **token** name, never its actor name, so a GM-only world actor
-name cannot reach player chat. No token on the scene → the prototype token's name; the actor name
-only when there is no token at all. name-leak (play-test TIE-3).
+name cannot reach player chat. The token is found on any scene, not only the one the posting
+client is viewing (the GM's tab can sit elsewhere); no token on any scene → the prototype token's
+name; the actor name only when there is no token at all. name-leak (play-test TIE-3).
 
 ## 0.19.4 (2026-10-10, usability run, Area 7 re-run)
 
