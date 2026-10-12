@@ -112,3 +112,34 @@ test("KIT-M9: each README .mjs row's Exports cell equals that file's named expor
     assert.deepEqual([...listed].sort(), [...actual].sort(), `README.md \`${rel}\` row lists the wrong exports`);
   }
 });
+
+// KIT-M7 (final review 2026-10-12): isCoded, withRef and installRoot have no consumer outside the
+// kit. Ruling: keep all three exported (dropping an export is a breaking change at a minor bump) and
+// say so in the README row. The marker must track reality — present while no module source outside
+// its vendored lib/ and test/kit/ names the export, gone once one does.
+test("KIT-M7: the README marks isCoded, withRef and installRoot 'exported for modules; no consumer yet' while no module uses them", () => {
+  const readme = readFileSync(fileURLToPath(new URL("../README.md", import.meta.url)), "utf8");
+  const modulesDir = new URL("../../module/", import.meta.url);
+  const sources = [];
+  const walk = (dir, rel) => {
+    for (const e of readdirSync(dir, { withFileTypes: true })) {
+      const r = rel ? `${rel}/${e.name}` : e.name;
+      if (e.isDirectory()) {
+        if (e.name === "node_modules" || /^[^/]+\/(lib|test\/kit)$/.test(r)) continue;
+        walk(new URL(`${e.name}/`, dir), r);
+      } else if (/\.(mjs|js)$/.test(e.name)) sources.push(readFileSync(new URL(e.name, dir), "utf8"));
+    }
+  };
+  walk(modulesDir, "");
+  assert.ok(sources.length > 0, "no module sources found under foundry/module/");
+  for (const [file, name] of [["errors.mjs", "isCoded"], ["resolve.mjs", "withRef"], ["publish.mjs", "installRoot"]]) {
+    const row = readme.split("\n").find(l => l.startsWith(`| \`${file}\` |`));
+    assert.ok(row, `README.md has no ${file} row`);
+    const notes = row.split("|").map(c => c.trim())[3];
+    const marked = notes.includes(`\`${name}\`: exported for modules; no consumer yet`);
+    const used = sources.some(s => new RegExp(`\\b${name}\\b`).test(s));
+    assert.equal(marked, !used, used
+      ? `a module now uses ${name}; drop its "no consumer yet" marker from the README ${file} row`
+      : `README.md ${file} row does not mark \`${name}\`: exported for modules; no consumer yet`);
+  }
+});
