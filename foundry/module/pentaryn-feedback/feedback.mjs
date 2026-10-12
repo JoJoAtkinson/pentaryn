@@ -33,6 +33,7 @@ import { registerQueries } from "./lib/queries.mjs";
 import { registerSettings, setting } from "./settings.mjs";
 import { MANIFEST } from "./api-manifest.mjs";
 import { buildApiFor } from "./api.mjs";
+import { fileStore, hasStore, useStore } from "./files-adapter.mjs";
 import * as recorder from "./recorder.mjs";
 import * as reporter from "./reporter.mjs";
 
@@ -75,6 +76,8 @@ function onInit() {
 }
 
 function onSetup() {
+  // the shared report store logs through the module (debug only); a store already active is kept
+  if (!hasStore()) useStore(fileStore({ log }));
   install();
 }
 

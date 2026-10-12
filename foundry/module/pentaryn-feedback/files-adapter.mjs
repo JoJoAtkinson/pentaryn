@@ -94,9 +94,17 @@ export function fileStore({ g = globalThis, fp = null, fetch: fetchFn = null, ro
 
 let active = null;
 
-/** The store the reporter and the API share (created on first use). */
+/**
+ * The store the reporter and the API share. The entry wires one with the module log at setup;
+ * anything that asks before then gets a log-less default.
+ */
 export function store() {
   return (active ??= fileStore());
+}
+
+/** True once a store is active (the entry's own, or one a test swapped in). */
+export function hasStore() {
+  return active !== null;
 }
 
 /** Swap the shared store — tests pass an in-memory one; `null` goes back to the default. */

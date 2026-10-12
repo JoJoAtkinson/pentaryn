@@ -2,6 +2,11 @@
 
 ## Unreleased — 2026-10-12 (W3L live-check fix; `module.json` stays 0.1.2, code-only sync)
 
+- **[declared] The report store logs through the module** (feedback-M10): `fileStore` took a
+  `log` option nobody passed, so its `createDirectory` and `browse` debug lines never fired. The
+  entry's setup now wires `useStore(fileStore({ log }))` when no store is active yet (a test's
+  memory store is kept). The lines stay debug level — console only, with
+  `CONFIG.debug["pentaryn-feedback"] = true`.
 - **[declared] The API manifest builds its strings from core** (feedback-EXT-1-followup): the
   report-file path, queue flag and the category/status unions in `api-manifest.mjs` were literals;
   they now come from `STORE_DIR`, `FLAG_SCOPE`, `QUEUE_KEY`, `CATEGORY_KEYS` and `STATUSES`, so a
