@@ -48,7 +48,7 @@ function reservedClash(path, { own, legacy }) {
  *  - Write rows never throw for an expected refusal (use-doc §5.1): a coded resolve error (NOT_FOUND,
  *    AMBIGUOUS, BAD_ARGS) comes back as `fail(code, reason)`. Callers `await` a write either way.
  */
-function bind(row, fn) {
+function bind(row, fn, { g = globalThis } = {}) {
   const first = row.params?.[0];
   if (first?.name !== "ref" || first.resolve === false || first.resolve === "self") return fn;
   const kind = first.kind ?? "actor";
@@ -57,7 +57,7 @@ function bind(row, fn) {
     const scope = opts && typeof opts === "object" ? opts : {};
     let doc;
     try {
-      doc = resolveRef(ref, kind, { required, sceneId: scope.sceneId, base: scope.base });
+      doc = resolveRef(ref, kind, { required, sceneId: scope.sceneId, base: scope.base, g });
     } catch (err) {
       if (row.writes && errorCode(err, CODES)) return toFail(err);
       throw err;
@@ -115,13 +115,14 @@ function freezeDeep(obj) {
  * @param {Manifest} manifest
  * @param {Record<string, Function>} impl  `{ path: fn }`
  * @param {{ contributions?: {rows: ApiRow[], impl: Record<string, Function>}[],
- *   extras?: object|(() => object), members?: Record<string, Function> }} [opts]
+ *   extras?: object|(() => object), members?: Record<string, Function>, g?: object }} [opts]
  *   extras: what `describe()` reports beyond the rows (settings, events, hooks, patches, published);
  *   a function is called on every describe(), so live registrations show.
+ *   g: the global a `ref` row resolves against (default `globalThis`, like every kit function; 1.2.0 KIT-M4).
  * @returns {object} the frozen API. Never freezes the caller's objects: an `unlisted` table is
  *   published as a frozen copy (kit 1.0.1, K5).
  */
-export function buildApi(manifest, impl, { contributions = [], extras = {}, members = {} } = {}) {
+export function buildApi(manifest, impl, { contributions = [], extras = {}, members = {}, g = globalThis } = {}) {
   const mod = manifest.module;
   const rows = [];
   const fns = {};
@@ -158,7 +159,7 @@ export function buildApi(manifest, impl, { contributions = [], extras = {}, memb
 
   const merged = { ...manifest, rows };
   const api = {};
-  for (const row of rows) setPath(api, row.path, bind(row, fns[row.path]), mod);
+  for (const row of rows) setPath(api, row.path, bind(row, fns[row.path], { g }), mod);
   for (const path of unlisted) if (fns[path]) setPath(api, path, publishedCopy(fns[path]), mod);
 
   api.version = manifest.version;

@@ -5,7 +5,7 @@ import { CODES, RESERVED } from "../errors.mjs";
 import { maxDepth as harnessDepth } from "../test-kit/harness.mjs";
 
 const doc = { documentName: "Actor", id: "aaaaaaaaaaaaaaaa", name: "Aldric", uuid: "Actor.aaaaaaaaaaaaaaaa" };
-globalThis.game = { actors: new Map([[doc.id, doc]]) };   // resolveRef's default global, for ref rows
+const g = { game: { actors: new Map([[doc.id, doc]]) } };   // the injected global ref rows resolve against (KIT-M4)
 
 const MANIFEST = Object.freeze({
   module: "pentaryn-x", namespace: "x", version: "0.1.0", contract: "pentaryn-x/api@1", flagScope: "pentaryn-x",
@@ -23,7 +23,7 @@ const impl = {
 };
 
 test("builds dotted paths, resolves ref params, freezes every level", () => {
-  const api = buildApi(MANIFEST, impl, { members: { settings: () => ({ on: true }) } });
+  const api = buildApi(MANIFEST, impl, { members: { settings: () => ({ on: true }) }, g });
   assert.ok(Object.isFrozen(api) && Object.isFrozen(api.store));
   assert.deepEqual(api.inspect("Aldric"), { name: "Aldric" });
   assert.throws(() => api.inspect("Nobody"), /NOT_FOUND/);
@@ -126,36 +126,43 @@ test("toPlain: documents → refs, collections, dates, functions, depth cap, cyc
 });
 
 test("ref rows take scene scope and base from the call's opts; writes return fail() on a bad ref", async () => {
-  const saved = globalThis.game;
   const tok = (id, sceneId) => ({ documentName: "Token", id, name: "Goblin", uuid: `Scene.${sceneId}.Token.${id}`, actorId: doc.id, actor: doc });
   const s1 = { documentName: "Scene", id: "scene00000000001", name: "One", tokens: new Map([["tok0000000000001", tok("tok0000000000001", "scene00000000001")]]) };
   const s2 = { documentName: "Scene", id: "scene00000000002", name: "Two", tokens: new Map([["tok0000000000002", tok("tok0000000000002", "scene00000000002")]]) };
-  globalThis.game = { actors: new Map([[doc.id, doc]]), scenes: new Map([[s1.id, s1], [s2.id, s2]]) };
-  try {
-    const M = {
-      ...MANIFEST,
-      rows: [
-        { path: "peek", params: [{ name: "ref", kind: "token" }, { name: "opts", optional: true }], returns: "string", gm: false, writes: false, doc: "read" },
-        { path: "mark", params: [{ name: "ref", kind: "actor" }, { name: "opts" }], returns: "ok|fail", gm: true, writes: true, doc: "write" },
-      ],
-    };
-    const seen = [];
-    const api = buildApi(M, {
-      peek: function peek(t, opts) { seen.push(opts); return t.id; },
-      mark: async function mark(actor) { return { ok: true, id: actor.id }; },
-    });
-    assert.throws(() => api.peek("Goblin"), /AMBIGUOUS: 2 tokens named Goblin/);
-    assert.equal(api.peek("Goblin", { sceneId: s1.id }), "tok0000000000001");
-    assert.equal(api.peek("Goblin", { sceneId: s2.id }), "tok0000000000002");
-    assert.deepEqual(seen.at(-1), { sceneId: s2.id });                   // opts still reach the impl
-    assert.equal(api.peek.name, "peek");
-    assert.deepEqual(await api.mark("Nobody", {}), { ok: false, code: "NOT_FOUND", reason: "NOT_FOUND: actor Nobody" });
-    assert.deepEqual(await api.mark(42, {}), { ok: false, code: "BAD_ARGS", reason: "BAD_ARGS: not a actor reference" });
-    assert.deepEqual(await api.mark("Aldric", {}), { ok: true, id: doc.id });
-    assert.throws(() => api.peek("Nobody", { sceneId: s1.id }), /NOT_FOUND/);   // reads still throw
-  } finally {
-    globalThis.game = saved;
-  }
+  const world = { game: { actors: new Map([[doc.id, doc]]), scenes: new Map([[s1.id, s1], [s2.id, s2]]) } };
+  const M = {
+    ...MANIFEST,
+    rows: [
+      { path: "peek", params: [{ name: "ref", kind: "token" }, { name: "opts", optional: true }], returns: "string", gm: false, writes: false, doc: "read" },
+      { path: "mark", params: [{ name: "ref", kind: "actor" }, { name: "opts" }], returns: "ok|fail", gm: true, writes: true, doc: "write" },
+    ],
+  };
+  const seen = [];
+  const api = buildApi(M, {
+    peek: function peek(t, opts) { seen.push(opts); return t.id; },
+    mark: async function mark(actor) { return { ok: true, id: actor.id }; },
+  }, { g: world });
+  assert.throws(() => api.peek("Goblin"), /AMBIGUOUS: 2 tokens named Goblin/);
+  assert.equal(api.peek("Goblin", { sceneId: s1.id }), "tok0000000000001");
+  assert.equal(api.peek("Goblin", { sceneId: s2.id }), "tok0000000000002");
+  assert.deepEqual(seen.at(-1), { sceneId: s2.id });                   // opts still reach the impl
+  assert.equal(api.peek.name, "peek");
+  assert.deepEqual(await api.mark("Nobody", {}), { ok: false, code: "NOT_FOUND", reason: "NOT_FOUND: actor Nobody" });
+  assert.deepEqual(await api.mark(42, {}), { ok: false, code: "BAD_ARGS", reason: "BAD_ARGS: not a actor reference" });
+  assert.deepEqual(await api.mark("Aldric", {}), { ok: true, id: doc.id });
+  assert.throws(() => api.peek("Nobody", { sceneId: s1.id }), /NOT_FOUND/);   // reads still throw
+});
+
+test("KIT-M4: buildApi takes an injected g and resolves ref rows against it, never globalThis.game", async () => {
+  const other = { documentName: "Actor", id: "bbbbbbbbbbbbbbbb", name: "Brenna", uuid: "Actor.bbbbbbbbbbbbbbbb" };
+  const injected = { game: { actors: new Map([[other.id, other]]) } };
+  const M = { ...MANIFEST, rows: [...MANIFEST.rows, { path: "mark", params: [{ name: "ref", kind: "actor" }, { name: "opts" }], returns: "ok|fail", gm: true, writes: true, doc: "write" }] };
+  const api = buildApi(M, { ...impl, mark: async function mark(actor) { return { ok: true, id: actor.id }; } }, { g: injected });
+  assert.deepEqual(api.inspect("Brenna"), { name: "Brenna" });
+  assert.throws(() => api.inspect("Aldric"), /NOT_FOUND/);            // not on the injected world
+  assert.equal(api.report("Aldric"), undefined);
+  assert.deepEqual(await api.mark("Brenna", {}), { ok: true, id: other.id });
+  assert.deepEqual(await api.mark("Aldric", {}), { ok: false, code: "NOT_FOUND", reason: "NOT_FOUND: actor Aldric" });
 });
 
 test("K5: an unlisted table is published as a frozen copy; the module's own table and a namespace are never frozen", async () => {
