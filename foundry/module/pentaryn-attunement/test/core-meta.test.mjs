@@ -36,3 +36,18 @@ test("patchProficiencyMap({}) adds PROFICIENCY_CATEGORIES in order", () => {
   assert.deepEqual([...core.PROFICIENCY_CATEGORIES], ["wondrous", "ring", "rod", "wand", "trinket"]);
   assert.ok(Object.isFrozen(core.PROFICIENCY_CATEGORIES));
 });
+
+test("EC-10: capOf — a finite max (floored at 0), else 3; computeSlots uses it", () => {
+  assert.equal(core.capOf({ max: 5 }), 5);
+  assert.equal(core.capOf({ max: 0 }), 0);
+  assert.equal(core.capOf({ max: -2 }), 0);
+  for (const max of [undefined, NaN, Infinity, null, "4"]) assert.equal(core.capOf({ max }), 3, String(max));
+  assert.equal(core.capOf({}), 3);
+  assert.equal(core.capOf(undefined), 3);
+  const actor = (att) => ({ system: { attributes: { attunement: att } }, items: { filter: () => [] }, getFlag: () => undefined });
+  for (const max of [undefined, NaN]) {
+    const s = core.computeSlots(actor({ value: 0, max }));
+    assert.equal(s.max, 3, String(max));
+    assert.deepEqual(s.slots, [null, null, null]);
+  }
+});

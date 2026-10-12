@@ -95,6 +95,21 @@ test("preUpdateItem attuning on an actor at cap: one WouldExceed warn; never vet
   assert.deepEqual(since(quiet, "notify"), [], "no delta, no attunement, already attuned: silent");
 });
 
+test("EC-10: a non-finite attunement.max warns against the strip's cap of 3, never 'undefined'", () => {
+  for (const [i, max] of [undefined, NaN].entries()) {
+    const quiet = makeActor(F, { id: `actorNoMx000000${i}`, name: "No Max", attunement: { value: 2, max } });
+    const q = addItem(F, quiet, { id: `itemNoMxQ000000${i}`, name: "Ring", system: { attunement: "required", attuned: false } });
+    const from = mark();
+    F.fireCall("preUpdateItem", q, { system: { attuned: true } });
+    assert.deepEqual(since(from, "notify"), [], `${max}: 2 of 3 is under the cap`);
+    const full = makeActor(F, { id: `actorNoMx100000${i}`, name: "No Max", attunement: { value: 3, max } });
+    const f = addItem(F, full, { id: `itemNoMxF000000${i}`, name: "Ring", system: { attunement: "required", attuned: false } });
+    const at = mark();
+    F.fireCall("preUpdateItem", f, { system: { attuned: true } });
+    assert.deepEqual(since(at, "notify").map(c => c.message), ["No Max is already attuned to 3 items — attuning Ring makes 4."], String(max));
+  }
+});
+
 // KNOWN: items-journal-12 — the over-cap warning reads system.attributes.attunement.value (dnd5e's count),
 // the strip counts prepared-attuned items: they can disagree. Recorded, not fixed (countMismatch is optional).
 test("KNOWN items-journal-12: computeSlots counts 2 where the warning's input is 1", () => {

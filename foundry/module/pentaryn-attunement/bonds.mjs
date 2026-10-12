@@ -11,7 +11,7 @@
  * an async ready, so restoreBond runs first. Moving this install to setup would change that order.
  */
 
-import { AWAY, AWAY_FLAG, BOND, MODULE, SLOTS, awayOf, bondChanges, computeSlots, homeSlots, isBondOwner, wouldExceed } from "./attunement-core.mjs";
+import { AWAY, AWAY_FLAG, BOND, MODULE, SLOTS, awayOf, bondChanges, capOf, computeSlots, homeSlots, isBondOwner, wouldExceed } from "./attunement-core.mjs";
 import { clearSerial, isPileActor, serial } from "./actor-adapter.mjs";
 import { claimDocument } from "./lib/election.mjs";
 import { flagPath } from "./lib/flags.mjs";
@@ -141,10 +141,11 @@ function warnOverCap(actor, item, key, freed = 0, options) {
   const batch = options ? (options[MODULE] ??= {}) : {};
   const pending = batch.pending ?? 0;
   batch.pending = pending + 1;
-  const { exceed, after } = wouldExceed({ value: att.value - freed, max: att.max, awayCount: awayOf(actor).length + pending });
+  const max = capOf(att);
+  const { exceed, after } = wouldExceed({ value: att.value - freed, max, awayCount: awayOf(actor).length + pending });
   if (!exceed) return;
   ui.notifications.warn(_loc(key, {
-    name: item.name, actor: actor.name, value: after, max: att.max
+    name: item.name, actor: actor.name, value: after, max
   }));
 }
 

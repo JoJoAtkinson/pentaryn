@@ -163,6 +163,16 @@ export function planStash(owner, itemIds, { tag, currency = false, randomID, set
 /* -------------------------------------------- */
 
 /**
+ * The attunement cap the strip and the over-cap warning share: a finite `max` (floored at 0),
+ * else 3 — so a missing or NaN `max` warns at the same count the strip draws (EC-10). Pure.
+ * @param {{max?: number}} [att]   `system.attributes.attunement`
+ * @returns {number}
+ */
+export function capOf(att) {
+  return Number.isFinite(att?.max) ? Math.max(0, att.max) : 3;
+}
+
+/**
  * Reconcile the stored slot order against what is actually attuned right now.
  *
  * Pure: reads documents, writes nothing. Safe to call from render.
@@ -172,7 +182,7 @@ export function planStash(owner, itemIds, { tag, currency = false, randomID, set
  */
 export function computeSlots(actor) {
   const att = actor.system?.attributes?.attunement ?? {};
-  const max = Number.isFinite(att.max) ? Math.max(0, att.max) : 3;
+  const max = capOf(att);
 
   // Prepared data is the right source here: an item stripped of its attunement
   // by prepareFinalEquippableData (equipment without the Magical property) is

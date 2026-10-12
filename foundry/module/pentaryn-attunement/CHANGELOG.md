@@ -4,6 +4,11 @@
 
 The version stays 0.3.0 until the next `module.json` restart batch (code only: sync + reload).
 
+- **[declared] EC-10:** the over-cap warning uses the strip's cap. A new pure `capOf(att)` in the
+  core (a finite `attunement.max`, floored at 0, else 3) feeds `computeSlots` and `warnOverCap`'s
+  threshold and its `{max}` placeholder, so an actor with no (or a NaN) `max` warns at 3 and the toast
+  says 3 (was: warned on every attune and said "attuned to undefined items").
+  `test/core-meta.test.mjs`, `test/glue.test.mjs`.
 - **[declared] ATT-ROB-6:** the legacy `computeSlots(actor)` / `away(actor)` pass an object through
   only when it is actor-like (has `items` and `getFlag`); any other object is a miss, so
   `computeSlots` returns `null` and `away` returns `[]`, as for a name that matches nothing (was:

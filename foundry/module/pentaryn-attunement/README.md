@@ -57,7 +57,7 @@ all NPC sheets get.
 
 **Warnings.** Attuning past the cap, or an item arriving already attuned onto an actor at the cap,
 shows a warning toast. A batch (several items attuned or created attuned in one write) counts the
-ones before each item, so the first past the cap and every one after it warns. A drop onto a filled slot is a swap (one out, one in), so it does not warn. Nothing is ever vetoed: a vetoed Foundry update resolves without applying
+ones before each item, so the first past the cap and every one after it warns. A drop onto a filled slot is a swap (one out, one in), so it does not warn. The warning and the strip share one cap (`capOf`): `attunement.max` when it is a finite number, else 3, so a missing max warns at 3 and names 3. Nothing is ever vetoed: a vetoed Foundry update resolves without applying
 and without throwing, so an MCP script would carry on believing it succeeded. The cap is
 unenforceable anyway — expire the effect that raised `attunement.max` and no item hook fires.
 
@@ -166,7 +166,7 @@ method is a row in `api-manifest.mjs` plus an impl in `api.mjs`, then
 | File | Role |
 |---|---|
 | `attunement.mjs` | entry: init, ready (guard, build, publish), installs `sheet` then `bonds` |
-| `attunement-core.mjs` | pure: constants, `computeSlots`, `homeSlots`, `planStash`, `bondChanges`, `wouldExceed`, `patchProficiencyMap`, `safe` |
+| `attunement-core.mjs` | pure: constants, `capOf`, `computeSlots`, `homeSlots`, `planStash`, `bondChanges`, `wouldExceed`, `patchProficiencyMap`, `safe` |
 | `actor-adapter.mjs` | `stash`, `releaseAway`, `writeSlots`, `isPileActor`, the two dnd5e adjustments |
 | `strip.mjs` | UI: the strip, the counter's over-cap class |
 | `sheet.mjs`, `bonds.mjs` | features: the render hook and slot gestures; the item hooks |
