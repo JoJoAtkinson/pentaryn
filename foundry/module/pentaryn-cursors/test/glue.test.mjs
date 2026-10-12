@@ -4,9 +4,8 @@
 // listeners, the MutationObserver callback and the published API — no test seam — so the pins
 // survive the step-5 split into board.mjs unchanged.
 //
-// Written to hold across the declared step-6 change (C-1): the API is read only after ready PLUS a
-// tick, its legacy keys are checked as a floor (never an exact key list), and module.api is not
-// pinned (undefined today, SF2; set by publishNamespace after step 6).
+// The API is read only after ready PLUS a tick, and its legacy keys are checked as a floor (never
+// an exact key list). module.api is not pinned here: api.test.mjs pins it as the canonical surface.
 //
 // Timers are mocked (the ready tick and canvasReady's resync tick); nothing waits on real time.
 import { mock, test } from "node:test";
@@ -43,8 +42,8 @@ test("foundry.utils is Foundry's own common/ code", () => {
 });
 
 test("hook registration manifest at load (golden/hooks.json)", () => {
-  // Consecutive identical rows collapse: guide step 5 registers the ready attach (board.mjs) and
-  // the ready publish (entry) as two `once ready` listeners where today there is one.
+  // Consecutive identical rows collapse: board.mjs (the ready attach) and the entry (the ready
+  // publish) each register a `once ready` listener, and hookSequence folds the pair into one row.
   pinJSON("hooks", hookSequence(hooksAtLoad), import.meta.url);
   assert.deepEqual(hookSequence(hooksAtLoad).map(h => `${h.kind} ${h.name}`), [
     "once init", "on getSceneControlButtons", "on renderSceneControls", "on activateCanvasLayer",
