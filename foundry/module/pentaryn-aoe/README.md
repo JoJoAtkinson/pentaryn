@@ -106,7 +106,7 @@ row with its params, returns and null cases (`api-manifest.mjs`). Kit members: `
 | `setting(key)` | value | any; the default when unregistered |
 | `hookIds()` | `{ name, id }[]` | this client |
 | `resolution(messageOrId)` | a copy of the tray state, or null | GM data |
-| `latestResolution({ sceneId? })` | `{ messageId, resolution } \| null` | the newest live tray of the last 60 messages; `"current"` = the viewing client's scene |
+| `latestResolution({ sceneId? })` | `{ messageId, resolution } \| null` | the newest live tray of the last 60 messages; `"current"` = the viewing client's scene, null when it views none (pass no `sceneId` for any scene) |
 | `summary(messageOrId)` | `{ item, ability, dc, onSave, region, superseded, applicable, rows, careful, playerStatus } \| null` | plain data for the bridge |
 | `isHandle(tokenOrDoc)` | boolean | any |
 | `inspect(ref, { sceneId?, as? })` | plain JSON, depth ≤ 4 | a message → `{ message, resolution, npcSave, effectsApplied }`; a token or actor → `{ token?, actor, isHandle, region, handleActor, careful }`. `as` a player: no tray summary (only `playerStatus`), Careful only on an actor they own. Unknown ref → `NOT_FOUND` |

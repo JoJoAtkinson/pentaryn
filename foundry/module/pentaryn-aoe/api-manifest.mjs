@@ -51,7 +51,7 @@ export const MANIFEST = Object.freeze({
     {
       path: "latestResolution", params: [p("opts", "{ sceneId? }", { optional: true, doc: "sceneId: a scene id, or \"current\" for the viewing client's scene" })],
       returns: "{ messageId, resolution }|null", gm: false, writes: false, since: "0.4.0",
-      nullWhen: "none of the last 60 messages carries a live (not superseded) resolution on that scene",
+      nullWhen: "none of the last 60 messages carries a live (not superseded) resolution on that scene, or sceneId is \"current\" and this client views no scene (pass no sceneId for any scene)",
       doc: "The newest live tray among the last 60 chat messages, optionally on one scene.",
     },
     {

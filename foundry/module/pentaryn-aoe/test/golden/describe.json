@@ -176,7 +176,7 @@
       "writes": false,
       "query": false,
       "sideEffects": [],
-      "nullWhen": "none of the last 60 messages carries a live (not superseded) resolution on that scene",
+      "nullWhen": "none of the last 60 messages carries a live (not superseded) resolution on that scene, or sceneId is \"current\" and this client views no scene (pass no sceneId for any scene)",
       "since": "0.4.0",
       "doc": "The newest live tray among the last 60 chat messages, optionally on one scene."
     },

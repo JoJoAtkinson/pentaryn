@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- **`latestResolution({ sceneId: "current" })` answers null when this client views no scene**
+  (declared, R3): it dropped the scene filter and returned the newest tray from any scene.
+  "current" means the viewing client's scene; with none there is none. A caller that wants any
+  scene passes no `sceneId`. Manifest `nullWhen` and README say so.
 - **Two GM tabs no longer fight over player saves or double-apply a tray** (declared, AC-1): with
   the MCP bridge tab and a GM browser tab both active, each matched a player's save into the tray
   from its own copy (a stale tab could undo an Apply or a GM edit), and Apply in both tabs damaged
