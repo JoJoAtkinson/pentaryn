@@ -6,6 +6,10 @@
 (`flagScope` stays `wall-autocomplete`), `languages`, `minimum: "14"`, `verified: "14.369"` and the
 description fix; the flag-scope migration is **parked** while walls stays off (Joe).
 
+- **[declared] `makeMacro` never reuses a same-named chat macro** (`walls-rob-9`): after the fixed-id
+  lookup, the fallback matched any macro named `Walls: <action>`, so a chat macro of that name was
+  reused, its command overwritten with the script and put on the hotbar. The name fallback now also
+  requires `type: "script"`; otherwise the fixed-id script macro is created and the chat macro is left alone.
 - **[declared] A failed GM report card is logged through the kit log** (`walls-rob-8`): a
   `ChatMessage.create` failure went to a raw `console.error("pentaryn-walls |", err)`, invisible to
   `api.trace()`. It now logs `pentaryn-walls | chat card failed` with the error via `log.error`, and

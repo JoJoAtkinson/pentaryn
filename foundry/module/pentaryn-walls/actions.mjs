@@ -195,15 +195,17 @@ const macroId = action => `pwmacro${action}`.padEnd(16, "0").slice(0, 16);
 
 /**
  * Create a hotbar macro for one of the three actions, so it can also be clicked or bound
- * from the macro bar. Returns the Macro document. Looks it up by its fixed id, then by name (a
- * macro made before the id was fixed); creates it with that id otherwise.
+ * from the macro bar. Returns the Macro document. Looks it up by its fixed id, then by name among
+ * script macros (one made before the id was fixed); creates it with that id otherwise.
  */
 async function makeMacro(action = "preview", slot) {
   if (!["preview", "run", "undo"].includes(action)) throw new Error(`unknown action "${action}"`);
   const name = `Walls: ${action}`;
   const command = `await game.pentaryn.walls.${action}();`;
   const _id = macroId(action);
-  let macro = game.macros.get(_id) ?? game.macros.find(m => m.name === name);
+  // The name fallback (a macro made before the fixed id) must be a script macro: a same-named
+  // chat macro is someone else's, and reusing it would overwrite its command (walls-rob-9).
+  let macro = game.macros.get(_id) ?? game.macros.find(m => m.name === name && m.type === "script");
   if (!macro) {
     try {
       macro = await Macro.create({

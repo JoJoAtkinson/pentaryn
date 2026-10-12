@@ -7,6 +7,7 @@ import assert from "node:assert/strict";
 import { pinJSON } from "./kit/harness.mjs";
 import { canonical, runEngine, wasmReady } from "./fixtures/engine.mjs";
 import { GM, houseWalls, makeScene, wallsWorld, withConsole } from "./fixtures/world.mjs";
+import { makeDoc } from "./kit/foundry-stub.mjs";
 
 const MOD = "pentaryn-walls";
 const F = await wallsWorld();
@@ -249,4 +250,23 @@ test("walls-async-2: two overlapping makeMacro calls (or two GM tabs) make one '
   const again = mark();
   assert.equal(await game.pentaryn.walls.makeMacro("undo"), a);
   assert.equal(since(again, "Macro.create").length, 0);
+});
+
+test("walls-rob-9: makeMacro's name fallback reuses only a script macro, never a same-named chat macro", async () => {
+  game.macros.clear();
+  // A player's chat macro that happens to share the name, and a script macro made before the
+  // fixed id (walls-async-2) — neither has the id.
+  const chat = makeDoc("Macro", { name: "Walls: preview", type: "chat", command: "Look at the walls!" });
+  const legacy = makeDoc("Macro", { name: "Walls: run", type: "script", command: "await game.pentaryn.walls.run();" });
+  game.macros.set(chat.id, chat);
+  game.macros.set(legacy.id, legacy);
+  const from = mark();
+  const pre = await game.pentaryn.walls.makeMacro("preview");
+  assert.notEqual(pre, chat, "the chat macro is not reused");
+  assert.equal(pre.id, "pwmacropreview00");
+  assert.equal(pre.type, "script");
+  assert.equal(chat.command, "Look at the walls!", "the chat macro is left alone");
+  assert.equal(await game.pentaryn.walls.makeMacro("run"), legacy, "a pre-id script macro is still found by name");
+  assert.deepEqual(since(from, "Macro.create").map(c => c.data._id), ["pwmacropreview00"]);
+  assert.deepEqual(since(from, "update").filter(c => c.documentName === "Macro"), []);
 });

@@ -58,7 +58,8 @@ no scene (`'pentaryn-walls: no scene with id "<sceneId>".'`). `preview`, `run`, 
 `analyze` take `null` as no argument at all: the viewed scene and the defaults. `undo`, `makeMacro`, `runEngine`
 and `backends` keep their legacy shapes (`legacy: true`).
 `makeMacro` gives each action's macro a fixed id, so two overlapping calls or two GM tabs still
-make one `Walls: <action>` macro.
+make one `Walls: <action>` macro. A macro made before the fixed id is reused by name only if it is a
+script macro; a same-named chat macro is left alone.
 
 ## Data written
 
