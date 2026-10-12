@@ -202,7 +202,7 @@ def _log_call(runner: "ToolRunner", arguments: dict[str, Any], *, ok: bool, ms: 
         }
         text = json.dumps(line, ensure_ascii=False, default=str) + "\n"
         path = Path(log_dir) / f"dnd-scripts-{now:%Y-%m}.jsonl"
-        with _log_lock, open(path, "a", encoding="utf-8") as fh:
+        with _log_lock, open(path, "a", encoding="utf-8", errors="backslashreplace") as fh:
             fh.write(text)
     except Exception as exc:
         try:

@@ -382,6 +382,18 @@ def test_log_subprocess_mode_and_truncated_args(monkeypatch, tmp_path):
     assert len(line["args"]["obj"]) < 2100 and line["args"]["obj"].startswith('{"k": "yyy')
 
 
+def test_log_line_survives_a_lone_surrogate(monkeypatch, tmp_path):
+    # README: every tools/call appends one line -- a lone UTF-16 surrogate in an
+    # argument must not drop it (it is written as its JSON escape instead).
+    monkeypatch.setenv("PENTARYN_MCP_LOG_DIR", str(tmp_path))
+    sent = _call(monkeypatch, _runner(lambda **k: "ok"), {"q": "x\ud800", "r": "\u16cf200"})
+    assert sent[0]["result"]["content"][0]["text"] == "ok"
+    [line] = _log_lines(tmp_path)
+    assert line["args"] == {"q": "x\ud800", "r": "\u16cf200"}
+    raw = b"".join(p.read_bytes() for p in tmp_path.glob("dnd-scripts-*.jsonl"))
+    assert "\u16cf200".encode("utf-8") in raw          # encodable text stays raw UTF-8
+
+
 def test_log_dir_that_is_a_file_does_not_break_the_call(monkeypatch, tmp_path, capsys):
     not_a_dir = tmp_path / "file"
     not_a_dir.write_text("", encoding="utf-8")
