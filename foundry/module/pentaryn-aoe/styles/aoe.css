@@ -27,8 +27,13 @@
 .pentaryn-aoe-tray .pa-applied { font-weight: normal; font-style: italic; }
 .pentaryn-aoe-tray .pa-superseded { margin: 2px 0 4px; font-style: italic; }
 .pentaryn-aoe-tray .pa-empty { margin: 2px 0; opacity: 0.7; }
-.pentaryn-aoe-tray .pa-buttons { display: flex; gap: 4px; margin-top: 6px; }
-.pentaryn-aoe-tray .pa-buttons button { flex: 1; font-size: inherit; line-height: 22px; height: 24px; }
+/* tray-overflow: in the default-width sidebar a whole button wraps to the next line; a label
+   never breaks inside a fixed-height button (it spilled out of its 24 px). */
+.pentaryn-aoe-tray .pa-buttons { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.pentaryn-aoe-tray .pa-buttons button {
+  flex: 1 1 auto; width: auto; max-width: 100%; min-height: 24px; height: auto;
+  font-size: inherit; line-height: 22px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
 .pentaryn-aoe-tray a[data-pa] { cursor: pointer; opacity: 0.75; }
 .pentaryn-aoe-tray a[data-pa]:hover { opacity: 1; }
 

@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- **The tray's buttons fit the chat sidebar** (declared, play test AO-1 / tray-overflow,
+  2026-10-12): Re-roll NPC saves, Ping and Apply were squeezed into one row at a fixed 24 px, so at
+  the default sidebar width a label broke onto a second line and spilled out of its button. The
+  row now wraps a whole button onto the next line and a button grows with its label (`aoe.css`,
+  own `.pentaryn-aoe-tray` rules only). Live check: GM tab, default sidebar width, a Fireball
+  tray — every label sits inside its button, on one line; widen the sidebar and the three share
+  one row again.
 - **Careful Spell ends after the next spell** (declared, play test AO-1 / metamagic-disarm,
   2026-10-12; Joe's ruling: metamagic ends after use): out of combat a used Careful Spell stayed
   armed for 10 minutes and protected whichever save spell came next. The caster's next spell cast
