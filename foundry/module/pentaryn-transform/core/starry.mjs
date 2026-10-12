@@ -27,11 +27,17 @@ export function constellationOfActivity(activity) {
 /**
  * The Starry Form effect for the druid: the feature's own base effect (or the Dragon's, whose
  * changes give the roll floors and, with Twinkling Constellations, Fly 20 and hover), renamed for
- * the constellation, enabled, not transferred, timed from now.
+ * the constellation, enabled, not transferred, started now.
+ *
+ * Off Foundry's world clock (D8, Joe's ruling): out of combat there are no turns to track, so the form
+ * stays on; in combat starry.mjs counts `flags.<module>.starry.left` down by combat time. So no
+ * duration value, and dnd5e's `isTemporary` flag keeps it a temporary effect (token icon) that
+ * Foundry's effect registry does not track.
  *
  * @param {{ base: object|null, constellation: string, label: string, img?: string, now: number,
  *           seconds?: number, description?: string, origin?: string, id: string }} args
  *        base: the item effect's source (`effect.toObject()`), or null for a bare effect
+ *        seconds: the combat time left on the form
  * @returns {object}  ActiveEffect data for `createEmbeddedDocuments(..., { keepId: true })`
  */
 export function starryEffectData({ base = null, constellation, label, img, now, seconds = STARRY_SECONDS, description = "", origin, id }) {
@@ -46,10 +52,10 @@ export function starryEffectData({ base = null, constellation, label, img, now, 
     img: img || src.img || "icons/magic/symbols/star-solid-gold.webp",
     transfer: false,
     disabled: false,
-    duration: { value: seconds, units: "seconds", expiry: null },
+    duration: { value: null, units: "seconds", expiry: null },
     start: { time: now },
     description,
-    flags: { ...(src.flags ?? {}), [MODULE]: { starry: { constellation } } }
+    flags: { ...(src.flags ?? {}), dnd5e: { ...(src.flags?.dnd5e ?? {}), isTemporary: true }, [MODULE]: { starry: { constellation, left: seconds } } }
   };
   if (origin) data.origin = origin;
   return data;

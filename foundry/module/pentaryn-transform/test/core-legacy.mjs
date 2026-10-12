@@ -409,10 +409,11 @@ check("133a fly: old key, new key, none, hover only, legacy top-level changes", 
 ], [true, true, false, false, true, false]);
 check("133b the Twinkling dragon is picked from either key", [dragonPlain, dragon6].find(grantsFly)?.name, "Dragon Form (Twinkling)");
 check("134 effect: id, name, enabled, not transferred", [se._id, se.name, se.disabled, se.transfer], ["pentarynStarry00", "Starry Form: Dragon", false, false]);
-check("135 effect: timed from now", [se.duration, se.start], [{ value: 600, units: "seconds", expiry: null }, { time: 30 }]);
+check("135 effect: started now, off the world clock (D8-starry: no duration value)", [se.duration, se.start], [{ value: null, units: "seconds", expiry: null }, { time: 30 }]);
 check("136 effect: keeps the Dragon's changes", se.system.changes.length, 1);
-check("137 effect: flag + origin, no _stats/sort", [se.flags[MODULE_ID], se.origin, "_stats" in se, "sort" in se, !!se.flags.dnd5e],
-  [{ starry: { constellation: "dragon" } }, "Actor.a.Item.b", false, false, true]);
+check("137 effect: flag (10 minutes of combat left) + origin, no _stats/sort, dnd5e flags kept + isTemporary (D8-starry)",
+  [se.flags[MODULE_ID], se.origin, "_stats" in se, "sort" in se, se.flags.dnd5e],
+  [{ starry: { constellation: "dragon", left: 600 } }, "Actor.a.Item.b", false, false, { riders: {}, isTemporary: true }]);
 ok("138 base not mutated", dragonBase.disabled === true && dragonBase._stats);
 check("139 bare effect", starryEffectData({ constellation: "archer", label: "Archer", now: 0, id: "pentarynStarry00" }).img,
   "icons/magic/symbols/star-solid-gold.webp");

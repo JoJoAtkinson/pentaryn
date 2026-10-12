@@ -251,7 +251,7 @@ test("StarryFormButton (off): label, icon, badge, tooltip (golden/tooltip-starry
 test("StarryFormButton (on): 'Starry Form: Archer', constellation icon, tooltip (golden/tooltip-starry-on.json), an End tile; clickable when spent out", async () => {
   const { talo } = fresh({ twinkling: true, uses: { max: 3, spent: 2 } });
   await S.assumeStarry(talo, "archer");
-  game.time.worldTime = 120;
+  await talo.effects.get(S.STARRY_EFFECT_ID).update({ "flags.pentaryn-transform.starry.left": 480 });   // combat time counted (D8-starry)
   const { starry } = await bonus(talo);
   assert.equal(starry.label, "Starry Form: Archer");
   assert.equal(starry.icon, "icons/weapons/bows/bow-ornamental-gold-blue.webp");

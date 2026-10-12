@@ -279,7 +279,7 @@ test("portrait: a form with no end time shows the effect name; Starry Form shows
   assert.equal(P.hp.children[0].textContent, "111");
   ({ talo } = fresh());
   await S.assumeStarry(talo, "dragon");
-  game.time.worldTime = 90;
+  await talo.effects.get(S.STARRY_EFFECT_ID).update({ "flags.pentaryn-transform.starry.left": 510 });   // combat time counted (D8-starry)
   P = portraitEl();
   Hooks.callAll("renderPortraitPanelArgonComponent", {}, P.el, talo);
   assert.equal(P.detail.textContent, "Starry Form: Dragon · 9 minutes left");
@@ -330,7 +330,7 @@ test("renderEffect: the Wild Shape and Starry effects get the big class and a li
   ui.ARGON._actor = t2;
   const sc = { effect: { uuid: `${t2.uuid}.ActiveEffect.${S.STARRY_EFFECT_ID}` }, element: F.D.el("div", ""), label: "Starry Form: Archer" };
   Hooks.callAll("renderEffectArgonComponent", sc);
-  game.time.worldTime = 60;
+  await t2.effects.get(S.STARRY_EFFECT_ID).update({ "flags.pentaryn-transform.starry.left": 540 });   // combat time counted (D8-starry)
   assert.deepEqual(await sc.getTooltipData(), { title: "Starry Form: Archer", description: "<p><strong>Time left:</strong> 9 minutes</p>", classes: ["pentaryn-tt"] });
   ui.ARGON._actor = null;
   assert.deepEqual(await sc.getTooltipData(), { title: "Starry Form: Archer", description: "", classes: ["pentaryn-tt"] });

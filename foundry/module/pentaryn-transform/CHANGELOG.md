@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+- **Starry Form counts combat time only (D8, Joe's ruling).** Out of combat there are no turns to
+  track, so the form stays on and world time does not count; in combat it counts down by combat time
+  to its 10 minutes, for a linked druid and an unlinked token druid alike. Before, Foundry's world
+  clock (and the world-time fallback, world actors only) ended a linked druid out of combat but not an
+  unlinked one. The effect has no duration value plus dnd5e's `isTemporary` flag; the time left is
+  `flags.pentaryn-transform.starry.left` ([declared]).
 - **A form tile's tooltip and right-click on a compendium form** (the Monster Manual Wolf, Cat, Giant
   Badger) load the beast first: `fromUuidSync` gives only the pack's index entry, and the hover threw
   `src.items is not iterable`, so no CR/AC/speeds/attacks tooltip and no sheet (PT TF-1, [declared]).

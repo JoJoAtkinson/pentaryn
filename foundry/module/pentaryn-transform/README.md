@@ -32,8 +32,9 @@ ordinary ability. Requires dnd5e 6 (verified 6.0.6) on Foundry v14.
 - **Starry Form:** one click on Archer, Chalice or Dragon spends the Wild Shape use, puts one effect
   on the druid (`Starry Form: Archer`, 10 minutes; the Dragon's carries the roll floors and, with
   Twinkling Constellations, Fly 20) and the starlight (Bright 10, Dim 10 more, through
-  pentaryn-senses). With Twinkling Constellations a change is free. It ends after 10 minutes, when
-  Incapacitated, at a Long Rest, or on a beast shift. While the Chalice glimmers, a slot-spending
+  pentaryn-senses). With Twinkling Constellations a change is free. It ends after 10 minutes of
+  combat time (out of combat it stays on and world time does not count, D8), when Incapacitated, at a
+  Long Rest, or on a beast shift. While the Chalice glimmers, a slot-spending
   heal makes the Chalice button pulse for a minute. From the sheet, Consume Wild Shape opens a
   three-button dialog; closing it refunds the use.
 - **Escape** cancels Argon's target picker ("0/1 Targets"), else closes an open Wild Shape / Starry
@@ -82,7 +83,7 @@ is out): `inspect("Talo")` and `inspect(<the form>)` give the same read. Kit mem
 | a form actor | `flags.pentaryn-transform.wildshape` | `{ original, source, profile, endsAt, carried }` — the sweep, the auto-revert, the HUD and `inspect` read it |
 | the form's duration effect | `_id pentarynWildShp0`, `flags.pentaryn-transform.wildshape` | the timed effect Argon's portrait strip shows |
 | an item | `flags.pentaryn-transform.revert` | set by hand: using it reverts its actor (`keepInForm` keeps a feat in the form) |
-| the druid's Starry effect | `_id pentarynStarry00`, `flags.pentaryn-transform.starry.constellation` | the constellation glimmering |
+| the druid's Starry effect | `_id pentarynStarry00`, `flags.pentaryn-transform.starry.constellation`, `.left` | the constellation glimmering; seconds of combat time left (D8) |
 | the Starry Form item | `flags.pentaryn-senses.light` | `STARRY_LIGHT` while the form lasts (pentaryn-senses lights the tokens) |
 | form actors | created / deleted | dnd5e creates them; the active GM sweeps spent ones |
 
@@ -154,8 +155,10 @@ rest hooks, core document hooks and Argon's render hooks (`test/golden/hooks.jso
   `feat` with one bonus-action utility activity, so the Wild Shape preset carries it onto the form.
 - Two GM tabs (bridge + browser) both run the automatic endings and the sweep; the second revert
   finds the form gone. Watch for a doubled chat line in the live phase.
-- Starry Form's world-time expiry checks world actors only: an unlinked druid token's Starry Form is
-  not ended there while no GM is connected (transform-creatures-22, a live decision, D8).
+- Starry Form counts combat time only (D8, Joe's ruling): the time left is
+  `flags.pentaryn-transform.starry.left`, counted down by the runner for every druid in a started
+  combat (linked or an unlinked token); the effect has no duration value and dnd5e's `isTemporary`
+  flag, so Foundry's world clock never expires it. A form put on before D8 keeps the world-time timing.
 - A Chrome tab that isn't visible runs no animation frames and drops synthetic clicks; size
   animations and clicks "that did nothing" there are the harness, not the module.
 - Debug lines: `CONFIG.debug["pentaryn-transform"] = true` (the stripped-items list, swallowed

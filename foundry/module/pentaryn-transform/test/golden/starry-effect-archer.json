@@ -9,9 +9,13 @@
         "core": {
           "keep": true
         },
+        "dnd5e": {
+          "isTemporary": true
+        },
         "pentaryn-transform": {
           "starry": {
-            "constellation": "archer"
+            "constellation": "archer",
+            "left": 600
           }
         }
       },
@@ -25,14 +29,14 @@
       "transfer": false,
       "disabled": false,
       "duration": {
-        "value": 600,
+        "value": null,
         "units": "seconds",
         "expiry": null
       },
       "start": {
         "time": 50
       },
-      "description": "<p>Now and as a Bonus Action on later turns: a luminous arrow at one creature within 60 ft — +9 to hit, 2d8 + 5 Radiant.</p><p>Ends after 10 minutes, if you are Incapacitated, if you dismiss it, or if you use Wild Shape.</p>",
+      "description": "<p>Now and as a Bonus Action on later turns: a luminous arrow at one creature within 60 ft — +9 to hit, 2d8 + 5 Radiant.</p><p>Ends after 10 minutes of combat (out of combat it stays on), if you are Incapacitated, if you dismiss it, or if you use Wild Shape.</p>",
       "origin": "Actor.taloActor0000001.Item.starryForm000001"
     }
   ]
