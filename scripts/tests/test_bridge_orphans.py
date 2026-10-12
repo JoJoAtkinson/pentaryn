@@ -282,3 +282,44 @@ def test_clean_fails_when_an_orphan_survives_sigkill_rob_11(cleaner, capsys):
     assert (300, _signal.SIGKILL) in sent
     tail = capsys.readouterr().out.split("still running")[-1]
     assert "300" in tail and "301" not in tail
+
+
+# --- EC-12: every port holder is judged, not just the first ---------------------------
+
+def _two_holders():
+    """A live broker on one port and an orphan on another — the shape EC-12 missed."""
+    live = Proc(pid=10, ppid=1, started="t1", command="c", kind="backend",
+                ports=(31414,), reason="broker for a live session")
+    orphan = Proc(pid=20, ppid=1, started="t2", command="c", kind="backend",
+                  ports=(31415,), orphan=True, reason="parent 1 is gone")
+    return [live, orphan]
+
+
+def test_status_report_fails_on_an_orphan_holding_a_second_port_ec_12():
+    r = bridge_mod.status_report(_two_holders())
+    assert r["ok"] is False
+    assert r["holders"] == [{"pid": 10, "ports": [31414], "orphan": False},
+                            {"pid": 20, "ports": [31415], "orphan": True}]
+    assert bridge_mod.status_report([])["holders"] == []
+
+
+def test_status_fails_and_names_an_orphan_on_a_second_port_ec_12(monkeypatch, capsys):
+    monkeypatch.setattr(bridge_mod, "scan", _two_holders)
+    assert bridge_mod.status() == bridge_mod.FAIL
+    out = capsys.readouterr().out
+    assert "✗" in out and "pid 20" in out
+    assert "pid 10" in out
+
+
+def test_warn_if_stale_warns_on_an_orphan_holding_a_second_port_ec_12(monkeypatch, capsys):
+    monkeypatch.setattr(bridge_mod, "scan", _two_holders)
+    bridge_mod.warn_if_stale()
+    out = capsys.readouterr().out
+    assert "⚠" in out and "pid 20" in out
+
+
+def test_warn_if_stale_is_quiet_when_every_holder_is_live_ec_12(monkeypatch, capsys):
+    live = _two_holders()[0]
+    monkeypatch.setattr(bridge_mod, "scan", lambda: [live])
+    bridge_mod.warn_if_stale()
+    assert capsys.readouterr().out == ""

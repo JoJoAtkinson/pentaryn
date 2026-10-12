@@ -362,7 +362,7 @@ def test_bridge_status_json_fails_only_on_an_orphan_holder(monkeypatch):
                          orphan=True)
     assert bridge.status_report([live])["ok"] is True
     assert bridge.status_report([orphan])["ok"] is False
-    assert bridge.status_report([])["holder"] is None
+    assert bridge.status_report([])["holders"] == []
 
 
 @pytest.mark.parametrize("cmd, fn", [("module-vendor", "vendor"),
