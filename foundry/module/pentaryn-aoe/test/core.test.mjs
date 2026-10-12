@@ -292,10 +292,10 @@ check("Careful on a no-damage-on-save spell is still 0",
 check("protected rows get no request card and answer no save",
   [prot.filter(r => r.kind === "manual" && r.apply && !r.save).length,
    matchSave({ ability: "dex", request: "q", rows: prot }, { requestId: "q", actorUuid: undefined, tokenId: "pc" })], [0, -1]);
-check("Careful waits for this turn's cast, bound to its card; out of combat for ten minutes",
+check("Careful waits for this turn's cast, bound to its card; out of combat until the next cast, no time window (metamagic-disarm)",
   [carefulApplies({ key: "c:1:x" }, { combatKey: "c:1:x" }), carefulApplies({ key: "c:1:x" }, { combatKey: "c:2:x" }),
    carefulApplies({ key: "c:1:x", usage: "u1" }, { combatKey: "c:1:x", usage: "u1" }), carefulApplies({ key: "c:1:x", usage: "u1" }, { combatKey: "c:1:x", usage: "u2" }),
-   carefulApplies({ at: 1000 }, { now: 1000 + 60000 }), carefulApplies({ at: 1000 }, { now: 1000 + 11 * 60000 }), carefulApplies(null, {})],
+   carefulApplies({ at: 1000 }, {}), carefulApplies({ at: 1000, usage: "u1" }, { usage: "u2" }), carefulApplies(null, {})],
   [true, false, true, false, true, false, false]);
 check("placement cancelled after a spend → refund; placed, nothing spent, or no placement offered → no",
   [placementCancelled({ wanted: true, placed: 0, consumed: true }), placementCancelled({ wanted: true, placed: 1, consumed: true }),

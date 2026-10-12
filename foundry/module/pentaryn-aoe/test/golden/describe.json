@@ -614,7 +614,7 @@
       "scope": "world",
       "type": "Boolean",
       "default": true,
-      "doc": "Part B: Careful Spell marks up to CHA mod of the caster's side as protected in the next save spell's area."
+      "doc": "Part B: Careful Spell marks up to CHA mod of the caster's side as protected in the area of the next spell they cast, if it calls for a save; then it ends."
     },
     {
       "key": "refundCancelledArea",

@@ -57,9 +57,11 @@ A known miss or a natural 1 rolls nothing. The card's Damage button still works.
 Players can't see hit/miss while `dnd5e.attackRollVisibility` is `"none"`. Setting it to
 `"hideAC"` shows hit/miss without the AC. That is Joe's call; this module does not change it.
 
-**Careful Spell.** After a sorcerer uses Careful Spell, their next save spell's area on the same
-turn marks up to their Charisma modifier of their own side (player characters first, never the
-caster) as *protected*: an automatic success, and no damage on a half-damage spell. They get no
+**Careful Spell.** After a sorcerer uses Careful Spell, it applies to the next spell they cast (in
+combat, on the same turn) and then ends: metamagic is a fresh choice for each casting, with no time
+window. If that spell's area calls for a save, it marks up to their Charisma modifier of their own
+side (player characters first, never the caster) as *protected*: an automatic success, and no
+damage on a half-damage spell. They get no
 request card. The GM can still change any row in the tray.
 
 **What the player sees.** The caster gets one line under their own damage card: waiting for the

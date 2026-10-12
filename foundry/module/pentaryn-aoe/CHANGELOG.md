@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **Careful Spell ends after the next spell** (declared, play test AO-1 / metamagic-disarm,
+  2026-10-12; Joe's ruling: metamagic ends after use): out of combat a used Careful Spell stayed
+  armed for 10 minutes and protected whichever save spell came next. The caster's next spell cast
+  now takes it (bound to that usage card, `postUseActivity`), in or out of combat, with no time
+  window; a non-save spell spends it, a placement cancelled before it lands does not.
+
 - **A handle drag keeps the area's direction** (declared, play test AO-3, 2026-10-12): handle moves
   are made with `autoRotate: false` (`preMoveToken`). Core's `tokenAutoRotate` turned the dragged
   handle to face its path, and the attached region turned with it (a cone aimed south-east swung

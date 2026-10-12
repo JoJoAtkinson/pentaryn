@@ -292,7 +292,7 @@ test("an armed Careful Spell protects the caster's side in the area (golden/care
   assert.equal(ops("create").filter(c => c.data.type === "request").length, 0, "the protected PC gets no request card");
 });
 
-test("carefulFor → null: setting off, no flag, another usage card, too old", async () => {
+test("carefulFor → null: setting off, no flag, another usage card (no time window: metamagic-disarm)", async () => {
   const flag = ctx.wizard.flags[MODULE].careful;
   const args = (usage = IDS.usage) => [ctx.wizard, [], { casterActorId: ctx.wizard.id, usage, scene: ctx.s, onSave: "half", rows: [] }];
   assert.deepEqual(await R.carefulFor(...args()), { names: [], max: 3 });
@@ -301,7 +301,7 @@ test("carefulFor → null: setting off, no flag, another usage card, too old", a
   assert.equal(await R.carefulFor(...args()), null);
   await game.settings.set(MODULE, "carefulSpell", true);
   ctx.wizard.flags[MODULE].careful = { at: Date.now() - 11 * 60 * 1000, key: null, usage: null };
-  assert.equal(await R.carefulFor(...args()), null);
+  assert.deepEqual(await R.carefulFor(...args()), { names: [], max: 3 }, "an unspent use has no time window");
   delete ctx.wizard.flags[MODULE].careful;
   assert.equal(await R.carefulFor(...args()), null);
   assert.equal(await R.carefulFor(null, [], {}), null);

@@ -29,9 +29,11 @@ dnd5e 6 only. Chat data is read from typed messages (`message.type` `usage` / `a
   pill agree. An older Damage click on the same area (or the same card after its area went) greys
   out. Players see one status line on their own card (waiting / applied / re-rolled), never
   monster numbers; the GM-only monster saves are hidden from their chat.
-- **Careful Spell** (`careful.mjs`). After a sorcerer uses it, their next save spell's area marks
-  up to their CHA mod of their own side as *protected*: an automatic success and ×0 on a half-damage
-  spell, no request card. Bound to that usage card; cleared when its combat is deleted.
+- **Careful Spell** (`careful.mjs`). After a sorcerer uses it, the next spell they cast takes it
+  (in combat, on the same turn; no time window), and it ends there: if that spell's area calls for a
+  save, up to their CHA mod of their own side are marked *protected*: an automatic success and ×0 on
+  a half-damage spell, no request card. Bound to that usage card; a placement cancelled before it
+  lands leaves it armed; cleared when its combat is deleted.
 - **Part C — damage on a hit** (`attacks.mjs`). The roller's client rolls damage after a hit (or an
   attack whose target AC it can't know). A known miss or a natural 1 rolls nothing.
 - **Part D — effects meant for you** (`effects.mjs`). A usage card's one effect goes on its caster

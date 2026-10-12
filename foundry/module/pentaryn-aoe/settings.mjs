@@ -48,7 +48,7 @@ export const SETTINGS = Object.freeze([
     doc: "Part D: an Effects tray nobody has applied yet is outlined (cards under an hour old)." },
   { key: "carefulSpell", scope: "world", config: true, type: Boolean, default: true,
     name: "PENTARYN_AOE.Setting.carefulSpell.Name", hint: "PENTARYN_AOE.Setting.carefulSpell.Hint",
-    doc: "Part B: Careful Spell marks up to CHA mod of the caster's side as protected in the next save spell's area." },
+    doc: "Part B: Careful Spell marks up to CHA mod of the caster's side as protected in the area of the next spell they cast, if it calls for a save; then it ends." },
   { key: "refundCancelledArea", scope: "world", config: true, type: Boolean, default: true,
     name: "PENTARYN_AOE.Setting.refundCancelledArea.Name", hint: "PENTARYN_AOE.Setting.refundCancelledArea.Hint",
     doc: "Part F: a cancelled area placement refunds what the cast spent and removes its card." },
