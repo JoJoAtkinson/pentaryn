@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Fixtures for table-core.mjs (concentration summons, Argon shared-uses badges). No
- * dependencies — `node test/table.mjs`; also run at the end of test/run.mjs. Synthetic fixtures.
+ * dependencies — `node test/table.mjs`; a LEGACY suite of test/run.mjs. Synthetic fixtures.
  */
 
 const { concentrationEffectFor, summonTokenIds, spendsUsesOf, MOD, SUMMON_FLAG, skipsTargetPicker, restoreSlotScaling,
