@@ -26,7 +26,7 @@ const afterTick = F.hooks.slice(golden.length);
 
 test("-12 importing every feature file registers nothing (hooks only inside install*())", () => {
   assert.equal(afterFeatureImports, 0);
-  assert.deepEqual(S.hooks.hookIds().filter(h => h.name !== "canvasReady").length, atSetup.length);
+  assert.deepEqual(S.hooks.hookIds().filter(h => h.name !== "canvasReady").length, atSetup.filter(h => h.name !== "canvasReady").length);
 });
 
 test("module scope: once init, once setup, once ready; init registers no hook", () => {
@@ -41,7 +41,7 @@ test("registration manifest (init + setup + ready as the active GM) equals golde
 test("setup registers the feature hooks in Part order: areas, resolve, tray, attacks, effects, refund, aim", () => {
   assert.deepEqual(atSetup.map(h => `${h.kind} ${h.name}`), [
     "on preCreateRegion", "on createRegion", "on deleteRegion", "on preCreateCombatant", "on targetToken", "on preMoveToken",
-    "on dnd5e.renderChatMessage", "on deleteActiveEffect",
+    "on dnd5e.renderChatMessage", "on deleteActiveEffect", "on canvasReady",
     "on dnd5e.postUseActivity", "on createChatMessage", "on updateChatMessage",
     "on dnd5e.renderChatMessage",
     "on dnd5e.postRollAttack",
@@ -51,8 +51,8 @@ test("setup registers the feature hooks in Part order: areas, resolve, tray, att
   ]);
 });
 
-test("ready (active GM, no ui.ARGON) adds the canvasReady sweep; the Argon fallback comes a tick later", () => {
-  assert.deepEqual(atReady, [{ kind: "on", name: "canvasReady" }]);
+test("[declared] aoe-edge-3 ready (active GM, no ui.ARGON) adds no hook (the canvasReady sweep is wired at setup); the Argon fallback comes a tick later", () => {
+  assert.deepEqual(atReady, []);
   assert.deepEqual(afterTick, [{ kind: "once", name: "canvasReady" }]);
 });
 

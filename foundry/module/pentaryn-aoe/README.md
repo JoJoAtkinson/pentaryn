@@ -169,7 +169,8 @@ pass `activeGM.isSelf` and `userId === game.user.id`.
 - **`resolve` and `selfApply`** (`createChatMessage`): the kit's `claimMessage(message, job,
   { scope })` — each candidate stamps its socket id, waits 750 ms, and only the last writer acts.
 - **Everything else** on a broadcast hook runs where `activeGM.isSelf` (concentration cleanup, the
-  ready sweep, the delete backstop); each is idempotent.
+  ready sweep, the `canvasReady` sweep of each newly viewed scene — wired at setup on every
+  client, so a GM who takes over after ready sweeps too — the delete backstop); each is idempotent.
 - **Apply** (`applyRows`): overlapping calls for one tray in one tab run one after another, so
   the later one skips the rows the earlier one applied; a later call stops waiting on an Apply
   stuck for 10 s (`APPLY_WAIT_MS`). Two tabs applying the same tray at once are not coordinated.

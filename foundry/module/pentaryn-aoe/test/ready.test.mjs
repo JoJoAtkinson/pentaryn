@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import { boot, advance, flush, lines, out, MODULE, PLAYER_ID, GM_ID } from "./fixtures/world.mjs";
 import { seams } from "./fixtures/seams.mjs";
 
-const { F } = await boot({
+const { F, W } = await boot({
   settings: { [`${MODULE}.npcSaveRollMode`]: "blindroll" },
   beforeEntry: F => {
     F._actorCreateError = "actors locked";
@@ -20,6 +20,16 @@ const startup = lines();
 test("ready failures are logged 'pentaryn-aoe | settings migration' and 'pentaryn-aoe | ready'; nothing reaches Foundry", () => {
   assert.deepEqual(startup.sort(), [`error: ${MODULE} | ready`, `error: ${MODULE} | settings migration`]);
   assert.deepEqual(F.hookErrors, []);
+});
+
+test("[declared] aoe-edge-3: a failed startup (handle actor create throws) still leaves the canvasReady sweep", async () => {
+  F._actorCreateError = null;
+  const s = W.scene({ id: "EdgeThreeScene01" });
+  W.token(s, { id: "orphanEdgeThree1", flags: { [MODULE]: { handle: true, region: "goneRegionEdge31" }, dnd5e: { lockSize: true } } });
+  F.calls.length = 0;
+  F.fire("canvasReady", { scene: s });
+  await flush(8);
+  assert.deepEqual(F.calls.filter(c => c.op === "deleteEmbedded").map(c => c.ids), [["orphanEdgeThree1"]]);
 });
 
 test("the API is still published a tick after a failed ready", () => {

@@ -116,7 +116,7 @@ function handleActorData(folder) {
 /* -------------------------------------------- */
 
 const pending = new Set();   // region ids whose handle is being created on this client
-/** The registry install() was given: readyAreas registers its canvasReady sweep through it too. */
+/** The registry install() was given: listenerGuard wraps the handle-repair listeners with it. */
 let hooks = null;
 let log = makeLog(MODULE);   // the entry's ctx.log once installed
 
@@ -386,6 +386,10 @@ export function install(reg, ctx) {
     }
   }), { guard: false, label: "deleteActiveEffect" });
 
+  // A new scene is swept by whoever is the active GM then ([declared] aoe-edge-3): wired here on
+  // every client, not after readyAreas' awaits, so a failed startup or a GM handover keeps it.
+  reg.on("canvasReady", reg.guardSwallowAsync("canvasReady", c => game.users.activeGM?.isSelf && sweep(c.scene)), { guard: false, label: "canvasReady" });
+
   return { rows: FEATURE_ROWS.areas, impl: { sweep, ensureHandleActor, createHandle } };
 }
 
@@ -404,14 +408,11 @@ function concentrationItemUuid(effect) {
   return null;
 }
 
-/** Startup work for the active GM: the actor, then a sweep of the viewed scene. */
+/** Startup work for the active GM: the actor, then a sweep of the viewed scene (install() wires later scenes). */
 export async function readyAreas({ sweepOnReady = true } = {}) {
   if (!game.users.activeGM?.isSelf) return;
   await ensureHandleActor();
-  if (sweepOnReady) {
-    await sweep(canvas.scene);
-    hooks?.on("canvasReady", hooks.guardSwallowAsync("canvasReady", c => game.users.activeGM?.isSelf && sweep(c.scene)), { guard: false, label: "canvasReady" });
-  }
+  if (sweepOnReady) await sweep(canvas.scene);
 }
 
 /** Nothing of its own to undo: every hook went through the registry the entry unwinds. */

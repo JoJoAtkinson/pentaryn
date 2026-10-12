@@ -141,7 +141,7 @@ test("ready (active GM): legacy roll mode migrated, handle actor created, viewed
   assert.deepEqual(create.options, { keepId: true });
 });
 
-test("ready: a canvasReady sweep is registered through on() (it is in hookIds)", () => {
+test("[declared] aoe-edge-3 a canvasReady sweep is registered through on() at setup (it is in hookIds)", () => {
   assert.ok(S.hooks.hookIds().some(h => h.name === "canvasReady"));
 });
 
@@ -279,7 +279,7 @@ test("[declared] W2-K1 hot patch: install({ sweepOnReady: false }) re-wires and 
   assert.equal(F.calls.filter(c => c.op === "keybindings.register").length, kb, "no second keybinding");
   assert.deepEqual(after.filter(c => ["createEmbedded", "deleteEmbedded", "updateEmbedded"].includes(c.op)), [], "no sweep");
   assert.ok(S.hooks.hookIds().length > 0);
-  assert.equal(S.hooks.hookIds().some(h => h.name === "canvasReady"), false, "no canvasReady sweep without sweepOnReady");
+  assert.equal(S.hooks.hookIds().some(h => h.name === "canvasReady"), true, "[declared] aoe-edge-3: the canvasReady sweep is wired by install, sweepOnReady only skips the startup sweep");
   assert.equal(typeof globalThis[Symbol.for(`${MODULE}.cancelTemplate`)], "function", "the Escape slot is this copy's again");
   assert.deepEqual(out, []);
 });

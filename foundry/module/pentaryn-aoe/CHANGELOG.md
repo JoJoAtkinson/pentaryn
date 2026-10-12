@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- **A newly viewed scene is swept even after a failed startup or a GM handover** (declared,
+  aoe-edge-3): the `canvasReady` sweep (orphan handles deleted, missing handles made, ownership
+  fixed) was registered only after `readyAreas`' awaits succeeded, and only on the GM active at
+  ready. `areas.install()` now registers it at setup on every client, gated inside on
+  `activeGM.isSelf`; `readyAreas` keeps the handle actor and the first sweep. A hot
+  `install({ sweepOnReady: false })` now wires the scene sweep too (it still skips the startup
+  sweep). Live check: with a second GM tab active first, close it, switch scenes in the remaining
+  GM tab, and a stray handle token on the new scene is removed.
 - **A superseded or partly applied tray keeps its area** (declared, aoe-edge-2): the tray's area
   picker re-resolved any tray, so picking another area on a superseded tray revived it, and on a
   tray with applied rows reset them — the same damage could then be applied twice. The picker is

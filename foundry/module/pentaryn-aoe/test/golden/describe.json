@@ -695,6 +695,10 @@
       "label": "deleteActiveEffect"
     },
     {
+      "name": "canvasReady",
+      "label": "canvasReady"
+    },
+    {
       "name": "dnd5e.postUseActivity",
       "label": "postUseActivity(careful)"
     },
@@ -733,10 +737,6 @@
     {
       "name": "dnd5e.preCreateMeasuredTemplate",
       "label": "preCreateMeasuredTemplate(aim)"
-    },
-    {
-      "name": "canvasReady",
-      "label": "canvasReady"
     },
     {
       "name": "canvasReady",
