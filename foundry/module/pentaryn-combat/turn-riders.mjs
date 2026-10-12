@@ -27,6 +27,13 @@ import { setting, riderMode } from "./settings.mjs";
 const log = makeLog(MODULE);
 
 
+/**
+ * combat-riders-33 [declared]: the rider dice and key that reach chat-card HTML are escaped. They come
+ * from the actor's scale values and from a message flag (flags.pentaryn-combat.auto) any message
+ * author can write; normal values ("3d6", "sneak-attack") render exactly as before.
+ */
+const esc = v => foundry.utils.escapeHTML(String(v));
+
 /* ── facts about an attack message ───────────────────────────────────────── */
 
 /**
@@ -167,7 +174,7 @@ function renderOffer(message, html) {
         if (now) b.dataset.tooltip = hintText(now);
       } catch (err) { log.debug("rider hint refresh (the render-time hint stays)", err); }
     });
-    b.innerHTML = `<i class="fa-solid fa-plus"></i> ${_loc(core.keyFor("Rider.Name", o.rider.key))} ${o.dice}`;
+    b.innerHTML = `<i class="fa-solid fa-plus"></i> ${_loc(core.keyFor("Rider.Name", o.rider.key))} ${esc(o.dice)}`;
     if (o.auto) b.classList.add("pentaryn-combat-eligible");
     b.addEventListener("click", ev => { ev.preventDefault(); ev.stopPropagation(); rollRider(message, o.rider.key); });
     row.append(b);
@@ -313,11 +320,11 @@ function renderAutoNote(message, html) {
         ? _loc("PENTARYN_COMBAT.Rider.UndoneCard", { formula: rolled.formula, n: rolled.total, total: total - rolled.total })
         : _loc("PENTARYN_COMBAT.Rider.UndoneCardPlain");
       note.classList.add("pentaryn-combat-undone");
-      return `<s>+ ${name} ${a.dice}</s> <span class="pentaryn-combat-undone-text">${text}</span>`;
+      return `<s>+ ${name} ${esc(a.dice)}</s> <span class="pentaryn-combat-undone-text">${text}</span>`;
     }
     const undo = live && (actor?.isOwner || game.user.isGM)
-      ? ` <button type="button" class="pentaryn-combat-undo" data-undo="${a.key}" data-tooltip="${_loc("PENTARYN_COMBAT.Rider.UndoHint")}"><i class="fa-solid fa-rotate-left"></i> ${_loc("PENTARYN_COMBAT.Rider.Undo")}</button>` : "";
-    return `+ ${name} ${a.dice}${undo}`;
+      ? ` <button type="button" class="pentaryn-combat-undo" data-undo="${esc(a.key)}" data-tooltip="${_loc("PENTARYN_COMBAT.Rider.UndoHint")}"><i class="fa-solid fa-rotate-left"></i> ${_loc("PENTARYN_COMBAT.Rider.Undo")}</button>` : "";
+    return `+ ${name} ${esc(a.dice)}${undo}`;
   });
   note.innerHTML = parts.join(" · ");
   note.addEventListener("click", async ev => {
