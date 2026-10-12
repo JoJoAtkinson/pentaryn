@@ -247,7 +247,7 @@ test("deleteActiveEffect: another Starry effect still up keeps the light; a ligh
   await talo.effects.get(SID).delete();
   await flush();
   assert.ok(light(talo));
-  talo.items.get(IDS.starry).unsetFlag = async () => { throw new Error("x"); };
+  talo.items.get(IDS.starry).update = async () => { throw new Error("x"); };   // [declared] §5.8: the light goes by update(_del), not unsetFlag
   await second.delete();
   await flush();
   assert.deepEqual(F.console.map(c => c.slice(0, 2)), [["warn", "pentaryn-transform | starry light off failed"]]);

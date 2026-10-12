@@ -24,6 +24,7 @@ import {
   constellationOfActivity, starryEffectData, starryBlock, findWildShapeItem, secondsLeft, constellationImgOf,
   pickStarryBase, starryEndKey
 } from "./transform-core.mjs";
+import { readFlag, flagPath } from "./lib/flags.mjs";
 import { say, markBonusUsed } from "./wildshape-adapter.mjs";
 
 /** The druid's Starry Form effect. Static, 16 characters. */
@@ -121,9 +122,9 @@ const sensesActive = () => !!game.modules.get(SENSES)?.active;
 
 export async function setLight(item, on) {
   if (!item || !sensesActive()) return;
-  const has = !!item.getFlag(SENSES, "light");
+  const has = !!readFlag(item, SENSES, "light");
   if (on && !has) await item.setFlag(SENSES, "light", foundry.utils.deepClone(STARRY_LIGHT));
-  else if (!on && has) await item.unsetFlag(SENSES, "light");
+  else if (!on && has) await item.update({ [flagPath(SENSES, "light")]: _del });   // a foreign scope: never unsetFlag (§5.8)
 }
 
 /** Put the constellation's effect on the druid: a fresh 10 minutes, or (keepTime) the time left. */

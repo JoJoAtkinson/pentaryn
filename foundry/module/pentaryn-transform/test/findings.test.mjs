@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { setup, IDS } from "./fixtures/world.mjs";
 
 mock.timers.enable({ apis: ["setTimeout", "Date"], now: 0 });
-const F = await setup();
+const F = await setup({ modules: ["pentaryn-senses"] });
 F.CONFIG.DND5E = { actorSizes: {}, creatureTypes: {}, limitedUsePeriods: { lr: { label: "Long Rest" }, sr: { label: "Short Rest" } } };
 const T = await import("../transform.mjs");
 await import("../hud.mjs");
@@ -151,4 +151,23 @@ test("C59 [declared, perf] revert: the druid's effects that ended in the form ar
   assert.deepEqual(ops.map(c => [c.op, c.ids ?? c.effect]), [["endConcentration", IDS.conc], ["deleteEmbedded", [IDS.bless, "guidanceEff00001"]]]);
   assert.equal(talo.effects.get(IDS.bless), undefined);
   assert.equal(talo.effects.get("guidanceEff00001"), undefined);
+});
+
+/* ── §5.8 the senses light flag is deleted with _del, never unsetFlag ─────── */
+
+test("§5.8 [declared] Starry Form ending removes flags.pentaryn-senses.light with update(_del), never unsetFlag on the foreign scope", async () => {
+  const S = await import("../starry-adapter.mjs");
+  const { talo } = fresh();
+  const item = talo.items.get(IDS.starry);
+  await S.assumeStarry(talo, "archer");
+  assert.ok(item.flags["pentaryn-senses"]?.light, "the light is on");
+  let unset = 0;
+  item.unsetFlag = async () => { unset++; };
+  F.calls.length = 0;
+  await S.endStarry(talo, { quiet: true });
+  await flush();
+  assert.equal(unset, 0);
+  const upd = F.calls.find(c => c.op === "update" && c.uuid === item.uuid);
+  assert.ok(upd, JSON.stringify(F.calls.map(c => c.op)));
+  assert.equal(item.flags["pentaryn-senses"]?.light, undefined, "gone");
 });
