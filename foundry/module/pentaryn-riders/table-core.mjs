@@ -24,8 +24,7 @@ export function concentrationEffectFor(effects, itemId, status = "concentrating"
   if (!itemId) return null;
   let found = null;
   for (const e of effects ?? []) {
-    const statuses = e?.statuses instanceof Set ? e.statuses : new Set(e?.statuses ?? []);
-    if (!statuses.has(status)) continue;
+    if (!isConcentration(e, status)) continue;
     const data = e?.flags?.dnd5e?.item ?? {};
     if (data.id === itemId || data.data?._id === itemId) found = e;
   }
