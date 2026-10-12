@@ -15,6 +15,7 @@ import time
 import urllib.error
 import urllib.request
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from scripts.foundry import host
 
@@ -82,6 +83,23 @@ def _probe(url: str, timeout: float) -> tuple[int, str]:
 
 def foundry_is_up(timeout: float = 2.0) -> bool:
     return _probe(cfg.FOUNDRY_URL, timeout)[0] in (200, 302)
+
+
+def is_access_login(code: int, location: str) -> bool:
+    """True when the answer is Cloudflare Access's login redirect, not the origin's.
+
+    Access answers the public hostname itself — a 3xx to
+    ``https://<team>.cloudflareaccess.com/cdn-cgi/access/login/...`` (or the same path
+    on our own host) — whether or not a tunnel and Foundry sit behind it. So that
+    redirect proves nothing about the origin.
+    """
+    if not 300 <= code < 400 or not location:
+        return False
+    parts = urlsplit(location)
+    host = (parts.hostname or "").lower()
+    if host == "cloudflareaccess.com" or host.endswith(".cloudflareaccess.com"):
+        return True
+    return host in ("", cfg.TUNNEL_HOST) and parts.path.startswith("/cdn-cgi/access/login")
 
 
 def world_is_launched(timeout: float = 3.0) -> bool | None:
@@ -294,6 +312,13 @@ def status_report() -> dict:
     if code == 0:
         state = "unreachable"
         verdict = "not reachable — tunnel or DNS is down"
+    elif is_access_login(code, location) and not pid:
+        state = "access-only"
+        verdict = "Access login only (tunnel down — players cannot connect)"
+    elif is_access_login(code, location):
+        state = "access-gated"
+        verdict = ("behind Cloudflare Access (login redirect) — tunnel process up; "
+                   "a script cannot see the origin past the login")
     elif code == 302 and "/setup" in location:
         state = "no-world"
         verdict = ("tunnel OK, but NO WORLD IS LAUNCHED — players get a 403.\n"

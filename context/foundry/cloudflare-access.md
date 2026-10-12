@@ -106,8 +106,11 @@ test users) has no supported public API; do it in the console.
 Every unauthenticated request now gets a `302` to the Access login — including the repo's
 own `curl` probes through the public hostname:
 
-- `make vtt` (`scripts/foundry/ops/service.py` `status_report`) treats `302` as "reachable",
-  so its *public* line reports reachable even when the tunnel is down.
+- `make vtt` (`scripts/foundry/ops/service.py` `status_report`) reads the redirect target:
+  an Access login redirect (`*.cloudflareaccess.com` or `/cdn-cgi/access/login`) is never
+  "reachable". With no tunnel process the *public* line says "Access login only (tunnel down
+  — players cannot connect)"; with one it says the origin is behind Access (a script cannot
+  see past the login).
 - `make foundry-verify` (`scripts/foundry/ops/pipeline.py` `verify`) requires `actors.json` to
   return 404 through the tunnel; it now gets 302 and fails. The exposure it guards
   ([`ops.md`](ops.md) §6) is now limited to whitelisted players, but the gate needs updating
