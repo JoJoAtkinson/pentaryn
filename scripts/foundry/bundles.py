@@ -27,7 +27,7 @@ import time
 import zlib
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Iterable, NamedTuple
+from typing import Callable, Iterable, Iterator, NamedTuple
 
 from scripts.foundry import host
 from scripts.foundry.storage import (CONTENT_ADDRESSED, JUNK_NAMES, Entry, Storage,
@@ -35,8 +35,22 @@ from scripts.foundry.storage import (CONTENT_ADDRESSED, JUNK_NAMES, Entry, Stora
 
 BUNDLES = "bundles"                       # the cloud subfolder (flat, shared by both hosts)
 assert BUNDLES in CONTENT_ADDRESSED       # its uploads never delete on a size mismatch (DL7)
-ROOTS = {"module": "Data/modules", "system": "Data/systems"}
-MANIFEST_FILE = {"module": "module.json", "system": "system.json"}
+
+
+class Kind(NamedTuple):
+    root: str             # under FOUNDRY_DATA
+    manifest_file: str    # what makes a folder under `root` a bundle
+    plural: str           # its section in a manifest, a marker and a sidecar
+
+
+# The one place a bundle kind is spelled (review EXT-1). Its order is the order of a
+# manifest's sections, so a sidecar's bytes and the snapshot digest depend on it.
+KINDS = {
+    "module": Kind("Data/modules", "module.json", "modules"),
+    "system": Kind("Data/systems", "system.json", "systems"),
+}
+ROOTS = {kind: k.root for kind, k in KINDS.items()}
+MANIFEST_FILE = {kind: k.manifest_file for kind, k in KINDS.items()}
 FP_LEN = 16
 GC_GRACE_SECONDS = 7 * 86400
 CACHE_FILENAME = "pentaryn-bundle-cache.json"   # beside pentaryn-boot.json, outside snapshots
@@ -46,12 +60,12 @@ STAGING = "bundles"                       # under .pentaryn-tmp/
 EXTRACT = "extract"                       # under .pentaryn-tmp/
 LEVELDB_MARKER = "CURRENT"
 LEVELDB_HOUSEKEEPING = {"LOCK", "LOG", "LOG.old", "CURRENT"}      # + MANIFEST-* + empty *.log
-BUNDLE_NAME = re.compile(r"^(module|system)@([^@/]+)@([^@/]*)@([0-9a-f]{16})\.tar\.gz$")
+BUNDLE_NAME = re.compile(rf"^({'|'.join(KINDS)})@([^@/]+)@([^@/]*)@([0-9a-f]{{16}})\.tar\.gz$")
 CHUNK = 1024 * 1024
 
 _VERSION_BAD = re.compile(r"[^A-Za-z0-9.+_-]")
 _FP_RE = re.compile(r"^[0-9a-f]{16}$")
-_PLURAL = {"module": "modules", "system": "systems"}
+_PLURAL = {kind: k.plural for kind, k in KINDS.items()}
 
 
 def log(msg: str) -> None:
@@ -353,9 +367,22 @@ def local_one(kind: str, id: str, *, cache: bool = False,
 
 # ── the manifest ─────────────────────────────────────────────────────────────
 
+def manifest_sections() -> Iterator[tuple[str, str]]:
+    """(kind, plural) for every bundle kind, in KINDS order — the order of a manifest's
+    sections."""
+    for kind, k in KINDS.items():
+        yield kind, k.plural
+
+
+def sections(m: dict) -> dict[str, dict[str, str]]:
+    """Just the manifest sections of `m` (a manifest, a marker, a sidecar), each one
+    present ({} when missing or empty), in KINDS order."""
+    return {plural: m.get(plural) or {} for _kind, plural in manifest_sections()}
+
+
 def manifest(inv: dict[str, Local]) -> dict:
     """{"modules": {id: bundle name}, "systems": {id: bundle name}}, keys sorted."""
-    out: dict[str, dict[str, str]] = {"modules": {}, "systems": {}}
+    out: dict[str, dict[str, str]] = {plural: {} for _kind, plural in manifest_sections()}
     for loc in sorted(inv.values(), key=lambda l: (l.kind, l.id)):
         out[_PLURAL[loc.kind]][loc.id] = loc.name
     return out
@@ -364,7 +391,7 @@ def manifest(inv: dict[str, Local]) -> dict:
 def manifest_keys(m: dict) -> dict[str, str]:
     """"<kind>/<id>" → bundle name, for every entry of a manifest."""
     out: dict[str, str] = {}
-    for kind, plural in _PLURAL.items():
+    for kind, plural in manifest_sections():
         for id, name in sorted((m.get(plural) or {}).items()):
             out[f"{kind}/{id}"] = name
     return out

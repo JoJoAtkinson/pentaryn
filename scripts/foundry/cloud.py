@@ -764,7 +764,7 @@ def snapshot_digest(manifest: dict | None = None) -> str:
     module — the fingerprint ignores LevelDB housekeeping — so the digest-skip holds."""
     if manifest is None:
         manifest = bundles.manifest(bundles.local_inventory())
-    m = {"modules": manifest.get("modules") or {}, "systems": manifest.get("systems") or {}}
+    m = bundles.sections(manifest)
     return hashlib.sha256((world_tree_digest() + "\n" + json.dumps(m, sort_keys=True))
                           .encode()).hexdigest()
 
@@ -1031,8 +1031,8 @@ def _build(st: Storage, reason: str, *, safety: bool = False,
     try:
         for loc in missing:
             bundles.build(loc, job.staging)
-        _build_world_tar(building, {"bundled": 1, "modules": manifest["modules"],
-                                    "systems": manifest["systems"], "host": me, "core": core})
+        _build_world_tar(building, {"bundled": 1, **bundles.sections(manifest),
+                                    "host": me, "core": core})
         os.replace(building, tmp)
         job.size = tmp.stat().st_size
         job.save()
@@ -1198,8 +1198,7 @@ def _upload_job(st: Storage, job: uploadq.Job, protect: str | None = None) -> Sn
                "ancestor_mtimes": ancestor_mtimes, "origin_before": _finite(origin),
                "host": me}
     if bundled:
-        sidecar.update({"bundled": 1, "modules": job.manifest.get("modules") or {},
-                        "systems": job.manifest.get("systems") or {}})
+        sidecar.update({"bundled": 1, **bundles.sections(job.manifest)})
     upload_world = there is None or there.size != size
     if upload_world:
         fresh = {n: p for n, p in staged.items() if n not in have}
@@ -2002,7 +2001,7 @@ def _parse_manifest(data) -> dict | None:
     if not isinstance(data, dict) or not data.get("bundled"):
         return None
     out: dict[str, dict[str, str]] = {}
-    for kind, plural in (("module", "modules"), ("system", "systems")):
+    for kind, plural in bundles.manifest_sections():
         section = data.get(plural) or {}
         if not isinstance(section, dict):
             return None
@@ -2452,7 +2451,7 @@ def apply_snapshot(f: Fetched, *, systems: bool = True) -> None:
         log("left in place (no local world, so no cloud copy references them): "
             + ", ".join(left))
     parts = []
-    for kind, plural in (("module", "modules"), ("system", "systems")):
+    for kind, plural in bundles.manifest_sections():
         if kind == "system" and not systems:
             parts.append(f"{plural}: not touched")
             continue
