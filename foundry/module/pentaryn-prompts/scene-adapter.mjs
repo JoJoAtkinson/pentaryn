@@ -305,7 +305,7 @@ export function sceneMeta(scene) {
   const squares = [Math.round(d.sceneWidth / d.size), Math.round(d.sceneHeight / d.size)];
   const warn = heightWarning(scene);
   // doors for the door lines in the overview, and every sight-blocking wall so a door line only puts
-  // on a side what can see the doorway (the pure wall test; Levels/heights not modelled, as los.mjs)
+  // on a side what can see the doorway (the pure wall test; Levels/heights not modelled, as in sight-adapter.mjs)
   const doors = [];
   for (const w of scene.walls ?? []) {
     if (w.door) doors.push({ id: w.id, c: [...w.c], door: w.door, ds: w.ds, sight: w.sight ?? 20 });

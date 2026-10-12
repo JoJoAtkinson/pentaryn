@@ -43,7 +43,7 @@ export const DIAGONALS = Object.freeze({
 });
 
 /**
- * Not a core diagonal rule: the "squares" are hex cube coordinates `{i: q, j: r}` (model.mjs maps
+ * Not a core diagonal rule: the "squares" are hex cube coordinates `{i: q, j: r}` (scene-adapter.mjs maps
  * `HexagonalGrid#offsetToCube` into them) and a step is one hex.
  */
 export const HEX_RULE = "hex";

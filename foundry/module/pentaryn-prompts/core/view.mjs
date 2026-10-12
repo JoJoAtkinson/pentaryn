@@ -14,7 +14,7 @@ import { parseParty } from "./xp.mjs";
 /** Built kinds that are creatures; the hostile ones make encounters and chain into packs (§13). */
 export const CREATURE_KINDS = Object.freeze(["npc", "character", "creature"]);
 
-/* ── From scene items to the rendered view (pure; model.mjs feeds it) ─────── */
+/* ── From scene items to the rendered view (pure; scene-adapter.mjs feeds it) ─ */
 
 /**
  * Build the gather view (what `renderGather` reads) and the manifest from scene items.
@@ -217,7 +217,7 @@ export function buildView(scenes, { unseenWithinFt = 60, linkFt = LINK_FT, forma
  * (~0.1 ms per test point on a 1,500-wall map), so a pair nobody asks about costs nothing.
  *
  * `sight`: null → the pure wall test over `walls` from A's origin to B's test points;
- * `{visible(A, B) → bool, classify(A, B) → "door"|"secret door"|"wall"}` (los.mjs);
+ * `{visible(A, B) → bool, classify(A, B) → "door"|"secret door"|"wall"}` (sight-adapter.mjs);
  * or a plain `(A, B) → los string` function.
  *
  * items: `[{ key, rect, centre, origin?, points?, squares? }]`

@@ -220,7 +220,7 @@ function renderBuilt(t, chars, sharedWith, described = null) {
   return out;
 }
 
-/* ── Built facts → text (model.mjs gathers the facts; these print them) ─── */
+/* ── Built facts → text (scene-adapter.mjs gathers the facts; these print them) */
 
 /**
  * An AmbientLight config as the gather prints it: `dim 10 ft, bright 5 ft, #9fd3ff, pulse` (empty

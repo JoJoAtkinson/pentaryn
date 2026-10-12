@@ -21,7 +21,7 @@ function slotsText(slots) {
   return slots.map(r => (r.key === "pact" ? `pact ${r.value}/${r.max} (${ordinal(r.level)})` : `${ordinal(r.level)} ${r.value}/${r.max}`)).join(", ");
 }
 
-/** A character's sheet numbers (character.mjs `summarise`) as one line. */
+/** A character's sheet numbers (character-adapter.mjs `summarise`) as one line. */
 export function sheetLine(s) {
   if (!s) return null;
   const ab = s.abilities ? Object.entries(s.abilities).map(([k, v]) => `${k} ${v}`).join(" ") : "";

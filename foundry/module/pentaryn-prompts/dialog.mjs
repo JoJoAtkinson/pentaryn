@@ -10,7 +10,7 @@
  * new marker's box never waits for the previous box to save, delete or animate out. `close()`
  * snapshots the text, removes the window at once (no fade: a fading window under the cursor ate
  * the next drop) and saves in the background. Keys typed before the textarea has focus are held
- * by typeahead.mjs and handed over on focus.
+ * by typeahead-adapter.mjs and handed over on focus.
  */
 
 import {
@@ -260,7 +260,7 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
     }, 0);
   }
 
-  /** Text no open claimed (typeahead.mjs): it belongs in the box Joe is looking at. */
+  /** Text no open claimed (typeahead-adapter.mjs captured it, typeahead.mjs routes it): it belongs in the box Joe is looking at. */
   static takeOrphan(text) {
     const app = PromptDialog.current;
     const ta = app?.rendered && !app.#closing ? app.element?.querySelector("textarea[name=prompt]") : null;

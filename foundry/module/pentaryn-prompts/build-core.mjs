@@ -3,7 +3,7 @@
  *
  * Ability budgets for player characters (the 2024 PHB's standard array / point buy, background
  * increases, level ASIs), matching a caller's short choice words against dnd5e's trait keys, and
- * the lookup order for per-advancement choices. character.mjs is the Foundry half.
+ * the lookup order for per-advancement choices. character-adapter.mjs is the Foundry half.
  */
 
 // moved to core/text.mjs (gather's crop decision, replace's spec-file path); re-exported for existing importers

@@ -4,7 +4,7 @@
  * Deterministic: placement on the marker's footprint, provenance stamped on every created
  * document, the marker deleted only after its replacement exists, a readback from the scene.
  *
- * `npc` (`{kind: "npc", npc, features, patch}`) is built here (npc.mjs, plan §13) through the bridge
+ * `npc` (`{kind: "npc", npc, features, patch}`) is built here (npc-adapter.mjs, plan §13) through the bridge
  * module's createNpcActor / add…ToActor handlers, so it works through eval-js as well as the MCP
  * tool. `{kind: "npc", actorId}` and the older bridge form `{kind: "actor", actorId, copy: false,
  * provenanceKind: "npc", stampActor: true}` still place an existing actor as an npc.

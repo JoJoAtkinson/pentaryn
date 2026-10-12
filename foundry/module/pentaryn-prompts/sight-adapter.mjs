@@ -35,7 +35,7 @@ export function heightWarning(scene) {
 }
 
 /**
- * Sight over items built by model.mjs (`{origin, points, centre, level}`), directional (A looks at
+ * Sight over items built by scene-adapter.mjs (`{origin, points, centre, level}`), directional (A looks at
  * B), as the two halves makeRel evaluates lazily:
  *   visible(A, B)  → boolean, core's test (any of B's test points clear);
  *   classify(A, B) → "door" | "secret door" | "wall", the door pass for a pair already blocked.
