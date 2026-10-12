@@ -1,4 +1,4 @@
-// pentaryn kit 1.0.2 · vendored from foundry/lib/election.mjs — edit the canonical file, then run scripts/foundry/blueprint/vendor.py
+// pentaryn kit 1.1.0 · vendored from foundry/lib/election.mjs — edit the canonical file, then run scripts/foundry/blueprint/vendor.py
 /**
  * Who acts. Every client sees the same hook; usually exactly one must act on it. The predicates
  * below are DIFFERENT truth tables on purpose — a call site keeps the one it uses today:
