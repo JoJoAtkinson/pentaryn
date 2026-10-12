@@ -8,7 +8,7 @@
  */
 
 import { MODULE, cardHTML, esc } from "./portals-core.mjs";
-import { cardFor, destinationsOf, linkPair, lookAt, passageRevealed, snapshot, teleportBehaviors, unlinkRegion } from "./scene-adapter.mjs";
+import { cardFor, destinationsOf, docOf, linkPair, lookAt, passageRevealed, snapshot, teleportBehaviors, unlinkRegion } from "./scene-adapter.mjs";
 import { flagPath } from "./lib/flags.mjs";
 
 const deps = { setEditing: () => {}, guard: (label, fn) => fn };
@@ -30,8 +30,10 @@ export class PortalCard extends foundry.applications.api.ApplicationV2 {
     position: { width: 600, height: "auto" }
   };
 
-  static open(region, { edit = false } = {}) {
+  static open(regionOrUuid, { edit = false } = {}) {
     if (!game.user.isGM) return null;
+    const region = docOf(regionOrUuid, "Region", "open");   // ROB-6
+    if (!region) return undefined;
     return new PortalCard(region, edit).render(true);
   }
 

@@ -24,7 +24,22 @@ export function configureSceneAdapter({ setting, log } = {}) {
 /* -------------------------------------------- */
 
 /** Card data for one destination region, with fallbacks (core cardData); null for no region. */
-export function cardFor(region) {
+/**
+ * ROB-6 [declared]: the legacy rows take a document or its uuid string, as snapshot does. A string
+ * resolves through fromUuidSync; one that names no `documentName` → null, with a log warning.
+ * Anything that is not a string passes through untouched.
+ */
+export function docOf(docOrUuid, documentName, row) {
+  if (typeof docOrUuid !== "string") return docOrUuid;
+  let doc = null;
+  try { doc = fromUuidSync(docOrUuid); } catch (err) { deps.log?.debug(`${row}: fromUuidSync`, err); }
+  if (doc?.documentName === documentName) return doc;
+  deps.log?.warn(`${row}: no ${documentName} at ${docOrUuid}`);
+  return null;
+}
+
+export function cardFor(regionOrUuid) {
+  const region = docOf(regionOrUuid, "Region", "cardFor");
   if (!region) return null;
   const scene = region.parent;
   return cardData({
@@ -167,8 +182,10 @@ export async function moveRegionDocs(region, dx, dy) {
  * GM only: go and look at a destination without moving anyone. Your view only; players stay put.
  * The destination's own badge (if it links back) is the way home, or the scene nav.
  */
-export async function lookAt(destRegion) {
-  if (!game.user.isGM || !destRegion) return;
+export async function lookAt(regionOrUuid) {
+  if (!game.user.isGM) return;
+  const destRegion = docOf(regionOrUuid, "Region", "lookAt");
+  if (!destRegion) return;
   const b = destRegion.bounds;
   const x = b.x + b.width / 2, y = b.y + b.height / 2;
   if (canvas.scene?.id !== destRegion.parent.id) {
@@ -313,8 +330,10 @@ export async function confirmParty(party, title) {
  * tokens moved; cancelled = the GM said no, nobody counts as party, or every party token was
  * deleted while the confirm was open); undefined for a player, no region or no scene on the canvas.
  */
-export async function teleportParty(destRegion, { confirm = true } = {}) {
-  if (!game.user.isGM || !destRegion) return;
+export async function teleportParty(regionOrUuid, { confirm = true } = {}) {
+  if (!game.user.isGM) return;
+  const destRegion = docOf(regionOrUuid, "Region", "teleportParty");
+  if (!destRegion) return;
   // portals-edge-5: no scene on the canvas → nothing to move, not a TypeError.
   if (!canvas?.scene) { deps.log?.warn("teleportParty: no scene"); return; }
   const from = canvas.scene;

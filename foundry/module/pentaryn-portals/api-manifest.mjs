@@ -2,14 +2,14 @@
  * Pentaryn Portal Cards — the API manifest. PURE DATA: node imports it without a Foundry stub,
  * describe() reports it, and buildApi() refuses to load when it and the implementations drift.
  *
- * Eight own rows; the first four keep their old signatures (`legacy: true`): documents in, the old
- * return shapes. Features contribute the rest from install(): badges → open, redraw, badges;
+ * Eight own rows; the first four keep their old signatures (`legacy: true`): a document or its uuid
+ * in (ROB-6: a uuid naming no document of that kind → null / undefined, logged), the old return shapes. Features contribute the rest from install(): badges → open, redraw, badges;
  * party → spreadArrival.
  */
 
 import { CONTRACT, MODULE, NS, VERSION } from "./portals-core.mjs";
 
-const REGION = { name: "region", type: "RegionDocument", doc: "a destination region document" };
+const REGION = { name: "region", type: "RegionDocument|uuid", doc: "a destination region document, or its uuid" };
 const REF = { name: "ref", kind: "region", type: "Region|uuid|id|exact name", doc: "never a substring; opts.sceneId scopes an id or a name" };
 const DESTINATION = "{ uuid, scene: { id, uuid, name }, name, card: { uuid, title, img, description }, revealed, choice, behavior }";
 
@@ -36,16 +36,16 @@ export const MANIFEST = Object.freeze({
       params: [REGION],
       returns: "{ uuid, title, img, description } | null",
       gm: false, writes: false, legacy: true,
-      nullWhen: "no region is given",
+      nullWhen: "no region is given, or a uuid that names no region (logged)",
       doc: "The card a player sees for this destination, with fallbacks (scene nav name, scene thumbnail).",
     },
     {
       path: "teleportParty",
       params: [
-        { name: "destRegion", type: "RegionDocument", doc: "where the party lands (its centre)" },
+        { name: "destRegion", type: "RegionDocument|uuid", doc: "where the party lands (its centre)" },
         { name: "opts", type: "{ confirm = true }", optional: true, doc: "confirm: false skips the GM's confirm dialog" },
       ],
-      returns: "{ moved, cancelled } | undefined (not a GM, no region, or no scene on the canvas)",
+      returns: "{ moved, cancelled } | undefined (not a GM, no region or a uuid that names no region, or no scene on the canvas)",
       gm: true, writes: true, legacy: true,
       sideEffects: ["Token: update (same scene) or create + delete (another scene)", "pulls active players to the destination"],
       doc: "Move the party on canvas.scene (PCs, their summons, player-owned tokens) to the region. Opens a "
@@ -53,7 +53,7 @@ export const MANIFEST = Object.freeze({
     },
     {
       path: "lookAt",
-      params: [{ name: "destRegion", type: "RegionDocument" }],
+      params: [{ name: "destRegion", type: "RegionDocument|uuid" }],
       returns: "undefined",
       gm: true, writes: false, legacy: true,
       doc: "Pan the calling GM's own view to the region (switching scene if needed). Nobody moves; nothing broadcasts.",
@@ -107,7 +107,7 @@ export const BADGE_ROWS = Object.freeze([
   {
     path: "open",
     params: [REGION, { name: "opts", type: "{ edit = false }", optional: true }],
-    returns: "Promise<PortalCard> | null (not a GM)",
+    returns: "Promise<PortalCard> | null (not a GM) | undefined (a uuid that names no region)",
     gm: true, writes: false, legacy: true,
     doc: "Open the Portal card window for a teleport region: the player's view, or the editor with { edit: true }.",
   },
@@ -131,8 +131,8 @@ export const BADGE_ROWS = Object.freeze([
 export const PARTY_ROWS = Object.freeze([
   {
     path: "spreadArrival",
-    params: [{ name: "tokenDoc", type: "TokenDocument", doc: "a token that just arrived" }],
-    returns: "the same TokenDocument",
+    params: [{ name: "tokenDoc", type: "TokenDocument|uuid", doc: "a token that just arrived, or its uuid" }],
+    returns: "the same TokenDocument | undefined (a uuid that names no token)",
     gm: true, writes: true, legacy: true,
     sideEffects: ["Token: x, y (teleport, no animation)"],
     doc: "If the token shares a square with someone, move it to the nearest free square (setting spreadArrivals).",

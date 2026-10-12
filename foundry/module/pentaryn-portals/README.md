@@ -71,18 +71,18 @@ or an exact name (`opts.sceneId` scopes an id or a name) — never a substring.
 
 | Call | Who | Returns |
 |---|---|---|
-| `cardFor(region)` | anyone | `{ uuid, title, img, description }`; `null` for no region |
+| `cardFor(region)` | anyone | `{ uuid, title, img, description }`; `null` for no region. `region`: `RegionDocument\|uuid` (a uuid naming no region → `null`, logged) |
 | `destinations(ref, { sceneId })` | anyone | `[{ uuid, scene, name, card, revealed, choice, behavior }]` |
 | `inspect(ref, { sceneId, as })` | anyone | `{ region, hidden, card, revealed, destinations }`; a player (`as`) gets `destinations: null` for a sealed or unrevealed passage and no passage name; an Actor or Token **document** (what the root `game.pentaryn.inspect` passes) → `null`; an Actor/Token uuid or name is not a region ref → `BAD_ARGS` / `NOT_FOUND` |
 | `badges()` | anyone | the badges drawn on **this** client: `[{ region, revealed, visible, cards }]` |
 | `redraw()` | anyone | redraws this client's badges |
 | `snapshot(regionOrUuid, { squaresWide, squaresHigh })` | GM | the saved image path, or `null` (no background, or the upload failed — warns, card image unchanged) |
-| `lookAt(region)` | GM | pans **your** view; nobody moves |
-| `teleportParty(region, { confirm = true })` | GM | `{ moved, cancelled }`. Moves the party on **`canvas.scene`** (the calling client's view); no scene on the canvas → `undefined`, nothing moves. It **opens a confirm dialog** unless `confirmPartyTeleport` is off — a console or bridge caller passes `{ confirm: false }`, or it waits on a click. Nobody counting as party is always the warn and `{ moved: 0, cancelled: true }`, confirm or not: no players pulled, no view change |
+| `lookAt(region)` | GM | pans **your** view; nobody moves. `region`: `RegionDocument\|uuid` (a uuid naming no region → `undefined`, logged) |
+| `teleportParty(region, { confirm = true })` | GM | `{ moved, cancelled }`. `region`: `RegionDocument\|uuid` (a uuid naming no region → `undefined`, logged). Moves the party on **`canvas.scene`** (the calling client's view); no scene on the canvas → `undefined`, nothing moves. It **opens a confirm dialog** unless `confirmPartyTeleport` is off — a console or bridge caller passes `{ confirm: false }`, or it waits on a click. Nobody counting as party is always the warn and `{ moved: 0, cancelled: true }`, confirm or not: no players pulled, no view change |
 | `link(ref, { to, twoWay, dryRun })` | GM | `ok({ from, to, twoWay })` / `fail(code, reason)`; the same writes as the card's Add a destination |
 | `unlink(ref, { to, dryRun })` | GM | `ok({ from, to, removed })` / `fail(…)` |
-| `open(region, { edit })` | GM | the Portal card window |
-| `spreadArrival(tokenDoc)` | GM | the token, moved off an occupied square if it was on one |
+| `open(region, { edit })` | GM | the Portal card window. `region`: `RegionDocument\|uuid` (a uuid naming no region → `undefined`, logged) |
+| `spreadArrival(tokenDoc)` | GM | the token, moved off an occupied square if it was on one. `tokenDoc`: `TokenDocument\|uuid` (a uuid naming no token → `undefined`, logged) |
 
 Writes (`link`, `unlink`) never throw for a bad ref or a player: they return `fail("NOT_FOUND" |
 "AMBIGUOUS" | "BAD_ARGS" | "NOT_GM", reason)`. The seven old members keep their signatures.

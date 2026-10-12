@@ -13,7 +13,7 @@
  */
 
 import { crowded, followersOf, isAoeHandle, tokenBox } from "./portals-core.mjs";
-import { carryTo, destinationsOf, gmUserIds, landingPlaces, recordOf } from "./scene-adapter.mjs";
+import { carryTo, destinationsOf, docOf, gmUserIds, landingPlaces, recordOf } from "./scene-adapter.mjs";
 import { setting } from "./settings.mjs";
 import { PARTY_ROWS } from "./api-manifest.mjs";
 
@@ -38,7 +38,9 @@ export function cameThroughPortal(token, destScene) {
  * already there all stood on the one landing square) steps to the nearest free square around it.
  * GM, after core's teleport created the token. Setting spreadArrivals.
  */
-export async function spreadArrival(arrived) {
+export async function spreadArrival(tokenOrUuid) {
+  const arrived = docOf(tokenOrUuid, "Token", "spreadArrival");   // ROB-6
+  if (!arrived) return undefined;
   if (!setting("spreadArrivals")) return arrived;
   const dest = arrived.parent;
   const g = dest.grid.size;
