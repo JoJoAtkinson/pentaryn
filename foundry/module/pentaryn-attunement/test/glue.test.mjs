@@ -233,6 +233,54 @@ test("[declared] W2-A1: the later claim wins when both tabs write before either 
   assert.equal(since(from, "delete").length, 1, "deleted once");
 });
 
+test("[declared] W2-A1 follow-up: preCreateItem clears a stale claims.coinBack copied with the purse", () => {
+  // A purse copied (toObject) inside the chest's 750 ms claim window carries that tab's stamp; left
+  // in place, claimDocument reads it as held and every other tab stands down — nobody pays.
+  const actor = makeActor(F, { id: "actorStal0000001", name: "Staler", currency: { gp: 1 } });
+  const bond = { actor: actor.id, key: "ks", name: "Coin Purse", currency: { gp: 12, sp: 3 } };
+  const purse = addItem(F, null, { id: "itemStal00000001", name: "Coin Purse (Staler)", type: "loot",
+    flags: { [MOD]: { bond, claims: { coinBack: "socket-gone" } } } });
+  purse.parent = actor;
+  const from = mark();
+  F.fireCall("preCreateItem", purse, {}, {});
+  assert.deepEqual(since(from, "updateSource").map(c => c.changes), [
+    { name: "Coin Purse", "flags.pentaryn-attunement.claims.coinBack": "<_del>" },
+  ]);
+});
+
+test("W2-A1 follow-up: a stale claim cleared before create — the purse is claimed afresh and pays once", async () => {
+  const actor = makeActor(F, { id: "actorStal0000002", name: "Restaler", currency: { gp: 1 } });
+  const bond = { actor: actor.id, key: "ks2", name: "Coin Purse", currency: { gp: 12 } };
+  const purse = addItem(F, null, { id: "itemStal00000002", name: "Coin Purse (Restaler)", type: "loot",
+    flags: { [MOD]: { bond, claims: { coinBack: "socket-gone" } } } });
+  purse.parent = actor;
+  F.fireCall("preCreateItem", purse, {}, {});
+  const cleared = since(0, "updateSource").at(-1).changes;
+  if (cleared["flags.pentaryn-attunement.claims.coinBack"] === "<_del>") delete purse.flags[MOD].claims.coinBack;
+  actor.items.set?.(purse.id, purse);
+  const from = mark();
+  F.fire("createItem", purse, {}, GM);
+  await flush();
+  mock.timers.tick(750);
+  await flush();
+  const pays = since(from).filter(c => c.op === "update" && c.documentName === "Actor");
+  assert.deepEqual(pays.map(c => c.changes), [{ "system.currency.gp": 13 }], "paid once");
+  assert.equal(since(from, "delete").length, 1, "the purse deletes itself");
+});
+
+test("preCreateItem: a purse with a claim arriving in a pile keeps its stamp (no updateSource)", () => {
+  const pile = makeActor(F, { id: "actorPile0000002", name: "Chest" });
+  game.itempiles = { API: { isValidItemPile: a => a === pile } };
+  const bond = { actor: "actorStal0000001", key: "ks", name: "Coin Purse", currency: { gp: 1 } };
+  const purse = addItem(F, null, { id: "itemStal00000003", name: "Coin Purse (Staler)", type: "loot",
+    flags: { [MOD]: { bond, claims: { coinBack: "socket-gone" } } } });
+  purse.parent = pile;
+  const from = mark();
+  F.fireCall("preCreateItem", purse, {}, {});
+  assert.deepEqual(since(from, "updateSource"), []);
+  delete game.itempiles;
+});
+
 test("stash(): container creates, owner deletes, owner update — in that order; resolves the create count (golden/stash.json)", async () => {
   F.resetIds();
   const owner = makeActor(F, { id: "actorOwnr0000001", name: "Talo Vesk", currency: { gp: 5, sp: 0 },

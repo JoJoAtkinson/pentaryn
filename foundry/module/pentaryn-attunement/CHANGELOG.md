@@ -1,5 +1,15 @@
 # Changelog — Pentaryn Attunement Slots (`pentaryn-attunement`)
 
+## Unreleased — 2026-10-12 (overnight FX batch 4)
+
+The version stays 0.3.0 until the next `module.json` restart batch (code only: sync + reload).
+
+- **[declared] W2-A1 follow-up:** `restoreBond` (preCreateItem, non-pile actor) clears a stale
+  `flags.pentaryn-attunement.claims.coinBack`. A purse copied inside another actor's 750 ms claim
+  window carried that tab's socket stamp, so every tab on the new actor read the claim as held and
+  stood down — the coin was never paid. Now the purse is claimed afresh and pays once. A purse
+  arriving in an Item Piles pile keeps its stamp (it never pays there).
+
 ## 0.3.0 — 2026-10-12 (Wave 7 restart batch, wave 5; kit 1.1.0)
 
 Releases the wave-2 blueprint migration (next section) and overnight FX batch 2 (W2-A1, W2-A2)

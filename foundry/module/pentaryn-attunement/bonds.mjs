@@ -54,7 +54,11 @@ function restoreBond(item, data, options) {
   // Into another container (box to box): leave it tagged.
   if (isPileActor(actor)) return;
 
-  item.updateSource(bondChanges(bond, { actorId: actor.id, awayKeys: awayOf(actor).map(a => a.key), fallbackName: item.name }));
+  const changes = bondChanges(bond, { actorId: actor.id, awayKeys: awayOf(actor).map(a => a.key), fallbackName: item.name });
+  // A purse copied inside another actor's 750 ms claim window carries that tab's stamp; left in
+  // place, every tab here reads the claim as held by someone else and nobody pays (W2-A1).
+  if (item.getFlag?.(MODULE, "claims")?.coinBack) changes[`flags.${MODULE}.claims.coinBack`] = _del;
+  item.updateSource(changes);
   if (options) options[MODULE] = { bond };
 }
 
