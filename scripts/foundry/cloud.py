@@ -1234,6 +1234,22 @@ def _upload_job(st: Storage, job: uploadq.Job, protect: str | None = None) -> Sn
 
     entry = next((e for e in st.ls(WORLD_BACKUPS) if e.name == job.name), None)
     snap = parse_snapshot(entry or Entry(job.name, size, time.time()), WORLD_BACKUPS)
+    _after_landing(st, job, me, state, linked, superseded, keep_names, snap,
+                   lineage=(ancestors, ancestor_mtimes, origin))
+    return snap
+
+
+def _after_landing(st: Storage, job: uploadq.Job, me: str, state: bootstate.BootState,
+                   linked: bool, superseded: Snapshot | None, keep_names: set[str],
+                   snap: Snapshot, *, lineage: tuple) -> None:
+    """Everything after `job`'s snapshot `snap` is in the cloud, in this order (review
+    M10): the based-on record (only when `linked`; `lineage` is the (ancestors, their
+    mtimes, origin_before) its sidecar carries), the job leaves the queue, the retired
+    `.last-digest` marker goes (primary only), the snapshot it coalesces (`superseded`)
+    is deleted, this host's own snapshots are pruned to its keep counts — never one in
+    `keep_names` — and the bundle GC runs."""
+    ancestors, ancestor_mtimes, origin = lineage
+    size = job.size
     if linked:
         state.record_snapshot(job.name, me, snap.mtime, job.digest, by="backup",
                               lineage=ancestors, lineage_mtimes=ancestor_mtimes,
@@ -1267,7 +1283,6 @@ def _upload_job(st: Storage, job: uploadq.Job, protect: str | None = None) -> Sn
         + (f", and {min(len(safeties), KEEP_SAFETY_COPIES)} of {KEEP_SAFETY_COPIES} "
            "restore safety copies" if safeties else ""))
     _gc_after_backup(st)
-    return snap
 
 
 def _unpublish(st: Storage, job: uploadq.Job) -> str:

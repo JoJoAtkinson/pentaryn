@@ -143,6 +143,37 @@ def test_coalescing_pruning_and_lineage_are_unchanged(two_hosts, spawned):
         assert anc == [first]
 
 
+def test_the_post_landing_retention_is_its_own_step(two_hosts, spawned, monkeypatch,
+                                                    capsys):
+    """Review M10: `_upload_job` publishes; `_after_landing` does what follows a landed
+    snapshot — the record, the queue drop, coalescing, pruning, GC — in the same order
+    and with the same log lines as when it was one function."""
+    seen = []
+    real = cloud._after_landing
+
+    def spy(st, job, me, state, linked, superseded, keep_names, snap, **kw):
+        seen.append((job.name, me, linked, superseded and superseded.name, snap.name,
+                     job.tar.exists() or uploadq.pending() != []))
+        return real(st, job, me, state, linked, superseded, keep_names, snap, **kw)
+
+    monkeypatch.setattr(cloud, "_after_landing", spy)
+    with two_hosts.use("mac") as data:
+        cloud.backup("shutdown")
+        first = bootstate.load().based_on
+        _edit(data, "second session")
+        cloud.backup("shutdown", background=True)
+        [job] = uploadq.pending()
+        capsys.readouterr()
+        cloud.upload_pending()
+        out = capsys.readouterr().out
+        assert seen[-1] == (job.name, "mac", True, first, job.name, True)
+        assert bootstate.load().based_on == job.name and uploadq.pending() == []
+        landed, replaced, kept = (out.index(f"snapshot → {job.name} ("),
+                                  out.index(f"replaced {first} ("),
+                                  out.index(" snapshots kept for mac"))
+        assert landed < replaced < kept
+
+
 # ── bootstate moves only when the upload completes; a failure is retried ─────
 
 def test_a_failed_upload_records_nothing_and_leaves_the_job(two_hosts, spawned, monkeypatch):
