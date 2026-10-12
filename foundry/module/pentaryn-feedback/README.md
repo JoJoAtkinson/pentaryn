@@ -60,10 +60,8 @@ whose queue held it — never from the payload), world, scene (viewed/active), c
 targeted tokens with hp, combat round/turn, open windows, active module versions, client (UA,
 viewport, language, time zone), the reporter's own last 10 chat cards (flavor and roll total;
 whisper as a yes/no), the error ring and the action ring. Never: other users' chat, whisper or
-chat content, setting values, form input values, journal text. Every string is clipped. Recorded
-free text (error messages and stacks, error locations, window titles, click labels, notification
-text, chat flavor) also passes through `redact()` (secret-looking `key=value`, Bearer tokens, URL
-query strings). The player's own report text and document/user names are clipped, not redacted.
+chat content, setting values, form input values, journal text. Every string is clipped and passed
+through `redact()` (secret-looking `key=value`, Bearer tokens, URL query strings).
 
 Nothing in world settings (blueprint §5.3).
 
