@@ -4,7 +4,8 @@
  * implementation map, and describe it.
  *
  * Drift fails at load, in node, before anything is synced: a row with no implementation, an
- * implementation with no row, or a name that would clobber a kit-owned member all throw here.
+ * implementation with no row, a name that would clobber a kit-owned member, or a resolved `ref`
+ * param whose kind is not in resolve.mjs's KINDS (kit-ext-6) all throw here.
  *
  * Kit-owned members (errors.RESERVED):
  *   describe, version, contract    built here; never a row
@@ -13,7 +14,7 @@
  */
 
 import { CODES, KIT_VERSION, RESERVED, errorCode, toFail } from "./errors.mjs";
-import { refOf, resolveRef } from "./resolve.mjs";
+import { KINDS, refOf, resolveRef } from "./resolve.mjs";
 
 /**
  * @typedef {{ name: string, kind?: string, type?: string, optional?: boolean, resolve?: boolean|"self", doc?: string }} Param
@@ -48,9 +49,16 @@ function reservedClash(path, { own, legacy }) {
  *  - Write rows never throw for an expected refusal (use-doc §5.1): a coded resolve error (NOT_FOUND,
  *    AMBIGUOUS, BAD_ARGS) comes back as `fail(code, reason)`. Callers `await` a write either way.
  */
-function bind(row, fn, { g = globalThis } = {}) {
+/** The leading `ref` param the kit resolves for this row, or null (absent, or `resolve: false`/`"self"`). */
+function resolvedRef(row) {
   const first = row.params?.[0];
-  if (first?.name !== "ref" || first.resolve === false || first.resolve === "self") return fn;
+  if (first?.name !== "ref" || first.resolve === false || first.resolve === "self") return null;
+  return first;
+}
+
+function bind(row, fn, { g = globalThis } = {}) {
+  const first = resolvedRef(row);
+  if (!first) return fn;
   const kind = first.kind ?? "actor";
   const required = !row.legacy;
   const wrapped = (ref, opts, ...rest) => {
@@ -133,6 +141,8 @@ export function buildApi(manifest, impl, { contributions = [], extras = {}, memb
       const clash = reservedClash(row.path, { own, legacy: row.legacy });
       if (clash) throw new Error(`${mod}: "${row.path}" is reserved`);
       if (rows.some(r => r.path === row.path)) throw new Error(`${mod}: API row "${row.path}" is defined twice`);
+      const kind = resolvedRef(row)?.kind ?? "actor";
+      if (!Object.hasOwn(KINDS, kind)) throw new Error(`${mod}: API row "${row.path}" ref kind "${kind}" is not a kit kind`);
       rows.push(row);
     }
     for (const [path, fn] of Object.entries(map ?? {})) {

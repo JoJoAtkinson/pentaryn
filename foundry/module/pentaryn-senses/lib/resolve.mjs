@@ -12,17 +12,26 @@
 
 import { codedError } from "./errors.mjs";
 
-const DOC = {
-  actor: "Actor", token: "Token", item: "Item", scene: "Scene", user: "User",
-  journal: "JournalEntry", message: "ChatMessage", macro: "Macro", region: "Region",
-  combat: "Combat", table: "RollTable", folder: "Folder", playlist: "Playlist",
-};
-const COLLECTION = {
-  actor: "actors", item: "items", scene: "scenes", user: "users", journal: "journal",
-  message: "messages", macro: "macros", combat: "combats", table: "tables",
-  folder: "folders", playlist: "playlists",
-};
-const EMBEDDED = { token: "tokens", region: "regions" };
+/**
+ * Every ref kind the kit resolves, in one table (kit-ext-6): its documentName, and either the world
+ * collection on `game` or the embedded collection on a Scene. buildApi throws at load on a ref param
+ * whose kind is not a key here.
+ */
+export const KINDS = Object.freeze(Object.fromEntries(Object.entries({
+  actor: { doc: "Actor", collection: "actors" },
+  token: { doc: "Token", embedded: "tokens" },
+  item: { doc: "Item", collection: "items" },
+  scene: { doc: "Scene", collection: "scenes" },
+  user: { doc: "User", collection: "users" },
+  journal: { doc: "JournalEntry", collection: "journal" },
+  message: { doc: "ChatMessage", collection: "messages" },
+  macro: { doc: "Macro", collection: "macros" },
+  region: { doc: "Region", embedded: "regions" },
+  combat: { doc: "Combat", collection: "combats" },
+  table: { doc: "RollTable", collection: "tables" },
+  folder: { doc: "Folder", collection: "folders" },
+  playlist: { doc: "Playlist", collection: "playlists" },
+}).map(([k, v]) => [k, Object.freeze(v)])));
 const ID = /^[A-Za-z0-9]{16}$/;
 const UUID = /^(?:Compendium\.|[A-Z][A-Za-z]+\.[A-Za-z0-9]{16}(?:\.|$))/;
 
@@ -51,7 +60,7 @@ function actorOfToken(tokenDoc, base, g) {
 }
 
 function adapt(doc, kind, base, g) {
-  const want = DOC[kind] ?? kind;
+  const want = KINDS[kind]?.doc ?? kind;
   if (!doc) return null;
   // A token's synthetic Actor asked for as the base: the world actor (1.2.0, names-ext-3).
   if (kind === "actor" && base && doc.documentName === "Actor" && doc.isToken) {
@@ -115,9 +124,10 @@ export function resolveRef(ref, kind = "actor", { base = false, sceneId, require
   }
 
   // (3) a 16-character id
-  const embedded = EMBEDDED[kind];
+  const embedded = KINDS[kind]?.embedded;
+  const collection = KINDS[kind]?.collection;
   if (ID.test(ref)) {
-    const coll = COLLECTION[kind] ? g.game[COLLECTION[kind]] : null;
+    const coll = collection ? g.game[collection] : null;
     const direct = coll?.get?.(ref);
     if (direct) return direct;
     if (kind === "actor" || embedded) {
@@ -131,7 +141,7 @@ export function resolveRef(ref, kind = "actor", { base = false, sceneId, require
   // (4) an exact name, then a case-insensitive one
   let candidates;
   if (embedded) candidates = scenesFor(sceneId, g).flatMap(s => listOf(s?.[embedded]));
-  else candidates = listOf(COLLECTION[kind] ? g.game[COLLECTION[kind]] : null);
+  else candidates = listOf(collection ? g.game[collection] : null);
   const named = byName(candidates, ref, kind);
   if (named) return named;
 

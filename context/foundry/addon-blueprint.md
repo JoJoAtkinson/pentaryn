@@ -296,7 +296,7 @@ The manifest (`api-manifest.mjs`) is pure data. **Manifest-level fields:**
 | Field | Type | Meaning |
 |---|---|---|
 | `path` | string | dotted path under the namespace (`"store.list"`); no reserved name at any depth (§5.1) |
-| `params` | `{name, kind?, type?, optional?, resolve?, doc?}[]` | a first param named `ref` is resolved per call (`kind`: `actor` default, `token`, `user`, …; `resolve: false` opts out). A param with a Document `kind`, or a `ref`, that the kit does **not** resolve must say how a string reaches it: `resolve: "self"` (kit 1.1.0) when the function resolves a uuid, id or exact name itself, or its string forms in `type` (`"Actor\|uuid\|id\|exact name"`), or `eval-js only` in its (or the row's) `doc`: the bridge refuses it over `pentaryn-read`/`-write` otherwise (C62) |
+| `params` | `{name, kind?, type?, optional?, resolve?, doc?}[]` | a first param named `ref` is resolved per call (`kind`: `actor` default, `token`, `user`, … — a key of the kit's `KINDS` table in `resolve.mjs`, else `buildApi` throws at load (kit 1.2.0, kit-ext-6); `resolve: false` opts out). A param with a Document `kind`, or a `ref`, that the kit does **not** resolve must say how a string reaches it: `resolve: "self"` (kit 1.1.0) when the function resolves a uuid, id or exact name itself, or its string forms in `type` (`"Actor\|uuid\|id\|exact name"`), or `eval-js only` in its (or the row's) `doc`: the bridge refuses it over `pentaryn-read`/`-write` otherwise (C62) |
 | `returns` | string | the shape, in words or TS-ish (`"{ ok, checks }"`) |
 | `gm` | boolean | GM-only |
 | `writes` | boolean | changes world data → returns `ok()/fail()`, accepts `dryRun` when bulk; the fork routes it to `pentaryn-write` (D14) |

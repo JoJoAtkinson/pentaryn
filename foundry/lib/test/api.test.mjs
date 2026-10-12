@@ -246,3 +246,25 @@ test("kit-ext-5: describe()'s optional method fields come from one ordered field
   assert.equal(bare.relay, true);
   assert.equal(bare.legacy, true);
 });
+
+test("kit-ext-6: one KINDS table; a ref param naming an unknown kind throws at load", async () => {
+  const { KINDS } = await import("../resolve.mjs");
+  assert.ok(KINDS && Object.isFrozen(KINDS), "resolve.mjs exports a frozen KINDS table");
+  assert.deepEqual(Object.keys(KINDS), ["actor", "token", "item", "scene", "user", "journal", "message", "macro",
+    "region", "combat", "table", "folder", "playlist"]);
+  assert.deepEqual(KINDS.actor, { doc: "Actor", collection: "actors" });
+  assert.deepEqual(KINDS.token, { doc: "Token", embedded: "tokens" });
+  for (const k of Object.values(KINDS)) assert.ok(Object.isFrozen(k) && k.doc && (k.collection || k.embedded));
+  const typo = { ...MANIFEST, rows: [{ path: "peek", params: [{ name: "ref", kind: "tokn" }], returns: "x", gm: false, writes: false, doc: "" }] };
+  assert.throws(() => buildApi(typo, { peek: () => 1 }), /pentaryn-x: API row "peek" ref kind "tokn" is not a kit kind/);
+  // a contribution's row is checked the same way
+  assert.throws(() => buildApi(MANIFEST, impl, { contributions: [{ rows: typo.rows, impl: { peek: () => 1 } }] }), /ref kind "tokn"/);
+  // the kit never resolves a resolve:false / resolve:"self" param, so its kind is descriptive only (aoe's inspect: "any")
+  for (const resolve of [false, "self"]) {
+    const raw = { ...MANIFEST, rows: [{ path: "peek", params: [{ name: "ref", kind: "any", resolve }], returns: "x", gm: false, writes: false, doc: "" }] };
+    assert.doesNotThrow(() => buildApi(raw, { peek: () => 1 }));
+  }
+  // no kind means actor, as before
+  const bare = { ...MANIFEST, rows: [{ path: "peek", params: [{ name: "ref" }], returns: "x", gm: false, writes: false, doc: "" }] };
+  assert.doesNotThrow(() => buildApi(bare, { peek: () => 1 }));
+});
