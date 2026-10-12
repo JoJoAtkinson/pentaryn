@@ -218,11 +218,7 @@ MODULES = {
         "pentaryn-names",
         # node-test: test/run.mjs runs the characterisation suites (names guide; C39).
         check=(*_STATIC, "node-test", *_BLUEPRINT),
-        after_sync=(
-            "First install: restart Foundry (module.json is read at startup), then reload.",
-            "Rename an actor: token labels that were its name (or the part before the",
-            "first comma) follow; nicknames stay.",
-        ),
+        # after_sync comes from module.json flags.pentaryn.afterSync (Wave 7 batch).
     ),
     "senses": ModuleSpec(
         "pentaryn-senses",
@@ -261,10 +257,7 @@ MODULES = {
         "pentaryn-cursors",
         # node-test: cursors-core.mjs picks the cursor for the active control/tool.
         check=(*_STATIC, "node-test", *_BLUEPRINT),
-        after_sync=(
-            "First install: restart Foundry (module.json is read at startup), enable 'Pentaryn Tool Cursors', then reload.",
-            "Each canvas tool gets its own cursor; check with  game.pentaryn.cursors.current()",
-        ),
+        # after_sync comes from module.json flags.pentaryn.afterSync (Wave 7 batch).
     ),
     "movement": ModuleSpec(
         "pentaryn-movement",
@@ -305,11 +298,7 @@ MODULES = {
         "pentaryn-pings",
         # node-test: test/run.mjs runs the characterisation suites (pings guide step 9; C39).
         check=(*_STATIC, "node-test", *_BLUEPRINT),
-        after_sync=(
-            "First install: restart Foundry (module.json is read at startup), enable",
-            "'Pentaryn Ping Log', then reload the GM tab (GM clients are the only writers).",
-            "  game.pentaryn.pings.recent(5)",
-        ),
+        # after_sync comes from module.json flags.pentaryn.afterSync (Wave 7 batch).
     ),
     "feedback": ModuleSpec(
         "pentaryn-feedback",
