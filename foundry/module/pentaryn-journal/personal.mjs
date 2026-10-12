@@ -17,7 +17,7 @@
  * Other features and api.mjs reach this file through `ctx.exposed` (install below).
  */
 
-import { MODULE, QUERY, claimWinner, flagsOf, isPersonal, validateEnsure } from "./journal-core.mjs";
+import { MODULE, QUERY, claimWinner, isMine, isPersonal, validateEnsure } from "./journal-core.mjs";
 import { setting } from "./settings.mjs";
 import { flagPath, readFlag } from "./lib/flags.mjs";
 import { relayed } from "./lib/queries.mjs";
@@ -32,7 +32,7 @@ let ctx = null;
 /** Every personal journal of a user, oldest first. The first one is THE journal. */
 function personalsOf(userId) {
   return game.journal
-    .filter(j => isPersonal(j) && flagsOf(j).userId === userId)
+    .filter(j => isMine(j, userId))
     .sort((a, b) => (a._stats?.createdTime ?? 0) - (b._stats?.createdTime ?? 0));
 }
 function personal(user = game.user) { return personalsOf(user?.id)[0] ?? null; }
