@@ -149,3 +149,49 @@ test("ties-28: the GM's kind picker walks the world's actors once", async () => 
   assert.match(html, /ZZ Ghoul/, "the picker lists the kind the others point at");
   assert.equal(scans, 1);
 });
+
+test("perf-2: beliefs() resolves the kind pointer once, however many kind rows the ledger holds", async () => {
+  const Study = await import("../study.mjs");
+  const row = c => ({ text: "A ghoul.", tier: 15, total: 18, when: W + c, delivered: W + c + 1 });
+  /** `game.actors.get` reads reached from `kindActorOf` called by `beliefs`, for a kind ledger of `n` characters' rows. */
+  const kindReads = async n => {
+    const ledger = Object.fromEntries([PC, NPC, NPC3].slice(0, n).map((c, i) => [c, { kind: row(i) }]));
+    await get(KIND).setFlag("pentaryn-ties", "beliefs", ledger);
+    const real = game.actors.get;
+    let reads = 0;
+    let rows = [];
+    game.actors.get = function (...args) {
+      if (calledFrom("kindActorOf", "beliefs")) reads++;
+      return real.apply(this, args);
+    };
+    try {
+      rows = Study.beliefs(get(NPC2));
+    } finally {
+      game.actors.get = real;
+      await get(KIND).unsetFlag("pentaryn-ties", "beliefs");
+    }
+    assert.equal(rows.filter(r => r.ns === "kind").length, n, "every kind row is listed");
+    return reads;
+  };
+  const one = await kindReads(1);
+  assert.ok(one > 0, "the kind pointer is resolved from beliefs()");
+  assert.equal(await kindReads(3), one, "a loop invariant: resolved once, above the ledger loop");
+});
+
+test("perf-1: studyStateFor skips the item walk when the biography decides", async () => {
+  const Study = await import("../study.mjs");
+  const attack = { system: { activities: new Set([{ type: "attack" }]) } };
+  /** A kind actor nobody points at (so it resolves to itself), whose `items` reads are counted. */
+  const kindWith = (id, biography, items) => {
+    const k = { id, name: id, flags: {}, system: { details: { biography: { value: biography } } }, reads: 0 };
+    Object.defineProperty(k, "items", { get: () => (k.reads++, items) });
+    return k;
+  };
+  const told = kindWith("zzStubKind000001", "<p>Eats the dead.</p>", [attack]);
+  assert.equal(Study.studyStateFor(get(PC), told).content, true);
+  assert.equal(told.reads, 0, "a non-blank biography decides `content`: no item walk");
+  const armed = kindWith("zzStubKind000002", "", [attack]);
+  assert.equal(Study.studyStateFor(get(PC), armed).content, true, "an attack activity alone is content");
+  assert.ok(armed.reads > 0);
+  assert.equal(Study.studyStateFor(get(PC), kindWith("zzStubKind000003", "", [])).content, false, "no biography, tiers or attacks: no content");
+});

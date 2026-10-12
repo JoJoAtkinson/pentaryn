@@ -99,9 +99,12 @@ function selftest(ctx) {
  * The legacy members that take an actor (S11, declared D-c2, combat-riders-12): an Actor, Token,
  * UUID, 16-character id or exact name is resolved (never a substring, never canvas.scene by
  * default); a miss, a bad ref or nothing at all answers null (a Promise of null for an async
- * member) instead of throwing a TypeError. The row stays `legacy: true`.
+ * member) instead of throwing a TypeError. The row stays `legacy: true`. The set is read from the
+ * manifest (every legacy row whose first param is the self-resolving ACTOR), so a new row cannot miss it.
  */
-const ACTOR_ROWS = new Set(["count", "plan", "turn", "newTurn", "multiattack", "weapons", "fullAttack", "followUp", "reckless", "setReckless", "fixFeats", "seedWeaponSets"]);
+const ACTOR_ROWS = new Set(MANIFEST.rows
+  .filter(r => r.legacy && r.params?.[0]?.type === "Actor|Token|uuid|id|exact name" && r.params[0].resolve === false)
+  .map(r => r.path));
 
 function legacyActor(fn) {
   const async = fn.constructor?.name === "AsyncFunction";

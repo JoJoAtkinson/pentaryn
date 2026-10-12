@@ -5,6 +5,9 @@
  * under, a usage card's effects, a recorded target, and the spell an applied effect came from.
  */
 
+/** A ChatMessage given as itself or by id (an unknown id → null). */
+export const messageFrom = m => (typeof m === "string" ? game.messages.get(m) ?? null : m);
+
 /** The activity a dnd5e 6 roll or usage message belongs to. */
 export function activityOf(message) {
   return message.getAssociatedActivity?.() ?? fromUuidSync(message.system?.activity?.uuid ?? "", { strict: false });
@@ -25,6 +28,7 @@ export function usageIdOf(message) {
  * message.system.getEffects() resolves both, falling back to the item snapshot of a consumed item.
  */
 export async function cardEffects(message) {
+  message = messageFrom(message);
   if (message?.type !== "usage" || !message.system?.effects?.length) return [];
   const effects = (await message.system.getEffects?.()) ?? [];
   return effects.filter(e => e && e.type !== "enchantment");

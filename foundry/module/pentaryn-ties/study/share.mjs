@@ -39,10 +39,10 @@ import {
   shareStatus
 } from "../known-core.mjs";
 import { applyPlayerWrites, knownListWith, putBelief } from "./apply.mjs";
-import { applyInspect, concealmentFor, grantKind, writeIdentification } from "./cascade.mjs";
+import { applyInspect, grantKind, writeIdentification } from "./cascade.mjs";
 import { dropRow } from "./claim.mjs";
-import { factFrom, pending, reset, rowMissed } from "./gate.mjs";
-import { beliefsOf, kindActorOf, reg, resolveFact, studyStateFor, studyTiersOf } from "./resolve.mjs";
+import { factFrom, reset, rowMissed } from "./gate.mjs";
+import { beliefsOf, concealmentFor, kindActorOf, reg, resolveFact, studyStateFor, studyTiersOf } from "./resolve.mjs";
 import { esc, INSPECT } from "./shared.mjs";
 import { readFlag } from "../lib/flags.mjs";
 import { setting } from "../settings.mjs";
@@ -165,7 +165,7 @@ export async function shareFact(spec, recipients, { from = null, notify = true }
   if (!game.user?.isGM) return { ...out, reason: "notGM" };
   const subject = game.actors?.get(spec?.subjectId);
   if (!subject || !["ident", "attr", "lore", "kind"].includes(spec?.ns)) return { ...out, reason: "invalid" };
-  const fromId = from ? from.id : "gm";
+  const fromId = from ? (typeof from === "string" ? from : from.id) : "gm";
   const fromActor = from && typeof from === "object" ? from : null;
   const sourceBy = source => (fromActor ? _loc("PENTARYN_TIES.known.share.sourceBy", { source, name: fromActor.name }) : source);
 

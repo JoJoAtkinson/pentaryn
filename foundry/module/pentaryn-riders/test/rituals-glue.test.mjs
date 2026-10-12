@@ -45,6 +45,23 @@ test("slot default: an unprepared ritual of a Ritual Adept wizard starts unticke
   assert.deepEqual(W.take()[0], ["warn", `${MODULE} | ritual slot default skipped`, "bad activity"]);
 });
 
+test("Ritual Adept is found by compendiumSource alone and by flags.core.sourceId alone", () => {
+  const SRC = "Compendium.dnd-players-handbook.classes.Item.phbwzdRitualAdep";
+  const ritual = { id: "srcritual0000001", name: "Alarm", type: "spell", system: { level: 1, method: "spell", prepared: 0, properties: new Set(["ritual"]) } };
+  const feat = extra => ({ id: "srcadeptfeat0001", name: "Book Rites", type: "feat", system: {}, ...extra });
+  const bySource = makeActor({ name: "BySource", items: [feat({ _stats: { compendiumSource: SRC } }), ritual] });
+  const byFlag = makeActor({ name: "ByFlag", items: [feat({ flags: { core: { sourceId: SRC } } }), ritual] });
+  const neither = makeActor({ name: "Neither", items: [feat({}), ritual] });
+  for (const a of [bySource, byFlag]) {
+    const u = { consume: { spellSlot: true } };
+    use(a.items.get("srcritual0000001"), u);
+    assert.deepEqual(u, { consume: { spellSlot: false } }, a.name);
+  }
+  const u = { consume: { spellSlot: true } };
+  use(neither.items.get("srcritual0000001"), u);
+  assert.deepEqual(u, { consume: { spellSlot: true } }, "no identifier, source or name: not Ritual Adept");
+});
+
 /* ── the Argon groups ─────────────────────────────────────────────────────── */
 
 class SpellButton {

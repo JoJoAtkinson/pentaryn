@@ -9,7 +9,7 @@ import { attributeIdsOf, describeAttribute, knowledge, setKnowledge } from "../a
 import { MODULE } from "../ties-core.mjs";
 import { canReach } from "../ties-adapter.mjs";
 import { mayWrite } from "../settings.mjs";
-import { CONCEAL_FLAG, concealFor, isIdentKey } from "../core/rules.mjs";
+import { isIdentKey } from "../core/rules.mjs";
 import {
   BELIEFS_FLAG,
   combineAdvantage,
@@ -25,12 +25,11 @@ import {
   STUDY_RUNGS
 } from "../known-core.mjs";
 import { applyPlayerWrites, postStub, putBelief, throwBlind } from "./apply.mjs";
-import { beliefs } from "./authoring.mjs";
 import { claimInspect, dropRow, releaseInspect } from "./claim.mjs";
 import { composeStudyPayload } from "./compose.mjs";
-import { pending } from "./gate.mjs";
 import {
   beliefsOf,
+  concealmentFor,
   holdDefault,
   kindActorOf,
   reg,
@@ -107,16 +106,6 @@ export async function inspect(character, subject) {
   return true;
 }
 
-/**
- * The module's own combat rule, and it is honest about what it is.
- *
- * dnd5e 5.3.3 keeps **no per-turn action ledger** to consume from (verified in phase 4), so
- * "inspection costs your action" cannot be implemented as an action. What can be implemented
- * truthfully is a rule about *this feature*: one inspection per combatant per round.
- *
- * ⚠ The refusal must be **uniform** — the same sentence whatever the target — or a refusal that
- * varied would itself be a probe.
- */
 const inspected = new Map();
 
 /** Forget one combat's per-round inspection marks once the combat is deleted (ties-31). */
@@ -128,6 +117,16 @@ export function forgetCombat(combatId) {
 /** Test-only: how many combat:round:combatant marks are held (ties-31). */
 export const _sizes = () => ({ inspected: inspected.size });
 
+/**
+ * The module's own combat rule, and it is honest about what it is.
+ *
+ * dnd5e 5.3.3 keeps **no per-turn action ledger** to consume from (verified in phase 4), so
+ * "inspection costs your action" cannot be implemented as an action. What can be implemented
+ * truthfully is a rule about *this feature*: one inspection per combatant per round.
+ *
+ * ⚠ The refusal must be **uniform** — the same sentence whatever the target — or a refusal that
+ * varied would itself be a probe.
+ */
 function combatAllows(character) {
   if (!game.combat?.started || !character.inCombat) return true;
   const combatant = game.combat.combatants.find(c => c.actorId === character.id);
@@ -507,15 +506,6 @@ export async function deliverHeldIdentifications(character, subject) {
   // resume: the ledgers changed, so the planner will now return the next rung
   return guardedCascade(character, subject);
 }
-
-/** Concealment: raises the DC without ever appearing in the printed one. */
-export const concealmentFor = (subject, attrId) => {
-  try {
-    return concealFor(subject?.getFlag(MODULE, CONCEAL_FLAG), attrId);
-  } catch {
-    return 0;
-  }
-};
 
 /**
  * **Hand a character a kind at a chosen rung** — no roll, the GM's decision.
