@@ -19,7 +19,6 @@
 
 import { MODULE, aimFromCaster, aimsFromCaster } from "./core.mjs";
 import { setting } from "./settings.mjs";
-import { on, guard } from "./hooks.mjs";
 
 const ARM_MS = 5000;
 let armed = null;          // { tokenId, sceneId, until }
@@ -81,9 +80,14 @@ function wrapPlacement() {
   proto[WRAPPED] = true;
 }
 
-export function installAim() {
+export function install(reg) {
   wrapPlacement();
-  on("dnd5e.preCreateMeasuredTemplate", guard("preCreateMeasuredTemplate(aim)", onPreCreate));
+  reg.on("dnd5e.preCreateMeasuredTemplate", reg.guardSwallowAsync("preCreateMeasuredTemplate(aim)", onPreCreate), { guard: false, label: "preCreateMeasuredTemplate(aim)" });
+}
+
+/** A pending aim is dropped. (The placeRegions wrap stays until S6 routes it through wrapMethod.) */
+export function uninstall() {
+  armed = null;
 }
 
 // Test seam (characterisation checkpoint): tests import this through test/fixtures/seams.mjs only,

@@ -23,7 +23,7 @@ import {
   supersedes, carefulTargets, protectRows, carefulApplies, carefulStale, isHandle, isTemplateRegion
 } from "./core.mjs";
 import { setting } from "./settings.mjs";
-import { on, guard, claimMessage } from "./hooks.mjs";
+import { claimMessage } from "./lib/election.mjs";
 import { areasFor, removeArea, handleActor, isPile } from "./scene-adapter.mjs";
 import { activityOf, usageIdOf, recordedTarget } from "./messages-adapter.mjs";
 
@@ -435,13 +435,15 @@ export function setRow(messageId, rowId, changes) {
 /** An ability saving throw (dnd5e 6 save messages also carry concentration and death saves). */
 const isAbilitySave = message => message?.type === "save" && (message.system?.type ?? "ability") === "ability";
 
-export function installResolve() {
+export function install(reg, ctx) {
   CONFIG.DND5E.requests[REQUEST_HANDLER] = handleSaveRequest;
+  // The tray (a separate feature) reaches these through ctx.exposed, never by importing this file.
+  ctx.expose({ resolve, applyRows, rollNpcSaves, rollForPlayer, pingPlayers, setRow });
 
-  on("dnd5e.postUseActivity", guard("postUseActivity(careful)", (activity) => onCarefulUsed(activity)));
+  reg.on("dnd5e.postUseActivity", reg.guardSwallowAsync("postUseActivity(careful)", (activity) => onCarefulUsed(activity)), { guard: false, label: "postUseActivity(careful)" });
 
   // A Careful Spell armed for a turn of a combat that is now gone can never apply: clear it.
-  on("deleteCombat", guard("deleteCombat(careful)", async (combat) => {
+  reg.on("deleteCombat", reg.guardSwallowAsync("deleteCombat(careful)", async (combat) => {
     if (!game.users.activeGM?.isSelf) return;
     const done = new Set();
     for (const c of combat.combatants ?? []) {
@@ -450,27 +452,33 @@ export function installResolve() {
       done.add(actor.uuid);
       if (carefulStale(aoeFlags(actor).careful, combat.id)) await actor.unsetFlag(MODULE, "careful");
     }
-  }));
+  }), { guard: false, label: "deleteCombat(careful)" });
 
-  on("createChatMessage", guard("createChatMessage", async (message) => {
+  reg.on("createChatMessage", reg.guardSwallowAsync("createChatMessage", async (message) => {
     if (!game.users.activeGM?.isSelf) return;
     if (isAbilitySave(message)) return onSaveMessage(message);
     if (message.type !== "damage" || !setting("resolveSaves")) return;
     if (aoeFlags(message).resolution) return;
     if (!activityOf(message)?.save) return;
     // Two sessions on the GM account would both resolve: doubled NPC saves and request cards.
-    if (!(await claimMessage(message, "resolve"))) return;
+    if (!(await claimMessage(message, "resolve", { scope: MODULE }))) return;
     if (aoeFlags(game.messages.get(message.id)).resolution) return;
     return resolve(message);
-  }));
+  }), { guard: false, label: "createChatMessage" });
 
   // A request result attached after creation (dnd5e's own #handleRequest setFlag path).
-  on("updateChatMessage", guard("updateChatMessage", async (message, changes) => {
+  reg.on("updateChatMessage", reg.guardSwallowAsync("updateChatMessage", async (message, changes) => {
     if (!game.users.activeGM?.isSelf) return;
     if (!foundry.utils.getProperty(changes, "flags.dnd5e.requestResult")) return;
     if (isAbilitySave(message)) return onSaveMessage(message);
-  }));
+  }), { guard: false, label: "updateChatMessage" });
 }
+
+/** The request handler goes with the hooks; the registry unwinds the hooks. */
+export function uninstall() {
+  if (CONFIG.DND5E?.requests?.[REQUEST_HANDLER]) delete CONFIG.DND5E.requests[REQUEST_HANDLER];
+}
+
 // Test seam (characterisation checkpoint): tests import this through test/fixtures/seams.mjs only,
 // so the blueprint refactor edits that shim, not the frozen tests. Not part of the API.
 export const _internals = { tokensForTargets, keysOnly, saveSystem, damagesOf, supersedeOlder, carefulFor, onCarefulUsed, rollOne, postRequest, onSaveMessage, cleanupInstant, isAbilitySave, queues };

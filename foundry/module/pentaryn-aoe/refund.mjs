@@ -17,7 +17,6 @@
 
 import { MODULE, placementCancelled } from "./core.mjs";
 import { setting } from "./settings.mjs";
-import { on } from "./hooks.mjs";
 
 
 function hasConsumed(deltas) {
@@ -46,10 +45,10 @@ async function refund(activity, usageConfig, results) {
   return true;
 }
 
-export function installRefund() {
+export function install(reg) {
   // Synchronous handler: Hooks.call honours a literal false only. We cannot know synchronously whether
   // the refund will run, so the check runs first, the refund after.
-  on("dnd5e.postUseActivity", (activity, usageConfig, results) => {
+  reg.on("dnd5e.postUseActivity", (activity, usageConfig, results) => {
     try {
       if (!setting("refundCancelledArea")) return;
       if (!usageConfig?.create?.measuredTemplate || (results?.templates?.length ?? 0) > 0) return;
@@ -62,8 +61,10 @@ export function installRefund() {
     } catch (err) {
       console.error(`${MODULE} | refund cancelled area`, err);
     }
-  });
+  }, { guard: false, label: "postUseActivity(refund)" });
 }
+
+export function uninstall() {}
 
 // Test seam (characterisation checkpoint): tests import this through test/fixtures/seams.mjs only,
 // so the blueprint refactor edits that shim, not the frozen tests. Not part of the API.

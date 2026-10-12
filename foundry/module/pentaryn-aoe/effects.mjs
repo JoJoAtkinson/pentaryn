@@ -25,7 +25,7 @@
 
 import { MODULE, aoeFlags, selfApplyReason, pendingEffects, sameSpellEffect } from "./core.mjs";
 import { setting } from "./settings.mjs";
-import { on, guard, claimMessage } from "./hooks.mjs";
+import { claimMessage } from "./lib/election.mjs";
 import { cardEffects, recordedTarget, spellOf } from "./messages-adapter.mjs";
 
 const esc = s => foundry.utils.escapeHTML(String(s ?? ""));
@@ -177,7 +177,7 @@ export async function selfApply(message, { force = false } = {}) {
     const reason = await selfReason(message, effects);
     if (!reason) return null;
     // Two sessions on the GM account are both the applier: one of them applies.
-    if (!force && !(await claimMessage(message, "selfApply"))) return null;
+    if (!force && !(await claimMessage(message, "selfApply", { scope: MODULE }))) return null;
     if (!force && aoeFlags(game.messages.get(message.id)).effectsApplied?.auto) return null;
     const applied = [];
     for (const effect of effects) {
@@ -277,14 +277,16 @@ function applyTargets(tray) {
 /*  Hook wiring                                 */
 /* -------------------------------------------- */
 
-export function installEffects() {
-  on("createChatMessage", guard("createChatMessage(selfApply)", async (message, options, userId) => {
+export function install(reg) {
+  reg.on("createChatMessage", reg.guardSwallowAsync("createChatMessage(selfApply)", async (message, options, userId) => {
     if (!setting("autoApplySelf") || !isApplier(userId)) return;
     await selfApply(message);
-  }));
-  on("dnd5e.renderChatMessage", guard("renderChatMessage(effects)", decorate));
-  on("preCreateActiveEffect", guard("preCreateActiveEffect(noStacking)", onPreCreateEffect));
+  }), { guard: false, label: "createChatMessage(selfApply)" });
+  reg.on("dnd5e.renderChatMessage", reg.guardSwallowAsync("renderChatMessage(effects)", decorate), { guard: false, label: "renderChatMessage(effects)" });
+  reg.on("preCreateActiveEffect", reg.guardSwallowAsync("preCreateActiveEffect(noStacking)", onPreCreateEffect), { guard: false, label: "preCreateActiveEffect(noStacking)" });
 }
+
+export function uninstall() {}
 
 // Test seam (characterisation checkpoint): tests import this through test/fixtures/seams.mjs only,
 // so the blueprint refactor edits that shim, not the frozen tests. Not part of the API.

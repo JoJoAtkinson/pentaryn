@@ -11,11 +11,11 @@
  */
 
 import { aoeFlags, MULTIPLIERS, playerStatus, applicableRows } from "./core.mjs";
-import { on, guard } from "./hooks.mjs";
 import { setting } from "./settings.mjs";
-import { applyRows, rollNpcSaves, rollForPlayer, pingPlayers, setRow, resolve } from "./resolve.mjs";
 
 const esc = s => foundry.utils.escapeHTML(String(s ?? ""));
+/** The ctx install() was given: resolve's actions are ctx.exposed (resolve installs first). */
+let context = null;
 const MULT_LABEL = { 0: "×0", 0.25: "×¼", 0.5: "×½", 1: "×1", 2: "×2" };
 
 function preview(row, res, message = null) {
@@ -125,9 +125,9 @@ function decorate(message, html) {
   tray.addEventListener("change", ev => {
     const el = ev.target;
     const rowId = el.closest("[data-row]")?.dataset.row;
-    if (el.dataset.pa === "tick") setRow(message.id, rowId, { apply: el.checked });
-    else if (el.dataset.pa === "mult" && el.value !== "") setRow(message.id, rowId, { multiplier: el.value });
-    else if (el.dataset.pa === "region") resolve(message.id, { regionId: el.value });
+    if (el.dataset.pa === "tick") context.exposed.setRow(message.id, rowId, { apply: el.checked });
+    else if (el.dataset.pa === "mult" && el.value !== "") context.exposed.setRow(message.id, rowId, { multiplier: el.value });
+    else if (el.dataset.pa === "region") context.exposed.resolve(message.id, { regionId: el.value });
   });
   tray.addEventListener("click", async ev => {
     const el = ev.target.closest("[data-pa]");
@@ -136,18 +136,21 @@ function decorate(message, html) {
     ev.stopPropagation();
     const rowId = el.dataset.row;
     switch (el.dataset.pa) {
-      case "apply": el.disabled = true; return applyRows(message.id);
-      case "reroll-all": return rollNpcSaves(message.id, { force: true });
-      case "reroll": return rollNpcSaves(message.id, { rowIds: [rowId], force: true });
-      case "rollfor": return rollForPlayer(message.id, rowId, { event: ev });
-      case "ping": return pingPlayers(message.id);
+      case "apply": el.disabled = true; return context.exposed.applyRows(message.id);
+      case "reroll-all": return context.exposed.rollNpcSaves(message.id, { force: true });
+      case "reroll": return context.exposed.rollNpcSaves(message.id, { rowIds: [rowId], force: true });
+      case "rollfor": return context.exposed.rollForPlayer(message.id, rowId, { event: ev });
+      case "ping": return context.exposed.pingPlayers(message.id);
     }
   });
 }
 
-export function installTray() {
-  on("dnd5e.renderChatMessage", guard("renderChatMessage(tray)", decorate));
+export function install(reg, ctx) {
+  context = ctx;
+  reg.on("dnd5e.renderChatMessage", reg.guardSwallowAsync("renderChatMessage(tray)", decorate), { guard: false, label: "renderChatMessage(tray)" });
 }
+
+export function uninstall() {}
 
 
 // Test seam (characterisation checkpoint): tests import this through test/fixtures/seams.mjs only,

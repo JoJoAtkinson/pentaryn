@@ -249,7 +249,8 @@ check("duplicates and blanks dropped", pendingEffects(["e1", "e1", "", null], []
   store.set(msg.id, msg);
   globalThis.foundry = { utils: { getProperty: getP } };
   globalThis.game = { socket: { id: "A" }, messages: { get: id => store.get(id) } };
-  const { claimMessage } = await import("../hooks.mjs");
+  const kit = await import("../lib/election.mjs");   // S5: hooks.mjs claimMessage → the kit's, scope pentaryn-aoe
+  const claimMessage = (m, key) => kit.claimMessage(m, key, { scope: "pentaryn-aoe" });
   const pa = claimMessage(msg, "resolve");             // client A sees the broadcast
   game.socket.id = "B";
   const pb = claimMessage(msg, "resolve");             // client B sees it a moment later

@@ -21,7 +21,6 @@ import { MODULE, aoeFlags, centreOf, isTemplateRegion, attachedToOther, handleVe
 import { handleActor, handleFor, removeArea, spellAreas } from "./scene-adapter.mjs";
 import { activityOf } from "./messages-adapter.mjs";
 import { setting } from "./settings.mjs";
-import { on, guard } from "./hooks.mjs";
 
 const OWNER = 3;
 const HANDLE_ICON = "icons/svg/target.svg";
@@ -94,6 +93,8 @@ export async function ensureHandleActor() {
 /* -------------------------------------------- */
 
 const pending = new Set();   // region ids whose handle is being created on this client
+/** The registry install() was given: readyAreas registers its canvasReady sweep through it too. */
+let hooks = null;
 
 /**
  * The spell's name for the handle label. dnd5e 6: flags.dnd5e.item is the item and
@@ -288,14 +289,15 @@ function actionRow(html) {
 /*  Hook wiring                                 */
 /* -------------------------------------------- */
 
-export function installAreas() {
+export function install(reg) {
+  hooks = reg;
   // Ownership on the creating client, before the document exists.
-  on("preCreateRegion", guard("preCreateRegion", (doc, data) => {
+  reg.on("preCreateRegion", reg.guardSwallowAsync("preCreateRegion", (doc, data) => {
     if (!isTemplateRegion(data)) return;
     doc.updateSource({ "ownership.default": OWNER });
-  }));
+  }), { guard: false, label: "preCreateRegion" });
 
-  on("createRegion", guard("createRegion", async (region, options, userId) => {
+  reg.on("createRegion", reg.guardSwallowAsync("createRegion", async (region, options, userId) => {
     if (!isTemplateRegion(region)) return;
     const gm = game.users.activeGM?.isSelf;
     if (gm && region.ownership.default !== OWNER) await region.update({ "ownership.default": OWNER });
@@ -308,29 +310,29 @@ export function installAreas() {
         if (live && !handleFor(live)) createHandle(live).catch(err => console.error("pentaryn-aoe | backstop handle", err));
       }, 2500);
     }
-  }));
+  }), { guard: false, label: "createRegion" });
 
   // Region deleted another way → its handle goes too. The deleting client acts at once; the GM
   // repeats it shortly after in case that client couldn't.
-  on("deleteRegion", guard("deleteRegion", async (region, options, userId) => {
+  reg.on("deleteRegion", reg.guardSwallowAsync("deleteRegion", async (region, options, userId) => {
     if (!isTemplateRegion(region)) return;
     if (userId === game.user.id) await deleteHandlesOf(region);
     else if (game.users.activeGM?.isSelf) setTimeout(() => deleteHandlesOf(region).catch(() => {}), 1500);
-  }));
+  }), { guard: false, label: "deleteRegion" });
 
   // Handles are never combatants and never stay targeted.
-  on("preCreateCombatant", (combatant, data) => {
+  reg.on("preCreateCombatant", (combatant, data) => {
     const tk = combatant.token ?? combatant.parent?.scene?.tokens?.get(data?.tokenId);
     if (tk && isHandle(tk)) return false;
-  });
-  on("targetToken", guard("targetToken", (user, token, targeted) => {
+  }, { guard: false, label: "preCreateCombatant" });
+  reg.on("targetToken", reg.guardSwallowAsync("targetToken", (user, token, targeted) => {
     if (targeted && user === game.user && isHandle(token.document)) token.setTarget(false, { releaseOthers: false });
-  }));
+  }), { guard: false, label: "targetToken" });
 
-  on("dnd5e.renderChatMessage", guard("renderChatMessage(remove)", decorateCard));
+  reg.on("dnd5e.renderChatMessage", reg.guardSwallowAsync("renderChatMessage(remove)", decorateCard), { guard: false, label: "renderChatMessage(remove)" });
 
   // Concentration ends → that spell's areas go, on every scene.
-  on("deleteActiveEffect", guard("deleteActiveEffect", async (effect, options, userId) => {
+  reg.on("deleteActiveEffect", reg.guardSwallowAsync("deleteActiveEffect", async (effect, options, userId) => {
     if (!game.users.activeGM?.isSelf || !setting("concentrationCleanup")) return;
     if (!effect.statuses?.has?.(CONFIG.specialStatusEffects.CONCENTRATING ?? "concentrating")) return;
     const itemUuid = concentrationItemUuid(effect);
@@ -339,7 +341,7 @@ export function installAreas() {
       const ids = spellAreas({ itemUuid }, s).map(r => r.id);
       if (ids.length) await s.deleteEmbeddedDocuments("Region", ids);
     }
-  }));
+  }), { guard: false, label: "deleteActiveEffect" });
 }
 
 /**
@@ -363,9 +365,12 @@ export async function readyAreas({ sweepOnReady = true } = {}) {
   await ensureHandleActor();
   if (sweepOnReady) {
     await sweep(canvas.scene);
-    on("canvasReady", guard("canvasReady", c => game.users.activeGM?.isSelf && sweep(c.scene)));
+    hooks?.on("canvasReady", hooks.guardSwallowAsync("canvasReady", c => game.users.activeGM?.isSelf && sweep(c.scene)), { guard: false, label: "canvasReady" });
   }
 }
+
+/** Nothing of its own to undo: every hook went through the registry the entry unwinds. */
+export function uninstall() {}
 
 // Test seam (characterisation checkpoint): tests import this through test/fixtures/seams.mjs only,
 // so the blueprint refactor edits that shim, not the frozen tests. Not part of the API.
