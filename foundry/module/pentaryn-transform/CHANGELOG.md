@@ -4,6 +4,10 @@
 
 ## Unreleased
 
+- **A failed Starry Form from the HUD refunds the Wild Shape use (R2-refund, final review).** The use
+  was spent before the form's effect was written, and a failure there kept it spent. Now, as a failed
+  shift does, the use comes back when the form did not go up; a form that is up (only its light
+  failed) keeps the use. The error still surfaces as before ([declared]).
 - **Uses spent in a form come back on revert when the uses max is a formula (EC-1, final review).**
   The revert's use sync read the item source's max as a number, so a formula max such as Wild
   Shape's `@scale.druid.wild-shape-uses` counted as no limit and the spent uses were dropped. A

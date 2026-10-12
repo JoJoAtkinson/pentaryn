@@ -45,7 +45,8 @@ ordinary ability. Requires dnd5e 6 (verified 6.0.6) on Foundry v14.
   combat time (out of combat it stays on and world time does not count, D8), when Incapacitated, at a
   Long Rest, or on a beast shift. While the Chalice glimmers, a slot-spending
   heal makes the Chalice button pulse for a minute. From the sheet, Consume Wild Shape opens a
-  three-button dialog; closing it refunds the use.
+  three-button dialog; closing it refunds the use. A use spent from the HUD comes back if the form
+  then fails to go up.
 - **Escape** cancels Argon's target picker ("0/1 Targets"), else closes an open Wild Shape / Starry
   Form picker; with nothing open it still reaches core. The target picker is also cancelled when the
   HUD's token changes body.

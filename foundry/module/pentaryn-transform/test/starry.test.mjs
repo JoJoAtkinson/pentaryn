@@ -186,6 +186,31 @@ test("assumeStarry: a vetoed or failed use returns false and applies nothing", a
   assert.deepEqual(lines(), []);
 });
 
+test("R2-refund: the use is spent but the form fails to go up → the use comes back, the error still surfaces", async () => {
+  // A fresh form whose effect write fails, and a constellation change without Twinkling whose update fails.
+  let { talo } = fresh();
+  talo.createEmbeddedDocuments = async () => { throw new Error("db"); };
+  await assert.rejects(S.assumeStarry(talo, "archer"), /db/);
+  assert.equal(ops("activity.use").length, 1, "the use was spent");
+  assert.equal(talo.items.get(IDS.ws).system.uses.spent, 1, "spent then refunded");
+  assert.equal(S.activeStarry(talo), null);
+  assert.deepEqual(lines(), []);
+  ({ talo } = fresh());
+  await S.assumeStarry(talo, "archer");
+  S.activeStarry(talo).update = async () => { throw new Error("db"); };
+  await assert.rejects(S.assumeStarry(talo, "chalice"), /db/);
+  assert.equal(talo.items.get(IDS.ws).system.uses.spent, 2, "the second use refunded; the first stands");
+  assert.equal(S.constellationOf(talo), "archer");
+});
+
+test("R2-refund: the form is up and only the light fails → no refund (the form happened)", async () => {
+  const { talo } = fresh();
+  talo.items.get(IDS.starry).setFlag = async () => { throw new Error("light"); };
+  await assert.rejects(S.assumeStarry(talo, "archer"), /light/);
+  assert.equal(S.constellationOf(talo), "archer");
+  assert.equal(talo.items.get(IDS.ws).system.uses.spent, 2);
+});
+
 test("changing constellation with Twinkling: free, the time left kept, StarrySwap line; without it: another use, a fresh 10 minutes", async () => {
   let { talo } = fresh({ twinkling: true });
   await S.assumeStarry(talo, "archer");

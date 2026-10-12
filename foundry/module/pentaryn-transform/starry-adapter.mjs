@@ -22,7 +22,7 @@
 import {
   MODULE, activitiesOf, usesLeft, formatDuration, CONSTELLATIONS, STARRY_LIGHT, STARRY_SECONDS,
   constellationOfActivity, starryEffectData, starryBlock, findWildShapeItem, secondsLeft, constellationImgOf,
-  pickStarryBase, starryEndKey
+  pickStarryBase, starryEndKey, refundUpdate
 } from "./transform-core.mjs";
 import { readFlag, flagPath } from "./lib/flags.mjs";
 import { say, markBonusUsed } from "./wildshape-adapter.mjs";
@@ -219,7 +219,15 @@ export async function assumeStarry(actor, constellation) {
     );
     if (!used) return false;
     markBonusUsed(actor);
-    await applyStarry(actor, constellation);
+    try {
+      await applyStarry(actor, constellation);
+    } catch (err) {
+      // The use is spent but the form did not go up: it comes back, as a failed shift's does (doShift).
+      // A form that is up (only its light failed) keeps the use.
+      const update = constellationOf(actor) === constellation ? null : refundUpdate(ws?.system?.uses);
+      if (update) await ws.update(update);
+      throw err;
+    }
     announceStarryOn(actor, constellation);
     return true;
   } finally {
