@@ -29,6 +29,11 @@
   abort at once) and a `path` that is not a non-empty string now throw an unshouted `PentarynAbort`
   `BAD_ARGS` before any fetch, naming the option and the value received. `import(null)` is
   `import({})` instead of a `TypeError`. New keys in golden/refusals.json.
+- **[declared] `selftest()` checks every version-gate key, not only `contract`** (`importer-M3`):
+  one check per `GATE_KEYS` key (`contract`, `targetSystem`, `targetSystemVersion`, `generation`),
+  labelled `module.json flags.pentaryn.<key> present` with the value as `detail`; `contract` must
+  still equal the actors.json contract. A module.json missing a gate key used to pass selftest while
+  every import was refused. The old check label `… contract is the contract this code speaks` is gone.
 - **[declared] `game.pentaryn` is merged into, never replaced or frozen** (`items-journal-1`). Every
   module's namespace survives whichever order the modules load in; `import`, `moduleId`, `contract`
   and the frozen `_internals` stay on the root.

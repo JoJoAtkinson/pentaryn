@@ -5,8 +5,9 @@
  */
 
 import {
-  CONTRACT_ID, DEFAULT_TIMEOUT_MS, FLAG_SCOPE, HOOKS, MODULE, NS, PentarynAbort, PentarynAssertionError,
-  idForSlug, lintFormulas, normalise, preparePayload, toCreatePayload, toUpdatePayload, valuesMatch
+  CONTRACT_ID, DEFAULT_TIMEOUT_MS, FLAG_SCOPE, GATE_KEYS, HOOKS, MODULE, NS, PentarynAbort,
+  PentarynAssertionError, idForSlug, lintFormulas, normalise, preparePayload, toCreatePayload, toUpdatePayload,
+  valuesMatch
 } from "./importer-core.mjs";
 import {
   TAG, assertItemsAddressable, assertNoBadFormulas, assertPrototypeToken, assertVersionGate,
@@ -318,11 +319,13 @@ function selftest(ctx) {
     { label: "published as module.api", ok: game.modules.get(MODULE)?.api === ctx.api },
     { label: "game.pentaryn.importer is this API", ok: game.pentaryn?.importer === ctx.api },
     { label: "game.pentaryn.import is importActors", ok: game.pentaryn?.import === importActors },
-    {
-      label: "module.json flags.pentaryn.contract is the contract this code speaks",
-      ok: flags?.contract === CONTRACT_ID,
-      detail: flags?.contract ?? null
-    }
+    // One check per version-gate key (importer-M3): a module.json missing any of them refuses
+    // every import, so selftest must not pass. `contract` must also be the one this code speaks.
+    ...GATE_KEYS.map(key => ({
+      label: `module.json flags.${FLAG_SCOPE}.${key} present`,
+      ok: key === "contract" ? flags?.contract === CONTRACT_ID : flags?.[key] != null,
+      detail: flags?.[key] ?? null
+    }))
   ];
   return { ok: checks.every(c => c.ok), checks: checks.map(c => ({ detail: null, ...c })) };
 }

@@ -128,6 +128,12 @@ const FLAG_SCOPE = "pentaryn";
 /** CONTRACT.md §1: the importer MUST refuse anything else. */
 const CONTRACT_ID = "pentaryn/actors.json@1";
 
+/**
+ * The module.json `flags.pentaryn.*` keys the version gate (`versionProblems`'s `expected`) reads.
+ * selftest checks each one is present; a missing one refuses every import (importer-M3).
+ */
+const GATE_KEYS = Object.freeze(["contract", "targetSystem", "targetSystemVersion", "generation"]);
+
 const DEFAULT_TIMEOUT_MS = 15000;
 
 /** CONTRACT.md §10. Digits, dice, arithmetic, whitespace — no `@`. */
@@ -597,7 +603,7 @@ function assertionMessage({ slug, action, activityId, path, expected, actual, hi
 }
 
 export {
-  FLAG_SCOPE, CONTRACT_ID, DEFAULT_TIMEOUT_MS, FORMULA_OK, FORMULA_GLOBS, FORMULA_PATTERNS,
+  FLAG_SCOPE, CONTRACT_ID, GATE_KEYS, DEFAULT_TIMEOUT_MS, FORMULA_OK, FORMULA_GLOBS, FORMULA_PATTERNS,
   STRIPPED_KEYS, STRIPPED_ACTOR_KEYS, STRIPPED_ITEM_KEYS, PentarynError, PentarynAbort, PentarynAssertionError,
   isPlainObject, normalise, cloneJson, walkStrings, walkLeaves, getPath, indexBySlug, versionProblems, lintFormulas,
   preparePayload, toUpdatePayload, toCreatePayload, idForSlug, valuesMatch, assertionMessage,
