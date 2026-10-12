@@ -212,20 +212,48 @@ def test_docs_follow_the_tier(tmp_path):
         assert (f"game.pentaryn.d{tier}.inspect(" in text) == (tier == "full")
 
 
-def test_after_sync_follow_up_is_valid_python_from_module_json(tmp_path, capsys):
+def _registration_row(out: str) -> str:
+    """The printed MODULES row (the `"<short>": ModuleSpec(` line and its continuation lines)."""
+    lines = out.splitlines()
+    i = next(n for n, ln in enumerate(lines) if ln.strip().startswith('"demo": ModuleSpec('))
+    row = [lines[i].strip()]
+    while not row[-1].endswith("),"):
+        i += 1
+        row.append(lines[i].strip())
+    return " ".join(row)
+
+
+def test_registration_row_runs_every_gate_and_leaves_after_sync_to_module_json(tmp_path, capsys):
+    """EXT-2: the printed row is check=ALL_GATES (vendor + conformance too), and it does not
+    repeat the afterSync lines the generator already wrote into module.json."""
+    import ast
     rc, target = gen(tmp_path, "demo", "--no-run")
     assert rc == 0
     out = capsys.readouterr().out
     assert "…)" not in out and "(…" not in out
-    line = next(ln.strip() for ln in out.splitlines() if ln.strip().startswith("after_sync=("))
-    assert line.endswith(")),")                      # the tuple, then ModuleSpec's own paren
-    expr = line[len("after_sync="):-2]
+    assert json.loads((target / "module.json").read_text())["flags"]["pentaryn"]["afterSync"]
+    row = _registration_row(out)
+    call = ast.parse("{" + row[:-1] + "}").body[0].value.values[0]   # pastes as one dict entry
+    kw = {k.arg: k.value for k in call.keywords}
+    assert isinstance(kw["check"], ast.Name) and kw["check"].id == "ALL_GATES"
+    assert "after_sync" not in kw
+    from scripts.foundry.ops import config
+    assert {"vendor", "conformance"} <= set(config.ALL_GATES)
+
+
+def test_registration_row_carries_after_sync_when_module_json_has_none(tmp_path):
+    """EXT-2: without flags.pentaryn.afterSync the row still names after_sync, as valid Python."""
     import ast
-    value = ast.literal_eval(expr)
-    want = json.loads((target / "module.json").read_text())["flags"]["pentaryn"]["afterSync"]
-    assert list(value) == want and len(want) >= 1
-    spec = next(ln.strip() for ln in out.splitlines() if ln.strip().startswith('"demo": ModuleSpec('))
-    ast.parse("{" + spec + " " + line[:-1] + "}")     # the two printed lines paste as one valid dict entry
+    rc, target = gen(tmp_path, "demo", "--no-run")
+    assert rc == 0
+    manifest = json.loads((target / "module.json").read_text())
+    del manifest["flags"]["pentaryn"]["afterSync"]
+    (target / "module.json").write_text(json.dumps(manifest), encoding="utf-8")
+    row = _registration_row(new_module.follow_ups("demo", "Pentaryn Demo", "demo", installed=False, target=target))
+    call = ast.parse("{" + row[:-1] + "}").body[0].value.values[0]
+    kw = {k.arg: k.value for k in call.keywords}
+    assert kw["check"].id == "ALL_GATES"
+    assert ast.literal_eval(kw["after_sync"]) == ()
 
 
 @needs_node

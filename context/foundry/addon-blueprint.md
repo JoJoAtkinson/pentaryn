@@ -141,8 +141,8 @@ prefix declared in `flags.pentaryn.cssPrefix` and unique (`pp-` is prompts'). Re
 7. **Patches**: `wrapMethod` + an adjustments row (§5.6).
 8. **Goldens**: `GOLDEN_UPDATE=1 node --test test/<file>.test.mjs`, read the diff, keep it.
 9. **Docs**: README sections in the fixed order (§7), CHANGELOG line, routing rows.
-10. **Wire it** (the generator prints these): a ModuleSpec in `scripts/foundry/ops/config.py` (its
-    kit list comes from `lib/kit.lock.json` and `after_sync` from `module.json`
+10. **Wire it** (the generator prints these): a ModuleSpec in `scripts/foundry/ops/config.py` with
+    `check=ALL_GATES` like every other row (its kit list comes from `lib/kit.lock.json` and `after_sync` from `module.json`
     `flags.pentaryn.afterSync`, never stored there), routing rows, then `make foundry-module-index`.
     The Makefile's `foundry-%-check`/`-sync` pattern rules need no line per module. Then
     `conformance.py --module <short>` scores the repo-wiring rules too (C39 ModuleSpec, C46 route).

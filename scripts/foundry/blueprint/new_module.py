@@ -296,14 +296,33 @@ def _has_api_index(readme: Path | None = None) -> bool:
         return False
 
 
-def follow_ups(short: str, title: str, ns: str, installed: bool, target: Path | None = None) -> str:
+def _writes_after_sync(target: Path | None) -> bool:
+    """Whether module.json carries flags.pentaryn.afterSync (ModuleSpec reads it there first)."""
+    if target is None:
+        return False
+    try:
+        lines = json.loads(_read(target / "module.json"))["flags"]["pentaryn"]["afterSync"]
+    except (OSError, ValueError, KeyError, TypeError):
+        return False
+    return isinstance(lines, list) and bool(lines)
+
+
+def registration_row(short: str, target: Path | None = None) -> list[str]:
+    """The config.py MODULES row: every gate (ALL_GATES, so vendor + conformance run strict like
+    every other row), and after_sync only when module.json has no afterSync to read (EXT-2)."""
+    head = f'       "{short}": ModuleSpec("pentaryn-{short}", check=ALL_GATES'
+    if _writes_after_sync(target):
+        return [head + "),"]
     after = after_sync_tuple(target) if target is not None else "after_sync=()"
+    return [head + ",", f"                  {after}),"]
+
+
+def follow_ups(short: str, title: str, ns: str, installed: bool, target: Path | None = None) -> str:
     return "\n".join([
         "Manual follow-ups (not done by this script):",
         f"  1. {'' if installed else 'Move the folder to foundry/module/ (rerun with --install --out foundry/module). '}"
         "Register it in scripts/foundry/ops/config.py MODULES:",
-        f'       "{short}": ModuleSpec("pentaryn-{short}", check=(*_STATIC, "node-test"),',
-        f"                  {after}),",
+        *registration_row(short, target),
         "  2. Makefile:",
         f"       foundry-{short}-check: ; @$(OPS) module-check {short}",
         f"       foundry-{short}-sync: foundry-{short}-check ; @$(OPS) module-sync {short}",
