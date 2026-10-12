@@ -634,3 +634,21 @@ the kit file.
 xfailed; `make foundry-modules-check` all 20 pass (riders node:test 175, 0 fail, 0 todo); `make
 foundry-lib-check` green; `make check-context` OK (4 pre-existing warnings); `make
 foundry-adjustments-check` green; `vendor.py check --all` identical.
+
+## Live phase — prepared, not run (2026-10-12)
+
+The gated live sequence is [`wave-4-live-plan.md`](wave-4-live-plan.md). New live goldens
+`scripts/foundry/live-goldens/{riders,aoe,combat,transform}.js` (shared/declared split; they run on
+the deployed riders 0.2.0 / aoe 0.3.1 / transform 0.3.3 / combat 0.2.5 and on this branch), proven
+offline by `scripts/tests/test_live_goldens_wave4.py`. No `module.json` edit, so the deploy needs one
+GM tab reload, no restart; the fork is unchanged, so no build or backend kill.
+
+### Open for Joe — live phase
+
+| # | Item | Default |
+|---|---|---|
+| W4-L1 | `migrate/wave-4` lacks wave 3 (now on main): sync only the four wave-4 folders from the branch, or merge main into it first | sync the four as they are; merge after a green live phase |
+| W4-L2 | the two-GM-tab checks (riders -41 / W4-R7 / W4-R8, transform W4-T1, aoe D-A6) | skip; aoe D-A6 only if Joe wants the handle actor's id fixed now |
+| W4-L3 | the deployed `pentaryn-read` description still calls combat, riders, transform and aoe "eval-js only"; a description-only fork commit (like wave 3's `a5ce74c`) fixes it | follow-up fork commit, deployed with this session's reload or the next fork build; not built in the code phase (no module guide asked for a fork change) |
+| W4-L4 | the Wave 7 restart batch (version bumps, `flags.pentaryn`, riders' `recommends` + D7 vendor, `styles`) | its own session |
+| D8 / T-L1 | Starry Form / Wild Shape world-time expiry for an unlinked druid token with no GM connected (transform live check 11) | record what happens live; build nothing |
