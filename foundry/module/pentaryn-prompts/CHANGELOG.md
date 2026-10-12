@@ -89,6 +89,10 @@ cssPrefix `pp-`, afterSync). Each **[declared]** change goes to the live check.
 - **[declared] `encounterXp`'s docblock says who counts** (prompts-core-M1): each built creature's
   XP comes from `actorXp(actor, token)`, which decides who counts; the wrong "Hostile-or-neutral npcs
   only" sentence is gone. Comment only, no behaviour change.
+- **[declared] A placed document reads the same in the readback and in `MARKER_GONE`** (prompts-core-EXT-4):
+  one private `nameOf(doc)` in `replace.mjs` (name, then text, then journal entry name, then "Light"
+  for an AmbientLight; an empty one falls through) labels both. A note pin with an empty label now
+  reads `Note "<entry>"` in the readback too; before, it read `Note ""` there.
 - `ensureMarkers` repairs every drifted actor in one batch update. A hot re-import after
   `uninstall()` re-wires and republishes at once.
 - Console only (DP9): a core token API that throws warns once; swallowed failures log at debug

@@ -99,12 +99,17 @@ function resolveOne(spec, index, { call, force }) {
   return e;
 }
 
+/** A placed document's label, the same in MARKER_GONE and the readback: name, text, journal entry, "Light". */
+function nameOf(doc) {
+  return doc.name || doc.text || doc.entry?.name || (doc.documentName === "AmbientLight" ? "Light" : "");
+}
+
 /** A gone marker: the document built from it (provenance), or the marker a size chip swapped it for. */
 function whyGone(scene, markerId) {
   try {
     for (const [, collectionOf] of PLACED) {
       const doc = collectionOf(scene)?.find(d => provenanceOf(d)?.markerId === markerId && provenanceOf(d)?.sceneId === scene.id);
-      if (doc) return { replacedBy: createdText({ type: doc.documentName, id: doc.id, name: doc.name || doc.text || doc.entry?.name || (doc.documentName === "AmbientLight" ? "Light" : "") }) };
+      if (doc) return { replacedBy: createdText({ type: doc.documentName, id: doc.id, name: nameOf(doc) }) };
     }
     let id = markerId, next = null;
     for (let hop = 0; hop < 8; hop++) {   // resized more than once: follow the chain
@@ -529,7 +534,7 @@ function readDoc(scene, type, id) {
   const doc = scene.getEmbeddedDocument(type, id);
   if (!doc) return { type, id, missing: true };
   const g = scene.dimensions.size;
-  const base = { type, id, name: doc.name ?? doc.text ?? (type === "AmbientLight" ? "Light" : ""), x: doc.x, y: doc.y };
+  const base = { type, id, name: nameOf(doc), x: doc.x, y: doc.y };
   if (type === "Token") return { ...base, w: doc.width, h: doc.height, hidden: doc.hidden, lockSize: !!doc.flags?.dnd5e?.lockSize };
   if (type === "Tile") return { ...base, w: doc.width / g, h: doc.height / g };
   return base;
