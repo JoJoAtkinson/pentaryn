@@ -38,3 +38,19 @@ test("-2 resolve() scans game.actors for the handle actor once for the whole are
   assert.equal(n, 1);
   assert.equal(msg.flags[MODULE].resolution.rows.length, 6);
 });
+
+/* ── -6: mutate keeps its order and drops each settled tail ─────────────────────────────────── */
+
+test("-6 a write queued behind another keeps the entry until the last settles; then pendingWrites() is 0", async () => {
+  const m = W.message({ id: "mutateFind000001", flags: { [MODULE]: { resolution: { rows: [], n: 0 } } } });
+  const a = R.mutate(m.id, r => { r.n++; return r; });
+  const b = R.mutate(m.id, async r => { await null; r.n *= 10; return r; });
+  assert.equal(R.queues.get(m.id), b);
+  await a;
+  assert.equal(R.queues.has(m.id), true, "a settled while b is queued: the entry stays");
+  assert.equal((await b).n, 10);
+  await flush();
+  assert.equal(R.queues.has(m.id), false);
+  assert.equal(R.pendingWrites(), 0);
+  assert.equal((await R.mutate(m.id, r => { r.n++; return r; })).n, 11);
+});

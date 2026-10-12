@@ -51,8 +51,14 @@ export function mutate(messageId, fn) {
     return out;
   }).catch(err => { log.error("mutate", err); return null; });
   queues.set(messageId, next);
+  // -6: drop the tail once it settles (unless a later call queued behind it), so a session does
+  // not keep every resolution it ever wrote alive. `next` never rejects (the catch above).
+  next.finally(() => { if (queues.get(messageId) === next) queues.delete(messageId); });
   return next;
 }
+
+/** Messages with a write still queued on this client (debugging and tests). */
+export const pendingWrites = () => queues.size;
 
 /* -------------------------------------------- */
 /*  Who is affected                             */

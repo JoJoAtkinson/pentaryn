@@ -404,13 +404,13 @@ test("mutate: a throwing fn is logged 'pentaryn-aoe | mutate' and resolves null;
   assert.equal((await R.mutate(m.id, r => { r.n = 5; return r; })).n, 5);
 });
 
-test("KNOWN -6: the per-message queue map never shrinks", async () => {
-  const size = R.queues.size;
-  assert.ok(size >= 2);
-  assert.ok(R.queues.has("mutateMsg0000001"));
+test("[declared] -6: the per-message queue map shrinks once its writes settle (was: never)", async () => {
+  await flush();
+  assert.equal(R.queues.has("mutateMsg0000001"), false);
+  assert.equal(R.pendingWrites(), R.queues.size);
 });
 
-test("-6 the queue entry is dropped once settled", { todo: "standalone -6: next.finally deletes the settled tail; pendingWrites()" }, async () => {
+test("-6 the queue entry is dropped once settled", async () => {
   await flush();
   assert.equal(R.queues.has("mutateMsg0000001"), false);
 });
