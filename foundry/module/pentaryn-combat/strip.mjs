@@ -238,7 +238,7 @@ function settleFocus() {
   setTimeout(() => focusRollWindow(), 150);
 }
 
-function onRollWindow(app, { weapon = false } = {}) {
+export function onRollWindow(app, { weapon = false } = {}) {
   try { if (app?.element?.classList?.contains("roll-configuration")) readEnter(app); } catch (err) { log.debug("read Enter (the hint stays)", err); }
   try { if (app?.element?.classList?.contains("roll-configuration")) settleFocus(); } catch (err) { log.debug("settle focus (the player clicks)", err); }
   try {
@@ -264,7 +264,7 @@ function keepOnScreen(app) {
   if (to) app.setPosition(to);
 }
 
-function onRollWindowClose(app) {
+export function onRollWindowClose(app) {
   try {
     if (moved(app)) {
       const p = app.position ?? {};
@@ -274,10 +274,7 @@ function onRollWindowClose(app) {
   } catch (err) { log.debug("roll window close (closing anyway)", err); }
 }
 
-Hooks.on("renderRollConfigurationDialog", (app) => onRollWindow(app, { weapon: true }));
-Hooks.on("renderRollResolver", (app) => onRollWindow(app, { weapon: true }));
-Hooks.on("closeRollConfigurationDialog", onRollWindowClose);
-Hooks.on("closeRollResolver", onRollWindowClose);
+// Registered by roll-dock.mjs (a feature installed first in combat.mjs).
 
 export function hide() {
   if (pending) { const p = pending; pending = null; p({ type: "stop" }); }

@@ -28,7 +28,7 @@ for (const a of F.game.actors) delete a.flags.enhancedcombathud;
 const api = F.game.pentaryn.combat;
 const shapes = await import("../shapes.mjs");
 const seq = await import("../sequence.mjs");
-const riders = await import("../riders.mjs");
+const riders = await import("../turn-riders.mjs");
 const settings = await import("../settings.mjs");
 const off = await import("../offhand.mjs");
 F.calls.length = 0;

@@ -31,7 +31,7 @@ const onTurn = actor => setTurn(combat, { turn: combat.combatants.contents.findI
 await import("../combat.mjs");
 await import("../hud.mjs");
 const seq = await import("../sequence.mjs");
-const riders = await import("../riders.mjs");
+const riders = await import("../turn-riders.mjs");
 const shapes = await import("../shapes.mjs");
 const strip = await import("../strip.mjs");
 F.fire("init");

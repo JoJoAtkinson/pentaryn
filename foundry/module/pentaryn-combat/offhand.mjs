@@ -1,14 +1,9 @@
 /**
- * Off-hand corrections and the weapon-set seed.
+ * Off-hand corrections and the weapon-set seed (feature, installed at setup).
  *
- *  offhandModeReset  dnd5e remembers the last attack mode per activity (flags.dnd5e.last.<id>), so
- *                    one Offhand swing made every later main-hand swing with that weapon default to
- *                    Offhand (no ability modifier). After any off-hand roll the remembered mode goes
- *                    back to the weapon's first main-hand mode. dnd5e writes `last` inside rollAttack
- *                    before dnd5e.postRollAttack fires, so restoring in that hook lands after it.
- *  offhandPip        Argon spends the pip of the activity's activation type, so an off-hand swing of
- *                    an `action` weapon greyed the Action pip. The Bonus pip is spent instead and the
- *                    Action pip given back when no main swing was made this turn (hud.mjs listens).
+ *  offhandModeReset  after an off-hand roll the weapon's remembered attack mode goes back to its
+ *                    first main-hand mode (shapes.mjs resetOffhandMode; counting.mjs calls it).
+ *  offhandPip        an off-hand swing spends the Bonus pip, not the Action pip (hud/bars.mjs).
  *  seedWeaponSets    Argon's weapon-set slot was empty for the PCs. At the active GM's ready (and on
  *                    a new character), a character whose flags.enhancedcombathud.weaponSets was never
  *                    written gets set 1 = main melee + Light off-hand, set 2 = ranged. Never overwrites.
@@ -17,23 +12,16 @@
 import * as core from "./combat-core.mjs";
 import { MODULE } from "./combat-core.mjs";
 import { makeLog } from "./lib/log.mjs";
-import { weaponsOf } from "./shapes.mjs";
+import { hookRegistry } from "./lib/hooks.mjs";
+import { weaponsOf, resetOffhandMode as resetMode } from "./shapes.mjs";
 import { setting } from "./settings.mjs";
 
 const log = makeLog(MODULE);
-
 const ARGON = "enhancedcombathud";
 
-/** Put a weapon's remembered attack mode back to main-hand after an off-hand roll. */
-export async function resetOffhandMode(activity, attackMode) {
-  if (!setting("offhandModeReset") || !String(attackMode ?? "").endsWith("offhand")) return false;
-  // dnd5e hands hooks a clone of the item (Activity#use works on one); write to the real one.
-  const item = activity?.item ? (activity.item.actor?.items?.get(activity.item.id) ?? null) : null;
-  if (!item?.isOwner) return false;
-  const next = core.mainMode(item.system?.attackModes ?? []);
-  if (!next) return false;
-  await item.setFlag("dnd5e", `last.${activity.id}.attackMode`, next);
-  return true;
+/** Put a weapon's remembered attack mode back to main-hand after an off-hand roll (setting offhandModeReset). */
+export function resetOffhandMode(activity, attackMode) {
+  return resetMode(activity, attackMode, { enabled: setting("offhandModeReset") });
 }
 
 /* ── weapon sets ─────────────────────────────────────────────────────────── */
@@ -74,10 +62,28 @@ export async function seedAll() {
   return out;
 }
 
-export function installOffhand() {
-  Hooks.on("createActor", (actor) => {
+/* ── install ─────────────────────────────────────────────────────────────── */
+
+const timers = new Set();
+
+export function install(reg) {
+  reg.on("createActor", (actor) => {
     if (!game.users?.activeGM?.isSelf || actor.type !== "character") return;
     // Items arrive with the actor; give the sheet's own creation flow a beat.
-    setTimeout(() => seedWeaponSets(actor).catch(err => { log.debug("weapon-set seed (new character)", err); return null; }), 500);
-  });
+    const t = setTimeout(() => {
+      timers.delete(t);
+      seedWeaponSets(actor).catch(err => { log.debug("weapon-set seed (new character)", err); return null; });
+    }, 500);
+    timers.add(t);
+  }, { guard: false, label: "seed a new character's weapon sets" });
+}
+
+export function uninstall() {
+  for (const t of timers) clearTimeout(t);
+  timers.clear();
+}
+
+/** The createActor seed on its own registry (kept for callers that install it outside the entry). */
+export function installOffhand() {
+  install(hookRegistry(MODULE, log));
 }

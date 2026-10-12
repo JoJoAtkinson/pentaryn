@@ -11,6 +11,7 @@ mock.timers.enable({ apis: ["setTimeout", "Date"], now: 1_000_000 });
 const W = await setupWorld();
 const { F, doc } = W;
 const lines = captureConsole();
+await import("../combat.mjs");                    // the roll-window hooks register with the entry (roll-dock, guide S6a)
 const strip = await import("../strip.mjs");
 (await import("../settings.mjs")).registerSettings();
 F.calls.length = 0;

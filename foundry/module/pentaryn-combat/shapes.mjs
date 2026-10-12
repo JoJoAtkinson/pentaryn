@@ -106,6 +106,24 @@ export function flurryActivity(actor) {
   return activitiesOf(item).find(a => /flurry/i.test(a.name ?? "")) ?? null;
 }
 
+/**
+ * offhandModeReset: put a weapon's remembered attack mode back to main-hand after an off-hand roll.
+ * dnd5e remembers the last mode per activity (flags.dnd5e.last.<id>), so one Offhand swing made every
+ * later main-hand swing default to Offhand (no ability modifier). dnd5e writes `last` inside
+ * rollAttack before dnd5e.postRollAttack fires, so restoring in that hook lands after it. The caller
+ * passes the setting (`enabled`): this adapter reads no setting.
+ */
+export async function resetOffhandMode(activity, attackMode, { enabled = true } = {}) {
+  if (!enabled || !String(attackMode ?? "").endsWith("offhand")) return false;
+  // dnd5e hands hooks a clone of the item (Activity#use works on one); write to the real one.
+  const item = activity?.item ? (activity.item.actor?.items?.get(activity.item.id) ?? null) : null;
+  if (!item?.isOwner) return false;
+  const next = core.mainMode(item.system?.attackModes ?? []);
+  if (!next) return false;
+  await item.setFlag("dnd5e", `last.${activity.id}.attackMode`, next);
+  return true;
+}
+
 /* ── which weapon Full Attack starts with ─────────────────────────────────── */
 
 /** The active Argon weapon set's primary weapon id, if any. */

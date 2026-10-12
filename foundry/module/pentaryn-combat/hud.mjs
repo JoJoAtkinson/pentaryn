@@ -20,7 +20,7 @@ import {
 } from "./shapes.mjs";
 import { runSwings, runFollowUp, fullAttackPlan, running, abortFor, registerTargetPicker } from "./sequence.mjs";
 import { pickWeapon } from "./strip.mjs";
-import { riderDiceFor, isReckless, setReckless } from "./riders.mjs";
+import { riderDiceFor, isReckless, setReckless } from "./turn-riders.mjs";
 // Turn flow (special actions, Opportunity Attack, Esc, death saves, portrait, follow): its own hooks.
 // Imported here, not listed in module.json, so a world relaunch is not needed to load it.
 import { placeOpenDrawers } from "./turnflow.mjs";

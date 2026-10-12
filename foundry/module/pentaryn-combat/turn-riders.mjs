@@ -471,33 +471,42 @@ export function report(actorOrName) {
 
 /* ── install ─────────────────────────────────────────────────────────────── */
 
-export function installRiders() {
+const opts = label => ({ guard: false, label });
+
+export function install(reg) {
   // Every attack roll carries the turn it was made in, so a card's button shows only that turn.
-  Hooks.on("dnd5e.preRollAttackV2", (config, dialog, message) => {
+  reg.on("dnd5e.preRollAttackV2", (config, dialog, message) => {
     try {
       const actor = config?.subject?.actor;
       if (actor) foundry.utils.setProperty(message, `data.flags.${MODULE}.turnKey`, combatContext(actor).key);
     } catch (err) { log.warn("turn stamp skipped", err); }
-  });
-  Hooks.on("dnd5e.preRollDamageV2", (config, dialog, message) => {
+  }, opts("turn stamp"));
+  reg.on("dnd5e.preRollDamageV2", (config, dialog, message) => {
     try { narrowType(config); } catch (err) { log.warn("rider type skipped", err); }
     try { autoRiders(config, message); } catch (err) { log.warn("auto rider skipped", err); }
-  });
-  Hooks.on("dnd5e.renderChatMessage", (message, html) => {
+  }, opts("rider damage"));
+  reg.on("dnd5e.renderChatMessage", (message, html) => {
     try { renderOffer(message, html); } catch (err) { log.warn("rider offer skipped", err); }
     try { renderAutoNote(message, html); } catch (err) { log.warn("rider note skipped", err); }
     try { renderSwingDamage(message, html); } catch (err) { log.warn("swing damage button skipped", err); }
-  });
-  Hooks.on("combatTurnChange", () => rerenderShowing());
-  Hooks.on("deleteCombat", () => rerenderShowing());
-  Hooks.on("updateActor", (actor, changes) => {
+  }, opts("rider card"));
+  reg.on("combatTurnChange", () => rerenderShowing(), opts("rider cards: turn changed"));
+  reg.on("deleteCombat", () => rerenderShowing(), opts("rider cards: combat over"));
+  reg.on("updateActor", (actor, changes) => {
     if (foundry.utils.hasProperty(changes, `flags.${MODULE}.turn`) || foundry.utils.hasProperty(changes, `flags.${MODULE}.-=turn`)) rerenderCards(actor);
-  });
+  }, opts("rider cards: turn flag"));
   // Reckless on/off changes Frenzy's offer and hint on this turn's cards.
   for (const hook of ["createActiveEffect", "deleteActiveEffect", "updateActiveEffect"]) {
-    Hooks.on(hook, (effect) => {
+    reg.on(hook, (effect) => {
       const actor = effect?.parent;
       if (actor?.documentName === "Actor" && /^reckless/i.test(effect.name ?? "")) rerenderCards(actor);
-    });
+    }, opts("rider cards: Reckless"));
   }
+}
+
+/** Session state only; the registry unwinds the hooks. */
+export function uninstall() {
+  inFlight.clear();
+  autoApplied.clear();
+  rerenderQueued = new Set();
 }

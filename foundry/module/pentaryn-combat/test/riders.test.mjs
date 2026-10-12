@@ -31,7 +31,7 @@ const combat = makeCombat({ id: "c1", entries: [
 ] });
 
 await import("../combat.mjs");
-const riders = await import("../riders.mjs");
+const riders = await import("../turn-riders.mjs");
 F.fire("init");
 F.fire("setup");
 F.fire("ready");

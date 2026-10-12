@@ -8,9 +8,24 @@
     "combat.mjs": [
       "argon.mjs",
       "combat-core.mjs",
-      "lib/log.mjs",
+      "context.mjs",
+      "counting.mjs",
       "offhand.mjs",
-      "riders.mjs",
+      "roll-dock.mjs",
+      "sequence.mjs",
+      "settings.mjs",
+      "shapes.mjs",
+      "turn-riders.mjs"
+    ],
+    "context.mjs": [
+      "combat-core.mjs",
+      "lib/hooks.mjs",
+      "lib/log.mjs",
+      "settings.mjs"
+    ],
+    "counting.mjs": [
+      "combat-core.mjs",
+      "lib/log.mjs",
       "sequence.mjs",
       "settings.mjs",
       "shapes.mjs"
@@ -18,24 +33,22 @@
     "hud.mjs": [
       "combat-core.mjs",
       "lib/log.mjs",
-      "riders.mjs",
       "sequence.mjs",
       "settings.mjs",
       "shapes.mjs",
       "strip.mjs",
+      "turn-riders.mjs",
       "turnflow.mjs"
     ],
     "offhand.mjs": [
       "combat-core.mjs",
+      "lib/hooks.mjs",
       "lib/log.mjs",
       "settings.mjs",
       "shapes.mjs"
     ],
-    "riders.mjs": [
-      "combat-core.mjs",
-      "lib/log.mjs",
-      "settings.mjs",
-      "shapes.mjs"
+    "roll-dock.mjs": [
+      "strip.mjs"
     ],
     "sequence.mjs": [
       "combat-core.mjs",
@@ -57,6 +70,12 @@
       "lib/log.mjs",
       "settings.mjs"
     ],
+    "turn-riders.mjs": [
+      "combat-core.mjs",
+      "lib/log.mjs",
+      "settings.mjs",
+      "shapes.mjs"
+    ],
     "turnflow.mjs": [
       "combat-core.mjs",
       "lib/log.mjs",
@@ -75,9 +94,13 @@
     "lib/settings.mjs",
     "sequence.mjs",
     "strip.mjs",
-    "riders.mjs",
+    "turn-riders.mjs",
     "combat.mjs",
+    "roll-dock.mjs",
     "offhand.mjs",
+    "lib/hooks.mjs",
+    "counting.mjs",
+    "context.mjs",
     "argon.mjs"
   ]
 }

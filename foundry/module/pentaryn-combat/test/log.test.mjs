@@ -10,7 +10,7 @@ const { F } = W;
 const lines = captureConsole();
 const debug = [];
 console.debug = (...args) => debug.push(args);
-const riders = await import("../riders.mjs");
+const riders = await import("../turn-riders.mjs");
 
 test("log.warn prints `pentaryn-combat | <text>` once, with the error after it", () => {
   const log = makeLog(MODULE);
