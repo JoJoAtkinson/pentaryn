@@ -13,7 +13,7 @@
 
 import {
   MODULE, EFFECT_ID, activitiesOf, isWildShapeActivity, planBonusBar, planWithout, frontRowItems, coveredPanel,
-  hpText, portraitText, earnsChalice, coveredMultiattackId, formatDuration
+  hpText, portraitText, earnsChalice, coveredMultiattackId, formatDuration, pruneDisconnected
 } from "./transform-core.mjs";
 import { makeLog } from "./lib/log.mjs";
 import { combatSetting, registerKeybindings } from "./settings.mjs";
@@ -62,6 +62,7 @@ function registerEscape() {
 /* ── composing the bars ──────────────────────────────────────────────────── */
 
 function composeBonusBar(panel, actor) {
+  pruneDisconnected(liveButtons);             // the buttons Argon's last rebuild left behind (-10)
   const C = argonClasses();
   const ItemBtn = itemButtonClass(panel);
   if (!C || !ItemBtn || !actor) return;
