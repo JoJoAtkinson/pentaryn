@@ -8,6 +8,7 @@
 import {
   MODULE, RULES, carriedAbilities, matchRule, normalizeName, pickRestore, pickSpend, resolveTypes, ruleByKey,
 } from "./riders-core.mjs";
+import { SUMMON_FLAG } from "./table-core.mjs";
 
 /* ── items and features ─────────────────────────────────────────────────── */
 
@@ -137,6 +138,24 @@ export function featureKeys(actor) {
   const out = [];
   for (const i of actor?.items ?? []) out.push(String(i.system?.identifier || i.name || "").toLowerCase());
   for (const e of actor?.appliedEffects ?? actor?.effects ?? []) out.push(String(e.name ?? "").toLowerCase().replace(/\s+/g, "-"));
+  return out;
+}
+
+/**
+ * The tokens, on any scene, that one of `actor`'s concentration effects keeps on the map (the
+ * summon stamp flags.pentaryn-riders.concentration, concentration.mjs): `[{ scene, token, effect }]`
+ * as ids and the effect's uuid. Not a hot path (inspect only).
+ */
+export function concentrationSummonsOf(actor, scenes) {
+  const prefix = actor?.uuid ? `${actor.uuid}.ActiveEffect.` : null;
+  if (!prefix) return [];
+  const out = [];
+  for (const scene of scenes ?? []) {
+    for (const t of scene?.tokens ?? []) {
+      const effect = t?.flags?.[MODULE]?.[SUMMON_FLAG];
+      if (typeof effect === "string" && effect.startsWith(prefix)) out.push({ scene: scene.id, token: t.id, effect });
+    }
+  }
   return out;
 }
 

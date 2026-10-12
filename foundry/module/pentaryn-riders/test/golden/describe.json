@@ -1,0 +1,488 @@
+{
+  "module": "pentaryn-riders",
+  "namespace": "riders",
+  "contract": "pentaryn-riders/api@1",
+  "flagScope": "pentaryn-riders",
+  "methods": [
+    {
+      "path": "inspect",
+      "params": [
+        {
+          "name": "ref",
+          "kind": "actor",
+          "type": "Actor|Token|uuid|id|exact name",
+          "doc": "never a substring"
+        },
+        {
+          "name": "opts",
+          "type": "{ sceneId?, as? }",
+          "optional": true
+        }
+      ],
+      "returns": "{ actor, rows, hd: { value, max }, settings, concentrationSummons: [{ scene, token, effect }] }",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "throws": [
+        "NOT_FOUND",
+        "AMBIGUOUS",
+        "BAD_ARGS"
+      ],
+      "doc": "Read-only riders state for one actor, plain JSON, depth ≤ 4: report()'s rows, the Hit Dice summary, all eight settings, and the tokens its concentration effects keep on any scene. opts.as = a user ref answers with that user's view (rows and hd need OBSERVER; concentrationSummons is GM-only)."
+    },
+    {
+      "path": "selftest",
+      "params": [],
+      "returns": "{ ok, checks: [{ label, ok, detail }] }",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "doc": "Live smoke checks after a sync: published, settings readable, hooks and the relay registered, patches."
+    },
+    {
+      "path": "arcaneRecovery",
+      "params": [
+        {
+          "name": "ref",
+          "kind": "actor",
+          "type": "Actor|Token|uuid|id|exact name",
+          "doc": "never a substring"
+        }
+      ],
+      "returns": "{ ok: true, actor, recovered: { [level]: count } | null } | { ok: false, code, reason }",
+      "gm": false,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "Actor.system.spells.spell1-5.value",
+        "ChatMessage (one line)"
+      ],
+      "doc": "Open the Arcane Recovery picker for an actor this client owns, without spending a use: the chosen slots are restored and one chat line posted, as after the feature's own use. recovered is null when cancelled or nothing was spent. A non-owner gets { ok: false, code: \"REFUSED\" }."
+    },
+    {
+      "path": "featuresOf",
+      "params": [
+        {
+          "name": "actor",
+          "type": "Actor",
+          "doc": "the Actor document (legacy: a name, id or uuid string is not resolved)"
+        }
+      ],
+      "returns": "{ key, rule, items: Item[], types: string[]|null }[]",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "Every rule the actor's items switch on, with the damage types it resolved to. items are LIVE Item documents (heavy through eval-js; inspect().rows is the plain view)."
+    },
+    {
+      "path": "report",
+      "params": [
+        {
+          "name": "actor",
+          "type": "Actor",
+          "doc": "omitted: every character actor",
+          "optional": true
+        }
+      ],
+      "returns": "{ actor, rule, items, types?, status, manual?, handAdded?, battleMedic? }[]",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "One row per (actor, feature): what is active, which types, and Battle Medic's state; also printed with console.table."
+    },
+    {
+      "path": "setType",
+      "params": [
+        {
+          "name": "target",
+          "type": "Item|Actor"
+        },
+        {
+          "name": "type",
+          "type": "string"
+        },
+        {
+          "name": "ruleKey",
+          "type": "string",
+          "optional": true
+        }
+      ],
+      "returns": "string[] (the names of the items set)",
+      "gm": false,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "flags.pentaryn-riders.damageType"
+      ],
+      "legacy": true,
+      "doc": "Set the damage type a typed feature (Elemental Adept, Elemental Affinity) stands for: one item, or every typed feature item of an actor (one rule's with ruleKey). Throws when type is empty."
+    },
+    {
+      "path": "retireManual",
+      "params": [
+        {
+          "name": "actor",
+          "type": "Actor",
+          "doc": "the Actor document (legacy: a name, id or uuid string is not resolved)"
+        }
+      ],
+      "returns": "string[] (\"<item>: <activity>\" per activity deleted)",
+      "gm": false,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "flags.pentaryn-riders.damageType",
+        "Item.system.activities"
+      ],
+      "legacy": true,
+      "doc": "Elemental Affinity: pin the resolved type into the item's flag and delete the PHB's manual +CHA damage activities (with the rider on, they add CHA twice). Typeless items are left alone."
+    },
+    {
+      "path": "spendHitDie",
+      "params": [
+        {
+          "name": "actor",
+          "type": "Actor",
+          "doc": "the Actor document (legacy: a name, id or uuid string is not resolved)"
+        },
+        {
+          "name": "opts",
+          "type": "{ faces? }",
+          "optional": true
+        }
+      ],
+      "returns": "number|null (the faces spent)",
+      "gm": false,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "Actor.system.attributes.hd.spent (NPC) | Item(class).system.hd.spent"
+      ],
+      "legacy": true,
+      "doc": "Spend one Hit Die: the largest left, or of `faces` when the actor has one left of that size."
+    },
+    {
+      "path": "restoreHitDie",
+      "params": [
+        {
+          "name": "actor",
+          "type": "Actor",
+          "doc": "the Actor document (legacy: a name, id or uuid string is not resolved)"
+        }
+      ],
+      "returns": "number|null (the faces restored)",
+      "gm": false,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "Actor.system.attributes.hd.spent (NPC) | Item(class).system.hd.spent"
+      ],
+      "legacy": true,
+      "doc": "Give back one spent Hit Die (the largest spent)."
+    },
+    {
+      "path": "hdPools",
+      "params": [
+        {
+          "name": "actor",
+          "type": "Actor",
+          "doc": "the Actor document (legacy: a name, id or uuid string is not resolved)"
+        }
+      ],
+      "returns": "{ id: string|null, faces, value, spent }[]",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "The actor's Hit Dice pools: one per class (an NPC: one, id null)."
+    },
+    {
+      "path": "preview",
+      "params": [
+        {
+          "name": "formula",
+          "type": "string"
+        },
+        {
+          "name": "opts",
+          "type": "{ rollType, types?, modifier?, bonus? }",
+          "optional": true
+        }
+      ],
+      "returns": "string (the formula with the riders applied)",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "What a rider would do to a damage formula string (core.transformFormula with dnd5e's damage types). The live riders edit real roll terms, not strings."
+    },
+    {
+      "path": "installBattleMedic",
+      "params": [
+        {
+          "name": "actor",
+          "type": "Actor"
+        },
+        {
+          "name": "opts",
+          "type": "{ replace? }",
+          "optional": true
+        }
+      ],
+      "returns": "{ ok: true, item, kit, kitFound, updated, removed } | { ok: false, why }",
+      "gm": false,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "Item(Healer).system.activities",
+        "flags.pentaryn-riders.flow"
+      ],
+      "legacy": true,
+      "doc": "GM / owner: give the actor's Healer feat one Battle Medic activity spending one use of their Healer's Kit; replace (default true) deletes the old 'Heal dX' activities."
+    },
+    {
+      "path": "battleMedic",
+      "params": [
+        {
+          "name": "healer",
+          "type": "Actor"
+        },
+        {
+          "name": "token",
+          "type": "Token placeable (its .actor is the patient)"
+        }
+      ],
+      "returns": "{ faces, healed, hp, value, max } | null",
+      "gm": false,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "ChatMessage (the roll)",
+        "the patient's Hit Dice and HP (through the GM relay when not owned)"
+      ],
+      "legacy": true,
+      "doc": "Run Battle Medic as the client runner does after the activity is used: roll the patient's largest Hit Die (1s rerolled) + PB, spend it and heal. Takes a Token, not an Actor (an Actor reads as 'no Hit Dice')."
+    }
+  ],
+  "queries": [
+    "pentaryn-riders.battleMedic"
+  ],
+  "settings": [
+    {
+      "key": "rituals",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "Ritual Adept: unprepared ritual spells get a Rituals group on Argon's Cast Spell panel and start with the slot unticked."
+    },
+    {
+      "key": "longCasts",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "A 'Longer casts' group (casting time a minute or more) on Argon's Action-bar Cast Spell panel."
+    },
+    {
+      "key": "concentrationSummons",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "Tokens a concentration spell summoned are removed when that concentration ends."
+    },
+    {
+      "key": "concentrationAutoBreak",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "A failed concentration save ends concentration on the roller's client; the save card shows DC and result."
+    },
+    {
+      "key": "castDefaults",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "Summons open with Place Summons ticked; a self-only spell's card drops leftover targets."
+    },
+    {
+      "key": "arcaneRecovery",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "After Arcane Recovery is used, the owner picks the slots to recover in a dialog."
+    },
+    {
+      "key": "enabled",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "Master switch for the damage and healing riders, the damage-tray preset and Battle Medic."
+    },
+    {
+      "key": "hdControls",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "Hit Dice − / + on the character sheet outside edit mode; a change re-renders open character sheets."
+    }
+  ],
+  "events": [],
+  "hooks": [
+    {
+      "name": "dnd5e.preUseActivity",
+      "label": "ritual slot default"
+    },
+    {
+      "name": "dnd5e.summonToken",
+      "label": "concentration summon stamp"
+    },
+    {
+      "name": "deleteActiveEffect",
+      "label": "concentration summon cleanup"
+    },
+    {
+      "name": "dnd5e.renderChatMessage",
+      "label": "break-concentration label"
+    },
+    {
+      "name": "createChatMessage",
+      "label": "concentration auto-break"
+    },
+    {
+      "name": "dnd5e.renderChatMessage",
+      "label": "concentration result line"
+    },
+    {
+      "name": "updateItem",
+      "label": "Argon shared-uses badges"
+    },
+    {
+      "name": "dnd5e.preCreateMeasuredTemplate",
+      "label": "Argon panel collapse"
+    },
+    {
+      "name": "dnd5e.preSummon",
+      "label": "Argon panel collapse"
+    },
+    {
+      "name": "renderItemButtonArgonComponent",
+      "label": "Argon button tidy"
+    },
+    {
+      "name": "dnd5e.preSummon",
+      "label": "summon sidebar keep"
+    },
+    {
+      "name": "changeSidebarTab",
+      "label": "summon sidebar keep"
+    },
+    {
+      "name": "dnd5e.postSummon",
+      "label": "summon sidebar keep"
+    },
+    {
+      "name": "dnd5e.preUseActivity",
+      "label": "restore-slot default"
+    },
+    {
+      "name": "dnd5e.preUseActivity",
+      "label": "cast defaults"
+    },
+    {
+      "name": "renderActivityUsageDialog",
+      "label": "usage dialog first click"
+    },
+    {
+      "name": "dnd5e.postUseActivity",
+      "label": "Arcane Recovery picker"
+    },
+    {
+      "name": "dnd5e.postDamageRollConfiguration",
+      "label": "damage and healing riders"
+    },
+    {
+      "name": "dnd5e.renderChatMessage",
+      "label": "card note"
+    },
+    {
+      "name": "dnd5e.preCalculateDamage",
+      "label": "Elemental Adept damage-tray preset"
+    },
+    {
+      "name": "dnd5e.preUseActivity",
+      "label": "Battle Medic veto"
+    },
+    {
+      "name": "dnd5e.postUseActivity",
+      "label": "Battle Medic"
+    },
+    {
+      "name": "renderCharacterActorSheet",
+      "label": "Hit Dice − / +"
+    },
+    {
+      "name": "init",
+      "label": "init: settings, Battle Medic relay"
+    },
+    {
+      "name": "ready",
+      "label": "ready: patches, publish"
+    }
+  ],
+  "patches": [
+    {
+      "label": "Argon ButtonPanelButton#_renderInner",
+      "marker": "pentaryn-riders.ritualsWrapped",
+      "adjustments": "riders-argon-ritual-adept-list"
+    },
+    {
+      "label": "TextEditor.implementation.enrichHTML",
+      "marker": "_prItemRollData",
+      "adjustments": "riders-argon-tooltip-item-rolldata"
+    },
+    {
+      "label": "dnd5e SummonActivity#_prepareUsageConfig",
+      "marker": "_prPlaceDefault",
+      "adjustments": "riders-summon-place-default"
+    },
+    {
+      "label": "dnd5e SummonActivity#getPlacement",
+      "marker": "_prWildcard",
+      "adjustments": "riders-summon-wildcard-preview"
+    }
+  ],
+  "flags": {
+    "writes": [
+      "flags.pentaryn-riders.damageType",
+      "flags.pentaryn-riders.flow",
+      "flags.pentaryn-riders.applied",
+      "flags.pentaryn-riders.ignoreResistance",
+      "flags.pentaryn-riders.origin",
+      "flags.pentaryn-riders.detail",
+      "flags.pentaryn-riders.target",
+      "flags.pentaryn-riders.faces",
+      "flags.pentaryn-riders.concentration"
+    ],
+    "reads": []
+  },
+  "errors": [
+    "NOT_GM",
+    "NO_GM",
+    "NOT_READY",
+    "NOT_FOUND",
+    "AMBIGUOUS",
+    "BAD_ARGS",
+    "REFUSED",
+    "CONFLICT",
+    "UNSUPPORTED",
+    "TIMEOUT",
+    "INTERNAL"
+  ]
+}

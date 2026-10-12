@@ -170,7 +170,30 @@ export function install(reg, ctx) {
   log = ctx.log;
   reg.on("dnd5e.preUseActivity", veto, { guard: false, label: "Battle Medic veto" });
   reg.on("dnd5e.postUseActivity", afterUse, { guard: false, label: "Battle Medic" });
-  ctx.expose({ runBattleMedic, installBattleMedic });
+  // The two API rows are Battle Medic's own (legacy shapes, kept as they were).
+  return {
+    rows: [
+      {
+        path: "installBattleMedic",
+        params: [{ name: "actor", type: "Actor" }, { name: "opts", type: "{ replace? }", optional: true }],
+        returns: "{ ok: true, item, kit, kitFound, updated, removed } | { ok: false, why }",
+        gm: false, writes: true, legacy: true,
+        sideEffects: ["Item(Healer).system.activities", "flags.pentaryn-riders.flow"],
+        doc: "GM / owner: give the actor's Healer feat one Battle Medic activity spending one use of their Healer's "
+          + "Kit; replace (default true) deletes the old 'Heal dX' activities.",
+      },
+      {
+        path: "battleMedic",
+        params: [{ name: "healer", type: "Actor" }, { name: "token", type: "Token placeable (its .actor is the patient)" }],
+        returns: "{ faces, healed, hp, value, max } | null",
+        gm: false, writes: true, legacy: true,
+        sideEffects: ["ChatMessage (the roll)", "the patient's Hit Dice and HP (through the GM relay when not owned)"],
+        doc: "Run Battle Medic as the client runner does after the activity is used: roll the patient's largest Hit "
+          + "Die (1s rerolled) + PB, spend it and heal. Takes a Token, not an Actor (an Actor reads as 'no Hit Dice').",
+      },
+    ],
+    impl: { installBattleMedic, battleMedic: runBattleMedic },
+  };
 }
 
 export function uninstall() {}

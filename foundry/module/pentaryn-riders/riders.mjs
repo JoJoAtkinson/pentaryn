@@ -13,7 +13,8 @@
  *   shapes.mjs             ADAPTER: dnd5e documents → the cores' shapes; Hit Dice reads and writes
  *   argon.mjs              ADAPTER: the only reader of ui.ARGON / CONFIG.ARGON
  *   patches.mjs            every wrap of another package's code (wrapMethod + adjustments row)
- *   api.mjs                the console API members
+ *   api-manifest.mjs       PURE: the API rows (describe() reads them)
+ *   api.mjs                implementations, inspect(), selftest(), buildApiFor(ctx)
  *   rituals.mjs … hd-sheet.mjs   the features: install(reg, ctx) / uninstall()
  *   lib/*.mjs              vendored kit — never edited here (scripts/foundry/blueprint/vendor.py)
  *
@@ -30,7 +31,7 @@ import { makeLog } from "./lib/log.mjs";
 import { emitter, hookRegistry } from "./lib/hooks.mjs";
 import { registerSettings, setting } from "./settings.mjs";
 import { installPatches, removePatches, wrapItemButton } from "./patches.mjs";
-import { legacyApi } from "./api.mjs";
+import { buildApiFor } from "./api.mjs";
 import * as rituals from "./rituals.mjs";
 import * as concentration from "./concentration.mjs";
 import * as argonTidy from "./argon-tidy.mjs";
@@ -83,11 +84,16 @@ function onInit() {
 
 function onReady() {
   installPatches(ctx);
+  try {
+    ctx.api = buildApiFor(ctx);
+  } catch (err) {
+    log.error("API manifest drift — not published", err);
+    return;
+  }
   // pentaryn-importer replaced game.pentaryn with a frozen object in its own ready hook; defer a
   // tick and rebuild rather than assign (same as pentaryn-journal / -portals).
   setTimeout(() => {
-    const api = legacyApi(ctx);
-    ctx.api = api;
+    const api = ctx.api;
     const current = game.pentaryn;
     if (current && !Object.isExtensible(current)) game.pentaryn = { ...current, riders: api };
     else { game.pentaryn ??= {}; game.pentaryn.riders = api; }

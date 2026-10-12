@@ -1,13 +1,25 @@
 /**
- * Pentaryn Feature Riders — the API: the console members behind game.pentaryn.riders.
+ * Pentaryn Feature Riders — the API: implementations for the manifest rows, inspect(), selftest().
  *
- * GLUE. May import core, adapters, settings and lib — never a feature file. Feature functions reach
- * this file through `ctx.exposed` (Battle Medic's `runBattleMedic` and `installBattleMedic`).
+ * May import core, adapters, settings, the manifest and lib — never a feature file. Feature
+ * functions reach this file through `ctx.exposed` (cast-flow's `arcaneRecoveryDialog`); Battle
+ * Medic contributes its own two rows from battle-medic.mjs.
  */
 
 import * as core from "./riders-core.mjs";
-import { MODULE } from "./riders-core.mjs";
-import { carriedBy, featuresOf, hdPools, isBattleMedic, isType, restoreHitDie, spendHitDie } from "./shapes.mjs";
+import { HOOKS, MODULE, NS } from "./riders-core.mjs";
+import { MANIFEST } from "./api-manifest.mjs";
+import { SETTINGS, settingsSnapshot } from "./settings.mjs";
+import {
+  carriedBy, concentrationSummonsOf, featuresOf, hdPools, hdSummary, isBattleMedic, isType, restoreHitDie, spendHitDie,
+} from "./shapes.mjs";
+import { buildApi, toPlain } from "./lib/api.mjs";
+import { fail, ok } from "./lib/errors.mjs";
+import { patches } from "./lib/patch.mjs";
+import { publishedOf } from "./lib/publish.mjs";
+import { refOf, resolveRef } from "./lib/resolve.mjs";
+
+const QUERY = `${MODULE}.battleMedic`;
 
 /**
  * Set the damage type a typed feature (Elemental Adept, Elemental Affinity) stands for.
@@ -51,52 +63,116 @@ async function retireManual(actor) {
   return out;
 }
 
-/** One row per (actor, feature): what is active, which types, and Battle Medic's state. */
+/** One row per feature of `a`: what is active, which types, and Battle Medic's state (plain strings). */
+function rowsFor(a) {
+  const rows = [];
+  for (const f of featuresOf(a)) {
+    const row = { actor: a.name, rule: f.key, items: f.items.map(i => i.name).join(", ") };
+    if (f.rule.types) {
+      row.types = f.types.join(", ");
+      row.status = f.types.length ? "active" : "NO TYPE — setType(actor, 'fire')";
+    } else row.status = "active";
+    if (f.key === "elemental-affinity") {
+      const manual = f.items.flatMap(i => i.system.activities?.contents ?? []).filter(x => x.type === "damage").length;
+      if (manual) row.manual = `${manual} +CHA activities left — retireManual(actor)`;
+    }
+    if (f.rule.effect?.unlessCarried) {
+      // Spells that already add this ability by hand: the rider skips them (no double count).
+      const ab = f.rule.effect.bonus;
+      const hand = a.items.filter(i => i.type === "spell" && (i.system.activities?.contents ?? []).some(x => carriedBy(x).includes(ab)));
+      if (hand.length) row.handAdded = `${hand.map(i => i.name).join(", ")} already add ${ab.toUpperCase()} — rider skips them`;
+    }
+    if (f.key === "healer") {
+      const bm = f.items.flatMap(i => i.system.activities?.contents ?? []).find(x => isBattleMedic(x));
+      const tgt = bm?.consumption?.targets?.find(t => t.type === "itemUses")?.target;
+      row.battleMedic = !bm ? "not installed — installBattleMedic(actor)"
+        : !tgt ? "installed, no kit linked"
+        : a.items.has(tgt) ? `installed, kit ${a.items.get(tgt).name}` : `installed, kit ${tgt} MISSING`;
+    }
+    rows.push(row);
+  }
+  return rows;
+}
+
+/** One row per (actor, feature) — every character actor when none is given — and a console.table of them. */
 function report(actor) {
   const actors = actor ? [actor] : game.actors.filter(a => a.type === "character");
-  const rows = [];
-  for (const a of actors) {
-    for (const f of featuresOf(a)) {
-      const row = { actor: a.name, rule: f.key, items: f.items.map(i => i.name).join(", ") };
-      if (f.rule.types) {
-        row.types = f.types.join(", ");
-        row.status = f.types.length ? "active" : "NO TYPE — setType(actor, 'fire')";
-      } else row.status = "active";
-      if (f.key === "elemental-affinity") {
-        const manual = f.items.flatMap(i => i.system.activities?.contents ?? []).filter(x => x.type === "damage").length;
-        if (manual) row.manual = `${manual} +CHA activities left — retireManual(actor)`;
-      }
-      if (f.rule.effect?.unlessCarried) {
-        // Spells that already add this ability by hand: the rider skips them (no double count).
-        const ab = f.rule.effect.bonus;
-        const hand = a.items.filter(i => i.type === "spell" && (i.system.activities?.contents ?? []).some(x => carriedBy(x).includes(ab)));
-        if (hand.length) row.handAdded = `${hand.map(i => i.name).join(", ")} already add ${ab.toUpperCase()} — rider skips them`;
-      }
-      if (f.key === "healer") {
-        const bm = f.items.flatMap(i => i.system.activities?.contents ?? []).find(x => isBattleMedic(x));
-        const tgt = bm?.consumption?.targets?.find(t => t.type === "itemUses")?.target;
-        row.battleMedic = !bm ? "not installed — installBattleMedic(actor)"
-          : !tgt ? "installed, no kit linked"
-          : a.items.has(tgt) ? `installed, kit ${a.items.get(tgt).name}` : `installed, kit ${tgt} MISSING`;
-      }
-      rows.push(row);
-    }
-  }
+  const rows = actors.flatMap(a => rowsFor(a));
   console.table(rows);
   return rows;
 }
 
 /**
- * The namespace as published today (one tick after `ready`, entry): the same keys and functions.
- * `battleMedic` and `installBattleMedic` are Battle Medic's (battle-medic.mjs, via ctx.exposed).
+ * @param {object} actor  resolved by buildApi (the row's first param is `ref`)
+ * @param {{ as?: * }} opts  `as`: a user ref — that user's view: rows and hd need OBSERVER on the
+ *   actor; the concentration summons (tokens on any scene) are GM-only.
  */
-export function legacyApi(ctx) {
-  return {
-    rules: core.RULES, featuresOf, report, setType, retireManual,
-    installBattleMedic: ctx.exposed.installBattleMedic,
-    battleMedic: ctx.exposed.runBattleMedic,
-    spendHitDie, restoreHitDie, hdPools,
+function inspect(actor, { as } = {}) {
+  const viewer = as === undefined || as === null ? null : resolveRef(as, "user");
+  const gmView = !viewer || viewer.isGM === true;
+  const observes = gmView || actor.testUserPermission?.(viewer, "OBSERVER") === true;
+  return toPlain({
+    actor: refOf(actor),
+    rows: observes ? rowsFor(actor) : null,
+    hd: observes ? hdSummary(actor) : null,
+    settings: settingsSnapshot(),
+    concentrationSummons: gmView ? concentrationSummonsOf(actor, game.scenes) : null,
+  });
+}
+
+/** The Arcane Recovery picker for an owned actor, without spending a use (combat-riders-32 ext.). */
+async function arcaneRecovery(actor, ctx) {
+  if (!actor.isOwner) return fail("REFUSED", `${game.user.name} does not own ${actor.name}`);
+  const recovered = await ctx.exposed.arcaneRecoveryDialog(actor);
+  return ok({ actor: refOf(actor), recovered: recovered ?? null });
+}
+
+/** This module's live patch records (a symbol marker by its description). */
+function patchRecords() {
+  return patches().filter(p => p.moduleId === MODULE).map(({ moduleId: _m, ...p }) => ({
+    ...p, marker: typeof p.marker === "symbol" ? p.marker.description : p.marker,
+  }));
+}
+
+const LIFECYCLE = new Set(["init", "setup", "ready"]);
+
+function selftest(ctx) {
+  const hooks = ctx.reg.ids().filter(h => !LIFECYCLE.has(h.name));
+  const checks = [
+    { label: "published as module.api", ok: game.modules.get(MODULE)?.api === ctx.api },
+    { label: `game.pentaryn.${NS} is this API`, ok: game.pentaryn?.[NS] === ctx.api },
+    { label: "settings readable", ok: SETTINGS.every(r => typeof ctx.setting(r.key) === "boolean") },
+    { label: "hooks registered", ok: hooks.length === 23, detail: hooks.length },
+    { label: "Battle Medic relay registered", ok: typeof CONFIG.queries?.[QUERY] === "function" },
+    { label: "patches installed", ok: true, detail: patchRecords().map(p => p.adjustments) },
+  ];
+  return { ok: checks.every(c => c.ok), checks: checks.map(c => ({ detail: null, ...c })) };
+}
+
+/** Build the frozen API. Throws (at ready, in node too) when manifest and implementations drift. */
+export function buildApiFor(ctx) {
+  return buildApi(MANIFEST, {
+    inspect: (actor, opts = {}) => inspect(actor, opts),
+    selftest: () => selftest(ctx),
+    arcaneRecovery: actor => arcaneRecovery(actor, ctx),
+    featuresOf, report, setType, retireManual, spendHitDie, restoreHitDie, hdPools,
     preview: (formula, opts) => core.transformFormula(formula, { isType, ...opts }),
-    core
-  };
+    rules: core.RULES,
+    core,
+  }, {
+    contributions: ctx.contributions,
+    members: {
+      settings: () => settingsSnapshot(),
+      trace: () => ctx.log.traces(),
+      uninstall: () => ctx.uninstall(),
+    },
+    extras: () => ({
+      settings: SETTINGS,
+      events: HOOKS,
+      hooks: ctx.reg.ids(),
+      patches: patchRecords(),
+      queries: [QUERY],
+      published: publishedOf(NS),
+    }),
+  });
 }
