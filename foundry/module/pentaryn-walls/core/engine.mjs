@@ -195,7 +195,6 @@ function toSeg(w, idx) {
     threshold: w.threshold ?? null,
     levels: w.levels ?? [],
     keepOpen: flags.keepOpen === true,
-    generated: flags.generated === true,
     isNew: false,
     dirty: false
   };
@@ -840,7 +839,6 @@ function applyInstance(inst, segs, runId) {
     return;
   }
   inst.act.walls.forEach((c, i) => {
-    const donor = inst.anchors.length ? inst.anchors[0] : null;
     const src = inst.act.srcs?.[i];
     segs.push({
       idx: segs.length,
@@ -849,12 +847,10 @@ function applyInstance(inst, segs, runId) {
       ...(src ? profileFrom(src) : {...SOLID}),
       levels: inst.levels ?? [],
       keepOpen: false,
-      generated: true,
       isNew: true,
       dirty: false,
       rule: inst.rule,
-      sources: inst.anchors,
-      donor
+      sources: inst.anchors
     });
   });
 }
