@@ -47,9 +47,6 @@ SETTLE_SECONDS = 8.0
 
 _DIGITS = re.compile(r"\d+")
 
-# Modules whose warnings are noise rather than breakage.
-IGNORED_WARNING_TYPES = {"info"}
-
 
 @dataclass
 class WorldResult:
@@ -318,8 +315,3 @@ def package_warnings(fa: FoundryAdmin, touched: set[str]) -> dict:
     if not isinstance(warnings, dict):
         return {}
     return {k: v for k, v in warnings.items() if k in touched}
-
-
-def wait_for_settle(seconds: float = 5.0) -> None:
-    """Let the server finish its post-launch bookkeeping before probing again."""
-    time.sleep(seconds)

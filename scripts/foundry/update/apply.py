@@ -18,7 +18,7 @@ handler returns ``{}`` once a world is active, and package warnings are the *onl
 an install-step failure appears — ``installPackage`` resolves ``{}`` on one. Read it
 after launching and a failed install looks like a clean run.
 
-Everything writes its phase to ``.state/vtt-update.status`` before acting, so the 08:00
+Everything writes its phase to ``.state/vtt-update.status`` before acting, so the 06:12
 watchdog can tell a slow core download from a dead run, and everything that changes
 service records the entry state first, so a crash is recoverable rather than permanent.
 """
@@ -51,7 +51,7 @@ class Aborted(RuntimeError):
 @dataclass
 class RunResult:
     run_id: str
-    outcome: str = "running"          # done | skipped | failed | recovered | no-op
+    outcome: str = "running"          # running | done | no-op | dry | skipped | failed | recovered
     plan: dict = field(default_factory=dict)
     applied: list[dict] = field(default_factory=list)
     failed: list[dict] = field(default_factory=list)
