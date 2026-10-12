@@ -1217,25 +1217,7 @@ def c47(m):
 
 def _published_literal_keys(m: Module) -> list[tuple[str, int, str]]:
     """Top-level keys of the object literals a legacy module publishes on game.pentaryn."""
-    out = []
-    for rel, src in m.files.items():
-        code = src.code
-        if "pentaryn" not in "".join(s.value for s in src.strings) and "game.pentaryn" not in code:
-            continue
-        for mm in re.finditer(r"(?:const|let)\s+api\s*=\s*\{|game\.pentaryn\.[\w$]+\s*=\s*\{", code):
-            start = mm.end() - 1
-            end = match_paren(code, start)
-            body = code[start + 1:end]
-            d = 0
-            for km in re.finditer(r"[{}\[\]()]|(?<![\w$.])([A-Za-z_$][\w$]*)\s*(?=[:,}(]|$)", body):
-                tok = km.group(0)
-                if tok in "{[(":
-                    d += 1
-                elif tok in "}])":
-                    d -= 1
-                elif d == 0 and km.group(1):
-                    out.append((rel, src.line_of(start + 1 + km.start()), km.group(1)))
-    return out
+    return [(rel, line, p) for rel, line, p in _published_literal_paths(m) if "." not in p]
 
 
 # Mirrors foundry/lib/api.mjs reservedClash: a reserved name at ANY depth of a published path.

@@ -787,3 +787,15 @@ def test_c15_namespace_import_of_core_mjs_is_a_core_barrel(tmp_path):
     d = _tiny(tmp_path, files={"one.mjs": imp, "x.mjs": imp, "core.mjs": 'export const MODULE = "pentaryn-one";\n'})
     r = next(r for r in conformance.score_dir(d)["results"] if r["id"] == "C15")
     assert r["status"] == "pass", r["detail"]
+
+
+def test_published_literal_keys_are_the_top_level_paths(tmp_path):
+    d = tmp_path / "pentaryn-one"
+    write(d, {"module.json": json.dumps({"id": "pentaryn-one", "esmodules": ["one.mjs"]}),
+              "one.mjs": "const api = {\n  describe() {},\n  attributes: { describe: 1, x: { y: 2 } },\n"
+                         "  version: 1 };\ngame.pentaryn.one = api;\n"})
+    m = conformance.load_module(d, installed=False, registry=None, registry_root=tmp_path)
+    assert conformance._published_literal_keys(m) == [
+        ("one.mjs", 2, "describe"), ("one.mjs", 3, "attributes"), ("one.mjs", 4, "version")]
+    assert [p for _, _, p in conformance._published_literal_paths(m)] == [
+        "describe", "attributes", "attributes.describe", "attributes.x", "attributes.x.y", "version"]
