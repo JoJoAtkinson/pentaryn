@@ -82,6 +82,23 @@ test("special actions: each spends the Action (or a swing for Shove) and does it
       statuses: [...fig.statuses], calls: F.calls.filter(c => ["argon.special", "createEmbedded", "toggleStatusEffect", "rollSkill", "notify"].includes(c.op)),
     });
   }
+  // Off his turn (ext-3 pins these before AFTER became a table): Dodge and Hide still do their rule; no pip, nothing recorded.
+  onTurn(gob);
+  for (const name of ["Dodge", "Hide"]) {
+    reset(fig);
+    const bar = actionBar(fig);
+    if (name === "Hide") fig.skillScript.push([{ total: 17 }]);
+    F.calls.length = 0;
+    await bar.by(name)._onLeftClick({});
+    await drain();
+    rows.push({
+      name: `${name} (off turn)`, special: bar.by(name)._pcSpecial, actionUsed: bar.panel.isActionUsed, paints: bar.panel.updates,
+      turn: fig.flags[MODULE]?.turn ?? null, effects: fig.effects.contents.map(e => ({ name: e.name, flags: e.flags, changes: e.system?.changes ?? null })),
+      statuses: [...fig.statuses], calls: F.calls.filter(c => ["argon.special", "createEmbedded", "toggleStatusEffect", "rollSkill", "notify"].includes(c.op)),
+    });
+  }
+  onTurn(fig);
+  F.calls.length = 0;
   pinJSON("turnflow-specials", rows, import.meta.url);
   assert.equal(rows[0].special, "dash");
   reset(fig);
