@@ -117,7 +117,8 @@ function report(actor) {
  * @param {{ as?: * }} opts  `as`: a user ref — that user's view: rows and hd need OBSERVER on the
  *   actor; the concentration summons (tokens on any scene) are GM-only.
  */
-function inspect(actor, { as } = {}) {
+function inspect(actor, opts) {
+  const { as } = opts ?? {}; // a null opts reads as omitted (rob-1)
   const viewer = as === undefined || as === null ? null : resolveRef(as, "user");
   const gmView = !viewer || viewer.isGM === true;
   const observes = gmView || actor.testUserPermission?.(viewer, "OBSERVER") === true;
@@ -162,7 +163,7 @@ function selftest(ctx) {
 /** Build the frozen API. Throws (at ready, in node too) when manifest and implementations drift. */
 export function buildApiFor(ctx) {
   return buildApi(MANIFEST, {
-    inspect: (actor, opts = {}) => inspect(actor, opts),
+    inspect: (actor, opts) => inspect(actor, opts),
     selftest: () => selftest(ctx),
     arcaneRecovery: actor => arcaneRecovery(actor, ctx),
     // legacy rows: a name, id, uuid or Token also resolves; a miss answers null (combat-riders-12)

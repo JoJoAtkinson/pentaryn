@@ -146,7 +146,8 @@ async function writePool(actor, pool, delta) {
  * string ("6"); anything else ("d6", junk) reads as no faces, as battle-medic's relay does (rob-3).
  * Returns the faces spent, or null.
  */
-export async function spendHitDie(actor, { faces } = {}) {
+export async function spendHitDie(actor, opts) {
+  const { faces } = opts ?? {}; // a null opts reads as omitted (rob-2)
   const pools = hdPools(actor);
   const want = Number(faces) || null;
   const pool = (want && pools.find(p => p.faces === want && p.value > 0)) || pickSpend(pools);

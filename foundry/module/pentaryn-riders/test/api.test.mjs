@@ -21,10 +21,14 @@
 // against each targeted rule's `types` (an actor's typed features, or the typed rules an Item
 // matches); only items whose rule lists it are set, and when none does it throws BAD_ARGS naming
 // the allowed types and writes nothing. An Item no typed rule matches (Healer) is no longer set.
+//
+// rob-1 / rob-2 [declared]: inspect, spendHitDie and installBattleMedic threw a destructuring
+// TypeError on a null opts. A null opts now reads as omitted on all three (`opts ?? {}`), one test
+// per row.
 import { mock, test } from "node:test";
 import assert from "node:assert/strict";
 import { pinJSON } from "./kit/harness.mjs";
-import { IDS, MODULE, makeActor, setupWorld } from "./fixtures/world.mjs";
+import { IDS, MODULE, healer as healerFixture, makeActor, npc as npcFixture, setupWorld } from "./fixtures/world.mjs";
 
 mock.timers.enable({ apis: ["setTimeout", "Date"], now: 1_800_000_000_000 });
 const W = await setupWorld();
@@ -360,5 +364,24 @@ test("combat-riders-12 [declared]: report/featuresOf/setType/retireManual/instal
   assert.equal(await api.spendHitDie("Grisk"), 8);
   assert.equal(await api.restoreHitDie(`Actor.${IDS.npc}`), 8);
   assert.deepEqual(api.report(), api.report(undefined), "no argument: every character, as before");
+  W.take();
+});
+
+test("rob-1 [declared]: inspect(actor, null) reads as inspect(actor)", () => {
+  assert.deepEqual(api.inspect(npc, null), api.inspect(npc));
+  assert.deepEqual(api.inspect(sorc, null), api.inspect(sorc));
+});
+
+test("rob-2 [declared]: spendHitDie(actor, null) reads as spendHitDie(actor)", async () => {
+  const twin = npcFixture(), nulled = npcFixture();
+  assert.equal(await api.spendHitDie(nulled, null), await api.spendHitDie(twin));
+  assert.equal(nulled.system.attributes.hd.spent, twin.system.attributes.hd.spent);
+  W.take();
+});
+
+test("rob-2 [declared]: installBattleMedic(actor, null) reads as installBattleMedic(actor) (replace defaults to true)", async () => {
+  const r = await api.installBattleMedic(healerFixture(), null);
+  assert.equal(r.ok, true);
+  assert.deepEqual(r.removed, ["Heal d8"], "replace defaults to true");
   W.take();
 });
