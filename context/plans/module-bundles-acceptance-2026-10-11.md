@@ -290,3 +290,56 @@ no-world case (Q3). The token is present again in the re-extracted world.
 Taken together: a snapshot's manifest names exact bundle versions. Old versions stay in the
 cloud while any snapshot names them, plus 7 days. A restore installs exactly the named version
 over whatever is local, and fetches only what differs. Both scratch roots were then deleted.
+
+## I. In-place dress rehearsal (Q6): S_final over the real data root
+
+Two things were checked first. The upload queue was empty: no `*.job.json` and no
+`pentaryn-replaced/`. A **local** copy of `Config/`, `Data/worlds/`, `pentaryn-boot.json` and
+`pentaryn-bundle-cache.json` was taken (35 MB, `cp -a`) to
+`~/pentaryn-restore-test/pre-I-local-copy/` as an extra net; it was never needed. Then, with
+Foundry down, 03:01:44 → 03:02:51 UTC (67 s, exit 0):
+
+```
+$ echo restore | make foundry-restore SNAP=world-2026-10-12-024111-fvtt14.369-mac.tar.gz
+  about to restore world-2026-10-12-024111-fvtt14.369-mac.tar.gz (mac) over /Users/joe/Library/Application Support/FoundryVTT
+  downloading world-2026-10-12-024111-fvtt14.369-mac.tar.gz (18.9 MB, mac)...
+  no change since the last snapshot — skipped
+  cleared Data/worlds
+  cleared Config
+  kept this machine's options.json, admin.txt, license.json
+  restored world-2026-10-12-024111-fvtt14.369-mac.tar.gz: world 18.9 MB; modules: all 45 unchanged; systems: all 1 unchanged
+  restored world-2026-10-12-024111-fvtt14.369-mac.tar.gz (the state it replaced: world-2026-10-12-024111-fvtt14.369-mac.tar.gz)
+```
+
+- **0 bundles fetched:** there is no "downloading N bundle(s)" line, and modules and the system
+  are all unchanged. The safety copy was correctly **not** needed: the tree was S_final, so
+  "no change since the last snapshot — skipped". Nothing was uploaded.
+- `diff -r` of the restored `Data/worlds` and `Config` against the pre-restore local copy:
+  **identical**, file content of every file.
+- `make foundry-bundles` after the restore is byte-identical to the one before stage G, so all
+  46 module and system folders were untouched.
+- Boot state: `based_on` = S_final, `by: restore:manual`. The recorded digest
+  (`e10bf363…`) equals the digest of the tree as it now is, so the next backup's skip check is
+  sound. It differs from the pre-restore digest (`a72b9ac0…`) only because the three kept Config
+  files were rewritten with new mtimes.
+- `make foundry-up FROM=local` → `▸ boot: local world (FROM=local)`, `✓ foundry up`. Then
+  `make login WORLD=pentaryn NO_OPEN=1`, with the one-time link opened in the existing localhost
+  tab (the only GM tab) → `✓ logged in as Gamemaster`.
+- `get-world-info`: `pentaryn`, dnd5e 6.0.6, Foundry 14.369, 1 active user (Gamemaster).
+- **ZZ acceptance journal present after the restore:** `list-journals journalId=ussRnQm9Ou73gPN3`
+  → `<p>ZZTOKEN-359119f12520b076</p>`.
+- `list-characters type=character` (read only): Caven Calderon (`IxcfWOvpcKID6bdn`), Marrith
+  Ashcroft (`RNDTDBlFXxZ7Uc8i`) and Talo (`pfCQRWnqsQjkZQnB`) are present, along with their
+  item piles. They are unchanged: the world folder is byte-identical to the pre-restore copy.
+- Boot probe:
+  - `pentaryn-read {ns:"*", path:"describe"}` lists all 10 blueprint namespaces at their
+    on-disk `module.json` versions: attunement 0.2.1, cursors 0.2.0, dropbin 0.2.3, feedback
+    0.1.1, importer 1.1.0, journal 0.1.0, movement 0.1.2, names 0.1.1, pings 0.1.1 (`ready:gm`),
+    rules/pentaryn-lookup 0.3.0. All are kit 1.0.2 and published at `ready`.
+  - A read-only `eval-js` over `game.modules` finds all 21 `pentaryn-*` modules at their on-disk
+    versions. 20 are active. `pentaryn-walls` 0.2.0 is inactive, which is expected: it is off on
+    Joe's instruction (`context/pentaryn.md`).
+  - `game.pentaryn` has 24 keys. 45 modules are installed and 44 are active.
+- Console: the buffer was cleared, then the tab reloaded. **0 errors** on load. Two warnings,
+  both v13 deprecation notices from third-party modules (scene-packer `JournalSheet`,
+  lib-wrapper `CompendiumCollection`); both were there before.
