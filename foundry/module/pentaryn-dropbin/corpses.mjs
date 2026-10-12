@@ -91,9 +91,12 @@ async function deadAsOverlay(actor) {
   if (flat.length) await actor.updateEmbeddedDocuments("ActiveEffect", flat);
 }
 
+/** A pre-overlay "Lootable" ActiveEffect (the old eye; migrateLegacyEyes deletes them). */
+const isLegacyEye = e => !!e?.flags?.[MODULE]?.lootable;
+
 /** Pre-overlay corpses carry a "Lootable" ActiveEffect (the old eye) and Dead as a corner icon. */
 async function removeLegacyEye(actor) {
-  const eyes = actor?.effects.filter(e => e.flags?.[MODULE]?.lootable).map(e => e.id) ?? [];
+  const eyes = actor?.effects.filter(isLegacyEye).map(e => e.id) ?? [];
   if (eyes.length) await actor.deleteEmbeddedDocuments("ActiveEffect", eyes);
   return eyes.length;
 }
@@ -168,7 +171,8 @@ function onActorHp(actor, changes) {
 }
 
 function onEffect(effect) {
-  if (effect.flags?.[MODULE]?.lootable) return; // our own eye marker; not a life-or-death change
+  // a legacy Lootable effect (pre-overlay corpses; migrateLegacyEyes deletes them) is not a life-or-death change
+  if (isLegacyEye(effect)) return;
   if (effect.parent instanceof Actor) queue(effect.parent);
 }
 
@@ -279,11 +283,11 @@ async function migrateLegacyEyes() {
   for (const scene of game.scenes) {
     for (const t of scene.tokens) {
       if (!t.actor) continue;
-      if (ourCorpse(t) || t.actor.effects.some(e => e.flags?.[MODULE]?.lootable)) await fix(t.actor, ourCorpse(t));
+      if (ourCorpse(t) || t.actor.effects.some(isLegacyEye)) await fix(t.actor, ourCorpse(t));
     }
   }
   for (const actor of game.actors) {
-    if (actor.effects.some(e => e.flags?.[MODULE]?.lootable)) await fix(actor, false);
+    if (actor.effects.some(isLegacyEye)) await fix(actor, false);
   }
   if (eyes || deads) console.log(`${MODULE} | corpses: removed ${eyes} old Lootable effect(s), Dead made the overlay on ${deads}`);
 }
