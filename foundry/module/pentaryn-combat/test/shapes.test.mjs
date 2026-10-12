@@ -302,17 +302,44 @@ test("seedWeaponSets: once per character with a class, never over a written flag
   assert.equal(rows.filter(r => r.seed).length, 2);
 });
 
-test("seedAll: active GM only, every character without the flag; a failure is warned per actor", async () => {
+test("seedAll: active GM only, every character without the flag in ONE Actor.updateDocuments; a compute failure is warned per actor (combat-core-AC-1)", async () => {
   for (const a of [...F.game.actors]) if (a.type === "character") delete a.flags.enhancedcombathud;
   const bad = fighter({ id: "seedBad000000001", name: "Broken" });
-  bad.setFlag = async () => { throw new Error("locked"); };
+  Object.defineProperty(bad, "items", { get() { throw new Error("locked"); }, configurable: true });
   lines.length = 0;
+  F.calls.length = 0;
   const out = await off.seedAll();
-  pinJSON("seed-all", { out, console: lines.splice(0) }, import.meta.url);
+  const batches = F.calls.filter(c => c.op === "Actor.updateDocuments");
+  assert.equal(batches.length, 1, "combat-core-AC-1: one batch write, not one setFlag per character");
+  assert.deepEqual(F.calls.filter(c => c.op === "update"), [], "combat-core-AC-1: no per-actor update");
+  const { updates } = batches[0];
+  for (const u of updates) assert.deepEqual(Object.keys(u), ["_id", "flags.enhancedcombathud.weaponSets"]);
+  assert.deepEqual(updates.map(u => u["flags.enhancedcombathud.weaponSets"]), out.map(r => r.seed));
+  pinJSON("seed-all", { out, updates: updates.map(u => u._id), console: lines.splice(0) }, import.meta.url);
   assert.ok(out.length >= 5);
+  for (const u of updates) assert.deepEqual(F.game.actors.get(u._id).flags.enhancedcombathud.weaponSets, u["flags.enhancedcombathud.weaponSets"]);
+  bad.delete();
   F.become({ userId: "player0000000001" });
   assert.deepEqual(await off.seedAll(), []);
   F.become({ userId: "gmUser0000000001" });
+  F.calls.length = 0;
+  assert.deepEqual(await off.seedAll(), [], "everyone already seeded");
+  assert.deepEqual(F.calls, [], "nothing to write: no batch");
+});
+
+test("seedAll: a failed batch warns once naming the actors, returns [] and seeds nobody (combat-core-AC-1)", async () => {
+  const fresh = [fighter({ id: "seedBatchFail001", name: "Ash" }), rogue({ id: "seedBatchFail002", name: "Birch" })];
+  const m = mock.method(globalThis.Actor, "updateDocuments", async () => { throw new Error("locked"); });
+  lines.length = 0;
+  try {
+    assert.deepEqual(await off.seedAll(), []);
+  } finally { m.mock.restore(); }
+  assert.equal(m.mock.callCount(), 1, "combat-core-AC-1: one batch");
+  const console_ = lines.splice(0);
+  assert.deepEqual(console_.map(l => l.level), ["warn"]);
+  assert.equal(console_[0].text, "pentaryn-combat | weapon-set seed failed for Ash, Birch");
+  for (const a of fresh) assert.equal(a.flags.enhancedcombathud, undefined, "nothing partially seeded");
+  for (const a of fresh) a.delete();
 });
 
 test("installOffhand: createActor seeds a new character 500 ms later, on the active GM only", async () => {
