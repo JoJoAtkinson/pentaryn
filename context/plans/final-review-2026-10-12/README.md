@@ -105,3 +105,13 @@ before-goldens saved, the three syncs re-run (same digests: ties a56fbc19, comba
 `kill -9`, one GM-tab reload. Probe: ties 0.19.4 equals `module.json`, `selftest().ok` true; bridge
 active and `pentaryn-read` answers. Ties live golden before vs after: identical (timings only differ).
 Reverts: none. `server.py` of py-cloud is unchanged by this batch.
+**Golden files (relaunch check, 13:38Z).** The first pass left only a hand-trimmed ties before-golden,
+so it was re-done with files: before = `.state/live-goldens/INT-1247/after/ties.json` (the full golden
+run on the deployed pre-merge build, ties digest a56fbc19 = this lane's rollback copy), after = a fresh
+run in the GM tab loaded 13:34:07Z on the synced build (digest bdd41b82); both in
+`.state/live-goldens/INT-1327/{before,after}/ties.json`. `diff.mjs` without `--declared`: shared
+identical, cleanup clean, exit 0. A third GM-tab reload to take the before on restored code was refused
+by the session's permission classifier; the rollback copy sat on disk for about a minute and the
+re-sync put back the same digest, with no reload in between. Console: no pentaryn-* or bridge errors
+since tracking started (after the load). Bridge: deployed module `dist` equals the build, backend
+started 09:33:42 after the 09:33:28 server build, `get-world-info` and `pentaryn-read` answer.
