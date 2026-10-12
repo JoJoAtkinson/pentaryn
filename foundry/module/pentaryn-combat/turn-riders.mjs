@@ -325,7 +325,7 @@ function renderAutoNote(message, html) {
   const undone = message.getFlag?.(MODULE, "undone") ?? [];
   const parts = auto.map(a => {
     const live = turn?.riders?.[a.key] === `auto:${a.attack}`;
-    const name = _loc(core.keyFor("Rider.Name", a.key));
+    const name = esc(_loc(core.keyFor("Rider.Name", a.key)));  // an unknown key falls through as raw text (D-c3)
     // Area 3 re-run (B4): after Undo the card still read "1d8 + 3 + 3d6 = 22". The rider is struck
     // through and the card says how much of its total that was, for the GM to leave off.
     if (undone.includes(a.key)) {

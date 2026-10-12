@@ -17,7 +17,7 @@ live checks in the migration guide §5).
   actor members resolve an id / UUID / name and answer null on a miss (declared D-c2).
 - **Events** (declared B2): `pentaryn-combat.*` rows; the old `pentarynCombat.*` names still fire
   (after the new ones) until 0.4.0.
-- **Hardening:** every hook guarded (declared D-c1); rider dice and keys escaped in chat HTML (declared
+- **Hardening:** every hook guarded (declared D-c1); rider dice, keys and names escaped in chat HTML (declared
   D-c3); prototype patches through the kit; named timer delays; session maps pruned.
 - **Fixes** (declared): Multiattack + Action Surge plans the surge's swings; Adv / Dis pressed while a
   swing's window is open applies to the next swing.

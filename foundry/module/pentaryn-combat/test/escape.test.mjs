@@ -35,3 +35,17 @@ test("the auto note escapes a crafted dice string and key; a normal one is uncha
     flags: { [MODULE]: { auto: [{ key: "sneak-attack", dice: "3d6", attack: "atk2" }] } } });
   assert.ok(render(ok).querySelector(".pentaryn-combat-auto").innerHTML.includes("+ Sneak Attack 3d6"));
 });
+
+test("an unknown rider key with markup is text in the note's name, live and Undone", () => {
+  const evil = "<img src=x onerror=alert(1)>";
+  const live = makeMessage({ type: "damage", speaker: { actor: rog.id }, author: F.game.user, rolls: [],
+    flags: { [MODULE]: { auto: [{ key: evil, dice: "3d6", attack: "atk3" }] } } });
+  const a = render(live).querySelector(".pentaryn-combat-auto");
+  assert.equal(a.innerHTML.includes("<img"), false, a.innerHTML);
+  assert.equal(a.querySelector("img"), null);
+  const undone = makeMessage({ type: "damage", speaker: { actor: rog.id }, author: F.game.user, rolls: [],
+    flags: { [MODULE]: { auto: [{ key: evil, dice: "3d6", attack: "atk4" }], undone: [evil] } } });
+  const b = render(undone).querySelector(".pentaryn-combat-auto");
+  assert.equal(b.innerHTML.includes("<img"), false, b.innerHTML);
+  assert.equal(b.querySelector("img"), null);
+});
