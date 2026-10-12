@@ -7,11 +7,11 @@
  *
  *   book = {id, label, edition?, docs: [{id, name, pages: [{id, name, html, text?}]}]}
  *
- * Why the split: every one of the five known traps in this workflow fails *silently* —
- * `getIndex({fields})` returning empty objects, `EmbeddedCollection` having no
- * `.length` (so sums become NaN and serialize to null), enricher noise surviving a
- * naive tag-strip, and an over-large return being truncated by the transport. None of
- * those throw. A fixture suite is the only thing that notices.
+ * Why the split: the four silent traps of the README's five (`globalThis.duplicate`,
+ * gone in v14, at least throws) — `getIndex({fields})` returning empty objects,
+ * `EmbeddedCollection` having no `.length` (so sums become NaN and serialize to null),
+ * enricher noise surviving a naive tag-strip, and an over-large return being truncated
+ * by the transport. None of those throw. A fixture suite is the only thing that notices.
  */
 
 // ── identity ─────────────────────────────────────────────────────────────────
