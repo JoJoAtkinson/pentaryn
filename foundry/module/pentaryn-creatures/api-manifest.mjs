@@ -55,7 +55,8 @@ export const MANIFEST = Object.freeze({
       returns: "Promise<number>",
       gm: true, writes: true, legacy: true,
       sideEffects: ["token light.bright/light.dim", "flags.pentaryn-creatures.light"],
-      doc: "syncScene over every scene; resolves to how many tokens were written. Active GM client only (0 elsewhere).",
+      doc: "syncScene over every scene; a scene whose write fails is one console warning naming it and the rest "
+        + "still sync. Resolves to how many tokens were written. Active GM client only (0 elsewhere).",
     },
     {
       path: "isCreature",

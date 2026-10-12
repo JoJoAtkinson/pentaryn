@@ -33,6 +33,10 @@ a player or GM can notice:
   the actor's default ownership. An unknown user or scene throws `NOT_FOUND`.
 - **[declared] creatures-rob-2** — `list(null, scene)` and `list(user, null)` treat `null` as
   omitted (this client's user, the viewed scene) instead of throwing a `TypeError` / answering `[]`.
+- **[declared] creatures-rob-3** — `syncAll` (run at `ready` and on a `lightRadius` change) no
+  longer stops at the first scene whose write fails: that scene is one console warning naming it
+  (`light sync failed on <scene>`, was a scene-less `light sync failed`) and every later scene still
+  gets its lights; the returned count covers the scenes that succeeded.
 
 ## 0.1.1 — 2026-10-10
 

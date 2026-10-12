@@ -328,7 +328,7 @@ test("a token whose light was set to 0 by hand is flagged false and never relit"
   assert.equal(eye.flags[MODULE].light, false);
 });
 
-test("failure texts: a failed queued write names the scene; a failed setting-driven sync does not", async () => {
+test("failure texts: a failed queued write names the scene; creatures-rob-3 [declared]: a failed setting-driven sync names it too", async () => {
   reset("tImp");
   W.failWrite.push(new Error("db down"));
   F.fire("createToken", W.tok("tImp"), {}, GM);
@@ -338,8 +338,31 @@ test("failure texts: a failed queued write names the scene; a failed setting-dri
   W.failWrite.push(new Error("db down again"));
   await F.game.settings.set(MODULE, "lightRadius", 5);
   await drain();
-  assert.deepEqual(W.lines(), [["warn", `${MODULE} | light sync failed`, "Error: db down again"]]);
+  assert.deepEqual(W.lines(), [["warn", `${MODULE} | light sync failed on Alpha`, "Error: db down again"]]);
   writes();
+  await tick(200);
+  writes();
+});
+
+test("creatures-rob-3 [declared]: syncAll isolates scenes — a rejected write is one warn naming the scene, later scenes still sync, the count covers the rest", async () => {
+  W.failWrite.push(new Error("db down"));
+  await F.game.settings.set(MODULE, "lightRadius", 2);
+  await drain();
+  assert.deepEqual(W.lines(), [["warn", `${MODULE} | light sync failed on Alpha`, "Error: db down"]]);
+  assert.deepEqual(writes().map(w => w.scene), [ALPHA, BETA], "Beta still synced after Alpha's write rejected");
+  assert.deepEqual(W.tok("tImpB").flags[MODULE].light, { bright: 2, dim: 2 });
+  reset("tImpB");
+  W.failWrite.push(new Error("db down again"));
+  assert.equal(await api().syncAll(), 1, "Alpha's write failed; Beta's one token was written");
+  assert.deepEqual(W.lines(), [["warn", `${MODULE} | light sync failed on Alpha`, "Error: db down again"]]);
+  assert.deepEqual(writes().map(w => w.scene), [ALPHA, BETA]);
+  await F.game.settings.set(MODULE, "lightRadius", 5);
+  await drain();
+  assert.deepEqual(writes(), [
+    { scene: ALPHA, type: "Token", updates: [lit("tImp")], argc: 3 },
+    { scene: BETA, type: "Token", updates: [lit("tImpB")], argc: 3 },
+  ], "relit at 5 everywhere");
+  assert.deepEqual(W.lines(), []);
   await tick(200);
   writes();
 });

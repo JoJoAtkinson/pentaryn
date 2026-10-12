@@ -104,7 +104,8 @@ Also `game.modules.get("pentaryn-creatures").api`; published at `ready`, frozen,
 - `isCreature(tokenDoc)` → boolean: would this token get the light?
 - `syncScene(scene, ids?)` → `Promise<number>`, `syncAll()` → `Promise<number>`: active GM client
   only (0 elsewhere). Re-run the light pass; resolves to how many tokens were written. `ids` may be
-  an array, a Set, one id or token documents (`[]` = none; omitted = every token).
+  an array, a Set, one id or token documents (`[]` = none; omitted = every token). `syncAll` keeps
+  going past a scene whose write fails (one console warning, `light sync failed on <scene>`).
 - `ownerSees(token)` → boolean: would the override show this token to me? A placeable or its
   TokenDocument (a document with no placeable on the viewed scene: `false`).
 - `patchedWith()` → `"libWrapper"`, `"direct"` or `null` (the getter was not found; see the console).
