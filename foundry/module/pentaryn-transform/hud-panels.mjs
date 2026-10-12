@@ -23,7 +23,8 @@ import {
   STARRY_EFFECT_ID, starryItem, activeStarry, constellationOf, starrySecondsLeft, constellationActivity
 } from "./starry-adapter.mjs";
 import {
-  onPointerMove, dropStaleTooltip, pickerOpen, cancelTargetPicker, closeOwnPickers
+  onPointerMove, dropStaleTooltip, pickerOpen, cancelTargetPicker, closeOwnPickers,
+  hudActor, hudTokenDoc, hudTokenId, hudPortrait, hudPanel
 } from "./argon.mjs";
 import { applyButtons, itemButtonClass, slotKind } from "./lib/argon-kit.mjs";
 import { argonClasses, liveButtons, TT } from "./form-picker.mjs";
@@ -40,7 +41,7 @@ const log = makeLog(MODULE);
 function onTokenBody(doc, changes) {
   if (!pickerOpen()) return;
   if (!("actorId" in (changes ?? {})) && !("name" in (changes ?? {})) && changes !== null) return;
-  const hudToken = ui.ARGON?._token?.document ?? null;
+  const hudToken = hudTokenDoc() ?? null;
   if (doc === hudToken || doc?.object?.controlled) cancelTargetPicker();
 }
 function onTokenDelete(doc) {
@@ -113,7 +114,7 @@ function composeBonusBar(panel, actor) {
   applyButtons(panel, next, fresh);
 
   // The shift or revert this turn spent the Bonus Action on a HUD that no longer exists.
-  if (bonusUsedNow(ui.ARGON?._token?.id)) {
+  if (bonusUsedNow(hudTokenId())) {
     panel.isActionUsed = true;
     panel.updateActionUse();
   }
@@ -196,7 +197,7 @@ function onActionPanelRender(panel, element, actor) {
 // In a beast form the Reaction bar's weapon slot is the Opportunity Attack, not a second Bite.
 function onItemButtonRender(button) {
   if (!button?._isWeaponSet || button.parent?.label !== "DND5E.Reaction") return;
-  const actor = ui.ARGON?._actor;
+  const actor = hudActor();
   if (!actor?.isPolymorphed || !button.item) return;
   const title = button.element.querySelector(".feature-element-title, .action-element-title");
   if (title) title.textContent = _loc("PENTARYN_TRANSFORM.Hud.OpportunityAttack", { name: button.item.name });
@@ -260,8 +261,8 @@ function onPortraitRender(panel, element, actor) {
 
 function onWorldTime() {
   // hot: reads only the HUD's own actor (ui.ARGON._actor); display only, every client.
-  const portrait = ui.ARGON?.components?.portrait;
-  if (portrait?.element && ui.ARGON?._actor) paintPortrait(portrait.element, ui.ARGON._actor);
+  const portrait = hudPortrait();
+  if (portrait?.element) { const actor = hudActor(); if (actor) paintPortrait(portrait.element, actor); }
 }
 
 /* ── the Wild Shape / Starry Form effect on the portrait: bigger, live time left ── */
@@ -273,7 +274,7 @@ function onEffectRender(component) {
   if (!isWs && !isStarry) return;
   component.element.classList.add("ptf-effect");
   component.getTooltipData = async function () {
-    const actor = ui.ARGON?._actor;
+    const actor = hudActor();
     let secs = null;
     if (isWs) {
       const endsAt = actor?.getFlag(MODULE, "wildshape")?.endsAt;
@@ -299,8 +300,8 @@ function onItemUpdate(item) {
 // Starry Form on or off: the button's label, icon and constellation button change; rebuild the bar.
 function onStarryChange(effect) {
   if (!effect?.getFlag?.(MODULE, "starry")) return;
-  if (effect.parent !== ui.ARGON?._actor) return;
-  const bonus = ui.ARGON?.components?.main?.find(p => p.label === "DND5E.BonusAction");
+  if (effect.parent !== hudActor()) return;
+  const bonus = hudPanel("DND5E.BonusAction");
   if (!bonus?.render) return;
   for (const b of bonus._buttons ?? []) if (liveButtons.has(b)) { b.panel?.element?.remove(); liveButtons.delete(b); }
   bonus.render();
@@ -317,7 +318,7 @@ function onStarryChange(effect) {
 const chaliceReady = new Map();   // actor uuid → timer
 
 function paintChalice(actor) {
-  if (actor !== ui.ARGON?._actor) return;
+  if (actor !== hudActor()) return;
   const on = chaliceReady.has(actor.uuid);
   for (const el of document.querySelectorAll(".extended-combat-hud .ptf-starry-chalice")) {
     el.classList.toggle("ptf-chalice-ready", on);

@@ -5,7 +5,7 @@
 import * as core from "../transform-core.mjs";
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { characterise } from "./kit/harness.mjs";
+import { characterise, sourceScan } from "./kit/harness.mjs";
 import * as LT from "./fixtures/legacy-transform.mjs";
 import * as LS from "./fixtures/legacy-starry.mjs";
 import * as LH from "./fixtures/legacy-hud.mjs";
@@ -341,4 +341,11 @@ test("shapingPlan: strip, rename, the timed effect and the form flag; no duratio
   assert.equal(timeless.effect.description, "<p>E</p>");
   assert.equal(timeless.flag.endsAt, null);
   assert.deepEqual(timeless.flag.carried, []);
+});
+
+/* ── the Argon boundary ───────────────────────────────────────────────────── */
+
+test("Argon private HUD state is read only in argon.mjs", () => {
+  const hits = sourceScan(new URL("..", file), /ui\.ARGON\??\.(_|components)/);
+  assert.deepEqual([...new Set(hits.map(h => h.file))], ["argon.mjs"]);
 });
