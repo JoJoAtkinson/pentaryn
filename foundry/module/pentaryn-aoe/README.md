@@ -116,7 +116,7 @@ row with its params, returns and null cases (`api-manifest.mjs`). Kit members: `
 | Flag | On | Shape |
 |---|---|---|
 | `flags.pentaryn-aoe.resolution` | the damage message | `{ activity, item, itemName, region, regions, scene, usage, ability, dc, onSave, careful, damages, request, created, superseded, rows[] }` |
-| `flags.pentaryn-aoe.claims.<job>` | the damage / usage message | the socket id of the session doing `resolve` / `selfApply` |
+| `flags.pentaryn-aoe.claims.<job>` | the damage / usage / player save message | the socket id of the session doing `resolve` / `selfApply` / `matchSave` |
 | `flags.pentaryn-aoe.effectsApplied` | the usage card | `{ ids, auto, reason, actor, actorName, names }` |
 | `flags.pentaryn-aoe.npcSave` | a monster save message | `true` |
 | `flags.pentaryn-aoe.damageMessage` | the request card | the damage message id |
@@ -168,12 +168,17 @@ pass `activeGM.isSelf` and `userId === game.user.id`.
   clients see `createActor` twice; one actor results. The "already exists" catch is a fallback.
 - **`resolve` and `selfApply`** (`createChatMessage`): the kit's `claimMessage(message, job,
   { scope })` — each candidate stamps its socket id, waits 750 ms, and only the last writer acts.
+- **Player save matching** (`matchSave`, on the save message): a save that answers a waiting
+  row is claimed the same way, so one tab fills the row. A save that answers no open tray is not
+  claimed (no flag write on every save).
 - **Everything else** on a broadcast hook runs where `activeGM.isSelf` (concentration cleanup, the
   ready sweep, the `canvasReady` sweep of each newly viewed scene — wired at setup on every
   client, so a GM who takes over after ready sweeps too — the delete backstop); each is idempotent.
 - **Apply** (`applyRows`): overlapping calls for one tray in one tab run one after another, so
   the later one skips the rows the earlier one applied; a later call stops waiting on an Apply
-  stuck for 10 s (`APPLY_WAIT_MS`). Two tabs applying the same tray at once are not coordinated.
+  stuck for 10 s (`APPLY_WAIT_MS`). Across tabs, each row is re-read from the live message just
+  before its damage and skipped if another tab already applied it, and each landed row is marked
+  applied at once, so a second tab's Apply lands nothing twice.
 
 ## Extending
 

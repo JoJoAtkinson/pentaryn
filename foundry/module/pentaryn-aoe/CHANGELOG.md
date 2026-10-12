@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- **Two GM tabs no longer fight over player saves or double-apply a tray** (declared, AC-1): with
+  the MCP bridge tab and a GM browser tab both active, each matched a player's save into the tray
+  from its own copy (a stale tab could undo an Apply or a GM edit), and Apply in both tabs damaged
+  the same rows twice. A save that answers a waiting row is now claimed
+  (`claimMessage(save, "matchSave")`) and only the winning tab fills the row (the row fills about
+  0.75 s after the roll); `applyRows` re-reads the live resolution before each row's damage, skips
+  a row another tab already applied, and marks each landed row applied at once. README "Two
+  sessions" says so. Live check: two GM tabs, a player answers the Fireball request, the row fills
+  once; press Apply in both tabs, each goblin takes damage once.
 - **A newly viewed scene is swept even after a failed startup or a GM handover** (declared,
   aoe-edge-3): the `canvasReady` sweep (orphan handles deleted, missing handles made, ownership
   fixed) was registered only after `readyAreas`' awaits succeeded, and only on the GM active at

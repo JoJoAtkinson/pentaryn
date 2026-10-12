@@ -60,6 +60,7 @@ test("the player's request button: the request handler rolls on the player's cli
   F.become({ userId: GM_ID });
   pinJSON("request-roll", ops("rollSavingThrow"), import.meta.url);
   F.fire("createChatMessage", saveMsg, {}, PLAYER_ID);
+  await advance(800);                                  // AC-1: the save's matchSave claim settles
   await flush(8);
   const row = resOf("dmgFireball00001").rows.find(r => r.id === IDS.cv);
   assert.deepEqual([row.save, row.multiplier], [{ total: 16, success: true, messageId: saveMsg.id }, 0.5]);
@@ -71,6 +72,7 @@ test("a save rolled from the card's own button (no request) answers by speaker t
   await flush(8);
   const save = W.message({ type: "save", rolls: [{ total: 3, isSuccess: false }], system: { ability: "dex", type: "ability" }, speaker: { token: IDS.cv, actor: IDS.caven }, timestamp: Date.now() + 1 });
   F.fire("createChatMessage", save, {}, PLAYER_ID);
+  await advance(800);                                  // AC-1: the save's matchSave claim settles
   await flush(8);
   const row = resOf(msg.id).rows.find(r => r.id === IDS.cv);
   assert.deepEqual(row.save, { total: 3, success: false, messageId: save.id });
@@ -87,6 +89,7 @@ test("a request result attached after creation (updateChatMessage) fills the row
   await flush(4);
   assert.equal(resOf(msg.id).rows.find(r => r.id === IDS.cv).save, null);
   await save.update({ "flags.dnd5e.requestResult": { actorUuid: ctx.caven.uuid, requestId: res.request } });
+  await advance(800);                                  // AC-1: the save's matchSave claim settles
   await flush(8);
   assert.deepEqual(resOf(msg.id).rows.find(r => r.id === IDS.cv).save, { total: 20, success: true, messageId: save.id });
 });

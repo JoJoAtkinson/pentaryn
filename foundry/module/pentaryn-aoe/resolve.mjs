@@ -312,7 +312,10 @@ async function postRequest(message, activity, res) {
   return request;
 }
 
-/** GM: a save message arrived — does it answer a waiting player row? */
+/**
+ * GM: a save message arrived — does it answer a waiting player row? AC-1: two GM tabs both get
+ * here, so a save that answers a row is claimed (`matchSave`) and only the winning tab fills it.
+ */
 async function onSaveMessage(message) {
   const roll = message.rolls?.[0];
   if (!roll) return;
@@ -333,6 +336,7 @@ async function onSaveMessage(message) {
     if (idx < 0) continue;
     const rowId = res.rows[idx].id;
     const success = roll.isSuccess ?? (Number.isFinite(res.dc) ? roll.total >= res.dc : null);
+    if (!(await claimMessage(message, "matchSave", { scope: MODULE }))) return why("matchSave", message.id, "another session claimed it");
     await mutate(m.id, r => {
       const row = r.rows.find(x => x.id === rowId);
       if (row && !row.save) fillSave(row, { total: roll.total, success, messageId: message.id }, r.onSave);
@@ -396,6 +400,8 @@ function settledOrAfter(promise, ms) {
  * aoe-edge-1: overlapping calls for one message in this tab run one after another, so the later
  * one sees the earlier one's rows as applied. A rejection still reaches its own caller; an earlier
  * Apply stuck for APPLY_WAIT_MS stops holding the later ones back.
+ * AC-1: across GM tabs, each row is re-read from the live message right before its damage and
+ * skipped if another tab applied it, and each landed row is marked applied at once.
  */
 export function applyRows(messageId, rowIds = null) {
   const prev = applying.get(messageId);
@@ -414,23 +420,29 @@ async function applyRowsNow(messageId, rowIds) {
   if (res.superseded) { why("apply", messageId, "superseded"); ui.notifications.warn(_loc("PENTARYN_AOE.Tray.Superseded")); return null; }
   const todo = applicableRows(res.rows, rowIds);
   const damages = hydrateDamages(res.damages);
-  const done = {};
+  const liveRow = id => aoeFlags(game.messages.get(messageId)).resolution?.rows.find(r => r.id === id);
   const failed = [];
+  let out = null;
   for (const row of todo) {
+    const live = liveRow(row.id);
+    if (!live || live.applied) { why("apply", messageId, "row applied meanwhile", { row: row.id }); continue; }
     const actor = fromUuidSync(row.actor);
     if (!actor) continue;
     const before = actor.system.attributes.hp.value;
     try {
       await actor.applyDamage(damages, { multiplier: row.multiplier, originatingMessage: message });
-      done[row.id] = { before, after: actor.system.attributes.hp.value };
     } catch (err) {
-      failed.push({ row, err });   // R1: the rows that landed are still marked below, so a retry skips them
+      failed.push({ row, err });   // R1: the rows that landed are already marked, so a retry skips them
+      continue;
     }
+    const hp = { before, after: actor.system.attributes.hp.value };
+    out = await mutate(messageId, r => {
+      const x = r.rows.find(y => y.id === row.id);
+      if (x) { x.applied = true; x.hp = hp; }
+      return r;
+    }) ?? out;
   }
-  const out = await mutate(messageId, r => {
-    for (const row of r.rows) if (done[row.id]) { row.applied = true; row.hp = done[row.id]; }
-    return r;
-  });
+  out ??= foundry.utils.deepClone(aoeFlags(game.messages.get(messageId)).resolution ?? null);
   if (failed.length) {
     for (const { row, err } of failed.slice(1)) log.error("apply", row.name, err);   // the first is rethrown for the caller to log
     ui.notifications.warn(_loc("PENTARYN_AOE.Tray.ApplyFailed", { names: failed.map(f => f.row.name).join(", ") }));

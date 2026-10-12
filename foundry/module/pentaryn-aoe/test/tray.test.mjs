@@ -3,7 +3,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { pinJSON } from "./kit/harness.mjs";
-import { boot, flush, MODULE } from "./fixtures/world.mjs";
+import { boot, advance, flush, MODULE } from "./fixtures/world.mjs";
 import { fireball, damage, IDS, GM_ID, PLAYER_ID } from "./fixtures/fireball.mjs";
 import { root, dispatch } from "./fixtures/dom.mjs";
 import { seams } from "./fixtures/seams.mjs";
@@ -132,6 +132,8 @@ test("tray clicks: apply (button disabled), reroll-all, reroll, rollfor, ping; i
   assert.deepEqual(ping.calls, [["create", [PLAYER_ID]]]);
   const rollfor = await click(`[data-row="${IDS.cv}"] [data-pa="rollfor"]`);
   assert.deepEqual(rollfor.calls, [["rollSavingThrow", "Actor.actCaven00000001"]]);
+  await advance(800);                                  // AC-1: the save's matchSave claim settles
+  await flush(8);
   const apply = await click('[data-pa="apply"]');
   assert.equal(apply.el.disabled, true);
   assert.deepEqual(apply.calls.map(c => c[1]), ["Actor.actGoblin0000001", "Actor.actGoblin0000002", "Actor.actCaven00000001"], "Caven has a save now (rollfor)");
