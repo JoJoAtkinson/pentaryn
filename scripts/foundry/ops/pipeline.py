@@ -16,9 +16,8 @@ import sys
 from . import config as cfg
 from .modules import install
 from . import service
-from .service import _http_code, _probe, _say
-
-OK, FAIL = 0, 1
+from .out import FAIL, OK, say as _say
+from .service import _http_code, _probe
 
 
 def build_actors() -> int:

@@ -35,10 +35,7 @@ from pathlib import Path
 
 from . import config as cfg, jsscan
 from .digest import SYNC_STAMP, tree_digest  # noqa: F401 — re-exported for callers and tests
-from .out import append_jsonl, event, now_iso
-from .service import _say
-
-OK, FAIL = 0, 1
+from .out import FAIL, OK, append_jsonl, event, now_iso, say as _say
 
 # Build output and vendored code are not ours to check.
 _SKIP_DIRS = {"node_modules", "target", ".git"}

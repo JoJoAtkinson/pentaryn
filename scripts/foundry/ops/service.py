@@ -20,7 +20,7 @@ from urllib.parse import urlsplit
 from scripts.foundry import host
 
 from . import config as cfg
-from .out import say as _say  # re-exported: modules.py and pipeline.py import it from here
+from .out import say as _say  # kept for compatibility (test_out.py and older importers)
 
 OK, FAIL = 0, 1
 
