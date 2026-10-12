@@ -25,7 +25,9 @@ const ADDED_S8 = ["areaPlacementSkipped", "fullAttackPlanFrom"];
 const ADDED_29 = ["pruneOlder"];
 // §4 combat-riders-37's named timer delays.
 const ADDED_37 = ["DELAYS"];
-const ADDED = [...ADDED_S2, ...ADDED_S4, ...ADDED_S8, ...ADDED_29, ...ADDED_37];
+// combat-core-EXT-11's shared lists: the Attack action's swing kinds and the five movement keys.
+const ADDED_EXT11 = ["ATTACK_ACTION_KINDS", "MOVEMENT_KEYS"];
+const ADDED = [...ADDED_S2, ...ADDED_S4, ...ADDED_S8, ...ADDED_29, ...ADDED_37, ...ADDED_EXT11];
 
 test("export surface (golden/core-exports.json): 81 names", () => {
   const names = Object.keys(core).sort();
@@ -38,7 +40,7 @@ test("export surface (golden/core-exports.json): 81 names", () => {
 
 test("object exports are frozen tables, rows and arrays included", () => {
   const objects = Object.entries(core).filter(([, v]) => v && typeof v === "object");
-  assert.deepEqual(objects.map(([k]) => k).sort(), ["DELAYS", "HOOKS", "I18N_KEYS", "RECKLESS_CHANGE", "SPECIAL_ACTIONS", "TURN_RIDERS"]);
+  assert.deepEqual(objects.map(([k]) => k).sort(), ["ATTACK_ACTION_KINDS", "DELAYS", "HOOKS", "I18N_KEYS", "MOVEMENT_KEYS", "RECKLESS_CHANGE", "SPECIAL_ACTIONS", "TURN_RIDERS"]);
   const deepFrozen = v => !v || typeof v !== "object" || (Object.isFrozen(v) && Object.values(v).every(deepFrozen));
   for (const [k, v] of objects) assert.ok(deepFrozen(v), k);
 });

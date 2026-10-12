@@ -160,10 +160,10 @@ import {
   stripNumbers
 } from "./core/sequence.mjs";
 import {
-  attackActions, classifySwing, freshTurn, orphanCombatFlags, otherActionsOf, pickCombat, pipFor,
-  pipState, reactionSpent, readTurn, recordBonusAction, recordFollowUp, recordKill,
-  recordOtherAction, recordQuickened, recordQuickenedCast, recordSurge, recordSwing, setRider,
-  spentPips, staleCombatFlags, swingsLeft, turnKey, pruneOlder
+  ATTACK_ACTION_KINDS, actionsLeft, attackActions, classifySwing, freshTurn, orphanCombatFlags,
+  otherActionsOf, pickCombat, pipFor, pipState, reactionSpent, readTurn, recordBonusAction,
+  recordFollowUp, recordKill, recordOtherAction, recordQuickened, recordQuickenedCast, recordSurge,
+  recordSwing, setRider, spentPips, staleCombatFlags, swingsLeft, turnKey, pruneOlder
 } from "./core/turn.mjs";
 import {
   followUps, hideOffhandSlot, poleStrikeOpen
@@ -179,7 +179,7 @@ import {
   multiattackPlan, overridePlan, parseMultiattack
 } from "./core/multiattack.mjs";
 import {
-  SPECIAL_ACTIONS, actionsLeft, areaPlacementSkipped, dashChanges, deltasConsumed, expiringAt,
+  MOVEMENT_KEYS, SPECIAL_ACTIONS, areaPlacementSkipped, dashChanges, deltasConsumed, expiringAt,
   hudFollowPlan, orphanUsage, portraitExtras, recordSpecialAction, specialActionOf, turnBoundary
 } from "./core/turnflow.mjs";
 import {
@@ -202,5 +202,6 @@ export {
   damageAtZero, damageBonuses, steadyAimAfterAttack, steadyAimChanges, multiattackPlan,
   overridePlan, parseMultiattack, SPECIAL_ACTIONS, actionsLeft, areaPlacementSkipped, dashChanges,
   deltasConsumed, expiringAt, hudFollowPlan, orphanUsage, portraitExtras, recordSpecialAction,
-  specialActionOf, turnBoundary, clampToView, dockRect, drawerLeft, swingTag, pruneOlder, DELAYS
+  specialActionOf, turnBoundary, clampToView, dockRect, drawerLeft, swingTag, pruneOlder, DELAYS,
+  ATTACK_ACTION_KINDS, MOVEMENT_KEYS
 };

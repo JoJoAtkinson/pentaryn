@@ -4,6 +4,9 @@
  * unchanged).
  */
 
+import { ATTACK_ACTION_KINDS } from "./turn.mjs";
+import { MOVEMENT_KEYS } from "./turnflow.mjs";
+
 /**
  * Extra damage parts for a weapon damage roll.
  *  Two-Weapon Fighting: the ability modifier back on an off-hand (Light) extra attack, when positive.
@@ -15,7 +18,7 @@ export function damageBonuses({ features = [], weapon = {}, attackMode = null, m
   const out = [];
   const offhand = String(attackMode ?? "").endsWith("offhand");
   if (offhand && feats.has("two-weapon-fighting") && mod > 0) out.push({ key: "two-weapon-fighting", part: "@mod" });
-  if (feats.has("great-weapon-master") && weapon.heavy && isOwnTurn && !offhand && (kind === "main" || kind === "nick")) {
+  if (feats.has("great-weapon-master") && weapon.heavy && isOwnTurn && !offhand && ATTACK_ACTION_KINDS.includes(kind)) {
     out.push({ key: "great-weapon-master", part: "@prof" });
   }
   return out;
@@ -50,7 +53,7 @@ export function damageAtZero({ isCharacter = true, hp = 0, temp = 0, max = 0, am
 export function steadyAimChanges() {
   return [
     ...["str", "dex", "con", "int", "wis", "cha"].map(a => ({ key: `system.abilities.${a}.attack.roll.mode`, type: "add", value: 1 })),
-    ...["walk", "fly", "swim", "climb", "burrow"].map(k => ({ key: `system.attributes.movement.${k}`, type: "override", value: 0 }))
+    ...MOVEMENT_KEYS.map(k => ({ key: `system.attributes.movement.${k}`, type: "override", value: 0 }))
   ];
 }
 
