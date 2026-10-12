@@ -411,6 +411,17 @@ they are visible, nameable, and survive a reload — but a ping is quicker for a
 
 ---
 
+## Who checks for Markers and crowd
+
+Three modules decide "is this token scaffolding?" and each asks a different question on purpose
+(finding aoe-movement-portals-38). Change one only after reading the other two.
+
+| Module · function | Treats as scaffolding | Crowd actors | Why it differs |
+|---|---|---|---|
+| `pentaryn-portals/portals-core.mjs` `isScenery` | a name containing `(crowd)` or starting `Marker` + optional space + `·`; or a folder starting `Crowd`, `Markers` or `Temp Markers` (any case) | scenery — never carried in a party teleport | must never pull a prop or a crowd token along with the party |
+| `pentaryn-prompts/scene-adapter.mjs` `isScaffold` | an actor named `Marker · ` (the space is required); or a folder chain reaching `Temp Markers` / `Markers…` (any case) before the module's own `Prompt Markers` folder | **context** — gather lists them | a gather describes the scene; crowd tokens are part of it |
+| `pentaryn-aoe/core.mjs` `isCreature` | no name or folder rule: an area handle, a pile, or anything that is not a `character`/`npc` with max HP above 0 | caught like any creature with HP | an area hits what has hit points; a marker actor has none |
+
 ## Also see
 
 - [`README.md`](README.md) — the Foundry domain root
