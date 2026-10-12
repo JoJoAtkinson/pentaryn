@@ -98,7 +98,7 @@ function onClick(ev) {
     if (lastCtx?.status === "paused") choose({ type: "adv", value: b.dataset.value });
     else handlers.onAdv?.(b.dataset.value);
   } else if (what === "stop") {
-    for (const fn of cancelFns.splice(0)) fn();
+    cancelWaits();
     // A swing's roll window still open closes unrolled (sequence.mjs onStop; U-10-11, which replaced
     // U-10-4's "focus goes back to the open window" — there is no window left to roll).
     handlers.onStop?.();
@@ -266,7 +266,7 @@ export function onRollWindowClose(app) {
 
 export function hide() {
   if (pending) { const p = pending; pending = null; p({ type: "stop" }); }
-  for (const fn of cancelFns.splice(0)) fn();
+  cancelWaits();
   document.removeEventListener("keydown", onKey, true);
   el?.remove();
   el = null;
@@ -300,6 +300,11 @@ export function choose(choice) {
 /** Called when the strip's Stop is pressed (used by the fallback target wait). */
 export function onceCancel(fn) {
   cancelFns.push(fn);
+}
+
+/** Run (and drop) every onceCancel wait: Stop, hide() and sequence.mjs abortFor. */
+export function cancelWaits() {
+  for (const fn of cancelFns.splice(0)) fn();
 }
 
 /* ── weapon picker ───────────────────────────────────────────────────────── */
