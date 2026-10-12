@@ -469,6 +469,16 @@ _GATES = {
 }
 
 
+def run_gate(spec: cfg.ModuleSpec, gate: str) -> int:
+    """Run one named gate against `spec`, printing as `check` does; its exit code.
+
+    The public way in for callers outside ops (the blueprint generator's `run_checks`).
+    An unknown gate name is a ValueError naming it and the known gates."""
+    if (checker := _CHECKS.get(gate)) is None:
+        raise ValueError(f"unknown gate {gate!r} (known: {', '.join(sorted(_CHECKS))})")
+    return checker(spec)
+
+
 def check(name: str) -> int:
     """Run every gate the spec names. Cheapest and most diagnostic first.
 

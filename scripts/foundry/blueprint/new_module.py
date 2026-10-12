@@ -253,7 +253,7 @@ def run_checks(target: Path) -> int:
     spec = TmpSpec(target)
     for gate in spec.check:
         sys.stdout.flush()
-        if ops_modules._CHECKS[gate](spec) != 0:
+        if ops_modules.run_gate(spec, gate) != 0:
             print(f"  ✗ gate {gate} failed")
             return 1
     problems = vendor.check(target)

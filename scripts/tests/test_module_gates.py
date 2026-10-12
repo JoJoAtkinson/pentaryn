@@ -67,6 +67,17 @@ def test_gate_tables_agree():
     assert set(cfg.ModuleSpec.CHECKS) == set(modules._CHECKS) == set(modules._GATES)
 
 
+def test_run_gate_is_the_public_prose_runner(tmp_path, capsys):
+    """py-blueprint-MAINT-12: callers outside ops (new_module.run_checks) use `run_gate`, not
+    the private `_CHECKS` table. Same rc and output as the table's runner; an unknown gate
+    is a ValueError naming it, never a bare KeyError."""
+    spec = TmpSpec(_module(tmp_path, BROKEN), check=("imports",))
+    assert modules.run_gate(spec, "imports") == 1
+    assert "alpha" in capsys.readouterr().out
+    with pytest.raises(ValueError, match="no-such-gate"):
+        modules.run_gate(spec, "no-such-gate")
+
+
 def test_prose_and_data_agree(tmp_path, capsys):
     spec = TmpSpec(_module(tmp_path, BROKEN), check=("imports",))
     rc = modules._check_imports(spec)
