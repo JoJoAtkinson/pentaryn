@@ -40,6 +40,11 @@ digits, at most 64). At load the GM's client rewrites each entry stored the old 
 it matches ignoring case (and any child pointing at it). If no actor matches, two actors match, or
 the actor already has an entry, the entry is left alone. R1.
 
+Fixed (declared): a lore row or attribute with **no DC** (missing, or its DC box cleared) rolls
+against the default DC 15. It used to read as 0 and clamp up to DC 1. A typed DC still counts, and
+a real 0 is still raised to the floor of 1. The same check now reads every number in the Known and
+study records, so a study rung saved without a `min` is ignored rather than taken as the base rung. M1.
+
 Fixed (declared): the chat cards — the "… studies …" stub, the tempo line and the GM's share
 whisper — name every creature by its **token** name, never its actor name, so a GM-only world actor
 name cannot reach player chat. The token is found on any scene, not only the one the posting

@@ -19,7 +19,17 @@
 export const KNOWN_NOTES_MAX = 8000;
 
 export const str = (v, max) => (typeof v === "string" ? v.slice(0, max) : "");
-export const num = (v, d) => (Number.isFinite(Number(v)) ? Math.round(Number(v)) : d);
+/*
+ * A number, or a numeric string (a form field), rounded; anything else takes the default. Typed
+ * first, as ties-core.mjs's own `num`: `Number(null | "" | [] | false)` is 0, so the old
+ * `Number.isFinite(Number(v))` read a missing or cleared DC as 0 and clamped it to 1 instead of the
+ * default 15 (M1, declared).
+ */
+export const num = (v, d) => {
+  if (typeof v === "number") return Number.isFinite(v) ? Math.round(v) : d;
+  if (typeof v === "string" && v.trim() !== "" && Number.isFinite(Number(v))) return Math.round(Number(v));
+  return d;
+};
 
 /**
  * A real number, or `null` — and it is `null` for `null`.
