@@ -33,6 +33,7 @@
 import { MODULE } from "./ties-core.mjs";
 import { baseActorOf } from "./ties-adapter.mjs";
 import { readFlag } from "./lib/flags.mjs";
+import { resolveRef } from "./lib/resolve.mjs";
 import {
   REGISTRY_SETTING,
   ATTRIBUTES_FLAG,
@@ -1178,7 +1179,8 @@ export const describeRef = ref => {
  * `attr:<attrId>:<loreId>` and titled `<entry> — <row label>`, exactly as the cascade would file it,
  * because the Known tab and the Look window join on that key and that source.
  *
- * @param {Actor} character
+ * @param {Actor|string} character  an Actor, or an id / uuid / exact name / token resolving to the
+ *   world actor (R3); anything that resolves to nothing is refused `invalid`, never a throw
  * @param {*} attrRef  an attribute id or title
  * @param {"all"|string|string[]} [loreIds]  which rows (default: every row)
  * @returns {Promise<{ ok: true, keys: string[] } | { ok: false, reason }>}
@@ -1186,6 +1188,14 @@ export const describeRef = ref => {
 export async function markLearned(character, attrRef, loreIds = "all", { now = Date.now() } = {}) {
   if (!game.user?.isGM) return fail("notGM");
   if (!character) return fail("notFound");
+  if (character.documentName !== "Actor") {
+    try {
+      character = resolveRef(character, "actor", { base: true, required: false });
+    } catch {
+      character = null; // AMBIGUOUS / BAD_ARGS
+    }
+    if (!character) return fail("invalid");
+  }
   const attrId = resolveAttribute(attrRef);
   if (!attrId) return fail("notFound");
   const entry = describeAttribute(attrId);

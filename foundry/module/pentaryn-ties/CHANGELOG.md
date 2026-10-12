@@ -51,6 +51,10 @@ The write logs a console warning and reports failure (`write`/`writeKnown` answe
 saved. At load, one actor whose legacy ties can't be moved is warned about and left for the next
 load, and the rest still move. R8.
 
+Fixed (declared): **`attributes.markLearned`** takes its character as an id, a uuid, an exact name
+or a token as well as an Actor, and marks the world actor it names. Something that names no actor is
+refused `invalid`; it used to throw `character.getFlag is not a function`. R3.
+
 Fixed (declared): the chat cards — the "… studies …" stub, the tempo line and the GM's share
 whisper — name every creature by its **token** name, never its actor name, so a GM-only world actor
 name cannot reach player chat. The token is found on any scene, not only the one the posting

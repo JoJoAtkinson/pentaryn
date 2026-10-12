@@ -264,7 +264,7 @@ export const MANIFEST = Object.freeze({
     { path: "study.setConceal", params: [p("actor", ACTOR), p("value", "number | { default, [attrId]: number } | null")],
       returns: "{ ok, conceal } | { ok: false, reason }", gm: true, writes: true, sideEffects: [`${F}.conceal`], since: "0.20.0",
       doc: "GM: set or (null) clear the actor's concealment (ties-9)." },
-    { path: "attributes.markLearned", params: [CHAR, ATTR, opt("loreIds", "\"all\" | string | string[]")],
+    { path: "attributes.markLearned", params: [p("character", "Actor|Token|id|uuid|exact name", "a player character; a token marks its world actor, a miss is refused invalid (R3)"), ATTR, opt("loreIds", "\"all\" | string | string[]")],
       returns: "{ ok, keys } | { ok: false, reason }", gm: true, writes: true, sideEffects: [`${F}.granted`], since: "0.20.0",
       doc: "GM: hand a character an attribute's lore rows as granted cards, no roll — the Attributes tab's Mark as learned (ties-9)." },
     { path: "study.identified", params: [SUBJ, CHAR, p("attrId", "string")], returns: "{ settled, carries, held, record? }", gm: false,

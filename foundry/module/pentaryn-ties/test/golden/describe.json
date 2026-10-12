@@ -2252,8 +2252,8 @@
       "params": [
         {
           "name": "character",
-          "type": "Actor",
-          "doc": "a player character"
+          "type": "Actor|Token|id|uuid|exact name",
+          "doc": "a player character; a token marks its world actor, a miss is refused invalid (R3)"
         },
         {
           "name": "attr",
