@@ -300,7 +300,10 @@ function toHexCubes(grid, items) {
   for (const it of items) {
     let offsets = it.docName === "Token" && it.coreSquares ? it.squares : null;
     if (!offsets?.length) {
-      try { offsets = [grid.getOffset({ x: it.centre.x, y: it.centre.y })]; } catch { offsets = it.squares; }
+      try { offsets = [grid.getOffset({ x: it.centre.x, y: it.centre.y })]; } catch (err) {
+        log.debug("hex offset of an item centre (using its squares)", err);
+        offsets = it.squares;
+      }
     }
     it.squares = dedupeSquares(offsets.map(cube));
   }
@@ -401,7 +404,7 @@ async function embedHtml(uuid) {
     html = doc?.text?.content ?? doc?.system?.description?.value ?? doc?.system?.details?.biography?.value
       ?? doc?.pages?.contents?.[0]?.text?.content ?? "";
     if (/@Embed\[/.test(html)) html = html.replace(EMBED_RE, "");   // one level only: no recursion loops
-  } catch { html = ""; }
+  } catch (err) { log.debug(`@Embed ${uuid} not resolved (shown blank)`, err); html = ""; }
   embedCache.set(uuid, html);
   return html;
 }
