@@ -37,3 +37,21 @@ test("normaliseAbilities: an Object.prototype name is an unknown ability", () =>
   assert.deepEqual(normaliseAbilities({ constructor: 2, str: 1 }), { abilities: { str: 1 }, unknown: ["constructor"] });
   assert.deepEqual(normaliseAbilities(JSON.parse('{"__proto__": 3, "Dexterity": 14}')), { abilities: { dex: 14 }, unknown: ["__proto__"] });
 });
+
+/* prompts-core-EC-1 [declared]: a lone Scene document passed to gather is stored by id, never whole */
+
+const { installWorld, captureConsole } = await import("./fixtures/world.mjs");
+const F = await installWorld();
+await captureConsole(() => import("../prompts.mjs"));
+F.fire("init");
+const G = await import("../gather.mjs");
+
+test("gather (prompts-core-EC-1): a lone Scene document lands in the manifest's opts as its id", async () => {
+  const lone = (await captureConsole(() => G.gather({ scenes: F.s1, crops: "off" }))).value;
+  assert.deepEqual([lone.counts.scenes, lone.manifest.opts.scenes], [1, ["s1"]]);
+  // the other shapes are kept as they were: a list stores ids, a string stores itself
+  const listed = (await captureConsole(() => G.gather({ scenes: [F.s1, "s1"], crops: "off" }))).value;
+  assert.deepEqual(listed.manifest.opts.scenes, ["s1"]);
+  const named = (await captureConsole(() => G.gather({ scenes: "s1", crops: "off" }))).value;
+  assert.equal(named.manifest.opts.scenes, "s1");
+});

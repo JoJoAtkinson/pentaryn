@@ -74,6 +74,9 @@ cssPrefix `pp-`, afterSync). Each **[declared]** change goes to the live check.
   failed", cancels the type-ahead ticket and returns null, as a failed create already did; before,
   it rejected and left the keyboard captured until the type-ahead timeout. The P key also cancels
   its ticket on any rejection.
+- **[declared] A lone Scene document passed to `gather` is stored by id** (prompts-core-EC-1): the
+  manifest's `opts.scenes` (kept in the `lastCalls` world setting) now holds `["<id>"]`, as a list
+  of Scene documents already did; before, the whole document was written into the setting.
 - `ensureMarkers` repairs every drifted actor in one batch update. A hot re-import after
   `uninstall()` re-wires and republishes at once.
 - Console only (DP9): a core token API that throws warns once; swallowed failures log at debug

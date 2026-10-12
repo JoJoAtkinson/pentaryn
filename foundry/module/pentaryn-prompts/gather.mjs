@@ -106,8 +106,9 @@ export async function gather(opts = {}) {
   const text = renderGather(view, { chars });
   const tRender = performance.now();
   manifest.at = Date.now();
-  // ids only: an API caller may pass Scene documents, and this lands in a world setting
-  manifest.opts = { scenes: Array.isArray(scenes) ? list.map(s => s.id) : scenes, unseenWithinFt, chars, party: view.party };
+  // ids only: an API caller may pass Scene documents (one, or a list), and this lands in a world setting
+  const storedScenes = scenes?.documentName === "Scene" ? [scenes.id] : Array.isArray(scenes) ? list.map(s => s.id) : scenes;
+  manifest.opts = { scenes: storedScenes, unseenWithinFt, chars, party: view.party };
   await storeManifest(manifest);
   const tStore = performance.now();
 
