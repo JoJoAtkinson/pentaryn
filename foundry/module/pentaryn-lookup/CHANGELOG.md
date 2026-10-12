@@ -31,6 +31,9 @@
   `[[/r 4d6kh3]]{ability scores}` reads "ability scores", not "r 4d6kh3{ability scores}" — and a
   bare roll command loses its `/r ` (`[[/r 4d6kh3]]` reads "4d6kh3"); `[[/save dex 15]]` still
   reads "save dex 15" (lookup-edge-2).
+- [declared] `monster(name)` looks for an exact (case-insensitive) name in every monster pack, in
+  pack order, before any substring match — `monster("Guardian")` answers the 2024 SRD's Guardian,
+  not the Monster Manual's Shield Guardian — as `describe()` already said (R6).
 
 ## 0.3.0 — 2026-10-10
 

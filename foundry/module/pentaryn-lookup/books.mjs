@@ -120,12 +120,16 @@ async function spellList(cls, { type = "class", level = null } = {}) {
 async function monster(name, opts = {}) {
   const wanted = String(name ?? "").trim();
   if (!wanted) return { error: "monster(name) needs a name" };
-  const tried = [];
+  const indexes = [];
   for (const packId of MONSTER_PACKS) {
     const idx = await readIndex(packId, null, log);
-    if (!idx) continue;
-    tried.push(packId);
-    const entry = pickByName(idx, wanted);
+    if (idx) indexes.push([packId, idx]);
+  }
+  const tried = indexes.map(([packId]) => packId);
+  // exact across every pack first, then substring: a later pack's exact name beats an earlier
+  // pack's substring hit (R6)
+  for (const substring of [false, true]) for (const [packId, idx] of indexes) {
+    const entry = pickByName(idx, wanted, { substring });
     if (!entry) continue;
     const actor = await readDocument(packId, entry._id, log);
     if (!actor) continue;
