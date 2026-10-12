@@ -1,8 +1,9 @@
 # Live goldens
 
 **Read this when:** writing, running or diffing a live golden — a `<module>.js` here that runs in
-the one GM tab through the foundry `eval-js` MCP tool and returns `{ module, env, golden, timings,
-cleanup }` as a JSON string. Which goldens a wave runs, in what order, and what may differ: that
+the one GM tab through the foundry `eval-js` MCP tool and returns `{ module, env?, golden, timings,
+cleanup }` as a JSON string (the wave-1 goldens — names, pings, cursors, importer, ties, prompts —
+carry no top-level `env`). Which goldens a wave runs, in what order, and what may differ: that
 wave's live plan in `context/plans/addon-blueprint-2026-10/`.
 
 ## Diffing

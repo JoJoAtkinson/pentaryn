@@ -1,9 +1,9 @@
 #!/usr/bin/env node
-// Compare a wave-2 live golden's "before" and "after" runs (the JSON string a
+// Compare a live golden's "before" and "after" runs (the JSON string a
 // scripts/foundry/live-goldens/<m>.js eval-js call returned, saved as a file).
 //
-//   node scripts/foundry/live-goldens/diff.mjs .state/live-goldens/wave2/before/lookup.json \
-//                                              .state/live-goldens/wave2/after/lookup.json
+//   node scripts/foundry/live-goldens/diff.mjs .state/live-goldens/<wave>/before/lookup.json \
+//                                              .state/live-goldens/<wave>/after/lookup.json
 //
 // Prints: env (versions), every path under golden.shared that differs (a regression until
 // explained), every path under golden.declared that differs (expected: check it against the
@@ -21,9 +21,10 @@
 // `#` comments and blank lines ignored; or a JSON array of globs). A shared difference whose path
 // matches a glob is listed as declared and does not fail the diff, so an all-declared diff exits 0.
 // Globs match the whole path as printed: `*` is any run within one segment (never `.`, `[` or
-// `]`), `**` is anything, `?` one character; `[` and `]` are literal. So `stash.chest[*]` covers
-// `stash.chest[2]` but not `stash.chest[0].name` (that is `stash.chest[*].*`), and `purseHome`
-// covers only `purseHome` itself (`purseHome.**` the rest). A glob that matched nothing is named.
+// `]`), `**` is anything, `?` one character other than `.`; `[` and `]` are literal. So
+// `stash.chest[*]` covers `stash.chest[2]` but not `stash.chest[0].name` (that is
+// `stash.chest[*].*`), and `purseHome` covers only `purseHome` itself (`purseHome.**` the rest).
+// A glob that matched nothing is named.
 import { readFileSync, realpathSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
