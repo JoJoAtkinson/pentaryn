@@ -118,18 +118,26 @@ def recover_system(fa: FoundryAdmin, system_id: str, previous_version: str,
                    world_snapshot: "cloud.Snapshot | Path | None") -> Recovery:
     """Roll a system back — code *and* every world it just migrated."""
     rec = Recovery(kind="system", target=system_id)
-    admin_mod.quit_app()
-    rec.steps.append("quit Foundry (a live LevelDB cannot be replaced safely)")
-
+    # Every quit/start sits inside a guard: a wedged Electron raises Timeout, and that
+    # must come back as a failed Recovery with the steps so far, not escape it (ROB-7).
     try:
+        admin_mod.quit_app()
+        rec.steps.append("quit Foundry (a live LevelDB cannot be replaced safely)")
         _restore_world_tar(world_snapshot, rec)
         _restore_system_from_aside(system_id, previous_version, rec)
     except Exception as exc:  # noqa: BLE001
         rec.error = str(exc)
-        admin_mod.start_app()
+        try:
+            admin_mod.start_app()
+        except Exception as start_exc:  # noqa: BLE001
+            rec.error += f"; could not relaunch Foundry: {start_exc}"
         return rec
 
-    admin_mod.start_app()
+    try:
+        admin_mod.start_app()
+    except Exception as exc:  # noqa: BLE001
+        rec.error = f"could not relaunch Foundry: {exc}"
+        return rec
     rec.steps.append("relaunched Foundry")
 
     on_disk = admin_mod.installed_version("system", system_id)
@@ -151,10 +159,9 @@ def recover_core(previous_version: str, world_snapshot: "cloud.Snapshot | Path |
         rec.error = "no core rollback bundle on disk — cannot restore the app"
         return rec
 
-    admin_mod.quit_app()
-    rec.steps.append("quit Foundry")
-
     try:
+        admin_mod.quit_app()
+        rec.steps.append("quit Foundry")
         # Clear before extracting. A tar extracted over a newer tree leaves every file
         # the new build added, which is a mixed-version install that runs and misbehaves
         # rather than failing loudly.
@@ -169,7 +176,11 @@ def recover_core(previous_version: str, world_snapshot: "cloud.Snapshot | Path |
         rec.error = str(exc)
         return rec
 
-    admin_mod.start_app()
+    try:
+        admin_mod.start_app()
+    except Exception as exc:  # noqa: BLE001
+        rec.error = f"could not relaunch Foundry: {exc}"
+        return rec
     fa = FoundryAdmin()
     for _ in range(30):
         try:
