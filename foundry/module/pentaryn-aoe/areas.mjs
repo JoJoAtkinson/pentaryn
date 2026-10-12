@@ -27,7 +27,6 @@ const HANDLE_ICON = "icons/svg/target.svg";
 export { isTemplateRegion, isHandle };
 /** A template region dnd5e attached to a token that is not our handle (an emanation on its caster). */
 const attachedElsewhere = region => attachedToOther(region, id => region?.parent?.tokens?.get(id));
-const t = (key, data) => (data ? game.i18n.format(`PENTARYN_AOE.${key}`, data) : game.i18n.localize(`PENTARYN_AOE.${key}`));
 
 /* -------------------------------------------- */
 /*  Handle actor                                */
@@ -286,7 +285,7 @@ function decorateCard(message, html) {
   const activity = message.getAssociatedActivity?.() ?? fromUuidSync(activityUuid, { strict: false });
   if (!place && !activity?.target?.template?.type) return;     // only cards that place an area
   const itemUuid = message.system?.item?.uuid ?? activity?.item?.uuid ?? null;
-  const label = t("RemoveAllTemplates");
+  const label = _loc("PENTARYN_AOE.RemoveAllTemplates");
   const li = document.createElement("li");
   const btn = document.createElement("button");
   btn.type = "button";
@@ -302,11 +301,11 @@ function decorateCard(message, html) {
     const scene = canvas.scene;
     // No viewed scene → nothing; spellAreas(…, null) would mean every scene.
     const regions = scene ? spellAreas({ itemUuid, activityUuid }, scene) : [];
-    if (!regions.length) return ui.notifications.info(t("NoArea"));
+    if (!regions.length) return ui.notifications.info(_loc("PENTARYN_AOE.NoArea"));
     btn.disabled = true;
     try {
       const n = await removeArea(regions, scene);
-      if (!n) ui.notifications.warn(t("CannotRemove"));
+      if (!n) ui.notifications.warn(_loc("PENTARYN_AOE.CannotRemove"));
     } finally {
       btn.disabled = false;
     }

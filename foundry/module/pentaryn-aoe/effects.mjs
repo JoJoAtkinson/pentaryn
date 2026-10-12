@@ -27,7 +27,6 @@ import { MODULE, aoeFlags, selfApplyReason, pendingEffects, sameSpellEffect } fr
 import { setting } from "./settings.mjs";
 import { on, guard, claimMessage } from "./hooks.mjs";
 
-const t = (key, data) => (data ? game.i18n.format(`PENTARYN_AOE.${key}`, data) : game.i18n.localize(`PENTARYN_AOE.${key}`));
 const esc = s => foundry.utils.escapeHTML(String(s ?? ""));
 
 /** Cards older than this are settled: last session's log never lights up. */
@@ -238,7 +237,7 @@ function decorate(message, html) {
   if (flag?.auto && flag.actorName && !html.querySelector(".pentaryn-aoe-applied")) {
     const p = document.createElement("p");
     p.className = "pentaryn-aoe-applied";
-    p.innerHTML = `<i class="fa-solid fa-wand-sparkles" inert></i> ${esc(t("Effects.AutoApplied", {
+    p.innerHTML = `<i class="fa-solid fa-wand-sparkles" inert></i> ${esc(_loc("PENTARYN_AOE.Effects.AutoApplied", {
       actor: flag.actorName, effects: (flag.names ?? []).join(", ")
     }))}`;
     (html.querySelector(".chat-card") ?? html).append(p);
@@ -251,7 +250,7 @@ function decorate(message, html) {
   const light = async msg => {
     if (!(await pendingFor(msg)).length) return;
     tray.classList.add("pentaryn-aoe-unapplied");
-    tray.style.setProperty("--pentaryn-aoe-unapplied", JSON.stringify(t("Effects.Unapplied")));
+    tray.style.setProperty("--pentaryn-aoe-unapplied", JSON.stringify(_loc("PENTARYN_AOE.Effects.Unapplied")));
   };
   const warn = err => console.warn(`${MODULE} | highlight`, err);
 

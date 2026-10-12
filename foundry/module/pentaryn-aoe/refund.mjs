@@ -19,7 +19,6 @@ import { MODULE, placementCancelled } from "./core.mjs";
 import { setting } from "./settings.mjs";
 import { on } from "./hooks.mjs";
 
-const t = (key, data) => (data ? game.i18n.format(`PENTARYN_AOE.${key}`, data) : game.i18n.localize(`PENTARYN_AOE.${key}`));
 
 function hasConsumed(deltas) {
   if (!deltas) return false;
@@ -43,7 +42,7 @@ async function refund(activity, usageConfig, results) {
   const began = (results.effects ?? []).filter(e => e?.parent === activity.actor && e.statuses?.has?.(CONFIG.specialStatusEffects?.CONCENTRATING ?? "concentrating"));
   for (const e of began) if (activity.actor.effects.has(e.id)) await e.delete().catch(() => null);
   if (game.messages.has(message.id)) await message.delete().catch(() => message.update({ "system.deltas": null }).catch(() => null));
-  ui.notifications?.info?.(t("Refund.Done", { item: activity.item?.name ?? "" }));
+  ui.notifications?.info?.(_loc("PENTARYN_AOE.Refund.Done", { item: activity.item?.name ?? "" }));
   return true;
 }
 

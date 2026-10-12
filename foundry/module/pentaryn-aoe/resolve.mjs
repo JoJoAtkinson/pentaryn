@@ -27,7 +27,6 @@ import { on, guard, claimMessage } from "./hooks.mjs";
 import { isHandle, isTemplateRegion, areasFor, removeArea, handleActor } from "./areas.mjs";
 
 export const REQUEST_HANDLER = `${MODULE}.save`;
-const t = (key, data) => (data ? game.i18n.format(`PENTARYN_AOE.${key}`, data) : game.i18n.localize(`PENTARYN_AOE.${key}`));
 const abilityLabel = a => CONFIG.DND5E.abilities[a]?.label ?? a;
 
 /* -------------------------------------------- */
@@ -256,7 +255,7 @@ async function onCarefulUsed(activity) {
   if (!actor?.isOwner) return;
   await actor.update({ [`flags.${MODULE}.careful`]: { at: Date.now(), key: carefulKey(actor), usage: null } });
   const max = Math.max(1, Number(actor.system?.abilities?.cha?.mod) || 1);
-  ui.notifications?.info?.(t("Careful.Armed", { n: max }));
+  ui.notifications?.info?.(_loc("PENTARYN_AOE.Careful.Armed", { n: max }));
 }
 
 /* -------------------------------------------- */
@@ -319,17 +318,17 @@ async function postRequest(message, activity, res) {
   const manual = res.rows.filter(r => r.kind === "manual" && r.apply && !r.save);
   if (!manual.length) return null;
   const label = abilityLabel(res.ability);
-  const content = res.onSave === "half" ? t("Request.Half") : res.onSave === "none" ? t("Request.None") : "";
+  const content = res.onSave === "half" ? _loc("PENTARYN_AOE.Request.Half") : res.onSave === "none" ? _loc("PENTARYN_AOE.Request.None") : "";
   const request = await ChatMessage.implementation.create({
     type: "request",
-    flavor: t("Request.Flavor", { item: res.itemName, ability: label }),
+    flavor: _loc("PENTARYN_AOE.Request.Flavor", { item: res.itemName, ability: label }),
     content: content ? `<p>${content}</p>` : "",
     speaker: ChatMessage.getSpeaker({ actor: activity.actor }),
     flags: { [MODULE]: { damageMessage: message.id } },
     system: {
       handler: REQUEST_HANDLER,
       data: { ability: res.ability, dc: res.dc, damageMessage: message.id },
-      button: { icon: "fa-solid fa-shield-heart", label: t("Request.Button", { ability: label }) },
+      button: { icon: "fa-solid fa-shield-heart", label: _loc("PENTARYN_AOE.Request.Button", { ability: label }) },
       targets: manual.map(r => ({ actor: r.actor }))
     }
   });
@@ -392,10 +391,10 @@ export async function pingPlayers(messageId) {
     const actor = fromUuidSync(r.actor);
     for (const u of game.users) if (!u.isGM && u.active && actor?.testUserPermission(u, "OWNER")) users.add(u.id);
   }
-  if (!users.size) return ui.notifications.info(t("Tray.NobodyToPing"));
+  if (!users.size) return ui.notifications.info(_loc("PENTARYN_AOE.Tray.NobodyToPing"));
   return ChatMessage.implementation.create({
     whisper: [...users],
-    content: `<p>${t("Tray.PingText", { item: res.itemName, ability: abilityLabel(res.ability) })}</p>`
+    content: `<p>${_loc("PENTARYN_AOE.Tray.PingText", { item: res.itemName, ability: abilityLabel(res.ability) })}</p>`
   });
 }
 
@@ -409,7 +408,7 @@ export async function applyRows(messageId, rowIds = null) {
   const message = game.messages.get(messageId);
   const res = aoeFlags(message).resolution;
   if (!res) return null;
-  if (res.superseded) { ui.notifications.warn(t("Tray.Superseded")); return null; }
+  if (res.superseded) { ui.notifications.warn(_loc("PENTARYN_AOE.Tray.Superseded")); return null; }
   const todo = applicableRows(res.rows, rowIds);
   const damages = res.damages.map(d => ({ ...d, properties: new Set(d.properties ?? []) }));
   const done = {};

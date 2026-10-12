@@ -16,7 +16,6 @@ import { setting } from "./settings.mjs";
 import { applyRows, rollNpcSaves, rollForPlayer, pingPlayers, setRow, resolve } from "./resolve.mjs";
 
 const esc = s => foundry.utils.escapeHTML(String(s ?? ""));
-const t = (key, data) => (data ? game.i18n.format(`PENTARYN_AOE.${key}`, data) : game.i18n.localize(`PENTARYN_AOE.${key}`));
 const MULT_LABEL = { 0: "×0", 0.25: "×¼", 0.5: "×½", 1: "×1", 2: "×2" };
 
 function preview(row, res, message = null) {
@@ -32,11 +31,11 @@ function preview(row, res, message = null) {
 
 function saveCell(row) {
   if (row.protected) {
-    return `<span class="pa-pass" data-tooltip="${esc(t("Careful.RowTip"))}"><i class="fa-solid fa-shield-halved" inert></i> ${esc(t("Careful.Row"))}</span>`;
+    return `<span class="pa-pass" data-tooltip="${esc(_loc("PENTARYN_AOE.Careful.RowTip"))}"><i class="fa-solid fa-shield-halved" inert></i> ${esc(_loc("PENTARYN_AOE.Careful.Row"))}</span>`;
   }
   if (!row.save) {
     return row.kind === "manual"
-      ? `<span class="pa-wait" data-tooltip="${esc(t("Tray.WaitingTip"))}"><i class="fa-solid fa-hourglass-half" inert></i> ${esc(t("Tray.Waiting"))}</span>`
+      ? `<span class="pa-wait" data-tooltip="${esc(_loc("PENTARYN_AOE.Tray.WaitingTip"))}"><i class="fa-solid fa-hourglass-half" inert></i> ${esc(_loc("PENTARYN_AOE.Tray.Waiting"))}</span>`
       : `<span class="pa-wait">—</span>`;
   }
   const cls = row.save.success ? "pa-pass" : "pa-fail";
@@ -49,13 +48,13 @@ function rowHTML(row, res, message = null) {
   const blank = row.multiplier === null || row.multiplier === undefined ? `<option value="" selected>?</option>` : "";
   const locked = row.applied || res.superseded ? "disabled" : "";
   const extra = row.kind === "auto"
-    ? `<a data-pa="reroll" data-row="${esc(row.id)}" data-tooltip="${esc(t("Tray.Reroll"))}"><i class="fa-solid fa-dice-d20" inert></i></a>`
-    : `<a data-pa="rollfor" data-row="${esc(row.id)}" data-tooltip="${esc(t("Tray.RollFor"))}"><i class="fa-solid fa-user-shield" inert></i></a>`;
-  const status = row.applied ? `<span class="pa-applied" data-tooltip="${esc(row.hp ? `${row.hp.before} → ${row.hp.after}` : "")}">${esc(t("Tray.Applied"))}</span>` : preview(row, res, message);
+    ? `<a data-pa="reroll" data-row="${esc(row.id)}" data-tooltip="${esc(_loc("PENTARYN_AOE.Tray.Reroll"))}"><i class="fa-solid fa-dice-d20" inert></i></a>`
+    : `<a data-pa="rollfor" data-row="${esc(row.id)}" data-tooltip="${esc(_loc("PENTARYN_AOE.Tray.RollFor"))}"><i class="fa-solid fa-user-shield" inert></i></a>`;
+  const status = row.applied ? `<span class="pa-applied" data-tooltip="${esc(row.hp ? `${row.hp.before} → ${row.hp.after}` : "")}">${esc(_loc("PENTARYN_AOE.Tray.Applied"))}</span>` : preview(row, res, message);
   return `<li class="pa-row ${row.applied ? "applied" : ""}" data-row="${esc(row.id)}">
     <input type="checkbox" data-pa="tick" ${row.apply ? "checked" : ""} ${locked}>
     <img src="${esc(row.img ?? "icons/svg/mystery-man.svg")}" alt="">
-    <span class="pa-name" data-tooltip="${esc(row.kind === "manual" ? t("Tray.Manual") : t("Tray.Auto"))}">${esc(row.name)}${row.caster ? ` <em>(${esc(t("Tray.Caster"))})</em>` : ""}</span>
+    <span class="pa-name" data-tooltip="${esc(row.kind === "manual" ? _loc("PENTARYN_AOE.Tray.Manual") : _loc("PENTARYN_AOE.Tray.Auto"))}">${esc(row.name)}${row.caster ? ` <em>(${esc(_loc("PENTARYN_AOE.Tray.Caster"))})</em>` : ""}</span>
     <span class="pa-save">${saveCell(row)}</span>
     ${row.applied ? "" : extra}
     <select data-pa="mult" ${locked}>${blank}${opts}</select>
@@ -71,18 +70,18 @@ export function trayHTML(res, message = null) {
     : "";
   const body = res.rows.length
     ? `<ol class="pa-rows">${res.rows.map(r => rowHTML(r, res, message)).join("")}</ol>`
-    : `<p class="pa-empty">${esc(t("Tray.Empty"))}</p>`;
+    : `<p class="pa-empty">${esc(_loc("PENTARYN_AOE.Tray.Empty"))}</p>`;
   return `<div class="pa-head">
-      <strong>${esc(t("Tray.Title", { ability, dc: res.dc ?? "?" }))}</strong>
-      <span class="pa-src">${esc(res.region ? t("Tray.FromArea") : t("Tray.FromTargets"))}</span>${picker}
+      <strong>${esc(_loc("PENTARYN_AOE.Tray.Title", { ability, dc: res.dc ?? "?" }))}</strong>
+      <span class="pa-src">${esc(res.region ? _loc("PENTARYN_AOE.Tray.FromArea") : _loc("PENTARYN_AOE.Tray.FromTargets"))}</span>${picker}
     </div>
-    ${res.superseded ? `<p class="pa-superseded">${esc(t("Tray.Superseded"))}</p>` : ""}
-    ${res.careful?.names?.length ? `<p class="pa-careful"><i class="fa-solid fa-shield-halved" inert></i> ${esc(t("Careful.Head", { names: res.careful.names.join(", ") }))}</p>` : ""}
+    ${res.superseded ? `<p class="pa-superseded">${esc(_loc("PENTARYN_AOE.Tray.Superseded"))}</p>` : ""}
+    ${res.careful?.names?.length ? `<p class="pa-careful"><i class="fa-solid fa-shield-halved" inert></i> ${esc(_loc("PENTARYN_AOE.Careful.Head", { names: res.careful.names.join(", ") }))}</p>` : ""}
     ${body}
     <div class="pa-buttons">
-      <button type="button" data-pa="reroll-all" ${res.superseded ? "disabled" : ""}><i class="fa-solid fa-dice-d20" inert></i> ${esc(t("Tray.RerollAll"))}</button>
-      <button type="button" data-pa="ping" ${res.superseded ? "disabled" : ""}><i class="fa-solid fa-bell" inert></i> ${esc(t("Tray.Ping"))}</button>
-      <button type="button" data-pa="apply" ${n && !res.superseded ? "" : "disabled"}><i class="fa-solid fa-heart-crack" inert></i> ${esc(t("Tray.Apply", { n }))}</button>
+      <button type="button" data-pa="reroll-all" ${res.superseded ? "disabled" : ""}><i class="fa-solid fa-dice-d20" inert></i> ${esc(_loc("PENTARYN_AOE.Tray.RerollAll"))}</button>
+      <button type="button" data-pa="ping" ${res.superseded ? "disabled" : ""}><i class="fa-solid fa-bell" inert></i> ${esc(_loc("PENTARYN_AOE.Tray.Ping"))}</button>
+      <button type="button" data-pa="apply" ${n && !res.superseded ? "" : "disabled"}><i class="fa-solid fa-heart-crack" inert></i> ${esc(_loc("PENTARYN_AOE.Tray.Apply", { n }))}</button>
     </div>`;
 }
 
@@ -105,7 +104,8 @@ function decoratePlayer(message, html) {
   const p = document.createElement("p");
   p.className = `pa-status pa-status-${status}`;
   const icon = { waiting: "fa-hourglass-half", applied: "fa-check", superseded: "fa-rotate" }[status];
-  p.innerHTML = `<i class="fa-solid ${icon}" inert></i> ${esc(t(`Status.${status}`))}`;
+  // keys: PENTARYN_AOE.Status.waiting, PENTARYN_AOE.Status.applied, PENTARYN_AOE.Status.superseded
+  p.innerHTML = `<i class="fa-solid ${icon}" inert></i> ${esc(_loc(`PENTARYN_AOE.Status.${status}`))}`;
   host.append(p);
 }
 
