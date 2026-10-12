@@ -559,3 +559,30 @@ def test_py_mcp_rob_2_serve_loop_survives_a_batch(monkeypatch):
     monkeypatch.setattr(server, "_write_message", sent.append)
     assert server._serve_loop((), {}, _SyncExecutor()) == 0
     assert [m["id"] for m in sent] == [1]
+
+
+# ---------------------------------------------------------------------------
+# py-mcp-rob-1: once in JSONL mode, a non-JSON line is skipped, not parsed as an
+# LSP header (which would swallow every later request looking for a blank line)
+# ---------------------------------------------------------------------------
+
+def test_py_mcp_rob_1_non_json_line_in_jsonl_mode_is_skipped(monkeypatch, capsys):
+    ping = {"jsonrpc": "2.0", "id": 2, "method": "ping"}
+    _stdin(monkeypatch, json.dumps(_INIT).encode() + b"\n"
+           + b"oops not json\n"
+           + json.dumps(ping).encode() + b"\n")
+    monkeypatch.setattr(server, "_TRANSPORT_MODE", None)
+    assert server._read_message() == _INIT
+    assert server._TRANSPORT_MODE == "jsonl"
+    assert server._read_message() is server._SKIP_MESSAGE
+    assert "[mcp-server] discarding non-JSON line in JSONL mode" in capsys.readouterr().err
+    assert server._read_message() == ping           # later request still served
+    assert server._read_message() is None
+    assert server._TRANSPORT_MODE == "jsonl"
+
+
+def test_py_mcp_rob_1_first_frame_still_sniffs_lsp(monkeypatch):
+    _stdin(monkeypatch, _lsp(json.dumps(_INIT).encode()))
+    monkeypatch.setattr(server, "_TRANSPORT_MODE", None)
+    assert server._read_message() == _INIT
+    assert server._TRANSPORT_MODE == "lsp"

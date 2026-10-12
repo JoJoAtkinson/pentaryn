@@ -112,6 +112,13 @@ def _read_message() -> Optional[dict[str, Any]]:
             sys.stderr.flush()
             return _SKIP_MESSAGE
 
+    if _TRANSPORT_MODE == "jsonl":
+        # Sniffing is for the first frame only: a stray non-JSON line in JSONL mode must not
+        # fall into the LSP header parser, which would swallow every later request.
+        sys.stderr.write("[mcp-server] discarding non-JSON line in JSONL mode\n")
+        sys.stderr.flush()
+        return _SKIP_MESSAGE
+
     _TRANSPORT_MODE = _TRANSPORT_MODE or "lsp"
 
     headers: dict[str, str] = {}
