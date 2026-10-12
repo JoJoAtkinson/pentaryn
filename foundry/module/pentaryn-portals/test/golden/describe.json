@@ -17,7 +17,7 @@
           "optional": true
         }
       ],
-      "returns": "the saved image path | null (not a GM, or the scene has no background)",
+      "returns": "the saved image path | null (not a GM, the scene has no background, or the upload failed)",
       "gm": true,
       "writes": true,
       "query": false,

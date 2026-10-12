@@ -26,7 +26,7 @@ export const MANIFEST = Object.freeze({
         { name: "regionOrUuid", type: "RegionDocument|uuid" },
         { name: "opts", type: "{ squaresWide = 8, squaresHigh = 5 }", optional: true },
       ],
-      returns: "the saved image path | null (not a GM, or the scene has no background)",
+      returns: "the saved image path | null (not a GM, the scene has no background, or the upload failed)",
       gm: true, writes: true, legacy: true,
       sideEffects: ["flags.pentaryn-portals.img", "Data: assets/tokens/custom/portals/<sceneId>-<regionId>.webp"],
       doc: "Crop the region's scene background around it (in grid squares), upload it and make it the card image.",

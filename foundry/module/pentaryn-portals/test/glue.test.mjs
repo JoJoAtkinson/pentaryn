@@ -349,10 +349,31 @@ test("gaps: [element] forms for preferTeleport and injectConfig; a snapshot that
   assert.equal(img.value, "", "no background: nothing filled in");
 });
 
-test("gaps: an upload that answers without a path → the path is built from the folder and file name", async t => {
+// [declared] ROB-1: a failed upload (no path) or a null blob used to fall back to a built path and
+// write the img flag anyway; now it warns once (log + notification), writes nothing and returns null.
+test("ROB-1: an upload that answers without a path, or a null blob → warn, no img flag write, null", async t => {
   t.mock.method(Date, "now", () => 1700000000000);
   W.images["maps/pit.webp"] = { naturalWidth: 4000, naturalHeight: 2000 };
   const FP = foundry.applications.apps.FilePicker.implementation;
-  t.mock.method(FP, "upload", async () => ({}));
-  assert.equal(await S.snapshot(P.pitGate), `assets/tokens/custom/portals/${P.pit.id}-${P.pitGate.id}.webp`);
+  const upload = t.mock.method(FP, "upload", async () => ({}));
+  const failed = { op: "notify", level: "warn", message: "The snapshot could not be saved; the card image is unchanged." };
+  for (const answer of [{}, false, undefined]) {
+    upload.mock.mockImplementation(async () => answer);
+    const n = F.calls.length, c = console$.length;
+    assert.equal(await S.snapshot(P.pitGate), null, `upload → ${JSON.stringify(answer)}`);
+    assert.deepEqual(W.callsSince(n, ["update"]), [], "no region.update");
+    assert.deepEqual(W.callsSince(n, ["notify"]), [failed]);
+    assert.deepEqual(console$.slice(c).map(([l, m]) => [l, m]), [["warn", "pentaryn-portals | snapshot upload failed"]]);
+  }
+  upload.mock.restore();
+  const make = document.createElement;
+  t.mock.method(document, "createElement", tag => {
+    const el = make(tag);
+    if (tag === "canvas") el.toBlob = cb => cb(null);
+    return el;
+  });
+  const n = F.calls.length;
+  assert.equal(await S.snapshot(P.pitGate), null, "null blob");
+  assert.deepEqual(W.callsSince(n, ["update", "upload"]), [], "nothing uploaded, nothing written");
+  assert.deepEqual(W.callsSince(n, ["notify"]), [failed]);
 });

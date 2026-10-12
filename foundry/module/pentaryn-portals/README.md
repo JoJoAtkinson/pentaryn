@@ -68,7 +68,7 @@ or an exact name (`opts.sceneId` scopes an id or a name) — never a substring.
 | `inspect(ref, { sceneId, as })` | anyone | `{ region, hidden, card, revealed, destinations }`; a player (`as`) gets `destinations: null` for a sealed or unrevealed passage and no passage name; an Actor or Token **document** (what the root `game.pentaryn.inspect` passes) → `null`; an Actor/Token uuid or name is not a region ref → `BAD_ARGS` / `NOT_FOUND` |
 | `badges()` | anyone | the badges drawn on **this** client: `[{ region, revealed, visible, cards }]` |
 | `redraw()` | anyone | redraws this client's badges |
-| `snapshot(regionOrUuid, { squaresWide, squaresHigh })` | GM | the saved image path, or `null` (no background) |
+| `snapshot(regionOrUuid, { squaresWide, squaresHigh })` | GM | the saved image path, or `null` (no background, or the upload failed — warns, card image unchanged) |
 | `lookAt(region)` | GM | pans **your** view; nobody moves |
 | `teleportParty(region, { confirm = true })` | GM | `{ moved, cancelled }`. Moves the party on **`canvas.scene`** (the calling client's view). It **opens a confirm dialog** unless `confirmPartyTeleport` is off — a console or bridge caller passes `{ confirm: false }`, or it waits on a click |
 | `link(ref, { to, twoWay, dryRun })` | GM | `ok({ from, to, twoWay })` / `fail(code, reason)`; the same writes as the card's Add a destination |

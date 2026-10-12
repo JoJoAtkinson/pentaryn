@@ -102,6 +102,13 @@ export async function snapshot(regionOrUuid, { squaresWide = 8, squaresHigh = 5 
   ctx.beginPath(); ctx.arc(mx, my, markR, 0, Math.PI * 2); ctx.stroke();
 
   const blob = await new Promise(r => c.toBlob(r, "image/webp", 0.88));
+  // ROB-1: no blob, or an upload that answers without a path, is a failure — warn, write nothing.
+  const failed = () => {
+    deps.log?.warn("snapshot upload failed");
+    ui.notifications.warn(_loc("PENTARYN_PORTALS.Notify.SnapshotFailed"));
+    return null;
+  };
+  if (!blob) return failed();
   const name = `${scene.id}-${region.id}.webp`;
   const FP = foundry.applications.apps.FilePicker.implementation;
   // An existing folder is the normal case; anything else (a permission failure) is worth a line.
@@ -109,7 +116,8 @@ export async function snapshot(regionOrUuid, { squaresWide = 8, squaresHigh = 5 
     if (!/EEXIST|exists/i.test(err?.message ?? "")) deps.log?.warn("create dir", err);
   });
   const res = await FP.upload("data", SNAP_DIR, new File([blob], name, { type: "image/webp" }), {}, { notify: false });
-  const path = res?.path ?? `${SNAP_DIR}/${name}`;
+  const path = res?.path;
+  if (!path) return failed();
   // Cache-bust so a re-snapshot shows immediately.
   await region.update({ [`flags.${MODULE}.img`]: `${path}?v=${Date.now().toString(36)}` });
   return path;
