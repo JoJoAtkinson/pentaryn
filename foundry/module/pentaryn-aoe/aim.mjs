@@ -19,10 +19,15 @@
 
 import { MODULE, aimFromCaster, aimsFromCaster } from "./core.mjs";
 import { setting } from "./settings.mjs";
+import { wrapMethod } from "./lib/patch.mjs";
+import { makeLog } from "./lib/log.mjs";
 
 const ARM_MS = 5000;
 let armed = null;          // { tokenId, sceneId, until }
 const WRAPPED = Symbol.for(`${MODULE}.aimWrapped`);
+/** The placeRegions wrap (kit wrapMethod); a second copy reuses the first copy's record. */
+let placement = null;
+let log = makeLog(MODULE);   // the entry's ctx.log once installed
 
 function casterToken(activity) {
   let token = null;
@@ -59,11 +64,11 @@ function aimer(tokenId) {
 }
 
 function wrapPlacement() {
-  const Layer = foundry.canvas?.layers?.RegionLayer;
-  const proto = Layer?.prototype;
-  if (!proto?.placeRegions || proto[WRAPPED]) return;
-  const own = proto.placeRegions;
-  proto.placeRegions = function placeRegions(data, options = {}) {
+  const proto = foundry.canvas?.layers?.RegionLayer?.prototype;
+  if (!proto?.placeRegions) return;
+  placement = wrapMethod(MODULE, {
+    target: proto, name: "placeRegions", label: "RegionLayer#placeRegions", marker: WRAPPED, adjustments: "aoe-self-area-aim",
+  }, function (wrapped, data, options = {}) {
     const a = armed;
     armed = null;
     if (a && Date.now() < a.until && a.sceneId === canvas.scene?.id && setting("aimSelfAreas")) {
@@ -75,17 +80,17 @@ function wrapPlacement() {
         return mine(args);
       } };
     }
-    return own.call(this, data, options);
-  };
-  proto[WRAPPED] = true;
+    return wrapped(data, options);
+  }, { log });
 }
 
-export function install(reg) {
+export function install(reg, ctx) {
+  log = ctx.log;
   wrapPlacement();
   reg.on("dnd5e.preCreateMeasuredTemplate", reg.guardSwallowAsync("preCreateMeasuredTemplate(aim)", onPreCreate), { guard: false, label: "preCreateMeasuredTemplate(aim)" });
 }
 
-/** A pending aim is dropped. (The placeRegions wrap stays until S6 routes it through wrapMethod.) */
+/** A pending aim is dropped. The placeRegions wrap stays (KNOWN -44; D-A7 unwraps it). */
 export function uninstall() {
   armed = null;
 }

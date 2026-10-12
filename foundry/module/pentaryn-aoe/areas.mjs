@@ -21,6 +21,7 @@ import { MODULE, aoeFlags, centreOf, isTemplateRegion, attachedToOther, handleVe
 import { handleActor, handleFor, removeArea, spellAreas } from "./scene-adapter.mjs";
 import { activityOf } from "./messages-adapter.mjs";
 import { setting } from "./settings.mjs";
+import { makeLog } from "./lib/log.mjs";
 
 const OWNER = 3;
 const HANDLE_ICON = "icons/svg/target.svg";
@@ -95,6 +96,7 @@ export async function ensureHandleActor() {
 const pending = new Set();   // region ids whose handle is being created on this client
 /** The registry install() was given: readyAreas registers its canvasReady sweep through it too. */
 let hooks = null;
+let log = makeLog(MODULE);   // the entry's ctx.log once installed
 
 /**
  * The spell's name for the handle label. dnd5e 6: flags.dnd5e.item is the item and
@@ -289,8 +291,9 @@ function actionRow(html) {
 /*  Hook wiring                                 */
 /* -------------------------------------------- */
 
-export function install(reg) {
+export function install(reg, ctx) {
   hooks = reg;
+  log = ctx.log;
   // Ownership on the creating client, before the document exists.
   reg.on("preCreateRegion", reg.guardSwallowAsync("preCreateRegion", (doc, data) => {
     if (!isTemplateRegion(data)) return;
@@ -307,7 +310,7 @@ export function install(reg) {
       // Backstop for a creator whose client has no module (or no handle actor): wait, then repair.
       setTimeout(() => {
         const live = region.parent?.regions.get(region.id);
-        if (live && !handleFor(live)) createHandle(live).catch(err => console.error("pentaryn-aoe | backstop handle", err));
+        if (live && !handleFor(live)) createHandle(live).catch(err => log.error("backstop handle", err));
       }, 2500);
     }
   }), { guard: false, label: "createRegion" });

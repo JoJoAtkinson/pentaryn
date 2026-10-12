@@ -6,7 +6,10 @@
  * that touches `game.itempiles` (adjustments row itempiles-aoe-skip-piles).
  */
 
-import { aoeFlags, isHandle, isTemplateRegion, regionFromSpell, regionOfActivity } from "./core.mjs";
+import { MODULE, aoeFlags, isHandle, isTemplateRegion, regionFromSpell, regionOfActivity } from "./core.mjs";
+import { makeLog } from "./lib/log.mjs";
+
+const log = makeLog(MODULE);
 
 /** The one shared world actor every handle token points at, found by flag; null when absent. */
 export function handleActor() {
@@ -70,6 +73,8 @@ export async function removeArea(regions, scene = canvas.scene) {
 export function isPile(token) {
   try {
     if (game.itempiles?.API?.isValidItemPile) return !!game.itempiles.API.isValidItemPile(token);
-  } catch { /* fall through */ }
+  } catch (err) {
+    log.debug("item piles check", err);   // fall through to the flags
+  }
   return !!token.actor?.flags?.["item-piles"]?.data?.enabled || !!token.flags?.["item-piles"]?.data?.enabled;
 }

@@ -26,6 +26,7 @@
 import { MODULE, aoeFlags, selfApplyReason, pendingEffects, sameSpellEffect } from "./core.mjs";
 import { setting } from "./settings.mjs";
 import { claimMessage } from "./lib/election.mjs";
+import { makeLog } from "./lib/log.mjs";
 import { cardEffects, recordedTarget, spellOf } from "./messages-adapter.mjs";
 
 const esc = s => foundry.utils.escapeHTML(String(s ?? ""));
@@ -36,6 +37,8 @@ const HIGHLIGHT_MAX_AGE = 60 * 60 * 1000;
 const MARK_DELAY = 1200;
 /** How long a fresh self-cast card waits for the auto-apply before it may light up. */
 const AUTO_GRACE = 15 * 1000;
+
+let log = makeLog(MODULE);   // the entry's ctx.log once installed
 
 const inflight = new Set();          // message ids being auto-applied on this client
 const localApplied = new Map();      // message id → Set(effect ids) applied from this client
@@ -116,7 +119,7 @@ function onPreCreateEffect(effect) {
   if (!spell) return;
   const old = sameSpellEffect({ name: effect.name, spell },
     actor.effects.filter(e => e.id !== effect.id).map(e => ({ id: e.id, name: e.name, disabled: e.disabled, spell: spellOf(e) })));
-  if (old) actor.effects.get(old)?.delete().catch(err => console.warn(`${MODULE} | replace ${effect.name}`, err));
+  if (old) actor.effects.get(old)?.delete().catch(err => log.warn(`replace ${effect.name}`, err));
 }
 
 /** Record applied effect ids on the message (if this user may), and locally either way. */
@@ -185,7 +188,7 @@ export async function selfApply(message, { force = false } = {}) {
         await applyEffect(message, effect, caster);
         applied.push(effect);
       } catch (err) {
-        console.warn(`${MODULE} | self-apply ${effect.name} → ${caster.name}`, err);
+        log.warn(`self-apply ${effect.name} → ${caster.name}`, err);
       }
     }
     if (!applied.length) return null;
@@ -230,7 +233,7 @@ function decorate(message, html) {
     tray.classList.add("pentaryn-aoe-unapplied");
     tray.style.setProperty("--pentaryn-aoe-unapplied", JSON.stringify(_loc("PENTARYN_AOE.Effects.Unapplied")));
   };
-  const warn = err => console.warn(`${MODULE} | highlight`, err);
+  const warn = err => log.warn("highlight", err);
 
   // A fresh card that is about to be auto-applied is not "waiting": skip the flash before the
   // GM's write lands and re-renders it. If that write never lands (the apply failed), look again
@@ -259,7 +262,7 @@ function decorate(message, html) {
     if (!ids.length || !applyTargets(tray).length) return;
     localApplied.set(message.id, new Set([...(localApplied.get(message.id) ?? []), ...ids]));
     pendingFor(message).then(p => { if (!p.length) tray.classList.remove("pentaryn-aoe-unapplied"); }).catch(warn);
-    setTimeout(() => markApplied(message, ids).catch(err => console.warn(`${MODULE} | mark applied`, err)), MARK_DELAY);
+    setTimeout(() => markApplied(message, ids).catch(err => log.warn("mark applied", err)), MARK_DELAY);
   }, true);
 }
 
@@ -277,7 +280,8 @@ function applyTargets(tray) {
 /*  Hook wiring                                 */
 /* -------------------------------------------- */
 
-export function install(reg) {
+export function install(reg, ctx) {
+  log = ctx.log;
   reg.on("createChatMessage", reg.guardSwallowAsync("createChatMessage(selfApply)", async (message, options, userId) => {
     if (!setting("autoApplySelf") || !isApplier(userId)) return;
     await selfApply(message);

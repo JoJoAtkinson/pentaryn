@@ -136,7 +136,7 @@ if (!globalThis.__pentarynAoeHot) {
     setTimeout(publish, 0);
     // Argon makes ui.ARGON in its own ready hook; a tick later it exists whatever the load order.
     setTimeout(() => { if (!guardArgonBind()) Hooks.once("canvasReady", guardArgonBind); }, 0);
-    migrateSettings().catch(err => console.error(`${MODULE} | settings migration`, err));
-    areas.readyAreas().catch(err => console.error(`${MODULE} | ready`, err));
+    migrateSettings().catch(err => log.error("settings migration", err));
+    areas.readyAreas().catch(err => log.error("ready", err));
   });
 }

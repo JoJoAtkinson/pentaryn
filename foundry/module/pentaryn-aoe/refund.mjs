@@ -17,6 +17,9 @@
 
 import { MODULE, placementCancelled } from "./core.mjs";
 import { setting } from "./settings.mjs";
+import { makeLog } from "./lib/log.mjs";
+
+let log = makeLog(MODULE);   // the entry's ctx.log once installed
 
 
 function hasConsumed(deltas) {
@@ -45,7 +48,8 @@ async function refund(activity, usageConfig, results) {
   return true;
 }
 
-export function install(reg) {
+export function install(reg, ctx) {
+  log = ctx.log;
   // Synchronous handler: Hooks.call honours a literal false only. We cannot know synchronously whether
   // the refund will run, so the check runs first, the refund after.
   reg.on("dnd5e.postUseActivity", (activity, usageConfig, results) => {
@@ -56,10 +60,10 @@ export function install(reg) {
       if (!(message instanceof ChatMessage) || !message.isOwner) return;
       if (!hasConsumed(message.system?.deltas) && !(results.effects ?? []).length) return;
       if (!activity?.target?.template?.type || !canvas?.scene || !game.user?.can?.("REGION_CREATE")) return;
-      refund(activity, usageConfig, results).catch(err => console.error(`${MODULE} | refund cancelled area`, err));
+      refund(activity, usageConfig, results).catch(err => log.error("refund cancelled area", err));
       return false;
     } catch (err) {
-      console.error(`${MODULE} | refund cancelled area`, err);
+      log.error("refund cancelled area", err);
     }
   }, { guard: false, label: "postUseActivity(refund)" });
 }

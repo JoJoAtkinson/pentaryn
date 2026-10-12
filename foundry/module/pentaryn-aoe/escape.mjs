@@ -19,6 +19,10 @@
  */
 
 import { MODULE, placementInProgress } from "./core.mjs";
+import { makeLog } from "./lib/log.mjs";
+
+// Registered at init, before any install(): the module's log line format, from its own logger.
+const log = makeLog(MODULE);
 
 /**
  * The handler slot the registered binding calls through. Foundry copies a binding's onDown into
@@ -41,7 +45,7 @@ function onEscape() {
   try {
     layer._cancelPlacement();
   } catch (err) {
-    console.error(`${MODULE} | cancel placement`, err);
+    log.error("cancel placement", err);
   }
   return true;
 }
@@ -64,7 +68,7 @@ export function registerEscape() {
       precedence: CONST.KEYBINDING_PRECEDENCE.PRIORITY
     });
   } catch (err) {
-    console.warn(`${MODULE} | Escape-cancels-placement keybinding not registered (registered after init?)`, err);
+    log.warn("Escape-cancels-placement keybinding not registered (registered after init?)", err);
   }
 }
 

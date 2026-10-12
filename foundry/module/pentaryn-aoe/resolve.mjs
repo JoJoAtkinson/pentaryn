@@ -24,6 +24,7 @@ import {
 } from "./core.mjs";
 import { setting } from "./settings.mjs";
 import { claimMessage } from "./lib/election.mjs";
+import { makeLog } from "./lib/log.mjs";
 import { areasFor, removeArea, handleActor, isPile } from "./scene-adapter.mjs";
 import { activityOf, usageIdOf, recordedTarget } from "./messages-adapter.mjs";
 
@@ -33,6 +34,8 @@ const abilityLabel = a => CONFIG.DND5E.abilities[a]?.label ?? a;
 /* -------------------------------------------- */
 /*  Serialised writes per message               */
 /* -------------------------------------------- */
+
+let log = makeLog(MODULE);   // the entry's ctx.log once installed
 
 const queues = new Map();
 /** Run fn(resolution) → resolution for one message, one at a time, then write it back. */
@@ -45,7 +48,7 @@ export function mutate(messageId, fn) {
     const out = (await fn(res, message)) ?? res;
     await message.update({ [`flags.${MODULE}.resolution`]: out });
     return out;
-  }).catch(err => { console.error("pentaryn-aoe | mutate", err); return null; });
+  }).catch(err => { log.error("mutate", err); return null; });
   queues.set(messageId, next);
   return next;
 }
@@ -436,6 +439,7 @@ export function setRow(messageId, rowId, changes) {
 const isAbilitySave = message => message?.type === "save" && (message.system?.type ?? "ability") === "ability";
 
 export function install(reg, ctx) {
+  log = ctx.log;
   CONFIG.DND5E.requests[REQUEST_HANDLER] = handleSaveRequest;
   // The tray (a separate feature) reaches these through ctx.exposed, never by importing this file.
   ctx.expose({ resolve, applyRows, rollNpcSaves, rollForPlayer, pingPlayers, setRow });
