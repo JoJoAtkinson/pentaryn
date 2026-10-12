@@ -637,6 +637,7 @@ riders.mjs:640) fails, and **C59** warns on the per-item writes at riders.mjs:55
 
 **KNOWN pins and their todo targets** (each flips in one `[declared]` commit after the structural
 refactor):
+
 | Pin | File | Target (todo) |
 |---|---|---|
 | W2-K1 frozen `game.pentaryn` is replaced by a copy | `publish-frozen.test` | S6 `publishNamespace`: a frozen root throws a TypeError |
@@ -647,6 +648,7 @@ refactor):
 | METAMAGIC is a mutable Set | `core.test` | S6: nothing mutable reachable from `api.core` |
 | S2 constants | `core.test` (todo only) | `MODULE` + version constant (C41 still fails until S2 writes that test) |
 | **new:** `parseFormula` splits a die modifier's @reference argument — `preview("1d8x@mod=8", {modifier:"min2"})` gives `"1d8xmin2@mod=8"` | `api.test` | `preview`/`transformFormula` only (the live riders edit real terms); a small standalone fix, not in the audit |
+
 Also pinned, no todo (additive later, guide §4 row -12): `battleMedic(healer, ACTOR)` warns "no Hit
 Dice" for the actor's name.
 
