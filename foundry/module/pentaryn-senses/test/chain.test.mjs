@@ -202,19 +202,22 @@ test("drawing: a hidden chained token is drawn for the GM only; no chain left dr
   assert.deepEqual({ playerLayers, gmSprites, afterBreak: F.canvas.primary.children.length }, { playerLayers: 0, gmSprites: 2, afterBreak: 0 });
 });
 
-test("drawing: a hidden ANCHOR does not hide the chain from players (today: only the chained end is checked)", async () => {
+test("drawing: a hidden ANCHOR hides the chain from players, the GM still sees it (W3-SE4)", async () => {
   F.frames.flush();
   await C().link(ID.tHulk, ID.tStake);
   tok(ID.tStake).hidden = true;
   F.become({ userId: PLAYER });
   C().repaint();
   F.frames.flush();
-  const sprites = F.canvas.primary.children[0]?.children.length ?? 0;
+  const playerLayers = F.canvas.primary.children.length;
   F.become({ userId: GM });
+  C().repaint();
+  F.frames.flush();
+  const gmSprites = F.canvas.primary.children[0]?.children.length ?? 0;
   tok(ID.tStake).hidden = false;
   await C().break(ID.tHulk);
   F.frames.flush();
-  assert.equal(sprites, 2, "drawn for the player toward the hidden anchor (recorded for Joe in the guide)");
+  assert.deepEqual({ playerLayers, gmSprites }, { playerLayers: 0, gmSprites: 2 }, "a hidden anchor's square never shows on a player's screen");
 });
 
 test("drawing: refreshToken with no layer and no chain does not repaint; canvasTearDown forgets the layer", async () => {

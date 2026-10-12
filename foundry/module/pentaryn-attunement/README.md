@@ -74,7 +74,7 @@ Also `game.modules.get("pentaryn-attunement").api`, published at `ready` (frozen
 | `report(target?, { quiet? })` | Actor, id or name; defaults to the controlled token | `{ actor, value, max, over, slots, rows }`, or `undefined` (+ a warn) when no actor; prints a table unless `quiet` | no | no |
 | `computeSlots(actor)` | Actor, or id / uuid / exact name | `{ slots, max, value, over }`; `null` for a name that matches nothing | no | no |
 | `away(actor)` | as above | `[{ key, name, img }]` | no | no |
-| `stash(owner, container, itemIds, { tag?, currency?, detail? })` | Actors and item ids | the number of items created; with `detail`, `{ count, created, away }`. Rejects, deleting nothing, if the container accepted fewer copies than asked; the error names the copies it left there (`err.created`). A success logs one `console.info` audit line (count, container, copy ids and names, `by`) | yes | no |
+| `stash(owner, container, itemIds, { tag?, currency?, detail? })` | Actors and item ids | the number of items created; with `detail`, `{ count, created, away }`. Rejects, deleting none of the owner's items, if the container accepted fewer copies than asked; the copies it did accept are deleted from the container again, and the error names them (`err.created`, `err.rolledBack`; a failed rollback leaves them there and says why). A success logs one `console.info` audit line (count, container, copy ids and names, `by`) | yes | no |
 | `releaseAway(actor, key)` | Actor, away key | `setFlag`'s promise | yes | no |
 | `inspect(ref, { sceneId?, base? })` | any actor ref (throws `NOT_FOUND` / `AMBIGUOUS`) | `{ actor, slots, max, value, over, away, bonds, counts }`, plain JSON; `counts` = dnd5e's value, away, the strip's value and `mismatch` | no | no |
 | `selftest()` | — | `{ ok, checks }` | no | no |
@@ -121,9 +121,9 @@ reads `DND5E.EFFECT.Suppressed.Hint`.
   the bond restore mutates the item's source there (for an Item Piles Take, the GM's).
 - `createItem` (slot hand-back, coin purse) runs only where `userId === game.user.id` — once per
   user, but in **every tab** of that user (the MCP bridge tab and a GM browser tab both, for a
-  GM-made change). The slot hand-back writes the same values from either tab; the **coin purse adds
-  `actor.currency + purse` from each tab**, so a GM Take with two GM tabs open can pay twice. Not
-  fixed (no claim yet): recorded in the wave-2 report, Open for Joe.
+  GM-made change). The slot hand-back writes the same values from either tab. The coin purse is
+  claimed first (kit `claimDocument`, key `coinBack` on the purse item, 750 ms settle), so exactly
+  one tab pays and deletes it; a purse already gone stands down (W2-A1).
 - Sheet drops and `stash` write from the client that calls them.
 
 ## Extending
@@ -158,7 +158,7 @@ method is a row in `api-manifest.mjs` plus an impl in `api.mjs`, then
 | `sheet.mjs`, `bonds.mjs` | features: the render hook and slot gestures; the item hooks |
 | `api-manifest.mjs`, `api.mjs` | the published API |
 | `styles/attunement.css` | every rule under `.pentaryn-attunement` / `.pentaryn-attunement-*` |
-| `lib/` | vendored kit 1.1.0 (full + `patch`) — never edited here |
+| `lib/` | vendored kit 1.1.0 (full + `patch`, `election`) — never edited here |
 
 ## Tests
 

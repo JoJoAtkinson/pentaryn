@@ -60,18 +60,32 @@ export async function stash(owner, container, itemIds, { tag, currency = false, 
   });
   const made = await container.createEmbeddedDocuments("Item", creates);
   // Foundry drops a document that fails validation without throwing: never delete an original
-  // whose copy may not exist (items-journal-10). The copies the container did accept stay there,
-  // bonded to the owner, so each item now exists twice: the Error names their ids (message and
-  // `err.created`) for the caller to clean up. Nothing is rolled back.
+  // whose copy may not exist (items-journal-10). The copies the container did accept are deleted
+  // from it again (W2-A2), so the call is all-or-nothing and no item exists twice. The Error names
+  // them either way (message and `err.created`); `err.rolledBack` says whether they are gone. A
+  // rollback that fails (an Item Piles pile may refuse) leaves them there, and the message says why.
   const accepted = made?.length ?? 0;
   if (accepted !== creates.length) {
     const msg = `${MODULE} | stash: container accepted ${accepted}/${creates.length}; originals NOT deleted`;
     console.error(`${MODULE} | stash: container accepted ${accepted}/${creates.length}; originals NOT deleted`,
       { owner: owner.id, container: container.id });
     const created = (made ?? []).map(d => d?.id ?? d?._id ?? null);
-    const err = new Error(created.length
-      ? `${msg}; copies left in container ${container.id}: ${created.join(", ")}` : msg);
+    let tail = "";
+    let rolledBack = true;
+    if (created.length) {
+      try {
+        if (created.some(id => !id)) throw new Error("a copy has no id");
+        await container.deleteEmbeddedDocuments("Item", created);
+        tail = `; copies rolled back from container ${container.id}: ${created.join(", ")}`;
+      } catch (e) {
+        rolledBack = false;
+        console.error(`${MODULE} | stash: rollback failed`, e);
+        tail = `; rollback failed (${e?.message ?? e}), copies left in container ${container.id}: ${created.join(", ")}`;
+      }
+    }
+    const err = new Error(msg + tail);
     err.created = created;
+    err.rolledBack = rolledBack;
     throw err;
   }
   await owner.deleteEmbeddedDocuments("Item", [...ids].filter(id => owner.items.has(id)));
