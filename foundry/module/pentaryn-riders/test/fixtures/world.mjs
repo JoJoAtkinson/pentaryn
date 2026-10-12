@@ -217,6 +217,27 @@ export function makeActor({ items = [], ...data } = {}) {
       enumerable: false,
       writable: true,
     },
+    // One batched embedded write: a single `updateEmbeddedDocuments` entry on W.log and F.calls;
+    // each item still takes its update (hooks fire per item, as in Foundry), unlogged.
+    updateEmbeddedDocuments: {
+      async value(embeddedName, updates = [], options = {}) {
+        const F = W?.F;
+        const plain = F?.plain(updates) ?? updates;
+        const calls = F?.calls.length ?? 0, logged = W?.log.length ?? 0;
+        const coll = embeddedName === "Item" ? this.items : null;
+        const done = [];
+        for (const { _id, ...changes } of updates) {
+          const doc = coll?.get(_id);
+          if (doc) done.push(await doc.update(changes, options));
+        }
+        F?.calls.splice(calls);
+        W?.log.splice(logged);
+        F?.calls.push({ op: "updateEmbeddedDocuments", documentName: embeddedName, uuid: this.uuid, updates: plain });
+        logOp("updateEmbeddedDocuments", { actor: this.name, embeddedName, updates: plain });
+        return done;
+      },
+      enumerable: false,
+    },
     getTokenImages: {
       async value() {
         logOp("getTokenImages", { actor: this.name });

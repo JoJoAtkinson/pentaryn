@@ -16,49 +16,55 @@ import {
 } from "./shapes.mjs";
 import { buildApi, toPlain } from "./lib/api.mjs";
 import { fail, ok } from "./lib/errors.mjs";
+import { flagPath } from "./lib/flags.mjs";
 import { patches } from "./lib/patch.mjs";
 import { publishedOf } from "./lib/publish.mjs";
 import { refOf, resolveRef } from "./lib/resolve.mjs";
 
 /**
  * Set the damage type a typed feature (Elemental Adept, Elemental Affinity) stands for.
- * `target` is that item, or an actor: then every typed feature item on it is set (only the one
- * rule's items when `ruleKey` is given). Returns the names of the items set.
+ * `target` is that item (one setFlag), or an actor: then every typed feature item on it is set
+ * (only the one rule's items when `ruleKey` is given), in one updateEmbeddedDocuments.
+ * Returns the names of the items set.
  */
 async function setType(target, type, ruleKey = null) {
   const t = String(type ?? "").toLowerCase().trim();
   if (!t) throw new Error("setType(item | actor, type, ruleKey?): type required");
-  const items = target instanceof Actor
-    ? featuresOf(target).filter(f => f.rule.types && (!ruleKey || f.key === ruleKey)).flatMap(f => f.items)
-    : [target];
-  const done = [];
-  for (const item of items) {
-    if (!item?.setFlag) continue;
-    await item.setFlag(MODULE, "damageType", t);
-    done.push(item.name);
+  if (!(target instanceof Actor)) {
+    if (!target?.setFlag) return [];
+    await target.setFlag(MODULE, "damageType", t);
+    return [target.name];
   }
-  return done;
+  const items = featuresOf(target).filter(f => f.rule.types && (!ruleKey || f.key === ruleKey)).flatMap(f => f.items);
+  if (items.length) await target.updateEmbeddedDocuments("Item", items.map(i => ({ _id: i.id, [flagPath(MODULE, "damageType")]: t })));
+  return items.map(i => i.name);
 }
 
 /**
  * The PHB models Elemental Affinity as damage activities the player clicks to add +CHA. With the
  * rider on, clicking one adds it twice. This pins the resolved type into the item's flag (the
  * activities were one way to resolve it) and deletes those activities. Typeless → left alone.
+ * One write: each item's flag and activity deletions (dnd5e's own `system.activities.<id>: _del`
+ * form) go in a single updateEmbeddedDocuments on the actor.
  */
 async function retireManual(actor) {
   const out = [];
+  const updates = [];
   for (const f of featuresOf(actor)) {
     if (f.key !== "elemental-affinity" || !f.types?.length) continue;
     for (const item of f.items) {
       if (!item.isOwner) continue;
-      if (!item.getFlag(MODULE, "damageType")) await item.setFlag(MODULE, "damageType", f.types.length === 1 ? f.types[0] : f.types);
+      const update = {};
+      if (!item.getFlag(MODULE, "damageType")) update[flagPath(MODULE, "damageType")] = f.types.length === 1 ? f.types[0] : f.types;
       for (const a of item.system.activities?.contents ?? []) {
         if (a.type !== "damage") continue;
-        await item.deleteActivity(a.id);
+        update[`system.activities.${a.id}`] = _del;
         out.push(`${item.name}: ${a.name || a.id}`);
       }
+      if (Object.keys(update).length) updates.push({ _id: item.id, ...update });
     }
   }
+  if (updates.length) await actor.updateEmbeddedDocuments("Item", updates);
   return out;
 }
 

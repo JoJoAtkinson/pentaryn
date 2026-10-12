@@ -11,6 +11,11 @@
 // riders-async-4 [declared]: installBattleMedic deleted each old "Heal dX" activity with its own
 // awaited deleteActivity write. It now removes them all in one item update (dnd5e's own
 // `system.activities.<id>: _del` form); the Battle Medic create/update stays a separate write.
+//
+// riders-async-5 [declared]: setType on an actor wrote one setFlag per item, and retireManual one
+// setFlag plus one deleteActivity per activity. An actor target now takes one
+// `updateEmbeddedDocuments("Item", …)` (a single Item target keeps its one setFlag); retireManual
+// puts each item's flag (when missing) and every damage-activity deletion into that one batch.
 import { mock, test } from "node:test";
 import assert from "node:assert/strict";
 import { pinJSON } from "./kit/harness.mjs";
@@ -90,12 +95,15 @@ test("setType: type required; an actor sets every typed feature item, or one rul
   assert.deepEqual(await api.setType(sc.items.get("schealer00000001"), "fire"), ["Healer"], "an item is set whatever it is");
   assert.deepEqual(await api.setType(npc, "fire"), []);
   assert.deepEqual(await api.setType({ name: "plain" }, "fire"), [], "no setFlag: skipped");
-  const writes = F.calls.filter(c => c.op === "update").slice(-4).map(c => [c.uuid.split(".").pop(), c.changes]);
+  // riders-async-5: an actor target is one updateEmbeddedDocuments; an Item target its one setFlag.
+  const writes = F.calls.filter(c => c.op === "update" || c.op === "updateEmbeddedDocuments").slice(-3).map(c => [c.op, c.uuid.split(".").pop(), c.changes ?? c.updates]);
   assert.deepEqual(writes, [
-    ["scadept000000001", { [`flags.${MODULE}.damageType`]: "cold" }],
-    ["scaffin000000001", { [`flags.${MODULE}.damageType`]: "cold" }],
-    ["scaffin000000001", { [`flags.${MODULE}.damageType`]: "fire" }],
-    ["schealer00000001", { [`flags.${MODULE}.damageType`]: "fire" }],
+    ["updateEmbeddedDocuments", sc.id, [
+      { _id: "scadept000000001", [`flags.${MODULE}.damageType`]: "cold" },
+      { _id: "scaffin000000001", [`flags.${MODULE}.damageType`]: "cold" },
+    ]],
+    ["updateEmbeddedDocuments", sc.id, [{ _id: "scaffin000000001", [`flags.${MODULE}.damageType`]: "fire" }]],
+    ["update", "schealer00000001", { [`flags.${MODULE}.damageType`]: "fire" }],
   ]);
 });
 
@@ -108,18 +116,63 @@ test("retireManual: untyped Affinity left alone; typed → flag pinned (if unset
   W.takeLog();
   assert.deepEqual(await api.retireManual(one), ["Elemental Affinity: Fire"]);
   assert.equal(one.items.get("oneaffin00000001").flags[MODULE].damageType, "fire");
-  assert.deepEqual(W.takeLog(), [{ op: "deleteActivity", item: "Elemental Affinity", id: "onefire000000001" }]);
+  assert.deepEqual(W.takeLog(), [{ op: "updateEmbeddedDocuments", actor: "One", embeddedName: "Item", updates: [
+    { _id: "oneaffin00000001", [`flags.${MODULE}.damageType`]: "fire", "system.activities.onefire000000001": "<_del>" },
+  ] }], "riders-async-5: flag and deletion in one write");
+  assert.deepEqual(one.items.get("oneaffin00000001").system.activities.map(a => a.id), ["oneutil000000001"]);
 
   const flagged = makeActor({ name: "Flagged", items: [{ id: "flgaffin00000001", name: "Elemental Affinity (Cold)", type: "feat", system: {}, flags: { [MODULE]: { damageType: "cold" } }, activities: [
     { id: "flgcold000000001", type: "damage", name: "" },
   ] }] });
   const before = F.calls.length;
   assert.deepEqual(await api.retireManual(flagged), ["Elemental Affinity (Cold): flgcold000000001"], "no name → the id");
-  assert.equal(F.calls.slice(before).filter(c => c.op === "update").length, 0, "flag already set: not rewritten");
+  assert.deepEqual(F.calls.slice(before).filter(c => c.op === "update" || c.op === "updateEmbeddedDocuments").map(c => c.updates ?? c.changes),
+    [[{ _id: "flgaffin00000001", "system.activities.flgcold000000001": "<_del>" }]], "flag already set: not rewritten");
 
   const multi = makeActor({ name: "Multi", items: [{ id: "mulaffin00000001", name: "Elemental Affinity (Fire, Cold)", type: "feat", system: {} }] });
   assert.deepEqual(await api.retireManual(multi), []);
   assert.deepEqual(multi.items.get("mulaffin00000001").flags[MODULE].damageType, ["fire", "cold"], "two types → the array");
+});
+
+test("setType on an actor and retireManual write once, in one updateEmbeddedDocuments (riders-async-5)", async () => {
+  const sc = makeActor({ name: "Batch", items: [
+    { id: "bsadept000000001", name: "Elemental Adept (Fire)", type: "feat", system: {} },
+    { id: "bsaffin000000001", name: "Elemental Affinity", type: "feat", system: {} },
+  ] });
+  let before = F.calls.length;
+  assert.deepEqual(await api.setType(sc, "acid"), ["Elemental Adept (Fire)", "Elemental Affinity"]);
+  assert.deepEqual(F.calls.slice(before).filter(c => c.op === "update" || c.op === "updateEmbeddedDocuments").map(c => [c.op, c.updates]), [
+    ["updateEmbeddedDocuments", [
+      { _id: "bsadept000000001", [`flags.${MODULE}.damageType`]: "acid" },
+      { _id: "bsaffin000000001", [`flags.${MODULE}.damageType`]: "acid" },
+    ]],
+  ], "one write for both items");
+  assert.equal(sc.items.get("bsadept000000001").flags[MODULE].damageType, "acid");
+  assert.equal(sc.items.get("bsaffin000000001").flags[MODULE].damageType, "acid");
+
+  const two = makeActor({ name: "TwoAffin", items: [
+    { id: "twaffin000000001", name: "Elemental Affinity (Fire)", type: "feat", system: {}, activities: [
+      { id: "twfire0000000001", type: "damage", name: "Fire" },
+      { id: "twutil0000000001", type: "utility", name: "Note" },
+      { id: "twfire0000000002", type: "damage", name: "Fire Again" },
+    ] },
+    { id: "twaffin000000002", name: "Elemental Affinity (Cold)", type: "feat", system: {}, flags: { [MODULE]: { damageType: "cold" } }, activities: [
+      { id: "twcold0000000001", type: "damage", name: "Cold" },
+    ] },
+  ] });
+  W.takeLog();
+  before = F.calls.length;
+  assert.deepEqual(await api.retireManual(two), ["Elemental Affinity (Fire): Fire", "Elemental Affinity (Fire): Fire Again", "Elemental Affinity (Cold): Cold"]);
+  assert.deepEqual(W.takeLog().map(l => l.op), ["updateEmbeddedDocuments"], "no setFlag, no deleteActivity: one batch");
+  assert.deepEqual(F.calls.slice(before).filter(c => c.op === "update" || c.op === "updateEmbeddedDocuments").map(c => [c.op, c.updates]), [
+    ["updateEmbeddedDocuments", [
+      { _id: "twaffin000000001", [`flags.${MODULE}.damageType`]: ["fire", "cold"], "system.activities.twfire0000000001": "<_del>", "system.activities.twfire0000000002": "<_del>" },
+      { _id: "twaffin000000002", "system.activities.twcold0000000001": "<_del>" },
+    ]],
+  ]);
+  assert.deepEqual(two.items.get("twaffin000000001").system.activities.map(a => a.id), ["twutil0000000001"]);
+  assert.equal(two.items.get("twaffin000000002").system.activities.size, 0);
+  assert.equal(two.items.get("twaffin000000002").flags[MODULE].damageType, "cold", "a set flag is not rewritten");
 });
 
 test("retireManual: items the user does not own are skipped", async () => {
