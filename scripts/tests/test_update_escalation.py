@@ -833,6 +833,21 @@ def test_adjudicator_prompt_tolerates_a_release_with_no_date():
     assert error is None and [v.verdict for v in verdicts] == ["apply"]
 
 
+@pytest.mark.parametrize("bad_id", ['["dnd5e"]', '{"x":1}'])
+def test_adjudicator_unhashable_id_holds_all(bad_id):
+    # EC-3: a list/dict id used to raise TypeError on `in allowed` instead of holding.
+    from scripts.foundry.update import adjudicate
+    plan = make_plan(decision("dnd5e", bucket="review", bump="major", type_="system"))
+
+    def caller(spec, stdin, **kw):
+        return llm.Result(llm.CallRecord(tier="adjudicator", model=spec.model,
+                                         effort=spec.effort, ok=True),
+                          text='{"verdicts":[{"id":' + bad_id + ',"verdict":"apply"}]}')
+    verdicts, error, _ = adjudicate.run(plan, caller=caller)
+    assert [v.verdict for v in verdicts] == ["hold"]
+    assert "unexpected entry" in error
+
+
 def test_report_writer_model_comes_from_policy():
     from scripts.foundry.update import report
     seen = {}

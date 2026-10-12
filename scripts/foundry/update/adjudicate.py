@@ -159,7 +159,8 @@ def run(plan: dict, *, policy: dict | None = None,
         pkg_id, verdict = entry.get("id"), entry.get("verdict")
         # An id that was not offered, or a verdict outside the enum, means the answer
         # is not trustworthy as a whole — not that one row should be dropped.
-        if pkg_id not in allowed or verdict not in ("apply", "hold"):
+        if (not isinstance(pkg_id, str) or pkg_id not in allowed
+                or verdict not in ("apply", "hold")):
             verdicts, reason = _hold_all(
                 ids, f"adjudication returned an unexpected entry: {entry}")
             return verdicts, reason, call
