@@ -6,7 +6,7 @@
  *
  * Drawn on every client, in canvas.primary just under the tokens (so fog and vision hide it like
  * the map), from the anchor's centre to the chained token's centre. It follows drags and move
- * animations live. A chain whose chained token is hidden is drawn for the GM only.
+ * animations live. A chain with either end hidden (chained or anchor token) is drawn for the GM only.
  *
  * Token HUD (GM only): "Break chain" on either end removes every chain touching that token.
  * "Chain to target" appears on an unchained token while you have exactly one other token targeted.
@@ -204,7 +204,8 @@ export function paint(pairs) {
   const scene = canvas.scene;
   pairs ??= links(scene);
   const isGM = isAnyGM();
-  const shown = pairs.filter(p => isGM || !scene.tokens.get(p.chained)?.hidden);
+  // Either end hidden → GM only, or the line would show a player the hidden token's square (W3-SE4).
+  const shown = pairs.filter(p => isGM || !(scene.tokens.get(p.chained)?.hidden || scene.tokens.get(p.anchor)?.hidden));
   if (!shown.length) return dropLayer();
 
   const tex = texture();

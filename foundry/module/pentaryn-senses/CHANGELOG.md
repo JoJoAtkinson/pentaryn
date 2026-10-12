@@ -6,6 +6,10 @@
 (`tier`, `namespace`, `flagScope: "pentaryn-senses"`, `cssPrefix: "ps-"`), `minimum: "14"` and
 `recommends: enhancedcombathud`.
 
+- **[declared] A chain on a hidden anchor is GM-only** (W3-SE4, Joe 2026-10-12): `paint()` now
+  hides a chain from non-GM viewers when either end is hidden, not just the chained token, so a
+  player's screen never shows the hidden anchor's square. Pin flipped in `chain.test.mjs`.
+
 - **[declared] `inspect` reaches the MCP bridge** (W3L, 2026-10-12): the manifest's `ref` gains
   `type: "Token|Actor|uuid|id|exact name"`, so `pentaryn-read {ns:"senses", path:"inspect", ref:<uuid>}`
   passes the string through (inspect resolves it itself) instead of refusing "eval-js only".
