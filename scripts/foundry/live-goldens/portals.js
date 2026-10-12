@@ -47,6 +47,8 @@ const strip = v => Array.isArray(v) ? v.map(strip)
 const norm = v => { let s = JSON.stringify(strip(v) ?? null); for (const [id, l] of ids) s = s.split(id).join(`<${l}>`); return JSON.parse(s); };
 const caught = e => ({ threw: true, name: e?.name ?? null, ctor: e?.constructor?.name ?? null, message: String(e?.message ?? e) });
 const probe = async fn => { try { return await fn(); } catch (e) { return caught(e); } };
+/** Map an array; keep anything else (a caught `{threw, name, message}`, a "no x" string) as-is (LG-R7). */
+const mapOr = (v, f) => Array.isArray(v) ? v.map(f) : (v ?? "undefined");
 const keysOf = o => Object.keys(o ?? {}).sort();
 /** One macrotask through a MessageChannel: unlike setTimeout it is not throttled in a hidden tab (J20). */
 const tick = () => new Promise(r => { const c = new MessageChannel(); c.port1.onmessage = () => { c.port1.close(); r(); }; c.port2.postMessage(0); });
@@ -103,7 +105,7 @@ try {
     partySelection: Array.isArray(party) ? party.map(r => r.id) : party,
     leaderOf: ["wolf", "hawk", "guard", "stray"].map(id => call("leaderOf", records.find(r => r.id === id), [pcA, pcB])),
     partyPreview: Array.isArray(party) ? call("partyPreview", party) : party,
-    followersOf: (call("followersOf", [pcA], records) ?? []).map?.(r => r.id) ?? null,
+    followersOf: mapOr(call("followersOf", [pcA], records), r => r.id),
     ringSpots: call("ringSpots", 500, 500, 100, 10, { occupied: (x, y) => x === 600 && y === 500 }),
     ringBlocked: call("ringSpots", 500, 500, 100, 4, { blocked: call("wallBlocker", [[550, 0, 550, 1000]]) }),
     assignSpots: Array.isArray(party) ? call("assignSpots", call("ringSpots", 500, 500, 100, party.length + 8), party) : party,
@@ -172,17 +174,17 @@ try {
   // ── after-only rows (-32): read on A/B, link/unlink on the scratch regions ───
   if (typeof P.destinations === "function") {
     const card = d => d && !d.threw ? { name: d.name, scene: d.scene, card: d.card, revealed: d.revealed, choice: d.choice } : d;
-    D.destinations = (await probe(() => P.destinations(door.uuid)))?.map?.(card) ?? "threw";
+    D.destinations = mapOr(await probe(() => P.destinations(door.uuid)), card);
     D.inspectDoor = await probe(() => P.inspect(door.uuid));
     D.inspectActor = await probe(() => P.inspect(actor)) ?? "undefined";
     D.inspectMissing = await probe(() => P.inspect("ZZ no such region zzz"));
     D.linkDry = await probe(() => P.link(door.uuid, { to: bare.uuid, dryRun: true }));
     D.linkReal = await probe(() => P.link(door.uuid, { to: bare.uuid }));
-    D.afterLink = (await probe(() => P.destinations(door.uuid)))?.map?.(d => d.name) ?? "threw";
+    D.afterLink = mapOr(await probe(() => P.destinations(door.uuid)), d => d.name);
     D.linkAgain = await probe(() => P.link(door.uuid, { to: bare.uuid }));
     D.unlinkDry = await probe(() => P.unlink(door.uuid, { to: bare.uuid, dryRun: true }));
     D.unlinkReal = await probe(() => P.unlink(door.uuid, { to: bare.uuid }));
-    D.afterUnlink = (await probe(() => P.destinations(door.uuid)))?.map?.(d => d.name) ?? "threw";
+    D.afterUnlink = mapOr(await probe(() => P.destinations(door.uuid)), d => d.name);
     const bd = await probe(() => P.badges());
     D.badges = Array.isArray(bd) ? { isArray: true } : bd;
   } else D.destinations = "absent";
