@@ -79,6 +79,16 @@ def _read_exact(stream: Any, n: int) -> bytes:
     return buf
 
 
+def _object_or_skip(value: Any) -> dict[str, Any]:
+    """A JSON-RPC message must be an object. A batch `[...]`, a scalar or an LSP
+    `null` body is logged and skipped (never EOF, never a crash at `msg.get`)."""
+    if isinstance(value, dict):
+        return value
+    sys.stderr.write("[mcp-server] discarding non-object JSON-RPC message\n")
+    sys.stderr.flush()
+    return _SKIP_MESSAGE
+
+
 def _read_message() -> Optional[dict[str, Any]]:
     # Codex uses newline-delimited JSON-RPC over stdio (JSONL). Some MCP clients use LSP-style
     # Content-Length headers. Support both by sniffing the first line.
@@ -95,7 +105,7 @@ def _read_message() -> Optional[dict[str, Any]]:
     if stripped.startswith(b"{") or stripped.startswith(b"["):
         _TRANSPORT_MODE = _TRANSPORT_MODE or "jsonl"
         try:
-            return json.loads(stripped.decode("utf-8"))
+            return _object_or_skip(json.loads(stripped.decode("utf-8")))
         except (json.JSONDecodeError, UnicodeDecodeError) as exc:
             # Reject one garbage JSONL line rather than crashing the serve loop.
             sys.stderr.write(f"[mcp-server] discarding malformed JSONL message: {exc}\n")
@@ -136,7 +146,7 @@ def _read_message() -> Optional[dict[str, Any]]:
     if not body:
         return None
     try:
-        return json.loads(body.decode("utf-8"))
+        return _object_or_skip(json.loads(body.decode("utf-8")))
     except (json.JSONDecodeError, UnicodeDecodeError) as exc:
         # Reject one garbage LSP body rather than crashing the serve loop.
         sys.stderr.write(f"[mcp-server] discarding malformed LSP message body: {exc}\n")

@@ -515,3 +515,47 @@ def test_serve_loop_releases_slots(monkeypatch):
     assert [m["id"] for m in sent] == [1, 2, 3]
     assert all("result" in m for m in sent)
     assert server._inflight_slots._value == 2
+
+
+# ---------------------------------------------------------------------------
+# py-mcp-rob-2 (EC-1, py-mcp-ac-1): a non-object JSON frame is skipped, not fatal
+# ---------------------------------------------------------------------------
+
+import io
+import types
+
+
+def _stdin(monkeypatch, data: bytes):
+    monkeypatch.setattr(server.sys, "stdin", types.SimpleNamespace(buffer=io.BytesIO(data)))
+
+
+def _lsp(body: bytes) -> bytes:
+    return b"Content-Length: %d\r\n\r\n%s" % (len(body), body)
+
+
+_INIT = {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}}
+
+
+@pytest.mark.parametrize("frames", [
+    b"[1, 2]\n" + json.dumps(_INIT).encode() + b"\n",          # JSONL batch
+    b"[]\n" + json.dumps(_INIT).encode() + b"\n",              # JSONL empty batch
+    _lsp(b"null") + _lsp(json.dumps(_INIT).encode()),          # LSP null body (was EOF)
+    _lsp(b"5") + _lsp(json.dumps(_INIT).encode()),             # LSP scalar body
+    _lsp(b"[{}]") + _lsp(json.dumps(_INIT).encode()),          # LSP batch body
+], ids=["jsonl-batch", "jsonl-empty-batch", "lsp-null", "lsp-scalar", "lsp-batch"])
+def test_py_mcp_rob_2_non_object_frame_is_skipped(monkeypatch, capsys, frames):
+    _stdin(monkeypatch, frames)
+    monkeypatch.setattr(server, "_TRANSPORT_MODE", None)
+    assert server._read_message() is server._SKIP_MESSAGE
+    assert "[mcp-server] discarding non-object JSON-RPC message" in capsys.readouterr().err
+    assert server._read_message() == _INIT          # serving continues
+    assert server._read_message() is None           # then real EOF
+
+
+def test_py_mcp_rob_2_serve_loop_survives_a_batch(monkeypatch):
+    _stdin(monkeypatch, b"[1]\n" + json.dumps(_INIT).encode() + b"\n")
+    monkeypatch.setattr(server, "_TRANSPORT_MODE", None)
+    sent = []
+    monkeypatch.setattr(server, "_write_message", sent.append)
+    assert server._serve_loop((), {}, _SyncExecutor()) == 0
+    assert [m["id"] for m in sent] == [1]
