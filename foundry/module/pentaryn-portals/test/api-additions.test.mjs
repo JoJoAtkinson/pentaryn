@@ -119,7 +119,7 @@ test("D-P5: teleportParty answers { moved, cancelled }; a cancelled confirm → 
   W.confirm = false;
   assert.deepEqual(await api().teleportParty(to), { moved: 0, cancelled: true }, "nobody counts as party: the empty-party warn");
   W.confirm = true;
-  assert.deepEqual(await api().teleportParty(to, { confirm: false }), { moved: 0, cancelled: false });
+  assert.deepEqual(await api().teleportParty(to, { confirm: false }), { moved: 0, cancelled: true }, "confirm skipped: still the empty-party warn [declared] (portals-edge-4)");
   F.become({ userId: P1 });
   assert.equal(await api().teleportParty(to, { confirm: false }), undefined, "a player: nothing, as before");
   F.become({ userId: GM });

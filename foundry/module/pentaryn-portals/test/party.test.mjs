@@ -162,7 +162,7 @@ test("confirmParty: lists each record, followers 'lands beside <PC>' (golden/con
   W.confirm = true;
 });
 
-test("confirmParty: a closed/rejected dialog → false; the setting off → true without a dialog; nobody → warn, false", async () => {
+test("confirmParty: a closed/rejected dialog → false; the setting off → true without a dialog; nobody → warn, false either way", async () => {
   const H = hall();
   const party = S.partyRecords(H.s);
   W.confirm = "reject";
@@ -172,7 +172,9 @@ test("confirmParty: a closed/rejected dialog → false; the setting off → true
   let n = F.calls.length;
   assert.equal(await S.confirmParty(party, "X"), true);
   assert.equal(W.callsSince(n, ["DialogV2.confirm"]).length, 0);
-  assert.equal(await S.confirmParty([], "X"), true, "setting off: even an empty party goes ahead");
+  n = F.calls.length;
+  assert.equal(await S.confirmParty([], "X"), false, "setting off: an empty party still stops [declared] (portals-edge-4)");
+  assert.deepEqual(W.callsSince(n, ["notify", "DialogV2.confirm"]), [{ op: "notify", level: "warn", message: "Teleport party: nobody on this scene counts as the party." }]);
   await game.settings.set(MODULE, "confirmPartyTeleport", true);
   n = F.calls.length;
   assert.equal(await S.confirmParty([], "X"), false);
@@ -265,6 +267,24 @@ test("teleportParty, same scene: a token deleted mid-dialog is left out; nobody 
   assert.deepEqual(seen.map(c => c.op), ["DialogV2.confirm", "notify"]);
   assert.equal(seen[1].level, "warn");
   assert.equal(seen[1].message, "Teleport party: nobody on this scene counts as the party.");
+});
+
+test("teleportParty, empty party with the confirm skipped: warn, { moved: 0, cancelled: true }, nobody pulled, no view, no toast [declared] (portals-edge-4)", async () => {
+  const H = hall({ tokens: k => [{ id: `tGuard${k}`, name: "Guard", actorId: "GUARD", x: 1100, y: 200 }] });
+  F.canvas.scene = H.s;
+  const nobody = [{ op: "notify", level: "warn", message: "Teleport party: nobody on this scene counts as the party." }];
+  let n = F.calls.length;
+  assert.deepEqual(await S.teleportParty(H.pitGate, { confirm: false }), { moved: 0, cancelled: true }, "confirm:false");
+  assert.deepEqual(ops(n), nobody);
+  await game.settings.set(MODULE, "confirmPartyTeleport", false);
+  n = F.calls.length;
+  assert.deepEqual(await S.teleportParty(H.pitGate), { moved: 0, cancelled: true }, "setting off");
+  assert.deepEqual(ops(n), nobody);
+  await game.settings.set(MODULE, "confirmPartyTeleport", true);
+  n = F.calls.length;
+  assert.deepEqual(await S.teleportParty(H.pitGate), { moved: 0, cancelled: true }, "setting on: one warn, no dialog");
+  assert.deepEqual(ops(n), nobody);
+  assert.equal(F.canvas.scene, H.s);
 });
 
 test("teleportParty / lookAt: a player or no region → nothing", async () => {

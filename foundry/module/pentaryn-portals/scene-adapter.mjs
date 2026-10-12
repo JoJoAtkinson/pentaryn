@@ -283,14 +283,15 @@ export async function carryTo(toks, dest, cx, cy, party = null) {
 
 /**
  * GM: who is about to move, before anything moves (usability Area 8, L11: an everyone-owned
- * scenery token joined the party silently). → true to go ahead.
+ * scenery token joined the party silently). → true to go ahead; an empty party → warn and false
+ * even with the setting off (portals-edge-4).
  */
 export async function confirmParty(party, title) {
-  if (!deps.setting("confirmPartyTeleport")) return true;
   if (!party.length) {
     ui.notifications.warn(_loc("PENTARYN_PORTALS.Party.Nobody"));
     return false;
   }
+  if (!deps.setting("confirmPartyTeleport")) return true;
   const rows = partyPreview(party).map(r => `<li>${esc(r.name)}${r.follower
     ? ` <span class="ppt-follows">${r.leaderName
       ? _loc("PENTARYN_PORTALS.Party.LandsBeside", { name: esc(r.leaderName) })
@@ -317,7 +318,8 @@ export async function teleportParty(destRegion, { confirm = true } = {}) {
   const from = canvas.scene;
   const dest = destRegion.parent;
   let party = partyRecords(from);
-  if (confirm && !(await confirmParty(party, cardFor(destRegion).title))) return { moved: 0, cancelled: true };
+  // portals-edge-4: an empty party never pulls players or moves the view, confirm or not.
+  if ((confirm || !party.length) && !(await confirmParty(party, cardFor(destRegion).title))) return { moved: 0, cancelled: true };
   // ROB-2: a token deleted while the dialog was open is dropped, not recreated on the far side.
   const kept = party.filter(r => from.tokens.has(r.doc.id));
   if (kept.length < party.length) {
