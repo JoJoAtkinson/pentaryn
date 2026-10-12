@@ -1,5 +1,9 @@
 # Module bundles — go-live acceptance on the Mac (2026-10-11)
 
+**Read this when:** you need proof that the bundled backups save, restore and dedupe on the
+Mac, or the name of the snapshot that go-live ended on (S_ok, §J). Not for operating backups:
+that is `context/foundry/ops.md` §3.
+
 Evidence record for the go-live of per-module backup bundles
 ([module-bundles-2026-10.md](module-bundles-2026-10.md) §10, §15). History, not instructions.
 
