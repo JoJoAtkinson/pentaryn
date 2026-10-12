@@ -9,8 +9,8 @@ import {
   lintFormulas, normalise, preparePayload, toCreatePayload, toUpdatePayload, valuesMatch
 } from "./importer-core.mjs";
 import {
-  TAG, assertActivityIdsSurvived, assertNoBadFormulas, assertPrototypeToken, assertVersionGate,
-  failAssertion, fetchJsonWithTimeout, indexActorsBySlug, log, refuse, replaceItems, reportSummary,
+  TAG, assertItemsAddressable, assertNoBadFormulas, assertPrototypeToken, assertVersionGate,
+  fetchJsonWithTimeout, indexActorsBySlug, log, refuse, replaceItems, reportSummary,
   runExpectedAssertions, shout, stampContentHash, storedHash
 } from "./documents-adapter.mjs";
 import { MANIFEST } from "./api-manifest.mjs";
@@ -145,7 +145,7 @@ async function importOnce({ path, dryRun, only, force, timeout, unmanagedItems }
     if (onlySet && !onlySet.has(slug)) continue;
     selected++;
 
-    const incomingHash = foundry.utils.getProperty(entry, `flags.${FLAG_SCOPE}.contentHash`);
+    const incomingHash = storedHash(entry);
 
     try {
       const existing = bySlug.get(slug);
@@ -193,35 +193,7 @@ async function importOnce({ path, dryRun, only, force, timeout, unmanagedItems }
 
       // Strip detection on the two structures Foundry is most likely to quietly mangle.
       assertPrototypeToken(actor, data.prototypeToken, slug);
-      // Every payload Item must be findable by its `flags.pentaryn.action`. `replaceItems` has
-      // already proved the COUNT matches; this proves the IDENTITY does. The two failures it
-      // separates: Foundry stripped `flags.pentaryn.action` (the item exists but is no longer
-      // addressable, and the next run would treat it as hand-added and leave it behind), or the
-      // generator emitted two rows with the same action name (count matches, one shadows the
-      // other). Silently skipping — the old `if (liveItem)` — is the exact failure class this
-      // module exists to catch.
-      for (const itemData of items) {
-        const action = foundry.utils.getProperty(itemData, `flags.${FLAG_SCOPE}.action`);
-        const liveItem = (action === undefined)
-          ? undefined
-          : actor.items.find(i => foundry.utils.getProperty(i, `flags.${FLAG_SCOPE}.action`) === action);
-        if (!liveItem) {
-          failAssertion({
-            slug,
-            action: action ?? "(no flags.pentaryn.action in payload)",
-            path: `flags.${FLAG_SCOPE}.action`,
-            expected: action,
-            actual: actor.items.map(i => foundry.utils.getProperty(i, `flags.${FLAG_SCOPE}.action`)),
-            hint: (action === undefined)
-              ? "The PAYLOAD item carries no `flags.pentaryn.action`. The generator must emit one on "
-                + "every Item — it is the upsert key for the embedded-Item replace (CONTRACT.md §4.2)."
-              : "Payload item has no matching embedded Item — it was dropped, or Foundry STRIPPED "
-                + "`flags.pentaryn.action`. Either way the Item is unaddressable: the next run cannot "
-                + "recognise it as managed and will leave it behind as hand-added."
-          });
-        }
-        assertActivityIdsSurvived(liveItem, itemData, slug);
-      }
+      assertItemsAddressable(actor, items, slug);
 
       // The contract's own expectations (§8) — displayed labels, not recomputed maths.
       assertions += runExpectedAssertions(actor, expected, slug);

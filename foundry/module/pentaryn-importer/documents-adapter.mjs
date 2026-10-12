@@ -278,7 +278,7 @@ function assertActivityIdsSurvived(item, requestedItemData, slug) {
   if (!missing.length) return;
   failAssertion({
     slug,
-    action: foundry.utils.getProperty(requestedItemData, `flags.${FLAG_SCOPE}.action`),
+    action: actionOf(requestedItemData),
     path: "system.activities",
     expected: requested,
     actual: [...live],
@@ -286,6 +286,44 @@ function assertActivityIdsSurvived(item, requestedItemData, slug) {
       + "(CONTRACT.md U7). Every `expected` activity lookup is now unresolvable; §8.2 rule 3 must "
       + "switch to resolving activities by name."
   });
+}
+
+/**
+ * Item-identity readback for one actor, then each Item's activity ids (U7). The caller must have
+ * reset the actor first (§8.2 rule 1).
+ *
+ * @param {Actor} actor
+ * @param {object[]} items  the requested Item payloads
+ * @param {string} slug
+ */
+function assertItemsAddressable(actor, items, slug) {
+  // Every payload Item must be findable by its `flags.pentaryn.action`. `replaceItems` has
+  // already proved the COUNT matches; this proves the IDENTITY does. The two failures it
+  // separates: Foundry stripped `flags.pentaryn.action` (the item exists but is no longer
+  // addressable, and the next run would treat it as hand-added and leave it behind), or the
+  // generator emitted two rows with the same action name (count matches, one shadows the
+  // other). Silently skipping — the old `if (liveItem)` — is the exact failure class this
+  // module exists to catch.
+  for (const itemData of items) {
+    const action = actionOf(itemData);
+    const liveItem = (action === undefined) ? undefined : itemByAction(actor, action);
+    if (!liveItem) {
+      failAssertion({
+        slug,
+        action: action ?? "(no flags.pentaryn.action in payload)",
+        path: `flags.${FLAG_SCOPE}.action`,
+        expected: action,
+        actual: actor.items.map(i => actionOf(i)),
+        hint: (action === undefined)
+          ? "The PAYLOAD item carries no `flags.pentaryn.action`. The generator must emit one on "
+            + "every Item — it is the upsert key for the embedded-Item replace (CONTRACT.md §4.2)."
+          : "Payload item has no matching embedded Item — it was dropped, or Foundry STRIPPED "
+            + "`flags.pentaryn.action`. Either way the Item is unaddressable: the next run cannot "
+            + "recognise it as managed and will leave it behind as hand-added."
+      });
+    }
+    assertActivityIdsSurvived(liveItem, itemData, slug);
+  }
 }
 
 /**
@@ -319,14 +357,14 @@ function runExpectedAssertions(actor, expected, slug) {
   // ── Item-level ───────────────────────────────────────────────────────────────────────────────
   for (const spec of expected.items ?? []) {
     const action = spec.action;
-    const item = actor.items.find(i => foundry.utils.getProperty(i, `flags.${FLAG_SCOPE}.action`) === action);
+    const item = itemByAction(actor, action);
     if (!item) {
       failAssertion({
         slug,
         action,
         path: `flags.${FLAG_SCOPE}.action`,
         expected: action,
-        actual: actor.items.map(i => foundry.utils.getProperty(i, `flags.${FLAG_SCOPE}.action`)),
+        actual: actor.items.map(i => actionOf(i)),
         hint: "No embedded Item on the Actor carries this action flag."
       });
     }
@@ -419,8 +457,14 @@ function indexActorsBySlug() {
 /** @param {Document} doc @returns {string|undefined} */
 const storedHash = doc => foundry.utils.getProperty(doc, `flags.${FLAG_SCOPE}.contentHash`);
 
+/** @param {Document|object} doc @returns {string|undefined} the `flags.pentaryn.action` upsert key */
+const actionOf = doc => foundry.utils.getProperty(doc, `flags.${FLAG_SCOPE}.action`);
+
+/** @param {Actor} actor @param {string} action @returns {Item|undefined} */
+const itemByAction = (actor, action) => actor.items.find(i => actionOf(i) === action);
+
 /** Items this module owns, i.e. ones it created and may therefore delete. */
-const isManagedItem = item => foundry.utils.getProperty(item, `flags.${FLAG_SCOPE}.action`) !== undefined;
+const isManagedItem = item => actionOf(item) !== undefined;
 
 /**
  * Replace the Actor's managed embedded Items.
@@ -546,6 +590,6 @@ function reportSummary({ counts, created, updated, skipped, failed, dryRun, url,
 export {
   TAG, log, shout, refuse, failAssertion, fetchJsonWithTimeout, moduleExpectations,
   assertVersionGate, assertNoBadFormulas, assertValue, assertPrototypeToken, assertActivityIdsSurvived,
-  runExpectedAssertions, indexActorsBySlug, storedHash, isManagedItem, replaceItems, stampContentHash,
+  assertItemsAddressable, runExpectedAssertions, indexActorsBySlug, storedHash, isManagedItem, replaceItems, stampContentHash,
   reportSummary
 };
