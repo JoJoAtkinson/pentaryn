@@ -334,10 +334,9 @@ test("every console text in the three files (golden/console-texts.json; step 9 m
     return [h.file, m?.[1] ?? "?", m?.[2] ?? h.text];
   }).sort((a, b) => (a.join("|") < b.join("|") ? -1 : 1));
   pinJSON("console-texts", rows, import.meta.url);
-  // KNOWN (-15): silent catches with no text at all — pinned so step 9 can name them.
+  // [declared] T-D3 (-15, guide step 9): no silent catch is left — each logs at debug (or warn-once).
   const silent = sourceScan(ROOT, /catch\s*(\(\w*\))?\s*\{\s*(return null;\s*)?\}/);
-  assert.deepEqual(silent.map(h => [h.file, h.text.replace(/\s+/g, " ")]), [["hud.mjs", "} catch (err) { }"], ["hud.mjs", "} catch { return null; }"]]);
+  assert.deepEqual(silent.map(h => [h.file, h.text.replace(/\s+/g, " ")]), []);
   const swallowed = sourceScan(ROOT, /\.catch\(\(\) =>/);
-  assert.deepEqual(swallowed.map(h => [h.file, h.text.includes('"") ') || h.text.includes("=> \"\")") ? "empty-string" : "null"]),
-    [["starry.mjs", "null"], ["transform.mjs", "empty-string"]]);
+  assert.deepEqual(swallowed.map(h => h.file), []);
 });

@@ -38,7 +38,7 @@ function dropTooltip() {
   try {
     game.tooltip?.deactivate?.();
     if (ui.ARGON?._tooltip) ui.ARGON._tooltip = null;
-  } catch (err) { /* never let tooltip hygiene break a click */ }
+  } catch (err) { log.debug("tooltip hygiene", err); }   // never let tooltip hygiene break a click
 }
 
 function dropStaleTooltip() {
@@ -576,7 +576,10 @@ function multiattackCoveredByFullAttack(actor) {
     const ma = game.pentaryn?.combat?.multiattack?.(actor);
     if (!ma || ma.source === "flag" || (ma.total ?? 0) < 2 || !actor.items.get(ma.source)) return null;
     return ma.source;
-  } catch { return null; }
+  } catch (err) {
+    log.warnOnce("combat-multiattack", "combat multiattack read failed", err);
+    return null;
+  }
 }
 
 function composeActionBar(panel, actor) {

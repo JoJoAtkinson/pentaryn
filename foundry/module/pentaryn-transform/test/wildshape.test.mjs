@@ -60,9 +60,9 @@ test("shift(talo, p1): one use spent, transformInto with the preset, the shaped 
   assert.equal(F.chat[0].speaker.actor, IDS.talo);
   assert.deepEqual(F.enriched.map(e => e.html), ["<p>Advantage with an ally.</p>"], "passive monster traits only");
   assert.deepEqual(F.enriched[0].opts.secrets, false);
-  // KNOWN (-15): an ungated console.log on every linked shift.
-  assert.deepEqual(F.console.map(c => c.slice(0, 3)), [["log", "pentaryn-transform | not carried into the form:",
-    "Wild Shape (wildshape), Starry Form (spends-wildshape), Wild Companion (spends-wildshape), Spellcasting (no-spellcasting)"]]);
+  // [declared] T-D3 (-15, guide step 9): the stripped-items line is a debug line now — nothing on the
+  // console unless CONFIG.debug["pentaryn-transform"] (test/logging.test.mjs pins it switched on).
+  assert.deepEqual(F.console, []);
   pinJSON("shift-linked-transform-data", F.lastTransformData, import.meta.url);
   assert.deepEqual(form.getFlag(MODULE, "wildshape"), { original: IDS.talo, source: wolfSrc.uuid, profile: "p1", endsAt: 21600, carried: [] });
   assert.equal(form.system.attributes.hp.temp, 12, "max(5, 12)");

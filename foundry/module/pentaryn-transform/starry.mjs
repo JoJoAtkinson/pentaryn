@@ -279,7 +279,10 @@ async function pickConstellation(actor) {
       `<p><strong>${constellationLabel(c)}.</strong> ${constellationText(actor, c)}</p>`).join("")}</div>`,
     buttons: CONSTELLATIONS.map((c, i) => ({ action: c, label: constellationLabel(c), default: i === 0 })),
     rejectClose: false
-  }).catch(() => null);
+  }).catch(err => {
+    log.debug("constellation dialog failed", { actor: actor?.uuid ?? null }, err);
+    return null;
+  });
 }
 
 /* ── ending without a click ──────────────────────────────────────────────── */

@@ -520,7 +520,10 @@ async function doShift(host, activity, profileId, uuid) {
   const seconds = durationSeconds(activity.duration);
   // Snapshot the druid now: for an unlinked token, `host` IS the form once transformInto returns.
   const meta = metaFor(host, {
-    profile: profileId, wildShapeId: itemId, seconds, traitsHtml: await traitsHtml(source).catch(() => "")
+    profile: profileId, wildShapeId: itemId, seconds, traitsHtml: await traitsHtml(source).catch(err => {
+      log.debug("traits enrichment failed", { source: source.uuid }, err);
+      return "";
+    })
   });
   pending.set(host.uuid, meta);
   // Starry Form is taken "rather than shape-shifting": a beast shift ends it (and its light).
@@ -619,7 +622,7 @@ Hooks.on("dnd5e.transformActor", (host, source, d, settings) => {
 
     d.items = plan.keep;
     if (plan.stripped.length) {
-      console.log(`${MODULE_ID} | not carried into the form:`, plan.stripped.map(s => `${s.name} (${s.reason})`).join(", "));
+      log.debug("not carried into the form:", plan.stripped.map(s => `${s.name} (${s.reason})`).join(", "));
       if (Array.isArray(d.system?.favorites)) d.system.favorites = pruneFavorites(d.system.favorites, plan.stripped.map(s => s._id));
     }
     // The revert item reads "Return to Talo" with Talo's portrait; Argon labels from the item.
