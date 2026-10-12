@@ -102,12 +102,22 @@ export function normalizePolicy(value) {
  * An empty encounter made by mistake does not switch ghost off.
  */
 export function combatOnScene(combats, sceneId) {
-  return !!sceneId && combatSceneIds(combats).has(sceneId);
+  if (!sceneId) return false;
+  for (const c of combats ?? []) {
+    if (!c || !c.active) continue;
+    const where = Array.isArray(c.combatantSceneIds) ? c.combatantSceneIds : [];
+    if (c.sceneId) {
+      if (c.sceneId === sceneId && (c.started || where.length > 0)) return true;
+    } else if (where.includes(sceneId)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 /**
- * The scene ids combatOnScene answers true for (it is defined through this set), as a Set — one
- * pass over the combats instead of one per token (finding -19).
+ * Every scene id where combatOnScene(combats, id) is true, as a Set — one pass over the combats
+ * instead of one per token (finding -19).
  */
 export function combatSceneIds(combats) {
   const out = new Set();

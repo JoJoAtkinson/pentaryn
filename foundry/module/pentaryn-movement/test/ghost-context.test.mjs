@@ -48,36 +48,6 @@ test("combatSceneIds contains a scene exactly when combatOnScene is true", () =>
   assert.deepEqual([...combatSceneIds(undefined)], []);
 });
 
-// Frozen copy of combatOnScene's body before it was defined through combatSceneIds (review
-// movement-mnt-2), so the equivalence above is not checked against itself alone.
-function oracleCombatOnScene(combats, sceneId) {
-  if (!sceneId) return false;
-  for (const c of combats ?? []) {
-    if (!c || !c.active) continue;
-    const where = Array.isArray(c.combatantSceneIds) ? c.combatantSceneIds : [];
-    if (c.sceneId) {
-      if (c.sceneId === sceneId && (c.started || where.length > 0)) return true;
-    } else if (where.includes(sceneId)) {
-      return true;
-    }
-  }
-  return false;
-}
-
-test("combatOnScene equals the pre-refactor rule over the fixtures", () => {
-  const extra = [
-    undefined,
-    [null, {}, { active: true }],
-    [{ active: true, sceneId: null, started: true, combatantSceneIds: ["", T, S, null] }],
-    [linked({ started: true, combatantSceneIds: [] }), linked({ sceneId: T, active: false })],
-  ];
-  for (const combats of [...COMBATS, ...extra]) {
-    for (const sceneId of [S, T, null, "", "junk"]) {
-      assert.equal(combatOnScene(combats, sceneId), oracleCombatOnScene(combats, sceneId), JSON.stringify({ combats, sceneId }));
-    }
-  }
-});
-
 test("buildGhostContext normalises, is frozen, and an explicit isGM overrides the cached one", () => {
   const ctx = buildGhostContext({ isGM: false, policy: "junk", wish: 1, ownedOnTop: false, combats: [] });
   assert.equal(ctx.policy, "exploration");
