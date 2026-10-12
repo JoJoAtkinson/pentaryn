@@ -41,6 +41,7 @@ import {
 import { applyPlayerWrites, knownListWith, putBelief } from "./apply.mjs";
 import { applyInspect, grantKind, identificationRows, writeIdentification } from "./cascade.mjs";
 import { dropBeliefRow } from "./claim.mjs";
+import { composeStudyPayload } from "./compose.mjs";
 import { factFrom, reset, rowMissed } from "./gate.mjs";
 import { beliefsOf, identDcOf, kindActorOf, reg, resolveFact, studyStateFor, studyTiersOf } from "./resolve.mjs";
 import { cardName, esc, INSPECT } from "./shared.mjs";
@@ -172,6 +173,7 @@ export async function shareFact(spec, recipients, { from = null, notify = true }
   let entry = null;
   let fact = null;
   let text = "";
+  let kindState = null;
   if (spec.ns === "ident") {
     if (!attributeIdsOf(subject, kindActorOf).includes(spec.attrId)) return { ...out, reason: "notCarried" };
     entry = describeAttribute(spec.attrId);
@@ -184,8 +186,8 @@ export async function shareFact(spec, recipients, { from = null, notify = true }
     text = String(fact.row.text ?? "");
     if (isBlankProse(text)) return { ...out, reason: "noText" };
   } else {
-    const state = studyStateFor(null, subject);
-    if (!state.kind || !state.content) return { ...out, reason: "noText" };
+    kindState = studyStateFor(null, subject);
+    if (!kindState.kind || !kindState.content) return { ...out, reason: "noText" };
   }
 
   const pcs = [];
@@ -286,8 +288,11 @@ export async function shareFact(spec, recipients, { from = null, notify = true }
       out.shared.push(pc.id);
     }
   } else {
+    // perf-4: a Share is the GM telling the table one thing — compose the tier-25 page once, so
+    // every recipient gets the same words (an inline roll in it resolves once, not per recipient)
+    const page = await composeStudyPayload(kindState.kind, 25, kindState.skillLabel);
     for (const pc of pcs) {
-      if (await grantKind(pc, subject, 25, { from: fromActor ?? "gm", quiet: true, prior: priorFor.get(pc.id) ?? null }))
+      if (await grantKind(pc, subject, 25, { from: fromActor ?? "gm", quiet: true, prior: priorFor.get(pc.id) ?? null, text: page }))
         out.shared.push(pc.id);
       else out.skipped.push({ pcId: pc.id, reason: "knows" });
     }

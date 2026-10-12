@@ -544,8 +544,11 @@ export async function deliverHeldIdentifications(character, subject) {
  *
  * The belief row is written as delivered with `total: null` — the ledger's honest record of *"they
  * did not roll for this; I told them."*
+ *
+ * `text` is the page to write when the caller already composed it — `shareFact` composes the
+ * tier-25 page once for every recipient (perf-4); without it the page is composed here.
  */
-export async function grantKind(character, kindOrSubject, tier = 15, { from = null, quiet = false, prior = null } = {}) {
+export async function grantKind(character, kindOrSubject, tier = 15, { from = null, quiet = false, prior = null, text: given = null } = {}) {
   if (!game.user?.isGM || !character) return false;
   const kind = kindActorOf(kindOrSubject);
   if (!kind) return false;
@@ -557,8 +560,8 @@ export async function grantKind(character, kindOrSubject, tier = 15, { from = nu
     return false;
   }
 
-  const { label } = studySkillFor(kind);
-  const text = await composeStudyPayload(kind, tier, label);
+  // `text`: a Share's payload, composed once for every recipient (perf-4) — the same words to all
+  const text = given ?? (await composeStudyPayload(kind, tier, studySkillFor(kind).label));
   const now = Date.now();
   const fact = resolveFact({ ns: "kind", subjectId: kind.id });
   if (!fact) return false;

@@ -130,6 +130,11 @@ not two writes per recipient; **Reset inspection** clears every rung in one upda
 one of the character, and posts **one** notification naming every attribute ("… may work out Kin, Vel,
 and Dockhands on … again.") instead of one per rung. The rows written are the same. AC-5.
 
+Fixed (declared): a GM **Share** of a kind to several characters composes the tier-25 page **once**
+and gives every recipient the same words (an inline roll in it resolves once, not per recipient);
+it used to compose the page again for each recipient. `grantKind` takes the composed page as a
+`text` option and composes its own only when none is given. perf-4.
+
 ## 0.19.4 (2026-10-10, usability run, Area 7 re-run)
 
 - **The inspect window's Share switches are the table's PCs only** (`tablePCs`): each player's
