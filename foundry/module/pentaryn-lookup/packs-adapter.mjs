@@ -94,7 +94,7 @@ export async function readTable(uuid, log = null) {
     results: t.results.contents.map(r => ({ range: r.range, description: r.description, name: r.name, text: r.text })) };
 }
 
-/** A spell document by uuid or name: PHB first, then the 2024 SRD (SPELL_PACKS order). */
+/** A spell document by uuid or name: PHB first, then the 2024 SRD, then the 2014 SRD (SPELL_PACKS order). */
 export async function findSpell(ref, log = null) {
   const s = String(ref ?? "").trim();
   if (s.startsWith("Compendium.")) return fromUuid(s).catch(err => (log?.debug("fromUuid failed", { uuid: s }, err), null));
