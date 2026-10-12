@@ -54,3 +54,23 @@ test("no viewed scene and no sceneId: sceneId null, no combat", () => {
   canvas.scene = saved;
   game.combats.contents = [];
 });
+
+test("rob-3: combatActive and status take a scene id or a Scene; status takes a bare id; sceneId is always the id", () => {
+  const other = { id: OTHER, documentName: "Scene" };
+  game.combats.contents = [combat({ sceneId: OTHER })];
+  try {
+    assert.equal(api.combatActive(OTHER), true);
+    assert.equal(api.combatActive(other), true, "a Scene document answers for that scene");
+    assert.equal(api.combatActive({ id: SCENE, documentName: "Scene" }), false);
+    for (const arg of [OTHER, other, { sceneId: OTHER }, { sceneId: other }]) {
+      const s = api.status(arg);
+      assert.equal(s.sceneId, OTHER, `sceneId for ${JSON.stringify(arg)}`);
+      assert.equal(s.combatOnScene, true, `combatOnScene for ${JSON.stringify(arg)}`);
+      assert.equal(s.reason, "combat");
+    }
+    assert.equal(api.status().sceneId, SCENE, "no argument still means the viewed scene");
+    assert.equal(api.status({ sceneId: null }).sceneId, SCENE);
+  } finally {
+    game.combats.contents = [];
+  }
+});

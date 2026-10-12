@@ -17,7 +17,8 @@ export const MANIFEST = Object.freeze({
   rows: [
     {
       path: "status",
-      params: [{ name: "opts", type: "{ sceneId? }", optional: true, doc: "sceneId default: the viewed scene" }],
+      params: [{ name: "opts", type: "{ sceneId?: string | Scene } | string | Scene", optional: true,
+        doc: "a scene id or Scene, bare or as opts.sceneId; default: the viewed scene" }],
       returns: "{ policy, combatOnScene, allowed, reason, wish, ghost, ownedOnTop, patched: { drag, keyboard }, "
         + "sceneId, version, settings: { <key>: scope } }",
       gm: false, writes: false, legacy: true,
@@ -35,7 +36,8 @@ export const MANIFEST = Object.freeze({
     },
     {
       path: "combatActive",
-      params: [{ name: "sceneId", type: "string", optional: true, doc: "default: the viewed scene" }],
+      params: [{ name: "sceneId", type: "string | Scene", optional: true,
+        doc: "a scene id or a Scene; default: the viewed scene" }],
       returns: "boolean",
       gm: false, writes: false, legacy: true,
       doc: "Does a combat stop ghosting on that scene (an active encounter there with a visible combatant, "

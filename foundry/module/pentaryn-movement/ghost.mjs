@@ -19,7 +19,7 @@ import {
   TOOL, TOOL_CLIP_KEYS, TOOL_KEYS, VERSION
 } from "./movement-core.mjs";
 import { SETTINGS, policyWrite, setting } from "./settings.mjs";
-import { combatSummaries } from "./combat-adapter.mjs";
+import { combatSummaries, sceneIdOf } from "./combat-adapter.mjs";
 import { defineAccessor, wrapMethod } from "./lib/patch.mjs";
 
 /** The ctx this feature was installed with (null when uninstalled). */
@@ -34,8 +34,9 @@ let log = null;
 const policy = () => core.normalizePolicy(setting("ghostPolicy"));
 const wish = () => !!setting("ghost");
 
-function combatActive(sceneId = canvas?.scene?.id) {
-  return core.combatOnScene(combatSummaries(), sceneId);
+/** Takes a scene id or a Scene document (rob-3); default: the viewed scene. */
+function combatActive(scene = canvas?.scene?.id) {
+  return core.combatOnScene(combatSummaries(), sceneIdOf(scene));
 }
 
 /**
@@ -77,10 +78,12 @@ const SETTING_SCOPES = Object.freeze(Object.fromEntries(SETTINGS.map(r => [r.key
 /**
  * Everything a console reader needs to see why ghost is or isn't on, for `opts.sceneId` (default:
  * the scene this client views). The first eight keys are the historic ones; sceneId, version and
- * the settings key map are appended after them.
+ * the settings key map are appended after them. `opts` may also be a bare scene id or a Scene, and
+ * `opts.sceneId` a Scene; the returned sceneId is always the id string (rob-3).
  */
 function status(opts = {}) {
-  const sceneId = opts?.sceneId ?? canvas?.scene?.id ?? null;
+  const scene = typeof opts === "string" || opts?.documentName === "Scene" ? opts : opts?.sceneId;
+  const sceneId = scene == null ? (canvas?.scene?.id ?? null) : sceneIdOf(scene);
   return {
     ...core.statusFrom({
       policy: policy(), combat: combatActive(sceneId), wish: wish(), isGM: game.user.isGM,
