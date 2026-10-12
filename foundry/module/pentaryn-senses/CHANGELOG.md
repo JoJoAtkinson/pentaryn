@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **[declared senses-ac-2] End light on the Token HUD shows only to someone who can use it**
+  (final review 2026-10-12): the button shows to the source item's owner or the active GM (was:
+  any GM). A second GM looking at an orphan spell light (its item gone) now sees no button instead
+  of one whose click did nothing; the active GM's click is unchanged. New
+  `test/hud-orphan-gm.test.mjs`.
+
 - **[declared senses-R5] A failed carried-light sync no longer skips the ready Light sweep**
   (final review 2026-10-12): on the active GM's ready, the carried sync now has its own catch and
   warns `carried sync`, then the Light sweep runs anyway (was: one bad Actor batch warned

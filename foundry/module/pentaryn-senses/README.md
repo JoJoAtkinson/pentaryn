@@ -54,7 +54,8 @@ prompt asks **Where does the light go?** — **On me** (your token on the viewed
 glow follows it, through portals too), **Pick a target** (crosshair: click a token or a square;
 right-click or Esc cancels; an open Combat HUD panel closes first), **Not now**. The chat card keeps
 **On me · Pick a target · End light** as icons in its action row. Casting again moves the light;
-**End light** is also on a lit token's HUD for the caster and the GM. If the lit creature is
+**End light** is also on a lit token's HUD for the caster and the GM (if the spell's item is gone,
+only the active GM sees it, since only that GM can put the light out). If the lit creature is
 deleted the light ends and the caster gets a whisper; a GM who deletes a Light square by hand ends
 it, one who drags it moves it. Two casters on one token: the newer wins. The cast notice names the
 token only if you could see its nameplate.

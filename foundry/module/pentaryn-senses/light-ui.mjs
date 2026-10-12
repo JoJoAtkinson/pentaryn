@@ -8,7 +8,7 @@
 import { MODULE, profileFor, isLit, isHooded, isLightSpellData, lightingItemId, readSpellLight, esc, setTip } from "./senses-core.mjs";
 import { realItem, itemFrom } from "./light-adapter.mjs";
 import { collapseArgonPanels } from "./argon.mjs";
-import { isAnyGM } from "./lib/election.mjs";
+import { isActiveGM } from "./lib/election.mjs";
 
 const PICK_TIMEOUT_MS = 60_000;
 
@@ -273,7 +273,9 @@ export function injectHUD(app, element) {
   const sl = readSpellLight(doc);
   if (!sl) return;
   const item = itemFrom(sl.source);
-  if (!isAnyGM() && !item?.isOwner) return;
+  // [declared senses-ac-2] only a viewer who can act sees it: the item's owner, or the active GM
+  // (only its reconcile puts an orphan out; another GM's click would do nothing)
+  if (!item?.isOwner && !isActiveGM()) return;
   const root = element instanceof HTMLElement ? element : element?.[0];
   const col = root?.querySelector(".col.right") ?? root?.querySelector(".right");
   if (!col || col.querySelector(".ps-light-end")) return;
@@ -288,7 +290,7 @@ export function injectHUD(app, element) {
     ev.stopPropagation();
     (async () => {
       if (item?.isOwner) await actions.end(item);
-      else if (isAnyGM()) actions.run(sl.source); // the item is gone: put the orphan out
+      else if (isActiveGM()) actions.run(sl.source); // the item is gone: put the orphan out
       app.render?.();
     })().catch(e => warn("hud click", e));
   });
