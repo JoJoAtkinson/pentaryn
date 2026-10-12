@@ -52,8 +52,6 @@ import { MODULE, restoreSlotScaling, placeSummonsDefault, isWildcardPath, arcane
   arcaneRecoveryCheck, isArcaneRecovery, ARCANE_RECOVERY_MAX_LEVEL } from "./table-core.mjs";
 import { settingOr } from "./settings.mjs";
 
-const T = (key, data) => (data ? game.i18n.format(key, data) : game.i18n.localize(key));
-
 /* ── 1. summons ─────────────────────────────────────────────────────────── */
 
 let summoning = null;   // { tab, collapsed, until }
@@ -64,7 +62,7 @@ Hooks.on("dnd5e.preSummon", (activity, profile) => {
     summoning = { tab: sidebar?.tabGroups?.primary ?? null, collapsed: sidebar ? !sidebar.expanded : false, until: Date.now() + 60_000 };
     if (activity?.summon?.prompt !== false) {
       const name = profile?.name || activity?.item?.name || "";
-      ui.notifications?.info?.(T("PENTARYN_RIDERS.summon.place", { name }));
+      ui.notifications?.info?.(_loc("PENTARYN_RIDERS.summon.place", { name }));
     }
   } catch (err) { console.warn(`${MODULE} | summon sidebar keep skipped`, err); }
 });
@@ -228,18 +226,17 @@ async function arcaneRecoveryDialog(actor) {
       <div class="form-fields"><input type="number" name="l${l}" min="0" max="${spent}" step="1" value="${choice[l] ?? 0}"></div></div>`);
   }
   if (!rows.length) {
-    ui.notifications.info(game.i18n.localize("PENTARYN_RIDERS.arcaneRecovery.none"));
+    ui.notifications.info(_loc("PENTARYN_RIDERS.arcaneRecovery.none"));
     return null;
   }
-  const T = (k, d) => game.i18n.format(`PENTARYN_RIDERS.arcaneRecovery.${k}`, d ?? {});
   const read = form => Object.fromEntries([...form.querySelectorAll("input[name^=l]")].map(i => [Number(i.name.slice(1)), Number(i.value) || 0]));
   const result = await foundry.applications.api.DialogV2.wait({
-    window: { title: T("title"), icon: "fa-solid fa-book-open" },
-    content: `<p>${T("intro", { cap })}</p>${rows.join("")}<p class="pr-ar-total"></p>`,
+    window: { title: _loc("PENTARYN_RIDERS.arcaneRecovery.title"), icon: "fa-solid fa-book-open" },
+    content: `<p>${_loc("PENTARYN_RIDERS.arcaneRecovery.intro", { cap })}</p>${rows.join("")}<p class="pr-ar-total"></p>`,
     buttons: [
-      { action: "ok", label: T("recover"), icon: "fa-solid fa-check", default: true,
+      { action: "ok", label: _loc("PENTARYN_RIDERS.arcaneRecovery.recover"), icon: "fa-solid fa-check", default: true,
         callback: (event, button) => read(button.form) },
-      { action: "cancel", label: T("cancel"), icon: "fa-solid fa-xmark" }
+      { action: "cancel", label: _loc("PENTARYN_RIDERS.arcaneRecovery.cancel"), icon: "fa-solid fa-xmark" }
     ],
     render: (event, dialog) => {
       const el = dialog.element;
@@ -248,7 +245,7 @@ async function arcaneRecoveryDialog(actor) {
       const ok = el.querySelector('button[data-action="ok"]');
       const refresh = () => {
         const check = arcaneRecoveryCheck(read(form), slots, cap);
-        total.textContent = T("total", { used: check.used, cap });
+        total.textContent = _loc("PENTARYN_RIDERS.arcaneRecovery.total", { used: check.used, cap });
         total.classList.toggle("over", !check.ok);
         if (ok) ok.disabled = !check.ok || check.used === 0;
       };
@@ -270,7 +267,7 @@ async function arcaneRecoveryDialog(actor) {
   await actor.update(update);
   await ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor }),
-    content: `<p>${foundry.utils.escapeHTML(T("done", { name: actor.name, slots: parts.join(", ") }))}</p>`
+    content: `<p>${foundry.utils.escapeHTML(_loc("PENTARYN_RIDERS.arcaneRecovery.done", { name: actor.name, slots: parts.join(", ") }))}</p>`
   });
   return result;
 }

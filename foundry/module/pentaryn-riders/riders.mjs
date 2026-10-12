@@ -53,7 +53,6 @@ import "./cast-flow.mjs";
 
 const QUERY = `${MODULE}.battleMedic`;
 const PRESET = Symbol.for(`${MODULE}.resistancePreset`);
-const L = (k, data) => (data ? game.i18n.format(`PENTARYN_RIDERS.${k}`, data) : game.i18n.localize(`PENTARYN_RIDERS.${k}`));
 
 /* -------------------------------------------- */
 /*  Features on an actor                        */
@@ -227,9 +226,9 @@ function renderNote(message, html) {
   const parts = core.noteParts(flag);
   if (!parts.length) return;
   const text = parts.map(p => {
-    if (p.kind === "bonus") return L("note.bonus", { label: p.label, value: p.value });
-    if (p.kind === "min") return L("note.min", { label: p.label, n: p.n });
-    if (p.kind === "reroll") return L("note.reroll", { label: p.label });
+    if (p.kind === "bonus") return _loc("PENTARYN_RIDERS.note.bonus", { label: p.label, value: p.value });
+    if (p.kind === "min") return _loc("PENTARYN_RIDERS.note.min", { label: p.label, n: p.n });
+    if (p.kind === "reroll") return _loc("PENTARYN_RIDERS.note.reroll", { label: p.label });
     return p.label;
   }).join(" · ");
   const note = document.createElement("p");
@@ -372,11 +371,11 @@ function soleTarget() {
 
 /** Why Battle Medic can't run right now, or null. Checked before dnd5e spends the kit. */
 function battleMedicBlock(healer, token) {
-  if (!token?.actor) return L("battleMedic.needTarget");
+  if (!token?.actor) return _loc("PENTARYN_RIDERS.battleMedic.needTarget");
   const target = token.actor;
-  if (!target.system?.attributes?.hd) return L("battleMedic.noHitDice", { name: token.name });
-  if (!core.pickSpend(hdPools(target))) return L("battleMedic.noHitDice", { name: token.name });
-  if (!target.isOwner && !game.users.activeGM) return L("battleMedic.noGM");
+  if (!target.system?.attributes?.hd) return _loc("PENTARYN_RIDERS.battleMedic.noHitDice", { name: token.name });
+  if (!core.pickSpend(hdPools(target))) return _loc("PENTARYN_RIDERS.battleMedic.noHitDice", { name: token.name });
+  if (!target.isOwner && !game.users.activeGM) return _loc("PENTARYN_RIDERS.battleMedic.noGM");
   return null;
 }
 
@@ -399,12 +398,12 @@ async function applyBattleMedic(target, { faces, amount, prof = null }) {
 async function runBattleMedic(healer, token) {
   const target = token.actor;
   const pool = core.pickSpend(hdPools(target));
-  if (!pool) { ui.notifications.warn(L("battleMedic.noHitDice", { name: token.name })); return null; }
+  if (!pool) { ui.notifications.warn(_loc("PENTARYN_RIDERS.battleMedic.noHitDice", { name: token.name })); return null; }
   const prof = healer.system?.attributes?.prof ?? 0;
   const roll = await new Roll(core.battleMedicFormula(pool.faces, prof)).evaluate();
   await roll.toMessage({
     speaker: ChatMessage.implementation.getSpeaker({ actor: healer }),
-    flavor: L("battleMedic.flavor", { target: token.name, faces: pool.faces }),
+    flavor: _loc("PENTARYN_RIDERS.battleMedic.flavor", { target: token.name, faces: pool.faces }),
     flags: { [MODULE]: { flow: "battle-medic", target: target.uuid, faces: pool.faces } }
   });
 
@@ -419,12 +418,12 @@ async function runBattleMedic(healer, token) {
     }
   } catch (err) {
     console.warn(`${MODULE} | Battle Medic write failed`, err);
-    ui.notifications.warn(L("battleMedic.failed", { name: token.name }));
+    ui.notifications.warn(_loc("PENTARYN_RIDERS.battleMedic.failed", { name: token.name }));
     return null;
   }
   // Hit Dice left only to someone who could read them on the sheet anyway (not an NPC's to a player).
   const seesSheet = game.user.isGM || target.testUserPermission(game.user, "OBSERVER");
-  ui.notifications.info(L(seesSheet ? "battleMedic.done" : "battleMedic.doneShort", {
+  ui.notifications.info(_loc(seesSheet ? "PENTARYN_RIDERS.battleMedic.done" : "PENTARYN_RIDERS.battleMedic.doneShort", {
     name: token.name, healed: result.healed, faces: result.faces, value: result.value, max: result.max
   }));
   return result;
@@ -514,8 +513,8 @@ function decorateHitDice(app, element) {
     return b;
   };
   wrap.append(
-    button("spend", "fa-minus", L("hd.spend"), value <= 0),
-    button("restore", "fa-plus", L("hd.restore"), value >= max)
+    button("spend", "fa-minus", _loc("PENTARYN_RIDERS.hd.spend"), value <= 0),
+    button("restore", "fa-plus", _loc("PENTARYN_RIDERS.hd.restore"), value >= max)
   );
   wrap.addEventListener("click", async ev => {
     const b = ev.target.closest("button[data-pr-hd]");

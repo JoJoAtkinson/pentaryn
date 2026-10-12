@@ -78,7 +78,7 @@ function addRituals(button) {
   if (enabled() && button.showPreparedOnly && hasRitualAdept(actor)) {
     const spells = rit.adeptRituals(all);
     if (spells.length) button._spells.push({
-      label: game.i18n.localize("PENTARYN_RIDERS.rituals.group"),
+      label: _loc("PENTARYN_RIDERS.rituals.group"),
       buttons: spells.map(item => new Btn({ item })),
       uses: { max: Infinity, value: Infinity }
     });
@@ -90,7 +90,7 @@ function addRituals(button) {
       activations: [...(item.system?.activities ?? [])].map(a => a?.activation?.type).filter(Boolean)
     })), { preparedOnly: !!button.showPreparedOnly });
     if (long.length) button._spells.push({
-      label: game.i18n.localize("PENTARYN_RIDERS.rituals.longGroup"),
+      label: _loc("PENTARYN_RIDERS.rituals.longGroup"),
       buttons: long.map(item => new Btn({ item })),
       uses: { max: Infinity, value: Infinity }
     });

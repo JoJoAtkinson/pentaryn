@@ -135,10 +135,12 @@ Hooks.on("dnd5e.renderChatMessage", (message, html) => {
     if (!Number.isFinite(Number(dc)) || dc === null) return;
     const failed = Number(roll.total) < Number(dc);
     const broken = message.system?.outcome === "broken";
-    const key = failed ? (broken ? "failedEnded" : "failed") : "success";
     const p = document.createElement("p");
     p.className = `pr-conc-result ${failed ? "failure" : "success"}`;
-    p.textContent = game.i18n.format(`PENTARYN_RIDERS.concentration.${key}`, { dc: Number(dc) });
+    const key = failed
+      ? (broken ? "PENTARYN_RIDERS.concentration.failedEnded" : "PENTARYN_RIDERS.concentration.failed")
+      : "PENTARYN_RIDERS.concentration.success";
+    p.textContent = _loc(key, { dc: Number(dc) });
     const at = root.querySelector(".dice-roll") ?? root.querySelector(".message-content");
     if (at?.classList?.contains("dice-roll")) at.after(p); else (at ?? root).append(p);
   } catch (err) { console.warn(`${MODULE} | concentration result line skipped`, err); }
