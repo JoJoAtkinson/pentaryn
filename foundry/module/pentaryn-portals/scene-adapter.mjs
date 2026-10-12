@@ -8,7 +8,7 @@
  */
 
 import { MODULE, SNAP_DIR, esc, cardData, dialogIdParts, cropWindow, translateShapes, blockingWallCoords, tokenBox,
-  occupiedBy, isAoeHandle, summonerActorId, playerOwners, isScenery, partySelection, ringSpots, wallBlocker, assignSpots,
+  occupiedBy, crowded, isAoeHandle, summonerActorId, playerOwners, isScenery, partySelection, ringSpots, wallBlocker, assignSpots,
   partyPreview, hasDestination, withoutDestination } from "./portals-core.mjs";
 
 const deps = { setting: () => undefined, log: null };
@@ -224,6 +224,8 @@ export function partyRecords(scene) {
 /**
  * Snapped top-left positions for `toks`, filled outward from (cx, cy) on `dest`. With `party`
  * (the partySelection records for `toks`, same order) each follower lands beside its PC.
+ * Every token is tested by its whole footprint (portals-edge-2): a Large token never lands over a
+ * stander or another arrival.
  */
 export function landingPlaces(dest, toks, cx, cy, party = null) {
   const g = dest.grid.size;
@@ -233,15 +235,30 @@ export function landingPlaces(dest, toks, cx, cy, party = null) {
   // Don't land on someone already standing there (the PC who just arrived, a guard).
   const moving = new Set(toks.map(t => t.id));
   const occupied = occupiedBy(dest.tokens.filter(t => !moving.has(t.id)).map(t => tokenBox(t, g)));
-  const grouped = party?.length === toks.length;
-  // A few spare squares let a follower pick one touching its PC rather than the next in the ring.
-  const ring = ringSpots(cx, cy, g, toks.length + (grouped ? 8 : 0), { blocked: wallBlocker(walls), occupied });
-  const spots = grouped ? assignSpots(ring, party) : ring;
-  return toks.map((t, i) => {
-    const w = t.width * g, h = t.height * g;
-    const s = dest.grid.getSnappedPoint({ x: spots[i].x - w / 2, y: spots[i].y - h / 2 }, { mode: CONST.GRID_SNAPPING_MODES.TOP_LEFT_VERTEX });
-    return { x: s.x, y: s.y };
-  });
+  // toks[i]'s box centred on a ring spot, top-left snapped to the grid: what is tested is what lands.
+  const boxes = new Map();
+  const boxAt = ({ x, y }, i) => {
+    const k = `${i}|${x},${y}`;
+    if (!boxes.has(k)) {
+      const w = toks[i].width * g, h = toks[i].height * g;
+      const s = dest.grid.getSnappedPoint({ x: x - w / 2, y: y - h / 2 }, { mode: CONST.GRID_SNAPPING_MODES.TOP_LEFT_VERTEX });
+      boxes.set(k, { x: s.x, y: s.y, w, h });
+    }
+    return boxes.get(k);
+  };
+  const clear = b => !occupied(b.x, b.y, b.w, b.h);
+  const blocked = wallBlocker(walls);
+  let spots;
+  if (party?.length === toks.length) {
+    // Spare squares let a follower pick one touching its PC, and cover the extra squares a big token fills.
+    const n = toks.reduce((sum, t) => sum + Math.max(1, Math.ceil(t.width) * Math.ceil(t.height)), 0) + 8;
+    const ring = ringSpots(cx, cy, g, n, { blocked, occupied });
+    const fits = (s, i, out) => clear(boxAt(s, i)) && !crowded(boxAt(s, i), out.flatMap((o, j) => (o ? [boxAt(o, j)] : [])));
+    spots = assignSpots(ring, party, { fits });
+  } else {
+    spots = ringSpots(cx, cy, g, toks.length, { blocked, occupied, footprint: (x, y, i) => boxAt({ x, y }, i) });
+  }
+  return toks.map((t, i) => { const b = boxAt(spots[i], i); return { x: b.x, y: b.y }; });
 }
 
 /** GM: move tokens to another scene around (cx, cy). Plain create + delete, no `replacements`, so

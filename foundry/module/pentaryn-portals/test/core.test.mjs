@@ -143,6 +143,25 @@ test("ringSpots", () => {
   assert.deepEqual(ringSpots(0, 0, 100, 2, { blocked: () => true, occupied: () => false, maxRing: 3 }), [{ x: 0, y: 0 }, { x: 0, y: 0 }]);
 });
 
+test("portals-edge-2: occupiedBy tests a box by overlap; ringSpots hands occupied each token's footprint", () => {
+  const occ = core.occupiedBy([{ x: 200, y: 200, w: 100, h: 100 }]);
+  assert.deepEqual([occ(100, 100, 200, 200), occ(100, 100, 100, 100), occ(300, 200, 100, 100), occ(250, 250)], [true, false, false, true]);
+  // A 2×2 first, then 1×1s, around (150, 150) on a 100 grid; a stander on (200, 200).
+  const size = i => (i === 0 ? 2 : 1);
+  const footprint = (x, y, i) => {
+    const w = size(i) * 100;
+    return { x: Math.round((x - w / 2) / 100) * 100, y: Math.round((y - w / 2) / 100) * 100, w, h: w };
+  };
+  const seen = [];
+  const spots = ringSpots(150, 150, 100, 6, { occupied: (...a) => { seen.push(a.length); return occ(...a); }, footprint });
+  const boxes = spots.map((s, i) => footprint(s.x, s.y, i));
+  assert.ok(seen.every(n => n === 4), "occupied gets the box");
+  boxes.forEach((b, i) => {
+    assert.equal(occ(b.x, b.y, b.w, b.h), false, `spot ${i} clear of the stander`);
+    assert.equal(crowded(b, boxes.filter((_, j) => j !== i)), false, `spot ${i} clear of the others`);
+  });
+});
+
 test("destinations: core 14.368+ stores same-scene links relative to the behavior", () => {
   const toAbs = u => (u.startsWith("..") && !u.startsWith("...") ? `Scene.S.Region.${u.slice(2)}` : u.startsWith(".") ? null : u);
   const stored = new Set(["..R2", "Scene.T.Region.R9"]);

@@ -477,11 +477,12 @@ test("gaps: a replacement uuid fromUuid rejects is skipped; a real token's centr
   assert.deepEqual(seen, [{ x: 150, y: 250, elevation: 15 }]);
 });
 
-test("gaps: spreadArrival stays put when the nearest free square is its own (an off-grid overlap)", async () => {
+test("gaps: spreadArrival steps off an off-grid overlap too; its own square is tested by footprint, not centre [declared] (portals-edge-2)", async () => {
+  // The guard covers the arrival's top-left quarter. Before, the centre point was free, so it stayed put on him.
   const arrived = arrivalScene({ name: "Guard", actorId: "GUARD", x: 550, y: 950 });
   const n = F.calls.length;
   await S.spreadArrival(arrived);
-  assert.deepEqual(W.callsSince(n, ["update"]), []);
+  assert.deepEqual(W.callsSince(n, ["update"]).map(c => c.changes), [{ x: 700, y: 900 }]);
 });
 
 test("gaps: a follower with no PC to stand by reads 'follower'; a destination with no nav name uses its name", async () => {
@@ -495,4 +496,29 @@ test("gaps: a follower with no PC to stand by reads 'follower'; a destination wi
   const m = F.calls.length;
   await S.bringFollowers(H.s, deleted, replacements);
   assert.deepEqual(ops(m).filter(c => c.op === "notify").map(c => c.message), ["Caven brought Skeleton to Drow City — Fighting Pit (set-piece)."]);
+});
+
+/* ── portals-edge-2: footprints (last, so the hall() ids above stay put) ── */
+
+/** Every pair of boxes that share area (touching edges do not count). */
+const overlaps = boxes => boxes.flatMap((a, i) => boxes.slice(i + 1).filter(b =>
+  a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h).map(b => [a.id, b.id]));
+const landedBoxes = (toks, places) => toks.map((t, i) => ({ id: t.id, x: places[i].x, y: places[i].y, w: t.width * 100, h: t.height * 100 }));
+
+test("portals-edge-2: landing tests each token's footprint, so a Large token never lands over a stander or the party", () => {
+  // A stander one square down-right of the centre square: a 2×2 centred there would cover it.
+  const dest = W.scene({ id: "LandBig", name: "Land", tokens: [{ id: "Stander2", x: 200, y: 200 }] });
+  const big = W.token(W.scene({ id: "FromBig2", name: "From" }), { id: "mBig2", x: 0, y: 0, width: 2, height: 2 });
+  const smalls = [1, 2, 3, 4, 5, 6].map(i => W.token(W.scene({ id: `FromS${i}`, name: "From" }), { id: `s${i}`, x: 0, y: 0 }));
+  const toks = [big, ...smalls];
+  const places = S.landingPlaces(dest, toks, 150, 150);
+  const standing = { id: "Stander2", x: 200, y: 200, w: 100, h: 100 };
+  assert.deepEqual(overlaps([standing, ...landedBoxes(toks, places)]), [], "no landed box overlaps a stander or another landed box");
+  for (const p of places) assert.ok(p.x % 100 === 0 && p.y % 100 === 0, "whole squares");
+
+  // Grouped (Teleport party): the 2×2 Steed lands beside its owners without covering any of them.
+  const H = hall();
+  const party = S.partyRecords(H.s);
+  const ptoks = party.map(r => r.doc);
+  assert.deepEqual(overlaps(landedBoxes(ptoks, S.landingPlaces(H.pit, ptoks, 1050, 550, party))), []);
 });

@@ -29,15 +29,17 @@ migration record → `context/plans/addon-blueprint-2026-10/migrate-pentaryn-por
 - **Teleport party (GM).** A confirm lists who moves, each follower "lands beside <PC>". The party
   is every linked character token plus every token a player owns or a PC summoned — never item
   piles, Markers, crowd, or pentaryn-aoe area handles. They land spread out from the region's
-  centre, skipping squares a wall cuts off or someone stands on, each follower beside its PC; on
+  centre, skipping squares a wall cuts off or someone stands on — a Large or bigger token's whole
+  footprint must be clear, of standers and of the rest of the party — each follower beside its PC; on
   another scene the active players are pulled there and the GM's view follows. A token deleted
   while the confirm is open is left behind, not recreated; if none are left it warns and moves nobody.
 - **Summons follow their PC.** When a player walks their PC through a link to **another scene**,
   the active GM's client carries the PC's summons and the tokens only that player owns, and lands
   them around the PC (a co-owned steed comes when all its owners go together). Only a real portal
   hop counts: a GM cut-and-paste drags nothing. Needs a GM logged in.
-- **Arrivals step off an occupied square.** A PC who comes through onto someone's square is moved
-  by the GM's client to the nearest free one before its company follows.
+- **Arrivals step off an occupied square.** A PC who comes through overlapping anyone (even off the
+  grid, or a Large token) is moved by the GM's client to the nearest square its whole footprint fits
+  before its company follows.
 - **Authoring (GM).** Region config → Appearance → *Portal card*: title, image, description, a live
   preview, and a camera button that crops the scene background around the region (8 × 5 squares,
   arrival square circled). The **Portal card window** (badge menu → Edit card) edits every
