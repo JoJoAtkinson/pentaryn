@@ -381,11 +381,9 @@ export function clampAttribute(entry) {
   if (!entry || typeof entry !== "object") return null;
   const rawId = typeof entry.id === "string" ? entry.id.trim() : "";
   // a derived id keeps its namespace verbatim; an authored one is re-normalised, so a
-  // hand-edited setting cannot smuggle in an id the autocomplete could never have produced.
-  // `kind:` keeps its slug verbatim too — it is an actor id, as in resolveAttrRef
+  // hand-edited setting cannot smuggle in an id the autocomplete could never have produced
   const ns = derivedNamespace(rawId);
-  const rest = rawId.slice(ns ? ns.length + 1 : 0);
-  const id = ns ? `${ns}:${ns === "kind" ? rest.trim() : attrIdOf(rest)}` : attrIdOf(rawId);
+  const id = ns ? `${ns}:${attrIdOf(rawId.slice(ns.length + 1))}` : attrIdOf(rawId);
   if (!id || (ns && id === `${ns}:`)) return null;
   const title = str(entry.title, ATTR_TITLE_MAX).trim();
   const degenerate = !!ns && NEVER_ADVANTAGE.has(ns);
