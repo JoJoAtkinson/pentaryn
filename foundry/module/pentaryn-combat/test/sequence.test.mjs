@@ -596,6 +596,15 @@ test("follow-ups: Off-hand, Nick, Martial Arts, Hew, Pole Strike, unknown (golde
   F.calls.length = 0;
 });
 
+test("api.followUp with a missing or non-object followUp answers unknown, not a TypeError (combat-core-ROB-6)", async () => {
+  for (const f of [undefined, null, "offhand", 3]) {
+    F.calls.length = 0;
+    assert.deepEqual(await api.followUp(fig, f), { rolled: 0, status: "unknown" }, `combat-core-ROB-6: ${String(f)}`);
+    assert.deepEqual(F.calls.filter(c => c.op === "activity.rollAttack"), [], "nothing rolled");
+  }
+  F.calls.length = 0;
+});
+
 test("Flurry of Blows: its own card spends the Focus first; missing / no Focus / cancelled (golden/sequence-flurry.json)", async () => {
   const rows = [];
   reset(mnk);

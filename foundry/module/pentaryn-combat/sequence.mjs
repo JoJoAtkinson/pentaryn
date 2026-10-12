@@ -397,6 +397,7 @@ export function abortFor(actor) {
  * @param {{kind: string, weaponId: string, count?: number}} f
  */
 export async function runFollowUp(actor, f, { event = null } = {}) {
+  if (!f || typeof f !== "object") return { rolled: 0, status: "unknown" };   // a console caller's bad argument (combat-core-ROB-6)
   const label = _loc(core.keyFor("FollowUp", f.kind), { weapon: actor.items.get(f.weaponId)?.name ?? "" });
   if (f.kind === "offhand") {
     const out = await runSwings(actor, [{ weaponId: f.weaponId, mode: "offhand", kind: "offhand" }], { event, title: label, swappable: false });
