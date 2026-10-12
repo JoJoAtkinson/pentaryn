@@ -57,7 +57,7 @@ object. Ask it: `describe()` (offline: `test/golden/describe.json`), `settings()
 | `arcaneRecovery(ref)` | spell slots, one chat line | `{ ok, actor, recovered }` / `{ ok: false, code: "REFUSED" \| "NOT_FOUND" … }`; the picker without spending a use |
 | `report(actor?)` | — | rows `{ actor, rule, items, types?, status, manual?, handAdded?, battleMedic? }` (+ `console.table`); no actor = every character |
 | `featuresOf(actor)` | — | `{ key, rule, items, types }[]` — `items` are **live** Item documents |
-| `setType(target, type, ruleKey?)` | `flags.pentaryn-riders.damageType` | names of the items set; throws on an empty type |
+| `setType(target, type, ruleKey?)` | `flags.pentaryn-riders.damageType` | names of the items set (only items whose rule lists the type; an Item no typed rule matches is not set); throws on an empty type, and `BAD_ARGS` naming the allowed types when no targeted rule lists it |
 | `retireManual(actor)` | the flag; deletes Affinity's damage activities | `"<item>: <activity>"[]` |
 | `installBattleMedic(actor, { replace })` | the Healer feat's activities | `{ ok, item, kit, kitFound, updated, removed }` / `{ ok: false, why }` |
 | `battleMedic(healer, token)` | the patient's Hit Die and HP | `{ faces, healed, hp, value, max }` / `null` — runs the flow without spending the kit |

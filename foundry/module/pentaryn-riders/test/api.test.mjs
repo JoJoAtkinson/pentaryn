@@ -16,6 +16,11 @@
 // setFlag plus one deleteActivity per activity. An actor target now takes one
 // `updateEmbeddedDocuments("Item", …)` (a single Item target keeps its one setFlag); retireManual
 // puts each item's flag (when missing) and every damage-activity deletion into that one batch.
+//
+// rob-5 [declared]: setType wrote any non-empty type and reported success. The type is now checked
+// against each targeted rule's `types` (an actor's typed features, or the typed rules an Item
+// matches); only items whose rule lists it are set, and when none does it throws BAD_ARGS naming
+// the allowed types and writes nothing. An Item no typed rule matches (Healer) is no longer set.
 import { mock, test } from "node:test";
 import assert from "node:assert/strict";
 import { pinJSON } from "./kit/harness.mjs";
@@ -92,7 +97,8 @@ test("setType: type required; an actor sets every typed feature item, or one rul
   assert.equal(sc.items.get("scadept000000001").flags[MODULE].damageType, "cold");
   assert.deepEqual(await api.setType(sc, "Fire", "elemental-affinity"), ["Elemental Affinity"]);
   assert.equal(sc.items.get("scaffin000000001").flags[MODULE].damageType, "fire");
-  assert.deepEqual(await api.setType(sc.items.get("schealer00000001"), "fire"), ["Healer"], "an item is set whatever it is");
+  assert.deepEqual(await api.setType(sc.items.get("schealer00000001"), "fire"), [], "rob-5: an item no typed rule matches is not set");
+  assert.deepEqual(await api.setType(sc.items.get("scadept000000001"), "fire"), ["Elemental Adept (Fire)"]);
   assert.deepEqual(await api.setType(npc, "fire"), []);
   assert.deepEqual(await api.setType({ name: "plain" }, "fire"), [], "no setFlag: skipped");
   // riders-async-5: an actor target is one updateEmbeddedDocuments; an Item target its one setFlag.
@@ -103,8 +109,35 @@ test("setType: type required; an actor sets every typed feature item, or one rul
       { _id: "scaffin000000001", [`flags.${MODULE}.damageType`]: "cold" },
     ]],
     ["updateEmbeddedDocuments", sc.id, [{ _id: "scaffin000000001", [`flags.${MODULE}.damageType`]: "fire" }]],
-    ["update", "schealer00000001", { [`flags.${MODULE}.damageType`]: "fire" }],
+    ["update", "scadept000000001", { [`flags.${MODULE}.damageType`]: "fire" }],
   ]);
+});
+
+test("rob-5 [declared]: setType checks the type against each targeted rule's types; none fits → BAD_ARGS naming them, nothing written", async () => {
+  const sc = makeActor({ name: "Typed", items: [
+    { id: "tyadept000000001", name: "Elemental Adept", type: "feat", system: {} },
+    { id: "tyaffin000000001", name: "Elemental Affinity", type: "feat", system: {} },
+    { id: "tyhealer00000001", name: "Healer", type: "feat", system: {} },
+  ] });
+  const before = F.calls.length;
+  const writes = () => F.calls.slice(before).filter(c => c.op === "update" || c.op === "updateEmbeddedDocuments");
+  await assert.rejects(api.setType(sc, "banana"), {
+    code: "BAD_ARGS",
+    message: "BAD_ARGS: setType: \"banana\" fits none of Elemental Adept (acid, cold, fire, lightning, thunder), Elemental Affinity (acid, cold, fire, lightning, poison)",
+  });
+  await assert.rejects(api.setType(sc, "poison", "elemental-adept"), { code: "BAD_ARGS", message: /fits none of Elemental Adept \(acid, cold, fire, lightning, thunder\)$/ });
+  await assert.rejects(api.setType(sc.items.get("tyadept000000001"), "Poison"), { code: "BAD_ARGS", message: /fits none of Elemental Adept \(/ });
+  assert.deepEqual(writes(), [], "an invalid type writes nothing");
+  // A type one rule takes and another does not: only the rule that takes it is set.
+  assert.deepEqual(await api.setType(sc, "Poison"), ["Elemental Affinity"]);
+  assert.deepEqual(await api.setType(sc, "thunder"), ["Elemental Adept"]);
+  assert.equal(sc.items.get("tyadept000000001").flags[MODULE].damageType, "thunder");
+  assert.equal(sc.items.get("tyaffin000000001").flags[MODULE].damageType, "poison");
+  // An item no typed rule matches is not set (was: any item took the flag).
+  assert.deepEqual(await api.setType(sc.items.get("tyhealer00000001"), "fire"), []);
+  assert.equal(sc.items.get("tyhealer00000001").flags?.[MODULE]?.damageType, undefined);
+  assert.deepEqual(await api.setType(sc.items.get("tyadept000000001"), "ACID"), ["Elemental Adept"]);
+  assert.equal(sc.items.get("tyadept000000001").flags[MODULE].damageType, "acid");
 });
 
 test("retireManual: untyped Affinity left alone; typed → flag pinned (if unset) and every damage activity deleted", async () => {

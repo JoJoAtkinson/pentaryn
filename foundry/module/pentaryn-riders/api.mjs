@@ -7,15 +7,15 @@
  */
 
 import * as core from "./riders-core.mjs";
-import { HOOKS, MODULE, NS } from "./riders-core.mjs";
+import { HOOKS, MODULE, NS, RULES, matchRule } from "./riders-core.mjs";
 import { MANIFEST } from "./api-manifest.mjs";
 import { SETTINGS, settingsSnapshot } from "./settings.mjs";
 import {
-  RELAY_QUERY, carriedBy, concentrationSummonsOf, featuresOf, hdPools, hdSummary, isBattleMedic, isType, restoreHitDie,
+  RELAY_QUERY, carriedBy, concentrationSummonsOf, featuresOf, hdPools, hdSummary, isBattleMedic, isType, itemInfo, restoreHitDie,
   spendHitDie, withLegacyActor,
 } from "./shapes.mjs";
 import { buildApi, toPlain } from "./lib/api.mjs";
-import { fail, ok } from "./lib/errors.mjs";
+import { codedError, fail, ok } from "./lib/errors.mjs";
 import { flagPath } from "./lib/flags.mjs";
 import { patches } from "./lib/patch.mjs";
 import { publishedOf } from "./lib/publish.mjs";
@@ -25,18 +25,28 @@ import { refOf, resolveRef } from "./lib/resolve.mjs";
  * Set the damage type a typed feature (Elemental Adept, Elemental Affinity) stands for.
  * `target` is that item (one setFlag), or an actor: then every typed feature item on it is set
  * (only the one rule's items when `ruleKey` is given), in one updateEmbeddedDocuments.
+ * Only items whose rule lists the type are set; when no targeted rule lists it, throws BAD_ARGS
+ * naming each rule's types and writes nothing (rob-5). An item no typed rule matches is not set.
  * Returns the names of the items set.
  */
 async function setType(target, type, ruleKey = null) {
   const t = String(type ?? "").toLowerCase().trim();
   if (!t) throw new Error("setType(item | actor, type, ruleKey?): type required");
+  if (!(target instanceof Actor) && !target?.setFlag) return [];
+  const targeted = target instanceof Actor
+    ? featuresOf(target).filter(f => f.rule.types && (!ruleKey || f.key === ruleKey)).map(f => ({ rule: f.rule, items: f.items }))
+    : RULES.filter(r => r.types && matchRule(r, itemInfo(target))).map(rule => ({ rule, items: [target] }));
+  if (!targeted.length) return [];
+  const fits = targeted.filter(x => x.rule.types.includes(t));
+  if (!fits.length) {
+    throw codedError("BAD_ARGS", `setType: "${t}" fits none of ${targeted.map(x => `${x.rule.label} (${x.rule.types.join(", ")})`).join(", ")}`);
+  }
   if (!(target instanceof Actor)) {
-    if (!target?.setFlag) return [];
     await target.setFlag(MODULE, "damageType", t);
     return [target.name];
   }
-  const items = featuresOf(target).filter(f => f.rule.types && (!ruleKey || f.key === ruleKey)).flatMap(f => f.items);
-  if (items.length) await target.updateEmbeddedDocuments("Item", items.map(i => ({ _id: i.id, [flagPath(MODULE, "damageType")]: t })));
+  const items = fits.flatMap(x => x.items);
+  await target.updateEmbeddedDocuments("Item", items.map(i => ({ _id: i.id, [flagPath(MODULE, "damageType")]: t })));
   return items.map(i => i.name);
 }
 

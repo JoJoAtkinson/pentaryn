@@ -71,7 +71,8 @@ export const MANIFEST = Object.freeze({
       gm: false, writes: true, legacy: true,
       sideEffects: ["flags.pentaryn-riders.damageType"],
       doc: "Set the damage type a typed feature (Elemental Adept, Elemental Affinity) stands for: one item, or "
-        + "every typed feature item of an actor (one rule's with ruleKey). Throws when type is empty.",
+        + "every typed feature item of an actor (one rule's with ruleKey). Only items whose rule lists the type are set. "
+        + "Throws when type is empty, and BAD_ARGS naming the allowed types when no targeted rule lists it.",
     },
     {
       path: "retireManual",
