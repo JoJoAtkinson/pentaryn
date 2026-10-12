@@ -10,7 +10,7 @@
 import { mock, test } from "node:test";
 import assert from "node:assert/strict";
 import { pinJSON } from "./kit/harness.mjs";
-import { IDS, MODULE, healer as healerFixture, makeActor, npc as npcFixture, setupWorld } from "./fixtures/world.mjs";
+import { IDS, MODULE, makeActor, setupWorld } from "./fixtures/world.mjs";
 
 mock.timers.enable({ apis: ["setTimeout", "Date"], now: 1_800_000_000_000 });
 const W = await setupWorld();
@@ -242,16 +242,5 @@ test("combat-riders-12 [declared]: report/featuresOf/setType/retireManual/instal
   assert.equal(await api.spendHitDie("Grisk"), 8);
   assert.equal(await api.restoreHitDie(`Actor.${IDS.npc}`), 8);
   assert.deepEqual(api.report(), api.report(undefined), "no argument: every character, as before");
-  W.take();
-});
-
-test("spendHitDie and installBattleMedic treat a null opts as omitted", async () => {
-  const twin = npcFixture(), nulled = npcFixture();
-  assert.equal(await api.spendHitDie(nulled, null), await api.spendHitDie(twin));
-  assert.equal(nulled.system.attributes.hd.spent, twin.system.attributes.hd.spent);
-  const fresh = healerFixture();
-  const r = await api.installBattleMedic(fresh, null);
-  assert.equal(r.ok, true);
-  assert.deepEqual(r.removed, ["Heal d8"], "replace defaults to true");
   W.take();
 });

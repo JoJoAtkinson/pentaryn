@@ -142,8 +142,7 @@ async function writePool(actor, pool, delta) {
 }
 
 /** Spend one Hit Die (the largest left, or of `faces` if given). Returns the faces spent, or null. */
-export async function spendHitDie(actor, opts = {}) {
-  const { faces } = opts ?? {};
+export async function spendHitDie(actor, { faces } = {}) {
   const pools = hdPools(actor);
   const pool = (faces && pools.find(p => p.faces === faces && p.value > 0)) || pickSpend(pools);
   if (!pool) return null;

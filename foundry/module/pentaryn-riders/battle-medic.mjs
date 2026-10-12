@@ -128,8 +128,7 @@ function findKit(actor) {
  * Healer's Kit. `replace` (default) deletes the old "Heal dX" activities, which asked the patient
  * to pick their own die.
  */
-async function installBattleMedic(actor, opts = {}) {
-  const { replace = true } = opts ?? {};
+async function installBattleMedic(actor, { replace = true } = {}) {
   const item = actor?.items?.find(i => matchRule(HEALER, itemInfo(i)));
   if (!item) return { ok: false, why: "no Healer feat" };
   if (!item.isOwner) return { ok: false, why: "not owner" };
