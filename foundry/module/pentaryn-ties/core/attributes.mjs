@@ -698,7 +698,7 @@ export function readRegistry(raw) {
  *    a root, so a malformed registry costs a wrong gate rather than a hung client.
  */
 export function ancestorsOf(id, registry) {
-  const byId = new Map(readRegistry(registry).map(e => [e.id, e]));
+  const byId = asIndex(registry).byId; // a registry or an indexRegistry() result (ties-20)
   const out = [];
   const seen = new Set([typeof id === "string" ? id.trim() : ""]);
   let cur = byId.get(typeof id === "string" ? id.trim() : "")?.parent ?? null;
@@ -736,7 +736,8 @@ export function wouldCycle(id, parent, registry) {
  * costing a pointless rung.
  */
 export function identificationLadder(id, registry) {
-  const byId = new Map(readRegistry(registry).map(e => [e.id, e]));
+  const index = asIndex(registry); // a registry or an indexRegistry() result (ties-20)
+  const byId = index.byId;
   const target = typeof id === "string" ? id.trim() : "";
   /*
    * A visible target is not a question, so it has no ladder at all — not even its ancestors'.
@@ -744,7 +745,7 @@ export function identificationLadder(id, registry) {
    * already see, which is the opposite of what secrecy is for.
    */
   if (!target || !byId.get(target)?.secret) return [];
-  return [...ancestorsOf(id, registry).reverse(), target].filter(step => byId.get(step)?.secret);
+  return [...ancestorsOf(id, index).reverse(), target].filter(step => byId.get(step)?.secret);
 }
 
 /* ── the two ledgers ──────────────────────────────────────────────────────── */

@@ -5,7 +5,7 @@
  * Pure: no Foundry global (split out of known-core.mjs, which re-exports this file — S4, ties-36).
  */
 
-import { MEMBER_FACT, attrIdOf, helpFor, identificationLadder, readRegistry } from "./attributes.mjs";
+import { MEMBER_FACT, attrIdOf, helpFor, identificationLadder, indexRegistry } from "./attributes.mjs";
 import { clampKnownNotes, fromOf, num, numOrNull, passOf, timeOrNull } from "./shared.mjs";
 import { clampSources, priorOf, readBeliefs } from "./study.mjs";
 
@@ -96,7 +96,12 @@ export const identMissKey = (subjectId, attrId) =>
   `lore:${String(subjectId ?? "")}:${IDENT_MISS_FACT_PREFIX}${encodeURIComponent(String(attrId ?? "")).replace(/\./g, "%2E")}`;
 
 export function identifiedState(beliefs, characterId, attrId) {
-  const rec = readBeliefs(beliefs)[characterId]?.[identifiedKey(attrId)];
+  return identifiedFrom(readBeliefs(beliefs), characterId, attrId);
+}
+
+/** identifiedState over an already-read ledger (`readBeliefs` output) — the planner reads it once. */
+function identifiedFrom(ledger, characterId, attrId) {
+  const rec = ledger[characterId]?.[identifiedKey(attrId)];
   if (!rec) return { settled: false, carries: false, held: false };
   const passed = !!String(rec.text ?? "").trim();
   /*
@@ -137,7 +142,17 @@ export function planStep({
   characterId = "",
   rollerCarries = []
 } = {}) {
-  const byId = new Map(readRegistry(registry).map(e => [e.id, e]));
+  /*
+   * Normalise each input ONCE (ties-20): the registry into an index the ladder walk reuses, the
+   * knowledge and belief ledgers into their read form. The helpers below used to re-read all
+   * three per rung, and this runs up to 24 times per cascade (and 12 × 24 in the GM's simulation).
+   */
+  const index = indexRegistry(registry);
+  const byId = index.byId;
+  const know = readKnowledge(knowledge);
+  const ledger = readBeliefs(beliefs);
+  const knows = attrId => know[characterId]?.[attrId]?.failed === false; // knowsAttribute
+  const failed = attrId => know[characterId]?.[attrId]?.failed === true; // failedAttribute
   const mine = new Set(Array.isArray(rollerCarries) ? rollerCarries : []);
   const subjectHas = new Set(Array.isArray(carried) ? carried : []);
 
@@ -154,8 +169,8 @@ export function planStep({
     const entry = byId.get(attrId);
     if (!entry?.secret || !mine.has(attrId)) continue;
     if (helpFor(entry, { carried: true }) !== "auto") continue;
-    if (identifiedState(beliefs, characterId, attrId).settled) continue;
-    return { grant: attrId, entry, backfill: !knowsAttribute(knowledge, characterId, attrId), bypass: true };
+    if (identifiedFrom(ledger, characterId, attrId).settled) continue;
+    return { grant: attrId, entry, backfill: !knows(attrId), bypass: true };
   }
 
   // PASS 2 — climb each ladder, root first, and return the first rung that needs resolving
@@ -163,11 +178,11 @@ export function planStep({
     const entry = byId.get(attrId);
     if (!entry?.secret) continue; // visible: not a question
 
-    for (const rung of identificationLadder(attrId, registry)) {
+    for (const rung of identificationLadder(attrId, index)) {
       // only rungs this creature actually carries are askable — Q1 materialises ancestors, so a
       // carrier of the guild carries the district too, and a gap here means an invalid sheet
       if (!subjectHas.has(rung)) break;
-      const already = identifiedState(beliefs, characterId, rung);
+      const already = identifiedFrom(ledger, characterId, rung);
       if (already.settled) {
         // already answered. A negative answer blocks everything beneath it.
         if (!already.carries) break;
@@ -179,15 +194,15 @@ export function planStep({
       const help = helpFor(rungEntry, { carried: iCarry });
 
       // stage 1: do they know this thing exists at all?
-      const knows = knowsAttribute(knowledge, characterId, rung);
-      if (!knows && failedAttribute(knowledge, characterId, rung)) break; // permanently unrecognisable
-      if (help === "auto") return { grant: rung, entry: rungEntry, backfill: !knows, bypass: false };
+      const knowsIt = knows(rung);
+      if (!knowsIt && failed(rung)) break; // permanently unrecognisable
+      if (help === "auto") return { grant: rung, entry: rungEntry, backfill: !knowsIt, bypass: false };
       return {
         roll: rung,
         entry: rungEntry,
         // the backfill: a first success proves they knew it all along (Joe's rule)
-        backfill: !knows,
-        advantage: help === "advantage" && (knows || iCarry)
+        backfill: !knowsIt,
+        advantage: help === "advantage" && (knowsIt || iCarry)
       };
     }
   }
