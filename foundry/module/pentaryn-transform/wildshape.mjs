@@ -7,7 +7,7 @@
  * have starry.mjs's and hud-panels.mjs's listeners after these.
  */
 
-import { MODULE, EFFECT_ID, isWildShapeActivity, isExpired, pruneFavorites, formTempHP } from "./transform-core.mjs";
+import { MODULE, EFFECT_ID, isWildShapeActivity, isExpired, pruneFavorites, formTempHP, worldTimeCandidates } from "./transform-core.mjs";
 import { makeLog } from "./lib/log.mjs";
 import {
   isRevertItem, original, wildShapeActivity, isWildShapeForm, exists, activeFormOf, blockedShift, say, RETURN_LINES,
@@ -164,9 +164,7 @@ function onEffectDelete(effect) {
 function onWorldTime(worldTime) {
   // hot: no cache — game.actors + the viewed scene's unlinked tokens, every client, every tick (C49;
   // transform-creatures-2 skips it on a client that cannot be the runner).
-  const candidates = [...game.actors];
-  for (const t of canvas.scene?.tokens ?? []) if (!t.actorLink && t.actor) candidates.push(t.actor);
-  for (const actor of candidates) {
+  for (const actor of worldTimeCandidates(game.actors, canvas.scene?.tokens)) {
     if (!isWildShapeForm(actor)) continue;
     if (isExpired(actor.getFlag(MODULE, "wildshape")?.endsAt, worldTime)) maybeAutoRevert(actor, "expired");
   }
