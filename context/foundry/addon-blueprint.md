@@ -316,7 +316,9 @@ The manifest (`api-manifest.mjs`) is pure data. **Manifest-level fields:**
 `module, namespace, version, contract, flagScope, kit, published, methods, queries, settings,
 events, hooks, patches, flags {writes, reads}, errors`. `methods[]` carries `path, params, returns,
 gm, writes, query, sideEffects, doc` plus `queryName, relay, dryRun, nullWhen, throws, legacy, since` when
-set. The goldens normalise away `version`, `kit`, `published` and patch routes.
+set. `queries` lists the row-derived query names first, then any `extras.queries` (a hand-registered
+query) not already present (kit 1.2.0, kit-ext-1). The goldens normalise away `version`, `kit`,
+`published` and patch routes.
 
 **`inspect(ref, { as })`** — read-only, plain JSON, depth ≤ 4. With no `as` it answers as the
 caller. `as` is a user ref: a GM sees everything; for a player, GM-only state (the template's

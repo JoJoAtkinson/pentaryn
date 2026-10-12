@@ -2,6 +2,8 @@
 
 ## Unreleased (Wave 7 restart batch, wave 5, 2026-10-12)
 
+- **[declared] kit-ext-1:** `describe().queries` now lists the hand-registered relay query
+  `pentaryn-journal.ensure` (passed as `extras.queries`; kit 1.2.0 merges it after the row-derived names).
 - `module.json`: `flags.pentaryn` blueprint keys (`flagScope` `journal` → `pentaryn-journal`,
   manifest-only), `relationships.systems` dnd5e, `recommends` item-piles, `verified: "14.369"`,
   `styles/journal.css` (moved).

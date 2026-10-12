@@ -254,7 +254,9 @@
       "doc": "Live smoke checks after a sync."
     }
   ],
-  "queries": [],
+  "queries": [
+    "pentaryn-journal.ensure"
+  ],
   "settings": [
     {
       "key": "gmButton",

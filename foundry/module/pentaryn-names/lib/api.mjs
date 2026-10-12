@@ -176,7 +176,7 @@ const typeName = t => (t === undefined || t === null ? null : t.name ?? t.constr
 /**
  * The manifest as plain JSON (key list: use-doc §5.1a). Cheap, static, safe to call from a socket.
  */
-export function describe(manifest, { settings = [], events = {}, patches = [], queries, hooks = [],
+export function describe(manifest, { settings = [], events = {}, patches = [], queries = [], hooks = [],
   errors = CODES, kitVersion = KIT_VERSION, published = null } = {}) {
   const rows = manifest.rows ?? [];
   return toPlain({
@@ -204,7 +204,9 @@ export function describe(manifest, { settings = [], events = {}, patches = [], q
       ...(r.since ? { since: r.since } : {}),
       doc: r.doc ?? "",
     })),
-    queries: queries ?? rows.filter(r => r.query).map(r => `${manifest.module}.${r.queryName ?? r.path}`),
+    // row-derived names first, then any extras not already present (kit-ext-1)
+    queries: [...new Set([...rows.filter(r => r.query).map(r => `${manifest.module}.${r.queryName ?? r.path}`),
+      ...(queries ?? [])])],
     settings: settings.map(s => ({
       key: s.key,
       scope: s.store ? "world" : s.scope ?? "world",

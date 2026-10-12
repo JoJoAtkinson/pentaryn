@@ -77,3 +77,6 @@ the live handle instead of stacking a second copy.
 AC-1 (declared): a `relay: true` row's API function now gets core's ctx as a trailing argument
 (`fn(d, ctx)` / `fn(d.ref, d, ctx)`), so a relayed handler can check ownership on `ctx.user` (§5.9.4);
 before, `registerQueries` dropped it. Guarded rows are called exactly as before.
+kit-ext-1 (declared): `describe().queries` merges — the row-derived names first, then any
+`extras.queries` not already present, deduped. Before, `extras.queries` replaced the row-derived list
+(an empty list wiped it). Journal now passes its hand-registered relay query, so it appears there.

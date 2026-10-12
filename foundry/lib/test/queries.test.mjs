@@ -125,4 +125,23 @@ test("describe().queries equals the names registerQueries registers", () => {
   const registered = registerQueries(M, () => ({}), { g: { CONFIG: {} } });
   assert.deepEqual(registered, ["pentaryn-q.list", "pentaryn-q.replace", "pentaryn-q.ensure"]);
   assert.deepEqual(describe(M).queries, registered);
+  // plus extras: a hand-registered query is appended after the row-derived names (kit-ext-1)
+  const extra = "pentaryn-q.relay";
+  assert.deepEqual(describe(M, { queries: [extra] }).queries, [...registered, extra]);
+});
+
+test("kit-ext-1: extras.queries adds to the row-derived describe().queries, deduped, rows first", () => {
+  const M = { module: "pentaryn-q", rows: [
+    { path: "list", params: [], query: true },
+    { path: "gather", params: [], query: true },
+    { path: "write", params: [], query: false },
+  ] };
+  assert.deepEqual(describe(M, { queries: ["pentaryn-q.ensure"] }).queries,
+    ["pentaryn-q.list", "pentaryn-q.gather", "pentaryn-q.ensure"]);
+  assert.deepEqual(describe(M, { queries: ["pentaryn-q.ensure", "pentaryn-q.list", "pentaryn-q.ensure"] }).queries,
+    ["pentaryn-q.list", "pentaryn-q.gather", "pentaryn-q.ensure"], "an extra already present is not repeated");
+  assert.deepEqual(describe(M, { queries: [] }).queries, ["pentaryn-q.list", "pentaryn-q.gather"],
+    "an empty extras list no longer wipes the row-derived names");
+  assert.deepEqual(describe({ module: "pentaryn-q", rows: [] }, { queries: ["pentaryn-q.ensure"] }).queries,
+    ["pentaryn-q.ensure"]);
 });
