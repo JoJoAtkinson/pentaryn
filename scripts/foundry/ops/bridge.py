@@ -248,6 +248,7 @@ def clean(dry_run: bool = False) -> int:
 
     # Backends first: killing a parent server first would orphan its child mid-scan.
     stale.sort(key=lambda p: 0 if p.kind == "backend" else 1)
+    refused: set[int] = set()
     for p in stale:
         if dry_run:
             _say(f"▸ would kill {p.kind} pid={p.pid} ({p.started}) — {p.reason}")
@@ -258,6 +259,7 @@ def clean(dry_run: bool = False) -> int:
         except ProcessLookupError:
             _say(f"▸ {p.pid} already gone")
         except PermissionError:
+            refused.add(p.pid)
             _say(f"✗ not permitted to kill {p.pid}")
 
     if dry_run:
@@ -270,9 +272,15 @@ def clean(dry_run: bool = False) -> int:
         try:
             os.kill(p.pid, signal.SIGKILL)
             _say(f"✓ KILL {p.kind} pid={p.pid} (did not answer TERM)")
+        except PermissionError:
+            refused.add(p.pid)
         except OSError:
             pass
 
+    # rob-11: OK only when every orphan is actually gone.
+    if survivors:
+        time.sleep(0.5)
+    left = [p for p in survivors if _alive(p.pid)]
     _say(f"▸ kept {len(live)} live session server(s)")
     owners = _port_owners()
     if owners:
@@ -280,6 +288,12 @@ def clean(dry_run: bool = False) -> int:
     else:
         _say("▸ bridge ports free — the next MCP server to start will bind them")
         _say("  A Foundry client already open must reload to reconnect.")
+    if left:
+        _say(f"✗ {len(left)} orphan(s) still running:")
+        for p in left:
+            why = "not permitted to kill" if p.pid in refused else "survived SIGKILL"
+            _say(f"    {p.kind} pid={p.pid} ({p.started}) — {why}")
+        return FAIL
     return OK
 
 

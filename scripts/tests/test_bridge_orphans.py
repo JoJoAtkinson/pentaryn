@@ -217,3 +217,68 @@ def test_scan_asks_ps_for_parent_names_once(canned):
     assert [c[0] for c in calls].count("ps") == 2
     assert [c[0] for c in calls].count("lsof") == len(bridge_mod.BRIDGE_PORTS)
     assert len(calls) == 5
+
+
+# ── clean(): the exit code tells the truth (rob-11) ──────────────────────────
+#
+# scan() is replaced by a scripted sequence of process tables and os.kill by a fake
+# that records signals, so clean() runs without touching the machine.
+
+import signal as _signal
+
+
+def _orphan_server(pid):
+    p = server(pid, 1, parent_alive=False, parent_comm="")
+    p.orphan, p.reason = True, "reparented to launchd"
+    return p
+
+
+@pytest.fixture
+def cleaner(monkeypatch):
+    def use(*, refuse=(), immortal=()):
+        alive = {300, 301}
+        sent: list[tuple[int, int]] = []
+
+        def kill(pid, sig):
+            if pid not in alive:
+                raise ProcessLookupError(pid)
+            if pid in refuse and sig != 0:
+                raise PermissionError(pid)
+            if sig == 0:
+                return
+            sent.append((pid, sig))
+            if pid not in immortal and sig == _signal.SIGKILL:
+                alive.discard(pid)
+
+        def scan():
+            return [_orphan_server(pid) for pid in sorted(alive)]
+
+        monkeypatch.setattr(bridge_mod.os, "kill", kill)
+        monkeypatch.setattr(bridge_mod, "scan", scan)
+        monkeypatch.setattr(bridge_mod, "_port_owners", lambda: {})
+        monkeypatch.setattr(bridge_mod.time, "sleep", lambda s: None)
+        return sent
+    return use
+
+
+def test_clean_is_ok_when_every_orphan_goes(cleaner, capsys):
+    cleaner()
+    assert bridge_mod.clean() == bridge_mod.OK
+    assert "✗" not in capsys.readouterr().out
+
+
+def test_clean_fails_when_a_kill_is_refused_rob_11(cleaner, capsys):
+    """rob-11 [declared]: a PermissionError on kill used to print a ✗ and still exit 0."""
+    cleaner(refuse={301})
+    assert bridge_mod.clean() == bridge_mod.FAIL
+    out = capsys.readouterr().out
+    assert "✗" in out and "301" in out.split("still running")[-1]
+
+
+def test_clean_fails_when_an_orphan_survives_sigkill_rob_11(cleaner, capsys):
+    """rob-11 [declared]: an orphan still alive after the SIGKILL pass is named and fails."""
+    sent = cleaner(immortal={300})
+    assert bridge_mod.clean() == bridge_mod.FAIL
+    assert (300, _signal.SIGKILL) in sent
+    tail = capsys.readouterr().out.split("still running")[-1]
+    assert "300" in tail and "301" not in tail
