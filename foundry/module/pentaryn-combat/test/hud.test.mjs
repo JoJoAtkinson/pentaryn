@@ -269,6 +269,14 @@ test("Full Attack's targets/ranges: Argon's picker opens only when nothing is ta
   reset(fig);
 });
 
+test("PickerProbe.ranges: range, reach, then 5", async () => {
+  const { argonClasses } = await import("../hud/buttons-ui.mjs");
+  const { PickerProbe } = argonClasses();
+  assert.deepEqual(new PickerProbe({ activity: { range: { value: 80, long: 320 } } }).ranges, { normal: 80, long: 320 });
+  assert.deepEqual(new PickerProbe({ activity: { item: { system: { range: { reach: 10 } } } } }).ranges, { normal: 10, long: null });
+  assert.deepEqual(new PickerProbe({ activity: {} }).ranges, { normal: 5, long: null });
+});
+
 test("follow-up and command clicks (golden/argon-clicks.json)", async () => {
   const out = {};
   // a greyed Flurry warns, no picker
