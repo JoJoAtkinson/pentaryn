@@ -101,7 +101,7 @@ adjustments:
   - id: dsn-skip-blind-study
     packages: [dice-so-nice]
     modules: [pentaryn-ties]
-    files: [foundry/module/pentaryn-ties/study.mjs]
+    files: [foundry/module/pentaryn-ties/study/apply.mjs]
     markers: ['"dice-so-nice": { skip: true }']
     what: sets flags["dice-so-nice"].skip on blind Study rolls so the GM's dice do not animate a secret check
     why: DSN animates blind rolls for the roller
@@ -167,7 +167,7 @@ adjustments:
   - id: dnd5e-legacy-roll-modes
     packages: [dnd5e, core]
     modules: [pentaryn-aoe, pentaryn-ties]
-    files: [foundry/module/pentaryn-aoe/resolve.mjs, foundry/module/pentaryn-aoe/settings.mjs, foundry/module/pentaryn-ties/study.mjs]
+    files: [foundry/module/pentaryn-aoe/resolve.mjs, foundry/module/pentaryn-aoe/settings.mjs, foundry/module/pentaryn-ties/study/apply.mjs]
     markers: ["_mapLegacyRollMode"]
     what: maps legacy roll-mode names ("gmroll", "blindroll", "publicroll") through core's foundry.dice.Roll._mapLegacyRollMode before handing them to dnd5e rolls (NPC area saves, blind Study rolls); pentaryn-aoe.npcSaveRollMode choices are gm / blind / public with a ready-time migration of a stored legacy value
     why: dnd5e 6 passes rollMode to core as messageMode, and core silently replaces an unknown name with the client default (public) — blind Study rolls and GM-side NPC saves would show to players
@@ -244,10 +244,21 @@ adjustments:
   - id: core-ties-flag-wipe
     packages: [core]
     modules: [pentaryn-ties]
-    files: [foundry/module/pentaryn-ties/known-core.mjs, foundry/module/pentaryn-ties/look.mjs, foundry/module/pentaryn-ties/preview.mjs]
+    files: [foundry/module/pentaryn-ties/core/known.mjs, foundry/module/pentaryn-ties/look-app.mjs, foundry/module/pentaryn-ties/preview-app.mjs]
     markers: ["ForcedDeletion"]
     what: recognises a whole-scope flag deletion with or without the `-=` marker (14.369 migrates `-=` keys to a ForcedDeletion operator)
     why: a wiped scope otherwise reads as an ordinary update and the ledger goes stale
+    native_when: n/a
+    retire_class: never
+    check: make foundry-ties-check
+
+  - id: itempiles-ties-pile-check
+    packages: [item-piles]
+    modules: [pentaryn-ties]
+    files: [foundry/module/pentaryn-ties/look-menu.mjs, foundry/module/pentaryn-ties/preview-app.mjs]
+    markers: ['"item-piles", "data"', "isValidItemPile"]
+    what: the double-click look menu skips a token whose item-piles flag marks it a pile; the inspect window leaves pile actors out of the table's PCs
+    why: an Item Piles container is a token and an actor; without the check a loot pile gets a closer-look menu and can show up as a PC to share with
     native_when: n/a
     retire_class: never
     check: make foundry-ties-check
