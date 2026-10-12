@@ -381,6 +381,8 @@ Append in the single adjustments batch, while `foundry/adjustments.yml` is idle:
 - **WAIT sub-step:** aoe-movement-portals-39 wants one shared row for cursors' `previewActive` and
   aoe's `placementInProgress`. aoe is WAIT. Land the cursors-only row now and add aoe's file to its
   `files` list when aoe leaves `wait.json`, after re-anchoring aoe.
+  **Done in wave 4** (`e1a9aade`): the shared row is aoe's `core-region-placement-escape`, widened
+  to cursors' `board.mjs`; see the Result table.
 
 ### Step 11 — Wave 7 restart batch (`module.json`) · C02, C07, C38
 
@@ -478,7 +480,7 @@ step 11 (already in `wave7-restart-batch.md`). The README still points at `DESIG
 | Commits (Joe-approved) | characterisation: b0ae88a (vendor), d49967e (checkpoint) · refactor: 4fad56d, f7a86f9, dcf9bb0 (senses-walls-cursors-31), 1724678, 88e8f11, 1a72a80, 4f4df57 · declared: ae51bca (C-1, -32), 738f4c4 (C-2, -30 runtime) · tests: a843e0c · shared files: 170f003 (`module.json`), 4825fae (`core-board-cursor-vars`), 54c1ce0 · standalone: 720486e (-27 cursors routing row), 827ebce (-30 registry README), 9d4ca38 (guide) |
 | Declared changes handed to the live-test workflow | C-1, C-2 deployed 2026-10-11; boot probe and live golden pass (surface + `module.api` only; all five tool switches identical). C-2's silence is console-only and was not observable (boot console not captured) |
 | `module.json` edits appended to `wave7-restart-batch.md` | landed directly in 170f003 |
-| Adjustments rows appended to `adjustments-batch.md` | landed in 4825fae; the aoe widening row (aoe-movement-portals-39) waits for aoe in Stage 4 |
+| Adjustments rows appended to `adjustments-batch.md` | landed in 4825fae; the aoe-shared half (aoe-movement-portals-39) landed in wave 4: `core-region-placement-escape` widened to `pentaryn-cursors` + `board.mjs` in e1a9aade, cross-referenced at `previewActive` in 73b6c672 (aoe's half 0b9b13fd). Step 10 is complete |
 | Still failing, and why | C05, C24, C25 (`tools/build.mjs`) and C13 (`DESIGN.md`, `assets/src/CREDITS.md`): steps 7 and 8 move files out of the module, outside the wave-1 agent's scope (senses-walls-cursors-35, wave-1-report "Not applied"). Tests: 55 node:test, all pass; module-code coverage 99.5 / 94.6 / 98.1, lcov records merged per file (94.5 / 90.2 / 93.2 unmerged) |
 | Steps 7–8 (Stage 5, 2026-10-12) | **done `83af47a1`** (W5c, `migrate/wave-5`): `tools/build.mjs` → `scripts/foundry/cursors/build.mjs` (+ `--check-sources`), `assets/src/` → `scripts/foundry/cursors/src/` (every `alt-*` and `CREDITS.md` kept), `DESIGN.md` → `context/plans/cursors-design.md`, README paths, `scripts/tests/test_cursors_build.py`. **100 %** (47/47). The step-8 README rewrite in the fixed order was already done in wave 1; the full PNG rebuild was not re-run (no `@resvg` here) — the outputs are unchanged and `--check-sources` passes |
 | Wave 2 (kit 1.0.2, code phase) | re-vendored `2a55cef3` [declared]: the frozen-root pin flipped (J10; `publish.test.mjs`). 55 tests green at `f8fb7377`; conformance unchanged. Not yet synced: [`wave-2-live-plan.md`](wave-2-live-plan.md) (W2-L2) |
