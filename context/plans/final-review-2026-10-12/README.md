@@ -115,3 +115,25 @@ by the session's permission classifier; the rollback copy sat on disk for about 
 re-sync put back the same digest, with no reload in between. Console: no pentaryn-* or bridge errors
 since tracking started (after the load). Bridge: deployed module `dist` equals the build, backend
 started 09:33:42 after the 09:33:28 server build, `get-world-info` and `pentaryn-read` answer.
+
+## Integration INT-1349
+
+| Area | Status | Merge SHA | Revert SHA | Synced modules | Reason |
+|---|---|---|---|---|---|
+| py-ops | merged | 1b7da6e2 | — | none (Python, live by being on main) | — |
+| py-blueprint | merged | 48456679 | — | none (Python, live by being on main) | — |
+| py-mcp | merged | d4b3a09e | — | none (Python, live by being on main) | — |
+
+**Gates.** On main at d4b3a09e: `make test` (1626 passed, 2 skipped, 5 xfailed), `check-context`
+(OK, 5 warnings), `foundry-modules-check` (all 20 modules pass), `foundry-lib-check` green. The three
+merges touch only `scripts/**` and their review docs: no module, no `module.json`, no fork, so no
+sync, no rebuild, no restart and no GM-tab reload; no module changed, so no live goldens and no
+rollback copies were needed.
+
+**Live check (13:56–14:05Z).** Tunnel down, Foundry up. `get-world-info` answers with one active
+user (Gamemaster); one Foundry tab. `pentaryn-read {ns:"*", path:"describe"}` answers `ok`. Smoke of
+the merged Python: `make vtt-status` (py-ops) and `scripts/mcp/server.py --list-tools` (py-mcp,
+the dnd-scripts server picks it up at the next session start) both run. `make login NO_OPEN=1`
+printed the URL and then timed out waiting for a browser to collect it, as designed when nothing
+navigates (the existing GM tab was kept, not replaced); py-ops' only `login.py` change is the
+`_choose` range check. Reverts: none. main was already on origin at d4b3a09e.

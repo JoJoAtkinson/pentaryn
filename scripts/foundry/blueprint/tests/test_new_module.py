@@ -110,6 +110,16 @@ def test_bad_or_reserved_short_names_are_refused(tmp_path, short):
     assert not target.exists()
 
 
+@pytest.mark.parametrize("kit", [["--kit", "nosuchfile"], ["--kit", "argon-kit"]])
+def test_a_refused_kit_leaves_nothing_behind(tmp_path, kit):
+    # docstring promise: "2 refused (nothing written)" — a vendoring refusal must not leave the
+    # rendered folder behind, or the plain rerun is refused with "… exists"
+    rc, target = gen(tmp_path, "demo", "--no-run", *kit)
+    assert rc == 2
+    assert not target.exists()
+    assert gen(tmp_path, "demo", "--no-run")[0] == 0
+
+
 def _fake_module(root, name, *, flags=None, source=None, css=None):
     d = root / name
     d.mkdir(parents=True)
@@ -243,3 +253,16 @@ def test_routing_follow_up_names_the_missing_api_index(tmp_path):
     assert new_module._has_api_index(tmp_path / "absent.md") is False
     text = new_module.follow_ups("demo", "Pentaryn Demo", "demo", installed=False)
     assert ("Module APIs index does not exist yet" in text) == (not new_module._has_api_index())
+
+
+@pytest.mark.parametrize("sibling, expected", [(False, "pd-"), (True, "pde-")])
+def test_force_keeps_the_css_prefix(tmp_path, sibling, expected):
+    mods = tmp_path / "mods"
+    mods.mkdir()
+    if sibling:
+        _fake_module(mods, "pentaryn-other", flags={"cssPrefix": "pd-"})
+    for extra in ((), ("--force",)):
+        rc, target = gen(tmp_path, "demo", "--no-run", *extra, modules_root=mods)
+        assert rc == 0
+        assert json.loads((target / "module.json").read_text())["flags"]["pentaryn"]["cssPrefix"] == expected
+        assert f".{expected}" in (target / "styles" / "demo.css").read_text()

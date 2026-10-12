@@ -9,6 +9,7 @@ verification must refuse to pass on anything except a positive 404.
 from __future__ import annotations
 
 import signal
+import sys
 import time
 
 import pytest
@@ -145,6 +146,20 @@ def test_import_deletes_on_interrupt(monkeypatch, staged):
         pipeline.run_import()
     assert exc.value.code == 130
     assert not staged.exists(), "Ctrl-C must not leave a public file behind"
+
+
+def test_import_deletes_when_the_prompt_raises(monkeypatch, staged):
+    """An unexpected error out of the prompt (a non-UTF-8 byte on the tty) still deletes."""
+    before = signal.getsignal(signal.SIGINT)
+
+    def garbled():
+        raise UnicodeDecodeError("utf-8", b"\xff", 0, 1, "bad")
+
+    monkeypatch.setattr(pipeline, "_ask", garbled)
+    with pytest.raises(UnicodeDecodeError):
+        pipeline.run_import()
+    assert not staged.exists(), "an error in the prompt must not leave a public file behind"
+    assert signal.getsignal(signal.SIGINT) is before
 
 
 def test_import_restores_the_previous_signal_handlers(monkeypatch, staged):
@@ -323,6 +338,15 @@ def test_module_new_installs_into_foundry_module_unless_out_is_given(monkeypatch
     cli.main(["module-new", "demo", "--title", "T", "--out", "/tmp/x"])
     assert seen[0] == ["demo", "--title", "Pentaryn Demo", "--tier", "small", "--install"]
     assert "--install" not in seen[1]
+
+
+def test_module_new_respects_out_equals(monkeypatch):
+    # argparse accepts `--out=DIR`; that spelling is a chosen --out too, so no --install.
+    from scripts.foundry.blueprint import new_module
+    seen = []
+    monkeypatch.setattr(new_module, "main", lambda argv: seen.append(argv) or 0)
+    cli.main(["module-new", "demo", "--title", "T", "--out=/tmp/x"])
+    assert "--install" not in seen[0]
 
 
 def test_unknown_subcommand_exits_nonzero():
@@ -698,6 +722,22 @@ def test_pick_user_menu_defaults_to_the_gamemaster(monkeypatch):
     assert seen["options"][seen["default_index"]][1]["_id"] == "gm"
 
 
+@pytest.mark.parametrize("raw", ["0", "-1"])
+def test_numbered_picker_rejects_zero_and_negatives(monkeypatch, raw):
+    """The fallback prompt says [1-N]. '0' or '-1' used to index from the end of the
+    list — in _ensure_world that picked 'yes, switch' and disconnected players."""
+    monkeypatch.setitem(sys.modules, "questionary", None)
+    monkeypatch.setattr("builtins.input", lambda _p: raw)
+    with pytest.raises(RuntimeError, match="not one of 1-2"):
+        login._choose("p", [("a", 1), ("b", 2)])
+
+
+def test_numbered_picker_still_takes_a_number_in_range(monkeypatch):
+    monkeypatch.setitem(sys.modules, "questionary", None)
+    monkeypatch.setattr("builtins.input", lambda _p: "2")
+    assert login._choose("p", [("a", 1), ("b", 2)]) == 2
+
+
 def test_pick_world_rejects_a_name_that_is_not_on_disk(monkeypatch):
     monkeypatch.setattr(login, "worlds_on_disk",
                         lambda: [{"id": "space-journey", "title": "SJ", "system": "dnd5e",
@@ -1064,3 +1104,22 @@ def test_the_fork_has_a_use_doc_and_routes_to_it():
     assert any("**Read this when:**" in line for line in head)
     for index in ("CLAUDE.md", "context/foundry/README.md"):
         assert "mcp-fork.md" in (cfg.REPO_ROOT / index).read_text(encoding="utf-8"), index
+
+
+# ── a corrupt tunnel pidfile never names a process group ──────────────────────
+# os.kill(0, sig) signals our own process group and os.kill(-1, sig) every process the
+# user owns, so a pidfile holding 0 or a negative number must read as "no tunnel".
+
+@pytest.mark.parametrize("content", ["0", "-1"])
+def test_tunnel_pid_rejects_non_positive_pids(monkeypatch, tmp_path, capsys, content):
+    pidfile = tmp_path / "cf.pid"
+    pidfile.write_text(content)
+    monkeypatch.setattr(cfg, "CF_PID", pidfile)
+    calls = []
+    monkeypatch.setattr(service.os, "kill", lambda pid, sig: calls.append((pid, sig)))
+
+    assert service._tunnel_pid() is None
+    assert service.tunnel_down() == 0
+    assert "tunnel already down" in capsys.readouterr().out
+    assert not [c for c in calls if c[0] <= 0]
+    assert not [c for c in calls if c[1] == 15]

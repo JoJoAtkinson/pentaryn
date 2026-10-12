@@ -14,7 +14,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from dataclasses import dataclass, replace
 from pathlib import Path
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Iterator, Optional
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -202,7 +202,7 @@ def _log_call(runner: "ToolRunner", arguments: dict[str, Any], *, ok: bool, ms: 
         }
         text = json.dumps(line, ensure_ascii=False, default=str) + "\n"
         path = Path(log_dir) / f"dnd-scripts-{now:%Y-%m}.jsonl"
-        with _log_lock, open(path, "a", encoding="utf-8") as fh:
+        with _log_lock, open(path, "a", encoding="utf-8", errors="backslashreplace") as fh:
             fh.write(text)
     except Exception as exc:
         try:
@@ -282,10 +282,12 @@ class ToolRunner:
             if isinstance(result, str):
                 return result
             return json.dumps(result, indent=2, ensure_ascii=False)
+        return self._run_subprocess(self._build_argv(arguments))
 
-        # TODO: replace token.format(**fmt_args) below with explicit {name} substitution so
-        # values containing literal `{` or `}` don't break argv construction.
-        python = _python_bin()
+    def _build_argv(self, arguments: dict[str, Any]) -> list[str]:
+        # Only braces in the template token are interpreted; argument values are substituted
+        # verbatim. A template token with a stray non-placeholder brace raises at format time
+        # (only KeyError is mapped to Missing required argument).
         argv: list[str] = []
         fmt_args: dict[str, str] = {}
         for key, value in arguments.items():
@@ -304,9 +306,7 @@ class ToolRunner:
                     and token.count("{") == 1
                 )
                 rendered = token.format(**fmt_args)
-                if is_placeholder:
-                    argv.append(rendered.strip())
-                elif rendered.strip():
+                if is_placeholder or rendered.strip():
                     argv.append(rendered.strip())
         except KeyError as exc:
             raise ValueError(f"Missing required argument: {exc.args[0]}") from exc
@@ -332,7 +332,10 @@ class ToolRunner:
             if not rendered:
                 continue
             argv.extend([self.value_flags[key], rendered])
+        return argv
 
+    def _run_subprocess(self, argv: list[str]) -> str:
+        python = _python_bin()
         # Wall-clock timeout protects against a hung child pinning a worker
         # forever; subprocess.run raises subprocess.TimeoutExpired on overrun
         # and DOES kill the child (the wait happens in the subprocess module).
@@ -411,6 +414,19 @@ def _has_top_level_assignment(source: str, name: str, *, tree: ast.Module | None
     return False
 
 
+def _top_level_assignments(module: ast.Module) -> Iterator[tuple[str, ast.expr]]:
+    """(name, value) for each top-level `name = value` or `name: T = value`,
+    in source order. A bare annotation (`name: T`) has no value and is not yielded."""
+    for node in module.body:
+        if isinstance(node, ast.Assign):
+            for target in node.targets:
+                if isinstance(target, ast.Name):
+                    yield target.id, node.value
+        elif isinstance(node, ast.AnnAssign):
+            if isinstance(node.target, ast.Name) and node.value is not None:
+                yield node.target.id, node.value
+
+
 def _read_top_level_string_list(source: str, name: str, *, tree: ast.Module | None = None) -> list[str]:
     """If `name` is assigned at module top-level to a literal list of strings,
     return that list. Otherwise return []. Used by the group filter to peek at
@@ -421,16 +437,14 @@ def _read_top_level_string_list(source: str, name: str, *, tree: ast.Module | No
         module = tree if tree is not None else ast.parse(source)
     except SyntaxError:
         return []
-    for node in module.body:
-        if isinstance(node, ast.Assign):
-            for target in node.targets:
-                if isinstance(target, ast.Name) and target.id == name:
-                    try:
-                        value = ast.literal_eval(node.value)
-                    except (ValueError, SyntaxError):
-                        return []
-                    if isinstance(value, list) and all(isinstance(v, str) for v in value):
-                        return value
+    for target_id, node_value in _top_level_assignments(module):
+        if target_id == name:
+            try:
+                value = ast.literal_eval(node_value)
+            except (ValueError, SyntaxError):
+                return []
+            if isinstance(value, list) and all(isinstance(v, str) for v in value):
+                return value
     return []
 
 
@@ -445,12 +459,9 @@ def _extract_mcp_tool_literal(source: str, *, path: Path,
 
     # Collect all MCP_TOOL* variables
     mcp_tool_vars: dict[str, ast.AST] = {}
-    for node in module.body:
-        if not isinstance(node, ast.Assign):
-            continue
-        for target in node.targets:
-            if isinstance(target, ast.Name) and target.id.startswith("MCP_TOOL"):
-                mcp_tool_vars[target.id] = node.value
+    for target_id, node_value in _top_level_assignments(module):
+        if target_id.startswith("MCP_TOOL"):
+            mcp_tool_vars[target_id] = node_value
     
     if not mcp_tool_vars:
         return None
@@ -508,6 +519,22 @@ def _normalize_input_schema(raw: Any) -> dict[str, Any]:
     return raw
 
 
+def _flag_map(entry: dict[str, Any], snake: str, camel: str, *, tool: str) -> dict[str, str]:
+    """An entry's argument_name -> flag map (snake_case key first, then camelCase);
+    keys and flags are stripped and blank ones dropped."""
+    raw = entry.get(snake) or entry.get(camel) or {}
+    if not isinstance(raw, dict):
+        raise ValueError(f"{tool}: {snake} must be a dict of argument_name -> flag")
+    flags: dict[str, str] = {}
+    for k, v in raw.items():
+        key = str(k).strip()
+        flag = str(v).strip()
+        if not key or not flag:
+            continue
+        flags[key] = flag
+    return flags
+
+
 def _tools_from_mcp_tool(*, path: Path, mcp_tool: dict[str, Any]) -> list[ToolRunner]:
     tools_raw = mcp_tool.get("tools")
     tool_entries: list[dict[str, Any]]
@@ -532,27 +559,8 @@ def _tools_from_mcp_tool(*, path: Path, mcp_tool: dict[str, Any]) -> list[ToolRu
         if not isinstance(argv_raw, list) or not all(isinstance(a, str) for a in argv_raw):
             raise ValueError(f"{name}: argv must be a list of strings")
 
-        bool_flags_raw = entry.get("bool_flags") or entry.get("boolFlags") or {}
-        if not isinstance(bool_flags_raw, dict):
-            raise ValueError(f"{name}: bool_flags must be a dict of argument_name -> flag")
-        bool_flags: dict[str, str] = {}
-        for k, v in bool_flags_raw.items():
-            key = str(k).strip()
-            flag = str(v).strip()
-            if not key or not flag:
-                continue
-            bool_flags[key] = flag
-
-        value_flags_raw = entry.get("value_flags") or entry.get("valueFlags") or {}
-        if not isinstance(value_flags_raw, dict):
-            raise ValueError(f"{name}: value_flags must be a dict of argument_name -> flag")
-        value_flags: dict[str, str] = {}
-        for k, v in value_flags_raw.items():
-            key = str(k).strip()
-            flag = str(v).strip()
-            if not key or not flag:
-                continue
-            value_flags[key] = flag
+        bool_flags = _flag_map(entry, "bool_flags", "boolFlags", tool=name)
+        value_flags = _flag_map(entry, "value_flags", "valueFlags", tool=name)
 
         runners.append(
             ToolRunner(
