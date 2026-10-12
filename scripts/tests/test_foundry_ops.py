@@ -819,6 +819,20 @@ def test_pick_world_without_a_terminal_never_switches_the_live_world(monkeypatch
     assert login._pick_world("ardenhaven", None, prompt=False) == "ardenhaven"
 
 
+def test_pick_world_without_a_terminal_rejects_a_configured_world_not_on_disk(monkeypatch):
+    """EC-14: `login --no-prompt` with nothing running fell back to cfg.WORLD_NAME
+    unchecked and asked Foundry to activate a world that is not there. It must fail
+    the same way an explicit --world typo does."""
+    monkeypatch.setattr(cfg, "WORLD_NAME", "gone-world")
+    monkeypatch.setattr(login, "worlds_on_disk", lambda: [
+        {"id": "ardenhaven", "title": "A", "system": "dnd5e", "played_label": "2026-01-01"},
+        {"id": "space-journey", "title": "SJ", "system": "dnd5e", "played_label": "2026-08-22"},
+    ])
+    with pytest.raises(RuntimeError, match=r"no world named 'gone-world' on disk — have: "
+                                           r"ardenhaven, space-journey"):
+        login._pick_world(None, None, prompt=False)
+
+
 def test_pick_world_menu_defaults_to_the_running_world(monkeypatch):
     seen = {}
 

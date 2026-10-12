@@ -175,20 +175,25 @@ def worlds_on_disk() -> list[dict]:
 def _pick_world(active: str | None, requested: str | None, prompt: bool) -> str:
     """Which world to end up in. An explicit `--world` always wins."""
     worlds = worlds_on_disk()
-    if requested:
-        if requested not in {w["id"] for w in worlds}:
+
+    def on_disk(name: str) -> str:
+        if name not in {w["id"] for w in worlds}:
             raise RuntimeError(
-                f"no world named {requested!r} on disk — "
+                f"no world named {name!r} on disk — "
                 f"have: {', '.join(w['id'] for w in worlds) or 'none'}"
             )
-        return requested
+        return name
+
+    if requested:
+        return on_disk(requested)
     if not worlds:
         raise RuntimeError(f"no worlds in {cfg.WORLDS_DIR}")
     if len(worlds) == 1:
         return worlds[0]["id"]
     if not prompt:
-        # Never silently switch a live world in a non-interactive run.
-        return active or cfg.WORLD_NAME
+        # Never silently switch a live world in a non-interactive run — and never ask
+        # Foundry to activate a configured world that is not on disk (EC-14).
+        return on_disk(active or cfg.WORLD_NAME)
 
     default_index = 0
     options = []
