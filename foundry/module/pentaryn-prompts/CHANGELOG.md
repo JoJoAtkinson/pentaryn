@@ -26,6 +26,10 @@ cssPrefix `pp-`, afterSync). Each **[declared]** change goes to the live check.
   (prompts-lookup-7).
 - **[declared] A patch's fractional CR** (`"1/2"`) is written as 0.5, not `NaN`, so a real run's
   encounter XP matches its dry run.
+- **[declared] Two gathers at once keep both manifests**: the ring writes through one
+  `serialStore` (a parallel gather no longer makes the other's call id `CALL_UNKNOWN`).
+- `ensureMarkers` repairs every drifted actor in one batch update. A hot re-import after
+  `uninstall()` re-wires and republishes at once.
 - Console only (DP9): a core token API that throws warns once; swallowed failures log at debug
   behind `CONFIG.debug["pentaryn-prompts"]`.
 - Internals: `prompts-core.mjs`; `geometry-core.mjs` split into `core/*.mjs` behind the barrel;
