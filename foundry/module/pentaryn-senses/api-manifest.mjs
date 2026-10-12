@@ -86,7 +86,7 @@ export const MANIFEST = Object.freeze({
       returns: "Promise<boolean> hooded now",
       gm: false, writes: true, legacy: true,
       sideEffects: ["Item update (flags.pentaryn-senses.hooded)", "ChatMessage"],
-      doc: "Lower or raise a hooded lantern's hood (bright 0 / dim 5 while lowered); one chat line.",
+      doc: "Lower or raise a hooded lantern's hood (bright 0 / dim 5 while lowered; owner only, a non-owner is warned); one chat line.",
     },
     {
       path: "light.profileFor",

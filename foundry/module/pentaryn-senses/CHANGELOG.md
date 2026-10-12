@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **[declared senses-EXT-9] Hood tells a non-owner why nothing happened** (final review
+  2026-10-12): one `ownerOrWarn(item)` guards cast, end, toggle and hood. Lowering the hood on
+  someone else's hooded lantern now warns "Only {name}'s owner can do that." (was: silent), as the
+  other three already did; same text, same `false`, nothing written. Hood on an item with no hood
+  stays silent. New `test/light-owner-warn.test.mjs`.
+
 - **[declared senses-ac-3] `setupLight` writes one batch per parent, not one update per torch**
   (final review 2026-10-12, = perf-4): it plans first (which torches lack the Light activity, and
   each one's sort), then world items go in one `Item.updateDocuments` and each actor's or unlinked

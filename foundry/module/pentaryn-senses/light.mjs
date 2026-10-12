@@ -33,6 +33,13 @@ const warn = (label, err) => console.warn(`${MODULE} | light ${label}`, err);
 /*  Casting (any client that owns the item)     */
 /* -------------------------------------------- */
 
+/** The one owner check for cast, end, toggle and hood: a non-owner is told why nothing happened. */
+function ownerOrWarn(item) {
+  if (item.isOwner) return true;
+  ui.notifications.warn(_loc("PENTARYN_SENSES.Light.NotOwner", { name: item.actor?.name ?? item.name }));
+  return false;
+}
+
 /**
  * Write where the light goes. `target` is {token: id} or {x, y}, on `target.scene` or the viewed
  * scene. The active GM does the rest; with no GM connected the flag waits for them.
@@ -40,10 +47,7 @@ const warn = (label, err) => console.warn(`${MODULE} | light ${label}`, err);
 export async function cast(item, target) {
   item = realItem(item);
   if (!item || !target) return false;
-  if (!item.isOwner) {
-    ui.notifications.warn(_loc("PENTARYN_SENSES.Light.NotOwner", { name: item.actor?.name ?? item.name }));
-    return false;
-  }
+  if (!ownerOrWarn(item)) return false;
   const flag = castFlag(target.scene ?? canvas?.scene?.id, target, Date.now());
   if (!flag) return false;
   await item.update({ [CAST]: flag });
@@ -68,10 +72,7 @@ function canSeeName(tok) {
 export async function end(item) {
   item = realItem(item);
   if (!item) return false;
-  if (!item.isOwner) {
-    ui.notifications.warn(_loc("PENTARYN_SENSES.Light.NotOwner", { name: item.actor?.name ?? item.name }));
-    return false;
-  }
+  if (!ownerOrWarn(item)) return false;
   if (!readSpellCast(item) && !anyLitBy(item.uuid)) {
     ui.notifications.info(_loc("PENTARYN_SENSES.Light.NoneLit"));
     return false;
@@ -109,10 +110,7 @@ export async function pickAndCast(item) {
 export async function toggle(item) {
   item = realItem(item);
   if (!item || !profileFor(item)) return false;
-  if (!item.isOwner) {
-    ui.notifications.warn(_loc("PENTARYN_SENSES.Light.NotOwner", { name: item.actor?.name ?? item.name }));
-    return false;
-  }
+  if (!ownerOrWarn(item)) return false;
   const lit = !isLit(item);
   await item.update(lit ? { [LIT]: true } : { [LIT]: false, [HOODED]: false });
   await announce(item, lit ? "PENTARYN_SENSES.Light.Lights" : "PENTARYN_SENSES.Light.Douses");
@@ -138,7 +136,8 @@ async function announce(item, key) {
 /** Lower or raise a hooded lantern's hood (bright 0 / dim 5 while lowered). */
 export async function hood(item) {
   item = realItem(item);
-  if (!item?.isOwner || !profileFor(item)?.hooded) return false;
+  if (!item || !profileFor(item)?.hooded) return false;
+  if (!ownerOrWarn(item)) return false;
   const hooded = !isHooded(item);
   await item.update({ [HOODED]: hooded });
   // The table hears the hood too (usability Area 8, L5: lowering it posted nothing).
