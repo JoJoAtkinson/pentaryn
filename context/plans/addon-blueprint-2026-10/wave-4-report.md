@@ -481,3 +481,54 @@ After the sync (+ the Wave 7 restart for module.json) and a reload, as GM with T
     GM connected — the form stays (decision for Joe).
 12. Escape with the Change Form picker open closes it (PT3-6); `CONFIG.debug["pentaryn-transform"] =
     true` then a shift prints the stripped-items debug line (T-D3).
+
+## D7 wiring stage (2026-10-12)
+
+One shared Argon tooltip stylesheet, `foundry/lib/argon-tooltip.css` (kit 1.0.2; no kit file changed,
+no kit bump). Code phase only, nothing live, no `module.json` touched.
+
+| Module | Vendored (vendor.py, byte-identical) | Loaded | Commit |
+|---|---|---|---|
+| transform | yes (`4af2a9c2`) | `styles/transform.css` `@import "../lib/argon-tooltip.css"` (`45733d25`, transform lane) | pin `f6c668c8` |
+| combat | yes (`eaff3e00`) | `styles/combat.css` `@import "../lib/argon-tooltip.css"` — **[declared]** `24e961a0` | `24e961a0` |
+| riders | **no** — `vendor.py sync pentaryn-riders --kit argon-tooltip` refuses until `module.json` `relationships` names `enhancedcombathud` (W7 batch, not this lane's file) | — | — |
+
+- **Visual output.** `test/css-rules.mjs` (one copy each in combat and transform) inlines `@import`s
+  and lists every selector's declarations in cascade order. `golden/tooltip-rules.json` (the same
+  file in both modules) was computed from **origin/main's** `pentaryn-transform/styles/transform.css`
+  :70-113, not from the code under test. Both modules' `.pentaryn-tt` rules match it: the same 11
+  selectors with the same values in the same order. Transform's own rules don't touch any tooltip
+  property, so moving the block to the top of transform.css changes nothing.
+- **The declared change (combat, `24e961a0`).** With pentaryn-transform **off**, combat's Full
+  Attack, follow-up and command tooltips now get the compact layout: a 340 px width cap,
+  click-through, and the two-column details grid. Before, they fell back to Argon's default. With
+  transform on, the same rules load twice and nothing changes. This is transform-creatures-14 step 2
+  and W4-C6, done without a hand copy.
+- **C37.** Combat still passes. Transform's C37 is only its `ptf-*` selectors now, and clears once W7
+  declares `cssPrefix: "ptf-"`. Riders' `.pr-*` selectors clear the same way with `cssPrefix: "pr-"`.
+  Its two `#tooltip` selectors stay failing by default (W4-R9).
+- **Gates.** combat node:test 244 pass / 0 fail / 0 todo (+3), transform 248 (+1), riders unchanged.
+  Every `modules.check_report` gate is green for combat, transform and riders, and `vendor.py check`
+  is clean for all three. Conformance is unchanged: combat 91.7 %, transform 93.6 %, riders 89.6 %.
+
+### Open for Joe — D7
+
+| # | Item | Default | Why |
+|---|---|---|---|
+| W4-D7a | Riders' `#tooltip.ech-tooltip-container`, `#tooltip .ech-tooltip { pointer-events: none }` cannot be expressed with the shared file without a rework: the kit's rule only covers tooltips with the `pentaryn-tt` class, while riders' rule covers every Argon hover tooltip | **keep it in riders.css** (same as W4-R9) | Moving it into the kit file would make every Argon tooltip click-through whenever combat or transform is on, even with riders off. That is a kit-wide behaviour change, so per Joe's D7 rule this lane pauses and records it |
+
+### Integrator — D7
+
+- W7 batch, riders: once `relationships.recommends` names `enhancedcombathud`, run
+  `vendor.py sync pentaryn-riders --kit argon-tooltip` and either list `lib/argon-tooltip.css` in
+  `styles` or `@import` it from `riders.css`. It is inert for riders alone, since riders renders no
+  `.pentaryn-tt` tooltip.
+- W7 batch, combat + transform (optional, W4-C6 / W4-T4): if `module.json` `styles` lists
+  `lib/argon-tooltip.css`, drop the matching `@import` line **and** flip the D7 import pin in that
+  module's `test/css.test.mjs` in the same commit. The `tooltip-rules.json` pins then need a
+  `styles`-aware loader, or should be retired with a note.
+- Docs outside this lane's ownership:
+  - `pentaryn-transform/README.md:99-100` ("combat's tooltips use the `pentaryn-tt` classes, styled
+    by … `styles/transform.css` imports") is no longer a coupling and could be dropped.
+  - Combat's CHANGELOG could note the [declared] `24e961a0`.
+
