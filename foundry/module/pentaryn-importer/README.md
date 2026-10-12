@@ -23,7 +23,8 @@ them is the `@2` contract bump). Tier `full`; no UI, no settings, one hook (`rea
 
 Nothing. The importer is GM-only and console-first. A GM sees a permanent error toast when the
 version gate or the @ref lint refuses a run, when a non-GM calls it, when an entry cannot be
-prepared (a missing slug, or an entry that is not an object — `null`, a string), and when a readback fails; an info toast with the counts after a
+prepared (a missing slug, an entry that is not an object — `null`, a string — or two items on one
+entry sharing a `flags.pentaryn.action`), and when a readback fails; an info toast with the counts after a
 real run; and a permanent "delete `Data/<path>`" toast after a successful one. Players see a
 toast only if they call `import()` themselves: the `NOT_GM` refusal. Some refusals throw a `PentarynAbort` with **no** toast — read `err.code` /
 `err.message`: a fetch failure (missing file, HTML body, network error, timeout), a bad option
@@ -78,7 +79,7 @@ undone should be re-run against the same file.
 
 | Signal | Meaning | Scope |
 |---|---|---|
-| throws `PentarynAbort` | version gate, `@ref` lint, missing or malformed file, non-GM, missing slug, an entry that is not an object, bad option, fetch failure, an import already running | whole run; **nothing was written** |
+| throws `PentarynAbort` | version gate, `@ref` lint, missing or malformed file, non-GM, missing slug, an entry that is not an object, two items on one entry with the same action, bad option, fetch failure, an import already running | whole run; **nothing was written** |
 | throws `PentarynAssertionError` | a readback mismatch (CONTRACT §8.3) | whole run; actors earlier in the batch **were** written |
 | `{ ok: false, failed: [...] }` | a `ValidationError` or similar from one Actor | that actor only |
 

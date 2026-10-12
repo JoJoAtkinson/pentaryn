@@ -505,6 +505,23 @@ function preparePayload(entry) {
     );
   }
 
+  // importer-EC4: `flags.pentaryn.action` is the upsert key for an entry's Items, so two rows with
+  // the same action would shadow each other (the readback's find() matches both to one live Item).
+  // A generator contract violation, refused here in the pre-pass before anything is written. Items
+  // without an action, or that are not objects, are left to the readback (assertItemsAddressable).
+  const actions = new Set();
+  for (const item of items) {
+    const action = isPlainObject(item) ? getPath(item, `flags.${FLAG_SCOPE}.action`) : undefined;
+    if (action === undefined) continue;
+    if (actions.has(action)) {
+      throw new PentarynAbort(
+        `Actor ${JSON.stringify(slug)} has two items with flags.${FLAG_SCOPE}.action ${JSON.stringify(action)}. `
+        + "The action is the upsert key for its Items; refusing the run rather than letting one row shadow the other."
+      );
+    }
+    actions.add(action);
+  }
+
   return { data, items, expected, slug };
 }
 

@@ -15,7 +15,7 @@
 //   golden/dryrun.json, golden/results.json, golden/refusals.json (toast text included) — no step
 //   may change them, except declared fixes: importer-M4 renamed the file in gateModuleJson's text
 //   (pentaryn-importer.mjs → importer-core.mjs, where CONTRACT_ID lives); importer-R4 made nullEntry
-//   a PentarynAbort REFUSED and added stringEntry.
+//   a PentarynAbort REFUSED and added stringEntry; importer-EC4 added duplicateAction.
 import { mock, test } from "node:test";
 import assert from "node:assert/strict";
 import { installFoundry } from "./kit/foundry-stub.mjs";
@@ -361,6 +361,17 @@ test("importer-R4: a string entry after a good one → PentarynAbort REFUSED bef
   assertShouted(o, "PentarynAbort");
   assert.equal(o.code, "REFUSED");
   pinKey("refusals", "stringEntry", refusal(o));
+});
+
+// importer-EC4 [declared]: two Items on one entry sharing flags.pentaryn.action is a generator
+// contract violation, refused in the pre-pass before the lint and before any write.
+test("importer-EC4: a duplicate item action on one entry → PentarynAbort REFUSED, one toast, nothing imported", async () => {
+  const item = action => ({ name: action, type: "weapon", flags: { pentaryn: { action } } });
+  serve(valid([entry("a", "h"), entry("b", "h", { items: [item("bite"), item("bite")] })]));
+  const o = await outcome(() => imp({ dryRun: true }));
+  assertShouted(o, "PentarynAbort");
+  assert.equal(o.code, "REFUSED");
+  pinKey("refusals", "duplicateAction", refusal(o));
 });
 
 test("non-GM → PentarynAbort with the guide's text, one toast, no fetch", async () => {

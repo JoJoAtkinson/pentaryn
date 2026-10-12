@@ -299,12 +299,12 @@ function assertActivityIdsSurvived(item, requestedItemData, slug) {
  */
 function assertItemsAddressable(actor, items, slug) {
   // Every payload Item must be findable by its `flags.pentaryn.action`. `replaceItems` has
-  // already proved the COUNT matches; this proves the IDENTITY does. The two failures it
-  // separates: Foundry stripped `flags.pentaryn.action` (the item exists but is no longer
-  // addressable, and the next run would treat it as hand-added and leave it behind), or the
-  // generator emitted two rows with the same action name (count matches, one shadows the
-  // other). Silently skipping — the old `if (liveItem)` — is the exact failure class this
-  // module exists to catch.
+  // already proved the COUNT matches; this proves the IDENTITY does: Foundry did not strip
+  // `flags.pentaryn.action` (an item that lost it is no longer addressable, and the next run would
+  // treat it as hand-added and leave it behind), and the payload item carries one at all. Two rows
+  // with the same action name never get here: `preparePayload` refuses them up front, before any
+  // write (importer-EC4) — `find()` below would match both to one live Item. Silently skipping —
+  // the old `if (liveItem)` — is the exact failure class this module exists to catch.
   for (const itemData of items) {
     const action = actionOf(itemData);
     const liveItem = (action === undefined) ? undefined : itemByAction(actor, action);

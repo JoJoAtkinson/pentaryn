@@ -64,6 +64,12 @@
   timeout), the importer throws `Network error reading <url>: <cause>`, like the fetch-failure
   branch, so `pentaryn-write` reports `REFUSED` instead of `INTERNAL`. New key `fetchBodyError` in
   golden/refusals.json.
+- **[declared] Two items on one entry with the same `flags.pentaryn.action` refuse the run**
+  (`importer-EC4`): `preparePayload` throws `PentarynAbort` `REFUSED` `Actor "<slug>" has two items
+  with flags.pentaryn.action "<action>". …` in the pre-pass, with one permanent error toast, before
+  any write. It used to import both rows and pass the readback, because `find()` matched both to one
+  live Item. No new assertion site; the adapter comment no longer claims the readback catches it.
+  New key `duplicateAction` in golden/refusals.json.
 - **[declared] `game.pentaryn` is merged into, never replaced or frozen** (`items-journal-1`). Every
   module's namespace survives whichever order the modules load in; `import`, `moduleId`, `contract`
   and the frozen `_internals` stay on the root.

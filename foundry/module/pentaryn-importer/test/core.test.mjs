@@ -179,6 +179,30 @@ for (const [label, M] of IMPLS) {
     same(["a string entry", null, [{ flags: { pentaryn: { slug: "x" } } }]].map(thrown), want);
   });
 
+  // importer-EC4 [declared]: two Items on one entry with the same flags.pentaryn.action used to pass
+  // (the readback's find() matched both rows to one live Item). The core now refuses the entry in
+  // the R1 pre-pass, before any write; the verbatim oracle still accepts it.
+  test(`${label}: preparePayload — a duplicate item action on one entry (importer-EC4)`, () => {
+    const thrown = entry => {
+      try {
+        M.preparePayload(entry);
+      } catch (err) {
+        return [err.name, err.message, err.code ?? null];
+      }
+      return null;
+    };
+    const act = action => ({ name: action, flags: { pentaryn: { action } } });
+    const dup = { name: "D", flags: { pentaryn: { slug: "d" } }, items: [act("bite"), act("claw"), act("bite")] };
+    const distinct = { flags: { pentaryn: { slug: "d" } }, items: [act("bite"), act("claw"), { name: "no action" }, { name: "none" }, "odd"] };
+    assert.equal(thrown(distinct), null, "distinct actions, unflagged items and non-objects are not this refusal");
+    same(thrown(dup), label === "oracle" ? null : [
+      "PentarynAbort",
+      "Actor \"d\" has two items with flags.pentaryn.action \"bite\". The action is the upsert key for "
+        + "its Items; refusing the run rather than letting one row shadow the other.",
+      "REFUSED",
+    ]);
+  });
+
   test(`${label}: toUpdatePayload / toCreatePayload`, () => {
     const data = { system: { attributes: { hp: { value: 5, max: 9 } } }, flags: { pentaryn: { contentHash: "h", slug: "x" } } };
     const before = JSON.stringify(data);

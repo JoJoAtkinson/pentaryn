@@ -110,6 +110,21 @@
     ],
     "fetched": 1
   },
+  "duplicateAction": {
+    "name": "PentarynAbort",
+    "message": "Actor \"b\" has two items with flags.pentaryn.action \"bite\". The action is the upsert key for its Items; refusing the run rather than letting one row shadow the other.",
+    "toasts": [
+      [
+        "error",
+        "[pentaryn-importer] Actor \"b\" has two items with flags.pentaryn.action \"bite\". The action is the upsert key for its Items; refusing the run rather than letting one row shadow the other.",
+        {
+          "permanent": true,
+          "console": false
+        }
+      ]
+    ],
+    "fetched": 1
+  },
   "notGM": {
     "name": "PentarynAbort",
     "message": "Refusing to import: only a GM can create or update world Actors.",
