@@ -657,7 +657,7 @@ test("scrolling-text guard: a destroyed PreciseText ignores destroy and x/y; a h
   u.destroy();
   assert.equal(u.destroyCalls, 2, "setting off: core's destroy runs");
   assert.throws(() => { u.y = 5; }, /null|undefined/, "setting off: the original setter runs (and throws on a null transform)");
-  assert.equal(u.y, 0, "the getter returns 0 whenever transform is null, whatever the setting");
+  assert.throws(() => u.y, /null|undefined/, "setting off: the original getter runs too (combat-core-EC-7)");
   await F.game.settings.set(MODULE, "scrollingTextGuard", true);
   const G = W.InterfaceCanvasGroup;
   assert.equal(G.prototype.createScrollingText._pentaryn, true);
@@ -679,6 +679,29 @@ test("scrolling-text guard: a destroyed PreciseText ignores destroy and x/y; a h
   doc.hidden = false;
   pinJSON("turnflow-guards", F.calls.filter(c => ["createScrollingText", "ChatLog.notify"].includes(c.op)), import.meta.url);
   F.calls.length = 0;
+});
+
+test("combat-core-EC-7 [declared]: with scrollingTextGuard Off a destroyed PreciseText's x/y getter is core's own", async () => {
+  const P = W.PreciseText;
+  const t = new P();
+  t.x = 7;
+  t.y = 8;
+  t.destroy();
+  assert.deepEqual([t.x, t.y], [0, 0], "On: a destroyed text reads 0");
+  await F.game.settings.set(MODULE, "scrollingTextGuard", false);
+  try {
+    const u = new P();
+    u.x = 1;
+    u.y = 2;
+    assert.deepEqual([u.x, u.y], [1, 2], "Off: a live text reads through the native getter");
+    u.destroy();
+    for (const axis of ["x", "y"]) {
+      assert.throws(() => u[axis], /null|undefined/, `Off: the native ${axis} getter runs on a destroyed text (it throws on a null transform)`);
+      assert.throws(() => { u[axis] = 5; }, /null|undefined/, `Off: the native ${axis} setter runs too`);
+    }
+  } finally {
+    await F.game.settings.set(MODULE, "scrollingTextGuard", true);
+  }
 });
 
 test("Argon's pip settle: updateActionUse runs twice only when the pip count changed (combat-riders-3)", () => {
