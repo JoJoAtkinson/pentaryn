@@ -128,8 +128,11 @@ Emits nothing of its own. Listens to: `ready` only (pinned in `test/golden/hooks
 ## Patches and adjustments
 
 Patches nothing. One `foundry/adjustments.yml` row: `dnd5e-importer-gate` (the dnd5e minor this
-code and `build_actors.py` target; markers `targetSystemVersion`, `TARGET_SYSTEM_VERSION` in
-`importer-core.mjs`, `documents-adapter.mjs` and `scripts/foundry/build_actors.py`).
+code and `build_actors.py` target). Its markers are matched across the row's files combined:
+`targetSystemVersion` (the `module.json` `flags.pentaryn` gate key the importer reads) appears in
+`importer-core.mjs` and `documents-adapter.mjs`; `TARGET_SYSTEM_VERSION` is the generator's
+constant in `scripts/foundry/build_actors.py`. The importer has no constant of its own holding the
+number.
 
 ## Two sessions / who writes
 
@@ -147,6 +150,9 @@ browser tab) can still overlap — run imports from one place.
    `api.mjs` `importActors`.
 4. A new API member → a row in `api-manifest.mjs`, its implementation in `api.mjs`, then
    `GOLDEN_UPDATE=1 node --test test/api.test.mjs` and review the `describe`/`surface` diff.
+5. Moving the dnd5e target minor → `module.json` `flags.pentaryn.targetSystemVersion` (a Foundry
+   restart, playbook §10), `TARGET_SYSTEM_VERSION` in `scripts/foundry/build_actors.py`, and the
+   `dnd5e-importer-gate` row in `foundry/adjustments.yml`, together.
 
 ## Pitfalls
 
