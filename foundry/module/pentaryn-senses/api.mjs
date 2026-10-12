@@ -36,7 +36,6 @@ function subjectOf(ref, { sceneId, base } = {}) {
  * actor gets `actor: null` and no `lightSpells` (the inventory is the owner's business).
  */
 export function inspect(ref, opts = {}) {
-  opts ??= {};
   const { token, actor } = subjectOf(ref, opts);
   const user = opts.as ? resolveRef(opts.as, "user") : game.user;
   const sees = !!actor && (user?.isGM === true || actor.testUserPermission?.(user, "OBSERVER") === true);
