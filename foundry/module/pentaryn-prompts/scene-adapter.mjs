@@ -372,10 +372,9 @@ export function panelFor(tokenDoc, { rows = 12, unseenWithinFt = 60 } = {}) {
   const model = sceneCache.put(scene.id, PANEL_OPTS, sceneModel(scene, PANEL_OPTS));
   const rels = panelRels(model.items, model.rel, `Token.${tokenDoc.id}`, unseenWithinFt);
   const split = panelSplit(rels, { rows, unseenWithinFt });
-  const d = scene.dimensions;
   return {
     ...split,
-    mapFt: [Math.round(d.sceneWidth / d.size * model.gridFt), Math.round(d.sceneHeight / d.size * model.gridFt)],
+    mapFt: [...model.mapFt],
     warn: model.warn
   };
 }
