@@ -20,6 +20,8 @@ F.fire("ready");
 await drain();
 mock.timers.tick(60);
 const api = F.game.modules.get(MODULE).api;
+const bootHookCount = F.hooks.length;
+const onRows = rows => rows.filter(h => h.kind === "on").map(h => `${h.kind}:${h.name}`);
 
 /** Feature files are exactly the entry's `import * as X from "./f.mjs"` targets (blueprint D12). */
 function featureFiles() {
@@ -97,4 +99,11 @@ test("hot patch: after uninstall(), re-importing the entry re-wires hooks, the w
   assert.ok(W.strip(), "the strip is drawn again");
   api2.uninstall();
   assert.deepEqual(F.listeners(), {});
+});
+
+test("every feature the hot re-import installs also installs on boot", () => {
+  const boot = onRows(F.hooks.slice(0, bootHookCount));
+  const hot = onRows(F.hooks.slice(bootHookCount));
+  assert.equal(hot.length, 13, "the hot re-import ran (previous test)");
+  assert.deepEqual(boot, hot, "a FEATURES entry not wired into the boot branch would differ here");
 });

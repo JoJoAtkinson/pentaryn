@@ -38,8 +38,10 @@ import * as light from "./light.mjs";
 import * as creatureStrip from "./creature-strip.mjs";
 import * as ownerSees from "./owner-sees.mjs";
 
-/** Features, in install order (uninstall runs them in reverse). */
-const FEATURES = [light, creatureStrip, ownerSees];
+/** Features, in install order (uninstall runs them in reverse). A new feature goes in one of the two lists. */
+const BODY_FEATURES = [light, creatureStrip]; // install in the module body, before init
+const AFTER_INIT_FEATURES = [ownerSees]; // install after Hooks.once("init") is registered
+const FEATURES = [...BODY_FEATURES, ...AFTER_INIT_FEATURES];
 
 const log = makeLog(MODULE);
 const reg = hookRegistry(MODULE, log);
@@ -94,10 +96,9 @@ if (ctx.late) {
   onReadyStartup();
   onReadyPublish();
 } else {
-  light.install(reg, ctx);
-  creatureStrip.install(reg, ctx);
+  for (const feature of BODY_FEATURES) feature.install(reg, ctx);
   Hooks.once("init", onInit);
-  ownerSees.install(reg, ctx);
+  for (const feature of AFTER_INIT_FEATURES) feature.install(reg, ctx);
   Hooks.once("ready", onReadyStartup);
   Hooks.once("ready", onReadyPublish);
 }
