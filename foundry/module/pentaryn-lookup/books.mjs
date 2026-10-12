@@ -168,7 +168,7 @@ async function monster(name, opts = {}) {
 /**
  * Monsters by size, type and CR, from the Monster Manual first, then the 2024 SRD (one entry per
  * name). `monsters({size: "large", type: "construct", cr: "5-8"})`; `cr` is a value ("1/4", 3) or a
- * range ("1/2-2"); `name` a substring; `limit` (default 40). → `{count, monsters: [{name, cr, size,
+ * range ("1/2-2", "CR 1/2 to 2"), an unreadable one filters nothing and warns; `name` a substring; `limit` (default 40). → `{count, monsters: [{name, cr, size,
  * type, uuid, pack}]}`, lowest CR first. Picks candidates without guessing from memory.
  */
 async function monsters(q = {}) {

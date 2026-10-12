@@ -57,6 +57,10 @@
 - [declared] The 2014 SRD spell pack (`dnd5e.spells`) is stamped 2014: an `onList` answer for a
   spell found there and a `spellList` row from it carry `edition: "2014"` (2024 answers have no
   `edition`, as search hits do), and `packs()` reports that pack as 2014, not 2024 (EXT-5).
+- [declared] `monsters({ cr })` reads an en-dash, em-dash or ` to ` as the range separator and a
+  leading `CR` on either value (`"CR 1/2 to 2"` = `"1/2-2"`); a `cr` that still names no bound
+  answers the unfiltered list with `warning: "cr not understood: <cr> — use '3', '1/4' or '1/2-2'"`
+  (joined to a `packs` warning with "; ") instead of silently returning everything (lookup-edge-5).
 
 ## 0.3.0 — 2026-10-10
 

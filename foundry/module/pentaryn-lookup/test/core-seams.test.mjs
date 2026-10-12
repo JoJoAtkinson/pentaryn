@@ -67,7 +67,12 @@ test("core.crNum and SIZE_KEYS equal the oracle", () => {
 });
 
 test("core.monsterQuery equals the oracle over the query table", () => {
-  for (const q of QUERIES) assert.deepEqual(core.monsterQuery(q), oracle.monsterQuery(q), JSON.stringify(q));
+  // [declared] lookup-edge-5: an unparseable cr ("x") adds a warning; everything else is unchanged.
+  for (const q of QUERIES) {
+    const want = oracle.monsterQuery(q);
+    if (q.cr === "x") want.warning = "cr not understood: x — use '3', '1/4' or '1/2-2'";
+    assert.deepEqual(core.monsterQuery(q), want, JSON.stringify(q));
+  }
   assert.deepEqual(core.monsterQuery(), oracle.monsterQuery());
 });
 

@@ -68,7 +68,7 @@ export const MANIFEST = Object.freeze({
     {
       path: "monsters",
       params: [
-        { name: "q", type: "{ size?, type?, cr? ('1/4', 3, '1/2-2'), minCr?, maxCr?, name?, limit? (40, max 200), "
+        { name: "q", type: "{ size?, type?, cr? ('1/4', 3, '1/2-2', 'CR 1/2 to 2'; unreadable answers unfiltered with a warning), minCr?, maxCr?, name?, limit? (40, max 200), "
           + "packs? (pack id | pack id[]; anything else answers the default packs with a warning) }", optional: true },
       ],
       returns: "{ count, shown, monsters: [{ name, cr, size, type, uuid, pack }], hint?, warning? }",

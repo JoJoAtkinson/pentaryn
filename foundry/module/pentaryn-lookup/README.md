@@ -79,7 +79,10 @@ remaining checks still run (R4).
 through the kit's actor resolver. A UUID of something that is not a page (a JournalEntry) answers
 empty `text` plus a `warning` saying so, and echoes that UUID as its `uuid` (never a made-up page UUID). `page()` appends embedded roll tables as `tables` (`{ tables:
 false }` skips them). `onList`'s `spell` is a spell name or an Item UUID; a UUID of anything that
-is not a spell Item answers `{ notFound, spell, hint }` naming what it is. Kit members: `describe()`, `version`, `contract`, `settings()`, `trace()`,
+is not a spell Item answers `{ notFound, spell, hint }` naming what it is. `monsters`' `cr` is a
+value (`"1/4"`, `3`, `"CR 3"`) or a range split by `-`, an en/em dash or ` to ` (`"1/2-2"`,
+`"CR 1/2 to 2"`); a `cr` it cannot read filters nothing and answers
+`warning: "cr not understood: <cr> — use '3', '1/4' or '1/2-2'"`. Kit members: `describe()`, `version`, `contract`, `settings()`, `trace()`,
 `uninstall()`.
 
 **Queries (GM only):** `pentaryn-lookup.search`, `.page`, `.monster`, `.monsters`, `.names`,

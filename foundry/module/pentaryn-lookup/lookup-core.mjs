@@ -435,17 +435,22 @@ export function crNum(v) {
   return Number.isFinite(n) ? n : null;
 }
 
+/** A CR range: "-", en-dash, em-dash or " to " between two values, each with an optional "CR". */
+const CR_RANGE = /^\s*(?:cr\s*)?([\d/.]+)(?:\s*[-\u2013\u2014]\s*|\s+to\s+)(?:cr\s*)?([\d/.]+)\s*$/i;
+
 /**
- * `monsters(q)`'s options → `{ size, type, lo, hi, name, limit, packIds }`. `cr` is a value ("1/4", 3)
- * or a range ("1/2-2"); `minCr`/`maxCr` override either end; `limit` defaults to 40, max 200.
+ * `monsters(q)`'s options → `{ size, type, lo, hi, name, limit, packIds, warning? }`. `cr` is a value
+ * ("1/4", 3, "CR 3") or a range ("1/2-2", "1/2 to 2"); a `cr` that names no bound filters nothing and
+ * warns (lookup-edge-5). `minCr`/`maxCr` override either end; `limit` defaults to 40, max 200.
  */
 export function monsterQuery(q = {}) {
   const size = q.size ? SIZE_KEYS[String(q.size).toLowerCase()] ?? String(q.size).toLowerCase() : null;
   const type = q.type ? String(q.type).toLowerCase() : null;
-  let lo = null, hi = null;
+  let lo = null, hi = null, crWarning = null;
   if (q.cr !== undefined && q.cr !== null && q.cr !== "") {
-    const m = /^\s*([\d/.]+)\s*-\s*([\d/.]+)\s*$/.exec(String(q.cr));
-    if (m) { lo = crNum(m[1]); hi = crNum(m[2]); } else { lo = hi = crNum(q.cr); }
+    const m = CR_RANGE.exec(String(q.cr));
+    if (m) { lo = crNum(m[1]); hi = crNum(m[2]); } else { lo = hi = crNum(String(q.cr).replace(/^\s*cr\s*/i, "")); }
+    if (lo === null && hi === null) crWarning = `cr not understood: ${q.cr} — use '3', '1/4' or '1/2-2'`;
   }
   if (q.minCr !== undefined) lo = crNum(q.minCr);
   if (q.maxCr !== undefined) hi = crNum(q.maxCr);
@@ -455,8 +460,8 @@ export function monsterQuery(q = {}) {
   const packs = q.packs ?? null;
   const usable = packs === null || typeof packs === "string" || Array.isArray(packs);
   const packIds = typeof packs === "string" ? [packs] : Array.isArray(packs) ? packs : [...MONSTER_LIST_PACKS];
-  return { size, type, lo, hi, name, limit, packIds,
-           ...(usable ? {} : { warning: "packs ignored: expected a pack id or an array" }) };
+  const warning = [usable ? null : "packs ignored: expected a pack id or an array", crWarning].filter(Boolean).join("; ");
+  return { size, type, lo, hi, name, limit, packIds, ...(warning ? { warning } : {}) };
 }
 
 /** The index fields matchMonster and monsterRow read (getIndex({fields})). */
