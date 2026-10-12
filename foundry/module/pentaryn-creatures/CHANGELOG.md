@@ -50,6 +50,8 @@ a player or GM can notice:
   instead of throwing a `TypeError`.
 - **[declared] creatures-M8** — docs only: the entry's file list is headed "Files (core first,
   then the features, then the API):" (it claimed "in load order", which the imports do not follow).
+- **[declared] creatures-ext-9** — tests only: a guard fails the suite when a `SETTINGS` row is
+  missing from `status()` or from its manifest row's `returns` (status() hard-codes its settings).
 
 ## 0.1.1 — 2026-10-10
 

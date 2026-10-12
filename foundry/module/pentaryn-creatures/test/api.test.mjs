@@ -79,6 +79,16 @@ test("status() (transform-creatures-31): wrap, the four settings, writer, lit to
   assert.equal(api.status().writer, true);
 });
 
+test("creatures-ext-9 [declared]: every SETTINGS row is a key of status() and named in the status row's returns", () => {
+  const keys = Object.keys(api.status());
+  const row = MANIFEST.rows.find(r => r.path === "status");
+  const named = row.returns.replace(/^\{\s*|\s*\}$/g, "").split(/\s*,\s*/);
+  for (const { key } of SETTINGS) {
+    assert.ok(keys.includes(key), `status() hard-codes its settings: ${key} is missing from it`);
+    assert.ok(named.includes(key), `the status manifest row's returns does not name ${key}`);
+  }
+});
+
 test("inspect(ref, { as }): plain JSON, depth ≤ 4; a document, a placeable or a uuid; a miss is coded", () => {
   const imp = W.tok("tImp");
   const out = api.inspect(imp);
