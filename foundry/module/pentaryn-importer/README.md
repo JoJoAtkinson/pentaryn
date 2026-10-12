@@ -85,7 +85,9 @@ undone should be re-run against the same file.
 Every assertion failure names the actor slug, item action, activity id, path, expected and actual,
 as a permanent toast and a `console.error`.
 
-**For an LLM.** Always run `{ dryRun: true }` first and read `created`/`updated`/`skipped`. A thrown
+**For an LLM.** Always run `{ dryRun: true }` first and read `created`/`updated`/`skipped`. The
+dry run's split is the real run's, a slug repeated in the file included (`importer-EC5`): the
+first entry would create, a later one would update, or skip when its hash matches. A thrown
 `PentarynAbort` means nothing was written: fix the cause and re-run; its `code` (1.1.1) is
 `NOT_FOUND` for a missing file, `NOT_GM`, `BAD_ARGS`, `CONFLICT` (already running), `TIMEOUT`, else
 `REFUSED` (gate, lint, malformed entry, other fetch failures). A thrown

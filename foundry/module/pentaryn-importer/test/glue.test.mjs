@@ -238,6 +238,26 @@ test("dry run over existing actors: update / create / skip by slug and contentHa
   pinKey("console", "dryRunActors", { plain: plain.console, only: only.console, force: force.console });
 });
 
+test("importer-EC5: a duplicate slug in the file splits created/updated/skipped as the real run would", async () => {
+  // The real run (write.test's full import) creates the first "dup" and updates it from the second;
+  // an entry whose hash matches what an earlier entry in the same file stamped is skipped.
+  serve(valid([
+    entry("dup", "sha256:dup-1"),
+    entry("dup", "sha256:dup-2"),
+    entry("twin", "sha256:twin"),
+    entry("twin", "sha256:twin"),
+    entry("a", "sha256:a-new"),
+    entry("a", "sha256:a-new"),
+  ]));
+  const o = await outcome(() => imp({ dryRun: true }));
+  assert.equal(o.error, null);
+  assert.deepEqual(
+    [o.result.created, o.result.updated, o.result.skipped],
+    [["dup", "twin"], ["dup", "a"], ["twin", "a"]],
+  );
+  assert.equal(game.actors.find(a => a.flags.pentaryn?.slug === "dup"), undefined, "a dry run writes nothing");
+});
+
 test("a custom path and timeout reach getRoute and fetch", async () => {
   serve(valid());
   const o = await outcome(() => imp({ dryRun: true, path: "worlds/other/export.json", timeout: 50 }));

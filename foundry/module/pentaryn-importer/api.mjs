@@ -200,6 +200,9 @@ async function importOnce({ path, dryRun, only, force, timeout, unmanagedItems }
       if (dryRun) {
         (existing ? updated : created).push(slug);
         log.info(`dry-run ${existing ? "would update" : "would create"} ${slug} (${items.length} item(s))`);
+        // importer-EC5: stand in for the hash the real run would stamp, so a later entry with the
+        // same slug reports "would update" (or "skip" on a matching hash), as the real run does.
+        bySlug.set(slug, { flags: { [FLAG_SCOPE]: { contentHash: incomingHash, slug } } });
         continue;
       }
 

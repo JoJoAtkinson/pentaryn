@@ -55,6 +55,10 @@
   Actor is written. An actor whose Item write (or anything else after the Actor write) fails is now
   reported only in `failed[]`, instead of "1 updated · 1 failed" for the same actor. A later entry
   with the same slug still updates the actor created earlier in the run. Goldens untouched.
+- **[declared] A dry run reports a duplicate slug the way the real run does** (`importer-EC5`): a
+  slug repeated in the file is "would create" once, then "would update" (or skipped when its
+  content hash matches the earlier entry's), instead of "would create" every time. A dry run still
+  writes nothing. golden/dryrun.json (an empty manifest) is unchanged.
 - **[declared] `game.pentaryn` is merged into, never replaced or frozen** (`items-journal-1`). Every
   module's namespace survives whichever order the modules load in; `import`, `moduleId`, `contract`
   and the frozen `_internals` stay on the root.
