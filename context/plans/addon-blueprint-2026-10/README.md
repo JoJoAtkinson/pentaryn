@@ -171,6 +171,11 @@ If WAIT lifts before Stage 3 runs, fold those modules' manifest edits in. Otherw
 form a second, final restart batch (**Wave 7b**) at the end of Stage 4. Two restarts total, never
 one per module.
 
+**Status 2026-10-12 (W5c):** batches 1 and 2 are applied together on `migrate/wave-5`, one commit
+per module (WAIT lifted, so one restart, not two): [`wave-5-report.md`](wave-5-report.md). The sync,
+the one restart and the live smoke are lane W5L: [`wave-5-live-plan.md`](wave-5-live-plan.md). The
+walls flag-scope data migration is parked (walls stays off).
+
 ### Stage 4 — Formerly-WAIT modules (audit Wave 8); all `wait.json` entries lifted 2026-10-11 (D9: live test done)
 
 Order: **creatures → portals → senses → riders → aoe → transform → combat.**
