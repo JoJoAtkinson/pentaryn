@@ -52,6 +52,8 @@
   leaves no debug trace there. An unknown list traces the list read, then the options read (LKM-12).
 - [declared] The ready console line counts every lookup and points at `describe()` — "8 lookups
   (describe() lists them), selftest()" — instead of naming 5 of the 8 (LKM-13).
+- [declared] `packs()` also lists the spell packs `onList`/`spellList` read and the PHB class,
+  origin and feat packs `names()` reads, after the book, 2014 and monster packs (EXT-3).
 
 ## 0.3.0 — 2026-10-10
 

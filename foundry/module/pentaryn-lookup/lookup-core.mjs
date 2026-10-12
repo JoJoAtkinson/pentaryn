@@ -566,6 +566,16 @@ export const NAME_SOURCES = Object.freeze({
   feats: { pack: "dnd-players-handbook.feats", fields: ["type", "system.type.value", "system.type.subtype"] },
 });
 
+/**
+ * Every pack a lookup reads, for packs(): the books, the 2014 SRD, the monster packs, the spell
+ * packs onList/spellList read, then the PHB name packs names() reads — unique, in that order (EXT-3).
+ * Derived, so a pack added to any of those tables cannot drop out of the session-opening probe.
+ */
+export const KNOWN_PACKS = Object.freeze([...new Set([
+  ...BOOKSETS.all, ...BOOKSETS["2014"], ...MONSTER_PACKS, ...SPELL_PACKS,
+  ...Object.values(NAME_SOURCES).map(s => s.pack),
+])]);
+
 /** `names(kind)` words → the part of the answer they pick (case-insensitive). */
 export const NAME_PARTS = Object.freeze({
   class: "classes", classes: "classes", subclass: "subclasses", subclasses: "subclasses",

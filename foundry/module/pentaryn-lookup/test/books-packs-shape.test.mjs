@@ -86,3 +86,19 @@ test("R5: page(name, {books: '<pack id>'}) reads from that pack", async () => {
   const bad = await rules.page("Cover (SRD)", { books: "srd" });
   assert.match(bad.warning, /books ignored: expected/);
 });
+
+// EXT-3 [declared]: packs() listed the book, 2014 and monster packs but not the spell packs onList /
+// spellList read nor the PHB name packs names() reads, so the session-opening probe could not say why
+// those answered empty. Now core's one derived KNOWN_PACKS is what packs() lists, in that order.
+test("EXT-3: KNOWN_PACKS is books, 2014, monsters, spells, then every NAME_SOURCES pack, unique, in order", () => {
+  const want = [...new Set([...BOOKSETS.all, ...BOOKSETS["2014"], ...core.MONSTER_PACKS, ...core.SPELL_PACKS,
+                            ...Object.values(core.NAME_SOURCES).map(s => s.pack)])];
+  assert.deepEqual(core.KNOWN_PACKS, want);
+  assert.ok(Object.isFrozen(core.KNOWN_PACKS));
+});
+
+test("EXT-3: packs() lists exactly KNOWN_PACKS, the spell and name packs included", async () => {
+  const ids = (await rules.packs()).packs.map(p => p.id);
+  assert.deepEqual(ids, core.KNOWN_PACKS);
+  for (const id of [...core.SPELL_PACKS, ...Object.values(core.NAME_SOURCES).map(s => s.pack)]) assert.ok(ids.includes(id), id);
+});

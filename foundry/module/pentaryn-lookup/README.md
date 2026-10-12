@@ -119,7 +119,8 @@ answer the same read, so the first answer is right.
 2. Any Foundry read it needs → a function in `packs-adapter.mjs` (plain data out). A pack id
    it reads goes in one of core's tables (`BOOKSETS`, `MONSTER_PACKS`, `MONSTER_LIST_PACKS`,
    `SPELL_PACKS`, `NAME_SOURCES`), never inline in `books.mjs`; so do the index fields it reads
-   (`NAME_SOURCES`, `MONSTER_INDEX_FIELDS`).
+   (`NAME_SOURCES`, `MONSTER_INDEX_FIELDS`). `packs()` lists `KNOWN_PACKS`, derived from all five,
+   so a pack added to any of them shows up in the probe.
 3. A thin method in `books.mjs`, added to `install()`'s `impl`.
 4. A row in `api-manifest.mjs`: `returns`, `doc`, `legacy: true` only if the answer is an
    `{error}`/`{notFound}` object, and `query: true` + an `args` mapper if the bridge should call it.

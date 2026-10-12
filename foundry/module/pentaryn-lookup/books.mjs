@@ -9,7 +9,7 @@
  */
 
 import {
-  BOOKSETS, EDITIONS, MONSTER_PACKS, findPage, foundFromDoc, nonPageWarning, knownLists, listFor as listForIn, matchMonster,
+  EDITIONS, KNOWN_PACKS, MONSTER_PACKS, findPage, foundFromDoc, nonPageWarning, knownLists, listFor, matchMonster,
   MONSTER_INDEX_FIELDS, missingPackError, monsterDigest, monsterQuery, monsterRow, pageMonsters, pickByName, renderPage, renderTable, resolveBooks,
   searchBooks, sortMonsters, embeddedTableUuids, groupListUuids, spellListRows, NAME_SOURCES, groupNames,
 } from "./lookup-core.mjs";
@@ -88,9 +88,9 @@ async function withTables(out, found, opts) {
 
 // ── spell lists (dnd5e's registry; the "Class Spell Lists" pages are empty shells) ──
 
-const listFor = (type, identifier) => listForIn(spellRegistry(), type, identifier,
+const spellListFor = (type, identifier) => listFor(spellRegistry(), type, identifier,
   err => log?.debug("spell-list registry read failed", { type, identifier }, err));
-const known = () => knownLists(spellRegistry(), err => log?.debug("spell-list options read failed", err));
+const knownSpellLists = () => knownLists(spellRegistry(), err => log?.debug("spell-list options read failed", err));
 
 /**
  * Is a spell on a class's list (or a subclass's: `{type: "subclass"}`)?
@@ -104,18 +104,18 @@ async function onList(spell, cls, opts = {}) {
   if (doc.type !== "spell" || !doc.system) {
     return { notFound: true, spell, hint: `${spell} is a ${doc.documentName}, not a spell Item` };
   }
-  const list = listFor(type, cls);
+  const list = spellListFor(type, cls);
   // the options are read only for the unknown-list hint, never on a found list (LKM-12)
   if (!list) return { spell: doc.name, uuid: doc.uuid, level: doc.system.level, list: `${type}:${cls}`, onList: null,
-    hint: `no such list; known: ${known().join(", ")}` };
+    hint: `no such list; known: ${knownSpellLists().join(", ")}` };
   return { spell: doc.name, uuid: doc.uuid, level: doc.system.level, list: `${type}:${cls}`, onList: list.has(doc) };
 }
 
 /** The names on a class list, optionally one spell level: `spellList("cleric", {level: 3})`. */
 async function spellList(cls, opts = {}) {
   const { type = "class", level = null } = opts ?? {};
-  const list = listFor(type, cls);
-  if (!list) return { error: `no ${type} list "${cls}"`, known: known() };
+  const list = spellListFor(type, cls);
+  if (!list) return { error: `no ${type} list "${cls}"`, known: knownSpellLists() };
   // the registry holds a uuid per contributing pack (PHB and the 2024 SRD both list Aid):
   // read levels from each pack's index, keep one entry per name, the owned book first
   const groups = groupListUuids(list.uuids);
@@ -198,9 +198,8 @@ async function names(kind = null) {
 
 /** What is actually installed. Answers the usual session-opening probe in one call. */
 async function packs() {
-  const known = [...new Set([...BOOKSETS.all, ...BOOKSETS["2014"], ...MONSTER_PACKS])];
   const rows = [];
-  for (const id of known) {
+  for (const id of KNOWN_PACKS) {
     const p = await packSummary(id, log);
     if (!p) { rows.push({ id, present: false }); continue; }
     rows.push({ id, present: true, label: p.label,
