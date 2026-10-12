@@ -236,7 +236,7 @@
           "optional": true
         }
       ],
-      "returns": "Promise<boolean> — false when no Starry Form was up",
+      "returns": "Promise<boolean> — false when no Starry Form was up, or this client is already ending it",
       "gm": false,
       "writes": true,
       "query": false,

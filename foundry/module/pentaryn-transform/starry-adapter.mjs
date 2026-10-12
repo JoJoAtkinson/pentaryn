@@ -235,11 +235,21 @@ export async function assumeStarry(actor, constellation) {
   }
 }
 
-/** Dismiss the starry form (no action required). */
+const ending = new Set();   // actor uuids, like wildshape-adapter's `reverting`
+
+/**
+ * Dismiss the starry form (no action required). One ending at a time per druid on this client: an
+ * expiry and an Incapacitated (or a Long Rest) landing together delete once and post one line.
+ */
 export async function endStarry(actor, { quiet = false, reason = "manual" } = {}) {
   const effect = activeStarry(actor);
-  if (!effect) return false;
-  await effect.delete();
+  if (!effect || ending.has(actor.uuid)) return false;
+  ending.add(actor.uuid);
+  try {
+    await effect.delete();
+  } finally {
+    ending.delete(actor.uuid);
+  }
   if (!quiet) say(actor, _loc(`PENTARYN_TRANSFORM.Chat.${starryEndKey(reason)}`, { name: actor.name }));
   return true;
 }

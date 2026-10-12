@@ -4,6 +4,10 @@
 
 ## Unreleased
 
+- **One Starry Form ending at a time (starry-double-end, final review).** An expiry landing together
+  with an Incapacitated or a Long Rest could send two deletes for the same effect and log a failed
+  ending. `endStarry` now holds an in-flight guard per druid, as revert does: the overlapping ending
+  answers false, so the form is deleted once with one chat line ([declared]).
 - **A failed Starry Form from the HUD refunds the Wild Shape use (R2-refund, final review).** The use
   was spent before the form's effect was written, and a failure there kept it spent. Now, as a failed
   shift does, the use comes back when the form did not go up; a form that is up (only its light

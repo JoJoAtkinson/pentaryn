@@ -74,7 +74,7 @@ The legacy methods take an Actor document (not a ref) and keep their old shapes.
 | `sweepSpentForms()` | — | not the active GM | yes | yes |
 | `formImage({ uuid })` | the token image a form of that beast gets | not an Actor; no image at all | — | — |
 | `starry.assume(actor, "archer"\|"chalice"\|"dragon")` | boolean | shifted, incapacitated, no uses, no feature | — | yes |
-| `starry.end(actor, { quiet, reason })` | boolean | no Starry Form up | — | yes |
+| `starry.end(actor, { quiet, reason })` | boolean | no Starry Form up; already ending on this client | — | yes |
 | `starry.active(actor)` / `starry.constellation(actor)` | the effect / the constellation | none up | — | — |
 | `inspect(ref, opts)` | shape state, plain JSON | throws `NOT_FOUND` / `AMBIGUOUS` / `BAD_ARGS` | — | — |
 | `selftest()` | `{ ok, checks }` | — | — | — |

@@ -120,7 +120,7 @@ export const STARRY_ROWS = Object.freeze([
   {
     path: "starry.end", legacy: true,
     params: [ACTOR, { name: "opts", type: "{ quiet?: boolean, reason?: 'manual'|'incapacitated'|'expired' }", optional: true }],
-    returns: "Promise<boolean> — false when no Starry Form was up", gm: false, writes: true, sideEffects: [STARRY, LIGHT],
+    returns: "Promise<boolean> — false when no Starry Form was up, or this client is already ending it", gm: false, writes: true, sideEffects: [STARRY, LIGHT],
     doc: "Dismiss Starry Form (no action required); one chat line for the reason unless quiet.",
   },
   {

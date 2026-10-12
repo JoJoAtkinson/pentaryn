@@ -259,6 +259,26 @@ test("endStarry: none → false; the effect deleted, the light off (runner), the
   assert.deepEqual(lines(), []);
 });
 
+test("starry-double-end: two overlapping endings delete once and post one line; the second answers false", async () => {
+  const { talo } = fresh();
+  await S.assumeStarry(talo, "archer");
+  F.chat.length = 0;
+  F.calls.length = 0;
+  // A real delete is a server round trip: the effect stays on the actor until the reply comes back.
+  const eff = talo.effects.get(SID);
+  const realDelete = eff.delete.bind(eff);
+  eff.delete = async (...args) => { await new Promise(r => setImmediate(r)); return realDelete(...args); };
+  const deletes = () => ops("delete").length;
+  const [a, b] = await Promise.all([S.endStarry(talo, { reason: "expired" }), S.endStarry(talo, { reason: "expired" })]);
+  await flush();
+  assert.deepEqual([a, b], [true, false], "starry-double-end: the second ending is a no-op while the first is in flight");
+  assert.equal(deletes(), 1, "starry-double-end: one expiry deletes the effect once");
+  assert.deepEqual(lines(), ["Talo's starry form fades after 10 minutes."]);
+  assert.equal(S.activeStarry(talo), null);
+  await S.assumeStarry(talo, "archer");
+  assert.equal(await S.endStarry(talo), true, "starry-double-end: the guard is released after the ending settles");
+});
+
 test("the light: nothing written without pentaryn-senses active; a hand-set light is not overwritten; a player's delete leaves it to the runner", async () => {
   let { talo } = fresh();
   game.modules.get("pentaryn-senses").active = false;
@@ -459,7 +479,13 @@ test("dnd5e.restCompleted (long): the form ends quietly for an owner; a short re
   Hooks.callAll("dnd5e.restCompleted", talo, {}, { type: "long" });
   Hooks.callAll("updateActiveEffect", talo.effects.get(SID), { duration: { expired: true } }, {}, "u");
   await flush();
-  assert.deepEqual(F.console.map(c => c.slice(0, 2)), [["warn", "pentaryn-transform | ending starry form failed"], ["warn", "pentaryn-transform | ending starry form failed"]]);
+  // starry-double-end: the rest and the expiry overlap, so only the first sends a delete and warns.
+  assert.deepEqual(F.console.map(c => c.slice(0, 2)), [["warn", "pentaryn-transform | ending starry form failed"]]);
+  F.console.length = 0;
+  Hooks.callAll("updateActiveEffect", talo.effects.get(SID), { duration: { expired: true } }, {}, "u");
+  await flush();
+  assert.deepEqual(F.console.map(c => c.slice(0, 2)), [["warn", "pentaryn-transform | ending starry form failed"]],
+    "starry-double-end: a failed ending releases the guard, so the next one tries again");
 });
 
 test("a beast shift ends Starry Form; Starry Form is never carried into the form (PT3-4)", async () => {
