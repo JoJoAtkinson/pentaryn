@@ -44,6 +44,27 @@ module. Baseline: [`wave-3-baseline.md`](wave-3-baseline.md).
   MUST and Joe's rule puts perf in the same wave.** [declared] `be2573e3` (switches), `5c34cda8`
   (unlink), each flipping its named pins; `05b79e3e` clears the scan's false positive. Live check
   in the portals guide's Result.
+- **prompts — the type-ahead's window listeners have no uninstall (prompts-lookup-32 item 1).** The
+  `keyup` (and `blur`) listeners are added when `typeahead-adapter.mjs` loads and are never removed;
+  `uninstall()` clears the orphan sink only. Removing them needs two new exports on the adapter
+  (`listenKeyup`, `unlistenAll`), and the frozen per-file surface golden (`golden/glue-exports.json`,
+  key `typeahead`) pins its five. Decide: extend that pin (a declared golden edit) and build the
+  uninstall, or keep the permanent listener (it only swallows releases of keys it swallowed).
+- **prompts — gather/replace summary log lines (prompts-lookup-18) not built.** The gather's console
+  line and replace's failure-path lines are pinned exactly by frozen tests, and logging is outside
+  this wave's rule (performance, maintainability, hardening, LLM-read). Decide: build it (flips the
+  two console pins, declared, console only) or drop it.
+- **prompts — the `pentaryn-prompts.replace` query writes but is not idempotent across GM tabs
+  (§5.9.1).** It is safe today: the fork reaches it through the bridge module, which calls the
+  handler in its own tab. A `User#query` to the GM user would run it in every tab of that user
+  (bridge + browser) and build every replacement twice. Documented in the README ("Two sessions").
+  Decide: keep it bridge-only (as documented), or key replace runs by a request id.
+- **prompts — the fork halves of mcp-fork-15 and prompts-lookup-11/-12 are open.** The module side
+  is done (`prompts-core.mjs` `KINDS`/`PATCH_KEYS`; the manifest is the query table;
+  `test/contract.test.mjs` checks the fork's kinds, sizes, feature types and patch keys and pins
+  `KNOWN_DRIFT` = `character.folder`, `gather.from`). Fork lane: the checked-in vocabulary copy and its
+  test, `ACTION_TABLE`; widening the fork's strict schemas for the two drift keys is a declared fork
+  change the audit deferred.
 
 ## Known red commits and ranges (bisecting)
 
@@ -51,6 +72,8 @@ module. Baseline: [`wave-3-baseline.md`](wave-3-baseline.md).
 |---|---|---|
 | portals: C32 / `foundry-adjustments-check` | `f6bbd2dc` → the ADJ batch commit | the S3 split moved the markers out of `portals.mjs`, and the two existing `adjustments.yml` rows still list it; fixed when the integrator lands the portals rows |
 | portals: module-check imports gate | `ae936c07` → `186cdfb1` (`ae936c07`, `8a060d21`, `b87d8c15`, `186cdfb1`) | `test/aoe-handle.test.mjs` imported `../../pentaryn-aoe/core.mjs` across modules; fixed `4d6f0c4b` (a cited oracle copy); module tests stayed green |
+| prompts: module-check i18n gate | `5ba6516c` → `02600db9` | `test/i18n.test.mjs` held a bare `"PENTARYN_PROMPTS."` literal the gate reads as a missing key; node tests stayed green; fixed `02600db9` |
+| prompts: C32 / C47 (advisory) | `f5a05191` → the ADJ batch commit | `wrapMethod` names `prompts-token-dblclick` and the code names item-piles; both rows wait in the integrator list (scored on a copy with them: 97.9 %) |
 - **senses — two GM tabs both run the Light reconcile (§5.9 async review).** The reconcile, the
   deletion hooks and the ready sweep are gated on `isActiveGM()`, which elects a *user*; with the MCP
   bridge tab and a GM browser tab open, both run. For a Light cast on a square both tabs create the
