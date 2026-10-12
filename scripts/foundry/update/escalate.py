@@ -45,7 +45,7 @@ from typing import Callable
 
 from scripts.foundry.ops import config as ops_cfg
 from scripts.foundry.update import adjustments as adj_mod
-from scripts.foundry.update import llm
+from scripts.foundry.update import llm, risk
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 CACHE_DIR = REPO_ROOT / ".state" / "vtt-update-analysis"
@@ -1220,8 +1220,7 @@ def run(plan: dict, policy: dict, *, run_id: str, dry: bool, forced: bool = Fals
     record["cost_usd"] = llm.total_cost(record["calls"])
     record["charged_usd"] = llm.charged(record["calls"])
     if record["plans"] or record["held"]:
-        plan["buckets"] = {b: [d["id"] for d in plan.get("decisions") or []
-                               if d.get("bucket") == b] for b in ("auto", "review", "hold")}
+        plan["buckets"] = risk.bucket_index(plan.get("decisions"))
     return record
 
 

@@ -27,7 +27,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Callable
 
-from scripts.foundry.update import llm
+from scripts.foundry.update import llm, risk
 
 # Model and effort come from `llm.adjudicator` in update-policy.yml; these are the
 # defaults when it is absent. Effort is set explicitly — Opus 5.5 defaults to medium, and
@@ -195,8 +195,5 @@ def apply_verdicts(plan: dict, verdicts: list[Verdict], error: str | None,
         "verdicts": [{"id": v.id, "verdict": v.verdict, "rationale": v.rationale}
                      for v in verdicts],
     }
-    plan["buckets"] = {
-        bucket: [d["id"] for d in plan["decisions"] if d["bucket"] == bucket]
-        for bucket in ("auto", "review", "hold")
-    }
+    plan["buckets"] = risk.bucket_index(plan["decisions"])
     return plan

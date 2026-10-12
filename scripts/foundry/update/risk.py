@@ -38,6 +38,12 @@ SEEN_PATH = REPO_ROOT / ".state" / "vtt-update.seen.json"
 
 AUTO, REVIEW, HOLD, SKIP = "auto", "review", "hold", "skip"
 
+
+def bucket_index(decisions) -> dict:
+    """The plan's ``buckets`` map: decision ids per bucket, keys in auto/review/hold order."""
+    return {b: [d["id"] for d in decisions or [] if d.get("bucket") == b]
+            for b in (AUTO, REVIEW, HOLD)}
+
 # Foundry's PACKAGE_AVAILABILITY_CODES, from common/constants.mjs. It vends these as
 # INTEGERS, not names — an earlier version of this file matched only on strings, which
 # meant no blocker was ever detected and every compatibility preview came back "clean".

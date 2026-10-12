@@ -1426,3 +1426,20 @@ def test_exposure_skips_blueprint_tooling(tmp_path):
     (other / "x.py").write_text('Y = "wall-height"\n')
     reg = adj_mod.Registry()
     assert reg.exposure("wall-height", root=tmp_path) == ["scripts/foundry/ops/x.py"]
+
+
+def test_bucket_index_matches_the_old_comprehension():
+    from scripts.foundry.update import risk
+    ds = [
+        {"id": "a", "bucket": "auto"},
+        {"id": "s", "bucket": "skip"},
+        {"id": "h", "bucket": "hold"},
+        {"id": "nobucket"},
+        {"id": "r", "bucket": "review"},
+        {"id": "a2", "bucket": "auto"},
+    ]
+    old = {b: [d["id"] for d in ds or [] if d.get("bucket") == b]
+           for b in ("auto", "review", "hold")}
+    assert json.dumps(risk.bucket_index(ds)) == json.dumps(old)
+    assert list(risk.bucket_index(ds)) == ["auto", "review", "hold"]
+    assert risk.bucket_index(None) == {"auto": [], "review": [], "hold": []}
