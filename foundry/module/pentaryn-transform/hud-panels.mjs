@@ -12,8 +12,8 @@
  */
 
 import {
-  MODULE, EFFECT_ID, activitiesOf, isWildShapeActivity, planBonusBar, planWithout, frontRowItems, coveredPanel,
-  hpText, portraitText, earnsChalice, formatDuration, pruneDisconnected
+  MODULE, EFFECT_ID, activitiesOf, isWildShapeActivity, findWildShapeItem, planBonusBar, planWithout, frontRowItems,
+  coveredPanel, hpText, portraitText, earnsChalice, formatDuration, pruneDisconnected
 } from "./transform-core.mjs";
 import { makeLog } from "./lib/log.mjs";
 import { registerKeybindings } from "./settings.mjs";
@@ -71,7 +71,7 @@ function composeBonusBar(panel, actor) {
   const hasWildShape = !!wildShapeActivity(actor) && !!original(actor);
   const revertItems = actor.items.filter(isRevertItem);
   if (!hasWildShape && !revertItems.length) return;
-  const ownWs = actor.items.find(i => activitiesOf(i).some(isWildShapeActivity));
+  const ownWs = findWildShapeItem(actor.items);
   // Shifted, planBonusBar drops a carried Starry Form's button instead of replacing it (PT3-4).
   const starry = starryItem(actor);
 
