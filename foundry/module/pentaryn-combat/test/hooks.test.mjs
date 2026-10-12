@@ -104,7 +104,7 @@ test("import graph: both entries reach every non-test .mjs; DFS order as recorde
   const graph = importGraph(ROOT, { exclude: ["lib/", "test/"] });
   const order = [...reachable(graph, ["combat.mjs", "hud.mjs"])];
   pinJSON("graph", { graph, order }, import.meta.url);
-  assert.deepEqual([...order].sort(), sourceFiles(ROOT));
+  assert.deepEqual([...order].filter(f => !f.startsWith("lib/")).sort(), sourceFiles(ROOT), "every own file (the vendored lib/ is reached too since S4)");
   assert.deepEqual(graph["hud.mjs"].includes("turnflow.mjs"), true, "turnflow is reached only through hud.mjs");
   assert.deepEqual(Object.entries(graph).filter(([, deps]) => deps.includes("turnflow.mjs")).map(([f]) => f), ["hud.mjs"]);
 });

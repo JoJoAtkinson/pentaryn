@@ -37,6 +37,98 @@ export const VERSION = "0.2.5";            // === module.json version (core.test
 export const CONTRACT = "pentaryn-combat/api@1";
 export const I18N = "PENTARYN_COMBAT";
 export const CSS = "pc-";
+/**
+ * Every i18n key the code used to build from a template (FollowUp + "." + kind), written
+ * out literally so each one is a definite reference for the i18n gate (C35, combat-riders-28). Read
+ * through `keyFor(family, value)`, which falls back to the old template's string for a value the
+ * table lacks, so the rendered text is unchanged either way.
+ */
+export const I18N_KEYS = Object.freeze({
+  FollowUp: Object.freeze({
+    offhand: "PENTARYN_COMBAT.FollowUp.offhand",
+    nick: "PENTARYN_COMBAT.FollowUp.nick",
+    flurry: "PENTARYN_COMBAT.FollowUp.flurry",
+    "martial-arts": "PENTARYN_COMBAT.FollowUp.martial-arts",
+    hew: "PENTARYN_COMBAT.FollowUp.hew",
+    "pole-strike": "PENTARYN_COMBAT.FollowUp.pole-strike",
+  }),
+  FollowUpText: Object.freeze({
+    offhand: "PENTARYN_COMBAT.FollowUpText.offhand",
+    "offhand-dual-wielder": "PENTARYN_COMBAT.FollowUpText.offhand-dual-wielder",
+    nick: "PENTARYN_COMBAT.FollowUpText.nick",
+    flurry: "PENTARYN_COMBAT.FollowUpText.flurry",
+    "martial-arts": "PENTARYN_COMBAT.FollowUpText.martial-arts",
+    hew: "PENTARYN_COMBAT.FollowUpText.hew",
+    "pole-strike": "PENTARYN_COMBAT.FollowUpText.pole-strike",
+  }),
+  Kind: Object.freeze({
+    nick: "PENTARYN_COMBAT.Kind.nick",
+    offhand: "PENTARYN_COMBAT.Kind.offhand",
+    bonus: "PENTARYN_COMBAT.Kind.bonus",
+    main: "PENTARYN_COMBAT.Kind.main",
+    "pole-strike": "PENTARYN_COMBAT.Kind.pole-strike",
+  }),
+  "Rider.Name": Object.freeze({
+    "sneak-attack": "PENTARYN_COMBAT.Rider.Name.sneak-attack",
+    frenzy: "PENTARYN_COMBAT.Rider.Name.frenzy",
+    "colossus-slayer": "PENTARYN_COMBAT.Rider.Name.colossus-slayer",
+    "divine-strike": "PENTARYN_COMBAT.Rider.Name.divine-strike",
+  }),
+  "Rider.Rule": Object.freeze({
+    "sneak-attack": "PENTARYN_COMBAT.Rider.Rule.sneak-attack",
+    frenzy: "PENTARYN_COMBAT.Rider.Rule.frenzy",
+    "colossus-slayer": "PENTARYN_COMBAT.Rider.Rule.colossus-slayer",
+    "divine-strike": "PENTARYN_COMBAT.Rider.Rule.divine-strike",
+  }),
+  "Rider.Check": Object.freeze({
+    advantage: "PENTARYN_COMBAT.Rider.Check.advantage",
+    ally: "PENTARYN_COMBAT.Rider.Check.ally",
+    noDisadvantage: "PENTARYN_COMBAT.Rider.Check.noDisadvantage",
+    raging: "PENTARYN_COMBAT.Rider.Check.raging",
+    reckless: "PENTARYN_COMBAT.Rider.Check.reckless",
+  }),
+  "Rider.Mode": Object.freeze({
+    ask: "PENTARYN_COMBAT.Rider.Mode.ask",
+    auto: "PENTARYN_COMBAT.Rider.Mode.auto",
+  }),
+  "Rider.ToggleHint": Object.freeze({
+    ask: "PENTARYN_COMBAT.Rider.ToggleHint.ask",
+    auto: "PENTARYN_COMBAT.Rider.ToggleHint.auto",
+  }),
+  "Reckless.State": Object.freeze({
+    on: "PENTARYN_COMBAT.Reckless.State.on",
+    off: "PENTARYN_COMBAT.Reckless.State.off",
+  }),
+  "Reckless.Hint": Object.freeze({
+    on: "PENTARYN_COMBAT.Reckless.Hint.on",
+    off: "PENTARYN_COMBAT.Reckless.Hint.off",
+  }),
+  "Strip.Action": Object.freeze({
+    normal: "PENTARYN_COMBAT.Strip.Action.normal",
+    advantage: "PENTARYN_COMBAT.Strip.Action.advantage",
+    disadvantage: "PENTARYN_COMBAT.Strip.Action.disadvantage",
+    critical: "PENTARYN_COMBAT.Strip.Action.critical",
+  }),
+  "Strip.PausedNote": Object.freeze({
+    main: "PENTARYN_COMBAT.Strip.PausedNote.main",
+    flurry: "PENTARYN_COMBAT.Strip.PausedNote.flurry",
+    bonus: "PENTARYN_COMBAT.Strip.PausedNote.bonus",
+  }),
+  "Turn.Effect": Object.freeze({
+    dash: "PENTARYN_COMBAT.Turn.Effect.dash",
+    disengage: "PENTARYN_COMBAT.Turn.Effect.disengage",
+  }),
+  "Turn.EffectText": Object.freeze({
+    dash: "PENTARYN_COMBAT.Turn.EffectText.dash",
+    disengage: "PENTARYN_COMBAT.Turn.EffectText.disengage",
+  }),
+});
+
+/** `I18N_KEYS[family][value]`, else the key the template used to build (same string, so the same text). */
+export function keyFor(family, value) {
+  return I18N_KEYS[family]?.[value] ?? `${I18N}.${family}.${value}`;
+}
+
 /** The module's own events (S9 fills it): `{ name, pre, args, legacyName?, until? }` rows, fired by ctx.emit. */
 export const HOOKS = Object.freeze({});
 

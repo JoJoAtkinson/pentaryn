@@ -6,10 +6,12 @@
  * Stop. Esc while paused = Stop.
  */
 
-import { dockRect, swingTag, clampToView } from "./combat-core.mjs";
+import { MODULE, dockRect, swingTag, clampToView, keyFor } from "./combat-core.mjs";
+import { makeLog } from "./lib/log.mjs";
 import { setting } from "./settings.mjs";
 
-const T = (key, data) => (data ? game.i18n.format(key, data) : game.i18n.localize(key));
+const log = makeLog(MODULE);
+
 
 let el = null;
 let handlers = {};
@@ -60,35 +62,35 @@ function paint(ctx) {
   lastCtx = ctx;
   const n = ctx.numbers ?? { current: 1, total: 1 };
   const paused = ctx.status === "paused";
-  const target = ctx.target ? ` → ${esc(ctx.target)}` : ` → <em>${esc(T("PENTARYN_COMBAT.Strip.NoTarget"))}</em>`;
-  const kind = ctx.kind && ctx.kind !== "main" ? ` <span class="pc-kind">${esc(T(`PENTARYN_COMBAT.Kind.${ctx.kind}`))}</span>` : "";
+  const target = ctx.target ? ` → ${esc(ctx.target)}` : ` → <em>${esc(_loc("PENTARYN_COMBAT.Strip.NoTarget"))}</em>`;
+  const kind = ctx.kind && ctx.kind !== "main" ? ` <span class="pc-kind">${esc(_loc(keyFor("Kind", ctx.kind)))}</span>` : "";
   const advBtn = (value, label) =>
-    `<button type="button" data-pc="adv" data-value="${value}" class="${ctx.adv === value ? "active" : ""}" data-tooltip="${esc(T("PENTARYN_COMBAT.Strip.AdvHint"))}">${esc(label)}</button>`;
+    `<button type="button" data-pc="adv" data-value="${value}" class="${ctx.adv === value ? "active" : ""}" data-tooltip="${esc(_loc("PENTARYN_COMBAT.Strip.AdvHint"))}">${esc(label)}</button>`;
   // Each tile says what the weapon does (to hit · damage), so a swap mid-sequence is an informed one.
   const tiles = paused && ctx.weapons?.length > 1
     ? `<div class="pc-weapons">${ctx.weapons.map(w =>
-      `<button type="button" data-pc="swap" data-id="${esc(w.id)}" data-tooltip="${esc(T("PENTARYN_COMBAT.Strip.SwapHint", { weapon: w.name }))}"><img src="${esc(w.img)}" alt=""><span class="pc-name">${esc(w.name)}</span>${w.stats ? `<span class="pc-stats">${esc(w.stats)}</span>` : ""}</button>`).join("")}</div>`
+      `<button type="button" data-pc="swap" data-id="${esc(w.id)}" data-tooltip="${esc(_loc("PENTARYN_COMBAT.Strip.SwapHint", { weapon: w.name }))}"><img src="${esc(w.img)}" alt=""><span class="pc-name">${esc(w.name)}</span>${w.stats ? `<span class="pc-stats">${esc(w.stats)}</span>` : ""}</button>`).join("")}</div>`
     : "";
   // Enter takes the roll window's highlighted (autofocused) button: Advantage under Reckless or Steady
   // Aim, not always Normal (usability Area 3, D1).
-  const keys = paused ? T("PENTARYN_COMBAT.Strip.KeysPaused")
-    : T("PENTARYN_COMBAT.Strip.KeysAction", { action: T(`PENTARYN_COMBAT.Strip.Action.${enterAction ?? "normal"}`) });
+  const keys = paused ? _loc("PENTARYN_COMBAT.Strip.KeysPaused")
+    : _loc("PENTARYN_COMBAT.Strip.KeysAction", { action: _loc(keyFor("Strip.Action", enterAction ?? "normal")) });
   el.classList.toggle("paused", paused);
   el.innerHTML = `
     <div class="pc-head">
       <strong>${esc(ctx.title ?? "")}</strong>
-      <span class="pc-count">${esc(T("PENTARYN_COMBAT.Strip.SwingOf", { i: n.current, n: n.total }))}</span>
+      <span class="pc-count">${esc(_loc("PENTARYN_COMBAT.Strip.SwingOf", { i: n.current, n: n.total }))}</span>
       <span class="pc-what">${esc(ctx.weapon)}${target}${kind}</span>
       <span class="pc-keys">${esc(keys)}</span>
     </div>
-    ${paused ? `<div class="pc-paused">${esc(T("PENTARYN_COMBAT.Strip.Paused"))} ${esc(T(`PENTARYN_COMBAT.Strip.PausedNote.${ctx.note ?? "main"}`))}</div>` : ""}
+    ${paused ? `<div class="pc-paused">${esc(_loc("PENTARYN_COMBAT.Strip.Paused"))} ${esc(_loc(keyFor("Strip.PausedNote", ctx.note ?? "main")))}</div>` : ""}
     <div class="pc-row">
-      ${paused ? `<button type="button" data-pc="resume" class="pc-primary">${esc(T("PENTARYN_COMBAT.Strip.Resume"))}</button>
-                  <button type="button" data-pc="retarget">${esc(T("PENTARYN_COMBAT.Strip.Retarget"))}</button>` : ""}
-      ${advBtn("advantage", T("PENTARYN_COMBAT.Strip.Adv"))}
-      ${advBtn("disadvantage", T("PENTARYN_COMBAT.Strip.Dis"))}
-      <label class="pc-quick" data-tooltip="${esc(T("PENTARYN_COMBAT.Strip.QuickHint"))}"><input type="checkbox" data-pc="quick" ${ctx.quick ? "checked" : ""}> ${esc(T("PENTARYN_COMBAT.Strip.Quick"))}</label>
-      <button type="button" data-pc="stop" class="pc-stop" data-tooltip="${esc(T("PENTARYN_COMBAT.Strip.StopHint"))}">${esc(T("PENTARYN_COMBAT.Strip.Stop"))}</button>
+      ${paused ? `<button type="button" data-pc="resume" class="pc-primary">${esc(_loc("PENTARYN_COMBAT.Strip.Resume"))}</button>
+                  <button type="button" data-pc="retarget">${esc(_loc("PENTARYN_COMBAT.Strip.Retarget"))}</button>` : ""}
+      ${advBtn("advantage", _loc("PENTARYN_COMBAT.Strip.Adv"))}
+      ${advBtn("disadvantage", _loc("PENTARYN_COMBAT.Strip.Dis"))}
+      <label class="pc-quick" data-tooltip="${esc(_loc("PENTARYN_COMBAT.Strip.QuickHint"))}"><input type="checkbox" data-pc="quick" ${ctx.quick ? "checked" : ""}> ${esc(_loc("PENTARYN_COMBAT.Strip.Quick"))}</label>
+      <button type="button" data-pc="stop" class="pc-stop" data-tooltip="${esc(_loc("PENTARYN_COMBAT.Strip.StopHint"))}">${esc(_loc("PENTARYN_COMBAT.Strip.Stop"))}</button>
     </div>
     ${tiles}`;
   el.style.bottom = `${anchor()}px`;
@@ -182,8 +184,8 @@ function tagTitle(app, { weapon = false } = {}) {
   const tag = swingTag({ ...(lastCtx?.numbers ?? {}), weapon: lastCtx?.weapon, kind: lastCtx?.kind, status: lastCtx?.status });
   const title = app?.window?.title;
   if (!tag || tag.n < 2 || !title || title.dataset.pcSwing) return;
-  const kind = tag.kind !== "main" ? ` (${T(`PENTARYN_COMBAT.Kind.${tag.kind}`)})` : "";
-  const text = T(weapon ? "PENTARYN_COMBAT.Strip.SwingTagWeapon" : "PENTARYN_COMBAT.Strip.SwingTag", { weapon: tag.weapon, i: tag.i, n: tag.n }) + kind;
+  const kind = tag.kind !== "main" ? ` (${_loc(keyFor("Kind", tag.kind))})` : "";
+  const text = _loc(weapon ? "PENTARYN_COMBAT.Strip.SwingTagWeapon" : "PENTARYN_COMBAT.Strip.SwingTag", { weapon: tag.weapon, i: tag.i, n: tag.n }) + kind;
   title.dataset.pcSwing = "1";
   title.textContent = `${title.textContent} · ${text}`;
 }
@@ -237,15 +239,15 @@ function settleFocus() {
 }
 
 function onRollWindow(app, { weapon = false } = {}) {
-  try { if (app?.element?.classList?.contains("roll-configuration")) readEnter(app); } catch { /* the hint stays */ }
-  try { if (app?.element?.classList?.contains("roll-configuration")) settleFocus(); } catch { /* the player clicks */ }
+  try { if (app?.element?.classList?.contains("roll-configuration")) readEnter(app); } catch (err) { log.debug("read Enter (the hint stays)", err); }
+  try { if (app?.element?.classList?.contains("roll-configuration")) settleFocus(); } catch (err) { log.debug("settle focus (the player clicks)", err); }
   try {
     if (!docking()) { requestAnimationFrame(() => keepOnScreen(app)); return; }
     tagTitle(app, { weapon });
     // After the frame paints, so the window's real height is known.
     requestAnimationFrame(() => dock(app));
     dock(app);
-  } catch (err) { console.warn("pentaryn-combat | roll window dock", err); }
+  } catch (err) { log.warn("roll window dock", err); }
 }
 
 /**
@@ -269,7 +271,7 @@ function onRollWindowClose(app) {
       dockLast = { left: Math.round(p.left), bottom: Math.round(p.top + (app._pcDock?.height ?? 0)) };
     }
     docked.delete(app);
-  } catch { /* closing anyway */ }
+  } catch (err) { log.debug("roll window close (closing anyway)", err); }
 }
 
 Hooks.on("renderRollConfigurationDialog", (app) => onRollWindow(app, { weapon: true }));
@@ -338,13 +340,13 @@ export function pickWeapon(tiles, { title = "" } = {}) {
     const key = (ev) => { if (ev.key === "Escape") { ev.preventDefault(); ev.stopPropagation(); done(null); } };
     pickerEl = document.createElement("div");
     pickerEl.className = "pentaryn-combat-strip pentaryn-combat-picker";
-    pickerEl.innerHTML = `<div class="pc-head"><strong>${esc(title)}</strong><span class="pc-what">${esc(T("PENTARYN_COMBAT.Picker.Hint"))}</span></div>
+    pickerEl.innerHTML = `<div class="pc-head"><strong>${esc(title)}</strong><span class="pc-what">${esc(_loc("PENTARYN_COMBAT.Picker.Hint"))}</span></div>
       <div class="pc-weapons">${tiles.map(t => `
         <button type="button" data-id="${esc(t.id)}">
           <img src="${esc(t.img)}" alt="">
           <span class="pc-name">${esc(t.name)}</span>
           <span class="pc-stats">${esc([t.toHit, t.damage].filter(Boolean).join(" · "))}</span>
-          <span class="pc-swings">${esc(T("PENTARYN_COMBAT.Picker.Swings", { n: t.swings }))}</span>
+          <span class="pc-swings">${esc(_loc("PENTARYN_COMBAT.Picker.Swings", { n: t.swings }))}</span>
         </button>`).join("")}</div>`;
     pickerEl.addEventListener("click", ev => {
       const b = ev.target.closest("button[data-id]");

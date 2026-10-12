@@ -17,19 +17,22 @@ test("imported bare: no Foundry global needed or added", () => {
 
 // Guide S2's explicit additive delta: the blueprint constants. The S1 golden stays the 81 names.
 const ADDED_S2 = ["CONTRACT", "CSS", "HOOKS", "I18N", "MODULE", "NS", "SHORT", "VERSION"];
+// Guide S4's: the literal i18n key tables and their reader.
+const ADDED_S4 = ["I18N_KEYS", "keyFor"];
+const ADDED = [...ADDED_S2, ...ADDED_S4];
 
 test("export surface (golden/core-exports.json): 81 names", () => {
   const names = Object.keys(core).sort();
-  pinJSON("core-exports", names.filter(n => !ADDED_S2.includes(n)), import.meta.url);
-  assert.equal(names.length, 81 + ADDED_S2.length);
-  for (const n of ADDED_S2) assert.ok(names.includes(n), n);
+  pinJSON("core-exports", names.filter(n => !ADDED.includes(n)), import.meta.url);
+  assert.equal(names.length, 81 + ADDED.length);
+  for (const n of ADDED) assert.ok(names.includes(n), n);
   assert.equal(core.MOD, "pentaryn-combat");
   assert.equal(core.MODULE, core.MOD);
 });
 
 test("object exports are frozen tables, rows and arrays included", () => {
   const objects = Object.entries(core).filter(([, v]) => v && typeof v === "object");
-  assert.deepEqual(objects.map(([k]) => k).sort(), ["HOOKS", "RECKLESS_CHANGE", "SPECIAL_ACTIONS", "TURN_RIDERS"]);
+  assert.deepEqual(objects.map(([k]) => k).sort(), ["HOOKS", "I18N_KEYS", "RECKLESS_CHANGE", "SPECIAL_ACTIONS", "TURN_RIDERS"]);
   const deepFrozen = v => !v || typeof v !== "object" || (Object.isFrozen(v) && Object.values(v).every(deepFrozen));
   for (const [k, v] of objects) assert.ok(deepFrozen(v), k);
 });

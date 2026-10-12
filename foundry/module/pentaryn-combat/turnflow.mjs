@@ -19,11 +19,13 @@
 
 import * as core from "./combat-core.mjs";
 import { MODULE } from "./combat-core.mjs";
+import { makeLog } from "./lib/log.mjs";
 import { setting } from "./settings.mjs";
 import { combatContext, turnOf, updateTurn, countFor, chosenWeapon } from "./shapes.mjs";
 import { expectRoll, forgetRoll, running } from "./sequence.mjs";
 
-const T = (key, data) => (data ? game.i18n.format(key, data) : game.i18n.localize(key));
+const log = makeLog(MODULE);
+
 
 function mainPanel(label) {
   return ui.ARGON?.components?.main?.find?.(p => p.label === label) ?? null;
@@ -31,7 +33,7 @@ function mainPanel(label) {
 
 /** Argon's updateActionUse paints used pips only when the pip count didn't change; twice settles it. */
 function paint(panel) {
-  try { panel?.updateActionUse?.(); panel?.updateActionUse?.(); } catch { /* HUD closed */ }
+  try { panel?.updateActionUse?.(); panel?.updateActionUse?.(); } catch (err) { log.debug("paint pips (HUD closed)", err); }
 }
 
 /* ── Argon's six built-in actions ────────────────────────────────────────── */
@@ -50,9 +52,9 @@ function swingsPerAction(actor) {
 async function addTurnEffect(actor, kind, img) {
   const changes = kind === "dash" ? dashBase(actor) : [];
   await actor.createEmbeddedDocuments("ActiveEffect", [{
-    name: T(`PENTARYN_COMBAT.Turn.Effect.${kind}`),
+    name: _loc(core.keyFor("Turn.Effect", kind)),
     img: img || "icons/svg/wingfoot.svg",
-    description: `<p>${T(`PENTARYN_COMBAT.Turn.EffectText.${kind}`)}</p>`,
+    description: `<p>${_loc(core.keyFor("Turn.EffectText", kind))}</p>`,
     transfer: false,
     origin: actor.uuid,
     system: { changes },
@@ -70,16 +72,16 @@ function dashBase(actor) {
 
 async function rollHide(actor) {
   let rolls = null;
-  try { rolls = await actor.rollSkill({ skill: "ste", target: 15 }); } catch (err) { console.warn(`${MODULE} | Hide roll`, err); }
+  try { rolls = await actor.rollSkill({ skill: "ste", target: 15 }); } catch (err) { log.warn("Hide roll", err); }
   const roll = Array.isArray(rolls) ? rolls[0] : rolls;
   const total = roll?.total;
   const hidden = Number.isFinite(total) && total >= 15;
   if (hidden) {
     if (!actor.statuses?.has?.("hiding")) await actor.toggleStatusEffect("hiding", { active: true });
-    ui.notifications.info(T("PENTARYN_COMBAT.Turn.Hidden", { total }));
+    ui.notifications.info(_loc("PENTARYN_COMBAT.Turn.Hidden", { total }));
   } else {
     if (actor.statuses?.has?.("hiding")) await actor.toggleStatusEffect("hiding", { active: false });
-    ui.notifications.info(Number.isFinite(total) ? T("PENTARYN_COMBAT.Turn.NotHidden", { total }) : T("PENTARYN_COMBAT.Turn.HideCancelled"));
+    ui.notifications.info(Number.isFinite(total) ? _loc("PENTARYN_COMBAT.Turn.NotHidden", { total }) : _loc("PENTARYN_COMBAT.Turn.HideCancelled"));
   }
 }
 
@@ -115,10 +117,10 @@ function wrapSpecial(btn) {
       const turn = turnOf(actor);
       const left = core.actionsLeft(turn, swingsPerAction(actor));
       const shoveOk = kind === "shove" && core.swingsLeft(swingsPerAction(actor), turn, { inCombat: true }) > 0;
-      if (!left && !shoveOk) ui.notifications.warn(T("PENTARYN_COMBAT.Turn.NoActionLeft", { action: btn.label }));
+      if (!left && !shoveOk) ui.notifications.warn(_loc("PENTARYN_COMBAT.Turn.NoActionLeft", { action: btn.label }));
     }
     await own.call(btn, event);
-    try { await afterSpecial(actor, kind, btn); } catch (err) { console.warn(`${MODULE} | ${kind}`, err); }
+    try { await afterSpecial(actor, kind, btn); } catch (err) { log.warn(`${kind}`, err); }
   };
 }
 
@@ -140,7 +142,7 @@ function wrapReactionSlot(btn) {
     configurable: true,
     get() {
       const base = ownLabel ? ownLabel.call(this) : this.item?.name;
-      return setting("reactionSlot") && this.item?.name ? T("PENTARYN_COMBAT.Turn.OA", { weapon: this.item.name }) : base;
+      return setting("reactionSlot") && this.item?.name ? _loc("PENTARYN_COMBAT.Turn.OA", { weapon: this.item.name }) : base;
     }
   });
   const own = btn._onLeftClick;
@@ -171,7 +173,7 @@ Hooks.on("renderActionPanelArgonComponent", (panel) => {
       if (panel.label === "DND5E.Reaction") wrapReactionSlot(b);
       if (panel.label === "DND5E.Action") for (const x of [b, b?.button1, b?.button2]) wrapSpecial(x);
     }
-  } catch (err) { console.warn(`${MODULE} | turn-flow buttons`, err); }
+  } catch (err) { log.warn("turn-flow buttons", err); }
 });
 
 /* ── turn boundaries: Dodge / Dash / Disengage end; targets; the HUD follows ── */
@@ -204,10 +206,10 @@ Hooks.on("combatTurnChange", (combat, previous, current) => {
   const prior = ended ? combat.combatants.get(ended) ?? null : null;
   const next = began ? combat.combatants.get(began) ?? null : null;
   if (game.users.activeGM?.isSelf) {
-    sweep(prior?.actor, "turnEnd").catch(err => console.warn(`${MODULE} | turn-end sweep`, err));
-    sweep(next?.actor, "turnStart").catch(err => console.warn(`${MODULE} | turn-start sweep`, err));
+    sweep(prior?.actor, "turnEnd").catch(err => log.warn("turn-end sweep", err));
+    sweep(next?.actor, "turnStart").catch(err => log.warn("turn-start sweep", err));
     // The Reaction comes back at the start of your turn (combat.mjs records it; hud.mjs relights the pip).
-    if (next?.actor?.getFlag?.(MODULE, "reaction")) next.actor.setFlag(MODULE, "reaction", null).catch(() => null);
+    if (next?.actor?.getFlag?.(MODULE, "reaction")) next.actor.setFlag(MODULE, "reaction", null).catch(err => { log.debug("Reaction reset", err); return null; });
   }
   closeDrawersOf([prior?.actor, next?.actor]);
   if (game.user.isGM) return;
@@ -240,7 +242,7 @@ function followTo(token) {
   let canSelect = false;
   try { canSelect = !!(token.layer?.active && token.isInteractable && token._canControl?.(game.user)); } catch { canSelect = false; }
   if (canSelect && token.control({ releaseOthers: true })) return;
-  try { ui.ARGON?.bind?.(token); } catch (err) { console.warn(`${MODULE} | HUD follow`, err); }
+  try { ui.ARGON?.bind?.(token); } catch (err) { log.warn("HUD follow", err); }
 }
 
 // A combat that ends mid-turn leaves nobody's turn to end it on. Its turn and Reaction flags go too:
@@ -254,7 +256,7 @@ Hooks.on("deleteCombat", (combat) => {
     done.add(actor.uuid);
     sweep(actor, "turnEnd").then(() => sweep(actor, "turnStart"))
       .then(() => clearCombatFlags(actor, combat.id))
-      .catch(err => console.warn(`${MODULE} | end-of-combat cleanup`, err));
+      .catch(err => log.warn("end-of-combat cleanup", err));
   }
 });
 
@@ -279,9 +281,9 @@ async function sweepOrphanFlags() {
   return n;
 }
 
-Hooks.once("ready", () => { sweepOrphanFlags().catch(err => console.warn(`${MODULE} | orphan flag sweep`, err)); });
+Hooks.once("ready", () => { sweepOrphanFlags().catch(err => log.warn("orphan flag sweep", err)); });
 Hooks.on("deleteCombat", () => {
-  setTimeout(() => sweepOrphanFlags().catch(err => console.warn(`${MODULE} | orphan flag sweep`, err)), 1500);
+  setTimeout(() => sweepOrphanFlags().catch(err => log.warn("orphan flag sweep", err)), 1500);
 });
 
 // Clicking one token of a selected group releases the others but never "controls" the clicked one
@@ -324,9 +326,9 @@ Hooks.on("deleteToken", (doc) => {
         if (!back && origin) back = ownedTokenOf(fromUuidSync(origin, { strict: false })?.actor);
         if (!back) back = ownedTokenOf(game.user.character);
         if (back && !back.destroyed && back.isOwner) back.control({ releaseOthers: true });
-      } catch (err) { console.warn(`${MODULE} | helper token control`, err); }
+      } catch (err) { log.warn("helper token control", err); }
     }, 0);
-  } catch (err) { console.warn(`${MODULE} | helper token control`, err); }
+  } catch (err) { log.warn("helper token control", err); }
 });
 
 /* ── roll dialogs: Esc, and the card a cancelled attack leaves ───────────── */
@@ -404,9 +406,9 @@ Hooks.on("closeAttackRollConfigurationDialog", (app) => {
         mine: msg.author?.id === game.user.id, ageMs: Date.now() - (msg.timestamp ?? 0), rolled,
         consumed: core.deltasConsumed(msg.system?.deltas), sequence: !!running()
       });
-      if (!keep) msg.delete().catch(err => console.warn(`${MODULE} | tidy usage card`, err));
+      if (!keep) msg.delete().catch(err => log.warn("tidy usage card", err));
     }, 250);
-  } catch (err) { console.warn(`${MODULE} | tidy usage card`, err); }
+  } catch (err) { log.warn("tidy usage card", err); }
 });
 
 /* ── damage at 0 HP ──────────────────────────────────────────────────────── */
@@ -424,16 +426,16 @@ Hooks.on("dnd5e.preApplyDamage", (actor, amount, updates, options) => {
       updates["system.attributes.death.failure"] = r.failures;
       ChatMessage.create({
         speaker: ChatMessage.getSpeaker({ actor }),
-        content: `<p>${T(critical ? "PENTARYN_COMBAT.Turn.DeathFailCrit" : "PENTARYN_COMBAT.Turn.DeathFail", { name: actor.name, n: r.failures })}</p>`
-      }).catch(() => {});
+        content: `<p>${_loc(critical ? "PENTARYN_COMBAT.Turn.DeathFailCrit" : "PENTARYN_COMBAT.Turn.DeathFail", { name: actor.name, n: r.failures })}</p>`
+      }).catch(err => log.debug("death save card", err));
     }
     if (r.massive) {
       ChatMessage.create({
-        content: `<p>${T("PENTARYN_COMBAT.Turn.Massive", { name: actor.name, amount, max: hp.effectiveMax ?? hp.max })}</p>`,
+        content: `<p>${_loc("PENTARYN_COMBAT.Turn.Massive", { name: actor.name, amount, max: hp.effectiveMax ?? hp.max })}</p>`,
         whisper: game.users.filter(u => u.isGM).map(u => u.id)
-      }).catch(() => {});
+      }).catch(err => log.debug("massive damage whisper", err));
     }
-  } catch (err) { console.warn(`${MODULE} | damage at 0 HP`, err); }
+  } catch (err) { log.warn("damage at 0 HP", err); }
 });
 
 /* ── conditions on the HUD portrait ──────────────────────────────────────── */
@@ -447,7 +449,7 @@ async function tooltipFor(effect) {
     const ref = CONFIG.DND5E?.conditionTypes?.[s]?.reference ?? CONFIG.DND5E?.statusEffects?.[s]?.reference;
     if (!ref) continue;
     if (!ruleText.has(ref)) {
-      ruleText.set(ref, fromUuid(ref).then(p => p?.text?.content ?? "").catch(() => ""));
+      ruleText.set(ref, fromUuid(ref).then(p => p?.text?.content ?? "").catch(err => { log.debug("condition rules text", err); return ""; }));
     }
     const text = await ruleText.get(ref);
     if (text) return foundry.applications.ux.TextEditor.implementation.enrichHTML(text);
@@ -474,7 +476,7 @@ function patchPortrait() {
         const e = all.find(x => x.uuid === uuid);
         list.push({ img: e.img, name: e.name, uuid, tooltip: await tooltipFor(e) });
       }
-    } catch (err) { console.warn(`${MODULE} | portrait conditions`, err); }
+    } catch (err) { log.warn("portrait conditions", err); }
     return list;
   };
 }
@@ -535,7 +537,7 @@ Hooks.once("init", () => {
       wrapped._pentaryn = true;
       G.prototype.createScrollingText = wrapped;
     }
-  } catch (err) { console.warn(`${MODULE} | scrolling text guard`, err); }
+  } catch (err) { log.warn("scrolling text guard", err); }
 });
 
 /* ── a background tab posts no chat-card pop-ups (setting scrollingTextGuard) ── */
@@ -559,7 +561,7 @@ Hooks.once("init", () => {
     };
     wrapped._pentaryn = true;
     C.prototype.notify = wrapped;
-  } catch (err) { console.warn(`${MODULE} | chat pop-up guard`, err); }
+  } catch (err) { log.warn("chat pop-up guard", err); }
 });
 
 /* ── manual dice: the Roll Resolution box takes the digits ───────────────── */
@@ -590,7 +592,7 @@ Hooks.on("renderRollResolver", (app) => {
     try {
       if (app.element?.contains(document.activeElement)) return;
       firstEmptyBox(app)?.focus();
-    } catch { /* the player clicks the box */ }
+    } catch (err) { log.debug("resolver focus (the player clicks the box)", err); }
   });
 });
 
@@ -649,20 +651,20 @@ async function steadyAim(activity) {
   const ident = item?.system?.identifier || core.slugify(item?.name ?? "");
   if (!actor?.isOwner || ident !== "steady-aim" || actor.effects.some(isSteadyAim)) return;
   await actor.createEmbeddedDocuments("ActiveEffect", [{
-    name: T("PENTARYN_COMBAT.Turn.SteadyAim"),
+    name: _loc("PENTARYN_COMBAT.Turn.SteadyAim"),
     img: item.img || "icons/svg/target.svg",
-    description: `<p>${T("PENTARYN_COMBAT.Turn.SteadyAimText")}</p>`,
+    description: `<p>${_loc("PENTARYN_COMBAT.Turn.SteadyAimText")}</p>`,
     transfer: false,
     origin: item.uuid,
     system: { changes: core.steadyAimChanges() },
     flags: { [MODULE]: { until: "turnEnd", special: "steady-aim" }, dnd5e: { isTemporary: true } }
   }]);
-  ui.notifications.info(T("PENTARYN_COMBAT.Turn.SteadyAimOn"));
+  ui.notifications.info(_loc("PENTARYN_COMBAT.Turn.SteadyAimOn"));
 }
 
 Hooks.on("dnd5e.postUseActivity", (activity, usageConfig, results) => {
-  applySelfEffect(activity, results).catch(err => console.warn(`${MODULE} | self effect`, err));
-  steadyAim(activity).catch(err => console.warn(`${MODULE} | Steady Aim`, err));
+  applySelfEffect(activity, results).catch(err => log.warn("self effect", err));
+  steadyAim(activity).catch(err => log.warn("Steady Aim", err));
 });
 
 // The attack Steady Aim was for has been rolled: the Advantage is used; Speed 0 lasts to the turn's end.
@@ -673,7 +675,7 @@ Hooks.on("dnd5e.postRollAttack", (rolls, { subject } = {}) => {
   for (const e of actor.effects.filter(isSteadyAim)) {
     const left = core.steadyAimAfterAttack(e.system?.changes ?? [], { inCombat });
     const done = left ? (left.length === e.system.changes.length ? null : e.update({ "system.changes": left.map(c => ({ key: c.key, type: c.type ?? "override", value: c.value })) })) : e.delete();
-    done?.catch?.(err => console.warn(`${MODULE} | Steady Aim end`, err));
+    done?.catch?.(err => log.warn("Steady Aim end", err));
   }
 });
 
@@ -716,7 +718,7 @@ function dropDrawerTooltip(panel) {
     game.tooltip?.deactivate?.();
     t._destroy?.(true);
     if (ui.ARGON._tooltip === t) ui.ARGON._tooltip = null;
-  } catch { /* never let tooltip hygiene break a click */ }
+  } catch (err) { log.debug("drawer tooltip", err); }   // never let tooltip hygiene break a click
 }
 
 Hooks.on("renderButtonPanelButtonArgonComponent", (button) => {
@@ -727,7 +729,7 @@ Hooks.on("renderButtonPanelButtonArgonComponent", (button) => {
     const own = panel.toggle;
     panel.toggle = function (...args) {
       const out = own.apply(this, args);
-      try { placeDrawer(button, this); } catch { /* Argon's place */ }
+      try { placeDrawer(button, this); } catch (err) { log.debug("place drawer (Argon's place)", err); }
       if (!this.element?.classList?.contains("show")) dropDrawerTooltip(this);
       return out;
     };
@@ -735,7 +737,7 @@ Hooks.on("renderButtonPanelButtonArgonComponent", (button) => {
     // its saved state inside its own render, before this wrapper exists, so it opened at the HUD's
     // far left, detached from its button. Place it once the bar has laid out.
     if (panel.element?.classList?.contains("show")) placeWhenLaidOut(button, panel);
-  } catch { /* never break Argon's render */ }
+  } catch (err) { log.debug("drawer wrap", err); }   // never break Argon's render
 });
 
 /**
@@ -750,7 +752,7 @@ function placeWhenLaidOut(button, panel, tries = 10) {
       const btn = button?.element;
       if (btn?.isConnected && btn.getBoundingClientRect().width > 0) placeDrawer(button, panel);
       else if (tries > 1) placeWhenLaidOut(button, panel, tries - 1);
-    } catch { /* Argon's place */ }
+    } catch (err) { log.debug("place drawer when laid out (Argon's place)", err); }
   });
 }
 
@@ -784,7 +786,7 @@ function closeDrawersOf(actors) {
       if (hud?._actor === actor) shown = true;
     }
     if (shown) hud.collapseAllPanels?.();
-  } catch { /* never break a turn change */ }
+  } catch (err) { log.debug("close drawers", err); }   // never break a turn change
 }
 
 /* ── Argon's pips: one updateActionUse call always settles them ──────────── */
@@ -808,7 +810,7 @@ Hooks.once("ready", () => {
     };
     settled._pcSettles = true;
     proto.updateActionUse = settled;
-  } catch (err) { console.warn(`${MODULE} | Argon pip settle not installed`, err); }
+  } catch (err) { log.warn("Argon pip settle not installed", err); }
 });
 
 /* ── Argon's movement readout follows your Speed (Area 10) ───────────────── */
@@ -821,7 +823,7 @@ function redrawMovement() {
   try {
     const m = ui.ARGON?.components?.movement;
     if (m?.element?.isConnected && ui.ARGON?._token && typeof m.updateMovement === "function") m.updateMovement();
-  } catch { /* the next move redraws it */ }
+  } catch (err) { log.debug("movement redraw (the next move redraws it)", err); }
 }
 
 let movementQueued = false;

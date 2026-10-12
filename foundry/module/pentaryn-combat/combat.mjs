@@ -22,6 +22,7 @@
 
 import * as core from "./combat-core.mjs";
 import { MODULE } from "./combat-core.mjs";
+import { makeLog } from "./lib/log.mjs";
 import { registerSettings, setting, setQuickMode, quickMode, setRiderMode, riderMode } from "./settings.mjs";
 import {
   weaponShape, weaponsOf, featuresOf, countFor, multiattackOf, combatContext, turnOf, updateTurn, newTurn,
@@ -30,6 +31,8 @@ import {
 import { taggedKind, forgetRoll, runSwings, runFollowUp, fullAttackPlan, running, abortFor } from "./sequence.mjs";
 import { installRiders, report as riderReport, rollRider, offersFor, isReckless, setReckless } from "./riders.mjs";
 import { installOffhand, resetOffhandMode, seedAll, seedWeaponSets } from "./offhand.mjs";
+
+const log = makeLog(MODULE);
 
 
 /* ── counting swings (every attack roll, sequence or by hand) ─────────────── */
@@ -78,7 +81,7 @@ async function onPostRollAttack(rolls, { subject } = {}) {
   // onPostUseActivity (Scorching Ray's three rays are one action), never per roll here.
   const swing = weaponLike(activity) ? kindOf(activity, attackMode) : null;
 
-  await resetOffhandMode(activity, attackMode).catch(err => console.warn(`${MODULE} | mode reset failed`, err));
+  await resetOffhandMode(activity, attackMode).catch(err => log.warn("mode reset failed", err));
 
   if (!swing || swing.kind === "other") return;
   const { ctx, kind, tagged } = swing;
@@ -123,7 +126,7 @@ async function onPostUseActivity(activity) {
     if (!setting("spellPips") || (activity.type === "attack" && weaponLike(activity))) return;
     const ctx = combatContext(actor);
     if (core.pipFor({ activation: "reaction", inCombat: ctx.inCombat, isOwnTurn: ctx.isOwnTurn }) !== "reaction") return;
-    await actor.setFlag(MODULE, "reaction", { combatId: ctx.combat?.id ?? null }).catch(() => null);
+    await actor.setFlag(MODULE, "reaction", { combatId: ctx.combat?.id ?? null }).catch(err => { log.debug("Reaction flag", err); return null; });
     Hooks.callAll("pentarynCombat.reaction", actor, activity);
     return;
   }
@@ -257,14 +260,14 @@ Hooks.once("init", () => {
 });
 
 Hooks.once("setup", () => {
-  Hooks.on("dnd5e.preRollAttackV2", (config) => { try { onPreRollAttack(config); } catch (err) { console.warn(`${MODULE} | swing tag skipped`, err); } });
-  Hooks.on("dnd5e.postRollAttack", (rolls, data) => { onPostRollAttack(rolls, data).catch(err => console.warn(`${MODULE} | swing count failed`, err)); });
+  Hooks.on("dnd5e.preRollAttackV2", (config) => { try { onPreRollAttack(config); } catch (err) { log.warn("swing tag skipped", err); } });
+  Hooks.on("dnd5e.postRollAttack", (rolls, data) => { onPostRollAttack(rolls, data).catch(err => log.warn("swing count failed", err)); });
   Hooks.on("dnd5e.postUseActivity", (activity, usage, results) => {
     // An area spell whose placement was cancelled was not cast (pentaryn-aoe refunds it): no pip, no Action.
     if (usage?.create?.measuredTemplate && activity?.target?.template?.type && !(results?.templates?.length) && canvas?.scene) return;
-    onPostUseActivity(activity).catch(err => console.warn(`${MODULE} | action count failed`, err));
+    onPostUseActivity(activity).catch(err => log.warn("action count failed", err));
   });
-  Hooks.on("dnd5e.preRollDamageV2", (config) => { try { onPreRollDamage(config); } catch (err) { console.warn(`${MODULE} | weapon bonus skipped`, err); } });
+  Hooks.on("dnd5e.preRollDamageV2", (config) => { try { onPreRollDamage(config); } catch (err) { log.warn("weapon bonus skipped", err); } });
   Hooks.on("updateActor", onUpdateActor);
   installRiders();
   installOffhand();
@@ -273,6 +276,6 @@ Hooks.once("setup", () => {
 // pentaryn-importer replaces game.pentaryn with a frozen object in its own ready hook; defer a tick.
 Hooks.once("ready", () => setTimeout(() => {
   publish();
-  if (game.users?.activeGM?.isSelf) seedAll().catch(err => console.warn(`${MODULE} | weapon-set seed failed`, err));
+  if (game.users?.activeGM?.isSelf) seedAll().catch(err => log.warn("weapon-set seed failed", err));
 }, 0));
 

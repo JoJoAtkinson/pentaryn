@@ -12,6 +12,7 @@
 
 import * as core from "./combat-core.mjs";
 import { MODULE } from "./combat-core.mjs";
+import { makeLog } from "./lib/log.mjs";
 import { setting, riderMode, setRiderMode } from "./settings.mjs";
 import {
   weaponsOf, featuresOf, countFor, multiattackOf, usesMultiattack, combatContext, turnOf, newTurn, attackActivityOf,
@@ -24,8 +25,9 @@ import { riderDiceFor, isReckless, setReckless } from "./riders.mjs";
 // Imported here, not listed in module.json, so a world relaunch is not needed to load it.
 import { placeOpenDrawers } from "./turnflow.mjs";
 
+const log = makeLog(MODULE);
+
 const ARGON = "enhancedcombathud";
-const T = (key, data) => (data ? game.i18n.format(key, data) : game.i18n.localize(key));
 const FALLBACK_IMG = "icons/skills/melee/blade-tips-triple-steel.webp";
 
 let DND5eItemButton = null;      // Argon dnd5e's closure-private button class, borrowed from the weapon-set slot
@@ -38,7 +40,7 @@ function dropTooltip() {
   try {
     game.tooltip?.deactivate?.();
     if (ui.ARGON?._tooltip) ui.ARGON._tooltip = null;
-  } catch { /* never let tooltip hygiene break a click */ }
+  } catch (err) { log.debug("drop tooltip", err); }   // never let tooltip hygiene break a click
 }
 
 /** Argon's hover tooltip, when it belongs to this button. */
@@ -59,7 +61,7 @@ function refreshOwnTooltip(button) {
     if (!data || ui.ARGON?._tooltip !== t) return;
     t._tooltipData = data;
     return t.render();
-  }).catch(() => null);
+  }).catch(err => { log.debug("tooltip refresh", err); return null; });
 }
 
 /**
@@ -93,7 +95,7 @@ function dropStrayTooltip(target = null) {
     t._destroy?.(true);
     if (ui.ARGON._tooltip === t) ui.ARGON._tooltip = null;
     if (game.tooltip?.element === trigger || gone) game.tooltip?.deactivate?.();
-  } catch { /* never let tooltip hygiene break anything */ }
+  } catch (err) { log.debug("stray tooltip", err); }   // never let tooltip hygiene break anything
 }
 document.addEventListener("pointerover", (ev) => { if (ui.ARGON?._tooltip) dropStrayTooltip(ev.target); }, { capture: true, passive: true });
 
@@ -203,7 +205,7 @@ async function chooseWeapon(actor) {
     tiles = weaponsOf(actor).filter(core.canSwing).map(w => weaponTile(actor, w, countFor(actor, w.id)));
   }
   if (tiles.length < 2) return tiles[0]?.id ?? null;
-  const id = await pickWeapon(tiles, { title: T("PENTARYN_COMBAT.Picker.Title") });
+  const id = await pickWeapon(tiles, { title: _loc("PENTARYN_COMBAT.Picker.Title") });
   if (id) await actor.setFlag(MODULE, "last.weapon", id);
   return id;
 }
@@ -247,12 +249,12 @@ function applyPickerGuide() {
   const on = !!setting("skipPickerGuide");
   try {
     document.body.classList.toggle("pentaryn-combat-picker-cue", on);
-    if (on) document.body.style.setProperty("--pentaryn-combat-picker-cue", JSON.stringify(T("PENTARYN_COMBAT.Hud.PickerCue")));
-  } catch { /* no body yet */ }
+    if (on) document.body.style.setProperty("--pentaryn-combat-picker-cue", JSON.stringify(_loc("PENTARYN_COMBAT.Hud.PickerCue")));
+  } catch (err) { log.debug("picker cue (no body yet)", err); }
   if (!on || !game.settings.settings.has(GUIDE_KEY)) return;
   try {
     if (!game.settings.get(ARGON, "targetPickerGuideShown")) game.settings.set(ARGON, "targetPickerGuideShown", true);
-  } catch (err) { console.warn(`${MODULE} | marking Argon's picker tutorial seen failed`, err); }
+  } catch (err) { log.warn("marking Argon's picker tutorial seen failed", err); }
 }
 
 Hooks.once("ready", applyPickerGuide);
@@ -270,7 +272,7 @@ Hooks.once("ready", () => new MutationObserver((records) => {
   for (const r of records) for (const n of r.addedNodes) {
     if (!(n instanceof HTMLElement) || !n.classList.contains("ech-target-picker")) continue;
     if (pointer && !n.style.left) { n.style.left = `${pointer.x + 20}px`; n.style.top = `${pointer.y}px`; }
-    if (!n.textContent) n.textContent = T("PENTARYN_COMBAT.Hud.PickerStart");
+    if (!n.textContent) n.textContent = _loc("PENTARYN_COMBAT.Hud.PickerStart");
   }
 }).observe(document.body, { childList: true }));
 // The first change from the default creates the Setting document; later ones update it.
@@ -291,7 +293,7 @@ function argonClasses() {
     constructor({ hudActor }) {
       const st = fullAttackState(hudActor);
       const first = hudActor.items.get(st.plan.weaponId ?? st.weaponId);
-      super({ item: { id: "pentaryn-combat-full-attack", name: T("PENTARYN_COMBAT.FullAttack"), img: first?.img || FALLBACK_IMG }, inActionPanel: true });
+      super({ item: { id: "pentaryn-combat-full-attack", name: _loc("PENTARYN_COMBAT.FullAttack"), img: first?.img || FALLBACK_IMG }, inActionPanel: true });
       this.hudActor = hudActor;
       this.element.classList.add("pentaryn-combat-full");
       liveButtons.add(this);
@@ -323,18 +325,18 @@ function argonClasses() {
       const nickName = nick ? this.hudActor.items.get(nick.weaponId)?.name ?? "" : "";
       const mainName = this.hudActor.items.get(sum.mainIds[0] ?? st.weaponId)?.name ?? first?.name ?? "—";
       const what = st.ma ? names.join(", ")
-        : nick ? T("PENTARYN_COMBAT.Hud.WithNick", { weapon: mainName, nick: nickName })
-        : T("PENTARYN_COMBAT.Hud.WithWeapon", { weapon: mainName });
-      const left = T("PENTARYN_COMBAT.Hud.SwingsLeft", { left: sum.left, total: sum.total });
+        : nick ? _loc("PENTARYN_COMBAT.Hud.WithNick", { weapon: mainName, nick: nickName })
+        : _loc("PENTARYN_COMBAT.Hud.WithWeapon", { weapon: mainName });
+      const left = _loc("PENTARYN_COMBAT.Hud.SwingsLeft", { left: sum.left, total: sum.total });
       return {
-        title: T("PENTARYN_COMBAT.FullAttack"),
-        subtitle: nick ? T("PENTARYN_COMBAT.Hud.PlusNick", { left, weapon: nickName }) : left,
-        description: `<p>${T("PENTARYN_COMBAT.Hud.FullAttackText", { what })}</p>`,
+        title: _loc("PENTARYN_COMBAT.FullAttack"),
+        subtitle: nick ? _loc("PENTARYN_COMBAT.Hud.PlusNick", { left, weapon: nickName }) : left,
+        description: `<p>${_loc("PENTARYN_COMBAT.Hud.FullAttackText", { what })}</p>`,
         details: [
-          { label: T("PENTARYN_COMBAT.Hud.ToHit"), value: act?.labels?.toHit ?? "—" },
-          { label: T("PENTARYN_COMBAT.Hud.Swings"), value: String(st.plan.swings.length) }
+          { label: _loc("PENTARYN_COMBAT.Hud.ToHit"), value: act?.labels?.toHit ?? "—" },
+          { label: _loc("PENTARYN_COMBAT.Hud.Swings"), value: String(st.plan.swings.length) }
         ],
-        footerText: T("PENTARYN_COMBAT.Hud.FullAttackHint"),
+        footerText: _loc("PENTARYN_COMBAT.Hud.FullAttackHint"),
         classes: TT
       };
     }
@@ -365,7 +367,7 @@ function argonClasses() {
       }
       const st = this.state;
       if (!st.plan.swings.length) {
-        ui.notifications.warn(T("PENTARYN_COMBAT.Hud.NoSwingsLeft"));
+        ui.notifications.warn(_loc("PENTARYN_COMBAT.Hud.NoSwingsLeft"));
         return;
       }
       await runSwings(actor, st.plan.swings, { event });
@@ -383,7 +385,7 @@ function argonClasses() {
   class FollowUpButton extends ItemButton {
     constructor({ hudActor, followUp }) {
       const w = hudActor.items.get(followUp.weaponId);
-      const label = T(`PENTARYN_COMBAT.FollowUp.${followUp.kind}`, { weapon: w?.name ?? "" });
+      const label = _loc(core.keyFor("FollowUp", followUp.kind), { weapon: w?.name ?? "" });
       super({ item: { id: `pentaryn-combat-${followUp.kind}`, name: label, img: w?.img || FALLBACK_IMG }, inActionPanel: true });
       this.hudActor = hudActor;
       this.followUp = followUp;
@@ -404,22 +406,22 @@ function argonClasses() {
       const k = this.followUp.kind;
       if (this.followUp.disabled) {
         return {
-          title: T(`PENTARYN_COMBAT.FollowUp.${k}`, { weapon: "" }),
-          description: `<p>${T("PENTARYN_COMBAT.FollowUp.NoFocus")}</p>`,
+          title: _loc(core.keyFor("FollowUp", k), { weapon: "" }),
+          description: `<p>${_loc("PENTARYN_COMBAT.FollowUp.NoFocus")}</p>`,
           classes: TT
         };
       }
       return {
-        title: T(`PENTARYN_COMBAT.FollowUp.${k}`, { weapon: this.hudActor.items.get(this.followUp.weaponId)?.name ?? "" }),
-        description: `<p>${T(`PENTARYN_COMBAT.FollowUpText.${k === "offhand" && this.followUp.via === "dual-wielder" ? "offhand-dual-wielder" : k}`, { n: this.followUp.count ?? 1 })}</p>`,
-        details: [{ label: T("PENTARYN_COMBAT.Hud.Cost"), value: T(this.followUp.free ? "PENTARYN_COMBAT.Hud.Free" : "PENTARYN_COMBAT.Hud.BonusAction") }],
+        title: _loc(core.keyFor("FollowUp", k), { weapon: this.hudActor.items.get(this.followUp.weaponId)?.name ?? "" }),
+        description: `<p>${_loc(core.keyFor("FollowUpText", k === "offhand" && this.followUp.via === "dual-wielder" ? "offhand-dual-wielder" : k), { n: this.followUp.count ?? 1 })}</p>`,
+        details: [{ label: _loc("PENTARYN_COMBAT.Hud.Cost"), value: _loc(this.followUp.free ? "PENTARYN_COMBAT.Hud.Free" : "PENTARYN_COMBAT.Hud.BonusAction") }],
         classes: TT
       };
     }
 
     async _onLeftClick(event) {
       dropTooltip();
-      if (this.followUp.disabled) { ui.notifications.warn(T("PENTARYN_COMBAT.FollowUp.NoFocus")); return; }
+      if (this.followUp.disabled) { ui.notifications.warn(_loc("PENTARYN_COMBAT.FollowUp.NoFocus")); return; }
       await runFollowUp(this.hudActor, this.followUp, { event });
     }
   }
@@ -528,7 +530,7 @@ function checkBars(actor) {
   for (const [label, sig] of Object.entries(SIGS)) {
     const p = mainPanel(label);
     if (!p || p._pcSig === undefined) continue;
-    try { if (sig(actor, p) !== p._pcSig) stale.push(label); } catch { /* next render recomposes */ }
+    try { if (sig(actor, p) !== p._pcSig) stale.push(label); } catch (err) { log.debug("bar signature (next render recomposes)", err); }
   }
   if (stale.length) rerender(stale);
 }
@@ -608,14 +610,14 @@ function gatePoleStrike(button, actor) {
     if (!el.classList.contains("pentaryn-combat-gated") || ev.button !== 0) return;
     ev.stopImmediatePropagation();
     ev.preventDefault();
-    ui.notifications.info(T("PENTARYN_COMBAT.Hud.PoleStrikeGated"));
+    ui.notifications.info(_loc("PENTARYN_COMBAT.Hud.PoleStrikeGated"));
   }, true);
   if (typeof button.getTooltipData === "function") {
     const own = button.getTooltipData.bind(button);
     button.getTooltipData = async (...args) => {
       const data = await own(...args);
       if (!data || !el.classList.contains("pentaryn-combat-gated")) return data;
-      return { ...data, description: `<p><strong>${T("PENTARYN_COMBAT.Hud.PoleStrikeGated")}</strong></p>${data.description ?? ""}` };
+      return { ...data, description: `<p><strong>${_loc("PENTARYN_COMBAT.Hud.PoleStrikeGated")}</strong></p>${data.description ?? ""}` };
     };
   }
 }
@@ -694,12 +696,12 @@ function composeSpecialBar(panel, actor) {
     for (const r of core.ridersFor(featuresOf(actor))) {
       if (!r.auto) continue;
       const mode = riderMode(r.key);
-      const name = T(`PENTARYN_COMBAT.Rider.Name.${r.key}`);
+      const name = _loc(core.keyFor("Rider.Name", r.key));
       fresh.push(new C.CommandButton({
         id: `pentaryn-combat-rider-${r.key}`,
-        name: T("PENTARYN_COMBAT.Rider.Toggle", { name, mode: T(`PENTARYN_COMBAT.Rider.Mode.${mode}`) }),
+        name: _loc("PENTARYN_COMBAT.Rider.Toggle", { name, mode: _loc(core.keyFor("Rider.Mode", mode)) }),
         img: actor.items.find(i => r.identifiers.includes(i.system?.identifier))?.img ?? FALLBACK_IMG,
-        tooltip: T(`PENTARYN_COMBAT.Rider.ToggleHint.${mode}`, { name, dice: riderDiceFor(actor, r) }),
+        tooltip: _loc(core.keyFor("Rider.ToggleHint", mode), { name, dice: riderDiceFor(actor, r) }),
         onClick: async () => { await setRiderMode(r.key, mode === "auto" ? "ask" : "auto"); rerender(["DND5E.Special"]); }
       }));
     }
@@ -709,13 +711,13 @@ function composeSpecialBar(panel, actor) {
     const state = on ? "on" : "off";
     fresh.push(new C.CommandButton({
       id: "pentaryn-combat-reckless",
-      name: T("PENTARYN_COMBAT.Reckless.Toggle", { state: T(`PENTARYN_COMBAT.Reckless.State.${state}`) }),
+      name: _loc("PENTARYN_COMBAT.Reckless.Toggle", { state: _loc(core.keyFor("Reckless.State", state)) }),
       img: actor.items.find(i => i.system?.identifier === "reckless-attack")?.img ?? FALLBACK_IMG,
-      tooltip: T(`PENTARYN_COMBAT.Reckless.Hint.${state}`),
+      tooltip: _loc(core.keyFor("Reckless.Hint", state)),
       active: on,
       onClick: async () => {
         const now = await setReckless(actor, !on);
-        if (now) ui.notifications.info(T("PENTARYN_COMBAT.Reckless.On"));
+        if (now) ui.notifications.info(_loc("PENTARYN_COMBAT.Reckless.On"));
         rerender(["DND5E.Special"]);
       }
     }));
@@ -725,8 +727,8 @@ function composeSpecialBar(panel, actor) {
   const touched = turn.attackAction.swings || Object.keys(turn.riders).length || turn.followUps.length || turn.nick;
   if (!ctx.inCombat && touched) {
     fresh.push(new C.CommandButton({
-      id: "pentaryn-combat-new-turn", name: T("PENTARYN_COMBAT.Hud.NewTurn"), img: "icons/svg/clockwork.svg",
-      tooltip: T("PENTARYN_COMBAT.Hud.NewTurnHint"),
+      id: "pentaryn-combat-new-turn", name: _loc("PENTARYN_COMBAT.Hud.NewTurn"), img: "icons/svg/clockwork.svg",
+      tooltip: _loc("PENTARYN_COMBAT.Hud.NewTurnHint"),
       onClick: async () => { await newTurn(actor); }
     }));
   }
@@ -745,7 +747,7 @@ Hooks.on("renderActionPanelArgonComponent", (panel, element, actor) => {
     else if (panel?.label === "DND5E.BonusAction") composeBonusBar(panel, a);
     else if (panel?.label === "DND5E.Special") composeSpecialBar(panel, a);
   } catch (err) {
-    console.error(`${MODULE} | HUD composition failed`, err);
+    log.error("HUD composition failed", err);
   }
 });
 
@@ -762,7 +764,7 @@ function forgetButtons(panel) {
       b.panel?.element?.remove?.();
       if (b._isWeaponSet && b.hookId !== undefined) Hooks.off("argon-onSetChangeUpdateItem", b.hookId);
       for (const x of [b, b.button1, b.button2]) if (x) ui.ARGON?._itemButtons?.delete?.(x);
-    } catch { /* best effort */ }
+    } catch (err) { log.debug("forget buttons", err); }   // best effort
   }
 }
 
@@ -795,7 +797,7 @@ function rerender(labels = ["DND5E.Action", "DND5E.BonusAction", "DND5E.Special"
       forgetButtons(p);
       Promise.resolve(p.render())
         .then(() => { dropStrayTooltip(); return refillWeaponSlots(p); })
-        .catch(err => console.warn(`${MODULE} | ${label} re-render`, err));
+        .catch(err => log.warn(`${label} re-render`, err));
     }
   }, 60);
 }
@@ -829,7 +831,7 @@ function recheckSlots(actor) {
   try {
     const bonus = mainPanel("DND5E.BonusAction");
     if (bonus && setting("followUps")) hideDuplicateSlots(bonus, followUpsNow(actor, bonus).filter(f => !f.free), actor);
-  } catch { /* the next render re-checks */ }
+  } catch (err) { log.debug("off-hand slot re-check (the next render re-checks)", err); }
 }
 
 // The last swing's flag write can land after the sequence ended; re-check once it has.
@@ -865,7 +867,7 @@ Hooks.on("pentarynCombat.usage", (activity, kind) => {
     const action = mainPanel("DND5E.Action");
     if (action?._pentarynPips?.()) return;        // our pips count this actor's swings
     DND5eItemButton?.consumeActionEconomy?.(activity);
-  } catch (err) { console.warn(`${MODULE} | action economy`, err); }
+  } catch (err) { log.warn("action economy", err); }
 });
 
 // Out of combat Argon shows no pips and never resets them, so nothing is marked there.
@@ -930,12 +932,12 @@ function restorePips(actor) {
 
 Hooks.on("renderActionPanelArgonComponent", (panel) => {
   if (!["DND5E.Action", "DND5E.BonusAction", "DND5E.Reaction"].includes(panel?.label)) return;
-  try { restorePips(ui.ARGON?._actor); } catch { /* never break Argon's render */ }
+  try { restorePips(ui.ARGON?._actor); } catch (err) { log.debug("restore pips", err); }   // never break Argon's render
 });
 // Argon's own updateCombat handler (registered after ours) relights every pip at a new round.
 Hooks.on("updateCombat", (combat, changes) => {
   if (!("round" in changes)) return;
-  setTimeout(() => { try { restorePips(ui.ARGON?._actor); } catch { /* HUD closed */ } }, 0);
+  setTimeout(() => { try { restorePips(ui.ARGON?._actor); } catch (err) { log.debug("restore pips (HUD closed)", err); } }, 0);
 });
 
 // An off-hand swing clicked through Argon's weapon slot made Argon grey the Action pip (the weapon's
@@ -953,14 +955,14 @@ Hooks.on("pentarynCombat.offhand", (actor, { bySequence = false } = {}) => {
 
 // Pole Strike inside Argon's "Use Feature" drawer: gated when the drawer's buttons render.
 Hooks.on("renderItemButtonArgonComponent", (button, element, actor) => {
-  try { gatePoleStrike(button, actor ?? ui.ARGON?._actor); } catch { /* never break Argon's render */ }
+  try { gatePoleStrike(button, actor ?? ui.ARGON?._actor); } catch (err) { log.debug("Pole Strike gate", err); }   // never break Argon's render
   try {
     if (!button?._isWeaponSet || !setting("followUps")) return;
     const bonus = mainPanel("DND5E.BonusAction");
     const a = actor ?? ui.ARGON?._actor;
     if (!bonus || !a || !bonus._buttons?.includes(button)) return;
     hideDuplicateSlots(bonus, followUpsNow(a, bonus).filter(f => !f.free), a);
-  } catch { /* never break Argon's render */ }
+  } catch (err) { log.debug("off-hand slot check", err); }   // never break Argon's render
 });
 
 // A shift or revert (a new body) ends a running sequence.

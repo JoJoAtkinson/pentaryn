@@ -16,8 +16,11 @@
 
 import * as core from "./combat-core.mjs";
 import { MODULE } from "./combat-core.mjs";
+import { makeLog } from "./lib/log.mjs";
 import { weaponsOf } from "./shapes.mjs";
 import { setting } from "./settings.mjs";
+
+const log = makeLog(MODULE);
 
 const ARGON = "enhancedcombathud";
 
@@ -54,7 +57,7 @@ export async function seedWeaponSets(actor) {
   const seed = core.weaponSetSeed(weaponsOf(actor));
   if (!seed) return null;
   await actor.setFlag(ARGON, "weaponSets", seed);
-  console.info(`${MODULE} | weapon sets seeded for ${actor.name}`, seed);
+  log.info(`weapon sets seeded for ${actor.name}`, seed);
   return seed;
 }
 
@@ -66,7 +69,7 @@ export async function seedAll() {
     try {
       const seed = await seedWeaponSets(actor);
       if (seed) out.push({ actor: actor.name, seed });
-    } catch (err) { console.warn(`${MODULE} | weapon-set seed failed for ${actor.name}`, err); }
+    } catch (err) { log.warn(`weapon-set seed failed for ${actor.name}`, err); }
   }
   return out;
 }
@@ -75,6 +78,6 @@ export function installOffhand() {
   Hooks.on("createActor", (actor) => {
     if (!game.users?.activeGM?.isSelf || actor.type !== "character") return;
     // Items arrive with the actor; give the sheet's own creation flow a beat.
-    setTimeout(() => seedWeaponSets(actor).catch(() => null), 500);
+    setTimeout(() => seedWeaponSets(actor).catch(err => { log.debug("weapon-set seed (new character)", err); return null; }), 500);
   });
 }

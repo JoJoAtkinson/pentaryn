@@ -5,6 +5,9 @@
 
 import * as core from "./combat-core.mjs";
 import { MODULE } from "./combat-core.mjs";
+import { makeLog } from "./lib/log.mjs";
+
+const log = makeLog(MODULE);
 
 
 /* ── items ───────────────────────────────────────────────────────────────── */
@@ -233,7 +236,7 @@ export function updateTurn(actor, fn) {
     if (!after || JSON.stringify(after) === JSON.stringify(before)) return before;
     await writeTurn(actor, after);
     return after;
-  }).catch(err => { console.warn(`${MODULE} | turn flag write failed`, err); return null; });
+  }).catch(err => { log.warn("turn flag write failed", err); return null; });
   writeChains.set(id, next);
   return next;
 }

@@ -3,6 +3,7 @@
     "combat-core.mjs": [],
     "combat.mjs": [
       "combat-core.mjs",
+      "lib/log.mjs",
       "offhand.mjs",
       "riders.mjs",
       "sequence.mjs",
@@ -11,6 +12,7 @@
     ],
     "hud.mjs": [
       "combat-core.mjs",
+      "lib/log.mjs",
       "riders.mjs",
       "sequence.mjs",
       "settings.mjs",
@@ -20,16 +22,19 @@
     ],
     "offhand.mjs": [
       "combat-core.mjs",
+      "lib/log.mjs",
       "settings.mjs",
       "shapes.mjs"
     ],
     "riders.mjs": [
       "combat-core.mjs",
+      "lib/log.mjs",
       "settings.mjs",
       "shapes.mjs"
     ],
     "sequence.mjs": [
       "combat-core.mjs",
+      "lib/log.mjs",
       "settings.mjs",
       "shapes.mjs",
       "strip.mjs"
@@ -38,14 +43,17 @@
       "combat-core.mjs"
     ],
     "shapes.mjs": [
-      "combat-core.mjs"
+      "combat-core.mjs",
+      "lib/log.mjs"
     ],
     "strip.mjs": [
       "combat-core.mjs",
+      "lib/log.mjs",
       "settings.mjs"
     ],
     "turnflow.mjs": [
       "combat-core.mjs",
+      "lib/log.mjs",
       "sequence.mjs",
       "settings.mjs",
       "shapes.mjs"
@@ -55,6 +63,7 @@
     "hud.mjs",
     "turnflow.mjs",
     "shapes.mjs",
+    "lib/log.mjs",
     "combat-core.mjs",
     "settings.mjs",
     "sequence.mjs",
