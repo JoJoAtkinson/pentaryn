@@ -174,3 +174,101 @@ The first attempt's after-files are kept as `*.attempt1.json`. `diff.mjs before 
 `--declared`, and for both attunement and portals shared is identical, cleanup is clean and the exit
 code is 0. Feedback has no live golden. Every ZZ fixture was deleted (no ZZ actors, scenes, items or
 journals are left). Reverts: none.
+
+## Integration INT-1417
+
+| Area | Status | Merge SHA | Revert SHA | Synced modules | Reason |
+|---|---|---|---|---|---|
+| dropbin | merged | 20fdd703 | — | dropbin | — |
+| journal | merged | 856f416b | — | journal | — |
+| creatures | merged | 6fa95f4b | — | creatures | — |
+
+**Gates.** On main at 6fa95f4b: `foundry-modules-check`, `foundry-lib-check`, `check-context` (OK, 5 warnings),
+`make test` (1626 passed, 2 skipped, 5 xfailed). No `module.json`, lang or fork file changed, so no restart and
+no fork rebuild.
+
+**Deploy.** Rollback copies of the three deployed folders (git 380a5348) in `.state/live-rollback/INT-1417/`.
+Before-goldens ran on the deployed pre-merge code in the one GM tab, `make foundry-{dropbin,journal,creatures}-sync`
+(FROM=local) at 14:23Z, one GM-tab reload. Probe: dropbin 0.2.3, journal 0.1.0, creatures 0.1.1 equal `module.json`,
+every described path a function, `selftest().ok` true for dropbin and journal (creatures has none).
+
+**Goldens.** Before and after diffed in page, then (relaunch reality check, 14:26Z) exported from the GM tab's
+localStorage to `.state/live-goldens/INT-1417/{before,after}/<m>.json` and the scratch keys removed;
+`diff.mjs before after` without `--declared` exits 0 for all three (shared identical, cleanups clean):
+`golden.shared`, `golden.declared` and env all empty for the three modules, cleanups clean, no ZZ leftovers. No
+allowlist. Reverts: none.
+
+**Foundry state.** Up, world `pentaryn` loaded, exactly one GM tab (Gamemaster) answering `get-world-info`; no restart, no fork rebuild. Pushed main; review worktrees for dropbin, journal and creatures removed (branches kept).
+
+## Integration INT-1427
+
+| Area | Status | Merge SHA | Revert SHA | Synced modules | Reason |
+|---|---|---|---|---|---|
+| lookup | merged | 2839e3de | — | lookup | — |
+| pings | merged | 57790465 | — | pings | — |
+| names | merged | d693144d | — | names | — |
+
+**Gates.** On main at d693144d: `foundry-modules-check` (all 20 modules), `foundry-lib-check`, `check-context`
+(OK, 5 warnings), `make test` (1626 passed, 2 skipped, 5 xfailed). No `module.json`, lang or fork file changed, so
+no restart and no fork rebuild.
+
+**Deploy.** Rollback copies of the three deployed folders (git 380a5348) in `.state/live-rollback/INT-1427/`.
+Before-goldens ran on the deployed pre-merge code in the one GM tab, `make foundry-{lookup,pings,names}-sync`
+(FROM=local) at 14:33Z (stamps now git d693144d), one GM-tab reload. Probe: lookup 0.3.0, pings 0.1.1, names 0.1.1
+equal `module.json`, every described method a function, lookup `selftest().ok` true, no pentaryn errors in the
+feedback ring, no ZZ leftovers.
+
+**Goldens.** Before and after kept in the GM tab's localStorage and diffed in page (deep compare of `golden`,
+`cleanup`, and lookup `env`; the scratch keys then removed): 0 differences for all three, cleanups clean
+(pings `pingLogRestored` true, `pingScratchLeft` 0). The known pings run-to-run noise did not appear. No
+allowlist. Reverts: none.
+
+**Foundry state.** Up, world `pentaryn` loaded, exactly one GM tab (Gamemaster) answering `get-world-info`; no
+restart, no fork rebuild.
+
+**Relaunch reality check (15:05Z).** The deployed folders were still the pre-merge code: each
+`.pentaryn-sync.json` read git 380a5348 (synced 07:46Z) and `diff -r` against main differed, so the 14:33Z
+sync above had not landed. Redone in full: before-goldens on the deployed 380a5348 code, rollback copies
+re-checked (identical to the deployed folders), `make foundry-{lookup,pings,names}-sync` (FROM=local,
+PENTARYN_NONINTERACTIVE=1) at 15:06Z — stamps now git 13de13f8, `diff -r` against main clean — one GM-tab
+reload. Probe: lookup (`rules`) 0.3.0, pings 0.1.1, names 0.1.1 equal `module.json`, every described path a
+function, lookup `selftest().ok` true, no console.error since the reload. Goldens written to
+`.state/live-goldens/INT-1427/{before,after}/<m>.json`; `diff.mjs before after` without `--declared` exits 0
+for all three (shared identical, cleanups clean; the pings noise did not appear). No ZZ leftovers. Reverts:
+none. Foundry up, world `pentaryn`, one GM tab answering `get-world-info`; no restart, no fork rebuild.
+
+## Integration INT-1508
+
+| Area | Status | Merge SHA | Revert SHA | Synced modules | Reason |
+|---|---|---|---|---|---|
+| movement | merged | e4126885 | — | movement | — |
+| cursors | merged | 5b92deca | — | cursors | — |
+
+**Reality check (15:12Z).** Both merges were already on main and pushed. A prior attempt had already run
+`make foundry-{movement,cursors}-sync` at 15:12:13Z (stamps git 5b92deca, `diff -r` against main clean)
+and reloaded the one GM tab at 15:12:17Z, but left no rollback copies or goldens. No `module.json`, lang,
+style or fork file changed, so there was no restart and no fork rebuild.
+
+**Rollback copies.** Rebuilt from git 380a5348 (`git archive`) into `.state/live-rollback/INT-1508/`. Their
+tree digests equal the 07:46Z deployed stamps (movement `sha256:93fa6380…`, cursors `sha256:194fdde8…`),
+so they are byte-identical to the pre-merge deployed code.
+
+**Before-goldens.** To get a fresh before-run, the rollback copies were put back into `Data/modules`.
+The second GM-tab reload that would load them was refused by the permission classifier. The folders
+were then synced straight back to main, and their digests again equal the 5b92deca stamps. The tab never
+loaded the pre-merge code. `before/<m>.json` is therefore `wave5/after/<m>.run1.json`, which was taken at
+about 08:04Z on the code synced at 07:46Z. That code is the same digest as the rollback copies.
+`INT-1508/PROVENANCE.txt` records this.
+
+**Probe** (on the code loaded at 15:12:17Z, confirmed as merged by export lists: board.mjs no longer exports
+`resync`/`refresh`; ghost.mjs exports only `install`/`uninstall`): movement 0.1.2 and cursors 0.2.0 equal
+`module.json`, every described path is a function, movement `selftest().ok` is true (cursors has none). There
+are no pentaryn-movement/cursors errors in the Foundry log. `pentaryn-read` cursors describe answers.
+
+**Goldens.** After-goldens are in `.state/live-goldens/INT-1508/after/`. `diff.mjs before after` without
+`--declared` exits 0 for both modules: shared is identical, declared has 0 differences, and both cleanups
+are clean. The post-merge goldens also exit 0 against all six wave5 pre-merge runs. No ZZ leftovers. No
+allowlist. Reverts: none.
+
+**Foundry state.** Foundry is up, world `pentaryn` is loaded, and exactly one GM tab (Gamemaster) answers
+`get-world-info`. No restart, no fork rebuild.

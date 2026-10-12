@@ -1,5 +1,5 @@
 /**
- * A minimal `document` / `window` for the strip (creatures.mjs :184-310). The kit stub has no DOM.
+ * A minimal `document` / `window` for the strip (strip.mjs). The kit stub has no DOM.
  *
  * Only what the entry touches: createElement, getElementById, `#ui-bottom` > `#hotbar`, body,
  * append/insertBefore/remove/replaceChildren, isConnected, childElementCount, id, className +

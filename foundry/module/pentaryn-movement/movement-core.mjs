@@ -33,7 +33,7 @@ export const GM_ICONS = Object.freeze({
 
 /*
  * Every label key as a full literal, looked up by state, so the i18n gate proves each one exists.
- * The states are the ones playerTool / gmTool / ghostAllowed / wishToClear / ghostBack produce.
+ * The states are the ones playerTool / gmTool / ghostAllowed / wishToClear / ghostBackKey produce.
  */
 
 /** The player's button title, by playerTool().state. */

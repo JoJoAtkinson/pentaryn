@@ -1,5 +1,5 @@
 // Glue characterisation: publishing into game.pentaryn when another module got there first, both load
-// orders (pings.mjs:232-238; SF1). Before: an extensible root (the importer's shape since its keystone,
+// orders (pings.mjs onReady → publishNamespace; SF1). Before: an extensible root (the importer's shape since its keystone,
 // items-journal-1) holding foreign keys — pings assigns into it and keeps them. After: a module
 // publishing later through the kit, and a legacy frozen-root rebuild, both keep pings. Its own process.
 // [declared] kit 1.0.2 (J10): the "before" root was a FROZEN one that pings rebuilt by spread; the kit

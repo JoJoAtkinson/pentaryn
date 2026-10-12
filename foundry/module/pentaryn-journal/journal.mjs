@@ -4,7 +4,7 @@
  * An "Add to my journal" bar under every eye readable copies what the player was shown, GM secrets
  * stripped, into their own personal journal (README "What the player sees").
  *
- * Files, in load order:
+ * Files, by layer (core → adapters → features → api):
  *   journal-core.mjs     PURE constants and rules: sanitize, planSave, status, the visibility rules
  *   settings.mjs         SETTINGS (gmButton, singlePageReadables, folderName), setting(), whenChanged()
  *   sources-adapter.mjs  windows, documents and Item Piles' pile data → targets and descriptors

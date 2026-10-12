@@ -5,7 +5,7 @@
 // console text. Timers and Date are mocked; nothing waits on a real clock.
 //
 // Separate processes (one ready each): glue-player.test.mjs (non-GM client), glue-nopatch.test.mjs (no
-// handlePing anywhere), glue-layers.test.mjs (ControlsLayer lookup order), glue-root.test.mjs (frozen
+// handlePing anywhere), glue-layers.test.mjs (ControlsLayer lookup order), glue-root.test.mjs (extensible
 // root, both load orders).
 //
 // Quirks pinned as they are (not bugs): the readers lag the buffer depending on state (SF3,
@@ -24,7 +24,7 @@ const { F } = W;
 F.game.modules.set(MODULE, { id: MODULE, active: true, version: manifest.version, title: manifest.title, flags: manifest.flags });
 W.captureConsole();
 
-// two decoy lookups the entry must NOT patch: foundry.canvas.layers wins (pings.mjs:161-164)
+// two decoy lookups the entry must NOT patch: foundry.canvas.layers wins (capture.mjs patchControlsLayer)
 class GlobalLayer { handlePing() {} }
 class ConfigLayer { handlePing() {} }
 globalThis.ControlsLayer = GlobalLayer;
@@ -124,7 +124,7 @@ test("live golden: a GM ping at 1050,850 on the viewed scene, decorated, origina
     userId: GM, userName: "Gamemaster", sceneId: ALPHA, sceneName: "ZZ live-goldens pings", x: 1050, y: 850,
     canvas: { x: 1050, y: 850 }, image: { x: 50, y: 50 }, gridSquare: { i: 0, j: 0 }, snapped: { x: 1000, y: 800 },
   });
-  // leading keys = the live golden's recentShape; a trailing key is core.test's named -39 pin
+  // leading keys = the live golden's recentShape; a trailing ageMs follows (publish.test step 6)
   assert.deepEqual(Object.keys(last).slice(0, 12), ["t", "userId", "userName", "sceneId", "sceneName", "x", "y", "canvas", "image", "gridSquare", "snapped", "age"]);
   assert.equal(last.t, 1_000_000);
   assert.equal(last.age, "0s ago");

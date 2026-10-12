@@ -20,6 +20,7 @@
 
 import {
   MODULE, LOCK_SOUND, lockedContainer, pileFlags, isPileFlagged, pinnedEntryIds, planLockSounds, planEyesNeedView,
+  isActiveGMSelf,
 } from "./dropbin-core.mjs";
 
 /** The module log (set by install). */
@@ -125,11 +126,12 @@ function announceLocked(actor, { playSound }) {
 }
 
 /**
- * The ready backfills run on the active GM user (corpses.mjs's runner): every tab on that account
- * runs them (`isSelf` is per user, not per tab), a second GM user does not. The writes are
- * idempotent; a one-tab gate would be a separate [declared] change (wave-2 report, W2-D1).
+ * The ready backfills run on the active GM user (the core's isActiveGMSelf, shared with
+ * corpses.mjs): every tab on that account runs them (`isSelf` is per user, not per tab), a second
+ * GM user does not. The writes are idempotent; a one-tab gate would be a separate [declared]
+ * change (wave-2 report, W2-D1).
  */
-const isGMRunner = () => game.users?.activeGM?.isSelf === true;
+const isGMRunner = () => isActiveGMSelf(game.users);
 
 /**
  * Write a backfill plan: every actor in one batch (items-journal-25; updateActor still fires per

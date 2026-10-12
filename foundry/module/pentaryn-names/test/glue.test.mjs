@@ -186,6 +186,18 @@ test("updateActor does nothing for another user's change, names' own write, or w
   assert.equal(game.scenes.get(IDS.one).tokens.get("tokA1000000000001").name, "Bob");
 });
 
+test("updateActor ignores an actor whose own change has no name, even when the batch options carry another actor's old name (README: a nickname is never touched)", async () => {
+  reset(F);
+  const other = game.actors.get(IDS.other);
+  other.name = "Zed";
+  F.fire("updateActor", other, { img: "x" }, { pentarynOldName: "Bob" }, IDS.gm);
+  await flush();
+  assert.deepEqual(effects(F.calls), []);
+  assert.equal(game.scenes.get(IDS.one).tokens.get("tokOther000000001").name, "Bob");
+  assert.equal(other.prototypeToken.name, "Bob");
+  reset(F);
+});
+
 test("a rename through actor.update relabels prototype + placed tokens, one write per scene, one toast (golden/rename.json)", async () => {
   reset(F);
   asked.length = 0;
@@ -304,7 +316,7 @@ test("api.sync(actor, old, new) returns the count and writes as the hook path do
 });
 
 // [declared] guide step 6 (N-D3, transform-creatures-38): sync's first argument is resolved at the
-// API boundary (kit resolveRef, exact match only). Before, an id, uuid or name rejected with a
+// API boundary (kit resolveRef: a whole name, exact then case-insensitive; never a substring). Before, an id, uuid or name rejected with a
 // TypeError because sync dereferenced actor.prototypeToken. A miss still reaches sync as null and
 // rejects with that TypeError (legacy row); an ambiguous name returns fail("AMBIGUOUS"), writing nothing.
 test("transform-creatures-38: api.sync resolves an id, uuid or exact name; a miss still rejects TypeError", async () => {
@@ -325,6 +337,31 @@ test("transform-creatures-38: api.sync resolves an id, uuid or exact name; a mis
     await assert.rejects(async () => api.sync(ref, "Bob", "Rob"), TypeError, `no substring match: ${ref}`);
   }
   assert.deepEqual(effects(F.calls), []);
+});
+
+test("api.sync resolves a whole name case-insensitively after the exact pass; two case-insensitive matches are AMBIGUOUS", async () => {
+  reset(F);
+  assert.equal(await api.sync(OLD.toLowerCase(), OLD, NEW), 3);
+  assert.equal(effects(F.calls)[0].uuid, `Actor.${IDS.glubbek}`);
+  reset(F);
+  const r = await api.sync("bob", "Bob", "Rob");
+  assert.equal(r.ok, false);
+  assert.equal(r.code, "AMBIGUOUS", "two actors are named Bob, so \"bob\" matches both");
+  assert.deepEqual(effects(F.calls), []);
+  reset(F);
+});
+
+// Characterisation (README sync row): a ref that is not an actor, token, placeable or string is
+// refused at the API boundary by the kit's resolveRef with fail("BAD_ARGS"), writing nothing.
+test("api.sync given a ref of the wrong kind returns fail(\"BAD_ARGS\") and writes nothing", async () => {
+  for (const ref of [42, {}, { documentName: "Item", id: "x" }]) {
+    reset(F);
+    const r = await api.sync(ref, "Bob", "Rob");
+    assert.equal(r.ok, false, JSON.stringify(ref));
+    assert.equal(r.code, "BAD_ARGS", JSON.stringify(ref));
+    assert.equal(typeof r.reason, "string", JSON.stringify(ref));
+    assert.deepEqual(effects(F.calls), [], JSON.stringify(ref));
+  }
 });
 
 // [declared] guide step 4 (N-D1, transform-creatures-33): a failed relabel write after a rename is

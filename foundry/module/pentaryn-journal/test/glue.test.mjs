@@ -222,3 +222,18 @@ test("a player's add(entry): one page copied into their journal, the sheet opene
   assert.equal(game.pentaryn.journal.status(readable), "saved");
   F.become({ userId: GM });
 });
+
+test("a personal journal at the root: report() lists it, ensureAll moves it in one batched update", async () => {
+  const api = game.pentaryn.journal;
+  const mine = api.personal(game.users.get(P1));
+  const folderId = mine.folder;
+  mine.folder = null;
+  assert.deepEqual(api.report().atRoot, [mine.id]);
+  const from = mark();
+  const r = await api.ensureAll();
+  assert.deepEqual(since(from).filter(c => /\.(create|updateDocuments)$/.test(c.op)), [
+    { op: "JournalEntry.updateDocuments", data: [{ _id: mine.id, folder: folderId }] },
+  ]);
+  assert.deepEqual(r.atRoot, []);
+  assert.deepEqual(api.report().atRoot, []);
+});
