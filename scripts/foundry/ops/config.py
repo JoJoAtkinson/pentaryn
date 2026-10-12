@@ -212,13 +212,7 @@ MODULES = {
         # node-test: transform-core.mjs decides what is stripped from a Wild Shape form, what
         # is carried back on revert, and how the Argon Bonus/Action bars are recomposed.
         check=(*_STATIC, "node-test", *_BLUEPRINT),
-        after_sync=(
-            "A module.json change needs a Foundry restart (make vtt-down && make vtt-up); otherwise reload every client.",
-            "Wild Shape and Starry Form live on the Argon Bonus bar:",
-            "  game.pentaryn.transform.inspect(\"Talo\")",
-            "  await game.pentaryn.transform.shift(actor, game.pentaryn.transform.forms(actor)[0].id)",
-            "  await game.pentaryn.transform.revert(actor)",
-        ),
+        # after_sync comes from module.json flags.pentaryn.afterSync (Wave 7 batch).
     ),
     "names": ModuleSpec(
         "pentaryn-names",

@@ -2,7 +2,14 @@
 
 **Read this when:** you need what changed in a version. How the module works now: [`README.md`](README.md).
 
-## Unreleased — the blueprint migration (wave 4, 2026-10-12)
+## 0.4.0 — 2026-10-12 (the blueprint migration, released by the Wave 7 restart batch)
+
+Wave 7 batch: `module.json` 0.3.3 → 0.4.0 with `VERSION`, `flags.pentaryn` blueprint keys
+(`flagScope` `transform` → `pentaryn-transform`, manifest-only), `minimum: "14"`,
+`verified: "14.369"`. W4-T4: the kit's `lib/argon-tooltip.css` is listed in `styles` and the
+`@import` in `styles/transform.css` is gone (the tooltip rules a transform tooltip gets are unchanged).
+
+### The blueprint migration (wave 4)
 
 Code moved into the blueprint layout (entries, wiring, features, adapters, UI, a pure core behind a
 barrel, the vendored kit 1.0.2); every play-tested behaviour kept. Declared changes, each its own

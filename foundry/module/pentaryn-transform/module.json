@@ -2,10 +2,10 @@
   "id": "pentaryn-transform",
   "title": "Pentaryn Transform Controls",
   "description": "Wild Shape and Starry Form on the Argon Combat HUD: one button opens a picker of the druid's known forms, a click shifts at once (the use is spent only when the shift happens), the form's attacks sit in the front row, 'Return to <druid>' and 'Change Form' sit on the Bonus bar, and a timed effect and the portrait line show the form and the time left. Starry Form is one click on a constellation: the Wild Shape use is spent, the effect (with the Dragon's floors and Twinkling flight) and the starlight go on, and it ends by itself after 10 minutes or when Incapacitated. The form ends by itself at 0 HP, when Incapacitated, when its time runs out, or before a Long Rest. Features that spend Wild Shape uses or spell slots never come along into the form, and item uses spent there are carried back. Any item flagged pentaryn-transform.revert reverts its actor when used; a non-Wild-Shape transform while transformed is still blocked. Exposes game.pentaryn.transform.",
-  "version": "0.3.3",
+  "version": "0.4.0",
   "compatibility": {
-    "minimum": "13",
-    "verified": "14"
+    "minimum": "14",
+    "verified": "14.369"
   },
   "authors": [
     {
@@ -17,7 +17,8 @@
     "hud.mjs"
   ],
   "styles": [
-    "styles/transform.css"
+    "styles/transform.css",
+    "lib/argon-tooltip.css"
   ],
   "languages": [
     {
@@ -59,8 +60,15 @@
   "protected": false,
   "flags": {
     "pentaryn": {
-      "flagScope": "transform",
-      "generation": 14
+      "tier": "full",
+      "namespace": "transform",
+      "flagScope": "pentaryn-transform",
+      "cssPrefix": "ptf-",
+      "generation": 14,
+      "afterSync": [
+        "After a sync: reload every client (a module.json change needs a Foundry restart).",
+        "  game.pentaryn.transform.describe()   game.pentaryn.transform.selftest()   game.pentaryn.transform.inspect(\"Talo\")"
+      ]
     }
   }
 }

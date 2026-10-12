@@ -44,7 +44,7 @@ import {
 
 export const SHORT = "transform";
 export const NS = "transform";
-export const VERSION = "0.3.3";                            // === module.json version (core.test pins it)
+export const VERSION = "0.4.0";                            // === module.json version (core.test pins it)
 export const CONTRACT = "pentaryn-transform/api@1";        // bump the major on a published-shape change
 export const I18N = "PENTARYN_TRANSFORM";
 export const CSS = "ptf-";

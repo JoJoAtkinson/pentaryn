@@ -43,3 +43,15 @@ export function cssRules(text) {
 
 /** The rules of the stylesheet at `url` (imports inlined) whose selector matches `pick`. */
 export const rulesFor = (url, pick) => cssRules(inlineImports(url)).filter(r => pick.test(r.selector));
+
+/**
+ * The rules Foundry applies from a module's `module.json` `styles`, in that order (each file's own
+ * @imports inlined), whose selector matches `pick`. Wave 7 (W4-T4 / W4-C6): the kit stylesheet is a
+ * `styles` entry, no longer an @import, so the cascade is the concatenation of the listed files.
+ */
+export function rulesForManifest(rootURL, pick) {
+  const root = new URL(rootURL.href.endsWith("/") ? rootURL.href : `${rootURL.href}/`);
+  const manifest = JSON.parse(readFileSync(new URL("module.json", root), "utf8"));
+  const text = (manifest.styles ?? []).map(s => inlineImports(new URL(typeof s === "string" ? s : s.src, root))).join("\n");
+  return cssRules(text).filter(r => pick.test(r.selector));
+}
