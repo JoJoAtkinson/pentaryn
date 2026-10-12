@@ -160,6 +160,21 @@ test("double-click: your own token on top opens no menu; an item pile is skipped
   assert.deepEqual({ ownOnTop, pile }, { ownOnTop: 0, pile: 0 });
 });
 
+test("double-click: the look menu opens in a world without item-piles", async () => {
+  const menus = () => document.body.children.filter(c => c.classList?.contains?.("pt-look-menu")).length;
+  if (!canvas.app.view.listeners.dblclick?.length) F.fire("canvasReady"); // run alone: wire the view
+  const before = menus();
+  F.activeScopes.delete("item-piles");
+  try {
+    await canvas.app.view.dispatch("dblclick", { clientX: 5, clientY: 5 });
+    await flush();
+    assert.equal(menus() - before, 1);
+  } finally {
+    document.listeners.filter(l => l.type === "keydown").forEach(l => l.fn({ key: "Escape" }));
+    F.activeScopes.add("item-piles");
+  }
+});
+
 test("study.look and describe through the API as a player", async () => {
   const mark = F.calls.length;
   const look = T().study.look(game.actors.get(NPC));

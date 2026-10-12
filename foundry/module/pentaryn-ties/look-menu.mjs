@@ -11,6 +11,7 @@ import { openTieDialogFor } from "./tie-dialog.mjs";
 import { openLook } from "./look-app.mjs";
 import { fileHovered } from "./known-ui.mjs";
 import { inspect } from "./study.mjs";
+import { readFlag } from "./lib/flags.mjs";
 
 /*
  * The player's door to Inspect: double-click a creature you can see.
@@ -101,7 +102,7 @@ function onDoubleClick(ev) {
   const under = canvas.tokens.placeables
     .filter(t => t.isVisible && t.bounds.contains(pt.x, pt.y))
     .sort((a, b) => (b.document.sort ?? 0) - (a.document.sort ?? 0) || b.zIndex - a.zIndex);
-  const token = under.find(t => !t.isOwner && !t.document.getFlag("item-piles", "data")?.enabled) ?? null;
+  const token = under.find(t => !t.isOwner && !readFlag(t.document, "item-piles", "data")?.enabled) ?? null;
   if (!token || under[0]?.isOwner) return; // your own token on top: core opens your sheet
   openLookMenu(token, ev);
 }
