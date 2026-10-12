@@ -6,6 +6,11 @@
 (`flagScope` stays `wall-autocomplete`), `languages`, `minimum: "14"`, `verified: "14.369"` and the
 description fix; the flag-scope migration is **parked** while walls stays off (Joe).
 
+- **[declared] The API manifest names every flag a run writes** (`walls-M11`): `describe()` listed
+  `run`'s writes as `generated`/`run`/`rule`/`moves`, missing the `kind` and `sources` stamped on created
+  walls; it now lists `generated`, `run`, `rule`, `kind`, `sources` and `moves.<run>` (`priorC` is
+  read-only since `walls-edge-2`). `undo`'s side effects now list the update batch before the delete
+  batch, the order it commits them. Manifest and `describe.json` only; no behaviour change.
 - **[declared] `compare()` survives js throwing** (`walls-rob-2`): when the js reference threw and
   another backend did not, the field diff read js's missing result and threw a TypeError. It now
   reports `identical: false`, `diff: "js threw: <message>"`; a backend's own throw is reported as before.

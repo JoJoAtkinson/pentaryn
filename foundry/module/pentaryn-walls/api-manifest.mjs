@@ -42,7 +42,7 @@ export const MANIFEST = Object.freeze({
       returns: `${ENGINE_RESULT} | null`,
       gm: true, writes: true,
       sideEffects: ["Wall update batch", "Wall create batch", "ChatMessage (GM whisper)",
-        "flags.wall-autocomplete.{generated,run,rule,moves}"],
+        "flags.wall-autocomplete.{generated,run,rule,kind,sources,moves.<run>}"],
       throws: ["Error"],
       doc: "Complete the scene's walls: one update batch (trims/welds), one create batch, then the chat card. "
         + "A created wall is stamped with the run id; a trimmed or welded one gets moves.<run id> = its prior "
@@ -53,7 +53,7 @@ export const MANIFEST = Object.freeze({
       params: [{ name: "opts", optional: true, type: "{ sceneId?, all? }", doc: "all: undo every run, not just the latest" }],
       returns: "{ deleted, restored, run } | null",
       gm: true, writes: true, legacy: true,
-      sideEffects: ["Wall delete batch", "Wall update batch", "ChatMessage (GM whisper)",
+      sideEffects: ["Wall update batch", "Wall delete batch", "ChatMessage (GM whisper)",
         "flags.pentaryn-walls and flags.wall-autocomplete: the undone run's moves entry deleted on restored walls, "
           + "or the whole stamp once no run is left"],
       throws: ["Error"],
@@ -102,8 +102,9 @@ export const MANIFEST = Object.freeze({
     },
   ],
   flags: {
-    writes: ["flags.wall-autocomplete.generated", "flags.wall-autocomplete.run",
-      "flags.wall-autocomplete.rule", "flags.wall-autocomplete.moves"],
+    // Every key runEngine stamps: generated/run/kind/sources on creates, rule on both, moves.<run> on
+    // updates (walls-M11). priorC is read-only now — only pre-walls-edge-2 walls carry it.
+    writes: ["generated", "run", "rule", "kind", "sources", "moves.<run>"].map(k => `flags.wall-autocomplete.${k}`),
     reads: ["keepOpen", "generated", "run", "priorC", "moves"].flatMap(underEveryScope),
   },
   unlisted: [],

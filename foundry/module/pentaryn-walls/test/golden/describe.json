@@ -46,7 +46,7 @@
         "Wall update batch",
         "Wall create batch",
         "ChatMessage (GM whisper)",
-        "flags.wall-autocomplete.{generated,run,rule,moves}"
+        "flags.wall-autocomplete.{generated,run,rule,kind,sources,moves.<run>}"
       ],
       "throws": [
         "Error"
@@ -68,8 +68,8 @@
       "writes": true,
       "query": false,
       "sideEffects": [
-        "Wall delete batch",
         "Wall update batch",
+        "Wall delete batch",
         "ChatMessage (GM whisper)",
         "flags.pentaryn-walls and flags.wall-autocomplete: the undone run's moves entry deleted on restored walls, or the whole stamp once no run is left"
       ],
@@ -181,7 +181,9 @@
       "flags.wall-autocomplete.generated",
       "flags.wall-autocomplete.run",
       "flags.wall-autocomplete.rule",
-      "flags.wall-autocomplete.moves"
+      "flags.wall-autocomplete.kind",
+      "flags.wall-autocomplete.sources",
+      "flags.wall-autocomplete.moves.<run>"
     ],
     "reads": [
       "flags.pentaryn-walls.keepOpen",

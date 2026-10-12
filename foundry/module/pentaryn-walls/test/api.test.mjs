@@ -81,3 +81,26 @@ test("undo() describes the stamp deletion under both scopes", () => {
   const undo = api.describe().methods.find(m => m.path === "undo");
   assert.ok(undo.sideEffects.some(e => e.includes("flags.pentaryn-walls") && e.includes("flags.wall-autocomplete") && e.includes("deleted")));
 });
+
+test("walls-M11: run's flag writes are every key the engine stamps; undo lists its batches in commit order", async () => {
+  const { FIXTURES } = await import("./fixtures/corpus.mjs");
+  const stamped = new Set();
+  const leaves = (o, at) => {
+    for (const [k, v] of Object.entries(o)) {
+      const path = `${at}.${k === "R" ? "<run>" : k}`;
+      if (v && typeof v === "object" && !Array.isArray(v)) leaves(v, path);
+      else stamped.add(path);
+    }
+  };
+  for (const fx of FIXTURES.filter(f => Array.isArray(f.walls))) {
+    const r = api.runEngine(fx.walls, { ...fx.opts, runId: "R" });
+    for (const w of [...r.creates, ...r.updates]) leaves(w.flags, "flags");
+  }
+  const d = api.describe();
+  assert.deepEqual([...d.flags.writes].sort(), [...stamped].sort());
+  const run = d.methods.find(m => m.path === "run");
+  const stamp = run.sideEffects.find(e => e.startsWith("flags.wall-autocomplete."));
+  for (const key of stamped) assert.ok(stamp.includes(key.replace("flags.wall-autocomplete.", "")), key);
+  const undo = d.methods.find(m => m.path === "undo").sideEffects;
+  assert.ok(undo.indexOf("Wall update batch") < undo.indexOf("Wall delete batch"), "update batch first (actions.mjs undo)");
+});
