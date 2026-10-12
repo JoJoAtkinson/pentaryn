@@ -131,8 +131,10 @@ wraps stay in place after `uninstall()` and record nothing until the next instal
 ## Extending
 
 1. A pure rule → `feedback-core.mjs` with a row in `test/core.test.mjs`.
-2. A new recorded kind → a `reg.on` in `recorder.mjs` (sync, one push, no await), a case in
-   `test/glue.test.mjs`, a line format in `scripts/feedback_reports.py` `action_line`.
+2. A new recorded kind → a `reg.on` in `recorder.mjs` (sync, one push, no await), the kind in
+   `ACTION_KINDS` (core), a case in `test/glue.test.mjs`, a line format in
+   `scripts/feedback_reports.py` `action_line` and a row in its test's case table. `core.test`
+   refuses a pushed kind missing from `ACTION_KINDS`; the Python test refuses one without a case.
 3. A report field → `buildReport` + `normaliseReport` + `REPORT_KEYS` in core, the Python renderer,
    and bump `SCHEMA_VERSION` on both sides if a reader would misread an old file. A new list
    section also goes in `LIST_KEYS` (validateReport's shape check).

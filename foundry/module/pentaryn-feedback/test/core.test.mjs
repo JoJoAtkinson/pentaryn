@@ -3,6 +3,7 @@
 import * as core from "../feedback-core.mjs";
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { manifestOf, pinJSON } from "./kit/harness.mjs";
 
 const ROOT = new URL("..", import.meta.url);
@@ -496,4 +497,15 @@ test("golden report.json: buildReport → fitReport → normaliseReport, as the 
   const filed = core.normaliseReport(fitted, { user: { id: "player0000000001", name: "Caven's player", role: 1, isGM: false, character: { id: "caven00000000001", name: "Caven" } } });
   assert.deepEqual(core.validateReport(filed), { ok: true });
   pinJSON("report", filed, import.meta.url);
+});
+
+test("ACTION_KINDS covers every `kind: \"…\"` the recorder and core push, and nothing else (feedback-EXT-6)", () => {
+  assert.ok(Array.isArray(core.ACTION_KINDS) && Object.isFrozen(core.ACTION_KINDS), "ACTION_KINDS is a frozen array");
+  const used = new Set();
+  for (const file of ["recorder.mjs", "feedback-core.mjs"]) {
+    for (const [, kind] of readFileSync(new URL(file, ROOT), "utf8").matchAll(/\bkind:\s*"([^"]+)"/g)) used.add(kind);
+  }
+  for (const kind of used) assert.ok(core.ACTION_KINDS.includes(kind), `"${kind}" is pushed but missing from ACTION_KINDS`);
+  for (const kind of core.ACTION_KINDS) assert.ok(used.has(kind), `ACTION_KINDS lists "${kind}" but nothing pushes it`);
+  assert.equal(new Set(core.ACTION_KINDS).size, core.ACTION_KINDS.length, "no duplicates");
 });

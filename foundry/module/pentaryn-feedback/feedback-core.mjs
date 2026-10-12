@@ -100,6 +100,14 @@ export const LIST_SECTIONS = Object.freeze(["windows", "modules", "chat"]);
 export const OBJECT_SECTIONS = Object.freeze(["user", "world", "scene", "tokens", "combat", "client"]);
 /** Every list-shaped report key validateReport checks, in check order: the two rings, then LIST_SECTIONS. */
 export const LIST_KEYS = Object.freeze(["actions", "errors", "chat", "windows", "modules"]);
+/**
+ * Every action-ring `kind` the recorder (and ringsFromStore's reload marker) pushes. core.test scans
+ * the sources for kind literals against this; the Python test reads it to cover `action_line`.
+ */
+export const ACTION_KINDS = Object.freeze([
+  "scene", "tool", "tab", "control", "target", "app", "doc", "chat", "use", "combat", "click", "notify",
+  "reload",
+]);
 
 /* ── text hygiene ─────────────────────────────────────────────────────────── */
 

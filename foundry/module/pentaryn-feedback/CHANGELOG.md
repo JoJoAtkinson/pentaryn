@@ -2,6 +2,11 @@
 
 ## Unreleased — 2026-10-12 (W3L live-check fix; `module.json` stays 0.1.2, code-only sync)
 
+- **[declared] One table of recorder action kinds** (feedback-EXT-6): the kinds the recorder
+  pushes were scattered literals, and the Python renderer test's case list had fallen behind (no
+  `tool`, `use`, `combat` or `notify`). Core now exports a frozen `ACTION_KINDS`; `core.test` scans
+  `recorder.mjs` and core for every `kind: "…"` literal against it, and the Python test reads it
+  from `feedback-core.mjs` and fails on a kind `action_line` has no case for. No timeline change.
 - **[declared] Windows without an id are throttled per class** (feedback-EC-5 + perf-4): the
   render throttle keyed on `row.id ?? row.cls`, but `clip()` had already turned a null id into
   `""`, so every id-less window shared one empty key and a second id-less window opened inside
