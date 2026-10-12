@@ -364,6 +364,16 @@ test("recorder: notifications are recorded and still shown (wrapMethod on Notifi
   assert.deepEqual(actionsOf().slice(n).map(({ t, ...rest }) => rest), [{ kind: "notify", level: "warning", text: "The door is locked token=[redacted]" }]);
 });
 
+test("feedback-M9: notify with no type reaches the original with exactly the caller's arguments; recorded as info", () => {
+  const n = clearRings();
+  const shown = F.calls.length;
+  ui.notifications.notify("Nothing to loot");
+  const call = F.calls.slice(shown).find(c => c.op === "notify");
+  assert.equal(call.argc, 1, "the wrap must not invent a type argument — core applies its own default");
+  assert.equal(call.level, "info");
+  assert.deepEqual(actionsOf().slice(n).map(({ t, ...rest }) => rest), [{ kind: "notify", level: "info", text: "Nothing to loot" }]);
+});
+
 test("feedback-M2: the recorder's own failure is redacted like every other error", () => {
   const level = { toString() { throw new Error("cannot label token=abcdefghijklmnop"); } };
   ui.notifications.notify("hello", level);

@@ -324,13 +324,13 @@ export function install(reg, ctx) {
     wrapMethod(MODULE, {
       target: Notifications.prototype, name: "notify", label: "Notifications#notify",
       marker: "__pentarynFeedbackNotify", adjustments: "feedback-notifications-notify",
-    }, function (wrapped, message, type = "info", ...rest) {
+    }, function (wrapped, message, ...rest) {
       try {
-        push({ kind: "notify", level: clip(type, 16), text: redact(messageOf(message), LIMITS.field) });
+        push({ kind: "notify", level: clip(rest[0] ?? "info", 16), text: redact(messageOf(message), LIMITS.field) });
       } catch (e) {
         pushOwnError(e);
       }
-      return wrapped(message, type, ...rest);
+      return wrapped(message, ...rest);
     }, { log: ctx.log });
   } else {
     ctx.log.debug("no Notifications#notify to record");

@@ -2,6 +2,11 @@
 
 ## Unreleased — 2026-10-12 (W3L live-check fix; `module.json` stays 0.1.2, code-only sync)
 
+- **[declared] The notify wrap passes the caller's arguments through untouched** (feedback-M9):
+  the README says every wrap hands the original exactly what it was given, but the
+  `Notifications#notify` wrap filled an omitted type with `"info"` before calling core. It now
+  takes `(message, ...rest)`, records `rest[0] ?? "info"` as the level and calls the original
+  with the caller's own arguments, so core applies its own default. A glue test pins it.
 - **[declared] The recorder's storage state is `persisted`** (feedback-M8): `recorder.mjs` kept
   its sessionStorage key, flush timer and dirty flag in a file-local `store`, the same name as the
   report store `store()` elsewhere in the module. Renamed to `persisted` (same shape); a core test
