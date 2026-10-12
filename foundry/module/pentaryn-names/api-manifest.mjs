@@ -32,7 +32,8 @@ export const MANIFEST = Object.freeze({
         + "case-insensitive; never a substring); a token or a token's synthetic actor means its base actor. "
         + "An ambiguous name returns fail(\"AMBIGUOUS\"); a missing or non-string oldName or newName returns "
         + "fail(\"BAD_ARGS\"), writing nothing; a ref that matches nothing rejects with a "
-        + "TypeError (legacy). A rename through actor.update already relabels on the renaming client, "
+        + "TypeError (legacy). Always async: every outcome, failures included, arrives through the returned "
+        + "Promise. A rename through actor.update already relabels on the renaming client, "
         + "without waiting: a sync called before those writes finish repeats them (same values, a second "
         + "toast). Call this only to repair labels that missed a rename, after the first relabel finished.",
     },

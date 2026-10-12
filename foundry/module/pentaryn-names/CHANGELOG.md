@@ -16,6 +16,10 @@
   `oldName`/`newName` returns `fail("BAD_ARGS", "oldName and newName must be strings")`, writing
   nothing and toasting nothing (new failure path). Before, it blanked every matching token label and
   toasted "undefined".
+- [declared] names-maint-1 (final review 2026-10-12): `api.sync` is always async (failure-path shape
+  change). `fail("BAD_ARGS")`, `fail("AMBIGUOUS")` and an uncoded resolve error now arrive through the
+  returned Promise (resolved, or rejected for the error) like the count and the legacy `TypeError`;
+  before, a coded failure came back as a plain object and an uncoded one threw synchronously.
 
 ## 0.1.1 — 2026-10-11 (play-test fix, fix/playtest-2026-10-11)
 

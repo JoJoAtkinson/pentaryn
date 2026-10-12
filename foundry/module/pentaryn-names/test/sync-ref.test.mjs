@@ -91,3 +91,28 @@ test("names-rob-2: api.sync with a missing or non-string oldName/newName returns
     assert.equal(game.actors.get(IDS.bob).prototypeToken.name, before, label);
   }
 });
+
+// [declared] names-maint-1 (final review 2026-10-12): api.sync always returns a Promise. Before, a
+// coded failure (BAD_ARGS before resolving, AMBIGUOUS or a wrong-kind ref from resolveRef) came back
+// as a plain fail() object while a count came back as a Promise, so `api.sync(...).then` threw on the
+// failure path. Now every outcome — the count, fail(BAD_ARGS), fail(AMBIGUOUS) and the legacy
+// TypeError of a miss — arrives through a Promise; an uncoded resolve error rejects instead of throwing.
+test("names-maint-1: api.sync returns a Promise on every outcome (count, BAD_ARGS, AMBIGUOUS, legacy TypeError)", async () => {
+  const outcomes = [
+    ["count", [IDS.bob, "Bob", "Rob"], r => assert.equal(typeof r, "number")],
+    ["BAD_ARGS names", [IDS.bob, "Bob"], r => assert.equal(r.code, "BAD_ARGS")],
+    ["BAD_ARGS ref", [42, "Bob", "Rob"], r => assert.equal(r.code, "BAD_ARGS")],
+    ["AMBIGUOUS", ["Bob", "Bob", "Rob"], r => assert.equal(r.code, "AMBIGUOUS")],
+  ];
+  for (const [label, args, check] of outcomes) {
+    reset(F);
+    tok.name = "Bob";
+    const p = api.sync(...args);
+    assert.ok(p instanceof Promise, `${label}: a Promise, not a plain value`);
+    check(await p);
+  }
+  reset(F);
+  const miss = api.sync("ZZ nobody at all", "Bob", "Rob");
+  assert.ok(miss instanceof Promise, "miss: a Promise");
+  await assert.rejects(miss, TypeError, "miss: the legacy TypeError arrives as a rejection");
+});
