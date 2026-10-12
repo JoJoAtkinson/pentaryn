@@ -5,7 +5,7 @@
  * own, their own tokens stay drawn on their screen, and a "Your creatures" strip above the hotbar.
  * What each does at the table: README "What the player sees".
  *
- * Files, in load order:
+ * Files (core first, then the features, then the API):
  *   creatures-core.mjs   PURE constants and rules: the light, owner-sees, strip order, dock, seams
  *   settings.mjs         SETTINGS (lightRadius, ownerSees, floatOverHud, showStrip), setting()
  *   tokens-adapter.mjs   TokenDocument → plain summary (reads aoe / Item Piles / dnd5e flags)

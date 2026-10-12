@@ -48,6 +48,8 @@ a player or GM can notice:
   document, so a placeable answers like its document (it used to miss token-level flags and call an
   Item Piles chest or a pentaryn-aoe area handle a creature); `isCreature(null)` answers `false`
   instead of throwing a `TypeError`.
+- **[declared] creatures-M8** — docs only: the entry's file list is headed "Files (core first,
+  then the features, then the API):" (it claimed "in load order", which the imports do not follow).
 
 ## 0.1.1 — 2026-10-10
 
