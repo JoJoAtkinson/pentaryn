@@ -96,7 +96,7 @@ class Module:
     installed: bool                              # under the repo's module root or a snapshot
     registry: adj.Registry | None
     registry_root: Path
-    all_manifests: dict[str, dict] = field(default_factory=dict)
+    all_manifests: dict[str, dict | None] = field(default_factory=dict)   # None: unreadable (C38 says so)
     registry_error: str | None = None            # why the registry could not be loaded (C47/C32 fail on it)
 
     @property
@@ -184,9 +184,25 @@ def _scan_dir(d: Path) -> tuple[dict, dict, list, list]:
     return files, raw, lib, tests
 
 
+class ManifestError(ValueError):
+    """The scored module's own module.json cannot be read as a JSON object (main() exits 2 on it)."""
+
+
+def read_manifest(d: Path) -> dict:
+    try:
+        man = json.loads((d / "module.json").read_text(encoding="utf-8"))
+    except OSError as exc:
+        raise ManifestError(f"module.json cannot be read: {exc}") from exc
+    except ValueError as exc:
+        raise ManifestError(f"module.json is not valid JSON: {exc}") from exc
+    if not isinstance(man, dict):
+        raise ManifestError(f"module.json is not valid JSON: a {type(man).__name__}, not an object")
+    return man
+
+
 def load_module(d: Path, *, installed: bool, registry: adj.Registry | None, registry_root: Path,
-                all_manifests: dict[str, dict] | None = None, registry_error: str | None = None) -> Module:
-    manifest = json.loads((d / "module.json").read_text(encoding="utf-8"))
+                all_manifests: dict[str, dict | None] | None = None, registry_error: str | None = None) -> Module:
+    manifest = read_manifest(d)
     files, raw, lib, tests = _scan_dir(d)
     return Module(d, manifest, files, raw, lib, tests, installed, registry, registry_root, all_manifests or {},
                   registry_error)
@@ -1097,8 +1113,11 @@ def c38(m):
     if not prefix:
         return na("no cssPrefix declared (C07)")
     clash = [mid for mid, man in m.all_manifests.items()
-             if mid != m.id and ((man.get("flags") or {}).get("pentaryn") or {}).get("cssPrefix") == prefix]
-    return ok() if not clash else bad([f"{prefix} also declared by {', '.join(clash)}"])
+             if man is not None and mid != m.id
+             and ((man.get("flags") or {}).get("pentaryn") or {}).get("cssPrefix") == prefix]
+    skipped = [f"{mid}: module.json unreadable — not compared" for mid, man in m.all_manifests.items()
+               if man is None and mid != m.dir.name]
+    return ok(skipped) if not clash else bad([f"{prefix} also declared by {', '.join(clash)}"] + skipped)
 
 
 def _spec_for(m: Module):
@@ -1942,10 +1961,17 @@ def load_registry(reg_path: Path) -> tuple[adj.Registry | None, str | None]:
         return None, str(exc)
 
 
-def load_manifests(root: Path) -> dict[str, dict]:
-    """Every sibling module.json under root, by folder name (C38's cssPrefix-clash check reads these)."""
-    return {p.name: json.loads((p / "module.json").read_text(encoding="utf-8"))
-            for p in root.iterdir() if (p / "module.json").exists()}
+def load_manifests(root: Path) -> dict[str, dict | None]:
+    """Every sibling module.json under root, by folder name (C38's cssPrefix-clash check reads these).
+    An unreadable one maps to None: C38 names it rather than one bad sibling crashing every score."""
+    out: dict[str, dict | None] = {}
+    for p in root.iterdir():
+        if (p / "module.json").exists():
+            try:
+                out[p.name] = read_manifest(p)
+            except ManifestError:
+                out[p.name] = None
+    return out
 
 
 def score_dir(module_dir: Path, *, root: Path | None = None, registry_path: Path | None = None,
@@ -2047,8 +2073,12 @@ def main(argv: list[str] | None = None) -> int:
         parent = t.resolve().parent
         if parent not in manifests:
             manifests[parent] = load_manifests(parent)
-        reports.append(score_dir(t, root=parent, registry_path=reg_path, installed=installed,
-                                 registry=registry, manifests=manifests[parent]))
+        try:
+            reports.append(score_dir(t, root=parent, registry_path=reg_path, installed=installed,
+                                     registry=registry, manifests=manifests[parent]))
+        except ManifestError as exc:
+            print(f"  ✗ {t.resolve().name}: {exc}", file=sys.stderr)
+            return 2
     if args.json:
         print(json.dumps(reports, indent=2))
     elif args.markdown:

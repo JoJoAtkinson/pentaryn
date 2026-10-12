@@ -886,3 +886,27 @@ def test_pyb_e6_strict_gate_matches_the_full_detail_list_and_display_caps_it(tmp
     assert "… 8 more" in line
     assert conformance._capped(["a", "b", "c"], 2) == ["a", "b", "… 1 more"]
     assert conformance._capped(["a", "b"], 2) == ["a", "b"]
+
+
+def test_py_blueprint_rob_5_a_malformed_sibling_manifest_is_skipped_and_the_broken_module_fails_fast(tmp_path, capsys):
+    """py-blueprint-ROB-5: one sibling module.json that is not JSON must not crash scoring every
+    other module — C38 passes and names the folder it could not compare; scoring the broken module
+    itself stops with one ✗ line and exit 2, not a traceback."""
+    root = tmp_path / "mods"
+    one = _tiny(root, files={"module.json": json.dumps({"id": "pentaryn-one", "esmodules": ["one.mjs"],
+                                                        "flags": {"pentaryn": {"cssPrefix": "pone-"}}})})
+    write(root / "pentaryn-broken", {"module.json": "{not json"})
+    write(root / "pentaryn-list", {"module.json": "[]"})
+    report = conformance.score_dir(one)
+    c38 = next(r for r in report["results"] if r["id"] == "C38")
+    assert c38["status"] == "pass", c38
+    assert "pentaryn-broken: module.json unreadable — not compared" in c38["detail"], c38["detail"]
+    assert "pentaryn-list: module.json unreadable — not compared" in c38["detail"], c38["detail"]
+
+    capsys.readouterr()
+    assert conformance.main(["--module", str(one), "--json"]) == 1      # scored; tiny fails other rules
+    assert json.loads(capsys.readouterr().out)[0]["module"] == "pentaryn-one"
+    for argv in (["--root", str(root)], ["--module", "broken", "--root", str(root)]):
+        assert conformance.main(argv) == 2
+        err = capsys.readouterr().err
+        assert "✗ pentaryn-broken: module.json is not valid JSON: " in err, err

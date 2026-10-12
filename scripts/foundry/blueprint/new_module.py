@@ -81,14 +81,22 @@ def _read(p: Path) -> str:
     return p.read_text(encoding="utf-8", errors="replace")
 
 
+def _flags_of(mod: Path) -> dict:
+    """module.json flags.pentaryn, or {} when the manifest is unreadable (its sources still get scanned)."""
+    try:
+        man = json.loads(_read(mod / "module.json"))
+    except (OSError, ValueError):
+        return {}
+    return ((man.get("flags") or {}).get("pentaryn") or {}) if isinstance(man, dict) else {}
+
+
 def namespace_owner(ns: str, roots: list[Path]) -> str | None:
     """A module that already publishes `ns`: declared, or found as game.pentaryn.<ns> / { ...current, <ns>: api }."""
     src_res = [re.compile(rf"game\.pentaryn\.{re.escape(ns)}\b"),
                re.compile(rf"\{{\s*\.\.\.\s*\w+\s*,\s*{re.escape(ns)}\s*:")]
     for root in roots:
         for mod in _modules(root):
-            man = json.loads(_read(mod / "module.json"))
-            if ((man.get("flags") or {}).get("pentaryn") or {}).get("namespace") == ns:
+            if _flags_of(mod).get("namespace") == ns:
                 return mod.name
             for f in mod.rglob("*.mjs"):
                 if {"lib", "test", "node_modules"} & set(f.relative_to(mod).parts):
@@ -105,8 +113,7 @@ def css_owner(prefix: str, roots: list[Path], *, skip: str | None = None) -> str
         for mod in _modules(root):
             if mod.name == skip:
                 continue
-            man = json.loads(_read(mod / "module.json"))
-            if ((man.get("flags") or {}).get("pentaryn") or {}).get("cssPrefix") == prefix:
+            if _flags_of(mod).get("cssPrefix") == prefix:
                 return mod.name
             for css in mod.rglob("*.css"):
                 if sel.search(_read(css)):

@@ -358,3 +358,17 @@ def test_vendor_plan_is_pure_and_refuses_like_sync(tmp_path):
     vendor.sync(d, extra=["election"])                # sync writes exactly what plan() chose
     lock = json.loads((d / "lib/kit.lock.json").read_text())
     assert (lock["tier"], lock["files"]) == (planned["tier"], planned["files"])
+
+
+def test_py_blueprint_rob_5_an_unreadable_sibling_manifest_still_has_its_sources_and_css_scanned(tmp_path):
+    # py-blueprint-ROB-5: a malformed module.json is skipped, not a traceback — and the module's
+    # sources and CSS are still scanned for the namespace and the prefix.
+    mods = tmp_path / "mods"
+    d = _fake_module(mods, "pentaryn-other", source="game.pentaryn.demo = api;\n", css=".pd-thing { color: red; }\n")
+    (d / "module.json").write_text("{not json")
+    assert new_module.namespace_owner("demo", [mods]) == "pentaryn-other"
+    assert new_module.css_owner("pd-", [mods]) == "pentaryn-other"
+    assert new_module.namespace_owner("other", [mods]) is None
+    assert new_module.css_owner("pz-", [mods]) is None
+    rc, target = gen(tmp_path, "demo", "--no-run", modules_root=mods)
+    assert rc == 2 and not target.exists()
