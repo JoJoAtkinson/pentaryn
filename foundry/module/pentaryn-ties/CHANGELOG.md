@@ -59,6 +59,11 @@ come from one `GROUP_LABEL` table in `facts.mjs` instead of string ladders. The 
 before; a group the table does not know is headed with its own name instead of "What they are".
 ties-ui-EXT-4.
 
+Fixed (declared): a switch clicked on the Inspect window's **Player view** while it is still
+redrawing acts on the fact it was drawn for — the redraw builds its fact list and PC roster aside and
+swaps them in only once finished, so a click or a switch refresh mid-redraw reads the previous,
+consistent set instead of a half-built one. ties-ui-ACC-2.
+
 Fixed (declared): the chat cards — the "… studies …" stub, the tempo line and the GM's share
 whisper — name every creature by its **token** name, never its actor name, so a GM-only world actor
 name cannot reach player chat. The token is found on any scene, not only the one the posting

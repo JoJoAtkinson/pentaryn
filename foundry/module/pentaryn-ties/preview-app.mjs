@@ -437,8 +437,10 @@ export class InspectPreview extends ApplicationV2 {
   async renderPlayerView() {
     const subject = this.subject;
     const pcs = this.playerCharacters();
-    this.pcKey = pcs.map(pc => pc.id).join(",");
-    this.specs = [];
+    // built locally and published after the last await: a click or refreshSwitches during the render
+    // reads the previous, consistent set (ties-ui-ACC-2)
+    const pcKey = pcs.map(pc => pc.id).join(",");
+    const specs = [];
     /*
      * Which facts, in what order, under what key: `subjectFacts` → known-core's `factOrder`, the
      * same list the player's Look window (`look-app.mjs`) filters by their `granted` map. Shared so the
@@ -457,7 +459,7 @@ export class InspectPreview extends ApplicationV2 {
       const e = describeAttribute(x.attrId);
       const reveal = String(e.reveal ?? "");
       const note = x.parentId ? _loc("PENTARYN_TIES.known.share.afterParent", { parent: describeAttribute(x.parentId).title }) : null;
-      return this.factCard({ icon: e.icon, source: e.title, text: reveal }, { ns: "ident", subjectId: subject.id, attrId: x.attrId }, pcs, {
+      return this.factCard(specs, { icon: e.icon, source: e.title, text: reveal }, { ns: "ident", subjectId: subject.id, attrId: x.attrId }, pcs, {
         blank: !reveal.trim() ? _loc("PENTARYN_TIES.known.share.blankReveal") : null, note
       });
     });
@@ -468,7 +470,7 @@ export class InspectPreview extends ApplicationV2 {
       const e = describeAttribute(x.attrId);
       const row = attributeLore(x.attrId).find(r => r.id === x.factId);
       if (!row) continue;
-      attrCards.push(this.factCard(
+      attrCards.push(this.factCard(specs,
         { icon: e.icon, source: `${e.title} — ${row.label}`, text: row.text },
         { ns: "attr", subjectId: subject.id, attrId: x.attrId, factId: x.factId }, pcs,
         { blank: !row.text.trim() ? _loc("PENTARYN_TIES.known.share.blankText") : null,
@@ -477,7 +479,7 @@ export class InspectPreview extends ApplicationV2 {
     }
     if (attrCards.length) groups.push([_loc(groupLabelKey("attr", "preview")), attrCards]);
 
-    const ownCards = facts.filter(x => x.group === "lore").map(x => ownRows.get(x.factId)).filter(Boolean).map(row => this.factCard(
+    const ownCards = facts.filter(x => x.group === "lore").map(x => ownRows.get(x.factId)).filter(Boolean).map(row => this.factCard(specs,
       { icon: subject.img, source: row.label, text: row.text },
       { ns: "lore", subjectId: subject.id, factId: row.id }, pcs,
       { blank: !row.text.trim() ? _loc("PENTARYN_TIES.known.share.blankText") : null }
@@ -490,11 +492,14 @@ export class InspectPreview extends ApplicationV2 {
       const text = await composeStudyPayload(kind, 25, state.skillLabel);
       // a separate kind actor's study files under the KIND's page on the Known tab, not this one's
       const kindLabel = _loc(groupLabelKey("kind", "preview", { kindPage: kind.id !== subject.id }), { kind: kind.name });
-      groups.push([kindLabel, [this.factCard(
+      groups.push([kindLabel, [this.factCard(specs,
         { icon: kind.img, source: kind.name, text }, { ns: "kind", subjectId: subject.id }, pcs,
         { note: studyOffsetOf(readFlag(kind, MODULE, STUDY_OFFSET_FLAG)) === "auto" ? _loc("PENTARYN_TIES.known.share.kindAuto") : null }
       )]]);
     }
+
+    this.specs = specs;
+    this.pcKey = pcKey;
 
     const head = `<div class="pt-summary pv-entry-head">
       <img class="pt-portrait" src="${esc(subject.img || "icons/svg/mystery-man.svg")}" alt="" />
@@ -516,13 +521,16 @@ export class InspectPreview extends ApplicationV2 {
     return html + `</div>`;
   }
 
-  /** One grant card plus the GM switch row. `blank` replaces the row: nothing there to share. */
-  factCard(g, spec, pcs, { blank = null, note = null, textHTML = null } = {}) {
-    const i = this.specs.push({ spec, label: g.source }) - 1;
+  /**
+   * One grant card plus the GM switch row, its fact pushed onto `specs` (the render's own list, not
+   * yet `this.specs`). `blank` replaces the row: nothing there to share.
+   */
+  factCard(specs, g, spec, pcs, { blank = null, note = null, textHTML = null } = {}) {
+    const i = specs.push({ spec, label: g.source }) - 1;
     const extra = blank
       ? `<p class="pv-silent pv-gm">${esc(blank)}</p>`
       : `<div class="pv-gm">${note ? `<span class="pv-gm-note">${esc(note)}</span>` : ""}
-          ${pcs.length ? this.switchRow(i, pcs) : ""}</div>`;
+          ${pcs.length ? this.switchRow(spec, i, pcs) : ""}</div>`;
     return grantCard(blank ? { ...g, text: g.text || "—" } : g, { extra, textHTML });
   }
 
@@ -574,9 +582,8 @@ export class InspectPreview extends ApplicationV2 {
     return { st, state, act, tip, name };
   }
 
-  /** The switch row for fact `i`: a switch per PC, then "Share with all". */
-  switchRow(i, pcs) {
-    const { spec } = this.specs[i];
+  /** The switch row for fact `i` (`spec`): a switch per PC, then "Share with all". */
+  switchRow(spec, i, pcs) {
     const states = pcs.map(pc => ({ pc, s: this.switchState(spec, pc) }));
     const anyOff = states.some(x => x.s.act === "share");
     return `<div class="pv-switches" data-fact="${i}">
