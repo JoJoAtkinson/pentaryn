@@ -59,6 +59,10 @@ Declared changes:
 - dropbin-EXT-3: the Item Piles loot-window selectors Loot all uses (footer, Close Lid / Leave
   icons, the native Take All icon) are one frozen `SELECTORS` table exported by `piles.mjs`;
   `loot.mjs` reads them from there. Loot all finds and places its button exactly as before.
+- dropbin-perf-1: the corpse eye's "show it?" answer (an Item Piles pile/empty query) is cached
+  on the Token as `_pdWantsEye` and recomputed only on drawToken, updateToken, the updateActor and
+  item hooks, canvasReady and a direct `corpses.paintEye`; `refreshToken` (every animation frame)
+  only places and sizes the eye from the cached answer.
 
 Added: `list(n, { brief })`, `restoreResult`, `inspect`, `selftest` (items-journal-28).
 - A restore another module refuses (a `preCreateItem` veto) is `{ ok: false, reason: "not-created" }`

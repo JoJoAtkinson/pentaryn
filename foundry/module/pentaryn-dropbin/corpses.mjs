@@ -236,13 +236,20 @@ function wantsEye(doc) {
   }
 }
 
-function paintEye(token) {
+/**
+ * Paint (or hide) the eye. The document-change paths (drawToken, updateToken, the actor/item hooks,
+ * canvasReady, the public API) re-ask wantsEye and cache the answer on the Token as `_pdWantsEye`;
+ * refreshToken passes `cached` and reuses it, so a frame of animation makes no Item Piles query
+ * (dropbin-perf-1). A token refreshed before any recompute asks once.
+ */
+function paintEye(token, { cached = false } = {}) {
   try {
     const doc = token?.document;
     if (!doc || token.destroyed) return;
     let eye = token[EYE_KEY];
     if (eye && (eye.destroyed || eye.parent !== token)) eye = token[EYE_KEY] = null;
-    if (!wantsEye(doc)) { if (eye) eye.visible = false; return; }
+    if (!cached || typeof token._pdWantsEye !== "boolean") token._pdWantsEye = wantsEye(doc);
+    if (!token._pdWantsEye) { if (eye) eye.visible = false; return; }
     const tex = eyeTexture();
     if (!tex) return; // paints when it loads
     if (!eye) {
@@ -357,8 +364,8 @@ export function install(reg, ctx) {
   const on = (name, fn, label) => reg.on(name, fn, { label });
   on("updateActor", onActorHp, "corpse: hp");
   for (const h of ["createActiveEffect", "deleteActiveEffect", "updateActiveEffect"]) on(h, onEffect, `corpse: ${h}`);
-  on("drawToken", paintEye, "eye: draw");
-  on("refreshToken", paintEye, "eye: refresh");               // hot: paints only our corpses, no world walk
+  on("drawToken", token => paintEye(token), "eye: draw");
+  on("refreshToken", token => paintEye(token, { cached: true }), "eye: refresh"); // hot: reuses the cached answer, no Item Piles query
   on("canvasReady", paintAllEyes, "eye: canvas");
   on("updateToken", doc => { if (doc.parent === canvas?.scene) paintEye(doc.object); }, "eye: token");
   // Taking items out of a corpse changes its synthetic actor's items/currency, not the token.
