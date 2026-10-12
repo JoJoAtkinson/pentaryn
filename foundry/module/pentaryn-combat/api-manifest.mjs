@@ -30,7 +30,7 @@ export const MANIFEST = Object.freeze({
   rows: [
     /* what the HUD shows */
     { path: "count", params: [ACTOR, WEAPON], returns: "number", gm: false, writes: false, legacy: true,
-      doc: "How many swings the Attack action gives this actor with that weapon (Extra Attack, a Multiattack's total, a flag override)." },
+      doc: "How many swings the Attack action gives this actor with that weapon (Extra Attack, a Multiattack's total while setting multiattack is on, a flag override)." },
     { path: "plan", params: [ACTOR, WEAPON], returns: "{ swings: {weaponId, mode, kind}[], count, left, weaponId }", gm: false, writes: false, legacy: true,
       doc: "The swings a Full Attack would make right now (left this turn in combat; the whole action out of combat)." },
     { path: "turn", params: [ACTOR], returns: "{ key, attackAction, riders, followUps, nick, bonusUsed, otherActions, surges, quickened }", gm: false, writes: false, legacy: true,

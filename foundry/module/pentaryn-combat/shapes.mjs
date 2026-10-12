@@ -178,10 +178,13 @@ export function usesMultiattack(actor) {
   return actor?.type === "npc" || !!actor?.isPolymorphed;
 }
 
-/** attackCount for this actor and weapon (weapon id optional). */
-export function countFor(actor, weaponId = null) {
+/**
+ * attackCount for this actor and weapon (weapon id optional). `multiattackOn` is setting multiattack:
+ * Off, the count comes from class features alone (Extra Attack and kin), so an NPC without them gets 1.
+ */
+export function countFor(actor, weaponId = null, { multiattackOn = true } = {}) {
   const w = weaponId ? actor.items.get(weaponId) : null;
-  const ma = usesMultiattack(actor) ? multiattackOf(actor) : null;
+  const ma = multiattackFor(actor, { enabled: multiattackOn });
   return core.attackCount({
     features: featuresOf(actor),
     override: actor.getFlag?.(MODULE, "attacks"),
@@ -365,7 +368,7 @@ export function planFor(actor, weaponId = null, { multiattackOn = true } = {}) {
   weaponId ??= chosenWeapon(actor);
   const ma = multiattackFor(actor, { enabled: multiattackOn });
   const pick = ma ? { "*": rememberedWeapon(actor) } : null;
-  return fullAttackPlanOf(actor, { weaponId, turn: turnOf(actor), inCombat: ctx.inCombat, multiattack: ma, count: ma ? ma.total : countFor(actor, weaponId), pick });
+  return fullAttackPlanOf(actor, { weaponId, turn: turnOf(actor), inCombat: ctx.inCombat, multiattack: ma, count: ma ? ma.total : countFor(actor, weaponId, { multiattackOn }), pick });
 }
 
 /** An area handle pentaryn-aoe placed (its token flag); combat reselects your token when one goes. */

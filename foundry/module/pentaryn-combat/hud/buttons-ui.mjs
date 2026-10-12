@@ -44,14 +44,15 @@ export function fullAttackState(actor) {
   const ma = multiattack(actor);
   const pick = ma ? { "*": rememberedWeapon(actor) } : null;
   const weaponId = ma ? null : chosenWeapon(actor);
-  const count = ma ? ma.total : countFor(actor, weaponId);
+  const on = { multiattackOn: setting("multiattack") };
+  const count = ma ? ma.total : countFor(actor, weaponId, on);
   const plan = fullAttackPlanOf(actor, { weaponId, turn, inCombat: ctx.inCombat, multiattack: ma, count, pick });
   const weapons = weaponsOf(actor);
   const nick = !ma && weaponId ? core.extraSwings({ main: weapons.find(w => w.id === weaponId), weapons, turn,
     enhancedDualWielding: !!actor.getFlag?.("dnd5e", "enhancedDualWielding") }).length : 0;
   // The pips count the Attack action's swings with any weapon: a Loading crossbow alone gives 1, but
   // a Fighter 5 holding one still has a second swing to make with something else.
-  const pipCount = ma ? ma.total : Math.max(count, countFor(actor, null));
+  const pipCount = ma ? ma.total : Math.max(count, countFor(actor, null, on));
   // Shown whenever the Attack action has 2+ swings with some weapon, so right-click can still switch
   // away from a remembered Loading crossbow (1 swing).
   return { ctx, turn, ma, weaponId, count, pipCount, plan, worth: pipCount >= 2 || nick > 0 };
@@ -74,7 +75,7 @@ async function chooseWeapon(actor) {
     const g = ma.groups.find(x => x.choices.length > 1) ?? ma.groups[0];
     tiles = g.choices.map(id => actor.items.get(id)).filter(Boolean).map(i => weaponTile(actor, { id: i.id, name: i.name, img: i.img }, g.count));
   } else {
-    tiles = weaponsOf(actor).filter(core.canSwing).map(w => weaponTile(actor, w, countFor(actor, w.id)));
+    tiles = weaponsOf(actor).filter(core.canSwing).map(w => weaponTile(actor, w, countFor(actor, w.id, { multiattackOn: setting("multiattack") })));
   }
   if (tiles.length < 2) return tiles[0]?.id ?? null;
   const id = await pickWeapon(tiles, { title: _loc("PENTARYN_COMBAT.Picker.Title") });

@@ -39,7 +39,7 @@ function specialNames() {
 }
 
 function swingsPerAction(actor) {
-  try { return countFor(actor, chosenWeapon(actor)); } catch { return 1; }
+  try { return countFor(actor, chosenWeapon(actor), { multiattackOn: setting("multiattack") }); } catch { return 1; }
 }
 
 async function addTurnEffect(actor, kind, img) {

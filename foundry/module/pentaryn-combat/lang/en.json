@@ -162,7 +162,7 @@
       },
       "multiattack": {
         "Name": "Full Attack for Multiattack",
-        "Hint": "NPCs and Wild Shape forms get Full Attack from their Multiattack (e.g. Bite then Claw). Off: the Multiattack card as before."
+        "Hint": "NPCs and Wild Shape forms get Full Attack from their Multiattack (e.g. Bite then Claw). Off: the Multiattack card as before, and Full Attack counts only class features such as Extra Attack."
       },
       "recklessToggle": {
         "Name": "Reckless Attack toggle",

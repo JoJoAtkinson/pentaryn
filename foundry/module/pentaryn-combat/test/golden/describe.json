@@ -26,7 +26,7 @@
       "query": false,
       "sideEffects": [],
       "legacy": true,
-      "doc": "How many swings the Attack action gives this actor with that weapon (Extra Attack, a Multiattack's total, a flag override)."
+      "doc": "How many swings the Attack action gives this actor with that weapon (Extra Attack, a Multiattack's total while setting multiattack is on, a flag override)."
     },
     {
       "path": "plan",
