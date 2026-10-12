@@ -141,8 +141,10 @@ reads `DND5E.EFFECT.Suppressed.Hint`.
 ## Extending
 
 Pure rules go in `attunement-core.mjs` with a fixture table in `test/core.test.mjs` (oracle +
-core). Document writes and third-party reads go in `actor-adapter.mjs`; DOM in `strip.mjs`; hooks in
-a feature (`sheet.mjs`, `bonds.mjs`) registered through `reg.on(name, fn, { label })`. A new API
+core). The shared writes (`stash`, `releaseAway`, `writeSlots`, the `serial` lane) and third-party reads go in
+`actor-adapter.mjs`; the features write their own hook-driven updates (`sheet.mjs` attune/unattune,
+`bonds.mjs` hand-back and purse). DOM in `strip.mjs`; hooks in a feature (`sheet.mjs`, `bonds.mjs`)
+registered through `reg.on(name, fn, { label })`. A new API
 method is a row in `api-manifest.mjs` plus an impl in `api.mjs`, then
 `GOLDEN_UPDATE=1 node --test test/api.test.mjs` and a read of the golden diff.
 

@@ -4,6 +4,11 @@
 
 The version stays 0.3.0 until the next `module.json` restart batch (code only: sync + reload).
 
+- **[declared] M4:** the `actor-adapter.mjs` header and the README "Extending" section now say the
+  adapter holds the shared writes (`stash`, `releaseAway`, `writeSlots`, the `serial` lane) and the
+  third-party reads, and that the features write their own hook-driven updates (`sheet.mjs`
+  attune/unattune, `bonds.mjs` hand-back and purse); was: "every document write lives in the
+  adapter". Docs only; no change in play. `test/docs.test.mjs`.
 - **[declared] M1:** `stash` builds the copies' id list through one private `idsOf(made)` helper,
   called in the shortfall branch and on the success path (was: the same `.map` written twice). Not
   hoisted, so the shortfall check runs first and the failure path's writes and `console.error` are

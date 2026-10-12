@@ -37,3 +37,23 @@ test("[declared] ATT-AC-2-residual: README says Item Piles' own currency write i
   assert.match(sec, /outside this chain/);
   assert.match(sec, /750 ms claim settle/);
 });
+
+// [declared] M4: the adapter holds the SHARED writes (stash, releaseAway, writeSlots, the serial
+// lane) and the third-party reads, not every document write: sheet.mjs (attune/unattune) and
+// bonds.mjs (hand-back, purse) write their own hook-driven updates. README "Extending" and the
+// adapter's header both say so.
+test("[declared] M4: README and adapter header say the adapter holds the shared writes, not every write", () => {
+  const start = README.indexOf("## Extending");
+  assert.ok(start >= 0, "README has an Extending section");
+  const sec = README.slice(start, README.indexOf("\n## ", start + 1)).replace(/\s+/g, " ");
+  assert.doesNotMatch(sec, /Document writes and third-party reads go in/);
+  assert.match(sec, /shared writes \(`stash`, `releaseAway`, `writeSlots`, the `serial` lane\) and third-party reads go in `actor-adapter\.mjs`/);
+  assert.match(sec, /sheet\.mjs.*attune\/unattune/);
+  assert.match(sec, /bonds\.mjs.*hand-back and purse/);
+  const src = readFileSync(new URL("../actor-adapter.mjs", import.meta.url), "utf8");
+  const header = src.slice(0, src.indexOf("*/")).replace(/\s*\*\s*/g, " ");
+  assert.doesNotMatch(header, /the writes to actor and item documents/);
+  assert.match(header, /shared writes \(stash, releaseAway, writeSlots, the serial lane\)/);
+  assert.match(header, /sheet\.mjs attune\/unattune/);
+  assert.match(header, /bonds\.mjs hand-back and purse/);
+});

@@ -1,7 +1,9 @@
 /**
- * Pentaryn Attunement Slots — ADAPTER: the writes to actor and item documents, the third-party
- * reads (Item Piles), and the two dnd5e adjustments (CONFIG.DND5E.armorProficienciesMap and the
- * Tooltips5e#_positionItemTooltip guard). Decisions come from attunement-core.mjs.
+ * Pentaryn Attunement Slots — ADAPTER: the shared writes (stash, releaseAway, writeSlots, the
+ * serial lane), the third-party reads (Item Piles), and the two dnd5e adjustments
+ * (CONFIG.DND5E.armorProficienciesMap and the Tooltips5e#_positionItemTooltip guard). Decisions
+ * come from attunement-core.mjs. The features write their own hook-driven updates (sheet.mjs
+ * attune/unattune, bonds.mjs hand-back and purse).
  *
  * Shared by the features (sheet.mjs, bonds.mjs) and api.mjs, which may not import each other.
  */
