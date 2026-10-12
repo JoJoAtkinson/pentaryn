@@ -56,6 +56,9 @@ export function pinnedEntryIds(scenes) {
   return s;
 }
 
+/** The active GM user's own client (every tab of that account, W2-D1). */
+export const isActiveGMSelf = users => users?.activeGM?.isSelf === true;
+
 /** The corpse eye's disc is redrawn only when its size changed. */
 export const needsRedraw = (prev, size) => prev !== size;
 

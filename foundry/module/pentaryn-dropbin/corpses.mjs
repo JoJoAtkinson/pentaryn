@@ -28,13 +28,13 @@
  *     The delta's own map is remembered and put back on revival (null: the base actor's again).
  */
 
-import { MODULE, showEye, eyePlacement, needsRedraw } from "./dropbin-core.mjs";
+import { MODULE, showEye, eyePlacement, needsRedraw, isActiveGMSelf } from "./dropbin-core.mjs";
 import { api as itemPilesApi, isValidItemPile, isItemPileEmpty, turnTokensIntoItemPiles, revertTokensFromItemPiles } from "./piles.mjs";
 
 const OBSERVER = CONST.DOCUMENT_OWNERSHIP_LEVELS.OBSERVER;
 const EYE = "assets/tokens/custom/props/icon-eye.webp";
 
-const isGMRunner = () => game.users?.activeGM?.isSelf;
+const isGMRunner = () => isActiveGMSelf(game.users);
 
 function tokensOf(actor) {
   if (actor.isToken) return [actor.token].filter(Boolean);

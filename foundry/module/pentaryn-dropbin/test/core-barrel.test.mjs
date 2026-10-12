@@ -62,3 +62,10 @@ test("listLast: last n means none for n <= 0, null or non-numeric", () => {
   assert.deepEqual(core.listLast(log, 2.7), [{ n: 3 }, { n: 2 }]);
   assert.deepEqual(core.listLast(log, undefined), [{ n: 3 }, { n: 2 }, { n: 1 }]);
 });
+
+test("isActiveGMSelf: true only on the active GM user's client", () => {
+  assert.equal(core.isActiveGMSelf(undefined), false);
+  assert.equal(core.isActiveGMSelf({ activeGM: null }), false);
+  assert.equal(core.isActiveGMSelf({ activeGM: { isSelf: false } }), false);
+  assert.equal(core.isActiveGMSelf({ activeGM: { isSelf: true } }), true);
+});
