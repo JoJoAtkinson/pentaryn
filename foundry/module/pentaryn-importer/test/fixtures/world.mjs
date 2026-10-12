@@ -17,6 +17,8 @@
  *   failCreate      slugs whose Actor.create throws a plain Error (a per-actor failure)
  *   raceCreate      slugs another GM tab creates first, between our slug index and our create
  *                   (importer-AC-2): its copy lands with the same `_id` when keepId is asked for
+ *   failItems       slugs whose createEmbeddedDocuments throws a plain Error (a per-actor failure
+ *                   after the Actor itself was written — importer-R6)
  *
  * Actor.create honours `data._id` under `{keepId: true}` and rejects an `_id` already in game.actors,
  * as Foundry's server does.
@@ -59,7 +61,7 @@ function tokenOf(data) {
 }
 
 export function makeWorld(F, knobs = {}) {
-  const K = { dropTypes: new Set(), regenIds: false, stripAction: new Set(), failCreate: new Set(), raceCreate: new Set(), ...knobs };
+  const K = { dropTypes: new Set(), regenIds: false, stripAction: new Set(), failCreate: new Set(), raceCreate: new Set(), failItems: new Set(), ...knobs };
   let seq = 0;
 
   function makeItem(actor, data) {
@@ -100,6 +102,7 @@ export function makeWorld(F, knobs = {}) {
     });
     hidden(actor, "createEmbeddedDocuments", async (type, list, options) => {
       F.calls.push({ op: "createEmbeddedDocuments", uuid: actor.uuid, type, names: list.map(d => d.name), options: F.plain(options) });
+      if (K.failItems.has(actor.flags?.pentaryn?.slug)) throw new Error(`Item validation errors: ${actor.flags.pentaryn.slug}`);
       const made = [];
       for (const d of list) {
         if (K.dropTypes.has(d.type)) continue;

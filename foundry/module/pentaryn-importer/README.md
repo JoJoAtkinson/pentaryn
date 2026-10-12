@@ -68,6 +68,9 @@ await game.pentaryn.import({
 The result is `{ ok, path, url, dryRun, manifest: { generator, generatorVersion, generatedAt,
 sourceRevision, skippedRows }, counts: { total, selected, created, updated, skipped, failed,
 assertions }, created, updated, skipped, failed: [{ slug, error }], deleteJson }`.
+Each selected actor appears in exactly one of `created`, `updated`, `skipped` or `failed`: a slug
+counts as created or updated only once its content hash is stamped (`importer-R6`), so an actor
+whose Item write fails after the Actor write is reported only in `failed`.
 `deleteJson.required` is `true` only after a non-dry run with zero failures; a run that left work
 undone should be re-run against the same file.
 

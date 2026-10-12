@@ -207,7 +207,6 @@ async function importOnce({ path, dryRun, only, force, timeout, unmanagedItems }
       if (actor) {
         // UPDATE — never recreate. `hp.value`, `img` and `prototypeToken.texture` are withheld.
         await actor.update(toUpdatePayload(data), { render: false });
-        updated.push(slug);
       } else {
         // CREATE under the slug's own id (importer-AC-2): another GM tab creating the same slug at the
         // same moment asks for the same id, and the server refuses whichever comes second.
@@ -222,7 +221,6 @@ async function importOnce({ path, dryRun, only, force, timeout, unmanagedItems }
         }
         if (!actor) throw new Error("Actor.create returned nothing");
         bySlug.set(slug, actor);                 // a later entry with the same slug updates it
-        created.push(slug);
       }
 
       const itemResult = await replaceItems(actor, items, unmanagedItems, slug);
@@ -246,6 +244,9 @@ async function importOnce({ path, dryRun, only, force, timeout, unmanagedItems }
 
       // Only now is the actor allowed to be marked current.
       await stampContentHash(actor, incomingHash);
+      // importer-R6: only a stamped actor counts as created/updated — a failure above lands in
+      // failed[] alone, so each actor has exactly one outcome in the summary.
+      (existing ? updated : created).push(slug);
 
       log.info(
         `${existing ? "update" : "create"} ${slug} — ${itemResult.created} item(s) written, `

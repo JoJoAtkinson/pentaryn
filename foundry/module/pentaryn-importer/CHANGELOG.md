@@ -50,6 +50,11 @@
   run with the named `READBACK ASSERTION FAILED` message (`path: system.activities`, `actual: []`)
   and its toast, instead of a `Cannot read properties of undefined` landing in `failed[]` while the
   run went on. No new assertion site; goldens untouched.
+- **[declared] Each actor has exactly one outcome in the result and summary** (`importer-R6`): a
+  slug goes into `created[]`/`updated[]` only after its content hash is stamped, not as soon as the
+  Actor is written. An actor whose Item write (or anything else after the Actor write) fails is now
+  reported only in `failed[]`, instead of "1 updated · 1 failed" for the same actor. A later entry
+  with the same slug still updates the actor created earlier in the run. Goldens untouched.
 - **[declared] `game.pentaryn` is merged into, never replaced or frozen** (`items-journal-1`). Every
   module's namespace survives whichever order the modules load in; `import`, `moduleId`, `contract`
   and the frozen `_internals` stay on the root.
