@@ -185,14 +185,21 @@ export async function applyInspect(payload, senderId, { postStubCard = false } =
  */
 async function guardedCascade(character, subject) {
   const release = [];
+  let held = false;
   try {
-    return await runCascade(character, subject, release);
+    ({ held } = await runCascade(character, subject, release));
   } finally {
     if (release[0]) await releaseInspect(subject, character.id, release[0]);
   }
+  // AC-1: only now, with the claim handed back, may the GM's Deliver/Later dialog sit open
+  if (held) await promptCascadeDeliver(character, subject);
+  return true;
 }
 
-/** The loop. One planner step at a time, batching everything it decides into two writes. */
+/**
+ * The loop. One planner step at a time, batching everything it decides into two writes.
+ * Reports `{ held }` rather than prompting, so the guard can release the claim first.
+ */
 async function runCascade(character, subject, release = []) {
   /*
    * The claim is taken **lazily** — on the first rung that actually needs dice, and never for a
@@ -338,8 +345,7 @@ async function runCascade(character, subject, release = []) {
 
   if (guard === 24) log.debug$?.("cascade stopped at its 24-step guard", { characterId: character.id, subjectId: subject.id });
   await commitGrants(character, grants);
-  if (held) await promptCascadeDeliver(character, subject);
-  return true;
+  return { held };
 }
 
 /** One identification row, at its own path so nobody else's record is in the payload. */

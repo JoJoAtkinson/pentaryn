@@ -230,11 +230,6 @@
           "name": "updateActor"
         },
         {
-          "op": "DialogV2.confirm",
-          "title": "A check came in",
-          "content": "<p>ZZ Caven is looking ZZ Brakka over. Something is waiting on you.</p><ul class=\"pt-list pt-belief-list pentaryn-ties\"><li class=\"pt-belief\">\n        <div class=\"pt-belief-head\">\n          <span class=\"pt-belief-who\">Salt Guild</span>\n          <span class=\"pt-belief-meta\">rolled 17 against DC 15</span>\n        </div>\n        <div class=\"pt-belief-text\">&lt;p&gt;Guild hands.&lt;/p&gt;</div>\n      </li></ul>"
-        },
-        {
           "op": "Hooks.call",
           "name": "preUpdateActor"
         },
@@ -249,6 +244,11 @@
         {
           "op": "Hooks.callAll",
           "name": "updateActor"
+        },
+        {
+          "op": "DialogV2.confirm",
+          "title": "A check came in",
+          "content": "<p>ZZ Caven is looking ZZ Brakka over. Something is waiting on you.</p><ul class=\"pt-list pt-belief-list pentaryn-ties\"><li class=\"pt-belief\">\n        <div class=\"pt-belief-head\">\n          <span class=\"pt-belief-who\">Salt Guild</span>\n          <span class=\"pt-belief-meta\">rolled 17 against DC 15</span>\n        </div>\n        <div class=\"pt-belief-text\">&lt;p&gt;Guild hands.&lt;/p&gt;</div>\n      </li></ul>"
         }
       ],
       "console": []
