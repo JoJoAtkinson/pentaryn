@@ -1003,7 +1003,9 @@ features — nothing here reads them.
   missing, check whether Foundry is open twice. The attribute-belief ledger is one setting written
   whole, so each write re-reads it a quarter-second later and re-applies its own row if the other
   session's write wiped it (AC-2).
-- **In combat, inspection is once per combatant per round.** The tempo warnings still *can* fire —
+- **In combat, inspection is once per combatant per round — marked, not refused.** A second look in
+  the same round warns the looker ("already taken a moment…") and still runs; the mark counts in every
+  started combat the character is in, not only the one the client is viewing (ES-5). The tempo warnings still *can* fire —
   the counter clears when combat starts, not each round, so two stationary looks on consecutive
   rounds reach the first threshold — they are just rare in a fight.
 - **A failed roll is forever.** Before raising any DC, ask what it closes.

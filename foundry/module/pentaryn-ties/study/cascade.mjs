@@ -81,7 +81,7 @@ export async function inspect(character, subject) {
     ui.notifications.warn(_loc("PENTARYN_TIES.known.study.notify.noGM"));
     return false;
   }
-  if (!combatAllows(character)) return refused("one inspection per combatant per round");
+  markCombatLook(character);
 
   /*
    * ⚠ The stub is posted HERE, by the client that made the gesture — not by the GM handler.
@@ -123,22 +123,23 @@ export const _sizes = () => ({ inspected: inspected.size });
  *
  * dnd5e 5.3.3 keeps **no per-turn action ledger** to consume from (verified in phase 4), so
  * "inspection costs your action" cannot be implemented as an action. What can be implemented
- * truthfully is a rule about *this feature*: one inspection per combatant per round.
+ * truthfully is a rule about *this feature*: one inspection per combatant per round — **tracked and
+ * marked, never refused** (ES-5): a second look in the same round warns the looker and still runs.
  *
- * ⚠ The refusal must be **uniform** — the same sentence whatever the target — or a refusal that
- * varied would itself be a probe.
+ * Every started combat is consulted, not only `game.combat` (the one this client is viewing), so a
+ * fight on another scene still counts. `actor.inCombat` is not used for the same reason — it reads
+ * the viewed combat only.
  */
-function combatAllows(character) {
-  if (!game.combat?.started || !character.inCombat) return true;
-  const combatant = game.combat.combatants.find(c => c.actorId === character.id);
-  if (!combatant) return true;
-  const key = `${game.combat.id}:${game.combat.round}:${combatant.id}`;
-  if (inspected.has(key)) {
-    ui.notifications.warn(_loc("PENTARYN_TIES.known.inspect.spentThisRound"));
-    return false;
+function markCombatLook(character) {
+  let again = false;
+  for (const combat of game.combats?.filter(c => c.started) ?? []) {
+    const combatant = combat.combatants.find(c => c.actorId === character.id);
+    if (!combatant) continue;
+    const key = `${combat.id}:${combat.round}:${combatant.id}`;
+    if (inspected.has(key)) again = true;
+    else inspected.set(key, true);
   }
-  inspected.set(key, true);
-  return true;
+  if (again) ui.notifications.warn(_loc("PENTARYN_TIES.known.inspect.spentThisRound"));
 }
 
 /**

@@ -1,8 +1,8 @@
 /**
  * ties-31: the session-lifetime maps are pruned. A deleted combat takes its per-round inspection
  * marks; a deleted actor takes its Known "show hidden" toggle, the Attributes tab's open rows,
- * toggled branches and filter, and its lore editor's open rows. The one-inspection-per-round rule
- * still holds inside a live combat.
+ * toggled branches and filter, and its lore editor's open rows. The one-inspection-per-round mark
+ * still holds inside a live combat (marked, not refused — ES-5).
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -21,19 +21,22 @@ const attrs = await import("../attributes-ui.mjs");
 const lore = await import("../lore-ui.mjs");
 const known = await import("../known-ui.mjs");
 
-test("deleteCombat prunes that combat's inspection marks, and only that combat's; the round rule still holds", async () => {
+test("deleteCombat prunes that combat's inspection marks, and only that combat's; the round mark still holds", async () => {
   const pc = game.actors.get(PC);
   Object.defineProperty(pc, "inCombat", { value: true, configurable: true });
   const combat = { id: "zzCombat00000001", started: true, round: 1, combatants: [{ id: "zzCombatant00001", actorId: PC }], previous: {} };
   game.combat = combat;
+  game.combats = [combat];
   await settle(game.pentaryn.ties.study.examine(pc, game.actors.get(NPC)));
   assert.equal(cascade._sizes().inspected, 1, "one mark for this combatant this round");
-  assert.equal(await game.pentaryn.ties.study.examine(pc, game.actors.get(NPC)), false, "a second inspection this round is refused");
+  assert.notEqual(await settle(game.pentaryn.ties.study.examine(pc, game.actors.get(NPC))), false, "a second inspection this round is marked, not refused (ES-5)");
+  assert.equal(cascade._sizes().inspected, 1, "the second look adds no second mark");
   cascade.forgetCombat("zzOtherCombat001");
   assert.equal(cascade._sizes().inspected, 1, "another combat's delete leaves it");
   F.fire("deleteCombat", combat);
   assert.equal(cascade._sizes().inspected, 0, "deleteCombat prunes it");
   game.combat = null;
+  game.combats = undefined;
 });
 
 test("deleteActor drops the actor's cosmetic state in every map", () => {

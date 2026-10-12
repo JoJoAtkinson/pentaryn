@@ -108,6 +108,12 @@ per-tab session token, `<userId>:<randomID>`, made on first use (`session()` in 
 Fact claims used to stake a bare random id while inspection claims were user-prefixed; a stray claim
 row now always names the account that left it. EXT-12.
 
+Fixed (declared): the **once-per-round inspection rule in combat** marks rather than refuses — a second
+look in the same round shows the "You have already taken a moment to look someone over this round."
+warning and the inspection still runs (track and mark, never hard-block). The round mark is kept in
+every started combat the character is a combatant in, not only the combat the client is viewing, so a
+fight on another scene counts too. ES-5.
+
 ## 0.19.4 (2026-10-10, usability run, Area 7 re-run)
 
 - **The inspect window's Share switches are the table's PCs only** (`tablePCs`): each player's

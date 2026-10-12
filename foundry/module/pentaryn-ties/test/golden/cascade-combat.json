@@ -41,24 +41,17 @@
   },
   {
     "label": "second look, same round",
-    "out": false,
+    "out": true,
     "calls": [
       {
         "op": "notify",
         "level": "warn",
         "message": "You have already taken a moment to look someone over this round."
-      }
-    ],
-    "console": []
-  },
-  {
-    "label": "next round",
-    "out": true,
-    "calls": [
+      },
       {
         "op": "ChatMessage.create",
         "data": {
-          "content": "<p class=\"pt-study-stub\">Token zzTokPc000000001 studies Token zzTokLone0000001.</p>",
+          "content": "<p class=\"pt-study-stub\">Token zzTokPc000000001 studies Token zzTokNpc00000002.</p>",
           "speaker": {
             "alias": "Token zzTokPc000000001",
             "actor": "zzPc000000000001"
@@ -82,6 +75,146 @@
         "data": {
           "content": "<p class=\"pt-tempo-line\">Token zzTokPc000000001 is looking people up and down.</p>",
           "style": 3,
+          "speaker": {
+            "alias": "Token zzTokPc000000001",
+            "actor": "zzPc000000000001"
+          }
+        }
+      },
+      {
+        "op": "Hooks.call",
+        "name": "preUpdateActor"
+      },
+      {
+        "op": "update",
+        "documentName": "Actor",
+        "uuid": "Actor.zzNpc00000000002",
+        "changes": {
+          "flags.pentaryn-ties.beliefs.zzPc000000000001.#inspect": {
+            "claim": "gmUser0000000001:rid0000000000001"
+          }
+        }
+      },
+      {
+        "op": "Hooks.callAll",
+        "name": "updateActor"
+      },
+      {
+        "op": "rollSkill",
+        "actor": "zzPc000000000001",
+        "config": {
+          "skill": "his",
+          "target": 12,
+          "advantage": true,
+          "disadvantage": false,
+          "rolls": []
+        },
+        "dialog": {
+          "configure": false
+        },
+        "message": {
+          "create": false
+        },
+        "total": 10
+      },
+      {
+        "op": "Hooks.call",
+        "name": "preUpdateActor"
+      },
+      {
+        "op": "update",
+        "documentName": "Actor",
+        "uuid": "Actor.zzNpc00000000002",
+        "changes": {
+          "flags.pentaryn-ties.beliefs.zzPc000000000001.attr:city:#id": {
+            "text": "",
+            "tier": null,
+            "total": 10,
+            "when": 1790000000000,
+            "delivered": 1790000000000,
+            "claim": null,
+            "sources": null
+          }
+        }
+      },
+      {
+        "op": "Hooks.callAll",
+        "name": "updateActor"
+      },
+      {
+        "op": "Hooks.call",
+        "name": "preUpdateActor"
+      },
+      {
+        "op": "update",
+        "documentName": "Actor",
+        "uuid": "Actor.zzPc000000000001",
+        "changes": {
+          "flags.pentaryn-ties.granted": {
+            "attr:kin:#id": {
+              "text": "<p>One of us.</p>",
+              "when": 1790000000000,
+              "icon": null,
+              "source": "Kin"
+            },
+            "attr:city:#id": {
+              "text": "<p>From Vel.</p>",
+              "when": 1790000000000,
+              "icon": null,
+              "source": "Vel"
+            },
+            "attr:guild:#id": {
+              "text": "<p>Guild hands.</p>",
+              "when": 1790000000000,
+              "icon": "icons/sundries/flags/banner-standard-green.webp",
+              "source": "Salt Guild"
+            },
+            "kind:zzKind0000000001": {
+              "text": "— Studied (Religion) —\nGrey hunters.\nNothing about it strikes you as proof against anything.",
+              "when": 1790000000000,
+              "icon": "icons/zz/zzKind0000000001.webp",
+              "source": "ZZ Ghoul"
+            },
+            "lore:zzNpc00000000002:#idmiss-city": {
+              "text": "<p>A Vel accent?</p>",
+              "when": 1790000000000,
+              "icon": "icons/zz/zzNpc00000000002.webp",
+              "source": "ZZ Second Carrier"
+            }
+          }
+        }
+      },
+      {
+        "op": "Hooks.callAll",
+        "name": "updateActor"
+      },
+      {
+        "op": "Hooks.call",
+        "name": "preUpdateActor"
+      },
+      {
+        "op": "update",
+        "documentName": "Actor",
+        "uuid": "Actor.zzNpc00000000002",
+        "changes": {
+          "flags.pentaryn-ties.beliefs.zzPc000000000001.-=#inspect": null
+        }
+      },
+      {
+        "op": "Hooks.callAll",
+        "name": "updateActor"
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "next round",
+    "out": true,
+    "calls": [
+      {
+        "op": "ChatMessage.create",
+        "data": {
+          "content": "<p class=\"pt-study-stub\">Token zzTokPc000000001 studies Token zzTokLone0000001.</p>",
           "speaker": {
             "alias": "Token zzTokPc000000001",
             "actor": "zzPc000000000001"

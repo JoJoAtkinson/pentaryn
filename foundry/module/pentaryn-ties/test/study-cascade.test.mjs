@@ -192,8 +192,9 @@ test("resetIdentification / resetInspection", async () => {
   pinJSON("cascade-reset", { rows, ledgers: ledgers() }, import.meta.url);
 });
 
-test("combat: one inspection per combatant per round, one sentence for every target", async () => {
+test("combat: one inspection per combatant per round, marked not refused (ES-5)", async () => {
   game.combat = { id: "zzCombat00000001", started: true, round: 1, combatants: [{ id: "zzCombatant00001", actorId: PC }] };
+  game.combats = [game.combat];
   Object.defineProperty(get(PC), "inCombat", { value: true, configurable: true, writable: true });
   const rows = [];
   rows.push(await run("first look this round", () => Study.inspect(get(PC), get(LONE))));
@@ -201,6 +202,7 @@ test("combat: one inspection per combatant per round, one sentence for every tar
   game.combat.round = 2;
   rows.push(await run("next round", () => Study.inspect(get(PC), get(LONE))));
   game.combat = null;
+  game.combats = undefined;
   get(PC).inCombat = false;
   pinJSON("cascade-combat", rows, import.meta.url);
 });
