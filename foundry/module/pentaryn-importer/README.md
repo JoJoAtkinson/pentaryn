@@ -24,8 +24,8 @@ them is the `@2` contract bump). Tier `full`; no UI, no settings, one hook (`rea
 Nothing. The importer is GM-only and console-first. A GM sees a permanent error toast when the
 version gate or the @ref lint refuses a run, when a non-GM calls it, when an entry cannot be
 prepared (e.g. a missing slug), and when a readback fails; an info toast with the counts after a
-real run; and a permanent "delete `Data/<path>`" toast after a successful one. Players never see
-a toast. Some refusals throw a `PentarynAbort` with **no** toast — read `err.code` /
+real run; and a permanent "delete `Data/<path>`" toast after a successful one. Players see a
+toast only if they call `import()` themselves: the `NOT_GM` refusal. Some refusals throw a `PentarynAbort` with **no** toast — read `err.code` /
 `err.message`: a fetch failure (missing file, HTML body, network error, timeout), a bad option
 (`BAD_ARGS`), a `module.json` without `flags.pentaryn`, and a call while an import is already
 running (`CONFLICT`).
@@ -133,7 +133,7 @@ code and `build_actors.py` target; markers `targetSystemVersion`, `TARGET_SYSTEM
 ## Two sessions / who writes
 
 Only the GM tab that calls `import()` writes; nothing runs by itself. A player calling it gets a
-`PentarynAbort`. A second call on the same tab while one is running is refused with
+`PentarynAbort` (code `NOT_GM`) and a permanent error toast. A second call on the same tab while one is running is refused with
 `PentarynAbort` (`items-journal-4`); the guard is per tab, so two GM tabs (the MCP bridge tab and a
 browser tab) can still overlap — run imports from one place.
 
