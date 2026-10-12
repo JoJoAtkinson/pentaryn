@@ -7,11 +7,12 @@
 
 import { describeAttribute } from "../attributes.mjs";
 import { MODULE } from "../ties-core.mjs";
-import { rolledMiss } from "../core/rules.mjs";
+import { rolledMiss, CONCEAL_FLAG } from "../core/rules.mjs";
 import {
   KIND_KEY,
   KIND_OF_FLAG,
   LORE_FLAG,
+  clampLoreRow,
   MEMBER_FACT,
   parseFactKey,
   readLore,
@@ -178,3 +179,48 @@ export function beliefs(actor) {
   }
   return out.sort((a, b) => Number(b.pending) - Number(a.pending) || a.character.localeCompare(b.character));
 }
+
+/* -------------------------------------------- */
+/*  Lore rows and concealment, as calls (ties-9) */
+/* -------------------------------------------- */
+
+/** An actor's lore rows, as the GM authors them (sanitised; blank-label rows kept). */
+export const loreRowsOf = actor => readLore(readFlag(actor, MODULE, LORE_FLAG));
+
+/**
+ * Write an actor's lore rows — the GM authoring section's save, as a call. Each row is sanitised
+ * (`clampLoreRow`); ⚠ an empty list DELETES the flag rather than leaving `[]` behind on every actor
+ * a GM ever opened the section on.
+ * → `{ ok: true, rows }` | `{ ok: false, reason: "notGM" | "notFound" }`
+ */
+export async function writeLoreRows(actor, list) {
+  if (!game.user?.isGM) return { ok: false, reason: "notGM" };
+  if (!actor) return { ok: false, reason: "notFound" };
+  const rows = (Array.isArray(list) ? list : []).map(clampLoreRow).filter(Boolean);
+  if (!rows.length) await actor.unsetFlag(MODULE, LORE_FLAG);
+  else await actor.setFlag(MODULE, LORE_FLAG, rows);
+  return { ok: true, rows };
+}
+
+/** The raw concealment flag: a number for every attribute, `{ default, <attrId>: n }`, or null. */
+export const concealOf = actor => readFlag(actor, MODULE, CONCEAL_FLAG) ?? null;
+
+/**
+ * Set (or with null, clear) an actor's concealment — how much it raises the DC to identify its
+ * attributes, never printed. A number applies to every attribute; `{ default, <attrId>: n }` per
+ * attribute. → `{ ok: true, conceal }` | `{ ok: false, reason: "notGM" | "notFound" | "invalid" }`
+ */
+export async function setConceal(actor, value) {
+  if (!game.user?.isGM) return { ok: false, reason: "notGM" };
+  if (!actor) return { ok: false, reason: "notFound" };
+  if (value === null || value === undefined) {
+    await actor.unsetFlag(MODULE, CONCEAL_FLAG);
+    return { ok: true, conceal: null };
+  }
+  const isNum = typeof value === "number" && Number.isFinite(value);
+  const isMap = value && typeof value === "object" && !Array.isArray(value) && Object.values(value).every(v => typeof v === "number" && Number.isFinite(v));
+  if (!isNum && !isMap) return { ok: false, reason: "invalid" };
+  await actor.setFlag(MODULE, CONCEAL_FLAG, value);
+  return { ok: true, conceal: value };
+}
+

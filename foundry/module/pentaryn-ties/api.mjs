@@ -20,13 +20,13 @@ import {
   studyTiersOf, setStudyHold, beliefs, pending, deliver, reset, studiedOf, resolveFact, loreStateFor, requestLore,
   requestAttrLore, attrOffersFor, inspect as examine, scopingState, clearScoping, inspectAs, deliverHeldIdentifications,
   releaseHeldAttribute, resetIdentification, grantKind, resetInspection, shareFact, forgetFact, factStatus,
-  legacyMissCards, beliefsOf
+  legacyMissCards, beliefsOf, loreRowsOf, writeLoreRows, concealOf, setConceal
 } from "./study.mjs";
 import {
   registry, attributesOf, attributeIdsOf, derivedFor, resolveAttribute, describeRef, ensureAttribute,
   createAttribute, updateAttribute, deleteAttribute, linkAttribute, unlinkAttribute, searchAttributes, knowledge,
   knownWorld, grantKnowledge, brokenAncestry, repairAncestry, staleCarriers, selectedAttributes, selectAttributes,
-  deselectAttributes, clearSelection, reviewAttribute, unreviewAttribute, unreviewedAttributes, describeAttribute, knowledgeTree, branchOf
+  deselectAttributes, clearSelection, reviewAttribute, unreviewAttribute, unreviewedAttributes, describeAttribute, knowledgeTree, branchOf, markLearned
 } from "./attributes.mjs";
 import {
   BELIEFS_FLAG, GRANTED_FLAG, LORE_FLAG, identifiedState, readGranted, readLore, visibleAttributesFor
@@ -170,6 +170,11 @@ const IMPL = {
   "study.shareFact": shareFact,
   "study.forgetFact": forgetFact,
   "study.identified": identified,
+  "study.loreRows": loreRowsOf,
+  "study.setLoreRows": writeLoreRows,
+  "study.conceal": concealOf,
+  "study.setConceal": setConceal,
+  "attributes.markLearned": markLearned,
   "study.knowsAbout": resolving(knowsAbout, 2),
 };
 

@@ -36,7 +36,8 @@ import {
   grantKnowledge,
   brokenAncestry,
   repairAncestry,
-  authorEntry
+  authorEntry,
+  markLearned
 } from "./attributes.mjs";
 import { loreEditorHTML, bindLoreEditor } from "./lore-ui.mjs";
 // `requestAttrLore` (the player-initiated roll) is deliberately no longer imported: attribute
@@ -731,17 +732,8 @@ export function bindAttributes(root, actor, rerender = () => {}) {
       btn.disabled = true;
       const attrId = btn.dataset.attr;
       const loreId = btn.dataset.lore;
-      const entry = describeAttribute(attrId);
-      const row = (entry?.lore ?? []).find(r => r.id === loreId);
-      if (row) {
-        const granted = foundry.utils.deepClone(viewer.getFlag(MODULE, GRANTED_FLAG) ?? {});
-        granted[attrFactKey(attrId, loreId)] = {
-          text: row.text,
-          when: Date.now(),
-          icon: entry.icon,
-          source: `${entry.title} — ${row.label}`
-        };
-        await viewer.update({ [`flags.${MODULE}.${GRANTED_FLAG}`]: granted });
+      const row = (describeAttribute(attrId)?.lore ?? []).find(r => r.id === loreId);
+      if (row && (await markLearned(viewer, attrId, [loreId])).ok) {
         ui.notifications.info(_loc("PENTARYN_TIES.attributes.learnedDone", { label: row.label, who: viewer.name }));
       }
       rerender();

@@ -31,7 +31,7 @@
 import { MODULE } from "./ties-core.mjs";
 import { LORE_FLAG, readLore, KIND_OF_FLAG, STUDY_TIERS_FLAG } from "./known-core.mjs";
 import { loreEditorHTML, bindLoreEditor } from "./lore-ui.mjs";
-import { beliefs, deliver, reset, kindActorOf, setKindOf } from "./study.mjs";
+import { beliefs, deliver, reset, kindActorOf, setKindOf, writeLoreRows } from "./study.mjs";
 import { esc } from "./core/html.mjs";
 
 const gmBadge = () =>
@@ -150,15 +150,9 @@ export function bindAuthoring(root, actor, rerender = () => {}) {
     key: `lore:${actor.id}`,
     // re-read at call time: the sheet can outlive the array it was painted from
     rows: () => actor.getFlag(MODULE, LORE_FLAG),
+    // an empty list deletes the flag (writeLoreRows says why)
     save: async list => {
-      /*
-       * ⚠ An empty list must DELETE the flag, not write `[]`. `Actor#update` merges, so
-       * writing an empty array is fine here — but leaving a permanent empty array on every
-       * actor a GM ever opened this section on is litter that shows up in every world dump
-       * and every diff. `unsetFlag` keeps a never-authored actor genuinely clean.
-       */
-      if (!list.length) await actor.unsetFlag(MODULE, LORE_FLAG);
-      else await actor.setFlag(MODULE, LORE_FLAG, list);
+      await writeLoreRows(actor, list);
     },
     rerender
   });

@@ -89,11 +89,15 @@ export {
 export { deliver, pending, reset } from "./study/gate.mjs";
 export {
   beliefs,
+  concealOf,
   kindDialog,
+  loreRowsOf,
+  setConceal,
   setKindOf,
   setStudyHold,
   setStudyOffset,
-  setStudyTiers
+  setStudyTiers,
+  writeLoreRows
 } from "./study/authoring.mjs";
 export {
   deliverHeldIdentifications,

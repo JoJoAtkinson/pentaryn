@@ -86,3 +86,35 @@ test("ties-8: study.knowsAbout is the Look window's list as data — granted car
   const { knowsAbout } = await import("../facts.mjs");
   assert.deepEqual(knowsAbout(pc, gob), rows);
 });
+
+test("ties-9: markLearned / setLoreRows / setConceal are the UI's writes as calls; the reads read them back", async () => {
+  const pc = get(PC);
+  const gob = get(GOB);
+  // markLearned without a registry entry with lore → refused, nothing written
+  assert.deepEqual(await T().attributes.markLearned(pc, "nope"), { ok: false, reason: "notFound" });
+  // lore rows round-trip, sanitised; an empty list deletes the flag
+  const w = await T().study.setLoreRows(gob, [{ id: "l9", label: "Debts", dc: 99, skill: "ins", text: "Owes." }]);
+  assert.equal(w.ok, true);
+  assert.equal(T().study.loreRows(gob)[0].dc, 40, "clamped like every lore row");
+  assert.deepEqual(await T().study.setLoreRows(gob, []), { ok: true, rows: [] });
+  assert.deepEqual(T().study.loreRows(gob), []);
+  // concealment
+  assert.deepEqual(await T().study.setConceal(gob, { default: 2, "species:goblin": 5 }), { ok: true, conceal: { default: 2, "species:goblin": 5 } });
+  assert.deepEqual(T().study.conceal(gob), { default: 2, "species:goblin": 5 });
+  assert.deepEqual(await T().study.setConceal(gob, "lots"), { ok: false, reason: "invalid" });
+  assert.deepEqual(await T().study.setConceal(gob, null), { ok: true, conceal: null });
+  assert.equal(T().study.conceal(gob), null);
+});
+
+test("ties-9: markLearned writes the exact grant the Mark-as-learned button writes", async () => {
+  await game.settings.set("pentaryn-ties", "attributes", [{ id: "a", title: "T", icon: "i.webp", lore: [{ id: "r", label: "L", text: "X", dc: 12, skill: "his" }, { id: "s", label: "M", text: "Y", dc: 12, skill: "his" }] }]);
+  const pc = get(PC);
+  pc.flags["pentaryn-ties"] = {};
+  const mark = F.calls.length;
+  const res = await T().attributes.markLearned(pc, "T", ["r"], { now: 5 });
+  assert.deepEqual(res, { ok: true, keys: ["attr:a:r"] });
+  const update = F.calls.slice(mark).find(c => c.op === "update" || c.op === "Actor.update" || /update/.test(c.op));
+  assert.ok(update, "one actor update");
+  assert.deepEqual(pc.flags["pentaryn-ties"].granted, { "attr:a:r": { text: "X", when: 5, icon: "i.webp", source: "T — L" } });
+  assert.deepEqual((await T().attributes.markLearned(pc, "a")).keys, ["attr:a:r", "attr:a:s"], "default: every row");
+});

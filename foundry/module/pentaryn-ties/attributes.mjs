@@ -67,7 +67,9 @@ import {
   readSelection,
   snapshotOf,
   ATTR_REVIEW_FIELDS,
-  BELIEFS_FLAG
+  BELIEFS_FLAG,
+  GRANTED_FLAG,
+  attrFactKey
 } from "./known-core.mjs";
 import { makeLog } from "./lib/log.mjs";
 import { setting } from "./settings.mjs";
@@ -1112,6 +1114,34 @@ export const describeRef = ref => {
   const id = resolveAttribute(ref);
   return id ? describeAttribute(id) : null;
 };
+
+/**
+ * **Mark as learned** (ties-9) — hand a character an attribute's lore rows as granted cards, no roll:
+ * the GM's "Mark as learned" button on the Attributes tab, as a function. Each card is keyed
+ * `attr:<attrId>:<loreId>` and titled `<entry> — <row label>`, exactly as the cascade would file it,
+ * because the Known tab and the Look window join on that key and that source.
+ *
+ * @param {Actor} character
+ * @param {*} attrRef  an attribute id or title
+ * @param {"all"|string|string[]} [loreIds]  which rows (default: every row)
+ * @returns {Promise<{ ok: true, keys: string[] } | { ok: false, reason }>}
+ */
+export async function markLearned(character, attrRef, loreIds = "all", { now = Date.now() } = {}) {
+  if (!game.user?.isGM) return fail("notGM");
+  if (!character) return fail("notFound");
+  const attrId = resolveAttribute(attrRef);
+  if (!attrId) return fail("notFound");
+  const entry = describeAttribute(attrId);
+  const wanted = loreIds === "all" ? null : new Set([].concat(loreIds));
+  const rows = (entry?.lore ?? []).filter(r => !wanted || wanted.has(r.id));
+  if (!rows.length) return fail("noLore");
+  const granted = foundry.utils.deepClone(character.getFlag(MODULE, GRANTED_FLAG) ?? {});
+  for (const row of rows) {
+    granted[attrFactKey(attrId, row.id)] = { text: row.text, when: now, icon: entry.icon, source: `${entry.title} — ${row.label}` };
+  }
+  await character.update({ [`flags.${MODULE}.${GRANTED_FLAG}`]: granted });
+  return { ok: true, keys: rows.map(r => attrFactKey(attrId, r.id)) };
+}
 
 /**
  * Everything a character knows of the world, as display records — the world-knowledge surface.

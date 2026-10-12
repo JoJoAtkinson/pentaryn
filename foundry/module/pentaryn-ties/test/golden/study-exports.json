@@ -7,6 +7,7 @@
   "beliefsOf",
   "clearScoping",
   "composeStudyPayload",
+  "concealOf",
   "deliver",
   "deliverHeldIdentifications",
   "factStatus",
@@ -18,6 +19,7 @@
   "kindActorOf",
   "kindDialog",
   "legacyMissCards",
+  "loreRowsOf",
   "loreStateFor",
   "pending",
   "registerStudy",
@@ -30,6 +32,7 @@
   "resetInspection",
   "resolveFact",
   "scopingState",
+  "setConceal",
   "setKindOf",
   "setStudyHold",
   "setStudyOffset",
@@ -40,5 +43,6 @@
   "studyHoldFor",
   "studySkillFor",
   "studyStateFor",
-  "studyTiersOf"
+  "studyTiersOf",
+  "writeLoreRows"
 ]

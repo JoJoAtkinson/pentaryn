@@ -1535,13 +1535,13 @@
           "optional": true
         }
       ],
-      "returns": "{ ok, id?, reason? }",
+      "returns": "string|null",
       "gm": false,
       "writes": false,
       "query": false,
       "sideEffects": [],
       "legacy": true,
-      "doc": "Resolve an id or title to one entry."
+      "doc": "Resolve an id or title to one entry's id; null on a miss."
     },
     {
       "path": "attributes.lookup",
@@ -2170,6 +2170,111 @@
       "sideEffects": [],
       "since": "0.20.0",
       "doc": "What this character has learned about this subject: the granted cards that pass the secrecy gate, in the Look window's order (ties-8)."
+    },
+    {
+      "path": "study.loreRows",
+      "params": [
+        {
+          "name": "actor",
+          "type": "Actor"
+        }
+      ],
+      "returns": "[{ id, label, dc, skill, text, miss, hold }]",
+      "gm": true,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "since": "0.20.0",
+      "doc": "GM: an actor's authored lore rows (ties-9)."
+    },
+    {
+      "path": "study.setLoreRows",
+      "params": [
+        {
+          "name": "actor",
+          "type": "Actor"
+        },
+        {
+          "name": "rows",
+          "type": "[{ id, label, dc, skill, text, miss, hold }]"
+        }
+      ],
+      "returns": "{ ok, rows } | { ok: false, reason }",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "flags.pentaryn-ties.lore"
+      ],
+      "since": "0.20.0",
+      "doc": "GM: write an actor's lore rows (each sanitised; an empty list deletes the flag) (ties-9)."
+    },
+    {
+      "path": "study.conceal",
+      "params": [
+        {
+          "name": "actor",
+          "type": "Actor"
+        }
+      ],
+      "returns": "number | { default, [attrId]: number } | null",
+      "gm": true,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "since": "0.20.0",
+      "doc": "GM: the actor's concealment (raises the identification DC, never printed) (ties-9)."
+    },
+    {
+      "path": "study.setConceal",
+      "params": [
+        {
+          "name": "actor",
+          "type": "Actor"
+        },
+        {
+          "name": "value",
+          "type": "number | { default, [attrId]: number } | null"
+        }
+      ],
+      "returns": "{ ok, conceal } | { ok: false, reason }",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "flags.pentaryn-ties.conceal"
+      ],
+      "since": "0.20.0",
+      "doc": "GM: set or (null) clear the actor's concealment (ties-9)."
+    },
+    {
+      "path": "attributes.markLearned",
+      "params": [
+        {
+          "name": "character",
+          "type": "Actor",
+          "doc": "a player character"
+        },
+        {
+          "name": "attr",
+          "type": "string",
+          "doc": "an attribute id or title (id wins; a miss is refused, never created)"
+        },
+        {
+          "name": "loreIds",
+          "type": "\"all\" | string | string[]",
+          "optional": true
+        }
+      ],
+      "returns": "{ ok, keys } | { ok: false, reason }",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "flags.pentaryn-ties.granted"
+      ],
+      "since": "0.20.0",
+      "doc": "GM: hand a character an attribute's lore rows as granted cards, no roll — the Attributes tab's Mark as learned (ties-9)."
     },
     {
       "path": "study.identified",
