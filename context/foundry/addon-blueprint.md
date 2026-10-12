@@ -407,7 +407,9 @@ existing one is declared); core CSS variables and `.theme-dark/.theme-light`.
 Shared CSS lives in the kit as a `kit.json` row with `"ext": "css"`. It is vendored to
 `lib/<name>.css`, loaded by listing it in `module.json` `styles`, and proven byte-identical by C14
 (`vendor.py` also fails a `styles` entry naming an unlocked `lib/*.css`). C37 and C37w do not score
-`lib/*.css`. First kit stylesheet: `argon-tooltip.css` (D7); no module adopts it in wave 1.
+`lib/*.css`. First kit stylesheet: `argon-tooltip.css` (D7). Wave 4 vendored it into combat and
+transform, which `@import "../lib/argon-tooltip.css"` from their own stylesheet until a manifest
+edit lists it in `styles` (then drop the `@import` in the same commit).
 
 ### 5.8 Flags
 
