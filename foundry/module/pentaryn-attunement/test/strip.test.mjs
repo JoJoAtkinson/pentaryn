@@ -199,6 +199,39 @@ test("listeners: drag over marks the slot; a drop attunes into that slot", async
   ]);
 });
 
+test("EC-3: a drop onto a filled slot at the cap is a swap: no WouldExceed warn", async () => {
+  const actor = makeActor(F, {
+    id: "actorSwap0000001", name: "Swap Cap", attunement: { value: 3, max: 3 },
+    flags: { [MOD]: { slots: ["itemSwpA00000001", "itemSwpB00000001", null, "itemSwpC00000001"] } },
+    items: [
+      { id: "itemSwpA00000001", name: "Ring", system: { attunement: "required", attuned: true } },
+      { id: "itemSwpB00000001", name: "Rod", system: { attunement: "required", attuned: true } },
+      { id: "itemSwpC00000001", name: "Cloak", system: { attunement: "required", attuned: true } },
+    ],
+  });
+  actor.isOwner = true;
+  const amulet = addItem(F, actor, { id: "itemSwpD00000001", name: "Amulet", system: { attunement: "required", attuned: false } });
+  // As Foundry does: every preUpdate hook of the batch runs, with the batch's options, before any write.
+  actor.updateEmbeddedDocuments = async (type, updates, options = {}) => {
+    for (const { _id, ...changes } of updates) F.fireCall(`preUpdate${type}`, actor.items.get(_id), foundry.utils.expandObject(changes), options, game.user.id);
+  };
+  const { strip } = render(actor);
+  foundry.applications.ux = { TextEditor: { implementation: { getDragEventData: () => ({ type: "Item", uuid: amulet.uuid }) } } };
+  globalThis.Item = { implementation: { fromDropData: async () => amulet } };
+  const from = F.calls.length;
+  await strip.listeners.drop[0](domEvent(slotsOf(strip)[1]));
+  assert.deepEqual(F.calls.slice(from).filter(c => c.op === "notify").map(c => c.message), [], "a one-for-one swap keeps the count at 3");
+
+  // Into an empty slot it is still a fourth attunement: the warning stands.
+  const { strip: again } = render(actor);
+  assert.ok(slotsOf(again)[2].classList.contains("empty"), "slot 2 is a hole");
+  const quiet = F.calls.length;
+  await again.listeners.drop[0](domEvent(slotsOf(again)[2]));
+  assert.deepEqual(F.calls.slice(quiet).filter(c => c.op === "notify").map(c => c.message), [
+    "Swap Cap is already attuned to 3 items — attuning Amulet makes 4.",
+  ]);
+});
+
 test("listeners: a drop onto an away slot warns SlotHeld; a foreign or unattunable item warns", async () => {
   const actor = overCapCharacter("actorStrp0000010");
   const other = makeActor(F, { id: "actorOthr0000001", name: "Other" });

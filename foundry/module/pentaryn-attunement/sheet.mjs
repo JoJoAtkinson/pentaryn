@@ -40,7 +40,9 @@ async function attuneToSlot(actor, item, index) {
   while (next.length <= index) next.push(null);
   next[index] = item.id;
 
-  if (updates.length) await actor.updateEmbeddedDocuments("Item", updates);
+  // A drop onto a filled slot is a swap: the over-cap warning subtracts the occupant (EC-3).
+  const options = occupant ? { [MODULE]: { swapFrom: occupant } } : {};
+  if (updates.length) await actor.updateEmbeddedDocuments("Item", updates, options);
   await writeSlots(actor, next);
 }
 

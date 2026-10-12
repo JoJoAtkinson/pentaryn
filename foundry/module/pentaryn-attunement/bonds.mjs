@@ -140,21 +140,24 @@ function serial(actor, step, lane = "") {
  * @param {Item} item
  * @param {string} key
  */
-function warnOverCap(actor, item, key) {
+function warnOverCap(actor, item, key, freed = 0) {
   const att = actor?.system?.attributes?.attunement;
   if (!att) return;
-  const { exceed, after } = wouldExceed({ value: att.value, max: att.max, awayCount: awayOf(actor).length });
+  const { exceed, after } = wouldExceed({ value: att.value - freed, max: att.max, awayCount: awayOf(actor).length });
   if (!exceed) return;
   ui.notifications.warn(t(key, {
     name: item.name, actor: actor.name, value: after, max: att.max
   }));
 }
 
-function onPreUpdateItem(item, changes) {
+function onPreUpdateItem(item, changes, options) {
   if (foundry.utils.getProperty(changes, "system.attuned") !== true) return;
   if (item.system?.attuned) return;             // already attuned: no delta
   if (!item.system?.attunement) return;         // does not count against the cap
-  warnOverCap(item.parent, item, "WouldExceed");
+  // A slot swap unattunes the occupant in the same batch, so it frees one (EC-3).
+  const from = item.parent?.items?.get?.(options?.[MODULE]?.swapFrom);
+  const freed = (from?.system?.attuned && from.system.attunement) ? 1 : 0;
+  warnOverCap(item.parent, item, "WouldExceed", freed);
 }
 
 function onPreCreateItem(item, data, options) {
