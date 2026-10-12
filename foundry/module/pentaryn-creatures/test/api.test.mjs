@@ -104,3 +104,15 @@ test("the legacy calls answer through the built API", async () => {
   assert.equal(await api.syncScene(W.scene("sceneAlpha000001")), 0, "ready already lit everything");
   assert.deepEqual(api.list(F.game.users.get("plyrUser00000001"), W.scene("sceneAlpha000001")).map(e => e.id), ["tPC", "tEye", "tImp", "tTorch"]);
 });
+
+test("creatures-rob-1: list(userId, sceneRef) answers as that user, like list(userDoc, sceneDoc)", () => {
+  const rook = F.game.users.get("plyrUser00000001");
+  const alpha = W.scene("sceneAlpha000001");
+  const byDoc = api.list(rook, alpha);
+  assert.ok(byDoc.some(e => e.id === "tImp"), "a token only Rook owns");
+  assert.deepEqual(api.list("plyrUser00000001", "sceneAlpha000001"), byDoc, "ids, as the bridge sends them");
+  assert.deepEqual(api.list("plyrUser00000001", alpha.uuid), byDoc, "a scene uuid");
+  assert.deepEqual(api.list(rook.name, "Alpha"), byDoc, "exact names");
+  assert.throws(() => api.list("Nobody", alpha), { code: "NOT_FOUND" });
+  assert.throws(() => api.list(rook, "Nowhere"), { code: "NOT_FOUND" });
+});

@@ -20,8 +20,8 @@ export const MANIFEST = Object.freeze({
     {
       path: "list",
       params: [
-        { name: "user", type: "User", optional: true, doc: "default: this client's user" },
-        { name: "scene", type: "Scene", optional: true, doc: "default: the viewed scene" },
+        { name: "user", type: "User | uuid | id | exact name", optional: true, doc: "default: this client's user" },
+        { name: "scene", type: "Scene | uuid | id | exact name", optional: true, doc: "default: the viewed scene" },
       ],
       returns: "{ id, name, img, rank }[]",
       gm: false, writes: false, legacy: true,

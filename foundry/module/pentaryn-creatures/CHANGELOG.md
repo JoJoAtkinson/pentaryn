@@ -28,6 +28,9 @@ a player or GM can notice:
 - **[declared] creatures-edge-1** — `uninstall()` also drops the settings' change handlers: after
   a hot-patch uninstall, toggling `showStrip` no longer redraws the strip (or its dock poll) and a
   `lightRadius` change no longer rewrites every light; re-importing the entry wires them again.
+- **[declared] creatures-rob-1** — `list(user, scene)` accepts a user and scene by id, uuid or
+  exact name (what the bridge sends): `list("<userId>", scene)` now answers as that player, not at
+  the actor's default ownership. An unknown user or scene throws `NOT_FOUND`.
 
 ## 0.1.1 — 2026-10-10
 

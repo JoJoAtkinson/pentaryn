@@ -9,13 +9,13 @@
       "params": [
         {
           "name": "user",
-          "type": "User",
+          "type": "User | uuid | id | exact name",
           "optional": true,
           "doc": "default: this client's user"
         },
         {
           "name": "scene",
-          "type": "Scene",
+          "type": "Scene | uuid | id | exact name",
           "optional": true,
           "doc": "default: the viewed scene"
         }
