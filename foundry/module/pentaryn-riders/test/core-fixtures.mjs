@@ -49,6 +49,13 @@ ok("16 healer rule ignores the kit (consumable)", !matchRule(ruleByKey("healer")
 ok("17 healer rule matches feat", matchRule(ruleByKey("healer"), { identifier: "healer", name: "Healer", type: "feat" }));
 ok("18 druid potent by full name", matchRule(ruleByKey("potent-spellcasting-druid"), { name: "Elemental Fury: Potent Spellcasting", type: "feat" }));
 ok("19 cleric potent not by druid identifier", !matchRule(ruleByKey("potent-spellcasting-cleric"), { identifier: "elemental-fury-potent-spellcasting", name: "Elemental Fury: Potent Spellcasting", type: "feat" }));
+// potent-name: a druid's "Potent Spellcasting" (identifier or source names the druid row) matches
+// the druid rule only; the shared name must not also pull in the cleric rule.
+ok("19a potent-name: druid identifier + short name not cleric", !matchRule(ruleByKey("potent-spellcasting-cleric"), { identifier: "elemental-fury-potent-spellcasting", name: "Potent Spellcasting", type: "feat" }));
+ok("19b potent-name: druid identifier + short name still druid", matchRule(ruleByKey("potent-spellcasting-druid"), { identifier: "elemental-fury-potent-spellcasting", name: "Potent Spellcasting", type: "feat" }));
+ok("19c potent-name: druid source + short name not cleric", !matchRule(ruleByKey("potent-spellcasting-cleric"), { source: "Compendium.dnd-players-handbook.classes.Item.phbFuryPotentSpe", name: "Potent Spellcasting", type: "feat" }));
+ok("19d potent-name: cleric identifier + short name not druid", !matchRule(ruleByKey("potent-spellcasting-druid"), { identifier: "blessed-strikes-potent-spellcasting", name: "Potent Spellcasting", type: "feat" }));
+ok("19e potent-name: unknown identifier still matches by name", matchRule(adept, { identifier: "elemental-adept-fire", name: "Elemental Adept (Fire)", type: "feat" }));
 
 /* ── type resolution ─────────────────────────────────────────────────────── */
 

@@ -200,13 +200,20 @@ async function arcaneRecoveryDialog(actor) {
     rejectClose: false
   });
   if (!result || typeof result !== "object") return null;
-  const check = arcaneRecoveryCheck(result, slots, cap);
-  if (!check.ok || !check.used) return null;
+  const asked = arcaneRecoveryCheck(result, slots, cap);
+  if (!asked.ok || !asked.used) return null;
+  // The dialog is not modal: a cast, edit or rest may have changed the slots meanwhile (riders-async-2).
+  const fresh = slotsFrom(actor?.system?.spells);
+  const check = arcaneRecoveryCheck(result, fresh, cap);
+  if (!check.ok || !check.used) {
+    ui.notifications.warn(_loc("PENTARYN_RIDERS.arcaneRecovery.changed"));
+    return null;
+  }
   const update = {};
   const parts = [];
   for (const [l, n] of Object.entries(result)) {
     if (!n) continue;
-    update[`system.spells.spell${l}.value`] = slots[l].value + n;
+    update[`system.spells.spell${l}.value`] = fresh[l].value + n;
     parts.push(`${n} × ${ordinal(Number(l))}`);
   }
   await actor.update(update);

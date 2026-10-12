@@ -9,7 +9,8 @@ migration record → `context/plans/addon-blueprint-2026-10/migrate-pentaryn-rid
 dnd5e leaves some feature riders for the player to do by hand. This module does them. The rules
 live in one table, `RULES` in `riders-core.mjs`, keyed by **feature identity** (the dnd5e
 `system.identifier`, the PHB compendium source, or the item name with any "(Fire)" suffix
-ignored). A rider is on only while the actor has the feature item. It also carries a few dnd5e and
+ignored; an item whose identifier or source names a row matches that row only, so a druid's
+"Potent Spellcasting" is never the cleric's). A rider is on only while the actor has the feature item. It also carries a few dnd5e and
 Argon table fixes (rituals, concentration, cast flow, HUD tidy-ups). Requires dnd5e 6.0 (verified 6.0.6).
 
 ## What the player sees

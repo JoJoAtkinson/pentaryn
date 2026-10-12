@@ -45,7 +45,8 @@ export const MANIFEST = Object.freeze({
       sideEffects: ["Actor.system.spells.spell1-5.value", "ChatMessage (one line)"],
       doc: "Open the Arcane Recovery picker for an actor this client owns, without spending a use: the chosen "
         + "slots are restored and one chat line posted, as after the feature's own use. recovered is null when "
-        + "cancelled or nothing was spent. A non-owner gets { ok: false, code: \"REFUSED\" }.",
+        + "cancelled, nothing was spent, or the slots changed while the picker was open (a warning says so). "
+        + "A non-owner gets { ok: false, code: \"REFUSED\" }.",
     },
     {
       path: "featuresOf",

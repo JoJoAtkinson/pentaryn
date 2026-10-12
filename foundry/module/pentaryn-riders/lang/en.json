@@ -71,7 +71,8 @@
       "cancel": "Not now",
       "total": "{used} of {cap} levels",
       "done": "{name} recovers spell slots by studying the spellbook: {slots}.",
-      "none": "Arcane Recovery: no spent slots of level 1 to 5 to recover."
+      "none": "Arcane Recovery: no spent slots of level 1 to 5 to recover.",
+      "changed": "Arcane Recovery: the spell slots changed while the window was open, so nothing was recovered."
     }
   }
 }

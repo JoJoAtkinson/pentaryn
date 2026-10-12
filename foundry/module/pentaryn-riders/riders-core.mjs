@@ -144,8 +144,13 @@ export function normalizeName(name) {
     .toLowerCase();
 }
 
+/** Every identifier and source some RULES row claims (the name fallback stands down for these). */
+const RULE_IDS = new Set(RULES.flatMap(r => [...(r.match?.identifiers ?? []), ...(r.match?.sources ?? [])]));
+
 /**
- * Does this item match the rule?
+ * Does this item match the rule? An item whose identifier or source names a RULES row matches that
+ * row only: the name fallback is skipped, so a druid's "Potent Spellcasting" is not also the
+ * cleric's (potent-name).
  * @param {object} rule
  * @param {{identifier?: string, source?: string, name?: string, type?: string}} item
  */
@@ -155,6 +160,7 @@ export function matchRule(rule, item) {
   const m = rule.match ?? {};
   if (item.identifier && (m.identifiers ?? []).includes(item.identifier)) return true;
   if (item.source && (m.sources ?? []).includes(item.source)) return true;
+  if (RULE_IDS.has(item.identifier) || RULE_IDS.has(item.source)) return false;
   const n = normalizeName(item.name);
   return !!n && (m.names ?? []).some(x => normalizeName(x) === n);
 }
