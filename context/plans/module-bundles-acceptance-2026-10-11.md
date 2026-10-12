@@ -192,3 +192,101 @@ them (no action needed). `.pentaryn-tmp/` holds no job and an empty `bundles/` s
 - Scratch left in place on purpose: journal `ZZ bundles acceptance 20261012T023213Z`
   (`ussRnQm9Ou73gPN3`, token `ZZTOKEN-359119f12520b076`) — the restore proof needs it; delete it
   after the restore stage. The probe module folder is already gone locally.
+
+## G. Clean-room restore — S_final from the cloud into an empty data root
+
+Scratch root `~/pentaryn-restore-test/FoundryVTT` (empty `Data/` + `Config/`, same SSD), selected
+with `FOUNDRY_DATA` only. `host show` with that override printed `data
+/Users/joe/pentaryn-restore-test/FoundryVTT`; `bootstate.path()`, `uploadq._dir()` and
+`cloud.data_root()` all resolved under it; `tree_has_world()` was false. Foundry down (the restore
+refuses otherwise). Then, 02:50:57 → 02:58:54 UTC (7 min 57 s, exit 0):
+
+```
+$ echo restore | FOUNDRY_DATA=~/pentaryn-restore-test/FoundryVTT make foundry-restore SNAP=world-2026-10-12-024111-fvtt14.369-mac.tar.gz
+  about to restore world-2026-10-12-024111-fvtt14.369-mac.tar.gz (mac) over /Users/joe/pentaryn-restore-test/FoundryVTT
+  downloading world-2026-10-12-024111-fvtt14.369-mac.tar.gz (18.9 MB, mac)...
+  downloading 46 bundle(s) (3.32 GB)...
+  no local world to snapshot — skipped
+  cleared Config
+  options.json came from another machine (dataPath /Users/joe/Library/Application Support/FoundryVTT); set to /Users/joe/pentaryn-restore-test/FoundryVTT
+  restored world-2026-10-12-024111-fvtt14.369-mac.tar.gz: world 18.9 MB; modules: 45 installed (3.21 GB), 0 unchanged, 0 removed; systems: 1 installed (108.4 MB), 0 unchanged, 0 removed
+  restored world-2026-10-12-024111-fvtt14.369-mac.tar.gz
+```
+
+No safety copy (no local world), so nothing was written to the cloud.
+
+**Scratch tree compared with the live tree**, file by file, full byte compare (`filecmp`, not
+shallow), 48 areas: all of `Data/worlds`, `Config`, each of the 45 `Data/modules/<id>` and
+`Data/systems/dnd5e`. `Data/worlds` and `Config` were compared with **no exclusions**. In
+module/system folders the only files left out were the LevelDB housekeeping files, by
+`bundles._housekeeping`, the fingerprint's own rule: 330 on each side.
+
+- 10,016 files identical, 3.63 GB compared.
+- `Data/worlds` (all four worlds + `README.txt`): **byte-identical, every file, housekeeping
+  included.**
+- `Config`: 3 of 4 identical. `options.json` differs **only** in `dataPath` (the restore points
+  it at the scratch root, per plan, because there was no local `options.json` to keep) plus a
+  trailing newline. `admin.txt`, `license.json` and `package-index.json` are identical.
+- All 45 modules + dnd5e identical except for one file. Live `dnd-players-handbook` has
+  `assets/journal-art/desktop.ini`, a Windows junk name (`storage.JUNK_NAMES`) that bundles never
+  carry, by design (§3.3). There were no other differences, missing files or extra files.
+- Fresh, uncached `bundles.fingerprint` of every restored folder: **46 of 46 equal the
+  fingerprint in the bundle name** that S_final's manifest records (3.59 GB hashed). The same
+  check on the live tree gives 46 of 46.
+- The housekeeping files left out of the compare are exactly the ones a launch rewrites: 55
+  identical, 165 differ, and 110 exist on one side only on each side. These are new
+  `MANIFEST-*` and empty WAL numbers from the save test's launch, since the bundles were tarred
+  before that launch.
+- **Journal token:** `ZZTOKEN-359119f12520b076` is in the restored
+  `Data/worlds/pentaryn/data/journal/000122.log`, the same file as on the live tree.
+- **`zz-bundles-probe` is absent** from the restored `Data/modules`, which has 45 folders. S_final
+  does not list it. No module or system folder exists that the manifest does not name.
+
+## H. Older snapshot: S_probe2 no longer exists, so substitutes were run
+
+S_probe2 (`world-2026-10-12-023846-…`) **cannot be restored: it is no longer in the cloud.**
+S_final coalesced it in stage E. That is by design: each backup in this run replaced the one
+before it inside the 5-day window. `world-backups/` holds only S_final + sidecar, and
+`major-release/` is empty. No older bundled snapshot is left to restore. Two substitutes cover
+what H was meant to prove, and neither writes to the cloud.
+
+**H1. Old bundle versions are intact and restorable.** Scratch root 2
+`~/pentaryn-restore-test/FoundryVTT-old` (`FOUNDRY_DATA` override). The restore's own functions
+were run: `bundles.listing` → `fetch` → `verify` → `extract`, on both probe bundles, which the
+7-day grace still keeps:
+
+```
+module@zz-bundles-probe@0.0.1@6d33710313e73218.tar.gz: size 465 B (listing 465 B); probe.txt='v1'; files=['module.json', 'probe.txt']; fingerprint of extracted folder 6d33710313e73218 — name says 6d33710313e73218 — MATCH
+module@zz-bundles-probe@0.0.1@13dafef6009c39f4.tar.gz: size 473 B (listing 473 B); probe.txt='v2'; files=['module.json', 'probe.txt']; fingerprint of extracted folder 13dafef6009c39f4 — name says 13dafef6009c39f4 — MATCH
+```
+
+The v2 bundle was extracted over v1, which is the replace path.
+
+**H2. Differential restore: only what this machine lacks, replaced with the version the snapshot
+names.** The step-G scratch root was reused. Three changes were made first:
+- `Data/worlds` deleted, so there is no local world, no safety copy and no cloud write.
+- One module tampered: a line appended to `pentaryn-walls/README.md` and a new
+  `zz-extra-file.txt` added. Its fingerprint became `b3f6cf4e5372d5a0`; the manifest says
+  `cf227cd3567d4043`.
+- The v2 probe module (from H1) dropped in as an extra.
+
+Then the same `make foundry-restore SNAP=<S_final>` (55 s, exit 0):
+
+```
+  downloading world-2026-10-12-024111-fvtt14.369-mac.tar.gz (18.9 MB, mac)...
+  downloading 1 bundle(s) (0.3 MB)...
+  no local world to snapshot — skipped
+  cleared Config
+  kept this machine's options.json, admin.txt, license.json
+  left in place (no local world, so no cloud copy references them): module/zz-bundles-probe
+  restored world-2026-10-12-024111-fvtt14.369-mac.tar.gz: world 18.9 MB; modules: 1 installed (0.3 MB), 44 unchanged, 0 removed, 1 left (zz-bundles-probe); systems: all 1 unchanged
+```
+
+The restore fetched exactly the one changed module. `zz-extra-file.txt` and the tamper are
+gone. The compare against live is again clean: 10,016 identical, only `options.json`
+`dataPath` and the `desktop.ini` junk. The probe was left in place, as plan §3.6 says for the
+no-world case (Q3). The token is present again in the re-extracted world.
+
+Taken together: a snapshot's manifest names exact bundle versions. Old versions stay in the
+cloud while any snapshot names them, plus 7 days. A restore installs exactly the named version
+over whatever is local, and fetches only what differs. Both scratch roots were then deleted.
