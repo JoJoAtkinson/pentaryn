@@ -296,11 +296,7 @@ MODULES = {
         "pentaryn-creatures",
         # node-test: creatures-core.mjs (who gets light, strip order) is pure.
         check=(*_STATIC, "node-test", *_BLUEPRINT),
-        after_sync=(
-            "First install: restart Foundry (module.json is read at startup), enable 'Pentaryn Creatures', then reload.",
-            "Player-owned NPC tokens get a small light; players with 2+ tokens get a 'Your creatures' strip.",
-            "  game.pentaryn.creatures.syncAll()",
-        ),
+        # after_sync comes from module.json flags.pentaryn.afterSync (Wave 7 batch).
     ),
     "riders": ModuleSpec(
         "pentaryn-riders",

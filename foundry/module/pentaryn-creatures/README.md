@@ -209,7 +209,7 @@ Not patches, but registry rows too: the Argon DOM read in `strip.mjs` (`.extende
 | `creature-strip.mjs` | feature: when the strip redraws |
 | `strip.mjs` | UI: the strip's DOM and the Combat HUD dock |
 | `api-manifest.mjs`, `api.mjs` | the published API |
-| `creatures.css` | the strip (`#pentaryn-creatures.pcr-strip`, `.pcr-*`) |
+| `styles/creatures.css` | the strip (`#pentaryn-creatures.pcr-strip`, `.pcr-*`) |
 | `lib/` | the vendored kit (`vendor.py`; never edited here) |
 
 ## Tests
