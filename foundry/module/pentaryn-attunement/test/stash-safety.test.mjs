@@ -20,7 +20,8 @@ function owner(id) {
 // the owner untouched — no delete, no owner update — logs one error and stash() rejects.
 test("items-journal-10: a container that drops a copy: originals kept, one error, stash rejects", async () => {
   const box = makeActor(F, { id: "actorBoxS0000001", name: "Box" });
-  box.createEmbeddedDocuments = async (type, data) => data.slice(1);
+  const log = box.createEmbeddedDocuments;
+  box.createEmbeddedDocuments = async (type, data) => (await log(type, data.slice(1))).map((d, i) => ({ ...d, id: `copyA${i}` }));
   const who = owner("actorSafe0000001");
   const from = F.calls.length;
   const errors = [];
@@ -31,7 +32,9 @@ test("items-journal-10: a container that drops a copy: originals kept, one error
   } finally {
     console.error = keep;
   }
-  assert.deepEqual(F.calls.slice(from).filter(c => c.op === "deleteEmbeddedDocuments" || c.op === "update"), []);
+  // [declared] W2-A2: the owner is untouched; the one delete is the rollback of the accepted copy, on the box
+  assert.deepEqual(F.calls.slice(from).filter(c => c.op === "deleteEmbeddedDocuments" || c.op === "update").map(c => [c.op, c.on ?? c.documentName]),
+    [["deleteEmbeddedDocuments", "Box"]]);
   assert.deepEqual(errors, [["pentaryn-attunement | stash: container accepted 1/2; originals NOT deleted",
     { owner: "actorSafe0000001", container: "actorBoxS0000001" }]]);
 });
@@ -45,10 +48,10 @@ test("every copy created: unchanged — delete, then the owner update; resolves 
     ["createEmbeddedDocuments", "deleteEmbeddedDocuments", "update"]);
 });
 
-// Review follow-up (items-journal-10, failure path): the copies the container did accept are left
-// there, still bonded to the owner. The Error names them, in its message and as `err.created`, so a
-// caller can find the duplicates without searching the container for the "(Tag)" name.
-test("items-journal-10: the rejection names the copies left in the container", async () => {
+// [declared] W2-A2 (Joe 2026-10-12; was: the copies are left in the container and named): the copies
+// the container did accept are deleted from it again before the rejection, so the item never exists
+// twice. The Error still names them, in its message and as `err.created`, and says they were rolled back.
+test("W2-A2: a shortfall rolls back the copies the container accepted; the rejection names them", async () => {
   const box = makeActor(F, { id: "actorBoxS0000003", name: "Box Three" });
   let accepted;
   box.createEmbeddedDocuments = async (type, data) => (accepted = data.slice(1).map((d, i) => ({ ...d, id: `copy${i}` })));
@@ -64,7 +67,32 @@ test("items-journal-10: the rejection names the copies left in the container", a
   assert.ok(err instanceof Error);
   assert.equal(accepted.length, 1);
   assert.deepEqual(err.created, ["copy0"]);
-  assert.match(err.message, /container accepted 1\/2; originals NOT deleted; copies left in container actorBoxS0000003: copy0$/);
+  assert.equal(err.rolledBack, true);
+  assert.match(err.message, /container accepted 1\/2; originals NOT deleted; copies rolled back from container actorBoxS0000003: copy0$/);
+  assert.deepEqual([...who.items.keys()].sort(), ["c", "t"]);
+  const rollback = F.calls.filter(c => c.op === "deleteEmbeddedDocuments" && c.on === "Box Three");
+  assert.deepEqual(rollback.map(c => [c.type, c.data]), [["Item", ["copy0"]]]);
+});
+
+test("W2-A2: a rollback that itself fails: the rejection names the copies left in the container and why", async () => {
+  const box = makeActor(F, { id: "actorBoxS0000007", name: "Box Seven" });
+  box.createEmbeddedDocuments = async (type, data) => data.slice(1).map((d, i) => ({ ...d, id: `copy${i}` }));
+  box.deleteEmbeddedDocuments = async () => { throw new Error("pile refused"); };
+  const who = owner("actorSafe0000007");
+  const errors = [];
+  const keep = console.error;
+  console.error = (...a) => errors.push(a);
+  let err;
+  try {
+    await stash(who, box, ["c", "t"]).catch(e => { err = e; });
+  } finally {
+    console.error = keep;
+  }
+  assert.deepEqual(err.created, ["copy0"]);
+  assert.equal(err.rolledBack, false);
+  assert.equal(err.message, "pentaryn-attunement | stash: container accepted 1/2; originals NOT deleted; "
+    + "rollback failed (pile refused), copies left in container actorBoxS0000007: copy0");
+  assert.equal(errors.length, 2, "the shortfall line and the rollback failure");
   assert.deepEqual([...who.items.keys()].sort(), ["c", "t"]);
 });
 
@@ -81,6 +109,7 @@ test("items-journal-10: a container that accepts nothing: err.created is empty, 
     console.error = keep;
   }
   assert.deepEqual(err.created, []);
+  assert.equal(err.rolledBack, true, "nothing to roll back");
   assert.equal(err.message, "pentaryn-attunement | stash: container accepted 0/2; originals NOT deleted");
 });
 
