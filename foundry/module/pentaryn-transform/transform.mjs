@@ -13,8 +13,10 @@ import {
   durationSeconds, formatDuration, isExpired, usesLeft, useSyncUpdates, carriedConditions, endedInForm,
   attributeSync, pruneFavorites, shiftBlock, pickRunner, withArticle, formTempHP, withoutOrigin, isBodySwap
 } from "./transform-core.mjs";
+import { makeLog } from "./lib/log.mjs";
 
 const T = (key, data) => (data ? game.i18n.format(key, data) : game.i18n.localize(key));
+const log = makeLog(MODULE_ID);
 
 /* ── Foundry v14 core bug (seen v14.367, still present in v14.369): token swaps with operator-wrapped sizes ── */
 // dnd5e's transformInto and revertOriginalForm swap the token with a non-recursive update
@@ -67,14 +69,14 @@ const T = (key, data) => (data ? game.i18n.format(key, data) : game.i18n.localiz
     try {
       if (options?.animate === false) return;
       if (isBodySwap(changes, { actorId: doc?._source?.actorId ?? doc?.actorId ?? null, unwrap })) options.animate = false;
-    } catch (err) { console.warn(`${MODULE_ID} | body-swap animation guard skipped`, err); }
+    } catch (err) { log.warn("body-swap animation guard skipped", err); }
   });
 }
 
 /** Re-prepare this actor's tokens from their source and end their animations, before dnd5e reads them. */
 function settleTokens(actor) {
   for (const t of actor?.getActiveTokens?.(false, false) ?? []) {
-    try { t.stopAnimation?.({ reset: true }); } catch (err) { console.warn(`${MODULE_ID} | settling ${t.name} failed`, err); }
+    try { t.stopAnimation?.({ reset: true }); } catch (err) { log.warn(`settling ${t.name} failed`, err); }
   }
 }
 
@@ -174,7 +176,7 @@ export function say(actor, content) {
   return ChatMessage.implementation.create({
     content: `<p class="pentaryn-transform-line">${content}</p>`,
     speaker: ChatMessage.implementation.getSpeaker({ actor })
-  }).catch(err => console.warn(`${MODULE_ID} | chat line failed`, err));
+  }).catch(err => log.warn("chat line failed", err));
 }
 
 const RETURN_LINES = {
@@ -336,7 +338,7 @@ Hooks.on("dnd5e.revertOriginalForm", (actor) => {
     const name = (actor.isToken ? actor.token?.getFlag?.("dnd5e", "previousActorData")?.name : null) ?? host.name;
     say(host, T(RETURN_LINES.manual, { name }));
   } catch (err) {
-    console.warn(`${MODULE_ID} | chat line failed`, err);
+    log.warn("chat line failed", err);
   }
 });
 
@@ -347,7 +349,7 @@ Hooks.on("dnd5e.revertOriginalForm", (actor) => {
 export function returnToNormal(actor) {
   markBonusUsed(actor);
   return revert(actor).catch(err => {
-    console.warn(`${MODULE_ID} | revert failed`, err);
+    log.warn("revert failed", err);
     return null;
   });
 }
@@ -523,7 +525,7 @@ async function doShift(host, activity, profileId, uuid) {
   pending.set(host.uuid, meta);
   // Starry Form is taken "rather than shape-shifting": a beast shift ends it (and its light).
   const starry = host.effects.find(e => e.getFlag(MODULE_ID, "starry"));
-  if (starry) await starry.delete().catch(err => console.warn(`${MODULE_ID} | ending Starry Form failed`, err));
+  if (starry) await starry.delete().catch(err => log.warn("ending Starry Form failed", err));
   // Mark the bonus action before the token swaps: Argon rebuilds the HUD as soon as it does.
   markBonusUsed(host);
   const token = host.isToken ? host.token : null;
@@ -536,7 +538,7 @@ async function doShift(host, activity, profileId, uuid) {
     else form = game.actors.find(a => a.isPolymorphed && a.getFlag("dnd5e", "originalActor") === host.id
       && !before.has(a.id)) ?? null;
   } catch (err) {
-    console.error(`${MODULE_ID} | transform failed`, err);
+    log.error("transform failed", err);
   } finally {
     pending.delete(host.uuid);
   }
@@ -547,7 +549,7 @@ async function doShift(host, activity, profileId, uuid) {
   }
   if (token) {
     // The shift happened: never refund past this point, even if the extras fail.
-    await shapeTokenForm(form, source, meta).catch(err => console.error(`${MODULE_ID} | shaping the token form failed`, err));
+    await shapeTokenForm(form, source, meta).catch(err => log.error("shaping the token form failed", err));
   }
   const uses = (token ? form : host).items.get(itemId)?.system.uses;
   say(token ? form : host, T("PENTARYN_TRANSFORM.Chat.Shift", {
@@ -582,7 +584,7 @@ Hooks.on("dnd5e.preUseActivity", (activity, usageConfig, dialogConfig, messageCo
   if (form) {
     revert(form, { quiet: true })
       .then(host => wildShapeActivity(host)?.use({}, {}, { create: false }))
-      .catch(err => console.warn(`${MODULE_ID} | change form failed`, err));
+      .catch(err => log.warn("change form failed", err));
     return false;
   }
   messageConfig.create = false;                           // no card: the shift happens on use
@@ -599,7 +601,7 @@ Hooks.on("dnd5e.postUseActivity", (activity, usageConfig, results) => {
   const uuid = foundry.utils.getProperty(results?.message ?? {}, "flags.dnd5e.transform.uuid")
     ?? activity.availableProfiles.find(p => p._id === profileId)?.uuid;
   const job = doShift(host, activity, profileId, uuid).catch(err => {
-    console.error(`${MODULE_ID} | shift failed`, err);
+    log.error("shift failed", err);
     return null;
   });
   inflight.set(host.uuid, job);
@@ -636,7 +638,7 @@ Hooks.on("dnd5e.transformActor", (host, source, d, settings) => {
     foundry.utils.setProperty(d, `flags.${MODULE_ID}.wildshape`, plan.flag);
   } catch (err) {
     // Never block the transform over the extras.
-    console.error(`${MODULE_ID} | shaping the form failed`, err);
+    log.error("shaping the form failed", err);
   }
 });
 
@@ -652,7 +654,7 @@ function maybeAutoRevert(actor, reason) {
   // exists(): the effect-expiry update and the world-time check can both fire for one ending; the
   // second must not run dnd5e's revert again on the already-deleted form.
   if (!exists(actor) || !isWildShapeForm(actor) || reverting.has(actor.uuid) || !isRunner(actor)) return;
-  revert(actor, { reason }).catch(err => console.warn(`${MODULE_ID} | auto-revert failed`, err));
+  revert(actor, { reason }).catch(err => log.warn("auto-revert failed", err));
 }
 
 // 0 HP: the 2024 form uses the druid's own HP; at 0 they are Unconscious, so the form ends.
@@ -695,7 +697,7 @@ Hooks.on("deleteActiveEffect", (effect) => {
   const host = original(actor);
   if (!host || host === actor) return;                    // a token's form: revert carries it back
   endOnDruid(host, [effect.id])
-    .catch(err => console.warn(`${MODULE_ID} | ending ${effect.name} on ${host.name} failed`, err));
+    .catch(err => log.warn(`ending ${effect.name} on ${host.name} failed`, err));
 });
 
 // Duration: the effect registry covers it; this covers time moved while no GM is connected and
@@ -725,7 +727,7 @@ Hooks.on("dnd5e.longRest", (actor, config) => {
   const { type, ...rest } = config ?? {};
   revert(form, { reason: "longRest" })
     .then(host => host?.longRest({ ...rest, dialog: false }))
-    .catch(err => console.warn(`${MODULE_ID} | long rest after revert failed`, err));
+    .catch(err => log.warn("long rest after revert failed", err));
   return false;
 });
 
@@ -736,7 +738,7 @@ Hooks.on("dnd5e.preShortRest", (actor, config) => {
   const form = activeFormOf(actor);
   if (!form?.isOwner) return;
   const { type, ...rest } = config ?? {};
-  form.shortRest(rest).catch(err => console.warn(`${MODULE_ID} | short rest on the form failed`, err));
+  form.shortRest(rest).catch(err => log.warn("short rest on the form failed", err));
   return false;
 });
 
@@ -750,7 +752,7 @@ Hooks.on("dnd5e.restCompleted", (actor, result, config) => {
     dialog: false, chat: false, autoHD: false, advanceTime: false, advanceBastionTurn: false, newDay: false,
     request: config.request,                              // a requested rest passes allowRests = off
     [REST_SYNC]: true
-  }).catch(err => console.warn(`${MODULE_ID} | short rest on the original failed`, err));
+  }).catch(err => log.warn("short rest on the original failed", err));
 });
 
 /* ── spent forms ─────────────────────────────────────────────────────────── */
@@ -791,7 +793,7 @@ function scheduleSweep(ms = 3000) {
   sweepTimer = setTimeout(() => {
     sweepTimer = null;
     sweepAt = Infinity;
-    sweepSpentForms().catch(err => console.warn(`${MODULE_ID} | sweep failed`, err));
+    sweepSpentForms().catch(err => log.warn("sweep failed", err));
   }, ms);
 }
 for (const h of ["updateToken", "deleteToken"]) Hooks.on(h, () => scheduleSweep(3000));

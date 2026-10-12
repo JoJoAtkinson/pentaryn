@@ -18,9 +18,11 @@ import {
   MODULE_ID, activitiesOf, isWildShapeActivity, usesLeft, formatDuration, CONSTELLATIONS, STARRY_LIGHT,
   STARRY_SECONDS, constellationOfActivity, starryEffectData, starryBlock, grantsFly
 } from "./transform-core.mjs";
+import { makeLog } from "./lib/log.mjs";
 import { say, isRunner, markBonusUsed } from "./transform.mjs";
 
 const T = (key, data) => (data ? game.i18n.format(key, data) : game.i18n.localize(key));
+const log = makeLog(MODULE_ID);
 
 /** The druid's Starry Form effect. Static, 16 characters. */
 export const STARRY_EFFECT_ID = "pentarynStarry00";
@@ -265,7 +267,7 @@ Hooks.on("dnd5e.postUseActivity", (activity, usageConfig) => {
       name: actor.name, constellation: constellationLabel(c),
       left: usesLeft(uses) ?? 0, max: uses?.max ?? 0, duration: formatDuration(STARRY_SECONDS)
     }));
-  }).catch(err => console.error(`${MODULE_ID} | starry form failed`, err));
+  }).catch(err => log.error("starry form failed", err));
 });
 
 /** Three buttons, one per constellation. Resolves to the choice, or null when closed. */
@@ -284,7 +286,7 @@ async function pickConstellation(actor) {
 
 function maybeEnd(actor, reason) {
   if (!actor || !activeStarry(actor) || !isRunner(actor)) return;
-  endStarry(actor, { reason }).catch(err => console.warn(`${MODULE_ID} | ending starry form failed`, err));
+  endStarry(actor, { reason }).catch(err => log.warn("ending starry form failed", err));
 }
 
 // Incapacitated (or anything that implies it).
@@ -307,7 +309,7 @@ Hooks.on("deleteActiveEffect", (effect) => {
   const actor = effect?.parent;
   if (!(actor instanceof Actor) || !effect.getFlag?.(MODULE_ID, "starry") || !isRunner(actor)) return;
   if (activeStarry(actor)) return;
-  setLight(starryItem(actor), false).catch(err => console.warn(`${MODULE_ID} | starry light off failed`, err));
+  setLight(starryItem(actor), false).catch(err => log.warn("starry light off failed", err));
 });
 
 // 10 minutes of world time.
@@ -322,7 +324,7 @@ Hooks.on("updateWorldTime", () => {
 // A Long Rest is far longer than 10 minutes; the light must not survive it.
 Hooks.on("dnd5e.restCompleted", (actor, result, config) => {
   if (config?.type === "long" && activeStarry(actor) && actor.isOwner) {
-    endStarry(actor, { quiet: true }).catch(err => console.warn(`${MODULE_ID} | ending starry form failed`, err));
+    endStarry(actor, { quiet: true }).catch(err => log.warn("ending starry form failed", err));
   }
 });
 

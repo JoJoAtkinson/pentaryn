@@ -14,6 +14,7 @@ import {
   MODULE_ID, EFFECT_ID, activitiesOf, isWildShapeActivity, usesLeft, durationSeconds, formatDuration,
   formSummary, planBonusBar, planWithout, frontRowItems, coveredPanel, hpText, returnLabel, CONSTELLATIONS, STARRY_SECONDS
 } from "./transform-core.mjs";
+import { makeLog } from "./lib/log.mjs";
 import { shift, forms, wildShapeActivity, original, isRevertItem, bonusUsedNow, returnToNormal, isWildShapeForm } from "./transform.mjs";
 import {
   STARRY_EFFECT_ID, starryItem, wildShapeItemOf, hasTwinkling, activeStarry, constellationOf, starrySecondsLeft,
@@ -21,6 +22,7 @@ import {
 } from "./starry.mjs";
 
 const T = (key, data) => (data ? game.i18n.format(key, data) : game.i18n.localize(key));
+const log = makeLog(MODULE_ID);
 
 let DND5eItemButton = null;      // borrowed from the weapon-set slot, once seen
 let built = null;                // { WildShapeButton, FormTile, … }, built on first use
@@ -69,7 +71,7 @@ export function cancelTargetPicker() {
   try {
     document.dispatchEvent(new MouseEvent("mouseup", { button: 2, buttons: 0, bubbles: true, cancelable: true }));
   } catch (err) {
-    console.warn(`${MODULE_ID} | cancelling Argon's target picker failed`, err);
+    log.warn("cancelling Argon's target picker failed", err);
   }
   return !pickerOpen();
 }
@@ -108,7 +110,7 @@ Hooks.once("init", () => {
       precedence: CONST.KEYBINDING_PRECEDENCE.PRIORITY
     });
   } catch (err) {
-    console.warn(`${MODULE_ID} | Escape-cancels-target-picker keybinding not registered`, err);
+    log.warn("Escape-cancels-target-picker keybinding not registered", err);
   }
 });
 
@@ -629,7 +631,7 @@ Hooks.on("renderActionPanelArgonComponent", (panel, element, actor) => {
     else if (panel?.label === "DND5E.Action") composeActionBar(panel, a);
     else if (panel?.label === "DND5E.Special") composeSpecialBar(panel, a);
   } catch (err) {
-    console.error(`${MODULE_ID} | HUD composition failed`, err);
+    log.error("HUD composition failed", err);
   }
   setTimeout(dropStaleTooltip, 0);
 });
@@ -684,7 +686,7 @@ function paintHP(element, actor) {
 }
 
 function paintPortrait(element, actor) {
-  try { paintHP(element, actor); } catch (err) { console.warn(`${MODULE_ID} | portrait HP failed`, err); }
+  try { paintHP(element, actor); } catch (err) { log.warn("portrait HP failed", err); }
   const detail = element?.querySelector?.(".player-detail");
   if (!detail) return;
   const line = portraitLine(actor);
@@ -699,7 +701,7 @@ function paintPortrait(element, actor) {
 }
 
 Hooks.on("renderPortraitPanelArgonComponent", (panel, element, actor) => {
-  try { paintPortrait(element, actor ?? panel.actor); } catch (err) { console.warn(`${MODULE_ID} | portrait line failed`, err); }
+  try { paintPortrait(element, actor ?? panel.actor); } catch (err) { log.warn("portrait line failed", err); }
   setTimeout(dropStaleTooltip, 0);
 });
 
@@ -796,7 +798,7 @@ Hooks.on("dnd5e.postUseActivity", (activity, usageConfig) => {
       return;
     }
     if (earnsChalice(activity, usageConfig)) setChalice(actor, true);
-  } catch (err) { console.warn(`${MODULE_ID} | Chalice offer skipped`, err); }
+  } catch (err) { log.warn("Chalice offer skipped", err); }
 });
 
 // Starry Form ended or changed constellation: no Chalice to take.
