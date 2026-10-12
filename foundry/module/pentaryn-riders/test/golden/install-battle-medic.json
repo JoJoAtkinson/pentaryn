@@ -1,0 +1,51 @@
+[
+  {
+    "op": "createActivity",
+    "item": "Healer",
+    "type": "utility",
+    "data": {
+      "name": "Battle Medic",
+      "img": "icons/healer.webp",
+      "activation": {
+        "type": "action",
+        "value": 1
+      },
+      "range": {
+        "units": "ft",
+        "value": "5"
+      },
+      "target": {
+        "affects": {
+          "type": "creature",
+          "count": "1"
+        },
+        "prompt": false
+      },
+      "consumption": {
+        "targets": [
+          {
+            "type": "itemUses",
+            "target": "healerkit0000001",
+            "value": "1"
+          }
+        ]
+      },
+      "description": {
+        "chatFlavor": "Tend to one creature: it spends a Hit Die, you roll it (1s rerolled) + your PB."
+      },
+      "flags": {
+        "pentaryn-riders": {
+          "flow": "battle-medic"
+        }
+      }
+    },
+    "options": {
+      "renderSheet": false
+    }
+  },
+  {
+    "op": "deleteActivity",
+    "item": "Healer",
+    "id": "heald80000000001"
+  }
+]
