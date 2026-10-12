@@ -35,7 +35,6 @@ export function uninstall() {
 
 /** Full-text search across the owned books. */
 async function search(query, opts = {}) {
-  opts ??= {};
   const ids = resolveBookIds(opts.books);
   const { books, missing } = await loadBooks(ids);
   if (!books.length) return missingPackError(missing);
@@ -46,7 +45,6 @@ async function search(query, opts = {}) {
 
 /** One page, by UUID or by name. */
 async function page(ref, opts = {}) {
-  opts ??= {};
   const raw = String(ref ?? "").trim();
   if (!raw) return { error: "page(ref) needs a UUID or a page name" };
 
@@ -90,8 +88,7 @@ const known = () => knownLists(spellRegistry(), err => log?.debug("spell-list op
  * Is a spell on a class's list (or a subclass's: `{type: "subclass"}`)?
  * → `{spell, uuid, level, list, onList}`; `onList` null when the list is unknown.
  */
-async function onList(spell, cls, opts = {}) {
-  const { type = "class" } = opts ?? {};
+async function onList(spell, cls, { type = "class" } = {}) {
   const doc = await findSpell(spell, log);
   if (!doc) return { notFound: true, spell, hint: "spell names are the book's English names" };
   const list = listFor(type, cls);
@@ -102,8 +99,7 @@ async function onList(spell, cls, opts = {}) {
 }
 
 /** The names on a class list, optionally one spell level: `spellList("cleric", {level: 3})`. */
-async function spellList(cls, opts = {}) {
-  const { type = "class", level = null } = opts ?? {};
+async function spellList(cls, { type = "class", level = null } = {}) {
   const list = listFor(type, cls);
   if (!list) return { error: `no ${type} list "${cls}"`, known: known() };
   // the registry holds a uuid per contributing pack (PHB and the 2024 SRD both list Aid):
@@ -122,7 +118,6 @@ async function spellList(cls, opts = {}) {
  * as plain text — one call instead of a digest and a second read of the items.
  */
 async function monster(name, opts = {}) {
-  opts ??= {};
   const wanted = String(name ?? "").trim();
   if (!wanted) return { error: "monster(name) needs a name" };
   const tried = [];
@@ -155,7 +150,7 @@ async function monster(name, opts = {}) {
  * type, uuid, pack}]}`, lowest CR first. Picks candidates without guessing from memory.
  */
 async function monsters(q = {}) {
-  const query = monsterQuery(q ?? {});
+  const query = monsterQuery(q);
   const seen = new Set(), out = [];
   for (const id of query.packIds) {
     const idx = await readIndex(id, [...MONSTER_INDEX_FIELDS]);

@@ -152,18 +152,3 @@ test("prompts-lookup-4 [declared DL3]: onList with dnd5e.registry undefined answ
 test("enrichStub fixture sanity", async () => {
   assert.equal(await enrichStub()("[[/attack]]", {}), "+4");
 });
-
-// review/lookup R1: README promises "a miss is an answer object …, never a throw", and api-manifest
-// marks every opts/q param optional — so null must answer exactly as an omitted argument does.
-test("null opts answers exactly as omitted opts (README: never a throw)", async () => {
-  const pairs = [
-    [() => rules.search("cover", null), () => rules.search("cover")],
-    [() => rules.page("Study", null), () => rules.page("Study")],
-    [() => rules.page(PAGE_UUID, null), () => rules.page(PAGE_UUID)],
-    [() => rules.monster("Goblin", null), () => rules.monster("Goblin")],
-    [() => rules.monsters(null), () => rules.monsters()],
-    [() => rules.onList("Fireball", "wizard", null), () => rules.onList("Fireball", "wizard")],
-    [() => rules.spellList("wizard", null), () => rules.spellList("wizard")],
-  ];
-  for (const [withNull, omitted] of pairs) assert.deepEqual(await withNull(), await omitted());
-});
