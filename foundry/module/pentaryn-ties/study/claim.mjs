@@ -61,8 +61,9 @@ export async function stakeAndConfirm({ write, readBack, token, settleMs = 250, 
  * refused by applyStudy's `readBelief` lock (apply.mjs) rather than racing the first. A claim
  * left behind by a client that died mid-roll therefore *does* strand the roll — deliberately the
  * safe direction, and `reset` is the one-line cure because it deletes the whole row.
+ *
+ * Stake this fact before rolling — two GM sessions of one account are both `activeGM`.
  */
-/** Stake this fact before rolling — two GM sessions of one account are both `activeGM`. */
 export async function claimFact(fact, characterId, now) {
   if (fact.ns === "attr") {
     const mine = session();

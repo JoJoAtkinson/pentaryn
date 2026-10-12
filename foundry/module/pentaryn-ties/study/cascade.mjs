@@ -106,16 +106,6 @@ export async function inspect(character, subject) {
   return true;
 }
 
-/**
- * The module's own combat rule, and it is honest about what it is.
- *
- * dnd5e 5.3.3 keeps **no per-turn action ledger** to consume from (verified in phase 4), so
- * "inspection costs your action" cannot be implemented as an action. What can be implemented
- * truthfully is a rule about *this feature*: one inspection per combatant per round.
- *
- * ⚠ The refusal must be **uniform** — the same sentence whatever the target — or a refusal that
- * varied would itself be a probe.
- */
 const inspected = new Map();
 
 /** Forget one combat's per-round inspection marks once the combat is deleted (ties-31). */
@@ -127,6 +117,16 @@ export function forgetCombat(combatId) {
 /** Test-only: how many combat:round:combatant marks are held (ties-31). */
 export const _sizes = () => ({ inspected: inspected.size });
 
+/**
+ * The module's own combat rule, and it is honest about what it is.
+ *
+ * dnd5e 5.3.3 keeps **no per-turn action ledger** to consume from (verified in phase 4), so
+ * "inspection costs your action" cannot be implemented as an action. What can be implemented
+ * truthfully is a rule about *this feature*: one inspection per combatant per round.
+ *
+ * ⚠ The refusal must be **uniform** — the same sentence whatever the target — or a refusal that
+ * varied would itself be a probe.
+ */
 function combatAllows(character) {
   if (!game.combat?.started || !character.inCombat) return true;
   const combatant = game.combat.combatants.find(c => c.actorId === character.id);

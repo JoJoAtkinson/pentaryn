@@ -33,6 +33,19 @@ import { setting, mayWrite, attrBeliefsStore } from "../settings.mjs";
 /* -------------------------------------------- */
 
 /**
+ * The blind roll mode, as dnd5e 6 must hand it to core: `Roll._mapLegacyRollMode(BLIND)`.
+ *
+ * ⚠ A private core API (adjustments row dnd5e-legacy-roll-modes). Asked BEFORE anything is staked
+ * (ties-29): a core that drops it refuses the study cleanly, never falling back to the legacy key —
+ * an unknown key is silently replaced by the client default, and the card would go public.
+ */
+export function rollModeBlind() {
+  const map = foundry.dice?.Roll?._mapLegacyRollMode;
+  if (typeof map !== "function") throw new Error("Roll._mapLegacyRollMode is missing; a blind study roll cannot be thrown");
+  return map(CONST.DICE_ROLL_MODES.BLIND);
+}
+
+/**
  * One blind skill check, with the option to leave **no chat message at all**.
  *
  * ## Why `silent` exists, and why it is not optional for a cascade
@@ -50,19 +63,6 @@ import { setting, mayWrite, attrBeliefsStore } from "../settings.mjs";
  * `create: false` returns the evaluated roll without a `ChatMessage`; the dnd5e hooks that would
  * post one never fire.
  */
-/**
- * The blind roll mode, as dnd5e 6 must hand it to core: `Roll._mapLegacyRollMode(BLIND)`.
- *
- * ⚠ A private core API (adjustments row dnd5e-legacy-roll-modes). Asked BEFORE anything is staked
- * (ties-29): a core that drops it refuses the study cleanly, never falling back to the legacy key —
- * an unknown key is silently replaced by the client default, and the card would go public.
- */
-export function rollModeBlind() {
-  const map = foundry.dice?.Roll?._mapLegacyRollMode;
-  if (typeof map !== "function") throw new Error("Roll._mapLegacyRollMode is missing; a blind study roll cannot be thrown");
-  return map(CONST.DICE_ROLL_MODES.BLIND);
-}
-
 export async function throwBlind(character, fact, { mode, situational, silent = false, rollMode = null } = {}) {
   const rolls = await character.rollSkill(
     {
@@ -273,15 +273,6 @@ async function applyClaimed(character, fact, payload, rollMode, refuse) {
 }
 
 /**
- * One belief row, written at its own path so nobody else's record is even in the payload.
- *
- * Every field is stated explicitly, `claim` included: the update merges, so a row that was a
- * claim a moment ago would otherwise keep its `claim` key forever underneath the real record.
- *
- * `render:false` — a belief row is GM-only data and must not repaint a sheet the GM has open
- * on another tab mid-gesture.
- */
-/**
  * Read one belief row, whichever plane it lives on.
  *
  * `kind:` and `lore:` records sit in a flag on a document; `attr:` records sit in a world
@@ -341,6 +332,15 @@ export async function putBelief(fact, characterId, record) {
   });
 }
 
+/**
+ * One belief row, written at its own path so nobody else's record is even in the payload.
+ *
+ * Every field is stated explicitly, `claim` included: the update merges, so a row that was a
+ * claim a moment ago would otherwise keep its `claim` key forever underneath the real record.
+ *
+ * `render:false` — a belief row is GM-only data and must not repaint a sheet the GM has open
+ * on another tab mid-gesture.
+ */
 async function writeBelief(fact, characterId, record) {
   await fact.ledger.update(
     {
