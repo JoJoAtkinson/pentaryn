@@ -2,6 +2,11 @@
 
 ## Unreleased — 2026-10-12 (W3L live-check fix; `module.json` stays 0.1.2, code-only sync)
 
+- **[declared] The GM's report list reads files in parallel** (feedback-async-3 + perf-2):
+  `readAll` awaited one GET per report file before starting the next, so `list`/`inspect` cost one
+  round trip per filed report. It now keeps up to `LIMITS.readsInFlight` (6) GETs in flight and
+  stores each result by index, so the order, EC-3's skip rules and their warn lines (in file
+  order) are unchanged. No per-tab cache.
 - **[declared] The report store logs through the module** (feedback-M10): `fileStore` took a
   `log` option nobody passed, so its `createDirectory` and `browse` debug lines never fired. The
   entry's setup now wires `useStore(fileStore({ log }))` when no store is active yet (a test's

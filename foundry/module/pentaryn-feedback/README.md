@@ -40,7 +40,7 @@ Ask it: `game.pentaryn.feedback.describe()` (offline: `test/golden/describe.json
 | `open({ category, text })` | — | — | opens the dialog pre-filled |
 | `submit({ category, text }, { dryRun })` | — | own User flag | `{ ok, id, status: "filed" \| "queued" }` / `fail` |
 | `ingest({ userId, ids })` | active GM | report files, the user's flag | `{ ok, filed, refused, done }` — the relay query |
-| `list({ status, limit })` | yes | — | `{ reports: [{ id, t, category, status, user, world, text60 }], count }`, oldest first; a report file that cannot be read or is not a JSON object is skipped with a console warning |
+| `list({ status, limit })` | yes | — | `{ reports: [{ id, t, category, status, user, world, text60 }], count }`, oldest first; report files are fetched up to 6 at a time (`LIMITS.readsInFlight`); a report file that cannot be read or is not a JSON object is skipped with a console warning |
 | `get({ id })` | yes | — | the report; `id` may be a unique prefix; throws `NOT_FOUND` / `AMBIGUOUS` / `BAD_ARGS` |
 | `resolve({ id, status, note, force, dryRun })` | yes | the report file | `{ ok, id, status, history }` / `fail("REFUSED", …)` |
 

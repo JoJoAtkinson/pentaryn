@@ -7,7 +7,7 @@
  * reads (`list`, `get`) and `resolve` work on the report files through the shared file store.
  */
 
-import { HOOKS, MODULE, NS, STATUSES, applyStatus, summaryOf, worldDir } from "./feedback-core.mjs";
+import { HOOKS, LIMITS, MODULE, NS, STATUSES, applyStatus, summaryOf, worldDir } from "./feedback-core.mjs";
 import { MANIFEST } from "./api-manifest.mjs";
 import { SETTINGS, settingsSnapshot } from "./settings.mjs";
 import { store } from "./files-adapter.mjs";
@@ -109,19 +109,30 @@ function selftest(ctx) {
 
 const isGM = () => game.user?.isGM === true;
 
-/** Every report file of this world, parsed (unreadable or non-object files skipped, one warn each). */
+/**
+ * Every report file of this world, parsed, in file order (unreadable or non-object files skipped,
+ * one warn each, also in file order). Up to LIMITS.readsInFlight GETs run at once.
+ */
 async function readAll(ctx) {
-  const out = [];
-  for (const path of await store().list(worldDir(game.world.id))) {
-    let r;
-    try {
-      r = await store().get(path);
-    } catch (err) {
-      ctx.log.warn("report file unreadable, skipped", path, err?.message ?? err);
-      continue;
+  const paths = await store().list(worldDir(game.world.id));
+  const got = new Array(paths.length);
+  let next = 0;
+  const worker = async () => {
+    while (next < paths.length) {
+      const i = next++;
+      try {
+        got[i] = { r: await store().get(paths[i]) };
+      } catch (err) {
+        got[i] = { err };
+      }
     }
-    if (r && typeof r === "object" && !Array.isArray(r)) out.push(r);
-    else ctx.log.warn("report file is missing or not a JSON object, skipped", path);
+  };
+  await Promise.all(Array.from({ length: Math.min(LIMITS.readsInFlight, paths.length) }, worker));
+  const out = [];
+  for (const [i, { r, err }] of got.entries()) {
+    if (err) ctx.log.warn("report file unreadable, skipped", paths[i], err?.message ?? err);
+    else if (r && typeof r === "object" && !Array.isArray(r)) out.push(r);
+    else ctx.log.warn("report file is missing or not a JSON object, skipped", paths[i]);
   }
   return out;
 }

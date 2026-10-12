@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { maxDepth, normaliseDescribe, pinJSON } from "./kit/harness.mjs";
 import { IDS, WORLD, installClient, memoryStore, queuedReport, settle } from "./fixtures/world.mjs";
-import { CATEGORY_KEYS, FLAG_SCOPE, MODULE, QUEUE_KEY, STATUSES, STORE_DIR, normaliseReport } from "../feedback-core.mjs";
+import { CATEGORY_KEYS, FLAG_SCOPE, LIMITS, MODULE, QUEUE_KEY, STATUSES, STORE_DIR, normaliseReport } from "../feedback-core.mjs";
 import { MANIFEST } from "../api-manifest.mjs";
 import { SETTINGS } from "../settings.mjs";
 import { buildApi, surfaceOf } from "../lib/api.mjs";
@@ -286,6 +286,49 @@ test("feedback-EC-3: a corrupt, a 500 and an array-valued report file are skippe
     warn.mock.restore();
     useStore(mem);
     for (const path of Object.keys(bad)) mem.files.delete(path);
+  }
+});
+
+// feedback-async-3 (+perf-2): readAll awaited one GET per report file before starting the next,
+// so list() over N files cost N round trips. Now up to LIMITS.readsInFlight GETs run at once;
+// results land by index, so the order (and EC-3's skips and their warn order) is unchanged.
+test("feedback-async-3: list() reads report files 6 at a time, keeping file order and skip warns in order", async () => {
+  seed();
+  const extra = Array.from({ length: 11 }, (_, i) => `${dir}/ffffff00000000${String(i).padStart(2, "0")}.json`);
+  for (const [i, path] of extra.entries()) {
+    const r = normaliseReport(queuedReport(path.split("/").pop().slice(0, 16), { t: T0 + i, category: "bug", text: `extra ${i}` }),
+      { user: { id: IDS.player, name: "Caven's player", role: 1 }, receivedAt: T0 + i });
+    mem.files.set(path, r);
+  }
+  const bad = new Set([extra[3], extra[8]]);
+  const paths = [...mem.files.keys()];
+  let inFlight = 0, peak = 0;
+  const warned = [];
+  const warn = mock.method(console, "warn", (...a) => { warned.push(a); });
+  try {
+    useStore({
+      ...mem,
+      get: async path => {
+        inFlight += 1;
+        peak = Math.max(peak, inFlight);
+        // later files answer sooner, so completion order is the reverse of file order
+        await new Promise(r => setTimeout(r, paths.length - paths.indexOf(path)));
+        inFlight -= 1;
+        if (bad.has(path)) throw new SyntaxError("Unexpected token < in JSON");
+        return mem.get(path);
+      },
+    });
+    const all = await api.list({ status: "all" });
+    assert.equal(peak, LIMITS.readsInFlight, "GETs overlap, capped at LIMITS.readsInFlight");
+    assert.equal(LIMITS.readsInFlight, 6);
+    const want = paths.filter(p => !bad.has(p)).map(p => mem.files.get(p)).sort((a, b) => a.t - b.t).map(r => r.id);
+    assert.deepEqual(all.reports.map(r => r.id), want);
+    const skipped = warned.filter(([line]) => String(line).startsWith(`${MODULE} | `)).map(([, path]) => path);
+    assert.deepEqual(skipped, [extra[3], extra[8]], "skip warns follow file order, not completion order");
+  } finally {
+    warn.mock.restore();
+    useStore(mem);
+    for (const path of extra) mem.files.delete(path);
   }
 });
 

@@ -67,6 +67,7 @@ export const LIMITS = Object.freeze({
   renderThrottleMs: 2000,
   persistMs: 1000,     // the rings are copied to sessionStorage at most this often
   dupErrorMs: 1000,
+  readsInFlight: 6,    // report-file GETs a GM's list/inspect runs at once
 });
 
 /**
