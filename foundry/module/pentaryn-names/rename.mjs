@@ -4,7 +4,7 @@
  * unlinked token's synthetic actor relabels only that token (names-edge-1).
  *
  * GLUE, one feature: `install(reg, ctx)` registers the two actor hooks through the registry;
- * `uninstall()` has no state to drop. `syncRef` is the legacy API row `sync`.
+ * `uninstall()` drops the per-actor sync chains. `syncRef` is the legacy API row `sync`.
  * preUpdateActor runs only on the client that made the rename (§5.9.1) and records the old name
  * in the operation options, keyed by actor id; they travel with the update to every client. Only
  * that client (`userId === game.user.id`) writes, and only to tokens it may edit.
@@ -16,6 +16,22 @@ import { resolveRef } from "./lib/resolve.mjs";
 
 /** The module logger, set by `install` (ctx.log). */
 let log = null;
+
+/**
+ * names-ac-3: the hook's syncs, chained per actor id. Each starts after the previous one for that
+ * actor settles, so its planner reads the labels that one wrote; the entry is dropped when the chain
+ * drains. Two quick renames on DIFFERENT clients are not chained (see the README).
+ */
+const chains = new Map();
+
+/** Run `run` after the chain for `id` settles (resolved or rejected); returns its own promise. */
+function chained(id, run) {
+  const next = (chains.get(id) ?? Promise.resolve()).then(run);
+  const tail = next.catch(() => {});
+  chains.set(id, tail);
+  tail.then(() => { if (chains.get(id) === tail) chains.delete(id); });
+  return next;
+}
 
 /**
  * Relabel the prototype token and every placed token of `actor`, then (GM only) its combatants.
@@ -125,8 +141,10 @@ export function install(reg, ctx) {
     const from = options.pentarynOldNames?.[actor.id];
     if (userId !== game.user.id || options.pentarynNames || !from || !("name" in changes)) return;
     const to = actor.name;
-    sync(actor, from, to).catch(err => ctx.log.warn("relabel after rename failed", { actor: actor.uuid, from, to }, err));
+    chained(actor.id, () => sync(actor, from, to)).catch(err => ctx.log.warn("relabel after rename failed", { actor: actor.uuid, from, to }, err));
   }, { label: "updateActor: relabel" });
 }
 
-export function uninstall() {}
+export function uninstall() {
+  chains.clear();
+}

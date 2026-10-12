@@ -45,6 +45,12 @@ prototype and scene writes are still in flight. A `sync()` called before they fi
 labels and repeats them (same values, a non-zero count and a second toast). Call `sync` only to
 repair labels that missed a rename, after the first relabel has finished.
 
+Two renames of one actor on the same client are chained (names-ac-3): the second relabel starts
+after the first settles and reads the labels it wrote, so `Bob → Rob → Robert` lands on `Robert`
+however fast they come. Renames of one actor from two different tabs or users less than a round
+trip apart are not chained and can leave labels on the middle name: call
+`sync(actor, middle, final)` to repair.
+
 Kit members: `describe()`, `version`, `contract`, `settings()` (always `{}`), `trace()`, `uninstall()`.
 
 ## Data written

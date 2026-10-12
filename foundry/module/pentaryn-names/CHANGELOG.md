@@ -25,6 +25,12 @@
   error) and the rename carries on: the token toast still shows and `sync` resolves with the token
   count. Before, it skipped the toast, rejected `sync`, and the hook logged the generic
   "relabel after rename failed".
+- [declared] names-ac-3 (+edge-4, final review 2026-10-12): the `updateActor` relabels are chained
+  per actor id, so two renames of one actor less than a write round trip apart (`Bob → Rob →
+  Robert`) leave every label on the final name. Before, the second relabel read labels still on
+  the first name, matched nothing, and the first write then left them on the middle name. A failed
+  relabel does not hold up the next one. Renames from two different clients are not chained: repair
+  with `sync(actor, middle, final)`.
 
 ## 0.1.1 — 2026-10-11 (play-test fix, fix/playtest-2026-10-11)
 
