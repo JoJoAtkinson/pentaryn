@@ -55,6 +55,8 @@ The engine result is `{creates, updates, refusals, lints, log, report}`. `previe
 `undo` are one-at-a-time across keybindings, macros and the API. They throw `Error` with no scene
 (`"pentaryn-walls: no scene — open one, or pass a sceneId."`). `undo`, `makeMacro`, `runEngine`
 and `backends` keep their legacy shapes (`legacy: true`).
+`makeMacro` gives each action's macro a fixed id, so two overlapping calls or two GM tabs still
+make one `Walls: <action>` macro.
 
 ## Data written
 

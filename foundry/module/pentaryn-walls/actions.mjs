@@ -172,18 +172,35 @@ async function undo({sceneId, all = false} = {}) {
 }
 
 /**
+ * The macro's fixed id for an action: 16 characters of Foundry's id alphabet, the same in every
+ * tab and world ("pwmacroundo00000"). The id is the election (walls-async-2): two overlapping
+ * makeMacro calls, or two GM tabs, both create it with `keepId` and only one record results.
+ */
+const macroId = action => `pwmacro${action}`.padEnd(16, "0").slice(0, 16);
+
+/**
  * Create a hotbar macro for one of the three actions, so it can also be clicked or bound
- * from the macro bar. Returns the Macro document.
+ * from the macro bar. Returns the Macro document. Looks it up by its fixed id, then by name (a
+ * macro made before the id was fixed); creates it with that id otherwise.
  */
 async function makeMacro(action = "preview", slot) {
   if (!["preview", "run", "undo"].includes(action)) throw new Error(`unknown action "${action}"`);
   const name = `Walls: ${action}`;
   const command = `await game.pentaryn.walls.${action}();`;
-  const existing = game.macros.find(m => m.name === name);
-  const macro = existing ?? await Macro.create({
-    name, type: "script", scope: "global", command,
-    img: "icons/environment/settlement/wall-tower.webp"
-  });
+  const _id = macroId(action);
+  let macro = game.macros.get(_id) ?? game.macros.find(m => m.name === name);
+  if (!macro) {
+    try {
+      macro = await Macro.create({
+        _id, name, type: "script", scope: "global", command,
+        img: "icons/environment/settlement/wall-tower.webp"
+      }, {keepId: true});
+    } catch (err) {
+      // The other call (or GM tab) won the id: use its macro.
+      if (!/already exists/i.test(err?.message ?? "") || !game.macros.get(_id)) throw err;
+      macro = game.macros.get(_id);
+    }
+  }
   if (macro.command !== command) await macro.update({command});
   await game.user.assignHotbarMacro(macro, slot);
   toast("info", "PENTARYN_WALLS.notify.macroReady", {name});

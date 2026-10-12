@@ -217,11 +217,36 @@ test("(i) makeMacro: unknown action throws; 'run' creates once, reuses, assigns 
   const m2 = await game.pentaryn.walls.makeMacro("run", 7);
   assert.equal(m1, m2);
   assert.deepEqual(since(from, "Macro.create").map(c => c.data), [{
-    name: "Walls: run", type: "script", scope: "global", command: "await game.pentaryn.walls.run();",
+    _id: "pwmacrorun000000", name: "Walls: run", type: "script", scope: "global", command: "await game.pentaryn.walls.run();",
     img: "icons/environment/settlement/wall-tower.webp",
   }]);
   assert.deepEqual(since(from, "assignHotbarMacro").map(c => [c.name, c.slot]), [["Walls: run", null], ["Walls: run", 7]]);
   assert.deepEqual(since(from, "notify").map(c => c.message), ['Macro "Walls: run" ready on the hotbar.', 'Macro "Walls: run" ready on the hotbar.']);
   const pre = await game.pentaryn.walls.makeMacro();
   assert.equal(pre.name, "Walls: preview");
+});
+
+test("walls-async-2: two overlapping makeMacro calls (or two GM tabs) make one 'Walls: undo' macro", async () => {
+  let release;
+  F.hold["Macro.create"] = new Promise(r => { release = r; });
+  const from = mark();
+  let both;
+  try {
+    both = Promise.all([game.pentaryn.walls.makeMacro("undo"), game.pentaryn.walls.makeMacro("undo", 3)]);
+    await flush();
+  } finally {
+    release();
+    delete F.hold["Macro.create"];
+  }
+  const [a, b] = await both;
+  assert.equal(game.macros.contents.filter(m => m.name === "Walls: undo").length, 1, "one macro, not two");
+  assert.equal(a, b, "the loser re-reads the winner's macro");
+  assert.equal(a.id, "pwmacroundo00000", "the id is fixed per action");
+  assert.deepEqual(since(from, "Macro.create").map(c => [c.data._id, c.options]),
+    [["pwmacroundo00000", { keepId: true }], ["pwmacroundo00000", { keepId: true }]]);
+  assert.deepEqual(since(from, "assignHotbarMacro").map(c => [c.name, c.slot]), [["Walls: undo", null], ["Walls: undo", 3]]);
+  // Afterwards the id lookup finds it: no third create.
+  const again = mark();
+  assert.equal(await game.pentaryn.walls.makeMacro("undo"), a);
+  assert.equal(since(again, "Macro.create").length, 0);
 });

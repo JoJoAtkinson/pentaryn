@@ -6,6 +6,10 @@
 (`flagScope` stays `wall-autocomplete`), `languages`, `minimum: "14"`, `verified: "14.369"` and the
 description fix; the flag-scope migration is **parked** while walls stays off (Joe).
 
+- **[declared] One hotbar macro per action, however many calls race** (`walls-async-2`): two
+  overlapping `makeMacro` calls (the same tab or two GM tabs) each created a `Walls: <action>` macro.
+  The macro now has a fixed id per action (`pwmacro<action>`, padded to 16) created with `keepId`;
+  the call that loses the id re-reads the winner's macro. A macro made earlier is still found by name.
 - **[declared] The API manifest names every flag a run writes** (`walls-M11`): `describe()` listed
   `run`'s writes as `generated`/`run`/`rule`/`moves`, missing the `kind` and `sources` stamped on created
   walls; it now lists `generated`, `run`, `rule`, `kind`, `sources` and `moves.<run>` (`priorC` is

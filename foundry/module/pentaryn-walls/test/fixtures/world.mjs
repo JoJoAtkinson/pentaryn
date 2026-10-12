@@ -71,11 +71,18 @@ export async function wallsWorld({ isGM = true } = {}) {
     getWhisperRecipients: role => (role === "GM" ? [gm] : []),
   };
   F.game.macros = new StubCollection();
+  // `{keepId: true}` keeps the given `_id`; a second create of a stored id is refused the way
+  // Foundry's server refuses it. `F.hold["Macro.create"]` parks every create (two overlapping
+  // calls, or two GM tabs, both past the lookup — walls-async-2).
   globalThis.Macro = {
-    create: async data => {
-      const macro = makeDoc("Macro", data);
+    create: async (data, options = {}) => {
+      F.calls.push({ op: "Macro.create", data: F.plain(data), options: F.plain(options) });
+      if (F.hold?.["Macro.create"]) await F.hold["Macro.create"];
+      const { _id, ...rest } = data;
+      const id = options.keepId ? _id : undefined;
+      if (id && F.game.macros.has(id)) throw new Error(`The Macro [${id}] already exists in the database`);
+      const macro = makeDoc("Macro", id ? { ...rest, id } : rest);
       F.game.macros.set(macro.id, macro);
-      F.calls.push({ op: "Macro.create", data: F.plain(data) });
       return macro;
     },
   };
