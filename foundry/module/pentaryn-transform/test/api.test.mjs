@@ -116,3 +116,16 @@ test("every patch record names an adjustments row; no settings; selftest passes 
   const st = api.selftest();
   assert.equal(st.ok, true, JSON.stringify(st.checks));
 });
+
+test("describe() enums match the implementation tables (revert reasons, constellations, starry.end reasons)", async () => {
+  const { RETURN_LINES } = await import("../wildshape-adapter.mjs");
+  const { CONSTELLATIONS, starryEndKey } = await import("../transform-core.mjs");
+  const quoted = type => [...type.matchAll(/'([^']+)'/g)].map(m => m[1]);
+  const row = (rows, path) => rows.find(r => r.path === path);
+  assert.deepEqual(quoted(row(MANIFEST.rows, "revert").params[1].type).sort(), Object.keys(RETURN_LINES).sort());
+  assert.deepEqual(quoted(row(STARRY_ROWS, "starry.assume").params[1].type), [...CONSTELLATIONS]);
+  assert.deepEqual(quoted(row(STARRY_ROWS, "starry.constellation").returns), [...CONSTELLATIONS]);
+  const endReasons = quoted(row(STARRY_ROWS, "starry.end").params[1].type);
+  assert.equal(new Set(endReasons.map(starryEndKey)).size, endReasons.length);
+  assert.equal(endReasons.length, 3);
+});
