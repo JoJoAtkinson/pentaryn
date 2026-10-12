@@ -1,6 +1,6 @@
 /**
- * Finding -13 (standalone): the deleteToken / deleteActor hooks walk the world's spell lights at
- * most once per burst, and not at all for a linked token. The frozen light-gm-hooks golden proves
+ * Finding -13 (standalone): the deleteToken / deleteActor / deleteItem hooks walk the world's spell
+ * lights at most once per burst, and not at all for a linked token. The frozen light-gm-hooks golden proves
  * the same sources are still queued; this file counts the walks.
  */
 import { test, mock } from "node:test";
@@ -45,4 +45,16 @@ test("a linked token's deletion does not walk at all", () => {
   const hero = game.scenes.contents[1].tokens.find(t => t.actorLink);
   F.fire("deleteToken", hero, {});
   assert.equal(walks, 0);
+});
+
+test("a batch deleteItem of three uncast items walks the scenes once, and a lit source is still queued", async () => {
+  const stake = game.scenes.contents[0].tokens.find(t => t.name === "Stake");
+  const source = "Actor.actGone0000000001.Item.itmGone000000001";
+  stake.flags["pentaryn-senses"] = { ...(stake.flags["pentaryn-senses"] ?? {}), spellLight: { source, prior: { dim: 0, bright: 0 } } };
+  const items = [source, "Actor.a.Item.x1", "Actor.a.Item.x2"].map((uuid, i) => ({ id: `x${i}`, uuid, flags: {} }));
+  walks = 0;
+  for (const item of items) F.fire("deleteItem", item);
+  assert.equal(walks, scenes, "one walk for the whole batch");
+  await settle(mock);
+  assert.equal(stake.flags["pentaryn-senses"]?.spellLight, undefined, "the lit source was queued and its light ended");
 });

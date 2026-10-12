@@ -437,7 +437,8 @@ export function install(reg, ctx) {
   });
   on("deleteItem", (item) => {
     if (!isActiveGM()) return;
-    if (readSpellCast(item) || anyLitBy(item.uuid)) queue(item.uuid);
+    // the burst memo (finding -13): a batch delete of N items walks the world once, not N times
+    if (readSpellCast(item) || sourcesNow().has(item.uuid)) queue(item.uuid);
   });
   on("createToken", (token) => {
     if (!isActiveGM()) return;
