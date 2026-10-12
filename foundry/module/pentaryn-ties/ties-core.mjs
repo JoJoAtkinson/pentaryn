@@ -49,7 +49,17 @@ export const NOTES_MAX = 4000;
  */
 export const WORD_MAX = 120;
 
-const num = (v, d) => (Number.isFinite(Number(v)) ? Math.round(Number(v)) : d);
+/*
+ * A number, or a numeric string (a form field), rounded; anything else takes the default. Typed
+ * first: `Number(null | "" | [] | false)` is 0 and `Number(true)` is 1, so the old
+ * `Number.isFinite(Number(v))` read a missing strength as 1 — the weakest tie — instead of the
+ * default 3 (fixed, declared).
+ */
+const num = (v, d) => {
+  if (typeof v === "number") return Number.isFinite(v) ? Math.round(v) : d;
+  if (typeof v === "string" && v.trim() !== "" && Number.isFinite(Number(v))) return Math.round(Number(v));
+  return d;
+};
 export const clampStance = v => Math.max(-2, Math.min(2, num(v, 0)));
 export const clampStrength = v => Math.max(1, Math.min(5, num(v, 3)));
 export const clampNotes = v => (typeof v === "string" ? v.slice(0, NOTES_MAX) : "");

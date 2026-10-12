@@ -137,8 +137,7 @@ test(
 );
 
 test(
-  "clampStrength falls back to the default 3 for a non-number (today: null, \"\", [] and false clamp to 1, true to 1)",
-  { todo: "ties-api num() uses Number.isFinite(Number(v)), so Number(null|\"\"|[]|false) = 0 → clamped to 1, the weakest tie, instead of the default 3. A stored strength of null/\"\" reads as 1 on every card and sheet. Fix after S3 (ties-core clamps) as its own [declared] commit." },
+  "clampStrength falls back to the default 3 for a non-number [declared, fixed] (before: null, \"\", [] and false clamped to 1, true to 1)",
   () => {
     for (const v of [null, "", [], false]) assert.equal(API.clampStrength(v), 3, JSON.stringify(v));
   }
