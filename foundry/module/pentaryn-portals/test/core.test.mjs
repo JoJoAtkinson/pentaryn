@@ -214,3 +214,20 @@ test("EXT-2: TELEPORT_TYPE and a frozen NEW_TELEPORT_BEHAVIOR in core; no 'telep
     assert.equal(n, file === "portals-core.mjs" ? 1 : 0, `${file}: ${n} 'teleportToken' literal(s)`);
   }
 });
+
+// [declared] EXT-4: every card flag path goes through the kit's flagPath(MODULE, key) — no hand-built
+// `flags.${MODULE}.<key>` strings in cards.mjs, card-app.mjs or scene-adapter.mjs (or anywhere else).
+test("EXT-4: card flag paths come from flagPath(MODULE, key); no hand-built `flags.${MODULE}.` strings", async () => {
+  const { readFileSync, readdirSync } = await import("node:fs");
+  const files = readdirSync(ROOT).filter(f => f.endsWith(".mjs"));
+  for (const want of ["cards.mjs", "card-app.mjs", "scene-adapter.mjs"]) {
+    assert.ok(files.includes(want), want);
+    assert.match(readFileSync(new URL(want, ROOT), "utf8"), /import \{[^}]*\bflagPath\b[^}]*\} from "\.\/lib\/flags\.mjs"/, `${want} imports flagPath`);
+  }
+  for (const file of files) {
+    const n = (readFileSync(new URL(file, ROOT), "utf8").match(/flags\.\$\{MODULE\}/g) ?? []).length;
+    assert.equal(n, 0, `${file}: ${n} hand-built flags.\${MODULE} path(s)`);
+  }
+  const { flagPath } = await import("../lib/flags.mjs");
+  assert.equal(flagPath(core.MODULE, "img"), "flags.pentaryn-portals.img");
+});

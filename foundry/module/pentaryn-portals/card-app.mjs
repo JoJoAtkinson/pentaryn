@@ -146,11 +146,11 @@ export class PortalCard extends foundry.applications.api.ApplicationV2 {
     const guard = deps.guard;
     const dest = fromUuidSync(card.dataset.uuid);
     const setImg = guard("card image pick", async path => {
-      await dest.update({ [`flags.${MODULE}.img`]: path });
+      await dest.update({ [flagPath(MODULE, "img")]: path });
       card.querySelector(".ppt-thumb").src = cardFor(dest).img;
     });
     for (const input of card.querySelectorAll("[data-f]")) {
-      input.addEventListener("change", guard("card field", () => dest.update({ [`flags.${MODULE}.${input.dataset.f}`]: input.value })));
+      input.addEventListener("change", guard("card field", () => dest.update({ [flagPath(MODULE, input.dataset.f)]: input.value })));
     }
     card.querySelector('[data-act="snap"]').addEventListener("click", guard("card snapshot", async () => {
       await snapshot(dest);
