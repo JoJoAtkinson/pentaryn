@@ -108,6 +108,28 @@ test("the bug button opens the dialog, Bug selected, with the help text on each 
   assert.equal(ReportDialog.current, null);
 });
 
+test("feedback-EXT-7: 'What gets attached' has one row per report section, the two rings included", async () => {
+  const { ATTACH_ROWS } = await import("../dialog.mjs");
+  const { LIST_SECTIONS, OBJECT_SECTIONS } = await import("../feedback-core.mjs");
+  assert.ok(Array.isArray(ATTACH_ROWS), "dialog.mjs exports ATTACH_ROWS");
+  const rows = ATTACH_ROWS.map(r => r.section);
+  assert.equal(new Set(rows).size, rows.length, "one row per section");
+  assert.deepEqual(new Set(rows), new Set([...OBJECT_SECTIONS, ...LIST_SECTIONS, "actions", "errors"]),
+    "a new report section needs its own attach row");
+  await api.open();
+  await settle();
+  const app = F.rendered.at(-1);
+  const items = [...app.html.matchAll(/<li>(.*?)<\/li>/g)].map(m => m[1]);
+  assert.equal(items.length, ATTACH_ROWS.length);
+  for (const line of [
+    "The world, game system and Foundry versions",
+    "0 selected and 0 targeted tokens (names and hit points)",
+    "The combat round and turn, if a fight is running",
+    "Your browser, window size, language and time zone",
+  ]) assert.ok(items.includes(line), `missing attach row: ${line}`);
+  await app.close();
+});
+
 /* ── /bug ────────────────────────────────────────────────────────────── */
 
 test("/bug <text> opens the dialog pre-filled and is not posted; other chat passes", async () => {

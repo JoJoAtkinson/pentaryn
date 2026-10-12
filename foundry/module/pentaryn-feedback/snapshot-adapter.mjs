@@ -146,6 +146,8 @@ export function attachSummary(snap, { actions = 0, errors = 0 } = {}) {
   return {
     user: snap?.user?.name ?? null,
     scene: snap?.scene?.viewed?.name ?? null,
+    controlled: Array.isArray(snap?.tokens?.controlled) ? snap.tokens.controlled.length : 0,
+    targeted: Array.isArray(snap?.tokens?.targeted) ? snap.tokens.targeted.length : 0,
     actions, errors,
     chat: Array.isArray(snap?.chat) ? snap.chat.length : 0,
     windows: Array.isArray(snap?.windows) ? snap.windows.length : 0,

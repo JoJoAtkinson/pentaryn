@@ -17,7 +17,10 @@ tools read one at a time.
   - Defect — "It works, just not the way you expect, so it comes across as a bug. If you don't know, pick Bug."
   - Feature — "100% new: it does not exist yet, like a new tab or a new subsystem."
 - A text box (4000 characters), a "What gets attached" fold-out, **Send report** (disabled while
-  empty) and **Cancel**.
+  empty) and **Cancel**. The fold-out has one row per section a report carries: name and role,
+  world/system/Foundry versions, viewed scene, selected and targeted tokens (names and hp), combat
+  round and turn, recent actions, recent errors, own chat, open windows, module versions and browser
+  details (user agent, viewport, language, time zone).
 - One toast: "Thanks — report <id> saved." or, with no GM online, "…will be sent when one connects."
 - `/bug <text>` in chat opens the dialog pre-filled and posts nothing.
 

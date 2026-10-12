@@ -2,6 +2,11 @@
 
 ## Unreleased — 2026-10-12 (W3L live-check fix; `module.json` stays 0.1.2, code-only sync)
 
+- **[declared] "What gets attached" lists every section a report carries** (feedback-EXT-7): the
+  fold-out left out the world/system/Foundry versions, the selected and targeted tokens, the combat
+  round/turn and the browser details. Rows now come from `ATTACH_ROWS` in `dialog.mjs`, one per
+  section (four new `Dialog.Attach.*` keys; `attachSummary` adds the token counts), and a test
+  refuses a section in `OBJECT_SECTIONS`/`LIST_SECTIONS` (or the two rings) without a row.
 - **[declared] The GM's report list reads files in parallel** (feedback-async-3 + perf-2):
   `readAll` awaited one GET per report file before starting the next, so `list`/`inspect` cost one
   round trip per filed report. It now keeps up to `LIMITS.readsInFlight` (6) GETs in flight and

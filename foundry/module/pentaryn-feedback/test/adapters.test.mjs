@@ -131,7 +131,9 @@ test("windowRow / attachSummary", () => {
   class ActorSheet5eCharacter {}
   assert.deepEqual(windowRow(Object.assign(new ActorSheet5eCharacter(), { id: "s1", title: "Caven" })), { id: "s1", cls: "ActorSheet5eCharacter", title: "Caven" });
   assert.deepEqual(attachSummary({ user: { name: "P" }, scene: { viewed: { name: "S" } }, chat: [1], windows: [1, 2], modules: [] }, { actions: 4, errors: 1 }),
-    { user: "P", scene: "S", actions: 4, errors: 1, chat: 1, windows: 2, modules: 0 });
+    { user: "P", scene: "S", controlled: 0, targeted: 0, actions: 4, errors: 1, chat: 1, windows: 2, modules: 0 });
+  assert.deepEqual(attachSummary({ tokens: { controlled: [1, 2], targeted: [1] } }),
+    { user: null, scene: null, controlled: 2, targeted: 1, actions: 0, errors: 0, chat: 0, windows: 0, modules: 0 });
 });
 
 test("snapshot: one bad row (a window whose title getter throws, an unreadable chat message) is a row with an error, not a lost section", () => {

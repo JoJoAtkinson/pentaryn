@@ -17,6 +17,33 @@ const { ApplicationV2 } = foundry.applications.api;
 
 const esc = s => foundry.utils.escapeHTML(String(s ?? ""));
 
+/**
+ * The "What gets attached" fold-out: one row per section a report carries (core's OBJECT_SECTIONS
+ * and LIST_SECTIONS, plus the actions and errors rings), in report order. A test refuses a section
+ * without a row. `line(summary)` reads attachSummary's counts.
+ */
+export const ATTACH_ROWS = Object.freeze([
+  { section: "user", line: s => _loc("PENTARYN_FEEDBACK.Dialog.Attach.User", { name: s.user ?? "?" }) },
+  { section: "world", line: () => _loc("PENTARYN_FEEDBACK.Dialog.Attach.World") },
+  {
+    section: "scene",
+    line: s => (s.scene
+      ? _loc("PENTARYN_FEEDBACK.Dialog.Attach.Scene", { name: s.scene })
+      : _loc("PENTARYN_FEEDBACK.Dialog.Attach.NoScene")),
+  },
+  {
+    section: "tokens",
+    line: s => _loc("PENTARYN_FEEDBACK.Dialog.Attach.Tokens", { controlled: s.controlled ?? 0, targeted: s.targeted ?? 0 }),
+  },
+  { section: "combat", line: () => _loc("PENTARYN_FEEDBACK.Dialog.Attach.Combat") },
+  { section: "actions", line: s => _loc("PENTARYN_FEEDBACK.Dialog.Attach.Actions", { n: s.actions ?? 0 }) },
+  { section: "errors", line: s => _loc("PENTARYN_FEEDBACK.Dialog.Attach.Errors", { n: s.errors ?? 0 }) },
+  { section: "chat", line: s => _loc("PENTARYN_FEEDBACK.Dialog.Attach.Chat", { n: s.chat ?? 0 }) },
+  { section: "windows", line: s => _loc("PENTARYN_FEEDBACK.Dialog.Attach.Windows", { n: s.windows ?? 0 }) },
+  { section: "modules", line: s => _loc("PENTARYN_FEEDBACK.Dialog.Attach.Modules", { n: s.modules ?? 0 }) },
+  { section: "client", line: () => _loc("PENTARYN_FEEDBACK.Dialog.Attach.Client") },
+]);
+
 /** The localised strings and state the markup is built from. */
 export function dialogView({ draft = {}, summary = {} } = {}) {
   const d = draftFrom(draft);
@@ -25,17 +52,7 @@ export function dialogView({ draft = {}, summary = {} } = {}) {
     legend: _loc("PENTARYN_FEEDBACK.Dialog.Legend"),
     placeholder: _loc("PENTARYN_FEEDBACK.Dialog.Placeholder"),
     attachTitle: _loc("PENTARYN_FEEDBACK.Dialog.Attach.Title"),
-    attach: [
-      _loc("PENTARYN_FEEDBACK.Dialog.Attach.User", { name: summary.user ?? "?" }),
-      summary.scene
-        ? _loc("PENTARYN_FEEDBACK.Dialog.Attach.Scene", { name: summary.scene })
-        : _loc("PENTARYN_FEEDBACK.Dialog.Attach.NoScene"),
-      _loc("PENTARYN_FEEDBACK.Dialog.Attach.Actions", { n: summary.actions ?? 0 }),
-      _loc("PENTARYN_FEEDBACK.Dialog.Attach.Errors", { n: summary.errors ?? 0 }),
-      _loc("PENTARYN_FEEDBACK.Dialog.Attach.Chat", { n: summary.chat ?? 0 }),
-      _loc("PENTARYN_FEEDBACK.Dialog.Attach.Windows", { n: summary.windows ?? 0 }),
-      _loc("PENTARYN_FEEDBACK.Dialog.Attach.Modules", { n: summary.modules ?? 0 }),
-    ],
+    attach: ATTACH_ROWS.map(r => r.line(summary)),
     never: _loc("PENTARYN_FEEDBACK.Dialog.Attach.Never"),
     submit: _loc("PENTARYN_FEEDBACK.Dialog.Submit"),
     cancel: _loc("PENTARYN_FEEDBACK.Dialog.Cancel"),
