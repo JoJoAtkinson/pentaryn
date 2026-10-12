@@ -527,13 +527,14 @@ The structural steps absorb -25, -26, -29 (W7), -31 (ADJ), -33, the C24 part of 
 
 | | |
 |---|---|
-| Live score after the migration | **87.0 % (40 / 46 fail-class rules)** — `conformance.py --module portals` at `4d6f0c4b` (checkpoint 67.4 %, wave-3-base 58.1 %) |
+| Live score after the migration | **91.3 % (42/46)** at `8d3d7736`, after the integrator's adjustments rows (`b3812eda`); fails C07, C09, C37, C51 (all Wave 7). Lane end 87.0 %, checkpoint 67.4 %, wave-3-base 58.1 % |
 | Date | 2026-10-11 (code phase; nothing synced) |
 | Commits | characterisation: `2b412b0a` `49b2484d` `a73d7ad1` `0ca63b97` · S2 oracle `a5a52410` · refactor: S2 `ff66ad35` (+ todo flip `b870dc71`), S3 `f6bbd2dc`, S4 `38c366fd`, S5 `66cb60ae`, S6 `bf362fd4`, D-P1 `d132395c`, S7 `2e15ab61`, S8 `186cdfb1` · standalone: -32 additions `fe8938fe`, hygiene `a3ade332`, -36 `477e39e2`, -27 `6d2785e4` + `6b892145`, D-P3 `0f06790a`, D-P4 `0fe9e4b8`, D-P5 `59a1e99b` + `413fed02`, -43 `ae936c07` + D-P6 `8a060d21`, -38 `b87d8c15`, gate fix `4d6f0c4b` · standalone pass 2 (2026-10-11): -27 rest `09ec04f9` (unawaited draws) + `7f50014c` (badge menu), -33 guard `14f86c48`, -36 README note `24cc1b58`, **[declared] C59** `be2573e3` (switches) + `5c34cda8` (unlink), C59 scan `05b79e3e`, CHANGELOG `aa43f188` |
 | Declared changes handed to the live-test workflow | D-P1, S7, D-P3, D-P4, D-P5, D-P6, -27 snapshot message, C59 batches (session: not yet run) |
 | `module.json` edits appended to `wave7-restart-batch.md` | no — returned to the integrator (shared file); the existing portals row needs four additions (below) · **done by the wave-3 integrator** (`d83d0b11`): the batch row carries the full edit; `module.json` itself waits for the Wave 7 restart |
 | Adjustments rows appended to `adjustments-batch.md` | no — returned to the integrator (shared file); two corrections to the existing rows (below) · **landed by the wave-3 integrator** in `foundry/adjustments.yml` (`b3812eda`), marked in `adjustments-batch.md` (`b631badf`) |
-| Still failing, and why | C07, C09, C37, C51 → W7 (`module.json` flags/recommends/cssPrefix, `lang/`); C32, C47 → the ADJ batch (rows still name `portals.mjs`; no item-piles row). Warn: C06w (W7 styles move), C36 (W7 i18n). C59 passes since `05b79e3e` (the two loops batch, [declared] `be2573e3`, `5c34cda8`) |
+| Still failing, and why | C07, C09, C37, C51 → Wave 7 (`module.json` flags/recommends/cssPrefix, `lang/`). C32/C47 closed by `b3812eda`. Warn: C06w (Wave 7 styles move), C36 (Wave 7 i18n). C59 passes since `05b79e3e` (at `8d3d7736`, wave-3 code-phase close) |
+| Wave 3 close (code phase, 2026-10-11) | `node test/run.mjs` 191 pass + legacy 52. Frozen-test diff since `0ca63b97`: 32 files (14 new, 18 changed). Untagged pin flip to treat as declared: `a3ade332` (clear-image `-=img` → `_del`). Coverage (node:test, lcov merged per file) 100 / 97.80 / 100 over 2 files → **99.51 / 96.19 / 97.89** over 10. Shared files landed: adjustments `b3812eda` (-31 closed), `scene-links.md` and `markers.md` `e0444215` (-38 table), index `e064e930`, Wave 7 row `d83d0b11`. Open for Joe: W3-P1, W3-P2 (W3-P3 closed). Live checks: [`wave-3-live-plan.md`](wave-3-live-plan.md). Record: [`wave-3-report.md`](wave-3-report.md) §Per module |
 
 ### Wave 3 migration notes (2026-10-11)
 

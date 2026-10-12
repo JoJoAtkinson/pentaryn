@@ -501,14 +501,15 @@ stays drawn; `game.pentaryn.creatures.status().patchedWith` is `"libWrapper"` or
 
 | | |
 |---|---|
-| Live score after the migration | **89.6 % (43/48)** at `cb77746` — `conformance.py --module creatures`. Against a snapshot with the integrator's adjustments rows: 93.8 % (45/48); plus the Wave 7 `module.json`: **100 % (48/48)** (both verified with `--snapshot`) |
+| Live score after the migration | **93.8 % (45/48)** at `8d3d7736`, after the integrator's adjustments rows (`f8e50927`); fails C07, C09, C37 (Wave 7). Lane end 89.6 % (`cb77746`), checkpoint 64.4 %, wave-3-base 57.8 % |
 | Date | 2026-10-11 |
 | Commits | characterisation: `6d36df2` (kit) + `6e4c7d7` (checkpoint) · refactor: `fdab0bf` (step 2, -30) · `f3085ab` (3) · `b461208` (4) · `90ea129` (5, structural) · `9c57142` (5, wrapMethod, **[declared] C-D1** text) · `a019151` (6) · `ef2578d` (7, **[declared] C-D2**) · `349ee86` (8, **[declared] C-D4**) · `5489890` (9) · `84d52ee` (10, self-activating manifest pins) · `cb77746` (hot-patch test) · standalone, one pin each: `cdb694e` (-29, C-D1) · `008647a` (-31 syncScene, C-D3) · `54f2d1b` (-31 ownerSees, C-D3) · `a8d5ead` (-31 `status()`, C-D3) · `4b0ebf7` (-26, C-D5) · `2f844f6` (-25, C-D6) · `a6a0d54` (-27, C-D7) · `23fa387` (-40, C-D8) · `61216f3` (`inspect()`, C-D3; C29) |
 | Tests | `node test/run.mjs`: 101 pass, 2 skipped (the step-10 manifest pins, until Wave 7), 0 todo; legacy core suite 73/73. `vendor.py check creatures` ✓. `module-check creatures` (parse, imports, i18n, node-test, vendor, conformance) ✓ |
 | Declared changes handed to the live-test workflow | C-D1 … C-D8 (§5) plus `inspect()` (C-D3); not yet run |
 | `module.json` edits appended to `wave7-restart-batch.md` | no — the creatures row there already holds them; returned to the integrator with the exact `module.json` (`afterSync` = the ModuleSpec tuple verbatim, which the same commit deletes from `config.py`) and the `git mv creatures.css styles/creatures.css` · **done by the wave-3 integrator** (`d83d0b11`): the batch row carries the full edit; `module.json` itself waits for the Wave 7 restart |
 | Adjustments rows appended to `adjustments-batch.md` | no — returned to the integrator (rewrite `creatures-libwrapper`; rename `creatures-strip-over-argon` → `argon-creatures-strip-float` pointing at `strip.mjs`; add `itempiles-creatures-pile-flag`). Until they land, `test_the_real_registry_matches_the_code` reports the two creatures rows (their markers left `creatures.mjs`) · **landed by the wave-3 integrator** in `foundry/adjustments.yml` (`f8e50927`), marked in `adjustments-batch.md` (`b631badf`) |
-| Still failing, and why | C07, C09, C37 (+ C06w): Wave 7 `module.json`. C32, C47: the adjustments rows above |
+| Still failing, and why | C07, C09, C37 (+ C06w): Wave 7 `module.json`. C32/C47 closed by `f8e50927` (at `8d3d7736`, wave-3 code-phase close) |
+| Wave 3 close (code phase, 2026-10-11) | Review fix after the lane: `6bc62f3a` (`ownerSees(null)` answers false without spending the override's warn-once; `test/glue-owner-sees-input.test.mjs`). `node test/run.mjs` 105 (103 pass, 2 skipped manifest pins until Wave 7) + legacy 73. Frozen-test diff since `6e4c7d7c`: 15 files (11 new, 4 changed), every change in a named [declared] commit. Coverage (node:test, lcov merged per file) 100 / 90.42 / 92.75 over 2 files → **99.73 / 95.19 / 99.08** over 10. Open for Joe: W3-C1 (C-L1). Record: [`wave-3-report.md`](wave-3-report.md) §Per module |
 
 **Deviations from the guide.**
 
