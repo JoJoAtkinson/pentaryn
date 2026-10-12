@@ -1,0 +1,17 @@
+{
+  "version": "1.0.2",
+  "tier": "full",
+  "files": [
+    "errors",
+    "log",
+    "hooks",
+    "publish",
+    "resolve",
+    "settings",
+    "api",
+    "queries",
+    "election",
+    "patch",
+    "flags"
+  ]
+}
