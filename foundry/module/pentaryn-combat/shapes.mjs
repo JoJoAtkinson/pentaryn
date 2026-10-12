@@ -358,13 +358,12 @@ export function fullAttackPlanOf(actor, { weaponId = null, turn = null, inCombat
 
 /**
  * What api.plan answers: the Full Attack plan for this actor and weapon (the remembered or default
- * one when none is given). `multiattackOn` is setting multiattack. The expression order is the old
- * api.plan's, so a bad ref fails the way it did until S11 resolves refs (combat-riders-12 KNOWN).
+ * one when none is given). `multiattackOn` is setting multiattack.
  */
 export function planFor(actor, weaponId = null, { multiattackOn = true } = {}) {
   const ctx = combatContext(actor);
   weaponId ??= chosenWeapon(actor);
-  const ma = (actor.type === "npc" || actor.isPolymorphed) && multiattackOn ? multiattackOf(actor) : null;
+  const ma = multiattackFor(actor, { enabled: multiattackOn });
   const pick = ma ? { "*": rememberedWeapon(actor) } : null;
   return fullAttackPlanOf(actor, { weaponId, turn: turnOf(actor), inCombat: ctx.inCombat, multiattack: ma, count: ma ? ma.total : countFor(actor, weaponId), pick });
 }

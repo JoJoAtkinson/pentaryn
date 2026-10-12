@@ -5,7 +5,7 @@
  * this file through `ctx.exposed` (what each passed to `ctx.expose()` in its install()):
  *   carried  syncLight, carriedLight, syncAll
  *   migrate  resetSight
- *   light    light  = { cast, end, pick, toggle, hood, profileFor, sweep, setup, onMe, prompt, reconcile }
+ *   light    light  = { cast, end, pick, toggle, hood, profileFor, sweep, setup, onMe, prompt, reconcile, recent }
  *   chain    chain  = { link, break, links, repaint }
  * The functions are published as they are (no wrappers), so their names are today's.
  */

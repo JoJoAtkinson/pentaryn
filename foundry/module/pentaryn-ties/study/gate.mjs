@@ -23,8 +23,7 @@ import {
   STUDIED_FLAG
 } from "../known-core.mjs";
 import { applyPlayerWrites, putBelief, readBelief } from "./apply.mjs";
-import { concealmentFor } from "./cascade.mjs";
-import { beliefsOf, resolveFact, studiedOf, studyTiersOf } from "./resolve.mjs";
+import { beliefsOf, concealmentFor, resolveFact, studiedOf, studyTiersOf } from "./resolve.mjs";
 import { esc } from "./shared.mjs";
 import { readFlag } from "../lib/flags.mjs";
 import { setting } from "../settings.mjs";

@@ -18,7 +18,7 @@ import { emitter } from "./lib/hooks.mjs";
 import { makeLog } from "./lib/log.mjs";
 import { attackActivityOf, weaponsOf, updateTurn, focusLeft, flurryActivity, unarmedStrike, turnOf, damageLabel, rememberWeapon, planFor } from "./shapes.mjs";
 import { openRollResolvers, isOrphanCard } from "./dialog-adapter.mjs";
-import { choose, hide, onceCancel, picking, show, update, waitChoice } from "./strip.mjs";
+import { cancelWaits, choose, hide, onceCancel, picking, show, update, waitChoice } from "./strip.mjs";
 import { quickMode, setQuickMode, setting } from "./settings.mjs";
 
 const log = makeLog(MODULE);
@@ -383,6 +383,7 @@ export function abortFor(actor) {
     current.abort = true;
     closeSwingWindow();
     choose({ type: "stop" });
+    cancelWaits();   // a fallback Retarget wait (pickTarget) settles too
   }
 }
 

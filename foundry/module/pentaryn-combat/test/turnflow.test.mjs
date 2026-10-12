@@ -1,5 +1,5 @@
-// turnflow.mjs on the active GM's client (guide S6c: turnflow/{action-buttons, boundaries, cleanup,
-// helper-token, dialogs, death, portrait, effects, drawers, movement}.mjs + patches.mjs). Each hook
+// turnflow.mjs on the active GM's client (guide S6c: turnflow/{action-buttons, boundaries,
+// helper-token, dialogs, death, portrait, effects, drawers, movement, manual-dice}.mjs + patches.mjs). Each hook
 // is driven as Foundry / dnd5e / Argon fire it and its effect pinned; the five prototype patches
 // are pinned before/after on stub classes (combat-riders-7, -8 oracles). The player-only branches of
 // the turn boundary are in turnflow-player.test.mjs.
@@ -202,6 +202,22 @@ test("the Reaction slot's click with no use (cancelled) forgets the tag and spen
   A.ARGON.components.main = [new A.ActionPanel({ label: "DND5E.Action" }), reaction];
   F.Hooks.callAll("renderActionPanelArgonComponent", reaction, reaction.element, fig);
   await slot._onLeftClick({});
+  assert.equal(seq.taggedKind(act.uuid), null);
+  assert.equal(reaction.isActionUsed, false);
+  assert.equal(F.listeners("dnd5e.postUseActivity"), 2, "its temporary hook is gone (setup's and turnflow's remain)");
+});
+
+test("the Reaction slot's click that throws (no use) still forgets the tag", async () => {
+  onTurn(fig);
+  const slot = new A.DND5eItemButton({ item: fig.items.get("dagger0000000001"), isWeaponSet: true });
+  const act = [...fig.items.get("dagger0000000001").system.activities.values()][0];
+  slot._activity = act;
+  Object.defineProperty(slot, "actor", { get: () => fig });
+  const reaction = new A.ActionPanel({ label: "DND5E.Reaction", buttons: [slot] });
+  A.ARGON.components.main = [new A.ActionPanel({ label: "DND5E.Action" }), reaction];
+  slot._onLeftClick = async () => { throw new Error("argon"); };
+  F.Hooks.callAll("renderActionPanelArgonComponent", reaction, reaction.element, fig);
+  await assert.rejects(slot._onLeftClick({}), /argon/);
   assert.equal(seq.taggedKind(act.uuid), null);
   assert.equal(reaction.isActionUsed, false);
   assert.equal(F.listeners("dnd5e.postUseActivity"), 2, "its temporary hook is gone (setup's and turnflow's remain)");
@@ -830,7 +846,7 @@ test("Argon's drawers open above their own button (golden/turnflow-drawers.json)
   button2.element._rect = { left: 400, top: 650, width: 40, height: 40 };
   doc.flushFrames();
   rows.push({ label: "restored drawer", before: notYet, after: drawer2.element.style.left });
-  // placeOpenDrawers (hud.mjs calls it after a recompose)
+  // placeOpenDrawers (hud/bars.mjs calls it after a recompose)
   drawer2.element.style.left = "";
   turnflow.placeOpenDrawers({ _buttons: [button2, button, null, { panel: null }] });
   doc.flushFrames();

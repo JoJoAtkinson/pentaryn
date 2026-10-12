@@ -7,6 +7,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { pinJSON, sourceScan } from "./kit/harness.mjs";
 import * as core from "../combat-core.mjs";
+import { MANIFEST } from "../api-manifest.mjs";
 
 const ROOT = new URL("..", import.meta.url);
 const lang = JSON.parse(readFileSync(new URL("../lang/en.json", import.meta.url), "utf8"));
@@ -58,6 +59,18 @@ test("riders: Name / Rule for each rider; Check for each hint code; Mode and Tog
   assert.deepEqual([...checks].sort(), ["advantage", "ally", "noDisadvantage", "raging", "reckless"]);
   for (const c of checks) assert.ok(has(`PENTARYN_COMBAT.Rider.Check.${c}`), c);
   for (const m of ["ask", "auto"]) for (const fam of ["Mode", "ToggleHint"]) assert.ok(has(`PENTARYN_COMBAT.Rider.${fam}.${m}`), `${fam}.${m}`);
+});
+
+test("the manifest RIDER type lists exactly the TURN_RIDERS keys", () => {
+  // README "Extending → A turn rider": a TURN_RIDERS row plus strings is the whole job, so a fifth row
+  // must not leave describe()'s rider param stale (api-manifest.mjs spells the keys out by hand).
+  const want = core.TURN_RIDERS.map(r => JSON.stringify(r.key)).join("|");
+  for (const path of ["riderMode", "setRiderMode", "rollRider"]) {
+    const row = MANIFEST.rows.find(r => r.path === path);
+    assert.ok(row, path);
+    const rider = row.params.find(p => p.name === "key");
+    assert.equal(rider?.type, want, path);
+  }
 });
 
 test("follow-ups: FollowUp / FollowUpText for every kind core.followUps offers (with offhand-dual-wielder); a runFollowUp branch for each", () => {
