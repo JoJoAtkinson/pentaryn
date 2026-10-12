@@ -50,7 +50,8 @@ test("version and contract; the five legacy methods keep their order", () => {
   assert.equal(api.contract, "pentaryn-attunement/api@1");
   assert.deepEqual(Object.keys(api).slice(0, 5), ["report", "computeSlots", "stash", "releaseAway", "away"]);
   assert.deepEqual(api.describe().flags.writes,
-    ["flags.pentaryn-attunement.slots", "flags.pentaryn-attunement.away", "flags.pentaryn-attunement.bond"]);
+    ["flags.pentaryn-attunement.slots", "flags.pentaryn-attunement.away", "flags.pentaryn-attunement.bond",
+      "flags.pentaryn-attunement.claims.coinBack", "flags.pentaryn-attunement.claims.home"]);   // [declared] EXT-6
 });
 
 test("describe() reports the hook labels and the tooltip patch row", () => {

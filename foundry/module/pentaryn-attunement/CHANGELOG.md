@@ -4,6 +4,10 @@
 
 The version stays 0.3.0 until the next `module.json` restart batch (code only: sync + reload).
 
+- **[declared] EXT-6:** `describe().flags.writes` and the README Data written table now list the
+  item claim flags `flags.pentaryn-attunement.claims.coinBack` and `.claims.home` that
+  `claimDocument` writes (a separate `CLAIMS` list in the manifest; `stash`'s side effects are
+  unchanged). `test/flags-written.test.mjs` scans the sources so a new flag write cannot go unlisted.
 - **[declared] EC-5:** stashing an attuned item and a plain item of the same name (an attuned
   Torch, then a stack of Torches) now gives two copies in the box; the plain stack used to be folded
   into the bonded attuned copy, so it came home with the attuned item. `planStash` registers only
