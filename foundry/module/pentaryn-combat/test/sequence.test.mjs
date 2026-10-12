@@ -130,15 +130,14 @@ test("Adv / Dis: for the next swing only (adds, never removes), toggled off by a
   await run;
   await tick(400);
   const rolls = F.calls.filter(c => c.op === "activity.rollAttack");
-  // KNOWN (W4-C1, new in the wave-4 checkpoint): Dis pressed while swing 1's roll window is open is
-  // cleared by swing 1's "rolled" (sequenceReducer resets adv), so swing 2 — the "next swing" the
-  // strip's hint promises — rolls without it.
-  assert.deepEqual(rolls.map(r => [r.config, r.dialog]), [[{}, {}], [{}, { configure: true }]]);
+  // W4-C1 [declared] (was KNOWN): Dis pressed while swing 1's roll window is open applies to swing 2,
+  // the "next swing" the strip's hint promises; swing 1's own roll is untouched.
+  assert.deepEqual(rolls.map(r => [r.config, r.dialog]), [[{}, {}], [{ rolls: [{ options: { disadvantage: true } }] }, { configure: true }]]);
   reset(fig);
   F.calls.length = 0;
 });
 
-test("Adv / Dis pressed while a swing's roll window is open applies to the next swing", { todo: "W4-C1: flips the KNOWN pin above (a [declared] fix; Open for Joe)" }, async () => {
+test("Adv / Dis pressed while a swing's roll window is open applies to the next swing (W4-C1)", async () => {
   const a = act(fig, "longsword0000001");
   let release;
   a.script.attack.push(() => new Promise(r => { release = r; }), { total: 10 });

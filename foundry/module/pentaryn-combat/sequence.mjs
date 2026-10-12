@@ -349,7 +349,11 @@ export async function runSwings(actor, swings, { event = null, title = null, ori
       if (!rolls?.length) { dispatch({ type: "cancel" }); continue; }
       const r = rolls[0];
       current.lastAdv = r.hasAdvantage ? "advantage" : r.hasDisadvantage ? "disadvantage" : null;
+      // W4-C1 [declared]: Adv / Dis pressed while this swing's window was open is for the NEXT swing
+      // (what the strip's hint says); "rolled" clears the toggle, so it is put back for that swing.
+      const pressedDuringRoll = current.state.adv && current.state.adv !== s.adv ? current.state.adv : null;
       dispatch({ type: "rolled", crit: !!r.isCritical });
+      if (pressedDuringRoll) dispatch({ type: "adv", value: pressedDuringRoll });
     }
     return { rolled: current.state.rolled, status: current.state.status };
   } finally {
