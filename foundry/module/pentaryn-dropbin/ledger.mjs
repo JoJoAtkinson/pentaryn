@@ -6,7 +6,8 @@
  * source object, so `restore(n)` is faithful after the pile, actor or scene is long gone.
  *
  * Two capture paths, registered at `ready`:
- *   1. Item Piles' drop hook — an item dropped onto the canvas as a pile.
+ *   1. Item Piles' drop hook — an item dropped onto the canvas as a pile. Item Piles fires it on
+ *      every client, so only the active GM user's client records it (DB-AC-1), on the pile's scene.
  *   2. Core `preDeleteItem` — an item removed from a character sheet outright, captured in the
  *      PRE hook because after deletion the data is unreachable.
  *
@@ -21,7 +22,7 @@
 
 import {
   MODULE, DIR, FILE, DEDUPE_MS, MIRROR_DEBOUNCE_MS, makeEntry, normaliseDeltas, listLast, findEntry, searchLog,
-  briefOf, shouldCaptureDelete, restoreTarget,
+  briefOf, shouldCaptureDelete, restoreTarget, pileScene, isActiveGMSelf,
 } from "./dropbin-core.mjs";
 import { readLog, appendLedger, clearLog } from "./settings.mjs";
 import { dropHook, actorClassType, isValidItemPile } from "./piles.mjs";
@@ -95,8 +96,8 @@ function submit(entry) {
   return null;
 }
 
-function baseEntry(reason, actor, item, quantity) {
-  return makeEntry(reason, { actor, item, quantity, user: game.user, scene: canvas?.scene, now: Date.now() });
+function baseEntry(reason, actor, item, quantity, scene = canvas?.scene) {
+  return makeEntry(reason, { actor, item, quantity, user: game.user, scene, now: Date.now() });
 }
 
 /* ------------------------------------------------------------------- capture */
@@ -104,15 +105,20 @@ function baseEntry(reason, actor, item, quantity) {
 function registerCapture(reg) {
   const DROP = dropHook();
 
-  // 1. dropped onto the canvas as an Item Pile
+  // 1. dropped onto the canvas as an Item Pile. Item Piles calls the hook on every client
+  // (DB-AC-1): the active GM user records it — the corpses' runner rule — and the scene is the
+  // pile token's, not this client's canvas. Two tabs of that GM both record; the tail dedupe
+  // catches the second.
   if (DROP) {
     reg.on(DROP, (source, target, itemDeltas, position) => {
+      if (!isActiveGMSelf(game.users)) return;
       try {
         const actor = source?.actor ?? source;
+        const scene = pileScene(typeof target === "string" ? globalThis.fromUuidSync?.(target) : target);
         for (const d of normaliseDeltas(itemDeltas)) {
           const doc = d?.item ?? d;
           const obj = doc?.toObject ? doc.toObject() : foundry.utils.duplicate(doc ?? {});
-          const e = baseEntry("drop", actor, obj, Math.abs(d?.quantity ?? obj?.system?.quantity ?? 1));
+          const e = baseEntry("drop", actor, obj, Math.abs(d?.quantity ?? obj?.system?.quantity ?? 1), scene);
           e.x = position?.x ?? null;
           e.y = position?.y ?? null;
           e.pileUuid = target?.uuid ?? (typeof target === "string" ? target : null);

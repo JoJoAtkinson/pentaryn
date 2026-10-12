@@ -86,7 +86,7 @@ itemName, itemType, quantity, sceneId, sceneName, x, y, pileUuid, item}`.
 
 | Where | What | Who |
 |---|---|---|
-| world settings `log`, `counter` | the ledger | a GM client (players relay through socketlib) |
+| world settings `log`, `counter` | the ledger | drops: the active GM; deletes: a GM client (players relay through socketlib) |
 | `Data/assets/drop-bin/drop-log.json` | the mirror, ~2 s after a burst; `export()` at once | the recording GM |
 | token `flags.pentaryn-dropbin.corpse`, `.sight`, `.ownership` | our corpse, its sight and pre-death delta ownership | active GM |
 | token `delta.ownership`, `sight.enabled`; Item Piles pile flags | while a corpse | active GM |
@@ -125,9 +125,12 @@ and the four patches above get their own rows (`adjustments-batch.md`, dropbin s
 
 ## Two sessions / who writes
 
-- **Ledger:** players relay through socketlib (`executeAsGM`) to a GM; a GM records locally.
-  Appends on one client are serialised and coalesced (one counter + log write per burst). Two GM
-  tabs on the responsible account both receive a relay and both record it; they compute the same
+- **Ledger:** a drop onto the canvas (Item Piles' hook, which fires on every client) is recorded
+  by the active GM user only, on the pile token's scene, with that GM as the entry's user (the hook
+  does not say who dropped; `fromActorName` does) — DB-AC-1. A delete off a sheet is captured by
+  the deleting client; players relay it through socketlib (`executeAsGM`) to a GM, and a GM records
+  locally. Appends on one client are serialised and coalesced (one counter + log write per burst).
+  Two tabs of one GM account both record a drop and both receive a relay; they compute the same
   row, and the tail dedupe (same item, actor, quantity within 2 s) catches the sequential case.
 - **Corpses:** conversion, revival and the legacy migration run where `activeGM.isSelf` — every
   tab of the active GM account (see the wave-2 report, W2-D1).

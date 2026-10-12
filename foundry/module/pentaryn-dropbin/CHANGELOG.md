@@ -39,6 +39,10 @@ Declared changes:
 - `clear()` empties the log in the same queue as appends: an append in flight cannot write the
   old log back over the clear, and an append asked for after the clear lands after it (§5.9).
 
+- DB-AC-1: a drop onto the canvas is recorded by the active GM user only (Item Piles fires its drop
+  hook on every client, so a multi-item drop was recorded once per extra client), and the entry's
+  scene is the pile token's scene, not the recording client's view. The entry's user is that GM.
+
 Added: `list(n, { brief })`, `restoreResult`, `inspect`, `selftest` (items-journal-28).
 - A restore another module refuses (a `preCreateItem` veto) is `{ ok: false, reason: "not-created" }`
   from `restoreResult` and an error toast from `restore()`, which threw a TypeError before.

@@ -37,20 +37,22 @@ async function warnings(fn) {
   return lines;
 }
 const drop = () => Hooks.callAll("item-piles-dropItem", { actor: ann }, "Scene.x.Token.y", [{ item: ann.items.get("itemSword0000001"), quantity: -1 }], {});
+// DB-AC-1 [declared]: a player's client records no drop (the active GM's does); its relay is a delete
+const lose = () => Hooks.call("preDeleteItem", ann.items.get("itemSword0000001"), {}, PLAYER);
 
 test("player relay with no GM online: one warning naming the entry, no unhandled rejection", async () => {
   relay = () => Promise.reject(new Error("No GM connected"));
   F.become({ userId: PLAYER });
-  const lines = await warnings(async () => { drop(); await flush(); });
+  const lines = await warnings(async () => { lose(); await flush(); });
   F.become({ userId: GM });
-  assert.deepEqual(lines, [["pentaryn-dropbin | ledger entry not recorded (no GM?)", '{"reason":"drop","item":"Sword","actor":"Ann"}', "Error: No GM connected"]]);
+  assert.deepEqual(lines, [["pentaryn-dropbin | ledger entry not recorded (no GM?)", '{"reason":"delete","item":"Sword","actor":"Ann"}', "Error: No GM connected"]]);
   assert.deepEqual(unhandled, []);
 });
 
 test("player relay that throws synchronously is caught the same way", async () => {
   relay = () => { throw new Error("socket closed"); };
   F.become({ userId: PLAYER });
-  const lines = await warnings(async () => { drop(); await flush(); });
+  const lines = await warnings(async () => { lose(); await flush(); });
   F.become({ userId: GM });
   assert.equal(lines.length, 1);
   assert.equal(lines[0][2], "Error: socket closed");

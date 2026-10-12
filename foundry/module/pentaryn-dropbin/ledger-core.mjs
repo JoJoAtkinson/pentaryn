@@ -67,6 +67,16 @@ export function makeEntry(reason, { actor, item, quantity, user, scene, now }) {
   };
 }
 
+/**
+ * The scene a dropped pile sits on (DB-AC-1): the pile token's parent, or a synthetic pile actor's
+ * token's; null for anything else (a world actor, an unresolved uuid). Never the recording client's
+ * canvas, which may show another scene.
+ */
+export function pileScene(target) {
+  const token = target?.documentName === "Actor" ? target.token : target;
+  return token?.documentName === "Token" ? token.parent ?? null : null;
+}
+
 /** Item Piles passes one delta or an array of them. */
 export const normaliseDeltas = itemDeltas => (Array.isArray(itemDeltas) ? itemDeltas : [itemDeltas].filter(Boolean));
 
