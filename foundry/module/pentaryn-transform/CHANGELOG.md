@@ -4,6 +4,11 @@
 
 ## Unreleased
 
+- **An item-less Argon button stays on the Bonus bar (EC-3, defect wave 2).** core/hud.mjs
+  `planBonusBar` compared slot ids with `wildShapeId`, which is null while shifted, so an Argon button
+  with no item (id null) was taken for Wild Shape and vanished. A null or undefined id never matches
+  Wild Shape now, so that button is kept ([declared]; test "EC-3 planBonusBar" in core.test.mjs;
+  goldens unchanged).
 - **A hot re-import past ready still sweeps (EC-4, defect wave 2).** sweep.mjs `install` registered
   its first sweep on `Hooks.once("ready")`, which never fires again after ready, so a hot re-import
   left spent forms in the sidebar until the next token change. It now schedules the 3 s sweep at once

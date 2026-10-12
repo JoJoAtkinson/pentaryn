@@ -75,7 +75,9 @@ export function formSummary(f) {
  */
 export function planBonusBar(slots, { wildShapeId = null, revertIds = [], shifted = false, revertId = null, hasWildShape = false, starryId = null, ownReturn = true } = {}) {
   const reverts = new Set(revertIds);
-  const ours = id => id === wildShapeId || reverts.has(id) || (!!starryId && id === starryId);
+  // A null/undefined id never matches: an item-less Argon button is not Wild Shape (EC-3).
+  const isWs = id => wildShapeId != null && id === wildShapeId;
+  const ours = id => isWs(id) || reverts.has(id) || (!!starryId && id === starryId);
   const out = [];
   let placedWildShape = false;
   let placedStarry = false;
@@ -90,7 +92,7 @@ export function planBonusBar(slots, { wildShapeId = null, revertIds = [], shifte
   };
   slots.forEach((s, index) => {
     if (s.kind === "item") {
-      if (s.id === wildShapeId) return placeWildShape();
+      if (isWs(s.id)) return placeWildShape();
       if (starryId && s.id === starryId) return placeStarry();
       if (reverts.has(s.id)) return;
       return out.push({ keep: index });
@@ -98,7 +100,7 @@ export function planBonusBar(slots, { wildShapeId = null, revertIds = [], shifte
     if (s.kind === "split") {
       const ids = s.ids ?? [];
       if (!ids.some(ours)) return out.push({ keep: index });
-      if (ids.includes(wildShapeId)) placeWildShape();
+      if (ids.some(isWs)) placeWildShape();
       if (starryId && ids.includes(starryId)) placeStarry();
       for (const id of ids) if (!ours(id)) out.push({ item: id });
       return;

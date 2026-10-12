@@ -301,3 +301,18 @@ test("oracle legacyPointerArms (hud.mjs:48-52): a move arms one check while none
   assert.equal(LH.legacyPointerArms(false), true);
   assert.equal(LH.legacyPointerArms(true), false);
 });
+
+test("EC-3 planBonusBar: an id-less Argon button is kept while shifted (null wildShapeId never matches)", () => {
+  const RV = "revert000000001";
+  // Shifted: Wild Shape is stripped, so wildShapeId is null; Argon's item-less button has id null.
+  const shifted = core.planBonusBar([{ kind: "weaponSet" }, { kind: "item", id: null }, { kind: "item", id: RV }],
+    { wildShapeId: null, revertIds: [RV], shifted: true, revertId: RV, hasWildShape: true });
+  assert.ok(shifted.some(p => p.keep === 1), "the id-less item button stays on the bar");
+  // A split whose halves have no item is untouched too.
+  const split = core.planBonusBar([{ kind: "split", ids: [null, undefined] }],
+    { wildShapeId: null, revertIds: [], shifted: true, revertId: null, hasWildShape: true, ownReturn: false });
+  assert.deepEqual(split.filter(p => "keep" in p), [{ keep: 0 }]);
+  // Normal form with no Wild Shape item: an id-less button is kept, not taken for Wild Shape.
+  const normal = core.planBonusBar([{ kind: "item", id: null }], { wildShapeId: null, hasWildShape: true });
+  assert.deepEqual(normal, [{ keep: 0 }, { wildshape: true }]);
+});
