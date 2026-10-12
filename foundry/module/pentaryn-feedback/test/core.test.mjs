@@ -231,6 +231,10 @@ test("buildReport: schema v1 with every key in file order", () => {
   assert.equal(sample({ draft: { category: "wat", text: "t" } }).category, "bug");
 });
 
+test("buildReport keeps the player's text verbatim (clipped, not redacted)", () => {
+  assert.equal(core.buildReport({ id: ID, t: 1, draft: { text: "password=hunter2" } }).text, "password=hunter2");
+});
+
 test("buildReport: every snapshot section in a shape validateReport accepts; failures under sectionErrors", () => {
   const r = sample({ snapshot: { world: { error: "w broke" }, combat: { error: "c broke" }, chat: { error: "chat broke" }, windows: "junk", modules: null } });
   assert.equal(r.world, null);
