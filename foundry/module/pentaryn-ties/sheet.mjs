@@ -19,12 +19,13 @@ const TAB = "ties";
 /*  Sheet integration                           */
 /* -------------------------------------------- */
 
-/**
+/*
  * dnd5e 5.x actor sheets are ApplicationV2 with nav.tabs[data-group=primary] and a
- * div.tab-body of section.tab[data-tab]. We append one of each and let the sheet's own
- * changeTab() drive activation. Everything here is best-effort: if the markup moves,
- * we bail silently and the header button still opens the editor.
+ * div.tab-body of section.tab[data-tab]. We append one of each and activate it by hand
+ * (see activate() in injectOneTab — not changeTab). Everything here is best-effort: if the
+ * markup moves, we bail silently and the header button still opens the editor.
  */
+
 /**
  * The GM gets the tab on every sheet; a player gets it on a character they own, and can
  * edit it — it's their character's address book. The point is "who do I know", answerable

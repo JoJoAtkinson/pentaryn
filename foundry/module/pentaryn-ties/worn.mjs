@@ -23,7 +23,7 @@
  * devtools open can read them. Do not put anything here you could not survive a
  * curious player reading; the README says the same out loud.
  *
- * Same robustness contract as ties-api.mjs: readWorn() never throws. A missing flag
+ * Same robustness contract as ties-adapter.mjs: readWorn() never throws. A missing flag
  * is absent, a malformed one is absent, an over-long note is truncated.
  */
 
