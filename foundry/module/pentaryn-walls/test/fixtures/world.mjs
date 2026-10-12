@@ -6,7 +6,11 @@
  */
 
 import { StubCollection, installFoundry, makeDoc, makeUser } from "../kit/foundry-stub.mjs";
+import { readJSON } from "../kit/harness.mjs";
 import { FIXTURES } from "./corpus.mjs";
+
+/** lang/en.json, so game.i18n renders the toasts as Foundry would (Wave 7 batch, -36). */
+const LANG = readJSON(new URL("../../lang/en.json", import.meta.url));
 
 export const GM = "gmUser0000000001";
 export const PLAYER = "player0000000001";
@@ -54,6 +58,7 @@ export async function wallsWorld({ isGM = true } = {}) {
     user: makeUser(isGM ? { id: GM, name: "Gamemaster", isGM: true } : { id: PLAYER, name: "Pat", isGM: false }),
     users: isGM ? [{ id: PLAYER, name: "Pat", isGM: false }] : [{ id: GM, name: "Gamemaster", isGM: true }],
     modules: ["pentaryn-walls"],
+    lang: LANG,
   });
   F.hold = {};
   const gm = F.game.users.get(GM);

@@ -2,9 +2,9 @@
  * Wall autocomplete — settings and keybindings. The only file outside lib/ that calls
  * game.settings.register/get.
  *
- * The labels are LITERAL ENGLISH, byte-identical to the registrations they replace: the module has
- * no `languages` entry yet, so a key would show raw. They become `PENTARYN_WALLS.*` keys together
- * with module.json `languages` (the Wave 7 batch, guide step 10; C51 fails until then).
+ * The labels are full-key literals into lang/en.json (`PENTARYN_WALLS.*`), switched together with
+ * module.json `languages` in the Wave 7 batch (guide step 10, -36; W2-WALLS-1, Joe 2026-10-12).
+ * Foundry localizes them when it draws the settings and controls screens.
  */
 
 import { I18N, MODULE } from "./walls-core.mjs";
@@ -14,11 +14,13 @@ import { defineKeybindings, defineSettings, settingReader, settingsSnapshot as s
 export const SETTINGS = Object.freeze([
   {
     key: "backend", scope: "world", config: true, type: String, default: "auto",
-    name: "Engine backend",
-    hint: "Automatic uses the compiled (WASM) engine when it loads, falling back to JavaScript. " +
-          "Both produce identical geometry — verified against the same 44 fixtures — so this " +
-          "only affects speed. Compiled is ~12x faster on large scenes.",
-    choices: { auto: "Automatic (compiled when available)", wasm: "Compiled (WASM)", js: "JavaScript" },
+    name: "PENTARYN_WALLS.settings.backend.name",
+    hint: "PENTARYN_WALLS.settings.backend.hint",
+    choices: {
+      auto: "PENTARYN_WALLS.settings.backend.choices.auto",
+      wasm: "PENTARYN_WALLS.settings.backend.choices.wasm",
+      js: "PENTARYN_WALLS.settings.backend.choices.js",
+    },
     doc: "Which engine runs: auto (wasm when loaded, else js), wasm, or js. Read on every run.",
   },
 ]);
@@ -30,24 +32,24 @@ export const SETTINGS = Object.freeze([
 export const KEYBINDINGS = Object.freeze([
   {
     key: "run", action: "run",
-    name: "Wall autocomplete: run",
-    hint: "Complete the walls on the current scene. Reversible — undo removes exactly this run.",
+    name: "PENTARYN_WALLS.keys.run.name",
+    hint: "PENTARYN_WALLS.keys.run.hint",
     editable: [{ key: "KeyW", modifiers: ["Alt"] }],
     restricted: true,
     doc: "Alt+W: run on the current scene (GM only).",
   },
   {
     key: "undo", action: "undo",
-    name: "Wall autocomplete: undo last run",
-    hint: "Remove the walls the last run created and restore any it trimmed. Press again to peel back the run before it.",
+    name: "PENTARYN_WALLS.keys.undo.name",
+    hint: "PENTARYN_WALLS.keys.undo.hint",
     editable: [{ key: "KeyZ", modifiers: ["Alt"] }],
     restricted: true,
     doc: "Alt+Z: undo the latest run on the current scene (GM only).",
   },
   {
     key: "preview", action: "preview",
-    name: "Wall autocomplete: preview",
-    hint: "Report what would be built without writing anything.",
+    name: "PENTARYN_WALLS.keys.preview.name",
+    hint: "PENTARYN_WALLS.keys.preview.hint",
     editable: [{ key: "KeyW", modifiers: ["Alt", "Shift"] }],
     restricted: true,
     doc: "Alt+Shift+W: preview on the current scene (GM only).",

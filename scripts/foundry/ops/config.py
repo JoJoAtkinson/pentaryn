@@ -199,10 +199,7 @@ MODULES = {
     "walls": ModuleSpec(
         "pentaryn-walls",
         check=(*_STATIC, "node-test", *_BLUEPRINT),
-        after_sync=(
-            "Enable 'Pentaryn Wall Autocomplete' in Manage Modules, reload, then:",
-            "  await game.pentaryn.walls.preview()",
-        ),
+        # after_sync comes from module.json flags.pentaryn.afterSync (Wave 7 batch).
     ),
     "attunement": ModuleSpec(
         "pentaryn-attunement",

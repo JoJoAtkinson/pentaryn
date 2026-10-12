@@ -19,8 +19,8 @@ test("every test/… path the README names exists", () => {
 });
 
 // senses-walls-cursors-8 recipe (scoped to walls): every repo doc path the module's sources and docs
-// cite resolves. module.json's `description` still says playbooks/… until the Wave 7 restart batch
-// edits it, so that file is a todo, not a pass.
+// cite resolves. module.json's `description` was edited in the Wave 7 restart batch (-8): it cites
+// context/foundry/walls.md, so its case is a pass, no longer a todo.
 const REPO = new URL("../../../", ROOT);
 const CITED = /\b(?:context|playbooks)\/[\w./-]+\.md\b/g;
 // Every .mjs the module owns (its tests too; not the vendored kit), found by walking, so a new file is
@@ -35,6 +35,6 @@ test("every context/… or playbooks/… path cited by the module resolves", () 
   for (const f of SOURCES) assert.deepEqual(unresolved(f), [], f);
 });
 
-test("module.json cites a doc that exists", { todo: "Wave 7 restart batch edits the description" }, () => {
+test("module.json cites a doc that exists", () => {
   assert.deepEqual(unresolved("module.json"), []);
 });

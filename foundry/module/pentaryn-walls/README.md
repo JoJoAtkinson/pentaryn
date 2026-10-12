@@ -30,8 +30,8 @@ reports the run, and refused endpoints get a transient `canvas.ping()`.
 | `backend` | world | `auto` | Engine: `auto` (compiled when its `.wasm` loaded, else JavaScript), `wasm`, `js`. Same geometry either way; speed only. Read on every run. |
 
 Keybindings (GM only, rebind in *Configure Controls*): **Alt+W** run · **Alt+Z** undo the last
-run · **Alt+Shift+W** preview. Labels are literal English until the Wave 7 batch adds
-`languages` (the keys wait in `test/fixtures/lang-en.wave7.json`).
+run · **Alt+Shift+W** preview. Labels and toasts are keys in `lang/en.json` (`PENTARYN_WALLS.*`),
+and every toast goes through the kit's `log.notify` (one console line each).
 
 ## API — game.pentaryn.walls
 
@@ -57,8 +57,10 @@ and `backends` keep their legacy shapes (`legacy: true`).
 ## Data written
 
 Every wall a run touches is stamped under `flags.wall-autocomplete`, the pre-blueprint scope.
-The Wave 7 batch migrates the stamps to `flags.pentaryn-walls` (`migrations.mjs`, dormant until
-then); reads already accept both scopes (`stampOf`, the module id winning):
+The flag-scope migration to `flags.pentaryn-walls` (`migrations.mjs`) is written but **parked**:
+walls stays off in Joe's world, so the Wave 7 batch (2026-10-12) did not wire it and `module.json`
+keeps `flagScope: "wall-autocomplete"`. Reads already accept both scopes (`stampOf`, the module id
+winning):
 
 | Key | On | Meaning |
 |---|---|---|
