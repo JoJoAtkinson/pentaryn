@@ -17,7 +17,7 @@ import {
   MODULE, SIZE_KEYS, SIZE_BY_KEY, normalisePrompt, nameplate, preview, stripHtml, distanceLine, dialogPosition,
   footprintLabel, behindDoor
 } from "./geometry-core.mjs";
-import { markerSizeOfToken, promptText, markerActor, art, EMPTY_TINT, FULL_TINT } from "./markers-adapter.mjs";
+import { markerSizeOfToken, promptText, markerActor, actorName, art, EMPTY_TINT, FULL_TINT } from "./markers-adapter.mjs";
 import { panelFor, resolveItemEmbeds } from "./scene-adapter.mjs";
 import { cancel as cancelTyping, start as startTyping, take as takeTyped } from "./typeahead-adapter.mjs";
 import { tokenDataFrom } from "./tokens-adapter.mjs";
@@ -460,7 +460,7 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
       let img, line1, line3;
       if (it.isPrompt) {
         img = `<img src="${esc(art(it.size))}" alt="">`;
-        line1 = `Prompt · ${it.size}`;
+        line1 = actorName(it.size);
         line3 = it.text ? esc(preview(it.text, chars)) : `<em>${esc(_loc("PENTARYN_PROMPTS.panel.empty"))}</em>`;
       } else {
         img = it.kind === "light" ? `<i class="fa-solid fa-lightbulb"></i>`
@@ -482,7 +482,7 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
     const more = p.more.length ? `<button type="button" class="pp-more" data-action="more">${esc(_loc("PENTARYN_PROMPTS.panel.more", { n: p.more.length }))}</button>` : "";
     const empty = p.total ? "" : `<p class="pp-empty">${esc(_loc("PENTARYN_PROMPTS.panel.nobody"))}</p>`;
     // a door in the way is the thing Joe designs around: say it above the fold (P-9-b)
-    const door = behindDoor(p.unseen.map(r => ({ ...r, name: r.item.isPrompt ? `Prompt · ${r.item.size}` : r.item.name })));
+    const door = behindDoor(p.unseen.map(r => ({ ...r, name: r.item.isPrompt ? actorName(r.item.size) : r.item.name })));
     const doorLine = door
       ? `<p class="pp-door"><i class="fa-solid fa-door-closed"></i> ${esc(_loc("PENTARYN_PROMPTS.panel.behindDoor", { list: door.list.join(", ") + (door.extra ? ` +${door.extra}` : "") }))}</p>`
       : "";
