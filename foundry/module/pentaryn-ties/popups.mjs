@@ -254,32 +254,42 @@ export function show(sourceActor, entries, { showNotes = false } = {}) {
   for (const { tie, token } of entries) {
     const k = key(sourceActor.id, tie.id);
     if (cards.has(k)) continue; // already up — probably pinned; don't stamp a second one
-    const { el, close } = buildCard(tie, token, { showNotes });
-    const rec = {
-      el,
-      pinned: false,
+    const rec = mount(k, {
+      tie,
+      token,
       sourceId: sourceActor.id,
-      tieId: tie.id,
-      tokenId: token?.id ?? null,
-      colour: stanceOf(tie.stance).hex,
+      showNotes,
+      pinned: false,
       // top edge of the token, in canvas coords — see the geometry note in overlay.mjs on
       // why this comes off `center` and the document, never `token.x`
       anchor: token ? { x: token.center.x, y: token.center.y - (token.h ?? 0) / 2 } : null
-    };
-    close.addEventListener("click", ev => {
-      ev.stopPropagation();
-      remove(k);
-      savePinned();
-      notify();
     });
-    layer().appendChild(el);
-    cards.set(k, rec);
-    makeDraggable(rec);
     follow(rec);
     shown++;
   }
   notify();
   return shown;
+}
+
+/**
+ * Build one card and put it up (ties-41): its record, the close button (remove → save the pins →
+ * tell the wires), the layer, the card map and dragging. `show` and `restorePinned` differ only in
+ * where it lands and whether it starts pinned.
+ */
+function mount(k, { tie, token, sourceId, showNotes, pinned, anchor }) {
+  const { el, close } = buildCard(tie, token, { showNotes });
+  const rec = { el, pinned, sourceId, tieId: tie.id, tokenId: token?.id ?? null, colour: stanceOf(tie.stance).hex, anchor };
+  if (pinned) el.classList.add("pt-pinned");
+  close.addEventListener("click", ev => {
+    ev.stopPropagation();
+    remove(k);
+    savePinned();
+    notify();
+  });
+  layer().appendChild(el);
+  cards.set(k, rec);
+  makeDraggable(rec);
+  return rec;
 }
 
 /** Park a transient card just above its token, in screen space. */
@@ -368,26 +378,7 @@ export function restorePinned() {
       : null;
     const k = key(actor.id, tie.id);
     if (cards.has(k)) continue;
-    const { el, close } = buildCard(tie, token, { showNotes: true });
-    const rec = {
-      el,
-      pinned: true,
-      sourceId: actor.id,
-      tieId: tie.id,
-      tokenId: token?.id ?? null,
-      colour: stanceOf(tie.stance).hex,
-      anchor: null
-    };
-    el.classList.add("pt-pinned");
-    close.addEventListener("click", ev => {
-      ev.stopPropagation();
-      remove(k);
-      savePinned();
-      notify();
-    });
-    layer().appendChild(el);
-    cards.set(k, rec);
-    makeDraggable(rec);
+    const rec = mount(k, { tie, token, sourceId: actor.id, showNotes: true, pinned: true, anchor: null });
     place(rec, Number(entry.x) || 20, Number(entry.y) || 20);
   }
   notify();
