@@ -5,9 +5,9 @@
  *   DEDUPE_MS · isDuplicate(last, rec, now, windowMs) · capLimit(raw) · appendCapped(buffer, rec, limit)
  *   imageOffset({width, height, padding, gridSize}) · decorate(rec, {offset, gridSize}, now) · recentOf(list, n)
  *
- * Today the only entry is the verbatim oracle (fixtures/legacy-pings.mjs) behind thin adapters that
- * map that shape onto the snapshot's own argument lists. Step 2 appends ["core", core]; the frozen
- * core.test never changes.
+ * IMPLS holds ["oracle", oracle] — the verbatim oracle (fixtures/legacy-pings.mjs) behind thin adapters
+ * that map that shape onto the snapshot's own argument lists — and ["core", core], pings-core.mjs as is.
+ * core.test runs every table against both.
  */
 import * as legacy from "./legacy-pings.mjs";
 import * as core from "../../pings-core.mjs";

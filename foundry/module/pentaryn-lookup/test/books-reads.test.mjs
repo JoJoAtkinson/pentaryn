@@ -8,6 +8,7 @@ import assert from "node:assert/strict";
 import { installFoundry } from "./kit/foundry-stub.mjs";
 import { installLookupWorld } from "./fixtures/packs.mjs";
 import * as oracle from "./fixtures/legacy-lists.mjs";
+import { MONSTER_LIST_PACKS } from "../lookup-core.mjs";
 
 const F = await installFoundry({ modules: ["pentaryn-lookup"] });
 const world = installLookupWorld(F);
@@ -53,4 +54,13 @@ test("books spellList(): same getIndex packs, fields and order as the oracle, sa
     assert.deepEqual(got, { list: "class:wizard", count: want.length, spells: want }, `level ${level}`);
     assert.deepEqual(live, oracleReads, `reads, level ${level}`);
   }
+});
+
+test("books monsters(): getIndex per present MONSTER_LIST_PACKS pack, with exactly the five index fields in order", async () => {
+  fresh();
+  await rules.monsters({});
+  const fields = ["type", "system.details.cr", "system.traits.size", "system.details.type.value", "system.details.type.subtype"];
+  const want = MONSTER_LIST_PACKS.filter(id => world.packs.has(id)).map(id => [id, fields]);
+  assert.ok(want.length > 0, "the fixture world has a monster list pack");
+  assert.deepEqual(live, want);
 });
