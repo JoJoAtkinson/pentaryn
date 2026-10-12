@@ -60,6 +60,7 @@ const sleep = async ms => { const t0 = performance.now(); while (performance.now
 const MOD = "pentaryn-portals";
 const LEGACY = ["snapshot", "cardFor", "teleportParty", "lookAt", "open", "redraw", "spreadArrival"];
 const ADDED = ["inspect", "destinations", "link", "unlink", "badges"];
+const SETTINGS = ["teleportDefault", "spreadArrivals", "confirmPartyTeleport"];
 const setting = k => { try { return game.settings.get(MOD, k); } catch { return "unregistered"; } };
 const pos = t => (t?.threw ? t : { x: t?.x ?? null, y: t?.y ?? null });
 
@@ -71,7 +72,7 @@ out.env = {
   world: game.world.id, foundry: game.version, system: `${game.system.id} ${game.system.version}`,
   manifestVersion: mod?.version ?? null, active: !!mod?.active, apiVersion: P?.version ?? null,
   players: game.users.filter(u => !u.isGM && u.active).map(u => u.name),
-  settings: { teleportDefault: setting("teleportDefault"), spreadArrivals: setting("spreadArrivals"), confirmPartyTeleport: setting("confirmPartyTeleport") },
+  settings: Object.fromEntries(SETTINGS.map(k => [k, setting(k)])),
   aoeHandleActor: !!realHandleActor
 };
 const S = out.golden.shared, D = out.golden.declared;
@@ -207,7 +208,7 @@ try {
   if (ghostActor && game.actors.get(ghostActor.id)) await safely("ghostActor", () => ghostActor.delete());
   Object.assign(out.cleanup, {
     zzLeft: game.actors.filter(a => a.name.startsWith("ZZ ")).length + game.scenes.filter(s => s.name.startsWith("ZZ ")).length,
-    settingsRestored: JSON.stringify({ teleportDefault: setting("teleportDefault"), spreadArrivals: setting("spreadArrivals"), confirmPartyTeleport: setting("confirmPartyTeleport") }) === JSON.stringify(out.env.settings)
+    settingsRestored: JSON.stringify(Object.fromEntries(SETTINGS.map(k => [k, setting(k)]))) === JSON.stringify(out.env.settings)
   });
 }
 out.golden = norm(out.golden);

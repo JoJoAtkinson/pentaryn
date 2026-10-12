@@ -61,6 +61,7 @@ const settle = async (pred, ms = 8000) => {
 
 const MOD = "pentaryn-creatures";
 const LEGACY = ["list", "render", "syncScene", "syncAll", "isCreature", "ownerSees", "patchedWith", "core"];
+const SETTINGS = ["lightRadius", "ownerSees", "floatOverHud", "showStrip"];
 const setting = k => { try { return game.settings.get(MOD, k); } catch { return "unregistered"; } };
 
 const out = { module: "creatures", env: {}, golden: { shared: {}, declared: {} }, timings: {}, cleanup: {} };
@@ -72,7 +73,7 @@ out.env = {
   world: game.world.id, foundry: game.version, system: `${game.system.id} ${game.system.version}`,
   manifestVersion: mod?.version ?? null, active: !!mod?.active, apiVersion: M?.version ?? null,
   players: game.users.filter(u => !u.isGM && u.active).map(u => u.name), writer, libWrapper: !!game.modules.get("lib-wrapper")?.active,
-  settings: { lightRadius: setting("lightRadius"), ownerSees: setting("ownerSees"), floatOverHud: setting("floatOverHud"), showStrip: setting("showStrip") }
+  settings: Object.fromEntries(SETTINGS.map(k => [k, setting(k)]))
 };
 if (!player || !writer || !M) {
   out.skipped = !M ? "game.pentaryn.creatures is missing" : !player ? "no non-GM user in the world" : "this tab is not the active GM";
@@ -200,7 +201,7 @@ try {
   if (actorIds.length) await safely("actors", () => Actor.deleteDocuments(actorIds));
   Object.assign(out.cleanup, {
     zzLeft: game.actors.filter(a => a.name.startsWith("ZZ ")).length + game.scenes.filter(s => s.name.startsWith("ZZ ")).length,
-    settingsRestored: JSON.stringify({ lightRadius: setting("lightRadius"), ownerSees: setting("ownerSees"), floatOverHud: setting("floatOverHud"), showStrip: setting("showStrip") }) === JSON.stringify(out.env.settings)
+    settingsRestored: JSON.stringify(Object.fromEntries(SETTINGS.map(k => [k, setting(k)]))) === JSON.stringify(out.env.settings)
   });
 }
 out.golden = norm(out.golden);
