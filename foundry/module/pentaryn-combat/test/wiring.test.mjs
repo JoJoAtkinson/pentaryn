@@ -1,11 +1,13 @@
 // Guide S6: both entries are wiring only. Every feature exports install/uninstall, every
 // registration goes through the shared registry (labelled), and uninstall leaves nothing behind:
 // no hook, no document listener, no observer, no patch.
-import { test } from "node:test";
+import { mock, test } from "node:test";
 import assert from "node:assert/strict";
 import { readdirSync } from "node:fs";
 import { setupWorld } from "./fixtures/world.mjs";
 
+// No real timers: onReady's deferred weapon-set seed (DELAYS.seedAfterReady) stays parked unless ticked.
+mock.timers.enable({ apis: ["setTimeout", "Date"], now: 1_000_000 });
 const W = await setupWorld();
 const { F, doc } = W;
 await import("../combat.mjs");

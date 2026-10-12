@@ -1,10 +1,12 @@
 // Guide S6c: the hand prototype patches go through the kit (C32). Every one is recorded with its
 // adjustments row, applies once, and unwraps on uninstall.
-import { test } from "node:test";
+import { mock, test } from "node:test";
 import assert from "node:assert/strict";
 import { setupWorld } from "./fixtures/world.mjs";
 import { patches } from "../lib/patch.mjs";
 
+// No real timers: onReady's deferred weapon-set seed (DELAYS.seedAfterReady) stays parked unless ticked.
+mock.timers.enable({ apis: ["setTimeout", "Date"], now: 1_000_000 });
 const W = await setupWorld();
 const { F } = W;
 await import("../combat.mjs");

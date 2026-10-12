@@ -1,9 +1,11 @@
 // combat-riders-35 [declared D-c4]: the picker cue's pointer listeners and observer exist only while
 // skipPickerGuide is on. Default on: as before (hooks.test's document-listener pin holds).
-import { test } from "node:test";
+import { mock, test } from "node:test";
 import assert from "node:assert/strict";
 import { MODULE, setupWorld } from "./fixtures/world.mjs";
 
+// No real timers: onReady's deferred weapon-set seed (DELAYS.seedAfterReady) stays parked unless ticked.
+mock.timers.enable({ apis: ["setTimeout", "Date"], now: 1_000_000 });
 const W = await setupWorld();
 const { F, doc } = W;
 await import("../combat.mjs");

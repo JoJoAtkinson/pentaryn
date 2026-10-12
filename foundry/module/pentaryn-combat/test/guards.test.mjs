@@ -2,10 +2,12 @@
 // the module's own handlers is logged as `pentaryn-combat | <label>` (not Foundry's "Error thrown in
 // hooked function"), the next listener still runs, return values (a veto) pass through, and a
 // rejected promise is logged instead of surfacing as an unhandled rejection.
-import { test } from "node:test";
+import { mock, test } from "node:test";
 import assert from "node:assert/strict";
 import { captureConsole, drain, setupWorld } from "./fixtures/world.mjs";
 
+// No real timers: onReady's deferred weapon-set seed (DELAYS.seedAfterReady) stays parked unless ticked.
+mock.timers.enable({ apis: ["setTimeout", "Date"], now: 1_000_000 });
 const W = await setupWorld();
 const { F } = W;
 const lines = captureConsole();
