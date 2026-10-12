@@ -31,7 +31,7 @@ Bump `kit.json` `version`, `errors.mjs` `KIT_VERSION` and every header together.
 | `settings.mjs` | `defineSettings`, `settingReader`, `settingsSnapshot`, `defineKeybindings`, `serialStore` | `serialStore(MODULE, ["counter", "log"])` serialises several keys on one queue (1.0.1); rows carry literal `name`/`hint` keys; both define calls skip rows already registered, and `defineKeybindings` registers nothing once Foundry has built its bindings (after `setup`), so a hot patch never throws |
 | `resolve.mjs` | `resolveRef`, `refOf`, `toIdSet`, `withRef` | exact match only, explicit scene scope |
 | `api.mjs` | `buildApi`, `describe`, `surfaceOf`, `maxDepth`, `toPlain` | drift and reserved names throw at load; a `ref` row resolves per call with that call's `opts.sceneId`/`opts.base`; a write row returns `fail()` on an unresolvable ref; an `unlisted` table is published as a frozen **copy** — the caller's objects are never frozen (1.0.1); a row's `dryRun: true` shows in `describe()`, and a first `ref` with `resolve: "self"` is passed raw like `resolve: false` (the function resolves strings itself; the marker shows in `describe()`) (1.1.0) |
-| `queries.mjs` | `guarded`, `relayed`, `registerQueries`, `queryNameOf`, `queryGM` | `CONFIG.queries` from `query: true` rows; `guarded(fn, { sender: "any" })` and `fn(data, ctx)`; `relayed` = any sender, active-GM receiver (`relay: true` rows); `row.queryName` when the query name ≠ the row path (1.0.1) |
+| `queries.mjs` | `guarded`, `relayed`, `registerQueries`, `queryNameOf`, `queryGM` | `CONFIG.queries` from `query: true` rows; `guarded(fn, { sender: "any" })` and `fn(data, ctx)`; `relayed` = any sender, active-GM receiver (`relay: true` rows, whose API function gets ctx as a trailing argument, 1.2.0 AC-1); `row.queryName` when the query name ≠ the row path (1.0.1) |
 | `publish.mjs` | `publishNamespace`, `installRoot`, `apiOf`, `publishedOf` | `module.api` canonical; assigns into the plain `game.pentaryn` (no frozen-root guard, no re-alias tick since 1.0.2) |
 | `election.mjs` | `isActiveGM`, `isAnyGM`, `isActiveGMOrLoneGM`, `pickRunner`, `claimDocument`, `claimMessage` | distinct truth tables — keep each call site's |
 | `patch.mjs` | `wrapMethod`, `defineAccessor`, `patches`, `unwrapAll` | names no third-party package; `kind: "getter"` wraps an accessor such as `Token#isVisible` (1.0.1) |
@@ -74,3 +74,6 @@ declared fix lands under this entry with its finding id. Re-vendored into every 
 KIT-R1 (declared): `unwrapAll()` undoes newest first and drops only the records whose undo succeeded —
 a patch a foreign wrapper keeps live stays in `patches()`, and a later wrap with its marker returns
 the live handle instead of stacking a second copy.
+AC-1 (declared): a `relay: true` row's API function now gets core's ctx as a trailing argument
+(`fn(d, ctx)` / `fn(d.ref, d, ctx)`), so a relayed handler can check ownership on `ctx.user` (§5.9.4);
+before, `registerQueries` dropped it. Guarded rows are called exactly as before.

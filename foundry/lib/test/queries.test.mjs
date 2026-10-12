@@ -92,6 +92,27 @@ test("K8 queryName names the query; relay rows register through relayed; a dupli
   assert.throws(() => registerQueries(dup, () => api, { g }), { message: 'pentaryn-p: query "pentaryn-p.b" is registered twice' });
 });
 
+test("AC-1 a relay row's API function gets core's ctx as a trailing argument; guarded rows do not", async () => {
+  const g = { game: { user: { isGM: true, name: "GM" }, users: { activeGM: { isSelf: true } } }, CONFIG: {} };
+  const M = { module: "pentaryn-r", rows: [
+    { path: "ingest", params: [{ name: "opts" }], query: true, relay: true },
+    { path: "tag", params: [{ name: "ref" }, { name: "opts" }], query: true, relay: true },
+    { path: "list", params: [{ name: "opts" }], query: true },
+  ] };
+  const seen = {};
+  const api = {
+    ingest: (o, ctx) => ({ k: o.k, by: ctx?.user?.name ?? null }),
+    tag: (ref, d, ctx) => ({ ref, by: ctx?.user?.name ?? null }),
+    list: (...a) => { seen.list = a.length; return "ok"; },
+  };
+  registerQueries(M, () => api, { g });
+  const player = { isGM: false, name: "P" };
+  assert.deepEqual(await g.CONFIG.queries["pentaryn-r.ingest"]({ k: 1 }, { user: player }), { k: 1, by: "P" });
+  assert.deepEqual(await g.CONFIG.queries["pentaryn-r.tag"]({ ref: "x" }, { user: player }), { ref: "x", by: "P" });
+  assert.equal(await g.CONFIG.queries["pentaryn-r.list"]({}, { user: g.game.user }), "ok");
+  assert.equal(seen.list, 1, "a guarded row's API function is called exactly as before");
+});
+
 test("describe().queries equals the names registerQueries registers", () => {
   // describe() computes the names inline (api.mjs) and registerQueries via queryNameOf: this guards
   // the two formulas against drifting apart (describe().queries feeds contractDrift and the bridge).

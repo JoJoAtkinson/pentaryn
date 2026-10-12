@@ -301,7 +301,7 @@ The manifest (`api-manifest.mjs`) is pure data. **Manifest-level fields:**
 | `writes` | boolean | changes world data → returns `ok()/fail()`, accepts `dryRun` when bulk; the fork routes it to `pentaryn-write` (D14) |
 | `query` | boolean | also registered as `CONFIG.queries["<id>.<queryName ?? path>"]` |
 | `queryName` | string | the query name when it differs from `path` (kit 1.0.1, K8) |
-| `relay` | boolean | register through `relayed` (any sender, active-GM receiver) instead of `guarded` (kit 1.0.1, K4) |
+| `relay` | boolean | register through `relayed` (any sender, active-GM receiver) instead of `guarded` (kit 1.0.1, K4); the API function gets core's ctx as a trailing argument — `fn(opts, ctx)` / `fn(ref, opts, ctx)` — for the `ctx.user` ownership check (kit 1.2.0, AC-1) |
 | `dryRun` | boolean | the row takes a dry run (`opts.dryRun`); the bridge's `pentaryn-write` forwards its `dryRun` only to such a row (kit 1.1.0, W2-B3) |
 | `wire` | `data => data` | fills query-payload defaults before the call (prompts' `cropsAs: "base64"`) |
 | `sideEffects` | string[] | flag paths / documents written |

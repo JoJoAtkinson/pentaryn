@@ -54,7 +54,9 @@ export function queryNameOf(manifest, row) {
  * depth limit; the 4-level cap is `inspect()`'s.
  *  - `row.queryName` names the query when it differs from the row path (prompts registers
  *    `pentaryn-prompts.replace` for the `replaceMany` row).
- *  - `row.relay: true` registers through `relayed` (any sender, active GM receiver) instead of `guarded`.
+ *  - `row.relay: true` registers through `relayed` (any sender, active GM receiver) instead of `guarded`,
+ *    and the API function gets core's ctx as a trailing argument (`fn(d, ctx)` / `fn(d.ref, d, ctx)`) so it
+ *    can check ownership against `ctx.user` (§5.9.4). Guarded rows are called exactly as before.
  * @returns {string[]} the query names registered
  */
 export function registerQueries(manifest, getApi, { g = globalThis, log = null } = {}) {
@@ -64,15 +66,16 @@ export function registerQueries(manifest, getApi, { g = globalThis, log = null }
     if (!row.query) continue;
     const name = queryNameOf(manifest, row);
     if (names.includes(name)) throw new Error(`${manifest.module}: query "${name}" is registered twice`);
-    const handler = async (data = {}) => {
+    const handler = async (data = {}, ctx) => {
       const api = getApi();
       if (!api) throw codedError("NOT_READY", manifest.module);
       const fn = row.path.split(".").reduce((o, k) => o?.[k], api);
       if (typeof fn !== "function") throw codedError("INTERNAL", row.path);
       const d = row.wire ? row.wire(data) : data;
+      const tail = row.relay ? [ctx] : [];
       const out = row.legacy && row.args
-        ? await fn(...row.args(d))
-        : row.params?.[0]?.name === "ref" ? await fn(d.ref, d) : await fn(d);
+        ? await fn(...row.args(d), ...tail)
+        : row.params?.[0]?.name === "ref" ? await fn(d.ref, d, ...tail) : await fn(d, ...tail);
       return toPlain(out, { maxDepth: Infinity });
     };
     g.CONFIG.queries[name] = row.relay ? relayed(handler, { g }) : guarded(handler, { g });
