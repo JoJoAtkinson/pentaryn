@@ -25,6 +25,10 @@
 - **[declared] journal-EC-4:** the per-tab claim is stamped and judged in server time
   (`game.time.serverTime`), not each machine's `Date.now()`, so a GM tab on a machine whose clock is a
   minute or more off no longer reads the other tab's fresh claim as stale and makes a second journal.
+- **[declared] journal-rob-2:** after the GM's client answers a player's first save, the player waits up
+  to 3 s (was 1 s) for the new journal, found by its flag or by the id in the GM's answer. If it still
+  has not arrived, the player gets the "Couldn't add this to your journal — tell the GM." warning and a
+  console warning, instead of the save silently doing nothing.
 
 ## Unreleased (blueprint migration, wave 2)
 

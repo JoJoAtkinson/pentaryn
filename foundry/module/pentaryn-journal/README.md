@@ -105,6 +105,9 @@ No patches. One third-party dependency: Item Piles shows a non-owner an unsaved 
   of the GM's account (the MCP bridge tab and a browser tab), so the tabs claim it first: the first to
   stamp its claim creates, the other waits for that journal and answers with it.
 - With no GM online and no journal yet, the player gets a warning and nothing happens.
+- After the GM answers, the player waits up to 3 s for the new journal to reach their client (by its
+  flag, or by the id the GM answered). If it never comes, the player gets the "tell the GM" warning
+  rather than nothing.
 
 ## Extending
 

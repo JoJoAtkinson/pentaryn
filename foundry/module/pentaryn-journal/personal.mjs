@@ -114,6 +114,8 @@ function report() {
 
 /** How long the player waits for the GM's answer to the ensure query. */
 const QUERY_TIMEOUT_MS = 8_000;
+/** After the GM's answer, how long the player waits for the journal's broadcast to land. */
+const ARRIVE_WAIT_MS = 3_000;
 
 /** Client side: the current user's journal, creating it (or asking the GM to) the first time. */
 let inflight = null;
@@ -131,8 +133,9 @@ async function ensurePersonalJournal() {
     }
     const gm = game.users.activeGM;
     if (!gm) { toast(game.i18n.localize("PENTARYN_JOURNAL.notify.noGM")); return null; }
+    let reply;
     try {
-      await gm.query(QUERY, {}, { timeout: QUERY_TIMEOUT_MS });
+      reply = await gm.query(QUERY, {}, { timeout: QUERY_TIMEOUT_MS });
     } catch (err) {
       ctx.log.warn("ensure query failed", err);
       toast(/timed? ?out/i.test(err?.message ?? "")
@@ -140,9 +143,16 @@ async function ensurePersonalJournal() {
         : game.i18n.localize("PENTARYN_JOURNAL.notify.failed"));
       return null;
     }
-    // The createJournalEntry broadcast normally lands before the query reply; allow a second if not.
-    for (let i = 0; i < 10 && !personal(user); i++) await new Promise(r => setTimeout(r, 100));
-    return personal(user);
+    // The createJournalEntry broadcast normally lands before the query reply; allow 3 s if not, and
+    // say so rather than return a silent null when it never comes (journal-rob-2).
+    const arrived = () => personal(user) ?? (reply?.entryId ? game.journal.get(reply.entryId) : null) ?? null;
+    for (let i = 0; i < ARRIVE_WAIT_MS / 100 && !arrived(); i++) await new Promise(r => setTimeout(r, 100));
+    const j = arrived();
+    if (!j) {
+      ctx.log.warn("ensure: the GM answered but the journal did not arrive", { entryId: reply?.entryId ?? null });
+      toast(game.i18n.localize("PENTARYN_JOURNAL.notify.failed"));
+    }
+    return j;
   })().finally(() => { inflight = null; });
   return inflight;
 }
