@@ -33,6 +33,10 @@ sender must own their character and have removed their own side). ties-ui-E3.
 Fixed (declared): the Known tab's **notes** keep the last words typed before you click away or close
 the sheet — leaving the box now saves a pending autosave at once instead of dropping it. ties-ui-M1.
 
+Fixed (declared): key 5 (or `known.open`) on a **hidden** Known entry opens its page instead of
+showing nothing — that one entry is un-hidden (as its Unhide button would) and the Known tab repaints
+in place, so an already-open sheet shows it too. Other hidden entries stay hidden. ties-ui-E2.
+
 Fixed (declared): the chat cards — the "… studies …" stub, the tempo line and the GM's share
 whisper — name every creature by its **token** name, never its actor name, so a GM-only world actor
 name cannot reach player chat. The token is found on any scene, not only the one the posting

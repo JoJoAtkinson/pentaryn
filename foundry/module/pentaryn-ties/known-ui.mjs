@@ -180,8 +180,15 @@ export async function fileHovered(token = canvas?.tokens?.hover ?? null) {
  *
  * The row is expanded through the same Map the tab's own toggle writes, so the paint that
  * follows renders it open — no second repaint, and nothing to keep in step with the DOM.
+ *
+ * Asking for a tucked-away (hidden) entry by name un-hides **that entry only** — a real write,
+ * the same one its Unhide button makes, not a transient "show hidden" toggle — and repaints the
+ * Known section in place, because an already-open sheet would otherwise keep the paint that
+ * filtered the row out (ties-ui-E2, declared).
  */
 export async function openKnownEntry(actor, id) {
+  const list = readKnown(actor);
+  const unhid = !!list.find(e => e.id === id)?.hidden && (await writeKnown(actor, list.map(e => (e.id === id ? { ...e, hidden: false } : e))));
   setExpanded(actor.id, id, true);
   const sheet = actor?.sheet;
   if (!sheet) return false;
@@ -198,6 +205,14 @@ export async function openKnownEntry(actor, id) {
   const root = sheet.element instanceof HTMLElement ? sheet.element : sheet.element?.[0];
   const section = root?.querySelector(`[data-tab="${KNOWN_TAB_ID}"].tab`);
   if (!section) return true; // tab switched off in settings, or the markup moved — the write stands
+  if (unhid) {
+    // the injector's own paint (sheet.mjs), so the repainted rows are wired exactly as a fresh one
+    const repaint = () => {
+      section.innerHTML = buildKnownHTML(actor);
+      bindKnown(section.firstElementChild, actor, repaint);
+    };
+    repaint();
+  }
   if (!section.classList.contains("active")) root.querySelector(`nav.tabs [data-tab="${KNOWN_TAB_ID}"]`)?.click();
   const row = section.querySelector(`.pt-row[data-id="${CSS.escape(id)}"]`);
   if (row && !row.classList.contains("pt-open")) row.querySelector(".pt-summary")?.click();

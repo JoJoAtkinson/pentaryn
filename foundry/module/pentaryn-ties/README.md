@@ -27,7 +27,7 @@ reverse side (the relay — never overwrites written text). Removing a tie remov
 a player the GM's client removes the NPC's row back (the relay's `remove-reverse`).
 
 **Known.** A second tab, on character sheets only: one page per creature or person they have met,
-filed under Sentient or Beasts. **`5`** files whoever you hover and opens the page. **What is this?**
+filed under Sentient or Beasts. **`5`** files whoever you hover and opens the page (un-hiding it if it was hidden). **What is this?**
 on a page throws a blind Study check on the GM's client (one attempt per kind, ever): 15 / 20 / 25
 buys description, defences, attacks — written in the GM's words, which at low tiers may be wrong.
 
