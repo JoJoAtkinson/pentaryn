@@ -33,6 +33,22 @@ test("documents and placeables pass through; a token asked for an actor gives it
   assert.equal(code(() => r(A, "token")), "BAD_ARGS");
 });
 
+// [declared] names-ext-3 (kit 1.2.0, final review 2026-10-12): a token's synthetic Actor asked for with
+// `base: true` gives the WORLD actor (token.actorId, else its own id, which Foundry shares with the
+// base). Before, adapt() returned it unchanged and names, ties and transform each patched it by hand.
+test("names-ext-3: a synthetic (isToken) Actor with base:true resolves to the world actor; base:false keeps it", () => {
+  const synth = { documentName: "Actor", id: A.id, name: "Aldric Vane", isToken: true, token: tok };
+  assert.equal(r(synth, "actor", { base: true }), A);
+  assert.equal(r({ document: synth }, "actor", { base: true }), A);
+  assert.equal(r(synth), synth);
+  const tokenless = { documentName: "Actor", id: A.id, name: "Aldric Vane", isToken: true, token: null };
+  assert.equal(r(tokenless, "actor", { base: true }), A);
+  const orphan = { documentName: "Actor", id: "oooooooooooooooo", name: "Gone", isToken: true, token: { actorId: "oooooooooooooooo" } };
+  assert.equal(r(orphan, "actor", { base: true, required: false }), null);
+  assert.equal(code(() => r(orphan, "actor", { base: true })), "NOT_FOUND");
+  assert.equal(r(A, "actor", { base: true }), A);
+});
+
 test("uuid, id, exact name, then case-insensitive name", () => {
   assert.equal(r("Actor.aaaaaaaaaaaaaaaa"), A);
   assert.equal(r(`Scene.${s1.id}.Token.${tok.id}`, "actor", { base: true }), A);

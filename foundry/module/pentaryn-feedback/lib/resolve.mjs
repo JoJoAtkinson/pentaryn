@@ -43,7 +43,8 @@ function scenesFor(sceneId, g) {
   return listOf(g.game.scenes);
 }
 
-/** Token → actor, per `base`: the world actor (`base: true`) or the token's own (synthetic) actor. */
+/** Token → actor, per `base`: the world actor (`base: true`) or the token's own (synthetic) actor.
+ *  A synthetic Actor itself is mapped the same way in adapt(). */
 function actorOfToken(tokenDoc, base, g) {
   if (!tokenDoc) return null;
   return base ? g.game.actors?.get?.(tokenDoc.actorId) ?? null : tokenDoc.actor ?? null;
@@ -52,6 +53,10 @@ function actorOfToken(tokenDoc, base, g) {
 function adapt(doc, kind, base, g) {
   const want = DOC[kind] ?? kind;
   if (!doc) return null;
+  // A token's synthetic Actor asked for as the base: the world actor (1.2.0, names-ext-3).
+  if (kind === "actor" && base && doc.documentName === "Actor" && doc.isToken) {
+    return g.game.actors?.get?.(doc.token?.actorId ?? doc.id) ?? null;
+  }
   if (doc.documentName === want) return doc;
   if (kind === "actor" && doc.documentName === "Token") return actorOfToken(doc, base, g);
   throw codedError("BAD_ARGS", `expected ${want}, got ${doc.documentName}`);

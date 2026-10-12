@@ -12,6 +12,9 @@
   (`Actor.updateDocuments`) each actor's tokens follow from its own old name. The old name is now
   kept per actor id in the update options (`pentarynOldNames[id]`, was `pentarynOldName`); before,
   every actor in the batch was given the last actor's old name, so the others' labels stayed put.
+- [declared] names-ext-3 (kit 1.2.0, final review 2026-10-12): `sync`'s base-actor mapping of a
+  token's synthetic actor now comes from the kit's `resolveRef(..., { base: true })`; names' own
+  `isToken` patch in `syncRef` is gone. Same result at the table.
 
 ## 0.1.1 — 2026-10-11 (play-test fix, fix/playtest-2026-10-11)
 

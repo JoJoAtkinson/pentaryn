@@ -88,3 +88,8 @@ KIT-M2 (declared, docs only): the README `resolve.mjs` row, the `resolve.mjs` he
 `publish.mjs` `inspect()` comment said resolution was "exact match only"; they now say what `byName`
 has always done — exact name, then a unique case-insensitive exact name; never a substring. No code
 change: modules rely on the fallback.
+names-ext-3 (declared): `resolveRef(ref, "actor", { base: true })` given a token's synthetic Actor
+(`isToken`, directly, as a placeable's document or by uuid) returns the world actor
+(`game.actors.get(token.actorId ?? id)`, null/NOT_FOUND when it is gone); before, it returned the
+synthetic actor unchanged. `base: false` is unchanged. Names' `syncRef` and ties' `inspect` drop
+their hand-rolled copies; transform's outside-revert hook never resolved through the kit and keeps its.

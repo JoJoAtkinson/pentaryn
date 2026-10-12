@@ -261,7 +261,8 @@ keeps what it had and gains the file and its deps), then `vendor.py check <short
   first param is named `ref` is resolved by `resolveRef` on every call (Actor, Token, UUID, 16-char
   id, exact then case-insensitive name; **never a substring**). Scene scope comes only from that
   call's `opts.sceneId` (`"current"` = the viewing client's canvas), and `opts.base: true` picks
-  the world actor over a token's synthetic one. `inspect(ref, { as: userRef })` answers with what
+  the world actor over a token's synthetic one (a token, its id/uuid, or the synthetic Actor itself,
+  kit 1.2.0). `inspect(ref, { as: userRef })` answers with what
   that user may see.
 - A **write** row (`writes: true`) whose ref does not resolve returns `fail("NOT_FOUND" |
   "AMBIGUOUS" | "BAD_ARGS", reason)` instead of throwing; `await` a write either way.
