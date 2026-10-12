@@ -55,6 +55,7 @@ export const LIMITS = Object.freeze({
   title: 60,           // a window title
   ua: 120,             // the browser's user agent
   keys: 8,             // changed keys kept per document update
+  actionsDefault: 200, // historySize's default: the settings row, the recorder's pre-ready fallback, historyMax on junk
   actionsMin: 20,      // historySize is clamped to [actionsMin, actionsMax]
   actionsMax: 1000,
   errorsMax: 50,
@@ -275,9 +276,9 @@ export function parseBugCommand(message) {
 
 /* ── the rings ────────────────────────────────────────────────────────────── */
 
-/** historySize → the ring cap actually used, clamped to [actionsMin, actionsMax]; junk → 200. */
+/** historySize → the ring cap actually used, clamped to [actionsMin, actionsMax]; junk → actionsDefault. */
 export function historyMax(n) {
-  const v = Number.isFinite(Number(n)) && n !== null && n !== "" ? Math.round(Number(n)) : 200;
+  const v = Number.isFinite(Number(n)) && n !== null && n !== "" ? Math.round(Number(n)) : LIMITS.actionsDefault;
   return Math.min(LIMITS.actionsMax, Math.max(LIMITS.actionsMin, v));
 }
 

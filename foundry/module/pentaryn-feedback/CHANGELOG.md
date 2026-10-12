@@ -2,6 +2,10 @@
 
 ## Unreleased — 2026-10-12 (W3L live-check fix; `module.json` stays 0.1.2, code-only sync)
 
+- **[declared] One history default** (feedback-M7): the `historySize` default of 200 was a bare
+  literal in the settings row, the recorder's pre-ready fallback and `historyMax`'s junk case. Core
+  now has `LIMITS.actionsDefault = 200` and all three read it; a core test pins the settings row to
+  it. Still 200 — no behaviour change.
 - **[declared] One table of recorder action kinds** (feedback-EXT-6): the kinds the recorder
   pushes were scattered literals, and the Python renderer test's case list had fallen behind (no
   `tool`, `use`, `combat` or `notify`). Core now exports a frozen `ACTION_KINDS`; `core.test` scans

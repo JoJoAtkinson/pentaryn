@@ -164,6 +164,16 @@ test("historyMax: clamps to 20..1000; junk is the default 200", () => {
   for (const [input, want] of table) assert.equal(core.historyMax(input), want, String(input));
 });
 
+test("feedback-M7: one actionsDefault — settings row, recorder fallback and historyMax agree", async () => {
+  assert.equal(LIMITS.actionsDefault, 200);
+  // Imported here, not at the top, so the bare-core purity proof above still loads core alone.
+  const { SETTINGS } = await import("../settings.mjs");
+  assert.equal(SETTINGS.find(r => r.key === "historySize").default, LIMITS.actionsDefault);
+  assert.equal(core.historyMax(undefined), LIMITS.actionsDefault);
+  const recorder = readFileSync(new URL("recorder.mjs", ROOT), "utf8");
+  assert.match(recorder, /historySize: \(\) => LIMITS\.actionsDefault/);
+});
+
 test("ringPush keeps the newest max entries, oldest dropped from the front", () => {
   const ring = [];
   for (let i = 1; i <= 7; i++) core.ringPush(ring, { i }, 3);

@@ -14,7 +14,7 @@ import { defineKeybindings, defineSettings, settingReader, settingsSnapshot as s
 /** @type {import("./lib/settings.mjs").SettingRow[]} */
 export const SETTINGS = Object.freeze([
   {
-    key: "historySize", scope: "world", config: true, type: Number, default: 200,
+    key: "historySize", scope: "world", config: true, type: Number, default: LIMITS.actionsDefault,
     range: { min: LIMITS.actionsMin, max: LIMITS.actionsMax, step: 10 },
     name: "PENTARYN_FEEDBACK.Setting.historySize.Name",
     hint: "PENTARYN_FEEDBACK.Setting.historySize.Hint",

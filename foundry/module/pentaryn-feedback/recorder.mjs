@@ -48,7 +48,7 @@ const undo = [];                  // DOM listeners to remove on uninstall
  * after an unwrap would be refused), so they check this switch: off after uninstall, back on at the
  * next install. `console` follows the captureConsole setting read at install (requiresReload).
  */
-const live = { on: false, early: true, console: false, historySize: () => 200 };
+const live = { on: false, early: true, console: false, historySize: () => LIMITS.actionsDefault };
 
 const now = () => Date.now();
 const push = entry => {
