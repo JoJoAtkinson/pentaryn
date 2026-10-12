@@ -101,7 +101,10 @@ function resultOf(message) {
   const roll = message.rolls?.[0];
   const actor = message.getAssociatedActor?.();
   let canBreak = false, canResist = false;
-  try { canBreak = !!message.system.canBreakConcentration; canResist = !!message.system.canResist; } catch { /* old card */ }
+  try {
+    canBreak = !!message.system.canBreakConcentration;
+    canResist = !!message.system.canResist;
+  } catch (err) { log.debug("concentration save card unreadable (an old card?): not auto-broken", err); }
   return concentrationResult({
     total: roll?.total ?? null, dc: roll?.options?.target ?? null, canBreak, canResist,
     features: featureKeys(actor), auto: autoBreakOn()

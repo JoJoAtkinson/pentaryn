@@ -76,7 +76,7 @@ function putSidebarBack(app) {
   setTimeout(() => {
     try {
       restoreSidebar(s);
-    } catch { /* leave it */ }
+    } catch (err) { log.debug("summon sidebar restore: left as it is", err); }
   }, 0);
 }
 

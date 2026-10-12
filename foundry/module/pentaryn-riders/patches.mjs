@@ -66,7 +66,7 @@ function patchEnrich(ctx) {
       if (item && !options.rollData && tooltipItems.has(item) && typeof item.getRollData === "function") {
         options = { ...options, rollData: item.getRollData() };
       }
-    } catch { /* enrich as asked */ }
+    } catch (err) { ctx.log.debug("tooltip roll data: enriched as asked", err); }
     return wrapped(content, options);
   }, { log: ctx.log }));
 }
