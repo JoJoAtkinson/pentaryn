@@ -372,8 +372,35 @@ export async function pingPlayers(messageId) {
 /*  Apply                                       */
 /* -------------------------------------------- */
 
-/** Apply damage for ticked, resolved, unapplied rows (all of them, or rowIds). Safe to repeat. */
-export async function applyRows(messageId, rowIds = null) {
+/** How long a queued Apply waits for an earlier, stuck Apply on the same tray before it runs anyway. */
+export const APPLY_WAIT_MS = 10_000;
+const applying = new Map();
+
+/** `promise` settled, or `ms` passed, whichever is first; never rejects. */
+function settledOrAfter(promise, ms) {
+  let timer;
+  const wait = new Promise(r => { timer = setTimeout(r, ms); });
+  return Promise.race([promise.then(() => {}, () => {}), wait]).finally(() => clearTimeout(timer));
+}
+
+/**
+ * Apply damage for ticked, resolved, unapplied rows (all of them, or rowIds). Safe to repeat.
+ * R1: a row whose applyDamage rejects does not stop the others; the rows that landed are marked
+ * applied, the GM is warned which rows failed, and the first error is rethrown for the caller.
+ * aoe-edge-1: overlapping calls for one message in this tab run one after another, so the later
+ * one sees the earlier one's rows as applied. A rejection still reaches its own caller; an earlier
+ * Apply stuck for APPLY_WAIT_MS stops holding the later ones back.
+ */
+export function applyRows(messageId, rowIds = null) {
+  const prev = applying.get(messageId);
+  const run = () => applyRowsNow(messageId, rowIds);
+  const next = prev ? settledOrAfter(prev, APPLY_WAIT_MS).then(run) : run();
+  applying.set(messageId, next);
+  next.then(() => {}, () => {}).finally(() => { if (applying.get(messageId) === next) applying.delete(messageId); });
+  return next.then(v => v);
+}
+
+async function applyRowsNow(messageId, rowIds) {
   if (!game.user.isGM) { why("apply", messageId, "not a GM"); return null; }
   const message = game.messages.get(messageId);
   const res = aoeFlags(message).resolution;
@@ -382,17 +409,27 @@ export async function applyRows(messageId, rowIds = null) {
   const todo = applicableRows(res.rows, rowIds);
   const damages = hydrateDamages(res.damages);
   const done = {};
+  const failed = [];
   for (const row of todo) {
     const actor = fromUuidSync(row.actor);
     if (!actor) continue;
     const before = actor.system.attributes.hp.value;
-    await actor.applyDamage(damages, { multiplier: row.multiplier, originatingMessage: message });
-    done[row.id] = { before, after: actor.system.attributes.hp.value };
+    try {
+      await actor.applyDamage(damages, { multiplier: row.multiplier, originatingMessage: message });
+      done[row.id] = { before, after: actor.system.attributes.hp.value };
+    } catch (err) {
+      failed.push({ row, err });   // R1: the rows that landed are still marked below, so a retry skips them
+    }
   }
   const out = await mutate(messageId, r => {
     for (const row of r.rows) if (done[row.id]) { row.applied = true; row.hp = done[row.id]; }
     return r;
   });
+  if (failed.length) {
+    for (const { row, err } of failed.slice(1)) log.error("apply", row.name, err);   // the first is rethrown for the caller to log
+    ui.notifications.warn(_loc("PENTARYN_AOE.Tray.ApplyFailed", { names: failed.map(f => f.row.name).join(", ") }));
+    throw failed[0].err;
+  }
   if (out && allApplied(out.rows)) await cleanupInstant(out);
   return out;
 }
@@ -462,4 +499,4 @@ export function uninstall() {
 
 // Test seam (characterisation checkpoint): tests import this through test/fixtures/seams.mjs only,
 // so the blueprint refactor edits that shim, not the frozen tests. Not part of the API.
-export const _internals = { tokensForTargets, keysOnly, saveSystem, damagesOf, supersedeOlder, rollOne, postRequest, onSaveMessage, cleanupInstant, isAbilitySave, queues };
+export const _internals = { tokensForTargets, keysOnly, saveSystem, damagesOf, supersedeOlder, rollOne, postRequest, onSaveMessage, cleanupInstant, isAbilitySave, queues, applying };

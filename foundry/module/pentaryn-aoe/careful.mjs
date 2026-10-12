@@ -6,8 +6,11 @@
  * it takes no damage if it would normally take half damage on a successful save."
  *
  *  - On the caster's client, using Careful Spell (`dnd5e.postUseActivity`) writes
- *    flags.pentaryn-aoe.careful = { at, key, usage } on the caster (key = the combat turn, else a
- *    10-minute window) and toasts how many it protects.
+ *    flags.pentaryn-aoe.careful = { at, key, usage } on the caster (key = the combat turn, or null
+ *    out of combat) and toasts how many it protects.
+ *  - Metamagic ends after use (metamagic-disarm): the caster's next spell cast takes it, binding it
+ *    to that spell's usage card, in or out of combat, with no time window. A placement cancelled
+ *    before it lands (refunded) is not a cast and leaves it armed.
  *  - The next save spell's resolution (resolve.mjs, through ctx.exposed.carefulFor) marks up to CHA
  *    mod of the caster's side as protected (core.carefulTargets / protectRows) and binds the use
  *    to that usage card, so a re-roll of the card keeps it and another spell does not get it.
@@ -49,7 +52,7 @@ async function carefulFor(caster, described, { casterActorId, usage, scene, onSa
   const flag = aoeFlags(caster).careful;
   const combatKey = carefulKey(caster);
   if (!flag) { why("careful", usage, "no flag"); return null; }
-  if (!carefulApplies(flag, { now: Date.now(), combatKey, usage })) { why("careful", usage, "not applicable", { combatKey, flag }); return null; }
+  if (!carefulApplies(flag, { combatKey, usage })) { why("careful", usage, "not applicable", { combatKey, flag }); return null; }
   const own = caster.token ?? caster.getActiveTokens?.(false, true)?.find(tk => tk.parent === scene) ?? null;
   const max = carefulMax(caster);
   const ids = carefulTargets(described, { casterActorId, casterDisposition: own?.disposition ?? CONST.TOKEN_DISPOSITIONS.FRIENDLY, max });
@@ -59,10 +62,24 @@ async function carefulFor(caster, described, { casterActorId, usage, scene, onSa
   return { names: rows.filter(r => r.protected).map(r => r.name), max };
 }
 
-/** On the caster's client: Careful Spell was used, the next save spell's area protects their side. */
-async function onCarefulUsed(activity) {
+/**
+ * metamagic-disarm: the caster cast a spell, so an armed Careful Spell is spent on it (bound to its
+ * usage card); if that spell has no save area, it protects nobody and the next one gets nothing.
+ */
+async function takeCareful(actor, usageConfig, results) {
+  const usage = results?.message?.id ?? null;
+  const flag = aoeFlags(actor).careful;
+  if (!actor?.isOwner || !flag || flag.usage || !usage) return;
+  // A placement cancelled before it landed is refunded (refund.mjs): that spell was never cast.
+  if (usageConfig?.create?.measuredTemplate && !(results?.templates?.length)) return why("careful", usage, "placement cancelled, still armed");
+  await actor.update({ [`flags.${MODULE}.careful.usage`]: usage }).catch(err => log.warn("careful spend on cast", err));
+}
+
+/** On the caster's client: Careful Spell was used, the next spell (if it is a save spell, its area) protects their side. */
+async function onCarefulUsed(activity, usageConfig, results) {
   if (!setting("carefulSpell")) return;
   const item = activity?.item;
+  if (item?.type === "spell") return takeCareful(activity.actor, usageConfig, results);
   if ((item?.system?.identifier || "") !== "careful-spell") return;
   const actor = activity.actor;
   if (!actor?.isOwner) return why("careful", null, "used, but this client does not own the caster");
@@ -76,7 +93,7 @@ export function install(reg, ctx) {
   // resolve.mjs (another feature) calls this through ctx.exposed, never by importing this file.
   ctx.expose({ carefulFor });
 
-  reg.on("dnd5e.postUseActivity", reg.guardSwallowAsync("postUseActivity(careful)", (activity) => onCarefulUsed(activity)), { guard: false, label: "postUseActivity(careful)" });
+  reg.on("dnd5e.postUseActivity", reg.guardSwallowAsync("postUseActivity(careful)", (activity, usageConfig, results) => onCarefulUsed(activity, usageConfig, results)), { guard: false, label: "postUseActivity(careful)" });
 
   // A Careful Spell armed for a turn of a combat that is now gone can never apply: clear it.
   reg.on("deleteCombat", reg.guardSwallowAsync("deleteCombat(careful)", async (combat) => {

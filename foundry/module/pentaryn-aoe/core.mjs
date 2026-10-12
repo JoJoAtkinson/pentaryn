@@ -461,18 +461,19 @@ export function carefulStale(flag, combatId) {
 }
 
 /**
- * Is a Careful Spell use still waiting for this cast? In combat: the same turn it was used on.
- * Out of combat: ten minutes. Bound to the first usage card it protected, so re-rolling that card
- * keeps the protection and a later, different spell does not get it.
+ * Is a Careful Spell use still waiting for this cast? Metamagic ends after use (metamagic-disarm):
+ * the caster's next spell cast takes it (binds it to that usage card), in or out of combat, with no
+ * time window. In combat it is also bound to the turn it was used on. Re-rolling the bound card
+ * keeps the protection; a later, different spell does not get it.
  * @param {{at?: number, key?: string|null, usage?: string|null}|null} flag
- * @param {{now?: number, combatKey?: string|null, usage?: string|null, maxAgeMs?: number}} o
+ * @param {{combatKey?: string|null, usage?: string|null}} o
  * @returns {boolean}
  */
-export function carefulApplies(flag, { now = 0, combatKey = null, usage = null, maxAgeMs = 10 * 60 * 1000 } = {}) {
+export function carefulApplies(flag, { combatKey = null, usage = null } = {}) {
   if (!flag || typeof flag !== "object") return false;
   if (flag.usage && flag.usage !== usage) return false;
   if (flag.key) return flag.key === combatKey;
-  return Number.isFinite(flag.at) && now - flag.at <= maxAgeMs;
+  return true;
 }
 
 /**

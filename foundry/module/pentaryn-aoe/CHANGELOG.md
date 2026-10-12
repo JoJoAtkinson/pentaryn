@@ -2,10 +2,31 @@
 
 ## Unreleased
 
+- **The tray's buttons fit the chat sidebar** (declared, play test AO-1 / tray-overflow,
+  2026-10-12): Re-roll NPC saves, Ping and Apply were squeezed into one row at a fixed 24 px, so at
+  the default sidebar width a label broke onto a second line and spilled out of its button. The
+  row now wraps a whole button onto the next line and a button grows with its label (`aoe.css`,
+  own `.pentaryn-aoe-tray` rules only). Live check: GM tab, default sidebar width, a Fireball
+  tray — every label sits inside its button, on one line; widen the sidebar and the three share
+  one row again.
+- **Careful Spell ends after the next spell** (declared, play test AO-1 / metamagic-disarm,
+  2026-10-12; Joe's ruling: metamagic ends after use): out of combat a used Careful Spell stayed
+  armed for 10 minutes and protected whichever save spell came next. The caster's next spell cast
+  now takes it (bound to that usage card, `postUseActivity`), in or out of combat, with no time
+  window; a non-save spell spends it, a placement cancelled before it lands does not.
+
 - **A handle drag keeps the area's direction** (declared, play test AO-3, 2026-10-12): handle moves
   are made with `autoRotate: false` (`preMoveToken`). Core's `tokenAutoRotate` turned the dragged
   handle to face its path, and the attached region turned with it (a cone aimed south-east swung
   north). Row `core-token-auto-rotate-handle`.
+- **Two quick Apply clicks damage each row once** (declared, review aoe-edge-1, 2026-10-12):
+  `applyRows` calls for one tray are serialised in the tab, so the second skips the rows the first
+  applied (each row used to take the damage twice). A rejection still reaches its caller; an Apply
+  stuck for 10 s (`APPLY_WAIT_MS`) no longer holds later ones back.
+- **A failed row no longer re-damages the others on retry** (declared, review R1, 2026-10-12): when
+  one row's `applyDamage` rejected, the rows already damaged in that Apply were never marked applied,
+  so the next Apply damaged them again. Each row is now caught on its own: the rest still land and
+  are marked applied, a warning toast names the rows that failed, and the first error still rejects.
 
 ## 0.4.0 — 2026-10-12 (migrated to the addon blueprint, wave 4; released by the Wave 7 restart batch)
 
