@@ -26,7 +26,7 @@
 import { DEDUPE_MS, FLUSH_MS, MODULE, capLimit, isDuplicate, mergePending } from "./pings-core.mjs";
 import { logStore, maxSetting, onLogChange, readLog } from "./settings.mjs";
 import { isAnyGM } from "./lib/election.mjs";
-import { unwrapAll, wrapMethod } from "./lib/patch.mjs";
+import { wrapMethod } from "./lib/patch.mjs";
 
 /**
  * Session state. `pending`: this tab's records since its last flush, so a burst costs one write.
@@ -39,6 +39,8 @@ let last = null;
 let epoch = 0;
 let flushTimer = null;
 let listener = null;
+/** The handlePing patch's kit handle (pings-ext-1): uninstall() undoes this patch only. */
+let handle = null;
 
 function scheduleFlush() {
   if (flushTimer) return;
@@ -124,7 +126,7 @@ function patchControlsLayer() {
   }
   if (Layer.prototype.handlePing.__pentarynPatched) return true;
 
-  wrapMethod(MODULE, {
+  handle = wrapMethod(MODULE, {
     target: Layer.prototype,
     name: "handlePing",
     marker: "__pentarynPatched",
@@ -148,12 +150,15 @@ export function install(reg, ctx) {
 }
 
 /**
- * Undo start(): unwrap handlePing (this module's kit copy holds only that patch), stop listening on
- * userActivity and on the log row, drop the pending records and their flush (pings not yet written,
- * ≤ FLUSH_MS, are lost).
+ * Undo start(): unwrap handlePing through its own handle, stop listening on userActivity and on the
+ * log row, drop the pending records and their flush (pings not yet written, ≤ FLUSH_MS, are lost).
+ * When a foreign wrapper sits on top of ours the undo fails and the kit keeps the record
+ * (pings-ext-1, [declared]): describe().patches still lists the live patch, and a hot re-import gets
+ * that existing handle back instead of wrapping a second time.
  */
 export function uninstall() {
-  unwrapAll();
+  handle?.unwrap();
+  handle = null;
   if (listener) game.socket?.off?.("userActivity", listener);
   listener = null;
   onLogChange(null);

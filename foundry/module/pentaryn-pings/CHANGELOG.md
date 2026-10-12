@@ -13,6 +13,10 @@
 
 ## Unreleased — 2026-10-11 (addon blueprint, wave 1)
 
+- [declared] Fix pings-ext-1: `uninstall()` undoes the `handlePing` wrap through its own kit handle
+  instead of `unwrapAll()`. With a foreign wrapper on top of ours the undo fails and the patch record
+  stays, so `describe().patches` still lists the live patch and a hot re-import reuses the existing
+  handle rather than wrapping a second time.
 - [declared] Fix pings-edge-1: with two GM tabs, a `clear()` in one tab is no longer undone by the
   other tab's next flush, and neither tab overwrites the other's pings. The log is a kit
   `serialStore`; each tab keeps only its pings since its last write and a flush appends them to the

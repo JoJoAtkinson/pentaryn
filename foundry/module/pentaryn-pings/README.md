@@ -86,6 +86,12 @@ Emits no events of its own (`HOOKS` is empty). Registers only `init` and `ready`
 The two paths overlap, so a record that repeats the last one (same user, scene and rounded point,
 less than 400 ms later) is dropped.
 
+`uninstall()` undoes the `handlePing` wrap through its own `wrapMethod` handle, never the kit's
+`unwrapAll()` (pings-ext-1, [declared]). If another module has wrapped `handlePing` on top of ours,
+the undo cannot restore the original without dropping that wrapper, so it leaves the patch live and
+the kit keeps its record: `describe().patches` still lists `pings-core-ping-handle`, and a hot
+re-import gets the existing handle back instead of wrapping a second time.
+
 ## Two sessions / who writes
 
 Every GM client captures and writes; players never write (world settings are not player-writable).
