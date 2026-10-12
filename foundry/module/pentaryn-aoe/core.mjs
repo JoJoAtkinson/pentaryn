@@ -243,7 +243,7 @@ export function attachedToOther(region, tokenById) {
 export function regionFromSpell(flags5e, { itemUuid = null, activityUuid = null } = {}) {
   if (!flags5e) return false;
   if (itemUuid && flags5e.item === itemUuid) return true;
-  if (activityUuid && (flags5e.activity === activityUuid || flags5e.origin === activityUuid)) return true;
+  if (regionOfActivity(flags5e, activityUuid)) return true;
   if (!itemUuid) return false;
   const prefix = `${itemUuid}.Activity.`;
   return [flags5e.activity, flags5e.origin].some(u => typeof u === "string" && u.startsWith(prefix));
