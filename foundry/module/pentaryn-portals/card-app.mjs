@@ -23,6 +23,27 @@ export function configureCardApp({ setEditing, guard } = {}) {
   if (guard) deps.guard = guard;
 }
 
+/** One teleport-behavior field, written in one batch for every teleport behavior of the region (C59). */
+const behaviorField = key => async (region, behaviors, on) => {
+  const updates = behaviors.map(b => ({ _id: b.id, [`system.${key}`]: on }));
+  if (updates.length) await region.updateEmbeddedDocuments("RegionBehavior", updates);
+};
+
+/**
+ * The passage switches (EXT-6): one row per switch drives both the render (`sw()`) and the change
+ * handler, so a new switch is one row. `label` / `hint` are lang keys; `read(region, behaviors)` is
+ * the switch's state, `write(region, behaviors, on)` its write; `behaviors` is the region's
+ * teleport behaviors.
+ */
+export const SWITCHES = Object.freeze([
+  { key: "open", label: "PENTARYN_PORTALS.Card.Open", hint: "PENTARYN_PORTALS.Card.OpenHint",
+    read: region => !region.hidden, write: (region, _behaviors, on) => region.update({ hidden: !on }) },
+  { key: "revealed", label: "PENTARYN_PORTALS.Card.Revealed", hint: "PENTARYN_PORTALS.Card.RevealedHint",
+    read: region => passageRevealed(region), write: behaviorField("revealed") },
+  { key: "choice", label: "PENTARYN_PORTALS.Card.Choice", hint: "PENTARYN_PORTALS.Card.ChoiceHint",
+    read: (_region, behaviors) => behaviors.every(b => b.system.choice), write: behaviorField("choice") },
+].map(Object.freeze));
+
 export class PortalCard extends foundry.applications.api.ApplicationV2 {
   static DEFAULT_OPTIONS = {
     classes: ["ppt-app", "ppt-dialog"],
@@ -61,15 +82,12 @@ export class PortalCard extends foundry.applications.api.ApplicationV2 {
       return `<p class="hint">${_loc("PENTARYN_PORTALS.Card.Intro")}</p>${sealed}${note}<div class="ppt-cards">${dests.map(d => cardHTML(cardFor(d))).join("")}</div>`;
     }
 
-    const sw = (key, on, label, hint) => `<label class="ppt-switch" data-tooltip="${esc(hint)}">
-      <input type="checkbox" data-set="${key}" ${on ? "checked" : ""}><span class="ppt-slider"></span><span>${esc(label)}</span></label>`;
-    const choice = behaviors.every(b => b.system.choice);
+    const sw = s => `<label class="ppt-switch" data-tooltip="${esc(_loc(s.hint))}">
+      <input type="checkbox" data-set="${s.key}" ${s.read(this.region, behaviors) ? "checked" : ""}><span class="ppt-slider"></span><span>${esc(_loc(s.label))}</span></label>`;
     const head = `<section class="ppt-passage">
       <input class="ppt-name" type="text" data-set="name" value="${esc(this.region.name)}" data-tooltip="${_loc("PENTARYN_PORTALS.Card.PassageName")}">
       <div class="ppt-switches">
-        ${sw("open", !this.region.hidden, _loc("PENTARYN_PORTALS.Card.Open"), _loc("PENTARYN_PORTALS.Card.OpenHint"))}
-        ${sw("revealed", revealedAll, _loc("PENTARYN_PORTALS.Card.Revealed"), _loc("PENTARYN_PORTALS.Card.RevealedHint"))}
-        ${sw("choice", choice, _loc("PENTARYN_PORTALS.Card.Choice"), _loc("PENTARYN_PORTALS.Card.ChoiceHint"))}
+        ${SWITCHES.map(sw).join("\n        ")}
       </div>
       <p class="hint"><i class="fa-solid fa-up-down-left-right"></i> ${_loc("PENTARYN_PORTALS.Card.DragHint")}</p>
     </section>`;
@@ -117,15 +135,11 @@ export class PortalCard extends foundry.applications.api.ApplicationV2 {
     const behaviors = () => teleportBehaviors(region);
     const guard = deps.guard;
 
-    for (const input of content.querySelectorAll("[data-set]")) {
-      input.addEventListener("change", guard("card switch", async () => {
-        const k = input.dataset.set;
-        if (k === "name") return region.update({ name: input.value });
-        if (k === "open") return region.update({ hidden: !input.checked });
-        // One batched write for every teleport behaviour of the region (C59).
-        const updates = behaviors().map(b => ({ _id: b.id, [`system.${k}`]: input.checked }));
-        if (updates.length) await region.updateEmbeddedDocuments("RegionBehavior", updates);
-      }));
+    const name = content.querySelector('[data-set="name"]');
+    name?.addEventListener("change", guard("card switch", () => region.update({ name: name.value })));
+    for (const s of SWITCHES) {
+      const input = content.querySelector(`[data-set="${s.key}"]`);
+      input?.addEventListener("change", guard("card switch", () => s.write(region, behaviors(), input.checked)));
     }
 
     for (const card of content.querySelectorAll(".ppt-editcard")) this._wireCard(card);
