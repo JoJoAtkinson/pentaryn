@@ -55,6 +55,17 @@ test("every pre-migration row is legacy; restore/export/clear are GM write rows;
   assert.ok(api.describe().flags.writes.includes("flags.pentaryn-dropbin.ownership"), "PT3-1's saved pre-death map");
 });
 
+test("dropbin-EXT-2: corpse rows declare every document write they make (revive ⊇ fromCorpse via sync; overlay)", () => {
+  const fx = path => api.describe().methods.find(m => m.path === path).sideEffects ?? [];
+  const has = (path, list) => { for (const e of list) assert.ok(fx(path).includes(e), `${path} lacks ${e}`); };
+  const flags = ["corpse", "sight", "ownership"].map(k => `flags.pentaryn-dropbin.${k}`);
+  has("corpses.fromCorpse", ["Item Piles pile flags", ...flags, "delta.ownership", "sight.enabled", "ActiveEffect (Lootable, removed)"]);
+  assert.ok(!fx("corpses.fromCorpse").includes("flags.pentaryn-dropbin.*"), "fromCorpse names each flag");
+  has("corpses.toCorpse", ["flags.core.overlay"]);
+  has("corpses.sync", ["flags.core.overlay", ...fx("corpses.fromCorpse"), ...fx("corpses.toCorpse")]);
+  has("corpses.revive", ["ActiveEffect (Dead)", "system.attributes.hp.value", ...fx("corpses.fromCorpse")]);
+});
+
 test("settings() reports the store rows' size, never the ledger itself", () => {
   assert.deepEqual(api.settings(), { log: { store: true, size: 0 }, counter: { store: true, size: null } });
 });

@@ -24,7 +24,9 @@
         "flags.pentaryn-dropbin.ownership",
         "delta.ownership",
         "sight.enabled",
-        "ActiveEffect (Dead)"
+        "ActiveEffect (Dead)",
+        "flags.core.overlay",
+        "ActiveEffect (Lootable, removed)"
       ],
       "legacy": true,
       "doc": "Active GM: turn each eligible token of the actor into a corpse pile (dead) or back (alive). No-op elsewhere or without Item Piles."
@@ -49,7 +51,8 @@
         "flags.pentaryn-dropbin.ownership",
         "delta.ownership",
         "sight.enabled",
-        "ActiveEffect (Dead)"
+        "ActiveEffect (Dead)",
+        "flags.core.overlay"
       ],
       "legacy": true,
       "doc": "Make this token a lootable corpse pile now (players get OBSERVER on its delta; sight off; Dead as the overlay)."
@@ -69,9 +72,12 @@
       "query": false,
       "sideEffects": [
         "Item Piles pile flags",
-        "flags.pentaryn-dropbin.*",
+        "flags.pentaryn-dropbin.corpse",
+        "flags.pentaryn-dropbin.sight",
+        "flags.pentaryn-dropbin.ownership",
         "delta.ownership",
-        "sight.enabled"
+        "sight.enabled",
+        "ActiveEffect (Lootable, removed)"
       ],
       "legacy": true,
       "doc": "Turn a corpse we made back into a creature: revert the pile, give back its sight and pre-death delta ownership."
@@ -108,7 +114,14 @@
       "query": false,
       "sideEffects": [
         "ActiveEffect (Dead)",
-        "system.attributes.hp.value"
+        "system.attributes.hp.value",
+        "Item Piles pile flags",
+        "flags.pentaryn-dropbin.corpse",
+        "flags.pentaryn-dropbin.sight",
+        "flags.pentaryn-dropbin.ownership",
+        "delta.ownership",
+        "sight.enabled",
+        "ActiveEffect (Lootable, removed)"
       ],
       "legacy": true,
       "doc": "The HUD's Revive: clear Dead, raise hp to 1, then sync (the pile reverts)."

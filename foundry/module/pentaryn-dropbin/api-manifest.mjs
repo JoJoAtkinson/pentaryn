@@ -15,6 +15,12 @@ const ACTOR = { name: "actor", type: "Actor", resolve: false };
 const APP = { name: "app", type: "ItemPileInventoryApp", resolve: false, doc: "an open Item Piles loot window" };
 const N = { name: "n", type: "number|string", doc: "the ledger number" };
 
+// What a corpse conversion writes (dropbin-EXT-2): sync runs either one, revive runs sync.
+const CORPSE_FLAGS = ["flags.pentaryn-dropbin.corpse", "flags.pentaryn-dropbin.sight", "flags.pentaryn-dropbin.ownership"];
+const TO_CORPSE_WRITES = ["Item Piles pile flags", ...CORPSE_FLAGS, "delta.ownership", "sight.enabled", "ActiveEffect (Dead)", "flags.core.overlay"];
+const FROM_CORPSE_WRITES = ["Item Piles pile flags", ...CORPSE_FLAGS, "delta.ownership", "sight.enabled", "ActiveEffect (Lootable, removed)"];
+const SYNC_WRITES = [...new Set([...TO_CORPSE_WRITES, ...FROM_CORPSE_WRITES])];
+
 const corpseRow = (path, params, returns, doc, extra = {}) => ({ path, params, returns, gm: false, writes: false, legacy: true, doc, ...extra });
 
 export const MANIFEST = Object.freeze({
@@ -26,18 +32,18 @@ export const MANIFEST = Object.freeze({
   rows: [
     corpseRow("corpses.sync", [ACTOR], "Promise<void>",
       "Active GM: turn each eligible token of the actor into a corpse pile (dead) or back (alive). No-op elsewhere or without Item Piles.",
-      { gm: true, writes: true, sideEffects: ["Item Piles pile flags", "flags.pentaryn-dropbin.corpse", "flags.pentaryn-dropbin.sight", "flags.pentaryn-dropbin.ownership", "delta.ownership", "sight.enabled", "ActiveEffect (Dead)"] }),
+      { gm: true, writes: true, sideEffects: SYNC_WRITES }),
     corpseRow("corpses.toCorpse", [TOKEN_DOC], "Promise<void>",
       "Make this token a lootable corpse pile now (players get OBSERVER on its delta; sight off; Dead as the overlay).",
-      { gm: true, writes: true, sideEffects: ["Item Piles pile flags", "flags.pentaryn-dropbin.corpse", "flags.pentaryn-dropbin.sight", "flags.pentaryn-dropbin.ownership", "delta.ownership", "sight.enabled", "ActiveEffect (Dead)"] }),
+      { gm: true, writes: true, sideEffects: TO_CORPSE_WRITES }),
     corpseRow("corpses.fromCorpse", [TOKEN_DOC], "Promise<void>",
       "Turn a corpse we made back into a creature: revert the pile, give back its sight and pre-death delta ownership.",
-      { gm: true, writes: true, sideEffects: ["Item Piles pile flags", "flags.pentaryn-dropbin.*", "delta.ownership", "sight.enabled"] }),
+      { gm: true, writes: true, sideEffects: FROM_CORPSE_WRITES }),
     corpseRow("corpses.isDead", [ACTOR], "boolean",
       "Dead by the corpse rule: hp 0 or below with hp.max > 0, or the dead status."),
     corpseRow("corpses.revive", [TOKEN_DOC], "Promise<void>",
       "The HUD's Revive: clear Dead, raise hp to 1, then sync (the pile reverts).",
-      { gm: true, writes: true, sideEffects: ["ActiveEffect (Dead)", "system.attributes.hp.value"] }),
+      { gm: true, writes: true, sideEffects: ["ActiveEffect (Dead)", "system.attributes.hp.value", ...FROM_CORPSE_WRITES] }),
     corpseRow("corpses.paintEye", [{ name: "token", type: "Token", resolve: false, doc: "the canvas placeable" }], "void",
       "Draw or hide the lootable eye on one token (this client only; no document)."),
     corpseRow("corpses.paintAllEyes", [], "void", "paintEye on every token of the viewed scene."),
