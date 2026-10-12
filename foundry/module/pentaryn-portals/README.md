@@ -52,7 +52,7 @@ migration record → `context/plans/addon-blueprint-2026-10/migrate-pentaryn-por
 | `spreadArrivals` | world | on | A PC arriving through a portal onto an occupied square steps to the nearest free one (GM's client). |
 | `confirmPartyTeleport` | world | on | Teleport party lists who moves and asks first. Off: it moves at once. |
 
-Every read is live; no reload. Labels are plain English until the Wave 7 batch adds `lang/en.json`.
+Every read is live; no reload. Labels and hints are `PENTARYN_PORTALS.Setting.<key>.Name/Hint` in `lang/en.json`.
 
 ## API — game.pentaryn.portals
 
