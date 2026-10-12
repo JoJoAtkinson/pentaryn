@@ -206,6 +206,11 @@ def test_every_spec_runs_the_blueprint_gates_last():
         assert spec.check[-2:] == ("vendor", "conformance"), name
 
 
+def test_every_spec_uses_all_gates():
+    assert cfg.ALL_GATES == ("parse", "imports", "i18n", "node-test", "vendor", "conformance")
+    assert all(s.check == cfg.ALL_GATES for s in cfg.MODULES.values())
+
+
 # ── check_all (python-tooling-8) ──────────────────────────────────────────────
 
 def test_check_all_keeps_going_and_fails_if_any_failed(monkeypatch, capsys):
