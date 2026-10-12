@@ -131,6 +131,11 @@ async function syncAll() {
 /** Coalesce bursts into one sync per actor. */
 function schedule(actor) {
   if (!actor || actor.documentName !== "Actor" || !isActiveGMOrLoneGM()) return;
+  // The key is the actor id, which a pack actor or an unlinked token's synthetic actor shares with
+  // a world actor: a pack sync writes nothing, and the base actor's sync covers the synthetic's
+  // tokens (each from its own items), so neither may replace the world actor's pending sync.
+  if (actor.pack) return;
+  if (actor.isToken) actor = game.actors?.get(actor.id) ?? actor;
   clearTimeout(pending.get(actor.id));
   pending.set(actor.id, setTimeout(() => {
     pending.delete(actor.id);
