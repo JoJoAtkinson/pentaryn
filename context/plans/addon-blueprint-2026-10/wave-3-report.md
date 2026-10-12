@@ -119,6 +119,12 @@ module. Baseline: [`wave-3-baseline.md`](wave-3-baseline.md).
   outside `import()` callers). Decide: keep it a release (and accept C05 for ties), or retire it
   (grep the world's macros for `ties-api.mjs` first).
 
+- **Live phase — three choices before go ([`wave-3-live-plan.md`](wave-3-live-plan.md) §12).**
+  W3-L1: deploy the fork's description-only `a5ce74c` in the same session (default yes: one
+  `kill -9`, and the GM reload is needed anyway). W3-L2: skip the two checks that need a second GM tab
+  (portals D-P4, prompts DP11; default skip, node tests cover them). W3-L3: take a before-run of
+  the `prompt-markers` tool for the DP3 compare (default yes).
+
 ## Known red commits and ranges (bisecting)
 
 | Where | Range | What |
@@ -280,3 +286,10 @@ decision on whether a later lane builds them in wave 3, not a review fix.
 for `typeof T.describe`. Since B1, that is the kit's `describe()`, and the card is
 `describeCard`. The key is kept so a before/after diff lines up, and the value is still
 `"function"`.
+
+## Live phase (planned, not run)
+
+The gated sequence is [`wave-3-live-plan.md`](wave-3-live-plan.md). Goldens: `portals.js`,
+`creatures.js` and `senses.js` are new, in the wave-2 shared/declared split. `prompts.js` and `ties.js`
+are unchanged; their expected declared differences are in the plan's §6 table. No `module.json`
+changes on this branch, so a GM tab reload deploys it; there is no Foundry restart. Nothing has run.
