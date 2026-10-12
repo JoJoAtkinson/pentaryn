@@ -61,6 +61,12 @@ a world rescan, so never judge by it. `npcBridge: false` means the bridge module
 `npc` replacements fail with `BAD_SPEC`. `party` is the world's party setting (`"none set"` when blank —
 then ask Joe or leave budgets out; never invent one). The MCP gather's trailer also prints `module=<version>`.
 
+Read-only checks (module 0.4.5+, kit API): `game.pentaryn.prompts.describe()` (every call, its
+params and the flags it reads/writes), `selftest()` (`.ok === true` after a sync),
+`inspect(ref, {sceneId})` (one token: its marker size, text and provenance), `markersOn(sceneId)`
+(`[{id, size, text}]`) and `manifest(call)` (one stored gather manifest, or null). The full table
+is in the module [README](../../foundry/module/pentaryn-prompts/README.md) § API.
+
 ## The one call
 
 ```
@@ -448,7 +454,7 @@ you passed `img`; the ring tier is set per replacement).
 - **Two GM tabs** double the module's work (two dialogs, two autosaves). One GM client.
 - **Tokens stop answering hover/double-click** — the Ruler (or another non-Select) token tool is
   active; core makes every token non-interactive then. Switch back to Select. Keys typed during an
-  open are held for the box (`typeahead.mjs`), so they should no longer pick tools by accident.
+  open are held for the box (`typeahead-adapter.mjs`), so they should no longer pick tools by accident.
 - **Gather on a scene with no prompts** still lists every built token as `t#` context; harmless.
 - **Players never see markers:** actors are ownership NONE, SECRET disposition, tokens hidden.
 - **Driving the API by hand** — the batch is `replaceMany({call, replacements, dryRun, force,

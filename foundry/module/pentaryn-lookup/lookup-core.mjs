@@ -379,8 +379,8 @@ export function monsterDigest(raw) {
 export const tidy = t => t.replace(/\s+([,.;:!?)])/g, "$1").replace(/\(\s+/g, "(");
 
 // ── monsters(): the query grammar, filter, order and page ────────────────────
-// TWIN: pentaryn-prompts keeps its own copies — SIZE_WORDS (patch.mjs; geometry-core once prompts
-// migrates) and crNumber (replace.mjs). Modules never import each other (prompts-lookup-9), so a
+// TWIN: pentaryn-prompts keeps its own copies — SIZE_WORDS and parseCr (core/size.mjs; used by
+// actor-patch-adapter.mjs). Modules never import each other (prompts-lookup-9), so a
 // change to either side is made on both, deliberately.
 export const SIZE_KEYS = { tiny: "tiny", small: "sm", sm: "sm", medium: "med", med: "med", large: "lg", lg: "lg",
                            huge: "huge", gargantuan: "grg", grg: "grg" };
