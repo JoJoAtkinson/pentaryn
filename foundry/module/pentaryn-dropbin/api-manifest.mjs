@@ -70,7 +70,7 @@ export const MANIFEST = Object.freeze({
     },
     {
       path: "restore",
-      params: [N, { name: "target", type: "Actor|id|exact name", optional: true, resolve: false, doc: "default: the actor it left" }],
+      params: [N, { name: "target", type: "Actor|TokenDocument|uuid|id|exact name", optional: true, resolve: false, doc: "default: the actor it left; a target that does not resolve is no-actor" }],
       returns: "Promise<Item | Notification>", gm: true, writes: true, legacy: true,
       sideEffects: ["Item (created on the target actor)"],
       doc: "GM: recreate entry #n on the actor it left (or target) and toast. A refusal returns the warn/error Notification it showed.",
@@ -87,7 +87,7 @@ export const MANIFEST = Object.freeze({
     },
     {
       path: "restoreResult",
-      params: [N, { name: "target", type: "Actor|id|exact name", optional: true, resolve: false, doc: "default: the actor it left" }],
+      params: [N, { name: "target", type: "Actor|TokenDocument|uuid|id|exact name", optional: true, resolve: false, doc: "default: the actor it left; a target that does not resolve is no-actor" }],
       returns: '{ ok: true, item, actor } | { ok: false, reason: "not-gm" | "no-entry" | "no-actor" | "not-created" }',
       gm: true, writes: true, since: "0.2.2",
       sideEffects: ["Item (created on the target actor)"],

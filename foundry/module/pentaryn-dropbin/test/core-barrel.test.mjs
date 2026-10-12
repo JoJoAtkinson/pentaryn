@@ -38,13 +38,17 @@ test("appendEntry: number counter + 1, never mutates; a duplicate returns the ta
   assert.equal(core.appendEntry([], undefined, { t: 0 }).n, 1, "no counter yet: #1");
 });
 
-test("restoreTarget agrees with the oracle", () => {
+test("restoreTarget agrees with the oracle where the target resolves or is absent (dropbin-R3 declared the rest)", () => {
   const ann = { id: "a", name: "Ann" }, bo = { id: "b", name: "Bo" };
   const actors = { get: id => ({ a: ann, b: bo })[id] ?? undefined, getName: n => [ann, bo].find(x => x.name === n) };
   const isActor = x => x === ann || x === bo;
-  for (const target of [bo, "b", "Bo", null, "nobody", 7]) {
+  for (const target of [bo, "b", "Bo", null]) {
     assert.equal(core.restoreTarget(target, { fromActorId: "a" }, { isActor, actors }),
       oracle.restoreTarget(target, { fromActorId: "a" }, { isActor, actors }), String(target?.name ?? target));
+  }
+  for (const target of ["nobody", 7]) {
+    assert.equal(oracle.restoreTarget(target, { fromActorId: "a" }, { isActor, actors }), ann, "the oracle fell back");
+    assert.equal(core.restoreTarget(target, { fromActorId: "a" }, { isActor, actors }), null, String(target));
   }
 });
 

@@ -179,7 +179,9 @@ async function restoreResult(n, target = null) {
   const entry = findEntry(readLog(), n);
   if (!entry) return { ok: false, reason: "no-entry" };
 
-  const actor = restoreTarget(target, entry, { isActor: x => x instanceof Actor, actors: game.actors });
+  const actor = restoreTarget(target, entry, {
+    isActor: x => x instanceof Actor, actors: game.actors, fromUuid: u => globalThis.fromUuidSync?.(u),
+  });
   if (!actor) return { ok: false, reason: "no-actor" };
 
   const obj = foundry.utils.duplicate(entry.item);

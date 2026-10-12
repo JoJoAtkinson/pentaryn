@@ -48,6 +48,10 @@ Declared changes:
 - dropbin-EC-4: HUD Revive cancels the debounced sync its own writes queued, and a second sync for
   a token already converting waits for it and then re-checks dead/alive, so a corpse is never
   reverted twice at once (the second revert erased the restored ownership map).
+- dropbin-R3: `restore`/`restoreResult` with a target that does not resolve (a typo, an unknown
+  UUID) is refused as `no-actor` with the "cannot find an actor" toast; it restored onto the actor
+  the item left and reported success. A target may now also be a TokenDocument (its actor) or an
+  Actor/Token UUID; only no target falls back to the actor the item left.
 
 Added: `list(n, { brief })`, `restoreResult`, `inspect`, `selftest` (items-journal-28).
 - A restore another module refuses (a `preCreateItem` veto) is `{ ok: false, reason: "not-created" }`

@@ -116,3 +116,20 @@ test("restoreResult: a vetoed create ([] from createEmbeddedDocuments) is not-cr
     else delete ann.createEmbeddedDocuments;
   }
 });
+
+test("dropbin-R3: an explicit target that does not resolve is no-actor; a TokenDocument or a UUID resolves to its actor", async () => {
+  const tok = scene.tokens.get("tokGob0000000001");
+  for (const bad of ["nobody", "Actor.nope000000000001", "Scene.sceneOne00000001.Token.nope000000000001", scene.uuid, 7, {}]) {
+    assert.deepEqual(await api.restoreResult(1, bad), { ok: false, reason: "no-actor" }, String(bad));
+  }
+  const from = F.calls.length;
+  const r = await api.restore(1, "nobody");
+  assert.equal(r.message, "Drop bin: cannot find an actor to restore #1 onto.");
+  assert.equal(F.calls.slice(from).filter(c => c.op === "createEmbeddedDocuments").length, 0, "nothing created");
+  for (const target of [tok, gob.uuid, tok.uuid, gob, gob.id, "Goblin"]) {
+    const ok = await api.restoreResult(1, target);
+    assert.equal(ok.ok, true, String(target?.uuid ?? target));
+    assert.equal(ok.actor, gob, String(target?.uuid ?? target));
+  }
+  for (const none of [null, undefined]) assert.equal((await api.restoreResult(1, none)).actor, ann);
+});

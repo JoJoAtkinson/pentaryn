@@ -115,11 +115,21 @@ export function shouldCaptureDelete({ userId, selfId, actor, characterType, isPi
 }
 
 /**
- * restore()'s target: an Actor as given, else an actor id or exact name, else the actor the entry
- * left. `isActor` stands for `instanceof Actor`; `actors` for `game.actors`.
+ * restore()'s target (dropbin-R3): null/undefined is the actor the entry left; otherwise an Actor
+ * (a synthetic token actor too) as given, a TokenDocument's actor, or a string that is an actor id,
+ * an exact actor name, or an Actor/Token UUID. An explicit target that does not resolve is null,
+ * never the actor the entry left. `isActor` stands for `instanceof Actor`; `actors` for
+ * `game.actors`; `fromUuid` for `fromUuidSync`.
  */
-export function restoreTarget(target, entry, { isActor, actors }) {
-  return isActor(target) ? target
-    : (typeof target === "string" ? (actors.get(target) ?? actors.getName(target)) : null)
-    ?? actors.get(entry.fromActorId);
+export function restoreTarget(target, entry, { isActor, actors, fromUuid = () => null }) {
+  if (target === null || target === undefined) return actors.get(entry.fromActorId) ?? null;
+  let doc = target;
+  if (typeof target === "string") {
+    doc = actors.get(target) ?? actors.getName(target) ?? null;
+    if (!doc && target.includes(".")) {
+      try { doc = fromUuid(target) ?? null; } catch { doc = null; }
+    }
+  }
+  if (doc?.documentName === "Token") return doc.actor ?? null;
+  return doc && isActor(doc) ? doc : null;
 }

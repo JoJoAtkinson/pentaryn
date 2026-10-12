@@ -282,10 +282,10 @@
         },
         {
           "name": "target",
-          "type": "Actor|id|exact name",
+          "type": "Actor|TokenDocument|uuid|id|exact name",
           "optional": true,
           "resolve": false,
-          "doc": "default: the actor it left"
+          "doc": "default: the actor it left; a target that does not resolve is no-actor"
         }
       ],
       "returns": "Promise<Item | Notification>",
@@ -335,10 +335,10 @@
         },
         {
           "name": "target",
-          "type": "Actor|id|exact name",
+          "type": "Actor|TokenDocument|uuid|id|exact name",
           "optional": true,
           "resolve": false,
-          "doc": "default: the actor it left"
+          "doc": "default: the actor it left; a target that does not resolve is no-actor"
         }
       ],
       "returns": "{ ok: true, item, actor } | { ok: false, reason: \"not-gm\" | \"no-entry\" | \"no-actor\" | \"not-created\" }",
