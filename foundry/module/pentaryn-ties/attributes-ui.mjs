@@ -185,10 +185,10 @@ function chainTags(row) {
   const parent = row.parent ? describeAttribute(row.parent) : null;
   const kids = registry().filter(e => e.parent === row.id);
   const need = parent
-    ? `<span class="pt-chain pt-chain-need" data-tooltip="${esc(`Can only be rolled after ${parent.title} is identified`)}"><i class="fa-solid fa-lock"></i> needs ${esc(parent.title)}</span>`
+    ? `<span class="pt-chain pt-chain-need" data-tooltip="${esc(_loc("PENTARYN_TIES.attributes.chain.needsTip", { title: parent.title }))}"><i class="fa-solid fa-lock"></i> ${esc(_loc("PENTARYN_TIES.attributes.chain.needs", { title: parent.title }))}</span>`
     : "";
   const unlocks = kids.length
-    ? `<span class="pt-chain pt-chain-kids" data-tooltip="${esc(`Identifying this unlocks: ${kids.map(k => k.title).join(", ")}`)}"><i class="fa-solid fa-key"></i> unlocks ${esc(kids.map(k => k.title).join(", "))}</span>`
+    ? `<span class="pt-chain pt-chain-kids" data-tooltip="${esc(_loc("PENTARYN_TIES.attributes.chain.unlocksTip", { titles: kids.map(k => k.title).join(", ") }))}"><i class="fa-solid fa-key"></i> ${esc(_loc("PENTARYN_TIES.attributes.chain.unlocks", { titles: kids.map(k => k.title).join(", ") }))}</span>`
     : "";
   return need + unlocks;
 }
@@ -749,7 +749,7 @@ export function bindAttributes(root, actor, rerender = () => {}) {
       const made = await authorEntry({ id, title: row.title, category: row.category, icon: row.icon });
       if (!made.ok) {
         if (made.reason === "collision" && made.existing)
-          ui.notifications.warn(`An attribute named "${made.existing.title}" already exists. Link that one instead.`);
+          ui.notifications.warn(_loc("PENTARYN_TIES.attributes.alreadyExists", { title: made.existing.title }));
         return;
       }
       open.add(id);

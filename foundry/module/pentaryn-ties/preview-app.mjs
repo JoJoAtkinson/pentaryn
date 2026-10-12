@@ -111,14 +111,14 @@ export class InspectPreview extends ApplicationV2 {
   static DEFAULT_OPTIONS = {
     id: "pentaryn-inspect-preview-{id}",
     classes: ["pentaryn-inspect-preview", "pt-inspect-preview"],
-    window: { title: "Inspect preview (GM only)", icon: "fa-solid fa-flask", resizable: true },
+    window: { title: "PENTARYN_TIES.preview.windowTitle", icon: "fa-solid fa-flask", resizable: true },
     position: { width: 620, height: 720 }
   };
 
   /** @param {Actor} subject */
   static open(subject) {
     if (!game.user?.isGM) return null;
-    if (!subject) return ui.notifications.warn("Hover or select a token to preview.");
+    if (!subject) return ui.notifications.warn(_loc("PENTARYN_TIES.preview.noToken"));
     return new InspectPreview(subject).render(true);
   }
 
@@ -142,7 +142,7 @@ export class InspectPreview extends ApplicationV2 {
   }
 
   get title() {
-    return `Inspect — ${this.subject?.name ?? "?"} (GM only)`;
+    return _loc("PENTARYN_TIES.preview.title", { name: this.subject?.name ?? "?" });
   }
 
   /** The bonus this roller adds for a skill. */
@@ -159,7 +159,7 @@ export class InspectPreview extends ApplicationV2 {
   }
 
   rollerOptions() {
-    return [{ id: "hypo", name: "Hypothetical character" }, ...this.playerCharacters().map(a => ({ id: a.id, name: a.name }))];
+    return [{ id: "hypo", name: _loc("PENTARYN_TIES.preview.hypothetical") }, ...this.playerCharacters().map(a => ({ id: a.id, name: a.name }))];
   }
 
   /**
@@ -340,83 +340,83 @@ export class InspectPreview extends ApplicationV2 {
     const opt = this.rollerOptions().map(o => `<option value="${o.id}" ${o.id === this.roller ? "selected" : ""}>${esc(o.name)}</option>`).join("");
     const levels = Array.from({ length: 20 }, (_, i) => i + 1).map(l => `<option ${l === this.level ? "selected" : ""}>${l}</option>`).join("");
     const abil = [-1, 0, 1, 2, 3, 4, 5].map(m => `<option value="${m}" ${m === this.ability ? "selected" : ""}>${m >= 0 ? "+" : ""}${m}</option>`).join("");
-    const profs = [["none", "Not proficient"], ["prof", "Proficient"], ["expert", "Expertise"]]
+    const profs = ["none", "prof", "expert"].map(v => [v, _loc(`PENTARYN_TIES.preview.prof.${v}`)])
       .map(([v, l]) => `<option value="${v}" ${v === this.prof ? "selected" : ""}>${l}</option>`).join("");
     const hypo = this.roller === "hypo";
     const bonus = this.ability + pb(this.level) * PROF[this.prof];
 
     const badge = r => r.pass
-      ? `<span class="pv-pass"><i class="fa-solid fa-check"></i> pass</span>`
-      : `<span class="pv-fail"><i class="fa-solid fa-xmark"></i> fail</span>`;
-    const dice = r => `<span class="pv-dice">${r.die} ${r.mod >= 0 ? "+" : "−"} ${Math.abs(r.mod)} = <b>${r.total}</b> vs DC ${r.dc}</span>`;
+      ? `<span class="pv-pass"><i class="fa-solid fa-check"></i> ${_loc("PENTARYN_TIES.preview.pass")}</span>`
+      : `<span class="pv-fail"><i class="fa-solid fa-xmark"></i> ${_loc("PENTARYN_TIES.preview.fail")}</span>`;
+    const dice = r => `<span class="pv-dice">${r.die} ${r.mod >= 0 ? "+" : "−"} ${Math.abs(r.mod)} = <b>${r.total}</b> ${_loc("PENTARYN_TIES.preview.vsDC", { dc: r.dc })}</span>`;
     const said = (text, pass) => text?.trim()
       ? `<blockquote class="${pass ? "pv-true" : "pv-false"}">${esc(text)}</blockquote>`
       : `<p class="pv-silent">${pass
-        ? "(pass, but no reveal text — nothing handed over; the ledger records it as a miss)"
-        : "(fail, no failure text written — nothing handed over; the failure is recorded)"}</p>`;
+        ? _loc("PENTARYN_TIES.preview.silentPass")
+        : _loc("PENTARYN_TIES.preview.silentFail")}</p>`;
 
     let html = `<section class="pv-controls">
-      <label>Roller <select data-k="roller">${opt}</select></label>
-      ${hypo ? `<label>Level <select data-k="level">${levels}</select></label>
-      <label>Ability <select data-k="ability">${abil}</select></label>
+      <label>${_loc("PENTARYN_TIES.preview.roller")} <select data-k="roller">${opt}</select></label>
+      ${hypo ? `<label>${_loc("PENTARYN_TIES.preview.level")} <select data-k="level">${levels}</select></label>
+      <label>${_loc("PENTARYN_TIES.preview.ability")} <select data-k="ability">${abil}</select></label>
       <label><select data-k="prof">${profs}</select></label>
-      <span class="pv-bonus">= +${bonus} to every check</span>` : `<span class="pv-bonus">uses this PC's real skill totals</span>`}
-      <button type="button" data-action="reroll"><i class="fa-solid fa-dice-d20"></i> Reroll</button>
+      <span class="pv-bonus">${_loc("PENTARYN_TIES.preview.bonusAll", { bonus })}</span>` : `<span class="pv-bonus">${_loc("PENTARYN_TIES.preview.realTotals")}</span>`}
+      <button type="button" data-action="reroll"><i class="fa-solid fa-dice-d20"></i> ${_loc("PENTARYN_TIES.preview.reroll")}</button>
     </section>
-    <p class="pv-note"><i class="fa-solid fa-eye-slash"></i> Only you see this. Nothing is rolled to chat and nothing is saved.</p>`;
+    <p class="pv-note"><i class="fa-solid fa-eye-slash"></i> ${_loc("PENTARYN_TIES.preview.onlyYou")}</p>`;
 
-    html += `<h3>1 · Inspect: who they belong to</h3>`;
+    html += `<h3>${_loc("PENTARYN_TIES.preview.membership")}</h3>`;
     const { gestures, unreached } = sim.membership;
-    if (!gestures.length && !unreached.length && !sim.free.length) html += `<p class="pv-silent">Carries nothing to identify.</p>`;
+    if (!gestures.length && !unreached.length && !sim.free.length) html += `<p class="pv-silent">${_loc("PENTARYN_TIES.preview.carriesNothing")}</p>`;
     gestures.forEach((rows, i) => {
       html += `<div class="pv-chain">${gestures.length > 1
-        ? `<p class="pv-note">${i === 0 ? "First Inspect click" : `Inspect click ${i + 1} (a failure ends a click; the next click carries on with the other branches)`}</p>` : ""}`;
+        ? `<p class="pv-note">${i === 0 ? _loc("PENTARYN_TIES.preview.firstClick") : _loc("PENTARYN_TIES.preview.nthClick", { n: i + 1 })}</p>` : ""}`;
       for (const r of rows) {
         const how = r.auto
-          ? `<span class="pv-dice">no roll — ${r.bypass ? "they carry it too" : "help scale is auto"}</span>`
-          : `${dice(r)}${r.adv ? ` <span class="pv-dice">(advantage)</span>` : ""}`;
+          ? `<span class="pv-dice">${_loc("PENTARYN_TIES.preview.noRoll", { why: r.bypass ? _loc("PENTARYN_TIES.preview.bypass") : _loc("PENTARYN_TIES.preview.autoScale") })}</span>`
+          : `${dice(r)}${r.adv ? ` <span class="pv-dice">${_loc("PENTARYN_TIES.preview.advantage")}</span>` : ""}`;
         html += `<div class="pv-row">
           <div class="pv-head"><img src="${esc(r.entry.icon)}"><b>${esc(r.entry.title)}</b> <span class="pv-skill">${esc(skillLabel(r.skill))}</span>
           ${how} ${badge(r)}
-          <span class="pv-odds" data-tooltip="chance this rung passes · chance of getting this far">${pct(r.p)} · ${pct(r.cumulative)}</span></div>
-          ${r.hold ? `<p class="pv-note">Held: waits for your Deliver before the player sees it or the climb continues.</p>` : ""}
-          ${r.emptyPass ? `<p class="pv-silent">(pass, but no reveal text — the ledger records this as NOT carrying, and every rung beneath it is blocked)</p>` : said(r.text, r.pass)}</div>`;
+          <span class="pv-odds" data-tooltip="${_loc("PENTARYN_TIES.preview.oddsTip")}">${pct(r.p)} · ${pct(r.cumulative)}</span></div>
+          ${r.hold ? `<p class="pv-note">${_loc("PENTARYN_TIES.preview.held")}</p>` : ""}
+          ${r.emptyPass ? `<p class="pv-silent">${_loc("PENTARYN_TIES.preview.emptyPass")}</p>` : said(r.text, r.pass)}</div>`;
       }
       html += `</div>`;
     });
-    if (unreached.length) html += `<p class="pv-silent">Never reached: ${unreached.map(e => esc(e.title)).join(" · ")} (blocked by a failed or empty rung above, a permanent failure, or a rung the subject does not carry)</p>`;
-    if (sim.free.length) html += `<p class="pv-free">Seen without a roll: ${sim.free.map(e => esc(e.title)).join(" · ")}</p>`;
+    if (unreached.length) html += `<p class="pv-silent">${_loc("PENTARYN_TIES.preview.neverReached", { titles: unreached.map(e => esc(e.title)).join(" · ") })}</p>`;
+    if (sim.free.length) html += `<p class="pv-free">${_loc("PENTARYN_TIES.preview.seenFree", { titles: sim.free.map(e => esc(e.title)).join(" · ") })}</p>`;
 
-    html += `<h3>2 · Facts about what they belong to</h3>
-    <p class="pv-note">In play these are handed over by your "Mark as learned" on the Attributes tab — no player roll, pass text only. Dice here are a ruling aid if you choose to roll at the table.</p>`;
-    if (!sim.attrLore.length) html += `<p class="pv-silent">No lore rows on their attributes.</p>`;
+    html += `<h3>${_loc("PENTARYN_TIES.preview.attrLore")}</h3>
+    <p class="pv-note">${_loc("PENTARYN_TIES.preview.attrLoreNote")}</p>`;
+    if (!sim.attrLore.length) html += `<p class="pv-silent">${_loc("PENTARYN_TIES.preview.noAttrLore")}</p>`;
     for (const g of sim.attrLore) {
-      html += `<h4><img src="${esc(g.entry.icon)}"> ${esc(g.entry.title)} ${g.locked ? `<span class="pv-locked"><i class="fa-solid fa-lock"></i> membership not identified this run</span>` : ""}</h4>`;
+      html += `<h4><img src="${esc(g.entry.icon)}"> ${esc(g.entry.title)} ${g.locked ? `<span class="pv-locked"><i class="fa-solid fa-lock"></i> ${_loc("PENTARYN_TIES.preview.lockedRun")}</span>` : ""}</h4>`;
       html += g.rows.map(r => this.loreRow(r, g.locked, badge, dice, said)).join("");
     }
 
-    html += `<h3>3 · Known tab: facts about ${esc(this.subject.name)}</h3>`;
+    html += `<h3>${_loc("PENTARYN_TIES.preview.ownLore", { name: esc(this.subject.name) })}</h3>`;
     html += sim.ownLore.length ? sim.ownLore.map(r => this.loreRow(r, false, badge, dice, said)).join("")
-      : `<p class="pv-silent">No individual lore rows.</p>`;
+      : `<p class="pv-silent">${_loc("PENTARYN_TIES.preview.noOwnLore")}</p>`;
 
-    html += `<h3>4 · Known tab: studying what they are</h3>`;
+    html += `<h3>${_loc("PENTARYN_TIES.preview.kind")}</h3>`;
     const k = sim.kind;
-    if (!k) html += `<p class="pv-silent">No kind to study.</p>`;
-    else if (k.none) html += `<p class="pv-silent">No study offered: ${esc(k.actor.name)} has no biography, tier text or attacks, so the Known tab draws no study icon.</p>`;
-    else if (k.auto) html += `${k.spent ? `<p class="pv-note">This PC has already studied it — the real button is spent.</p>` : ""}<p>${esc(k.actor.name)} is common knowledge: no roll, top tier.</p>${said(k.text, true)}`;
+    if (!k) html += `<p class="pv-silent">${_loc("PENTARYN_TIES.preview.noKind")}</p>`;
+    else if (k.none) html += `<p class="pv-silent">${_loc("PENTARYN_TIES.preview.noStudy", { name: esc(k.actor.name) })}</p>`;
+    else if (k.auto) html += `${k.spent ? `<p class="pv-note">${_loc("PENTARYN_TIES.preview.spent")}</p>` : ""}<p>${_loc("PENTARYN_TIES.preview.common", { name: esc(k.actor.name) })}</p>${said(k.text, true)}`;
     else {
-      if (k.spent) html += `<p class="pv-note">This PC has already studied it — the real button is spent.</p>`;
+      if (k.spent) html += `<p class="pv-note">${_loc("PENTARYN_TIES.preview.spent")}</p>`;
       html += `<div class="pv-row"><div class="pv-head"><img src="${esc(k.actor.img)}"><b>${esc(k.actor.name)}</b> <span class="pv-skill">${esc(skillLabel(k.skill))}</span>
         <span class="pv-dice">${k.die} ${k.mod >= 0 ? "+" : "−"} ${Math.abs(k.mod)} = <b>${k.total}</b></span>
-        <span class="${k.tier >= 15 ? "pv-pass" : "pv-fail"}">tier ${k.tier}${
+        <span class="${k.tier >= 15 ? "pv-pass" : "pv-fail"}">${_loc("PENTARYN_TIES.preview.tier", { tier: k.tier })}${
           // below 15 is a failure: nothing at all, unless the GM authored rung 0 (the one lie)
-          k.tier < 15 && k.text?.trim() ? " · fail — rung-0 lie delivered" : ""}</span>
+          k.tier < 15 && k.text?.trim() ? ` · ${_loc("PENTARYN_TIES.preview.rung0Lie")}` : ""}</span>
         <span class="pv-odds">${k.odds.map(o => `${o.t}${k.shift ? `(DC ${o.t + k.shift})` : ""}: ${pct(o.p)}`).join(" · ")}</span></div>
-        <details ${k.tier >= 15 ? "" : "open"}><summary>What they would be told</summary>${said(k.text, k.tier >= 15)}</details></div>`;
+        <details ${k.tier >= 15 ? "" : "open"}><summary>${_loc("PENTARYN_TIES.preview.whatTold")}</summary>${said(k.text, k.tier >= 15)}</details></div>`;
     }
     if (this.missingSkills?.size)
-      html = `<p class="pv-silent">This PC's sheet has no ${[...this.missingSkills].map(x => esc(skillLabel(x))).join(", ")}: a real roll would not happen. Those rows use the hypothetical bonus instead.</p>` + html;
-    html += `<p class="pv-note">Player-declared advantage and situational bonuses (individual lore, kind study) are not modelled: those rows roll flat. Membership advantage comes from the attribute's help scale, as in play.</p>`;
+      html = `<p class="pv-silent">${_loc("PENTARYN_TIES.preview.missingSkills", { skills: [...this.missingSkills].map(x => esc(skillLabel(x))).join(", ") })}</p>` + html;
+    html += `<p class="pv-note">${_loc("PENTARYN_TIES.preview.notModelled")}</p>`;
     return html;
   }
 
@@ -498,7 +498,7 @@ export class InspectPreview extends ApplicationV2 {
     let html = `<p class="pv-note"><i class="fa-solid fa-eye-slash"></i> ${esc(_loc("PENTARYN_TIES.known.share.playerNote"))}</p>`;
     if (!pcs.length) html += `<p class="pv-silent">${esc(_loc("PENTARYN_TIES.known.share.noPCs"))}</p>`;
     html += `<div class="pentaryn-ties pentaryn-known pv-player">${head}`;
-    if (free.length) html += `<p class="pv-free">Seen without a roll: ${free.map(e => esc(e.title)).join(" · ")}</p>`;
+    if (free.length) html += `<p class="pv-free">${_loc("PENTARYN_TIES.preview.seenFree", { titles: free.map(e => esc(e.title)).join(" · ") })}</p>`;
     if (!groups.length) html += `<p class="pv-silent">${esc(_loc("PENTARYN_TIES.known.share.nothing"))}</p>`;
     else {
       html += `<section class="pt-granted" aria-label="${esc(_loc("PENTARYN_TIES.known.granted.label"))}">${grantedHead()}`;

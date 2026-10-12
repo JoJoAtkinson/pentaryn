@@ -56,8 +56,8 @@ function injectTieHUD(app, element) {
     const pv = document.createElement("button");
     pv.type = "button";
     pv.className = "control-icon pt-preview-btn";
-    pv.dataset.tooltip = "Inspect (GM only): player view and simulated rolls";
-    pv.setAttribute("aria-label", "Inspect preview");
+    pv.dataset.tooltip = _loc("PENTARYN_TIES.hud.inspect");
+    pv.setAttribute("aria-label", _loc("PENTARYN_TIES.hud.inspectAria"));
     pv.innerHTML = '<i class="fa-solid fa-flask"></i>';
     pv.addEventListener("click", ev => {
       ev.preventDefault();

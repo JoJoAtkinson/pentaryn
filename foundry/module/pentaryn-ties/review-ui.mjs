@@ -363,8 +363,8 @@ export class AttributeReview extends ApplicationV2 {
           ${e.category ? `<span class="pt-review-cat">${esc(e.category)}</span>` : ""}
           <code class="pt-review-id" data-act="copy-id" data-tooltip="${esc(_loc("PENTARYN_TIES.review.copyId"))}">${esc(e.id)}</code></span>
         <span class="pt-review-line pt-review-meta">
-          ${parent || e.parent ? `<span class="pt-review-link pt-review-parent" data-tooltip="Can only be rolled after ${esc(parent?.title ?? e.parent)} is identified"><i class="fa-solid fa-lock"></i> needs ${esc(parent?.title ?? e.parent)}</span>` : ""}
-          ${kids.length ? `<span class="pt-review-link pt-review-kids" data-tooltip="Identifying this unlocks: ${esc(kids.map(k => k.title).join(", "))}"><i class="fa-solid fa-key"></i> unlocks ${esc(kids.map(k => k.title).join(", "))}</span>` : ""}
+          ${parent || e.parent ? `<span class="pt-review-link pt-review-parent" data-tooltip="${esc(_loc("PENTARYN_TIES.attributes.chain.needsTip", { title: parent?.title ?? e.parent }))}"><i class="fa-solid fa-lock"></i> ${esc(_loc("PENTARYN_TIES.attributes.chain.needs", { title: parent?.title ?? e.parent }))}</span>` : ""}
+          ${kids.length ? `<span class="pt-review-link pt-review-kids" data-tooltip="${esc(_loc("PENTARYN_TIES.attributes.chain.unlocksTip", { titles: kids.map(k => k.title).join(", ") }))}"><i class="fa-solid fa-key"></i> ${esc(_loc("PENTARYN_TIES.attributes.chain.unlocks", { titles: kids.map(k => k.title).join(", ") }))}</span>` : ""}
           <span>${esc(_loc("PENTARYN_TIES.review.facts", { n: lore.length }))}</span>
           <span>${esc(_loc("PENTARYN_TIES.review.carrierCount", { n: who.length }))}</span>
           <span>${esc(_loc("PENTARYN_TIES.review.modified"))} ${when(e.modifiedAt)}</span>
@@ -415,7 +415,7 @@ export class AttributeReview extends ApplicationV2 {
     const others = ["parent", "secret", "whenKnown", "whenCarried", "hold"].map(k => was(k, e[k], k)).join("");
     const carriersShown = who.slice(0, CARRIERS_SHOWN).map(esc).join(", ");
     const more = who.length > CARRIERS_SHOWN ? ` ${esc(_loc("PENTARYN_TIES.review.more", { n: who.length - CARRIERS_SHOWN }))}` : "";
-    const hold = e.hold === true ? "held" : e.hold === false ? "not held" : "world default";
+    const hold = esc(_loc(`PENTARYN_TIES.review.hold.${e.hold === true ? "held" : e.hold === false ? "notHeld" : "default"}`));
     const rel = `<dl class="pt-review-rel">
       <dt>${esc(_loc("PENTARYN_TIES.review.parent"))}</dt><dd>${
         e.parent ? `${esc(parent?.title ?? "?")} <code>${esc(e.parent)}</code>${parent ? "" : ` ${esc(_loc("PENTARYN_TIES.review.dangling"))}`}` : esc(_loc("PENTARYN_TIES.review.root"))
@@ -424,7 +424,7 @@ export class AttributeReview extends ApplicationV2 {
         kids.length ? kids.map(k => `${esc(k.title)} <code>${esc(k.id)}</code>`).join(", ") : esc(_loc("PENTARYN_TIES.review.none"))
       }</dd>
       <dt>${esc(_loc("PENTARYN_TIES.review.carriers"))}</dt><dd>${who.length ? `${who.length}: ${carriersShown}${more}` : esc(_loc("PENTARYN_TIES.review.none"))}</dd>
-      <dt>${esc(_loc("PENTARYN_TIES.review.flags"))}</dt><dd>secret: ${e.secret ? "yes" : "no"} · whenKnown: ${esc(e.whenKnown)} · whenCarried: ${esc(
+      <dt>${esc(_loc("PENTARYN_TIES.review.flags"))}</dt><dd>secret: ${esc(_loc(e.secret ? "PENTARYN_TIES.review.yes" : "PENTARYN_TIES.review.no"))} · whenKnown: ${esc(e.whenKnown)} · whenCarried: ${esc(
         e.whenCarried
       )} · hold: ${hold}${e.source?.path ? ` · source: <code>${esc(e.source.path)}</code>` : ""}</dd>
     </dl>${others}`;

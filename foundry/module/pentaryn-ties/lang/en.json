@@ -126,7 +126,9 @@
       "sourceHint": "Whose list this tie is written on — you can only pick characters you own"
     },
     "hud": {
-      "tie": "Add or edit a tie with this token"
+      "tie": "Add or edit a tie with this token",
+      "inspect": "Inspect (GM only): player view and simulated rolls",
+      "inspectAria": "Inspect preview"
     },
     "gmOnly": "GM only",
     "reply": {
@@ -483,7 +485,14 @@
       "identifyDC": "DC",
       "identifySuccess": "On a success they learn",
       "identifyFailHint": "On a failure they get the text below, or nothing if it is empty. Either way the failure is recorded so they cannot retry.",
-      "identifyFailure": "On a failure (shown to the player — leave empty to show nothing)"
+      "identifyFailure": "On a failure (shown to the player — leave empty to show nothing)",
+      "chain": {
+        "needs": "needs {title}",
+        "needsTip": "Can only be rolled after {title} is identified",
+        "unlocks": "unlocks {titles}",
+        "unlocksTip": "Identifying this unlocks: {titles}"
+      },
+      "alreadyExists": "An attribute named \"{title}\" already exists. Link that one instead."
     },
     "review": {
       "control": "Review attributes (GM)",
@@ -561,7 +570,66 @@
       "tab": {
         "world": "Global",
         "personal": "Personal"
-      }
+      },
+      "hold": {
+        "held": "held",
+        "notHeld": "not held",
+        "default": "world default"
+      },
+      "yes": "yes",
+      "no": "no"
+    },
+    "preview": {
+      "windowTitle": "Inspect preview (GM only)",
+      "title": "Inspect — {name} (GM only)",
+      "noToken": "Hover or select a token to preview.",
+      "hypothetical": "Hypothetical character",
+      "prof": {
+        "none": "Not proficient",
+        "prof": "Proficient",
+        "expert": "Expertise"
+      },
+      "pass": "pass",
+      "fail": "fail",
+      "vsDC": "vs DC {dc}",
+      "silentPass": "(pass, but no reveal text — nothing handed over; the ledger records it as a miss)",
+      "silentFail": "(fail, no failure text written — nothing handed over; the failure is recorded)",
+      "roller": "Roller",
+      "level": "Level",
+      "ability": "Ability",
+      "bonusAll": "= +{bonus} to every check",
+      "realTotals": "uses this PC's real skill totals",
+      "reroll": "Reroll",
+      "onlyYou": "Only you see this. Nothing is rolled to chat and nothing is saved.",
+      "membership": "1 · Inspect: who they belong to",
+      "carriesNothing": "Carries nothing to identify.",
+      "firstClick": "First Inspect click",
+      "nthClick": "Inspect click {n} (a failure ends a click; the next click carries on with the other branches)",
+      "noRoll": "no roll — {why}",
+      "bypass": "they carry it too",
+      "autoScale": "help scale is auto",
+      "advantage": "(advantage)",
+      "oddsTip": "chance this rung passes · chance of getting this far",
+      "held": "Held: waits for your Deliver before the player sees it or the climb continues.",
+      "emptyPass": "(pass, but no reveal text — the ledger records this as NOT carrying, and every rung beneath it is blocked)",
+      "neverReached": "Never reached: {titles} (blocked by a failed or empty rung above, a permanent failure, or a rung the subject does not carry)",
+      "seenFree": "Seen without a roll: {titles}",
+      "attrLore": "2 · Facts about what they belong to",
+      "attrLoreNote": "In play these are handed over by your \"Mark as learned\" on the Attributes tab — no player roll, pass text only. Dice here are a ruling aid if you choose to roll at the table.",
+      "noAttrLore": "No lore rows on their attributes.",
+      "lockedRun": "membership not identified this run",
+      "ownLore": "3 · Known tab: facts about {name}",
+      "noOwnLore": "No individual lore rows.",
+      "kind": "4 · Known tab: studying what they are",
+      "noKind": "No kind to study.",
+      "noStudy": "No study offered: {name} has no biography, tier text or attacks, so the Known tab draws no study icon.",
+      "spent": "This PC has already studied it — the real button is spent.",
+      "common": "{name} is common knowledge: no roll, top tier.",
+      "tier": "tier {tier}",
+      "rung0Lie": "fail — rung-0 lie delivered",
+      "whatTold": "What they would be told",
+      "missingSkills": "This PC's sheet has no {skills}: a real roll would not happen. Those rows use the hypothetical bonus instead.",
+      "notModelled": "Player-declared advantage and situational bonuses (individual lore, kind study) are not modelled: those rows roll flat. Membership advantage comes from the attribute's help scale, as in play."
     }
   }
 }
