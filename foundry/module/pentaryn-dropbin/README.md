@@ -129,7 +129,8 @@ and the four patches above get their own rows (`adjustments-batch.md`, dropbin s
   by the active GM user only, on the pile token's scene, with that GM as the entry's user (the hook
   does not say who dropped; `fromActorName` does) — DB-AC-1. A delete off a sheet is captured by
   the deleting client; players relay it through socketlib (`executeAsGM`) to a GM, and a GM records
-  locally. Appends on one client are serialised and coalesced (one counter + log write per burst).
+  locally. A relay that reaches a GM tab still loading (before `ready`) is held and recorded at
+  `ready`, in arrival order; the player's relay resolves with its number then — DB-AC-2. Appends on one client are serialised and coalesced (one counter + log write per burst).
   Two tabs of one GM account both record a drop and both receive a relay; they compute the same
   row, and the tail dedupe (same item, actor, quantity within 2 s) catches the sequential case.
 - **Corpses:** conversion, revival and the legacy migration run where `activeGM.isSelf` — every

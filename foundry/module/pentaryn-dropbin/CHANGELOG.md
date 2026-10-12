@@ -42,6 +42,9 @@ Declared changes:
 - DB-AC-1: a drop onto the canvas is recorded by the active GM user only (Item Piles fires its drop
   hook on every client, so a multi-item drop was recorded once per extra client), and the entry's
   scene is the pile token's scene, not the recording client's view. The entry's user is that GM.
+- DB-AC-2: an entry relayed to a GM tab before that tab is `ready` is held and recorded at `ready`,
+  in arrival order, and the relay resolves with its ledger number (it called `settings.set` before
+  ready and was lost).
 
 Added: `list(n, { brief })`, `restoreResult`, `inspect`, `selftest` (items-journal-28).
 - A restore another module refuses (a `preCreateItem` veto) is `{ ok: false, reason: "not-created" }`

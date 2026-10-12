@@ -66,10 +66,25 @@ function cancelMirror() {
 }
 
 /**
+ * Entries relayed before `ready` (DB-AC-2): the relay is registered at socketlib.ready, when world
+ * settings cannot be written yet. Each waits here and is recorded at ready, in arrival order.
+ */
+let preReady = [];
+
+/** Record the held entries in arrival order; each relay's promise settles with its number. */
+function drainPreReady() {
+  const held = preReady;
+  preReady = [];
+  for (const it of held) recordAsGM(it.entry).then(it.resolve, it.reject);
+}
+
+/**
  * Append one entry. GM-only — everything else routes here through socketlib.
- * De-dupes, because Item Piles hooks can fire on more than one client.
+ * De-dupes, because Item Piles hooks can fire on more than one client. Before `ready` the entry is
+ * held and recorded at ready (DB-AC-2); settings.set is never called before ready.
  */
 async function recordAsGM(entry) {
+  if (!game.ready) return new Promise((resolve, reject) => preReady.push({ entry, resolve, reject }));
   if (!game.user.isGM) return null;
   const { n, duplicate } = await appendLedger(entry, DEDUPE_MS);
   if (duplicate) return n;
@@ -217,8 +232,8 @@ async function clear() {
 /* --------------------------------------------------------------- lifecycle */
 
 /**
- * socketlib.ready → register the relay; ready → the capture hooks, then the entry's publish
- * (one ready handler, as before the migration).
+ * socketlib.ready → register the relay; ready → record any entry relayed before ready (DB-AC-2),
+ * the capture hooks, then the entry's publish (one ready handler, as before the migration).
  */
 export function install(reg, ctx) {
   ctx.expose({ ledger: { all, list, get, search, restore, restoreResult, export: exportMirror, clear } });
@@ -232,6 +247,7 @@ export function install(reg, ctx) {
     }, { label: "socketlib.ready" });
   }
   ctx.onReady(() => {
+    drainPreReady();
     registerCapture(reg);
     ctx.publish();
   }, "ledger ready");
