@@ -10,6 +10,10 @@
   `applyRows` calls for one tray are serialised in the tab, so the second skips the rows the first
   applied (each row used to take the damage twice). A rejection still reaches its caller; an Apply
   stuck for 10 s (`APPLY_WAIT_MS`) no longer holds later ones back.
+- **A failed row no longer re-damages the others on retry** (declared, review R1, 2026-10-12): when
+  one row's `applyDamage` rejected, the rows already damaged in that Apply were never marked applied,
+  so the next Apply damaged them again. Each row is now caught on its own: the rest still land and
+  are marked applied, a warning toast names the rows that failed, and the first error still rejects.
 
 ## 0.4.0 — 2026-10-12 (migrated to the addon blueprint, wave 4; released by the Wave 7 restart batch)
 

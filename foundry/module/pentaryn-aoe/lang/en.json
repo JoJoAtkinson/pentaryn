@@ -30,6 +30,7 @@
       "RerollAll": "Re-roll NPC saves",
       "Ping": "Ping players",
       "Apply": "Apply {n}",
+      "ApplyFailed": "Damage could not be applied to {names}. The other creatures took their damage; press Apply again to retry.",
       "NobodyToPing": "No connected player is waiting on a save.",
       "PingText": "{item}: please roll your {ability} save from the request card in chat."
     },

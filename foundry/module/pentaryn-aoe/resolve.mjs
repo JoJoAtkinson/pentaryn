@@ -385,6 +385,8 @@ function settledOrAfter(promise, ms) {
 
 /**
  * Apply damage for ticked, resolved, unapplied rows (all of them, or rowIds). Safe to repeat.
+ * R1: a row whose applyDamage rejects does not stop the others; the rows that landed are marked
+ * applied, the GM is warned which rows failed, and the first error is rethrown for the caller.
  * aoe-edge-1: overlapping calls for one message in this tab run one after another, so the later
  * one sees the earlier one's rows as applied. A rejection still reaches its own caller; an earlier
  * Apply stuck for APPLY_WAIT_MS stops holding the later ones back.
@@ -407,17 +409,27 @@ async function applyRowsNow(messageId, rowIds) {
   const todo = applicableRows(res.rows, rowIds);
   const damages = hydrateDamages(res.damages);
   const done = {};
+  const failed = [];
   for (const row of todo) {
     const actor = fromUuidSync(row.actor);
     if (!actor) continue;
     const before = actor.system.attributes.hp.value;
-    await actor.applyDamage(damages, { multiplier: row.multiplier, originatingMessage: message });
-    done[row.id] = { before, after: actor.system.attributes.hp.value };
+    try {
+      await actor.applyDamage(damages, { multiplier: row.multiplier, originatingMessage: message });
+      done[row.id] = { before, after: actor.system.attributes.hp.value };
+    } catch (err) {
+      failed.push({ row, err });   // R1: the rows that landed are still marked below, so a retry skips them
+    }
   }
   const out = await mutate(messageId, r => {
     for (const row of r.rows) if (done[row.id]) { row.applied = true; row.hp = done[row.id]; }
     return r;
   });
+  if (failed.length) {
+    for (const { row, err } of failed.slice(1)) log.error("apply", row.name, err);   // the first is rethrown for the caller to log
+    ui.notifications.warn(_loc("PENTARYN_AOE.Tray.ApplyFailed", { names: failed.map(f => f.row.name).join(", ") }));
+    throw failed[0].err;
+  }
   if (out && allApplied(out.rows)) await cleanupInstant(out);
   return out;
 }
