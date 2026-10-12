@@ -40,6 +40,9 @@ cssPrefix `pp-`, afterSync). Each **[declared]** change goes to the live check.
   `BAD_SPEC: patch.disposition: hostile|neutral|friendly|secret`, checked after every other patch
   field so a second bad field keeps its own message. The real run now refuses it at plan time, so
   nothing is imported, copied or stamped first (no cleanup line, no `discarded` entry).
+- **[declared] A spell listed twice in one call is added once** (EC-7): `spells` or `spellbook`
+  naming the same spell twice gives one copy and the warning `<spell> listed twice — added once`,
+  in the dry run's preview and the real run alike.
 - **[declared] A misshapen patch field is refused by the dry run** (R3): `removeItems` must be a
   list of item names or ids, `itemUpdates` a list of `{item, set: {...}}`, `set` an object of
   paths, `hp` a number or `{max, formula}`, and `ac`, `cr` (fractions allowed) and `speed` must

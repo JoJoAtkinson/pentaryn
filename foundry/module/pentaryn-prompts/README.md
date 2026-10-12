@@ -125,7 +125,8 @@ row in replace), `NOT_GM` (every query), `CREATE_FAILED` (replace rows) and `DRY
   dnd5e's own advancements run headlessly with the caller's `choices` or a stated default
   (`DEFAULTED`); every problem is collected into one `BAD_SPEC`. The dry run builds it on an unsaved
   actor, so its `sheet:`, `DEFAULTED` and `WARN` lines are the real run's. Spell slots start full;
-  a Monk's weapons get Martial Arts.
+  a Monk's weapons get Martial Arts. A spell named twice in `spells` (or in `spellbook`) is added
+  once, with the warning `<spell> listed twice — added once`.
 - `hotspot` — `{name, description, items, size = 0.5, locked, icon, light}`: a clone of
   `Hotspot · Look (template)` (Item Piles); `light` is an AmbientLight config at its centre.
 - `note` — `{name, html, folderId, label, ownership = "observer", iconSize = 64, icon, light}`.

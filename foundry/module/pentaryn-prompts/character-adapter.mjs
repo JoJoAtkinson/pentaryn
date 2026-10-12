@@ -558,9 +558,11 @@ function onClassList(cls, spell) {
 
 async function addSpells(actor, cls, refs, { prepared, report, allowOffList, ghost }) {
   const out = [];
+  const queued = new Set();
   for (const ref of refs ?? []) {
     const spell = await findItem(ref, "spell");
     if (!spell) { report.warnings.push(`spell "${ref}" not found`); continue; }
+    if (queued.has(spell.name)) { report.warnings.push(`${spell.name} listed twice — added once`); continue; }
     const on = onClassList(cls, spell);
     if (on === false && !allowOffList) {
       throw codedError("BAD_SPEC", `${spell.name} is not on the ${cls.name} spell list (allowOffList: true if a feature grants it)`);
@@ -575,6 +577,7 @@ async function addSpells(actor, cls, refs, { prepared, report, allowOffList, gho
     data.system.prepared = spell.system.level === 0 ? 1 : (prepared ? 1 : 0);
     data.system.sourceItem = `class:${cls.system.identifier}`;
     data._id = foundry.utils.randomID();
+    queued.add(spell.name);
     out.push(data);
   }
   await addItems(actor, out, ghost);
