@@ -239,6 +239,66 @@ test("perf-1: one burst (a flag write, a settled sequence, a turn change) works 
   F.calls.length = 0;
 });
 
+test("perf-2: one burst works the follow-ups out once (the Bonus and Special signatures and the off-hand slot share it); a throw still logs at each caller", async () => {
+  onTurn(fig);
+  reset(fig);
+  const { fullAttackState } = await import("../hud/buttons-ui.mjs");
+  const { followUpsFor } = await import("../shapes.mjs");
+  const h = buildHud(fig, { mainSlot: "longsword0000001", offSlot: "dagger0000000001" });
+  renderAll(h, fig);
+  await drain();
+  mock.timers.tick(60);
+  // Each follow-ups computation (and each fullAttackState with a weapon) reads Enhanced Dual Wielding once.
+  const own = Object.hasOwn(fig, "getFlag");
+  const getFlag = fig.getFlag;
+  let reads = 0;
+  fig.getFlag = function (scope, key) { if (scope === "dnd5e" && key === "enhancedDualWielding") reads += 1; return getFlag.call(this, scope, key); };
+  const count = async (fn) => { reads = 0; await fn(); return reads; };
+  try {
+    const state = await count(() => fullAttackState(fig));
+    const fu = await count(() => followUpsFor(fig));
+    assert.ok(fu > 0, "the counter sees a follow-ups computation");
+    const rows = {
+      "a flag write": await count(() => fig.update({ [`flags.${MODULE}.turn`]: { key: "c1:1:cb1", attackAction: { swings: 1 } } })),
+      "a settled sequence": await count(async () => { F.Hooks.callAll("pentarynCombat.sequenceEnd", fig); await drain(); }),
+      "a turn change": await count(() => F.Hooks.callAll("updateCombat", combat, { round: 1 })),
+    };
+    assert.deepEqual(rows, {
+      "a flag write": state + fu,
+      "a settled sequence": state + fu,
+      "a turn change": state + fu,
+    });
+  } finally {
+    if (own) fig.getFlag = getFlag; else delete fig.getFlag;
+  }
+  // A throw is kept with the burst: each caller still logs its own debug line, the follow-ups are tried once.
+  const desc = Object.getOwnPropertyDescriptor(h.bonus, "currentActions");
+  let tries = 0;
+  Object.defineProperty(h.bonus, "currentActions", { configurable: true, get() { tries += 1; throw new Error("perf-2 probe"); } });
+  const debugs = [];
+  const debug = console.debug;
+  console.debug = (...args) => debugs.push([args[0], args[1]?.message ?? null]);
+  globalThis.CONFIG.debug = { ...(globalThis.CONFIG.debug ?? {}), [MODULE]: true };
+  try {
+    await fig.update({ [`flags.${MODULE}.turn`]: { key: "c1:1:cb1", attackAction: { swings: 2 } } });
+  } finally {
+    console.debug = debug;
+    delete globalThis.CONFIG.debug[MODULE];
+    if (desc) Object.defineProperty(h.bonus, "currentActions", desc); else delete h.bonus.currentActions;
+  }
+  assert.equal(tries, 1, "the follow-ups are tried once per burst");
+  assert.deepEqual(debugs.filter(d => d[1] === "perf-2 probe"), [
+    [`${MODULE} | bar signature (next render recomposes)`, "perf-2 probe"],
+    [`${MODULE} | bar signature (next render recomposes)`, "perf-2 probe"],
+    [`${MODULE} | off-hand slot re-check (the next render re-checks)`, "perf-2 probe"],
+  ]);
+  mock.timers.tick(60);
+  await drain();
+  row.textContent = "";
+  reset(fig);
+  F.calls.length = 0;
+});
+
 test("Full Attack clicks: runs the plan; asks for a weapon once when nothing is remembered; warns with no swings left", async () => {
   onTurn(fig);
   reset(fig);
