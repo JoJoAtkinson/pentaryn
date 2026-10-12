@@ -28,7 +28,10 @@ export async function load(url) {
     const target = url ?? here;
     let bytes;
     if (typeof fetch === "function" && String(target).startsWith("http")) {
-      bytes = await (await fetch(target)).arrayBuffer();
+      const res = await fetch(target);
+      // A 404 page is HTML, which instantiate() would report as a CompileError (walls-rob-10).
+      if (!res.ok) throw new Error(`fetch ${target} → HTTP ${res.status}`);
+      bytes = await res.arrayBuffer();
     } else {
       const {readFile} = await import("node:fs/promises");
       bytes = await readFile(new URL(target));

@@ -46,6 +46,29 @@ test("senses-walls-cursors-37: a copy without the .wasm loads js only and report
   }
 });
 
+test("walls-rob-10: a browser fetch that 404s reports the HTTP status, not a CompileError", async () => {
+  const { cpSync, mkdtempSync, rmSync } = await import("node:fs");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const { fileURLToPath, pathToFileURL } = await import("node:url");
+  const dir = mkdtempSync(join(tmpdir(), "walls-404-"));
+  const realFetch = globalThis.fetch;
+  try {
+    const src = fileURLToPath(ROOT);
+    for (const f of ["backend-wasm.mjs", "walls-core.mjs", "core"]) cpSync(join(src, f), join(dir, f), { recursive: true });
+    const copy = await import(pathToFileURL(join(dir, "backend-wasm.mjs")).href);
+    await copy.ready;
+    const target = "https://vtt.example/modules/pentaryn-walls/wall-engine.wasm";
+    globalThis.fetch = async () => ({ ok: false, status: 404,
+      arrayBuffer: async () => new TextEncoder().encode("<html>Not Found</html>").buffer });
+    assert.equal(await copy.load(target), null);
+    assert.equal(copy.loadErrorMessage(), `fetch ${target} \u2192 HTTP 404`);
+  } finally {
+    globalThis.fetch = realFetch;
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test("senses-walls-cursors-3: canonical(r, {extended}) adds createLevels/updateRules, order-independent", async () => {
   const r = {
     creates: [{ c: [100, 0, 0, 0], levels: ["L2", "L1"] }, { c: [0, 0, 0, 100] }],

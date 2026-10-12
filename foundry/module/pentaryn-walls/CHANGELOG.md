@@ -6,6 +6,10 @@
 (`flagScope` stays `wall-autocomplete`), `languages`, `minimum: "14"`, `verified: "14.369"` and the
 description fix; the flag-scope migration is **parked** while walls stays off (Joe).
 
+- **[declared] A missing `.wasm` in the browser names the HTTP status** (`walls-rob-10`): the
+  browser load never checked `response.ok`, so a 404 page went to `WebAssembly.instantiate` and the
+  ready line said "expected magic word …". It now throws `fetch <url> → HTTP <status>` first, and
+  the ready line's "(wasm unavailable: …)" shows that cause. Walls still falls back to the JS engine.
 - **[declared] `makeMacro` never reuses a same-named chat macro** (`walls-rob-9`): after the fixed-id
   lookup, the fallback matched any macro named `Walls: <action>`, so a chat macro of that name was
   reused, its command overwritten with the script and put on the hotbar. The name fallback now also
