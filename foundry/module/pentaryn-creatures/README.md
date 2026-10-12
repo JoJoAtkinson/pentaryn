@@ -172,6 +172,9 @@ Not patches, but registry rows too: the Argon DOM read in `strip.mjs` (`.extende
 ## Extending
 
 1. A pure rule → `creatures-core.mjs`, with a case in `test/seams.test.mjs` or `test/core.test.mjs`.
+   Every export of `creatures-core.mjs` is published as `api.core` and pinned in
+   `test/golden/surface.json`, so a new export is an API addition (regenerate `surface.json` and
+   declare it). Keep helpers that are not API module-private.
 2. A hook → `reg.on(...)` inside the feature's `install()` (`light.mjs`, `creature-strip.mjs`,
    `owner-sees.mjs`); order matters: re-pin `hooks.json` only as a declared change.
 3. A setting → a row in `settings.mjs` with literal `name`/`hint`; react through
