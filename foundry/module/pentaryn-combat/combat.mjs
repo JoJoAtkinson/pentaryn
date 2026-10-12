@@ -40,18 +40,18 @@ import * as offhand from "./offhand.mjs";
 import * as sequence from "./sequence.mjs";
 
 /** Installed while this file evaluates: the roll-window hooks keep their place ahead of everyone. */
-const AT_LOAD = [rollDock];
+const AT_LOAD = { rollDock };
 /** Installed at setup, in registration order (the runner registers no hook; it contributes API rows). */
-const AT_SETUP = [counting, turnRiders, offhand, sequence];
+const AT_SETUP = { counting, turnRiders, offhand, sequence };
 
-for (const feature of AT_LOAD) installFeature(feature);
+for (const [name, feature] of Object.entries(AT_LOAD)) installFeature(feature, name);
 
 function onInit() {
   registerSettings({ onChange: renderHud });
 }
 
 function onSetup() {
-  for (const feature of AT_SETUP) installFeature(feature);
+  for (const [name, feature] of Object.entries(AT_SETUP)) installFeature(feature, name);
 }
 
 /**
