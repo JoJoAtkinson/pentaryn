@@ -54,10 +54,33 @@ test("put creates each folder once per tab (EEXIST tolerated), uploads pretty JS
   const files = fileStore({ fp: s.fp, fetch: s.fetch, route: p => `/${p}` });
   await files.put("pentaryn-feedback/w/AAAA.json", { a: 1 });
   await files.put("pentaryn-feedback/w/BBBB.json", { b: 2 });
+  // the root's EEXIST marks it made like a success does: neither folder is asked for again
   assert.deepEqual(s.calls.filter(c => c[0] === "mkdir").map(c => c[2]), ["pentaryn-feedback", "pentaryn-feedback/w"]);
   const up = s.calls.find(c => c[0] === "upload");
   assert.deepEqual(up, ["upload", "data", "pentaryn-feedback/w", "AAAA.json", "application/json", { notify: false }]);
   assert.equal(s.disk.get("pentaryn-feedback/w/AAAA.json"), '{\n "a": 1\n}');
+});
+
+test("a mkdir that fails once (not EEXIST) is retried and succeeds on the next put (feedback-rob-3)", async () => {
+  const s = fakeServer();
+  let fail = true;
+  const fp = {
+    ...s.fp,
+    async createDirectory(source, dir) {
+      if (fail && dir === "pentaryn-feedback/w") {
+        s.calls.push(["mkdir", source, dir]);
+        fail = false;
+        throw new Error("EACCES: permission denied");
+      }
+      return s.fp.createDirectory(source, dir);
+    },
+  };
+  const files = fileStore({ fp, fetch: s.fetch, route: p => `/${p}` });
+  await assert.rejects(files.put("pentaryn-feedback/w/AAAA.json", { a: 1 }), { code: "INTERNAL" });
+  await files.put("pentaryn-feedback/w/BBBB.json", { b: 2 });   // the folder is asked for again
+  assert.deepEqual(s.calls.filter(c => c[0] === "mkdir").map(c => c[2]),
+    ["pentaryn-feedback", "pentaryn-feedback/w", "pentaryn-feedback/w"]);
+  assert.equal(s.disk.get("pentaryn-feedback/w/BBBB.json"), '{\n "b": 2\n}');
 });
 
 test("an upload refusal throws a coded error", async () => {

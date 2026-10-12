@@ -22,6 +22,11 @@
   clipped, so `token=…`, Bearer tokens and URL query strings survived there; they now go through
   `redact()` like the error ring. The player's report text and document/user names stay clip-only,
   and the README privacy line, the core header and the `redact()` doc now say exactly that.
+- **[declared] A failed folder create no longer breaks every later upload in that tab**
+  (feedback-rob-3/EC-4): `ensureDir` remembered a folder as made even when `createDirectory`
+  failed for a reason other than "already exists", so each later `put()` skipped the mkdir and its
+  upload was refused until reload. A folder is now remembered only when the create succeeds or the
+  error says `EEXIST` / "already exists"; any other failure is retried on the next `put()`.
 
 ## 0.1.2 — 2026-10-11 (live-check fix)
 

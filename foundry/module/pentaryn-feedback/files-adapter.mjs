@@ -34,7 +34,11 @@ export function fileStore({ g = globalThis, fp = null, fetch: fetchFn = null, ro
   const doFetch = (...a) => (fetchFn ?? g.fetch)(...a);
   const url = path => (route ?? g.foundry?.utils?.getRoute ?? (p => `/${p}`))(path);
 
-  /** Create every missing folder of `dir`. "Already exists" is the normal case after the first. */
+  /**
+   * Create every missing folder of `dir`. "Already exists" is the normal case after the first.
+   * A folder is remembered only when it was made or already exists; any other failure leaves it
+   * unmarked, so the next put() asks again instead of failing every upload until reload.
+   */
   async function ensureDir(dir) {
     for (const d of dirChain(dir)) {
       if (made.has(d)) continue;
@@ -43,6 +47,7 @@ export function fileStore({ g = globalThis, fp = null, fetch: fetchFn = null, ro
       } catch (err) {
         // EEXIST is expected; anything else surfaces at the upload that follows
         log?.debug?.(`createDirectory ${d}`, err?.message ?? err);
+        if (!/EEXIST|already exists/i.test(String(err?.message ?? err))) continue;
       }
       made.add(d);
     }
