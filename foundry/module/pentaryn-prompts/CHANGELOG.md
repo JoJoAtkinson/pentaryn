@@ -69,6 +69,11 @@ cssPrefix `pp-`, afterSync). Each **[declared]** change goes to the live check.
   marker claims, `buildDocuments`, `placeOnScenes`, `discardFailed` and `readBack` in `replace.mjs`
   run in the old order; a test pins the call order (per scene, one create per type in Token, Note,
   AmbientLight, Tile order, then one marker delete). No behaviour change.
+- **[declared] A P key or `place` that cannot build its marker gives up cleanly** (prompts-core-EC-6):
+  an unreadable default-size setting or refused token data now logs "placing a prompt marker
+  failed", cancels the type-ahead ticket and returns null, as a failed create already did; before,
+  it rejected and left the keyboard captured until the type-ahead timeout. The P key also cancels
+  its ticket on any rejection.
 - `ensureMarkers` repairs every drifted actor in one batch update. A hot re-import after
   `uninstall()` re-wires and republishes at once.
 - Console only (DP9): a core token API that throws warns once; swallowed failures log at debug
