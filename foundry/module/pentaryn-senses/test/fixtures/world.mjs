@@ -1,7 +1,8 @@
 /**
  * Boot the real senses entry on the kit's Foundry stub, with the extra stand-ins senses needs:
  * dnd5e items with activity collections, scene embedded-document batches (Token, AmbientLight)
- * that fire their hooks, `Actor.implementation.updateDocuments`, `ChatMessage`, `DialogV2`, PIXI,
+ * that fire their hooks, `Actor.implementation.updateDocuments`, Item batches (`Item.implementation.updateDocuments`,
+ * `actor.updateEmbeddedDocuments("Item")`), `ChatMessage`, `DialogV2`, PIXI,
  * `requestAnimationFrame`, a canvas, `window` and a small DOM (fixtures/dom.mjs).
  *
  * One boot per process: the entry self-installs at import, so every scenario that needs a
@@ -92,6 +93,14 @@ export function makeActor({ items = [], prototypeToken = {}, ownership = { defau
     it.collection = coll;
     coll.set(it.id, it);
   }
+  // An Item batch on this actor (setupLight's per-parent write): logged once, applied per item.
+  Object.defineProperty(actor, "updateEmbeddedDocuments", {
+    async value(type, updates) {
+      F.calls.push({ op: "updateEmbedded", parent: actor.uuid, type, updates: plain(updates) });
+      if (actor.throwOnUpdate) throw new Error(actor.throwOnUpdate);
+      return applyItems(type === "Item" ? coll : null, updates);
+    },
+  });
   Object.defineProperty(actor, "isOwner", { get() { return this.testUserPermission(globalThis.game.user, "OWNER"); } });
   Object.defineProperty(actor, "isToken", { get() { return this.parent?.documentName === "Token"; } });
   Object.defineProperty(actor, "token", { get() { return this.isToken ? this.parent : null; } });
@@ -141,6 +150,20 @@ function apply(doc, changes) {
     if (del) delete node[leaf];
     else node[leaf] = value;
   }
+}
+
+/** Apply an Item batch to `coll`, one updateItem hook per item, as Foundry does. */
+function applyItems(coll, updates) {
+  const out = [];
+  for (const { _id, ...changes } of updates) {
+    const item = coll?.get(_id);
+    if (!item) continue;
+    apply(item, changes);
+    item.system.activities?.sync?.();
+    out.push(item);
+    F.Hooks.callAll("updateItem", item, expand(changes), {}, globalThis.game.user?.id ?? null);
+  }
+  return out;
 }
 
 let lightSeq = 0;
@@ -303,6 +326,17 @@ export async function boot({ user = GM, others = [PLAYER], world = standardWorld
           apply(a, changes);
           F.Hooks.callAll("updateActor", a, expand(changes), {}, F.game.user.id);
         }
+      },
+    },
+  };
+
+  // Item.implementation.updateDocuments (setupLight's world-item batch)
+  globalThis.Item = {
+    implementation: {
+      async updateDocuments(updates) {
+        F.calls.push({ op: "Item.updateDocuments", updates: plain(updates) });
+        if (F.itemBatchThrows) throw new Error(F.itemBatchThrows);
+        return applyItems(F.game.items, updates);
       },
     },
   };

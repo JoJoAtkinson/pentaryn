@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- **[declared senses-ac-3] `setupLight` writes one batch per parent, not one update per torch**
+  (final review 2026-10-12, = perf-4): it plans first (which torches lack the Light activity, and
+  each one's sort), then world items go in one `Item.updateDocuments` and each actor's or unlinked
+  token actor's torches in one `updateEmbeddedDocuments("Item")`. Same count returned; a failed
+  batch warns `light setup <parent>` and its torches are not counted. The torch-on-create hook keeps
+  its single-item write. `setup-light.json` and `second-gm.json` re-pinned; new
+  `test/light-setup-batch.test.mjs`.
+
 - **[declared senses-ac-2] End light on the Token HUD shows only to someone who can use it**
   (final review 2026-10-12): the button shows to the source item's owner or the active GM (was:
   any GM). A second GM looking at an orphan spell light (its item gone) now sees no button instead

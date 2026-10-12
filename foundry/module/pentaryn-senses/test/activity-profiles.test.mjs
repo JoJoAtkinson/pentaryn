@@ -18,10 +18,10 @@ test("senses-EXT-4: ACTIVITY_PROFILES is a frozen list of LIGHT_PROFILES keys, t
   for (const key of ACTIVITY_PROFILES) assert.ok(key in LIGHT_PROFILES, `${key} is a LIGHT_PROFILES key`);
 });
 
-test("senses-EXT-4: ensureTorchActivity tests ACTIVITY_PROFILES membership, not a hard-coded 'torch'", () => {
+test("senses-EXT-4: torchActivityChange (setupLight's plan and ensureTorchActivity) tests ACTIVITY_PROFILES membership, not a hard-coded 'torch'", () => {
   const src = readFileSync(new URL("../light.mjs", import.meta.url), "utf8");
-  const fn = /async function ensureTorchActivity\([^)]*\) \{[\s\S]*?\n\}/.exec(src)?.[0] ?? "";
-  assert.ok(fn, "light.mjs has ensureTorchActivity");
+  const fn = /function torchActivityChange\([^)]*\) \{[\s\S]*?\n\}/.exec(src)?.[0] ?? "";
+  assert.ok(fn, "light.mjs has torchActivityChange");
   assert.match(fn, /ACTIVITY_PROFILES\.includes\(profileKey\(item\)\)/);
   assert.doesNotMatch(fn, /["']torch["']/);
 });

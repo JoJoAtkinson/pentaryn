@@ -148,33 +148,64 @@ export async function hood(item) {
 
 /**
  * GM, idempotent: give every Torch (world items, actors, unlinked tokens) a "Light" activity that
- * toggles it. Lamps, lanterns and candles already have one. → number of torches changed.
+ * toggles it. Lamps, lanterns and candles already have one. Plans first, then writes one batch per
+ * parent (senses-ac-3): world items in one Item.updateDocuments, each actor's or unlinked token
+ * actor's torches in one updateEmbeddedDocuments("Item"). → number of torches changed.
  */
 export async function setup() {
   if (!isAnyGM()) {
     ui.notifications.warn(_loc("PENTARYN_SENSES.Light.SetupGMOnly"));
     return 0;
   }
-  let n = 0;
+  const byParent = new Map();   // parent Actor, or null for world items → [update]
   for (const item of allItems({ worldItems: true })) {
-    if (await ensureTorchActivity(item)) n++;
+    let change;
+    try {
+      change = torchActivityChange(item);
+    } catch (e) {
+      warn(`setup ${item?.uuid}`, e);
+    }
+    if (!change) continue;
+    const parent = item.parent ?? null;
+    if (!byParent.has(parent)) byParent.set(parent, []);
+    byParent.get(parent).push({ _id: item.id, ...change });
+  }
+  let n = 0;
+  for (const [parent, updates] of byParent) {
+    try {
+      if (parent) await parent.updateEmbeddedDocuments("Item", updates);
+      else await Item.implementation.updateDocuments(updates);
+      n += updates.length;
+    } catch (e) {
+      warn(`setup ${parent?.uuid ?? "world items"}`, e);
+    }
   }
   console.info(`${MODULE} | setupLight: ${n} torch item(s) given a Light activity`);
   return n;
 }
 
-/** One item of an ACTIVITY_PROFILES profile: add the Light activity if it has none. → true when it was added. */
-async function ensureTorchActivity(item) {
-  if (!ACTIVITY_PROFILES.includes(profileKey(item)) || !item?.system?.activities) return false;
+/**
+ * The change that gives one item of an ACTIVITY_PROFILES profile its Light activity, sorted after
+ * its last one; null when it is not such an item or already has one.
+ */
+function torchActivityChange(item) {
+  if (!ACTIVITY_PROFILES.includes(profileKey(item)) || !item?.system?.activities) return null;
   const has = item.system.activities.has?.(TORCH_ACTIVITY_ID)
     || [...item.system.activities.values()].some(a => a?.flags?.[MODULE]?.lightToggle === true);
-  if (has) return false;
+  if (has) return null;
+  const data = torchActivityData(_loc("PENTARYN_SENSES.Light.ActivityName"));
+  const sort = item.system.activities.size
+    ? Math.max(...[...item.system.activities.values()].map(a => a.sort ?? 0)) + CONST.SORT_INTEGER_DENSITY
+    : 0;
+  return { [`system.activities.${TORCH_ACTIVITY_ID}`]: { ...data, sort } };
+}
+
+/** One item (the createItem hook): add the Light activity if it has none. → true when it was added. */
+async function ensureTorchActivity(item) {
+  const change = torchActivityChange(item);
+  if (!change) return false;
   try {
-    const data = torchActivityData(_loc("PENTARYN_SENSES.Light.ActivityName"));
-    const sort = item.system.activities.size
-      ? Math.max(...[...item.system.activities.values()].map(a => a.sort ?? 0)) + CONST.SORT_INTEGER_DENSITY
-      : 0;
-    await item.update({ [`system.activities.${TORCH_ACTIVITY_ID}`]: { ...data, sort } });
+    await item.update(change);
     return true;
   } catch (e) {
     warn(`setup ${item.uuid}`, e);
