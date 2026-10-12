@@ -275,15 +275,14 @@ export async function setTie(actor, targetActor, { word = "", notes, stance = 0,
   return wrote || mirrored;
 }
 
-/** Set just the notes on an existing edge. No-op if the edge isn't there. */
+/** Set just the notes on an existing edge. False if the edge isn't there or the write was refused. */
 export async function setNotes(actor, targetId, notes = "") {
   if (!actor || !targetId) return false;
   const list = read(actor);
   const entry = list.find(t => t.id === targetId);
   if (!entry) return false;
   entry.notes = clampNotes(notes);
-  await write(actor, list);
-  return true;
+  return write(actor, list);
 }
 
 /** Remove an edge. `bothWays` also removes the mirror. */

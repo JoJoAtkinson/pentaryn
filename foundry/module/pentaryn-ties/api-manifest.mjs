@@ -97,7 +97,7 @@ export const MANIFEST = Object.freeze({
     row("setTie", [p("actor", ACTOR), p("target", ACTOR), opt("tie", "{ word, notes?, stance, strength }"), opt("opts", "object")],
       "Promise<boolean>", "Same as set.", { writes: true, sideEffects: [`${F}.ties`] }),
     row("setNotes", [p("actor", ACTOR), p("targetId", "string"), opt("notes", "string")], "Promise<boolean>",
-      "Set just the notes on an existing edge; false when the edge is not there.", { writes: true, sideEffects: [`${F}.ties`] }),
+      "Set just the notes on an existing edge; false when the edge is not there or the write is refused.", { writes: true, sideEffects: [`${F}.ties`] }),
     row("remove", [p("actor", ACTOR), p("targetId", "string"), opt("opts", "{ bothWays = true }")], "Promise<boolean>",
       "Remove an edge and (by default) its mirror.", { writes: true, sideEffects: [`${F}.ties`] }),
     row("migrate", [], "Promise<{ moved }>", "GM: move pre-module flags.world.ties onto the module scope (runs at ready).",

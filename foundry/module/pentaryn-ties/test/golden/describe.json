@@ -272,7 +272,7 @@
         "flags.pentaryn-ties.ties"
       ],
       "legacy": true,
-      "doc": "Set just the notes on an existing edge; false when the edge is not there."
+      "doc": "Set just the notes on an existing edge; false when the edge is not there or the write is refused."
     },
     {
       "path": "remove",

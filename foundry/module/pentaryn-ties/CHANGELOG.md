@@ -51,6 +51,10 @@ The write logs a console warning and reports failure (`write`/`writeKnown` answe
 saved. At load, one actor whose legacy ties can't be moved is warned about and left for the next
 load, and the rest still move. R8.
 
+Fixed (declared): **`setNotes`** answers false when its save is refused — a player editing notes on an
+actor they don't own, or an update the server rejects — instead of reporting true with nothing
+saved. M11.
+
 Fixed (declared): **`attributes.markLearned`** takes its character as an id, a uuid, an exact name
 or a token as well as an Actor, and marks the world actor it names. Something that names no actor is
 refused `invalid`; it used to throw `character.getFlag is not a function`. R3.
