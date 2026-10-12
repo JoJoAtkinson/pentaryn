@@ -108,6 +108,9 @@ function report() {
   return { folder: findFolder()?.id ?? null, users, atRoot };
 }
 
+/** How long the player waits for the GM's answer to the ensure query. */
+const QUERY_TIMEOUT_MS = 8_000;
+
 /** Client side: the current user's journal, creating it (or asking the GM to) the first time. */
 let inflight = null;
 async function ensurePersonalJournal() {
@@ -125,7 +128,7 @@ async function ensurePersonalJournal() {
     const gm = game.users.activeGM;
     if (!gm) { toast(game.i18n.localize("PENTARYN_JOURNAL.notify.noGM")); return null; }
     try {
-      await gm.query(QUERY, {}, { timeout: 8000 });
+      await gm.query(QUERY, {}, { timeout: QUERY_TIMEOUT_MS });
     } catch (err) {
       ctx.log.warn("ensure query failed", err);
       toast(/timed? ?out/i.test(err?.message ?? "")
@@ -148,7 +151,7 @@ async function ensurePersonalJournal() {
 const CLAIM = "claims.ensure";
 /** A stamp older than this is a tab that died mid-claim; it no longer blocks anyone. */
 const CLAIM_STALE_MS = 60_000;
-/** How long the losing tab waits for the winner's journal: under the player's 8 s query timeout. */
+/** How long the losing tab waits for the winner's journal: under QUERY_TIMEOUT_MS, the player's query timeout. */
 const LOSER_WAIT_MS = 7_000;
 const POLL_MS = 50;
 
