@@ -1749,14 +1749,42 @@ def loop_bodies(code: str) -> list[tuple[int, str]]:
     return out
 
 
+def _awaits_doc_write(body: str) -> bool:
+    return any(_awaited_call(body, am.end()) in LOOP_AWAIT_METHODS
+               for am in re.finditer(r"(?<![\w$])await\s+", body))
+
+
+def _writing_helpers(code: str) -> set[str]:
+    """Names of this file's functions (`function f(`, `const f = async (…) =>`) whose body awaits a
+    LOOP_AWAIT_METHODS call — C59 follows an awaited call one level into these (ac-5)."""
+    out = set()
+    decl = (r"(?<![\w$.])(?:async\s+)?function\s*\*?\s*([A-Za-z_$][\w$]*)\s*(?=\()"
+            r"|(?<![\w$.])(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*")
+    for dm in re.finditer(decl, code):
+        name = dm.group(1) or dm.group(2)
+        _, body, _ = handler_at(code, dm.start() if dm.group(1) else dm.end(), _depth=1)
+        if body and _awaits_doc_write(body):
+            out.add(name)
+    return out
+
+
 @rule("C59", "warn+manual", "no per-document await inside a loop (batch with updateDocuments/modifyBatch)")
 def c59(m):
     found = []
     for rel, src in m.files.items():
+        helpers = None
         for pos, body in loop_bodies(src.code):
-            for am in re.finditer(r"(?<![\w$])await\s+", body):
-                if _awaited_call(body, am.end()) in LOOP_AWAIT_METHODS:
-                    found.append(f"{rel}:{src.line_of(pos)} — batch with updateDocuments/modifyBatch")
+            if _awaits_doc_write(body):
+                found.append(f"{rel}:{src.line_of(pos)} — batch with updateDocuments/modifyBatch")
+                continue
+            # one level of indirection: `await dropFlags(a, keys)` where dropFlags is a same-file
+            # function that awaits the write itself
+            if helpers is None:
+                helpers = _writing_helpers(src.code)
+            for cm in re.finditer(r"(?<![\w$])await\s+([A-Za-z_$][\w$]*)\s*\(", body):
+                if cm.group(1) in helpers:
+                    found.append(f"{rel}:{src.line_of(pos)} — batch with updateDocuments/modifyBatch "
+                                 f"(via {cm.group(1)}())")
                     break
     found = sorted(set(found), key=found.index)
     return ok() if not found else ("warn", found[:15])

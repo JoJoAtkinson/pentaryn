@@ -544,6 +544,15 @@ C59_CASES = [
     ("for (const t of tokens) { await sleep(1); }", "pass"),
     ("for (const scene of game.scenes) { await scene.updateEmbeddedDocuments('Token', u); }", "pass"),
     ("for (const s of scenes) { await s.deleteEmbeddedDocuments('Wall', ids); }", "pass"),
+    # ac-5/C59: one level of same-file indirection — the loop awaits a local helper that awaits a write
+    ("async function dropFlags(actor, keys) { await actor.unsetFlag(M, keys[0]); }\n"
+     "for (const a of actors) { await dropFlags(a, keys); }", "warn"),
+    ("const dropFlags = async (actor, keys) => { await actor.update({ [`flags.-=${M}`]: null }); };\n"
+     "for (const a of actors) await dropFlags(a, keys);", "warn"),
+    ("async function dropFlags(actor, keys) { u.push({ _id: actor.id }); }\n"
+     "for (const a of actors) { await dropFlags(a, keys); }", "pass"),           # helper writes nothing
+    ("async function dropFlags(actor, keys) { await actor.unsetFlag(M, keys[0]); }\n"
+     "for (const a of actors) { await other.dropFlags(a, keys); }", "pass"),     # a method, not the local
 ]
 
 
