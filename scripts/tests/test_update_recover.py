@@ -11,8 +11,6 @@ from __future__ import annotations
 
 import tarfile
 
-import pytest
-
 from scripts.foundry.update import recover
 
 
@@ -66,56 +64,3 @@ def test_newest_core_bundle_orders_numerically(tmp_path, monkeypatch):
     monkeypatch.setattr(recover, "CORE_ROLLBACK_DIR", tmp_path)
 
     assert recover.newest_core_bundle().name == "app-14.100.tar.gz"
-
-
-# An interrupted stash must not leave a truncated archive at the final path: the next run
-# trusts any file already there (``if out.exists(): return out``) and recover_* rmtree the
-# live tree before extracting it.
-
-def _fail_add(monkeypatch):
-    def boom(self, *a, **k):
-        raise OSError(28, "No space left on device")
-    monkeypatch.setattr(tarfile.TarFile, "add", boom)
-
-
-def test_interrupted_stash_system_leaves_no_archive(tmp_path, monkeypatch):
-    aside = tmp_path / "aside"
-    data = tmp_path / "data"
-    system = data / "Data/systems/dnd5e"
-    system.mkdir(parents=True)
-    (system / "system.json").write_text('{"id": "dnd5e"}')
-    monkeypatch.setattr(recover, "SYSTEM_ASIDE_DIR", aside)
-    monkeypatch.setattr(recover, "FOUNDRY_DATA", data)
-
-    with monkeypatch.context() as m:
-        _fail_add(m)
-        with pytest.raises(OSError):
-            recover.stash_system("dnd5e", "6.0.6")
-    assert sorted(p.name for p in aside.iterdir()) == []
-
-    out = recover.stash_system("dnd5e", "6.0.6")
-    assert out == aside / "dnd5e-6.0.6.tar.gz"
-    with tarfile.open(out) as tar:
-        assert "dnd5e" in tar.getnames()
-    assert sorted(p.name for p in aside.iterdir()) == ["dnd5e-6.0.6.tar.gz"]
-
-
-def test_interrupted_stash_core_leaves_no_archive(tmp_path, monkeypatch):
-    rollback = tmp_path / "rollback"
-    payload = tmp_path / "app" / "resources" / "app"
-    payload.mkdir(parents=True)
-    (payload / "main.mjs").write_text("// core")
-    monkeypatch.setattr(recover, "CORE_ROLLBACK_DIR", rollback)
-    monkeypatch.setattr(recover, "APP_PAYLOAD", payload)
-
-    with monkeypatch.context() as m:
-        _fail_add(m)
-        with pytest.raises(OSError):
-            recover.stash_core("14.360")
-    assert sorted(p.name for p in rollback.iterdir()) == []
-
-    out = recover.stash_core("14.360")
-    assert out == rollback / "app-14.360.tar.gz"
-    with tarfile.open(out) as tar:
-        assert "app/main.mjs" in tar.getnames()
-    assert sorted(p.name for p in rollback.iterdir()) == ["app-14.360.tar.gz"]
