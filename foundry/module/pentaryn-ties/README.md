@@ -137,7 +137,8 @@ array (`serial(actorId, fn)` in `ties-adapter.mjs` — read inside `fn`, after t
 
 ## Extending
 
-- **A sheet tab:** a spec row in `SHEET_TABS` (`sheet.mjs`) — id, icon, tooltip, `shows`, `build`, `bind`.
+- **A sheet tab:** a spec row in `SHEET_TABS` (`sheet.mjs`) — id, icon, tooltip, `shows`, `build`, `bind`,
+  `forget(actorId)` (drop its per-actor cosmetic state; the `deleteActor` sweep loops over the rows).
 - **A GM socket action:** a row in the caller's `listen({ action: { run, gmOnly } })` table
   (`socket-adapter.mjs`) — never another `game.socket.on`.
 - **An API path:** a row in `api-manifest.mjs` plus its function in `api.mjs`, or a feature's

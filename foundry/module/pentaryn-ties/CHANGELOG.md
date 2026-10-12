@@ -46,6 +46,10 @@ button — the GM's filter and tab buttons (Attributes world filter, Review tabs
 `pt-filter-chip` / `pt-filter-chip-on` / `pt-filter-chip-quiet`, so `.pt-chip` is the stance chip's
 alone and its narrow-sheet dot-only override works again. ties-ui-M2.
 
+Changed (declared, no table-visible change): each `SHEET_TABS` row in `sheet.mjs` now carries
+`forget(actorId)`, and the `deleteActor` sweep loops over the rows instead of a hand list, so a new
+sheet tab says what it forgets. ties-ui-EXT-2.
+
 Fixed (declared): the chat cards — the "… studies …" stub, the tempo line and the GM's share
 whisper — name every creature by its **token** name, never its actor name, so a GM-only world actor
 name cannot reach player chat. The token is found on any scene, not only the one the posting

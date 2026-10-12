@@ -50,15 +50,20 @@ function mayView(actor) {
  * it is a player's notebook about the world, and an NPC does not keep one (design decision
  * 1). Nothing else varies per tab, and if a third tab ever needs more than this, add the
  * field here rather than a branch in the loop.
+ *
+ * `forget(actorId)` drops the tab's session-lifetime cosmetic state for a deleted actor (open
+ * rows, toggles, filters); the deleteActor sweep in `install` loops over the rows, so a new tab
+ * cannot be added without saying what it forgets (ties-ui-EXT-2).
  */
-const SHEET_TABS = [
+export const SHEET_TABS = [
   {
     id: TAB,
     icon: "fa-solid fa-people-arrows",
     tooltip: "PENTARYN_TIES.title",
     shows: () => true,
     build: actor => buildHTML(actor),
-    bind: (root, actor, repaint) => bind(root, actor, repaint)
+    bind: (root, actor, repaint) => bind(root, actor, repaint),
+    forget: actorId => forgetActor(actorId)
   },
   {
     id: KNOWN_TAB_ID,
@@ -66,7 +71,8 @@ const SHEET_TABS = [
     tooltip: "PENTARYN_TIES.known.title",
     shows: actor => actor?.type === "character",
     build: actor => buildKnownHTML(actor),
-    bind: (root, actor, repaint) => bindKnown(root, actor, repaint)
+    bind: (root, actor, repaint) => bindKnown(root, actor, repaint),
+    forget: actorId => forgetKnownActor(actorId)
   },
   {
     id: ATTR_TAB_ID,
@@ -81,7 +87,12 @@ const SHEET_TABS = [
      */
     shows: () => true,
     build: actor => buildAttributesHTML(actor),
-    bind: (root, actor, repaint) => bindAttributes(root, actor, repaint)
+    bind: (root, actor, repaint) => bindAttributes(root, actor, repaint),
+    // ties-31: the Attributes tab's and the actor's lore editor's cosmetic state
+    forget: actorId => {
+      forgetAttributesActor(actorId);
+      forgetLoreKey(`lore:${actorId}`);
+    }
   }
 ];
 
@@ -228,15 +239,12 @@ function firstThisDispatch(element) {
  * four sheet render hooks (each keeps its own try/catch; the text is pinned).
  */
 export function install(reg) {
-  // The editor keeps which note panels are open in a module-level Map keyed by actor id.
-  // Nothing else references a deleted actor's entry, so drop it rather than hold it for the
-  // rest of the session.
+  // Each tab keeps cosmetic state (open note panels, toggles, filters) in module-level Maps keyed
+  // by actor id. Nothing else references a deleted actor's entry, so each tab's `forget` drops it
+  // rather than hold it for the rest of the session (ties-ui-EXT-2: one loop, not a hand list).
   reg.on("deleteActor", actor => {
-    forgetActor(actor.id);
-    forgetKnownActor(actor.id);
-    // ties-31: the Attributes tab's and the lore editor's cosmetic state for that actor too
-    forgetAttributesActor(actor.id);
-    forgetLoreKey(`lore:${actor.id}`);
+    const id = actor.id;
+    for (const spec of SHEET_TABS) spec.forget(id);
   }, { label: "sheet: forget a deleted actor" });
 
   for (const hook of ["renderNPCActorSheet", "renderCharacterActorSheet", "renderActorSheetV2", "renderActorSheet"]) {
