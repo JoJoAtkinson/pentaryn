@@ -10,6 +10,8 @@
       "total": 22,
       "when": "<localeDate>",
       "delivered": "<localeDate>",
+      "whenMs": 1790000000000,
+      "deliveredMs": 1790000000000,
       "pending": false,
       "pass": true,
       "text": "— Studied (Religion) —\nGrey hunters of the barrow.\nImmune: Poison, Grief. Vulnerable: Fire. Untroubled by: Charmed."
@@ -26,6 +28,8 @@
       "total": 22,
       "when": "<localeDate>",
       "delivered": "<localeDate>",
+      "whenMs": 1790000000000,
+      "deliveredMs": 1790000000000,
       "pending": false,
       "pass": true,
       "text": "— Studied (Religion) —\nGrey hunters of the barrow.\nImmune: Poison, Grief. Vulnerable: Fire. Untroubled by: Charmed."
@@ -40,6 +44,8 @@
       "total": 5,
       "when": "<localeDate>",
       "delivered": "<localeDate>",
+      "whenMs": 1790000000000,
+      "deliveredMs": 1790000000000,
       "pending": false,
       "pass": false,
       "text": "<p>Shifty eyes.</p>"
@@ -54,6 +60,8 @@
       "total": 3,
       "when": "<localeDate>",
       "delivered": "<localeDate>",
+      "whenMs": 1790000000000,
+      "deliveredMs": 1790000000000,
       "pending": false,
       "pass": false,
       "text": ""
@@ -68,6 +76,8 @@
       "total": 18,
       "when": "<localeDate>",
       "delivered": "<localeDate>",
+      "whenMs": 1790000000000,
+      "deliveredMs": 1790000000000,
       "pending": false,
       "pass": true,
       "text": "<p>He sold the map.</p>"

@@ -466,6 +466,7 @@
         "tier": 0,
         "total": 18,
         "when": "<localeDate>",
+        "whenMs": 1790000000000,
         "text": "<p>He sold the map.</p>"
       }
     ],

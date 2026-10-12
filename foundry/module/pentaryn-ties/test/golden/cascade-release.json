@@ -15,6 +15,7 @@
           "tier": 0,
           "total": 17,
           "when": "<localeDate>",
+          "whenMs": 1790000000000,
           "text": "<p>Guild hands.</p>"
         }
       ],
@@ -374,6 +375,8 @@
           "total": null,
           "when": "<localeDate>",
           "delivered": "<localeDate>",
+          "whenMs": 1790000000000,
+          "deliveredMs": 1790000000000,
           "pending": false,
           "pass": true,
           "text": "<p>One of us.</p>"
@@ -388,6 +391,8 @@
           "total": 16,
           "when": "<localeDate>",
           "delivered": "<localeDate>",
+          "whenMs": 1790000000000,
+          "deliveredMs": 1790000000000,
           "pending": false,
           "pass": true,
           "text": "<p>From Vel.</p>"
@@ -402,6 +407,8 @@
           "total": 17,
           "when": "<localeDate>",
           "delivered": "<localeDate>",
+          "whenMs": 1790000000000,
+          "deliveredMs": 1790000000000,
           "pending": false,
           "pass": true,
           "text": "<p>Guild hands.</p>"
@@ -416,6 +423,8 @@
           "total": 19,
           "when": "<localeDate>",
           "delivered": "<localeDate>",
+          "whenMs": 1790000000000,
+          "deliveredMs": 1790000000000,
           "pending": false,
           "pass": true,
           "text": ""
@@ -430,6 +439,8 @@
           "total": 10,
           "when": "<localeDate>",
           "delivered": "<localeDate>",
+          "whenMs": 1790000000000,
+          "deliveredMs": 1790000000000,
           "pending": false,
           "pass": false,
           "text": ""
@@ -444,6 +455,8 @@
           "total": 4,
           "when": "<localeDate>",
           "delivered": "<localeDate>",
+          "whenMs": 1,
+          "deliveredMs": 2,
           "pending": false,
           "pass": false,
           "text": "x"
@@ -458,6 +471,8 @@
           "total": 9,
           "when": "<localeDate>",
           "delivered": "<localeDate>",
+          "whenMs": 1,
+          "deliveredMs": 2,
           "pending": false,
           "pass": false,
           "text": "Shifty eyes."
@@ -472,6 +487,8 @@
           "total": 5,
           "when": "<localeDate>",
           "delivered": "<localeDate>",
+          "whenMs": 1790000000000,
+          "deliveredMs": 1790000000000,
           "pending": false,
           "pass": false,
           "text": ""
@@ -486,6 +503,8 @@
           "total": 10,
           "when": "<localeDate>",
           "delivered": "<localeDate>",
+          "whenMs": 1790000000000,
+          "deliveredMs": 1790000000000,
           "pending": false,
           "pass": false,
           "text": ""
