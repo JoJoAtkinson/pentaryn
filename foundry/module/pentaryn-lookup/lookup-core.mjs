@@ -7,11 +7,11 @@
  *
  *   book = {id, label, edition?, docs: [{id, name, pages: [{id, name, html, text?}]}]}
  *
- * Why the split: every one of the five known traps in this workflow fails *silently* —
- * `getIndex({fields})` returning empty objects, `EmbeddedCollection` having no
- * `.length` (so sums become NaN and serialize to null), enricher noise surviving a
- * naive tag-strip, and an over-large return being truncated by the transport. None of
- * those throw. A fixture suite is the only thing that notices.
+ * Why the split: the four silent traps of the README's five (`globalThis.duplicate`,
+ * gone in v14, at least throws) — `getIndex({fields})` returning empty objects,
+ * `EmbeddedCollection` having no `.length` (so sums become NaN and serialize to null),
+ * enricher noise surviving a naive tag-strip, and an over-large return being truncated
+ * by the transport. None of those throw. A fixture suite is the only thing that notices.
  */
 
 // ── identity ─────────────────────────────────────────────────────────────────
@@ -27,11 +27,13 @@ export const HOOKS = Object.freeze({});
 // 2014 SRD is excluded from every default: this table runs D&D 2024, and quoting
 // 2014 text at it is the quietest way to be wrong. When it IS asked for, its hits
 // carry `edition: "2014"` so a mixed result cannot masquerade as current.
+// `all` is derived so a book added to rules or monsters cannot drop out of packs().
+const RULES_BOOKS = ["dnd-players-handbook.content", "dnd-dungeon-masters-guide.content", "dnd5e.content24"];
+const MONSTER_BOOKS = ["dnd-monster-manual.content"];
 export const BOOKSETS = {
-  rules: ["dnd-players-handbook.content", "dnd-dungeon-masters-guide.content", "dnd5e.content24"],
-  monsters: ["dnd-monster-manual.content"],
-  all: ["dnd-players-handbook.content", "dnd-dungeon-masters-guide.content",
-        "dnd5e.content24", "dnd-monster-manual.content"],
+  rules: RULES_BOOKS,
+  monsters: MONSTER_BOOKS,
+  all: [...RULES_BOOKS, ...MONSTER_BOOKS],
   "2014": ["dnd5e.rules"],
 };
 export const EDITIONS = { "dnd5e.rules": "2014" };
@@ -66,6 +68,8 @@ export const LIMITS = {
   pageChars: 6000,
   payloadBytes: 8192,
 };
+/** page()'s maxChars ceiling (module-local; not part of the published LIMITS). */
+const PAGE_CHARS_MAX = 40000;
 
 // ── enricher + HTML normalization ────────────────────────────────────────────
 // Measured on 2026-08-22: 5,052 `@UUID[...]` across PHB/DMG/MM/content24, plus 312
@@ -171,12 +175,10 @@ export function searchBooks(books, query, opts = {}) {
       for (const page of doc.pages ?? []) {
         const text = page.text ?? toPlainText(page.html);
         if (!text) continue;
-        re.lastIndex = 0;
         const found = text.match(re);
         if (!found) continue;
         total += 1;
-        re.lastIndex = 0;
-        const at = text.search(new RegExp(re.source, "i"));
+        const at = text.search(re);
         const hit = {
           book: book.label ?? book.id,
           journal: doc.name,
@@ -272,6 +274,16 @@ export function nonPageWarning(uuid, documentName) {
   return `${uuid} is a ${documentName}, not a JournalEntryPage — pass a page UUID from search()`;
 }
 
+/**
+ * The first entry whose name equals `wanted` (case-insensitive), else — unless `substring` is off —
+ * the first whose name contains it. `entries.find` only, so a Foundry index Collection works as-is.
+ */
+export function pickByName(entries, wanted, { substring = true } = {}) {
+  const w = String(wanted).toLowerCase();
+  return entries.find(e => e.name.toLowerCase() === w)
+      ?? (substring ? entries.find(e => e.name.toLowerCase().includes(w)) : undefined);
+}
+
 // ── one page ─────────────────────────────────────────────────────────────────
 /** Find a page by exact-then-loose name across books. Never returns undefined. */
 export function findPage(books, name) {
@@ -303,7 +315,7 @@ export function renderPage(found, opts = {}) {
   if (opts.raw) return { journal: doc.name, page: page.name, uuid, raw: page.html ?? "" };
 
   const full = page.text ?? toPlainText(page.html);
-  const max = clamp(opts.maxChars, LIMITS.pageChars, 40000);
+  const max = clamp(opts.maxChars, LIMITS.pageChars, PAGE_CHARS_MAX);
   const offset = Math.max(0, Number(opts.offset) || 0);
   const slice = full.slice(offset, offset + max);
   const out = { book: book.label ?? book.id, journal: doc.name, page: page.name, uuid, text: slice };
@@ -378,6 +390,18 @@ export function monsterDigest(raw) {
 /** Enriched roll text leaves spaces before punctuation ("+4 , reach 5 ft ."): close them up. */
 export const tidy = t => t.replace(/\s+([,.;:!?)])/g, "$1").replace(/\(\s+/g, "(");
 
+/**
+ * One featureTexts() row from an item and its enriched description HTML: the first activity's
+ * activation (else the legacy system.activation; "" reads as null), a recharge recovery as "n-6"
+ * (no formula reads "6-6"), and the text as tidy plain text. Key order is the published shape.
+ */
+export function featureRow({ name, type, system }, enriched) {
+  const act = system?.activities?.contents?.[0]?.activation?.type ?? system?.activation?.type ?? null;
+  const rch = system?.uses?.recovery?.find?.(r => r.period === "recharge");
+  return { name, type, activation: act || null,
+    recharge: rch ? `${rch.formula ?? "6"}-6` : null, text: tidy(toPlainText(enriched)) };
+}
+
 // ── monsters(): the query grammar, filter, order and page ────────────────────
 // TWIN: pentaryn-prompts keeps its own copies — SIZE_WORDS and parseCr (core/size.mjs; used by
 // actor-patch-adapter.mjs). Modules never import each other (prompts-lookup-9), so a
@@ -412,6 +436,9 @@ export function monsterQuery(q = {}) {
   const packIds = q.packs ?? [...MONSTER_LIST_PACKS];
   return { size, type, lo, hi, name, limit, packIds };
 }
+
+/** The index fields matchMonster and monsterRow read (getIndex({fields})). */
+export const MONSTER_INDEX_FIELDS = Object.freeze(["type", "system.details.cr", "system.traits.size", "system.details.type.value", "system.details.type.subtype"]);
 
 /** One compendium index entry against a parsed query: NPCs only; size, type, CR range, name substring. */
 export function matchMonster(e, { size, type, lo, hi, name }) {

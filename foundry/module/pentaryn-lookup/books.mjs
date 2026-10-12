@@ -10,7 +10,7 @@
 
 import {
   BOOKSETS, EDITIONS, MONSTER_PACKS, findPage, foundFromDoc, nonPageWarning, knownLists, listFor as listForIn, matchMonster,
-  missingPackError, monsterDigest, monsterQuery, monsterRow, pageMonsters, renderPage, renderTable, resolveBookIds,
+  MONSTER_INDEX_FIELDS, missingPackError, monsterDigest, monsterQuery, monsterRow, pageMonsters, pickByName, renderPage, renderTable, resolveBookIds,
   searchBooks, sortMonsters, embeddedTableUuids, groupListUuids, spellListRows, NAME_SOURCES, groupNames,
 } from "./lookup-core.mjs";
 import {
@@ -125,8 +125,7 @@ async function monster(name, opts = {}) {
     const idx = await readIndex(packId);
     if (!idx) continue;
     tried.push(packId);
-    const entry = idx.find(e => e.name.toLowerCase() === wanted.toLowerCase())
-               ?? idx.find(e => e.name.toLowerCase().includes(wanted.toLowerCase()));
+    const entry = pickByName(idx, wanted);
     if (!entry) continue;
     const actor = await readDocument(packId, entry._id);
     const out = monsterDigest({
@@ -154,7 +153,7 @@ async function monsters(q = {}) {
   const query = monsterQuery(q);
   const seen = new Set(), out = [];
   for (const id of query.packIds) {
-    const idx = await readIndex(id, ["type", "system.details.cr", "system.traits.size", "system.details.type.value", "system.details.type.subtype"]);
+    const idx = await readIndex(id, [...MONSTER_INDEX_FIELDS]);
     if (!idx) continue;
     for (const e of idx) {
       if (!matchMonster(e, query)) continue;

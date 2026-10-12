@@ -275,6 +275,15 @@ test("page() text is capped with an offset to continue", () => {
   ok(next.text !== r.text, "offset should advance the window");
 });
 
+test("renderPage caps maxChars at 40000", () => {
+  const found = { book: { id: "p" }, doc: { id: "d", name: "D" }, page: { id: "g", name: "G", text: "x".repeat(50000) } };
+  const r = renderPage(found, { maxChars: 999999 });
+  eq(r.text.length, 40000);
+  eq(r.truncated, true);
+  eq(r.totalChars, 50000);
+  eq(r.nextOffset, 40000);
+});
+
 test("page({raw}) returns the original enricher-laden HTML", () => {
   const r = renderPage(findPage(BOOKS, "Cover"), { raw: true });
   has(r.raw, "@UUID[");
@@ -326,4 +335,38 @@ test("renderTable prints ranges and stripped text", () => {
     { range: [1, 20], description: "<p>You can speak @UUID[x]{Abyssal}.</p>" }, { range: [21, 21], name: "Single" }] });
   eq(r.rows, ["1-20 You can speak Abyssal.", "21 Single"]);
   eq(r.formula, "1d100");
+});
+
+// ── featureTexts' row rules (LKM-3): pinned here, not only through the Goblin Boss golden ──
+test("featureRow: activation, recharge and text rules", () => {
+  const { featureRow, tidy } = core;
+  const row = (system, html = "") => featureRow({ name: "N", type: "feat", system }, html);
+  // key order is the published shape
+  eq(Object.keys(row({})), ["name", "type", "activation", "recharge", "text"]);
+  // the first activity's activation beats the legacy system.activation
+  eq(row({ activities: { contents: [{ activation: { type: "bonus" } }] }, activation: { type: "action" } }).activation, "bonus");
+  eq(row({ activation: { type: "action" } }).activation, "action");
+  eq(row({}).activation, null);
+  // an empty-string activation is null, not ""
+  eq(row({ activities: { contents: [{ activation: { type: "" } }] } }).activation, null);
+  // recharge: no formula reads as 6-6; a formula n reads n-6
+  eq(row({ uses: { recovery: [{ period: "recharge" }] } }).recharge, "6-6");
+  eq(row({ uses: { recovery: [{ period: "lr" }, { period: "recharge", formula: "5" }] } }).recharge, "5-6");
+  eq(row({ uses: { recovery: [{ period: "lr" }] } }).recharge, null);
+  eq(row({ uses: { recovery: {} } }).recharge, null);
+  eq(row({ uses: {} }).recharge, null);
+  // text is tidy(toPlainText(html))
+  eq(row({}, "<p>+4 , reach</p>").text, "+4, reach");
+  eq(row({}, "<p>Hit ( 1d6 ) .</p>").text, tidy(toPlainText("<p>Hit ( 1d6 ) .</p>")));
+  eq(featureRow({ name: "Bite", type: "weapon", system: undefined }, "").name, "Bite");
+});
+
+test("pickByName: exact beats an earlier substring, case-insensitive, substring off, miss", () => {
+  const { pickByName } = core;
+  const boss = { name: "Goblin Boss" }, goblin = { name: "Goblin" };
+  const entries = [boss, goblin];
+  assert.equal(pickByName(entries, "goblin"), goblin);
+  assert.equal(pickByName(entries, "GOB"), boss);
+  assert.equal(pickByName(entries, "gob", { substring: false }), undefined);
+  assert.equal(pickByName(entries, "zzz"), undefined);
 });
