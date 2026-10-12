@@ -106,16 +106,15 @@ try {
   tag(scene.id, "scene"); tag(actor.id, "actor");
   const base = (await actor.getTokenDocument({ x: 200, y: 200 })).toObject();
   delete base._id;
-  const [tokA, tokHidden] = await scene.createEmbeddedDocuments("Token", [
-    { ...base, name: "ZZ Visible", x: 200, y: 200 },
-    { ...base, name: "ZZ Hidden", x: 600, y: 600, hidden: true }
-  ]);
+  // one create per document: a batch create comes back in no fixed order on Foundry 14, which
+  // tagged the wrong note id on some runs (W5L 2026-10-12)
+  const one = async (type, data) => (await scene.createEmbeddedDocuments(type, [data]))[0];
+  const tokA = await one("Token", { ...base, name: "ZZ Visible", x: 200, y: 200 });
+  const tokHidden = await one("Token", { ...base, name: "ZZ Hidden", x: 600, y: 600, hidden: true });
   tag(tokA.id, "tokA"); tag(tokHidden.id, "tokHidden");
-  const [noteUnder, noteClear, noteHidden] = await scene.createEmbeddedDocuments("Note", [
-    { x: 250, y: 250, text: "ZZ pin under" },
-    { x: 850, y: 150, text: "ZZ pin clear" },
-    { x: 650, y: 650, text: "ZZ pin under hidden" }
-  ]);
+  const noteUnder = await one("Note", { x: 250, y: 250, text: "ZZ pin under" });
+  const noteClear = await one("Note", { x: 850, y: 150, text: "ZZ pin clear" });
+  const noteHidden = await one("Note", { x: 650, y: 650, text: "ZZ pin under hidden" });
   tag(noteUnder.id, "noteUnder"); tag(noteClear.id, "noteClear"); tag(noteHidden.id, "noteHidden");
   S.pinsUnderTokens = await probe(() => M.pinsUnderTokens(scene));
   S.pinsNoScene = await probe(() => M.pinsUnderTokens(null));
