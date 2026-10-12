@@ -84,7 +84,7 @@ class Registry:
     rows: list[Adjustment] = field(default_factory=list)
     aliases: dict[str, tuple[str, ...]] = field(default_factory=dict)
     path: Path | None = None
-    _exposure: dict[str, list[str]] = field(default_factory=dict, repr=False)
+    _exposure: dict[tuple[str, Path], list[str]] = field(default_factory=dict, repr=False)
 
     # ── lookups ──────────────────────────────────────────────────────────────
 
@@ -109,11 +109,12 @@ class Registry:
     def exposure(self, package: str, *, root: Path = REPO_ROOT) -> list[str]:
         """Repo-relative files of ours that name ``package`` or one of its aliases.
 
-        Cached per registry instance, which is per run."""
+        Cached per registry instance (which is per run) and per root."""
         if package in NO_EXPOSURE:
             return []
-        if package in self._exposure:
-            return self._exposure[package]
+        key = (package, Path(root).resolve())
+        if key in self._exposure:
+            return self._exposure[key]
         id_re = id_pattern(package)
         aliases = [a.lower() for a in self.aliases.get(package, ())]
         hits: list[str] = []
@@ -125,8 +126,8 @@ class Registry:
                 continue
             if id_re.search(code) or any(a in code.lower() for a in aliases):
                 hits.append(str(path.relative_to(root)))
-        self._exposure[package] = sorted(set(hits))
-        return self._exposure[package]
+        self._exposure[key] = sorted(set(hits))
+        return self._exposure[key]
 
 
 def id_pattern(package: str) -> re.Pattern:

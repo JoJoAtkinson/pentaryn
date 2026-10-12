@@ -34,7 +34,7 @@ let log = null;
 const policy = () => core.normalizePolicy(setting("ghostPolicy"));
 const wish = () => !!setting("ghost");
 
-export function combatActive(sceneId = canvas?.scene?.id) {
+function combatActive(sceneId = canvas?.scene?.id) {
   return core.combatOnScene(combatSummaries(), sceneId);
 }
 
@@ -58,13 +58,13 @@ function invalidate() {
 }
 
 /** Ghost in effect for this placeable (Token) on this client? */
-export function ghostFor(token) {
+function ghostFor(token) {
   const doc = token?.document;
   if (!doc) return false;
   return core.ghostForCtx(context(), { isGM: game.user.isGM, isOwner: !!doc.isOwner, sceneId: doc.parent?.id });
 }
 
-export function ownedRankOf(token) {
+function ownedRankOf(token) {
   return core.ownedRank({ isGM: game.user.isGM, enabled: context().ownedOnTop, isOwner: !!token?.document?.isOwner });
 }
 
@@ -76,7 +76,7 @@ const SETTING_SCOPES = Object.freeze(Object.fromEntries(SETTINGS.map(r => [r.key
  * the scene this client views). The first eight keys are the historic ones; sceneId, version and
  * the settings key map are appended after them.
  */
-export function status(opts = {}) {
+function status(opts = {}) {
   const sceneId = opts?.sceneId ?? canvas?.scene?.id ?? null;
   return {
     ...core.statusFrom({
@@ -210,10 +210,9 @@ function toolclip(heading, paragraphs) {
 function addTools(controls) {
   const tools = controls?.tokens?.tools;
   if (!tools) return;
-  const p = policy();
-  const combat = combatActive();
+  const now = liveState();
 
-  const pt = core.playerTool({ isGM: game.user.isGM, policy: p, combatActive: combat, wish: wish() });
+  const pt = core.playerTool({ isGM: game.user.isGM, ...now });
   if (pt.visible) {
     tools[TOOL] = {
       name: TOOL,
@@ -227,7 +226,7 @@ function addTools(controls) {
     };
   }
 
-  const gt = core.gmTool({ isGM: game.user.isGM, policy: p });
+  const gt = core.gmTool({ isGM: game.user.isGM, policy: now.policy });
   if (gt.visible) {
     tools[GM_TOOL] = {
       name: GM_TOOL,
@@ -243,7 +242,7 @@ function addTools(controls) {
 }
 
 /** The player's button, and `setGhost` on the API. */
-export async function onPlayerToggle(active) {
+async function onPlayerToggle(active) {
   try {
     if (active) {
       const { allowed, reason } = core.ghostAllowed({ policy: policy(), combatActive: combatActive() });
@@ -288,7 +287,7 @@ function rerenderControls(force = false, now = liveState()) {
 function markBlocked(element) {
   const btn = (element ?? ui.controls?.element)?.querySelector?.(`button.tool[data-tool="${TOOL}"]`);
   if (!btn) return;
-  const pt = core.playerTool({ isGM: game.user.isGM, policy: policy(), combatActive: combatActive(), wish: wish() });
+  const pt = core.playerTool({ isGM: game.user.isGM, ...liveState() });
   btn.classList.toggle(CSS.blocked, pt.state === "combat");
 }
 
@@ -330,6 +329,13 @@ async function refresh() {
 }
 const queueRefresh = foundry.utils.debounce(() => refresh(), 50);
 
+/** The settings this feature reacts to, in registration order. */
+const ON_SETTING = Object.freeze({
+  ghostPolicy: () => { invalidate(); queueRefresh(); },
+  ghost: () => { invalidate(); queueRefresh(); },
+  ownedOnTop: () => { invalidate(); refreshTokens(); },
+});
+
 /* -------------------------------------------- */
 /*  Install / uninstall                         */
 /* -------------------------------------------- */
@@ -345,9 +351,7 @@ const COMBAT_HOOKS = ["createCombat", "updateCombat", "deleteCombat", "createCom
 export function install(reg, ctx) {
   feature = ctx;
   log = ctx.log;
-  ctx.onSettingChange("ghostPolicy", () => { invalidate(); queueRefresh(); });
-  ctx.onSettingChange("ghost", () => { invalidate(); queueRefresh(); });
-  ctx.onSettingChange("ownedOnTop", () => { invalidate(); refreshTokens(); });
+  for (const [key, fn] of Object.entries(ON_SETTING)) ctx.onSettingChange(key, fn);
 
   if (ctx.late) patchAll();
   else reg.once("setup", patchAll, { guard: false, label: "setup: wrap drag and keyboard" });
@@ -405,6 +409,6 @@ export function uninstall() {
   dragPatched = keyboardPatched = false;
   lastToolKey = null;
   clearedBy = null;
-  if (feature) for (const key of ["ghostPolicy", "ghost", "ownedOnTop"]) feature.onSettingChange(key, null);
+  if (feature) for (const key of Object.keys(ON_SETTING)) feature.onSettingChange(key, null);
   feature = null;
 }

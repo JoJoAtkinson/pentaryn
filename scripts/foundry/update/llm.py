@@ -330,3 +330,18 @@ def charged_one(call: dict | CallRecord | None) -> float:
 
 def charged(calls: list[dict]) -> float:
     return round(sum(charged_one(c) for c in calls if c), 5)
+
+
+def cost_line(calls: list[dict]) -> str:
+    """``LLM cost this run: $0.42 (adjudicator $0.05, T0 $0.00, T1 $0.37)``, plus what a
+    call killed on timeout may have spent without reporting it."""
+    by: dict[str, float] = {}
+    for c in calls:
+        if c:
+            by[c.get("tier", "?")] = by.get(c.get("tier", "?"), 0.0) + float(c.get("cost_usd") or 0)
+    total = sum(by.values())
+    parts = ", ".join(f"{k} ${v:.2f}" for k, v in by.items())
+    unmeasured = charged([c for c in calls if c]) - total_cost([c for c in calls if c])
+    return (f"LLM cost this run: ${total:.2f}" + (f" ({parts})" if parts else "")
+            + (f" + up to ${unmeasured:.2f} unreported (timed-out calls)"
+               if unmeasured > 0.005 else ""))
