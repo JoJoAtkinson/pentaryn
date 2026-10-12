@@ -10,6 +10,7 @@
 import { MODULE } from "./geometry-core.mjs";
 import { assetUrl } from "./core/text.mjs";
 import { makeLog } from "./lib/log.mjs";
+import { footprintRect, tokenImg, EYE } from "./scene-adapter.mjs";
 
 const log = makeLog(MODULE);
 
@@ -120,8 +121,8 @@ async function renderOne(scene, eid, enc, manifest, sid, longSide, cache) {
   for (const [pid, p] of Object.entries(manifest.prompts)) {
     if (p.sceneId !== scene.id) continue;
     const tok = scene.tokens.get(p.markerId);
-    const r = tok ? { x: tok.x, y: tok.y, w: tok.width * g, h: tok.height * g } : { x: p.x, y: p.y, w: p.w, h: p.h };
-    labelled.push({ id: pid, rect: r, img: tok?.texture?.src, prompt: true, member: enc.members.includes(pid) });
+    const r = tok ? footprintRect(tok, g) : { x: p.x, y: p.y, w: p.w, h: p.h };
+    labelled.push({ id: pid, rect: r, img: tok ? tokenImg(tok) : undefined, prompt: true, member: enc.members.includes(pid) });
   }
   for (const [tid, b] of Object.entries(manifest.built)) {
     if (b.sceneId !== scene.id) continue;
@@ -129,14 +130,15 @@ async function renderOne(scene, eid, enc, manifest, sid, longSide, cache) {
     if (!doc) continue;
     let r, img = null;
     if (b.docName === "Token") {
-      r = { x: doc.x, y: doc.y, w: doc.width * g, h: doc.height * g };
-      img = doc.ring?.enabled && doc.ring.subject?.texture ? doc.ring.subject.texture : doc.texture?.src;
+      // the scene model's own footprint and art: on a hex grid the box is the rect the gather measures
+      r = footprintRect(doc, g);
+      img = tokenImg(doc);
     } else if (b.docName === "Tile") {
       r = { x: doc.x, y: doc.y, w: doc.width, h: doc.height };
       img = doc.texture?.src;
     } else {
       r = { x: doc.x - g / 4, y: doc.y - g / 4, w: g / 2, h: g / 2 };
-      img = b.docName === "Note" ? doc.texture?.src : null;
+      img = b.docName === "Note" ? (doc.texture?.src || EYE) : null;
     }
     labelled.push({ id: tid, rect: r, img, prompt: false, member: enc.members.includes(tid) });
   }

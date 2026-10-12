@@ -26,7 +26,8 @@ const coreSetting = settingReader("core", [{ key: "gridDiagonals", default: 0 }]
 /** dnd5e size → the marker size rank used for ordering (tiny 0 … grg 5). */
 const DND_RANK = { tiny: 0, sm: 1, med: 2, lg: 3, huge: 4, grg: 5 };
 
-const EYE = "assets/tokens/custom/props/icon-eye.webp";
+/** The icon a note without its own is drawn with (scene model and crops alike). */
+export const EYE = "assets/tokens/custom/props/icon-eye.webp";
 
 /**
  * Colour/number markers and anything in a markers folder are scaffolding, not context: an actor
@@ -151,7 +152,8 @@ export function actorXp(actor, tok = null) {
   return Number.isFinite(v) && v > 0 ? v : crXp(actor.system?.details?.cr);
 }
 
-function tokenImg(tok) {
+/** A token's art as drawn: the dynamic ring's subject when the ring is on, else its texture. */
+export function tokenImg(tok) {
   const ring = tok.ring;
   if (ring?.enabled && ring.subject?.texture) return ring.subject.texture;
   return tok.texture?.src ?? "";
@@ -170,11 +172,18 @@ function tryCore(tok, method, use) {
   }
 }
 
-function tokenGeometry(tok, g) {
-  // getSize: the real pixel footprint (hex rows/columns are not width × size)
+/**
+ * A token's drawn footprint in scene pixels. getSize is core's real footprint (hex rows/columns
+ * are not width × size); width × grid when it is absent or throws. Crops box this same rect.
+ */
+export function footprintRect(tok, g) {
   let size = null;
   tryCore(tok, "getSize", v => { size = v; });
-  const rect = { x: tok.x, y: tok.y, w: size?.width ?? tok.width * g, h: size?.height ?? tok.height * g };
+  return { x: tok.x, y: tok.y, w: size?.width ?? tok.width * g, h: size?.height ?? tok.height * g };
+}
+
+function tokenGeometry(tok, g) {
+  const rect = footprintRect(tok, g);
   const centre = { x: rect.x + rect.w / 2, y: rect.y + rect.h / 2, elevation: tok.elevation ?? 0 };
   let origin = centre, points = null, squares = null;
   tryCore(tok, "getMovementOrigin", v => { origin = v; });

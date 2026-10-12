@@ -83,6 +83,11 @@ cssPrefix `pp-`, afterSync). Each **[declared]** change goes to the live check.
   `test/ext3-returns.test.mjs` compares each row's key list with a real sample (the `crop-row`
   golden, a renderCrops error row, a stub scene model), so the next drift fails the gate; the
   `describe` golden is re-pinned. No behaviour change: only describe()'s text differs.
+- **[declared] Hex crops box each token's real footprint** (EXT-12): crops take the token box and
+  art from the scene model's exported `footprintRect` (core's `Token#getSize`, else width × grid),
+  `tokenImg` (the ring subject when the ring is on) and `EYE` (a note with no icon), so on a hex grid
+  the crop draws the same rect the gather measures. Square-grid crops are unchanged (the crop
+  goldens are byte-identical); `glue-exports` is re-pinned for the three new exports.
 - **[declared] Two gathers at once keep both manifests**: the ring writes through one
   `serialStore` (a parallel gather no longer makes the other's call id `CALL_UNKNOWN`).
 - **[declared] `ensureMarkers` no longer duplicates across two GM tabs** (§5.9.1): the folder and
