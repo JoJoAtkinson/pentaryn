@@ -154,7 +154,8 @@ const search = text => searchLog(readLog(), text);
 
 /**
  * Recreate entry #n with no toast (items-journal-28): `{ok: true, item, actor}`, or
- * `{ok: false, reason: "not-gm" | "no-entry" | "no-actor"}`. Defaults to the actor it left.
+ * `{ok: false, reason: "not-gm" | "no-entry" | "no-actor" | "not-created"}`
+ * (not-created: a preCreateItem listener vetoed the item). Defaults to the actor it left.
  */
 async function restoreResult(n, target = null) {
   if (!game.user.isGM) return { ok: false, reason: "not-gm" };
