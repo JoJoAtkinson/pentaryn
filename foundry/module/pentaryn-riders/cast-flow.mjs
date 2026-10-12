@@ -52,7 +52,7 @@
 import { restoreSlotScaling, slotsFrom, arcaneRecoveryCap, arcaneRecoveryDefault, arcaneRecoveryCheck, isArcaneRecovery,
   ARCANE_RECOVERY_MAX_LEVEL } from "./table-core.mjs";
 import { settingOr } from "./settings.mjs";
-import { restoreSidebar, sidebarState } from "./shapes.mjs";
+import { itemInfo, restoreSidebar, sidebarState } from "./shapes.mjs";
 
 let log = null;
 
@@ -222,7 +222,7 @@ function arcaneRecoveryPicker(activity) {
     if (!on("arcaneRecovery")) return;
     const item = activity?.item;
     const actor = item?.actor;
-    if (!actor?.isOwner || !isArcaneRecovery({ type: item.type, identifier: item.system?.identifier, name: item.name })) return;
+    if (!actor?.isOwner || !isArcaneRecovery(itemInfo(item))) return;
     // Only the client that used it: postUseActivity runs on the user's own client.
     setTimeout(() => arcaneRecoveryDialog(actor).catch(err => log.warn("Arcane Recovery dialog", err)), 0);
   } catch (err) { log.warn("Arcane Recovery picker skipped", err); }

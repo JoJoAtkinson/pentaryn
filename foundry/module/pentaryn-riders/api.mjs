@@ -11,16 +11,14 @@ import { HOOKS, MODULE, NS } from "./riders-core.mjs";
 import { MANIFEST } from "./api-manifest.mjs";
 import { SETTINGS, settingsSnapshot } from "./settings.mjs";
 import {
-  carriedBy, concentrationSummonsOf, featuresOf, hdPools, hdSummary, isBattleMedic, isType, restoreHitDie, spendHitDie,
-  withLegacyActor,
+  RELAY_QUERY, carriedBy, concentrationSummonsOf, featuresOf, hdPools, hdSummary, isBattleMedic, isType, restoreHitDie,
+  spendHitDie, withLegacyActor,
 } from "./shapes.mjs";
 import { buildApi, toPlain } from "./lib/api.mjs";
 import { fail, ok } from "./lib/errors.mjs";
 import { patches } from "./lib/patch.mjs";
 import { publishedOf } from "./lib/publish.mjs";
 import { refOf, resolveRef } from "./lib/resolve.mjs";
-
-const QUERY = `${MODULE}.battleMedic`;
 
 /**
  * Set the damage type a typed feature (Elemental Adept, Elemental Affinity) stands for.
@@ -139,7 +137,7 @@ function selftest(ctx) {
     { label: `game.pentaryn.${NS} is this API`, ok: game.pentaryn?.[NS] === ctx.api },
     { label: "settings readable", ok: SETTINGS.every(r => typeof ctx.setting(r.key) === "boolean") },
     { label: "hooks registered", ok: hooks.length === 23, detail: hooks.length },
-    { label: "Battle Medic relay registered", ok: typeof CONFIG.queries?.[QUERY] === "function" },
+    { label: "Battle Medic relay registered", ok: typeof CONFIG.queries?.[RELAY_QUERY] === "function" },
     { label: "patches installed", ok: true, detail: patchRecords().map(p => p.adjustments) },
   ];
   return { ok: checks.every(c => c.ok), checks: checks.map(c => ({ detail: null, ...c })) };
@@ -169,7 +167,7 @@ export function buildApiFor(ctx) {
       events: HOOKS,
       hooks: ctx.reg.ids(),
       patches: patchRecords(),
-      queries: [QUERY],
+      queries: [RELAY_QUERY],
       published: publishedOf(NS),
     }),
   });

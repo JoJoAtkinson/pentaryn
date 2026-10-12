@@ -33,3 +33,18 @@ test("every setting key is in the Settings section", async () => {
   const s = section("Settings");
   for (const r of SETTINGS) assert.ok(s.includes(`\`${r.key}\``), r.key);
 });
+
+test("every adjustments.yml row owned by pentaryn-riders is named in the README Patches and adjustments section", () => {
+  const yml = readFileSync(new URL("../../adjustments.yml", ROOT), "utf8");
+  const ours = [];
+  let id = null;
+  for (const line of yml.split("\n")) {
+    const m = line.match(/^  - id:\s*(\S+)/);
+    if (m) { id = m[1]; continue; }
+    const mods = line.match(/^    modules:\s*\[([^\]]*)\]/);
+    if (id && mods && mods[1].split(",").map(x => x.trim()).includes("pentaryn-riders")) ours.push(id);
+  }
+  assert.ok(ours.length > 0, "no pentaryn-riders rows found in adjustments.yml");
+  const s = section("Patches and adjustments");
+  for (const r of ours) assert.ok(s.includes(`\`${r}\``), r);
+});
