@@ -258,7 +258,8 @@ test("bindBoard: once per board; hover shows the tip; pointerleave hides it", as
   assert.equal(W.board.listeners.length, count);
   assert.equal(W.board.dataset.ppBound, "1");
   assert.deepEqual(W.board.listeners.map(l => [l.type, l.capture]), [
-    ["pointermove", false], ["pointerdown", true], ["pointermove", true], ["pointerup", true], ["pointerleave", false], ["contextmenu", true],
+    ["pointermove", false], ["pointerdown", true], ["pointermove", true], ["pointerup", true],
+    ["pointercancel", true], ["lostpointercapture", true], ["pointerleave", false], ["contextmenu", true],
   ]);
   await W.board.fire("pointermove", { clientX: 150, clientY: 180 });
   assert.equal(S.state().tip.style.display, "block");
@@ -299,6 +300,99 @@ test("bindBoard: drag an edit-mode badge (GM, left button) → the sprite follow
   await W.board.fire("pointerup", { clientX: 260, clientY: 190 });
   assert.equal(S.state().drag, null);
   assert.deepEqual(W.callsSince(n, ["update"]).map(c => [c.uuid, c.changes.shapes[0].x, c.changes.shapes[0].y]), [[P.passage.uuid, 250, 250]]);
+  S.editing.delete(P.passage.uuid);
+});
+
+/** Start a drag on the first badge (the Passage, in edit mode); returns the world. */
+async function startDrag() {
+  const P = onCanvas();
+  S.editing.add(P.passage.uuid);
+  await S.drawBadges();
+  S.bindBoard();
+  await W.board.fire("pointerdown", { clientX: 150, clientY: 180, button: 0, pointerId: 7 });
+  assert.ok(S.state().drag, "dragging");
+  return P;
+}
+const updates = n => W.callsSince(n, ["update", "updateEmbedded"]);
+
+test("portals-edge-1: a redraw mid-drag abandons the drag — the move and the release write nothing", async () => {
+  const P = await startDrag();
+  const stale = S.badges[0].sprite;
+  await S.drawBadges();
+  assert.equal(stale.destroyed, true);
+  const n = F.calls.length;
+  const runs = S.state().drawRun;
+  const move = await W.board.fire("pointermove", { clientX: 260, clientY: 190 });
+  assert.equal(move.event.immediateStopped, true);
+  assert.equal(S.state().drag, null, "abandoned on the first move");
+  assert.equal(S.state().drawRun, runs + 1, "redrawn");
+  await W.flush();
+  await W.board.fire("pointerup", { clientX: 260, clientY: 190 });
+  assert.deepEqual(updates(n), []);
+  S.editing.delete(P.passage.uuid);
+});
+
+test("portals-edge-1: a release after the badge was redrawn writes nothing and redraws", async () => {
+  const P = await startDrag();
+  await S.drawBadges();
+  const n = F.calls.length;
+  const runs = S.state().drawRun;
+  const up = await W.board.fire("pointerup", { clientX: 260, clientY: 190 });
+  await W.flush();
+  assert.equal(up.event.immediateStopped, true);
+  assert.equal(S.state().drag, null);
+  assert.equal(S.state().drawRun, runs + 1);
+  assert.deepEqual(updates(n), []);
+  S.editing.delete(P.passage.uuid);
+});
+
+test("portals-edge-1: a release after the canvas moved to another scene writes nothing to the old region", async () => {
+  const P = await startDrag();
+  F.canvas.scene = W.scene({ id: `ScnElsewhere${seq}`, name: "Elsewhere" });
+  const n = F.calls.length;
+  await W.board.fire("pointerup", { clientX: 260, clientY: 190 });
+  await W.flush();
+  assert.equal(S.state().drag, null);
+  assert.deepEqual(updates(n), []);
+  S.editing.delete(P.passage.uuid);
+});
+
+test("portals-edge-1: canvasTearDown clears the drag", async () => {
+  const P = await startDrag();
+  F.fire("canvasTearDown");
+  assert.equal(S.state().drag, null);
+  const n = F.calls.length;
+  await W.board.fire("pointerup", { clientX: 260, clientY: 190 });
+  assert.deepEqual(updates(n), []);
+  S.editing.delete(P.passage.uuid);
+});
+
+for (const type of ["pointercancel", "lostpointercapture"]) {
+  test(`portals-edge-1: ${type} abandons the drag, redraws the badge back, writes nothing`, async () => {
+    const P = await startDrag();
+    await W.board.fire("pointermove", { clientX: 260, clientY: 190 });
+    const n = F.calls.length;
+    const runs = S.state().drawRun;
+    await W.board.fire(type, { pointerId: 7 });
+    await W.flush();
+    assert.equal(S.state().drag, null);
+    assert.equal(S.state().drawRun, runs + 1, "redrawn");
+    assert.deepEqual([S.badges[0].sprite.x, S.badges[0].sprite.y], [150, 180.2], "back on its square");
+    await W.board.fire("pointerup", { clientX: 260, clientY: 190 });
+    assert.deepEqual(updates(n), []);
+    S.editing.delete(P.passage.uuid);
+  });
+}
+
+test("portals-edge-1: the lostpointercapture after a normal release is a no-op", async () => {
+  const P = await startDrag();
+  await W.board.fire("pointerup", { clientX: 260, clientY: 190 });
+  await W.flush();
+  const runs = S.state().drawRun;
+  const n = F.calls.length;
+  await W.board.fire("lostpointercapture", { pointerId: 7 });
+  assert.equal(S.state().drawRun, runs);
+  assert.deepEqual(W.callsSince(n), []);
   S.editing.delete(P.passage.uuid);
 });
 

@@ -242,16 +242,22 @@ export function bindBoard() {
   board.addEventListener("pointermove", ev => {
     if (!drag) return;
     ev.stopImmediatePropagation();
+    if (dragGone(drag)) return abandonDrag();
     const p = canvas.canvasCoordinatesFromClient({ x: ev.clientX, y: ev.clientY });
     drag.badge.sprite.position.set(drag.bx + p.x - drag.start.x, drag.by + p.y - drag.start.y);
   }, true);
   board.addEventListener("pointerup", guard("badge drag release", async ev => {
     if (!drag) return;
     ev.stopImmediatePropagation();
+    if (dragGone(drag)) return abandonDrag();
     const d = drag; drag = null;
     const p = canvas.canvasCoordinatesFromClient({ x: ev.clientX, y: ev.clientY });
     await moveRegion(d.badge.region, p.x - d.start.x, p.y - d.start.y);
   }), true);
+  // The browser took the pointer away (a system gesture, a lost capture): drop the drag, write nothing.
+  // A normal release clears `drag` in pointerup first, so the lostpointercapture after it is a no-op.
+  board.addEventListener("pointercancel", abandonDrag, true);
+  board.addEventListener("lostpointercapture", abandonDrag, true);
   board.addEventListener("pointerleave", hideTip);
   board.addEventListener("contextmenu", ev => {
     if (!game.user.isGM) return;
@@ -262,6 +268,19 @@ export function bindBoard() {
     openMenu(b, ev);
   }, true);
   document.addEventListener("pointerdown", ev => { if (menu && !menu.contains(ev.target)) closeMenu(); }, true);
+}
+
+/**
+ * portals-edge-1: the dragged badge was redrawn away (a region hook, an edit toggle) or its region
+ * is no longer on the viewed scene (deleted, or the canvas moved on). Its drag must not write.
+ */
+const dragGone = d => !!d.badge.sprite.destroyed || canvas?.scene?.regions?.get(d.badge.region.id) !== d.badge.region;
+
+/** End a drag without writing: clear it and redraw, so a half-dragged badge snaps back. */
+function abandonDrag() {
+  if (!drag) return;
+  drag = null;
+  if (canvas?.ready) redrawNow();
 }
 
 /**
@@ -287,7 +306,7 @@ const REDRAW_MS = 50;
  */
 let queueDraw = null;
 
-function onCanvasTearDown() { queueDraw?.cancel(); hideTip(); closeMenu(); drawRun++; badges.length = 0; badgeLayer = null; }
+function onCanvasTearDown() { queueDraw?.cancel(); hideTip(); closeMenu(); drag = null; drawRun++; badges.length = 0; badgeLayer = null; }
 
 /** The API rows this feature contributes (api-manifest BADGE_ROWS). */
 export const contribution = () => ({ rows: BADGE_ROWS, impl: { open: PortalCard.open, redraw: drawBadges, badges: listBadges } });

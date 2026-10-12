@@ -44,6 +44,8 @@ migration record → `context/plans/addon-blueprint-2026-10/migrate-pentaryn-por
   destination's card in place, opens/seals the passage, reveals it, toggles "ask before moving",
   adds a destination (two-way by default) or removes one, and — with its edit toggle on — lets you
   drag the badge to move the travel spot (it snaps by its bounds; its travel tiles move with it).
+  A drag that is interrupted — the badge redraws, the scene changes, the browser cancels the
+  pointer — snaps the badge back and moves nothing.
 
 ## Settings
 
