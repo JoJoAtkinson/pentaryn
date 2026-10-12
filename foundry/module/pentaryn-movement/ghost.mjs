@@ -300,6 +300,7 @@ function markBlocked(element) {
  * if what the button shows has changed.
  */
 let clearedBy = null; // why this client last switched the player's ghost off ("combat" | "off")
+let clearedScene = null; // the viewed scene a "combat" clear happened on (movement-edge-1)
 async function refresh() {
   try {
     // One live read serves every rule below: nothing awaits between them (finding -19).
@@ -308,15 +309,18 @@ async function refresh() {
     if (reason) {
       ui.notifications.info(NOTIFY_CLEARED[reason], { localize: true });
       clearedBy = reason;
+      clearedScene = reason === "combat" ? canvas?.scene?.id ?? null : null;
       await game.settings.set(MODULE, "ghost", false); // its onChange calls refresh again
       return;
     }
-    if (now.wish) clearedBy = null;
+    if (now.wish) clearedBy = clearedScene = null;
     else if (!game.user.isGM) {
-      const key = core.ghostBackKey({ cleared: clearedBy, ...now });
+      // A fight clear asks about the scene it happened on, not the one now viewed (movement-edge-1).
+      const combatActive = clearedBy === "combat" ? core.combatOnScene(combatSummaries(), clearedScene) : now.combatActive;
+      const key = core.ghostBackKey({ cleared: clearedBy, ...now, combatActive });
       if (key) {
         ui.notifications.info(key, { localize: true });
-        clearedBy = null;
+        clearedBy = clearedScene = null;
       }
     }
     // Combat updates fire every turn; only a real change of state redraws anything.
@@ -408,7 +412,7 @@ export function uninstall() {
   dragHandle = keyboardHandle = sortPatch = null;
   dragPatched = keyboardPatched = false;
   lastToolKey = null;
-  clearedBy = null;
+  clearedBy = clearedScene = null;
   if (feature) for (const key of Object.keys(ON_SETTING)) feature.onSettingChange(key, null);
   feature = null;
 }

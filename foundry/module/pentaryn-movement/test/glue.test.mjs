@@ -328,6 +328,59 @@ test("aoe-movement-portals-42: GM allows ghost mid-fight → the toast is notify
   await reset();
 });
 
+// movement-edge-1 (fixed [declared]) — cleared by a fight on scene A, then the player views scene B while
+// that fight still runs: the toast was "The fight is over" (notify.back.combat) and it used up the one-time
+// toast. Now B says nothing, and back.combat fires once, when A's fight really ends.
+test("movement-edge-1: viewing another scene mid-fight says nothing; back.combat fires once when that fight ends", async t => {
+  t.after(() => { canvas.scene = { id: SCENE }; });
+  await reset();
+  await set("ghost", true);
+  game.combats.contents = [combat()];
+  F.fire("createCombat");
+  await settle();                                     // cleared.combat on SCENE
+
+  let from = mark();
+  canvas.scene = { id: OTHER };
+  F.fire("canvasReady");
+  await settle();
+  assert.deepEqual(toasts(from), [], "the fight on the cleared scene still runs");
+
+  from = mark();
+  F.fire("updateCombat");
+  await settle();
+  assert.deepEqual(toasts(from), [], "still running");
+
+  from = mark();
+  game.combats.contents = [];
+  F.fire("deleteCombat");
+  await settle();
+  assert.deepEqual(toasts(from), [["info", "PENTARYN_MOVEMENT.notify.back.combat", { localize: true }]]);
+
+  from = mark();
+  F.fire("updateCombat");
+  await settle();
+  assert.deepEqual(toasts(from), [], "once only");
+  canvas.scene = { id: SCENE };
+  await reset();
+});
+
+test("movement-edge-1: on another scene, the GM allowing ghost mid-fight still toasts back.off", async t => {
+  t.after(() => { canvas.scene = { id: SCENE }; });
+  await reset();
+  await set("ghost", true);
+  game.combats.contents = [combat()];
+  F.fire("createCombat");
+  await settle();
+  canvas.scene = { id: OTHER };
+  F.fire("canvasReady");
+  await settle();
+  const from = mark();
+  await set("ghostPolicy", "always");
+  assert.deepEqual(toasts(from), [["info", "PENTARYN_MOVEMENT.notify.back.off", { localize: true }]]);
+  canvas.scene = { id: SCENE };
+  await reset();
+});
+
 test("a GM never gets the cleared or the back toast", async () => {
   await reset();
   asGM();

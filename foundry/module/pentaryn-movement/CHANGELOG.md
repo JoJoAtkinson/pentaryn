@@ -17,6 +17,9 @@ manifest); the kit is vendored. What a player or GM can notice:
   session instead of swallowed silently (console only).
 - **[declared] D-M4** — the "ghost movement is available again" toast after the GM allows ghost
   during a fight reads "The GM allows ghost movement again" instead of "The fight is over" (F-M2).
+- **[declared]** after a fight switched a player's ghost off, moving to another map while that fight
+  still runs no longer toasts "The fight is over" (which used up the one-time toast); the toast now
+  comes once, when the fight on the map it was cleared on really ends (movement-edge-1).
 - Performance: the per-token paths (drag, arrow keys, token refresh, the layer sort) read the
   settings and the combats once per change instead of once per token (F-M1).
 
