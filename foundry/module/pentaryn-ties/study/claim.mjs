@@ -9,7 +9,7 @@ import { MODULE } from "../ties-core.mjs";
 import { INSPECT_CLAIM_KEY } from "../core/rules.mjs";
 import { BELIEFS_FLAG, KIND_KEY } from "../known-core.mjs";
 import { putBelief, readBelief } from "./apply.mjs";
-import { readFlag } from "../lib/flags.mjs";
+import { flagPath, readFlag } from "../lib/flags.mjs";
 
 /**
  * ⚠ **`activeGM` identifies a USER, not a session — and one GM can be logged in twice.**
@@ -127,13 +127,36 @@ export function dropRow(base, ownerId, key, owned) {
   return rest.length ? { [`${base}.${ownerId}.${key}`]: _del } : { [`${base}.${ownerId}`]: _del };
 }
 
+/**
+ * **The one beliefs-row drop** (ES-7, M10): remove `characterId`'s `key` row from a ledger's beliefs
+ * flag. False when there was no such row. Every caller that deletes a beliefs row comes through here
+ * — `putBelief(null)`, the two release twins, the identification do-over and `forgetFact`.
+ *
+ * ⚠ Unset the whole flag when the last row goes, rather than leaving `beliefs: {}` behind.
+ *
+ * `dropRow` removes the character's entry and stops there, so an inspection that rolled nothing
+ * against a creature nobody had studied leaves an empty container on that actor — permanently,
+ * and on every creature the party ever glanced at. Caught while restoring a test world: three
+ * actors held `beliefs: {}` where the baseline had no key at all. Harmless to read, but it is
+ * litter in every world export and every diff, and it makes "has anyone studied this?" a
+ * question you cannot answer by looking.
+ */
+export async function dropBeliefRow(ledger, characterId, key) {
+  const all = readFlag(ledger, MODULE, BELIEFS_FLAG) ?? {};
+  if (!all[characterId]?.[key]) return false;
+  const others = Object.keys(all[characterId]).filter(k => k !== key);
+  const rest = Object.keys(all).filter(k => k !== characterId);
+  const base = flagPath(MODULE, BELIEFS_FLAG);
+  // the whole flag goes with core's `_del` too (ES-6), and quietly, like every other row drop
+  const change = !others.length && !rest.length ? { [base]: _del } : dropRow(base, characterId, key, all[characterId]);
+  await ledger.update(change, { render: false });
+  return true;
+}
+
 /** Un-stake it — only ever called by the client that won, and only when no roll happened. */
 async function releaseClaim(ledger, characterId, key = KIND_KEY) {
-  const all = readFlag(ledger, MODULE, BELIEFS_FLAG) ?? {};
-  if (all?.[characterId]?.[key]?.claim !== session()) return;
-  await ledger.update(dropRow(`flags.${MODULE}.${BELIEFS_FLAG}`, characterId, key, all[characterId]), {
-    render: false
-  });
+  if (readFlag(ledger, MODULE, BELIEFS_FLAG)?.[characterId]?.[key]?.claim !== session()) return;
+  await dropBeliefRow(ledger, characterId, key);
 }
 
 export async function claimInspect(subject, characterId) {
@@ -148,27 +171,7 @@ export async function claimInspect(subject, characterId) {
 }
 
 export async function releaseInspect(subject, characterId, token = null) {
-  const all = readFlag(subject, MODULE, BELIEFS_FLAG) ?? {};
   const mine = token ?? session();
-  if (all?.[characterId]?.[INSPECT_CLAIM_KEY]?.claim !== mine) return;
-
-  /*
-   * ⚠ Unset the whole flag when the last row goes, rather than leaving `beliefs: {}` behind.
-   *
-   * `dropRow` removes the character's entry and stops there, so an inspection that rolled nothing
-   * against a creature nobody had studied leaves an empty container on that actor — permanently,
-   * and on every creature the party ever glanced at. Caught while restoring a test world: three
-   * actors held `beliefs: {}` where the baseline had no key at all. Harmless to read, but it is
-   * litter in every world export and every diff, and it makes "has anyone studied this?" a
-   * question you cannot answer by looking.
-   */
-  const others = Object.keys(all[characterId] ?? {}).filter(k => k !== INSPECT_CLAIM_KEY);
-  const rest = Object.keys(all).filter(k => k !== characterId);
-  if (!others.length && !rest.length) {
-    await subject.unsetFlag(MODULE, BELIEFS_FLAG);
-    return;
-  }
-  await subject.update(dropRow(`flags.${MODULE}.${BELIEFS_FLAG}`, characterId, INSPECT_CLAIM_KEY, all[characterId]), {
-    render: false
-  });
+  if (readFlag(subject, MODULE, BELIEFS_FLAG)?.[characterId]?.[INSPECT_CLAIM_KEY]?.claim !== mine) return;
+  await dropBeliefRow(subject, characterId, INSPECT_CLAIM_KEY);
 }

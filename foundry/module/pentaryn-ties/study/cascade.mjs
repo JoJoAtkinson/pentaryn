@@ -25,7 +25,7 @@ import {
   STUDY_RUNGS
 } from "../known-core.mjs";
 import { applyPlayerWrites, postStub, putBelief, throwBlind } from "./apply.mjs";
-import { claimInspect, dropRow, releaseInspect } from "./claim.mjs";
+import { claimInspect, dropBeliefRow, releaseInspect } from "./claim.mjs";
 import { composeStudyPayload } from "./compose.mjs";
 import {
   beliefsOf,
@@ -588,14 +588,7 @@ export async function grantKind(character, kindOrSubject, tier = 15, { from = nu
  */
 export async function resetIdentification(character, subject, attrId) {
   if (!game.user?.isGM || !character || !subject || !attrId) return false;
-  const all = readFlag(subject, MODULE, BELIEFS_FLAG) ?? {};
-  const key = identifiedKey(attrId);
-  if (!all[character.id]?.[key]) return false;
-
-  const others = Object.keys(all[character.id]).filter(k => k !== key);
-  const rest = Object.keys(all).filter(k => k !== character.id);
-  if (!others.length && !rest.length) await subject.unsetFlag(MODULE, BELIEFS_FLAG);
-  else await subject.update(dropRow(`flags.${MODULE}.${BELIEFS_FLAG}`, character.id, key, all[character.id]), { render: false });
+  if (!(await dropBeliefRow(subject, character.id, identifiedKey(attrId)))) return false;
   // a do-over takes back the failure line that roll handed them, if it handed one (2026-10-08)
   const missKey = identMissKey(subject.id, attrId);
   if (readGranted(readFlag(character, MODULE, GRANTED_FLAG))[missKey])

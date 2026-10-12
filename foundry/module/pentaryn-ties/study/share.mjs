@@ -40,7 +40,7 @@ import {
 } from "../known-core.mjs";
 import { applyPlayerWrites, knownListWith, putBelief } from "./apply.mjs";
 import { applyInspect, grantKind, writeIdentification } from "./cascade.mjs";
-import { dropRow } from "./claim.mjs";
+import { dropBeliefRow } from "./claim.mjs";
 import { factFrom, reset, rowMissed } from "./gate.mjs";
 import { beliefsOf, identDcOf, kindActorOf, reg, resolveFact, studyStateFor, studyTiersOf } from "./resolve.mjs";
 import { cardName, esc, INSPECT } from "./shared.mjs";
@@ -334,9 +334,7 @@ export async function forgetFact(spec, character) {
     const key = identifiedKey(attrId);
     // quietly, not through `resetIdentification`: this is not a do-over, and a flag update would
     // MERGE the prior into the shared row (keeping its `from`) instead of replacing it
-    const all = readFlag(subject, MODULE, BELIEFS_FLAG) ?? {};
-    if (all[character.id]?.[key])
-      await subject.update(dropRow(`flags.${MODULE}.${BELIEFS_FLAG}`, character.id, key, all[character.id]), { render: false });
+    await dropBeliefRow(subject, character.id, key);
     if (prior) await writeIdentification(subject, character.id, attrId, prior);
     const elsewhere = (game.actors?.contents ?? []).some(
       a => a.id !== subject.id && identifiedState(readFlag(a, MODULE, BELIEFS_FLAG) ?? {}, character.id, attrId).carries

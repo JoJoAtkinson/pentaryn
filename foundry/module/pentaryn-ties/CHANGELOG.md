@@ -119,6 +119,11 @@ study lock, a granted line on reset, forget or a do-over — uses core's `_del` 
 `-=key` prefix deprecated in v14; the inspect preview reads a `_del` on a beliefs path as a
 ledger-only change. ES-6.
 
+Fixed (declared, no table-visible change): clearing the **last** study or identification row on a
+creature (a reset, a released claim, Forget, an identification do-over) removes the creature's whole
+`beliefs` flag instead of leaving an empty `beliefs: {}` behind. Every beliefs-row drop now goes
+through one helper, `dropBeliefRow` (study/claim.mjs). ES-7, M10.
+
 ## 0.19.4 (2026-10-10, usability run, Area 7 re-run)
 
 - **The inspect window's Share switches are the table's PCs only** (`tablePCs`): each player's

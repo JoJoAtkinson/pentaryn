@@ -21,7 +21,7 @@ import {
   STUDIED_FLAG,
   toStoredKnown
 } from "../known-core.mjs";
-import { claimFact, dropRow, releaseFact, stakeAndConfirm } from "./claim.mjs";
+import { claimFact, dropBeliefRow, releaseFact, stakeAndConfirm } from "./claim.mjs";
 import { promptDeliver } from "./gate.mjs";
 import { beliefsOf, resolveFact, stackingRule, studiedOf } from "./resolve.mjs";
 import { cardName, cardToken, clampSituational, esc, log } from "./shared.mjs";
@@ -287,12 +287,7 @@ export function readBelief(fact, characterId) {
 export async function putBelief(fact, characterId, record) {
   if (fact.ns !== "attr") {
     if (record === null) {
-      const all = readFlag(fact.ledger, MODULE, BELIEFS_FLAG) ?? {};
-      if (!all[characterId]?.[fact.beliefKey]) return;
-      await fact.ledger.update(
-        dropRow(`flags.${MODULE}.${BELIEFS_FLAG}`, characterId, fact.beliefKey, all[characterId]),
-        { render: false }
-      );
+      await dropBeliefRow(fact.ledger, characterId, fact.beliefKey);
       return;
     }
     return writeBelief(fact, characterId, record);
