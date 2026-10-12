@@ -142,7 +142,8 @@ function bindLeft() {
   const left = canvas.tokens?.controlled ?? [];
   if (left.length !== 1 || !argonOn() || ui.ARGON?._token === left[0]) return;
   if (!left[0].actor?.isOwner) return;
-  ui.ARGON.bind(left[0]);
+  // rob-5: runs from a timer, so a bind that throws (token destroyed since the release) is warned here
+  try { ui.ARGON.bind(left[0]); } catch (err) { log.warn("HUD follow", err); }
 }
 
 /**

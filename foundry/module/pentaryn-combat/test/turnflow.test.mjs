@@ -405,6 +405,24 @@ test("controlToken: the one token left selected is bound to the HUD 150 ms later
   F.calls.length = 0;
 });
 
+test("rob-5: a HUD bind that throws in the 150 ms look (token gone) is warned, never thrown from the timer", () => {
+  const bind = A.ARGON.bind;
+  A.ARGON.bind = () => { throw new Error("token destroyed"); };
+  A.ARGON.enabled = true;
+  A.ARGON._token = null;
+  F.canvas.tokens.controlled = [toks[rog.id]];
+  lines.length = 0;
+  try {
+    F.Hooks.callAll("controlToken", toks[fig.id], false);
+    assert.doesNotThrow(() => mock.timers.tick(150));
+  } finally {
+    A.ARGON.bind = bind;
+    F.canvas.tokens.controlled = [];
+  }
+  assert.deepEqual(lines.splice(0), [{ level: "warn", text: "pentaryn-combat | HUD follow", err: "token destroyed" }]);
+  F.calls.length = 0;
+});
+
 test("a helper token you held is deleted: your own token is selected again (handle → HUD token; summon → summoner; else your character)", async () => {
   const rows = [];
   const run = (label, { handle = false, origin = null, hud = null, others = [], character = null, controlled = true, scene = F.canvas.scene }) => {
