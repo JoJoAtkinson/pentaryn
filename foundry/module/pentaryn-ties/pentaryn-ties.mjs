@@ -48,6 +48,8 @@ import * as itemMarks from "./item-marks.mjs";
 const FEATURES = [conduit, tokenHud, lookMenu, sheet];
 /** Features whose hooks have always registered during init. */
 const AT_INIT = [overlay, worn, itemMarks];
+/** The *Ties Web* hotbar macro's fixed id (16 chars), so two GM tabs create one record (ties-core-U1). */
+const MACRO_ID = "pentarynTiesWeb0";
 
 const log = makeLog(MODULE);
 const reg = hookRegistry(MODULE, log);
@@ -153,17 +155,23 @@ async function readySteps(publishError) {
   }
 }
 
-/** A draggable macro, created once, for people who'd rather use a hotbar slot. */
+/**
+ * A draggable macro, created once, for people who'd rather use a hotbar slot. ties-core-U1
+ * [declared]: a fixed id with keepId. Two GM tabs at the first ready (the bridge and a GM browser)
+ * both get here before either write lands; v14 does not refuse a world document whose id exists, so
+ * the later create replaces the record with the same data and one macro results.
+ */
 async function ensureMacro() {
   if (setting("macroCreated")) return;
   const name = game.i18n.localize("PENTARYN_TIES.macroName");
   if (!game.macros.getName(name)) {
     await Macro.create({
+      _id: MACRO_ID,
       name,
       type: "script",
       img: "icons/sundries/gaming/chess-pawn-white.webp",
       command: "game.pentaryn.ties.show();"
-    });
+    }, { keepId: true });
   }
   await game.settings.set(MODULE, "macroCreated", true);
 }

@@ -130,6 +130,11 @@ Fixed (declared): a PC whose name merely contains "marker", "crowd" or "hotspot"
 names with one of those as a whole word — "Marker · 1", "Drow Commoner (crowd) 1", "Hotspot · Look".
 Pinned by `test/review-roster-whole-words.test.mjs`. ext-11.
 
+Fixed (declared): two GM tabs at a world's first ready (the bridge and a GM browser) no longer make
+two **Ties Web** hotbar macros. The macro is created with the fixed id `pentarynTiesWeb0` and
+`keepId`; v14 does not refuse a world document whose id exists, so the later tab's create replaces the
+record with the same data and one macro results. Pinned by `test/review-macro-race.test.mjs`. ties-core-U1.
+
 ## 0.19.4 (2026-10-10, usability run, Area 7 re-run)
 
 - **The inspect window's Share switches are the table's PCs only** (`tablePCs`): each player's
