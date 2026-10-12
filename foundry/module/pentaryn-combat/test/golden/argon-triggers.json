@@ -1,0 +1,42 @@
+[
+  {
+    "label": "sequenceEnd",
+    "refreshes": 2,
+    "renders": []
+  },
+  {
+    "label": "sequenceEnd for another actor",
+    "refreshes": 0,
+    "renders": []
+  },
+  {
+    "label": "updateCombat round",
+    "refreshes": 1,
+    "renders": []
+  },
+  {
+    "label": "updateCombat, nothing turn-related",
+    "refreshes": 0,
+    "renders": []
+  },
+  {
+    "label": "deleteCombat (a tick later)",
+    "refreshes": 1,
+    "renders": []
+  },
+  {
+    "label": "updateItem of the HUD actor",
+    "refreshes": 0,
+    "renders": []
+  },
+  {
+    "label": "updateItem of another actor",
+    "refreshes": 0,
+    "renders": []
+  },
+  {
+    "label": "an effect on the HUD actor",
+    "refreshes": 0,
+    "renders": []
+  }
+]

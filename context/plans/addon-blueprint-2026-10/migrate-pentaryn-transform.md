@@ -1,7 +1,7 @@
 ---
 title: Migration guide — pentaryn-transform to the addon blueprint
-status: plan
-last_modified: 2026-10-11
+status: done (code phase, wave 4)
+last_modified: 2026-10-12
 tags: [foundry, modules, blueprint, plan, migration, transform, wild-shape]
 ---
 
@@ -26,6 +26,40 @@ Argon HUD) up to the addon blueprint. **Not this file:** the general procedure a
 > and combat's forked `applyButtons` grew a `placeOpenDrawers` tail plus a fourth
 > `renderActionPanelArgonComponent` handler (audit -12, extended). Steps: 0 resolved, 0 obsolete,
 > 0 new. Re-score at HEAD: **48.8 % (20/41)**, failing set unchanged.
+
+> **Re-anchored to wave-4-base `a5a1a906` on 2026-10-11 (wave 4, checkpoint `f06e6b18`).** Eight
+> transform commits since 28ccc87 (PT3-3/4/6/7, 0.3.3, the kit-stub re-vendor); `starry.mjs`,
+> `module.json` shape and the CSS are unchanged. Read every §1–§3 line number through this map
+> (28ccc87 → HEAD):
+> - **transform.mjs:** :1-325 same; +29 for :326-563 (PT3-7's `dnd5e.revertOriginalForm` hook now
+>   :330, `returnToNormal` :347); :564-566 collapse into :593; +27 from :567. So preUse :533→:562,
+>   postUse :562→:591, transformActor :585→:612, the stripped-items `console.log` :593→:620,
+>   traits catch :492→:521, refund :394-398→:423-427, `isRunner` :619-622→:646-649, auto-revert
+>   hooks :632/645/646/654→:659/672/673/681, `updateWorldTime` :676→:703 (candidates :704-705),
+>   rests :695/707/718→:722/734/745, sweep :741-775→:768-802, publish :777-787→:804-814.
+>   :36-46, :66, :102-117 and :150 are unchanged.
+> - **hud.mjs:** :1-86 same; `closeOwnPickers` +9 (:87-92); the keybinding `once init` :89→:98;
+>   +12 for :96-225; `ReturnButton` +29 (:238-266) → +41 for old :226-476; +42 after :477, +43 after
+>   :483, +44 after :493. So `summaryInput`/`recoveryText` :125-163→:137-175, `picker` + `argonClasses`
+>   :172-438→:184-478, `describe` :449-454→:490-495, compose :468-580→:509-623,
+>   `multiattackCoveredByFullAttack` :526-534→:570-578 (the C21/C23 reads :529→:573, the silent
+>   catch :533→:577), render hooks :581/594→:625/638, portrait :606-620→:650-664, hooks
+>   :657/662/686/696/710→:701/706/730/740/754, `refreshLive` prune :690-695→:734-739, Chalice
+>   :719-760→:756-805 (`earnsChalice` :781-788, hooks :790/:803). :39 and :48-52 are unchanged.
+> - **transform-core.mjs:** +5 after :57 (`isStarryFormData` :58-61), +9 after :83 (the
+>   starry-form strip rule), +11 after :388, +13 after :432. The §2 split ranges become :26-339
+>   (wildshape), :340-543 (hud), :547-636 (starry), :637-650 (bodyswap, `isBodySwap`).
+> - **Hooks golden:** 40 rows, not 39 — PT3-7's `dnd5e.revertOriginalForm` is row 2, so the
+>   guide's rows 2-39 are rows 3-40 (transform 1-18, starry 19-26, hud 27-40). Step 8's
+>   [declared] edit removes starry's `once ready` (row 26 now).
+> - **Couplings re-checked at HEAD:** combat publishes `multiattack: multiattackOf`
+>   (combat.mjs:227) and registers `fullAttack`/`multiattack`; combat's `TT` (hud.mjs:157) is now
+>   `["pentaryn-tt", "pentaryn-combat-tt"]` and combat's CSS still has 0 `pentaryn-tt` rules (D7);
+>   senses' `lightEntries` :127 / `carriedLightOf` :145 unchanged.
+> - **Score at base:** 55.6 % (25/45) on today's scorer (it no longer reports C43); at the
+>   checkpoint 60.0 % (27/45): C20 clears, and C41 passes on the text of a todo pin (it becomes
+>   real at step 2). C59 warns at transform.mjs:255 (`endOnDruid` deletes one effect at a time) —
+>   a §5.9.1 batching item for this wave.
 
 > **WAIT — do not start.** `pentaryn-transform` is on `scripts/foundry/blueprint/wait.json` (melee
 > live-test workflow; entry collapse needs the hook-order fixture), and it composes the same Argon
@@ -572,10 +606,69 @@ should absorb `playtest.test.mjs`'s cases. New exports for step 2's barrel/expor
 
 | | |
 |---|---|
-| Live score after the migration | ___ % (___ / ___ fail-class rules) — `conformance.py --module transform --markdown` |
-| Date | ____-__-__ |
-| Commits (Joe-approved) | characterisation: ______ · refactor: ______ · standalone: ______ |
-| Declared changes handed to the live-test workflow | ______ (session L__) |
-| `module.json` edits appended to `wave7-restart-batch.md` | yes / no |
-| Adjustments rows appended to `adjustments-batch.md` | yes / no |
-| Still failing, and why | ______ |
+| Live score after the migration | **93.6 % (44/47)** — `conformance.py --module transform --markdown` (base 55.6 %, checkpoint 60.0 %). With the integrator's edits: C32 clears (adjustments rows), C07 and C37 clear with the Wave 7 `module.json` (cssPrefix `ptf-`) → 100 % |
+| Date | 2026-10-12 (wave 4, code phase only; nothing live) |
+| Commits | characterisation: `94991024`, **`f06e6b18`** · refactor: `4af2a9c2` kit · `a5481159` S2 · `a7d52ce3` S3 · `0f995af9` S9a · `01583116` S9b [declared T-D3] · `702e85a1` S7 · `9d4b0af9` S4 · `395d6573` S5 · `6d436550` S6 · `e24730aa` S8 [declared T-D1 T-D2 W2-K1] · `89c3b57c` [declared] hooks golden −1 row · `d0882eac` [declared T-D8] guarded hooks · `45733d25` S10 [declared T-D4] + D7 · `977e430d` S11 docs · `d7fa35f2` 8.6 argon-kit (-12) · `a5151861` 8.6 size split · standalone: `89fd21a0` -10 · `59d560ba` -1 · `796fdf63` -23 · `0e113e81` -11 [declared T-D7] · `2aa03f5e` -22 extraction · `c25e6a9b` -2 [declared T-D6] · `08b9d901` C59 [declared, perf] · `0dfff3de` §5.8 [declared] · `eb5d576b` -13 step 3 [declared] · `b22643fc` hot-patch test |
+| Declared changes handed to the live-test workflow | T-D1, T-D2, T-D3, T-D4, T-D6, T-D7, T-D8 (new: guarded hooks), -13 step 3, C59 batch, §5.8 `_del` — live checks in `wave-4-report.md` § transform |
+| `module.json` edits appended to `wave7-restart-batch.md` | no — handed to the integrator (shared file); exact edits in `wave-4-report.md` § transform |
+| Adjustments rows appended to `adjustments-batch.md` | no — handed to the integrator (shared file); exact edits in `wave-4-report.md` § transform |
+| Still failing, and why | C07 (Wave 7 `flags.pentaryn`), C37 (the `ptf-` selectors pass once W7 declares `cssPrefix`), C32 (the adjustments rows still name the old files / `core-transform-unwrap`) |
+
+**Deviations from the steps above (recorded on purpose):**
+- Order: S9 (logging) and S7 (`_loc`) ran before the file moves, so the source-scan pins
+  (`console-texts.json`, the T-wrapper list) flipped once instead of twice.
+- S4: `registerKeybindings` registers with `game.keybindings.register` directly — the kit's
+  `defineKeybindings` skips a late registration silently, which would have broken the frozen
+  late-registration warn pin.
+- S6: `starry.mjs` is installed by `hud.mjs` (entry 1), where its rows always registered, not by
+  entry 0 — keeps `golden/hooks.json` and "entry 0 registers rows 1-18" frozen; -9 resolves at the
+  Wave 8 collapse. Handlers registered unguarded during the refactor, guarded in `d0882eac`.
+- S8: the publish stays in entry 0's own `Hooks.once("ready")` body (C50 reads it there); a hot
+  re-import republishes, hud.mjs again with Starry's rows (`ctx.exposed.publish`).
+- Patch row named per D2: `transform-preupdate-unwrap` (the guide said `core-transform-unwrap`).
+- D7: `styles/transform.css` `@import`s `../lib/argon-tooltip.css` (works under today's
+  module.json; Foundry v14 imports module styles with `@import`, so nested imports resolve).
+- 8.6 / -12 done now (combat's argon-kit landed this wave); -13 step 3 done now (combat publishes
+  `coversMultiattack`); -13 step 2 (an adjustments row for the private read) superseded.
+
+### Checkpoint (wave 4, 2026-10-11) — `f06e6b18`
+
+Written against unchanged 0.3.3 code (`git diff a5a1a906..f06e6b18 -- foundry/module/pentaryn-transform`
+touches only `test/`). `94991024` moved the 155-check suite to `test/core-legacy.mjs` (tail dropped,
+exits 1 on failure), put the fixed `test/run.mjs` in place (`LEGACY = ["test/core-legacy.mjs"]`) and
+vendored `test/kit/harness.mjs` 1.0.2. `lib/` is **not** vendored yet (step 1's `vendor.py sync`
+moves to the refactor lane's first step; C14 stays red until then).
+
+- **Suites:** 15 node:test files, 186 tests (184 pass, 2 todo) + legacy 155 checks. `playtest.test.mjs`
+  stays its own file, unchanged (its cases are not copied into glue).
+- **Fixtures:** `fixtures/world.mjs` (kit stub + TokenDocument `_preUpdateOperation`, v14
+  operators, Actor/ChatMessage, TextEditor, DialogV2, `game.time`, combats, tooltip manager,
+  `user.can`, dnd5e `allowPolymorphing`; a level-12 Stars druid and three beasts; dnd5e's use,
+  transform and revert as the module sees them), `fixtures/dom.mjs`, `fixtures/argon.mjs`. Oracles:
+  `fixtures/legacy-{transform,starry,hud}.mjs`, verbatim with Foundry reads injected, pinned over
+  their tables in `core.test.mjs` (`golden/oracle-*.json`) — step 3 proves its seams against these.
+- **Goldens:** `hooks.json` (40), `legacy-surface.json`, `console-texts.json` (step 9 moves it,
+  [declared]), `core-exports.json`, `core-constants.json`, shift/revert writes, every bar plan, every
+  button tooltip, the Starry effect and dialog.
+- **Coverage** (node:test only, module files, lcov merged per file; `lib/`, `test/` excluded):
+  51.48 / 50.67 / 23.48 at base → **99.88 / 91.38 / 98.50**. Left: `findWildShapeItem` (never called
+  at runtime, -3; the legacy suite covers it) and defensive `??` fallbacks.
+- **KNOWN pins (as they are, no todo):** -15 the ungated "not carried into the form" `console.log`
+  and the silent catches (traits → `""`, Starry dialog → `null`, hud.mjs:39, hud.mjs:577); -13 the
+  raw `pentaryn-combat` settings read inside a silent catch; -23 `forms()` resolves 3 + 1 per
+  empty-named profile; -22 Starry world-time expiry skips unlinked druids (D8: a live decision).
+- **Todo pins:** -16 the namespace survives either load order (`publish-late.test.mjs`, flips at
+  step 8, [declared]); `VERSION === module.json` (`core.test.mjs`, step 2).
+- **Not built here (needs wave-3 code):** nothing for transform — the isAoeHandle oracle pin is
+  aoe/portals/creatures.
+
+### Wave 4 close (2026-10-12, `1d86bd5a`, code phase)
+
+After the integrator's adjustments rows (`e1a9aade`): **95.7 %**, failing only C07, C37 (W7,
+`cssPrefix: "ptf-"`). node:test **248** pass, 0 todo, plus legacy 155; HEAD line coverage 99.92.
+Commits after the table above: review `4ee9928a` [declared] (C59 batch with a dependent effect),
+`3ceee0e0` [declared] (§5.8 manifest), `e4ed58fe`, `198688df` (-3), `c2d4a524`, `e02d2006`; D7 pin
+`f6c668c8`; integrator `fb3361b9` (-18), `d73acb65` (-21 contract test), `b4c324b7` (-20 routing
+row), `7ca2026b` (-19). Frozen-test diff since `f06e6b18`: 35 files (15 A, 20 M), +1833 −152; the one
+untagged pin flip is `796fdf63` (-23, treat as declared). Open rows W4-T1…T5, D8:
+[`wave-4-report.md`](wave-4-report.md) "Open for Joe — consolidated".

@@ -1,7 +1,7 @@
 ---
 title: "Spell areas, saves and damage (pentaryn-aoe)"
 status: active
-last_modified: 2026-10-10
+last_modified: 2026-10-11
 tags: [context, foundry, dnd5e, module]
 ---
 
@@ -57,6 +57,31 @@ A known miss or a natural 1 rolls nothing. The card's Damage button still works.
 Players can't see hit/miss while `dnd5e.attackRollVisibility` is `"none"`. Setting it to
 `"hideAC"` shows hit/miss without the AC. That is Joe's call; this module does not change it.
 
+**Careful Spell.** After a sorcerer uses Careful Spell, their next save spell's area on the same
+turn marks up to their Charisma modifier of their own side (player characters first, never the
+caster) as *protected*: an automatic success, and no damage on a half-damage spell. They get no
+request card. The GM can still change any row in the tray.
+
+**What the player sees.** The caster gets one line under their own damage card: waiting for the
+GM, applied, or re-rolled. Monster save numbers never show, and the GM-only monster save rolls are
+hidden from players' chat instead of showing as "privately rolled".
+
+**Effects meant for you.** A card whose only target is the caster (Mage Armor on yourself), or a
+spell that only affects its caster (Shield), puts its effect on the caster straight away. A touch
+spell for one willing creature cast with nothing targeted goes on the caster too. A card with
+several effects (Guidance's skills) is a choice and stays in the tray. An Effects tray nobody has
+applied yet is outlined "Not applied yet" for an hour. The same spell's effect from another source
+replaces the old one instead of stacking.
+
+**Cancelling refunds the cast (Part F).** When an area placement is cancelled (Escape or
+right-click), the slot, charge or uses it spent come back, the concentration it began ends, and its
+card is removed, as the card's Refund button would.
+
+**Self cones and lines start at the caster (Part G).** Placing a Self-range cone or line (Cone of
+Cold, Burning Hands, Lightning Bolt) keeps its point on the caster's token edge and turns it toward
+the mouse; click to cast. With the setting off, core's placement applies: the point follows the
+mouse and the wheel turns it.
+
 ## Settings (world, Configure Settings → Pentaryn AoE)
 
 | Setting | Default | |
@@ -69,11 +94,26 @@ Players can't see hit/miss while `dnd5e.attackRollVisibility` is `"none"`. Setti
 | Monster save visibility | GM only | `gm` · `blind` · `public` (core v14 message modes; a stored `gmroll` is migrated on the GM's ready) |
 | Apply monster damage automatically | off | PCs always wait for Apply |
 | Ask players to roll | on | the request card |
-| Roll damage on a hit | on | |
+| Roll damage on a hit | on | pentaryn-combat reads it too |
+| Apply self-cast effects automatically | on | the caster's one effect goes on straight away |
+| Highlight effects not yet applied | on | cards under an hour old |
+| Careful Spell protects allies in the area | on | |
+| Refund a cancelled area | on | Part F |
+| Tell the caster when damage is waiting for the GM | on | also hides GM-only monster saves from players |
+| A touch spell cast at nobody goes on the caster | on | off: it waits in the GM's effects tray |
+| The same spell does not stack | on | |
+| Self cones and lines start at the caster | on | Part G |
 
 ## Console (`game.pentaryn.aoe`)
 
+Every method, with its arguments, return shape, null cases and who may call it, is in the
+[module README's API table](../../foundry/module/pentaryn-aoe/README.md#api--gamepentarynaoe);
+`describe()` prints the same from the manifest. The ones you reach for:
+
 ```js
+game.pentaryn.aoe.summary(messageId)    // a damage message's tray as plain data (who is in, saves, multipliers)
+game.pentaryn.aoe.inspect(ref)          // aoe state of a token, actor or chat message; { as: user } = that user's view
+game.pentaryn.aoe.describe()            // every method, setting and hook this module has
 game.pentaryn.aoe.sweep(canvas.scene)   // repair: orphan handles out, ownership + handles onto every template region
 game.pentaryn.aoe.areasFor(activityUuid, scene)
 game.pentaryn.aoe.removeArea(regionIds, scene)

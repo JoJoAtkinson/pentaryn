@@ -1,0 +1,241 @@
+[
+  {
+    "label": "Action Surge on your turn",
+    "turn": {
+      "key": "c1:1:cb1",
+      "swings": 0,
+      "weapons": [],
+      "crit": false,
+      "critWeapon": null,
+      "kill": false,
+      "killWeapon": null,
+      "nick": false,
+      "bonusUsed": false,
+      "followUps": [],
+      "otherActions": 0,
+      "surges": 1,
+      "quickened": false
+    },
+    "reaction": null,
+    "events": [],
+    "notes": []
+  },
+  {
+    "label": "Quickened Spell",
+    "turn": {
+      "key": "c1:1:cb1",
+      "swings": 0,
+      "weapons": [],
+      "crit": false,
+      "critWeapon": null,
+      "kill": false,
+      "killWeapon": null,
+      "nick": false,
+      "bonusUsed": false,
+      "followUps": [],
+      "otherActions": 0,
+      "surges": 0,
+      "quickened": true
+    },
+    "reaction": null,
+    "events": [],
+    "notes": []
+  },
+  {
+    "label": "Fire Bolt after Quickened Spell: the Bonus Action",
+    "turn": {
+      "key": "c1:1:cb1",
+      "swings": 0,
+      "weapons": [],
+      "crit": false,
+      "critWeapon": null,
+      "kill": false,
+      "killWeapon": null,
+      "nick": false,
+      "bonusUsed": true,
+      "followUps": [],
+      "otherActions": 0,
+      "surges": 0,
+      "quickened": false
+    },
+    "reaction": null,
+    "events": [
+      "bonusAction"
+    ],
+    "notes": [
+      "Quickened: Fire Bolt is your Bonus Action. Your Action is still free."
+    ]
+  },
+  {
+    "label": "Magic Missile after Quickened Spell",
+    "turn": {
+      "key": "c1:1:cb1",
+      "swings": 0,
+      "weapons": [],
+      "crit": false,
+      "critWeapon": null,
+      "kill": false,
+      "killWeapon": null,
+      "nick": false,
+      "bonusUsed": true,
+      "followUps": [],
+      "otherActions": 0,
+      "surges": 0,
+      "quickened": false
+    },
+    "reaction": null,
+    "events": [
+      "bonusAction"
+    ],
+    "notes": [
+      "Quickened: Magic Missile is your Bonus Action. Your Action is still free."
+    ]
+  },
+  {
+    "label": "Shield (a reaction)",
+    "turn": null,
+    "reaction": {
+      "combatId": "c1"
+    },
+    "events": [
+      "reaction"
+    ],
+    "notes": []
+  },
+  {
+    "label": "Second Wind (a bonus feature)",
+    "turn": {
+      "key": "c1:1:cb1",
+      "swings": 0,
+      "weapons": [],
+      "crit": false,
+      "critWeapon": null,
+      "kill": false,
+      "killWeapon": null,
+      "nick": false,
+      "bonusUsed": true,
+      "followUps": [],
+      "otherActions": 0,
+      "surges": 0,
+      "quickened": false
+    },
+    "reaction": null,
+    "events": [
+      "bonusAction"
+    ],
+    "notes": []
+  },
+  {
+    "label": "Magic Missile (another Action)",
+    "turn": {
+      "key": "c1:1:cb1",
+      "swings": 0,
+      "weapons": [],
+      "crit": false,
+      "critWeapon": null,
+      "kill": false,
+      "killWeapon": null,
+      "nick": false,
+      "bonusUsed": false,
+      "followUps": [],
+      "otherActions": 1,
+      "surges": 0,
+      "quickened": false
+    },
+    "reaction": null,
+    "events": [
+      "otherAction"
+    ],
+    "notes": []
+  },
+  {
+    "label": "Fire Bolt (a spell attack Action)",
+    "turn": {
+      "key": "c1:1:cb1",
+      "swings": 0,
+      "weapons": [],
+      "crit": false,
+      "critWeapon": null,
+      "kill": false,
+      "killWeapon": null,
+      "nick": false,
+      "bonusUsed": false,
+      "followUps": [],
+      "otherActions": 1,
+      "surges": 0,
+      "quickened": false
+    },
+    "reaction": null,
+    "events": [
+      "otherAction"
+    ],
+    "notes": []
+  },
+  {
+    "label": "Longsword attack activity (counted on the roll)",
+    "turn": null,
+    "reaction": null,
+    "events": [],
+    "notes": []
+  },
+  {
+    "label": "Grapple (Unarmed Strike's save): one swing",
+    "turn": {
+      "key": "c1:1:cb1",
+      "swings": 1,
+      "weapons": [
+        "unarmedStrike001"
+      ],
+      "crit": false,
+      "critWeapon": null,
+      "kill": false,
+      "killWeapon": null,
+      "nick": false,
+      "bonusUsed": false,
+      "followUps": [],
+      "otherActions": 0,
+      "surges": 0,
+      "quickened": false
+    },
+    "reaction": null,
+    "events": [],
+    "notes": []
+  },
+  {
+    "label": "Multiattack by name",
+    "turn": null,
+    "reaction": null,
+    "events": [],
+    "notes": []
+  },
+  {
+    "label": "Fireball whose placement was cancelled (aoe refunds it)",
+    "turn": null,
+    "reaction": null,
+    "events": [],
+    "notes": []
+  },
+  {
+    "label": "Fireball placed",
+    "turn": {
+      "key": "c1:1:cb1",
+      "swings": 0,
+      "weapons": [],
+      "crit": false,
+      "critWeapon": null,
+      "kill": false,
+      "killWeapon": null,
+      "nick": false,
+      "bonusUsed": false,
+      "followUps": [],
+      "otherActions": 1,
+      "surges": 0,
+      "quickened": false
+    },
+    "reaction": null,
+    "events": [
+      "otherAction"
+    ],
+    "notes": []
+  }
+]

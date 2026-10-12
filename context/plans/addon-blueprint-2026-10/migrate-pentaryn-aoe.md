@@ -1,7 +1,7 @@
 ---
 title: Migrating pentaryn-aoe to the addon blueprint
-status: plan
-last_modified: 2026-10-11
+status: done (code phase, wave 4)
+last_modified: 2026-10-12
 tags: [foundry, modules, blueprint, migration, aoe]
 ---
 
@@ -26,6 +26,15 @@ full → `context/plans/code-audit-2026-10/aoe.md` · using aoe →
 > C26 now scored, C37 new). No step was resolved or made obsolete; S1, S3, S5, S6, S7, S8 and ADJ
 > gained the new code, and finding **aoe-movement-portals-44** (Part G's hand-made prototype wrap)
 > is new and lands in S6 with -15. Node suite: 160 checks (snapshot 135).
+
+> **Re-anchored for wave 4 on 2026-10-11 (`migrate/wave-4`, base `a5a1a906`).** `git log 28ccc87..wave-4-base
+> -- foundry/module/pentaryn-aoe` is empty, so every HEAD line number below still holds. The checkpoint
+> step appended an `_internals` seam (2–3 lines) at the END of `escape`, `effects`, `resolve`, `refund`,
+> `settings`, `areas`, `aim` and `tray.mjs`; no anchor above a file's last line moved. `resolve.mjs` is
+> now 499 lines (C10 cap 500). Live score at the base: **50.0 % (23/46)** (the scorer's denominator
+> grew to 46); warnings C06w, C59 (`areas.mjs:252`, `resolve.mjs:470`: per-document writes in a loop,
+> an 8.5 performance item for S4/S5). After the checkpoint: **58.7 % (27/46)** (C14, C20, C41, C43
+> clear; C41 passes on the scorer's text match while the VERSION test itself is a todo until S2).
 
 ## WAIT — every step re-anchors first
 
@@ -533,7 +542,7 @@ already in S1.
 |---|---|---|
 | **-2** | `describeToken(token, { handleActorId })`, computed once in `resolve()` | neutral (pinned; the only divergence is an `undefined` `actorId`, which is unreachable) |
 | **-6** | `next.finally(() => { if (queues.get(id) === next) queues.delete(id); })` + `pendingWrites()` | neutral (ordering pinned); memory only |
-| **-7** | Handle actor created with `_id: "pentarynAoeHndl0"`, `keepId: true`; on "already exists", look it up by flag | **[declared] D-A6**, live test |
+| **-7** | Handle actor created with `_id: "pentarynAoeHndl0"`, `keepId: true`; on "already exists", look it up by flag (a fallback only: v14 does not refuse a world document whose id exists, so the later create replaces it with the same data and a second `createActor` fires; one actor results — `test/handle-race.test.mjs`) | **[declared] D-A6**, live test |
 | **-8** | `log.trace(...)` at each early return in the resolve pipeline (the kit's ring replaces the finding's `pushRing`/`TRACE`). Keep `trace(...); return null;` in `resolve`/`applyRows`, and in the re-run's `carefulFor` (`resolve.mjs:238–249`, three silent `null`s) | console only under `CONFIG.debug["pentaryn-aoe"]`; the `null` pins guard it |
 | **-9** (rest) | Wrap the tray `change`/`click` listeners and the eraser listener (`areas.mjs:300-314`) in `reg.guard`. The backstop delete `.catch` ignores only "does not exist" and otherwise `log.warn("backstop handle delete", err)`. Re-run swallows: `resolve.mjs:246` (Careful usage bind), `refund.mjs:44`, `:45` (refund cleanup) log instead of `() => null` | console only (listeners ignore return values; the swallowed results are discarded today) |
 | **-14** | `pendingFor(message, { effects })`; `decorate` fetches `cardEffects` once per render; the 15 s re-check still fetches fresh | neutral (pinned outputs) |
@@ -592,12 +601,74 @@ Deferred (not part of this migration): D-A5, the Argon readiness `argonInit` hoo
 
 ## Result (fill when done)
 
+### Checkpoint (wave 4, S1) — `7a12ffad`
+
 | | |
 |---|---|
-| Live score after the migration | ___ % (___ / ___ fail-class rules) — `conformance.py --module aoe --markdown` |
-| Date | ____-__-__ |
-| Commits (Joe-approved) | characterisation: ______ · refactor: ______ · standalone: ______ |
-| Declared changes handed to the live-test workflow | ______ (session L__) |
-| `module.json` edits appended to `wave7-restart-batch.md` | yes / no |
-| Adjustments rows appended to `adjustments-batch.md` | yes / no |
-| Still failing, and why | ______ |
+| Commits | kit `fb18b3dd` · runner `30378553` · seams `ff202cf0` · **checkpoint `7a12ffad`** (`test(aoe): characterisation checkpoint`) |
+| Approval | S1.5 says "committed only with Joe's approval": committed by the wave-4 workflow on `migrate/wave-4` (never main); Joe reviews before merge (wave-4-report, Open for Joe) |
+| Tests | 329 node:test (324 pass, 5 todo) in 13 files + LEGACY `test/legacy-core.mjs` 160; 22 goldens; mocked timers only |
+| Coverage | before: none (legacy hand-rolled runner only, no node:test). After (lcov merged per file over the 12 module files, `lib/` and `test/` excluded): lines 100 / branches ≈77 / functions 94.0 (uncovered functions are anonymous catch/callback arrows) |
+| Seams | `test/fixtures/seams.mjs` groups today's files (`hooks`, `settings`, `areas`, `resolve`, `tray`, `attacks`, `effects`, `escape`, `refund`, `aim`) = public exports + `_internals`; `freshAim(tag)` loads a hot copy of Part G. S2–S6 edit the shim, never the tests |
+| KNOWN pins (flip in their own `[declared]` commit) | -44 a hot copy gets no `onMove`; `uninstall` leaves `placeRegions` wrapped (D-A7) · -15 `uninstall` leaves the Argon wrap (D-A2) · -7 handle actor created with a random id, no `keepId` (D-A6) · -6 queue map never shrinks · -9 refund's double swallow and the GM's delayed handle delete are silent · D-A1 `applyRows` throws on a resolution without `damages` · C26 publish one tick after ready (D-A3) · D-A4 raw `Hooks.once("canvasReady")` Argon fallback |
+| Todo pins | core `VERSION` (S2) · -44 hot copy aims after uninstall · -15 uninstall restores `ui.ARGON.bind` · -7 two GM sessions make one handle actor · -6 settled queue entry dropped |
+| Not built (needs wave-3) | the shared handle oracle is pinned on aoe's side only (`core.test.mjs` `HANDLE_ORACLE`); pinning portals' and creatures' `isAoeHandle` copies against it needs `migrate/wave-3` — follow-up |
+
+### Migration (wave 4, S2–S8 + standalone) — `03322772` … `47bc85c7`
+
+| | |
+|---|---|
+| Live score after the migration | **89.6 % (43/48)** at `47bc85c7` (`conformance.py --module aoe`); warnings C06w only. Failing: C07, C09, C37 (`module.json`, W7), C32 (`aoe-argon-handle-bind` files still name `areas.mjs`), C47 (no `itempiles-aoe-skip-piles` row) — all shared-file edits below. With the ADJ and W7 batches: 48/48 expected |
+| Date | 2026-10-11 |
+| Tests | 400 node:test (400 pass, 0 todo) + LEGACY 160; `node test/run.mjs` exit 0; `vendor.py check aoe` identical; module-check gates green |
+| Commits — structural | S2 `03322772` · oracle `cfc8effd` · S3 `87959748`, `0d9f1607` · S4 characterisation `51f302c7`, adapters `4bc7d44c` · S5 `41b51b43` · S6 `515776c0` · S7 `4644e577` · 8.6 split `536bbcf3` · docs `0b9b13fd`, S8 `47bc85c7` |
+| Commits — declared (each flips its named pin) | D-A4 `3f8dd7f7` · D-A3 + W2-K1 `0cbbab0e` · -6 `f54ba674` · D-A6 (-7) `5009afc4` · -9 refund `097c9e67` · D-A1 `0f83d5fe` · D-A2 (-15) `18addee4` · D-A7 (-44) `0d51383e` · 8.5 sweep batch `fa8f2d46` · 8.5 Careful batch `7f1d4bcf` |
+| Commits — standalone, neutral | -2 `c0a75a64` · -8 `130fb3c3` · -9 `84c847df` · -14 `7198fe70` |
+| Findings → commit | -2 c0a75a64 · -4 03322772 + 0f83d5fe · -5 4bc7d44c · -6 f54ba674 · -7 5009afc4 + fb931b3d · -8 130fb3c3 · -9 515776c0 (prefixes) + 84c847df + 097c9e67 · -10 4644e577 + 0cbbab0e · -11 47bc85c7 + a6038b1d (use-doc rows, Parts F/G, Console; `test/docs-drift.test.mjs`) · -12 47bc85c7 · -13 87959748 · -14 7198fe70 · -15 515776c0 + 18addee4 · -30 41b51b43 · -39 0b9b13fd (+ ADJ row) · -40 checkpoint · -44 515776c0 + 0d51383e |
+| Declared changes handed to the live-test workflow | D-A2, D-A3 (+ W2-K1), D-A4, D-A6, D-A7, S3 lang, the two 8.5 batches (live checks in §5 and the wave-4 report); D-A1, -6, -9 are failure-path / console only |
+| `module.json` edits appended to `wave7-restart-batch.md` | no — returned to the integrator (the aoe row there already lists them; add `afterSync` and the 0.4.0 bump with `core.VERSION`) |
+| Adjustments rows appended to `adjustments-batch.md` | no — returned to the integrator (rows 90–97 there; plus `careful.mjs` on `dnd5e-careful-spell-protected-rows`) |
+| Still failing, and why | C07, C09, C37 wait for W7; C32, C47 for the ADJ batch. Repo pytest `test_the_real_registry_matches_the_code` lists `aoe-argon-handle-bind` (files) until the ADJ edit lands |
+
+**Deviations from the plan, and why.**
+- `mutate` stays in `resolve.mjs`, not `messages-adapter.mjs`: only resolve calls it, and it logs
+  through the module log (an adapter has no `ctx`).
+- **8.6 split:** Careful Spell (`carefulKey`, `carefulFor`, `onCarefulUsed`, its two hooks) became
+  `careful.mjs`, installed between areas and resolve so every hook keeps its place; resolve reaches
+  `carefulFor` through `ctx.exposed`. `resolve.mjs` was 516 lines after -8.
+- Feature rows live in `api-manifest.mjs` as `FEATURE_ROWS` and are returned by each feature's
+  `install()` as its contribution (pure data stays in the manifest; features stay under the cap).
+- `onReady` is the one synchronous ready body (C50); the hot-patch `install()` calls it with
+  `{ hot: true }` and then does the Argon guard and startup work itself, as before.
+- New rows carry `since: "0.4.0"` while `VERSION` stays `0.3.1` until the W7 bump.
+- The test world's `Actor.create` honours `keepId` (and refuses an existing id) and gains
+  `updateDocuments`; a kept id still advances the stub's id sequence so unrelated goldens keep their
+  ids.
+- The seams shim maps `hooks.hookIds` to the published API's `hookIds()` when the entry has
+  published, else to the shim's own kit registry (`aim.installAim()` installs on it).
+
+**Pins flipped (each in its declared commit):** glue — D-A4 fallback in `hookIds`; published
+synchronously at ready (D-A3); the key set (legacy 20 + kit members + reads); `surface-legacy` now on
+the 20 legacy keys (golden unchanged); hot patch without the frozen-root rebuild (W2-K1, plus a new
+"frozen root rejects" test); -7 create with the fixed id; -44 uninstall restores `placeRegions`.
+areas — -15 uninstall restores `ui.ARGON.bind`; -7 todo. aim — the -44 hot copy aims; -44 todo.
+resolve — -6 queue map shrinks; -6 todo; D-A1 applies nothing. refund — -9 warns. core — VERSION todo
+(S2). Goldens changed only where a declared commit names them: `ready-calls.json` (-7 id, 8.5
+sweep batch), `describe-token.json` and `create-handle.json` (the handle actor's id), and the new
+`describe.json` / `surface.json`.
+
+**Follow-ups (not built).** Pinning portals' and creatures' `isAoeHandle` copies against
+`test/fixtures/handle-oracle.json` needs `migrate/wave-3` (aoe-movement-portals-43,
+transform-creatures-30). Flag scope `aoe` → module id in `module.json` is the W7 manifest
+correction (no data moves). D-A5 (`argonInit` instead of the Argon tick) stays deferred.
+
+### Wave 4 close (2026-10-12, `1d86bd5a`, code phase)
+
+After the integrator's adjustments rows (`e1a9aade`): **93.8 %**, failing only C07, C09, C37 (W7).
+node:test **411** pass, 0 todo, plus LEGACY 160; HEAD line coverage 99.90. Review commits after
+`47bc85c7`: `fb931b3d` (-7, v14 world-actor replace modelled), `a6038b1d` (-11 use-doc + docs-drift
+test), `b0ae5dc9` (JSDoc), `e63dacef` (trace pins); integrator `cd63f263` (README:128, oracle
+`about`), `09585ef7` (combat's isAoeHandle pinned to the oracle). Frozen-test diff since `7a12ffad`:
+27 files (15 A, 12 M), +1909 −67. Open rows and the wave-3 follow-up (portals / creatures oracle
+pin): [`wave-4-report.md`](wave-4-report.md) "Open for Joe — consolidated" and "Follow-ups that need
+wave-3 code".

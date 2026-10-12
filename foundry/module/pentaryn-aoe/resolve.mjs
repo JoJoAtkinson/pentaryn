@@ -19,20 +19,26 @@
  */
 
 import {
-  MODULE, aoeFlags, buildRows, fillSave, matchSave, applicableRows, allApplied, newestRegion, multiplierFor,
-  supersedes, carefulTargets, protectRows, carefulApplies, carefulStale
+  MODULE, aoeFlags, buildRows, fillSave, matchSave, applicableRows, allApplied, newestRegion,
+  supersedes, isHandle, isTemplateRegion, hydrateDamages
 } from "./core.mjs";
 import { setting } from "./settings.mjs";
-import { on, guard, claimMessage } from "./hooks.mjs";
-import { isHandle, isTemplateRegion, areasFor, removeArea, handleActor } from "./areas.mjs";
+import { claimMessage } from "./lib/election.mjs";
+import { makeLog } from "./lib/log.mjs";
+import { FEATURE_ROWS } from "./api-manifest.mjs";
+import { areasFor, removeArea, handleActor, isPile } from "./scene-adapter.mjs";
+import { activityOf, usageIdOf, recordedTarget } from "./messages-adapter.mjs";
 
 export const REQUEST_HANDLER = `${MODULE}.save`;
-const t = (key, data) => (data ? game.i18n.format(`PENTARYN_AOE.${key}`, data) : game.i18n.localize(`PENTARYN_AOE.${key}`));
 const abilityLabel = a => CONFIG.DND5E.abilities[a]?.label ?? a;
 
 /* -------------------------------------------- */
 /*  Serialised writes per message               */
 /* -------------------------------------------- */
+
+let log = makeLog(MODULE);   // the entry's ctx.log once installed
+/** The ctx install() was given (Careful Spell's carefulFor is ctx.exposed). */
+let context = null;
 
 const queues = new Map();
 /** Run fn(resolution) → resolution for one message, one at a time, then write it back. */
@@ -45,24 +51,36 @@ export function mutate(messageId, fn) {
     const out = (await fn(res, message)) ?? res;
     await message.update({ [`flags.${MODULE}.resolution`]: out });
     return out;
-  }).catch(err => { console.error("pentaryn-aoe | mutate", err); return null; });
+  }).catch(err => { log.error("mutate", err); return null; });
   queues.set(messageId, next);
+  // -6: drop the tail once it settles (unless a later call queued behind it), so a session does
+  // not keep every resolution it ever wrote alive. `next` never rejects (the catch above).
+  next.finally(() => { if (queues.get(messageId) === next) queues.delete(messageId); });
   return next;
+}
+
+/** Messages with a write still queued on this client (debugging and tests). */
+export const pendingWrites = () => queues.size;
+
+/**
+ * -8: why the pipeline stopped, for "why did no tray appear / why was my ally not protected?".
+ * Recorded in the log's trace ring (api.trace()) and printed at debug, both only while
+ * CONFIG.debug["pentaryn-aoe"] is true. Returns undefined, so a hook body may `return why(…)`.
+ */
+function why(job, id, outcome, extra = {}) {
+  log.trace(job, { id: id ?? null, outcome, ...extra });
+  log.debug(`${job}: ${outcome}`, id ?? "");
 }
 
 /* -------------------------------------------- */
 /*  Who is affected                             */
 /* -------------------------------------------- */
 
-function isPile(token) {
-  try {
-    if (game.itempiles?.API?.isValidItemPile) return !!game.itempiles.API.isValidItemPile(token);
-  } catch { /* fall through */ }
-  return !!token.actor?.flags?.["item-piles"]?.data?.enabled || !!token.flags?.["item-piles"]?.data?.enabled;
-}
-
-/** Describe a TokenDocument as the plain object core.buildRows expects. */
-export function describeToken(token) {
+/**
+ * Describe a TokenDocument as the plain object core.buildRows expects. `handleActorId` (finding
+ * -2): the handle actor's id, looked up once by the caller; omitted, it is looked up here.
+ */
+export function describeToken(token, { handleActorId } = {}) {
   const actor = token.actor;
   return {
     id: token.id,
@@ -76,7 +94,8 @@ export function describeToken(token) {
     hidden: !!token.hidden,
     disposition: token.disposition ?? null,
     handle: isHandle(token),
-    isHandleActor: !!aoeFlags(actor).handleActor || token.actorId === handleActor()?.id,
+    isHandleActor: !!aoeFlags(actor).handleActor
+      || (handleActorId === undefined ? token.actorId === handleActor()?.id : !!handleActorId && token.actorId === handleActorId),
     isPile: isPile(token),
     hasPlayerOwner: !!actor?.hasPlayerOwner
   };
@@ -89,9 +108,9 @@ export function describeToken(token) {
 function tokensForTargets(targets, scene) {
   const out = [];
   for (const tg of targets ?? []) {
-    const doc = tg?.token ? fromUuidSync(tg.token, { strict: false }) : null;
+    const { token: doc, actor: actorUuid } = recordedTarget(tg);
     if (doc && (!scene || doc.parent === scene)) { out.push(doc); continue; }
-    const actor = fromUuidSync(tg?.actor ?? tg?.uuid ?? "", { strict: false });
+    const actor = fromUuidSync(actorUuid ?? tg?.uuid ?? "", { strict: false });
     if (!actor) continue;
     const token = actor.token ?? actor.getActiveTokens?.(false, true)?.find(tk => tk.parent === scene)
       ?? scene?.tokens.find(tk => tk.actorId === actor.id);
@@ -103,20 +122,6 @@ function tokensForTargets(targets, scene) {
 /* -------------------------------------------- */
 /*  Resolve                                     */
 /* -------------------------------------------- */
-
-/** The activity a dnd5e 6 roll message belongs to. */
-function activityOf(message) {
-  return message.getAssociatedActivity?.() ?? fromUuidSync(message.system?.activity?.uuid ?? "", { strict: false });
-}
-
-/**
- * The id of the usage card a roll message threads under (its system.origin; the live field is the
- * resolved message), or null when it was rolled from somewhere else (the sheet, a macro).
- */
-export function usageIdOf(message) {
-  const id = message?._source?.system?.origin ?? message?.system?.origin?.id ?? null;
-  return id && game.messages.get(id)?.type === "usage" ? id : null;
-}
 
 /**
  * dnd5e's roll workflow sets system.origin to the message the click came from
@@ -153,11 +158,12 @@ function damagesOf(message) {
  * @param {{regionId?: string|null}} [opts]
  */
 export async function resolve(messageOrId, { regionId = undefined } = {}) {
-  if (!game.users.activeGM?.isSelf) return null;
+  const ref = typeof messageOrId === "string" ? messageOrId : messageOrId?.id;
+  if (!game.users.activeGM?.isSelf) { why("resolve", ref, "not the active GM"); return null; }
   const message = typeof messageOrId === "string" ? game.messages.get(messageOrId) : messageOrId;
-  if (!message || message.type !== "damage") return null;
+  if (!message || message.type !== "damage") { why("resolve", ref, "not a damage message"); return null; }
   const activity = activityOf(message);
-  if (!activity?.save) return null;
+  if (!activity?.save) { why("resolve", ref, "its activity has no save"); return null; }
 
   const scene = game.scenes.get(message.speaker?.scene) ?? canvas.scene;
   const candidates = scene ? areasFor(activity.uuid, scene) : [];
@@ -173,10 +179,12 @@ export async function resolve(messageOrId, { regionId = undefined } = {}) {
   const dc = activity.save.dc?.value;
   const onSave = message.system?.onSave ?? activity.damage?.onSave ?? "half";
   const casterActorId = activity.actor?.id ?? null;
-  const described = tokens.map(describeToken);
+  const handleActorId = handleActor()?.id ?? null;   // once, not once per token (-2)
+  const described = tokens.map(tk => describeToken(tk, { handleActorId }));
   const rows = buildRows(described, { casterActorId });
   const usage = usageIdOf(message);
-  const careful = await carefulFor(activity.actor, described, { casterActorId, usage, scene, onSave, rows });
+  // Careful Spell is its own feature (careful.mjs); it reaches this one through ctx.exposed.
+  const careful = (await context?.exposed.carefulFor?.(activity.actor, described, { casterActorId, usage, scene, onSave, rows })) ?? null;
 
   const res = {
     activity: activity.uuid,
@@ -218,45 +226,6 @@ async function supersedeOlder(message, res) {
   const older = game.messages.filter(m => m.id !== message.id && supersedes(aoeFlags(m).resolution, res)
     && (m.timestamp ?? 0) <= (message.timestamp ?? Infinity));
   for (const m of older) await mutate(m.id, r => { r.superseded = true; return r; });
-}
-
-/* -------------------------------------------- */
-/*  Careful Spell                               */
-/* -------------------------------------------- */
-
-/** The combat turn an actor's Careful Spell belongs to ("combatId:round:combatantId"), or null out of combat. */
-export function carefulKey(actor) {
-  const combat = game.combats?.find?.(c => c.started && c.combatants.some(cb => cb.actor === actor || cb.actorId === actor?.id));
-  return combat ? `${combat.id}:${combat.round}:${combat.combatant?.id ?? combat.turn}` : null;
-}
-
-/**
- * The caster used Careful Spell for this cast: mark their side's rows (up to the CHA mod) as an
- * automatic success with no damage on a half-on-save spell, and bind the use to this usage card.
- * @returns {Promise<{names: string[], max: number}|null>}
- */
-async function carefulFor(caster, described, { casterActorId, usage, scene, onSave, rows }) {
-  if (!caster || !setting("carefulSpell")) return null;
-  const flag = aoeFlags(caster).careful;
-  if (!carefulApplies(flag, { now: Date.now(), combatKey: carefulKey(caster), usage })) return null;
-  const own = caster.token ?? caster.getActiveTokens?.(false, true)?.find(tk => tk.parent === scene) ?? null;
-  const max = Math.max(1, Number(caster.system?.abilities?.cha?.mod) || 1);
-  const ids = carefulTargets(described, { casterActorId, casterDisposition: own?.disposition ?? CONST.TOKEN_DISPOSITIONS.FRIENDLY, max });
-  protectRows(rows, ids, onSave);
-  if (usage && !flag.usage) await caster.update({ [`flags.${MODULE}.careful.usage`]: usage }).catch(() => null);
-  return { names: rows.filter(r => r.protected).map(r => r.name), max };
-}
-
-/** On the caster's client: Careful Spell was used, the next save spell's area protects their side. */
-async function onCarefulUsed(activity) {
-  if (!setting("carefulSpell")) return;
-  const item = activity?.item;
-  if ((item?.system?.identifier || "") !== "careful-spell") return;
-  const actor = activity.actor;
-  if (!actor?.isOwner) return;
-  await actor.update({ [`flags.${MODULE}.careful`]: { at: Date.now(), key: carefulKey(actor), usage: null } });
-  const max = Math.max(1, Number(actor.system?.abilities?.cha?.mod) || 1);
-  ui.notifications?.info?.(t("Careful.Armed", { n: max }));
 }
 
 /* -------------------------------------------- */
@@ -319,17 +288,17 @@ async function postRequest(message, activity, res) {
   const manual = res.rows.filter(r => r.kind === "manual" && r.apply && !r.save);
   if (!manual.length) return null;
   const label = abilityLabel(res.ability);
-  const content = res.onSave === "half" ? t("Request.Half") : res.onSave === "none" ? t("Request.None") : "";
+  const content = res.onSave === "half" ? _loc("PENTARYN_AOE.Request.Half") : res.onSave === "none" ? _loc("PENTARYN_AOE.Request.None") : "";
   const request = await ChatMessage.implementation.create({
     type: "request",
-    flavor: t("Request.Flavor", { item: res.itemName, ability: label }),
+    flavor: _loc("PENTARYN_AOE.Request.Flavor", { item: res.itemName, ability: label }),
     content: content ? `<p>${content}</p>` : "",
     speaker: ChatMessage.getSpeaker({ actor: activity.actor }),
     flags: { [MODULE]: { damageMessage: message.id } },
     system: {
       handler: REQUEST_HANDLER,
       data: { ability: res.ability, dc: res.dc, damageMessage: message.id },
-      button: { icon: "fa-solid fa-shield-heart", label: t("Request.Button", { ability: label }) },
+      button: { icon: "fa-solid fa-shield-heart", label: _loc("PENTARYN_AOE.Request.Button", { ability: label }) },
       targets: manual.map(r => ({ actor: r.actor }))
     }
   });
@@ -392,10 +361,10 @@ export async function pingPlayers(messageId) {
     const actor = fromUuidSync(r.actor);
     for (const u of game.users) if (!u.isGM && u.active && actor?.testUserPermission(u, "OWNER")) users.add(u.id);
   }
-  if (!users.size) return ui.notifications.info(t("Tray.NobodyToPing"));
+  if (!users.size) return ui.notifications.info(_loc("PENTARYN_AOE.Tray.NobodyToPing"));
   return ChatMessage.implementation.create({
     whisper: [...users],
-    content: `<p>${t("Tray.PingText", { item: res.itemName, ability: abilityLabel(res.ability) })}</p>`
+    content: `<p>${_loc("PENTARYN_AOE.Tray.PingText", { item: res.itemName, ability: abilityLabel(res.ability) })}</p>`
   });
 }
 
@@ -405,13 +374,13 @@ export async function pingPlayers(messageId) {
 
 /** Apply damage for ticked, resolved, unapplied rows (all of them, or rowIds). Safe to repeat. */
 export async function applyRows(messageId, rowIds = null) {
-  if (!game.user.isGM) return null;
+  if (!game.user.isGM) { why("apply", messageId, "not a GM"); return null; }
   const message = game.messages.get(messageId);
   const res = aoeFlags(message).resolution;
-  if (!res) return null;
-  if (res.superseded) { ui.notifications.warn(t("Tray.Superseded")); return null; }
+  if (!res) { why("apply", messageId, "no resolution"); return null; }
+  if (res.superseded) { why("apply", messageId, "superseded"); ui.notifications.warn(_loc("PENTARYN_AOE.Tray.Superseded")); return null; }
   const todo = applicableRows(res.rows, rowIds);
-  const damages = res.damages.map(d => ({ ...d, properties: new Set(d.properties ?? []) }));
+  const damages = hydrateDamages(res.damages);
   const done = {};
   for (const row of todo) {
     const actor = fromUuidSync(row.actor);
@@ -449,8 +418,6 @@ export function setRow(messageId, rowId, changes) {
   });
 }
 
-export { multiplierFor };
-
 /* -------------------------------------------- */
 /*  Hook wiring                                 */
 /* -------------------------------------------- */
@@ -458,39 +425,41 @@ export { multiplierFor };
 /** An ability saving throw (dnd5e 6 save messages also carry concentration and death saves). */
 const isAbilitySave = message => message?.type === "save" && (message.system?.type ?? "ability") === "ability";
 
-export function installResolve() {
+export function install(reg, ctx) {
+  log = ctx.log;
+  context = ctx;
   CONFIG.DND5E.requests[REQUEST_HANDLER] = handleSaveRequest;
+  // The tray (a separate feature) reaches these through ctx.exposed, never by importing this file.
+  ctx.expose({ resolve, applyRows, rollNpcSaves, rollForPlayer, pingPlayers, setRow });
 
-  on("dnd5e.postUseActivity", guard("postUseActivity(careful)", (activity) => onCarefulUsed(activity)));
-
-  // A Careful Spell armed for a turn of a combat that is now gone can never apply: clear it.
-  on("deleteCombat", guard("deleteCombat(careful)", async (combat) => {
-    if (!game.users.activeGM?.isSelf) return;
-    const done = new Set();
-    for (const c of combat.combatants ?? []) {
-      const actor = c.actor;
-      if (!actor || done.has(actor.uuid)) continue;
-      done.add(actor.uuid);
-      if (carefulStale(aoeFlags(actor).careful, combat.id)) await actor.unsetFlag(MODULE, "careful");
-    }
-  }));
-
-  on("createChatMessage", guard("createChatMessage", async (message) => {
+  reg.on("createChatMessage", reg.guardSwallowAsync("createChatMessage", async (message) => {
     if (!game.users.activeGM?.isSelf) return;
     if (isAbilitySave(message)) return onSaveMessage(message);
-    if (message.type !== "damage" || !setting("resolveSaves")) return;
-    if (aoeFlags(message).resolution) return;
-    if (!activityOf(message)?.save) return;
+    if (message.type !== "damage") return;
+    if (!setting("resolveSaves")) return why("resolve", message.id, "resolveSaves is off");
+    if (aoeFlags(message).resolution) return why("resolve", message.id, "already resolved");
+    if (!activityOf(message)?.save) return why("resolve", message.id, "its activity has no save");
     // Two sessions on the GM account would both resolve: doubled NPC saves and request cards.
-    if (!(await claimMessage(message, "resolve"))) return;
-    if (aoeFlags(game.messages.get(message.id)).resolution) return;
+    if (!(await claimMessage(message, "resolve", { scope: MODULE }))) return why("resolve", message.id, "another session claimed it");
+    if (aoeFlags(game.messages.get(message.id)).resolution) return why("resolve", message.id, "resolved meanwhile");
     return resolve(message);
-  }));
+  }), { guard: false, label: "createChatMessage" });
 
   // A request result attached after creation (dnd5e's own #handleRequest setFlag path).
-  on("updateChatMessage", guard("updateChatMessage", async (message, changes) => {
+  reg.on("updateChatMessage", reg.guardSwallowAsync("updateChatMessage", async (message, changes) => {
     if (!game.users.activeGM?.isSelf) return;
     if (!foundry.utils.getProperty(changes, "flags.dnd5e.requestResult")) return;
     if (isAbilitySave(message)) return onSaveMessage(message);
-  }));
+  }), { guard: false, label: "updateChatMessage" });
+
+  return { rows: FEATURE_ROWS.resolve, impl: { resolve, applyRows, rollNpcSaves, rollForPlayer, pingPlayers, setRow } };
 }
+
+/** The request handler goes with the hooks; the registry unwinds the hooks. */
+export function uninstall() {
+  if (CONFIG.DND5E?.requests?.[REQUEST_HANDLER]) delete CONFIG.DND5E.requests[REQUEST_HANDLER];
+}
+
+// Test seam (characterisation checkpoint): tests import this through test/fixtures/seams.mjs only,
+// so the blueprint refactor edits that shim, not the frozen tests. Not part of the API.
+export const _internals = { tokensForTargets, keysOnly, saveSystem, damagesOf, supersedeOlder, rollOne, postRequest, onSaveMessage, cleanupInstant, isAbilitySave, queues };

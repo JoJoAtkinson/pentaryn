@@ -1,0 +1,10 @@
+{
+  "gated": {
+    "title": "Pole Strike",
+    "description": "<p><strong>Pole Strike opens after you take the Attack action with a Quarterstaff, Spear or Heavy weapon with Reach.</strong></p><p>own</p>"
+  },
+  "open": {
+    "title": "Pole Strike",
+    "description": "<p>own</p>"
+  }
+}

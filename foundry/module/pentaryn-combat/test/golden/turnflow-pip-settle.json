@@ -1,0 +1,38 @@
+[
+  {
+    "from": 1,
+    "to": 2,
+    "calls": 2,
+    "out": "rebuilt",
+    "used": [
+      true,
+      true
+    ]
+  },
+  {
+    "from": 2,
+    "to": 2,
+    "calls": 1,
+    "out": "marked",
+    "used": [
+      true,
+      true
+    ]
+  },
+  {
+    "from": 2,
+    "to": 4,
+    "calls": 2,
+    "out": "rebuilt",
+    "used": [
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  {
+    "label": "element-less panel",
+    "calls": 1
+  }
+]

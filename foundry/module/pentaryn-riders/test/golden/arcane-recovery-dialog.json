@@ -1,0 +1,36 @@
+{
+  "rendered": {
+    "content": "<p>Choose spent spell slots to recover: up to 3 levels combined, none of level 6 or higher.</p><div class=\"form-group\"><label>DND5E.SpellLevel1 <span class=\"hint\">(1/4)</span></label>\n      <div class=\"form-fields\"><input type=\"number\" name=\"l1\" min=\"0\" max=\"3\" step=\"1\" value=\"0\"></div></div><div class=\"form-group\"><label>DND5E.SpellLevel2 <span class=\"hint\">(1/3)</span></label>\n      <div class=\"form-fields\"><input type=\"number\" name=\"l2\" min=\"0\" max=\"2\" step=\"1\" value=\"0\"></div></div><div class=\"form-group\"><label>DND5E.SpellLevel3 <span class=\"hint\">(0/2)</span></label>\n      <div class=\"form-fields\"><input type=\"number\" name=\"l3\" min=\"0\" max=\"2\" step=\"1\" value=\"1\"></div></div><p class=\"pr-ar-total\"></p>",
+    "total": "3 of 3 levels",
+    "okDisabled": false
+  },
+  "log": [
+    {
+      "op": "DialogV2.wait",
+      "title": "Arcane Recovery",
+      "buttons": [
+        [
+          "ok",
+          "Recover",
+          true
+        ],
+        [
+          "cancel",
+          "Not now",
+          false
+        ]
+      ],
+      "rejectClose": false
+    },
+    {
+      "op": "ChatMessage.create",
+      "data": {
+        "speaker": {
+          "actor": "wizard0000000001",
+          "alias": "Tamsin Reed"
+        },
+        "content": "<p>Tamsin Reed recovers spell slots by studying the spellbook: 1 × DND5E.SpellLevel1, 1 × DND5E.SpellLevel2.</p>"
+      }
+    }
+  ]
+}

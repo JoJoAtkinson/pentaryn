@@ -19,6 +19,11 @@
  */
 
 import { MODULE, placementInProgress } from "./core.mjs";
+import { makeLog } from "./lib/log.mjs";
+import { FEATURE_ROWS } from "./api-manifest.mjs";
+
+// Registered at init, before any install(): the module's log line format, from its own logger.
+const log = makeLog(MODULE);
 
 /**
  * The handler slot the registered binding calls through. Foundry copies a binding's onDown into
@@ -41,7 +46,7 @@ function onEscape() {
   try {
     layer._cancelPlacement();
   } catch (err) {
-    console.error(`${MODULE} | cancel placement`, err);
+    log.error("cancel placement", err);
   }
   return true;
 }
@@ -64,7 +69,7 @@ export function registerEscape() {
       precedence: CONST.KEYBINDING_PRECEDENCE.PRIORITY
     });
   } catch (err) {
-    console.warn(`${MODULE} | Escape-cancels-placement keybinding not registered (registered after init?)`, err);
+    log.warn("Escape-cancels-placement keybinding not registered (registered after init?)", err);
   }
 }
 
@@ -72,3 +77,16 @@ export function registerEscape() {
 export function disableEscape() {
   if (globalThis[SLOT] === onEscape) delete globalThis[SLOT];
 }
+
+/** Part E registers no hooks: its keybinding is registered at init (registerEscape, from the entry). */
+export function install() {
+  return { rows: FEATURE_ROWS.escape, impl: { activePlacement } };
+}
+
+export function uninstall() {
+  disableEscape();
+}
+
+// Test seam (characterisation checkpoint): tests import this through test/fixtures/seams.mjs only,
+// so the blueprint refactor edits that shim, not the frozen tests. Not part of the API.
+export const _internals = { onEscape, trampoline, SLOT };

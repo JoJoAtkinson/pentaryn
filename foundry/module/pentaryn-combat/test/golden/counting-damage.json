@@ -1,0 +1,67 @@
+[
+  [
+    "TWF off-hand Dagger",
+    [
+      "1d8",
+      "@mod",
+      "@mod"
+    ]
+  ],
+  [
+    "TWF off-hand Dagger, mod 0",
+    [
+      "1d8",
+      "@mod"
+    ]
+  ],
+  [
+    "TWF main Longsword",
+    [
+      "1d8",
+      "@mod"
+    ]
+  ],
+  [
+    "GWM Glaive main, own turn",
+    [
+      "1d8",
+      "@mod",
+      "@prof"
+    ]
+  ],
+  [
+    "GWM Glaive tagged bonus (Pole Strike)",
+    [
+      "1d8",
+      "@mod"
+    ]
+  ],
+  [
+    "GWM Glaive tagged nick",
+    [
+      "1d8",
+      "@mod",
+      "@prof"
+    ]
+  ],
+  [
+    "GWM Glaive off its turn (reaction)",
+    [
+      "1d8",
+      "@mod"
+    ]
+  ],
+  [
+    "weaponBonuses off",
+    [
+      "1d8",
+      "@mod"
+    ]
+  ],
+  [
+    "a spell's damage: untouched",
+    [
+      "1d10"
+    ]
+  ]
+]

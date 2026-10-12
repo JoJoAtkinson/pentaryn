@@ -1,0 +1,67 @@
+{
+  "careful": {
+    "names": [
+      "Caven"
+    ],
+    "max": 3
+  },
+  "rows": [
+    {
+      "id": "tokGoblin0000001",
+      "protected": false,
+      "save": {
+        "total": 10,
+        "success": false,
+        "messageId": "0000000000000067"
+      },
+      "multiplier": 1
+    },
+    {
+      "id": "tokGoblin0000002",
+      "protected": false,
+      "save": {
+        "total": 10,
+        "success": false,
+        "messageId": "0000000000000068"
+      },
+      "multiplier": 1
+    },
+    {
+      "id": "tokCaven00000001",
+      "protected": true,
+      "save": {
+        "total": null,
+        "success": true,
+        "messageId": null,
+        "careful": true
+      },
+      "multiplier": 0
+    },
+    {
+      "id": "tokMarrith000001",
+      "protected": false,
+      "save": null,
+      "multiplier": null
+    },
+    {
+      "id": "tokGoblinDead001",
+      "protected": false,
+      "save": {
+        "total": 10,
+        "success": false,
+        "messageId": "0000000000000069"
+      },
+      "multiplier": 1
+    },
+    {
+      "id": "tokGoblinHid0001",
+      "protected": false,
+      "save": {
+        "total": 10,
+        "success": false,
+        "messageId": "0000000000000070"
+      },
+      "multiplier": 1
+    }
+  ]
+}

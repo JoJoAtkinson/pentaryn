@@ -1,0 +1,100 @@
+[
+  {
+    "label": "two Dashes",
+    "changes": [
+      [
+        {
+          "key": "system.attributes.movement.walk",
+          "type": "add",
+          "value": 30
+        }
+      ],
+      [
+        {
+          "key": "system.attributes.movement.walk",
+          "type": "add",
+          "value": 30
+        }
+      ]
+    ],
+    "notes": [
+      "You have already used your Action this turn. Dash was posted anyway; check with your GM."
+    ]
+  },
+  {
+    "label": "Hide 9: not hidden (status off)",
+    "statuses": [],
+    "notes": [
+      "Stealth 9 vs DC 15: not hidden."
+    ]
+  },
+  {
+    "label": "Hide cancelled",
+    "notes": [
+      "You have already used your Action this turn. Hide was posted anyway; check with your GM.",
+      "Hide cancelled: no Stealth roll, not hidden."
+    ]
+  },
+  {
+    "label": "Hide roll throws",
+    "notes": [
+      "You have already used your Action this turn. Hide was posted anyway; check with your GM.",
+      "Hide cancelled: no Stealth roll, not hidden."
+    ],
+    "console": [
+      {
+        "level": "warn",
+        "text": "pentaryn-combat | Hide roll",
+        "err": "dialog broke"
+      }
+    ]
+  },
+  {
+    "label": "no Action left: warned, still posted",
+    "notes": [
+      "You have already used your Action this turn. Dodge was posted anyway; check with your GM."
+    ],
+    "dodging": true
+  },
+  {
+    "label": "Shove with no Action left: warned too (its swing needs an Attack action)",
+    "notes": [
+      "You have already used your Action this turn. Shove was posted anyway; check with your GM."
+    ]
+  },
+  {
+    "label": "an owned Dash item: pip only",
+    "actionUsed": true,
+    "turn": null,
+    "effects": 0
+  },
+  {
+    "label": "off his turn: Dodge only, nothing recorded",
+    "actionUsed": false,
+    "turn": null,
+    "dodging": true
+  },
+  {
+    "label": "setting off: Argon's own click only",
+    "calls": [
+      {
+        "op": "argon.special",
+        "name": "Dash"
+      },
+      {
+        "op": "argon.leftClick",
+        "id": "dash"
+      }
+    ]
+  },
+  {
+    "label": "effect create fails",
+    "console": [
+      {
+        "level": "warn",
+        "text": "pentaryn-combat | disengage",
+        "err": "no create"
+      }
+    ]
+  }
+]

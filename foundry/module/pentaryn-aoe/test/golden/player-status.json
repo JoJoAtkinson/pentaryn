@@ -1,0 +1,5 @@
+{
+  "waiting": "<div class=\"chat-card\">card</div><section class=\"icon-row\">roll</section><damage-application></damage-application><p class=\"pa-status pa-status-superseded\"><i class=\"fa-solid fa-rotate\" inert=\"\"></i> Re-rolled: the newer damage card for this spell is the one that counts.</p>",
+  "applied": "<p>x</p><p class=\"pa-status pa-status-superseded\"><i class=\"fa-solid fa-rotate\" inert=\"\"></i> Re-rolled: the newer damage card for this spell is the one that counts.</p>",
+  "superseded": "<p>x</p><p class=\"pa-status pa-status-superseded\"><i class=\"fa-solid fa-rotate\" inert=\"\"></i> Re-rolled: the newer damage card for this spell is the one that counts.</p>"
+}

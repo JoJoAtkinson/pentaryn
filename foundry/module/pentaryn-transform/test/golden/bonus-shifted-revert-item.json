@@ -1,0 +1,30 @@
+[
+  {
+    "cls": "DND5eItemButton",
+    "label": null,
+    "item": null,
+    "classes": "",
+    "rendered": 0
+  },
+  {
+    "cls": "DND5eItemButton",
+    "label": "Return to Talo",
+    "item": "returnNormal0001",
+    "classes": "ptf-return",
+    "rendered": 1
+  },
+  {
+    "cls": "WildShapeButton",
+    "label": "PENTARYN_TRANSFORM.Hud.ChangeForm",
+    "item": null,
+    "classes": "",
+    "rendered": 1
+  },
+  {
+    "cls": "DND5eItemButton",
+    "label": "Cure Wounds",
+    "item": "cureWounds000001",
+    "classes": "",
+    "rendered": 1
+  }
+]

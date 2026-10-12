@@ -21,7 +21,18 @@
  *     { key: "elemental-adept", types: ["fire"] }      // typed rules carry their chosen types
  */
 
-export const MOD = "pentaryn-riders";
+export const MODULE = "pentaryn-riders";
+/** The old name, kept: `game.pentaryn.riders.core.MOD` and the fixture suites read it. */
+export { MODULE as MOD };
+export const SHORT = "riders";
+export const NS = "riders";
+export const VERSION = "0.2.0";                        // === module.json version (constants.test pins it)
+export const CONTRACT = "pentaryn-riders/api@1";       // bump the major on a published-shape change
+export const I18N = "PENTARYN_RIDERS";
+export const CSS = "pr-";
+export const FLAG_SCOPE = MODULE;
+/** Events this module emits: none (README "Events"). */
+export const HOOKS = Object.freeze({});
 
 /** The damage types each typed feature may choose from (2024 PHB). */
 export const ADEPT_TYPES = Object.freeze(["acid", "cold", "fire", "lightning", "thunder"]);
@@ -270,6 +281,10 @@ export function parseFormula(formula) {
     if ("+-*/".includes(c)) { out.push({ kind: "op", operator: c }); i++; continue; }
     const rest = s.slice(i);
     let m = DIE_RX.exec(rest);
+    // A die whose token runs on past the match ("1d8x@mod=8": an @reference modifier argument) is
+    // not a plain die: the whole token is `other`, left alone.
+    const runsOn = m && m[0].length < rest.length && !/[\s+\-*/]/.test(rest[m[0].length]);
+    if (runsOn) m = null;
     if (m) {
       out.push({
         kind: "die", number: m[1] === "" ? 1 : Number(m[1]), faces: Number(m[2]),
@@ -278,7 +293,7 @@ export function parseFormula(formula) {
       i += m[0].length;
       continue;
     }
-    m = NUM_RX.exec(rest);
+    m = runsOn ? null : NUM_RX.exec(rest);
     if (m) { out.push({ kind: "num", number: Number(m[1]), flavor: m[2] ?? "" }); i += m[0].length; continue; }
     // Anything else up to the next top-level + - * / or space.
     let j = i;
@@ -501,7 +516,7 @@ export function usedFromMessages(messages, origin) {
   const used = new Set();
   for (const m of messages ?? []) {
     if (m?._source?.system?.origin !== origin) continue;
-    for (const k of m?.flags?.[MOD]?.applied ?? []) used.add(k);
+    for (const k of m?.flags?.[MODULE]?.applied ?? []) used.add(k);
   }
   return [...used];
 }
@@ -538,3 +553,11 @@ export function clampHeal(amount, faces, prof) {
   const max = Math.max(0, Math.trunc(Number(faces) || 0)) + Math.max(0, Math.trunc(Number(prof) || 0));
   return Math.max(0, Math.min(n, max));
 }
+
+/* Hit Dice pools, the Battle Medic gate and the report row: core/hit-dice.mjs (combat-riders-26);
+   the Battle Medic relay's claim: core/relay.mjs (combat-riders-41).
+   Imported and re-exported by name (not `export … from`), so the import-graph gates see the edge
+   (pentaryn-walls' barrel does the same). */
+import { battleMedicBlockReason, hdPoolsFrom, hdSummaryOf, reportRow } from "./core/hit-dice.mjs";
+import { relayClaimWinner, relayPrune, relayRequestId } from "./core/relay.mjs";
+export { battleMedicBlockReason, hdPoolsFrom, hdSummaryOf, reportRow, relayClaimWinner, relayPrune, relayRequestId };

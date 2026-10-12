@@ -1,0 +1,84 @@
+[
+  {
+    "label": "usage main, 1-swing rogue: Argon's consumeActionEconomy",
+    "action": false,
+    "bonus": false,
+    "reaction": false,
+    "calls": [
+      {
+        "op": "argon.consumeActionEconomy",
+        "activity": "Actor.rogue00000000001.Item.scimitar00000001.Activity.scimitar00000001"
+      }
+    ]
+  },
+  {
+    "label": "usage nick: nothing",
+    "action": false,
+    "bonus": false,
+    "reaction": false,
+    "calls": []
+  },
+  {
+    "label": "bonusSpent: Bonus pip used",
+    "action": false,
+    "bonus": true,
+    "reaction": false,
+    "calls": []
+  },
+  {
+    "label": "bonusAction: Bonus pip used",
+    "action": false,
+    "bonus": true,
+    "reaction": false,
+    "calls": []
+  },
+  {
+    "label": "otherAction: Action pip used (Argon's single pip)",
+    "action": true,
+    "bonus": true,
+    "reaction": false,
+    "calls": []
+  },
+  {
+    "label": "offhand by hand with no Action taken: Action pip given back",
+    "action": false,
+    "bonus": true,
+    "reaction": false,
+    "calls": []
+  },
+  {
+    "label": "reaction: Reaction pip used",
+    "action": false,
+    "bonus": true,
+    "reaction": true,
+    "calls": []
+  },
+  {
+    "label": "another actor's event: nothing",
+    "action": false,
+    "bonus": true,
+    "reaction": true,
+    "calls": []
+  },
+  {
+    "label": "out of combat: no pips",
+    "action": false,
+    "bonus": false,
+    "reaction": true,
+    "calls": []
+  },
+  {
+    "label": "usage main with our swing pips: nothing (our pips count it)",
+    "action": false,
+    "bonus": false,
+    "reaction": false,
+    "calls": []
+  },
+  {
+    "label": "otherAction with our swing pips: nothing",
+    "action": false,
+    "bonus": false,
+    "reaction": false,
+    "calls": []
+  }
+]

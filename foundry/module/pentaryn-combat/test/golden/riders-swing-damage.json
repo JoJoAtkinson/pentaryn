@@ -1,0 +1,26 @@
+{
+  "button": "<div class=\"pentaryn-combat-damage card-buttons\"><button type=\"button\"><i class=\"fa-solid fa-burst\"></i> DND5E.Damage</button></div>",
+  "roll": [
+    {
+      "op": "activity.rollDamage",
+      "activity": "Actor.rogue00000000001.Item.scimitar00000001.Activity.scimitar00000001",
+      "config": {
+        "isCritical": true,
+        "attackMode": "offhand"
+      },
+      "event": true,
+      "dialog": {},
+      "message": {
+        "data": {
+          "system": {
+            "origin": "usageCard000001"
+          }
+        }
+      }
+    }
+  ],
+  "notASwing": null,
+  "aoeOn": null,
+  "aoeInactive": true,
+  "notOwner": null
+}

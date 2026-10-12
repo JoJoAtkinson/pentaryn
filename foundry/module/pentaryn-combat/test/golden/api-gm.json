@@ -1,0 +1,169 @@
+{
+  "report": [
+    {
+      "actor": "Fighter",
+      "riders": [],
+      "turn": null,
+      "lastWeapon": null
+    },
+    {
+      "actor": "Rogue",
+      "riders": [
+        {
+          "key": "sneak-attack",
+          "dice": "3d6",
+          "activity": true,
+          "modeForMe": "ask"
+        }
+      ],
+      "turn": null,
+      "lastWeapon": null
+    },
+    {
+      "actor": "Monk (2 Focus)",
+      "riders": [],
+      "turn": null,
+      "lastWeapon": null
+    },
+    {
+      "actor": "Druid (Bear)",
+      "riders": [],
+      "turn": null,
+      "lastWeapon": null
+    },
+    {
+      "actor": "Barbarian",
+      "riders": [
+        {
+          "key": "frenzy",
+          "dice": "2d6",
+          "activity": true,
+          "modeForMe": "ask"
+        }
+      ],
+      "turn": null,
+      "lastWeapon": null
+    },
+    {
+      "actor": "Slayer",
+      "riders": [
+        {
+          "key": "colossus-slayer",
+          "dice": "1d8",
+          "activity": true,
+          "modeForMe": "ask"
+        },
+        {
+          "key": "divine-strike",
+          "dice": "1d8",
+          "activity": true,
+          "modeForMe": "ask"
+        }
+      ],
+      "turn": null,
+      "lastWeapon": null
+    }
+  ],
+  "fixFeats": {
+    "actor": "Slayer",
+    "plan": [
+      {
+        "feature": "great-weapon-master",
+        "change": "damage bonus @prof",
+        "when": "Heavy weapon, Attack action, own turn"
+      }
+    ],
+    "applied": false,
+    "reason": "report only",
+    "fallback": true
+  },
+  "seedOne": {
+    "1": {
+      "primary": "Actor.fighter000000001.Item.longsword0000001",
+      "secondary": "Actor.fighter000000001.Item.dagger0000000001"
+    },
+    "2": {
+      "primary": "Actor.fighter000000001.Item.shortbow00000001",
+      "secondary": null
+    },
+    "3": {
+      "primary": null,
+      "secondary": null
+    }
+  },
+  "seedAll": [
+    {
+      "actor": "Rogue",
+      "seed": {
+        "1": {
+          "primary": "Actor.rogue00000000001.Item.scimitar00000001",
+          "secondary": "Actor.rogue00000000001.Item.dagger0000000002"
+        },
+        "2": {
+          "primary": null,
+          "secondary": null
+        },
+        "3": {
+          "primary": null,
+          "secondary": null
+        }
+      }
+    },
+    {
+      "actor": "Barbarian",
+      "seed": {
+        "1": {
+          "primary": "Actor.barbarian0000001.Item.greataxe00000001",
+          "secondary": null
+        },
+        "2": {
+          "primary": null,
+          "secondary": null
+        },
+        "3": {
+          "primary": null,
+          "secondary": null
+        }
+      }
+    },
+    {
+      "actor": "Slayer",
+      "seed": {
+        "1": {
+          "primary": "Actor.slayer0000000001.Item.glaive0000000001",
+          "secondary": null
+        },
+        "2": {
+          "primary": null,
+          "secondary": null
+        },
+        "3": {
+          "primary": null,
+          "secondary": null
+        }
+      }
+    }
+  ],
+  "console": [
+    [
+      "table",
+      "[{\"actor\":\"Fighter\",\"riders\":\"—\",\"turn\":\"—\"},{\"actor\":\"Rogue\",\"riders\":\"sneak-attack 3d6 (ask)\",\"turn\":\"—\"},{\"actor\":\"Monk (2 Focus)\",\"riders\":\"—\",\"turn\":\"—\"},{\"actor\":\"Druid (Bear)\",\"riders\":\"—\",\"turn\":\"—\"},{\"actor\":\"Barbarian\",\"riders\":\"frenzy 2d6 (ask)\",\"turn\":\"—\"},{\"actor\":\"Slayer\",\"riders\":\"colossus-slayer 1d8 (ask), divine-strike 1d8 (ask)\",\"turn\":\"—\"}]"
+    ],
+    [
+      "info",
+      "pentaryn-combat | weapon sets seeded for Fighter"
+    ],
+    [
+      "info",
+      "pentaryn-combat | weapon sets seeded for Rogue"
+    ],
+    [
+      "info",
+      "pentaryn-combat | weapon sets seeded for Barbarian"
+    ],
+    [
+      "info",
+      "pentaryn-combat | weapon sets seeded for Slayer"
+    ]
+  ]
+}

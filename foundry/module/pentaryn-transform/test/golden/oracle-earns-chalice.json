@@ -1,0 +1,173 @@
+[
+  {
+    "input": [
+      {
+        "type": "heal",
+        "item": {
+          "type": "spell",
+          "system": {
+            "level": 1
+          }
+        }
+      },
+      {}
+    ],
+    "out": true
+  },
+  {
+    "input": [
+      {
+        "type": "heal",
+        "item": {
+          "type": "spell",
+          "system": {
+            "level": 1
+          }
+        }
+      },
+      {
+        "consume": {
+          "spellSlot": false
+        }
+      }
+    ],
+    "out": false
+  },
+  {
+    "input": [
+      {
+        "type": "heal",
+        "item": {
+          "type": "spell",
+          "system": {
+            "level": 0
+          }
+        }
+      },
+      {}
+    ],
+    "out": false
+  },
+  {
+    "input": [
+      {
+        "type": "heal",
+        "item": {
+          "type": "spell",
+          "system": {
+            "level": "2"
+          }
+        }
+      },
+      {}
+    ],
+    "out": true
+  },
+  {
+    "input": [
+      {
+        "type": "heal",
+        "item": {
+          "type": "feat",
+          "system": {
+            "level": 1
+          }
+        }
+      },
+      {}
+    ],
+    "out": false
+  },
+  {
+    "input": [
+      {
+        "type": "damage",
+        "item": {
+          "type": "spell",
+          "system": {
+            "level": 1
+          }
+        },
+        "damage": {
+          "parts": [
+            {
+              "types": {}
+            }
+          ]
+        }
+      },
+      {}
+    ],
+    "out": true
+  },
+  {
+    "input": [
+      {
+        "type": "damage",
+        "item": {
+          "type": "spell",
+          "system": {
+            "level": 1
+          }
+        },
+        "damage": {
+          "parts": [
+            {
+              "types": [
+                "temphp"
+              ]
+            }
+          ]
+        }
+      },
+      {}
+    ],
+    "out": true
+  },
+  {
+    "input": [
+      {
+        "type": "damage",
+        "item": {
+          "type": "spell",
+          "system": {
+            "level": 1
+          }
+        },
+        "damage": {
+          "parts": [
+            {
+              "types": [
+                "fire"
+              ]
+            }
+          ]
+        }
+      },
+      {}
+    ],
+    "out": false
+  },
+  {
+    "input": [
+      {
+        "type": "damage",
+        "item": {
+          "type": "spell",
+          "system": {
+            "level": 1
+          }
+        }
+      },
+      null
+    ],
+    "out": false
+  },
+  {
+    "input": [
+      null,
+      {}
+    ],
+    "out": false
+  }
+]

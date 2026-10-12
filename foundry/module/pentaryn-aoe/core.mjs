@@ -6,10 +6,31 @@
  */
 
 export const MODULE = "pentaryn-aoe";
+export const SHORT = "aoe";
+export const NS = "aoe";
+export const VERSION = "0.3.1";                          // === module.json version (core.test pins it)
+export const CONTRACT = "pentaryn-aoe/api@1";            // bump the major on a published-shape change
+export const I18N = "PENTARYN_AOE";
+export const CSS = "pa-";
+export const FLAG_SCOPE = MODULE;
+/** aoe emits no events of its own. */
+export const HOOKS = Object.freeze({});
 
 /** Read this module's flags without getFlag(): getFlag throws while the module is inactive (hot-patch). */
 export function aoeFlags(doc) {
   return doc?.flags?.[MODULE] ?? {};
+}
+
+/** Is this token (a TokenDocument) one of our area handles? The token flag only; see isHandleTarget. */
+export const isHandle = t => !!aoeFlags(t).handle;
+
+/**
+ * A resolution's stored damages as `actor.applyDamage` / `calculateDamage` want them: each row's
+ * `properties` array becomes a Set. The input is not mutated; no damages → [].
+ * @param {{value: number, type: string, properties?: string[]}[]|undefined|null} damages
+ */
+export function hydrateDamages(damages) {
+  return (damages ?? []).map(d => ({ ...d, properties: new Set(d.properties ?? []) }));
 }
 
 /**
@@ -223,6 +244,12 @@ export function regionFromSpell(flags5e, { itemUuid = null, activityUuid = null 
  * Is a region placement following the mouse on this RegionLayer? Core v14 keeps the placement's
  * context on `_placementContext` from RegionLayer#placeRegions until it is confirmed or cancelled,
  * and `_cancelPlacement` is what core's own Escape calls (escape.mjs, Part E).
+ *
+ * -39: pentaryn-cursors reads the same internal for a different question — `placementActive`
+ * (cursors-core.mjs, called from board.mjs) asks "is the preview drawn on the layer yet?" (false
+ * until the first pointer move); this asks "can a placement be cancelled?" (true as soon as the
+ * context exists). Do not merge them. One adjustments row covers both reads:
+ * core-region-placement-escape.
  * @param {{ _placementContext?: object|null, _cancelPlacement?: Function }|null|undefined} layer
  */
 export function placementInProgress(layer) {
@@ -416,13 +443,6 @@ export function protectRows(rows, ids, onSave) {
 }
 
 /**
- * Is a Careful Spell use still waiting for this cast? In combat: the same turn it was used on.
- * Out of combat: ten minutes. Bound to the first usage card it protected, so re-rolling that card
- * keeps the protection and a later, different spell does not get it.
- * @param {{at?: number, key?: string|null, usage?: string|null}|null} flag
- * @param {{now?: number, combatKey?: string|null, usage?: string|null, maxAgeMs?: number}} o
- */
-/**
  * A Careful Spell use bound to a combat turn ("combatId:round:combatant") of a combat that was
  * deleted: it can never apply again, so it is cleared (usability Area 9 found one on Marrith).
  * An out-of-combat use (no key) expires by time and is left alone.
@@ -431,6 +451,14 @@ export function carefulStale(flag, combatId) {
   return !!(combatId && flag && typeof flag === "object" && typeof flag.key === "string" && flag.key.startsWith(`${combatId}:`));
 }
 
+/**
+ * Is a Careful Spell use still waiting for this cast? In combat: the same turn it was used on.
+ * Out of combat: ten minutes. Bound to the first usage card it protected, so re-rolling that card
+ * keeps the protection and a later, different spell does not get it.
+ * @param {{at?: number, key?: string|null, usage?: string|null}|null} flag
+ * @param {{now?: number, combatKey?: string|null, usage?: string|null, maxAgeMs?: number}} o
+ * @returns {boolean}
+ */
 export function carefulApplies(flag, { now = 0, combatKey = null, usage = null, maxAgeMs = 10 * 60 * 1000 } = {}) {
   if (!flag || typeof flag !== "object") return false;
   if (flag.usage && flag.usage !== usage) return false;
@@ -456,4 +484,32 @@ export function playerStatus(res) {
   if (res.superseded) return "superseded";
   if (!res.rows?.some(r => r.apply)) return null;
   return allApplied(res.rows) ? "applied" : "waiting";
+}
+
+/**
+ * A resolution as an LLM or the console reads it (finding -10): no images, no message ids, the
+ * Apply count, and the players' status. null for no resolution. Plain data, depth 3.
+ * @returns {{item: string, ability: string, dc: number|null, onSave: string, region: string|null,
+ *   superseded: boolean, applicable: number, rows: object[], careful: object|null,
+ *   playerStatus: "waiting"|"applied"|"superseded"|null}|null}
+ */
+export function summariseResolution(res) {
+  if (!res) return null;
+  const rows = res.rows ?? [];
+  return {
+    item: res.itemName ?? "",
+    ability: res.ability ?? null,
+    dc: res.dc ?? null,
+    onSave: res.onSave ?? null,
+    region: res.region ?? null,
+    superseded: !!res.superseded,
+    applicable: applicableRows(rows).length,
+    rows: rows.map(r => ({
+      id: r.id, name: r.name, kind: r.kind, apply: !!r.apply,
+      save: r.save ? { total: r.save.total ?? null, success: !!r.save.success } : null,
+      multiplier: r.multiplier ?? null, applied: !!r.applied, hp: r.hp ?? null, caster: !!r.caster, protected: !!r.protected,
+    })),
+    careful: res.careful ?? null,
+    playerStatus: playerStatus(res),
+  };
 }

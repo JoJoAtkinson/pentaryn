@@ -1,0 +1,94 @@
+[
+  {
+    "kind": "on",
+    "name": "dnd5e.preUseActivity"
+  },
+  {
+    "kind": "on",
+    "name": "dnd5e.summonToken"
+  },
+  {
+    "kind": "on",
+    "name": "deleteActiveEffect"
+  },
+  {
+    "kind": "on",
+    "name": "dnd5e.renderChatMessage"
+  },
+  {
+    "kind": "on",
+    "name": "createChatMessage"
+  },
+  {
+    "kind": "on",
+    "name": "dnd5e.renderChatMessage"
+  },
+  {
+    "kind": "on",
+    "name": "updateItem"
+  },
+  {
+    "kind": "on",
+    "name": "dnd5e.preCreateMeasuredTemplate"
+  },
+  {
+    "kind": "on",
+    "name": "dnd5e.preSummon"
+  },
+  {
+    "kind": "on",
+    "name": "renderItemButtonArgonComponent"
+  },
+  {
+    "kind": "on",
+    "name": "dnd5e.preSummon"
+  },
+  {
+    "kind": "on",
+    "name": "changeSidebarTab"
+  },
+  {
+    "kind": "on",
+    "name": "dnd5e.postSummon"
+  },
+  {
+    "kind": "on",
+    "name": "dnd5e.preUseActivity"
+  },
+  {
+    "kind": "on",
+    "name": "dnd5e.preUseActivity"
+  },
+  {
+    "kind": "on",
+    "name": "renderActivityUsageDialog"
+  },
+  {
+    "kind": "on",
+    "name": "dnd5e.postUseActivity"
+  },
+  {
+    "kind": "on",
+    "name": "dnd5e.postDamageRollConfiguration"
+  },
+  {
+    "kind": "on",
+    "name": "dnd5e.renderChatMessage"
+  },
+  {
+    "kind": "on",
+    "name": "dnd5e.preCalculateDamage"
+  },
+  {
+    "kind": "on",
+    "name": "dnd5e.preUseActivity"
+  },
+  {
+    "kind": "on",
+    "name": "dnd5e.postUseActivity"
+  },
+  {
+    "kind": "on",
+    "name": "renderCharacterActorSheet"
+  }
+]

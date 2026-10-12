@@ -122,7 +122,7 @@ built), `fork-footprint.sh` ✓. Pentaryn: importer 93, feedback 118, pings 67 n
 Deploy (fold into wave 3's live phase):
 1. Fork: merge into `pentaryn`, `npm run build:server`, `kill -9` the stale backend;
    `npm run build:foundry`, copy into `Data/modules/foundry-mcp-bridge`, reload the GM tab.
-2. Pentaryn: merge into `main`, sync `pentaryn-importer` and `pentaryn-feedback`. Both
+2. Pentaryn: merge into `main`, install `pentaryn-importer` (`make foundry-importer-install`) and sync `pentaryn-feedback`. Both
    `module.json` versions changed → **Foundry restart**, then reload.
 3. Live checks:
    - `toggle-token-condition {tokenId, conditionId: "prone"}` with no `active` on a ZZ token: on,
@@ -132,8 +132,9 @@ Deploy (fold into wave 3's live phase):
    - `eval-js` with `timeoutMs: 500`: the `mcp-` line has `phase: "args"` and a one-line `error`.
    - `pentaryn-write {ns: "importer", path: "import", dryRun: true}` with no actors.json →
      `code: "NOT_FOUND"`; `describe().version` 1.1.1.
-   - `pentaryn-read {ns: "*", path: "inspect", ref: "Talo"}` → `feedback` is
-     `{actor, users: [Talo's player], pending, reports}`, not BAD_ARGS; an NPC → empty lists;
+   - `pentaryn-read {ns: "*", path: "inspect", ref: "<ZZ PC name>"}` (a ZZ PC-type actor with a
+     throwaway ZZ player user assigned as its non-GM owner; never a real PC) → `feedback` is
+     `{actor, users: [<the ZZ player>], pending, reports}`, not BAD_ARGS; an NPC → empty lists;
      feedback `describe().version` 0.1.2, `selftest().ok`.
    - Pings golden before/after: `cleanup.pingLogRestored: true`, `pingScratchLeft: 0`, and
      `game.pentaryn.pings.all()` unchanged across the run.
@@ -235,17 +236,23 @@ Player's Journal" is gone too. Rollback copies: `.state/live-rollback/W3L/` (wor
 
 **Follow-ups**
 - Fix the importer golden (`importer.js`): sort `root.keysInPublishOrder`, or move it to declared.
-  It records publish order, which other modules change.
+  It records publish order, which other modules change. Done on `fix/overnight-2026-10-12`
+  (moved out of `golden` to a top-level `publishOrder`).
 - `pings.js`: read and restore through the stored Setting `_source`, not the aliased cache, so a
-  run on a hidden tab cannot leave scratch records or report `pingLogRestored` false.
-- Add a `make foundry-importer-install` target (module-check + install, no actors.json).
+  run on a hidden tab cannot leave scratch records or report `pingLogRestored` false. Done on
+  `fix/overnight-2026-10-12` (the pytest now runs a hidden-tab model too).
+- Add a `make foundry-importer-install` target (module-check + install, no actors.json). Done on
+  `fix/overnight-2026-10-12`.
 - Wave-3 live plan: senses `timeoutMs` 90000 is over the eval-js cap of 60000. §4 says "no
   restart" and "no bridge build", which is wrong when the optional fixes ride along. The §5
   `want` map has no feedback entry. §7 row 8 and §7.3 here name real PCs; use a ZZ PC-type actor.
+  Done on `fix/overnight-2026-10-12` (wave-3 live plan §0, §4 addendum, §5, §7; §7.3 here).
 - Add a kit conformance test: a Document-kind manifest param with `resolve:false` must name its
-  string forms in `type` (this would have caught the senses.inspect refusal).
+  string forms in `type` (this would have caught the senses.inspect refusal). Done on
+  `fix/overnight-2026-10-12` as conformance rule C62; attunement fails it (stash, releaseAway take
+  live Actors: an `eval-js only` marker is the fix, not string forms).
 - toggle-token-condition only searches the viewed scene: document it in `mcp-fork.md`, or
-  resolve the token by uuid.
+  resolve the token by uuid. Documented in `mcp-fork.md` on `fix/overnight-2026-10-12`.
 - feedback 0.1.2 has an "Unreleased" CHANGELOG entry (`c18b74ec`), so the version bump waits for
   the next restart batch.
 - For Joe: the wave-3 §8 table checks, and W2-B2 confirmation (§7).

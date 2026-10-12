@@ -1,0 +1,781 @@
+{
+  "module": "pentaryn-aoe",
+  "namespace": "aoe",
+  "contract": "pentaryn-aoe/api@1",
+  "flagScope": "pentaryn-aoe",
+  "methods": [
+    {
+      "path": "areasFor",
+      "params": [
+        {
+          "name": "activityUuid",
+          "type": "string",
+          "resolve": false
+        },
+        {
+          "name": "scene",
+          "type": "Scene",
+          "resolve": false,
+          "optional": true,
+          "doc": "default: every scene"
+        }
+      ],
+      "returns": "RegionDocument[]",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "Template regions created by one activity, on one scene or every scene; [] without an activity uuid."
+    },
+    {
+      "path": "spellAreas",
+      "params": [
+        {
+          "name": "spell",
+          "type": "{ itemUuid?, activityUuid? }",
+          "resolve": false
+        },
+        {
+          "name": "scene",
+          "type": "Scene",
+          "resolve": false,
+          "optional": true,
+          "doc": "default: every scene"
+        }
+      ],
+      "returns": "RegionDocument[]",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "Template regions placed by a spell (every activity of the item; the activity uuid is the fallback); [] with neither uuid."
+    },
+    {
+      "path": "handleFor",
+      "params": [
+        {
+          "name": "region",
+          "type": "RegionDocument",
+          "resolve": false
+        }
+      ],
+      "returns": "TokenDocument|null",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "nullWhen": "no handle, or the region has no scene",
+      "legacy": true,
+      "doc": "A template region's handle token: the attached handle, else a token flagged with the region."
+    },
+    {
+      "path": "removeArea",
+      "params": [
+        {
+          "name": "regions",
+          "type": "RegionDocument|id|Array",
+          "resolve": false
+        },
+        {
+          "name": "scene",
+          "type": "Scene",
+          "resolve": false,
+          "optional": true,
+          "doc": "default: canvas.scene (the viewing client's scene), for ids"
+        }
+      ],
+      "returns": "Promise<number>",
+      "gm": false,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "Region (deleted)",
+        "Token (handle, deleted by cascade)"
+      ],
+      "legacy": true,
+      "doc": "Delete template regions (their handles go by cascade). Skips non-templates, ones this user may not delete and ones already gone; returns how many went."
+    },
+    {
+      "path": "cardEffects",
+      "params": [
+        {
+          "name": "messageOrId",
+          "type": "ChatMessage|id",
+          "resolve": false
+        }
+      ],
+      "returns": "Promise<ActiveEffect[]>",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "A usage card's applicable effects (enchantments dropped); [] for anything else."
+    },
+    {
+      "path": "setting",
+      "params": [
+        {
+          "name": "key",
+          "type": "string",
+          "resolve": false
+        }
+      ],
+      "returns": "*",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "A pentaryn-aoe setting's live value; the default when unregistered; undefined for an unknown key."
+    },
+    {
+      "path": "hookIds",
+      "params": [],
+      "returns": "{ name, id }[]",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "The hooks this module registered, in registration order."
+    },
+    {
+      "path": "resolution",
+      "params": [
+        {
+          "name": "messageOrId",
+          "type": "ChatMessage|id",
+          "resolve": false
+        }
+      ],
+      "returns": "object|null",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "nullWhen": "no such message, or it has no resolution",
+      "since": "0.4.0",
+      "doc": "A copy of a damage message's tray state (flags.pentaryn-aoe.resolution): rows, saves, multipliers, what was applied. GM data."
+    },
+    {
+      "path": "latestResolution",
+      "params": [
+        {
+          "name": "opts",
+          "type": "{ sceneId? }",
+          "resolve": false,
+          "optional": true,
+          "doc": "sceneId: a scene id, or \"current\" for the viewing client's scene"
+        }
+      ],
+      "returns": "{ messageId, resolution }|null",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "nullWhen": "none of the last 60 messages carries a live (not superseded) resolution on that scene",
+      "since": "0.4.0",
+      "doc": "The newest live tray among the last 60 chat messages, optionally on one scene."
+    },
+    {
+      "path": "summary",
+      "params": [
+        {
+          "name": "messageOrId",
+          "type": "ChatMessage|id",
+          "resolve": false
+        }
+      ],
+      "returns": "{ item, ability, dc, onSave, region, superseded, applicable, rows[], careful, playerStatus }|null",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "nullWhen": "no such message, or it has no resolution",
+      "since": "0.4.0",
+      "doc": "A damage message's tray as plain data (core.summariseResolution): who is in the area, each save and multiplier, how many rows Apply would act on."
+    },
+    {
+      "path": "isHandle",
+      "params": [
+        {
+          "name": "tokenOrDoc",
+          "type": "Token|TokenDocument|Actor",
+          "resolve": false
+        }
+      ],
+      "returns": "boolean",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "since": "0.4.0",
+      "doc": "Is this an area handle (a handle token or placeable, the handle actor, or a synthetic actor of a handle)? core.isHandleTarget."
+    },
+    {
+      "path": "inspect",
+      "params": [
+        {
+          "name": "ref",
+          "kind": "any",
+          "type": "Token|TokenDocument|Actor|ChatMessage|uuid|id|exact actor name",
+          "resolve": false,
+          "doc": "never a substring"
+        },
+        {
+          "name": "opts",
+          "type": "{ sceneId?, as? }",
+          "resolve": false,
+          "optional": true
+        }
+      ],
+      "returns": "{ token?, actor?, isHandle, region, handleActor, careful } | { message, resolution, npcSave, effectsApplied }",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "throws": [
+        "NOT_FOUND",
+        "AMBIGUOUS",
+        "BAD_ARGS"
+      ],
+      "since": "0.4.0",
+      "doc": "Read-only aoe state for a token, an actor or a chat message, plain JSON, depth ≤ 4. opts.as = a user ref answers with that user's view (the tray summary and Careful Spell are GM or owner only)."
+    },
+    {
+      "path": "sweep",
+      "params": [
+        {
+          "name": "scene",
+          "type": "Scene",
+          "resolve": false,
+          "optional": true,
+          "doc": "default: canvas.scene"
+        }
+      ],
+      "returns": "Promise<{ orphansDeleted, ownershipFixed, handlesCreated, sizeLocked }>",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "Token (handle, created/deleted/updated)",
+        "Region (ownership, attachment)"
+      ],
+      "legacy": true,
+      "doc": "GM: repair one scene — delete orphan handles, size-lock old ones, give template regions shared ownership and a handle. All zeros for a player or no scene."
+    },
+    {
+      "path": "ensureHandleActor",
+      "params": [],
+      "returns": "Promise<Actor|null>",
+      "gm": false,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "Actor (Area handle, created/updated)",
+        "flags.pentaryn-aoe.handleActor"
+      ],
+      "legacy": true,
+      "doc": "The one shared 'Area handle' actor: found by flag (and repaired by a GM), else created by a GM; null for a player when there is none."
+    },
+    {
+      "path": "createHandle",
+      "params": [
+        {
+          "name": "region",
+          "type": "RegionDocument",
+          "resolve": false
+        }
+      ],
+      "returns": "Promise<TokenDocument|null>",
+      "gm": false,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "Token (handle)",
+        "flags.pentaryn-aoe.handle",
+        "flags.pentaryn-aoe.region",
+        "Region attachment"
+      ],
+      "legacy": true,
+      "doc": "Create a template region's handle token and attach the region to it; null when it is not a template, already has a handle, is attached elsewhere, or another client won."
+    },
+    {
+      "path": "resolve",
+      "params": [
+        {
+          "name": "messageOrId",
+          "type": "ChatMessage|id",
+          "resolve": false
+        },
+        {
+          "name": "opts",
+          "type": "{ regionId? }",
+          "resolve": false,
+          "optional": true,
+          "doc": "regionId: another candidate area; null = the roller's targets"
+        }
+      ],
+      "returns": "Promise<object|null>",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "flags.pentaryn-aoe.resolution",
+        "ChatMessage (NPC saves, request card)"
+      ],
+      "nullWhen": "not the active GM, not a damage message, or its activity has no save",
+      "legacy": true,
+      "doc": "Active GM: build (or rebuild) the tray on a damage message from a save activity, roll the NPC saves and post the players' request card. Returns the resolution."
+    },
+    {
+      "path": "applyRows",
+      "params": [
+        {
+          "name": "messageId",
+          "type": "string",
+          "resolve": false,
+          "doc": "the damage message's id"
+        },
+        {
+          "name": "rowIds",
+          "type": "string[]|null",
+          "resolve": false,
+          "optional": true,
+          "doc": "default: every applicable row"
+        }
+      ],
+      "returns": "Promise<object|null>",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "flags.pentaryn-aoe.resolution",
+        "Actor hp (applyDamage)",
+        "Region (instantaneous area, deleted)"
+      ],
+      "nullWhen": "not a GM, no resolution, or superseded (a warning toast)",
+      "legacy": true,
+      "doc": "GM: apply damage to the ticked, resolved, unapplied rows (safe to repeat). Returns the updated resolution."
+    },
+    {
+      "path": "rollNpcSaves",
+      "params": [
+        {
+          "name": "messageId",
+          "type": "string",
+          "resolve": false,
+          "doc": "the damage message's id"
+        },
+        {
+          "name": "opts",
+          "type": "{ rowIds?, force? }",
+          "resolve": false,
+          "optional": true
+        }
+      ],
+      "returns": "Promise<object|null>",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "flags.pentaryn-aoe.resolution",
+        "ChatMessage (save rolls)"
+      ],
+      "nullWhen": "no resolution",
+      "legacy": true,
+      "doc": "Roll (or with force re-roll) the monsters' saves for a tray. Returns the updated resolution."
+    },
+    {
+      "path": "rollForPlayer",
+      "params": [
+        {
+          "name": "messageId",
+          "type": "string",
+          "resolve": false,
+          "doc": "the damage message's id"
+        },
+        {
+          "name": "rowId",
+          "type": "string",
+          "resolve": false
+        },
+        {
+          "name": "opts",
+          "type": "{ event? }",
+          "resolve": false,
+          "optional": true
+        }
+      ],
+      "returns": "Promise<Roll[]|null>",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "ChatMessage (save roll)"
+      ],
+      "nullWhen": "no such row or actor",
+      "legacy": true,
+      "doc": "Roll a waiting player's save for them (the normal dialog), threaded under the usage card."
+    },
+    {
+      "path": "pingPlayers",
+      "params": [
+        {
+          "name": "messageId",
+          "type": "string",
+          "resolve": false,
+          "doc": "the damage message's id"
+        }
+      ],
+      "returns": "Promise<ChatMessage|Notification|null>",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "ChatMessage (whisper)"
+      ],
+      "nullWhen": "no resolution",
+      "legacy": true,
+      "doc": "Whisper the owners of rows still waiting for a save; an info toast (returned) when nobody is."
+    },
+    {
+      "path": "setRow",
+      "params": [
+        {
+          "name": "messageId",
+          "type": "string",
+          "resolve": false,
+          "doc": "the damage message's id"
+        },
+        {
+          "name": "rowId",
+          "type": "string",
+          "resolve": false
+        },
+        {
+          "name": "changes",
+          "type": "{ apply?, multiplier? }",
+          "resolve": false
+        }
+      ],
+      "returns": "Promise<object|null>",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "flags.pentaryn-aoe.resolution"
+      ],
+      "nullWhen": "no resolution",
+      "legacy": true,
+      "doc": "GM edit of one unapplied row (tick, multiplier). Returns the updated resolution."
+    },
+    {
+      "path": "selfApply",
+      "params": [
+        {
+          "name": "messageOrId",
+          "type": "ChatMessage|id",
+          "resolve": false
+        },
+        {
+          "name": "opts",
+          "type": "{ force? }",
+          "resolve": false,
+          "optional": true,
+          "doc": "force: ignore the autoApplySelf setting and the claim"
+        }
+      ],
+      "returns": "Promise<{ reason, actor, effects }|null>",
+      "gm": false,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "ActiveEffect (on the caster)",
+        "flags.pentaryn-aoe.effectsApplied",
+        "flags.pentaryn-aoe.claims"
+      ],
+      "legacy": true,
+      "doc": "Put a usage card's one effect on its caster when the card is meant for them; null when it is not, or it was already applied."
+    },
+    {
+      "path": "pendingFor",
+      "params": [
+        {
+          "name": "messageOrId",
+          "type": "ChatMessage|id",
+          "resolve": false
+        },
+        {
+          "name": "opts",
+          "type": "{ effects? }",
+          "resolve": false,
+          "optional": true,
+          "doc": "effects: the card's effects, when the caller already fetched them (-14)"
+        }
+      ],
+      "returns": "Promise<string[]>",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "Effect ids on a usage card nobody has applied yet ([] once one is applied, or for a card over an hour old)."
+    },
+    {
+      "path": "activePlacement",
+      "params": [],
+      "returns": "object|null",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "The region placement following the mouse right now (core's placement context), or null."
+    }
+  ],
+  "queries": [],
+  "settings": [
+    {
+      "key": "handleTokens",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "Part A: a small owned handle token on every spell area; drag it to move the area, delete it to delete the area."
+    },
+    {
+      "key": "removeAreaButton",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "Part A: a Remove all templates icon next to Place Template on spell cards that place an area."
+    },
+    {
+      "key": "instantCleanup",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "Part B: an instantaneous spell's area is deleted once every ticked row is applied."
+    },
+    {
+      "key": "concentrationCleanup",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "Part A: when concentration ends, that spell's areas are deleted on every scene (active GM)."
+    },
+    {
+      "key": "resolveSaves",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "Part B: a save spell's damage roll builds the GM tray, rolls monster saves and asks players for theirs."
+    },
+    {
+      "key": "autoApplyNpc",
+      "scope": "world",
+      "type": "Boolean",
+      "default": false,
+      "doc": "Part B: apply monster damage as soon as their saves are rolled, without Apply."
+    },
+    {
+      "key": "promptPlayers",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "Part B: post one request card so each player rolls their own character's save."
+    },
+    {
+      "key": "autoDamageOnHit",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "Part C: roll damage straight after an attack that hits (read by pentaryn-combat too)."
+    },
+    {
+      "key": "autoApplySelf",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "Part D: a self-cast card's one effect goes on the caster automatically."
+    },
+    {
+      "key": "highlightUnapplied",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "Part D: an Effects tray nobody has applied yet is outlined (cards under an hour old)."
+    },
+    {
+      "key": "carefulSpell",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "Part B: Careful Spell marks up to CHA mod of the caster's side as protected in the next save spell's area."
+    },
+    {
+      "key": "refundCancelledArea",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "Part F: a cancelled area placement refunds what the cast spent and removes its card."
+    },
+    {
+      "key": "playerStatus",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "Part B: the caster's own damage card shows one status line; GM-only monster saves are hidden from players."
+    },
+    {
+      "key": "untargetedSelf",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "Part D: a touch spell for one willing creature cast at nobody goes on the caster."
+    },
+    {
+      "key": "noSpellStacking",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "Part D: a spell's effect from another source replaces the same spell's effect instead of stacking."
+    },
+    {
+      "key": "aimSelfAreas",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "Part G: a Self-range cone or line keeps its point on the caster and turns toward the mouse."
+    },
+    {
+      "key": "npcSaveRollMode",
+      "scope": "world",
+      "type": "String",
+      "default": "gm",
+      "doc": "Part B: the message mode of the saves the GM's client rolls for monsters (gm, blind or public)."
+    }
+  ],
+  "events": [],
+  "hooks": [
+    {
+      "name": "preCreateRegion",
+      "label": "preCreateRegion"
+    },
+    {
+      "name": "createRegion",
+      "label": "createRegion"
+    },
+    {
+      "name": "deleteRegion",
+      "label": "deleteRegion"
+    },
+    {
+      "name": "preCreateCombatant",
+      "label": "preCreateCombatant"
+    },
+    {
+      "name": "targetToken",
+      "label": "targetToken"
+    },
+    {
+      "name": "dnd5e.renderChatMessage",
+      "label": "renderChatMessage(remove)"
+    },
+    {
+      "name": "deleteActiveEffect",
+      "label": "deleteActiveEffect"
+    },
+    {
+      "name": "dnd5e.postUseActivity",
+      "label": "postUseActivity(careful)"
+    },
+    {
+      "name": "deleteCombat",
+      "label": "deleteCombat(careful)"
+    },
+    {
+      "name": "createChatMessage",
+      "label": "createChatMessage"
+    },
+    {
+      "name": "updateChatMessage",
+      "label": "updateChatMessage"
+    },
+    {
+      "name": "dnd5e.renderChatMessage",
+      "label": "renderChatMessage(tray)"
+    },
+    {
+      "name": "dnd5e.postRollAttack",
+      "label": "postRollAttack"
+    },
+    {
+      "name": "createChatMessage",
+      "label": "createChatMessage(selfApply)"
+    },
+    {
+      "name": "dnd5e.renderChatMessage",
+      "label": "renderChatMessage(effects)"
+    },
+    {
+      "name": "preCreateActiveEffect",
+      "label": "preCreateActiveEffect(noStacking)"
+    },
+    {
+      "name": "dnd5e.postUseActivity",
+      "label": "postUseActivity(refund)"
+    },
+    {
+      "name": "dnd5e.preCreateMeasuredTemplate",
+      "label": "preCreateMeasuredTemplate(aim)"
+    },
+    {
+      "name": "canvasReady",
+      "label": "canvasReady"
+    },
+    {
+      "name": "canvasReady",
+      "label": "canvasReady(argon)"
+    }
+  ],
+  "patches": [
+    {
+      "label": "RegionLayer#placeRegions",
+      "adjustments": "aoe-self-area-aim"
+    }
+  ],
+  "flags": {
+    "writes": [
+      "flags.pentaryn-aoe.handle",
+      "flags.pentaryn-aoe.handleActor",
+      "flags.pentaryn-aoe.region",
+      "flags.pentaryn-aoe.resolution",
+      "flags.pentaryn-aoe.claims",
+      "flags.pentaryn-aoe.effectsApplied",
+      "flags.pentaryn-aoe.damageMessage",
+      "flags.pentaryn-aoe.careful",
+      "flags.pentaryn-aoe.npcSave"
+    ],
+    "reads": [
+      "flags.dnd5e.*",
+      "flags.item-piles.data.enabled"
+    ]
+  },
+  "errors": [
+    "NOT_GM",
+    "NO_GM",
+    "NOT_READY",
+    "NOT_FOUND",
+    "AMBIGUOUS",
+    "BAD_ARGS",
+    "REFUSED",
+    "CONFLICT",
+    "UNSUPPORTED",
+    "TIMEOUT",
+    "INTERNAL"
+  ]
+}

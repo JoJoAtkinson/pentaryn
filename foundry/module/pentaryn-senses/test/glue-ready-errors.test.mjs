@@ -17,7 +17,8 @@ const F = await boot({ world, ready: false });
 
 test("ready: reset fails → warned, sync still runs; sync fails → warned, sweep skipped", async t => {
   const out = captureConsole(t);
-  globalThis.Actor.implementation.updateDocuments = async () => { throw new Error("actors down"); };
+  let batches = 0;   // [declared W3-SE3] counted: the reset's batch, then the carried sync's
+  globalThis.Actor.implementation.updateDocuments = async () => { batches++; throw new Error("actors down"); };
   const mark = F.calls.length;
   F.fire("ready");
   await flush();
@@ -28,9 +29,12 @@ test("ready: reset fails → warned, sync still runs; sync fails → warned, swe
   await settle(mock);
   assert.deepEqual(out.map(l => l.slice(0, 3)), [
     ["warn", `${MODULE} | sight reset`, "Error: actors down"],
-    ["warn", `${MODULE} | ready sweep`, "Error: scene down"],
+    // [declared W3-SE3] syncAll batches every prototype into one Actor.updateDocuments (was one
+    // actor.update each), so the failing batch stub stops the carried sync at its prototypes, before
+    // the scene: was "Error: scene down"
+    ["warn", `${MODULE} | ready sweep`, "Error: actors down"],
   ]);
-  assert.equal(calls.some(c => c.op === "update" && c.documentName === "Actor"), true, "the carried sync ran (prototype first)");
+  assert.equal(batches, 2, "the carried sync ran (its prototype batch first, after the reset's)");
   assert.equal(calls.some(c => c.op === "update" && c.documentName === "Token"), false, "no Light reconcile: the sweep never ran");
   assert.equal(calls.some(c => c.op === "settings.set"), false, "the reset did not mark itself done");
 });

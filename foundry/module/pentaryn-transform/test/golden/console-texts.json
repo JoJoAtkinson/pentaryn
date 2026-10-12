@@ -1,0 +1,162 @@
+[
+  [
+    "argon.mjs",
+    "warn",
+    "cancelling Argon's target picker failed"
+  ],
+  [
+    "bodyswap.mjs",
+    "warn",
+    "body-swap animation guard skipped"
+  ],
+  [
+    "hud-panels.mjs",
+    "error",
+    "HUD composition failed"
+  ],
+  [
+    "hud-panels.mjs",
+    "warnOnce",
+    "combat multiattack read failed"
+  ],
+  [
+    "hud-panels.mjs",
+    "warn",
+    "Chalice offer skipped"
+  ],
+  [
+    "hud-panels.mjs",
+    "warn",
+    "portrait HP failed"
+  ],
+  [
+    "hud-panels.mjs",
+    "warn",
+    "portrait line failed"
+  ],
+  [
+    "settings.mjs",
+    "warn",
+    "Escape-cancels-target-picker keybinding not registered"
+  ],
+  [
+    "starry-dialog.mjs",
+    "debug",
+    "constellation dialog failed"
+  ],
+  [
+    "starry.mjs",
+    "error",
+    "starry form failed"
+  ],
+  [
+    "starry.mjs",
+    "warn",
+    "ending starry form failed"
+  ],
+  [
+    "starry.mjs",
+    "warn",
+    "ending starry form failed"
+  ],
+  [
+    "starry.mjs",
+    "warn",
+    "starry light off failed"
+  ],
+  [
+    "sweep-adapter.mjs",
+    "warn",
+    "sweep failed"
+  ],
+  [
+    "transform.mjs",
+    "error",
+    "API manifest drift — not published"
+  ],
+  [
+    "wildshape-adapter.mjs",
+    "debug",
+    "traits enrichment failed"
+  ],
+  [
+    "wildshape-adapter.mjs",
+    "error",
+    "shaping the token form failed"
+  ],
+  [
+    "wildshape-adapter.mjs",
+    "error",
+    "transform failed"
+  ],
+  [
+    "wildshape-adapter.mjs",
+    "warn",
+    "chat line failed"
+  ],
+  [
+    "wildshape-adapter.mjs",
+    "warn",
+    "ending Starry Form failed"
+  ],
+  [
+    "wildshape-adapter.mjs",
+    "warn",
+    "revert failed"
+  ],
+  [
+    "wildshape-adapter.mjs",
+    "warn",
+    "settling ${t.name} failed"
+  ],
+  [
+    "wildshape.mjs",
+    "debug",
+    "not carried into the form:"
+  ],
+  [
+    "wildshape.mjs",
+    "error",
+    "shaping the form failed"
+  ],
+  [
+    "wildshape.mjs",
+    "error",
+    "shift failed"
+  ],
+  [
+    "wildshape.mjs",
+    "warn",
+    "auto-revert failed"
+  ],
+  [
+    "wildshape.mjs",
+    "warn",
+    "change form failed"
+  ],
+  [
+    "wildshape.mjs",
+    "warn",
+    "chat line failed"
+  ],
+  [
+    "wildshape.mjs",
+    "warn",
+    "ending ${effect.name} on ${host.name} failed"
+  ],
+  [
+    "wildshape.mjs",
+    "warn",
+    "long rest after revert failed"
+  ],
+  [
+    "wildshape.mjs",
+    "warn",
+    "short rest on the form failed"
+  ],
+  [
+    "wildshape.mjs",
+    "warn",
+    "short rest on the original failed"
+  ]
+]

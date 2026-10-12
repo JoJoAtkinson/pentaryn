@@ -1,0 +1,91 @@
+{
+  "atImport": [
+    {
+      "op": "add",
+      "type": "keydown",
+      "capture": true,
+      "passive": false
+    },
+    {
+      "op": "add",
+      "type": "keydown",
+      "capture": true,
+      "passive": false
+    },
+    {
+      "op": "add",
+      "type": "keydown",
+      "capture": true,
+      "passive": false
+    },
+    {
+      "op": "add",
+      "type": "pointerover",
+      "capture": true,
+      "passive": true
+    },
+    {
+      "op": "add",
+      "type": "pointermove",
+      "capture": true,
+      "passive": true
+    },
+    {
+      "op": "add",
+      "type": "pointerdown",
+      "capture": true,
+      "passive": true
+    }
+  ],
+  "afterReady": [
+    {
+      "op": "add",
+      "type": "keydown",
+      "capture": true,
+      "passive": false
+    },
+    {
+      "op": "add",
+      "type": "keydown",
+      "capture": true,
+      "passive": false
+    },
+    {
+      "op": "add",
+      "type": "keydown",
+      "capture": true,
+      "passive": false
+    },
+    {
+      "op": "add",
+      "type": "pointerover",
+      "capture": true,
+      "passive": true
+    },
+    {
+      "op": "add",
+      "type": "pointermove",
+      "capture": true,
+      "passive": true
+    },
+    {
+      "op": "add",
+      "type": "pointerdown",
+      "capture": true,
+      "passive": true
+    }
+  ],
+  "observers": [
+    {
+      "targets": [
+        {
+          "target": "body",
+          "opts": {
+            "childList": true
+          }
+        }
+      ]
+    }
+  ],
+  "observersAtImport": 0
+}

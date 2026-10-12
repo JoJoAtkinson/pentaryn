@@ -1,0 +1,254 @@
+[
+  {
+    "label": "advantage",
+    "actor": "Rogue",
+    "turnKey": "c1:1:cb1",
+    "offers": [
+      {
+        "key": "sneak-attack",
+        "activity": "sneakDmg00000001",
+        "dice": "3d6",
+        "state": null,
+        "offer": true,
+        "auto": true,
+        "checks": [
+          {
+            "key": "advantage",
+            "ok": true
+          },
+          {
+            "key": "ally",
+            "ok": false
+          },
+          {
+            "key": "noDisadvantage",
+            "ok": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "label": "no advantage, no ally",
+    "actor": "Rogue",
+    "turnKey": "c1:1:cb1",
+    "offers": [
+      {
+        "key": "sneak-attack",
+        "activity": "sneakDmg00000001",
+        "dice": "3d6",
+        "state": null,
+        "offer": true,
+        "auto": false,
+        "checks": [
+          {
+            "key": "advantage",
+            "ok": false
+          },
+          {
+            "key": "ally",
+            "ok": false
+          },
+          {
+            "key": "noDisadvantage",
+            "ok": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "label": "an ally beside the target",
+    "actor": "Rogue",
+    "turnKey": "c1:1:cb1",
+    "offers": [
+      {
+        "key": "sneak-attack",
+        "activity": "sneakDmg00000001",
+        "dice": "3d6",
+        "state": null,
+        "offer": true,
+        "auto": true,
+        "checks": [
+          {
+            "key": "advantage",
+            "ok": false
+          },
+          {
+            "key": "ally",
+            "ok": true
+          },
+          {
+            "key": "noDisadvantage",
+            "ok": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "label": "ally, but disadvantage",
+    "actor": "Rogue",
+    "turnKey": "c1:1:cb1",
+    "offers": [
+      {
+        "key": "sneak-attack",
+        "activity": "sneakDmg00000001",
+        "dice": "3d6",
+        "state": null,
+        "offer": true,
+        "auto": false,
+        "checks": [
+          {
+            "key": "advantage",
+            "ok": false
+          },
+          {
+            "key": "ally",
+            "ok": true
+          },
+          {
+            "key": "noDisadvantage",
+            "ok": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "label": "two targets: ally unknown",
+    "actor": "Rogue",
+    "turnKey": "c1:1:cb1",
+    "offers": [
+      {
+        "key": "sneak-attack",
+        "activity": "sneakDmg00000001",
+        "dice": "3d6",
+        "state": null,
+        "offer": true,
+        "auto": false,
+        "checks": [
+          {
+            "key": "advantage",
+            "ok": false
+          },
+          {
+            "key": "ally",
+            "ok": null
+          },
+          {
+            "key": "noDisadvantage",
+            "ok": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "label": "already used this turn",
+    "actor": "Rogue",
+    "turnKey": "c1:1:cb1",
+    "offers": [
+      {
+        "key": "sneak-attack",
+        "activity": "sneakDmg00000001",
+        "dice": "3d6",
+        "state": "used",
+        "offer": false,
+        "auto": false,
+        "checks": []
+      }
+    ]
+  },
+  {
+    "label": "a fighter: no riders",
+    "actor": "Fighter",
+    "turnKey": null,
+    "offers": []
+  },
+  {
+    "label": "a barbarian, raging? no; reckless? no",
+    "actor": "Barbarian",
+    "turnKey": "c1:1:cb1",
+    "offers": [
+      {
+        "key": "frenzy",
+        "activity": "frenzyDmg0000001",
+        "dice": "2d6",
+        "state": null,
+        "offer": true,
+        "auto": false,
+        "checks": [
+          {
+            "key": "raging",
+            "ok": false
+          },
+          {
+            "key": "reckless",
+            "ok": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "label": "a slayer: Divine Strike and Colossus Slayer",
+    "actor": "Slayer",
+    "turnKey": "nocombat",
+    "offers": [
+      {
+        "key": "colossus-slayer",
+        "activity": "colossusDmg00001",
+        "dice": "1d8",
+        "state": null,
+        "offer": true,
+        "auto": false,
+        "checks": []
+      },
+      {
+        "key": "divine-strike",
+        "activity": "divineDmg0000001",
+        "dice": "1d8",
+        "state": null,
+        "offer": true,
+        "auto": true,
+        "checks": []
+      }
+    ]
+  },
+  {
+    "label": "not an attack message's activity",
+    "actor": null,
+    "turnKey": null,
+    "offers": []
+  },
+  {
+    "label": "activity as a uuid string",
+    "actor": "Rogue",
+    "turnKey": "c1:1:cb1",
+    "offers": [
+      {
+        "key": "sneak-attack",
+        "activity": "sneakDmg00000001",
+        "dice": "3d6",
+        "state": null,
+        "offer": true,
+        "auto": true,
+        "checks": [
+          {
+            "key": "advantage",
+            "ok": true
+          },
+          {
+            "key": "ally",
+            "ok": null
+          },
+          {
+            "key": "noDisadvantage",
+            "ok": true
+          }
+        ]
+      }
+    ]
+  }
+]

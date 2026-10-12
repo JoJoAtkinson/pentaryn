@@ -3,7 +3,10 @@
  * Fixtures: test/table.mjs (`node test/table.mjs`, also run from test/run.mjs).
  */
 
-export const MOD = "pentaryn-riders";
+import { MODULE } from "./riders-core.mjs";
+
+/** The one module id lives in riders-core (core → core); `MOD` is kept for old imports. */
+export { MODULE, MODULE as MOD };
 
 /** The flag a summoned token carries: the uuid of the concentration effect that keeps it. */
 export const SUMMON_FLAG = "concentration";
@@ -30,6 +33,18 @@ export function concentrationEffectFor(effects, itemId, status = "concentrating"
 }
 
 /**
+ * Is this effect a concentration effect (it carries the concentrating status)? The same Set-or-array
+ * reading as concentrationEffectFor. The summon cleanup returns early for every other deleted
+ * effect (Dodge, Dash, Reckless…) before it scans any scene (combat-riders-23).
+ * @param {{ statuses?: Set<string>|string[] }} effect
+ * @param {string} [status="concentrating"]
+ */
+export function isConcentration(effect, status = "concentrating") {
+  const statuses = effect?.statuses instanceof Set ? effect.statuses : new Set(effect?.statuses ?? []);
+  return statuses.has(status);
+}
+
+/**
  * Ids of the tokens (of one scene) that a deleted concentration effect was keeping on the map.
  * @param {Iterable<{ id: string, flags?: object }>} tokens
  * @param {string} effectUuid
@@ -39,7 +54,7 @@ export function summonTokenIds(tokens, effectUuid) {
   if (!effectUuid) return [];
   const ids = [];
   for (const t of tokens ?? []) {
-    if (t?.flags?.[MOD]?.[SUMMON_FLAG] === effectUuid) ids.push(t.id);
+    if (t?.flags?.[MODULE]?.[SUMMON_FLAG] === effectUuid) ids.push(t.id);
   }
   return ids;
 }
@@ -100,6 +115,23 @@ export function restoreSlotScaling({ targets = [], scaling = {}, slots = {} } = 
     if (s && Number(s.max) > 0 && Number(s.value) < Number(s.max)) return level - base;
   }
   return null;
+}
+
+/**
+ * An actor's spell slots by level, `{ [level]: { value, max } }`, from `system.spells`: spell1 …
+ * spell9 by key, numbers coerced (a missing or junk number reads 0). A Pact slot is its own
+ * consumption type and is left out. One builder for cast-flow's restore-slot default and its
+ * Arcane Recovery picker (combat-riders-26 ext.).
+ * @param {Record<string, {value?: *, max?: *}>} spells
+ * @returns {Record<number, {value: number, max: number}>}
+ */
+export function slotsFrom(spells) {
+  const slots = {};
+  for (let level = 1; level <= 9; level++) {
+    const s = spells?.[`spell${level}`];
+    if (s) slots[level] = { value: Number(s.value) || 0, max: Number(s.max) || 0 };
+  }
+  return slots;
 }
 
 /* ── usability Area 6 re-run (wizard) ───────────────────────────────────── */

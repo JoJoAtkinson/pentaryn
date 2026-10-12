@@ -1,0 +1,158 @@
+[
+  {
+    "kind": "on",
+    "name": "preUpdateToken"
+  },
+  {
+    "kind": "on",
+    "name": "dnd5e.revertOriginalForm"
+  },
+  {
+    "kind": "on",
+    "name": "dnd5e.preUseActivity"
+  },
+  {
+    "kind": "on",
+    "name": "dnd5e.postUseActivity"
+  },
+  {
+    "kind": "on",
+    "name": "dnd5e.transformActor"
+  },
+  {
+    "kind": "on",
+    "name": "updateActor"
+  },
+  {
+    "kind": "on",
+    "name": "createActiveEffect"
+  },
+  {
+    "kind": "on",
+    "name": "updateActiveEffect"
+  },
+  {
+    "kind": "on",
+    "name": "deleteActiveEffect"
+  },
+  {
+    "kind": "on",
+    "name": "updateWorldTime"
+  },
+  {
+    "kind": "on",
+    "name": "dnd5e.longRest"
+  },
+  {
+    "kind": "on",
+    "name": "dnd5e.preShortRest"
+  },
+  {
+    "kind": "on",
+    "name": "dnd5e.restCompleted"
+  },
+  {
+    "kind": "on",
+    "name": "updateToken"
+  },
+  {
+    "kind": "on",
+    "name": "deleteToken"
+  },
+  {
+    "kind": "on",
+    "name": "updateActor"
+  },
+  {
+    "kind": "once",
+    "name": "ready"
+  },
+  {
+    "kind": "once",
+    "name": "ready"
+  },
+  {
+    "kind": "on",
+    "name": "dnd5e.preUseActivity"
+  },
+  {
+    "kind": "on",
+    "name": "dnd5e.postUseActivity"
+  },
+  {
+    "kind": "on",
+    "name": "createActiveEffect"
+  },
+  {
+    "kind": "on",
+    "name": "updateActiveEffect"
+  },
+  {
+    "kind": "on",
+    "name": "deleteActiveEffect"
+  },
+  {
+    "kind": "on",
+    "name": "updateWorldTime"
+  },
+  {
+    "kind": "on",
+    "name": "dnd5e.restCompleted"
+  },
+  {
+    "kind": "on",
+    "name": "updateToken"
+  },
+  {
+    "kind": "on",
+    "name": "deleteToken"
+  },
+  {
+    "kind": "once",
+    "name": "init"
+  },
+  {
+    "kind": "on",
+    "name": "renderActionPanelArgonComponent"
+  },
+  {
+    "kind": "on",
+    "name": "renderItemButtonArgonComponent"
+  },
+  {
+    "kind": "on",
+    "name": "renderPortraitPanelArgonComponent"
+  },
+  {
+    "kind": "on",
+    "name": "updateWorldTime"
+  },
+  {
+    "kind": "on",
+    "name": "renderEffectArgonComponent"
+  },
+  {
+    "kind": "on",
+    "name": "updateItem"
+  },
+  {
+    "kind": "on",
+    "name": "createActiveEffect"
+  },
+  {
+    "kind": "on",
+    "name": "updateActiveEffect"
+  },
+  {
+    "kind": "on",
+    "name": "deleteActiveEffect"
+  },
+  {
+    "kind": "on",
+    "name": "dnd5e.postUseActivity"
+  },
+  {
+    "kind": "on",
+    "name": "deleteActiveEffect"
+  }
+]

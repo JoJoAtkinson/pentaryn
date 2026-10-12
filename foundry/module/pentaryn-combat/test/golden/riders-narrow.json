@@ -1,0 +1,49 @@
+{
+  "ours": [
+    {
+      "parts": [
+        "2d6"
+      ],
+      "data": {
+        "scale": {
+          "barbarian": {
+            "rage-damage": 2
+          }
+        }
+      },
+      "options": {
+        "type": "slashing",
+        "types": [
+          "slashing"
+        ]
+      }
+    },
+    {
+      "parts": "x",
+      "options": {
+        "type": "slashing",
+        "types": [
+          "slashing"
+        ]
+      }
+    }
+  ],
+  "plain": [
+    {
+      "parts": [
+        "(@scale.barbarian.rage-damage)d6"
+      ],
+      "data": {}
+    }
+  ],
+  "noType": [
+    {
+      "parts": [
+        "(@x)d6"
+      ],
+      "data": {
+        "x": "a"
+      }
+    }
+  ]
+}

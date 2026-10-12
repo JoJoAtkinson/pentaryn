@@ -1,0 +1,64 @@
+[
+  {
+    "op": "updateEmbedded",
+    "actor": "taloActor0000001",
+    "type": "Item",
+    "updates": [
+      {
+        "_id": "clsDruid0000001",
+        "system.hd.spent": 4
+      }
+    ],
+    "options": {}
+  },
+  {
+    "op": "update",
+    "documentName": "Actor",
+    "uuid": "Actor.taloActor0000001",
+    "changes": {
+      "system.attributes.exhaustion": 2,
+      "system.attributes.inspiration": true
+    }
+  },
+  {
+    "op": "endConcentration",
+    "actor": "taloActor0000001",
+    "effect": "concEffect000001"
+  },
+  {
+    "op": "delete",
+    "documentName": "ActiveEffect",
+    "uuid": "Actor.taloActor0000001.ActiveEffect.concEffect000001"
+  },
+  {
+    "op": "delete",
+    "documentName": "ActiveEffect",
+    "uuid": "Actor.taloActor0000001.ActiveEffect.blessEffect00001"
+  },
+  {
+    "op": "createEmbedded",
+    "actor": "taloActor0000001",
+    "type": "ActiveEffect",
+    "data": [
+      {
+        "documentName": "ActiveEffect",
+        "id": "stunEffect000001",
+        "name": "Stunned",
+        "system": {
+          "a": 1
+        },
+        "flags": {},
+        "ownership": {
+          "default": 0
+        },
+        "_id": "stunEffect000001",
+        "statuses": [
+          "stunned"
+        ]
+      }
+    ],
+    "options": {
+      "keepId": true
+    }
+  }
+]

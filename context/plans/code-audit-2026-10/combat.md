@@ -129,6 +129,8 @@ There is no 'Extending' section and no completeness test that would catch a miss
 
 **Status (28ccc87):** open (re-anchored; body unchanged, hud.mjs:141-158 at the snapshot)
 
+**Status (wave 4, `migrate/wave-4`, 2026-10-11):** skipped — a per-task memo of fullAttackState (memoTick) went red on two frozen hud.test pins that mutate the actor and read again in the same task (stale value); reverted, not committed. A cache keyed on the actor's data version is the open design (wave-4 report, Open for Joe W4-C2).
+
 **Where:** `foundry/module/pentaryn-combat/hud.mjs:166–183`
 
 **Anchor:** `function fullAttackState(actor) {`
@@ -159,6 +161,8 @@ New test/glue.mjs importing a test/foundry-stubs.mjs (game.settings.get throws s
 
 **Status (28ccc87):** open (re-anchored; lines unchanged; the re-run makes it hotter)
 
+**Status (wave 4, `migrate/wave-4`, 2026-10-11):** done `c69a5e22` (+ test fix `1992dadb`): renderOffer checks permission and the stamp before offersFor; rerenderCards computes one key per actor.
+
 **Where:** `foundry/module/pentaryn-combat/riders.mjs:167–169`
 
 **Anchor:** `  const { actor, offers } = offersFor(message);`
@@ -188,6 +192,8 @@ New test/glue.mjs with stubs. Fake attack message {type:'attack', getFlag(MOD,'t
 **Category:** Performance gains · **Impact:** low · **Effort:** S · **WAIT** (re-anchored to 28ccc87 on 2026-10-11; pentaryn-combat is still in wait.json)
 
 **Status (28ccc87):** open (re-anchored; lines were ~240-250); extended with the new always-on pointerover listener
+
+**Status (wave 4, `migrate/wave-4`, 2026-10-11):** done `9448deea` [declared D-c4].
 
 **Where:** `foundry/module/pentaryn-combat/hud.mjs:265–275`
 
@@ -221,6 +227,8 @@ test/glue.mjs with a stub document (add/removeEventListener recorders, body.clas
 
 **Status (28ccc87):** open (re-anchored; file grew 884 → 970 lines and gained two concerns)
 
+**Status (wave 4, `migrate/wave-4`, 2026-10-11):** done `3a29eb4f` (hud/{tooltips,picker,bars}.mjs, hud/buttons-ui.mjs; `e723fb44` hud/pips-bar.mjs).
+
 **Where:** `foundry/module/pentaryn-combat/hud.mjs:1–970`
 
 **Anchor:** `// Pentaryn Combat — the Argon Combat HUD.`
@@ -250,6 +258,8 @@ Add test/hooks-manifest.mjs on test/foundry-stubs.mjs: Hooks.on/once/callAll pus
 **Category:** Maintainability gains · **Impact:** medium · **Effort:** M · **WAIT** (re-anchored to 28ccc87 on 2026-10-11; pentaryn-combat is still in wait.json)
 
 **Status (28ccc87):** open (re-anchored; file now committed in 17275c9/4f9224f and grew 607 → 841 lines, four new concerns)
+
+**Status (wave 4, `migrate/wave-4`, 2026-10-11):** done `8a29ed7f` (turnflow/*.mjs + patches.mjs).
 
 **Where:** `foundry/module/pentaryn-combat/turnflow.mjs:1–841`
 
@@ -281,6 +291,8 @@ The hook-manifest test (combat-riders-6) must list identical hook names in ident
 
 **Status (28ccc87):** open (re-anchored; core grew 1025 → 1240 lines, 68 → 81 exports, three more area sections)
 
+**Status (wave 4, `migrate/wave-4`, 2026-10-11):** done `1514cd22` (core/*.mjs behind the barrel; `87366619` added core/timing.mjs).
+
 **Where:** `foundry/module/pentaryn-combat/combat-core.mjs:894`
 
 **Anchor:** `/* ── usability run, Area 2 (fixer pass 2) ─────────────────────────────────── */`
@@ -311,6 +323,8 @@ Before splitting add to test/run.mjs `check('export surface', Object.keys(core).
 
 **Status (28ccc87):** open (re-anchored; unchanged apart from line numbers)
 
+**Status (wave 4, `migrate/wave-4`, 2026-10-11):** done: dead exports `796b1bc1`, CSS rule `ea181b22`.
+
 **Where:** `foundry/module/pentaryn-combat/combat.mjs:279`
 
 **Anchor:** `export { attackActivityOf };`
@@ -339,6 +353,8 @@ Source-grep test (test/dead.mjs): no file in the module imports from "./combat.m
 
 **Status (28ccc87):** open (re-anchored; one more listener on the shared hook, one more tooltip-hygiene copy)
 
+**Status (wave 4, `migrate/wave-4`, 2026-10-11):** phase 1 (the shared argon-kit, adopted by combat) done `87be8cd4`, `3a29eb4f`; the per-module Argon hook map (context/foundry/argon.md) is returned to the integrator.
+
 **Where:** `foundry/module/pentaryn-combat/turnflow.mjs:135–166`
 
 **Anchor:** `function wrapReactionSlot(btn) {`
@@ -366,6 +382,8 @@ Extend the hook manifest (combat-riders-6) in scripts/tests (node) to import com
 **Category:** Defragmentation · **Impact:** medium · **Effort:** S · **WAIT** (re-anchored to 28ccc87 on 2026-10-11; pentaryn-combat is still in wait.json)
 
 **Status (28ccc87):** open (re-anchored; extended: the re-run added three more copies)
+
+**Status (wave 4, `migrate/wave-4`, 2026-10-11):** done: T() wrappers `e45b8484`; one mainPanel / releaseTargets / settlePips / tooltip helpers in argon.mjs `8a29ed7f`, `3a29eb4f`; dialog-adapter.mjs (rollDialogOf, topRollWindow, openRollResolvers, isOrphanCard) and damageLabel `7d386862`.
 
 **Where:** `foundry/module/pentaryn-combat/turnflow.mjs:28–30`
 
@@ -397,6 +415,8 @@ test/glue.mjs: damageLabel with {labels:{damage:[{label:'1d8 + 3 Slashing'}]}}, 
 
 **Status (28ccc87):** open (re-anchored; header unchanged; riders.mjs is now 501 lines, over the 500 feature cap)
 
+**Status (wave 4, `migrate/wave-4`, 2026-10-11):** step 1 (rename to turn-riders.mjs) `91dd98db`; step 2 (the 'Which riders module?' table) in the README `b936d9f6`; melee.md copy returned to the integrator. Steps 3 (the shared `insertCardNote`) and 4 (`scripts/tests/test_rider_tables.py`, the double-apply guard) are **open**: both are outside the combat lane. Step 4 is drafted for the integrator in the wave-4 report; wave-4 report Open for Joe W4-C8.
+
 **Where:** `foundry/module/pentaryn-combat/riders.mjs:1–16`
 
 **Anchor:** ` * Once-per-turn riders — Sneak Attack, Frenzy, Colossus Slayer, Divine Strike — offered on the`
@@ -422,6 +442,8 @@ New scripts/tests/test_rider_tables.py running `node --input-type=module -e` tha
 **Category:** Defragmentation · **Impact:** medium · **Effort:** S · **WAIT** (re-anchored to 28ccc87 on 2026-10-11; pentaryn-combat is still in wait.json)
 
 **Status (28ccc87):** open (re-anchored; one more raw read found)
+
+**Status (wave 4, `migrate/wave-4`, 2026-10-11):** done `7d386862` (rememberedWeapon / rememberWeapon / multiattackFor / planFor; api.plan = planFor).
 
 **Where:** `foundry/module/pentaryn-combat/combat.mjs:218–224`
 
@@ -451,6 +473,8 @@ test/glue.mjs with stubs: Fighter (Extra Attack, Longsword+Dagger), Rogue (Nick 
 
 **Status (28ccc87):** open (re-anchored; the three double-call sites are unchanged)
 
+**Status (wave 4, `migrate/wave-4`, 2026-10-11):** done `3a29eb4f` (kit settlePips) — call sites keep 'twice' (behaviour-neutral), the patch still settles Argon's own calls.
+
 **Where:** `foundry/module/pentaryn-combat/hud.mjs:488–489`
 
 **Anchor:** `  panel.updateActionUse();`
@@ -476,6 +500,8 @@ New test/argon-pips.mjs with a node fake `class ActionPanel` reproducing Argon's
 **Category:** Defragmentation · **Impact:** low · **Effort:** S · **WAIT** (re-anchored to 28ccc87 on 2026-10-11; pentaryn-combat is still in wait.json)
 
 **Status (28ccc87):** open (re-anchored; one more call site)
+
+**Status (wave 4, `migrate/wave-4`, 2026-10-11):** done `7d386862` (shapes.isWeaponAttack; seams.test pins both legacy predicates on the 60-case table).
 
 **Where:** `foundry/module/pentaryn-combat/combat.mjs:48–52`
 
@@ -507,6 +533,8 @@ test/glue.mjs: copy both bodies verbatim as oldA/oldB. Truth table over type in 
 
 **Status (28ccc87):** open (re-anchored; extended: 19 → 27 empty catches, 6 → 8 `.catch(() => …)` sites, one site fixed)
 
+**Status (wave 4, `migrate/wave-4`, 2026-10-11):** done `e45b8484` (kit log; empty catches debug-gated).
+
 **Where:** `foundry/module/pentaryn-combat/offhand.mjs:78`
 
 **Anchor:** `    setTimeout(() => seedWeaponSets(actor).catch(() => null), 500);`
@@ -534,6 +562,8 @@ test/log.mjs (node, injected fake console): with CONFIG.debug unset, swallow('x'
 **Category:** Logging / auditability gains · **Impact:** medium · **Effort:** S · **WAIT** (re-anchored to 28ccc87 on 2026-10-11; pentaryn-combat is still in wait.json)
 
 **Status (28ccc87):** open (re-anchored; more silent decision points)
+
+**Status (wave 4, `migrate/wave-4`, 2026-10-11):** done: trace member `d54ad23d`; decision points `1ba641d2`.
 
 **Where:** `foundry/module/pentaryn-combat/combat.mjs:55–60`
 
@@ -565,6 +595,8 @@ test/trace.mjs: flag unset -> trace() leaves traceLog() []; flag set, 250 pushes
 
 **Status (28ccc87):** open (re-anchored; extended: one more hand patch, an accessor pair)
 
+**Status (wave 4, `migrate/wave-4`, 2026-10-11):** done `8a29ed7f` (wrapMethod / defineAccessor, recorded with adjustments ids; describe().patches).
+
 **Where:** `foundry/module/pentaryn-combat/turnflow.mjs:493–563`
 
 **Anchor:** `Hooks.once("init", () => {`
@@ -595,6 +627,8 @@ test/patch.mjs, pure node: class P { f(a){return a+1} }; wrapMethod(P.prototype,
 
 **Status (28ccc87):** open (re-anchored; body byte-identical to the snapshot; the surge gap re-verified at 28ccc87)
 
+**Status (wave 4, `migrate/wave-4`, 2026-10-11):** move `7d386862`; bug half [declared] `f709a285`.
+
 **Where:** `foundry/module/pentaryn-combat/sequence.mjs:421–435`
 
 **Anchor:** `export function fullAttackPlan(actor, { weaponId = null, turn = null, inCombat = false, multiattack = null, count = 1, pick = null } = {}) {`
@@ -623,6 +657,8 @@ Add to test/run.mjs. Record actual outputs by running the current code first, th
 
 **Status (28ccc87):** open (re-anchored; extended: about a dozen more unguarded registrations)
 
+**Status (wave 4, `migrate/wave-4`, 2026-10-11):** done `0fea9208` [declared D-c1].
+
 **Where:** `foundry/module/pentaryn-combat/hud.mjs:812–826`
 
 **Anchor:** `Hooks.on("updateActor", (actor, changes) => {`
@@ -648,6 +684,8 @@ test/hooks.mjs with a stub Hooks: on('x','lbl',()=>false) stores a listener that
 **Category:** Hardening · **Impact:** low · **Effort:** S · **WAIT** (re-anchored to 28ccc87 on 2026-10-11; pentaryn-combat is still in wait.json)
 
 **Status (28ccc87):** open (re-anchored; unchanged)
+
+**Status (wave 4, `migrate/wave-4`, 2026-10-11):** done `3fc1643c`.
 
 **Where:** `foundry/module/pentaryn-combat/shapes.mjs:208`
 
@@ -676,6 +714,8 @@ Add to test/run.mjs: pruneOlder(new Map([['a',1000],['b',9000]]),10000,4000) lea
 **Category:** Hardening · **Impact:** low · **Effort:** S · **WAIT** (re-anchored to 28ccc87 on 2026-10-11; pentaryn-combat is still in wait.json)
 
 **Status (28ccc87):** open (re-anchored; extended: the re-run's Undone branch adds two more unescaped insertions, and the Undo markup changed)
+
+**Status (wave 4, `migrate/wave-4`, 2026-10-11):** done `de84b8a5` [declared D-c3].
 
 **Where:** `foundry/module/pentaryn-combat/riders.mjs:325–345`
 
@@ -709,6 +749,8 @@ In test/run.mjs with esc = s => String(s).replace(/[&<>"']/g, c => `&#${c.charCo
 
 **Status (28ccc87):** open (re-anchored; extended: 5 → 7 events)
 
+**Status (wave 4, `migrate/wave-4`, 2026-10-11):** done `cac1b85b` [declared B2] (HOOKS rows, legacy names until pentaryn-combat 0.4.0).
+
 **Where:** `foundry/module/pentaryn-combat/combat.mjs:89–90`
 
 **Anchor:** `  if (kind === "offhand") Hooks.callAll("pentarynCombat.offhand", actor, { bySequence: !!tagged });`
@@ -738,6 +780,8 @@ test/events.mjs (node source scan): read every *.mjs in the module dir; collect 
 **Category:** Extendability · **Impact:** medium · **Effort:** S · **WAIT** (re-anchored to 28ccc87 on 2026-10-11; pentaryn-combat is still in wait.json)
 
 **Status (28ccc87):** open (re-anchored; recipe corrected: the snapshot's key-family claim did not hold)
+
+**Status (wave 4, `migrate/wave-4`, 2026-10-11):** done: literal key tables `e45b8484`, completeness test `1514cd22`; README Extending `b936d9f6`.
 
 **Where:** `foundry/module/pentaryn-combat/settings.mjs:50–62`
 
@@ -769,6 +813,8 @@ test/i18n-complete.mjs (node; reads ../lang/en.json and imports combat-core.mjs 
 
 **Status (28ccc87):** open (re-anchored; extended: followUpsNow now tags `via`, and there is more per-actor state to report)
 
+**Status (wave 4, `migrate/wave-4`, 2026-10-11):** done `d54ad23d` (inspect, followUpsFor seam `7c3dbf90`).
+
 **Where:** `foundry/module/pentaryn-combat/hud.mjs:551–583`
 
 **Anchor:** `function followUpsNow(actor, bonusPanel) {`
@@ -799,6 +845,8 @@ test/glue.mjs with Fighter/Rogue/Monk fakes. Characterise first: copy the old fo
 
 **Status (28ccc87):** open (re-anchored; unchanged)
 
+**Status (wave 4, `migrate/wave-4`, 2026-10-11):** combat half done `26cdb801` [declared D-c2].
+
 **Where:** `foundry/module/pentaryn-combat/combat.mjs:215–247`
 
 **Anchor:** `const api = {`
@@ -824,6 +872,8 @@ test/glue.mjs with stubs (class Actor {} so instanceof works; game.actors.get/ge
 **Category:** LLM interface · **Impact:** high · **Effort:** M · **WAIT** (re-anchored to 28ccc87 on 2026-10-11; pentaryn-combat is still in wait.json)
 
 **Status (28ccc87):** open (re-anchored; 30 settings now)
+
+**Status (wave 4, `migrate/wave-4`, 2026-10-11):** settings half `33faf80b`; describe/settings members `d54ad23d`; the module.json flagScope half is the Wave 7 batch.
 
 **Where:** `foundry/module/pentaryn-combat/settings.mjs:12–48`
 
@@ -855,6 +905,8 @@ test/api-manifest.mjs: buildApi(stubs); assert METHODS.map(m=>m.name).sort() dee
 
 **Status (28ccc87):** open (re-anchored; partly addressed by the re-run's README edits, the drift items remain)
 
+**Status (wave 4, `migrate/wave-4`, 2026-10-11):** README part done `b936d9f6`; melee.md:21 and module.json drift returned to the integrator (the `description` sentence is in the wave-4 report's "Integrator — combat" list, with the Wave 7 module.json batch).
+
 **Where:** `foundry/module/pentaryn-combat/README.md:158–166`
 
 **Anchor:** `## Files`
@@ -880,6 +932,8 @@ Docs only. Add test/docs.mjs wired into test/run.mjs: parse README for `game.pen
 **Category:** Documentation / skills · **Impact:** medium · **Effort:** S · **WAIT** (re-anchored to 28ccc87 on 2026-10-11; pentaryn-combat is still in wait.json)
 
 **Status (28ccc87):** open (re-anchored; partly changed: turnflow is now a named import, the load-order constraint is unchanged)
+
+**Status (wave 4, `migrate/wave-4`, 2026-10-11):** done: explicit load order in both entries `91dd98db`, `3a29eb4f`; README Files `b936d9f6`.
 
 **Where:** `foundry/module/pentaryn-combat/hud.mjs:22–24`
 
@@ -911,6 +965,8 @@ Findings the usability re-run introduced (new code with the same kind of problem
 
 **Status (28ccc87):** new — introduced by the usability re-run (17275c9).
 
+**Status (wave 4, `migrate/wave-4`, 2026-10-11):** move done `7d386862` (core.areaPlacementSkipped, shapes.isAoeHandle); reading aoe's own refund decision stays open — pentaryn-aoe publishes no refund event or member yet.
+
 **Where:** `foundry/module/pentaryn-combat/combat.mjs:262–265`
 
 **Anchor:** `    // An area spell whose placement was cancelled was not cast (pentaryn-aoe refunds it): no pip, no Action.`
@@ -937,6 +993,8 @@ Core: areaPlacementSkipped over wanted ∈ {true,false} × placed ∈ {0,1} × o
 
 **Status (28ccc87):** new — most of these timers came with the usability re-run.
 
+**Status (wave 4, `migrate/wave-4`, 2026-10-11):** done `87366619` (core DELAYS, values unchanged).
+
 **Where:** `foundry/module/pentaryn-combat/turnflow.mjs:223–229`
 
 **Anchor:** `  for (const ms of plan.recheck) setTimeout(() => {`
@@ -962,6 +1020,8 @@ Core: `Object.isFrozen(DELAYS)`; `DELAYS.tidyAfterSequence > DELAYS.tidyLook`; `
 **Category:** Performance gains · **Impact:** low · **Effort:** S · **WAIT** (added at the re-anchor to 28ccc87 on 2026-10-11)
 
 **Status (28ccc87):** new — introduced by the usability re-run (17275c9, 4f9224f).
+
+**Status (wave 4, `migrate/wave-4`, 2026-10-11):** done `06755b88` [declared]. Review note: the orphan sweep still makes one awaited write per actor in its loop, which is §5.9.4's shape, and C59 does not see it behind `dropCombatFlags`. Kept on purpose; wave-4 report Open for Joe W4-C7 (also seedAll).
 
 **Where:** `foundry/module/pentaryn-combat/turnflow.mjs:261–285`
 

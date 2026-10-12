@@ -1,0 +1,124 @@
+[
+  {
+    "input": [
+      {
+        "active": false,
+        "fullAttack": true,
+        "multiattack": true,
+        "ma": {
+          "source": "mmMulti",
+          "total": 2
+        }
+      }
+    ],
+    "out": null
+  },
+  {
+    "input": [
+      {
+        "active": true,
+        "fullAttack": false,
+        "multiattack": true,
+        "ma": {
+          "source": "mmMulti",
+          "total": 2
+        }
+      }
+    ],
+    "out": null
+  },
+  {
+    "input": [
+      {
+        "active": true,
+        "fullAttack": true,
+        "multiattack": false,
+        "ma": {
+          "source": "mmMulti",
+          "total": 2
+        }
+      }
+    ],
+    "out": null
+  },
+  {
+    "input": [
+      {
+        "active": true,
+        "fullAttack": true,
+        "multiattack": true,
+        "ma": null
+      }
+    ],
+    "out": null
+  },
+  {
+    "input": [
+      {
+        "active": true,
+        "fullAttack": true,
+        "multiattack": true,
+        "ma": {
+          "source": "flag",
+          "total": 3
+        }
+      }
+    ],
+    "out": null
+  },
+  {
+    "input": [
+      {
+        "active": true,
+        "fullAttack": true,
+        "multiattack": true,
+        "ma": {
+          "source": "mmMulti",
+          "total": 1
+        }
+      }
+    ],
+    "out": null
+  },
+  {
+    "input": [
+      {
+        "active": true,
+        "fullAttack": true,
+        "multiattack": true,
+        "ma": {
+          "source": "mmMulti"
+        }
+      }
+    ],
+    "out": null
+  },
+  {
+    "input": [
+      {
+        "active": true,
+        "fullAttack": true,
+        "multiattack": true,
+        "ma": {
+          "source": "gone",
+          "total": 2
+        }
+      }
+    ],
+    "out": null
+  },
+  {
+    "input": [
+      {
+        "active": true,
+        "fullAttack": true,
+        "multiattack": true,
+        "ma": {
+          "source": "mmMulti",
+          "total": 2
+        }
+      }
+    ],
+    "out": "mmMulti"
+  }
+]

@@ -1,0 +1,26 @@
+[
+  {
+    "window": {
+      "title": "Starry Form — choose a constellation"
+    },
+    "content": "<div class=\"ptf-starry-pick\"><p><strong>Archer.</strong> Now and as a Bonus Action on later turns: a luminous arrow at one creature within 60 ft — +9 to hit, 2d8 + 5 Radiant.</p><p><strong>Chalice.</strong> When you cast a spell with a slot that restores HP, you or a creature within 30 ft can regain 2d8 + 5.</p><p><strong>Dragon.</strong> On Intelligence and Wisdom checks and Concentration saves, treat a d20 roll of 9 or lower as a 10.</p></div>",
+    "buttons": [
+      {
+        "action": "archer",
+        "label": "Archer",
+        "default": true
+      },
+      {
+        "action": "chalice",
+        "label": "Chalice",
+        "default": false
+      },
+      {
+        "action": "dragon",
+        "label": "Dragon",
+        "default": false
+      }
+    ],
+    "rejectClose": false
+  }
+]

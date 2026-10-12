@@ -1,0 +1,195 @@
+[
+  {
+    "input": [
+      {
+        "system": {
+          "details": {
+            "cr": 1,
+            "type": {
+              "value": "beast"
+            }
+          },
+          "traits": {
+            "size": "lg"
+          },
+          "attributes": {
+            "ac": {
+              "value": 14
+            },
+            "movement": {
+              "walk": 50,
+              "units": "ft"
+            },
+            "senses": {
+              "ranges": {
+                "darkvision": 60
+              }
+            }
+          }
+        },
+        "items": [
+          {
+            "name": "Bite",
+            "type": "weapon",
+            "system": {
+              "activities": {}
+            }
+          },
+          {
+            "name": "Claw",
+            "type": "weapon",
+            "labels": {
+              "toHit": "+4",
+              "damages": [
+                {
+                  "formula": "1d6"
+                }
+              ]
+            },
+            "system": {
+              "activities": {}
+            }
+          },
+          {
+            "name": "Breath",
+            "type": "feat",
+            "system": {
+              "type": {
+                "value": "monster"
+              },
+              "activities": {}
+            }
+          },
+          {
+            "name": "Pack Tactics",
+            "type": "feat",
+            "system": {
+              "type": {
+                "value": "monster"
+              }
+            }
+          },
+          {
+            "name": "Multiattack",
+            "type": "feat",
+            "system": {
+              "type": {
+                "value": "monster"
+              },
+              "activities": {}
+            }
+          },
+          {
+            "name": "Odd",
+            "type": "loot",
+            "system": {}
+          }
+        ]
+      }
+    ],
+    "out": {
+      "input": {
+        "cr": 1,
+        "sizeLabel": "Large",
+        "typeLabel": "Beast",
+        "ac": 14,
+        "movement": {
+          "walk": 50,
+          "units": "ft"
+        },
+        "units": "ft",
+        "senses": {
+          "darkvision": 60
+        },
+        "attacks": [
+          {
+            "name": "Bite",
+            "toHit": "+5",
+            "damage": "2d6 + 3"
+          },
+          {
+            "name": "Claw",
+            "toHit": "+4",
+            "damage": "1d6"
+          },
+          {
+            "name": "Breath",
+            "toHit": "",
+            "damage": ""
+          }
+        ],
+        "traits": [
+          "Pack Tactics"
+        ]
+      },
+      "summary": {
+        "subtitle": "CR 1 Large Beast",
+        "details": [
+          {
+            "label": "AC",
+            "value": "14"
+          },
+          {
+            "label": "Speed",
+            "value": "50 ft"
+          },
+          {
+            "label": "Senses",
+            "value": "Darkvision 60 ft"
+          },
+          {
+            "label": "Bite",
+            "value": "+5, 2d6 + 3"
+          },
+          {
+            "label": "Claw",
+            "value": "+4, 1d6"
+          },
+          {
+            "label": "Breath",
+            "value": "—"
+          }
+        ],
+        "traits": [
+          "Pack Tactics"
+        ]
+      }
+    }
+  },
+  {
+    "input": [
+      {
+        "system": {
+          "details": {
+            "type": {
+              "value": "ooze"
+            }
+          },
+          "attributes": {}
+        },
+        "items": []
+      }
+    ],
+    "out": {
+      "input": {
+        "sizeLabel": "",
+        "typeLabel": "ooze",
+        "movement": {},
+        "units": "ft",
+        "senses": {},
+        "attacks": [],
+        "traits": []
+      },
+      "summary": {
+        "subtitle": "CR — Ooze",
+        "details": [
+          {
+            "label": "AC",
+            "value": "—"
+          }
+        ],
+        "traits": []
+      }
+    }
+  }
+]

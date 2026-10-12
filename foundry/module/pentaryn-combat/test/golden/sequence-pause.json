@@ -1,0 +1,202 @@
+{
+  "pausedHtml": "\n    <div class=\"pc-head\">\n      <strong>Full Attack</strong>\n      <span class=\"pc-count\">Swing 1 of 2</span>\n      <span class=\"pc-what\">Longsword → Goblin</span>\n      <span class=\"pc-keys\">Esc = Stop</span>\n    </div>\n    <div class=\"pc-paused\">Paused — the roll was closed. Resume, pick a new target or another weapon, or Stop (Esc). Swings you don't take stay on your Action pips.</div>\n    <div class=\"pc-row\">\n      <button type=\"button\" data-pc=\"resume\" class=\"pc-primary\">Resume</button>\n                  <button type=\"button\" data-pc=\"retarget\">New target</button>\n      <button type=\"button\" data-pc=\"adv\" data-value=\"advantage\" class data-tooltip=\"For the next swing only. The roll dialog's own buttons work too.\">Adv</button>\n      <button type=\"button\" data-pc=\"adv\" data-value=\"disadvantage\" class data-tooltip=\"For the next swing only. The roll dialog's own buttons work too.\">Dis</button>\n      <label class=\"pc-quick\" data-tooltip=\"After the first swing, roll the rest without the dialog (same Normal / Advantage / Disadvantage). Manual dice still ask for each roll.\"><input type=\"checkbox\" data-pc=\"quick\"> Quick</label>\n      <button type=\"button\" data-pc=\"stop\" class=\"pc-stop\" data-tooltip=\"End the Full Attack here. An open roll window closes without rolling. Swings not taken stay available.\">Stop</button>\n    </div>\n    <div class=\"pc-weapons\"><button type=\"button\" data-pc=\"swap\" data-id=\"longsword0000001\" data-tooltip=\"Use Longsword for the remaining swings\"><img src=\"icons/weapons/longsword0000001.webp\" alt><span class=\"pc-name\">Longsword</span><span class=\"pc-stats\">+5 · 1d8 + 3 Slashing</span></button><button type=\"button\" data-pc=\"swap\" data-id=\"dagger0000000001\" data-tooltip=\"Use Dagger for the remaining swings\"><img src=\"icons/weapons/dagger0000000001.webp\" alt><span class=\"pc-name\">Dagger</span><span class=\"pc-stats\">+5 · 1d8 + 3 Slashing</span></button><button type=\"button\" data-pc=\"swap\" data-id=\"shortbow00000001\" data-tooltip=\"Use Shortbow for the remaining swings\"><img src=\"icons/weapons/shortbow00000001.webp\" alt><span class=\"pc-name\">Shortbow</span><span class=\"pc-stats\">+5 · 1d8 + 3 Slashing</span></button><button type=\"button\" data-pc=\"swap\" data-id=\"handaxe000000001\" data-tooltip=\"Use Handaxe for the remaining swings\"><img src=\"icons/weapons/sword.webp\" alt><span class=\"pc-name\">Handaxe</span><span class=\"pc-stats\">+5 · 1d8 + 3 Slashing</span></button></div>",
+  "calls": [
+    {
+      "op": "activity.use",
+      "activity": "Actor.fighter000000001.Item.longsword0000001.Activity.longsword0000001",
+      "usage": {
+        "subsequentActions": false
+      },
+      "dialog": {
+        "configure": false
+      },
+      "message": {
+        "create": true
+      }
+    },
+    {
+      "op": "Hooks.callAll",
+      "name": "dnd5e.postUseActivity"
+    },
+    {
+      "op": "Hooks.callAll",
+      "name": "pentarynCombat.usage"
+    },
+    {
+      "op": "activity.rollAttack",
+      "activity": "Actor.fighter000000001.Item.longsword0000001.Activity.longsword0000001",
+      "config": {},
+      "event": false,
+      "dialog": {},
+      "message": {
+        "data": {
+          "system": {
+            "origin": "msg0000000000003"
+          },
+          "flags": {
+            "pentaryn-combat": {
+              "swing": {
+                "i": 1,
+                "n": 2,
+                "kind": "main"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "op": "Hooks.call",
+      "name": "dnd5e.preRollAttackV2"
+    },
+    {
+      "op": "activity.rollAttack",
+      "activity": "Actor.fighter000000001.Item.longsword0000001.Activity.longsword0000001",
+      "config": {},
+      "event": false,
+      "dialog": {},
+      "message": {
+        "data": {
+          "system": {
+            "origin": "msg0000000000003"
+          },
+          "flags": {
+            "pentaryn-combat": {
+              "swing": {
+                "i": 1,
+                "n": 2,
+                "kind": "main"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "op": "Hooks.call",
+      "name": "dnd5e.preRollAttackV2"
+    },
+    {
+      "op": "Hooks.callAll",
+      "name": "dnd5e.postRollAttack"
+    },
+    {
+      "op": "activity.rollAttack",
+      "activity": "Actor.fighter000000001.Item.longsword0000001.Activity.longsword0000001",
+      "config": {},
+      "event": false,
+      "dialog": {
+        "configure": true
+      },
+      "message": {
+        "data": {
+          "system": {
+            "origin": "msg0000000000003"
+          },
+          "flags": {
+            "pentaryn-combat": {
+              "swing": {
+                "i": 2,
+                "n": 2,
+                "kind": "main"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "op": "Hooks.call",
+      "name": "dnd5e.preRollAttackV2"
+    },
+    {
+      "op": "Hooks.callAll",
+      "name": "dnd5e.postRollAttack"
+    },
+    {
+      "op": "update",
+      "documentName": "Actor",
+      "uuid": "Actor.fighter000000001",
+      "changes": {
+        "flags.pentaryn-combat.turn": {
+          "<replace>": {
+            "key": "c1:1:cb1",
+            "attackAction": {
+              "weapons": [
+                "longsword0000001"
+              ],
+              "swings": 1,
+              "crit": false,
+              "critWeapon": null,
+              "kill": false,
+              "killWeapon": null
+            },
+            "riders": {},
+            "followUps": [],
+            "nick": false,
+            "bonusUsed": false,
+            "otherAction": false,
+            "otherActions": 0,
+            "surges": 0,
+            "quickened": false
+          }
+        }
+      }
+    },
+    {
+      "op": "update",
+      "documentName": "Actor",
+      "uuid": "Actor.fighter000000001",
+      "changes": {
+        "flags.pentaryn-combat.last.weapon": "longsword0000001"
+      }
+    },
+    {
+      "op": "Hooks.callAll",
+      "name": "pentarynCombat.sequenceEnd"
+    },
+    {
+      "op": "update",
+      "documentName": "Actor",
+      "uuid": "Actor.fighter000000001",
+      "changes": {
+        "flags.pentaryn-combat.turn": {
+          "<replace>": {
+            "key": "c1:1:cb1",
+            "attackAction": {
+              "weapons": [
+                "longsword0000001"
+              ],
+              "swings": 2,
+              "crit": true,
+              "critWeapon": "longsword0000001",
+              "kill": false,
+              "killWeapon": null
+            },
+            "riders": {},
+            "followUps": [],
+            "nick": false,
+            "bonusUsed": false,
+            "otherAction": false,
+            "otherActions": 0,
+            "surges": 0,
+            "quickened": false
+          }
+        }
+      }
+    },
+    {
+      "op": "chat.updateMessage",
+      "id": "msg0000000000002"
+    },
+    {
+      "op": "chat.updateMessage",
+      "id": "msg0000000000004"
+    },
+    {
+      "op": "chat.updateMessage",
+      "id": "msg0000000000005"
+    }
+  ],
+  "console": []
+}

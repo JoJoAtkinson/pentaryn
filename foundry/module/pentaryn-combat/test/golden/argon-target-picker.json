@@ -1,0 +1,79 @@
+[
+  {
+    "label": "picked",
+    "statusAfterPick": "ended",
+    "calls": [
+      {
+        "op": "canvas.setTargets",
+        "ids": [],
+        "opts": {
+          "mode": "replace"
+        }
+      },
+      {
+        "op": "argon.preLeftClick",
+        "id": "pentaryn-combat-probe",
+        "targets": 1,
+        "ranges": {
+          "normal": 5,
+          "long": null
+        },
+        "event": "mouseup"
+      }
+    ]
+  },
+  {
+    "label": "cancelled (right-click): targets restored, still paused",
+    "statusAfterPick": "paused",
+    "calls": [
+      {
+        "op": "canvas.setTargets",
+        "ids": [],
+        "opts": {
+          "mode": "replace"
+        }
+      },
+      {
+        "op": "argon.preLeftClick",
+        "id": "pentaryn-combat-probe",
+        "targets": 1,
+        "ranges": {
+          "normal": 5,
+          "long": null
+        },
+        "event": "mouseup"
+      },
+      {
+        "op": "canvas.setTargets",
+        "ids": [
+          "tokgoblin0000000"
+        ],
+        "opts": {
+          "mode": "replace"
+        }
+      }
+    ]
+  },
+  {
+    "label": "Argon's picker setting off: the fallback",
+    "statusAfterPick": "ended",
+    "calls": [
+      {
+        "op": "notify",
+        "level": "info",
+        "message": "Target a creature for the next swing (Stop cancels)."
+      }
+    ]
+  },
+  {
+    "label": "no HUD token: the fallback",
+    "statusAfterPick": "ended",
+    "calls": [
+      {
+        "op": "notify",
+        "level": "info",
+        "message": "Target a creature for the next swing (Stop cancels)."
+      }
+    ]
+  }
+]

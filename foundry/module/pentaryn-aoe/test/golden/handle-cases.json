@@ -1,0 +1,78 @@
+{
+  "rectangle": {
+    "returned": "regionRect000001",
+    "calls": [
+      {
+        "x": 275,
+        "y": 275,
+        "elevation": 0,
+        "level": null,
+        "hidden": false,
+        "name": "Fireball (Player)"
+      },
+      {
+        "attachment": {
+          "token": "regionRect000001"
+        },
+        "flags.pentaryn-aoe.handle": "regionRect000001"
+      }
+    ]
+  },
+  "v533": {
+    "returned": "regionOld0000001",
+    "calls": [
+      {
+        "x": -25,
+        "y": -25,
+        "elevation": 5,
+        "level": null,
+        "hidden": false,
+        "name": "Fireball (Gamemaster)"
+      },
+      {
+        "attachment": {
+          "token": "regionOld0000001"
+        },
+        "flags.pentaryn-aoe.handle": "regionOld0000001"
+      }
+    ]
+  },
+  "hidden": {
+    "returned": "regionHidden0001",
+    "calls": [
+      {
+        "x": 475,
+        "y": 475,
+        "elevation": 0,
+        "level": null,
+        "hidden": true,
+        "name": "Fireball (Gamemaster)"
+      },
+      {
+        "attachment": {
+          "token": "regionHidden0001"
+        },
+        "flags.pentaryn-aoe.handle": "regionHidden0001"
+      }
+    ]
+  },
+  "unnamed": {
+    "returned": "regionAnon000001",
+    "calls": [
+      {
+        "x": 475,
+        "y": 475,
+        "elevation": 0,
+        "level": null,
+        "hidden": false,
+        "name": "Template (Gamemaster)"
+      },
+      {
+        "attachment": {
+          "token": "regionAnon000001"
+        },
+        "flags.pentaryn-aoe.handle": "regionAnon000001"
+      }
+    ]
+  }
+}

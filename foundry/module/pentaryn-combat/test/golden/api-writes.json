@@ -1,0 +1,30 @@
+[
+  [
+    "update",
+    "Actor.fighter000000001"
+  ],
+  [
+    "update",
+    "User.gmUser0000000001"
+  ],
+  [
+    "update",
+    "User.gmUser0000000001"
+  ],
+  [
+    "update",
+    "User.gmUser0000000001"
+  ],
+  [
+    "update",
+    "User.gmUser0000000001"
+  ],
+  [
+    "createEmbedded",
+    "Actor.barbarian0000001"
+  ],
+  [
+    "deleteEmbedded",
+    "Actor.barbarian0000001"
+  ]
+]

@@ -1,0 +1,195 @@
+[
+  {
+    "label": "two strikes",
+    "out": {
+      "rolled": 2,
+      "status": "done"
+    },
+    "calls": [
+      {
+        "op": "activity.use",
+        "activity": "Actor.monk200000000000.Item.monksFocus000001.Activity.flurryAct0000001",
+        "usage": {
+          "subsequentActions": false
+        },
+        "dialog": {
+          "configure": false
+        },
+        "message": {
+          "create": true
+        }
+      },
+      {
+        "op": "Hooks.callAll",
+        "name": "dnd5e.postUseActivity"
+      },
+      {
+        "op": "update",
+        "documentName": "Actor",
+        "uuid": "Actor.monk200000000000",
+        "changes": {
+          "flags.pentaryn-combat.turn": {
+            "<replace>": {
+              "key": "nocombat",
+              "attackAction": {
+                "weapons": [],
+                "swings": 0,
+                "crit": false,
+                "critWeapon": null,
+                "kill": false,
+                "killWeapon": null
+              },
+              "riders": {},
+              "followUps": [
+                "flurry"
+              ],
+              "nick": false,
+              "bonusUsed": true,
+              "otherAction": false,
+              "otherActions": 0,
+              "surges": 0,
+              "quickened": false
+            }
+          }
+        }
+      },
+      {
+        "op": "Hooks.callAll",
+        "name": "pentarynCombat.bonusSpent"
+      },
+      {
+        "op": "activity.rollAttack",
+        "activity": "Actor.monk200000000000.Item.unarmedStrike001.Activity.unarmedStrike001",
+        "config": {},
+        "event": false,
+        "dialog": {},
+        "message": {
+          "data": {
+            "system": {
+              "origin": "msg0000000000076"
+            },
+            "flags": {
+              "pentaryn-combat": {
+                "swing": {
+                  "i": 1,
+                  "n": 2,
+                  "kind": "bonus"
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "op": "Hooks.call",
+        "name": "dnd5e.preRollAttackV2"
+      },
+      {
+        "op": "Hooks.callAll",
+        "name": "dnd5e.postRollAttack"
+      },
+      {
+        "op": "activity.rollAttack",
+        "activity": "Actor.monk200000000000.Item.unarmedStrike001.Activity.unarmedStrike001",
+        "config": {},
+        "event": false,
+        "dialog": {
+          "configure": true
+        },
+        "message": {
+          "data": {
+            "system": {
+              "origin": "msg0000000000076"
+            },
+            "flags": {
+              "pentaryn-combat": {
+                "swing": {
+                  "i": 2,
+                  "n": 2,
+                  "kind": "bonus"
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "op": "Hooks.call",
+        "name": "dnd5e.preRollAttackV2"
+      },
+      {
+        "op": "Hooks.callAll",
+        "name": "dnd5e.postRollAttack"
+      },
+      {
+        "op": "Hooks.callAll",
+        "name": "pentarynCombat.sequenceEnd"
+      },
+      {
+        "op": "chat.updateMessage",
+        "id": "msg0000000000071"
+      },
+      {
+        "op": "chat.updateMessage",
+        "id": "msg0000000000077"
+      },
+      {
+        "op": "chat.updateMessage",
+        "id": "msg0000000000078"
+      },
+      {
+        "op": "Hooks.callAll",
+        "name": "pentarynCombat.bonusSpent"
+      },
+      {
+        "op": "Hooks.callAll",
+        "name": "pentarynCombat.bonusSpent"
+      }
+    ],
+    "turn": {
+      "key": "nocombat",
+      "attackAction": {
+        "weapons": [],
+        "swings": 0,
+        "crit": false,
+        "critWeapon": null,
+        "kill": false,
+        "killWeapon": null
+      },
+      "riders": {},
+      "followUps": [
+        "flurry"
+      ],
+      "nick": false,
+      "bonusUsed": true,
+      "otherAction": false,
+      "otherActions": 0,
+      "surges": 0,
+      "quickened": false
+    }
+  },
+  {
+    "label": "no Focus left",
+    "out": {
+      "rolled": 0,
+      "status": "empty"
+    },
+    "notes": [
+      "No Focus Points left for Flurry of Blows."
+    ]
+  },
+  {
+    "label": "no Flurry activity (a Fighter)",
+    "out": {
+      "rolled": 0,
+      "status": "missing"
+    }
+  },
+  {
+    "label": "Flurry's card cancelled",
+    "out": {
+      "rolled": 0,
+      "status": "cancelled"
+    }
+  }
+]

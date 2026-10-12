@@ -1,5 +1,11 @@
 /* Pentaryn Combat — Full Attack, follow-ups and the swing strip on the Argon HUD. */
 
+/* The compact Argon tooltip rules (.ech-tooltip.pentaryn-tt, -list) that hud/buttons-ui.mjs TT asks for:
+   the kit's shared stylesheet (D7: lib/argon-tooltip.css, byte-identical in combat, transform and
+   riders), imported here so today's module.json loads it and combat no longer relies on
+   pentaryn-transform's copy. With both modules on, the same rules load twice; nothing changes. */
+@import "../lib/argon-tooltip.css";
+
 /* Full Attack: the first button on the Action bar, marked so it reads as "the" button. */
 .extended-combat-hud .action-element.pentaryn-combat-full {
   box-shadow: inset 0 0 0 2px var(--ech-mainAction-base-background, #b5562e), 0 0 10px #f2d27a66;
@@ -39,11 +45,6 @@
 .extended-combat-hud .pentaryn-combat-command.pentaryn-combat-active {
   opacity: 1;
   box-shadow: inset 0 0 0 2px #c0392b, 0 0 10px #c0392b88;
-}
-
-/* Kept for the no-Argon-render fallback. !important: Argon resets style.display on render. */
-.extended-combat-hud .pentaryn-combat-hidden {
-  display: none !important;
 }
 
 /* PT1-6: our tooltips' subtitle wraps instead of losing both ends. Argon draws it as a one-line

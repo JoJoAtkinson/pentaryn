@@ -1,0 +1,141 @@
+[
+  {
+    "input": [
+      {
+        "items": [
+          {
+            "id": "a",
+            "system": {
+              "activities": [
+                {
+                  "_id": "pm",
+                  "type": "transform",
+                  "transform": {
+                    "preset": "polymorph"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "id": "b",
+            "system": {
+              "activities": {
+                "ws": {
+                  "_id": "ws",
+                  "type": "transform",
+                  "transform": {
+                    "preset": "wildshape"
+                  },
+                  "availableProfiles": [
+                    {
+                      "_id": "p1",
+                      "name": "Dire Wolf",
+                      "uuid": "A.wolf"
+                    },
+                    {
+                      "_id": "p2",
+                      "name": "",
+                      "uuid": "A.ape"
+                    },
+                    {
+                      "_id": "p3",
+                      "name": "",
+                      "uuid": "A.gone"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "out": "ws"
+  },
+  {
+    "input": [
+      {
+        "items": [
+          {
+            "id": "a",
+            "system": {
+              "activities": [
+                {
+                  "_id": "ws",
+                  "type": "transform",
+                  "transform": {
+                    "preset": "wildshape"
+                  },
+                  "availableProfiles": [
+                    {
+                      "_id": "p1",
+                      "name": "Dire Wolf",
+                      "uuid": "A.wolf"
+                    },
+                    {
+                      "_id": "p2",
+                      "name": "",
+                      "uuid": "A.ape"
+                    },
+                    {
+                      "_id": "p3",
+                      "name": "",
+                      "uuid": "A.gone"
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "id": "b",
+            "system": {
+              "activities": [
+                {
+                  "_id": "ws2",
+                  "type": "transform",
+                  "transform": {
+                    "preset": "wildshape"
+                  },
+                  "availableProfiles": [
+                    {
+                      "_id": "p1",
+                      "name": "Dire Wolf",
+                      "uuid": "A.wolf"
+                    },
+                    {
+                      "_id": "p2",
+                      "name": "",
+                      "uuid": "A.ape"
+                    },
+                    {
+                      "_id": "p3",
+                      "name": "",
+                      "uuid": "A.gone"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ],
+    "out": "ws"
+  },
+  {
+    "input": [
+      {
+        "items": []
+      }
+    ],
+    "out": null
+  },
+  {
+    "input": [
+      null
+    ],
+    "out": null
+  }
+]

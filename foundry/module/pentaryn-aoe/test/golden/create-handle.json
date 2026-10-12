@@ -1,0 +1,71 @@
+[
+  {
+    "op": "update",
+    "documentName": "Region",
+    "uuid": "Scene.CreateScene00001.Region.regionCircle0001",
+    "changes": {
+      "ownership.default": 3
+    }
+  },
+  {
+    "op": "createEmbedded",
+    "parent": "Scene.CreateScene00001",
+    "documentName": "Token",
+    "data": [
+      {
+        "name": "Fireball (Gamemaster)",
+        "width": 0.5,
+        "height": 0.5,
+        "texture": {
+          "src": "icons/svg/target.svg"
+        },
+        "displayName": 30,
+        "displayBars": 0,
+        "disposition": -2,
+        "actorLink": false,
+        "lockRotation": true,
+        "movementAction": "displace",
+        "sight": {
+          "enabled": false
+        },
+        "light": {
+          "dim": 0,
+          "bright": 0
+        },
+        "ring": {
+          "enabled": false
+        },
+        "flags": {
+          "pentaryn-aoe": {
+            "handle": true,
+            "region": "regionCircle0001"
+          },
+          "dnd5e": {
+            "lockSize": true
+          }
+        },
+        "_id": "regionCircle0001",
+        "actorId": "pentarynAoeHndl0",
+        "x": 1475,
+        "y": 1175,
+        "elevation": 10,
+        "level": "lvlGround0000001",
+        "hidden": false
+      }
+    ],
+    "options": {
+      "keepId": true
+    }
+  },
+  {
+    "op": "update",
+    "documentName": "Region",
+    "uuid": "Scene.CreateScene00001.Region.regionCircle0001",
+    "changes": {
+      "attachment": {
+        "token": "regionCircle0001"
+      },
+      "flags.pentaryn-aoe.handle": "regionCircle0001"
+    }
+  }
+]

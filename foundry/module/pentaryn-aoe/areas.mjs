@@ -17,26 +17,27 @@
  * its caster) gets no handle: re-attaching it to a handle would leave it behind when the caster moves.
  */
 
-import { MODULE, aoeFlags, centreOf, regionFromSpell, regionOfActivity, isTemplateRegion, attachedToOther, handleVertical, stillListing, isHandleTarget } from "./core.mjs";
+import { MODULE, aoeFlags, centreOf, isTemplateRegion, attachedToOther, handleVertical, stillListing, isHandle } from "./core.mjs";
+import { handleActor, handleFor, removeArea, spellAreas } from "./scene-adapter.mjs";
+import { activityOf } from "./messages-adapter.mjs";
 import { setting } from "./settings.mjs";
-import { on, guard } from "./hooks.mjs";
+import { makeLog } from "./lib/log.mjs";
+import { FEATURE_ROWS } from "./api-manifest.mjs";
 
 const OWNER = 3;
 const HANDLE_ICON = "icons/svg/target.svg";
+/** The handle actor's fixed id (16 alphanumerics): two sessions creating it at once make one actor. */
+const HANDLE_ACTOR_ID = "pentarynAoeHndl0";
 
-export { isTemplateRegion };
-export const isHandle = t => !!aoeFlags(t).handle;
+/** A DOM listener wrapped like a hook (the kit's pass-through guard), once installed. */
+const listenerGuard = (label, fn) => (hooks ? hooks.guard(label, fn) : fn);
+
 /** A template region dnd5e attached to a token that is not our handle (an emanation on its caster). */
 const attachedElsewhere = region => attachedToOther(region, id => region?.parent?.tokens?.get(id));
-const t = (key, data) => (data ? game.i18n.format(`PENTARYN_AOE.${key}`, data) : game.i18n.localize(`PENTARYN_AOE.${key}`));
 
 /* -------------------------------------------- */
 /*  Handle actor                                */
 /* -------------------------------------------- */
-
-export function handleActor() {
-  return game.actors.find(a => aoeFlags(a).handleActor) ?? null;
-}
 
 function handlePrototype() {
   return {
@@ -82,7 +83,23 @@ export async function ensureHandleActor() {
   }
   if (existing || !game.user.isGM) return existing;
   const folder = game.folders.find(f => f.type === "Actor" && f.name === "Scene Props");
-  return Actor.implementation.create({
+  // -7: a fixed id with keepId. Two GM sessions at ready (the bridge tab and a GM browser tab) both
+  // get here on a world without the actor. v14 does not refuse a world document whose id exists
+  // (only embedded ones, as createHandle's tokens): the later create replaces the record with the
+  // same data and clients see createActor twice. One actor results; no listener cares (npc).
+  try {
+    return await Actor.implementation.create({
+      _id: HANDLE_ACTOR_ID,
+      ...handleActorData(folder)
+    }, { keepId: true });
+  } catch (err) {
+    if (/already exists/i.test(err?.message ?? "")) return handleActor();   // fallback: a server that refuses
+    throw err;
+  }
+}
+
+function handleActorData(folder) {
+  return {
     name: "Area handle",
     type: "npc",
     img: HANDLE_ICON,
@@ -91,23 +108,17 @@ export async function ensureHandleActor() {
     system: { attributes: { hp: { value: 0, max: 0 }, movement: { hover: true } }, traits: { size: "tiny" } },
     prototypeToken: handlePrototype(),
     flags: { [MODULE]: { handleActor: true } }
-  });
+  };
 }
 
 /* -------------------------------------------- */
 /*  Handle tokens                               */
 /* -------------------------------------------- */
 
-export function handleFor(region) {
-  const scene = region?.parent;
-  if (!scene) return null;
-  const id = region.attachment?.token?.id ?? region._source?.attachment?.token;
-  const attached = id ? scene.tokens.get(id) : null;
-  if (attached && isHandle(attached)) return attached;
-  return scene.tokens.find(tk => aoeFlags(tk).region === region.id) ?? null;
-}
-
 const pending = new Set();   // region ids whose handle is being created on this client
+/** The registry install() was given: readyAreas registers its canvasReady sweep through it too. */
+let hooks = null;
+let log = makeLog(MODULE);   // the entry's ctx.log once installed
 
 /**
  * The spell's name for the handle label. dnd5e 6: flags.dnd5e.item is the item and
@@ -182,36 +193,8 @@ export async function createHandle(region) {
 }
 
 /* -------------------------------------------- */
-/*  Finding and removing areas                  */
+/*  Removing handles, repairing a scene         */
 /* -------------------------------------------- */
-
-/** Template regions created by an activity, on one scene (default: every scene). */
-export function areasFor(activityUuid, scene = null) {
-  if (!activityUuid) return [];
-  const scenes = scene ? [scene] : game.scenes.contents;
-  return scenes.flatMap(s => s.regions.filter(r => isTemplateRegion(r) && regionOfActivity(r.flags?.dnd5e, activityUuid)));
-}
-
-/** Delete regions (and through the cascade their handles). Accepts ids on a scene, or documents. */
-export async function removeArea(regions, scene = canvas.scene) {
-  const docs = [regions].flat().map(r => (typeof r === "string" ? scene?.regions.get(r) : r)).filter(Boolean)
-    .filter(isTemplateRegion);
-  const byScene = new Map();
-  for (const r of docs) {
-    if (!r.canUserModify(game.user, "delete")) continue;
-    const list = byScene.get(r.parent) ?? [];
-    list.push(r.id);
-    byScene.set(r.parent, list);
-  }
-  let n = 0;
-  for (const [s, ids] of byScene) {
-    const live = ids.filter(id => s.regions.has(id));
-    if (!live.length) continue;
-    await s.deleteEmbeddedDocuments("Region", live);
-    n += live.length;
-  }
-  return n;
-}
 
 async function deleteHandlesOf(region) {
   const scene = region.parent;
@@ -249,8 +232,14 @@ export async function sweep(scene = canvas.scene) {
     await scene.updateEmbeddedDocuments("Token", unlocked);
     out.sizeLocked = unlocked.length;
   }
+  // One batched write for every template region still owned by its author alone (§5.9.1, C59).
+  const unshared = scene.regions.filter(r => isTemplateRegion(r) && r.ownership.default !== OWNER)
+    .map(r => ({ _id: r.id, "ownership.default": OWNER }));
+  if (unshared.length) {
+    await scene.updateEmbeddedDocuments("Region", unshared);
+    out.ownershipFixed = unshared.length;
+  }
   for (const r of scene.regions.filter(isTemplateRegion)) {
-    if (r.ownership.default !== OWNER) { await r.update({ "ownership.default": OWNER }); out.ownershipFixed++; }
     if (setting("handleTokens") && !attachedElsewhere(r) && !handleFor(r) && r.shapes.length === 1) {
       if (await createHandle(r)) out.handlesCreated++;
     }
@@ -263,17 +252,6 @@ export async function sweep(scene = canvas.scene) {
 /* -------------------------------------------- */
 
 /**
- * Template regions placed by a spell on one scene (default: every scene). Matched by the spell
- * item, so every activity of that spell is covered; the activity uuid is the fallback.
- */
-export function spellAreas({ itemUuid = null, activityUuid = null } = {}, scene = null) {
-  if (!itemUuid && !activityUuid) return [];
-  const scenes = scene ? [scene] : game.scenes.contents;
-  return scenes.flatMap(s => s.regions.filter(r => isTemplateRegion(r)
-    && regionFromSpell(r.flags?.dnd5e, { itemUuid, activityUuid })));
-}
-
-/**
  * The icon sits right after dnd5e's Place Template icon in the usage card's action row
  * (section.icon-row, card-buttons.hbs), so placing and clearing are side by side. It clears that
  * spell's templates on the scene being viewed. A card with no visible actions gets the row built
@@ -284,10 +262,10 @@ function decorateCard(message, html) {
   const activityUuid = message.system?.activity?.uuid ?? null;
   if (!activityUuid || html.querySelector("[data-pentaryn-aoe-action]")) return;
   const place = html.querySelector('[data-action="placeTemplate"]');
-  const activity = message.getAssociatedActivity?.() ?? fromUuidSync(activityUuid, { strict: false });
+  const activity = activityOf(message);
   if (!place && !activity?.target?.template?.type) return;     // only cards that place an area
   const itemUuid = message.system?.item?.uuid ?? activity?.item?.uuid ?? null;
-  const label = t("RemoveAllTemplates");
+  const label = _loc("PENTARYN_AOE.RemoveAllTemplates");
   const li = document.createElement("li");
   const btn = document.createElement("button");
   btn.type = "button";
@@ -297,21 +275,22 @@ function decorateCard(message, html) {
   btn.setAttribute("aria-label", label);
   btn.innerHTML = `<i class="fa-solid fa-eraser" inert></i>`;
   li.append(btn);
-  btn.addEventListener("click", async ev => {
+  // -9: a rejected removal is logged with the module prefix, not an unattributed rejection.
+  btn.addEventListener("click", listenerGuard("remove all templates", async ev => {
     ev.preventDefault();
     ev.stopPropagation();
     const scene = canvas.scene;
     // No viewed scene → nothing; spellAreas(…, null) would mean every scene.
     const regions = scene ? spellAreas({ itemUuid, activityUuid }, scene) : [];
-    if (!regions.length) return ui.notifications.info(t("NoArea"));
+    if (!regions.length) return ui.notifications.info(_loc("PENTARYN_AOE.NoArea"));
     btn.disabled = true;
     try {
       const n = await removeArea(regions, scene);
-      if (!n) ui.notifications.warn(t("CannotRemove"));
+      if (!n) ui.notifications.warn(_loc("PENTARYN_AOE.CannotRemove"));
     } finally {
       btn.disabled = false;
     }
-  });
+  }));
   const placeLi = place?.closest("li");
   if (placeLi) return placeLi.after(li);
   actionRow(html)?.append(li);
@@ -341,14 +320,16 @@ function actionRow(html) {
 /*  Hook wiring                                 */
 /* -------------------------------------------- */
 
-export function installAreas() {
+export function install(reg, ctx) {
+  hooks = reg;
+  log = ctx.log;
   // Ownership on the creating client, before the document exists.
-  on("preCreateRegion", guard("preCreateRegion", (doc, data) => {
+  reg.on("preCreateRegion", reg.guardSwallowAsync("preCreateRegion", (doc, data) => {
     if (!isTemplateRegion(data)) return;
     doc.updateSource({ "ownership.default": OWNER });
-  }));
+  }), { guard: false, label: "preCreateRegion" });
 
-  on("createRegion", guard("createRegion", async (region, options, userId) => {
+  reg.on("createRegion", reg.guardSwallowAsync("createRegion", async (region, options, userId) => {
     if (!isTemplateRegion(region)) return;
     const gm = game.users.activeGM?.isSelf;
     if (gm && region.ownership.default !== OWNER) await region.update({ "ownership.default": OWNER });
@@ -358,41 +339,46 @@ export function installAreas() {
       // Backstop for a creator whose client has no module (or no handle actor): wait, then repair.
       setTimeout(() => {
         const live = region.parent?.regions.get(region.id);
-        if (live && !handleFor(live)) createHandle(live).catch(err => console.error("pentaryn-aoe | backstop handle", err));
+        if (live && !handleFor(live)) createHandle(live).catch(err => log.error("backstop handle", err));
       }, 2500);
     }
-  }));
+  }), { guard: false, label: "createRegion" });
 
   // Region deleted another way → its handle goes too. The deleting client acts at once; the GM
   // repeats it shortly after in case that client couldn't.
-  on("deleteRegion", guard("deleteRegion", async (region, options, userId) => {
+  reg.on("deleteRegion", reg.guardSwallowAsync("deleteRegion", async (region, options, userId) => {
     if (!isTemplateRegion(region)) return;
     if (userId === game.user.id) await deleteHandlesOf(region);
-    else if (game.users.activeGM?.isSelf) setTimeout(() => deleteHandlesOf(region).catch(() => {}), 1500);
-  }));
+    else if (game.users.activeGM?.isSelf) {
+      // -9: the handle is often gone already (the deleting client got there): only another error is news.
+      setTimeout(() => deleteHandlesOf(region).catch(err => (/does not exist/i.test(err?.message ?? "") ? null : log.warn("backstop handle delete", err))), 1500);
+    }
+  }), { guard: false, label: "deleteRegion" });
 
   // Handles are never combatants and never stay targeted.
-  on("preCreateCombatant", (combatant, data) => {
+  reg.on("preCreateCombatant", (combatant, data) => {
     const tk = combatant.token ?? combatant.parent?.scene?.tokens?.get(data?.tokenId);
     if (tk && isHandle(tk)) return false;
-  });
-  on("targetToken", guard("targetToken", (user, token, targeted) => {
+  }, { guard: false, label: "preCreateCombatant" });
+  reg.on("targetToken", reg.guardSwallowAsync("targetToken", (user, token, targeted) => {
     if (targeted && user === game.user && isHandle(token.document)) token.setTarget(false, { releaseOthers: false });
-  }));
+  }), { guard: false, label: "targetToken" });
 
-  on("dnd5e.renderChatMessage", guard("renderChatMessage(remove)", decorateCard));
+  reg.on("dnd5e.renderChatMessage", reg.guardSwallowAsync("renderChatMessage(remove)", decorateCard), { guard: false, label: "renderChatMessage(remove)" });
 
   // Concentration ends → that spell's areas go, on every scene.
-  on("deleteActiveEffect", guard("deleteActiveEffect", async (effect, options, userId) => {
+  reg.on("deleteActiveEffect", reg.guardSwallowAsync("deleteActiveEffect", async (effect, options, userId) => {
     if (!game.users.activeGM?.isSelf || !setting("concentrationCleanup")) return;
     if (!effect.statuses?.has?.(CONFIG.specialStatusEffects.CONCENTRATING ?? "concentrating")) return;
     const itemUuid = concentrationItemUuid(effect);
     if (!itemUuid) return;
     for (const s of game.scenes) {
-      const ids = s.regions.filter(r => isTemplateRegion(r) && regionFromSpell(r.flags?.dnd5e, { itemUuid })).map(r => r.id);
+      const ids = spellAreas({ itemUuid }, s).map(r => r.id);
       if (ids.length) await s.deleteEmbeddedDocuments("Region", ids);
     }
-  }));
+  }), { guard: false, label: "deleteActiveEffect" });
+
+  return { rows: FEATURE_ROWS.areas, impl: { sweep, ensureHandleActor, createHandle } };
 }
 
 /**
@@ -416,25 +402,13 @@ export async function readyAreas({ sweepOnReady = true } = {}) {
   await ensureHandleActor();
   if (sweepOnReady) {
     await sweep(canvas.scene);
-    on("canvasReady", guard("canvasReady", c => game.users.activeGM?.isSelf && sweep(c.scene)));
+    hooks?.on("canvasReady", hooks.guardSwallowAsync("canvasReady", c => game.users.activeGM?.isSelf && sweep(c.scene)), { guard: false, label: "canvasReady" });
   }
 }
 
-/**
- * Argon never binds to an area handle. Dragging a handle controls it, Argon bound its HUD to it
- * (the handle actor: a 0/0 HP skull bar) and the caster had to click their own token again
- * (Area 4, D10). The HUD now stays on whatever it showed. Argon's controlToken hook calls
- * `this.bind(token)`, so an instance wrap of `bind` covers it. Adjustment row aoe-argon-handle-bind.
- */
-export function guardArgonBind() {
-  const hud = ui.ARGON;
-  if (!hud?.bind || hud.bind._aoeGuard) return !!hud?.bind?._aoeGuard;
-  const own = hud.bind;
-  const guarded = function (target, ...rest) {
-    try { if (target && isHandleTarget(target)) return Promise.resolve(); } catch { /* bind as usual */ }
-    return own.call(this, target, ...rest);
-  };
-  guarded._aoeGuard = true;
-  hud.bind = guarded;
-  return true;
-}
+/** Nothing of its own to undo: every hook went through the registry the entry unwinds. */
+export function uninstall() {}
+
+// Test seam (characterisation checkpoint): tests import this through test/fixtures/seams.mjs only,
+// so the blueprint refactor edits that shim, not the frozen tests. Not part of the API.
+export const _internals = { handlePrototype, handleActorRepairs, spellName, deleteHandlesOf, decorateCard, actionRow, concentrationItemUuid, attachedElsewhere, pending };

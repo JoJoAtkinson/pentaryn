@@ -149,7 +149,7 @@ def sync(module_dir: Path, *, tier: str | None = None, extra: list[str] | None =
             raise VendorError(f"{n} is deferred (kit.json status) and has no canonical file yet")
         missing = [p for p in meta.get("packages", []) if p not in related]
         if missing:
-            raise VendorError(f"{n}.mjs names {', '.join(missing)} — add it to module.json "
+            raise VendorError(f"{kit_file(n, kit)} names {', '.join(missing)} — add it to module.json "
                               f"relationships first (refused: {module_dir.name})")
 
     written: list[str] = []

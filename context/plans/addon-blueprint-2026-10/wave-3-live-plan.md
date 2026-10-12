@@ -23,6 +23,7 @@ start any step until Joe says go**, and never while a play session is on.
   stay the same: portals 0.4.4, creatures 0.1.1, senses 0.4.1, prompts 0.4.5, ties 0.19.4. So this
   deploy needs **no Foundry restart**, only one GM tab reload. The `.pentaryn-sync.json` stamp tells
   before from after, not the version. The Wave 7 restart batch is a separate, later session.
+  **Not when the optional fixes ride along** (they did, W3L): see the §4 addendum.
 - **The bridge module is unchanged.** The fork has one commit (`a5ce74c`), and it changes only the
   wording of the `pentaryn-read` description. Deploying it means a server build and a `kill -9` of
   the backend. There is no bridge module copy and no restart. It is optional (§4.3).
@@ -48,7 +49,8 @@ Scripts: [`scripts/foundry/live-goldens/`](../../../scripts/foundry/live-goldens
 
 Each golden is one `eval-js` call:
 - `script` is the file's text;
-- `timeoutMs` is 60000, except **90000 for `senses.js`** (it waits for about ten debounced writes);
+- `timeoutMs` is 60000 for every script, `senses.js` too: 60000 is the eval-js cap (a larger value is
+  refused). senses waits for about ten debounced writes and finishes inside it (W3L);
 - `purpose` is `"wave-3 live golden <before|after> <m> run <k>"`.
 
 The call returns a JSON **string**. Save it to `OUT` exactly as returned.
@@ -173,6 +175,18 @@ this plan was written, recompute the set from the stamps.
    - **Nothing in steps c–e needs the new text.** `pentaryn-read` already exists in the wave-2 build,
      and it finds namespaces at run time. The description is the only change.
 
+**§4 addendum (2026-10-12): when the optional fixes ride along.** Everything above holds for wave 3
+alone. When `fix/optional-2026-10-11` (merge-and-go-live §7) deploys with it, as it did in W3L:
+- **A Foundry restart is needed.** importer 1.1.0 → 1.1.1 and feedback 0.1.1 → 0.1.2 change their
+  `module.json`, so step 4.2's diff is expected to differ for those two (not a red). Restart with
+  `FROM=local` as in the wave-2 plan §4.5, then one GM tab reload.
+- **A bridge module build is needed.** The optional fork commits touch the bridge module
+  (`fork/handlers.*`, the new `fork/toggle-condition.*`), so step 4.3 also runs
+  `npm run build:foundry` and copies the `dist/` into `$DATA/modules/foundry-mcp-bridge`, besides
+  `build:server` and the backend `kill -9`.
+- The importer installs with `make -C $WT foundry-importer-install` (there is no
+  `foundry-importer-sync`), feedback with `make -C $WT foundry-feedback-sync`.
+
 ## 5. Step c — boot probes — **S**
 
 One eval-js (`purpose: "wave-3 boot probe"`), saved to `OUT/probes.json`:
@@ -183,7 +197,8 @@ const want = { portals: ["pentaryn-portals", "portals"], creatures: ["pentaryn-c
   lookup: ["pentaryn-lookup", "rules"], movement: ["pentaryn-movement", "movement"], attunement: ["pentaryn-attunement", "attunement"],
   journal: ["pentaryn-journal", "journal"], dropbin: ["pentaryn-dropbin", "dropbin"], names: ["pentaryn-names", "names"],
   pings: ["pentaryn-pings", "pings"], cursors: ["pentaryn-cursors", "cursors"], importer: ["pentaryn-importer", "importer"],
-  transform: ["pentaryn-transform", "transform"], combat: ["pentaryn-combat", "combat"] };
+  transform: ["pentaryn-transform", "transform"], combat: ["pentaryn-combat", "combat"],
+  feedback: ["pentaryn-feedback", "feedback"] };
 const out = { rootKeys: Object.keys(game.pentaryn ?? {}).sort(), rootFrozen: Object.isFrozen(game.pentaryn),
   chainAlias: game.pentaryn?.chain === undefined ? "absent" : game.pentaryn.chain === game.pentaryn?.senses?.chain ? "same" : "different",
   chainUninstall: typeof game.pentaryn?.chain?.uninstall };
@@ -262,7 +277,9 @@ Make each call once. Record the answer and its log line in `OUT/reads.md`. Log l
 (read only) and saves them in `reads.md`:
 - a teleport region uuid with a destination (`game.scenes` → `regions` with an enabled `teleportToken` behaviour);
 - a player-owned npc token uuid, or else any token uuid;
-- a PC's exact name;
+- the exact name of a **ZZ PC-type actor** (`type: "character"`, name starting `ZZ `) with a non-GM
+  owner assigned (a throwaway ZZ player user). Create both if missing; delete both in cleanup (§9).
+  **Never a real PC's name** (Caven, Marrith, Talo): overnight rules §10;
 - the id of a scene that holds prompt markers.
 
 **Never call** these UI rows through the bridge: portals `open` and `lookAt` (a window, the GM's
@@ -278,7 +295,7 @@ they write no data.
 | 5 | creatures: `{ns:"creatures", path:"status"}`, `{ns:"creatures", path:"inspect", ref:"<token uuid>"}` | `patchedWith: "libWrapper"`, `writer: true`, `version: "0.1.1"`; inspect plain JSON |
 | 6 | senses: `{ns:"senses", path:"inspect", ref:"<token uuid>"}`, `{ns:"senses", path:"light.recent"}`, `{ns:"senses", path:"chain.links", opts:{scene:"<scene id>"}}` | plain JSON, no `"[max depth]"` leaf (S-12); a list; `[]` or the scene's chains |
 | 7 | prompts: `{ns:"prompts", path:"status"}`, `{ns:"prompts", path:"list"}`, `{ns:"prompts", path:"manifests"}` | as `prompts.js`'s status; the marker scenes; the ring (no new entry: these do not gather) |
-| 8 | ties: `{ns:"ties", path:"read", ref:"<PC name>"}` (B2: a name now resolves to the base actor), `{ns:"ties", path:"attributes.list"}` | the PC's ties (not `[]`); the registry |
+| 8 | ties: `{ns:"ties", path:"read", ref:"<ZZ PC name>"}` (B2: a name now resolves to the base actor), `{ns:"ties", path:"attributes.list"}` | the ZZ actor's ties (`[]` for a fresh ZZ actor; the point is that the name resolves, not NOT_FOUND); the registry |
 | 9 | dry runs: `pentaryn-write {ns:"portals", path:"link", ref:"<region uuid>", opts:{to:"<its first destination uuid>"}, dryRun:true}` | `{ok: true, …}`, "already linked" as a no-op, nothing written (the region's `updatedTime` is unchanged) |
 | 10 | `pentaryn-write {ns:"prompts", path:"replaceMany", opts:{call:"zz-none", replacements:[]}, dryRun:true}` | a coded refusal (`CALL_UNKNOWN` or `BAD_SPEC`), nothing written |
 | 11 | refusals that must not run: `pentaryn-write {ns:"senses", path:"syncAll", dryRun:true}`, `{ns:"creatures", path:"syncAll", dryRun:true}`, `{ns:"ties", path:"study.reset", dryRun:true}` | `BAD_ARGS … has no dry run` each; **nothing ran** (the write log line says `ok:false`) |
@@ -328,6 +345,8 @@ rolls back, run the other's golden once more, after the rollback, to check nothi
 
 **Cleanup — S.**
 - No ZZ documents left (the §2.5 eval-js), and every `cleanup` block clean.
+- The §7 ZZ PC-type actor and its throwaway ZZ player user are deleted (users are not in the §2.5
+  document sweep: check `game.users` for a `ZZ ` name too).
 - The creatures, portals and prompts settings equal their before values (each golden reports it).
 - No player tab open.
 - No chat lines from ZZ actors (senses reports `zzMessagesLeft`).

@@ -1,121 +1,80 @@
 /* Pentaryn Transform — Wild Shape and Starry Form on the Argon HUD. */
 
+/* The compact Argon tooltip rules (.ech-tooltip.pentaryn-tt, -list) are the kit's shared stylesheet
+   (D7: lib/argon-tooltip.css, byte-identical in combat, transform and riders), imported here so the
+   module.json in place loads it; pentaryn-combat's TT classes rely on it too. They never catch the
+   pointer, so a tooltip over a picker can't swallow the click on a tile. */
+@import "../lib/argon-tooltip.css";
+
 /* "Return to Talo" while shifted: the one button that matters. */
-.extended-combat-hud .action-element.pentaryn-return {
+.extended-combat-hud .action-element.ptf-return {
   box-shadow: 0 0 0 2px var(--ech-bonusAction-base-background), 0 0 14px var(--ech-bonusAction-base-background);
 }
-.extended-combat-hud .action-element.pentaryn-return .action-element-title {
+.extended-combat-hud .action-element.ptf-return .action-element-title {
   background-color: rgba(0, 0, 0, 0.6);
 }
 
 /* No uses left: grey, still hoverable for its tooltip. */
-.extended-combat-hud .pentaryn-empty {
+.extended-combat-hud .ptf-empty {
   filter: grayscale(1) brightness(0.8);
 }
 
 /* Starry Form while it lasts, and the Archer/Chalice button beside it. */
-.extended-combat-hud .action-element.pentaryn-starry-on {
+.extended-combat-hud .action-element.ptf-starry-on {
   box-shadow: 0 0 0 2px #cfe0ff99, 0 0 14px #cfe0ff88;
 }
-.extended-combat-hud .pentaryn-starry-act {
+.extended-combat-hud .ptf-starry-act {
   box-shadow: inset 0 0 0 2px #cfe0ff88;
 }
 
 /* Chalice earned: a slot-spending heal was just cast, the second heal is there to take (Area 4, D6). */
-@keyframes pentaryn-chalice-pulse {
+@keyframes ptf-chalice-pulse {
   0%, 100% { box-shadow: inset 0 0 0 2px #cfe0ff88, 0 0 0 2px #cfe0ff, 0 0 12px #cfe0ff88; }
   50% { box-shadow: inset 0 0 0 2px #cfe0ffcc, 0 0 0 3px #ffffff, 0 0 22px #cfe0ffee; }
 }
-.extended-combat-hud .pentaryn-starry-act.pentaryn-chalice-ready {
-  animation: pentaryn-chalice-pulse 0.8s ease-in-out infinite;
+.extended-combat-hud .ptf-starry-act.ptf-chalice-ready {
+  animation: ptf-chalice-pulse 0.8s ease-in-out infinite;
 }
 
 /* The weapon-set slot in a beast form: its attacks are front-row buttons instead.
    !important because Argon's ItemButton resets style.display on every render. */
-.extended-combat-hud .pentaryn-hidden {
+.extended-combat-hud .ptf-hidden {
   display: none !important;
 }
 
 /* Our pickers appear in place (no slide-in), so the first click on a tile always lands. */
-.extended-combat-hud .action-hud .features-container.pentaryn-picker {
+.extended-combat-hud .action-hud .features-container.ptf-picker {
   transition: opacity 0.15s ease-in-out;
   flex-wrap: nowrap;   /* one row of forms / constellations, whatever the drawer's left (Area 4, D1) */
 }
 
 /* The form Talo is in / the constellation glimmering, in its picker. */
-.extended-combat-hud .feature-element.pentaryn-current {
+.extended-combat-hud .feature-element.ptf-current {
   outline: 2px solid #f2d27a;
   outline-offset: -2px;
 }
 
 /* The Wild Shape / Starry Form effect on the portrait: big enough to find, with a ring. */
-.extended-combat-hud .portrait-hud .portrait-stat-block.player-details .effects-container .effect-icon.pentaryn-effect {
+.extended-combat-hud .portrait-hud .portrait-stat-block.player-details .effects-container .effect-icon.ptf-effect {
   width: 3rem;
   height: 3rem;
   border-radius: 4px;
   box-shadow: 0 0 0 2px #f2d27a, 0 0 8px #f2d27a99;
   order: -1;
 }
-.extended-combat-hud .portrait-hud .portrait-stat-block.player-details .effects-container .effect-icon.pentaryn-effect img {
+.extended-combat-hud .portrait-hud .portrait-stat-block.player-details .effects-container .effect-icon.ptf-effect img {
   width: 100%;
   height: 100%;
 }
-.extended-combat-hud .portrait-hud .player-detail.pentaryn-form-line {
+.extended-combat-hud .portrait-hud .player-detail.ptf-form-line {
   color: #f2d27a;
   font-weight: 600;
-}
-
-/* Compact tooltips: never taller than the screen allows, nothing clipped or overlapping. They
-   also never catch the pointer, so a tooltip over a picker can't swallow the click on a tile. */
-.ech-tooltip.pentaryn-tt {
-  pointer-events: none;
-  max-width: 340px;
-}
-.ech-tooltip.pentaryn-tt .ech-tooltip-description {
-  max-height: none;
-  overflow: visible;
-}
-.ech-tooltip.pentaryn-tt .ech-tooltip-description p {
-  margin: 0 0 0.35rem;
-}
-.ech-tooltip.pentaryn-tt .ech-tooltip-details {
-  grid-template-columns: 1fr 1fr !important;
-  gap: 0.35rem 0.9rem;
-}
-.ech-tooltip.pentaryn-tt .ech-tooltip-details > div {
-  min-width: 0;
-}
-.ech-tooltip.pentaryn-tt .ech-tooltip-details > div > span {
-  padding: 0.1rem 0;
-  white-space: normal;
-  overflow-wrap: anywhere;
-}
-.ech-tooltip.pentaryn-tt .ech-tooltip-details > div > span:last-child {
-  font-size: 1.05rem;
-  line-height: 1.2;
-}
-/* One detail per row: label left, value right (beast stats, constellations). */
-.ech-tooltip.pentaryn-tt.pentaryn-tt-list .ech-tooltip-details {
-  grid-template-columns: 1fr !important;
-  gap: 0.2rem;
-}
-.ech-tooltip.pentaryn-tt.pentaryn-tt-list .ech-tooltip-details > div {
-  flex-direction: row;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 0.75rem;
-}
-.ech-tooltip.pentaryn-tt.pentaryn-tt-list .ech-tooltip-details > div > span:first-child {
-  flex: 0 0 auto;
-}
-.ech-tooltip.pentaryn-tt.pentaryn-tt-list .ech-tooltip-details > div > span:last-child {
-  text-align: right;
 }
 
 /* Chat lines: one quiet line, not a card. */
 .chat-message .pentaryn-transform-line {
   margin: 0;
 }
-.pentaryn-starry-pick p {
+.ptf-starry-pick p {
   margin: 0 0 0.4rem;
 }

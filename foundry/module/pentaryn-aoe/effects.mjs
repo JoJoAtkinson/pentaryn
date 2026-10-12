@@ -25,9 +25,11 @@
 
 import { MODULE, aoeFlags, selfApplyReason, pendingEffects, sameSpellEffect } from "./core.mjs";
 import { setting } from "./settings.mjs";
-import { on, guard, claimMessage } from "./hooks.mjs";
+import { claimMessage } from "./lib/election.mjs";
+import { makeLog } from "./lib/log.mjs";
+import { FEATURE_ROWS } from "./api-manifest.mjs";
+import { cardEffects, recordedTarget, spellOf } from "./messages-adapter.mjs";
 
-const t = (key, data) => (data ? game.i18n.format(`PENTARYN_AOE.${key}`, data) : game.i18n.localize(`PENTARYN_AOE.${key}`));
 const esc = s => foundry.utils.escapeHTML(String(s ?? ""));
 
 /** Cards older than this are settled: last session's log never lights up. */
@@ -37,6 +39,8 @@ const MARK_DELAY = 1200;
 /** How long a fresh self-cast card waits for the auto-apply before it may light up. */
 const AUTO_GRACE = 15 * 1000;
 
+let log = makeLog(MODULE);   // the entry's ctx.log once installed
+
 const inflight = new Set();          // message ids being auto-applied on this client
 const localApplied = new Map();      // message id → Set(effect ids) applied from this client
 
@@ -44,22 +48,11 @@ const localApplied = new Map();      // message id → Set(effect ids) applied f
 /*  Reading a usage card                        */
 /* -------------------------------------------- */
 
-/**
- * The card's applicable effects (enchantments excluded). dnd5e 6 stores them as uuids that are
- * either relative to the item (.ActiveEffect.<id>) or point into the dnd5e.effects compendium;
- * message.system.getEffects() resolves both, falling back to the item snapshot of a consumed item.
- */
-export async function cardEffects(message) {
-  if (message?.type !== "usage" || !message.system?.effects?.length) return [];
-  const effects = (await message.system.getEffects?.()) ?? [];
-  return effects.filter(e => e && e.type !== "enchantment");
-}
-
 /** The actors a usage card targeted: dnd5e 6 records { actor, token } uuids (migrated cards only the actor). */
 function targetActors(message) {
   return (message.system?.targets ?? []).map(tg => {
-    const token = tg?.token ? fromUuidSync(tg.token, { strict: false }) : null;
-    return token?.actor ?? (tg?.actor ? fromUuidSync(tg.actor, { strict: false }) : null);
+    const { token, actor } = recordedTarget(tg);
+    return token?.actor ?? (actor ? fromUuidSync(actor, { strict: false }) : null);
   }).filter(a => a?.effects);
 }
 
@@ -76,11 +69,11 @@ function appliedIds(message) {
  * Effect ids on the card still waiting. Applied = recorded on the message, or already on every
  * creature the card targeted (covers a GM who applied it some other way).
  */
-export async function pendingFor(message) {
+export async function pendingFor(message, { effects = null } = {}) {
   // A settled card never lights up (pendingEffects says so too); answer before resolving its
   // effects, which on dnd5e 6 is an async fromUuid per card (a pack fetch for dnd5e.effects).
   if (Date.now() - (message?.timestamp ?? 0) > HIGHLIGHT_MAX_AGE) return [];
-  const effects = await cardEffects(message);
+  effects ??= await cardEffects(message);   // -14: a caller that already has them passes them
   if (!effects.length) return [];
   const applied = new Set(appliedIds(message));
   const targets = targetActors(message);
@@ -127,19 +120,7 @@ function onPreCreateEffect(effect) {
   if (!spell) return;
   const old = sameSpellEffect({ name: effect.name, spell },
     actor.effects.filter(e => e.id !== effect.id).map(e => ({ id: e.id, name: e.name, disabled: e.disabled, spell: spellOf(e) })));
-  if (old) actor.effects.get(old)?.delete().catch(err => console.warn(`${MODULE} | replace ${effect.name}`, err));
-}
-
-/** The spell identifier an applied effect came from (its source effect's item, else its origin). */
-function spellOf(effect) {
-  for (const uuid of [effect._stats?.duplicateSource, effect.origin]) {
-    if (!uuid) continue;
-    let doc = null;
-    try { doc = fromUuidSync(uuid, { strict: false }); } catch { doc = null; }
-    const item = doc?.documentName === "Item" ? doc : doc?.parent?.documentName === "Item" ? doc.parent : null;
-    if (item?.type === "spell") return item.system?.identifier || item.name;
-  }
-  return null;
+  if (old) actor.effects.get(old)?.delete().catch(err => log.warn(`replace ${effect.name}`, err));
 }
 
 /** Record applied effect ids on the message (if this user may), and locally either way. */
@@ -171,8 +152,8 @@ async function selfReason(message, effects = null) {
 
 /** A recorded target's actor uuid (the token's actor when the token still exists, else the stored actor). */
 function targetActorUuid(tg) {
-  const token = tg?.token ? fromUuidSync(tg.token, { strict: false }) : null;
-  return token?.actor?.uuid ?? tg?.actor ?? null;
+  const { token, actor } = recordedTarget(tg);
+  return token?.actor?.uuid ?? actor ?? null;
 }
 
 /** Is this client the one that writes for a card made by `userId`? */
@@ -200,7 +181,7 @@ export async function selfApply(message, { force = false } = {}) {
     const reason = await selfReason(message, effects);
     if (!reason) return null;
     // Two sessions on the GM account are both the applier: one of them applies.
-    if (!force && !(await claimMessage(message, "selfApply"))) return null;
+    if (!force && !(await claimMessage(message, "selfApply", { scope: MODULE }))) return null;
     if (!force && aoeFlags(game.messages.get(message.id)).effectsApplied?.auto) return null;
     const applied = [];
     for (const effect of effects) {
@@ -208,7 +189,7 @@ export async function selfApply(message, { force = false } = {}) {
         await applyEffect(message, effect, caster);
         applied.push(effect);
       } catch (err) {
-        console.warn(`${MODULE} | self-apply ${effect.name} → ${caster.name}`, err);
+        log.warn(`self-apply ${effect.name} → ${caster.name}`, err);
       }
     }
     if (!applied.length) return null;
@@ -238,7 +219,7 @@ function decorate(message, html) {
   if (flag?.auto && flag.actorName && !html.querySelector(".pentaryn-aoe-applied")) {
     const p = document.createElement("p");
     p.className = "pentaryn-aoe-applied";
-    p.innerHTML = `<i class="fa-solid fa-wand-sparkles" inert></i> ${esc(t("Effects.AutoApplied", {
+    p.innerHTML = `<i class="fa-solid fa-wand-sparkles" inert></i> ${esc(_loc("PENTARYN_AOE.Effects.AutoApplied", {
       actor: flag.actorName, effects: (flag.names ?? []).join(", ")
     }))}`;
     (html.querySelector(".chat-card") ?? html).append(p);
@@ -248,12 +229,12 @@ function decorate(message, html) {
   if (!tray || tray.dataset.pentarynAoe) return;
   tray.dataset.pentarynAoe = "1";
 
-  const light = async msg => {
-    if (!(await pendingFor(msg)).length) return;
+  const light = async (msg, effects = null) => {
+    if (!(await pendingFor(msg, { effects })).length) return;
     tray.classList.add("pentaryn-aoe-unapplied");
-    tray.style.setProperty("--pentaryn-aoe-unapplied", JSON.stringify(t("Effects.Unapplied")));
+    tray.style.setProperty("--pentaryn-aoe-unapplied", JSON.stringify(_loc("PENTARYN_AOE.Effects.Unapplied")));
   };
-  const warn = err => console.warn(`${MODULE} | highlight`, err);
+  const warn = err => log.warn("highlight", err);
 
   // A fresh card that is about to be auto-applied is not "waiting": skip the flash before the
   // GM's write lands and re-renders it. If that write never lands (the apply failed), look again
@@ -261,8 +242,11 @@ function decorate(message, html) {
   const age = Date.now() - (message.timestamp ?? 0);
   if (setting("highlightUnapplied")) {
     (async () => {
-      const autoSoon = setting("autoApplySelf") && !flag?.auto && age < AUTO_GRACE && !!(await selfReason(message));
-      if (!autoSoon) return light(message);
+      // -14: one effects fetch per render for a fresh card (selfReason and the highlight shared
+      // it); a settled card fetches nothing. The re-check after the grace fetches fresh.
+      const effects = age > HIGHLIGHT_MAX_AGE ? null : await cardEffects(message);
+      const autoSoon = setting("autoApplySelf") && !flag?.auto && age < AUTO_GRACE && !!(await selfReason(message, effects ?? undefined));
+      if (!autoSoon) return light(message, effects);
       setTimeout(() => {
         const live = game.messages.get(message.id);
         if (live && tray.isConnected && !aoeFlags(live).effectsApplied?.auto) light(live).catch(warn);
@@ -282,7 +266,7 @@ function decorate(message, html) {
     if (!ids.length || !applyTargets(tray).length) return;
     localApplied.set(message.id, new Set([...(localApplied.get(message.id) ?? []), ...ids]));
     pendingFor(message).then(p => { if (!p.length) tray.classList.remove("pentaryn-aoe-unapplied"); }).catch(warn);
-    setTimeout(() => markApplied(message, ids).catch(err => console.warn(`${MODULE} | mark applied`, err)), MARK_DELAY);
+    setTimeout(() => markApplied(message, ids).catch(err => log.warn("mark applied", err)), MARK_DELAY);
   }, true);
 }
 
@@ -300,11 +284,20 @@ function applyTargets(tray) {
 /*  Hook wiring                                 */
 /* -------------------------------------------- */
 
-export function installEffects() {
-  on("createChatMessage", guard("createChatMessage(selfApply)", async (message, options, userId) => {
+export function install(reg, ctx) {
+  log = ctx.log;
+  reg.on("createChatMessage", reg.guardSwallowAsync("createChatMessage(selfApply)", async (message, options, userId) => {
     if (!setting("autoApplySelf") || !isApplier(userId)) return;
     await selfApply(message);
-  }));
-  on("dnd5e.renderChatMessage", guard("renderChatMessage(effects)", decorate));
-  on("preCreateActiveEffect", guard("preCreateActiveEffect(noStacking)", onPreCreateEffect));
+  }), { guard: false, label: "createChatMessage(selfApply)" });
+  reg.on("dnd5e.renderChatMessage", reg.guardSwallowAsync("renderChatMessage(effects)", decorate), { guard: false, label: "renderChatMessage(effects)" });
+  reg.on("preCreateActiveEffect", reg.guardSwallowAsync("preCreateActiveEffect(noStacking)", onPreCreateEffect), { guard: false, label: "preCreateActiveEffect(noStacking)" });
+
+  return { rows: FEATURE_ROWS.effects, impl: { selfApply, pendingFor } };
 }
+
+export function uninstall() {}
+
+// Test seam (characterisation checkpoint): tests import this through test/fixtures/seams.mjs only,
+// so the blueprint refactor edits that shim, not the frozen tests. Not part of the API.
+export const _internals = { targetActors, targetActorUuid, appliedIds, applyEffect, onPreCreateEffect, markApplied, selfReason, isApplier, decorate, applyTargets, inflight, localApplied };

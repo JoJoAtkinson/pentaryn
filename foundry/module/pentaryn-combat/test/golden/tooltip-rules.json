@@ -1,0 +1,78 @@
+[
+  {
+    "selector": ".ech-tooltip.pentaryn-tt",
+    "decls": {
+      "pointer-events": "none",
+      "max-width": "340px"
+    }
+  },
+  {
+    "selector": ".ech-tooltip.pentaryn-tt .ech-tooltip-description",
+    "decls": {
+      "max-height": "none",
+      "overflow": "visible"
+    }
+  },
+  {
+    "selector": ".ech-tooltip.pentaryn-tt .ech-tooltip-description p",
+    "decls": {
+      "margin": "0 0 0.35rem"
+    }
+  },
+  {
+    "selector": ".ech-tooltip.pentaryn-tt .ech-tooltip-details",
+    "decls": {
+      "grid-template-columns": "1fr 1fr !important",
+      "gap": "0.35rem 0.9rem"
+    }
+  },
+  {
+    "selector": ".ech-tooltip.pentaryn-tt .ech-tooltip-details > div",
+    "decls": {
+      "min-width": "0"
+    }
+  },
+  {
+    "selector": ".ech-tooltip.pentaryn-tt .ech-tooltip-details > div > span",
+    "decls": {
+      "padding": "0.1rem 0",
+      "white-space": "normal",
+      "overflow-wrap": "anywhere"
+    }
+  },
+  {
+    "selector": ".ech-tooltip.pentaryn-tt .ech-tooltip-details > div > span:last-child",
+    "decls": {
+      "font-size": "1.05rem",
+      "line-height": "1.2"
+    }
+  },
+  {
+    "selector": ".ech-tooltip.pentaryn-tt.pentaryn-tt-list .ech-tooltip-details",
+    "decls": {
+      "grid-template-columns": "1fr !important",
+      "gap": "0.2rem"
+    }
+  },
+  {
+    "selector": ".ech-tooltip.pentaryn-tt.pentaryn-tt-list .ech-tooltip-details > div",
+    "decls": {
+      "flex-direction": "row",
+      "justify-content": "space-between",
+      "align-items": "baseline",
+      "gap": "0.75rem"
+    }
+  },
+  {
+    "selector": ".ech-tooltip.pentaryn-tt.pentaryn-tt-list .ech-tooltip-details > div > span:first-child",
+    "decls": {
+      "flex": "0 0 auto"
+    }
+  },
+  {
+    "selector": ".ech-tooltip.pentaryn-tt.pentaryn-tt-list .ech-tooltip-details > div > span:last-child",
+    "decls": {
+      "text-align": "right"
+    }
+  }
+]

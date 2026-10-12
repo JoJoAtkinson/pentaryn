@@ -68,9 +68,9 @@ The table is generated from each `module.json`, the module's code and its
 
 | Namespace | Module | Version | Blueprint | API (describe golden) | Docs |
 |---|---|---|---|---|---|
-| `aoe` | `pentaryn-aoe` | 0.3.1 | not migrated | — (no describe golden yet) | [`aoe.md`](aoe.md) · [README](../../foundry/module/pentaryn-aoe/README.md) |
+| `aoe` | `pentaryn-aoe` | 0.3.1 | full tier | `areasFor`, `spellAreas`, `handleFor`, `removeArea`, `cardEffects`, `setting`, `hookIds`, `resolution` … (+15) | [`aoe.md`](aoe.md) · [README](../../foundry/module/pentaryn-aoe/README.md) |
 | `attunement` | `pentaryn-attunement` | 0.2.1 | full tier | `report`, `computeSlots`, `stash`, `releaseAway`, `away` | [README](../../foundry/module/pentaryn-attunement/README.md) |
-| `combat` | `pentaryn-combat` | 0.2.5 | not migrated | — (no describe golden yet) | [README](../../foundry/module/pentaryn-combat/README.md) |
+| `combat` | `pentaryn-combat` | 0.2.5 | full tier | `count`, `plan`, `turn`, `newTurn`, `multiattack`, `weapons`, `offers`, `fullAttack` … (+15) | [README](../../foundry/module/pentaryn-combat/README.md) |
 | `creatures` | `pentaryn-creatures` | 0.1.1 | full tier | `list`, `render`, `syncScene`, `syncAll`, `isCreature`, `ownerSees`, `patchedWith`, `status` | [README](../../foundry/module/pentaryn-creatures/README.md) |
 | `cursors` | `pentaryn-cursors` | 0.2.0 | small tier | `refresh`, `current`, `keyFor`, `status` | [README](../../foundry/module/pentaryn-cursors/README.md) |
 | `dropbin` | `pentaryn-dropbin` | 0.2.3 | full tier | `corpses.sync`, `corpses.toCorpse`, `corpses.fromCorpse`, `corpses.isDead`, `corpses.revive`, `corpses.paintEye`, `corpses.paintAllEyes`, `corpses.migrateLegacyEyes` … (+11) | [README](../../foundry/module/pentaryn-dropbin/README.md) |
@@ -83,10 +83,10 @@ The table is generated from each `module.json`, the module's code and its
 | `pings` | `pentaryn-pings` | 0.1.1 | small tier | — (no describe golden yet) | [README](../../foundry/module/pentaryn-pings/README.md) |
 | `portals` | `pentaryn-portals` | 0.4.4 | full tier | `snapshot`, `cardFor`, `teleportParty`, `lookAt`, `destinations`, `link`, `unlink`, `spreadArrival` … (+3) | [README](../../foundry/module/pentaryn-portals/README.md) |
 | `prompts` | `pentaryn-prompts` | 0.4.5 | full tier | `list`, `gather`, `crops`, `replaceMany`, `show`, `replace`, `open`, `place` … (+6) | [README](../../foundry/module/pentaryn-prompts/README.md) |
-| `riders` | `pentaryn-riders` | 0.2.0 | not migrated | — (no describe golden yet) | [README](../../foundry/module/pentaryn-riders/README.md) |
+| `riders` | `pentaryn-riders` | 0.2.0 | full tier | `arcaneRecovery`, `featuresOf`, `report`, `setType`, `retireManual`, `spendHitDie`, `restoreHitDie`, `hdPools` … (+3) | [README](../../foundry/module/pentaryn-riders/README.md) |
 | `chain`, `senses` | `pentaryn-senses` | 0.4.1 | full tier | `syncLight`, `carriedLight`, `resetSight`, `light.cast`, `light.end`, `light.pick`, `light.toggle`, `light.hood` … (+14) | [README](../../foundry/module/pentaryn-senses/README.md) |
 | `ties` | `pentaryn-ties` | 0.19.4 | full tier | `show`, `showAll`, `showOne`, `cards`, `clear`, `closeAllCards`, `edit`, `addTie` … (+101) | [README](../../foundry/module/pentaryn-ties/README.md) |
-| `transform` | `pentaryn-transform` | 0.3.3 | not migrated | — (no describe golden yet) | [README](../../foundry/module/pentaryn-transform/README.md) |
+| `transform` | `pentaryn-transform` | 0.3.3 | full tier | `shift`, `revert`, `forms`, `wildShapeActivity`, `original`, `isRevertItem`, `sweepSpentForms`, `starry.assume` … (+3) | [README](../../foundry/module/pentaryn-transform/README.md) |
 | `walls` | `pentaryn-walls` | 0.2.0 | full tier | `preview`, `run`, `undo`, `makeMacro`, `analyze`, `runEngine`, `backends` | [`walls.md`](walls.md) · [README](../../foundry/module/pentaryn-walls/README.md) |
 
 <!-- module-index:end -->
@@ -116,8 +116,10 @@ The table is generated from each `module.json`, the module's code and its
 | Attunement — the sidebar slots, over-cap warnings, "why is this item doing nothing" | [`../../foundry/module/pentaryn-attunement/README.md`](../../foundry/module/pentaryn-attunement/README.md) |
 | Player journal — "Add to my journal" on eye readables, a personal journal missing or duplicated | [`../../foundry/module/pentaryn-journal/README.md`](../../foundry/module/pentaryn-journal/README.md) |
 | "My cursor is wrong / stuck as an arrow" — map cursor per scene tool (target, ruler, spell area, journal pin, drawing); `game.pentaryn.cursors.status()` | [`../../foundry/module/pentaryn-cursors/README.md`](../../foundry/module/pentaryn-cursors/README.md) |
+| Feat and spell riders — Elemental Adept / Affinity, Battle Medic, Hit Dice −/+, rituals, Arcane Recovery, concentration and summon clean-up — `pentaryn-riders` | [`../../foundry/module/pentaryn-riders/README.md`](../../foundry/module/pentaryn-riders/README.md) (which riders module: [`melee.md`](melee.md)) |
+| Wild Shape / Starry Form / Return / Change Form / a form left in the sidebar — `pentaryn-transform` | [`../../foundry/module/pentaryn-transform/README.md`](../../foundry/module/pentaryn-transform/README.md) |
 | Lights on tokens — carried items, torches/lanterns (flame and hood buttons), the Light cantrip ("Where does the light go?"), the Broken glow, token chains (`pentaryn-senses`) | [`../../foundry/module/pentaryn-senses/README.md`](../../foundry/module/pentaryn-senses/README.md) |
-| Table-feedback modules — ghost movement, creature strip, rider rules (Elemental Adept, Battle Medic), Loot all, portals follow | [`../../foundry/module/pentaryn-movement/README.md`](../../foundry/module/pentaryn-movement/README.md), [`-creatures`](../../foundry/module/pentaryn-creatures/README.md), [`-riders`](../../foundry/module/pentaryn-riders/README.md), [`-dropbin`](../../foundry/module/pentaryn-dropbin/README.md), [`-portals`](../../foundry/module/pentaryn-portals/README.md), [`-senses`](../../foundry/module/pentaryn-senses/README.md) |
+| Table-feedback modules — ghost movement, creature strip, Loot all, portals follow | [`../../foundry/module/pentaryn-movement/README.md`](../../foundry/module/pentaryn-movement/README.md), [`-creatures`](../../foundry/module/pentaryn-creatures/README.md), [`-dropbin`](../../foundry/module/pentaryn-dropbin/README.md), [`-portals`](../../foundry/module/pentaryn-portals/README.md), [`-senses`](../../foundry/module/pentaryn-senses/README.md) |
 | Finding one battlemap out of ~1,750 | [`map-library.md`](map-library.md) |
 | The unattended Saturday updater — before touching it | [`automated-updates.md`](automated-updates.md) |
 | Running the updater as an operator — commands, setup, retention | [`../../automation/README.md`](../../automation/README.md) |

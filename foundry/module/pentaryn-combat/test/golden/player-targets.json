@@ -1,0 +1,41 @@
+[
+  {
+    "label": "my fighter's turn ended",
+    "targets": [],
+    "calls": [
+      {
+        "op": "canvas.setTargets",
+        "ids": [],
+        "opts": {
+          "mode": "replace"
+        }
+      }
+    ]
+  },
+  {
+    "label": "…with no setTargets on the canvas",
+    "targets": [],
+    "calls": [
+      {
+        "op": "token.setTarget",
+        "id": "tokgoblin0000000",
+        "on": false,
+        "opts": {
+          "releaseOthers": false
+        }
+      }
+    ]
+  },
+  {
+    "label": "someone else's turn ended",
+    "targets": [
+      "tokgoblin0000000"
+    ],
+    "calls": []
+  },
+  {
+    "label": "nothing targeted",
+    "targets": [],
+    "calls": []
+  }
+]

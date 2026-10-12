@@ -1,0 +1,126 @@
+[
+  {
+    "input": [
+      "mixed, recursive:false"
+    ],
+    "out": {
+      "returned": null,
+      "op": {
+        "recursive": false,
+        "updates": [
+          {
+            "x": 100,
+            "y": null,
+            "texture": {
+              "forced": {
+                "src": "a"
+              }
+            },
+            "name": "n",
+            "elevation": 5
+          }
+        ]
+      },
+      "identity": true
+    }
+  },
+  {
+    "input": [
+      "recursive:true"
+    ],
+    "out": {
+      "returned": null,
+      "op": {
+        "recursive": true,
+        "updates": [
+          {
+            "x": {
+              "forced": 100
+            }
+          }
+        ]
+      },
+      "identity": true
+    }
+  },
+  {
+    "input": [
+      "recursive unset"
+    ],
+    "out": {
+      "returned": null,
+      "op": {
+        "updates": [
+          {
+            "x": {
+              "forced": 100
+            }
+          }
+        ]
+      },
+      "identity": true
+    }
+  },
+  {
+    "input": [
+      "no updates"
+    ],
+    "out": {
+      "returned": null,
+      "op": {
+        "recursive": false
+      },
+      "identity": true
+    }
+  },
+  {
+    "input": [
+      "null entry, string, array"
+    ],
+    "out": {
+      "returned": null,
+      "op": {
+        "recursive": false,
+        "updates": [
+          null,
+          {
+            "x": "s",
+            "flags": {
+              "forced": [
+                1
+              ]
+            }
+          }
+        ]
+      },
+      "identity": true
+    }
+  },
+  {
+    "input": [
+      "false and undefined"
+    ],
+    "out": {
+      "returned": null,
+      "op": {
+        "recursive": false,
+        "updates": [
+          {
+            "hidden": false
+          }
+        ]
+      },
+      "identity": true
+    }
+  },
+  {
+    "input": [
+      "null operation"
+    ],
+    "out": {
+      "returned": null,
+      "op": null,
+      "identity": true
+    }
+  }
+]

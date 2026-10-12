@@ -1,0 +1,4 @@
+{
+  "html": "<div class=\"pc-head\"><strong>Full Attack with…</strong><span class=\"pc-what\">Click a weapon (remembered). Esc closes.</span></div>\n      <div class=\"pc-weapons\">\n        <button type=\"button\" data-id=\"longsword\">\n          <img src=\"l.webp\" alt>\n          <span class=\"pc-name\">Longsword</span>\n          <span class=\"pc-stats\">+5 · 1d8 + 3 Slashing</span>\n          <span class=\"pc-swings\">2 swing(s)</span>\n        </button>\n        <button type=\"button\" data-id=\"dagger\">\n          <img src=\"d.webp\" alt>\n          <span class=\"pc-name\">Dagger</span>\n          <span class=\"pc-stats\">+5</span>\n          <span class=\"pc-swings\">2 swing(s)</span>\n        </button></div>",
+  "bottom": "120px"
+}

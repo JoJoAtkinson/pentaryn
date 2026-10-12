@@ -1,0 +1,69 @@
+[
+  {
+    "label": "an aoe handle: back to the HUD's token",
+    "controls": [
+      [
+        "tokrogue00000000",
+        {
+          "releaseOthers": true
+        }
+      ]
+    ]
+  },
+  {
+    "label": "a summon: back to the summoner's token (origin = the summoning item)",
+    "controls": [
+      [
+        "tokbarbarian0000",
+        {
+          "releaseOthers": true
+        }
+      ]
+    ]
+  },
+  {
+    "label": "an origin that resolves to an Actor (no .actor): your character",
+    "controls": [
+      [
+        "tokfighter000000",
+        {
+          "releaseOthers": true
+        }
+      ]
+    ]
+  },
+  {
+    "label": "a summon whose summoner has no token here, no character: nothing",
+    "controls": []
+  },
+  {
+    "label": "something else is still selected",
+    "controls": []
+  },
+  {
+    "label": "not a helper",
+    "controls": []
+  },
+  {
+    "label": "not selected when deleted",
+    "controls": []
+  },
+  {
+    "label": "another scene",
+    "controls": []
+  },
+  {
+    "label": "setting off",
+    "controls": []
+  },
+  {
+    "label": "a throw",
+    "console": [
+      {
+        "level": "warn",
+        "text": "pentaryn-combat | helper token control",
+        "err": "canvas torn down"
+      }
+    ]
+  }
+]

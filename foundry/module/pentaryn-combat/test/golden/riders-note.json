@@ -1,0 +1,24 @@
+{
+  "live": "<p class=\"supplement pentaryn-combat-auto\">+ Sneak Attack 3d6 <button type=\"button\" class=\"pentaryn-combat-undo\" data-undo=\"sneak-attack\" data-tooltip=\"It missed: give back this turn's use (the GM just doesn't apply this damage).\"><i class=\"fa-solid fa-rotate-left\"></i> Undo</button></p>",
+  "position": [
+    "icon-row",
+    "supplement pentaryn-combat-auto",
+    "card-buttons"
+  ],
+  "afterUndo": {
+    "turn": {},
+    "undone": [
+      "sneak-attack"
+    ],
+    "notes": [
+      "Sneak Attack is available again this turn. The damage card shows it struck through."
+    ]
+  },
+  "undone": "<p class=\"supplement pentaryn-combat-auto pentaryn-combat-undone\"><s>+ Sneak Attack 3d6</s> <span class=\"pentaryn-combat-undone-text\">undone: 3d6 rolled 12, so this card deals 7</span></p>",
+  "notLive": "<p class=\"supplement pentaryn-combat-auto\">+ Sneak Attack 3d6</p>",
+  "staleNotes": [
+    "That attack was on an earlier turn — use the button on this turn's attack card."
+  ],
+  "undonePlain": "<p class=\"supplement pentaryn-combat-auto pentaryn-combat-undone\"><s>+ Sneak Attack 3d6</s> <span class=\"pentaryn-combat-undone-text\">undone: leave its dice off this card</span></p>",
+  "attackType": null
+}

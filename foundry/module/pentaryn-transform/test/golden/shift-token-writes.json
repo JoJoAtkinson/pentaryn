@@ -1,0 +1,79 @@
+[
+  {
+    "op": "deleteEmbedded",
+    "actor": "taloActor0000001",
+    "type": "Item",
+    "ids": [
+      "starryForm000001",
+      "wildCompanion001",
+      "spellcasting0001"
+    ]
+  },
+  {
+    "op": "updateEmbedded",
+    "actor": "taloActor0000001",
+    "type": "Item",
+    "updates": [
+      {
+        "_id": "returnNormal0001",
+        "name": "Return to Talo",
+        "img": "talo.webp"
+      }
+    ],
+    "options": {}
+  },
+  {
+    "op": "createEmbedded",
+    "actor": "taloActor0000001",
+    "type": "ActiveEffect",
+    "data": [
+      {
+        "_id": "pentarynWildShp0",
+        "name": "Wild Shape: Dire Wolf",
+        "img": "direWolfSrc00001.webp",
+        "transfer": false,
+        "disabled": false,
+        "duration": {
+          "value": 21600,
+          "units": "seconds",
+          "expiry": null
+        },
+        "start": {
+          "time": 0
+        },
+        "description": "<p>Return to Talo is a Bonus Action. The form ends at 0 HP, when Incapacitated, or after 6 hours.</p><p><strong>Pack Tactics.</strong> Advantage with an ally. (enriched)</p>",
+        "flags": {
+          "pentaryn-transform": {
+            "wildshape": true
+          }
+        }
+      }
+    ],
+    "options": {
+      "keepId": true
+    }
+  },
+  {
+    "op": "update",
+    "documentName": "Actor",
+    "uuid": "Actor.taloActor0000001",
+    "changes": {
+      "flags.pentaryn-transform.wildshape": {
+        "original": "taloActor0000001",
+        "source": "Actor.direWolfSrc00001",
+        "profile": "p1",
+        "endsAt": 21600,
+        "carried": [
+          "blessEffect00001"
+        ]
+      },
+      "system.attributes.hp.temp": 30,
+      "system.favorites": [
+        {
+          "type": "item",
+          "id": ".Item.cureWounds000001"
+        }
+      ]
+    }
+  }
+]

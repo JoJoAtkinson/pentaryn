@@ -1,0 +1,54 @@
+{
+  "transform": [
+    [
+      "shift",
+      "function"
+    ],
+    [
+      "revert",
+      "function"
+    ],
+    [
+      "forms",
+      "function"
+    ],
+    [
+      "wildShapeActivity",
+      "function"
+    ],
+    [
+      "original",
+      "function"
+    ],
+    [
+      "isRevertItem",
+      "function"
+    ],
+    [
+      "sweepSpentForms",
+      "function"
+    ],
+    [
+      "starry",
+      "object"
+    ]
+  ],
+  "starry": [
+    [
+      "assume",
+      "function"
+    ],
+    [
+      "end",
+      "function"
+    ],
+    [
+      "active",
+      "function"
+    ],
+    [
+      "constellation",
+      "function"
+    ]
+  ]
+}

@@ -1,0 +1,31 @@
+[
+  {
+    "actor": "Ilsa Vantrel",
+    "rule": "elemental-adept",
+    "items": "Elemental Adept (Fire)",
+    "types": "fire",
+    "status": "active"
+  },
+  {
+    "actor": "Ilsa Vantrel",
+    "rule": "elemental-affinity",
+    "items": "Elemental Affinity",
+    "types": "",
+    "status": "NO TYPE — setType(actor, 'fire')",
+    "manual": "2 +CHA activities left — retireManual(actor)"
+  },
+  {
+    "actor": "Bren Ashwood",
+    "rule": "potent-spellcasting-druid",
+    "items": "Elemental Fury: Potent Spellcasting",
+    "status": "active",
+    "handAdded": "Thorn Whip already add WIS — rider skips them"
+  },
+  {
+    "actor": "Mara Quill",
+    "rule": "healer",
+    "items": "Healer",
+    "status": "active",
+    "battleMedic": "not installed — installBattleMedic(actor)"
+  }
+]

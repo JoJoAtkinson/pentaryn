@@ -1,7 +1,7 @@
 ---
 title: Migration guide — pentaryn-riders to the addon blueprint
-status: plan
-last_modified: 2026-10-11
+status: done (code phase, wave 4)
+last_modified: 2026-10-12
 tags: [foundry, modules, blueprint, migration, pentaryn-riders]
 ---
 
@@ -584,14 +584,100 @@ Verified as neutral in the steps:
 | §4 standalone | S | 0.5 |
 | **Total** | | **≈ 6.5 agent-days** (S0 done, the re-run code adds ≈ 0.75), plus two live-test round trips (D-r1/D-r3 together, D-r2). The Argon CSS decision (D-r4) waits for Wave 8.6 |
 
-## Result (fill when done)
+## Result (wave 4, code phase, 2026-10-11)
 
 | | |
 |---|---|
-| Live score after the migration | ___ % (___ / ___ fail-class rules) — `conformance.py --module riders --markdown` |
-| Date | ____-__-__ |
-| Commits (Joe-approved) | characterisation: ______ · refactor: ______ · standalone: ______ |
-| Declared changes handed to the live-test workflow | ______ (session L__) |
-| `module.json` edits appended to `wave7-restart-batch.md` | yes / no |
-| Adjustments rows appended to `adjustments-batch.md` | yes / no |
-| Still failing, and why | ______ |
+| Live score after the migration | **89.6 % (43/48)** (`conformance.py --module riders`, offline, branch `migrate/wave-4`); was 47.8 % (22/46) at `wave-4-base`, 54.3 % at the checkpoint |
+| Date | 2026-10-11 (code phase only; nothing synced) |
+| Commits | vendor `a972ccdf` · S2 `111ac454` · S4 `d70ed29b` · S3 i18n `5a536025` · S5 `b81fa95d` · S3 log (-40) `0f1c1822` · S6 `3dacbbe1` · S7 `d6dbb324` · C05/C50 `065d0d22` · S9 `d42a1164` · todos `d3a12e5b` |
+| Declared (each its own commit) | S6 API frozen + additive members `3dacbbe1` · W2-K1 publishNamespace `6c159d58` · D-r1 relay through `guarded` `62d4eda1` · -27 audit lines `50d4f655` · -12 legacy refs `32a0a8e6` · -23 concentration early return `6516b872` · parseFormula `@` argument `3cc5fd7f` · -41 claim-first relay `c8ce8381` · -41 late tab answers the recorded result `8f525b11` |
+| Tests | `node test/run.mjs`: 168 node:test pass, 0 todo (checkpoint: 121 + 8 todo) + LEGACY 103 / 22 / 39. Coverage 99.62 / 88.58 / 98.00 (L/B/F; checkpoint 99.00 / 86.64 / 97.72) |
+| `module.json` edits appended to `wave7-restart-batch.md` | no — shared file; the exact edit is in the wave-4 report's integrator list |
+| Adjustments rows appended to `adjustments-batch.md` | no — shared file; exact `foundry/adjustments.yml` edits in the wave-4 report's integrator list |
+| Still failing, and why | C07, C09 (`module.json`, Wave 7) · C32 (the adjustments.yml renames/moves/new rows are the integrator's: D2 makes every patch row `riders-…`) · C37 (`.pr-*` clears with `cssPrefix: "pr-"` in Wave 7; the two Argon `#tooltip` selectors wait for D7, which waits for combat's argon-kit) · C56 (the relay is still a hand `CONFIG.queries` assignment: the kit's `registerQueries` does not forward the sender, W2-J2) |
+
+Deviations from the steps as written:
+- **Order.** S3's i18n half landed before S5 and its log half inside S5 (the kit logger arrives with the features' `ctx`); the three debug catches are their own commit after S5.
+- **Row ids (D2).** The guide's patch rows `dnd5e-summon-place-default`, `dnd5e-summon-wildcard-preview`, `argon-tooltip-item-rolldata`, `argon-metamagic-no-picker` are named `riders-summon-place-default`, `riders-summon-wildcard-preview`, `riders-argon-tooltip-item-rolldata`, `riders-argon-metamagic-no-picker` (a patch row starts with the module's short, decided after this guide was written). `riders-arcane-recovery-picker` and `riders-argon-long-casts` take the interim ids `dnd5e-riders-arcane-recovery-picker` and `argon-riders-long-casts`.
+- **The targets accessor** uses `wrapMethod({ kind: "getter" })` (kit 1.0.1) rather than `defineAccessor`: it finds the getter on the prototype chain and skips a class whose inherited getter is already wrapped, which `_prTidy` did by accident.
+- **Once-per-casting guard (§4, no finding id): applied `79e29f8d`** (standalone lane) without an index of our own: dnd5e 6 already keeps one, `dnd5e.registry.messages.get(origin)` (tracked by `_source.system.origin` on prepare, untracked on delete), so the guard reads the card's own messages there and scans the whole log only when the registry is missing or throws. No hook added; `golden/hooks.json` unchanged; `test/once-per-casting.test.mjs`.
+- **Not applied:** C59 batching of `setType` / `retireManual` / `installBattleMedic`: one-off GM setup commands, and batching moves frozen per-item write pins (W3-SE2 precedent). Both are in the wave-4 report.
+- **D7** (riders' `#tooltip` selectors adopt `lib/argon-tooltip.css`): not done. combat's argon-kit has landed (`87be8cd4`, adopted `3a29eb4f`), but `vendor.py sync pentaryn-riders --kit argon-tooltip` refuses until `module.json` `relationships` names `enhancedcombathud` (the W7 `recommends` edit), and loading it is a `styles` edit (W7). Whether the `#tooltip` click-through rule moves into the shared kit file is Joe's call (wave-4 report W4-R9).
+
+**Wave 4 close (2026-10-12, `1d86bd5a`, code phase).** After the integrator's adjustments rows
+(`e1a9aade`) the score is **91.7 %**; still failing C07, C09, C37 (W7; two `#tooltip` selectors stay,
+W4-R9) and C56 (W4-R4). node:test **175** pass, 0 todo, plus LEGACY 103 / 22 / 39; HEAD line coverage
+99.62. Commits after the table above: `79e29f8d` (once-per-casting guard), `794e1ed9` (-41 prune,
+[declared, edge]), integrator `e1a9aade`, `4cab245c`, `762c9113`, `18fd2633`. Frozen-test diff since
+`67fe16a3`: 20 files (13 A, 7 M), +1557 −55, every M touched only by a [declared] commit,
+`d3a12e5b` or a comment. Open rows W4-R3…R11 and the consolidated table:
+[`wave-4-report.md`](wave-4-report.md) "Open for Joe — consolidated".
+
+## Checkpoint (wave 4, 2026-10-11)
+
+**Checkpoint: `67fe16a39b865804a157138326700763112bb4e2`** (`test(riders): characterisation
+checkpoint`, branch `migrate/wave-4`). From this commit on, every assertion and golden under
+`foundry/module/pentaryn-riders/test/` is frozen: during S2–S10 only import paths may change, and a
+known-bug fix flips one named pin in its own `[declared]` commit.
+
+**Re-anchor.** `git diff 28ccc87..HEAD -- foundry/module/pentaryn-riders` was empty at `wave-4-base`
+(`a5a1a906`), so every §1–§5 anchor above still holds. The live score at the base was **47.8 %
+(22/46)** with the rule set grown since §1: **C56** (hand-written `CONFIG.queries` assignment,
+riders.mjs:640) fails, and **C59** warns on the per-item writes at riders.mjs:556, 571 and 573
+(§5.9 batch rule; `setType`/`retireManual` loop `setFlag`/`deleteActivity`). Both are cleared by S6
+(the relay through the kit) and noted for S6/S7; neither changes a step.
+
+**What the checkpoint is** (7 commits, `d7bb2a9d`..`67fe16a3`, test/ only, no module file touched):
+- Layout (S1): `test/kit/` byte-identical to `foundry/lib/test-kit` 1.0.2; `run.mjs` →
+  `core-fixtures.mjs` minus its two trailing imports; the fixed `run.mjs` with
+  `LEGACY = [core-fixtures, rituals, table]`. **Not done here:** `vendor.py sync pentaryn-riders
+  --tier full --kit patch` (it writes `lib/`, outside this lane's paths) — the refactor lane runs it
+  first; it rewrites `test/kit/` identically.
+- Fixtures: `fixtures/world.mjs` (synthetic sorcerer / druid / healer / NPC / two-class wizard / a
+  no-Hit-Dice actor, dice terms, Roll, ChatMessage, SummonActivity, Argon's ButtonPanelButton,
+  TextEditor, DialogV2), `fixtures/dom.mjs` (portals' no-jsdom DOM + `[attr^=v]`, `after`, `blur`).
+- node:test files (121 pass, 8 todo): `hooks` (golden/hooks.json = the 23 non-lifecycle rows, in
+  §2.2 order; lifecycle pinned by effect only), `glue` (golden/settings.json, the relay query,
+  hdControls onChange, the four ready wraps, golden/surface-legacy.json as a ⊆ check), `glue-bare`,
+  `glue-ready-fail` (one ready step failing must not stop the others or the publish — the folded
+  S5 `ready` must keep that), `publish`, `publish-frozen`, `api` (report/featuresOf/setType/
+  retireManual/installBattleMedic/Hit Dice kernels/preview oracles), `battle-medic` (veto reasons,
+  runner, relay oracle with the four refusals verbatim), `rolls` (golden/rolls.json, card note,
+  tray preset), `hd-sheet`, `rituals-glue`, `concentration`, `argon-tidy` and `cast-flow`
+  (combat-riders-39's recipe for all five hand patches), `core` (export surfaces ⊆ check, purity,
+  frozen exports, the 200-message once-per-casting oracle), `i18n` (41 keys, the 21 prefix-built
+  keys, placeholders). LEGACY: riders-core 103, rituals-core 22, table-core 39.
+- Pinned so the refactor cannot change them silently: the warn texts of every hook's catch, the
+  before-`init` reader behaviour (six try/catch readers → `false`; `enabled`/`hdControls` throw
+  into their hook's warn), and the three comment-only catches of combat-riders-40 printing nothing
+  (S3 may add `debug` lines; no warn/error).
+
+**KNOWN pins and their todo targets** (each flips in one `[declared]` commit after the structural
+refactor):
+
+| Pin | File | Target (todo) |
+|---|---|---|
+| W2-K1 frozen `game.pentaryn` is replaced by a copy | `publish-frozen.test` | S6 `publishNamespace`: a frozen root throws a TypeError |
+| combat-riders-12 a name/id/UUID string is not resolved | `api.test` | legacy rows resolve Actor/Token/UUID/id/exact name (§4) |
+| combat-riders-23 a status-less effect still takes stamped tokens | `concentration.test` | `isConcentration` early return (§4, D-r2) |
+| combat-riders-41 two GM tabs heal twice, two Hit Dice | `battle-medic.test` | claim-first relay: one heal, one die, same result in both tabs; a tab arriving after the record answers with it (`8f525b11`) |
+| combat-riders-27 audit lines | `battle-medic.test` (todo only; relay console output deliberately unpinned) | S6: one info on success, one warn per refusal |
+| METAMAGIC is a mutable Set | `core.test` | S6: nothing mutable reachable from `api.core` |
+| S2 constants | `core.test` (todo only) | `MODULE` + version constant (C41 still fails until S2 writes that test) |
+| **new:** `parseFormula` splits a die modifier's @reference argument — `preview("1d8x@mod=8", {modifier:"min2"})` gives `"1d8xmin2@mod=8"` | `api.test` | `preview`/`transformFormula` only (the live riders edit real terms); a small standalone fix, not in the audit |
+
+Also pinned, no todo (additive later, guide §4 row -12): `battleMedic(healer, ACTOR)` warns "no Hit
+Dice" for the actor's name.
+
+**Coverage** (wave-3 report method: `node --test --experimental-test-coverage` over every
+`*.test.mjs`, lcov per file, the module's own 8 files, `lib/` and `test/` excluded):
+- before (setup baseline, the old self-running suites only): 3 of 8 files ever loaded
+  (the three cores, 99.64 / 86.60 / 96.00 on those); 828 of 2197 module lines;
+- checkpoint, node:test only: **99.00 / 86.64 / 97.72** (L / B / F), 8 of 8 files; riders.mjs,
+  rituals.mjs, concentration.mjs, argon-tidy.mjs and cast-flow.mjs 100 % lines.
+
+**Gates at the checkpoint:** `node test/run.mjs` green twice; `make foundry-riders-check` exit 0
+(vendor and conformance gates skip: no `lib/kit.lock.json` yet); `pytest -q` 1199 passed, 2
+skipped, 3 xfailed (= baseline); conformance **54.3 % (25/46)** — C20, C40, C43 now pass.
+

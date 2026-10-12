@@ -87,9 +87,37 @@ def test_package_files_are_refused_without_the_relationship(tmp_path):
 
 
 def test_deferred_files_are_refused(tmp_path):
-    d = make_module(tmp_path, relationships={"recommends": [{"id": "enhancedcombathud", "type": "module", "reason": "x"}]})
+    # argon-kit was the real deferred row until wave 4 wrote it; a synthetic one keeps the refusal pinned
+    lib = tmp_path / "lib"
+    lib.mkdir()
+    for f in vendor.LIB_ROOT.glob("*.mjs"):
+        (lib / f.name).write_bytes(f.read_bytes())
+    (lib / "test-kit").mkdir()
+    kit = vendor.load_kit()
+    for f in kit["testKit"]:
+        (lib / "test-kit" / f).write_bytes((vendor.LIB_ROOT / "test-kit" / f).read_bytes())
+    kit["files"]["later"] = {"deps": [], "status": "deferred"}
+    (lib / "kit.json").write_text(json.dumps(kit))
+    d = make_module(tmp_path)
     with pytest.raises(vendor.VendorError, match="deferred"):
-        vendor.sync(d, extra=["argon-kit"])
+        vendor.sync(d, extra=["later"], lib_root=lib)
+
+
+def test_argon_kit_vendors_with_its_package(tmp_path):
+    d = make_module(tmp_path, relationships={"recommends": [{"id": "enhancedcombathud", "type": "module", "reason": "x"}]})
+    vendor.sync(d, extra=["argon-kit"])
+    assert (d / "lib/argon-kit.mjs").read_bytes() == (vendor.LIB_ROOT / "argon-kit.mjs").read_bytes()
+    assert vendor.check(d) == []
+    bare = make_module(tmp_path, "pentaryn-bare")
+    with pytest.raises(vendor.VendorError, match="enhancedcombathud"):
+        vendor.sync(bare, extra=["argon-kit"])
+
+
+def test_refusal_names_the_kit_file_with_its_ext(tmp_path):
+    # a CSS kit file is named argon-tooltip.css in the refusal, not argon-tooltip.mjs (wave-4 riders lane)
+    bare = make_module(tmp_path, "pentaryn-bare")
+    with pytest.raises(vendor.VendorError, match=r"^argon-tooltip\.css names enhancedcombathud"):
+        vendor.sync(bare, extra=["argon-tooltip"])
 
 
 def test_module_json_is_never_touched(tmp_path):

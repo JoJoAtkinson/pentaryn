@@ -155,7 +155,7 @@ test("the stub runs Foundry's own common/ (set PENTARYN_TEST_SHIMS=1 to accept s
   if (process.env.PENTARYN_TEST_SHIMS !== "1") assert.equal(F.utilsSource, "foundry", "Foundry's common/ did not load");
 });
 
-const returnButtons = panel => panel._buttons.filter(b => b.element.classList.contains("pentaryn-return"));
+const returnButtons = panel => panel._buttons.filter(b => b.element.classList.contains("ptf-return"));
 
 /* ── PT3-3 ───────────────────────────────────────────────────────────────── */
 
@@ -210,7 +210,7 @@ test("PT3-6: Escape closes an open Change Form picker instead of reaching the ga
   assert.ok(action, "the Escape keybinding is registered");
   assert.equal(action.onDown(), false, "nothing open: Escape falls through to core");
   const picker = new El();
-  picker.classList.add("features-container", "pentaryn-picker", "show");
+  picker.classList.add("features-container", "ptf-picker", "show");
   assert.equal(action.onDown(), true, "consumed");
   assert.equal(picker.classList.contains("show"), false, "the picker is closed");
   assert.equal(action.onDown(), false, "closed: the next Escape falls through again");

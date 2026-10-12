@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Fixtures for rituals-core.mjs (Ritual Adept). No dependencies — `node test/rituals.mjs`;
- * also run at the end of test/run.mjs so the module's node-test gate covers it.
+ * a LEGACY suite of test/run.mjs (its own process).
  * Synthetic fixtures only.
  */
 

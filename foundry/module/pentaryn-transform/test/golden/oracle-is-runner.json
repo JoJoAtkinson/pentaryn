@@ -1,0 +1,62 @@
+[
+  {
+    "input": [
+      "gm",
+      "gm"
+    ],
+    "out": true
+  },
+  {
+    "input": [
+      "gm",
+      "p1"
+    ],
+    "out": false
+  },
+  {
+    "input": [
+      null,
+      "p1"
+    ],
+    "out": true
+  },
+  {
+    "input": [
+      null,
+      "p2"
+    ],
+    "out": false
+  },
+  {
+    "input": [
+      null,
+      "p3"
+    ],
+    "out": false
+  },
+  {
+    "input": [
+      null,
+      "gm"
+    ],
+    "out": false
+  },
+  {
+    "input": [
+      null,
+      "p2",
+      [
+        "p2"
+      ]
+    ],
+    "out": true
+  },
+  {
+    "input": [
+      null,
+      "p1",
+      []
+    ],
+    "out": false
+  }
+]
