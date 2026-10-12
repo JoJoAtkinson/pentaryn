@@ -196,7 +196,8 @@ try {
   await sleep(1500);                                                      // any trailing light flush lands first
   if (hookId !== null) Hooks.off("updateToken", hookId);
   if (scene && game.scenes.get(scene.id)) await safely("scene", () => scene.delete());
-  for (const a of actors) if (game.actors.get(a.id)) await safely("actor", () => a.delete());
+  const actorIds = actors.filter(a => game.actors.get(a.id)).map(a => a.id);
+  if (actorIds.length) await safely("actors", () => Actor.deleteDocuments(actorIds));
   Object.assign(out.cleanup, {
     zzLeft: game.actors.filter(a => a.name.startsWith("ZZ ")).length + game.scenes.filter(s => s.name.startsWith("ZZ ")).length,
     settingsRestored: JSON.stringify({ lightRadius: setting("lightRadius"), ownerSees: setting("ownerSees"), floatOverHud: setting("floatOverHud"), showStrip: setting("showStrip") }) === JSON.stringify(out.env.settings)

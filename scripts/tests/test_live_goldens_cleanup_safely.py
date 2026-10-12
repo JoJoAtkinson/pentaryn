@@ -33,6 +33,13 @@ globalThis.Actor = { async create(data) {
     async delete() { if (REFUSE.has(data.name)) throw new Error(`refused: ${data.name}`); world.delete(id); deleted.push(data.name); } };
   world.set(id, doc);
   return doc;
+},
+// LG-AC-3: a batch is one request, refused whole when any document in it is refused
+async deleteDocuments(ids) {
+  const docs = ids.map(id => world.get(id));
+  const bad = docs.find(d => REFUSE.has(d.name));
+  if (bad) throw new Error(`refused: ${bad.name}`);
+  for (const d of docs) { world.delete(d.id); deleted.push(d.name); }
 } };
 const notes = { info() {}, warn() {}, error() {} };
 globalThis.ui = { notifications: notes };
@@ -58,8 +65,9 @@ STUBS = {
              ["ZZ Golden Ties Subject"], []),
     "combat": ("{ combat: { running: () => null, quick: () => null, riderMode: () => null } }",
                ["ZZ Golden Combat Fighter"], []),
+    # LG-AC-3: its three actors go in one batch, so the refused owner takes the batch with it
     "attunement": ("{ attunement: {} }",
-                   ["ZZ Golden Attunement Owner"], ["ZZ Golden Attunement Chest", "ZZ Golden Attunement Stranger"]),
+                   ["ZZ Golden Attunement Owner"], []),
 }
 
 

@@ -212,7 +212,8 @@ try {
     }
   }
   if (createdFolder && game.folders.get(createdFolder) && !game.folders.get(createdFolder).contents.length) await safely("folder", () => game.folders.get(createdFolder).delete());
-  for (const [name, j] of Object.entries({ src, owned })) if (j && game.journal.get(j.id)) await safely(name, () => j.delete());
+  const journalIds = [src, owned].filter(j => j && game.journal.get(j.id)).map(j => j.id);
+  if (journalIds.length) await safely("journals", () => JournalEntry.deleteDocuments(journalIds));
   const gmJournalPagesNow = gmJournal && game.journal.get(gmJournal.id) ? game.journal.get(gmJournal.id).pages.size : null;
   Object.assign(out.cleanup, {
     gmButtonRestored: "gmButton" in saved ? game.settings.get(MOD, "gmButton") === saved.gmButton : null,

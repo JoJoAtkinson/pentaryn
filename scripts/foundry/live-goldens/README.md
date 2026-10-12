@@ -30,7 +30,11 @@ as `<thing>Left: <count>` (fails above 0) and restores as `<thing>Restored: <boo
 objects included — is printed but never judged. Every awaited step in a `finally` runs through the
 preamble's `safely(name, fn)`: a refused delete or restore is recorded as
 `<name>CleanupError: "NOT done: <why>"` and the next step still runs, so one failure never leaves
-the remaining ZZ documents behind (`scripts/tests/test_live_goldens_cleanup_safely.py`). Add to
+the remaining ZZ documents behind (`scripts/tests/test_live_goldens_cleanup_safely.py`). Delete
+each document type in one batch — collect the ids still in the world, then one
+`Actor.deleteDocuments(ids)` / `ChatMessage.deleteDocuments(ids)` / `JournalEntry.deleteDocuments(ids)`
+inside one `safely` step — never one awaited `doc.delete()` per id
+(`scripts/tests/test_live_goldens_cleanup_batch.py`); a refused batch is reported whole. Add to
 `out.cleanup` in `finally` (`Object.assign`), never replace it, or those keys are lost.
 
 ## Known run-to-run noise

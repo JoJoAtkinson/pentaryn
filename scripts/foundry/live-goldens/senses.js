@@ -219,11 +219,12 @@ try {
 } finally {
   await sleep(1500);                                                      // trailing carried-light / reconcile timers
   const zzActors = new Set([carrier?.id, target?.id].filter(Boolean));
-  const mine = game.messages.filter(m => !msgsBefore.has(m.id) && zzActors.has(m.speaker?.actor));
-  out.cleanup.chatDeleted = mine.length;
-  for (const m of mine) await safely("chat", () => m.delete());
+  const chatIds = game.messages.filter(m => !msgsBefore.has(m.id) && zzActors.has(m.speaker?.actor)).map(m => m.id);
+  out.cleanup.chatDeleted = chatIds.length;
+  if (chatIds.length) await safely("chat", () => ChatMessage.deleteDocuments(chatIds));
   if (scene && game.scenes.get(scene.id)) await safely("scene", () => scene.delete());
-  for (const [name, a] of Object.entries({ carrier, target })) if (a && game.actors.get(a.id)) await safely(name, () => a.delete());
+  const actorIds = [carrier, target].filter(a => a && game.actors.get(a.id)).map(a => a.id);
+  if (actorIds.length) await safely("actors", () => Actor.deleteDocuments(actorIds));
   out.cleanup.zzLeft = game.actors.filter(a => a.name.startsWith("ZZ ")).length + game.scenes.filter(s => s.name.startsWith("ZZ ")).length;
   out.cleanup.zzMessagesLeft = game.messages.filter(m => !msgsBefore.has(m.id) && zzActors.has(m.speaker?.actor)).length;
 }

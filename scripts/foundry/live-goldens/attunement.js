@@ -213,7 +213,8 @@ try {
   S.error = caught(e);
 } finally {
   for (const [lvl, s] of Object.entries(spied)) { if (s.own) notes[lvl] = s.fn; else delete notes[lvl]; }
-  for (const [name, a] of Object.entries({ owner, chest, stranger })) if (a && game.actors.get(a.id)) await safely(name, () => a.delete());
+  const actorIds = [owner, chest, stranger].filter(a => a && game.actors.get(a.id)).map(a => a.id);
+  if (actorIds.length) await safely("actors", () => Actor.deleteDocuments(actorIds));
   Object.assign(out.cleanup, {
     toastsRestored: ["info", "warn", "error"].every(l => ui.notifications[l] === spied[l].fn),
     zzActorsLeft: game.actors.filter(a => a.name.startsWith("ZZ ")).length
