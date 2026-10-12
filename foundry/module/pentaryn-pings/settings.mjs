@@ -8,13 +8,19 @@
  */
 
 import { I18N, MODULE } from "./pings-core.mjs";
-import { defineSettings, settingsSnapshot } from "./lib/settings.mjs";
+import { defineSettings, serialStore, settingsSnapshot } from "./lib/settings.mjs";
+
+/** pings-edge-1: who hears a change to the log, from this tab or another GM tab (capture.mjs). */
+let logListener = null;
+/** The log's serialStore, made on first use (its queue needs Foundry's Semaphore). */
+let store = null;
 
 /** @type {import("./lib/settings.mjs").SettingRow[]} */
 export const SETTINGS = [
   {
     key: "log", store: true, scope: "world", config: false, type: Array, default: [],
-    doc: "The ping store: the newest `max` records { t, userId, userName, sceneId, sceneName, x, y }, oldest first. Written by GM clients only, at most once per 250 ms.",
+    onChange: value => logListener?.(value),
+    doc: "The ping store: the newest `max` records { t, userId, userName, sceneId, sceneName, x, y }, oldest first. Written by GM clients only, at most once per 250 ms each, read-modify-write so every GM tab's pings are merged.",
   },
   {
     key: "max", scope: "world", config: true, type: Number, default: 50,
@@ -44,9 +50,18 @@ export function readLog({ log }) {
   }
 }
 
-/** Persist the log (GM clients only: world settings are not player-writable). */
-export function writeLog(list) {
-  return game.settings.set(MODULE, "log", list);
+/**
+ * The log as a kit serialStore (pings-edge-1): `write(current => next)` re-reads the stored log at
+ * write time, so a tab never writes back a stale copy. Any GM client may write; on a player client a
+ * write resolves null (world settings are not player-writable).
+ */
+export function logStore() {
+  return (store ??= serialStore(MODULE, "log"));
+}
+
+/** Set (or, with null, drop) the function the log row's onChange calls with the new stored value. */
+export function onLogChange(fn) {
+  logListener = fn;
 }
 
 /** The raw `max` value; core `capLimit` clamps it. */

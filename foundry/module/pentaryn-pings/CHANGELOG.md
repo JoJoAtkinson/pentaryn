@@ -13,6 +13,14 @@
 
 ## Unreleased — 2026-10-11 (addon blueprint, wave 1)
 
+- [declared] Fix pings-edge-1: with two GM tabs, a `clear()` in one tab is no longer undone by the
+  other tab's next flush, and neither tab overwrites the other's pings. The log is a kit
+  `serialStore`; each tab keeps only its pings since its last write and a flush appends them to the
+  log as stored then (core `mergePending`, which skips the other tab's copy of the same ping). The
+  `log` row has an onChange: an empty log (a clear from either tab) drops the unwritten pings.
+  Readers now always trail a new ping until its write (the SF3 "no lag before the first flush" and
+  "max+1 on a trim" cases are gone); a `clear()` with a flush due is one write, not two.
+
 - Rebuilt on the blueprint (tier small, kit `settings, api, patch, election`): pure core
   `pings-core.mjs`, `settings.mjs`, `api-manifest.mjs`, the `capture.mjs` feature; the
   `handlePing` wrap goes through the kit's `wrapMethod`. Capture, dedupe, cap, flush timing,

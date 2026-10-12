@@ -6,9 +6,9 @@
 //
 // Separate processes (one ready each): glue-player.test.mjs (non-GM client), glue-nopatch.test.mjs (no
 // handlePing anywhere), glue-layers.test.mjs (ControlsLayer lookup order), glue-root.test.mjs (extensible
-// root, both load orders).
+// root, both load orders), glue-trim.test.mjs (a full log), glue-two-gm.test.mjs (a second GM tab).
 //
-// Quirks pinned as they are (not bugs): the readers lag the buffer depending on state (SF3,
+// Quirks pinned as they are (not bugs): the readers trail a new ping until its write (SF3,
 // transform-creatures-39), recent(0) returns everything and square-grid `snapped` on a hex scene
 // (transform-creatures-36), a ping is recorded even when core will not draw it (SF4).
 import { mock, test } from "node:test";
@@ -66,8 +66,10 @@ test("init registers log then max, option objects key by key", () => {
     const { namespace, key, ...rest } = F.game.settings.settings.get(id);
     return rest;
   };
-  const log = opts(`${MODULE}.log`);
-  assert.deepEqual(Object.keys(log), ["scope", "config", "type", "default"]);
+  const { onChange, ...log } = opts(`${MODULE}.log`);
+  // [declared] pings-edge-1: the store row has an onChange, so a change from another GM tab is heard
+  assert.deepEqual(Object.keys(opts(`${MODULE}.log`)), ["scope", "config", "type", "default", "onChange"]);
+  assert.equal(typeof onChange, "function");
   assert.equal(log.type, Array);
   assert.deepEqual(log, { scope: "world", config: false, type: Array, default: [] });
   const max = opts(`${MODULE}.max`);
@@ -118,18 +120,9 @@ test("live golden: a GM ping at 1050,850 on the viewed scene, decorated, origina
   assert.equal(W.pings[0].position, position);
   assert.equal(W.pings[0].options, options, "same options object");
 
-  const last = api().last();
-  // SF3 case A: buffer is the cached setting array until the first flush, so no lag yet
-  assert.deepEqual(strip(last), {
-    userId: GM, userName: "Gamemaster", sceneId: ALPHA, sceneName: "ZZ live-goldens pings", x: 1050, y: 850,
-    canvas: { x: 1050, y: 850 }, image: { x: 50, y: 50 }, gridSquare: { i: 0, j: 0 }, snapped: { x: 1000, y: 800 },
-  });
-  // leading keys = the live golden's recentShape; a trailing ageMs follows (publish.test step 6)
-  assert.deepEqual(Object.keys(last).slice(0, 12), ["t", "userId", "userName", "sceneId", "sceneName", "x", "y", "canvas", "image", "gridSquare", "snapped", "age"]);
-  assert.equal(last.t, 1_000_000);
-  assert.equal(last.age, "0s ago");
-  pinJSON("record", { last: strip(last), keys: Object.keys(last).slice(0, 12) }, import.meta.url);
-
+  // [declared] pings-edge-1: the ping waits in this tab's pending list, never in the settings cache,
+  // so the readers show it only once it is written (SF3 case A, "no lag before the first flush", is gone)
+  assert.equal(api().last(), null, "not on record until the write");
   assert.equal(W.log().length, 0, "no write before 250 ms");
   mock.timers.tick(249);
   await drain();
@@ -139,13 +132,23 @@ test("live golden: a GM ping at 1050,850 on the viewed scene, decorated, origina
   assert.equal(W.log().length, 1);
   assert.deepEqual(W.log()[0].value, [{ t: 1_000_000, userId: GM, userName: "Gamemaster", sceneId: ALPHA, sceneName: "ZZ live-goldens pings", x: 1050, y: 850 }]);
   assert.deepEqual(Object.keys(W.log()[0].value[0]), ["t", "userId", "userName", "sceneId", "sceneName", "x", "y"]);
-  assert.equal(api().last().age, "0s ago");
-  mock.timers.tick(12_000);
+
+  const last = api().last();
+  assert.deepEqual(strip(last), {
+    userId: GM, userName: "Gamemaster", sceneId: ALPHA, sceneName: "ZZ live-goldens pings", x: 1050, y: 850,
+    canvas: { x: 1050, y: 850 }, image: { x: 50, y: 50 }, gridSquare: { i: 0, j: 0 }, snapped: { x: 1000, y: 800 },
+  });
+  // leading keys = the live golden's recentShape; a trailing ageMs follows (publish.test step 6)
+  assert.deepEqual(Object.keys(last).slice(0, 12), ["t", "userId", "userName", "sceneId", "sceneName", "x", "y", "canvas", "image", "gridSquare", "snapped", "age"]);
+  assert.equal(last.t, 1_000_000);
+  assert.equal(last.age, "0s ago");
+  pinJSON("record", { last: strip(last), keys: Object.keys(last).slice(0, 12) }, import.meta.url);
+  mock.timers.tick(11_750);
   assert.equal(api().last().age, "12s ago");
   assert.deepEqual(lines(), []);
 });
 
-test("KNOWN transform-creatures-39 (SF3 case B): after a flush the readers lag the buffer until the next flush", async () => {
+test("KNOWN transform-creatures-39 (SF3 case B): the readers trail a new ping until its write", async () => {
   mock.timers.tick(1000);
   layer.handlePing(gm, { x: 1250, y: 950 }, { scene: ALPHA });
   assert.equal(api().last().x, 1050, "last() still shows the previous ping");
@@ -383,7 +386,7 @@ test("the cap: max 3 keeps the newest three; a non-numeric max falls back to 50;
   await F.game.settings.set(MODULE, "max", 50);
 });
 
-test("clear(): writes [] and resolves true; a pending flush then writes the emptied buffer", async () => {
+test("clear(): writes [] and resolves true; a flush already due then writes nothing ([declared] pings-edge-1)", async () => {
   mock.timers.tick(1000);
   layer.handlePing(gm, { x: 77, y: 77 }, { scene: ALPHA });
   const before = W.log().length;
@@ -391,11 +394,11 @@ test("clear(): writes [] and resolves true; a pending flush then writes the empt
   assert.deepEqual(W.log().slice(before).map(c => c.value), [[]]);
   mock.timers.tick(250);
   await drain();
-  assert.deepEqual(W.log().slice(before).map(c => c.value), [[], []], "the ping before clear() is gone");
+  assert.deepEqual(W.log().slice(before).map(c => c.value), [[]], "the ping before clear() is gone; no second write");
   layer.handlePing(gm, { x: 78, y: 78 }, { scene: ALPHA });
   mock.timers.tick(250);
   await drain();
-  assert.deepEqual(W.log().at(-1).value.map(r => r.x), [78], "buffer started empty");
+  assert.deepEqual(W.log().at(-1).value.map(r => r.x), [78], "the log started empty");
 });
 
 test("GM gate: no record while the client user is not a GM, and a flush due then writes nothing", async () => {
@@ -415,7 +418,7 @@ test("GM gate: no record while the client user is not a GM, and a flush due then
   layer.handlePing(gm, { x: 4, y: 4 }, { scene: ALPHA });
   mock.timers.tick(250);
   await drain();
-  assert.deepEqual(W.log().at(-1).value.map(r => r.x), [1, 4], "the GM-time record survived in the buffer");
+  assert.deepEqual(W.log().at(-1).value.map(r => r.x), [1, 4], "the GM-time record survived in the pending list");
   assert.deepEqual(lines(), []);
 });
 
@@ -445,7 +448,7 @@ test("failure texts: capture throw in the wrap, capture throw on the socket, wri
   mock.timers.tick(250);
   await drain();
   assert.deepEqual(lines(), [["warn", "pentaryn-pings | could not persist the log", rejected]]);
-  // the buffer kept the ping; the next flush carries it
+  // the pending list kept the ping; the next flush carries it
   layer.handlePing(gm, { x: 9, y: 9 }, { scene: BETA });
   mock.timers.tick(250);
   await drain();

@@ -108,13 +108,13 @@ test("uninstall() unwraps handlePing, stops listening, drops a pending flush; a 
   assert.equal(F.game.modules.get(MODULE).api, again);
   assert.equal(W.ControlsLayer.prototype.handlePing.__pentarynPatched, true, "wrapped again");
   assert.deepEqual(W.socket.map(([e]) => e), ["userActivity"]);
-  // SF3: before the first flush the buffer is the cached setting array, so the unflushed ping at 10
-  // already sits in the cache (never written) and the re-read buffer carries it
-  assert.deepEqual(W.console.splice(0), [["log", "pentaryn-pings | ready — 2 ping(s) on record"]]);
+  // [declared] pings-edge-1: the unflushed ping at 10 sat only in the pending list, which uninstall()
+  // dropped; it never reached the settings cache
+  assert.deepEqual(W.console.splice(0), [["log", "pentaryn-pings | ready — 1 ping(s) on record"]]);
   await layer.handlePing(F.game.users.get(GM), { x: 13, y: 13 }, { scene: ALPHA });
   mock.timers.tick(250);
   await drain();
-  assert.deepEqual(W.log().at(-1).value.map(r => r.x), [1, 10, 13]);
+  assert.deepEqual(W.log().at(-1).value.map(r => r.x), [1, 13]);
   again.uninstall();
 });
 

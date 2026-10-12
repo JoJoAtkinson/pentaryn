@@ -90,3 +90,19 @@ test("drift guard: the settings rows and reader docs quote the core constants", 
   const last = MANIFEST.rows.find(r => r.path === "last").doc;
   assert.ok(last.includes(`${core.FLUSH_MS} ms`), last);
 });
+
+test("pings-edge-1: mergePending appends this tab's pending records to the log as stored now, capped, without the other tab's copy of a ping", () => {
+  const r = (x, t, userId = "u") => ({ t, userId, sceneId: "s", x, y: 0 });
+  const stored = [r(1, 1000), r(2, 2000)];
+  const out = core.mergePending(stored, [r(3, 3000), r(4, 3100)], 50);
+  same(out.map(x => x.x), [1, 2, 3, 4]);
+  same(stored.map(x => x.x), [1, 2], "the stored array is not mutated");
+  same(core.mergePending(stored, [r(3, 3000)], 2).map(x => x.x), [2, 3], "capped as appendCapped");
+  same(core.mergePending(stored, [r(3, 3000)], 0.5).map(x => x.x), [1, 2, 3], "a fractional limit below 1 never trims");
+  for (const junk of [null, undefined, "log", { 0: r(9, 1) }]) same(core.mergePending(junk, [r(3, 3000)], 50).map(x => x.x), [3], "not an array → empty");
+  // the other tab's copy: same user, scene and point, stamped < DEDUPE_MS apart either way
+  same(core.mergePending(stored, [r(2, 2399), r(2, 1601)], 50).map(x => x.x), [1, 2], "inside the window");
+  same(core.mergePending(stored, [r(2, 2400)], 50).map(x => x.x), [1, 2, 2], "400 ms apart is a new ping");
+  same(core.mergePending(stored, [r(2, 2001, "v")], 50).map(x => x.x), [1, 2, 2], "another user");
+  same(core.mergePending([], [r(5, 1), r(5, 2)], 50).map(x => x.x), [5, 5], "pending records are not compared with each other");
+});
