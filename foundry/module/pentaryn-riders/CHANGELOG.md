@@ -18,6 +18,8 @@
   non-GM client answers `NOT_GM: this client is not a GM`. It logs an audit line per success and a
   warn per refusal. The runner sends a request id and the GM tabs claim it first, so two GM tabs
   heal once, even when one tab's claim lands after the other recorded its result (combat-riders-41).
+  Recording a result no longer prunes another patient request that is still being claimed
+  (`794e1ed9`), so two Battle Medics on one patient at once also heal once each.
 - Three silent catches now log at debug (`CONFIG.debug["pentaryn-riders"] = true`).
 - The once-per-casting guard reads the usage card's own messages from dnd5e's message registry
   (`dnd5e.registry.messages`) instead of scanning the whole chat log on each attack damage roll;
