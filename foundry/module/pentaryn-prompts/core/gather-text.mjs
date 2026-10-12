@@ -55,7 +55,8 @@ function ftPair(p) {
  *                   stats: {cr, ac, hp, hpMax} | null, classes: [{name, levels, subclass}] | null, species,
  *                   items: [..] | null, disposition, xp, light: string | null, ownTextUuid? } },
  *   todo: [pids], next: sceneId | null, unseenWithinFt,
- *   party: parseParty input ({level, size} | "4x5" | [levels]) | null, partySource: "setting" | "call" | null, cropsNote: string | null
+ *   party: parseParty input ({level, size} | "4x5" | [levels]) | null, partySource: "setting" | "call" | null,
+ *   partyUnreadable: boolean (the call gave a party that could not be read), cropsNote: string | null
  * }
  */
 export function renderGather(view, { chars = GATHER_CHARS } = {}) {
@@ -163,7 +164,10 @@ export function renderGather(view, { chars = GATHER_CHARS } = {}) {
 export function partyLine(view) {
   const levels = view.party ? parseParty(view.party) : null;
   if (!levels?.length) {
-    return "<party>none set (the world setting \"Party for encounter budgets\" is blank and the call gave none): no XP budgets. " +
+    const why = view.partyUnreadable
+      ? "the call's party could not be read and the world setting \"Party for encounter budgets\" is blank or unreadable"
+      : "the world setting \"Party for encounter budgets\" is blank and the call gave none";
+    return `<party>none set (${why}): no XP budgets. ` +
       "Pass party: \"4x5\" (PCs x level) or [5,5,4,5] if you know the party; otherwise ask Joe — never guess one.</party>";
   }
   const same = levels.every(l => l === levels[0]);

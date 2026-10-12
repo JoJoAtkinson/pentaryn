@@ -2,7 +2,7 @@
  * pentaryn-prompts — the one-call context export (plan §5), the manifest ring, list and show.
  */
 
-import { MODULE, VERSION, buildView, renderGather, codedError, idCompare, sceneRefs, CURRENT_SCENE } from "./geometry-core.mjs";
+import { MODULE, VERSION, buildView, renderGather, codedError, idCompare, sceneRefs, CURRENT_SCENE, parseParty } from "./geometry-core.mjs";
 import { sceneModel, promptTokens, resolveItemEmbeds } from "./scene-adapter.mjs";
 import { promptText } from "./markers-adapter.mjs";
 import { renderCrops } from "./crops-adapter.mjs";
@@ -79,9 +79,13 @@ export async function gather(opts = {}) {
     unseenWithinFt = setting("unseenWithinFt", DEFAULTS.unseenWithinFt), builtWithoutProvenance = true, maxPrompts = 60, from = null,
     party: partyArg = null, cropsAs = "files"
   } = opts ?? {};
-  const worldParty = setting("party", "") || null;
-  const party = partyArg ?? worldParty;
-  const partySource = partyArg ? "call" : worldParty ? "setting" : null;
+  // a call party that cannot be read (or "") is not given: the world party stands (prompts-core-EC-3)
+  const callParty = parseParty(partyArg) ? partyArg : null;
+  const worldSetting = setting("party", "");
+  const worldParty = parseParty(worldSetting) ? worldSetting : null;
+  const party = callParty ?? worldParty;
+  const partySource = callParty ? "call" : worldParty ? "setting" : null;
+  const partyUnreadable = partyArg != null && partyArg !== "" && !callParty;
   const t0 = performance.now();
   // each scene's prompt count once (prompts-lookup-23): the "all" filter and the paging share it
   const counted = new Map();
@@ -102,7 +106,7 @@ export async function gather(opts = {}) {
 
   // crops only where there is a picture: a scene with no background image or tiles crops to grey
   const cropPlan = cropsDecision(crops, models.map(m => ({ hasArt: sceneHasArt(game.scenes.get(m.key)) })));
-  const { view, manifest } = buildView(models, { unseenWithinFt, next, party, partySource, cropsNote: cropPlan.note });
+  const { view, manifest } = buildView(models, { unseenWithinFt, next, party, partySource, partyUnreadable, cropsNote: cropPlan.note });
   const text = renderGather(view, { chars });
   const tRender = performance.now();
   manifest.at = Date.now();

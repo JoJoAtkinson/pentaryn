@@ -32,7 +32,7 @@ export const CREATURE_KINDS = Object.freeze(["npc", "character", "creature"]);
  * to stamp. `view` is the shape `renderGather` documents.
  */
 export function buildView(scenes, { unseenWithinFt = DEFAULTS.unseenWithinFt, linkFt = LINK_FT, formationFt = FORMATION_FT, next = null, party = null,
-  partySource = null, cropsNote = null } = {}) {
+  partySource = null, partyUnreadable = false, cropsNote = null } = {}) {
   const prepared = scenes.map(sc => {
     const byKey = new Map(sc.items.map(it => [it.key, it]));
     const prompts = sc.items.filter(it => it.isPrompt).map(it => it.key);
@@ -49,7 +49,7 @@ export function buildView(scenes, { unseenWithinFt = DEFAULTS.unseenWithinFt, li
 
   const view = { call: null, counts: { scenes: 0, prompts: 0, built: 0, encounters: 0, alone: 0 },
     scenes: [], prompts: {}, built: {}, todo: [], next, unseenWithinFt, party: parseParty(party) ? party : null,
-    partySource: parseParty(party) ? partySource : null, cropsNote };
+    partySource: parseParty(party) ? partySource : null, partyUnreadable: !!partyUnreadable, cropsNote };
   const manifest = { call: null, at: null, scenes: {}, prompts: {}, built: {}, encounters: {} };
   const callEntries = [];
 

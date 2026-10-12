@@ -55,3 +55,28 @@ test("gather (prompts-core-EC-1): a lone Scene document lands in the manifest's 
   const named = (await captureConsole(() => G.gather({ scenes: "s1", crops: "off" }))).value;
   assert.equal(named.manifest.opts.scenes, "s1");
 });
+
+/* prompts-core-EC-3 [declared]: a call party that cannot be read is treated as not given */
+
+test("gather (prompts-core-EC-3): an unreadable call party falls back to the world party, or says it was unreadable", async () => {
+  const partyOf = text => /<party>[^\n]*<\/party>/.exec(text)[0];
+  await F.game.settings.set("pentaryn-prompts", "party", "3x2");
+  try {
+    for (const bad of ["four", "", { level: 0 }, [0]]) {
+      const r = (await captureConsole(() => G.gather({ scenes: "s1", crops: "off", party: bad }))).value;
+      assert.deepEqual([r.party, r.partySource, r.manifest.opts.party], ["3x2", "setting", "3x2"], JSON.stringify(bad));
+      assert.equal(partyOf(r.text), "<party>3 x level 2 (from the world setting)</party>");
+    }
+    const good = (await captureConsole(() => G.gather({ scenes: "s1", crops: "off", party: "4x5" }))).value;
+    assert.deepEqual([good.party, good.partySource], ["4x5", "call"]);
+    await F.game.settings.set("pentaryn-prompts", "party", "");
+    const none = (await captureConsole(() => G.gather({ scenes: "s1", crops: "off", party: "four" }))).value;
+    assert.deepEqual([none.party, none.partySource], [null, null]);
+    assert.match(partyOf(none.text), /^<party>none set \(the call's party could not be read/);
+    // an empty call party is simply not given: the usual none-set line
+    const empty = (await captureConsole(() => G.gather({ scenes: "s1", crops: "off", party: "" }))).value;
+    assert.match(partyOf(empty.text), /^<party>none set \(the world setting/);
+  } finally {
+    await F.game.settings.set("pentaryn-prompts", "party", "");
+  }
+});
