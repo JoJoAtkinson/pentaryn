@@ -110,6 +110,10 @@ Fixed (declared): a **late claim** — a second GM session's stake that lands af
 already rolled and wrote the answer — no longer wins, so a finished kind or lore fact is never rolled a
 second time over the first answer. The late session hands its stray stake back and stays silent. AC-4.
 
+Fixed (declared, no table-visible change): the kind study's pass rung (15) is one rule,
+`kindPassed(tier)` in `core/rules.mjs`, read off `STUDY_RUNGS` (now kept in `core/shared.mjs`, still
+exported by `core/study.mjs`), instead of a hand-written `>= 15` at nine sites. ext-7.
+
 ## 0.19.4 (2026-10-10, usability run, Area 7 re-run)
 
 - **The inspect window's Share switches are the table's PCs only** (`tablePCs`): each player's
