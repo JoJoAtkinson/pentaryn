@@ -69,3 +69,24 @@ test("kit-1.2.0: kit.json, KIT_VERSION and the README changelog name 1.2.0", asy
   const readme = readFileSync(fileURLToPath(new URL("../README.md", import.meta.url)), "utf8");
   assert.match(readme, /^1\.2\.0 \(/m, "README.md changelog has no 1.2.0 entry");
 });
+
+// KIT-M3 (final review 2026-10-12): the argon-tooltip.css row said the migration was still partial
+// (@import, "riders waits"). It must name every module that vendors the file, each of which lists
+// lib/argon-tooltip.css in its module.json styles.
+test("KIT-M3: the argon-tooltip.css README row names every module that lists it in module.json styles", () => {
+  const readme = readFileSync(fileURLToPath(new URL("../README.md", import.meta.url)), "utf8");
+  const row = readme.split("\n").find(l => l.startsWith("| `argon-tooltip.css` |"));
+  assert.ok(row, "README.md has no argon-tooltip.css row");
+  assert.doesNotMatch(row, /@import/, "row still describes an @import");
+  assert.doesNotMatch(row, /waits/, "row still says a module waits");
+  const modDir = new URL("../../module/", import.meta.url);
+  const vendors = readdirSync(fileURLToPath(modDir))
+    .filter(m => existsSync(fileURLToPath(new URL(`${m}/lib/argon-tooltip.css`, modDir))));
+  assert.ok(vendors.length > 0, "no module vendors lib/argon-tooltip.css");
+  for (const m of vendors) {
+    const styles = readJSON(new URL(`${m}/module.json`, modDir)).styles ?? [];
+    assert.ok(styles.includes("lib/argon-tooltip.css"), `${m} vendors lib/argon-tooltip.css but its module.json styles omit it`);
+    const short = m.replace(/^pentaryn-/, "");
+    assert.match(row, new RegExp(`\\b${short}\\b`), `README row does not name ${short}`);
+  }
+});
