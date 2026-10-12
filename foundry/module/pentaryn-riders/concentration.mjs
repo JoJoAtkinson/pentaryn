@@ -27,7 +27,8 @@
  *    posts the save card with a Break Concentration button and ends nothing; the result showed a
  *    bare total with no DC and no pass or fail. On the roller's client, when dnd5e's own
  *    `canBreakConcentration` says the save failed, we call `actor.endConcentration()` and mark the
- *    card broken, as the button does. Kept as a button (nothing ends) when the creature can still
+ *    card broken, as the button does. Two tabs on the roller's account (the MCP bridge plus a GM
+ *    browser tab) both see the message: the kit's claimMessage elects one, so it ends once. Kept as a button (nothing ends) when the creature can still
  *    turn the failure around after the roll: an NPC with Legendary Resistance left, or a feature
  *    such as Indomitable, a Mind Sharpener or Bardic Inspiration (table-core AFTER_FAIL_FEATURES).
  *    The card gets one line: "DC 10 · Failed: concentration ended" / "DC 10 · Success".
@@ -40,6 +41,7 @@
 import { MODULE, SUMMON_FLAG, concentrationEffectFor, summonTokenIds, concentrationResult, isConcentration } from "./table-core.mjs";
 import { settingOr } from "./settings.mjs";
 import { featureKeys } from "./shapes.mjs";
+import { claimMessage } from "./lib/election.mjs";
 
 const enabled = () => settingOr("concentrationSummons", false);
 
@@ -121,6 +123,8 @@ async function autoBreak(message, options, userId) {
     if (!res.autoBreak) return;
     const actor = message.getAssociatedActor?.();
     if (!actor?.isOwner) return;
+    // Two tabs on the roller's account both pass the gate above: one wins the card (riders-async-1).
+    if (!await claimMessage(message, "autoBreak", { scope: MODULE })) return;
     const ended = await actor.endConcentration();
     if (ended?.length) await message.update({ "system.outcome": "broken" });
   } catch (err) { log.warn("concentration auto-break skipped", err); }

@@ -89,6 +89,7 @@ R.inspect("Marrith Ashcroft").rows;                  // the same rows, plain, by
 | Battle Medic roll message `flags.pentaryn-riders` | `{ flow: "battle-medic", target, faces }` |
 | Activity flag `flags.pentaryn-riders.flow` | `"battle-medic"` on the activity `installBattleMedic` builds |
 | Token flag `flags.pentaryn-riders.concentration` | the uuid of the concentration effect that keeps a summon |
+| Concentration save card `flags.pentaryn-riders.claims.autoBreak` | the socket id of the one tab that ends the concentration (the kit's `claimMessage`, riders-async-1) |
 | Patient flag `flags.pentaryn-riders.relay.<requestId>` | the GM tabs' claim stamps (`claims.<socketId>`, removed when answered) and the winner's `{ result \| error, at }`; the last five kept |
 | Documents | class `system.hd.spent` / NPC `system.attributes.hd.spent`; HP via `applyDamage`; `system.spells.spellN.value` (Arcane Recovery); a concentration save card's `system.outcome = "broken"`; summoned tokens deleted |
 
@@ -128,7 +129,10 @@ Nothing in Argon's files is edited.
 ## Two sessions / who writes
 
 - **Damage riders, tray preset, Battle Medic roll, Arcane Recovery, auto-break**: the roller's
-  (owner's) own client; nothing runs twice.
+  (owner's) own client; nothing runs twice. Auto-break also claims the save card first (the kit's
+  `claimMessage`, key `autoBreak`), because two tabs on the roller's account (the MCP bridge tab and
+  a GM browser tab) both pass the roller test: one tab ends the concentration, about 750 ms after
+  the card posts (riders-async-1).
 - **Battle Medic on a target the player doesn't own**: the active GM writes, through the query
   `pentaryn-riders.battleMedic` (registered on every client; the kit's `guarded` with
   `sender: "any"`: a GM receiver, any sender). The handler checks the sender owns the healer, the
