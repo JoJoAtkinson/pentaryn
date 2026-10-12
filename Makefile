@@ -267,7 +267,7 @@ foundry-module-new:
 	@$(OPS) module-new $(M) --title "$(TITLE)" --tier $(if $(TIER),$(TIER),full) $(ARGS)
 # Regenerate the Module APIs table in context/foundry/README.md (check-context fails when stale).
 foundry-module-index: ; @$(OPS) module-index
-# Score against rules C01–C61: every module, or M=<short>; MD=1 for the markdown table.
+# Score against rules C01–C62: every module, or M=<short>; MD=1 for the markdown table.
 foundry-conformance: ; @$(OPS) module-conformance $(if $(M),--module $(M),) $(if $(MD),--markdown,)
 
 # ─── Auto-update (Saturdays 04:06, watchdog 06:12) ──────────────────────
