@@ -85,7 +85,8 @@ hold `"current"`). `crops`: `"auto"` · `true`/`"on"` · `false`/`"off"`. `crops
 default: `Data/pentaryn-prompts-crops/<call>/E1.webp`, no base64 in an eval-js result) or `"base64"`
 (what the queries get; the bridge turns them into MCP images). `party`: `"4x5"`, `{size, level}` or
 `[levels]`; the text's `<party>` line names it and its source, or says none is set. Paging: at most
-`maxPrompts` (60) after the first scene; pass `next` as `from` with the same `scenes`. `specFile`: a JSON
+`maxPrompts` (60) after the first scene; pass `next` as `from` with the same `scenes` (under `"all"`, a
+`from` that has since lost its prompts resumes at the next prompted scene after it). `specFile`: a JSON
 file under the Data dir (`pentaryn-prompts-specs/<name>.json`): replacements, or `{call, party, replacements}`.
 `place` and a drop arm the keyboard capture on the **calling** client for up to 3.5 s.
 

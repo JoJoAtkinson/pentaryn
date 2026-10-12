@@ -37,8 +37,9 @@ export function resolveScene(ref) {
 function pickScenes(scenes, from, countOf) {
   let list;
   const refs = sceneRefs(scenes);
-  if (refs === "all") {
-    list = scenesInNavOrder().filter(s => countOf(s) > 0);
+  const ordered = refs === "all" ? scenesInNavOrder() : null;
+  if (ordered) {
+    list = ordered.filter(s => countOf(s) > 0);
   } else {
     const seen = new Set();
     list = [];
@@ -55,7 +56,14 @@ function pickScenes(scenes, from, countOf) {
     }
   }
   if (from) {
-    const start = list.findIndex(s => s.id === from);
+    let start = list.findIndex(s => s.id === from);
+    // "all", and the next scene lost its prompts since the last page: carry on with the first listed
+    // scene after it in navigation order, an empty page when none is (prompts-core-EC-7)
+    const at = start < 0 && ordered ? ordered.findIndex(s => s.id === from) : -1;
+    if (at >= 0) {
+      const after = list.findIndex(s => ordered.indexOf(s) > at);
+      start = after < 0 ? list.length : after;
+    }
     if (start < 0) throw codedError("SCENE_UNKNOWN", `next scene ${from} is not in this gather`);
     list = list.slice(start);
   }

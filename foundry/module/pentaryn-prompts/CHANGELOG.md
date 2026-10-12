@@ -82,6 +82,10 @@ cssPrefix `pp-`, afterSync). Each **[declared]** change goes to the live check.
   party the `<party>` line reads `none set` and says the call's party could not be read. `""` is
   simply not given. Before, an unreadable call party still overrode the world party and was reported
   as from "this call" while the text printed `none set`.
+- **[declared] Paging `scenes: "all"` survives a `next` scene that lost its prompts** (prompts-core-EC-7):
+  a `from` that is a scene but no longer has prompts continues with the first prompted scene after it
+  in navigation order (an empty page when none is left); before, it refused `SCENE_UNKNOWN`. An
+  explicit scene list still refuses a `from` it does not hold, and so does a `from` that is no scene.
 - **[declared] `encounterXp`'s docblock says who counts** (prompts-core-M1): each built creature's
   XP comes from `actorXp(actor, token)`, which decides who counts; the wrong "Hostile-or-neutral npcs
   only" sentence is gone. Comment only, no behaviour change.
