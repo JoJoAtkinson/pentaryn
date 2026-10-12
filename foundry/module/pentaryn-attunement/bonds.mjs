@@ -84,12 +84,15 @@ async function onCreateItemBond(item, options, userId) {
     // already gone (paid by the other tab) re-reads as {} and stands down.
     const won = await claimDocument(item, "coinBack", { scope: MODULE, reread: d => d.parent?.items?.get?.(d.id) ?? {} });
     if (!won) return;
-    const update = {};
-    for (const [k, v] of Object.entries(bond.currency)) update[`system.currency.${k}`] = (actor.system.currency?.[k] ?? 0) + v;
-    await actor.update(update);
-    await item.delete();
-    ui.notifications.info(t("CoinBack", { actor: actor.name }));
-    return;
+    // Two purses in one batch settle together; each sums onto the other's write, not the same read
+    // (ATT-AC-2). Item Piles' own currency transfer is another module's absolute write, outside this chain.
+    return serial(actor, async () => {
+      const update = {};
+      for (const [k, v] of Object.entries(bond.currency)) update[`system.currency.${k}`] = (actor.system.currency?.[k] ?? 0) + v;
+      await actor.update(update);
+      await item.delete();
+      ui.notifications.info(t("CoinBack", { actor: actor.name }));
+    });
   }
 
   if (actor.id !== bond.actor) return;
@@ -110,7 +113,7 @@ async function onCreateItemBond(item, options, userId) {
   });
 }
 
-/** Per-actor tail of in-flight hand-backs. Local to this tab; two tabs still race (recorded). */
+/** Per-actor tail of in-flight hand-backs and coin purses. Local to this tab; two tabs still race (recorded). */
 const tails = new Map();
 
 /**

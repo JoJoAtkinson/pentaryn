@@ -2,10 +2,12 @@
 // stash() box creates several bonded items in one batch; each createItem hand-back must see the previous
 // one's actor write, or one away entry survives next to its own, attuned item. Document writes are
 // deferred here until drained, which models the server round trip the stub otherwise skips.
-import { test } from "node:test";
+import { mock, test } from "node:test";
 import assert from "node:assert/strict";
 import { GM, MOD, addItem, attunementWorld, makeActor } from "./fixtures/world.mjs";
 import { awayOf } from "../attunement-core.mjs";
+
+mock.timers.enable({ apis: ["setTimeout"] });   // the coin purse's 750 ms claim (ATT-AC-2)
 
 const F = await attunementWorld();
 await import("../attunement.mjs");
@@ -49,4 +51,26 @@ test("two bonded items home in one batch: both away entries consumed, each in it
     "Staff is back with Talo Race — attunement restored.",
     "Ring is back with Talo Race — attunement restored.",
   ]);
+});
+
+// ATT-AC-2: README "A bonded `Coin Purse` pays its coin to whoever takes it". Two purses taken in one batch
+// both win their own claim and settle together; each must add to the other's total, not to the same read.
+test("two coin purses in one batch: both pay", async () => {
+  const actor = makeActor(F, { id: "actorPurseRace01", name: "Purse Race", currency: { gp: 10 } });
+  const bond = (key, gp) => ({ actor: actor.id, key, name: "Coin Purse", currency: { gp } });
+  const a = addItem(F, actor, { id: "itemPurseRaceA01", name: "Coin Purse", type: "loot", flags: { [MOD]: { bond: bond("ka", 5) } } });
+  const b = addItem(F, actor, { id: "itemPurseRaceB01", name: "Coin Purse", type: "loot", flags: { [MOD]: { bond: bond("kb", 3) } } });
+  const queue = [];
+  deferWrites(actor, queue);
+  const from = F.calls.length;
+
+  F.fire("createItem", a, {}, GM);
+  F.fire("createItem", b, {}, GM);
+  await flush();
+  mock.timers.tick(750);
+  await flush();
+  await drain(queue);
+
+  assert.equal(actor.system.currency.gp, 18);
+  assert.equal(F.calls.slice(from).filter(c => c.op === "delete" && c.documentName === "Item").length, 2);
 });
