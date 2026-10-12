@@ -138,8 +138,8 @@ node test/run.mjs                                  # from the module folder
 ## Sync
 
 `make foundry-pings-sync` (the `pings` ModuleSpec is registered); then reload (`.mjs` changes).
-`make foundry-pings-check` runs the node suite only once the ModuleSpec's `check` gains `node-test`
-(C39); until then run `node foundry/module/pentaryn-pings/test/run.mjs` directly. A `module.json`
-change needs a Foundry restart. Live check on the GM client: ping the canvas, wait a second, then
+`make foundry-pings-check` runs the node suite (gate `node-test`) together with the static and
+blueprint gates; `node foundry/module/pentaryn-pings/test/run.mjs` runs the suite alone. A
+`module.json` change needs a Foundry restart. Live check on the GM client: ping the canvas, wait a second, then
 `game.pentaryn.pings.last()` has the point and `game.pentaryn.pings.describe().version` matches
 `module.json`.
