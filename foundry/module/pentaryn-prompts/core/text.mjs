@@ -65,9 +65,9 @@ export function stripHtml(html) {
     .replace(/&(#\d+|#x[0-9a-f]+|[a-z]+);/gi, (m, e) => {
       const k = e.toLowerCase();
       if (ENTITIES[k] !== undefined) return ENTITIES[k];
-      if (k.startsWith("#x")) return String.fromCodePoint(parseInt(k.slice(2), 16));
-      if (k.startsWith("#")) return String.fromCodePoint(parseInt(k.slice(1), 10));
-      return m;
+      if (!k.startsWith("#")) return m;
+      const cp = k.startsWith("#x") ? parseInt(k.slice(2), 16) : parseInt(k.slice(1), 10);
+      return cp <= 0x10FFFF ? String.fromCodePoint(cp) : m;
     });
   return s.split("\n").map(l => l.replace(/[ \t]+/g, " ").trim()).filter((l, i, a) => l || (a[i - 1] ?? "") !== "")
     .join("\n").trim();
