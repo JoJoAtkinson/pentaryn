@@ -45,6 +45,12 @@ against the default DC 15. It used to read as 0 and clamp up to DC 1. A typed DC
 a real 0 is still raised to the floor of 1. The same check now reads every number in the Known and
 study records, so a study rung saved without a `min` is ignored rather than taken as the base rung. M1.
 
+Fixed (declared): a **refused save** of a tie, a Known entry or a Mark as learned no longer throws.
+The write logs a console warning and reports failure (`write`/`writeKnown` answer false,
+`markLearned` answers `writeFailed`); a tie whose other side is refused still reports the side that
+saved. At load, one actor whose legacy ties can't be moved is warned about and left for the next
+load, and the rest still move. R8.
+
 Fixed (declared): the chat cards — the "… studies …" stub, the tempo line and the GM's share
 whisper — name every creature by its **token** name, never its actor name, so a GM-only world actor
 name cannot reach player chat. The token is found on any scene, not only the one the posting

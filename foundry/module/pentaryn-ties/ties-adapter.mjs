@@ -226,10 +226,16 @@ export async function write(actor, list, { render = false } = {}) {
   // Players reach this now. An update to an actor they don't own is refused by the server
   // anyway — catching it here turns a console stack trace into a quiet no-op.
   if (!actor.isOwner) return false;
-  await actor.update(
-    { [`flags.${MODULE}.${FLAG}`]: toStored(Array.isArray(list) ? list : []) },
-    { render }
-  );
+  try {
+    await actor.update(
+      { [`flags.${MODULE}.${FLAG}`]: toStored(Array.isArray(list) ? list : []) },
+      { render }
+    );
+  } catch (err) {
+    // A refused update (R8) — the server said no, or a preUpdate hook threw. Answer false, never throw.
+    log.warn(`${actor.name}: ties write refused`, err);
+    return false;
+  }
   return true;
 }
 
@@ -327,9 +333,14 @@ export async function migrateLegacy() {
     if (!Array.isArray(legacy) || !legacy.length) continue;
     const current = actor.flags?.[MODULE]?.[FLAG];
     if (!Array.isArray(current) || !current.length) {
-      await actor.setFlag(MODULE, FLAG, toStored(legacy.filter(t => typeof t?.id === "string")));
-      await actor.unsetFlag(LEGACY_SCOPE, FLAG);
-      moved++;
+      // One actor's refusal (R8) is logged and the loop carries on with the rest.
+      try {
+        await actor.setFlag(MODULE, FLAG, toStored(legacy.filter(t => typeof t?.id === "string")));
+        await actor.unsetFlag(LEGACY_SCOPE, FLAG);
+        moved++;
+      } catch (err) {
+        log.warn(`${actor.name}: legacy ties migration refused — left for the next load`, err);
+      }
     } else {
       // Module data already exists. Copying would clobber it and unsetting would destroy the
       // legacy rows, so do NEITHER — leave both in place and say so loudly.

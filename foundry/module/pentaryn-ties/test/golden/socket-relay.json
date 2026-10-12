@@ -133,8 +133,8 @@
     "calls": [],
     "console": [
       {
-        "level": "error",
-        "text": "pentaryn-ties | relayed mirror write failed",
+        "level": "warn",
+        "text": "pentaryn-ties | ZZ Brakka: ties write refused",
         "err": "zz write refused"
       }
     ]

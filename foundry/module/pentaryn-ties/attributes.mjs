@@ -1196,7 +1196,12 @@ export async function markLearned(character, attrRef, loreIds = "all", { now = D
   for (const row of rows) {
     granted[attrFactKey(attrId, row.id)] = { text: row.text, when: now, icon: entry.icon, source: `${entry.title} — ${row.label}` };
   }
-  await character.update({ [`flags.${MODULE}.${GRANTED_FLAG}`]: granted });
+  try {
+    await character.update({ [`flags.${MODULE}.${GRANTED_FLAG}`]: granted });
+  } catch (err) {
+    log.warn(`mark as learned failed`, err); // R8
+    return fail("writeFailed");
+  }
   return { ok: true, keys: rows.map(r => attrFactKey(attrId, r.id)) };
 }
 
