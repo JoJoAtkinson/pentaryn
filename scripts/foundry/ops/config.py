@@ -238,11 +238,10 @@ MODULES = {
         # is carried back on revert, and how the Argon Bonus/Action bars are recomposed.
         check=(*_STATIC, "node-test", *_BLUEPRINT),
         after_sync=(
-            "0.2 adds hud.mjs and styles/transform.css to module.json — restart Foundry",
-            "(make vtt-down && make vtt-up); a browser reload alone will not load them.",
-            "Then reload every client. Wild Shape lives on the Argon Bonus bar:",
-            "  game.pentaryn.transform.forms(actor)            // the picker's tiles",
-            "  await game.pentaryn.transform.shift(actor, id)  // what a tile click does",
+            "A module.json change needs a Foundry restart (make vtt-down && make vtt-up); otherwise reload every client.",
+            "Wild Shape and Starry Form live on the Argon Bonus bar:",
+            "  game.pentaryn.transform.inspect(\"Talo\")",
+            "  await game.pentaryn.transform.shift(actor, game.pentaryn.transform.forms(actor)[0].id)",
             "  await game.pentaryn.transform.revert(actor)",
         ),
     ),
@@ -372,7 +371,7 @@ MODULES = {
         after_sync=(
             "First install: restart Foundry (module.json is read at startup), enable",
             "'Pentaryn Combat', then reload the ONE GM tab and any player tabs.",
-            "Every behaviour is a world setting (default on) — README → Adjustments.",
+            "Every behaviour is a world setting (default on) — README → Settings.",
             "  game.pentaryn.combat.plan(actor)      // the swings Full Attack would make",
             "  game.pentaryn.combat.report()         // riders per PC and the turn flags",
         ),
