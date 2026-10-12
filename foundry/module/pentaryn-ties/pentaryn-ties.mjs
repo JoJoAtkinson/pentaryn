@@ -17,8 +17,9 @@
  * init → settings and keys, then overlay, worn, item-marks · ready → publish, then the GM's
  * one-time steps. The keys' bodies are handed to settings.mjs with onKeys().
  *
- * The API is `game.pentaryn.ties` — `game.pentaryn.ties.describe()` lists it once the kit API lands
- * (S8); until then the published object below is the reference.
+ * The API is `game.pentaryn.ties`, built from api-manifest.mjs by buildApiFor (api.mjs) and
+ * published at ready. `game.pentaryn.ties.describe()` (pinned in test/golden/describe.json) is the
+ * reference.
  */
 
 import { MODULE, NS } from "./ties-core.mjs";
