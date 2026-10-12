@@ -543,7 +543,10 @@ def _ops_log(cmd: str, record: dict, dst: Path) -> None:
         append_jsonl(cfg.OPS_LOG_DIR / f"ops-{record['synced_at'][:7]}.jsonl", line)
     except OSError as err:
         _say(f"▸ ops log not written ({err})")
-    event(cmd, **{k: v for k, v in line.items() if k != "ts"})
+    try:
+        event(cmd, **{k: v for k, v in line.items() if k != "ts"})
+    except OSError as err:
+        _say(f"▸ ops log not written ({err})")
 
 
 def staging_dir(dst: Path) -> Path:
