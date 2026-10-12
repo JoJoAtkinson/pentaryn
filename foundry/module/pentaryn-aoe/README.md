@@ -99,7 +99,7 @@ row with its params, returns and null cases (`api-manifest.mjs`). Kit members: `
 | `rollForPlayer(messageId, rowId, { event? })` | `Promise<Roll[] \| null>` | GM |
 | `pingPlayers(messageId)` | `Promise<ChatMessage \| Notification \| null>` | GM; the info toast when nobody waits |
 | `setRow(messageId, rowId, { apply?, multiplier? })` | `Promise<resolution \| null>` | GM |
-| `selfApply(message, { force? })` | `Promise<{ reason, actor, effects } \| null>` | the applier client; `force` skips the setting and the claim |
+| `selfApply(messageOrId, { force? })` | `Promise<{ reason, actor, effects } \| null>` | the applier client; `force` skips the setting and the claim; an unknown id → null |
 | `pendingFor(message, { effects? })` | `Promise<string[]>` | any |
 | `cardEffects(message)` | `Promise<ActiveEffect[]>` | any |
 | `activePlacement()` | `object \| null` | this client |

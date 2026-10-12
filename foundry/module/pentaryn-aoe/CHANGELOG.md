@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- **`selfApply` accepts a message id** (declared, R2-selfApply): the manifest and describe already
+  said `ChatMessage|id`, but an id string was used as the card itself and nothing was applied.
+  It now looks the id up first, as `cardEffects` and `pendingFor` do; an unknown id returns null.
+  README API row says so.
 - **`latestResolution({ sceneId: "current" })` answers null when this client views no scene**
   (declared, R3): it dropped the scene filter and returned the newest tray from any scene.
   "current" means the viewing client's scene; with none there is none. A caller that wants any

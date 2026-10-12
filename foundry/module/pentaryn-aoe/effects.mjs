@@ -167,10 +167,11 @@ function isApplier(userId) {
 /**
  * Apply a card's effects to its caster if the card is meant for them. Returns the reason and
  * what was applied, or null. Safe to call twice: a recorded card is skipped.
- * @param {ChatMessage} message
+ * @param {ChatMessage|string} message  the card, or its id (an unknown id → null)
  * @param {{force?: boolean}} [opts]  force ignores the setting (manual use from the console)
  */
 export async function selfApply(message, { force = false } = {}) {
+  message = messageFrom(message);
   if (!message || (!force && !setting("autoApplySelf"))) return null;
   if (aoeFlags(message).effectsApplied?.auto || inflight.has(message.id)) return null;
   inflight.add(message.id);
