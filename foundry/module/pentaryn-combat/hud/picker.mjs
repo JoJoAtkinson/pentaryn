@@ -48,9 +48,11 @@ function applyPickerGuide() {
     if (on) document.body.style.setProperty("--pentaryn-combat-picker-cue", JSON.stringify(_loc("PENTARYN_COMBAT.Hud.PickerCue")));
   } catch (err) { log.debug("picker cue (no body yet)", err); }
   if (!on || !hasArgonSetting("targetPickerGuideShown")) return;
+  const warn = err => log.warn("marking Argon's picker tutorial seen failed", err);
   try {
-    if (!argonSetting("targetPickerGuideShown")) setArgonSetting("targetPickerGuideShown", true);
-  } catch (err) { log.warn("marking Argon's picker tutorial seen failed", err); }
+    // ac-1: settings.set is async; a rejected write is warned here, a throwing read by the catch
+    if (!argonSetting("targetPickerGuideShown")) Promise.resolve(setArgonSetting("targetPickerGuideShown", true)).catch(warn);
+  } catch (err) { warn(err); }
 }
 
 

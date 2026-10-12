@@ -739,6 +739,28 @@ test("the picker tutorial and its cue: setting on/off through createSetting / up
   F.calls.length = 0;
 });
 
+test("ac-1: marking Argon's picker tutorial seen rejects (async settings.set): warned once, never an unhandled rejection", async () => {
+  const unhandled = [];
+  const onUnhandled = err => unhandled.push(err?.message ?? String(err));
+  process.on("unhandledRejection", onUnhandled);
+  const set = F.game.settings.set;
+  lines.splice(0);
+  try {
+    await set.call(F.game.settings, "enhancedcombathud", "targetPickerGuideShown", false);
+    F.game.settings.set = async () => { throw new Error("client setting locked"); };
+    F.Hooks.callAll("updateSetting", { key: `${MODULE}.skipPickerGuide` });
+    await drain();
+    await new Promise(r => setImmediate(r));
+  } finally {
+    process.off("unhandledRejection", onUnhandled);
+    F.game.settings.set = set;
+  }
+  assert.deepEqual(unhandled, [], "no unhandled rejection");
+  const warned = lines.splice(0).filter(l => JSON.stringify(l).includes("marking Argon's picker tutorial seen failed"));
+  assert.equal(warned.length, 1, "warned once");
+  F.calls.length = 0;
+});
+
 test("Argon's target picker for a Retarget: a hidden probe's pre-click; undefined when it can't run", async () => {
   onTurn(fig);
   reset(fig);
