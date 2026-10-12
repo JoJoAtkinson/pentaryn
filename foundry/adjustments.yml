@@ -1145,3 +1145,26 @@ adjustments:
     native_when: core fires a hook for every notification shown
     retire_class: safe
     check: make foundry-feedback-check
+
+  # pentaryn-prompts (wave 3 blueprint migration, 2026-10-11).
+  - id: prompts-token-dblclick
+    packages: [lib-wrapper, core]
+    modules: [pentaryn-prompts]
+    files: [foundry/module/pentaryn-prompts/patches.mjs]
+    markers: ["__pentarynPromptsClick", "_onClickLeft2"]
+    what: wraps CONFIG.Token.objectClass.prototype._onClickLeft2 through wrapMethod (libWrapper MIXED when lib-wrapper is active, else a direct wrap marked __pentarynPromptsClick) so a GM's double-click on a prompt marker opens its prompt box instead of the actor sheet; every other token and every player calls the original
+    why: core has no hook to veto or replace a token's double-click action
+    native_when: core fires a vetoable hook for a token double-click, or lets a token document override its click-left-2 action
+    retire_class: guarded
+    check: make foundry-prompts-check
+
+  - id: itempiles-prompts-hotspot
+    packages: [item-piles]
+    modules: [pentaryn-prompts]
+    files: [foundry/module/pentaryn-prompts/replace.mjs, foundry/module/pentaryn-prompts/scene-adapter.mjs]
+    markers: ["flags.item-piles.data", "Hotspot · Look (template)"]
+    what: a hotspot replacement clones the world's "Hotspot · Look (template)" Item Piles actor and writes flags.item-piles.data (images, description, closed/locked, deleteWhenEmpty) on the actor, its prototype and the token; the scene model reads flags.item-piles.data.enabled/description to tell piles from creatures
+    why: Item Piles keeps its pile configuration only in that flag, and exposes no API for creating a configured pile from a template actor
+    native_when: Item Piles offers a create-pile-from-template API that takes the images, description and lock state
+    retire_class: never
+    check: make foundry-prompts-check
