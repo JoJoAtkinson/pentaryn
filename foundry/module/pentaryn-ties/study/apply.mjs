@@ -24,7 +24,7 @@ import {
 import { claimFact, dropRow, releaseFact } from "./claim.mjs";
 import { promptDeliver } from "./gate.mjs";
 import { beliefsOf, resolveFact, stackingRule, studiedOf } from "./resolve.mjs";
-import { esc, log, SITUATIONAL_MAX, SITUATIONAL_MIN } from "./shared.mjs";
+import { clampSituational, esc, log } from "./shared.mjs";
 import { readFlag } from "../lib/flags.mjs";
 import { setting, mayWrite, attrBeliefsStore } from "../settings.mjs";
 
@@ -163,10 +163,7 @@ export async function applyStudy(payload, senderId) {
 /** applyStudy past the stake: roll, grade, write. Its caller releases the claim on a throw. */
 async function applyClaimed(character, fact, payload, rollMode, refuse) {
 
-  const situational = Math.max(
-    SITUATIONAL_MIN,
-    Math.min(SITUATIONAL_MAX, Math.round(Number(payload?.situational) || 0))
-  );
+  const situational = clampSituational(payload?.situational);
 
   /*
    * Advantage, counted here and stored nowhere (decision 19, as amended by §2e).
