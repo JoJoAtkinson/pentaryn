@@ -625,7 +625,8 @@ def module_new(argv: list[str]) -> int:
     repo's own entry point, so it adds `--install` unless the caller chose an `--out`."""
     from scripts.foundry.blueprint import new_module
     argv = list(argv)
-    if "--out" not in argv and "--install" not in argv:
+    chose_out = any(a == "--out" or a.startswith("--out=") for a in argv)
+    if not chose_out and "--install" not in argv:
         argv.append("--install")
     return new_module.main(argv)
 

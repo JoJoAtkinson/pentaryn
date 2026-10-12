@@ -339,6 +339,15 @@ def test_module_new_installs_into_foundry_module_unless_out_is_given(monkeypatch
     assert "--install" not in seen[1]
 
 
+def test_module_new_respects_out_equals(monkeypatch):
+    # argparse accepts `--out=DIR`; that spelling is a chosen --out too, so no --install.
+    from scripts.foundry.blueprint import new_module
+    seen = []
+    monkeypatch.setattr(new_module, "main", lambda argv: seen.append(argv) or 0)
+    cli.main(["module-new", "demo", "--title", "T", "--out=/tmp/x"])
+    assert "--install" not in seen[0]
+
+
 def test_unknown_subcommand_exits_nonzero():
     with pytest.raises(SystemExit) as exc:
         cli.main(["no-such-command"])
