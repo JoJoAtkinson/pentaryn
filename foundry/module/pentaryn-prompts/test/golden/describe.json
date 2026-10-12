@@ -468,7 +468,7 @@
     },
     {
       "name": "updateToken",
-      "label": "updateToken: refresh panels when moved"
+      "label": "updateToken: refresh panels when moved or renamed"
     },
     {
       "name": "setup",

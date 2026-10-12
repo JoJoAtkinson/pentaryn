@@ -43,7 +43,7 @@ test("FEATURES in order register golden/hooks.json between init and ready, with 
     "deleteToken: hide tip, close its box",
     "createWall: refresh panels", "updateWall: refresh panels", "deleteWall: refresh panels", "createToken: refresh panels",
     "deleteToken: refresh panels", "createNote: refresh panels", "deleteNote: refresh panels",
-    "updateToken: refresh panels when moved",
+    "updateToken: refresh panels when moved or renamed",
     "setup: double-click opens the box",
   ]);
   assert.deepEqual(Object.keys(ctx.exposed).sort(), ["doubleClick", "open", "place"]);

@@ -24,6 +24,9 @@ cssPrefix `pp-`, afterSync). Each **[declared]** change goes to the live check.
 - **[declared] The hover tip reuses a cached scene model** until the scene changes (DP8); the side
   panel still builds fresh, gather never uses the cache. Its count skips the door/wall pass
   (prompts-lookup-7).
+- **[declared] The side panel follows a rename** (PT 2026-10-12, the DP8 live check): an
+  `updateToken` that changes a token's `name` or `texture` redraws the open panels, so renaming an
+  actor in view (core renames its linked tokens with a name-only update) shows the new name.
 - **[declared] A patch's fractional CR** (`"1/2"`) is written as 0.5, not `NaN`, so a real run's
   encounter XP matches its dry run.
 - **[declared] Two gathers at once keep both manifests**: the ring writes through one

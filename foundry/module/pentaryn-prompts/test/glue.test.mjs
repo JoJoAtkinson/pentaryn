@@ -276,7 +276,7 @@ test("hoverToken: no tip while that marker's own box is open; none for a player"
 
 /* ── panel refresh hooks ────────────────────────────────────────────────── */
 
-test("wall, door, note and token hooks refresh the open box's panel (250 ms debounce); a token update only when it moved", async t => {
+test("wall, door, note and token hooks refresh the open box's panel (250 ms debounce); a token update only when it moved or renamed", async t => {
   t.mock.timers.enable({ apis: ["setTimeout"] });
   const m1 = F.s1.tokens.get("m1");
   const app = await PromptDialog.open(m1);
@@ -296,7 +296,9 @@ test("wall, door, note and token hooks refresh the open box's panel (250 ms debo
     assert.equal(panel(), first, `${h}: redrawn`);
   }
   app.element.querySelector("[data-panel]").innerHTML = "stale";
-  F.fire("updateToken", F.s1.tokens.get("m2"), { name: "x" });
+  // [declared] PT 2026-10-12 (DP8 live check): a rename now redraws (panel-refresh.test); a change
+  // no row shows still does not
+  F.fire("updateToken", F.s1.tokens.get("m2"), { flags: { x: 1 } });
   t.mock.timers.tick(300);
   await flush();
   assert.equal(panel(), "stale");
