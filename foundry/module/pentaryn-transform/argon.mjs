@@ -5,7 +5,7 @@
  * argon-target-picker-cancel, argon-tooltip-clear (foundry/adjustments.yml).
  */
 
-import { MODULE } from "./transform-core.mjs";
+import { MODULE, shouldQueueStaleCheck } from "./transform-core.mjs";
 import { makeLog } from "./lib/log.mjs";
 import { dropTooltip as dropArgonTooltip } from "./lib/argon-kit.mjs";
 
@@ -29,9 +29,13 @@ export function dropStaleTooltip() {
 
 let staleCheckQueued = false;
 
-/** The capture-phase pointermove listener (hud.mjs installs it): one stale-tooltip check per 60 ms. */
+/**
+ * The capture-phase pointermove listener (hud-panels installs it): one stale-tooltip check per 60 ms,
+ * armed only while a tooltip is up whose anchor has already left the DOM (transform-creatures-11).
+ */
 export function onPointerMove() {
-  if (staleCheckQueued) return;
+  // hot: reads game.tooltip.element and a flag only
+  if (!shouldQueueStaleCheck({ anchor: game.tooltip?.element ?? null, queued: staleCheckQueued })) return;
   staleCheckQueued = true;
   setTimeout(() => { staleCheckQueued = false; dropStaleTooltip(); }, 60);
 }

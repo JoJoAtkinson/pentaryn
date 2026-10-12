@@ -79,3 +79,32 @@ test("-23 the Wild Shape button's tooltip counts the profiles without resolving 
   assert.equal(n, 0);
   assert.equal(tip.subtitle, "3 known forms");
 });
+
+/* ── -11 the pointermove check arms only for a stale tooltip ──────────────── */
+
+test("-11 [declared] T-D7 pointermove arms no timer while no tooltip is up or its anchor is connected", () => {
+  mock.timers.tick(1_000);                                        // earlier renders' pending stale checks run first
+  const move = F.D.listeners.find(l => l.type === "pointermove").fn;
+  let armed = 0;
+  const realSet = globalThis.setTimeout;
+  globalThis.setTimeout = (fn, ms) => { if (ms === 60) armed++; return realSet(fn, ms); };
+  try {
+    game.tooltip.element = null;
+    move();
+    const anchor = F.D.el("div", "anchor");
+    game.tooltip.element = anchor;
+    move();
+    assert.equal(armed, 0, "nothing to check");
+    F.tooltipCalls.length = 0;
+    anchor.remove();                                              // the anchor leaves after the move …
+    mock.timers.tick(60);
+    assert.deepEqual(F.tooltipCalls, [], "… so no pending check drops it (the declared nuance)");
+    move();                                                       // the next move does
+    assert.equal(armed, 1);
+    mock.timers.tick(60);
+    assert.deepEqual(F.tooltipCalls, ["deactivate"]);
+  } finally {
+    globalThis.setTimeout = realSet;
+    game.tooltip.element = null;
+  }
+});
