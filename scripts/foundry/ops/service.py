@@ -199,7 +199,7 @@ def down() -> int:
 # ── the Cloudflare tunnel ─────────────────────────────────────────────────────
 
 def _tunnel_pid() -> int | None:
-    """The pid from the pidfile, if that process is actually alive."""
+    """The pid from the pidfile, if that process is alive AND is cloudflared."""
     try:
         pid = int(cfg.CF_PID.read_text().strip())
     except (OSError, ValueError):
@@ -210,7 +210,26 @@ def _tunnel_pid() -> int | None:
         os.kill(pid, 0)
     except OSError:
         return None
-    return pid
+    return pid if _is_cloudflared(pid) else None
+
+
+def _is_cloudflared(pid: int) -> bool:
+    """A pidfile outlives its process and the OS hands the number to whatever starts
+    next, so `kill -0` alone would call that process the tunnel — and tunnel-down
+    would SIGTERM it (EC-3). `ps` names the executable (a full path on macOS)."""
+    try:
+        res = subprocess.run(["ps", "-p", str(pid), "-o", "comm="],
+                             capture_output=True, text=True, timeout=5)
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return Path((res.stdout or "").strip()).name in ("cloudflared", "cloudflared.exe")
+
+
+def _drop_stale_pidfile() -> None:
+    """Called once _tunnel_pid() has said no: any pidfile left is stale."""
+    if cfg.CF_PID.exists():
+        cfg.CF_PID.unlink(missing_ok=True)
+        _say("▸ stale pidfile removed")
 
 
 def tunnel_up() -> int:
@@ -226,6 +245,7 @@ def tunnel_up() -> int:
     if (pid := _tunnel_pid()) is not None:
         _say(f"▸ tunnel already up (pid {pid})")
         return OK
+    _drop_stale_pidfile()
     if not CF_CERT.exists():
         _say("✗ cloudflared not authenticated — run: make tunnel-setup")
         return FAIL
@@ -256,7 +276,7 @@ def tunnel_up() -> int:
 def tunnel_down() -> int:
     pid = _tunnel_pid()
     if pid is None:
-        cfg.CF_PID.unlink(missing_ok=True)
+        _drop_stale_pidfile()
         _say("▸ tunnel already down")
         return OK
     try:

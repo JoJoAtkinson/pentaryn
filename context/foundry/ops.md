@@ -206,10 +206,10 @@ there, and each upload adds `cloud-upload` lines (queued, uploading, done/failed
 | ------ | ---- |
 | `make foundry-up` / `foundry-down` | App only (plus the boot choice before `foundry-up`). Via `host.py`: `foundry-down` is `osascript quit`, falling back to `pkill` on the Mac; `PENTARYN_STOP_CMD` on BOSS |
 | `make foundry-boot` | The boot choice alone — `FROM=` to decide it |
-| `make tunnel-up` / `tunnel-down` | Tunnel only. `tunnel-up` starts cloudflared detached, writes the pidfile, and checks it survived 3 s |
+| `make tunnel-up` / `tunnel-down` | Tunnel only. `tunnel-up` starts cloudflared detached, writes the pidfile, and checks it survived 3 s. The pidfile is trusted only while its pid is alive **and** `ps` names it cloudflared; otherwise both commands delete it (`▸ stale pidfile removed`) and never signal that process |
 | `make tunnel-logs` | Last 40 lines of the cloudflared log |
 | `make tunnel-setup` | **One-time**: `cloudflared tunnel login`, create the tunnel, route DNS. Idempotent |
-| `make vtt` | Three independent probes: local HTTP · pidfile `kill -0` · public HTTP 200/302 |
+| `make vtt` | Three independent probes: local HTTP · pidfile `kill -0` + `ps` says cloudflared · public HTTP 200/302 |
 
 ### Where the logic lives
 

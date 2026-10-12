@@ -1170,3 +1170,64 @@ def test_tunnel_pid_rejects_non_positive_pids(monkeypatch, tmp_path, capsys, con
     assert "tunnel already down" in capsys.readouterr().out
     assert not [c for c in calls if c[0] <= 0]
     assert not [c for c in calls if c[1] == 15]
+
+
+# ── EC-3: a stale tunnel pidfile whose pid now belongs to another process ─────
+# A pidfile outlives cloudflared, and the OS hands its number to whatever starts
+# next. `kill -0` only proves *some* process holds the pid, so tunnel-up said
+# "already up" and tunnel-down SIGTERMed an unrelated process.
+
+@pytest.fixture
+def reused_pid(monkeypatch, tmp_path):
+    """The pidfile names a live pid that is not cloudflared."""
+    import os
+    import subprocess
+    pidfile = tmp_path / "cloudflared.pid"
+    pidfile.write_text(str(os.getpid()))   # alive, and certainly not cloudflared
+    monkeypatch.setattr(cfg, "CF_PID", pidfile)
+    monkeypatch.setattr(cfg, "RUN_DIR", tmp_path)
+    real_run = subprocess.run
+    monkeypatch.setattr(service.subprocess, "run", lambda argv, **kw: (
+        real_run(argv, **kw) if argv[:2] == ["ps", "-p"]
+        else pytest.fail(f"unexpected process {argv}")))
+    kills = []
+    monkeypatch.setattr(service.os, "kill", lambda pid, sig: kills.append((pid, sig)))
+    return pidfile, kills
+
+
+def test_tunnel_pid_ignores_a_pid_that_is_not_cloudflared(reused_pid):
+    """EC-3: a reused pid is not the tunnel."""
+    assert service._tunnel_pid() is None
+
+
+def test_tunnel_down_never_signals_a_reused_pid(reused_pid, capsys):
+    """EC-3: tunnel-down removes the stale pidfile and says so, killing nothing."""
+    pidfile, kills = reused_pid
+    assert service.tunnel_down() == 0
+    assert [k for k in kills if k[1] != 0] == []
+    assert not pidfile.exists()
+    out = capsys.readouterr().out
+    assert "stale pidfile removed" in out and "tunnel already down" in out
+
+
+def test_tunnel_up_does_not_call_a_reused_pid_already_up(reused_pid, monkeypatch, capsys):
+    """EC-3: tunnel-up drops the stale pidfile and goes on to start the tunnel."""
+    pidfile, _ = reused_pid
+    monkeypatch.setattr(service.host, "require_primary", lambda *a, **kw: None)
+    monkeypatch.setattr(service, "CF_CERT", pidfile.parent / "missing-cert.pem")
+    assert service.tunnel_up() == 1   # reached the cert check, i.e. not "already up"
+    out = capsys.readouterr().out
+    assert "already up" not in out and "stale pidfile removed" in out
+    assert not pidfile.exists()
+
+
+def test_tunnel_pid_trusts_a_live_cloudflared(monkeypatch, tmp_path):
+    """EC-3: the real tunnel still reads as up (ps names it by full path on macOS)."""
+    import subprocess
+    pidfile = tmp_path / "cloudflared.pid"
+    pidfile.write_text("4242")
+    monkeypatch.setattr(cfg, "CF_PID", pidfile)
+    monkeypatch.setattr(service.os, "kill", lambda pid, sig: None)
+    monkeypatch.setattr(service.subprocess, "run", lambda argv, **kw: subprocess.CompletedProcess(
+        argv, 0, stdout="/opt/homebrew/bin/cloudflared\n", stderr=""))
+    assert service._tunnel_pid() == 4242
