@@ -203,7 +203,8 @@ export const MANIFEST = Object.freeze({
         { name: "ref", kind: "token", resolve: false, doc: "a token (id, uuid, exact name, document, placeable), else an actor" },
         { name: "opts", optional: true, type: "{ sceneId?, base?, as? }", doc: "scene scope; base: the world actor; as: answer as that user" },
       ],
-      returns: "{ token: { id, light, itemLight, itemLightPrior, spellLight } | null, actor: { id, carried, carriers, hooded, lightingItem } | null, "
+      returns: "{ token: { id, light, itemLight, itemLightPrior, spellLight: { source, prior (dotted keys) } | null } | null, "
+        + "actor: { id, carried, carriers, hooded, lightingItem } | null, "
         + "chain: { anchor, chainedHere } | null, lightSpells: { item, cast, litBy: uuid[] }[] }",
       gm: false, writes: false,
       throws: ["NOT_FOUND", "AMBIGUOUS", "BAD_ARGS"],

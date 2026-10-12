@@ -73,3 +73,41 @@ test("light.status(item): cast and what it lights; a miss throws NOT_FOUND", () 
   assert.deepEqual(S().light.status(item.uuid), S().light.status(item));
   assert.throws(() => S().light.status("Actor.nope000000000000.Item.nope000000000000"), /NOT_FOUND/);
 });
+
+// Review fix (S-12): a spell-lit token's prior is a `toObject()` light, which always carries the
+// `animation` and `darkness` objects. At token.spellLight.prior that is depth 4, so toPlain would
+// cut them to "[max depth]" (and maxDepth counts that string as a leaf). The prior is dotted instead.
+const leaves = (v, out = []) => {
+  if (v && typeof v === "object") for (const x of Object.values(v)) leaves(x, out);
+  else out.push(v);
+  return out;
+};
+const FULL_PRIOR = { dim: 30, bright: 10, animation: { type: "torch", speed: 5, intensity: 5, reverse: false }, darkness: { min: 0, max: 1 } };
+
+test("inspectShape (pure): a spell-lit token's full prior light survives toPlain, dotted, with no [max depth]", async () => {
+  const { toPlain } = await import("../lib/api.mjs");
+  const token = deepFreeze({ id: "t", light: { bright: 20, dim: 40 }, flags: { [MODULE]: { spellLight: { source: "Actor.a.Item.lgt", prior: FULL_PRIOR } } } });
+  const out = toPlain(core.inspectShape({ token }));
+  assert.ok(!leaves(out).includes("[max depth]"), JSON.stringify(out));
+  assert.deepEqual(out.token.spellLight, {
+    source: "Actor.a.Item.lgt",
+    prior: {
+      dim: 30, bright: 10, "animation.type": "torch", "animation.speed": 5, "animation.intensity": 5, "animation.reverse": false,
+      "darkness.min": 0, "darkness.max": 1,
+    },
+  });
+  assert.equal(core.inspectShape({ token: { id: "t", flags: { [MODULE]: { spellLight: { source: "x" } } } } }).token.spellLight.prior, null);
+});
+
+test("inspect(token): the live answer for a spell-lit token keeps animation and darkness", () => {
+  const stake = game.scenes.get(ID.s1).tokens.get(ID.tStake);
+  const flag = stake.flags[MODULE].spellLight;
+  const was = flag.prior;
+  flag.prior = structuredClone(FULL_PRIOR);
+  try {
+    const r = S().inspect(ID.tStake, { sceneId: ID.s1 });
+    assert.ok(!leaves(r).includes("[max depth]"), JSON.stringify(r.token));
+    assert.equal(r.token.spellLight.prior["animation.type"], "torch");
+    assert.equal(r.token.spellLight.prior["darkness.max"], 1);
+  } finally { flag.prior = was; }
+});

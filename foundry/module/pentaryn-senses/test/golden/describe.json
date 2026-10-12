@@ -396,7 +396,7 @@
           "doc": "scene scope; base: the world actor; as: answer as that user"
         }
       ],
-      "returns": "{ token: { id, light, itemLight, itemLightPrior, spellLight } | null, actor: { id, carried, carriers, hooded, lightingItem } | null, chain: { anchor, chainedHere } | null, lightSpells: { item, cast, litBy: uuid[] }[] }",
+      "returns": "{ token: { id, light, itemLight, itemLightPrior, spellLight: { source, prior (dotted keys) } | null } | null, actor: { id, carried, carriers, hooded, lightingItem } | null, chain: { anchor, chainedHere } | null, lightSpells: { item, cast, litBy: uuid[] }[] }",
       "gm": false,
       "writes": false,
       "query": false,

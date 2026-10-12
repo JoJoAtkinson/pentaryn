@@ -7,6 +7,9 @@
  *   chain        the token's own chain and the tokens chained to it
  *   lightSpells  each Light cantrip the actor knows: where it is cast and what it lights now
  *                (litBy as "Scene.<id>.Token.<id>" / "Scene.<id>.AmbientLight.<id>", so depth stays ≤ 4)
+ *
+ * token.spellLight.prior sits at depth 3, so its nested objects (a `toObject()` light always carries
+ * `animation` and `darkness`) are reported with Foundry-style dotted keys: `"animation.type"`.
  */
 
 import { MODULE } from "./ids.mjs";
@@ -14,6 +17,22 @@ import { readChain } from "./chain.mjs";
 import { carriedLightOf, isLightSpellData, lightEntries, lightingItemId, litByIn, readSpellCast, readSpellLight } from "./light.mjs";
 
 const copy = v => (v === undefined ? null : JSON.parse(JSON.stringify(v)));
+
+/** One flat level of Foundry-style dotted keys: `{ animation: { type } }` → `{ "animation.type" }`. */
+function flatten(obj, prefix = "", out = {}) {
+  for (const [k, v] of Object.entries(obj)) {
+    if (v && typeof v === "object" && !Array.isArray(v)) flatten(v, `${prefix}${k}.`, out);
+    else out[`${prefix}${k}`] = v;
+  }
+  return out;
+}
+
+/** The spell flag with its prior light flattened, so the answer stays within depth 4. */
+function spellLightOf(token) {
+  const s = readSpellLight(token);
+  if (!s) return null;
+  return { source: s.source, prior: s.prior ? flatten(copy(s.prior)) : null };
+}
 
 function lightOf(token) {
   const l = token?.light?.toObject?.() ?? token?.light;
@@ -42,7 +61,7 @@ export function inspectShape({ token = null, actor = null, items = [], sceneToke
       light: lightOf(token),
       itemLight: f.itemLight === true,
       itemLightPrior: copy(f.itemLightPrior ?? null),
-      spellLight: copy(readSpellLight(token)),
+      spellLight: spellLightOf(token),
     } : null,
     actor: actor ? {
       id: actor.id ?? null,
