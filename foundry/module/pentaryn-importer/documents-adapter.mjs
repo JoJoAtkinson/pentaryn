@@ -327,6 +327,12 @@ function assertItemsAddressable(actor, items, slug) {
 }
 
 /**
+ * Item-spec keys the forward-safety pass skips: each has a dedicated branch in
+ * runExpectedAssertions; a new item-level key with its own branch must be added here.
+ */
+const HANDLED_ITEM_SPEC_KEYS = Object.freeze(new Set(["action", "itemType", "itemLabels", "activities"]));
+
+/**
  * Run the whole `expected` block for one actor (§8).
  *
  * Assertions run against PREPARED documents (§8.2 rule 1), so the caller must have reset the
@@ -391,7 +397,7 @@ function runExpectedAssertions(actor, expected, slug) {
     // a future contract revision can add item-level assertions without a code change. Non-scalars
     // are ignored rather than stringified into a misleading comparison.
     for (const [key, value] of Object.entries(spec)) {
-      if (["action", "itemType", "itemLabels", "activities"].includes(key)) continue;
+      if (HANDLED_ITEM_SPEC_KEYS.has(key)) continue;
       if (isPlainObject(value) || Array.isArray(value)) {
         log.warn(`${slug} → ${action}: ignoring non-scalar expectation "${key}" (unsupported shape)`);
         continue;
