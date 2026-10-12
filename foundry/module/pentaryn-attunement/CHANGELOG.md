@@ -4,6 +4,12 @@
 
 The version stays 0.3.0 until the next `module.json` restart batch (code only: sync + reload).
 
+- **[declared] M10:** `actor-adapter.mjs` looks up dnd5e's Tooltips5e prototype through one private,
+  uncached `itemTooltipProto()` (used by `guardItemTooltipPosition` and `tooltipGuarded`) and names
+  the wrap marker once, `GUARD_MARKER = "pentarynGuarded"`, for the `wrapMethod` marker and the
+  `tooltipGuarded` check (was: both written out twice). The literal stays in `actor-adapter.mjs`
+  (adjustments.yml lists it as a marker); `describe()` is unchanged. No change in play.
+  `test/docs.test.mjs`.
 - **[declared] M7:** `strip.mjs` builds the slot ✕ button through one private
   `removeButton(action, label)` helper, used by filled slots (`unattune`) and away slots (`release`)
   with the same class, `data-action`, `aria-label` and icon in the same order (was: the same seven lines

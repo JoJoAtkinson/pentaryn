@@ -159,23 +159,37 @@ export function applyProficiencies() {
 let tooltipGuard = null;
 
 /**
+ * The wrapMethod marker on the guarded `_positionItemTooltip`. The literal stays in this file:
+ * adjustments.yml row `attunement-item-tooltip-anchor` lists it as a marker.
+ */
+const GUARD_MARKER = "pentarynGuarded";
+
+/**
+ * dnd5e's Tooltips5e prototype, or null when this dnd5e has no item tooltips. Looked up on each
+ * call, never cached. Used by the guard and by tooltipGuarded.
+ */
+function itemTooltipProto() {
+  return game.dnd5e?.tooltips ? Object.getPrototypeOf(game.dnd5e.tooltips) : null;
+}
+
+/**
  * dnd5e 6.0.6 `Tooltips5e#_positionItemTooltip` runs a frame after an item tooltip's content
  * loads and calls `game.tooltip._setAnchor`, which reads `game.tooltip.element`. When the row
  * under the pointer was re-rendered away in between (a sheet refresh after a take, an attune,
  * a light), core has already deactivated the tooltip and that element is null, so every such
  * hover logged "Cannot read properties of null (reading 'getBoundingClientRect')" (Area 8 run).
  * With no anchor there is nothing to position: skip. Adjustments row
- * `attunement-item-tooltip-anchor` (a patch row, D2). The marker literal `pentarynGuarded` stays
+ * `attunement-item-tooltip-anchor` (a patch row, D2). The marker (GUARD_MARKER) stays
  * the same, so a second install (and a copy wrapped before the migration) is a no-op.
  */
 export function guardItemTooltipPosition() {
-  const proto = game.dnd5e?.tooltips ? Object.getPrototypeOf(game.dnd5e.tooltips) : null;
+  const proto = itemTooltipProto();
   if (typeof proto?._positionItemTooltip !== "function") return;
   tooltipGuard = wrapMethod(MODULE, {
     target: proto,
     label: "Tooltips5e#_positionItemTooltip",
     name: "_positionItemTooltip",
-    marker: "pentarynGuarded",
+    marker: GUARD_MARKER,
     adjustments: "attunement-item-tooltip-anchor",
   }, function (wrapped, ...args) {
     if (tooltipAnchorMissing({ element: game.tooltip?.element, tooltip: this.tooltip })) return;
@@ -188,9 +202,9 @@ export function guardItemTooltipPosition() {
  * has no item tooltips to guard (selftest).
  */
 export function tooltipGuarded() {
-  const proto = game.dnd5e?.tooltips ? Object.getPrototypeOf(game.dnd5e.tooltips) : null;
+  const proto = itemTooltipProto();
   if (typeof proto?._positionItemTooltip !== "function") return null;
-  return proto._positionItemTooltip.pentarynGuarded === true;
+  return proto._positionItemTooltip[GUARD_MARKER] === true;
 }
 
 /** Undo the tooltip guard (uninstall). */

@@ -57,3 +57,17 @@ test("[declared] M4: README and adapter header say the adapter holds the shared 
   assert.match(header, /sheet\.mjs attune\/unattune/);
   assert.match(header, /bonds\.mjs hand-back and purse/);
 });
+
+test("[declared] M10: the tooltip prototype lookup and the guard marker are written once in actor-adapter.mjs", () => {
+  const src = readFileSync(new URL("../actor-adapter.mjs", import.meta.url), "utf8");
+  // adjustments.yml lists the literal as a marker, so it must stay in this file — exactly once.
+  assert.match(src, /^const GUARD_MARKER = "pentarynGuarded";$/m);
+  assert.equal(src.match(/"pentarynGuarded"/g)?.length ?? 0, 1);
+  assert.match(src, /marker: GUARD_MARKER,/);
+  assert.match(src, /\._positionItemTooltip\[GUARD_MARKER\] === true/);
+  // One private, uncached lookup of dnd5e's Tooltips5e prototype, used by the guard and the check.
+  assert.match(src, /^function itemTooltipProto\(\) \{/m);
+  assert.doesNotMatch(src, /^export function itemTooltipProto/m);
+  assert.equal(src.match(/Object\.getPrototypeOf\(game\.dnd5e\.tooltips\)/g)?.length ?? 0, 1);
+  assert.equal(src.match(/= itemTooltipProto\(\);/g)?.length ?? 0, 2);
+});
