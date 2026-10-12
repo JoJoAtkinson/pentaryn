@@ -1,0 +1,34 @@
+{
+  "title": "Odd Beast",
+  "subtitle": "CR 1/4 Ooze",
+  "description": "",
+  "details": [
+    {
+      "label": "AC",
+      "value": "8"
+    },
+    {
+      "label": "Speed",
+      "value": "swim 30 m (hover)"
+    },
+    {
+      "label": "Senses",
+      "value": "Blindsight 10 m"
+    },
+    {
+      "label": "Slam",
+      "value": "+2, 1d4"
+    },
+    {
+      "label": "Spit",
+      "value": "—"
+    }
+  ],
+  "propertiesLabel": "PENTARYN_TRANSFORM.Hud.Traits",
+  "properties": [],
+  "footerText": "Click to shift. Right-click opens the beast's sheet.",
+  "classes": [
+    "pentaryn-tt",
+    "pentaryn-tt-list"
+  ]
+}

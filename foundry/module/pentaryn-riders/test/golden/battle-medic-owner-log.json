@@ -1,0 +1,33 @@
+[
+  {
+    "op": "roll",
+    "formula": "1d8r1 + 3",
+    "total": 7
+  },
+  {
+    "op": "roll.toMessage",
+    "formula": "1d8r1 + 3",
+    "total": 7,
+    "data": {
+      "speaker": {
+        "actor": "healer0000000001",
+        "alias": "Mara Quill"
+      },
+      "flavor": "Battle Medic — Grisk token spends a d8 Hit Die",
+      "flags": {
+        "pentaryn-riders": {
+          "flow": "battle-medic",
+          "target": "Actor.npcgrisk00000001",
+          "faces": 8
+        }
+      }
+    }
+  },
+  {
+    "op": "applyDamage",
+    "actor": "Grisk",
+    "amount": -7,
+    "before": 10,
+    "after": 17
+  }
+]

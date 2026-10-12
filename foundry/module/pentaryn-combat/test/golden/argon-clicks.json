@@ -1,0 +1,59 @@
+{
+  "flurryTargets": 0,
+  "flurryGreyed": [
+    "No Focus Points left for Flurry of Blows."
+  ],
+  "maRanges": {
+    "normal": 5,
+    "long": null
+  },
+  "maRolls": [
+    "Actor.monk000000000000.Item.unarmedStrike001.Activity.unarmedStrike001"
+  ],
+  "toggleTooltip": {
+    "title": "Sneak Attack: Ask",
+    "description": "<p>Ask (now): a '+ Sneak Attack 3d6' button appears on your attack cards; click it when the GM says you hit. Click to switch to Auto.</p>",
+    "classes": [
+      "pentaryn-tt",
+      "pentaryn-combat-tt"
+    ]
+  },
+  "toggle": {
+    "mode": "auto",
+    "renders": [
+      "DND5E.Special"
+    ]
+  },
+  "reckless": {
+    "on": [
+      "Reckless"
+    ],
+    "notes": [
+      "Reckless Attack: on until the start of your next turn."
+    ],
+    "renders": [
+      "DND5E.Special"
+    ]
+  },
+  "recklessOnClass": "feature-element pentaryn-combat-command pentaryn-combat-active",
+  "recklessOff": [],
+  "newTurn": {
+    "key": "nocombat",
+    "attackAction": {
+      "weapons": [],
+      "swings": 0,
+      "crit": false,
+      "critWeapon": null,
+      "kill": false,
+      "killWeapon": null
+    },
+    "riders": {},
+    "followUps": [],
+    "nick": false,
+    "bonusUsed": false,
+    "otherAction": false,
+    "otherActions": 0,
+    "surges": 0,
+    "quickened": false
+  }
+}

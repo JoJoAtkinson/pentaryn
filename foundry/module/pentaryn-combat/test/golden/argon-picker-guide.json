@@ -1,0 +1,53 @@
+[
+  {
+    "label": "after ready",
+    "cue": true,
+    "guide": true
+  },
+  {
+    "label": "switched off",
+    "cue": false
+  },
+  {
+    "label": "switched on again",
+    "cue": true,
+    "calls": [
+      {
+        "op": "Hooks.callAll",
+        "name": "createSetting"
+      },
+      {
+        "op": "settings.set",
+        "id": "enhancedcombathud.targetPickerGuideShown",
+        "value": true
+      }
+    ]
+  },
+  {
+    "label": "observer",
+    "style": {
+      "left": "320px",
+      "top": "400px"
+    },
+    "text": "Click a creature to target",
+    "placedStyle": {
+      "left": "5px"
+    },
+    "placedText": "1/1 Targets"
+  },
+  {
+    "label": "cue off: untouched",
+    "style": {},
+    "text": ""
+  },
+  {
+    "label": "set throws",
+    "console": [
+      {
+        "level": "warn",
+        "text": "pentaryn-combat | marking Argon's picker tutorial seen failed",
+        "err": "client setting locked"
+      }
+    ]
+  }
+]

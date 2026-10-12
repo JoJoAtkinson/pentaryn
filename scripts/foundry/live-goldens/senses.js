@@ -1,5 +1,5 @@
 // Live golden — pentaryn-senses (`game.pentaryn.senses`, alias `game.pentaryn.chain`). Body of an
-// async function for the foundry `eval-js` MCP tool (paste the file as `script`, timeoutMs 90000).
+// async function for the foundry `eval-js` MCP tool (paste the file as `script`, timeoutMs 60000 — the eval-js cap).
 // GM client only, ONE GM tab (the Light reconcile runs on every tab of the active GM user: two
 // tabs make two squares — wave-3 report, Open for Joe), no player connected (toggle() posts a chat
 // line; the run deletes it). Needs this tab to be the active GM; otherwise returns { skipped }.

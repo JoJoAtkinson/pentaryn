@@ -1,0 +1,35 @@
+{
+  "portrait": [
+    [
+      "Poisoned",
+      ""
+    ]
+  ],
+  "portrait2": [
+    [
+      "Poisoned",
+      ""
+    ],
+    [
+      "Deafened",
+      ""
+    ]
+  ],
+  "console": [
+    {
+      "level": "warn",
+      "text": "pentaryn-combat | Steady Aim end",
+      "err": "update refused"
+    },
+    {
+      "level": "warn",
+      "text": "pentaryn-combat | self effect",
+      "err": "no effect"
+    },
+    {
+      "level": "warn",
+      "text": "pentaryn-combat | Steady Aim end",
+      "err": "delete refused"
+    }
+  ]
+}

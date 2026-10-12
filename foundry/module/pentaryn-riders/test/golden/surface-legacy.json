@@ -1,0 +1,14 @@
+{
+  "rules": "object",
+  "featuresOf": "function",
+  "report": "function",
+  "setType": "function",
+  "retireManual": "function",
+  "installBattleMedic": "function",
+  "battleMedic": "function",
+  "spendHitDie": "function",
+  "restoreHitDie": "function",
+  "hdPools": "function",
+  "preview": "function",
+  "core": "object"
+}

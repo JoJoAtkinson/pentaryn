@@ -1,0 +1,66 @@
+[
+  {
+    "label": "a button inside the low one",
+    "closed": [
+      1,
+      0
+    ],
+    "prevented": true
+  },
+  {
+    "label": "nothing focused: the top one",
+    "closed": [
+      1,
+      1
+    ],
+    "prevented": true
+  },
+  {
+    "label": "the document element focused",
+    "closed": [
+      1,
+      2
+    ],
+    "prevented": true
+  },
+  {
+    "label": "a number field inside",
+    "closed": [
+      1,
+      2
+    ],
+    "prevented": false
+  },
+  {
+    "label": "a select",
+    "closed": [
+      1,
+      2
+    ],
+    "prevented": false
+  },
+  {
+    "label": "focus elsewhere (not body): not ours",
+    "closed": [
+      1,
+      2
+    ],
+    "prevented": false
+  },
+  {
+    "label": "setting off",
+    "closed": [
+      1,
+      2
+    ],
+    "prevented": false
+  },
+  {
+    "label": "a sequence runs: the strip's own Esc",
+    "closed": [
+      1,
+      2
+    ],
+    "prevented": false
+  }
+]

@@ -1,0 +1,46 @@
+[
+  {
+    "label": "released, one left",
+    "early": 0,
+    "binds": [
+      "tokrogue00000000"
+    ]
+  },
+  {
+    "label": "controlled (not a release)",
+    "early": 0,
+    "binds": []
+  },
+  {
+    "label": "two left",
+    "early": 0,
+    "binds": []
+  },
+  {
+    "label": "Argon off",
+    "early": 0,
+    "binds": []
+  },
+  {
+    "label": "already the HUD's",
+    "early": 0,
+    "binds": []
+  },
+  {
+    "label": "not the owner",
+    "early": 0,
+    "binds": []
+  },
+  {
+    "label": "hudFollows off",
+    "early": 0,
+    "binds": []
+  },
+  {
+    "label": "Argon disabled but alwaysOn",
+    "early": 0,
+    "binds": [
+      "tokrogue00000000"
+    ]
+  }
+]

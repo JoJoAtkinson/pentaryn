@@ -1,0 +1,86 @@
+{
+  "rows": [
+    {
+      "label": "fighter",
+      "seed": {
+        "1": {
+          "primary": "Actor.seedFighter00001.Item.longsword0000001",
+          "secondary": "Actor.seedFighter00001.Item.dagger0000000001"
+        },
+        "2": {
+          "primary": "Actor.seedFighter00001.Item.shortbow00000001",
+          "secondary": null
+        },
+        "3": {
+          "primary": null,
+          "secondary": null
+        }
+      }
+    },
+    {
+      "label": "already written (even empty)",
+      "seed": null
+    },
+    {
+      "label": "rogue: scimitar + dagger",
+      "seed": {
+        "1": {
+          "primary": "Actor.seedRogue0000001.Item.scimitar00000001",
+          "secondary": "Actor.seedRogue0000001.Item.dagger0000000002"
+        },
+        "2": {
+          "primary": null,
+          "secondary": null
+        },
+        "3": {
+          "primary": null,
+          "secondary": null
+        }
+      }
+    },
+    {
+      "label": "npc",
+      "seed": null
+    },
+    {
+      "label": "Wild Shape form",
+      "seed": null
+    },
+    {
+      "label": "dnd5e isPolymorphed flag",
+      "seed": null
+    },
+    {
+      "label": "no class (a pile or template)",
+      "seed": null
+    },
+    {
+      "label": "nothing worth seeding",
+      "seed": null
+    },
+    {
+      "label": "null",
+      "seed": null
+    },
+    {
+      "label": "setting off",
+      "seed": null
+    },
+    {
+      "label": "Argon off",
+      "seed": null
+    }
+  ],
+  "console": [
+    {
+      "level": "info",
+      "text": "pentaryn-combat | weapon sets seeded for Fighter",
+      "err": "{\"1\":{\"primary\":\"Actor.seedFighter00001.Item.longsword0000001\",\"secondary\":\"Actor.seedFighter00001.Item.dagger0000000001\"},\"2\":{\"primary\":\"Actor.seedFighter00001.Item.shortbow00000001\",\"secondary\":null},\"3\":{\"primary\":null,\"secondary\":null}}"
+    },
+    {
+      "level": "info",
+      "text": "pentaryn-combat | weapon sets seeded for Rogue",
+      "err": "{\"1\":{\"primary\":\"Actor.seedRogue0000001.Item.scimitar00000001\",\"secondary\":\"Actor.seedRogue0000001.Item.dagger0000000002\"},\"2\":{\"primary\":null,\"secondary\":null},\"3\":{\"primary\":null,\"secondary\":null}}"
+    }
+  ]
+}

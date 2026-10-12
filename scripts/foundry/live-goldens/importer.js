@@ -5,6 +5,7 @@
 //
 // What it exercises (the real glue, no stubs):
 //   1. the root namespace after every module's ready: Object.keys(game.pentaryn).sort(), frozen?
+//      (the publish order is returned as `publishOrder`, outside `golden`: it is not compared)
 //   2. import({dryRun:true}) against the world's default path (today: no actors.json → 404 abort)
 //   3. import({dryRun:true}) against a synthetic ZZ manifest served by a fetch shim for ONE
 //      scratch URL only, so the gate, the payload prep, findActorBySlug and the dry-run summary
@@ -37,11 +38,14 @@ const caught = e => ({ threw: true, name: e?.name ?? null, ctor: e?.constructor?
 
 const out = { module: "importer", golden: {}, timings: {}, cleanup: {} };
 const P = game.pentaryn;
+// Insertion order = the order the ready hooks published. Kept for reading, outside `golden`: it
+// moves whenever another module's kit migration changes its ready path, so comparing it reported a
+// false shared difference (overnight-2026-10-11 FX item 1).
+out.publishOrder = Object.keys(P);
 
 // 1 — root namespace
 out.golden.root = {
   keys: Object.keys(P).sort(),
-  keysInPublishOrder: Object.keys(P), // insertion order = the order the ready hooks published
   frozen: Object.isFrozen(P),
   extensible: Object.isExtensible(P),
   importIsFunction: typeof P.import === "function",

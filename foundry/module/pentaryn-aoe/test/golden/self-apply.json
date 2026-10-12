@@ -1,0 +1,61 @@
+{
+  "calls": [
+    {
+      "op": "update",
+      "documentName": "ChatMessage",
+      "uuid": "ChatMessage.0000000000000020",
+      "changes": {
+        "flags.pentaryn-aoe.claims.selfApply": "socket-gm-1"
+      }
+    },
+    {
+      "op": "_prepareEffectData",
+      "effect": "Actor.actCavenEff00001.Item.itemMageArmor001.ActiveEffect.effMageArmor0001",
+      "actor": "Actor.actCavenEff00001",
+      "message": "0000000000000020"
+    },
+    {
+      "op": "create",
+      "documentName": "ActiveEffect",
+      "parent": "Actor.actCavenEff00001",
+      "data": {
+        "name": "Mage Armor",
+        "origin": "Actor.actCavenEff00001.Item.itemMageArmor001.ActiveEffect.effMageArmor0001",
+        "_stats": {
+          "duplicateSource": "Actor.actCavenEff00001.Item.itemMageArmor001.ActiveEffect.effMageArmor0001"
+        }
+      }
+    },
+    {
+      "op": "update",
+      "documentName": "ChatMessage",
+      "uuid": "ChatMessage.0000000000000020",
+      "changes": {
+        "flags.pentaryn-aoe.effectsApplied": {
+          "auto": true,
+          "reason": "targeted-self",
+          "actor": "Actor.actCavenEff00001",
+          "actorName": "Cav",
+          "names": [
+            "Mage Armor"
+          ],
+          "ids": [
+            "effMageArmor0001"
+          ]
+        }
+      }
+    }
+  ],
+  "flag": {
+    "auto": true,
+    "reason": "targeted-self",
+    "actor": "Actor.actCavenEff00001",
+    "actorName": "Cav",
+    "names": [
+      "Mage Armor"
+    ],
+    "ids": [
+      "effMageArmor0001"
+    ]
+  }
+}

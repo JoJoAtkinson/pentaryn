@@ -306,3 +306,36 @@ def test_events_mirror_the_log_when_asked(module, monkeypatch, tmp_path):
 def test_git_state_reads_this_checkout():
     rev, dirty = modules._git_state(cfg.MODULE_SRC_ROOT / "pentaryn-importer")
     assert rev and isinstance(dirty, bool)
+
+
+# ── importer-install: the module alone, no actors.json (overnight-2026-10-11 FX item 3) ───────
+
+def test_importer_install_checks_then_installs_without_staging(importer, monkeypatch, capsys):
+    import json
+
+    pipeline, spec = importer
+    checked = []
+    monkeypatch.setattr(modules, "check", lambda name: checked.append(name) or 0)
+    monkeypatch.setattr(pipeline, "build_actors", lambda: pytest.fail("importer-install builds no actors"))
+    assert pipeline.install_importer() == 0
+    assert checked == ["importer"]
+    assert _installed(spec.dst) == _tree(spec.src)
+    assert not cfg.ACTORS_STAGED.exists(), "no actors.json is staged"
+    (line,) = [json.loads(x) for p in cfg.OPS_LOG_DIR.glob("ops-*.jsonl") for x in p.read_text().splitlines()]
+    assert (line["cmd"], line["module"]) == ("importer-install", "pentaryn-importer")
+    assert f"✓ module → {spec.dst}" in capsys.readouterr().out
+
+
+def test_importer_install_leaves_an_already_staged_json_alone(importer, monkeypatch):
+    pipeline, spec = importer
+    monkeypatch.setattr(modules, "check", lambda name: 0)
+    cfg.ACTORS_STAGED.write_text("staged by foundry-import")
+    assert pipeline.install_importer() == 0
+    assert cfg.ACTORS_STAGED.read_text() == "staged by foundry-import"
+
+
+def test_importer_install_failing_check_installs_nothing(importer, monkeypatch):
+    pipeline, spec = importer
+    monkeypatch.setattr(modules, "check", lambda name: 1)
+    assert pipeline.install_importer() == 1
+    assert not spec.dst.exists()

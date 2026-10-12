@@ -1,0 +1,85 @@
+[
+  {
+    "input": [
+      {
+        "start": {
+          "time": 100
+        },
+        "_source": {
+          "duration": {
+            "value": 600
+          }
+        }
+      },
+      400
+    ],
+    "out": 300
+  },
+  {
+    "input": [
+      {
+        "_source": {
+          "start": {
+            "time": 100
+          },
+          "duration": {
+            "value": 600
+          }
+        }
+      },
+      800
+    ],
+    "out": -100
+  },
+  {
+    "input": [
+      {
+        "start": {
+          "time": 100
+        },
+        "_source": {
+          "duration": {}
+        }
+      },
+      400
+    ],
+    "out": null
+  },
+  {
+    "input": [
+      {
+        "start": {},
+        "_source": {
+          "duration": {
+            "value": 600
+          }
+        }
+      },
+      400
+    ],
+    "out": null
+  },
+  {
+    "input": [
+      null,
+      0
+    ],
+    "out": null
+  },
+  {
+    "input": [
+      {
+        "start": {
+          "time": 0
+        },
+        "_source": {
+          "duration": {
+            "value": 600
+          }
+        }
+      },
+      600
+    ],
+    "out": 0
+  }
+]

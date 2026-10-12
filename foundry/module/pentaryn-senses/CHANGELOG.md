@@ -10,6 +10,12 @@
   hides a chain from non-GM viewers when either end is hidden, not just the chained token, so a
   player's screen never shows the hidden anchor's square. Pin flipped in `chain.test.mjs`.
 
+- **[declared] `syncAll` batches its writes** (W3-SE3, 2026-10-12, performance): every prototype in
+  one `Actor.updateDocuments`, then every token in one `updateEmbeddedDocuments` per scene (was one
+  `actor.update` and one token batch per actor per scene). The same documents get the same values
+  (test/carried-batch.test.mjs, 60 seeded worlds against the legacy plan); the ready goldens are
+  unchanged. A failing prototype write now stops the whole sync before any token write (console:
+  the `ready sweep` warning names that error).
 - **[declared] `inspect` reaches the MCP bridge** (W3L, 2026-10-12): the manifest's `ref` gains
   `type: "Token|Actor|uuid|id|exact name"`, so `pentaryn-read {ns:"senses", path:"inspect", ref:<uuid>}`
   passes the string through (inspect resolves it itself) instead of refusing "eval-js only".

@@ -1,0 +1,39 @@
+{
+  "atRender": {
+    "positions": [
+      {
+        "left": 600,
+        "top": 452
+      }
+    ],
+    "title": "Longsword: Attack Roll · Dagger, swing 2 of 3 (Nick)",
+    "dock": {
+      "left": 600,
+      "top": 452,
+      "height": 300
+    }
+  },
+  "afterFrame": [
+    {
+      "left": 600,
+      "top": 452
+    },
+    {
+      "left": 600,
+      "top": 452
+    }
+  ],
+  "keys": "Enter = Normal · Esc = pause",
+  "title2": "Longsword: Attack Roll · Dagger, swing 2 of 3 (Nick)",
+  "nextPositions": [
+    {
+      "left": 100,
+      "top": 200
+    },
+    {
+      "left": 100,
+      "top": 200
+    }
+  ],
+  "nextTitle": "Longsword: Attack Roll · Dagger, swing 2 of 3 (Nick)"
+}

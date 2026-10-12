@@ -1,0 +1,240 @@
+[
+  {
+    "label": "main, untagged",
+    "turn": {
+      "key": "c1:1:cb1",
+      "swings": 1,
+      "weapons": [
+        "longsword0000001"
+      ],
+      "crit": false,
+      "critWeapon": null,
+      "kill": false,
+      "killWeapon": null,
+      "nick": false,
+      "bonusUsed": false,
+      "followUps": [],
+      "otherActions": 0,
+      "surges": 0,
+      "quickened": false
+    },
+    "events": [],
+    "dnd5eLast": null
+  },
+  {
+    "label": "main, tagged by the sequence",
+    "turn": {
+      "key": "c1:1:cb1",
+      "swings": 1,
+      "weapons": [
+        "longsword0000001"
+      ],
+      "crit": false,
+      "critWeapon": null,
+      "kill": false,
+      "killWeapon": null,
+      "nick": false,
+      "bonusUsed": false,
+      "followUps": [],
+      "otherActions": 0,
+      "surges": 0,
+      "quickened": false
+    },
+    "events": [],
+    "dnd5eLast": null
+  },
+  {
+    "label": "offhand mode, untagged",
+    "turn": {
+      "key": "c1:1:cb1",
+      "swings": 0,
+      "weapons": [],
+      "crit": false,
+      "critWeapon": null,
+      "kill": false,
+      "killWeapon": null,
+      "nick": false,
+      "bonusUsed": true,
+      "followUps": [
+        "offhand"
+      ],
+      "otherActions": 0,
+      "surges": 0,
+      "quickened": false
+    },
+    "events": [
+      "offhand",
+      "bonusSpent"
+    ],
+    "dnd5eLast": null
+  },
+  {
+    "label": "offhand, tagged (sequence)",
+    "turn": {
+      "key": "c1:1:cb1",
+      "swings": 0,
+      "weapons": [],
+      "crit": false,
+      "critWeapon": null,
+      "kill": false,
+      "killWeapon": null,
+      "nick": false,
+      "bonusUsed": true,
+      "followUps": [
+        "offhand"
+      ],
+      "otherActions": 0,
+      "surges": 0,
+      "quickened": false
+    },
+    "events": [
+      "offhand",
+      "bonusSpent"
+    ],
+    "dnd5eLast": null
+  },
+  {
+    "label": "nick, tagged",
+    "turn": {
+      "key": "c1:1:cb1",
+      "swings": 0,
+      "weapons": [
+        "dagger0000000001"
+      ],
+      "crit": false,
+      "critWeapon": null,
+      "kill": false,
+      "killWeapon": null,
+      "nick": true,
+      "bonusUsed": false,
+      "followUps": [],
+      "otherActions": 0,
+      "surges": 0,
+      "quickened": false
+    },
+    "events": [],
+    "dnd5eLast": null
+  },
+  {
+    "label": "bonus-activation weapon",
+    "turn": {
+      "key": "c1:1:cb1",
+      "swings": 0,
+      "weapons": [],
+      "crit": false,
+      "critWeapon": null,
+      "kill": false,
+      "killWeapon": null,
+      "nick": false,
+      "bonusUsed": true,
+      "followUps": [],
+      "otherActions": 0,
+      "surges": 0,
+      "quickened": false
+    },
+    "events": [
+      "bonusSpent"
+    ],
+    "dnd5eLast": null
+  },
+  {
+    "label": "bonus, tagged (Flurry strike)",
+    "turn": {
+      "key": "c1:1:cb1",
+      "swings": 0,
+      "weapons": [],
+      "crit": false,
+      "critWeapon": null,
+      "kill": false,
+      "killWeapon": null,
+      "nick": false,
+      "bonusUsed": true,
+      "followUps": [],
+      "otherActions": 0,
+      "surges": 0,
+      "quickened": false
+    },
+    "events": [
+      "bonusSpent"
+    ],
+    "dnd5eLast": null
+  },
+  {
+    "label": "reaction, tagged (Opportunity Attack)",
+    "turn": null,
+    "events": [],
+    "dnd5eLast": null
+  },
+  {
+    "label": "crit with a melee weapon",
+    "turn": {
+      "key": "c1:1:cb1",
+      "swings": 1,
+      "weapons": [
+        "longsword0000001"
+      ],
+      "crit": true,
+      "critWeapon": "longsword0000001",
+      "kill": false,
+      "killWeapon": null,
+      "nick": false,
+      "bonusUsed": false,
+      "followUps": [],
+      "otherActions": 0,
+      "surges": 0,
+      "quickened": false
+    },
+    "events": [],
+    "dnd5eLast": null
+  },
+  {
+    "label": "crit with a ranged weapon (no Hew)",
+    "turn": {
+      "key": "c1:1:cb1",
+      "swings": 1,
+      "weapons": [
+        "shortbow00000001"
+      ],
+      "crit": false,
+      "critWeapon": null,
+      "kill": false,
+      "killWeapon": null,
+      "nick": false,
+      "bonusUsed": false,
+      "followUps": [],
+      "otherActions": 0,
+      "surges": 0,
+      "quickened": false
+    },
+    "events": [],
+    "dnd5eLast": null
+  },
+  {
+    "label": "crit with a thrown attack mode",
+    "turn": {
+      "key": "c1:1:cb1",
+      "swings": 1,
+      "weapons": [
+        "handaxe000000001"
+      ],
+      "crit": false,
+      "critWeapon": null,
+      "kill": false,
+      "killWeapon": null,
+      "nick": false,
+      "bonusUsed": false,
+      "followUps": [],
+      "otherActions": 0,
+      "surges": 0,
+      "quickened": false
+    },
+    "events": [],
+    "dnd5eLast": null
+  },
+  {
+    "label": "spell attack (Fire Bolt): never a swing",
+    "turn": null,
+    "events": [],
+    "dnd5eLast": null
+  }
+]

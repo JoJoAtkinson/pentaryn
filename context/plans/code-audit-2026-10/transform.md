@@ -1,7 +1,7 @@
 ---
 title: "Code audit 2026-10 — pentaryn-transform"
 status: active
-last_modified: 2026-10-11
+last_modified: 2026-10-12
 tags: [plans, audit, foundry]
 ---
 
@@ -15,6 +15,18 @@ tags: [plans, audit, foundry]
 > History-tree plan, not a use-doc. Line numbers refer to the frozen audit snapshot (see the master plan); re-locate each change by its **anchor** if the live file has drifted. Write the characterisation test first, run it green, refactor, re-run.
 
 > **WAIT module.** This module's files were uncommitted/in flux when the snapshot was taken (another workflow is live-testing it). Every change here runs in Wave 8, only after that workflow is idle on this module, and only after re-anchoring every line.
+
+> **Status 2026-10-12 (wave 4, branch `migrate/wave-4`, code phase).** Applied: -1 `59d560ba`; -2
+> `c25e6a9b` [declared]; -3, -4 `a7d52ce3` + `395d6573` (T part `702e85a1`); -5 `a7d52ce3` +
+> `9d4b0af9`; -6, -7 `a7d52ce3` + `395d6573`; -8 `6d436550` (registry, labels, uninstall); -9
+> superseded (starry installed by entry 1; the Wave 8 collapse makes one entry); -10 `89fd21a0`;
+> -11 `0e113e81` [declared]; -12 `d7fa35f2` (kit argon-kit); -13 step 1 `01583116`, step 3
+> `eb5d576b` [declared] (combat's `coversMultiattack`), step 2 superseded; -14 transform half
+> `45733d25` (`ptf-*`, the tooltip rules from `lib/argon-tooltip.css`; combat half = combat's W4-C6,
+> Wave 7); -15 `0f995af9` + `01583116`; -16 `e24730aa` + `89c3b57c`; -17 `a7d52ce3` + `e24730aa`
+> (`inspect(ref)`); -18, -19, -20 (README part) `977e430d`; -22 extraction `2aa03f5e`, behaviour
+> half open (D8, live); -23 `796fdf63`. Integrator: -18 config.py text, -20 routing row, -21
+> contract test (drafted), -24 minimum 14 (Wave 7). Record: `wave-4-report.md` § transform.
 
 ## Summary
 

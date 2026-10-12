@@ -12,6 +12,20 @@ tags: [plans, audit, foundry]
 
 > History-tree plan, not a use-doc. Line numbers refer to the frozen audit snapshot (see the master plan); re-locate each change by its **anchor** if the live file has drifted. Write the characterisation test first, run it green, refactor, re-run.
 
+> **Status (wave 4, 2026-10-11, branch `migrate/wave-4`, not merged):** all 16 findings landed in
+> the blueprint migration (record: `../addon-blueprint-2026-10/migrate-pentaryn-aoe.md` Result).
+> -2 `c0a75a64` · -4 `03322772` + `0f83d5fe` (D-A1) · -5 `4bc7d44c` · -6 `f54ba674` · -7 `5009afc4`
+> (D-A6; review fix `fb931b3d`: v14 replaces a world actor with an existing id rather than
+> refusing it, so the catch is a fallback) · -8 `130fb3c3` · -9 `515776c0`, `84c847df`, `097c9e67` · -10 `4644e577`, `0cbbab0e` ·
+> -11 `47bc85c7` (README) + `a6038b1d`, the review fix that put the 8 setting rows, Parts F/G and the Console
+> pointer into `context/foundry/aoe.md` with the docs-drift guard `test/docs-drift.test.mjs` (a node
+> test reading SETTINGS / MANIFEST / FEATURE_ROWS, not the pytest regexes) · -12 `47bc85c7` · -13 `87959748` · -14
+> `7198fe70` · -15 `515776c0` + `18addee4` (D-A2) · -30 `41b51b43` · -39 `0b9b13fd` (+ the
+> `core-region-placement-escape` widening, integrator) · -40 checkpoint `7a12ffad` · -44 `515776c0`
+> + `0d51383e` (D-A7). The re-anchor note's "not raised as a finding" (the `carefulApplies` JSDoc above
+> `carefulStale`'s) was fixed in `b0ae5dc9`, with `test/jsdoc.test.mjs` guarding orphaned JSDoc.
+> Line numbers below are the pre-migration ones.
+
 > **Re-anchored to `28ccc87` on 2026-10-11.** Every **Where**/**Anchor** below now points at HEAD `28ccc87` (the working tree equals HEAD for this module; the only commit touching it since the snapshot is `17275c9`, module 0.3.0 → 0.3.1). Snapshot lines are kept in brackets where they moved. The usability re-run added Part F `refund.mjs` (67 lines, U-5-12) and Part G `aim.mjs` (87 lines, U-6-5); Careful Spell (`carefulKey`/`carefulFor`/`onCarefulUsed`, resolve.mjs:224–261, U-5-11) with its `deleteCombat` clean-up (resolve.mjs:466–476, U-9-8); same-usage superseding (`core.supersedes`, U-5-13); the players' status line and hidden NPC save rows (`decoratePlayer`, tray.mjs:89–110, U-5-14); untargeted touch spells on the caster (`core.selfApplyReason`, U-6-3); no same-spell stacking (`onPreCreateEffect`/`spellOf`, effects.mjs:114–143, U-6-4); and 6 booleans in settings.mjs. `areas.mjs`, `hooks.mjs`, `escape.mjs` and `attacks.mjs` are byte-identical to the snapshot. Offsets: `aoe.mjs` +1 after :10, +3 after :30, +5 after :64; `settings.mjs` +8 after :22, +9 after :27; `resolve.mjs` +1 after :22, +2 after :75, +47 after :215; `effects.mjs` +2 after :9, +35 after :109; `tray.mjs` +1 after :13, +4 after :32, +5 after :75, +28 after :83; `core.mjs` unchanged up to :271, then +54 (selfApplyReason, sameSpellEffect, aim helpers) and a new block :369–459. The node suite prints 160 passed (snapshot 135). Tally: **15 re-anchored, 0 resolved, 0 obsolete, 1 new (aoe-movement-portals-44)**; -2, -8, -9, -10, -11, -12, -13 and -15 are extended to cover the re-run code. Not raised as a finding: in core.mjs the JSDoc for `carefulApplies` (:418–424) sits above `carefulStale`'s own JSDoc and body (:425–432), so `carefulApplies` (:434) reads undocumented.
 
 | Id | Re-anchor status (HEAD `28ccc87`) |

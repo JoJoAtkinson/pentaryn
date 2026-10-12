@@ -106,6 +106,13 @@ The wrapper that adds the sender check to upstream's `foundry-mcp-bridge.*` hand
 opposite of whether the token's actor has the condition now (`src/fork/toggle-condition.ts`,
 optfix build). Upstream's schema always said "omitted = toggle"; its handler refused it.
 
+**`toggle-token-condition` only finds tokens on the GM's viewed scene.** Upstream's handler looks
+the `tokenId` up in `game.scenes.current` (the scene the bridge's GM tab is viewing, not the
+active one; `data-access.ts` `toggleTokenCondition`), not across the world, so a token on any
+other scene fails as not found even with the right id. View that scene in the GM tab first
+(`eval-js`: `await game.scenes.get(id).view()`, which moves no player), or set the condition
+through `eval-js` on the token's actor. Seen live in W3L (merge-and-go-live-2026-10-11, "Live checks").
+
 ## Build, restart, verify
 
 ```bash

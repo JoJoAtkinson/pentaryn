@@ -21,6 +21,9 @@
 // store into a fresh buffer — the state right after a reload, so `lastImmediateIsScratch` no longer
 // depends on earlier runs). cleanup.pingLogRestored / pingScratchLeft report it; diff.mjs fails
 // on false / > 0. A player's ping in the few milliseconds between uninstall and re-import is lost.
+// The log is read and restored through the stored Setting's `_source` (2026-10-12), not the cache
+// game.settings.get returns: on a hidden tab the flush is held back, the scratch records sit only in
+// the cached array, and a set() of the unchanged store is a no-op that left them there.
 
 const N = 5;
 const median = xs => { const s = [...xs].sort((a, b) => a - b); const m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
@@ -58,16 +61,31 @@ const out = { module: "pings", golden: {}, timings: {}, cleanup: {} };
 const API = game.pentaryn.pings;
 const MOD = "pentaryn-pings";
 let scene = null;
-// before the first ping; a deep copy, because the settings cache array is what a flush replaces
-const savedLog = foundry.utils.deepClone(game.settings.get(MOD, "log") ?? []);
-/** Put the saved log back, in the store and in the module's buffer (hot patch). → true when exact. */
+// The stored Setting document, not game.settings.get: get returns the cached array the module's
+// buffer aliases, which on a hidden tab holds pings whose flush never ran. `_source.value` is what
+// the store holds. No storage API → the cache (the old read).
+const storedSetting = () => game.settings.storage?.get?.("world")?.getSetting?.(`${MOD}.log`);
+const storedLog = () => {
+  if (!game.settings.storage?.get?.("world")?.getSetting) return foundry.utils.deepClone(game.settings.get(MOD, "log") ?? []);
+  const v = storedSetting()?._source?.value;
+  const parsed = typeof v === "string" ? JSON.parse(v) : (v ?? []);
+  return Array.isArray(parsed) ? foundry.utils.deepClone(parsed) : [];
+};
+// before the first ping
+const savedLog = storedLog();
+/** Put the saved log back, in the store, the settings cache and the module's buffer (hot patch). → true when exact. */
 async function restorePingLog() {
   try {
     game.pentaryn.pings?.uninstall?.();
     await game.settings.set(MOD, "log", savedLog);
+    // set() is a no-op when the store already equals savedLog, which leaves unflushed scratch
+    // records in the cached array: re-derive the cache from the stored source
+    const doc = storedSetting();
+    if (typeof doc?.reset === "function") doc.reset();
+    else { const c = game.settings.get(MOD, "log"); if (Array.isArray(c)) c.splice(0, c.length, ...foundry.utils.deepClone(savedLog)); }
     await import(`${foundry.utils.getRoute(`modules/${MOD}/pings.mjs`)}?golden=${Date.now()}`);
-    const now = game.settings.get(MOD, "log");
-    return JSON.stringify(now) === JSON.stringify(savedLog) && game.pentaryn.pings?.all?.().length === savedLog.length;
+    const same = v => JSON.stringify(v) === JSON.stringify(savedLog);
+    return same(storedLog()) && same(game.settings.get(MOD, "log")) && game.pentaryn.pings?.all?.().length === savedLog.length;
   } catch (e) {
     out.cleanup.pingLogError = String(e?.message ?? e);
     return false;
@@ -122,7 +140,8 @@ try {
   if (scene && game.scenes.get(scene.id)) await scene.delete();
   out.cleanup = { zzScenesLeft: game.scenes.filter(s => s.name.startsWith("ZZ ")).length };
   out.cleanup.pingLogRestored = await restorePingLog();
-  out.cleanup.pingScratchLeft = scene ? game.settings.get(MOD, "log").filter(r => r.sceneId === scene.id).length : 0;
+  // scratch records in the store or in the cache (the module's buffer re-reads the cache)
+  out.cleanup.pingScratchLeft = scene ? Math.max(storedLog().filter(r => r.sceneId === scene.id).length, (game.settings.get(MOD, "log") ?? []).filter(r => r.sceneId === scene.id).length) : 0;
 }
 out.golden = norm(out.golden);
 // a string, not the object: the eval bridge truncates nested results at a fixed depth

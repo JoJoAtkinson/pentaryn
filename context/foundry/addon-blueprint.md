@@ -295,7 +295,7 @@ The manifest (`api-manifest.mjs`) is pure data. **Manifest-level fields:**
 | Field | Type | Meaning |
 |---|---|---|
 | `path` | string | dotted path under the namespace (`"store.list"`); no reserved name at any depth (§5.1) |
-| `params` | `{name, kind?, type?, optional?, resolve?, doc?}[]` | a first param named `ref` is resolved per call (`kind`: `actor` default, `token`, `user`, …; `resolve: false` opts out) |
+| `params` | `{name, kind?, type?, optional?, resolve?, doc?}[]` | a first param named `ref` is resolved per call (`kind`: `actor` default, `token`, `user`, …; `resolve: false` opts out). A param with a Document `kind`, or a `ref`, that the kit does **not** resolve must name its string forms in `type` (`"Actor\|uuid\|id\|exact name"`) when the function resolves strings itself, or say `eval-js only` in its (or the row's) `doc`: the bridge refuses it over `pentaryn-read`/`-write` otherwise (C62) |
 | `returns` | string | the shape, in words or TS-ish (`"{ ok, checks }"`) |
 | `gm` | boolean | GM-only |
 | `writes` | boolean | changes world data → returns `ok()/fail()`, accepts `dryRun` when bulk; the fork routes it to `pentaryn-write` (D14) |
@@ -407,7 +407,9 @@ existing one is declared); core CSS variables and `.theme-dark/.theme-light`.
 Shared CSS lives in the kit as a `kit.json` row with `"ext": "css"`. It is vendored to
 `lib/<name>.css`, loaded by listing it in `module.json` `styles`, and proven byte-identical by C14
 (`vendor.py` also fails a `styles` entry naming an unlocked `lib/*.css`). C37 and C37w do not score
-`lib/*.css`. First kit stylesheet: `argon-tooltip.css` (D7); no module adopts it in wave 1.
+`lib/*.css`. First kit stylesheet: `argon-tooltip.css` (D7). Wave 4 vendored it into combat and
+transform, which `@import "../lib/argon-tooltip.css"` from their own stylesheet until a manifest
+edit lists it in `styles` (then drop the `@import` in the same commit).
 
 ### 5.8 Flags
 
@@ -708,6 +710,7 @@ game.settings.set(MODULE, "worldX", 1) /* world-scoped, in Hooks.once("init") */
 - [ ] Python: file read-modify-write paths hold `flock` on `<file>.lock`.
 
 C53–C61 in §11 automate what a scan can see; C54, C59 and C61 also land on the manual list.
+C62 (§5.1a `params`) is the manifest-side twin of the bridge's "eval-js only" refusal.
 
 #### 5.9.5 Open findings (not changed by this section)
 
@@ -929,6 +932,7 @@ both Warnings and Manual.
 | C59 | warn+manual | `await <doc>.update/create/delete/setFlag/unsetFlag(` inside a loop body (batch it) |
 | C60 | warn | no `async` listener or `await` in a hot-hook handler unless it defers via `perFrame`/`debounce`/`coalesce` |
 | C61 | warn+manual | a writing `create*/update*/delete*` listener has an active-GM gate, the initiator gate (`userId !== game.user.id`) or a claim (an any-GM gate alone → manual). The active-GM and initiator gates pick one *user*, not one tab: every tab of that user passes, so where two tabs on one account matter the review checks for a claim (§5.9.4); the write and the gate are looked for in the listener and the functions it calls by name, in its file or the module files it imports |
+| C62 | fail | a manifest param with a Document `kind` (`actor token item scene user journal message macro region combat table folder playlist`), or a `ref`, that the kit does not resolve (`resolve: false`, or not the first param) names a string form in `type` (`uuid`, `id`, `name`, `string`), or its `doc` or the row's says `eval-js only`. Read from `test/golden/describe.json` (n/a without one). Mirrors the bridge's `needsDoc` (`pentaryn-call.ts`): without it the row is refused live as "eval-js only" (senses.inspect, W3L) |
 
 ## 12. Wiring status
 

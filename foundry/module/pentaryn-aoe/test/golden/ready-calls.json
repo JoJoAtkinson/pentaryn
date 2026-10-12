@@ -1,0 +1,165 @@
+[
+  {
+    "op": "settings.set",
+    "id": "pentaryn-aoe.npcSaveRollMode",
+    "value": "gm"
+  },
+  {
+    "op": "create",
+    "documentName": "Actor",
+    "data": {
+      "_id": "pentarynAoeHndl0",
+      "name": "Area handle",
+      "type": "npc",
+      "img": "icons/svg/target.svg",
+      "folder": null,
+      "ownership": {
+        "default": 3
+      },
+      "system": {
+        "attributes": {
+          "hp": {
+            "value": 0,
+            "max": 0
+          },
+          "movement": {
+            "hover": true
+          }
+        },
+        "traits": {
+          "size": "tiny"
+        }
+      },
+      "prototypeToken": {
+        "name": "Area handle",
+        "width": 0.5,
+        "height": 0.5,
+        "texture": {
+          "src": "icons/svg/target.svg"
+        },
+        "displayName": 30,
+        "displayBars": 0,
+        "disposition": -2,
+        "actorLink": false,
+        "lockRotation": true,
+        "movementAction": "displace",
+        "sight": {
+          "enabled": false
+        },
+        "light": {
+          "dim": 0,
+          "bright": 0
+        },
+        "ring": {
+          "enabled": false
+        },
+        "flags": {
+          "pentaryn-aoe": {
+            "handle": true
+          },
+          "dnd5e": {
+            "lockSize": true
+          }
+        }
+      },
+      "flags": {
+        "pentaryn-aoe": {
+          "handleActor": true
+        }
+      }
+    },
+    "options": {
+      "keepId": true
+    }
+  },
+  {
+    "op": "deleteEmbedded",
+    "parent": "Scene.SceneReady000001",
+    "documentName": "Token",
+    "ids": [
+      "orphan0000000001"
+    ]
+  },
+  {
+    "op": "updateEmbedded",
+    "parent": "Scene.SceneReady000001",
+    "documentName": "Token",
+    "updates": [
+      {
+        "_id": "regionKeep000001",
+        "flags.dnd5e.lockSize": true
+      }
+    ]
+  },
+  {
+    "op": "updateEmbedded",
+    "parent": "Scene.SceneReady000001",
+    "documentName": "Region",
+    "updates": [
+      {
+        "_id": "regionBare000001",
+        "ownership.default": 3
+      }
+    ]
+  },
+  {
+    "op": "createEmbedded",
+    "parent": "Scene.SceneReady000001",
+    "documentName": "Token",
+    "data": [
+      {
+        "name": "Bare (Gamemaster)",
+        "width": 0.5,
+        "height": 0.5,
+        "texture": {
+          "src": "icons/svg/target.svg"
+        },
+        "displayName": 30,
+        "displayBars": 0,
+        "disposition": -2,
+        "actorLink": false,
+        "lockRotation": true,
+        "movementAction": "displace",
+        "sight": {
+          "enabled": false
+        },
+        "light": {
+          "dim": 0,
+          "bright": 0
+        },
+        "ring": {
+          "enabled": false
+        },
+        "flags": {
+          "pentaryn-aoe": {
+            "handle": true,
+            "region": "regionBare000001"
+          },
+          "dnd5e": {
+            "lockSize": true
+          }
+        },
+        "_id": "regionBare000001",
+        "actorId": "pentarynAoeHndl0",
+        "x": 475,
+        "y": 475,
+        "elevation": 0,
+        "hidden": false
+      }
+    ],
+    "options": {
+      "keepId": true
+    }
+  },
+  {
+    "op": "update",
+    "documentName": "Region",
+    "uuid": "Scene.SceneReady000001.Region.regionBare000001",
+    "changes": {
+      "attachment": {
+        "token": "regionBare000001"
+      },
+      "flags.pentaryn-aoe.handle": "regionBare000001"
+    }
+  }
+]

@@ -1,0 +1,29 @@
+[
+  {
+    "op": "createScrollingText",
+    "text": "5"
+  },
+  {
+    "op": "createScrollingText",
+    "text": "7"
+  },
+  {
+    "op": "ChatLog.notify",
+    "id": "m1",
+    "options": {
+      "newMessage": false
+    }
+  },
+  {
+    "op": "ChatLog.notify",
+    "id": "m2",
+    "options": {
+      "newMessage": true
+    }
+  },
+  {
+    "op": "ChatLog.notify",
+    "id": "m3",
+    "options": {}
+  }
+]

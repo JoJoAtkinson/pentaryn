@@ -1,0 +1,78 @@
+{
+  "created": {
+    "op": "createEmbedded",
+    "type": "ActiveEffect",
+    "uuid": "Actor.barbarian0000001",
+    "data": [
+      {
+        "documentName": "ActiveEffect",
+        "id": "stockReckless001",
+        "name": "Reckless",
+        "system": {
+          "changes": [
+            {
+              "key": "system.abilities.str.attack.roll.mode",
+              "type": "add",
+              "value": 1
+            }
+          ]
+        },
+        "flags": {
+          "pentaryn-combat": {
+            "reckless": true
+          }
+        },
+        "ownership": {
+          "default": 0
+        },
+        "disabled": false,
+        "isSuppressed": false,
+        "img": "icons/svg/aura.svg",
+        "description": "",
+        "origin": "Actor.barbarian0000001.Item.recklessAttack01",
+        "transfer": false
+      }
+    ]
+  },
+  "deleted": {
+    "op": "deleteEmbedded",
+    "type": "ActiveEffect",
+    "uuid": "Actor.barbarian0000001",
+    "ids": [
+      "stockReckless001"
+    ]
+  },
+  "fallback": {
+    "op": "createEmbedded",
+    "type": "ActiveEffect",
+    "uuid": "Actor.barbarian0000001",
+    "data": [
+      {
+        "name": "Reckless",
+        "img": "icons/feats/recklessAttack01.webp",
+        "duration": {
+          "value": 6,
+          "units": "seconds",
+          "expiry": "turnStart"
+        },
+        "transfer": false,
+        "disabled": false,
+        "origin": "Actor.barbarian0000001.Item.recklessAttack01",
+        "flags": {
+          "pentaryn-combat": {
+            "reckless": true
+          }
+        },
+        "system": {
+          "changes": [
+            {
+              "key": "system.abilities.str.attack.roll.mode",
+              "type": "add",
+              "value": 1
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

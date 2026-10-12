@@ -1,0 +1,106 @@
+{
+  "fighter, fresh": {
+    "noPanel": [],
+    "bonusFree": [],
+    "bonusSpent": []
+  },
+  "fighter after a Light Dagger swing": {
+    "noPanel": [
+      {
+        "kind": "offhand",
+        "weaponId": "handaxe000000001",
+        "via": "light"
+      }
+    ],
+    "bonusFree": [
+      {
+        "kind": "offhand",
+        "weaponId": "handaxe000000001",
+        "via": "light"
+      }
+    ],
+    "bonusSpent": []
+  },
+  "rogue after the Scimitar (Nick)": {
+    "noPanel": [
+      {
+        "kind": "nick",
+        "weaponId": "dagger0000000002",
+        "free": true
+      }
+    ],
+    "bonusFree": [
+      {
+        "kind": "nick",
+        "weaponId": "dagger0000000002",
+        "free": true
+      }
+    ],
+    "bonusSpent": [
+      {
+        "kind": "nick",
+        "weaponId": "dagger0000000002",
+        "free": true
+      }
+    ]
+  },
+  "monk focus 0": {
+    "noPanel": [
+      {
+        "kind": "flurry",
+        "weaponId": "unarmedStrike001",
+        "count": 2,
+        "disabled": "focus"
+      },
+      {
+        "kind": "martial-arts",
+        "weaponId": "unarmedStrike001",
+        "count": 1
+      }
+    ],
+    "bonusFree": [
+      {
+        "kind": "flurry",
+        "weaponId": "unarmedStrike001",
+        "count": 2,
+        "disabled": "focus"
+      },
+      {
+        "kind": "martial-arts",
+        "weaponId": "unarmedStrike001",
+        "count": 1
+      }
+    ],
+    "bonusSpent": []
+  },
+  "monk focus 2": {
+    "noPanel": [
+      {
+        "kind": "flurry",
+        "weaponId": "unarmedStrike001",
+        "count": 2
+      },
+      {
+        "kind": "martial-arts",
+        "weaponId": "unarmedStrike001",
+        "count": 1
+      }
+    ],
+    "bonusFree": [
+      {
+        "kind": "flurry",
+        "weaponId": "unarmedStrike001",
+        "count": 2
+      },
+      {
+        "kind": "martial-arts",
+        "weaponId": "unarmedStrike001",
+        "count": 1
+      }
+    ],
+    "bonusSpent": []
+  },
+  "fighter out of combat, panel spent (ignored out of combat)": {
+    "bonusSpent": []
+  }
+}

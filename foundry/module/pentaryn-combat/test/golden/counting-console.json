@@ -1,0 +1,47 @@
+[
+  {
+    "level": "warn",
+    "text": "pentaryn-combat | swing tag skipped",
+    "err": "boom"
+  },
+  {
+    "level": "warn",
+    "text": "pentaryn-combat | turn stamp skipped",
+    "err": "boom"
+  },
+  {
+    "level": "warn",
+    "text": "pentaryn-combat | weapon bonus skipped",
+    "err": "boom"
+  },
+  {
+    "level": "warn",
+    "text": "pentaryn-combat | auto rider skipped",
+    "err": "boom"
+  },
+  {
+    "level": "warn",
+    "text": "pentaryn-combat | swing count failed",
+    "err": "boom"
+  },
+  {
+    "level": "warn",
+    "text": "pentaryn-combat | Steady Aim",
+    "err": "boom"
+  },
+  {
+    "level": "warn",
+    "text": "pentaryn-combat | action count failed",
+    "err": "boom"
+  },
+  {
+    "level": "warn",
+    "text": "pentaryn-combat | mode reset failed",
+    "err": "no permission"
+  },
+  {
+    "level": "warn",
+    "text": "pentaryn-combat | turn flag write failed",
+    "err": "write refused"
+  }
+]

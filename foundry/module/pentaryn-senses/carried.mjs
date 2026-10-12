@@ -45,6 +45,30 @@ function tokensOf(actor, index) {
 }
 
 /**
+ * What syncing one actor would write: `{ proto: {"prototypeToken.<k>": v} | null, scenes: [{ scene,
+ * updates: [{_id, …}] }] }`. Reads only; the same selection as syncLight. `index` as syncLight's.
+ */
+function planLight(actor, index) {
+  const light = carriedLight(actor);
+  const p = actor.isToken ? null : lightUpdate(actor.prototypeToken, light);
+  let proto = null;
+  if (p) {
+    proto = {};
+    for (const [k, v] of Object.entries(p)) proto[`prototypeToken.${k}`] = v;
+  }
+  const scenes = [];
+  for (const { scene, tokens } of tokensOf(actor, index)) {
+    const updates = [];
+    for (const t of tokens) {
+      const u = lightUpdate(t, t.actorLink ? light : carriedLight(t.actor ?? actor));
+      if (u) updates.push({ _id: t.id, ...u });
+    }
+    if (updates.length) scenes.push({ scene, updates });
+  }
+  return { proto, scenes };
+}
+
+/**
  * Bring the actor's prototype and every token of it (on every scene) in line. → documents written.
  * `opts.index`: a tokensByActor(game.scenes) map, so a whole-world sync walks the scenes once.
  */
@@ -75,11 +99,32 @@ async function syncLight(actor, { index = null } = {}) {
   return count;
 }
 
-/** Every world actor, one after another. → documents written. */
+/**
+ * Every world actor at once (W3-SE3): the same per-actor plans syncLight writes, batched as
+ * resetSight batches: every prototype in one Actor.updateDocuments, then every token in one
+ * updateEmbeddedDocuments per scene, in scene order. → documents written.
+ */
 async function syncAll() {
   const index = tokensByActor(game.scenes);
-  let n = 0;
-  for (const a of game.actors) n += await syncLight(a, { index });
+  const protos = [];
+  const byScene = new Map();
+  for (const actor of game.actors) {
+    if (!actor || actor.pack) continue;
+    const { proto, scenes } = planLight(actor, index);
+    if (proto) protos.push({ _id: actor.id, ...proto });
+    for (const { scene, updates } of scenes) {
+      if (!byScene.has(scene)) byScene.set(scene, []);
+      byScene.get(scene).push(...updates);
+    }
+  }
+  if (protos.length) await Actor.implementation.updateDocuments(protos);
+  let n = protos.length;
+  for (const scene of game.scenes) {
+    const updates = byScene.get(scene);
+    if (!updates) continue;
+    await scene.updateEmbeddedDocuments("Token", updates);
+    n += updates.length;
+  }
   return n;
 }
 

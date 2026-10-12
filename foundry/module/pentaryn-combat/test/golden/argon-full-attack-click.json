@@ -1,0 +1,16 @@
+{
+  "tiles": [
+    "longsword0000001",
+    "dagger0000000001",
+    "shortbow00000001",
+    "handaxe000000001"
+  ],
+  "targets": [
+    1,
+    {
+      "normal": 5,
+      "long": null
+    }
+  ],
+  "hasTooltip": true
+}

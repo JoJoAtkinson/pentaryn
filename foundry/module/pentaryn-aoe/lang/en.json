@@ -1,76 +1,130 @@
 {
-  "PENTARYN_AOE.RemoveAllTemplates": "Remove all templates",
-  "PENTARYN_AOE.NoArea": "This spell has no templates on the scene you are viewing.",
-  "PENTARYN_AOE.CannotRemove": "You don't own those templates. Ask the GM to remove them.",
-  "PENTARYN_AOE.Effects.Unapplied": "Not applied yet",
-  "PENTARYN_AOE.Effects.AutoApplied": "Applied to {actor}: {effects}",
-  "PENTARYN_AOE.Request.Flavor": "{item} — {ability} saving throw",
-  "PENTARYN_AOE.Request.Button": "Roll {ability} save",
-  "PENTARYN_AOE.Request.Half": "Half damage on a success.",
-  "PENTARYN_AOE.Request.None": "No damage on a success.",
-  "PENTARYN_AOE.Tray.Title": "{ability} save · DC {dc}",
-  "PENTARYN_AOE.Tray.FromArea": "creatures in the area",
-  "PENTARYN_AOE.Tray.FromTargets": "the roller's targets",
-  "PENTARYN_AOE.Tray.Empty": "No creatures inside the area.",
-  "PENTARYN_AOE.Tray.Superseded": "Superseded by a newer damage roll for this area. Apply from that one.",
-  "PENTARYN_AOE.Tray.Waiting": "waiting",
-  "PENTARYN_AOE.Tray.WaitingTip": "Waiting for the player to roll from the request card.",
-  "PENTARYN_AOE.Tray.Reroll": "Re-roll this save",
-  "PENTARYN_AOE.Tray.RollFor": "Roll this save for the player",
-  "PENTARYN_AOE.Tray.Applied": "applied",
-  "PENTARYN_AOE.Tray.Manual": "Player rolls",
-  "PENTARYN_AOE.Tray.Auto": "Rolled by the GM",
-  "PENTARYN_AOE.Tray.Caster": "caster",
-  "PENTARYN_AOE.Tray.RerollAll": "Re-roll NPC saves",
-  "PENTARYN_AOE.Tray.Ping": "Ping players",
-  "PENTARYN_AOE.Tray.Apply": "Apply {n}",
-  "PENTARYN_AOE.Tray.NobodyToPing": "No connected player is waiting on a save.",
-  "PENTARYN_AOE.Tray.PingText": "{item}: please roll your {ability} save from the request card in chat.",
-  "PENTARYN_AOE.Setting.handleTokens.Name": "Area handles",
-  "PENTARYN_AOE.Setting.handleTokens.Hint": "Put a small token on every spell area. Drag it to move the area; delete it to delete the area. Everyone owns it.",
-  "PENTARYN_AOE.Setting.removeAreaButton.Name": "\"Remove all templates\" icon",
-  "PENTARYN_AOE.Setting.removeAreaButton.Hint": "Put a Remove all templates icon next to Place Template on every spell card that places an area. It removes every template that spell placed on the scene you are viewing.",
-  "PENTARYN_AOE.Setting.instantCleanup.Name": "Remove instantaneous areas after Apply",
-  "PENTARYN_AOE.Setting.instantCleanup.Hint": "When every ticked row of an instantaneous spell (Fireball) has been applied, delete its area.",
-  "PENTARYN_AOE.Setting.concentrationCleanup.Name": "Remove areas when concentration ends",
-  "PENTARYN_AOE.Setting.concentrationCleanup.Hint": "When a caster stops concentrating, delete that spell's areas on every scene.",
-  "PENTARYN_AOE.Setting.resolveSaves.Name": "Saves from the area",
-  "PENTARYN_AOE.Setting.resolveSaves.Hint": "When a save spell's damage is rolled, list the creatures in its area, roll the monsters' saves and ask the players for theirs. Nothing is applied until the GM presses Apply.",
-  "PENTARYN_AOE.Setting.npcSaveRollMode.Name": "Monster save visibility",
-  "PENTARYN_AOE.Setting.npcSaveRollMode.Hint": "Roll mode for saves the GM's client rolls for monsters.",
-  "PENTARYN_AOE.Setting.npcSaveRollMode.gm": "GM only",
-  "PENTARYN_AOE.Setting.npcSaveRollMode.blind": "Blind",
-  "PENTARYN_AOE.Setting.npcSaveRollMode.public": "Public",
-  "PENTARYN_AOE.Setting.autoApplyNpc.Name": "Apply monster damage automatically",
-  "PENTARYN_AOE.Setting.autoApplyNpc.Hint": "Apply damage to monsters as soon as their saves are rolled, without pressing Apply. Players' characters always wait for Apply.",
-  "PENTARYN_AOE.Setting.promptPlayers.Name": "Ask players to roll",
-  "PENTARYN_AOE.Setting.promptPlayers.Hint": "Post a request card so each player rolls their own character's save.",
-  "PENTARYN_AOE.Setting.autoDamageOnHit.Name": "Roll damage on a hit",
-  "PENTARYN_AOE.Setting.autoDamageOnHit.Hint": "After an attack roll that hits (or whose target is unknown), roll its damage straight away on the attacker's client. A known miss or a natural 1 rolls nothing.",
-  "PENTARYN_AOE.Setting.autoApplySelf.Name": "Apply self-cast effects automatically",
-  "PENTARYN_AOE.Setting.autoApplySelf.Hint": "When a spell card's only target is the caster (Mage Armor, Fly or Invisibility on yourself), or the spell can only affect its caster (Shield), put its effect on the caster straight away. A card with several effects is a choice (Guidance's skills) and stays in the tray. The GM's client does it, so players don't need to open the Effects tray.",
-  "PENTARYN_AOE.Setting.highlightUnapplied.Name": "Highlight effects not yet applied",
-  "PENTARYN_AOE.Setting.highlightUnapplied.Hint": "Outline a card's Effects tray and mark it \"Not applied yet\" until someone applies its effects. Cards older than an hour are left alone.",
-  "PENTARYN_AOE.Keybinding.cancelTemplate.Name": "Cancel template placement",
-  "PENTARYN_AOE.Keybinding.cancelTemplate.Hint": "While you are placing a spell's area, this key cancels it on the first press, even with a sheet open. At any other time the key does what it normally does.",
-  "PENTARYN_AOE.Careful.Armed": "Careful Spell: in your next save spell's area this turn, up to {n} of your side (players first) succeed automatically and take no damage on a half-damage spell. The GM can change any row.",
-  "PENTARYN_AOE.Careful.Row": "protected",
-  "PENTARYN_AOE.Careful.RowTip": "Careful Spell: an automatic success, and no damage where a success halves it.",
-  "PENTARYN_AOE.Careful.Head": "Careful Spell protects: {names}",
-  "PENTARYN_AOE.Status.waiting": "Saves are in. Waiting for the GM to apply the damage.",
-  "PENTARYN_AOE.Status.applied": "The GM applied this damage.",
-  "PENTARYN_AOE.Status.superseded": "Re-rolled: the newer damage card for this spell is the one that counts.",
-  "PENTARYN_AOE.Refund.Done": "{item}: placement cancelled, so nothing was spent. The slot, charge or uses are back.",
-  "PENTARYN_AOE.Setting.carefulSpell.Name": "Careful Spell protects allies in the area",
-  "PENTARYN_AOE.Setting.carefulSpell.Hint": "After a sorcerer uses Careful Spell, their next save spell's area on the same turn marks up to their Charisma modifier of their own side (same token disposition, player characters first, never the caster) as protected: an automatic success and no damage on a half-damage spell. No request card for them. The GM can change any row in the tray.",
-  "PENTARYN_AOE.Setting.refundCancelledArea.Name": "Refund a cancelled area",
-  "PENTARYN_AOE.Setting.refundCancelledArea.Hint": "If a spell's area placement is cancelled (Escape or right-click), give back the slot, charges or uses it spent and remove its card, as the card's Refund button would.",
-  "PENTARYN_AOE.Setting.playerStatus.Name": "Tell the caster when damage is waiting for the GM",
-  "PENTARYN_AOE.Setting.playerStatus.Hint": "Players see one line under their own save-spell damage card: waiting for the GM to apply, applied, or re-rolled. No monster save numbers. Monsters' GM-only save rolls are hidden from players' chat instead of showing as \"privately rolled\" rows.",
-  "PENTARYN_AOE.Setting.untargetedSelf.Name": "A touch spell cast at nobody goes on the caster",
-  "PENTARYN_AOE.Setting.untargetedSelf.Hint": "A touch spell for one willing creature (Mage Armor) cast with nothing targeted lands on the caster, with the usual \"Applied to …\" line on the card. Off: it waits in the GM's effects tray.",
-  "PENTARYN_AOE.Setting.noSpellStacking.Name": "The same spell does not stack",
-  "PENTARYN_AOE.Setting.noSpellStacking.Hint": "When a spell's effect goes on a creature that already has that spell's effect from another source (Shield from a slot, then from a Ring of Spell Storing), the old one is replaced instead of adding a second (PHB: the effects of the same spell don't combine).",
-  "PENTARYN_AOE.Setting.aimSelfAreas.Name": "Self cones and lines start at the caster",
-  "PENTARYN_AOE.Setting.aimSelfAreas.Hint": "Placing a Self-range cone or line (Cone of Cold, Burning Hands, Lightning Bolt) keeps its point at the caster's token and points it at the mouse; click to cast. Off: core's placement (the point follows the mouse, the mouse wheel turns it)."
+  "PENTARYN_AOE": {
+    "RemoveAllTemplates": "Remove all templates",
+    "NoArea": "This spell has no templates on the scene you are viewing.",
+    "CannotRemove": "You don't own those templates. Ask the GM to remove them.",
+    "Effects": {
+      "Unapplied": "Not applied yet",
+      "AutoApplied": "Applied to {actor}: {effects}"
+    },
+    "Request": {
+      "Flavor": "{item} — {ability} saving throw",
+      "Button": "Roll {ability} save",
+      "Half": "Half damage on a success.",
+      "None": "No damage on a success."
+    },
+    "Tray": {
+      "Title": "{ability} save · DC {dc}",
+      "FromArea": "creatures in the area",
+      "FromTargets": "the roller's targets",
+      "Empty": "No creatures inside the area.",
+      "Superseded": "Superseded by a newer damage roll for this area. Apply from that one.",
+      "Waiting": "waiting",
+      "WaitingTip": "Waiting for the player to roll from the request card.",
+      "Reroll": "Re-roll this save",
+      "RollFor": "Roll this save for the player",
+      "Applied": "applied",
+      "Manual": "Player rolls",
+      "Auto": "Rolled by the GM",
+      "Caster": "caster",
+      "RerollAll": "Re-roll NPC saves",
+      "Ping": "Ping players",
+      "Apply": "Apply {n}",
+      "NobodyToPing": "No connected player is waiting on a save.",
+      "PingText": "{item}: please roll your {ability} save from the request card in chat."
+    },
+    "Setting": {
+      "handleTokens": {
+        "Name": "Area handles",
+        "Hint": "Put a small token on every spell area. Drag it to move the area; delete it to delete the area. Everyone owns it."
+      },
+      "removeAreaButton": {
+        "Name": "\"Remove all templates\" icon",
+        "Hint": "Put a Remove all templates icon next to Place Template on every spell card that places an area. It removes every template that spell placed on the scene you are viewing."
+      },
+      "instantCleanup": {
+        "Name": "Remove instantaneous areas after Apply",
+        "Hint": "When every ticked row of an instantaneous spell (Fireball) has been applied, delete its area."
+      },
+      "concentrationCleanup": {
+        "Name": "Remove areas when concentration ends",
+        "Hint": "When a caster stops concentrating, delete that spell's areas on every scene."
+      },
+      "resolveSaves": {
+        "Name": "Saves from the area",
+        "Hint": "When a save spell's damage is rolled, list the creatures in its area, roll the monsters' saves and ask the players for theirs. Nothing is applied until the GM presses Apply."
+      },
+      "npcSaveRollMode": {
+        "Name": "Monster save visibility",
+        "Hint": "Roll mode for saves the GM's client rolls for monsters.",
+        "gm": "GM only",
+        "blind": "Blind",
+        "public": "Public"
+      },
+      "autoApplyNpc": {
+        "Name": "Apply monster damage automatically",
+        "Hint": "Apply damage to monsters as soon as their saves are rolled, without pressing Apply. Players' characters always wait for Apply."
+      },
+      "promptPlayers": {
+        "Name": "Ask players to roll",
+        "Hint": "Post a request card so each player rolls their own character's save."
+      },
+      "autoDamageOnHit": {
+        "Name": "Roll damage on a hit",
+        "Hint": "After an attack roll that hits (or whose target is unknown), roll its damage straight away on the attacker's client. A known miss or a natural 1 rolls nothing."
+      },
+      "autoApplySelf": {
+        "Name": "Apply self-cast effects automatically",
+        "Hint": "When a spell card's only target is the caster (Mage Armor, Fly or Invisibility on yourself), or the spell can only affect its caster (Shield), put its effect on the caster straight away. A card with several effects is a choice (Guidance's skills) and stays in the tray. The GM's client does it, so players don't need to open the Effects tray."
+      },
+      "highlightUnapplied": {
+        "Name": "Highlight effects not yet applied",
+        "Hint": "Outline a card's Effects tray and mark it \"Not applied yet\" until someone applies its effects. Cards older than an hour are left alone."
+      },
+      "carefulSpell": {
+        "Name": "Careful Spell protects allies in the area",
+        "Hint": "After a sorcerer uses Careful Spell, their next save spell's area on the same turn marks up to their Charisma modifier of their own side (same token disposition, player characters first, never the caster) as protected: an automatic success and no damage on a half-damage spell. No request card for them. The GM can change any row in the tray."
+      },
+      "refundCancelledArea": {
+        "Name": "Refund a cancelled area",
+        "Hint": "If a spell's area placement is cancelled (Escape or right-click), give back the slot, charges or uses it spent and remove its card, as the card's Refund button would."
+      },
+      "playerStatus": {
+        "Name": "Tell the caster when damage is waiting for the GM",
+        "Hint": "Players see one line under their own save-spell damage card: waiting for the GM to apply, applied, or re-rolled. No monster save numbers. Monsters' GM-only save rolls are hidden from players' chat instead of showing as \"privately rolled\" rows."
+      },
+      "untargetedSelf": {
+        "Name": "A touch spell cast at nobody goes on the caster",
+        "Hint": "A touch spell for one willing creature (Mage Armor) cast with nothing targeted lands on the caster, with the usual \"Applied to …\" line on the card. Off: it waits in the GM's effects tray."
+      },
+      "noSpellStacking": {
+        "Name": "The same spell does not stack",
+        "Hint": "When a spell's effect goes on a creature that already has that spell's effect from another source (Shield from a slot, then from a Ring of Spell Storing), the old one is replaced instead of adding a second (PHB: the effects of the same spell don't combine)."
+      },
+      "aimSelfAreas": {
+        "Name": "Self cones and lines start at the caster",
+        "Hint": "Placing a Self-range cone or line (Cone of Cold, Burning Hands, Lightning Bolt) keeps its point at the caster's token and points it at the mouse; click to cast. Off: core's placement (the point follows the mouse, the mouse wheel turns it)."
+      }
+    },
+    "Keybinding": {
+      "cancelTemplate": {
+        "Name": "Cancel template placement",
+        "Hint": "While you are placing a spell's area, this key cancels it on the first press, even with a sheet open. At any other time the key does what it normally does."
+      }
+    },
+    "Careful": {
+      "Armed": "Careful Spell: in your next save spell's area this turn, up to {n} of your side (players first) succeed automatically and take no damage on a half-damage spell. The GM can change any row.",
+      "Row": "protected",
+      "RowTip": "Careful Spell: an automatic success, and no damage where a success halves it.",
+      "Head": "Careful Spell protects: {names}"
+    },
+    "Status": {
+      "waiting": "Saves are in. Waiting for the GM to apply the damage.",
+      "applied": "The GM applied this damage.",
+      "superseded": "Re-rolled: the newer damage card for this spell is the one that counts."
+    },
+    "Refund": {
+      "Done": "{item}: placement cancelled, so nothing was spent. The slot, charge or uses are back."
+    }
+  }
 }

@@ -1,0 +1,90 @@
+[
+  {
+    "kind": "once",
+    "name": "init"
+  },
+  {
+    "kind": "once",
+    "name": "setup"
+  },
+  {
+    "kind": "once",
+    "name": "ready"
+  },
+  {
+    "kind": "on",
+    "name": "preCreateRegion"
+  },
+  {
+    "kind": "on",
+    "name": "createRegion"
+  },
+  {
+    "kind": "on",
+    "name": "deleteRegion"
+  },
+  {
+    "kind": "on",
+    "name": "preCreateCombatant"
+  },
+  {
+    "kind": "on",
+    "name": "targetToken"
+  },
+  {
+    "kind": "on",
+    "name": "dnd5e.renderChatMessage"
+  },
+  {
+    "kind": "on",
+    "name": "deleteActiveEffect"
+  },
+  {
+    "kind": "on",
+    "name": "dnd5e.postUseActivity"
+  },
+  {
+    "kind": "on",
+    "name": "deleteCombat"
+  },
+  {
+    "kind": "on",
+    "name": "createChatMessage"
+  },
+  {
+    "kind": "on",
+    "name": "updateChatMessage"
+  },
+  {
+    "kind": "on",
+    "name": "dnd5e.renderChatMessage"
+  },
+  {
+    "kind": "on",
+    "name": "dnd5e.postRollAttack"
+  },
+  {
+    "kind": "on",
+    "name": "createChatMessage"
+  },
+  {
+    "kind": "on",
+    "name": "dnd5e.renderChatMessage"
+  },
+  {
+    "kind": "on",
+    "name": "preCreateActiveEffect"
+  },
+  {
+    "kind": "on",
+    "name": "dnd5e.postUseActivity"
+  },
+  {
+    "kind": "on",
+    "name": "dnd5e.preCreateMeasuredTemplate"
+  },
+  {
+    "kind": "on",
+    "name": "canvasReady"
+  }
+]

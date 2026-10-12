@@ -1,0 +1,5 @@
+{
+  "what": "A&lt;b&gt;&amp;\"' → <em>no target</em>",
+  "before": 2,
+  "after": 2
+}

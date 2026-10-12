@@ -4,8 +4,11 @@
  */
 
 import * as core from "./combat-core.mjs";
+import { MODULE } from "./combat-core.mjs";
+import { makeLog } from "./lib/log.mjs";
 
-const MOD = core.MOD;
+const log = makeLog(MODULE);
+
 
 /* ── items ───────────────────────────────────────────────────────────────── */
 
@@ -63,7 +66,7 @@ export function weaponShape(item) {
     attackActivity: atk?.id ?? null,
     natural,
     unarmed,
-    pactWeapon: !!item.getFlag?.(MOD, "pactWeapon"),
+    pactWeapon: !!item.getFlag?.(MODULE, "pactWeapon"),
     ability: atk?.ability || sys._typeAbilityMod || null
   };
 }
@@ -103,6 +106,24 @@ export function flurryActivity(actor) {
   return activitiesOf(item).find(a => /flurry/i.test(a.name ?? "")) ?? null;
 }
 
+/**
+ * offhandModeReset: put a weapon's remembered attack mode back to main-hand after an off-hand roll.
+ * dnd5e remembers the last mode per activity (flags.dnd5e.last.<id>), so one Offhand swing made every
+ * later main-hand swing default to Offhand (no ability modifier). dnd5e writes `last` inside
+ * rollAttack before dnd5e.postRollAttack fires, so restoring in that hook lands after it. The caller
+ * passes the setting (`enabled`): this adapter reads no setting.
+ */
+export async function resetOffhandMode(activity, attackMode, { enabled = true } = {}) {
+  if (!enabled || !String(attackMode ?? "").endsWith("offhand")) return false;
+  // dnd5e hands hooks a clone of the item (Activity#use works on one); write to the real one.
+  const item = activity?.item ? (activity.item.actor?.items?.get(activity.item.id) ?? null) : null;
+  if (!item?.isOwner) return false;
+  const next = core.mainMode(item.system?.attackModes ?? []);
+  if (!next) return false;
+  await item.setFlag("dnd5e", `last.${activity.id}.attackMode`, next);
+  return true;
+}
+
 /* ── which weapon Full Attack starts with ─────────────────────────────────── */
 
 /** The active Argon weapon set's primary weapon id, if any. */
@@ -119,7 +140,7 @@ export function setPrimaryId(actor) {
 export function chosenWeapon(actor) {
   return core.defaultWeapon({
     weapons: weaponsOf(actor),
-    remembered: actor?.getFlag?.(MOD, "last")?.weapon ?? null,
+    remembered: rememberedWeapon(actor),
     setPrimary: setPrimaryId(actor)
   });
 }
@@ -141,7 +162,7 @@ function rollFormula(actor, formula) {
 export function multiattackOf(actor) {
   if (!actor) return null;
   const items = actor.items?.contents ?? [];
-  const override = core.overridePlan(actor.getFlag?.(MOD, "multiattack"), items.map(i => i.id));
+  const override = core.overridePlan(actor.getFlag?.(MODULE, "multiattack"), items.map(i => i.id));
   if (override) return { plan: override, total: override.reduce((s, r) => s + r.count, 0), groups: override.map(r => ({ count: r.count, choices: [r.itemId] })), source: "flag" };
   const ma = items.find(i => /^multiattack\b/i.test(i.name ?? ""));
   if (!ma) return null;
@@ -163,7 +184,7 @@ export function countFor(actor, weaponId = null) {
   const ma = usesMultiattack(actor) ? multiattackOf(actor) : null;
   return core.attackCount({
     features: featuresOf(actor),
-    override: actor.getFlag?.(MOD, "attacks"),
+    override: actor.getFlag?.(MODULE, "attacks"),
     multiattack: ma
   }, w ? weaponShape(w) : null);
 }
@@ -202,7 +223,7 @@ export function combatContext(actor) {
 
 export function turnOf(actor) {
   const { key } = combatContext(actor);
-  return core.readTurn(actor?.getFlag?.(MOD, "turn"), key);
+  return core.readTurn(actor?.getFlag?.(MODULE, "turn"), key);
 }
 
 const writeChains = new Map();
@@ -214,9 +235,9 @@ const writeChains = new Map();
  * "==" key) replaces the value instead.
  */
 function writeTurn(actor, value) {
-  const path = `flags.${MOD}.turn`;
+  const path = `flags.${MODULE}.turn`;
   const replace = globalThis._replace ?? foundry.data?.operators?.ForcedReplacement?.create;
-  return actor.update(replace ? { [path]: replace(value) } : { [`flags.${MOD}.==turn`]: value });
+  return actor.update(replace ? { [path]: replace(value) } : { [`flags.${MODULE}.==turn`]: value });
 }
 
 /**
@@ -233,8 +254,10 @@ export function updateTurn(actor, fn) {
     if (!after || JSON.stringify(after) === JSON.stringify(before)) return before;
     await writeTurn(actor, after);
     return after;
-  }).catch(err => { console.warn(`${MOD} | turn flag write failed`, err); return null; });
+  }).catch(err => { log.warn("turn flag write failed", err); return null; });
   writeChains.set(id, next);
+  // combat-riders-29: a settled chain is forgotten (unless a newer write already replaced it).
+  next.finally(() => { if (writeChains.get(id) === next) writeChains.delete(id); });
   return next;
 }
 
@@ -289,4 +312,118 @@ export function allyAdjacent(attackerToken, targetToken) {
 
 export function tokenOf(actor) {
   return actor?.token?.object ?? actor?.getActiveTokens?.()[0] ?? null;
+}
+
+/* ── adapter seams (guide S8: combat-riders-4, -5, -21, -22, -36) ─────────── */
+
+/**
+ * A weapon (or unarmed) attack, not a spell attack: counts as a swing, carries the riders. One
+ * predicate for counting (was combat.mjs weaponLike) and the riders (was riders.mjs
+ * isWeaponAttack); both bodies were the same (combat-riders-4).
+ */
+export function isWeaponAttack(activity) {
+  const cls = activity?.attack?.type?.classification;
+  return activity?.type === "attack" && cls !== "spell" && activity.item?.type !== "spell"
+    && (cls === "weapon" || cls === "unarmed" || activity.item?.type === "weapon");
+}
+
+/** "1d8 + 3 Slashing" from an attack activity's damage labels (weapon tile and pause-bar tile). */
+export function damageLabel(activity) {
+  const dmg = activity?.labels?.damage ?? activity?.labels?.damages ?? [];
+  return (Array.isArray(dmg) ? dmg : []).map(d => d.label ?? d.formula).filter(Boolean).join(" + ");
+}
+
+/** The weapon Full Attack last started with (flags.pentaryn-combat.last.weapon), else null. */
+export function rememberedWeapon(actor) {
+  return actor?.getFlag?.(MODULE, "last")?.weapon ?? null;
+}
+
+/** Remember the weapon Full Attack starts with next time. */
+export function rememberWeapon(actor, weaponId) {
+  return actor.setFlag(MODULE, "last.weapon", weaponId);
+}
+
+/** The actor's Multiattack when it swings by one (NPC, Wild Shape form) and `enabled` (setting multiattack). */
+export function multiattackFor(actor, { enabled = true } = {}) {
+  return usesMultiattack(actor) && enabled ? multiattackOf(actor) : null;
+}
+
+/** core.fullAttackPlanFrom with this actor's weapon shapes and Enhanced Dual Wielding flag. */
+export function fullAttackPlanOf(actor, { weaponId = null, turn = null, inCombat = false, multiattack = null, count = 1, pick = null } = {}) {
+  if (multiattack) return core.fullAttackPlanFrom({ weaponId, turn, inCombat, multiattack, count, pick });
+  const weapons = weaponsOf(actor);
+  return core.fullAttackPlanFrom({ weapons, weaponId, turn, inCombat, count, pick,
+    enhancedDualWielding: !!actor.getFlag?.("dnd5e", "enhancedDualWielding") });
+}
+
+/**
+ * What api.plan answers: the Full Attack plan for this actor and weapon (the remembered or default
+ * one when none is given). `multiattackOn` is setting multiattack. The expression order is the old
+ * api.plan's, so a bad ref fails the way it did until S11 resolves refs (combat-riders-12 KNOWN).
+ */
+export function planFor(actor, weaponId = null, { multiattackOn = true } = {}) {
+  const ctx = combatContext(actor);
+  weaponId ??= chosenWeapon(actor);
+  const ma = (actor.type === "npc" || actor.isPolymorphed) && multiattackOn ? multiattackOf(actor) : null;
+  const pick = ma ? { "*": rememberedWeapon(actor) } : null;
+  return fullAttackPlanOf(actor, { weaponId, turn: turnOf(actor), inCombat: ctx.inCombat, multiattack: ma, count: ma ? ma.total : countFor(actor, weaponId), pick });
+}
+
+/** An area handle pentaryn-aoe placed (its token flag); combat reselects your token when one goes. */
+export function isAoeHandle(flags) {
+  return !!flags?.["pentaryn-aoe"]?.handle;
+}
+
+/* ── rider reads (pure: no write, no DOM) ─────────────────────────────────── */
+
+export function isReckless(actor) {
+  return !!actor?.effects?.some(e => core.isRecklessEffect(e));
+}
+
+/** The rider's damage activity on its feature item. */
+export function riderActivity(actor, rider) {
+  for (const id of rider.identifiers) {
+    const item = featureItem(actor, id);
+    const act = activitiesOf(item).find(a => a.type === "damage");
+    if (act) return act;
+  }
+  return null;
+}
+
+/** "3d6" for the button label. */
+export function riderDiceFor(actor, rider) {
+  const scale = rider.scale ? actor?.system?.scale?.[rider.scale[0]]?.[rider.scale[1]] : null;
+  return core.riderDice(rider, scale);
+}
+
+/**
+ * The follow-ups (Off-hand, Nick, Flurry, Martial Arts, Hew, Pole Strike) this actor qualifies for
+ * right now, as the Bonus and Special bars offer them (combat-riders-11). `bonusFree`: the Bonus
+ * Action is not spent — the HUD reads Argon's Bonus pip, inspect() the turn flag.
+ */
+export function followUpsFor(actor, { bonusFree = true } = {}) {
+  const ctx = combatContext(actor);
+  const weapons = weaponsOf(actor);
+  const unarmed = unarmedStrike(actor);
+  const turn = turnOf(actor);
+  const features = featuresOf(actor);
+  const focus = focusLeft(actor);
+  const pam = features.has("polearm-master") ? featureItem(actor, "polearm-master") : null;
+  const list = core.followUps({
+    turn, weapons, features,
+    enhancedDualWielding: !!actor.getFlag?.("dnd5e", "enhancedDualWielding"),
+    bonusFree, focus, unarmedId: unarmed?.id ?? null, isOwnTurn: ctx.isOwnTurn,
+    poleStrikeId: pam && attackActivityOf(pam) ? pam.id : null
+  });
+  // Which rule each Off-hand is (Light property or Dual Wielder), for its tooltip (U-10-12).
+  for (const f of list) {
+    if (f.kind === "offhand") f.via = core.offhandVia({ weapon: weapons.find(w => w.id === f.weaponId) ?? null, turn, offered: list });
+  }
+  // Usability (area 3, C3): Flurry with no Focus left stays on the bar, greyed with its reason, instead of
+  // vanishing — a player who sees Martial Arts but no Flurry wonders whether the feature broke.
+  if (ctx.isOwnTurn && unarmed && features.has("monks-focus") && (focus ?? 0) < 1 && bonusFree && !turn.bonusUsed
+    && !turn.followUps.includes("flurry") && !turn.followUps.includes("martial-arts")) {
+    list.unshift({ kind: "flurry", weaponId: unarmed.id, count: features.has("heightened-focus") ? 3 : 2, disabled: "focus" });
+  }
+  return list;
 }

@@ -1,0 +1,49 @@
+[
+  {
+    "actor": "Fighter",
+    "plan": [
+      {
+        "feature": "two-weapon-fighting",
+        "change": "damage bonus @mod",
+        "when": "attack mode offhand"
+      }
+    ],
+    "applied": false,
+    "reason": "report only",
+    "fallback": true
+  },
+  {
+    "actor": "Fighter",
+    "plan": [
+      {
+        "feature": "two-weapon-fighting",
+        "change": "damage bonus @mod",
+        "when": "attack mode offhand"
+      }
+    ],
+    "applied": false,
+    "reason": "unverified: native rule conditions not yet proved in 6.0.6 — weaponBonuses fallback is active",
+    "fallback": true
+  },
+  {
+    "actor": "Slayer",
+    "plan": [
+      {
+        "feature": "great-weapon-master",
+        "change": "damage bonus @prof",
+        "when": "Heavy weapon, Attack action, own turn"
+      }
+    ],
+    "applied": false,
+    "reason": "report only",
+    "fallback": true
+  },
+  {
+    "actor": "Rogue",
+    "plan": [],
+    "applied": false,
+    "reason": "report only",
+    "fallback": true
+  },
+  null
+]

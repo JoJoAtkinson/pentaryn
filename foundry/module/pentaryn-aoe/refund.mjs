@@ -17,9 +17,10 @@
 
 import { MODULE, placementCancelled } from "./core.mjs";
 import { setting } from "./settings.mjs";
-import { on } from "./hooks.mjs";
+import { makeLog } from "./lib/log.mjs";
 
-const t = (key, data) => (data ? game.i18n.format(`PENTARYN_AOE.${key}`, data) : game.i18n.localize(`PENTARYN_AOE.${key}`));
+let log = makeLog(MODULE);   // the entry's ctx.log once installed
+
 
 function hasConsumed(deltas) {
   if (!deltas) return false;
@@ -41,16 +42,24 @@ async function refund(activity, usageConfig, results) {
   await activity.refund(deltas);
   // The concentration this cast began goes too (its effect id is on the card).
   const began = (results.effects ?? []).filter(e => e?.parent === activity.actor && e.statuses?.has?.(CONFIG.specialStatusEffects?.CONCENTRATING ?? "concentrating"));
-  for (const e of began) if (activity.actor.effects.has(e.id)) await e.delete().catch(() => null);
-  if (game.messages.has(message.id)) await message.delete().catch(() => message.update({ "system.deltas": null }).catch(() => null));
-  ui.notifications?.info?.(t("Refund.Done", { item: activity.item?.name ?? "" }));
+  // -9: log what the clean-up could not do. If neither the card's delete nor its fallback update
+  // lands, the card keeps its Refund button and could be refunded twice.
+  const gone = err => /does not exist/i.test(err?.message ?? "");
+  for (const e of began) {
+    if (activity.actor.effects.has(e.id)) await e.delete().catch(err => (gone(err) ? null : log.warn("refund end concentration", err)));
+  }
+  if (game.messages.has(message.id)) {
+    await message.delete().catch(() => message.update({ "system.deltas": null }).catch(err => log.warn("refund card cleanup", err)));
+  }
+  ui.notifications?.info?.(_loc("PENTARYN_AOE.Refund.Done", { item: activity.item?.name ?? "" }));
   return true;
 }
 
-export function installRefund() {
+export function install(reg, ctx) {
+  log = ctx.log;
   // Synchronous handler: Hooks.call honours a literal false only. We cannot know synchronously whether
   // the refund will run, so the check runs first, the refund after.
-  on("dnd5e.postUseActivity", (activity, usageConfig, results) => {
+  reg.on("dnd5e.postUseActivity", (activity, usageConfig, results) => {
     try {
       if (!setting("refundCancelledArea")) return;
       if (!usageConfig?.create?.measuredTemplate || (results?.templates?.length ?? 0) > 0) return;
@@ -58,10 +67,16 @@ export function installRefund() {
       if (!(message instanceof ChatMessage) || !message.isOwner) return;
       if (!hasConsumed(message.system?.deltas) && !(results.effects ?? []).length) return;
       if (!activity?.target?.template?.type || !canvas?.scene || !game.user?.can?.("REGION_CREATE")) return;
-      refund(activity, usageConfig, results).catch(err => console.error(`${MODULE} | refund cancelled area`, err));
+      refund(activity, usageConfig, results).catch(err => log.error("refund cancelled area", err));
       return false;
     } catch (err) {
-      console.error(`${MODULE} | refund cancelled area`, err);
+      log.error("refund cancelled area", err);
     }
-  });
+  }, { guard: false, label: "postUseActivity(refund)" });
 }
+
+export function uninstall() {}
+
+// Test seam (characterisation checkpoint): tests import this through test/fixtures/seams.mjs only,
+// so the blueprint refactor edits that shim, not the frozen tests. Not part of the API.
+export const _internals = { refund, hasConsumed };

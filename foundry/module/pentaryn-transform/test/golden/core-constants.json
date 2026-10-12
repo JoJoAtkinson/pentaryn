@@ -1,0 +1,28 @@
+{
+  "MODULE_ID": "pentaryn-transform",
+  "EFFECT_ID": "pentarynWildShp0",
+  "CONSTELLATIONS": [
+    "archer",
+    "chalice",
+    "dragon"
+  ],
+  "STARRY_LIGHT": {
+    "bright": 10,
+    "dim": 20,
+    "color": "#cfe0ff",
+    "alpha": 0.35,
+    "luminosity": 0.5,
+    "coloration": 1,
+    "animation": {
+      "type": "starlight",
+      "speed": 2,
+      "intensity": 3,
+      "reverse": false
+    }
+  },
+  "STARRY_SECONDS": 600,
+  "frozen": [
+    true,
+    true
+  ]
+}

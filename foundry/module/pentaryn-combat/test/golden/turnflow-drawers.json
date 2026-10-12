@@ -1,0 +1,38 @@
+[
+  {
+    "label": "opened",
+    "left": "996px",
+    "toggles": 1
+  },
+  {
+    "label": "closed (wrapped once)",
+    "left": "996px",
+    "toggles": 2
+  },
+  {
+    "label": "closing drops its tooltip",
+    "tooltip": null,
+    "calls": [
+      {
+        "op": "tooltip.deactivate"
+      },
+      {
+        "op": "argon.tooltip.destroy"
+      }
+    ]
+  },
+  {
+    "label": "setting off: Argon's place",
+    "left": ""
+  },
+  {
+    "label": "restored drawer",
+    "before": "",
+    "after": "600px"
+  },
+  {
+    "label": "placeOpenDrawers",
+    "left": "600px",
+    "closedOneUntouched": "996px"
+  }
+]

@@ -1,0 +1,21 @@
+{
+  "contract": "string",
+  "describe": "function",
+  "forms": "forms",
+  "inspect": "inspect",
+  "isRevertItem": "isRevertItem",
+  "original": "original",
+  "revert": "revert",
+  "selftest": "selftest",
+  "settings": "settings",
+  "shift": "shift",
+  "starry.active": "activeStarry",
+  "starry.assume": "assumeStarry",
+  "starry.constellation": "constellationOf",
+  "starry.end": "endStarry",
+  "sweepSpentForms": "sweepSpentForms",
+  "trace": "trace",
+  "uninstall": "uninstall",
+  "version": "string",
+  "wildShapeActivity": "wildShapeActivity"
+}

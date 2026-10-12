@@ -1,0 +1,321 @@
+[
+  {
+    "name": "Dash",
+    "special": "dash",
+    "actionUsed": true,
+    "paints": 6,
+    "turn": {
+      "key": "c1:1:cb1",
+      "attackAction": {
+        "weapons": [],
+        "swings": 0,
+        "crit": false,
+        "critWeapon": null,
+        "kill": false,
+        "killWeapon": null
+      },
+      "riders": {},
+      "followUps": [],
+      "nick": false,
+      "bonusUsed": false,
+      "otherAction": true,
+      "otherActions": 1,
+      "surges": 0,
+      "quickened": false
+    },
+    "effects": [
+      {
+        "name": "Dash",
+        "flags": {
+          "pentaryn-combat": {
+            "until": "turnEnd",
+            "special": "dash"
+          },
+          "dnd5e": {
+            "isTemporary": true
+          }
+        },
+        "changes": [
+          {
+            "key": "system.attributes.movement.walk",
+            "type": "add",
+            "value": 30
+          }
+        ]
+      }
+    ],
+    "statuses": [],
+    "calls": [
+      {
+        "op": "argon.special",
+        "name": "Dash"
+      },
+      {
+        "op": "createEmbedded",
+        "type": "ActiveEffect",
+        "uuid": "Actor.fighter000000001",
+        "data": [
+          {
+            "name": "Dash",
+            "img": "icons/Dash.webp",
+            "description": "<p>Extra movement equal to your Speed for this turn (PHB: Dash). Ends at the end of your turn.</p>",
+            "transfer": false,
+            "origin": "Actor.fighter000000001",
+            "system": {
+              "changes": [
+                {
+                  "key": "system.attributes.movement.walk",
+                  "type": "add",
+                  "value": 30
+                }
+              ]
+            },
+            "flags": {
+              "pentaryn-combat": {
+                "until": "turnEnd",
+                "special": "dash"
+              },
+              "dnd5e": {
+                "isTemporary": true
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Disengage",
+    "special": "disengage",
+    "actionUsed": true,
+    "paints": 6,
+    "turn": {
+      "key": "c1:1:cb1",
+      "attackAction": {
+        "weapons": [],
+        "swings": 0,
+        "crit": false,
+        "critWeapon": null,
+        "kill": false,
+        "killWeapon": null
+      },
+      "riders": {},
+      "followUps": [],
+      "nick": false,
+      "bonusUsed": false,
+      "otherAction": true,
+      "otherActions": 1,
+      "surges": 0,
+      "quickened": false
+    },
+    "effects": [
+      {
+        "name": "Disengage",
+        "flags": {
+          "pentaryn-combat": {
+            "until": "turnEnd",
+            "special": "disengage"
+          },
+          "dnd5e": {
+            "isTemporary": true
+          }
+        },
+        "changes": []
+      }
+    ],
+    "statuses": [],
+    "calls": [
+      {
+        "op": "argon.special",
+        "name": "Disengage"
+      },
+      {
+        "op": "createEmbedded",
+        "type": "ActiveEffect",
+        "uuid": "Actor.fighter000000001",
+        "data": [
+          {
+            "name": "Disengage",
+            "img": "icons/Disengage.webp",
+            "description": "<p>Your movement doesn't provoke Opportunity Attacks for the rest of this turn (PHB: Disengage). Ends at the end of your turn.</p>",
+            "transfer": false,
+            "origin": "Actor.fighter000000001",
+            "system": {
+              "changes": []
+            },
+            "flags": {
+              "pentaryn-combat": {
+                "until": "turnEnd",
+                "special": "disengage"
+              },
+              "dnd5e": {
+                "isTemporary": true
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Dodge",
+    "special": "dodge",
+    "actionUsed": true,
+    "paints": 6,
+    "turn": {
+      "key": "c1:1:cb1",
+      "attackAction": {
+        "weapons": [],
+        "swings": 0,
+        "crit": false,
+        "critWeapon": null,
+        "kill": false,
+        "killWeapon": null
+      },
+      "riders": {},
+      "followUps": [],
+      "nick": false,
+      "bonusUsed": false,
+      "otherAction": true,
+      "otherActions": 1,
+      "surges": 0,
+      "quickened": false
+    },
+    "effects": [],
+    "statuses": [
+      "dodging"
+    ],
+    "calls": [
+      {
+        "op": "argon.special",
+        "name": "Dodge"
+      },
+      {
+        "op": "toggleStatusEffect",
+        "uuid": "Actor.fighter000000001",
+        "status": "dodging",
+        "active": true
+      }
+    ]
+  },
+  {
+    "name": "Hide",
+    "special": "hide",
+    "actionUsed": true,
+    "paints": 6,
+    "turn": {
+      "key": "c1:1:cb1",
+      "attackAction": {
+        "weapons": [],
+        "swings": 0,
+        "crit": false,
+        "critWeapon": null,
+        "kill": false,
+        "killWeapon": null
+      },
+      "riders": {},
+      "followUps": [],
+      "nick": false,
+      "bonusUsed": false,
+      "otherAction": true,
+      "otherActions": 1,
+      "surges": 0,
+      "quickened": false
+    },
+    "effects": [],
+    "statuses": [
+      "hiding"
+    ],
+    "calls": [
+      {
+        "op": "argon.special",
+        "name": "Hide"
+      },
+      {
+        "op": "rollSkill",
+        "uuid": "Actor.fighter000000001",
+        "config": {
+          "skill": "ste",
+          "target": 15
+        }
+      },
+      {
+        "op": "toggleStatusEffect",
+        "uuid": "Actor.fighter000000001",
+        "status": "hiding",
+        "active": true
+      },
+      {
+        "op": "notify",
+        "level": "info",
+        "message": "Stealth 17 vs DC 15: you are hidden. Your total is the DC to find you."
+      }
+    ]
+  },
+  {
+    "name": "Ready",
+    "special": "ready",
+    "actionUsed": true,
+    "paints": 6,
+    "turn": {
+      "key": "c1:1:cb1",
+      "attackAction": {
+        "weapons": [],
+        "swings": 0,
+        "crit": false,
+        "critWeapon": null,
+        "kill": false,
+        "killWeapon": null
+      },
+      "riders": {},
+      "followUps": [],
+      "nick": false,
+      "bonusUsed": false,
+      "otherAction": true,
+      "otherActions": 1,
+      "surges": 0,
+      "quickened": false
+    },
+    "effects": [],
+    "statuses": [],
+    "calls": [
+      {
+        "op": "argon.special",
+        "name": "Ready"
+      }
+    ]
+  },
+  {
+    "name": "Shove",
+    "special": "shove",
+    "actionUsed": false,
+    "paints": 4,
+    "turn": {
+      "key": "c1:1:cb1",
+      "attackAction": {
+        "weapons": [],
+        "swings": 1,
+        "crit": false,
+        "critWeapon": null,
+        "kill": false,
+        "killWeapon": null
+      },
+      "riders": {},
+      "followUps": [],
+      "nick": false,
+      "bonusUsed": false,
+      "otherAction": false,
+      "otherActions": 0,
+      "surges": 0,
+      "quickened": false
+    },
+    "effects": [],
+    "statuses": [],
+    "calls": [
+      {
+        "op": "argon.special",
+        "name": "Shove"
+      }
+    ]
+  }
+]

@@ -2,7 +2,7 @@
 
 **Status:** built 2026-10-09/10; playtest passed the core flow, audit items open. Use-doc:
 [`foundry/module/pentaryn-transform/README.md`](../../foundry/module/pentaryn-transform/README.md).
-Design detail: `foundry/module/pentaryn-transform/WILDSHAPE-DESIGN.md`.
+Design detail (history): [wildshape-hud-design.md](wildshape-hud-design.md).
 
 **Why.** Joe: Wild Shape felt chunky. Wanted it in the HUD: one click to shift, the beast's actions on
 the HUD, a clear "Return to Talo", use count tracked and recovered per the 2024 PHB (uses by level,

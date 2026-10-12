@@ -1,0 +1,55 @@
+[
+  {
+    "label": "no strip: clamped into the viewport",
+    "positions": [
+      {
+        "left": 1192,
+        "top": 592
+      }
+    ],
+    "title": "Longsword: Attack Roll"
+  },
+  {
+    "label": "paused: clamped, not docked",
+    "positions": [
+      {
+        "left": 1192,
+        "top": 592
+      }
+    ],
+    "title": "Longsword: Attack Roll"
+  },
+  {
+    "label": "picking a target",
+    "positions": [
+      {
+        "left": 1192,
+        "top": 592
+      }
+    ],
+    "title": "Longsword: Attack Roll"
+  },
+  {
+    "label": "a one-swing sequence: docked, no title tag",
+    "positions": [
+      {
+        "left": 100,
+        "top": 200
+      },
+      {
+        "left": 100,
+        "top": 200
+      }
+    ],
+    "title": "Longsword: Attack Roll"
+  },
+  {
+    "label": "setting off: left where dnd5e put it",
+    "positions": [],
+    "title": "Longsword: Attack Roll"
+  },
+  {
+    "label": "detached window",
+    "positions": []
+  }
+]

@@ -19,11 +19,15 @@
 
 import { MODULE, aimFromCaster, aimsFromCaster } from "./core.mjs";
 import { setting } from "./settings.mjs";
-import { on, guard } from "./hooks.mjs";
+import { wrapMethod } from "./lib/patch.mjs";
+import { makeLog } from "./lib/log.mjs";
 
 const ARM_MS = 5000;
 let armed = null;          // { tokenId, sceneId, until }
 const WRAPPED = Symbol.for(`${MODULE}.aimWrapped`);
+/** The placeRegions wrap (kit wrapMethod); a second copy reuses the first copy's record. */
+let placement = null;
+let log = makeLog(MODULE);   // the entry's ctx.log once installed
 
 function casterToken(activity) {
   let token = null;
@@ -60,11 +64,11 @@ function aimer(tokenId) {
 }
 
 function wrapPlacement() {
-  const Layer = foundry.canvas?.layers?.RegionLayer;
-  const proto = Layer?.prototype;
-  if (!proto?.placeRegions || proto[WRAPPED]) return;
-  const own = proto.placeRegions;
-  proto.placeRegions = function placeRegions(data, options = {}) {
+  const proto = foundry.canvas?.layers?.RegionLayer?.prototype;
+  if (!proto?.placeRegions) return;
+  placement = wrapMethod(MODULE, {
+    target: proto, name: "placeRegions", label: "RegionLayer#placeRegions", marker: WRAPPED, adjustments: "aoe-self-area-aim",
+  }, function (wrapped, data, options = {}) {
     const a = armed;
     armed = null;
     if (a && Date.now() < a.until && a.sceneId === canvas.scene?.id && setting("aimSelfAreas")) {
@@ -76,12 +80,26 @@ function wrapPlacement() {
         return mine(args);
       } };
     }
-    return own.call(this, data, options);
-  };
-  proto[WRAPPED] = true;
+    return wrapped(data, options);
+  }, { log });
 }
 
-export function installAim() {
+export function install(reg, ctx) {
+  log = ctx.log;
   wrapPlacement();
-  on("dnd5e.preCreateMeasuredTemplate", guard("preCreateMeasuredTemplate(aim)", onPreCreate));
+  reg.on("dnd5e.preCreateMeasuredTemplate", reg.guardSwallowAsync("preCreateMeasuredTemplate(aim)", onPreCreate), { guard: false, label: "preCreateMeasuredTemplate(aim)" });
 }
+
+/**
+ * A pending aim is dropped and core's own placeRegions comes back ([declared] D-A7, -44), so a
+ * hot-patched copy wraps it again with its own state instead of standing down behind this one's.
+ */
+export function uninstall() {
+  armed = null;
+  placement?.unwrap();
+  placement = null;
+}
+
+// Test seam (characterisation checkpoint): tests import this through test/fixtures/seams.mjs only,
+// so the blueprint refactor edits that shim, not the frozen tests. Not part of the API.
+export const _internals = { casterToken, onPreCreate, aimer, wrapPlacement, WRAPPED, armed: () => armed, arm: v => { armed = v; } };

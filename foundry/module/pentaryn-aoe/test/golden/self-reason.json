@@ -1,0 +1,10 @@
+{
+  "targetedSelf": "targeted-self",
+  "selfOnly": "self-only",
+  "untargetedTouch": "untargeted-self",
+  "untargetedRanged": null,
+  "targetedAlly": null,
+  "saveActivity": null,
+  "twoEffects": null,
+  "noCaster": null
+}

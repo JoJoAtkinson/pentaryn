@@ -1,0 +1,36 @@
+[
+  {
+    "op": "rollSavingThrow",
+    "actor": "Actor.actCaven00000001",
+    "config": {
+      "ability": "dex",
+      "target": 15,
+      "event": "<event>"
+    },
+    "dialog": {},
+    "message": {
+      "data": {
+        "flags": {
+          "dnd5e": {
+            "requestResult": {
+              "actorUuid": "Actor.actCaven00000001",
+              "requestId": "0000000000000012"
+            }
+          }
+        },
+        "speaker": {
+          "scene": "FireScene0000001",
+          "actor": "actCaven00000001",
+          "token": "tokCaven00000001",
+          "alias": "Caven"
+        },
+        "system": {
+          "activity": {
+            "uuid": "Actor.actMarrith000001.Item.itemFireball0001.Activity.act00000000fire1"
+          },
+          "origin": "usageCard0000001"
+        }
+      }
+    }
+  }
+]

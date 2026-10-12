@@ -1,0 +1,14 @@
+{
+  "doc": "Import edges allowed despite the direction table (use-doc §2, context/foundry/addon-blueprint.md). Each entry: {\"from\": \"a.mjs\", \"to\": \"b.mjs\", \"why\": \"…\"}. Every entry is a debt; the target is a ctx.exposed accessor (guide §2.3).",
+  "allow": [
+    { "from": "counting.mjs", "to": "sequence.mjs", "why": "taggedKind / forgetRoll: the runner's tag for the roll in flight classifies the swing; it is only live while rollAttack runs, so it is read synchronously" },
+    { "from": "turnflow/action-buttons.mjs", "to": "sequence.mjs", "why": "expectRoll / forgetRoll: the Reaction slot announces its attack roll as a reaction to the runner's tag table" },
+    { "from": "turnflow/dialogs.mjs", "to": "sequence.mjs", "why": "running(): Esc and the cancelled-card tidy leave a Full Attack's own windows to it" },
+    { "from": "hud/picker.mjs", "to": "sequence.mjs", "why": "registerTargetPicker: the HUD hands the runner Argon's target picker for a Retarget" },
+    { "from": "hud/bars.mjs", "to": "sequence.mjs", "why": "running() / abortFor(): a turn change or a shape change stops a running sequence" },
+    { "from": "hud/buttons-ui.mjs", "to": "sequence.mjs", "why": "runSwings / runFollowUp / running: what Full Attack and a follow-up click do" },
+    { "from": "hud/buttons-ui.mjs", "to": "strip.mjs", "why": "pickWeapon: the weapon picker is the strip's DOM (ui → ui)" },
+    { "from": "hud/bars.mjs", "to": "turn-riders.mjs", "why": "setReckless: the Special bar's Reckless toggle writes the rider feature's effect" },
+    { "from": "hud/bars.mjs", "to": "turnflow/drawers.mjs", "why": "placeOpenDrawers: applyButtons' `after` re-places an open drawer whose button moved" }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "title": "Wild Shape",
+  "subtitle": "3 known forms",
+  "description": "<p>Bonus Action: become one of your known Beasts. You keep your HP and gain 12 temp HP, keep your mind and class features, and can't cast spells. Ends early at 0 HP, when Incapacitated, or with Return (Bonus Action).</p>",
+  "details": [
+    {
+      "label": "Uses",
+      "value": "2 / 3"
+    },
+    {
+      "label": "Duration",
+      "value": "6 hours"
+    },
+    {
+      "label": "Recovery",
+      "value": "Long Rest: all · Short Rest: 1"
+    },
+    {
+      "label": "Cost",
+      "value": "Bonus Action"
+    }
+  ],
+  "footerText": "Click to pick a form. Right-click opens the feature.",
+  "classes": [
+    "pentaryn-tt"
+  ]
+}

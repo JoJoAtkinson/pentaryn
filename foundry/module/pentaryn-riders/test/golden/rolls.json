@@ -1,0 +1,303 @@
+{
+  "adeptOnly": {
+    "formulas": [
+      "8d6min2[fire]"
+    ],
+    "resets": [
+      1
+    ],
+    "flag": {
+      "applied": [
+        "elemental-adept"
+      ],
+      "ignoreResistance": [
+        "fire"
+      ],
+      "origin": null,
+      "detail": {
+        "elemental-adept": {
+          "modifier": "min2"
+        }
+      }
+    }
+  },
+  "both": {
+    "formulas": [
+      "8d6min2[fire] + 4[Elemental Affinity]"
+    ],
+    "resets": [
+      1
+    ],
+    "flag": {
+      "applied": [
+        "elemental-adept",
+        "elemental-affinity"
+      ],
+      "ignoreResistance": [
+        "fire"
+      ],
+      "origin": null,
+      "detail": {
+        "elemental-adept": {
+          "modifier": "min2"
+        },
+        "elemental-affinity": {
+          "bonus": 4
+        }
+      }
+    }
+  },
+  "mixed": {
+    "formulas": [
+      "2d8 + 1d6min2[fire]",
+      "3d6min2 + 4[Elemental Affinity]"
+    ],
+    "resets": [
+      1,
+      1
+    ],
+    "flag": {
+      "applied": [
+        "elemental-adept",
+        "elemental-affinity"
+      ],
+      "ignoreResistance": [
+        "fire"
+      ],
+      "origin": null,
+      "detail": {
+        "elemental-adept": {
+          "modifier": "min2"
+        },
+        "elemental-affinity": {
+          "bonus": 4
+        }
+      }
+    }
+  },
+  "otherRoll": {
+    "formulas": [
+      "2d8",
+      "1d4min2[fire] + 4[fire]"
+    ],
+    "resets": [
+      0,
+      1
+    ],
+    "flag": {
+      "applied": [
+        "elemental-adept",
+        "elemental-affinity"
+      ],
+      "ignoreResistance": [
+        "fire"
+      ],
+      "origin": null,
+      "detail": {
+        "elemental-adept": {
+          "modifier": "min2"
+        },
+        "elemental-affinity": {
+          "bonus": 4
+        }
+      }
+    }
+  },
+  "secondRay": {
+    "formulas": [
+      "2d6min2[fire]"
+    ],
+    "resets": [
+      1
+    ],
+    "flag": {
+      "applied": [
+        "elemental-adept"
+      ],
+      "ignoreResistance": [
+        "fire"
+      ],
+      "origin": "usecard000000001",
+      "detail": {
+        "elemental-adept": {
+          "modifier": "min2"
+        }
+      }
+    }
+  },
+  "flatOrigin": {
+    "formulas": [
+      "2d6min2[fire]"
+    ],
+    "resets": [
+      1
+    ],
+    "flag": {
+      "applied": [
+        "elemental-adept"
+      ],
+      "ignoreResistance": [
+        "fire"
+      ],
+      "origin": "usecard000000001",
+      "detail": {
+        "elemental-adept": {
+          "modifier": "min2"
+        }
+      }
+    }
+  },
+  "clickedCard": {
+    "formulas": [
+      "2d6min2[fire]"
+    ],
+    "resets": [
+      1
+    ],
+    "flag": {
+      "applied": [
+        "elemental-adept"
+      ],
+      "ignoreResistance": [
+        "fire"
+      ],
+      "origin": "usecard000000001",
+      "detail": {
+        "elemental-adept": {
+          "modifier": "min2"
+        }
+      }
+    }
+  },
+  "firstRay": {
+    "formulas": [
+      "2d6min2[fire] + 4[Elemental Affinity]"
+    ],
+    "resets": [
+      1
+    ],
+    "flag": {
+      "applied": [
+        "elemental-adept",
+        "elemental-affinity"
+      ],
+      "ignoreResistance": [
+        "fire"
+      ],
+      "origin": "freshcard0000001",
+      "detail": {
+        "elemental-adept": {
+          "modifier": "min2"
+        },
+        "elemental-affinity": {
+          "bonus": 4
+        }
+      }
+    }
+  },
+  "potent": {
+    "formulas": [
+      "1d8[fire] + 3[Potent Spellcasting]"
+    ],
+    "resets": [
+      1
+    ],
+    "flag": {
+      "applied": [
+        "potent-spellcasting-druid"
+      ],
+      "ignoreResistance": [],
+      "origin": null,
+      "detail": {
+        "potent-spellcasting-druid": {
+          "bonus": 3
+        }
+      }
+    }
+  },
+  "handAdded": {
+    "formulas": [
+      "1d6[piercing] + 3"
+    ],
+    "resets": [
+      0
+    ],
+    "flag": null
+  },
+  "heal": {
+    "formulas": [
+      "2d8r1 + 2"
+    ],
+    "resets": [
+      1
+    ],
+    "flag": {
+      "applied": [
+        "healer"
+      ],
+      "ignoreResistance": [],
+      "origin": null,
+      "detail": {
+        "healer": {
+          "modifier": "r1"
+        }
+      }
+    }
+  },
+  "temp": {
+    "formulas": [
+      "1d4 + 4"
+    ],
+    "resets": [
+      0
+    ],
+    "flag": null
+  },
+  "weapon": {
+    "formulas": [
+      "1d8[slashing]"
+    ],
+    "resets": [
+      0
+    ],
+    "flag": null
+  },
+  "noFeatures": {
+    "formulas": [
+      "3d4 + 3"
+    ],
+    "resets": [
+      0
+    ],
+    "flag": null
+  },
+  "off": {
+    "formulas": [
+      "8d6[fire]"
+    ],
+    "resets": [
+      0
+    ],
+    "flag": null
+  },
+  "negative": {
+    "formulas": [
+      "1d8[cold] - 1[Elemental Affinity]"
+    ],
+    "resets": [
+      1
+    ],
+    "flag": {
+      "applied": [
+        "elemental-affinity"
+      ],
+      "ignoreResistance": [],
+      "origin": null,
+      "detail": {
+        "elemental-affinity": {
+          "bonus": -1
+        }
+      }
+    }
+  }
+}

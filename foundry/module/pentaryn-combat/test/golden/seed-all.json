@@ -1,0 +1,231 @@
+{
+  "out": [
+    {
+      "actor": "Fighter",
+      "seed": {
+        "1": {
+          "primary": "Actor.fighter000000001.Item.longsword0000001",
+          "secondary": "Actor.fighter000000001.Item.dagger0000000001"
+        },
+        "2": {
+          "primary": "Actor.fighter000000001.Item.shortbow00000001",
+          "secondary": null
+        },
+        "3": {
+          "primary": null,
+          "secondary": null
+        }
+      }
+    },
+    {
+      "actor": "Rogue",
+      "seed": {
+        "1": {
+          "primary": "Actor.rogue00000000001.Item.scimitar00000001",
+          "secondary": "Actor.rogue00000000001.Item.dagger0000000002"
+        },
+        "2": {
+          "primary": null,
+          "secondary": null
+        },
+        "3": {
+          "primary": null,
+          "secondary": null
+        }
+      }
+    },
+    {
+      "actor": "Barbarian",
+      "seed": {
+        "1": {
+          "primary": "Actor.barbarian0000001.Item.greataxe00000001",
+          "secondary": null
+        },
+        "2": {
+          "primary": null,
+          "secondary": null
+        },
+        "3": {
+          "primary": null,
+          "secondary": null
+        }
+      }
+    },
+    {
+      "actor": "Slayer",
+      "seed": {
+        "1": {
+          "primary": "Actor.slayer0000000001.Item.glaive0000000001",
+          "secondary": null
+        },
+        "2": {
+          "primary": null,
+          "secondary": null
+        },
+        "3": {
+          "primary": null,
+          "secondary": null
+        }
+      }
+    },
+    {
+      "actor": "Fighter",
+      "seed": {
+        "1": {
+          "primary": "Actor.fighterFlag00001.Item.longsword0000001",
+          "secondary": "Actor.fighterFlag00001.Item.dagger0000000001"
+        },
+        "2": {
+          "primary": "Actor.fighterFlag00001.Item.shortbow00000001",
+          "secondary": null
+        },
+        "3": {
+          "primary": null,
+          "secondary": null
+        }
+      }
+    },
+    {
+      "actor": "Fighter",
+      "seed": {
+        "1": {
+          "primary": "Actor.seedFighter00001.Item.longsword0000001",
+          "secondary": "Actor.seedFighter00001.Item.dagger0000000001"
+        },
+        "2": {
+          "primary": "Actor.seedFighter00001.Item.shortbow00000001",
+          "secondary": null
+        },
+        "3": {
+          "primary": null,
+          "secondary": null
+        }
+      }
+    },
+    {
+      "actor": "Fighter",
+      "seed": {
+        "1": {
+          "primary": "Actor.seedFighter00002.Item.longsword0000001",
+          "secondary": "Actor.seedFighter00002.Item.dagger0000000001"
+        },
+        "2": {
+          "primary": "Actor.seedFighter00002.Item.shortbow00000001",
+          "secondary": null
+        },
+        "3": {
+          "primary": null,
+          "secondary": null
+        }
+      }
+    },
+    {
+      "actor": "Rogue",
+      "seed": {
+        "1": {
+          "primary": "Actor.seedRogue0000001.Item.scimitar00000001",
+          "secondary": "Actor.seedRogue0000001.Item.dagger0000000002"
+        },
+        "2": {
+          "primary": null,
+          "secondary": null
+        },
+        "3": {
+          "primary": null,
+          "secondary": null
+        }
+      }
+    },
+    {
+      "actor": "Fighter",
+      "seed": {
+        "1": {
+          "primary": "Actor.seedFighter00003.Item.longsword0000001",
+          "secondary": "Actor.seedFighter00003.Item.dagger0000000001"
+        },
+        "2": {
+          "primary": "Actor.seedFighter00003.Item.shortbow00000001",
+          "secondary": null
+        },
+        "3": {
+          "primary": null,
+          "secondary": null
+        }
+      }
+    },
+    {
+      "actor": "Fighter",
+      "seed": {
+        "1": {
+          "primary": "Actor.seedFighter00004.Item.longsword0000001",
+          "secondary": "Actor.seedFighter00004.Item.dagger0000000001"
+        },
+        "2": {
+          "primary": "Actor.seedFighter00004.Item.shortbow00000001",
+          "secondary": null
+        },
+        "3": {
+          "primary": null,
+          "secondary": null
+        }
+      }
+    }
+  ],
+  "console": [
+    {
+      "level": "info",
+      "text": "pentaryn-combat | weapon sets seeded for Fighter",
+      "err": "{\"1\":{\"primary\":\"Actor.fighter000000001.Item.longsword0000001\",\"secondary\":\"Actor.fighter000000001.Item.dagger0000000001\"},\"2\":{\"primary\":\"Actor.fighter000000001.Item.shortbow00000001\",\"secondary\":null},\"3\":{\"primary\":null,\"secondary\":null}}"
+    },
+    {
+      "level": "info",
+      "text": "pentaryn-combat | weapon sets seeded for Rogue",
+      "err": "{\"1\":{\"primary\":\"Actor.rogue00000000001.Item.scimitar00000001\",\"secondary\":\"Actor.rogue00000000001.Item.dagger0000000002\"},\"2\":{\"primary\":null,\"secondary\":null},\"3\":{\"primary\":null,\"secondary\":null}}"
+    },
+    {
+      "level": "info",
+      "text": "pentaryn-combat | weapon sets seeded for Barbarian",
+      "err": "{\"1\":{\"primary\":\"Actor.barbarian0000001.Item.greataxe00000001\",\"secondary\":null},\"2\":{\"primary\":null,\"secondary\":null},\"3\":{\"primary\":null,\"secondary\":null}}"
+    },
+    {
+      "level": "info",
+      "text": "pentaryn-combat | weapon sets seeded for Slayer",
+      "err": "{\"1\":{\"primary\":\"Actor.slayer0000000001.Item.glaive0000000001\",\"secondary\":null},\"2\":{\"primary\":null,\"secondary\":null},\"3\":{\"primary\":null,\"secondary\":null}}"
+    },
+    {
+      "level": "info",
+      "text": "pentaryn-combat | weapon sets seeded for Fighter",
+      "err": "{\"1\":{\"primary\":\"Actor.fighterFlag00001.Item.longsword0000001\",\"secondary\":\"Actor.fighterFlag00001.Item.dagger0000000001\"},\"2\":{\"primary\":\"Actor.fighterFlag00001.Item.shortbow00000001\",\"secondary\":null},\"3\":{\"primary\":null,\"secondary\":null}}"
+    },
+    {
+      "level": "info",
+      "text": "pentaryn-combat | weapon sets seeded for Fighter",
+      "err": "{\"1\":{\"primary\":\"Actor.seedFighter00001.Item.longsword0000001\",\"secondary\":\"Actor.seedFighter00001.Item.dagger0000000001\"},\"2\":{\"primary\":\"Actor.seedFighter00001.Item.shortbow00000001\",\"secondary\":null},\"3\":{\"primary\":null,\"secondary\":null}}"
+    },
+    {
+      "level": "info",
+      "text": "pentaryn-combat | weapon sets seeded for Fighter",
+      "err": "{\"1\":{\"primary\":\"Actor.seedFighter00002.Item.longsword0000001\",\"secondary\":\"Actor.seedFighter00002.Item.dagger0000000001\"},\"2\":{\"primary\":\"Actor.seedFighter00002.Item.shortbow00000001\",\"secondary\":null},\"3\":{\"primary\":null,\"secondary\":null}}"
+    },
+    {
+      "level": "info",
+      "text": "pentaryn-combat | weapon sets seeded for Rogue",
+      "err": "{\"1\":{\"primary\":\"Actor.seedRogue0000001.Item.scimitar00000001\",\"secondary\":\"Actor.seedRogue0000001.Item.dagger0000000002\"},\"2\":{\"primary\":null,\"secondary\":null},\"3\":{\"primary\":null,\"secondary\":null}}"
+    },
+    {
+      "level": "info",
+      "text": "pentaryn-combat | weapon sets seeded for Fighter",
+      "err": "{\"1\":{\"primary\":\"Actor.seedFighter00003.Item.longsword0000001\",\"secondary\":\"Actor.seedFighter00003.Item.dagger0000000001\"},\"2\":{\"primary\":\"Actor.seedFighter00003.Item.shortbow00000001\",\"secondary\":null},\"3\":{\"primary\":null,\"secondary\":null}}"
+    },
+    {
+      "level": "info",
+      "text": "pentaryn-combat | weapon sets seeded for Fighter",
+      "err": "{\"1\":{\"primary\":\"Actor.seedFighter00004.Item.longsword0000001\",\"secondary\":\"Actor.seedFighter00004.Item.dagger0000000001\"},\"2\":{\"primary\":\"Actor.seedFighter00004.Item.shortbow00000001\",\"secondary\":null},\"3\":{\"primary\":null,\"secondary\":null}}"
+    },
+    {
+      "level": "warn",
+      "text": "pentaryn-combat | weapon-set seed failed for Broken",
+      "err": "locked"
+    }
+  ]
+}

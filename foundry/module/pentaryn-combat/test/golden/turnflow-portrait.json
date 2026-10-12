@@ -1,0 +1,46 @@
+{
+  "list": [
+    {
+      "uuid": "Actor.fighter000000001.ActiveEffect.dash000000000001",
+      "name": "Dash"
+    },
+    {
+      "img": "icons/svg/aura.svg",
+      "name": "Prone",
+      "uuid": "Actor.fighter000000001.ActiveEffect.prone00000000001",
+      "tooltip": "[enriched]<p>Prone rules</p>"
+    },
+    {
+      "img": "icons/svg/aura.svg",
+      "name": "Dodging",
+      "uuid": "Actor.fighter000000001.ActiveEffect.dodging000000001",
+      "tooltip": "[enriched]<p>own text</p>"
+    }
+  ],
+  "again": [
+    {
+      "uuid": "Actor.fighter000000001.ActiveEffect.prone00000000001",
+      "name": "Prone (Argon)"
+    },
+    {
+      "img": "icons/svg/aura.svg",
+      "name": "Dodging",
+      "uuid": "Actor.fighter000000001.ActiveEffect.dodging000000001",
+      "tooltip": "[enriched]<p>own text</p>"
+    }
+  ],
+  "offList": [],
+  "noActor": [
+    {
+      "uuid": "x"
+    }
+  ],
+  "broken": [],
+  "console": [
+    {
+      "level": "warn",
+      "text": "pentaryn-combat | portrait conditions",
+      "err": "prepare failed"
+    }
+  ]
+}

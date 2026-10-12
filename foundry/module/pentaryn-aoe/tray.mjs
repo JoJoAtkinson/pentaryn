@@ -10,20 +10,21 @@
  * section.icon-row, then <damage-application>; this tray goes right after the native one.
  */
 
-import { aoeFlags, MULTIPLIERS, playerStatus } from "./core.mjs";
-import { on, guard } from "./hooks.mjs";
+import { aoeFlags, MULTIPLIERS, playerStatus, applicableRows, hydrateDamages } from "./core.mjs";
 import { setting } from "./settings.mjs";
-import { applyRows, rollNpcSaves, rollForPlayer, pingPlayers, setRow, resolve } from "./resolve.mjs";
 
 const esc = s => foundry.utils.escapeHTML(String(s ?? ""));
-const t = (key, data) => (data ? game.i18n.format(`PENTARYN_AOE.${key}`, data) : game.i18n.localize(`PENTARYN_AOE.${key}`));
+/** The ctx install() was given: resolve's actions are ctx.exposed (resolve installs first). */
+let context = null;
+/** -9: the listeners go through the kit's pass-through guard, so a rejected roll or Apply is logged with the module prefix. */
+const listenerGuard = (label, fn) => (context?.reg ? context.reg.guard(label, fn) : fn);
 const MULT_LABEL = { 0: "×0", 0.25: "×¼", 0.5: "×½", 1: "×1", 2: "×2" };
 
 function preview(row, res, message = null) {
   if (row.multiplier === null || row.multiplier === undefined) return "—";
   const actor = fromUuidSync(row.actor);
   if (!actor?.calculateDamage) return "—";
-  const damages = res.damages.map(d => ({ ...d, properties: new Set(d.properties ?? []) }));
+  const damages = hydrateDamages(res.damages);
   // originatingMessage as Apply passes it (resolve.applyRows), so a damage-card rider such as
   // Elemental Adept's ignored resistance shows here too, not only once applied.
   const out = actor.calculateDamage(damages, { multiplier: row.multiplier, originatingMessage: message ?? undefined });
@@ -32,11 +33,11 @@ function preview(row, res, message = null) {
 
 function saveCell(row) {
   if (row.protected) {
-    return `<span class="pa-pass" data-tooltip="${esc(t("Careful.RowTip"))}"><i class="fa-solid fa-shield-halved" inert></i> ${esc(t("Careful.Row"))}</span>`;
+    return `<span class="pa-pass" data-tooltip="${esc(_loc("PENTARYN_AOE.Careful.RowTip"))}"><i class="fa-solid fa-shield-halved" inert></i> ${esc(_loc("PENTARYN_AOE.Careful.Row"))}</span>`;
   }
   if (!row.save) {
     return row.kind === "manual"
-      ? `<span class="pa-wait" data-tooltip="${esc(t("Tray.WaitingTip"))}"><i class="fa-solid fa-hourglass-half" inert></i> ${esc(t("Tray.Waiting"))}</span>`
+      ? `<span class="pa-wait" data-tooltip="${esc(_loc("PENTARYN_AOE.Tray.WaitingTip"))}"><i class="fa-solid fa-hourglass-half" inert></i> ${esc(_loc("PENTARYN_AOE.Tray.Waiting"))}</span>`
       : `<span class="pa-wait">—</span>`;
   }
   const cls = row.save.success ? "pa-pass" : "pa-fail";
@@ -49,13 +50,13 @@ function rowHTML(row, res, message = null) {
   const blank = row.multiplier === null || row.multiplier === undefined ? `<option value="" selected>?</option>` : "";
   const locked = row.applied || res.superseded ? "disabled" : "";
   const extra = row.kind === "auto"
-    ? `<a data-pa="reroll" data-row="${esc(row.id)}" data-tooltip="${esc(t("Tray.Reroll"))}"><i class="fa-solid fa-dice-d20" inert></i></a>`
-    : `<a data-pa="rollfor" data-row="${esc(row.id)}" data-tooltip="${esc(t("Tray.RollFor"))}"><i class="fa-solid fa-user-shield" inert></i></a>`;
-  const status = row.applied ? `<span class="pa-applied" data-tooltip="${esc(row.hp ? `${row.hp.before} → ${row.hp.after}` : "")}">${esc(t("Tray.Applied"))}</span>` : preview(row, res, message);
+    ? `<a data-pa="reroll" data-row="${esc(row.id)}" data-tooltip="${esc(_loc("PENTARYN_AOE.Tray.Reroll"))}"><i class="fa-solid fa-dice-d20" inert></i></a>`
+    : `<a data-pa="rollfor" data-row="${esc(row.id)}" data-tooltip="${esc(_loc("PENTARYN_AOE.Tray.RollFor"))}"><i class="fa-solid fa-user-shield" inert></i></a>`;
+  const status = row.applied ? `<span class="pa-applied" data-tooltip="${esc(row.hp ? `${row.hp.before} → ${row.hp.after}` : "")}">${esc(_loc("PENTARYN_AOE.Tray.Applied"))}</span>` : preview(row, res, message);
   return `<li class="pa-row ${row.applied ? "applied" : ""}" data-row="${esc(row.id)}">
     <input type="checkbox" data-pa="tick" ${row.apply ? "checked" : ""} ${locked}>
     <img src="${esc(row.img ?? "icons/svg/mystery-man.svg")}" alt="">
-    <span class="pa-name" data-tooltip="${esc(row.kind === "manual" ? t("Tray.Manual") : t("Tray.Auto"))}">${esc(row.name)}${row.caster ? ` <em>(${esc(t("Tray.Caster"))})</em>` : ""}</span>
+    <span class="pa-name" data-tooltip="${esc(row.kind === "manual" ? _loc("PENTARYN_AOE.Tray.Manual") : _loc("PENTARYN_AOE.Tray.Auto"))}">${esc(row.name)}${row.caster ? ` <em>(${esc(_loc("PENTARYN_AOE.Tray.Caster"))})</em>` : ""}</span>
     <span class="pa-save">${saveCell(row)}</span>
     ${row.applied ? "" : extra}
     <select data-pa="mult" ${locked}>${blank}${opts}</select>
@@ -65,24 +66,24 @@ function rowHTML(row, res, message = null) {
 
 export function trayHTML(res, message = null) {
   const ability = CONFIG.DND5E.abilities[res.ability]?.label ?? res.ability;
-  const n = res.rows.filter(r => r.apply && !r.applied && r.multiplier !== null && r.multiplier !== undefined).length;
+  const n = applicableRows(res.rows).length;
   const picker = (res.regions?.length ?? 0) > 1
     ? `<select data-pa="region">${res.regions.map(r => `<option value="${esc(r.id)}" ${r.id === res.region ? "selected" : ""}>${esc(r.name)}</option>`).join("")}</select>`
     : "";
   const body = res.rows.length
     ? `<ol class="pa-rows">${res.rows.map(r => rowHTML(r, res, message)).join("")}</ol>`
-    : `<p class="pa-empty">${esc(t("Tray.Empty"))}</p>`;
+    : `<p class="pa-empty">${esc(_loc("PENTARYN_AOE.Tray.Empty"))}</p>`;
   return `<div class="pa-head">
-      <strong>${esc(t("Tray.Title", { ability, dc: res.dc ?? "?" }))}</strong>
-      <span class="pa-src">${esc(res.region ? t("Tray.FromArea") : t("Tray.FromTargets"))}</span>${picker}
+      <strong>${esc(_loc("PENTARYN_AOE.Tray.Title", { ability, dc: res.dc ?? "?" }))}</strong>
+      <span class="pa-src">${esc(res.region ? _loc("PENTARYN_AOE.Tray.FromArea") : _loc("PENTARYN_AOE.Tray.FromTargets"))}</span>${picker}
     </div>
-    ${res.superseded ? `<p class="pa-superseded">${esc(t("Tray.Superseded"))}</p>` : ""}
-    ${res.careful?.names?.length ? `<p class="pa-careful"><i class="fa-solid fa-shield-halved" inert></i> ${esc(t("Careful.Head", { names: res.careful.names.join(", ") }))}</p>` : ""}
+    ${res.superseded ? `<p class="pa-superseded">${esc(_loc("PENTARYN_AOE.Tray.Superseded"))}</p>` : ""}
+    ${res.careful?.names?.length ? `<p class="pa-careful"><i class="fa-solid fa-shield-halved" inert></i> ${esc(_loc("PENTARYN_AOE.Careful.Head", { names: res.careful.names.join(", ") }))}</p>` : ""}
     ${body}
     <div class="pa-buttons">
-      <button type="button" data-pa="reroll-all" ${res.superseded ? "disabled" : ""}><i class="fa-solid fa-dice-d20" inert></i> ${esc(t("Tray.RerollAll"))}</button>
-      <button type="button" data-pa="ping" ${res.superseded ? "disabled" : ""}><i class="fa-solid fa-bell" inert></i> ${esc(t("Tray.Ping"))}</button>
-      <button type="button" data-pa="apply" ${n && !res.superseded ? "" : "disabled"}><i class="fa-solid fa-heart-crack" inert></i> ${esc(t("Tray.Apply", { n }))}</button>
+      <button type="button" data-pa="reroll-all" ${res.superseded ? "disabled" : ""}><i class="fa-solid fa-dice-d20" inert></i> ${esc(_loc("PENTARYN_AOE.Tray.RerollAll"))}</button>
+      <button type="button" data-pa="ping" ${res.superseded ? "disabled" : ""}><i class="fa-solid fa-bell" inert></i> ${esc(_loc("PENTARYN_AOE.Tray.Ping"))}</button>
+      <button type="button" data-pa="apply" ${n && !res.superseded ? "" : "disabled"}><i class="fa-solid fa-heart-crack" inert></i> ${esc(_loc("PENTARYN_AOE.Tray.Apply", { n }))}</button>
     </div>`;
 }
 
@@ -105,7 +106,8 @@ function decoratePlayer(message, html) {
   const p = document.createElement("p");
   p.className = `pa-status pa-status-${status}`;
   const icon = { waiting: "fa-hourglass-half", applied: "fa-check", superseded: "fa-rotate" }[status];
-  p.innerHTML = `<i class="fa-solid ${icon}" inert></i> ${esc(t(`Status.${status}`))}`;
+  // keys: PENTARYN_AOE.Status.waiting, PENTARYN_AOE.Status.applied, PENTARYN_AOE.Status.superseded
+  p.innerHTML = `<i class="fa-solid ${icon}" inert></i> ${esc(_loc(`PENTARYN_AOE.Status.${status}`))}`;
   host.append(p);
 }
 
@@ -122,30 +124,37 @@ function decorate(message, html) {
   if (native) native.after(tray);
   else host.append(tray);
 
-  tray.addEventListener("change", ev => {
+  tray.addEventListener("change", listenerGuard("tray change", ev => {
     const el = ev.target;
     const rowId = el.closest("[data-row]")?.dataset.row;
-    if (el.dataset.pa === "tick") setRow(message.id, rowId, { apply: el.checked });
-    else if (el.dataset.pa === "mult" && el.value !== "") setRow(message.id, rowId, { multiplier: el.value });
-    else if (el.dataset.pa === "region") resolve(message.id, { regionId: el.value });
-  });
-  tray.addEventListener("click", async ev => {
+    if (el.dataset.pa === "tick") return context.exposed.setRow(message.id, rowId, { apply: el.checked });
+    if (el.dataset.pa === "mult" && el.value !== "") return context.exposed.setRow(message.id, rowId, { multiplier: el.value });
+    if (el.dataset.pa === "region") return context.exposed.resolve(message.id, { regionId: el.value });
+  }));
+  tray.addEventListener("click", listenerGuard("tray click", async ev => {
     const el = ev.target.closest("[data-pa]");
     if (!el || el.tagName === "INPUT" || el.tagName === "SELECT") return;
     ev.preventDefault();
     ev.stopPropagation();
     const rowId = el.dataset.row;
     switch (el.dataset.pa) {
-      case "apply": el.disabled = true; return applyRows(message.id);
-      case "reroll-all": return rollNpcSaves(message.id, { force: true });
-      case "reroll": return rollNpcSaves(message.id, { rowIds: [rowId], force: true });
-      case "rollfor": return rollForPlayer(message.id, rowId, { event: ev });
-      case "ping": return pingPlayers(message.id);
+      case "apply": el.disabled = true; return context.exposed.applyRows(message.id);
+      case "reroll-all": return context.exposed.rollNpcSaves(message.id, { force: true });
+      case "reroll": return context.exposed.rollNpcSaves(message.id, { rowIds: [rowId], force: true });
+      case "rollfor": return context.exposed.rollForPlayer(message.id, rowId, { event: ev });
+      case "ping": return context.exposed.pingPlayers(message.id);
     }
-  });
+  }));
 }
 
-export function installTray() {
-  on("dnd5e.renderChatMessage", guard("renderChatMessage(tray)", decorate));
+export function install(reg, ctx) {
+  context = ctx;
+  reg.on("dnd5e.renderChatMessage", reg.guardSwallowAsync("renderChatMessage(tray)", decorate), { guard: false, label: "renderChatMessage(tray)" });
 }
 
+export function uninstall() {}
+
+
+// Test seam (characterisation checkpoint): tests import this through test/fixtures/seams.mjs only,
+// so the blueprint refactor edits that shim, not the frozen tests. Not part of the API.
+export const _internals = { preview, saveCell, rowHTML, decoratePlayer, decorate };

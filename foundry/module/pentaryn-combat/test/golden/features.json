@@ -1,0 +1,97 @@
+{
+  "fighter": {
+    "features": [
+      "fighter",
+      "extra-attack",
+      "two-weapon-fighting"
+    ],
+    "reckless": null,
+    "pam": null,
+    "unarmed": null,
+    "focus": null,
+    "flurry": null
+  },
+  "rogue": {
+    "features": [
+      "rogue",
+      "sneak-attack"
+    ],
+    "reckless": null,
+    "pam": null,
+    "unarmed": null,
+    "focus": null,
+    "flurry": null
+  },
+  "monk0": {
+    "features": [
+      "monk",
+      "monks-focus",
+      "martial-arts"
+    ],
+    "reckless": null,
+    "pam": null,
+    "unarmed": "unarmedStrike001",
+    "focus": 0,
+    "flurry": "flurryAct0000001"
+  },
+  "monk2": {
+    "features": [
+      "monk",
+      "monks-focus",
+      "martial-arts"
+    ],
+    "reckless": null,
+    "pam": null,
+    "unarmed": "unarmedStrike001",
+    "focus": 2,
+    "flurry": "flurryAct0000001"
+  },
+  "wolf": {
+    "features": [
+      "multiattack"
+    ],
+    "reckless": null,
+    "pam": null,
+    "unarmed": null,
+    "focus": null,
+    "flurry": null
+  },
+  "druid": {
+    "features": [
+      "multiattack"
+    ],
+    "reckless": null,
+    "pam": null,
+    "unarmed": null,
+    "focus": null,
+    "flurry": null
+  },
+  "barbarian": {
+    "features": [
+      "barbarian",
+      "extra-attack",
+      "reckless-attack",
+      "frenzy",
+      "rage"
+    ],
+    "reckless": "recklessAttack01",
+    "pam": null,
+    "unarmed": null,
+    "focus": null,
+    "flurry": null
+  },
+  "slayer": {
+    "features": [
+      "paladin",
+      "great-weapon-master",
+      "polearm-master",
+      "divine-strike",
+      "colossus-slayer"
+    ],
+    "reckless": null,
+    "pam": "polearmMaster001",
+    "unarmed": null,
+    "focus": null,
+    "flurry": null
+  }
+}

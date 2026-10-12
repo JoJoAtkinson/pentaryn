@@ -1,13 +1,22 @@
 ---
 title: Migration guide — pentaryn-combat to the addon blueprint
-status: plan
-last_modified: 2026-10-11
+status: done (code phase, wave 4)
+last_modified: 2026-10-12
 tags: [foundry, modules, blueprint, migration, pentaryn-combat]
 ---
 
 # Migrating `pentaryn-combat` to the addon blueprint
 
+> **Migrated in the wave-4 code phase (2026-10-11, `migrate/wave-4`): see Result.** Nothing is live yet.
+
 > **WAIT lifted 2026-10-11** (D9: live usability work finished; `wait.json` is empty). The WAIT wording below is history; the re-anchor step still applies.
+
+> **Re-anchored again for wave 4 (2026-10-11, base `a5a1a906`):** since 28ccc87 only PT1-6 touched the
+> module (`d7a7c7b6`, `99102603`): `hud.mjs:157` `TT` gained `pentaryn-combat-tt` (same line), and
+> `styles/combat.css` gained 15 lines after `:47` (already reflected below). No `.mjs` line moved, so
+> every JS anchor in this guide holds. Live score at the base: 50.0 % (23/46): the scorer now has 46
+> fail-class rules (42 when §1 was written) and the 23 failing are exactly §1's (C59 is a new warning).
+> Checkpoint below.
 
 **Read this when:** you are about to restructure `foundry/module/pentaryn-combat` to the blueprint,
 or you need to know which 2026-10 audit findings (`combat-riders-*`) the restructure absorbs and
@@ -699,13 +708,56 @@ the prototype as well.
 
 | | |
 |---|---|
-| Live score after the migration | ___ % (___ / ___ fail-class rules) — `conformance.py --module combat --markdown` |
-| Date | ____-__-__ |
-| Commits (Joe-approved) | characterisation: ______ · refactor: ______ · standalone: ______ |
-| Declared changes handed to the live-test workflow | ______ (session L__) |
-| `module.json` edits appended to `wave7-restart-batch.md` | yes / no |
-| Adjustments rows appended to `adjustments-batch.md` | yes / no |
-| Still failing, and why | ______ |
+| Live score after the migration | 91.7 % (44 / 48 fail-class rules) on `migrate/wave-4` — `conformance.py --module pentaryn-combat --markdown`; 93.8 % (45 / 48) once the S13 adjustments edits land (checked on a snapshot copy) |
+| Date | 2026-10-11 (code phase; nothing live) |
+| Commits | argon-kit `87be8cd4` (written first, 8.6) · vendor `eaff3e00` · S2 `49750dbc` · S3 `796b1bc1` · S4 `e45b8484` · S5 `33faf80b` · S6a `91dd98db` · S6c `8a29ed7f` · S6b `3a29eb4f` · S6d `bb0d66fd` · S8 `7d386862` (+ `7c3dbf90` followUpsFor) · S7 [declared W2-K1] `d54ad23d` · S9 [declared B2] `cac1b85b` · S10 `ea181b22` · S11 [declared D-c1] `0fea9208`, [declared D-c2] `26cdb801` · S12 `1514cd22` · S14 `b936d9f6`, `df18b89f` · C10 split `e723fb44` · standalone: -22 [declared] `f709a285`, W4-C1 [declared] `affd3273`, -33 [declared D-c3] `de84b8a5`, -35 [declared D-c4] `9448deea`, -29 `3fc1643c`, -2 `c69a5e22` + `1992dadb`, -37 `87366619`, -38 [declared] `06755b88`, -10 `1ba641d2` · review: -33 follow-up [declared D-c3] (rider name escaped) `51912021`, mocked timers in four tests `e7cb12b1`; records `caae2696`, `9a873c05` (W4-C7), `a495c0c4` (W4-C8) |
+| Declared changes handed to the live-test workflow | W2-K1, B2, D-c1, D-c2, D-c3, D-c4, -22 surge fix, W4-C1, -38 (wave-4 report, combat live checks) |
+| `module.json` edits appended to `wave7-restart-batch.md` | no — returned to the integrator (shared file): flags.pentaryn, version 0.3.0, compatibility.verified, styles += `lib/argon-tooltip.css`, and the `description` turn-flow sentence (combat-riders-15; exact text in the wave-4 report, "Integrator — combat") |
+| Adjustments rows appended to `adjustments-batch.md` | no — returned to the integrator (shared file); the exact `foundry/adjustments.yml` edits were checked on a copy (0 problems) |
+| Still failing, and why | C07 (module.json, Wave 7); C21 + C23 (`turn-riders.mjs` reads pentaryn-aoe's `autoDamageOnHit`: aoe's kit `settings()` is published at ready, but chat cards first render before ready, so the C23-clean read answers wrong at load — Open for Joe); C32 until the S13 adjustments edits land. Warnings: C10 `turn-riders.mjs` 520/500, C36 three rider hint fragments (intentional), C37w one `!important` (B5) |
+
+**Wave 4 code phase (2026-10-11).** Deviations from the steps above, each recorded in its commit:
+weapon-bonus stays in `counting.mjs` (it reads counting's `lastTag`); the docking state stays in
+`strip.mjs` and `roll-dock.mjs` owns its four registrations; `offhand.mjs` keeps the seed (an adapter
+may not import `shapes.mjs`); `turnflow/boundaries.mjs` keeps the end-of-combat cleanup and orphan
+sweep (one hook-name order); the pip handlers live in `hud/pips-bar.mjs` but `hud/bars.mjs` registers
+them; hud's listeners stay on the legacy `pentarynCombat.*` names until `until` (emit fires both);
+the core barrel imports and re-exports by name (the scanner sees no edge in `export * from`); C23 is
+not taken (above). Frozen-test changes: import / file paths only, the S2/S4/S8 additive core-surface
+deltas, layout goldens (emits, graph, module-scope hooks, i18n templates and literal keys), the S3
+dead-export pins, strip.test importing the entry, and the named pins of each `[declared]` commit.
+combat-riders-1 (memoise per task) was tried and reverted: two frozen hud.test pins read stale values.
+
+**S1 checkpoint (wave 4, 2026-10-11): `6e802ebb`** — `test(combat): characterisation checkpoint`, on
+`migrate/wave-4`; tests and goldens only (no `lib/`: the kit is vendored by the kit step, C14 still
+fails). `12e86e58` before it: `test/run.mjs` is the fixed body with `LEGACY = ["test/core-fixtures.mjs"]`
+(the old suite moved byte for byte), `test/kit/` = `foundry/lib/test-kit` 1.0.2, `core.test.mjs`.
+
+- Files: `hooks`, `glue`, `core`, `counting`, `shapes`, `sequence`, `strip`, `riders`, `hud`, `turnflow`,
+  `turnflow-player`, `api`, `i18n`, `failure-paths`, `publish-frozen`, `publish-open` `.test.mjs`;
+  fixtures `dom`, `argon`, `world`, `actors`, `legacy-combat` (the S1 oracles, verbatim); 100 goldens
+  (`hooks.json` 62 rows, `surface-legacy.json` 23 members, `argon-bars.json`, `document-listeners.json`,
+  `graph.json`, `core-exports.json` 81 names, …). Mocked timers (setTimeout + Date) throughout.
+- Results: node:test 179 (175 pass, 4 todo, 0 fail); legacy 326 fixtures pass; `make foundry-combat-check`
+  green; pytest 1199 passed (unchanged).
+- Coverage (node:test, module files, `lib/` and `test/` excluded): before — no node:test suite (the
+  legacy suite loaded `combat-core.mjs` only: 99.76 / 89.21 / 99.32); at the checkpoint 99.78 / 87.01 /
+  98.92 L / B / F over all 10 files (combat.mjs, settings, offhand, shapes, strip, turnflow, sequence,
+  hud 100 % lines; riders 99.80; combat-core 99.19, the rest of it is the legacy suite's).
+- Conformance: 50.0 % (23/46) → 58.7 % (27/46); C20, C40, C41, C43 now pass.
+- KNOWN pins, each with a todo test that flips it: **combat-riders-22** (`sequence.test`: Multiattack +
+  Action Surge plans nothing; §4), **combat-riders-12** (`api.test` + `golden/api-bad-*.json`: legacy
+  members throw or read nothing on a bad ref; S11, D-c2), **W4-C1** (new: Adv/Dis pressed on the strip
+  while a swing's roll window is open is cleared by that swing's `rolled`, so the next swing rolls
+  without it; `sequence.test`; recorded under Open for Joe in `wave-4-report.md`), and `VERSION ===
+  module.json` (todo until S2).
+- Seen, pinned, not a todo: a Martial Arts / Hew / Pole Strike follow-up emits
+  `pentarynCombat.bonusSpent` twice (once from the roll's counting, once from `runFollowUp`); hud's
+  listener is idempotent. S9 should keep the count or note the change.
+- Fixture notes for S6–S12: `test/fixtures/world.mjs`'s `actor.update` applies `_replace` (v14
+  ForcedReplacement) before the update hooks fire; activities fire dnd5e's hooks in dnd5e's order.
+  Goldens hold message ids, so a test added to a frozen file mid-refactor would shift them: add new
+  tests in new files.
 
 Fixed outside the migration, on `fix/playtest-2026-10-11` (module 0.2.5): **PT1-6** — the Full
 Attack tooltip subtitle ("2 of 2 swings left this turn, + Nick: Scimitar") was cut at both edges.
@@ -714,3 +766,12 @@ Attack tooltip subtitle ("2 of 2 swings left this turn, + Nick: Scimitar") was c
 width, centred on the header/body seam, no `!important`, C37-clean), placed after the S10 dead rule
 so S10's line range still holds (the B5 `!important` moved from `:187` to `:202`; refs above updated); fixtures 378-383 pin it. S3/S4 keep `TT` as is (it may become a
 core constant); it is not part of the `.pentaryn-tt` block transform-creatures-14 step 2 copies.
+
+**Wave 4 close (2026-10-12, `1d86bd5a`, code phase).** After the integrator's adjustments rows
+(`e1a9aade`): **93.8 %**, failing C07 (W7) and C21 / C23 (W4-C3, on purpose). node:test **244** pass,
+0 todo, plus the legacy suite's 326 fixtures; HEAD line coverage 99.68. Commits after the table above:
+D7 `24e961a0` [declared] (combat.css imports the kit tooltip CSS; closes W4-C6), review `5750434c`,
+`6acb2e0e`; integrator `e1a9aade`, `cd63f263`, `0b414108` (-17 step 4), `4ecec06b` (melee.md),
+`09585ef7` (isAoeHandle oracle pin, -36). Frozen-test diff since `6e802ebb`: 55 files (25 A, 30 M),
++3462 −253. Open rows W4-C2…C8, W4-I1 (`argon.md`): [`wave-4-report.md`](wave-4-report.md)
+"Open for Joe — consolidated".

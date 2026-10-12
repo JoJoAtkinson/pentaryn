@@ -1,0 +1,1055 @@
+{
+  "fighter, his turn": [
+    {
+      "label": "DND5E.Action",
+      "attached": true,
+      "buttons": [
+        {
+          "cls": "FullAttackButton",
+          "id": "pentaryn-combat-full-attack",
+          "name": "Full Attack",
+          "classes": "feature-element pentaryn-combat-full",
+          "badge": "2",
+          "followUp": null
+        },
+        {
+          "cls": "DND5eItemButton",
+          "id": "longsword0000001",
+          "name": "Longsword",
+          "classes": "feature-element",
+          "badge": null,
+          "followUp": null
+        },
+        {
+          "cls": "ItemButton",
+          "id": "castSpell",
+          "name": "Cast Spell",
+          "classes": "feature-element",
+          "badge": null,
+          "followUp": null
+        }
+      ],
+      "domOrder": 1,
+      "sig": "[true,\"longsword0000001\"]",
+      "pips": {
+        "max": 2,
+        "current": 2,
+        "ours": true
+      },
+      "used": false
+    },
+    {
+      "label": "DND5E.BonusAction",
+      "attached": true,
+      "buttons": [
+        {
+          "cls": "DND5eItemButton",
+          "id": "dagger0000000001",
+          "name": "Dagger",
+          "classes": "feature-element",
+          "badge": null,
+          "followUp": null
+        }
+      ],
+      "domOrder": 1,
+      "sig": "[false,[]]",
+      "pips": null,
+      "used": false
+    },
+    {
+      "label": "DND5E.Reaction",
+      "attached": false,
+      "buttons": [],
+      "domOrder": 0,
+      "sig": null,
+      "pips": null,
+      "used": false
+    },
+    {
+      "label": "DND5E.Special",
+      "attached": false,
+      "buttons": [],
+      "domOrder": 0,
+      "sig": "[[],[],false,null]",
+      "pips": null,
+      "used": false
+    }
+  ],
+  "fighter after a Dagger swing (Off-hand: Handaxe offered)": [
+    {
+      "label": "DND5E.Action",
+      "attached": true,
+      "buttons": [
+        {
+          "cls": "FullAttackButton",
+          "id": "pentaryn-combat-full-attack",
+          "name": "Full Attack",
+          "classes": "feature-element pentaryn-combat-full",
+          "badge": "1",
+          "followUp": null
+        },
+        {
+          "cls": "DND5eItemButton",
+          "id": "dagger0000000001",
+          "name": "Dagger",
+          "classes": "feature-element",
+          "badge": null,
+          "followUp": null
+        },
+        {
+          "cls": "ItemButton",
+          "id": "castSpell",
+          "name": "Cast Spell",
+          "classes": "feature-element",
+          "badge": null,
+          "followUp": null
+        }
+      ],
+      "domOrder": 1,
+      "sig": "[true,\"longsword0000001\"]",
+      "pips": {
+        "max": 2,
+        "current": 1,
+        "ours": true
+      },
+      "used": false
+    },
+    {
+      "label": "DND5E.BonusAction",
+      "attached": true,
+      "buttons": [
+        {
+          "cls": "FollowUpButton",
+          "id": "pentaryn-combat-offhand",
+          "name": "Off-hand: Handaxe",
+          "classes": "feature-element pentaryn-combat-followup",
+          "badge": null,
+          "followUp": {
+            "kind": "offhand",
+            "weaponId": "handaxe000000001",
+            "via": "light"
+          }
+        },
+        {
+          "cls": "DND5eItemButton",
+          "id": "dagger0000000001",
+          "name": "Dagger",
+          "classes": "feature-element",
+          "badge": null,
+          "followUp": null
+        }
+      ],
+      "domOrder": 1,
+      "sig": "[false,[[\"offhand\",\"handaxe000000001\",null,null]]]",
+      "pips": null,
+      "used": false
+    },
+    {
+      "label": "DND5E.Reaction",
+      "attached": false,
+      "buttons": [],
+      "domOrder": 0,
+      "sig": null,
+      "pips": null,
+      "used": false
+    },
+    {
+      "label": "DND5E.Special",
+      "attached": false,
+      "buttons": [],
+      "domOrder": 0,
+      "sig": "[[],[],false,null]",
+      "pips": null,
+      "used": false
+    }
+  ],
+  "rogue, her turn (Nick pair; Sneak Attack toggle)": [
+    {
+      "label": "DND5E.Action",
+      "attached": true,
+      "buttons": [
+        {
+          "cls": "FullAttackButton",
+          "id": "pentaryn-combat-full-attack",
+          "name": "Full Attack",
+          "classes": "feature-element pentaryn-combat-full",
+          "badge": "2",
+          "followUp": null
+        },
+        {
+          "cls": "DND5eItemButton",
+          "id": "scimitar00000001",
+          "name": "Scimitar",
+          "classes": "feature-element",
+          "badge": null,
+          "followUp": null
+        },
+        {
+          "cls": "ItemButton",
+          "id": "castSpell",
+          "name": "Cast Spell",
+          "classes": "feature-element",
+          "badge": null,
+          "followUp": null
+        }
+      ],
+      "domOrder": 1,
+      "sig": "[true,\"scimitar00000001\"]",
+      "pips": {
+        "max": 1,
+        "current": 1,
+        "ours": false
+      },
+      "used": false
+    },
+    {
+      "label": "DND5E.BonusAction",
+      "attached": true,
+      "buttons": [
+        {
+          "cls": "DND5eItemButton",
+          "id": "dagger0000000002",
+          "name": "Dagger",
+          "classes": "feature-element",
+          "badge": null,
+          "followUp": null
+        }
+      ],
+      "domOrder": 1,
+      "sig": "[false,[]]",
+      "pips": null,
+      "used": false
+    },
+    {
+      "label": "DND5E.Reaction",
+      "attached": false,
+      "buttons": [],
+      "domOrder": 0,
+      "sig": null,
+      "pips": null,
+      "used": false
+    },
+    {
+      "label": "DND5E.Special",
+      "attached": true,
+      "buttons": [
+        {
+          "cls": "CommandButton",
+          "id": "pentaryn-combat-rider-sneak-attack",
+          "name": "Sneak Attack: Ask",
+          "classes": "feature-element pentaryn-combat-command",
+          "badge": null,
+          "followUp": null
+        }
+      ],
+      "domOrder": 1,
+      "sig": "[[],[[\"sneak-attack\",\"ask\"]],false,null]",
+      "pips": null,
+      "used": false
+    }
+  ],
+  "rogue after the Scimitar (Nick on the Special bar)": [
+    {
+      "label": "DND5E.Action",
+      "attached": true,
+      "buttons": [
+        {
+          "cls": "FullAttackButton",
+          "id": "pentaryn-combat-full-attack",
+          "name": "Full Attack",
+          "classes": "feature-element pentaryn-combat-full pentaryn-combat-empty",
+          "badge": "0",
+          "followUp": null
+        },
+        {
+          "cls": "DND5eItemButton",
+          "id": "scimitar00000001",
+          "name": "Scimitar",
+          "classes": "feature-element",
+          "badge": null,
+          "followUp": null
+        },
+        {
+          "cls": "ItemButton",
+          "id": "castSpell",
+          "name": "Cast Spell",
+          "classes": "feature-element",
+          "badge": null,
+          "followUp": null
+        }
+      ],
+      "domOrder": 1,
+      "sig": "[true,\"scimitar00000001\"]",
+      "pips": {
+        "max": 1,
+        "current": 0,
+        "ours": false
+      },
+      "used": true
+    },
+    {
+      "label": "DND5E.BonusAction",
+      "attached": true,
+      "buttons": [
+        {
+          "cls": "DND5eItemButton",
+          "id": "dagger0000000002",
+          "name": "Dagger",
+          "classes": "feature-element",
+          "badge": null,
+          "followUp": null
+        }
+      ],
+      "domOrder": 1,
+      "sig": "[false,[]]",
+      "pips": null,
+      "used": false
+    },
+    {
+      "label": "DND5E.Reaction",
+      "attached": false,
+      "buttons": [],
+      "domOrder": 0,
+      "sig": null,
+      "pips": null,
+      "used": false
+    },
+    {
+      "label": "DND5E.Special",
+      "attached": true,
+      "buttons": [
+        {
+          "cls": "FollowUpButton",
+          "id": "pentaryn-combat-nick",
+          "name": "Nick: Dagger",
+          "classes": "feature-element pentaryn-combat-followup",
+          "badge": null,
+          "followUp": {
+            "kind": "nick",
+            "weaponId": "dagger0000000002",
+            "free": true
+          }
+        },
+        {
+          "cls": "CommandButton",
+          "id": "pentaryn-combat-rider-sneak-attack",
+          "name": "Sneak Attack: Ask",
+          "classes": "feature-element pentaryn-combat-command",
+          "badge": null,
+          "followUp": null
+        }
+      ],
+      "domOrder": 2,
+      "sig": "[[[\"nick\",\"dagger0000000002\"]],[[\"sneak-attack\",\"ask\"]],false,null]",
+      "pips": null,
+      "used": false
+    }
+  ],
+  "wolf, its turn (Multiattack)": [
+    {
+      "label": "DND5E.Action",
+      "attached": true,
+      "buttons": [
+        {
+          "cls": "FullAttackButton",
+          "id": "pentaryn-combat-full-attack",
+          "name": "Full Attack",
+          "classes": "feature-element pentaryn-combat-full",
+          "badge": "2",
+          "followUp": null
+        },
+        {
+          "cls": "DND5eItemButton",
+          "id": "bite",
+          "name": "Bite",
+          "classes": "feature-element",
+          "badge": null,
+          "followUp": null
+        },
+        {
+          "cls": "ItemButton",
+          "id": "castSpell",
+          "name": "Cast Spell",
+          "classes": "feature-element",
+          "badge": null,
+          "followUp": null
+        }
+      ],
+      "domOrder": 1,
+      "sig": "[true,\"bite\"]",
+      "pips": {
+        "max": 2,
+        "current": 2,
+        "ours": true
+      },
+      "used": false
+    },
+    {
+      "label": "DND5E.BonusAction",
+      "attached": true,
+      "buttons": [
+        {
+          "cls": "DND5eItemButton",
+          "id": null,
+          "name": null,
+          "classes": "feature-element",
+          "badge": null,
+          "followUp": null
+        }
+      ],
+      "domOrder": 1,
+      "sig": "[false,[]]",
+      "pips": null,
+      "used": false
+    },
+    {
+      "label": "DND5E.Reaction",
+      "attached": false,
+      "buttons": [],
+      "domOrder": 0,
+      "sig": null,
+      "pips": null,
+      "used": false
+    },
+    {
+      "label": "DND5E.Special",
+      "attached": false,
+      "buttons": [],
+      "domOrder": 0,
+      "sig": "[[],[],false,null]",
+      "pips": null,
+      "used": false
+    }
+  ],
+  "monk with no Focus (Flurry greyed, Martial Arts)": [
+    {
+      "label": "DND5E.Action",
+      "attached": true,
+      "buttons": [
+        {
+          "cls": "DND5eItemButton",
+          "id": null,
+          "name": null,
+          "classes": "feature-element",
+          "badge": null,
+          "followUp": null
+        },
+        {
+          "cls": "ItemButton",
+          "id": "castSpell",
+          "name": "Cast Spell",
+          "classes": "feature-element",
+          "badge": null,
+          "followUp": null
+        }
+      ],
+      "domOrder": 2,
+      "sig": "[false,\"unarmedStrike001\"]",
+      "pips": {
+        "max": 1,
+        "current": 1,
+        "ours": false
+      },
+      "used": false
+    },
+    {
+      "label": "DND5E.BonusAction",
+      "attached": true,
+      "buttons": [
+        {
+          "cls": "FollowUpButton",
+          "id": "pentaryn-combat-flurry",
+          "name": "Flurry of Blows",
+          "classes": "feature-element pentaryn-combat-followup pentaryn-combat-disabled",
+          "badge": null,
+          "followUp": {
+            "kind": "flurry",
+            "weaponId": "unarmedStrike001",
+            "count": 2,
+            "disabled": "focus"
+          }
+        },
+        {
+          "cls": "FollowUpButton",
+          "id": "pentaryn-combat-martial-arts",
+          "name": "Martial Arts strike",
+          "classes": "feature-element pentaryn-combat-followup",
+          "badge": null,
+          "followUp": {
+            "kind": "martial-arts",
+            "weaponId": "unarmedStrike001",
+            "count": 1
+          }
+        },
+        {
+          "cls": "DND5eItemButton",
+          "id": null,
+          "name": null,
+          "classes": "feature-element",
+          "badge": null,
+          "followUp": null
+        }
+      ],
+      "domOrder": 2,
+      "sig": "[false,[[\"flurry\",\"unarmedStrike001\",2,\"focus\"],[\"martial-arts\",\"unarmedStrike001\",1,null]]]",
+      "pips": null,
+      "used": false
+    },
+    {
+      "label": "DND5E.Reaction",
+      "attached": false,
+      "buttons": [],
+      "domOrder": 0,
+      "sig": null,
+      "pips": null,
+      "used": false
+    },
+    {
+      "label": "DND5E.Special",
+      "attached": false,
+      "buttons": [],
+      "domOrder": 0,
+      "sig": "[[],[],false,null]",
+      "pips": null,
+      "used": false
+    }
+  ],
+  "monk with 2 Focus": [
+    {
+      "label": "DND5E.Action",
+      "attached": true,
+      "buttons": [
+        {
+          "cls": "DND5eItemButton",
+          "id": null,
+          "name": null,
+          "classes": "feature-element",
+          "badge": null,
+          "followUp": null
+        },
+        {
+          "cls": "ItemButton",
+          "id": "castSpell",
+          "name": "Cast Spell",
+          "classes": "feature-element",
+          "badge": null,
+          "followUp": null
+        }
+      ],
+      "domOrder": 2,
+      "sig": "[false,\"unarmedStrike001\"]",
+      "pips": {
+        "max": 1,
+        "current": 1,
+        "ours": false
+      },
+      "used": false
+    },
+    {
+      "label": "DND5E.BonusAction",
+      "attached": true,
+      "buttons": [
+        {
+          "cls": "FollowUpButton",
+          "id": "pentaryn-combat-flurry",
+          "name": "Flurry of Blows",
+          "classes": "feature-element pentaryn-combat-followup",
+          "badge": null,
+          "followUp": {
+            "kind": "flurry",
+            "weaponId": "unarmedStrike001",
+            "count": 2
+          }
+        },
+        {
+          "cls": "FollowUpButton",
+          "id": "pentaryn-combat-martial-arts",
+          "name": "Martial Arts strike",
+          "classes": "feature-element pentaryn-combat-followup",
+          "badge": null,
+          "followUp": {
+            "kind": "martial-arts",
+            "weaponId": "unarmedStrike001",
+            "count": 1
+          }
+        },
+        {
+          "cls": "DND5eItemButton",
+          "id": null,
+          "name": null,
+          "classes": "feature-element",
+          "badge": null,
+          "followUp": null
+        }
+      ],
+      "domOrder": 2,
+      "sig": "[false,[[\"flurry\",\"unarmedStrike001\",2,null],[\"martial-arts\",\"unarmedStrike001\",1,null]]]",
+      "pips": null,
+      "used": false
+    },
+    {
+      "label": "DND5E.Reaction",
+      "attached": false,
+      "buttons": [],
+      "domOrder": 0,
+      "sig": null,
+      "pips": null,
+      "used": false
+    },
+    {
+      "label": "DND5E.Special",
+      "attached": false,
+      "buttons": [],
+      "domOrder": 0,
+      "sig": "[[],[],false,null]",
+      "pips": null,
+      "used": false
+    }
+  ],
+  "slayer, Pole Strike gated on the bar": [
+    {
+      "label": "DND5E.Action",
+      "attached": true,
+      "buttons": [
+        {
+          "cls": "DND5eItemButton",
+          "id": "glaive0000000001",
+          "name": "Glaive",
+          "classes": "feature-element",
+          "badge": null,
+          "followUp": null
+        },
+        {
+          "cls": "ItemButton",
+          "id": "castSpell",
+          "name": "Cast Spell",
+          "classes": "feature-element",
+          "badge": null,
+          "followUp": null
+        }
+      ],
+      "domOrder": 2,
+      "sig": "[false,\"glaive0000000001\"]",
+      "pips": {
+        "max": 1,
+        "current": 1,
+        "ours": false
+      },
+      "used": false
+    },
+    {
+      "label": "DND5E.BonusAction",
+      "attached": true,
+      "buttons": [
+        {
+          "cls": "DND5eItemButton",
+          "id": null,
+          "name": null,
+          "classes": "feature-element",
+          "badge": null,
+          "followUp": null
+        },
+        {
+          "cls": "ItemButton",
+          "id": "polearmMaster001",
+          "name": "Polearm Master",
+          "classes": "feature-element pentaryn-combat-gated",
+          "badge": null,
+          "followUp": null
+        }
+      ],
+      "domOrder": 2,
+      "sig": "[false,[]]",
+      "pips": null,
+      "used": false
+    },
+    {
+      "label": "DND5E.Reaction",
+      "attached": false,
+      "buttons": [],
+      "domOrder": 0,
+      "sig": null,
+      "pips": null,
+      "used": false
+    },
+    {
+      "label": "DND5E.Special",
+      "attached": true,
+      "buttons": [
+        {
+          "cls": "CommandButton",
+          "id": "pentaryn-combat-rider-divine-strike",
+          "name": "Divine Strike: Ask",
+          "classes": "feature-element pentaryn-combat-command",
+          "badge": null,
+          "followUp": null
+        }
+      ],
+      "domOrder": 1,
+      "sig": "[[],[[\"divine-strike\",\"ask\"]],false,null]",
+      "pips": null,
+      "used": false
+    }
+  ],
+  "slayer after the Glaive (Pole Strike open, Hew after a crit)": [
+    {
+      "label": "DND5E.Action",
+      "attached": true,
+      "buttons": [
+        {
+          "cls": "DND5eItemButton",
+          "id": "glaive0000000001",
+          "name": "Glaive",
+          "classes": "feature-element",
+          "badge": null,
+          "followUp": null
+        },
+        {
+          "cls": "ItemButton",
+          "id": "castSpell",
+          "name": "Cast Spell",
+          "classes": "feature-element",
+          "badge": null,
+          "followUp": null
+        }
+      ],
+      "domOrder": 2,
+      "sig": "[false,\"glaive0000000001\"]",
+      "pips": {
+        "max": 1,
+        "current": 0,
+        "ours": false
+      },
+      "used": true
+    },
+    {
+      "label": "DND5E.BonusAction",
+      "attached": true,
+      "buttons": [
+        {
+          "cls": "FollowUpButton",
+          "id": "pentaryn-combat-hew",
+          "name": "Hew: Glaive",
+          "classes": "feature-element pentaryn-combat-followup",
+          "badge": null,
+          "followUp": {
+            "kind": "hew",
+            "weaponId": "glaive0000000001"
+          }
+        },
+        {
+          "cls": "FollowUpButton",
+          "id": "pentaryn-combat-pole-strike",
+          "name": "Pole Strike",
+          "classes": "feature-element pentaryn-combat-followup",
+          "badge": null,
+          "followUp": {
+            "kind": "pole-strike",
+            "weaponId": "polearmMaster001"
+          }
+        },
+        {
+          "cls": "DND5eItemButton",
+          "id": null,
+          "name": null,
+          "classes": "feature-element",
+          "badge": null,
+          "followUp": null
+        },
+        {
+          "cls": "ItemButton",
+          "id": "polearmMaster001",
+          "name": "Polearm Master",
+          "classes": "feature-element",
+          "badge": null,
+          "followUp": null
+        }
+      ],
+      "domOrder": 2,
+      "sig": "[true,[[\"hew\",\"glaive0000000001\",null,null],[\"pole-strike\",\"polearmMaster001\",null,null]]]",
+      "pips": null,
+      "used": false
+    },
+    {
+      "label": "DND5E.Reaction",
+      "attached": false,
+      "buttons": [],
+      "domOrder": 0,
+      "sig": null,
+      "pips": null,
+      "used": false
+    },
+    {
+      "label": "DND5E.Special",
+      "attached": true,
+      "buttons": [
+        {
+          "cls": "CommandButton",
+          "id": "pentaryn-combat-rider-divine-strike",
+          "name": "Divine Strike: Ask",
+          "classes": "feature-element pentaryn-combat-command",
+          "badge": null,
+          "followUp": null
+        }
+      ],
+      "domOrder": 1,
+      "sig": "[[],[[\"divine-strike\",\"ask\"]],false,null]",
+      "pips": null,
+      "used": false
+    }
+  ],
+  "barbarian (Reckless toggle, Frenzy toggle)": [
+    {
+      "label": "DND5E.Action",
+      "attached": true,
+      "buttons": [
+        {
+          "cls": "FullAttackButton",
+          "id": "pentaryn-combat-full-attack",
+          "name": "Full Attack",
+          "classes": "feature-element pentaryn-combat-full",
+          "badge": "2",
+          "followUp": null
+        },
+        {
+          "cls": "DND5eItemButton",
+          "id": "greataxe00000001",
+          "name": "Greataxe",
+          "classes": "feature-element",
+          "badge": null,
+          "followUp": null
+        },
+        {
+          "cls": "ItemButton",
+          "id": "castSpell",
+          "name": "Cast Spell",
+          "classes": "feature-element",
+          "badge": null,
+          "followUp": null
+        }
+      ],
+      "domOrder": 1,
+      "sig": "[true,\"greataxe00000001\"]",
+      "pips": {
+        "max": 2,
+        "current": 2,
+        "ours": true
+      },
+      "used": false
+    },
+    {
+      "label": "DND5E.BonusAction",
+      "attached": true,
+      "buttons": [
+        {
+          "cls": "DND5eItemButton",
+          "id": null,
+          "name": null,
+          "classes": "feature-element",
+          "badge": null,
+          "followUp": null
+        }
+      ],
+      "domOrder": 1,
+      "sig": "[false,[]]",
+      "pips": null,
+      "used": false
+    },
+    {
+      "label": "DND5E.Reaction",
+      "attached": false,
+      "buttons": [],
+      "domOrder": 0,
+      "sig": null,
+      "pips": null,
+      "used": false
+    },
+    {
+      "label": "DND5E.Special",
+      "attached": true,
+      "buttons": [
+        {
+          "cls": "CommandButton",
+          "id": "pentaryn-combat-rider-frenzy",
+          "name": "Frenzy: Ask",
+          "classes": "feature-element pentaryn-combat-command",
+          "badge": null,
+          "followUp": null
+        },
+        {
+          "cls": "CommandButton",
+          "id": "pentaryn-combat-reckless",
+          "name": "Reckless Attack: Off",
+          "classes": "feature-element pentaryn-combat-command",
+          "badge": null,
+          "followUp": null
+        }
+      ],
+      "domOrder": 2,
+      "sig": "[[],[[\"frenzy\",\"ask\"]],false,false]",
+      "pips": null,
+      "used": false
+    }
+  ],
+  "fighter off his turn": [
+    {
+      "label": "DND5E.Action",
+      "attached": true,
+      "buttons": [
+        {
+          "cls": "FullAttackButton",
+          "id": "pentaryn-combat-full-attack",
+          "name": "Full Attack",
+          "classes": "feature-element pentaryn-combat-full",
+          "badge": "2",
+          "followUp": null
+        },
+        {
+          "cls": "DND5eItemButton",
+          "id": "longsword0000001",
+          "name": "Longsword",
+          "classes": "feature-element",
+          "badge": null,
+          "followUp": null
+        },
+        {
+          "cls": "ItemButton",
+          "id": "castSpell",
+          "name": "Cast Spell",
+          "classes": "feature-element",
+          "badge": null,
+          "followUp": null
+        }
+      ],
+      "domOrder": 1,
+      "sig": "[true,\"longsword0000001\"]",
+      "pips": {
+        "max": 2,
+        "current": 2,
+        "ours": true
+      },
+      "used": false
+    },
+    {
+      "label": "DND5E.BonusAction",
+      "attached": true,
+      "buttons": [
+        {
+          "cls": "DND5eItemButton",
+          "id": "dagger0000000001",
+          "name": "Dagger",
+          "classes": "feature-element",
+          "badge": null,
+          "followUp": null
+        }
+      ],
+      "domOrder": 1,
+      "sig": "[false,[]]",
+      "pips": null,
+      "used": false
+    },
+    {
+      "label": "DND5E.Reaction",
+      "attached": false,
+      "buttons": [],
+      "domOrder": 0,
+      "sig": null,
+      "pips": null,
+      "used": false
+    },
+    {
+      "label": "DND5E.Special",
+      "attached": false,
+      "buttons": [],
+      "domOrder": 0,
+      "sig": "[[],[],false,null]",
+      "pips": null,
+      "used": false
+    }
+  ],
+  "fighter out of combat, after a swing (New turn)": [
+    {
+      "label": "DND5E.Action",
+      "attached": true,
+      "buttons": [
+        {
+          "cls": "FullAttackButton",
+          "id": "pentaryn-combat-full-attack",
+          "name": "Full Attack",
+          "classes": "feature-element pentaryn-combat-full",
+          "badge": "2",
+          "followUp": null
+        },
+        {
+          "cls": "DND5eItemButton",
+          "id": "longsword0000001",
+          "name": "Longsword",
+          "classes": "feature-element",
+          "badge": null,
+          "followUp": null
+        },
+        {
+          "cls": "ItemButton",
+          "id": "castSpell",
+          "name": "Cast Spell",
+          "classes": "feature-element",
+          "badge": null,
+          "followUp": null
+        }
+      ],
+      "domOrder": 1,
+      "sig": "[true,\"longsword0000001\"]",
+      "pips": {
+        "max": null,
+        "current": null,
+        "ours": true
+      },
+      "used": false
+    },
+    {
+      "label": "DND5E.BonusAction",
+      "attached": true,
+      "buttons": [
+        {
+          "cls": "DND5eItemButton",
+          "id": null,
+          "name": null,
+          "classes": "feature-element",
+          "badge": null,
+          "followUp": null
+        }
+      ],
+      "domOrder": 1,
+      "sig": "[false,[]]",
+      "pips": null,
+      "used": false
+    },
+    {
+      "label": "DND5E.Reaction",
+      "attached": false,
+      "buttons": [],
+      "domOrder": 0,
+      "sig": null,
+      "pips": null,
+      "used": false
+    },
+    {
+      "label": "DND5E.Special",
+      "attached": true,
+      "buttons": [
+        {
+          "cls": "CommandButton",
+          "id": "pentaryn-combat-new-turn",
+          "name": "New turn",
+          "classes": "feature-element pentaryn-combat-command",
+          "badge": null,
+          "followUp": null
+        }
+      ],
+      "domOrder": 1,
+      "sig": "[[],[],true,null]",
+      "pips": null,
+      "used": false
+    }
+  ]
+}

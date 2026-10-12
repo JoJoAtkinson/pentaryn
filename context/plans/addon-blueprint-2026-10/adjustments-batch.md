@@ -107,6 +107,10 @@ flags rows the guides named with the module prefix although they are not patches
 
 | Date | Module | Row id | Kind | Source |
 |---|---|---|---|---|
+| 2026-10-12 | riders, aoe, transform, combat | **Batch B rows for all four landed** in `e1a9aade` (wave-4 integration): riders' four patch rows renamed `riders-*` and two non-patch rows `dnd5e-riders-arcane-recovery-picker` / `argon-riders-long-casts`; `aoe-argon-handle-bind`, `aoe-self-area-aim`, `core-region-placement-escape` (+ cursors `board.mjs`), `dnd5e-careful-spell-protected-rows` (+ `careful.mjs`); transform's seven rows (`core-transform-unwrap` → `transform-preupdate-unwrap`); combat's 34 rows (29 renamed to the package prefix); `dnd5e-chat-message-types` widened (combat, aoe `messages-adapter.mjs`, riders' four files, marker `registry.messages`); `dnd5e-cancelled-area-refund`'s `what` corrected | wave-4 lane reports |
+| 2026-10-12 | riders | `dnd5e-riders-damage-tray-preset`, `dnd5e-riders-roll-term-riders`, `dnd5e-riders-sheet-hit-dice`, `core-riders-query-battle-medic` | new | combat-riders-16 (`e1a9aade`) |
+| 2026-10-12 | aoe | `itempiles-aoe-skip-piles` | new | aoe ADJ, C47 (`e1a9aade`) |
+| 2026-10-12 | combat | `core-combat-flag-forced-replacement`, `core-combat-reads-aoe-placement` | new | combat S13 (`e1a9aade`). `transform-reads-combat-multiattack` **not added**: superseded, transform asks combat's published `coversMultiattack` (eb5d576b) |
 
 ## Batch checklist
 

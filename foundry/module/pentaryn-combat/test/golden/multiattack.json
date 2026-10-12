@@ -1,0 +1,139 @@
+{
+  "wolf": {
+    "total": 2,
+    "groups": [
+      {
+        "count": 2,
+        "choices": [
+          "bite"
+        ]
+      }
+    ],
+    "plan": [
+      {
+        "itemId": "bite",
+        "count": 2
+      }
+    ],
+    "source": "multiattack00001"
+  },
+  "druid": {
+    "total": 2,
+    "groups": [
+      {
+        "count": 1,
+        "choices": [
+          "bite"
+        ]
+      },
+      {
+        "count": 1,
+        "choices": [
+          "claw"
+        ]
+      }
+    ],
+    "plan": [
+      {
+        "itemId": "bite",
+        "count": 1
+      },
+      {
+        "itemId": "claw",
+        "count": 1
+      }
+    ],
+    "source": "multiattack00002"
+  },
+  "spirit": {
+    "total": 2,
+    "groups": [
+      {
+        "count": 2,
+        "choices": [
+          "rend000000000001"
+        ]
+      }
+    ],
+    "formula": "floor(@details.level / 2)",
+    "plan": [
+      {
+        "itemId": "rend000000000001",
+        "count": 2
+      }
+    ],
+    "source": "multiattack00003"
+  },
+  "chaos": null,
+  "override": {
+    "plan": [
+      {
+        "itemId": "bite",
+        "count": 3
+      }
+    ],
+    "total": 3,
+    "groups": [
+      {
+        "count": 3,
+        "choices": [
+          "bite"
+        ]
+      }
+    ],
+    "source": "flag"
+  },
+  "unparsed": null,
+  "fighter": null,
+  "none": null,
+  "uses": {
+    "fighter": false,
+    "rogue": false,
+    "monk0": false,
+    "monk2": false,
+    "wolf": true,
+    "druid": true,
+    "barbarian": false,
+    "slayer": false
+  },
+  "count": {
+    "fighter": [
+      2,
+      2,
+      2,
+      2
+    ],
+    "rogue": [
+      1,
+      1,
+      1
+    ],
+    "monk0": [
+      1,
+      1
+    ],
+    "monk2": [
+      1,
+      1
+    ],
+    "wolf": [
+      2,
+      2
+    ],
+    "druid": [
+      2,
+      2,
+      2
+    ],
+    "barbarian": [
+      2,
+      2
+    ],
+    "slayer": [
+      1,
+      1,
+      1
+    ]
+  },
+  "attacksFlag": 3
+}

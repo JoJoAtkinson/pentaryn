@@ -176,6 +176,10 @@ Steps:
    change and of the bridge (`.state/live-rollback/<lane>/`); **a local copy of `Data/worlds` +
    `Config`** (~45 MB, taken while Foundry is down at the restart, `rsync -a`) into
    `.state/live-rollback/<lane>/world/`. This copy is rung 1 of the restore ladder.
+   **Copies taken in a fix round** (step 7) go to `.state/live-rollback/<lane>-fix/`, never into
+   `<lane>/`: the fix round's re-sync would otherwise overwrite the pre-merge copies with the
+   post-merge build (it happened in W3L: the `W3L/` copies of ties, senses and feedback had to be
+   rebuilt from git). One `-fix/` folder per lane; a later round adds `-fix2/`, and so on.
 3. **Merge:** merge the branch into main, no-ff, in the main checkout. Never `git stash`,
    `git reset --hard`, `git checkout -- .` or `git clean` in the main checkout (the modified
    `foundry/logs/*.jsonl` are the bridge's live logs).
@@ -187,7 +191,8 @@ Steps:
    checks; bridge parity if the fork changed. **Foundry 14.369 bug:** the first token change on
    a new scene is not persisted — on any new ZZ scene make one throwaway token change (or reload
    once) before asserting persistence; a "bug" that disappears on retry is this and is not a bug.
-7. **Fix loop:** up to 3 rounds (test first, re-sync, re-check).
+7. **Fix loop:** up to 3 rounds (test first, rollback copies into `.state/live-rollback/<lane>-fix/`
+   (step 2), re-sync, re-check).
 8. **Green:** push main (and the fork's `pentaryn` branch). Record in
    `merge-and-go-live-2026-10-11.md` (append a section; conflicts there are resolved by keeping both).
 9. **Not green after the fix loop:** restore ladder, then park (§10).

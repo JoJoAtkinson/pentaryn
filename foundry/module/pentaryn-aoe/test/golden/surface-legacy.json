@@ -1,0 +1,22 @@
+{
+  "activePlacement": "activePlacement",
+  "applyRows": "applyRows",
+  "areasFor": "areasFor",
+  "cardEffects": "cardEffects",
+  "createHandle": "createHandle",
+  "ensureHandleActor": "ensureHandleActor",
+  "handleFor": "handleFor",
+  "hookIds": "hookIds",
+  "pendingFor": "pendingFor",
+  "pingPlayers": "pingPlayers",
+  "removeArea": "removeArea",
+  "resolve": "resolve",
+  "rollForPlayer": "rollForPlayer",
+  "rollNpcSaves": "rollNpcSaves",
+  "selfApply": "selfApply",
+  "setRow": "setRow",
+  "setting": "setting",
+  "spellAreas": "spellAreas",
+  "sweep": "sweep",
+  "uninstall": "uninstall"
+}

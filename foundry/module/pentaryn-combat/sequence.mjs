@@ -13,12 +13,29 @@
  */
 
 import * as core from "./combat-core.mjs";
-import { attackActivityOf, weaponsOf, weaponShape, updateTurn, focusLeft, flurryActivity, unarmedStrike, turnOf } from "./shapes.mjs";
-import * as strip from "./strip.mjs";
-import { quickMode, setting } from "./settings.mjs";
+import { HOOKS, MODULE, VERSION } from "./combat-core.mjs";
+import { emitter } from "./lib/hooks.mjs";
+import { makeLog } from "./lib/log.mjs";
+import { attackActivityOf, weaponsOf, updateTurn, focusLeft, flurryActivity, unarmedStrike, turnOf, damageLabel, rememberWeapon, planFor } from "./shapes.mjs";
+import { openRollResolvers, isOrphanCard } from "./dialog-adapter.mjs";
+import { choose, hide, onceCancel, picking, show, update, waitChoice } from "./strip.mjs";
+import { quickMode, setQuickMode, setting } from "./settings.mjs";
 
-const MOD = core.MOD;
-const T = (key, data) => (data ? game.i18n.format(key, data) : game.i18n.localize(key));
+const log = makeLog(MODULE);
+
+/** The module's events (core HOOKS rows, legacy name too): ctx.emit once installed. */
+let emit = emitter(MODULE, HOOKS, { log, version: VERSION });
+
+/**
+ * Temporary hooks (one roll, one pick, one dialog) go through the registry the feature was
+ * installed with, so uninstall() unwinds a stray one; before install they fall back to Hooks.
+ */
+let hooks = null;
+const temp = {
+  on: (name, fn, label) => (hooks ? hooks.on(name, fn, { label }) : Hooks.on(name, fn)),
+  off: (name, id) => (hooks ? hooks.off(id) : Hooks.off(name, id)),
+};
+
 
 let current = null;            // the running sequence on this client (one at a time)
 let tag = null;                // { activityUuid, kind } for the attack roll in flight
@@ -33,6 +50,11 @@ const expected = new Map();     // activityUuid → { kind, at }
 
 export function expectRoll(activityUuid, kind) {
   if (activityUuid) expected.set(activityUuid, { kind, at: Date.now() });
+}
+
+/** combat-riders-29: forget announced rolls past the two-minute window (taggedKind ignores them). */
+export function pruneSession(now = Date.now()) {
+  return core.pruneOlder(expected, now, 120000, v => v.at);
 }
 
 export function forgetRoll(activityUuid) {
@@ -66,16 +88,16 @@ async function pickTarget(activity) {
     try {
       const r = await picker(activity);
       if (r !== undefined) return r;
-    } catch (err) { console.warn(`${MOD} | Argon target picker failed`, err); }
+    } catch (err) { log.warn("Argon target picker failed", err); }
   }
   return new Promise(resolve => {
-    ui.notifications.info(T("PENTARYN_COMBAT.Strip.PickTarget"));
-    const id = Hooks.on("targetToken", (user, token, targeted) => {
+    ui.notifications.info(_loc("PENTARYN_COMBAT.Strip.PickTarget"));
+    const id = temp.on("targetToken", (user, token, targeted) => {
       if (user !== game.user || !targeted) return;
-      Hooks.off("targetToken", id);
+      temp.off("targetToken", id);
       resolve(true);
-    });
-    strip.onceCancel(() => { Hooks.off("targetToken", id); resolve(false); });
+    }, "Retarget: wait for a target");
+    onceCancel(() => { temp.off("targetToken", id); resolve(false); });
   });
 }
 
@@ -87,14 +109,14 @@ function restoreTargets(before) {
     const ids = before.filter(t => t?.document && t.scene?.id === canvas.scene?.id).map(t => t.id);
     if (canvas.tokens?.setTargets) canvas.tokens.setTargets(ids, { mode: "replace" });
     else before.forEach((t, i) => t.setTarget(true, { releaseOthers: i === 0 }));
-  } catch (err) { console.warn(`${MOD} | target restore failed`, err); }
+  } catch (err) { log.warn("target restore failed", err); }
 }
 
 function targetName() {
   const t = game.user.targets.first?.() ?? [...game.user.targets][0];
   if (!t) return null;
   const n = game.user.targets.size;
-  return n > 1 ? T("PENTARYN_COMBAT.Strip.Targets", { n }) : t.name;
+  return n > 1 ? _loc("PENTARYN_COMBAT.Strip.Targets", { n }) : t.name;
 }
 
 /* ── keeping swing → damage → swing in order ─────────────────────────────── */
@@ -104,17 +126,14 @@ function targetName() {
 // dnd5e.rollDamageV2), or for no RollResolver to be open (a cancelled resolver fires no hook).
 
 function resolverOpen() {
-  const R = foundry.applications?.dice?.RollResolver;
-  if (!R) return false;
-  for (const app of foundry.applications.instances?.values?.() ?? []) if (app instanceof R) return true;
-  return false;
+  return openRollResolvers().length > 0;
 }
 
 function watchDamage(activity) {
   const w = { started: false, done: false };
-  const pre = Hooks.on("dnd5e.preRollDamageV2", (config) => { if (config?.subject?.uuid === activity.uuid) w.started = true; });
-  const post = Hooks.on("dnd5e.rollDamageV2", (rolls, { subject } = {}) => { if (subject?.uuid === activity.uuid) w.done = true; });
-  w.stop = () => { Hooks.off("dnd5e.preRollDamageV2", pre); Hooks.off("dnd5e.rollDamageV2", post); };
+  const pre = temp.on("dnd5e.preRollDamageV2", (config) => { if (config?.subject?.uuid === activity.uuid) w.started = true; }, "swing damage: started");
+  const post = temp.on("dnd5e.rollDamageV2", (rolls, { subject } = {}) => { if (subject?.uuid === activity.uuid) w.done = true; }, "swing damage: done");
+  w.stop = () => { temp.off("dnd5e.preRollDamageV2", pre); temp.off("dnd5e.rollDamageV2", post); };
   return w;
 }
 
@@ -124,7 +143,7 @@ async function settleDamage(w, { limitMs = 120000 } = {}) {
     const t0 = Date.now();
     let idle = 0;
     while (!w.done && Date.now() - t0 < limitMs && !current?.abort) {
-      await new Promise(r => setTimeout(r, 150));
+      await new Promise(r => setTimeout(r, core.DELAYS.damagePoll));
       idle = resolverOpen() ? 0 : idle + 1;
       if (idle >= 4 && Date.now() - t0 > 600) break;   // nothing to wait on: no resolver, ~0.6 s gone
     }
@@ -172,15 +191,13 @@ function swapTile(actor, w) {
   let stats = "";
   try {
     const act = attackActivityOf(actor.items.get(w.id));
-    const dmg = act?.labels?.damage ?? act?.labels?.damages ?? [];
-    const damage = (Array.isArray(dmg) ? dmg : []).map(d => d.label ?? d.formula).filter(Boolean).join(" + ");
-    stats = [act?.labels?.toHit ?? "", damage].filter(Boolean).join(" · ");
-  } catch { /* the name alone */ }
+    stats = [act?.labels?.toHit ?? "", damageLabel(act)].filter(Boolean).join(" · ");
+  } catch (err) { log.debug("swap tile stats (the name alone)", err); }
   return { id: w.id, name: w.name, img: w.img, stats };
 }
 
 function render() {
-  if (current) strip.update(stripContext());
+  if (current) update(stripContext());
 }
 
 /**
@@ -197,7 +214,7 @@ function closeSwingWindow() {
     let subject = null;
     try { subject = app.config?.subject ?? null; } catch { subject = null; }
     if (subject?.uuid !== uuid) continue;
-    app.close().catch?.(() => null);
+    app.close().catch?.(err => { log.debug("close swing window", err); return null; });
     n++;
   }
   return n;
@@ -213,12 +230,7 @@ function tidyOrigins(ids) {
   for (const id of ids) {
     const msg = id ? game.messages.get(id) : null;
     if (!msg || msg.type !== "usage") continue;
-    const rolled = game.messages.contents.some(m => m.id !== msg.id && ((m.system?.origin?.id ?? m.system?.origin) === msg.id));
-    const orphan = core.orphanUsage({
-      mine: msg.author?.id === game.user.id, ageMs: Date.now() - (msg.timestamp ?? 0), rolled,
-      consumed: core.deltasConsumed(msg.system?.deltas), sequence: false
-    });
-    if (orphan) msg.delete().catch(err => console.warn(`${MOD} | tidy usage card`, err));
+    if (isOrphanCard(msg, { sequence: false })) msg.delete().catch(err => log.warn("tidy usage card", err));
   }
 }
 
@@ -236,7 +248,7 @@ function tidyOrigins(ids) {
  */
 export async function runSwings(actor, swings, { event = null, title = null, origins = null, swappable = true, paid = false } = {}) {
   if (current) {
-    ui.notifications.warn(T("PENTARYN_COMBAT.Strip.AlreadyRunning"));
+    ui.notifications.warn(_loc("PENTARYN_COMBAT.Strip.AlreadyRunning"));
     return { rolled: 0, status: "busy" };
   }
   if (!actor?.isOwner || !swings?.length) return { rolled: 0, status: "done" };
@@ -247,7 +259,7 @@ export async function runSwings(actor, swings, { event = null, title = null, ori
     actor,
     state: core.sequenceReducer(null, { type: "start", swings }),
     origins: new Map(origins ?? []),
-    title: title ?? T("PENTARYN_COMBAT.FullAttack"),
+    title: title ?? _loc("PENTARYN_COMBAT.FullAttack"),
     swappable,
     paid,
     abort: false,
@@ -255,10 +267,10 @@ export async function runSwings(actor, swings, { event = null, title = null, ori
     created: new Set()      // usage cards this sequence posted (Flurry's own card is passed in, not ours)
   };
   const dispatch = (action) => { current.state = core.sequenceReducer(current.state, action); render(); };
-  strip.show(stripContext(), {
+  show(stripContext(), {
     onAdv: (value) => dispatch({ type: "adv", value }),
-    onStop: () => { dispatch({ type: "stop" }); closeSwingWindow(); strip.choose({ type: "stop" }); },
-    onQuick: async (on) => { await game.user.setFlag(MOD, "quick", !!on); render(); }
+    onStop: () => { dispatch({ type: "stop" }); closeSwingWindow(); choose({ type: "stop" }); },
+    onQuick: async (on) => { await setQuickMode(on); render(); }
   });
 
   try {
@@ -266,16 +278,16 @@ export async function runSwings(actor, swings, { event = null, title = null, ori
       if (current.abort) { dispatch({ type: "stop" }); break; }
 
       if (current.state.status === "paused") {
-        const choice = await strip.waitChoice(stripContext());
+        const choice = await waitChoice(stripContext());
         if (current.abort || !choice || choice.type === "stop") { dispatch({ type: "stop" }); break; }
         if (choice.type === "swap") dispatch({ type: "swap", weaponId: choice.weaponId, extras: swapExtras(actor, choice.weaponId) });
         if (choice.type === "retarget") {
           const swing = current.state.swings[current.state.index];
           const act = attackActivityOf(actor.items.get(swing.weaponId));
           const before = [...game.user.targets];
-          strip.picking(true);
+          picking(true);
           let picked;
-          try { picked = await pickTarget(act); } finally { strip.picking(false); }
+          try { picked = await pickTarget(act); } finally { picking(false); }
           if (current.abort || current.state.status === "stopped") continue;
           // Picker cancelled (right-click): stay paused on the old target, don't roll at nobody.
           if (!picked) { restoreTargets(before); render(); continue; }
@@ -290,7 +302,7 @@ export async function runSwings(actor, swings, { event = null, title = null, ori
       const item = actor.items.get(swing.weaponId);
       const activity = attackActivityOf(item);
       if (!activity) {
-        ui.notifications.warn(T("PENTARYN_COMBAT.Strip.NoWeapon"));
+        ui.notifications.warn(_loc("PENTARYN_COMBAT.Strip.NoWeapon"));
         dispatch({ type: "stop" });
         break;
       }
@@ -303,7 +315,7 @@ export async function runSwings(actor, swings, { event = null, title = null, ori
         origin = results.message?.id ?? null;
         current.origins.set(item.id, origin);
         if (origin) current.created.add(origin);
-        Hooks.callAll("pentarynCombat.usage", activity, swing.kind);
+        emit("usage", activity, swing.kind);
       }
 
       const first = s.rolled === 0;
@@ -323,7 +335,7 @@ export async function runSwings(actor, swings, { event = null, title = null, ori
       const message = {
         data: {
           ...(origin ? { system: { origin } } : {}),
-          flags: { [MOD]: { swing: { i: s.index + 1, n: s.swings.length, kind: swing.kind } } }
+          flags: { [MODULE]: { swing: { i: s.index + 1, n: s.swings.length, kind: swing.kind } } }
         }
       };
 
@@ -342,21 +354,25 @@ export async function runSwings(actor, swings, { event = null, title = null, ori
       if (!rolls?.length) { dispatch({ type: "cancel" }); continue; }
       const r = rolls[0];
       current.lastAdv = r.hasAdvantage ? "advantage" : r.hasDisadvantage ? "disadvantage" : null;
+      // W4-C1 [declared]: Adv / Dis pressed while this swing's window was open is for the NEXT swing
+      // (what the strip's hint says); "rolled" clears the toggle, so it is put back for that swing.
+      const pressedDuringRoll = current.state.adv && current.state.adv !== s.adv ? current.state.adv : null;
       dispatch({ type: "rolled", crit: !!r.isCritical });
+      if (pressedDuringRoll) dispatch({ type: "adv", value: pressedDuringRoll });
     }
     return { rolled: current.state.rolled, status: current.state.status };
   } finally {
     const first = current?.state?.swings?.[0];
     if (first?.kind === "main" && actor.isOwner && actor.items.get(first.weaponId)) {
-      actor.setFlag(MOD, "last.weapon", first.weaponId).catch(() => null);
+      rememberWeapon(actor, first.weaponId).catch(err => { log.debug("remember weapon", err); return null; });
     }
     const created = [...(current?.created ?? [])];
     current = null;
     // After dnd5e has posted any last attack (and the tidy hook's own 250 ms look).
-    if (created.length) setTimeout(() => { try { tidyOrigins(created); } catch (err) { console.warn(`${MOD} | tidy usage card`, err); } }, 400);
-    strip.hide();
+    if (created.length) setTimeout(() => { try { tidyOrigins(created); } catch (err) { log.warn("tidy usage card", err); } }, core.DELAYS.tidyAfterSequence);
+    hide();
     // The bars re-check their follow-ups (Off-hand, Hew, Nick…) once the last swing's flag lands.
-    Hooks.callAll("pentarynCombat.sequenceEnd", actor);
+    emit("sequenceEnd", actor);
   }
 }
 
@@ -366,7 +382,7 @@ export function abortFor(actor) {
   if (!actor || current.actor === actor || current.actor?.uuid === actor?.uuid) {
     current.abort = true;
     closeSwingWindow();
-    strip.choose({ type: "stop" });
+    choose({ type: "stop" });
   }
 }
 
@@ -378,7 +394,7 @@ export function abortFor(actor) {
  * @param {{kind: string, weaponId: string, count?: number}} f
  */
 export async function runFollowUp(actor, f, { event = null } = {}) {
-  const label = T(`PENTARYN_COMBAT.FollowUp.${f.kind}`, { weapon: actor.items.get(f.weaponId)?.name ?? "" });
+  const label = _loc(core.keyFor("FollowUp", f.kind), { weapon: actor.items.get(f.weaponId)?.name ?? "" });
   if (f.kind === "offhand") {
     const out = await runSwings(actor, [{ weaponId: f.weaponId, mode: "offhand", kind: "offhand" }], { event, title: label, swappable: false });
     return out;
@@ -390,12 +406,12 @@ export async function runFollowUp(actor, f, { event = null } = {}) {
     const act = flurryActivity(actor);
     const unarmed = unarmedStrike(actor);
     if (!act || !unarmed) return { rolled: 0, status: "missing" };
-    if ((focusLeft(actor) ?? 0) < 1) { ui.notifications.warn(T("PENTARYN_COMBAT.FollowUp.NoFocus")); return { rolled: 0, status: "empty" }; }
+    if ((focusLeft(actor) ?? 0) < 1) { ui.notifications.warn(_loc("PENTARYN_COMBAT.FollowUp.NoFocus")); return { rolled: 0, status: "empty" }; }
     // Flurry's own card spends the Focus Point; the strikes thread under it.
     const res = await act.use({ subsequentActions: false }, { configure: false }, { create: true });
     if (!res) return { rolled: 0, status: "cancelled" };
     await updateTurn(actor, t => core.recordFollowUp(t, "flurry"));
-    Hooks.callAll("pentarynCombat.bonusSpent", actor, "flurry");
+    emit("bonusSpent", actor, "flurry");
     const n = f.count ?? 2;
     const swings = Array.from({ length: n }, () => ({ weaponId: unarmed.id, mode: null, kind: "bonus" }));
     return runSwings(actor, swings, { event, title: label, origins: new Map([[unarmed.id, res.message?.id]]), swappable: false, paid: true });
@@ -405,33 +421,40 @@ export async function runFollowUp(actor, f, { event = null } = {}) {
     const out = await runSwings(actor, [{ weaponId: f.weaponId, mode: null, kind: "bonus" }], { event, title: label, swappable: false });
     if (out.rolled) {
       await updateTurn(actor, t => core.recordFollowUp(t, f.kind));
-      Hooks.callAll("pentarynCombat.bonusSpent", actor, f.kind);
+      emit("bonusSpent", actor, f.kind);
     }
     return out;
   }
   return { rolled: 0, status: "unknown" };
 }
 
-/* ── Full Attack ─────────────────────────────────────────────────────────── */
+
+/* ── install ─────────────────────────────────────────────────────────────── */
 
 /**
- * The swings a Full Attack would make right now, for the button's badge and for start.
- * @returns {{swings: object[], count: number, left: number, weaponId: string|null}}
+ * The runner registers no hook of its own: it keeps the registry for its temporary hooks, exposes
+ * `running` (ctx.exposed) and contributes the fullAttack, followUp, running and abort rows' impls.
  */
-export function fullAttackPlan(actor, { weaponId = null, turn = null, inCombat = false, multiattack = null, count = 1, pick = null } = {}) {
-  if (multiattack) {
-    const plan = pick ? core.multiattackPlan(multiattack, { pick }) : multiattack.plan;
-    const total = plan.reduce((s, r) => s + r.count, 0);
-    const done = inCombat ? (turn?.attackAction?.swings ?? 0) : 0;
-    const swings = inCombat && core.attackActions(turn) === 0 ? [] : core.planSequence({ multiattack: plan, done });
-    return { swings, count: total, left: swings.length, weaponId: plan[0]?.itemId ?? null };
-  }
-  const weapons = weaponsOf(actor);
-  const main = weapons.find(w => w.id === weaponId) ?? null;
-  const left = core.swingsLeft(count, turn, { inCombat });
-  const extras = core.extraSwings({ main, weapons, turn, enhancedDualWielding: !!actor.getFlag?.("dnd5e", "enhancedDualWielding") });
-  const swings = left > 0 ? core.planSequence({ weaponId, count: left, extras }) : [];
-  return { swings, count, left, weaponId };
+export function install(reg, ctx) {
+  hooks = reg;
+  if (ctx?.emit) emit = ctx.emit;
+  ctx?.expose?.({ running });
+  return { impl: { fullAttack, followUp: runFollowUp, running, abort: abortFor } };
 }
 
-export { weaponShape };
+/** api.fullAttack: run the plan api.plan would answer. */
+async function fullAttack(actor, weaponId, opts = {}) {
+  const p = planFor(actor, weaponId, { multiattackOn: setting("multiattack") });
+  return runSwings(actor, p.swings, opts);
+}
+
+/** A running sequence is stopped (its strip goes, its roll window closes); session maps cleared. */
+export function uninstall() {
+  if (current) abortFor(null);
+  hooks = null;
+  expected.clear();
+  picker = null;
+}
+
+/** The swings a Full Attack would make right now (core.fullAttackPlanFrom with this actor's weapons). */
+export { fullAttackPlanOf as fullAttackPlan } from "./shapes.mjs";

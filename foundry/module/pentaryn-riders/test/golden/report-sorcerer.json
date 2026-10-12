@@ -1,0 +1,17 @@
+[
+  {
+    "actor": "Ilsa Vantrel",
+    "rule": "elemental-adept",
+    "items": "Elemental Adept (Fire)",
+    "types": "fire",
+    "status": "active"
+  },
+  {
+    "actor": "Ilsa Vantrel",
+    "rule": "elemental-affinity",
+    "items": "Elemental Affinity",
+    "types": "",
+    "status": "NO TYPE — setType(actor, 'fire')",
+    "manual": "2 +CHA activities left — retireManual(actor)"
+  }
+]

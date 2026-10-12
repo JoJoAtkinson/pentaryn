@@ -1,0 +1,49 @@
+[
+  {
+    "input": [
+      "custom.webp",
+      "item.webp",
+      "archer"
+    ],
+    "out": "custom.webp"
+  },
+  {
+    "input": [
+      "icons/svg/mystery-man.svg",
+      "item.webp",
+      "chalice"
+    ],
+    "out": "icons/magic/holy/chalice-glowing-yellow-blue.webp"
+  },
+  {
+    "input": [
+      "systems/dnd5e/icons/svg/activity/attack.svg",
+      "item.webp",
+      "dragon"
+    ],
+    "out": "icons/creatures/reptiles/dragon-winged-blue.webp"
+  },
+  {
+    "input": [
+      "",
+      "item.webp",
+      "archer"
+    ],
+    "out": "icons/weapons/bows/bow-ornamental-gold-blue.webp"
+  },
+  {
+    "input": [
+      null,
+      "item.webp",
+      "nebula"
+    ],
+    "out": "item.webp"
+  },
+  {
+    "input": [
+      null,
+      null,
+      "nebula"
+    ]
+  }
+]

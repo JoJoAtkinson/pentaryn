@@ -1,0 +1,34 @@
+{
+  "applied": [
+    {
+      "key": "sneak-attack",
+      "dice": "3d6",
+      "attack": "atk0000000000024"
+    }
+  ],
+  "parts": [
+    "1d6",
+    "@mod",
+    "3d6"
+  ],
+  "flags": {
+    "pentaryn-combat": {
+      "auto": [
+        {
+          "key": "sneak-attack",
+          "dice": "3d6",
+          "attack": "atk0000000000024"
+        }
+      ]
+    }
+  },
+  "turn": {
+    "sneak-attack": "auto:atk0000000000024"
+  },
+  "guarded": [],
+  "afterGuardButUsed": [],
+  "notWeapon": [],
+  "notOwner": [],
+  "settingOff": [],
+  "noRolls": []
+}

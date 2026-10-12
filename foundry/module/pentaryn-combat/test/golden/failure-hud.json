@@ -1,0 +1,46 @@
+{
+  "ma": {
+    "total": 2,
+    "groups": [
+      {
+        "count": 2,
+        "choices": [
+          "bite",
+          "claw"
+        ]
+      }
+    ],
+    "plan": [
+      {
+        "itemId": "bite",
+        "count": 2
+      }
+    ],
+    "source": "multiattack00007"
+  },
+  "tiles": [
+    [
+      "bite",
+      "2 swing(s)"
+    ],
+    [
+      "claw",
+      "2 swing(s)"
+    ]
+  ],
+  "last": {
+    "weapon": "bite"
+  },
+  "released": [
+    [
+      "tokgoblin0000000",
+      false
+    ],
+    [
+      "tokgoblin0000000",
+      true
+    ]
+  ],
+  "oddPips": null,
+  "console": []
+}

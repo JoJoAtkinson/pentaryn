@@ -1,0 +1,468 @@
+{
+  "fighter": {
+    "count": 2,
+    "countWeapon": 2,
+    "plan": {
+      "swings": [
+        {
+          "weaponId": "longsword0000001",
+          "mode": null,
+          "kind": "main"
+        },
+        {
+          "weaponId": "longsword0000001",
+          "mode": null,
+          "kind": "main"
+        }
+      ],
+      "count": 2,
+      "left": 2,
+      "weaponId": "longsword0000001"
+    },
+    "planWeapon": {
+      "swings": [
+        {
+          "weaponId": "longsword0000001",
+          "mode": null,
+          "kind": "main"
+        },
+        {
+          "weaponId": "longsword0000001",
+          "mode": null,
+          "kind": "main"
+        }
+      ],
+      "count": 2,
+      "left": 2,
+      "weaponId": "longsword0000001"
+    },
+    "turn": {
+      "key": "c1:1:cb1",
+      "attackAction": {
+        "weapons": [],
+        "swings": 0,
+        "crit": false,
+        "critWeapon": null,
+        "kill": false,
+        "killWeapon": null
+      },
+      "riders": {},
+      "followUps": [],
+      "nick": false,
+      "bonusUsed": false,
+      "otherAction": false,
+      "otherActions": 0,
+      "surges": 0,
+      "quickened": false
+    },
+    "multiattack": null,
+    "weapons": [
+      "longsword0000001",
+      "dagger0000000001",
+      "shortbow00000001"
+    ],
+    "reckless": false
+  },
+  "rogue": {
+    "count": 1,
+    "countWeapon": 1,
+    "plan": {
+      "swings": [
+        {
+          "weaponId": "scimitar00000001",
+          "mode": null,
+          "kind": "main"
+        },
+        {
+          "weaponId": "dagger0000000002",
+          "mode": "offhand",
+          "kind": "nick"
+        }
+      ],
+      "count": 1,
+      "left": 1,
+      "weaponId": "scimitar00000001"
+    },
+    "planWeapon": {
+      "swings": [
+        {
+          "weaponId": "scimitar00000001",
+          "mode": null,
+          "kind": "main"
+        },
+        {
+          "weaponId": "dagger0000000002",
+          "mode": "offhand",
+          "kind": "nick"
+        }
+      ],
+      "count": 1,
+      "left": 1,
+      "weaponId": "scimitar00000001"
+    },
+    "turn": {
+      "key": "c1:1:cb1",
+      "attackAction": {
+        "weapons": [],
+        "swings": 0,
+        "crit": false,
+        "critWeapon": null,
+        "kill": false,
+        "killWeapon": null
+      },
+      "riders": {},
+      "followUps": [],
+      "nick": false,
+      "bonusUsed": false,
+      "otherAction": false,
+      "otherActions": 0,
+      "surges": 0,
+      "quickened": false
+    },
+    "multiattack": null,
+    "weapons": [
+      "scimitar00000001",
+      "dagger0000000002"
+    ],
+    "reckless": false
+  },
+  "monk": {
+    "count": 1,
+    "countWeapon": 1,
+    "plan": {
+      "swings": [
+        {
+          "weaponId": "unarmedStrike001",
+          "mode": null,
+          "kind": "main"
+        }
+      ],
+      "count": 1,
+      "left": 1,
+      "weaponId": "unarmedStrike001"
+    },
+    "planWeapon": {
+      "swings": [
+        {
+          "weaponId": "unarmedStrike001",
+          "mode": null,
+          "kind": "main"
+        }
+      ],
+      "count": 1,
+      "left": 1,
+      "weaponId": "unarmedStrike001"
+    },
+    "turn": {
+      "key": "c1:1:cb1",
+      "attackAction": {
+        "weapons": [],
+        "swings": 0,
+        "crit": false,
+        "critWeapon": null,
+        "kill": false,
+        "killWeapon": null
+      },
+      "riders": {},
+      "followUps": [],
+      "nick": false,
+      "bonusUsed": false,
+      "otherAction": false,
+      "otherActions": 0,
+      "surges": 0,
+      "quickened": false
+    },
+    "multiattack": null,
+    "weapons": [
+      "unarmedStrike001"
+    ],
+    "reckless": false
+  },
+  "wolf": {
+    "count": 2,
+    "countWeapon": 2,
+    "plan": {
+      "swings": [
+        {
+          "weaponId": "bite",
+          "mode": null,
+          "kind": "main"
+        },
+        {
+          "weaponId": "bite",
+          "mode": null,
+          "kind": "main"
+        }
+      ],
+      "count": 2,
+      "left": 2,
+      "weaponId": "bite"
+    },
+    "planWeapon": {
+      "swings": [
+        {
+          "weaponId": "bite",
+          "mode": null,
+          "kind": "main"
+        },
+        {
+          "weaponId": "bite",
+          "mode": null,
+          "kind": "main"
+        }
+      ],
+      "count": 2,
+      "left": 2,
+      "weaponId": "bite"
+    },
+    "turn": {
+      "key": "c1:1:cb1",
+      "attackAction": {
+        "weapons": [],
+        "swings": 0,
+        "crit": false,
+        "critWeapon": null,
+        "kill": false,
+        "killWeapon": null
+      },
+      "riders": {},
+      "followUps": [],
+      "nick": false,
+      "bonusUsed": false,
+      "otherAction": false,
+      "otherActions": 0,
+      "surges": 0,
+      "quickened": false
+    },
+    "multiattack": {
+      "total": 2,
+      "groups": [
+        {
+          "count": 2,
+          "choices": [
+            "bite"
+          ]
+        }
+      ],
+      "plan": [
+        {
+          "itemId": "bite",
+          "count": 2
+        }
+      ],
+      "source": "multiattack00001"
+    },
+    "weapons": [
+      "bite"
+    ],
+    "reckless": false
+  },
+  "druid": {
+    "count": 2,
+    "countWeapon": 2,
+    "plan": {
+      "swings": [
+        {
+          "weaponId": "bite",
+          "mode": null,
+          "kind": "main"
+        },
+        {
+          "weaponId": "claw",
+          "mode": null,
+          "kind": "main"
+        }
+      ],
+      "count": 2,
+      "left": 2,
+      "weaponId": "bite"
+    },
+    "planWeapon": {
+      "swings": [
+        {
+          "weaponId": "bite",
+          "mode": null,
+          "kind": "main"
+        },
+        {
+          "weaponId": "claw",
+          "mode": null,
+          "kind": "main"
+        }
+      ],
+      "count": 2,
+      "left": 2,
+      "weaponId": "bite"
+    },
+    "turn": {
+      "key": "c1:1:cb1",
+      "attackAction": {
+        "weapons": [],
+        "swings": 0,
+        "crit": false,
+        "critWeapon": null,
+        "kill": false,
+        "killWeapon": null
+      },
+      "riders": {},
+      "followUps": [],
+      "nick": false,
+      "bonusUsed": false,
+      "otherAction": false,
+      "otherActions": 0,
+      "surges": 0,
+      "quickened": false
+    },
+    "multiattack": {
+      "total": 2,
+      "groups": [
+        {
+          "count": 1,
+          "choices": [
+            "bite"
+          ]
+        },
+        {
+          "count": 1,
+          "choices": [
+            "claw"
+          ]
+        }
+      ],
+      "plan": [
+        {
+          "itemId": "bite",
+          "count": 1
+        },
+        {
+          "itemId": "claw",
+          "count": 1
+        }
+      ],
+      "source": "multiattack00002"
+    },
+    "weapons": [
+      "bite",
+      "claw"
+    ],
+    "reckless": false
+  },
+  "barbarian": {
+    "count": 2,
+    "countWeapon": 2,
+    "plan": {
+      "swings": [
+        {
+          "weaponId": "greataxe00000001",
+          "mode": null,
+          "kind": "main"
+        },
+        {
+          "weaponId": "greataxe00000001",
+          "mode": null,
+          "kind": "main"
+        }
+      ],
+      "count": 2,
+      "left": 2,
+      "weaponId": "greataxe00000001"
+    },
+    "planWeapon": {
+      "swings": [
+        {
+          "weaponId": "greataxe00000001",
+          "mode": null,
+          "kind": "main"
+        },
+        {
+          "weaponId": "greataxe00000001",
+          "mode": null,
+          "kind": "main"
+        }
+      ],
+      "count": 2,
+      "left": 2,
+      "weaponId": "greataxe00000001"
+    },
+    "turn": {
+      "key": "c1:1:cb1",
+      "attackAction": {
+        "weapons": [],
+        "swings": 0,
+        "crit": false,
+        "critWeapon": null,
+        "kill": false,
+        "killWeapon": null
+      },
+      "riders": {},
+      "followUps": [],
+      "nick": false,
+      "bonusUsed": false,
+      "otherAction": false,
+      "otherActions": 0,
+      "surges": 0,
+      "quickened": false
+    },
+    "multiattack": null,
+    "weapons": [
+      "greataxe00000001"
+    ],
+    "reckless": false
+  },
+  "slayer": {
+    "count": 1,
+    "countWeapon": 1,
+    "plan": {
+      "swings": [
+        {
+          "weaponId": "glaive0000000001",
+          "mode": null,
+          "kind": "main"
+        }
+      ],
+      "count": 1,
+      "left": 1,
+      "weaponId": "glaive0000000001"
+    },
+    "planWeapon": {
+      "swings": [
+        {
+          "weaponId": "polearmMaster001",
+          "mode": null,
+          "kind": "main"
+        }
+      ],
+      "count": 1,
+      "left": 1,
+      "weaponId": "polearmMaster001"
+    },
+    "turn": {
+      "key": "c1:1:cb1",
+      "attackAction": {
+        "weapons": [],
+        "swings": 0,
+        "crit": false,
+        "critWeapon": null,
+        "kill": false,
+        "killWeapon": null
+      },
+      "riders": {},
+      "followUps": [],
+      "nick": false,
+      "bonusUsed": false,
+      "otherAction": false,
+      "otherActions": 0,
+      "surges": 0,
+      "quickened": false
+    },
+    "multiattack": null,
+    "weapons": [
+      "polearmMaster001",
+      "glaive0000000001"
+    ],
+    "reckless": false
+  },
+  "quick": false,
+  "riderMode": "ask",
+  "running": null
+}

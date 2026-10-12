@@ -625,3 +625,56 @@ def test_c50_reads_the_kit_registrar_ready_body(tmp_path):
     assert status(conformance.score_dir(d), "C50") == "pass"
     (d / "reg.mjs").write_text(body.replace('{ moduleId: "pentaryn-reg" }', '{ moduleId: "pentaryn-reg", when: "later" }'))
     assert status(conformance.score_dir(d), "C50") == "fail"
+
+
+# ── C62: a Document param the kit does not resolve names its string forms (FX item 5) ────────
+# The bridge (pentaryn-call.ts needsDoc) refuses a call that fills such a param with BAD_ARGS
+# "eval-js only" unless its `type` names uuid / id / name / string; senses.inspect's ref
+# (resolve:false, no string form) was refused live that way (W3L row 6).
+
+def c62(tmp_path, *params, row_doc="x", name="pentaryn-docref"):
+    d = tmp_path / name
+    describe = {"module": name, "methods": [{"path": "f", "params": list(params), "doc": row_doc}]}
+    write(d, {"module.json": json.dumps({"id": name, "esmodules": ["a.mjs"]}),
+              "a.mjs": "export const a = 1;\n",
+              "test/golden/describe.json": json.dumps(describe)})
+    return res(conformance.score_dir(d), "C62")
+
+
+C62_CASES = [
+    ({"name": "ref", "kind": "actor", "type": "Actor"}, "pass"),                                   # kit resolves it
+    ({"name": "ref", "kind": "token", "resolve": False, "type": "Token|Actor"}, "fail"),           # senses.inspect before 43c6e628
+    ({"name": "ref", "kind": "token", "resolve": False, "type": "Token|Actor|uuid|id|exact name"}, "pass"),
+    ({"name": "owner", "kind": "actor", "type": "Actor", "resolve": False}, "fail"),               # attunement.stash
+    ({"name": "owner", "kind": "actor", "type": "Actor"}, "fail"),                                 # not ref: never resolved
+    ({"name": "actor", "kind": "actor", "type": "Actor|uuid|id|exact name", "resolve": False}, "pass"),
+    ({"name": "u", "kind": "user", "type": "User|string", "resolve": False}, "pass"),
+    ({"name": "doc", "kind": "actor", "type": "Actor", "resolve": False, "doc": "a live Actor — eval-js only"}, "pass"),
+    ({"name": "doc", "kind": "actor", "type": "Actor", "resolve": False, "doc": "eval-js-only"}, "pass"),
+    ({"name": "doc", "type": "JournalEntry", "resolve": False}, "pass"),                           # no kind: out of scope
+    ({"name": "query", "type": "string"}, "pass"),
+    ({"name": "x", "kind": "identifier", "resolve": False}, "pass"),                               # not a Document kind
+]
+
+
+@pytest.mark.parametrize("param,want", C62_CASES)
+def test_c62_document_params_name_their_string_forms(tmp_path, param, want):
+    r = c62(tmp_path, param)
+    assert r["status"] == want, r
+
+
+def test_c62_a_non_first_ref_is_never_resolved(tmp_path):
+    r = c62(tmp_path, {"name": "opts", "type": "{}"}, {"name": "ref", "kind": "actor", "type": "Actor"})
+    assert r["status"] == "fail" and "f(ref)" in r["detail"][0]
+
+
+def test_c62_the_row_doc_can_mark_the_whole_row_eval_js_only(tmp_path):
+    r = c62(tmp_path, {"name": "owner", "kind": "actor", "type": "Actor", "resolve": False},
+            row_doc="Confiscation (eval-js only: live Actors).")
+    assert r["status"] == "pass"
+
+
+def test_c62_is_na_without_a_describe_golden(tmp_path):
+    d = tmp_path / "pentaryn-nogold"
+    write(d, {"module.json": json.dumps({"id": "pentaryn-nogold", "esmodules": ["a.mjs"]}), "a.mjs": "export const a = 1;\n"})
+    assert res(conformance.score_dir(d), "C62")["status"] == "n/a"

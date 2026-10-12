@@ -1,0 +1,32 @@
+[
+  {
+    "input": [
+      "incapacitated"
+    ],
+    "out": "StarryIncapacitated"
+  },
+  {
+    "input": [
+      "expired"
+    ],
+    "out": "StarryExpired"
+  },
+  {
+    "input": [
+      "manual"
+    ],
+    "out": "StarryEnd"
+  },
+  {
+    "input": [
+      null
+    ],
+    "out": "StarryEnd"
+  },
+  {
+    "input": [
+      "longRest"
+    ],
+    "out": "StarryEnd"
+  }
+]

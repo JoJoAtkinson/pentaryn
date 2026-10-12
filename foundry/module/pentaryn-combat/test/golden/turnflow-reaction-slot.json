@@ -1,0 +1,10 @@
+{
+  "label": "Opportunity Attack: Longsword",
+  "once": true,
+  "used": {
+    "action": false,
+    "reaction": true,
+    "tag": "reaction"
+  },
+  "labelOff": null
+}

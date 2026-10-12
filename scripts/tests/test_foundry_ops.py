@@ -212,13 +212,20 @@ def test_every_subcommand_routes(monkeypatch):
     for fn in ("up", "down", "status", "lock_check", "tunnel_up", "tunnel_down",
                "tunnel_setup", "tunnel_logs"):
         monkeypatch.setattr(cli.service, fn, lambda *a, **k: 0)
-    for fn in ("build_actors", "stage", "run_import", "clean", "clean_only", "verify"):
+    for fn in ("build_actors", "stage", "install_importer", "run_import", "clean", "clean_only", "verify"):
         monkeypatch.setattr(cli.pipeline, fn, lambda *a, **k: 0)
     for fn in ("check", "sync", "walls_wasm", "walls_bench",
                "module_new", "module_vendor", "module_conformance"):
         monkeypatch.setattr(cli.modules, fn, lambda *a, **k: 0)
     monkeypatch.setattr(cli.login_mod, "login", lambda *a, **k: 0)
     monkeypatch.setattr(cli.index, "main", lambda *a, **k: 0)
+
+    # a subcommand left unstubbed must never reach the real Foundry Data folder (an unstubbed
+    # importer-install rewrote the live pentaryn-importer on every pytest run, 2026-10-12)
+    def no_real_install(*a, **k):
+        raise AssertionError(f"routing test reached a real module install: {a}")
+    monkeypatch.setattr(cli.pipeline, "install", no_real_install)
+    monkeypatch.setattr(cli.modules, "install", no_real_install)
 
     for name in names:
         argv = [name]

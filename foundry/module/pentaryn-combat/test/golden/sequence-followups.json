@@ -1,0 +1,242 @@
+[
+  {
+    "label": "Off-hand: Dagger",
+    "out": {
+      "rolled": 1,
+      "status": "done"
+    },
+    "rolls": [
+      [
+        "Actor.fighter000000001.Item.dagger0000000001.Activity.dagger0000000001",
+        {
+          "attackMode": "offhand"
+        }
+      ]
+    ],
+    "events": [
+      "pentarynCombat.usage",
+      "pentarynCombat.sequenceEnd",
+      "pentarynCombat.offhand",
+      "pentarynCombat.bonusSpent"
+    ],
+    "turn": {
+      "key": "c1:1:cb1",
+      "attackAction": {
+        "weapons": [],
+        "swings": 0,
+        "crit": false,
+        "critWeapon": null,
+        "kill": false,
+        "killWeapon": null
+      },
+      "riders": {},
+      "followUps": [
+        "offhand"
+      ],
+      "nick": false,
+      "bonusUsed": true,
+      "otherAction": false,
+      "otherActions": 0,
+      "surges": 0,
+      "quickened": false
+    }
+  },
+  {
+    "label": "Nick: Dagger",
+    "out": {
+      "rolled": 1,
+      "status": "done"
+    },
+    "rolls": [
+      [
+        "Actor.rogue00000000001.Item.dagger0000000002.Activity.dagger0000000002",
+        {
+          "attackMode": "offhand"
+        }
+      ]
+    ],
+    "events": [
+      "pentarynCombat.usage",
+      "pentarynCombat.sequenceEnd"
+    ],
+    "turn": {
+      "key": "nocombat",
+      "attackAction": {
+        "weapons": [
+          "dagger0000000002"
+        ],
+        "swings": 0,
+        "crit": false,
+        "critWeapon": null,
+        "kill": false,
+        "killWeapon": null
+      },
+      "riders": {},
+      "followUps": [],
+      "nick": true,
+      "bonusUsed": false,
+      "otherAction": false,
+      "otherActions": 0,
+      "surges": 0,
+      "quickened": false
+    }
+  },
+  {
+    "label": "Martial Arts",
+    "out": {
+      "rolled": 1,
+      "status": "done"
+    },
+    "rolls": [
+      [
+        "Actor.monk200000000000.Item.unarmedStrike001.Activity.unarmedStrike001",
+        {}
+      ]
+    ],
+    "events": [
+      "pentarynCombat.usage",
+      "pentarynCombat.sequenceEnd",
+      "pentarynCombat.bonusSpent",
+      "pentarynCombat.bonusSpent"
+    ],
+    "turn": {
+      "key": "nocombat",
+      "attackAction": {
+        "weapons": [],
+        "swings": 0,
+        "crit": false,
+        "critWeapon": null,
+        "kill": false,
+        "killWeapon": null
+      },
+      "riders": {},
+      "followUps": [
+        "martial-arts"
+      ],
+      "nick": false,
+      "bonusUsed": true,
+      "otherAction": false,
+      "otherActions": 0,
+      "surges": 0,
+      "quickened": false
+    }
+  },
+  {
+    "label": "Hew: Glaive",
+    "out": {
+      "rolled": 1,
+      "status": "done"
+    },
+    "rolls": [
+      [
+        "Actor.slayer0000000001.Item.glaive0000000001.Activity.glaive0000000001",
+        {}
+      ]
+    ],
+    "events": [
+      "pentarynCombat.usage",
+      "pentarynCombat.sequenceEnd",
+      "pentarynCombat.bonusSpent",
+      "pentarynCombat.bonusSpent"
+    ],
+    "turn": {
+      "key": "nocombat",
+      "attackAction": {
+        "weapons": [],
+        "swings": 0,
+        "crit": false,
+        "critWeapon": null,
+        "kill": false,
+        "killWeapon": null
+      },
+      "riders": {},
+      "followUps": [
+        "hew"
+      ],
+      "nick": false,
+      "bonusUsed": true,
+      "otherAction": false,
+      "otherActions": 0,
+      "surges": 0,
+      "quickened": false
+    }
+  },
+  {
+    "label": "Pole Strike",
+    "out": {
+      "rolled": 1,
+      "status": "done"
+    },
+    "rolls": [
+      [
+        "Actor.slayer0000000001.Item.polearmMaster001.Activity.poleStrikeAct001",
+        {}
+      ]
+    ],
+    "events": [
+      "pentarynCombat.usage",
+      "pentarynCombat.sequenceEnd",
+      "pentarynCombat.bonusSpent",
+      "pentarynCombat.bonusSpent"
+    ],
+    "turn": {
+      "key": "nocombat",
+      "attackAction": {
+        "weapons": [],
+        "swings": 0,
+        "crit": false,
+        "critWeapon": null,
+        "kill": false,
+        "killWeapon": null
+      },
+      "riders": {},
+      "followUps": [
+        "pole-strike"
+      ],
+      "nick": false,
+      "bonusUsed": true,
+      "otherAction": false,
+      "otherActions": 0,
+      "surges": 0,
+      "quickened": false
+    }
+  },
+  {
+    "label": "Hew closed and stopped: nothing recorded",
+    "out": {
+      "rolled": 0,
+      "status": "stopped"
+    },
+    "turn": {
+      "key": "nocombat",
+      "attackAction": {
+        "weapons": [],
+        "swings": 0,
+        "crit": false,
+        "critWeapon": null,
+        "kill": false,
+        "killWeapon": null
+      },
+      "riders": {},
+      "followUps": [
+        "pole-strike"
+      ],
+      "nick": false,
+      "bonusUsed": true,
+      "otherAction": false,
+      "otherActions": 0,
+      "surges": 0,
+      "quickened": false
+    }
+  },
+  {
+    "label": "unknown kind",
+    "out": {
+      "rolled": 0,
+      "status": "unknown"
+    },
+    "rolls": [],
+    "events": [],
+    "turn": null
+  }
+]

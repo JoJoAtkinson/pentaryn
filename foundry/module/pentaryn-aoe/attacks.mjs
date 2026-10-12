@@ -10,7 +10,6 @@
 
 import { shouldAutoDamage } from "./core.mjs";
 import { setting } from "./settings.mjs";
-import { on, guard } from "./hooks.mjs";
 
 export async function onPostRollAttack(rolls, { subject } = {}) {
   if (!setting("autoDamageOnHit") || subject?.type !== "attack") return;
@@ -35,6 +34,8 @@ export async function onPostRollAttack(rolls, { subject } = {}) {
   return subject.rollDamage({ attackMode, ammunition, isCritical: roll.isCritical }, { configure: false }, message);
 }
 
-export function installAttacks() {
-  on("dnd5e.postRollAttack", guard("postRollAttack", onPostRollAttack));
+export function install(reg) {
+  reg.on("dnd5e.postRollAttack", reg.guardSwallowAsync("postRollAttack", onPostRollAttack), { guard: false, label: "postRollAttack" });
 }
+
+export function uninstall() {}

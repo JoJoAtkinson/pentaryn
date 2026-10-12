@@ -71,6 +71,7 @@ def test_every_registered_module_has_a_check_target(module):
     ("foundry-module-index", "module-index"),
     ("test", "pytest -q"),
     ("foundry-eval-report", "scripts.foundry.ops eval-report"),
+    ("foundry-importer-install", "scripts.foundry.ops importer-install"),
 ])
 def test_new_targets(target, expect):
     assert expect in _dry(target)
