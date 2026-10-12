@@ -7,7 +7,7 @@
  * that it is a no-op, which cannot happen at runtime — the entry installs features before any render.
  */
 
-import { MODULE, cardHTML, esc, landingCandidate } from "./portals-core.mjs";
+import { MODULE, FLAG_SCOPE, cardHTML, esc, landingCandidate } from "./portals-core.mjs";
 import { cardFor, destinationsOf, docOf, linkPair, lookAt, passageRevealed, snapshot, teleportBehaviors, unlinkRegion } from "./scene-adapter.mjs";
 import { flagPath } from "./lib/flags.mjs";
 
@@ -146,11 +146,11 @@ export class PortalCard extends foundry.applications.api.ApplicationV2 {
     const guard = deps.guard;
     const dest = fromUuidSync(card.dataset.uuid);
     const setImg = guard("card image pick", async path => {
-      await dest.update({ [flagPath(MODULE, "img")]: path });
+      await dest.update({ [flagPath(FLAG_SCOPE, "img")]: path });
       card.querySelector(".ppt-thumb").src = cardFor(dest).img;
     });
     for (const input of card.querySelectorAll("[data-f]")) {
-      input.addEventListener("change", guard("card field", () => dest.update({ [flagPath(MODULE, input.dataset.f)]: input.value })));
+      input.addEventListener("change", guard("card field", () => dest.update({ [flagPath(FLAG_SCOPE, input.dataset.f)]: input.value })));
     }
     card.querySelector('[data-act="snap"]').addEventListener("click", guard("card snapshot", async () => {
       await snapshot(dest);
@@ -161,7 +161,7 @@ export class PortalCard extends foundry.applications.api.ApplicationV2 {
     card.querySelector('[data-act="pick"]').addEventListener("click", pick);
     card.querySelector(".ppt-thumb").addEventListener("click", pick);
     card.querySelector('[data-act="clearimg"]')?.addEventListener("click", guard("card clear image", async () => {
-      await dest.update({ [flagPath(MODULE, "img")]: _del });
+      await dest.update({ [flagPath(FLAG_SCOPE, "img")]: _del });
       await this.render();
     }));
     card.querySelector('[data-act="look"]').addEventListener("click", guard("card look", () => lookAt(dest)));

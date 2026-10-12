@@ -231,3 +231,21 @@ test("EXT-4: card flag paths come from flagPath(MODULE, key); no hand-built `fla
   const { flagPath } = await import("../lib/flags.mjs");
   assert.equal(flagPath(core.MODULE, "img"), "flags.pentaryn-portals.img");
 });
+
+// [declared] M8: FLAG_SCOPE has a reader — every flagPath( call passes FLAG_SCOPE (=== MODULE), not MODULE;
+// and the dead core export behaviorUuidFromDialogId is gone (dialogIdParts is the one parse; the legacy
+// oracle in test/fixtures keeps its own copy).
+test("M8: flagPath calls use FLAG_SCOPE; core no longer exports behaviorUuidFromDialogId", async () => {
+  const { readFileSync, readdirSync } = await import("node:fs");
+  assert.equal(core.FLAG_SCOPE, core.MODULE);
+  let calls = 0;
+  for (const file of readdirSync(ROOT).filter(f => f.endsWith(".mjs"))) {
+    const src = readFileSync(new URL(file, ROOT), "utf8");
+    for (const m of src.matchAll(/\bflagPath\(\s*([A-Za-z_$][\w$.]*)/g)) {
+      calls++;
+      assert.equal(m[1], "FLAG_SCOPE", `${file}: flagPath(${m[1]}, …)`);
+    }
+  }
+  assert.ok(calls >= 5, `found ${calls} flagPath calls`);
+  assert.equal("behaviorUuidFromDialogId" in core, false);
+});

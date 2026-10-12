@@ -7,7 +7,7 @@
  * before any hook can fire).
  */
 
-import { MODULE, SNAP_DIR, esc, cardData, dialogIdParts, cropWindow, translateShapes, blockingWallCoords, tokenBox,
+import { MODULE, FLAG_SCOPE, SNAP_DIR, esc, cardData, dialogIdParts, cropWindow, translateShapes, blockingWallCoords, tokenBox,
   occupiedBy, crowded, isAoeHandle, summonerActorId, playerOwners, isScenery, partySelection, ringSpots, wallBlocker, assignSpots,
   partyPreview, hasDestination, withoutDestination, TELEPORT_TYPE, NEW_TELEPORT_BEHAVIOR } from "./portals-core.mjs";
 import { flagPath } from "./lib/flags.mjs";
@@ -144,7 +144,7 @@ export async function snapshot(regionOrUuid, { squaresWide = 8, squaresHigh = 5 
   const path = res?.path;
   if (!path) return failed();
   // Cache-bust so a re-snapshot shows immediately.
-  await region.update({ [flagPath(MODULE, "img")]: `${path}?v=${Date.now().toString(36)}` });
+  await region.update({ [flagPath(FLAG_SCOPE, "img")]: `${path}?v=${Date.now().toString(36)}` });
   return path;
 }
 

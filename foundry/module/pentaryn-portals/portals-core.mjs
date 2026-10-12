@@ -346,9 +346,6 @@ export function dialogIdParts(id = "") {
   return { behaviorUuid: id.slice("dialog-".length, cut), tokenId: id.slice(cut + 1) };
 }
 
-/** The behaviour uuid of a core teleport dialog id, or null. */
-export const behaviorUuidFromDialogId = id => dialogIdParts(id)?.behaviorUuid ?? null;
-
 /**
  * Every shape moved by (sx, sy): polygon points pairwise, x/y where present and not null. Takes
  * plain shape objects and never mutates them.
