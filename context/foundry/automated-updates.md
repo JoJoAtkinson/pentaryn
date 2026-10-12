@@ -467,6 +467,9 @@ Every one of these was invisible to unit tests and would have silently broken pr
    deactivates first, and waits `SETTLE_SECONDS` because the world's LevelDB closes
    *after* `/api/status` reports inactive (otherwise the next launch logs
    `LEVEL_DATABASE_NOT_OPEN` and the error-log check blames the update).
+   If the graceful deactivate is refused it restarts the app instead; if *that* fails
+   (a wedged Electron makes `quit_app`/`start_app` time out), the world is recorded as
+   a failed smoke (`could not return to setup: <exc>`) and the run still recovers.
 
 5. **`/auth` reports a correct admin password as wrong whenever a world is live.**
    Not a wrong password and not a lapsed secret — the route short-circuits on
