@@ -188,7 +188,7 @@ and foreign flag has a row in `foundry/adjustments.yml` (`combat-*` patch rows; 
 
 The turn flag is written by the actor's owner (`updateTurn`, serialised per actor on one client).
 The active GM alone sweeps effects at a turn boundary, gives the Reaction back, clears a deleted
-combat's flags (one write per actor), sweeps orphans at load and seeds weapon sets. Of two GM tabs, one claims each turn on the Combat (`claimDocument`) and sweeps; the other stands down (ac-4).
+combat's flags (one write per actor), sweeps orphans at load (every actor in one `Actor.updateDocuments` batch, ac-5) and seeds weapon sets. Of two GM tabs, one claims each turn on the Combat (`claimDocument`) and sweeps; the other stands down (ac-4).
 A deleted combat's cleanup runs in both, idempotently: an effect already gone is skipped or its "does not exist" is success (debug); a gone flag key is a no-op.
 
 ## Extending

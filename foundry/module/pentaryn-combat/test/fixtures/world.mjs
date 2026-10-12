@@ -166,6 +166,30 @@ export async function setupWorld({ gm = true, aoe = false, aoeAutoDamage = false
   def("fromUuidSync", (uuid) => resolve(uuid));
   def("fromUuid", async (uuid) => resolve(uuid));
 
+  /*
+   * Actor.implementation.updateDocuments (ac-5: the orphan sweep's one batch). F.calls records ONE
+   * {op: "Actor.updateDocuments", updates}; each row is applied through its actor's own update (so
+   * the pre/update hooks fire per document, as Foundry's batch does, and a test's update override
+   * still bites) and that per-document record is taken back out of F.calls.
+   */
+  const ActorClass = {
+    async updateDocuments(updates = [], options = {}) {
+      F.calls.push({ op: "Actor.updateDocuments", updates: F.plain(updates) });
+      const out = [];
+      for (const { _id, ...changes } of updates) {
+        const a = F.game.actors.get(_id);
+        if (!a) continue;
+        const at = F.calls.length;
+        out.push(await a.update(changes, options));
+        const i = F.calls.findIndex((c, k) => k >= at && c.op === "update" && c.uuid === a.uuid);
+        if (i >= 0) F.calls.splice(i, 1);
+      }
+      return out;
+    },
+  };
+  ActorClass.implementation = ActorClass;
+  def("Actor", ActorClass);
+
   W = { F, doc, argon, scene, placeables, uuids: new Map(), TargetSet, RollResolver, PreciseText, DisplayObject, InterfaceCanvasGroup, ChatLog };
   return W;
 }

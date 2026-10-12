@@ -352,10 +352,10 @@ test("a deleted combat: its combatants' effects swept and their combat flags cle
   F.calls.length = 0;
   F.Hooks.callAll("deleteCombat", c9);
   await drain();
-  const now = F.calls.splice(0).filter(c => ["deleteEmbedded", "update"].includes(c.op));
+  const now = F.calls.splice(0).filter(c => ["deleteEmbedded", "update", "Actor.updateDocuments"].includes(c.op));
   mock.timers.tick(1500);
   await drain();
-  const later = F.calls.splice(0).filter(c => ["deleteEmbedded", "update"].includes(c.op));
+  const later = F.calls.splice(0).filter(c => ["deleteEmbedded", "update", "Actor.updateDocuments"].includes(c.op));
   pinJSON("turnflow-delete-combat", { now, later, flags: { fig: fig.flags[MODULE], rog: rog.flags[MODULE], brb: brb.flags[MODULE] } }, import.meta.url);
   assert.deepEqual(fig.flags[MODULE], {});
   assert.deepEqual(rog.flags[MODULE], { turn: { key: "nocombat" } }, "the other combat's reaction is an orphan too (no such combat)");

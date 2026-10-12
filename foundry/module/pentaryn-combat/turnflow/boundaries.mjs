@@ -131,9 +131,11 @@ const combatFlagsOf = (actor) => ({ turn: actor.getFlag?.(MODULE, "turn"), react
  * form v14's Document#unsetFlag uses ({flags: {scope: {key: _del}}}), instead of one write per key.
  * @returns {Promise<number>} keys dropped
  */
+const unsetKeys = keys => ({ [MODULE]: Object.fromEntries(keys.map(k => [k, _del])) });
+
 async function dropCombatFlags(actor, keys) {
   if (!keys.length) return 0;
-  await actor.update({ flags: { [MODULE]: Object.fromEntries(keys.map(k => [k, _del])) } });
+  await actor.update({ flags: unsetKeys(keys) });
   return keys.length;
 }
 
@@ -146,15 +148,22 @@ async function clearCombatFlags(actor, combatId) {
  * Area 10: a turn flag from a combat deleted before the cleanup above existed (or while no GM was
  * connected) stayed on a PC for good. The active GM removes every world actor's turn and Reaction
  * flags whose combat no longer exists, on load and a moment after any combat is deleted.
+ * ac-5 [declared, perf]: every actor's orphan keys go in ONE Actor.updateDocuments batch, not one
+ * awaited write per actor.
+ * @returns {Promise<number>} keys dropped
  */
 async function sweepOrphanFlags() {
   if (!game.users.activeGM?.isSelf) return 0;
   const live = game.combats.map(c => c.id);
+  const rows = [];
   let n = 0;
   for (const actor of game.actors) {
     const keys = core.orphanCombatFlags(combatFlagsOf(actor), live);
-    n += await dropCombatFlags(actor, keys);
+    if (!keys.length) continue;
+    rows.push({ _id: actor.id, flags: unsetKeys(keys) });
+    n += keys.length;
   }
+  if (rows.length) await Actor.implementation.updateDocuments(rows);
   return n;
 }
 

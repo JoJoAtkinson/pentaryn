@@ -9,30 +9,31 @@
       "name": "pentaryn.ready"
     },
     {
-      "op": "settings.set",
-      "id": "enhancedcombathud.targetPickerGuideShown",
-      "value": true
+      "op": "Actor.updateDocuments",
+      "updates": [
+        {
+          "_id": "wolf000000000001",
+          "flags": {
+            "pentaryn-combat": {
+              "turn": "<_del>",
+              "reaction": "<_del>"
+            }
+          }
+        }
+      ]
     },
     {
       "op": "Hooks.call",
       "name": "preUpdateActor"
     },
     {
-      "op": "update",
-      "documentName": "Actor",
-      "uuid": "Actor.wolf000000000001",
-      "changes": {
-        "flags": {
-          "pentaryn-combat": {
-            "turn": "<_del>",
-            "reaction": "<_del>"
-          }
-        }
-      }
-    },
-    {
       "op": "Hooks.callAll",
       "name": "updateActor"
+    },
+    {
+      "op": "settings.set",
+      "id": "enhancedcombathud.targetPickerGuideShown",
+      "value": true
     }
   ],
   "afterTick": [
