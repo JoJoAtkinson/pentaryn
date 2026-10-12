@@ -474,7 +474,7 @@ export async function releaseHeldAttribute(character, attrId) {
  * one stub per gesture holds, and this is the GM's action, not the player's.
  */
 export async function deliverHeldIdentifications(character, subject) {
-  if (!game.user?.isGM) return false;
+  if (!game.user?.isGM || !character || !subject) return false;
   const all = readFlag(subject, MODULE, BELIEFS_FLAG) ?? {};
   const mine = all[character.id] ?? {};
   const now = Date.now();

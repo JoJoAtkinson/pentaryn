@@ -67,6 +67,10 @@ rewritten whole, so `putBelief` now confirms its write like a claim: it waits 25
 ledger and, when its row is missing or different (a reset: present again), re-applies that one row on
 the fresh value so both sessions' rows survive. An uncontested write is still one write. AC-2.
 
+Fixed (declared): **Deliver** on a held identification whose character or creature is gone (a
+deleted actor, a stale id) now does nothing and returns `false` instead of throwing a TypeError —
+`deliverHeldIdentifications` guards both like `resetIdentification`. rob-1.
+
 ## 0.19.4 (2026-10-10, usability run, Area 7 re-run)
 
 - **The inspect window's Share switches are the table's PCs only** (`tablePCs`): each player's
