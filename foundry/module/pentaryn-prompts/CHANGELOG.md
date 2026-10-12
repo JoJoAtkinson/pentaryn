@@ -27,6 +27,9 @@ cssPrefix `pp-`, afterSync). Each **[declared]** change goes to the live check.
 - **[declared] The side panel follows a rename** (PT 2026-10-12, the DP8 live check): an
   `updateToken` that changes a token's `name` or `texture` redraws the open panels, so renaming an
   actor in view (core renames its linked tokens with a name-only update) shows the new name.
+- **[declared] The side panel follows a ring or prompt edit** (EC-1): an `updateToken` that changes
+  a token's `ring` or its `flags.pentaryn-prompts.prompt` redraws the open panels too, so a
+  ring-subject swap, or a prompt edit saved without a nameplate change, shows at once.
 - **[declared] The side panel follows note edits, lights and tiles** (M1): `updateNote` and the
   create/update/delete hooks for `AmbientLight` and `Tile` redraw the open panels too (the panel
   lists provenance lights and tiles as rows), as the README already said; the 250 ms debounce
