@@ -1708,7 +1708,7 @@ def c58(m):
     detail, manual = [], []
     for rel, src in m.files.items():
         code = src.code
-        for mm in re.finditer(r"(?<![\w$.])serialStore\(\s*[\w$.]+\s*,\s*", code):
+        for mm in re.finditer(r"(?<![\w$.])serialStore\(\s*(?:[\w$.]+|\x01\d+\x01)\s*,\s*", code):
             where = f"{rel}:{src.line_of(mm.start())}"
             lit = lit_after(src, mm.end())
             if lit is not None and lit.plain:

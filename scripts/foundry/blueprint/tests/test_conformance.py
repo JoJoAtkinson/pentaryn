@@ -519,6 +519,8 @@ C58_CASES = [
     ('const a = serialStore(MODULE, ["b", "a"]);\nconst b = serialStore(MODULE, ["a", "b"]);', "fail"),
     ('const a = serialStore(MODULE, ["a", "b"]);\nconst b = serialStore(MODULE, "a");', "fail"),
     ('const a = serialStore(MODULE, key);', "pass"),                             # non-literal: noted
+    ('const a = serialStore("pentaryn-async", "ledger");', "pass"),               # literal module id
+    ('const a = serialStore("pentaryn-async", "ledger");\nconst b = serialStore("pentaryn-async", "ledger");', "fail"),
 ]
 
 
