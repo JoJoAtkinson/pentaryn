@@ -214,6 +214,7 @@ async function relay(data, { user } = {}) {
 async function claimedHeal(target, requestId, me, heal) {
   const base = `relay.${requestId}`;
   const mine = flagPath(MODULE, `${base}.claims.${me}`);
+  const release = () => target.update({ [mine]: _del }).catch(err => log.warn("battle medic relay: claim not released", err));
   // Already answered (a slow tab: the winner recorded before this one started) → no stamp, no heal.
   const done = recordedAnswer(readFlag(target, MODULE, base));
   if (done) return done();
@@ -225,15 +226,15 @@ async function claimedHeal(target, requestId, me, heal) {
     try {
       return late();
     } finally {
-      await target.update({ [mine]: _del }).catch(err => log.warn("battle medic relay: claim not released", err));
+      await release();
     }
   }
   if (!relayClaimWinner(readFlag(target, MODULE, `${base}.claims`), me, Date.now(), CLAIM_STALE_MS)) {
     log.debug("battle medic relay: another GM tab claimed it — waiting for its result", { requestId });
     try {
-      return { result: await waitForResult(target, requestId), wrote: false };
+      return await waitForResult(target, requestId);
     } finally {
-      await target.update({ [mine]: _del }).catch(err => log.warn("battle medic relay: claim not released", err));
+      await release();
     }
   }
   const record = fields => {
@@ -263,12 +264,11 @@ function recordedAnswer(entry) {
   return null;
 }
 
-/** The losing tab: the winner's recorded result (or its error), once it arrives by broadcast. */
+/** The losing tab: the winner's recorded answer (its result, or its error thrown), once it arrives by broadcast. */
 async function waitForResult(target, requestId) {
   for (let waited = 0; ; waited += POLL_MS) {
-    const entry = readFlag(target, MODULE, `relay.${requestId}`);
-    if (entry?.result) return entry.result;
-    if (entry?.error) throw new Error(entry.error);
+    const answer = recordedAnswer(readFlag(target, MODULE, `relay.${requestId}`));
+    if (answer) return answer();
     if (waited >= LOSER_WAIT_MS) throw new Error("another GM tab claimed this Battle Medic and did not finish");
     await new Promise(resolve => setTimeout(resolve, POLL_MS));
   }
