@@ -7,7 +7,7 @@
  * have starry.mjs's and hud-panels.mjs's listeners after these.
  */
 
-import { MODULE, EFFECT_ID, isWildShapeActivity, isExpired, pruneFavorites, formTempHP, worldTimeCandidates } from "./transform-core.mjs";
+import { MODULE, EFFECT_ID, isWildShapeActivity, isExpired, pruneFavorites, formTempHP, worldTimeCandidates, canRunAny } from "./transform-core.mjs";
 import { makeLog } from "./lib/log.mjs";
 import {
   isRevertItem, original, wildShapeActivity, isWildShapeForm, exists, activeFormOf, blockedShift, say, RETURN_LINES,
@@ -162,8 +162,9 @@ function onEffectDelete(effect) {
 // Duration: the effect registry covers it; this covers time moved while no GM is connected and
 // keeps working if a world sets CONFIG.ActiveEffect.expiryAction to something else.
 function onWorldTime(worldTime) {
-  // hot: no cache — game.actors + the viewed scene's unlinked tokens, every client, every tick (C49;
-  // transform-creatures-2 skips it on a client that cannot be the runner).
+  // hot: no cache — game.actors + the viewed scene's unlinked tokens, every tick, but only on a client
+  // that can be the runner: while another user is the active GM nothing here could act (-2).
+  if (!canRunAny({ activeGMId: game.users.activeGM?.id ?? null, selfId: game.user.id })) return;
   for (const actor of worldTimeCandidates(game.actors, canvas.scene?.tokens)) {
     if (!isWildShapeForm(actor)) continue;
     if (isExpired(actor.getFlag(MODULE, "wildshape")?.endsAt, worldTime)) maybeAutoRevert(actor, "expired");

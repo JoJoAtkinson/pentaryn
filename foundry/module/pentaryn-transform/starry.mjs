@@ -4,7 +4,7 @@
  * hud.mjs (esmodules[1]) right before the HUD panels, where its hooks always registered.
  */
 
-import { MODULE, starryBlock, refundUpdate } from "./transform-core.mjs";
+import { MODULE, starryBlock, refundUpdate, canRunAny } from "./transform-core.mjs";
 import { makeLog } from "./lib/log.mjs";
 import { isRunner } from "./wildshape-adapter.mjs";
 import {
@@ -75,8 +75,9 @@ function onStarryDelete(effect) {
 
 // 10 minutes of world time.
 function onWorldTime() {
-  // hot: no cache — every world actor, every client, every tick (C49; transform-creatures-2 skips it
-  // on a client that cannot be the runner; -22: unlinked druid tokens are not checked, a live decision).
+  // hot: no cache — every world actor, every tick, but only on a client that can be the runner (-2);
+  // -22: unlinked druid tokens are not checked, a live decision (D8).
+  if (!canRunAny({ activeGMId: game.users.activeGM?.id ?? null, selfId: game.user.id })) return;
   for (const actor of game.actors) {
     if (!activeStarry(actor)) continue;
     const left = starrySecondsLeft(actor);

@@ -108,3 +108,32 @@ test("-11 [declared] T-D7 pointermove arms no timer while no tooltip is up or it
     game.tooltip.element = null;
   }
 });
+
+/* ── -2 world-time scans only where the runner can be ─────────────────────── */
+
+test("-2 [declared] T-D6 updateWorldTime: a player's client skips both scans while a GM is connected; with no GM the owner's still ends the form", async () => {
+  const { talo } = fresh();
+  const wolf = await T.shift(talo, "p1");
+  let scans = 0;
+  const realIter = game.actors[Symbol.iterator];
+  game.actors[Symbol.iterator] = function () { scans++; return realIter.call(this); };
+  try {
+    F.become({ userId: IDS.player });
+    Hooks.callAll("updateWorldTime", 30_000, 30_000);
+    assert.equal(scans, 0, "neither the Wild Shape nor the Starry scan ran");
+    F.become({ userId: IDS.gm });
+    Hooks.callAll("updateWorldTime", 10, 10);
+    assert.equal(scans, 2, "the GM's client scans (Wild Shape, Starry)");
+    F.calls.length = 0;
+    game.users.get(IDS.gm).active = false;
+    F.become({ userId: IDS.player });
+    Hooks.callAll("updateWorldTime", 30_000, 30_000);
+    await flush();
+    assert.equal(scans, 4, "no GM connected: the owner's client scans");
+    assert.deepEqual(F.calls.filter(c => c.op === "revertOriginalForm").map(c => c.actor), [wolf.id], "and ends the expired form");
+  } finally {
+    game.actors[Symbol.iterator] = realIter;
+    game.users.get(IDS.gm).active = true;
+    F.become({ userId: IDS.gm });
+  }
+});
