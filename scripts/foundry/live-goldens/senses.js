@@ -57,6 +57,8 @@ const tagLitBy = (status, inspect) => {
   for (const id of idsIn) if (id && !ids.has(id)) tag(id, `lit-${n++}`);
 };
 const caught = e => ({ threw: true, name: e?.name ?? null, ctor: e?.constructor?.name ?? null, message: String(e?.message ?? e) });
+/** Cleanup: run one step; a failure becomes a `NOT ` string diff.mjs fails on, and the next step still runs (LG-R8). */
+const safely = async (name, fn) => { try { await fn(); } catch (e) { out.cleanup[`${name}CleanupError`] = `NOT done: ${e?.message ?? e}`; } };
 const probe = async fn => { try { return await fn(); } catch (e) { return caught(e); } };
 const keysOf = o => Object.keys(o ?? {}).sort();
 /** One macrotask through a MessageChannel: unlike setTimeout it is not throttled in a hidden tab (J20). */
@@ -219,9 +221,9 @@ try {
   const zzActors = new Set([carrier?.id, target?.id].filter(Boolean));
   const mine = game.messages.filter(m => !msgsBefore.has(m.id) && zzActors.has(m.speaker?.actor));
   out.cleanup.chatDeleted = mine.length;
-  for (const m of mine) await m.delete();
-  if (scene && game.scenes.get(scene.id)) await scene.delete();
-  for (const a of [carrier, target]) if (a && game.actors.get(a.id)) await a.delete();
+  for (const m of mine) await safely("chat", () => m.delete());
+  if (scene && game.scenes.get(scene.id)) await safely("scene", () => scene.delete());
+  for (const [name, a] of Object.entries({ carrier, target })) if (a && game.actors.get(a.id)) await safely(name, () => a.delete());
   out.cleanup.zzLeft = game.actors.filter(a => a.name.startsWith("ZZ ")).length + game.scenes.filter(s => s.name.startsWith("ZZ ")).length;
   out.cleanup.zzMessagesLeft = game.messages.filter(m => !msgsBefore.has(m.id) && zzActors.has(m.speaker?.actor)).length;
 }

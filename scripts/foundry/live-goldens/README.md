@@ -27,7 +27,11 @@ matched nothing is named. Keep the globs to what the wave's plan declares.
 **Cleanup keys.** `diff.mjs` judges a `cleanup` by its top-level key names only. Report leftovers
 as `<thing>Left: <count>` (fails above 0) and restores as `<thing>Restored: <boolean>` (fails when
 `false`); a top-level string containing `REFUSED` or `NOT ` also fails. Any other key — nested
-objects included — is printed but never judged.
+objects included — is printed but never judged. Every awaited step in a `finally` runs through the
+preamble's `safely(name, fn)`: a refused delete or restore is recorded as
+`<name>CleanupError: "NOT done: <why>"` and the next step still runs, so one failure never leaves
+the remaining ZZ documents behind (`scripts/tests/test_live_goldens_cleanup_safely.py`). Add to
+`out.cleanup` in `finally` (`Object.assign`), never replace it, or those keys are lost.
 
 ## Known run-to-run noise
 

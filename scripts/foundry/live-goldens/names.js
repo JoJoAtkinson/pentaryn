@@ -31,6 +31,8 @@ const strip = v => Array.isArray(v) ? v.map(strip)
   : v;
 const norm = v => { let s = JSON.stringify(strip(v) ?? null); for (const [id, l] of ids) s = s.split(id).join(`<${l}>`); return JSON.parse(s); };
 const caught = e => ({ threw: true, name: e?.name ?? null, ctor: e?.constructor?.name ?? null, message: String(e?.message ?? e) });
+/** Cleanup: run one step; a failure becomes a `NOT ` string diff.mjs fails on, and the next step still runs (LG-R8). */
+const safely = async (name, fn) => { try { await fn(); } catch (e) { out.cleanup[`${name}CleanupError`] = `NOT done: ${e?.message ?? e}`; } };
 /** One macrotask through a MessageChannel: unlike setTimeout it is not throttled in a hidden tab (J20). */
 const tick = () => new Promise(r => { const c = new MessageChannel(); c.port1.onmessage = () => { c.port1.close(); r(); }; c.port2.postMessage(0); });
 /** Wait ms of wall time, yielding with tick() (a hidden tab clamps setTimeout to 1 s or more). */
@@ -113,12 +115,12 @@ try {
   out.golden.error = caught(e);
 } finally {
   if (hadOwnInfo) notes.info = origInfo; else delete notes.info;
-  if (scene && game.scenes.get(scene.id)) await scene.delete();
-  if (actor && game.actors.get(actor.id)) await actor.delete();
-  out.cleanup = {
+  if (scene && game.scenes.get(scene.id)) await safely("scene", () => scene.delete());
+  if (actor && game.actors.get(actor.id)) await safely("actor", () => actor.delete());
+  Object.assign(out.cleanup, {
     infoRestored: ui.notifications.info === origInfo,
     zzLeft: game.actors.filter(a => a.name.startsWith("ZZ ")).length + game.scenes.filter(s => s.name.startsWith("ZZ ")).length
-  };
+  });
 }
 out.golden = norm(out.golden);
 // a string, not the object: the eval bridge truncates nested results at a fixed depth

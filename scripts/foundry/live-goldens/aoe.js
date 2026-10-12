@@ -43,6 +43,8 @@ const strip = v => Array.isArray(v) ? v.map(strip)
   : v;
 const norm = v => { let s = JSON.stringify(strip(v) ?? null); for (const [id, l] of ids) s = s.split(id).join(`<${l}>`); return JSON.parse(s); };
 const caught = e => ({ threw: true, name: e?.name ?? null, ctor: e?.constructor?.name ?? null, message: String(e?.message ?? e) });
+/** Cleanup: run one step; a failure becomes a `NOT ` string diff.mjs fails on, and the next step still runs (LG-R8). */
+const safely = async (name, fn) => { try { await fn(); } catch (e) { out.cleanup[`${name}CleanupError`] = `NOT done: ${e?.message ?? e}`; } };
 const probe = async fn => { try { return await fn(); } catch (e) { return caught(e); } };
 const keysOf = o => Object.keys(o ?? {}).sort();
 /** One macrotask through a MessageChannel: unlike setTimeout it is not throttled in a hidden tab (J20). */
@@ -208,13 +210,13 @@ try {
   if (!e?.skip) S.error = caught(e);
 } finally {
   await sleep(300);
-  if (scene && game.scenes.get(scene.id)) await scene.delete();
-  if (caster && game.actors.get(caster.id)) await caster.delete();
-  out.cleanup = {
+  if (scene && game.scenes.get(scene.id)) await safely("scene", () => scene.delete());
+  if (caster && game.actors.get(caster.id)) await safely("caster", () => caster.delete());
+  Object.assign(out.cleanup, {
     zzLeft: game.actors.filter(a => a.name.startsWith("ZZ ")).length + game.scenes.filter(s => s.name.startsWith("ZZ ")).length,
     handleActorsLeft: Math.max(0, game.actors.filter(a => a.flags?.[MOD]?.handleActor).length - (out.env.handleActor?.count ?? 0)),
     settingsRestored: JSON.stringify(Object.fromEntries(SETTING_KEYS().map(k => [k, rawSetting(k)]))) === JSON.stringify(settingsBefore)
-  };
+  });
 }
 out.golden = norm(out.golden);
 // a string, not the object: the eval bridge truncates nested results at a fixed depth

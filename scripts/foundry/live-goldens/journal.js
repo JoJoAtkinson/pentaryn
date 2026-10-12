@@ -42,6 +42,8 @@ const norm = v => { let s = JSON.stringify(strip(v) ?? null); for (const [id, l]
 /** A text with every tagged id replaced by its label, so a hash of it compares across runs. */
 const idsOut = text => { let s = String(text); for (const [id, l] of ids) s = s.split(id).join(`<${l}>`); return s; };
 const caught = e => ({ threw: true, name: e?.name ?? null, ctor: e?.constructor?.name ?? null, message: String(e?.message ?? e) });
+/** Cleanup: run one step; a failure becomes a `NOT ` string diff.mjs fails on, and the next step still runs (LG-R8). */
+const safely = async (name, fn) => { try { await fn(); } catch (e) { out.cleanup[`${name}CleanupError`] = `NOT done: ${e?.message ?? e}`; } };
 const probe = async fn => { try { return await fn(); } catch (e) { return caught(e); } };
 const keysOf = o => Object.keys(o ?? {}).sort();
 const fnv = s => { let h = 0x811c9dc5; s = String(s ?? ""); for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193); } return (h >>> 0).toString(16).padStart(8, "0"); };
@@ -194,25 +196,25 @@ try {
   S.error = caught(e);
 } finally {
   for (const [lvl, s] of Object.entries(spied)) { if (s.own) notes[lvl] = s.fn; else delete notes[lvl]; }
-  if ("gmButton" in saved && game.settings.get(MOD, "gmButton") !== saved.gmButton) await game.settings.set(MOD, "gmButton", saved.gmButton);
+  if ("gmButton" in saved && game.settings.get(MOD, "gmButton") !== saved.gmButton) await safely("gmButton", () => game.settings.set(MOD, "gmButton", saved.gmButton));
   for (const app of [...foundry.applications.instances.values()]) {
     // LG-E5: an app with no document must never match the null src/owned/gmJournal ids
     const id = app.document?.id;
-    if (app.rendered && id && !openedBefore.has(app.id) && [src?.id, owned?.id, gmJournal?.id].includes(id)) await app.close();
+    if (app.rendered && id && !openedBefore.has(app.id) && [src?.id, owned?.id, gmJournal?.id].includes(id)) await safely("sheet", () => app.close());
   }
   let pagesDeleted = 0;
   if (gmJournal && game.journal.get(gmJournal.id)) {
-    if (createdGmJournal) await gmJournal.delete();
+    if (createdGmJournal) await safely("gmJournal", () => gmJournal.delete());
     else {
       const mine = gmJournal.pages.contents.filter(p => !pagesBefore.has(p.id)).map(p => p.id);
-      if (mine.length) await gmJournal.deleteEmbeddedDocuments("JournalEntryPage", mine);
+      if (mine.length) await safely("gmJournalPages", () => gmJournal.deleteEmbeddedDocuments("JournalEntryPage", mine));
       pagesDeleted = mine.length;
     }
   }
-  if (createdFolder && game.folders.get(createdFolder) && !game.folders.get(createdFolder).contents.length) await game.folders.get(createdFolder).delete();
-  for (const j of [src, owned]) if (j && game.journal.get(j.id)) await j.delete();
+  if (createdFolder && game.folders.get(createdFolder) && !game.folders.get(createdFolder).contents.length) await safely("folder", () => game.folders.get(createdFolder).delete());
+  for (const [name, j] of Object.entries({ src, owned })) if (j && game.journal.get(j.id)) await safely(name, () => j.delete());
   const gmJournalPagesNow = gmJournal && game.journal.get(gmJournal.id) ? game.journal.get(gmJournal.id).pages.size : null;
-  out.cleanup = {
+  Object.assign(out.cleanup, {
     gmButtonRestored: "gmButton" in saved ? game.settings.get(MOD, "gmButton") === saved.gmButton : null,
     toastsRestored: ["info", "warn", "error"].every(l => ui.notifications[l] === spied[l].fn),
     gmJournal: createdGmJournal ? "created and deleted" : `kept, ${pagesDeleted} page(s) removed`,
@@ -222,7 +224,7 @@ try {
     gmJournalPagesLeft: Math.max(0, (gmJournalPagesNow ?? 0) - pagesBefore.size),
     folder: createdFolder ? (game.folders.get(createdFolder) ? "created, NOT deleted (not empty)" : "created and deleted") : "untouched",
     zzJournalsLeft: game.journal.filter(j => j.name.startsWith("ZZ ")).length
-  };
+  });
 }
 out.golden = norm(out.golden);
 // a string, not the object: the eval bridge truncates nested results at a fixed depth

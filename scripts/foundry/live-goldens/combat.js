@@ -41,6 +41,8 @@ const strip = v => Array.isArray(v) ? v.map(strip)
   : v;
 const norm = v => { let s = JSON.stringify(strip(v) ?? null); for (const [id, l] of ids) s = s.split(id).join(`<${l}>`); return JSON.parse(s); };
 const caught = e => ({ threw: true, name: e?.name ?? null, ctor: e?.constructor?.name ?? null, message: String(e?.message ?? e) });
+/** Cleanup: run one step; a failure becomes a `NOT ` string diff.mjs fails on, and the next step still runs (LG-R8). */
+const safely = async (name, fn) => { try { await fn(); } catch (e) { out.cleanup[`${name}CleanupError`] = `NOT done: ${e?.message ?? e}`; } };
 const probe = async fn => { try { return await fn(); } catch (e) { return caught(e); } };
 const keysOf = o => Object.keys(o ?? {}).sort();
 /** One macrotask through a MessageChannel: unlike setTimeout it is not throttled in a hidden tab (J20). */
@@ -175,14 +177,14 @@ try {
 } catch (e) {
   if (!e?.skip) S.error = caught(e);
 } finally {
-  if (npc && game.actors.get(npc.id)) await npc.delete();
+  if (npc && game.actors.get(npc.id)) await safely("npc", () => npc.delete());
   await sleep(100);
-  out.cleanup = {
+  Object.assign(out.cleanup, {
     zzActorsLeft: game.actors.filter(a => a.name.startsWith("ZZ ")).length,
     zzMessagesLeft: game.messages.filter(m => (m.speaker?.alias ?? "").startsWith("ZZ ")).length,
     settingsRestored: JSON.stringify(Object.fromEntries(SETTING_KEYS().map(k => [k, rawSetting(k)]))) === JSON.stringify(settingsBefore),
     userFlagsRestored: JSON.stringify(game.user.flags?.[MOD] ?? null) === userFlagsBefore
-  };
+  });
 }
 out.golden = norm(out.golden);
 // a string, not the object: the eval bridge truncates nested results at a fixed depth

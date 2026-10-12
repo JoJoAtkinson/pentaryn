@@ -47,6 +47,8 @@ const strip = v => Array.isArray(v) ? v.map(strip)
   : v;
 const norm = v => { let s = JSON.stringify(strip(v) ?? null); for (const [id, l] of ids) s = s.split(id).join(`<${l}>`); return JSON.parse(s); };
 const caught = e => ({ threw: true, name: e?.name ?? null, ctor: e?.constructor?.name ?? null, message: String(e?.message ?? e) });
+/** Cleanup: run one step; a failure becomes a `NOT ` string diff.mjs fails on, and the next step still runs (LG-R8). */
+const safely = async (name, fn) => { try { await fn(); } catch (e) { out.cleanup[`${name}CleanupError`] = `NOT done: ${e?.message ?? e}`; } };
 /** One macrotask through a MessageChannel: unlike setTimeout it is not throttled in a hidden tab (J20). */
 const tick = () => new Promise(r => { const c = new MessageChannel(); c.port1.onmessage = () => { c.port1.close(); r(); }; c.port2.postMessage(0); });
 /** Wait ms of wall time, yielding with tick() (a hidden tab clamps setTimeout to 1 s or more). */
@@ -144,8 +146,8 @@ try {
 } catch (e) {
   out.golden.error = caught(e);
 } finally {
-  if (scene && game.scenes.get(scene.id)) await scene.delete();
-  out.cleanup = { zzScenesLeft: game.scenes.filter(s => s.name.startsWith("ZZ ")).length };
+  if (scene && game.scenes.get(scene.id)) await safely("scene", () => scene.delete());
+  out.cleanup.zzScenesLeft = game.scenes.filter(s => s.name.startsWith("ZZ ")).length;
   out.cleanup.pingLogRestored = await restorePingLog();
   // scratch records in the store or in the cache (the module's buffer re-reads the cache)
   out.cleanup.pingScratchLeft = scene ? Math.max(storedLog().filter(r => r.sceneId === scene.id).length, (game.settings.get(MOD, "log") ?? []).filter(r => r.sceneId === scene.id).length) : 0;

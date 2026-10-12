@@ -42,6 +42,8 @@ const strip = v => Array.isArray(v) ? v.map(strip)
   : v;
 const norm = v => { let s = JSON.stringify(strip(v) ?? null); for (const [id, l] of ids) s = s.split(id).join(`<${l}>`); return JSON.parse(s); };
 const caught = e => ({ threw: true, name: e?.name ?? null, ctor: e?.constructor?.name ?? null, message: String(e?.message ?? e) });
+/** Cleanup: run one step; a failure becomes a `NOT ` string diff.mjs fails on, and the next step still runs (LG-R8). */
+const safely = async (name, fn) => { try { await fn(); } catch (e) { out.cleanup[`${name}CleanupError`] = `NOT done: ${e?.message ?? e}`; } };
 const probe = async fn => { try { return await fn(); } catch (e) { return caught(e); } };
 const keysOf = o => Object.keys(o ?? {}).sort();
 /** One macrotask through a MessageChannel: unlike setTimeout it is not throttled in a hidden tab (J20). */
@@ -158,13 +160,13 @@ try {
   Hooks.off("createChatMessage", hookId);
   await tick();
   const mine = chats.filter(id => game.messages.has(id));
-  if (mine.length) await ChatMessage.deleteDocuments(mine);
-  if (scene && game.scenes.get(scene.id)) await scene.delete();
-  out.cleanup = {
+  if (mine.length) await safely("chat", () => ChatMessage.deleteDocuments(mine));
+  if (scene && game.scenes.get(scene.id)) await safely("scene", () => scene.delete());
+  Object.assign(out.cleanup, {
     chatDeleted: mine.length,
     chatLeft: chats.filter(id => game.messages.has(id)).length,
     zzScenesLeft: game.scenes.filter(s => s.name.startsWith("ZZ ")).length
-  };
+  });
 }
 out.golden = norm(out.golden);
 // a string, not the object: the eval bridge truncates nested results at a fixed depth

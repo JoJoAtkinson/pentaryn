@@ -11,7 +11,7 @@ import pytest
 GOLDENS = Path(__file__).resolve().parents[2] / "scripts/foundry/live-goldens"
 TEXTS = {p.stem: p.read_text(encoding="utf-8") for p in sorted(GOLDENS.glob("*.js"))}
 
-ONE_LINE = ["median", "norm", "caught", "tick", "sleep", "probe", "keysOf", "tag", "fnv"]
+ONE_LINE = ["median", "norm", "caught", "tick", "sleep", "probe", "keysOf", "tag", "fnv", "safely"]
 # name -> (start anchor, closing text); the block runs from the anchor through the closing text.
 BLOCKS = {
     "timeIt": ("async function timeIt(", "\n}\n"),

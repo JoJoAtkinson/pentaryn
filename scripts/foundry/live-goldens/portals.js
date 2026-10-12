@@ -46,6 +46,8 @@ const strip = v => Array.isArray(v) ? v.map(strip)
   : v;
 const norm = v => { let s = JSON.stringify(strip(v) ?? null); for (const [id, l] of ids) s = s.split(id).join(`<${l}>`); return JSON.parse(s); };
 const caught = e => ({ threw: true, name: e?.name ?? null, ctor: e?.constructor?.name ?? null, message: String(e?.message ?? e) });
+/** Cleanup: run one step; a failure becomes a `NOT ` string diff.mjs fails on, and the next step still runs (LG-R8). */
+const safely = async (name, fn) => { try { await fn(); } catch (e) { out.cleanup[`${name}CleanupError`] = `NOT done: ${e?.message ?? e}`; } };
 const probe = async fn => { try { return await fn(); } catch (e) { return caught(e); } };
 /** Map an array; keep anything else (a caught `{threw, name, message}`, a "no x" string) as-is (LG-R7). */
 const mapOr = (v, f) => Array.isArray(v) ? v.map(f) : (v ?? "undefined");
@@ -199,14 +201,14 @@ try {
   S.error = caught(e);
 } finally {
   await sleep(300);                                                       // D-P3's 50 ms region-hook debounce
-  if (sceneA && game.scenes.get(sceneA.id)) await sceneA.delete();
-  if (sceneB && game.scenes.get(sceneB.id)) await sceneB.delete();
-  if (actor && game.actors.get(actor.id)) await actor.delete();
-  if (ghostActor && game.actors.get(ghostActor.id)) await ghostActor.delete();
-  out.cleanup = {
+  if (sceneA && game.scenes.get(sceneA.id)) await safely("sceneA", () => sceneA.delete());
+  if (sceneB && game.scenes.get(sceneB.id)) await safely("sceneB", () => sceneB.delete());
+  if (actor && game.actors.get(actor.id)) await safely("actor", () => actor.delete());
+  if (ghostActor && game.actors.get(ghostActor.id)) await safely("ghostActor", () => ghostActor.delete());
+  Object.assign(out.cleanup, {
     zzLeft: game.actors.filter(a => a.name.startsWith("ZZ ")).length + game.scenes.filter(s => s.name.startsWith("ZZ ")).length,
     settingsRestored: JSON.stringify({ teleportDefault: setting("teleportDefault"), spreadArrivals: setting("spreadArrivals"), confirmPartyTeleport: setting("confirmPartyTeleport") }) === JSON.stringify(out.env.settings)
-  };
+  });
 }
 out.golden = norm(out.golden);
 // a string, not the object: the eval bridge truncates nested results at a fixed depth
