@@ -439,7 +439,8 @@
       "flags.dnd5e.isPolymorphed",
       "flags.dnd5e.transformOptions",
       "flags.dnd5e.previousTokenData",
-      "flags.dnd5e.previousActorData"
+      "flags.dnd5e.previousActorData",
+      "flags.pentaryn-senses.light"
     ]
   },
   "errors": [

@@ -90,7 +90,7 @@ export const MANIFEST = Object.freeze({
   flags: {
     writes: [WS, REVERT, STARRY, LIGHT],
     reads: ["flags.dnd5e.originalActor", "flags.dnd5e.isPolymorphed", "flags.dnd5e.transformOptions",
-      "flags.dnd5e.previousTokenData", "flags.dnd5e.previousActorData"],
+      "flags.dnd5e.previousTokenData", "flags.dnd5e.previousActorData", LIGHT],
   },
   unlisted: [],
 });
