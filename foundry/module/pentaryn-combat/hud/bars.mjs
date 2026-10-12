@@ -86,13 +86,19 @@ function recklessShown(actor) {
   return setting("recklessToggle") && featuresOf(actor).has("reckless-attack");
 }
 
-const SIGS = { "DND5E.Action": (a) => actionSig(a), "DND5E.BonusAction": (a, p) => bonusSig(a, p), "DND5E.Special": (a) => specialSig(a) };
+// Each bar by its label: its signature and its composer (function declarations, hoisted). Insertion
+// order is the order checkBars re-renders stale bars in: Action, Bonus, Special.
+const BARS = {
+  "DND5E.Action": { sig: (a) => actionSig(a), compose: composeActionBar },
+  "DND5E.BonusAction": { sig: (a, p) => bonusSig(a, p), compose: composeBonusBar },
+  "DND5E.Special": { sig: (a) => specialSig(a), compose: composeSpecialBar }
+};
 
 /** Re-render the bars whose signature changed since they were composed. */
 function checkBars(actor) {
   if (!actor || actor !== ui.ARGON?._actor) return;
   const stale = [];
-  for (const [label, sig] of Object.entries(SIGS)) {
+  for (const [label, { sig }] of Object.entries(BARS)) {
     const p = mainPanel(label);
     if (!p || p._pcSig === undefined) continue;
     try { if (sig(actor, p) !== p._pcSig) stale.push(label); } catch (err) { log.debug("bar signature (next render recomposes)", err); }
@@ -289,9 +295,7 @@ const onPanelRendered = (panel, element, actor) => {
     const a = actor ?? panel.actor;
     if (!a) return;
     itemButtonClass(panel);
-    if (panel?.label === "DND5E.Action") composeActionBar(panel, a);
-    else if (panel?.label === "DND5E.BonusAction") composeBonusBar(panel, a);
-    else if (panel?.label === "DND5E.Special") composeSpecialBar(panel, a);
+    if (Object.hasOwn(BARS, panel?.label)) BARS[panel.label].compose(panel, a);
   } catch (err) {
     log.error("HUD composition failed", err);
   }
