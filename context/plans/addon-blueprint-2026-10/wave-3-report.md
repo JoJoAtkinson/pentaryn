@@ -85,6 +85,8 @@ module. Baseline: [`wave-3-baseline.md`](wave-3-baseline.md).
 - **ties — ties-24 item 3 (worn badges diff instead of rebuild) not built.** Items 1–2 landed
   ([declared] B7). The diff changes the PIXI call pins in the worn goldens. Low value (GM only, few
   badges).
+  *Update:* closed by `6f1fca29` — a whole-plan skip (unchanged plan + live layer → no rebuild)
+  instead of a per-badge diff; no frozen golden changed, so nothing left to decide here.
 - **ties — two C59 sequential-write warnings recorded, not batched.** Share's per-PC writes
   (`study/share.mjs` ~252: one identification and one granted write per PC) and `migrateLegacy`
   (`ties-adapter.mjs` ~325, one-time, copy-verify-clear per actor). Batching changes the frozen

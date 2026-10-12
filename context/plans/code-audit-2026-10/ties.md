@@ -162,7 +162,7 @@ test/attributes.mjs with stub game.settings over a 300-entry registry fixture an
 
 **Category:** Performance gains · **Impact:** medium · **Effort:** M
 
-**Status (wave 3, branch `migrate/wave-3`, 2026-10-11):** items 1–2 done [declared] B7 half `697b7330` (`badgePlan`, players schedule no frame); item 3 (diff instead of rebuild) not done — open
+**Status (wave 3, branch `migrate/wave-3`, 2026-10-11):** items 1–2 done [declared] B7 half `697b7330` (`badgePlan`, players schedule no frame); item 3 done `6f1fca29` as a whole-plan skip (an unchanged `planKey` with a live layer is not rebuilt; any change rebuilds all, so no stale badge; no frozen golden changed)
 
 **Where:** `foundry/module/pentaryn-ties/worn.mjs:144`
 
