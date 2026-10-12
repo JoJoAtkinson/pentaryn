@@ -36,6 +36,9 @@
   not the Monster Manual's Shield Guardian — as `describe()` already said (R6).
 - [declared] `search`, `page`, `monster`, `monsters`, `onList` and `spellList` called with `null`
   options answer exactly as with the options omitted, instead of throwing a TypeError (R1).
+- [declared] `onList(<uuid>)` of a document that is not a spell Item (a JournalEntry, an Actor)
+  answers `{ notFound, spell, hint: "<uuid> is a <documentName>, not a spell Item" }` instead of
+  throwing a TypeError on `system.level` or answering a level-less spell (lookup-edge-3).
 
 ## 0.3.0 — 2026-10-10
 

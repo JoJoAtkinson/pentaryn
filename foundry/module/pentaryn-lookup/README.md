@@ -76,7 +76,8 @@ remaining checks still run (R4).
 `page`'s `ref` is a page UUID or a page **name** (exact, then substring) — it is never run
 through the kit's actor resolver. A UUID of something that is not a page (a JournalEntry) answers
 empty `text` plus a `warning` saying so, and echoes that UUID as its `uuid` (never a made-up page UUID). `page()` appends embedded roll tables as `tables` (`{ tables:
-false }` skips them). Kit members: `describe()`, `version`, `contract`, `settings()`, `trace()`,
+false }` skips them). `onList`'s `spell` is a spell name or an Item UUID; a UUID of anything that
+is not a spell Item answers `{ notFound, spell, hint }` naming what it is. Kit members: `describe()`, `version`, `contract`, `settings()`, `trace()`,
 `uninstall()`.
 
 **Queries (GM only):** `pentaryn-lookup.search`, `.page`, `.monster`, `.monsters`, `.names`,

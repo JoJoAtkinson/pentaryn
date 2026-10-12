@@ -94,6 +94,10 @@ async function onList(spell, cls, opts = {}) {
   const { type = "class" } = opts ?? {};
   const doc = await findSpell(spell, log);
   if (!doc) return { notFound: true, spell, hint: "spell names are the book's English names" };
+  // a uuid can resolve to any document: only a spell Item has a level and a list (lookup-edge-3)
+  if (doc.type !== "spell" || !doc.system) {
+    return { notFound: true, spell, hint: `${spell} is a ${doc.documentName}, not a spell Item` };
+  }
   const list = listFor(type, cls);
   const lists = known();
   if (!list) return { spell: doc.name, uuid: doc.uuid, level: doc.system.level, list: `${type}:${cls}`, onList: null,
