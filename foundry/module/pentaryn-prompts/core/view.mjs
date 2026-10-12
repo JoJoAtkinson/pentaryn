@@ -8,7 +8,7 @@ import { doorLines } from "./doors.mjs";
 import { DIAGONALS, bearing, dedupeSquares, gaplessDistanceFt, occupiedSquares, squareDistanceFt } from "./grid.mjs";
 import { FORMATION_FT, LINK_FT, assignIds, groupScene } from "./group.mjs";
 import { atFeet } from "./placement.mjs";
-import { classifyBlocked, isSeen, rayPasses, wallSegment } from "./sight.mjs";
+import { asSegment, classifyBlocked, isSeen, rayPasses } from "./sight.mjs";
 import { callId, idCompare, stripHtml, textHash } from "./text.mjs";
 import { parseParty } from "./xp.mjs";
 
@@ -244,7 +244,7 @@ export function makeRel(items, { gridSize, gridFt = 5, rule = DIAGONALS.EQUIDIST
     if (!squares.has(it.key)) squares.set(it.key, it.squares?.length ? dedupeSquares(it.squares) : occupiedSquares(it.rect, gridSize));
     return squares.get(it.key);
   };
-  const segs = walls.map(w => (w.a && w.b && "sight" in w) ? w : wallSegment(w));
+  const segs = walls.map(asSegment);
   const originOf = A => A.origin ?? A.centre;
   const pointsOf = B => (B.points?.length ? B.points : [B.centre]);
   let visible, classify;

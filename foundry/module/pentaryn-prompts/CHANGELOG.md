@@ -93,6 +93,10 @@ cssPrefix `pp-`, afterSync). Each **[declared]** change goes to the live check.
   one private `nameOf(doc)` in `replace.mjs` (name, then text, then journal entry name, then "Light"
   for an AmbientLight; an empty one falls through) labels both. A note pin with an empty label now
   reads `Note "<entry>"` in the readback too; before, it read `Note ""` there.
+- **[declared] One "segment or normalise it" helper** (prompts-core-M6): `rayPasses`, `doorLines`'
+  wall list and `makeRel` call a core-only `asSegment` in `core/sight.mjs` (not on the
+  geometry-core barrel) instead of three copies of the test. `doorLines`' own door test stays
+  loose. No behaviour change.
 - `ensureMarkers` repairs every drifted actor in one batch update. A hot re-import after
   `uninstall()` re-wires and republishes at once.
 - Console only (DP9): a core token API that throws warns once; swallowed failures log at debug

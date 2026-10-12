@@ -4,7 +4,7 @@
  */
 
 import { atFeet } from "./placement.mjs";
-import { DOOR, classifySight, wallSegment } from "./sight.mjs";
+import { DOOR, asSegment, classifySight, wallSegment } from "./sight.mjs";
 import { idCompare } from "./text.mjs";
 
 /* ── Doors near prompts ──────────────────────────────────────────────────── */
@@ -30,7 +30,7 @@ const DOOR_BUILT_CAP = 3;
 export function doorLines(doors, groups, { dims, gridFt = 5, withinFt = 60, walls = null, reach = null } = {}) {
   if (!doors?.length || !dims) return [];
   const pxPerFt = dims.size / gridFt;
-  const segs = walls ? walls.map(x => (x.a && x.b && "sight" in x ? x : wallSegment(x))) : null;
+  const segs = walls ? walls.map(asSegment) : null;
   const same = (s, d) => (s.id && d.id ? s.id === d.id
     : s.a.x === d.a.x && s.a.y === d.a.y && s.b.x === d.b.x && s.b.y === d.b.y);
   const out = [];
