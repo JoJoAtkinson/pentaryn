@@ -819,12 +819,12 @@ const titleCase = s =>
 export function attributesOf(actor, kindResolver = null, { viewer = null } = {}) {
   const carried = attributeIdsOf(actor, kindResolver);
   const visible =
-    game.user?.isGM || (viewer && viewer.id === actor.id)
+    game.user?.isGM || (viewer && viewer.id === actor?.id)
       ? carried
       : visibleAttributesFor({
           carried,
           registry: registry(),
-          beliefs: actor.getFlag?.(MODULE, BELIEFS_FLAG) ?? {},
+          beliefs: actor?.getFlag?.(MODULE, BELIEFS_FLAG) ?? {},
           characterId: viewer?.id ?? "",
           isGM: false
         });
