@@ -65,3 +65,9 @@ module. Baseline: [`wave-3-baseline.md`](wave-3-baseline.md).
   over every torch in the world; batching per parent actor is one round trip each but changes the
   frozen per-item `update` pins in `setup-light.json`, so it would be its own declared perf step.
   Low value; recorded, not built.
+- **senses — `syncAll` writes prototypes one actor at a time (C59 pattern, §5.9.4).** The ready
+  chain's `syncAll` awaits one `actor.update` of the prototype per actor that needs a write, plus one
+  `updateEmbeddedDocuments` per scene per actor. Batching per world (`Actor.implementation.
+  updateDocuments`, as `resetSight` does) is one round trip, but it changes the glue ready-chain call
+  order pins, so it would be its own declared perf step. On a converged world it is mostly no-op
+  writes; recorded, not built. Migration `4e9cc5bf`.

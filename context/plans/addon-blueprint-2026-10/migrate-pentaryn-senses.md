@@ -661,6 +661,13 @@ deleteItem half — the hook asks the burst memo (`sourcesNow().has(item.uuid)`)
 `anyLitBy`, so a batch delete of N items walks the world once (`light-perf` row; the frozen
 `light-gm-hooks` golden unchanged). `node test/run.mjs`: 149 cases, 149 pass.
 
+§5.9 async review (what is recorded, not built — rows in `wave-3-report.md` "Open for Joe"):
+- two GM tabs both run the Light reconcile (square created twice, whisper posted twice);
+- `setupLight()` updates each torch one at a time (C59);
+- senses — syncAll writes prototypes one actor at a time (C59); batching per world
+  (Actor.updateDocuments) changes the glue ready-chain call order pins, so it would be its own
+  declared perf step.
+
 Live-test handoff (gated live phase; walls-style "nothing live" until then):
 
 | # | Observe |
