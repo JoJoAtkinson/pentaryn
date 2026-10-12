@@ -111,7 +111,7 @@ const LEDGER_ONLY = new RegExp(`^(_id$|_stats\\.|flags\\.${MODULE.replace(/[-.]/
 export class InspectPreview extends ApplicationV2 {
   static DEFAULT_OPTIONS = {
     id: "pentaryn-inspect-preview-{id}",
-    classes: ["pentaryn-inspect-preview"],
+    classes: ["pentaryn-inspect-preview", "pt-inspect-preview"],
     window: { title: "Inspect preview (GM only)", icon: "fa-solid fa-flask", resizable: true },
     position: { width: 620, height: 720 }
   };

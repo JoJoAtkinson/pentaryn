@@ -953,7 +953,7 @@ export async function openAddPicker(actor, onAdded = () => {}) {
 
   const chosen = await foundry.applications.api.DialogV2.prompt({
     window: { title: _loc("PENTARYN_TIES.known.picker.title") },
-    classes: ["pentaryn-tie-dialog"],
+    classes: ["pentaryn-tie-dialog", "pt-tie-dialog"],
     content,
     ok: {
       label: _loc("PENTARYN_TIES.known.picker.add"),

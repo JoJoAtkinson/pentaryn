@@ -50,7 +50,7 @@ export async function kindDialog(actor) {
 
   const chosen = await foundry.applications.api.DialogV2.prompt({
     window: { title: _loc("PENTARYN_TIES.known.study.kindTitle", { name: actor.name }) },
-    classes: ["pentaryn-tie-dialog"],
+    classes: ["pentaryn-tie-dialog", "pt-tie-dialog"],
     content: `<div class="pt-known-picker">
       <p class="pt-study-hint">${esc(_loc("PENTARYN_TIES.known.study.kindHint"))}</p>
       <label class="pt-field">

@@ -45,7 +45,7 @@ async function studyDialog(kindName) {
 
   return foundry.applications.api.DialogV2.prompt({
     window: { title: _loc("PENTARYN_TIES.known.study.dialogTitle", { name: kindName }) },
-    classes: ["pentaryn-tie-dialog"],
+    classes: ["pentaryn-tie-dialog", "pt-tie-dialog"],
     content: `<div class="pt-study-dialog">
       <p class="pt-study-hint">${esc(_loc("PENTARYN_TIES.known.study.dialogHint"))}</p>
       <div class="pt-study-modes">${modes}</div>

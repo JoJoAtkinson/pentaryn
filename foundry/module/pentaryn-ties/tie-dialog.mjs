@@ -190,7 +190,7 @@ export class TieDialog extends ApplicationV2 {
   }
 
   static DEFAULT_OPTIONS = {
-    classes: ["pentaryn-tie-dialog"],
+    classes: ["pentaryn-tie-dialog", "pt-tie-dialog"],
     window: { title: "PENTARYN_TIES.dialog.title", icon: "fa-solid fa-people-arrows" },
     position: { width: 520, height: "auto" }
   };
