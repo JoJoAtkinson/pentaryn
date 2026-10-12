@@ -135,7 +135,7 @@ export class PortalCard extends foundry.applications.api.ApplicationV2 {
       const dest = fromUuidSync(uuid);
       const twoWay = content.querySelector('[data-act="twoway"]')?.checked;
       await linkPair(region, dest, twoWay);
-      this.render();
+      await this.render();
     }));
   }
 
@@ -161,12 +161,12 @@ export class PortalCard extends foundry.applications.api.ApplicationV2 {
     card.querySelector(".ppt-thumb").addEventListener("click", pick);
     card.querySelector('[data-act="clearimg"]')?.addEventListener("click", guard("card clear image", async () => {
       await dest.update({ [flagPath(MODULE, "img")]: _del });
-      this.render();
+      await this.render();
     }));
     card.querySelector('[data-act="look"]').addEventListener("click", guard("card look", () => lookAt(dest)));
     card.querySelector('[data-act="unlink"]').addEventListener("click", guard("card unlink", async () => {
       await unlinkRegion(region, dest);
-      this.render();
+      await this.render();
     }));
   }
 
@@ -178,11 +178,11 @@ export class PortalCard extends foundry.applications.api.ApplicationV2 {
     toggle.className = "ppt-toggle";
     toggle.dataset.tooltip = _loc("PENTARYN_PORTALS.Card.ToggleEdit");
     toggle.innerHTML = `<input type="checkbox" ${this.edit ? "checked" : ""}><span class="ppt-slider"></span>`;
-    toggle.querySelector("input").addEventListener("change", ev => {
+    toggle.querySelector("input").addEventListener("change", deps.guard("card edit toggle", async ev => {
       this.edit = ev.target.checked;
       deps.setEditing(this.region, this.edit); // edit on: drag the badge on the map to move this travel spot
-      this.render();
-    });
+      await this.render();
+    }));
     header.prepend(toggle);
     return frame;
   }
