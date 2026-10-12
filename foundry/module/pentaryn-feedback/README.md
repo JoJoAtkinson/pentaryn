@@ -124,7 +124,8 @@ wraps stay in place after `uninstall()` and record nothing until the next instal
 2. A new recorded kind → a `reg.on` in `recorder.mjs` (sync, one push, no await), a case in
    `test/glue.test.mjs`, a line format in `scripts/feedback_reports.py` `action_line`.
 3. A report field → `buildReport` + `normaliseReport` + `REPORT_KEYS` in core, the Python renderer,
-   and bump `SCHEMA_VERSION` on both sides if a reader would misread an old file.
+   and bump `SCHEMA_VERSION` on both sides if a reader would misread an old file. A new list
+   section also goes in `LIST_KEYS` (validateReport's shape check).
 4. An API method → a row in `api-manifest.mjs` + an impl in `api.mjs`, then
    `GOLDEN_UPDATE=1 node --test test/api.test.mjs` and review the diff.
 
@@ -137,8 +138,9 @@ wraps stay in place after `uninstall()` and record nothing until the next instal
   (redacted). Acceptable at this table; never put a secret in a report field.
 - A queued report rides on the User document every client receives: the queue is capped at 5
   (oldest dropped, the player is told) and each report at 256 KB.
-- `kit 1.0.1`'s `registerQueries` passes no sender to a row's implementation, which is why the
-  identity comes from the queue's User document, not from the query.
+- The kit's `registerQueries` (1.1.0) passes no sender to a row's implementation (its inner
+  handler drops core's ctx; `guarded`/`relayed` do pass it), which is why the identity comes
+  from the queue's User document, not from the query.
 - `lib/` and `test/kit/` are vendored: edit `foundry/lib/`, then `vendor.py sync`.
 - `module.json` is read at Foundry startup: a change needs a restart.
 

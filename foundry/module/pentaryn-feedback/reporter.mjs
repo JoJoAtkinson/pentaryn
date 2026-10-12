@@ -19,7 +19,8 @@
 
 import {
   FLAG_SCOPE, LIMITS, MODULE, QUEUE_KEY, admit, buildReport, categoryOf, draftFrom, fitReport,
-  normaliseReport, parseBugCommand, queueTrim, reportPath, userFields, validateReport,
+  isReportId,
+  normaliseReport, parseBugCommand, queueTrim, reportPath, userFieldsOf, validateReport,
 } from "./feedback-core.mjs";
 import { ReportDialog } from "./dialog.mjs";
 import { attachSummary, snapshot } from "./snapshot-adapter.mjs";
@@ -184,7 +185,7 @@ export function install(reg, ctx) {
     const refused = [];
     const held = [];
     const del = {};
-    const who = userFields({ ...plainUser(user), character: user.character ? { id: user.character.id, name: user.character.name } : null });
+    const who = userFieldsOf(user);
     for (const [id, report] of Object.entries(queue)) {
       const v = validateReport(report);
       if (!v.ok || report.id !== id) {
@@ -264,7 +265,7 @@ export function install(reg, ctx) {
     try {
       const { filed, refused } = await ingestUser(user);
       const done = [];
-      const asked = (Array.isArray(ids) ? ids : []).filter(id => typeof id === "string" && /^[A-Za-z0-9]{16}$/.test(id));
+      const asked = (Array.isArray(ids) ? ids : []).filter(isReportId);
       const waiting = queueOf(user);
       const refusedIds = new Set(refused.map(r => r.id));
       for (const id of asked.slice(0, LIMITS.queueMax)) {
@@ -304,10 +305,6 @@ export function install(reg, ctx) {
   else reg.once("ready", ready, { label: "ready: file waiting reports" });
 
   ctx.expose({ open, submit, ingest, pending: user => Object.keys(queueOf(user)) });
-}
-
-function plainUser(u) {
-  return { id: u?.id, name: u?.name, role: u?.role, isGM: u?.isGM };
 }
 
 export function uninstall() {

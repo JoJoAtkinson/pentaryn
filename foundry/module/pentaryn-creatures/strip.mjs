@@ -9,11 +9,11 @@
  * redraw it live in creature-strip.mjs.
  */
 
-import { dockKey, shouldPollDock, shouldShowStrip, stripDock, stripEntries, stripSignature } from "./creatures-core.mjs";
+import { MODULE, dockKey, shouldPollDock, shouldShowStrip, stripDock, stripEntries, stripSignature } from "./creatures-core.mjs";
 import { setting } from "./settings.mjs";
 import { summarize } from "./tokens-adapter.mjs";
 
-const STRIP_ID = "pentaryn-creatures";
+const STRIP_ID = MODULE;
 let lastSig = null;
 
 /** The strip's entries for `user` on the viewed scene (or `scene`). */
