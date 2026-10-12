@@ -610,8 +610,8 @@ and **-34** (step 7).
 | Date | 2026-10-11 (code phase only; nothing synced or run live) |
 | Commits | characterisation: `5e76c4a1` · refactor (steps 1–11): `0a2d50ad` `0bd574da` `a3388e0b` `13bd7517` `902cde6f` `a1ea3e1a` `a6561663` `92cc591f` `4110d70a` `f76e7f91` `88f85d98` `9e0c3a20` `7b5d79fd` `a269f91d` `c5af5e88` `92d0834c` `4e9cc5bf` · standalone: `c1478be1` `59870f95` `90273143` `2ae44ef8` `282d6c16` `42c4cfb7` `ff544d99` `9fda315e` `6d43eb7e` `cece01a2` `763dda0f` `980958eb` `ab430bed` · review fixes: `41cc0954` (inspect, S-12) `e4a8f0c7` (-13 deleteItem half) |
 | Declared changes handed to the live-test workflow | S-1 … S-8, S-11 … S-14, J10, glow label (table below); live session not yet run |
-| `module.json` edits appended to `wave7-restart-batch.md` | no — a shared file: returned to the integrator (step 13 rows, unchanged from the guide) |
-| Adjustments rows appended to `adjustments-batch.md` | no — a shared file: returned to the integrator (step 12 rows + the two moved-marker rows) |
+| `module.json` edits appended to `wave7-restart-batch.md` | no — a shared file: returned to the integrator (step 13 rows, unchanged from the guide) · **done by the wave-3 integrator** (`d83d0b11`): the batch row carries the full edit; `module.json` itself waits for the Wave 7 restart |
+| Adjustments rows appended to `adjustments-batch.md` | no — a shared file: returned to the integrator (step 12 rows + the two moved-marker rows) · **landed by the wave-3 integrator** in `foundry/adjustments.yml` (`287a945c`), marked in `adjustments-batch.md` (`b631badf`) |
 | Still failing, and why | C07, C09, C37: the Wave 7 `module.json` batch. C32: `argon-light-pick-collapse-panels` still lists `light.mjs` (the marker moved to `argon.mjs` at step 6; the row edit is the integrator's). Warn: C02 (Wave 7), C37w (the pick crosshair's `!important`, kept) |
 
 ### Wave 3 code phase (2026-10-11)
