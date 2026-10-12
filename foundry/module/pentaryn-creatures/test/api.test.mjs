@@ -123,3 +123,21 @@ test("creatures-rob-2: list(null, scene) / list(user, null) fall to the defaults
   assert.deepEqual(api.list(null, alpha), api.list(undefined, alpha), "null user = this client's user");
   assert.deepEqual(api.list(rook, null), api.list(rook), "null scene = the viewed scene");
 });
+
+test("creatures-rob-4 [declared]: syncScene resolves a scene id, uuid or exact name; a missing one rejects coded on every client", async () => {
+  const alpha = W.scene("sceneAlpha000001");
+  assert.equal(await api.syncScene("sceneAlpha000001"), 0, "an id (ready already lit everything)");
+  assert.equal(await api.syncScene(alpha.uuid), 0, "a uuid");
+  assert.equal(await api.syncScene("Alpha", ["tImp"]), 0, "an exact name");
+  await assert.rejects(api.syncScene("Nowhere"), { code: "NOT_FOUND" });
+  await assert.rejects(api.syncScene(), { code: "BAD_ARGS" });
+  await assert.rejects(api.syncScene(null), { code: "BAD_ARGS" });
+  F.become({ userId: "plyrUser00000001" });
+  try {
+    assert.equal(await api.syncScene("Alpha"), 0, "a player client with a valid scene still resolves 0");
+    await assert.rejects(api.syncScene("Nowhere"), { code: "NOT_FOUND" }, "was: resolved 0 off the active GM");
+    await assert.rejects(api.syncScene(), { code: "BAD_ARGS" });
+  } finally {
+    F.become({ userId: "gmUser0000000001" });
+  }
+});

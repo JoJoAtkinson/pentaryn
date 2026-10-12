@@ -44,7 +44,7 @@
       "params": [
         {
           "name": "scene",
-          "type": "Scene"
+          "type": "Scene | uuid | id | exact name"
         },
         {
           "name": "ids",
@@ -61,8 +61,12 @@
         "token light.bright/light.dim",
         "flags.pentaryn-creatures.light"
       ],
+      "throws": [
+        "NOT_FOUND",
+        "BAD_ARGS"
+      ],
       "legacy": true,
-      "doc": "Bring one scene's creature lights in line now; resolves to how many tokens were written. Active GM client only (0 elsewhere)."
+      "doc": "Bring one scene's creature lights in line now; resolves to how many tokens were written. Active GM client only (0 elsewhere). A missing or unknown scene rejects NOT_FOUND / BAD_ARGS on every client."
     },
     {
       "path": "syncAll",

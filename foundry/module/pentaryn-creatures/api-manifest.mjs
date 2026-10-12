@@ -39,15 +39,15 @@ export const MANIFEST = Object.freeze({
     {
       path: "syncScene",
       params: [
-        { name: "scene", type: "Scene" },
+        { name: "scene", type: "Scene | uuid | id | exact name" },
         { name: "ids", type: "string[] | Set<string> | string | TokenDocument[]", optional: true,
           doc: "only these tokens (ids or documents; [] means none); default every token" },
       ],
       returns: "Promise<number>",
-      gm: true, writes: true, legacy: true,
+      gm: true, writes: true, legacy: true, throws: ["NOT_FOUND", "BAD_ARGS"],
       sideEffects: ["token light.bright/light.dim", "flags.pentaryn-creatures.light"],
       doc: "Bring one scene's creature lights in line now; resolves to how many tokens were written. Active GM "
-        + "client only (0 elsewhere).",
+        + "client only (0 elsewhere). A missing or unknown scene rejects NOT_FOUND / BAD_ARGS on every client.",
     },
     {
       path: "syncAll",

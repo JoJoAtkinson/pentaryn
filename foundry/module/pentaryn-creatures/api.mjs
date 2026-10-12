@@ -71,8 +71,10 @@ export function buildApiFor(ctx) {
       typeof scene === "string" ? resolveRef(scene, "scene") : scene ?? undefined,
     ),
     render: () => x.render(),
-    // ids at the boundary: an array, a Set (copied), one id or token documents → a Set; null/undefined = all
-    syncScene: (scene, ids) => x.syncScene(scene, ids == null ? null : toIdSet(ids)),
+    // the scene (a Scene, or its id, uuid or exact name) resolves first, on every client: a missing one rejects
+    // NOT_FOUND / BAD_ARGS (creatures-rob-4). ids at the boundary: an array, a Set (copied), one id or token
+    // documents → a Set; null/undefined = all
+    syncScene: async (scene, ids) => x.syncScene(resolveRef(scene, "scene"), ids == null ? null : toIdSet(ids)),
     syncAll: () => x.syncAll(),
     isCreature: (tokenDoc) => isPlayerCreature(summarize(tokenDoc)),
     // a TokenDocument answers for its placeable on the viewed scene (a document off-canvas: false)

@@ -104,7 +104,9 @@ Also `game.modules.get("pentaryn-creatures").api`; published at `ready`, frozen,
 - `render()`: force a redraw of this client's strip.
 - `isCreature(tokenDoc)` → boolean: would this token get the light?
 - `syncScene(scene, ids?)` → `Promise<number>`, `syncAll()` → `Promise<number>`: active GM client
-  only (0 elsewhere). Re-run the light pass; resolves to how many tokens were written. `ids` may be
+  only (0 elsewhere). Re-run the light pass; resolves to how many tokens were written. `scene` may be
+  a document or its id, uuid or exact name; a missing or unknown one rejects `BAD_ARGS` / `NOT_FOUND`
+  on every client. `ids` may be
   an array, a Set, one id or token documents (`[]` = none; omitted = every token). `syncAll` keeps
   going past a scene whose write fails (one console warning, `light sync failed on <scene>`).
 - `ownerSees(token)` → boolean: would the override show this token to me? A placeable or its

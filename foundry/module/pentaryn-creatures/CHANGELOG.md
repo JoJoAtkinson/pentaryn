@@ -40,6 +40,10 @@ a player or GM can notice:
 - **[declared] creatures-edge-3** — the "Your creatures" strip redraws at most 60 ms after the
   first change, even under steady token flag traffic in combat (the redraw was a debounce that
   traffic could postpone indefinitely); a quick burst still draws once.
+- **[declared] creatures-rob-4** — `syncScene(scene, ids)` accepts the scene by id, uuid or exact
+  name (what the bridge sends); a missing or unknown scene rejects with a coded `BAD_ARGS` /
+  `NOT_FOUND` on every client (was a raw `TypeError` on the active GM and a silent `0` elsewhere).
+  A player client with a valid scene still resolves `0`.
 
 ## 0.1.1 — 2026-10-10
 
