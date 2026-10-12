@@ -17,6 +17,11 @@
       "why": "the published attributes.* paths are the attribute layer's own functions. gap G1: the blueprint has no 'domain' role for Foundry-aware, non-UI logic; attributes.mjs, study.mjs (study/*), facts.mjs, known-data.mjs and relay.mjs score as glue"
     },
     {
+      "from": "api.mjs",
+      "to": "facts.mjs",
+      "why": "study.knowsAbout publishes the Look window's data half (ties-8). gap G1: the blueprint has no 'domain' role for Foundry-aware, non-UI logic; attributes.mjs, study.mjs (study/*), facts.mjs, known-data.mjs and relay.mjs score as glue"
+    },
+    {
       "from": "conduit.mjs",
       "to": "relay.mjs",
       "why": "the conduit feature registers the relay's socket action at ready. gap G1: the blueprint has no 'domain' role for Foundry-aware, non-UI logic; attributes.mjs, study.mjs (study/*), facts.mjs, known-data.mjs and relay.mjs score as glue"

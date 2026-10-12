@@ -2148,6 +2148,30 @@
       "doc": "Same as study.forget (its own name, ties-6)."
     },
     {
+      "path": "study.knowsAbout",
+      "params": [
+        {
+          "name": "ref",
+          "kind": "actor",
+          "type": "Actor|Token|id|uuid|exact name",
+          "resolve": false,
+          "doc": "the character"
+        },
+        {
+          "name": "subject",
+          "type": "Actor|Token|id|uuid|exact name",
+          "doc": "the creature or person studied"
+        }
+      ],
+      "returns": "[{ group, key, ns, attrId, icon, source, text }]",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "since": "0.20.0",
+      "doc": "What this character has learned about this subject: the granted cards that pass the secrecy gate, in the Look window's order (ties-8)."
+    },
+    {
       "path": "study.identified",
       "params": [
         {

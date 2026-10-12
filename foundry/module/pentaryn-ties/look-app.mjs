@@ -68,10 +68,8 @@ import { MODULE } from "./ties-core.mjs";
 import { mayWrite } from "./settings.mjs";
 import { kindActorOf } from "./study.mjs";
 import { grantCard, grantedHead } from "./known-ui.mjs";
-import { subjectFacts } from "./facts.mjs";
-import {
-  GRANTED_FLAG, BELIEFS_FLAG, REGISTRY_SETTING, readGranted, visibleAttributesFor, identMissKey, touchesFlagScope
-} from "./known-core.mjs";
+import { subjectFacts, knowsAbout } from "./facts.mjs";
+import { REGISTRY_SETTING, touchesFlagScope } from "./known-core.mjs";
 import { makeLog } from "./lib/log.mjs";
 
 const log = makeLog(MODULE);
@@ -153,33 +151,15 @@ export class LookWindow extends ApplicationV2 {
    * draws it like any other card (2026-10-08); a failed identification's sits under `identMissKey`.
    */
   shownGroups() {
-    const { base, kind, registry, carried, facts } = subjectFacts(this.subject);
-    const granted = readGranted(this.character.getFlag(MODULE, GRANTED_FLAG));
-    const beliefs = log.swallow("look: beliefs unreadable", () => base?.getFlag(MODULE, BELIEFS_FLAG) ?? {}, {});
-    const visible = new Set(visibleAttributesFor({ carried, registry, beliefs, characterId: this.character.id, isGM: false }));
-
+    const gathered = subjectFacts(this.subject);
+    const { base, kind } = gathered;
     const groups = new Map(); // group → cards, insertion order = factOrder order
-    const push = (group, card) => {
-      if (!card) return; // a blank grant draws nothing — and must not open its group's header
-      if (!groups.has(group)) groups.set(group, []);
-      groups.get(group).push(card);
-    };
-    const subjectId = base?.id ?? this.subject?.id ?? "";
-    for (const x of facts) {
-      /*
-       * A failed identification's written failure line (2026-10-08) sits where that rung's card
-       * would, under its own key — never the ident key, so the secrecy gate below and the
-       * attribute's title play no part. Absent unless the GM wrote one and the roll failed.
-       */
-      if (x.ns === "ident") {
-        const m = granted[identMissKey(subjectId, x.attrId)];
-        if (m) push(x.group, grantCard({ icon: m.icon, source: m.source, text: m.text }));
-      }
-      const g = granted[x.key];
-      if (!g) continue;
-      if ((x.ns === "ident" || x.ns === "attr") && !visible.has(x.attrId)) continue;
+    for (const c of knowsAbout(this.character, this.subject, gathered)) {
       // the grant record, never the authored source: the words are what they were told
-      push(x.group, grantCard({ icon: g.icon, source: g.source, text: g.text }));
+      const card = grantCard({ icon: c.icon, source: c.source, text: c.text });
+      if (!card) continue; // a blank grant draws nothing — and must not open its group's header
+      if (!groups.has(c.group)) groups.set(c.group, []);
+      groups.get(c.group).push(card);
     }
     return { base, kind, groups };
   }

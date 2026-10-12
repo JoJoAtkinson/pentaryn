@@ -69,3 +69,20 @@ test("ties-10: pending() rows carry whenMs; beliefs() rows carry whenMs and deli
     assert.equal(r.deliveredMs, 6);
   }
 });
+
+test("ties-8: study.knowsAbout is the Look window's list as data — granted cards past the secrecy gate", async () => {
+  const pc = get(PC);
+  const gob = get(GOB);
+  gob.flags["pentaryn-ties"].lore = [{ id: "l1", label: "Debts", dc: 12, skill: "ins", text: "<p>Owes.</p>" }];
+  pc.flags["pentaryn-ties"] = {
+    granted: {
+      [`lore:${GOB}:l1`]: { text: "Owes the guild.", when: 5, icon: "i.webp", source: "ZZ Goblin — Debts" },
+      "attr:type:undead:#id": { text: "Not carried, so never shown.", when: 5 }
+    }
+  };
+  const rows = T().study.knowsAbout(pc, gob);
+  assert.deepEqual(rows.map(r => [r.ns, r.key, r.text]), [["lore", `lore:${GOB}:l1`, "Owes the guild."]]);
+  assert.deepEqual(T().study.knowsAbout("ZZ Caven", "ZZ Goblin"), rows, "refs resolve");
+  const { knowsAbout } = await import("../facts.mjs");
+  assert.deepEqual(knowsAbout(pc, gob), rows);
+});

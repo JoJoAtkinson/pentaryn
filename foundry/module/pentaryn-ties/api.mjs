@@ -32,6 +32,7 @@ import {
   BELIEFS_FLAG, GRANTED_FLAG, LORE_FLAG, identifiedState, readGranted, readLore, visibleAttributesFor
 } from "./known-core.mjs";
 import { CONCEAL_FLAG } from "./core/rules.mjs";
+import { knowsAbout } from "./facts.mjs";
 import { buildApi, maxDepth, toPlain } from "./lib/api.mjs";
 import { readFlag } from "./lib/flags.mjs";
 import { publishedOf } from "./lib/publish.mjs";
@@ -169,6 +170,7 @@ const IMPL = {
   "study.shareFact": shareFact,
   "study.forgetFact": forgetFact,
   "study.identified": identified,
+  "study.knowsAbout": resolving(knowsAbout, 2),
 };
 
 /**
