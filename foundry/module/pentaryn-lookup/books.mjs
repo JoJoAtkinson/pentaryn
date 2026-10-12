@@ -36,7 +36,7 @@ export function uninstall() {
 /** Full-text search across the owned books. */
 async function search(query, opts = {}) {
   const ids = resolveBookIds(opts.books);
-  const { books, missing } = await loadBooks(ids);
+  const { books, missing } = await loadBooks(ids, log);
   if (!books.length) return missingPackError(missing);
   const result = searchBooks(books, query, opts);
   if (missing.length) result.warning = `skipped missing pack(s): ${missing.join(", ")}`;
@@ -58,7 +58,7 @@ async function page(ref, opts = {}) {
     return withTables(warning ? { ...out, warning } : out, found, opts);
   }
 
-  const { books, missing } = await loadBooks(resolveBookIds(opts.books));
+  const { books, missing } = await loadBooks(resolveBookIds(opts.books), log);
   if (!books.length) return missingPackError(missing);
   const found = findPage(books, raw);
   return withTables(renderPage(found, opts), found, opts);
@@ -106,7 +106,7 @@ async function spellList(cls, { type = "class", level = null } = {}) {
   // read levels from each pack's index, keep one entry per name, the owned book first
   const groups = groupListUuids(list.uuids);
   const indexes = new Map();
-  for (const [id] of groups) indexes.set(id, await readIndex(id, ["system.level"]));
+  for (const [id] of groups) indexes.set(id, await readIndex(id, ["system.level"], log));
   const out = spellListRows(groups, indexes, level);
   return { list: `${type}:${cls}`, count: out.length, spells: out };
 }
@@ -122,12 +122,13 @@ async function monster(name, opts = {}) {
   if (!wanted) return { error: "monster(name) needs a name" };
   const tried = [];
   for (const packId of MONSTER_PACKS) {
-    const idx = await readIndex(packId);
+    const idx = await readIndex(packId, null, log);
     if (!idx) continue;
     tried.push(packId);
     const entry = pickByName(idx, wanted);
     if (!entry) continue;
-    const actor = await readDocument(packId, entry._id);
+    const actor = await readDocument(packId, entry._id, log);
+    if (!actor) continue;
     const out = monsterDigest({
       name: actor.name, id: actor.id, packId, system: actor.system,
       items: actor.items.map(i => ({ name: i.name, type: i.type })),
@@ -153,7 +154,7 @@ async function monsters(q = {}) {
   const query = monsterQuery(q);
   const seen = new Set(), out = [];
   for (const id of query.packIds) {
-    const idx = await readIndex(id, [...MONSTER_INDEX_FIELDS]);
+    const idx = await readIndex(id, [...MONSTER_INDEX_FIELDS], log);
     if (!idx) continue;
     for (const e of idx) {
       if (!matchMonster(e, query)) continue;
@@ -172,7 +173,7 @@ async function monsters(q = {}) {
  */
 async function names(kind = null) {
   const indexes = {};
-  for (const [key, { pack, fields }] of Object.entries(NAME_SOURCES)) indexes[key] = (await readIndex(pack, [...fields])) ?? [];
+  for (const [key, { pack, fields }] of Object.entries(NAME_SOURCES)) indexes[key] = (await readIndex(pack, [...fields], log)) ?? [];
   return groupNames(indexes, kind);
 }
 
@@ -181,7 +182,7 @@ async function packs() {
   const known = [...new Set([...BOOKSETS.all, ...BOOKSETS["2014"], ...MONSTER_PACKS])];
   const rows = [];
   for (const id of known) {
-    const p = await packSummary(id);
+    const p = await packSummary(id, log);
     if (!p) { rows.push({ id, present: false }); continue; }
     rows.push({ id, present: true, label: p.label,
                 type: p.type, entries: p.entries,

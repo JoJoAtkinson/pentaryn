@@ -43,13 +43,14 @@ test("a missing pack is never cached: it is looked up on every call", async () =
   assert.match((await rules.search("cover")).warning, /dnd-dungeon-masters-guide\.content/);
 });
 
-test("a failed load is not cached: the call rejects as before, the next call retries", async () => {
+// R4 [declared]: the failed pack is skipped as missing (was: the call rejected).
+test("a failed load is not cached: the pack is skipped as missing, the next call retries", async () => {
   rules.uninstall();
   const pack = world.packs.get(PHB);
   const real = pack.getDocuments;
   pack.getDocuments = async () => { pack.calls.getDocuments += 1; throw new Error("pack locked"); };
   try {
-    await assert.rejects(rules.search("cover"), /pack locked/);
+    assert.match((await rules.search("cover")).warning, /dnd-players-handbook\.content/);
   } finally {
     pack.getDocuments = real;
   }

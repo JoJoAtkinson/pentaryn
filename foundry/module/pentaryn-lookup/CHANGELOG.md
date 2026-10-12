@@ -20,6 +20,10 @@
   empty, the label in `name`) prints its label after the range, not the bare range ("21" → "21 A
   single row"); tables no longer read `TableResult#text`, so v13's deprecation warning is gone
   (lookup-edge-1).
+- [declared] A pack read that rejects (a book load, an index, a document, a pack summary) answers
+  as if the pack were absent instead of throwing: `search`/`page` list it under "skipped missing
+  pack(s)", the rest answer null/not found, and a debug trace names the pack. `selftest()` records a
+  throwing check as `{label, ok: false, detail: <message>}` and runs the rest (R4).
 
 ## 0.3.0 — 2026-10-10
 

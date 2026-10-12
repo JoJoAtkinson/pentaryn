@@ -5,7 +5,8 @@
  *
  * May import core and lib (C16). Each function reads its globals at call time. A read that fails is
  * answered as "nothing there" (the shapes callers already handle) and traced through the caller's
- * `log` at debug level: `CONFIG.debug["pentaryn-lookup"] = true` shows it (prompts-lookup-34).
+ * `log` at debug level: `CONFIG.debug["pentaryn-lookup"] = true` shows it (prompts-lookup-34). A pack
+ * read that rejects answers as if the pack were absent, traced with the pack id (R4).
  */
 
 import { EDITIONS, SPELL_PACKS, featureRow, pickByName, toBook } from "./lookup-core.mjs";
@@ -22,6 +23,16 @@ import { EDITIONS, SPELL_PACKS, featureRow, pickByName, toBook } from "./lookup-
  * books' HTML plus their plain text.
  */
 const bookCache = new Map();
+
+/** `read()`, or null when it throws or rejects: traced at debug with the pack id (R4). */
+async function packRead(id, what, read, log) {
+  try {
+    return await read();
+  } catch (err) {
+    log?.debug(`${what} failed`, { pack: id }, err);
+    return null;
+  }
+}
 
 export function clearBookCache() {
   bookCache.clear();
@@ -59,13 +70,14 @@ function cachedBook(id, pack) {
  *
  * `doc.pages` is an EmbeddedCollection: iterate it, use `.size`, never `.length`.
  */
-export async function loadBooks(ids) {
+export async function loadBooks(ids, log = null) {
   const books = [];
   const missing = [];
   for (const id of ids) {
     const pack = game.packs.get(id);
-    if (!pack) { missing.push(id); continue; }
-    books.push(await cachedBook(id, pack));
+    const book = pack && await packRead(id, "getDocuments", () => cachedBook(id, pack), log);
+    if (!book) { missing.push(id); continue; }
+    books.push(book);
   }
   return { books, missing };
 }
@@ -102,8 +114,10 @@ export async function findSpell(ref, log = null) {
   for (const id of SPELL_PACKS) {
     const pack = game.packs.get(id);
     if (!pack) continue;
-    const hit = pickByName(await pack.getIndex(), s, { substring: false });
-    if (hit) return pack.getDocument(hit._id);
+    const index = await packRead(id, "getIndex", () => pack.getIndex(), log);
+    const hit = index && pickByName(index, s, { substring: false });
+    const doc = hit && await packRead(id, "getDocument", () => pack.getDocument(hit._id), log);
+    if (doc) return doc;
   }
   return null;
 }
@@ -113,23 +127,27 @@ export function spellRegistry() {
   return dnd5e.registry;
 }
 
-/** A pack's index (`fields` for the nested values a filter needs), or null when the pack is absent. */
-export async function readIndex(id, fields = null) {
+/** A pack's index (`fields` for the nested values a filter needs), or null when the pack is absent
+ *  or its read rejects. */
+export async function readIndex(id, fields = null, log = null) {
   const pack = game.packs.get(id);
   if (!pack) return null;
-  return fields ? pack.getIndex({ fields }) : pack.getIndex();
+  return packRead(id, "getIndex", () => (fields ? pack.getIndex({ fields }) : pack.getIndex()), log);
 }
 
-/** One document from a pack by id. */
-export async function readDocument(id, docId) {
-  return game.packs.get(id).getDocument(docId);
-}
-
-/** `{ label, type, entries }` for an installed pack, or null. */
-export async function packSummary(id) {
+/** One document from a pack by id, or null when the pack is absent or the read rejects. */
+export async function readDocument(id, docId, log = null) {
   const pack = game.packs.get(id);
   if (!pack) return null;
-  const idx = await pack.getIndex();
+  return packRead(id, "getDocument", () => pack.getDocument(docId), log);
+}
+
+/** `{ label, type, entries }` for an installed pack, or null (absent, or its index read rejects). */
+export async function packSummary(id, log = null) {
+  const pack = game.packs.get(id);
+  if (!pack) return null;
+  const idx = await packRead(id, "getIndex", () => pack.getIndex(), log);
+  if (!idx) return null;
   return { label: pack.metadata.label, type: pack.documentName, entries: idx.size };
 }
 
