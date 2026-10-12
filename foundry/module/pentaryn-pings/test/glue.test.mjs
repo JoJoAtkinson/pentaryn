@@ -24,7 +24,7 @@ const { F } = W;
 F.game.modules.set(MODULE, { id: MODULE, active: true, version: manifest.version, title: manifest.title, flags: manifest.flags });
 W.captureConsole();
 
-// two decoy lookups the entry must NOT patch: foundry.canvas.layers wins (pings.mjs:161-164)
+// two decoy lookups the entry must NOT patch: foundry.canvas.layers wins (capture.mjs patchControlsLayer)
 class GlobalLayer { handlePing() {} }
 class ConfigLayer { handlePing() {} }
 globalThis.ControlsLayer = GlobalLayer;

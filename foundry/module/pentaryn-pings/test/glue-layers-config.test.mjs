@@ -1,4 +1,4 @@
-// Glue characterisation: the last ControlsLayer lookup (pings.mjs:164) — only
+// Glue characterisation: the last ControlsLayer lookup (capture.mjs patchControlsLayer) — only
 // CONFIG.Canvas.layers.controls.layerClass exists, and its prototype is wrapped. Its own process.
 import { mock, test } from "node:test";
 import assert from "node:assert/strict";

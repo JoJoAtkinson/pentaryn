@@ -1,4 +1,4 @@
-// Glue characterisation: the ControlsLayer lookup order (pings.mjs:161-164) when foundry.canvas.layers
+// Glue characterisation: the ControlsLayer lookup order (capture.mjs patchControlsLayer) when foundry.canvas.layers
 // has no ControlsLayer — globalThis.ControlsLayer wins over CONFIG.Canvas.layers.controls.layerClass.
 // (glue.test pins foundry.canvas.layers winning over both.) Its own process.
 import { mock, test } from "node:test";

@@ -1,4 +1,4 @@
-// Glue characterisation: no ControlsLayer#handlePing anywhere (pings.mjs:166-169). The GM ready warns
+// Glue characterisation: no ControlsLayer#handlePing anywhere (capture.mjs patchControlsLayer). The GM ready warns
 // once with the verbatim text and carries on with the socket path and the readers. Its own process.
 import { mock, test } from "node:test";
 import assert from "node:assert/strict";
