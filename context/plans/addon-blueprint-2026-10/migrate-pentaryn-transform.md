@@ -27,6 +27,40 @@ Argon HUD) up to the addon blueprint. **Not this file:** the general procedure a
 > `renderActionPanelArgonComponent` handler (audit -12, extended). Steps: 0 resolved, 0 obsolete,
 > 0 new. Re-score at HEAD: **48.8 % (20/41)**, failing set unchanged.
 
+> **Re-anchored to wave-4-base `a5a1a906` on 2026-10-11 (wave 4, checkpoint `f06e6b18`).** Eight
+> transform commits since 28ccc87 (PT3-3/4/6/7, 0.3.3, the kit-stub re-vendor); `starry.mjs`,
+> `module.json` shape and the CSS are unchanged. Read every §1–§3 line number through this map
+> (28ccc87 → HEAD):
+> - **transform.mjs:** :1-325 same; +29 for :326-563 (PT3-7's `dnd5e.revertOriginalForm` hook now
+>   :330, `returnToNormal` :347); :564-566 collapse into :593; +27 from :567. So preUse :533→:562,
+>   postUse :562→:591, transformActor :585→:612, the stripped-items `console.log` :593→:620,
+>   traits catch :492→:521, refund :394-398→:423-427, `isRunner` :619-622→:646-649, auto-revert
+>   hooks :632/645/646/654→:659/672/673/681, `updateWorldTime` :676→:703 (candidates :704-705),
+>   rests :695/707/718→:722/734/745, sweep :741-775→:768-802, publish :777-787→:804-814.
+>   :36-46, :66, :102-117 and :150 are unchanged.
+> - **hud.mjs:** :1-86 same; `closeOwnPickers` +9 (:87-92); the keybinding `once init` :89→:98;
+>   +12 for :96-225; `ReturnButton` +29 (:238-266) → +41 for old :226-476; +42 after :477, +43 after
+>   :483, +44 after :493. So `summaryInput`/`recoveryText` :125-163→:137-175, `picker` + `argonClasses`
+>   :172-438→:184-478, `describe` :449-454→:490-495, compose :468-580→:509-623,
+>   `multiattackCoveredByFullAttack` :526-534→:570-578 (the C21/C23 reads :529→:573, the silent
+>   catch :533→:577), render hooks :581/594→:625/638, portrait :606-620→:650-664, hooks
+>   :657/662/686/696/710→:701/706/730/740/754, `refreshLive` prune :690-695→:734-739, Chalice
+>   :719-760→:756-805 (`earnsChalice` :781-788, hooks :790/:803). :39 and :48-52 are unchanged.
+> - **transform-core.mjs:** +5 after :57 (`isStarryFormData` :58-61), +9 after :83 (the
+>   starry-form strip rule), +11 after :388, +13 after :432. The §2 split ranges become :26-339
+>   (wildshape), :340-543 (hud), :547-636 (starry), :637-650 (bodyswap, `isBodySwap`).
+> - **Hooks golden:** 40 rows, not 39 — PT3-7's `dnd5e.revertOriginalForm` is row 2, so the
+>   guide's rows 2-39 are rows 3-40 (transform 1-18, starry 19-26, hud 27-40). Step 8's
+>   [declared] edit removes starry's `once ready` (row 26 now).
+> - **Couplings re-checked at HEAD:** combat publishes `multiattack: multiattackOf`
+>   (combat.mjs:227) and registers `fullAttack`/`multiattack`; combat's `TT` (hud.mjs:157) is now
+>   `["pentaryn-tt", "pentaryn-combat-tt"]` and combat's CSS still has 0 `pentaryn-tt` rules (D7);
+>   senses' `lightEntries` :127 / `carriedLightOf` :145 unchanged.
+> - **Score at base:** 55.6 % (25/45) on today's scorer (it no longer reports C43); at the
+>   checkpoint 60.0 % (27/45): C20 clears, and C41 passes on the text of a todo pin (it becomes
+>   real at step 2). C59 warns at transform.mjs:255 (`endOnDruid` deletes one effect at a time) —
+>   a §5.9.1 batching item for this wave.
+
 > **WAIT — do not start.** `pentaryn-transform` is on `scripts/foundry/blueprint/wait.json` (melee
 > live-test workflow; entry collapse needs the hook-order fixture), and it composes the same Argon
 > panels as `pentaryn-combat` (also WAIT) and writes through `pentaryn-senses`' light flag. Every
@@ -574,8 +608,40 @@ should absorb `playtest.test.mjs`'s cases. New exports for step 2's barrel/expor
 |---|---|
 | Live score after the migration | ___ % (___ / ___ fail-class rules) — `conformance.py --module transform --markdown` |
 | Date | ____-__-__ |
-| Commits (Joe-approved) | characterisation: ______ · refactor: ______ · standalone: ______ |
+| Commits (Joe-approved) | characterisation: `94991024` (runner move + harness), **`f06e6b18` (checkpoint)** · refactor: ______ · standalone: ______ |
 | Declared changes handed to the live-test workflow | ______ (session L__) |
 | `module.json` edits appended to `wave7-restart-batch.md` | yes / no |
 | Adjustments rows appended to `adjustments-batch.md` | yes / no |
 | Still failing, and why | ______ |
+
+### Checkpoint (wave 4, 2026-10-11) — `f06e6b18`
+
+Written against unchanged 0.3.3 code (`git diff a5a1a906..f06e6b18 -- foundry/module/pentaryn-transform`
+touches only `test/`). `94991024` moved the 155-check suite to `test/core-legacy.mjs` (tail dropped,
+exits 1 on failure), put the fixed `test/run.mjs` in place (`LEGACY = ["test/core-legacy.mjs"]`) and
+vendored `test/kit/harness.mjs` 1.0.2. `lib/` is **not** vendored yet (step 1's `vendor.py sync`
+moves to the refactor lane's first step; C14 stays red until then).
+
+- **Suites:** 15 node:test files, 186 tests (184 pass, 2 todo) + legacy 155 checks. `playtest.test.mjs`
+  stays its own file, unchanged (its cases are not copied into glue).
+- **Fixtures:** `fixtures/world.mjs` (kit stub + TokenDocument `_preUpdateOperation`, v14
+  operators, Actor/ChatMessage, TextEditor, DialogV2, `game.time`, combats, tooltip manager,
+  `user.can`, dnd5e `allowPolymorphing`; a level-12 Stars druid and three beasts; dnd5e's use,
+  transform and revert as the module sees them), `fixtures/dom.mjs`, `fixtures/argon.mjs`. Oracles:
+  `fixtures/legacy-{transform,starry,hud}.mjs`, verbatim with Foundry reads injected, pinned over
+  their tables in `core.test.mjs` (`golden/oracle-*.json`) — step 3 proves its seams against these.
+- **Goldens:** `hooks.json` (40), `legacy-surface.json`, `console-texts.json` (step 9 moves it,
+  [declared]), `core-exports.json`, `core-constants.json`, shift/revert writes, every bar plan, every
+  button tooltip, the Starry effect and dialog.
+- **Coverage** (node:test only, module files, lcov merged per file; `lib/`, `test/` excluded):
+  51.48 / 50.67 / 23.48 at base → **99.88 / 91.38 / 98.50**. Left: `findWildShapeItem` (never called
+  at runtime, -3; the legacy suite covers it) and defensive `??` fallbacks.
+- **KNOWN pins (as they are, no todo):** -15 the ungated "not carried into the form" `console.log`
+  and the silent catches (traits → `""`, Starry dialog → `null`, hud.mjs:39, hud.mjs:577); -13 the
+  raw `pentaryn-combat` settings read inside a silent catch; -23 `forms()` resolves 3 + 1 per
+  empty-named profile; -22 Starry world-time expiry skips unlinked druids (D8: a live decision).
+- **Todo pins:** -16 the namespace survives either load order (`publish-late.test.mjs`, flips at
+  step 8, [declared]); `VERSION === module.json` (`core.test.mjs`, step 2).
+- **Not built here (needs wave-3 code):** nothing for transform — the isAoeHandle oracle pin is
+  aoe/portals/creatures.
+
