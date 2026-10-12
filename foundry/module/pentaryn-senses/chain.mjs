@@ -11,9 +11,10 @@
  * Token HUD (GM only): "Break chain" on either end removes every chain touching that token.
  * "Chain to target" appears on an unchained token while you have exactly one other token targeted.
  *
- *   game.pentaryn.chain.link(chained, anchor)   token / doc / id
+ *   game.pentaryn.chain.link(chained, anchor)   token / doc / Token uuid / id
  *   game.pentaryn.chain.break(token)            removes every chain touching it
  *   game.pentaryn.chain.links()                 [{chained, anchor}] on the viewed scene
+ *   game.pentaryn.chain.repaint()               redraws the viewed scene's chains on the next frame
  *
  * Every hook body is guarded: a bug here logs a warning and draws nothing. It never throws into
  * token rendering. A feature: the entry calls install(reg, ctx); the entry's ready publishes the API.
