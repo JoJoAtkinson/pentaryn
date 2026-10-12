@@ -27,6 +27,15 @@ full → `context/plans/code-audit-2026-10/aoe.md` · using aoe →
 > gained the new code, and finding **aoe-movement-portals-44** (Part G's hand-made prototype wrap)
 > is new and lands in S6 with -15. Node suite: 160 checks (snapshot 135).
 
+> **Re-anchored for wave 4 on 2026-10-11 (`migrate/wave-4`, base `a5a1a906`).** `git log 28ccc87..wave-4-base
+> -- foundry/module/pentaryn-aoe` is empty, so every HEAD line number below still holds. The checkpoint
+> step appended an `_internals` seam (2–3 lines) at the END of `escape`, `effects`, `resolve`, `refund`,
+> `settings`, `areas`, `aim` and `tray.mjs`; no anchor above a file's last line moved. `resolve.mjs` is
+> now 499 lines (C10 cap 500). Live score at the base: **50.0 % (23/46)** (the scorer's denominator
+> grew to 46); warnings C06w, C59 (`areas.mjs:252`, `resolve.mjs:470`: per-document writes in a loop,
+> an 8.5 performance item for S4/S5). After the checkpoint: **58.7 % (27/46)** (C14, C20, C41, C43
+> clear; C41 passes on the scorer's text match while the VERSION test itself is a todo until S2).
+
 ## WAIT — every step re-anchors first
 
 `pentaryn-aoe` is in flux under the live-test (usability/melee) workflow: it is listed in
@@ -591,6 +600,19 @@ Deferred (not part of this migration): D-A5, the Argon readiness `argonInit` hoo
 | **Total** | **L: about 4–5 agent-days, plus one live-test pass (D-A2/3/4/6/7 + the S3 lang pass)** |
 
 ## Result (fill when done)
+
+### Checkpoint (wave 4, S1) — `7a12ffad`
+
+| | |
+|---|---|
+| Commits | kit `fb18b3dd` · runner `30378553` · seams `ff202cf0` · **checkpoint `7a12ffad`** (`test(aoe): characterisation checkpoint`) |
+| Approval | S1.5 says "committed only with Joe's approval": committed by the wave-4 workflow on `migrate/wave-4` (never main); Joe reviews before merge (wave-4-report, Open for Joe) |
+| Tests | 329 node:test (324 pass, 5 todo) in 13 files + LEGACY `test/legacy-core.mjs` 160; 22 goldens; mocked timers only |
+| Coverage | before: none (legacy hand-rolled runner only, no node:test). After (lcov merged per file over the 12 module files, `lib/` and `test/` excluded): lines 100 / branches ≈77 / functions 94.0 (uncovered functions are anonymous catch/callback arrows) |
+| Seams | `test/fixtures/seams.mjs` groups today's files (`hooks`, `settings`, `areas`, `resolve`, `tray`, `attacks`, `effects`, `escape`, `refund`, `aim`) = public exports + `_internals`; `freshAim(tag)` loads a hot copy of Part G. S2–S6 edit the shim, never the tests |
+| KNOWN pins (flip in their own `[declared]` commit) | -44 a hot copy gets no `onMove`; `uninstall` leaves `placeRegions` wrapped (D-A7) · -15 `uninstall` leaves the Argon wrap (D-A2) · -7 handle actor created with a random id, no `keepId` (D-A6) · -6 queue map never shrinks · -9 refund's double swallow and the GM's delayed handle delete are silent · D-A1 `applyRows` throws on a resolution without `damages` · C26 publish one tick after ready (D-A3) · D-A4 raw `Hooks.once("canvasReady")` Argon fallback |
+| Todo pins | core `VERSION` (S2) · -44 hot copy aims after uninstall · -15 uninstall restores `ui.ARGON.bind` · -7 two GM sessions make one handle actor · -6 settled queue entry dropped |
+| Not built (needs wave-3) | the shared handle oracle is pinned on aoe's side only (`core.test.mjs` `HANDLE_ORACLE`); pinning portals' and creatures' `isAoeHandle` copies against it needs `migrate/wave-3` — follow-up |
 
 | | |
 |---|---|
