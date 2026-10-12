@@ -33,9 +33,10 @@ help:
 	@echo ""
 	@echo "  Content"
 	@echo "    make foundry-import    build actors -> stage -> import -> delete -> verify"
+	@echo "    make foundry-importer-install  check + install the importer's code only (no actors.json)"
 	@echo "    make foundry-<m>-check prove one module (parse, imports, i18n, tests, kit, conformance)"
 	@echo "    make foundry-<m>-sync  check, then install it into Foundry's Data/modules"
-	@echo "      <m>: $(MODULE_NAMES)"
+	@echo "      <m>: $(MODULE_NAMES)   (importer: -check only; install with foundry-importer-install)"
 	@echo "    make foundry-modules-check  every module, keeps going (JSON=1 for --json)"
 	@echo ""
 	@echo "  Building modules (context/foundry/addon-blueprint.md)"
@@ -179,6 +180,7 @@ foundry-admin-key:
 # Data/ is public with no auth while the tunnel is up, which is why deletion is a
 # required step rather than tidying. See context/foundry/ops.md.
 .PHONY: foundry-actors foundry-sync foundry-import foundry-clean foundry-clean-only foundry-verify
+.PHONY: foundry-importer-install
 
 foundry-actors:     ; @$(OPS) actors
 foundry-sync:       ; @$(OPS) stage
@@ -186,6 +188,9 @@ foundry-import:     ; @$(OPS) import
 foundry-clean:      ; @$(OPS) clean
 foundry-clean-only: ; @$(OPS) clean-only
 foundry-verify:     ; @$(OPS) verify
+# The importer's code alone (module-check + install, nothing staged): module-sync refuses it, and
+# foundry-sync stages actors.json with it. There is no foundry-importer-sync.
+foundry-importer-install: ; @$(OPS) importer-install
 
 # ─── Foundry ⇄ OneDrive ─────────────────────────────────────────────────
 # One direction each way so the two can never fight over a file: assets flow DOWN,

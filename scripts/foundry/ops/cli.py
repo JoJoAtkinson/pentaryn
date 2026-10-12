@@ -77,6 +77,7 @@ def build_parser() -> argparse.ArgumentParser:
     # ── actor pipeline ──
     add("actors", "Stage 1 — regenerate foundry/build/actors.json.")
     add("stage", "Copy the importer module + actors.json into Foundry's Data/.")
+    add("importer-install", "Check, then install the importer module alone (no actors.json).")
     add("import", "The Stage 2 loop: stage, wait for the browser import, delete, verify.")
     add("clean", "Delete the staged actors.json, then prove it 404s publicly.")
     add("clean-only", "Delete the staged actors.json without verifying.")
@@ -173,6 +174,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if c == "actors":        return pipeline.build_actors()
     if c == "stage":         return pipeline.stage()
+    if c == "importer-install": return pipeline.install_importer()
     if c == "import":        return pipeline.run_import()
     if c == "clean":         return pipeline.clean()
     if c == "clean-only":    return pipeline.clean_only()

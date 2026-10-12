@@ -122,7 +122,7 @@ built), `fork-footprint.sh` ✓. Pentaryn: importer 93, feedback 118, pings 67 n
 Deploy (fold into wave 3's live phase):
 1. Fork: merge into `pentaryn`, `npm run build:server`, `kill -9` the stale backend;
    `npm run build:foundry`, copy into `Data/modules/foundry-mcp-bridge`, reload the GM tab.
-2. Pentaryn: merge into `main`, sync `pentaryn-importer` and `pentaryn-feedback`. Both
+2. Pentaryn: merge into `main`, install `pentaryn-importer` (`make foundry-importer-install`) and sync `pentaryn-feedback`. Both
    `module.json` versions changed → **Foundry restart**, then reload.
 3. Live checks:
    - `toggle-token-condition {tokenId, conditionId: "prone"}` with no `active` on a ZZ token: on,
@@ -238,7 +238,8 @@ Player's Journal" is gone too. Rollback copies: `.state/live-rollback/W3L/` (wor
   It records publish order, which other modules change.
 - `pings.js`: read and restore through the stored Setting `_source`, not the aliased cache, so a
   run on a hidden tab cannot leave scratch records or report `pingLogRestored` false.
-- Add a `make foundry-importer-install` target (module-check + install, no actors.json).
+- Add a `make foundry-importer-install` target (module-check + install, no actors.json). Done on
+  `fix/overnight-2026-10-12`.
 - Wave-3 live plan: senses `timeoutMs` 90000 is over the eval-js cap of 60000. §4 says "no
   restart" and "no bridge build", which is wrong when the optional fixes ride along. The §5
   `want` map has no feedback entry. §7 row 8 and §7.3 here name real PCs; use a ZZ PC-type actor.

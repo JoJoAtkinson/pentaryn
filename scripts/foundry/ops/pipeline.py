@@ -60,6 +60,25 @@ def stage() -> int:
     return OK
 
 
+def install_importer() -> int:
+    """Check, then install the importer module alone: no actors.json is built or staged.
+
+    `module-sync` refuses the importer (the actor pipeline owns its install), and `stage` always
+    stages actors.json too, which sits public in Data/ until `foundry-clean`. A code-only deploy of
+    the importer needs neither. An actors.json some earlier `stage` left is not touched.
+    """
+    from . import modules
+    spec = cfg.MODULES["importer"]
+    if (rc := modules.check("importer")) != 0:
+        return rc
+    if not spec.src.is_dir():
+        _say(f"✗ no module at {spec.src}")
+        return FAIL
+    install(spec.src, spec.dst, cmd="importer-install")
+    _say(f"✓ module → {spec.dst}")
+    return OK
+
+
 def check_world() -> int:
     """Refuse to stage into a world that isn't there.
 
