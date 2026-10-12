@@ -26,6 +26,11 @@ test("trimSlots drops trailing holes only and copies (writeSlots, :352–353)", 
   assert.deepEqual(core.trimSlots([]), []);
 });
 
+test("shortName takes the first word before a space or comma", () => {
+  assert.equal(core.shortName("Talo Vesk"), "Talo");
+  assert.equal(core.shortName("Quinn, Ballad"), "Quinn");
+});
+
 test("patchProficiencyMap({}) adds PROFICIENCY_CATEGORIES in order", () => {
   assert.deepEqual(core.patchProficiencyMap({}), [...core.PROFICIENCY_CATEGORIES]);
   assert.deepEqual([...core.PROFICIENCY_CATEGORIES], ["wondrous", "ring", "rod", "wand", "trinket"]);

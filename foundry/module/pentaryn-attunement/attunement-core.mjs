@@ -71,6 +71,13 @@ export function bondChanges(bond, { actorId, awayKeys = [], fallbackName } = {})
 }
 
 /**
+ * The short name used in the stash tag and the away tooltip: the first word before a space or comma.
+ * @param {string} name
+ * @returns {string}
+ */
+export const shortName = name => name.split(/[ ,]/)[0];
+
+/**
  * Move-out plan for stash(): the container's creates, the owner's new away list and slot order.
  * Container contents are flattened; plain duplicates (two stacks of torches) merge.
  *
@@ -81,7 +88,7 @@ export function bondChanges(bond, { actorId, awayKeys = [], fallbackName } = {})
  * @returns {{creates: object[], away: object[], slots: (string|null)[]}}
  */
 export function planStash(owner, itemIds, { tag, currency = false, randomID, setProperty } = {}) {
-  tag ??= owner.name.split(/[ ,]/)[0];
+  tag ??= shortName(owner.name);
   const ids = new Set(itemIds);
   const away = awayOf(owner);
   const creates = [];
