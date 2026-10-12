@@ -105,22 +105,29 @@ test("registering again skips keys already registered", () => {
   assert.equal(registered.length, n);
 });
 
-test("ready: the API is published one tick later, not synchronously (C26 today)", () => {
-  assert.equal(publishedSync, undefined);
-  assert.ok(game.pentaryn.aoe);
+test("[declared] D-A3 ready: the API is published synchronously at ready, as module.api and game.pentaryn.aoe", () => {
+  assert.ok(publishedSync);
+  assert.equal(game.pentaryn.aoe, publishedSync);
+  assert.equal(game.modules.get(MODULE).api, publishedSync);
+  assert.equal(Object.isFrozen(publishedSync), true);
 });
 
-test("-10 the published API is the 20 legacy names (as a set)", () => {
-  assert.deepEqual(Object.keys(game.pentaryn.aoe).sort(), [
-    "activePlacement", "applyRows", "areasFor", "cardEffects", "createHandle", "ensureHandleActor", "handleFor", "hookIds",
-    "pendingFor", "pingPlayers", "removeArea", "resolve", "rollForPlayer", "rollNpcSaves", "selfApply", "setRow",
-    "setting", "spellAreas", "sweep", "uninstall",
-  ]);
-  for (const [k, v] of Object.entries(game.pentaryn.aoe)) assert.equal(typeof v, "function", k);
+const LEGACY = [
+  "activePlacement", "applyRows", "areasFor", "cardEffects", "createHandle", "ensureHandleActor", "handleFor", "hookIds",
+  "pendingFor", "pingPlayers", "removeArea", "resolve", "rollForPlayer", "rollNpcSaves", "selfApply", "setRow",
+  "setting", "spellAreas", "sweep", "uninstall",
+];
+
+test("[declared] D-A3 -10 the published API keeps the 20 legacy names and adds the kit members and the -10 reads", () => {
+  assert.deepEqual(Object.keys(game.pentaryn.aoe).sort(), [...LEGACY,
+    "contract", "describe", "inspect", "isHandle", "latestResolution", "resolution", "settings", "summary", "trace", "version",
+  ].sort());
+  for (const k of LEGACY) assert.equal(typeof game.pentaryn.aoe[k], "function", k);
 });
 
 test("the legacy surface (member → function name) equals golden/surface-legacy.json", () => {
-  pinJSON("surface-legacy", surfaceOf(game.pentaryn.aoe), import.meta.url);
+  const surface = surfaceOf(game.pentaryn.aoe);
+  pinJSON("surface-legacy", Object.fromEntries(LEGACY.map(k => [k, surface[k]])), import.meta.url);
 });
 
 test("ready (active GM): legacy roll mode migrated, handle actor created, viewed scene swept (golden/ready-calls.json)", () => {
@@ -256,17 +263,17 @@ test("hot patch: a copy imported with __pentarynAoeHot registers nothing at modu
   assert.equal(copy.MODULE, MODULE);
 });
 
-test("hot patch: install({ sweepOnReady: false }) re-wires and publishes synchronously, without a sweep", async () => {
-  const { install, api } = await import("../aoe.mjs");
+test("[declared] W2-K1 hot patch: install({ sweepOnReady: false }) re-wires and publishes synchronously through publishNamespace, without a sweep", async () => {
+  const { install } = await import("../aoe.mjs");
   const before = F.calls.length;
   const kb = F.calls.filter(c => c.op === "keybindings.register").length;
   out.length = 0;
-  const pentaryn = game.pentaryn;
-  game.pentaryn = Object.freeze({ ...pentaryn, aoe: undefined });   // the importer's frozen root
+  const old = game.pentaryn.aoe;
   const p = install({ sweepOnReady: false });
-  assert.equal(game.pentaryn.aoe, api, "published in the same tick (no setTimeout on this path)");
-  assert.equal(Object.isFrozen(game.pentaryn), false, "the frozen root is rebuilt, not mutated");
-  assert.equal(await p, api);
+  const published = game.pentaryn.aoe;
+  assert.notEqual(published, old, "a new API object, published in the same tick (no setTimeout on this path)");
+  assert.equal(game.modules.get(MODULE).api, published);
+  assert.equal(await p, published);
   await flush();
   const after = F.calls.slice(before);
   assert.equal(F.calls.filter(c => c.op === "keybindings.register").length, kb, "no second keybinding");
@@ -282,4 +289,12 @@ test("install() twice does not stack hooks (installed gate)", async () => {
   const n = S.hooks.hookIds().length;
   await install({ sweepOnReady: false });
   assert.equal(S.hooks.hookIds().length, n);
+});
+
+test("[declared] W2-K1 a frozen game.pentaryn (the old importer's) now makes the publish throw (kit 1.0.2, J10)", async () => {
+  const { install } = await import("../aoe.mjs");
+  const pentaryn = game.pentaryn;
+  game.pentaryn = Object.freeze({ ...pentaryn });
+  await assert.rejects(install({ sweepOnReady: false }), TypeError);
+  game.pentaryn = pentaryn;
 });

@@ -16,20 +16,22 @@
  *
  * Lifecycle: init → settings and the Escape keybinding (a keybinding can only be registered then) ·
  * setup → each feature's install(reg, ctx), in FEATURES order (aoe has always registered its hooks
- * at setup) · ready → the namespace, the Argon guard, the GM's startup work.
+ * at setup) · ready → buildApiFor(ctx), publishNamespace, the Argon guard, the GM's startup work.
  *
- * Hot patch (README-documented): game.pentaryn.aoe.uninstall() removes every hook it added; then
- * set globalThis.__pentarynAoeHot, import this file under a new URL and call its install().
+ * Hot patch (README-documented): game.pentaryn.aoe.uninstall() removes every hook and patch it
+ * added; then set globalThis.__pentarynAoeHot, import this file under a new URL and call its
+ * install(). As with every kit entry, the re-import re-runs the WIRING only: the features, core,
+ * api and settings files resolve to the instances already loaded, so a code change needs a reload.
  *
  * Design: context/plans/aoe-circles.md · Use: README.md
  */
 
-import { HOOKS, MODULE, VERSION } from "./core.mjs";
+import { HOOKS, MODULE, NS, VERSION } from "./core.mjs";
 import { makeLog } from "./lib/log.mjs";
 import { emitter, hookRegistry } from "./lib/hooks.mjs";
+import { publishNamespace } from "./lib/publish.mjs";
 import { registerSettings, migrateSettings, setting } from "./settings.mjs";
-import { areasFor, spellAreas, handleFor, removeArea } from "./scene-adapter.mjs";
-import { cardEffects } from "./messages-adapter.mjs";
+import { buildApiFor } from "./api.mjs";
 import { guardArgonBind } from "./argon.mjs";
 import * as areas from "./areas.mjs";
 import * as resolvePart from "./resolve.mjs";
@@ -79,65 +81,69 @@ function uninstall() {
   installed = false;
 }
 
-/** The registered hooks as `[{ name, id }]`, in registration order (the legacy shape). */
-function hookIds() {
-  return reg.ids().map(({ name, id }) => ({ name, id }));
+/**
+ * The published API (kit-built, frozen; null until ready or after a manifest drift). A hot patch's
+ * install() republishes a new object; this binding follows it.
+ */
+export let api = null;
+
+function onInit() {
+  registerSettings();
+  escape.registerEscape();
 }
 
-const api = {
-  areasFor, spellAreas, handleFor, removeArea,
-  sweep: areas.sweep, ensureHandleActor: areas.ensureHandleActor, createHandle: areas.createHandle,
-  resolve: resolvePart.resolve, applyRows: resolvePart.applyRows, rollNpcSaves: resolvePart.rollNpcSaves,
-  rollForPlayer: resolvePart.rollForPlayer, pingPlayers: resolvePart.pingPlayers, setRow: resolvePart.setRow,
-  selfApply: effects.selfApply, pendingFor: effects.pendingFor, cardEffects,
-  activePlacement: escape.activePlacement, setting, hookIds, uninstall,
-};
-
-// pentaryn-importer creates and FREEZES game.pentaryn, so a bare assignment throws in strict
-// mode. Rebuild the namespace instead (same pattern as pentaryn-transform).
-function publish() {
-  const current = game.pentaryn;
-  if (current && !Object.isExtensible(current)) game.pentaryn = { ...current, aoe: api };
-  else {
-    game.pentaryn ??= {};
-    game.pentaryn.aoe = api;
-  }
+function onSetup() {
+  installHooks();
 }
 
 /**
- * @param {{sweepOnReady?: boolean}} [opts]  sweepOnReady false skips the startup sweep — used when
- *        hot-patching, so the scene someone is working on is not touched.
+ * ready, in today's order: the API (built first: a manifest drift stops the publish with one clear
+ * line, the startup work still runs), published synchronously ([declared] D-A3: it used to wait a
+ * tick for pentaryn-importer's frozen root, which the importer no longer makes); the Argon guard a
+ * tick later (Argon makes ui.ARGON in its own ready hook); then the active GM's startup work.
+ * `hot`: the hot-patch install() runs the Argon guard and the startup work itself.
+ */
+function onReady({ hot = false } = {}) {
+  try {
+    ctx.api = buildApiFor(ctx);
+  } catch (err) {
+    ctx.api = null;
+    log.error("API manifest drift — not published", err);
+  }
+  if (ctx.api) publishNamespace(NS, ctx.api, { moduleId: MODULE });
+  api = ctx.api;
+  if (hot) return;
+  // D-A4: the late-Argon fallback goes through the registry too, so uninstall() removes it.
+  setTimeout(() => { if (!guardArgonBind()) reg.once("canvasReady", () => guardArgonBind(), { label: "canvasReady(argon)" }); }, 0);
+  migrateSettings().catch(err => log.error("settings migration", err));
+  areas.readyAreas().catch(err => log.error("ready", err));
+}
+
+/**
+ * Hot patch (README): after game.pentaryn.aoe.uninstall(), a copy imported with
+ * globalThis.__pentarynAoeHot set re-wires here. Settings and the keybinding already registered
+ * are skipped (a hot copy cannot add a keybinding; it takes over the Escape slot).
+ * @param {{sweepOnReady?: boolean}} [opts]  sweepOnReady false skips the startup sweep, so the scene
+ *        someone is working on is not touched.
+ * @returns {Promise<object|null>} the published API
  */
 export async function install({ sweepOnReady = true } = {}) {
-  registerSettings();
-  escape.registerEscape();
-  installHooks();
-  publish();
+  onInit();
+  onSetup();
+  onReady({ hot: true });
   guardArgonBind();
   await migrateSettings();
   await areas.readyAreas({ sweepOnReady });
-  return api;
+  return ctx.api;
 }
 
-export { api, uninstall, MODULE };
+export { uninstall, MODULE };
 
 // Normal module load: settings and the Escape keybinding at init (a keybinding can only be
-// registered then), hooks at setup (they only act on later events), namespace and the GM's
-// startup work at ready. CONFIG.DND5E.requests exists from dnd5e's init.
+// registered then), hooks at setup (they only act on later events), the API and the GM's startup
+// work at ready. CONFIG.DND5E.requests exists from dnd5e's init.
 if (!globalThis.__pentarynAoeHot) {
-  Hooks.once("init", () => {
-    registerSettings();
-    escape.registerEscape();
-  });
-  Hooks.once("setup", () => installHooks());
-  Hooks.once("ready", () => {
-    // Deferred a tick: pentaryn-importer's ready hook (it sorts after "aoe") replaces
-    // game.pentaryn with a frozen object, which would drop a key published synchronously here.
-    setTimeout(publish, 0);
-    // Argon makes ui.ARGON in its own ready hook; a tick later it exists whatever the load order.
-    // D-A4: the late-Argon fallback goes through the registry too, so uninstall() removes it.
-    setTimeout(() => { if (!guardArgonBind()) reg.once("canvasReady", () => guardArgonBind(), { label: "canvasReady(argon)" }); }, 0);
-    migrateSettings().catch(err => log.error("settings migration", err));
-    areas.readyAreas().catch(err => log.error("ready", err));
-  });
+  Hooks.once("init", onInit);
+  Hooks.once("setup", onSetup);
+  Hooks.once("ready", onReady);
 }
