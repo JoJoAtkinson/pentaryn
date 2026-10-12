@@ -2517,6 +2517,26 @@ def restore_snapshot(st: Storage, snap: Snapshot, reason: str = "manual") -> Non
         _restore_locked(st, snap, reason)
 
 
+def record_restored(st: Storage, snap: Snapshot, by: str, manifest: dict | None) -> None:
+    """The bootstate record of a restore of `snap` that has just been applied — one
+    record for `restore` and the updater rollback alike (review M15)."""
+    anc = read_lineage(st, snap)
+    # The digest of what `snap` holds — its world, as now on disk, and ITS manifest —
+    # not of the local tree: extras a world-less restore left in place are not in
+    # that manifest, so the next backup differs, uploads, and its manifest references
+    # them before any later restore may remove them (review DL5/R1, §1 #9).
+    digest = snapshot_digest(manifest) if manifest is not None else snapshot_digest()
+    bootstate.load().record_snapshot(snap.name, snap.host, snap.mtime, digest, by=by,
+                                     lineage=list(anc.names) if anc else [],
+                                     lineage_mtimes=list(anc.mtimes) if anc else [],
+                                     # unbounded (no edge recorded) is stored as None:
+                                     # edge = this snapshot's own mtime, which is sound
+                                     # — it holds nothing newer than itself
+                                     origin_before=_finite(anc.origin_before)
+                                     if anc else None,
+                                     clear_pending=True)
+
+
 def _restore_locked(st: Storage, snap: Snapshot, reason: str) -> None:
     try:
         f = fetch_snapshot(st, snap)
@@ -2542,22 +2562,7 @@ def _restore_locked(st: Storage, snap: Snapshot, reason: str) -> None:
             die(f"restore of {snap.name} refused: {exc}\n    {back}")
         except Exception as exc:  # noqa: BLE001
             die(f"extract of {snap.name} failed part-way: {exc}\n    {back}")
-        anc = read_lineage(st, snap)
-        # The digest of what `snap` holds — its world, as now on disk, and ITS manifest —
-        # not of the local tree: extras a world-less restore left in place are not in
-        # that manifest, so the next backup differs, uploads, and its manifest references
-        # them before any later restore may remove them (review DL5/R1, §1 #9).
-        digest = snapshot_digest(f.manifest) if f.manifest is not None else snapshot_digest()
-        bootstate.load().record_snapshot(snap.name, snap.host, snap.mtime, digest,
-                                         by=f"restore:{reason}",
-                                         lineage=list(anc.names) if anc else [],
-                                         lineage_mtimes=list(anc.mtimes) if anc else [],
-                                         # unbounded (no edge recorded) is stored as
-                                         # None: edge = this snapshot's own mtime, which
-                                         # is sound — it holds nothing newer than itself
-                                         origin_before=_finite(anc.origin_before)
-                                         if anc else None,
-                                         clear_pending=True)
+        record_restored(st, snap, f"restore:{reason}", f.manifest)
         log(f"restored {snap.name}" + (f" (the state it replaced: {before})" if before else ""))
     finally:
         discard_fetched(f)

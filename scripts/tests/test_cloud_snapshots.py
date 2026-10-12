@@ -1512,6 +1512,33 @@ def test_updater_world_restore_of_a_bundled_snapshot_restores_modules_not_the_sy
     assert len(got) == 1 and got[0].startswith("module@tools@")   # never the system
 
 
+def test_updater_rollback_writes_the_same_record_as_a_restore_M15(two_hosts):
+    """M15: the rollback's bootstate record is `_restore_locked`'s, through one helper —
+    lineage mtimes kept, the snapshot's own manifest digest (not the local tree, whose
+    system the rollback leaves at the new version), and any pending notice answered."""
+    from scripts.foundry.update import recover
+    mac = _install(two_hosts.data["mac"])
+    with two_hosts.use("mac"):
+        cloud.backup("shutdown")
+        m0 = bootstate.load().based_on
+        m0_mtime = cloud.find_snapshot(cloud.store(), m0).mtime
+        _edit(mac, "pre-update")
+        cloud.backup("auto-update")
+        snap = recover.newest_world_snapshot()
+        want_digest = cloud.snapshot_digest()      # what `snap` holds, as backed up
+        bootstate.load().set_pending("boss-20990101-000000.tar.gz", 1.0)
+        _edit(mac, "migrated by a bad update")
+        _system(mac, "5.13", body="the new system\n")
+        rec = recover.Recovery(kind="system", target="dnd5e")
+        recover._restore_world_tar(snap, rec)
+        st = bootstate.load()
+    assert (st.based_on, st.by, st.lineage) == (snap.name, "updater-rollback", [m0])
+    assert st.lineage_mtimes == [m0_mtime]
+    assert st.lineage_origin_before == m0_mtime
+    assert st.digest == want_digest
+    assert (st.pending_newer, st.pending_newer_mtime) == (None, None)
+
+
 def test_updater_world_restore_does_not_need_the_system_bundle(two_hosts):
     from scripts.foundry.update import recover
     mac = _install(two_hosts.data["mac"])
