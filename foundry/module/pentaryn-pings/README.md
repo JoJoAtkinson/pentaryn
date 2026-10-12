@@ -104,9 +104,11 @@ to `serialStore` changes write timing and needs a two-GM live test.
 
 ## Pitfalls
 
-- **Read lag:** the readers read the stored setting, not the buffer. Until a first flush the buffer
-  *is* the cached setting array, so a new ping shows at once; after one, the readers trail the
-  newest ping until the next write (≤ 250 ms). Wait a second after pinging before `last()`.
+- **Read lag:** the readers read the stored setting, not the buffer. Until the first flush, or the
+  first trim (the log already holding `max`), the buffer *is* the cached setting array, so a new
+  ping shows at once. A trim detaches it: that ping still shows, `all()` briefly returns `max`+1
+  records, and later pings trail until the write (≤ 250 ms). After a flush the readers trail the
+  newest ping until the next write. Wait a second after pinging before `last()`.
 - `recent(0)` returns **everything**, and a negative `n` drops records from the oldest end.
 - `snapped` is square-grid maths even on a hex scene.
 - A fractional `max` below 1 never trims the log.
