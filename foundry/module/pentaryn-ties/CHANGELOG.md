@@ -78,6 +78,11 @@ Fixed (declared): `describe()` now tells the truth about the study API — `stud
 `inspectAs` and `deliverHeld` list the Known list and the `attributeKnowledge` setting among their
 writes, `study.deliver` lists `studied` and `known`. Manifest only; no behaviour changed. EXT-2.
 
+Fixed (declared): README's Extending recipe for **a new study namespace** no longer says one branch in
+`resolveFact` is enough — it names the downstream `fact.ns` tests in `apply.mjs`, `claim.mjs`,
+`gate.mjs`, `share.mjs` and `authoring.mjs` too, and points at the seam note in `study/resolve.mjs`
+as the kept list. Docs only; no behaviour changed. EXT-3.
+
 ## 0.19.4 (2026-10-10, usability run, Area 7 re-run)
 
 - **The inspect window's Share switches are the table's PCs only** (`tablePCs`): each player's

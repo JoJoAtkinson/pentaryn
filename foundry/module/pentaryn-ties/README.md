@@ -144,7 +144,11 @@ are GM-written; the registry queues its writes one at a time.
   `GOLDEN_UPDATE=1 node --test test/api-kit.test.mjs` and read the diff.
 - **A pure rule:** `core/<topic>.mjs` with a fixture; new rules go in `core/rules.mjs` (the
   `known-core.mjs` barrel's export list is pinned).
-- **A study namespace:** a branch in `resolveFact` (`study/resolve.mjs`).
+- **A study namespace:** a branch in `resolveFact` (`study/resolve.mjs`) **plus** the `fact.ns` tests
+  downstream — `study/apply.mjs` (`readBelief`, `putBelief`, `applyPlayerWrites`), `study/claim.mjs`
+  (`claimFact`, `releaseFact`), `study/gate.mjs` (`promptDeliver`, `deliverFact`, `rowMissed`, the
+  parsed-key test in `pending`), `study/share.mjs`, and `study/authoring.mjs`'s `beliefs`. The kept
+  list is the seam note at `study/resolve.mjs:68`; a new place that tests `fact.ns` goes there too.
 
 ## Pitfalls
 
