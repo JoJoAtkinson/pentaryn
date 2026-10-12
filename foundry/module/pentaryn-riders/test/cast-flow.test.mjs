@@ -343,6 +343,31 @@ test("arcaneRecoveryDialog (cast-flow's export) called directly: same dialog, re
   assert.equal(await arcaneRecoveryDialog(makeActor({ name: "Nobody" })), null);
 });
 
+test("riders-async-2: slots that change while the picker is open — the choice adds to the fresh values; a choice no longer valid recovers nothing and warns", async () => {
+  const { arcaneRecoveryDialog } = await import("../cast-flow.mjs");
+  const mage = () => makeActor({ name: "Mage", ownership: { default: 3 }, system: { spells: { spell1: { level: 1, value: 2, max: 4 }, spell2: { level: 2, value: 1, max: 3 } } }, items: [
+    { id: "mageclass0000001", name: "Wizard", type: "class", system: { identifier: "wizard", levels: 5 } },
+  ] });
+  // A 1st-level cast while the window is open: one 1st recovered on top of the fresh 1, not the old 2.
+  const caster = mage();
+  W.answer = async () => { await caster.update({ "system.spells.spell1.value": 1 }); return { l1: 1, l2: 0 }; };
+  assert.deepEqual(await arcaneRecoveryDialog(caster), { 1: 1, 2: 0 });
+  assert.equal(caster.system.spells.spell1.value, 2);
+  assert.equal(caster.system.spells.spell2.value, 1);
+  // A long rest while the window is open: the 1st is no longer spent, so nothing is written.
+  const rester = mage();
+  newNotes();
+  W.takeLog();
+  const before = F.calls.length;
+  W.answer = async () => { await rester.update({ "system.spells.spell1.value": 4, "system.spells.spell2.value": 3 }); return { l1: 1, l2: 0 }; };
+  assert.equal(await arcaneRecoveryDialog(rester), null);
+  W.answer = () => "cancel";
+  assert.equal(rester.system.spells.spell1.value, 4);
+  assert.equal(F.calls.slice(before).filter(c => c.op === "update").length, 1, "only the rest's own update");
+  assert.deepEqual(W.takeLog().filter(l => l.op === "ChatMessage.create"), []);
+  assert.deepEqual(newNotes(), [["warn", "Arcane Recovery: the spell slots changed while the window was open, so nothing was recovered."]]);
+});
+
 test("Arcane Recovery: a failing dialog and a throw are warned", async () => {
   W.take();
   await useRecovery(() => { throw new Error("dialog broke"); });

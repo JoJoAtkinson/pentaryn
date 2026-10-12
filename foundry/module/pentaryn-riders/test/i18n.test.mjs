@@ -1,4 +1,4 @@
-// lang/en.json against the code (guide S1, S3): the 41 keys exist (golden/lang-keys.json), every
+// lang/en.json against the code (guide S1, S3): the 42 keys exist (golden/lang-keys.json), every
 // full `PENTARYN_RIDERS.*` literal in the sources resolves, and so do the 21 keys built today by
 // prefix wrappers — 12 by riders.mjs's L(k), 6 by cast-flow's arcaneRecovery T(k), 3 by
 // concentration's template key. S3 turns those into full literals; the set must not change.
@@ -19,7 +19,7 @@ const flat = (node, prefix = "", out = []) => {
 const KEYS = flat(lang);
 
 test("lang/en.json: the key list (golden/lang-keys.json), every value a non-empty string", () => {
-  assert.equal(KEYS.length, 41);
+  assert.equal(KEYS.length, 42);
   pinJSON("lang-keys", KEYS, import.meta.url);
   for (const k of KEYS) assert.ok(typeof k === "string" && String(k.split(".").reduce((o, p) => o[p], lang)).trim(), k);
 });
