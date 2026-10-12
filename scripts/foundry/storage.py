@@ -182,7 +182,8 @@ class FolderStorage:
 
     def read_text(self, rel: str) -> str | None:
         try:
-            return self._p(rel).read_text(encoding="utf-8")
+            # 'replace': a corrupt file reads as "bad", never a UnicodeDecodeError (R3).
+            return self._p(rel).read_bytes().decode("utf-8", "replace")
         except FileNotFoundError:
             return None
         except OSError as exc:
@@ -469,12 +470,16 @@ class RcloneStorage:
     # -- small files --------------------------------------------------------
 
     def read_text(self, rel: str) -> str | None:
-        proc = self._run("cat", self._r(_check_rel(rel)), timeout=self.timeouts["cat"], what=rel)
+        # Binary, decoded here with 'replace': non-UTF-8 text reads as "bad", never a
+        # UnicodeDecodeError out of subprocess (R3).
+        proc = self._run("cat", self._r(_check_rel(rel)), timeout=self.timeouts["cat"], what=rel,
+                         text=False)
         if proc.returncode != 0:
             if self._not_found(proc):
                 return None
             raise self._fail("cat", rel, proc)
-        return proc.stdout
+        out = proc.stdout or b""
+        return out.decode("utf-8", "replace") if isinstance(out, bytes) else out
 
     def read_head(self, rel: str, n: int) -> bytes | None:
         """The first `n` bytes of a cloud file (``rclone cat --count``), or None when it is

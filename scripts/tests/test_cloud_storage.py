@@ -137,6 +137,23 @@ def test_bad_rel_paths_are_refused(st):
             st.read_text(bad)
 
 
+# ── R3: non-UTF-8 cloud text is replaced, never a UnicodeDecodeError ─────────
+
+def test_read_text_of_non_utf8_bytes_replaces_them_not_raises(st, cloud_dir):
+    # R3: a corrupt sidecar must fall into the callers' "absent"/"bad" paths, not a traceback.
+    (cloud_dir / "world-backups" / "w.parent.json").write_bytes(b'{"a": "\xff\xfe"}\n')
+    got = st.read_text("world-backups/w.parent.json")
+    assert got == '{"a": "\ufffd\ufffd"}\n'
+
+
+def test_rclone_read_text_is_a_binary_cat(rc, fake):
+    # R3: rclone's stdout is decoded by us (with 'replace'), not by subprocess.
+    rc.write_text("world-backups/README.txt", "hi")
+    fake.calls.clear()
+    assert rc.read_text("world-backups/README.txt") == "hi"
+    assert fake._text is False
+
+
 # ── rclone only: the two-step upload, failures, argv ────────────────────────
 
 @pytest.fixture

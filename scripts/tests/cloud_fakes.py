@@ -120,7 +120,8 @@ class FakeRclone:
             with p.open("rb") as fh:
                 data = fh.read(n)
             return self._done(argv, 0, data if not self._text else data.decode("utf-8"))
-        return self._done(argv, 0, p.read_text(encoding="utf-8"))
+        data = p.read_bytes()                       # text=True decodes strictly, as subprocess
+        return self._done(argv, 0, data if not self._text else data.decode("utf-8"))
 
     def _rcat(self, argv, pos, data):
         p = self._path(pos[0])
