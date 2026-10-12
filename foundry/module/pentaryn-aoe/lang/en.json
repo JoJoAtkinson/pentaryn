@@ -86,7 +86,7 @@
       },
       "carefulSpell": {
         "Name": "Careful Spell protects the creatures the player chooses",
-        "Hint": "When a sorcerer uses Careful Spell, they pick up to their Charisma modifier (minimum one) of the creatures on their scene, and a chat card names them. The next save spell's tray marks exactly those creatures protected: an automatic success and no damage on a half-damage spell, no request card. Then it ends; a spell with no save leaves it waiting, and using it again replaces the choice. The GM can protect or unprotect any row in the tray with its shield."
+        "Hint": "When a sorcerer uses Careful Spell, they pick up to their Charisma modifier (minimum one) of the creatures they can see on their scene, and a chat card names them (or says nobody was chosen, if they skip). The next save spell's tray marks exactly those creatures protected: an automatic success and no damage on a half-damage spell, no request card. Then it ends; a spell with no save leaves it waiting, and using it again replaces the choice. The GM can protect or unprotect any row in the tray with its shield."
       },
       "refundCancelledArea": {
         "Name": "Refund a cancelled area",
@@ -117,11 +117,11 @@
     },
     "Careful": {
       "PickTitle": "Careful Spell",
-      "PickHint": "Choose who it protects (up to {n}). On your next spell that calls for a saving throw, they succeed automatically and take no damage where a success would halve it.",
+      "PickHint": "Choose who it protects (up to {n}). On your next spell that calls for a saving throw, they succeed automatically and take no damage where a success would halve it. Skip to choose nobody; the GM can protect creatures on the tray.",
       "PickOk": "Protect them",
-      "PickCancel": "Cancel",
-      "Nobody": "Careful Spell: there is no creature on this scene to choose.",
+      "PickSkip": "Skip",
       "Card": "{caster} uses Careful Spell: {names}",
+      "CardNobody": "{caster} uses Careful Spell: nobody chosen (the GM can protect creatures on the save tray)",
       "Protect": "Careful Spell: protect this creature (an automatic success, no damage where a success halves it)",
       "Unprotect": "Careful Spell: take the protection off (back to its own save)",
       "Row": "protected",

@@ -99,7 +99,7 @@ test("aoe-careful-select: a non-save spell (Shield) leaves it armed; no time win
   assert.deepEqual(res.rows.filter(r => r.protected).map(r => r.id), [IDS.mr, IDS.dead], "the caster may choose herself");
 });
 
-test("aoe-careful-select: the choice is capped at the CHA mod (min 1); closing the picker stores and posts nothing", async () => {
+test("aoe-careful-select: the choice is capped at the CHA mod (min 1); closing the picker declares nobody (MM-1)", async () => {
   await useCareful({ pick: [IDS.g1, IDS.g2, IDS.cv, IDS.mr, IDS.dead] });
   assert.deepEqual(ctx.wizard.flags[MODULE].careful.tokens, [IDS.g1, IDS.g2, IDS.cv], "CHA +3");
   const cha = ctx.wizard.system.abilities.cha.mod;
@@ -109,8 +109,8 @@ test("aoe-careful-select: the choice is capped at the CHA mod (min 1); closing t
   ctx.wizard.system.abilities.cha.mod = cha;
   F.calls.length = 0;
   await useCareful({ pick: null });
-  assert.deepEqual(ops("update", "create"), []);
-  assert.deepEqual(ctx.wizard.flags[MODULE].careful.tokens, [IDS.g2], "the earlier choice stands");
+  assert.match(ops("create").find(c => c.documentName === "ChatMessage")?.data.content ?? "", /nobody chosen/, "MM-1: still a declaration");
+  assert.deepEqual(ctx.wizard.flags[MODULE].careful.tokens, [], "MM-1: it replaces the earlier choice");
   delete ctx.wizard.flags[MODULE].careful;
 });
 

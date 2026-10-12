@@ -31,9 +31,11 @@ dnd5e 6 only. Chat data is read from typed messages (`message.type` `usage` / `a
   out. Players see one status line on their own card (waiting / applied / re-rolled), never
   monster numbers; the GM-only monster saves are hidden from their chat.
 - **Careful Spell** (`careful.mjs`). Metamagic is tracked, not forced onto a spell (Joe's ruling,
-  2026-10-12). Using it opens a picker on the caster's client: the creatures on their scene by
-  token name, the current targets ticked, up to their CHA mod (min 1). A public card says
-  `<caster token> uses Careful Spell: <token names>`. The caster's next save spell's tray marks
+  2026-10-12). Using it opens a picker on the caster's client: the creatures on their scene they
+  can see, by token name, the current targets ticked, up to their CHA mod (min 1). A public card
+  says `<caster token> uses Careful Spell: <token names>`. Using it always declares: a skipped pick
+  (or nobody to pick) posts the card with nobody chosen and still replaces an earlier choice; that
+  tray then protects nobody and the GM shields rows by hand. The caster's next save spell's tray marks
   exactly those creatures *protected*: an automatic success and ×0 on a half-damage spell, no
   request card. Then it ends (one use per declaration); a re-roll of that card keeps it. A spell
   with no save leaves it waiting, there is no time window, and using it again replaces the choice.

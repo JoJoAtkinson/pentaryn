@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- **Careful Spell is always a declaration; the picker names only creatures the player can see**
+  (declared, MM-1; Joe's metamagic ruling 2026-10-12): skipping the pick (Skip, or closing the
+  picker) or having nobody to pick used to store and post nothing, so the use left no card and an
+  older choice stayed armed. Now the public card posts with nobody chosen (new string
+  `PENTARYN_AOE.Careful.CardNobody`), the empty choice replaces the earlier one, and the next save
+  tray uses it up with nobody protected (the GM shields rows by hand). A player's picker leaves out
+  tokens out of their sight on their canvas, as well as hidden ones. `Careful.PickCancel` became
+  `Careful.PickSkip`; `Careful.Nobody` is gone.
 - **A publish throw at ready no longer skips the rest of ready** (declared, R7): on the normal
   ready path a `publishNamespace` throw (e.g. a frozen `game.pentaryn`) is caught and logged
   `pentaryn-aoe | publish`; the Argon guard, the settings migration and the startup sweep still

@@ -48,7 +48,7 @@ export const SETTINGS = Object.freeze([
     doc: "Part D: an Effects tray nobody has applied yet is outlined (cards under an hour old)." },
   { key: "carefulSpell", scope: "world", config: true, type: Boolean, default: true,
     name: "PENTARYN_AOE.Setting.carefulSpell.Name", hint: "PENTARYN_AOE.Setting.carefulSpell.Hint",
-    doc: "Part B: using Careful Spell opens a picker (up to CHA mod, min 1, of the creatures on the caster's scene) and posts a public card; the caster's next save tray protects exactly those rows, then it ends. The GM can toggle any row's protection on the tray." },
+    doc: "Part B: using Careful Spell opens a picker (up to CHA mod, min 1, of the creatures the user can see on the caster's scene) and always posts a public card (a skipped pick declares nobody); the caster's next save tray protects exactly those rows, then it ends. The GM can toggle any row's protection on the tray." },
   { key: "refundCancelledArea", scope: "world", config: true, type: Boolean, default: true,
     name: "PENTARYN_AOE.Setting.refundCancelledArea.Name", hint: "PENTARYN_AOE.Setting.refundCancelledArea.Hint",
     doc: "Part F: a cancelled area placement refunds what the cast spent and removes its card." },

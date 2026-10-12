@@ -615,7 +615,7 @@
       "scope": "world",
       "type": "Boolean",
       "default": true,
-      "doc": "Part B: using Careful Spell opens a picker (up to CHA mod, min 1, of the creatures on the caster's scene) and posts a public card; the caster's next save tray protects exactly those rows, then it ends. The GM can toggle any row's protection on the tray."
+      "doc": "Part B: using Careful Spell opens a picker (up to CHA mod, min 1, of the creatures the user can see on the caster's scene) and always posts a public card (a skipped pick declares nobody); the caster's next save tray protects exactly those rows, then it ends. The GM can toggle any row's protection on the tray."
     },
     {
       "key": "refundCancelledArea",

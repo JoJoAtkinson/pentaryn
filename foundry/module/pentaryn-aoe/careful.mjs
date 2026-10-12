@@ -8,9 +8,11 @@
  * Joe's metamagic ruling (2026-10-12, aoe-careful-select): metamagic is a tracking thing. The player
  * declares it and chooses; nothing is inferred and nothing is forced onto a spell's mechanics.
  *  - On the caster's client, using Careful Spell (`dnd5e.postUseActivity`) opens a picker of the
- *    creatures on the caster's scene (token names, the current targets ticked, up to CHA mod, min 1),
- *    posts a public card "<caster's token> uses Careful Spell: <tokens>" and stores the choice on the
- *    caster: flags.pentaryn-aoe.careful = { at, scene, tokens, names }. Using it again replaces it.
+ *    creatures on the caster's scene the user can see (token names, the current targets ticked, up
+ *    to CHA mod, min 1), posts a public card "<caster's token> uses Careful Spell: <tokens>" and
+ *    stores the choice on the caster: flags.pentaryn-aoe.careful = { at, scene, tokens, names }.
+ *    Using it always declares (MM-1): skipping the pick, or nobody to pick, stores an empty choice
+ *    and the card says nobody was chosen. Using it again replaces the earlier declaration.
  *  - The caster's next SAVE tray (resolve.mjs, through ctx.exposed.carefulFor) marks exactly those
  *    rows protected (core.protectRows) and clears the flag: one use per declaration. A spell with no
  *    save never reaches it, so it stays armed; there is no time window. A re-roll of a card that
@@ -45,11 +47,16 @@ function ownToken(actor) {
   return actor.token ?? tokens.find(tk => tk.parent === canvas?.scene) ?? tokens[0] ?? null;
 }
 
-/** The creatures on `scene` this user may choose (core.isCreature), hidden ones only for a GM. */
+/**
+ * The creatures on `scene` this user may choose (core.isCreature). A player sees no hidden token and,
+ * where the token is drawn on their canvas, none out of their sight (MM-1: the picker names no one
+ * the player cannot see); a GM sees them all.
+ */
 function choicesOn(scene) {
   return (scene?.tokens?.contents ?? [...(scene?.tokens ?? [])]).filter(tk => {
     const actor = tk.actor;
-    if (!actor || (tk.hidden && !game.user.isGM)) return false;
+    if (!actor) return false;
+    if (!game.user.isGM && (tk.hidden || (tk.object && !tk.object.visible))) return false;
     return isCreature({
       actorType: actor.type, hpMax: actor.system?.attributes?.hp?.max ?? 0,
       handle: isHandle(tk), isHandleActor: !!aoeFlags(actor).handleActor, isPile: isPile(tk),
@@ -59,7 +66,7 @@ function choicesOn(scene) {
 
 /**
  * The picker: one box per creature (token name), the user's current targets ticked (up to max).
- * @returns {Promise<string[]|null>}  the chosen token ids (at most max), or null when closed
+ * @returns {Promise<string[]>}  the chosen token ids (at most max); none when skipped or closed
  */
 async function pick(tokens, max) {
   const targeted = new Set([...(game.user?.targets ?? [])].map(t => t?.document?.id ?? t?.id));
@@ -76,7 +83,7 @@ async function pick(tokens, max) {
     buttons: [
       { action: "ok", label: _loc("PENTARYN_AOE.Careful.PickOk"), icon: "fa-solid fa-shield-halved", default: true,
         callback: (event, button) => read(button.form) },
-      { action: "cancel", label: _loc("PENTARYN_AOE.Careful.PickCancel"), icon: "fa-solid fa-xmark" },
+      { action: "skip", label: _loc("PENTARYN_AOE.Careful.PickSkip"), icon: "fa-solid fa-forward" },
     ],
     // No more than max boxes can be ticked: the others grey out at the limit.
     render: (event, dialog) => {
@@ -90,10 +97,14 @@ async function pick(tokens, max) {
     },
     rejectClose: false,
   });
-  return Array.isArray(out) ? out : null;
+  return Array.isArray(out) ? out : [];
 }
 
-/** On the caster's client: Careful Spell was used — the player picks who it protects, a public card says so. */
+/**
+ * On the caster's client: Careful Spell was used — the player picks who it protects, a public card
+ * says so. Always a declaration (MM-1): a skipped pick stores nobody, replaces any earlier choice, and
+ * the next save tray uses it up; the GM protects rows by hand.
+ */
 async function onCarefulUsed(activity) {
   if (!setting("carefulSpell")) return;
   if ((activity?.item?.system?.identifier || "") !== "careful-spell") return;
@@ -102,20 +113,18 @@ async function onCarefulUsed(activity) {
   const own = ownToken(actor);
   const scene = own?.parent ?? canvas?.scene ?? null;
   const tokens = choicesOn(scene);
-  if (!tokens.length) {
-    ui.notifications?.info?.(_loc("PENTARYN_AOE.Careful.Nobody"));
-    return why("careful", null, "no creature on the scene to choose");
-  }
-  const ids = await pick(tokens, carefulMax(actor));
-  if (!ids?.length) return why("careful", null, "picker closed, nothing chosen");
+  const ids = tokens.length ? await pick(tokens, carefulMax(actor)) : [];
+  if (!ids.length) why("careful", null, tokens.length ? "pick skipped, nobody chosen" : "no creature on the scene to choose");
   const chosen = tokens.filter(tk => ids.includes(tk.id));
   const names = chosen.map(tk => tk.name);
-  await actor.update({ [`flags.${MODULE}.careful`]: { at: Date.now(), scene: scene.id, tokens: chosen.map(tk => tk.id), names } });
+  await actor.update({ [`flags.${MODULE}.careful`]: { at: Date.now(), scene: scene?.id ?? null, tokens: chosen.map(tk => tk.id), names } });
   // Public, token names only (never the actor's name).
   const caster = own?.name ?? actor.prototypeToken?.name ?? "";
+  const text = names.length ? _loc("PENTARYN_AOE.Careful.Card", { caster, names: names.join(", ") })
+    : _loc("PENTARYN_AOE.Careful.CardNobody", { caster });
   await ChatMessage.implementation.create({
     speaker: ChatMessage.getSpeaker({ actor, scene, token: own }),
-    content: `<p class="pa-careful-card"><i class="fa-solid fa-shield-halved" inert></i> ${esc(_loc("PENTARYN_AOE.Careful.Card", { caster, names: names.join(", ") }))}</p>`,
+    content: `<p class="pa-careful-card"><i class="fa-solid fa-shield-halved" inert></i> ${esc(text)}</p>`,
   });
 }
 
@@ -124,7 +133,7 @@ function usedBy(usage) {
   if (!usage) return null;
   for (const m of game.messages.contents.slice(-RECENT_MESSAGES).reverse()) {
     const res = aoeFlags(m).resolution;
-    if (res?.usage === usage && res.careful?.ids?.length) return res.careful;
+    if (res?.usage === usage && Array.isArray(res.careful?.ids)) return res.careful;   // an empty pick counts
   }
   return null;
 }
