@@ -3,7 +3,7 @@
 // Wild Shape as one HUD click, revert from an item, and the end-of-form rules dnd5e leaves to the
 // table; Starry Form; the Argon HUD. Files, in load order:
 //   transform-core.mjs     PURE barrel over core/* (constants, rules)
-//   settings.mjs           the Escape keybinding row; the two outside settings reads
+//   settings.mjs           the Escape keybinding row; the one outside settings read (dnd5e's)
 //   patches.mjs            the core v14 _preUpdateOperation unwrap (wrapMethod)
 //   wiring.mjs             the one log / hook registry / ctx both entries share
 //   wildshape-adapter.mjs  shift, revert, lookups, chat, the bonus-action mark, who runs what
