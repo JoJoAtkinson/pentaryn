@@ -23,9 +23,10 @@ export const MANIFEST = Object.freeze({
     {
       path: "inspect",
       params: [
-        { name: "ref", kind: "user", type: "User|id|exact name|Actor|Token", resolve: false,
+        { name: "ref", kind: "user", type: "User|id|exact name|uuid|Actor|Token", resolve: false,
           doc: "never a substring; an Actor or Token (what the root game.pentaryn.inspect passes) means its players: "
-            + "every non-GM user who owns it or has it as their assigned character" },
+            + "every non-GM user who owns it or has it as their assigned character. As a string: a user first, then "
+            + "an Actor/Token uuid, or an actor id or exact name no user has" },
         { name: "opts", type: "{ as? }", optional: true },
       ],
       returns: "Promise<{ user, pending, reports, actions, errors }> | for an Actor/Token: "

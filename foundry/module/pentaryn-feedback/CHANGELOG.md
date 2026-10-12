@@ -1,5 +1,13 @@
 # Changelog — Pentaryn Feedback (`pentaryn-feedback`)
 
+## Unreleased — 2026-10-12 (W3L live-check fix; `module.json` stays 0.1.2, code-only sync)
+
+- **[declared] `inspect` reaches an Actor from a string**, which is all the MCP bridge can send:
+  `pentaryn-read {ns:"feedback", path:"inspect", ref:"Actor.<id>"}` answered `expected User, got Actor`,
+  and an actor's name `NOT_FOUND: user <name>`. A string ref is still a user first; otherwise an
+  Actor/Token uuid, or an actor id or exact name, means that actor's players. The manifest `ref` type
+  adds `uuid` and its doc says so (describe() golden updated for those two strings).
+
 ## 0.1.2 — 2026-10-11 (live-check fix)
 
 - **[declared] `inspect` accepts an Actor or Token**, as `journal.inspect` does: the root

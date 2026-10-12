@@ -183,6 +183,24 @@ test("inspect(Actor): the actor's owning non-GM users, their pending ids and rep
   assert.deepEqual(root.feedback.users.map(u => u.id), [IDS.player], "the root inspect no longer gets BAD_ARGS");
 });
 
+// 2026-10-12 live check (W3L): over the MCP bridge a ref is a string, so pentaryn-read
+// {ns:"feedback", path:"inspect", ref:"Actor.<id>"} answered "expected User, got Actor" and an actor's
+// name NOT_FOUND (user <name>). A uuid of an Actor/Token, and — when no user matches — an actor's id
+// or exact name, now reach the Actor path; a user ref still wins, and a miss on both is NOT_FOUND.
+test("inspect(string): an Actor/Token uuid, or an actor id / name no user has, means that actor's players", async () => {
+  seed();
+  const byUuid = await api.inspect(`Actor.${IDS.caven}`);
+  assert.equal(byUuid.actor.id, IDS.caven);
+  assert.deepEqual(byUuid.users.map(u => u.id), [IDS.player]);
+  const tok = game.scenes.get(IDS.scene).tokens.get(IDS.token);
+  assert.deepEqual((await api.inspect(tok.uuid)).users.map(u => u.id), [IDS.player], "a Token uuid means its actor");
+  assert.deepEqual((await api.inspect("Goblin")).actor?.id, IDS.goblin, "an actor's exact name");
+  assert.deepEqual((await api.inspect(IDS.goblin)).actor?.id, IDS.goblin, "an actor's id");
+  assert.equal((await api.inspect(IDS.player)).user.id, IDS.player, "a user ref still resolves as the user");
+  assert.equal(await code(() => api.inspect("Nobody")), "NOT_FOUND");
+  assert.equal(await code(() => api.inspect(`Scene.${IDS.scene}`)), "BAD_ARGS", "a uuid of anything else");
+});
+
 test("list: oldest first, status filter, limit, count; a player gets NOT_GM", async () => {
   seed();
   assert.deepEqual((await api.list()).reports.map(r => r.id), ["aaaaaa0000000001"]);

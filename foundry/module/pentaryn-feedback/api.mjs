@@ -22,10 +22,13 @@ import { refOf, resolveRef } from "./lib/resolve.mjs";
  * that to every namespace, so an Actor (or a Token, or a placeable carrying one) means its players:
  * every non-GM user who OWNs it or has it as their assigned character (journal.inspect's rule, plus
  * ownership). Anything else resolves as a user ref (NOT_FOUND / AMBIGUOUS / BAD_ARGS thrown).
+ * Over the MCP bridge the ref is always a string (W3L), so a string also reaches the Actor path when
+ * it is an Actor/Token uuid, or — only when no user matches — an actor's id or exact name.
  * @returns {{ actor: object|null, users: object[] }}
  */
 function inspected(ref) {
-  const doc = ref?.documentName ? ref : ref?.document?.documentName ? ref.document : null;
+  let doc = ref?.documentName ? ref : ref?.document?.documentName ? ref.document : null;
+  if (!doc && typeof ref === "string") doc = actorOfString(ref);
   if (doc?.documentName !== "Actor" && doc?.documentName !== "Token") {
     return { actor: null, users: [resolveRef(ref, "user")] };
   }
@@ -34,6 +37,17 @@ function inspected(ref) {
   const users = (game.users?.contents ?? [...(game.users ?? [])]).filter(u => !u.isGM && (
     ids.has(u.character?.id) || actor?.testUserPermission?.(u, "OWNER") === true));
   return { actor: actor ?? doc, users };
+}
+
+/** A string inspect ref → the Actor/Token it names, or null (then it is a user ref). A user wins. */
+function actorOfString(ref) {
+  if (ref.includes(".")) {
+    let doc = null;
+    try { doc = globalThis.fromUuidSync?.(ref) ?? null; } catch { doc = null; }
+    if (doc?.documentName === "Actor" || doc?.documentName === "Token") return doc;
+  }
+  if (resolveRef(ref, "user", { required: false }) !== null) return null;
+  return resolveRef(ref, "actor", { required: false });
 }
 
 /** Summaries of the reports these users filed, oldest first, the last 20; null when unreadable. */
