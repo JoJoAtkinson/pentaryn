@@ -40,6 +40,7 @@
 
 import * as core from "./riders-core.mjs";
 import { MODULE } from "./riders-core.mjs";
+import { registerSettings, settingRaw } from "./settings.mjs";
 // Ritual Adept: unprepared wizard rituals on the HUD, slot unticked by default (setting `rituals`).
 import "./rituals.mjs";
 // Concentration summons leave when concentration ends; the break button gets its label (setting `concentrationSummons`).
@@ -145,7 +146,7 @@ function originOf(config, message) {
 const usedFrom = origin => core.usedFromMessages(game.messages ?? [], origin);
 
 function applyRiders(rolls, config, message) {
-  if (!game.settings.get(MODULE, "enabled")) return;
+  if (!settingRaw("enabled")) return;
   const activity = config?.subject;
   const item = activity?.item;
   const actor = activity?.actor ?? item?.actor;
@@ -292,7 +293,7 @@ Hooks.on("dnd5e.preCalculateDamage", (actor, damages, options) => {
     if (!options || options[PRESET]) return;
     const message = options.originatingMessage;
     const types = message?.flags?.[MODULE]?.ignoreResistance;
-    if (!types?.length || !game.settings.get(MODULE, "enabled")) return;
+    if (!types?.length || !settingRaw("enabled")) return;
     const dr = actor?.system?.traits?.dr?.value;
     const hit = types.filter(t => dr?.has?.(t));
     for (const persistent of trayOptionsFor(message, actor)) {
@@ -431,7 +432,7 @@ async function runBattleMedic(healer, token) {
 
 Hooks.on("dnd5e.preUseActivity", (activity) => {
   try {
-    if (!game.settings.get(MODULE, "enabled") || !isBattleMedic(activity)) return;
+    if (!settingRaw("enabled") || !isBattleMedic(activity)) return;
     const why = battleMedicBlock(activity.actor, soleTarget());
     if (why) { ui.notifications.warn(why); return false; }
   } catch (err) { console.warn(`${MODULE} | Battle Medic check skipped`, err); }
@@ -439,7 +440,7 @@ Hooks.on("dnd5e.preUseActivity", (activity) => {
 
 Hooks.on("dnd5e.postUseActivity", (activity) => {
   try {
-    if (!game.settings.get(MODULE, "enabled") || !isBattleMedic(activity)) return;
+    if (!settingRaw("enabled") || !isBattleMedic(activity)) return;
     const token = soleTarget();
     if (!token?.actor || !activity.actor) return;
     runBattleMedic(activity.actor, token).catch(err => console.warn(`${MODULE} | Battle Medic failed`, err));
@@ -496,7 +497,7 @@ function decorateHitDice(app, element) {
   if (!label) return;
   label.querySelector(".pr-hd")?.remove();
   const actor = app.document ?? app.actor;
-  if (!game.settings.get(MODULE, "hdControls") || app.isEditMode || !app.isEditable || !actor) return;
+  if (!settingRaw("hdControls") || app.isEditMode || !app.isEditable || !actor) return;
 
   const { value, max } = hdSummary(actor);
   const wrap = document.createElement("span");
@@ -623,17 +624,9 @@ function report(actor) {
 /* -------------------------------------------- */
 
 Hooks.once("init", () => {
-  game.settings.register(MODULE, "enabled", {
-    name: "PENTARYN_RIDERS.settings.enabled.name",
-    hint: "PENTARYN_RIDERS.settings.enabled.hint",
-    scope: "world", config: true, type: Boolean, default: true
-  });
-  game.settings.register(MODULE, "hdControls", {
-    name: "PENTARYN_RIDERS.settings.hdControls.name",
-    hint: "PENTARYN_RIDERS.settings.hdControls.hint",
-    scope: "world", config: true, type: Boolean, default: true,
-    onChange: () => { for (const a of foundry.applications.instances.values()) if (a.document?.type === "character" && a.rendered) a.render(); }
-  });
+  // All eight settings, in today's order (rituals, longCasts, concentrationSummons,
+  // concentrationAutoBreak, castDefaults, arcaneRecovery, enabled, hdControls): settings.mjs.
+  registerSettings();
 
   // The relay. `user` is the sender as the server knows it. The sender must own the healer, the
   // healer must have the Healer feat, and the amount is clamped to what the die could roll.

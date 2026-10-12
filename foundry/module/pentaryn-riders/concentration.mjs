@@ -38,23 +38,9 @@
  */
 
 import { MODULE, SUMMON_FLAG, concentrationEffectFor, summonTokenIds, concentrationResult } from "./table-core.mjs";
+import { settingOr } from "./settings.mjs";
 
-function enabled() {
-  try { return game.settings.get(MODULE, "concentrationSummons") !== false; } catch { return false; }
-}
-
-Hooks.once("init", () => {
-  game.settings.register(MODULE, "concentrationSummons", {
-    name: "PENTARYN_RIDERS.settings.concentrationSummons.name",
-    hint: "PENTARYN_RIDERS.settings.concentrationSummons.hint",
-    scope: "world", config: true, type: Boolean, default: true
-  });
-  game.settings.register(MODULE, "concentrationAutoBreak", {
-    name: "PENTARYN_RIDERS.settings.concentrationAutoBreak.name",
-    hint: "PENTARYN_RIDERS.settings.concentrationAutoBreak.hint",
-    scope: "world", config: true, type: Boolean, default: true
-  });
-});
+const enabled = () => settingOr("concentrationSummons", false);
 
 /* ── 1a. stamp a concentration summon ─────────────────────────────────── */
 
@@ -104,9 +90,7 @@ Hooks.on("dnd5e.renderChatMessage", (message, html) => {
 
 /* ── 3. a failed concentration save ends it; the card says DC and result ── */
 
-function autoBreakOn() {
-  try { return game.settings.get(MODULE, "concentrationAutoBreak") !== false; } catch { return false; }
-}
+const autoBreakOn = () => settingOr("concentrationAutoBreak", false);
 
 const isConcSave = m => m?.type === "save" && m.system?.type === "concentration";
 

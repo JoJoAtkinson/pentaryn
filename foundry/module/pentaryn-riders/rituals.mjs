@@ -33,17 +33,13 @@
 
 import * as rit from "./rituals-core.mjs";
 import { MODULE } from "./riders-core.mjs";
+import { settingOr } from "./settings.mjs";
 
 const DONE = Symbol.for(`${MODULE}.ritualsAdded`);
 const WRAPPED = Symbol.for(`${MODULE}.ritualsWrapped`);
 
-function enabled() {
-  try { return game.settings.get(MODULE, "rituals") !== false; } catch { return false; }
-}
-
-function longEnabled() {
-  try { return game.settings.get(MODULE, "longCasts") !== false; } catch { return false; }
-}
+const enabled = () => settingOr("rituals", false);
+const longEnabled = () => settingOr("longCasts", false);
 
 function hasRitualAdept(actor) {
   return !!actor?.items?.some(i => rit.isRitualAdept({
@@ -53,19 +49,6 @@ function hasRitualAdept(actor) {
     name: i.name
   }));
 }
-
-Hooks.once("init", () => {
-  game.settings.register(MODULE, "rituals", {
-    name: "PENTARYN_RIDERS.settings.rituals.name",
-    hint: "PENTARYN_RIDERS.settings.rituals.hint",
-    scope: "world", config: true, type: Boolean, default: true
-  });
-  game.settings.register(MODULE, "longCasts", {
-    name: "PENTARYN_RIDERS.settings.longCasts.name",
-    hint: "PENTARYN_RIDERS.settings.longCasts.hint",
-    scope: "world", config: true, type: Boolean, default: true
-  });
-});
 
 /* ── 1. slot unticked by default ──────────────────────────────────────── */
 

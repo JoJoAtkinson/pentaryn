@@ -50,6 +50,7 @@
 
 import { MODULE, restoreSlotScaling, placeSummonsDefault, isWildcardPath, arcaneRecoveryCap, arcaneRecoveryDefault,
   arcaneRecoveryCheck, isArcaneRecovery, ARCANE_RECOVERY_MAX_LEVEL } from "./table-core.mjs";
+import { settingOr } from "./settings.mjs";
 
 const T = (key, data) => (data ? game.i18n.format(key, data) : game.i18n.localize(key));
 
@@ -103,22 +104,9 @@ Hooks.on("dnd5e.preUseActivity", (activity, usageConfig) => {
   } catch (err) { console.warn(`${MODULE} | restore-slot default skipped`, err); }
 });
 
-/* ── settings for parts 3 and 6 ─────────────────────────────────────────── */
+/* ── settings for parts 3 and 6 (rows in settings.mjs) ──────────────────── */
 
-Hooks.once("init", () => {
-  game.settings.register(MODULE, "castDefaults", {
-    name: "PENTARYN_RIDERS.settings.castDefaults.name",
-    hint: "PENTARYN_RIDERS.settings.castDefaults.hint",
-    scope: "world", config: true, type: Boolean, default: true
-  });
-  game.settings.register(MODULE, "arcaneRecovery", {
-    name: "PENTARYN_RIDERS.settings.arcaneRecovery.name",
-    hint: "PENTARYN_RIDERS.settings.arcaneRecovery.hint",
-    scope: "world", config: true, type: Boolean, default: true
-  });
-});
-
-const on = key => { try { return game.settings.get(MODULE, key) !== false; } catch { return false; } };
+const on = key => settingOr(key, false);
 
 /* ── 3. summons ticked to place; a self-only card keeps no stale target ──── */
 
