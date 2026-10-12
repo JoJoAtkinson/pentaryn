@@ -79,7 +79,7 @@ test("(b)+(d) ready as GM on an extensible root {x:1}: the same root gains walls
   assert.deepEqual(api.backends().map(b => b.name), ["js", "wasm"]);
   assert.deepEqual(since(from, "console.log").map(c => c.args), [[
     "pentaryn-walls | ready — backends: js, wasm. Alt+W run, Alt+Z undo, Alt+Shift+W preview. " +
-    "API: game.pentaryn.walls.preview() / .run() / .undo() / .makeMacro()",
+    "API: game.pentaryn.walls.preview() / .run() / .undo() / .makeMacro() / .analyze()",  // walls-EXT-11
   ]]);
 });
 

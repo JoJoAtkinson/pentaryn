@@ -173,5 +173,6 @@ make foundry-walls-bench [N=20]                           # scaling curve, every
 
 `make foundry-walls-sync` (copy, not symlink — re-copy after every change), then reload. A
 `module.json` change needs a Foundry restart. After sync the GM console shows
-`pentaryn-walls | ready — backends: js, wasm. …`; a failed `.wasm` load adds
+`pentaryn-walls | ready — backends: js, wasm. …` (its keys and API list come from `KEYBINDINGS`
+and the manifest's GM rows); a failed `.wasm` load adds
 `(wasm unavailable: …)`.

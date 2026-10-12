@@ -5,6 +5,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import * as core from "../walls-core.mjs";
+import { MANIFEST } from "../api-manifest.mjs";
+import { KEYBINDINGS } from "../settings.mjs";
 import { manifestOf, readJSON } from "./kit/harness.mjs";
 import { get, wasmReady } from "./fixtures/engine.mjs";
 import { houseWalls } from "./fixtures/world.mjs";
@@ -25,10 +27,17 @@ test("VERSION === module.json version", () => {
   assert.equal(manifestOf(ROOT).id, core.MODULE);
 });
 
-test("readyLine: today's console text (glue case (b))", () => {
-  assert.equal(core.readyLine(["js", "wasm"]),
+// [declared] walls-EXT-11: the keys and the API list were hard-coded (analyze() was missing). They
+// now come from KEYBINDINGS and the manifest's GM rows, so the line tracks a rebinding or a new row.
+test("readyLine lists the GM API rows and KEYBINDINGS (walls-EXT-11; glue case (b))", () => {
+  const paths = MANIFEST.rows.filter(r => r.gm).map(r => r.path);
+  assert.equal(core.readyLine(["js", "wasm"], paths, KEYBINDINGS),
     "ready — backends: js, wasm. Alt+W run, Alt+Z undo, Alt+Shift+W preview. " +
-    "API: game.pentaryn.walls.preview() / .run() / .undo() / .makeMacro()");
+    "API: game.pentaryn.walls.preview() / .run() / .undo() / .makeMacro() / .analyze()");
+  const rebound = [{ action: "run", editable: [{ key: "KeyR", modifiers: ["Control", "Shift"] }] },
+    { action: "undo", editable: [{ key: "Digit1", modifiers: [] }] }];
+  assert.equal(core.readyLine(["js"], ["run"], rebound, "no bytes"),
+    "ready — backends: js. Control+Shift+R run, 1 undo. API: game.pentaryn.walls.run() (wasm unavailable: no bytes)");
 });
 
 test("reportHtml: the preview card equals golden/glue.json", async () => {

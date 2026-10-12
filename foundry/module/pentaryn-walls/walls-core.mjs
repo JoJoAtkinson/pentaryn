@@ -39,16 +39,23 @@ const plural = (n, one, many = `${one}s`) => (n === 1 ? one : many);
 const ESCAPES = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#x27;" };
 const escapeHtml = s => String(s).replace(/[&<>"']/g, c => ESCAPES[c]);
 
+/** A keybinding as the console names it: `{key: "KeyW", modifiers: ["Alt"]}` → "Alt+W". */
+const keyLabel = ({ key, modifiers = [] }) => [...modifiers, key.replace(/^(Key|Digit)/, "")].join("+");
+
 /**
- * The ready console line, without the `<module> |` prefix.
+ * The ready console line, without the `<module> |` prefix. The keys and the API list are passed
+ * in, not written here, so the line tracks KEYBINDINGS and the manifest (walls-EXT-11).
  * @param {string[]} names  the available backends, in registry order
+ * @param {string[]} paths  the GM API paths, in manifest order
+ * @param {{action: string, editable: {key: string, modifiers?: string[]}[]}[]} keys  KEYBINDINGS
+ *   rows; each is named by its first binding
  * @param {string|null} [wasmError]  why the compiled backend failed to load, if it did: appended so
  *   a missing or broken .wasm is visible in "auto" mode, which otherwise falls back silently
  */
-export function readyLine(names, wasmError = null) {
+export function readyLine(names, paths, keys, wasmError = null) {
   return `ready — backends: ${names.join(", ")}. ` +
-    `Alt+W run, Alt+Z undo, Alt+Shift+W preview. ` +
-    `API: game.pentaryn.walls.preview() / .run() / .undo() / .makeMacro()` +
+    `${keys.map(k => `${keyLabel(k.editable[0])} ${k.action}`).join(", ")}. ` +
+    `API: game.pentaryn.${NS}.${paths.map(p => `${p}()`).join(" / .")}` +
     (wasmError ? ` (wasm unavailable: ${wasmError})` : "");
 }
 

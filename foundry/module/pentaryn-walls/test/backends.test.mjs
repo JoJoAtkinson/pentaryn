@@ -14,10 +14,11 @@ test("senses-walls-cursors-7: the stale wasm placeholder export is gone (module 
 });
 
 test("senses-walls-cursors-37: readyLine appends why wasm is missing, and only then", async () => {
-  const { readyLine } = core;
-  const healthy = readyLine(["js", "wasm"], null);
-  assert.equal(healthy, readyLine(["js", "wasm"]));
-  assert.equal(readyLine(["js"], "ENOENT: no such file"), `${readyLine(["js"])} (wasm unavailable: ENOENT: no such file)`);
+  // walls-EXT-11: the paths and keys are arguments now, before the wasm error.
+  const line = (names, err) => core.readyLine(names, ["run"], [{ action: "run", editable: [{ key: "KeyW", modifiers: ["Alt"] }] }], err);
+  const healthy = line(["js", "wasm"], null);
+  assert.equal(healthy, line(["js", "wasm"]));
+  assert.equal(line(["js"], "ENOENT: no such file"), `${line(["js"])} (wasm unavailable: ENOENT: no such file)`);
 });
 
 test("senses-walls-cursors-37: loadErrorMessage() is null when the .wasm loaded", async () => {

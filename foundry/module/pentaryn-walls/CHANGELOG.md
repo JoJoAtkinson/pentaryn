@@ -6,6 +6,11 @@
 (`flagScope` stays `wall-autocomplete`), `languages`, `minimum: "14"`, `verified: "14.369"` and the
 description fix; the flag-scope migration is **parked** while walls stays off (Joe).
 
+- **[declared] The ready line lists `analyze()` and follows the keybindings** (`walls-EXT-11`):
+  `readyLine` hard-coded "Alt+W run, Alt+Z undo, Alt+Shift+W preview" and an API list without
+  `analyze()`. It now takes the API paths and the keybinding rows as arguments; the entry passes the
+  manifest's GM rows and `KEYBINDINGS`, so the console line ends `… / .makeMacro() / .analyze()` and
+  a changed default binding shows up there.
 - **[declared] The manifest's flag scope comes from `FLAG_SCOPE`** (`walls-EXT-6`): `api-manifest.mjs`
   hard-coded `"wall-autocomplete"` in `flagScope`, `flags.writes` and `run`'s side effects (and both
   read scopes in `undo`'s), so a future scope migration would have left `describe()` naming the old
