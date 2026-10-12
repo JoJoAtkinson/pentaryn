@@ -175,10 +175,11 @@ subclass (the box): no row, nothing of core's is changed.
 
 ## Two sessions / who writes
 
-Everything is GM-only. `ensureMarkers` runs on the active GM. The queries are GM-guarded; the fork
-reaches them through the bridge module, which calls the handler in its own GM tab. A `User#query` to
-the GM would run in **every** tab of that user, and `replace` is not idempotent across tabs — keep
-calling it through the bridge. The side panel, hover tip and keyboard capture are per client.
+Everything is GM-only. `ensureMarkers` runs on the active GM, which is every tab of that user;
+its creates use fixed ids with `keepId`, so two tabs make one folder and one actor per size. The
+queries are GM-guarded; the fork reaches them through the bridge module, which calls the handler in
+its own GM tab. A `User#query` to the GM would run in **every** tab of that user, and `replace` is
+not idempotent across tabs — keep calling it through the bridge. The side panel, hover tip and keyboard capture are per client.
 
 ## Extending
 

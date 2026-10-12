@@ -687,4 +687,6 @@ Result section has the step map and the deviations.
 | mcp-fork-15 | module half done (`prompts-core.mjs` KINDS/PATCH_KEYS, contract.test vocabularies); fork half open |
 | mcp-fork-24 | done `876f2899` (kit guarded through registerQueries) |
 | new (checkpoint) | fractional patch CR written as NaN — fixed `0dfb854a` [declared] |
+| new (review, §5.9.1) | `ensureMarkers` duplicated the folder / marker actors when two tabs of the active GM (bridge + browser) both found one missing — fixed `e451d4a7` [declared] (deterministic `_id` + `keepId`) |
+| new (review, LLM-read) | comments named files step 10 renamed (`character.mjs`, `npc.mjs`, `model.mjs`, `los.mjs`, the typeahead capture) — fixed `3072e08e`; the TWIN comment in `pentaryn-lookup/lookup-core.mjs` is the integrator's |
 
