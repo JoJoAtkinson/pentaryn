@@ -6,7 +6,7 @@
 import { MODULE } from "./ties-core.mjs";
 import { setting } from "./settings.mjs";
 import { TiesEditor, buildHTML, bind, forgetActor } from "./editor.mjs";
-import { KNOWN_TAB_ID, buildKnownHTML, bindKnown, forgetKnownActor, openAddPicker, fileHovered, openKnownEntry } from "./known.mjs";
+import { KNOWN_TAB_ID, buildKnownHTML, bindKnown, forgetKnownActor, openAddPicker, fileHovered, openKnownEntry } from "./known-ui.mjs";
 import { ATTR_TAB_ID, buildAttributesHTML, bindAttributes } from "./attributes-ui.mjs";
 import { makeLog } from "./lib/log.mjs";
 

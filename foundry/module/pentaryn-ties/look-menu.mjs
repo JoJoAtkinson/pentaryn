@@ -8,8 +8,8 @@
 import { mayWrite } from "./settings.mjs";
 import { inspectorFor } from "./ties-adapter.mjs";
 import { openTieDialogFor } from "./tie-dialog.mjs";
-import { openLook } from "./look.mjs";
-import { fileHovered } from "./known.mjs";
+import { openLook } from "./look-app.mjs";
+import { fileHovered } from "./known-ui.mjs";
 import { inspect } from "./study.mjs";
 
 /*

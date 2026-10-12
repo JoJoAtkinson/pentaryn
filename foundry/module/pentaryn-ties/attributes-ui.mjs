@@ -38,7 +38,7 @@ import {
   repairAncestry,
   authorEntry
 } from "./attributes.mjs";
-import { loreEditorHTML, bindLoreEditor } from "./lore.mjs";
+import { loreEditorHTML, bindLoreEditor } from "./lore-ui.mjs";
 // `requestAttrLore` (the player-initiated roll) is deliberately no longer imported: attribute
 // facts are handed over by the GM via "Mark as learned", never rolled for from the player's side.
 import { kindActorOf, attrLoreStateFor, releaseHeldAttribute } from "./study.mjs";

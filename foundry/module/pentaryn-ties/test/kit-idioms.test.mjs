@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 import { bootWorld } from "./fixtures/world.mjs";
 
 const F = await bootWorld({ importEntry: false });
-const Known = await import("../known.mjs");
+const Known = await import("../known-ui.mjs");
 const Attributes = await import("../attributes.mjs");
 const Study = await import("../study.mjs");
 

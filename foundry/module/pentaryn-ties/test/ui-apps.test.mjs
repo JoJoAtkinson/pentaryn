@@ -55,7 +55,7 @@ game.users.get(PLAYER).character = game.actors.get(PC);
 const get = id => game.actors.get(id);
 const { TieDialog, sourceCandidates, targetCandidates } = await import("../tie-dialog.mjs");
 const { TiesEditor } = await import("../editor.mjs");
-const { InspectPreview } = await import("../preview.mjs");
+const { InspectPreview } = await import("../preview-app.mjs");
 const { AttributeReview } = await import("../review-ui.mjs");
 
 /** A deterministic Math.random for the preview's dice. */

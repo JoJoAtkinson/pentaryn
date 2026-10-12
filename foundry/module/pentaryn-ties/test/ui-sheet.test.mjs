@@ -63,7 +63,7 @@ const F = await bootWorld({
 });
 const get = id => game.actors.get(id);
 const Editor = await import("../editor.mjs");
-const Known = await import("../known.mjs");
+const Known = await import("../known-ui.mjs");
 const AUI = await import("../attributes-ui.mjs");
 
 const mountWith = (build, bind, actor) => () => {

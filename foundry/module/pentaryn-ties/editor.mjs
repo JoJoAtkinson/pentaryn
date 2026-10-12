@@ -19,7 +19,7 @@
 
 import { MODULE, STANCES, NOTES_MAX, clampStance, clampStrength, stanceOf } from "./ties-core.mjs";
 import { read, inbound, presentActorIds, write, removeTie, stanceLabel } from "./ties-adapter.mjs";
-import { authoringHTML, bindAuthoring } from "./authoring.mjs";
+import { authoringHTML, bindAuthoring } from "./authoring-ui.mjs";
 import { esc } from "./core/html.mjs";
 import { makeLog } from "./lib/log.mjs";
 

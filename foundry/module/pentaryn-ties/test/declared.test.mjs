@@ -115,7 +115,7 @@ test("B7 / ties-24 (before): a player's canvasReady still schedules a worn-badge
 });
 
 test("ties-46 (before): the inspect preview's live hooks — no updateUser, no ownership watch", async () => {
-  const { InspectPreview } = await import("../preview.mjs");
+  const { InspectPreview } = await import("../preview-app.mjs");
   const pv = new InspectPreview(get(NPC));
   const before = F.hooks.length;
   pv._onFirstRender({}, {});

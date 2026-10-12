@@ -65,7 +65,7 @@ import { attributeIdsOf, describeAttribute, attributeLore, registry, knowledge }
 import {
   kindActorOf, studySkillFor, studyStateFor, composeStudyPayload, factStatus, shareFact, forgetFact
 } from "./study.mjs";
-import { grantCard, grantedHead } from "./known.mjs";
+import { grantCard, grantedHead } from "./known-ui.mjs";
 import { subjectFacts } from "./facts.mjs";
 import {
   rollableLore, loreOfferable, loreOutcome, tierOf, studyOffsetOf, STUDY_OFFSET_FLAG, LORE_FLAG,

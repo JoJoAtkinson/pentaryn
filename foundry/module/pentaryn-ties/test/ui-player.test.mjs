@@ -79,8 +79,8 @@ game.user.character = game.actors.get(PC);
 const T = () => game.pentaryn.ties;
 const get = id => game.actors.get(id);
 const tok = id => canvas.tokens.get(id);
-const { LookWindow, openLook } = await import("../look.mjs");
-const Known = await import("../known.mjs");
+const { LookWindow, openLook } = await import("../look-app.mjs");
+const Known = await import("../known-ui.mjs");
 const { TieDialog } = await import("../tie-dialog.mjs");
 const step = async (label, fn) => {
   const mark = F.calls.length;

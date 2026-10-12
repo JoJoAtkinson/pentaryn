@@ -23,7 +23,7 @@ const FAMILIES = [
 
 const F = await bootWorld();
 const API = await import("../ties-api.mjs");
-const Known = await import("../known.mjs");
+const Known = await import("../known-ui.mjs");
 const Attributes = await import("../attributes.mjs");
 
 test("the 48 template-built keys and their English, by family", () => {

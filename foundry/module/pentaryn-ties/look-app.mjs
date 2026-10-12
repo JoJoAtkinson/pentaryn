@@ -67,7 +67,7 @@
 import { MODULE } from "./ties-core.mjs";
 import { mayWrite } from "./settings.mjs";
 import { kindActorOf } from "./study.mjs";
-import { grantCard, grantedHead } from "./known.mjs";
+import { grantCard, grantedHead } from "./known-ui.mjs";
 import { subjectFacts } from "./facts.mjs";
 import {
   GRANTED_FLAG, BELIEFS_FLAG, REGISTRY_SETTING, readGranted, visibleAttributesFor, identMissKey, touchesFlagScope

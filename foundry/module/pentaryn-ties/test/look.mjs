@@ -16,8 +16,8 @@
 
 import { StubActor, W } from "./fixtures/stubs.mjs";
 
-const { LookWindow } = await import("../look.mjs");
-const { buildKnownHTML, grantCard } = await import("../known.mjs");
+const { LookWindow } = await import("../look-app.mjs");
+const { buildKnownHTML, grantCard } = await import("../known-ui.mjs");
 const { loreOutcome, identMissKey } = await import("../known-core.mjs");
 
 /* ── the world: Caven, Marrith, three tells ───────────────────────────────── */
