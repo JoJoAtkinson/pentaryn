@@ -172,7 +172,8 @@ const search = text => searchLog(readLog(), text);
 /**
  * Recreate entry #n with no toast (items-journal-28): `{ok: true, item, actor}`, or
  * `{ok: false, reason: "not-gm" | "no-entry" | "no-actor" | "not-created"}`
- * (not-created: a preCreateItem listener vetoed the item). Defaults to the actor it left.
+ * (not-created: a preCreateItem listener vetoed the item, the create threw — logged once — or the
+ * entry has no item source). Never rejects. Defaults to the actor it left.
  */
 async function restoreResult(n, target = null) {
   if (!game.user.isGM) return { ok: false, reason: "not-gm" };
@@ -184,10 +185,19 @@ async function restoreResult(n, target = null) {
   });
   if (!actor) return { ok: false, reason: "no-actor" };
 
+  // an entry with no item source has nothing to recreate (dropbin-R5)
+  if (!entry.item || typeof entry.item !== "object") return { ok: false, reason: "not-created" };
   const obj = foundry.utils.duplicate(entry.item);
   delete obj._id;
-  // {restoring: true} tags our own restore for other modules; nothing reads it today (items-journal-27)
-  const [made] = await actor.createEmbeddedDocuments("Item", [obj], { [MODULE]: { restoring: true } });
+  let made;
+  try {
+    // {restoring: true} tags our own restore for other modules; nothing reads it today (items-journal-27)
+    [made] = await actor.createEmbeddedDocuments("Item", [obj], { [MODULE]: { restoring: true } });
+  } catch (err) {
+    // a server/validation error is a coded refusal, not a rejection (dropbin-R5)
+    console.warn(`${MODULE} | restore #${entry.n} failed`, err);
+    return { ok: false, reason: "not-created" };
+  }
   // a preCreateItem listener that vetoes the item resolves the create to []
   if (!made) return { ok: false, reason: "not-created" };
   return { ok: true, item: made, actor };

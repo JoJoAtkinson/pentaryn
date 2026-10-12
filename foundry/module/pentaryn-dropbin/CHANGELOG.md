@@ -55,6 +55,10 @@ Declared changes:
 - dropbin-R4: with no target, an item that left an unlinked token is restored onto that token's
   own (synthetic) actor while the token still exists; it went to the base actor in the sidebar.
   Once the token is gone it falls back to the base actor.
+- dropbin-R5: `restoreResult` never rejects. A create that throws (a server or validation error)
+  or an entry with no item source is `{ok: false, reason: "not-created"}`, the throw logged once as
+  `pentaryn-dropbin | restore #n failed`; it rejected with the raw error, and `restore()` showed no
+  toast. `restore()` now shows the "was not restored" error toast for both.
 - dropbin-EC-2: the tail dedupe also matches the lost item's source `_id` and the entry's
   `pileUuid`, so a second, distinct same-named item lost from the same actor within 2 s is its own
   entry (it was dropped as a duplicate); one event seen on two clients is still one entry. Stored

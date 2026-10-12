@@ -133,3 +133,36 @@ test("dropbin-R3: an explicit target that does not resolve is no-actor; a TokenD
   }
   for (const none of [null, undefined]) assert.equal((await api.restoreResult(1, none)).actor, ann);
 });
+
+test("dropbin-R5: a throwing create or an entry with no item source is not-created (one prefixed warning), never a rejection", async () => {
+  const warns = [];
+  const keepWarn = console.warn;
+  console.warn = (...a) => warns.push(a);
+  const keep = Object.getOwnPropertyDescriptor(ann, "createEmbeddedDocuments");
+  ann.createEmbeddedDocuments = async () => { throw new Error("server refused"); };
+  try {
+    assert.deepEqual(await api.restoreResult(1), { ok: false, reason: "not-created" });
+    assert.equal(warns.length, 1, JSON.stringify(warns));
+    assert.match(String(warns[0][0]), /^pentaryn-dropbin \| /);
+    const r = await api.restore(1);
+    assert.equal(r.message, "Drop bin: #1 was not restored; the item was not created (another module may have refused it).");
+  } finally {
+    console.warn = keepWarn;
+    if (keep) Object.defineProperty(ann, "createEmbeddedDocuments", keep);
+    else delete ann.createEmbeddedDocuments;
+  }
+
+  const entry = api.get(1);
+  const item = entry.item;
+  entry.item = null;
+  const from = F.calls.length;
+  try {
+    assert.deepEqual(await api.restoreResult(1), { ok: false, reason: "not-created" });
+    assert.equal(F.calls.slice(from).filter(c => c.op === "createEmbeddedDocuments").length, 0, "nothing created");
+    const r = await api.restore(1);
+    assert.equal(r.message, "Drop bin: #1 was not restored; the item was not created (another module may have refused it).");
+  } finally {
+    entry.item = item;
+  }
+  assert.equal((await api.restoreResult(1)).ok, true);
+});
