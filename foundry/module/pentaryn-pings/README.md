@@ -104,9 +104,11 @@ to `serialStore` changes write timing and needs a two-GM live test.
 
 ## Pitfalls
 
-- **Read lag:** the readers read the stored setting, not the buffer. Until a first flush the buffer
-  *is* the cached setting array, so a new ping shows at once; after one, the readers trail the
-  newest ping until the next write (≤ 250 ms). Wait a second after pinging before `last()`.
+- **Read lag:** the readers read the stored setting, not the buffer. Until the first flush, or the
+  first trim (the log already holding `max`), the buffer *is* the cached setting array, so a new
+  ping shows at once. A trim detaches it: that ping still shows, `all()` briefly returns `max`+1
+  records, and later pings trail until the write (≤ 250 ms). After a flush the readers trail the
+  newest ping until the next write. Wait a second after pinging before `last()`.
 - `recent(0)` returns **everything**, and a negative `n` drops records from the oldest end.
 - `snapped` is square-grid maths even on a hex scene.
 - A fractional `max` below 1 never trims the log.
@@ -138,8 +140,8 @@ node test/run.mjs                                  # from the module folder
 ## Sync
 
 `make foundry-pings-sync` (the `pings` ModuleSpec is registered); then reload (`.mjs` changes).
-`make foundry-pings-check` runs the node suite only once the ModuleSpec's `check` gains `node-test`
-(C39); until then run `node foundry/module/pentaryn-pings/test/run.mjs` directly. A `module.json`
-change needs a Foundry restart. Live check on the GM client: ping the canvas, wait a second, then
+`make foundry-pings-check` runs the node suite (gate `node-test`) together with the static and
+blueprint gates; `node foundry/module/pentaryn-pings/test/run.mjs` runs the suite alone. A
+`module.json` change needs a Foundry restart. Live check on the GM client: ping the canvas, wait a second, then
 `game.pentaryn.pings.last()` has the point and `game.pentaryn.pings.describe().version` matches
 `module.json`.
