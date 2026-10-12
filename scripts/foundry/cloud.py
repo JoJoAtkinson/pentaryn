@@ -837,12 +837,19 @@ def backup(reason: str = "manual", if_stopped: bool = False) -> int:
 
 def _in_cloud(st: Storage, name: str, existing: list[Snapshot]) -> bool:
     """Is `name` still a snapshot in the cloud — rolling, or preserved in major-release/?"""
-    if any(s.name == name for s in existing):
-        return True
+    return _find_in_cloud(st, name, existing) is not None
+
+
+def _find_in_cloud(st: Storage, name: str, existing: list[Snapshot]) -> Snapshot | None:
+    """`name` as a snapshot still in the cloud — rolling (`existing`) or preserved in
+    major-release/ — or None (also when major-release/ cannot be listed)."""
+    found = next((s for s in existing if s.name == name), None)
+    if found is not None:
+        return found
     try:
-        return any(s.name == name for s in snapshots(st, MAJOR_RELEASES))
+        return next((s for s in snapshots(st, MAJOR_RELEASES) if s.name == name), None)
     except StorageError:
-        return False
+        return None
 
 
 def _backup(st: Storage, reason: str, *, safety: bool = False,
@@ -871,8 +878,9 @@ def _backup(st: Storage, reason: str, *, safety: bool = False,
         # Unchanged since the last upload or restore — but "skip" is only safe while that
         # snapshot still exists. Coalescing, pruning or prune-untagged (on either machine)
         # may have deleted it, and then this tree has no cloud copy at all.
-        if state.based_on and _in_cloud(st, state.based_on, existing):
-            _heal_bundles(st, inv, have)
+        base = _find_in_cloud(st, state.based_on, existing) if state.based_on else None
+        if base is not None:
+            _heal_bundles(st, base, inv, have)
             log("no change since the last snapshot — skipped")
             return None
         if (safety and protect is not None and state.based_on
@@ -1084,10 +1092,24 @@ def _check_backup_disk(where: Path, world: int, missing: list) -> None:
             f"{_mb(bundle_bytes)}); free at least twice that")
 
 
-def _heal_bundles(st: Storage, inv: dict, have: dict[str, Entry]) -> None:
-    """The tree is unchanged and its snapshot is in the cloud, but a bundle the manifest
-    names is not (deleted by hand): upload just those (§3.5 step 3)."""
-    lost = [loc for loc in inv.values() if loc.name not in have]
+def _heal_bundles(st: Storage, base: Snapshot, inv: dict, have: dict[str, Entry]) -> None:
+    """The tree is unchanged and its snapshot `base` is in the cloud, but a bundle `base`
+    names is not (deleted by hand): upload just those, from the local folders (§3.5 step
+    3). What `base` names, never the local inventory: after a full restore (or an adopted
+    legacy marker) `base` is a full snapshot that names no bundle — its tar holds the
+    modules — so a skip uploads nothing (review R4); the next changed-tree backup uploads
+    them with a manifest that references them. `base`'s sidecar is read only when some
+    local bundle is missing from the cloud: a routine skip costs no read."""
+    local_lost = {loc.name: loc for loc in inv.values() if loc.name not in have}
+    if not local_lost:
+        return
+    try:
+        named = _snapshot_manifest(st, base)
+    except StorageError as exc:
+        die(f"cannot read which bundles {base.name} names (to re-upload any the cloud lost): "
+            f"{exc} — rerun the backup")
+    lost = [local_lost[n] for n in sorted(bundles.manifest_names(named or {}))
+            if n in local_lost]
     if not lost:
         return
     _check_backup_disk(tmp_dir(), 0, lost)
@@ -1185,15 +1207,28 @@ def _mark(st: Storage, skip: frozenset[str] = frozenset()
             if s.host is None or s.rel in skip:
                 continue
             seen.add(s.rel)
-            kind, m = _read_sidecar(st, s)
-            if kind == "bad":
-                raise StorageError(f"the sidecar of {s.rel} says bundled but its manifest is "
-                                   "malformed", verb="cat")
-            if kind == "absent":
-                m = _manifest_from_tar_head(st, s)
+            m = _snapshot_manifest(st, s)
             if m is not None:
                 out |= bundles.manifest_names(m)
     return out, seen
+
+
+def _snapshot_manifest(st: Storage, s: Snapshot) -> dict | None:
+    """The bundles snapshot `s` references, for GC's mark and the backup's healing: None
+    for a full one — untagged (they predate sidecars), a full-era sidecar, a tar with no
+    marker, a tar gone since the listing. A lost (missing, empty, torn) sidecar is
+    answered from the tar's own marker. Raises StorageError when it cannot tell — an
+    unreadable sidecar or tar head, a sidecar that says bundled with a malformed
+    manifest: "cannot tell" is never "names nothing"."""
+    if s.host is None:
+        return None
+    kind, m = _read_sidecar(st, s)
+    if kind == "bad":
+        raise StorageError(f"the sidecar of {s.rel} says bundled but its manifest is "
+                           "malformed", verb="cat")
+    if kind == "absent":
+        return _manifest_from_tar_head(st, s)
+    return m
 
 
 # How much of a snapshot tar GC reads when its sidecar is lost: the marker is the first

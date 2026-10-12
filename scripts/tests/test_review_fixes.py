@@ -940,3 +940,100 @@ def test_dl8_the_updaters_full_extract_keeps_what_no_bundle_holds(two_hosts, tmp
     assert (mac / "Data/modules/scratch/ideas.md").read_text() == "only copy\n"
     assert (mac / "Data/modules/old/module.json").is_file()
     assert not (mac / "Data/modules/maps").exists()
+
+
+# ── R4: healing re-uploads only what the based-on snapshot names ─────────────
+
+def _reads(monkeypatch):
+    seen: list[str] = []
+    real_text, real_head = storage.FolderStorage.read_text, storage.FolderStorage.read_head
+
+    def text(self, rel):
+        seen.append(rel)
+        return real_text(self, rel)
+
+    def head(self, rel, n):
+        seen.append(f"head:{rel}")
+        return real_head(self, rel, n)
+    monkeypatch.setattr(storage.FolderStorage, "read_text", text)
+    monkeypatch.setattr(storage.FolderStorage, "read_head", head)
+    return seen
+
+
+def test_r4_a_routine_skip_reads_no_sidecar(two_hosts, monkeypatch, capsys):
+    _install(two_hosts.data["mac"])
+    with two_hosts.use("mac"):
+        cloud.backup("shutdown")
+    seen = _reads(monkeypatch)
+    capsys.readouterr()
+    with two_hosts.use("mac"):
+        cloud.backup("pre-launch", if_stopped=True)
+    assert "skipped" in capsys.readouterr().out
+    assert [r for r in seen if r.endswith(cloud.PARENT_SUFFIX) or r.startswith("head:")] == []
+
+
+def test_r4_healing_reads_a_lost_sidecars_names_from_the_tar_marker(two_hosts, capsys):
+    c = two_hosts.cloud
+    _install(two_hosts.data["mac"])
+    with two_hosts.use("mac"):
+        cloud.backup("shutdown")
+    [snap] = _names(c)
+    [maps] = [n for n in _bundle_names(c) if n.startswith("module@maps@")]
+    (c / "world-backups" / f"{snap}{cloud.PARENT_SUFFIX}").unlink()     # the sidecar lost
+    (c / "bundles" / maps).unlink()                                     # and a bundle
+    capsys.readouterr()
+    with two_hosts.use("mac"):
+        cloud.backup("shutdown")
+    out = capsys.readouterr().out
+    assert "uploaded 1 bundle(s) the cloud had lost" in out and "skipped" in out, out
+    assert maps in _bundle_names(c)
+
+
+def test_r4_a_tagged_full_era_based_on_heals_nothing(two_hosts, monkeypatch, capsys):
+    """The full -mac snapshot of 2026-10-11 has a lineage-only sidecar (no "bundled")."""
+    c = two_hosts.cloud
+    name = f"world-{time.strftime('%Y-%m-%d-%H%M%S', time.gmtime(time.time() - 2 * DAY))}" \
+           "-fvtt14.369-mac.tar.gz"
+    _full_tar(c / "world-backups" / name, {
+        **_LEGACY_WORLD,
+        "Data/modules/old-maps/module.json": b'{"id": "old-maps", "version": "1"}',
+        "Data/modules/old-maps/art.webp": b"old art " * 64}, age_days=2)
+    (c / "world-backups" / f"{name}{cloud.PARENT_SUFFIX}").write_text(json.dumps(
+        {"parent": None, "ancestors": [], "ancestor_mtimes": [], "origin_before": None,
+         "host": "mac"}) + "\n")
+    with two_hosts.use("mac"):
+        cloud.restore(name, yes=True)
+    real = storage.FolderStorage.upload
+    sent: list[str] = []
+    monkeypatch.setattr(storage.FolderStorage, "upload",
+                        lambda self, src, rel: (sent.append(rel), real(self, src, rel))[1])
+    capsys.readouterr()
+    with two_hosts.use("mac"):
+        cloud.backup("pre-launch", if_stopped=True)
+    out = capsys.readouterr().out
+    assert "skipped" in out and "had lost" not in out, out
+    assert sent == []
+
+
+def test_r4_a_heal_that_cannot_read_the_based_on_dies_naming_it(two_hosts, monkeypatch,
+                                                                capsys):
+    c = two_hosts.cloud
+    _install(two_hosts.data["mac"])
+    with two_hosts.use("mac"):
+        cloud.backup("shutdown")
+    [snap] = _names(c)
+    [maps] = [n for n in _bundle_names(c) if n.startswith("module@maps@")]
+    (c / "bundles" / maps).unlink()
+    real = storage.FolderStorage.read_text
+
+    def flaky(self, rel):
+        if rel.endswith(cloud.PARENT_SUFFIX):
+            raise storage.StorageError("cat: connection reset", verb="cat")
+        return real(self, rel)
+    monkeypatch.setattr(storage.FolderStorage, "read_text", flaky)
+    capsys.readouterr()
+    with two_hosts.use("mac"), pytest.raises(SystemExit):
+        cloud.backup("shutdown")
+    err = capsys.readouterr().err
+    assert f"cannot read which bundles {snap} names" in err, err
+    assert maps not in _bundle_names(c)

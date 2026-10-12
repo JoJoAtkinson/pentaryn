@@ -232,15 +232,14 @@ def test_R3_a_symlinked_module_the_snapshot_names_is_refused_before_the_world_is
 
 # ── R4: after a full restore the "skipped" backup uploads every module bundle ───────
 
-@pytest.mark.xfail(strict=True, reason="R4: _heal_bundles heals against the local inventory, "
-                   "not against based_on's manifest; a full based-on names no bundle")
 def test_R4_an_unchanged_tree_restored_from_a_full_snapshot_uploads_no_bundle_on_a_skip(
         two_hosts, monkeypatch, capsys):
     """Healing (§3.5 step 3) is for a bundle *the based-on manifest names* that was deleted
     by hand. After a restore of a full (legacy) snapshot the recorded digest is the new
     formula over the restored tree, so the next backup (vtt-up's pre-launch one) skips —
-    and `_heal_bundles` uploads a bundle for every module, though no snapshot references
-    them, while the boot waits ("uploaded N bundle(s) the cloud had lost")."""
+    and `_heal_bundles` uploaded a bundle for every module, though no snapshot references
+    them, while the boot waited ("uploaded N bundle(s) the cloud had lost"). R4 (fixed):
+    it heals only what the based-on snapshot names (cloud._snapshot_manifest)."""
     name = f"world-{time.strftime('%Y-%m-%d-%H%M%S', time.gmtime(time.time() - 2 * DAY))}" \
            "-fvtt14.369.tar.gz"
     p = _legacy_tar(two_hosts.cloud / "world-backups" / name, {
