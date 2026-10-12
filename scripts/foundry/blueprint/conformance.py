@@ -97,6 +97,7 @@ class Module:
     registry: adj.Registry | None
     registry_root: Path
     all_manifests: dict[str, dict] = field(default_factory=dict)
+    registry_error: str | None = None            # why the registry could not be loaded (C47/C32 fail on it)
 
     @property
     def id(self) -> str:
@@ -184,10 +185,16 @@ def _scan_dir(d: Path) -> tuple[dict, dict, list, list]:
 
 
 def load_module(d: Path, *, installed: bool, registry: adj.Registry | None, registry_root: Path,
-                all_manifests: dict[str, dict] | None = None) -> Module:
+                all_manifests: dict[str, dict] | None = None, registry_error: str | None = None) -> Module:
     manifest = json.loads((d / "module.json").read_text(encoding="utf-8"))
     files, raw, lib, tests = _scan_dir(d)
-    return Module(d, manifest, files, raw, lib, tests, installed, registry, registry_root, all_manifests or {})
+    return Module(d, manifest, files, raw, lib, tests, installed, registry, registry_root, all_manifests or {},
+                  registry_error)
+
+
+def registry_failure(err: str) -> str:
+    """The one line C47, C32 and main() report when adjustments.yml cannot be loaded."""
+    return f"adjustments registry cannot be loaded: {err}"
 
 
 # ── helpers ──────────────────────────────────────────────────────────────────
@@ -931,6 +938,8 @@ def c32(m):
                 if not comment_only:
                     detail.append(f"row {r.id} has no wrapMethod patch naming it — a non-patch row takes "
                                   f"its package's prefix (core-, dnd5e-, argon-, …; D2)")
+    elif m.registry_error:
+        detail.insert(0, registry_failure(m.registry_error))     # first, so the cap below never hides it
     return ok() if not detail else bad(detail[:14] + ([f"… {len(detail) - 14} more"] if len(detail) > 14 else []))
 
 
@@ -1206,6 +1215,8 @@ def c46(m):
 
 @rule("C47", "fail", "adjustments rows exist for every package the code names")
 def c47(m):
+    if m.registry_error:
+        return bad([registry_failure(m.registry_error)])
     if m.registry is None:
         return na("no registry")
     detail = []
@@ -1895,17 +1906,18 @@ def score_dir(module_dir: Path, *, root: Path | None = None, registry_path: Path
     module_dir = module_dir.resolve()
     root = (root or module_dir.parent).resolve()
     reg_path = registry_path or adj.REGISTRY_PATH
+    registry, registry_error = None, None
     try:
         registry = adj.load(reg_path)
-    except adj.RegistryError:
-        registry = None
+    except adj.RegistryError as exc:     # broken or missing: C47 and C32 FAIL with this text
+        registry_error = str(exc)
     if installed is None:
         installed = root == MODULE_ROOT.resolve()
     manifests = {p.name: json.loads((p / "module.json").read_text(encoding="utf-8"))
                  for p in root.iterdir() if (p / "module.json").exists()}
     reg_root = reg_path.parent.parent if reg_path == adj.REGISTRY_PATH else reg_path.parent
     m = load_module(module_dir, installed=installed, registry=registry, registry_root=reg_root,
-                    all_manifests=manifests)
+                    all_manifests=manifests, registry_error=registry_error)
     return score(m)
 
 
@@ -1978,6 +1990,10 @@ def main(argv: list[str] | None = None) -> int:
     if not targets:
         targets = sorted(p for p in root.iterdir() if (p / "module.json").exists())
 
+    try:
+        adj.load(reg_path)
+    except adj.RegistryError as exc:
+        print(f"  ✗ {registry_failure(str(exc))}", file=sys.stderr)
     reports = [score_dir(t, root=t.resolve().parent, registry_path=reg_path, installed=installed) for t in targets]
     if args.json:
         print(json.dumps(reports, indent=2))

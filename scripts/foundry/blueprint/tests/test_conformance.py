@@ -795,3 +795,31 @@ def test_reserved_api_mirrors_the_kit():
     text = (conformance.REPO_ROOT / "foundry/lib/errors.mjs").read_text(encoding="utf-8")
     body = re.search(r"export const RESERVED\s*=\s*Object\.freeze\(\[(.*?)\]", text, re.S).group(1)
     assert set(re.findall(r'"([^"]+)"', body)) == set(conformance.RESERVED_API)
+
+
+def test_py_blueprint_rob_2_a_broken_or_missing_registry_fails_c47_and_c32(tmp_path, capsys):
+    """py-blueprint-ROB-2: an adjustments registry that cannot be loaded must FAIL the strict gate
+    (C47 fails with the loader's text, C32 appends it), never pass it as "n/a: no registry"."""
+    d = _tiny(tmp_path / "mods")
+    broken = tmp_path / "reg" / "adjustments.yml"
+    write(broken.parent, {"adjustments.yml": "adjustments:\n  - id: Not A Valid Id\n"})
+    for reg in (broken, tmp_path / "missing" / "adjustments.yml"):
+        report = conformance.score_dir(d, registry_path=reg)
+        r47 = next(r for r in report["results"] if r["id"] == "C47")
+        r32 = next(r for r in report["results"] if r["id"] == "C32")
+        assert r47["status"] == "fail", r47
+        assert any("adjustments registry cannot be loaded" in x for x in r47["detail"]), r47["detail"]
+        assert r32["status"] == "fail", r32
+        assert any("adjustments registry cannot be loaded" in x for x in r32["detail"]), r32["detail"]
+        assert "C47" in report["blocking"]
+
+    # --snapshot with no adjustments.yml fails the same way; main says so once on stderr
+    snap = tmp_path / "snap"
+    shutil.copytree(_tiny(tmp_path / "src", name="pentaryn-two"), snap / "module" / "pentaryn-two")
+    shutil.copytree(_tiny(tmp_path / "src", name="pentaryn-three"), snap / "module" / "pentaryn-three")
+    capsys.readouterr()
+    assert conformance.main(["--snapshot", str(snap), "--json"]) == 1
+    out = capsys.readouterr()
+    for rep in json.loads(out.out):
+        assert next(r for r in rep["results"] if r["id"] == "C47")["status"] == "fail"
+    assert out.err.count("adjustments registry cannot be loaded") == 1, out.err
