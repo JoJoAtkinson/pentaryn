@@ -22,10 +22,10 @@ export function isBodySwap(changes, { actorId = null, unwrap = v => v } = {}) {
     const next = unwrap(changes.actorId);
     if (next !== actorId) return true;
   }
+  const flags = unwrap(changes.flags);
+  const dnd5e = flags && typeof flags === "object" ? unwrap(flags.dnd5e) : null;
   for (const key of ["previousTokenData", "previousActorData"]) {
     if (Object.hasOwn(changes, `flags.dnd5e.${key}`)) return true;
-    const flags = unwrap(changes.flags);
-    const dnd5e = flags && typeof flags === "object" ? unwrap(flags.dnd5e) : null;
     if (dnd5e && typeof dnd5e === "object" && Object.hasOwn(dnd5e, key)) return true;
   }
   return false;
