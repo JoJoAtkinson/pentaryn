@@ -95,3 +95,18 @@ test("ties-30: two concurrent attribute-belief writes both land", async () => {
   assert.equal(Apply.readBelief(fact("r1"), "pc1")?.text, "one");
   assert.equal(Apply.readBelief(fact("r2"), "pc2")?.text, "two");
 });
+
+/* ── ties-32: escaped art, a checked item-mark icon ───────────────────────── */
+
+test("ties-32: an item mark's icon is one fa- class or the flame", async () => {
+  const { decorate } = await import("../item-marks.mjs");
+  const { el, serialise } = await import("./fixtures/dom.mjs");
+  const row = icon => el("li", { dataset: { itemId: "zzItem0000000001" }, children: [el("div", { className: "name", children: [el("span", { className: "title" })] })] });
+  const cases = [["fa-skull", "pt-item-mark fa-solid fa-skull"], ["x\" onmouseover", "pt-item-mark fa-solid fa-fire"], ["fa-a fa-b", "pt-item-mark fa-solid fa-fire"], [undefined, "pt-item-mark fa-solid fa-fire"]];
+  for (const [icon, want] of cases) {
+    const r = row(icon);
+    const actor = { items: { get: () => ({ getFlag: () => ({ icon }) }) } };
+    decorate({ actor }, el("ol", { children: [r] }));
+    assert.match(JSON.stringify(serialise(r)), new RegExp(want.replace(/ /g, " ")), String(icon));
+  }
+});

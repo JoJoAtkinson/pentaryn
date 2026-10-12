@@ -26,6 +26,7 @@
  */
 
 import { MODULE } from "./ties-core.mjs";
+import { esc } from "./core/html.mjs";
 
 /** The single live window, and who it is about. */
 let current = { app: null, actorId: null };
@@ -86,7 +87,7 @@ export async function toggle() {
 
   const art = actor.img || actor.prototypeToken?.texture?.src || "icons/svg/mystery-man.svg";
   const content = `<div class="pt-describe">
-    <img class="pt-describe-art" src="${art}" alt="" />
+    <img class="pt-describe-art" src="${esc(art)}" alt="" />
     <div class="pt-describe-body">${body}</div>
   </div>`;
 

@@ -84,7 +84,7 @@ test("B5 / ties-30 (before): a player-client knowledge write is refused by the G
   assert.deepEqual({ set, clear }, { set: false, clear: false });
 });
 
-test("B6 / ties-32 (before): describe-card art is not escaped; an item mark's icon is used as given", async () => {
+test("B6 / ties-32 [declared, flipped]: describe-card art is escaped; an item mark's icon must be one fa- class, else the flame (before: both used as given)", async () => {
   canvas.tokens.hover = canvas.tokens.get("zzTokPc000000001");
   let content = null;
   const DialogV2 = foundry.applications.api.DialogV2;

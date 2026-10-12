@@ -12,6 +12,8 @@ import { makeLog } from "./lib/log.mjs";
 const log = makeLog(MODULE);
 
 const CLASS = "pt-item-mark";
+/** A Font Awesome icon class, and nothing else (no spaces, no quotes, no second class). */
+const ICON = /^fa-[a-z0-9-]+$/;
 
 export function decorate(app, element) {
   const actor = app?.actor;
@@ -22,7 +24,8 @@ export function decorate(app, element) {
     const title = row.querySelector(".name .title");
     if (!mark || !title || title.querySelector(`.${CLASS}`)) continue;
     const i = document.createElement("i");
-    i.className = `${CLASS} fa-solid ${mark.icon ?? "fa-fire"}`;
+    // ties-32: an icon is one Font Awesome class name, or the flame — an item flag is player-writable
+    i.className = `${CLASS} fa-solid ${ICON.test(mark.icon ?? "") ? mark.icon : "fa-fire"}`;
     if (mark.color) i.style.color = mark.color;
     if (mark.tip) i.dataset.tooltip = mark.tip;
     title.append(" ", i);
