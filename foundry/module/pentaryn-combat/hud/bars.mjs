@@ -216,7 +216,7 @@ function pulseNew(panel, actor, buttons) {
     const el = b.element;
     el.classList.add("pentaryn-combat-new");
     const stop = () => el.classList.remove("pentaryn-combat-new");
-    setTimeout(stop, 12000);
+    setTimeout(stop, core.DELAYS.pulse);
     panel.element?.addEventListener?.("pointerenter", stop, { once: true });
   }
 }
@@ -337,7 +337,7 @@ function rerender(labels = ["DND5E.Action", "DND5E.BonusAction", "DND5E.Special"
         .then(() => { dropStrayTooltip(); return refillWeaponSlots(p); })
         .catch(err => log.warn(`${label} re-render`, err));
     }
-  }, 60);
+  }, core.DELAYS.rerender);
 }
 
 function refreshAll() {
@@ -394,7 +394,7 @@ const onCombatUpdated = (combat, changes) => {
 
 // Combat over (in-combat → nocombat key, "New turn" may appear); a weapon equipped or a Focus Point
 // spent elsewhere (follow-ups depend on both).
-const onCombatDeleted = () => { const a = ui.ARGON?._actor; if (a) setTimeout(() => { refreshAll(); checkBars(a); }, 0); };
+const onCombatDeleted = () => { const a = ui.ARGON?._actor; if (a) setTimeout(() => { refreshAll(); checkBars(a); }, core.DELAYS.afterArgon); };
 const onItemUpdated = (item) => { const a = ui.ARGON?._actor; if (a && item?.parent === a) checkBars(a); };
 // Reckless on/off (from our toggle, the sheet, or its expiry at turn start) flips the Special-bar toggle.
 const onEffectChanged = (effect) => { const a = ui.ARGON?._actor; if (a && effect?.parent === a) checkBars(a); };
@@ -476,7 +476,7 @@ const onPanelRenderedPips = (panel) => {
 // Argon's own updateCombat handler (registered after ours) relights every pip at a new round.
 const onRoundPips = (combat, changes) => {
   if (!("round" in changes)) return;
-  setTimeout(() => { try { restorePips(ui.ARGON?._actor); } catch (err) { log.debug("restore pips (HUD closed)", err); } }, 0);
+  setTimeout(() => { try { restorePips(ui.ARGON?._actor); } catch (err) { log.debug("restore pips (HUD closed)", err); } }, core.DELAYS.afterArgon);
 };
 
 // An off-hand swing clicked through Argon's weapon slot made Argon grey the Action pip (the weapon's

@@ -22,6 +22,7 @@
  *   core/turnflow.mjs     Argon's special actions, expiringAt, portraitExtras, orphanUsage, turnBoundary,
  *                         hudFollowPlan, deltasConsumed, areaPlacementSkipped
  *   core/layout.mjs       dockRect, swingTag, drawerLeft, clampToView
+ *   core/timing.mjs       DELAYS: every timer delay, named (combat-riders-37)
  */
 
 /* ── identity (blueprint constants; one MODULE for every file) ──────────────── */
@@ -184,6 +185,9 @@ import {
 import {
   clampToView, dockRect, drawerLeft, swingTag
 } from "./core/layout.mjs";
+import {
+  DELAYS
+} from "./core/timing.mjs";
 
 export {
   featureSet, normalizeName, slugify, attackCount, canSwing, defaultWeapon, extraSwings,
@@ -198,5 +202,5 @@ export {
   damageAtZero, damageBonuses, steadyAimAfterAttack, steadyAimChanges, multiattackPlan,
   overridePlan, parseMultiattack, SPECIAL_ACTIONS, actionsLeft, areaPlacementSkipped, dashChanges,
   deltasConsumed, expiringAt, hudFollowPlan, orphanUsage, portraitExtras, recordSpecialAction,
-  specialActionOf, turnBoundary, clampToView, dockRect, drawerLeft, swingTag, pruneOlder
+  specialActionOf, turnBoundary, clampToView, dockRect, drawerLeft, swingTag, pruneOlder, DELAYS
 };

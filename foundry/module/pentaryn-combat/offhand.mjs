@@ -78,7 +78,7 @@ function registerSeed(reg) {
     const t = setTimeout(() => {
       timers.delete(t);
       seedWeaponSets(actor).catch(err => { log.debug("weapon-set seed (new character)", err); return null; });
-    }, 500);
+    }, core.DELAYS.seedAfterCreate);
     timers.add(t);
   }, { label: "seed a new character's weapon sets" });
 }

@@ -3,7 +3,7 @@
  * effect change on the HUD's actor, a Speed edit or a turn change redraws it (50 ms, batched).
  */
 
-import { MODULE } from "../combat-core.mjs";
+import { DELAYS, MODULE } from "../combat-core.mjs";
 import { makeLog } from "../lib/log.mjs";
 
 const log = makeLog(MODULE);
@@ -26,7 +26,7 @@ function queueMovement(actor) {
   if (!actor || actor !== ui.ARGON?._actor || movementQueued) return;
   movementQueued = true;
   // After dnd5e has prepared the actor again with the effect in or out.
-  setTimeout(() => { movementQueued = false; redrawMovement(); }, 50);
+  setTimeout(() => { movementQueued = false; redrawMovement(); }, DELAYS.movementRedraw);
 }
 
 /* ── install ─────────────────────────────────────────────────────────────── */

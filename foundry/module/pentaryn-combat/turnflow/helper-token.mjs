@@ -3,7 +3,7 @@
  * helperTokenControl, usability Area 5 re-run, S3 and S13).
  */
 
-import { MODULE } from "../combat-core.mjs";
+import { DELAYS, MODULE } from "../combat-core.mjs";
 import { makeLog } from "../lib/log.mjs";
 import { setting } from "../settings.mjs";
 import { isAoeHandle } from "../shapes.mjs";
@@ -39,7 +39,7 @@ const onTokenDeleted = (doc) => {
         if (!back) back = ownedTokenOf(game.user.character);
         if (back && !back.destroyed && back.isOwner) back.control({ releaseOthers: true });
       } catch (err) { log.warn("helper token control", err); }
-    }, 0);
+    }, DELAYS.helperReselect);
   } catch (err) { log.warn("helper token control", err); }
 };
 

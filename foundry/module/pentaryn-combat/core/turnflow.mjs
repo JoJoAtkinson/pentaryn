@@ -5,6 +5,7 @@
  */
 
 import { normalizeName } from "./identity.mjs";
+import { DELAYS } from "./timing.mjs";
 import { otherActionsOf, recordOtherAction, recordSwing } from "./turn.mjs";
 
 /** Argon dnd5e's six built-in action buttons, by key. */
@@ -115,7 +116,7 @@ export function turnBoundary(previous = {}, current = {}) {
  */
 export function hudFollowPlan({ enabled = false, owner = false, onScene = false, argonOn = false, combatStart = false } = {}) {
   if (!enabled || !owner || !onScene) return { now: false, recheck: [] };
-  return { now: !!argonOn, recheck: combatStart ? [300, 1200] : [] };
+  return { now: !!argonOn, recheck: combatStart ? [...DELAYS.hudFollowRecheck] : [] };
 }
 
 /** A usage card's `system.deltas` show something consumed (a use, a slot, ammunition, an item). */

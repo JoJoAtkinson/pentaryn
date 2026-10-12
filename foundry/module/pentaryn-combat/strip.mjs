@@ -6,7 +6,7 @@
  * Stop. Esc while paused = Stop.
  */
 
-import { MODULE, dockRect, swingTag, clampToView, keyFor } from "./combat-core.mjs";
+import { DELAYS, MODULE, dockRect, swingTag, clampToView, keyFor } from "./combat-core.mjs";
 import { makeLog } from "./lib/log.mjs";
 import { setting } from "./settings.mjs";
 import { rollDialogOf, topRollWindow } from "./dialog-adapter.mjs";
@@ -223,7 +223,7 @@ function settleFocus() {
   if (!el) return;
   // Twice: once the frame paints, and again after a pick's pointerup has landed on the canvas.
   requestAnimationFrame(() => focusRollWindow());
-  setTimeout(() => focusRollWindow(), 150);
+  setTimeout(() => focusRollWindow(), DELAYS.focusRetry);
 }
 
 export function onRollWindow(app, { weapon = false } = {}) {
@@ -343,6 +343,6 @@ export function pickWeapon(tiles, { title = "" } = {}) {
     setTimeout(() => {
       document.addEventListener("pointerdown", outside, true);
       document.addEventListener("keydown", key, true);
-    }, 0);
+    }, DELAYS.pickerArm);
   });
 }

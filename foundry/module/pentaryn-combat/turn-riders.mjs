@@ -421,7 +421,7 @@ function rerenderCards(actor) {
       if (!current && !showing(m.id) && !m.getFlag?.(MODULE, "auto")) continue;
       try { ui.chat?.updateMessage?.(m); } catch (err) { log.debug("card re-render (popped out)", err); }
     }
-  }, 50);
+  }, core.DELAYS.cardRerender);
 }
 
 /**
@@ -441,7 +441,7 @@ function rerenderShowing() {
       const m = game.messages.get(id);
       if (m) try { ui.chat?.updateMessage?.(m); } catch (err) { log.debug("card re-render (popped out)", err); }
     }
-  }, 50);
+  }, core.DELAYS.cardRerender);
 }
 
 /* ── GM audit ────────────────────────────────────────────────────────────── */

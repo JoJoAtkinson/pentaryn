@@ -25,7 +25,7 @@
  * Design: context/plans/melee-streamlining.md · Use: README.md · Exposes game.pentaryn.combat.
  */
 
-import { MODULE, NS } from "./combat-core.mjs";
+import { DELAYS, MODULE, NS } from "./combat-core.mjs";
 import { ctx, installFeature, log } from "./context.mjs";
 import { registerSettings } from "./settings.mjs";
 import { renderHud } from "./argon.mjs";
@@ -69,7 +69,7 @@ function onReady() {
   publishNamespace(NS, ctx.api, { moduleId: MODULE });
   setTimeout(() => {
     if (isActiveGM()) seedAll().catch(err => log.warn("weapon-set seed failed", err));
-  }, 0);
+  }, DELAYS.seedAfterReady);
 }
 
 if (globalThis.game?.ready) {

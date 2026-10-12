@@ -119,7 +119,7 @@ async function sweepOrphanFlags() {
 
 const onReadySweep = () => { sweepOrphanFlags().catch(err => log.warn("orphan flag sweep", err)); };
 const onCombatDeletedSweep = () => {
-  setTimeout(() => sweepOrphanFlags().catch(err => log.warn("orphan flag sweep", err)), 1500);
+  setTimeout(() => sweepOrphanFlags().catch(err => log.warn("orphan flag sweep", err)), core.DELAYS.orphanSweep);
 };
 
 // Clicking one token of a selected group releases the others but never "controls" the clicked one
@@ -140,7 +140,7 @@ let followLeft = null;
 
 const onControlToken = (token, controlled) => {
   if (controlled || !setting("hudFollows")) return;
-  followLeft ??= foundry.utils.debounce(bindLeft, 150);
+  followLeft ??= foundry.utils.debounce(bindLeft, core.DELAYS.followLeft);
   followLeft();
 };
 

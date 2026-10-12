@@ -27,6 +27,7 @@
       "core/layout.mjs",
       "core/multiattack.mjs",
       "core/sequence.mjs",
+      "core/timing.mjs",
       "core/turn-riders.mjs",
       "core/turn.mjs",
       "core/turnflow.mjs",
@@ -68,6 +69,7 @@
       "core/turn.mjs",
       "core/weapons.mjs"
     ],
+    "core/timing.mjs": [],
     "core/turn-riders.mjs": [],
     "core/turn.mjs": [
       "core/followups.mjs",
@@ -75,6 +77,7 @@
     ],
     "core/turnflow.mjs": [
       "core/identity.mjs",
+      "core/timing.mjs",
       "core/turn.mjs"
     ],
     "core/weapons.mjs": [],
@@ -254,6 +257,7 @@
     "core/turnflow.mjs",
     "core/turn.mjs",
     "core/followups.mjs",
+    "core/timing.mjs",
     "core/identity.mjs",
     "core/turn-riders.mjs",
     "core/sequence.mjs",

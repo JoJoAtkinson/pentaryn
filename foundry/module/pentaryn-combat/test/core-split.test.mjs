@@ -28,5 +28,5 @@ test("the barrel re-exports every topic export, each from exactly one file", asy
       assert.ok(k in barrel, k);
     }
   }
-  assert.equal(files.length, 11);
+  assert.equal(files.length, 12);
 });

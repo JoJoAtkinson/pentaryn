@@ -143,7 +143,7 @@ async function settleDamage(w, { limitMs = 120000 } = {}) {
     const t0 = Date.now();
     let idle = 0;
     while (!w.done && Date.now() - t0 < limitMs && !current?.abort) {
-      await new Promise(r => setTimeout(r, 150));
+      await new Promise(r => setTimeout(r, core.DELAYS.damagePoll));
       idle = resolverOpen() ? 0 : idle + 1;
       if (idle >= 4 && Date.now() - t0 > 600) break;   // nothing to wait on: no resolver, ~0.6 s gone
     }
@@ -369,7 +369,7 @@ export async function runSwings(actor, swings, { event = null, title = null, ori
     const created = [...(current?.created ?? [])];
     current = null;
     // After dnd5e has posted any last attack (and the tidy hook's own 250 ms look).
-    if (created.length) setTimeout(() => { try { tidyOrigins(created); } catch (err) { log.warn("tidy usage card", err); } }, 400);
+    if (created.length) setTimeout(() => { try { tidyOrigins(created); } catch (err) { log.warn("tidy usage card", err); } }, core.DELAYS.tidyAfterSequence);
     hide();
     // The bars re-check their follow-ups (Off-hand, Hew, Nick…) once the last swing's flag lands.
     emit("sequenceEnd", actor);

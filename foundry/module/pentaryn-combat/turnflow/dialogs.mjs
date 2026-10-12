@@ -58,7 +58,7 @@ function pressUse(app) {
   };
   const hook = (rendered) => { if (rendered === app) requestAnimationFrame(press); };
   id = temp.on("renderActivityUsageDialog", hook, "Enter uses: wait for the re-render");
-  setTimeout(press, 400);   // a value that did not change re-renders nothing
+  setTimeout(press, core.DELAYS.useFallback);   // a value that did not change re-renders nothing
 }
 
 const onEnterKey = (ev) => {
@@ -87,7 +87,7 @@ const onAttackDialogClosed = (app) => {
       if (!game.messages.get(msg.id)) return;
       const keep = !isOrphanCard(msg, { sequence: !!running() });
       if (!keep) msg.delete().catch(err => log.warn("tidy usage card", err));
-    }, 250);
+    }, core.DELAYS.tidyLook);
   } catch (err) { log.warn("tidy usage card", err); }
 };
 
