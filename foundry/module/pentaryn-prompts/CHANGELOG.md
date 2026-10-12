@@ -40,6 +40,9 @@ cssPrefix `pp-`, afterSync). Each **[declared]** change goes to the live check.
   `BAD_SPEC: patch.disposition: hostile|neutral|friendly|secret`, checked after every other patch
   field so a second bad field keeps its own message. The real run now refuses it at plan time, so
   nothing is imported, copied or stamped first (no cleanup line, no `discarded` entry).
+- **[declared] The type-ahead orphan toast is localised on every path** (M12): the adapter's
+  no-sink fallback reads `PENTARYN_PROMPTS.typeahead.orphan` through `_loc`, as the entry's sink
+  does; English is only the fallback where `_loc` is undefined (node). No change in English.
 - **[declared] A choice pool entry that fails to load reads as its uuid** (M10): an ItemChoice
   pool entry whose `fromUuid` rejects (a locked or broken pack) is named by its uuid in the real
   run's matching and `DEFAULTED` line, as the dry run already did, instead of throwing the build
