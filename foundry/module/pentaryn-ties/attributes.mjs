@@ -179,12 +179,34 @@ const DERIVED_ICONS = {
 /*  The registry                                */
 /* -------------------------------------------- */
 
-/** Never throws — a setting can be unregistered when a hook fires early. */
-export function registry() {
-  return readRegistry(setting(REGISTRY_SETTING));
+/*
+ * The clamped registry, memoised on the identity of the setting's value (ties-19). Foundry hands
+ * back the Setting document's own value object until that document updates, so an unchanged
+ * registry is clamped once instead of on every row of every paint and every search keystroke; any
+ * write gives a new object and the next read re-clamps. Callers mutate what they get (push, assign),
+ * so they always get a COPY — of the whole list, or of the one entry.
+ */
+let memo = { raw: undefined, list: null, byId: null };
+function clampedRegistry() {
+  const raw = setting(REGISTRY_SETTING);
+  if (!memo.list || memo.raw !== raw) {
+    const list = readRegistry(raw);
+    const byId = new Map();
+    for (const e of list) if (!byId.has(e.id)) byId.set(e.id, e); // first wins, as find() did
+    memo = { raw, list, byId };
+  }
+  return memo;
 }
 
-export const attributeById = id => registry().find(e => e.id === id) ?? null;
+/** Never throws — a setting can be unregistered when a hook fires early. */
+export function registry() {
+  return structuredClone(clampedRegistry().list);
+}
+
+export const attributeById = id => {
+  const entry = clampedRegistry().byId.get(id);
+  return entry ? structuredClone(entry) : null;
+};
 
 /**
  * GM-only. The server would refuse a player anyway; refusing here keeps the message honest.

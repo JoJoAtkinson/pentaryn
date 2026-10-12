@@ -63,3 +63,28 @@ test("ties-25: drawWires schedules nothing with no card and no wire layer; one c
   assert.equal(Cards.size(), 0);
   assert.equal(F.frames.length, 0);
 });
+
+test("ties-19: the clamped registry is memoised on the setting's value; callers get copies; a write re-reads", async () => {
+  const A = await import("../attributes.mjs");
+  const reg = [{ id: "guild", title: "Guild", category: "guild", lore: [] }, { id: "city", title: "City", lore: [] }];
+  // a value object that stays the same between reads, as Foundry's Setting#value does
+  const get = game.settings.get.bind(game.settings);
+  let value = reg;
+  game.settings.get = (ns, key) => (key === "attributes" ? value : get(ns, key));
+  try {
+    const one = A.registry();
+    one.push({ id: "x" });
+    one[0].title = "changed";
+    assert.equal(A.registry().length, 2, "a push on a returned copy does not leak");
+    assert.equal(A.registry()[0].title, "Guild", "nor an edit");
+    const e = A.attributeById("guild");
+    e.lore.push({ id: "q" });
+    assert.equal(A.attributeById("guild").lore.length, 0, "attributeById copies too");
+    assert.equal(A.attributeById("nope"), null);
+    value = [{ id: "guild", title: "Guild Renamed", lore: [] }];
+    assert.equal(A.registry()[0].title, "Guild Renamed", "a new value is re-read");
+    assert.equal(A.describeAttribute("guild").title, "Guild Renamed");
+  } finally {
+    game.settings.get = get;
+  }
+});
