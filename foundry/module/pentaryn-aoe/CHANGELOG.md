@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **The area picker says why it does nothing on a second GM tab** (declared, aoe-edge-8): on a GM
+  tab that is not the active GM, picking another area on the tray did nothing, yet the select kept
+  showing the new choice. That tab now gets a warning toast (new string
+  `PENTARYN_AOE.Tray.NotActiveGm`, "Only the active GM can change the area.") and the select goes
+  back to the area the tray still uses. The tray keeps rendering on every GM tab. README API row
+  says so.
 - **A bad multiplier no longer lands on a tray row** (declared, aoe-edge-7): `setRow` turned a
   null or blank multiplier into ×0 and `'abc'` into NaN. A multiplier that is not one of the
   tray's (0, 0.25, 0.5, 1, 2) now leaves the row unchanged (tick included), logs

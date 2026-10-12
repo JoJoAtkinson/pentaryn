@@ -139,7 +139,15 @@ function decorate(message, html) {
     const rowId = el.closest("[data-row]")?.dataset.row;
     if (el.dataset.pa === "tick") return context.exposed.setRow(message.id, rowId, { apply: el.checked });
     if (el.dataset.pa === "mult" && el.value !== "") return context.exposed.setRow(message.id, rowId, { multiplier: el.value });
-    if (el.dataset.pa === "region") return context.exposed.resolve(message.id, { regionId: el.value });
+    if (el.dataset.pa === "region") {
+      // aoe-edge-8: resolve() only runs on the active GM; elsewhere say so and show the area still in use.
+      if (!game.users.activeGM?.isSelf) {
+        ui.notifications.warn(_loc("PENTARYN_AOE.Tray.NotActiveGm"));
+        el.value = aoeFlags(message).resolution?.region ?? res.region ?? "";
+        return;
+      }
+      return context.exposed.resolve(message.id, { regionId: el.value });
+    }
   }));
   tray.addEventListener("click", listenerGuard("tray click", async ev => {
     const el = ev.target.closest("[data-pa]");

@@ -20,6 +20,7 @@
       "Empty": "No creatures inside the area.",
       "Superseded": "Superseded by a newer damage roll for this area. Apply from that one.",
       "AreaLocked": "This tray's area can no longer change: damage has been applied from it, or a newer roll superseded it.",
+      "NotActiveGm": "Only the active GM can change the area.",
       "Waiting": "waiting",
       "WaitingTip": "Waiting for the player to roll from the request card.",
       "NoDcTip": "This save has no DC, so it is neither a pass nor a fail. Set the multiplier by hand.",
