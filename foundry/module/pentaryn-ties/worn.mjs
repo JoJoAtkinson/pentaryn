@@ -122,9 +122,40 @@ function makeText(str, style) {
   return major >= 8 ? new PIXI.Text({ text: str, style }) : new PIXI.Text(str, style);
 }
 
-/** Coalesce to one repaint per frame — refreshToken fires per animation step per token. */
+/**
+ * Where each badge goes (ties-24) — pure: the marked tokens in, `{ tokenId, x, y, r, letter }` out,
+ * each token's mark read once. Top-right corner of the token, positioned off the DOCUMENT (Token#x
+ * reads 0 on v14); the letter is the wearer's initial, or a dot.
+ *
+ * @param {{ id, document: { x, y }, w }[]} placeables
+ * @param {number} gridSize
+ */
+export function badgePlan(placeables, gridSize) {
+  const size = gridSize || 100;
+  const r = Math.max(8, size * 0.15);
+  const out = [];
+  for (const p of placeables ?? []) {
+    const worn = readWorn(p.document);
+    if (!worn) continue;
+    out.push({
+      tokenId: p.id ?? p.document?.id ?? null,
+      x: (p.document?.x ?? 0) + (p.w ?? size) - r * 1.15,
+      y: (p.document?.y ?? 0) + r * 1.15,
+      r,
+      // the wearer's initial — enough to say "that one is him" without painting prose on the map
+      letter: (worn.by || "").trimStart().charAt(0).toUpperCase() || "•"
+    });
+  }
+  return out;
+}
+
+/**
+ * Coalesce to one repaint per frame — refreshToken fires per animation step per token.
+ * hot: the badge layer. Players never paint it, so they never schedule the frame (ties-24, B7).
+ */
 let queued = 0;
 export function drawBadges() {
+  if (!game.user?.isGM) return;
   if (queued) return;
   queued = requestAnimationFrame(() => {
     queued = 0;
@@ -139,28 +170,18 @@ export function drawBadges() {
 function paintBadges() {
   if (!canvas?.ready) return;
   if (!game.user?.isGM) return; // the whole layer is GM-only; players never get a frame of it
-  const marked = (canvas.tokens?.placeables ?? []).filter(p => readWorn(p.document));
-  if (!marked.length) return dropBadges();
+  const plan = badgePlan(canvas.tokens?.placeables ?? [], canvas.grid?.size);
+  if (!plan.length) return dropBadges();
 
   const layer = badgeLayer();
   if (!layer) return;
   layer.removeChildren().forEach(c => c.destroy({ children: true }));
 
-  const size = canvas.grid?.size || 100;
-  const r = Math.max(8, size * 0.15);
-
-  for (const p of marked) {
-    const worn = readWorn(p.document);
-    // top-right corner of the token — position off the document, never Token#x (0 on v14)
-    const x = (p.document?.x ?? 0) + (p.w ?? size) - r * 1.15;
-    const y = (p.document?.y ?? 0) + r * 1.15;
-
+  for (const { x, y, r, letter } of plan) {
     const g = new PIXI.Graphics();
     drawDisc(g, x, y, r, Math.max(1.5, r * 0.18));
     layer.addChild(g);
 
-    // the wearer's initial — enough to say "that one is him" without painting prose on the map
-    const letter = (worn.by || "").trimStart().charAt(0).toUpperCase() || "•";
     const text = makeText(letter, {
       fontFamily: "Signika, sans-serif",
       fontSize: Math.round(r * 1.3),
