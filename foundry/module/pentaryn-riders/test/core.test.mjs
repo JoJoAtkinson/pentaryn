@@ -3,8 +3,8 @@
 // exports are frozen (S6's buildApi freezes a copy of `core`), and the once-per-casting guard over a
 // long chat log (guide §4: the index by origin must give the same answer).
 //
-// KNOWN (guide §2.1 note for S6): table-core's METAMAGIC is a mutable Set, not frozen. S6 either
-// keeps it out of `core`'s copy or makes it a frozen array (todo at the end).
+// Guide §2.1 note for S6: table-core's METAMAGIC is a mutable Set, not frozen. S6 kept it out of
+// `api.core` (a frozen copy of riders-core's exports only); the Set itself is unchanged (pinned).
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { pinJSON, readJSON } from "./kit/harness.mjs";
@@ -67,5 +67,15 @@ test("usedFromMessages over a 200-message log: only the card's own damage messag
   assert.deepEqual(riders.usedFromMessages(null, "card000000000000"), []);
 });
 
-test.todo("S2: riders-core exports MODULE (MOD kept as its alias) and a version constant equal to the manifest's version");
-test.todo("S6: every object export reachable from api.core is frozen (METAMAGIC kept out or a frozen array)");
+test("S2: riders-core exports MODULE (MOD kept as its alias) and a version constant equal to the manifest's version", () => {
+  assert.equal(riders.MODULE, manifest.id);
+  assert.equal(riders.MOD, riders.MODULE);
+  assert.equal(riders.VERSION, manifest.version);
+});
+
+test("S6: every object export reachable from api.core is frozen (METAMAGIC kept out or a frozen array)", () => {
+  // api.core is a frozen copy of riders-core's exports (buildApi); riders-core's own object exports
+  // are frozen too, and table-core's mutable METAMAGIC is not among them.
+  for (const [name, v] of Object.entries(riders)) if (v && typeof v === "object") assert.ok(Object.isFrozen(v), name);
+  assert.equal("METAMAGIC" in riders, false);
+});
