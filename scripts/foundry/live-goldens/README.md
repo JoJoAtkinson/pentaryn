@@ -36,4 +36,5 @@ either decides nothing and timings stretch. Await the document operation or hook
 golden must wait out wall time (a module's own debounce or claim window), use the `tick()` /
 `sleep()` / `settle()` helpers the goldens already carry (a `MessageChannel` macrotask plus
 `performance.now()`, not throttled in a hidden tab). The same holds for one-off probes run by
-`eval-js`.
+`eval-js`. Copy the helper preamble from an existing golden; only `DROP` and `settle` may differ
+(`scripts/tests/test_live_goldens_preamble.py` checks this).
