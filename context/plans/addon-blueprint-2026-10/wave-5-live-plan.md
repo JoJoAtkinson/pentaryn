@@ -72,7 +72,7 @@ waits for him overnight (§11 of the overnight plan).
 | Module | Version deployed → after | How | Golden | What changed (declared marked D) |
 |---|---|---|---|---|
 | aoe | 0.3.1 → **0.4.0** | `make foundry-aoe-sync` | `aoe.js` | flags, recommends, `styles/aoe.css` (moved), verified; D version |
-| attunement | 0.2.1 | `…-attunement-sync` | `attunement.js` | flags, recommends item-piles, minimum 14, `styles/attunement.css` (moved), `languages` + **inert** `lang/en.json` (no `_loc` yet), `stash`/`releaseAway` docs "eval-js only" (describe text) |
+| attunement | 0.2.1 → **0.3.0** | `…-attunement-sync` | `attunement.js` | flags, recommends item-piles, minimum 14, `styles/attunement.css` (moved), `languages` + **inert** `lang/en.json` (no `_loc` yet), `stash`/`releaseAway` docs "eval-js only" (describe text); fixes batch 2: D W2-A1 (a returning coin purse is claimed, pays once ~750 ms after the Take), D W2-A2 (a `stash()` shortfall rolls back the accepted copies, `err.rolledBack`), kit `election` vendored; D version |
 | combat | 0.2.5 → **0.3.0** | `…-combat-sync` | `combat.js` | flags, verified, description sentence, `lib/argon-tooltip.css` via `styles` and the `@import` dropped; D version |
 | creatures | 0.1.1 | `…-creatures-sync` | `creatures.js` | flags, recommends item-piles + enhancedcombathud, `styles/creatures.css` (moved), verified |
 | cursors | 0.2.0 | `…-cursors-sync` | `cursors.js` | kit re-vendor; `tools/build.mjs`, `assets/src/`, `DESIGN.md` left the module (built outputs unchanged) |
@@ -87,7 +87,7 @@ waits for him overnight (§11 of the overnight plan).
 | portals | 0.4.4 → **0.5.0** | `…-portals-sync` | `portals.js` | flags, `styles/portals.css` (moved), recommends, D `languages` + `lang/en.json` (59 keys), every on-screen string through `_loc` full keys, settings labels as keys |
 | prompts | 0.4.5 | `…-prompts-sync` | `prompts.js` | flags (tier, namespace, cssPrefix) |
 | riders | 0.2.0 → **0.3.0** | `…-riders-sync` | `riders.js` | flags, Argon ×2 recommends, `styles/riders.css` (moved), D7 `lib/argon-tooltip.css` vendored and listed in `styles`, `#tooltip` click-through rule kept; D version |
-| senses | 0.4.1 | `…-senses-sync` | `senses.js` | manifest only: flags, minimum 14, enhancedcombathud recommend |
+| senses | 0.4.1 → **0.5.0** | `…-senses-sync` | `senses.js` | manifest: flags, minimum 14, enhancedcombathud recommend; fixes batch 2: D W3-SE4 (a chain with a hidden anchor is GM-only, `paint()`); D version |
 | ties | 0.19.4 | `…-ties-sync` | `ties.js` | flags (`pentaryn-ties`), minimum 14, verified, recommends |
 | transform | 0.3.3 → **0.4.0** | `…-transform-sync` | `transform.js` | flags, minimum 14, `lib/argon-tooltip.css` via `styles` and the `@import` dropped; D version |
 
@@ -260,9 +260,9 @@ return JSON.stringify(out);
 **Pass, every module of the 19:**
 - `active: true`, `moduleApi: "same"`, `frozen: true`, `notFunctions: []`, no `error`;
 - `version` **equals the `module.json` version** in `$LIVE` at the merge commit (`versionMatches:
-  true`): aoe 0.4.0, attunement 0.2.1, combat 0.3.0, creatures 0.1.1, cursors 0.2.0, dropbin
+  true`): aoe 0.4.0, attunement 0.3.0, combat 0.3.0, creatures 0.1.1, cursors 0.2.0, dropbin
   0.2.3, feedback 0.1.2, importer 1.1.1, journal 0.1.0, lookup 0.3.0, movement 0.1.2, names 0.1.1,
-  pings 0.1.1, portals 0.5.0, prompts 0.4.5, riders 0.3.0, senses 0.4.1, ties 0.19.4, transform 0.4.0
+  pings 0.1.1, portals 0.5.0, prompts 0.4.5, riders 0.3.0, senses 0.5.0, ties 0.19.4, transform 0.4.0
   (re-read them from `module.json` if main moved);
 - `kit: "1.1.0"`; `contract: "pentaryn-<m>/api@1"`; `namespace` = the `ns` above;
 - `flags` = the manifest's `namespace`, `cssPrefix`, `flagScope` (the module id for all 19);
@@ -467,10 +467,11 @@ from the CSSOM (`sheet.disabled = true` on the `<link>` or its `@import` parent)
 
 | Module | Declared differences (before → after) |
 |---|---|
-| every module | `env.manifestVersion` / `env.apiVersion` where the version moved (aoe 0.3.1 → 0.4.0, combat 0.2.5 → 0.3.0, portals 0.4.4 → 0.5.0, riders 0.2.0 → 0.3.0, transform 0.3.3 → 0.4.0); any captured `describe().kit` "1.0.2" → "1.1.0" |
+| every module | `env.manifestVersion` / `env.apiVersion` where the version moved (aoe 0.3.1 → 0.4.0, attunement 0.2.1 → 0.3.0, combat 0.2.5 → 0.3.0, portals 0.4.4 → 0.5.0, riders 0.2.0 → 0.3.0, senses 0.4.1 → 0.5.0, transform 0.3.3 → 0.4.0); any captured `describe().kit` "1.0.2" → "1.1.0" |
 | importer | any captured describe row: `import` gains `dryRun: true` |
 | names | any captured describe/param: `sync`'s `ref` gains `resolve: "self"`. A wave-1 golden: read the shared list by hand |
-| attunement | any captured describe text of `stash`/`releaseAway` now says eval-js only |
+| attunement | any captured describe text of `stash`/`releaseAway` now says eval-js only; `purseHome` still `purseLeft: false` with the coin paid once (the payment now lands ~750 ms after the Take — the golden's 3 s `settle` covers it; a `purseLeft: true` means the settle ran out, rerun once) |
+| senses | nothing else: the golden's chains have no hidden end (W3-SE4 is checked in §10.4) |
 | journal | a captured `folderName` setting `name`/`hint` is now the lang key `PENTARYN_JOURNAL.settings.folderName.*` in the registry (it localizes to the same English) |
 | portals | a captured settings label is now a `PENTARYN_PORTALS.*` key in the registry (same English when localized); any captured on-screen string must equal the old English |
 | combat | the manifest `description` (if captured) gains the turn-flow sentence |
@@ -494,6 +495,34 @@ from the CSSOM (`sheet.disabled = true` on the `<link>` or its `@import` parent)
 | 7 | `pentaryn-read {ns:"<m>", path:"selftest"}` for every module with one (§7 list) | `ok: true` each |
 | 8 | `pentaryn-read {ns:"*", path:"inspect", ref:"ZZ Wave5 Reader"}` | one plain-JSON entry per namespace with `inspect`, no throw |
 | 9 | `pentaryn-read {ns:"walls", path:"describe"}` | `NOT_FOUND` (walls off) |
+
+4. **Fixes batch 2 live checks** (merged from `fix/overnight-2-2026-10-12` by W5L, 2026-10-12;
+   record each in `OUT/fx2.md`). Throwaway data only, on "ZZ Wave5 Scene" (never activated); make
+   the throwaway token change first (Foundry 14.369, §12).
+   - **SE4 (senses, declared):** two ZZ npc tokens "ZZ Wave5 Anchor" and "ZZ Wave5 Chained";
+     `game.pentaryn.chain.link(<chained token>, <anchor token>)` (or the HUD "Chain to target").
+     In the §8.4 player tab (the zz player pulled to the scene, both tokens visible): the chain
+     sprite is drawn (`canvas.primary.children` holds the senses chain layer with one sprite;
+     screenshot). GM hides the **anchor** (`anchorDoc.update({hidden: true})`): in the player
+     tab the chain is **gone** (no chain layer / zero sprites; screenshot); in the GM tab it is
+     still drawn. Unhide the anchor: the chain is **back** in the player tab. Then hide the
+     chained token instead: gone for the player (the old rule, unchanged). Break the chain.
+   - **A2 (attunement, declared):** a ZZ owner actor with one item, and a ZZ container that
+     accepts fewer copies than asked (an Item Piles pile whose `createEmbeddedDocuments` is
+     wrapped for this one call to drop the last copy, or a `preCreateItem` hook returning
+     `false` for the second item on that container — removed straight after). `await
+     game.pentaryn.attunement.stash(owner, container, [id1, id2], {tag: "ZZ"})` rejects; the
+     error has `err.rolledBack === true` and `err.created` naming the copy that landed; the
+     container holds **no** leftover copy (`container.items.size` as before); the owner still
+     has both originals. Console: one `pentaryn-attunement |` error line.
+   - **A1 (attunement, declared):** stash a ZZ coin (`currency: true`) from the ZZ owner into the
+     ZZ container, then Take the purse back (create it on the owner from the container's purse
+     data, delete it from the container, as the golden's `purseHome` does). The owner's gp rises
+     **once**, about 750 ms after the create (the claim's settle; read gp at ~200 ms: unchanged,
+     at ~2 s: +amount); the purse deletes itself; the purse item carried
+     `flags.pentaryn-attunement.claims.coinBack` before it went. One GM tab only, so this checks
+     the single-tab path still pays (the two-tab race itself is covered by the node test).
+   Delete every ZZ document these made (§13).
 
 ## 11. Rollback — O decides
 
@@ -549,7 +578,7 @@ token change on "ZZ Wave5 Scene" before asserting persistence; a "bug" gone on r
    (merge SHA, snapshot, the 19 deployed modules and versions, walls not synced, probe/lang/styles
    verdicts, golden table, reads, any rollback or fix commit, exit state). Fill
    [`wave-5-report.md`](wave-5-report.md) "Live phase". Update the module versions in
-   `context/pentaryn.md` and the batch checklist step 3 date in `wave7-restart-batch.md`.
+   `context/pentaryn.md` (attunement 0.3.0, senses 0.5.0 included) and the batch checklist step 3 date in `wave7-restart-batch.md`.
    Commit with `-- <paths>`, push.
 6. Keep `$RB` and `OUT` until the morning report; never commit `.state/**` or `foundry/logs/**`.
 
