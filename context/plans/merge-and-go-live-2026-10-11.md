@@ -132,8 +132,9 @@ Deploy (fold into wave 3's live phase):
    - `eval-js` with `timeoutMs: 500`: the `mcp-` line has `phase: "args"` and a one-line `error`.
    - `pentaryn-write {ns: "importer", path: "import", dryRun: true}` with no actors.json →
      `code: "NOT_FOUND"`; `describe().version` 1.1.1.
-   - `pentaryn-read {ns: "*", path: "inspect", ref: "Talo"}` → `feedback` is
-     `{actor, users: [Talo's player], pending, reports}`, not BAD_ARGS; an NPC → empty lists;
+   - `pentaryn-read {ns: "*", path: "inspect", ref: "<ZZ PC name>"}` (a ZZ PC-type actor with a
+     throwaway ZZ player user assigned as its non-GM owner; never a real PC) → `feedback` is
+     `{actor, users: [<the ZZ player>], pending, reports}`, not BAD_ARGS; an NPC → empty lists;
      feedback `describe().version` 0.1.2, `selftest().ok`.
    - Pings golden before/after: `cleanup.pingLogRestored: true`, `pingScratchLeft: 0`, and
      `game.pentaryn.pings.all()` unchanged across the run.
@@ -243,6 +244,7 @@ Player's Journal" is gone too. Rollback copies: `.state/live-rollback/W3L/` (wor
 - Wave-3 live plan: senses `timeoutMs` 90000 is over the eval-js cap of 60000. §4 says "no
   restart" and "no bridge build", which is wrong when the optional fixes ride along. The §5
   `want` map has no feedback entry. §7 row 8 and §7.3 here name real PCs; use a ZZ PC-type actor.
+  Done on `fix/overnight-2026-10-12` (wave-3 live plan §0, §4 addendum, §5, §7; §7.3 here).
 - Add a kit conformance test: a Document-kind manifest param with `resolve:false` must name its
   string forms in `type` (this would have caught the senses.inspect refusal).
 - toggle-token-condition only searches the viewed scene: document it in `mcp-fork.md`, or
