@@ -284,11 +284,7 @@ MODULES = {
         "pentaryn-dropbin",
         # node-test: loot-core.mjs decides when the Loot all button shows and greys out.
         check=(*_STATIC, "node-test", *_BLUEPRINT),
-        after_sync=(
-            "Already enabled? A browser RELOAD (F5) picks up .mjs changes; module.json needs a restart.",
-            "Item Piles loot windows get a 'Loot all' button; corpses show Dead as the overlay plus a drawn eye.",
-            "  game.pentaryn.dropbin.corpses.migrateLegacyEyes()",
-        ),
+        # after_sync comes from module.json flags.pentaryn.afterSync (Wave 7 batch).
     ),
     "cursors": ModuleSpec(
         "pentaryn-cursors",

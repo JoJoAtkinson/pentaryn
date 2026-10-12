@@ -4,8 +4,8 @@
   "description": "An append-only ledger of every item that leaves a character. Records Item Piles drops to the ground and outright deletions from a sheet, in the order they happened, with the item's complete source data — so a two-hander dropped in a corridor three sessions ago can be handed back exactly as it was. Writes to a world setting and mirrors to assets/drop-bin/drop-log.json. GM is the only writer; player clients route their entries through socketlib. Exposes game.pentaryn.dropbin. Also turns dead NPCs into lootable piles (Dead as the full-body overlay, a drawn eye while there is loot) and adds a Loot all button to Item Piles loot windows.",
   "version": "0.2.3",
   "compatibility": {
-    "minimum": "13",
-    "verified": "14"
+    "minimum": "14",
+    "verified": "14.369"
   },
   "authors": [
     {
@@ -40,12 +40,32 @@
         "id": "socketlib",
         "type": "module"
       }
+    ],
+    "recommends": [
+      {
+        "id": "item-piles",
+        "type": "module",
+        "reason": "Drop capture, corpse piles, the Loot all button and container locks are built on Item Piles."
+      },
+      {
+        "id": "itempilesdnd5e",
+        "type": "module",
+        "reason": "The rarity i18n shim targets the Item Piles dnd5e system module's labels."
+      }
     ]
   },
   "flags": {
     "pentaryn": {
-      "flagScope": "dropbin",
-      "generation": 14
+      "tier": "full",
+      "namespace": "dropbin",
+      "flagScope": "pentaryn-dropbin",
+      "cssPrefix": "pd-",
+      "generation": 14,
+      "afterSync": [
+        "Already enabled? A browser RELOAD (F5) picks up .mjs changes; module.json needs a restart.",
+        "Item Piles loot windows get a 'Loot all' button; corpses show Dead as the overlay plus a drawn eye.",
+        "  game.pentaryn.dropbin.corpses.migrateLegacyEyes()"
+      ]
     }
   }
 }
