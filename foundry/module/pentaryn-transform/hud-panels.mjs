@@ -307,6 +307,15 @@ function onStarryChange(effect) {
   setTimeout(dropStaleTooltip, 50);
 }
 
+// A combat tick writes only the time left (D8-starry): nothing on the bar changes, so no rebuild
+// (a rebuild every round would also close an open Wild Shape or Starry picker).
+const STARRY_LEFT = `flags.${MODULE}.starry.left`;
+function onStarryUpdate(effect, changes) {
+  const paths = Object.keys(foundry.utils.flattenObject(changes ?? {})).filter(k => k !== "_id" && !k.startsWith("_stats"));
+  if (paths.length && paths.every(k => k === STARRY_LEFT)) return;
+  onStarryChange(effect);
+}
+
 /* ── Chalice: offered when it is earned (Area 4, D6) ─────────────────────── */
 // "Whenever you cast a spell using a spell slot that restores Hit Points to a creature, you or
 // another creature within 30 feet of you can regain Hit Points equal to 1d8 + WIS" (2024 PHB). The
@@ -362,7 +371,7 @@ export function install(reg) {
   reg.on("renderEffectArgonComponent", onEffectRender, { label: "renderEffectArgonComponent: the form's effect" });
   reg.on("updateItem", onItemUpdate, { label: "updateItem: Wild Shape uses badge" });
   reg.on("createActiveEffect", onStarryChange, { label: "createActiveEffect: Starry Form rebuilds the Bonus bar" });
-  reg.on("updateActiveEffect", onStarryChange, { label: "updateActiveEffect: Starry Form rebuilds the Bonus bar" });
+  reg.on("updateActiveEffect", onStarryUpdate, { label: "updateActiveEffect: Starry Form rebuilds the Bonus bar" });
   reg.on("deleteActiveEffect", onStarryChange, { label: "deleteActiveEffect: Starry Form rebuilds the Bonus bar" });
   reg.on("dnd5e.postUseActivity", onChaliceUse, { label: "dnd5e.postUseActivity: Chalice offer" });
   reg.on("deleteActiveEffect", onStarryEnd, { label: "deleteActiveEffect: no Chalice to take" });

@@ -368,7 +368,7 @@ export function canRunAny({ activeGMId = null, selfId } = {}) {
 
 /**
  * The actors the world-time fallback checks for an expired Wild Shape: every world actor, then the
- * unlinked tokens' actors on the viewed scene (transform-creatures-22; Starry keeps world actors).
+ * unlinked tokens' actors on the viewed scene (transform-creatures-22).
  * @param {Iterable<object>} actors
  * @param {Iterable<{ actorLink: boolean, actor: object|null }>} sceneTokens
  */
