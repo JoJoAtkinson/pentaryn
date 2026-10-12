@@ -143,3 +143,21 @@ test("walls-edge-2: the wasm backend stamps the same shape", async () => {
   const [u] = get("wasm").run(before, { gridSize: 100, runId: R2 }).updates;
   assert.deepEqual(u.flags["wall-autocomplete"], { rule: "X1", moves: { [R2]: before.find(w => w._id === "stub").c } });
 });
+
+test("walls-edge-5: an ISO-stamped run outranks a non-ISO run id; non-ISO ids undo oldest-first among themselves", () => {
+  const gen = (id, run) => ({ _id: id, c: [0, 0, 10, 0], flags: { "wall-autocomplete": { generated: true, run } } });
+  // "zz" sorts after any ISO string, and V8 reads "run-2099" as the year 2099: neither may stay latest.
+  const iso = "2026-01-02T00:00:00,123Z";               // a real run id, stamped dot-free
+  const scene = [gen("a", "zz"), gen("b", "run-2099"), gen("c", iso), gen("d", R1)];
+  const plan = planUndo(scene);
+  assert.equal(plan.latest, iso, "the newest ISO run is undone first");
+  assert.deepEqual(plan.generated, ["c"]);
+  assert.equal(plan.remaining, 3);
+  const isoGone = scene.filter(w => !["c", "d"].includes(w._id));
+  assert.equal(planUndo(isoGone).latest, "zz", "then the non-ISO ids, by string order");
+  // all=true restores a user wall to its earliest run's prior under the same order.
+  const u = { _id: "u", c: [0, 9, 30, 9], flags: { "wall-autocomplete": { rule: "X1",
+    moves: { [R1]: [0, 9, 50, 9], zz: [0, 9, 80, 9] } } } };
+  assert.equal(planUndo([u]).latest, R1);
+  assert.deepEqual(planUndo([u], { all: true }).restores, [{ _id: "u", c: [0, 9, 80, 9] }]);
+});

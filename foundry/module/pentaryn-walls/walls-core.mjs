@@ -101,6 +101,19 @@ export function undoHtml({generated, restored, all, latest, remaining}) {
       ? `<p style="opacity:.7">${remaining} earlier ${plural(remaining, "run")} still applied — undo again to peel back further.</p>` : "");
 }
 
+/** An ISO-stamped run id's time (its dot-free `,` read back as `.`), else -Infinity. A strict ISO
+ *  prefix, not bare Date.parse, which reads "run-2099" as the year 2099 in V8 (walls-edge-5). */
+const runTime = id => {
+  const t = /^\d{4}-\d{2}-\d{2}T/.test(id) ? Date.parse(id.replaceAll(",", ".")) : NaN;
+  return Number.isFinite(t) ? t : -Infinity;
+};
+
+/** Run-id order for undo: by ISO time (non-ISO first), then by string (walls-edge-5). */
+const runOrder = (a, b) => {
+  const ta = runTime(a), tb = runTime(b);
+  return ta !== tb ? (ta < tb ? -1 : 1) : a < b ? -1 : a > b ? 1 : 0;
+};
+
 /** Every run id in a wall's history: its creating run, then each run that moved it. */
 const runsOf = h => [...(h.created ? [h.created] : []), ...Object.keys(h.moves)];
 
@@ -110,7 +123,9 @@ const runsOf = h => [...(h.created ? [h.created] : []), ...Object.keys(h.moves)]
  * Stamps are read under every READ_SCOPES scope (historyOf), so a migrated wall undoes the same.
  *
  * Per-run history (walls-edge-2): the latest run is the greatest run id across every wall's
- * creating `run` and `moves` keys (string order; ISO timestamps sort by time). A generated wall
+ * creating `run` and `moves` keys, in runOrder (walls-edge-5): an ISO-stamped id (the glue's
+ * `toISOString()`, stored dot-free) ranks by its time and always outranks a non-ISO id; non-ISO ids
+ * (tests and the bridge pass short ones) rank below every ISO one, by string order. A generated wall
  * is deleted only when the latest run created it; any wall with a `moves[latest]` entry gets those
  * coordinates back — so undoing run 2 restores a run-1 wall run 2 moved, rather than deleting it.
  * `all` deletes every generated wall and restores every other one to its earliest run's prior.
@@ -125,12 +140,12 @@ export function planUndo(walls, {all = false} = {}) {
   const stamped = walls.map(w => ({w, h: historyOf(w)})).filter(({h}) => runsOf(h).length);
   if (!stamped.length) return {stamped: 0, latest: null, generated: [], restores: [], remaining: 0};
   const ids = new Set(stamped.flatMap(({h}) => runsOf(h)));
-  const latest = [...ids].sort().at(-1);
+  const latest = [...ids].sort(runOrder).at(-1);
   const generated = [], restores = [];
   for (const {w, h} of stamped) {
     const id = w._id ?? w.id;
     if (all ? h.generated : h.created === latest) { generated.push(id); continue; }
-    const from = all ? Object.keys(h.moves).sort()[0] : latest;
+    const from = all ? Object.keys(h.moves).sort(runOrder)[0] : latest;
     const prior = from !== undefined && Object.hasOwn(h.moves, from) ? h.moves[from] : null;
     if (prior) restores.push({_id: id, c: [...prior]});
   }

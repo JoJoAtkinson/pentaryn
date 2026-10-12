@@ -77,7 +77,9 @@ winning):
 | `moves.<run>` | updated walls | per run that trimmed, welded or moved it: the coordinates that run first found it at |
 | `rule` | updated walls | the rule of the latest move |
 
-Undo takes the latest run id across every `run` and `moves` key: it deletes the walls that run
+Undo takes the latest run id across every `run` and `moves` key — ISO-timestamped ids by time, and
+any of them before a non-ISO id (those rank below every ISO run, by string order; walls-edge-5) — and
+it deletes the walls that run
 created and gives every wall with a `moves.<run>` entry those coordinates back — so undoing run 2
 restores a run-1 wall that run 2 moved instead of deleting it (walls-edge-2). It then deletes
 `flags.<scope>.moves.<run>`, or the whole stamp (`{"flags.<scope>": _del}` for each scope the wall

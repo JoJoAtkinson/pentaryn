@@ -6,6 +6,11 @@
 (`flagScope` stays `wall-autocomplete`), `languages`, `minimum: "14"`, `verified: "14.369"` and the
 description fix; the flag-scope migration is **parked** while walls stays off (Joe).
 
+- **[declared] Undo ranks run ids by time, not string** (`walls-edge-5`): `planUndo` picked the
+  latest run by string sort, so a non-ISO run id (a short id from a test or the bridge) sorted after
+  every timestamp and stayed "latest" forever. ISO-stamped ids now rank by their time and always
+  outrank a non-ISO id; non-ISO ids rank below them by string order. `all` restores each wall to its
+  earliest run's prior under the same order. No run id is rejected.
 - **[declared] A missing `.wasm` in the browser names the HTTP status** (`walls-rob-10`): the
   browser load never checked `response.ok`, so a 404 page went to `WebAssembly.instantiate` and the
   ready line said "expected magic word …". It now throws `fetch <url> → HTTP <status>` first, and
