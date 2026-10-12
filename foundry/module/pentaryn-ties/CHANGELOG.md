@@ -124,6 +124,10 @@ from `worn.mjs`, `PIN_SETTING` from `popups.mjs`, `baseActorOf` from `tie-dialog
 from `review-ui.mjs`; import them from their homes (`ties-adapter.mjs`, `settings.mjs`, `attributes.mjs`).
 `popups.mjs` imports `ties-adapter.mjs` once. The public API is unchanged. ties-ui-M5.
 
+Fixed (declared, no table-visible change): `overlay.mjs` no longer exports `toggle`, the 0.3.0 alias of
+`showAll` nothing imported — import `showAll`. The API rows (`show`, `showAll`, `cards`) are unchanged.
+ties-ui-M6.
+
 ## 0.19.4 (2026-10-10, usability run, Area 7 re-run)
 
 - **The inspect window's Share switches are the table's PCs only** (`tablePCs`): each player's

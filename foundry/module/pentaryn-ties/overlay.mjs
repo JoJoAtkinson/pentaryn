@@ -460,13 +460,6 @@ export function showOne() {
   }
 }
 
-/**
- * 0.3.0 name, kept for anything that imported this module directly. `install()`'s impl table binds
- * `show`/`cards` straight to `showAll`, so nothing in the repo reaches it — it exists only
- * so an outside importer does not break.
- */
-export const toggle = showAll;
-
 /* -------------------------------------------- */
 /*  Hooks                                       */
 /* -------------------------------------------- */
