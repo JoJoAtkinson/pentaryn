@@ -45,7 +45,7 @@ function scheduleFlush() {
  * Record one ping. Silently ignores anything malformed — a dropped ping is a missing convenience,
  * but a throw here would land inside Foundry's own socket handler. Both call sites catch.
  */
-export function record(userId, sceneId, x, y) {
+function record(userId, sceneId, x, y) {
   if (!isAnyGM()) return;
   if (!Number.isFinite(x) || !Number.isFinite(y)) return;
 
