@@ -78,7 +78,7 @@ false }` skips them). Kit members: `describe()`, `version`, `contract`, `setting
 
 **Queries (GM only):** `pentaryn-lookup.search`, `.page`, `.monster`, `.monsters`, `.names`,
 `.onList`, `.spellList`, `.packs`, registered at `init` on every client. Payloads are named
-fields: `{ query, books, limit }`, `{ ref, maxChars }`, `{ name, text }`, `{ cr, size }`,
+fields: `{ query, books, limit }`, `{ ref, maxChars }`, `{ name (or ref), text }`, `{ cr, size }`,
 `{ kind }`, `{ spell, cls, type }`, `{ cls, type, level }`, `{}`. A player sender or a player
 client gets `NOT_GM`; before `ready` publishes, `NOT_READY`.
 
