@@ -47,6 +47,9 @@
   packs with `warning: "packs ignored: expected a pack id or an array"`. `search`/`page` take a
   single pack id as `books` (any string with a dot) instead of falling back to the rules set; an
   unknown word still answers the rules set, now with a `books ignored: …` warning (R5).
+- [declared] `onList` reads the registry's list options only when the list is unknown (they feed
+  the `no such list; known: …` hint); a found list no longer reads them, so a throwing `options`
+  leaves no debug trace there. An unknown list traces the list read, then the options read (LKM-12).
 
 ## 0.3.0 — 2026-10-10
 

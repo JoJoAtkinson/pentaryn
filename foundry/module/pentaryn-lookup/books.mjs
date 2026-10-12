@@ -105,9 +105,9 @@ async function onList(spell, cls, opts = {}) {
     return { notFound: true, spell, hint: `${spell} is a ${doc.documentName}, not a spell Item` };
   }
   const list = listFor(type, cls);
-  const lists = known();
+  // the options are read only for the unknown-list hint, never on a found list (LKM-12)
   if (!list) return { spell: doc.name, uuid: doc.uuid, level: doc.system.level, list: `${type}:${cls}`, onList: null,
-    hint: `no such list; known: ${lists.join(", ")}` };
+    hint: `no such list; known: ${known().join(", ")}` };
   return { spell: doc.name, uuid: doc.uuid, level: doc.system.level, list: `${type}:${cls}`, onList: list.has(doc) };
 }
 
