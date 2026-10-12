@@ -1,4 +1,4 @@
-// pentaryn kit 1.0.2 · vendored from foundry/lib/api.mjs — edit the canonical file, then run scripts/foundry/blueprint/vendor.py
+// pentaryn kit 1.1.0 · vendored from foundry/lib/api.mjs — edit the canonical file, then run scripts/foundry/blueprint/vendor.py
 /**
  * Build a module's published API from its manifest (pure data, `api-manifest.mjs`) and an
  * implementation map, and describe it.
@@ -16,9 +16,11 @@ import { CODES, KIT_VERSION, RESERVED, errorCode, toFail } from "./errors.mjs";
 import { refOf, resolveRef } from "./resolve.mjs";
 
 /**
- * @typedef {{ name: string, kind?: string, type?: string, optional?: boolean, resolve?: boolean, doc?: string }} Param
+ * @typedef {{ name: string, kind?: string, type?: string, optional?: boolean, resolve?: boolean|"self", doc?: string }} Param
+ *   `resolve: false` — the kit does not resolve this param; `resolve: "self"` (kit 1.1.0) — nor does the
+ *   kit, but the function resolves a string (uuid, id, exact name) itself, so the bridge may pass one
  * @typedef {{ path: string, params: Param[], returns: string, gm: boolean, writes: boolean, query?: boolean,
- *   queryName?: string, relay?: boolean, wire?: Function, sideEffects?: string[], nullWhen?: string,
+ *   queryName?: string, relay?: boolean, dryRun?: boolean, wire?: Function, sideEffects?: string[], nullWhen?: string,
  *   throws?: string[], legacy?: boolean, args?: Function, since?: string, doc: string }} ApiRow
  *   (field reference: context/foundry/addon-blueprint.md §5.1a)
  * @typedef {{ module: string, namespace: string, version: string, contract: string, flagScope: string,
@@ -41,13 +43,14 @@ function reservedClash(path, { own, legacy }) {
  * Wrap a row's implementation so a leading `ref` param is resolved per call.
  *  - Scene scope and base-actor choice come from THIS call's options object (`opts.sceneId`,
  *    `opts.base`), the argument right after the ref (use-doc §5.1) — never from the row.
+ *  - `resolve: false` / `resolve: "self"` on that param opts out: the function gets the raw ref.
  *  - Legacy rows: a miss resolves to null instead of throwing (`attunement.report` → undefined).
  *  - Write rows never throw for an expected refusal (use-doc §5.1): a coded resolve error (NOT_FOUND,
  *    AMBIGUOUS, BAD_ARGS) comes back as `fail(code, reason)`. Callers `await` a write either way.
  */
 function bind(row, fn) {
   const first = row.params?.[0];
-  if (first?.name !== "ref" || first.resolve === false) return fn;
+  if (first?.name !== "ref" || first.resolve === false || first.resolve === "self") return fn;
   const kind = first.kind ?? "actor";
   const required = !row.legacy;
   const wrapped = (ref, opts, ...rest) => {
@@ -193,6 +196,7 @@ export function describe(manifest, { settings = [], events = {}, patches = [], q
       query: !!r.query,
       ...(r.query && r.queryName ? { queryName: r.queryName } : {}),
       ...(r.relay ? { relay: true } : {}),
+      ...(r.dryRun ? { dryRun: true } : {}),
       sideEffects: r.sideEffects ?? [],
       ...(r.nullWhen ? { nullWhen: r.nullWhen } : {}),
       ...(r.throws ? { throws: r.throws } : {}),

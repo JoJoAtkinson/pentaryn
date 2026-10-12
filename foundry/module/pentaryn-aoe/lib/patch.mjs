@@ -1,4 +1,4 @@
-// pentaryn kit 1.0.2 · vendored from foundry/lib/patch.mjs — edit the canonical file, then run scripts/foundry/blueprint/vendor.py
+// pentaryn kit 1.1.0 · vendored from foundry/lib/patch.mjs — edit the canonical file, then run scripts/foundry/blueprint/vendor.py
 /**
  * The only way a module changes someone else's prototype. Every patch is recorded with its
  * adjustments row id (foundry/adjustments.yml), which `describe().patches` reports.
