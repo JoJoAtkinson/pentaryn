@@ -14,7 +14,7 @@ test("core loads with no Foundry globals present", () => {
   assert.equal(core.MODULE, "pentaryn-aoe");
 });
 
-/* ── the legacy core checks (test/legacy-core.mjs), ported one check → one test ──────────────── */
+/* ── the legacy core checks (formerly test/legacy-core.mjs), ported one check → one test ──────────────── */
 
 /** Legacy `check(name, got, want)`: JSON equality, now one node:test case each. */
 function check(name, got, want) {
