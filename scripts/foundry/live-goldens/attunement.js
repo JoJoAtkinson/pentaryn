@@ -1,7 +1,6 @@
 // Live golden — pentaryn-attunement (`game.pentaryn.attunement`). Body of an async function for the
 // foundry `eval-js` MCP tool (paste the file as `script`, timeoutMs 60000). GM client only, and
-// ONE GM tab (the bridge tab): with a second GM tab open the coin purse's way home pays twice
-// (W2-A1, open). Returns a JSON string of { module, env, golden: { shared, declared }, timings, cleanup }:
+// ONE GM tab (the bridge tab). Returns a JSON string of { module, env, golden: { shared, declared }, timings, cleanup }:
 //   - `golden.shared`: behaviour the deployed 0.2.1 code ("before") and the wave-2 code ("after")
 //     both have: slots, report, stash (tags, bonds, merged stacks, the coin purse, away list and
 //     the slot the away item keeps), an item coming home (name, attuned, equipped and its slot
@@ -12,6 +11,11 @@
 // deleted off a *character* into its ledger, and stash deletes the owner's items. The container is
 // a second ZZ npc (not an Item Piles pile). Both are deleted at the end; random bond keys are
 // normalised to <key:item name>.
+// W2-A1 (attunement 0.3.0, [declared]): a bonded purse is claimed and pays ~750 ms after it lands
+// on any non-pile actor. 0.2.1 paid at once, so the chest ate the purse during the stash ("before":
+// stash.chest has no purse, a "Chest recovers their coin" stash toast, purseHome "no purse in the
+// chest"); from 0.3.0 the purse is still in the chest at the snapshot and is taken home to the owner
+// before the chest's claim settles (purseHome: owner paid, chestCurrency {}). See wave-5-live-plan.
 // Wave 2 live plan: context/plans/addon-blueprint-2026-10/wave-2-live-plan.md.
 
 const N = 5;
@@ -136,6 +140,26 @@ try {
     toasts: takeToasts()
   };
 
+  // ── the purse comes home: the coin is paid back and the purse deletes itself ──
+  // Straight after the stash, with nothing awaited in between: the chest is a non-pile npc, so the
+  // purse's arrival there started a claim that pays the *chest* ~750 ms later (W2-A1; README "pays
+  // its coin to whoever takes it"). Taking it home first means that claim always finds the purse
+  // gone and stands down, in a hidden or a visible tab. chestCurrency shows a double payment.
+  const chestPurse = chest.items.find(i => i.flags?.[MOD]?.bond?.currency);
+  if (chestPurse) {
+    const purseData = chestPurse.toObject(); delete purseData._id;
+    const [p] = await owner.createEmbeddedDocuments("Item", [purseData]);
+    tag(p.id, "purseHome");
+    await chestPurse.delete();
+    await settle(() => !owner.items.get(p.id) && (owner.system.currency?.gp ?? 0) > 0);
+    await sleep(100);
+    S.purseHome = {
+      purseLeft: !!owner.items.get(p.id), ownerCurrency: { ...owner.system.currency },
+      chestCurrency: Object.fromEntries(Object.entries(chest.system.currency ?? {}).filter(([, v]) => v)),
+      toasts: takeToasts()
+    };
+  } else S.purseHome = "no purse in the chest";
+
   // ── the ring comes home (a Take: created on the owner, deleted from the chest) ──
   const chestRing = chest.items.find(i => i.name.startsWith("ZZ Ring"));
   const ringData = chestRing.toObject(); delete ringData._id;
@@ -148,18 +172,6 @@ try {
     item: itemsOf(owner).find(i => i.id === home.id) ?? null, ownerFlags: flagsOf(owner),
     slots: await probe(() => A.computeSlots(owner)), toasts: takeToasts()
   };
-
-  // ── the purse comes home: the coin is paid back and the purse deletes itself ──
-  const chestPurse = chest.items.find(i => i.flags?.[MOD]?.bond?.currency);
-  if (chestPurse) {
-    const purseData = chestPurse.toObject(); delete purseData._id;
-    const [p] = await owner.createEmbeddedDocuments("Item", [purseData]);
-    tag(p.id, "purseHome");
-    await chestPurse.delete();
-    await settle(() => !owner.items.get(p.id) && (owner.system.currency?.gp ?? 0) > 0);
-    await sleep(100);
-    S.purseHome = { purseLeft: !!owner.items.get(p.id), ownerCurrency: { ...owner.system.currency }, toasts: takeToasts() };
-  } else S.purseHome = "no purse in the chest";
 
   // ── an away item handed to someone else keeps its bond; the owner then releases it ──
   await probe(() => A.stash(owner, chest, [trinket.id], { tag: "Golden" }));
@@ -182,6 +194,7 @@ try {
   D.stashDetail = await probe(async () => {
     const r = await A.stash(owner, chest, [charm.id], { tag: "Golden", detail: true });
     tagKeys(chest);
+    (r?.created ?? []).forEach((id, k) => tag(typeof id === "string" ? id : id?.id, `charmCopy${k}`));
     return r;
   });
   D.toasts = takeToasts();

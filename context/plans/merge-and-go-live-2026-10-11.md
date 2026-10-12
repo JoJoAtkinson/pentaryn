@@ -367,3 +367,167 @@ the 6 modules, the bridge, the old fork dist, fork commit `2fd6eb0` in README.tx
   clock advance. D7: look at the real Argon HUD tooltips at the table. A third-party update dialog
   for "Argon - Combat HUD" is open on the GM tab, left alone. Run `/mcp` in long-running sessions
   to pick up the new pentaryn-read description.
+
+## W5L — attunement golden-diff re-check (2026-10-12, overnight)
+
+Main `56c2f39a`, attunement 0.3.0 deployed. A 5th after-run of `live-goldens/attunement.js`
+gives the same golden as the 4 earlier runs (`after-fix3/attunement.recheck.json`). `diff.mjs`
+against both 0.2.1 before-runs shows the env version (0.2.1 → 0.3.0), the 23 shared W2-A1 paths and
+`stashDetail.created[0]` → `<charmCopy0>`, and nothing else. Each one matches the declared row in
+`wave-5-live-plan.md` §10.2 (ab677200). `chestCurrency` is `{}`, so the purse paid once, and cleanup
+is clean. No timing flag: every before median is below 0.05 ms. `diff.mjs` exits 1 because it
+counts every shared difference as a failure. By §9 that is green: only `[declared]` lines differ.
+Main pushed.
+
+Follow-up (FX): `diff.mjs` could take a declared-paths allowlist so that an all-declared diff
+exits 0.
+
+## W5L — wave 5 restart batch + fixes batch 2 live (overnight)
+
+Wave 5 (the Wave 7 restart batch: blueprint kit 1.1.0 for all 19 modules, `styles/` moves, lang
+files, strict gates) and fixes batch 2 (`fix/overnight-2-2026-10-12`: senses SE4, attunement A1/A2)
+went live together on the Mac. Conditions: FROM=local, tunnel down, updater paused, one GM tab,
+world `pentaryn`. There was one Foundry restart, because every manifest changed.
+
+**Merged**
+- `migrate/wave-5` took fixes batch 2 as `0ef92fb4`. That merge had three doc conflicts and no
+  code conflicts. Then:
+  - `ee87ec60` re-vendors kit `election.mjs` at 1.1.0; fx2 had vendored the 1.0.2 copy.
+  - `8f6a8924` [declared] releases senses 0.4.1 → **0.5.0** and attunement 0.2.1 → **0.3.0**.
+  - `acc8636f` and `913350fd` are docs and the module index.
+- Merged into main no-ff as **`380a5348`**. The tree equals `913350fd`, with no `foundry/logs`
+  hunks.
+- Fix round 1, golden script only: `85af01b5`. It merged as **`13c53cbb`**.
+- Fix round 2, golden script and plan row: `df161e4d` and `ab677200`. They merged as **`56c2f39a`**.
+- `fb40383c` is the attunement re-check note above.
+- Fork unchanged at `7712417` on `pentaryn`; it was not built and not pushed.
+
+**Deployed**, all from main `380a5348`. Every stamp is dirty false, and every `module.json`
+equals the repo copy:
+
+| Module | Version | | Module | Version |
+|---|---|---|---|---|
+| aoe | 0.4.0 | | movement | 0.1.2 |
+| attunement | 0.3.0 | | names | 0.1.1 |
+| combat | 0.3.0 | | pings | 0.1.1 |
+| creatures | 0.1.1 | | portals | 0.5.0 |
+| cursors | 0.2.0 | | prompts | 0.4.5 |
+| dropbin | 0.2.3 | | riders | 0.3.0 |
+| feedback | 0.1.2 | | senses | 0.5.0 |
+| importer | 1.1.1 | | ties | 0.19.4 |
+| journal | 0.1.0 | | transform | 0.4.0 |
+| lookup | 0.3.0 | | | |
+
+- 18 modules went in with `make foundry-<m>-sync`; importer used `make foundry-importer-install`.
+- Walls was not synced and is still 0.2.0 and off. Its folder equals the rollback copy.
+- The 7 old CSS paths are gone.
+- The bridge module is unchanged at 0.8.3-pentaryn.2.
+- Snapshot before the deploy: `world-2026-10-12-073936-fvtt14.369-mac.tar.gz` (19.5 MB, bundled).
+- Rollback copies are in `.state/live-rollback/W5L/`: world and Config, every module, the bridge,
+  and the fork dist. The fix rounds re-synced no module, so there is no `W5L-fix/`.
+
+**Gates on main**, strict, all green both at `380a5348` and at `56c2f39a`:
+- pytest: 1538 passed at the merge, 1542 after the new golden tests (2 skipped, 5 xfailed).
+- Node tests: 20 of 20 modules pass.
+- `foundry-modules-check` passes all 20. `foundry-lib-check` gives 93 pass, 0 fail.
+- `check-context`, `foundry-adjustments-check`, `vendor.py check --all` and conformance all exit 0.
+- Attunement's C35 exception stays, because fx2 did not do the `_loc` switch.
+
+**Boot probe** (`.state/live-goldens/wave5/probes.json`): all 19 modules pass.
+- Each is active, `moduleApi` same, frozen, `notFunctions []`, versionMatches.
+- Kit 1.1.0, contract `pentaryn-<m>/api@1`, flags equal the module id.
+- Importer `import` has dryRun. Names `sync.ref` is `resolve:"self"`.
+- Selftest is ok for all 12 modules that have one.
+- Walls is off with scope `wall-autocomplete`. `rootFrozen` false, chainAlias "same", and the
+  root keys equal the before probe.
+- The console from load is clean: no errors, no 404s, no missing-localization lines. The Foundry
+  log has no error or warn line since the restart.
+
+**Lang** (`lang-gm.json`, `lang-player.json`): all 17 lang files return 200 with nothing missing.
+There were zero raw `PENTARYN_` keys on any GM surface: settings, controls, the hero sheet, the
+token HUD, scene controls, the Portal card, the feedback dialog and chat. There were also zero on
+the player tab: user Talo on `zz1.localhost`, opened and then closed.
+
+**Styles** (`styles.json`): all 16 `styles` entries are loaded, and no old path is.
+- Each moved file keeps its rule count. Combat stays at 43 and transform at 16, because the walk had
+  already credited the old `@import` to `lib/argon-tooltip.css`, 11 rules each.
+- `.pentaryn-tt` went from 22 to 33 rules: pointer-events none, max-width 340px, clickThrough true.
+- D7 isolation: any one of the three `argon-tooltip.css` copies carries the styling alone.
+
+**Goldens** (`.state/live-goldens/wave5/before|after/`): 18 modules × 2 runs on each side.
+
+| Result | Modules |
+|---|---|
+| Shared identical, no declared difference | aoe, combat, creatures, cursors, dropbin, importer, journal, lookup, names, portals, prompts, riders, ties, transform |
+| Declared only: the scratch AmbientLight id, known noise | senses |
+| Identical to before after fix round 1 | movement |
+| Run-to-run noise (below) | pings |
+| 23 shared W2-A1 paths, declared | attunement |
+
+- **movement:** the after runs first read `pinsUnderTokens[0].noteId` as `<noteClear>`, then as
+  `<noteUnder>`. Cause: a batch `createEmbeddedDocuments` returns in no fixed order on Foundry 14.
+  `85af01b5` creates the documents one per call and adds a test that no golden destructures a
+  multi-document create. After that, 3 runs matched the before hash `1f7f4313…`.
+- **pings:** `ping.settingArrayReplacedByFlush` is true only in before run1. Before runs 2–4 and
+  both after runs are false, and after run1 is shared-identical to before run2. This is
+  timing/cache noise in the golden, not a code change.
+- **attunement:** the 23 shared paths are the [declared] W2-A1 change. A purse in a non-pile chest
+  is now paid out after the 750 ms claim instead of at once.
+  - `df161e4d` takes the purse home before the claim settles. It adds `purseHome.chestCurrency`,
+    which comes out `{}`, so there is no double payment. It also tags the stash copy ids.
+  - `ab677200` lists the exact diff in live plan §10.2.
+  - 5 runs gave one hash, `dcddcbe0…`. Only the declared lines differ.
+- No timing flag. Every cleanup was clean.
+
+**Reads** (`reads.md`): §10.3 rows 1–9, the three refusals and the bridge smoke all pass.
+- Describe answers for 19 namespaces at kit 1.1.0.
+- Importer `import` dryRun returns NOT_FOUND (actors.json 404).
+- Names sync takes the string ref.
+- Attunement's `stash` and `releaseAway` docs say eval-js only.
+- The 12 selftests pass, inspect returns plain JSON, and walls gives NOT_FOUND.
+
+**Fixes batch 2 live** (`fx2.md`, on ZZ Wave5 Scene after one throwaway token change). The screen
+was locked, so every tab was hidden and timings are bounded only to whole seconds.
+- **SE4 passes.** The chain sprite was counted for the GM / the player:
+  - both tokens visible: 2 / 2;
+  - anchor hidden: 2 / 0;
+  - anchor unhidden: back to 2 for the player;
+  - chained token hidden: 2 / 0;
+  - chain broken: 0 for the GM.
+- **A2 passes.** A forced shortfall rejects with `rolledBack: true` and `created` naming the copy
+  that landed. The container ends with 0 items, the owner keeps both originals, and the console has
+  exactly one `pentaryn-attunement |` error line.
+- **A1 passes.** The purse carries `claims.coinBack`. gp is unchanged at about 1 s and paid once by
+  2 s (12 gp), then the purse deletes itself. There is one toast, and an item pile never pays.
+
+**Pushes:** pentaryn main `7b444c6f..fb40383c`, then this record. Fork not pushed (unchanged).
+No reverts.
+
+**Exit state (verified at close):**
+- Foundry is up (FROM=local), the tunnel is down and the updater is paused.
+- World `pentaryn`. Only the Gamemaster is active, in one Foundry tab (localhost:30000/game), and
+  `get-world-info` answers.
+- 0 ZZ documents, 0 ZZ chat lines, 0 combats. Walls is inactive.
+- Every pentaryn stamp is `380a5348`, dirty false.
+
+**Follow-ups (FX, no-downside)**
+- Wave-5 live plan §9, the styles probe:
+  - Strip `modules/<id>/` before the `loaded` test. As written, every entry reads not loaded.
+  - The "styles/<m>.css = before − 11" row is wrong; the counts stay the same.
+  - D7 isolation needs `deleteRule`/`insertRule`, one case per eval, and no timers.
+    `sheet.disabled` does nothing on an `@import`ed sheet.
+- §8.4: the player tab should call `scene.view()` itself. The GM's `pullToScene` throws a core
+  TypeError in a hidden tab.
+- Add pings `settingArrayReplacedByFlush` to the known run-to-run noise. Senses' light id and
+  attunement's `stashDetail.created[0]` are already handled.
+- `diff.mjs`: take a declared-paths allowlist, so that an all-declared diff exits 0.
+- `vendor.py check`: name a header kit version that differs from `kit.lock.json`.
+- Goldens and probes run by eval-js: avoid `requestAnimationFrame` and timers, because a hidden or
+  locked tab throttles them.
+- Attunement `bonds.mjs`: clear a stale `claims.coinBack` in `restoreBond`, with a unit test. A copy
+  taken inside the 750 ms window keeps the stamp of the tab that set it.
+
+**For Joe**
+- Attunement's `_loc` switch (guide step 8) is still open, and its C35 exception stays.
+- `make vtt-status` says "public: reachable (HTTP 302)" while the tunnel is down. That is most
+  likely the Cloudflare Access redirect, but it was not checked.
