@@ -1,7 +1,7 @@
 ---
 title: Migration guide — pentaryn-combat to the addon blueprint
-status: plan
-last_modified: 2026-10-11
+status: done (code phase, wave 4)
+last_modified: 2026-10-12
 tags: [foundry, modules, blueprint, migration, pentaryn-combat]
 ---
 
@@ -766,3 +766,12 @@ Attack tooltip subtitle ("2 of 2 swings left this turn, + Nick: Scimitar") was c
 width, centred on the header/body seam, no `!important`, C37-clean), placed after the S10 dead rule
 so S10's line range still holds (the B5 `!important` moved from `:187` to `:202`; refs above updated); fixtures 378-383 pin it. S3/S4 keep `TT` as is (it may become a
 core constant); it is not part of the `.pentaryn-tt` block transform-creatures-14 step 2 copies.
+
+**Wave 4 close (2026-10-12, `1d86bd5a`, code phase).** After the integrator's adjustments rows
+(`e1a9aade`): **93.8 %**, failing C07 (W7) and C21 / C23 (W4-C3, on purpose). node:test **244** pass,
+0 todo, plus the legacy suite's 326 fixtures; HEAD line coverage 99.68. Commits after the table above:
+D7 `24e961a0` [declared] (combat.css imports the kit tooltip CSS; closes W4-C6), review `5750434c`,
+`6acb2e0e`; integrator `e1a9aade`, `cd63f263`, `0b414108` (-17 step 4), `4ecec06b` (melee.md),
+`09585ef7` (isAoeHandle oracle pin, -36). Frozen-test diff since `6e802ebb`: 55 files (25 A, 30 M),
++3462 −253. Open rows W4-C2…C8, W4-I1 (`argon.md`): [`wave-4-report.md`](wave-4-report.md)
+"Open for Joe — consolidated".

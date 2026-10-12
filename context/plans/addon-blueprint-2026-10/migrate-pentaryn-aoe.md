@@ -1,7 +1,7 @@
 ---
 title: Migrating pentaryn-aoe to the addon blueprint
-status: plan
-last_modified: 2026-10-11
+status: done (code phase, wave 4)
+last_modified: 2026-10-12
 tags: [foundry, modules, blueprint, migration, aoe]
 ---
 
@@ -661,3 +661,14 @@ sweep batch), `describe-token.json` and `create-handle.json` (the handle actor's
 `test/fixtures/handle-oracle.json` needs `migrate/wave-3` (aoe-movement-portals-43,
 transform-creatures-30). Flag scope `aoe` → module id in `module.json` is the W7 manifest
 correction (no data moves). D-A5 (`argonInit` instead of the Argon tick) stays deferred.
+
+### Wave 4 close (2026-10-12, `1d86bd5a`, code phase)
+
+After the integrator's adjustments rows (`e1a9aade`): **93.8 %**, failing only C07, C09, C37 (W7).
+node:test **411** pass, 0 todo, plus LEGACY 160; HEAD line coverage 99.90. Review commits after
+`47bc85c7`: `fb931b3d` (-7, v14 world-actor replace modelled), `a6038b1d` (-11 use-doc + docs-drift
+test), `b0ae5dc9` (JSDoc), `e63dacef` (trace pins); integrator `cd63f263` (README:128, oracle
+`about`), `09585ef7` (combat's isAoeHandle pinned to the oracle). Frozen-test diff since `7a12ffad`:
+27 files (15 A, 12 M), +1909 −67. Open rows and the wave-3 follow-up (portals / creatures oracle
+pin): [`wave-4-report.md`](wave-4-report.md) "Open for Joe — consolidated" and "Follow-ups that need
+wave-3 code".

@@ -1,7 +1,7 @@
 ---
 title: Migration guide — pentaryn-riders to the addon blueprint
-status: plan
-last_modified: 2026-10-11
+status: done (code phase, wave 4)
+last_modified: 2026-10-12
 tags: [foundry, modules, blueprint, migration, pentaryn-riders]
 ---
 
@@ -604,6 +604,15 @@ Deviations from the steps as written:
 - **Once-per-casting guard (§4, no finding id): applied `79e29f8d`** (standalone lane) without an index of our own: dnd5e 6 already keeps one, `dnd5e.registry.messages.get(origin)` (tracked by `_source.system.origin` on prepare, untracked on delete), so the guard reads the card's own messages there and scans the whole log only when the registry is missing or throws. No hook added; `golden/hooks.json` unchanged; `test/once-per-casting.test.mjs`.
 - **Not applied:** C59 batching of `setType` / `retireManual` / `installBattleMedic`: one-off GM setup commands, and batching moves frozen per-item write pins (W3-SE2 precedent). Both are in the wave-4 report.
 - **D7** (riders' `#tooltip` selectors adopt `lib/argon-tooltip.css`): not done. combat's argon-kit has landed (`87be8cd4`, adopted `3a29eb4f`), but `vendor.py sync pentaryn-riders --kit argon-tooltip` refuses until `module.json` `relationships` names `enhancedcombathud` (the W7 `recommends` edit), and loading it is a `styles` edit (W7). Whether the `#tooltip` click-through rule moves into the shared kit file is Joe's call (wave-4 report W4-R9).
+
+**Wave 4 close (2026-10-12, `1d86bd5a`, code phase).** After the integrator's adjustments rows
+(`e1a9aade`) the score is **91.7 %**; still failing C07, C09, C37 (W7; two `#tooltip` selectors stay,
+W4-R9) and C56 (W4-R4). node:test **175** pass, 0 todo, plus LEGACY 103 / 22 / 39; HEAD line coverage
+99.62. Commits after the table above: `79e29f8d` (once-per-casting guard), `794e1ed9` (-41 prune,
+[declared, edge]), integrator `e1a9aade`, `4cab245c`, `762c9113`, `18fd2633`. Frozen-test diff since
+`67fe16a3`: 20 files (13 A, 7 M), +1557 −55, every M touched only by a [declared] commit,
+`d3a12e5b` or a comment. Open rows W4-R3…R11 and the consolidated table:
+[`wave-4-report.md`](wave-4-report.md) "Open for Joe — consolidated".
 
 ## Checkpoint (wave 4, 2026-10-11)
 

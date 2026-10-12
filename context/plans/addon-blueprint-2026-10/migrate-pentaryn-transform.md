@@ -662,3 +662,13 @@ moves to the refactor lane's first step; C14 stays red until then).
 - **Not built here (needs wave-3 code):** nothing for transform — the isAoeHandle oracle pin is
   aoe/portals/creatures.
 
+### Wave 4 close (2026-10-12, `1d86bd5a`, code phase)
+
+After the integrator's adjustments rows (`e1a9aade`): **95.7 %**, failing only C07, C37 (W7,
+`cssPrefix: "ptf-"`). node:test **248** pass, 0 todo, plus legacy 155; HEAD line coverage 99.92.
+Commits after the table above: review `4ee9928a` [declared] (C59 batch with a dependent effect),
+`3ceee0e0` [declared] (§5.8 manifest), `e4ed58fe`, `198688df` (-3), `c2d4a524`, `e02d2006`; D7 pin
+`f6c668c8`; integrator `fb3361b9` (-18), `d73acb65` (-21 contract test), `b4c324b7` (-20 routing
+row), `7ca2026b` (-19). Frozen-test diff since `f06e6b18`: 35 files (15 A, 20 M), +1833 −152; the one
+untagged pin flip is `796fdf63` (-23, treat as declared). Open rows W4-T1…T5, D8:
+[`wave-4-report.md`](wave-4-report.md) "Open for Joe — consolidated".
