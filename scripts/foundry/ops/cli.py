@@ -24,6 +24,7 @@ from pathlib import Path
 
 from . import (bridge, config as cfg, evallog, index, login as login_mod, modules, pipeline,
                service)
+from .out import say
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -136,14 +137,14 @@ def eval_report(log_dir: Path | None, *, since: str | None, as_json: bool) -> in
     """mcp-fork-25: the monthly action-log review as one command (evallog.py)."""
     log_dir = log_dir or Path(os.environ.get("PENTARYN_MCP_LOG_DIR") or cfg.OPS_LOG_DIR)
     if not log_dir.is_dir():
-        service._say(f"✗ no log folder at {log_dir}")
+        say(f"✗ no log folder at {log_dir}")
         return 1
     r = evallog.report(log_dir, since=since)
     if as_json:
         print(json.dumps(evallog.to_json(r), indent=2, ensure_ascii=False))
         return 0
     for line in evallog.render(r):
-        service._say(line)
+        say(line)
     return 0
 
 

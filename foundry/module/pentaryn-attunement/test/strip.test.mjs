@@ -231,3 +231,16 @@ test("El stub sanity: closest walks up through classes and data-action", () => {
   assert.equal(b.closest(".attunement-slot"), li);
   assert.equal(b.closest('[data-action="release"]'), b);
 });
+
+test("away slot aria-label is plain text: no undefined, no entities", () => {
+  const actor = makeActor(F, {
+    id: "actorStrpArl0001", name: "D'Arcy Vale", attunement: { value: 0, max: 3 },
+    flags: { [MOD]: { away: [{ key: "k" }], slots: ["away:k"] } },
+  });
+  actor.isOwner = true;
+  const { strip } = render(actor);
+  const label = slotsOf(strip)[0].attrs["aria-label"];
+  assert.equal(label, " — Still attuned, but not on D'Arcy. Its power is dormant until it is back in hand.");
+  assert.ok(!label.includes("undefined"));
+  assert.ok(!label.includes("&#x27;"));
+});

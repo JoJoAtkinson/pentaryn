@@ -20,7 +20,7 @@ from urllib.parse import urlsplit
 from scripts.foundry import host
 
 from . import config as cfg
-from .out import say as _say  # re-exported: modules.py and pipeline.py import it from here
+from .out import say as _say  # kept for compatibility (test_out.py and older importers)
 
 OK, FAIL = 0, 1
 
@@ -126,7 +126,8 @@ def lock_check() -> int:
 # ── the Foundry application ───────────────────────────────────────────────────
 
 def _boot_choice() -> int:
-    """The §6 boot choice, once per start.
+    """The boot choice (design §6, context/plans/rclone-two-hosts-2026-10.md;
+    use-doc ops.md §3), once per start.
 
     `make foundry-up` / `vtt-up` run it as their own `foundry-boot` step and set
     PENTARYN_BOOT_DONE so it is not asked twice; `make login` (and anything else that
@@ -202,6 +203,8 @@ def _tunnel_pid() -> int | None:
     try:
         pid = int(cfg.CF_PID.read_text().strip())
     except (OSError, ValueError):
+        return None
+    if pid <= 0:   # os.kill(0|-n, …) would signal a whole process group, not one process
         return None
     try:
         os.kill(pid, 0)

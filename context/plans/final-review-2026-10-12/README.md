@@ -115,3 +115,62 @@ by the session's permission classifier; the rollback copy sat on disk for about 
 re-sync put back the same digest, with no reload in between. Console: no pentaryn-* or bridge errors
 since tracking started (after the load). Bridge: deployed module `dist` equals the build, backend
 started 09:33:42 after the 09:33:28 server build, `get-world-info` and `pentaryn-read` answer.
+
+## Integration INT-1349
+
+| Area | Status | Merge SHA | Revert SHA | Synced modules | Reason |
+|---|---|---|---|---|---|
+| py-ops | merged | 1b7da6e2 | — | none (Python, live by being on main) | — |
+| py-blueprint | merged | 48456679 | — | none (Python, live by being on main) | — |
+| py-mcp | merged | d4b3a09e | — | none (Python, live by being on main) | — |
+
+**Gates.** On main at d4b3a09e: `make test` (1626 passed, 2 skipped, 5 xfailed), `check-context`
+(OK, 5 warnings), `foundry-modules-check` (all 20 modules pass), `foundry-lib-check` green. The three
+merges touch only `scripts/**` and their review docs: no module, no `module.json`, no fork, so no
+sync, no rebuild, no restart and no GM-tab reload; no module changed, so no live goldens and no
+rollback copies were needed.
+
+**Live check (13:56–14:05Z).** Tunnel down, Foundry up. `get-world-info` answers with one active
+user (Gamemaster); one Foundry tab. `pentaryn-read {ns:"*", path:"describe"}` answers `ok`. Smoke of
+the merged Python: `make vtt-status` (py-ops) and `scripts/mcp/server.py --list-tools` (py-mcp,
+the dnd-scripts server picks it up at the next session start) both run. `make login NO_OPEN=1`
+printed the URL and then timed out waiting for a browser to collect it, as designed when nothing
+navigates (the existing GM tab was kept, not replaced); py-ops' only `login.py` change is the
+`_choose` range check. Reverts: none. main was already on origin at d4b3a09e.
+
+## Integration INT-1405
+
+| Area | Status | Merge SHA | Revert SHA | Synced modules | Reason |
+|---|---|---|---|---|---|
+| attunement | merged | 14cbb9b3 | — | attunement | — |
+| portals | merged | 4ba5f7e2 | — | portals | — |
+| feedback | merged | 6294260f | — | feedback | — |
+
+**Gates.** On main at 6294260f: `foundry-modules-check` (all 20 modules pass), `foundry-lib-check`,
+`check-context` (OK, 5 warnings), `make test` (1626 passed, 2 skipped, 5 xfailed). No `module.json`,
+lang or fork file changed, so no restart and no fork rebuild. One CSS line left portals
+(`.ppt-app .ppt-edit`, a selector nothing renders; the edit cards are `.ppt-editcard`), which a
+reload picks up.
+
+**Deploy.** This record comes from a relaunch, which checked what was really in place first. The first
+attempt (14:09–14:11Z) took the rollback copies
+`.state/live-rollback/INT-1405/` (pre-merge builds: attunement git 991cee3e, portals and feedback
+380a5348), ran the before-goldens on the deployed pre-merge code, synced all three modules at
+14:10:21–24Z (git 6294260f) and reloaded the one GM tab at 14:10:27Z. The relaunch did not reload
+again. The tab had loaded after the sync, and post-merge-only exports (`feedback-core.isReportId`,
+`LIST_KEYS`, `attunement-core.PROFICIENCY_CATEGORIES`, `shortName`) are present in the running
+build. The before-goldens are confirmed as pre-merge behaviour: each one's `golden.shared` is
+identical to an independent earlier run (`wave5/after-fix3/attunement.recheck.json`,
+`wave5/after/portals.run2.json`).
+
+**Probe.** attunement 0.3.0, portals 0.5.0 and feedback 0.1.2 each equal `module.json`. Every
+described path is a function (7, 12 and 8). `selftest().ok` is true for attunement and feedback
+(portals has no selftest). There are no console errors since the load: feedback's error ring holds
+only Foundry deprecation warnings, and the tab console is clean. `get-world-info` answers with only
+the Gamemaster active, and the tunnel is down.
+
+**Goldens.** The relaunch made fresh after-runs at 14:14Z into `.state/live-goldens/INT-1405/after/`.
+The first attempt's after-files are kept as `*.attempt1.json`. `diff.mjs before after` was run without
+`--declared`, and for both attunement and portals shared is identical, cleanup is clean and the exit
+code is 0. Feedback has no live golden. Every ZZ fixture was deleted (no ZZ actors, scenes, items or
+journals are left). Reverts: none.

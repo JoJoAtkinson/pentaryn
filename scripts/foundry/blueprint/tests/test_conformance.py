@@ -440,6 +440,9 @@ C53_CASES = [
     ('reg.on("updateActor", async (a) => { await a.x(); });', "pass"),          # not vetoable
     ('reg.on("preUpdateActor", elsewhere);', "pass"),                            # unresolved: noted only
     ('myHooks.on("preUpdateActor", async () => {});', "pass"),                  # lookbehind
+    ('reg.on("preUpdateActor", reg.guardSwallowAsync("x", async (a) => { return false; }), { guard: false });',
+     "fail"),                                                                    # through the kit's wrapper
+    ('reg.on("preUpdateActor", reg.guard("x", (a) => false));', "pass"),
 ]
 
 
@@ -513,6 +516,8 @@ C58_CASES = [
     ('const a = serialStore(MODULE, ["b", "a"]);\nconst b = serialStore(MODULE, ["a", "b"]);', "fail"),
     ('const a = serialStore(MODULE, ["a", "b"]);\nconst b = serialStore(MODULE, "a");', "fail"),
     ('const a = serialStore(MODULE, key);', "pass"),                             # non-literal: noted
+    ('const a = serialStore("pentaryn-async", "ledger");', "pass"),               # literal module id
+    ('const a = serialStore("pentaryn-async", "ledger");\nconst b = serialStore("pentaryn-async", "ledger");', "fail"),
 ]
 
 
@@ -579,6 +584,7 @@ C61_CASES = [
      'async function react(a) { await a.update({ x: 1 }); }', "pass"),
     ('reg.on("updateActor", (a) => { void note(a); });\n'
      'function note(a) { seen.set(a.id, 1); }', "pass"),                                  # helper writes nothing
+    ('reg.on("updateActor", reg.guard("x", (a) => { a.update({}); }));', "warn"),          # through reg.guard
 ]
 
 
@@ -762,3 +768,30 @@ def test_a_row_with_match_accepts_only_the_findings_it_names(monkeypatch):
     v = conformance.verdict("pentaryn-x", [later])
     assert v["blocking"] == ["C37"] and v["unmatched"] == {"C37": ["styles/a.css: .new"]} and not v["accepted"]
     assert not conformance.gate_ok(v)
+
+
+def test_c15_namespace_import_of_core_mjs_is_a_core_barrel(tmp_path):
+    # §9 C15: `import * as` is for features and core barrels; a top-level core.mjs is core (C11, role_of)
+    imp = 'import * as core from "./core.mjs";\nexport const y = core.MODULE;\n'
+    d = _tiny(tmp_path, files={"one.mjs": imp, "x.mjs": imp, "core.mjs": 'export const MODULE = "pentaryn-one";\n'})
+    r = next(r for r in conformance.score_dir(d)["results"] if r["id"] == "C15")
+    assert r["status"] == "pass", r["detail"]
+
+
+def test_published_literal_keys_are_the_top_level_paths(tmp_path):
+    d = tmp_path / "pentaryn-one"
+    write(d, {"module.json": json.dumps({"id": "pentaryn-one", "esmodules": ["one.mjs"]}),
+              "one.mjs": "const api = {\n  describe() {},\n  attributes: { describe: 1, x: { y: 2 } },\n"
+                         "  version: 1 };\ngame.pentaryn.one = api;\n"})
+    m = conformance.load_module(d, installed=False, registry=None, registry_root=tmp_path)
+    assert conformance._published_literal_keys(m) == [
+        ("one.mjs", 2, "describe"), ("one.mjs", 3, "attributes"), ("one.mjs", 4, "version")]
+    assert [p for _, _, p in conformance._published_literal_paths(m)] == [
+        "describe", "attributes", "attributes.describe", "attributes.x", "attributes.x.y", "version"]
+
+
+def test_reserved_api_mirrors_the_kit():
+    # C48's RESERVED_API is a hand copy of the kit's errors.RESERVED; a kit bump that adds a name must fail here.
+    text = (conformance.REPO_ROOT / "foundry/lib/errors.mjs").read_text(encoding="utf-8")
+    body = re.search(r"export const RESERVED\s*=\s*Object\.freeze\(\[(.*?)\]", text, re.S).group(1)
+    assert set(re.findall(r'"([^"]+)"', body)) == set(conformance.RESERVED_API)

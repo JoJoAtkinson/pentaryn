@@ -96,14 +96,36 @@ async function onCreateItemBond(item, options, userId) {
   // Home for good: the bond has done its job. Anywhere else it stays, so the
   // item still knows its way back if it is handed over later.
   await item.update({ [flagPath(MODULE, BOND)]: _del });
-  const entry = awayOf(actor).find(a => a.key === bond.key);
-  if (!entry) return;
-  const slots = homeSlots(computeSlots(actor).slots, AWAY + bond.key, item.id);
-  await actor.update({
-    [`flags.${MODULE}.${AWAY_FLAG}`]: awayOf(actor).filter(a => a.key !== bond.key),
-    [`flags.${MODULE}.${SLOTS}`]: slots
+  // A take-all brings several bonded items home in one batch: each hand-back reads the away list
+  // and slots, so it waits for the previous one's actor write (ATT-AC-1).
+  return serial(actor, async () => {
+    const away = awayOf(actor);
+    if (!away.some(a => a.key === bond.key)) return;
+    const slots = homeSlots(computeSlots(actor).slots, AWAY + bond.key, item.id);
+    await actor.update({
+      [`flags.${MODULE}.${AWAY_FLAG}`]: away.filter(a => a.key !== bond.key),
+      [`flags.${MODULE}.${SLOTS}`]: slots
+    });
+    ui.notifications.info(t("BackInHand", { name: item.name, actor: actor.name }));
   });
-  ui.notifications.info(t("BackInHand", { name: item.name, actor: actor.name }));
+}
+
+/** Per-actor tail of in-flight hand-backs. Local to this tab; two tabs still race (recorded). */
+const tails = new Map();
+
+/**
+ * Run `step` after the actor's previous hand-back settles. Uncontended, it runs synchronously, so a
+ * lone item home takes the same ticks as before. Returns `step`'s own promise: a rejection still
+ * reaches the reg's labelled catch, while the stored tail swallows it so the next step still runs.
+ */
+function serial(actor, step) {
+  const key = actor.uuid;
+  const prev = tails.get(key);
+  const run = prev ? prev.then(step) : step();
+  const tail = run.catch(() => {});
+  tails.set(key, tail);
+  tail.then(() => { if (tails.get(key) === tail) tails.delete(key); });
+  return run;
 }
 
 /* -------------------------------------------- */
@@ -146,5 +168,7 @@ export function install(reg) {
   reg.on("createItem", onCreateItemBond, { label: "createItem: bond return" });
 }
 
-/** No session state. */
-export function uninstall() {}
+/** Session state: the hand-back tails. */
+export function uninstall() {
+  tails.clear();
+}
