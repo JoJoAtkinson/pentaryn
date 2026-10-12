@@ -91,10 +91,10 @@ Both installed and loaded. `launchctl list | grep pentaryn.vtt`.
 |---|---|
 | `scripts/foundry/update/admin.py` | Foundry's local admin HTTP API + app process lifecycle. **Start here** — the API's quirks are documented in its module docstring. |
 | `scripts/foundry/update/inventory.py` | On-disk scan of `Data/{modules,systems}`; classifies tracked / protected / local / forked. |
-| `scripts/foundry/update/upstream.py` | Version resolution + release notes (manifest, GitHub, GitLab, r2, Forge). Semver-ish comparison lives here. |
+| `scripts/foundry/update/upstream.py` | Version resolution + release notes (manifest, GitHub, GitLab, r2, Forge). Semver-ish comparison lives here. A failed, stalled (timeout) or missing `gh` returns `None` — the package is unresolved (HOLD), as on a 404, never a crashed run. |
 | `scripts/foundry/update/risk.py` | The deterministic `auto`/`review`/`hold` table, policy loading, the "seen" state. |
 | `scripts/foundry/update/plan.py` | Assembles `plan.json`. Standalone vs Foundry-assisted modes. |
-| `scripts/foundry/update/forks.py` | `gh`-driven fork drift. Report only, never merges. |
+| `scripts/foundry/update/forks.py` | `gh`-driven fork drift. Report only, never merges. A stalled or missing `gh` reads as no forks, not a crash. |
 | `scripts/foundry/update/adjudicate.py` | Sandboxed `claude -p` that grades `review` items. |
 | `scripts/foundry/update/llm.py` | **The one way to call `claude -p`.** Builds the sandboxed argv, refuses tools for untrusted input, heartbeats the status file, enforces timeout/budget, parses cost. |
 | `scripts/foundry/update/escalate.py` | Triage (T0) and impact analysis (T1): facts, floor/ceiling, validators, source bundle, analysis cache, plan writer. |

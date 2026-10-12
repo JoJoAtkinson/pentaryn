@@ -43,7 +43,11 @@ class ForkStatus:
 
 
 def _gh(args: list[str]) -> dict | list | None:
-    r = subprocess.run(["gh", *args], capture_output=True, text=True, timeout=90)
+    """``None`` on any failure — including a stalled gh (timeout) or no gh at all."""
+    try:
+        r = subprocess.run(["gh", *args], capture_output=True, text=True, timeout=90)
+    except (subprocess.TimeoutExpired, OSError):
+        return None
     if r.returncode != 0:
         return None
     try:

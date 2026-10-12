@@ -168,11 +168,15 @@ def fetch_json(url: str, timeout: float = 25.0, retries: int = 3) -> dict | None
 
 def gh_api(path: str, *, paginate: bool = False) -> list | dict | None:
     """GitHub through the authenticated ``gh`` CLI — 5000 req/hr instead of 60, and no
-    token handling of our own."""
+    token handling of our own. Returns ``None`` rather than raising: a stalled gh
+    (timeout) or a missing one (OSError) degrades to "unresolved", exactly as a 404."""
     cmd = ["gh", "api", path]
     if paginate:
         cmd.append("--paginate")
-    r = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+    try:
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+    except (subprocess.TimeoutExpired, OSError):
+        return None
     if r.returncode != 0:
         return None
     try:
