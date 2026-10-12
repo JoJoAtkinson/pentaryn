@@ -144,7 +144,11 @@ are GM-written; the registry queues its writes one at a time.
   `GOLDEN_UPDATE=1 node --test test/api-kit.test.mjs` and read the diff.
 - **A pure rule:** `core/<topic>.mjs` with a fixture; new rules go in `core/rules.mjs` (the
   `known-core.mjs` barrel's export list is pinned).
-- **A study namespace:** a branch in `resolveFact` (`study/resolve.mjs`).
+- **A study namespace:** a branch in each of the five fact-key helpers, which are if-ladders on the
+  namespace — `factKeyOf` (`core/facts.mjs`, the key a share writes), `parseFactKey` (`core/lore.mjs`,
+  the key read back), `factOrder` (`core/facts.mjs`, what a subject could hand a player), `knowsAbout`
+  (`facts.mjs`, what the Look window draws) and `resolveFact` (`study/resolve.mjs`). Miss one and a
+  share lands under a key nothing reads.
 
 ## Pitfalls
 

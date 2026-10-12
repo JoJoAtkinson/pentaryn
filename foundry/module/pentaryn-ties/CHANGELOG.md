@@ -76,6 +76,10 @@ Guarded (declared, no table-visible change): `attributes.mjs` exports `NS_LABEL`
 (module exports, not API paths), and `test/review-derived-ns.test.mjs` fails if a derived namespace
 lacks a label in `lang/en.json`, an icon, or a `deriveAttributes` slot. ext-2.
 
+Docs (declared, no table-visible change): README Extending's study-namespace bullet names all five
+fact-key helpers a new namespace must touch — `factKeyOf`, `parseFactKey`, `factOrder`, `knowsAbout`
+and `resolveFact` — pinned by `test/review-extending-ns.test.mjs`. ext-3.
+
 Fixed (declared): the chat cards — the "… studies …" stub, the tempo line and the GM's share
 whisper — name every creature by its **token** name, never its actor name, so a GM-only world actor
 name cannot reach player chat. The token is found on any scene, not only the one the posting
