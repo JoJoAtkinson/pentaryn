@@ -27,7 +27,8 @@ prepared (e.g. a missing slug), and when a readback fails; an info toast with th
 real run; and a permanent "delete `Data/<path>`" toast after a successful one. Players see a
 toast only if they call `import()` themselves: the `NOT_GM` refusal. Some refusals throw a `PentarynAbort` with **no** toast — read `err.code` /
 `err.message`: a fetch failure (missing file, HTML body, network error, timeout), a bad option
-(`BAD_ARGS`), a `module.json` without `flags.pentaryn`, and a call while an import is already
+(`BAD_ARGS`: `only` not null or an array of slug strings, `timeout` not a positive number, `path`
+not a non-empty string, `unmanagedItems` not `"keep"`/`"delete"`; `import(null)` is `import({})`), a `module.json` without `flags.pentaryn`, and a call while an import is already
 running (`CONFLICT`).
 
 ## Settings

@@ -347,6 +347,44 @@ test("unmanagedItems other than keep/delete → PentarynAbort, no toast, no fetc
   pinKey("refusals", "unmanagedItems", refusal(o));
 });
 
+// importer-R3 [declared]: only, timeout and path are shape-checked like unmanagedItems — a bad shape
+// is an unshouted BAD_ARGS before any fetch, naming the option and the value it got.
+test("importer-R3: a bad only / timeout / path → PentarynAbort BAD_ARGS, no toast, no fetch", async () => {
+  serve(valid([entry("b", "h")]));
+  const bad = {
+    badOnlyString: { only: "x" },
+    badOnlyItems: { only: ["b", 7] },
+    badTimeoutNull: { timeout: null },
+    badTimeoutZero: { timeout: 0 },
+    badTimeoutNaN: { timeout: NaN },
+    badPathEmpty: { path: "" },
+    badPathNull: { path: null },
+  };
+  for (const [key, opts] of Object.entries(bad)) {
+    const o = await outcome(() => imp({ dryRun: true, ...opts }));
+    assert.equal(o.error?.name, "PentarynAbort", `${key} must reject PentarynAbort`);
+    assert.equal(o.code, "BAD_ARGS", key);
+    assert.deepEqual(o.toasts, [], `${key}: no toast`);
+    assert.equal(o.fetches.length, 0, `${key}: no fetch`);
+    pinKey("refusals", key, refusal(o));
+  }
+});
+
+test("importer-R3: import(null) is import({}); only: [] and only: null are accepted", async () => {
+  serve(valid());   // a real run with no actors: nothing to write
+  const asNull = await outcome(() => imp(null));
+  assert.equal(asNull.error, null, "import(null) runs with the defaults");
+  assert.equal(asNull.result.dryRun, false);
+  assert.equal(asNull.result.path, "worlds/w/actors.json");
+  serve(valid([entry("b", "h")]));
+  const none = await outcome(() => imp({ dryRun: true, only: [] }));
+  assert.equal(none.error, null);
+  assert.equal(none.result.counts.selected, 0);
+  const all = await outcome(() => imp({ dryRun: true, only: null }));
+  assert.equal(all.error, null);
+  assert.equal(all.result.counts.selected, 1);
+});
+
 test("fetch failures are PentarynAbort without a toast: HTTP 404, HTML body, network error", async () => {
   serve("Not here", { status: 404, statusText: "Not Found" });
   const notFound = await outcome(() => imp({ dryRun: true }));

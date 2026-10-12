@@ -116,6 +116,48 @@
     "toasts": [],
     "fetched": 0
   },
+  "badOnlyString": {
+    "name": "PentarynAbort",
+    "message": "only must be null or an array of slug strings, got \"x\"",
+    "toasts": [],
+    "fetched": 0
+  },
+  "badOnlyItems": {
+    "name": "PentarynAbort",
+    "message": "only must be null or an array of slug strings, got [\"b\",7]",
+    "toasts": [],
+    "fetched": 0
+  },
+  "badTimeoutNull": {
+    "name": "PentarynAbort",
+    "message": "timeout must be a positive number of milliseconds, got null",
+    "toasts": [],
+    "fetched": 0
+  },
+  "badTimeoutZero": {
+    "name": "PentarynAbort",
+    "message": "timeout must be a positive number of milliseconds, got 0",
+    "toasts": [],
+    "fetched": 0
+  },
+  "badTimeoutNaN": {
+    "name": "PentarynAbort",
+    "message": "timeout must be a positive number of milliseconds, got NaN",
+    "toasts": [],
+    "fetched": 0
+  },
+  "badPathEmpty": {
+    "name": "PentarynAbort",
+    "message": "path must be a non-empty string, got \"\"",
+    "toasts": [],
+    "fetched": 0
+  },
+  "badPathNull": {
+    "name": "PentarynAbort",
+    "message": "path must be a non-empty string, got null",
+    "toasts": [],
+    "fetched": 0
+  },
   "fetch404": {
     "name": "PentarynAbort",
     "message": "HTTP 404 Not Found for /worlds/w/actors.json. Is the file under Data/? Run `make foundry-sync` first.",

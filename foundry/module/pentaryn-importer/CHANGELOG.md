@@ -17,6 +17,12 @@
   (`importer-R1`): every entry is prepared first, so a missing slug or a null entry after a good one
   no longer leaves the earlier actors created and hash-stamped. A thrown `PentarynAbort` again means
   nothing was written.
+- **[declared] Every option is shape-checked, not only `unmanagedItems`** (`importer-R3`): `only`
+  that is not null or an array of slug strings (e.g. `only: "x"`, which used to select nothing and
+  still toast the counts), a `timeout` that is not a positive finite number (`timeout: null` used to
+  abort at once) and a `path` that is not a non-empty string now throw an unshouted `PentarynAbort`
+  `BAD_ARGS` before any fetch, naming the option and the value received. `import(null)` is
+  `import({})` instead of a `TypeError`. New keys in golden/refusals.json.
 - **[declared] `game.pentaryn` is merged into, never replaced or frozen** (`items-journal-1`). Every
   module's namespace survives whichever order the modules load in; `import`, `moduleId`, `contract`
   and the frozen `_internals` stay on the root.

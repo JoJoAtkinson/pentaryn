@@ -74,7 +74,7 @@ export async function importActors(options = {}) {
     force = false,
     timeout = DEFAULT_TIMEOUT_MS,
     unmanagedItems = "keep"
-  } = options;
+  } = options ?? {};   // import(null) is import({}) (importer-R3)
 
   if (!game.user?.isGM) {
     const message = "Refusing to import: only a GM can create or update world Actors.";
@@ -91,6 +91,16 @@ export async function importActors(options = {}) {
   }
 }
 
+/** A received option value for a BAD_ARGS message: JSON where it is faithful, else String (NaN, undefined). */
+function shown(value) {
+  if (typeof value === "number" || value === undefined) return String(value);
+  try {
+    return JSON.stringify(value) ?? String(value);
+  } catch {
+    return String(value);
+  }
+}
+
 /**
  * The run itself, behind `importActors`' GM check and re-entrancy guard.
  * @param {Required<ImportOptions>} options  already defaulted
@@ -99,6 +109,16 @@ export async function importActors(options = {}) {
 async function importOnce({ path, dryRun, only, force, timeout, unmanagedItems }) {
   if (!["keep", "delete"].includes(unmanagedItems)) {
     throw new PentarynAbort(`unmanagedItems must be "keep" or "delete", got ${JSON.stringify(unmanagedItems)}`, "BAD_ARGS");
+  }
+  // importer-R3: the other options are shape-checked the same way — refused before any fetch.
+  if (only != null && !(Array.isArray(only) && only.every(s => typeof s === "string"))) {
+    throw new PentarynAbort(`only must be null or an array of slug strings, got ${shown(only)}`, "BAD_ARGS");
+  }
+  if (typeof timeout !== "number" || !Number.isFinite(timeout) || timeout <= 0) {
+    throw new PentarynAbort(`timeout must be a positive number of milliseconds, got ${shown(timeout)}`, "BAD_ARGS");
+  }
+  if (typeof path !== "string" || path === "") {
+    throw new PentarynAbort(`path must be a non-empty string, got ${shown(path)}`, "BAD_ARGS");
   }
 
   const url = foundry.utils.getRoute(path);
