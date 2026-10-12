@@ -15,6 +15,8 @@ const { F } = W;
 const lines = captureConsole();
 const shapes = await import("../shapes.mjs");
 const off = await import("../offhand.mjs");
+const { hookRegistry } = await import("../lib/hooks.mjs");
+const { makeLog } = await import("../lib/log.mjs");
 const settings = await import("../settings.mjs");
 settings.registerSettings();
 F.calls.length = 0;
@@ -342,8 +344,8 @@ test("seedAll: a failed batch warns once naming the actors, returns [] and seeds
   for (const a of fresh) a.delete();
 });
 
-test("installOffhand: createActor seeds a new character 500 ms later, on the active GM only", async () => {
-  off.installOffhand();
+test("offhand install: createActor seeds a new character 500 ms later, on the active GM only", async () => {
+  off.install(hookRegistry(MODULE, makeLog(MODULE)));
   const fresh = fighter({ id: "seedNew000000001", name: "Newcomer" });
   F.Hooks.callAll("createActor", fresh);
   F.Hooks.callAll("createActor", wolf({ id: "seedNewWolf00001" }));

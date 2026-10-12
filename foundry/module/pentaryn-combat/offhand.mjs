@@ -13,17 +13,11 @@
 import * as core from "./combat-core.mjs";
 import { MODULE } from "./combat-core.mjs";
 import { makeLog } from "./lib/log.mjs";
-import { hookRegistry } from "./lib/hooks.mjs";
-import { weaponsOf, resetOffhandMode as resetMode } from "./shapes.mjs";
+import { weaponsOf } from "./shapes.mjs";
 import { setting } from "./settings.mjs";
 
 const log = makeLog(MODULE);
 const ARGON = "enhancedcombathud";
-
-/** Put a weapon's remembered attack mode back to main-hand after an off-hand roll (setting offhandModeReset). */
-export function resetOffhandMode(activity, attackMode) {
-  return resetMode(activity, attackMode, { enabled: setting("offhandModeReset") });
-}
 
 /* ── weapon sets ─────────────────────────────────────────────────────────── */
 
@@ -104,9 +98,4 @@ function registerSeed(reg) {
 export function uninstall() {
   for (const t of timers) clearTimeout(t);
   timers.clear();
-}
-
-/** The createActor seed on its own registry (kept for callers that install it outside the entry). */
-export function installOffhand() {
-  install(hookRegistry(MODULE, log));
 }

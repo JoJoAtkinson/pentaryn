@@ -8,7 +8,7 @@
 //                                  Enter-uses, digits — then pointerover, pointermove, pointerdown
 //                                  from hud) and the MutationObserver's target
 // plus source scans: the pentarynCombat.* event names, the import graph from both entries
-// (reachability and DFS order, combat-riders-31), and the two dead exports (combat-riders-34).
+// (reachability and DFS order, combat-riders-31), and the dead exports (combat-riders-34, combat-core-M8).
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { importGraph, pinJSON, reachable, sourceFiles, sourceScan } from "./kit/harness.mjs";
@@ -125,6 +125,12 @@ test("dead exports gone (combat-riders-34, guide S3): no re-export of attackActi
 
 test("dead exports gone (final review): ownTooltip and multiattack are file-private", () => {
   assert.deepEqual(sourceScan(ROOT, /export function (ownTooltip|multiattack)\b/).map(h => `${h.file}:${h.line}`), []);
+});
+
+test("dead exports gone (combat-core-M8): offhand.mjs exports neither resetOffhandMode nor installOffhand", async () => {
+  const off = await import("../offhand.mjs");
+  assert.equal(off.resetOffhandMode, undefined, "counting.mjs calls shapes.mjs resetOffhandMode with the setting");
+  assert.equal(off.installOffhand, undefined, "the entry installs the seed through install(reg)");
 });
 
 test("Hooks.on/once call sites per file at indent ≤ 2, and hook loops (C17 today)", () => {

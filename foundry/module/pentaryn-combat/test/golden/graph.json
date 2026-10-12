@@ -150,7 +150,6 @@
     ],
     "offhand.mjs": [
       "combat-core.mjs",
-      "lib/hooks.mjs",
       "lib/log.mjs",
       "settings.mjs",
       "shapes.mjs"
