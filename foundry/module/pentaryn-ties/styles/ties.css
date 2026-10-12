@@ -1918,7 +1918,7 @@
 .pt-look-menu button:hover { background: rgba(155, 77, 255, 0.25); }
 .pt-look-menu button + button { border-top: 1px solid rgba(107, 90, 122, 0.5); }
 
-/* The player's Look window (look.mjs) — the grant cards come from .pentaryn-ties .pt-granted* */
+/* The player's Look window (look-app.mjs) — the grant cards come from .pentaryn-ties .pt-granted* */
 .pt-look-window .window-content { padding: 0.5rem 0.75rem; overflow-y: auto; }
 .pt-look-window .pt-look-head { cursor: default; margin-bottom: 0.25rem; }
 .pt-look-window .pt-look-group { font-size: 0.8em; text-transform: uppercase; letter-spacing: 0.04em; opacity: 0.7; margin: 0.6rem 0 0.2rem; }

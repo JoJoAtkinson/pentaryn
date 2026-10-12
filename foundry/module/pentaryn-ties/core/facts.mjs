@@ -109,8 +109,8 @@ export function factKeyOf(spec, kindId = null) {
  *
  * ⚠ **Ids and keys only, by design.** Never `reveal`, `miss`, `text`, `dc`, `skill` or `title`.
  * Two consumers share this list and they are allowed to see very different things: the GM's
- * player view (`preview.mjs`) draws the authored words under every key, and the player's Look
- * window (`look.mjs`) may draw ONLY the `granted` record a key points at. If the ordering helper
+ * player view (`preview-app.mjs`) draws the authored words under every key, and the player's Look
+ * window (`look-app.mjs`) may draw ONLY the `granted` record a key points at. If the ordering helper
  * carried the authored text, the player surface would be one careless `fact.text` away from
  * printing a rung they failed. Each consumer fetches what it is allowed to see.
  */

@@ -14,7 +14,7 @@
  * labelled *"Shared — every carrier of X"* and the row editor is mounted under that heading,
  * never inline in a way that reads as a per-actor field.
  *
- * The row editor itself is `lore.mjs`, mounted unchanged. That is decision 21 rule 3 paying
+ * The row editor itself is `lore-ui.mjs`, mounted unchanged. That is decision 21 rule 3 paying
  * out: the same file that edits an NPC's lore rows edits an attribute's, because it never knew
  * what an actor was.
  */

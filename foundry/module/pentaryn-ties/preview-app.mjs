@@ -439,7 +439,7 @@ export class InspectPreview extends ApplicationV2 {
     this.specs = [];
     /*
      * Which facts, in what order, under what key: `subjectFacts` → known-core's `factOrder`, the
-     * same list the player's Look window (`look.mjs`) filters by their `granted` map. Shared so the
+     * same list the player's Look window (`look-app.mjs`) filters by their `granted` map. Shared so the
      * two can never disagree about order or keys. Everything drawn below — the authored reveal,
      * the row text, the notes, the switches — stays here: it is GM-plane, and the shared list
      * deliberately carries none of it. `onBase: false` keeps this window reading the document it

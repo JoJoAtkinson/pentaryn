@@ -3,7 +3,7 @@
  *
  * ## What this is, in one paragraph
  *
- * Joe's GM inspect window (`preview.mjs`, Player view) draws every fact a subject could hand a
+ * Joe's GM inspect window (`preview-app.mjs`, Player view) draws every fact a subject could hand a
  * player, with the Known tab's own grant cards, in the order a player would meet them. He asked
  * for the same view on the player's side: double-click someone, take a closer look, and a window
  * pops up showing **what this character now knows about that person** — none of the GM's
@@ -59,7 +59,7 @@
  *
  * ## Not a GM surface
  *
- * `open` refuses for a GM (they have the flask — `preview.mjs`), for a player whose access is
+ * `open` refuses for a GM (they have the flask — `preview-app.mjs`), for a player whose access is
  * switched off (`mayWrite`), for a character this user does not own, and for looking at yourself.
  * GM behaviour is unchanged by this file.
  */

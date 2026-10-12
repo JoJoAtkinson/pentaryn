@@ -7,8 +7,8 @@
  * a flag. This file reads those four things and nothing more, so the two surfaces that draw a
  * subject's facts agree about the list by construction:
  *
- *   - the GM's inspect window, Player view (`preview.mjs`) — every fact, authored words, switches
- *   - the player's Look window (`look.mjs`) — only the facts already in their `granted` map
+ *   - the GM's inspect window, Player view (`preview-app.mjs`) — every fact, authored words, switches
+ *   - the player's Look window (`look-app.mjs`) — only the facts already in their `granted` map
  *
  * ⚠ **Ids and keys only.** Nothing here returns authored hit or miss prose, a row's wording, a DC, a skill or a
  * tier, and nothing here reads a ledger. The Look window imports this file; keeping it blind to

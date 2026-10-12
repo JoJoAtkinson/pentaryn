@@ -50,7 +50,7 @@ function injectTieHUD(app, element) {
   /*
    * The GM's inspect window: what would an inspection (and every study after it) hand a player,
    * who already knows each fact, and a Share to tell them. Drawn for the GM only, and the window
-   * itself refuses to open for anyone else — see preview.mjs. Only its Share/Forget clicks write.
+   * itself refuses to open for anyone else — see preview-app.mjs. Only its Share/Forget clicks write.
    */
   if (game.user?.isGM && !col.querySelector(".pt-preview-btn")) {
     const pv = document.createElement("button");

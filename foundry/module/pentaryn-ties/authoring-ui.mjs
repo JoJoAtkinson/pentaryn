@@ -6,7 +6,7 @@
  *   1. **Kind** — the pointer that says what this creature *is* (decision 4). One dropdown,
  *      absorbing phase 3's console-only `kindDialog`.
  *   2. **Lore rows** — what this *one* is (decision 8). The editor itself lives in
- *      `lore.mjs` and knows nothing about actors; this file is the half that does.
+ *      `lore-ui.mjs` and knows nothing about actors; this file is the half that does.
  *   3. **Beliefs** — what each character now holds as true (decision 12), with the Deliver
  *      control for anything the approval gate is holding. Deferred out of phase 3 by the
  *      build-and-validate cut list; this is where it lands.
