@@ -28,18 +28,19 @@ from __future__ import annotations
 
 import json
 import re
+import shutil
 import subprocess
 import tempfile
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from scripts.foundry import host
 from scripts.foundry.update import admin as admin_mod
 from scripts.foundry.update.admin import FoundryAdmin, Timeout
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 SMOKE_JS = REPO_ROOT / "automation" / "smoke" / "smoke.mjs"
-NODE = "/opt/homebrew/bin/node"
 CHROME_PROFILE = REPO_ROOT / ".state" / "smoke-chrome-profile"
 BASELINE_PATH = REPO_ROOT / ".state" / "vtt-smoke-baseline.json"
 # Time for a deactivated world's LevelDB to finish closing before the next launch.
@@ -264,6 +265,13 @@ def run_browser(fa: FoundryAdmin, world: str, *, dwell: int,
     if not SMOKE_JS.exists():
         return {"ok": True, "skipped": "smoke.mjs not installed", "errors": []}
 
+    node = host.node()  # resolved per call: PATH, then Homebrew (EXT-2)
+    if shutil.which(node) is None:
+        return {"ok": False, "errors": [{"type": "fatal",
+                                         "text": f"Node.js not found ({node!r} is not on PATH "
+                                                 "or executable) — install Node.js to run "
+                                                 "the browser smoke test"}]}
+
     try:
         fa.authenticate()
     except Exception as exc:  # noqa: BLE001
@@ -281,7 +289,7 @@ def run_browser(fa: FoundryAdmin, world: str, *, dwell: int,
         cookie_path = Path(fh.name)
     cookie_path.chmod(0o600)
 
-    cmd = [NODE, str(SMOKE_JS), "--url", fa.base_url, "--world", world,
+    cmd = [node, str(SMOKE_JS), "--url", fa.base_url, "--world", world,
            "--dwell", str(dwell), "--cookies", str(cookie_path),
            "--profile", str(CHROME_PROFILE)]
     for pattern in ignores:

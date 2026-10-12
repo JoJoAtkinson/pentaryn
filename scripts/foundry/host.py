@@ -39,6 +39,8 @@ DEFAULT_PORT = 30000
 DEFAULT_KEEP_SNAPSHOTS = 10
 MAC_APP_NAME = "Foundry Virtual Tabletop"
 MAC_APP_BUNDLE = Path("/Applications/Foundry Virtual Tabletop.app")
+# launchd's PATH has no /opt/homebrew/bin, so the Saturday updater cannot rely on `which`.
+HOMEBREW_NODE = Path("/opt/homebrew/bin/node")
 
 # Every key the env file may set, with what it means. host.env.example is checked
 # against this list by a test, so the two cannot drift.
@@ -412,6 +414,19 @@ def stop(timeout: float = 30) -> None:
             return
         time.sleep(1.0)
     force_stop()
+
+
+# ── tools ────────────────────────────────────────────────────────────────────
+
+def node() -> str:
+    """The Node.js to run: PATH first, then Homebrew's (launchd jobs lack it on PATH),
+    else plain ``node`` so the caller's spawn fails with a nameable error."""
+    found = shutil.which("node")
+    if found:
+        return found
+    if HOMEBREW_NODE.exists():
+        return str(HOMEBREW_NODE)
+    return "node"
 
 
 # ── clipboard ────────────────────────────────────────────────────────────────
