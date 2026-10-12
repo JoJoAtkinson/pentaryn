@@ -48,13 +48,16 @@ let tag = null;                // { activityUuid, kind } for the attack roll in 
  */
 const expected = new Map();     // activityUuid → { kind, at }
 
+/** How long an announced roll (expectRoll) stays good: two minutes (combat-core-M5). */
+const EXPECT_TTL_MS = 120000;
+
 export function expectRoll(activityUuid, kind) {
   if (activityUuid) expected.set(activityUuid, { kind, at: Date.now() });
 }
 
 /** combat-riders-29: forget announced rolls past the two-minute window (taggedKind ignores them). */
 export function pruneSession(now = Date.now()) {
-  return core.pruneOlder(expected, now, 120000, v => v.at);
+  return core.pruneOlder(expected, now, EXPECT_TTL_MS, v => v.at);
 }
 
 export function forgetRoll(activityUuid) {
@@ -65,7 +68,7 @@ export function forgetRoll(activityUuid) {
 export function taggedKind(activityUuid) {
   if (tag && tag.activityUuid === activityUuid) return tag.kind;
   const e = expected.get(activityUuid);
-  if (e && Date.now() - e.at < 120000) return e.kind;
+  if (e && Date.now() - e.at < EXPECT_TTL_MS) return e.kind;
   return null;
 }
 
@@ -137,7 +140,14 @@ function watchDamage(activity) {
   return w;
 }
 
-async function settleDamage(w, { limitMs = 120000 } = {}) {
+/** The longest a swing waits on its damage roll before the next swing goes (combat-core-M5). */
+const DAMAGE_WAIT_MS = 120000;
+/** Polls in a row with no RollResolver open before the wait gives up early... */
+const IDLE_POLLS = 4;
+/** ...and only once this long has passed since the wait began (~0.6 s). */
+const IDLE_MIN_MS = 600;
+
+async function settleDamage(w, { limitMs = DAMAGE_WAIT_MS } = {}) {
   try {
     if (!w.started) return;
     const t0 = Date.now();
@@ -145,7 +155,7 @@ async function settleDamage(w, { limitMs = 120000 } = {}) {
     while (!w.done && Date.now() - t0 < limitMs && !current?.abort) {
       await new Promise(r => setTimeout(r, core.DELAYS.damagePoll));
       idle = resolverOpen() ? 0 : idle + 1;
-      if (idle >= 4 && Date.now() - t0 > 600) break;   // nothing to wait on: no resolver, ~0.6 s gone
+      if (idle >= IDLE_POLLS && Date.now() - t0 > IDLE_MIN_MS) break;   // nothing to wait on: no resolver, ~0.6 s gone
     }
   } finally {
     w.stop();
