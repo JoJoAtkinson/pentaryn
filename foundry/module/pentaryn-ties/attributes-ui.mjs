@@ -326,16 +326,19 @@ function identifyBlock(row) {
  * deciding what a scene can surface. GM-only: the DCs and labels are authoring, never player-facing.
  * Shared with the review panel (`review-ui.mjs`).
  */
-export function personalCluesHTML(entry) {
+export function personalCluesHTML(entry, carriersOf = null) {
   if (game.user?.isGM !== true || !entry?.id) return "";
   if (String(entry.category ?? "").trim().toLowerCase() !== "personal") return "";
-  const carriers = (game.actors?.contents ?? []).filter(a => {
-    try {
-      return attributeIdsOf(a, kindActorOf).includes(entry.id);
-    } catch {
-      return false;
-    }
-  });
+  // the review panel already built id → carrying actors for this render; pass it in (ties-27)
+  const carriers = carriersOf
+    ? carriersOf(entry.id)
+    : (game.actors?.contents ?? []).filter(a => {
+        try {
+          return attributeIdsOf(a, kindActorOf).includes(entry.id);
+        } catch {
+          return false;
+        }
+      });
   if (!carriers.length) return "";
   const skill = k => {
     const label = CONFIG.DND5E?.skills?.[k]?.label;

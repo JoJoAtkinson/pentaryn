@@ -245,6 +245,8 @@ export class AttributeReview extends ApplicationV2 {
   /** id → carrier actor names, computed per render (world actors; unlinked tokens not counted). */
   carriers() {
     const map = new Map();
+    // the same walk, keeping the actors too: the personal-clue rows need them (ties-27)
+    const actors = new Map();
     for (const actor of game.actors?.contents ?? []) {
       let ids = [];
       try {
@@ -255,8 +257,11 @@ export class AttributeReview extends ApplicationV2 {
       for (const id of ids) {
         if (!map.has(id)) map.set(id, []);
         map.get(id).push(actor.name);
+        if (!actors.has(id)) actors.set(id, []);
+        actors.get(id).push(actor);
       }
     }
+    this.carrierActors = actors;
     return map;
   }
 
@@ -469,7 +474,7 @@ export class AttributeReview extends ApplicationV2 {
       <p class="pt-review-shared"><i class="fa-solid fa-users"></i> ${esc(_loc("PENTARYN_TIES.attributes.sharedWarning", { title: e.title }))}</p>
       ${fields}
       <h4>${esc(_loc("PENTARYN_TIES.review.relationships"))}</h4>${rel}
-      ${personalCluesHTML(e)}
+      ${personalCluesHTML(e, this.carrierActors ? id => this.carrierActors.get(id) ?? [] : null)}
       <h4>${esc(_loc("PENTARYN_TIES.review.factsHeading"))}</h4>${loreCards}${removedLine}
       ${timeline}
       <div class="pt-review-actions">
