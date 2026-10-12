@@ -186,6 +186,18 @@ test("updateActor does nothing for another user's change, names' own write, or w
   assert.equal(game.scenes.get(IDS.one).tokens.get("tokA1000000000001").name, "Bob");
 });
 
+test("updateActor ignores an actor whose own change has no name, even when the batch options carry another actor's old name (README: a nickname is never touched)", async () => {
+  reset(F);
+  const other = game.actors.get(IDS.other);
+  other.name = "Zed";
+  F.fire("updateActor", other, { img: "x" }, { pentarynOldName: "Bob" }, IDS.gm);
+  await flush();
+  assert.deepEqual(effects(F.calls), []);
+  assert.equal(game.scenes.get(IDS.one).tokens.get("tokOther000000001").name, "Bob");
+  assert.equal(other.prototypeToken.name, "Bob");
+  reset(F);
+});
+
 test("a rename through actor.update relabels prototype + placed tokens, one write per scene, one toast (golden/rename.json)", async () => {
   reset(F);
   asked.length = 0;
