@@ -14,7 +14,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from dataclasses import dataclass, replace
 from pathlib import Path
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Iterator, Optional
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -411,6 +411,19 @@ def _has_top_level_assignment(source: str, name: str, *, tree: ast.Module | None
     return False
 
 
+def _top_level_assignments(module: ast.Module) -> Iterator[tuple[str, ast.expr]]:
+    """(name, value) for each top-level `name = value` or `name: T = value`,
+    in source order. A bare annotation (`name: T`) has no value and is not yielded."""
+    for node in module.body:
+        if isinstance(node, ast.Assign):
+            for target in node.targets:
+                if isinstance(target, ast.Name):
+                    yield target.id, node.value
+        elif isinstance(node, ast.AnnAssign):
+            if isinstance(node.target, ast.Name) and node.value is not None:
+                yield node.target.id, node.value
+
+
 def _read_top_level_string_list(source: str, name: str, *, tree: ast.Module | None = None) -> list[str]:
     """If `name` is assigned at module top-level to a literal list of strings,
     return that list. Otherwise return []. Used by the group filter to peek at
@@ -421,16 +434,14 @@ def _read_top_level_string_list(source: str, name: str, *, tree: ast.Module | No
         module = tree if tree is not None else ast.parse(source)
     except SyntaxError:
         return []
-    for node in module.body:
-        if isinstance(node, ast.Assign):
-            for target in node.targets:
-                if isinstance(target, ast.Name) and target.id == name:
-                    try:
-                        value = ast.literal_eval(node.value)
-                    except (ValueError, SyntaxError):
-                        return []
-                    if isinstance(value, list) and all(isinstance(v, str) for v in value):
-                        return value
+    for target_id, node_value in _top_level_assignments(module):
+        if target_id == name:
+            try:
+                value = ast.literal_eval(node_value)
+            except (ValueError, SyntaxError):
+                return []
+            if isinstance(value, list) and all(isinstance(v, str) for v in value):
+                return value
     return []
 
 
@@ -445,12 +456,9 @@ def _extract_mcp_tool_literal(source: str, *, path: Path,
 
     # Collect all MCP_TOOL* variables
     mcp_tool_vars: dict[str, ast.AST] = {}
-    for node in module.body:
-        if not isinstance(node, ast.Assign):
-            continue
-        for target in node.targets:
-            if isinstance(target, ast.Name) and target.id.startswith("MCP_TOOL"):
-                mcp_tool_vars[target.id] = node.value
+    for target_id, node_value in _top_level_assignments(module):
+        if target_id.startswith("MCP_TOOL"):
+            mcp_tool_vars[target_id] = node_value
     
     if not mcp_tool_vars:
         return None

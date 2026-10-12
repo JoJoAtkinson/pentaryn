@@ -177,6 +177,33 @@ def test_extract_mcp_tool_literal_none_without_tool(tmp_path):
     assert literal is None
 
 
+def test_annotated_mcp_tool_is_discovered(tmp_path):
+    """README: discovery reads a module's MCP_TOOL literal — an annotated
+    `MCP_TOOL: dict[...] = {...}` is still that literal, not 'no MCP_TOOL'."""
+    repo = _make_repo(tmp_path)
+    (repo / "scripts" / "ann_tool.py").write_text(
+        'from typing import Any\n'
+        'MCP_TOOL: dict[str, Any] = {"name": "ann_tool", "description": "x", "argv": []}\n',
+        encoding="utf-8")
+
+    result = server.discover_tools(repo_root=repo)
+    by_name = {r.tool.name: r for r in result.tools}
+    assert "ann_tool" in by_name, result.skipped
+    assert by_name["ann_tool"].handler is None
+
+
+def test_annotated_mcp_groups_passes_the_group_filter(tmp_path, monkeypatch):
+    """README: DND_MCP_TOOLS_GROUP loads modules whose top-level MCP_GROUPS
+    list contains the group — an annotated MCP_GROUPS is that list."""
+    monkeypatch.setenv("DND_MCP_TOOLS_GROUP", "combat")
+    repo = _make_repo(tmp_path)
+    (repo / "scripts" / "grouped.py").write_text(
+        'MCP_GROUPS: list[str] = ["combat"]\n' + _AST_ONLY_MODULE, encoding="utf-8")
+
+    result = server.discover_tools(repo_root=repo)
+    assert "sample_subproc" in {r.tool.name for r in result.tools}, result.skipped
+
+
 # ---------------------------------------------------------------------------
 # python-tooling-27: discovery cost and the startup skip report
 # ---------------------------------------------------------------------------
