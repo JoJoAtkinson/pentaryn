@@ -24,6 +24,9 @@ export const HOOKS = Object.freeze({});
 export const SLOTS = "slots";
 export const AWAY_FLAG = "away";
 export const BOND = "bond";
+/** Claim keys: kit claimDocument stamps the item flag claims.<key> under this module (EXT-3). */
+export const COIN_CLAIM = "coinBack";
+export const HOME_CLAIM = "home";
 /** Prefix of an away item's id in the slot array: `away:<key>`. */
 export const AWAY = "away:";
 

@@ -11,6 +11,7 @@
 import {
   AWAY_FLAG, MODULE, SLOTS, awayOf, patchProficiencyMap, planStash, tooltipAnchorMissing, trimSlots
 } from "./attunement-core.mjs";
+import { flagPath } from "./lib/flags.mjs";
 import { wrapMethod } from "./lib/patch.mjs";
 
 /**
@@ -127,7 +128,7 @@ async function stashNow(owner, container, itemIds, { tag, currency = false, deta
     throw err;
   }
   await owner.deleteEmbeddedDocuments("Item", [...ids].filter(id => owner.items.has(id)));
-  const update = { [`flags.${MODULE}.${AWAY_FLAG}`]: away, [`flags.${MODULE}.${SLOTS}`]: slots };
+  const update = { [flagPath(MODULE, AWAY_FLAG)]: away, [flagPath(MODULE, SLOTS)]: slots };
   if (currency) for (const k of Object.keys(owner.system.currency ?? {})) update[`system.currency.${k}`] = 0;
   await owner.update(update);
   const created = idsOf(made);

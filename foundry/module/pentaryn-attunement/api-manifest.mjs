@@ -6,13 +6,13 @@
  * (report, computeSlots, stash, releaseAway, away — test/glue.test.mjs pins it).
  */
 
-import { CONTRACT, MODULE, NS, VERSION } from "./attunement-core.mjs";
+import { COIN_CLAIM, CONTRACT, HOME_CLAIM, MODULE, NS, VERSION } from "./attunement-core.mjs";
 
 const ACTOR = { name: "actor", kind: "actor", type: "Actor|uuid|id|exact name", resolve: false,
   doc: "an Actor (any object with items and getFlag) passes through unchanged; a string resolves exactly (never a substring)" };
 const FLAGS = [`flags.${MODULE}.slots`, `flags.${MODULE}.away`, `flags.${MODULE}.bond`];
 /** Item claim flags claimDocument stamps so one GM tab acts; gone with the paid purse / cleared on the hand-back. */
-const CLAIMS = [`flags.${MODULE}.claims.coinBack`, `flags.${MODULE}.claims.home`];
+const CLAIMS = [`flags.${MODULE}.claims.${COIN_CLAIM}`, `flags.${MODULE}.claims.${HOME_CLAIM}`];
 
 export const MANIFEST = Object.freeze({
   module: MODULE,

@@ -11,7 +11,7 @@
  * an async ready, so restoreBond runs first. Moving this install to setup would change that order.
  */
 
-import { AWAY, AWAY_FLAG, BOND, MODULE, SLOTS, awayOf, bondChanges, capOf, computeSlots, homeSlots, isBondOwner, wouldExceed } from "./attunement-core.mjs";
+import { AWAY, AWAY_FLAG, BOND, COIN_CLAIM, HOME_CLAIM, MODULE, SLOTS, awayOf, bondChanges, capOf, computeSlots, homeSlots, isBondOwner, wouldExceed } from "./attunement-core.mjs";
 import { clearSerial, isPileActor, serial } from "./actor-adapter.mjs";
 import { claimDocument } from "./lib/election.mjs";
 import { flagPath } from "./lib/flags.mjs";
@@ -58,8 +58,8 @@ function restoreBond(item) {
   // A purse copied inside another actor's 750 ms claim window carries that tab's stamp; left in
   // place, every tab here reads the claim as held by someone else and nobody pays (W2-A1).
   const claims = item.getFlag?.(MODULE, "claims");
-  if (claims?.coinBack) changes[`flags.${MODULE}.claims.coinBack`] = _del;
-  if (claims?.home) changes[`flags.${MODULE}.claims.home`] = _del;   // the same, for a hand-back (ATT-AC-1-residual)
+  if (claims?.[COIN_CLAIM]) changes[flagPath(MODULE, `claims.${COIN_CLAIM}`)] = _del;
+  if (claims?.[HOME_CLAIM]) changes[flagPath(MODULE, `claims.${HOME_CLAIM}`)] = _del;   // the same, for a hand-back (ATT-AC-1-residual)
   item.updateSource(changes);
 }
 
@@ -83,7 +83,7 @@ async function onCreateItemBond(item, options, userId) {
   if (bond.currency) {
     // Single-use key: the purse is a one-time event and deletes itself. A purse
     // already gone (paid by the other tab) re-reads as {} and stands down.
-    const won = await claimDocument(item, "coinBack", { scope: MODULE, reread: d => d.parent?.items?.get?.(d.id) ?? {} });
+    const won = await claimDocument(item, COIN_CLAIM, { scope: MODULE, reread: d => d.parent?.items?.get?.(d.id) ?? {} });
     if (!won) return;
     // Two purses in one batch each add onto the other's write, not the same read (ATT-AC-2). Their own
     // chain, so a purse never waits on a hand-back. Item Piles' own currency write is outside any chain.
@@ -99,11 +99,11 @@ async function onCreateItemBond(item, options, userId) {
   if (!isBondOwner(bond, actor)) return;
   // One tab per item, as the purse: two tabs each running their own chain could interleave a batch's
   // actor writes and leave a phantom away slot (ATT-AC-1-residual). An item already home re-reads as {}.
-  const won = await claimDocument(item, "home", { scope: MODULE, reread: d => d.parent?.items?.get?.(d.id) ?? {} });
+  const won = await claimDocument(item, HOME_CLAIM, { scope: MODULE, reread: d => d.parent?.items?.get?.(d.id) ?? {} });
   if (!won) return;
   // Home for good: the bond has done its job. Anywhere else it stays, so the
   // item still knows its way back if it is handed over later. The claim goes with it.
-  await item.update({ [flagPath(MODULE, BOND)]: _del, [`flags.${MODULE}.claims.home`]: _del });
+  await item.update({ [flagPath(MODULE, BOND)]: _del, [flagPath(MODULE, `claims.${HOME_CLAIM}`)]: _del });
   // A take-all brings several bonded items home in one batch: each hand-back reads the away list
   // and slots, so it waits for the previous one's actor write (ATT-AC-1).
   return serial(actor, async () => {
@@ -111,8 +111,8 @@ async function onCreateItemBond(item, options, userId) {
     if (!away.some(a => a.key === bond.key)) return;
     const slots = homeSlots(computeSlots(actor).slots, AWAY + bond.key, item.id);
     await actor.update({
-      [`flags.${MODULE}.${AWAY_FLAG}`]: away.filter(a => a.key !== bond.key),
-      [`flags.${MODULE}.${SLOTS}`]: slots
+      [flagPath(MODULE, AWAY_FLAG)]: away.filter(a => a.key !== bond.key),
+      [flagPath(MODULE, SLOTS)]: slots
     });
     ui.notifications.info(_loc("PENTARYN_ATTUNEMENT.BackInHand", { name: item.name, actor: actor.name }));
   });

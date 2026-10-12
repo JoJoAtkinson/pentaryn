@@ -28,8 +28,8 @@ function writtenPaths(src) {
   for (const [, t] of src.matchAll(/`(flags\.[^`]+)`/g)) out.add(interpolate(t));
   for (const [, scope, key] of src.matchAll(/(?:setFlag|unsetFlag)\(\s*([\w"'`.-]+)\s*,\s*([\w"'`.-]+)/g))
     out.add(`flags.${resolve(scope)}.${resolve(key)}`);
-  for (const [, scope, key] of src.matchAll(/flagPath\(\s*([\w"'`.-]+)\s*,\s*([\w"'`.-]+)\s*\)/g))
-    out.add(`flags.${resolve(scope)}.${resolve(key)}`);
+  for (const [, scope, key] of src.matchAll(/flagPath\(\s*([\w"'`.-]+)\s*,\s*([\w"'.-]+|`[^`]+`)\s*\)/g))
+    out.add(`flags.${resolve(scope)}.${key.startsWith("`") ? interpolate(key.slice(1, -1)) : resolve(key)}`);   // EXT-3: `claims.${COIN_CLAIM}`
   for (const [, key, scope] of src.matchAll(/claimDocument\(\s*\w+\s*,\s*([\w"'`.-]+)\s*,\s*\{\s*scope:\s*([\w"'`.-]+)/g))
     out.add(`flags.${resolve(scope)}.claims.${resolve(key)}`);
   return [...out].filter(p => p.startsWith(`flags.${MOD}.`));
@@ -37,14 +37,15 @@ function writtenPaths(src) {
 
 test("[declared] EXT-6: every flags.pentaryn-attunement.* path the sources write is in describe() flags.writes", () => {
   const written = new Set(SOURCES.flatMap(f => writtenPaths(readFileSync(new URL(f, DIR), "utf8"))));
-  assert.ok(written.has(`flags.${MOD}.claims.coinBack`), "scan must see the coinBack claim (bonds.mjs)");
+  assert.ok(written.has(`flags.${MOD}.claims.${core.COIN_CLAIM}`), "scan must see the coinBack claim (bonds.mjs)");
+  assert.ok(written.has(`flags.${MOD}.claims.${core.HOME_CLAIM}`), "scan must see the home claim (bonds.mjs)");
   const listed = new Set(MANIFEST.flags.writes);
   assert.deepEqual([...written].filter(p => !listed.has(p)).sort(), []);
 });
 
 test("[declared] EXT-6: the claim flags are listed apart from the stash side effects", () => {
   assert.deepEqual(MANIFEST.flags.writes.filter(p => p.includes(".claims.")),
-    [`flags.${MOD}.claims.coinBack`, `flags.${MOD}.claims.home`]);
+    [`flags.${MOD}.claims.${core.COIN_CLAIM}`, `flags.${MOD}.claims.${core.HOME_CLAIM}`]);
   const stash = MANIFEST.rows.find(r => r.path === "stash");
   assert.deepEqual(stash.sideEffects.filter(s => s.includes(".claims.")), []);
 });

@@ -187,7 +187,8 @@ node test/run.mjs        # from this folder
 over cap, non-default `max`, away entries, coming home) and the proficiency-map patch; `glue.test`,
 `hooks.test`, `api.test`, `strip.test` (a minimal DOM), `listeners`, `hook-errors`, `perf`,
 `stash-safety`, `guard-failure`, `home-race`, `overlap`, `bond-uuid` and `lang-switch` pin the wiring;
-`flags-written` scans the sources so every flag path they write is in `describe().flags.writes`; `core-meta` holds the core's identity (it loads
+`flags-written` scans the sources so every flag path they write is in `describe().flags.writes`;
+`flag-paths` checks `bonds.mjs` and `actor-adapter.mjs` build flag paths with the kit's `flagPath` and the core's claim keys (`COIN_CLAIM`, `HOME_CLAIM`); `core-meta` holds the core's identity (it loads
 with no Foundry globals, constants agree with `module.json`, `trimSlots`), `docs` guards this
 README, and `i18n` checks `lang/en.json` against the oracle's former `STRINGS`. Goldens in `test/golden/`.
 

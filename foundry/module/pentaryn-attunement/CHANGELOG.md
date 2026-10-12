@@ -4,6 +4,12 @@
 
 The version stays 0.3.0 until the next `module.json` restart batch (code only: sync + reload).
 
+- **[declared] EXT-3:** the claim keys are named once in the core, `COIN_CLAIM = "coinBack"` and
+  `HOME_CLAIM = "home"`, and `bonds.mjs` and `actor-adapter.mjs` build every flag update path with
+  the kit's `flagPath(MODULE, …)` (the away list, the slots, the two claims) instead of hand-written
+  `flags.${…}` templates. `api-manifest.mjs` and the EXT-6 source scan read the same constants (the
+  scan now resolves a template key passed to `flagPath`). The paths written are unchanged
+  (`golden/describe.json` untouched); no change in play. `test/flag-paths.test.mjs`.
 - **[declared] M10:** `actor-adapter.mjs` looks up dnd5e's Tooltips5e prototype through one private,
   uncached `itemTooltipProto()` (used by `guardItemTooltipPosition` and `tooltipGuarded`) and names
   the wrap marker once, `GUARD_MARKER = "pentarynGuarded"`, for the `wrapMethod` marker and the
