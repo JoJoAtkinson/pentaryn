@@ -1,8 +1,7 @@
 /**
  * Pentaryn AoE (pentaryn-aoe) — ENTRY: esmodules[0]. Wiring only, no logic.
  *
- * Spell areas you can drag and delete, monster saves rolled off the area, damage applied with a GM
- * confirm, and damage rolled automatically on a hit. Features, in load order (FEATURES):
+ * Features, in load order (FEATURES; the file map is in README.md "Files"):
  *   areas.mjs    Part A  ownership, handle tokens, delete cascade, Remove all templates, cleanup, sweep
  *   careful.mjs  Part B  Careful Spell: the caster's side in the next save spell's area is protected
  *   resolve.mjs  Part B  who is inside, NPC saves, the players' request card, Apply
@@ -12,8 +11,6 @@
  *   refund.mjs   Part F  a cancelled placement gives back the slot / charge it spent
  *   aim.mjs      Part G  a Self cone or line starts at its caster and points at the mouse
  *   escape.mjs   Part E  Escape cancels a spell-area placement on the first press, even with a sheet open
- * and core.mjs (pure), settings.mjs (SETTINGS), scene-adapter.mjs / messages-adapter.mjs / argon.mjs
- * (Foundry, dnd5e, Item Piles and Argon → plain data), lib/ (the vendored kit).
  *
  * Lifecycle: init → settings and the Escape keybinding (a keybinding can only be registered then) ·
  * setup → each feature's install(reg, ctx), in FEATURES order (aoe has always registered its hooks
@@ -21,10 +18,8 @@
  *
  * Hot patch (README-documented): game.pentaryn.aoe.uninstall() removes every hook and patch it
  * added; then set globalThis.__pentarynAoeHot, import this file under a new URL and call its
- * install(). As with every kit entry, the re-import re-runs the WIRING only: the features, core,
- * api and settings files resolve to the instances already loaded, so a code change needs a reload.
- *
- * Design: context/plans/aoe-circles.md · Use: README.md
+ * install(). It re-runs the WIRING only (feature, core, api and settings files are the instances
+ * already loaded), so a code change needs a reload.
  */
 
 import { HOOKS, MODULE, NS, VERSION } from "./core.mjs";

@@ -244,6 +244,12 @@ export function regionFromSpell(flags5e, { itemUuid = null, activityUuid = null 
  * Is a region placement following the mouse on this RegionLayer? Core v14 keeps the placement's
  * context on `_placementContext` from RegionLayer#placeRegions until it is confirmed or cancelled,
  * and `_cancelPlacement` is what core's own Escape calls (escape.mjs, Part E).
+ *
+ * -39: pentaryn-cursors reads the same internal for a different question — `placementActive`
+ * (cursors-core.mjs, called from board.mjs) asks "is the preview drawn on the layer yet?" (false
+ * until the first pointer move); this asks "can a placement be cancelled?" (true as soon as the
+ * context exists). Do not merge them. One adjustments row covers both reads:
+ * core-region-placement-escape.
  * @param {{ _placementContext?: object|null, _cancelPlacement?: Function }|null|undefined} layer
  */
 export function placementInProgress(layer) {
