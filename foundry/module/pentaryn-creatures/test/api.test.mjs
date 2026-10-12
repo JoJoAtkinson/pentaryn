@@ -134,6 +134,24 @@ test("creatures-rob-2: list(null, scene) / list(user, null) fall to the defaults
   assert.deepEqual(api.list(rook, null), api.list(rook), "null scene = the viewed scene");
 });
 
+test("creatures-rob-2: with no viewed scene, list() answers [] for every null/undefined spelling", () => {
+  const rook = F.game.users.get("plyrUser00000001");
+  const viewed = F.canvas.scene;
+  assert.ok(viewed, "fixture: a scene is viewed before the pin");
+  assert.ok(api.list(rook).length > 0, "fixture: the viewed scene has entries for Rook");
+  F.canvas.scene = null;
+  try {
+    assert.deepEqual(api.list(rook), [], "no viewed scene, a user");
+    assert.deepEqual(api.list(rook, null), []);
+    assert.deepEqual(api.list(null, null), []);
+    assert.deepEqual(api.list(null), []);
+    assert.deepEqual(api.list(), [], "README: [] without a scene");
+  } finally {
+    F.canvas.scene = viewed;
+  }
+  assert.ok(api.list(rook).length > 0, "the viewed scene is restored");
+});
+
 test("creatures-rob-5 [declared]: isCreature reads a Token placeable through its document; null/undefined answer false", () => {
   for (const id of ["tImp", "tEye", "tPC", "tHandle", "tHandle2", "tPile", "tPile2", "tGob"]) {
     assert.equal(api.isCreature(W.p(id)), api.isCreature(W.tok(id)), `${id}: the placeable answers like its document`);
