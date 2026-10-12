@@ -440,7 +440,7 @@ export function makeToken(actor, { id, x = 0, y = 0, width = 1, disposition = 1,
   const { F, placeables } = W;
   const tid = id ?? `tok${actor.id}`.slice(0, 16);
   const sc = scene ?? F.canvas.scene;
-  const document = { id: tid, uuid: `Scene.${sc?.id}.Token.${tid}`, disposition, hidden, width, parent: sc, flags: {}, actor };
+  const document = { documentName: "Token", id: tid, uuid: `Scene.${sc?.id}.Token.${tid}`, actorId: actor.id, disposition, hidden, width, parent: sc, flags: {}, actor };
   const t = {
     id: tid, name: actor.name, actor, document, scene: sc,
     center: { x: x * 100 + 50, y: y * 100 + 50 },

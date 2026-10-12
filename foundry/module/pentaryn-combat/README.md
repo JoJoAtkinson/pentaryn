@@ -123,7 +123,8 @@ is canonical; `game.pentaryn.combat` the alias; `pentaryn-combat.ready` fires). 
 | `core` | a frozen copy of the pure core |
 
 The legacy members that take an actor accept an Actor, Token, UUID, 16-character id or exact name
-(never a substring); a miss answers `null`. `inspect` and `coversMultiattack` throw `NOT_FOUND` /
+(never a substring); a miss answers `null`. `abort()` with no argument stops whatever is running;
+`abort(ref)` stops only that actor's sequence, and a ref that resolves to nothing stops nothing. `inspect` and `coversMultiattack` throw `NOT_FOUND` /
 `AMBIGUOUS` / `BAD_ARGS` instead.
 
 ```js

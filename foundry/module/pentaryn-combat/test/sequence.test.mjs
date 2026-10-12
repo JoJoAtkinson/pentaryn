@@ -395,6 +395,30 @@ test("Stop with the swing's roll window open closes that window unrolled; abortF
   F.calls.length = 0;
 });
 
+test("combat-core-ROB-2 [declared]: api.abort resolves a Token, name, id or UUID; a miss never aborts; no argument aborts any", async () => {
+  const a = act(fig, "longsword0000001");
+  const refs = [["token", ftok], ["name", fig.name], ["id", fig.id], ["uuid", fig.uuid], ["actor", fig], ["no argument", undefined]];
+  for (const [label, ref] of refs) {
+    let release;
+    a.script.attack.push(() => new Promise(r => { release = r; }));
+    const run = api.fullAttack(fig);
+    await drain();
+    // a ref that resolves to nothing, or to another actor, leaves the running sequence alone
+    for (const miss of ["Nobody At All", "zzzzzzzzzzzzzzzz", rog, rog.name, {}]) {
+      api.abort(miss);
+      assert.equal(seq.running().abort, false, `${label}: abort(${miss?.name ?? miss}) is a no-op`);
+    }
+    if (ref === undefined) api.abort(); else api.abort(ref);
+    assert.equal(seq.running().abort, true, `abort by ${label} stops the run`);
+    release(null);
+    assert.equal((await run).status, "stopped", label);
+    await tick(400);
+  }
+  F.foundry.applications.instances.clear();
+  reset(fig);
+  F.calls.length = 0;
+});
+
 test("a cancelled usage card pauses; a weapon with no attack activity stops with a warning", async () => {
   const a = act(fig, "longsword0000001");
   a.script.use.push(null);

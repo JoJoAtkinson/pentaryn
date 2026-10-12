@@ -292,9 +292,10 @@
       "params": [
         {
           "name": "actor",
-          "type": "Actor",
-          "optional": true,
-          "resolve": false
+          "type": "Actor|Token|uuid|id|exact name",
+          "resolve": false,
+          "doc": "resolved by the member itself (never a substring); omitted: whatever is running; a miss aborts nothing",
+          "optional": true
         }
       ],
       "returns": "void",
