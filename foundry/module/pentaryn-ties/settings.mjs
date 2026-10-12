@@ -117,8 +117,16 @@ export function onKeys(bodies) {
   Object.assign(keyBodies, bodies);
 }
 
+/** The module log, kept from registerSettings({ log }) so a rejected body is logged with its prefix. */
+let keyLog = null;
+
+/*
+ * The press stays synchronous and always swallows the key; a body that answers a promise has its
+ * rejection logged as `key <key> failed` instead of surfacing as a bare "Uncaught (in promise)" (R10).
+ */
 const press = key => () => {
-  keyBodies[key]?.();
+  const out = keyBodies[key]?.();
+  if (typeof out?.then === "function") out.then(undefined, err => keyLog?.error(`key ${key} failed`, err));
   return true;
 };
 
@@ -177,6 +185,7 @@ export const KEYBINDINGS = Object.freeze([
  * patch re-runs it; both kit calls skip what is already registered).
  */
 export function registerSettings({ log } = {}) {
+  if (log) keyLog = log;
   defineKeybindings(MODULE, KEYBINDINGS, { i18nRoot: I18N, log });
   for (const row of SETTINGS) {
     defineSettings(MODULE, [row], { i18nRoot: I18N });
