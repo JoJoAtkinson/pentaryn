@@ -328,8 +328,9 @@ export function errorEntry({ t, source, message, stack, location }) {
 }
 
 /**
- * The keys an update touched, never their values: top-level keys, and `system.*` one level down.
- * At most LIMITS.keys; `_id` and flag-only noise from other packages are kept as `flags.<scope>`.
+ * The keys an update touched, never their values. `_id` and `_stats` are skipped; `system` and
+ * `flags` are listed one level down (`system.<key>`, `flags.<scope>`), so another package's flag
+ * noise shows only its scope. At most LIMITS.keys.
  */
 export function changedKeys(changes) {
   if (!changes || typeof changes !== "object") return [];

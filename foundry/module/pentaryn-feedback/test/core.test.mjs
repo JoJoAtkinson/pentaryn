@@ -190,7 +190,7 @@ test("errorEntry: message capped and redacted, stack head kept, location optiona
 });
 
 test("changedKeys: top-level and system.* / flags.* one level, never values, at most 8", () => {
-  assert.deepEqual(core.changedKeys({ _id: "x", name: "N", system: { attributes: { hp: 3 } }, flags: { dnd5e: {} } }),
+  assert.deepEqual(core.changedKeys({ _id: "x", _stats: {}, name: "N", system: { attributes: { hp: 3 } }, flags: { dnd5e: {} } }),
     ["name", "system.attributes", "flags.dnd5e"]);
   assert.deepEqual(core.changedKeys(null), []);
   const many = Object.fromEntries(Array.from({ length: 12 }, (_, i) => [`k${i}`, i]));
