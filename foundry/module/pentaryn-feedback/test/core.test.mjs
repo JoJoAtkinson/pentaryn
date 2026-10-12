@@ -366,6 +366,11 @@ test("validateReport: a good report passes; each broken field is named", () => {
   }
 });
 
+test("LIST_KEYS covers every list section plus the two rings", () => {
+  assert.deepEqual(new Set(core.LIST_KEYS), new Set(["actions", "errors", ...core.LIST_SECTIONS]));
+  assert.equal(core.validateReport({ ...sample(), chat: "x", windows: "y" }).reason, "chat must be a list");
+});
+
 test("normaliseReport: the sender's user wins over the payload; status reset; unknown keys dropped; strings re-capped", () => {
   const spoof = {
     ...sample(), user: { id: "gm", name: "Gamemaster", isGM: true, role: 4 },

@@ -96,6 +96,8 @@ export const REPORT_KEYS = Object.freeze([
 /** Snapshot sections, by shape. A section that failed arrives as `{ error }` (snapshot-adapter). */
 export const LIST_SECTIONS = Object.freeze(["windows", "modules", "chat"]);
 export const OBJECT_SECTIONS = Object.freeze(["user", "world", "scene", "tokens", "combat", "client"]);
+/** Every list-shaped report key validateReport checks, in check order: the two rings, then LIST_SECTIONS. */
+export const LIST_KEYS = Object.freeze(["actions", "errors", "chat", "windows", "modules"]);
 
 /* ── text hygiene ─────────────────────────────────────────────────────────── */
 
@@ -487,7 +489,7 @@ export function validateReport(report) {
   if (!CATEGORY_KEYS.includes(report.category)) return { ok: false, reason: `category must be one of ${CATEGORY_KEYS.join(", ")}` };
   if (typeof report.text !== "string" || !report.text.trim()) return { ok: false, reason: "text is empty" };
   if (report.text.length > LIMITS.text) return { ok: false, reason: `text is over ${LIMITS.text} characters` };
-  for (const k of ["actions", "errors", "chat", "windows", "modules"]) {
+  for (const k of LIST_KEYS) {
     if (report[k] !== undefined && !Array.isArray(report[k])) return { ok: false, reason: `${k} must be a list` };
   }
   const bytes = byteSize(report);
