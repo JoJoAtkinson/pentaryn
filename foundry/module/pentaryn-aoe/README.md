@@ -124,6 +124,8 @@ row with its params, returns and null cases (`api-manifest.mjs`). Kit members: `
 | `flags.pentaryn-aoe.handle`, `.region` | a handle token | `true`, the region id |
 | `flags.pentaryn-aoe.handle` | a template region | its handle token's id (plus core's `attachment.token`) |
 | `flags.pentaryn-aoe.handleActor` | the "Area handle" actor | `true` |
+| `flags.dnd5e.lockSize` | a handle token and the "Area handle" actor's prototype token | `true` (dnd5e never resizes a handle) |
+| `flags.dnd5e.requestResult` | a save roll message | `{ actorUuid, requestId }`: threads the save under the players' request card |
 
 Flags are read as `doc.flags["pentaryn-aoe"]`, never `getFlag` (it throws while the module is
 inactive, e.g. hot-patched).

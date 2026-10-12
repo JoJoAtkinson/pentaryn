@@ -57,8 +57,16 @@ test("every pre-migration row is legacy with resolve: false params; the -10 read
 test("the flags contract: what aoe writes, what it reads", () => {
   const { flags } = api.describe();
   assert.ok(flags.writes.includes("flags.pentaryn-aoe.handle") && flags.writes.includes("flags.pentaryn-aoe.resolution"));
-  assert.equal(flags.writes.length, 9);
-  assert.deepEqual(flags.reads, ["flags.dnd5e.*", "flags.item-piles.data.enabled"]);
+  assert.equal(flags.writes.length, 11);
+  assert.deepEqual(flags.reads, ["flags.dnd5e.*", "flags.core.MeasuredTemplate", "flags.item-piles.data.enabled"]);
+});
+
+test("EXT-1: the flags contract names the dnd5e flags aoe writes and core's template flag it reads", () => {
+  const { flags } = api.describe();
+  // areas.mjs size-locks every handle token; resolve.mjs threads save messages under the request card.
+  for (const f of ["flags.dnd5e.lockSize", "flags.dnd5e.requestResult"]) assert.ok(flags.writes.includes(f), f);
+  // core.isTemplateRegion recognises regions placed under 5.3.3 by core's MeasuredTemplate flag.
+  assert.ok(flags.reads.includes("flags.core.MeasuredTemplate"));
 });
 
 test("describe().patches lists nothing until Argon or Part G is patched; hooks are the registration manifest", () => {

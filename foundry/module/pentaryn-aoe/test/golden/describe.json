@@ -759,10 +759,13 @@
       "flags.pentaryn-aoe.effectsApplied",
       "flags.pentaryn-aoe.damageMessage",
       "flags.pentaryn-aoe.careful",
-      "flags.pentaryn-aoe.npcSave"
+      "flags.pentaryn-aoe.npcSave",
+      "flags.dnd5e.lockSize",
+      "flags.dnd5e.requestResult"
     ],
     "reads": [
       "flags.dnd5e.*",
+      "flags.core.MeasuredTemplate",
       "flags.item-piles.data.enabled"
     ]
   },

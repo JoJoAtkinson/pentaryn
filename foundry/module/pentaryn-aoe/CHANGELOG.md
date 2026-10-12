@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **The API's flags contract names everything aoe touches outside its own scope** (declared,
+  EXT-1): `describe().flags.writes` adds `flags.dnd5e.lockSize` (handle tokens) and
+  `flags.dnd5e.requestResult` (save rolls threaded under the request card); `flags.reads` adds
+  `flags.core.MeasuredTemplate` (5.3.3 template regions). README "Data written" has the two rows.
+  Metadata only — no in-game behaviour changes.
 - **A cancelled cast that spent nothing but began concentration is cleaned up** (declared,
   aoe-mnt-1): the refund's veto and the refund itself disagreed — the veto stopped dnd5e's
   follow-ups, then the refund did nothing, leaving the concentration and the card. Both now share

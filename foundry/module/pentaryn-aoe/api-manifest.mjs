@@ -76,8 +76,9 @@ export const MANIFEST = Object.freeze({
       "flags.pentaryn-aoe.handle", "flags.pentaryn-aoe.handleActor", "flags.pentaryn-aoe.region",
       "flags.pentaryn-aoe.resolution", "flags.pentaryn-aoe.claims", "flags.pentaryn-aoe.effectsApplied",
       "flags.pentaryn-aoe.damageMessage", "flags.pentaryn-aoe.careful", "flags.pentaryn-aoe.npcSave",
+      "flags.dnd5e.lockSize", "flags.dnd5e.requestResult",
     ],
-    reads: ["flags.dnd5e.*", "flags.item-piles.data.enabled"],
+    reads: ["flags.dnd5e.*", "flags.core.MeasuredTemplate", "flags.item-piles.data.enabled"],
   },
   unlisted: [],
 });
