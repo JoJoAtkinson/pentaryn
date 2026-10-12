@@ -1,0 +1,7 @@
+[
+  {
+    "op": "settings.set",
+    "id": "enhancedcombathud.targetPickerGuideShown",
+    "value": true
+  }
+]

@@ -1,0 +1,155 @@
+[
+  {
+    "label": "Rage",
+    "applied": [
+      {
+        "effect": "Actor.barbarian0000001.Item.rage000000000001.ActiveEffect.rage",
+        "actor": "barbarian0000001",
+        "chat": "msg0000000000020",
+        "effects": [
+          "Actor.barbarian0000001.Item.rage000000000001.ActiveEffect.rage"
+        ]
+      }
+    ]
+  },
+  {
+    "label": "already on from that source",
+    "applied": []
+  },
+  {
+    "label": "a profile with an effect getter (older dnd5e), a message not in game.messages",
+    "applied": [
+      {
+        "effect": "Actor.barbarian0000001.Item.rage000000000001.ActiveEffect.rage",
+        "actor": "barbarian0000001",
+        "chat": "notInGame",
+        "effects": [
+          "Actor.barbarian0000001.Item.rage000000000001.ActiveEffect.rage"
+        ]
+      }
+    ]
+  },
+  {
+    "label": "two effects / not self / no message / setting off",
+    "applied": []
+  },
+  {
+    "label": "Steady Aim",
+    "created": [
+      [
+        {
+          "name": "Steady Aim",
+          "img": "sa.webp",
+          "description": "<p>Advantage on your next attack roll this turn (the roll window opens on Advantage). Your Speed is 0 until the end of the turn. Ends after that attack, or at the end of your turn.</p>",
+          "transfer": false,
+          "origin": "Actor.rogue00000000001.Item.steadyAim",
+          "system": {
+            "changes": [
+              {
+                "key": "system.abilities.str.attack.roll.mode",
+                "type": "add",
+                "value": 1
+              },
+              {
+                "key": "system.abilities.dex.attack.roll.mode",
+                "type": "add",
+                "value": 1
+              },
+              {
+                "key": "system.abilities.con.attack.roll.mode",
+                "type": "add",
+                "value": 1
+              },
+              {
+                "key": "system.abilities.int.attack.roll.mode",
+                "type": "add",
+                "value": 1
+              },
+              {
+                "key": "system.abilities.wis.attack.roll.mode",
+                "type": "add",
+                "value": 1
+              },
+              {
+                "key": "system.abilities.cha.attack.roll.mode",
+                "type": "add",
+                "value": 1
+              },
+              {
+                "key": "system.attributes.movement.walk",
+                "type": "override",
+                "value": 0
+              },
+              {
+                "key": "system.attributes.movement.fly",
+                "type": "override",
+                "value": 0
+              },
+              {
+                "key": "system.attributes.movement.swim",
+                "type": "override",
+                "value": 0
+              },
+              {
+                "key": "system.attributes.movement.climb",
+                "type": "override",
+                "value": 0
+              },
+              {
+                "key": "system.attributes.movement.burrow",
+                "type": "override",
+                "value": 0
+              }
+            ]
+          },
+          "flags": {
+            "pentaryn-combat": {
+              "until": "turnEnd",
+              "special": "steady-aim"
+            },
+            "dnd5e": {
+              "isTemporary": true
+            }
+          }
+        }
+      ]
+    ],
+    "notes": [
+      "Steady Aim: your next attack defaults to Advantage; Speed 0 this turn."
+    ]
+  },
+  {
+    "label": "Steady Aim again: one effect only",
+    "created": 0
+  },
+  {
+    "label": "after its attack, in combat",
+    "changes": [
+      [
+        "system.attributes.movement.walk",
+        "system.attributes.movement.fly",
+        "system.attributes.movement.swim",
+        "system.attributes.movement.climb",
+        "system.attributes.movement.burrow"
+      ]
+    ],
+    "calls": [
+      "update",
+      "update"
+    ]
+  },
+  {
+    "label": "a second attack: nothing left to trim",
+    "changes": [
+      5
+    ]
+  },
+  {
+    "label": "out of combat: the effect goes",
+    "effects": 0
+  },
+  {
+    "label": "setting off",
+    "effects": 0
+  }
+]

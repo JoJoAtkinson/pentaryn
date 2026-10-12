@@ -1,0 +1,141 @@
+{
+  "fighter": {
+    "swings": [
+      {
+        "weaponId": "longsword0000001",
+        "mode": null,
+        "kind": "main"
+      },
+      {
+        "weaponId": "longsword0000001",
+        "mode": null,
+        "kind": "main"
+      }
+    ],
+    "count": 2,
+    "left": 2,
+    "weaponId": "longsword0000001"
+  },
+  "fighterOneDone": {
+    "swings": [
+      {
+        "weaponId": "longsword0000001",
+        "mode": null,
+        "kind": "main"
+      }
+    ],
+    "count": 2,
+    "left": 1,
+    "weaponId": "longsword0000001"
+  },
+  "fighterOutOfCombatIgnoresTurn": {
+    "swings": [
+      {
+        "weaponId": "longsword0000001",
+        "mode": null,
+        "kind": "main"
+      },
+      {
+        "weaponId": "longsword0000001",
+        "mode": null,
+        "kind": "main"
+      }
+    ],
+    "count": 2,
+    "left": 2,
+    "weaponId": "longsword0000001"
+  },
+  "rogueNick": {
+    "swings": [
+      {
+        "weaponId": "scimitar00000001",
+        "mode": null,
+        "kind": "main"
+      },
+      {
+        "weaponId": "dagger0000000002",
+        "mode": "offhand",
+        "kind": "nick"
+      }
+    ],
+    "count": 1,
+    "left": 1,
+    "weaponId": "scimitar00000001"
+  },
+  "rogueNickSpent": {
+    "swings": [
+      {
+        "weaponId": "scimitar00000001",
+        "mode": null,
+        "kind": "main"
+      }
+    ],
+    "count": 1,
+    "left": 1,
+    "weaponId": "scimitar00000001"
+  },
+  "rogueNoneLeft": {
+    "swings": [],
+    "count": 1,
+    "left": 0,
+    "weaponId": "scimitar00000001"
+  },
+  "multiattack": {
+    "swings": [
+      {
+        "weaponId": "bite",
+        "mode": null,
+        "kind": "main"
+      },
+      {
+        "weaponId": "bite",
+        "mode": null,
+        "kind": "main"
+      }
+    ],
+    "count": 2,
+    "left": 2,
+    "weaponId": "bite"
+  },
+  "multiattackPick": {
+    "swings": [
+      {
+        "weaponId": "claw",
+        "mode": null,
+        "kind": "main"
+      },
+      {
+        "weaponId": "claw",
+        "mode": null,
+        "kind": "main"
+      }
+    ],
+    "count": 2,
+    "left": 2,
+    "weaponId": "claw"
+  },
+  "multiattackOneDone": {
+    "swings": [
+      {
+        "weaponId": "bite",
+        "mode": null,
+        "kind": "main"
+      }
+    ],
+    "count": 2,
+    "left": 1,
+    "weaponId": "bite"
+  },
+  "multiattackOtherAction": {
+    "swings": [],
+    "count": 2,
+    "left": 0,
+    "weaponId": "bite"
+  },
+  "noWeapon": {
+    "swings": [],
+    "count": 1,
+    "left": 1,
+    "weaponId": null
+  }
+}

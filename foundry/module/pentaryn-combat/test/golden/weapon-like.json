@@ -1,0 +1,427 @@
+[
+  {
+    "type": "attack",
+    "classification": "weapon",
+    "itemType": "weapon",
+    "weaponLike": true,
+    "isWeaponAttack": true
+  },
+  {
+    "type": "attack",
+    "classification": "weapon",
+    "itemType": "spell",
+    "weaponLike": false,
+    "isWeaponAttack": false
+  },
+  {
+    "type": "attack",
+    "classification": "weapon",
+    "itemType": "feat",
+    "weaponLike": true,
+    "isWeaponAttack": true
+  },
+  {
+    "type": "attack",
+    "classification": "weapon",
+    "itemType": "consumable",
+    "weaponLike": true,
+    "isWeaponAttack": true
+  },
+  {
+    "type": "attack",
+    "classification": "weapon",
+    "itemType": null,
+    "weaponLike": true,
+    "isWeaponAttack": true
+  },
+  {
+    "type": "attack",
+    "classification": "unarmed",
+    "itemType": "weapon",
+    "weaponLike": true,
+    "isWeaponAttack": true
+  },
+  {
+    "type": "attack",
+    "classification": "unarmed",
+    "itemType": "spell",
+    "weaponLike": false,
+    "isWeaponAttack": false
+  },
+  {
+    "type": "attack",
+    "classification": "unarmed",
+    "itemType": "feat",
+    "weaponLike": true,
+    "isWeaponAttack": true
+  },
+  {
+    "type": "attack",
+    "classification": "unarmed",
+    "itemType": "consumable",
+    "weaponLike": true,
+    "isWeaponAttack": true
+  },
+  {
+    "type": "attack",
+    "classification": "unarmed",
+    "itemType": null,
+    "weaponLike": true,
+    "isWeaponAttack": true
+  },
+  {
+    "type": "attack",
+    "classification": "spell",
+    "itemType": "weapon",
+    "weaponLike": false,
+    "isWeaponAttack": false
+  },
+  {
+    "type": "attack",
+    "classification": "spell",
+    "itemType": "spell",
+    "weaponLike": false,
+    "isWeaponAttack": false
+  },
+  {
+    "type": "attack",
+    "classification": "spell",
+    "itemType": "feat",
+    "weaponLike": false,
+    "isWeaponAttack": false
+  },
+  {
+    "type": "attack",
+    "classification": "spell",
+    "itemType": "consumable",
+    "weaponLike": false,
+    "isWeaponAttack": false
+  },
+  {
+    "type": "attack",
+    "classification": "spell",
+    "itemType": null,
+    "weaponLike": false,
+    "isWeaponAttack": false
+  },
+  {
+    "type": "attack",
+    "classification": null,
+    "itemType": "weapon",
+    "weaponLike": true,
+    "isWeaponAttack": true
+  },
+  {
+    "type": "attack",
+    "classification": null,
+    "itemType": "spell",
+    "weaponLike": false,
+    "isWeaponAttack": false
+  },
+  {
+    "type": "attack",
+    "classification": null,
+    "itemType": "feat",
+    "weaponLike": false,
+    "isWeaponAttack": false
+  },
+  {
+    "type": "attack",
+    "classification": null,
+    "itemType": "consumable",
+    "weaponLike": false,
+    "isWeaponAttack": false
+  },
+  {
+    "type": "attack",
+    "classification": null,
+    "itemType": null,
+    "weaponLike": false,
+    "isWeaponAttack": false
+  },
+  {
+    "type": "save",
+    "classification": "weapon",
+    "itemType": "weapon",
+    "weaponLike": false,
+    "isWeaponAttack": false
+  },
+  {
+    "type": "save",
+    "classification": "weapon",
+    "itemType": "spell",
+    "weaponLike": false,
+    "isWeaponAttack": false
+  },
+  {
+    "type": "save",
+    "classification": "weapon",
+    "itemType": "feat",
+    "weaponLike": false,
+    "isWeaponAttack": false
+  },
+  {
+    "type": "save",
+    "classification": "weapon",
+    "itemType": "consumable",
+    "weaponLike": false,
+    "isWeaponAttack": false
+  },
+  {
+    "type": "save",
+    "classification": "weapon",
+    "itemType": null,
+    "weaponLike": false,
+    "isWeaponAttack": false
+  },
+  {
+    "type": "save",
+    "classification": "unarmed",
+    "itemType": "weapon",
+    "weaponLike": false,
+    "isWeaponAttack": false
+  },
+  {
+    "type": "save",
+    "classification": "unarmed",
+    "itemType": "spell",
+    "weaponLike": false,
+    "isWeaponAttack": false
+  },
+  {
+    "type": "save",
+    "classification": "unarmed",
+    "itemType": "feat",
+    "weaponLike": false,
+    "isWeaponAttack": false
+  },
+  {
+    "type": "save",
+    "classification": "unarmed",
+    "itemType": "consumable",
+    "weaponLike": false,
+    "isWeaponAttack": false
+  },
+  {
+    "type": "save",
+    "classification": "unarmed",
+    "itemType": null,
+    "weaponLike": false,
+    "isWeaponAttack": false
+  },
+  {
+    "type": "save",
+    "classification": "spell",
+    "itemType": "weapon",
+    "weaponLike": false,
+    "isWeaponAttack": false
+  },
+  {
+    "type": "save",
+    "classification": "spell",
+    "itemType": "spell",
+    "weaponLike": false,
+    "isWeaponAttack": false
+  },
+  {
+    "type": "save",
+    "classification": "spell",
+    "itemType": "feat",
+    "weaponLike": false,
+    "isWeaponAttack": false
+  },
+  {
+    "type": "save",
+    "classification": "spell",
+    "itemType": "consumable",
+    "weaponLike": false,
+    "isWeaponAttack": false
+  },
+  {
+    "type": "save",
+    "classification": "spell",
+    "itemType": null,
+    "weaponLike": false,
+    "isWeaponAttack": false
+  },
+  {
+    "type": "save",
+    "classification": null,
+    "itemType": "weapon",
+    "weaponLike": false,
+    "isWeaponAttack": false
+  },
+  {
+    "type": "save",
+    "classification": null,
+    "itemType": "spell",
+    "weaponLike": false,
+    "isWeaponAttack": false
+  },
+  {
+    "type": "save",
+    "classification": null,
+    "itemType": "feat",
+    "weaponLike": false,
+    "isWeaponAttack": false
+  },
+  {
+    "type": "save",
+    "classification": null,
+    "itemType": "consumable",
+    "weaponLike": false,
+    "isWeaponAttack": false
+  },
+  {
+    "type": "save",
+    "classification": null,
+    "itemType": null,
+    "weaponLike": false,
+    "isWeaponAttack": false
+  },
+  {
+    "type": "damage",
+    "classification": "weapon",
+    "itemType": "weapon",
+    "weaponLike": false,
+    "isWeaponAttack": false
+  },
+  {
+    "type": "damage",
+    "classification": "weapon",
+    "itemType": "spell",
+    "weaponLike": false,
+    "isWeaponAttack": false
+  },
+  {
+    "type": "damage",
+    "classification": "weapon",
+    "itemType": "feat",
+    "weaponLike": false,
+    "isWeaponAttack": false
+  },
+  {
+    "type": "damage",
+    "classification": "weapon",
+    "itemType": "consumable",
+    "weaponLike": false,
+    "isWeaponAttack": false
+  },
+  {
+    "type": "damage",
+    "classification": "weapon",
+    "itemType": null,
+    "weaponLike": false,
+    "isWeaponAttack": false
+  },
+  {
+    "type": "damage",
+    "classification": "unarmed",
+    "itemType": "weapon",
+    "weaponLike": false,
+    "isWeaponAttack": false
+  },
+  {
+    "type": "damage",
+    "classification": "unarmed",
+    "itemType": "spell",
+    "weaponLike": false,
+    "isWeaponAttack": false
+  },
+  {
+    "type": "damage",
+    "classification": "unarmed",
+    "itemType": "feat",
+    "weaponLike": false,
+    "isWeaponAttack": false
+  },
+  {
+    "type": "damage",
+    "classification": "unarmed",
+    "itemType": "consumable",
+    "weaponLike": false,
+    "isWeaponAttack": false
+  },
+  {
+    "type": "damage",
+    "classification": "unarmed",
+    "itemType": null,
+    "weaponLike": false,
+    "isWeaponAttack": false
+  },
+  {
+    "type": "damage",
+    "classification": "spell",
+    "itemType": "weapon",
+    "weaponLike": false,
+    "isWeaponAttack": false
+  },
+  {
+    "type": "damage",
+    "classification": "spell",
+    "itemType": "spell",
+    "weaponLike": false,
+    "isWeaponAttack": false
+  },
+  {
+    "type": "damage",
+    "classification": "spell",
+    "itemType": "feat",
+    "weaponLike": false,
+    "isWeaponAttack": false
+  },
+  {
+    "type": "damage",
+    "classification": "spell",
+    "itemType": "consumable",
+    "weaponLike": false,
+    "isWeaponAttack": false
+  },
+  {
+    "type": "damage",
+    "classification": "spell",
+    "itemType": null,
+    "weaponLike": false,
+    "isWeaponAttack": false
+  },
+  {
+    "type": "damage",
+    "classification": null,
+    "itemType": "weapon",
+    "weaponLike": false,
+    "isWeaponAttack": false
+  },
+  {
+    "type": "damage",
+    "classification": null,
+    "itemType": "spell",
+    "weaponLike": false,
+    "isWeaponAttack": false
+  },
+  {
+    "type": "damage",
+    "classification": null,
+    "itemType": "feat",
+    "weaponLike": false,
+    "isWeaponAttack": false
+  },
+  {
+    "type": "damage",
+    "classification": null,
+    "itemType": "consumable",
+    "weaponLike": false,
+    "isWeaponAttack": false
+  },
+  {
+    "type": "damage",
+    "classification": null,
+    "itemType": null,
+    "weaponLike": false,
+    "isWeaponAttack": false
+  },
+  {
+    "type": null,
+    "weaponLike": false,
+    "isWeaponAttack": false
+  }
+]

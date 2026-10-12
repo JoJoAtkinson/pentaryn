@@ -1,0 +1,19 @@
+{
+  "first": [],
+  "before60": 0,
+  "second": [
+    {
+      "op": "argon.panel.render",
+      "label": "DND5E.BonusAction"
+    },
+    {
+      "op": "argon.onSetChange",
+      "id": "dagger0000000001",
+      "data": {
+        "set": 1
+      }
+    }
+  ],
+  "drawerGone": true,
+  "itemButtons": 0
+}

@@ -1,0 +1,50 @@
+{
+  "calls": [
+    {
+      "op": "deleteEmbedded",
+      "type": "ActiveEffect",
+      "uuid": "Actor.fighter000000001",
+      "ids": [
+        "effect00000000005"
+      ]
+    },
+    {
+      "op": "deleteEmbedded",
+      "type": "ActiveEffect",
+      "uuid": "Actor.rogue00000000001",
+      "ids": [
+        "effect00000000007",
+        "effect00000000008"
+      ]
+    },
+    {
+      "op": "update",
+      "documentName": "Actor",
+      "uuid": "Actor.rogue00000000001",
+      "changes": {
+        "flags.pentaryn-combat.reaction": null
+      }
+    },
+    {
+      "op": "argon.collapseAllPanels"
+    }
+  ],
+  "state": {
+    "fig": {
+      "effects": [
+        "Dodging"
+      ]
+    },
+    "rog": {
+      "effects": [],
+      "reaction": null
+    },
+    "hudState": {
+      "DND5E_BonusAction": {
+        "visible": false
+      },
+      "other": 3
+    }
+  },
+  "same": []
+}

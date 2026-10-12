@@ -1,0 +1,52 @@
+{
+  "away": [
+    {
+      "op": "argon.tooltip.destroy",
+      "force": true
+    }
+  ],
+  "goneCalls": [
+    {
+      "op": "Hooks.callAll",
+      "name": "renderItemButtonArgonComponent"
+    },
+    {
+      "op": "argon.tooltip.destroy",
+      "force": true
+    },
+    {
+      "op": "tooltip.deactivate"
+    }
+  ],
+  "dialogs": [
+    [
+      "renderRollConfigurationDialog",
+      true
+    ],
+    [
+      "renderRollResolver",
+      true
+    ],
+    [
+      "renderDialog5e",
+      true
+    ],
+    [
+      "renderActivityChoiceDialog",
+      true
+    ],
+    [
+      "renderDialogV2",
+      true
+    ],
+    [
+      "fullAttack off",
+      false
+    ],
+    [
+      "mouseleave",
+      true
+    ]
+  ],
+  "refreshed": 1
+}

@@ -1,0 +1,35 @@
+[
+  {
+    "label": "stopped before rolling, 399 ms",
+    "cardThere": true
+  },
+  {
+    "label": "…400 ms",
+    "cardThere": false,
+    "last": {
+      "weapon": "longsword0000001"
+    }
+  },
+  {
+    "label": "setting off",
+    "cardThere": true
+  },
+  {
+    "label": "consumed ammunition",
+    "cardThere": true
+  },
+  {
+    "label": "delete rejects",
+    "console": [
+      {
+        "level": "warn",
+        "text": "pentaryn-combat | tidy usage card",
+        "err": "gone already"
+      }
+    ]
+  },
+  {
+    "label": "off-hand only",
+    "last": null
+  }
+]

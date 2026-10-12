@@ -1,0 +1,112 @@
+{
+  "all": [
+    {
+      "actor": "Rogue",
+      "riders": [
+        {
+          "key": "sneak-attack",
+          "dice": "3d6",
+          "activity": true,
+          "modeForMe": "ask"
+        }
+      ],
+      "turn": {
+        "key": "c1:1:cb1"
+      },
+      "lastWeapon": "scimitar00000001"
+    },
+    {
+      "actor": "Fighter",
+      "riders": [],
+      "turn": null,
+      "lastWeapon": null
+    },
+    {
+      "actor": "Barbarian",
+      "riders": [
+        {
+          "key": "frenzy",
+          "dice": "2d6",
+          "activity": true,
+          "modeForMe": "ask"
+        }
+      ],
+      "turn": null,
+      "lastWeapon": null
+    },
+    {
+      "actor": "Slayer",
+      "riders": [
+        {
+          "key": "colossus-slayer",
+          "dice": "1d8",
+          "activity": true,
+          "modeForMe": "ask"
+        },
+        {
+          "key": "divine-strike",
+          "dice": "1d8",
+          "activity": true,
+          "modeForMe": "ask"
+        }
+      ],
+      "turn": null,
+      "lastWeapon": null
+    }
+  ],
+  "one": [
+    {
+      "actor": "Rogue",
+      "riders": [
+        {
+          "key": "sneak-attack",
+          "dice": "3d6",
+          "activity": true,
+          "modeForMe": "ask"
+        }
+      ],
+      "turn": {
+        "key": "c1:1:cb1"
+      },
+      "lastWeapon": "scimitar00000001"
+    }
+  ],
+  "byDoc": [
+    {
+      "actor": "Barbarian",
+      "riders": [
+        {
+          "key": "frenzy",
+          "dice": "2d6",
+          "activity": true,
+          "modeForMe": "ask"
+        }
+      ],
+      "turn": null,
+      "lastWeapon": null
+    }
+  ],
+  "none": [],
+  "console": [
+    {
+      "level": "table",
+      "text": "[{\"actor\":\"Rogue\",\"riders\":\"sneak-attack 3d6 (ask)\",\"turn\":\"c1:1:cb1\"},{\"actor\":\"Fighter\",\"riders\":\"—\",\"turn\":\"—\"},{\"actor\":\"Barbarian\",\"riders\":\"frenzy 2d6 (ask)\",\"turn\":\"—\"},{\"actor\":\"Slayer\",\"riders\":\"colossus-slayer 1d8 (ask), divine-strike 1d8 (ask)\",\"turn\":\"—\"}]",
+      "err": null
+    },
+    {
+      "level": "table",
+      "text": "[{\"actor\":\"Rogue\",\"riders\":\"sneak-attack 3d6 (ask)\",\"turn\":\"c1:1:cb1\"}]",
+      "err": null
+    },
+    {
+      "level": "table",
+      "text": "[{\"actor\":\"Barbarian\",\"riders\":\"frenzy 2d6 (ask)\",\"turn\":\"—\"}]",
+      "err": null
+    },
+    {
+      "level": "table",
+      "text": "[]",
+      "err": null
+    }
+  ]
+}

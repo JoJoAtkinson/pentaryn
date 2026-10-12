@@ -1,0 +1,79 @@
+[
+  {
+    "label": "no combat at all",
+    "combat": null,
+    "inCombat": false,
+    "isOwnTurn": true,
+    "key": "nocombat"
+  },
+  {
+    "label": "no actor",
+    "combat": null,
+    "inCombat": false,
+    "isOwnTurn": true,
+    "key": "nocombat"
+  },
+  {
+    "label": "c1, the fighter's turn",
+    "combat": "c1",
+    "inCombat": true,
+    "isOwnTurn": true,
+    "key": "c1:1:cb1"
+  },
+  {
+    "label": "c1, the wolf off its turn",
+    "combat": "c1",
+    "inCombat": true,
+    "isOwnTurn": false,
+    "key": "c1:1:cb1"
+  },
+  {
+    "label": "c1 round 2, the wolf's turn",
+    "combat": "c1",
+    "inCombat": true,
+    "isOwnTurn": true,
+    "key": "c1:2:cb2"
+  },
+  {
+    "label": "viewing c2 (not holding the fighter): c1 still found",
+    "combat": "c1",
+    "inCombat": true,
+    "isOwnTurn": false,
+    "key": "c1:2:cb2"
+  },
+  {
+    "label": "c1 inactive and the only one holding him: still c1",
+    "combat": "c1",
+    "inCombat": true,
+    "isOwnTurn": false,
+    "key": "c1:2:cb2"
+  },
+  {
+    "label": "c1 not started: falls back to the viewed combat (c2), not in it",
+    "combat": "c2",
+    "inCombat": false,
+    "isOwnTurn": true,
+    "key": "nocombat"
+  },
+  {
+    "label": "the rogue in c2",
+    "combat": "c2",
+    "inCombat": true,
+    "isOwnTurn": true,
+    "key": "c2:5:cbX"
+  },
+  {
+    "label": "nothing viewed",
+    "combat": "c1",
+    "inCombat": true,
+    "isOwnTurn": false,
+    "key": "c1:2:cb2"
+  },
+  {
+    "label": "c1 no longer holds him and nothing is viewed: no combat",
+    "combat": null,
+    "inCombat": false,
+    "isOwnTurn": true,
+    "key": "nocombat"
+  }
+]

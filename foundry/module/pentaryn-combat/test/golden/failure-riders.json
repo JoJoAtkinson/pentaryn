@@ -1,0 +1,24 @@
+{
+  "frenzy": [
+    [
+      "frenzy",
+      true,
+      true,
+      "2d6"
+    ]
+  ],
+  "narrowed": {
+    "isCritical": false,
+    "pentaryn-combat": {
+      "rider": "frenzy",
+      "narrow": "slashing"
+    }
+  },
+  "console": [
+    {
+      "level": "warn",
+      "text": "pentaryn-combat | undo mark",
+      "err": "card locked"
+    }
+  ]
+}

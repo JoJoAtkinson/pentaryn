@@ -1,0 +1,54 @@
+[
+  {
+    "label": "Shield off your turn: still the Reaction",
+    "turn": null,
+    "reaction": {
+      "combatId": "c1"
+    },
+    "events": [
+      "reaction"
+    ]
+  },
+  {
+    "label": "Shield out of combat",
+    "turn": null,
+    "reaction": null,
+    "events": []
+  },
+  {
+    "label": "Shield, spellPips off",
+    "turn": null,
+    "reaction": null,
+    "events": []
+  },
+  {
+    "label": "Second Wind off your turn",
+    "turn": null,
+    "reaction": null,
+    "events": []
+  },
+  {
+    "label": "Second Wind, bonusPip off",
+    "turn": null,
+    "reaction": null,
+    "events": []
+  },
+  {
+    "label": "Magic Missile out of combat",
+    "turn": null,
+    "reaction": null,
+    "events": []
+  },
+  {
+    "label": "Action Surge off your turn",
+    "turn": null,
+    "reaction": null,
+    "events": []
+  },
+  {
+    "label": "Quickened Spell, setting off",
+    "turn": null,
+    "reaction": null,
+    "events": []
+  }
+]

@@ -1,0 +1,38 @@
+[
+  {
+    "input": [
+      null
+    ],
+    "threw": "Cannot read properties of undefined (reading 'getFlag')"
+  },
+  {
+    "input": [
+      null
+    ],
+    "threw": "Cannot read properties of null (reading 'getFlag')"
+  },
+  {
+    "input": [
+      "Fighter"
+    ],
+    "out": 1
+  },
+  {
+    "input": [
+      "fighter000000001"
+    ],
+    "out": 1
+  },
+  {
+    "input": [
+      "Actor.fighter000000001"
+    ],
+    "out": 1
+  },
+  {
+    "input": [
+      {}
+    ],
+    "out": 1
+  }
+]

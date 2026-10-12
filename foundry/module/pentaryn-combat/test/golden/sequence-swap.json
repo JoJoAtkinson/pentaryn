@@ -1,0 +1,40 @@
+{
+  "plan": [
+    {
+      "weaponId": "scimitar00000001",
+      "mode": null,
+      "kind": "main"
+    },
+    {
+      "weaponId": "dagger0000000002",
+      "mode": "offhand",
+      "kind": "nick"
+    }
+  ],
+  "tiles": [
+    [
+      "scimitar00000001",
+      "Scimitar+5 · 1d8 + 3 Slashing"
+    ],
+    [
+      "dagger0000000002",
+      "Dagger+5 · 1d8 + 3 Slashing"
+    ]
+  ],
+  "out": {
+    "rolled": 2,
+    "status": "done"
+  },
+  "rolls": [
+    [
+      "Actor.rogue00000000001.Item.dagger0000000002.Activity.dagger0000000002",
+      {}
+    ],
+    [
+      "Actor.rogue00000000001.Item.scimitar00000001.Activity.scimitar00000001",
+      {
+        "attackMode": "offhand"
+      }
+    ]
+  ]
+}

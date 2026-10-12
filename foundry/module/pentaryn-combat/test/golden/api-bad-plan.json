@@ -1,0 +1,58 @@
+[
+  {
+    "input": [
+      null
+    ],
+    "threw": "Cannot read properties of undefined (reading 'type')"
+  },
+  {
+    "input": [
+      null
+    ],
+    "threw": "Cannot read properties of null (reading 'type')"
+  },
+  {
+    "input": [
+      "Fighter"
+    ],
+    "out": {
+      "swings": [],
+      "count": 1,
+      "left": 1,
+      "weaponId": null
+    }
+  },
+  {
+    "input": [
+      "fighter000000001"
+    ],
+    "out": {
+      "swings": [],
+      "count": 1,
+      "left": 1,
+      "weaponId": null
+    }
+  },
+  {
+    "input": [
+      "Actor.fighter000000001"
+    ],
+    "out": {
+      "swings": [],
+      "count": 1,
+      "left": 1,
+      "weaponId": null
+    }
+  },
+  {
+    "input": [
+      {}
+    ],
+    "out": {
+      "swings": [],
+      "count": 1,
+      "left": 1,
+      "weaponId": null
+    }
+  }
+]

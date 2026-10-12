@@ -1,0 +1,146 @@
+[
+  {
+    "input": [
+      null
+    ],
+    "out": {
+      "key": "nocombat",
+      "attackAction": {
+        "weapons": [],
+        "swings": 0,
+        "crit": false,
+        "critWeapon": null,
+        "kill": false,
+        "killWeapon": null
+      },
+      "riders": {},
+      "followUps": [],
+      "nick": false,
+      "bonusUsed": false,
+      "otherAction": false,
+      "otherActions": 0,
+      "surges": 0,
+      "quickened": false
+    }
+  },
+  {
+    "input": [
+      null
+    ],
+    "out": {
+      "key": "nocombat",
+      "attackAction": {
+        "weapons": [],
+        "swings": 0,
+        "crit": false,
+        "critWeapon": null,
+        "kill": false,
+        "killWeapon": null
+      },
+      "riders": {},
+      "followUps": [],
+      "nick": false,
+      "bonusUsed": false,
+      "otherAction": false,
+      "otherActions": 0,
+      "surges": 0,
+      "quickened": false
+    }
+  },
+  {
+    "input": [
+      "Fighter"
+    ],
+    "out": {
+      "key": "nocombat",
+      "attackAction": {
+        "weapons": [],
+        "swings": 0,
+        "crit": false,
+        "critWeapon": null,
+        "kill": false,
+        "killWeapon": null
+      },
+      "riders": {},
+      "followUps": [],
+      "nick": false,
+      "bonusUsed": false,
+      "otherAction": false,
+      "otherActions": 0,
+      "surges": 0,
+      "quickened": false
+    }
+  },
+  {
+    "input": [
+      "fighter000000001"
+    ],
+    "out": {
+      "key": "nocombat",
+      "attackAction": {
+        "weapons": [],
+        "swings": 0,
+        "crit": false,
+        "critWeapon": null,
+        "kill": false,
+        "killWeapon": null
+      },
+      "riders": {},
+      "followUps": [],
+      "nick": false,
+      "bonusUsed": false,
+      "otherAction": false,
+      "otherActions": 0,
+      "surges": 0,
+      "quickened": false
+    }
+  },
+  {
+    "input": [
+      "Actor.fighter000000001"
+    ],
+    "out": {
+      "key": "nocombat",
+      "attackAction": {
+        "weapons": [],
+        "swings": 0,
+        "crit": false,
+        "critWeapon": null,
+        "kill": false,
+        "killWeapon": null
+      },
+      "riders": {},
+      "followUps": [],
+      "nick": false,
+      "bonusUsed": false,
+      "otherAction": false,
+      "otherActions": 0,
+      "surges": 0,
+      "quickened": false
+    }
+  },
+  {
+    "input": [
+      {}
+    ],
+    "out": {
+      "key": "nocombat",
+      "attackAction": {
+        "weapons": [],
+        "swings": 0,
+        "crit": false,
+        "critWeapon": null,
+        "kill": false,
+        "killWeapon": null
+      },
+      "riders": {},
+      "followUps": [],
+      "nick": false,
+      "bonusUsed": false,
+      "otherAction": false,
+      "otherActions": 0,
+      "surges": 0,
+      "quickened": false
+    }
+  }
+]

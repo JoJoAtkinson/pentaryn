@@ -1,0 +1,66 @@
+[
+  {
+    "label": "closed, nothing under it: deleted",
+    "earlyThere": true,
+    "there": false
+  },
+  {
+    "label": "origin given as {id}",
+    "earlyThere": true,
+    "there": false
+  },
+  {
+    "label": "an attack rolled under it: kept",
+    "earlyThere": true,
+    "there": true
+  },
+  {
+    "label": "the dialog rolled: not looked at",
+    "earlyThere": true,
+    "there": true
+  },
+  {
+    "label": "someone else's card: kept",
+    "earlyThere": true,
+    "there": true
+  },
+  {
+    "label": "something consumed: kept",
+    "earlyThere": true,
+    "there": true
+  },
+  {
+    "label": "older than 5 minutes: kept",
+    "earlyThere": true,
+    "there": true
+  },
+  {
+    "label": "a sequence still running: kept",
+    "earlyThere": true,
+    "there": true
+  },
+  {
+    "label": "setting off: kept",
+    "earlyThere": true,
+    "there": true
+  },
+  {
+    "label": "not a usage card",
+    "there": true
+  },
+  {
+    "label": "warns",
+    "console": [
+      {
+        "level": "warn",
+        "text": "pentaryn-combat | tidy usage card",
+        "err": "already gone"
+      },
+      {
+        "level": "warn",
+        "text": "pentaryn-combat | tidy usage card",
+        "err": "app broke"
+      }
+    ]
+  }
+]

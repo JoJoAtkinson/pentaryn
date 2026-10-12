@@ -1,0 +1,63 @@
+{
+  "roll": [
+    {
+      "op": "activity.rollDamage",
+      "activity": "Actor.rogue00000000001.Item.sneakAttack00001.Activity.sneakDmg00000001",
+      "config": {
+        "isCritical": true,
+        "pentaryn-combat": {
+          "rider": "sneak-attack",
+          "narrow": "slashing"
+        }
+      },
+      "event": false,
+      "dialog": {
+        "configure": false
+      },
+      "message": {
+        "data": {
+          "system": {
+            "origin": "usageCard000001",
+            "targets": [
+              {
+                "token": "Scene.sceneArena000001.Token.tokGoblin0000001"
+              }
+            ]
+          },
+          "flags": {
+            "pentaryn-combat": {
+              "rider": "sneak-attack",
+              "attack": "atk0000000000021"
+            }
+          }
+        }
+      }
+    },
+    {
+      "op": "damage.parts",
+      "parts": [
+        [
+          "1d8",
+          "@mod"
+        ]
+      ],
+      "options": [
+        {
+          "type": "slashing",
+          "types": [
+            "slashing"
+          ]
+        }
+      ],
+      "flags": {
+        "pentaryn-combat": {
+          "rider": "sneak-attack",
+          "attack": "atk0000000000021"
+        }
+      }
+    }
+  ],
+  "turn": {
+    "sneak-attack": "used"
+  }
+}

@@ -1,0 +1,481 @@
+{
+  "fighter": {
+    "plan": {
+      "swings": [
+        {
+          "weaponId": "longsword0000001",
+          "mode": null,
+          "kind": "main"
+        },
+        {
+          "weaponId": "longsword0000001",
+          "mode": null,
+          "kind": "main"
+        }
+      ],
+      "count": 2,
+      "left": 2,
+      "weaponId": "longsword0000001"
+    },
+    "withWeapon": {
+      "swings": [
+        {
+          "weaponId": "longsword0000001",
+          "mode": null,
+          "kind": "main"
+        },
+        {
+          "weaponId": "longsword0000001",
+          "mode": null,
+          "kind": "main"
+        }
+      ],
+      "count": 2,
+      "left": 2,
+      "weaponId": "longsword0000001"
+    },
+    "state": {
+      "weaponId": "longsword0000001",
+      "count": 2,
+      "pipCount": 2,
+      "worth": true,
+      "plan": {
+        "swings": [
+          {
+            "weaponId": "longsword0000001",
+            "mode": null,
+            "kind": "main"
+          },
+          {
+            "weaponId": "longsword0000001",
+            "mode": null,
+            "kind": "main"
+          }
+        ],
+        "count": 2,
+        "left": 2,
+        "weaponId": "longsword0000001"
+      },
+      "ma": null
+    }
+  },
+  "rogue": {
+    "plan": {
+      "swings": [
+        {
+          "weaponId": "scimitar00000001",
+          "mode": null,
+          "kind": "main"
+        },
+        {
+          "weaponId": "dagger0000000002",
+          "mode": "offhand",
+          "kind": "nick"
+        }
+      ],
+      "count": 1,
+      "left": 1,
+      "weaponId": "scimitar00000001"
+    },
+    "withWeapon": {
+      "swings": [
+        {
+          "weaponId": "scimitar00000001",
+          "mode": null,
+          "kind": "main"
+        },
+        {
+          "weaponId": "dagger0000000002",
+          "mode": "offhand",
+          "kind": "nick"
+        }
+      ],
+      "count": 1,
+      "left": 1,
+      "weaponId": "scimitar00000001"
+    },
+    "state": {
+      "weaponId": "scimitar00000001",
+      "count": 1,
+      "pipCount": 1,
+      "worth": true,
+      "plan": {
+        "swings": [
+          {
+            "weaponId": "scimitar00000001",
+            "mode": null,
+            "kind": "main"
+          },
+          {
+            "weaponId": "dagger0000000002",
+            "mode": "offhand",
+            "kind": "nick"
+          }
+        ],
+        "count": 1,
+        "left": 1,
+        "weaponId": "scimitar00000001"
+      },
+      "ma": null
+    }
+  },
+  "monk0": {
+    "plan": {
+      "swings": [
+        {
+          "weaponId": "unarmedStrike001",
+          "mode": null,
+          "kind": "main"
+        }
+      ],
+      "count": 1,
+      "left": 1,
+      "weaponId": "unarmedStrike001"
+    },
+    "withWeapon": {
+      "swings": [
+        {
+          "weaponId": "unarmedStrike001",
+          "mode": null,
+          "kind": "main"
+        }
+      ],
+      "count": 1,
+      "left": 1,
+      "weaponId": "unarmedStrike001"
+    },
+    "state": {
+      "weaponId": "unarmedStrike001",
+      "count": 1,
+      "pipCount": 1,
+      "worth": false,
+      "plan": {
+        "swings": [
+          {
+            "weaponId": "unarmedStrike001",
+            "mode": null,
+            "kind": "main"
+          }
+        ],
+        "count": 1,
+        "left": 1,
+        "weaponId": "unarmedStrike001"
+      },
+      "ma": null
+    }
+  },
+  "monk2": {
+    "plan": {
+      "swings": [
+        {
+          "weaponId": "unarmedStrike001",
+          "mode": null,
+          "kind": "main"
+        }
+      ],
+      "count": 1,
+      "left": 1,
+      "weaponId": "unarmedStrike001"
+    },
+    "withWeapon": {
+      "swings": [
+        {
+          "weaponId": "unarmedStrike001",
+          "mode": null,
+          "kind": "main"
+        }
+      ],
+      "count": 1,
+      "left": 1,
+      "weaponId": "unarmedStrike001"
+    },
+    "state": {
+      "weaponId": "unarmedStrike001",
+      "count": 1,
+      "pipCount": 1,
+      "worth": false,
+      "plan": {
+        "swings": [
+          {
+            "weaponId": "unarmedStrike001",
+            "mode": null,
+            "kind": "main"
+          }
+        ],
+        "count": 1,
+        "left": 1,
+        "weaponId": "unarmedStrike001"
+      },
+      "ma": null
+    }
+  },
+  "wolf": {
+    "plan": {
+      "swings": [
+        {
+          "weaponId": "bite",
+          "mode": null,
+          "kind": "main"
+        },
+        {
+          "weaponId": "bite",
+          "mode": null,
+          "kind": "main"
+        }
+      ],
+      "count": 2,
+      "left": 2,
+      "weaponId": "bite"
+    },
+    "withWeapon": {
+      "swings": [
+        {
+          "weaponId": "bite",
+          "mode": null,
+          "kind": "main"
+        },
+        {
+          "weaponId": "bite",
+          "mode": null,
+          "kind": "main"
+        }
+      ],
+      "count": 2,
+      "left": 2,
+      "weaponId": "bite"
+    },
+    "state": {
+      "weaponId": null,
+      "count": 2,
+      "pipCount": 2,
+      "worth": true,
+      "plan": {
+        "swings": [
+          {
+            "weaponId": "bite",
+            "mode": null,
+            "kind": "main"
+          },
+          {
+            "weaponId": "bite",
+            "mode": null,
+            "kind": "main"
+          }
+        ],
+        "count": 2,
+        "left": 2,
+        "weaponId": "bite"
+      },
+      "ma": {
+        "total": 2,
+        "groups": [
+          {
+            "count": 2,
+            "choices": [
+              "bite"
+            ]
+          }
+        ],
+        "plan": [
+          {
+            "itemId": "bite",
+            "count": 2
+          }
+        ],
+        "source": "multiattack00001"
+      }
+    }
+  },
+  "druid": {
+    "plan": {
+      "swings": [
+        {
+          "weaponId": "bite",
+          "mode": null,
+          "kind": "main"
+        },
+        {
+          "weaponId": "claw",
+          "mode": null,
+          "kind": "main"
+        }
+      ],
+      "count": 2,
+      "left": 2,
+      "weaponId": "bite"
+    },
+    "withWeapon": {
+      "swings": [
+        {
+          "weaponId": "bite",
+          "mode": null,
+          "kind": "main"
+        },
+        {
+          "weaponId": "claw",
+          "mode": null,
+          "kind": "main"
+        }
+      ],
+      "count": 2,
+      "left": 2,
+      "weaponId": "bite"
+    },
+    "state": {
+      "weaponId": null,
+      "count": 2,
+      "pipCount": 2,
+      "worth": true,
+      "plan": {
+        "swings": [
+          {
+            "weaponId": "bite",
+            "mode": null,
+            "kind": "main"
+          },
+          {
+            "weaponId": "claw",
+            "mode": null,
+            "kind": "main"
+          }
+        ],
+        "count": 2,
+        "left": 2,
+        "weaponId": "bite"
+      },
+      "ma": {
+        "total": 2,
+        "groups": [
+          {
+            "count": 1,
+            "choices": [
+              "bite"
+            ]
+          },
+          {
+            "count": 1,
+            "choices": [
+              "claw"
+            ]
+          }
+        ],
+        "plan": [
+          {
+            "itemId": "bite",
+            "count": 1
+          },
+          {
+            "itemId": "claw",
+            "count": 1
+          }
+        ],
+        "source": "multiattack00002"
+      }
+    }
+  },
+  "barbarian": {
+    "plan": {
+      "swings": [
+        {
+          "weaponId": "greataxe00000001",
+          "mode": null,
+          "kind": "main"
+        },
+        {
+          "weaponId": "greataxe00000001",
+          "mode": null,
+          "kind": "main"
+        }
+      ],
+      "count": 2,
+      "left": 2,
+      "weaponId": "greataxe00000001"
+    },
+    "withWeapon": {
+      "swings": [
+        {
+          "weaponId": "greataxe00000001",
+          "mode": null,
+          "kind": "main"
+        },
+        {
+          "weaponId": "greataxe00000001",
+          "mode": null,
+          "kind": "main"
+        }
+      ],
+      "count": 2,
+      "left": 2,
+      "weaponId": "greataxe00000001"
+    },
+    "state": {
+      "weaponId": "greataxe00000001",
+      "count": 2,
+      "pipCount": 2,
+      "worth": true,
+      "plan": {
+        "swings": [
+          {
+            "weaponId": "greataxe00000001",
+            "mode": null,
+            "kind": "main"
+          },
+          {
+            "weaponId": "greataxe00000001",
+            "mode": null,
+            "kind": "main"
+          }
+        ],
+        "count": 2,
+        "left": 2,
+        "weaponId": "greataxe00000001"
+      },
+      "ma": null
+    }
+  },
+  "slayer": {
+    "plan": {
+      "swings": [
+        {
+          "weaponId": "glaive0000000001",
+          "mode": null,
+          "kind": "main"
+        }
+      ],
+      "count": 1,
+      "left": 1,
+      "weaponId": "glaive0000000001"
+    },
+    "withWeapon": {
+      "swings": [
+        {
+          "weaponId": "polearmMaster001",
+          "mode": null,
+          "kind": "main"
+        }
+      ],
+      "count": 1,
+      "left": 1,
+      "weaponId": "polearmMaster001"
+    },
+    "state": {
+      "weaponId": "glaive0000000001",
+      "count": 1,
+      "pipCount": 1,
+      "worth": false,
+      "plan": {
+        "swings": [
+          {
+            "weaponId": "glaive0000000001",
+            "mode": null,
+            "kind": "main"
+          }
+        ],
+        "count": 1,
+        "left": 1,
+        "weaponId": "glaive0000000001"
+      },
+      "ma": null
+    }
+  }
+}

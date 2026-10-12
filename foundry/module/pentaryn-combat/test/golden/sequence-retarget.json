@@ -1,0 +1,81 @@
+[
+  {
+    "label": "picked",
+    "targetsAfterPick": [
+      "tokGoblin0000002"
+    ],
+    "out": {
+      "rolled": 2,
+      "status": "done"
+    },
+    "calls": [],
+    "console": []
+  },
+  {
+    "label": "cancelled after clearing the targets",
+    "statusAfterPick": "paused",
+    "targetsAfterPick": [
+      "tokGoblin0000001"
+    ],
+    "out": {
+      "rolled": 2,
+      "status": "done"
+    },
+    "calls": [
+      {
+        "op": "canvas.setTargets",
+        "ids": [
+          "tokGoblin0000001"
+        ],
+        "opts": {
+          "mode": "replace"
+        }
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "can't run (undefined): the fallback",
+    "statusAfterPick": "paused",
+    "targetsAfterPick": [
+      "tokGoblin0000001"
+    ],
+    "out": {
+      "rolled": 2,
+      "status": "done"
+    },
+    "calls": [
+      {
+        "op": "notify",
+        "level": "info",
+        "message": "Target a creature for the next swing (Stop cancels)."
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "throws: warned, the fallback",
+    "statusAfterPick": "paused",
+    "targetsAfterPick": [
+      "tokGoblin0000001"
+    ],
+    "out": {
+      "rolled": 2,
+      "status": "done"
+    },
+    "calls": [
+      {
+        "op": "notify",
+        "level": "info",
+        "message": "Target a creature for the next swing (Stop cancels)."
+      }
+    ],
+    "console": [
+      {
+        "level": "warn",
+        "text": "pentaryn-combat | Argon target picker failed",
+        "err": "picker broke"
+      }
+    ]
+  }
+]

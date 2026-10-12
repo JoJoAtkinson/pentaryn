@@ -1,0 +1,32 @@
+[
+  {
+    "level": "warn",
+    "text": "pentaryn-combat | weapon bonus skipped",
+    "err": "boom"
+  },
+  {
+    "level": "warn",
+    "text": "pentaryn-combat | rider type skipped",
+    "err": "boom"
+  },
+  {
+    "level": "warn",
+    "text": "pentaryn-combat | auto rider skipped",
+    "err": "boom"
+  },
+  {
+    "level": "warn",
+    "text": "pentaryn-combat | rider offer skipped",
+    "err": "boom"
+  },
+  {
+    "level": "warn",
+    "text": "pentaryn-combat | rider note skipped",
+    "err": "boom"
+  },
+  {
+    "level": "warn",
+    "text": "pentaryn-combat | swing damage button skipped",
+    "err": "boom"
+  }
+]

@@ -1,0 +1,66 @@
+{
+  "graph": {
+    "combat-core.mjs": [],
+    "combat.mjs": [
+      "combat-core.mjs",
+      "offhand.mjs",
+      "riders.mjs",
+      "sequence.mjs",
+      "settings.mjs",
+      "shapes.mjs"
+    ],
+    "hud.mjs": [
+      "combat-core.mjs",
+      "riders.mjs",
+      "sequence.mjs",
+      "settings.mjs",
+      "shapes.mjs",
+      "strip.mjs",
+      "turnflow.mjs"
+    ],
+    "offhand.mjs": [
+      "combat-core.mjs",
+      "settings.mjs",
+      "shapes.mjs"
+    ],
+    "riders.mjs": [
+      "combat-core.mjs",
+      "settings.mjs",
+      "shapes.mjs"
+    ],
+    "sequence.mjs": [
+      "combat-core.mjs",
+      "settings.mjs",
+      "shapes.mjs",
+      "strip.mjs"
+    ],
+    "settings.mjs": [
+      "combat-core.mjs"
+    ],
+    "shapes.mjs": [
+      "combat-core.mjs"
+    ],
+    "strip.mjs": [
+      "combat-core.mjs",
+      "settings.mjs"
+    ],
+    "turnflow.mjs": [
+      "combat-core.mjs",
+      "sequence.mjs",
+      "settings.mjs",
+      "shapes.mjs"
+    ]
+  },
+  "order": [
+    "hud.mjs",
+    "turnflow.mjs",
+    "shapes.mjs",
+    "combat-core.mjs",
+    "settings.mjs",
+    "sequence.mjs",
+    "strip.mjs",
+    "riders.mjs",
+    "combat.mjs",
+    "offhand.mjs"
+  ]
+}

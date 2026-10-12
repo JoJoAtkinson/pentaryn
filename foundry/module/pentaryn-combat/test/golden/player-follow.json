@@ -1,0 +1,94 @@
+[
+  {
+    "label": "mid-combat, my turn: selected",
+    "calls": [
+      [
+        "token.control",
+        "tokfighter000000"
+      ]
+    ]
+  },
+  {
+    "label": "can't select now (another layer): bound directly",
+    "calls": [
+      [
+        "argon.bind",
+        "tokfighter000000"
+      ]
+    ]
+  },
+  {
+    "label": "control refused: bound directly",
+    "calls": [
+      [
+        "token.control",
+        "tokfighter000000"
+      ],
+      [
+        "argon.bind",
+        "tokfighter000000"
+      ]
+    ]
+  },
+  {
+    "label": "already on the HUD: nothing",
+    "calls": []
+  },
+  {
+    "label": "combat start, Argon still off: nothing yet",
+    "calls": []
+  },
+  {
+    "label": "299 ms",
+    "calls": []
+  },
+  {
+    "label": "300 ms: Argon on now, the HUD shows the old token → follow",
+    "calls": [
+      [
+        "token.control",
+        "tokfighter000000"
+      ]
+    ]
+  },
+  {
+    "label": "1200 ms: still the old token → follow again",
+    "calls": [
+      [
+        "token.control",
+        "tokfighter000000"
+      ]
+    ]
+  },
+  {
+    "label": "combat start with Argon on: follows at once",
+    "calls": [
+      [
+        "token.control",
+        "tokfighter000000"
+      ]
+    ]
+  },
+  {
+    "label": "the turn moved on before the rechecks: no recheck follows",
+    "calls": []
+  },
+  {
+    "label": "someone else's creature: nothing",
+    "calls": []
+  },
+  {
+    "label": "hudFollows off",
+    "calls": []
+  },
+  {
+    "label": "bind throws",
+    "console": [
+      {
+        "level": "warn",
+        "text": "pentaryn-combat | HUD follow",
+        "err": "argon not ready"
+      }
+    ]
+  }
+]

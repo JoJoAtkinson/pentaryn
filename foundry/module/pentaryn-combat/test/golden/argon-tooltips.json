@@ -1,0 +1,207 @@
+{
+  "fighter": [
+    {
+      "id": "pentaryn-combat-full-attack",
+      "data": {
+        "title": "Full Attack",
+        "subtitle": "2 of 2 swings left this turn",
+        "description": "<p>Attacks with Longsword, one swing after another. Each swing opens the normal attack roll (Normal / Advantage / Disadvantage, or your own dice), and damage follows as usual.</p>",
+        "details": [
+          {
+            "label": "To hit",
+            "value": "+5"
+          },
+          {
+            "label": "Swings",
+            "value": "2"
+          }
+        ],
+        "footerText": "Left-click: attack. Enter rolls Normal in each roll window; tick Quick on the bar above the HUD to roll the rest without windows. Right-click: pick another weapon. Esc on a roll pauses; Esc again stops. Clicking a weapon by hand still works and counts.",
+        "classes": [
+          "pentaryn-tt",
+          "pentaryn-combat-tt"
+        ]
+      }
+    }
+  ],
+  "fighter after a Dagger swing": [
+    {
+      "id": "pentaryn-combat-full-attack",
+      "data": {
+        "title": "Full Attack",
+        "subtitle": "1 of 2 swings left this turn",
+        "description": "<p>Attacks with Longsword, one swing after another. Each swing opens the normal attack roll (Normal / Advantage / Disadvantage, or your own dice), and damage follows as usual.</p>",
+        "details": [
+          {
+            "label": "To hit",
+            "value": "+5"
+          },
+          {
+            "label": "Swings",
+            "value": "1"
+          }
+        ],
+        "footerText": "Left-click: attack. Enter rolls Normal in each roll window; tick Quick on the bar above the HUD to roll the rest without windows. Right-click: pick another weapon. Esc on a roll pauses; Esc again stops. Clicking a weapon by hand still works and counts.",
+        "classes": [
+          "pentaryn-tt",
+          "pentaryn-combat-tt"
+        ]
+      }
+    },
+    {
+      "id": "pentaryn-combat-offhand",
+      "data": {
+        "title": "Off-hand: Handaxe",
+        "description": "<p>The Light property's extra attack, as a Bonus Action. Your ability modifier isn't added to its damage unless it is negative (or you have Two-Weapon Fighting).</p>",
+        "details": [
+          {
+            "label": "Cost",
+            "value": "Bonus Action"
+          }
+        ],
+        "classes": [
+          "pentaryn-tt",
+          "pentaryn-combat-tt"
+        ]
+      }
+    }
+  ],
+  "rogue (Nick)": [
+    {
+      "id": "pentaryn-combat-full-attack",
+      "data": {
+        "title": "Full Attack",
+        "subtitle": "1 of 1 swings left this turn, + Nick: Dagger",
+        "description": "<p>Attacks with Scimitar, then Dagger as the free Nick attack, one swing after another. Each swing opens the normal attack roll (Normal / Advantage / Disadvantage, or your own dice), and damage follows as usual.</p>",
+        "details": [
+          {
+            "label": "To hit",
+            "value": "+5"
+          },
+          {
+            "label": "Swings",
+            "value": "2"
+          }
+        ],
+        "footerText": "Left-click: attack. Enter rolls Normal in each roll window; tick Quick on the bar above the HUD to roll the rest without windows. Right-click: pick another weapon. Esc on a roll pauses; Esc again stops. Clicking a weapon by hand still works and counts.",
+        "classes": [
+          "pentaryn-tt",
+          "pentaryn-combat-tt"
+        ]
+      }
+    },
+    {
+      "id": "pentaryn-combat-rider-sneak-attack",
+      "data": {
+        "title": "Sneak Attack: Ask",
+        "description": "<p>Ask (now): a '+ Sneak Attack 3d6' button appears on your attack cards; click it when the GM says you hit. Click to switch to Auto.</p>",
+        "classes": [
+          "pentaryn-tt",
+          "pentaryn-combat-tt"
+        ]
+      }
+    }
+  ],
+  "wolf": [
+    {
+      "id": "pentaryn-combat-full-attack",
+      "data": {
+        "title": "Full Attack",
+        "subtitle": "2 of 2 swings left this turn",
+        "description": "<p>Attacks with Bite, Bite, one swing after another. Each swing opens the normal attack roll (Normal / Advantage / Disadvantage, or your own dice), and damage follows as usual.</p>",
+        "details": [
+          {
+            "label": "To hit",
+            "value": "+5"
+          },
+          {
+            "label": "Swings",
+            "value": "2"
+          }
+        ],
+        "footerText": "Left-click: attack. Enter rolls Normal in each roll window; tick Quick on the bar above the HUD to roll the rest without windows. Right-click: pick another weapon. Esc on a roll pauses; Esc again stops. Clicking a weapon by hand still works and counts.",
+        "classes": [
+          "pentaryn-tt",
+          "pentaryn-combat-tt"
+        ]
+      }
+    }
+  ],
+  "monk, no Focus": [
+    {
+      "id": "pentaryn-combat-flurry",
+      "data": {
+        "title": "Flurry of Blows",
+        "description": "<p>No Focus Points left for Flurry of Blows.</p>",
+        "classes": [
+          "pentaryn-tt",
+          "pentaryn-combat-tt"
+        ]
+      }
+    },
+    {
+      "id": "pentaryn-combat-martial-arts",
+      "data": {
+        "title": "Martial Arts strike",
+        "description": "<p>One Unarmed Strike as a Bonus Action.</p>",
+        "details": [
+          {
+            "label": "Cost",
+            "value": "Bonus Action"
+          }
+        ],
+        "classes": [
+          "pentaryn-tt",
+          "pentaryn-combat-tt"
+        ]
+      }
+    }
+  ],
+  "barbarian": [
+    {
+      "id": "pentaryn-combat-full-attack",
+      "data": {
+        "title": "Full Attack",
+        "subtitle": "2 of 2 swings left this turn",
+        "description": "<p>Attacks with Greataxe, one swing after another. Each swing opens the normal attack roll (Normal / Advantage / Disadvantage, or your own dice), and damage follows as usual.</p>",
+        "details": [
+          {
+            "label": "To hit",
+            "value": "+5"
+          },
+          {
+            "label": "Swings",
+            "value": "2"
+          }
+        ],
+        "footerText": "Left-click: attack. Enter rolls Normal in each roll window; tick Quick on the bar above the HUD to roll the rest without windows. Right-click: pick another weapon. Esc on a roll pauses; Esc again stops. Clicking a weapon by hand still works and counts.",
+        "classes": [
+          "pentaryn-tt",
+          "pentaryn-combat-tt"
+        ]
+      }
+    },
+    {
+      "id": "pentaryn-combat-rider-frenzy",
+      "data": {
+        "title": "Frenzy: Ask",
+        "description": "<p>Ask (now): a '+ Frenzy 2d6' button appears on your attack cards; click it when the GM says you hit. Click to switch to Auto.</p>",
+        "classes": [
+          "pentaryn-tt",
+          "pentaryn-combat-tt"
+        ]
+      }
+    },
+    {
+      "id": "pentaryn-combat-reckless",
+      "data": {
+        "title": "Reckless Attack: Off",
+        "description": "<p>Off (now). Click when you make your first attack this turn: Advantage on Strength attack rolls until your next turn starts (the roll dialog then defaults to Advantage), and attacks against you have Advantage. Frenzy counts it.</p>",
+        "classes": [
+          "pentaryn-tt",
+          "pentaryn-combat-tt"
+        ]
+      }
+    }
+  ]
+}

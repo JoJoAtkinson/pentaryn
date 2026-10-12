@@ -1,0 +1,250 @@
+[
+  {
+    "kind": "on",
+    "name": "renderRollConfigurationDialog"
+  },
+  {
+    "kind": "on",
+    "name": "renderRollResolver"
+  },
+  {
+    "kind": "on",
+    "name": "closeRollConfigurationDialog"
+  },
+  {
+    "kind": "on",
+    "name": "closeRollResolver"
+  },
+  {
+    "kind": "on",
+    "name": "renderActionPanelArgonComponent"
+  },
+  {
+    "kind": "on",
+    "name": "combatTurnChange"
+  },
+  {
+    "kind": "on",
+    "name": "deleteCombat"
+  },
+  {
+    "kind": "on",
+    "name": "deleteCombat"
+  },
+  {
+    "kind": "on",
+    "name": "controlToken"
+  },
+  {
+    "kind": "on",
+    "name": "deleteToken"
+  },
+  {
+    "kind": "on",
+    "name": "closeAttackRollConfigurationDialog"
+  },
+  {
+    "kind": "on",
+    "name": "dnd5e.preApplyDamage"
+  },
+  {
+    "kind": "on",
+    "name": "renderRollResolver"
+  },
+  {
+    "kind": "on",
+    "name": "dnd5e.postUseActivity"
+  },
+  {
+    "kind": "on",
+    "name": "dnd5e.postRollAttack"
+  },
+  {
+    "kind": "on",
+    "name": "renderButtonPanelButtonArgonComponent"
+  },
+  {
+    "kind": "on",
+    "name": "createActiveEffect"
+  },
+  {
+    "kind": "on",
+    "name": "deleteActiveEffect"
+  },
+  {
+    "kind": "on",
+    "name": "updateActiveEffect"
+  },
+  {
+    "kind": "on",
+    "name": "updateActor"
+  },
+  {
+    "kind": "on",
+    "name": "combatTurnChange"
+  },
+  {
+    "kind": "on",
+    "name": "renderRollConfigurationDialog"
+  },
+  {
+    "kind": "on",
+    "name": "renderRollResolver"
+  },
+  {
+    "kind": "on",
+    "name": "renderDialog5e"
+  },
+  {
+    "kind": "on",
+    "name": "renderActivityChoiceDialog"
+  },
+  {
+    "kind": "on",
+    "name": "renderDialogV2"
+  },
+  {
+    "kind": "on",
+    "name": "createSetting"
+  },
+  {
+    "kind": "on",
+    "name": "updateSetting"
+  },
+  {
+    "kind": "on",
+    "name": "renderActionPanelArgonComponent"
+  },
+  {
+    "kind": "on",
+    "name": "updateActor"
+  },
+  {
+    "kind": "on",
+    "name": "pentarynCombat.sequenceEnd"
+  },
+  {
+    "kind": "on",
+    "name": "updateCombat"
+  },
+  {
+    "kind": "on",
+    "name": "deleteCombat"
+  },
+  {
+    "kind": "on",
+    "name": "updateItem"
+  },
+  {
+    "kind": "on",
+    "name": "createActiveEffect"
+  },
+  {
+    "kind": "on",
+    "name": "deleteActiveEffect"
+  },
+  {
+    "kind": "on",
+    "name": "updateActiveEffect"
+  },
+  {
+    "kind": "on",
+    "name": "pentarynCombat.usage"
+  },
+  {
+    "kind": "on",
+    "name": "pentarynCombat.bonusSpent"
+  },
+  {
+    "kind": "on",
+    "name": "pentarynCombat.bonusAction"
+  },
+  {
+    "kind": "on",
+    "name": "pentarynCombat.otherAction"
+  },
+  {
+    "kind": "on",
+    "name": "pentarynCombat.reaction"
+  },
+  {
+    "kind": "on",
+    "name": "renderActionPanelArgonComponent"
+  },
+  {
+    "kind": "on",
+    "name": "updateCombat"
+  },
+  {
+    "kind": "on",
+    "name": "pentarynCombat.offhand"
+  },
+  {
+    "kind": "on",
+    "name": "renderItemButtonArgonComponent"
+  },
+  {
+    "kind": "on",
+    "name": "updateToken"
+  },
+  {
+    "kind": "on",
+    "name": "dnd5e.preRollAttackV2"
+  },
+  {
+    "kind": "on",
+    "name": "dnd5e.postRollAttack"
+  },
+  {
+    "kind": "on",
+    "name": "dnd5e.postUseActivity"
+  },
+  {
+    "kind": "on",
+    "name": "dnd5e.preRollDamageV2"
+  },
+  {
+    "kind": "on",
+    "name": "updateActor"
+  },
+  {
+    "kind": "on",
+    "name": "dnd5e.preRollAttackV2"
+  },
+  {
+    "kind": "on",
+    "name": "dnd5e.preRollDamageV2"
+  },
+  {
+    "kind": "on",
+    "name": "dnd5e.renderChatMessage"
+  },
+  {
+    "kind": "on",
+    "name": "combatTurnChange"
+  },
+  {
+    "kind": "on",
+    "name": "deleteCombat"
+  },
+  {
+    "kind": "on",
+    "name": "updateActor"
+  },
+  {
+    "kind": "on",
+    "name": "createActiveEffect"
+  },
+  {
+    "kind": "on",
+    "name": "deleteActiveEffect"
+  },
+  {
+    "kind": "on",
+    "name": "updateActiveEffect"
+  },
+  {
+    "kind": "on",
+    "name": "createActor"
+  }
+]

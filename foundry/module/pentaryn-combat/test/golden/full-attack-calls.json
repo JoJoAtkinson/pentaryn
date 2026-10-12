@@ -1,0 +1,194 @@
+{
+  "calls": [
+    {
+      "op": "activity.use",
+      "activity": "Actor.fighter000000001.Item.longsword0000001.Activity.longsword0000001",
+      "usage": {
+        "subsequentActions": false
+      },
+      "dialog": {
+        "configure": false
+      },
+      "message": {
+        "create": true
+      }
+    },
+    {
+      "op": "Hooks.callAll",
+      "name": "dnd5e.postUseActivity"
+    },
+    {
+      "op": "Hooks.callAll",
+      "name": "pentarynCombat.usage"
+    },
+    {
+      "op": "activity.rollAttack",
+      "activity": "Actor.fighter000000001.Item.longsword0000001.Activity.longsword0000001",
+      "config": {},
+      "event": false,
+      "dialog": {},
+      "message": {
+        "data": {
+          "system": {
+            "origin": "msg0000000000001"
+          },
+          "flags": {
+            "pentaryn-combat": {
+              "swing": {
+                "i": 1,
+                "n": 2,
+                "kind": "main"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "op": "Hooks.call",
+      "name": "dnd5e.preRollAttackV2"
+    },
+    {
+      "op": "Hooks.callAll",
+      "name": "dnd5e.postRollAttack"
+    },
+    {
+      "op": "activity.rollAttack",
+      "activity": "Actor.fighter000000001.Item.longsword0000001.Activity.longsword0000001",
+      "config": {},
+      "event": false,
+      "dialog": {
+        "configure": true
+      },
+      "message": {
+        "data": {
+          "system": {
+            "origin": "msg0000000000001"
+          },
+          "flags": {
+            "pentaryn-combat": {
+              "swing": {
+                "i": 2,
+                "n": 2,
+                "kind": "main"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "op": "Hooks.call",
+      "name": "dnd5e.preRollAttackV2"
+    },
+    {
+      "op": "Hooks.callAll",
+      "name": "dnd5e.postRollAttack"
+    },
+    {
+      "op": "Hooks.call",
+      "name": "preUpdateActor"
+    },
+    {
+      "op": "update",
+      "documentName": "Actor",
+      "uuid": "Actor.fighter000000001",
+      "changes": {
+        "flags.pentaryn-combat.turn": {
+          "<replace>": {
+            "key": "c1:1:cb1",
+            "attackAction": {
+              "weapons": [
+                "longsword0000001"
+              ],
+              "swings": 1,
+              "crit": false,
+              "critWeapon": null,
+              "kill": false,
+              "killWeapon": null
+            },
+            "riders": {},
+            "followUps": [],
+            "nick": false,
+            "bonusUsed": false,
+            "otherAction": false,
+            "otherActions": 0,
+            "surges": 0,
+            "quickened": false
+          }
+        }
+      }
+    },
+    {
+      "op": "Hooks.callAll",
+      "name": "updateActor"
+    },
+    {
+      "op": "Hooks.call",
+      "name": "preUpdateActor"
+    },
+    {
+      "op": "update",
+      "documentName": "Actor",
+      "uuid": "Actor.fighter000000001",
+      "changes": {
+        "flags.pentaryn-combat.last.weapon": "longsword0000001"
+      }
+    },
+    {
+      "op": "Hooks.callAll",
+      "name": "updateActor"
+    },
+    {
+      "op": "Hooks.callAll",
+      "name": "pentarynCombat.sequenceEnd"
+    },
+    {
+      "op": "chat.updateMessage",
+      "id": "msg0000000000002"
+    },
+    {
+      "op": "chat.updateMessage",
+      "id": "msg0000000000003"
+    },
+    {
+      "op": "Hooks.call",
+      "name": "preUpdateActor"
+    },
+    {
+      "op": "update",
+      "documentName": "Actor",
+      "uuid": "Actor.fighter000000001",
+      "changes": {
+        "flags.pentaryn-combat.turn": {
+          "<replace>": {
+            "key": "c1:1:cb1",
+            "attackAction": {
+              "weapons": [
+                "longsword0000001"
+              ],
+              "swings": 2,
+              "crit": false,
+              "critWeapon": null,
+              "kill": false,
+              "killWeapon": null
+            },
+            "riders": {},
+            "followUps": [],
+            "nick": false,
+            "bonusUsed": false,
+            "otherAction": false,
+            "otherActions": 0,
+            "surges": 0,
+            "quickened": false
+          }
+        }
+      }
+    },
+    {
+      "op": "Hooks.callAll",
+      "name": "updateActor"
+    }
+  ],
+  "console": []
+}

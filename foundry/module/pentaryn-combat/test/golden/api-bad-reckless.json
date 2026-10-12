@@ -1,0 +1,38 @@
+[
+  {
+    "input": [
+      null
+    ],
+    "out": false
+  },
+  {
+    "input": [
+      null
+    ],
+    "out": false
+  },
+  {
+    "input": [
+      "Fighter"
+    ],
+    "out": false
+  },
+  {
+    "input": [
+      "fighter000000001"
+    ],
+    "out": false
+  },
+  {
+    "input": [
+      "Actor.fighter000000001"
+    ],
+    "out": false
+  },
+  {
+    "input": [
+      {}
+    ],
+    "out": false
+  }
+]
