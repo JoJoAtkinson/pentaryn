@@ -11,6 +11,7 @@ import {
   ATTR_BELIEFS_SETTING,
   attrFactKey,
   authoredTier,
+  BELIEFS_FLAG,
   isBlankProse,
   KIND_KEY,
   LORE_FLAG,
@@ -46,14 +47,16 @@ import { setting } from "../settings.mjs";
 export async function promptDeliver(character, fact) {
   const rec = readBelief(fact, character.id);
   if (!rec || rec.delivered) return;
+  // only a kind has a tier; a row with no roll behind it (auto kind, GM tell) has no total (EXT-1)
+  const total = rec.total ?? "—";
   const ok = await foundry.applications.api.DialogV2.confirm({
     window: { title: _loc("PENTARYN_TIES.known.study.holdTitle") },
     content:
       `<p>${esc(_loc("PENTARYN_TIES.known.study.holdWho", { character: character.name, subject: fact.subject?.name ?? fact.name }))}</p>` +
       `<p class="pt-study-hold-meta">${esc(
-        fact.ns === "lore"
-          ? _loc("PENTARYN_TIES.known.study.holdMetaLore", { fact: fact.name, dc: fact.dc, total: rec.total })
-          : _loc("PENTARYN_TIES.known.study.holdMeta", { tier: rec.tier, total: rec.total })
+        fact.ns === "kind"
+          ? _loc("PENTARYN_TIES.known.study.holdMeta", { tier: rec.tier, total })
+          : _loc("PENTARYN_TIES.known.study.holdMetaLore", { fact: fact.name, dc: fact.dc, total })
       )}</p>` +
       // a silent outcome has no prose to preview — say so, or the GM reads an empty box as a bug
       `<div class="pt-study-hold-text">${
@@ -75,7 +78,8 @@ export async function promptDeliver(character, fact) {
  */
 async function deliverFact(fact, character) {
   const rec = readBelief(fact, character?.id);
-  if (!rec) {
+  // a bare claim is a roll in flight or stranded, not a held reveal: Deliver would spend it for nothing (ES-2)
+  if (!rec || claimOf(fact, character?.id)) {
     ui.notifications.warn(
       _loc("PENTARYN_TIES.known.study.notify.noPending", { character: character?.name ?? "?", kind: fact.name })
     );
@@ -98,6 +102,15 @@ async function deliverFact(fact, character) {
     _loc(missed ? "PENTARYN_TIES.known.study.notify.missed" : "PENTARYN_TIES.known.study.notify.delivered", { character: character.name, kind: fact.name })
   );
   return true;
+}
+
+/**
+ * The claim stake on this row, if it is still a bare claim (claim.mjs). `readBeliefs` strips
+ * `claim` from the flag plane, so a stake reads back there as an empty held row; ask the raw flag.
+ */
+function claimOf(fact, characterId) {
+  if (fact.ns === "attr") return readBelief(fact, characterId)?.claim ?? null;
+  return readFlag(fact.ledger, MODULE, BELIEFS_FLAG)?.[characterId]?.[fact.beliefKey]?.claim ?? null;
 }
 
 /**
@@ -143,9 +156,11 @@ export function pending() {
   if (!game.user?.isGM) return [];
   const out = [];
   for (const ledger of game.actors?.contents ?? []) {
+    const raw = readFlag(ledger, MODULE, BELIEFS_FLAG) ?? {};
     for (const [characterId, facts] of Object.entries(beliefsOf(ledger))) {
       for (const [beliefKey, rec] of Object.entries(facts)) {
         if (!rec || rec.delivered) continue;
+        if (raw[characterId]?.[beliefKey]?.claim) continue; // a bare claim is a roll in flight, not a pending reveal (ES-1)
         const parsed = beliefKey === KIND_KEY ? { ns: "kind", fact: KIND_KEY } : parseFactKey(beliefKey);
         if (!parsed) continue; // an unrecognised key is not a pending anything
         /*

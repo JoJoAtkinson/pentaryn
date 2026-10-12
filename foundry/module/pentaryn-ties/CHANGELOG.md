@@ -26,6 +26,37 @@ Added: `inspect(ref, { as })` (the dossier), `selftest()`, `attributes.effective
 (with the kind pointer), `attributes.tree/branch/describeId`, `study.factStatus/shareFact/forgetFact`,
 `study.identified`.
 
+Fixed (declared): a player's **Remove** on the Ties tab now removes the tie in both directions, as its
+confirm says — the active GM's client removes the NPC's row back (relay action `remove-reverse`; the
+sender must own their character and have removed their own side). ties-ui-E3.
+
+Fixed (declared): the Known tab's **notes** keep the last words typed before you click away or close
+the sheet — leaving the box now saves a pending autosave at once instead of dropping it. ties-ui-M1.
+
+Fixed (declared): the chat cards — the "… studies …" stub, the tempo line and the GM's share
+whisper — name every creature by its **token** name, never its actor name, so a GM-only world actor
+name cannot reach player chat. The token is found on any scene, not only the one the posting
+client is viewing (the GM's tab can sit elsewhere); no token on any scene → the prototype token's
+name; the actor name only when there is no token at all. name-leak (play-test TIE-3).
+
+Fixed (declared): the tempo bubble ("… is studying the room") is drawn only over a token the viewer
+can see. A player whose client cannot see the looker's token gets no bubble at that spot, so it no
+longer reveals where a hidden character stands. The GM still sees it, and the chat line still posts. ES-4.
+
+Fixed (declared): the GM's **hold prompt** ("A check came in") names an attribute fact as it does a
+lore row — "The Guild — Held oath — DC 10, rolled 15" — instead of "Tier null on a total of 15"; only
+a kind prints a tier. A held row with no roll behind it (an auto kind, a GM tell) shows its total as
+"—", not "null". EXT-1.
+
+Fixed (declared): a bare **claim row** (the stake a GM client writes before the dice fall, still in
+flight or stranded by a client that closed mid-roll) is no longer listed by `study.pending()` as an
+undelivered reveal, and **Deliver** on one is refused with "Nothing is pending…" instead of spending
+the roll and handing over nothing. `reset` stays the cure for a stranded claim. ES-1, ES-2.
+
+Fixed (declared): a **late claim** — a second GM session's stake that lands after the first session
+already rolled and wrote the answer — no longer wins, so a finished kind or lore fact is never rolled a
+second time over the first answer. The late session hands its stray stake back and stays silent. AC-4.
+
 ## 0.19.4 (2026-10-10, usability run, Area 7 re-run)
 
 - **The inspect window's Share switches are the table's PCs only** (`tablePCs`): each player's

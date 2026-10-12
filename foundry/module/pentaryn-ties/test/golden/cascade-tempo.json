@@ -8,14 +8,14 @@
     {
       "look": 2,
       "emitted": [
-        "ZZ Caven gives a second stranger the once-over. People do notice being measured."
+        "Token zzTokPc000000001 gives a second stranger the once-over. People do notice being measured."
       ],
       "state": 2
     },
     {
       "look": 3,
       "emitted": [
-        "ZZ Caven is looking people up and down."
+        "Token zzTokPc000000001 is looking people up and down."
       ],
       "state": 3
     },
@@ -27,14 +27,14 @@
     {
       "look": 5,
       "emitted": [
-        "Careful now, ZZ Caven."
+        "Careful now, Token zzTokPc000000001."
       ],
       "state": 5
     },
     {
       "look": 6,
       "emitted": [
-        "ZZ Caven looks openly paranoid."
+        "Token zzTokPc000000001 looks openly paranoid."
       ],
       "state": 6
     },

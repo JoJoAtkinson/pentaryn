@@ -62,6 +62,7 @@ import { makeLog } from "./lib/log.mjs";
 const log = makeLog(MODULE);
 
 const MIRROR = "mirror-reverse";
+const UNMIRROR = "remove-reverse";
 
 /**
  * Ask a GM to run the reverse write for a tie the sender has just saved on their own side.
@@ -151,7 +152,55 @@ async function applyMirror(payload, senderId) {
   await write(target, theirs);
 }
 
-/** The relay's one action, on the module socket; only the active GM applies it. */
+/**
+ * Ask a GM to remove the reverse row of a tie the sender has just removed from their own side —
+ * the Ties tab's Remove confirms "in both directions" (ties-ui-E3). Same no-ops as `requestMirror`,
+ * plus one: nothing to ask for when the other side has no row back.
+ */
+export function requestUnmirror({ source, target }) {
+  const skip = reason => {
+    log.debug$?.("unmirror not requested", { reason, sourceId: source?.id ?? null, targetId: target?.id ?? null });
+    return false;
+  };
+  if (!source || !target || source.id === target.id) return skip("no pair");
+  if (target.isOwner) return skip("target owned: removed directly");
+  if (!read(target).some(x => x.id === source.id)) return skip("no reverse row");
+  if (!game.users?.activeGM) return skip("no active GM");
+  send({ action: UNMIRROR, sourceId: source.id, targetId: target.id });
+  return true;
+}
+
+/**
+ * GM side of `requestUnmirror`: remove the target's row about the source, and nothing else.
+ *
+ * The same boundary as `applyMirror` — the server's sender id, ownership of the source, the
+ * kill switch, a target the GM can write — with two differences. The proof is the forward row's
+ * ABSENCE: the sender must already have removed their own side. And there is no reach test: a
+ * removal writes no prose and reveals nothing, the only row it can touch is the one about the
+ * sender's own character, and a player's tie list includes people who are not on the scene.
+ */
+async function applyUnmirror(payload, senderId) {
+  const user = game.users?.get(senderId); // ⚠ the server's word, never the payload's (see applyMirror)
+  const source = game.actors?.get(payload?.sourceId);
+  const target = game.actors?.get(payload?.targetId);
+  const drop = reason => log.debug$?.("relay dropped", { reason, senderId, sourceId: payload?.sourceId ?? null, targetId: payload?.targetId ?? null });
+  if (!user || !source || !target || source.id === target.id) return drop("unknown sender, actor or self pair");
+  if (source.testUserPermission(user, "OWNER") !== true) {
+    log.warn(`relay refused: ${user.name} does not own ${source.name}`);
+    return;
+  }
+  if (!mayWrite(user)) return drop("playerAccess");
+  if (!target.isOwner) return drop("target not owned");
+  if (read(source).some(x => x.id === target.id)) return drop("forward row still there"); // they removed nothing
+  const theirs = read(target);
+  if (!theirs.some(x => x.id === source.id)) return drop("no reverse row");
+  await write(target, theirs.filter(x => x.id !== source.id));
+}
+
+/** The relay's two actions, on the module socket; only the active GM applies them. */
 export function registerRelay() {
-  listen({ [MIRROR]: { run: applyMirror } }, { failed: err => log.error(`relayed mirror write failed`, err) });
+  listen(
+    { [MIRROR]: { run: applyMirror }, [UNMIRROR]: { run: applyUnmirror } },
+    { failed: err => log.error(`relayed mirror write failed`, err) }
+  );
 }

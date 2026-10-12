@@ -156,9 +156,9 @@
       {
         "op": "ChatMessage.create",
         "data": {
-          "content": "<p class=\"pt-study-stub\">ZZ Caven studies ZZ Brakka.</p>",
+          "content": "<p class=\"pt-study-stub\">Token zzTokPc000000001 studies Token zzTokNpc00000001.</p>",
           "speaker": {
-            "alias": "ZZ Caven",
+            "alias": "Token zzTokPc000000001",
             "actor": "zzPc000000000001"
           }
         }
@@ -317,7 +317,7 @@
       {
         "op": "ChatMessage.create",
         "data": {
-          "content": "<p class=\"pt-study-stub\">ZZ Wren studies ZZ Brakka.</p>",
+          "content": "<p class=\"pt-study-stub\">ZZ Wren studies Token zzTokNpc00000001.</p>",
           "speaker": {
             "alias": "ZZ Wren",
             "actor": "zzPc000000000002"
@@ -327,7 +327,7 @@
       {
         "op": "DialogV2.confirm",
         "title": "A check came in",
-        "content": "<p>ZZ Wren studied ZZ Brakka.</p><p class=\"pt-study-hold-meta\">Tier null on a total of 15. Deliver now, or leave it pending and hand it over when the scene arrives.</p><div class=\"pt-study-hold-text\">&lt;p&gt;Second oath.&lt;/p&gt;</div>"
+        "content": "<p>ZZ Wren studied ZZ Brakka.</p><p class=\"pt-study-hold-meta\">The Guild — Held oath — DC 10, rolled 15</p><div class=\"pt-study-hold-text\">&lt;p&gt;Second oath.&lt;/p&gt;</div>"
       }
     ],
     "console": []

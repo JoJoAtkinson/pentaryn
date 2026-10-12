@@ -24,7 +24,7 @@ import {
 import { claimFact, dropRow, releaseFact } from "./claim.mjs";
 import { promptDeliver } from "./gate.mjs";
 import { beliefsOf, resolveFact, stackingRule, studiedOf } from "./resolve.mjs";
-import { clampSituational, esc, log } from "./shared.mjs";
+import { cardName, cardToken, clampSituational, esc, log } from "./shared.mjs";
 import { readFlag } from "../lib/flags.mjs";
 import { setting, mayWrite, attrBeliefsStore } from "../settings.mjs";
 
@@ -454,8 +454,9 @@ export function knownListWith(character, entryActor, now) {
  * turn its presence into the answer.
  */
 export async function postStub(character, subject) {
+  // both creatures by their token names, never the actor names (TIE-3)
   await ChatMessage.create({
-    content: `<p class="pt-study-stub">${esc(_loc("PENTARYN_TIES.known.study.stub", { character: character.name, subject: subject.name }))}</p>`,
-    speaker: ChatMessage.getSpeaker({ actor: character })
+    content: `<p class="pt-study-stub">${esc(_loc("PENTARYN_TIES.known.study.stub", { character: cardName(character), subject: cardName(subject) }))}</p>`,
+    speaker: { ...ChatMessage.getSpeaker({ actor: character, token: cardToken(character) }), alias: cardName(character) }
   });
 }

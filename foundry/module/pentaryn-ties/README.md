@@ -23,7 +23,8 @@ word, stance (−2 hostile … +2 devoted), strength (1–5) and notes in place.
 A tie is **directed**: an actor's array says what *that actor* is to each person listed. Saving writes
 your side and seeds theirs; a blank reverse box keeps following yours, typed text diverges, emptying
 it re-links. A player cannot write to an NPC, so their client asks the active GM to fill the blank
-reverse side (the relay — never overwrites written text).
+reverse side (the relay — never overwrites written text). Removing a tie removes both directions; for
+a player the GM's client removes the NPC's row back (the relay's `remove-reverse`).
 
 **Known.** A second tab, on character sheets only: one page per creature or person they have met,
 filed under Sentient or Beasts. **`5`** files whoever you hover and opens the page. **What is this?**
@@ -129,7 +130,7 @@ The **active GM** (`isActiveGM()`, a *user*) applies every relayed write — the
 the study conduit on the `module.pentaryn-ties` socket. One GM account can be signed in twice (the MCP
 bridge tab and a browser), and both are the active GM, so the conduit **stakes a claim** before it rolls
 (`stakeAndConfirm` in `study/claim.mjs`: write a token, wait 250 ms, read it back) and only the winning
-tab rolls. The relay needs no claim: it only fills blanks, so a second application changes nothing. The
+tab rolls. The relay needs no claim: it only fills blanks or removes one row, so a second application changes nothing. The
 stub card and the tempo bubble are posted by the client that made the gesture. World-setting stores
 are GM-written; the registry queues its writes one at a time.
 

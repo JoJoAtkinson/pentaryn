@@ -4,8 +4,9 @@
  * Split out of study.mjs (S4b, ties-35); study.mjs re-exports this file's public names.
  */
 
-import { BUBBLE, esc, log } from "./shared.mjs";
+import { BUBBLE, cardName, esc, log } from "./shared.mjs";
 import { send } from "../socket-adapter.mjs";
+import { canSee } from "../ties-adapter.mjs";
 
 /* -------------------------------------------- */
 /*  The tempo tell — scoping a crowd shows      */
@@ -124,7 +125,8 @@ export async function announceTempo(character) {
   if (!own) return;
   const line = scopeTell(character, own);
   if (!line) return;
-  const text = _loc(SCOPE_STEPS.find(s => s.key === line).label, { name: character.name });
+  // the token name the table sees, never the actor name (TIE-3)
+  const text = _loc(SCOPE_STEPS.find(s => s.key === line).label, { name: own.document.name || cardName(character) });
 
   broadcastBubble(own.id, canvas.scene?.id, text);
 
@@ -142,7 +144,7 @@ export async function announceTempo(character) {
   await ChatMessage.create({
     content: `<p class="pt-tempo-line">${esc(text)}</p>`,
     style: CONST.CHAT_MESSAGE_STYLES.EMOTE,
-    speaker: ChatMessage.getSpeaker({ actor: character })
+    speaker: { ...ChatMessage.getSpeaker({ actor: character, token: own.document }), alias: own.document.name || cardName(character) }
   });
 }
 
@@ -164,13 +166,17 @@ const SCOPE_BUBBLE_MS = 5000;
  * Placement mirrors core's own math (`#chat-bubbles` is canvas-transformed, so token document
  * coordinates are the right space) and the `chat-bubble` class is reused, so it inherits the
  * table's own speech-bubble look and stays consistent with everything else on the canvas.
+ *
+ * ⚠ Never over a token this viewer cannot see (`canSee`: the GM sees all, a player needs
+ * `isVisible`). The broadcast reaches every client, and a bubble pinned to a hidden token's spot
+ * would show the table where it stands. The chat line still posts; only the bubble is withheld. ES-4.
  */
 export function showBubble({ tokenId, sceneId, text }) {
   try {
     if (canvas?.scene?.id !== sceneId) return;
     const token = canvas.tokens?.get(tokenId);
     const container = document.getElementById("chat-bubbles");
-    if (!token || !container) return;
+    if (!token || !container || !canSee(token)) return;
 
     // one tell per token at a time — a fast second look replaces the first rather than stacking
     container.querySelector(`.pt-tempo[data-pt-token="${tokenId}"]`)?.remove();

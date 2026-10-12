@@ -86,16 +86,22 @@ export async function releaseFact(fact, characterId) {
   return releaseClaim(fact.ledger, characterId, fact.beliefKey);
 }
 
+/** A row that holds a finished record (writeBelief), not just a stake's `{ claim, when }`. */
+const isRecord = row => !!row && Object.keys(row).some(k => k !== "claim" && k !== "when");
+
 async function claimRoll(ledger, characterId, now, key = KIND_KEY) {
   const mine = session();
-  return stakeAndConfirm({
-    write: () => ledger.update(
-      { [`flags.${MODULE}.${BELIEFS_FLAG}.${characterId}.${key}`]: { claim: mine, when: now } },
-      { render: false }
-    ),
-    readBack: () => readFlag(ledger, MODULE, BELIEFS_FLAG)?.[characterId]?.[key]?.claim,
+  const path = `flags.${MODULE}.${BELIEFS_FLAG}.${characterId}.${key}`;
+  const row = () => readFlag(ledger, MODULE, BELIEFS_FLAG)?.[characterId]?.[key];
+  const won = await stakeAndConfirm({
+    write: () => ledger.update({ [path]: { claim: mine, when: now } }, { render: false }),
+    // a late stake merges into a row another session already finished: it loses, or the fact rolls twice (AC-4)
+    readBack: () => (isRecord(row()) ? null : row()?.claim),
     token: mine
   });
+  // and hands its stray stake back, so the finished record does not read as a roll in flight (gate.mjs)
+  if (!won && isRecord(row()) && row().claim === mine) await ledger.update({ [`${path}.claim`]: null }, { render: false });
+  return won;
 }
 
 /**
