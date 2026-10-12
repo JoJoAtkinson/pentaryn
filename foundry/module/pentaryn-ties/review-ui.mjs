@@ -71,6 +71,12 @@ const FIELD_LABEL = Object.freeze({
   skill: "PENTARYN_TIES.review.field.skill",
   dc: "PENTARYN_TIES.review.field.dc"
 });
+/** The entry's hold state (`hold` true / false / unset). */
+const HOLD_LABEL = Object.freeze({
+  held: "PENTARYN_TIES.review.hold.held",
+  notHeld: "PENTARYN_TIES.review.hold.notHeld",
+  default: "PENTARYN_TIES.review.hold.default"
+});
 
 const { ApplicationV2 } = foundry.applications.api;
 
@@ -415,7 +421,7 @@ export class AttributeReview extends ApplicationV2 {
     const others = ["parent", "secret", "whenKnown", "whenCarried", "hold"].map(k => was(k, e[k], k)).join("");
     const carriersShown = who.slice(0, CARRIERS_SHOWN).map(esc).join(", ");
     const more = who.length > CARRIERS_SHOWN ? ` ${esc(_loc("PENTARYN_TIES.review.more", { n: who.length - CARRIERS_SHOWN }))}` : "";
-    const hold = esc(_loc(`PENTARYN_TIES.review.hold.${e.hold === true ? "held" : e.hold === false ? "notHeld" : "default"}`));
+    const hold = esc(_loc(HOLD_LABEL[e.hold === true ? "held" : e.hold === false ? "notHeld" : "default"]));
     const rel = `<dl class="pt-review-rel">
       <dt>${esc(_loc("PENTARYN_TIES.review.parent"))}</dt><dd>${
         e.parent ? `${esc(parent?.title ?? "?")} <code>${esc(e.parent)}</code>${parent ? "" : ` ${esc(_loc("PENTARYN_TIES.review.dangling"))}`}` : esc(_loc("PENTARYN_TIES.review.root"))

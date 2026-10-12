@@ -90,6 +90,12 @@ const SKIP_LABEL = Object.freeze({
   notCarried: "PENTARYN_TIES.known.share.skip.notCarried",
   notTold: "PENTARYN_TIES.known.share.skip.notTold"
 });
+/** The simulator's proficiency choices (literal keys). */
+const PROF_LABEL = Object.freeze({
+  none: "PENTARYN_TIES.preview.prof.none",
+  prof: "PENTARYN_TIES.preview.prof.prof",
+  expert: "PENTARYN_TIES.preview.prof.expert"
+});
 
 const { ApplicationV2 } = foundry.applications.api;
 
@@ -340,7 +346,7 @@ export class InspectPreview extends ApplicationV2 {
     const opt = this.rollerOptions().map(o => `<option value="${o.id}" ${o.id === this.roller ? "selected" : ""}>${esc(o.name)}</option>`).join("");
     const levels = Array.from({ length: 20 }, (_, i) => i + 1).map(l => `<option ${l === this.level ? "selected" : ""}>${l}</option>`).join("");
     const abil = [-1, 0, 1, 2, 3, 4, 5].map(m => `<option value="${m}" ${m === this.ability ? "selected" : ""}>${m >= 0 ? "+" : ""}${m}</option>`).join("");
-    const profs = ["none", "prof", "expert"].map(v => [v, _loc(`PENTARYN_TIES.preview.prof.${v}`)])
+    const profs = Object.entries(PROF_LABEL).map(([v, key]) => [v, _loc(key)])
       .map(([v, l]) => `<option value="${v}" ${v === this.prof ? "selected" : ""}>${l}</option>`).join("");
     const hypo = this.roller === "hypo";
     const bonus = this.ability + pb(this.level) * PROF[this.prof];
