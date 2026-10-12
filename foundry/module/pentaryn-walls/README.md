@@ -99,7 +99,9 @@ GM tabs each publish their own API; a run in one does not lock the other.
 - **A rule:** add it in `core/engine.mjs` `enumerate()` with its `PRIORITY`, add a fixture to
   `test/fixtures/corpus.mjs`, then either mirror it in `wasm/src/lib.rs` (rebuild with
   `make foundry-walls-wasm`) or make `runWasm` delegate the case to js, as it does for Levels.
-  The JS engine is the reference: change it first, then port.
+  The JS engine is the reference: change it first, then port. Give it a refusal reason in
+  `diagnose()` (it re-checks F1/F2 by hand), and a new act kind also needs `applyInstance()` and
+  the batch box (`boxOf`) in `runEngine`.
 - **A backend:** `register({name, run(walls, opts), available()})` from its own adapter file,
   returning the `runEngine` shape. `compare()` then diffs it against js, the bench gains a column,
   and `node test/corpus.mjs --backend=<name>` runs the corpus on it.
