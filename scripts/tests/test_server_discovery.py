@@ -419,3 +419,72 @@ def test_log_month_is_taken_per_call(monkeypatch, tmp_path):
     _call(monkeypatch, _runner(lambda **k: "ok"), {})
     assert sorted(p.name for p in tmp_path.iterdir()) == [
         "dnd-scripts-2026-10.jsonl", "dnd-scripts-2026-11.jsonl"]
+
+
+# ---------------------------------------------------------------------------
+# py-mcp-ac-6: the stdin serve loop (inline replies, admission control, slots)
+# ---------------------------------------------------------------------------
+
+class _SyncExecutor:
+    """Runs each submitted call at once, so the serve loop is deterministic."""
+
+    def submit(self, fn, *args):
+        fn(*args)
+
+
+def _serve(monkeypatch, messages, runners=(), slots=2):
+    sent = []
+    feed = iter([*messages, None])
+    monkeypatch.setattr(server, "_read_message", lambda: next(feed))
+    monkeypatch.setattr(server, "_write_message", sent.append)
+    monkeypatch.setattr(server, "_inflight_slots", server.threading.Semaphore(slots))
+    monkeypatch.delenv("PENTARYN_MCP_LOG_DIR", raising=False)
+    tools = tuple(r.tool for r in runners)
+    by_name = {r.tool.name: r for r in runners}
+    assert server._serve_loop(tools, by_name, _SyncExecutor()) == 0
+    return sent
+
+
+def test_serve_loop_inline_payloads_pinned(monkeypatch):
+    """Characterisation: initialize echoes any requested version (EC-7), and the
+    inline error envelopes for an unknown method and an unknown tool."""
+    sent = _serve(monkeypatch, [
+        {"jsonrpc": "2.0", "id": 1, "method": "initialize",
+         "params": {"protocolVersion": "1999-01-01"}},
+        {"jsonrpc": "2.0", "id": 2, "method": "tools/list"},
+        {"jsonrpc": "2.0", "id": 3, "method": "nope"},
+        {"jsonrpc": "2.0", "id": 4, "method": "tools/call", "params": {"name": "x"}},
+        {"jsonrpc": "2.0", "method": "notifications/initialized"},
+    ], runners=(_runner(lambda **k: "ok"),))
+    assert sent == [
+        {"jsonrpc": "2.0", "id": 1, "result": {
+            "protocolVersion": "1999-01-01",
+            "capabilities": {"tools": {"listChanged": False}},
+            "serverInfo": {"name": "dnd-scripts", "version": "0.1.0"}}},
+        {"jsonrpc": "2.0", "id": 2, "result": {"tools": [
+            {"name": "probe", "description": "", "inputSchema": {}}]}},
+        {"jsonrpc": "2.0", "id": 3,
+         "error": {"code": -32601, "message": "Method not found: nope"}},
+        {"jsonrpc": "2.0", "id": 4,
+         "error": {"code": -32000, "message": "Unknown tool: x"}},
+    ]
+
+
+def test_serve_loop_busy_reply_when_slots_exhausted(monkeypatch):
+    calls = []
+    sent = _serve(monkeypatch, [
+        {"jsonrpc": "2.0", "id": 5, "method": "tools/call", "params": {"name": "probe"}},
+    ], runners=(_runner(lambda **k: calls.append(k) or "ok"),), slots=0)
+    assert calls == []
+    assert len(sent) == 1 and sent[0]["id"] == 5
+    assert sent[0]["error"]["code"] == -32000
+    assert sent[0]["error"]["message"].startswith("Server busy: ")
+
+
+def test_serve_loop_releases_slots(monkeypatch):
+    call = {"jsonrpc": "2.0", "method": "tools/call", "params": {"name": "probe"}}
+    sent = _serve(monkeypatch, [{**call, "id": i} for i in (1, 2, 3)],
+                  runners=(_runner(lambda **k: "ok"),), slots=2)
+    assert [m["id"] for m in sent] == [1, 2, 3]
+    assert all("result" in m for m in sent)
+    assert server._inflight_slots._value == 2
