@@ -440,6 +440,9 @@ export function buildReport({ id, t, draft, snapshot = {}, actions = [], errors 
 
 const ID = /^[A-Za-z0-9]{16}$/;
 
+/** True for a report id: a string of exactly 16 letters or digits. */
+export const isReportId = id => typeof id === "string" && ID.test(id);
+
 /** Serialised size in bytes (UTF-8), or Infinity when it cannot be serialised. */
 export function byteSize(value) {
   try {
@@ -478,7 +481,7 @@ export function fitReport(report, max = LIMITS.bytes) {
 export function validateReport(report) {
   if (!report || typeof report !== "object" || Array.isArray(report)) return { ok: false, reason: "not an object" };
   if (report.schemaVersion !== SCHEMA_VERSION) return { ok: false, reason: `schemaVersion ${report.schemaVersion} is not ${SCHEMA_VERSION}` };
-  if (typeof report.id !== "string" || !ID.test(report.id)) return { ok: false, reason: "id must be 16 letters or digits" };
+  if (!isReportId(report.id)) return { ok: false, reason: "id must be 16 letters or digits" };
   if (!Number.isFinite(report.t)) return { ok: false, reason: "t must be a timestamp" };
   if (!CATEGORY_KEYS.includes(report.category)) return { ok: false, reason: `category must be one of ${CATEGORY_KEYS.join(", ")}` };
   if (typeof report.text !== "string" || !report.text.trim()) return { ok: false, reason: "text is empty" };

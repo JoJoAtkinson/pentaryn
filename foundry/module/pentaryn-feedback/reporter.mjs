@@ -19,6 +19,7 @@
 
 import {
   FLAG_SCOPE, LIMITS, MODULE, QUEUE_KEY, admit, buildReport, categoryOf, draftFrom, fitReport,
+  isReportId,
   normaliseReport, parseBugCommand, queueTrim, reportPath, userFieldsOf, validateReport,
 } from "./feedback-core.mjs";
 import { ReportDialog } from "./dialog.mjs";
@@ -264,7 +265,7 @@ export function install(reg, ctx) {
     try {
       const { filed, refused } = await ingestUser(user);
       const done = [];
-      const asked = (Array.isArray(ids) ? ids : []).filter(id => typeof id === "string" && /^[A-Za-z0-9]{16}$/.test(id));
+      const asked = (Array.isArray(ids) ? ids : []).filter(isReportId);
       const waiting = queueOf(user);
       const refusedIds = new Set(refused.map(r => r.id));
       for (const id of asked.slice(0, LIMITS.queueMax)) {

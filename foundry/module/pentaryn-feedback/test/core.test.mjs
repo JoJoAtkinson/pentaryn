@@ -334,6 +334,16 @@ test("admit: a burst of 5, then one per 5 s; a refusal says how long to wait", (
   assert.equal(core.admit({ tokens: "x" }, 5).ok, true, "a junk bucket starts full");
 });
 
+test("isReportId: 16 letters or digits only", () => {
+  assert.equal(core.isReportId("k3Yx9Qp2LmN7aB4c"), true);
+  assert.equal(core.isReportId("k3Yx9Qp2LmN7aB4"), false);
+  assert.equal(core.isReportId("k3Yx9Qp2LmN7aB4cd"), false);
+  assert.equal(core.isReportId("abcdefghijklmno_"), false);
+  assert.equal(core.isReportId("../xxxxxxxxxxxxx"), false);
+  assert.equal(core.isReportId(null), false);
+  assert.equal(core.isReportId(42), false);
+});
+
 test("validateReport: a good report passes; each broken field is named", () => {
   assert.deepEqual(core.validateReport(sample()), { ok: true });
   const broken = [
