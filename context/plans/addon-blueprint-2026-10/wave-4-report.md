@@ -221,3 +221,21 @@ press Dis while swing 1's window is open, roll it — swing 2 opens on Disadvant
 combat clears every combatant's turn / Reaction flags (one update per actor in the console). D-c1:
 console only. Argon render order (four listeners across combat and transform) unchanged: watch the
 Action bar after a Wild Shape.
+
+### Integrator — combat (review, 2026-10-11)
+
+Shared or other-lane files. Each item is an exact edit for the integrator.
+
+- **`foundry/module/pentaryn-combat/module.json` `description`** (Wave 7 module.json batch, with
+  flags.pentaryn, version 0.3.0, compatibility.verified and styles; combat-riders-15). Insert before
+  ` Every change is a setting.`:
+  ` On the turn: Dash, Disengage, Dodge, Hide, Ready and Shove spend the Action; the Reaction slot is an
+  Opportunity Attack; Action and Reaction spells grey their pips; after Quickened Spell the next spell
+  spends the Bonus pip; the HUD follows your creature at turn start, and goes back to your caster when
+  an area handle or summon you had selected is deleted.` (one line in the JSON string).
+- **`foundry/module/pentaryn-aoe/README.md:128`** (aoe lane or integrator): `` (no turn for a helper
+  token, `turnflow.mjs`) `` → `` (no turn for a helper token, `turnflow/helper-token.mjs` through
+  `shapes.isAoeHandle`) ``. combat's `turnflow.mjs` was split in S6c (`8a29ed7f`).
+- **`foundry/module/pentaryn-aoe/test/fixtures/handle-oracle.json` `about`** (aoe lane or
+  integrator): `combat's turnflow` → `combat's turnflow/helper-token.mjs (shapes.isAoeHandle)`. Only
+  the `about` string changes, no row or column.

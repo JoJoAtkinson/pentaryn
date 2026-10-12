@@ -905,7 +905,7 @@ test/api-manifest.mjs: buildApi(stubs); assert METHODS.map(m=>m.name).sort() dee
 
 **Status (28ccc87):** open (re-anchored; partly addressed by the re-run's README edits, the drift items remain)
 
-**Status (wave 4, `migrate/wave-4`, 2026-10-11):** README part done `b936d9f6`; melee.md:21 and module.json drift returned to the integrator.
+**Status (wave 4, `migrate/wave-4`, 2026-10-11):** README part done `b936d9f6`; melee.md:21 and module.json drift returned to the integrator (the `description` sentence is in the wave-4 report's "Integrator — combat" list, with the Wave 7 module.json batch).
 
 **Where:** `foundry/module/pentaryn-combat/README.md:158–166`
 
