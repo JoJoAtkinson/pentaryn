@@ -33,6 +33,10 @@
   },
   {
     "kind": "on",
+    "name": "preMoveToken"
+  },
+  {
+    "kind": "on",
     "name": "dnd5e.renderChatMessage"
   },
   {

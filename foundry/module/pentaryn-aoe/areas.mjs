@@ -364,6 +364,14 @@ export function install(reg, ctx) {
     if (targeted && user === game.user && isHandle(token.document)) token.setTarget(false, { releaseOthers: false });
   }), { guard: false, label: "targetToken" });
 
+  // A handle drag moves its area, never turns it ([declared], PT AO-3). Core's tokenAutoRotate
+  // turns a dragged token to face the way it went (lockRotation only stops the mesh turning), and
+  // an attached region turns with its token: a Burning Hands cone aimed south-east swung north when
+  // its handle was dragged north-east. Row core-token-auto-rotate-handle.
+  reg.on("preMoveToken", (token, movement) => {
+    if (movement?.autoRotate && isHandle(token)) movement.autoRotate = false;
+  }, { guard: false, label: "preMoveToken" });
+
   reg.on("dnd5e.renderChatMessage", reg.guardSwallowAsync("renderChatMessage(remove)", decorateCard), { guard: false, label: "renderChatMessage(remove)" });
 
   // Concentration ends → that spell's areas go, on every scene.

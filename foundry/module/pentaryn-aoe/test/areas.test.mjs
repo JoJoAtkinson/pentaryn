@@ -284,6 +284,19 @@ test("targetToken: this user's target on a handle is released at once; another u
   assert.deepEqual(ops("setTarget"), [{ op: "setTarget", id: h.id, on: false, o: { releaseOthers: false } }]);
 });
 
+test("[declared] preMoveToken: a handle drag never auto-rotates, so its attached area keeps its direction; a creature's move is untouched", () => {
+  const s = W.scene({ id: "RotateScene00001" });
+  const h = W.token(s, { id: "handleRot0000001", flags: { [MODULE]: { handle: true } } });
+  const c = W.token(s, { id: "creatureRot00001" });
+  const hm = { method: "dragging", autoRotate: true };
+  const cm = { method: "dragging", autoRotate: true };
+  F.fire("preMoveToken", h, hm, {});
+  F.fire("preMoveToken", c, cm, {});
+  assert.equal(hm.autoRotate, false);
+  assert.equal(cm.autoRotate, true);
+  assert.equal(F.fireCall("preMoveToken", h, { autoRotate: true }, {}), true, "never vetoes the move");
+});
+
 /* ── "Remove all templates" on the usage card ─────────────────────────────────────────────────── */
 
 const ACTIONS = `<div class="chat-card"><section class="icon-row"><ul class="pills unlist"><li>V</li></ul></section><section class="icon-row"><ul class="unlist"><li><button data-action="placeTemplate">P</button></li><li><button data-action="consume">C</button></li></ul></section></div>`;

@@ -1,5 +1,12 @@
 # Changelog — Pentaryn AoE (`pentaryn-aoe`)
 
+## Unreleased
+
+- **A handle drag keeps the area's direction** (declared, play test AO-3, 2026-10-12): handle moves
+  are made with `autoRotate: false` (`preMoveToken`). Core's `tokenAutoRotate` turned the dragged
+  handle to face its path, and the attached region turned with it (a cone aimed south-east swung
+  north). Row `core-token-auto-rotate-handle`.
+
 ## 0.4.0 — 2026-10-12 (migrated to the addon blueprint, wave 4; released by the Wave 7 restart batch)
 
 The Wave 7 batch bumped `module.json` and `core.VERSION` to 0.4.0 together and added the

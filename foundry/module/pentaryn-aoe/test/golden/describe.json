@@ -682,6 +682,10 @@
       "label": "targetToken"
     },
     {
+      "name": "preMoveToken",
+      "label": "preMoveToken"
+    },
+    {
       "name": "dnd5e.renderChatMessage",
       "label": "renderChatMessage(remove)"
     },

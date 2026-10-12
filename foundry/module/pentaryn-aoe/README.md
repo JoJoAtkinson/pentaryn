@@ -16,8 +16,9 @@ dnd5e 6 only. Chat data is read from typed messages (`message.type` `usage` / `a
 
 - **Part A — areas you can move and delete** (`areas.mjs`). Every template region is owned by
   everyone and gets a small handle token (`_id` = the region's id) it is attached to: drag the
-  handle to move the area, delete it to delete the area; deleting the area deletes the handle. An
-  emanation dnd5e attached to its caster gets no handle. Handles are never combatants and never stay
+  handle to move the area (it keeps its direction: a handle never auto-rotates), delete it to
+  delete the area; deleting the area deletes the handle. An emanation dnd5e attached to its caster
+  gets no handle. Handles are never combatants and never stay
   targeted. The spell card gets an eraser icon after *Place Template*: **Remove all templates** of
   that spell on the viewed scene. When concentration ends, that spell's areas go on every scene.
 - **Part B — saves off the area** (`resolve.mjs`, `tray.mjs`). A damage roll from a save activity
@@ -142,7 +143,7 @@ Patches (kit `wrapMethod`, listed by `describe().patches`, undone by `uninstall(
 `ui.ARGON.bind` (marker `_aoeGuard`, row `aoe-argon-handle-bind`: Argon never binds its HUD to a
 handle) and `RegionLayer.prototype.placeRegions` (marker `Symbol.for("pentaryn-aoe.aimWrapped")`,
 row `aoe-self-area-aim`: Part G's `onMove`). Non-patch rows: `core-region-placement-escape`,
-`core-region-delete-handle-race`, `core-private-roll-rows-hidden`, `dnd5e-chat-message-types`,
+`core-region-delete-handle-race`, `core-token-auto-rotate-handle`, `core-private-roll-rows-hidden`, `dnd5e-chat-message-types`,
 `dnd5e-legacy-roll-modes`, `dnd5e-token-size-lock`, `dnd5e-careful-spell-protected-rows`,
 `dnd5e-supersede-same-usage`, `dnd5e-untargeted-touch-self`, `dnd5e-same-spell-no-stack`,
 `dnd5e-cancelled-area-refund`, and for Item Piles `itempiles-aoe-skip-piles` (in the adjustments

@@ -649,6 +649,17 @@ adjustments:
     retire_class: safe
     check: make foundry-aoe-check
 
+  - id: core-token-auto-rotate-handle
+    packages: [core]
+    modules: [pentaryn-aoe]
+    files: [foundry/module/pentaryn-aoe/areas.mjs]
+    markers: ["core-token-auto-rotate-handle"]
+    what: a spell-area handle's move is made with autoRotate false (preMoveToken), so dragging a handle moves its area without turning it
+    why: core's tokenAutoRotate turns a dragged token to face its path even with lockRotation, and an attached region turns with its token; a Burning Hands cone aimed south-east swung north when its handle was dragged (play test AO-3, 2026-10-12)
+    native_when: core skips auto-rotation for a token with lockRotation, or attached regions stop inheriting token rotation
+    retire_class: safe
+    check: make foundry-aoe-check
+
   - id: core-region-delete-handle-race
     packages: [core]
     modules: [pentaryn-aoe]

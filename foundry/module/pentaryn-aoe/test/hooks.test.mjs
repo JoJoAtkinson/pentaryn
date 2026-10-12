@@ -40,7 +40,7 @@ test("registration manifest (init + setup + ready as the active GM) equals golde
 
 test("setup registers the feature hooks in Part order: areas, resolve, tray, attacks, effects, refund, aim", () => {
   assert.deepEqual(atSetup.map(h => `${h.kind} ${h.name}`), [
-    "on preCreateRegion", "on createRegion", "on deleteRegion", "on preCreateCombatant", "on targetToken",
+    "on preCreateRegion", "on createRegion", "on deleteRegion", "on preCreateCombatant", "on targetToken", "on preMoveToken",
     "on dnd5e.renderChatMessage", "on deleteActiveEffect",
     "on dnd5e.postUseActivity", "on deleteCombat", "on createChatMessage", "on updateChatMessage",
     "on dnd5e.renderChatMessage",
