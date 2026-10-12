@@ -336,9 +336,10 @@ export function install(reg, ctx) {
     schedule();
   });
   on("updateToken", (doc, changes) => {
-    const chainChanged = foundry.utils.getProperty(changes ?? {}, `flags.${MODULE}`) !== undefined;
-    if (chainChanged) forgetPairs(doc);
-    if (chainChanged || "hidden" in (changes ?? {}) || "elevation" in (changes ?? {})) schedule();
+    // The whole flag scope is tested on purpose: a chain deletion arrives as `-=chain` / `_del`, which a narrow `flags.<scope>.chain` path test would miss.
+    const ourFlagsChanged = foundry.utils.getProperty(changes ?? {}, `flags.${MODULE}`) !== undefined;
+    if (ourFlagsChanged) forgetPairs(doc);
+    if (ourFlagsChanged || "hidden" in (changes ?? {}) || "elevation" in (changes ?? {})) schedule();
   });
   on("renderTokenHUD", (app, element) => injectHUD(app, element));
 
