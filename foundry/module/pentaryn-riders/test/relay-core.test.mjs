@@ -25,3 +25,12 @@ test("relayPrune: keep the newest keep-1 others by `at`, delete the rest; the cu
   assert.deepEqual(relayPrune({ x: {} }, "new", 5), []);
   assert.deepEqual(relayPrune(undefined, "new"), []);
 });
+
+test("relayPrune: another request still being claimed (no `at`, a fresh stamp) is never pruned; one whose stamps are all stale is", () => {
+  const entries = Object.fromEntries([1, 2, 3, 4, 5].map(i => [`r${i}`, { at: NOW + i }]));
+  entries.open = { claims: { A: NOW - 5 } };
+  entries.dead = { claims: { B: NOW - 120_000 } };
+  assert.deepEqual(relayPrune(entries, "r6", 5, NOW).sort(), ["dead", "r1"]);
+  assert.deepEqual(relayPrune(entries, "r6", 5).sort(), ["r1"], "no clock: every open entry is kept");
+  assert.deepEqual(relayPrune({ ...entries, r5: { at: NOW + 5, result: {}, claims: { A: NOW } } }, "r6", 5, NOW).sort(), ["dead", "r1"], "a recorded entry is not open");
+});

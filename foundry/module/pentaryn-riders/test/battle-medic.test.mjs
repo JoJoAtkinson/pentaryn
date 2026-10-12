@@ -382,3 +382,21 @@ test("combat-riders-41 [declared]: a GM tab whose relay starts after the winner 
     F.become({ socketId: "socket-gm-1" });
   }
 });
+
+test("combat-riders-41: a record's pruning keeps another request still being claimed on the same patient", async () => {
+  const spent = npc.system.attributes.hd.spent;
+  npc.system.attributes.hd.spent = 0;
+  npc.system.attributes.hp.value = 10;
+  await npc.update({ [`flags.${MODULE}.relay.relayreqinflight1`]: { claims: { "socket-tab-Z": Date.now() } } });
+  for (let i = 0; i < 6; i++) {
+    npc.system.attributes.hd.spent = 0;
+    mock.timers.tick(1);
+    await relay(payload({ amount: 1, requestId: `relayreqprune00${i}` }), { user: W.player });
+  }
+  const kept = Object.keys(npc.flags[MODULE].relay).sort();
+  assert.ok(kept.includes("relayreqinflight1"), "the open entry survives six records");
+  assert.deepEqual(npc.flags[MODULE].relay.relayreqinflight1.claims, { "socket-tab-Z": Date.now() - 6 });
+  assert.deepEqual(kept.filter(id => id !== "relayreqinflight1"), ["relayreqprune001", "relayreqprune002", "relayreqprune003", "relayreqprune004", "relayreqprune005"], "the five newest records");
+  npc.system.attributes.hd.spent = spent;
+  W.take(); W.takeLog();
+});

@@ -243,7 +243,7 @@ async function claimedHeal(target, requestId, me, heal) {
   const record = fields => {
     const update = { [mine]: _del, [flagPath(MODULE, `${base}.at`)]: Date.now() };
     for (const [k, v] of Object.entries(fields)) update[flagPath(MODULE, `${base}.${k}`)] = v;
-    for (const id of relayPrune(readFlag(target, MODULE, "relay"), requestId, KEEP_RELAYS)) update[flagPath(MODULE, `relay.${id}`)] = _del;
+    for (const id of relayPrune(readFlag(target, MODULE, "relay"), requestId, KEEP_RELAYS, Date.now(), CLAIM_STALE_MS)) update[flagPath(MODULE, `relay.${id}`)] = _del;
     return target.update(update);
   };
   let result;

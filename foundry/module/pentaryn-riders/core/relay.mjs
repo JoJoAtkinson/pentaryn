@@ -29,11 +29,16 @@ export function relayClaimWinner(claims, me, now, staleMs = 60_000) {
 
 /**
  * The request ids to delete when `keepId` records its result: all but the newest `keep - 1` others
- * (by their `at`), so the patient carries at most `keep` relay entries.
- * @param {Record<string, { at?: number }>} entries  `flags.pentaryn-riders.relay` as read
+ * (by their `at`), so the patient carries at most `keep` relay entries. An entry still being
+ * claimed (no `at` yet, a fresh stamp: another request in flight on the same patient) is never
+ * deleted: a slow tab's stamp would then recreate it holding only itself, win, and heal a second
+ * time. An open entry whose stamps are all stale (its tabs died) is pruned like the oldest.
+ * @param {Record<string, { at?: number, claims?: Record<string, number> }>} entries  `flags.pentaryn-riders.relay` as read
+ * @param {number|null} [now]  without it, any stamp on an open entry counts as fresh
  */
-export function relayPrune(entries, keepId, keep = 5) {
-  const others = Object.entries(entries ?? {}).filter(([id]) => id !== keepId);
+export function relayPrune(entries, keepId, keep = 5, now = null, staleMs = 60_000) {
+  const open = e => !Number(e?.at) && Object.values(e?.claims ?? {}).some(at => now === null || now - Number(at) < staleMs);
+  const others = Object.entries(entries ?? {}).filter(([id, e]) => id !== keepId && !open(e));
   others.sort((a, b) => (Number(b[1]?.at) || 0) - (Number(a[1]?.at) || 0));
   return others.slice(Math.max(0, keep - 1)).map(([id]) => id);
 }
