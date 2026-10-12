@@ -80,3 +80,54 @@ test("EC-2: Delete during a swap removes the marker the swap made (no orphan)", 
   assert.equal(markers().length, before - 1, "both the old and the swapped marker are gone");
   assert.ok(![...F.s1.tokens.values()].some(t => t.flags?.[MODULE]?.swappedFrom === tok.id));
 });
+
+/**
+ * R4 (final review 2026-10-12, prompts-adapters): #onSize did not re-check the marker after its
+ * awaits. A marker deleted elsewhere while the swap built the new marker's data still got a new
+ * marker made (an orphan, the dialog already closed); one deleted while the new marker was being
+ * created was deleted a second time. Now the swap stops when the marker it started from is gone,
+ * and once the new marker exists it is left in place with no second delete and no re-render.
+ */
+async function midSwap(app, op, act) {
+  let fired = false;
+  const push = F.calls.push;
+  F.calls.push = function (c) {
+    const r = push.call(this, c);
+    if (c?.op === op && !fired) { fired = true; act(); }
+    return r;
+  };
+  try { await size.call(app, {}, { dataset: { size: "large" } }); } finally { F.calls.push = push; }
+  return fired;
+}
+
+test("R4: a marker deleted elsewhere while the swap builds its data gets no new marker", async t => {
+  t.mock.timers.enable({ apis: ["setTimeout", "Date"], now: NOW });
+  const tok = await fresh("r4-data", "a cart");
+  const before = markers().length;
+  const app = await PromptDialog.open(tok);
+  const n0 = F.calls.length;
+  const fired = await midSwap(app, "getTokenDocument", () => { F.s1.deleteEmbeddedDocuments("Token", [tok.id]); });
+  assert.ok(fired, "the marker was deleted mid-swap");
+  await app.close();
+  const calls = F.calls.slice(n0);
+  assert.equal(calls.filter(c => c.op === "createEmbeddedDocuments").length, 0, "no new marker for a gone marker");
+  assert.ok(![...F.s1.tokens.values()].some(t => t.flags?.[MODULE]?.swappedFrom === tok.id), "no orphan");
+  assert.equal(markers().length, before - 1);
+});
+
+test("R4: a marker deleted elsewhere while the new one is created is not deleted twice", async t => {
+  t.mock.timers.enable({ apis: ["setTimeout", "Date"], now: NOW });
+  const tok = await fresh("r4-create", "a cart");
+  const app = await PromptDialog.open(tok);
+  const n0 = F.calls.length;
+  const fired = await midSwap(app, "createEmbeddedDocuments", () => { F.s1.deleteEmbeddedDocuments("Token", [tok.id]); });
+  assert.ok(fired, "the marker was deleted mid-create");
+  await app.close();
+  const calls = F.calls.slice(n0);
+  assert.equal(calls.filter(c => c.op === "delete" && c.uuid === tok.uuid).length, 0, "the gone marker is not deleted again");
+  assert.equal(calls.filter(c => c.op === "app.render").length, 0, "no re-render of a closing window");
+  const made = [...F.s1.tokens.values()].find(t => t.flags?.[MODULE]?.swappedFrom === tok.id);
+  assert.ok(made, "the new marker stays in place");
+  assert.equal(made.flags[MODULE].prompt, "a cart", "with the text carried");
+  await F.s1.deleteEmbeddedDocuments("Token", [made.id]);
+});

@@ -390,9 +390,14 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
     return this.#swapping;
   }
 
+  /** The marker this swap started from is gone (deleted elsewhere, or by the dialog) (R4). */
+  #lost(tok) {
+    return this.#deleted || this.token !== tok;
+  }
+
   async #swap(tok, size) {
     if (!(await this.#save())) return;   // a failed save: no swap, so stale text is never carried
-    if (this.#deleted || !this.token) return;   // the marker went while saving: nothing to swap
+    if (this.#lost(tok)) return;   // the marker went while saving: nothing to swap
     const actor = markerActor(size);
     if (!actor) { ui.notifications?.warn(_loc("PENTARYN_PROMPTS.dialog.noActor", { size })); return; }
     const scene = tok.parent;
@@ -402,12 +407,14 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
     // elevation and level copied unconditionally (a null level stays an own property)
     const data = await tokenDataFrom(actor, scene, { at: { x: cx - w / 2, y: cy - w / 2 },
       x: Math.round(cx - w / 2), y: Math.round(cy - w / 2), extra: { elevation: tok.elevation, level: tok.level } });
+    if (this.#lost(tok)) return;   // the marker went while its data was built: no orphan new marker (R4)
     foundry.utils.setProperty(data, `flags.${MODULE}.prompt`, this.#saved);
     foundry.utils.setProperty(data, `flags.${MODULE}.updatedAt`, Date.now());
     // a replace still holding the old id can say "resized (now marker X)" instead of a bare MARKER_GONE
     foundry.utils.setProperty(data, `flags.${MODULE}.swappedFrom`, tok.id);
     const [made] = await scene.createEmbeddedDocuments("Token", [data], { pentarynPrompts: { swap: true } });
     if (!made) return;
+    if (this.#lost(tok)) return;   // the marker went mid-create: the new one stays, no second delete (R4)
     this.#tokenId = made.id;   // before the delete: its deleteToken hook must not close this dialog
     await tok.delete();
     if (this.#closing) return;

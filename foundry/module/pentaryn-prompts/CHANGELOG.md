@@ -47,6 +47,10 @@ cssPrefix `pp-`, afterSync). Each **[declared]** change goes to the live check.
   marker and one delete. The chips grey out (`pp-swapping`) while a swap runs and further clicks
   are ignored; closing the box or Delete waits for the swap, so the closing save lands on the new
   marker and Delete removes it rather than leaving an orphan.
+- **[declared] A size swap stops when its marker goes** (R4): a marker deleted elsewhere (another
+  tab, a replace) while a size chip is swapping it no longer gets a new marker made; if the new
+  marker was already created, it stays in place with the text, and the gone marker is not deleted a
+  second time.
 - **[declared] Two gathers at once keep both manifests**: the ring writes through one
   `serialStore` (a parallel gather no longer makes the other's call id `CALL_UNKNOWN`).
 - **[declared] `ensureMarkers` no longer duplicates across two GM tabs** (§5.9.1): the folder and
