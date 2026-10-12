@@ -226,7 +226,8 @@ export function gmTool({ isGM, policy } = {}) {
  */
 export function flipPolicy(policy, last, on) {
   const p = normalizePolicy(policy);
-  const remembered = last === "always" || last === "exploration" ? last : DEFAULT_POLICY;
+  const r = normalizePolicy(last);
+  const remembered = r === "off" ? DEFAULT_POLICY : r;
   if (on) return { policy: p === "off" ? remembered : p, last: p === "off" ? remembered : p };
   return { policy: "off", last: p === "off" ? remembered : p };
 }

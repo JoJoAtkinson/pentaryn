@@ -42,6 +42,8 @@ manifest); the kit is vendored. What a player or GM can notice:
 - **[declared]** `pinsUnderTokens` respects Foundry 14 scene levels: a pin shown only on other
   levels than a token's is no longer reported under it; a pin shown on every level, or a token with
   no level, pairs as before (movement-edge-5).
+- **[declared]** the GM ghost switch remembers its last mode from the policy list itself rather than
+  a hand-kept copy of it; every off/on flip lands where it did before (EXT-4).
 - Performance: the per-token paths (drag, arrow keys, token refresh, the layer sort) read the
   settings and the combats once per change instead of once per token (F-M1).
 

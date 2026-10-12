@@ -185,3 +185,28 @@ test("pinsUnderTokens drops pairs on different scene levels; an unlevelled note 
     "legacy/down", "legacy/up", "legacy/nolevel",
   ]);
 });
+
+// EXT-4: flipPolicy's remembered mode is derived from POLICIES (normalizePolicy), not a hand list.
+// A frozen copy of the pre-EXT-4 function pins that every (policy, last, on) triple answers the same.
+const OLD_FLIP_POLICY = Object.freeze(function oldFlipPolicy(policy, last, on) {
+  const p = normalizePolicy(policy);
+  const remembered = last === "always" || last === "exploration" ? last : DEFAULT_POLICY;
+  if (on) return { policy: p === "off" ? remembered : p, last: p === "off" ? remembered : p };
+  return { policy: "off", last: p === "off" ? remembered : p };
+});
+
+test("flipPolicy names no non-off mode by hand (EXT-4)", () => {
+  const src = String(flipPolicy);
+  for (const p of POLICIES.filter(m => m !== "off")) assert.ok(!src.includes(`"${p}"`), `flipPolicy lists "${p}" by hand`);
+});
+
+test("flipPolicy answers every (policy, last, on) triple as before (EXT-4)", () => {
+  const values = [...POLICIES, undefined, null, "", "sometimes", "Always", true, 0];
+  let n = 0;
+  for (const policy of values) for (const last of values) for (const on of [true, false]) {
+    n += 1;
+    assert.equal(JSON.stringify(flipPolicy(policy, last, on)), JSON.stringify(OLD_FLIP_POLICY(policy, last, on)),
+      `flipPolicy(${String(policy)}, ${String(last)}, ${on})`);
+  }
+  assert.equal(n, values.length * values.length * 2);
+});
