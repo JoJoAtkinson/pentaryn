@@ -94,7 +94,7 @@ export function appendLedger(entry, dedupeMs = DEDUPE_MS) {
 }
 
 /** Write the counter, then the log (in that order, each awaited). */
-export async function writeLedger({ n, log }) {
+async function writeLedger({ n, log }) {
   await game.settings.set(MODULE, "counter", n);
   await game.settings.set(MODULE, "log", log);
 }
