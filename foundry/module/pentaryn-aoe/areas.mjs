@@ -209,7 +209,7 @@ async function deleteHandlesOf(region) {
     && stillListing(handles().map(tk => ({ id: tk.id, _regions: tk._source._regions })), region.id).length) {
     await new Promise(r => setTimeout(r, 100));
   }
-  const ids = handles().map(tk => tk.id).filter(id => scene.tokens.has(id));
+  const ids = handles().map(tk => tk.id);
   if (ids.length) await scene.deleteEmbeddedDocuments("Token", ids);
 }
 
