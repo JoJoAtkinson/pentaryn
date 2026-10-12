@@ -273,7 +273,8 @@ function assertPrototypeToken(actor, requested, slug) {
 function assertActivityIdsSurvived(item, requestedItemData, slug) {
   const requested = Object.keys(requestedItemData?.system?.activities ?? {});
   if (!requested.length) return;
-  const live = new Set(item.system.activities.map(a => a._id));
+  // `?.` / `?? []`: loot, container, class, subclass, background and race have no activities field.
+  const live = new Set(item.system.activities?.map(a => a._id) ?? []);
   const missing = requested.filter(id => !live.has(id));
   if (!missing.length) return;
   failAssertion({
@@ -408,7 +409,7 @@ function runExpectedAssertions(actor, expected, slug) {
 
     // ── Activity-level ─────────────────────────────────────────────────────────────────────────
     for (const activitySpec of spec.activities ?? []) {
-      const activity = item.system.activities.get(activitySpec.id);   // §8.2 rule 3
+      const activity = item.system.activities?.get(activitySpec.id);  // §8.2 rule 3
       if (!activity) {
         failAssertion({
           slug,
@@ -416,7 +417,7 @@ function runExpectedAssertions(actor, expected, slug) {
           activityId: activitySpec.id,
           path: "system.activities",
           expected: activitySpec.id,
-          actual: item.system.activities.map(a => a._id),
+          actual: item.system.activities?.map(a => a._id) ?? [],
           hint: "Activity id not present on the saved Item — see CONTRACT.md U7."
         });
       }

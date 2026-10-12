@@ -207,3 +207,25 @@ test("assertion sites: messages and write sequences (golden/write-sites.json)", 
 test("console lines of every write-path run (golden/write-console.json)", () => {
   pinJSON("write-console", consoleGolden, import.meta.url);
 });
+
+// Last in the file: it runs after the goldens are pinned, so the stub's id sequence and
+// golden/write-console.json are untouched.
+test("importer-R5: activities on an Item type without system.activities fail the named U7 assertion, not a TypeError", async () => {
+  const sack = { name: "Sack", type: "loot", flags: { pentaryn: { action: "sack" } } };
+  const cases = [
+    // the payload carries activities a loot Item cannot hold → the U7 readback (assertActivityIdsSurvived)
+    ["r5Payload", npc("r5-payload", { items: [{ ...sack, system: { activities: { sackUse00000001: { _id: "sackUse00000001", type: "utility" } } } }] }),
+      /path: {5}system\.activities[\s\S]*CONTRACT\.md U7\)/],
+    // an `expected` activity on a loot Item → the expected-activity site
+    ["r5Expected", npc("r5-expected", { items: [sack], expected: { items: [{ action: "sack", activities: [{ id: "sackUse00000001" }] }] } }),
+      /Activity id not present on the saved Item — see CONTRACT\.md U7\./],
+  ];
+  for (const [key, entry, hint] of cases) {
+    const o = await run(key, [entry]);
+    assert.equal(o.result, null, `${key}: the run is refused, not reported in failed[]`);
+    assert.equal(o.error?.name, "PentarynAssertionError", `${key}: ${o.error?.name}: ${o.error?.message}`);
+    assert.match(o.error.message, /^READBACK ASSERTION FAILED — aborting the whole run\./);
+    assert.match(o.error.message, hint);
+    assert.doesNotMatch(o.error.message, /TypeError|Cannot read properties/);
+  }
+});

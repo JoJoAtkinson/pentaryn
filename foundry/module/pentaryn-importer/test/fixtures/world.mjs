@@ -6,7 +6,8 @@
  *   actor.update / items / createEmbeddedDocuments / deleteEmbeddedDocuments / reset
  *   actor.prototypeToken.toObject()          → source data; keys outside PrototypeToken's set are
  *                                              dropped on create/update, as Foundry strips them
- *   item.system.activities                   → a Map keyed by `_id` with .get/.map, as ActivityCollection
+ *   item.system.activities                   → a Map keyed by `_id` with .get/.map, as ActivityCollection;
+ *                                              absent on the types without ActivitiesTemplate (NO_ACTIVITIES)
  *   item.labels / activity.labels            → derived from the source (see `labelsOf`)
  *
  * Knobs (all off by default) make Foundry misbehave in the ways the importer's assertions catch:
@@ -33,6 +34,9 @@ const TOKEN_KEYS = new Set([
 
 const clone = v => (v === undefined ? undefined : JSON.parse(JSON.stringify(v)));
 const hidden = (obj, name, value) => Object.defineProperty(obj, name, { value, configurable: true, writable: true, enumerable: false });
+
+/** dnd5e 6.0.6 Item types whose system data has no ActivitiesTemplate, so no `system.activities`. */
+const NO_ACTIVITIES = new Set(["class", "subclass", "background", "race", "loot", "container"]);
 
 class ActivityCollection extends Map {
   map(fn) {
@@ -67,7 +71,8 @@ export function makeWorld(F, knobs = {}) {
       acts.set(id, { ...a, _id: id, labels: labelsOf(a) });
     }
     const item = makeDoc("Item", { id: `item${String(++seq).padStart(12, "0")}`, ...src, system: { ...(src.system ?? {}) } }, { parent: actor });
-    hidden(item.system, "activities", acts);
+    if (NO_ACTIVITIES.has(src.type)) delete item.system.activities;   // the schema has no such field
+    else hidden(item.system, "activities", acts);
     hidden(item, "labels", src.system?.uses?.recovery?.[0]?.type === "recharge" ? { recharge: `Recharge ${src.system.uses.recovery[0].formula}` } : {});
     return item;
   }

@@ -44,6 +44,12 @@
   an uncoded `TypeError` (a string entry from the lint, unshouted). golden/refusals.json `nullEntry`
   carries the new text and `stringEntry` is new; the two non-object rows of golden/prepare.json moved
   to a core.test case that still pins the oracle's `TypeError`.
+- **[declared] Activities on an Item type that cannot hold them fail the U7 readback, not a `TypeError`**
+  (`importer-R5`): a payload or `expected` entry that asks for activities on a `loot`, `container`,
+  `class`, `subclass`, `background` or `race` Item (no `system.activities` in dnd5e) now aborts the
+  run with the named `READBACK ASSERTION FAILED` message (`path: system.activities`, `actual: []`)
+  and its toast, instead of a `Cannot read properties of undefined` landing in `failed[]` while the
+  run went on. No new assertion site; goldens untouched.
 - **[declared] `game.pentaryn` is merged into, never replaced or frozen** (`items-journal-1`). Every
   module's namespace survives whichever order the modules load in; `import`, `moduleId`, `contract`
   and the frozen `_internals` stay on the root.
