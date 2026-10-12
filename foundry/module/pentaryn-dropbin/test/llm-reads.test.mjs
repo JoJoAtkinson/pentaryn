@@ -47,6 +47,10 @@ test("list(n, {brief: true}): the nine keys in order, no item source; list(n) un
   assert.deepEqual(api.list(1, {}), api.list(1));
 });
 
+test("list(n, null): null opts is no opts", () => {
+  assert.deepEqual(api.list(1, null), api.list(1));
+});
+
 test("list(0) is empty", () => {
   assert.deepEqual(api.list(0), []);
   assert.equal(api.list(1).length, 1);

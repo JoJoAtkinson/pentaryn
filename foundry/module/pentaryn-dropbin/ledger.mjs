@@ -140,8 +140,12 @@ function registerCapture(reg) {
 /* ----------------------------------------------------------------------- API */
 
 const all = () => readLog();
-/** The last n entries, newest first; `{brief: true}` drops the item sources (items-journal-28). */
-function list(n = 20, { brief = false } = {}) {
+/**
+ * The last n entries, newest first; `{brief: true}` drops the item sources (items-journal-28).
+ * opts optional; null = none.
+ */
+function list(n = 20, opts) {
+  const brief = !!(opts && typeof opts === "object" && opts.brief);
   const out = listLast(readLog(), n);
   return brief ? out.map(briefOf) : out;
 }
