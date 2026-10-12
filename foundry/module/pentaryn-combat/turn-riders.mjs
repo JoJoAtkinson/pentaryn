@@ -22,7 +22,7 @@ import { featuresOf, featureItem, weaponShape, combatContext, turnOf, updateTurn
 
 // The pure rider reads live in shapes.mjs (guide S8); re-exported for callers of this file.
 export { isReckless, riderActivity, riderDiceFor };
-import { setting, riderMode } from "./settings.mjs";
+import { setting, riderMode, aoeAutoDamage } from "./settings.mjs";
 
 const log = makeLog(MODULE);
 
@@ -380,11 +380,6 @@ function renderAutoNote(message, html) {
 // A Full Attack posts one usage card for several swings; its Damage button can't know which swing
 // it is for. Without aoe's auto-damage, each swing's attack card gets its own Damage button, with
 // that swing's crit, attack mode and ammunition.
-
-function aoeAutoDamage() {
-  try { return !!game.modules.get("pentaryn-aoe")?.active && !!game.settings.get("pentaryn-aoe", "autoDamageOnHit"); }
-  catch { return false; }
-}
 
 function renderSwingDamage(message, html) {
   if (message?.type !== "attack" || !message.getFlag?.(MODULE, "swing") || aoeAutoDamage() || !html?.querySelector) return;

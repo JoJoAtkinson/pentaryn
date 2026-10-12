@@ -226,8 +226,9 @@ Strike) are here; damage/heal rule riders, rituals, concentration and Argon tidy
   (players don't), so a miss needs the **Undo** on the card.
 - **Multiattack "in any combination"** runs the first listed weapon for every swing; right-click
   Full Attack to pick another, or pause and swap per swing.
-- **C23 open:** this module still reads pentaryn-aoe's `autoDamageOnHit` setting directly: aoe's
-  `settings()` member is published at `ready`, but chat cards first render before it.
+- **C23 open:** this module still reads pentaryn-aoe's `autoDamageOnHit` setting directly (one
+  reader, `aoeAutoDamage()` in `settings.mjs`): aoe's `settings()` member is published at `ready`,
+  but chat cards first render before it.
 
 ## Files
 
