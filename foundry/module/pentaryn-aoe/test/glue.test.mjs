@@ -138,9 +138,9 @@ test("ready: a canvasReady sweep is registered through on() (it is in hookIds)",
   assert.ok(S.hooks.hookIds().some(h => h.name === "canvasReady"));
 });
 
-test("ready without ui.ARGON: a raw once canvasReady fallback (not in hookIds; D-A4)", () => {
+test("[declared] D-A4 ready without ui.ARGON: the once canvasReady fallback is registered through the registry (in hookIds)", () => {
   assert.equal(F.listeners("canvasReady"), 2);
-  assert.equal(S.hooks.hookIds().filter(h => h.name === "canvasReady").length, 1);
+  assert.equal(S.hooks.hookIds().filter(h => h.name === "canvasReady").length, 2);
 });
 
 test("hookIds() is [{ name, id }] in registration order, ids increasing", () => {

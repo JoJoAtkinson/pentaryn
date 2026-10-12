@@ -135,7 +135,8 @@ if (!globalThis.__pentarynAoeHot) {
     // game.pentaryn with a frozen object, which would drop a key published synchronously here.
     setTimeout(publish, 0);
     // Argon makes ui.ARGON in its own ready hook; a tick later it exists whatever the load order.
-    setTimeout(() => { if (!guardArgonBind()) Hooks.once("canvasReady", guardArgonBind); }, 0);
+    // D-A4: the late-Argon fallback goes through the registry too, so uninstall() removes it.
+    setTimeout(() => { if (!guardArgonBind()) reg.once("canvasReady", () => guardArgonBind(), { label: "canvasReady(argon)" }); }, 0);
     migrateSettings().catch(err => log.error("settings migration", err));
     areas.readyAreas().catch(err => log.error("ready", err));
   });
