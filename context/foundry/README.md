@@ -162,6 +162,13 @@ wrapper reads that as "lost the lock" and exits too, which takes the session's M
 it. After SIGKILL, the next tool call respawns the backend from the current `dist/`. The GM tab
 does not reconnect by itself (`autoReconnectEnabled` is off), so either reload it or run
 `await foundryMCPBridge.restart()` in its console (done 2026-10-10 for the dnd5e 6 port).
+**With more than one live session, the respawn can race:** two wrappers each spawn a backend
+within the same second, the loser's backend exits 0 on the lock, and that wrapper exits although it
+had already connected to the winner (`wrapper.log`: `backend exited cleanly (likely lock failure),
+exiting wrapper`). That session loses its `foundry` tools until a Claude Code restart, and the dead
+wrapper's backend can linger as an ORPHAN (`make foundry-bridge-status`; clear with
+`make foundry-bridge-clean`). Seen 2026-10-12 (PT PR-2). Restart the broker only when no other
+session is mid-call, and expect to restart the session that ran the kill.
 
 ## The action log is the promotion mechanism — keep it on
 
