@@ -98,11 +98,12 @@ export async function readPageDoc(raw, log = null) {
   };
 }
 
-/** A RollTable by UUID → renderTable's input, or null when it cannot be read. `r.text` is not read:
- *  v13 deprecates it (a console warning per result) and description/name carry the row (lookup-edge-1). */
+/** A RollTable by UUID → renderTable's input, or null when it cannot be read or is not a table (no
+ *  `results.contents`, R3). `r.text` is not read: v13 deprecates it (a console warning per result)
+ *  and description/name carry the row (lookup-edge-1). */
 export async function readTable(uuid, log = null) {
   const t = await fromUuid(uuid).catch(err => (log?.debug("fromUuid failed", { uuid }, err), null));
-  if (!t) return null;
+  if (!t?.results?.contents) return null;
   return { name: t.name, formula: t.formula, uuid,
     results: t.results.contents.map(r => ({ range: r.range, description: r.description, name: r.name })) };
 }

@@ -39,6 +39,9 @@
 - [declared] `onList(<uuid>)` of a document that is not a spell Item (a JournalEntry, an Actor)
   answers `{ notFound, spell, hint: "<uuid> is a <documentName>, not a spell Item" }` instead of
   throwing a TypeError on `system.level` or answering a level-less spell (lookup-edge-3).
+- [declared] A page's embedded `@Embed[….RollTable.…]` whose uuid resolves to something that is not
+  a roll table lists that table as `{ uuid, error: "not found" }` and the rest of the page still
+  answers, instead of `page()` throwing a TypeError on `results.contents` (R3).
 
 ## 0.3.0 — 2026-10-10
 
