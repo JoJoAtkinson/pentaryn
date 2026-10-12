@@ -594,8 +594,8 @@ function reportSummary({ counts, created, updated, skipped, failed, dryRun, url,
 }
 
 export {
-  TAG, log, shout, refuse, failAssertion, fetchJsonWithTimeout, moduleExpectations,
-  assertVersionGate, assertNoBadFormulas, assertValue, assertPrototypeToken, assertActivityIdsSurvived,
-  assertItemsAddressable, runExpectedAssertions, indexActorsBySlug, storedHash, isManagedItem, replaceItems, stampContentHash,
+  TAG, log, shout, refuse, failAssertion, fetchJsonWithTimeout,
+  assertVersionGate, assertNoBadFormulas, assertPrototypeToken, assertActivityIdsSurvived,
+  assertItemsAddressable, runExpectedAssertions, indexActorsBySlug, storedHash, replaceItems, stampContentHash,
   reportSummary
 };
