@@ -78,7 +78,6 @@ import argparse
 import hashlib
 import io
 import json
-import math
 import re
 import os
 import shutil
@@ -113,7 +112,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 MANIFEST = REPO_ROOT / "foundry" / "assets-manifest.json"
 
 # Default per-host retention; PENTARYN_KEEP_SNAPSHOTS overrides (host.keep_snapshots()).
-KEEP_SNAPSHOTS = 10
+KEEP_SNAPSHOTS = host.DEFAULT_KEEP_SNAPSHOTS
 
 # Restore safety copies are kept apart from the rolling ten: this many per host, so
 # repeated "take the latest" boots on the alt never push regular snapshots out.
@@ -230,9 +229,7 @@ def sha256_file(path: Path) -> str:
 
 
 def tmp_dir() -> Path:
-    d = data_root() / TMP_DIRNAME
-    d.mkdir(parents=True, exist_ok=True)
-    return d
+    return uploadq.tmp_dir()
 
 
 def _mb(n: int | float) -> str:
@@ -425,12 +422,8 @@ class Ancestry:
     mtimes: tuple[float | None, ...] = ()
 
 
-def _finite(x) -> float | None:
-    """`x` as a finite float, else None — never NaN or ±Infinity (non-strict JSON)."""
-    if isinstance(x, bool) or not isinstance(x, (int, float)):
-        return None
-    x = float(x)
-    return x if math.isfinite(x) else None
+# `x` as a finite float, else None — never NaN or ±Infinity (non-strict JSON).
+_finite = bootstate._finite
 
 
 def read_lineage(st: Storage, snap: Snapshot) -> Ancestry | None:
@@ -742,9 +735,10 @@ def _tree_digest(paths: list[str]) -> str:
             continue
         for p in sorted(base.rglob("*")):
             if p.is_file():
+                s = p.stat()
                 h.update(str(p.relative_to(root)).encode())
-                h.update(str(p.stat().st_size).encode())
-                h.update(str(int(p.stat().st_mtime)).encode())
+                h.update(str(s.st_size).encode())
+                h.update(str(int(s.st_mtime)).encode())
     return h.hexdigest()
 
 

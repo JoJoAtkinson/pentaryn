@@ -86,6 +86,8 @@ def parse_env(text: str) -> dict[str, str]:
             val = val[1:-1]
         elif " #" in val:  # trailing comment on an unquoted value
             val = val.split(" #", 1)[0].rstrip()
+            if len(val) >= 2 and val[0] == val[-1] and val[0] in "\"'":
+                val = val[1:-1]
         out[key] = val
     return out
 

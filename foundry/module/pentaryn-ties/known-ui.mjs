@@ -96,7 +96,7 @@ export const _sizes = () => ({ expanded: expanded.size, shownHidden: shownHidden
 /**
  * Who is left to add.
  *
- * ⚠ **Not `candidates()` from `ties-api.mjs`**, which the plan names — that function excludes
+ * ⚠ **Not `candidates()` from `ties-adapter.mjs`**, which the plan names — that function excludes
  * everyone the actor already has a *tie* to, which is precisely the wrong exclusion set
  * here: the people you know best are the people you are tied to, and using it would hide
  * every one of Ballad Quinn's 24 acquaintances from her own notebook. What is actually
@@ -325,8 +325,7 @@ function studyControls(entry, { canEdit, isGM, study }) {
  *
  * `pre-line` because the GM's rungs are authored as paragraphs and a tier that arrives as
  * one run-on line reads as a different tier.
- */
-/**
+ *
  * One granted fact, exactly as the Known tab draws it. Exported for the GM's inspect window, whose
  * player view must be the same furniture: `textHTML` replaces the escaped text (already-safe
  * markup, e.g. a `<details>` around a long kind payload) and `extra` is appended inside the body
@@ -480,11 +479,6 @@ export function buildKnownHTML(actor) {
   const entries = readKnown(actor);
   const open = expandedFor(actor.id);
 
-  /*
-   * The study state per row, computed once here rather than inside the row builder — it walks
-   * the kind's items to answer "is there anything to learn", and a notebook of thirty entries
-   * would otherwise do that walk twice per paint.
-   */
   // one read of the granted flag per paint, joined per entry — `grantsForEntry` is pure, and
   // re-reading the flag inside the row builder would parse the whole map once per row
   const grantedRaw = actor?.getFlag?.(MODULE, GRANTED_FLAG) ?? null;
@@ -499,6 +493,11 @@ export function buildKnownHTML(actor) {
   const attrsFor = new Map();
   // the registry cannot change mid-paint: read (and clamp) it once, not once per entry (ties-23)
   const registryNow = registryOf();
+  /*
+   * The study state per row, computed once here rather than inside the row builder — it walks
+   * the kind's items to answer "is there anything to learn", and a notebook of thirty entries
+   * would otherwise do that walk twice per paint.
+   */
   for (const entry of entries) {
     const subject = game.actors?.get(entry.id);
     studyFor.set(entry.id, subject ? studyStateFor(actor, subject) : null);
@@ -648,8 +647,6 @@ export function bindKnown(root, actor, rerender = () => {}) {
     });
   });
 
-  // GM only, and gated in the markup rather than here only because the button is the whole
-  // feature: the minimal kind-pointer picker phase 4's authoring section absorbs.
   root.querySelectorAll('select[data-action="release"]').forEach(sel => {
     sel.addEventListener("change", async () => {
       const subject = game.actors?.get(sel.dataset.id);
@@ -661,6 +658,8 @@ export function bindKnown(root, actor, rerender = () => {}) {
     });
   });
 
+  // GM only, and gated in the markup rather than here only because the button is the whole
+  // feature: the minimal kind-pointer picker phase 4's authoring section absorbs.
   root.querySelectorAll('[data-action="kind"]').forEach(btn => {
     btn.addEventListener("click", async () => {
       const subject = game.actors?.get(btn.dataset.id);

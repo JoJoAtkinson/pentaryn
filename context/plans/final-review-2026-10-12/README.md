@@ -86,3 +86,32 @@ before-goldens saved, the three syncs re-run (same digests: ties a56fbc19, comba
 **Relaunch (13:10Z).** The first INT run saved no golden files, so the relaunch restored the rollback copies, reloaded, captured before-goldens, re-synced combat and senses (digests unchanged: combat 9b7e03d3, senses e6f875db), reloaded once and captured after-goldens in `.state/live-goldens/INT-1259/{before,after}/`. `diff.mjs before after` (no `--declared`) exits 0 for both modules; cleanups clean. Senses has no `selftest()`.
 
 **Foundry state.** Up, no restart; world pentaryn, dnd5e 6.0.6, Foundry 14.369; one GM tab, Gamemaster the only active user; no ZZ documents or combats left behind.
+
+## Integration INT-1327
+
+| Area | Status | Merge SHA | Revert SHA | Synced modules | Reason |
+|---|---|---|---|---|---|
+| ties-ui | merged | aeb31af6 | — | ties | — |
+| fork | merged | 0bd2f94 (fork repo) | — | bridge (server + module handlers) | — |
+| py-cloud | merged | 86c9ec78 | — | none (Python, live by being on main) | — |
+
+**Gates.** On main: `foundry-modules-check`, `foundry-lib-check`, `make test` (1587 passed, 2 skipped,
+5 xfailed), `check-context` green. Fork: typecheck, mcp-server and foundry-module vitest,
+`fork-footprint.sh` green. No `module.json` changed, so no restart.
+
+**Deploy.** Rollback copies of ties, the bridge module and the server `dist` in
+`.state/live-rollback/INT-1327/`. `make foundry-ties-sync`; fork `build:server` and `build:foundry`
+(only `dist/fork/handlers.*` differed, copied; deployed bridge dist equals the build), backend
+`kill -9`, one GM-tab reload. Probe: ties 0.19.4 equals `module.json`, `selftest().ok` true; bridge
+active and `pentaryn-read` answers. Ties live golden before vs after: identical (timings only differ).
+Reverts: none. `server.py` of py-cloud is unchanged by this batch.
+**Golden files (relaunch check, 13:38Z).** The first pass left only a hand-trimmed ties before-golden,
+so it was re-done with files: before = `.state/live-goldens/INT-1247/after/ties.json` (the full golden
+run on the deployed pre-merge build, ties digest a56fbc19 = this lane's rollback copy), after = a fresh
+run in the GM tab loaded 13:34:07Z on the synced build (digest bdd41b82); both in
+`.state/live-goldens/INT-1327/{before,after}/ties.json`. `diff.mjs` without `--declared`: shared
+identical, cleanup clean, exit 0. A third GM-tab reload to take the before on restored code was refused
+by the session's permission classifier; the rollback copy sat on disk for about a minute and the
+re-sync put back the same digest, with no reload in between. Console: no pentaryn-* or bridge errors
+since tracking started (after the load). Bridge: deployed module `dist` equals the build, backend
+started 09:33:42 after the 09:33:28 server build, `get-world-info` and `pentaryn-read` answer.

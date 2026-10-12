@@ -47,7 +47,7 @@ import {
 } from "./attributes.mjs";
 import { kindActorOf } from "./study.mjs";
 import { personalCluesHTML } from "./attributes-ui.mjs";
-import { reviewState, sortForReview, childrenOf, readLore, REVIEW_SORTS, REGISTRY_SETTING } from "./known-core.mjs";
+import { reviewState, sortForReview, childrenOf, indexRegistry, readLore, REVIEW_SORTS, REGISTRY_SETTING } from "./known-core.mjs";
 import { makeLog } from "./lib/log.mjs";
 
 const log = makeLog(MODULE);
@@ -327,19 +327,20 @@ export class AttributeReview extends ApplicationV2 {
 
     if (!list.length) return `<div class="pentaryn-ties pt-review">${head}<p class="pt-empty">${esc(_loc("PENTARYN_TIES.review.empty"))}</p></div>`;
 
-    const body = rows.map(e => this.row(e, byId, list, carriers)).join("");
+    const index = indexRegistry(list); // one index per paint, not one clamp of the registry per row
+    const body = rows.map(e => this.row(e, byId, index, carriers)).join("");
     return `<div class="pentaryn-ties pt-review">${head}
       <ul class="pt-review-list">${body}</ul>
       <p class="pt-empty pt-review-nomatch" hidden></p>
     </div>`;
   }
 
-  row(e, byId, list, carriers) {
+  row(e, byId, index, carriers) {
     const state = reviewState(e);
     const open = this.expanded.has(e.id);
     const lore = readLore(e.lore);
     const who = carriers.get(e.id) ?? [];
-    const kids = childrenOf(e.id, list);
+    const kids = childrenOf(e.id, index);
     const parent = e.parent ? byId.get(e.parent) : null;
     const icon = e.icon || iconForCategory(e.category);
     const search = [e.id, e.title, e.category, e.reveal, e.miss, ...lore.flatMap(r => [r.label, r.text, r.miss])]
