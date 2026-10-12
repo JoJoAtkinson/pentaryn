@@ -88,6 +88,7 @@ async function syncLight(actor, { index = null } = {}) {
   for (const { scene, tokens } of tokensOf(actor, index)) {
     const updates = [];
     for (const t of tokens) {
+      if (actor.isToken && t.actorLink) continue;   // the base actor's linked token is not the synthetic's
       const u = lightUpdate(t, t.actorLink ? light : carriedLight(t.actor ?? actor));
       if (u) updates.push({ _id: t.id, ...u });
     }
