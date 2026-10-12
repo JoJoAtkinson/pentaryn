@@ -54,7 +54,7 @@ n/a — no settings.
 Canonical: `game.modules.get("pentaryn-lookup").api`; `game.pentaryn.rules` is the same frozen
 object. Ask it: `game.pentaryn.rules.describe()` (offline: `test/golden/describe.json`). Every
 lookup is a **legacy** row: a miss is an answer object (`{error}`, `{notFound, …, hint}`), never a
-throw. None is GM-only, none writes. A pack whose read fails answers as if it were not installed
+throw; a `null` options argument answers exactly as an omitted one (R1). None is GM-only, none writes. A pack whose read fails answers as if it were not installed
 (`search`/`page` name it in `warning: "skipped missing pack(s): …"`), traced at debug with the pack
 id; a `selftest()` check that throws is recorded as failed with the error as its `detail`, and the
 remaining checks still run (R4).

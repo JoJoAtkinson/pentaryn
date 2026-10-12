@@ -153,3 +153,18 @@ test("prompts-lookup-4 [declared DL3]: onList with dnd5e.registry undefined answ
 test("enrichStub fixture sanity", async () => {
   assert.equal(await enrichStub()("[[/attack]]", {}), "+4");
 });
+
+// R1 [declared] (re-lands reverted b01c8309): every opts/q param is optional in api-manifest, so a
+// `null` opts answers exactly as an omitted one — it no longer throws a TypeError.
+test("R1 [declared]: null opts answers exactly as omitted opts", async () => {
+  const pairs = [
+    [() => rules.search("cover", null), () => rules.search("cover")],
+    [() => rules.page("Study", null), () => rules.page("Study")],
+    [() => rules.page(PAGE_UUID, null), () => rules.page(PAGE_UUID)],
+    [() => rules.monster("Goblin", null), () => rules.monster("Goblin")],
+    [() => rules.monsters(null), () => rules.monsters()],
+    [() => rules.onList("Fireball", "wizard", null), () => rules.onList("Fireball", "wizard")],
+    [() => rules.spellList("wizard", null), () => rules.spellList("wizard")],
+  ];
+  for (const [withNull, omitted] of pairs) assert.deepEqual(await withNull(), await omitted());
+});

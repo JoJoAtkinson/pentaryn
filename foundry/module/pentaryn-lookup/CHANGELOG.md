@@ -34,6 +34,8 @@
 - [declared] `monster(name)` looks for an exact (case-insensitive) name in every monster pack, in
   pack order, before any substring match — `monster("Guardian")` answers the 2024 SRD's Guardian,
   not the Monster Manual's Shield Guardian — as `describe()` already said (R6).
+- [declared] `search`, `page`, `monster`, `monsters`, `onList` and `spellList` called with `null`
+  options answer exactly as with the options omitted, instead of throwing a TypeError (R1).
 
 ## 0.3.0 — 2026-10-10
 
