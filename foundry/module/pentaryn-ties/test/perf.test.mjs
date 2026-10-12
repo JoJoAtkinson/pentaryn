@@ -89,6 +89,38 @@ test("ties-24 item 3: an unchanged plan is not rebuilt; a move, a teardown or a 
   F.flushFrames();
 });
 
+test("ties-24 item 3: a paint that fails partway forgets the last good plan, so going back to it redraws", async () => {
+  const doc = canvas.tokens.get("zzTokNpc00000001").document;
+  const news = () => F.pixi.filter(c => c.call === "new" && c.id.startsWith("Graphics")).length;
+  const paint = () => (Worn.drawBadges(), F.flushFrames());
+  const x = doc.x;
+  await Worn.setWorn(doc, { by: "Oz", note: "" });
+  F.flushFrames();
+  paint();
+  const drawn = news(); // the plan at x is painted and remembered
+
+  // the badge moves and that paint throws once the old discs are gone: the layer is half-built
+  const Graphics = PIXI.Graphics;
+  const warn = console.warn;
+  try {
+    console.warn = () => {};
+    PIXI.Graphics = function () {
+      throw new Error("boom");
+    };
+    doc.x = x + 50;
+    paint();
+  } finally {
+    PIXI.Graphics = Graphics;
+    console.warn = warn;
+  }
+  // the token comes back: the remembered plan matches again, but the layer no longer shows it
+  doc.x = x;
+  paint();
+  assert.equal(news(), drawn + 1, "the old plan is redrawn, not skipped as already painted");
+  await Worn.clearWorn(doc);
+  F.flushFrames();
+});
+
 test("ties-26 / B7 [declared]: one sheet render through the four hooks injects once; a later render runs again", async () => {
   const { el } = await import("./fixtures/dom.mjs");
   const actor = game.actors.get("zzNpc00000000001");
