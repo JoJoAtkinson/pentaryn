@@ -126,7 +126,7 @@ function findKit(actor) {
 /**
  * GM / owner: give the actor's Healer feat one Battle Medic activity spending one use of their
  * Healer's Kit. `replace` (default) deletes the old "Heal dX" activities, which asked the patient
- * to pick their own die.
+ * to pick their own die, in one item update.
  */
 async function installBattleMedic(actor, { replace = true } = {}) {
   const item = actor?.items?.find(i => matchRule(HEALER, itemInfo(i)));
@@ -149,12 +149,10 @@ async function installBattleMedic(actor, { replace = true } = {}) {
   const existing = acts.find(a => isBattleMedic(a));
   if (existing) await item.updateActivity(existing.id, data);
   else await item.createActivity("utility", data, { renderSheet: false });
-  const removed = [];
-  if (replace) {
-    for (const a of acts) {
-      if (a.type === "heal" && /^heal\s*d\d+$/i.test(a.name ?? "")) { await item.deleteActivity(a.id); removed.push(a.name); }
-    }
-  }
+  // The old "Heal dX" activities go in one item update, in dnd5e's own deleteActivity form.
+  const old = replace ? acts.filter(a => a.type === "heal" && /^heal\s*d\d+$/i.test(a.name ?? "")) : [];
+  if (old.length) await item.update(Object.fromEntries(old.map(a => [`system.activities.${a.id}`, _del])));
+  const removed = old.map(a => a.name);
   return { ok: true, item: item.uuid, kit: kitId, kitFound: !!kitId, updated: !!existing, removed };
 }
 

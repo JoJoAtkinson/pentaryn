@@ -160,6 +160,21 @@ export function makeItem(data = {}, actor = null) {
       enumerable: false,
     },
   });
+  // An item update that writes `system.activities.<id>` (dnd5e's own deleteActivity form) lands on
+  // W.log as `updateItem` and, for a deletion value, drops the activity from the collection.
+  const update = item.update;
+  item.update = async function (changes = {}, options = {}) {
+    const acts = Object.keys(changes).filter(k => k.startsWith("system.activities."));
+    if (!acts.length) return update.call(this, changes, options);
+    logOp("updateItem", { item: this.name, changes: W?.F?.plain(changes) ?? changes });
+    const rest = { ...changes };
+    for (const k of acts) {
+      delete rest[k];
+      const id = k.slice("system.activities.".length).replace(/^-=/, "");
+      if (W?.F?.isDeletion(changes[k]) || k.includes(".-=")) this.system.activities.delete(id);
+    }
+    return update.call(this, rest, options);
+  };
   return item;
 }
 

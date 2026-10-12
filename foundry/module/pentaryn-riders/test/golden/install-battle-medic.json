@@ -44,8 +44,10 @@
     }
   },
   {
-    "op": "deleteActivity",
+    "op": "updateItem",
     "item": "Healer",
-    "id": "heald80000000001"
+    "changes": {
+      "system.activities.heald80000000001": "<_del>"
+    }
   }
 ]

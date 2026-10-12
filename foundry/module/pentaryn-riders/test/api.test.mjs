@@ -7,6 +7,10 @@
 // combat-riders-12 [declared] (riders half, guide §4): legacy members took documents only (a name
 // string returned no rows). They now also resolve a name, id, UUID or Token; a miss answers null.
 // The flipped pin is the last test.
+//
+// riders-async-4 [declared]: installBattleMedic deleted each old "Heal dX" activity with its own
+// awaited deleteActivity write. It now removes them all in one item update (dnd5e's own
+// `system.activities.<id>: _del` form); the Battle Medic create/update stays a separate write.
 import { mock, test } from "node:test";
 import assert from "node:assert/strict";
 import { pinJSON } from "./kit/harness.mjs";
@@ -146,6 +150,25 @@ test("installBattleMedic: creates one utility activity on the kit the old activi
   assert.deepEqual(again, { ok: true, item: `Actor.${IDS.healer}.Item.healerfeat000001`, kit: "healerkit0000001", kitFound: true, updated: true, removed: [] });
   assert.deepEqual(W.takeLog().map(l => l.op), ["updateActivity"]);
   assert.deepEqual(api.report(healer)[0].battleMedic, "installed, kit Healer's Kit");
+  W.take();
+});
+
+test("installBattleMedic: every 'Heal dX' activity goes in one item update (riders-async-4)", async () => {
+  const two = makeActor({ name: "TwoDice", items: [{
+    id: "twofeat000000001", name: "Healer", type: "feat", system: { identifier: "healer" },
+    activities: [
+      { id: "twod8act00000001", type: "heal", name: "Heal d8", consumption: { targets: [] } },
+      { id: "twod6act00000001", type: "heal", name: "Heal d6", consumption: { targets: [] } },
+      { id: "tworeroll0000001", type: "heal", name: "Healing Reroll", consumption: { targets: [] } },
+    ],
+  }] });
+  W.takeLog();
+  const out = await api.installBattleMedic(two);
+  assert.deepEqual(out.removed, ["Heal d8", "Heal d6"]);
+  const log = W.takeLog();
+  assert.deepEqual(log.map(l => l.op), ["createActivity", "updateItem"], "one create, then one update for both deletions");
+  assert.deepEqual(log[1].changes, { "system.activities.twod8act00000001": "<_del>", "system.activities.twod6act00000001": "<_del>" });
+  assert.deepEqual(two.items.get("twofeat000000001").system.activities.map(a => a.name), ["Healing Reroll", "Battle Medic"]);
   W.take();
 });
 
