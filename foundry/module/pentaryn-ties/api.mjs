@@ -189,7 +189,8 @@ const IMPL = {
  * rows and concealment — and gets the ties, Known list, granted cards and world knowledge only of an
  * actor they own; attributes are the ones that character can see.
  */
-function dossier(actor, { as } = {}) {
+function dossier(actor, opts) {
+  const as = opts?.as;
   const subject = actor?.isToken ? game.actors?.get(actor.id) ?? actor : actor;
   const viewer = as === undefined || as === null ? game.user : resolveRef(as, "user");
   const gmView = viewer?.isGM === true;

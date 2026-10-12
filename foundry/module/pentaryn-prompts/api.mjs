@@ -7,7 +7,7 @@
  * the entry contributes gather/crops/list/show and replace/replaceMany (`ctx.contributions`).
  */
 
-import { MODULE, NS, VERSION, SPEC_DIR } from "./prompts-core.mjs";
+import { MODULE, NS, VERSION, SPEC_DIR, HOOKS } from "./prompts-core.mjs";
 import { CODES as PROMPTS_CODES, SIZE_KEYS, codedError as promptsError } from "./geometry-core.mjs";
 import { MANIFEST } from "./api-manifest.mjs";
 import { SETTINGS, setting, manifests, manifestFor, settingsSnapshot } from "./settings.mjs";
@@ -94,7 +94,7 @@ export function buildApiFor(ctx) {
     },
     extras: () => ({
       settings: SETTINGS,
-      events: {},
+      events: HOOKS,
       hooks: ctx.reg.ids(),
       patches: patches().filter(p => p.moduleId === MODULE),
       queries: MANIFEST.rows.filter(r => r.query).map(r => queryNameOf(MANIFEST, r)),

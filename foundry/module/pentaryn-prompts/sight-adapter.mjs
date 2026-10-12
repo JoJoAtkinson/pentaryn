@@ -11,8 +11,9 @@
  * If core's test throws (an API drift after an update), the pure test does both passes and a
  * warning is logged once.
  *
- * Levels / wall heights: not modelled (the gather prints a WARN when a scene has them). The place
- * to filter edges by elevation is core/walls.mjs `wallSegmentsOf`.
+ * Levels: each pair is tested on the looker's own Level (core's test, plus a surface test on
+ * multi-level scenes; the fallback uses that Level's walls). Wall heights: not modelled (the gather
+ * prints a WARN). The place to filter edges by elevation is core/walls.mjs `wallSegmentsOf`.
  */
 
 import { MODULE, classifyBlocked, rayPasses } from "./geometry-core.mjs";

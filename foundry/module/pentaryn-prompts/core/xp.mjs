@@ -33,13 +33,14 @@ export function crXp(cr) {
 export function parseParty(party) {
   if (!party) return null;
   let levels = null;
+  const okLen = n => Number.isInteger(n) && n > 0 && n <= 0xFFFFFFFF;
   if (Array.isArray(party)) levels = party.map(Number);
   else if (typeof party === "string") {
     const m = /^\s*(\d+)\s*[x×*]\s*(\d+)\s*$/i.exec(party);
-    if (m) levels = Array(Number(m[1])).fill(Number(m[2]));
+    if (m) { const n = Number(m[1]); if (okLen(n)) levels = Array(n).fill(Number(m[2])); }
   } else if (typeof party === "object") {
     const n = Number(party.size ?? 4), l = Number(party.level);
-    if (n > 0 && l > 0) levels = Array(n).fill(l);
+    if (okLen(n) && l > 0) levels = Array(n).fill(l);
   }
   if (!levels?.length || levels.some(l => !(l >= 1 && l <= 20))) return null;
   return levels.map(l => Math.round(l));
