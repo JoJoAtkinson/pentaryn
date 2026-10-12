@@ -207,12 +207,15 @@ try {
   }
   if (createdFolder && game.folders.get(createdFolder) && !game.folders.get(createdFolder).contents.length) await game.folders.get(createdFolder).delete();
   for (const j of [src, owned]) if (j && game.journal.get(j.id)) await j.delete();
+  const gmJournalPagesNow = gmJournal && game.journal.get(gmJournal.id) ? game.journal.get(gmJournal.id).pages.size : null;
   out.cleanup = {
     gmButtonRestored: "gmButton" in saved ? game.settings.get(MOD, "gmButton") === saved.gmButton : null,
     toastsRestored: ["info", "warn", "error"].every(l => ui.notifications[l] === spied[l].fn),
     gmJournal: createdGmJournal ? "created and deleted" : `kept, ${pagesDeleted} page(s) removed`,
-    gmJournalPagesNow: gmJournal && game.journal.get(gmJournal.id) ? game.journal.get(gmJournal.id).pages.size : null,
+    gmJournalPagesNow,
     gmJournalPagesBefore: pagesBefore.size,
+    // judged by diff.mjs: pages this run added and did not remove (0 when the journal was created and deleted)
+    gmJournalPagesLeft: Math.max(0, (gmJournalPagesNow ?? 0) - pagesBefore.size),
     folder: createdFolder ? (game.folders.get(createdFolder) ? "created, NOT deleted (not empty)" : "created and deleted") : "untouched",
     zzJournalsLeft: game.journal.filter(j => j.name.startsWith("ZZ ")).length
   };

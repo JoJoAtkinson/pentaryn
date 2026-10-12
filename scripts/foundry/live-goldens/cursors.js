@@ -88,7 +88,11 @@ try {
   out.golden.error = caught(e);
 } finally {
   try { await ui.controls.activate({ control: start.control ?? "tokens", tool: start.tool ?? "select" }); await sleep(60); } catch { /* best effort */ }
-  out.cleanup = { restored: read(), wanted: start };
+  const restored = read();
+  out.cleanup = {
+    toolRestored: restored.control === (start.control ?? "tokens") && restored.tool === (start.tool ?? "select"),
+    restored, wanted: start
+  };
 }
 out.golden = norm(out.golden);
 // a string, not the object: the eval bridge truncates nested results at a fixed depth
