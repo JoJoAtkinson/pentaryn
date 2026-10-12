@@ -1,4 +1,4 @@
-// pentaryn kit 1.1.0 · vendored from foundry/lib/perf.mjs — edit the canonical file, then run scripts/foundry/blueprint/vendor.py
+// pentaryn kit 1.2.0 · vendored from foundry/lib/perf.mjs — edit the canonical file, then run scripts/foundry/blueprint/vendor.py
 /**
  * Three helpers core does not have. For debounce and throttle use core's
  * `foundry.utils.debounce` / `foundry.utils.throttle`.

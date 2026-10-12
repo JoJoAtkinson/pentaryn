@@ -1,4 +1,4 @@
-// pentaryn kit 1.1.0 · vendored from foundry/lib/queries.mjs — edit the canonical file, then run scripts/foundry/blueprint/vendor.py
+// pentaryn kit 1.2.0 · vendored from foundry/lib/queries.mjs — edit the canonical file, then run scripts/foundry/blueprint/vendor.py
 /**
  * `CONFIG.queries` handlers from the API manifest. A row with `query: true` becomes
  * `CONFIG.queries["<module>.<queryName ?? path>"]`, GM-guarded on both ends (or, for a

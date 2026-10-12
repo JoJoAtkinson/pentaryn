@@ -1,4 +1,4 @@
-// pentaryn kit 1.1.0 · vendored from foundry/lib/hooks.mjs — edit the canonical file, then run scripts/foundry/blueprint/vendor.py
+// pentaryn kit 1.2.0 · vendored from foundry/lib/hooks.mjs — edit the canonical file, then run scripts/foundry/blueprint/vendor.py
 /**
  * Hook registration that remembers what it registered, and the one way a module emits its own hooks.
  *

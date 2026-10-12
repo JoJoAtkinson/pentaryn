@@ -1,4 +1,4 @@
-// pentaryn kit 1.1.0 · vendored from foundry/lib/resolve.mjs — edit the canonical file, then run scripts/foundry/blueprint/vendor.py
+// pentaryn kit 1.2.0 · vendored from foundry/lib/resolve.mjs — edit the canonical file, then run scripts/foundry/blueprint/vendor.py
 /**
  * One reference resolver for every API boundary. A ref may be a Document, a placeable (`.document`),
  * a UUID, a 16-character id, or an exact name — never a substring. Substring matching is a

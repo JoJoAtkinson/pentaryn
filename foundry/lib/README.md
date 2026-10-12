@@ -67,3 +67,7 @@ pentaryn-write forwards a dry run only to such a row or to one whose param text 
 param marker `resolve: "self"` (the kit does not resolve the param, the function resolves a uuid, id
 or exact name itself; `describe()` keeps it, conformance C62 accepts it, and the bridge treats a first
 `ref` carrying it as resolvable). Re-vendored into every module with a lock.
+1.2.0 (defect wave 2, 2026-10-12; final-review record `context/plans/final-review-2026-10-12/kit.md`,
+approved by Joe 2026-10-12) — the version bump that carries the record's kit-source fixes; each
+declared fix lands under this entry with its finding id. Re-vendored into every module with a lock
+(walls included on disk; walls is still never synced live). Reload only — no `module.json` change.

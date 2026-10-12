@@ -60,3 +60,12 @@ test("kit version, KIT_VERSION and every header agree", async () => {
     assert.ok(readme.includes(`| \`${rel}\` |`), `README.md table has no \`${rel}\` row`);
   }
 });
+
+// kit-1.2.0 (defect wave 2, Joe 2026-10-12): the final-review kit fixes ship as kit 1.2.0.
+test("kit-1.2.0: kit.json, KIT_VERSION and the README changelog name 1.2.0", async () => {
+  const { KIT_VERSION } = await import("../errors.mjs");
+  assert.equal(kit.version, "1.2.0", "kit.json version is not 1.2.0");
+  assert.equal(KIT_VERSION, "1.2.0", "errors.mjs KIT_VERSION is not 1.2.0");
+  const readme = readFileSync(fileURLToPath(new URL("../README.md", import.meta.url)), "utf8");
+  assert.match(readme, /^1\.2\.0 \(/m, "README.md changelog has no 1.2.0 entry");
+});
