@@ -70,11 +70,14 @@ function bonusSig(actor, panel) {
   return JSON.stringify([gate, fu]);
 }
 
+// Anything this turn already spent or offered: out of combat, it is what puts "New turn" on the Special bar.
+const turnTouched = (turn) => !!(turn.attackAction.swings || Object.keys(turn.riders).length || turn.followUps.length || turn.nick);
+
 function specialSig(actor) {
   const fu = setting("followUps") ? followUpsNow(actor, mainPanel("DND5E.BonusAction")).filter(f => f.free).map(f => [f.kind, f.weaponId]) : [];
   const riders = setting("riderOffers") ? core.ridersFor(featuresOf(actor)).filter(r => r.auto).map(r => [r.key, riderMode(r.key)]) : [];
   const turn = turnOf(actor);
-  const touched = !!(turn.attackAction.swings || Object.keys(turn.riders).length || turn.followUps.length || turn.nick);
+  const touched = turnTouched(turn);
   const reckless = recklessShown(actor) ? isReckless(actor) : null;
   return JSON.stringify([fu, riders, !combatContext(actor).inCombat && touched, reckless]);
 }
@@ -263,7 +266,7 @@ function composeSpecialBar(panel, actor) {
   }
   const ctx = combatContext(actor);
   const turn = turnOf(actor);
-  const touched = turn.attackAction.swings || Object.keys(turn.riders).length || turn.followUps.length || turn.nick;
+  const touched = turnTouched(turn);
   if (!ctx.inCombat && touched) {
     fresh.push(new C.CommandButton({
       id: "pentaryn-combat-new-turn", name: _loc("PENTARYN_COMBAT.Hud.NewTurn"), img: "icons/svg/clockwork.svg",
