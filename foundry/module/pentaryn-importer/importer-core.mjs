@@ -369,7 +369,7 @@ function versionProblems(manifest, expected, live) {
   if (expected.contract !== CONTRACT_ID) {
     problems.push(
       `module.json declares contract "${expected.contract}" but this code implements `
-      + `"${CONTRACT_ID}" — module.json and pentaryn-importer.mjs are out of step.`
+      + `"${CONTRACT_ID}" — module.json and importer-core.mjs are out of step.`
     );
   }
 

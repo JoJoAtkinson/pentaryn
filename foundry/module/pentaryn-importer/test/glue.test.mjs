@@ -13,7 +13,8 @@
 //   the items-journal-4 re-entrancy test — was a KNOWN row; flipped by the standalone re-entrancy
 //                         commit ([declared] D-I3).
 //   golden/dryrun.json, golden/results.json, golden/refusals.json (toast text included) — no step
-//   may change them.
+//   may change them, except declared fixes: importer-M4 renamed the file in gateModuleJson's text
+//   (pentaryn-importer.mjs → importer-core.mjs, where CONTRACT_ID lives).
 import { mock, test } from "node:test";
 import assert from "node:assert/strict";
 import { installFoundry } from "./kit/foundry-stub.mjs";
@@ -277,13 +278,16 @@ test("version gate: an empty manifest lists every problem at once", async () => 
   pinKey("refusals", "gateEmpty", refusal(o));
 });
 
-test("version gate: a module.json that disagrees with the code's contract and system", async () => {
+test("version gate: a module.json that disagrees with the code's contract and system names importer-core.mjs (importer-M4)", async () => {
   const flags = game.modules.get(MODULE).flags;
   game.modules.get(MODULE).flags = { pentaryn: { ...flags.pentaryn, contract: "pentaryn/actors.json@0", targetSystem: "pf2e", generation: 13 } };
   try {
     serve(valid());
     const o = await outcome(() => imp({ dryRun: true }));
     assertShouted(o, "PentarynAbort");
+    // importer-M4: CONTRACT_ID lives in importer-core.mjs, so that is the file the refusal names.
+    assert.match(o.error.message, /module\.json and importer-core\.mjs are out of step\./);
+    assert.doesNotMatch(o.error.message, /pentaryn-importer\.mjs/);
     pinKey("refusals", "gateModuleJson", refusal(o));
   } finally {
     game.modules.get(MODULE).flags = flags;

@@ -34,6 +34,10 @@
   labelled `module.json flags.pentaryn.<key> present` with the value as `detail`; `contract` must
   still equal the actors.json contract. A module.json missing a gate key used to pass selftest while
   every import was refused. The old check label `… contract is the contract this code speaks` is gone.
+- **[declared] The version-gate refusal names `importer-core.mjs`, not `pentaryn-importer.mjs`**
+  (`importer-M4`): when module.json's `flags.pentaryn.contract` disagrees with the code, the line now
+  reads `… module.json and importer-core.mjs are out of step.` — the file that holds `CONTRACT_ID`
+  since the core split. golden/refusals.json `gateModuleJson` carries the new text.
 - **[declared] `game.pentaryn` is merged into, never replaced or frozen** (`items-journal-1`). Every
   module's namespace survives whichever order the modules load in; `import`, `moduleId`, `contract`
   and the frozen `_internals` stay on the root.

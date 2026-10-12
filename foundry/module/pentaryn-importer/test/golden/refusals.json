@@ -31,11 +31,11 @@
   },
   "gateModuleJson": {
     "name": "PentarynAbort",
-    "message": "VERSION GATE FAILED — nothing was imported.\n  • module.json declares contract \"pentaryn/actors.json@0\" but this code implements \"pentaryn/actors.json@1\" — module.json and pentaryn-importer.mjs are out of step.\n  • targetSystem is \"dnd5e\" but module.json expects \"pf2e\".\n  • generation is 14 but module.json expects 13.",
+    "message": "VERSION GATE FAILED — nothing was imported.\n  • module.json declares contract \"pentaryn/actors.json@0\" but this code implements \"pentaryn/actors.json@1\" — module.json and importer-core.mjs are out of step.\n  • targetSystem is \"dnd5e\" but module.json expects \"pf2e\".\n  • generation is 14 but module.json expects 13.",
     "toasts": [
       [
         "error",
-        "[pentaryn-importer] VERSION GATE FAILED — nothing was imported.\n  • module.json declares contract \"pentaryn/actors.json@0\" but this code implements \"pentaryn/actors.json@1\" — module.json and pentaryn-importer.mjs are out of step.\n  • targetSystem is \"dnd5e\" but module.json expects \"pf2e\".\n  • generation is 14 but module.json expects 13.",
+        "[pentaryn-importer] VERSION GATE FAILED — nothing was imported.\n  • module.json declares contract \"pentaryn/actors.json@0\" but this code implements \"pentaryn/actors.json@1\" — module.json and importer-core.mjs are out of step.\n  • targetSystem is \"dnd5e\" but module.json expects \"pf2e\".\n  • generation is 14 but module.json expects 13.",
         {
           "permanent": true,
           "console": false
