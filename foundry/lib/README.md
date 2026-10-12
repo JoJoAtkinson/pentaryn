@@ -38,13 +38,15 @@ Bump `kit.json` `version`, `errors.mjs` `KIT_VERSION` and every header together.
 | `patch-libwrapper.mjs` | `libWrapperRoute` | `packages: [lib-wrapper]` — vendored only where used |
 | `flags.mjs` | `readFlag`, `flagPath` | delete with `{[flagPath(s,k)]: _del}` at the call site |
 | `perf.mjs` | `memo`, `coalesce`, `perFrame` | debounce/throttle: use `foundry.utils` |
+| `argon-kit.mjs` | `dropTooltip`, `paintBadge(button, left, emptyClass)`, `applyButtons(panel, next, fresh, { attachDetached, after })`, `itemButtonClass(panel?)`, `slotKind`, `mainPanel(label)`, `settlePips(panel)` | `packages: [enhancedcombathud]`; Argon HUD helpers combat and transform hand-copied (transform-creatures-12, combat-riders-3/-5). `attachDetached` and `after` are combat's superset, opt-in; `itemButtonClass` caches per vendored copy |
 | `argon-tooltip.css` | Argon's compact `.ech-tooltip.pentaryn-tt` / `.pentaryn-tt-list` tooltip rules | `ext: css`, `packages: [enhancedcombathud]`; verbatim from transform.css (D7). Vendored to `lib/argon-tooltip.css`, loaded by listing it in `module.json` `styles`; C37/C37w do not score `lib/*.css`. No module vendors it yet |
 | `test-kit/foundry-stub.mjs` | `installFoundry`, `StubCollection`, `makeDoc`, `makeToken`, `makeScene`, `makeUser` | imports Foundry's own `common/` from the installed app; `Hooks` catches a throwing listener like Foundry's `Hooks.#call` (warn, continue; `F.hookErrors`); `fire("ready")` sets `game.ready` |
 | `test-kit/harness.mjs` | `pinJSON`, `characterise`, `normaliseDescribe`, `checkJSON`, `sourceScan`, `importGraph`, `reachable`, `maxDepth`, `readJSON`, `manifestOf`, `forkQueries`, `forkSource`, `contractDrift` | goldens in `test/golden/`; a missing golden fails; `forkQueries` reads `$FOUNDRY_MCP_FORK` and returns `{ skip }` when the fork is absent |
 
 `kit.json` lists each file's dependencies (vendoring closes over them), the two tiers
 (`small`, `full`), and `packages` for files whose bytes name a third-party package.
-`argon-kit` is listed as **deferred**: its signatures are fixed, its source is not written yet.
+`argon-kit` was the one **deferred** row (D7) until wave 4 wrote it (combat, audit Wave 8.6); a row with
+`"status": "deferred"` is refused by `vendor.py sync`.
 A row with `"ext": "css"` is a stylesheet (`<name>.css`); every other row is `<name>.mjs`.
 
 `test/fixtures/hook-order.mjs` is the cross-module registration-order fixture: it shows why moving
