@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- **A cancelled cast that spent nothing but began concentration is cleaned up** (declared,
+  aoe-mnt-1): the refund's veto and the refund itself disagreed — the veto stopped dnd5e's
+  follow-ups, then the refund did nothing, leaving the concentration and the card. Both now share
+  one predicate (spent something OR began concentration); dnd5e's `Activity#refund` runs only when
+  something was spent, and the concentration this cast began and its usage card always go (toast
+  `PENTARYN_AOE.Refund.Ended`). A no-spend cast with only a non-concentration effect is no longer
+  vetoed. Live check: an at-will concentration area spell (no slot or charge), Escape while placing —
+  concentration ends and the card disappears.
 - **Careful Spell: the player picks who it protects** (declared, aoe-careful-select; Joe's
   metamagic ruling 2026-10-12, supersedes metamagic-disarm): using Careful Spell opens a picker of
   the creatures on the caster's scene (token names, current targets ticked, up to CHA mod, min 1)

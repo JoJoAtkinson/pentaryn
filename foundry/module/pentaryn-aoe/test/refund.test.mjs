@@ -69,10 +69,29 @@ test("not cancelled: placed, nothing spent, no area wanted, no message, or the s
   await flush();
 });
 
-test("nothing spent but concentration began → still vetoed; the refund itself then declines (placementCancelled false)", async () => {
+test("[declared] aoe-mnt-1: nothing spent but concentration began → vetoed AND cleaned up: no activity.refund, the concentration ends, the card goes (was: vetoed, then nothing)", async () => {
   const c = cast({ consumed: false, effects: [{}] });
   F.calls.length = 0;
+  out.length = 0;
   assert.equal(F.fireCall("dnd5e.postUseActivity", c.activity, c.usageConfig, c.results), false);
+  await flush();
+  assert.deepEqual(F.calls.filter(x => ["activity.refund", "delete", "notify", "update"].includes(x.op)), [
+    { op: "delete", documentName: "ActiveEffect", uuid: c.conc[0].uuid },
+    { op: "delete", documentName: "ChatMessage", uuid: c.message.uuid },
+    { op: "notify", level: "info", message: "Fireball: placement cancelled, so its concentration ended and its card was removed." },
+  ]);
+  assert.equal(game.messages.has(c.message.id), false);
+  assert.deepEqual(out, []);
+  // refund() agrees with the veto on the same cast shape.
+  const d = cast({ consumed: false, effects: [{}] });
+  assert.equal(await R.refund(d.activity, d.usageConfig, d.results), true);
+});
+
+test("[declared] aoe-mnt-1: nothing spent and a non-concentration effect → no veto, refund() declines too", async () => {
+  const c = cast({ consumed: false, effects: [{ name: "Blessed", statuses: [] }] });
+  F.calls.length = 0;
+  assert.equal(F.fireCall("dnd5e.postUseActivity", c.activity, c.usageConfig, c.results), true);
+  assert.equal(await R.refund(c.activity, c.usageConfig, c.results), false);
   await flush();
   assert.deepEqual(F.calls.filter(x => ["activity.refund", "delete", "notify"].includes(x.op)), []);
 });

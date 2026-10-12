@@ -132,7 +132,8 @@
       "superseded": "Re-rolled: the newer damage card for this spell is the one that counts."
     },
     "Refund": {
-      "Done": "{item}: placement cancelled, so nothing was spent. The slot, charge or uses are back."
+      "Done": "{item}: placement cancelled, so nothing was spent. The slot, charge or uses are back.",
+      "Ended": "{item}: placement cancelled, so its concentration ended and its card was removed."
     }
   }
 }

@@ -48,7 +48,8 @@ dnd5e 6 only. Chat data is read from typed messages (`message.type` `usage` / `a
 - **Part E — Escape** (`escape.mjs`) cancels an area placement on the first press, even with the
   sheet open (core's own Escape closes every window first).
 - **Part F — refund** (`refund.mjs`). A cancelled placement gives back the slot, charge or uses it
-  spent, ends the concentration it began and removes the card.
+  spent, ends the concentration it began and removes the card. A cast that spent nothing but began
+  concentration counts as cancelled too: its concentration ends and its card goes.
 - **Part G — aim** (`aim.mjs`). A Self-range cone or line keeps its point on the caster's token
   edge and turns toward the mouse while placing.
 
