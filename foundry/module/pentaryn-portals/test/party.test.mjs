@@ -223,6 +223,50 @@ test("teleportParty, another scene: carry, pull the active players, view it, toa
   assert.equal(F.canvas.scene, H.pit);
 });
 
+/** ROB-2: the GM's confirm dialog stays open while `during` runs (a token deleted mid-dialog). */
+async function withDialog(during, fn) {
+  const api = foundry.applications.api.DialogV2, real = api.confirm;
+  api.confirm = async opts => { const ans = await real(opts); during(); return ans; };
+  try { return await fn(); } finally { api.confirm = real; }
+}
+
+test("teleportParty, another scene: a token deleted while the confirm is open is dropped, not recreated [declared] (ROB-2)", async () => {
+  const H = hall();
+  F.canvas.scene = H.s;
+  W.confirm = true;
+  const n = F.calls.length;
+  const out = await withDialog(() => H.s.tokens.delete(`tSkel${H.k}`), () => S.teleportParty(H.pitGate));
+  assert.deepEqual(out, { moved: 4, cancelled: false });
+  const seen = ops(n);
+  assert.deepEqual(seen.map(c => c.op), ["DialogV2.confirm", "createEmbedded", "deleteEmbedded", "pullUsers", "scene.view", "notify"]);
+  const ids = ["tCav", "tMar", "tEye", "tSteed"].map(i => `${i}${H.k}`);
+  assert.deepEqual(seen[1].ids, ids);
+  assert.deepEqual(seen[2].ids, ids);
+  assert.equal(H.pit.tokens.get(`tSkel${H.k}`), undefined);
+  assert.equal(seen[5].message, "4 party tokens moved to The Fighting Pit.");
+});
+
+test("teleportParty, same scene: a token deleted mid-dialog is left out; nobody left → warn, { moved: 0, cancelled: true } [declared] (ROB-2)", async () => {
+  const H = hall({ tokens: k => [{ id: `tCav${k}`, name: "Caven", actorId: "CAV", actorLink: true, x: 100, y: 200 },
+    { id: `tMar${k}`, name: "Marrith", actorId: "MAR", actorLink: true, x: 200, y: 200 }] });
+  const cell = W.region(H.s, { id: `Cell${H.k}`, name: "Cell", bounds: { x: 2000, y: 2000, width: 100, height: 100 }, flags: { [MODULE]: { title: "The Cell" } } });
+  F.canvas.scene = H.s;
+  W.confirm = true;
+  let n = F.calls.length;
+  let out = await withDialog(() => H.s.tokens.delete(`tMar${H.k}`), () => S.teleportParty(cell));
+  assert.deepEqual(out, { moved: 1, cancelled: false });
+  let seen = ops(n);
+  assert.deepEqual(seen.map(c => c.op), ["DialogV2.confirm", "updateEmbedded", "notify"]);
+  assert.deepEqual(seen[1].updates.map(u => u._id), [`tCav${H.k}`]);
+  n = F.calls.length;
+  out = await withDialog(() => H.s.tokens.delete(`tCav${H.k}`), () => S.teleportParty(cell));
+  assert.deepEqual(out, { moved: 0, cancelled: true });
+  seen = ops(n);
+  assert.deepEqual(seen.map(c => c.op), ["DialogV2.confirm", "notify"]);
+  assert.equal(seen[1].level, "warn");
+  assert.equal(seen[1].message, "Teleport party: nobody on this scene counts as the party.");
+});
+
 test("teleportParty / lookAt: a player or no region → nothing", async () => {
   const H = hall();
   F.canvas.scene = H.s;

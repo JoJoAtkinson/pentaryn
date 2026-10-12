@@ -30,7 +30,8 @@ migration record → `context/plans/addon-blueprint-2026-10/migrate-pentaryn-por
   is every linked character token plus every token a player owns or a PC summoned — never item
   piles, Markers, crowd, or pentaryn-aoe area handles. They land spread out from the region's
   centre, skipping squares a wall cuts off or someone stands on, each follower beside its PC; on
-  another scene the active players are pulled there and the GM's view follows.
+  another scene the active players are pulled there and the GM's view follows. A token deleted
+  while the confirm is open is left behind, not recreated; if none are left it warns and moves nobody.
 - **Summons follow their PC.** When a player walks their PC through a link to **another scene**,
   the active GM's client carries the PC's summons and the tokens only that player owns, and lands
   them around the PC (a co-owned steed comes when all its owners go together). Only a real portal

@@ -283,15 +283,24 @@ export async function confirmParty(party, title) {
 
 /**
  * GM: move the party on canvas.scene to `destRegion`'s centre. → `{ moved, cancelled }` (moved =
- * tokens moved; cancelled = the GM said no, or nobody counts as party); undefined for a player or
- * no region.
+ * tokens moved; cancelled = the GM said no, nobody counts as party, or every party token was
+ * deleted while the confirm was open); undefined for a player or no region.
  */
 export async function teleportParty(destRegion, { confirm = true } = {}) {
   if (!game.user.isGM || !destRegion) return;
   const from = canvas.scene;
   const dest = destRegion.parent;
-  const party = partyRecords(from);
+  let party = partyRecords(from);
   if (confirm && !(await confirmParty(party, cardFor(destRegion).title))) return { moved: 0, cancelled: true };
+  // ROB-2: a token deleted while the dialog was open is dropped, not recreated on the far side.
+  const kept = party.filter(r => from.tokens.has(r.doc.id));
+  if (kept.length < party.length) {
+    if (!kept.length) {
+      ui.notifications.warn(_loc("PENTARYN_PORTALS.Party.Nobody"));
+      return { moved: 0, cancelled: true };
+    }
+    party = kept;
+  }
   const toks = party.map(r => r.doc);
   const b = destRegion.bounds;
   const cx = b.x + b.width / 2, cy = b.y + b.height / 2;
