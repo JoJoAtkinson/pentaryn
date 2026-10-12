@@ -13,6 +13,11 @@
 
 `module.json` stays 1.1.0 until the Wave 7 restart batch adds the blueprint keys.
 
+- **[declared] README: a run with a failed actor ends on a permanent warning, not the counts toast**
+  (`importer-M2-followup`, doc only): "What the player sees" now says the info toast with counts appears
+  only when no actor failed; otherwise the GM sees the permanent "N actor(s) failed — see the console"
+  warning and no delete-the-JSON toast (`deleteJson.required` is `false`). Pinned by
+  test/per-actor-outcome.test.mjs.
 - **[declared] Each failed slug is logged through the kit logger** (`importer-R8`): the end-of-run
   summary writes one `pentaryn-importer | failed <slug>: <error>` warn line per failure before the
   `console.table` (kept, with the group), and with debug on `trace()` carries an `import.failed`

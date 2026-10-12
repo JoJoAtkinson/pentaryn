@@ -4,6 +4,7 @@
 // updated[] only once stampContentHash succeeds, so every selected actor has exactly one outcome.
 import { mock, test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { installFoundry } from "./kit/foundry-stub.mjs";
 import { manifestOf } from "./kit/harness.mjs";
 import { makeWorld } from "./fixtures/world.mjs";
@@ -79,4 +80,33 @@ test("importer-R6: an actor whose Item write fails after the Actor write is repo
   assert.equal(created + updated + skipped + failed, selected, "one outcome per selected actor");
   assert.equal(game.actors.find(a => a.flags.pentaryn?.slug === "old").flags.pentaryn.contentHash, "sha256:old-old", "not stamped");
   assert.equal(game.actors.find(a => a.flags.pentaryn?.slug === "fresh").flags.pentaryn.contentHash, undefined, "not stamped");
+});
+
+// importer-M2-followup: when any actor fails, the end-of-run toast is a permanent warning pointing
+// at the console — not the info toast with counts — and the delete-the-JSON toast is not shown.
+// The README's "What the player sees" must say so.
+test("importer-M2-followup: a run with a failed actor shows only a permanent warning, and the README says so", async () => {
+  const toasts = [];
+  const keep = ui.notifications;
+  ui.notifications = Object.fromEntries(["info", "warn", "error", "success"]
+    .map(level => [level, (message, opts) => { toasts.push([level, String(message), opts ?? null]); }]));
+  W.K.failItems.add("broken");
+  let result;
+  try {
+    result = await run([npc("broken"), npc("ok")]);
+  } finally {
+    W.K.failItems.clear();
+    ui.notifications = keep;
+  }
+  assert.equal(result.counts.failed, 1);
+  assert.equal(result.deleteJson.required, false);
+  assert.deepEqual(toasts, [[
+    "warn", "[pentaryn-importer] 1 actor(s) failed — see the console for the per-slug report.", { permanent: true },
+  ]]);
+
+  const readme = readFileSync(new URL("../README.md", import.meta.url), "utf8");
+  const section = readme.split("## What the player sees")[1].split("\n## ")[0].replace(/\s+/g, " ");
+  assert.match(section, /info toast with the counts[^.]*only when no actor failed/i);
+  assert.match(section, /any actor fails[^.]*permanent warning toast[^.]*console/i);
+  assert.match(section, /delete[^.]*toast is not shown[^.]*deleteJson\.required[^.]*false/i);
 });

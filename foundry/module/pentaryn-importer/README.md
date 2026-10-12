@@ -1,6 +1,6 @@
 ---
 created: 2026-08-10
-last_modified: 2026-10-11
+last_modified: 2026-10-12
 tags: ["foundry", "vtt", "module", "dnd5e"]
 status: active
 ---
@@ -25,7 +25,10 @@ Nothing. The importer is GM-only and console-first. A GM sees a permanent error 
 version gate or the @ref lint refuses a run, when a non-GM calls it, when an entry cannot be
 prepared (a missing slug, an entry that is not an object — `null`, a string — or two items on one
 entry sharing a `flags.pentaryn.action`), and when a readback fails; an info toast with the counts after a
-real run; and a permanent "delete `Data/<path>`" toast after a successful one. Players see a
+real run, only when no actor failed — when any actor fails the GM instead sees a permanent warning toast
+("N actor(s) failed") pointing at the console for the per-slug report; and a permanent "delete
+`Data/<path>`" toast after a fully successful real run (when any actor fails, that delete toast is not
+shown: `deleteJson.required` is `false`). Players see a
 toast only if they call `import()` themselves: the `NOT_GM` refusal. Some refusals throw a `PentarynAbort` with **no** toast — read `err.code` /
 `err.message`: a fetch failure (missing file, HTML body, network error, timeout), a bad option
 (`BAD_ARGS`: `only` not null or an array of slug strings, `timeout` not a positive number, `path`
