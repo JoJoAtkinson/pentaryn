@@ -672,7 +672,7 @@ Result section has the step map and the deviations.
 | prompts-lookup-15 | done `e00bb70f` [declared] DP7 (`core/text.mjs` assetUrl) |
 | prompts-lookup-16 | done `5ba6516c` (`settings.mjs`; gatherChars already agreed since D6) |
 | prompts-lookup-17 | done `f131b6ee` [declared] DP9 (warn once on a throwing core token API; debug elsewhere) |
-| prompts-lookup-18 | not done: the gather and replace console lines are pinned exactly by frozen tests; logging is outside the wave's rule (open for Joe) |
+| prompts-lookup-18 | done `25fd3172` [declared] (DP9 class): `core/log-lines.mjs`; the always-on gather line unchanged, the phase split + manifest size and the replace summary are debug lines, so no frozen console pin moved. Fork half (`prompt-markers done` log) is the fork lane's |
 | prompts-lookup-19 | done `a86a769e` (inspect, markersOn, manifest, selftest, describe; module.api) |
 | prompts-lookup-20 | done `b60f4dd4` (geometry-core → `core/*.mjs` behind the barrel) |
 | prompts-lookup-21 | done `a4f3d32c` (LINK_FT, FORMATION_FT) |
@@ -686,6 +686,10 @@ Result section has the step map and the deviations.
 | prompts-lookup-33 | done `be5c783b` (the live toast is localised through the entry's sink) |
 | mcp-fork-15 | module half done (`prompts-core.mjs` KINDS/PATCH_KEYS, contract.test vocabularies); fork half open |
 | mcp-fork-24 | done `876f2899` (kit guarded through registerQueries) |
+| mcp-fork-2 | module half pinned `1fb8c610` (bridge handlers called with no ctx; own queries plain, unmarked; fork guard text with `FOUNDRY_MCP_FORK`) |
+| mcp-fork-10 | parity pinned `c56d3196` (the patch's recharge row = the fork's `rechargeUpdate`, through `applyPatch`; `rechargeData` stays private) |
+| mcp-fork-20 | no module half (prompts already has `describe()`); the `context/foundry/README.md` namespace table row is the integrator's |
+| aoe-movement-portals-38 | prompts half `020bde4c` (`isScaffold` docblock names the rule and the markers.md table; doc guard); the table is the integrator's (portals lane) |
 | new (checkpoint) | fractional patch CR written as NaN — fixed `0dfb854a` [declared] |
 | new (review, §5.9.1) | `ensureMarkers` duplicated the folder / marker actors when two tabs of the active GM (bridge + browser) both found one missing — fixed `e451d4a7` [declared] (deterministic `_id` + `keepId`) |
 | new (review, LLM-read) | comments named files step 10 renamed (`character.mjs`, `npc.mjs`, `model.mjs`, `los.mjs`, the typeahead capture) — fixed `3072e08e`; the TWIN comment in `pentaryn-lookup/lookup-core.mjs` is the integrator's |

@@ -54,6 +54,10 @@ module. Baseline: [`wave-3-baseline.md`](wave-3-baseline.md).
   line and replace's failure-path lines are pinned exactly by frozen tests, and logging is outside
   this wave's rule (performance, maintainability, hardening, LLM-read). Decide: build it (flips the
   two console pins, declared, console only) or drop it.
+  **Built narrower in the standalone pass (`25fd3172`), no decision needed for it:** the phase split,
+  manifest size and the replace summary are debug lines (`CONFIG.debug["pentaryn-prompts"]`), so no
+  pin moved. Still Joe's, only if wanted: make the replace summary always-on (`log.debug` →
+  `log.info`, one line in `replace.mjs` `logSummary`).
 - **prompts — the `pentaryn-prompts.replace` query writes but is not idempotent across GM tabs
   (§5.9.1).** It is safe today: the fork reaches it through the bridge module, which calls the
   handler in its own tab. A `User#query` to the GM user would run it in every tab of that user

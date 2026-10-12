@@ -224,7 +224,8 @@ not idempotent across tabs — keep calling it through the bridge. The side pane
 `node test/run.mjs`: every `test/*.test.mjs` (node:test) and the legacy core suite
 `test/legacy-run.mjs` (snapshots in `test/snapshots/`; `UPDATE_SNAPSHOTS=1` rewrites them — read the
 diff). Goldens live in `test/golden/`; `GOLDEN_UPDATE=1 node --test test/<file>.test.mjs` rewrites one
-file's. `FOUNDRY_MCP_FORK=<fork checkout>` turns on `contract.test.mjs`. `test/scenarios.mjs` builds
+file's. `FOUNDRY_MCP_FORK=<fork checkout>` turns on the fork checks in `contract.test.mjs`,
+`bridge-ctx.test.mjs` and `recharge-parity.test.mjs`. `test/scenarios.mjs` builds
 the scratch scenes `ZZ Prompt Test 1/2` in a live world (`build()`, `setDoor()`, `cleanup()`).
 
 ## Sync
