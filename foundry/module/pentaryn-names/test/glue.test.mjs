@@ -316,7 +316,7 @@ test("api.sync(actor, old, new) returns the count and writes as the hook path do
 });
 
 // [declared] guide step 6 (N-D3, transform-creatures-38): sync's first argument is resolved at the
-// API boundary (kit resolveRef, exact match only). Before, an id, uuid or name rejected with a
+// API boundary (kit resolveRef: a whole name, exact then case-insensitive; never a substring). Before, an id, uuid or name rejected with a
 // TypeError because sync dereferenced actor.prototypeToken. A miss still reaches sync as null and
 // rejects with that TypeError (legacy row); an ambiguous name returns fail("AMBIGUOUS"), writing nothing.
 test("transform-creatures-38: api.sync resolves an id, uuid or exact name; a miss still rejects TypeError", async () => {
@@ -337,6 +337,18 @@ test("transform-creatures-38: api.sync resolves an id, uuid or exact name; a mis
     await assert.rejects(async () => api.sync(ref, "Bob", "Rob"), TypeError, `no substring match: ${ref}`);
   }
   assert.deepEqual(effects(F.calls), []);
+});
+
+test("api.sync resolves a whole name case-insensitively after the exact pass; two case-insensitive matches are AMBIGUOUS", async () => {
+  reset(F);
+  assert.equal(await api.sync(OLD.toLowerCase(), OLD, NEW), 3);
+  assert.equal(effects(F.calls)[0].uuid, `Actor.${IDS.glubbek}`);
+  reset(F);
+  const r = await api.sync("bob", "Bob", "Rob");
+  assert.equal(r.ok, false);
+  assert.equal(r.code, "AMBIGUOUS", "two actors are named Bob, so \"bob\" matches both");
+  assert.deepEqual(effects(F.calls), []);
+  reset(F);
 });
 
 // Characterisation (README sync row): a ref that is not an actor, token, placeable or string is

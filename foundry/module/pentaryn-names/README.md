@@ -34,7 +34,7 @@ object. Ask it what it offers: `game.pentaryn.names.describe()` (offline: `test/
 
 | Call | Returns | Notes |
 |---|---|---|
-| `sync(actorRef, oldName, newName)` | number of labels changed (prototype + placed tokens this user can edit) | writes. On a GM client it also relabels the actor's combatants by the same rule (not counted, not toasted). `actorRef`: an Actor, a token or placeable, a UUID, an id or a whole name — never a substring; a token or a token's synthetic actor means its base (world) actor. An ambiguous name returns `{ok: false, code: "AMBIGUOUS", reason}`; a ref that is not an actor, token, placeable or string (a number, a plain object, an Item) returns `{ok: false, code: "BAD_ARGS", reason}`, writing nothing; a ref that matches nothing rejects with a `TypeError` |
+| `sync(actorRef, oldName, newName)` | number of labels changed (prototype + placed tokens this user can edit) | writes. On a GM client it also relabels the actor's combatants by the same rule (not counted, not toasted). `actorRef`: an Actor, a token or placeable, a UUID, an id or a whole name (exact, then case-insensitive; never a substring); a token or a token's synthetic actor means its base (world) actor. An ambiguous name returns `{ok: false, code: "AMBIGUOUS", reason}`; a ref that is not an actor, token, placeable or string (a number, a plain object, an Item) returns `{ok: false, code: "BAD_ARGS", reason}`, writing nothing; a ref that matches nothing rejects with a `TypeError` |
 | `relabel(label, oldName, newName)` | the new label, or `null` for a nickname | pure preview, safe to call |
 | `shortName(name)` | the part before the first comma, trimmed | pure |
 
