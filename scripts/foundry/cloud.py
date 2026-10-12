@@ -2454,9 +2454,16 @@ def extract_snapshot(tar_path: Path, *, systems: bool = True) -> None:
     """Restore from a LOCAL snapshot tar (the updater's entry point). A full tar is
     applied as before bundles. A bundled tar is applied only when every bundle it names
     is already here at its fingerprint — there is nothing to download them from — else
-    RestoreError (a RuntimeError) names the missing ones before anything is touched."""
+    RestoreError (a RuntimeError) names the missing ones before anything is touched. The
+    tar is read end to end first, as fetch_snapshot does: a damaged one is refused before
+    the clear (review R2)."""
     tar_path = Path(tar_path)
-    marked, manifest = _read_marker(tar_path)
+    try:
+        marked, manifest = _read_marker(tar_path)
+        bundles.read_all(tar_path)
+    except (tarfile.TarError, OSError, EOFError, zlib.error, ValueError) as exc:
+        raise RestoreError(f"{tar_path.name} is not a readable snapshot — nothing was "
+                           f"touched: {exc}") from exc
     if not marked:
         apply_snapshot(Fetched(None, tar_path, None, {}, {}, [], []), systems=systems)
         return
