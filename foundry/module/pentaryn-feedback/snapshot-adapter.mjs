@@ -13,7 +13,7 @@
  */
 
 import {
-  DIALOG_ID, LIMITS, QUIET_APPS, QUIET_APP_PATTERN, chatEntry, clip, messageOf, redact, userFields,
+  DIALOG_ID, LIMITS, QUIET_APPS, QUIET_APP_PATTERN, chatEntry, clip, messageOf, redact, userFieldsOf,
 } from "./feedback-core.mjs";
 
 const section = fn => {
@@ -94,7 +94,7 @@ export function snapshot({ g = globalThis } = {}) {
       id: game.world?.id ?? null, title: clip(game.world?.title), system: game.system?.id ?? null,
       systemVersion: game.system?.version ?? null, coreVersion: game.version ?? game.release?.version ?? null,
     })),
-    user: section(() => userFields({ ...plainUser(game.user), character: ref(game.user?.character) })),
+    user: section(() => userFieldsOf(game.user)),
     scene: section(() => ({
       viewed: ref(g.canvas?.scene ?? game.scenes?.viewed), active: ref(game.scenes?.active ?? null),
       canvasReady: g.canvas?.ready === true,
@@ -139,10 +139,6 @@ export function snapshot({ g = globalThis } = {}) {
       return mine.slice(-LIMITS.chatMax).map(row(m => chatEntry(m), { id: "" }));
     }),
   };
-}
-
-function plainUser(u) {
-  return { id: u?.id, name: u?.name, role: u?.role, isGM: u?.isGM };
 }
 
 /** The one-line counts the dialog's "What gets attached" list shows. */

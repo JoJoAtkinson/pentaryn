@@ -96,6 +96,8 @@ export const REPORT_KEYS = Object.freeze([
 /** Snapshot sections, by shape. A section that failed arrives as `{ error }` (snapshot-adapter). */
 export const LIST_SECTIONS = Object.freeze(["windows", "modules", "chat"]);
 export const OBJECT_SECTIONS = Object.freeze(["user", "world", "scene", "tokens", "combat", "client"]);
+/** Every list-shaped report key validateReport checks, in check order: the two rings, then LIST_SECTIONS. */
+export const LIST_KEYS = Object.freeze(["actions", "errors", "chat", "windows", "modules"]);
 
 /* ── text hygiene ─────────────────────────────────────────────────────────── */
 
@@ -328,8 +330,9 @@ export function errorEntry({ t, source, message, stack, location }) {
 }
 
 /**
- * The keys an update touched, never their values: top-level keys, and `system.*` one level down.
- * At most LIMITS.keys; `_id` and flag-only noise from other packages are kept as `flags.<scope>`.
+ * The keys an update touched, never their values. `_id` and `_stats` are skipped; `system` and
+ * `flags` are listed one level down (`system.<key>`, `flags.<scope>`), so another package's flag
+ * noise shows only its scope. At most LIMITS.keys.
  */
 export function changedKeys(changes) {
   if (!changes || typeof changes !== "object") return [];
@@ -364,6 +367,14 @@ export function userFields({ id, name, role, isGM, character } = {}) {
     id: clip(id, 32), name: clip(name), role: Number.isFinite(role) ? role : 0, isGM: !!isGM,
     character: character?.id ? { id: clip(character.id, 32), name: clip(character.name) } : null,
   };
+}
+
+/** userFields() from a User document itself (or null → the empty user). Reads only its argument. */
+export function userFieldsOf(u) {
+  return userFields({
+    id: u?.id, name: u?.name, role: u?.role, isGM: u?.isGM,
+    character: u?.character ? { id: u.character.id, name: u.character.name } : null,
+  });
 }
 
 /** A snapshot section that failed: `{ error: "…" }` and nothing else. */
@@ -432,6 +443,9 @@ export function buildReport({ id, t, draft, snapshot = {}, actions = [], errors 
 
 const ID = /^[A-Za-z0-9]{16}$/;
 
+/** True for a report id: a string of exactly 16 letters or digits. */
+export const isReportId = id => typeof id === "string" && ID.test(id);
+
 /** Serialised size in bytes (UTF-8), or Infinity when it cannot be serialised. */
 export function byteSize(value) {
   try {
@@ -470,12 +484,12 @@ export function fitReport(report, max = LIMITS.bytes) {
 export function validateReport(report) {
   if (!report || typeof report !== "object" || Array.isArray(report)) return { ok: false, reason: "not an object" };
   if (report.schemaVersion !== SCHEMA_VERSION) return { ok: false, reason: `schemaVersion ${report.schemaVersion} is not ${SCHEMA_VERSION}` };
-  if (typeof report.id !== "string" || !ID.test(report.id)) return { ok: false, reason: "id must be 16 letters or digits" };
+  if (!isReportId(report.id)) return { ok: false, reason: "id must be 16 letters or digits" };
   if (!Number.isFinite(report.t)) return { ok: false, reason: "t must be a timestamp" };
   if (!CATEGORY_KEYS.includes(report.category)) return { ok: false, reason: `category must be one of ${CATEGORY_KEYS.join(", ")}` };
   if (typeof report.text !== "string" || !report.text.trim()) return { ok: false, reason: "text is empty" };
   if (report.text.length > LIMITS.text) return { ok: false, reason: `text is over ${LIMITS.text} characters` };
-  for (const k of ["actions", "errors", "chat", "windows", "modules"]) {
+  for (const k of LIST_KEYS) {
     if (report[k] !== undefined && !Array.isArray(report[k])) return { ok: false, reason: `${k} must be a list` };
   }
   const bytes = byteSize(report);
