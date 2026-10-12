@@ -31,7 +31,7 @@ export function paintBadge(button, left) {
  * Off-hand) moves the others, and an open drawer follows its own.
  */
 export function applyButtons(panel, next, fresh, after) {
-  kitApplyButtons(panel, next, fresh, { attachDetached: true, after });
+  kitApplyButtons(panel, next, fresh, { attachDetached: true, after, log });
 }
 
 /** Argon's hover tooltip, when it belongs to this button. */
