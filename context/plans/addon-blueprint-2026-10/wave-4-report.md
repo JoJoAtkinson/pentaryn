@@ -532,3 +532,58 @@ no kit bump). Code phase only, nothing live, no `module.json` touched.
     by … `styles/transform.css` imports") is no longer a coupling and could be dropped.
   - Combat's CHANGELOG could note the [declared] `24e961a0`.
 
+
+## Integrator (2026-10-12)
+
+Applied every lane's shared-file list on `migrate/wave-4` (code phase only, nothing live, no
+`module.json` touched, fork not touched — no lane changed prompts or the bridge).
+
+| Commit | What |
+|---|---|
+| `e1a9aade` | `foundry/adjustments.yml`: riders, aoe, transform and combat rows follow their moves; D2 renames (riders' four patch rows `riders-*`, `dnd5e-riders-arcane-recovery-picker`, `argon-riders-long-casts`, `transform-preupdate-unwrap`, 29 combat rows to the package prefix); `core-region-placement-escape` widened to cursors (-39); `dnd5e-chat-message-types` widened (combat, aoe `messages-adapter.mjs`, riders' four files + marker `registry.messages`); `dnd5e-cancelled-area-refund` `what` corrected (combat-riders-36); seven new rows (`dnd5e-riders-damage-tray-preset`, `dnd5e-riders-roll-term-riders`, `dnd5e-riders-sheet-hit-dice`, `core-riders-query-battle-medic`, `itempiles-aoe-skip-piles`, `core-combat-flag-forced-replacement`, `core-combat-reads-aoe-placement`). `transform-reads-combat-multiattack` not added (superseded by eb5d576b). A misspelled marker fails the check |
+| `4cab245c` | riders file-header comments name the renamed rows |
+| `fb3361b9` | `config.py` `after_sync`: transform version-neutral (-18); combat → "README → Settings" |
+| `4dcb6cfd` | `vendor.py` refusal names `argon-tooltip.css` (riders lane); new test, red before |
+| `cd63f263` | aoe README:128 + handle-oracle `about` (combat review); combat README "Flags other modules read" (transform); transform README D7 coupling dropped; combat CHANGELOG D7 line |
+| `0b414108` | `scripts/tests/test_rider_tables.py` (combat-riders-17 step 4, W4-C8 draft) |
+| `d73acb65` | `scripts/tests/test_module_contracts.py` (transform-creatures-21 draft) |
+| `4ecec06b` | `context/foundry/melee.md`: `turnflow/*.mjs`, stacked weapons (-15), "Which riders module?" table (-17 step 2) |
+| `7ca2026b` | `druid-wild-shape.md` and plans index route `wildshape-hud-design.md` (transform-creatures-19); `pentaryn.md` transform line |
+| `b4c324b7` | `context/foundry/README.md`: module index regenerated; riders and transform routing rows (-20) |
+| `4e3e69e9` | this report: two example links made plain text (check-context was red on them) |
+| `d0d8e771` | `wave7-restart-batch.md` rows for riders, aoe, transform, combat; `adjustments-batch.md` marks the wave-4 rows landed |
+| `762c9113` | riders CHANGELOG names `794e1ed9` (-41 prune follow-up) |
+| `73b6c672` | cursors `board.mjs` -39 cross-reference (aoe's half is `0b9b13fd`) |
+
+**Gates at the end** (all static): `./.venv/bin/pytest -q` 1208 pass, 2 skipped, 3 xfailed (the
+registry check is green again); `make foundry-modules-check` all 20 modules pass their gates (walls'
+docs.test warns on its known W7 description pin); `make foundry-lib-check` green, 0 todo; `make
+check-context` OK (4 warnings, pre-existing); `make foundry-adjustments-check` 106 rows green;
+`vendor.py check --all` identical for every migrated module. node:test: riders 175 (+ legacy 103 /
+22 / 39), aoe 411 (+ legacy 160), transform 248 (+ legacy 155), combat 244; 0 fail, 0 todo each.
+
+**Conformance** (origin/main → lanes done `a202a6f1` → integrated HEAD):
+
+| Module | origin/main | after lanes | after integration | Still failing |
+|---|---|---|---|---|
+| riders | 47.8 % | 89.6 % | **91.7 %** | C07, C09, C37 (W7), C56 (W2-J2) |
+| aoe | 50.0 % | 89.6 % | **93.8 %** | C07, C09, C37 (W7) |
+| transform | 55.6 % | 93.6 % | **95.7 %** | C07, C37 (W7) |
+| combat | 50.0 % | 91.7 % | **93.8 %** | C07 (W7), C21, C23 (W4-C3) |
+
+(The lanes quoted aoe's base as 58.7 %, its checkpoint; origin/main scores 50.0 % with today's
+scorer.) Other modules are unchanged by this pass.
+
+**Not done here (recorded):**
+- Every `module.json` edit → Wave 7 batch rows (`d0d8e771`), incl. the version bumps, riders' D7
+  vendor sync, combat's description sentence and the transform `core.test` manifest pin flip.
+- `context/foundry/argon.md` (combat-riders-18 phase 1, every Argon hook and prototype touch by
+  module and order) — not written; needs a read of all four modules' Argon registrations in order.
+  Follow-up.
+- Combat README: kept its two-line "Which riders module?" prose (the README is 249/250 lines);
+  the full table is in `melee.md` and riders' README.
+- `conformance.py` C59 blind spot (a per-document write behind a local helper, W4-C7): a scorer
+  note, not built.
+- isAoeHandle oracle pin for portals / creatures copies: needs `migrate/wave-3`; follow-up.
+- Riders sr follow-ups (not fixed): the 60 s claim staleness compares clocks across machines; a
+  winner slower than 7 s lets the loser's timeout reach the player before the heal.
