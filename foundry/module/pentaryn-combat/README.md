@@ -95,9 +95,6 @@ target itself, so it works either way.
 Per player (user flags, not settings): **Quick** (`flags.pentaryn-combat.quick`, the strip's
 checkbox) and **rider Ask/Auto** (`flags.pentaryn-combat.riders.<key>`, the Special-bar toggle).
 
-Per player (user flags, not settings): **Quick** (`flags.pentaryn-combat.quick`, the strip's checkbox)
-and **rider Ask/Auto** (`flags.pentaryn-combat.riders.<key>`, the Special-bar toggle).
-
 ## API — game.pentaryn.combat
 
 Built from `api-manifest.mjs` by the kit, frozen, published at `ready` (`game.modules.get("pentaryn-combat").api`

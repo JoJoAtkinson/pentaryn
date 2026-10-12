@@ -25,3 +25,9 @@ test("every top-level .mjs and both entries are under Files; at most 250 lines; 
   assert.ok(readme.trimEnd().split("\n").length <= 250, String(readme.trimEnd().split("\n").length));
   assert.equal(/\b\d+\s+(fixtures|cases|checks|assertions)\b/.test(readme), false);
 });
+
+test("no paragraph is repeated (M9: the 'Per player' paragraph appeared twice)", () => {
+  const paras = readme.split(/\n\s*\n/).map(p => p.replace(/\s+/g, " ").trim()).filter(Boolean);
+  const seen = new Set();
+  for (const p of paras) { assert.equal(seen.has(p), false, p.slice(0, 80)); seen.add(p); }
+});
