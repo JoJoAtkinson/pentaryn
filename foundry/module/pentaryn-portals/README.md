@@ -109,8 +109,7 @@ core 14.368), `core-teleport-default-and-spread` (DialogV2's yes/no buttons, the
 `core-teleport-dialog-cards` (the dialog id `dialog-<behaviorUuid>-<tokenId>`, `.dialog-content`,
 `select[name="destination"]`), `core-teleport-replacements-follow` (`options.replacements` on
 `deleteToken`), `core-region-config-portal-card` (the Appearance tab), `itempiles-portals-pile-pc`
-(`isValidItemPile`, so a pile-PC is never left behind). The first two exist today; the other four
-are queued in the adjustments batch (`context/plans/addon-blueprint-2026-10/adjustments-batch.md`).
+(`isValidItemPile`, so a pile-PC is never left behind). All six rows are in `foundry/adjustments.yml`.
 
 ## Two sessions / who writes
 
