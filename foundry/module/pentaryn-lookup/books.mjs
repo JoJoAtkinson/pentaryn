@@ -52,7 +52,7 @@ async function page(ref, opts = {}) {
   if (raw.startsWith("Compendium.")) {
     const read = await readPageDoc(raw, log);
     if (!read) return { error: `no document at ${raw}` };
-    const found = foundFromDoc(read);
+    const found = foundFromDoc({ ...read, uuid: raw });
     const out = renderPage(found, opts);
     const warning = nonPageWarning(raw, read.documentName);
     return withTables(warning ? { ...out, warning } : out, found, opts);

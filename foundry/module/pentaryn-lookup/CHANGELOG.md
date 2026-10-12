@@ -24,6 +24,9 @@
   as if the pack were absent instead of throwing: `search`/`page` list it under "skipped missing
   pack(s)", the rest answer null/not found, and a debug trace names the pack. `selftest()` records a
   throwing check as `{label, ok: false, detail: <message>}` and runs the rest (R4).
+- [declared] `page(<uuid>)` of a document that is not a page (a JournalEntry, Actor, Item) answers
+  the caller's uuid verbatim as `uuid`, not a fabricated `…JournalEntry.<id>.JournalEntryPage.<id>`
+  that resolves to nothing; page uuids are unchanged (LKM-11).
 
 ## 0.3.0 — 2026-10-10
 

@@ -49,7 +49,7 @@ export const MANIFEST = Object.freeze({
       gm: false, writes: false, legacy: true, query: true,
       args: d => [d.ref, d],
       doc: "One page as plain text, with its embedded roll tables. Page past maxChars with offset = nextOffset. "
-        + "A UUID that is not a page (a JournalEntry) answers empty text with a warning.",
+        + "A UUID that is not a page (a JournalEntry) answers empty text with a warning, and its uuid echoed as given.",
     },
     {
       path: "monster",

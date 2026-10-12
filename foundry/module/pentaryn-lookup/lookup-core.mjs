@@ -256,13 +256,16 @@ export function toBook(id, label, edition, docs) {
  * One document read by UUID → the `{ book, doc, page }` renderPage takes. `parent` is the page's
  * journal entry; a document with no parent (a JournalEntry, Actor, Item UUID) stands as its own.
  */
-export function foundFromDoc({ id, name, html, pack, parent, packLabel, edition = EDITIONS[pack] }) {
+export function foundFromDoc({ documentName, uuid, id, name, html, pack, parent, packLabel, edition = EDITIONS[pack] }) {
   const p = parent ?? { id, name };
-  return {
+  const found = {
     book: { id: pack, label: packLabel ?? pack, edition },
     doc: { id: p.id, name: p.name },
     page: { id, name, html: html ?? "" },
   };
+  // Not a page: answer the caller's uuid, never a fabricated `…JournalEntryPage.<id>` (LKM-11).
+  if (uuid && documentName !== "JournalEntryPage") found.uuid = uuid;
+  return found;
 }
 
 /**
@@ -311,7 +314,7 @@ export function findPage(books, name) {
 export function renderPage(found, opts = {}) {
   if (!found || found.error || found.notFound) return found;
   const { book, doc, page } = found;
-  const uuid = pageUuid(book.id, doc.id, page.id);
+  const uuid = found.uuid ?? pageUuid(book.id, doc.id, page.id);
   if (opts.raw) return { journal: doc.name, page: page.name, uuid, raw: page.html ?? "" };
 
   const full = page.text ?? toPlainText(page.html);

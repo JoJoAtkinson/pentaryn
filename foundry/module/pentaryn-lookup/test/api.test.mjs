@@ -102,6 +102,7 @@ test("legacy API over the input table (golden/legacy-api.json)", async () => {
   assert.equal(out["monster zzz"].notFound, true);
   assert.equal(out["onList Fireball wizard"].onList, true);
   assert.equal(out["onList Fireball nope"].onList, null);
+  assert.equal(out["page by JournalEntry uuid (warning since DL4)"].uuid, ENTRY_UUID);   // LKM-11: echoed, not fabricated
 });
 
 test("selftest() against the stub: { ok, passed, failed, labels } pinned", async () => {

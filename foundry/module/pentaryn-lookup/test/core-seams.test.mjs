@@ -157,6 +157,19 @@ test("foundFromDoc: a parentless JournalEntry stands as its own journal, with em
   assert.equal("edition" in out, false);
 });
 
+test("foundFromDoc: a non-page uuid is echoed verbatim, never a fabricated page uuid (LKM-11)", () => {
+  for (const [documentName, uuid] of [["JournalEntry", "Compendium.p.c.JournalEntry.d"], ["Actor", "Compendium.p.a.Actor.x"],
+                                      ["Item", "Compendium.p.i.Item.y"]]) {
+    const f = core.foundFromDoc({ documentName, uuid, id: uuid.split(".").pop(), name: "N", html: "", pack: "p.c", parent: null });
+    assert.equal(core.renderPage(f).uuid, uuid, documentName);
+    assert.equal(core.renderPage(f, { raw: true }).uuid, uuid, `${documentName} raw`);
+  }
+  // a page still answers its canonical pageUuid(), whatever the caller passed
+  const pg = core.foundFromDoc({ documentName: "JournalEntryPage", uuid: "Compendium.p.c.JournalEntryPage.g", id: "g", name: "G",
+    html: "", pack: "p.c", parent: { id: "d", name: "D" } });
+  assert.equal(core.renderPage(pg).uuid, "Compendium.p.c.JournalEntry.d.JournalEntryPage.g");
+});
+
 test("foundFromDoc: the 2014 pack's edition comes from EDITIONS", () => {
   const out = core.renderPage(core.foundFromDoc({ id: "g", name: "G", html: "x", pack: "dnd5e.rules", parent: { id: "d", name: "D" }, packLabel: "SRD" }));
   assert.equal(out.edition, "2014");

@@ -245,7 +245,7 @@
       "book": "Player's Handbook",
       "journal": "Appendix C: Rules Glossary",
       "page": "Appendix C: Rules Glossary",
-      "uuid": "Compendium.dnd-players-handbook.content.JournalEntry.docGloss.JournalEntryPage.docGloss",
+      "uuid": "Compendium.dnd-players-handbook.content.JournalEntry.docGloss",
       "text": "",
       "warning": "Compendium.dnd-players-handbook.content.JournalEntry.docGloss is a JournalEntry, not a JournalEntryPage — pass a page UUID from search()"
     }
