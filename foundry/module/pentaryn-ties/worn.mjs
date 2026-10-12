@@ -29,40 +29,23 @@
 
 import { MODULE, NOTES_MAX, clampNotes } from "./ties-core.mjs";
 import { esc } from "./core/html.mjs";
+import { WORN_FLAG, WORN_BY_MAX as BY_MAX, docOf, readWorn } from "./ties-adapter.mjs";
+
+// the read half lives in the adapter (popups reads it too); re-exported for this file's importers
+export { WORN_FLAG, readWorn };
 import { makeLog } from "./lib/log.mjs";
 
 const log = makeLog(MODULE);
 
-export const WORN_FLAG = "worn";
-const BY_MAX = 200;
 
 /** One accent, a render decision (like stance colours) — never stored in the flag. */
 const ACCENT = 0x9b59b6;
 const DISC = 0x141311;
 
-/** Token placeable or TokenDocument in, TokenDocument out. */
-const docOf = token => token?.document ?? token ?? null;
 
 /* -------------------------------------------- */
 /*  Data                                        */
 /* -------------------------------------------- */
-
-/** The mark on a token, sanitised, or null. Never throws, never returns junk. */
-export function readWorn(token) {
-  const doc = docOf(token);
-  if (!doc?.getFlag) return null;
-  let raw;
-  try {
-    raw = doc.getFlag(MODULE, WORN_FLAG);
-  } catch {
-    return null;
-  }
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
-  const by = typeof raw.by === "string" ? raw.by.trim().slice(0, BY_MAX) : "";
-  const note = clampNotes(raw.note);
-  if (!by && !note.trim()) return null;
-  return { by, note };
-}
 
 /**
  * Write the mark. Token flags only — this function must never touch an actor

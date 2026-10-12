@@ -378,3 +378,31 @@ export function canReach(user, actor) {
   }
   return false;
 }
+
+/* -------------------------------------------- */
+/*  The worn mark (token flags)                 */
+/* -------------------------------------------- */
+
+/** `flags.pentaryn-ties.worn` on a TOKEN document: `{ by, note }`. */
+export const WORN_FLAG = "worn";
+export const WORN_BY_MAX = 200;
+
+/** Token placeable or TokenDocument in, TokenDocument out. */
+export const docOf = token => token?.document ?? token ?? null;
+
+/** The mark on a token, sanitised, or null. Never throws, never returns junk. */
+export function readWorn(token) {
+  const doc = docOf(token);
+  if (!doc?.getFlag) return null;
+  let raw;
+  try {
+    raw = doc.getFlag(MODULE, WORN_FLAG);
+  } catch {
+    return null;
+  }
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const by = typeof raw.by === "string" ? raw.by.trim().slice(0, WORN_BY_MAX) : "";
+  const note = clampNotes(raw.note);
+  if (!by && !note.trim()) return null;
+  return { by, note };
+}

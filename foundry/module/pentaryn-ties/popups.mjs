@@ -23,7 +23,7 @@
  */
 
 import { MODULE, stanceOf } from "./ties-core.mjs";
-import { readWorn } from "./worn.mjs";
+import { readWorn } from "./ties-adapter.mjs";
 import { canSee, read, stanceLabel } from "./ties-adapter.mjs";
 import { makeLog } from "./lib/log.mjs";
 import { PIN_SETTING, setting } from "./settings.mjs";
