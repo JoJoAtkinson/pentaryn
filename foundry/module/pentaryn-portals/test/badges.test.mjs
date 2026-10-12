@@ -9,7 +9,7 @@ import { places } from "./fixtures/places.mjs";
 
 const { F, S, W } = await boot();
 await W.tick();
-W.textures["cards/pit.webp"] = { src: "cards/pit.webp", width: 200, height: 100 };
+W.textures["cards/pit.webp?v=abc"] = { src: "cards/pit.webp?v=abc", width: 200, height: 100 };
 W.textures["thumbs/pit.webp"] = { src: "thumbs/pit.webp", width: 100, height: 100 };
 
 let seq = 0;
@@ -85,11 +85,24 @@ test("a canvasTearDown during the texture wait leaves no badge and no throw", as
   assert.equal(layer(), null);
 });
 
+test("portals-edge-3: the badge loads the card image with its ?v=, so a re-snapshot shows the new crop", async () => {
+  const P = onCanvas();
+  W.textures["cards/pit.webp?v=old"] = { src: "cards/pit.webp?v=old", width: 200, height: 100 };
+  W.textures["cards/pit.webp?v=new"] = { src: "cards/pit.webp?v=new", width: 200, height: 100 };
+  const drawn = () => S.badges[0].sprite.children.find(c => c.constructor.name === "Sprite")?.texture.src;
+  await P.pitGate.update({ "flags.pentaryn-portals.img": "cards/pit.webp?v=old" });
+  await S.drawBadges();
+  assert.equal(drawn(), "cards/pit.webp?v=old");
+  await P.pitGate.update({ "flags.pentaryn-portals.img": "cards/pit.webp?v=new" });
+  await S.drawBadges();
+  assert.equal(drawn(), "cards/pit.webp?v=new", "the re-snapshot's crop, not the cached old one");
+});
+
 test("a texture that fails to load, or a layer that fails to destroy: the badge still draws, nothing throws", async () => {
   const P = onCanvas();
-  W.textures["cards/pit.webp"] = "reject";
+  W.textures["cards/pit.webp?v=abc"] = "reject";
   await S.drawBadges();
-  W.textures["cards/pit.webp"] = { src: "cards/pit.webp", width: 200, height: 100 };
+  W.textures["cards/pit.webp?v=abc"] = { src: "cards/pit.webp?v=abc", width: 200, height: 100 };
   assert.equal(S.badges.length, 3);
   assert.equal(S.badges[0].sprite.children.some(c => c.constructor.name === "Sprite"), false);
   PIXI.throwOnDestroy = true;

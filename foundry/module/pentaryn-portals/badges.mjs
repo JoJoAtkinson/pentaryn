@@ -87,7 +87,8 @@ export async function drawBadges() {
     const first = cardFor(dests[0].region);
     if (revealed && first.img) {
       try {
-        const tex = await foundry.canvas.loadTexture(first.img.split("?")[0]);
+        // keep the ?v= cache-buster: PIXI caches by the full URL, so a re-snapshot's new ?v= loads the new crop
+        const tex = await foundry.canvas.loadTexture(first.img);
         if (tex) {
           const spr = new PIXI.Sprite(tex);
           const scale = (2 * r) / Math.min(tex.width, tex.height);
