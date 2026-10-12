@@ -488,7 +488,7 @@ nothing to decide. The prose under this table is the detail, kept as the lanes w
 
 | # | Item | Default | Why |
 |---|---|---|---|
-| W3-SE4 | senses: a chain whose anchor is hidden is drawn for players | **hide it**: one condition in `paint()`, as a `[declared]` visual commit | It leaks the hidden token's square on screen, and on-screen leaks are the ones that matter at this table |
+| W3-SE4 | senses: a chain whose anchor is hidden is drawn for players | **hide it**: one condition in `paint()`, as a `[declared]` visual commit | It leaks the hidden token's square on screen, and on-screen leaks are the ones that matter at this table. **Decided (Joe 2026-10-12): fixed `97df5ddf`** on `fix/overnight-2-2026-10-12` (pin flipped in `1f999831`). senses stays 0.4.1; the bump rides the wave 5 restart batch |
 | W3-C1 | creatures/senses: the orphan 5/5 light after a senses hand-off (C-L1) | **keep**; watch for it in the live phase | Rare, and the GM can set the light to 0. Arbitrating needs a contract on both sides |
 | W3-P1 | portals' Item Piles probe differs from aoe's | **keep them different**; revisit when aoe migrates in wave 4 | Documented on purpose (-36): aoe tolerates a false positive, portals must not |
 | W3-P2 | portals: `spreadArrival → { moved, to }`, `teleportParty(ref, { from })`, refs on the legacy rows | **don't build now** | They are shape changes outside the guide's list. The new rows already take refs |
