@@ -123,3 +123,35 @@ module. Baseline: [`wave-3-baseline.md`](wave-3-baseline.md).
   updateDocuments`, as `resetSight` does) is one round trip, but it changes the glue ready-chain call
   order pins, so it would be its own declared perf step. On a converged world it is mostly no-op
   writes; recorded, not built. Migration `4e9cc5bf`.
+
+## ties — standalone-finding review (2026-10-11)
+
+Every §4 commit was checked against its audit finding, the frozen checkpoint (`7395a708`) and §5.9.
+The only checkpoint test or golden edits are in the [declared] commits and their golden commits
+(B2, B3/ties-10, B4, B6, B7/ties-25, ties-46). `node test/run.mjs` passed twice after the fixes:
+250 pass, 0 fail, 0 todo, plus LEGACY 183, 9 and reach. `vendor.py check` is identical and
+conformance is still 87.8 %.
+
+- **Fixed in this review.** `cad6f949`: ties-21, -23, -27 and -28 had no test of the saving itself,
+  only goldens showing the output was unchanged. `test/perf-scans.test.mjs` now counts the reads
+  from each moved call site, and each case fails when its fix is reverted. `d3bd0e51`: the ties-24
+  item 3 tests did not cover the `state.painted = null` reset. A new case paints the last good
+  plan again after a paint that failed partway; it fails without that line. `41fa7d31`: removes the
+  orphaned `LIVE_MS` doc comment left in `look-app.mjs` after ties-40.
+- **For the live-test run: B3 covers more commits than are tagged.** §5 B3 lists ties-3, -5, -6,
+  -8, -9 and -10, but only `5b47b528` (ties-10) is tagged [declared] B3. The other additive commits
+  are `7cb9e4f9` (ties-3), `bf44258f` (ties-5/-6), `fbc7c696` (ties-8) and `1d660cc8` (ties-9). They
+  also update the S8 goldens `describe.json` and `surface.json` in the same commit. Those goldens are
+  not checkpoint-frozen and nothing goes red. History is not rewritten; treat all five as B3 when
+  checking at the table.
+- **Red windows for bisecting.** Each behaviour commit below fails until its golden commit lands,
+  because the golden follows in its own commit as §5 requires. Module tests are green from each
+  golden commit onward.
+
+  | [declared] commit | Red until |
+  |---|---|
+  | `468c4eee` (B2) | `1693599c` |
+  | `5b47b528` (B3) | `9bbca55a` |
+  | `c31bd116` (B4) | `c9f3e284` |
+  | `f7aa8929` (B6) | `8bf658c6` |
+  | `28b913e2` (ties-46) | `313c7df8` |
