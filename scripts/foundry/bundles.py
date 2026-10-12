@@ -287,42 +287,68 @@ def local_inventory(*, cache: bool = True, warn: Callable[[str], None] | None = 
         with os.scandir(root) as it:
             entries = sorted(it, key=lambda e: e.name)
         for e in entries:
-            name, where = e.name, f"{rel_root}/{e.name}"
             path = Path(e.path)
             why = _skip_reason(kind, path)
             if why is not None:
                 if why:
                     say(why)
                 continue
-            mf = path / MANIFEST_FILE[kind]
-            try:
-                meta = json.loads(mf.read_text(encoding="utf-8"))
-            except (OSError, ValueError):
-                meta = None
-            if not isinstance(meta, dict):
-                say(f"⚠ {where}: {MANIFEST_FILE[kind]} is not a JSON object — "
-                    f"bundled under version 0")
-                version = "0"
-            else:
-                version = sanitize_version(meta.get("version"))
-                mid = meta.get("id")
-                if mid is not None and mid != name:
-                    say(f"⚠ {where}: {MANIFEST_FILE[kind]} says id {mid!r} — "
-                        f"bundled under the folder name {name!r}")
-            files = _walk(path)
-            key = f"{kind}/{name}"
-            hit = old.get(key)
-            sig = _sig(files)
-            if hit is not None and hit["sig"] == sig:
-                fp = hit["fp"]
-            else:
-                fp = fingerprint(path, files=files).fp
-            new[key] = _entry(files, fp, version, sig)
-            inv[key] = Local(kind, name, version, fp, path, new[key]["files"],
-                             new[key]["bytes"])
+            key = f"{kind}/{e.name}"
+            loc, new[key] = _locate(kind, path, old, say)
+            inv[key] = loc
     if cache and save and new != old:
         _save_cache(cache_path, new)
     return inv
+
+
+def _locate(kind: str, path: Path, old: dict[str, dict], say: Callable[[str], None]
+            ) -> tuple[Local, dict]:
+    """One bundle folder (already past _skip_reason): its Local and its cache entry,
+    reusing `old`'s fingerprint when the stat signature matches."""
+    name, where = path.name, f"{ROOTS[kind]}/{path.name}"
+    mf = path / MANIFEST_FILE[kind]
+    try:
+        meta = json.loads(mf.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        meta = None
+    if not isinstance(meta, dict):
+        say(f"⚠ {where}: {MANIFEST_FILE[kind]} is not a JSON object — "
+            f"bundled under version 0")
+        version = "0"
+    else:
+        version = sanitize_version(meta.get("version"))
+        mid = meta.get("id")
+        if mid is not None and mid != name:
+            say(f"⚠ {where}: {MANIFEST_FILE[kind]} says id {mid!r} — "
+                f"bundled under the folder name {name!r}")
+    files = _walk(path)
+    hit = old.get(f"{kind}/{name}")
+    sig = _sig(files)
+    if hit is not None and hit["sig"] == sig:
+        fp = hit["fp"]
+    else:
+        fp = fingerprint(path, files=files).fp
+    entry = _entry(files, fp, version, sig)
+    return Local(kind, name, version, fp, path, entry["files"], entry["bytes"]), entry
+
+
+def local_one(kind: str, id: str, *, cache: bool = False,
+              warn: Callable[[str], None] | None = None) -> Local | None:
+    """The one bundle "<kind>/<id>" as local_inventory would list it, hashing only that
+    folder (review PERF-1: a rebuild of one bundle must not re-hash every module and
+    system), or None where the inventory would have no such key — no folder, a skipped
+    one, a name that cannot be a bundle. With `cache`, a matching stat signature reuses
+    the cached fingerprint; the cache is never written (it holds every folder, and this
+    looked at one). Warnings are silent unless `warn` is given."""
+    try:
+        _check_id(kind, id)
+    except ValueError:
+        return None
+    path = host.foundry_data() / ROOTS[kind] / id
+    if _skip_reason(kind, path) is not None:
+        return None
+    old = _load_cache(host.foundry_data() / CACHE_FILENAME) if cache else {}
+    return _locate(kind, path, old, warn or (lambda _m: None))[0]
 
 
 # ── the manifest ─────────────────────────────────────────────────────────────

@@ -415,6 +415,45 @@ def test_inventory_signs_each_folder_once(modules_root, fake_data, monkeypatch):
     assert cache.read_bytes() == before
 
 
+# ── PERF-1: one folder's entry without hashing every other folder ────────────
+
+def test_perf1_local_one_hashes_only_its_own_folder(modules_root, fake_data, counting):
+    make_module(modules_root, "alpha", version="1.2")
+    make_module(modules_root, "beta")
+    whole = bundles.local_inventory(cache=False, warn=lambda m: None)
+    counting.clear()
+    one = bundles.local_one("module", "alpha")
+    assert one == whole["module/alpha"]
+    assert counting == [modules_root / "alpha"]
+    assert not (fake_data / bundles.CACHE_FILENAME).exists()     # cache=False: no write
+
+
+def test_perf1_local_one_reads_but_never_writes_the_cache(modules_root, fake_data, counting):
+    make_module(modules_root, "alpha")
+    first = _inv()
+    cache = fake_data / bundles.CACHE_FILENAME
+    before = cache.read_bytes()
+    counting.clear()
+    assert bundles.local_one("module", "alpha", cache=True) == first["module/alpha"]
+    assert counting == []                       # the stat signature matched: nothing hashed
+    assert bundles.local_one("module", "alpha") == first["module/alpha"]
+    assert counting == [modules_root / "alpha"]                  # cache=False re-hashes
+    assert cache.read_bytes() == before
+
+
+def test_perf1_local_one_is_none_for_what_the_inventory_skips(modules_root, tmp_path):
+    target = make_module(tmp_path / "elsewhere", "linked")
+    (modules_root / "linked").symlink_to(target, target_is_directory=True)
+    make_module(modules_root, ".hidden")
+    (modules_root / "leftover").mkdir()
+    (modules_root / "loose.txt").write_text("x")
+    for id in ("linked", ".hidden", "leftover", "loose.txt", "missing", "..", ".", "a/b",
+               "a@b", ""):
+        assert bundles.local_one("module", id) is None, id
+    assert bundles.local_one("system", "m") is None             # no Data/systems at all
+    assert bundles.local_one("nonsense", "m") is None
+
+
 def test_cache_drops_removed_modules(modules_root, fake_data):
     make_module(modules_root, "gone")
     _inv()

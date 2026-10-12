@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import os
 import time
+from pathlib import Path
 
 import pytest
 
@@ -648,6 +649,21 @@ def test_upload_missing_rebuilds_a_gone_staged_tar_and_replaces_its_entry(two_ho
                                     rebuild=cloud._rebuilder(rebuilt))
     assert up == [loc.name] and staged[loc.name] == rebuilt[0] != tar
     assert loc.name in _bundle_names(two_hosts.cloud)
+
+
+def test_perf1_rebuilding_one_bundle_hashes_only_that_folder(two_hosts, tmp_path,
+                                                             monkeypatch):
+    from scripts.foundry import bundles
+    loc, tar = _staged(two_hosts, tmp_path)
+    tar.unlink()
+    walked: list = []
+    real = bundles._walk
+    monkeypatch.setattr(bundles, "_walk", lambda root: (walked.append(Path(root)),
+                                                        real(root))[1])
+    rebuilt: list = []
+    with two_hosts.use("mac"):
+        assert cloud._rebuilder(rebuilt)(loc.name) == rebuilt[0]
+    assert walked and set(walked) == {Path(loc.path)}, walked    # never module/maps
 
 
 def test_a_staged_tar_built_days_ago_lands_with_a_fresh_cloud_mtime(two_hosts, tmp_path):

@@ -1409,8 +1409,8 @@ def _verify_bundles(st: Storage, name: str, manifest: dict, staged: dict[str, Pa
 
 def _rebuilder(rebuilt: list[Path], dest_dir: Path | None = None):
     """`rebuild(name)`: the bundle `name` built again from the live folder when that
-    folder's fingerprint still matches it (the inventory re-hashed, no cache, once per
-    rebuilder), else None. Each tar built is appended to `rebuilt` for the caller to
+    folder's fingerprint still matches it (that one folder re-hashed, no cache — never
+    the whole inventory, review PERF-1), else None. Each tar built is appended to `rebuilt` for the caller to
     delete.
 
     Only a stopped tree is tarred (review MC2): the upload half runs in the background
@@ -1424,10 +1424,7 @@ def _rebuilder(rebuilt: list[Path], dest_dir: Path | None = None):
     An OSError from the hash or the tar (a file replaced mid-walk: Foundry's launch, a
     module sync swapping the folder) is a StorageError too, never a bare exception that
     escapes _run_job."""
-    live: dict | None = None
-
     def rebuild(n: str) -> Path | None:
-        nonlocal live
         ref = bundles.parse_bundle(n)
         if ref is None:
             return None
@@ -1439,9 +1436,7 @@ def _rebuilder(rebuilt: list[Path], dest_dir: Path | None = None):
             raise refuse
         src: Path | None = None
         try:
-            if live is None:
-                live = bundles.local_inventory(cache=False, warn=lambda _m: None)
-            loc = live.get(ref.key)
+            loc = bundles.local_one(ref.kind, ref.id)
             if loc is None or loc.name != n:
                 return None
             src = bundles.build(loc, dest_dir or (tmp_dir() / bundles.STAGING))
