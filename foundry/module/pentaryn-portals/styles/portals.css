@@ -24,7 +24,6 @@
 .ppt-app .ppt-toggle input:checked + .ppt-slider { background: #8a5cff; }
 .ppt-app .ppt-toggle input:checked + .ppt-slider::before { transform: translateX(16px); }
 .ppt-app .window-content { padding: 0.5rem 0.75rem; }
-.ppt-app .ppt-edit { margin-bottom: 0.5rem; }
 
 /* ── Edit view: the card, edited in place ────────────────────────────────── */
 .ppt-app .ppt-passage { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 0.6rem; }

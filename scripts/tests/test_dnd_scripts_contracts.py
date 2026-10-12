@@ -11,6 +11,7 @@ from __future__ import annotations
 import dataclasses
 import importlib.util
 import json
+import string
 import sys
 from pathlib import Path
 
@@ -47,6 +48,23 @@ NO_ANNOTATIONS: set[str] = set()
 @pytest.mark.repo
 def test_tools_without_annotations(runners):
     assert {n for n, r in runners.items() if not r.tool.annotations} == NO_ANNOTATIONS
+
+
+# scripts/mcp/README.md: every tool declares these five keys and this file fails if one is missing.
+REQUIRED_ANNOTATIONS = {"title", "readOnlyHint", "destructiveHint", "idempotentHint", "openWorldHint"}
+# KNOWN gap (final review py-mcp ext-1), recorded for Joe: the feedback_reports.py tools
+# carry no `title`. Adding one changes tools/list, so it is not made here.
+KNOWN_MISSING_ANNOTATIONS: dict[str, list[str]] = {
+    "feedback_list": ["title"], "feedback_next": ["title"],
+    "feedback_get": ["title"], "feedback_resolve": ["title"],
+}
+
+
+@pytest.mark.repo
+def test_every_tool_declares_the_five_annotation_keys(runners):
+    gaps = {n: sorted(REQUIRED_ANNOTATIONS - (r.tool.annotations or {}).keys())
+            for n, r in runners.items()}
+    assert {n: miss for n, miss in gaps.items() if miss} == KNOWN_MISSING_ANNOTATIONS
 
 
 @pytest.mark.repo
@@ -97,8 +115,17 @@ UNMAPPED = {("check_lore_links", "zone")}
 
 
 def _mapped(r) -> set[str]:
-    placeholders = {tok[1:-1] for tok in r.argv_template if tok.startswith("{") and tok.endswith("}")}
+    placeholders = {field for tok in r.argv_template
+                    for _, field, _, _ in string.Formatter().parse(tok) if field}
     return placeholders | set(r.bool_flags) | set(r.value_flags)
+
+
+def test_mapped_sees_embedded_placeholders():
+    """The server formats every template token, so '--zone={zone}' maps `zone` too."""
+    r = server.ToolRunner(tool=server.Tool(name="t", description="", input_schema={}),
+                          script_path=Path("t.py"), argv_template=("--zone={zone}",),
+                          bool_flags={}, value_flags={})
+    assert "zone" in _mapped(r)
 
 
 @pytest.mark.repo
@@ -116,6 +143,28 @@ def test_known_zone_never_reaches_the_script(runners, tmp_path):
     echo.write_text("import json, sys\nprint(json.dumps(sys.argv[1:]))\n")
     r = dataclasses.replace(runners["check_lore_links"], script_path=echo)
     assert json.loads(r.run(arguments={"zone": "world/x"})) == []
+
+
+def test_placeholder_values_with_braces_render_verbatim(runners, tmp_path):
+    """Only template tokens are format-parsed; a value's own braces reach argv unchanged."""
+    echo = tmp_path / "echo_argv.py"
+    echo.write_text("import json, sys\nprint(json.dumps(sys.argv[1:]))\n")
+    r = dataclasses.replace(
+        runners["check_lore_links"], script_path=echo, argv_template=("{q}",),
+        bool_flags={}, value_flags={}, handler=None,
+    )
+    assert json.loads(r.run(arguments={"q": "a {b} }{ {0}"})) == ["a {b} }{ {0}"]
+
+
+@pytest.mark.repo
+def test_build_argv_direct(runners):
+    """argv is built without spawning a process: the KNOWN -49 zone drop, and a bare
+    placeholder keeps its slot even when the value is empty."""
+    assert runners["check_lore_links"]._build_argv({"zone": "x"}) == []
+    r = server.ToolRunner(tool=server.Tool(name="t", description="", input_schema={}),
+                          script_path=Path("t.py"), argv_template=("--a", "{v}"),
+                          bool_flags={}, value_flags={})
+    assert r._build_argv({"v": ""}) == ["--a", ""]
 
 
 def test_known_timeline_key_output_can_leave_the_repo(tmp_path, monkeypatch):

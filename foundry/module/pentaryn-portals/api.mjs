@@ -7,7 +7,7 @@
 
 import { HOOKS, NS } from "./portals-core.mjs";
 import { MANIFEST } from "./api-manifest.mjs";
-import { behaviorsLeadingTo, cardFor, destinationsOf, linkRegions, lookAt, snapshot, teleportParty, unlinkRegion } from "./scene-adapter.mjs";
+import { behaviorsLeadingTo, cardFor, destinationsOf, linkPair, lookAt, snapshot, teleportParty, unlinkRegion } from "./scene-adapter.mjs";
 import { SETTINGS, settingsSnapshot } from "./settings.mjs";
 import { buildApi, toPlain } from "./lib/api.mjs";
 import { fail, ok, toFail } from "./lib/errors.mjs";
@@ -67,8 +67,7 @@ async function link(from, ctx, { to, twoWay = false, dryRun = false } = {}) {
   const out = { from: refOf(from), to: refOf(dest), twoWay: !!twoWay };
   if (dryRun) return ok({ dryRun: true, ...out });
   try {
-    await linkRegions(from, dest);
-    if (twoWay) await linkRegions(dest, from);
+    await linkPair(from, dest, twoWay);
   } catch (err) {
     ctx.log.error("link failed", err);
     return toFail(err);

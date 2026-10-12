@@ -225,12 +225,17 @@ def depth_at(code: str, pos: int) -> int:
     return code.count("{", 0, pos) - code.count("}", 0, pos)
 
 
+def _is_core_path(rel: str) -> bool:
+    name = rel.split("/")[-1]
+    return rel.startswith("core/") or name.endswith("-core.mjs") or name == "core.mjs"
+
+
 def role_of(m: Module, rel: str, features: set[str]) -> str:
     if rel == m.entry or rel in m.entries:
         return "entry"
-    name = rel.split("/")[-1]
-    if rel.startswith("core/") or name.endswith("-core.mjs") or name == "core.mjs":
+    if _is_core_path(rel):
         return "core"
+    name = rel.split("/")[-1]
     if name == "api-manifest.mjs":
         return "manifest"
     if name == "api.mjs" or name.endswith("-api.mjs"):
@@ -244,11 +249,6 @@ def role_of(m: Module, rel: str, features: set[str]) -> str:
     if UI_NAME.search(rel):
         return "ui"
     return "glue"
-
-
-def _is_core_path(rel: str) -> bool:
-    name = rel.split("/")[-1]
-    return rel.startswith("core/") or name.endswith("-core.mjs") or name == "core.mjs"
 
 
 LIFECYCLE_HOOKS = {"init", "i18nInit", "setup", "ready"}
@@ -539,8 +539,7 @@ CORE_FOUNDRY = re.compile(r"(?<![\w$.])foundry\.(?!utils\.)")
 
 
 def core_files(m: Module) -> list[str]:
-    return [r for r in m.files if r.startswith("core/") or r.split("/")[-1].endswith("-core.mjs")
-            or r.split("/")[-1] == "core.mjs"]
+    return [r for r in m.files if _is_core_path(r)]
 
 
 @rule("C11", "fail", "a pure core exists: no game/canvas/ui/Hooks/CONFIG, only foundry.utils")
@@ -591,7 +590,7 @@ def c15(m):
         for target, imp in m.imports(rel):
             if not imp.namespace:
                 continue
-            if target.startswith("core/") or target.endswith("-core.mjs"):
+            if _is_core_path(target):
                 continue
             if rel in m.entries:
                 src = m.files.get(target)
@@ -1218,25 +1217,7 @@ def c47(m):
 
 def _published_literal_keys(m: Module) -> list[tuple[str, int, str]]:
     """Top-level keys of the object literals a legacy module publishes on game.pentaryn."""
-    out = []
-    for rel, src in m.files.items():
-        code = src.code
-        if "pentaryn" not in "".join(s.value for s in src.strings) and "game.pentaryn" not in code:
-            continue
-        for mm in re.finditer(r"(?:const|let)\s+api\s*=\s*\{|game\.pentaryn\.[\w$]+\s*=\s*\{", code):
-            start = mm.end() - 1
-            end = match_paren(code, start)
-            body = code[start + 1:end]
-            d = 0
-            for km in re.finditer(r"[{}\[\]()]|(?<![\w$.])([A-Za-z_$][\w$]*)\s*(?=[:,}(]|$)", body):
-                tok = km.group(0)
-                if tok in "{[(":
-                    d += 1
-                elif tok in "}])":
-                    d -= 1
-                elif d == 0 and km.group(1):
-                    out.append((rel, src.line_of(start + 1 + km.start()), km.group(1)))
-    return out
+    return [(rel, line, p) for rel, line, p in _published_literal_paths(m) if "." not in p]
 
 
 # Mirrors foundry/lib/api.mjs reservedClash: a reserved name at ANY depth of a published path.
@@ -1515,8 +1496,15 @@ def _arrow_body(code: str, q: int) -> str:
     return code[q:_expr_end(code, q)]
 
 
+# The kit's own listener wrappers (lib/hooks.mjs): handler_at reads the function they wrap.
+GUARD_WRAP = re.compile(r"(?:ctx\.)?reg\.guard(?:SwallowAsync)?\(\s*\x01\d+\x01\s*,\s*")
+
+
 def handler_at(code: str, pos: int, *, _depth: int = 0) -> tuple[bool, str | None, str | None]:
-    """(is_async, body, unresolved identifier) of the function expression or name at `pos`."""
+    """(is_async, body, unresolved identifier) of the function expression or name at `pos`,
+    seen through reg.guard / reg.guardSwallowAsync."""
+    if _depth == 0 and (g := GUARD_WRAP.match(code, pos)):
+        pos = g.end()
     am = re.match(r"async\b\s*", code[pos:])
     is_async = bool(am)
     p = pos + (am.end() if am else 0)
@@ -1687,7 +1675,7 @@ def c58(m):
     detail, manual = [], []
     for rel, src in m.files.items():
         code = src.code
-        for mm in re.finditer(r"(?<![\w$.])serialStore\(\s*[\w$.]+\s*,\s*", code):
+        for mm in re.finditer(r"(?<![\w$.])serialStore\(\s*(?:[\w$.]+|\x01\d+\x01)\s*,\s*", code):
             where = f"{rel}:{src.line_of(mm.start())}"
             lit = lit_after(src, mm.end())
             if lit is not None and lit.plain:

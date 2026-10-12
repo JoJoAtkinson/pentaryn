@@ -116,8 +116,8 @@ class ModuleSpec:
     * `kit` — the vendored kit files, from `lib/kit.lock.json` (blueprint D8: the lock is
       the only kit list). None means the module has not adopted the kit (unmigrated).
     * `after_sync` — `module.json` `flags.pentaryn.afterSync` when the module carries
-      it (the generator writes it), else the tuple given here. One source per module:
-      the tuples move into module.json in the Wave 7 restart batch, never by editing both.
+      it (the generator writes it), else the tuple given here. The tuples moved into
+      module.json in the Wave 7 batch; the tuple remains only as a fallback.
     """
 
     #: every gate a spec may name — see `modules._CHECKS`
@@ -180,103 +180,92 @@ _STATIC = ("parse", "imports", "i18n")
 #   conformance  the scorer's fail-class rules (scripts/foundry/blueprint/conformance.py)
 _BLUEPRINT = ("vendor", "conformance")
 
+#: every in-house module runs the full battery, in this order
+ALL_GATES = (*_STATIC, "node-test", *_BLUEPRINT)
+
+# No row passes after_sync: every module carries flags.pentaryn.afterSync in its module.json.
 MODULES = {
     "ties": ModuleSpec(
         "pentaryn-ties",
         # node-test: test/run.mjs (the blueprint's fixed body) runs the converted suites and
         # the legacy known/look/reach ones (python-tooling-7).
-        check=(*_STATIC, "node-test", *_BLUEPRINT),
-        # after_sync comes from module.json flags.pentaryn.afterSync (Wave 7 batch).
+        check=ALL_GATES,
     ),
     "walls": ModuleSpec(
         "pentaryn-walls",
-        check=(*_STATIC, "node-test", *_BLUEPRINT),
-        # after_sync comes from module.json flags.pentaryn.afterSync (Wave 7 batch).
+        check=ALL_GATES,
     ),
     "attunement": ModuleSpec(
         "pentaryn-attunement",
         # node-test on top of the static gates: the slot reconciliation has edge cases
         # (stale flags, deleted items, over-cap) that are tedious to stage in a browser
         # and must never throw — computeSlots runs inside a render hook.
-        check=(*_STATIC, "node-test", *_BLUEPRINT),
-        # after_sync comes from module.json flags.pentaryn.afterSync (Wave 7 batch).
+        check=ALL_GATES,
     ),
     "lookup": ModuleSpec(
         "pentaryn-lookup",
         # node-test: the whole point of the module is that its text handling is proved
         # rather than retyped. lookup-core.mjs is pure, so its fixtures run in node (`node test/run.mjs`).
-        check=(*_STATIC, "node-test", *_BLUEPRINT),
-        # after_sync comes from module.json flags.pentaryn.afterSync (Wave 7 batch).
+        check=ALL_GATES,
     ),
     "transform": ModuleSpec(
         "pentaryn-transform",
         # node-test: transform-core.mjs decides what is stripped from a Wild Shape form, what
         # is carried back on revert, and how the Argon Bonus/Action bars are recomposed.
-        check=(*_STATIC, "node-test", *_BLUEPRINT),
-        # after_sync comes from module.json flags.pentaryn.afterSync (Wave 7 batch).
+        check=ALL_GATES,
     ),
     "names": ModuleSpec(
         "pentaryn-names",
         # node-test: test/run.mjs runs the characterisation suites (names guide; C39).
-        check=(*_STATIC, "node-test", *_BLUEPRINT),
-        # after_sync comes from module.json flags.pentaryn.afterSync (Wave 7 batch).
+        check=ALL_GATES,
     ),
     "senses": ModuleSpec(
         "pentaryn-senses",
         # node-test: test/run.mjs runs every suite; the pure code is core/*.mjs behind the
         # senses-core.mjs barrel (chain flags and line geometry, the Light rules, the glow, migrate).
-        check=(*_STATIC, "node-test", *_BLUEPRINT),
-        # after_sync comes from module.json flags.pentaryn.afterSync (Wave 7 batch).
+        check=ALL_GATES,
     ),
     "portals": ModuleSpec(
         "pentaryn-portals",
         # node-test: portals-core.mjs decides who a party teleport carries and who follows a PC.
-        check=(*_STATIC, "node-test", *_BLUEPRINT),
-        # after_sync comes from module.json flags.pentaryn.afterSync (Wave 7 batch).
+        check=ALL_GATES,
     ),
     "journal": ModuleSpec(
         "pentaryn-journal",
         # node-test: sanitize() is what keeps GM secrets out of a player-owned copy; it is proved
         # on synthetic fixtures before anything reaches Data/.
-        check=(*_STATIC, "node-test", *_BLUEPRINT),
-        # after_sync comes from module.json flags.pentaryn.afterSync (Wave 7 batch).
+        check=ALL_GATES,
     ),
     "aoe": ModuleSpec(
         "pentaryn-aoe",
         # node-test: core.mjs decides who is caught in an area, what a save is worth and which
         # waiting row a save answers — proved on fixtures before anything reaches Data/.
-        check=(*_STATIC, "node-test", *_BLUEPRINT),
-        # after_sync comes from module.json flags.pentaryn.afterSync (Wave 7 batch).
+        check=ALL_GATES,
     ),
     "dropbin": ModuleSpec(
         "pentaryn-dropbin",
         # node-test: loot-core.mjs decides when the Loot all button shows and greys out.
-        check=(*_STATIC, "node-test", *_BLUEPRINT),
-        # after_sync comes from module.json flags.pentaryn.afterSync (Wave 7 batch).
+        check=ALL_GATES,
     ),
     "cursors": ModuleSpec(
         "pentaryn-cursors",
         # node-test: cursors-core.mjs picks the cursor for the active control/tool.
-        check=(*_STATIC, "node-test", *_BLUEPRINT),
-        # after_sync comes from module.json flags.pentaryn.afterSync (Wave 7 batch).
+        check=ALL_GATES,
     ),
     "movement": ModuleSpec(
         "pentaryn-movement",
         # node-test: test/run.mjs runs every test/**/*.test.mjs (core, glue, api, patches …).
-        check=(*_STATIC, "node-test", *_BLUEPRINT),
-        # after_sync comes from module.json flags.pentaryn.afterSync (Wave 7 batch).
+        check=ALL_GATES,
     ),
     "creatures": ModuleSpec(
         "pentaryn-creatures",
         # node-test: creatures-core.mjs (who gets light, strip order) is pure.
-        check=(*_STATIC, "node-test", *_BLUEPRINT),
-        # after_sync comes from module.json flags.pentaryn.afterSync (Wave 7 batch).
+        check=ALL_GATES,
     ),
     "riders": ModuleSpec(
         "pentaryn-riders",
         # node-test: riders-core.mjs (the RULES table and roll-term edits) is pure.
-        check=(*_STATIC, "node-test", *_BLUEPRINT),
-        # after_sync comes from module.json flags.pentaryn.afterSync (Wave 7 batch).
+        check=ALL_GATES,
     ),
     "prompts": ModuleSpec(
         "pentaryn-prompts",
@@ -285,32 +274,28 @@ MODULES = {
         # grouping, ids, the gather text, door lines, XP budgets; geometry-core.mjs is their
         # barrel) plus build-core.mjs / npc-core.mjs (PC ability budgets, choice matching), and
         # it carries the whole contract.
-        check=(*_STATIC, "node-test", *_BLUEPRINT),
-        # after_sync comes from module.json flags.pentaryn.afterSync (Wave 7 batch).
+        check=ALL_GATES,
     ),
     "combat": ModuleSpec(
         "pentaryn-combat",
         # node-test: combat-core.mjs (attack counts, the Full Attack state machine, the turn flag,
         # follow-up and Sneak Attack eligibility, Multiattack parsing, weapon-set seeds) is pure.
-        check=(*_STATIC, "node-test", *_BLUEPRINT),
-        # after_sync comes from module.json flags.pentaryn.afterSync (Wave 7 batch).
+        check=ALL_GATES,
     ),
     "pings": ModuleSpec(
         "pentaryn-pings",
         # node-test: test/run.mjs runs the characterisation suites (pings guide step 9; C39).
-        check=(*_STATIC, "node-test", *_BLUEPRINT),
-        # after_sync comes from module.json flags.pentaryn.afterSync (Wave 7 batch).
+        check=ALL_GATES,
     ),
     "feedback": ModuleSpec(
         "pentaryn-feedback",
         # node-test: feedback-core.mjs (report schema, redaction, status rules) is pure; the glue
         # suite drives the recorder, the queue/relay delivery and the dialog markup in node.
-        # after_sync comes from module.json flags.pentaryn.afterSync.
-        check=(*_STATIC, "node-test", *_BLUEPRINT),
+        check=ALL_GATES,
     ),
     # The actor pipeline stages this one, not module-sync, so it is not in the CLI's
     # module list — but the static gates are free and it is real code, so it gets them.
     # node-test: test/run.mjs (the blueprint's fixed body) runs the characterisation suites
     # (importer guide step 1.11, items-journal-2; C39).
-    "importer": ModuleSpec("pentaryn-importer", check=(*_STATIC, "node-test", *_BLUEPRINT)),
+    "importer": ModuleSpec("pentaryn-importer", check=ALL_GATES),
 }

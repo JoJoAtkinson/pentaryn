@@ -5,7 +5,7 @@
  * GLUE. Imports core, the adapter, the manifest and lib — never a feature file.
  */
 
-import { BOND, HOOKS, MODULE, NS, awayOf, computeSlots } from "./attunement-core.mjs";
+import { BOND, HOOKS, MODULE, NS, PROFICIENCY_CATEGORIES, awayOf, computeSlots } from "./attunement-core.mjs";
 import { releaseAway, stash, tooltipGuarded } from "./actor-adapter.mjs";
 import { MANIFEST } from "./api-manifest.mjs";
 import { buildApi, toPlain } from "./lib/api.mjs";
@@ -94,7 +94,7 @@ function selftest(ctx) {
     { label: `game.pentaryn.${NS} is this API`, ok: game.pentaryn?.[NS] === ctx.api },
     { label: "item hooks and the sheet hook registered", ok: ctx.reg.ids().length >= 4, detail: ctx.reg.ids().length },
     { label: "armorProficienciesMap covers the attunement categories",
-      ok: ["wondrous", "ring", "rod", "wand", "trinket"].every(k => map?.[k] != null) },
+      ok: PROFICIENCY_CATEGORIES.every(k => map?.[k] != null) },
     { label: "dnd5e item-tooltip guard installed (null: no item tooltips)", ok: guarded !== false,
       detail: guardErr ? guardErr.message : guarded },
   ];

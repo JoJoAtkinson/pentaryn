@@ -122,6 +122,25 @@ def test_re_export_chain_is_followed(tmp_path):
     assert modules._check_imports(build(tmp_path, files)) == 0
 
 
+LIST_BARREL = {"barrel.mjs": 'export { a } from "./lib.mjs";\n',
+               "lib.mjs": 'export const a = 1;\nexport const b = 2;\n'}
+
+
+def test_imports_gate_rejects_a_name_a_list_reexport_does_not_forward(tmp_path, capsys):
+    """`export { a } from` forwards `a` only — the browser rejects `import { b }` through it."""
+    files = {**LIST_BARREL,
+             "main.mjs": 'import { b } from "./barrel.mjs";\nexport const x = b;\n'}
+    assert modules._check_imports(build(tmp_path, files)) == 1
+    out = capsys.readouterr().out
+    assert "{ b }" in out and "./barrel.mjs" in out
+
+
+def test_imports_gate_accepts_a_name_a_list_reexport_forwards(tmp_path):
+    files = {**LIST_BARREL,
+             "main.mjs": 'import { a } from "./barrel.mjs";\nexport const x = a;\n'}
+    assert modules._check_imports(build(tmp_path, files)) == 0
+
+
 def test_bare_specifiers_are_left_alone(tmp_path):
     """Foundry core and CDN imports are not ours to resolve — and must not fail."""
     files = {"main.mjs": 'import { Application } from "foundry/applications/api.mjs";\nexport const x = Application;\n'}

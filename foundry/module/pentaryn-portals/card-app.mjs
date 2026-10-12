@@ -1,13 +1,14 @@
 /**
  * Pentaryn Portal Cards — UI: the Portal card window (preview, with an edit toggle).
  *
- * DOM and ApplicationV2 only; every write goes through scene-adapter. The badges feature hands it
+ * DOM and ApplicationV2. Link, unlink, snapshot and look-at go through scene-adapter; the passage
+ * switches and the card fields write their region/behaviors/flags directly. The badges feature hands it
  * `setEditing` through configureCardApp() at install (a ui file never imports a feature); before
  * that it is a no-op, which cannot happen at runtime — the entry installs features before any render.
  */
 
 import { MODULE, cardHTML, esc } from "./portals-core.mjs";
-import { cardFor, destinationsOf, linkRegions, lookAt, snapshot, teleportBehaviors, unlinkRegion } from "./scene-adapter.mjs";
+import { cardFor, destinationsOf, linkPair, lookAt, snapshot, teleportBehaviors, unlinkRegion } from "./scene-adapter.mjs";
 import { flagPath } from "./lib/flags.mjs";
 
 const deps = { setEditing: () => {}, guard: (label, fn) => fn };
@@ -93,7 +94,7 @@ export class PortalCard extends foundry.applications.api.ApplicationV2 {
       </article>`;
     }).join("");
 
-    // Any other region in the world can be a landing spot.
+    // Any other region whose behaviors are all teleports (or none) can be a landing spot.
     const taken = new Set([this.region.uuid, ...dests.map(d => d.uuid)]);
     const opts = game.scenes.contents.flatMap(sc => sc.regions.contents
       .filter(r => !taken.has(r.uuid) && !r.behaviors.some(b => b.type !== "teleportToken"))
@@ -131,8 +132,7 @@ export class PortalCard extends foundry.applications.api.ApplicationV2 {
       if (!uuid) return;
       const dest = fromUuidSync(uuid);
       const twoWay = content.querySelector('[data-act="twoway"]')?.checked;
-      await linkRegions(region, dest);
-      if (twoWay) await linkRegions(dest, region);
+      await linkPair(region, dest, twoWay);
       this.render();
     }));
   }
