@@ -138,3 +138,17 @@ Deploy (fold into wave 3's live phase):
    - Pings golden before/after: `cleanup.pingLogRestored: true`, `pingScratchLeft: 0`, and
      `game.pentaryn.pings.all()` unchanged across the run.
    - W2-B2 still needs Joe's confirmation (wave-2-report "Open for Joe").
+
+## W3L fix round (2026-10-12, overnight)
+
+Three non-regression findings from the wave-3 live checks, fixed on main, code-only (no
+`module.json` change → sync + one GM tab reload, no restart). Rollback copies of the deployed
+post-merge modules: `.state/live-rollback/W3L-fix/`; the pre-merge copies in
+`.state/live-rollback/W3L/pentaryn-{ties,senses,feedback}` were rebuilt from git `b7b625a7` (the
+originals were overwritten by this round's first copy — a stamp in each folder says so).
+
+| Finding | Fix | Re-check |
+|---|---|---|
+| `pentaryn-read {ns:"senses", path:"inspect", ref:<token uuid>}` → BAD_ARGS "eval-js only" (wave-3 live plan §7 row 6) | `43c6e628` [declared]: the manifest `ref` gains `type: "Token\|Actor\|uuid\|id\|exact name"`, so the bridge passes strings through | passes: plain JSON `{token, actor, chain, lightSpells}`, no `[max depth]` |
+| `pentaryn-read {ns:"feedback", path:"inspect", ref:"Actor.<id>"}` → "expected User, got Actor"; an actor name → NOT_FOUND user (§7 item 5) | `c18b74ec` [declared]: a string ref is a user first, else an Actor/Token uuid or an actor id / exact name means that actor's players; manifest type adds `uuid` | passes: Actor uuid and Token uuid → `{actor, users, pending, reports}`; `"Gamemaster"` still the user |
+| ties timings x2–x6 after the ties-19 memo (structuredClone of the 70 KB registry per call) | `69bfc641`: resolve reads the memo uncopied; `list()` copies by a fresh clamp (pre-ties-19 path); one-entry clone kept | golden identical; resolve 0.1255 → 0.0275 ms, describe 0.123 → 0.0255, list 0.1175 → 0.021 (pre-wave-3: 0.05 / 0.0605 / 0.02). `.state/live-goldens/wave3/after-w3l/ties.run1.json` |
