@@ -62,7 +62,7 @@ function apply(el, key) {
  */
 // hot: runs from the #board style observer on every PIXI cursor-mode change (hover in/out); keep the
 // non-empty style.cursor return first: no setting read, lookup or allocation before it.
-export function resync(el = boardEl()) {
+function resync(el = boardEl()) {
   const events = canvas?.app?.renderer?.events;
   if (!el || !events || el.style.cursor || !enabled()) return;
   const mode = events.currentCursor;
@@ -110,7 +110,7 @@ function watchPreview() {
 }
 
 /** Recompute the cursor for the current control, tool and layer. Returns the key or null. */
-export function refresh() {
+function refresh() {
   const el = boardEl();
   if (!el) { current = null; return null; }
   const templatesActive = !!canvas?.ready && previewActive();
