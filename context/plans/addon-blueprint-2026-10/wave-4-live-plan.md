@@ -215,7 +215,15 @@ const want = { riders: ["pentaryn-riders", "riders"], aoe: ["pentaryn-aoe", "aoe
   feedback: ["pentaryn-feedback", "feedback"] };
 const out = { rootKeys: Object.keys(game.pentaryn ?? {}).sort(), rootFrozen: Object.isFrozen(game.pentaryn),
   chainAlias: game.pentaryn?.chain === undefined ? "absent" : game.pentaryn.chain === game.pentaryn?.senses?.chain ? "same" : "different",
-  tooltipRules: [...document.styleSheets].some(s => { try { return [...s.cssRules].some(r => r.selectorText?.includes(".pentaryn-tt")); } catch { return false; } }) };
+  ttRules: 0 };
+// Foundry 14 nests module CSS inside @import/@layer, so a top-level cssRules scan is always
+// false (W4L). Walk every nested sheet and count the .pentaryn-tt rules instead.
+const walkTT = list => { for (const r of list) {
+  if (r.styleSheet) { try { walkTT(r.styleSheet.cssRules); } catch {} continue; }
+  if (r.cssRules && !(r instanceof CSSStyleRule)) { walkTT(r.cssRules); continue; }
+  if (r.selectorText?.includes(".pentaryn-tt")) out.ttRules++;
+} };
+for (const s of document.styleSheets) { try { walkTT(s.cssRules); } catch {} }
 for (const [m, [id, ns]] of Object.entries(want)) {
   const mod = game.modules.get(id), api = game.pentaryn?.[ns], r = { active: !!mod?.active, manifest: mod?.version ?? null };
   out[m] = r;
@@ -245,8 +253,11 @@ return JSON.stringify(out);
 **Every other module** must match `OUT/probes-before.json` exactly. Their code did not change, so
 any difference is a red.
 
-**Whole world:** `rootFrozen: false` (J10), and `tooltipRules: true` on both sides. Before, it comes
-from transform.css. After, it comes from both stylesheets' `@import`.
+**Whole world:** `rootFrozen: false` (J10), and `ttRules > 0` on both sides (W4L measured 22
+after). Before, the rules come from transform.css. After, they come from both stylesheets'
+`@import`. Do not probe the argon-kit with `document.scripts`: an ES-module import never appears
+there, so an `argonKitScripts`-style check is always empty (W4L). The kit's presence is proved by
+`selftest` and `describe`.
 
 **"No console errors."** The boot console cannot be read (J21). This check rests on three things:
 - this probe;
@@ -274,8 +285,8 @@ Any red probe goes to O (§10).
 |---|---|---|
 | riders | `surface.keys` gains the kit members (`contract describe settings trace uninstall version`) and `inspect selftest arcaneRecovery`. `moduleApi` `"undefined"` → `"same"`. `frozen` false → true (S6). `contract` null → `"pentaryn-riders/api@1"`. `describe` `"absent"` → 13 paths, four patches, the one query. `added.*` → `"function"`. `rulesFrozen` may stay true. `coreFrozen` false → true. `coreSets` may change. `previewAtArgument` `["1d8xmin2@mod=8", "1d8x@mod=8 + 2d6min2"]` → `["1d8x@mod=8", "1d8x@mod=8 + 2d6min2"]` (parseFormula `@`). `legacyRefs`: `featuresByName`, `featuresById`, `reportByName` `[]` → the caster's rows (the same as shared `featuresOf`/`report`), `hdPoolsByUuid` `[]` → the pools, `reportMiss` `[]` → `"null"` (-12). `inspect`, `inspectMiss` (`NOT_FOUND` throw), `selftest` (`ok: true`) `"absent"` → values | `featuresOf`, `hdPools`, `preview`, `report` within noise. The legacy wrapper adds one type check per call |
 | aoe | `surface.keys` gains the kit members and the 0.4.0 rows (`isHandle inspect summary resolution latestResolution`). `moduleApi` → `"same"`. `frozen` → true. `contract` → `"pentaryn-aoe/api@1"`. `describe` → 24 paths, 17 settings (D-A3, W2-K1). `hookNames` may change order or names where the splits moved a registration (the count is pinned offline by `golden/hooks.json`; O reads any change against it). `added`: `isHandleToken`/`isHandleActor` → true, `isHandleCaster` → false, `inspectHandle` → `{token, actor, isHandle: true, region: <burstRegion>, handleActor: true, careful: null}`, `inspectCaster` → `isHandle: false`, `summaryNull`/`resolutionNull`/`latestOnScene` → `"null"` | `areasFor`, `spellAreas`, `handleFor`, `setting` within noise. `sweepClean` within noise (8.5 batches only the writes, and a clean scene writes nothing) |
-| transform | `surface.keys` gains the kit members and `inspect selftest starry`. `moduleApi` → `"same"`. `frozen` → true (T-D1, W2-K1). `contract` → `"pentaryn-transform/api@1"`. `describe` → 13 paths, one patch. `starryKeys` `[]` → `active assume constellation end`. `starry` `"absent"` → `{active: null, constellation: "null"}`. `inspect` → plain JSON for the druid (`shifted: false`, `form: null`, the Wild Shape uses). `inspectMiss` → a `NOT_FOUND` throw. `selftest` → `ok: true`. `refs` may stay identical (legacy rows take Documents). `toasts` in declared: none expected | `forms` may drop (-23, one resolve per profile). `wildShapeActivity`, `original`, `isRevertItem` within noise |
-| combat | `surface.keys` gains the kit members and `inspect selftest coversMultiattack`. `moduleApi` → `"same"`. `frozen` → true. `contract` → `"pentaryn-combat/api@1"`. `describe` → 25 paths, seven events (each with its `pentarynCombat.*` legacy name until 0.4.0), eight patches, 30 settings. `coreKeys` may change (S3 dead exports dropped). `refs.planNoActor` TypeError → `"null"` (D-c2). `planByName`/`planByUuid`/`countByName`/`turnByName`/`weaponsByName` TypeError or a wrong answer → the same values as shared `plan`/`count`/`turn`/`weapons`. `multiattackMiss` → `"null"`. `inspect` → plain JSON with `inCombat: false`, `isOwnTurn: true`, depth ≤ 4. `inspectMiss` → `NOT_FOUND`. `coversMultiattack` → the Multiattack item's id tag or `"null"` (null when the fullAttack or multiattack setting is off). `selftest` → `ok: true` | `weapons`, `count`, `multiattack`, `plan`, `turn` within noise |
+| transform | `surface.keys` gains the kit members and `inspect selftest starry`. `moduleApi` → `"same"`. `frozen` → true (T-D1, W2-K1). `contract` → `"pentaryn-transform/api@1"`. `describe` → 13 paths, one patch. `starryKeys` and `starry` are **unchanged**: both were already present on the deployed 0.3.3 (`active assume constellation end`; `{active: null, constellation: "null"}`), so the earlier "absent → …" row was stale (W4L). `inspect` → plain JSON for the druid (`shifted: false`, `form: null`, the Wild Shape uses). `inspectMiss` → a `NOT_FOUND` throw. `selftest` → `ok: true`. `refs` may stay identical (legacy rows take Documents). `toasts` in declared: none expected | `forms` may drop (-23, one resolve per profile). `wildShapeActivity`, `original`, `isRevertItem` within noise |
+| combat | `surface.keys` gains the kit members and `inspect selftest coversMultiattack`. `moduleApi` → `"same"`. `frozen` → true. `contract` → `"pentaryn-combat/api@1"`. `describe` → 25 paths, seven events (each with its `pentarynCombat.*` legacy name until 0.4.0), eight patches, 30 settings. `coreKeys` changes: W4L measured 81 → 95 (the `turnflow/` and `hud/` splits add exports; S3 dropped dead ones). `refs.planNoActor` TypeError → `"null"` (D-c2). `planByName`/`planByUuid`/`countByName`/`turnByName`/`weaponsByName` TypeError or a wrong answer → the same values as shared `plan`/`count`/`turn`/`weapons`. `multiattackMiss` → `"null"`. `inspect` → plain JSON with `inCombat: false`, `isOwnTurn: true`, depth ≤ 4. `inspectMiss` → `NOT_FOUND`. `coversMultiattack` → the Multiattack item's id tag or `"null"` (null when the fullAttack or multiattack setting is off). `selftest` → `ok: true` | `weapons`, `count`, `multiattack`, `plan`, `turn` within noise |
 
 ## 7. Step e — `pentaryn-read` / `pentaryn-write` on the new namespaces — **S**
 

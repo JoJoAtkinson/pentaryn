@@ -162,7 +162,7 @@ def verify() -> int:
 def _access_gated(url: str) -> bool:
     """True when Cloudflare Access, not Foundry, answers ``url`` (a redirect to its login)."""
     code, location = _probe(url, 8.0)
-    return 300 <= code < 400 and ".cloudflareaccess.com/" in location
+    return service.is_access_login(code, location)
 
 
 # NOTE: plain str.replace, not str.format — the body is full of JS object literals

@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import signal
 import time
-import sys
 
 import pytest
 
@@ -389,6 +388,62 @@ def test_status_public_line_names_the_actual_state(monkeypatch, capsys, code, lo
     assert expect in capsys.readouterr().out
 
 
+# Cloudflare Access answers vtt.atjoseph.com itself — a 302 to its login page — with or
+# without an origin behind it, so a 302 alone is not "players can connect" (2026-10-12:
+# the line said reachable while the tunnel was down).
+_ACCESS_LOGIN = ("https://broad-smoke-7112.cloudflareaccess.com/cdn-cgi/access/login/"
+                 "vtt.atjoseph.com?kid=abc&redirect_url=%2F")
+
+
+@pytest.mark.parametrize(
+    "location,expected",
+    [
+        (_ACCESS_LOGIN, True),
+        ("https://team.cloudflareaccess.com/cdn-cgi/access/login/x", True),
+        ("/cdn-cgi/access/login/vtt.atjoseph.com?kid=abc", True),
+        ("/join", False),
+        ("/setup", False),
+        ("https://vtt.atjoseph.com/game", False),
+        ("https://evil.example/?next=cloudflareaccess.com", False),
+        ("", False),
+    ],
+)
+def test_is_access_login(location, expected):
+    assert service.is_access_login(302, location) is expected
+
+
+def test_is_access_login_needs_a_redirect():
+    assert service.is_access_login(200, _ACCESS_LOGIN) is False
+
+
+def test_status_access_login_with_the_tunnel_down_says_players_cannot_connect(monkeypatch, capsys):
+    monkeypatch.setattr(service, "_probe", lambda url, t: (302, _ACCESS_LOGIN))
+    monkeypatch.setattr(service, "foundry_is_up", lambda t=2.0: True)
+    monkeypatch.setattr(service, "_tunnel_pid", lambda: None)
+    r = service.status_report()
+    assert r["public"]["state"] == "access-only"
+    service.status()
+    out = capsys.readouterr().out
+    assert "Access login only (tunnel down — players cannot connect)" in out
+    assert "players can connect" not in out.replace("cannot connect", "")
+
+
+def test_status_access_login_with_the_tunnel_up_does_not_claim_the_origin(monkeypatch, capsys):
+    monkeypatch.setattr(service, "_probe", lambda url, t: (302, _ACCESS_LOGIN))
+    monkeypatch.setattr(service, "foundry_is_up", lambda t=2.0: True)
+    monkeypatch.setattr(service, "_tunnel_pid", lambda: 123)
+    r = service.status_report()
+    assert r["public"]["state"] == "access-gated"
+    assert "behind Cloudflare Access" in r["public"]["verdict"]
+    assert "players can connect" not in r["public"]["verdict"]
+
+
+def test_pipeline_access_gated_shares_the_status_rule(monkeypatch):
+    monkeypatch.undo()
+    monkeypatch.setattr(pipeline, "_probe", lambda url, t: (302, "/cdn-cgi/access/login/vtt.atjoseph.com"))
+    assert pipeline._access_gated(cfg.ACTORS_URL) is True
+
+
 @pytest.mark.parametrize(
     "code,location,expected",
     [(0, "", None), (302, "/setup", False), (302, "/join", True), (200, "", True)],
@@ -546,8 +601,9 @@ def test_foundry_data_is_under_application_support_on_a_mac(monkeypatch):
     monkeypatch.delenv("FOUNDRY_DATA", raising=False)
     monkeypatch.setattr(host.platform, "system", lambda: "Darwin")
     assert str(host.FOUNDRY_DATA).endswith("Library/Application Support/FoundryVTT")
-    if sys.platform == "darwin":
-        assert str(cfg.FOUNDRY_DATA_DIR).endswith("Application Support/FoundryVTT/Data")
+    # config derives its Data/ folder from host.foundry_data() at import; every test sees a tmp
+    # copy (conftest `_isolate_foundry_data`), so pin the derivation, not the import-time value.
+    assert str(host.foundry_data() / "Data").endswith("Application Support/FoundryVTT/Data")
 
 
 # ── foundry-down: pid OR port ─────────────────────────────────────────────────
@@ -956,7 +1012,9 @@ def staged_paths(monkeypatch, tmp_path):
     world.mkdir(parents=True)
     spec = cfg.ModuleSpec("pentaryn-importer", check="parse")
     monkeypatch.setattr(cfg, "MODULE_SRC_ROOT", src.parent)
+    monkeypatch.setattr(cfg, "FOUNDRY_DATA_DIR", tmp_path / "Data")
     monkeypatch.setattr(cfg, "FOUNDRY_MODULES", tmp_path / "Data/modules")
+    monkeypatch.setattr(cfg, "WORLDS_DIR", tmp_path / "Data/worlds")   # known_worlds() lists this on a refusal
     monkeypatch.setitem(cfg.MODULES, "importer", spec)
     monkeypatch.setattr(cfg, "ACTORS_JSON", actors)
     monkeypatch.setattr(cfg, "ACTORS_STAGED", world / "actors.json")

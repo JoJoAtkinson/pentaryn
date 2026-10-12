@@ -190,6 +190,7 @@ def importer(monkeypatch, tmp_path):
     world.mkdir(parents=True)
     monkeypatch.setattr(cfg, "FOUNDRY_DATA_DIR", data)
     monkeypatch.setattr(cfg, "FOUNDRY_MODULES", data / "modules")
+    monkeypatch.setattr(cfg, "WORLDS_DIR", data / "worlds")   # known_worlds() lists this on a refusal
     monkeypatch.setattr(cfg, "MODULE_SRC_ROOT", src.parent)
     monkeypatch.setattr(cfg, "WORLD_NAME", "zz-world")
     monkeypatch.setattr(cfg, "WORLD_DIR", world)

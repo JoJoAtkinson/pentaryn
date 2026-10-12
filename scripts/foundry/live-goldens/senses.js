@@ -46,6 +46,16 @@ const strip = v => Array.isArray(v) ? v.map(strip)
   : (v && typeof v === "object") ? Object.fromEntries(Object.entries(v).filter(([k]) => !DROP.has(k)).map(([k, x]) => [k, strip(x)]))
   : v;
 const norm = v => { let s = JSON.stringify(strip(v) ?? null); for (const [id, l] of ids) s = s.split(id).join(`<${l}>`); return JSON.parse(s); };
+/** Tag the AmbientLight ids a Light answer names: they are random per run, so without this a
+ * before-vs-before self-diff shows 2 declared differences (W4L). `status.litBy[]` holds
+ * `{kind, scene, id}`, `inspect.lightSpells[].litBy[]` holds "Scene.<id>.AmbientLight.<id>" uuids;
+ * the token and scene ids in them are tagged already, so only an id not yet known is labelled. */
+const tagLitBy = (status, inspect) => {
+  const idsIn = [...(Array.isArray(status?.litBy) ? status.litBy : []).map(l => l?.id),
+    ...(Array.isArray(inspect?.lightSpells) ? inspect.lightSpells : []).flatMap(s => (Array.isArray(s?.litBy) ? s.litBy : []).map(u => String(u).split(".").at(-1)))];
+  let n = 0;
+  for (const id of idsIn) if (id && !ids.has(id)) tag(id, `lit-${n++}`);
+};
 const caught = e => ({ threw: true, name: e?.name ?? null, ctor: e?.constructor?.name ?? null, message: String(e?.message ?? e) });
 const probe = async fn => { try { return await fn(); } catch (e) { return caught(e); } };
 const keysOf = o => Object.keys(o ?? {}).sort();
@@ -174,6 +184,7 @@ try {
     D.lightStatus = await probe(() => L.status(spellNow()));
     D.inspectTarget = await probe(() => SN.inspect(live(tTok)));
     D.inspectCarrier = await probe(() => SN.inspect(live(cTok)));
+    tagLitBy(D.lightStatus, D.inspectCarrier);
   } else D.lightStatus = "absent";
   S.end = await probe(() => L.end(spellNow()));
   D.reconcileEnd = await probe(() => L.reconcile(spellNow().uuid)) ?? "undefined";

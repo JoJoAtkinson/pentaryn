@@ -185,7 +185,9 @@ Steps:
    `foundry/logs/*.jsonl` are the bridge's live logs).
 4. **Deploy:** sync the changed modules; the fork build plus `kill -9` of the backend if the fork
    changed; a `module.json` / lang / styles change or a new module → restart; code-only → one GM
-   tab reload. One GM tab.
+   tab reload. One GM tab. **Fork diff scope:** `npm run build:foundry` and the bridge-module copy
+   run only when the fork diff touches `packages/foundry-module`; a server-side-only diff (e.g. a
+   tool description) is `build:server` plus the backend `kill -9` alone (wave-4 live plan §4.3, W4L).
 5. **Boot probe:** for every module (`game.pentaryn.<ns>.describe()` answers, console clean).
 6. **Checks:** after-goldens plus diffs (only `[declared]` changes may differ); the wave's live
    checks; bridge parity if the fork changed. **Foundry 14.369 bug:** the first token change on
