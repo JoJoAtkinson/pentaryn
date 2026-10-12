@@ -38,7 +38,7 @@ import { publishedOf } from "./lib/publish.mjs";
  * @property {string}  path
  * @property {string}  url
  * @property {boolean} dryRun
- * @property {object}  manifest          generatorVersion / generatedAt / sourceRevision.
+ * @property {object}  manifest          { generator, generatorVersion, generatedAt, sourceRevision, skippedRows }
  * @property {object}  counts            {total, selected, created, updated, skipped, failed, assertions}
  * @property {string[]}created
  * @property {string[]}updated

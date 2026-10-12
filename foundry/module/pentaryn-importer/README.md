@@ -64,8 +64,9 @@ await game.pentaryn.import({
 });
 ```
 
-The result is `{ ok, path, url, dryRun, manifest, counts: { total, selected, created, updated,
-skipped, failed, assertions }, created, updated, skipped, failed: [{ slug, error }], deleteJson }`.
+The result is `{ ok, path, url, dryRun, manifest: { generator, generatorVersion, generatedAt,
+sourceRevision, skippedRows }, counts: { total, selected, created, updated, skipped, failed,
+assertions }, created, updated, skipped, failed: [{ slug, error }], deleteJson }`.
 `deleteJson.required` is `true` only after a non-dry run with zero failures; a run that left work
 undone should be re-run against the same file.
 
