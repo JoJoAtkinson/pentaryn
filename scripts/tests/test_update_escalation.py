@@ -1098,6 +1098,29 @@ def test_a_held_major_reuses_its_analysis_across_patches(tmp_path):
     assert esc.package_floor(f) is Tier.ANALYZE
 
 
+
+def test_safe_name_is_shared_by_cache_and_plan_paths(tmp_path):
+    # The cache file name, the globs that find it again and the plan name must sanitise a
+    # package id the same way, or a held major silently stops reusing its analysis.
+    assert esc._cache_path("a/b c", "k", tmp_path).name == "a_b_c--k.json"
+    now = datetime(2026, 10, 10, 4, 30)
+    rec = {"key": "k", "id": "a/b c", "installed": "1.0.0", "target": "7.0.0",
+           "prompt_version": esc.PROMPT_VERSION, "created": now.isoformat(),
+           "analysis": {"x": 1}}
+    esc.cache_write("a/b c", "k", rec, tmp_path)
+    f = {"id": "a/b c", "installed": "1.0.0", "target": "7.0.1"}
+    assert esc.reusable_held(f, tmp_path, now=now, max_age_days=30) == rec
+    assert esc.previous_analysis("a/b c", "other", tmp_path) == rec
+    facts = esc.package_facts(decision("dice-so-nice", bucket="hold", bump="major"), {},
+                              registry(), {})
+    a = esc.validate_analysis(analysis("dice-so-nice", rec="hold"), pkg="dice-so-nice",
+                              row_ids=[], bundle_files=[])
+    path = esc.write_plan("r1", {**facts, "id": "a/b c", "modules": [], "exposure": []}, a,
+                          dry=True, cached_since=None, held_reason=None,
+                          plans_dir=tmp_path / "plans")
+    assert path.name.endswith("-a_b_c.md")
+
+
 # ── what upstream controls cannot write the plan ─────────────────────────────
 
 def test_upstream_strings_are_flattened_in_facts_and_plan(tmp_path):

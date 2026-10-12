@@ -932,8 +932,14 @@ def cache_key(f: dict, registry: adj_mod.Registry, bundle_hash: str) -> str:
     return hashlib.sha256(blob.encode()).hexdigest()[:24]
 
 
+def _safe_name(pkg: str) -> str:
+    """A package id as a filename part. The cache files, the globs that find them and the
+    plan names all go through here, so they cannot drift apart."""
+    return re.sub(r"[^A-Za-z0-9._-]", "_", pkg)
+
+
 def _cache_path(pkg: str, key: str, cache_dir: Path) -> Path:
-    safe = re.sub(r"[^A-Za-z0-9._-]", "_", pkg)
+    safe = _safe_name(pkg)
     return cache_dir / f"{safe}--{key}.json"
 
 
@@ -966,7 +972,7 @@ def reusable_held(f: dict, cache_dir: Path = CACHE_DIR, *, now: datetime,
     a month per held major, and at once when the installed version or the major moves."""
     if max_age_days <= 0:
         return None
-    safe = re.sub(r"[^A-Za-z0-9._-]", "_", f["id"])
+    safe = _safe_name(f["id"])
     try:
         paths = sorted(cache_dir.glob(f"{safe}--*.json"),
                        key=lambda p: p.stat().st_mtime, reverse=True)
@@ -988,7 +994,7 @@ def reusable_held(f: dict, cache_dir: Path = CACHE_DIR, *, now: datetime,
 
 
 def _fail_path(pkg: str, key: str, cache_dir: Path) -> Path:
-    safe = re.sub(r"[^A-Za-z0-9._-]", "_", pkg)
+    safe = _safe_name(pkg)
     return cache_dir / f"{safe}--{key}.failures"
 
 
@@ -1010,7 +1016,7 @@ def record_failure(pkg: str, key: str, error: str, cache_dir: Path = CACHE_DIR, 
 
 
 def previous_analysis(pkg: str, key: str, cache_dir: Path = CACHE_DIR) -> dict | None:
-    safe = re.sub(r"[^A-Za-z0-9._-]", "_", pkg)
+    safe = _safe_name(pkg)
     try:
         older = sorted((p for p in cache_dir.glob(f"{safe}--*.json")
                         if not p.name.endswith(f"--{key}.json")),
@@ -1137,7 +1143,7 @@ def write_plan(run_id: str, f: dict, analysis: dict, *, dry: bool, cached_since:
                analysed_pair: str | None = None) -> Path:
     target_dir = plans_dir or (DRY_PLANS_DIR if dry else PLANS_DIR)
     target_dir.mkdir(parents=True, exist_ok=True)
-    safe = re.sub(r"[^A-Za-z0-9._-]", "_", f["id"])
+    safe = _safe_name(f["id"])
     path = target_dir / f"{run_id}-{safe}.md"
     path.write_text(render_plan(run_id, f, analysis, cached_since=cached_since,
                                 held_reason=held_reason, analysed_pair=analysed_pair),
