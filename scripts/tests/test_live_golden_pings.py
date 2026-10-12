@@ -4,7 +4,11 @@ scripts/foundry/live-goldens/pings.js pings a ZZ scratch scene 1 + N times; thos
 stay in `pentaryn-pings.log` (and in the module's private buffer, which re-wrote them on the next
 flush), pushing real pings out of the 50-entry ring and leaving the SF3 ring-state difference
 between runs. The golden now saves the log first and restores it, and the module's buffer with it.
-Run against the real module in its node test world (fixtures/pings_live_golden.mjs).
+Run against the real module in its node test world (fixtures/pings_live_golden.mjs), on a
+visible tab and on a hidden one. On a hidden tab the module's flush is held back, so the scratch
+records reach only the aliased settings cache; the golden must read and restore through the stored
+Setting `_source`, or it reports pingLogRestored false and the module's buffer keeps the scratch
+records for its next flush (overnight-2026-10-11 FX item 2).
 """
 
 import json
@@ -17,11 +21,12 @@ import pytest
 HARNESS = Path(__file__).parent / "fixtures" / "pings_live_golden.mjs"
 
 
-@pytest.fixture(scope="module")
-def run():
+@pytest.fixture(scope="module", params=["visible", "hidden"])
+def run(request):
     if shutil.which("node") is None:
         pytest.skip("node not installed")
-    proc = subprocess.run(["node", str(HARNESS)], capture_output=True, text=True, timeout=60)
+    args = ["--hidden"] if request.param == "hidden" else []
+    proc = subprocess.run(["node", str(HARNESS), *args], capture_output=True, text=True, timeout=60)
     assert proc.returncode == 0, proc.stderr
     return json.loads(proc.stdout)
 
@@ -35,6 +40,7 @@ def test_golden_itself_still_runs(run):
 
 def test_log_is_restored_exactly(run):
     assert run["logAfter"] == run["seeded"]
+    assert run["storedAfter"] == run["seeded"]
     assert run["out"]["cleanup"]["pingLogRestored"] is True
     assert run["out"]["cleanup"]["pingScratchLeft"] == 0
 
