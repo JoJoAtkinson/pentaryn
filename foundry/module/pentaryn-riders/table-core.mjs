@@ -1,5 +1,6 @@
 /**
- * Pure helpers for concentration.mjs and argon-tidy.mjs (no Foundry globals at import).
+ * Pure helpers for concentration, Argon and cast-flow (concentration.mjs, argon.mjs, cast-flow.mjs,
+ * patches.mjs, shapes.mjs; no Foundry globals at import).
  * Fixtures: test/table.mjs (`node test/table.mjs`, also run from test/run.mjs).
  */
 
