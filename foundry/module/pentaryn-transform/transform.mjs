@@ -30,9 +30,10 @@ import { MANIFEST } from "./api-manifest.mjs";
 import { installFeature, ctx, log } from "./wiring.mjs";
 import { buildApiFor } from "./api.mjs";
 import {
-  shift, revert, forms, wildShapeActivity, original, isRevertItem, isRunner, markBonusUsed, bonusUsedNow, say,
+  shift, revert, forms, wildShapeActivity, original, isRevertItem, markBonusUsed, bonusUsedNow, say,
   returnToNormal, isWildShapeForm
 } from "./wildshape-adapter.mjs";
+import { isRunner } from "./claim-adapter.mjs";
 import { sweepSpentForms } from "./sweep-adapter.mjs";
 import * as bodyswap from "./bodyswap.mjs";
 import * as wildshape from "./wildshape.mjs";

@@ -293,3 +293,55 @@ test("M7 [declared] wildshape-adapter exports refund(actor, item | id); starry.m
     assert.match(src, /\brefund\(/, `${f} calls the shared refund()`);
   }
 });
+
+/* ── EXT-2 one 'ending without a click' helper for Wild Shape and Starry Form ── */
+
+test("EXT-2 [declared] claim-adapter's endingListeners holds the incapacitated / expired listeners, the setTimeout(0) and the runner gate once; wildshape.mjs and starry.mjs register it", async () => {
+  const { readFileSync } = await import("node:fs");
+  const C = await import("../claim-adapter.mjs");
+  assert.equal(typeof C.endingListeners, "function", "EXT-2: the shared helper is exported");
+  const { talo } = fresh();
+  const ended = [];
+  const doc = { uuid: "ZZ.ending", name: "ZZ ending" };   // no id: the claim is won at once
+  const L = C.endingListeners({
+    effectId: "zzEndingEffect01",
+    isActive: a => a === talo,
+    ending: (actor, reason, extra = "looked up") => ({ doc, key: "end", work: () => ended.push([actor.name, reason, extra]) }),
+    onError: err => { throw err; }
+  });
+  L.onEffectUpdate({ id: "zzEndingEffect01", parent: talo }, { duration: { expired: true } });
+  await flush();
+  assert.deepEqual(ended, [["Talo", "expired", "looked up"]], "its own effect marked expired ends it");
+  ended.length = 0;
+  L.end(talo, "expired", "handed down");
+  await flush();
+  assert.deepEqual(ended, [["Talo", "expired", "handed down"]], "end() passes the caller's extra argument to ending()");
+  ended.length = 0;
+  talo.statuses.add("incapacitated");
+  L.onEffectChange({ id: "other", parent: talo });
+  await flush();
+  assert.deepEqual(ended, [], "the Incapacitated check waits for the effect to land (setTimeout 0)");
+  mock.timers.tick(0);
+  await flush();
+  L.onEffectUpdate({ id: "zzEndingEffect01", parent: talo }, { name: "renamed" });
+  mock.timers.tick(0);
+  await flush();
+  assert.deepEqual(ended, [["Talo", "incapacitated", "looked up"], ["Talo", "incapacitated", "looked up"]], "create and a non-expiry update both check");
+  ended.length = 0;
+  L.onEffectChange({ id: "other", parent: { name: "not an actor" } });
+  mock.timers.tick(0);
+  await flush();
+  assert.deepEqual(ended, [], "not an actor with the feature up: nothing");
+  F.become({ userId: IDS.player });
+  L.end(talo, "expired");
+  await flush();
+  F.become({ userId: IDS.gm });
+  assert.deepEqual(ended, [], "not the runner: nothing");
+  talo.statuses.delete("incapacitated");
+  for (const f of ["wildshape.mjs", "starry.mjs"]) {
+    const src = readFileSync(new URL(`../${f}`, import.meta.url), "utf8");
+    assert.match(src, /\bendingListeners\(/, `${f} registers the shared helper`);
+    assert.doesNotMatch(src, /setTimeout\(/, `${f} has no Incapacitated timer of its own`);
+    assert.doesNotMatch(src, /duration\.expired/, `${f} has no expiry check of its own`);
+  }
+});

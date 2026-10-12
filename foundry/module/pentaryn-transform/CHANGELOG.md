@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+- **Wild Shape and Starry Form end through one shared helper (EXT-2, defect wave 2).** The
+  Incapacitated check (after the effect lands, `setTimeout(0)`), the expiry check on the feature's own
+  effect, the runner gate and the per-tab claim were copied in wildshape.mjs and starry.mjs; they are
+  now claim-adapter.mjs's `endingListeners({ effectId, isActive, ending, onError })`, registered by
+  both features with their existing labels and order. `isRunner` moved from wildshape-adapter.mjs to
+  claim-adapter.mjs (still on the entry's exports). No behaviour change ([declared]; goldens unchanged).
 - **One place computes the Wild Shape refund (M7, defect wave 2).** wildshape-adapter.mjs now exports
   `refund(actor, item | itemId)`; Starry Form's sheet route (dialog closed) and `assumeStarry`'s failed
   form call it instead of building the refund update inline. No behaviour change ([declared]).

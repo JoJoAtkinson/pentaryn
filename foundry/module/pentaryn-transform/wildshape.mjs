@@ -11,9 +11,9 @@ import { MODULE, EFFECT_ID, isWildShapeActivity, isExpired, pruneFavorites, form
 import { makeLog } from "./lib/log.mjs";
 import {
   isRevertItem, original, wildShapeActivity, isWildShapeForm, exists, activeFormOf, blockedShift, say, RETURN_LINES,
-  revert, returnToNormal, endOnDruid, doShift, metaFor, shaping, isRunner, isReverting, revertInFlight, pendingMeta, trackShift
+  revert, returnToNormal, endOnDruid, doShift, metaFor, shaping, isReverting, revertInFlight, pendingMeta, trackShift
 } from "./wildshape-adapter.mjs";
-import { claimed } from "./claim-adapter.mjs";
+import { claimed, isRunner, endingListeners } from "./claim-adapter.mjs";
 
 const log = makeLog(MODULE);
 
@@ -149,15 +149,20 @@ function onPreSwapToken(doc, changes) {
 
 /* ── ending without a click ──────────────────────────────────────────────── */
 
-/** End a Wild Shape form on the runner's client, once (the shared path of every automatic ending). */
-function maybeAutoRevert(actor, reason) {
+// End a Wild Shape form on the runner's client, once (the shared path of every automatic ending);
+// Incapacitated and the effect's expiry are claim-adapter.mjs's endingListeners (EXT-2, [declared]).
+const ending = endingListeners({
+  effectId: EFFECT_ID,
+  isActive: isWildShapeForm,
   // exists(): the effect-expiry update and the world-time check can both fire for one ending; the
   // second must not run dnd5e's revert again on the already-deleted form.
-  if (!exists(actor) || !isWildShapeForm(actor) || isReverting(actor.uuid) || !isRunner(actor)) return;
   // One tab of the runner user reverts (transform-core-async-2, [declared]); re-checked after the claim.
-  claimed(actor, "revert", () => (exists(actor) && isWildShapeForm(actor) ? revert(actor, { reason }) : null))
-    .catch(err => log.warn("auto-revert failed", err));
-}
+  ending: (actor, reason) => (!exists(actor) || !isWildShapeForm(actor) || isReverting(actor.uuid) ? null : {
+    doc: actor, key: "revert", work: () => (exists(actor) && isWildShapeForm(actor) ? revert(actor, { reason }) : null)
+  }),
+  onError: err => log.warn("auto-revert failed", err)
+});
+const maybeAutoRevert = ending.end;
 
 // 0 HP: the 2024 form uses the druid's own HP; at 0 they are Unconscious, so the form ends.
 function onZeroHP(actor, changes) {
@@ -165,22 +170,6 @@ function onZeroHP(actor, changes) {
   if ((actor.system.attributes.hp?.value ?? 1) <= 0) maybeAutoRevert(actor, "zeroHP");
 }
 
-// Incapacitated (or any condition that implies it). Checked after the effect lands on the actor.
-function onEffectChange(effect) {
-  const actor = effect?.parent;
-  if (!(actor instanceof Actor) || !isWildShapeForm(actor)) return;
-  setTimeout(() => {
-    if (actor.statuses?.has("incapacitated")) maybeAutoRevert(actor, "incapacitated");
-  }, 0);
-}
-function onEffectUpdate(effect, changes) {
-  // Foundry v14's effect registry marks a lapsed duration expired; that is the form running out.
-  if (effect.id === EFFECT_ID && foundry.utils.getProperty(changes, "duration.expired") === true) {
-    maybeAutoRevert(effect.parent, "expired");
-    return;
-  }
-  onEffectChange(effect);
-}
 function onEffectDelete(effect) {
   const actor = effect?.parent;
   if (!(actor instanceof Actor) || !exists(actor) || !isWildShapeForm(actor)) return;
@@ -277,8 +266,8 @@ export function install(reg) {
   reg.on("dnd5e.transformActor", onTransformActor, { label: "dnd5e.transformActor: shape the form" });
   reg.on("preUpdateToken", onPreSwapToken, { label: "preUpdateToken: a shift keeps the token's own light for the revert and gets the form's image" });
   reg.on("updateActor", onZeroHP, { label: "updateActor: 0 HP" });
-  reg.on("createActiveEffect", onEffectChange, { label: "createActiveEffect: incapacitated" });
-  reg.on("updateActiveEffect", onEffectUpdate, { label: "updateActiveEffect: expired / incapacitated" });
+  reg.on("createActiveEffect", ending.onEffectChange, { label: "createActiveEffect: incapacitated" });
+  reg.on("updateActiveEffect", ending.onEffectUpdate, { label: "updateActiveEffect: expired / incapacitated" });
   reg.on("deleteActiveEffect", onEffectDelete, { label: "deleteActiveEffect: form effect / carried effect" });
   reg.on("updateWorldTime", onWorldTime, { label: "updateWorldTime: form expiry" });
   reg.on("dnd5e.longRest", onLongRest, { label: "dnd5e.longRest: revert, then rest" });

@@ -6,8 +6,8 @@
 
 import { MODULE, starryBlock, canRunAny } from "./transform-core.mjs";
 import { makeLog } from "./lib/log.mjs";
-import { isRunner, refund } from "./wildshape-adapter.mjs";
-import { claimed } from "./claim-adapter.mjs";
+import { refund } from "./wildshape-adapter.mjs";
+import { isRunner, endingListeners } from "./claim-adapter.mjs";
 import {
   STARRY_EFFECT_ID, starryItem, wildShapeItemOf, isStarryConsume, activeStarry, constellationOf, tickStarry,
   setLight, applyStarry, BLOCKS, assumeStarry, endStarry, endStarryEffect, announceStarryOn
@@ -42,26 +42,18 @@ function onSheetPostUse(activity, usageConfig) {
 
 /* ── ending without a click ──────────────────────────────────────────────── */
 
-// `effect`: the form the caller already looked up (perf-2), else it is looked up here.
-function maybeEnd(actor, reason, effect = actor ? activeStarry(actor) : null) {
-  if (!effect || !isRunner(actor)) return;
+// Incapacitated and the effect's expiry are claim-adapter.mjs's endingListeners (EXT-2, [declared]).
+const ending = endingListeners({
+  effectId: STARRY_EFFECT_ID,
+  isActive: actor => !!activeStarry(actor),
+  // `effect`: the form the caller already looked up (perf-2), else it is looked up here.
   // One tab of the runner user ends it (transform-core-async-2, [declared]); endStarryEffect re-checks.
-  claimed(effect, "end", () => endStarryEffect(actor, effect, { reason })).catch(err => log.warn("ending starry form failed", err));
-}
-
-// Incapacitated (or anything that implies it).
-function onEffectChange(effect) {
-  const actor = effect?.parent;
-  if (!(actor instanceof Actor) || !activeStarry(actor)) return;
-  setTimeout(() => { if (actor.statuses?.has("incapacitated")) maybeEnd(actor, "incapacitated"); }, 0);
-}
-function onEffectUpdate(effect, changes) {
-  if (effect.id === STARRY_EFFECT_ID && foundry.utils.getProperty(changes, "duration.expired") === true) {
-    maybeEnd(effect.parent, "expired");
-    return;
-  }
-  onEffectChange(effect);
-}
+  ending: (actor, reason, effect = actor ? activeStarry(actor) : null) => (!effect ? null : {
+    doc: effect, key: "end", work: () => endStarryEffect(actor, effect, { reason })
+  }),
+  onError: err => log.warn("ending starry form failed", err)
+});
+const maybeEnd = ending.end;
 
 // However it went (dismissed, expired, right-clicked off the HUD, deleted on the sheet): the light goes.
 function onStarryDelete(effect) {
@@ -104,8 +96,8 @@ function onRestCompleted(actor, result, config) {
 export function install(reg) {
   reg.on("dnd5e.preUseActivity", onSheetPreUse, { label: "dnd5e.preUseActivity: Starry Form sheet route" });
   reg.on("dnd5e.postUseActivity", onSheetPostUse, { label: "dnd5e.postUseActivity: Starry Form sheet route" });
-  reg.on("createActiveEffect", onEffectChange, { label: "createActiveEffect: incapacitated ends Starry Form" });
-  reg.on("updateActiveEffect", onEffectUpdate, { label: "updateActiveEffect: Starry Form expired / incapacitated" });
+  reg.on("createActiveEffect", ending.onEffectChange, { label: "createActiveEffect: incapacitated ends Starry Form" });
+  reg.on("updateActiveEffect", ending.onEffectUpdate, { label: "updateActiveEffect: Starry Form expired / incapacitated" });
   reg.on("deleteActiveEffect", onStarryDelete, { label: "deleteActiveEffect: the starlight goes" });
   reg.on("updateWorldTime", onWorldTime, { label: "updateWorldTime: Starry Form expiry" });
   reg.on("dnd5e.restCompleted", onRestCompleted, { label: "dnd5e.restCompleted: a Long Rest ends Starry Form" });

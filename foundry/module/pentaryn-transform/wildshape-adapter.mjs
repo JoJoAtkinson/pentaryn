@@ -1,7 +1,7 @@
 /**
  * Pentaryn Transform — ADAPTER: Wild Shape on live documents. The lookups (original, the Wild Shape
  * activity, the known forms), the shift and the revert with everything dnd5e leaves to the table,
- * the chat line, the bonus-action mark, and who runs the automatic endings.
+ * the chat line and the bonus-action mark. Who runs the automatic endings is claim-adapter.mjs's.
  *
  * dnd5e 6 fires dnd5e.preUseActivity (return false cancels) and dnd5e.postUseActivity on the client
  * of the user who used the activity, so a player's click shifts and reverts with the player's own
@@ -13,7 +13,7 @@
 
 import {
   MODULE, activitiesOf, isWildShapeActivity, shapingPlan, durationSeconds, formatDuration,
-  usesLeft, useSyncUpdates, carriedConditions, endedInForm, attributeSync, shiftBlock, runnerIs, withArticle,
+  usesLeft, useSyncUpdates, carriedConditions, endedInForm, attributeSync, shiftBlock, withArticle,
   formTempHP, withoutOrigin, pruneFavorites, findWildShapeItem, wildShapeActivityOf, refundUpdate, formEntries,
   isWildcardPath, pickFormImage
 } from "./transform-core.mjs";
@@ -561,17 +561,6 @@ export async function doShift(host, activity, profileId, uuid) {
     duration: seconds ? formatDuration(seconds) : "—"
   }));
   return form;
-}
-
-/* ── ending without a click ──────────────────────────────────────────────── */
-
-/** True for exactly one user for this actor (the active GM, else the first active owner), in every tab of that user (README "Two sessions"). */
-export function isRunner(actor) {
-  const activeGMId = game.users.activeGM?.id ?? null;
-  // A connected GM always wins pickRunner: no owner scan (transform-creatures-1).
-  if (activeGMId) return runnerIs(game.user.id, { activeGMId, ownerIds: [] });
-  const ownerIds = game.users.filter(u => u.active && !u.isGM && actor.testUserPermission(u, "OWNER")).map(u => u.id);
-  return runnerIs(game.user.id, { activeGMId, ownerIds });
 }
 
 /* ── what the hooks (wildshape.mjs) read across the gap ──────────────────── */

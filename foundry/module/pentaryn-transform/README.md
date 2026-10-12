@@ -145,7 +145,8 @@ rest hooks, core document hooks and Argon's render hooks (`test/golden/hooks.jso
 - A shift, Change Form, Return and the Starry buttons run on the clicking user's client, with that
   user's permissions (dnd5e refuses a non-owner's revert).
 - The automatic endings (0 HP, Incapacitated, expiry, a carried effect ending) run on **one user**:
-  the active GM, else the first active owner by id (`isRunner`).
+  the active GM, else the first active owner by id (`isRunner`, `claim-adapter.mjs`). Wild Shape and
+  Starry Form share one Incapacitated / expiry listener pair and runner gate (`endingListeners`).
 - Two sessions: every tab of that user (the MCP bridge tab plus a GM browser tab) passes `isRunner`,
   so each automatic write is then claimed per tab with the kit's `claimDocument`
   (`flags.pentaryn-transform.claims.<key>`, `claim-adapter.mjs`): the form (`revert`), the druid's
@@ -202,7 +203,7 @@ rest hooks, core document hooks and Argon's render hooks (`test/golden/hooks.jso
 | `wiring.mjs` | the one log / hook registry / ctx both entries share |
 | `transform-core.mjs`, `core/*.mjs` | pure rules (wildshape, hud, starry, bodyswap) behind the barrel |
 | `settings.mjs`, `patches.mjs` | the keybinding and outside settings reads; the core patch |
-| `wildshape-adapter.mjs`, `sweep-adapter.mjs`, `starry-adapter.mjs`, `claim-adapter.mjs`, `argon.mjs` | adapters (documents, the one-tab claim, Argon) |
+| `wildshape-adapter.mjs`, `sweep-adapter.mjs`, `starry-adapter.mjs`, `claim-adapter.mjs`, `argon.mjs` | adapters (documents, the runner and the one-tab claim, Argon) |
 | `form-picker.mjs`, `starry-dialog.mjs` | UI: the Argon components; the constellation dialog |
 | `bodyswap.mjs`, `wildshape.mjs`, `sweep.mjs`, `starry.mjs`, `hud-panels.mjs` | features: `install(reg, ctx)` / `uninstall()` |
 | `api-manifest.mjs`, `api.mjs` | the published API |
