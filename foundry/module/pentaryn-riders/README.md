@@ -88,6 +88,7 @@ R.inspect("Marrith Ashcroft").rows;                  // the same rows, plain, by
 | Battle Medic roll message `flags.pentaryn-riders` | `{ flow: "battle-medic", target, faces }` |
 | Activity flag `flags.pentaryn-riders.flow` | `"battle-medic"` on the activity `installBattleMedic` builds |
 | Token flag `flags.pentaryn-riders.concentration` | the uuid of the concentration effect that keeps a summon |
+| Patient flag `flags.pentaryn-riders.relay.<requestId>` | the GM tabs' claim stamps (`claims.<socketId>`, removed when answered) and the winner's `{ result \| error, at }`; the last five kept |
 | Documents | class `system.hd.spent` / NPC `system.attributes.hd.spent`; HP via `applyDamage`; `system.spells.spellN.value` (Arcane Recovery); a concentration save card's `system.outcome = "broken"`; summoned tokens deleted |
 
 ## Flags other modules read
@@ -129,7 +130,9 @@ Non-patch rows: `argon-shared-uses-badge`, `argon-collapse-on-area-placement`,
   `sender: "any"`: a GM receiver, any sender). The handler checks the sender owns the healer, the
   healer has the Healer feat, and clamps the amount to the die spent + PB; it logs one audit line
   (`battle medic relay`) or one warn per refusal. The server sends a query to **every** tab of the
-  GM's account (the MCP bridge tab and a GM browser tab): see Pitfalls.
+  GM's account (the MCP bridge tab and a GM browser tab), so the payload carries a request id and the
+  tabs claim it on the patient first: the first to stamp heals and records its result, the others
+  wait (up to 7 s) and answer with it (combat-riders-41).
 - **Concentration summon cleanup**: the active GM's client (with no GM online, the user who ended
   the concentration) deletes the tokens.
 
@@ -161,8 +164,8 @@ in `riders.mjs` at the place its hook order needs; a wrap goes in `patches.mjs` 
   off, `report()` says **NO TYPE**, and the roller's console warns.
 - **Potent Spellcasting skips a cantrip that already adds WIS** in its damage formula (a hand
   edit; `report()` lists them under `handAdded`). Elemental Affinity has no such skip.
-- **Battle Medic in two GM tabs** (the bridge tab plus a GM browser tab): the relay runs in both
-  and heals twice, spending two Hit Dice (combat-riders-41, open).
+- **Battle Medic from an older client** (a payload with no request id) is still answered by every
+  GM tab: two tabs heal twice. Reload the players' clients after a sync.
 - `battleMedic(healer, token)` wants a Token placeable; an Actor reads as "no Hit Dice".
 - **Summon cleanup reacts to concentration effects only**: an effect whose `concentrating` status
   was stripped before it was deleted leaves its summons on the map (dnd5e never does that).
@@ -178,7 +181,7 @@ concentration line before the card note; `dnd5e.postUseActivity` runs Arcane Rec
 | File | Role |
 |---|---|
 | `riders.mjs` | entry: wiring, `FEATURES`, init (settings, relay), ready (patches, publish) |
-| `riders-core.mjs`, `core/hit-dice.mjs` | pure: constants, `RULES`, rider planning, Hit Dice / Battle Medic / report kernels |
+| `riders-core.mjs`, `core/hit-dice.mjs`, `core/relay.mjs` | pure: constants, `RULES`, rider planning, Hit Dice / Battle Medic / report kernels, the relay's claim |
 | `rituals-core.mjs`, `table-core.mjs` | pure: Ritual Adept and Longer casts; concentration, Argon and cast-flow helpers |
 | `settings.mjs` | `SETTINGS`, `settingOr` / `settingRaw` |
 | `api-manifest.mjs`, `api.mjs` | the API rows; implementations, `inspect`, `selftest` |

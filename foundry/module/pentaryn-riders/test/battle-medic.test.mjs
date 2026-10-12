@@ -2,10 +2,11 @@
 // dnd5e.postUseActivity runner (owner write or GM relay), and the relay query handler itself
 // (combat-riders-27 oracle: its return value and its four thrown messages, verbatim).
 //
-// KNOWN combat-riders-41: the relay has no claim. The server sends a query to every socket of the
-// active GM's account, and the handler's gate (`isGM && activeGM.isSelf`) passes in every one of
-// those tabs, so two GM tabs heal twice and spend two Hit Dice. Pinned below; the [declared] claim-
-// first commit after the structural refactor flips it (todo at the end).
+// combat-riders-41 [declared]: the server sends a query to every socket of the active GM's account,
+// and the handler's gate (`isGM && activeGM.isSelf`) passes in every one of those tabs, so two GM
+// tabs healed twice and spent two Hit Dice. The runner now sends a requestId and the tabs claim it
+// first: one heals, the others answer with its result (flipped pin at the end). A payload without a
+// requestId (a client older than this version) is still answered by every tab (the old pin, kept).
 // The relay's console output is pinned by the combat-riders-27 test at the end (S6 added the lines).
 import { mock, test } from "node:test";
 import assert from "node:assert/strict";
@@ -108,8 +109,10 @@ test("postUse on a player's client, target not theirs: the GM relay is queried w
     return r;
   });
   F.CONFIG.queries[QUERY] = relay;
-  assert.deepEqual(F.calls.slice(before).filter(c => c.op === "query"), [
-    { op: "query", to: IDS.gm, name: QUERY, data: { healerUuid: `Actor.${IDS.healer}`, targetUuid: `Actor.${IDS.npc}`, faces: 8, amount: 11 } },
+  const queries = F.calls.slice(before).filter(c => c.op === "query");
+  assert.match(queries[0]?.data?.requestId ?? "", /^[A-Za-z0-9]{16}$/, "combat-riders-41: a fresh request id per relay");
+  assert.deepEqual(queries, [
+    { op: "query", to: IDS.gm, name: QUERY, data: { healerUuid: `Actor.${IDS.healer}`, targetUuid: `Actor.${IDS.npc}`, faces: 8, amount: 11, requestId: queries[0].data.requestId } },
   ]);
   assert.deepEqual(result, { faces: 8, healed: 11, hp: 28, value: 3, max: 6 });
   assert.deepEqual(newNotes(), [["info", "Grisk token spends a d8 Hit Die and regains 11 HP."]], "a player who can't see the sheet gets the short text");
@@ -190,7 +193,7 @@ test("relay: a second, non-active GM refuses with 'not the active GM'", async ()
   F.game.users.delete(gm0.id);
 });
 
-test("KNOWN combat-riders-41: the same payload reaching two GM tabs heals twice and spends two Hit Dice", async () => {
+test("combat-riders-41, an older client's payload (no requestId): two GM tabs heal twice and spend two Hit Dice, as before", async () => {
   npc.system.attributes.hp.value = 10;
   const spentBefore = npc.system.attributes.hd.spent;
   W.takeLog();
@@ -202,7 +205,84 @@ test("KNOWN combat-riders-41: the same payload reaching two GM tabs heals twice 
   assert.equal(W.takeLog().filter(l => l.op === "applyDamage").length, 2);
 });
 
-test.todo("combat-riders-41 [declared]: two GM tabs, one payload → one heal, one Hit Die, both tabs resolve to the same result");
+test("combat-riders-41 [declared]: two GM tabs, one payload → one heal, one Hit Die, both tabs resolve to the same result", async () => {
+  // Two tabs of the GM account hold their own copy of the patient; the server applies updates in
+  // send order: the sender's copy gets every earlier broadcast before its own reply, the other
+  // tab's copy gets the broadcast 10 ms later (pentaryn-journal's two-tabs harness).
+  const data = { id: "patient000000001", name: "Patient", type: "npc", system: { isNPC: true, abilities: {}, attributes: { hp: { value: 5, max: 30 }, hd: { denomination: "d8", value: 3, spent: 0 } } } };
+  const tabs = ["socket-tab-A", "socket-tab-B"];
+  const copies = Object.fromEntries(tabs.map(t => [t, makeActor(structuredClone(data))]));
+  const inbox = Object.fromEntries(tabs.map(t => [t, []]));
+  for (const t of tabs) {
+    const doc = copies[t];
+    const raw = doc.update.bind(doc);
+    const deliver = () => { for (const u of inbox[t].splice(0)) raw(u); };
+    Object.defineProperty(doc, "update", {
+      enumerable: false,
+      value: async changes => {
+        deliver();
+        for (const o of tabs) if (o !== t) { inbox[o].push(changes); setTimeout(() => { for (const u of inbox[o].splice(0)) copies[o].__raw(u); }, 10); }
+        await raw(changes);
+        return doc;
+      },
+    });
+    Object.defineProperty(doc, "__raw", { value: raw, enumerable: false });
+  }
+  const realFromUuid = globalThis.fromUuid;
+  globalThis.fromUuid = async uuid => (uuid === "Actor.patient000000001" ? copies[F.game.socket.id] : realFromUuid(uuid));
+  const settle = async () => {
+    for (let i = 0; i < 200; i++) {
+      for (let j = 0; j < 20; j++) await Promise.resolve();
+      mock.timers.tick(10);
+    }
+  };
+  const body = payload({ targetUuid: "Actor.patient000000001", amount: 6, requestId: "relayreq00000001" });
+  W.takeLog();
+  try {
+    F.become({ socketId: "socket-tab-A" });
+    const a = relay(body, { user: W.player });
+    F.become({ socketId: "socket-tab-B" });
+    const b = relay(body, { user: W.player });
+    const results = Promise.allSettled([a, b]);
+    await settle();
+    const [ra, rb] = await results;
+    assert.equal(ra.status, "fulfilled", String(ra.reason));
+    assert.equal(rb.status, "fulfilled", String(rb.reason));
+    assert.deepEqual(rb.value, ra.value, "both tabs answer with the same result");
+    assert.equal(ra.value.faces, 8);
+    assert.equal(W.takeLog().filter(l => l.op === "applyDamage").length, 1, "one heal");
+    for (const t of tabs) {
+      assert.equal(copies[t].system.attributes.hd.spent, 1, `${t}: one Hit Die spent`);
+      assert.deepEqual(copies[t].flags[MODULE].relay.relayreq00000001.claims, {}, `${t}: both stamps removed`);
+      assert.deepEqual(copies[t].flags[MODULE].relay.relayreq00000001.result, ra.value, `${t}: the result is recorded`);
+    }
+  } finally {
+    globalThis.fromUuid = realFromUuid;
+    F.become({ socketId: "socket-gm-1" });
+  }
+});
+
+test("combat-riders-41: one tab with a requestId answers as before, records its result, and keeps at most five entries", async () => {
+  const spent = npc.system.attributes.hd.spent;
+  npc.system.attributes.hd.spent = 0;
+  npc.system.attributes.hp.value = 10;
+  const plain = await relay(payload({ amount: 6 }), { user: W.player });
+  npc.system.attributes.hd.spent = 0;
+  npc.system.attributes.hp.value = 10;
+  const claimed = await relay(payload({ amount: 6, requestId: "relayreq00000002" }), { user: W.player });
+  assert.deepEqual(claimed, plain, "the same return value");
+  assert.deepEqual(npc.flags[MODULE].relay.relayreq00000002.claims, {});
+  for (let i = 3; i <= 9; i++) {
+    npc.system.attributes.hd.spent = 0;
+    mock.timers.tick(1);
+    await relay(payload({ amount: 1, requestId: `relayreq0000000${i}` }), { user: W.player });
+  }
+  assert.deepEqual(Object.keys(npc.flags[MODULE].relay).sort(), ["relayreq00000005", "relayreq00000006", "relayreq00000007", "relayreq00000008", "relayreq00000009"]);
+  await assert.rejects(relay(payload({ targetUuid: `Actor.${IDS.noHd}`, requestId: "relayreq0000000a" }), { user: W.player }), { message: "Wisp has no Hit Dice left" });
+  assert.equal(W.actor(IDS.noHd).flags[MODULE].relay.relayreq0000000a.error, "Wisp has no Hit Dice left", "a failure is recorded for the other tabs");
+  npc.system.attributes.hd.spent = spent;
+  W.take();
+});
 test("combat-riders-27: the relay logs one info line on success and one warn before each refusal; runBattleMedic's warn names the uuids", async () => {
   const seen = [];
   const { info, warn } = console;

@@ -11,12 +11,22 @@
  * left, or no GM is online to write a target the player doesn't own.
  */
 
-import { MODULE, battleMedicBlockReason, battleMedicFormula, clampHeal, matchRule, pickSpend } from "./riders-core.mjs";
+import {
+  MODULE, battleMedicBlockReason, battleMedicFormula, clampHeal, matchRule, pickSpend, relayClaimWinner, relayPrune,
+  relayRequestId,
+} from "./riders-core.mjs";
 import { settingRaw } from "./settings.mjs";
 import { guarded } from "./lib/queries.mjs";
+import { flagPath, readFlag } from "./lib/flags.mjs";
 import { HEALER, hdPools, hdSummary, isBattleMedic, itemInfo, spendHitDie, withLegacyActor } from "./shapes.mjs";
 
 const QUERY = `${MODULE}.battleMedic`;
+
+/* The relay's claim (combat-riders-41, core/relay.mjs). */
+const CLAIM_STALE_MS = 60_000;   // a stamp older than this is a tab that died mid-claim
+const LOSER_WAIT_MS = 7_000;     // the losing tab waits this long for the winner's result (< the 8 s query timeout)
+const POLL_MS = 50;
+const KEEP_RELAYS = 5;           // relay entries kept on a patient
 
 let log = null;
 
@@ -74,7 +84,10 @@ async function runBattleMedic(healer, token) {
     else {
       const gm = game.users.activeGM;
       if (!gm) throw new Error("no GM");
-      result = await gm.query(QUERY, { healerUuid: healer.uuid, targetUuid: target.uuid, faces: pool.faces, amount }, { timeout: 8000 });
+      // requestId: every GM tab receives the query; the first to claim it heals (combat-riders-41)
+      result = await gm.query(QUERY, {
+        healerUuid: healer.uuid, targetUuid: target.uuid, faces: pool.faces, amount, requestId: foundry.utils.randomID()
+      }, { timeout: 8000 });
     }
   } catch (err) {
     log.warn("Battle Medic write failed", err, { healer: healer.uuid, target: target.uuid });
@@ -163,8 +176,12 @@ export function registerRelay() {
 /**
  * The GM side of the relay. `user` is the sender as the server knows it. The sender must own the
  * healer, the healer must have the Healer feat, and the amount is clamped to what the die could roll.
+ * With a `requestId` (every client from this version on) the GM tabs claim it first and only the
+ * winner heals; the others answer with the winner's recorded result (combat-riders-41). Without one
+ * (an older client) every tab that receives the query heals, as before.
  */
 async function relay(data, { user } = {}) {
+  const me = game.socket?.id ?? null;   // this tab, read before the first await
   // Audit lines (combat-riders-27, use-doc §5.1): one warn before each refusal, one info on success.
   const who = { healer: data?.healerUuid ?? null, target: data?.targetUuid ?? null, by: game.user?.id ?? null, for: user?.id ?? null };
   const refuse = reason => {
@@ -172,21 +189,70 @@ async function relay(data, { user } = {}) {
     return new Error(reason);
   };
   if (!game.user.isGM || !game.users.activeGM?.isSelf) throw refuse("not the active GM");
-  const healer = await fromUuid(data?.healerUuid);
-  const target = await fromUuid(data?.targetUuid);
+  const [healer, target] = await Promise.all([fromUuid(data?.healerUuid), fromUuid(data?.targetUuid)]);
   if (!(healer instanceof Actor) || !(target instanceof Actor)) throw refuse("unknown actor");
   if (!user || !healer.testUserPermission(user, "OWNER")) throw refuse("sender does not own the healer");
   if (!healer.items.some(i => matchRule(HEALER, itemInfo(i)))) throw refuse("healer has no Healer feat");
   const faces = Number(data?.faces) || 0;
-  let result;
+  const heal = () => applyBattleMedic(target, { faces, amount: data?.amount, prof: healer.system?.attributes?.prof ?? 0 });
+  const requestId = relayRequestId(data?.requestId);
+  let out;
   try {
-    result = await applyBattleMedic(target, { faces, amount: data?.amount, prof: healer.system?.attributes?.prof ?? 0 });
+    out = requestId && me ? await claimedHeal(target, requestId, me, heal) : { result: await heal(), wrote: true };
   } catch (err) {
     log.warn(`battle medic relay refused: ${err.message}`, who);
     throw err;
   }
-  log.info("battle medic relay", { uuid: target.uuid, ids: [healer.uuid], by: game.user.id, for: user.id, healed: result.healed, faces: result.faces });
+  const { result, wrote } = out;
+  if (wrote) log.info("battle medic relay", { uuid: target.uuid, ids: [healer.uuid], by: game.user.id, for: user.id, healed: result.healed, faces: result.faces });
+  else log.debug("battle medic relay: answered with another GM tab's result", { uuid: target.uuid, requestId });
   return result;
+}
+
+/**
+ * Claim `requestId` on the patient, then heal (the winner) or wait for the winner's result.
+ * Stamps live at `flags.pentaryn-riders.relay.<requestId>.claims.<socketId>`; the winner records
+ * `{ result | error, at }` there and drops its stamp in one update, pruning old entries; a loser
+ * drops its own stamp when it has its answer.
+ */
+async function claimedHeal(target, requestId, me, heal) {
+  const base = `relay.${requestId}`;
+  const mine = flagPath(MODULE, `${base}.claims.${me}`);
+  await target.update({ [mine]: Date.now() });
+  if (!relayClaimWinner(readFlag(target, MODULE, `${base}.claims`), me, Date.now(), CLAIM_STALE_MS)) {
+    log.debug("battle medic relay: another GM tab claimed it — waiting for its result", { requestId });
+    try {
+      return { result: await waitForResult(target, requestId), wrote: false };
+    } finally {
+      await target.update({ [mine]: _del }).catch(err => log.warn("battle medic relay: claim not released", err));
+    }
+  }
+  const record = fields => {
+    const update = { [mine]: _del, [flagPath(MODULE, `${base}.at`)]: Date.now() };
+    for (const [k, v] of Object.entries(fields)) update[flagPath(MODULE, `${base}.${k}`)] = v;
+    for (const id of relayPrune(readFlag(target, MODULE, "relay"), requestId, KEEP_RELAYS)) update[flagPath(MODULE, `relay.${id}`)] = _del;
+    return target.update(update);
+  };
+  let result;
+  try {
+    result = await heal();
+  } catch (err) {
+    await record({ error: err.message }).catch(e => log.warn("battle medic relay: result not recorded", e));
+    throw err;
+  }
+  await record({ result });
+  return { result, wrote: true };
+}
+
+/** The losing tab: the winner's recorded result (or its error), once it arrives by broadcast. */
+async function waitForResult(target, requestId) {
+  for (let waited = 0; ; waited += POLL_MS) {
+    const entry = readFlag(target, MODULE, `relay.${requestId}`);
+    if (entry?.result) return entry.result;
+    if (entry?.error) throw new Error(entry.error);
+    if (waited >= LOSER_WAIT_MS) throw new Error("another GM tab claimed this Battle Medic and did not finish");
+    await new Promise(resolve => setTimeout(resolve, POLL_MS));
+  }
 }
 
 /* ── wiring ───────────────────────────────────────────────────────────── */

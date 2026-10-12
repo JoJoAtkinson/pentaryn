@@ -124,6 +124,7 @@ export const MANIFEST = Object.freeze({
       "flags.pentaryn-riders.target",
       "flags.pentaryn-riders.faces",
       "flags.pentaryn-riders.concentration",
+      "flags.pentaryn-riders.relay",
     ],
     reads: [],
   },

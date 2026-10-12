@@ -16,7 +16,8 @@
   `pentaryn-riders.ready` fires. A frozen `game.pentaryn` now throws instead of being replaced.
 - The Battle Medic relay goes through the kit's `guarded` (`sender: "any"`): a query reaching a
   non-GM client answers `NOT_GM: this client is not a GM`. It logs an audit line per success and a
-  warn per refusal.
+  warn per refusal. The runner sends a request id and the GM tabs claim it first, so two GM tabs
+  heal once (combat-riders-41).
 - Three silent catches now log at debug (`CONFIG.debug["pentaryn-riders"] = true`).
 - Pure kernels for Hit Dice pools, the Battle Medic gate and the report row (`core/hit-dice.mjs`);
   one spell-slot builder (`slotsFrom`).

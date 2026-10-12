@@ -554,8 +554,10 @@ export function clampHeal(amount, faces, prof) {
   return Math.max(0, Math.min(n, max));
 }
 
-/* Hit Dice pools, the Battle Medic gate and the report row: core/hit-dice.mjs (combat-riders-26).
+/* Hit Dice pools, the Battle Medic gate and the report row: core/hit-dice.mjs (combat-riders-26);
+   the Battle Medic relay's claim: core/relay.mjs (combat-riders-41).
    Imported and re-exported by name (not `export … from`), so the import-graph gates see the edge
    (pentaryn-walls' barrel does the same). */
 import { battleMedicBlockReason, hdPoolsFrom, hdSummaryOf, reportRow } from "./core/hit-dice.mjs";
-export { battleMedicBlockReason, hdPoolsFrom, hdSummaryOf, reportRow };
+import { relayClaimWinner, relayPrune, relayRequestId } from "./core/relay.mjs";
+export { battleMedicBlockReason, hdPoolsFrom, hdSummaryOf, reportRow, relayClaimWinner, relayPrune, relayRequestId };

@@ -462,7 +462,8 @@
       "flags.pentaryn-riders.detail",
       "flags.pentaryn-riders.target",
       "flags.pentaryn-riders.faces",
-      "flags.pentaryn-riders.concentration"
+      "flags.pentaryn-riders.concentration",
+      "flags.pentaryn-riders.relay"
     ],
     "reads": []
   },
