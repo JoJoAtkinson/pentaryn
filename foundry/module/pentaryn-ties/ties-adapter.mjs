@@ -16,6 +16,7 @@
 
 import { stanceOf, clampStance, clampStrength, clampNotes, clampWord, FLAG, LEGACY_SCOPE, MODULE } from "./ties-core.mjs";
 import { makeLog } from "./lib/log.mjs";
+import { hookRegistry } from "./lib/hooks.mjs";
 
 const log = makeLog(MODULE);
 
@@ -406,3 +407,50 @@ export function readWorn(token) {
   if (!by && !note.trim()) return null;
   return { by, note };
 }
+
+/* -------------------------------------------- */
+/*  Live windows (ties-40)                      */
+/* -------------------------------------------- */
+
+/** Debounce for live refreshes: a share or a cascade lands as several writes in a burst. */
+export const LIVE_MS = 150;
+
+/**
+ * The live-refresh kit the Look window and the GM's inspect window share: a hook registry per open
+ * window (registered on first render, all removed on close) and one debounce timer. Each window
+ * keeps its own predicates — this only owns the plumbing they had each copied.
+ */
+export class LiveHooks {
+  #reg = null;
+  #timer = null;
+
+  /** Register `[[hookName, fn], …]`; false when already watching. Raw handlers, as before. */
+  start(hooks) {
+    if (this.#reg) return false;
+    this.#reg = hookRegistry(MODULE);
+    for (const [name, fn] of hooks) this.#reg.on(name, fn, { guard: false, label: `live: ${name}` });
+    return true;
+  }
+
+  /** Remove every hook and drop a pending refresh. */
+  stop() {
+    this.#reg?.offAll();
+    this.#reg = null;
+    clearTimeout(this.#timer);
+    this.#timer = null;
+  }
+
+  get watching() {
+    return this.#reg !== null;
+  }
+
+  /** Run `fn` once, `ms` after the last call in a burst. */
+  debounce(fn, ms = LIVE_MS) {
+    clearTimeout(this.#timer);
+    this.#timer = setTimeout(() => {
+      this.#timer = null;
+      fn();
+    }, ms);
+  }
+}
+

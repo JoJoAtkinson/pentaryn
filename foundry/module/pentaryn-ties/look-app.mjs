@@ -65,6 +65,7 @@
  */
 
 import { MODULE } from "./ties-core.mjs";
+import { LiveHooks } from "./ties-adapter.mjs";
 import { mayWrite } from "./settings.mjs";
 import { kindActorOf } from "./study.mjs";
 import { grantCard, grantedHead } from "./known-ui.mjs";
@@ -79,7 +80,6 @@ const { ApplicationV2 } = foundry.applications.api;
 const esc = s => foundry.utils.escapeHTML(String(s ?? ""));
 
 /** Debounce for live refreshes — a cascade lands as several writes in a burst. Same as preview. */
-const LIVE_MS = 150;
 
 /** One window per (character, subject) on this client. */
 const open = new Map();
@@ -128,8 +128,7 @@ export class LookWindow extends ApplicationV2 {
     this.base = game.actors?.get(subject.id) ?? subject;
     this.pair = pairKey(character, subject);
     this.lastHTML = null;
-    this.liveTimer = null;
-    this.liveHooks = null;
+    this.live = new LiveHooks();
   }
 
   get title() {
@@ -226,11 +225,7 @@ export class LookWindow extends ApplicationV2 {
 
   queueLive() {
     if (!this.rendered) return;
-    clearTimeout(this.liveTimer);
-    this.liveTimer = setTimeout(() => {
-      this.liveTimer = null;
-      this.liveRender();
-    }, LIVE_MS);
+    this.live.debounce(() => this.liveRender());
   }
 
   /**
@@ -244,7 +239,7 @@ export class LookWindow extends ApplicationV2 {
    * Not watched: attributeBeliefs, attributeKnowledge, holdDefault — nothing drawn here reads them.
    */
   watch() {
-    if (this.liveHooks) return;
+    if (this.live.watching) return;
     const regKey = `${MODULE}.${REGISTRY_SETTING}`;
     const onActor = (actor, changes = {}) => {
       if (!actor) return;
@@ -276,14 +271,11 @@ export class LookWindow extends ApplicationV2 {
       ["updateToken", onToken],
       ["deleteActor", onDelete]
     ];
-    this.liveHooks = hooks.map(([name, fn]) => [name, Hooks.on(name, fn)]);
+    this.live.start(hooks);
   }
 
   unwatch() {
-    for (const [name, id] of this.liveHooks ?? []) Hooks.off(name, id);
-    this.liveHooks = null;
-    clearTimeout(this.liveTimer);
-    this.liveTimer = null;
+    this.live.stop();
   }
 
   _onFirstRender(context, options) {

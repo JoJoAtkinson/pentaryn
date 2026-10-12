@@ -61,6 +61,7 @@
  */
 
 import { MODULE } from "./ties-core.mjs";
+import { LiveHooks } from "./ties-adapter.mjs";
 import { attributeIdsOf, describeAttribute, attributeLore, registry, knowledge } from "./attributes.mjs";
 import {
   kindActorOf, studySkillFor, studyStateFor, composeStudyPayload, factStatus, shareFact, forgetFact
@@ -102,8 +103,6 @@ const skillLabel = s => CONFIG.DND5E?.skills?.[s]?.label ?? s;
 
 const PROF = { none: 0, prof: 1, expert: 2 };
 
-/** Debounce for live refreshes: a share or a cascade lands as several writes in a burst. */
-const LIVE_MS = 150;
 
 /** Subject/kind actor changes that touch ONLY the ledger — patch the switches, no re-render. */
 const LEDGER_ONLY = new RegExp(`^(_id$|_stats\\.|flags\\.${MODULE.replace(/[-.]/g, "\\$&")}\\.(-=)?beliefs(\\.|$))`);
@@ -133,9 +132,8 @@ export class InspectPreview extends ApplicationV2 {
     this.specs = []; // per render: the fact descriptors the switches point at
     this.pcKey = ""; // the PC roster the last player view was drawn for
     this.busy = new Set(); // `${fact}:${pcId}` switches with a write in flight
-    this.liveTimer = null;
+    this.live = new LiveHooks();
     this.liveFull = false;
-    this.liveHooks = null;
     this.keepScroll = false;
     this.roller = "hypo";
     this.level = 12;
@@ -697,14 +695,12 @@ export class InspectPreview extends ApplicationV2 {
   queueLive(full) {
     if (this.mode !== "player" || !this.rendered) return;
     this.liveFull ||= full;
-    clearTimeout(this.liveTimer);
-    this.liveTimer = setTimeout(() => {
-      this.liveTimer = null;
+    this.live.debounce(() => {
       const fullNow = this.liveFull;
       this.liveFull = false;
       if (this.mode !== "player" || !this.rendered) return;
       if (fullNow || !this.refreshSwitches()) this.liveRender();
-    }, LIVE_MS);
+    });
   }
 
   /**
@@ -717,7 +713,7 @@ export class InspectPreview extends ApplicationV2 {
    *   tokens          an unlinked subject's delta (its own lore rows / attributes)
    */
   watch() {
-    if (this.liveHooks) return;
+    if (this.live.watching) return;
     const settingKey = k => `${MODULE}.${k}`;
     const LEDGER_SETTINGS = new Set([settingKey(ATTR_BELIEFS_SETTING), settingKey(KNOWLEDGE_SETTING), settingKey("holdDefault")]);
     const onSetting = setting => {
@@ -754,14 +750,11 @@ export class InspectPreview extends ApplicationV2 {
       ["deleteSetting", onSetting],
       ["updateToken", onToken]
     ];
-    this.liveHooks = hooks.map(([name, fn]) => [name, Hooks.on(name, fn)]);
+    this.live.start(hooks);
   }
 
   unwatch() {
-    for (const [name, id] of this.liveHooks ?? []) Hooks.off(name, id);
-    this.liveHooks = null;
-    clearTimeout(this.liveTimer);
-    this.liveTimer = null;
+    this.live.stop();
   }
 
   _onFirstRender(context, options) {
