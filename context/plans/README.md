@@ -31,6 +31,7 @@ lore authoring → [`../world/README.md`](../world/README.md)
 | [`seafoot-v14-migration.md`](seafoot-v14-migration.md) | 520 v9 map modules → one v14 module | complete |
 | [`table-feedback-2026-10-08.md`](table-feedback-2026-10-08.md) | Triage of player feedback from the Underdark one-shot: bugs, rules riders, UX design questions | built and playtested 2026-10-09 |
 | [`druid-wild-shape.md`](druid-wild-shape.md) | Talo's Wild Shape and Starry Form on the Argon HUD (`pentaryn-transform` 0.2-0.3) | built; playtest 2026-10-10 passed core, audit items open |
+| [`cursors-design.md`](cursors-design.md) | The `pentaryn-cursors` tool-cursor set: rules, glyph choice, hotspots (moved out of the module, cursors guide step 8) | built (0.1.0); history only |
 | [`wildshape-hud-design.md`](wildshape-hud-design.md) | The 0.2 design for Wild Shape on the HUD (moved out of the module, transform-creatures-19) | superseded; history only |
 | [`dnd5e-6-upgrade.md`](dnd5e-6-upgrade.md) | dnd5e 5.3.3 to 6.0.6: backups, per-module port, retired-for-native, Argon playtest, rollback recipe | executed 2026-10-10, kept 6.0.6 |
 | [`foundry-update-2026-10.md`](foundry-update-2026-10.md) | Attended October 2026 update: core 14.369, Dice So Nice, mad-endlesswiz2; dnd5e 6 go/no-go, rollback rule, regression checklist | executed 2026-10-10 |

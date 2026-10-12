@@ -1,9 +1,21 @@
+---
+title: Tool-cursor set — design (pentaryn-cursors, plan C4b)
+created: 2026-10-08
+last_modified: 2026-10-12
+tags: ["plan", "foundry", "pentaryn-cursors"]
+status: built (pentaryn-cursors 0.1.0); history, not instructions
+---
+
 # pentaryn-cursors — tool-cursor set (design)
 
 **Read this when:** building or changing the cursor set. Plan: `context/plans/table-feedback-2026-10-08.md`
 §C4b. The table problem: players could not tell which scene tool they were on, so pins "stopped
 working" and AoE placement was "fiddly". The fix is not to change any tool; it is to make the active
 tool visible on the mouse pointer itself, so the GM can ask "do you have the arrow?"
+
+Moved here from `foundry/module/pentaryn-cursors/DESIGN.md` on 2026-10-12 (cursors guide step 8,
+C13). Since then the build tool is `scripts/foundry/cursors/build.mjs` and the icon sources and
+`CREDITS.md` are in `scripts/foundry/cursors/src/` (step 7); the paths below are as designed.
 
 ## Rules
 

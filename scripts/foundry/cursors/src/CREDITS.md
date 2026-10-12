@@ -1,7 +1,8 @@
 # Cursor icon sources
 
-Unmodified originals. The module's cursors in `../cursors/` are recoloured, outlined and rasterised
-from these at build time; the shapes are the artists' work.
+Unmodified originals. The module's cursors in `foundry/module/pentaryn-cursors/assets/cursors/` are
+recoloured, outlined and rasterised
+from these by `../build.mjs`; the shapes are the artists' work.
 
 | File | Icon | Artist | Licence |
 |---|---|---|---|

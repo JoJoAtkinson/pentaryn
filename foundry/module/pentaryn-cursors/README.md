@@ -2,7 +2,7 @@
 
 **Read this when:** a player can't tell which scene tool they are on, a map cursor looks wrong, or
 you are changing the cursor set. **Not this file:** design and the why behind each glyph →
-[`DESIGN.md`](DESIGN.md) · how every addon is built → `context/foundry/addon-blueprint.md`.
+[`context/plans/cursors-design.md`](../../../context/plans/cursors-design.md) · how every addon is built → `context/foundry/addon-blueprint.md`.
 
 The mouse pointer **over the map** shows the active tool, so "pins stopped working" becomes "you
 have the pencil, click the arrow". Nothing about any tool changes; only what the pointer looks like.
@@ -93,7 +93,8 @@ n/a — each client computes its own cursor; nothing crosses the wire.
 ## Extending
 
 To add a key (e.g. a GM wall cursor): add it to `KEYS` and a line to `keyFor()` in
-`cursors-core.mjs`, drop the source SVG in `assets/src/`, run the build (Files), and add the row to
+`cursors-core.mjs`, drop the source SVG in `scripts/foundry/cursors/src/` (credit it in its
+`CREDITS.md`), run the build (Files), and add the row to
 the `keyFor` table in `test/core.test.mjs`. The build fails unless the measured hotspot equals
 `KEYS[key].hotspot`, so a new glyph can't ship with a stale one — update `KEYS` to the printed
 value if the new one is right.
@@ -124,8 +125,8 @@ value if the new one is right.
 | `api-manifest.mjs`, `api.mjs` | API rows and implementations |
 | `lib/` | vendored kit (`lib/kit.lock.json`) |
 | `assets/cursors/` | built `<key>.png`, `@2x`, `-pointer`, `-pointer@2x`, and the outlined `.svg` they came from. **Committed; do not hand-edit.** |
-| `assets/src/` | unmodified icon sources and credited alternates (`CREDITS.md`) |
-| `tools/build.mjs` | rebuild after changing a glyph or colour in `KEYS`: `cd "$(mktemp -d)" && npm i @resvg/resvg-js@2.6.2 && node <repo>/foundry/module/pentaryn-cursors/tools/build.mjs`. Fits each glyph to 26×26, adds the 2 px dark outline and 1 px white halo, measures the hotspot. |
+| `scripts/foundry/cursors/src/` (repo, not shipped) | unmodified icon sources and credited alternates (`CREDITS.md`) |
+| `scripts/foundry/cursors/build.mjs` (repo, not shipped) | rebuild after changing a glyph or colour in `KEYS`: `cd "$(mktemp -d)" && npm i @resvg/resvg-js@2.6.2 && node <repo>/scripts/foundry/cursors/build.mjs`. Fits each glyph to 26×26, adds the 2 px dark outline and 1 px white halo, measures the hotspot. `--check-sources` (no resvg) proves every `KEYS` source exists; `scripts/tests/test_cursors_build.py` runs it. |
 | `test/` | node:test suites, goldens, fixtures, vendored test kit |
 
 ## Tests
@@ -147,7 +148,7 @@ Check what is live with `game.pentaryn.cursors.describe().version` and `game.pen
 
 ## Credits
 
-The cursor shapes are the artists' work, recoloured, outlined and rasterised by `tools/build.mjs`.
+The cursor shapes are the artists' work, recoloured, outlined and rasterised by `scripts/foundry/cursors/build.mjs`.
 
 | Cursor | Icon | Artist | Licence |
 |---|---|---|---|
@@ -157,9 +158,9 @@ The cursor shapes are the artists' work, recoloured, outlined and rasterised by 
 | ruler | `ruler` (solid) | [Font Awesome Free 6.7.2](https://fontawesome.com), Fonticons, Inc. | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) |
 | draw | `pencil` (solid) | Font Awesome Free 6.7.2, Fonticons, Inc. | CC BY 4.0 |
 
-Alternates in `assets/src/alt-*` (Lorc's [Compass](https://game-icons.net/1x1/lorc/compass.html)
+Alternates in `scripts/foundry/cursors/src/alt-*` (Lorc's [Compass](https://game-icons.net/1x1/lorc/compass.html)
 and [Quill](https://game-icons.net/1x1/lorc/quill.html), Delapouite's
 [Measure tape](https://game-icons.net/1x1/delapouite/measure-tape.html) and
 [Pencil](https://game-icons.net/1x1/delapouite/pencil.html), CC BY 3.0; Font Awesome Free `bullseye`,
 CC BY 4.0) are deliberate, credited alternates — not dead code — listed in
-[`assets/src/CREDITS.md`](assets/src/CREDITS.md).
+[`scripts/foundry/cursors/src/CREDITS.md`](../../../scripts/foundry/cursors/src/CREDITS.md).
