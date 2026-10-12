@@ -587,3 +587,50 @@ scorer.) Other modules are unchanged by this pass.
 - isAoeHandle oracle pin for portals / creatures copies: needs `migrate/wave-3`; follow-up.
 - Riders sr follow-ups (not fixed): the 60 s claim staleness compares clocks across machines; a
   winner slower than 7 s lets the loser's timeout reach the player before the heal.
+
+## Integration review (2026-10-12)
+
+Whole-branch review of `wave-4-base..HEAD` (173 commits reviewed, plus this review's 3 fixes). The fork worktree has no commits past
+`origin/pentaryn`, so the fork was not touched. **Verdict: pass, with three small fixes.**
+
+| Check | Result |
+|---|---|
+| `foundry/logs/**`, secrets, the lane-locked scripts (`cloud`, `storage`, `bundles`, `boot`, `bootstate`, `uploadq`), `module.json` | none touched by any commit |
+| Each commit's paths vs its subject | every `foundry/module/pentaryn-<m>/` path sits in a commit scoped to `<m>`; shared files (kit, adjustments, scripts, context) only in `lib`/`plans`/`chore`/integrator commits |
+| Base | `wave-4-base` = `a5a1a906`; no merge commits; `origin/migrate/wave-3` is not an ancestor |
+| Frozen tests (from checkpoints riders `67fe16a3`, aoe `7a12ffad`, transform `f06e6b18`, combat `6e802ebb`) | every removed non-import line is either in a `[declared]` commit or a structural re-anchor: seam shims, `ADDED_S*` export deltas, emit/graph location goldens, todo→test, or the guide-planned flips (transform S7 T-wrappers, combat S3 dead exports). One process nit: `796fdf63` (perf -23) flips the `KNOWN -23` resolve-count pin 4→3 without `[declared]` in its subject. The test name says `[perf]`. Left as is |
+| Kit copies | `vendor.py check --all` identical; `argon-kit.mjs` and `argon-tooltip.css` byte-identical in combat and transform (riders: W4-D7a / W7, as recorded) |
+| D7 | combat.css and transform.css `@import "../lib/argon-tooltip.css"` as their first rule; no JS anywhere still uses transform's pre-`ptf-` class names |
+| combat↔transform | transform asks `apiOf("pentaryn-combat")?.coversMultiattack?.(actor)`; combat's manifest row, `api.mjs`, the describe golden and both READMEs agree. combat and transform keep only thin wrappers over `lib/argon-kit.mjs` |
+| riders↔combat | `test_rider_tables.py` green; no module outside combat listens to `pentarynCombat.*` / `pentaryn-combat.*` |
+| aoe handle contract | combat's `shapes.isAoeHandle` was not read against the oracle anywhere. **Fixed:** `09585ef7`, see below |
+| describe() goldens | `test/golden/describe.json` is present and pinned by the API test in riders (13), aoe (24), transform (13) and combat (25). Every `game.pentaryn.<ns>.<member>` named in `config.py` and `context/foundry/aoe.md` exists in them |
+| Index | `module-index --check` current |
+| Adjustments ids | outside `context/plans/`, no stale pre-rename id remains, except two riders test comments. **Fixed:** `18fd2633` |
+| Gates | all green (below) |
+
+**Fixes (this review)**
+
+| Commit | What |
+|---|---|
+| `d54efe2c` | `foundry/lib/README.md` and `context/foundry/addon-blueprint.md` §5.7 now say that combat and transform vendor `argon-tooltip.css` and `@import` it. The old text said "no module vendors it yet" |
+| `09585ef7` | new `scripts/tests/test_aoe_handle_contract.py` pins combat's `shapes.isAoeHandle` against aoe's `handle-oracle.json` column `handle`. A mutant fails it. This corrects the W4-C8 table's last row ("pinned only against its old inline expression"). portals' and creatures' copies still need wave-3 |
+| `18fd2633` | riders `test/glue.test.mjs` and `test/rituals-glue.test.mjs` comments now name the renamed D2 rows. Comments only; no assertion changed |
+
+**Superseded rows, for whoever reads them later:** W4-C6's "until then combat's `pentaryn-tt` class
+is still styled only by transform.css" no longer holds, because `24e961a0` makes combat.css import
+the kit file.
+
+**Merge note (for the wave-4 → main merge, not done here):** `origin/main` has moved since
+`wave-4-base`. It now holds wave 3 (`880de701`) and a newer `conformance.py`.
+- A dry-run `git merge-tree` against it conflicts in `context/foundry/README.md` (the module index:
+  regenerate it with `module-index` after resolving) and `foundry/adjustments.yml` (keep both sides'
+  rows).
+- main's newer scorer gives the four modules the same scores as this branch's scorer.
+- Once merged, the portals/creatures `isAoeHandle` oracle pin is no longer blocked. It goes into
+  `test_aoe_handle_contract.py`, column `prop`.
+
+**Gates after the review (`18fd2633`), all static:** `pytest -q` 1210 passed (+2 new), 2 skipped, 3
+xfailed; `make foundry-modules-check` all 20 pass (riders node:test 175, 0 fail, 0 todo); `make
+foundry-lib-check` green; `make check-context` OK (4 pre-existing warnings); `make
+foundry-adjustments-check` green; `vendor.py check --all` identical.
