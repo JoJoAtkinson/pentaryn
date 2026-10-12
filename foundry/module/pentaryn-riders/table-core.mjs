@@ -105,6 +105,23 @@ export function restoreSlotScaling({ targets = [], scaling = {}, slots = {} } = 
   return null;
 }
 
+/**
+ * An actor's spell slots by level, `{ [level]: { value, max } }`, from `system.spells`: spell1 …
+ * spell9 by key, numbers coerced (a missing or junk number reads 0). A Pact slot is its own
+ * consumption type and is left out. One builder for cast-flow's restore-slot default and its
+ * Arcane Recovery picker (combat-riders-26 ext.).
+ * @param {Record<string, {value?: *, max?: *}>} spells
+ * @returns {Record<number, {value: number, max: number}>}
+ */
+export function slotsFrom(spells) {
+  const slots = {};
+  for (let level = 1; level <= 9; level++) {
+    const s = spells?.[`spell${level}`];
+    if (s) slots[level] = { value: Number(s.value) || 0, max: Number(s.max) || 0 };
+  }
+  return slots;
+}
+
 /* ── usability Area 6 re-run (wizard) ───────────────────────────────────── */
 
 /**

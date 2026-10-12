@@ -49,7 +49,7 @@
  *    pentaryn-riders.arcaneRecovery. Row riders-arcane-recovery-picker.
  */
 
-import { restoreSlotScaling, arcaneRecoveryCap, arcaneRecoveryDefault, arcaneRecoveryCheck, isArcaneRecovery,
+import { restoreSlotScaling, slotsFrom, arcaneRecoveryCap, arcaneRecoveryDefault, arcaneRecoveryCheck, isArcaneRecovery,
   ARCANE_RECOVERY_MAX_LEVEL } from "./table-core.mjs";
 import { settingOr } from "./settings.mjs";
 import { restoreSidebar, sidebarState } from "./shapes.mjs";
@@ -90,11 +90,8 @@ function restoreSlotDefault(activity, usageConfig) {
     if (!usageConfig || (usageConfig.scaling !== undefined && usageConfig.scaling !== 0)) return;
     const actor = activity?.actor;
     if (!actor?.system?.spells) return;
-    const slots = {};
     // spell1…spell9 (type "spell"); a Pact slot is its own consumption type and never restored this way.
-    for (const [key, s] of Object.entries(actor.system.spells)) {
-      if (/^spell[1-9]$/.test(key) && Number.isFinite(s?.level)) slots[s.level] = { value: s.value, max: s.max };
-    }
+    const slots = slotsFrom(actor.system.spells);
     const scaling = restoreSlotScaling({
       targets: [...(activity.consumption?.targets ?? [])].map(t => ({ type: t.type, value: t.value, target: t.target })),
       scaling: activity.consumption?.scaling ?? {},
@@ -160,19 +157,10 @@ function firstClick(app, element) {
 
 const ordinal = n => game.i18n.localize(`DND5E.SpellLevel${n}`);
 
-function slotTable(actor) {
-  const slots = {};
-  for (let level = 1; level <= 9; level++) {
-    const s = actor?.system?.spells?.[`spell${level}`];
-    if (s) slots[level] = { value: Number(s.value) || 0, max: Number(s.max) || 0 };
-  }
-  return slots;
-}
-
 async function arcaneRecoveryDialog(actor) {
   const level = actor?.classes?.wizard?.system?.levels ?? 0;
   const cap = arcaneRecoveryCap(level);
-  const slots = slotTable(actor);
+  const slots = slotsFrom(actor?.system?.spells);
   const choice = arcaneRecoveryDefault(slots, cap);
   const rows = [];
   for (let l = 1; l <= ARCANE_RECOVERY_MAX_LEVEL; l++) {

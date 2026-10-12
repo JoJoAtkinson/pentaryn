@@ -549,3 +549,6 @@ export function clampHeal(amount, faces, prof) {
   const max = Math.max(0, Math.trunc(Number(faces) || 0)) + Math.max(0, Math.trunc(Number(prof) || 0));
   return Math.max(0, Math.min(n, max));
 }
+
+/* Hit Dice pools, the Battle Medic gate and the report row: core/hit-dice.mjs (combat-riders-26). */
+export * from "./core/hit-dice.mjs";

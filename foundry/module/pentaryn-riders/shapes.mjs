@@ -6,7 +6,8 @@
  */
 
 import {
-  MODULE, RULES, carriedAbilities, matchRule, normalizeName, pickRestore, pickSpend, resolveTypes, ruleByKey,
+  MODULE, RULES, carriedAbilities, hdPoolsFrom, hdSummaryOf, matchRule, normalizeName, pickRestore, pickSpend,
+  resolveTypes, ruleByKey,
 } from "./riders-core.mjs";
 import { SUMMON_FLAG } from "./table-core.mjs";
 
@@ -89,24 +90,19 @@ export function isBattleMedic(activity) {
 
 /* ── Hit Dice ───────────────────────────────────────────────────────────── */
 
+/** The actor's Hit Dice pools (core hdPoolsFrom over `attributes.hd` and the class items). */
 export function hdPools(actor) {
-  const sys = actor?.system;
-  const hd = sys?.attributes?.hd;
+  const hd = actor?.system?.attributes?.hd ?? null;
   if (!hd) return [];
-  if (sys.isNPC) {
-    return [{ id: null, faces: Number(String(hd.denomination ?? "").replace(/^d/, "")) || 0, value: hd.value ?? 0, spent: hd.spent ?? 0 }];
-  }
-  return Object.values(actor.classes ?? {}).map(c => ({
-    id: c.id,
-    faces: Number(String(c.system?.hd?.denomination ?? "").replace(/^d/, "")) || 0,
-    value: c.system?.hd?.value ?? 0,
-    spent: c.system?.hd?.spent ?? 0
-  }));
+  return hdPoolsFrom({
+    isNPC: !!actor.system.isNPC,
+    hd,
+    classes: Object.values(actor.classes ?? {}).map(c => ({ id: c.id, hd: c.system?.hd })),
+  });
 }
 
 export function hdSummary(actor) {
-  const pools = hdPools(actor);
-  return { value: pools.reduce((a, p) => a + p.value, 0), max: pools.reduce((a, p) => a + p.value + p.spent, 0) };
+  return hdSummaryOf(hdPools(actor));
 }
 
 async function writePool(actor, pool, delta) {

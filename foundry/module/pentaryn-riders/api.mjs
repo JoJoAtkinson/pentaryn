@@ -63,35 +63,30 @@ async function retireManual(actor) {
   return out;
 }
 
-/** One row per feature of `a`: what is active, which types, and Battle Medic's state (plain strings). */
+/** One row per feature of `a`: what is active, which types, and Battle Medic's state (core reportRow). */
 function rowsFor(a) {
-  const rows = [];
-  for (const f of featuresOf(a)) {
-    const row = { actor: a.name, rule: f.key, items: f.items.map(i => i.name).join(", ") };
-    if (f.rule.types) {
-      row.types = f.types.join(", ");
-      row.status = f.types.length ? "active" : "NO TYPE — setType(actor, 'fire')";
-    } else row.status = "active";
-    if (f.key === "elemental-affinity") {
-      const manual = f.items.flatMap(i => i.system.activities?.contents ?? []).filter(x => x.type === "damage").length;
-      if (manual) row.manual = `${manual} +CHA activities left — retireManual(actor)`;
-    }
+  return featuresOf(a).map(f => {
+    const activities = f.items.flatMap(i => i.system.activities?.contents ?? []);
+    let hand = null;
     if (f.rule.effect?.unlessCarried) {
       // Spells that already add this ability by hand: the rider skips them (no double count).
-      const ab = f.rule.effect.bonus;
-      const hand = a.items.filter(i => i.type === "spell" && (i.system.activities?.contents ?? []).some(x => carriedBy(x).includes(ab)));
-      if (hand.length) row.handAdded = `${hand.map(i => i.name).join(", ")} already add ${ab.toUpperCase()} — rider skips them`;
+      const ability = f.rule.effect.bonus;
+      const spells = a.items.filter(i => i.type === "spell" && (i.system.activities?.contents ?? []).some(x => carriedBy(x).includes(ability)));
+      hand = { ability, spells: spells.map(i => i.name) };
     }
+    let battleMedic = null;
     if (f.key === "healer") {
-      const bm = f.items.flatMap(i => i.system.activities?.contents ?? []).find(x => isBattleMedic(x));
-      const tgt = bm?.consumption?.targets?.find(t => t.type === "itemUses")?.target;
-      row.battleMedic = !bm ? "not installed — installBattleMedic(actor)"
-        : !tgt ? "installed, no kit linked"
-        : a.items.has(tgt) ? `installed, kit ${a.items.get(tgt).name}` : `installed, kit ${tgt} MISSING`;
+      const bm = activities.find(x => isBattleMedic(x));
+      const kit = bm?.consumption?.targets?.find(t => t.type === "itemUses")?.target ?? null;
+      battleMedic = { installed: !!bm, kit, kitFound: !!kit && a.items.has(kit), kitName: kit && a.items.has(kit) ? a.items.get(kit).name : null };
     }
-    rows.push(row);
-  }
-  return rows;
+    return core.reportRow({
+      actor: a.name, rule: f.key, items: f.items.map(i => i.name),
+      typed: !!f.rule.types, types: f.types,
+      manual: f.key === "elemental-affinity" ? activities.filter(x => x.type === "damage").length : 0,
+      hand, battleMedic,
+    });
+  });
 }
 
 /** One row per (actor, feature) — every character actor when none is given — and a console.table of them. */

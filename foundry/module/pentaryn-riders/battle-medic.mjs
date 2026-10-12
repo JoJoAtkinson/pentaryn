@@ -11,7 +11,7 @@
  * left, or no GM is online to write a target the player doesn't own.
  */
 
-import { MODULE, battleMedicFormula, clampHeal, matchRule, pickSpend } from "./riders-core.mjs";
+import { MODULE, battleMedicBlockReason, battleMedicFormula, clampHeal, matchRule, pickSpend } from "./riders-core.mjs";
 import { settingRaw } from "./settings.mjs";
 import { guarded } from "./lib/queries.mjs";
 import { HEALER, hdPools, hdSummary, isBattleMedic, itemInfo, spendHitDie } from "./shapes.mjs";
@@ -27,12 +27,16 @@ function soleTarget() {
 
 /** Why Battle Medic can't run right now, or null. Checked before dnd5e spends the kit. */
 function battleMedicBlock(healer, token) {
-  if (!token?.actor) return _loc("PENTARYN_RIDERS.battleMedic.needTarget");
-  const target = token.actor;
-  if (!target.system?.attributes?.hd) return _loc("PENTARYN_RIDERS.battleMedic.noHitDice", { name: token.name });
-  if (!pickSpend(hdPools(target))) return _loc("PENTARYN_RIDERS.battleMedic.noHitDice", { name: token.name });
-  if (!target.isOwner && !game.users.activeGM) return _loc("PENTARYN_RIDERS.battleMedic.noGM");
-  return null;
+  const target = token?.actor ?? null;
+  const hasHd = !!target?.system?.attributes?.hd;
+  const key = battleMedicBlockReason({
+    hasTargetActor: !!target,
+    hasHd,
+    canSpend: hasHd && !!pickSpend(hdPools(target)),
+    ownsTarget: !!target?.isOwner,
+    gmOnline: !!game.users.activeGM,
+  });
+  return key ? _loc(key, { name: token?.name }) : null;
 }
 
 /**

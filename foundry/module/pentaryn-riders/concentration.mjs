@@ -130,16 +130,17 @@ function resultLine(message, html) {
     const root = html instanceof HTMLElement ? html : html?.[0];
     if (!root || root.querySelector(".pr-conc-result")) return;
     const roll = message.rolls?.[0];
-    const dc = roll?.options?.target;
-    if (!Number.isFinite(Number(dc)) || dc === null) return;
-    const failed = Number(roll.total) < Number(dc);
+    // {dc, failed} as concentrationResult reads them (an unevaluated total reads NaN: not failed)
+    const { dc, failed: res } = concentrationResult({ total: Number(roll?.total), dc: roll?.options?.target ?? null });
+    if (dc === null) return;
+    const failed = !!res;
     const broken = message.system?.outcome === "broken";
     const p = document.createElement("p");
     p.className = `pr-conc-result ${failed ? "failure" : "success"}`;
     const key = failed
       ? (broken ? "PENTARYN_RIDERS.concentration.failedEnded" : "PENTARYN_RIDERS.concentration.failed")
       : "PENTARYN_RIDERS.concentration.success";
-    p.textContent = _loc(key, { dc: Number(dc) });
+    p.textContent = _loc(key, { dc });
     const at = root.querySelector(".dice-roll") ?? root.querySelector(".message-content");
     if (at?.classList?.contains("dice-roll")) at.after(p); else (at ?? root).append(p);
   } catch (err) { log.warn("concentration result line skipped", err); }
