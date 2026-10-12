@@ -835,3 +835,52 @@ def test_a_job_with_a_non_numeric_created_still_loads_and_sorts(two_hosts, bad):
         assert uploadq.in_flight() == "world-b.tar.gz"           # the newest, as before
         (uploadq.tmp_dir() / f"world-b.tar.gz{uploadq.JOB_SUFFIX}").unlink()
         assert uploadq.in_flight() == "world-a.tar.gz"           # still protected alone
+
+
+# ── py-cloud-ac-1: the record is written from a fresh bootstate, never a stale one ──
+
+def _during_world_upload(monkeypatch, action):
+    """Run `action` while the uploader copies a world tar up (minutes, in real life)."""
+    real = storage.FolderStorage.upload
+
+    def slow(self, src, rel):
+        if rel.startswith(f"{cloud.WORLD_BACKUPS}/world-"):
+            action()
+        return real(self, src, rel)
+    monkeypatch.setattr(storage.FolderStorage, "upload", slow)
+
+
+def test_a_bootstate_write_during_the_upload_is_kept_py_cloud_ac_1(two_hosts, spawned,
+                                                                    monkeypatch):
+    """py-cloud-ac-1: the uploader recorded from the BootState it loaded before the
+    upload, writing back over anything saved meanwhile (here a boot notice)."""
+    with two_hosts.use("mac"):
+        cloud.backup("shutdown", background=True)
+        [job] = uploadq.pending()
+        _during_world_upload(monkeypatch, lambda: bootstate.load().set_pending(
+            "boss-20990101-000000.tar.gz", 123.0))
+        assert cloud.upload_pending() == 0
+        st = bootstate.load()
+    assert st.based_on == job.name
+    assert (st.pending_newer, st.pending_newer_mtime) == ("boss-20990101-000000.tar.gz",
+                                                          123.0)
+
+
+def test_a_record_moved_during_the_upload_is_not_overwritten_py_cloud_ac_1(
+        two_hosts, spawned, monkeypatch, capsys):
+    """py-cloud-ac-1: a restore recorded while the upload ran is the tree on disk now —
+    the landed snapshot was built from the old one and must not take the record back."""
+    with two_hosts.use("mac"):
+        cloud.backup("shutdown", background=True)
+        [job] = uploadq.pending()
+        _during_world_upload(monkeypatch, lambda: bootstate.load().record_snapshot(
+            "boss-20990101-000000.tar.gz", "boss", 123.0, "d1g3st", by="restore",
+            clear_pending=True))
+        capsys.readouterr()
+        assert cloud.upload_pending() == 0
+        out = capsys.readouterr().out
+        st = bootstate.load()
+        assert uploadq.pending() == []
+    assert (st.based_on, st.by) == ("boss-20990101-000000.tar.gz", "restore")
+    assert "unknown lineage, and not recording it" in out
+    assert job.name in _snaps(two_hosts.cloud)

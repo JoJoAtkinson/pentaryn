@@ -196,22 +196,27 @@ def _restore_world_tar(snapshot: "cloud.Snapshot | Path | None", rec: Recovery) 
     this machine's own ``Config/options.json``, ``admin.txt`` and ``license.json``. A
     full (pre-bundles) snapshot restores as before; a refusal raises ``RuntimeError``.
     The based-on record is ``cloud.record_restored``'s, the same one a restore writes.
+    Holds both queue locks (``cloud._exclusive``) throughout, as a restore does.
     """
     if snapshot is None:
         raise RuntimeError("no world snapshot to restore from")
     if isinstance(snapshot, Path):
         if not snapshot.exists():
             raise RuntimeError(f"world snapshot missing: {snapshot}")
-        cloud.extract_snapshot(snapshot, systems=False)
+        with cloud._exclusive():
+            cloud.extract_snapshot(snapshot, systems=False)
         rec.steps.append(f"restored worlds/Config/modules from {snapshot.name}")
         return
     st = cloud.store()
-    fetched = cloud.fetch_snapshot(st, snapshot, systems=False)
-    try:
-        cloud.apply_snapshot(fetched, systems=False)
-        cloud.record_restored(st, snapshot, "updater-rollback", fetched.manifest)
-    finally:
-        cloud.discard_fetched(fetched)
+    # Both queue locks, as ``cloud.py restore`` holds them: a build or a background
+    # upload must never interleave with the rollback's extract or its record.
+    with cloud._exclusive():
+        fetched = cloud.fetch_snapshot(st, snapshot, systems=False)
+        try:
+            cloud.apply_snapshot(fetched, systems=False)
+            cloud.record_restored(st, snapshot, "updater-rollback", fetched.manifest)
+        finally:
+            cloud.discard_fetched(fetched)
     rec.steps.append(f"restored worlds/Config/modules from {snapshot.name}")
 
 

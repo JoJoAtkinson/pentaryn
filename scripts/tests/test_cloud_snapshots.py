@@ -2160,3 +2160,32 @@ def test_tree_digests_are_stable(fake_data):
                                          "a00aaa1e002f876dd55e1ae04de4dbf5")
     assert cloud.legacy_snapshot_digest() == ("9d7d27c6399e982930a40d47fac44cb8"
                                              "d6eaff3b24eb982131c3d312287a01b7")
+
+
+def test_updater_world_restore_holds_both_queue_locks_py_cloud_ac_1(two_hosts, monkeypatch):
+    """py-cloud-ac-1: the rollback restore wrote the world and the based-on record with no
+    lock, so a background upload or a build could interleave with it."""
+    import threading
+    from scripts.foundry import uploadq
+    from scripts.foundry.update import recover
+    mac = _install(two_hosts.data["mac"])
+    held: dict[str, bool] = {}
+    real = cloud.apply_snapshot
+
+    def probe():           # another thread: a separate holder, as another process is
+        for name in (uploadq.BUILD_LOCK, uploadq.UPLOAD_LOCK):
+            with uploadq.lock(name, wait=False) as got:
+                held[name] = not got
+
+    def spy(*a, **kw):
+        t = threading.Thread(target=probe)
+        t.start()
+        t.join()
+        return real(*a, **kw)
+    monkeypatch.setattr(cloud, "apply_snapshot", spy)
+    with two_hosts.use("mac"):
+        cloud.backup("auto-update")
+        snap = recover.newest_world_snapshot()
+        _edit(mac, "migrated by a bad update")
+        recover._restore_world_tar(snap, recover.Recovery(kind="system", target="dnd5e"))
+    assert held == {uploadq.BUILD_LOCK: True, uploadq.UPLOAD_LOCK: True}

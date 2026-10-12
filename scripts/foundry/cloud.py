@@ -1248,13 +1248,23 @@ def _after_landing(st: Storage, job: uploadq.Job, me: str, state: bootstate.Boot
                    linked: bool, superseded: Snapshot | None, keep_names: set[str],
                    snap: Snapshot, *, lineage: tuple) -> None:
     """Everything after `job`'s snapshot `snap` is in the cloud, in this order (review
-    M10): the based-on record (only when `linked`; `lineage` is the (ancestors, their
-    mtimes, origin_before) its sidecar carries), the job leaves the queue, the retired
+    M10): the based-on record (only when `linked` and the record, reloaded now, still
+    names `job.parent` — else nothing is recorded or coalesced; `lineage` is the
+    (ancestors, their mtimes, origin_before) its sidecar carries), the job leaves the queue, the retired
     `.last-digest` marker goes (primary only), the snapshot it coalesces (`superseded`)
     is deleted, this host's own snapshots are pruned to its keep counts — never one in
     `keep_names` — and the bundle GC runs."""
     ancestors, ancestor_mtimes, origin = lineage
     size = job.size
+    if linked:
+        # Reloaded: the upload took minutes, and a boot notice or a restore may have saved
+        # the record meanwhile — never write back the copy loaded before it (py-cloud-ac-1).
+        state = bootstate.load()
+        if state.based_on != job.parent:
+            log(f"⚠ this machine's based-on record moved to {state.based_on or 'empty'} "
+                f"while {job.name} uploaded (it extends {job.parent or 'nothing'}) — "
+                "uploaded with an unknown lineage, and not recording it")
+            linked, superseded = False, None
     if linked:
         state.record_snapshot(job.name, me, snap.mtime, job.digest, by="backup",
                               lineage=ancestors, lineage_mtimes=ancestor_mtimes,
