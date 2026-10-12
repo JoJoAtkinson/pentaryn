@@ -128,6 +128,10 @@ Fixed (declared, no table-visible change): `overlay.mjs` no longer exports `togg
 `showAll` nothing imported — import `showAll`. The API rows (`show`, `showAll`, `cards`) are unchanged.
 ties-ui-M6.
 
+Fixed (declared, no table-visible change): the Ties tab's editing pass no longer binds a tie `change`
+handler on the authoring section's lore rows (selector `.pt-row:not([data-inbound]):not(.pt-lore-row)`);
+lore rows are saved by the lore editor alone. ties-ui-M7.
+
 ## 0.19.4 (2026-10-10, usability run, Area 7 re-run)
 
 - **The inspect window's Share switches are the table's PCs only** (`tablePCs`): each player's

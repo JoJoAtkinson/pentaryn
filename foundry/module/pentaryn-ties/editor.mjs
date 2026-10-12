@@ -439,7 +439,8 @@ export function bind(root, actor, rerender = () => {}) {
 
   /* ── editing, inside an expanded row ─────────────────────────────────── */
 
-  root.querySelectorAll(".pt-row:not([data-inbound])").forEach(row => {
+  // the authoring section's lore rows are .pt-rows too; lore-ui binds those (ties-ui-M7)
+  root.querySelectorAll(".pt-row:not([data-inbound]):not(.pt-lore-row)").forEach(row => {
     const id = row.dataset.id;
 
     // read-modify-write inside the actor's queue, so a quick second edit reads the first one's
