@@ -1,26 +1,23 @@
-// Pentaryn Transform — Starry Form (Circle of the Stars): the hooks. The rule, the effect and the
-// light live in starry-adapter.mjs, the sheet route's dialog in starry-dialog.mjs.
+/**
+ * Pentaryn Transform — FEATURE: Starry Form (Circle of the Stars), the hooks. The rule, the effect and
+ * the light live in starry-adapter.mjs, the sheet route's dialog in starry-dialog.mjs. Installed by
+ * hud.mjs (esmodules[1]) right before the HUD panels, where its hooks always registered.
+ */
 
-import { MODULE_ID, starryBlock, refundUpdate } from "./transform-core.mjs";
+import { MODULE, starryBlock, refundUpdate } from "./transform-core.mjs";
 import { makeLog } from "./lib/log.mjs";
 import { isRunner } from "./wildshape-adapter.mjs";
 import {
-  STARRY_EFFECT_ID, starryItem, wildShapeItemOf, hasTwinkling, isStarryConsume, constellationActivity, activeStarry,
-  constellationOf, starrySecondsLeft, constellationLabel, constellationImg, constellationText, setLight, applyStarry,
-  BLOCKS, assumeStarry, endStarry, announceStarryOn
+  STARRY_EFFECT_ID, starryItem, wildShapeItemOf, isStarryConsume, activeStarry, constellationOf, starrySecondsLeft,
+  setLight, applyStarry, BLOCKS, assumeStarry, endStarry, announceStarryOn
 } from "./starry-adapter.mjs";
 import { pickConstellation } from "./starry-dialog.mjs";
 
-export {
-  STARRY_EFFECT_ID, starryItem, wildShapeItemOf, hasTwinkling, isStarryConsume, constellationActivity, activeStarry,
-  constellationOf, starrySecondsLeft, constellationLabel, constellationImg, constellationText, assumeStarry, endStarry
-};
-
-const log = makeLog(MODULE_ID);
+const log = makeLog(MODULE);
 
 /* ── the sheet route: Starry Form → Consume Wild Shape ───────────────────── */
 
-Hooks.on("dnd5e.preUseActivity", (activity, usageConfig, dialogConfig, messageConfig) => {
+function onSheetPreUse(activity, usageConfig, dialogConfig, messageConfig) {
   if (!isStarryConsume(activity)) return;
   const actor = activity.actor;
   const why = starryBlock({ shifted: !!actor?.isPolymorphed, incapacitated: !!actor?.statuses?.has("incapacitated"), spends: false });
@@ -29,9 +26,9 @@ Hooks.on("dnd5e.preUseActivity", (activity, usageConfig, dialogConfig, messageCo
     return false;
   }
   messageConfig.create = false;                   // no card with effects to apply by hand
-});
+}
 
-Hooks.on("dnd5e.postUseActivity", (activity, usageConfig) => {
+function onSheetPostUse(activity, usageConfig) {
   if (!isStarryConsume(activity) || usageConfig?.pentaryn?.starry) return;
   const actor = activity.actor;
   pickConstellation(actor).then(async c => {
@@ -44,7 +41,7 @@ Hooks.on("dnd5e.postUseActivity", (activity, usageConfig) => {
     await applyStarry(actor, c);
     announceStarryOn(actor, c);
   }).catch(err => log.error("starry form failed", err));
-});
+}
 
 /* ── ending without a click ──────────────────────────────────────────────── */
 
@@ -59,44 +56,58 @@ function onEffectChange(effect) {
   if (!(actor instanceof Actor) || !activeStarry(actor)) return;
   setTimeout(() => { if (actor.statuses?.has("incapacitated")) maybeEnd(actor, "incapacitated"); }, 0);
 }
-Hooks.on("createActiveEffect", onEffectChange);
-Hooks.on("updateActiveEffect", (effect, changes) => {
+function onEffectUpdate(effect, changes) {
   if (effect.id === STARRY_EFFECT_ID && foundry.utils.getProperty(changes, "duration.expired") === true) {
     maybeEnd(effect.parent, "expired");
     return;
   }
   onEffectChange(effect);
-});
+}
 
 // However it went (dismissed, expired, right-clicked off the HUD, deleted on the sheet): the light goes.
-Hooks.on("deleteActiveEffect", (effect) => {
+function onStarryDelete(effect) {
   const actor = effect?.parent;
-  if (!(actor instanceof Actor) || !effect.getFlag?.(MODULE_ID, "starry") || !isRunner(actor)) return;
+  if (!(actor instanceof Actor) || !effect.getFlag?.(MODULE, "starry") || !isRunner(actor)) return;
   if (activeStarry(actor)) return;
   setLight(starryItem(actor), false).catch(err => log.warn("starry light off failed", err));
-});
+}
 
 // 10 minutes of world time.
-Hooks.on("updateWorldTime", () => {
+function onWorldTime() {
+  // hot: no cache — every world actor, every client, every tick (C49; transform-creatures-2 skips it
+  // on a client that cannot be the runner; -22: unlinked druid tokens are not checked, a live decision).
   for (const actor of game.actors) {
     if (!activeStarry(actor)) continue;
     const left = starrySecondsLeft(actor);
     if (left !== null && left <= 0) maybeEnd(actor, "expired");
   }
-});
+}
 
 // A Long Rest is far longer than 10 minutes; the light must not survive it.
-Hooks.on("dnd5e.restCompleted", (actor, result, config) => {
+function onRestCompleted(actor, result, config) {
   if (config?.type === "long" && activeStarry(actor) && actor.isOwner) {
     endStarry(actor, { quiet: true }).catch(err => log.warn("ending starry form failed", err));
   }
-});
+}
 
 /* ── API ─────────────────────────────────────────────────────────────────── */
 
-Hooks.once("ready", () => {
+function extendApi() {
   const api = game.pentaryn?.transform;
   if (api && Object.isExtensible(api)) {
     api.starry = { assume: assumeStarry, end: endStarry, active: activeStarry, constellation: constellationOf };
   }
-});
+}
+
+export function install(reg) {
+  reg.on("dnd5e.preUseActivity", onSheetPreUse, { label: "dnd5e.preUseActivity: Starry Form sheet route", guard: false });
+  reg.on("dnd5e.postUseActivity", onSheetPostUse, { label: "dnd5e.postUseActivity: Starry Form sheet route", guard: false });
+  reg.on("createActiveEffect", onEffectChange, { label: "createActiveEffect: incapacitated ends Starry Form", guard: false });
+  reg.on("updateActiveEffect", onEffectUpdate, { label: "updateActiveEffect: Starry Form expired / incapacitated", guard: false });
+  reg.on("deleteActiveEffect", onStarryDelete, { label: "deleteActiveEffect: the starlight goes", guard: false });
+  reg.on("updateWorldTime", onWorldTime, { label: "updateWorldTime: Starry Form expiry", guard: false });
+  reg.on("dnd5e.restCompleted", onRestCompleted, { label: "dnd5e.restCompleted: a Long Rest ends Starry Form", guard: false });
+  reg.once("ready", extendApi, { label: "ready: api.starry", guard: false });
+}
+
+export function uninstall() {}

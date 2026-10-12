@@ -122,7 +122,7 @@ test("published at ready: game.pentaryn.transform, the legacy surface (golden/le
 });
 
 test("starry API rows are starry.mjs's own functions", async () => {
-  const S = await import("../starry.mjs");
+  const S = await import("../starry-adapter.mjs");
   assert.deepEqual(game.pentaryn.transform.starry,
     { assume: S.assumeStarry, end: S.endStarry, active: S.activeStarry, constellation: S.constellationOf });
 });

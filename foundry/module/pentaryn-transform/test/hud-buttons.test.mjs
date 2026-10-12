@@ -15,7 +15,7 @@ F.CONFIG.DND5E = {
   limitedUsePeriods: { lr: { label: "Long Rest" }, sr: { label: "Short Rest" } }
 };
 const T = await import("../transform.mjs");
-const S = await import("../starry.mjs");
+const S = await import("../starry-adapter.mjs");
 await import("../hud.mjs");
 F.fire("init");
 F.fire("ready");

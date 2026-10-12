@@ -12,7 +12,7 @@ mock.timers.enable({ apis: ["setTimeout", "Date"], now: 0 });
 const F = await setup({ modules: ["pentaryn-senses", { id: "pentaryn-combat", active: false }] });
 const savedArgon = F.CONFIG.ARGON;
 const T = await import("../transform.mjs");
-const S = await import("../starry.mjs");
+const S = await import("../starry-adapter.mjs");
 await import("../hud.mjs");
 F.fire("init");
 F.fire("ready");

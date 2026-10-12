@@ -11,7 +11,7 @@ import { STARRY_LIGHT } from "../transform-core.mjs";
 mock.timers.enable({ apis: ["setTimeout", "Date"], now: 0 });
 const F = await setup({ modules: ["pentaryn-senses"] });
 const T = await import("../transform.mjs");
-const S = await import("../starry.mjs");
+const S = await import("../starry-adapter.mjs");
 await import("../hud.mjs");
 F.fire("init");
 F.fire("ready");
