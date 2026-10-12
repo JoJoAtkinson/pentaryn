@@ -245,13 +245,7 @@ export const IDENT_FLAG = BELIEFS_FLAG;
  * Titles stay free-form and display-only; this is the only thing that has to be unique.
  */
 export function attrIdOf(title) {
-  const raw = typeof title === "string" ? title : "";
-  return raw
-    .normalize("NFKD")
-    .replace(/[\u0300-\u036f]/g, "") // combining marks, so "é" has already become "e" + mark
-    .toLowerCase()
-    .replace(/[^a-z0-9]/g, "")
-    .slice(0, 64);
+  return attrNameKey(title).slice(0, 64);
 }
 
 /**
@@ -274,7 +268,7 @@ export function attrNameKey(title) {
   const raw = typeof title === "string" ? title : "";
   return raw
     .normalize("NFKD")
-    .replace(/[̀-ͯ]/g, "")
+    .replace(/[\u0300-\u036f]/g, "") // combining marks, so "é" has already become "e" + mark
     .toLowerCase()
     .replace(/[^a-z0-9]/g, "");
 }
