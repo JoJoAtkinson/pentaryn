@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import signal
 import time
-import sys
 
 import pytest
 
@@ -546,8 +545,9 @@ def test_foundry_data_is_under_application_support_on_a_mac(monkeypatch):
     monkeypatch.delenv("FOUNDRY_DATA", raising=False)
     monkeypatch.setattr(host.platform, "system", lambda: "Darwin")
     assert str(host.FOUNDRY_DATA).endswith("Library/Application Support/FoundryVTT")
-    if sys.platform == "darwin":
-        assert str(cfg.FOUNDRY_DATA_DIR).endswith("Application Support/FoundryVTT/Data")
+    # config derives its Data/ folder from host.foundry_data() at import; every test sees a tmp
+    # copy (conftest `_isolate_foundry_data`), so pin the derivation, not the import-time value.
+    assert str(host.foundry_data() / "Data").endswith("Application Support/FoundryVTT/Data")
 
 
 # ── foundry-down: pid OR port ─────────────────────────────────────────────────
@@ -956,7 +956,9 @@ def staged_paths(monkeypatch, tmp_path):
     world.mkdir(parents=True)
     spec = cfg.ModuleSpec("pentaryn-importer", check="parse")
     monkeypatch.setattr(cfg, "MODULE_SRC_ROOT", src.parent)
+    monkeypatch.setattr(cfg, "FOUNDRY_DATA_DIR", tmp_path / "Data")
     monkeypatch.setattr(cfg, "FOUNDRY_MODULES", tmp_path / "Data/modules")
+    monkeypatch.setattr(cfg, "WORLDS_DIR", tmp_path / "Data/worlds")   # known_worlds() lists this on a refusal
     monkeypatch.setitem(cfg.MODULES, "importer", spec)
     monkeypatch.setattr(cfg, "ACTORS_JSON", actors)
     monkeypatch.setattr(cfg, "ACTORS_STAGED", world / "actors.json")

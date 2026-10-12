@@ -37,9 +37,12 @@ def store(tmp_path, monkeypatch):
     return root
 
 
-def test_feedback_dir_defaults_to_foundry_data(monkeypatch):
+def test_feedback_dir_defaults_to_foundry_data(monkeypatch, fake_data):
+    """Unset, it is <data root>/Data/pentaryn-feedback. conftest points the data root at a temp
+    tree for every test; that the Mac's root is ~/Library/Application Support/FoundryVTT is
+    test_foundry_ops' test_foundry_data_is_under_application_support_on_a_mac."""
     monkeypatch.delenv("PENTARYN_FEEDBACK_DIR", raising=False)
-    assert fr.feedback_dir() == Path.home() / "Library/Application Support/FoundryVTT/Data/pentaryn-feedback"
+    assert fr.feedback_dir() == fake_data / "Data/pentaryn-feedback"
 
 
 def test_missing_dir_is_empty_not_an_error(tmp_path, monkeypatch):

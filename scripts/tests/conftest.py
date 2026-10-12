@@ -16,6 +16,10 @@ Four things live here, and only these:
 * ``fake_cloud`` / ``fake_data`` (autouse) — the cloud is a temp folder and Foundry's data
   root a tiny temp tree, and the host is the primary ``testhost``; see the section at the
   bottom (rclone-two-hosts-2026-10 §10).
+* ``_isolate_foundry_data`` (autouse) — the paths that were resolved at *import* time
+  (``ops.config``'s Data/, modules and worlds dirs; ``update.admin``'s data root and its
+  dirs, and the ``inventory``/``recover`` copies of them; the feedback default dir) are re-pointed into ``fake_data`` for every test, so no
+  test reaches ~/Library/Application Support/FoundryVTT by default (W4L follow-up).
 """
 
 from __future__ import annotations
@@ -142,6 +146,47 @@ def fake_data(monkeypatch, tmp_path_factory, fake_cloud):
     monkeypatch.setenv("FOUNDRY_DATA", str(root))
     monkeypatch.setenv("PENTARYN_BOOT_STATE", str(root / "pentaryn-boot.json"))
     return root
+
+
+@pytest.fixture(autouse=True)
+def _isolate_foundry_data(monkeypatch, fake_data):
+    """Re-point every import-time Foundry path into the temp data root.
+
+    ``FOUNDRY_DATA`` in the env (``fake_data``) only reaches code that asks ``host`` at call
+    time. ``ops.config``, ``update.admin`` and ``feedback_reports`` resolve their paths once,
+    at import, before any fixture runs — so without this they name the real Foundry folder.
+    A test that needs other paths still sets them itself; this is only the default."""
+    from scripts import feedback_reports
+    from scripts.foundry.ops import config as cfg
+    from scripts.foundry.update import admin
+
+    data = fake_data / "Data"
+    monkeypatch.setattr(cfg, "FOUNDRY_DATA_DIR", data)
+    monkeypatch.setattr(cfg, "FOUNDRY_MODULES", data / "modules")
+    monkeypatch.setattr(cfg, "WORLDS_DIR", data / "worlds")
+    monkeypatch.setattr(cfg, "WORLD_DIR", data / "worlds" / cfg.WORLD_NAME)
+    monkeypatch.setattr(cfg, "ACTORS_STAGED", data / "worlds" / cfg.WORLD_NAME / "actors.json")
+
+    monkeypatch.setattr(admin, "FOUNDRY_DATA", fake_data)
+    monkeypatch.setattr(admin, "DATA", data)
+    for name, sub in (("MODULES_DIR", "modules"), ("SYSTEMS_DIR", "systems"), ("WORLDS_DIR", "worlds"),
+                      ("BACKUPS_DIR", "Backups")):
+        monkeypatch.setattr(admin, name, data / sub)
+    monkeypatch.setattr(admin, "SNAPSHOTS_DIR", data / "Backups" / "snapshots")
+    monkeypatch.setattr(admin, "LOGS_DIR", fake_data / "Logs")
+    monkeypatch.setattr(admin, "OPTIONS_JSON", fake_data / "Config/options.json")
+    package_dir = {"module": data / "modules", "system": data / "systems", "world": data / "worlds"}
+    monkeypatch.setattr(admin, "PACKAGE_DIR", package_dir)
+    # the updater modules that copied admin's constants by name at import
+    from scripts.foundry.update import inventory, recover
+    monkeypatch.setattr(inventory, "MODULES_DIR", data / "modules")
+    monkeypatch.setattr(inventory, "SYSTEMS_DIR", data / "systems")
+    monkeypatch.setattr(inventory, "PACKAGE_DIR", package_dir)
+    monkeypatch.setattr(recover, "FOUNDRY_DATA", fake_data)
+
+    monkeypatch.setattr(feedback_reports, "FOUNDRY_DATA_DIR", data)
+    monkeypatch.setattr(feedback_reports, "_DEFAULT_DIR", data / "pentaryn-feedback")
+    return fake_data
 
 
 class TwoHosts:
