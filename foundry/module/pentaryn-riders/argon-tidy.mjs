@@ -32,7 +32,7 @@
  *    `relativeTo: item` and no roll data, so Scorching Ray's `[[@item.level + 1]]{Total Rays}`
  *    read "1" instead of 3. While one of Argon's buttons builds its tooltip, an enrichHTML call for
  *    that item gets `rollData: item.getRollData()`, as dnd5e's own sheet passes. Row
- *    argon-tooltip-item-rolldata.
+ *    riders-argon-tooltip-item-rolldata.
  */
 
 import { collapseAllPanels, refreshSharedUses } from "./argon.mjs";

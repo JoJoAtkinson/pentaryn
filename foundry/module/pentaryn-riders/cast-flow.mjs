@@ -26,7 +26,7 @@
  *    `_prepareUsageConfig` ticks it when placing is possible and the caller did not say (an explicit
  *    `create: {summons: false}` is kept). Untick it in the dialog to cast without placing. A self-only activity
  *    (Shield) also drops the user's leftover targets from its card (the Shield card named a Fighter
- *    targeted minutes earlier). Setting pentaryn-riders.castDefaults. Row dnd5e-summon-place-default.
+ *    targeted minutes earlier). Setting pentaryn-riders.castDefaults. Row riders-summon-place-default.
  *
  * 4. A typed number in a usage dialog counts on the first Use click (W4). dnd5e's usage dialog
  *    re-renders on every change; clicking Use with the number still focused blurred it, the change
@@ -39,14 +39,14 @@
  * 5. A wildcard token image on a summon (Animate Dead's "skeleton-*.webp") no longer makes the
  *    placement preview load the literal "*" path (an "Invalid Asset" error per preview, W7). The
  *    preview gets one of the actor's real images (or its portrait); dnd5e still picks the placed
- *    token's own random image. Row dnd5e-summon-wildcard-preview.
+ *    token's own random image. Row riders-summon-wildcard-preview.
  *
  * 6. Arcane Recovery picks its slots (W5). dnd5e spends the use and rolls "combined spell levels";
  *    the player then had to open the Spells tab and click pips, on the honour system. After the use,
  *    the owner gets a dialog: each spent slot level 1–5 with a number, opening on the highest spent
  *    slots that fit, the PHB budget (half the Wizard level, rounded up; nothing of level 6+) shown
  *    and enforced. Recover writes the slots and posts one line. Setting
- *    pentaryn-riders.arcaneRecovery. Row riders-arcane-recovery-picker.
+ *    pentaryn-riders.arcaneRecovery. Row dnd5e-riders-arcane-recovery-picker.
  */
 
 import { restoreSlotScaling, slotsFrom, arcaneRecoveryCap, arcaneRecoveryDefault, arcaneRecoveryCheck, isArcaneRecovery,

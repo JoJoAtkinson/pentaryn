@@ -27,7 +27,7 @@
  *    bar, so a player could start it only from the sheet. The Action bar's Cast Spell panel gets a
  *    "Longer casts" group: castable spells (Argon's own prepared filter) whose casting time is
  *    minutes or hours and that no bar shows. Any character, not only wizards. Setting
- *    pentaryn-riders.longCasts (world, default on). Row riders-argon-long-casts.
+ *    pentaryn-riders.longCasts (world, default on). Row argon-riders-long-casts.
  *
  * Setting: pentaryn-riders.rituals (world, default on) turns 1 and 2 off.
  */
