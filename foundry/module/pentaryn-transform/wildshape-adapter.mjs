@@ -14,7 +14,7 @@
 
 import {
   MODULE, EFFECT_ID, activitiesOf, isWildShapeActivity, stripForForm, isRevertData, returnLabel, durationSeconds, formatDuration,
-  usesLeft, useSyncUpdates, carriedConditions, endedInForm, attributeSync, shiftBlock, pickRunner, withArticle,
+  usesLeft, useSyncUpdates, carriedConditions, endedInForm, attributeSync, shiftBlock, runnerIs, withArticle,
   formTempHP, withoutOrigin, pruneFavorites, findWildShapeItem, wildShapeActivityOf, refundUpdate
 } from "./transform-core.mjs";
 import { makeLog } from "./lib/log.mjs";
@@ -493,8 +493,11 @@ export async function doShift(host, activity, profileId, uuid) {
 
 /** True on exactly one client for this actor: the active GM, else the first active owner. */
 export function isRunner(actor) {
+  const activeGMId = game.users.activeGM?.id ?? null;
+  // A connected GM always wins pickRunner: no owner scan (transform-creatures-1).
+  if (activeGMId) return runnerIs(game.user.id, { activeGMId, ownerIds: [] });
   const ownerIds = game.users.filter(u => u.active && !u.isGM && actor.testUserPermission(u, "OWNER")).map(u => u.id);
-  return pickRunner({ activeGMId: game.users.activeGM?.id ?? null, ownerIds }) === game.user.id;
+  return runnerIs(game.user.id, { activeGMId, ownerIds });
 }
 
 export function maybeAutoRevert(actor, reason) {

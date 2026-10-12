@@ -42,3 +42,23 @@ test("-10 composing a Bonus bar drops the live buttons Argon's last rebuild left
   for (const b of first) assert.equal(liveButtons.has(b), false, "a disconnected, rendered button is dropped");
   assert.equal(liveButtons.size, 2, "the new bar's two (not yet rendered) are kept");
 });
+
+/* ── -1 isRunner short-circuits on a connected GM ─────────────────────────── */
+
+test("-1 isRunner: with a GM connected no owner permission is tested; the answers are today's", () => {
+  const { talo } = fresh({ ownership: { default: 0, [IDS.player]: 3, [IDS.player2]: 3 } });
+  let tests = 0;
+  const real = talo.testUserPermission;
+  talo.testUserPermission = (...a) => { tests++; return real.apply(talo, a); };
+  assert.equal(T.isRunner(talo), true, "the GM's client");
+  F.become({ userId: IDS.player });
+  assert.equal(T.isRunner(talo), false, "a player's client while a GM is connected");
+  assert.equal(tests, 0);
+  const gm = game.users.get(IDS.gm);
+  gm.active = false;
+  assert.equal(T.isRunner(talo), true, "no GM: the first active owner");
+  assert.ok(tests > 0, "the owner scan runs only without a GM");
+  gm.active = true;
+  talo.testUserPermission = real;
+  F.become({ userId: IDS.gm });
+});
