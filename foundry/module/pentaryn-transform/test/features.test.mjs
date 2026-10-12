@@ -72,3 +72,21 @@ test("hot patch after ready: uninstall(), then re-import both entries — every 
   assert.equal(F.TokenDocument._preUpdateOperation.pentarynUnwrapped, true, "the patch is back");
   assert.equal(F.D.listeners.filter(l => l.type === "pointermove").length, 1);
 });
+
+test("[declared] R3 ctx.uninstall(): a feature whose uninstall throws logs a warning naming it, and every other feature, hook and the patch are still undone", () => {
+  let probeOff = 0;
+  W.installFeature({ install() {}, uninstall() { probeOff += 1; } }, "probe-older");  // runs after the throw
+  W.installFeature({ install() {}, uninstall() { throw new Error("boom"); } }, "probe");
+  assert.ok(W.reg.ids().length > 0);
+  const warn = mock.method(console, "warn", () => {});
+  try {
+    W.ctx.uninstall();
+    const lines = warn.mock.calls.map(c => [c.arguments[0], c.arguments[1]?.message]);
+    assert.deepEqual(lines, [["pentaryn-transform | probe: uninstall failed", "boom"]]);
+  } finally { warn.mock.restore(); }
+  assert.equal(probeOff, 1, "an older feature still uninstalled");
+  assert.equal(W.ctx.contributions.length, 0);
+  assert.equal(W.reg.ids().length, 0, "every hook removed");
+  assert.equal(F.TokenDocument._preUpdateOperation, coreOp, "the patch undone");
+  assert.equal(F.D.listeners.filter(l => l.type === "pointermove").length, 0, "hud-panels still uninstalled");
+});

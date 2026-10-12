@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+- **One feature's failed uninstall no longer strands the rest (R3, defect wave 2).** wiring.mjs
+  `ctx.uninstall()` ran each feature's `uninstall` bare, so a throw skipped the remaining features,
+  `reg.offAll()` and `removePatches()`. Each uninstall now runs in try/catch and logs
+  `<feature>: uninstall failed` at warn (the entries pass each feature's name to `installFeature`);
+  contributions, every hook and the patch are always cleared after ([declared]; test "R3 ctx.uninstall()"
+  in features.test.mjs; golden/console-texts.json gains the wiring.mjs row).
 - **An item-less Argon button stays on the Bonus bar (EC-3, defect wave 2).** core/hud.mjs
   `planBonusBar` compared slot ids with `wildShapeId`, which is null while shifted, so an Argon button
   with no item (id null) was taken for Wild Shape and vanished. A null or undefined id never matches

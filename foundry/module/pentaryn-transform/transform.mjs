@@ -45,12 +45,12 @@ export {
 };
 
 /** Features this entry installs, in load order (hud.mjs installs starry and the HUD panels after). */
-const FEATURES = [bodyswap, wildshape, sweep];
+const FEATURES = { bodyswap, wildshape, sweep };
 
 /* ── the core v14 operator unwrap: applied now, before any preUpdateToken listener ── */
 installPatches();
 
-for (const feature of FEATURES) installFeature(feature);
+for (const [name, feature] of Object.entries(FEATURES)) installFeature(feature, name);
 
 /* ── the manifest's query rows (formImage's relay), on every client: a player's queryGM needs it too ── */
 registerQueries(MANIFEST, () => ctx.api, { log });
