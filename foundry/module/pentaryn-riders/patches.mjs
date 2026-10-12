@@ -20,7 +20,8 @@
  *        marker _prTooltip                                     row riders-argon-tooltip-item-rolldata
  *
  * GLUE: the entry imports it; it reads core, the settings readers and the Argon adapter, and re-exports
- * api.mjs's patchRecords (riders-maint-01). Bodies are today's, verbatim (the wraps of 2-6 were hand patches in argon-tidy.mjs and cast-flow.mjs).
+ * api.mjs's patchRecords (riders-maint-01). Bodies are today's, verbatim (the wraps of 2-6 were hand
+ * patches in argon-tidy.mjs and cast-flow.mjs).
  */
 
 import { MODULE } from "./riders-core.mjs";
