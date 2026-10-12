@@ -6,6 +6,11 @@
 (`flagScope` stays `wall-autocomplete`), `languages`, `minimum: "14"`, `verified: "14.369"` and the
 description fix; the flag-scope migration is **parked** while walls stays off (Joe).
 
+- **[declared] The GM report card escapes the scene name** (`walls-edge-7`): `reportHtml` put
+  `scene.name` into the card raw, so a name with `<`, `&` or quotes rendered as markup. It now goes
+  through a small pure escape in `walls-core` (same table as `foundry.utils.escapeHTML`, which node
+  lacks). Plain names render byte-identical; the glue golden is unchanged.
+
 - **[declared] `run()`'s ABI doc in `wasm/src/lib.rs` matches the marshaller** (`walls-M2`): it named
   8 input fields and a 4-int header; it now names all 11 (`…keepOpen,light,sound,move`), the 5-int header
   with `components`, the 8-wide create rows and the component rows, still in three lines, so

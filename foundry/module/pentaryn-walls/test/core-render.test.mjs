@@ -54,6 +54,19 @@ test("reportHtml: committed wording, singulars, and a lint list", () => {
     "<p style=\"opacity:.7;font-size:.9em\">grid 50px &middot; weld 2px &middot; collinear 1px &middot; pin 1px &middot; gap/corner/reach 6/6/20 squares</p>");
 });
 
+test("reportHtml escapes the scene name (walls-edge-7)", () => {
+  const result = {
+    report: { created: 0, moved: 0, iterations: 1, components: [],
+      config: { gridSize: 50, weldEps: 2, collEps: 1, pinEps: 1, gapMax: 6, cornerMax: 6, extMax: 20 } },
+    refusals: [], lints: [],
+  };
+  const html = core.reportHtml(`Tom's <b>"Hall"</b> & <img src=x onerror=alert(1)>`, result,
+    { committed: false, backend: "js", ms: 1 });
+  assert.ok(html.startsWith("<p><strong>Wall autocomplete — " +
+    "Tom&#x27;s &lt;b&gt;&quot;Hall&quot;&lt;/b&gt; &amp; &lt;img src=x onerror=alert(1)&gt;</strong></p>"), html);
+  assert.doesNotMatch(html, /<img|<b>/);
+});
+
 test("undoHtml: today's template (one run, several runs, everything)", () => {
   assert.equal(core.undoHtml({ generated: 1, restored: 0, all: false, latest: "T1", remaining: 0 }),
     "<p><strong>Wall autocomplete — undo</strong></p><p>Removed 1 generated wall and restored 0 trimmed walls from the run at T1.</p>");

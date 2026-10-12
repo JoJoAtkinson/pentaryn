@@ -35,6 +35,10 @@ export const HOOKS = Object.freeze({});
 
 const plural = (n, one, many = `${one}s`) => (n === 1 ? one : many);
 
+/** HTML-escape text for a card, matching foundry.utils.escapeHTML (not available in node). */
+const ESCAPES = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#x27;" };
+const escapeHtml = s => String(s).replace(/[&<>"']/g, c => ESCAPES[c]);
+
 /**
  * The ready console line, without the `<module> |` prefix.
  * @param {string[]} names  the available backends, in registry order
@@ -50,7 +54,7 @@ export function readyLine(names, wasmError = null) {
 
 /**
  * The GM chat card for a preview or a run.
- * @param {string} sceneName
+ * @param {string} sceneName  escaped here, so a scene name can't inject markup (walls-edge-7)
  * @param {{report, refusals, lints}} result  an engine result
  * @param {{committed: boolean, backend: string, ms: number}} meta
  * @returns {string} HTML
@@ -58,7 +62,7 @@ export function readyLine(names, wasmError = null) {
 export function reportHtml(sceneName, result, {committed, backend, ms}) {
   const {report: r, refusals, lints} = result;
   const lines = [];
-  lines.push(`<p><strong>Wall autocomplete — ${sceneName}</strong></p>`);
+  lines.push(`<p><strong>Wall autocomplete — ${escapeHtml(sceneName)}</strong></p>`);
   lines.push(`<p>${committed ? "Committed" : "<em>Preview — nothing was written.</em>"} ` +
              `${r.created} ${plural(r.created, "wall")} created, ${r.moved} moved, ` +
              `${r.iterations} ${plural(r.iterations, "pass", "passes")} in ${Math.round(ms)} ms ` +
