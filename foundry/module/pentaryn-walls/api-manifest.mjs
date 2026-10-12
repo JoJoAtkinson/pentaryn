@@ -34,7 +34,7 @@ export const MANIFEST = Object.freeze({
       sideEffects: ["ChatMessage (GM whisper)", "canvas.controls.drawPing (local)", "console.table"],
       throws: ["Error"],
       doc: "Run the engine on a scene and report what it would build, writing no walls. Not a pure read: "
-        + "it posts a GM-whispered chat card, pings each refusal on this client only and prints console tables." + BUSY,
+        + "it posts a GM-whispered chat card, pings each refusal on this client only (when the scene is the one being viewed) and prints console tables." + BUSY,
     },
     {
       path: "run",

@@ -18,6 +18,10 @@ description fix; the flag-scope migration is **parked** while walls stays off (J
   (first per run, never overwritten), on both backends. Undo restores each wall with a
   `moves.<latest>` entry and deletes only walls the latest run created; legacy flat stamps still undo.
   Run ids are stamped with `,` for the `.` so `moves.<run>` is one flag key.
+- **[declared] Refusal pings only on the viewed scene** (`walls-rob-3`): `preview`/`run` with another
+  scene's `sceneId` pinged that scene's coordinates on the canvas the GM was looking at. Markers are
+  now drawn only when `canvas.scene` is the reported scene; the chat card and console table still
+  list every refusal.
 - **[declared] Refusal pings stay on the GM's screen** (`walls-edge-1`): each refused endpoint is
   drawn locally with `canvas.controls.drawPing(…, {style: PULSE})` instead of `canvas.ping`, which
   broadcast to every player and, with Alt+Shift held from the preview key, became a pull that

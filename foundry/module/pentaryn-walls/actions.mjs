@@ -90,9 +90,11 @@ async function report(scene, result, {committed, backend, ms}) {
 
   // Transient markers only — a Drawing or Note would persist and turn a report into state.
   // Drawn on this client alone: canvas.ping broadcasts to every player, and the held Alt+Shift of
-  // the preview key would turn it into a view-panning pull (walls-edge-1).
+  // the preview key would turn it into a view-panning pull (walls-edge-1). Only on the viewed
+  // scene: another scene's coordinates mean nothing here; its card and table still list them (walls-rob-3).
   const style = CONFIG.Canvas?.pings?.types?.PULSE ?? "pulse";
-  for (const x of refusals) {
+  const viewed = canvas?.scene?.id === scene.id;
+  for (const x of viewed ? refusals : []) {
     // drawPing is async in Foundry 14: a rejection reaches the same debug line as a throw. Not awaited.
     try { Promise.resolve(canvas.controls.drawPing({x: x.at[0], y: x.at[1]}, {style})).catch(err => log?.debug("ping", err)); }
     catch (err) { log?.debug("ping", err); }   // a nicety

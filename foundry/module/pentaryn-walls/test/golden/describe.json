@@ -26,7 +26,7 @@
       "throws": [
         "Error"
       ],
-      "doc": "Run the engine on a scene and report what it would build, writing no walls. Not a pure read: it posts a GM-whispered chat card, pings each refusal on this client only and prints console tables. One at a time: while preview/run/undo is running, another call warns and returns null."
+      "doc": "Run the engine on a scene and report what it would build, writing no walls. Not a pure read: it posts a GM-whispered chat card, pings each refusal on this client only (when the scene is the one being viewed) and prints console tables. One at a time: while preview/run/undo is running, another call warns and returns null."
     },
     {
       "path": "run",
