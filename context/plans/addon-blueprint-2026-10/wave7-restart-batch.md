@@ -104,6 +104,10 @@ C21/C23 (W4-C3), journal C56 (W2-J2), ties C05/C37 (W3-T6/W3-T1), walls C07 (the
 and attunement C35 (until its `_loc` step — the fixes lane that lands it deletes the row in the
 same commit, or the gate fails on a stale exception). Cleared instead of excepted: dropbin C50
 (scorer gap, `5c54ae0f`) and cursors C05/C13/C24/C25 (guide steps 7–8, `83af47a1`).
+Since the W5c review (`4ccdc350`) each row also carries `match`, the findings its decision covers: a
+later finding of the same rule (a new unprefixed selector in riders.css, a second hand-wired query)
+blocks the gate instead of riding on the row. The same review made the i18n gate check a
+`PENTARYN_*` key under a mistyped root (`e1f10d39`) and completed `argon.md` (`7d1eac9d`).
 
 **Follow-ups recorded, not built:**
 
