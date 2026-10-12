@@ -15,6 +15,7 @@ import {
   formSummary, planBonusBar, planWithout, frontRowItems, coveredPanel, hpText, returnLabel, CONSTELLATIONS, STARRY_SECONDS
 } from "./transform-core.mjs";
 import { makeLog } from "./lib/log.mjs";
+import { combatSetting, registerKeybindings } from "./settings.mjs";
 import { shift, forms, wildShapeActivity, original, isRevertItem, bonusUsedNow, returnToNormal, isWildShapeForm } from "./transform.mjs";
 import {
   STARRY_EFFECT_ID, starryItem, wildShapeItemOf, hasTwinkling, activeStarry, constellationOf, starrySecondsLeft,
@@ -96,22 +97,12 @@ function closeOwnPickers() {
 // either otherwise fell through to core's dismiss and opened the game menu. With nothing open it
 // returns false, so Escape still reaches core. Synchronous on purpose: an async onDown returns a
 // Promise, which always counts as consumed.
-Hooks.once("init", () => {
-  try {
-    game.keybindings.register(MODULE_ID, "cancelTargetPicker", {
-      name: "PENTARYN_TRANSFORM.Keybinding.CancelPicker.Name",
-      hint: "PENTARYN_TRANSFORM.Keybinding.CancelPicker.Hint",
-      editable: [{ key: "Escape" }],
-      onDown: () => {
-        if (pickerOpen()) { cancelTargetPicker(); return true; }
-        return closeOwnPickers();
-      },
-      precedence: CONST.KEYBINDING_PRECEDENCE.PRIORITY
-    });
-  } catch (err) {
-    log.warn("Escape-cancels-target-picker keybinding not registered", err);
+Hooks.once("init", () => registerKeybindings({
+  onDown: () => {
+    if (pickerOpen()) { cancelTargetPicker(); return true; }
+    return closeOwnPickers();
   }
-});
+}));
 
 /** Tooltip classes: compact grid (pentaryn-tt), or one detail per row (pentaryn-tt-list). */
 const TT = ["pentaryn-tt"];
@@ -571,7 +562,7 @@ function composeBonusBar(panel, actor) {
 function multiattackCoveredByFullAttack(actor) {
   try {
     if (!game.modules.get("pentaryn-combat")?.active) return null;
-    if (!game.settings.get("pentaryn-combat", "fullAttack") || !game.settings.get("pentaryn-combat", "multiattack")) return null;
+    if (!combatSetting("fullAttack") || !combatSetting("multiattack")) return null;
     const ma = game.pentaryn?.combat?.multiattack?.(actor);
     if (!ma || ma.source === "flag" || (ma.total ?? 0) < 2 || !actor.items.get(ma.source)) return null;
     return ma.source;

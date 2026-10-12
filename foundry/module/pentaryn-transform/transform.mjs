@@ -14,43 +14,13 @@ import {
   attributeSync, pruneFavorites, shiftBlock, pickRunner, withArticle, formTempHP, withoutOrigin, isBodySwap
 } from "./transform-core.mjs";
 import { makeLog } from "./lib/log.mjs";
+import { installPatches } from "./patches.mjs";
+import { dnd5eAllowsPolymorphing } from "./settings.mjs";
 
 const log = makeLog(MODULE_ID);
 
-/* ── Foundry v14 core bug (seen v14.367, still present in v14.369): token swaps with operator-wrapped sizes ── */
-// dnd5e's transformInto and revertOriginalForm swap the token with a non-recursive update
-// ({diff: false, recursive: false}). Core v14 turns every root key of such an update into a
-// ForcedReplacement operator, then TokenDocument._preUpdateOperation hands those raw operators to
-// code that expects numbers: region identification does `point.x.almostEqual(...)` on an operator
-// object and throws ("point.x.almostEqual is not a function"), aborting the update. On a scene with
-// Regions (Drow Prison's passages), a druid whose form stands in one could not return to normal
-// form: the token kept pointing at "Talo (Dire Wolf)". Movement-waypoint inference reads the same
-// raw values. For a scalar field a ForcedReplacement means exactly "set this value", so unwrap scalars before
-// core sees them. Object fields (texture, sight, ring, flags, delta) keep their operators.
-// Re-checked 2026-10-10 on v14.369: DataModel still wraps every root key of a recursive:false
-// update (common/abstract/data.mjs) and testInsideRegion still reads `data.x ?? _source.x` with no
-// unwrap; a wrapped x/y at a region's centre tests outside. Remove only when that changes.
-{
-  const TD = foundry.documents?.TokenDocument;
-  const Ops = foundry.data?.operators;
-  const original = TD && Object.hasOwn(TD, "_preUpdateOperation") ? TD._preUpdateOperation : null;
-  if (original && Ops?.ForcedReplacement && !original.pentarynUnwrapped) {
-    const wrapped = function (documents, operation, user) {
-      if (operation?.recursive === false) {
-        for (const u of operation.updates ?? []) {
-          for (const [k, v] of Object.entries(u ?? {})) {
-            if (!(v instanceof Ops.ForcedReplacement)) continue;
-            const plain = Ops.DataFieldOperator.get(v);
-            if (plain === null || typeof plain !== "object") u[k] = plain;
-          }
-        }
-      }
-      return original.call(this, documents, operation, user);
-    };
-    wrapped.pentarynUnwrapped = true;
-    TD._preUpdateOperation = wrapped;
-  }
-}
+/* ── the core v14 operator unwrap (patches.mjs): applied now, before any preUpdateToken listener ── */
+installPatches();
 
 /* ── body swaps never animate (Area 4 live run, D4) ──────────────────────── */
 // Core animates a token update and, on every frame, writes the animation's in-flight values back
@@ -148,7 +118,7 @@ const BLOCK_MESSAGES = {
 
 /** dnd5e's own test (TransformActivity#canTransform), minus ACTOR_CREATE for a token's form. */
 function canTransform(actor) {
-  const allowed = game.user.isGM || game.settings.get("dnd5e", "allowPolymorphing");
+  const allowed = game.user.isGM || dnd5eAllowsPolymorphing();
   return allowed && (!!actor?.isToken || game.user.can("ACTOR_CREATE"));
 }
 
