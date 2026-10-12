@@ -85,7 +85,7 @@ export async function setKindOf(actor, kindId) {
  * authoring *surface* is phase 4's GM section, and phase 3 needs authored tiers to test
  * falsity with.
  *
- *   game.pentaryn.ties.study.setTiers(actor, [{ min: 25, text: "…" }, { min: 0, text: "…" }])
+ *   game.pentaryn.ties.study.tiers(actor, [{ min: 25, text: "…" }, { min: 0, text: "…" }])
  */
 export async function setStudyTiers(actor, tiers) {
   if (!game.user?.isGM || !actor) return false;

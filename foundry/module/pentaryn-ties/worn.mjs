@@ -30,10 +30,10 @@
 import { MODULE, NOTES_MAX, clampNotes } from "./ties-core.mjs";
 import { esc } from "./core/html.mjs";
 import { WORN_FLAG, WORN_BY_MAX as BY_MAX, docOf, readWorn } from "./ties-adapter.mjs";
+import { makeLog } from "./lib/log.mjs";
 
 // the read half lives in the adapter (popups reads it too); re-exported for this file's importers
 export { WORN_FLAG, readWorn };
-import { makeLog } from "./lib/log.mjs";
 
 const log = makeLog(MODULE);
 

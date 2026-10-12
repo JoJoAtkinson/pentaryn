@@ -712,3 +712,204 @@ once S5 has landed, as long as they stay out of the same files in the same commi
 | Wave 3 checkpoint: todo pins (found bugs; intended behaviour stated, not failing the run) | (1) `readBeliefs` turns a `null` tier into rung 0 (`num(rec.tier, NaN)` — `Number(null)` is 0, the trap `priorOf` guards), so lore / ident / attr rows show `tier: 0` in `pending()` and `beliefs()`; fix after S4, [declared]. (2) `clampStrength(null \| "" \| [] \| false)` is 1, not the default 3 (`ties-api` `num()` has the same trap); fix after S3, [declared]. Both in `test/declared.test.mjs`. |
 | Wave 3 checkpoint: coverage (gap finder) | module's own files, `lib/` and `test/` excluded, every `*.test.mjs` plus LEGACY, `node --test --experimental-test-coverage`: lines / branches / functions **50.49 / 84.03 / 37.82 → 95.49 / 80.54 / 91.50** (branches dip because far more functions are now entered). Lowest: `tie-dialog.mjs` 88.0 (re-aim and draft paths), `attributes-ui.mjs` 81.1 (mark-as-learned with a viewer, derived authoring), `overlay.mjs` 83.8 (the PIXI 7 stroke path, unseen-wire branches), `worn.mjs` 82.7 (badge disc/text on PIXI 7). (The wave-3 baseline doc's 61.44 / 84.58 / 53.65 was aggregated differently; same-method before is 50.49 / 84.03 / 37.82.) |
 | Wave 3 checkpoint: conformance | **55.3 % → 61.7 % (29/47)**: C20, C40, C41 now pass. Still failing: C07 C09 C12 C15 C16 C18 C21 C22 C24 C27 C28 C34 C35 C37 C44 C45 C47 C48 — the refactor steps (S3+) have not run; C28's `describe.json`/`surface.json` are S8's new goldens. `vendor.py check` identical; `node test/run.mjs` exit 0 (142 pass, 2 todo; LEGACY 183 + 9 + reach all passed); blueprint pytest 155 passed. |
+
+
+---
+
+## Appendix — design notes moved out of the module README (S13, 2026-10-11)
+
+The blueprint keeps design history out of the module folder (use-doc §7). These sections of the
+pre-migration README (`foundry/module/pentaryn-ties/README.md` at a5a1a906) are history, kept here
+verbatim; the README now carries only the use-doc sections and CHANGELOG.md the version notes.
+
+### What a tie is
+
+A **directed** edge stored on the actor:
+
+```js
+actor.flags["pentaryn-ties"].ties = [
+  { id: "<actorId>", name: "Vasca Orrin", word: "hire", stance: 1, strength: 3, notes: "" }
+]
+```
+
+**An actor's array says what THAT ACTOR is to each person listed.** Piet's array holds
+`{ brellin, word: "understudy" }`, so hovering Piet puts **understudy** on Brellin's card. Hover
+Brellin instead and Piet's card reads **maestro**. You are always playing the person under the
+cursor, and every card tells you what you are to them.
+
+| Field | | |
+| ----- | - | - |
+| `word` | free text, one word ideally | *sister · rival · client · understudy* |
+| `stance` | −2 … +2 | hostile · wary · **neutral** · friendly · devoted. Colours the dot and the wire |
+| `strength` | 1 … 5 | how much they matter — orders the list, sheet and cards alike |
+| `notes` | prose, up to 4000 chars | the long version — on the sheet and on the card |
+| `name` | cached copy | so a deleted actor degrades to a greyed row instead of vanishing |
+
+**Stance 0 is not the same as no entry.** A grey dot means *they know each other and it's neutral*;
+no entry at all means no card. Absence is information.
+
+### Notes
+
+The one-word label is what you need mid-scene; the notes are what you need when a player asks a
+question you didn't plan for. **Click a row anywhere** and it opens: word, stance, strength and a
+textarea for how they met, what is owed, what neither of them says out loud. The first line of the
+notes shows under the name while the row is shut, so you can read the column at a glance.
+
+Notes ride along on the card, under the name. They are only ever shown to whoever pressed the key —
+a card is drawn in one browser and nothing about it crosses the socket.
+
+Notes save as you type (and again on blur), so closing the sheet mid-sentence doesn't lose the
+paragraph. Deleting a tie deletes its notes, and the confirmation says so when there is prose to
+lose.
+
+Notes are **directed**, like `word`: Piet's notes about Brellin are written from Piet's side. But
+they are not *isolated* — in the tie dialog each of the word and the notes has a second box for the
+other side, showing your text greyed in behind it. **Leave it blank and their side stays the same as
+yours**, this save and every later one; type in it and the two have diverged, and yours stops
+changing theirs. Clearing the box re-links them. Identity is the whole mechanism: two sides that say
+the same thing *are* linked, two that differ are not, and there is no hidden flag to disagree with
+what you can read. From a script: `game.pentaryn.ties.setNotes(actor, targetId, text)`.
+
+### On the canvas
+
+**One key: `8`.** It takes whoever is hovered — or, for a player who has nothing selected, their own
+token if it is the only one they own on the scene. Every tie in sight gets a card over their token:
+the token's own art, the word, the name, the notes.
+
+**Cards stick if you drag them.** A card spawned by the key is *transient*: it follows the canvas as
+you pan and zoom, and the next press sweeps it away. **Drag one and it pins** — it stops following
+the canvas, stops answering the key, and closes only by its own ✕. Dragging is the gesture that
+means *keep this*, so that's what it does. Pinned cards survive scene changes and a reload.
+
+**A wire keeps every card attached to its person.** Two ways a card and its token come apart, so two
+wires, both thin and stance-coloured:
+
+- **reach** — the tie stands more than **4 squares** away (configurable), so the card is floating
+  over a token on the far side of the market. The wire runs from *your* token to theirs.
+- **leash** — you dragged the card to a corner. The wire runs from the card back to whoever it is
+  about, so a memo parked by the edge of the screen still points at a person.
+
+Wires are rebuilt from whatever cards are actually on screen, every pan and every change — so a card
+can never be up without the line that explains it, and a pinned card gets its leash back after a
+reload or a scene change. A tie who walks behind a wall loses their wire mid-pan.
+
+### What a player can and cannot see
+
+The feature is safe to hand to the table because of three rules, none of which is a matter of taste:
+
+1. **Only your own character.** You can run it on a token you own; pointing at an NPC gets nothing.
+   The web on screen is always *yours*.
+2. **Only who you can actually see.** Every tie is tested with **`Token#isVisible`** — the same
+   question the renderer already asked to decide whether to draw the token. Behind a wall, outside
+   your light, or not on this scene: no card, no wire. **And no notification either.** Telling a
+   player "3 contacts not in sight" would hand back exactly the information the wall took away.
+   If nothing is visible they are told only that nobody they know is in sight.
+3. **Only your own list.** Players edit their own character's ties — it's an address book, and
+   keeping it current is theirs to do. Target lists are filtered: from a **sheet**, to actors they
+   already have at least LIMITED permission on, because Foundry ships every Actor document to every
+   client and an unfiltered list would name every NPC in the world; from the **canvas**, to tokens
+   that pass `Token#isVisible`, and a token they do not own is named by its *token* name, so a
+   disguise stays a disguise.
+
+> #### ⚠ Tie notes are not a secrets store
+>
+> **Verified on v14, as a logged-in player:** Foundry ships *every* Actor document — flags and all —
+> to *every* connected client, including actors at permission NONE that don't even appear in their
+> sidebar. A player who opens devtools can read the ties, words and notes on any actor in the world,
+> whatever this module's UI shows them.
+>
+> So the three rules above govern **what is presented**, which is what stops accidental reading and
+> shoulder-surfing. They are not an access-control boundary, and nothing client-side could be one.
+>
+> **Anything that would actually spoil the game — "Vasca is Ozmandius wearing her" — must not be
+> written into the world at all.** Not as a tie note, and **not in a GM-only journal**: measured in
+> a live world from a player's own session, their client holds 9 journals, 4 of them at permission
+> level 0, and the full text of one that is hidden from their sidebar reads straight out of the
+> console. A compendium marked "not visible" to them still serves its whole index and every
+> document on request. Foundry's server does no ownership filtering when it hands documents out.
+>
+> Use notes for what you'd be happy to read out if asked: how they met, what is owed, what they
+> want. Putting a secret on the NPC's side rather than the PC's hides it from the *sheet*, which is
+> worth doing, but it is a tidiness measure and not a lock. A real secret lives in your own notes,
+> outside the VTT, and reaches the table by being said.
+>
+> This is a deliberate, accepted trade: it is a game among friends, and hardening it against people
+> who are not attacking it would buy nothing.
+
+Turn the whole thing back off with **Let players see their own ties** in module settings.
+
+### Rebinding the key
+
+They're real Foundry keybindings, not hotbar macros: **Configure Controls → Ties**. If `5` through
+`9` are already spoken for, rebind them there — the tab's own hint reads whatever they are bound to
+now, so it cannot go stale on you. Number keys were chosen over letters because Foundry
+and dnd5e already own most of the alphabet, and `5`–`9` collide with nothing but hotbar slots. A `Ties Web` macro is also created once on first load for anyone who
+would rather drag it to a hotbar slot.
+
+> **0.4.0 dropped the second key.** 0.3.0 had bare `8` for a one-word badge under each token and
+> `Shift+8` for cards. Cards won at the table, so they moved onto `8` and the badge mode was removed
+> rather than left in as a setting nobody would pick. The keybinding kept its internal id, so a
+> custom binding survives the upgrade — only what it does has changed.
+
+> **Why the dialog has no default button.** Foundry's `KeyboardManager.hasFocus` returns `true` for
+> a focused `<button>` that lives in a form — and DialogV2 renders its buttons in one, then focuses
+> the default. With a default button set, opening the card silently suppressed *every* keybinding,
+> so the second press of `9` never reached the handler and the card could only be closed with the
+> mouse. The fix is two-part: no `default: true`, plus an explicit blur on render, and a keydown
+> listener on the window itself for the case where you click a button and hand focus back to it.
+> Verified both ways — focus released (`hasFocus: false`) and the local listener closing the card
+> while focus is trapped on the Close button.
+
+
+> **This replaces the `Quick View` macro.** It was the same feature, but a macro's key lives in a
+> hotbar slot, and a hotbar slot is one stray drag from empty — the binding did not survive a
+> reboot. A registered keybinding does. The old macro still works if it is still in the world;
+> nothing depends on it any more.
+
+### Design notes
+
+**Flags, not text.** JSON in, JSON out — there is no format to get wrong, so there is no parse step
+to fail. `read()` is contractually forbidden from throwing: a malformed entry is dropped, a missing
+field takes a default, a dead actor id renders greyed.
+
+**Cards are DOM, wires are PIXI.** Cards live in their own fixed layer (`#pentaryn-ties-cards`,
+`pointer-events: none` except on the cards) because they need to be dragged, scrolled and read. The
+wires are a single `PIXI.Graphics` on `canvas.interface` — never Drawing documents, which are world
+documents and would sync one player's web to every connected client.
+
+**Wires are derived, not tracked.** `drawWires()` clears the whole layer and rebuilds it from
+`Cards.live()`, coalesced to one repaint per frame. There is no per-card line handle to keep in step,
+so "card on screen with no line" is not a state the code can reach — which it *was*, in 0.3.0, where
+the lines belonged to a toggle that a pinned card could outlive.
+
+**Visibility is delegated, not re-implemented.** `canSee()` asks **`Token#isVisible`** and nothing
+else. Re-deriving line of sight from wall geometry would be a second, subtly different answer to a
+question Foundry has already answered correctly for this client — and a second thing to get wrong
+every time the vision system changes. (It must be `isVisible`; on v14 `Token#visible` is the
+inherited PIXI flag and reads `true` for walled-off and GM-hidden tokens alike.)
+
+**Sheet injection is best-effort.** dnd5e's sheets are ApplicationV2 with
+`nav.tabs[data-group="primary"]` and a `div.tab-body`; the tab appends one nav item and one
+`section[data-tab="ties"]`, then lets the sheet's own `changeTab()` drive activation. Tabs are
+independent of each other, so this does not interfere with tabs added by anything else.
+
+Two things can stop it appearing, and neither breaks anything:
+
+- **A module that replaces the actor sheet** (Tidy 5e and similar) renders different markup, so
+  there is no `nav.tabs` / `div.tab-body` to append to. Injection bails silently.
+- **dnd5e restructuring its own sheet** in a future release. Same outcome.
+
+In both cases the sheet is untouched and the **header button still opens the editor**. The
+`Show the Ties tab` client setting is the manual escape hatch if the tab ever renders somewhere
+ugly under a different sheet.
+
+**No `world`-scope flags.** Data lives under this module's own id so it can't collide in a shared
+world. Pre-module data on `flags.world.ties` is migrated once, automatically, on first ready.
+
+### Compatibility
+
+Foundry **v13+**, verified on **v14** (14.369). **dnd5e 6.0+**, verified on **6.0.6** (declared in
+`module.json` → `relationships.systems`). Ties themselves touch no system data; the Known/Study side
+reads `details.race`/`background` and rolls through dnd5e's `rollSkill`, and the sheet tab is
+written against dnd5e's sheet markup (unchanged from 5.x in 6.0.6) but degrades to the header
+button anywhere else.

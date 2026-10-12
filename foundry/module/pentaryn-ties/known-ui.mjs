@@ -7,16 +7,16 @@
  * into a category, with a page of prose the player owns.
  *
  * Phases 1 and 2 of `context/plans/foundry-encounter-log.md` — the tab, and the canvas key
- * that files whoever you are hovering. Deliberately not here yet, all additive and none of
- * them touching this schema: the Study roll and its reveals (phase 3), GM lore rows
- * (phase 4), the Past Encounters chronicle that will feed this list (phase 5).
+ * that files whoever you are hovering — plus the study controls, lore offers and granted cards
+ * the later phases drew into each entry (study/, attributes.mjs). The Past Encounters chronicle
+ * that would feed this list is still unbuilt.
  *
  * ## What lives where
  *
  * Everything that can be got quietly wrong — the reader, the category defaulting, the caps,
- * the ordering — is in `known-core.mjs`, which imports nothing and is fixtured in bare node
- * (`node test/known.mjs`). This file is the half that needs a running client: the flag
- * round-trip, the markup, and the listeners.
+ * the ordering — is in `core/known.mjs` (the `known-core.mjs` barrel), which imports nothing and
+ * is fixtured in bare node (`node test/known.mjs`). The flag round-trip is `known-data.mjs`; this
+ * file is the markup and the listeners.
  *
  * ## Borrowed wholesale, on purpose
  *

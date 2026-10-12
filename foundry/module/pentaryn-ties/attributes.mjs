@@ -354,14 +354,6 @@ export async function ensureAttribute(title, opts = {}) {
 }
 
 /**
- * One-shot repair for entries authored against the two icon paths that 404 (see `CATEGORY_ICONS`).
- *
- * Entries store their icon, so fixing the default fixes nothing already written — and the symptom
- * is a blank square rather than an error, so nobody would think to go and re-pick them by hand.
- * Only the dead paths are touched; a deliberately chosen icon is never overwritten.
- */
-
-/**
  * The sheet's "author entry" for a DERIVED id (`species:elf` …): creates an entry with that exact
  * id, which `createAttribute` cannot (it derives ids from titles). Queued like every other write,
  * and held to the same unique-name rule. → `{ok:true, entry}` | `{ok:false, reason:"notGM"|
@@ -381,6 +373,13 @@ export const authorEntry = ({ id, title, category, icon }) =>
     return { ok: true, entry };
   });
 
+/**
+ * One-shot repair for entries authored against the two icon paths that 404 (see `CATEGORY_ICONS`).
+ *
+ * Entries store their icon, so fixing the default fixes nothing already written — and the symptom
+ * is a blank square rather than an error, so nobody would think to go and re-pick them by hand.
+ * Only the dead paths are touched; a deliberately chosen icon is never overwritten.
+ */
 export const repairIcons = () => serial(repairIconsNow);
 
 async function repairIconsNow() {

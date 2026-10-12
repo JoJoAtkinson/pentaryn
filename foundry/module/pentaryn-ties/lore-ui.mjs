@@ -233,10 +233,9 @@ export function bindLoreEditor(root, { rows, save, key = "lore", rerender }) {
   section.querySelector("[data-action='lore-add']")?.addEventListener("click", async () => {
     const row = makeLoreRow(foundry.utils.randomID());
     /*
-     * A fresh row has no label, and `readLore` drops labelless rows — so committing it through
-     * `commit` would delete it on the way to the disk. It is expanded and rendered locally,
-     * and reaches storage on the first `change` that gives it a label. That is also the right
-     * behaviour: an abandoned blank row leaves nothing behind.
+     * A fresh row has no label yet. Storage keeps a blank-label row (`clampLoreRow` sanitises
+     * storage and does not refuse one) and `rollableLore` never offers it, so it is saved as it
+     * stands and opened, ready for the GM to name it.
      */
     expanded.add(row.id);
     const list = current();
