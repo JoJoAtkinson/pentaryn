@@ -290,8 +290,7 @@
       },
       "events": [
         "click"
-      ],
-      "delegated": true
+      ]
     }
   ],
   "rows": [
@@ -1065,7 +1064,13 @@
         "action": "belief-reset"
       },
       "type": "click",
-      "calls": [],
+      "calls": [
+        {
+          "op": "DialogV2.confirm",
+          "title": "Let them roll again?",
+          "content": "<p>ZZ Caven may study ZZ Brakka again.</p><p class=\"pt-hint\">They keep everything they already learned, and their own notes are untouched. A new roll replaces what this one told them.</p>"
+        }
+      ],
       "console": [],
       "after": {
         "className": "pt-textbtn",

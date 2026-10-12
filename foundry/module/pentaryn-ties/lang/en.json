@@ -232,6 +232,7 @@
           "missed": "{character} studied {kind} and missed.",
           "noPending": "Nothing is pending for {character} on {kind}.",
           "reset": "{character} may study {kind} again.",
+          "resetOrphan": "Cleared a deleted character's belief about {kind}.",
           "released": "{character} now knows a {kind} to DC {tier}.",
           "alreadyKnows": "{character} already knows {kind} at least that well."
         },
@@ -351,11 +352,13 @@
       "beliefMetaLore": "rolled {total}",
       "beliefSilent": "Nothing handed over.",
       "beliefMissed": "missed",
+      "beliefDeleted": "(deleted)",
       "pending": "Waiting on you",
       "delivered": "Delivered {when}",
       "reset": "Let them roll again",
       "resetTitle": "Let them roll again?",
       "resetBody": "{character} may study {actor} again.",
+      "resetBodyOrphan": "That character was deleted. Clear what they believed about {actor}?",
       "resetKeeps": "They keep everything they already learned, and their own notes are untouched. A new roll replaces what this one told them."
     },
     "lore": {

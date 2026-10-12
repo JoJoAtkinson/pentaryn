@@ -105,6 +105,11 @@ Fixed (declared): **Mark as learned on an NPC's Attributes tab** grants to your 
 With no assigned character the button is not drawn. One `viewerFor` in `attributes-ui.mjs` now
 decides the tab's viewer for both drawing and clicking. ties-ui-M11.
 
+Fixed (declared): a **belief row for a deleted character** can be cleared. The GM's "What they
+believe" list tags it "(deleted)", offers no Deliver, and its "Let them roll again" clears the row by
+the id on the ledger; the toast names nobody. `study.reset` accepts a character or its id.
+ties-ui-rob-4.
+
 ## 0.19.4 (2026-10-10, usability run, Area 7 re-run)
 
 - **The inspect window's Share switches are the table's PCs only** (`tablePCs`): each player's

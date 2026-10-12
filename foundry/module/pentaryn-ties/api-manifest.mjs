@@ -156,7 +156,7 @@ export const MANIFEST = Object.freeze({
     row("study.pending", [], "[{ … }]", "GM: every undelivered reveal in the world.", { gm: true }),
     row("study.deliver", [CHAR, SUBJ, opt("loreId", "string"), opt("attrId", "string")], "Promise<boolean>", "GM: release one held reveal.",
       { gm: true, writes: true, sideEffects: [`${F}.beliefs`, `${F}.granted`] }),
-    row("study.reset", [CHAR, SUBJ, opt("loreId", "string"), opt("attrId", "string")], "Promise<boolean>",
+    row("study.reset", [p("character", "Actor|id", "a player character, or the id on its belief row (a deleted character's row still clears)"), SUBJ, opt("loreId", "string"), opt("attrId", "string")], "Promise<boolean>",
       "GM: un-spend a study — the honest do-over.", { gm: true, writes: true, sideEffects: [`${F}.beliefs`, `${F}.studied`] }),
     row("study.studied", [p("actor", ACTOR)], "{ kind, lore }", "The player-side `studied` hints (a UI hint, not the lock)."),
     row("study.fact", [SPEC], "object|null", "The conduit's resolve seam: one fact's skill, DC, ledger and text."),

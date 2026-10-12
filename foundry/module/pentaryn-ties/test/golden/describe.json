@@ -928,8 +928,8 @@
       "params": [
         {
           "name": "character",
-          "type": "Actor",
-          "doc": "a player character"
+          "type": "Actor|id",
+          "doc": "a player character, or the id on its belief row (a deleted character's row still clears)"
         },
         {
           "name": "subject",
