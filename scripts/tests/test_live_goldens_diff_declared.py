@@ -127,3 +127,70 @@ def test_missing_declared_file_is_bad_input(tmp_path):
 def test_without_declared_the_output_is_unchanged(tmp_path):
     r = _write(tmp_path, after=BEFORE)
     assert r.returncode == 0 and "## shared — identical" in r.stdout, r.stdout
+
+
+def _run_copy(script, tmp_path, *args):
+    b, a = tmp_path / "before.json", tmp_path / "after.json"
+    b.write_text(json.dumps(json.dumps(BEFORE)))
+    a.write_text(json.dumps(json.dumps(AFTER)))
+    files = [str(b), str(a)] if not args else list(args)
+    return subprocess.run(["node", str(script)] + files, capture_output=True, text=True, timeout=30)
+
+
+def test_diff_runs_from_a_path_with_a_space(tmp_path):
+    # README: exit 1 when golden.shared differs — also when the script's path needs URL escaping
+    d = tmp_path / "with space"
+    d.mkdir()
+    shutil.copy(DIFF, d / "diff.mjs")
+    r = _run_copy(d / "diff.mjs", tmp_path)
+    assert r.returncode == 1, r.stdout + r.stderr
+    assert "23 DIFFERENCE(S)" in r.stdout, r.stdout
+
+
+def test_diff_runs_through_a_symlink(tmp_path):
+    link = tmp_path / "link.mjs"
+    link.symlink_to(DIFF)
+    r = _run_copy(link, tmp_path)
+    assert r.returncode == 1, r.stdout + r.stderr
+    assert "23 DIFFERENCE(S)" in r.stdout, r.stdout
+
+
+def test_usage_from_a_path_with_a_space_is_bad_input(tmp_path):
+    d = tmp_path / "with space"
+    d.mkdir()
+    shutil.copy(DIFF, d / "diff.mjs")
+    r = subprocess.run(["node", str(d / "diff.mjs")], capture_output=True, text=True, timeout=30)
+    assert r.returncode == 2, r.stdout + r.stderr
+
+
+def test_a_declared_block_difference_is_listed(tmp_path):
+    # README: the exit code follows golden.shared and the cleanups only; golden.declared differences
+    # are listed but never move it. Pins the block byte for byte.
+    extra = {"stash": {"chest": [RING, TORCH]}, "purseHome": "no purse in the chest"}
+    before = _run(extra, declared={"surface": {"keys": ["a"]}})
+    after = _run(extra, declared={"surface": {"keys": ["a", "b"]}})
+    r = _write(tmp_path, before=before, after=after)
+    block = ('## declared — 1 difference(s), each must match a declared change\n'
+             '  surface.keys[1]\n'
+             '    before undefined\n'
+             '    after  "b"\n')
+    assert block in r.stdout, r.stdout
+    assert r.returncode == 0, r.stdout + r.stderr
+    same = _write(tmp_path, before=before, after=before)
+    assert same.returncode == r.returncode, same.stdout
+
+
+@pytest.mark.parametrize("cleanup, code", [
+    ({"fooLeft": 1}, 1),
+    ({"barRestored": False}, 1),
+    ({"x": "NOT done"}, 1),
+    ({"restored": {"tool": "x"}}, 0),
+    ({"fooLeft": 0}, 0),
+])
+def test_cleanup_key_rule_is_what_the_readme_says(tmp_path, cleanup, code):
+    # README "Cleanup keys": a top-level `<thing>Left` above 0, `<thing>Restored: false`, or a
+    # string holding REFUSED / "NOT " fails; anything else (nested objects too) is printed only.
+    after = json.loads(json.dumps(BEFORE))
+    after["cleanup"] = cleanup
+    r = _write(tmp_path, after=after)
+    assert r.returncode == code, r.stdout + r.stderr

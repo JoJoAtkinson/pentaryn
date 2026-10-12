@@ -141,7 +141,7 @@ class RunStatus:
     run_id: str
     started: float
     phase: str = "start"
-    outcome: str = "running"        # running | done | skipped | failed | recovered
+    outcome: str = "running"        # running | done | no-op | dry | skipped | failed | recovered
     detail: str = ""
     updated: float = field(default_factory=time.time)
 

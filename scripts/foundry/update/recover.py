@@ -70,8 +70,8 @@ def recover_module(fa: FoundryAdmin, pkg_type: str, pkg_id: str,
     Note what this deliberately does *not* do: reinstall the previous version from its
     manifest. A package's stable manifest URL always points at *latest* — there is no
     "previous version" URL to install, and ``installPackage`` refuses downgrades anyway
-    without ``force``. Foundry's per-package backups, written by ``createSnapshot``
-    before the run, are the actual mechanism.
+    without ``force``. Foundry's per-package backups, written by ``createBackup``
+    in ``apply.backup_packages`` before the run, are the actual mechanism.
     """
     rec = Recovery(kind="module", target=pkg_id)
     try:
