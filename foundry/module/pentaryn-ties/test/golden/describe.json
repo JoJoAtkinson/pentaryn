@@ -566,7 +566,7 @@
           "type": "Actor"
         }
       ],
-      "returns": "[{ key, label? }]",
+      "returns": "[{ key, label, seeded }]",
       "gm": false,
       "writes": false,
       "query": false,
@@ -1711,7 +1711,7 @@
           "optional": true
         }
       ],
-      "returns": "[record]",
+      "returns": "{ matches, wouldBe, canCreate, collidesWith }",
       "gm": false,
       "writes": false,
       "query": false,
@@ -1773,7 +1773,7 @@
           "optional": true
         }
       ],
-      "returns": "Promise<{ ok, reason? }>",
+      "returns": "{ ok, ids } | { ok: false, reason }",
       "gm": true,
       "writes": true,
       "query": false,
@@ -1839,7 +1839,7 @@
           "doc": "an attribute id or title (id wins; a miss is refused, never created)"
         }
       ],
-      "returns": "[Actor]",
+      "returns": "[{ actor, extra, missing }]",
       "gm": false,
       "writes": false,
       "query": false,
@@ -1964,7 +1964,7 @@
     {
       "path": "attributes.unreviewed",
       "params": [],
-      "returns": "[entry]",
+      "returns": "[{ id, title, reviewState, touched, modifiedAt, createdAt }]",
       "gm": false,
       "writes": false,
       "query": false,

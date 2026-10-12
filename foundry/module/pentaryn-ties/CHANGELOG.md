@@ -86,6 +86,13 @@ already was — api.mjs resolves a token, id, uuid or exact name there itself. `
 now fails if a read param that takes an id is unmarked, or if any `resolve: false` position answers
 differently for the actor's id than for the Actor. ext-5.
 
+API description (declared, no table-visible change): five `returns` strings in `describe()` now say
+what the call answers — `attributes.search` → `{ matches, wouldBe, canCreate, collidesWith }`,
+`attributes.stale` → `[{ actor, extra, missing }]`, `attributes.tell` → `{ ok, ids } | { ok: false,
+reason }`, `attributes.unreviewed` → `[{ id, title, reviewState, touched, modifiedAt, createdAt }]`,
+`known.categories` → `[{ key, label, seeded }]`. Pinned by `test/review-manifest-returns.test.mjs`
+against the live calls; `noLore` joined the reason table with M10. ext-8.
+
 Fixed (declared): the chat cards — the "… studies …" stub, the tempo line and the GM's share
 whisper — name every creature by its **token** name, never its actor name, so a GM-only world actor
 name cannot reach player chat. The token is found on any scene, not only the one the posting
