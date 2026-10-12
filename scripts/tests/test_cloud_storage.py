@@ -409,3 +409,15 @@ def test_rclone_read_head_is_one_binary_cat_with_a_count(rc, fake, tmp_path):
     rc.read_head("world-backups/a.tar.gz", 4096)
     [argv] = fake.calls
     assert argv[1] == "cat" and argv[argv.index("--count") + 1] == "4096"
+
+
+# ── ls(must_exist=True): a folder that is not found is "cannot tell" (review MD1) ──
+
+def test_ls_must_exist_raises_on_a_missing_folder_and_plain_ls_stays_empty(st):
+    assert st.ls("nowhere") == []                           # cached as not found (rclone)
+    with pytest.raises(StorageError):
+        st.ls("nowhere", must_exist=True)                   # the cached miss too
+    storage.refresh(st, "nowhere")
+    with pytest.raises(StorageError):
+        st.ls("nowhere", must_exist=True)                   # a fresh listing
+    assert st.ls("nowhere") == []

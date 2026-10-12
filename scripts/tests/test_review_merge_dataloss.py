@@ -86,18 +86,6 @@ def _target(argv) -> str:
 
 # ── MD1: the GC mark reads a snapshot folder it cannot find as "no snapshots" ──
 
-@pytest.mark.xfail(strict=True, reason=(
-    "MD1: _mark lists world-backups/ and major-release/ through snapshots() → st.ls(), "
-    "and both storages turn a folder that is not found into an EMPTY listing "
-    "(RcloneStorage._lsjson: rclone exit 3, or any stderr saying 'not found'; "
-    "FolderStorage._entries: FileNotFoundError). ensure_cloud has just mkdir'd both, so "
-    "'not found' there is a transient (an OneDrive itemNotFound, the app folder mid-resync) "
-    "— 'cannot tell' — yet the mark reads it as 'no snapshot references anything' and "
-    "the sweep (and its recheck, which lists the same way) deletes every bundle older "
-    "than 7 days. major-release/: a preserved generation's old module versions exist "
-    "nowhere else, so it is unrestorable for good; world-backups/: the newest snapshots "
-    "lose their long-lived bundles (seafoot, the premium packs) until each host's next "
-    "backup re-uploads them — and the other host's older module versions never come back"))
 @pytest.mark.parametrize("folder", ["world-backups", "major-release"])
 def test_md1_gc_never_reads_a_snapshot_folder_it_cannot_find_as_empty(
         two_hosts, monkeypatch, folder):

@@ -89,7 +89,7 @@ class Storage(Protocol):
     kind: str          # "folder" | "rclone"
     root: str          # display only
 
-    def ls(self, sub: str) -> list[Entry]: ...
+    def ls(self, sub: str, *, must_exist: bool = False) -> list[Entry]: ...
     def partials(self, sub: str) -> list[Entry]: ...
     def exists(self, rel: str) -> bool: ...
     def read_text(self, rel: str) -> str | None: ...
@@ -146,11 +146,14 @@ class FolderStorage:
     def _p(self, rel: str) -> Path:
         return self.path / _check_rel(rel)
 
-    def _entries(self, sub: str) -> list[Entry]:
+    def _entries(self, sub: str, must_exist: bool = False) -> list[Entry]:
         d = self.path / sub if sub else self.path
         try:
             items = list(d.iterdir())
-        except FileNotFoundError:
+        except FileNotFoundError as exc:
+            if must_exist:
+                raise StorageError(f"cannot list {sub or '/'}: the folder is not found",
+                                   verb="ls") from exc
             return []
         except OSError as exc:
             raise StorageError(f"cannot list {sub or '/'}: {exc}", verb="ls") from exc
@@ -165,8 +168,11 @@ class FolderStorage:
             out.append(Entry(p.name, st.st_size, st.st_mtime))
         return sorted(out, key=lambda e: e.name)
 
-    def ls(self, sub: str) -> list[Entry]:
-        return [e for e in self._entries(sub) if _visible(e.name)]
+    def ls(self, sub: str, *, must_exist: bool = False) -> list[Entry]:
+        """The visible files in `sub`. A folder that is not there lists as empty — unless
+        `must_exist`: then it raises StorageError (the GC mark: "cannot tell" is never
+        "nothing is there", review MD1)."""
+        return [e for e in self._entries(sub, must_exist) if _visible(e.name)]
 
     def partials(self, sub: str) -> list[Entry]:
         return [e for e in self._entries(sub) if e.name.endswith(PARTIAL)]
@@ -343,6 +349,7 @@ class RcloneStorage:
         self.interactive = interactive
         self._dir_cache: dict[str, list[Entry]] = {}
         self._raw_cache: dict[str, list[Entry]] = {}
+        self._missing: set[str] = set()     # cached listings that were "not found"
 
     # -- plumbing -----------------------------------------------------------
 
@@ -411,17 +418,25 @@ class RcloneStorage:
         """Drop the cached listing of `sub`: the next `ls` runs `lsjson` again."""
         self._dir_cache.pop(sub, None)
         self._raw_cache.pop(sub, None)
+        self._missing.discard(sub)
 
     # -- listing ------------------------------------------------------------
 
-    def _lsjson(self, sub: str) -> list[Entry]:
+    def _lsjson(self, sub: str, must_exist: bool = False) -> list[Entry]:
         if sub in self._raw_cache:
+            if must_exist and sub in self._missing:
+                raise StorageError(f"rclone lsjson {sub}: the folder is not found",
+                                   verb="lsjson")
             return self._raw_cache[sub]
         proc = self._run("lsjson", "--files-only", "--no-mimetype", self._r(sub),
                          timeout=self.timeouts["lsjson"], what=sub)
         if proc.returncode != 0:
             if self._not_found(proc):
+                if must_exist:
+                    raise StorageError(f"rclone lsjson {sub}: the folder is not found",
+                                       verb="lsjson", code=proc.returncode)
                 self._raw_cache[sub] = []
+                self._missing.add(sub)
                 return []
             raise self._fail("lsjson", sub, proc)
         try:
@@ -441,8 +456,10 @@ class RcloneStorage:
         self._raw_cache[sub] = out
         return out
 
-    def ls(self, sub: str) -> list[Entry]:
-        return [e for e in self._lsjson(sub) if _visible(e.name)]
+    def ls(self, sub: str, *, must_exist: bool = False) -> list[Entry]:
+        """The visible files in `sub`. A folder rclone says is not found lists as empty —
+        unless `must_exist`: then it raises StorageError (the GC mark, review MD1)."""
+        return [e for e in self._lsjson(sub, must_exist) if _visible(e.name)]
 
     def partials(self, sub: str) -> list[Entry]:
         return [e for e in self._lsjson(sub) if e.name.endswith(PARTIAL)]

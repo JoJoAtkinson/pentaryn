@@ -339,13 +339,15 @@ def parse_snapshot(entry: Entry, folder: str = WORLD_BACKUPS) -> Snapshot | None
 
 
 def snapshots(st: Storage | None = None, folder: str = WORLD_BACKUPS, *,
-              fresh: bool = False) -> list[Snapshot]:
+              fresh: bool = False, must_exist: bool = False) -> list[Snapshot]:
     """Every parseable snapshot in one folder, oldest first by (stamp, name). `fresh`
-    drops this process's cached listing first (storage.refresh)."""
+    drops this process's cached listing first (storage.refresh). `must_exist`: a folder
+    the storage cannot find raises StorageError instead of listing as empty."""
     st = st or store()
     if fresh:
         storage_mod.refresh(st, folder)
-    snaps = [s for e in st.ls(folder) if (s := parse_snapshot(e, folder))]
+    entries = st.ls(folder, must_exist=True) if must_exist else st.ls(folder)
+    snaps = [s for e in entries if (s := parse_snapshot(e, folder))]
     return sorted(snaps)
 
 
@@ -1451,11 +1453,15 @@ def _mark(st: Storage, skip: frozenset[str] = frozenset()
     in `skip` (by `rel`) were read by an earlier pass and are not read again. This host's
     queued uploads count too (their snapshots are not in the cloud yet); the other host's
     GC never sees them — a queued job's fresh upload mtimes and _refresh_reused are what
-    protect its bundles there."""
+    protect its bundles there.
+
+    Both folders must be found (review MD1): ensure_cloud created them, so "not found"
+    is a transient (an OneDrive itemNotFound, the app folder mid-resync) — "cannot tell",
+    which raises StorageError, never "no snapshot references anything"."""
     out: set[str] = _queued_bundles()
     seen: set[str] = set()
     for folder in (WORLD_BACKUPS, MAJOR_RELEASES):
-        for s in snapshots(st, folder, fresh=True):
+        for s in snapshots(st, folder, fresh=True, must_exist=True):
             if s.host is None or s.rel in skip:
                 continue
             seen.add(s.rel)
