@@ -132,7 +132,8 @@ export function buildAwaySlot(actor, key, index, overflow, editable, li, awayByK
   const body = t("AwayBody", { actor: foundry.utils.escapeHTML(actor.name.split(/[ ,]/)[0]) });
   li.dataset.tooltip = `<div class="pentaryn-attunement-away-tip"><strong>${name}</strong><p>${body}</p></div>`;
   li.dataset.tooltipDirection = "RIGHT";
-  li.setAttribute("aria-label", `${entry?.name} — ${body}`);
+  const rawBody = t("AwayBody", { actor: actor.name.split(/[ ,]/)[0] });
+  li.setAttribute("aria-label", `${entry?.name ?? ""} — ${rawBody}`);
   return li;
 }
 
