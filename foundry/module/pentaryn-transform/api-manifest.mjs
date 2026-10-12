@@ -17,6 +17,8 @@ const WS = "flags.pentaryn-transform.wildshape";
 const REVERT = "flags.pentaryn-transform.revert";
 const STARRY = "flags.pentaryn-transform.starry";
 const LIGHT = "flags.pentaryn-senses.light";
+const HAND_LIGHT = "flags.dnd5e.previousTokenData.light";   // light-roundtrip: the druid token's own light
+const SENSES_TOKEN = ["flags.pentaryn-senses.itemLight", "flags.pentaryn-senses.itemLightPrior", "flags.pentaryn-senses.spellLight"];
 
 export const MANIFEST = Object.freeze({
   module: MODULE,
@@ -29,7 +31,8 @@ export const MANIFEST = Object.freeze({
       path: "shift", legacy: true,
       params: [ACTOR, { name: "profileId", type: "string", doc: "the transform profile's _id (forms(actor)[].id)" }],
       returns: "Promise<Actor|null> — the new form", gm: false, writes: true,
-      sideEffects: [WS, "the Wild Shape item's uses", "a new form actor (linked) or the token's actor (unlinked)"],
+      sideEffects: [WS, "the Wild Shape item's uses", "a new form actor (linked) or the token's actor (unlinked)",
+        `${HAND_LIGHT} (the token's own light, which dnd5e's revert puts back)`],
       nullWhen: "a shift for this actor is already running (double-click); no Wild Shape; an unknown profile; a block "
         + "(busy, no permission, incapacitated, 0 HP, no token on the viewed scene, no uses — each warns); the old "
         + "form's revert failed; the transform did not happen (the use is refunded)",
@@ -97,9 +100,9 @@ export const MANIFEST = Object.freeze({
     },
   ],
   flags: {
-    writes: [WS, REVERT, STARRY, LIGHT],
+    writes: [WS, REVERT, STARRY, LIGHT, HAND_LIGHT],
     reads: ["flags.dnd5e.originalActor", "flags.dnd5e.isPolymorphed", "flags.dnd5e.transformOptions",
-      "flags.dnd5e.previousTokenData", "flags.dnd5e.previousActorData", LIGHT],
+      "flags.dnd5e.previousTokenData", "flags.dnd5e.previousActorData", LIGHT, ...SENSES_TOKEN],
   },
   unlisted: [],
 });

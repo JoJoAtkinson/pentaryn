@@ -7,7 +7,7 @@
  * have starry.mjs's and hud-panels.mjs's listeners after these.
  */
 
-import { MODULE, EFFECT_ID, isWildShapeActivity, isExpired, pruneFavorites, formTempHP, worldTimeCandidates, canRunAny } from "./transform-core.mjs";
+import { MODULE, EFFECT_ID, isWildShapeActivity, isExpired, pruneFavorites, formTempHP, worldTimeCandidates, canRunAny, handLight } from "./transform-core.mjs";
 import { makeLog } from "./lib/log.mjs";
 import {
   isRevertItem, original, wildShapeActivity, isWildShapeForm, exists, activeFormOf, blockedShift, say, RETURN_LINES,
@@ -112,6 +112,25 @@ function onTransformActor(host, source, d, settings) {
   } catch (err) {
     // Never block the transform over the extras.
     log.error("shaping the form failed", err);
+  }
+}
+
+/* ── the token's own light (light-roundtrip) ─────────────────────────────── */
+
+// dnd5e rebuilds the druid's token from the prototype on revert and merges its own snapshot,
+// flags.dnd5e.previousTokenData, over it — but that snapshot holds no light, so a light set by hand on
+// the token came back as the prototype's (PT TF-2). On a Wild Shape shift's token swap (this client's
+// doShift is in flight for the token's actor) the token's own light joins that snapshot, in the same
+// write; every revert path (linked, unlinked, restoreTokensElsewhere) then brings it back. [declared]
+function onPreSwapToken(doc, changes) {
+  try {
+    if (!pendingMeta(doc?.actor?.uuid)) return;
+    const prev = foundry.utils.getProperty(changes ?? {}, "flags.dnd5e.previousTokenData");
+    if (!prev || typeof prev !== "object" || Object.hasOwn(prev, "light")) return;
+    const light = handLight(doc._source ?? doc);
+    if (light) prev.light = light;
+  } catch (err) {
+    log.warn("keeping the token's own light failed", err);
   }
 }
 
@@ -228,6 +247,7 @@ export function install(reg) {
   reg.on("dnd5e.preUseActivity", onPreUse, { label: "dnd5e.preUseActivity: Wild Shape / revert item" });
   reg.on("dnd5e.postUseActivity", onPostUse, { label: "dnd5e.postUseActivity: shift / revert" });
   reg.on("dnd5e.transformActor", onTransformActor, { label: "dnd5e.transformActor: shape the form" });
+  reg.on("preUpdateToken", onPreSwapToken, { label: "preUpdateToken: a shift keeps the token's own light for the revert" });
   reg.on("updateActor", onZeroHP, { label: "updateActor: 0 HP" });
   reg.on("createActiveEffect", onEffectChange, { label: "createActiveEffect: incapacitated" });
   reg.on("updateActiveEffect", onEffectUpdate, { label: "updateActiveEffect: expired / incapacitated" });

@@ -32,7 +32,9 @@ const ADDED_S3 = ["STARRY_IMG", "canRunAny", "constellationImgOf", "coveredMulti
 const ADDED_86 = ["shapingPlan"];
 // wildcard-art: the form's token image, the same every time.
 const ADDED_WILDCARD_ART = ["isWildcardPath", "pickFormImage"];
-const ADDED = [...ADDED_S2, ...ADDED_S3, ...ADDED_86, ...ADDED_WILDCARD_ART];
+// light-roundtrip: the druid token's own light, carried back on revert.
+const ADDED_LIGHT_ROUNDTRIP = ["handLight"];
+const ADDED = [...ADDED_S2, ...ADDED_S3, ...ADDED_86, ...ADDED_WILDCARD_ART, ...ADDED_LIGHT_ROUNDTRIP];
 
 test("export list of transform-core.mjs (step 2's barrel must re-export every name)", () => {
   const names = Object.keys(core).sort();

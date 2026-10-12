@@ -486,3 +486,37 @@ export function pickFormImage({ src = null, wildcard = false, images = [], portr
   const first = (Array.isArray(images) ? images : []).filter(real).sort()[0];
   return first ?? (real(portrait) ? portrait : null);
 }
+
+/* ── the token's own light (light-roundtrip) ─────────────────────────────── */
+
+/** Foundry's unlit token light: what a token goes back to when its own light was off. */
+const UNLIT = Object.freeze({
+  dim: 0, bright: 0, color: null, alpha: 0.5, luminosity: 0.5,
+  animation: Object.freeze({ type: null, speed: 5, intensity: 5, reverse: false })
+});
+
+const isPlain = v => !!v && typeof v === "object" && !Array.isArray(v);
+
+/**
+ * The light a druid's token goes back to after a Wild Shape: its own, hand-set light (light-roundtrip,
+ * Joe's ruling; PT TF-2). dnd5e rebuilds the token from the prototype on revert, so without this the
+ * prototype's light came back. A light pentaryn-senses put on the token (a carried torch, Starry Form's
+ * starlight, the Light cantrip) is not the token's own: senses keeps the light it replaced as the prior
+ * (`flags.pentaryn-senses.itemLightPrior` / `.spellLight.prior`), and that one comes back — unlit when
+ * there was none; senses lights the token again if the source is still lit.
+ *
+ * @param {object} token  the token's source data ({ light, flags })
+ * @returns {object|null}  a plain copy of the light, or null when the token has none
+ */
+export function handLight(token) {
+  const light = token?.light;
+  if (!isPlain(light)) return null;
+  const senses = token.flags?.["pentaryn-senses"] ?? {};
+  let own = light;
+  if (isPlain(senses.spellLight) && typeof senses.spellLight.source === "string" && senses.spellLight.source) {
+    own = isPlain(senses.spellLight.prior) ? senses.spellLight.prior : { ...light, ...UNLIT };
+  } else if (senses.itemLight === true) {
+    own = isPlain(senses.itemLightPrior) ? senses.itemLightPrior : { ...light, ...UNLIT };
+  }
+  return JSON.parse(JSON.stringify(own));
+}

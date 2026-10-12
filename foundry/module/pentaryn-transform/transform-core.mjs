@@ -7,7 +7,7 @@
  *
  *   core/constants.mjs   MODULE, EFFECT_ID, UNIT_SECONDS (what the core/ files share)
  *   core/wildshape.mjs   activities, shaping the form, durations, uses, revert carry-back, shiftBlock, pickRunner,
- *                        the form's token image (pickFormImage)
+ *                        the form's token image (pickFormImage), the token's own light (handLight)
  *   core/hud.mjs         beast tooltip text, the bar plans, Hit Point text
  *   core/starry.mjs      Starry Form: constellations, the effect, the light, starryBlock
  *   core/bodyswap.mjs    isBodySwap (the no-animation guard's test)
@@ -24,7 +24,7 @@ import {
   isExpired, usesLeft, useSyncUpdates, carriedConditions, withoutOrigin, endedInForm,
   attributeSync, shiftBlock, pickRunner,
   wildShapeActivityOf, formEntries, refundUpdate, runnerIs, canRunAny, worldTimeCandidates, shapeStatus, shapingPlan,
-  formTempHP, isWildcardPath, pickFormImage
+  formTempHP, isWildcardPath, pickFormImage, handLight
 } from "./core/wildshape.mjs";
 
 import {
@@ -63,7 +63,7 @@ export {
   isExpired, usesLeft, useSyncUpdates, carriedConditions, withoutOrigin, endedInForm,
   attributeSync, shiftBlock, pickRunner,
   wildShapeActivityOf, formEntries, refundUpdate, runnerIs, canRunAny, worldTimeCandidates, shapeStatus, shapingPlan,
-  formTempHP, isWildcardPath, pickFormImage
+  formTempHP, isWildcardPath, pickFormImage, handLight
 };
 
 export {

@@ -177,6 +177,11 @@
   [
     "wildshape.mjs",
     "warn",
+    "keeping the token's own light failed"
+  ],
+  [
+    "wildshape.mjs",
+    "warn",
     "long rest after revert failed"
   ],
   [

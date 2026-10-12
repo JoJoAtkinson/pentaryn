@@ -34,6 +34,10 @@ ordinary ability. Requires dnd5e 6 (verified 6.0.6) on Foundry v14.
 - Features that would spend Wild Shape uses or spell slots never come along into the form; item
   uses, Hit Dice, exhaustion, inspiration and conditions gained there come back on revert, and a
   Concentration broken in beast form ends on the druid too.
+- A light set by hand on the druid's token comes back on revert (light-roundtrip, Joe's ruling):
+  dnd5e rebuilds the token from the prototype, so the prototype's light used to return. A light
+  pentaryn-senses put there (a torch, Starry Form, the Light cantrip) is not the token's own; the
+  light senses replaced comes back instead, and senses relights the token if its source is still lit.
 - **Starry Form:** one click on Archer, Chalice or Dragon spends the Wild Shape use, puts one effect
   on the druid (`Starry Form: Archer`, 10 minutes; the Dragon's carries the roll floors and, with
   Twinkling Constellations, Fly 20) and the starlight (Bright 10, Dim 10 more, through
@@ -96,6 +100,7 @@ the player may not list (core's wildcard listing needs `FILES_BROWSE` or ownersh
 | the druid's Starry effect | `_id pentarynStarry00`, `flags.pentaryn-transform.starry.constellation`, `.left` | the constellation glimmering; seconds of combat time left (D8) |
 | the Starry Form item | `flags.pentaryn-senses.light` | `STARRY_LIGHT` while the form lasts (pentaryn-senses lights the tokens) |
 | form actors | created / deleted | dnd5e creates them; the active GM sweeps spent ones |
+| the druid's token, on a shift | `flags.dnd5e.previousTokenData.light` | the token's own light (`handLight`), added to dnd5e's snapshot in the same swap write; dnd5e's revert merges it back (light-roundtrip) |
 
 ## Flags other modules read
 
@@ -111,7 +116,9 @@ the player may not list (core's wildcard listing needs `FILES_BROWSE` or ownersh
 - **pentaryn-combat's tooltips** use the `pentaryn-tt` classes too; both modules load the same kit
   `lib/argon-tooltip.css` (D7), so neither depends on the other for them.
 - Transform reads dnd5e's `flags.dnd5e.originalActor`, `isPolymorphed`, `transformOptions`,
-  `previousTokenData`, `previousActorData`.
+  `previousTokenData`, `previousActorData`, and adds `light` to `previousTokenData` on a shift.
+- Transform reads pentaryn-senses' token flags `itemLight`, `itemLightPrior` and `spellLight.prior`
+  on a shift, to tell the token's own light from a senses light (`core/wildshape.mjs` `handLight`).
 
 ## Events
 

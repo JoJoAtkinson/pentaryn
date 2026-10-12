@@ -22,9 +22,9 @@ test("every feature file exports install and uninstall", async () => {
   }
 });
 
-test("the registry recorded golden/hooks.json less the entry's own ready (row 18, a lifecycle Hooks.once), every row labelled", () => {
+test("the registry recorded golden/hooks.json less the entry's own ready (row 19, a lifecycle Hooks.once), every row labelled", () => {
   const ids = W.reg.ids();
-  assert.deepEqual(ids.map(r => ({ kind: r.kind, name: r.name })), golden.filter((_, i) => i !== 17));
+  assert.deepEqual(ids.map(r => ({ kind: r.kind, name: r.name })), golden.filter((_, i) => i !== 18));
   for (const r of ids) assert.ok(r.label && r.label !== r.name, `${r.name} has a label`);
   assert.equal(new Set(ids.map(r => r.label)).size, ids.length, "labels are unique");
 });
@@ -63,7 +63,7 @@ test("hot patch after ready: uninstall(), then re-import both entries — every 
   const before = game.modules.get("pentaryn-transform").api;
   await import("../transform.mjs?v=2");
   await import("../hud.mjs?v=2");
-  assert.deepEqual(W.reg.ids().map(r => ({ kind: r.kind, name: r.name })), golden.filter((_, i) => i !== 17));
+  assert.deepEqual(W.reg.ids().map(r => ({ kind: r.kind, name: r.name })), golden.filter((_, i) => i !== 18));
   const api = game.modules.get("pentaryn-transform").api;
   assert.notEqual(api, before, "a new API object");
   assert.equal(game.pentaryn.transform, api);

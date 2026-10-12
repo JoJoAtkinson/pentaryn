@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+- **A hand-set token light survives a Wild Shape round trip (light-roundtrip, Joe's ruling; PT TF-2).**
+  dnd5e rebuilt the druid's token from the prototype on revert, so a light set by hand on the token
+  was lost and the prototype's came back. A shift now adds the token's own light to dnd5e's
+  `flags.dnd5e.previousTokenData` in the same swap write, and every revert path puts it back. A light
+  pentaryn-senses put there (torch, Starry Form, Light cantrip) is not the token's own: senses' prior
+  is carried instead. One new `preUpdateToken` listener (hooks 39 → 40) ([declared]).
 - **A Wild Shape form's token image is the same every time (wildcard-art, Joe's ruling; PT TF-1/TF-2/
   D7-1).** A beast with wildcard token art (the Monster Manual Wolf, Cat) gave a random file to a GM
   and, to a player who may not browse files, no image at all (the mystery-man token and "Invalid
