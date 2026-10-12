@@ -69,7 +69,7 @@ The table is generated from each `module.json`, the module's code and its
 | Namespace | Module | Version | Blueprint | API (describe golden) | Docs |
 |---|---|---|---|---|---|
 | `aoe` | `pentaryn-aoe` | 0.4.0 | full tier | `areasFor`, `spellAreas`, `handleFor`, `removeArea`, `cardEffects`, `setting`, `hookIds`, `resolution` … (+15) | [`aoe.md`](aoe.md) · [README](../../foundry/module/pentaryn-aoe/README.md) |
-| `attunement` | `pentaryn-attunement` | 0.2.1 | full tier | `report`, `computeSlots`, `stash`, `releaseAway`, `away` | [README](../../foundry/module/pentaryn-attunement/README.md) |
+| `attunement` | `pentaryn-attunement` | 0.3.0 | full tier | `report`, `computeSlots`, `stash`, `releaseAway`, `away` | [README](../../foundry/module/pentaryn-attunement/README.md) |
 | `combat` | `pentaryn-combat` | 0.3.0 | full tier | `count`, `plan`, `turn`, `newTurn`, `multiattack`, `weapons`, `offers`, `fullAttack` … (+15) | [README](../../foundry/module/pentaryn-combat/README.md) |
 | `creatures` | `pentaryn-creatures` | 0.1.1 | full tier | `list`, `render`, `syncScene`, `syncAll`, `isCreature`, `ownerSees`, `patchedWith`, `status` | [README](../../foundry/module/pentaryn-creatures/README.md) |
 | `cursors` | `pentaryn-cursors` | 0.2.0 | small tier | `refresh`, `current`, `keyFor`, `status` | [README](../../foundry/module/pentaryn-cursors/README.md) |
@@ -84,7 +84,7 @@ The table is generated from each `module.json`, the module's code and its
 | `portals` | `pentaryn-portals` | 0.5.0 | full tier | `snapshot`, `cardFor`, `teleportParty`, `lookAt`, `destinations`, `link`, `unlink`, `spreadArrival` … (+3) | [README](../../foundry/module/pentaryn-portals/README.md) |
 | `prompts` | `pentaryn-prompts` | 0.4.5 | full tier | `list`, `gather`, `crops`, `replaceMany`, `show`, `replace`, `open`, `place` … (+6) | [README](../../foundry/module/pentaryn-prompts/README.md) |
 | `riders` | `pentaryn-riders` | 0.3.0 | full tier | `arcaneRecovery`, `featuresOf`, `report`, `setType`, `retireManual`, `spendHitDie`, `restoreHitDie`, `hdPools` … (+3) | [README](../../foundry/module/pentaryn-riders/README.md) |
-| `chain`, `senses` | `pentaryn-senses` | 0.4.1 | full tier | `syncLight`, `carriedLight`, `resetSight`, `light.cast`, `light.end`, `light.pick`, `light.toggle`, `light.hood` … (+14) | [README](../../foundry/module/pentaryn-senses/README.md) |
+| `chain`, `senses` | `pentaryn-senses` | 0.5.0 | full tier | `syncLight`, `carriedLight`, `resetSight`, `light.cast`, `light.end`, `light.pick`, `light.toggle`, `light.hood` … (+14) | [README](../../foundry/module/pentaryn-senses/README.md) |
 | `ties` | `pentaryn-ties` | 0.19.4 | full tier | `show`, `showAll`, `showOne`, `cards`, `clear`, `closeAllCards`, `edit`, `addTie` … (+101) | [README](../../foundry/module/pentaryn-ties/README.md) |
 | `transform` | `pentaryn-transform` | 0.4.0 | full tier | `shift`, `revert`, `forms`, `wildShapeActivity`, `original`, `isRevertItem`, `sweepSpentForms`, `starry.assume` … (+3) | [README](../../foundry/module/pentaryn-transform/README.md) |
 | `walls` | `pentaryn-walls` | 0.2.0 | full tier | `preview`, `run`, `undo`, `makeMacro`, `analyze`, `runEngine`, `backends` | [`walls.md`](walls.md) · [README](../../foundry/module/pentaryn-walls/README.md) |
