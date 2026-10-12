@@ -4,6 +4,10 @@
 
 The version stays 0.3.0 until the next `module.json` restart batch (code only: sync + reload).
 
+- **[declared] EC-5:** stashing an attuned item and a plain item of the same name (an attuned
+  Torch, then a stack of Torches) now gives two copies in the box; the plain stack used to be folded
+  into the bonded attuned copy, so it came home with the attuned item. `planStash` registers only
+  mergeable copies (not containers, not attuned) as merge targets.
 - **[declared] EC-4:** a batch that attunes several items, or creates several already attuned, now
   warns for the first item past the cap and every one after it (was: no warning, since none of the
   batch's writes had landed when each pre-hook read the count). The pre-hooks count the batch's

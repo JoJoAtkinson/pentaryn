@@ -131,11 +131,13 @@ export function planStash(owner, itemIds, { tag, currency = false, randomID, set
     });
     if (wasAttuned) { away.push({ key, name: item.name, img: item.img }); keyById.set(id, key); }
 
-    // Merge plain duplicates (two stacks of torches) so the box stays readable.
+    // Merge plain duplicates (two stacks of torches) so the box stays readable. Only a mergeable
+    // copy is a merge target: an attuned copy is never a prior for a later stack (EC-5).
     const mkey = `${data.type}|${data.name}`;
-    const prior = (data.type !== "container" && !wasAttuned) ? merged.get(mkey) : null;
+    const mergeable = data.type !== "container" && !wasAttuned;
+    const prior = mergeable ? merged.get(mkey) : null;
     if (prior && ("quantity" in data.system)) { prior.system.quantity += data.system.quantity ?? 1; continue; }
-    merged.set(mkey, data);
+    if (mergeable) merged.set(mkey, data);
     creates.push(data);
   }
 
