@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Score in-house Foundry modules against the addon blueprint (rules C01–C61).
+"""Score in-house Foundry modules against the addon blueprint (rules C01–C62).
 
     conformance.py [--root foundry/module] [--snapshot DIR] [--module m …] [--json | --markdown]
 
@@ -1746,6 +1746,47 @@ def c61(m):
         why = "any-GM gate only (runs in every GM tab)" if ROLE_GATE.search(scope) else "no gate"
         found.append(f"{ls.rel}:{ls.line} {ls.name} — {why}")
     return ok() if not found else ("warn", found[:15])
+
+# C62 mirrors the bridge's needsDoc (foundry-vtt-mcp packages/mcp-server/src/fork/tools/
+# pentaryn-call.ts): a param with one of these kinds, or named `ref`, that the kit does not resolve
+# (only a FIRST `ref` without resolve:false is) is refused over pentaryn-read/-write unless its
+# `type` names a string form. Scope: a Document `kind` or a `ref` (a bare `type: "Actor"` with no
+# kind is a live-Document param by design and is left alone).
+DOC_KINDS = ("actor", "token", "item", "scene", "user", "journal", "message", "macro", "region",
+             "combat", "table", "folder", "playlist")
+STRING_FORMS = ("uuid", "id", "name", "string")
+EVAL_JS_ONLY = re.compile(r"eval-js[ -]only", re.I)
+
+
+@rule("C62", "fail", "a Document param the kit does not resolve names its string forms in `type` "
+                     "(uuid/id/name) or says eval-js only")
+def c62(m):
+    path = m.dir / "test/golden/describe.json"
+    if not path.exists():
+        return na("no test/golden/describe.json")
+    methods = json.loads(path.read_text(encoding="utf-8")).get("methods") or []
+    found = []
+    for row in methods:
+        if EVAL_JS_ONLY.search(str(row.get("doc") or "")):
+            continue
+        for i, p in enumerate(row.get("params") or []):
+            if not isinstance(p, dict):
+                continue
+            is_ref = p.get("name") == "ref"
+            if is_ref and i == 0 and p.get("resolve") is not False:
+                continue                                     # the kit resolves it per call
+            if not (is_ref or p.get("kind") in DOC_KINDS):
+                continue
+            type_text = p.get("type") if isinstance(p.get("type"), str) else ""
+            if any(w in STRING_FORMS for w in re.split(r"[^a-z0-9_]+", type_text.lower())):
+                continue
+            if EVAL_JS_ONLY.search(str(p.get("doc") or "")):
+                continue
+            why = "a non-first ref" if is_ref and i else "resolve:false" if p.get("resolve") is False else "not the first ref"
+            found.append(f"{row.get('path')}({p.get('name')}) kind {p.get('kind') or 'ref'}, {why}, "
+                         f"type {type_text or '(none)'!s} — add uuid|id|exact name, or say eval-js only")
+    return ok() if not found else bad(found[:15])
+
 
 # ── scoring ──────────────────────────────────────────────────────────────────
 

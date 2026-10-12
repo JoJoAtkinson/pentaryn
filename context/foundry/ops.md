@@ -44,7 +44,7 @@ Where this one and `foundry-vtt.md` overlap — the actors import pipeline and i
 | See what's in the cloud store | `make foundry-cloud` |
 | See which modules are in the cloud, and their fingerprints | `make foundry-bundles` · `make foundry-bundles-gc` lists what the sweep would delete (`YES=1` deletes) |
 | Install or update a module | Setup screen (resolves dependencies) **or** unzip the release into `Data/modules/<id>/` and restart — §5. Never from inside a running world |
-| Push a local module to Foundry | `make foundry-<short>-sync` (e.g. `make foundry-walls-sync`) · the importer only through `make foundry-sync WORLD=<world>` (it also stages `actors.json` — `make foundry-clean` after). The copy is built in `FoundryVTT/.pentaryn-sync/` and swapped in whole, so a failed copy leaves the old install serving. Which build is live: `Data/modules/<id>/.pentaryn-sync.json` (module, version, digest, git, dirty, synced_at — a dotfile, not served); every install also appends a line to `foundry/logs/ops-YYYY-MM.jsonl` |
+| Push a local module to Foundry | `make foundry-<short>-sync` (e.g. `make foundry-walls-sync`) · the importer through `make foundry-importer-install` (its code alone: module-check + install, nothing staged) or `make foundry-sync WORLD=<world>` (it also stages `actors.json` — `make foundry-clean` after); there is no `foundry-importer-sync`. The copy is built in `FoundryVTT/.pentaryn-sync/` and swapped in whole, so a failed copy leaves the old install serving. Which build is live: `Data/modules/<id>/.pentaryn-sync.json` (module, version, digest, git, dirty, synced_at — a dotfile, not served); every install also appends a line to `foundry/logs/ops-YYYY-MM.jsonl` |
 | Import actors | [`foundry-vtt.md`](../plans/foundry-content-pipeline.md) Stages 1–2, then `make foundry-import` (🔴 read §1's red box first — it stages into the wrong world today) |
 | Prove nothing's exposed | `make foundry-verify` |
 | Check the license key resolves | `make foundry-check` — prints length and format, never the value |
@@ -577,7 +577,7 @@ Full detail: [`scripts/foundry/README.md`](../../scripts/foundry/README.md).
 
 | id | version | Source |
 | -- | ------- | ------ |
-| `pentaryn-importer` | 1.0.0 | `make foundry-sync` copies it in |
+| `pentaryn-importer` | 1.0.0 | `make foundry-importer-install` copies the code alone; `make foundry-sync` copies it with `actors.json` |
 | `pentaryn-walls` | 0.2.0 | `make foundry-walls-sync` copies it in ([README](../../foundry/module/pentaryn-walls/README.md)) |
 | `pentaryn-ties` | 0.1.0 | `make foundry-ties-sync` copies it in. Directed NPC relationships on actor flags: Ties tab on actor sheets, GM-only canvas overlay on a rebindable keybinding (default `8`). [README](../../foundry/module/pentaryn-ties/README.md) · [design doc](../plans/foundry-npc-ties.md) |
 
