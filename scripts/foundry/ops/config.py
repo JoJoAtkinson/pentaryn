@@ -235,13 +235,7 @@ MODULES = {
         # node-test: test/run.mjs runs every suite; the pure code is core/*.mjs behind the
         # senses-core.mjs barrel (chain flags and line geometry, the Light rules, the glow, migrate).
         check=(*_STATIC, "node-test", *_BLUEPRINT),
-        after_sync=(
-            "First install: restart Foundry (module.json is read at startup), then reload.",
-            "Already enabled? A browser RELOAD (F5) picks up new .mjs files and assets.",
-            "Token vision is dnd5e's senseVisionSync (6.0+); the one-shot reset of stored",
-            "darkvision runs at GM ready — check game.settings.get('pentaryn-senses', 'sightReset') === 1",
-            "Token chains: game.pentaryn.chain.links() · Token HUD → Break chain.",
-        ),
+        # after_sync comes from module.json flags.pentaryn.afterSync (Wave 7 batch).
     ),
     "portals": ModuleSpec(
         "pentaryn-portals",
