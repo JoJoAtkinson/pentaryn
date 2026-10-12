@@ -40,7 +40,7 @@ Bump `kit.json` `version`, `errors.mjs` `KIT_VERSION` and every header together.
 | `perf.mjs` | `memo`, `coalesce`, `perFrame` | debounce/throttle: use `foundry.utils` |
 | `argon-kit.mjs` | `dropTooltip`, `paintBadge(button, left, emptyClass)`, `applyButtons(panel, next, fresh, { attachDetached, after })`, `itemButtonClass(panel?)`, `slotKind`, `mainPanel(label)`, `settlePips(panel)` | `packages: [enhancedcombathud]`; Argon HUD helpers combat and transform hand-copied (transform-creatures-12, combat-riders-3/-5). `attachDetached` and `after` are combat's superset, opt-in; `itemButtonClass` caches per vendored copy |
 | `argon-tooltip.css` | Argon's compact `.ech-tooltip.pentaryn-tt` / `.pentaryn-tt-list` tooltip rules | `ext: css`, `packages: [enhancedcombathud]`; verbatim from transform.css (D7). Vendored to `lib/argon-tooltip.css`, loaded by listing it in `module.json` `styles`; C37/C37w do not score `lib/*.css`. Vendored by combat and transform (wave 4), each `@import`ing it from its own stylesheet until the Wave 7 batch lists it in `styles`; riders waits on its `relationships` edit |
-| `test-kit/foundry-stub.mjs` | `installFoundry`, `StubCollection`, `makeDoc`, `makeToken`, `makeScene`, `makeUser` | imports Foundry's own `common/` from the installed app; `Hooks` catches a throwing listener like Foundry's `Hooks.#call` (warn, continue; `F.hookErrors`); `fire("ready")` sets `game.ready` |
+| `test-kit/foundry-stub.mjs` | `installFoundry`, `StubCollection`, `makeDoc`, `makeToken`, `makeScene`, `makeUser` | imports Foundry's own `common/` from the installed app; `Hooks` catches a throwing listener like Foundry's `Hooks.#call` (warn, continue; `F.hookErrors`); `fire("ready")` sets `game.ready`; `doc.update`/`doc.delete` fire the vetoable `preUpdate`/`preDelete<Doc>` first (1.2.0 kit-edge-2) |
 | `test-kit/harness.mjs` | `pinJSON`, `characterise`, `normaliseDescribe`, `checkJSON`, `sourceScan`, `importGraph`, `reachable`, `maxDepth`, `readJSON`, `manifestOf`, `forkQueries`, `forkSource`, `contractDrift` | goldens in `test/golden/`; a missing golden fails; `forkQueries` reads `$FOUNDRY_MCP_FORK` and returns `{ skip }` when the fork is absent |
 
 `kit.json` lists each file's dependencies (vendoring closes over them), the two tiers
@@ -80,3 +80,7 @@ before, `registerQueries` dropped it. Guarded rows are called exactly as before.
 kit-ext-1 (declared): `describe().queries` merges — the row-derived names first, then any
 `extras.queries` not already present, deduped. Before, `extras.queries` replaced the row-derived list
 (an empty list wiped it). Journal now passes its hand-registered relay query, so it appears there.
+kit-edge-2 (declared, test-kit only): the stub's `doc.delete()` runs the vetoable
+`Hooks.call("preDelete<Doc>", doc, options, userId)` first, as Foundry does; a `false` resolves
+undefined, leaves the collection alone and logs no `delete` to `F.calls`. A proceeding delete now
+logs `Hooks.call preDelete<Doc>` before its `delete` entry. No module golden moved.

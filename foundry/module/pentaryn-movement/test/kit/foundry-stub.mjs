@@ -189,7 +189,8 @@ function applyUpdate(doc, changes) {
 
 /**
  * A plain stand-in Document. `data` fields land on the object; `system` and `flags` default to {}.
- * update/delete/setFlag/unsetFlag log to `F.calls` and fire the matching pre/update hooks.
+ * update/delete/setFlag/unsetFlag fire the vetoable pre<Op><Doc> hook first (a `false` resolves
+ * undefined and changes nothing, as Foundry does), then log to `F.calls` and fire update/delete<Doc>.
  */
 export function makeDoc(documentName, data = {}, { parent = null, collection = null } = {}) {
   const doc = {
@@ -239,9 +240,11 @@ export function makeDoc(documentName, data = {}, { parent = null, collection = n
     },
     async delete(options = {}) {
       const F = current;
+      const userId = F?.game.user?.id ?? null;
+      if (F && F.Hooks.call(`preDelete${documentName}`, this, options, userId) === false) return undefined;
       this.collection?.delete?.(this.id);
       F?.calls.push({ op: "delete", documentName, uuid: this.uuid });
-      F?.Hooks.callAll(`delete${documentName}`, this, options, F?.game.user?.id ?? null);
+      F?.Hooks.callAll(`delete${documentName}`, this, options, userId);
       return this;
     },
     toObject() {

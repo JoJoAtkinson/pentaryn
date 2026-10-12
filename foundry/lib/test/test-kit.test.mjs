@@ -183,3 +183,24 @@ test("logger (J6): Foundry's console alias records on F.logged, so logCompatibil
   globalThis.logger.info("plain", 1);
   assert.deepEqual(F.logged.at(-1), { level: "info", args: ["plain", 1] });
 });
+
+test("kit-edge-2: doc.delete() fires the vetoable preDelete<Doc> hook first; a veto leaves the doc and logs no delete", async () => {
+  const s = makeScene({ name: "Three", tokens: [makeToken({ id: "tokVeto000000001", name: "Kept" })] });
+  const tok = s.tokens.get("tokVeto000000001");
+  const seen = [];
+  const id = Hooks.on("preDeleteToken", (doc, options, userId) => {
+    seen.push([doc.id, options.why, userId]);
+    return false;
+  });
+  let from = F.calls.length;
+  assert.equal(await tok.delete({ why: "test" }), undefined, "a vetoed delete resolves undefined, as Foundry's does");
+  assert.deepEqual(seen, [["tokVeto000000001", "test", game.user.id]]);
+  assert.equal(s.tokens.get("tokVeto000000001"), tok, "still in its collection");
+  assert.deepEqual(F.calls.slice(from).map(c => c.op + (c.name ? ` ${c.name}` : "")), ["Hooks.call preDeleteToken"]);
+  Hooks.off("preDeleteToken", id);
+  from = F.calls.length;
+  assert.equal(await tok.delete(), tok);
+  assert.equal(s.tokens.get("tokVeto000000001"), undefined);
+  assert.deepEqual(F.calls.slice(from).map(c => c.op + (c.name ? ` ${c.name}` : "")),
+    ["Hooks.call preDeleteToken", "delete", "Hooks.callAll deleteToken"]);
+});
