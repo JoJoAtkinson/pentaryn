@@ -1,4 +1,4 @@
-// pentaryn kit 1.0.2 · vendored from foundry/lib/publish.mjs — edit the canonical file, then run scripts/foundry/blueprint/vendor.py
+// pentaryn kit 1.1.0 · vendored from foundry/lib/publish.mjs — edit the canonical file, then run scripts/foundry/blueprint/vendor.py
 /**
  * Publish a module's API. `game.modules.get(id).api` is canonical; `game.pentaryn.<ns>` is an
  * alias kept for the console, macros and the MCP bridge.
