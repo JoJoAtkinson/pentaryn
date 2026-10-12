@@ -34,7 +34,7 @@ const rows = F.hooks.filter(h => !(h.kind === "once" && LIFECYCLE.has(h.name)));
 
 test("hook registration manifest (golden/hooks.json): module evaluation, then setup's registrations", () => {
   pinJSON("hooks", rows, import.meta.url);
-  assert.equal(rows.length, 62);
+  assert.equal(rows.length, 63);
 });
 
 test("combat.mjs graph registers strip's four roll-window hooks first, then its own three lifecycle hooks", () => {

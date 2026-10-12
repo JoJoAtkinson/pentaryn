@@ -696,7 +696,9 @@ test("damage at 0 HP: a Death Saving Throw failure (two on a crit), a chat line;
     actor.system.attributes.death = { failure: failures };
     const updates = {};
     F.calls.length = 0;
-    F.Hooks.call("dnd5e.preApplyDamage", actor, amount, updates, { originatingMessage: crit ? { rolls: [{ isCritical: true }] } : null });
+    const options = { originatingMessage: crit ? { rolls: [{ isCritical: true }] } : null };
+    F.Hooks.call("dnd5e.preApplyDamage", actor, amount, updates, options);   // dnd5e: same options to both hooks
+    F.Hooks.callAll("dnd5e.applyDamage", actor, amount, options);
     rows.push({ label, updates, chats: F.calls.filter(c => c.op === "ChatMessage.create").map(c => c.data) });
   };
   hit("at 0 HP, 5 damage", fig, 5);
@@ -710,6 +712,41 @@ test("damage at 0 HP: a Death Saving Throw failure (two on a crit), a chat line;
   hit("an NPC", gob, 5);
   rows.push({ label: "setting off" });
   pinJSON("turnflow-death", rows, import.meta.url);
+});
+
+test("damage at 0 HP (ac-6): the cards post after the damage lands, so a vetoed preApplyDamage leaves no card; the speaker is the token", () => {
+  const created = [];
+  const create = ChatMessage.create;
+  ChatMessage.create = async data => { created.push(data); };   // recorded, not made: later goldens keep their message ids
+  const chats = () => created;
+  fig.system.attributes.hp = { value: 0, max: 20, temp: 0, effectiveMax: 20 };
+  fig.system.attributes.death = { failure: 0 };
+  F.calls.length = 0;
+  // a later listener vetoes: dnd5e never fires applyDamage, so no card (the failure is only in the dropped updates)
+  const vetoed = {};
+  const updates = {};
+  F.Hooks.call("dnd5e.preApplyDamage", fig, 25, updates, vetoed);
+  assert.deepEqual(updates, { "system.attributes.death.failure": 1 });
+  assert.deepEqual(chats(), []);
+  // a fresh application lands: both cards, the public one spoken by the token
+  const options = {};
+  F.Hooks.call("dnd5e.preApplyDamage", fig, 25, {}, options);
+  assert.deepEqual(chats(), []);
+  toks[fig.id].name = "Masked Knight";   // the public card names the token, never the actor
+  F.Hooks.callAll("dnd5e.applyDamage", fig, 25, options);
+  toks[fig.id].name = fig.name;
+  const posted = chats();
+  assert.equal(posted.length, 2);
+  assert.deepEqual([posted[0].speaker.token, posted[0].speaker.alias], [toks[fig.id].id, "Masked Knight"]);
+  assert.equal(posted[0].content, "<p>Masked Knight takes damage at 0 Hit Points: a Death Saving Throw failure (1 of 3).</p>");
+  assert.deepEqual(posted[1].whisper, ["gmUser0000000001"]);
+  // applyDamage again on the same options (or for another actor) posts nothing more: the stash is spent
+  F.Hooks.callAll("dnd5e.applyDamage", fig, 25, options);
+  F.Hooks.callAll("dnd5e.applyDamage", rog, 25, vetoed);
+  assert.equal(chats().length, 2);
+  ChatMessage.create = create;
+  fig.system.attributes.hp = { value: 20, max: 20, temp: 0 };
+  F.calls.length = 0;
 });
 
 test("damage at 0 HP: setting off, no death data, a throw", async () => {

@@ -10,6 +10,7 @@
   "deleteToken": 1,
   "closeAttackRollConfigurationDialog": 1,
   "dnd5e.preApplyDamage": 1,
+  "dnd5e.applyDamage": 1,
   "dnd5e.postUseActivity": 2,
   "dnd5e.postRollAttack": 2,
   "renderButtonPanelButtonArgonComponent": 1,

@@ -836,6 +836,10 @@
       "label": "damage at 0 HP"
     },
     {
+      "name": "dnd5e.applyDamage",
+      "label": "damage at 0 HP: cards"
+    },
+    {
       "name": "ready",
       "label": "portrait conditions: wrap PortraitPanel"
     },

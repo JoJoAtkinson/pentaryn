@@ -112,7 +112,10 @@ export async function setupWorld({ gm = true, aoe = false, aoeAutoDamage = false
       F.calls.push({ op: "ChatMessage.create", data: F.plain(data) });
       return makeMessage({ type: "base", ...data });
     },
-    getSpeaker: ({ actor } = {}) => ({ actor: actor?.id ?? null, alias: actor?.name ?? null }),
+    // Foundry: an explicit token speaks as the token (its name), else the actor
+    getSpeaker: ({ actor, token } = {}) => token
+      ? { scene: token.parent?.id ?? null, token: token.id, actor: token.actor?.id ?? null, alias: token.name ?? token.object?.name ?? null }
+      : { actor: actor?.id ?? null, alias: actor?.name ?? null },
   };
   const def = (k, v) => Object.defineProperty(globalThis, k, { value: v, configurable: true, writable: true });
   def("Roll", Roll);

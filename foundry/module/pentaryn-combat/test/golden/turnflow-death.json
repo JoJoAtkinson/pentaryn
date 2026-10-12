@@ -7,6 +7,8 @@
     "chats": [
       {
         "speaker": {
+          "scene": "sceneArena000001",
+          "token": "tokfighter000000",
           "actor": "fighter000000001",
           "alias": "Fighter"
         },
@@ -22,6 +24,8 @@
     "chats": [
       {
         "speaker": {
+          "scene": "sceneArena000001",
+          "token": "tokfighter000000",
           "actor": "fighter000000001",
           "alias": "Fighter"
         },
@@ -37,6 +41,8 @@
     "chats": [
       {
         "speaker": {
+          "scene": "sceneArena000001",
+          "token": "tokfighter000000",
           "actor": "fighter000000001",
           "alias": "Fighter"
         },
@@ -62,6 +68,8 @@
     "chats": [
       {
         "speaker": {
+          "scene": "sceneArena000001",
+          "token": "tokfighter000000",
           "actor": "fighter000000001",
           "alias": "Fighter"
         },
