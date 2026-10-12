@@ -123,10 +123,7 @@ export function targetFor(app, { gmButton = false } = {}) {
     if (page?.documentName !== "JournalEntryPage" || page.type !== "image") return null;
     return shouldShowBar(page.parent, undefined, { gmButton }) ? { kind: "image", entry: page.parent, page } : null;
   }
-  if (app.document?.documentName === "Item") {
-    const src = itemSource(app.document);
-    return shouldShowItemBar(src, undefined, { gmButton }) ? { kind: "item", src } : null;
-  }
+  if (app.document?.documentName === "Item") return targetOf(app.document, { gmButton });
   return null;
 }
 
@@ -140,19 +137,17 @@ export function descriptorsFor(target, user = game.user) {
     .map(p => pageDescriptor(p, target.entry));
 }
 
-/** Turn an entry, a page or an item into a target, applying the same rules as the bar. */
+/**
+ * Turn an entry, a page or an item into a target, applying the same rules as the bar: rawTargetOf's
+ * target, kept only when the bar would show on it.
+ */
 export function targetOf(doc, { gmButton = false } = {}) {
-  if (!doc) return null;
-  if (doc.documentName === "JournalEntry") return shouldShowBar(doc, undefined, { gmButton }) ? { kind: "entry", entry: doc } : null;
-  if (doc.documentName === "JournalEntryPage") {
-    if (!shouldShowBar(doc.parent, undefined, { gmButton })) return null;
-    return doc.type === "image" ? { kind: "image", entry: doc.parent, page: doc } : { kind: "entry", entry: doc.parent };
-  }
-  if (doc.documentName === "Item") {
-    const src = itemSource(doc);
-    return shouldShowItemBar(src, undefined, { gmButton }) ? { kind: "item", src } : null;
-  }
-  return null;
+  const t = rawTargetOf(doc);
+  if (!t) return null;
+  const ok = t.kind === "item"
+    ? shouldShowItemBar(t.src, undefined, { gmButton })
+    : shouldShowBar(t.entry, undefined, { gmButton });
+  return ok ? t : null;
 }
 
 /**

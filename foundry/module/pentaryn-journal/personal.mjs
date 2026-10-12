@@ -17,7 +17,7 @@
  * Other features and api.mjs reach this file through `ctx.exposed` (install below).
  */
 
-import { MODULE, QUERY, claimWinner, flagsOf, isPersonal, validateEnsure } from "./journal-core.mjs";
+import { MODULE, QUERY, claimWinner, isMine, isPersonal, validateEnsure } from "./journal-core.mjs";
 import { setting } from "./settings.mjs";
 import { flagPath, readFlag } from "./lib/flags.mjs";
 import { relayed } from "./lib/queries.mjs";
@@ -32,10 +32,12 @@ let ctx = null;
 /** Every personal journal of a user, oldest first. The first one is THE journal. */
 function personalsOf(userId) {
   return game.journal
-    .filter(j => isPersonal(j) && flagsOf(j).userId === userId)
+    .filter(j => isMine(j, userId))
     .sort((a, b) => (a._stats?.createdTime ?? 0) - (b._stats?.createdTime ?? 0));
 }
 function personal(user = game.user) { return personalsOf(user?.id)[0] ?? null; }
+/** Every personal journal not in a folder (a player made it at the root). */
+const atRootJournals = () => game.journal.filter(j => isPersonal(j) && !j.folder);
 
 function folderName() {
   return setting("folderName") || game.i18n.localize("PENTARYN_JOURNAL.folder");
@@ -87,7 +89,7 @@ async function ensureAll() {
   for (const u of players) {
     try { await ensureFor(u); } catch (err) { ctx.log.warn(`ensure failed for ${u.name}`, err); }
   }
-  const stray = game.journal.filter(j => isPersonal(j) && !j.folder);
+  const stray = atRootJournals();
   if (stray.length) {
     const folder = await ensureFolder();
     await JournalEntry.updateDocuments(stray.map(j => ({ _id: j.id, folder: folder.id })));
@@ -102,9 +104,12 @@ function report() {
     return { user: u.name, userId: u.id, isGM: u.isGM, journalId: all[0]?.id ?? null,
       pages: all[0]?.pages.size ?? 0, duplicates: all.slice(1).map(j => j.id) };
   });
-  const atRoot = game.journal.filter(j => isPersonal(j) && !j.folder).map(j => j.id);
+  const atRoot = atRootJournals().map(j => j.id);
   return { folder: findFolder()?.id ?? null, users, atRoot };
 }
+
+/** How long the player waits for the GM's answer to the ensure query. */
+const QUERY_TIMEOUT_MS = 8_000;
 
 /** Client side: the current user's journal, creating it (or asking the GM to) the first time. */
 let inflight = null;
@@ -123,7 +128,7 @@ async function ensurePersonalJournal() {
     const gm = game.users.activeGM;
     if (!gm) { toast(game.i18n.localize("PENTARYN_JOURNAL.notify.noGM")); return null; }
     try {
-      await gm.query(QUERY, {}, { timeout: 8000 });
+      await gm.query(QUERY, {}, { timeout: QUERY_TIMEOUT_MS });
     } catch (err) {
       ctx.log.warn("ensure query failed", err);
       toast(/timed? ?out/i.test(err?.message ?? "")
@@ -146,7 +151,7 @@ async function ensurePersonalJournal() {
 const CLAIM = "claims.ensure";
 /** A stamp older than this is a tab that died mid-claim; it no longer blocks anyone. */
 const CLAIM_STALE_MS = 60_000;
-/** How long the losing tab waits for the winner's journal: under the player's 8 s query timeout. */
+/** How long the losing tab waits for the winner's journal: under QUERY_TIMEOUT_MS, the player's query timeout. */
 const LOSER_WAIT_MS = 7_000;
 const POLL_MS = 50;
 

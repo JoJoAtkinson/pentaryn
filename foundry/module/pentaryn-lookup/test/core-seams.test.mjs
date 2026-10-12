@@ -130,6 +130,12 @@ test("resolveBookIds and missingPackError keep today's answers", () => {
     { error: "compendium pack(s) not found: a.b, c.d — is the module enabled in Manage Modules?" });
 });
 
+test("BOOKSETS.all is rules then monsters, in order (EXT-1)", () => {
+  assert.deepEqual(core.BOOKSETS.all, [...core.BOOKSETS.rules, ...core.BOOKSETS.monsters]);
+  // "2014" is an integer-like key, so JS enumerates it first whatever the literal order.
+  assert.deepEqual(Object.keys(core.BOOKSETS), ["2014", "rules", "monsters", "all"]);
+});
+
 test("tidy closes the spaces enriched roll text leaves", () => {
   assert.equal(core.tidy("+4 , reach 5 ft . Two ( 2 ) attacks"), "+4, reach 5 ft. Two (2) attacks");
 });

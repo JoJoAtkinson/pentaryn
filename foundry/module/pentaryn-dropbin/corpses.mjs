@@ -13,7 +13,8 @@
  * To keep a 0-HP NPC alive and unlootable (knocked out for questioning), set
  * `flags.pentaryn-dropbin.noLoot = true` on its token or actor; it is then never converted.
  *
- * Only the active GM converts, so several connected clients never race each other.
+ * Only the active GM user converts (activeGM.isSelf: every tab of that account, W2-D1), so other
+ * players' and GMs' clients never race it.
  *
  * Pile settings:
  *   - `type: "pile"`, keeping the creature's own token art, so the body stays a body on the map.
@@ -27,21 +28,17 @@
  *     The delta's own map is remembered and put back on revival (null: the base actor's again).
  */
 
-import { MODULE, showEye, eyePlacement, needsRedraw } from "./dropbin-core.mjs";
+import { MODULE, showEye, eyePlacement, needsRedraw, isActiveGMSelf, isOurCorpse as ourCorpse, hasNoLoot as noLoot } from "./dropbin-core.mjs";
 import { api as itemPilesApi, isValidItemPile, isItemPileEmpty, turnTokensIntoItemPiles, revertTokensFromItemPiles } from "./piles.mjs";
 
 const OBSERVER = CONST.DOCUMENT_OWNERSHIP_LEVELS.OBSERVER;
 const EYE = "assets/tokens/custom/props/icon-eye.webp";
 
-const isGMRunner = () => game.users?.activeGM?.isSelf;
+const isGMRunner = () => isActiveGMSelf(game.users);
 
 function tokensOf(actor) {
   if (actor.isToken) return [actor.token].filter(Boolean);
   return actor.getActiveTokens(false, true);
-}
-
-function noLoot(tokenDoc) {
-  return !!(tokenDoc.flags?.[MODULE]?.noLoot || tokenDoc.actor?.flags?.[MODULE]?.noLoot);
 }
 
 function isDead(actor) {
@@ -57,7 +54,6 @@ function eligible(tokenDoc) {
 }
 
 const isPile = isValidItemPile;
-const ourCorpse = t => !!t.flags?.[MODULE]?.corpse;
 
 async function toCorpse(tokenDoc) {
   if (isPile(tokenDoc)) return;
@@ -90,9 +86,12 @@ async function deadAsOverlay(actor) {
   if (flat.length) await actor.updateEmbeddedDocuments("ActiveEffect", flat);
 }
 
+/** A pre-overlay "Lootable" ActiveEffect (the old eye; migrateLegacyEyes deletes them). */
+const isLegacyEye = e => !!e?.flags?.[MODULE]?.lootable;
+
 /** Pre-overlay corpses carry a "Lootable" ActiveEffect (the old eye) and Dead as a corner icon. */
 async function removeLegacyEye(actor) {
-  const eyes = actor?.effects.filter(e => e.flags?.[MODULE]?.lootable).map(e => e.id) ?? [];
+  const eyes = actor?.effects.filter(isLegacyEye).map(e => e.id) ?? [];
   if (eyes.length) await actor.deleteEmbeddedDocuments("ActiveEffect", eyes);
   return eyes.length;
 }
@@ -167,7 +166,8 @@ function onActorHp(actor, changes) {
 }
 
 function onEffect(effect) {
-  if (effect.flags?.[MODULE]?.lootable) return; // our own eye marker; not a life-or-death change
+  // a legacy Lootable effect (pre-overlay corpses; migrateLegacyEyes deletes them) is not a life-or-death change
+  if (isLegacyEye(effect)) return;
   if (effect.parent instanceof Actor) queue(effect.parent);
 }
 
@@ -278,11 +278,11 @@ async function migrateLegacyEyes() {
   for (const scene of game.scenes) {
     for (const t of scene.tokens) {
       if (!t.actor) continue;
-      if (ourCorpse(t) || t.actor.effects.some(e => e.flags?.[MODULE]?.lootable)) await fix(t.actor, ourCorpse(t));
+      if (ourCorpse(t) || t.actor.effects.some(isLegacyEye)) await fix(t.actor, ourCorpse(t));
     }
   }
   for (const actor of game.actors) {
-    if (actor.effects.some(e => e.flags?.[MODULE]?.lootable)) await fix(actor, false);
+    if (actor.effects.some(isLegacyEye)) await fix(actor, false);
   }
   if (eyes || deads) console.log(`${MODULE} | corpses: removed ${eyes} old Lootable effect(s), Dead made the overlay on ${deads}`);
 }

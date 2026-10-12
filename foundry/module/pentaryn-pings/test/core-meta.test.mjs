@@ -75,3 +75,18 @@ test("seeded sweep: core equals the oracle on 2000 generated cases per function"
     same(n === undefined ? core.recentOf(list) : core.recentOf(list, n), n === undefined ? oracle.recentOf(list) : oracle.recentOf(list, n), `recentOf #${i}`);
   }
 });
+
+test("drift guard: the settings rows and reader docs quote the core constants", async () => {
+  // settings.mjs imports only pings-core and lib/settings, so it loads bare (no Foundry globals)
+  const src = readFileSync(new URL("../settings.mjs", import.meta.url), "utf8");
+  assert.deepEqual([...src.matchAll(/^import\b.*?from\s+"([^"]+)"/gm)].map(m => m[1]), ["./pings-core.mjs", "./lib/settings.mjs"]);
+  const { SETTINGS } = await import("../settings.mjs");
+  const { MANIFEST } = await import("../api-manifest.mjs");
+  const row = key => SETTINGS.find(r => r.key === key);
+  assert.equal(row("max").default, core.DEFAULT_MAX);
+  assert.ok(row("log").doc.includes(`${core.FLUSH_MS} ms`), row("log").doc);
+  assert.ok(row("max").doc.includes(`→ ${core.DEFAULT_MAX}`), row("max").doc);
+  assert.ok(row("max").doc.includes(`at most ${core.MAX_CAP}`), row("max").doc);
+  const last = MANIFEST.rows.find(r => r.path === "last").doc;
+  assert.ok(last.includes(`${core.FLUSH_MS} ms`), last);
+});

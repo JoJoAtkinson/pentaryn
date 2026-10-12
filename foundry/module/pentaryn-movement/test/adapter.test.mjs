@@ -3,6 +3,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { OTHER, PLAYER, SCENE, combat, movementWorld } from "./fixtures/world.mjs";
 import { combatSummaries, pinInputs } from "../combat-adapter.mjs";
+import * as core from "../movement-core.mjs";
 
 await movementWorld();
 
@@ -60,4 +61,21 @@ test("pinInputs: note labels in today's order of preference; hidden tokens dropp
       { id: "c", name: "C", x: 5, y: 5, w: 50, h: 50, playerOwned: false },
     ],
   });
+});
+
+test("pinInputs: a token's own getSize (hex) wins over width × grid.size; tokens without it keep the old size", () => {
+  const scene = {
+    grid: { size: 100 },
+    notes: [{ id: "n", x: 110, y: 50, text: "Edge" }],
+    tokens: [
+      { id: "h", name: "Hex", x: 0, y: 0, width: 1, height: 1, hidden: false, getSize: () => ({ width: 115.47, height: 100 }) },
+      { id: "s", name: "Square", x: 0, y: 0, width: 1, height: 1, hidden: false },
+    ],
+  };
+  const { notes, tokens } = pinInputs(scene);
+  assert.equal(tokens[0].w, 115.47);
+  assert.equal(tokens[0].h, 100);
+  assert.equal(tokens[1].w, 100);
+  assert.equal(tokens[1].h, 100);
+  assert.deepEqual(core.pinsUnderTokens(notes, tokens).map(r => r.tokenId), ["h"]);
 });

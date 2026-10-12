@@ -19,6 +19,9 @@ export function onSettingChange(key, fn) {
   handlers[key] = fn;
 }
 
+/** A row's onChange: calls the handler registered for `key` at change time, if any. */
+const routed = key => value => handlers[key]?.(value);
+
 /** @type {import("./lib/settings.mjs").SettingRow[]} */
 export const SETTINGS = Object.freeze([
   {
@@ -26,7 +29,7 @@ export const SETTINGS = Object.freeze([
     name: "PENTARYN_CREATURES.settings.lightRadius.name",
     hint: "PENTARYN_CREATURES.settings.lightRadius.hint",
     range: { min: 0, max: 30, step: 0.5 },
-    onChange: value => handlers.lightRadius?.(value),
+    onChange: routed("lightRadius"),
     doc: "Bright = dim radius (ft) of the light on every player-owned creature token; 0 removes every light we added. "
       + "The active GM's client rewrites the lights when it changes.",
   },
@@ -34,21 +37,21 @@ export const SETTINGS = Object.freeze([
     key: "ownerSees", scope: "world", config: true, type: Boolean, default: true,
     name: "PENTARYN_CREATURES.settings.ownerSees.name",
     hint: "PENTARYN_CREATURES.settings.ownerSees.hint",
-    onChange: value => handlers.ownerSees?.(value),
+    onChange: routed("ownerSees"),
     doc: "A player always sees the tokens they own (never GM-hidden ones); anything but false is on.",
   },
   {
     key: "floatOverHud", scope: "world", config: true, type: Boolean, default: true,
     name: "PENTARYN_CREATURES.settings.floatOverHud.name",
     hint: "PENTARYN_CREATURES.settings.floatOverHud.hint",
-    onChange: value => handlers.floatOverHud?.(value),
+    onChange: routed("floatOverHud"),
     doc: "The strip floats just above Argon's Combat HUD while it is open, instead of behind it.",
   },
   {
     key: "showStrip", scope: "client", config: true, type: Boolean, default: true,
     name: "PENTARYN_CREATURES.settings.showStrip.name",
     hint: "PENTARYN_CREATURES.settings.showStrip.hint",
-    onChange: value => handlers.showStrip?.(value),
+    onChange: routed("showStrip"),
     doc: "This client draws the \"Your creatures\" strip (players only, from two owned tokens on the scene). Client scope.",
   },
 ]);

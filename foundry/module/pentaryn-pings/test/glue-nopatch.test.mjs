@@ -1,8 +1,8 @@
-// Glue characterisation: no ControlsLayer#handlePing anywhere (pings.mjs:166-169). The GM ready warns
+// Glue characterisation: no ControlsLayer#handlePing anywhere (capture.mjs patchControlsLayer). The GM ready warns
 // once with the verbatim text and carries on with the socket path and the readers. Its own process.
 import { mock, test } from "node:test";
 import assert from "node:assert/strict";
-import { BETA, MODULE, PLAYER, drain, setupWorld } from "./fixtures/world.mjs";
+import { BETA, PLAYER, drain, setupWorld } from "./fixtures/world.mjs";
 
 mock.timers.enable({ apis: ["setTimeout", "Date"], now: 1_000_000 });
 
@@ -24,7 +24,7 @@ test("no handlePing to patch: one warning, socket path and readers still work", 
   W.emitSocket("userActivity", PLAYER, { cursor: { x: 600, y: 500 }, ping: { scene: BETA } });
   mock.timers.tick(250);
   await drain();
-  const sets = F.calls.filter(c => c.op === "settings.set" && c.id === `${MODULE}.log`);
+  const sets = W.log();
   assert.deepEqual(sets.map(c => c.value.map(r => r.x)), [[5, 600]], "the seeded record is kept");
   assert.deepEqual(F.game.pentaryn.pings.recent().map(r => [r.x, r.image]), [[600, { x: 100, y: 100 }], [5, { x: -495, y: -394 }]]);
   assert.deepEqual(W.console, []);
