@@ -15,7 +15,7 @@
  * publish it on module.api and game.pentaryn.names.
  */
 
-import { MODULE, NS, relabel, shortName } from "./names-core.mjs";
+import { HOOKS, MODULE, NS, relabel, shortName } from "./names-core.mjs";
 import { MANIFEST } from "./api-manifest.mjs";
 import { buildApi } from "./lib/api.mjs";
 import { makeLog } from "./lib/log.mjs";
@@ -47,7 +47,7 @@ function onReady() {
     members: { uninstall, trace: () => log.traces() },
     extras: () => ({
       hooks: reg.ids().map(h => ({ name: h.name, label: h.label })),
-      events: {},
+      events: HOOKS,
       published: publishedOf(NS),
     }),
   });
