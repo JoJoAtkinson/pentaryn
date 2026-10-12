@@ -144,6 +144,7 @@ ZIP_NAME = re.compile(r"^([a-z][a-z0-9-]*)-(\d{2})\.zip$")
 # The host group is host.py's alphabet; host.validate_host refuses anything that would
 # read as part of the version group. `.safety` marks the copy a restore takes of the
 # state it is about to replace (see restore_snapshot).
+STAMP_FORMAT = "%Y-%m-%d-%H%M%S"   # UTC; snapshot names, heal jobs, replaced/ folders
 SNAPSHOT_NAME = re.compile(
     r"^world-(\d{4}-\d{2}-\d{2}-\d{6})(?:-fvtt([0-9.]+|unknown))?(?:-([a-z0-9-]+))?"
     r"(\.safety)?\.tar\.gz$")
@@ -341,6 +342,12 @@ def parse_snapshot(entry: Entry, folder: str = WORLD_BACKUPS) -> Snapshot | None
     return Snapshot(stamp=m.group(1), name=entry.name, host=m.group(3), core=m.group(2),
                     size=entry.size, mtime=entry.mtime, folder=folder,
                     safety=bool(m.group(4)))
+
+
+def snapshot_filename(when: datetime, core: str, host_: str, safety: bool = False) -> str:
+    """The one builder for a snapshot name; parse_snapshot reads it back unchanged."""
+    return (f"world-{when.strftime(STAMP_FORMAT)}-fvtt{core}-{host_}"
+            f"{'.safety' if safety else ''}.tar.gz")
 
 
 def snapshots(st: Storage | None = None, folder: str = WORLD_BACKUPS, *,
@@ -1009,8 +1016,7 @@ def _build(st: Storage, reason: str, *, safety: bool = False,
     taken = {s.name for s in existing} | {j.name for j in queued}
     when = datetime.now(timezone.utc)
     while True:  # a name is an identity (based_on, keep-local): never reuse one
-        stamp = when.strftime("%Y-%m-%d-%H%M%S")
-        name = f"world-{stamp}-fvtt{core}-{me}{'.safety' if safety else ''}.tar.gz"
+        name = snapshot_filename(when, core, me, safety)
         if name not in taken:
             break
         when += timedelta(seconds=1)
@@ -1075,7 +1081,7 @@ def _heal_job(st: Storage, base: Snapshot, inv: dict, have: dict[str, Entry],
     me = host.host_name()
     when = datetime.now(timezone.utc)
     while True:
-        name = f"{uploadq.HEAL_PREFIX}{when:%Y-%m-%d-%H%M%S}-{me}"
+        name = f"{uploadq.HEAL_PREFIX}{when.strftime(STAMP_FORMAT)}-{me}"
         if not (tmp_dir() / (name + uploadq.JOB_SUFFIX)).exists():
             break
         when += timedelta(seconds=1)
@@ -2307,7 +2313,7 @@ def _move_aside(keys: list[str]) -> list[str]:
 
 
 def _aside_stamp() -> str:
-    return datetime.now(timezone.utc).strftime("%Y-%m-%d-%H%M%S")
+    return datetime.now(timezone.utc).strftime(STAMP_FORMAT)
 
 
 def _move_aside_rels(rels: list[str], why: str, stamp: str | None = None) -> list[str]:

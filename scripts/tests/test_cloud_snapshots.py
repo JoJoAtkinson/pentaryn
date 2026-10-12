@@ -86,6 +86,22 @@ def test_parser_rejects(name):
     assert parse_snapshot(Entry(name, 1, 1.0)) is None
 
 
+@pytest.mark.parametrize("core, host_, safety", [
+    ("14.369", "mac", False), ("14.369", "boss", True), ("unknown", "a-b-1", False),
+])
+def test_snapshot_filename_round_trips_through_the_parser(core, host_, safety):
+    """EXT-2: one builder beside the one parser — what _build names, parse_snapshot reads
+    back as the same stamp, core, host and safety flag."""
+    from datetime import datetime, timezone
+    when = datetime(2026, 10, 11, 3, 4, 12, tzinfo=timezone.utc)
+    name = cloud.snapshot_filename(when, core, host_, safety)
+    assert name == (f"world-{when.strftime(cloud.STAMP_FORMAT)}-fvtt{core}-{host_}"
+                    f"{'.safety' if safety else ''}.tar.gz")
+    s = parse_snapshot(Entry(name, 1, 1.0))
+    assert s and (s.stamp, s.core, s.host, s.safety) == (
+        "2026-10-11-030412", core, host_, safety)
+
+
 def test_newest_is_by_mtime_then_name_not_by_stamp():
     a = Snapshot("2026-10-11-090000", "a", "mac", "14.369", 1, mtime=100.0, folder="wb")
     b = Snapshot("2026-10-10-090000", "b", "boss", "14.369", 1, mtime=200.0, folder="wb")
