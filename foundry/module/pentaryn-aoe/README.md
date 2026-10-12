@@ -176,7 +176,11 @@ pass `activeGM.isSelf` and `userId === game.user.id`.
   claimed (no flag write on every save).
 - **Everything else** on a broadcast hook runs where `activeGM.isSelf` (concentration cleanup, the
   ready sweep, the `canvasReady` sweep of each newly viewed scene — wired at setup on every
-  client, so a GM who takes over after ready sweeps too — the delete backstop); each is idempotent.
+  client, so a GM who takes over after ready sweeps too — the delete backstop). Two GM tabs both
+  run these. A delete the server refuses as "does not exist" (handle deletes, the concentration
+  cleanup, the sweep's orphans) means the other tab already deleted it: that counts as done,
+  nothing is logged, and the job carries on (the next scene, the rest of the sweep). Any other
+  refusal is still an error.
 - **Apply** (`applyRows`): overlapping calls for one tray in one tab run one after another, so
   the later one skips the rows the earlier one applied; a later call stops waiting on an Apply
   stuck for 10 s (`APPLY_WAIT_MS`). Across tabs, each row is re-read from the live message just

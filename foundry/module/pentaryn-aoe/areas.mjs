@@ -196,6 +196,19 @@ export async function createHandle(region) {
 /*  Removing handles, repairing a scene         */
 /* -------------------------------------------- */
 
+/**
+ * Delete embedded documents; a "does not exist" refusal is success — with two GM sessions the
+ * other one already deleted them ([declared] aoe-edge-4). Returns the deleted docs, or null then.
+ */
+async function deleteGone(parent, name, ids) {
+  try {
+    return await parent.deleteEmbeddedDocuments(name, ids);
+  } catch (err) {
+    if (doesNotExist(err)) return null;
+    throw err;
+  }
+}
+
 async function deleteHandlesOf(region) {
   const scene = region.parent;
   const handles = () => scene.tokens.filter(tk => isHandle(tk) && aoeFlags(tk).region === region.id
@@ -210,21 +223,19 @@ async function deleteHandlesOf(region) {
     await new Promise(r => setTimeout(r, 100));
   }
   const ids = handles().map(tk => tk.id);
-  if (ids.length) await scene.deleteEmbeddedDocuments("Token", ids);
+  if (ids.length) await deleteGone(scene, "Token", ids);
 }
 
 /**
  * Repair one scene (active GM): delete handles whose region is gone, give template regions the
- * shared ownership and a handle if they have none. Returns what it did.
+ * shared ownership and a handle if they have none. Returns what it did (orphans another GM
+ * session deleted first are not counted).
  */
 export async function sweep(scene = canvas.scene) {
   const out = { orphansDeleted: 0, ownershipFixed: 0, handlesCreated: 0, sizeLocked: 0 };
   if (!scene || !game.user.isGM) return out;
   const orphans = scene.tokens.filter(tk => isHandle(tk) && !scene.regions.has(aoeFlags(tk).region)).map(tk => tk.id);
-  if (orphans.length) {
-    await scene.deleteEmbeddedDocuments("Token", orphans);
-    out.orphansDeleted = orphans.length;
-  }
+  if (orphans.length && await deleteGone(scene, "Token", orphans)) out.orphansDeleted = orphans.length;
   // Handles placed before dnd5e-token-size-lock: opt them out of tokenSizeSync (idempotent).
   const unlocked = scene.tokens.filter(tk => isHandle(tk) && tk._source.flags?.dnd5e?.lockSize !== true)
     .map(tk => ({ _id: tk.id, "flags.dnd5e.lockSize": true }));
@@ -350,8 +361,9 @@ export function install(reg, ctx) {
     if (!isTemplateRegion(region)) return;
     if (userId === game.user.id) await deleteHandlesOf(region);
     else if (game.users.activeGM?.isSelf) {
-      // -9: the handle is often gone already (the deleting client got there): only another error is news.
-      setTimeout(() => deleteHandlesOf(region).catch(err => (doesNotExist(err) ? null : log.warn("backstop handle delete", err))), 1500);
+      // -9: the handle is often gone already (the deleting client got there); deleteHandlesOf
+      // takes that as success, so only another error is news.
+      setTimeout(() => deleteHandlesOf(region).catch(err => log.warn("backstop handle delete", err)), 1500);
     }
   }), { guard: false, label: "deleteRegion" });
 
@@ -382,7 +394,7 @@ export function install(reg, ctx) {
     if (!itemUuid) return;
     for (const s of game.scenes) {
       const ids = spellAreas({ itemUuid }, s).map(r => r.id);
-      if (ids.length) await s.deleteEmbeddedDocuments("Region", ids);
+      if (ids.length) await deleteGone(s, "Region", ids);
     }
   }), { guard: false, label: "deleteActiveEffect" });
 

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **Two GM tabs no longer log or abort on each other's deletes** (declared, aoe-edge-4): with the
+  MCP bridge tab and a GM browser tab both open, the losing tab's delete of a handle, of a
+  concentration spell's areas or of a sweep's orphan handles was refused "does not exist", logged
+  at error level, and stopped the job (the next scene's areas, the rest of the sweep). That
+  refusal now counts as done: nothing is logged and the job carries on. The sweep's
+  `orphansDeleted` counts only what this tab deleted. README "Two sessions" says so.
 - **Careful Spell is always a declaration; the picker names only creatures the player can see**
   (declared, MM-1; Joe's metamagic ruling 2026-10-12): skipping the pick (Skip, or closing the
   picker) or having nobody to pick used to store and post nothing, so the use left no card and an
