@@ -19,6 +19,9 @@ from typing import Any, Callable, Iterator, Optional
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 PROTOCOL_VERSION = "2025-06-18"
+SERVER_NAME = "dnd-scripts"
+_E_SERVER = -32000      # JSON-RPC: implementation-defined server error
+_E_NO_METHOD = -32601   # JSON-RPC: method not found
 _TRANSPORT_MODE: Optional[str] = None  # "jsonl" | "lsp"
 
 # Concurrent dispatch: tool calls go to a thread pool so a batch of cold
@@ -184,6 +187,17 @@ def _write_message(payload: dict[str, Any]) -> None:
         sys.stdout.buffer.flush()
 
 
+def _reply(msg_id: Any, result: Any) -> None:
+    """Write a JSON-RPC success envelope ({jsonrpc, id, result})."""
+    _write_message({"jsonrpc": "2.0", "id": msg_id, "result": result})
+
+
+def _error(msg_id: Any, code: int, message: str) -> None:
+    """Write a JSON-RPC error envelope ({jsonrpc, id, error: {code, message}})."""
+    _write_message({"jsonrpc": "2.0", "id": msg_id,
+                    "error": {"code": code, "message": message}})
+
+
 # ── per-call action log (python-tooling-29) ──────────────────────────────────
 # Same switch as the fork's action log: PENTARYN_MCP_LOG_DIR. Unset → nothing is written.
 # One line per tools/call in <dir>/dnd-scripts-<YYYY-MM>.jsonl (the month is taken per
@@ -218,7 +232,7 @@ def _log_call(runner: "ToolRunner", arguments: dict[str, Any], *, ok: bool, ms: 
         now = datetime.now(timezone.utc)
         line = {
             "ts": now.isoformat(timespec="milliseconds").replace("+00:00", "Z"),
-            "server": "dnd-scripts",
+            "server": SERVER_NAME,
             "tool": runner.tool.name,
             "mode": "inprocess" if runner.handler is not None else "subprocess",
             "args": _log_args(arguments),
@@ -227,7 +241,7 @@ def _log_call(runner: "ToolRunner", arguments: dict[str, Any], *, ok: bool, ms: 
             "error": error,
         }
         text = json.dumps(line, ensure_ascii=False, default=str) + "\n"
-        path = Path(log_dir) / f"dnd-scripts-{now:%Y-%m}.jsonl"
+        path = Path(log_dir) / f"{SERVER_NAME}-{now:%Y-%m}.jsonl"
         with _log_lock, open(path, "a", encoding="utf-8", errors="backslashreplace") as fh:
             fh.write(text)
     except Exception as exc:
@@ -250,11 +264,7 @@ def _run_call_worker(msg_id: Any, runner: "ToolRunner", arguments: dict[str, Any
         out = runner.run(arguments=arguments)
         ok = True
         if msg_id is not None:
-            _write_message({
-                "jsonrpc": "2.0",
-                "id": msg_id,
-                "result": {"content": [{"type": "text", "text": out}]},
-            })
+            _reply(msg_id, {"content": [{"type": "text", "text": out}]})
     except Exception as exc:
         if not ok:              # the tool failed (not the response write after it)
             error = str(exc)
@@ -268,11 +278,7 @@ def _run_call_worker(msg_id: Any, runner: "ToolRunner", arguments: dict[str, Any
         )
         sys.stderr.flush()
         if msg_id is not None:
-            _write_message({
-                "jsonrpc": "2.0",
-                "id": msg_id,
-                "error": {"code": -32000, "message": str(exc)},
-            })
+            _error(msg_id, _E_SERVER, str(exc))
     finally:
         try:
             _log_call(runner, arguments, ok=ok,
@@ -834,10 +840,10 @@ def _serve_loop(
                 result = {
                     "protocolVersion": str(req_version) if req_version else PROTOCOL_VERSION,
                     "capabilities": {"tools": {"listChanged": False}},
-                    "serverInfo": {"name": "dnd-scripts", "version": "0.1.0"},
+                    "serverInfo": {"name": SERVER_NAME, "version": "0.1.0"},
                 }
                 if msg_id is not None:
-                    _write_message({"jsonrpc": "2.0", "id": msg_id, "result": result})
+                    _reply(msg_id, result)
                 continue
 
             if method == "tools/list":
@@ -853,7 +859,7 @@ def _serve_loop(
                     tool_payload.append(entry)
                 result = {"tools": tool_payload}
                 if msg_id is not None:
-                    _write_message({"jsonrpc": "2.0", "id": msg_id, "result": result})
+                    _reply(msg_id, result)
                 continue
 
             if method == "tools/call":
@@ -872,17 +878,9 @@ def _serve_loop(
                 # latency). Slot is released by the worker in its finally clause.
                 if not _inflight_slots.acquire(blocking=False):
                     if msg_id is not None:
-                        _write_message({
-                            "jsonrpc": "2.0",
-                            "id": msg_id,
-                            "error": {
-                                "code": -32000,
-                                "message": (
-                                    f"Server busy: {_INFLIGHT_LIMIT} in-flight tool calls. "
-                                    "Retry after some complete."
-                                ),
-                            },
-                        })
+                        _error(msg_id, _E_SERVER,
+                               f"Server busy: {_INFLIGHT_LIMIT} in-flight tool calls. "
+                               "Retry after some complete.")
                     continue
                 executor.submit(_run_call_worker, msg_id, runner, arguments)
                 continue
@@ -891,23 +889,11 @@ def _serve_loop(
             if msg_id is None:
                 continue
 
-            _write_message(
-                {
-                    "jsonrpc": "2.0",
-                    "id": msg_id,
-                    "error": {"code": -32601, "message": f"Method not found: {method}"},
-                }
-            )
+            _error(msg_id, _E_NO_METHOD, f"Method not found: {method}")
         except Exception as exc:
             if msg_id is None:
                 continue
-            _write_message(
-                {
-                    "jsonrpc": "2.0",
-                    "id": msg_id,
-                    "error": {"code": -32000, "message": str(exc)},
-                }
-            )
+            _error(msg_id, _E_SERVER, str(exc))
 
 
 if __name__ == "__main__":

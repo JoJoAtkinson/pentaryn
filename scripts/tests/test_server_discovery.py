@@ -668,3 +668,37 @@ def test_py_mcp_mnt_7_comments_match_the_code():
     assert "DND_MCP_TOOL_TIMEOUT\n        # (default 60s)" in src
     assert "in-process handlers have no cap" in src
     assert "SQLite's per-connection locking" in src
+
+
+# ---------------------------------------------------------------------------
+# py-mcp-ext-5: every JSON-RPC envelope is built by _reply / _error, never by hand
+# ---------------------------------------------------------------------------
+
+def test_py_mcp_ext_5_envelope_helpers(monkeypatch):
+    sent = []
+    monkeypatch.setattr(server, "_write_message", sent.append)
+    assert (server.SERVER_NAME, server._E_SERVER, server._E_NO_METHOD) == (
+        "dnd-scripts", -32000, -32601)
+    server._reply(7, {"ok": True})
+    server._error(8, server._E_NO_METHOD, "Method not found: x")
+    assert sent == [
+        {"jsonrpc": "2.0", "id": 7, "result": {"ok": True}},
+        {"jsonrpc": "2.0", "id": 8, "error": {"code": -32601, "message": "Method not found: x"}},
+    ]
+    assert [list(m) for m in sent] == [["jsonrpc", "id", "result"], ["jsonrpc", "id", "error"]]
+
+
+def test_py_mcp_ext_5_no_hand_built_envelopes():
+    import ast
+    tree = ast.parse(_SERVER_PATH.read_text(encoding="utf-8"))
+    builders = {"_reply", "_error"}
+    offenders = []
+    for fn in ast.walk(tree):
+        if not isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef)) or fn.name in builders:
+            continue
+        for node in ast.walk(fn):
+            if isinstance(node, ast.Constant) and node.value in ("2.0", -32000, -32601, 32000, 32601):
+                offenders.append((fn.name, node.lineno))
+            if isinstance(node, ast.Constant) and node.value == "dnd-scripts":
+                offenders.append((fn.name, node.lineno))
+    assert offenders == []
