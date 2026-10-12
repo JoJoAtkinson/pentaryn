@@ -31,6 +31,8 @@ a player or GM can notice:
 - **[declared] creatures-rob-1** — `list(user, scene)` accepts a user and scene by id, uuid or
   exact name (what the bridge sends): `list("<userId>", scene)` now answers as that player, not at
   the actor's default ownership. An unknown user or scene throws `NOT_FOUND`.
+- **[declared] creatures-rob-2** — `list(null, scene)` and `list(user, null)` treat `null` as
+  omitted (this client's user, the viewed scene) instead of throwing a `TypeError` / answering `[]`.
 
 ## 0.1.1 — 2026-10-10
 

@@ -97,8 +97,8 @@ Also `game.modules.get("pentaryn-creatures").api`; published at `ready`, frozen,
 `describe()`, `version`, `contract`, `settings()`, `trace()`, `uninstall()`.
 
 - `list(user?, scene?)` → `{ id, name, img, rank }[]`: the strip's entries for a user (default this
-  client's) on a scene (default the viewed one). Either may be a document or its id, uuid or exact
-  name. Run it as the GM with a player's `User` (or user id) to check what they'd see. `[]` without
+  client's) on a scene (default the viewed one); `null` counts as omitted. Either may be a document
+  or its id, uuid or exact name. Run it as the GM with a player's `User` (or user id) to check what they'd see. `[]` without
   a scene.
 - `render()`: force a redraw of this client's strip.
 - `isCreature(tokenDoc)` → boolean: would this token get the light?

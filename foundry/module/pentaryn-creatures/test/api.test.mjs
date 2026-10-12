@@ -116,3 +116,10 @@ test("creatures-rob-1: list(userId, sceneRef) answers as that user, like list(us
   assert.throws(() => api.list("Nobody", alpha), { code: "NOT_FOUND" });
   assert.throws(() => api.list(rook, "Nowhere"), { code: "NOT_FOUND" });
 });
+
+test("creatures-rob-2: list(null, scene) / list(user, null) fall to the defaults, like undefined", () => {
+  const rook = F.game.users.get("plyrUser00000001");
+  const alpha = W.scene("sceneAlpha000001");
+  assert.deepEqual(api.list(null, alpha), api.list(undefined, alpha), "null user = this client's user");
+  assert.deepEqual(api.list(rook, null), api.list(rook), "null scene = the viewed scene");
+});

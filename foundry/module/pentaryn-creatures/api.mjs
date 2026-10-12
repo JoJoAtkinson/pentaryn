@@ -64,10 +64,11 @@ function inspect(ctx, doc, opts = {}) {
 export function buildApiFor(ctx) {
   const x = ctx.exposed;
   return buildApi(MANIFEST, {
-    // a string user/scene (id, uuid or exact name — what the bridge sends) resolves first; documents pass through
+    // a string user/scene (id, uuid or exact name — what the bridge sends) resolves first; documents pass through;
+    // null counts as omitted (this client's user, the viewed scene)
     list: (user, scene) => x.list(
-      typeof user === "string" ? resolveRef(user, "user") : user,
-      typeof scene === "string" ? resolveRef(scene, "scene") : scene,
+      typeof user === "string" ? resolveRef(user, "user") : user ?? undefined,
+      typeof scene === "string" ? resolveRef(scene, "scene") : scene ?? undefined,
     ),
     render: () => x.render(),
     // ids at the boundary: an array, a Set (copied), one id or token documents → a Set; null/undefined = all

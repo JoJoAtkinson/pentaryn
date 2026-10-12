@@ -199,7 +199,7 @@ test("oracle: isCreature and list() agree with the verbatim legacy summarize (fi
   assert.deepEqual(api().list(rook, alpha), entries);
   assert.deepEqual(entries.map(e => [e.id, e.rank]), [["tPC", 0], ["tEye", 2], ["tImp", 2], ["tTorch", 2]]);
   assert.deepEqual(api().list(F.game.user, W.scene(GAMMA)), [], "GM owns nothing as a character; empty scene");
-  assert.deepEqual(api().list(rook, null), [], "no scene");
+  assert.deepEqual(api().list(rook, null), api().list(rook), "[declared] creatures-rob-2: null scene = the viewed scene");
 });
 
 test("transform-creatures-26 [declared]: a fixed window — queues at 0/50/100/150/190 flush once, at 200; a queue at 250 flushes at 450", async () => {
