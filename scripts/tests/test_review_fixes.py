@@ -1037,3 +1037,61 @@ def test_r4_a_heal_that_cannot_read_the_based_on_dies_naming_it(two_hosts, monke
     err = capsys.readouterr().err
     assert f"cannot read which bundles {snap} names" in err, err
     assert maps not in _bundle_names(c)
+
+
+# ── R5: the prompt says when the offer needs a bundle the cloud lacks ────────
+
+def _mac_snapshot_missing_maps(two_hosts):
+    c = two_hosts.cloud
+    _install(two_hosts.data["mac"])
+    _edit(two_hosts.data["mac"], "mac session")
+    with two_hosts.use("mac"):
+        cloud.backup("shutdown")
+    [snap] = _names(c)
+    [maps] = [n for n in _bundle_names(c) if n.startswith("module@maps@")]
+    [tools] = [n for n in _bundle_names(c) if n.startswith("module@tools@")]
+    (c / "bundles" / maps).unlink()                     # hand-deleted, or swept
+    return snap, tools
+
+
+def test_r5_restore_cost_names_the_needed_bundles_the_cloud_lacks(two_hosts):
+    snap, tools = _mac_snapshot_missing_maps(two_hosts)
+    st = cloud.store()
+    with two_hosts.use("boss"):                         # boss has `m`, lacks maps and tools
+        cost = cloud.restore_cost(st, cloud.find_snapshot(st, snap))
+    assert cost.missing == ("module/maps",)
+    assert tuple(cost)[1:] == (2, (two_hosts.cloud / "bundles" / tools).stat().st_size)
+
+
+def test_r5_enter_keeps_local_when_the_offer_would_refuse(two_hosts, tty, capsys):
+    from scripts.foundry import boot, bootstate
+
+    def tree(root):                                     # the answer itself is recorded
+        return sorted(p.relative_to(root).as_posix() for p in root.rglob("*")
+                      if cloud.TMP_DIRNAME not in p.parts and p.name != bootstate.FILENAME)
+    snap, _tools = _mac_snapshot_missing_maps(two_hosts)
+    boss = two_hosts.data["boss"]
+    before = tree(boss)
+    asked = tty(True, [""])                             # Enter
+    with two_hosts.use("boss"):
+        assert boot.choose() == 0
+    out = capsys.readouterr().out
+    lines = [ln.strip() for ln in out.splitlines()]
+    plus = next(i for i, ln in enumerate(lines) if ln.startswith("+ "))
+    assert lines[plus + 1] == ("! 1 of them is missing from the cloud (module maps) — a restore "
+                               "would refuse; Enter keeps local"), out
+    assert "Enter = local" in asked[0]
+    assert "boot: local world (the offered snapshot needs a bundle" in out, out
+    assert "restoring" not in out
+    assert tree(boss) == before
+    # Enter here is not a decline: with the bundle back, the same snapshot is offered again
+    with two_hosts.use("boss"):
+        state = bootstate.load()
+    assert state.keep_local_until_newer_than is None
+    with two_hosts.use("mac"):
+        cloud.backup("shutdown")                        # unchanged tree: heals maps, skips
+    tty(True, ["k"])
+    with two_hosts.use("boss"):
+        assert boot.choose() == 0
+    out = capsys.readouterr().out
+    assert f"cloud    {snap}" in out and "missing from the cloud" not in out, out

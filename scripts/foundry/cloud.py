@@ -1636,11 +1636,14 @@ def fetch_snapshot(st: Storage, snap: Snapshot, *, systems: bool = True) -> Fetc
 class RestoreCost(tuple):
     """(world_bytes, n_bundles, bundle_bytes) a restore of a bundled snapshot downloads;
     `.total` is how many bundles its manifest names (n_bundles == total: this machine has
-    none of them)."""
+    none of them); `.missing` the "<kind>/<id>" of every needed bundle the cloud lacks
+    (counted in n_bundles, not in bundle_bytes) — a restore of it would refuse."""
 
-    def __new__(cls, world_bytes: int, n_bundles: int, bundle_bytes: int, total: int):
+    def __new__(cls, world_bytes: int, n_bundles: int, bundle_bytes: int, total: int,
+                missing: tuple[str, ...] = ()):
         self = super().__new__(cls, (world_bytes, n_bundles, bundle_bytes))
         self.total = total
+        self.missing = tuple(missing)
         return self
 
     world_bytes = property(lambda self: self[0])
@@ -1651,7 +1654,10 @@ class RestoreCost(tuple):
 def restore_cost(st: Storage, snap: Snapshot) -> RestoreCost | None:
     """What restoring `snap` here would download (§3.8): one sidecar read, one bundles/
     listing, the local inventory (its cache read, never written). None for a full
-    snapshot, a lost sidecar, or any failure — the boot prompt then shows nothing extra."""
+    snapshot, a lost sidecar, or any failure — the boot prompt then shows nothing extra.
+    A needed bundle the listing lacks is named in `.missing`, never silently dropped: the
+    prompt says the restore would refuse and makes keeping local the default (review
+    R5)."""
     try:
         m = read_manifest(st, snap)
         if m is None:
@@ -1659,7 +1665,9 @@ def restore_cost(st: Storage, snap: Snapshot) -> RestoreCost | None:
         needed, _extras, _unchanged = _bundle_plan(m, warn=lambda _m: None)
         have = bundles.listing(st)
         size = sum(have[n].size for n in needed.values() if n in have)
-        return RestoreCost(snap.size, len(needed), size, len(bundles.manifest_keys(m)))
+        missing = tuple(k for k, n in sorted(needed.items()) if n not in have)
+        return RestoreCost(snap.size, len(needed), size, len(bundles.manifest_keys(m)),
+                           missing)
     except Exception:  # noqa: BLE001 — a cost estimate never stops a boot
         return None
 

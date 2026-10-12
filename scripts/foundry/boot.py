@@ -238,23 +238,46 @@ def decide(from_: str | None, interactive: bool, *, st=None, adopt: bool = True)
     return _prompt(offer, rolling, state, warning, relation, st=st)
 
 
-def _bundle_line(st, snap: Snapshot) -> str | None:
-    """What a restore of `snap` would download beyond the world tar (module bundles §3.8);
-    None for a full snapshot or any failure — a cost estimate never stops a boot."""
+def _bundle_cost(st, snap: Snapshot):
+    """cloud.restore_cost(st, snap) — None for a full snapshot or any failure: a cost
+    estimate never stops a boot."""
     if st is None:
         return None
     try:
-        cost = cloud.restore_cost(st, snap)
-        if cost is None:
-            return None
-        _world, n, size = cost
-        if n == 0:
-            return "(every bundle is already on this machine)"
-        word = "bundle" if n == 1 else "bundles"
-        every = "all " if n == getattr(cost, "total", None) and n > 1 else ""
-        return f"+ {every}{n} {word} ({_gb(size)}) to fetch"
+        return cloud.restore_cost(st, snap)
     except Exception:  # noqa: BLE001
         return None
+
+
+def _missing(cost) -> list[str]:
+    """The "<kind>/<id>" of every bundle a restore needs that the cloud lacks."""
+    try:
+        return list(getattr(cost, "missing", ()) or ())
+    except Exception:  # noqa: BLE001
+        return []
+
+
+def _bundle_lines(cost) -> list[str]:
+    """What a restore would download beyond the world tar (module bundles §3.8), and —
+    when the cloud lacks a bundle it needs — that it would refuse (review R5)."""
+    if cost is None:
+        return []
+    try:
+        _world, n, size = cost
+        if n == 0:
+            return ["(every bundle is already on this machine)"]
+        word = "bundle" if n == 1 else "bundles"
+        every = "all " if n == getattr(cost, "total", None) and n > 1 else ""
+        lines = [f"+ {every}{n} {word} ({_gb(size)}) to fetch"]
+    except Exception:  # noqa: BLE001
+        return []
+    missing = _missing(cost)
+    if missing:
+        which = ", ".join(k.replace("/", " ", 1) for k in missing)
+        verb = "is" if len(missing) == 1 else "are"
+        lines.append(f"! {len(missing)} of them {verb} missing from the cloud ({which}) — "
+                     "a restore would refuse; Enter keeps local")
+    return lines
 
 
 def _prompt(newest: Snapshot, rolling: list[Snapshot], state: bootstate.BootState,
@@ -262,7 +285,11 @@ def _prompt(newest: Snapshot, rolling: list[Snapshot], state: bootstate.BootStat
     """Ask about `newest` — the snapshot on offer (normally the newest in the cloud)."""
     others = [s for s in sorted(rolling, key=lambda s: (s.mtime, s.name), reverse=True)
               if s.name != newest.name][:MAX_OTHERS]
-    local_default = relation != "newer"
+    cost = _bundle_cost(st, newest)
+    # A restore that would refuse (a bundle it needs is not in the cloud) is never the
+    # Enter default (review R5); `l` still tries it, and it refuses with nothing touched.
+    refuses = bool(_missing(cost))
+    local_default = relation != "newer" or refuses
     print()
     if relation == "unknown" and state.based_on:
         say(f"▸ cannot tell how this cloud snapshot relates to {state.based_on}, which this "
@@ -281,9 +308,8 @@ def _prompt(newest: Snapshot, rolling: list[Snapshot], state: bootstate.BootStat
     print()
     say(f"    cloud    {newest.name}   {newest.host_label}   {_utc(newest.mtime)}   "
         f"{newest.core or '?'}   {_gb(newest.size)}")
-    extra = _bundle_line(st, newest)
-    if extra:
-        say(f"    {extra}")
+    for line in _bundle_lines(cost):
+        say(f"    {line}")
     if state.based_on:
         say(f"    local    based on {state.based_on}   {state.based_on_host or 'untagged'}   "
             f"{_utc(state.based_on_mtime)}")
@@ -310,6 +336,11 @@ def _prompt(newest: Snapshot, rolling: list[Snapshot], state: bootstate.BootStat
         except (EOFError, KeyboardInterrupt):
             print()
             return Decision("local", None, "no answer — booting local", warning=warning)
+        if ans == "" and refuses:
+            # Not a decline: once the bundle is back (the other host's next backup heals
+            # it), this snapshot must be offered again, so nothing is remembered.
+            return Decision("local", None, "the offered snapshot needs a bundle the cloud "
+                            "lacks — asked again at the next boot", warning=warning)
         if ans == "":
             ans = "k" if local_default else "l"
         if ans in ("l", "latest"):

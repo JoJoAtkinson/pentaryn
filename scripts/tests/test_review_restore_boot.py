@@ -262,13 +262,12 @@ def test_R4_an_unchanged_tree_restored_from_a_full_snapshot_uploads_no_bundle_on
 
 # ── R5: the boot prompt offers (Enter = take it) a snapshot whose restore must refuse ──
 
-@pytest.mark.xfail(strict=True, reason="R5: restore_cost drops manifest names that are not in "
-                   "the listing; the prompt counts only what it can price")
 def test_R5_the_prompt_says_when_a_bundle_the_offer_needs_is_missing(two_hosts, tty, capsys):
-    """`restore_cost` sums `have[n].size for n in needed if n in have` — a missing bundle is
-    silently dropped, so the prompt reads '+ 1 bundle (…) to fetch' and Enter (the default)
-    starts a restore that refuses after the world download. The prompt has everything it
-    needs to say '(1 missing from the cloud — a restore would refuse)' and default to local."""
+    """`restore_cost` summed `have[n].size for n in needed if n in have` — a missing bundle
+    was silently dropped, so the prompt read '+ 1 bundle (…) to fetch' and Enter (the
+    default) started a restore that refuses after the world download. The prompt has
+    everything it needs to say '(1 missing from the cloud — a restore would refuse)' and
+    default to local. R5 (fixed): RestoreCost.missing; the prompt says so, Enter = local."""
     _install(two_hosts.data["mac"])
     _edit(two_hosts.data["mac"], "mac session")
     with two_hosts.use("mac"):
