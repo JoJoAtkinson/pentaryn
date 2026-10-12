@@ -1,16 +1,21 @@
 {
-  "threw": "foundry.dice.Roll._mapLegacyRollMode is not a function",
-  "raw": {
-    "claim": "rid0000000000002",
-    "when": 1790000000000
-  },
+  "threw": null,
+  "raw": null,
   "read": {
-    "text": "",
-    "tier": null,
-    "total": null,
+    "text": "<p>Owes.</p>",
+    "tier": 0,
+    "total": 18,
     "when": 1790000000000,
-    "delivered": null,
-    "sources": null
+    "delivered": 1790000000000,
+    "sources": {
+      "adv": 0,
+      "dis": 0,
+      "shared": [],
+      "declared": "normal",
+      "rule": "raw",
+      "resolved": "normal"
+    },
+    "pass": true
   },
   "loreState": [
     {
@@ -19,17 +24,17 @@
       "dc": 12,
       "skill": "ins",
       "skillLabel": "Insight",
-      "spent": false,
-      "available": true,
+      "spent": true,
+      "available": false,
       "gmOnline": true
     }
   ],
-  "again": false,
+  "again": true,
   "againConsole": [
     {
       "level": "warn",
-      "text": "pentaryn-ties | study refused: ZZ Caven has already studied Debts"
+      "text": "pentaryn-ties | study refused: Roll._mapLegacyRollMode is missing; a blind study roll cannot be thrown"
     }
   ],
-  "againCalls": 0
+  "againCalls": 12
 }
