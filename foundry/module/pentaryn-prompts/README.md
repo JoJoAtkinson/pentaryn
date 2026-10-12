@@ -40,7 +40,7 @@ name. Every marker token is born hidden, sightless and size-locked. Art: `assets
 - **Side panel:** what this marker can see (unlimited darkvision, doors as they stand, light
   ignored), nearest first; *Out of sight (within 60 ft)* with `door` / `wall` tags; anything blocked
   only by a door named above the list. Click pans, ⌘-click opens the sheet or box. It redraws when a
-  wall, door, note or token on the scene changes.
+  wall, door, note, light, tile or token on the scene changes.
 - **Hover** a marker: its text, size, footprint and how many things it sees.
 - Nameplate: `✎ ` + the text, lines joined by ` / `, cut at 40 characters.
 

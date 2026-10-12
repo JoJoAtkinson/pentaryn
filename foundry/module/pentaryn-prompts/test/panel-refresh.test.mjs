@@ -35,3 +35,23 @@ test("updateToken redraws the open panels on a move, a rename or a new image, no
     reg.offAll();
   }
 });
+
+test("M1: a note edit and a light or tile create/update/delete redraw the open panels", () => {
+  const log = makeLog(MODULE);
+  const reg = hookRegistry(MODULE, log);
+  panels.install(reg, { log, reg });
+  const seen = [];
+  const saved = PromptDialog.refreshPanels;
+  PromptDialog.refreshPanels = id => seen.push(id);
+  const HOOKS = ["updateNote", "createAmbientLight", "updateAmbientLight", "deleteAmbientLight",
+    "createTile", "updateTile", "deleteTile"];
+  try {
+    const doc = { parent: { id: "s1" } };
+    for (const h of HOOKS) F.fire(h, doc, {});
+    assert.deepEqual(seen, HOOKS.map(() => "s1"));
+  } finally {
+    PromptDialog.refreshPanels = saved;
+    panels.uninstall();
+    reg.offAll();
+  }
+});
