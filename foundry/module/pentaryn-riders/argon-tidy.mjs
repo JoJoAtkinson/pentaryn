@@ -33,7 +33,7 @@
  *    argon-tooltip-item-rolldata.
  */
 
-import { MOD, spendsUsesOf, skipsTargetPicker } from "./table-core.mjs";
+import { MODULE, spendsUsesOf, skipsTargetPicker } from "./table-core.mjs";
 
 Hooks.on("updateItem", (item, changes) => {
   try {
@@ -45,14 +45,14 @@ Hooks.on("updateItem", (item, changes) => {
       if (!own || own === item || !spendsUsesOf(own, item.id)) continue;
       button.render?.();
     }
-  } catch (err) { console.warn(`${MOD} | Argon shared-uses badge refresh skipped`, err); }
+  } catch (err) { console.warn(`${MODULE} | Argon shared-uses badge refresh skipped`, err); }
 });
 
 // Also before a summon's placement (Mage Hand, Summon Undead): the same click problem (usability
 // Area 6 re-run, W8/W10).
 for (const hook of ["dnd5e.preCreateMeasuredTemplate", "dnd5e.preSummon"]) {
   Hooks.on(hook, () => {
-    try { ui.ARGON?.collapseAllPanels?.(); } catch (err) { console.warn(`${MOD} | Argon panel collapse skipped`, err); }
+    try { ui.ARGON?.collapseAllPanels?.(); } catch (err) { console.warn(`${MODULE} | Argon panel collapse skipped`, err); }
   });
 }
 
@@ -77,7 +77,7 @@ function wrapEnrich() {
   TE.enrichHTML = wrapped;
 }
 
-Hooks.once("ready", () => { try { wrapEnrich(); } catch (err) { console.warn(`${MOD} | tooltip roll data skipped`, err); } });
+Hooks.once("ready", () => { try { wrapEnrich(); } catch (err) { console.warn(`${MODULE} | tooltip roll data skipped`, err); } });
 
 /** Wrap Argon dnd5e's (closure-private) item button class once, through the first button rendered. */
 function wrapButtonClass(button) {
@@ -109,5 +109,5 @@ Hooks.on("renderItemButtonArgonComponent", (button) => {
     // Only Argon dnd5e's own item buttons (they have an activity); our own buttons subclass them too
     // and inherit the wrap, which is harmless (they are never Metamagic and enrich nothing).
     if (button?.item?.documentName === "Item") wrapButtonClass(button);
-  } catch (err) { console.warn(`${MOD} | Argon button tidy skipped`, err); }
+  } catch (err) { console.warn(`${MODULE} | Argon button tidy skipped`, err); }
 });

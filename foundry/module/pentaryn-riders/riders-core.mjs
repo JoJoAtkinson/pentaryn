@@ -21,7 +21,18 @@
  *     { key: "elemental-adept", types: ["fire"] }      // typed rules carry their chosen types
  */
 
-export const MOD = "pentaryn-riders";
+export const MODULE = "pentaryn-riders";
+/** The old name, kept: `game.pentaryn.riders.core.MOD` and the fixture suites read it. */
+export { MODULE as MOD };
+export const SHORT = "riders";
+export const NS = "riders";
+export const VERSION = "0.2.0";                        // === module.json version (constants.test pins it)
+export const CONTRACT = "pentaryn-riders/api@1";       // bump the major on a published-shape change
+export const I18N = "PENTARYN_RIDERS";
+export const CSS = "pr-";
+export const FLAG_SCOPE = MODULE;
+/** Events this module emits: none (README "Events"). */
+export const HOOKS = Object.freeze({});
 
 /** The damage types each typed feature may choose from (2024 PHB). */
 export const ADEPT_TYPES = Object.freeze(["acid", "cold", "fire", "lightning", "thunder"]);
@@ -501,7 +512,7 @@ export function usedFromMessages(messages, origin) {
   const used = new Set();
   for (const m of messages ?? []) {
     if (m?._source?.system?.origin !== origin) continue;
-    for (const k of m?.flags?.[MOD]?.applied ?? []) used.add(k);
+    for (const k of m?.flags?.[MODULE]?.applied ?? []) used.add(k);
   }
   return [...used];
 }

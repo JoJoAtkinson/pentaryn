@@ -3,7 +3,10 @@
  * Fixtures: test/table.mjs (`node test/table.mjs`, also run from test/run.mjs).
  */
 
-export const MOD = "pentaryn-riders";
+import { MODULE } from "./riders-core.mjs";
+
+/** The one module id lives in riders-core (core → core); `MOD` is kept for old imports. */
+export { MODULE, MODULE as MOD };
 
 /** The flag a summoned token carries: the uuid of the concentration effect that keeps it. */
 export const SUMMON_FLAG = "concentration";
@@ -39,7 +42,7 @@ export function summonTokenIds(tokens, effectUuid) {
   if (!effectUuid) return [];
   const ids = [];
   for (const t of tokens ?? []) {
-    if (t?.flags?.[MOD]?.[SUMMON_FLAG] === effectUuid) ids.push(t.id);
+    if (t?.flags?.[MODULE]?.[SUMMON_FLAG] === effectUuid) ids.push(t.id);
   }
   return ids;
 }

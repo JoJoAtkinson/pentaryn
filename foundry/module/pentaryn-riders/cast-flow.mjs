@@ -48,7 +48,7 @@
  *    pentaryn-riders.arcaneRecovery. Row riders-arcane-recovery-picker.
  */
 
-import { MOD, restoreSlotScaling, placeSummonsDefault, isWildcardPath, arcaneRecoveryCap, arcaneRecoveryDefault,
+import { MODULE, restoreSlotScaling, placeSummonsDefault, isWildcardPath, arcaneRecoveryCap, arcaneRecoveryDefault,
   arcaneRecoveryCheck, isArcaneRecovery, ARCANE_RECOVERY_MAX_LEVEL } from "./table-core.mjs";
 
 const T = (key, data) => (data ? game.i18n.format(key, data) : game.i18n.localize(key));
@@ -65,7 +65,7 @@ Hooks.on("dnd5e.preSummon", (activity, profile) => {
       const name = profile?.name || activity?.item?.name || "";
       ui.notifications?.info?.(T("PENTARYN_RIDERS.summon.place", { name }));
     }
-  } catch (err) { console.warn(`${MOD} | summon sidebar keep skipped`, err); }
+  } catch (err) { console.warn(`${MODULE} | summon sidebar keep skipped`, err); }
 });
 
 Hooks.on("changeSidebarTab", (app) => {
@@ -100,25 +100,25 @@ Hooks.on("dnd5e.preUseActivity", (activity, usageConfig) => {
       slots
     });
     if (scaling !== null && scaling > 0) usageConfig.scaling = scaling;
-  } catch (err) { console.warn(`${MOD} | restore-slot default skipped`, err); }
+  } catch (err) { console.warn(`${MODULE} | restore-slot default skipped`, err); }
 });
 
 /* ── settings for parts 3 and 6 ─────────────────────────────────────────── */
 
 Hooks.once("init", () => {
-  game.settings.register(MOD, "castDefaults", {
+  game.settings.register(MODULE, "castDefaults", {
     name: "PENTARYN_RIDERS.settings.castDefaults.name",
     hint: "PENTARYN_RIDERS.settings.castDefaults.hint",
     scope: "world", config: true, type: Boolean, default: true
   });
-  game.settings.register(MOD, "arcaneRecovery", {
+  game.settings.register(MODULE, "arcaneRecovery", {
     name: "PENTARYN_RIDERS.settings.arcaneRecovery.name",
     hint: "PENTARYN_RIDERS.settings.arcaneRecovery.hint",
     scope: "world", config: true, type: Boolean, default: true
   });
 });
 
-const on = key => { try { return game.settings.get(MOD, key) !== false; } catch { return false; } };
+const on = key => { try { return game.settings.get(MODULE, key) !== false; } catch { return false; } };
 
 /* ── 3. summons ticked to place; a self-only card keeps no stale target ──── */
 
@@ -129,7 +129,7 @@ Hooks.on("dnd5e.preUseActivity", (activity, usageConfig, dialogConfig, messageCo
     if (activity?.target?.affects?.type === "self" && !tpl && messageConfig?.data?.system?.targets?.length) {
       messageConfig.data.system.targets = [];
     }
-  } catch (err) { console.warn(`${MOD} | cast defaults skipped`, err); }
+  } catch (err) { console.warn(`${MODULE} | cast defaults skipped`, err); }
 });
 
 // The tick goes in SummonActivity#_prepareUsageConfig, where "the caller said nothing" (create.summons
@@ -150,11 +150,11 @@ Hooks.once("ready", () => {
           });
           if (tick) out.create.summons = true;
         }
-      } catch (err) { console.warn(`${MOD} | Place Summons default skipped`, err); }
+      } catch (err) { console.warn(`${MODULE} | Place Summons default skipped`, err); }
       return out;
     };
     proto._prPlaceDefault = true;
-  } catch (err) { console.warn(`${MOD} | Place Summons default not installed`, err); }
+  } catch (err) { console.warn(`${MODULE} | Place Summons default not installed`, err); }
 });
 
 /* ── 4. the first click on Use counts after typing a number ──────────────── */
@@ -185,7 +185,7 @@ Hooks.on("renderActivityUsageDialog", (app, element) => {
     root.addEventListener("click", ev => {
       if (ev.target?.closest?.(USE)) app._prUseAfterRender = null;
     }, true);
-  } catch (err) { console.warn(`${MOD} | usage dialog first click skipped`, err); }
+  } catch (err) { console.warn(`${MODULE} | usage dialog first click skipped`, err); }
 });
 
 /* ── 5. a wildcard summon image previews as a real image ─────────────────── */
@@ -206,11 +206,11 @@ Hooks.once("ready", () => {
           const real = images.find(i => !isWildcardPath(i)) ?? actor?.img;
           if (real && !isWildcardPath(real)) token = token.clone({ "texture.src": real });
         }
-      } catch (err) { console.warn(`${MOD} | summon preview image kept`, err); }
+      } catch (err) { console.warn(`${MODULE} | summon preview image kept`, err); }
       return own.call(this, token, profile, options);
     };
     proto._prWildcard = true;
-  } catch (err) { console.warn(`${MOD} | summon wildcard preview skipped`, err); }
+  } catch (err) { console.warn(`${MODULE} | summon wildcard preview skipped`, err); }
 });
 
 /* ── 6. Arcane Recovery: pick the slots ──────────────────────────────────── */
@@ -294,8 +294,8 @@ Hooks.on("dnd5e.postUseActivity", (activity) => {
     const actor = item?.actor;
     if (!actor?.isOwner || !isArcaneRecovery({ type: item.type, identifier: item.system?.identifier, name: item.name })) return;
     // Only the client that used it: postUseActivity runs on the user's own client.
-    setTimeout(() => arcaneRecoveryDialog(actor).catch(err => console.warn(`${MOD} | Arcane Recovery dialog`, err)), 0);
-  } catch (err) { console.warn(`${MOD} | Arcane Recovery picker skipped`, err); }
+    setTimeout(() => arcaneRecoveryDialog(actor).catch(err => console.warn(`${MODULE} | Arcane Recovery dialog`, err)), 0);
+  } catch (err) { console.warn(`${MODULE} | Arcane Recovery picker skipped`, err); }
 });
 
 export { arcaneRecoveryDialog };

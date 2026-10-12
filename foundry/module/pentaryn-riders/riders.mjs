@@ -39,6 +39,7 @@
  */
 
 import * as core from "./riders-core.mjs";
+import { MODULE } from "./riders-core.mjs";
 // Ritual Adept: unprepared wizard rituals on the HUD, slot unticked by default (setting `rituals`).
 import "./rituals.mjs";
 // Concentration summons leave when concentration ends; the break button gets its label (setting `concentrationSummons`).
@@ -49,9 +50,8 @@ import "./argon-tidy.mjs";
 // Cast flow: a summon keeps the sidebar tab and says how to place; restoring a slot opens on the highest spent level.
 import "./cast-flow.mjs";
 
-const MOD = core.MOD;
-const QUERY = `${MOD}.battleMedic`;
-const PRESET = Symbol.for(`${MOD}.resistancePreset`);
+const QUERY = `${MODULE}.battleMedic`;
+const PRESET = Symbol.for(`${MODULE}.resistancePreset`);
 const L = (k, data) => (data ? game.i18n.format(`PENTARYN_RIDERS.${k}`, data) : game.i18n.localize(`PENTARYN_RIDERS.${k}`));
 
 /* -------------------------------------------- */
@@ -89,7 +89,7 @@ function featuresOf(actor) {
       entry.items.push(item);
       if (rule.types) {
         const t = core.resolveTypes({
-          flagType: item.getFlag?.(MOD, "damageType"),
+          flagType: item.getFlag?.(MODULE, "damageType"),
           name: item.name,
           activityTypes: activityDamageTypes(item)
         }, rule.types);
@@ -145,7 +145,7 @@ function originOf(config, message) {
 const usedFrom = origin => core.usedFromMessages(game.messages ?? [], origin);
 
 function applyRiders(rolls, config, message) {
-  if (!game.settings.get(MOD, "enabled")) return;
+  if (!game.settings.get(MODULE, "enabled")) return;
   const activity = config?.subject;
   const item = activity?.item;
   const actor = activity?.actor ?? item?.actor;
@@ -176,7 +176,7 @@ function applyRiders(rolls, config, message) {
     usedThisCasting: activity.type === "attack" ? usedFrom(origin) : []
   });
   for (const s of plan.skipped) {
-    if (s.why === "no-type") console.warn(`${MOD} | ${s.key} on ${actor.name} has no damage type set — game.pentaryn.riders.setType(actor, "fire")`);
+    if (s.why === "no-type") console.warn(`${MODULE} | ${s.key} on ${actor.name} has no damage type set — game.pentaryn.riders.setType(actor, "fire")`);
   }
   if (!plan.applied.length) return;
 
@@ -204,11 +204,11 @@ function applyRiders(rolls, config, message) {
   // Stamp the message: what was applied (once-per-casting guard, the tray preset, the card note).
   // dnd5e 6 strips the header flavor from item cards, so the note is rendered from this flag.
   message.data ??= {};
-  foundry.utils.setProperty(message.data, `flags.${MOD}`, core.riderFlag(plan, origin));
+  foundry.utils.setProperty(message.data, `flags.${MODULE}`, core.riderFlag(plan, origin));
 }
 
 Hooks.on("dnd5e.postDamageRollConfiguration", (rolls, config, dialog, message) => {
-  try { applyRiders(rolls, config, message); } catch (err) { console.warn(`${MOD} | riders skipped`, err); }
+  try { applyRiders(rolls, config, message); } catch (err) { console.warn(`${MODULE} | riders skipped`, err); }
 });
 
 /* -------------------------------------------- */
@@ -221,7 +221,7 @@ Hooks.on("dnd5e.postDamageRollConfiguration", (rolls, config, dialog, message) =
 function renderNote(message, html) {
   if (!html?.querySelector) return;
   html.querySelector(".pentaryn-riders-note")?.remove();
-  const flag = message?.flags?.[MOD];
+  const flag = message?.flags?.[MODULE];
   if (!flag?.applied?.length || !["damage", "healing"].includes(message.type) || !message.isContentVisible) return;
   const parts = core.noteParts(flag);
   if (!parts.length) return;
@@ -241,7 +241,7 @@ function renderNote(message, html) {
 }
 
 Hooks.on("dnd5e.renderChatMessage", (message, html) => {
-  try { renderNote(message, html); } catch (err) { console.warn(`${MOD} | card note skipped`, err); }
+  try { renderNote(message, html); } catch (err) { console.warn(`${MODULE} | card note skipped`, err); }
 });
 
 /* -------------------------------------------- */
@@ -291,8 +291,8 @@ Hooks.on("dnd5e.preCalculateDamage", (actor, damages, options) => {
   try {
     if (!options || options[PRESET]) return;
     const message = options.originatingMessage;
-    const types = message?.flags?.[MOD]?.ignoreResistance;
-    if (!types?.length || !game.settings.get(MOD, "enabled")) return;
+    const types = message?.flags?.[MODULE]?.ignoreResistance;
+    if (!types?.length || !game.settings.get(MODULE, "enabled")) return;
     const dr = actor?.system?.traits?.dr?.value;
     const hit = types.filter(t => dr?.has?.(t));
     for (const persistent of trayOptionsFor(message, actor)) {
@@ -303,7 +303,7 @@ Hooks.on("dnd5e.preCalculateDamage", (actor, damages, options) => {
     // This calculation's copy was taken before the seeding above.
     options[PRESET] = true;
     if (hit.length) seedIgnore(options, hit);
-  } catch (err) { console.warn(`${MOD} | resistance preset skipped`, err); }
+  } catch (err) { console.warn(`${MODULE} | resistance preset skipped`, err); }
 });
 
 /* -------------------------------------------- */
@@ -360,7 +360,7 @@ const HEALER = core.ruleByKey("healer");
 
 function isBattleMedic(activity) {
   if (!activity) return false;
-  if (activity.flags?.[MOD]?.flow === "battle-medic") return true;
+  if (activity.flags?.[MODULE]?.flow === "battle-medic") return true;
   return core.normalizeName(activity.name) === "battle medic" && core.matchRule(HEALER, itemInfo(activity.item));
 }
 
@@ -404,7 +404,7 @@ async function runBattleMedic(healer, token) {
   await roll.toMessage({
     speaker: ChatMessage.implementation.getSpeaker({ actor: healer }),
     flavor: L("battleMedic.flavor", { target: token.name, faces: pool.faces }),
-    flags: { [MOD]: { flow: "battle-medic", target: target.uuid, faces: pool.faces } }
+    flags: { [MODULE]: { flow: "battle-medic", target: target.uuid, faces: pool.faces } }
   });
 
   const amount = core.clampHeal(roll.total, pool.faces, prof);
@@ -417,7 +417,7 @@ async function runBattleMedic(healer, token) {
       result = await gm.query(QUERY, { healerUuid: healer.uuid, targetUuid: target.uuid, faces: pool.faces, amount }, { timeout: 8000 });
     }
   } catch (err) {
-    console.warn(`${MOD} | Battle Medic write failed`, err);
+    console.warn(`${MODULE} | Battle Medic write failed`, err);
     ui.notifications.warn(L("battleMedic.failed", { name: token.name }));
     return null;
   }
@@ -431,19 +431,19 @@ async function runBattleMedic(healer, token) {
 
 Hooks.on("dnd5e.preUseActivity", (activity) => {
   try {
-    if (!game.settings.get(MOD, "enabled") || !isBattleMedic(activity)) return;
+    if (!game.settings.get(MODULE, "enabled") || !isBattleMedic(activity)) return;
     const why = battleMedicBlock(activity.actor, soleTarget());
     if (why) { ui.notifications.warn(why); return false; }
-  } catch (err) { console.warn(`${MOD} | Battle Medic check skipped`, err); }
+  } catch (err) { console.warn(`${MODULE} | Battle Medic check skipped`, err); }
 });
 
 Hooks.on("dnd5e.postUseActivity", (activity) => {
   try {
-    if (!game.settings.get(MOD, "enabled") || !isBattleMedic(activity)) return;
+    if (!game.settings.get(MODULE, "enabled") || !isBattleMedic(activity)) return;
     const token = soleTarget();
     if (!token?.actor || !activity.actor) return;
-    runBattleMedic(activity.actor, token).catch(err => console.warn(`${MOD} | Battle Medic failed`, err));
-  } catch (err) { console.warn(`${MOD} | Battle Medic skipped`, err); }
+    runBattleMedic(activity.actor, token).catch(err => console.warn(`${MODULE} | Battle Medic failed`, err));
+  } catch (err) { console.warn(`${MODULE} | Battle Medic skipped`, err); }
 });
 
 function findKit(actor) {
@@ -472,7 +472,7 @@ async function installBattleMedic(actor, { replace = true } = {}) {
     target: { affects: { type: "creature", count: "1" }, prompt: false },
     consumption: { targets: kitId ? [{ type: "itemUses", target: kitId, value: "1" }] : [] },
     description: { chatFlavor: "Tend to one creature: it spends a Hit Die, you roll it (1s rerolled) + your PB." },
-    flags: { [MOD]: { flow: "battle-medic" } }
+    flags: { [MODULE]: { flow: "battle-medic" } }
   };
   const existing = acts.find(a => isBattleMedic(a));
   if (existing) await item.updateActivity(existing.id, data);
@@ -496,7 +496,7 @@ function decorateHitDice(app, element) {
   if (!label) return;
   label.querySelector(".pr-hd")?.remove();
   const actor = app.document ?? app.actor;
-  if (!game.settings.get(MOD, "hdControls") || app.isEditMode || !app.isEditable || !actor) return;
+  if (!game.settings.get(MODULE, "hdControls") || app.isEditMode || !app.isEditable || !actor) return;
 
   const { value, max } = hdSummary(actor);
   const wrap = document.createElement("span");
@@ -526,7 +526,7 @@ function decorateHitDice(app, element) {
       if (b.dataset.prHd === "spend") await spendHitDie(actor);
       else await restoreHitDie(actor);
     } catch (err) {
-      console.warn(`${MOD} | hit die change failed`, err);
+      console.warn(`${MODULE} | hit die change failed`, err);
       b.disabled = false;
     }
   });
@@ -534,7 +534,7 @@ function decorateHitDice(app, element) {
 }
 
 Hooks.on("renderCharacterActorSheet", (app, element) => {
-  try { decorateHitDice(app, element); } catch (err) { console.warn(`${MOD} | hit dice controls skipped`, err); }
+  try { decorateHitDice(app, element); } catch (err) { console.warn(`${MODULE} | hit dice controls skipped`, err); }
 });
 
 /* -------------------------------------------- */
@@ -555,7 +555,7 @@ async function setType(target, type, ruleKey = null) {
   const done = [];
   for (const item of items) {
     if (!item?.setFlag) continue;
-    await item.setFlag(MOD, "damageType", t);
+    await item.setFlag(MODULE, "damageType", t);
     done.push(item.name);
   }
   return done;
@@ -572,7 +572,7 @@ async function retireManual(actor) {
     if (f.key !== "elemental-affinity" || !f.types?.length) continue;
     for (const item of f.items) {
       if (!item.isOwner) continue;
-      if (!item.getFlag(MOD, "damageType")) await item.setFlag(MOD, "damageType", f.types.length === 1 ? f.types[0] : f.types);
+      if (!item.getFlag(MODULE, "damageType")) await item.setFlag(MODULE, "damageType", f.types.length === 1 ? f.types[0] : f.types);
       for (const a of item.system.activities?.contents ?? []) {
         if (a.type !== "damage") continue;
         await item.deleteActivity(a.id);
@@ -623,12 +623,12 @@ function report(actor) {
 /* -------------------------------------------- */
 
 Hooks.once("init", () => {
-  game.settings.register(MOD, "enabled", {
+  game.settings.register(MODULE, "enabled", {
     name: "PENTARYN_RIDERS.settings.enabled.name",
     hint: "PENTARYN_RIDERS.settings.enabled.hint",
     scope: "world", config: true, type: Boolean, default: true
   });
-  game.settings.register(MOD, "hdControls", {
+  game.settings.register(MODULE, "hdControls", {
     name: "PENTARYN_RIDERS.settings.hdControls.name",
     hint: "PENTARYN_RIDERS.settings.hdControls.hint",
     scope: "world", config: true, type: Boolean, default: true,

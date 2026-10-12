@@ -37,19 +37,19 @@
  * Setting: pentaryn-riders.concentrationSummons (world, default on) turns part 1 off.
  */
 
-import { MOD, SUMMON_FLAG, concentrationEffectFor, summonTokenIds, concentrationResult } from "./table-core.mjs";
+import { MODULE, SUMMON_FLAG, concentrationEffectFor, summonTokenIds, concentrationResult } from "./table-core.mjs";
 
 function enabled() {
-  try { return game.settings.get(MOD, "concentrationSummons") !== false; } catch { return false; }
+  try { return game.settings.get(MODULE, "concentrationSummons") !== false; } catch { return false; }
 }
 
 Hooks.once("init", () => {
-  game.settings.register(MOD, "concentrationSummons", {
+  game.settings.register(MODULE, "concentrationSummons", {
     name: "PENTARYN_RIDERS.settings.concentrationSummons.name",
     hint: "PENTARYN_RIDERS.settings.concentrationSummons.hint",
     scope: "world", config: true, type: Boolean, default: true
   });
-  game.settings.register(MOD, "concentrationAutoBreak", {
+  game.settings.register(MODULE, "concentrationAutoBreak", {
     name: "PENTARYN_RIDERS.settings.concentrationAutoBreak.name",
     hint: "PENTARYN_RIDERS.settings.concentrationAutoBreak.hint",
     scope: "world", config: true, type: Boolean, default: true
@@ -65,8 +65,8 @@ Hooks.on("dnd5e.summonToken", (activity, profile, tokenData) => {
     const status = CONFIG.specialStatusEffects?.CONCENTRATING ?? "concentrating";
     const effect = concentrationEffectFor(actor?.effects ?? [], activity?.item?.id, status);
     if (!effect?.uuid) return;
-    foundry.utils.setProperty(tokenData, `flags.${MOD}.${SUMMON_FLAG}`, effect.uuid);
-  } catch (err) { console.warn(`${MOD} | concentration summon stamp skipped`, err); }
+    foundry.utils.setProperty(tokenData, `flags.${MODULE}.${SUMMON_FLAG}`, effect.uuid);
+  } catch (err) { console.warn(`${MODULE} | concentration summon stamp skipped`, err); }
 });
 
 /* ── 1b. concentration ends → its summons go ──────────────────────────── */
@@ -80,10 +80,10 @@ Hooks.on("deleteActiveEffect", (effect, options, userId) => {
     for (const scene of game.scenes) {
       const ids = summonTokenIds(scene.tokens, uuid).filter(id => scene.tokens.get(id)?.canUserModify(game.user, "delete"));
       if (!ids.length) continue;
-      console.info(`${MOD} | concentration on ${effect.name} ended: removing ${ids.length} summon token(s) from ${scene.name}`);
-      scene.deleteEmbeddedDocuments("Token", ids).catch(err => console.warn(`${MOD} | summon cleanup failed`, err));
+      console.info(`${MODULE} | concentration on ${effect.name} ended: removing ${ids.length} summon token(s) from ${scene.name}`);
+      scene.deleteEmbeddedDocuments("Token", ids).catch(err => console.warn(`${MODULE} | summon cleanup failed`, err));
     }
-  } catch (err) { console.warn(`${MOD} | concentration summon cleanup skipped`, err); }
+  } catch (err) { console.warn(`${MODULE} | concentration summon cleanup skipped`, err); }
 });
 
 /* ── 2. label the break button ────────────────────────────────────────── */
@@ -99,13 +99,13 @@ Hooks.on("dnd5e.renderChatMessage", (message, html) => {
       btn.append(span);
       btn.classList.add("pr-labelled");
     }
-  } catch (err) { console.warn(`${MOD} | break-concentration label skipped`, err); }
+  } catch (err) { console.warn(`${MODULE} | break-concentration label skipped`, err); }
 });
 
 /* ── 3. a failed concentration save ends it; the card says DC and result ── */
 
 function autoBreakOn() {
-  try { return game.settings.get(MOD, "concentrationAutoBreak") !== false; } catch { return false; }
+  try { return game.settings.get(MODULE, "concentrationAutoBreak") !== false; } catch { return false; }
 }
 
 const isConcSave = m => m?.type === "save" && m.system?.type === "concentration";
@@ -138,7 +138,7 @@ Hooks.on("createChatMessage", async (message, options, userId) => {
     if (!actor?.isOwner) return;
     const ended = await actor.endConcentration();
     if (ended?.length) await message.update({ "system.outcome": "broken" });
-  } catch (err) { console.warn(`${MOD} | concentration auto-break skipped`, err); }
+  } catch (err) { console.warn(`${MODULE} | concentration auto-break skipped`, err); }
 });
 
 Hooks.on("dnd5e.renderChatMessage", (message, html) => {
@@ -157,5 +157,5 @@ Hooks.on("dnd5e.renderChatMessage", (message, html) => {
     p.textContent = game.i18n.format(`PENTARYN_RIDERS.concentration.${key}`, { dc: Number(dc) });
     const at = root.querySelector(".dice-roll") ?? root.querySelector(".message-content");
     if (at?.classList?.contains("dice-roll")) at.after(p); else (at ?? root).append(p);
-  } catch (err) { console.warn(`${MOD} | concentration result line skipped`, err); }
+  } catch (err) { console.warn(`${MODULE} | concentration result line skipped`, err); }
 });

@@ -32,17 +32,17 @@
  */
 
 import * as rit from "./rituals-core.mjs";
+import { MODULE } from "./riders-core.mjs";
 
-const MOD = "pentaryn-riders";
-const DONE = Symbol.for(`${MOD}.ritualsAdded`);
-const WRAPPED = Symbol.for(`${MOD}.ritualsWrapped`);
+const DONE = Symbol.for(`${MODULE}.ritualsAdded`);
+const WRAPPED = Symbol.for(`${MODULE}.ritualsWrapped`);
 
 function enabled() {
-  try { return game.settings.get(MOD, "rituals") !== false; } catch { return false; }
+  try { return game.settings.get(MODULE, "rituals") !== false; } catch { return false; }
 }
 
 function longEnabled() {
-  try { return game.settings.get(MOD, "longCasts") !== false; } catch { return false; }
+  try { return game.settings.get(MODULE, "longCasts") !== false; } catch { return false; }
 }
 
 function hasRitualAdept(actor) {
@@ -55,12 +55,12 @@ function hasRitualAdept(actor) {
 }
 
 Hooks.once("init", () => {
-  game.settings.register(MOD, "rituals", {
+  game.settings.register(MODULE, "rituals", {
     name: "PENTARYN_RIDERS.settings.rituals.name",
     hint: "PENTARYN_RIDERS.settings.rituals.hint",
     scope: "world", config: true, type: Boolean, default: true
   });
-  game.settings.register(MOD, "longCasts", {
+  game.settings.register(MODULE, "longCasts", {
     name: "PENTARYN_RIDERS.settings.longCasts.name",
     hint: "PENTARYN_RIDERS.settings.longCasts.hint",
     scope: "world", config: true, type: Boolean, default: true
@@ -77,7 +77,7 @@ Hooks.on("dnd5e.preUseActivity", (activity, usageConfig) => {
     if (!hasRitualAdept(item.actor)) return;
     const consume = usageConfig?.consume;
     if (consume && typeof consume === "object" && consume.spellSlot === true) consume.spellSlot = false;
-  } catch (err) { console.warn(`${MOD} | ritual slot default skipped`, err); }
+  } catch (err) { console.warn(`${MODULE} | ritual slot default skipped`, err); }
 });
 
 /* ── 2. "Rituals" group on Argon's Action-bar Cast Spell panel ─────────── */
@@ -120,7 +120,7 @@ Hooks.once("ready", () => {
   Base.prototype[WRAPPED] = true;
   const original = Base.prototype._renderInner;
   Base.prototype._renderInner = async function (...args) {
-    try { addRituals(this); } catch (err) { console.warn(`${MOD} | Rituals group skipped`, err); }
+    try { addRituals(this); } catch (err) { console.warn(`${MODULE} | Rituals group skipped`, err); }
     return original.apply(this, args);
   };
 });
