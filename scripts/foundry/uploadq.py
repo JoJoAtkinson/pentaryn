@@ -44,14 +44,13 @@ from dataclasses import MISSING, asdict, dataclass, field
 from pathlib import Path
 from typing import Callable, Iterator
 
-from scripts.foundry.bundles import STAGING
+from scripts.foundry.bundles import STAGING, TMP_DIRNAME
 
 try:
     import fcntl
 except ImportError:  # pragma: no cover — native Windows; BOSS runs Foundry in WSL
     fcntl = None  # type: ignore[assignment]
 
-TMP_DIRNAME = ".pentaryn-tmp"
 JOB_SUFFIX = ".job.json"
 BUILDING_SUFFIX = ".building"
 BUILD_LOCK = "snapshot-build.lock"

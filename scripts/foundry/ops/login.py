@@ -113,7 +113,10 @@ def _choose(prompt: str, options: list[tuple[str, object]], default_index: int =
         if not raw:
             return options[default_index][1]
         try:
-            return options[int(raw) - 1][1]
+            n = int(raw)
+            if not 1 <= n <= len(options):
+                raise IndexError
+            return options[n - 1][1]
         except (ValueError, IndexError):
             raise RuntimeError(f"{raw!r} is not one of 1-{len(options)}") from None
 

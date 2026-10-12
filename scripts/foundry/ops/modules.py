@@ -7,12 +7,14 @@ The check step exists because of how Foundry fails here — a broken esmodule fa
 console, no entry in Manage Modules that looks wrong; it is just absent. So nothing
 reaches Data/ until its sources have been proved.
 
-There are four gates, and each one sees something the others cannot:
+There are six gates, and each one sees something the others cannot:
 
-    parse      `node --check` on every .mjs, JSON.parse on every .json
-    imports    every named import exists in the file it is imported FROM
-    i18n       every key the code localises exists in lang/en.json
-    node-test  the module's own suite, where it has one
+    parse        `node --check` on every .mjs, JSON.parse on every .json
+    imports      every named import exists in the file it is imported FROM
+    i18n         every key the code localises exists in lang/en.json
+    node-test    the module's own suite, where it has one
+    vendor       the vendored kit is byte-identical to foundry/lib
+    conformance  the fail-class blueprint rules pass, or exceptions.json accepts them
 
 They run in that order and stop at the first failure. `imports` is the one added
 after 2026-08-22, when an `export` was deleted out from under two importers: every
@@ -35,10 +37,7 @@ from pathlib import Path
 
 from . import config as cfg, jsscan
 from .digest import SYNC_STAMP, tree_digest  # noqa: F401 — re-exported for callers and tests
-from .out import append_jsonl, event, now_iso
-from .service import _say
-
-OK, FAIL = 0, 1
+from .out import FAIL, OK, append_jsonl, event, now_iso, say as _say
 
 # Build output and vendored code are not ours to check.
 _SKIP_DIRS = {"node_modules", "target", ".git"}
@@ -158,7 +157,7 @@ def _gate_imports(spec: cfg.ModuleSpec) -> GateResult:
         return target
 
     def exported(path: Path, name: str, seen: set[Path] | None = None) -> bool:
-        """Membership, following `export * from` / `export {x} from` one hop at a time."""
+        """Membership, following `export * from` one hop at a time."""
         seen = seen or set()
         if path in seen:
             return False
@@ -325,7 +324,7 @@ def _check_i18n(spec: cfg.ModuleSpec) -> int:
 
 
 def _gate_node_test(spec: cfg.ModuleSpec, *, capture: bool = False) -> GateResult:
-    """Run the module's own test suite. Pure geometry — Foundry can stay stopped.
+    """Run the module's own suite (node, no Foundry needed).
 
     Streams the suite to the terminal, or — `capture=True`, for `--json` — keeps its
     output off stdout and puts the tail of it in `problems` when it fails."""
@@ -543,7 +542,10 @@ def _ops_log(cmd: str, record: dict, dst: Path) -> None:
         append_jsonl(cfg.OPS_LOG_DIR / f"ops-{record['synced_at'][:7]}.jsonl", line)
     except OSError as err:
         _say(f"▸ ops log not written ({err})")
-    event(cmd, **{k: v for k, v in line.items() if k != "ts"})
+    try:
+        event(cmd, **{k: v for k, v in line.items() if k != "ts"})
+    except OSError as err:
+        _say(f"▸ ops log not written ({err})")
 
 
 def staging_dir(dst: Path) -> Path:
@@ -565,7 +567,7 @@ def install(src: Path, dst: Path, *, cmd: str = "module-sync") -> dict:
 
     The stamp (`SYNC_STAMP`: module, version, digest, git, dirty, synced_at) is written into the copy
     before the swap; after it, one line goes to `foundry/logs/ops-YYYY-MM.jsonl` with `cmd`
-    (`module-sync`, or `stage` from the actor pipeline). Returns the stamp.
+    (`module-sync`, `stage` or `importer-install`). Returns the stamp.
     """
     staging = staging_dir(dst)
     staging.mkdir(parents=True, exist_ok=True)
@@ -622,7 +624,8 @@ def module_new(argv: list[str]) -> int:
     repo's own entry point, so it adds `--install` unless the caller chose an `--out`."""
     from scripts.foundry.blueprint import new_module
     argv = list(argv)
-    if "--out" not in argv and "--install" not in argv:
+    chose_out = any(a == "--out" or a.startswith("--out=") for a in argv)
+    if not chose_out and "--install" not in argv:
         argv.append("--install")
     return new_module.main(argv)
 

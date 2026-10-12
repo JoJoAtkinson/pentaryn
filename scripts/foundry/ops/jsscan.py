@@ -341,10 +341,8 @@ def exports_of(s: Source) -> tuple[set[str], list[str]]:
         names.update(re.findall(IDENT, m.group(1)))
 
     for m in _RE_EXPORT_LIST.finditer(s.code):
-        if m.group(2):                      # `export {a} from "./x"` — a re-export
-            lit = s.str_at(m.group(2))
-            if lit:
-                stars.append(lit.value)     # resolved the same way; names filtered below
+        # `export {a} from "./x"` forwards only the braced names, so it adds them here
+        # and never feeds `stars` — only `export * from` forwards everything.
         for part in m.group(1).split(","):
             part = part.strip()
             if part:

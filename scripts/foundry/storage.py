@@ -347,7 +347,6 @@ class RcloneStorage:
         self.runner = runner or subprocess.run
         self.timeouts = {**TIMEOUTS, **(timeouts or {})}
         self.interactive = interactive
-        self._dir_cache: dict[str, list[Entry]] = {}
         self._raw_cache: dict[str, list[Entry]] = {}
         self._missing: set[str] = set()     # cached listings that were "not found"
 
@@ -416,7 +415,6 @@ class RcloneStorage:
 
     def refresh(self, sub: str) -> None:
         """Drop the cached listing of `sub`: the next `ls` runs `lsjson` again."""
-        self._dir_cache.pop(sub, None)
         self._raw_cache.pop(sub, None)
         self._missing.discard(sub)
 

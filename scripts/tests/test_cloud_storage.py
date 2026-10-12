@@ -57,6 +57,16 @@ def test_mkdirs_creates_the_five_subfolders(st, cloud_dir):
     assert sorted(p.name for p in cloud_dir.iterdir()) == sorted(storage.SUBFOLDERS)
 
 
+def test_subfolders_are_exactly_the_cloud_folders():
+    # storage cannot import cloud/bundles, so its literals are pinned here: a rename on
+    # one side would stop mkdirs creating the folder and fail GC's must_exist mark forever.
+    from scripts.foundry import bundles, cloud
+    assert set(storage.SUBFOLDERS) == {cloud.ASSETS_IN, cloud.WORLD_BACKUPS,
+                                       cloud.SYSTEM_BACKUP, cloud.MAJOR_RELEASES,
+                                       bundles.BUNDLES}
+    assert storage.CONTENT_ADDRESSED == {bundles.BUNDLES}
+
+
 def test_write_read_exists_delete(st):
     assert st.read_text("world-backups/README.txt") is None
     assert not st.exists("world-backups/README.txt")
@@ -316,6 +326,14 @@ def test_ensure_cloud_rewrites_a_stale_readme_that_describes_bundles(fake_cloud)
     assert "lineage and bundle manifest" in text
     legacy = text[text.index("system-backup/"):]
     assert "legacy" in legacy.splitlines()[0].lower()
+
+
+def test_readme_retention_is_the_host_default():
+    from scripts.foundry import cloud, host
+    assert cloud.KEEP_SNAPSHOTS == host.DEFAULT_KEEP_SNAPSHOTS
+    # The README line is the text it was before cloud took the number from host.
+    assert ("                Each machine keeps its own most recent 10, and a snapshot\n"
+            in cloud.README_TEXT)
 
 
 # ── PENTARYN_CLOUD selection (§1.8) ─────────────────────────────────────────

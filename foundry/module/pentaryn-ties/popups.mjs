@@ -26,7 +26,7 @@ import { MODULE, stanceOf } from "./ties-core.mjs";
 import { readWorn } from "./ties-adapter.mjs";
 import { canSee, read, stanceLabel } from "./ties-adapter.mjs";
 import { makeLog } from "./lib/log.mjs";
-import { PIN_SETTING, setting } from "./settings.mjs";
+import { PIN_SETTING, setting, mayWrite } from "./settings.mjs";
 
 const log = makeLog(MODULE);
 
@@ -357,6 +357,7 @@ function savePinned() {
 export function restorePinned() {
   const saved = setting(PIN_SETTING);
   if (!Array.isArray(saved) || !saved.length) return;
+  if (!mayWrite()) return; // the playerAccess kill switch: a player's memo waits, untouched, for access to return
 
   for (const entry of saved) {
     const actor = game.actors?.get(entry?.sourceId);

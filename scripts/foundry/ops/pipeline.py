@@ -16,9 +16,8 @@ import sys
 from . import config as cfg
 from .modules import install
 from . import service
-from .service import _http_code, _probe, _say
-
-OK, FAIL = 0, 1
+from .out import FAIL, OK, say as _say
+from .service import _http_code, _probe
 
 
 def build_actors() -> int:
@@ -225,6 +224,10 @@ def run_import() -> int:
     previous = {s: signal.signal(s, _on_signal) for s in (signal.SIGINT, signal.SIGTERM)}
     try:
         answer = _ask()
+    except BaseException:
+        # Anything else out of the prompt (a garbled tty byte, a bug) still deletes.
+        cfg.ACTORS_STAGED.unlink(missing_ok=True)
+        raise
     finally:
         for s, handler in previous.items():
             signal.signal(s, handler)

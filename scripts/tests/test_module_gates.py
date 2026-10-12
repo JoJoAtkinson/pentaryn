@@ -59,6 +59,14 @@ def test_check_report_is_silent(tmp_path, monkeypatch, capsys):
     assert capsys.readouterr().out == ""
 
 
+def test_gate_tables_agree():
+    """The spec's gate names, the prose runners and the --json runners are one set.
+
+    `check` and `check_report` skip a name their table lacks, so a drift would make prose
+    and --json silently run different gates."""
+    assert set(cfg.ModuleSpec.CHECKS) == set(modules._CHECKS) == set(modules._GATES)
+
+
 def test_prose_and_data_agree(tmp_path, capsys):
     spec = TmpSpec(_module(tmp_path, BROKEN), check=("imports",))
     rc = modules._check_imports(spec)
@@ -196,6 +204,11 @@ def test_conformance_gate_does_not_exempt_a_wait_module(tmp_path, monkeypatch):
 def test_every_spec_runs_the_blueprint_gates_last():
     for name, spec in cfg.MODULES.items():
         assert spec.check[-2:] == ("vendor", "conformance"), name
+
+
+def test_every_spec_uses_all_gates():
+    assert cfg.ALL_GATES == ("parse", "imports", "i18n", "node-test", "vendor", "conformance")
+    assert all(s.check == cfg.ALL_GATES for s in cfg.MODULES.values())
 
 
 # ── check_all (python-tooling-8) ──────────────────────────────────────────────

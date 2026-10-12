@@ -41,7 +41,7 @@ FP_LEN = 16
 GC_GRACE_SECONDS = 7 * 86400
 CACHE_FILENAME = "pentaryn-bundle-cache.json"   # beside pentaryn-boot.json, outside snapshots
 CACHE_SCHEMA = 1
-TMP_DIRNAME = ".pentaryn-tmp"             # = cloud.TMP_DIRNAME; same filesystem as Data/
+TMP_DIRNAME = ".pentaryn-tmp"   # uploadq and cloud take the name from here; same fs as Data/
 STAGING = "bundles"                       # under .pentaryn-tmp/
 EXTRACT = "extract"                       # under .pentaryn-tmp/
 LEVELDB_MARKER = "CURRENT"
@@ -225,8 +225,8 @@ def _save_cache(path: Path, entries: dict[str, dict]) -> None:
         log(f"⚠ could not write the bundle cache {path}: {e}")
 
 
-def _entry(files, fp: str, version: str) -> dict:
-    return {"sig": _sig(files), "fp": fp, "version": version, "files": len(files),
+def _entry(files, fp: str, version: str, sig: str | None = None) -> dict:
+    return {"sig": sig if sig is not None else _sig(files), "fp": fp, "version": version, "files": len(files),
             "bytes": sum(size for _r, _p, size, _m in files)}
 
 
@@ -317,7 +317,7 @@ def local_inventory(*, cache: bool = True, warn: Callable[[str], None] | None = 
                 fp = hit["fp"]
             else:
                 fp = fingerprint(path, files=files).fp
-            new[key] = _entry(files, fp, version)
+            new[key] = _entry(files, fp, version, sig)
             inv[key] = Local(kind, name, version, fp, path, new[key]["files"],
                              new[key]["bytes"])
     if cache and save and new != old:

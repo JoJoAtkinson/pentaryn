@@ -29,9 +29,7 @@ import subprocess
 import time
 from dataclasses import dataclass, field
 
-from .service import _say
-
-OK, FAIL = 0, 1
+from .out import FAIL, OK, say as _say
 
 BRIDGE_PORTS = (31414, 31415, 31416)
 MATCH = "foundry-vtt-mcp"
