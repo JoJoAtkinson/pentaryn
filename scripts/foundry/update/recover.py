@@ -188,27 +188,28 @@ def _restore_world_tar(snapshot: "cloud.Snapshot | Path | None", rec: Recovery) 
     """Replace worlds/Config/modules from a cloud snapshot (or a local tar path).
 
     ``cloud.py restore`` cannot be used here: it prompts on stdin (an EOFError under
-    launchd), refuses while the server answers, and runs a pre-restore ``backup()`` —
-    which calls ``mirror_systems()`` and would prune the older system tar a system
-    rollback may still need. This downloads to temp first (rclone or folder alike), then
-    clears and extracts via ``cloud.extract_snapshot``, which keeps this machine's own
-    ``Config/options.json``, ``admin.txt`` and ``license.json``.
+    launchd), refuses while the server answers, and runs a pre-restore ``backup()``.
+    This goes through ``cloud.fetch_snapshot`` (the world tar plus every module bundle this
+    machine lacks, downloaded and verified before anything local is touched) and
+    ``cloud.apply_snapshot(systems=False)`` — the system comes back from its own aside
+    copy (``_restore_system_from_aside``), never from the snapshot's manifest. Both keep
+    this machine's own ``Config/options.json``, ``admin.txt`` and ``license.json``. A
+    full (pre-bundles) snapshot restores as before; a refusal raises ``RuntimeError``.
     """
     if snapshot is None:
         raise RuntimeError("no world snapshot to restore from")
     if isinstance(snapshot, Path):
         if not snapshot.exists():
             raise RuntimeError(f"world snapshot missing: {snapshot}")
-        cloud.extract_snapshot(snapshot)
+        cloud.extract_snapshot(snapshot, systems=False)
         rec.steps.append(f"restored worlds/Config/modules from {snapshot.name}")
         return
     st = cloud.store()
-    local = cloud.tmp_dir() / snapshot.name
+    fetched = cloud.fetch_snapshot(st, snapshot, systems=False)
     try:
-        st.download(snapshot.rel, local)
-        cloud.extract_snapshot(local)
+        cloud.apply_snapshot(fetched, systems=False)
     finally:
-        local.unlink(missing_ok=True)
+        cloud.discard_fetched(fetched)
     anc = cloud.read_lineage(st, snapshot)
     bootstate.load().record_snapshot(snapshot.name, snapshot.host, snapshot.mtime,
                                      cloud.snapshot_digest(), by="updater-rollback",
@@ -220,10 +221,10 @@ def _restore_world_tar(snapshot: "cloud.Snapshot | Path | None", rec: Recovery) 
 def _restore_system_from_aside(system_id: str, version: str, rec: Recovery) -> None:
     """Put back the pre-update system code from the copy set aside before the run.
 
-    The copy is essential: ``cloud.py``'s ``mirror_systems()`` deletes every older
-    ``<system>-*.tar.gz`` before writing the current one, so the moment a post-update
-    backup runs, the only OneDrive copy of the old system is gone. Phase 1 stashes it
-    in ``.state/system-aside/`` for exactly this moment.
+    The copy is the rollback's own: the cloud keeps a system bundle only while a retained
+    snapshot's manifest names it, and the world restore here leaves ``Data/systems``
+    alone (``systems=False``). Phase 1 stashes it in ``.state/system-aside/`` for exactly
+    this moment.
     """
     aside = SYSTEM_ASIDE_DIR / f"{system_id}-{version}.tar.gz"
     if not aside.exists():

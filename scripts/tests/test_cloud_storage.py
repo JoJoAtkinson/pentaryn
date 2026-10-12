@@ -52,7 +52,8 @@ def _src(tmp_path: Path, name="snap.tar.gz", size=4096) -> Path:
 
 # ── the shared contract ─────────────────────────────────────────────────────
 
-def test_mkdirs_creates_the_four_subfolders(st, cloud_dir):
+def test_mkdirs_creates_the_five_subfolders(st, cloud_dir):
+    assert len(storage.SUBFOLDERS) == 5 and "bundles" in storage.SUBFOLDERS
     assert sorted(p.name for p in cloud_dir.iterdir()) == sorted(storage.SUBFOLDERS)
 
 
@@ -145,6 +146,13 @@ def test_rclone_upload_is_copyto_partial_then_moveto(rc, fake, tmp_path):
     copy, move = fake.calls[0], fake.calls[1]
     assert copy[2:4] == [str(src), "fake:root/world-backups/w.tar.gz.partial"]
     assert move[2:4] == ["fake:root/world-backups/w.tar.gz.partial", "fake:root/world-backups/w.tar.gz"]
+
+
+def test_rclone_mkdirs_is_one_mkdir_per_subfolder(rc, fake):
+    rc.mkdirs()
+    assert fake.calls == [["rclone", "mkdir", f"fake:root/{sub}", *storage.COMMON_FLAGS]
+                          for sub in storage.SUBFOLDERS]
+    assert len(fake.calls) == 5
 
 
 def test_rclone_failing_copyto_leaves_only_partial_and_raises(rc, fake, tmp_path):
@@ -279,6 +287,37 @@ def test_rclone_transfers_show_progress_on_a_tty(cloud_dir, fake, tmp_path):
     assert "--progress" in fake.calls[0]
 
 
+# ── cloud.ensure_cloud sweeps stale partials in bundles/ too (module bundles §6) ──
+
+def test_ensure_cloud_sweeps_stale_bundle_partials_only(fake_cloud):
+    from scripts.foundry import cloud
+    bdir = fake_cloud / "bundles"
+    bdir.mkdir(exist_ok=True)
+    old = bdir / "module@a@1@0123456789abcdef.tar.gz.partial"
+    young = bdir / "module@b@1@0123456789abcdef.tar.gz.partial"
+    done = bdir / "module@c@1@0123456789abcdef.tar.gz"
+    for p in (old, young, done):
+        p.write_text("x")
+    for p, age in ((old, 25 * 3600), (young, 2 * 3600), (done, 30 * 86400)):
+        t = time.time() - age
+        os.utime(p, (t, t))
+    cloud.ensure_cloud()
+    assert not old.exists() and young.exists() and done.exists()
+
+
+def test_ensure_cloud_rewrites_a_stale_readme_that_describes_bundles(fake_cloud):
+    from scripts.foundry import cloud
+    (fake_cloud / "README.txt").write_text("the old text, system mirrors and 3 GB snapshots\n")
+    cloud.ensure_cloud()
+    text = (fake_cloud / "README.txt").read_text()
+    assert text == cloud.README_TEXT
+    assert "bundles/" in text and "module@<id>@<version>@<fingerprint>.tar.gz" in text
+    assert "~45 MB" in text and "2.5-3.2 GB" not in text
+    assert "lineage and bundle manifest" in text
+    legacy = text[text.index("system-backup/"):]
+    assert "legacy" in legacy.splitlines()[0].lower()
+
+
 # ── PENTARYN_CLOUD selection (§1.8) ─────────────────────────────────────────
 
 def test_select_a_path_is_a_folder(tmp_path):
@@ -324,3 +363,61 @@ def test_select_mac_folder_is_an_explicit_opt_out(tmp_path):
 
 def test_entry_is_plain_data():
     assert Entry("a", 1, 2.0) == Entry("a", 1, 2.0)
+
+
+# ── refresh: a listing of what the cloud holds NOW (review DL1) ─────────────
+
+def test_refresh_makes_the_next_ls_see_what_another_process_did(st, cloud_dir, tmp_path):
+    st.upload(_src(tmp_path), "bundles/a.tar.gz")
+    assert [e.name for e in st.ls("bundles")] == ["a.tar.gz"]
+    (cloud_dir / "bundles" / "a.tar.gz").unlink()           # the other host's GC
+    (cloud_dir / "bundles" / "b.tar.gz").write_bytes(b"b")  # the other host's upload
+    storage.refresh(st, "bundles")
+    assert [e.name for e in st.ls("bundles")] == ["b.tar.gz"]
+
+
+def test_rclone_refresh_drops_only_that_folders_listing(rc, fake):
+    rc.ls("bundles")
+    rc.ls("world-backups")
+    fake.calls.clear()
+    rc.refresh("bundles")
+    rc.ls("bundles")
+    rc.ls("world-backups")
+    assert fake.verbs() == ["lsjson"]                       # bundles/ only
+
+
+def test_refresh_tolerates_a_storage_without_the_method():
+    class Bare:
+        def ls(self, sub):
+            return []
+    storage.refresh(Bare(), "bundles")                      # no AttributeError
+
+
+# ── read_head: the first bytes of a cloud file (review DL4) ─────────────────
+
+def test_read_head_returns_the_first_bytes_or_none(st, tmp_path):
+    src = _src(tmp_path, size=8192)
+    st.upload(src, "world-backups/a.tar.gz")
+    assert st.read_head("world-backups/a.tar.gz", 100) == src.read_bytes()[:100]
+    assert st.read_head("world-backups/a.tar.gz", 10**6) == src.read_bytes()
+    assert st.read_head("world-backups/gone.tar.gz", 100) is None
+
+
+def test_rclone_read_head_is_one_binary_cat_with_a_count(rc, fake, tmp_path):
+    rc.upload(_src(tmp_path), "world-backups/a.tar.gz")
+    fake.calls.clear()
+    rc.read_head("world-backups/a.tar.gz", 4096)
+    [argv] = fake.calls
+    assert argv[1] == "cat" and argv[argv.index("--count") + 1] == "4096"
+
+
+# ── ls(must_exist=True): a folder that is not found is "cannot tell" (review MD1) ──
+
+def test_ls_must_exist_raises_on_a_missing_folder_and_plain_ls_stays_empty(st):
+    assert st.ls("nowhere") == []                           # cached as not found (rclone)
+    with pytest.raises(StorageError):
+        st.ls("nowhere", must_exist=True)                   # the cached miss too
+    storage.refresh(st, "nowhere")
+    with pytest.raises(StorageError):
+        st.ls("nowhere", must_exist=True)                   # a fresh listing
+    assert st.ls("nowhere") == []

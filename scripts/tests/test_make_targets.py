@@ -151,3 +151,32 @@ def test_two_host_targets(target, expect):
 def test_clipboard_targets_never_name_pbcopy_directly():
     for target in ("foundry-key", "foundry-admin-key"):
         assert "pbcopy" not in _dry(target)
+
+
+# ── module bundles (module-bundles-2026-10 §3.7, §3.8, S5) ───────────────────
+
+def test_foundry_bundles_lists_and_never_sweeps():
+    out = _dry("foundry-bundles")
+    assert "scripts.foundry.cloud bundles" in out
+    assert "bundles-gc" not in out
+
+
+def test_foundry_bundles_gc_is_a_dry_run_unless_yes():
+    dry = _dry("foundry-bundles-gc")
+    assert "scripts.foundry.cloud bundles-gc" in dry
+    assert "--yes" not in dry
+    assert "scripts.foundry.cloud bundles-gc --yes" in _dry_args("foundry-bundles-gc", "YES=1")
+
+
+def test_vtt_down_snapshots_after_everything_is_down():
+    out = _dry("vtt-down")
+    order = [out.index(s) for s in ("ops lock-check", "ops tunnel-down", "ops down",
+                                    "cloud backup --reason shutdown")]
+    assert order == sorted(order)
+
+
+def test_help_names_the_bundle_targets_and_the_world_size():
+    out = _dry_args("help")
+    assert "make foundry-bundles " in out and "make foundry-bundles-gc" in out
+    assert "YES=1 deletes" in out
+    assert "~45 MB" in out
