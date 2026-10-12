@@ -15,8 +15,9 @@ tags: [plans, audit, foundry]
 > **Status (wave 4, 2026-10-11, branch `migrate/wave-4`, not merged):** all 16 findings landed in
 > the blueprint migration (record: `../addon-blueprint-2026-10/migrate-pentaryn-aoe.md` Result).
 > -2 `c0a75a64` · -4 `03322772` + `0f83d5fe` (D-A1) · -5 `4bc7d44c` · -6 `f54ba674` · -7 `5009afc4`
-> (D-A6) · -8 `130fb3c3` · -9 `515776c0`, `84c847df`, `097c9e67` · -10 `4644e577`, `0cbbab0e` ·
-> -11 `47bc85c7` (README) + the review fix that put the 8 setting rows, Parts F/G and the Console
+> (D-A6; review fix `fb931b3d`: v14 replaces a world actor with an existing id rather than
+> refusing it, so the catch is a fallback) · -8 `130fb3c3` · -9 `515776c0`, `84c847df`, `097c9e67` · -10 `4644e577`, `0cbbab0e` ·
+> -11 `47bc85c7` (README) + `a6038b1d`, the review fix that put the 8 setting rows, Parts F/G and the Console
 > pointer into `context/foundry/aoe.md` with the docs-drift guard `test/docs-drift.test.mjs` (a node
 > test reading SETTINGS / MANIFEST / FEATURE_ROWS, not the pytest regexes) · -12 `47bc85c7` · -13 `87959748` · -14
 > `7198fe70` · -15 `515776c0` + `18addee4` (D-A2) · -30 `41b51b43` · -39 `0b9b13fd` (+ the
