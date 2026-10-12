@@ -376,6 +376,13 @@ Form / a form left in the sidebar* → [`../../foundry/module/pentaryn-transform
 design for Wild Shape on the HUD (moved out of the module, transform-creatures-19) | superseded; history only |`.
 `context/pentaryn.md:613` (optional): the module is past 0.3.1; `starry.mjs` is no longer imported by hud.mjs.
 
+`foundry/module/pentaryn-combat/README.md:158-159` ("Flags other modules read", made wrong by
+eb5d576b, -13 step 3) — replace the two lines starting "None directly. pentaryn-transform reads…" with
+the text below (or the combat lane lands it):
+
+> None directly. pentaryn-transform asks this module's published `coversMultiattack(ref)` to hide a covered
+> Multiattack button (transform-creatures-13); it reads no combat setting.
+
 New `scripts/tests/test_module_contracts.py` (-21; drafted, 4 passed against this branch at a
 repo-shaped path): transform-core's `STARRY_LIGHT` pinned, and pentaryn-senses'
 `carriedLightOf` / `lightingItemId` turn exactly that `flags.pentaryn-senses.light` into the token's
