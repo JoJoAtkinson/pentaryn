@@ -24,6 +24,18 @@ export function bindActions(a) {
 
 const warn = (label, err) => console.warn(`${MODULE} | light ${label}`, err);
 
+/**
+ * The Light actions, once, for both the prompt's buttons (`dialog`) and the spell card's action row
+ * (`card`): same labels, same icons, same order. `handler` names light.mjs's action (null: Not now).
+ */
+export const LIGHT_ACTIONS = Object.freeze([
+  Object.freeze({ action: "me", icon: "fa-solid fa-user", label: "PENTARYN_SENSES.Light.OnMe", handler: "onMe", dialog: true, card: true }),
+  Object.freeze({ action: "pick", icon: "fa-solid fa-crosshairs", label: "PENTARYN_SENSES.Light.Pick", handler: "pickAndCast", dialog: true, card: true }),
+  Object.freeze({ action: "end", icon: "fa-solid fa-lightbulb-slash", label: "PENTARYN_SENSES.Light.End", handler: "end", card: true }),
+  Object.freeze({ action: "cancel", icon: "fa-solid fa-xmark", label: "PENTARYN_SENSES.Light.NotNow", handler: null, dialog: true })
+]);
+const lightAction = act => LIGHT_ACTIONS.find(a => a.action === act);
+
 /** The "Where does the light go?" prompt, right after the cast. */
 export async function prompt(item) {
   item = realItem(item);
@@ -32,15 +44,13 @@ export async function prompt(item) {
   const choice = await DialogV2.wait({
     window: { title: _loc("PENTARYN_SENSES.Light.Title"), icon: "fa-solid fa-lightbulb" },
     content: `<p>${esc(_loc("PENTARYN_SENSES.Light.Where"))}</p>`,
-    buttons: [
-      { action: "me", label: _loc("PENTARYN_SENSES.Light.OnMe"), icon: "fa-solid fa-user", default: true },
-      { action: "pick", label: _loc("PENTARYN_SENSES.Light.Pick"), icon: "fa-solid fa-crosshairs" },
-      { action: "cancel", label: _loc("PENTARYN_SENSES.Light.NotNow"), icon: "fa-solid fa-xmark" }
-    ],
+    buttons: LIGHT_ACTIONS.filter(a => a.dialog).map((a, i) => ({
+      action: a.action, label: _loc(a.label), icon: a.icon, ...(i === 0 ? { default: true } : {})
+    })),
     rejectClose: false
   });
-  if (choice === "me") return actions.onMe(item);
-  if (choice === "pick") return actions.pickAndCast(item);
+  const handler = lightAction(choice)?.handler;
+  if (handler) return actions[handler](item);
 }
 
 /* -------------------------------------------- */
@@ -188,11 +198,7 @@ export function decorateCard(message, html) {
     content.append(section);
   }
   if (list.querySelector("[data-ps-light]")) return;
-  const row = [
-    cardButton("fa-solid fa-user", _loc("PENTARYN_SENSES.Light.OnMe"), "me"),
-    cardButton("fa-solid fa-crosshairs", _loc("PENTARYN_SENSES.Light.Pick"), "pick"),
-    cardButton("fa-solid fa-lightbulb-slash", _loc("PENTARYN_SENSES.Light.End"), "end")
-  ];
+  const row = LIGHT_ACTIONS.filter(a => a.card).map(a => cardButton(a.icon, _loc(a.label), a.action));
   for (const li of row) {
     const b = li.firstElementChild;
     b.addEventListener("click", ev => {
@@ -201,7 +207,7 @@ export function decorateCard(message, html) {
       const live = itemFrom(uuid);
       if (!live) return;
       const act = b.dataset.psLight;
-      const p = act === "me" ? actions.onMe(live) : act === "pick" ? actions.pickAndCast(live) : actions.end(live);
+      const p = actions[lightAction(act).handler](live);
       Promise.resolve(p).catch(e => warn(`card ${act}`, e));
     });
     list.append(li);

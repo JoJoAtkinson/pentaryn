@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **[declared senses-EXT-2] One table for the Light actions** (final review 2026-10-12): the prompt's
+  buttons and the spell card's action row are now both built from the frozen `LIGHT_ACTIONS` table
+  in `light-ui.mjs` (action, icon, label key, handler), so they keep the same labels, icons and order.
+  The prompt keeps "Not now", the card keeps "End light". Nothing on screen changes; goldens unchanged.
+  New `test/light-actions.test.mjs`.
+
 - **[declared senses-ac-1] Two GM tabs, one Light square, one whisper** (final review 2026-10-12): the
   Light reconcile runs in every tab of the active GM (the MCP bridge and a browser). A square is now
   created with an `_id` fixed by its Light item and spot and `keepId`, and the other tab's refused

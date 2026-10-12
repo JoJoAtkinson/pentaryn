@@ -140,6 +140,9 @@ made first (a square, an old summon token) counts as done.
 
 - **A light source:** a `LIGHT_PROFILES` row (and an `ALIASES` spelling) in `core/light.mjs`, plus a
   row in `test/light-core.test.mjs`.
+- **A Light action** (prompt button, spell-card button): a row in `LIGHT_ACTIONS` in `light-ui.mjs`
+  (`dialog` / `card` say where it shows; `handler` names light.mjs's action), its label in
+  `lang/en.json`, and the expected table in `test/light-actions.test.mjs`.
 - **A feature:** a file exporting `install(reg, ctx)` / `uninstall()`, added to `FEATURES` in
   `senses.mjs`; hooks through `reg.on`, shared state through `ctx.expose`.
 - **An API method:** a row in `api-manifest.mjs`, the function exposed by its feature, the binding
@@ -163,7 +166,7 @@ made first (a square, an old summon token) counts as done.
 | `settings.mjs` | `SETTINGS` and the setting readers |
 | `api-manifest.mjs`, `api.mjs` | API rows; their bindings, `inspect`, `light.status` |
 | `carried.mjs`, `light.mjs`, `chain.mjs`, `glow.mjs`, `migrate.mjs` | features |
-| `light-ui.mjs` | UI: prompt, pick, spell card, inventory row, Token HUD |
+| `light-ui.mjs` | UI: prompt, pick, spell card (both from one `LIGHT_ACTIONS` table), inventory row, Token HUD |
 | `light-adapter.mjs`, `argon.mjs` | adapters: documents → plain data; `ui.ARGON` |
 | `lib/` | vendored kit — never edited here |
 
