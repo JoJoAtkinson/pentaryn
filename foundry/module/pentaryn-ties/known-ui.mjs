@@ -182,6 +182,7 @@ export async function fileHovered(token = canvas?.tokens?.hover ?? null) {
  * follows renders it open — no second repaint, and nothing to keep in step with the DOM.
  */
 export async function openKnownEntry(actor, id) {
+  if (readKnown(actor).find(e => e.id === id)?.hidden) setShowHidden(actor.id, true); // a hidden page asked for by name is shown, not left unreachable
   setExpanded(actor.id, id, true);
   const sheet = actor?.sheet;
   if (!sheet) return false;
