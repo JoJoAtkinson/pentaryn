@@ -6,6 +6,10 @@
 (`flagScope` stays `wall-autocomplete`), `languages`, `minimum: "14"`, `verified: "14.369"` and the
 description fix; the flag-scope migration is **parked** while walls stays off (Joe).
 
+- **[declared] A failed GM report card is logged through the kit log** (`walls-rob-8`): a
+  `ChatMessage.create` failure went to a raw `console.error("pentaryn-walls |", err)`, invisible to
+  `api.trace()`. It now logs `pentaryn-walls | chat card failed` with the error via `log.error`, and
+  with debug on traces `{error}` under `chat card failed`. The card stays non-fatal.
 - **[declared] An unknown `sceneId` says so** (`walls-rob-7`): `preview`/`run`/`analyze`/`undo`
   given a `sceneId` that matched no scene threw "no scene — open one, or pass a sceneId.", advice
   the caller had already followed. They now throw `pentaryn-walls: no scene with id "<sceneId>".`;

@@ -72,9 +72,15 @@ function evaluate(scene, opts = {}) {
 /*  Reporting                                   */
 /* -------------------------------------------- */
 
-/** Post a GM-whispered card. Awaited by the caller; a failure is logged, never thrown. */
+/**
+ * Post a GM-whispered card. Awaited by the caller; a failure is logged through the kit log (and
+ * traced, so api.trace() shows it with debug on), never thrown (walls-rob-8).
+ */
 function postCard(content) {
-  const failed = err => console.error(`${MODULE} |`, err);
+  const failed = err => {
+    log.error("chat card failed", err);
+    log.trace("chat card failed", {error: String(err?.message ?? err)});
+  };
   try {
     return Promise.resolve(ChatMessage.create({content, whisper: ChatMessage.getWhisperRecipients("GM").map(u => u.id)}))
       .catch(failed);
