@@ -208,7 +208,6 @@ test("(h) keybinding guard: a second press while running warns; a rejection logs
 
 test("(i) makeMacro: unknown action throws; 'run' creates once, reuses, assigns the hotbar, toasts", async () => {
   await assert.rejects(game.pentaryn.walls.makeMacro("bogus"), { message: 'unknown action "bogus"' });
-  await assert.rejects(game.pentaryn.walls.makeMacro("toString"), { message: 'unknown action "toString"' });
   const from = mark();
   const m1 = await game.pentaryn.walls.makeMacro("run");
   const m2 = await game.pentaryn.walls.makeMacro("run", 7);

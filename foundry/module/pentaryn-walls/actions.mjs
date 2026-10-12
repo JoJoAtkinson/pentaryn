@@ -172,7 +172,7 @@ async function undo({sceneId, all = false} = {}) {
  * from the macro bar. Returns the Macro document.
  */
 async function makeMacro(action = "preview", slot) {
-  if (!Object.hasOwn(exclusiveActions, action)) throw new Error(`unknown action "${action}"`);
+  if (!["preview", "run", "undo"].includes(action)) throw new Error(`unknown action "${action}"`);
   const name = `Walls: ${action}`;
   const command = `await game.pentaryn.walls.${action}();`;
   const existing = game.macros.find(m => m.name === name);
