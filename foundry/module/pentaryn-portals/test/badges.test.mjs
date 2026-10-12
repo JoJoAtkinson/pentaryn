@@ -297,7 +297,9 @@ test("bindBoard: once per board; hover shows the tip; pointerleave hides it", as
   const count = W.board.listeners.length;
   S.bindBoard();
   assert.equal(W.board.listeners.length, count);
-  assert.equal(W.board.dataset.ppBound, "1");
+  // M12: the guard key is portals' own; prompts binds with dataset.ppBound on its own root.
+  assert.equal(W.board.dataset.pptBound, "1");
+  assert.equal(W.board.dataset.ppBound, undefined, "M12: not prompts' ppBound key");
   assert.deepEqual(W.board.listeners.map(l => [l.type, l.capture]), [
     ["pointermove", false], ["pointerdown", true], ["pointermove", true], ["pointerup", true],
     ["pointercancel", true], ["lostpointercapture", true], ["pointerleave", false], ["contextmenu", true],

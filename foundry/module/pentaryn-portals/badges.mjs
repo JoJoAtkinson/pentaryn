@@ -208,8 +208,8 @@ export function openMenu(badge, ev) {
 
 export function bindBoard() {
   const board = document.getElementById("board");
-  if (!board || board.dataset.ppBound) return;
-  board.dataset.ppBound = "1";
+  if (!board || board.dataset.pptBound) return;
+  board.dataset.pptBound = "1";
   // PIXI owns #board.style.cursor (it writes "var(--cursor-…)" and only rewrites on a mode change).
   // Touch it only while over an edit-mode badge, and put back exactly what was there on leaving;
   // writing "" on every move erased Foundry's hands and pentaryn-cursors' tool cursors.
@@ -334,7 +334,7 @@ export function install(reg, ctx) {
   return contribution();
 }
 
-/** Destroy the layer, hide the tip, close the menu. The #board listeners stay (dataset.ppBound). */
+/** Destroy the layer, hide the tip, close the menu. The #board listeners stay (dataset.pptBound). */
 export function uninstall() {
   try { badgeLayer?.destroy({ children: true }); } catch (err) { log?.debug("badge layer destroy", err); }
   onCanvasTearDown();
