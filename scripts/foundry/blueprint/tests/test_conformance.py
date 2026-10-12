@@ -512,6 +512,14 @@ def test_c57_module_socket_channel_is_the_module_id(tmp_path, code, want):
     assert res(one(tmp_path, code, socket=True), "C57")["status"] == want
 
 
+@pytest.mark.parametrize("channel,want", [("module.pentaryn-other", "fail"), ("module.pentaryn-async", "pass")])
+def test_c57_resolves_a_channel_constant_from_another_file(tmp_path, channel, want):
+    # C57's title promises every game.socket module.* channel; C08 already resolves the constant module-wide
+    code = 'import { CHANNEL } from "./async-core.mjs";\ngame.socket.emit(CHANNEL, {});'
+    extra = {"async-core.mjs": f'export const CHANNEL = "{channel}";\n'}
+    assert res(one(tmp_path, code, socket=True, extra=extra), "C57")["status"] == want
+
+
 C58_CASES = [
     ('const a = serialStore(MODULE, "ledger");', "pass"),
     ('const a = serialStore(MODULE, ["a", "b"]);\nconst b = serialStore(MODULE, "c");', "pass"),

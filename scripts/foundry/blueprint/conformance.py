@@ -1678,18 +1678,30 @@ def c56(m):
 def c57(m):
     want = f"module.{m.id}"
     used, detail = False, []
-    for rel, src in m.files.items():
-        code = src.code
-        consts = {}
-        for mm in re.finditer(r"(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*", code):
+
+    def channel_consts(src):
+        found = {}
+        for mm in re.finditer(r"(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*", src.code):
             lit = lit_after(src, mm.end())
             if lit and lit.value.startswith("module."):
-                consts[mm.group(1)] = lit
+                found[mm.group(1)] = lit
+        return found
+
+    module_consts = {}               # a channel constant imported from another file (as C08 resolves it)
+    for src in m.files.values():
+        for name, lit in channel_consts(src).items():
+            module_consts.setdefault(name, lit)
+    for rel, src in m.files.items():
+        code = src.code
+        consts = channel_consts(src)
         for mm in re.finditer(r"game\.socket\??\.(?:emit|on|off)\(\s*", code):
             lit = lit_after(src, mm.end())
             if lit is None:
                 ident = re.match(r"[A-Za-z_$][\w$]*", code[mm.end():])
-                lit = consts.get(ident.group(0)) if ident else None
+                name = ident.group(0) if ident else None
+                lit = consts.get(name) if name else None
+                if lit is None and name and not re.search(rf"(?:const|let|var)\s+{re.escape(name)}\s*=", code):
+                    lit = module_consts.get(name)
             if lit is None or not lit.value.startswith("module."):
                 continue                     # a core event (§5.6, C47) or unresolved
             used = True
