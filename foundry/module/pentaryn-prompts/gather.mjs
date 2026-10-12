@@ -68,8 +68,9 @@ export { manifests, manifestFor };
 /* ── gather ─────────────────────────────────────────────────────────────── */
 
 /**
- * `gather({scenes, crops, chars, unseenWithinFt, builtWithoutProvenance, maxPrompts, from})`
- * → `{call, text, counts, manifest, crops, next}` (plan §5.2). Stores the manifest.
+ * `gather({scenes, crops, chars, unseenWithinFt, builtWithoutProvenance, maxPrompts, from, party, cropsAs})`
+ * → `{call, text, counts, manifest, crops, next, ms, version, party, partySource, cropsNote}` (plan §5.2).
+ * Stores the manifest.
  */
 export async function gather(opts = {}) {
   const {
