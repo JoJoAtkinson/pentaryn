@@ -170,6 +170,13 @@ export function onEnabledChange() {
   resync();
 }
 
+/** Clear the board's cursor variables and forget the current cursor. */
+function clear() {
+  const el = boardEl();
+  if (el) apply(el, null);
+  current = null;
+}
+
 export function install(reg, ctx) {
   log = ctx.log;
   ctx.expose({ refresh, current: () => current, snapshot });
@@ -194,11 +201,7 @@ export function install(reg, ctx) {
     checkInternals();
     setTimeout(() => resync(), 0);
   }, { guard: false, label: "canvasReady: attach" });
-  reg.on("canvasTearDown", () => {
-    const el = boardEl();
-    if (el) apply(el, null);
-    current = null;
-  }, { guard: false, label: "canvasTearDown: clear" });
+  reg.on("canvasTearDown", () => clear(), { guard: false, label: "canvasTearDown: clear" });
 
   const ready = () => setTimeout(() => { attach(); resync(); }, 0);
   if (globalThis.game?.ready) ready();   // hot patch: ready has already fired
@@ -207,7 +210,5 @@ export function install(reg, ctx) {
 
 /** Clear the board; the hooks go with the entry's reg.offAll(). Wrapped onChanges stay (they only refresh). */
 export function uninstall() {
-  const el = boardEl();
-  if (el) apply(el, null);
-  current = null;
+  clear();
 }
