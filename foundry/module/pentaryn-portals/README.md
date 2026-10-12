@@ -65,7 +65,7 @@ or an exact name (`opts.sceneId` scopes an id or a name) — never a substring.
 |---|---|---|
 | `cardFor(region)` | anyone | `{ uuid, title, img, description }`; `null` for no region |
 | `destinations(ref, { sceneId })` | anyone | `[{ uuid, scene, name, card, revealed, choice, behavior }]` |
-| `inspect(ref, { sceneId, as })` | anyone | `{ region, hidden, card, revealed, destinations }`; a player (`as`) gets `destinations: null` for a sealed or unrevealed passage and no passage name; an Actor/Token ref → `null` |
+| `inspect(ref, { sceneId, as })` | anyone | `{ region, hidden, card, revealed, destinations }`; a player (`as`) gets `destinations: null` for a sealed or unrevealed passage and no passage name; an Actor or Token **document** (what the root `game.pentaryn.inspect` passes) → `null`; an Actor/Token uuid or name is not a region ref → `BAD_ARGS` / `NOT_FOUND` |
 | `badges()` | anyone | the badges drawn on **this** client: `[{ region, revealed, visible, cards }]` |
 | `redraw()` | anyone | redraws this client's badges |
 | `snapshot(regionOrUuid, { squaresWide, squaresHigh })` | GM | the saved image path, or `null` (no background) |
