@@ -815,6 +815,24 @@ def test_adjudicator_failure_holds_all_and_keeps_the_record():
     assert call["error"] == "timed out after 600s"
 
 
+def test_adjudicator_prompt_tolerates_a_release_with_no_date():
+    # upstream._attach_notes sets published to null for a GitHub draft release.
+    from scripts.foundry.update import adjudicate
+    plan = make_plan(decision("some-module", bucket="review", bump="minor", target="1.1"))
+    plan["upstream"]["some-module"]["notes"] = [
+        {"version": "1.1", "published": None, "body": "x"}]
+    prompt, ids = adjudicate.build_prompt(plan)
+    assert ids == ["some-module"] and "--- 1.1 () ---" in prompt
+
+    def caller(spec, stdin, **kw):
+        return llm.Result(llm.CallRecord(tier="adjudicator", model=spec.model,
+                                         effort=spec.effort, ok=True),
+                          text='{"verdicts":[{"id":"some-module","verdict":"apply",'
+                               '"rationale":"fine"}]}')
+    verdicts, error, _ = adjudicate.run(plan, caller=caller)
+    assert error is None and [v.verdict for v in verdicts] == ["apply"]
+
+
 def test_report_writer_model_comes_from_policy():
     from scripts.foundry.update import report
     seen = {}

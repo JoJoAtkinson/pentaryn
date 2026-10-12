@@ -84,7 +84,7 @@ def _candidate_block(decision: dict, upstream: dict) -> str:
     notes = upstream.get("notes") or []
     if notes:
         rendered = "\n".join(
-            f"  --- {n.get('version')} ({n.get('published', '')[:10]}) ---\n"
+            f"  --- {n.get('version')} ({str(n.get('published') or '')[:10]}) ---\n"
             f"  {(n.get('body') or '(no body)').strip()[:2500]}"
             for n in notes[:6]
         )
