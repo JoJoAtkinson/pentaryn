@@ -83,15 +83,17 @@ export async function ensureHandleActor() {
   }
   if (existing || !game.user.isGM) return existing;
   const folder = game.folders.find(f => f.type === "Actor" && f.name === "Scene Props");
-  // -7: a fixed id with keepId, as the handle tokens have. Two GM sessions at ready (the bridge tab
-  // and a GM browser tab) both get here on a world without the actor; the server keeps one.
+  // -7: a fixed id with keepId. Two GM sessions at ready (the bridge tab and a GM browser tab) both
+  // get here on a world without the actor. v14 does not refuse a world document whose id exists
+  // (only embedded ones, as createHandle's tokens): the later create replaces the record with the
+  // same data and clients see createActor twice. One actor results; no listener cares (npc).
   try {
     return await Actor.implementation.create({
       _id: HANDLE_ACTOR_ID,
       ...handleActorData(folder)
     }, { keepId: true });
   } catch (err) {
-    if (/already exists/i.test(err?.message ?? "")) return handleActor();   // the other session won
+    if (/already exists/i.test(err?.message ?? "")) return handleActor();   // fallback: a server that refuses
     throw err;
   }
 }

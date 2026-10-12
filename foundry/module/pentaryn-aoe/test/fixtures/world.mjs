@@ -314,14 +314,22 @@ export async function boot({ user = null, users = [], settings = {}, entry = fal
       create: async (data, opts) => {
         F.calls.push({ op: "create", documentName: "Actor", data: F.plain(data), options: F.plain(opts) ?? null });
         if (F._actorCreateError) throw new Error(F._actorCreateError);
-        // core: with keepId the given _id is kept, and the server refuses an id that exists
+        // core v14: with keepId the given _id is kept. A WORLD document with an id that exists is
+        // NOT refused (server-backend #_createDocuments only checks a parent's embedded
+        // collection): the record is replaced and every client gets createActor again. Embedded
+        // documents are refused (the scene's collOf stub above). Tests that need a refusal stub
+        // create themselves.
         const { _id, ...rest } = data;
         const id = opts?.keepId && _id ? _id : undefined;
-        if (id && g.actors.has(id)) throw new Error(`The Actor ${id} already exists in the world collection`);
+        const replaced = !!id && g.actors.has(id);
         // A kept id still advances the stub's id sequence, as a generated one did, so the ids of
         // every later stub document (and the goldens that carry them) do not shift.
         if (id) stubId("Act");
-        return actor({ ...rest, ...(id ? { id } : {}), hp: data.system?.attributes?.hp });
+        const a = actor({ ...rest, ...(id ? { id } : {}), hp: data.system?.attributes?.hp });
+        // The stub fires no createActor for a first create (no goldens carry one); the replace
+        // fires it, so a test can see the second event the server sends.
+        if (replaced) F.Hooks.callAll("createActor", a, F.plain(opts) ?? {}, g.user.id);
+        return a;
       },
       // core: one request for many world actors; each still gets its own update (and its hooks)
       updateDocuments: async (updates, opts) => {

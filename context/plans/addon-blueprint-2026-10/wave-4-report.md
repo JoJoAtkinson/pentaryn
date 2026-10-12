@@ -84,7 +84,10 @@ resolved by S2 (VERSION). 8.5: the sweep's region writes and the Careful clean-u
    cast Cone of Cold from a token (the point stays on the caster's edge, D-A7), Escape still cancels
    and refunds. Repeat with Argon loading after aoe (D-A4).
 5. D-A6: delete "Area handle", open the bridge tab and a GM browser tab, reload both: one actor,
-   id `pentarynAoeHndl0`. On the existing world the old actor is kept (found by flag).
+   id `pentarynAoeHndl0`. On the existing world the old actor is kept (found by flag). Also watch
+   for a duplicate `createActor` (`Hooks.on("createActor", a => console.log(a.id))` in both tabs
+   before the reload): v14 lets the later keepId create replace the world record, so two events
+   for `pentarynAoeHndl0` are expected and harmless; record whether it happened.
 6. 8.5: on a scene with several pre-module template regions, `sweep(canvas.scene)` shares them in
    one Region update.
 

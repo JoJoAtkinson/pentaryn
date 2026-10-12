@@ -22,7 +22,8 @@ items below (each its own commit; live checks in the migration guide §5).
   `RegionLayer#placeRegions` and removes the late-Argon `canvasReady` fallback, so a hot-patched
   copy aims Self cones again.
 - **Two GM sessions** (declared D-A6, -7): the "Area handle" actor is created with the fixed id
-  `pentarynAoeHndl0` and `keepId`.
+  `pentarynAoeHndl0` and `keepId`. v14 does not refuse a world actor whose id exists: the later
+  create replaces it with the same data (a second `createActor`), so one actor results.
 - **Performance**: one `game.actors` scan per resolve instead of one per token (-2); one effects
   fetch per fresh card render (-14); the sweep shares template regions in one batched write and the
   Careful clean-up batches its actor writes (declared, C59); mutate's queue map drops settled

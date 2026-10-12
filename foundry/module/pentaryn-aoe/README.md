@@ -152,7 +152,9 @@ batch; only `scene-adapter.mjs` touches `game.itempiles`).
 The MCP bridge tab is a GM session, so a GM browser tab next to it makes two clients that both
 pass `activeGM.isSelf` and `userId === game.user.id`.
 - **Handles**: created with `_id` = the region's id and `keepId`; the server refuses the second.
-- **The handle actor**: fixed id `pentarynAoeHndl0` with `keepId`; the loser finds it by flag.
+- **The handle actor**: fixed id `pentarynAoeHndl0` with `keepId`. v14 does not refuse a world
+  document whose id exists (only embedded ones), so the later create wins with identical data and
+  clients see `createActor` twice; one actor results. The "already exists" catch is a fallback.
 - **`resolve` and `selfApply`** (`createChatMessage`): the kit's `claimMessage(message, job,
   { scope })` — each candidate stamps its socket id, waits 750 ms, and only the last writer acts.
 - **Everything else** on a broadcast hook runs where `activeGM.isSelf` (concentration cleanup, the
