@@ -1828,15 +1828,30 @@ def c59(m):
     return ok() if not found else ("warn", found)
 
 
-@rule("C60", "warn", "no async listener or await in a hot-hook handler (defer via perFrame/debounce/coalesce)")
+def _async_called(code: str, body: str, more: tuple[str, ...] = ()) -> str | None:
+    """The first function `body` calls by bare name (`paint(`, `void paint(`) that is declared
+    `async function paint` in `code` (the listener's file) or in `more` (the files it imports)."""
+    for name in dict.fromkeys(re.findall(r"(?<![\w$.])([A-Za-z_$][\w$]*)\s*\(", body)):
+        decl = re.compile(rf"(?<![\w$.])async\s+function\s*{re.escape(name)}\s*\(")
+        if any(decl.search(src) for src in (code, *more)):
+            return name
+    return None
+
+
+@rule("C60", "warn", "no async listener, await or async-function call in a hot-hook handler (defer via perFrame/debounce/coalesce)")
 def c60(m):
     found = []
     for ls in listeners(m):
         if not is_hot_hook(ls.name):
             continue
         body = ls.body or ""
-        if (ls.is_async or re.search(r"(?<![\w$])await\b", body)) and not DEFER.search(body):
+        if DEFER.search(body):
+            continue
+        if ls.is_async or re.search(r"(?<![\w$])await\b", body):
             found.append(f"{ls.rel}:{ls.line} {ls.name}")
+        elif name := _async_called(m.code(ls.rel), body, _imported_code(m, ls.rel)):
+            # a sync handler that fires `void paint(t)` still starts one async job per frame
+            found.append(f"{ls.rel}:{ls.line} {ls.name} — starts async {name}() per call")
     return ok() if not found else ("warn", found)
 
 

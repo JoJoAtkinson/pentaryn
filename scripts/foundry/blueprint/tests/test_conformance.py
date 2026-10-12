@@ -604,6 +604,36 @@ def test_c60_no_async_job_per_hot_hook_call(tmp_path, code, want):
     assert res(one(tmp_path, code), "C60")["status"] == want
 
 
+C60_CALLS_ASYNC_CASES = [                                                        # py-blueprint-AC-7
+    ('reg.on("refreshToken", (t) => { void paint(t); });\nasync function paint(t) { await t.x(); }',
+     "warn"),
+    ('reg.on("refreshToken", (t) => paint(t));\nasync function paint(t) {}', "warn"),
+    ('reg.on("refreshToken", onRefresh);\nfunction onRefresh(t) { paint(t); }\nasync function paint(t) {}',
+     "warn"),
+    ('reg.on("refreshToken", (t) => { perFrame(() => void paint(t)); });\nasync function paint(t) {}',
+     "pass"),
+    ('reg.on("refreshToken", (t) => { paint(t); });\nfunction paint(t) {}', "pass"),     # sync helper
+    ('reg.on("refreshToken", (t) => { obj.paint(t); });\nasync function paint(t) {}', "pass"),  # a method
+]
+
+
+@pytest.mark.parametrize("code,want", C60_CALLS_ASYNC_CASES)
+def test_c60_sync_handler_starting_an_async_function_py_blueprint_ac_7(tmp_path, code, want):
+    r = res(one(tmp_path, code), "C60")
+    assert r["status"] == want
+    if want == "warn":
+        assert any(d.startswith("a.mjs:1 refreshToken") and d.endswith("starts async paint() per call")
+                   for d in r["detail"]), r["detail"]
+
+
+def test_c60_async_function_in_an_imported_file_py_blueprint_ac_7(tmp_path):
+    report = one(tmp_path, 'import { paint } from "./b.mjs";\nreg.on("refreshToken", (t) => { void paint(t); });',
+                 extra={"b.mjs": "export async function paint(t) { await t.x(); }\n"})
+    r = res(report, "C60")
+    assert r["status"] == "warn"
+    assert r["detail"] == ["a.mjs:2 refreshToken — starts async paint() per call"]
+
+
 C61_CASES = [
     ('reg.on("updateActor", (a) => { a.update({ x: 1 }); });', "warn"),
     ('reg.on("createChatMessage", async (m) => { await m.setFlag(M, "k", 1); });', "warn"),

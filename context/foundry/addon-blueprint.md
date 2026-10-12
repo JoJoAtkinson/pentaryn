@@ -574,7 +574,8 @@ listener. The active GM is a **user, not a tab** — and in this setup two tabs 
   (`client/canvas/placeables/placeable-object.mjs:424-441`); `draw*`, `hover*`, `sightRefresh`,
   `canvasPan`, `updateWorldTime` are all `callAll` on every client. MUST: their handlers are
   synchronous, read from a cache/`memo` (§5.5, C49) and never start an async job per call —
-  `void (async () => …)()` is still one (C60). Defer with `perFrame` (latest args, once per frame),
+  `void (async () => …)()` is still one, and so is `void paint(t)` when `paint` is an
+  `async function` in the file or a file it imports (C60). Defer with `perFrame` (latest args, once per frame),
   `foundry.utils.debounce` (trailing, `.cancel()`, callback errors **not** caught,
   `common/utils/helpers.mjs:101-114`) or `coalesce` when several triggers want the same rebuild
   (`lib/perf.mjs`).
@@ -938,7 +939,7 @@ both Warnings and Manual.
 | C57 | fail | a `game.socket` `module.*` channel is exactly `module.<module.json id>` (C08 owns `socket: true`) |
 | C58 | fail | one `serialStore` per key across the module, at module scope or memoised (`x ??= serialStore(`) |
 | C59 | warn+manual | `await <doc>.update/create/delete/setFlag/unsetFlag(` inside a loop body, or an `await f(…)` there where `f` is a same-file function that awaits one (batch it) |
-| C60 | warn | no `async` listener or `await` in a hot-hook handler unless it defers via `perFrame`/`debounce`/`coalesce` |
+| C60 | warn | no `async` listener, `await`, or call to a same-file/imported `async function` in a hot-hook handler unless it defers via `perFrame`/`debounce`/`coalesce` |
 | C61 | warn+manual | a writing `create*/update*/delete*` listener has an active-GM gate, the initiator gate (`userId !== game.user.id`) or a claim (an any-GM gate alone → manual). The active-GM and initiator gates pick one *user*, not one tab: every tab of that user passes, so where two tabs on one account matter the review checks for a claim (§5.9.4); the write and the gate are looked for in the listener and the functions it calls by name, in its file or the module files it imports |
 | C62 | fail | a manifest param with a Document `kind` (`actor token item scene user journal message macro region combat table folder playlist`), or a `ref`, that the kit does not resolve (`resolve: false`, or not the first param) names a string form in `type` (`uuid`, `id`, `name`, `string`), carries `resolve: "self"` (kit 1.1.0), or its `doc` or the row's says `eval-js only`. Read from `test/golden/describe.json` (n/a without one). Mirrors the bridge's `needsDoc` (`pentaryn-call.ts`): without it the row is refused live as "eval-js only" (senses.inspect, W3L) |
 
