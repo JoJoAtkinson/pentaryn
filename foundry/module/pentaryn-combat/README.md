@@ -192,6 +192,7 @@ run those sweeps; each write is idempotent (a delete of a key already gone does 
 
 - **A setting:** a `SETTINGS` row (key, literal Name/Hint, doc), the two lang keys, `setting(key)` where it applies.
 - **A turn rider:** a `TURN_RIDERS` row in `core/turn-riders.mjs`, its `Rider.Name/Rule` keys in `I18N_KEYS` and lang.
+  describe()'s rider `key` param (riderMode, setRiderMode, rollRider) comes from the manifest automatically: `api-manifest.mjs` builds its type from `TURN_RIDERS`.
 - **A follow-up kind:** `core/followups.mjs` `followUps`, a `runFollowUp` branch in `sequence.mjs`, its `FollowUp*` keys.
 - **A special action:** `SPECIAL_ACTIONS` / `recordSpecialAction` in `core/turnflow.mjs`, its after-click in `turnflow/action-buttons.mjs`.
 

@@ -61,9 +61,16 @@ test("riders: Name / Rule for each rider; Check for each hint code; Mode and Tog
   for (const m of ["ask", "auto"]) for (const fam of ["Mode", "ToggleHint"]) assert.ok(has(`PENTARYN_COMBAT.Rider.${fam}.${m}`), `${fam}.${m}`);
 });
 
+test("combat-core-EXT-2-followup: api-manifest builds the RIDER type from TURN_RIDERS, no hand-written rider keys", () => {
+  // A literal that merely matches today still goes stale on a fifth row; the source must derive it.
+  const src = readFileSync(new URL("../api-manifest.mjs", import.meta.url), "utf8");
+  assert.match(src, /TURN_RIDERS\.map\(r => JSON\.stringify\(r\.key\)\)\.join\("\|"\)/, "RIDER.type built from TURN_RIDERS");
+  for (const r of core.TURN_RIDERS) assert.ok(!src.includes(`"${r.key}"`), `no hand-written "${r.key}" in api-manifest.mjs`);
+});
+
 test("the manifest RIDER type lists exactly the TURN_RIDERS keys", () => {
   // README "Extending → A turn rider": a TURN_RIDERS row plus strings is the whole job, so a fifth row
-  // must not leave describe()'s rider param stale (api-manifest.mjs spells the keys out by hand).
+  // must not leave describe()'s rider param stale (api-manifest.mjs builds the type from TURN_RIDERS).
   const want = core.TURN_RIDERS.map(r => JSON.stringify(r.key)).join("|");
   for (const path of ["riderMode", "setRiderMode", "rollRider"]) {
     const row = MANIFEST.rows.find(r => r.path === path);

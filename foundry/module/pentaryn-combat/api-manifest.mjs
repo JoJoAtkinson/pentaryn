@@ -13,12 +13,12 @@
  * as a frozen copy (`unlisted`). The new reads take a `ref` (Actor, Token, UUID, id or exact name).
  */
 
-import { CONTRACT, MODULE, NS, VERSION } from "./combat-core.mjs";
+import { CONTRACT, MODULE, NS, TURN_RIDERS, VERSION } from "./combat-core.mjs";   // the pure core, so the manifest stays node-importable
 
 const ACTOR = { name: "actor", type: "Actor|Token|uuid|id|exact name", resolve: false, doc: "resolved by the member itself (never a substring); a miss answers null" };
 const WEAPON = { name: "weaponId", type: "string", optional: true, doc: "an item id; default: the remembered weapon, else the active set's primary, else the first equipped melee weapon" };
 const REF = { name: "ref", kind: "actor", type: "Actor|Token|uuid|id|exact name", doc: "never a substring" };
-const RIDER = { name: "key", type: '"sneak-attack"|"frenzy"|"colossus-slayer"|"divine-strike"' };
+const RIDER = { name: "key", type: TURN_RIDERS.map(r => JSON.stringify(r.key)).join("|") };   // a new TURN_RIDERS row reaches describe() by itself
 
 const TURN = "flags.pentaryn-combat.turn";
 
