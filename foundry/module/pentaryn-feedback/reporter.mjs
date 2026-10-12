@@ -198,7 +198,17 @@ export function install(reg, ctx) {
       // receivedAt stays null: two GM tabs (the bridge and a browser) both file, and must write the
       // same bytes; the file's mtime is when it was filed. The folder is always THIS world's — the
       // payload's world id is the client's claim, kept only as data.
-      const safe = normaliseReport(report, { user: who });
+      let safe;
+      try {
+        safe = normaliseReport(report, { user: who });
+      } catch (err) {
+        // like a malformed entry, one that cannot be normalised would block the queue forever (rob-1/EC-1)
+        const reason = err?.message ?? String(err);
+        refused.push({ id, reason });
+        del[queuePath(id)] = _del;
+        log.warn(`refused report ${id} from ${user.name}: ${reason}`);
+        continue;
+      }
       safe.world = { ...(safe.world ?? {}), id: g.game.world.id };
       let path;
       try {
