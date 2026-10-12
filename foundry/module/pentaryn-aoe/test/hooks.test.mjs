@@ -1,6 +1,6 @@
 // The hook manifest: what aoe registers, in order, pinned against golden/hooks.json. Order WITHIN a
 // name is behaviour (three dnd5e.renderChatMessage decorators, two createChatMessage jobs, and two
-// dnd5e.postUseActivity listeners where resolve's Careful arm must run before refund's literal
+// dnd5e.postUseActivity listeners where Careful Spell's must run before refund's literal
 // false stops the rest), and S5 keeps today's FEATURES order, so the full order is pinned.
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -42,7 +42,7 @@ test("setup registers the feature hooks in Part order: areas, resolve, tray, att
   assert.deepEqual(atSetup.map(h => `${h.kind} ${h.name}`), [
     "on preCreateRegion", "on createRegion", "on deleteRegion", "on preCreateCombatant", "on targetToken", "on preMoveToken",
     "on dnd5e.renderChatMessage", "on deleteActiveEffect",
-    "on dnd5e.postUseActivity", "on deleteCombat", "on createChatMessage", "on updateChatMessage",
+    "on dnd5e.postUseActivity", "on createChatMessage", "on updateChatMessage",
     "on dnd5e.renderChatMessage",
     "on dnd5e.postRollAttack",
     "on createChatMessage", "on dnd5e.renderChatMessage", "on preCreateActiveEffect",

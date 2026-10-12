@@ -424,25 +424,18 @@ export function supersedes(older, newer) {
  * Careful Spell (PHB 2024): "choose a number of those creatures up to your Charisma modifier
  * (minimum of one creature). A chosen creature automatically succeeds on its saving throw against the
  * spell, and it takes no damage if it would normally take half damage on a successful save."
- * We choose for the player: the caster's side (same token disposition) in the area, player
- * characters first, never the caster; the GM can change any row in the tray.
- * @param {object[]} tokens  describeToken() shapes, plus `disposition`
- * @param {{casterActorId?: string|null, casterDisposition?: number|null, max?: number}} o
- * @returns {string[]}  token ids
+ * The player chooses (careful.mjs's picker); this marks exactly those rows: an automatic success, and
+ * no damage where a success halves it. A row that already had a save keeps it in `unprotected`, so
+ * unprotectRow gives it back.
+ * @param {object[]} rows
+ * @param {string[]} ids  token ids
+ * @param {string} onSave
  */
-export function carefulTargets(tokens, { casterActorId = null, casterDisposition = null, max = 1 } = {}) {
-  if (casterDisposition === null || casterDisposition === undefined) return [];
-  const n = Math.max(1, Math.floor(Number(max) || 1));
-  const side = (tokens ?? []).filter(t => isCreature(t) && t.baseActorId !== casterActorId && t.disposition === casterDisposition && !t.hidden);
-  side.sort((a, b) => Number(!!b.hasPlayerOwner) - Number(!!a.hasPlayerOwner));
-  return side.slice(0, n).map(t => t.id);
-}
-
-/** Mark rows protected by Careful Spell: an automatic success, and no damage where a success halves it. */
 export function protectRows(rows, ids, onSave) {
   const set = new Set(ids ?? []);
   for (const row of rows ?? []) {
-    if (!set.has(row.id) || row.caster) continue;
+    if (!set.has(row.id) || row.protected || row.applied) continue;
+    if (row.save) row.unprotected = { save: row.save, multiplier: row.multiplier ?? null };
     row.protected = true;
     row.save = { total: null, success: true, messageId: null, careful: true };
     const m = multiplierFor(true, onSave);
@@ -452,28 +445,18 @@ export function protectRows(rows, ids, onSave) {
 }
 
 /**
- * A Careful Spell use bound to a combat turn ("combatId:round:combatant") of a combat that was
- * deleted: it can never apply again, so it is cleared (usability Area 9 found one on Marrith).
- * An out-of-combat use (no key) expires by time and is left alone.
+ * The GM takes Careful Spell off a row: back to the save it had (and its multiplier), else to no
+ * save at all — a player row waits again, a monster row is rolled by the caller.
+ * @returns {object} the row
  */
-export function carefulStale(flag, combatId) {
-  return !!(combatId && flag && typeof flag === "object" && typeof flag.key === "string" && flag.key.startsWith(`${combatId}:`));
-}
-
-/**
- * Is a Careful Spell use still waiting for this cast? Metamagic ends after use (metamagic-disarm):
- * the caster's next spell cast takes it (binds it to that usage card), in or out of combat, with no
- * time window. In combat it is also bound to the turn it was used on. Re-rolling the bound card
- * keeps the protection; a later, different spell does not get it.
- * @param {{at?: number, key?: string|null, usage?: string|null}|null} flag
- * @param {{combatKey?: string|null, usage?: string|null}} o
- * @returns {boolean}
- */
-export function carefulApplies(flag, { combatKey = null, usage = null } = {}) {
-  if (!flag || typeof flag !== "object") return false;
-  if (flag.usage && flag.usage !== usage) return false;
-  if (flag.key) return flag.key === combatKey;
-  return true;
+export function unprotectRow(row) {
+  if (!row?.protected || row.applied) return row;
+  const prev = row.unprotected ?? null;
+  delete row.protected;
+  delete row.unprotected;
+  row.save = prev?.save ?? null;
+  row.multiplier = prev ? prev.multiplier : null;
+  return row;
 }
 
 /**

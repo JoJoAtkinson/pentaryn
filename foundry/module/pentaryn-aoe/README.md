@@ -29,11 +29,15 @@ dnd5e 6 only. Chat data is read from typed messages (`message.type` `usage` / `a
   pill agree. An older Damage click on the same area (or the same card after its area went) greys
   out. Players see one status line on their own card (waiting / applied / re-rolled), never
   monster numbers; the GM-only monster saves are hidden from their chat.
-- **Careful Spell** (`careful.mjs`). After a sorcerer uses it, the next spell they cast takes it
-  (in combat, on the same turn; no time window), and it ends there: if that spell's area calls for a
-  save, up to their CHA mod of their own side are marked *protected*: an automatic success and ×0 on
-  a half-damage spell, no request card. Bound to that usage card; a placement cancelled before it
-  lands leaves it armed; cleared when its combat is deleted.
+- **Careful Spell** (`careful.mjs`). Metamagic is tracked, not forced onto a spell (Joe's ruling,
+  2026-10-12). Using it opens a picker on the caster's client: the creatures on their scene by
+  token name, the current targets ticked, up to their CHA mod (min 1). A public card says
+  `<caster token> uses Careful Spell: <token names>`. The caster's next save spell's tray marks
+  exactly those creatures *protected*: an automatic success and ×0 on a half-damage spell, no
+  request card. Then it ends (one use per declaration); a re-roll of that card keeps it. A spell
+  with no save leaves it waiting, there is no time window, and using it again replaces the choice.
+  The GM toggles any open row's protection with its shield in the tray: off, the row gets back its
+  own save, or a monster rolls one and a player row waits.
 - **Part C — damage on a hit** (`attacks.mjs`). The roller's client rolls damage after a hit (or an
   attack whose target AC it can't know). A known miss or a natural 1 rolls nothing.
 - **Part D — effects meant for you** (`effects.mjs`). A usage card's one effect goes on its caster
@@ -65,7 +69,7 @@ live through `setting()`, so a change applies without a reload).
 | `autoDamageOnHit` | on | C | damage after a hit (pentaryn-combat reads it too) |
 | `autoApplySelf` | on | D | a self-cast card's one effect goes on the caster |
 | `highlightUnapplied` | on | D | outline an Effects tray nobody has applied |
-| `carefulSpell` | on | B | Careful Spell protects the caster's side |
+| `carefulSpell` | on | B | Careful Spell protects the creatures the player picks; the tray's shield toggle |
 | `refundCancelledArea` | on | F | a cancelled placement refunds what it spent |
 | `playerStatus` | on | B | the caster's status line; GM-only monster saves hidden from players |
 | `untargetedSelf` | on | D | a touch spell cast at nobody goes on the caster |
@@ -115,7 +119,7 @@ row with its params, returns and null cases (`api-manifest.mjs`). Kit members: `
 | `flags.pentaryn-aoe.effectsApplied` | the usage card | `{ ids, auto, reason, actor, actorName, names }` |
 | `flags.pentaryn-aoe.npcSave` | a monster save message | `true` |
 | `flags.pentaryn-aoe.damageMessage` | the request card | the damage message id |
-| `flags.pentaryn-aoe.careful` | the caster actor | `{ at, key, usage }` |
+| `flags.pentaryn-aoe.careful` | the caster actor | `{ at, scene, tokens, names }`: the picked token ids and names, until a save tray uses them |
 | `flags.pentaryn-aoe.handle`, `.region` | a handle token | `true`, the region id |
 | `flags.pentaryn-aoe.handle` | a template region | its handle token's id (plus core's `attachment.token`) |
 | `flags.pentaryn-aoe.handleActor` | the "Area handle" actor | `true` |
@@ -162,7 +166,7 @@ pass `activeGM.isSelf` and `userId === game.user.id`.
 - **`resolve` and `selfApply`** (`createChatMessage`): the kit's `claimMessage(message, job,
   { scope })` — each candidate stamps its socket id, waits 750 ms, and only the last writer acts.
 - **Everything else** on a broadcast hook runs where `activeGM.isSelf` (concentration cleanup, the
-  ready sweep, the Careful clean-up on `deleteCombat`, the delete backstop); each is idempotent.
+  ready sweep, the delete backstop); each is idempotent.
 - **Apply** (`applyRows`): overlapping calls for one tray in one tab run one after another, so
   the later one skips the rows the earlier one applied; a later call stops waiting on an Apply
   stuck for 10 s (`APPLY_WAIT_MS`). Two tabs applying the same tray at once are not coordinated.

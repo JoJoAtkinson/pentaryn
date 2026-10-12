@@ -28,7 +28,7 @@ test("trayHTML over the resolution states (golden/tray-html.json)", () => {
   const superseded = { ...clone(base), superseded: true };
   const careful = clone(base);
   protectRows(careful.rows, [IDS.cv], "half");
-  careful.careful = { names: ["Caven"], max: 3 };
+  careful.careful = { names: ["Caven"], ids: [IDS.cv] };
   const picker = { ...clone(base), regions: [{ id: IDS.region, name: "Fireball" }, { id: "regionOther00001", name: "Fireball <2>" }] };
   const targets = { ...clone(base), region: null, rows: [] };
   const unknownAbility = { ...clone(base), ability: "str", dc: undefined };

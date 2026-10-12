@@ -111,9 +111,9 @@ export const FEATURE_ROWS = Object.freeze({
     legacy("pingPlayers", [MESSAGE_ID], "Promise<ChatMessage|Notification|null>",
       "Whisper the owners of rows still waiting for a save; an info toast (returned) when nobody is.",
       { gm: true, writes: true, nullWhen: "no resolution", sideEffects: ["ChatMessage (whisper)"] }),
-    legacy("setRow", [MESSAGE_ID, p("rowId", "string"), p("changes", "{ apply?, multiplier? }")], "Promise<object|null>",
-      "GM edit of one unapplied row (tick, multiplier). Returns the updated resolution.",
-      { gm: true, writes: true, nullWhen: "no resolution", sideEffects: WRITES_RESOLUTION }),
+    legacy("setRow", [MESSAGE_ID, p("rowId", "string"), p("changes", "{ apply?, multiplier?, protected? }")], "Promise<object|null>",
+      "GM edit of one unapplied row (tick, multiplier, Careful Spell protection; unprotected, a row gets back its own save, a monster row with none is rolled). Returns the updated resolution.",
+      { gm: true, writes: true, nullWhen: "no resolution", sideEffects: [...WRITES_RESOLUTION, "ChatMessage (save roll, unprotected monster row)"] }),
   ],
   effects: [
     legacy("selfApply", [MESSAGE, p("opts", "{ force? }", { optional: true, doc: "force: ignore the autoApplySelf setting and the claim" })], "Promise<{ reason, actor, effects }|null>",

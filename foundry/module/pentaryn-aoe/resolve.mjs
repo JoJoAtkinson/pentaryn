@@ -20,7 +20,7 @@
 
 import {
   MODULE, RECENT_MESSAGES, aoeFlags, buildRows, fillSave, matchSave, applicableRows, allApplied, newestRegion,
-  supersedes, isHandle, isTemplateRegion, hydrateDamages
+  supersedes, isHandle, isTemplateRegion, hydrateDamages, protectRows, unprotectRow
 } from "./core.mjs";
 import { setting } from "./settings.mjs";
 import { claimMessage } from "./lib/election.mjs";
@@ -184,7 +184,7 @@ export async function resolve(messageOrId, { regionId = undefined } = {}) {
   const rows = buildRows(described, { casterActorId });
   const usage = usageIdOf(message);
   // Careful Spell is its own feature (careful.mjs); it reaches this one through ctx.exposed.
-  const careful = (await context?.exposed.carefulFor?.(activity.actor, described, { casterActorId, usage, scene, onSave, rows })) ?? null;
+  const careful = (await context?.exposed.carefulFor?.(activity.actor, { usage, onSave, rows })) ?? null;
 
   const res = {
     activity: activity.uuid,
@@ -444,15 +444,28 @@ async function cleanupInstant(res) {
   if (region && isTemplateRegion(region)) await removeArea([region], scene);
 }
 
-/** GM edits from the tray. */
-export function setRow(messageId, rowId, changes) {
-  return mutate(messageId, r => {
+/**
+ * GM edits from the tray: tick, multiplier, and Careful Spell's protection (aoe-careful-select).
+ * Unprotected, a row gets back the save it had; a monster row that had none is rolled now, a
+ * player row waits again.
+ */
+export async function setRow(messageId, rowId, changes) {
+  const out = await mutate(messageId, r => {
     const row = r.rows.find(x => x.id === rowId);
     if (!row || row.applied) return r;
     if ("apply" in changes) row.apply = !!changes.apply;
     if ("multiplier" in changes) { row.multiplier = Number(changes.multiplier); row.overridden = true; }
+    if ("protected" in changes && !r.superseded) {
+      if (changes.protected) protectRows([row], [row.id], r.onSave);
+      else unprotectRow(row);
+    }
     return r;
   });
+  const row = out?.rows.find(x => x.id === rowId);
+  if ("protected" in changes && !changes.protected && row?.kind === "auto" && !row.save && !row.applied) {
+    return rollNpcSaves(messageId, { rowIds: [rowId] });
+  }
+  return out;
 }
 
 /* -------------------------------------------- */

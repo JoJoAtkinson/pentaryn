@@ -52,13 +52,16 @@ function rowHTML(row, res, message = null) {
   const extra = row.kind === "auto"
     ? `<a data-pa="reroll" data-row="${esc(row.id)}" data-tooltip="${esc(_loc("PENTARYN_AOE.Tray.Reroll"))}"><i class="fa-solid fa-dice-d20" inert></i></a>`
     : `<a data-pa="rollfor" data-row="${esc(row.id)}" data-tooltip="${esc(_loc("PENTARYN_AOE.Tray.RollFor"))}"><i class="fa-solid fa-user-shield" inert></i></a>`;
+  // aoe-careful-select: the GM protects or unprotects any open row by hand.
+  const shield = row.applied || res.superseded || !setting("carefulSpell") ? ""
+    : `<a data-pa="protect" data-row="${esc(row.id)}" class="pa-protect${row.protected ? " on" : ""}" data-tooltip="${esc(_loc(row.protected ? "PENTARYN_AOE.Careful.Unprotect" : "PENTARYN_AOE.Careful.Protect"))}"><i class="fa-solid fa-shield-halved" inert></i></a>`;
   const status = row.applied ? `<span class="pa-applied" data-tooltip="${esc(row.hp ? `${row.hp.before} → ${row.hp.after}` : "")}">${esc(_loc("PENTARYN_AOE.Tray.Applied"))}</span>` : preview(row, res, message);
   return `<li class="pa-row ${row.applied ? "applied" : ""}" data-row="${esc(row.id)}">
     <input type="checkbox" data-pa="tick" ${row.apply ? "checked" : ""} ${locked}>
     <img src="${esc(row.img ?? "icons/svg/mystery-man.svg")}" alt="">
     <span class="pa-name" data-tooltip="${esc(row.kind === "manual" ? _loc("PENTARYN_AOE.Tray.Manual") : _loc("PENTARYN_AOE.Tray.Auto"))}">${esc(row.name)}${row.caster ? ` <em>(${esc(_loc("PENTARYN_AOE.Tray.Caster"))})</em>` : ""}</span>
     <span class="pa-save">${saveCell(row)}</span>
-    ${row.applied ? "" : extra}
+    ${row.applied ? "" : extra}${shield}
     <select data-pa="mult" ${locked}>${blank}${opts}</select>
     <span class="pa-amount">${status}</span>
   </li>`;
@@ -67,6 +70,7 @@ function rowHTML(row, res, message = null) {
 export function trayHTML(res, message = null) {
   const ability = CONFIG.DND5E.abilities[res.ability]?.label ?? res.ability;
   const n = applicableRows(res.rows).length;
+  const guarded = res.rows.filter(r => r.protected).map(r => r.name);   // as the rows stand (the GM may toggle)
   const picker = (res.regions?.length ?? 0) > 1
     ? `<select data-pa="region">${res.regions.map(r => `<option value="${esc(r.id)}" ${r.id === res.region ? "selected" : ""}>${esc(r.name)}</option>`).join("")}</select>`
     : "";
@@ -78,7 +82,7 @@ export function trayHTML(res, message = null) {
       <span class="pa-src">${esc(res.region ? _loc("PENTARYN_AOE.Tray.FromArea") : _loc("PENTARYN_AOE.Tray.FromTargets"))}</span>${picker}
     </div>
     ${res.superseded ? `<p class="pa-superseded">${esc(_loc("PENTARYN_AOE.Tray.Superseded"))}</p>` : ""}
-    ${res.careful?.names?.length ? `<p class="pa-careful"><i class="fa-solid fa-shield-halved" inert></i> ${esc(_loc("PENTARYN_AOE.Careful.Head", { names: res.careful.names.join(", ") }))}</p>` : ""}
+    ${guarded.length ? `<p class="pa-careful"><i class="fa-solid fa-shield-halved" inert></i> ${esc(_loc("PENTARYN_AOE.Careful.Head", { names: guarded.join(", ") }))}</p>` : ""}
     ${body}
     <div class="pa-buttons">
       <button type="button" data-pa="reroll-all" ${res.superseded ? "disabled" : ""}><i class="fa-solid fa-dice-d20" inert></i> ${esc(_loc("PENTARYN_AOE.Tray.RerollAll"))}</button>
@@ -143,6 +147,7 @@ function decorate(message, html) {
       case "reroll": return context.exposed.rollNpcSaves(message.id, { rowIds: [rowId], force: true });
       case "rollfor": return context.exposed.rollForPlayer(message.id, rowId, { event: ev });
       case "ping": return context.exposed.pingPlayers(message.id);
+      case "protect": return context.exposed.setRow(message.id, rowId, { protected: !el.classList.contains("on") });
     }
   }));
 }

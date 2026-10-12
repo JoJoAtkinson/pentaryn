@@ -49,10 +49,6 @@
   },
   {
     "kind": "on",
-    "name": "deleteCombat"
-  },
-  {
-    "kind": "on",
     "name": "createChatMessage"
   },
   {

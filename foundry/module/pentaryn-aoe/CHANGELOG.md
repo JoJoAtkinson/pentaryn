@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- **Careful Spell: the player picks who it protects** (declared, aoe-careful-select; Joe's
+  metamagic ruling 2026-10-12, supersedes metamagic-disarm): using Careful Spell opens a picker of
+  the creatures on the caster's scene (token names, current targets ticked, up to CHA mod, min 1)
+  and posts a public card `<caster token> uses Careful Spell: <token names>`. The caster's next save tray
+  protects exactly those rows and the declaration ends; a non-save spell leaves it armed, no time
+  window, a second use replaces it. Gone: the "caster's side" inference (`carefulTargets`), the bind
+  to the next cast, and the `deleteCombat` clean-up. New: a per-row shield toggle on the GM tray
+  (`setRow(…, { protected })`; unprotected, a row gets its own save back, or a monster rolls one).
+  Live check: a sorcerer uses Careful Spell, picks one goblin and one ally, casts Shield, then
+  Fireball — the card names both, the tray shows both protected, the next Fireball protects nobody.
 - **The tray's buttons fit the chat sidebar** (declared, play test AO-1 / tray-overflow,
   2026-10-12): Re-roll NPC saves, Ping and Apply were squeezed into one row at a fixed 24 px, so at
   the default sidebar width a label broke onto a second line and spilled out of its button. The

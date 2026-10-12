@@ -57,12 +57,15 @@ A known miss or a natural 1 rolls nothing. The card's Damage button still works.
 Players can't see hit/miss while `dnd5e.attackRollVisibility` is `"none"`. Setting it to
 `"hideAC"` shows hit/miss without the AC. That is Joe's call; this module does not change it.
 
-**Careful Spell.** After a sorcerer uses Careful Spell, it applies to the next spell they cast (in
-combat, on the same turn) and then ends: metamagic is a fresh choice for each casting, with no time
-window. If that spell's area calls for a save, it marks up to their Charisma modifier of their own
-side (player characters first, never the caster) as *protected*: an automatic success, and no
-damage on a half-damage spell. They get no
-request card. The GM can still change any row in the tray.
+**Careful Spell.** Metamagic is tracked, not forced onto a spell (Joe's ruling, 2026-10-12). When a
+sorcerer uses Careful Spell, a picker opens on their screen: the creatures on their scene by token
+name, with whatever they have targeted already ticked, up to their Charisma modifier (minimum one).
+A public chat card says `<caster token> uses Careful Spell: <token names>`. Their next spell that calls for a
+save marks exactly those creatures *protected* in its tray: an automatic success, and no damage on
+a half-damage spell. They get no request card. Then it ends; re-rolling that spell's damage keeps
+it. A spell with no save (Shield) leaves it waiting, there is no time window, and using Careful
+Spell again replaces the choice. The GM can protect or unprotect any row with its shield in the
+tray: unprotected, the row gets back its own save, or a monster rolls one and a player waits.
 
 **What the player sees.** The caster gets one line under their own damage card: waiting for the
 GM, applied, or re-rolled. Monster save numbers never show, and the GM-only monster save rolls are
@@ -99,7 +102,7 @@ mouse and the wheel turns it.
 | Roll damage on a hit | on | pentaryn-combat reads it too |
 | Apply self-cast effects automatically | on | the caster's one effect goes on straight away |
 | Highlight effects not yet applied | on | cards under an hour old |
-| Careful Spell protects allies in the area | on | |
+| Careful Spell protects the creatures the player chooses | on | |
 | Refund a cancelled area | on | Part F |
 | Tell the caster when damage is waiting for the GM | on | also hides GM-only monster saves from players |
 | A touch spell cast at nobody goes on the caster | on | off: it waits in the GM's effects tray |

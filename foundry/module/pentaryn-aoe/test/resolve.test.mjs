@@ -264,77 +264,49 @@ test("resolve(id, { regionId: null }) uses the recorded targets instead of the a
 
 /* ── Careful Spell ───────────────────────────────────────────────────────────────────────────── */
 
-test("Careful Spell used (postUseActivity on the caster's client): armed for the next save spell, toast with the CHA count", async () => {
+// aoe-careful-select (declared, Joe's metamagic ruling 2026-10-12): the player picks who Careful
+// Spell protects; the next save tray protects exactly those and clears it. The full flow is in
+// careful-select.test.mjs; here, the resolution it leaves (golden/careful.json).
+test("Careful Spell used (postUseActivity on the caster's client): the player's pick is stored; a spell, or a client that does not own the caster, does nothing", async () => {
   const careful = W.item({ name: "Careful Spell", type: "feat", system: { identifier: "careful-spell" } }, ctx.wizard);
   reset();
   const at = Date.now();
   assert.ok(at >= NOW, "mocked clock");
+  F.dialog = (opts, inputs) => { for (const i of inputs) i.checked = i.value === IDS.cv; return "ok"; };
   F.fire("dnd5e.postUseActivity", { item: careful, actor: ctx.wizard }, {}, {});
   await flush();
-  assert.deepEqual(ctx.wizard.flags[MODULE].careful, { at, key: null, usage: null });
-  assert.deepEqual(ops("notify").map(c => [c.level, c.message]), [["info", game.i18n.format("PENTARYN_AOE.Careful.Armed", { n: 3 })]]);
+  F.dialog = undefined;
+  assert.deepEqual(ctx.wizard.flags[MODULE].careful, { at, scene: IDS.scene, tokens: [IDS.cv], names: ["Caven"] });
+  assert.deepEqual(ops("create").map(c => c.data.content), [`<p class="pa-careful-card"><i class="fa-solid fa-shield-halved" inert></i> ${game.i18n.format("PENTARYN_AOE.Careful.Card", { caster: "Marrith", names: "Caven" })}</p>`]);
   reset();
   F.fire("dnd5e.postUseActivity", { item: ctx.item, actor: ctx.wizard }, {}, {});
   F.fire("dnd5e.postUseActivity", { item: careful, actor: { ...ctx.wizard, isOwner: false } }, {}, {});
   await flush();
-  assert.deepEqual(ops("update", "notify"), []);
+  assert.deepEqual(ops("dialog", "update", "create", "notify"), []);
 });
 
-test("an armed Careful Spell protects the caster's side in the area (golden/careful.json) and binds to the usage card", async () => {
+test("a declared Careful Spell protects exactly the chosen rows on the next save tray (golden/careful.json) and is cleared", async () => {
   reset();
   const msg = damage(W, ctx, { id: "dmgCareful000001", hook: true });
   await advance(800);
   await flush(8);
   const res = resOf(msg.id);
   pinJSON("careful", { careful: res.careful, rows: res.rows.map(r => ({ id: r.id, protected: !!r.protected, save: r.save, multiplier: r.multiplier })) }, import.meta.url);
-  assert.deepEqual(res.careful, { names: ["Caven"], max: 3 });
-  assert.equal(ctx.wizard.flags[MODULE].careful.usage, IDS.usage);
+  assert.deepEqual(res.careful, { names: ["Caven"], ids: [IDS.cv] });
+  assert.equal(ctx.wizard.flags[MODULE].careful, undefined, "one use per declaration");
   assert.equal(ops("create").filter(c => c.data.type === "request").length, 0, "the protected PC gets no request card");
 });
 
-test("carefulFor → null: setting off, no flag, another usage card (no time window: metamagic-disarm)", async () => {
-  const flag = ctx.wizard.flags[MODULE].careful;
-  const args = (usage = IDS.usage) => [ctx.wizard, [], { casterActorId: ctx.wizard.id, usage, scene: ctx.s, onSave: "half", rows: [] }];
-  assert.deepEqual(await R.carefulFor(...args()), { names: [], max: 3 });
-  assert.equal(await R.carefulFor(...args("otherUsage000001")), null);
+test("carefulFor → null: setting off, no declaration, no caster", async () => {
+  const args = () => [ctx.wizard, { usage: "otherUsage000001", onSave: "half", rows: [] }];
+  assert.equal(await R.carefulFor(...args()), null, "no declaration");
+  ctx.wizard.flags[MODULE].careful = { at: 1, scene: IDS.scene, tokens: [IDS.cv], names: ["Caven"] };
   await game.settings.set(MODULE, "carefulSpell", false);
   assert.equal(await R.carefulFor(...args()), null);
   await game.settings.set(MODULE, "carefulSpell", true);
-  ctx.wizard.flags[MODULE].careful = { at: Date.now() - 11 * 60 * 1000, key: null, usage: null };
-  assert.deepEqual(await R.carefulFor(...args()), { names: [], max: 3 }, "an unspent use has no time window");
-  delete ctx.wizard.flags[MODULE].careful;
-  assert.equal(await R.carefulFor(...args()), null);
-  assert.equal(await R.carefulFor(null, [], {}), null);
-  ctx.wizard.flags[MODULE].careful = flag;
-});
-
-test("carefulKey: the started combat's turn the actor is in, else null", () => {
-  assert.equal(R.carefulKey(ctx.wizard), null);
-  const combat = { id: "combat0000000001", started: true, round: 2, combatant: { id: "cbt1" }, turn: 0, combatants: [{ actor: ctx.wizard, actorId: ctx.wizard.id }] };
-  game.combats.set(combat.id, combat);
-  assert.equal(R.carefulKey(ctx.wizard), "combat0000000001:2:cbt1");
-  combat.combatant = null;
-  assert.equal(R.carefulKey(ctx.wizard), "combat0000000001:2:0");
-  combat.started = false;
-  assert.equal(R.carefulKey(ctx.wizard), null);
-  game.combats.delete(combat.id);
-});
-
-test("deleteCombat (active GM): a Careful Spell armed for that combat's turn is cleared; others stay", async () => {
-  ctx.wizard.flags[MODULE].careful = { at: 1, key: "combat0000000002:1:x", usage: null };
-  ctx.caven.flags[MODULE] = { careful: { at: 1, key: "combat0000000003:1:x" } };
-  reset();
-  F.fire("deleteCombat", { id: "combat0000000002", combatants: [{ actor: ctx.wizard }, { actor: ctx.wizard }, { actor: ctx.caven }, { actor: null }] });
-  await flush();
+  assert.deepEqual(await R.carefulFor(...args()), { names: [], ids: [IDS.cv] }, "no time window; Caven not in these rows");
   assert.equal(ctx.wizard.flags[MODULE].careful, undefined);
-  assert.deepEqual(ctx.caven.flags[MODULE].careful, { at: 1, key: "combat0000000003:1:x" });
-  assert.equal(ops("update").length, 1, "each actor once");
-  F.become({ userId: PLAYER_ID });
-  ctx.caven.flags[MODULE].careful.key = "combat0000000004:1:x";
-  F.fire("deleteCombat", { id: "combat0000000004", combatants: [{ actor: ctx.caven }] });
-  await flush();
-  F.become({ userId: GM_ID });
-  assert.ok(ctx.caven.flags[MODULE].careful, "not the active GM: untouched");
+  assert.equal(await R.carefulFor(null, {}), null);
 });
 
 /* ── the pieces (-2, -5, -6) ─────────────────────────────────────────────────────────────────── */

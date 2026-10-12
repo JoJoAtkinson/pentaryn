@@ -3,7 +3,7 @@
  *
  * Features, in load order (FEATURES; the file map is in README.md "Files"):
  *   areas.mjs    Part A  ownership, handle tokens, delete cascade, Remove all templates, cleanup, sweep
- *   careful.mjs  Part B  Careful Spell: the caster's side in the next save spell's area is protected
+ *   careful.mjs  Part B  Careful Spell: the player picks who; the next save spell's tray protects them
  *   resolve.mjs  Part B  who is inside, NPC saves, the players' request card, Apply
  *   tray.mjs     Part B  the GM-only tray on the damage message (resolve's actions via ctx.exposed)
  *   attacks.mjs  Part C  auto damage on hit

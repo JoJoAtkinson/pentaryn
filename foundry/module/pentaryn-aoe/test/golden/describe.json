@@ -458,7 +458,7 @@
         },
         {
           "name": "changes",
-          "type": "{ apply?, multiplier? }",
+          "type": "{ apply?, multiplier?, protected? }",
           "resolve": false
         }
       ],
@@ -467,11 +467,12 @@
       "writes": true,
       "query": false,
       "sideEffects": [
-        "flags.pentaryn-aoe.resolution"
+        "flags.pentaryn-aoe.resolution",
+        "ChatMessage (save roll, unprotected monster row)"
       ],
       "nullWhen": "no resolution",
       "legacy": true,
-      "doc": "GM edit of one unapplied row (tick, multiplier). Returns the updated resolution."
+      "doc": "GM edit of one unapplied row (tick, multiplier, Careful Spell protection; unprotected, a row gets back its own save, a monster row with none is rolled). Returns the updated resolution."
     },
     {
       "path": "selfApply",
@@ -614,7 +615,7 @@
       "scope": "world",
       "type": "Boolean",
       "default": true,
-      "doc": "Part B: Careful Spell marks up to CHA mod of the caster's side as protected in the area of the next spell they cast, if it calls for a save; then it ends."
+      "doc": "Part B: using Careful Spell opens a picker (up to CHA mod, min 1, of the creatures on the caster's scene) and posts a public card; the caster's next save tray protects exactly those rows, then it ends. The GM can toggle any row's protection on the tray."
     },
     {
       "key": "refundCancelledArea",
@@ -696,10 +697,6 @@
     {
       "name": "dnd5e.postUseActivity",
       "label": "postUseActivity(careful)"
-    },
-    {
-      "name": "deleteCombat",
-      "label": "deleteCombat(careful)"
     },
     {
       "name": "createChatMessage",

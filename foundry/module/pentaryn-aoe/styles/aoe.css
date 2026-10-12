@@ -13,14 +13,14 @@
 .pentaryn-aoe-tray .pa-rows { list-style: none; margin: 0; padding: 0; }
 .pentaryn-aoe-tray .pa-row {
   display: grid;
-  grid-template-columns: auto 22px 1fr auto auto auto 2.5em;
+  grid-template-columns: auto 22px 1fr auto auto auto auto 2.5em;
   gap: 4px; align-items: center; padding: 2px 0;
 }
 .pentaryn-aoe-tray .pa-row.applied { opacity: 0.6; }
 .pentaryn-aoe-tray .pa-row img { width: 22px; height: 22px; border: none; object-fit: cover; }
 .pentaryn-aoe-tray .pa-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pentaryn-aoe-tray .pa-row select { width: 4em; height: 20px; padding: 0 2px; }
-.pentaryn-aoe-tray .pa-amount { text-align: right; font-weight: bold; }
+.pentaryn-aoe-tray .pa-amount { grid-column: -2; text-align: right; font-weight: bold; }
 .pentaryn-aoe-tray .pa-pass { color: var(--color-level-success, #18520b); }
 .pentaryn-aoe-tray .pa-fail { color: var(--color-level-error, #6e0000); }
 .pentaryn-aoe-tray .pa-wait { opacity: 0.7; }
@@ -70,5 +70,10 @@ effect-application.pentaryn-aoe-unapplied > .card-tray > label::after {
 
 /* usability Area 5 re-run: Careful Spell in the tray; the caster's status line */
 .pentaryn-aoe-tray .pa-careful { margin: 2px 0 4px; font-size: var(--font-size-12, 12px); }
+/* aoe-careful-select: the GM's per-row shield toggle (lit when the row is protected); the picker */
+.pentaryn-aoe-tray a.pa-protect { opacity: 0.35; }
+.pentaryn-aoe-tray a.pa-protect.on { opacity: 1; color: var(--color-level-success, #18520b); }
+.pa-careful-picks { display: flex; flex-direction: column; gap: 2px; margin: 4px 0; }
+.pa-careful-picks .pa-careful-pick { display: flex; align-items: center; gap: 6px; }
 .chat-message .pa-status { margin: 4px 0 0; font-size: var(--font-size-12, 12px); font-style: italic; opacity: 0.85; }
 .chat-message .pa-status i { margin-right: 4px; }

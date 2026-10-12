@@ -83,8 +83,8 @@
         "Hint": "Outline a card's Effects tray and mark it \"Not applied yet\" until someone applies its effects. Cards older than an hour are left alone."
       },
       "carefulSpell": {
-        "Name": "Careful Spell protects allies in the area",
-        "Hint": "After a sorcerer uses Careful Spell, it applies to the next spell they cast (in combat, on the same turn) and then ends. If that spell's area calls for a save, it marks up to their Charisma modifier of their own side (same token disposition, player characters first, never the caster) as protected: an automatic success and no damage on a half-damage spell. No request card for them. The GM can change any row in the tray."
+        "Name": "Careful Spell protects the creatures the player chooses",
+        "Hint": "When a sorcerer uses Careful Spell, they pick up to their Charisma modifier (minimum one) of the creatures on their scene, and a chat card names them. The next save spell's tray marks exactly those creatures protected: an automatic success and no damage on a half-damage spell, no request card. Then it ends; a spell with no save leaves it waiting, and using it again replaces the choice. The GM can protect or unprotect any row in the tray with its shield."
       },
       "refundCancelledArea": {
         "Name": "Refund a cancelled area",
@@ -114,7 +114,14 @@
       }
     },
     "Careful": {
-      "Armed": "Careful Spell: your next spell uses it. If its area calls for a save, up to {n} of your side (players first) succeed automatically and take no damage on a half-damage spell. The GM can change any row.",
+      "PickTitle": "Careful Spell",
+      "PickHint": "Choose who it protects (up to {n}). On your next spell that calls for a saving throw, they succeed automatically and take no damage where a success would halve it.",
+      "PickOk": "Protect them",
+      "PickCancel": "Cancel",
+      "Nobody": "Careful Spell: there is no creature on this scene to choose.",
+      "Card": "{caster} uses Careful Spell: {names}",
+      "Protect": "Careful Spell: protect this creature (an automatic success, no damage where a success halves it)",
+      "Unprotect": "Careful Spell: take the protection off (back to its own save)",
       "Row": "protected",
       "RowTip": "Careful Spell: an automatic success, and no damage where a success halves it.",
       "Head": "Careful Spell protects: {names}"

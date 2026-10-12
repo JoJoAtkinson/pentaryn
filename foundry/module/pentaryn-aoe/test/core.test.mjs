@@ -25,7 +25,7 @@ const {
   centreOf, multiplierFor, isCreature, rowKind, buildRows, fillSave, applicableRows, allApplied,
   matchSave, shouldAutoDamage, newestRegion, aoeFlags, regionFromSpell, regionOfActivity, selfApplyReason,
   pendingEffects, isTemplateRegion, attachedTokenId, attachedToOther, handleVertical, placementInProgress,
-  stillListing, isHandleTarget, supersedes, carefulTargets, protectRows, carefulApplies, placementCancelled, playerStatus,
+  stillListing, isHandleTarget, supersedes, protectRows, unprotectRow, placementCancelled, playerStatus,
   sameSpellEffect, aimFromCaster, aimsFromCaster
 } = await import("../core.mjs");
 
@@ -269,34 +269,25 @@ check("supersede: same area (a moved Fireball), same card after its area went (S
    supersedes({ activity: "b", region: "r1", usage: "u1" }, { activity: "a", region: "r1", usage: "u1" }),
    supersedes({ activity: "a", region: "r1", usage: "u1", superseded: true }, { activity: "a", region: "r1", usage: "u1" })],
   [true, true, false, false, false, false]);
-const crowd = [
-  { id: "pc", baseActorId: "f", actorType: "character", hpMax: 30, disposition: 1, hasPlayerOwner: true },
-  { id: "me", baseActorId: "caster", actorType: "character", hpMax: 98, disposition: 1, hasPlayerOwner: true },
-  { id: "npcAlly", baseActorId: "g", actorType: "npc", hpMax: 10, disposition: 1, hasPlayerOwner: false },
-  { id: "gob", baseActorId: "h", actorType: "npc", hpMax: 7, disposition: -1, hasPlayerOwner: false },
-  { id: "hid", baseActorId: "i", actorType: "character", hpMax: 7, disposition: 1, hidden: true },
-  { id: "h", handle: true, actorType: "npc", hpMax: 1, disposition: 1 }
-];
-check("Careful: the caster's side, PCs first, never the caster, a foe, a hidden token or a handle; up to CHA mod (min 1)",
-  [carefulTargets([...crowd].reverse(), { casterActorId: "caster", casterDisposition: 1, max: 5 }),
-   carefulTargets(crowd, { casterActorId: "caster", casterDisposition: 1, max: 1 }),
-   carefulTargets(crowd, { casterActorId: "caster", casterDisposition: 1, max: 0 }),
-   carefulTargets(crowd, { casterActorId: "caster", casterDisposition: null, max: 5 })],
-  [["pc", "npcAlly"], ["pc"], ["pc"], []]);
+// aoe-careful-select (declared, Joe's metamagic ruling 2026-10-12): the player chooses; nothing is
+// inferred from disposition. protectRows marks exactly the chosen rows, the caster's own included.
 const prot = protectRows([{ id: "pc", kind: "manual", save: null, multiplier: null, apply: true }, { id: "gob", kind: "auto", save: null, multiplier: null, apply: true },
-  { id: "me", caster: true, save: null, multiplier: null }], ["pc", "me"], "half");
-check("Careful: a protected row auto-succeeds and takes 0 of a half-on-save spell; the caster and others untouched",
-  prot.map(r => [r.id, !!r.protected, r.save?.success ?? null, r.multiplier]), [["pc", true, true, 0], ["gob", false, null, null], ["me", false, null, null]]);
+  { id: "me", caster: true, save: null, multiplier: null }, { id: "foe", kind: "auto", save: null, multiplier: null, apply: true }], ["pc", "me", "foe"], "half");
+check("Careful: exactly the chosen rows auto-succeed and take 0 of a half-on-save spell (a foe, the caster too); others untouched",
+  prot.map(r => [r.id, !!r.protected, r.save?.success ?? null, r.multiplier]), [["pc", true, true, 0], ["gob", false, null, null], ["me", true, true, 0], ["foe", true, true, 0]]);
 check("Careful on a no-damage-on-save spell is still 0",
   protectRows([{ id: "pc", save: null, multiplier: null }], ["pc"], "none")[0].multiplier, 0);
+{
+  const rolled = protectRows([{ id: "g", kind: "auto", save: { total: 9, success: false, messageId: "m" }, multiplier: 1 }], ["g"], "half")[0];
+  const back = unprotectRow(structuredClone(rolled));
+  const fresh = unprotectRow(structuredClone(prot[0]));
+  check("unprotectRow: a row gets back the save it had; one protected before any roll has no save again",
+    [[!!back.protected, back.save, back.multiplier, "unprotected" in back], [!!fresh.protected, fresh.save, fresh.multiplier]],
+    [[false, { total: 9, success: false, messageId: "m" }, 1, false], [false, null, null]]);
+}
 check("protected rows get no request card and answer no save",
   [prot.filter(r => r.kind === "manual" && r.apply && !r.save).length,
    matchSave({ ability: "dex", request: "q", rows: prot }, { requestId: "q", actorUuid: undefined, tokenId: "pc" })], [0, -1]);
-check("Careful waits for this turn's cast, bound to its card; out of combat until the next cast, no time window (metamagic-disarm)",
-  [carefulApplies({ key: "c:1:x" }, { combatKey: "c:1:x" }), carefulApplies({ key: "c:1:x" }, { combatKey: "c:2:x" }),
-   carefulApplies({ key: "c:1:x", usage: "u1" }, { combatKey: "c:1:x", usage: "u1" }), carefulApplies({ key: "c:1:x", usage: "u1" }, { combatKey: "c:1:x", usage: "u2" }),
-   carefulApplies({ at: 1000 }, {}), carefulApplies({ at: 1000, usage: "u1" }, { usage: "u2" }), carefulApplies(null, {})],
-  [true, false, true, false, true, false, false]);
 check("placement cancelled after a spend → refund; placed, nothing spent, or no placement offered → no",
   [placementCancelled({ wanted: true, placed: 0, consumed: true }), placementCancelled({ wanted: true, placed: 1, consumed: true }),
    placementCancelled({ wanted: true, placed: 0, consumed: false }), placementCancelled({ wanted: false, consumed: true }),
@@ -305,14 +296,6 @@ check("player status line: waiting, applied, superseded, nothing to say",
   [playerStatus({ rows: [{ apply: true, applied: false }] }), playerStatus({ rows: [{ apply: true, applied: true }, { apply: false }] }),
    playerStatus({ superseded: true, rows: [] }), playerStatus({ rows: [] }), playerStatus(null)],
   ["waiting", "applied", "superseded", null, null]);
-
-{
-  const { carefulStale } = await import("../core.mjs");
-  check("Careful armed for a deleted combat's turn is stale; another combat's or an out-of-combat use is not",
-    [carefulStale({ key: "c1:2:x", at: 1 }, "c1"), carefulStale({ key: "c2:2:x" }, "c1"), carefulStale({ key: "c10:1:x" }, "c1"),
-     carefulStale({ at: 1000, key: null }, "c1"), carefulStale(null, "c1"), carefulStale({ key: "c1:1:x" }, null)],
-    [true, false, false, false, false, false]);
-}
 
 /* ── checkpoint additions (guide S1.4, core.test.mjs) ─────────────────────────────────────────── */
 
@@ -328,10 +311,13 @@ test("VERSION === module.json version", () => {
   assert.equal(core.VERSION, manifestOf(ROOT).version);
 });
 
+// [declared] aoe-careful-select (Joe's metamagic ruling, 2026-10-12): carefulTargets (the "caster's
+// side" inference), carefulApplies and carefulStale (the bind-to-next-cast and its combat clean-up)
+// are dropped; unprotectRow (the GM's tray toggle) is added.
 test("the pure surface core exports today (names; later steps may add, never drop)", () => {
   const want = [
     "MODULE", "MULTIPLIERS", "allApplied", "aimFromCaster", "aimsFromCaster", "aoeFlags", "applicableRows", "attachedToOther",
-    "attachedTokenId", "buildRows", "carefulApplies", "carefulStale", "carefulTargets", "centreOf", "fillSave", "handleVertical",
+    "attachedTokenId", "buildRows", "centreOf", "fillSave", "handleVertical", "unprotectRow",
     "isCreature", "isHandleTarget", "isTemplateRegion", "matchSave", "multiplierFor", "newestRegion", "pendingEffects",
     "placementCancelled", "placementInProgress", "playerStatus", "protectRows", "regionFromSpell", "regionOfActivity", "rowKind",
     "sameSpellEffect", "selfApplyReason", "shouldAutoDamage", "stillListing", "supersedes",
