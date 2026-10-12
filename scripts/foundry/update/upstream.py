@@ -102,6 +102,17 @@ def _parts(version: str) -> list[int]:
     return [int(n) for n in _NUM.findall(version or "")]
 
 
+def _key(version: str) -> list[int]:
+    """Numeric parts with trailing zeros dropped, so ``1.2`` and ``1.2.0`` compare equal."""
+    parts = _parts(version)
+    while parts and parts[-1] == 0:
+        parts.pop()
+    return parts
+
+
+_PRERELEASE = re.compile(r"(alpha|beta|rc|pre|dev)", re.I)
+
+
 def is_newer(candidate: str | None, current: str | None) -> bool:
     if not candidate:
         return False
@@ -303,13 +314,24 @@ def _attach_notes(pkg: Package, up: Upstream, repo: str | None) -> None:
     Reading only the newest release would miss the breaking change three releases back
     that we are also about to skip over — which is precisely what the adjudicator is
     for. Bodies are truncated because they are fed to an LLM.
+
+    Only installed < tag <= target counts: betas and anything past the target are not
+    what we are installing. Past eight, the target's own note is kept plus the seven
+    nearest the installed version — the ones a newest-first cut used to drop (EC-6).
     """
+    low, high = _key(up.installed), _key(up.latest or "")
+
+    def wanted(rel: dict, tag: str) -> bool:
+        if rel.get("prerelease") or rel.get("upcoming_release") or _PRERELEASE.search(tag):
+            return False
+        return low < _key(tag) <= high
+
     releases: list[dict] = []
     if repo:
         up.notes_url = f"https://github.com/{repo}/releases"
         for rel in _github_releases(repo):
             tag = (rel.get("tag_name") or "").lstrip("v")
-            if is_newer(tag, up.installed):
+            if wanted(rel, tag):
                 releases.append({
                     "version": tag,
                     "name": rel.get("name") or tag,
@@ -321,7 +343,7 @@ def _attach_notes(pkg: Package, up: Upstream, repo: str | None) -> None:
         up.notes_url = f"https://gitlab.com/{project}/-/releases"
         for rel in _gitlab_releases(project):
             tag = (rel.get("tag_name") or "").lstrip("v")
-            if is_newer(tag, up.installed):
+            if wanted(rel, tag):
                 releases.append({
                     "version": tag,
                     "name": rel.get("name") or tag,
@@ -333,7 +355,11 @@ def _attach_notes(pkg: Package, up: Upstream, repo: str | None) -> None:
         # Premium content: no public release feed. Point a human at the vendor page.
         up.notes_url = pkg.changelog or pkg.url
 
-    up.notes = releases[:8]
+    releases.sort(key=lambda r: _key(r["version"]))   # oldest first
+    if len(releases) > 8:
+        target = [r for r in releases if _key(r["version"]) == high][-1:]
+        releases = [r for r in releases if r not in target][:8 - len(target)] + target
+    up.notes = releases[::-1]
 
 
 def resolve_all(packages: list[Package], *, notes: bool = True) -> dict[str, Upstream]:
