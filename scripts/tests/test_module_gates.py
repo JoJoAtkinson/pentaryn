@@ -59,6 +59,14 @@ def test_check_report_is_silent(tmp_path, monkeypatch, capsys):
     assert capsys.readouterr().out == ""
 
 
+def test_gate_tables_agree():
+    """The spec's gate names, the prose runners and the --json runners are one set.
+
+    `check` and `check_report` skip a name their table lacks, so a drift would make prose
+    and --json silently run different gates."""
+    assert set(cfg.ModuleSpec.CHECKS) == set(modules._CHECKS) == set(modules._GATES)
+
+
 def test_prose_and_data_agree(tmp_path, capsys):
     spec = TmpSpec(_module(tmp_path, BROKEN), check=("imports",))
     rc = modules._check_imports(spec)
