@@ -26,6 +26,7 @@
 import { MODULE, aoeFlags, selfApplyReason, pendingEffects, sameSpellEffect } from "./core.mjs";
 import { setting } from "./settings.mjs";
 import { on, guard, claimMessage } from "./hooks.mjs";
+import { cardEffects, recordedTarget, spellOf } from "./messages-adapter.mjs";
 
 const esc = s => foundry.utils.escapeHTML(String(s ?? ""));
 
@@ -43,22 +44,11 @@ const localApplied = new Map();      // message id → Set(effect ids) applied f
 /*  Reading a usage card                        */
 /* -------------------------------------------- */
 
-/**
- * The card's applicable effects (enchantments excluded). dnd5e 6 stores them as uuids that are
- * either relative to the item (.ActiveEffect.<id>) or point into the dnd5e.effects compendium;
- * message.system.getEffects() resolves both, falling back to the item snapshot of a consumed item.
- */
-export async function cardEffects(message) {
-  if (message?.type !== "usage" || !message.system?.effects?.length) return [];
-  const effects = (await message.system.getEffects?.()) ?? [];
-  return effects.filter(e => e && e.type !== "enchantment");
-}
-
 /** The actors a usage card targeted: dnd5e 6 records { actor, token } uuids (migrated cards only the actor). */
 function targetActors(message) {
   return (message.system?.targets ?? []).map(tg => {
-    const token = tg?.token ? fromUuidSync(tg.token, { strict: false }) : null;
-    return token?.actor ?? (tg?.actor ? fromUuidSync(tg.actor, { strict: false }) : null);
+    const { token, actor } = recordedTarget(tg);
+    return token?.actor ?? (actor ? fromUuidSync(actor, { strict: false }) : null);
   }).filter(a => a?.effects);
 }
 
@@ -129,18 +119,6 @@ function onPreCreateEffect(effect) {
   if (old) actor.effects.get(old)?.delete().catch(err => console.warn(`${MODULE} | replace ${effect.name}`, err));
 }
 
-/** The spell identifier an applied effect came from (its source effect's item, else its origin). */
-function spellOf(effect) {
-  for (const uuid of [effect._stats?.duplicateSource, effect.origin]) {
-    if (!uuid) continue;
-    let doc = null;
-    try { doc = fromUuidSync(uuid, { strict: false }); } catch { doc = null; }
-    const item = doc?.documentName === "Item" ? doc : doc?.parent?.documentName === "Item" ? doc.parent : null;
-    if (item?.type === "spell") return item.system?.identifier || item.name;
-  }
-  return null;
-}
-
 /** Record applied effect ids on the message (if this user may), and locally either way. */
 async function markApplied(message, ids, extra = {}) {
   const live = game.messages.get(message.id) ?? message;
@@ -170,8 +148,8 @@ async function selfReason(message, effects = null) {
 
 /** A recorded target's actor uuid (the token's actor when the token still exists, else the stored actor). */
 function targetActorUuid(tg) {
-  const token = tg?.token ? fromUuidSync(tg.token, { strict: false }) : null;
-  return token?.actor?.uuid ?? tg?.actor ?? null;
+  const { token, actor } = recordedTarget(tg);
+  return token?.actor?.uuid ?? actor ?? null;
 }
 
 /** Is this client the one that writes for a card made by `userId`? */
@@ -310,4 +288,4 @@ export function installEffects() {
 
 // Test seam (characterisation checkpoint): tests import this through test/fixtures/seams.mjs only,
 // so the blueprint refactor edits that shim, not the frozen tests. Not part of the API.
-export const _internals = { targetActors, targetActorUuid, appliedIds, applyEffect, onPreCreateEffect, spellOf, markApplied, selfReason, isApplier, decorate, applyTargets, inflight, localApplied };
+export const _internals = { targetActors, targetActorUuid, appliedIds, applyEffect, onPreCreateEffect, markApplied, selfReason, isApplier, decorate, applyTargets, inflight, localApplied };

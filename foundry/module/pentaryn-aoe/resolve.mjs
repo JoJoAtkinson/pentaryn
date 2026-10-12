@@ -19,12 +19,13 @@
  */
 
 import {
-  MODULE, aoeFlags, buildRows, fillSave, matchSave, applicableRows, allApplied, newestRegion, multiplierFor,
-  supersedes, carefulTargets, protectRows, carefulApplies, carefulStale
+  MODULE, aoeFlags, buildRows, fillSave, matchSave, applicableRows, allApplied, newestRegion,
+  supersedes, carefulTargets, protectRows, carefulApplies, carefulStale, isHandle, isTemplateRegion
 } from "./core.mjs";
 import { setting } from "./settings.mjs";
 import { on, guard, claimMessage } from "./hooks.mjs";
-import { isHandle, isTemplateRegion, areasFor, removeArea, handleActor } from "./areas.mjs";
+import { areasFor, removeArea, handleActor, isPile } from "./scene-adapter.mjs";
+import { activityOf, usageIdOf, recordedTarget } from "./messages-adapter.mjs";
 
 export const REQUEST_HANDLER = `${MODULE}.save`;
 const abilityLabel = a => CONFIG.DND5E.abilities[a]?.label ?? a;
@@ -52,13 +53,6 @@ export function mutate(messageId, fn) {
 /* -------------------------------------------- */
 /*  Who is affected                             */
 /* -------------------------------------------- */
-
-function isPile(token) {
-  try {
-    if (game.itempiles?.API?.isValidItemPile) return !!game.itempiles.API.isValidItemPile(token);
-  } catch { /* fall through */ }
-  return !!token.actor?.flags?.["item-piles"]?.data?.enabled || !!token.flags?.["item-piles"]?.data?.enabled;
-}
 
 /** Describe a TokenDocument as the plain object core.buildRows expects. */
 export function describeToken(token) {
@@ -88,9 +82,9 @@ export function describeToken(token) {
 function tokensForTargets(targets, scene) {
   const out = [];
   for (const tg of targets ?? []) {
-    const doc = tg?.token ? fromUuidSync(tg.token, { strict: false }) : null;
+    const { token: doc, actor: actorUuid } = recordedTarget(tg);
     if (doc && (!scene || doc.parent === scene)) { out.push(doc); continue; }
-    const actor = fromUuidSync(tg?.actor ?? tg?.uuid ?? "", { strict: false });
+    const actor = fromUuidSync(actorUuid ?? tg?.uuid ?? "", { strict: false });
     if (!actor) continue;
     const token = actor.token ?? actor.getActiveTokens?.(false, true)?.find(tk => tk.parent === scene)
       ?? scene?.tokens.find(tk => tk.actorId === actor.id);
@@ -102,20 +96,6 @@ function tokensForTargets(targets, scene) {
 /* -------------------------------------------- */
 /*  Resolve                                     */
 /* -------------------------------------------- */
-
-/** The activity a dnd5e 6 roll message belongs to. */
-function activityOf(message) {
-  return message.getAssociatedActivity?.() ?? fromUuidSync(message.system?.activity?.uuid ?? "", { strict: false });
-}
-
-/**
- * The id of the usage card a roll message threads under (its system.origin; the live field is the
- * resolved message), or null when it was rolled from somewhere else (the sheet, a macro).
- */
-export function usageIdOf(message) {
-  const id = message?._source?.system?.origin ?? message?.system?.origin?.id ?? null;
-  return id && game.messages.get(id)?.type === "usage" ? id : null;
-}
 
 /**
  * dnd5e's roll workflow sets system.origin to the message the click came from
@@ -448,8 +428,6 @@ export function setRow(messageId, rowId, changes) {
   });
 }
 
-export { multiplierFor };
-
 /* -------------------------------------------- */
 /*  Hook wiring                                 */
 /* -------------------------------------------- */
@@ -495,4 +473,4 @@ export function installResolve() {
 }
 // Test seam (characterisation checkpoint): tests import this through test/fixtures/seams.mjs only,
 // so the blueprint refactor edits that shim, not the frozen tests. Not part of the API.
-export const _internals = { isPile, tokensForTargets, activityOf, keysOnly, saveSystem, damagesOf, supersedeOlder, carefulFor, onCarefulUsed, rollOne, postRequest, onSaveMessage, cleanupInstant, isAbilitySave, queues };
+export const _internals = { tokensForTargets, keysOnly, saveSystem, damagesOf, supersedeOlder, carefulFor, onCarefulUsed, rollOne, postRequest, onSaveMessage, cleanupInstant, isAbilitySave, queues };

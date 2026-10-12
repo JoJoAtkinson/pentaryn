@@ -17,24 +17,21 @@
  * its caster) gets no handle: re-attaching it to a handle would leave it behind when the caster moves.
  */
 
-import { MODULE, aoeFlags, centreOf, regionFromSpell, regionOfActivity, isTemplateRegion, attachedToOther, handleVertical, stillListing, isHandleTarget, isHandle } from "./core.mjs";
+import { MODULE, aoeFlags, centreOf, isTemplateRegion, attachedToOther, handleVertical, stillListing, isHandle } from "./core.mjs";
+import { handleActor, handleFor, removeArea, spellAreas } from "./scene-adapter.mjs";
+import { activityOf } from "./messages-adapter.mjs";
 import { setting } from "./settings.mjs";
 import { on, guard } from "./hooks.mjs";
 
 const OWNER = 3;
 const HANDLE_ICON = "icons/svg/target.svg";
 
-export { isTemplateRegion, isHandle };
 /** A template region dnd5e attached to a token that is not our handle (an emanation on its caster). */
 const attachedElsewhere = region => attachedToOther(region, id => region?.parent?.tokens?.get(id));
 
 /* -------------------------------------------- */
 /*  Handle actor                                */
 /* -------------------------------------------- */
-
-export function handleActor() {
-  return game.actors.find(a => aoeFlags(a).handleActor) ?? null;
-}
 
 function handlePrototype() {
   return {
@@ -95,15 +92,6 @@ export async function ensureHandleActor() {
 /* -------------------------------------------- */
 /*  Handle tokens                               */
 /* -------------------------------------------- */
-
-export function handleFor(region) {
-  const scene = region?.parent;
-  if (!scene) return null;
-  const id = region.attachment?.token?.id ?? region._source?.attachment?.token;
-  const attached = id ? scene.tokens.get(id) : null;
-  if (attached && isHandle(attached)) return attached;
-  return scene.tokens.find(tk => aoeFlags(tk).region === region.id) ?? null;
-}
 
 const pending = new Set();   // region ids whose handle is being created on this client
 
@@ -180,36 +168,8 @@ export async function createHandle(region) {
 }
 
 /* -------------------------------------------- */
-/*  Finding and removing areas                  */
+/*  Removing handles, repairing a scene         */
 /* -------------------------------------------- */
-
-/** Template regions created by an activity, on one scene (default: every scene). */
-export function areasFor(activityUuid, scene = null) {
-  if (!activityUuid) return [];
-  const scenes = scene ? [scene] : game.scenes.contents;
-  return scenes.flatMap(s => s.regions.filter(r => isTemplateRegion(r) && regionOfActivity(r.flags?.dnd5e, activityUuid)));
-}
-
-/** Delete regions (and through the cascade their handles). Accepts ids on a scene, or documents. */
-export async function removeArea(regions, scene = canvas.scene) {
-  const docs = [regions].flat().map(r => (typeof r === "string" ? scene?.regions.get(r) : r)).filter(Boolean)
-    .filter(isTemplateRegion);
-  const byScene = new Map();
-  for (const r of docs) {
-    if (!r.canUserModify(game.user, "delete")) continue;
-    const list = byScene.get(r.parent) ?? [];
-    list.push(r.id);
-    byScene.set(r.parent, list);
-  }
-  let n = 0;
-  for (const [s, ids] of byScene) {
-    const live = ids.filter(id => s.regions.has(id));
-    if (!live.length) continue;
-    await s.deleteEmbeddedDocuments("Region", live);
-    n += live.length;
-  }
-  return n;
-}
 
 async function deleteHandlesOf(region) {
   const scene = region.parent;
@@ -261,17 +221,6 @@ export async function sweep(scene = canvas.scene) {
 /* -------------------------------------------- */
 
 /**
- * Template regions placed by a spell on one scene (default: every scene). Matched by the spell
- * item, so every activity of that spell is covered; the activity uuid is the fallback.
- */
-export function spellAreas({ itemUuid = null, activityUuid = null } = {}, scene = null) {
-  if (!itemUuid && !activityUuid) return [];
-  const scenes = scene ? [scene] : game.scenes.contents;
-  return scenes.flatMap(s => s.regions.filter(r => isTemplateRegion(r)
-    && regionFromSpell(r.flags?.dnd5e, { itemUuid, activityUuid })));
-}
-
-/**
  * The icon sits right after dnd5e's Place Template icon in the usage card's action row
  * (section.icon-row, card-buttons.hbs), so placing and clearing are side by side. It clears that
  * spell's templates on the scene being viewed. A card with no visible actions gets the row built
@@ -282,7 +231,7 @@ function decorateCard(message, html) {
   const activityUuid = message.system?.activity?.uuid ?? null;
   if (!activityUuid || html.querySelector("[data-pentaryn-aoe-action]")) return;
   const place = html.querySelector('[data-action="placeTemplate"]');
-  const activity = message.getAssociatedActivity?.() ?? fromUuidSync(activityUuid, { strict: false });
+  const activity = activityOf(message);
   if (!place && !activity?.target?.template?.type) return;     // only cards that place an area
   const itemUuid = message.system?.item?.uuid ?? activity?.item?.uuid ?? null;
   const label = _loc("PENTARYN_AOE.RemoveAllTemplates");
@@ -416,25 +365,6 @@ export async function readyAreas({ sweepOnReady = true } = {}) {
     await sweep(canvas.scene);
     on("canvasReady", guard("canvasReady", c => game.users.activeGM?.isSelf && sweep(c.scene)));
   }
-}
-
-/**
- * Argon never binds to an area handle. Dragging a handle controls it, Argon bound its HUD to it
- * (the handle actor: a 0/0 HP skull bar) and the caster had to click their own token again
- * (Area 4, D10). The HUD now stays on whatever it showed. Argon's controlToken hook calls
- * `this.bind(token)`, so an instance wrap of `bind` covers it. Adjustment row aoe-argon-handle-bind.
- */
-export function guardArgonBind() {
-  const hud = ui.ARGON;
-  if (!hud?.bind || hud.bind._aoeGuard) return !!hud?.bind?._aoeGuard;
-  const own = hud.bind;
-  const guarded = function (target, ...rest) {
-    try { if (target && isHandleTarget(target)) return Promise.resolve(); } catch { /* bind as usual */ }
-    return own.call(this, target, ...rest);
-  };
-  guarded._aoeGuard = true;
-  hud.bind = guarded;
-  return true;
 }
 
 // Test seam (characterisation checkpoint): tests import this through test/fixtures/seams.mjs only,

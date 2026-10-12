@@ -23,11 +23,14 @@
 import { MODULE } from "./core.mjs";
 import { registerSettings, migrateSettings, setting } from "./settings.mjs";
 import { hookIds, offAll } from "./hooks.mjs";
-import { installAreas, readyAreas, areasFor, spellAreas, handleFor, removeArea, sweep, ensureHandleActor, createHandle, guardArgonBind } from "./areas.mjs";
+import { installAreas, readyAreas, sweep, ensureHandleActor, createHandle } from "./areas.mjs";
+import { areasFor, spellAreas, handleFor, removeArea } from "./scene-adapter.mjs";
+import { cardEffects } from "./messages-adapter.mjs";
+import { guardArgonBind } from "./argon.mjs";
 import { installResolve, resolve, applyRows, rollNpcSaves, rollForPlayer, pingPlayers, setRow, REQUEST_HANDLER } from "./resolve.mjs";
 import { installTray } from "./tray.mjs";
 import { installAttacks } from "./attacks.mjs";
-import { installEffects, selfApply, pendingFor, cardEffects } from "./effects.mjs";
+import { installEffects, selfApply, pendingFor } from "./effects.mjs";
 import { registerEscape, disableEscape, activePlacement } from "./escape.mjs";
 import { installRefund } from "./refund.mjs";
 import { installAim } from "./aim.mjs";

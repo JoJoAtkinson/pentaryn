@@ -52,3 +52,17 @@ test("handleFor / areasFor / spellAreas never touch a region without a template 
   assert.deepEqual(S.areas.areasFor("Item.x.Activity.y", s), []);
   assert.deepEqual(S.areas.spellAreas({ itemUuid: "Item.x" }, s), []);
 });
+
+/* ── after the move (-5): one resolver for a recorded target ─────────────────────────────────── */
+
+test("-5 recordedTarget: the live token when its uuid resolves, and the stored actor uuid", async () => {
+  const { recordedTarget } = await import("../messages-adapter.mjs");
+  const s = W.scene({ id: "AdapterScene0003" });
+  const tok = W.token(s, { id: "tokRecorded00001" });
+  W.register(tok.uuid, tok);
+  assert.deepEqual(recordedTarget({ token: tok.uuid, actor: "Actor.a1" }), { token: tok, actor: "Actor.a1" });
+  assert.deepEqual(recordedTarget({ token: "Scene.x.Token.gone", actor: "Actor.a1" }), { token: null, actor: "Actor.a1" });
+  assert.deepEqual(recordedTarget({ actor: "Actor.a2" }), { token: null, actor: "Actor.a2" });
+  assert.deepEqual(recordedTarget({ uuid: "Actor.legacy" }), { token: null, actor: null }, "the legacy uuid is the caller's fallback");
+  assert.deepEqual(recordedTarget(null), { token: null, actor: null });
+});
