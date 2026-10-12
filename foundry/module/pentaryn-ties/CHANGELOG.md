@@ -30,6 +30,9 @@ Fixed (declared): a player's **Remove** on the Ties tab now removes the tie in b
 confirm says — the active GM's client removes the NPC's row back (relay action `remove-reverse`; the
 sender must own their character and have removed their own side). ties-ui-E3.
 
+Fixed (declared): the Known tab's **notes** keep the last words typed before you click away or close
+the sheet — leaving the box now saves a pending autosave at once instead of dropping it. ties-ui-M1.
+
 ## 0.19.4 (2026-10-10, usability run, Area 7 re-run)
 
 - **The inspect window's Share switches are the table's PCs only** (`tablePCs`): each player's
