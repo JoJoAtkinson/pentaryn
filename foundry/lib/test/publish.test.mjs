@@ -80,3 +80,15 @@ test("root helpers count only kit-built namespaces and never sink on one failure
   await assert.rejects(root.inspect("Ald"), { code: "NOT_FOUND" });
   assert.equal(installRoot(Object.freeze({}), { g }).describe, undefined);
 });
+
+test("KIT-R2: inspect(ref, null) or a non-object opts behaves like {}", async () => {
+  const g = env();
+  const seen = [];
+  publishNamespace("x", api("x", { inspect: (actor, o) => { seen.push(o); return { name: actor.name }; } }), { moduleId: "pentaryn-x", g });
+  const root = g.game.pentaryn;
+  for (const opts of [null, "actor", 7, true]) {
+    assert.deepEqual(await root.inspect("Aldric", opts), { x: { name: "Aldric" } });
+  }
+  assert.deepEqual(seen, [{}, {}, {}, {}]);
+  await assert.rejects(root.inspect("Ald", null), { code: "NOT_FOUND" });
+});

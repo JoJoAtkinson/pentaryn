@@ -83,14 +83,16 @@ export function installRoot(root, { g = globalThis } = {}) {
   // The ref is resolved ONCE (explicit scene scope; a name matches as: exact name, then a unique
   // case-insensitive exact name; never a substring), so every namespace inspects the same Document
   // and an ambiguous name is reported once instead of per module.
-  define(root, "inspect", async (ref, opts = {}) => {
+  // A null or non-object opts behaves like {} (KIT-R2).
+  define(root, "inspect", async (ref, opts) => {
+    const o = opts && typeof opts === "object" ? opts : {};
     const r = live();
-    const doc = resolveRef(ref, opts.kind ?? "actor", { sceneId: opts.sceneId, base: opts.base, g });
+    const doc = resolveRef(ref, o.kind ?? "actor", { sceneId: o.sceneId, base: o.base, g });
     const out = {};
     for (const ns of namespaces()) {
       if (typeof r[ns].inspect !== "function") continue;
       try {
-        out[ns] = await r[ns].inspect(doc, opts);
+        out[ns] = await r[ns].inspect(doc, o);
       } catch (err) {
         out[ns] = { error: err?.message ?? String(err), code: err?.code ?? null };
       }

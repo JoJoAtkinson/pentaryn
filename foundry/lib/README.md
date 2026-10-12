@@ -112,3 +112,6 @@ hand-copied "log or console" fallbacks (hooks ×2, patch, patch-libwrapper) are 
 `log.mjs` `logOrConsole`; kit.json gives hooks, patch and patch-libwrapper a `log` dep (every lock
 already vendors log). The console lines are byte-identical, so a caller without a log (ties' registry,
 most `wrapMethod` calls) sees only the repeated legacy warning stop.
+KIT-R2 (declared): the root `game.pentaryn.inspect(ref, opts)` treats a null or non-object `opts` as
+`{}` — before, `inspect(ref, null)` threw an uncoded TypeError reading `kind`. Each namespace's
+`inspect(doc, opts)` now gets that same normalised object. An object `opts` is unchanged.
