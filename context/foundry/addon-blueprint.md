@@ -496,16 +496,19 @@ listener. The active GM is a **user, not a tab** — and in this setup two tabs 
 - A world setting's `onChange` runs on **every client** (`client/documents/setting.mjs:39-51`); a
   client-scoped one locally only (`client-settings.mjs:327`). An `onChange` that writes is a fan-out
   bug unless role-gated.
-- `serialStore(MODULE, key)` (`lib/settings.mjs:160`) serialises read-modify-write **for one store
+- `serialStore(MODULE, key)` (`lib/settings.mjs:166`) serialises read-modify-write **for one store
   instance in one tab** (`foundry.utils.Semaphore(1)`). It does not protect against two tabs, two
   `serialStore` instances on one key, or a direct `game.settings.set` on that key. The write sends
   the whole value, so two clients writing at once lose one update; the server's own `Semaphore(1)`
   orders DB writes, it does not merge them.
   - A multi-key store's `mutate` may return a partial object: an omitted key keeps its value, an
     explicit `null` writes `null`; `write` resolves to the full stored object (kit 1.2.0 KIT-R4).
+  - A multi-key write is **not atomic** (no multi-key setting transaction): keys are separate
+    Setting writes in table order, each `onChange` sees the intermediate state, and a failure can
+    leave a torn pair. List the counter key first so a torn write never reuses an id (kit 1.2.0 AC-6).
   - MUST: exactly one `serialStore` per key, at module scope (C58).
   - MUST: a key more than one client may write uses `anyGM: false` — the active GM *user*
-    (`activeGM.isSelf`, `lib/settings.mjs:163`); **two tabs on that account still race**. Other
+    (`activeGM.isSelf`, `lib/settings.mjs:169`); **two tabs on that account still race**. Other
     clients reach it through a `relay: true` query.
   - MUST: a relayed store write is idempotent or keyed by a request id — the relay arrives in every
     GM tab (below), so a bare `counter + 1` counts twice. A claim picks the writer but the losing

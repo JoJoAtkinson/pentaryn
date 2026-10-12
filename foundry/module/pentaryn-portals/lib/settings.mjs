@@ -154,6 +154,12 @@ export function defineKeybindings(moduleId, KEYBINDINGS, { i18nRoot, g = globalT
  *   const ledger = serialStore(MODULE, ["counter", "log"]);
  *   await ledger.write(({ counter, log }) => ({ counter: counter + 1, log: [...log, entry] }));
  *
+ * A multi-key write is not atomic: Foundry has no multi-key setting transaction, so the keys are
+ * written in table order as separate Setting writes. Each key's `onChange` (on every client) sees
+ * the intermediate state between them, and a failure part-way can leave a torn pair (the earlier
+ * keys stored, the later ones not). List the counter key first, so a torn write has already
+ * advanced the counter and a retry never reuses an id.
+ *
  * `write` resolves to the stored value (the object, for several keys), or `null` when this client
  * may not write. A rejected write rejects that caller only; later writes still run.
  */

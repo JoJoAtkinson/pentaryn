@@ -166,3 +166,22 @@ test("KIT-R4 a partial multi-key mutate keeps the omitted key; an explicit null 
   await store.write(() => ({ ledger: null }));
   assert.deepEqual(store.read(), { counter: 2, ledger: null });
 });
+
+// AC-6 (declared, docs only): a multi-key write is not atomic — Foundry has no multi-key setting
+// transaction. The serialStore JSDoc and the README settings row must say so and name the mitigation.
+test("AC-6: the serialStore JSDoc and the README row document the non-atomic multi-key window", async () => {
+  const { readFileSync } = await import("node:fs");
+  const { fileURLToPath } = await import("node:url");
+  const read = rel => readFileSync(fileURLToPath(new URL(`../${rel}`, import.meta.url)), "utf8");
+  const src = read("settings.mjs");
+  const jsdoc = src.slice(src.lastIndexOf("/**", src.indexOf("export function serialStore")), src.indexOf("export function serialStore"))
+    .replace(/\s*\n\s*\*\s?/g, " ");
+  const row = read("README.md").split("\n").find(l => l.startsWith("| `settings.mjs` |"));
+  for (const [where, text] of [["serialStore JSDoc", jsdoc], ["README settings.mjs row", row ?? ""]]) {
+    assert.match(text, /not atomic/, `${where}: says a multi-key write is not atomic`);
+    assert.match(text, /separate Setting writes/, `${where}: keys are separate Setting writes`);
+    assert.match(text, /onChange/, `${where}: onChange sees intermediate states`);
+    assert.match(text, /torn/, `${where}: a failure can leave a torn pair`);
+    assert.match(text, /counter key first/, `${where}: list the counter key first`);
+  }
+});
