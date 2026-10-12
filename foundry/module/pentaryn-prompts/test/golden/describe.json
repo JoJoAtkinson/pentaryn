@@ -560,6 +560,10 @@
       "label": "updateActor: scene-model cache"
     },
     {
+      "name": "deleteActor",
+      "label": "deleteActor: scene-model cache"
+    },
+    {
       "name": "createItem",
       "label": "createItem: scene-model cache"
     },

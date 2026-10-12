@@ -54,6 +54,10 @@ cssPrefix `pp-`, afterSync). Each **[declared]** change goes to the live check.
   `DEFAULTS` (`unseenWithinFt` 60, `cropMaxPerCall` 6, `cropLongSidePx` 768, `cropsDefault` auto,
   `gatherChars` = `GATHER_CHARS`) feeds the setting rows, gather's/the panel's/the crops' fallbacks
   and the core's default parameters. Same values, no behaviour change.
+- **[declared] Deleting an actor refreshes the hover counts** (prompts-core-EXT-1): the cache's
+  hooks and their scopes are one table, `core/cache.mjs` `INVALIDATION` (hook → `scene` | `self` |
+  `world` | `setting`), and `INVALIDATING_HOOKS` is its keys. `deleteActor` joins it as a world-wide
+  drop, as `updateActor` already was.
 - `ensureMarkers` repairs every drifted actor in one batch update. A hot re-import after
   `uninstall()` re-wires and republishes at once.
 - Console only (DP9): a core token API that throws warns once; swallowed failures log at debug

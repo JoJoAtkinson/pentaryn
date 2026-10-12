@@ -166,7 +166,8 @@ the table is in `context/foundry/markers.md`.
 
 None emitted (`renderPromptDialog` is core's ApplicationV2 hook). The hooks it listens to are
 `test/golden/hooks.json` (registered at import), plus the scene-model cache's invalidation hooks
-(`core/cache.mjs` `INVALIDATING_HOOKS`), registered at `ready`.
+(`core/cache.mjs` `INVALIDATION`, hook → scope; `INVALIDATING_HOOKS` is its keys), registered at
+`ready`.
 
 ## Patches and adjustments
 
