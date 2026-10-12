@@ -195,12 +195,15 @@ async function restoreTokensElsewhere(form) {
  * endConcentration so anything listening for dnd5e.endConcentration hears it on the druid.
  */
 export async function endOnDruid(host, ids) {
+  const plain = [];
   for (const id of ids) {
     const effect = host.effects.get(id);
     if (!effect) continue;
     if (effect.statuses?.has("concentrating") && typeof host.endConcentration === "function") await host.endConcentration(effect);
-    else await effect.delete();
+    else plain.push(id);
   }
+  // One round trip for the rest (§5.9.1, C59); deleteActiveEffect still fires per effect.
+  if (plain.length) await host.deleteEmbeddedDocuments("ActiveEffect", plain);
 }
 
 /**

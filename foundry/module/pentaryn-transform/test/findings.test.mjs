@@ -137,3 +137,18 @@ test("-2 [declared] T-D6 updateWorldTime: a player's client skips both scans whi
     F.become({ userId: IDS.gm });
   }
 });
+
+/* ── C59 the druid's ended effects go in one batch ────────────────────────── */
+
+test("C59 [declared, perf] revert: the druid's effects that ended in the form are deleted in one batch (Concentration through endConcentration first)", async () => {
+  const { talo } = fresh({ effects: [{ id: IDS.conc, name: "Concentrating", statuses: ["concentrating"] }, { id: IDS.bless, name: "Bless" },
+    { id: "guidanceEff00001", name: "Guidance" }] });
+  const wolf = await T.shift(talo, "p1");
+  for (const id of [IDS.conc, IDS.bless, "guidanceEff00001"]) wolf.effects.delete(id);   // ended in the form (no hooks)
+  F.calls.length = 0;
+  await T.revert(wolf, { quiet: true });
+  const ops = F.calls.filter(c => ["endConcentration", "deleteEmbedded"].includes(c.op) && c.actor === IDS.talo);
+  assert.deepEqual(ops.map(c => [c.op, c.ids ?? c.effect]), [["endConcentration", IDS.conc], ["deleteEmbedded", [IDS.bless, "guidanceEff00001"]]]);
+  assert.equal(talo.effects.get(IDS.bless), undefined);
+  assert.equal(talo.effects.get("guidanceEff00001"), undefined);
+});
