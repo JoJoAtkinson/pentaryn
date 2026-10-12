@@ -4,23 +4,26 @@
  * Reached from the panel's Add button and from a token on the canvas. It always writes a
  * DIRECTED tie: the word and the notes say what the **source** actor is to the **target**.
  *
- * ## The seeding rule
+ * ## The mirror rule
  *
  * Saving writes the source's side in full — it is theirs, they are looking at it. The
- * reverse side (target → source) is only ever *seeded*, never overwritten:
+ * reverse side (target → source) is a mirror of it, word and notes each on their own:
  *
- *   - no reverse row at all  → create one, copying word/stance/strength/notes across, so a
- *                              new acquaintance shows up on both sheets immediately
- *   - reverse row exists     → fill only the fields that are still EMPTY on it; anything
- *                              already written on the other side is left exactly as it is
+ *   - no reverse row at all  → create one from yours (word/stance/strength/notes), so a new
+ *                              acquaintance shows up on both sheets immediately; stance and
+ *                              strength are copied then and never again
+ *   - linked reverse side    → it follows yours. Linked means blank, or equal to what your
+ *                              side said before this save (`mirrorLinked`, ties-core); the
+ *                              mirror box renders blank for it
+ *   - diverged reverse side  → its own (typed) text is written back unchanged; emptying the
+ *                              box re-links it to yours (`resolveMirror`, ties-core)
  *
- * The point is that both people end up on each other's list without either of them being
- * able to rewrite what the other thinks. To change the other side, open it from that side —
- * which is what "if i go and set a desc from their perspective it overrides" means.
+ * Linked-ness is re-tested at save time, so text written on the other side after the
+ * dialog opened is never overwritten by a blank box.
  *
- * A player owns exactly one character and cannot write to anyone else's actor; the server
- * refuses it and `write()` returns false rather than throwing. So the reverse side simply
- * does not happen for them, and the dialog says so instead of pretending it did.
+ * A player cannot write to an actor they do not own. Their reverse side is handed to a GM's
+ * client instead (`relay.requestMirror`), which fills only blank fields — silently, with
+ * nothing said in the dialog either way.
  */
 
 import { read, write, baseActorOf } from "./ties-adapter.mjs";
@@ -597,7 +600,7 @@ export class TieDialog extends ApplicationV2 {
     });
   }
 
-  /** Write the source's side in full; seed the reverse without ever overwriting it. */
+  /** Write the source's side in full; write the reverse through resolveMirror (linked follows, diverged kept); a non-owner's reverse goes to the GM relay. */
   async #save() {
     const { source, target, draft } = this;
     if (!source || !target || !draft) return false;

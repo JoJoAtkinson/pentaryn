@@ -22,8 +22,8 @@
  *           card back to whoever it is about, so a memo parked by the edge of the screen
  *           still points at a person.
  *
- * Wires are a pure function of the live card set: `drawWires()` throws the whole layer
- * away and rebuilds it from `live()` on every pan, every scene load, and every
+ * Wires are a pure function of the live card set: `drawWires()` clears and redraws the one
+ * layer from `live()` on every pan, every scene load, and every
  * change to what is on screen. A card can therefore never be up without its wire — which
  * it could be, back when the two were tracked separately and a card outlived the layer
  * that drew its line.
@@ -461,7 +461,7 @@ export function showOne() {
 }
 
 /**
- * 0.3.0 name, kept for anything that imported this module directly. `publishAPI()` binds
+ * 0.3.0 name, kept for anything that imported this module directly. `install()`'s impl table binds
  * `show`/`cards` straight to `showAll`, so nothing in the repo reaches it — it exists only
  * so an outside importer does not break.
  */

@@ -2059,3 +2059,24 @@ def test_status_reads_each_sidecar_once(two_hosts, monkeypatch):
         cloud.status()
     sidecars = [r for r in reads if r.endswith(cloud.PARENT_SUFFIX)]
     assert len(sidecars) == len(set(sidecars)) == 3
+
+
+def test_tree_digests_are_stable(fake_data):
+    """Both tree digests are persisted (pentaryn-boot.json, `.last-digest`), so their bytes
+    are pinned: path, size and int mtime of each file, in sorted order."""
+    for rel in cloud.SNAPSHOT_PATHS:
+        shutil.rmtree(fake_data / rel, ignore_errors=True)
+    files = {
+        "Data/worlds/w/a.db": (b"world-db\n", 1_700_000_000.75),
+        "Config/options.json": (b'{"port": 30000}\n', 1_700_000_100.0),
+        "Data/modules/m/module.json": (b'{"id": "m"}\n', 1_700_000_200.5),
+    }
+    for rel, (data, mtime) in files.items():
+        p = fake_data / rel
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_bytes(data)
+        os.utime(p, (mtime, mtime))
+    assert cloud.world_tree_digest() == ("575e05987fc9486fbb3640192f0fa8c7"
+                                         "a00aaa1e002f876dd55e1ae04de4dbf5")
+    assert cloud.legacy_snapshot_digest() == ("9d7d27c6399e982930a40d47fac44cb8"
+                                             "d6eaff3b24eb982131c3d312287a01b7")

@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { guarded, queryGM, queryNameOf, registerQueries, relayed } from "../queries.mjs";
+import { describe } from "../api.mjs";
 
 const doc = { documentName: "Actor", id: "aaaaaaaaaaaaaaaa", name: "Aldric", uuid: "Actor.aaaaaaaaaaaaaaaa" };
 const MANIFEST = {
@@ -89,4 +90,18 @@ test("K8 queryName names the query; relay rows register through relayed; a dupli
   assert.equal(queryNameOf(M, M.rows[1]), "pentaryn-p.replace");
   const dup = { module: "pentaryn-p", rows: [{ path: "a", query: true, queryName: "b" }, { path: "b", query: true }] };
   assert.throws(() => registerQueries(dup, () => api, { g }), { message: 'pentaryn-p: query "pentaryn-p.b" is registered twice' });
+});
+
+test("describe().queries equals the names registerQueries registers", () => {
+  // describe() computes the names inline (api.mjs) and registerQueries via queryNameOf: this guards
+  // the two formulas against drifting apart (describe().queries feeds contractDrift and the bridge).
+  const M = { module: "pentaryn-q", namespace: "q", version: "1.0.0", contract: 1, rows: [
+    { path: "list", params: [], query: true },
+    { path: "replaceMany", params: [{ name: "data" }], query: true, queryName: "replace" },
+    { path: "ensure", params: [{ name: "opts" }], query: true, relay: true },
+    { path: "write", params: [], query: false },
+  ] };
+  const registered = registerQueries(M, () => ({}), { g: { CONFIG: {} } });
+  assert.deepEqual(registered, ["pentaryn-q.list", "pentaryn-q.replace", "pentaryn-q.ensure"]);
+  assert.deepEqual(describe(M).queries, registered);
 });

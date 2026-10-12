@@ -18,7 +18,7 @@ import time
 import pytest
 
 from cloud_fakes import FakeRclone
-from scripts.foundry import bootstate, cloud, storage, uploadq
+from scripts.foundry import bootstate, bundles, cloud, storage, uploadq
 from scripts.foundry.storage import RcloneStorage
 
 DAY = 86400
@@ -775,3 +775,10 @@ def test_a_killed_builds_staging_is_swept_a_queued_jobs_is_not(two_hosts, spawne
             uploadq.sweep_building()
         assert not orphan.exists() and not top.exists() and live.exists()
         assert all((job.staging / n).is_file() for n in job.bundles)
+
+
+def test_tmp_dirname_has_one_source():
+    """bundles owns the '.pentaryn-tmp' name; uploadq and cloud take it from there, and
+    cloud.tmp_dir() is uploadq.tmp_dir(), one scratch directory."""
+    assert cloud.TMP_DIRNAME == bundles.TMP_DIRNAME == uploadq.TMP_DIRNAME
+    assert cloud.tmp_dir() == uploadq.tmp_dir()
