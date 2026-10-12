@@ -16,7 +16,7 @@ import * as core from "./combat-core.mjs";
 import { HOOKS, MODULE, VERSION } from "./combat-core.mjs";
 import { emitter } from "./lib/hooks.mjs";
 import { makeLog } from "./lib/log.mjs";
-import { attackActivityOf, weaponsOf, updateTurn, focusLeft, flurryActivity, unarmedStrike, turnOf, damageLabel, rememberWeapon, planFor } from "./shapes.mjs";
+import { attackActivityOf, weaponsOf, updateTurn, focusLeft, flurryActivity, unarmedStrike, turnOf, damageLabel, rememberWeapon, planFor, enhancedDualWieldingOf } from "./shapes.mjs";
 import { openRollResolvers, isOrphanCard } from "./dialog-adapter.mjs";
 import { cancelWaits, choose, hide, onceCancel, picking, show, update, waitChoice } from "./strip.mjs";
 import { quickMode, setQuickMode, setting } from "./settings.mjs";
@@ -173,7 +173,7 @@ function swapExtras(actor, weaponId) {
     const weapons = weaponsOf(actor);
     const main = weapons.find(w => w.id === weaponId);
     if (!main) return null;
-    return core.extraSwings({ main, weapons, turn: turnOf(actor), enhancedDualWielding: !!actor.getFlag?.("dnd5e", "enhancedDualWielding") });
+    return core.extraSwings({ main, weapons, turn: turnOf(actor), enhancedDualWielding: enhancedDualWieldingOf(actor) });
   } catch { return null; }
 }
 

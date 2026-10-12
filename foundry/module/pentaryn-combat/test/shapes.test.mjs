@@ -370,3 +370,21 @@ test("offhand install: createActor seeds a new character 500 ms later, on the ac
   await drain();
   assert.deepEqual(lines.filter(l => l.level === "warn"), [{ level: "warn", text: "pentaryn-combat | weapon-set seed (new character)", err: "locked" }], "combat-core-ROB-5: the createActor seed warns its failure, never throws");
 });
+
+// combat-core-EXT-6: the Enhanced Dual Wielding flag read was copy-pasted in sequence.mjs, shapes.mjs
+// (twice) and hud/buttons-ui.mjs. One exported shapes.enhancedDualWieldingOf(actor) is the only read;
+// the test fixture legacy-combat.mjs keeps its own copy.
+test("combat-core-EXT-6: enhancedDualWieldingOf(actor) is the one Enhanced Dual Wielding flag read", async () => {
+  assert.equal(typeof shapes.enhancedDualWieldingOf, "function", "combat-core-EXT-6: shapes exports enhancedDualWieldingOf");
+  const flagged = { getFlag: (scope, key) => (scope === "dnd5e" && key === "enhancedDualWielding" ? 1 : undefined) };
+  assert.equal(shapes.enhancedDualWieldingOf(flagged), true, "a truthy flag reads true");
+  assert.equal(shapes.enhancedDualWieldingOf({ getFlag: () => undefined }), false, "no flag reads false");
+  assert.equal(shapes.enhancedDualWieldingOf({}), false, "an actor with no getFlag reads false");
+  const { readFileSync } = await import("node:fs");
+  for (const file of ["../shapes.mjs", "../sequence.mjs", "../hud/buttons-ui.mjs"]) {
+    const src = readFileSync(new URL(file, import.meta.url), "utf8");
+    const reads = src.match(/getFlag\?\.\("dnd5e", "enhancedDualWielding"\)/g) ?? [];
+    assert.equal(reads.length, file === "../shapes.mjs" ? 1 : 0, `combat-core-EXT-6: ${file} reads the flag ${reads.length} time(s)`);
+    if (file !== "../shapes.mjs") assert.match(src, /enhancedDualWieldingOf\(actor\)/, `${file} calls enhancedDualWieldingOf`);
+  }
+});

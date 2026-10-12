@@ -351,12 +351,17 @@ export function multiattackFor(actor, { enabled = true } = {}) {
   return usesMultiattack(actor) && enabled ? multiattackOf(actor) : null;
 }
 
+/** The actor's Enhanced Dual Wielding flag (dnd5e's Dual Wielder feat) — the one read of it (combat-core-EXT-6). */
+export function enhancedDualWieldingOf(actor) {
+  return !!actor.getFlag?.("dnd5e", "enhancedDualWielding");
+}
+
 /** core.fullAttackPlanFrom with this actor's weapon shapes and Enhanced Dual Wielding flag. */
 export function fullAttackPlanOf(actor, { weaponId = null, turn = null, inCombat = false, multiattack = null, count = 1, pick = null } = {}) {
   if (multiattack) return core.fullAttackPlanFrom({ weaponId, turn, inCombat, multiattack, count, pick });
   const weapons = weaponsOf(actor);
   return core.fullAttackPlanFrom({ weapons, weaponId, turn, inCombat, count, pick,
-    enhancedDualWielding: !!actor.getFlag?.("dnd5e", "enhancedDualWielding") });
+    enhancedDualWielding: enhancedDualWieldingOf(actor) });
 }
 
 /**
@@ -413,7 +418,7 @@ export function followUpsFor(actor, { bonusFree = true } = {}) {
   const pam = features.has("polearm-master") ? featureItem(actor, "polearm-master") : null;
   const list = core.followUps({
     turn, weapons, features,
-    enhancedDualWielding: !!actor.getFlag?.("dnd5e", "enhancedDualWielding"),
+    enhancedDualWielding: enhancedDualWieldingOf(actor),
     bonusFree, focus, unarmedId: unarmed?.id ?? null, isOwnTurn: ctx.isOwnTurn,
     poleStrikeId: pam && attackActivityOf(pam) ? pam.id : null
   });
