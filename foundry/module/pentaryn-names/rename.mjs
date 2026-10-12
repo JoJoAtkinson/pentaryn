@@ -1,12 +1,13 @@
 /**
  * Pentaryn Token Name Sync — the rename feature: an actor rename carries through to its token
- * labels (prototype token and every placed token of that actor, on every scene).
+ * labels (prototype token and every placed token of that actor, on every scene). Renaming an
+ * unlinked token's synthetic actor relabels only that token (names-edge-1).
  *
  * GLUE, one feature: `install(reg, ctx)` registers the two actor hooks through the registry;
  * `uninstall()` has no state to drop. `syncRef` is the legacy API row `sync`.
  * preUpdateActor runs only on the client that made the rename (§5.9.1) and records the old name
- * in the operation options, which travel with the update to every client; only that client
- * (`userId === game.user.id`) writes, and only to tokens it may edit.
+ * in the operation options, keyed by actor id; they travel with the update to every client. Only
+ * that client (`userId === game.user.id`) writes, and only to tokens it may edit.
  */
 
 import { planTokenRelabels, relabel } from "./names-core.mjs";
@@ -18,6 +19,7 @@ import { resolveRef } from "./lib/resolve.mjs";
  * Returns how many TOKEN labels changed; combatant names are not counted or toasted.
  */
 export async function sync(actor, oldName, newName) {
+  if (actor.isToken) return syncToken(actor, oldName, newName);
   let count = 0;
   const proto = relabel(actor.prototypeToken.name, oldName, newName);
   if (proto !== null && proto !== actor.prototypeToken.name) {
@@ -26,6 +28,20 @@ export async function sync(actor, oldName, newName) {
   }
   count += await relabelEmbedded(game.scenes, "tokens", "Token", t => t.canUserModify(game.user, "update"), actor, oldName, newName);
   if (game.user.isGM) await relabelCombatants(actor, oldName, newName);
+  if (count) ui.notifications.info(_loc("PENTARYN_NAMES.Synced", { name: newName, count }));
+  return count;
+}
+
+/**
+ * names-edge-1: a synthetic (unlinked token) actor was renamed, so only its own token follows, and
+ * (GM only) that token's combatants. It carries the base actor's id, so the base-actor pass would
+ * relabel every sibling token, and its prototype write would go to the ActorDelta, which drops it.
+ */
+async function syncToken(actor, oldName, newName) {
+  const tok = actor.token;
+  const scenes = tok?.parent ? [tok.parent] : [];
+  const count = await relabelEmbedded(scenes, "tokens", "Token", t => t.id === tok.id && t.canUserModify(game.user, "update"), actor, oldName, newName);
+  if (game.user.isGM) await relabelEmbedded(game.combats, "combatants", "Combatant", c => c.tokenId === tok.id, actor, oldName, newName);
   if (count) ui.notifications.info(_loc("PENTARYN_NAMES.Synced", { name: newName, count }));
   return count;
 }
@@ -78,15 +94,17 @@ export function syncRef(ref, oldName, newName) {
 }
 
 export function install(reg, ctx) {
-  // Capture the old name before it is overwritten.
+  // Capture the old name before it is overwritten, keyed by actor id: one Actor.updateDocuments
+  // batch shares its options across every actor in it (names-ac-2).
   reg.on("preUpdateActor", (actor, changes, options) => {
-    if ("name" in changes && changes.name !== actor.name) options.pentarynOldName = actor.name;
+    if ("name" in changes && changes.name !== actor.name) (options.pentarynOldNames ??= {})[actor.id] = actor.name;
   }, { label: "preUpdateActor: remember old name" });
 
   // Act only on the client that made the change, never on names' own prototype write.
   reg.on("updateActor", (actor, changes, options, userId) => {
-    if (userId !== game.user.id || options.pentarynNames || !options.pentarynOldName || !("name" in changes)) return;
-    const from = options.pentarynOldName, to = actor.name;
+    const from = options.pentarynOldNames?.[actor.id];
+    if (userId !== game.user.id || options.pentarynNames || !from || !("name" in changes)) return;
+    const to = actor.name;
     sync(actor, from, to).catch(err => ctx.log.warn("relabel after rename failed", { actor: actor.uuid, from, to }, err));
   }, { label: "updateActor: relabel" });
 }

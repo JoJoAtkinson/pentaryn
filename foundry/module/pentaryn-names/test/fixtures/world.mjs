@@ -7,7 +7,7 @@
 //   calls `preUpdate<Type>` with the cleaned, UNDIFFED changes (client/data/client-backend.mjs:238-239)
 //   and then drops an empty diff before it reaches the server (:262), so a same-name write is stopped
 //   by names' own `changes.name !== actor.name` guard and updateActor never fires live (SF7). In the
-//   stub updateActor does fire, and names bails on the missing `pentarynOldName` — same outcome.
+//   stub updateActor does fire, and names bails on the missing `pentarynOldNames` — same outcome.
 // - Scene#updateEmbeddedDocuments and TokenDocument#canUserModify are added here (the kit stub has
 //   neither). canUserModify answers `!zzLocked` and records its arguments.
 // - game.combats is added here too (the kit stub has none): empty unless `equip(F, {combats})` names

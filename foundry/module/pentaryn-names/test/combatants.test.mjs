@@ -100,7 +100,7 @@ test("PT3-9: another client's rename writes nothing here (same initiator gate as
   resetAll();
   const actor = game.actors.get(IDS.bob);
   actor.name = "Rob";
-  F.fire("updateActor", actor, { name: "Rob" }, { pentarynOldName: "Bob" }, IDS.player);
+  F.fire("updateActor", actor, { name: "Rob" }, { pentarynOldNames: { [IDS.bob]: "Bob" } }, IDS.player);
   await flush();
   assert.deepEqual(effects(F.calls), []);
   assert.deepEqual(names(), INITIAL);
