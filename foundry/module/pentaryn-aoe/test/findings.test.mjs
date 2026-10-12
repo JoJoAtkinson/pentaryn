@@ -203,3 +203,44 @@ test("8.5 deleteCombat: stale Careful Spell flags of world actors go in ONE Acto
   assert.deepEqual(batch.map(c => c.updates.map(u => u._id)), [["actCareful850001", "actCareful850002"]]);
   for (const x of [a, b, synth]) assert.equal(x.flags[MODULE].careful, undefined, x.name);
 });
+
+/* ── review: the -8 traces that answer "why no tray / why no protection", and -9's quiet cases ── */
+
+test("-8 traced (debug on): the createChatMessage gate with resolveSaves off, Careful Spell off, and a Careful use bound to another card", async () => {
+  F.CONFIG.debug = { [MODULE]: true };
+  const before = game.pentaryn.aoe.trace().length;
+  await game.settings.set(MODULE, "resolveSaves", false);
+  const msg = damage(W, ctx, { id: "dmgFindingTrace1", hook: true });
+  await flush();
+  await game.settings.set(MODULE, "resolveSaves", true);
+  assert.equal(game.messages.get(msg.id).flags?.[MODULE]?.resolution, undefined, "nothing resolved");
+  const opts = { casterActorId: ctx.wizard.id, usage: IDS.usage, scene: ctx.s, onSave: "half", rows: [] };
+  await game.settings.set(MODULE, "carefulSpell", false);
+  assert.equal(await R.carefulFor(ctx.wizard, [], opts), null);
+  await game.settings.set(MODULE, "carefulSpell", true);
+  const flag = { at: Date.now(), key: null, usage: "usageOtherCard01" };
+  await ctx.wizard.update({ [`flags.${MODULE}.careful`]: flag });
+  assert.equal(await R.carefulFor(ctx.wizard, [], opts), null);
+  const traces = game.pentaryn.aoe.trace().slice(before);
+  assert.deepEqual(traces.map(t => [t.op, t.data.id, t.data.outcome]), [
+    ["resolve", msg.id, "resolveSaves is off"],
+    ["careful", IDS.usage, "off"],
+    ["careful", IDS.usage, "not applicable"],
+  ]);
+  assert.deepEqual(traces[2].data.flag, flag, "the trace carries the flag that did not apply");
+  assert.equal(traces[2].data.combatKey, null);
+  F.CONFIG.debug = {};
+});
+
+test("-9 refund: a concentration already gone ('does not exist') and a card whose delete fails but whose fallback lands stay quiet", async () => {
+  const caster = W.actor({ name: "Sorcerer", type: "character" });
+  const item = W.item({ name: "Fireball", system: { identifier: "fireball" } }, caster);
+  const activity = { actor: caster, item, target: { template: { type: "sphere" } }, refund: async () => {} };
+  const message = W.message({ type: "usage", system: { deltas: { actor: [{ keyPath: "system.spells.spell3.value", delta: -1 }], item: {} } } });
+  Object.defineProperty(message, "delete", { value: async () => { throw new Error("locked"); } });
+  const conc = W.effect(caster, { name: "Concentrating", statuses: ["concentrating"] });
+  Object.defineProperty(conc, "delete", { value: async () => { throw new Error(`ActiveEffect ${conc.id} does not exist`); } });
+  out.length = 0;
+  assert.equal(await S.refund.refund(activity, { create: { measuredTemplate: true } }, { message, templates: [], effects: [conc] }), true);
+  assert.deepEqual(lines(), []);
+});
