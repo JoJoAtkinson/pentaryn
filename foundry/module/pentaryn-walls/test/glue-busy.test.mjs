@@ -46,7 +46,8 @@ test("two un-awaited API calls: the second is null, the first resolves to the en
 });
 
 test("a throwing action releases the lock for the next caller", async () => {
-  await assert.rejects(api.preview({ sceneId: "noSuchScene0000" }), /no scene/);
+  await assert.rejects(api.preview({ sceneId: "noSuchScene0000" }),
+    { message: 'pentaryn-walls: no scene with id "noSuchScene0000".' });
   const next = api.preview();
   assert.notEqual(next, null);
   await withConsole(F, () => next);   // settle it here, so the lock is free for the next test

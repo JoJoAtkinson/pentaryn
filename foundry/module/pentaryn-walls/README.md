@@ -53,7 +53,8 @@ Ask it what it offers: `game.pentaryn.walls.describe()` (offline: `test/golden/d
 
 The engine result is `{creates, updates, refusals, lints, log, report}`. `preview`, `run` and
 `undo` are one-at-a-time across keybindings, macros and the API. They throw `Error` with no scene
-(`"pentaryn-walls: no scene — open one, or pass a sceneId."`). `preview`, `run`, `undo` and
+(`"pentaryn-walls: no scene — open one, or pass a sceneId."`), or naming a `sceneId` that matches
+no scene (`'pentaryn-walls: no scene with id "<sceneId>".'`). `preview`, `run`, `undo` and
 `analyze` take `null` as no argument at all: the viewed scene and the defaults. `undo`, `makeMacro`, `runEngine`
 and `backends` keep their legacy shapes (`legacy: true`).
 `makeMacro` gives each action's macro a fixed id, so two overlapping calls or two GM tabs still

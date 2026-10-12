@@ -19,7 +19,12 @@ function toast(level, key, data, opts) {
 }
 
 function targetScene(sceneId) {
-  const scene = sceneId ? game.scenes.get(sceneId) : canvas?.scene;
+  if (sceneId) {
+    const scene = game.scenes.get(sceneId);
+    if (!scene) throw new Error(`pentaryn-walls: no scene with id "${sceneId}".`);
+    return scene;
+  }
+  const scene = canvas?.scene;
   if (!scene) throw new Error("pentaryn-walls: no scene — open one, or pass a sceneId.");
   return scene;
 }

@@ -6,6 +6,10 @@
 (`flagScope` stays `wall-autocomplete`), `languages`, `minimum: "14"`, `verified: "14.369"` and the
 description fix; the flag-scope migration is **parked** while walls stays off (Joe).
 
+- **[declared] An unknown `sceneId` says so** (`walls-rob-7`): `preview`/`run`/`analyze`/`undo`
+  given a `sceneId` that matched no scene threw "no scene — open one, or pass a sceneId.", advice
+  the caller had already followed. They now throw `pentaryn-walls: no scene with id "<sceneId>".`;
+  the old message stays for no `sceneId` and no viewed scene.
 - **[declared] `preview`/`run`/`analyze`/`undo(null)` mean the defaults** (`walls-rob-5`): a `null`
   argument hit the parameter destructuring and rejected with a `TypeError`. Each action now reads
   `arg ?? {}`, so `null` is the same as calling with no argument (the viewed scene, the settings).
