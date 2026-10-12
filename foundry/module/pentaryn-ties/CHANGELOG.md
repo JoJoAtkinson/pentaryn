@@ -68,6 +68,10 @@ Fixed (declared): the GM's **Attributes** tab finds who carries each personal at
 of the world's actors per paint (built only if a personal row asks), instead of one walk per personal
 row; the "Clues on …" lines are byte-identical. ties-ui-perf-2.
 
+Fixed (declared): the GM's **Attribute Review** repaints once, 150 ms after the last of a burst of
+registry writes (a Claude batch, a cascade), instead of once per write; it watches through the shared
+`LiveHooks` kit and drops a pending repaint on close. ties-ui-perf-5 (with ACC-5).
+
 Fixed (declared): the chat cards — the "… studies …" stub, the tempo line and the GM's share
 whisper — name every creature by its **token** name, never its actor name, so a GM-only world actor
 name cannot reach player chat. The token is found on any scene, not only the one the posting

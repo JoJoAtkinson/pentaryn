@@ -48,6 +48,7 @@ import {
 import { kindActorOf } from "./study.mjs";
 import { personalCluesHTML } from "./attributes-ui.mjs";
 import { reviewState, sortForReview, childrenOf, indexRegistry, readLore, REVIEW_SORTS, REGISTRY_SETTING } from "./known-core.mjs";
+import { LiveHooks } from "./ties-adapter.mjs";
 import { makeLog } from "./lib/log.mjs";
 
 const log = makeLog(MODULE);
@@ -161,7 +162,7 @@ export class AttributeReview extends ApplicationV2 {
     this.inflight = new Map();
     this.selWrites = Promise.resolve();
     this.selWriting = 0;
-    this.hookIds = null;
+    this.live = new LiveHooks();
   }
 
   /* ── live refresh ──────────────────────────────────────────────────────── */
@@ -221,28 +222,29 @@ export class AttributeReview extends ApplicationV2 {
     setTimeout(() => this.pendingRender && this.safeRender(), 0);
   }
 
+  /** Registry writes land in bursts (a Claude batch, a cascade): one repaint, 150 ms after the last. */
   attachHooks() {
-    if (this.hookIds) return;
-    this.hookIds = {
-      updateSetting: Hooks.on("updateSetting", s => {
-        if (s?.key === SETTING_KEY) this.safeRender();
-      }),
-      createSetting: Hooks.on("createSetting", s => {
-        if (s?.key === SETTING_KEY) this.safeRender();
-      }),
-      updateUser: Hooks.on("updateUser", (user, changes) => {
-        if (user?.id !== game.user?.id) return;
-        if (!foundry.utils.hasProperty(changes ?? {}, `flags.${MODULE}`)) return;
-        if (this.selWriting > 0) return; // our own write in flight; the set is already right
-        this.selection = new Set(selectionIds());
-        this.syncSelectionDOM();
-      })
+    const onRegistry = s => {
+      if (s?.key === SETTING_KEY) this.live.debounce(() => this.safeRender());
     };
+    this.live.start([
+      ["updateSetting", onRegistry],
+      ["createSetting", onRegistry],
+      [
+        "updateUser",
+        (user, changes) => {
+          if (user?.id !== game.user?.id) return;
+          if (!foundry.utils.hasProperty(changes ?? {}, `flags.${MODULE}`)) return;
+          if (this.selWriting > 0) return; // our own write in flight; the set is already right
+          this.selection = new Set(selectionIds());
+          this.syncSelectionDOM();
+        }
+      ]
+    ]);
   }
 
   async _onClose(options) {
-    if (this.hookIds) for (const [hook, id] of Object.entries(this.hookIds)) Hooks.off(hook, id);
-    this.hookIds = null;
+    this.live.stop();
     return super._onClose?.(options);
   }
 

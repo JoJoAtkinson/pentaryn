@@ -98,8 +98,8 @@ return A.list().sort((a, b) => (b.modifiedAt ?? 0) - (a.modifiedAt ?? 0)).slice(
   determined player's console — same rule as [`attributes.md`](attributes.md).
 - **Registry writes are queued** (`serial` in `attributes.mjs`): your `A.update` and a panel save
   or Reviewed click landing together run one after the other, each on the latest list.
-- The panel **live-refreshes** when you write, but defers while Joe has a text field focused (not
-  the search box), so your write cannot eat his draft. If you change an entry whose row he has
+- The panel **live-refreshes** when you write (once, 150 ms after the last write of a burst), but
+  defers while Joe has a text field focused (not the search box), so your write cannot eat his draft. If you change an entry whose row he has
   open meanwhile, that row shows **"Changed by Claude — click to reload"**, and a save of a field
   you changed is **refused** rather than written over your change.
 - **Rows keep their place** while he works. Order is recomputed on open, on a sort change, after
