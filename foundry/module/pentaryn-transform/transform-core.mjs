@@ -22,7 +22,7 @@ import {
   stripForForm, pruneFavorites, isRevertData, returnLabel, durationSeconds, formatDuration,
   isExpired, usesLeft, useSyncUpdates, carriedConditions, withoutOrigin, endedInForm,
   attributeSync, shiftBlock, pickRunner,
-  wildShapeActivityOf, formEntries, refundUpdate, runnerIs, canRunAny, worldTimeCandidates, shapeStatus
+  wildShapeActivityOf, formEntries, refundUpdate, runnerIs, canRunAny, worldTimeCandidates, shapeStatus, shapingPlan
 } from "./core/wildshape.mjs";
 
 import {
@@ -60,7 +60,7 @@ export {
   stripForForm, pruneFavorites, isRevertData, returnLabel, durationSeconds, formatDuration,
   isExpired, usesLeft, useSyncUpdates, carriedConditions, withoutOrigin, endedInForm,
   attributeSync, shiftBlock, pickRunner,
-  wildShapeActivityOf, formEntries, refundUpdate, runnerIs, canRunAny, worldTimeCandidates, shapeStatus
+  wildShapeActivityOf, formEntries, refundUpdate, runnerIs, canRunAny, worldTimeCandidates, shapeStatus, shapingPlan
 };
 
 export {

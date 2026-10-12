@@ -413,3 +413,41 @@ export function shapeStatus({ actor = null, original = null, shifted = false, wi
     forms: (forms ?? []).map(f => ({ id: f.id, name: f.name }))
   };
 }
+
+/**
+ * What the form gets on top of dnd5e's wildshape preset: the strip, the "Return to Talo" item, the
+ * timed effect, and the flag the sweep, auto-revert, the HUD and inspect read. The glue passes the
+ * world time and the three localized strings.
+ *
+ * @param {{ meta: object, source: { name, img, uuid }, items: object[], effects: object[],
+ *   keepWildShape?: boolean, now: number, end: string, effectName: string }} args
+ *        items/effects: the form's data as it will be created (linked) or as it was created (token)
+ * @returns {{ keep: object[], stripped: object[], renames: object[], effect: object, flag: object }}
+ */
+export function shapingPlan({ meta, source, items, effects, keepWildShape = false, now, end, effectName }) {
+  const { keep, stripped } = stripForForm(items, {
+    wildShapeIds: [meta.wildShapeId].filter(Boolean), hostItemIds: meta.hostItemIds, keepWildShape
+  });
+  const renames = keep.filter(isRevertData).map(i => ({ _id: i._id, name: returnLabel(meta.hostName), img: meta.hostImg }));
+
+  const seconds = meta.seconds;
+  const effect = {
+    _id: EFFECT_ID,
+    name: effectName,
+    img: source.img,
+    transfer: false,
+    disabled: false,
+    ...(seconds ? { duration: { value: seconds, units: "seconds", expiry: null }, start: { time: now } } : {}),
+    description: `<p>${end}</p>${meta.traitsHtml ?? ""}`,
+    flags: { [MODULE]: { wildshape: true } }
+  };
+
+  const hostEffects = new Set(meta.hostEffectIds ?? []);
+  const flag = {
+    original: meta.hostId, source: source.uuid, profile: meta.profile ?? null,
+    endsAt: seconds ? now + seconds : null,
+    // The druid's effects that went into the form (same ids): revert ends those that ended here.
+    carried: (effects ?? []).map(e => e?._id).filter(id => id && hostEffects.has(id))
+  };
+  return { keep, stripped, renames, effect, flag };
+}

@@ -3,17 +3,16 @@
  * activity, the known forms), the shift and the revert with everything dnd5e leaves to the table,
  * the chat line, the bonus-action mark, and who runs the automatic endings.
  *
- * dnd5e 6 fires dnd5e.preUseActivity(activity, usageConfig, dialogConfig, messageConfig) (return
- * false cancels) and dnd5e.postUseActivity(activity, usageConfig, results) on the client of the user
- * who used the activity, so a player's click shifts and reverts with the player's own permissions —
- * Actor#revertOriginalForm already refuses non-owners. The hooks themselves are wildshape.mjs's.
+ * dnd5e 6 fires dnd5e.preUseActivity (return false cancels) and dnd5e.postUseActivity on the client
+ * of the user who used the activity, so a player's click shifts and reverts with the player's own
+ * permissions (Actor#revertOriginalForm refuses non-owners). The hooks are wildshape.mjs's.
  *
  * Session state kept here (never persisted): the bonus-action mark, the forms being reverted, the
  * shifts in flight and what the synchronous dnd5e.transformActor hook needs across the gap.
  */
 
 import {
-  MODULE, EFFECT_ID, activitiesOf, isWildShapeActivity, stripForForm, isRevertData, returnLabel, durationSeconds, formatDuration,
+  MODULE, activitiesOf, isWildShapeActivity, shapingPlan, durationSeconds, formatDuration,
   usesLeft, useSyncUpdates, carriedConditions, endedInForm, attributeSync, shiftBlock, runnerIs, withArticle,
   formTempHP, withoutOrigin, pruneFavorites, findWildShapeItem, wildShapeActivityOf, refundUpdate, formEntries
 } from "./transform-core.mjs";
@@ -375,34 +374,14 @@ export function metaFor(host, extra = {}) {
  *        items/effects: the form's data as it will be created (linked) or as it was created (token)
  */
 export function shaping({ meta, source, items, effects, keepWildShape = false }) {
-  const { keep, stripped } = stripForForm(items, {
-    wildShapeIds: [meta.wildShapeId].filter(Boolean), hostItemIds: meta.hostItemIds, keepWildShape
-  });
-  const renames = keep.filter(isRevertData).map(i => ({ _id: i._id, name: returnLabel(meta.hostName), img: meta.hostImg }));
-
-  const now = game.time.worldTime;
   const seconds = meta.seconds;
-  const end = seconds ? _loc("PENTARYN_TRANSFORM.Effect.Ends", { name: meta.hostName, duration: formatDuration(seconds) })
-    : _loc("PENTARYN_TRANSFORM.Effect.EndsNoTime", { name: meta.hostName });
-  const effect = {
-    _id: EFFECT_ID,
-    name: _loc("PENTARYN_TRANSFORM.Effect.Name", { form: source.name }),
-    img: source.img,
-    transfer: false,
-    disabled: false,
-    ...(seconds ? { duration: { value: seconds, units: "seconds", expiry: null }, start: { time: now } } : {}),
-    description: `<p>${end}</p>${meta.traitsHtml ?? ""}`,
-    flags: { [MODULE]: { wildshape: true } }
-  };
-
-  const hostEffects = new Set(meta.hostEffectIds ?? []);
-  const flag = {
-    original: meta.hostId, source: source.uuid, profile: meta.profile ?? null,
-    endsAt: seconds ? now + seconds : null,
-    // The druid's effects that went into the form (same ids): revert ends those that ended here.
-    carried: (effects ?? []).map(e => e?._id).filter(id => id && hostEffects.has(id))
-  };
-  return { keep, stripped, renames, effect, flag };
+  return shapingPlan({
+    meta, items, effects, keepWildShape, now: game.time.worldTime,
+    source: { name: source.name, img: source.img, uuid: source.uuid },
+    end: seconds ? _loc("PENTARYN_TRANSFORM.Effect.Ends", { name: meta.hostName, duration: formatDuration(seconds) })
+      : _loc("PENTARYN_TRANSFORM.Effect.EndsNoTime", { name: meta.hostName }),
+    effectName: _loc("PENTARYN_TRANSFORM.Effect.Name", { form: source.name })
+  });
 }
 
 /**
@@ -498,13 +477,6 @@ export function isRunner(actor) {
   if (activeGMId) return runnerIs(game.user.id, { activeGMId, ownerIds: [] });
   const ownerIds = game.users.filter(u => u.active && !u.isGM && actor.testUserPermission(u, "OWNER")).map(u => u.id);
   return runnerIs(game.user.id, { activeGMId, ownerIds });
-}
-
-export function maybeAutoRevert(actor, reason) {
-  // exists(): the effect-expiry update and the world-time check can both fire for one ending; the
-  // second must not run dnd5e's revert again on the already-deleted form.
-  if (!exists(actor) || !isWildShapeForm(actor) || reverting.has(actor.uuid) || !isRunner(actor)) return;
-  revert(actor, { reason }).catch(err => log.warn("auto-revert failed", err));
 }
 
 /* ── what the hooks (wildshape.mjs) read across the gap ──────────────────── */

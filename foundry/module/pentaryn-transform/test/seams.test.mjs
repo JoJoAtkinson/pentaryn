@@ -317,3 +317,28 @@ test("-7 pickStarryBase equals the oracle-base-effect rows", async () => {
 test("-7 starryEndKey equals the oracle-starry-end-key rows", async () => {
   await characterise("oracle-starry-end-key", core.starryEndKey, ["incapacitated", "expired", "manual", undefined, "longRest"], { file });
 });
+
+/* ── 8.6 shapingPlan (the pure half of shaping the form) ──────────────────── */
+
+test("shapingPlan: strip, rename, the timed effect and the form flag; no duration → no end time", () => {
+  const ws = { _id: "ws", type: "feat", name: "Wild Shape", system: { activities: { a: { type: "transform", transform: { preset: "wildshape" } } } } };
+  const rn = { _id: "rn", type: "feat", name: "Return to Normal Form", flags: { "pentaryn-transform": { revert: true } }, system: {} };
+  const bite = { _id: "bite", type: "weapon", name: "Bite", system: {} };
+  const meta = { wildShapeId: "ws", hostItemIds: ["ws", "rn"], hostName: "Talo", hostImg: "talo.webp", hostId: "talo",
+    hostEffectIds: ["bless"], profile: "p1", seconds: 21600, traitsHtml: "<p>T</p>" };
+  const plan = core.shapingPlan({ meta, source: { name: "Dire Wolf", img: "w.webp", uuid: "Actor.w" }, items: [ws, rn, bite],
+    effects: [{ _id: "bless" }, { _id: "keen" }], now: 100, end: "END", effectName: "Wild Shape: Dire Wolf" });
+  assert.deepEqual(plan.keep.map(i => i._id), ["rn", "bite"]);
+  assert.deepEqual(plan.stripped, [{ _id: "ws", name: "Wild Shape", reason: "wildshape" }]);
+  assert.deepEqual(plan.renames, [{ _id: "rn", name: "Return to Talo", img: "talo.webp" }]);
+  assert.deepEqual(plan.effect, { _id: core.EFFECT_ID, name: "Wild Shape: Dire Wolf", img: "w.webp", transfer: false, disabled: false,
+    duration: { value: 21600, units: "seconds", expiry: null }, start: { time: 100 }, description: "<p>END</p><p>T</p>",
+    flags: { "pentaryn-transform": { wildshape: true } } });
+  assert.deepEqual(plan.flag, { original: "talo", source: "Actor.w", profile: "p1", endsAt: 21700, carried: ["bless"] });
+  const timeless = core.shapingPlan({ meta: { ...meta, seconds: null, traitsHtml: undefined }, source: { name: "X", img: "x", uuid: "u" },
+    items: [], effects: undefined, now: 5, end: "E", effectName: "N" });
+  assert.equal("duration" in timeless.effect, false);
+  assert.equal(timeless.effect.description, "<p>E</p>");
+  assert.equal(timeless.flag.endsAt, null);
+  assert.deepEqual(timeless.flag.carried, []);
+});

@@ -11,7 +11,7 @@ import { MODULE, EFFECT_ID, isWildShapeActivity, isExpired, pruneFavorites, form
 import { makeLog } from "./lib/log.mjs";
 import {
   isRevertItem, original, wildShapeActivity, isWildShapeForm, exists, activeFormOf, blockedShift, say, RETURN_LINES,
-  revert, returnToNormal, endOnDruid, doShift, metaFor, shaping, isRunner, maybeAutoRevert, isReverting, pendingMeta, trackShift
+  revert, returnToNormal, endOnDruid, doShift, metaFor, shaping, isRunner, isReverting, pendingMeta, trackShift
 } from "./wildshape-adapter.mjs";
 
 const log = makeLog(MODULE);
@@ -116,6 +116,14 @@ function onTransformActor(host, source, d, settings) {
 }
 
 /* ── ending without a click ──────────────────────────────────────────────── */
+
+/** End a Wild Shape form on the runner's client, once (the shared path of every automatic ending). */
+function maybeAutoRevert(actor, reason) {
+  // exists(): the effect-expiry update and the world-time check can both fire for one ending; the
+  // second must not run dnd5e's revert again on the already-deleted form.
+  if (!exists(actor) || !isWildShapeForm(actor) || isReverting(actor.uuid) || !isRunner(actor)) return;
+  revert(actor, { reason }).catch(err => log.warn("auto-revert failed", err));
+}
 
 // 0 HP: the 2024 form uses the druid's own HP; at 0 they are Unconscious, so the form ends.
 function onZeroHP(actor, changes) {
