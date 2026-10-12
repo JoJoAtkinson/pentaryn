@@ -17,5 +17,22 @@
   },
   "socket": false,
   "protected": false,
-  "flags": { "pentaryn": { "flagScope": "pentaryn-prompts", "generation": 14 } }
+  "flags": {
+    "pentaryn": {
+      "tier": "full",
+      "namespace": "prompts",
+      "flagScope": "pentaryn-prompts",
+      "cssPrefix": "pp-",
+      "generation": 14,
+      "afterSync": [
+        "First install: restart Foundry (module.json is read at startup), enable",
+        "'Pentaryn Prompt Markers', then reload the ONE GM tab. The six 'Prompt ·' actors",
+        "appear in the 'Prompt Markers' folder at GM ready.",
+        "  game.pentaryn.prompts.status()",
+        "  game.pentaryn.prompts.selftest()   // .ok === true",
+        "  await game.pentaryn.prompts.gather({scenes: 'current'})",
+        "Marker art: ./.venv/bin/python scripts/foundry/prompt_marker_art.py"
+      ]
+    }
+  }
 }

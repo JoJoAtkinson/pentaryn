@@ -328,15 +328,7 @@ MODULES = {
         # barrel) plus build-core.mjs / npc-core.mjs (PC ability budgets, choice matching), and
         # it carries the whole contract.
         check=(*_STATIC, "node-test", *_BLUEPRINT),
-        after_sync=(
-            "First install: restart Foundry (module.json is read at startup), enable",
-            "'Pentaryn Prompt Markers', then reload the ONE GM tab. The six 'Prompt ·' actors",
-            "appear in the 'Prompt Markers' folder at GM ready.",
-            "  game.pentaryn.prompts.status()",
-            "  game.pentaryn.prompts.selftest()   // .ok === true",
-            "  await game.pentaryn.prompts.gather({scenes: 'current'})",
-            "Marker art: ./.venv/bin/python scripts/foundry/prompt_marker_art.py",
-        ),
+        # after_sync comes from module.json flags.pentaryn.afterSync (Wave 7 batch).
     ),
     "combat": ModuleSpec(
         "pentaryn-combat",
