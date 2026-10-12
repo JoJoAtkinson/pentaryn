@@ -386,6 +386,7 @@
         {
           "name": "ref",
           "kind": "token",
+          "type": "Token|Actor|uuid|id|exact name",
           "resolve": false,
           "doc": "a token (id, uuid, exact name, document, placeable), else an actor"
         },

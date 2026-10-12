@@ -200,7 +200,7 @@ export const MANIFEST = Object.freeze({
     {
       path: "inspect",
       params: [
-        { name: "ref", kind: "token", resolve: false, doc: "a token (id, uuid, exact name, document, placeable), else an actor" },
+        { name: "ref", kind: "token", type: "Token|Actor|uuid|id|exact name", resolve: false, doc: "a token (id, uuid, exact name, document, placeable), else an actor" },
         { name: "opts", optional: true, type: "{ sceneId?, base?, as? }", doc: "scene scope; base: the world actor; as: answer as that user" },
       ],
       returns: "{ token: { id, light, itemLight, itemLightPrior, spellLight: { source, prior (dotted keys) } | null } | null, "

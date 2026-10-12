@@ -111,3 +111,17 @@ test("inspect(token): the live answer for a spell-lit token keeps animation and 
     assert.equal(r.token.spellLight.prior["darkness.max"], 1);
   } finally { flag.prior = was; }
 });
+
+test("inspect over the MCP bridge (W3L, wave-3 live plan §7 row 6): the ref row names its string forms", async () => {
+  // pentaryn-read refuses a Document-kind param ("needs a live Document — eval-js only") unless its
+  // `type` names a string form (uuid / id / name / string): that is how a row says it resolves strings
+  // itself. inspect does (an id, a uuid or an exact name), so a uuid must reach it as plain JSON.
+  const { MANIFEST } = await import("../api-manifest.mjs");
+  const ref = MANIFEST.rows.find(r => r.path === "inspect").params.find(p => p.name === "ref");
+  const words = String(ref.type ?? "").toLowerCase().split(/[^a-z0-9_]+/);
+  assert.ok(["uuid", "id", "name"].every(w => words.includes(w)), `ref.type names uuid, id and name: ${ref.type}`);
+  const stake = game.scenes.get(ID.s1).tokens.get(ID.tStake);
+  const byUuid = S().inspect(stake.uuid);
+  assert.equal(byUuid.token.id, ID.tStake);
+  assert.deepEqual(JSON.parse(JSON.stringify(byUuid)), byUuid, "plain JSON");
+});

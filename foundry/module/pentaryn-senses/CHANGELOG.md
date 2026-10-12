@@ -6,6 +6,10 @@
 (`tier`, `namespace`, `flagScope: "pentaryn-senses"`, `cssPrefix: "ps-"`), `minimum: "14"` and
 `recommends: enhancedcombathud`.
 
+- **[declared] `inspect` reaches the MCP bridge** (W3L, 2026-10-12): the manifest's `ref` gains
+  `type: "Token|Actor|uuid|id|exact name"`, so `pentaryn-read {ns:"senses", path:"inspect", ref:<uuid>}`
+  passes the string through (inspect resolves it itself) instead of refusing "eval-js only".
+  describe() golden updated for that one key.
 - **[declared] The API is kit-built** (S-1, S-2): frozen, with `describe()`/`version`/`contract`/
   `settings()`/`trace()`/`uninstall()`, also `game.modules.get("pentaryn-senses").api`;
   `game.pentaryn.senses.chain` is the same object as `game.pentaryn.chain`. `chain.uninstall` and
