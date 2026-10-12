@@ -45,6 +45,7 @@ export function installFeature(feature) {
 /** Every installed feature's uninstall, newest first, then every recorded hook, then the patch. */
 function uninstall() {
   for (const f of installed.splice(0).reverse()) f.uninstall?.();
+  ctx.contributions.length = 0;
   reg.offAll();
   removePatches();
 }

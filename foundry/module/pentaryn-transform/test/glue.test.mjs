@@ -6,6 +6,7 @@
 // the runner election and Argon's target-picker cancel.
 import { test, mock } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { pinJSON, sourceScan } from "./kit/harness.mjs";
 import { setup, IDS, MODULE } from "./fixtures/world.mjs";
 import { legacyUnwrap } from "./fixtures/legacy-transform.mjs";
@@ -101,9 +102,9 @@ test("preUpdateToken: animate already false → untouched; a throw inside logs a
   assert.equal("animate" in opts, false);
 });
 
-/* ── publish (legacy, frozen-root guard) ──────────────────────────────────── */
+/* ── publish (the kit's publishNamespace; [declared] T-D1, W2-K1) ──────────── */
 
-test("published at ready: game.pentaryn.transform, the legacy surface (golden/legacy-surface.json)", () => {
+test("[declared] T-D1 published at ready through the kit: frozen, module.api, ⊇ the legacy surface (golden/legacy-surface.json)", () => {
   const api = game.pentaryn.transform;
   assert.ok(api);
   assert.equal(api.shift, T.shift);
@@ -113,12 +114,13 @@ test("published at ready: game.pentaryn.transform, the legacy surface (golden/le
   assert.equal(api.original, T.original);
   assert.equal(api.isRevertItem, T.isRevertItem);
   assert.equal(api.sweepSpentForms, T.sweepSpentForms);
-  assert.equal(Object.isFrozen(api), false, "legacy: a plain object");
-  assert.equal(game.modules.get(MODULE).api, undefined, "no module.api today");
-  pinJSON("legacy-surface", {
-    transform: Object.keys(api).map(k => [k, typeof api[k]]),
-    starry: Object.keys(api.starry).map(k => [k, typeof api.starry[k]])
-  }, import.meta.url);
+  assert.equal(Object.isFrozen(api), true, "kit-built: frozen");
+  assert.equal(game.modules.get(MODULE).api, api, "module.api is canonical; game.pentaryn.transform the alias");
+  const legacy = JSON.parse(readFileSync(new URL("./golden/legacy-surface.json", import.meta.url), "utf8"));
+  const now = { transform: Object.keys(api).map(k => [k, typeof api[k]]), starry: Object.keys(api.starry).map(k => [k, typeof api.starry[k]]) };
+  for (const row of legacy.transform) assert.ok(now.transform.some(r => r[0] === row[0] && r[1] === row[1]), `transform.${row[0]}`);
+  assert.deepEqual(now.starry, legacy.starry, "the starry members, in order");
+  assert.deepEqual(now.transform.slice(0, 7).map(r => r[0]), legacy.transform.slice(0, 7).map(r => r[0]), "legacy order first");
 });
 
 test("starry API rows are starry.mjs's own functions", async () => {
@@ -127,8 +129,8 @@ test("starry API rows are starry.mjs's own functions", async () => {
     { assume: S.assumeStarry, end: S.endStarry, active: S.activeStarry, constellation: S.constellationOf });
 });
 
-test("no ready-time hook emitted, no socket, no settings registered (only dnd5e's, by the fixture)", () => {
-  assert.deepEqual(F.calls.filter(c => c.op === "Hooks.callAll" && /ready/i.test(c.name)), []);
+test("[declared] T-D1 ready hooks pentaryn-transform.ready and pentaryn.ready; no socket, no settings registered (only dnd5e's)", () => {
+  assert.deepEqual(F.calls.filter(c => c.op === "Hooks.callAll" && /ready/i.test(c.name)).map(c => c.name), ["pentaryn-transform.ready", "pentaryn.ready"]);
   assert.deepEqual(F.calls.filter(c => c.op === "socket.emit"), []);
   assert.deepEqual([...game.settings.settings.keys()], ["dnd5e.allowPolymorphing"]);
 });

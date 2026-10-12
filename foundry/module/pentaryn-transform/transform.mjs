@@ -15,12 +15,17 @@
 //
 // Lifecycle: the patch, then every feature installs synchronously while this file loads (the moment
 // their module-scope hooks always registered; moving them to `setup` would reorder them against
-// other modules — golden/hooks.json) · ready → publish.
+// other modules — golden/hooks.json) · ready → build the API (api.mjs), publish it (kit publishNamespace).
+//   api-manifest.mjs       PURE API rows (+ STARRY_ROWS, starry.mjs's contribution)
+//   api.mjs                implementations, inspect(), selftest(), buildApiFor(ctx)
 //
 // Design and verified line references: WILDSHAPE-DESIGN.md (this folder).
 
 import { installPatches } from "./patches.mjs";
-import { installFeature, reg } from "./wiring.mjs";
+import { MODULE, NS } from "./transform-core.mjs";
+import { publishNamespace } from "./lib/publish.mjs";
+import { installFeature, ctx, log } from "./wiring.mjs";
+import { buildApiFor } from "./api.mjs";
 import {
   shift, revert, forms, wildShapeActivity, original, isRevertItem, isRunner, markBonusUsed, bonusUsedNow, say,
   returnToNormal, isWildShapeForm
@@ -43,16 +48,23 @@ installPatches();
 
 for (const feature of FEATURES) installFeature(feature);
 
-// pentaryn-importer creates and FREEZES game.pentaryn, so a bare assignment throws in
-// strict mode. Rebuild the namespace instead (same pattern as pentaryn-ties).
+/**
+ * Ready: build the API first (a manifest drift is one error line and nothing is published), then
+ * publish it synchronously as game.modules.get("pentaryn-transform").api and game.pentaryn.transform
+ * (W2-K1: game.pentaryn is a plain object every module assigns into; a frozen one throws here).
+ */
 function onReady() {
-  const api = { shift, revert, forms, wildShapeActivity, original, isRevertItem, sweepSpentForms };
-  const current = game.pentaryn;
-  if (current && !Object.isExtensible(current)) game.pentaryn = { ...current, transform: api };
-  else {
-    game.pentaryn ??= {};
-    game.pentaryn.transform = api;
+  try {
+    ctx.api = buildApiFor(ctx);
+  } catch (err) {
+    log.error("API manifest drift — not published", err);
+    return;
   }
+  publishNamespace(NS, ctx.api, { moduleId: MODULE });
 }
+ctx.expose({ publish: onReady });
 
-reg.once("ready", onReady, { label: "ready: publish game.pentaryn.transform", guard: false });
+// A hot re-import after ready (uninstall(), then import "transform.mjs?v=2" and "hud.mjs?v=2")
+// publishes at once; hud.mjs publishes again with Starry's rows.
+if (globalThis.game?.ready) onReady();
+else Hooks.once("ready", onReady);

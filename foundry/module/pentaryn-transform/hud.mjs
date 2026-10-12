@@ -5,7 +5,7 @@
 // registry and ctx with transform.mjs (esmodules[0]); the Wave 8 collapse folds this file into it
 // once the cross-module render-order fixture exists (D11).
 
-import { installFeature } from "./wiring.mjs";
+import { installFeature, ctx } from "./wiring.mjs";
 import * as starry from "./starry.mjs";
 import * as hudPanels from "./hud-panels.mjs";
 
@@ -15,3 +15,6 @@ export { cancelTargetPicker } from "./argon.mjs";
 const FEATURES = [starry, hudPanels];
 
 for (const feature of FEATURES) installFeature(feature);
+
+// A hot re-import after ready: republish so the API carries Starry's rows again.
+if (globalThis.game?.ready) ctx.exposed.publish?.();

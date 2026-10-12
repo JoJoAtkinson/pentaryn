@@ -22,14 +22,15 @@ test("every feature file exports install and uninstall", async () => {
   }
 });
 
-test("the registry recorded exactly golden/hooks.json, every row labelled", () => {
+test("the registry recorded golden/hooks.json less the entry's own ready (row 18, a lifecycle Hooks.once), every row labelled", () => {
   const ids = W.reg.ids();
-  assert.deepEqual(ids.map(r => ({ kind: r.kind, name: r.name })), golden);
+  assert.deepEqual(ids.map(r => ({ kind: r.kind, name: r.name })), golden.filter((_, i) => i !== 17));
   for (const r of ids) assert.ok(r.label && r.label !== r.name, `${r.name} has a label`);
   assert.equal(new Set(ids.map(r => r.label)).size, ids.length, "labels are unique");
 });
 
 test("ctx.uninstall(): no hook, no pointermove listener, the patch undone, the sweep timer dropped", () => {
+  F.fire("ready");                                                // the lifecycle ready runs (and is gone)
   Hooks.callAll("updateToken", {}, {}, {}, "u");                 // a sweep timer is pending
   assert.ok(F.D.listeners.some(l => l.type === "pointermove"));
   W.ctx.uninstall();

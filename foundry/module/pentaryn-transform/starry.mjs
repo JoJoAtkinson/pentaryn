@@ -12,6 +12,7 @@ import {
   setLight, applyStarry, BLOCKS, assumeStarry, endStarry, announceStarryOn
 } from "./starry-adapter.mjs";
 import { pickConstellation } from "./starry-dialog.mjs";
+import { STARRY_ROWS } from "./api-manifest.mjs";
 
 const log = makeLog(MODULE);
 
@@ -108,6 +109,11 @@ export function install(reg) {
   reg.on("updateWorldTime", onWorldTime, { label: "updateWorldTime: Starry Form expiry", guard: false });
   reg.on("dnd5e.restCompleted", onRestCompleted, { label: "dnd5e.restCompleted: a Long Rest ends Starry Form", guard: false });
   reg.once("ready", extendApi, { label: "ready: api.starry", guard: false });
+  // game.pentaryn.transform.starry: built into the one frozen API (transform-creatures-16).
+  return {
+    rows: STARRY_ROWS,
+    impl: { "starry.assume": assumeStarry, "starry.end": endStarry, "starry.active": activeStarry, "starry.constellation": constellationOf }
+  };
 }
 
 export function uninstall() {}

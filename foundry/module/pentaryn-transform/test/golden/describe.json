@@ -1,0 +1,462 @@
+{
+  "module": "pentaryn-transform",
+  "namespace": "transform",
+  "contract": "pentaryn-transform/api@1",
+  "flagScope": "pentaryn-transform",
+  "methods": [
+    {
+      "path": "shift",
+      "params": [
+        {
+          "name": "actor",
+          "type": "Actor",
+          "doc": "the druid or the form they are in — a document, not a ref (legacy)"
+        },
+        {
+          "name": "profileId",
+          "type": "string",
+          "doc": "the transform profile's _id (forms(actor)[].id)"
+        }
+      ],
+      "returns": "Promise<Actor|null> — the new form",
+      "gm": false,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "flags.pentaryn-transform.wildshape",
+        "the Wild Shape item's uses",
+        "a new form actor (linked) or the token's actor (unlinked)"
+      ],
+      "nullWhen": "a shift for this actor is already running (double-click); no Wild Shape; an unknown profile; a block (busy, no permission, incapacitated, 0 HP, no token on the viewed scene, no uses — each warns); the old form's revert failed; the transform did not happen (the use is refunded)",
+      "legacy": true,
+      "doc": "Wild Shape into a known form, spending one use; from a form, the 2024 'use Wild Shape again' (the current form ends first). Runs with the caller's permissions, as a HUD click does."
+    },
+    {
+      "path": "revert",
+      "params": [
+        {
+          "name": "actor",
+          "type": "Actor",
+          "doc": "the druid or the form they are in — a document, not a ref (legacy)"
+        },
+        {
+          "name": "opts",
+          "type": "{ quiet?: boolean, reason?: 'manual'|'zeroHP'|'incapacitated'|'expired'|'longRest' }",
+          "optional": true
+        }
+      ],
+      "returns": "Promise<Actor|null> — the original",
+      "gm": false,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "the original's item uses, Hit Dice, exhaustion, inspiration and carried conditions",
+        "tokens on other scenes"
+      ],
+      "nullWhen": "not transformed (an info toast unless quiet); a stale form; not the owner (a warning); this form is already reverting; dnd5e returned nothing",
+      "legacy": true,
+      "doc": "Return a transformed actor to its original form, carrying back what dnd5e does not; one chat line for the reason unless quiet."
+    },
+    {
+      "path": "forms",
+      "params": [
+        {
+          "name": "actor",
+          "type": "Actor",
+          "doc": "the druid or the form they are in — a document, not a ref (legacy)"
+        }
+      ],
+      "returns": "{ id, name, uuid, actor: Actor|null }[]",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "The druid's known forms (the Wild Shape activity's profiles), with the source actors resolved. [] without Wild Shape."
+    },
+    {
+      "path": "wildShapeActivity",
+      "params": [
+        {
+          "name": "actor",
+          "type": "Actor",
+          "doc": "the druid or the form they are in — a document, not a ref (legacy)"
+        }
+      ],
+      "returns": "Activity|null",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "nullWhen": "no Wild Shape activity on the actor or its original",
+      "legacy": true,
+      "doc": "The Wild Shape transform activity (on the original when the actor is a form)."
+    },
+    {
+      "path": "original",
+      "params": [
+        {
+          "name": "actor",
+          "type": "Actor",
+          "doc": "the druid or the form they are in — a document, not a ref (legacy)"
+        }
+      ],
+      "returns": "Actor|null",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "nullWhen": "a linked form whose original actor is gone; no actor",
+      "legacy": true,
+      "doc": "The actor a form was made from; the actor itself when it is not transformed, or when it is an unlinked token's form."
+    },
+    {
+      "path": "isRevertItem",
+      "params": [
+        {
+          "name": "item",
+          "type": "Item"
+        }
+      ],
+      "returns": "boolean",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "True for an item flagged pentaryn-transform.revert (using it returns its actor to normal form)."
+    },
+    {
+      "path": "sweepSpentForms",
+      "params": [],
+      "returns": "Promise<void>",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "deletes spent form actors"
+      ],
+      "legacy": true,
+      "doc": "Active GM only: delete transformed copies (flags.dnd5e.originalActor) with no token on any scene and older than 10 s; younger ones are checked again when old enough. Runs by itself after token traffic."
+    },
+    {
+      "path": "inspect",
+      "params": [
+        {
+          "name": "ref",
+          "kind": "actor",
+          "type": "Actor|Token|uuid|id|exact name",
+          "doc": "never a substring"
+        },
+        {
+          "name": "opts",
+          "type": "{ sceneId?, base?, as? }",
+          "optional": true
+        }
+      ],
+      "returns": "{ actor, original, shifted, wildShapeForm, form: { name, profileId, sourceUuid, endsAt, secondsLeft }|null, wildShape: { itemId, usesLeft, max }|null, starry: { constellation, secondsLeft }|null, forms: { id, name }[] }",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "throws": [
+        "NOT_FOUND",
+        "AMBIGUOUS",
+        "BAD_ARGS"
+      ],
+      "since": "0.4.0",
+      "doc": "Read-only shape state for one actor, plain JSON, depth ≤ 4. opts.sceneId scopes a token ref; opts.as = a user ref answers with that user's view (without OBSERVER on the actor: { actor } only)."
+    },
+    {
+      "path": "selftest",
+      "params": [],
+      "returns": "{ ok, checks: [{ label, ok, detail }] }",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "since": "0.4.0",
+      "doc": "Live smoke checks after a sync."
+    },
+    {
+      "path": "starry.assume",
+      "params": [
+        {
+          "name": "actor",
+          "type": "Actor",
+          "doc": "the druid or the form they are in — a document, not a ref (legacy)"
+        },
+        {
+          "name": "constellation",
+          "type": "'archer'|'chalice'|'dragon'"
+        }
+      ],
+      "returns": "Promise<boolean> — whether the form is now up with that constellation",
+      "gm": false,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "flags.pentaryn-transform.starry",
+        "flags.pentaryn-senses.light",
+        "the Wild Shape item's uses"
+      ],
+      "legacy": true,
+      "doc": "Take on Starry Form with this constellation (one Wild Shape use), or with Twinkling Constellations change it for free while the form is up. false (with a warning) when shifted, incapacitated or out of uses."
+    },
+    {
+      "path": "starry.end",
+      "params": [
+        {
+          "name": "actor",
+          "type": "Actor",
+          "doc": "the druid or the form they are in — a document, not a ref (legacy)"
+        },
+        {
+          "name": "opts",
+          "type": "{ quiet?: boolean, reason?: 'manual'|'incapacitated'|'expired' }",
+          "optional": true
+        }
+      ],
+      "returns": "Promise<boolean> — false when no Starry Form was up",
+      "gm": false,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "flags.pentaryn-transform.starry",
+        "flags.pentaryn-senses.light"
+      ],
+      "legacy": true,
+      "doc": "Dismiss Starry Form (no action required); one chat line for the reason unless quiet."
+    },
+    {
+      "path": "starry.active",
+      "params": [
+        {
+          "name": "actor",
+          "type": "Actor",
+          "doc": "the druid or the form they are in — a document, not a ref (legacy)"
+        }
+      ],
+      "returns": "ActiveEffect|null",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "The druid's live Starry Form effect."
+    },
+    {
+      "path": "starry.constellation",
+      "params": [
+        {
+          "name": "actor",
+          "type": "Actor",
+          "doc": "the druid or the form they are in — a document, not a ref (legacy)"
+        }
+      ],
+      "returns": "'archer'|'chalice'|'dragon'|null",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "The constellation glimmering now, or null."
+    }
+  ],
+  "queries": [],
+  "settings": [],
+  "events": [],
+  "hooks": [
+    {
+      "name": "preUpdateToken",
+      "label": "preUpdateToken: body swaps never animate"
+    },
+    {
+      "name": "dnd5e.revertOriginalForm",
+      "label": "dnd5e.revertOriginalForm: chat line for an outside revert"
+    },
+    {
+      "name": "dnd5e.preUseActivity",
+      "label": "dnd5e.preUseActivity: Wild Shape / revert item"
+    },
+    {
+      "name": "dnd5e.postUseActivity",
+      "label": "dnd5e.postUseActivity: shift / revert"
+    },
+    {
+      "name": "dnd5e.transformActor",
+      "label": "dnd5e.transformActor: shape the form"
+    },
+    {
+      "name": "updateActor",
+      "label": "updateActor: 0 HP"
+    },
+    {
+      "name": "createActiveEffect",
+      "label": "createActiveEffect: incapacitated"
+    },
+    {
+      "name": "updateActiveEffect",
+      "label": "updateActiveEffect: expired / incapacitated"
+    },
+    {
+      "name": "deleteActiveEffect",
+      "label": "deleteActiveEffect: form effect / carried effect"
+    },
+    {
+      "name": "updateWorldTime",
+      "label": "updateWorldTime: form expiry"
+    },
+    {
+      "name": "dnd5e.longRest",
+      "label": "dnd5e.longRest: revert, then rest"
+    },
+    {
+      "name": "dnd5e.preShortRest",
+      "label": "dnd5e.preShortRest: the form rests"
+    },
+    {
+      "name": "dnd5e.restCompleted",
+      "label": "dnd5e.restCompleted: the druid's short rest"
+    },
+    {
+      "name": "updateToken",
+      "label": "updateToken: sweep spent forms"
+    },
+    {
+      "name": "deleteToken",
+      "label": "deleteToken: sweep spent forms"
+    },
+    {
+      "name": "updateActor",
+      "label": "updateActor: a reverted form, sweep soon"
+    },
+    {
+      "name": "ready",
+      "label": "ready: first sweep"
+    },
+    {
+      "name": "dnd5e.preUseActivity",
+      "label": "dnd5e.preUseActivity: Starry Form sheet route"
+    },
+    {
+      "name": "dnd5e.postUseActivity",
+      "label": "dnd5e.postUseActivity: Starry Form sheet route"
+    },
+    {
+      "name": "createActiveEffect",
+      "label": "createActiveEffect: incapacitated ends Starry Form"
+    },
+    {
+      "name": "updateActiveEffect",
+      "label": "updateActiveEffect: Starry Form expired / incapacitated"
+    },
+    {
+      "name": "deleteActiveEffect",
+      "label": "deleteActiveEffect: the starlight goes"
+    },
+    {
+      "name": "updateWorldTime",
+      "label": "updateWorldTime: Starry Form expiry"
+    },
+    {
+      "name": "dnd5e.restCompleted",
+      "label": "dnd5e.restCompleted: a Long Rest ends Starry Form"
+    },
+    {
+      "name": "ready",
+      "label": "ready: api.starry"
+    },
+    {
+      "name": "updateToken",
+      "label": "updateToken: the HUD's token changed body"
+    },
+    {
+      "name": "deleteToken",
+      "label": "deleteToken: the HUD's token is gone"
+    },
+    {
+      "name": "init",
+      "label": "init: Escape keybinding"
+    },
+    {
+      "name": "renderActionPanelArgonComponent",
+      "label": "renderActionPanelArgonComponent: Bonus / Action / Special bars"
+    },
+    {
+      "name": "renderItemButtonArgonComponent",
+      "label": "renderItemButtonArgonComponent: Opportunity Attack label"
+    },
+    {
+      "name": "renderPortraitPanelArgonComponent",
+      "label": "renderPortraitPanelArgonComponent: form line and HP"
+    },
+    {
+      "name": "updateWorldTime",
+      "label": "updateWorldTime: repaint the portrait"
+    },
+    {
+      "name": "renderEffectArgonComponent",
+      "label": "renderEffectArgonComponent: the form's effect"
+    },
+    {
+      "name": "updateItem",
+      "label": "updateItem: Wild Shape uses badge"
+    },
+    {
+      "name": "createActiveEffect",
+      "label": "createActiveEffect: Starry Form rebuilds the Bonus bar"
+    },
+    {
+      "name": "updateActiveEffect",
+      "label": "updateActiveEffect: Starry Form rebuilds the Bonus bar"
+    },
+    {
+      "name": "deleteActiveEffect",
+      "label": "deleteActiveEffect: Starry Form rebuilds the Bonus bar"
+    },
+    {
+      "name": "dnd5e.postUseActivity",
+      "label": "dnd5e.postUseActivity: Chalice offer"
+    },
+    {
+      "name": "deleteActiveEffect",
+      "label": "deleteActiveEffect: no Chalice to take"
+    }
+  ],
+  "patches": [
+    {
+      "label": "TokenDocument._preUpdateOperation",
+      "marker": "pentarynUnwrapped",
+      "adjustments": "transform-preupdate-unwrap"
+    }
+  ],
+  "flags": {
+    "writes": [
+      "flags.pentaryn-transform.wildshape",
+      "flags.pentaryn-transform.revert",
+      "flags.pentaryn-transform.starry",
+      "flags.pentaryn-senses.light"
+    ],
+    "reads": [
+      "flags.dnd5e.originalActor",
+      "flags.dnd5e.isPolymorphed",
+      "flags.dnd5e.transformOptions",
+      "flags.dnd5e.previousTokenData",
+      "flags.dnd5e.previousActorData"
+    ]
+  },
+  "errors": [
+    "NOT_GM",
+    "NO_GM",
+    "NOT_READY",
+    "NOT_FOUND",
+    "AMBIGUOUS",
+    "BAD_ARGS",
+    "REFUSED",
+    "CONFLICT",
+    "UNSUPPORTED",
+    "TIMEOUT",
+    "INTERNAL"
+  ]
+}
