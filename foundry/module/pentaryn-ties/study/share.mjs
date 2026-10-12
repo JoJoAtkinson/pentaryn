@@ -42,7 +42,7 @@ import { applyPlayerWrites, knownListWith, putBelief } from "./apply.mjs";
 import { applyInspect, grantKind, writeIdentification } from "./cascade.mjs";
 import { dropRow } from "./claim.mjs";
 import { factFrom, reset, rowMissed } from "./gate.mjs";
-import { beliefsOf, concealmentFor, kindActorOf, reg, resolveFact, studyStateFor, studyTiersOf } from "./resolve.mjs";
+import { beliefsOf, identDcOf, kindActorOf, reg, resolveFact, studyStateFor, studyTiersOf } from "./resolve.mjs";
 import { cardName, esc, INSPECT } from "./shared.mjs";
 import { readFlag } from "../lib/flags.mjs";
 import { setting } from "../settings.mjs";
@@ -84,8 +84,7 @@ export function factStatus(spec, character) {
   if (spec.ns === "ident") {
     belief = beliefsOf(subject)[character.id]?.[key] ?? null;
     failedKnowledge = failedAttribute(knowledge(), character.id, spec.attrId);
-    const entry = describeAttribute(spec.attrId);
-    if (typeof entry.dc === "number") dc = entry.dc + concealmentFor(subject, spec.attrId);
+    dc = identDcOf(subject, spec.attrId);
   } else if (spec.ns === "attr") {
     belief = readAttrBeliefs(setting(ATTR_BELIEFS_SETTING))[`${key}:${character.id}`] ?? null;
     dc = rollableLore(attributeLore(spec.attrId)).find(r => r.id === spec.factId)?.dc ?? null;

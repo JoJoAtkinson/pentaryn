@@ -218,6 +218,25 @@ export const beliefsOf = actor => readBeliefs(readFlag(actor, MODULE, BELIEFS_FL
 export const concealmentFor = (subject, attrId) => concealFor(readFlag(subject, MODULE, CONCEAL_FLAG), attrId);
 export const studyTiersOf = actor => readStudyTiers(readFlag(actor, MODULE, STUDY_TIERS_FLAG));
 
+/**
+ * The effective identification DC on this subject: the entry's DC plus its concealment, or `null`
+ * when the attribute has no DC — a derived attribute with no authored entry. The one answer for
+ * every site that rolls, judges or reports an identification (M13/EXT-9). `entry` defaults to the
+ * registry's; the cascade passes the entry it planned from.
+ */
+export function identDcOf(subject, attrId, entry = describeAttribute(attrId)) {
+  return typeof entry?.dc === "number" ? entry.dc + concealmentFor(subject, attrId) : null;
+}
+
+/**
+ * Was this identification row missed? A DC-less row is never a miss — there is nothing to fail
+ * against — and neither is a row without a numeric total (a GM tell, a claim in flight).
+ */
+export function identRowMissed(rec, dc) {
+  if (typeof dc !== "number" || typeof rec?.total !== "number") return false;
+  return rec.total < dc;
+}
+
 /** The registry, read defensively — a setting can be unregistered when a hook fires early. */
 export function reg() {
   return setting(REGISTRY_SETTING) ?? [];

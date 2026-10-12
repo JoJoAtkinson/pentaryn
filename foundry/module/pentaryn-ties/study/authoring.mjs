@@ -5,7 +5,6 @@
  * Split out of study.mjs (S4b, ties-35); study.mjs re-exports this file's public names.
  */
 
-import { describeAttribute } from "../attributes.mjs";
 import { MODULE } from "../ties-core.mjs";
 import { rolledMiss, CONCEAL_FLAG } from "../core/rules.mjs";
 import {
@@ -22,7 +21,7 @@ import {
   STUDY_TIERS_FLAG,
   studyOffsetOf
 } from "../known-core.mjs";
-import { beliefsOf, concealmentFor, kindActorOf, studyHoldFor } from "./resolve.mjs";
+import { beliefsOf, identDcOf, identRowMissed, kindActorOf, studyHoldFor } from "./resolve.mjs";
 import { esc } from "./shared.mjs";
 import { readFlag } from "../lib/flags.mjs";
 
@@ -141,8 +140,8 @@ export function beliefs(actor) {
     }
     if (parsed.ns === "attr" && parsed.fact === MEMBER_FACT) {
       if (String(rec.text ?? "").trim()) return true;
-      const dc = describeAttribute(parsed.subject)?.dc;
-      return typeof dc === "number" ? rec.total >= dc + concealmentFor(actor, parsed.subject) : null;
+      const dc = identDcOf(actor, parsed.subject);
+      return dc === null ? null : !identRowMissed(rec, dc); // a DC-less row is never a miss (M13)
     }
     return null;
   };

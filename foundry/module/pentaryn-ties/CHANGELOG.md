@@ -92,6 +92,13 @@ Fixed (declared): an **inspection relayed for an actor that is not a character s
 as the inspector) is now refused before anything is written, the same refusal a study roll makes —
 no ledger rows or grants land under an NPC's id. rob-5.
 
+Fixed (declared): an **identification row on an attribute with no DC** (a derived attribute nobody has
+authored an entry for) is never counted as a miss — there is nothing to fail against. The GM's pending
+list no longer drops an empty one as a parked failure, so `deliverHeld` can free it; the beliefs view
+and the held-rung prompt already agreed. The effective DC (entry DC plus concealment) now comes from one
+helper, `identDcOf`, and the miss test from `identRowMissed`, both in `study/resolve.mjs`, at every site
+that rolls, judges or reports an identification; the held-rung prompt prints "—" for a missing DC. M13, EXT-9.
+
 ## 0.19.4 (2026-10-10, usability run, Area 7 re-run)
 
 - **The inspect window's Share switches are the table's PCs only** (`tablePCs`): each player's

@@ -29,8 +29,9 @@ import { claimInspect, dropRow, releaseInspect } from "./claim.mjs";
 import { composeStudyPayload } from "./compose.mjs";
 import {
   beliefsOf,
-  concealmentFor,
   holdDefault,
+  identDcOf,
+  identRowMissed,
   kindActorOf,
   reg,
   resolveFact,
@@ -281,7 +282,7 @@ async function runCascade(character, subject, release = []) {
     if (step.roll) {
       const fact = {
         skill: entry.skill,
-        dc: entry.dc + concealmentFor(subject, attrId),
+        dc: identDcOf(subject, attrId, entry),
         name: entry.title,
         skillLabel: CONFIG.DND5E?.skills?.[entry.skill]?.label ?? entry.skill,
         silentRoll: true // chat-less: N rungs must not print N cards
@@ -411,12 +412,12 @@ async function promptCascadeDeliver(character, subject) {
       const entry = describeAttribute(attrId);
       const passed = !!String(rec.text ?? "").trim();
       // an empty row is a pass with no reveal authored, or a legacy failure parked before 2026-10
-      const missed = !passed && typeof rec.total === "number" && rec.total < entry.dc + concealmentFor(subject, attrId);
+      const missed = !passed && identRowMissed(rec, identDcOf(subject, attrId, entry));
       return `<li class="pt-belief${missed ? " pt-belief-miss" : ""}">
         <div class="pt-belief-head">
           <span class="pt-belief-who">${esc(entry.title)}</span>
           <span class="pt-belief-meta">${esc(
-            _loc("PENTARYN_TIES.known.inspect.holdMeta", { total: rec.total ?? "—", dc: entry.dc })
+            _loc("PENTARYN_TIES.known.inspect.holdMeta", { total: rec.total ?? "—", dc: entry.dc ?? "—" })
           )}</span>
         </div>
         <div class="pt-belief-text">${

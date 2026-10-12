@@ -24,7 +24,7 @@ import {
   STUDIED_FLAG
 } from "../known-core.mjs";
 import { applyPlayerWrites, putBelief, readBelief } from "./apply.mjs";
-import { beliefsOf, concealmentFor, resolveFact, studiedOf, studyTiersOf } from "./resolve.mjs";
+import { beliefsOf, identDcOf, identRowMissed, resolveFact, studiedOf, studyTiersOf } from "./resolve.mjs";
 import { esc } from "./shared.mjs";
 import { readFlag } from "../lib/flags.mjs";
 import { setting } from "../settings.mjs";
@@ -171,8 +171,7 @@ export function pending() {
          * with `deliverHeld`.
          */
         if (parsed.ns === "attr" && parsed.fact === MEMBER_FACT && !String(rec.text ?? "").trim()
-          && typeof rec.total === "number"
-          && rec.total < (describeAttribute(parsed.subject)?.dc ?? Infinity) + concealmentFor(ledger, parsed.subject)) continue;
+          && identRowMissed(rec, identDcOf(ledger, parsed.subject))) continue;
         const label =
           parsed.ns === "lore"
             ? readLore(readFlag(ledger, MODULE, LORE_FLAG)).find(r => r.id === parsed.fact)?.label ?? parsed.fact
