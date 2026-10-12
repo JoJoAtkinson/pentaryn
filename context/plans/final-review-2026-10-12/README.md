@@ -192,6 +192,8 @@ Before-goldens ran on the deployed pre-merge code in the one GM tab, `make found
 (FROM=local) at 14:23Z, one GM-tab reload. Probe: dropbin 0.2.3, journal 0.1.0, creatures 0.1.1 equal `module.json`,
 every described path a function, `selftest().ok` true for dropbin and journal (creatures has none).
 
-**Goldens.** Before and after diffed in page (the goldens are kept in the GM tab's localStorage, not as files):
+**Goldens.** Before and after diffed in page, then (relaunch reality check, 14:26Z) exported from the GM tab's
+localStorage to `.state/live-goldens/INT-1417/{before,after}/<m>.json` and the scratch keys removed;
+`diff.mjs before after` without `--declared` exits 0 for all three (shared identical, cleanups clean):
 `golden.shared`, `golden.declared` and env all empty for the three modules, cleanups clean, no ZZ leftovers. No
 allowlist. Reverts: none.
