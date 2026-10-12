@@ -531,3 +531,57 @@ No reverts.
 - Attunement's `_loc` switch (guide step 8) is still open, and its C35 exception stays.
 - `make vtt-status` says "public: reachable (HTTP 302)" while the tunnel is down. That is most
   likely the Cloudflare Access redirect, but it was not checked.
+
+## FX-L — fixes batches 3+4 (overnight)
+
+2026-10-12, about 04:45 EDT. Branch `fix/overnight-3-2026-10-12` (batch 3 and batch 4, tip
+`493eea96`) was merged into main as `991cee3e` (no-ff) and pushed (`933b78a5..991cee3e`).
+
+**Preconditions.**
+- The tunnel was down.
+- `get-world-info` showed only the Gamemaster active.
+- The upload queue was empty: no `.pentaryn-tmp/*.job.json`, and `foundry-cloud` showed only the
+  last finished upload.
+- The branch touches no `foundry/logs/**`.
+
+**Rollback.** `.state/live-rollback/FX-L/pentaryn-attunement/` holds the deployed 0.3.0 at
+`380a5348`. It is the only module this merge changes.
+
+**Gates on main after the merge.** All green, with no exceptions.json change:
+- `make foundry-modules-check`: 20/20.
+- `pytest -q`: 1581 passed, 2 skipped, 5 xfailed.
+- `make check-context`: OK, with 5 warnings that were already there.
+
+**Deploy.** `make foundry-attunement-sync`, stamped `991cee3e` with dirty false. On disk, only
+`bonds.mjs`, `CHANGELOG.md` and `test/glue.test.mjs` differ from the rollback copy. module.json,
+lang and styles are unchanged, so there was no restart, only GM tab reloads. The bridge fork is
+unchanged, so it was not rebuilt.
+
+**Boot probe.**
+- Attunement is active at 0.3.0. `describe()` answers, `selftest()` is ok on all 5 checks, and
+  the served `bonds.mjs` has the fix.
+- The console from a full reload is clean. The only warnings are third-party v13 deprecations
+  (scene-packer, lib-wrapper), and there are no pentaryn errors.
+- The other 18 pentaryn stamps are still `380a5348`.
+
+**Checks.**
+- `make vtt-status` with the tunnel down now says
+  `public: Access login only (tunnel down — players cannot connect)`. Before the merge it said
+  "reachable (HTTP 302) — players can connect".
+- A ZZ bonded purse (`currency.gp 12`) and a ZZ bonded ring were created on a ZZ npc (not a pile).
+  Each was copied by `toObject()` from a ZZ world item whose `claims.coinBack` was set to a stale
+  `socket-gone-zz` via eval-js. Results:
+  - In the `createItem` hook, both arrived with `claims` = `{}`.
+  - The ring persisted with the claim cleared and its bond kept.
+  - The purse paid once (gp 1 → 13, still 13 a few seconds later) and deleted itself.
+- The ZZ actor and the two ZZ world items were deleted. 0 `ZZ FX-L` documents remain.
+
+No fix rounds and no reverts.
+
+**Exit state.**
+- Foundry is up (FROM=local) and the tunnel is down.
+- World `pentaryn` is loaded. Only the Gamemaster is active, in one GM tab, and `get-world-info`
+  answers.
+
+**For Joe:** the vtt-status question from W5L is answered: the 302 was the Cloudflare Access login
+redirect, and the status line now says so. Attunement's `_loc` switch (C35) is still open.
