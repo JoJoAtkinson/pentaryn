@@ -659,9 +659,10 @@ def installed_version(pkg_type: str, pkg_id: str) -> str | None:
     happens legitimately *mid-install*, while the archive is being extracted."""
     path = PACKAGE_DIR[pkg_type] / pkg_id / MANIFEST_NAME[pkg_type]
     try:
-        return json.loads(path.read_text(encoding="utf-8")).get("version")
+        v = json.loads(path.read_text(encoding="utf-8")).get("version")
     except (OSError, json.JSONDecodeError):
         return None
+    return None if v is None else str(v)
 
 
 def installed_manifest(pkg_type: str, pkg_id: str) -> dict | None:
