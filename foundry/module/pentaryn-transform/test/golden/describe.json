@@ -364,10 +364,6 @@
       "label": "dnd5e.restCompleted: a Long Rest ends Starry Form"
     },
     {
-      "name": "ready",
-      "label": "ready: api.starry"
-    },
-    {
       "name": "updateToken",
       "label": "updateToken: the HUD's token changed body"
     },

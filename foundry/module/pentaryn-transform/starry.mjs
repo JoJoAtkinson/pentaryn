@@ -91,15 +91,6 @@ function onRestCompleted(actor, result, config) {
   }
 }
 
-/* ── API ─────────────────────────────────────────────────────────────────── */
-
-function extendApi() {
-  const api = game.pentaryn?.transform;
-  if (api && Object.isExtensible(api)) {
-    api.starry = { assume: assumeStarry, end: endStarry, active: activeStarry, constellation: constellationOf };
-  }
-}
-
 export function install(reg) {
   reg.on("dnd5e.preUseActivity", onSheetPreUse, { label: "dnd5e.preUseActivity: Starry Form sheet route", guard: false });
   reg.on("dnd5e.postUseActivity", onSheetPostUse, { label: "dnd5e.postUseActivity: Starry Form sheet route", guard: false });
@@ -108,7 +99,6 @@ export function install(reg) {
   reg.on("deleteActiveEffect", onStarryDelete, { label: "deleteActiveEffect: the starlight goes", guard: false });
   reg.on("updateWorldTime", onWorldTime, { label: "updateWorldTime: Starry Form expiry", guard: false });
   reg.on("dnd5e.restCompleted", onRestCompleted, { label: "dnd5e.restCompleted: a Long Rest ends Starry Form", guard: false });
-  reg.once("ready", extendApi, { label: "ready: api.starry", guard: false });
   // game.pentaryn.transform.starry: built into the one frozen API (transform-creatures-16).
   return {
     rows: STARRY_ROWS,

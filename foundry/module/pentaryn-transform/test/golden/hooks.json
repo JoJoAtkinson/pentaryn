@@ -100,10 +100,6 @@
     "name": "dnd5e.restCompleted"
   },
   {
-    "kind": "once",
-    "name": "ready"
-  },
-  {
     "kind": "on",
     "name": "updateToken"
   },
