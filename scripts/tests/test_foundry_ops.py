@@ -98,6 +98,22 @@ def test_clean_only_fails_loudly_if_the_file_survives(monkeypatch, tmp_path):
     assert pipeline.clean_only() == 1
 
 
+def test_clean_only_reports_a_refused_delete_instead_of_tracing_back(monkeypatch, tmp_path, capsys):
+    """rob-5: a PermissionError from unlink must print the ✗ line and return FAIL, not raise."""
+    staged = tmp_path / "actors.json"
+    staged.write_text("{}")
+    monkeypatch.setattr(cfg, "ACTORS_STAGED", staged)
+
+    def refuse(self, **kw):
+        raise PermissionError(13, "Permission denied", str(self))
+    monkeypatch.setattr(type(staged), "unlink", refuse)
+    assert pipeline.clean_only() == 1
+    out = capsys.readouterr()
+    text = out.out + out.err
+    assert "still on disk — check permissions" in text
+    assert "Permission denied" in text
+
+
 # ── run_import(): three ways out, all three delete ────────────────────────────
 
 @pytest.fixture

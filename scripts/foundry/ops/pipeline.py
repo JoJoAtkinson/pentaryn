@@ -95,7 +95,11 @@ def check_world() -> int:
 
 def clean_only() -> int:
     """Delete the staged file and assert it actually went."""
-    cfg.ACTORS_STAGED.unlink(missing_ok=True)
+    try:
+        cfg.ACTORS_STAGED.unlink(missing_ok=True)
+    except OSError as e:
+        _say(f"✗ {cfg.ACTORS_STAGED} still on disk — check permissions ({e.strerror or e})")
+        return FAIL
     if cfg.ACTORS_STAGED.exists():
         _say(f"✗ {cfg.ACTORS_STAGED} still on disk — check permissions")
         return FAIL
