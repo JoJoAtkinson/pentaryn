@@ -116,6 +116,7 @@ The table is generated from each `module.json`, the module's code and its
 | Attunement — the sidebar slots, over-cap warnings, "why is this item doing nothing" | [`../../foundry/module/pentaryn-attunement/README.md`](../../foundry/module/pentaryn-attunement/README.md) |
 | Player journal — "Add to my journal" on eye readables, a personal journal missing or duplicated | [`../../foundry/module/pentaryn-journal/README.md`](../../foundry/module/pentaryn-journal/README.md) |
 | "My cursor is wrong / stuck as an arrow" — map cursor per scene tool (target, ruler, spell area, journal pin, drawing); `game.pentaryn.cursors.status()` | [`../../foundry/module/pentaryn-cursors/README.md`](../../foundry/module/pentaryn-cursors/README.md) |
+| Lights on tokens — carried items, torches/lanterns (flame and hood buttons), the Light cantrip ("Where does the light go?"), the Broken glow, token chains (`pentaryn-senses`) | [`../../foundry/module/pentaryn-senses/README.md`](../../foundry/module/pentaryn-senses/README.md) |
 | Table-feedback modules — ghost movement, creature strip, rider rules (Elemental Adept, Battle Medic), Loot all, portals follow | [`../../foundry/module/pentaryn-movement/README.md`](../../foundry/module/pentaryn-movement/README.md), [`-creatures`](../../foundry/module/pentaryn-creatures/README.md), [`-riders`](../../foundry/module/pentaryn-riders/README.md), [`-dropbin`](../../foundry/module/pentaryn-dropbin/README.md), [`-portals`](../../foundry/module/pentaryn-portals/README.md), [`-senses`](../../foundry/module/pentaryn-senses/README.md) |
 | Finding one battlemap out of ~1,750 | [`map-library.md`](map-library.md) |
 | The unattended Saturday updater — before touching it | [`automated-updates.md`](automated-updates.md) |
@@ -262,8 +263,10 @@ keep showing the *host's* own relationships. See [`../plans/foundry-npc-ties.md`
 - `foundry/assets-manifest.json`, `foundry/roll20-maps.json`
 - `foundry/module/` — in-house modules: `pentaryn-ties`, `-walls`, `-importer`,
   `-pings`, `-dropbin`, `-attunement`, `-lookup`, `-feedback` (player bug/defect/feature reports, [`feedback.md`](feedback.md)), `-prompts`, `-journal`, `-combat`, `-transform` (Wild Shape and Starry Form on the Argon Bonus bar: pick a form, Return/Change Form, use count; revert from an item; blocks stacked transforms), `-names` (actor rename carries to token labels;
-  nicknames kept), `-cursors` (tool cursors), `-movement` (ghost toggle, owned-on-top), `-creatures` (creature light, Your creatures strip), `-riders` (Elemental Adept/Affinity, Battle Medic, Hit Dice -/+), `-portals`, `-aoe` (draggable/deletable spell areas, area saves with a GM Apply, damage on hit), `-senses` (token vision follows sheet Darkvision; an item flagged
-  `flags.pentaryn-senses.light` lights its carrier; `glow.mjs` adds the wandering
-  "Broken glow" light animation; `chain.mjs` draws an iron chain between two tokens, GM Token
-  HUD → Chain to target / Break chain). Players inspect others through `-ties`' double-click menu
-  and read-only **Look window** (`look.mjs`) — see its README
+  nicknames kept), `-cursors` (tool cursors), `-movement` (ghost toggle, owned-on-top), `-creatures` (creature light, Your creatures strip), `-riders` (Elemental Adept/Affinity, Battle Medic, Hit Dice -/+), `-portals`, `-aoe` (draggable/deletable spell areas, area saves with a GM Apply, damage on hit), `-senses` (lights: an item flagged
+  `flags.pentaryn-senses.light` lights its carrier; torches, lamps, lanterns and candles get a flame
+  button; the Light cantrip asks where the light goes; `glow.mjs` adds the wandering "Broken glow"
+  light animation; `chain.mjs` draws an iron chain between two tokens, GM Token HUD → Chain to
+  target / Break chain. Token vision from the sheet's senses is dnd5e's own since 6.0; senses only
+  clears, once per world, the darkvision sight its retired 0.3 sync stored). Players inspect others
+  through `-ties`' double-click menu and read-only **Look window** (`look-app.mjs`) — see its README
