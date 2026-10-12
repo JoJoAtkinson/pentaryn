@@ -1,5 +1,14 @@
 # Changelog — Pentaryn Importer (`pentaryn-importer`)
 
+## 1.1.1 — 2026-10-11 (live-check fix)
+
+- **[declared] Every `PentarynAbort` carries a kit code** (`err.code`, lib/errors.mjs): `NOT_FOUND`
+  when the file is not there (HTTP 404, or Foundry's HTML page instead of JSON), `NOT_GM`, `BAD_ARGS`
+  (`unmanagedItems`), `CONFLICT` (an import already running), `TIMEOUT` (the fetch), else `REFUSED`
+  (version gate, `@ref` lint, malformed entry, another HTTP error, a network failure). Through
+  `pentaryn-write` a dry run on the default path after an import now answers `NOT_FOUND`, not
+  `INTERNAL`. Messages, toasts and `name` are unchanged (golden/refusals.json untouched).
+
 ## Unreleased — blueprint migration (wave 1, 2026-10-11)
 
 `module.json` stays 1.1.0 until the Wave 7 restart batch adds the blueprint keys.

@@ -1,6 +1,6 @@
 ---
 title: Migration guide — pentaryn-creatures to the addon blueprint
-status: plan
+status: done (offline) — live test pending
 last_modified: 2026-10-11
 tags: [foundry, modules, blueprint, plan, migration, creatures]
 ---
@@ -462,14 +462,86 @@ stays drawn; `game.pentaryn.creatures.status().patchedWith` is `"libWrapper"` or
 | 10 Wave 7 | batched |
 | **Total** | **M, ≈ 2 days** plus checkpoint, K1, adjustments batch, restart item; §4 fixes ≈ 0.5 day more |
 
-## Result (fill when done)
+## Checkpoint (wave 3, 2026-10-11)
+
+- **Re-anchor (step 0):** `git diff 4e64f47..wave-3-base -- foundry/module/pentaryn-creatures` is
+  empty, so every line number in this guide still holds. aoe's `isHandleTarget` is unchanged at
+  `pentaryn-aoe/core.mjs:364-368`. `wait.json` is empty (D9). The scorer has grown to 45 fail-class
+  rules: at `wave-3-base` it gives **57.8 % (26/45)**, failing C07 C09 C14 C18 C20 C21 C22 C26 C27
+  C28 C32 C35 C37 C40 C41 C43 C44 C45 C47 (warn C06w C10).
+- **Kit:** `6d36df2` vendors kit 1.0.2 (full + patch, patch-libwrapper, election) and adds the fixed
+  `test/run.mjs`. It renames `test/run.mjs` to `test/core-legacy.mjs` with the content unchanged
+  (73 checks) and lists it in `LEGACY`.
+- **Checkpoint: `6e4c7d7`** (`test(creatures): characterisation checkpoint`). Files:
+  `test/{core,glue,glue-player,glue-libwrapper,glue-libwrapper-throws,glue-nogetter,glue-ready-fail,publish}.test.mjs`,
+  `test/fixtures/{world,dom,legacy-creatures}.mjs`, and
+  `test/golden/{hooks,legacy-surface,strip,senses-handoff}.json`. Step 1's list is covered in full.
+  Deviations from step 1:
+  - `golden/strip.json` does not pin the nav's own class list, because step 6 adds the inert `pcr-strip` class.
+  - The KNOWN -25 render is counted by `showStrip` reads.
+  - The interval is counted by `document.querySelector` and `getElementById` calls.
+- **Coverage:**
+  - Before: core 100 / 97.00 / 100 (line / branch / funcs); `creatures.mjs` was not loaded.
+  - After, every file except `publish.test`: `creatures.mjs` 100 / 98.36 / 100 and core 100 / 98.06 / 100.
+  - Node does not merge `publish.test`'s `?query` instances into the report. Its frozen-root branch (:378) is still pinned by assertion.
+  - Branches left uncovered:
+    - `L`'s `format` branch (:19). Nothing calls it with data, and step 3 deletes it.
+    - Core :111 and :123. These were already uncovered at baseline.
+- **Score after the checkpoint:** 64.4 % (29/45). This clears C14, C20 and C43.
+- **Todo pins** (`test.todo`, the target of each KNOWN row):
+  - -25 `stripMayChange`
+  - -26 fixed window
+  - -27 options flag
+  - -29 `warnOnce`
+  - -31 syncScene array/id
+  - -31 ownerSees(TokenDocument)
+  - -40 no poll without Argon or with `floatOverHud` off
+
+## Result (wave 3, 2026-10-11)
 
 | | |
 |---|---|
-| Live score after the migration | ___ % (___ / ___ fail-class rules) — `conformance.py --module creatures --markdown` |
-| Date | ____-__-__ |
-| Commits (Joe-approved) | characterisation: ______ · refactor: ______ · standalone: ______ |
-| Declared changes handed to the live-test workflow | ______ (session L__) |
-| `module.json` edits appended to `wave7-restart-batch.md` | yes / no |
-| Adjustments rows appended to `adjustments-batch.md` | yes / no |
-| Still failing, and why | ______ |
+| Live score after the migration | **93.8 % (45/48)** at `8d3d7736`, after the integrator's adjustments rows (`f8e50927`); fails C07, C09, C37 (Wave 7). Lane end 89.6 % (`cb77746`), checkpoint 64.4 %, wave-3-base 57.8 % |
+| Date | 2026-10-11 |
+| Commits | characterisation: `6d36df2` (kit) + `6e4c7d7` (checkpoint) · refactor: `fdab0bf` (step 2, -30) · `f3085ab` (3) · `b461208` (4) · `90ea129` (5, structural) · `9c57142` (5, wrapMethod, **[declared] C-D1** text) · `a019151` (6) · `ef2578d` (7, **[declared] C-D2**) · `349ee86` (8, **[declared] C-D4**) · `5489890` (9) · `84d52ee` (10, self-activating manifest pins) · `cb77746` (hot-patch test) · standalone, one pin each: `cdb694e` (-29, C-D1) · `008647a` (-31 syncScene, C-D3) · `54f2d1b` (-31 ownerSees, C-D3) · `a8d5ead` (-31 `status()`, C-D3) · `4b0ebf7` (-26, C-D5) · `2f844f6` (-25, C-D6) · `a6a0d54` (-27, C-D7) · `23fa387` (-40, C-D8) · `61216f3` (`inspect()`, C-D3; C29) |
+| Tests | `node test/run.mjs`: 101 pass, 2 skipped (the step-10 manifest pins, until Wave 7), 0 todo; legacy core suite 73/73. `vendor.py check creatures` ✓. `module-check creatures` (parse, imports, i18n, node-test, vendor, conformance) ✓ |
+| Declared changes handed to the live-test workflow | C-D1 … C-D8 (§5) plus `inspect()` (C-D3); not yet run |
+| `module.json` edits appended to `wave7-restart-batch.md` | no — the creatures row there already holds them; returned to the integrator with the exact `module.json` (`afterSync` = the ModuleSpec tuple verbatim, which the same commit deletes from `config.py`) and the `git mv creatures.css styles/creatures.css` · **done by the wave-3 integrator** (`d83d0b11`): the batch row carries the full edit; `module.json` itself waits for the Wave 7 restart |
+| Adjustments rows appended to `adjustments-batch.md` | no — returned to the integrator (rewrite `creatures-libwrapper`; rename `creatures-strip-over-argon` → `argon-creatures-strip-float` pointing at `strip.mjs`; add `itempiles-creatures-pile-flag`). Until they land, `test_the_real_registry_matches_the_code` reports the two creatures rows (their markers left `creatures.mjs`) · **landed by the wave-3 integrator** in `foundry/adjustments.yml` (`f8e50927`), marked in `adjustments-batch.md` (`b631badf`) |
+| Still failing, and why | C07, C09, C37 (+ C06w): Wave 7 `module.json`. C32/C47 closed by `f8e50927` (at `8d3d7736`, wave-3 code-phase close) |
+| Wave 3 close (code phase, 2026-10-11) | Review fix after the lane: `6bc62f3a` (`ownerSees(null)` answers false without spending the override's warn-once; `test/glue-owner-sees-input.test.mjs`). `node test/run.mjs` 105 (103 pass, 2 skipped manifest pins until Wave 7) + legacy 73. Frozen-test diff since `6e4c7d7c`: 15 files (11 new, 4 changed), every change in a named [declared] commit. Coverage (node:test, lcov merged per file) 100 / 90.42 / 92.75 over 2 files → **99.73 / 95.19 / 99.08** over 10. Open for Joe: W3-C1 (C-L1). Record: [`wave-3-report.md`](wave-3-report.md) §Per module |
+
+**Deviations from the guide.**
+
+- Steps 5 and 7's known-bug halves (-29 warn-once, -31) landed after the structural refactor with
+  the other standalone fixes, one [declared] commit per pin, as the wave-3 rule asks; step 5's
+  wrapMethod swap is its own [declared] commit (C-D1's text half).
+- `overrideFor` (a -29 seam) was not built: building the view object up front would read
+  `_testCulled()` and the other private fields for every unseen token, including ones the player
+  does not own, on a hot getter. `ownerOverride` keeps its lazy reads and uses core `safely`.
+- The missing-getter check runs before libWrapper is tried (it used to run after). Only different
+  with lib-wrapper active and no own `isVisible` getter on `Token.prototype`, which v14 never lacks.
+- `inspect(ref, { as })` was optional in step 7; C29 now requires it (the manifest declares the
+  token flag we write), so it landed as its own [declared] commit. No `selftest()` (not in this
+  guide); `status()` is the live smoke's one call.
+- `-40`'s floatOverHud test world: glue-player now enables `enhancedcombathud` (the dock only polls
+  with Argon enabled); the disabled cases live in the new `test/glue-dock.test.mjs`.
+- Light writes now pass `{ pentarynCreatures: true }` (-27), so every recorded write's `argc` pin
+  moved 2 → 3 in that commit.
+
+**Live check (gated live phase).** After the sync (reload; the Wave 7 batch needs a restart):
+
+1. `game.pentaryn.creatures.describe().version === "0.1.1"`, `Object.isFrozen(game.pentaryn.creatures)`,
+   `game.modules.get("pentaryn-creatures").api === game.pentaryn.creatures` (C-D2).
+2. `game.pentaryn.creatures.status()` → `patchedWith` `"libWrapper"` (lib-wrapper is enabled) and
+   `writer: true` in the GM tab; `lit` equals the count of summons/familiars with our flag.
+3. As a player with two owned tokens: the strip shows, looks the same docked (C-D4); an Invisible
+   owned token in the dark stays drawn.
+4. Open Argon's Combat HUD: the strip floats above the action bar and drops back when it closes
+   (U-6-12 retest); toggle `floatOverHud` off/on: docks/floats at once (C-D8).
+5. Drag a summon: the strip does not flicker or rebuild; rename or hide it: the strip updates (C-D6).
+6. Summon a creature during combat with flags churning: its light appears within ~200 ms (C-D5);
+   the console stays quiet, no second pass (C-D7).
+7. `game.pentaryn.creatures.syncScene(canvas.scene, [tokenId])` returns a count;
+   `ownerSees(token.document)` matches `ownerSees(token)`; `inspect(token)` is plain JSON (C-D3).
+8. C-L1 stays a decision (Open for Joe in the wave-3 report).

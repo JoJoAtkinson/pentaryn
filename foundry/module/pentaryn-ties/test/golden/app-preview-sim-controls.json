@@ -1,0 +1,206 @@
+{
+  "inventory": [
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "dataset": {
+        "mode": "player"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "active",
+      "dataset": {
+        "mode": "simulate"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "SELECT",
+      "dataset": {
+        "k": "roller"
+      },
+      "events": [
+        "change"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "SELECT",
+      "dataset": {
+        "k": "level"
+      },
+      "events": [
+        "change"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "SELECT",
+      "dataset": {
+        "k": "ability"
+      },
+      "events": [
+        "change"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "SELECT",
+      "dataset": {
+        "k": "prof"
+      },
+      "events": [
+        "change"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "dataset": {
+        "action": "reroll"
+      },
+      "events": [
+        "click"
+      ]
+    }
+  ],
+  "rows": [
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "dataset": {
+        "mode": "player"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "app.render",
+          "app": "InspectPreview",
+          "opts": null
+        }
+      ],
+      "console": [],
+      "after": {
+        "parent": "pv-mode"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "active",
+      "dataset": {
+        "mode": "simulate"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "active",
+        "parent": "pv-mode"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "SELECT",
+      "dataset": {
+        "k": "roller"
+      },
+      "type": "change",
+      "calls": [
+        {
+          "op": "app.render",
+          "app": "InspectPreview",
+          "opts": null
+        }
+      ],
+      "console": [],
+      "after": {
+        "value": "zzPc000000000001"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "SELECT",
+      "dataset": {
+        "k": "level"
+      },
+      "type": "change",
+      "calls": [
+        {
+          "op": "app.render",
+          "app": "InspectPreview",
+          "opts": null
+        }
+      ],
+      "console": [],
+      "after": {
+        "value": "13"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "SELECT",
+      "dataset": {
+        "k": "ability"
+      },
+      "type": "change",
+      "calls": [
+        {
+          "op": "app.render",
+          "app": "InspectPreview",
+          "opts": null
+        }
+      ],
+      "console": [],
+      "after": {
+        "value": "4"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "SELECT",
+      "dataset": {
+        "k": "prof"
+      },
+      "type": "change",
+      "calls": [
+        {
+          "op": "app.render",
+          "app": "InspectPreview",
+          "opts": null
+        }
+      ],
+      "console": [],
+      "after": {
+        "value": "expert"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "dataset": {
+        "action": "reroll"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "app.render",
+          "app": "InspectPreview",
+          "opts": null
+        }
+      ],
+      "console": [],
+      "after": {
+        "parent": "pv-controls"
+      }
+    }
+  ]
+}

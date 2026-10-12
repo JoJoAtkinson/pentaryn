@@ -1,0 +1,98 @@
+[
+  {
+    "label": "hover PC, press 9",
+    "out": "zzPc000000000001",
+    "calls": [
+      {
+        "op": "DialogV2.new",
+        "title": "ZZ Caven"
+      }
+    ],
+    "pixi": 0,
+    "cards": {
+      "tag": "DIV",
+      "id": "pentaryn-ties-cards"
+    }
+  },
+  {
+    "label": "press 9 again (same face: close)",
+    "out": null,
+    "calls": [],
+    "pixi": 0,
+    "cards": {
+      "tag": "DIV",
+      "id": "pentaryn-ties-cards"
+    }
+  },
+  {
+    "label": "press 9 (open)",
+    "out": "zzPc000000000001",
+    "calls": [
+      {
+        "op": "DialogV2.new",
+        "title": "ZZ Caven"
+      }
+    ],
+    "pixi": 0,
+    "cards": {
+      "tag": "DIV",
+      "id": "pentaryn-ties-cards"
+    }
+  },
+  {
+    "label": "hover NPC (public bio only), press 9 (swap)",
+    "out": "zzNpc00000000001",
+    "calls": [
+      {
+        "op": "DialogV2.new",
+        "title": "ZZ Brakka"
+      }
+    ],
+    "pixi": 0,
+    "cards": {
+      "tag": "DIV",
+      "id": "pentaryn-ties-cards"
+    }
+  },
+  {
+    "label": "hover nothing, press 9 (closes)",
+    "out": null,
+    "calls": [],
+    "pixi": 0,
+    "cards": {
+      "tag": "DIV",
+      "id": "pentaryn-ties-cards"
+    }
+  },
+  {
+    "label": "hover nothing, press 9 (warns)",
+    "out": null,
+    "calls": [
+      {
+        "op": "notify",
+        "level": "warn",
+        "message": "Hover a token, or select one."
+      }
+    ],
+    "pixi": 0,
+    "cards": {
+      "tag": "DIV",
+      "id": "pentaryn-ties-cards"
+    }
+  },
+  {
+    "label": "open, then closeDescription",
+    "out": null,
+    "calls": [
+      {
+        "op": "DialogV2.new",
+        "title": "ZZ Brakka"
+      }
+    ],
+    "pixi": 0,
+    "cards": {
+      "tag": "DIV",
+      "id": "pentaryn-ties-cards"
+    }
+  }
+]

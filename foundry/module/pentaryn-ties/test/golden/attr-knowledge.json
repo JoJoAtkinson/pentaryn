@@ -1,0 +1,615 @@
+[
+  {
+    "label": "tell ELF guild",
+    "out": {
+      "ok": true,
+      "ids": [
+        "guild"
+      ]
+    },
+    "calls": [
+      {
+        "op": "settings.set",
+        "id": "pentaryn-ties.attributeKnowledge",
+        "value": {
+          "zzElf00000000001": {
+            "guild": {
+              "when": 1790000000000,
+              "failed": false,
+              "via": "grant",
+              "pending": false
+            }
+          }
+        }
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "tell ELF loner withParents",
+    "out": {
+      "ok": true,
+      "ids": [
+        "loner"
+      ]
+    },
+    "calls": [
+      {
+        "op": "settings.set",
+        "id": "pentaryn-ties.attributeKnowledge",
+        "value": {
+          "zzElf00000000001": {
+            "guild": {
+              "when": 1790000000000,
+              "failed": false,
+              "pending": false,
+              "via": "grant"
+            },
+            "loner": {
+              "when": 1790000000000,
+              "failed": false,
+              "via": "grant",
+              "pending": false
+            }
+          }
+        }
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "tell ELF dockward withParents",
+    "out": {
+      "ok": true,
+      "ids": [
+        "dockward",
+        "city",
+        "realm"
+      ]
+    },
+    "calls": [
+      {
+        "op": "settings.set",
+        "id": "pentaryn-ties.attributeKnowledge",
+        "value": {
+          "zzElf00000000001": {
+            "guild": {
+              "when": 1790000000000,
+              "failed": false,
+              "pending": false,
+              "via": "grant"
+            },
+            "loner": {
+              "when": 1790000000000,
+              "failed": false,
+              "pending": false,
+              "via": "grant"
+            },
+            "dockward": {
+              "when": 1790000000000,
+              "failed": false,
+              "via": "grant",
+              "pending": false
+            },
+            "city": {
+              "when": 1790000000000,
+              "failed": false,
+              "via": "grant",
+              "pending": false
+            },
+            "realm": {
+              "when": 1790000000000,
+              "failed": false,
+              "via": "grant",
+              "pending": false
+            }
+          }
+        }
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "tell unknown",
+    "out": {
+      "ok": false,
+      "reason": "notFound"
+    },
+    "calls": [],
+    "console": []
+  },
+  {
+    "label": "tell no character",
+    "out": {
+      "ok": false,
+      "reason": "invalid"
+    },
+    "calls": [],
+    "console": []
+  },
+  {
+    "label": "player: tell",
+    "out": {
+      "ok": false,
+      "reason": "notGM"
+    },
+    "calls": [],
+    "console": []
+  },
+  {
+    "label": "setKnowledge: a failure and a pending pass",
+    "out": true,
+    "calls": [
+      {
+        "op": "settings.set",
+        "id": "pentaryn-ties.attributeKnowledge",
+        "value": {
+          "zzElf00000000001": {
+            "guild": {
+              "when": 1790000000000,
+              "failed": false,
+              "pending": false,
+              "via": "grant"
+            },
+            "loner": {
+              "when": 1790000000000,
+              "failed": false,
+              "pending": false,
+              "via": "grant"
+            },
+            "dockward": {
+              "when": 1790000000000,
+              "failed": false,
+              "pending": false,
+              "via": "grant"
+            },
+            "city": {
+              "when": 4,
+              "failed": false,
+              "via": "roll",
+              "pending": true
+            },
+            "realm": {
+              "when": 3,
+              "failed": true,
+              "via": "roll",
+              "pending": false
+            }
+          }
+        }
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "setKnowledge: nothing",
+    "out": false,
+    "calls": [],
+    "console": []
+  },
+  {
+    "label": "knows()",
+    "out": {
+      "zzElf00000000001": {
+        "guild": {
+          "when": 1790000000000,
+          "failed": false,
+          "pending": false,
+          "via": "grant"
+        },
+        "loner": {
+          "when": 1790000000000,
+          "failed": false,
+          "pending": false,
+          "via": "grant"
+        },
+        "dockward": {
+          "when": 1790000000000,
+          "failed": false,
+          "pending": false,
+          "via": "grant"
+        },
+        "city": {
+          "when": 4,
+          "failed": false,
+          "pending": true,
+          "via": "roll"
+        },
+        "realm": {
+          "when": 3,
+          "failed": true,
+          "pending": false,
+          "via": "roll"
+        }
+      }
+    },
+    "calls": [],
+    "console": []
+  },
+  {
+    "label": "known(ELF) as player view",
+    "out": [
+      [
+        "guild",
+        "grant",
+        false,
+        false
+      ],
+      [
+        "loner",
+        "grant",
+        false,
+        false
+      ],
+      [
+        "dockward",
+        "grant",
+        false,
+        false
+      ]
+    ],
+    "calls": [],
+    "console": []
+  },
+  {
+    "label": "known(ELF) forGM",
+    "out": [
+      [
+        "city",
+        "roll",
+        false,
+        true
+      ],
+      [
+        "guild",
+        "grant",
+        false,
+        false
+      ],
+      [
+        "loner",
+        "grant",
+        false,
+        false
+      ],
+      [
+        "dockward",
+        "grant",
+        false,
+        false
+      ],
+      [
+        "realm",
+        "roll",
+        true,
+        false
+      ]
+    ],
+    "calls": [],
+    "console": []
+  },
+  {
+    "label": "known(PC) carried",
+    "out": [
+      [
+        "ghost2",
+        "carried"
+      ],
+      [
+        "city",
+        "carried"
+      ],
+      [
+        "guild",
+        "carried"
+      ],
+      [
+        "realm",
+        "carried"
+      ]
+    ],
+    "calls": [],
+    "console": []
+  },
+  {
+    "label": "knowledgeTree(ELF) player",
+    "out": [
+      {
+        "id": "dockward",
+        "title": "Dock Ward",
+        "category": "Street",
+        "icon": "icons/environment/settlement/sign-wood.webp",
+        "secret": true,
+        "depth": 0,
+        "state": "known",
+        "children": []
+      },
+      {
+        "id": "loner",
+        "title": "Loner",
+        "category": "smugglers' compact",
+        "icon": "icons/zz/custom.webp",
+        "secret": true,
+        "depth": 0,
+        "state": "known",
+        "children": []
+      },
+      {
+        "id": "guild",
+        "title": "Salt Guild",
+        "category": "Guild",
+        "icon": "icons/sundries/flags/banner-standard-green.webp",
+        "secret": true,
+        "depth": 0,
+        "state": "known",
+        "children": []
+      }
+    ],
+    "calls": [],
+    "console": []
+  },
+  {
+    "label": "knowledgeTree(ELF) GM",
+    "out": [
+      {
+        "id": "species:dwarf",
+        "title": "Dwarrow",
+        "category": "Species",
+        "icon": "icons/environment/people/group.webp",
+        "secret": false,
+        "depth": 0,
+        "state": "unknown",
+        "children": []
+      },
+      {
+        "id": "species:elf",
+        "title": "Elvenkind",
+        "category": "Species",
+        "icon": "icons/environment/people/group.webp",
+        "secret": false,
+        "depth": 0,
+        "state": "unknown",
+        "children": []
+      },
+      {
+        "id": "loner",
+        "title": "Loner",
+        "category": "smugglers' compact",
+        "icon": "icons/zz/custom.webp",
+        "secret": true,
+        "depth": 0,
+        "state": "known",
+        "children": []
+      },
+      {
+        "id": "realm",
+        "title": "Old Realm",
+        "category": "Realm",
+        "icon": "icons/sundries/flags/banner-standard-blue.webp",
+        "secret": true,
+        "depth": 0,
+        "state": "failed",
+        "children": [
+          {
+            "id": "guild",
+            "title": "Salt Guild",
+            "category": "Guild",
+            "icon": "icons/sundries/flags/banner-standard-green.webp",
+            "secret": true,
+            "depth": 1,
+            "state": "known",
+            "children": []
+          },
+          {
+            "id": "city",
+            "title": "Vel",
+            "category": "City",
+            "icon": "icons/environment/settlement/city-gate.webp",
+            "secret": true,
+            "depth": 1,
+            "state": "pending",
+            "children": [
+              {
+                "id": "dockward",
+                "title": "Dock Ward",
+                "category": "Street",
+                "icon": "icons/environment/settlement/sign-wood.webp",
+                "secret": true,
+                "depth": 2,
+                "state": "known",
+                "children": []
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "calls": [],
+    "console": []
+  },
+  {
+    "label": "branchOf(realm, ELF)",
+    "out": [
+      [
+        "guild",
+        "known"
+      ],
+      [
+        "dockward",
+        "known"
+      ]
+    ],
+    "calls": [],
+    "console": []
+  },
+  {
+    "label": "branchOf(realm, ELF, GM)",
+    "out": [
+      [
+        "realm",
+        "failed"
+      ],
+      [
+        "guild",
+        "known"
+      ],
+      [
+        "city",
+        "pending"
+      ],
+      [
+        "dockward",
+        "known"
+      ]
+    ],
+    "calls": [],
+    "console": []
+  },
+  {
+    "label": "branchOf(realm) no character",
+    "out": [],
+    "calls": [],
+    "console": []
+  },
+  {
+    "label": "knowsIncludingCarried(PC)",
+    "out": [
+      "type:humanoid",
+      "size:med",
+      "guild",
+      "realm",
+      "ghost2",
+      "city"
+    ],
+    "calls": [],
+    "console": []
+  },
+  {
+    "label": "knowsOf / hasFailed",
+    "out": [
+      true,
+      true,
+      false
+    ],
+    "calls": [],
+    "console": []
+  },
+  {
+    "label": "clearKnowledge: a granted row (not shared: refused)",
+    "out": false,
+    "calls": [],
+    "console": []
+  },
+  {
+    "label": "clearKnowledge: a shared row",
+    "out": true,
+    "calls": [
+      {
+        "op": "settings.set",
+        "id": "pentaryn-ties.attributeKnowledge",
+        "value": {
+          "zzElf00000000001": {
+            "guild": {
+              "when": 1790000000000,
+              "failed": false,
+              "pending": false,
+              "via": "grant"
+            },
+            "dockward": {
+              "when": 1790000000000,
+              "failed": false,
+              "pending": false,
+              "via": "grant"
+            },
+            "city": {
+              "when": 4,
+              "failed": false,
+              "pending": true,
+              "via": "roll"
+            },
+            "realm": {
+              "when": 6,
+              "failed": false,
+              "pending": false,
+              "via": "shared",
+              "overFailed": true
+            }
+          }
+        }
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "clearKnowledge: a share over a failure gives the failure back",
+    "out": true,
+    "calls": [
+      {
+        "op": "settings.set",
+        "id": "pentaryn-ties.attributeKnowledge",
+        "value": {
+          "zzElf00000000001": {
+            "guild": {
+              "when": 1790000000000,
+              "failed": false,
+              "pending": false,
+              "via": "grant"
+            },
+            "dockward": {
+              "when": 1790000000000,
+              "failed": false,
+              "pending": false,
+              "via": "grant"
+            },
+            "city": {
+              "when": 4,
+              "failed": false,
+              "pending": true,
+              "via": "roll"
+            },
+            "realm": {
+              "when": 6,
+              "failed": true,
+              "via": "roll",
+              "pending": false
+            }
+          }
+        }
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "knows() after",
+    "out": {
+      "zzElf00000000001": {
+        "guild": {
+          "when": 1790000000000,
+          "failed": false,
+          "pending": false,
+          "via": "grant"
+        },
+        "dockward": {
+          "when": 1790000000000,
+          "failed": false,
+          "pending": false,
+          "via": "grant"
+        },
+        "city": {
+          "when": 4,
+          "failed": false,
+          "pending": true,
+          "via": "roll"
+        },
+        "realm": {
+          "when": 6,
+          "failed": true,
+          "pending": false,
+          "via": "roll"
+        }
+      }
+    },
+    "calls": [],
+    "console": []
+  }
+]

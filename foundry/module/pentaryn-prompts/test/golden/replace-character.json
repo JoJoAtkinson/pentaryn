@@ -1,0 +1,71 @@
+{
+  "bad": [
+    "replace (by marker) — dry run: 0 ok, 1 failed",
+    "s1/pc character: FAIL BAD_SPEC: character: choices: unknown key(s) \"Monk: Nope\"; known for Monk 2, Dwarf, Acolyte: Ability Score Increase",
+    "remaining: s1=3",
+    "Nothing was written. Repeat the identical call without dryRun to apply."
+  ],
+  "dry": [
+    "replace (by marker) — dry run: 1 ok, 0 failed",
+    "s1/pc character: at 400,400 (same), footprint 1x1; creates Actor (character \"Ko\": Dwarf, Acolyte, Monk 2; advancements run by dnd5e); Token \"Ko\", ring pc",
+    "  s1/pc sheet: Monk 2, Dwarf, Acolyte; str 8 dex 14 con 13 int 10 wis 15 cha 12; HP 30 AC 14 PB +2; saves ; skills ; speed 40; size med. spells: 0 cantrips/?, 0 prepared/?, 0 always",
+    "remaining: s1=3",
+    "Nothing was written. Repeat the identical call without dryRun to apply."
+  ],
+  "broken": [
+    "replace (by marker) — real run: 0 ok, 1 failed",
+    "s1/pc character: FAIL CREATE_FAILED: a.getTokenDocument is not a function (markerDeleted=false)",
+    "  s1/pc sheet: Monk 2, Dwarf, Acolyte; str 8 dex 14 con 13 int 10 wis 15 cha 12; HP 30 AC 14 PB +2; saves ; skills ; speed 40; size med. spells: 0 cantrips/?, 0 prepared/?, 0 always",
+    "  s1/pc cleanup: deleted Actor \"Ko\" [<id>]",
+    "remaining: s1=3"
+  ],
+  "real": [
+    "replace (by marker) — real run: 1 ok, 0 failed",
+    "s1/pc → Token \"Ko\" [<id>] @400,400 1x1, Actor \"Ko\" [<id>]; markerDeleted=true",
+    "  s1/pc sheet: Monk 2, Dwarf, Acolyte; str 8 dex 14 con 13 int 10 wis 15 cha 12; HP 30 AC 14 PB +2; saves ; skills ; speed 40; size med. spells: 0 cantrips/?, 0 prepared/?, 0 always",
+    "remaining: s1=2"
+  ],
+  "token": [
+    {
+      "name": "Ko",
+      "actorId": "<id>",
+      "x": 400,
+      "y": 400,
+      "width": 1,
+      "height": 1,
+      "actorLink": true,
+      "disposition": 1,
+      "texture": {
+        "src": "ko.webp"
+      },
+      "flags": {
+        "pentaryn-prompts": {
+          "provenance": {
+            "prompt": "our monk",
+            "size": "mid",
+            "footprint": "1x1",
+            "sceneId": "s1",
+            "markerId": "pc",
+            "call": null,
+            "pid": null,
+            "at": 1760000000000,
+            "kind": "character",
+            "note": ""
+          }
+        }
+      },
+      "hidden": false,
+      "ring": {
+        "enabled": true,
+        "colors": {
+          "ring": "#ffcc4d"
+        },
+        "subject": {
+          "texture": "ko.webp",
+          "scale": 1
+        }
+      },
+      "elevation": 0
+    }
+  ]
+}

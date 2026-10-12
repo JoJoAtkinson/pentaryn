@@ -200,9 +200,9 @@ A.resolve("Ashfall Company");  // "ashfallcompany" — or null. Cheap; check bef
 A.lookup("Ashfall Company");   // the display record, or null if it names nothing
 ```
 
-`A.lookup` was `A.describe` before 2026-10-11 (decision D1: `describe` and `inspect` are names the
-kit API reserves). The old name still answers, with a console compatibility warning, until the
-ties API moves to the kit; write `lookup`. Likewise `S.inspect` is now `S.examine`.
+`A.lookup` was `A.describe`, and `S.examine` was `S.inspect`, before 2026-10-11 (D1: `describe`
+and `inspect` are names the kit API reserves). The old names were removed in wave 3 ([declared]
+B1b) and now read as undefined.
 
 ### What every write returns
 
@@ -603,8 +603,7 @@ learn others by inspecting. Worked example: the three 3200 A.F. PCs in
 5. **Story-given knowledge of each other** — `S.share({ns:"ident", subjectId, attrId}, [pc], {notify:false})`
    **one rung at a time, root first** (a share writes exactly one rung, never parents), then
    `S.share({ns:"attr", subjectId, attrId, factId}, [pc], {notify:false})` for facts. Check each
-   ident with `identifiedState(subject.flags["pentaryn-ties"].beliefs, pc.id, attrId).carries`
-   (`import("/modules/pentaryn-ties/known-core.mjs")`). No `A.tell` first; the share already
+   ident with `S.identified(subject, pc, attrId).carries`. No `A.tell` first; the share already
    writes stage-1 knowledge. Leave one cheap rung unshared if it gives a player a fun roll.
 6. **The city they are in**: `A.tell(pc, cityId)`, not a link, unless they are actually of it.
 7. Never roll or `inspectAs` on the real PCs; Joe reviews every new entry in his panel.

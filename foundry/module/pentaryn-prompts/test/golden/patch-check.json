@@ -1,0 +1,15 @@
+{
+  "notes": [
+    "languages → common, terran",
+    "languages Klingon not dnd5e languages: kept as custom text",
+    "languages → goblin",
+    "+ Rope x2",
+    "+ Tower shield",
+    "+ Amulet (inline)",
+    "+ Odd charm (inline)"
+  ],
+  "defaults": [
+    "Amulet: attunement set to required (its text requires attunement)",
+    "Odd charm: its text requires attunement, but a loot item has no attunement in dnd5e — make it type \"equipment\" (wondrous item) if it should take a slot"
+  ]
+}

@@ -1,0 +1,10 @@
+[
+  "on:updateActor",
+  "on:createActor",
+  "on:deleteActor",
+  "on:updateSetting",
+  "on:createSetting",
+  "on:deleteSetting",
+  "on:updateToken",
+  "on:updateUser"
+]

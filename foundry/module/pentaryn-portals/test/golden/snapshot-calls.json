@@ -1,0 +1,62 @@
+[
+  {
+    "op": "toBlob",
+    "width": 480,
+    "height": 300,
+    "type": "image/webp",
+    "q": 0.88,
+    "ctx": [
+      [
+        "drawImage",
+        "Image",
+        1100,
+        400,
+        1600,
+        1000,
+        0,
+        0,
+        480,
+        300
+      ],
+      [
+        "beginPath"
+      ],
+      [
+        "arc",
+        240,
+        150,
+        27,
+        0,
+        6.283
+      ],
+      [
+        "stroke"
+      ]
+    ],
+    "strokeStyle": "rgba(255,255,255,0.85)",
+    "lineWidth": 3
+  },
+  {
+    "op": "createDirectory",
+    "source": "data",
+    "path": "assets/tokens/custom/portals"
+  },
+  {
+    "op": "upload",
+    "source": "data",
+    "path": "assets/tokens/custom/portals",
+    "name": "ScnPit-RegPit.webp",
+    "type": "image/webp",
+    "options": {
+      "notify": false
+    }
+  },
+  {
+    "op": "update",
+    "documentName": "Region",
+    "uuid": "Scene.ScnPit.Region.RegPit",
+    "changes": {
+      "flags.pentaryn-portals.img": "assets/tokens/custom/portals/ScnPit-RegPit.webp?v=loyw3v28"
+    }
+  }
+]

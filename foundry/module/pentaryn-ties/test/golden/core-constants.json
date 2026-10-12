@@ -1,0 +1,46 @@
+{
+  "MODULE": "pentaryn-ties",
+  "FLAG": "ties",
+  "LEGACY_SCOPE": "world",
+  "STANCES": [
+    {
+      "value": 2,
+      "key": "devoted",
+      "hex": 3066944,
+      "css": "#2ecc40"
+    },
+    {
+      "value": 1,
+      "key": "friendly",
+      "hex": 6991948,
+      "css": "#6ab04c"
+    },
+    {
+      "value": 0,
+      "key": "neutral",
+      "hex": 10133670,
+      "css": "#9aa0a6"
+    },
+    {
+      "value": -1,
+      "key": "wary",
+      "hex": 14787898,
+      "css": "#e1a53a"
+    },
+    {
+      "value": -2,
+      "key": "hostile",
+      "hex": 15158332,
+      "css": "#e74c3c"
+    }
+  ],
+  "STRENGTHS": [
+    5,
+    4,
+    3,
+    2,
+    1
+  ],
+  "NOTES_MAX": 4000,
+  "WORD_MAX": 120
+}

@@ -1,0 +1,258 @@
+[
+  {
+    "input": [
+      "guild"
+    ],
+    "out": {
+      "id": "guild",
+      "title": "Salt Guild",
+      "category": "Guild",
+      "icon": "icons/sundries/flags/banner-standard-green.webp",
+      "whenKnown": "enables",
+      "whenCarried": "inherit",
+      "secret": true,
+      "parent": "city",
+      "dc": 16,
+      "skill": "inv",
+      "reveal": "",
+      "miss": "",
+      "hold": null,
+      "lore": [
+        {
+          "id": "g1",
+          "label": "Oath",
+          "dc": 12,
+          "skill": "rel",
+          "text": "<p>Salt.</p>",
+          "miss": "",
+          "hold": null
+        }
+      ],
+      "source": null,
+      "bonuses": [],
+      "createdAt": null,
+      "modifiedAt": null,
+      "reviewedAt": null,
+      "touched": [],
+      "reviewedSnapshot": null,
+      "derived": false,
+      "authored": true,
+      "loreCount": 1
+    }
+  },
+  {
+    "input": [
+      "city"
+    ],
+    "out": {
+      "id": "city",
+      "title": "Vel",
+      "category": "City",
+      "icon": "icons/environment/settlement/city-gate.webp",
+      "whenKnown": "enables",
+      "whenCarried": "inherit",
+      "secret": true,
+      "parent": "realm",
+      "dc": 15,
+      "skill": "his",
+      "reveal": "",
+      "miss": "",
+      "hold": null,
+      "lore": [],
+      "source": null,
+      "bonuses": [],
+      "createdAt": null,
+      "modifiedAt": null,
+      "reviewedAt": null,
+      "touched": [],
+      "reviewedSnapshot": null,
+      "derived": false,
+      "authored": true,
+      "loreCount": 0
+    }
+  },
+  {
+    "input": [
+      "species:elf"
+    ],
+    "out": {
+      "id": "species:elf",
+      "title": "Elvenkind",
+      "category": "Species",
+      "icon": "icons/environment/people/group.webp",
+      "whenKnown": "enables",
+      "whenCarried": "inherit",
+      "secret": false,
+      "parent": null,
+      "dc": 15,
+      "skill": "his",
+      "reveal": "",
+      "miss": "",
+      "hold": null,
+      "lore": [],
+      "source": null,
+      "bonuses": [],
+      "createdAt": null,
+      "modifiedAt": null,
+      "reviewedAt": null,
+      "touched": [],
+      "reviewedSnapshot": null,
+      "derived": true,
+      "authored": true,
+      "loreCount": 0
+    }
+  },
+  {
+    "input": [
+      "species:half_orc"
+    ],
+    "out": {
+      "id": "species:half_orc",
+      "title": "Half Orc",
+      "category": "Species",
+      "icon": "icons/environment/people/group.webp",
+      "source": null,
+      "lore": [],
+      "bonuses": [],
+      "derived": true,
+      "authored": false,
+      "loreCount": 0
+    }
+  },
+  {
+    "input": [
+      "type:humanoid"
+    ],
+    "out": {
+      "id": "type:humanoid",
+      "title": "Humanoid",
+      "category": "Creature type",
+      "icon": "icons/creatures/abilities/paw-print-pair-purple.webp",
+      "source": null,
+      "lore": [],
+      "bonuses": [],
+      "derived": true,
+      "authored": false,
+      "loreCount": 0
+    }
+  },
+  {
+    "input": [
+      "type:aberration"
+    ],
+    "out": {
+      "id": "type:aberration",
+      "title": "Aberration",
+      "category": "Creature type",
+      "icon": "icons/creatures/abilities/paw-print-pair-purple.webp",
+      "source": null,
+      "lore": [],
+      "bonuses": [],
+      "derived": true,
+      "authored": false,
+      "loreCount": 0
+    }
+  },
+  {
+    "input": [
+      "size:lg"
+    ],
+    "out": {
+      "id": "size:lg",
+      "title": "Large",
+      "category": "Size",
+      "icon": "icons/tools/scribal/lens-blue.webp",
+      "source": null,
+      "lore": [],
+      "bonuses": [],
+      "derived": true,
+      "authored": false,
+      "loreCount": 0
+    }
+  },
+  {
+    "input": [
+      "size:tiny"
+    ],
+    "out": {
+      "id": "size:tiny",
+      "title": "Tiny",
+      "category": "Size",
+      "icon": "icons/tools/scribal/lens-blue.webp",
+      "source": null,
+      "lore": [],
+      "bonuses": [],
+      "derived": true,
+      "authored": false,
+      "loreCount": 0
+    }
+  },
+  {
+    "input": [
+      "kind:zzNpc00000000001"
+    ],
+    "out": {
+      "id": "kind:zzNpc00000000001",
+      "title": "ZZ Brakka",
+      "category": "Kind",
+      "icon": "icons/creatures/abilities/paw-print-orange.webp",
+      "source": null,
+      "lore": [],
+      "bonuses": [],
+      "derived": true,
+      "authored": false,
+      "loreCount": 0
+    }
+  },
+  {
+    "input": [
+      "kind:zzNope0000000001"
+    ],
+    "out": {
+      "id": "kind:zzNope0000000001",
+      "title": "zzNope0000000001",
+      "category": "Kind",
+      "icon": "icons/creatures/abilities/paw-print-orange.webp",
+      "source": null,
+      "lore": [],
+      "bonuses": [],
+      "derived": true,
+      "authored": false,
+      "loreCount": 0
+    }
+  },
+  {
+    "input": [
+      "background:far-traveller"
+    ],
+    "out": {
+      "id": "background:far-traveller",
+      "title": "Far Traveller",
+      "category": "Background",
+      "icon": "icons/sundries/books/book-worn-brown.webp",
+      "source": null,
+      "lore": [],
+      "bonuses": [],
+      "derived": true,
+      "authored": false,
+      "loreCount": 0
+    }
+  },
+  {
+    "input": [
+      "ghost"
+    ],
+    "out": {
+      "id": "ghost",
+      "title": "Ghost",
+      "category": "",
+      "icon": "icons/sundries/flags/banner-standard-brown.webp",
+      "source": null,
+      "lore": [],
+      "bonuses": [],
+      "derived": false,
+      "authored": false,
+      "loreCount": 0
+    }
+  }
+]

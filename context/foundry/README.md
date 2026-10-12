@@ -54,9 +54,11 @@ name will not tell you:
   is `pentaryn-senses`.
 - **Reads return an object, not an array, and report trouble in it** —
   `await game.pentaryn.rules.search("half cover")` is `{ query, books, total, shown, hits: [...], … }` or `{ error }` — iterate `.hits`.
-- **ties takes documents** — `game.pentaryn.ties.attributes.of(actor)` wants an `Actor`, not a
-  name or id. Blueprint modules (a `describe` golden below) accept a ref instead: Actor, Token,
-  uuid, id or exact name; `game.pentaryn.<ns>.describe()` lists every method with its params.
+- **ties reads take a ref, ties writes take documents** — since wave 3 the reads (`read`,
+  `inbound`, `known.read`, `attributes.of/ids/known/broken`, `study.beliefs/state/lore`) accept an
+  id, name, uuid or token; writes still want the `Actor`. Blueprint modules (a `describe` golden
+  below) accept a ref: Actor, Token, uuid, id or exact name; `game.pentaryn.<ns>.describe()` lists
+  every method with its params.
 
 The table is generated from each `module.json`, the module's code and its
 `test/golden/describe.json`; `make check-context` fails when it is stale — regenerate with
@@ -69,21 +71,21 @@ The table is generated from each `module.json`, the module's code and its
 | `aoe` | `pentaryn-aoe` | 0.3.1 | not migrated | — (no describe golden yet) | [`aoe.md`](aoe.md) · [README](../../foundry/module/pentaryn-aoe/README.md) |
 | `attunement` | `pentaryn-attunement` | 0.2.1 | full tier | `report`, `computeSlots`, `stash`, `releaseAway`, `away` | [README](../../foundry/module/pentaryn-attunement/README.md) |
 | `combat` | `pentaryn-combat` | 0.2.5 | not migrated | — (no describe golden yet) | [README](../../foundry/module/pentaryn-combat/README.md) |
-| `creatures` | `pentaryn-creatures` | 0.1.1 | not migrated | — (no describe golden yet) | [README](../../foundry/module/pentaryn-creatures/README.md) |
+| `creatures` | `pentaryn-creatures` | 0.1.1 | full tier | `list`, `render`, `syncScene`, `syncAll`, `isCreature`, `ownerSees`, `patchedWith`, `status` | [README](../../foundry/module/pentaryn-creatures/README.md) |
 | `cursors` | `pentaryn-cursors` | 0.2.0 | small tier | `refresh`, `current`, `keyFor`, `status` | [README](../../foundry/module/pentaryn-cursors/README.md) |
 | `dropbin` | `pentaryn-dropbin` | 0.2.3 | full tier | `corpses.sync`, `corpses.toCorpse`, `corpses.fromCorpse`, `corpses.isDead`, `corpses.revive`, `corpses.paintEye`, `corpses.paintAllEyes`, `corpses.migrateLegacyEyes` … (+11) | [README](../../foundry/module/pentaryn-dropbin/README.md) |
-| `feedback` | `pentaryn-feedback` | 0.1.1 | full tier | `open`, `submit`, `ingest`, `list`, `get`, `resolve` | [`feedback.md`](feedback.md) · [README](../../foundry/module/pentaryn-feedback/README.md) |
-| `importer` | `pentaryn-importer` | 1.1.0 | full tier | `import` | [`importer.md`](importer.md) · [README](../../foundry/module/pentaryn-importer/README.md) |
+| `feedback` | `pentaryn-feedback` | 0.1.2 | full tier | `open`, `submit`, `ingest`, `list`, `get`, `resolve` | [`feedback.md`](feedback.md) · [README](../../foundry/module/pentaryn-feedback/README.md) |
+| `importer` | `pentaryn-importer` | 1.1.1 | full tier | `import` | [`importer.md`](importer.md) · [README](../../foundry/module/pentaryn-importer/README.md) |
 | `journal` | `pentaryn-journal` | 0.1.0 | full tier | `personal`, `add`, `status`, `open`, `shouldShowBar`, `ensure`, `ensureAll`, `report` … (+3) | [README](../../foundry/module/pentaryn-journal/README.md) |
 | `rules` | `pentaryn-lookup` | 0.3.0 | full tier | `search`, `page`, `monster`, `monsters`, `names`, `packs`, `onList`, `spellList` … (+1) | [README](../../foundry/module/pentaryn-lookup/README.md) |
 | `movement` | `pentaryn-movement` | 0.1.2 | full tier | `status`, `ghostFor`, `combatActive`, `setGhost`, `setPolicy`, `pinsUnderTokens` | [README](../../foundry/module/pentaryn-movement/README.md) |
 | `names` | `pentaryn-names` | 0.1.1 | small tier | — (no describe golden yet) | [README](../../foundry/module/pentaryn-names/README.md) |
 | `pings` | `pentaryn-pings` | 0.1.1 | small tier | — (no describe golden yet) | [README](../../foundry/module/pentaryn-pings/README.md) |
-| `portals` | `pentaryn-portals` | 0.4.4 | not migrated | — (no describe golden yet) | [README](../../foundry/module/pentaryn-portals/README.md) |
-| `prompts` | `pentaryn-prompts` | 0.4.5 | full tier | — (no describe golden yet) | [README](../../foundry/module/pentaryn-prompts/README.md) |
+| `portals` | `pentaryn-portals` | 0.4.4 | full tier | `snapshot`, `cardFor`, `teleportParty`, `lookAt`, `destinations`, `link`, `unlink`, `spreadArrival` … (+3) | [README](../../foundry/module/pentaryn-portals/README.md) |
+| `prompts` | `pentaryn-prompts` | 0.4.5 | full tier | `list`, `gather`, `crops`, `replaceMany`, `show`, `replace`, `open`, `place` … (+6) | [README](../../foundry/module/pentaryn-prompts/README.md) |
 | `riders` | `pentaryn-riders` | 0.2.0 | not migrated | — (no describe golden yet) | [README](../../foundry/module/pentaryn-riders/README.md) |
-| `chain`, `senses` | `pentaryn-senses` | 0.4.1 | not migrated | — (no describe golden yet) | [README](../../foundry/module/pentaryn-senses/README.md) |
-| `ties` | `pentaryn-ties` | 0.19.4 | full tier | — (no describe golden yet) | [README](../../foundry/module/pentaryn-ties/README.md) |
+| `chain`, `senses` | `pentaryn-senses` | 0.4.1 | full tier | `syncLight`, `carriedLight`, `resetSight`, `light.cast`, `light.end`, `light.pick`, `light.toggle`, `light.hood` … (+14) | [README](../../foundry/module/pentaryn-senses/README.md) |
+| `ties` | `pentaryn-ties` | 0.19.4 | full tier | `show`, `showAll`, `showOne`, `cards`, `clear`, `closeAllCards`, `edit`, `addTie` … (+101) | [README](../../foundry/module/pentaryn-ties/README.md) |
 | `transform` | `pentaryn-transform` | 0.3.3 | not migrated | — (no describe golden yet) | [README](../../foundry/module/pentaryn-transform/README.md) |
 | `walls` | `pentaryn-walls` | 0.2.0 | full tier | `preview`, `run`, `undo`, `makeMacro`, `analyze`, `runEngine`, `backends` | [`walls.md`](walls.md) · [README](../../foundry/module/pentaryn-walls/README.md) |
 
@@ -104,7 +106,7 @@ The table is generated from each `module.json`, the module's code and its
 | Adding or changing an MCP bridge tool (`mcp__foundry__*`), the fork repo, its build, logs and upstream footprint | [`mcp-fork.md`](mcp-fork.md) |
 | "Put X here" / "replace the red one" — anything naming a spot on a map | [`markers.md`](markers.md) |
 | "Process the prompt markers" / "replace the prompts" — `Prompt · <size>` tokens with typed text | [`prompt-markers.md`](prompt-markers.md) |
-| "The party goes upstairs" — Region + teleport scene links | [`scene-links.md`](scene-links.md) |
+| "The party goes upstairs" — Region + teleport scene links; destination cards, travel badges, party teleport (`pentaryn-portals`) | [`scene-links.md`](scene-links.md) · [README](../../foundry/module/pentaryn-portals/README.md) |
 | "Set it on fire" / "the building goes up" — the Fire Kit | [`fire.md`](fire.md) |
 | Who-knows-who, social graph, possession marks — at the table | [`../../foundry/module/pentaryn-ties/README.md`](../../foundry/module/pentaryn-ties/README.md) |
 | Full Attack, swing pips, off-hand / Nick / Flurry, Sneak Attack offers on the HUD — `pentaryn-combat` | [`melee.md`](melee.md) |
@@ -114,6 +116,7 @@ The table is generated from each `module.json`, the module's code and its
 | Attunement — the sidebar slots, over-cap warnings, "why is this item doing nothing" | [`../../foundry/module/pentaryn-attunement/README.md`](../../foundry/module/pentaryn-attunement/README.md) |
 | Player journal — "Add to my journal" on eye readables, a personal journal missing or duplicated | [`../../foundry/module/pentaryn-journal/README.md`](../../foundry/module/pentaryn-journal/README.md) |
 | "My cursor is wrong / stuck as an arrow" — map cursor per scene tool (target, ruler, spell area, journal pin, drawing); `game.pentaryn.cursors.status()` | [`../../foundry/module/pentaryn-cursors/README.md`](../../foundry/module/pentaryn-cursors/README.md) |
+| Lights on tokens — carried items, torches/lanterns (flame and hood buttons), the Light cantrip ("Where does the light go?"), the Broken glow, token chains (`pentaryn-senses`) | [`../../foundry/module/pentaryn-senses/README.md`](../../foundry/module/pentaryn-senses/README.md) |
 | Table-feedback modules — ghost movement, creature strip, rider rules (Elemental Adept, Battle Medic), Loot all, portals follow | [`../../foundry/module/pentaryn-movement/README.md`](../../foundry/module/pentaryn-movement/README.md), [`-creatures`](../../foundry/module/pentaryn-creatures/README.md), [`-riders`](../../foundry/module/pentaryn-riders/README.md), [`-dropbin`](../../foundry/module/pentaryn-dropbin/README.md), [`-portals`](../../foundry/module/pentaryn-portals/README.md), [`-senses`](../../foundry/module/pentaryn-senses/README.md) |
 | Finding one battlemap out of ~1,750 | [`map-library.md`](map-library.md) |
 | The unattended Saturday updater — before touching it | [`automated-updates.md`](automated-updates.md) |
@@ -260,8 +263,10 @@ keep showing the *host's* own relationships. See [`../plans/foundry-npc-ties.md`
 - `foundry/assets-manifest.json`, `foundry/roll20-maps.json`
 - `foundry/module/` — in-house modules: `pentaryn-ties`, `-walls`, `-importer`,
   `-pings`, `-dropbin`, `-attunement`, `-lookup`, `-feedback` (player bug/defect/feature reports, [`feedback.md`](feedback.md)), `-prompts`, `-journal`, `-combat`, `-transform` (Wild Shape and Starry Form on the Argon Bonus bar: pick a form, Return/Change Form, use count; revert from an item; blocks stacked transforms), `-names` (actor rename carries to token labels;
-  nicknames kept), `-cursors` (tool cursors), `-movement` (ghost toggle, owned-on-top), `-creatures` (creature light, Your creatures strip), `-riders` (Elemental Adept/Affinity, Battle Medic, Hit Dice -/+), `-portals`, `-aoe` (draggable/deletable spell areas, area saves with a GM Apply, damage on hit), `-senses` (token vision follows sheet Darkvision; an item flagged
-  `flags.pentaryn-senses.light` lights its carrier; `glow.mjs` adds the wandering
-  "Broken glow" light animation; `chain.mjs` draws an iron chain between two tokens, GM Token
-  HUD → Chain to target / Break chain). Players inspect others through `-ties`' double-click menu
-  and read-only **Look window** (`look.mjs`) — see its README
+  nicknames kept), `-cursors` (tool cursors), `-movement` (ghost toggle, owned-on-top), `-creatures` (creature light, Your creatures strip), `-riders` (Elemental Adept/Affinity, Battle Medic, Hit Dice -/+), `-portals`, `-aoe` (draggable/deletable spell areas, area saves with a GM Apply, damage on hit), `-senses` (lights: an item flagged
+  `flags.pentaryn-senses.light` lights its carrier; torches, lamps, lanterns and candles get a flame
+  button; the Light cantrip asks where the light goes; `glow.mjs` adds the wandering "Broken glow"
+  light animation; `chain.mjs` draws an iron chain between two tokens, GM Token HUD → Chain to
+  target / Break chain. Token vision from the sheet's senses is dnd5e's own since 6.0; senses only
+  clears, once per world, the darkvision sight its retired 0.3 sync stored). Players inspect others
+  through `-ties`' double-click menu and read-only **Look window** (`look-app.mjs`) — see its README

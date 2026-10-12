@@ -1,0 +1,40 @@
+{
+  "threw": null,
+  "raw": null,
+  "read": {
+    "text": "<p>Owes.</p>",
+    "tier": null,
+    "total": 18,
+    "when": 1790000000000,
+    "delivered": 1790000000000,
+    "sources": {
+      "adv": 0,
+      "dis": 0,
+      "shared": [],
+      "declared": "normal",
+      "rule": "raw",
+      "resolved": "normal"
+    },
+    "pass": true
+  },
+  "loreState": [
+    {
+      "id": "l1",
+      "label": "Debts",
+      "dc": 12,
+      "skill": "ins",
+      "skillLabel": "Insight",
+      "spent": true,
+      "available": false,
+      "gmOnline": true
+    }
+  ],
+  "again": true,
+  "againConsole": [
+    {
+      "level": "warn",
+      "text": "pentaryn-ties | study refused: Roll._mapLegacyRollMode is missing; a blind study roll cannot be thrown"
+    }
+  ],
+  "againCalls": 12
+}

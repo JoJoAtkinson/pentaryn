@@ -1,0 +1,344 @@
+[
+  {
+    "label": "readKnown(PC)",
+    "out": [
+      {
+        "id": "zzNpc00000000001",
+        "name": "ZZ Brakka",
+        "cachedName": "ZZ Brakka",
+        "img": "icons/zz/zzNpc00000000001.webp",
+        "missing": false,
+        "category": "sentient",
+        "notes": "Salt.",
+        "imposter": null,
+        "hidden": false,
+        "when": 1700000000000
+      }
+    ],
+    "calls": [],
+    "console": []
+  },
+  {
+    "label": "readKnown(null)",
+    "out": [],
+    "calls": [],
+    "console": []
+  },
+  {
+    "label": "add OTHER",
+    "out": {
+      "id": "zzOther000000001",
+      "cachedName": "ZZ Other",
+      "category": "sentient",
+      "notes": "",
+      "when": 1790000000000
+    },
+    "calls": [
+      {
+        "op": "update",
+        "documentName": "Actor",
+        "uuid": "Actor.zzPc000000000001",
+        "changes": {
+          "flags.pentaryn-ties.known": [
+            {
+              "id": "zzNpc00000000001",
+              "name": "ZZ Brakka",
+              "category": "sentient",
+              "notes": "Salt.",
+              "imposter": null,
+              "hidden": false,
+              "when": 1700000000000
+            },
+            {
+              "id": "zzOther000000001",
+              "name": "ZZ Other",
+              "category": "sentient",
+              "notes": "",
+              "imposter": null,
+              "hidden": false,
+              "when": 1790000000000
+            }
+          ]
+        }
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "add OTHER again (already filed)",
+    "out": null,
+    "calls": [],
+    "console": []
+  },
+  {
+    "label": "add self",
+    "out": null,
+    "calls": [],
+    "console": []
+  },
+  {
+    "label": "add to an actor they do not own",
+    "out": null,
+    "calls": [],
+    "console": []
+  },
+  {
+    "label": "set notes",
+    "out": true,
+    "calls": [
+      {
+        "op": "update",
+        "documentName": "Actor",
+        "uuid": "Actor.zzPc000000000001",
+        "changes": {
+          "flags.pentaryn-ties.known": [
+            {
+              "id": "zzNpc00000000001",
+              "name": "ZZ Brakka",
+              "category": "sentient",
+              "notes": "Salt.",
+              "imposter": null,
+              "hidden": false,
+              "when": 1700000000000
+            },
+            {
+              "id": "zzOther000000001",
+              "name": "ZZ Other",
+              "category": "sentient",
+              "notes": "Quiet type.",
+              "imposter": null,
+              "hidden": false,
+              "when": 1790000000000
+            }
+          ]
+        }
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "set a field that is not settable",
+    "out": false,
+    "calls": [],
+    "console": []
+  },
+  {
+    "label": "set on a missing entry",
+    "out": false,
+    "calls": [],
+    "console": []
+  },
+  {
+    "label": "hide OTHER",
+    "out": true,
+    "calls": [
+      {
+        "op": "update",
+        "documentName": "Actor",
+        "uuid": "Actor.zzPc000000000001",
+        "changes": {
+          "flags.pentaryn-ties.known": [
+            {
+              "id": "zzNpc00000000001",
+              "name": "ZZ Brakka",
+              "category": "sentient",
+              "notes": "Salt.",
+              "imposter": null,
+              "hidden": false,
+              "when": 1700000000000
+            },
+            {
+              "id": "zzOther000000001",
+              "name": "ZZ Other",
+              "category": "sentient",
+              "notes": "Quiet type.",
+              "imposter": null,
+              "hidden": true,
+              "when": 1790000000000
+            }
+          ]
+        }
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "hide missing",
+    "out": false,
+    "calls": [],
+    "console": []
+  },
+  {
+    "label": "purge OTHER",
+    "out": true,
+    "calls": [
+      {
+        "op": "update",
+        "documentName": "Actor",
+        "uuid": "Actor.zzPc000000000001",
+        "changes": {
+          "flags.pentaryn-ties.known": [
+            {
+              "id": "zzNpc00000000001",
+              "name": "ZZ Brakka",
+              "category": "sentient",
+              "notes": "Salt.",
+              "imposter": null,
+              "hidden": false,
+              "when": 1700000000000
+            }
+          ]
+        }
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "remove missing",
+    "out": false,
+    "calls": [],
+    "console": []
+  },
+  {
+    "label": "categories",
+    "out": [
+      {
+        "key": "sentient",
+        "label": null,
+        "seeded": true
+      },
+      {
+        "key": "beasts",
+        "label": null,
+        "seeded": true
+      }
+    ],
+    "calls": [],
+    "console": []
+  },
+  {
+    "label": "notebook (assigned character)",
+    "out": "zzPc000000000001",
+    "calls": [],
+    "console": []
+  },
+  {
+    "label": "file a token they cannot see",
+    "out": null,
+    "calls": [
+      {
+        "op": "notify",
+        "level": "warn",
+        "message": "Hover whoever you want to write down."
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "file themselves",
+    "out": null,
+    "calls": [
+      {
+        "op": "notify",
+        "level": "warn",
+        "message": "Hover whoever you want to write down."
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "file OTHER's token",
+    "out": {
+      "id": "zzOther000000001",
+      "cachedName": "ZZ Other",
+      "category": "sentient",
+      "notes": "",
+      "when": 1790000000000
+    },
+    "calls": [
+      {
+        "op": "update",
+        "documentName": "Actor",
+        "uuid": "Actor.zzPc000000000001",
+        "changes": {
+          "flags.pentaryn-ties.known": [
+            {
+              "id": "zzNpc00000000001",
+              "name": "ZZ Brakka",
+              "category": "sentient",
+              "notes": "Salt.",
+              "imposter": null,
+              "hidden": false,
+              "when": 1700000000000
+            },
+            {
+              "id": "zzOther000000001",
+              "name": "ZZ Other",
+              "category": "sentient",
+              "notes": "",
+              "imposter": null,
+              "hidden": false,
+              "when": 1790000000000
+            }
+          ]
+        }
+      },
+      {
+        "op": "sheet.render",
+        "actor": "zzPc000000000001",
+        "force": true,
+        "tab": "known"
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "file the NPC (already filed: opens it)",
+    "out": {
+      "id": "zzNpc00000000001",
+      "name": "ZZ Brakka",
+      "cachedName": "ZZ Brakka",
+      "img": "icons/zz/zzNpc00000000001.webp",
+      "missing": false,
+      "category": "sentient",
+      "notes": "Salt.",
+      "imposter": null,
+      "hidden": false,
+      "when": 1700000000000
+    },
+    "calls": [
+      {
+        "op": "sheet.render",
+        "actor": "zzPc000000000001",
+        "force": true,
+        "tab": "known"
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "open entry",
+    "out": true,
+    "calls": [
+      {
+        "op": "sheet.render",
+        "actor": "zzPc000000000001",
+        "force": true,
+        "tab": "known"
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "no notebook to write in",
+    "out": null,
+    "calls": [
+      {
+        "op": "notify",
+        "level": "warn",
+        "message": "Select your character's token first — a notebook belongs to somebody."
+      }
+    ],
+    "console": []
+  }
+]

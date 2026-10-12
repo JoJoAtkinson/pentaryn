@@ -1,0 +1,1301 @@
+{
+  "inventory": [
+    {
+      "nth": 0,
+      "tag": "DIV",
+      "className": "pt-summary pt-attr-summary",
+      "events": [
+        "click",
+        "keydown"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn pt-lore-btn",
+      "dataset": {
+        "action": "attr-learned",
+        "attr": "city",
+        "lore": "c1",
+        "tooltip": "Hand “zz typed label” over now. No roll — you have already decided."
+      },
+      "events": [
+        "click"
+      ],
+      "delegated": true
+    },
+    {
+      "nth": 0,
+      "tag": "INPUT",
+      "dataset": {
+        "attrField": "title",
+        "id": "city"
+      },
+      "events": [
+        "change"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "INPUT",
+      "dataset": {
+        "attrField": "category",
+        "id": "city"
+      },
+      "events": [
+        "change"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "SELECT",
+      "dataset": {
+        "attrField": "whenKnown",
+        "id": "city"
+      },
+      "events": [
+        "change"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "SELECT",
+      "dataset": {
+        "attrField": "whenCarried",
+        "id": "city"
+      },
+      "events": [
+        "change"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "INPUT",
+      "dataset": {
+        "attrField": "secret",
+        "id": "city"
+      },
+      "events": [
+        "change"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "SELECT",
+      "dataset": {
+        "attrField": "skill",
+        "id": "city"
+      },
+      "events": [
+        "change"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "INPUT",
+      "dataset": {
+        "attrField": "dc",
+        "id": "city"
+      },
+      "events": [
+        "change"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "TEXTAREA",
+      "dataset": {
+        "attrField": "reveal",
+        "id": "city"
+      },
+      "events": [
+        "change"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "TEXTAREA",
+      "dataset": {
+        "attrField": "miss",
+        "id": "city"
+      },
+      "events": [
+        "change"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "DIV",
+      "className": "pt-summary pt-lore-summary",
+      "events": [
+        "click",
+        "keydown"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "INPUT",
+      "dataset": {
+        "field": "label"
+      },
+      "events": [
+        "change"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "SELECT",
+      "dataset": {
+        "field": "skill"
+      },
+      "events": [
+        "change"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "INPUT",
+      "dataset": {
+        "field": "dc"
+      },
+      "events": [
+        "change"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "SELECT",
+      "dataset": {
+        "field": "hold",
+        "tooltip": "Hold the result until you deliver it, so you can play the moment out first."
+      },
+      "events": [
+        "change"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "TEXTAREA",
+      "dataset": {
+        "field": "text"
+      },
+      "events": [
+        "change"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "TEXTAREA",
+      "dataset": {
+        "field": "miss"
+      },
+      "events": [
+        "change"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn pt-del",
+      "dataset": {
+        "action": "lore-remove",
+        "id": "c1"
+      },
+      "events": [
+        "click"
+      ],
+      "delegated": true
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-add-btn",
+      "dataset": {
+        "action": "lore-add"
+      },
+      "events": [
+        "click"
+      ],
+      "delegated": true
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn pt-del",
+      "dataset": {
+        "action": "attr-delete",
+        "id": "city"
+      },
+      "events": [
+        "click"
+      ],
+      "delegated": true
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "action": "attr-unlink",
+        "id": "city"
+      },
+      "events": [
+        "click"
+      ],
+      "delegated": true
+    },
+    {
+      "nth": 1,
+      "tag": "DIV",
+      "className": "pt-summary pt-attr-summary",
+      "events": [
+        "click",
+        "keydown"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "action": "attr-author",
+        "id": "type:humanoid"
+      },
+      "events": [
+        "click"
+      ],
+      "delegated": true
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "action": "attr-unlink",
+        "id": "type:humanoid"
+      },
+      "events": [
+        "click"
+      ],
+      "delegated": true
+    },
+    {
+      "nth": 2,
+      "tag": "DIV",
+      "className": "pt-summary pt-attr-summary",
+      "events": [
+        "click",
+        "keydown"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "action": "attr-author",
+        "id": "kind:zzKind0000000001"
+      },
+      "events": [
+        "click"
+      ],
+      "delegated": true
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "action": "attr-unlink",
+        "id": "kind:zzKind0000000001"
+      },
+      "events": [
+        "click"
+      ],
+      "delegated": true
+    },
+    {
+      "nth": 0,
+      "tag": "INPUT",
+      "className": "pt-attr-search",
+      "events": [
+        "input",
+        "focus"
+      ]
+    }
+  ],
+  "rows": [
+    {
+      "nth": 0,
+      "tag": "DIV",
+      "className": "pt-summary pt-attr-summary",
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-summary pt-attr-summary",
+        "parent": "pt-row pt-attr-row pt-open"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "DIV",
+      "className": "pt-summary pt-attr-summary",
+      "type": "keydown",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-summary pt-attr-summary",
+        "parent": "pt-row pt-attr-row"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn pt-lore-btn",
+      "dataset": {
+        "action": "attr-learned",
+        "attr": "city",
+        "lore": "c1",
+        "tooltip": "Hand “zz typed label” over now. No roll — you have already decided."
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-textbtn pt-lore-btn"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "INPUT",
+      "dataset": {
+        "attrField": "title",
+        "id": "city"
+      },
+      "type": "change",
+      "calls": [
+        {
+          "op": "notify",
+          "level": "warn",
+          "message": "“zz typed” (guild) already has that name. Attribute names are unique, ignoring case and accents. Title not changed."
+        },
+        {
+          "op": "rerender"
+        }
+      ],
+      "console": [],
+      "after": {
+        "parent": "pt-field",
+        "value": "zz typed"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "INPUT",
+      "dataset": {
+        "attrField": "category",
+        "id": "city"
+      },
+      "type": "change",
+      "calls": [
+        {
+          "op": "rerender"
+        }
+      ],
+      "console": [],
+      "after": {
+        "parent": "pt-field",
+        "value": "zz typed"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "SELECT",
+      "dataset": {
+        "attrField": "whenKnown",
+        "id": "city"
+      },
+      "type": "change",
+      "calls": [
+        {
+          "op": "settings.set",
+          "id": "pentaryn-ties.attributes",
+          "value": [
+            {
+              "id": "city",
+              "title": "Vel",
+              "category": "zz typed",
+              "icon": "icons/sundries/flags/banner-standard-brown.webp",
+              "whenKnown": "auto",
+              "whenCarried": "inherit",
+              "secret": false,
+              "parent": null,
+              "dc": 7,
+              "skill": "arc",
+              "reveal": "zz typed",
+              "miss": "zz typed",
+              "hold": null,
+              "lore": [
+                {
+                  "id": "c1",
+                  "label": "zz typed label",
+                  "dc": 7,
+                  "skill": "ins",
+                  "text": "zz typed text",
+                  "miss": "zz typed miss",
+                  "hold": true
+                }
+              ],
+              "source": null,
+              "bonuses": [],
+              "createdAt": null,
+              "modifiedAt": 1790000000000,
+              "reviewedAt": null,
+              "touched": [
+                "category",
+                "icon",
+                "whenKnown",
+                "whenCarried",
+                "secret",
+                "skill",
+                "dc",
+                "reveal",
+                "miss",
+                "lore"
+              ],
+              "reviewedSnapshot": null
+            },
+            {
+              "id": "guild",
+              "title": "zz typed",
+              "category": "zz typed",
+              "icon": "icons/sundries/flags/banner-standard-brown.webp",
+              "whenKnown": "advantage",
+              "whenCarried": "advantage",
+              "secret": true,
+              "parent": "city",
+              "dc": 7,
+              "skill": "his",
+              "reveal": "zz typed",
+              "miss": "zz typed",
+              "hold": null,
+              "lore": [],
+              "source": null,
+              "bonuses": [],
+              "createdAt": null,
+              "modifiedAt": 1790000000000,
+              "reviewedAt": null,
+              "touched": [
+                "title",
+                "category",
+                "icon",
+                "whenKnown",
+                "whenCarried",
+                "secret",
+                "skill",
+                "dc",
+                "reveal",
+                "miss"
+              ],
+              "reviewedSnapshot": null
+            }
+          ]
+        },
+        {
+          "op": "rerender"
+        }
+      ],
+      "console": [],
+      "after": {
+        "parent": "pt-field",
+        "value": "auto"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "SELECT",
+      "dataset": {
+        "attrField": "whenCarried",
+        "id": "city"
+      },
+      "type": "change",
+      "calls": [
+        {
+          "op": "rerender"
+        }
+      ],
+      "console": [],
+      "after": {
+        "parent": "pt-field",
+        "value": "advantage"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "INPUT",
+      "dataset": {
+        "attrField": "secret",
+        "id": "city"
+      },
+      "type": "change",
+      "calls": [
+        {
+          "op": "settings.set",
+          "id": "pentaryn-ties.attributes",
+          "value": [
+            {
+              "id": "city",
+              "title": "Vel",
+              "category": "zz typed",
+              "icon": "icons/sundries/flags/banner-standard-brown.webp",
+              "whenKnown": "auto",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": null,
+              "dc": 7,
+              "skill": "arc",
+              "reveal": "zz typed",
+              "miss": "zz typed",
+              "hold": null,
+              "lore": [
+                {
+                  "id": "c1",
+                  "label": "zz typed label",
+                  "dc": 7,
+                  "skill": "ins",
+                  "text": "zz typed text",
+                  "miss": "zz typed miss",
+                  "hold": true
+                }
+              ],
+              "source": null,
+              "bonuses": [],
+              "createdAt": null,
+              "modifiedAt": 1790000000000,
+              "reviewedAt": null,
+              "touched": [
+                "category",
+                "icon",
+                "whenKnown",
+                "whenCarried",
+                "secret",
+                "skill",
+                "dc",
+                "reveal",
+                "miss",
+                "lore"
+              ],
+              "reviewedSnapshot": null
+            },
+            {
+              "id": "guild",
+              "title": "zz typed",
+              "category": "zz typed",
+              "icon": "icons/sundries/flags/banner-standard-brown.webp",
+              "whenKnown": "advantage",
+              "whenCarried": "advantage",
+              "secret": true,
+              "parent": "city",
+              "dc": 7,
+              "skill": "his",
+              "reveal": "zz typed",
+              "miss": "zz typed",
+              "hold": null,
+              "lore": [],
+              "source": null,
+              "bonuses": [],
+              "createdAt": null,
+              "modifiedAt": 1790000000000,
+              "reviewedAt": null,
+              "touched": [
+                "title",
+                "category",
+                "icon",
+                "whenKnown",
+                "whenCarried",
+                "secret",
+                "skill",
+                "dc",
+                "reveal",
+                "miss"
+              ],
+              "reviewedSnapshot": null
+            }
+          ]
+        },
+        {
+          "op": "rerender"
+        }
+      ],
+      "console": [],
+      "after": {
+        "parent": "pt-field pt-field-check",
+        "value": "",
+        "checked": true
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "SELECT",
+      "dataset": {
+        "attrField": "skill",
+        "id": "city"
+      },
+      "type": "change",
+      "calls": [
+        {
+          "op": "settings.set",
+          "id": "pentaryn-ties.attributes",
+          "value": [
+            {
+              "id": "city",
+              "title": "Vel",
+              "category": "zz typed",
+              "icon": "icons/sundries/flags/banner-standard-brown.webp",
+              "whenKnown": "auto",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": null,
+              "dc": 7,
+              "skill": "ins",
+              "reveal": "zz typed",
+              "miss": "zz typed",
+              "hold": null,
+              "lore": [
+                {
+                  "id": "c1",
+                  "label": "zz typed label",
+                  "dc": 7,
+                  "skill": "ins",
+                  "text": "zz typed text",
+                  "miss": "zz typed miss",
+                  "hold": true
+                }
+              ],
+              "source": null,
+              "bonuses": [],
+              "createdAt": null,
+              "modifiedAt": 1790000000000,
+              "reviewedAt": null,
+              "touched": [
+                "category",
+                "icon",
+                "whenKnown",
+                "whenCarried",
+                "secret",
+                "skill",
+                "dc",
+                "reveal",
+                "miss",
+                "lore"
+              ],
+              "reviewedSnapshot": null
+            },
+            {
+              "id": "guild",
+              "title": "zz typed",
+              "category": "zz typed",
+              "icon": "icons/sundries/flags/banner-standard-brown.webp",
+              "whenKnown": "advantage",
+              "whenCarried": "advantage",
+              "secret": true,
+              "parent": "city",
+              "dc": 7,
+              "skill": "his",
+              "reveal": "zz typed",
+              "miss": "zz typed",
+              "hold": null,
+              "lore": [],
+              "source": null,
+              "bonuses": [],
+              "createdAt": null,
+              "modifiedAt": 1790000000000,
+              "reviewedAt": null,
+              "touched": [
+                "title",
+                "category",
+                "icon",
+                "whenKnown",
+                "whenCarried",
+                "secret",
+                "skill",
+                "dc",
+                "reveal",
+                "miss"
+              ],
+              "reviewedSnapshot": null
+            }
+          ]
+        },
+        {
+          "op": "rerender"
+        }
+      ],
+      "console": [],
+      "after": {
+        "parent": "pt-identify-head",
+        "value": "ins"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "INPUT",
+      "dataset": {
+        "attrField": "dc",
+        "id": "city"
+      },
+      "type": "change",
+      "calls": [
+        {
+          "op": "rerender"
+        }
+      ],
+      "console": [],
+      "after": {
+        "parent": "pt-identify-head",
+        "value": "7"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "TEXTAREA",
+      "dataset": {
+        "attrField": "reveal",
+        "id": "city"
+      },
+      "type": "change",
+      "calls": [
+        {
+          "op": "rerender"
+        }
+      ],
+      "console": [],
+      "after": {
+        "parent": "pt-field pt-field-stacked",
+        "value": "zz typed"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "TEXTAREA",
+      "dataset": {
+        "attrField": "miss",
+        "id": "city"
+      },
+      "type": "change",
+      "calls": [
+        {
+          "op": "rerender"
+        }
+      ],
+      "console": [],
+      "after": {
+        "parent": "pt-field pt-field-stacked",
+        "value": "zz typed"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "DIV",
+      "className": "pt-summary pt-lore-summary",
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-summary pt-lore-summary",
+        "parent": "pt-row pt-lore-row pt-open"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "DIV",
+      "className": "pt-summary pt-lore-summary",
+      "type": "keydown",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-summary pt-lore-summary",
+        "parent": "pt-row pt-lore-row"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "INPUT",
+      "dataset": {
+        "field": "label"
+      },
+      "type": "change",
+      "calls": [
+        {
+          "op": "rerender"
+        }
+      ],
+      "console": [],
+      "after": {
+        "parent": "pt-field",
+        "value": "zz typed label"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "SELECT",
+      "dataset": {
+        "field": "skill"
+      },
+      "type": "change",
+      "calls": [
+        {
+          "op": "settings.set",
+          "id": "pentaryn-ties.attributes",
+          "value": [
+            {
+              "id": "city",
+              "title": "Vel",
+              "category": "zz typed",
+              "icon": "icons/sundries/flags/banner-standard-brown.webp",
+              "whenKnown": "auto",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": null,
+              "dc": 7,
+              "skill": "ins",
+              "reveal": "zz typed",
+              "miss": "zz typed",
+              "hold": null,
+              "lore": [
+                {
+                  "id": "c1",
+                  "label": "zz typed label",
+                  "dc": 7,
+                  "skill": "inv",
+                  "text": "zz typed text",
+                  "miss": "zz typed miss",
+                  "hold": true
+                }
+              ],
+              "source": null,
+              "bonuses": [],
+              "createdAt": null,
+              "modifiedAt": 1790000000000,
+              "reviewedAt": null,
+              "touched": [
+                "category",
+                "icon",
+                "whenKnown",
+                "whenCarried",
+                "secret",
+                "skill",
+                "dc",
+                "reveal",
+                "miss",
+                "lore"
+              ],
+              "reviewedSnapshot": null
+            },
+            {
+              "id": "guild",
+              "title": "zz typed",
+              "category": "zz typed",
+              "icon": "icons/sundries/flags/banner-standard-brown.webp",
+              "whenKnown": "advantage",
+              "whenCarried": "advantage",
+              "secret": true,
+              "parent": "city",
+              "dc": 7,
+              "skill": "his",
+              "reveal": "zz typed",
+              "miss": "zz typed",
+              "hold": null,
+              "lore": [],
+              "source": null,
+              "bonuses": [],
+              "createdAt": null,
+              "modifiedAt": 1790000000000,
+              "reviewedAt": null,
+              "touched": [
+                "title",
+                "category",
+                "icon",
+                "whenKnown",
+                "whenCarried",
+                "secret",
+                "skill",
+                "dc",
+                "reveal",
+                "miss"
+              ],
+              "reviewedSnapshot": null
+            }
+          ]
+        },
+        {
+          "op": "rerender"
+        }
+      ],
+      "console": [],
+      "after": {
+        "parent": "pt-field",
+        "value": "inv"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "INPUT",
+      "dataset": {
+        "field": "dc"
+      },
+      "type": "change",
+      "calls": [
+        {
+          "op": "rerender"
+        }
+      ],
+      "console": [],
+      "after": {
+        "parent": "pt-field pt-field-dc",
+        "value": "7"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "SELECT",
+      "dataset": {
+        "field": "hold",
+        "tooltip": "Hold the result until you deliver it, so you can play the moment out first."
+      },
+      "type": "change",
+      "calls": [
+        {
+          "op": "settings.set",
+          "id": "pentaryn-ties.attributes",
+          "value": [
+            {
+              "id": "city",
+              "title": "Vel",
+              "category": "zz typed",
+              "icon": "icons/sundries/flags/banner-standard-brown.webp",
+              "whenKnown": "auto",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": null,
+              "dc": 7,
+              "skill": "ins",
+              "reveal": "zz typed",
+              "miss": "zz typed",
+              "hold": null,
+              "lore": [
+                {
+                  "id": "c1",
+                  "label": "zz typed label",
+                  "dc": 7,
+                  "skill": "inv",
+                  "text": "zz typed text",
+                  "miss": "zz typed miss",
+                  "hold": false
+                }
+              ],
+              "source": null,
+              "bonuses": [],
+              "createdAt": null,
+              "modifiedAt": 1790000000000,
+              "reviewedAt": null,
+              "touched": [
+                "category",
+                "icon",
+                "whenKnown",
+                "whenCarried",
+                "secret",
+                "skill",
+                "dc",
+                "reveal",
+                "miss",
+                "lore"
+              ],
+              "reviewedSnapshot": null
+            },
+            {
+              "id": "guild",
+              "title": "zz typed",
+              "category": "zz typed",
+              "icon": "icons/sundries/flags/banner-standard-brown.webp",
+              "whenKnown": "advantage",
+              "whenCarried": "advantage",
+              "secret": true,
+              "parent": "city",
+              "dc": 7,
+              "skill": "his",
+              "reveal": "zz typed",
+              "miss": "zz typed",
+              "hold": null,
+              "lore": [],
+              "source": null,
+              "bonuses": [],
+              "createdAt": null,
+              "modifiedAt": 1790000000000,
+              "reviewedAt": null,
+              "touched": [
+                "title",
+                "category",
+                "icon",
+                "whenKnown",
+                "whenCarried",
+                "secret",
+                "skill",
+                "dc",
+                "reveal",
+                "miss"
+              ],
+              "reviewedSnapshot": null
+            }
+          ]
+        },
+        {
+          "op": "rerender"
+        }
+      ],
+      "console": [],
+      "after": {
+        "parent": "pt-field",
+        "value": "off"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "TEXTAREA",
+      "dataset": {
+        "field": "text"
+      },
+      "type": "change",
+      "calls": [
+        {
+          "op": "rerender"
+        }
+      ],
+      "console": [],
+      "after": {
+        "parent": "pt-field pt-field-notes",
+        "value": "zz typed text"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "TEXTAREA",
+      "dataset": {
+        "field": "miss"
+      },
+      "type": "change",
+      "calls": [
+        {
+          "op": "rerender"
+        }
+      ],
+      "console": [],
+      "after": {
+        "parent": "pt-field pt-field-notes",
+        "value": "zz typed miss"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn pt-del",
+      "dataset": {
+        "action": "lore-remove",
+        "id": "c1"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-textbtn pt-del",
+        "parent": "pt-detail-actions"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-add-btn",
+      "dataset": {
+        "action": "lore-add"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-add-btn",
+        "parent": "pt-add-bar"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn pt-del",
+      "dataset": {
+        "action": "attr-delete",
+        "id": "city"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-textbtn pt-del",
+        "parent": "pt-detail-actions"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "action": "attr-unlink",
+        "id": "city"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-textbtn",
+        "parent": "pt-detail-actions"
+      }
+    },
+    {
+      "nth": 1,
+      "tag": "DIV",
+      "className": "pt-summary pt-attr-summary",
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-summary pt-attr-summary",
+        "parent": "pt-row pt-attr-row pt-open"
+      }
+    },
+    {
+      "nth": 1,
+      "tag": "DIV",
+      "className": "pt-summary pt-attr-summary",
+      "type": "keydown",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-summary pt-attr-summary",
+        "parent": "pt-row pt-attr-row"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "action": "attr-author",
+        "id": "type:humanoid"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-textbtn",
+        "parent": "pt-detail-actions"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "action": "attr-unlink",
+        "id": "type:humanoid"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-textbtn",
+        "parent": "pt-detail-actions"
+      }
+    },
+    {
+      "nth": 2,
+      "tag": "DIV",
+      "className": "pt-summary pt-attr-summary",
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-summary pt-attr-summary",
+        "parent": "pt-row pt-attr-row pt-open"
+      }
+    },
+    {
+      "nth": 2,
+      "tag": "DIV",
+      "className": "pt-summary pt-attr-summary",
+      "type": "keydown",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-summary pt-attr-summary",
+        "parent": "pt-row pt-attr-row"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "action": "attr-author",
+        "id": "kind:zzKind0000000001"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-textbtn",
+        "parent": "pt-detail-actions"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "action": "attr-unlink",
+        "id": "kind:zzKind0000000001"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-textbtn",
+        "parent": "pt-detail-actions"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "INPUT",
+      "className": "pt-attr-search",
+      "type": "input",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-attr-search",
+        "parent": "pt-add-bar pt-attr-add",
+        "value": "zz typed"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "INPUT",
+      "className": "pt-attr-search",
+      "type": "focus",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-attr-search",
+        "parent": "pt-add-bar pt-attr-add",
+        "value": ""
+      }
+    }
+  ]
+}

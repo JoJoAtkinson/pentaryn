@@ -1,0 +1,326 @@
+{
+  "rows": [
+    {
+      "item": "itmTorch00000001",
+      "row": {
+        "tag": "div",
+        "class": "item-row",
+        "children": [
+          {
+            "tag": "div",
+            "class": "item-name"
+          },
+          {
+            "tag": "div",
+            "class": "ps-light-controls",
+            "children": [
+              {
+                "tag": "button",
+                "class": "unbutton config-button item-control ps-light-toggle lit",
+                "type": "button",
+                "data": {
+                  "tooltip": "Put it out"
+                },
+                "attrs": {
+                  "aria-label": "Put it out"
+                },
+                "html": "<i class=\"fa-solid fa-fire\" inert></i>"
+              }
+            ]
+          },
+          {
+            "tag": "div",
+            "class": "item-controls"
+          }
+        ]
+      }
+    },
+    {
+      "item": "itmLantern000001",
+      "row": {
+        "tag": "div",
+        "class": "item-row",
+        "children": [
+          {
+            "tag": "div",
+            "class": "item-name"
+          },
+          {
+            "tag": "div",
+            "class": "ps-light-controls",
+            "children": [
+              {
+                "tag": "button",
+                "class": "unbutton config-button item-control ps-light-toggle lit outshone",
+                "type": "button",
+                "data": {
+                  "tooltip": "Lit, but your Torch gives more light, so this one adds nothing now. Click to put it out."
+                },
+                "attrs": {
+                  "aria-label": "Lit, but your Torch gives more light, so this one adds nothing now. Click to put it out."
+                },
+                "html": "<i class=\"fa-solid fa-fire\" inert></i>"
+              },
+              {
+                "tag": "button",
+                "class": "unbutton config-button item-control ps-light-hood hooded",
+                "type": "button",
+                "data": {
+                  "tooltip": "Raise the hood"
+                },
+                "attrs": {
+                  "aria-label": "Raise the hood"
+                },
+                "html": "<i class=\"fa-solid fa-eye\" inert></i>"
+              }
+            ]
+          },
+          {
+            "tag": "div",
+            "class": "item-controls"
+          }
+        ]
+      }
+    },
+    {
+      "item": "itmLight00000001",
+      "row": {
+        "tag": "div",
+        "class": "item-row",
+        "children": [
+          {
+            "tag": "div",
+            "class": "item-name"
+          },
+          {
+            "tag": "div",
+            "class": "item-controls"
+          }
+        ]
+      }
+    }
+  ],
+  "clickTorch": {
+    "value": "<undefined>",
+    "calls": [
+      {
+        "op": "update",
+        "documentName": "Item",
+        "uuid": "Actor.actHero000000001.Item.itmTorch00000001",
+        "changes": {
+          "flags.pentaryn-senses.lit": false,
+          "flags.pentaryn-senses.hooded": false
+        }
+      },
+      {
+        "op": "ChatMessage.create",
+        "data": {
+          "speaker": {
+            "actor": "actHero000000001",
+            "alias": "Marrith"
+          },
+          "content": "<p>Marrith puts out the Torch.</p>",
+          "rollMode": "publicroll"
+        }
+      },
+      {
+        "op": "update",
+        "documentName": "Actor",
+        "uuid": "Actor.actHero000000001",
+        "changes": {
+          "prototypeToken.light": {
+            "bright": 0,
+            "dim": 5,
+            "angle": 360,
+            "color": "#ffc266",
+            "alpha": 0.35,
+            "luminosity": 0.5,
+            "negative": false,
+            "darkness": {
+              "min": 0,
+              "max": 1
+            },
+            "animation": {
+              "type": "torch",
+              "speed": 1,
+              "intensity": 1,
+              "reverse": false
+            }
+          },
+          "prototypeToken.flags.pentaryn-senses.itemLight": true
+        }
+      },
+      {
+        "op": "updateEmbedded",
+        "scene": "scnCellar0000001",
+        "type": "Token",
+        "updates": [
+          {
+            "_id": "tokHero000000001",
+            "light": {
+              "bright": 0,
+              "dim": 5,
+              "angle": 360,
+              "color": "#ffc266",
+              "alpha": 0.35,
+              "luminosity": 0.5,
+              "negative": false,
+              "darkness": {
+                "min": 0,
+                "max": 1
+              },
+              "animation": {
+                "type": "torch",
+                "speed": 1,
+                "intensity": 1,
+                "reverse": false
+              }
+            },
+            "flags.pentaryn-senses.itemLight": true
+          }
+        ]
+      },
+      {
+        "op": "updateEmbedded",
+        "scene": "scnRoad000000002",
+        "type": "Token",
+        "updates": [
+          {
+            "_id": "tokHero000000002",
+            "light": {
+              "bright": 0,
+              "dim": 5,
+              "angle": 360,
+              "color": "#ffc266",
+              "alpha": 0.35,
+              "luminosity": 0.5,
+              "negative": false,
+              "darkness": {
+                "min": 0,
+                "max": 1
+              },
+              "animation": {
+                "type": "torch",
+                "speed": 1,
+                "intensity": 1,
+                "reverse": false
+              }
+            },
+            "flags.pentaryn-senses.itemLight": true
+          }
+        ]
+      }
+    ]
+  },
+  "clickHood": {
+    "value": "<undefined>",
+    "calls": [
+      {
+        "op": "update",
+        "documentName": "Item",
+        "uuid": "Actor.actHero000000001.Item.itmLantern000001",
+        "changes": {
+          "flags.pentaryn-senses.hooded": false
+        }
+      },
+      {
+        "op": "ChatMessage.create",
+        "data": {
+          "speaker": {
+            "actor": "actHero000000001",
+            "alias": "Marrith"
+          },
+          "content": "<p>Marrith raises the hood of the Lantern, Hooded.</p>",
+          "rollMode": "publicroll"
+        }
+      },
+      {
+        "op": "update",
+        "documentName": "Actor",
+        "uuid": "Actor.actHero000000001",
+        "changes": {
+          "prototypeToken.light": {
+            "bright": 30,
+            "dim": 60,
+            "angle": 360,
+            "color": "#ffc266",
+            "alpha": 0.35,
+            "luminosity": 0.5,
+            "negative": false,
+            "darkness": {
+              "min": 0,
+              "max": 1
+            },
+            "animation": {
+              "type": "torch",
+              "speed": 1,
+              "intensity": 1,
+              "reverse": false
+            }
+          },
+          "prototypeToken.flags.pentaryn-senses.itemLight": true
+        }
+      },
+      {
+        "op": "updateEmbedded",
+        "scene": "scnCellar0000001",
+        "type": "Token",
+        "updates": [
+          {
+            "_id": "tokHero000000001",
+            "light": {
+              "bright": 30,
+              "dim": 60,
+              "angle": 360,
+              "color": "#ffc266",
+              "alpha": 0.35,
+              "luminosity": 0.5,
+              "negative": false,
+              "darkness": {
+                "min": 0,
+                "max": 1
+              },
+              "animation": {
+                "type": "torch",
+                "speed": 1,
+                "intensity": 1,
+                "reverse": false
+              }
+            },
+            "flags.pentaryn-senses.itemLight": true
+          }
+        ]
+      },
+      {
+        "op": "updateEmbedded",
+        "scene": "scnRoad000000002",
+        "type": "Token",
+        "updates": [
+          {
+            "_id": "tokHero000000002",
+            "light": {
+              "bright": 30,
+              "dim": 60,
+              "angle": 360,
+              "color": "#ffc266",
+              "alpha": 0.35,
+              "luminosity": 0.5,
+              "negative": false,
+              "darkness": {
+                "min": 0,
+                "max": 1
+              },
+              "animation": {
+                "type": "torch",
+                "speed": 1,
+                "intensity": 1,
+                "reverse": false
+              }
+            },
+            "flags.pentaryn-senses.itemLight": true
+          }
+        ]
+      }
+    ]
+  }
+}

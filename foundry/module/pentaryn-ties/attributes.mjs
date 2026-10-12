@@ -30,7 +30,9 @@
  * GM who wants *this* orc not to count as `type:humanoid`.
  */
 
-import { MODULE, baseActorOf } from "./ties-api.mjs";
+import { MODULE } from "./ties-core.mjs";
+import { baseActorOf } from "./ties-adapter.mjs";
+import { readFlag } from "./lib/flags.mjs";
 import {
   REGISTRY_SETTING,
   ATTRIBUTES_FLAG,
@@ -57,21 +59,33 @@ import {
   forestOf,
   subtreeOf,
   contractForest,
-  childrenOf,
   changedFields,
   clampTouched,
   reviewState,
   needsReview,
   readSelection,
   snapshotOf,
-  ATTR_REVIEW_FIELDS
+  ATTR_REVIEW_FIELDS,
+  BELIEFS_FLAG,
+  GRANTED_FLAG,
+  attrFactKey
 } from "./known-core.mjs";
+import { makeLog } from "./lib/log.mjs";
+import { setting, knowledgeStore } from "./settings.mjs";
+
+const log = makeLog(MODULE);
+
+/** The derived namespaces' labels (literal keys). */
+const NS_LABEL = Object.freeze({
+  type: "PENTARYN_TIES.attributes.ns.type",
+  species: "PENTARYN_TIES.attributes.ns.species",
+  background: "PENTARYN_TIES.attributes.ns.background",
+  size: "PENTARYN_TIES.attributes.ns.size",
+  kind: "PENTARYN_TIES.attributes.ns.kind"
+});
 
 // re-exported so the entry point registers the settings by the same names this file reads
 export { REGISTRY_SETTING, ATTR_BELIEFS_SETTING, KNOWLEDGE_SETTING } from "./known-core.mjs";
-
-const t = k => game.i18n.localize(`PENTARYN_TIES.${k}`);
-const f = (k, data) => game.i18n.format(`PENTARYN_TIES.${k}`, data);
 
 /**
  * A default icon per category, so a new attribute looks like the thing it is without anyone
@@ -165,16 +179,34 @@ const DERIVED_ICONS = {
 /*  The registry                                */
 /* -------------------------------------------- */
 
-/** Never throws — a setting can be unregistered when a hook fires early. */
-export function registry() {
-  try {
-    return readRegistry(game.settings.get(MODULE, REGISTRY_SETTING));
-  } catch {
-    return [];
+/*
+ * The clamped registry, memoised on the identity of the setting's value (ties-19). Foundry hands
+ * back the Setting document's own value object until that document updates, so an unchanged
+ * registry is clamped once instead of on every row of every paint and every search keystroke; any
+ * write gives a new object and the next read re-clamps. Callers mutate what they get (push, assign),
+ * so they always get a COPY — of the whole list, or of the one entry.
+ */
+let memo = { raw: undefined, list: null, byId: null };
+function clampedRegistry() {
+  const raw = setting(REGISTRY_SETTING);
+  if (!memo.list || memo.raw !== raw) {
+    const list = readRegistry(raw);
+    const byId = new Map();
+    for (const e of list) if (!byId.has(e.id)) byId.set(e.id, e); // first wins, as find() did
+    memo = { raw, list, byId };
   }
+  return memo;
 }
 
-export const attributeById = id => registry().find(e => e.id === id) ?? null;
+/** Never throws — a setting can be unregistered when a hook fires early. */
+export function registry() {
+  return structuredClone(clampedRegistry().list);
+}
+
+export const attributeById = id => {
+  const entry = clampedRegistry().byId.get(id);
+  return entry ? structuredClone(entry) : null;
+};
 
 /**
  * GM-only. The server would refuse a player anyway; refusing here keeps the message honest.
@@ -187,7 +219,7 @@ async function saveRegistry(list) {
     await game.settings.set(MODULE, REGISTRY_SETTING, readRegistry(list));
     return true;
   } catch (err) {
-    console.warn(`${MODULE} | attribute registry write failed`, err);
+    log.warn(`attribute registry write failed`, err);
     return false;
   }
 }
@@ -345,14 +377,6 @@ export async function ensureAttribute(title, opts = {}) {
 }
 
 /**
- * One-shot repair for entries authored against the two icon paths that 404 (see `CATEGORY_ICONS`).
- *
- * Entries store their icon, so fixing the default fixes nothing already written — and the symptom
- * is a blank square rather than an error, so nobody would think to go and re-pick them by hand.
- * Only the dead paths are touched; a deliberately chosen icon is never overwritten.
- */
-
-/**
  * The sheet's "author entry" for a DERIVED id (`species:elf` …): creates an entry with that exact
  * id, which `createAttribute` cannot (it derives ids from titles). Queued like every other write,
  * and held to the same unique-name rule. → `{ok:true, entry}` | `{ok:false, reason:"notGM"|
@@ -372,6 +396,13 @@ export const authorEntry = ({ id, title, category, icon }) =>
     return { ok: true, entry };
   });
 
+/**
+ * One-shot repair for entries authored against the two icon paths that 404 (see `CATEGORY_ICONS`).
+ *
+ * Entries store their icon, so fixing the default fixes nothing already written — and the symptom
+ * is a blank square rather than an error, so nobody would think to go and re-pick them by hand.
+ * Only the dead paths are touched; a deliberately chosen icon is never overwritten.
+ */
 export const repairIcons = () => serial(repairIconsNow);
 
 async function repairIconsNow() {
@@ -470,7 +501,7 @@ async function commitNow(ref, patch, { review = false } = {}) {
    * the whole loop and everything under it disappear (see `forestOf`). Cheap to refuse here.
    */
   if (next.parent && wouldCycle(id, next.parent, list)) {
-    ui.notifications?.warn(t("attributes.cycleRefused"));
+    ui.notifications?.warn(_loc("PENTARYN_TIES.attributes.cycleRefused"));
     return fail("cycle");
   }
   /*
@@ -482,7 +513,7 @@ async function commitNow(ref, patch, { review = false } = {}) {
   if ("title" in next) {
     const clash = renameCollision(id, String(next.title ?? "").trim() || list[i].id, list);
     if (clash) {
-      ui.notifications?.warn(f("attributes.renameRefused", { title: clash.title, id: clash.id }));
+      ui.notifications?.warn(_loc("PENTARYN_TIES.attributes.renameRefused", { title: clash.title, id: clash.id }));
       return fail("collision", { existing: clash });
     }
   }
@@ -519,7 +550,7 @@ async function commitNow(ref, patch, { review = false } = {}) {
   } else merged.touched = clampTouched([...list[i].touched, ...diff]);
   list[i] = merged;
   if (!(await saveRegistry(list))) return fail("writeFailed");
-  return { ok: true, entry: merged, ...(diff.length ? { changed: diff } : { unchanged: true }) };
+  return { ok: true, entry: merged, changed: diff }; // diff is non-empty here: the empty case returned above
 }
 
 /* -------------------------------------------- */
@@ -596,7 +627,7 @@ async function writeSelection(ids) {
     await game.user.setFlag(MODULE, SELECTION_FLAG, ids);
     return { ok: true, ids };
   } catch (err) {
-    console.warn(`${MODULE} | selection write failed`, err);
+    log.warn(`selection write failed`, err);
     return fail("writeFailed");
   }
 }
@@ -687,12 +718,8 @@ export function derivedFor(actor, kindResolver = null) {
 }
 
 const flagList = (actor, key) => {
-  try {
-    const raw = actor?.getFlag(MODULE, key);
-    return Array.isArray(raw) ? raw : [];
-  } catch {
-    return [];
-  }
+  const raw = readFlag(actor, MODULE, key);
+  return Array.isArray(raw) ? raw : [];
 };
 
 /** The effective id list for one actor: derived ∪ authored, minus suppressed. */
@@ -734,7 +761,7 @@ export function describeAttribute(id) {
   return {
     id,
     title: derivedTitle(ns, slug),
-    category: ns ? f("attributes.derivedCategory", { ns: t(`attributes.ns.${ns}`) }) : "",
+    category: ns ? _loc("PENTARYN_TIES.attributes.derivedCategory", { ns: _loc(NS_LABEL[ns] ?? `PENTARYN_TIES.attributes.ns.${ns}`) }) : "",
     icon: ns ? DERIVED_ICONS[ns] ?? CATEGORY_ICONS.default : CATEGORY_ICONS.default,
     // no entry means the GM has said nothing about it — and `source` must be null on BOTH branches
     // or a consumer sees an object one way and `undefined` the other
@@ -794,7 +821,7 @@ export function attributesOf(actor, kindResolver = null, { viewer = null } = {})
       : visibleAttributesFor({
           carried,
           registry: registry(),
-          beliefs: actor.getFlag?.(MODULE, "beliefs") ?? {},
+          beliefs: actor.getFlag?.(MODULE, BELIEFS_FLAG) ?? {},
           characterId: viewer?.id ?? "",
           isGM: false
         });
@@ -839,7 +866,7 @@ async function writeLinks(actor, { authored = null, off = null }) {
     await actor.update(data);
     return true;
   } catch (err) {
-    console.warn(`${MODULE} | attribute link write failed`, err);
+    log.warn(`attribute link write failed`, err);
     return false;
   }
 }
@@ -1013,11 +1040,7 @@ export function staleCarriers(ref) {
 
 /** Never throws — a setting can be unregistered when a hook fires early. */
 export function knowledge() {
-  try {
-    return readKnowledge(game.settings.get(MODULE, KNOWLEDGE_SETTING));
-  } catch {
-    return {};
-  }
+  return readKnowledge(setting(KNOWLEDGE_SETTING));
 }
 
 export const knowsOf = (character, attrId) => knowsAttribute(knowledge(), character?.id, attrId);
@@ -1032,13 +1055,16 @@ export const hasFailed = (character, attrId) => failedAttribute(knowledge(), cha
  */
 export async function setKnowledge(rows) {
   if (!game.user?.isGM || !rows?.length) return false;
-  const all = knowledge();
-  for (const { characterId, attrId, failed = false, via = "roll", when = 0, pending = false, overFailed = false } of rows) {
-    if (!characterId || !attrId) continue;
-    all[characterId] ??= {};
-    all[characterId][attrId] = { when, failed, via, pending, ...(overFailed ? { overFailed: true } : {}) };
-  }
-  await game.settings.set(MODULE, KNOWLEDGE_SETTING, all);
+  // queued (ties-30): the read happens inside the queue, so a concurrent write is never lost
+  await knowledgeStore().write(raw => {
+    const all = readKnowledge(raw);
+    for (const { characterId, attrId, failed = false, via = "roll", when = 0, pending = false, overFailed = false } of rows) {
+      if (!characterId || !attrId) continue;
+      all[characterId] ??= {};
+      all[characterId][attrId] = { when, failed, via, pending, ...(overFailed ? { overFailed: true } : {}) };
+    }
+    return all;
+  });
   return true;
 }
 
@@ -1054,15 +1080,21 @@ export async function setKnowledge(rows) {
  */
 export async function clearKnowledge(characterId, attrId) {
   if (!game.user?.isGM || !characterId || !attrId) return false;
-  const all = knowledge();
-  const row = all[characterId]?.[attrId];
-  if (row?.via !== "shared") return false;
-  // a share laid over a failed roll gives the failure back — forgetting is not a free re-roll
-  if (row.overFailed) all[characterId][attrId] = { when: row.when, failed: true, via: "roll", pending: false };
-  else delete all[characterId][attrId];
-  if (!Object.keys(all[characterId]).length) delete all[characterId];
-  await game.settings.set(MODULE, KNOWLEDGE_SETTING, all);
-  return true;
+  if (knowledge()[characterId]?.[attrId]?.via !== "shared") return false;
+  // queued (ties-30), and re-checked inside the queue: a write that landed first decides
+  let cleared = false;
+  await knowledgeStore().write(raw => {
+    const all = readKnowledge(raw);
+    const row = all[characterId]?.[attrId];
+    if (row?.via !== "shared") return all;
+    // a share laid over a failed roll gives the failure back — forgetting is not a free re-roll
+    if (row.overFailed) all[characterId][attrId] = { when: row.when, failed: true, via: "roll", pending: false };
+    else delete all[characterId][attrId];
+    if (!Object.keys(all[characterId]).length) delete all[characterId];
+    cleared = true;
+    return all;
+  });
+  return cleared;
 }
 
 /**
@@ -1097,7 +1129,7 @@ export async function grantKnowledge(character, ref, { withParents = false } = {
   try {
     await setKnowledge(ids.map(id => ({ characterId: character.id, attrId: id, via: "grant", when: now })));
   } catch (err) {
-    console.warn(`${MODULE} | knowledge grant failed`, err);
+    log.warn(`knowledge grant failed`, err);
     return fail("writeFailed");
   }
   return { ok: true, ids };
@@ -1112,6 +1144,34 @@ export const describeRef = ref => {
   const id = resolveAttribute(ref);
   return id ? describeAttribute(id) : null;
 };
+
+/**
+ * **Mark as learned** (ties-9) — hand a character an attribute's lore rows as granted cards, no roll:
+ * the GM's "Mark as learned" button on the Attributes tab, as a function. Each card is keyed
+ * `attr:<attrId>:<loreId>` and titled `<entry> — <row label>`, exactly as the cascade would file it,
+ * because the Known tab and the Look window join on that key and that source.
+ *
+ * @param {Actor} character
+ * @param {*} attrRef  an attribute id or title
+ * @param {"all"|string|string[]} [loreIds]  which rows (default: every row)
+ * @returns {Promise<{ ok: true, keys: string[] } | { ok: false, reason }>}
+ */
+export async function markLearned(character, attrRef, loreIds = "all", { now = Date.now() } = {}) {
+  if (!game.user?.isGM) return fail("notGM");
+  if (!character) return fail("notFound");
+  const attrId = resolveAttribute(attrRef);
+  if (!attrId) return fail("notFound");
+  const entry = describeAttribute(attrId);
+  const wanted = loreIds === "all" ? null : new Set([].concat(loreIds));
+  const rows = (entry?.lore ?? []).filter(r => !wanted || wanted.has(r.id));
+  if (!rows.length) return fail("noLore");
+  const granted = foundry.utils.deepClone(character.getFlag(MODULE, GRANTED_FLAG) ?? {});
+  for (const row of rows) {
+    granted[attrFactKey(attrId, row.id)] = { text: row.text, when: now, icon: entry.icon, source: `${entry.title} — ${row.label}` };
+  }
+  await character.update({ [`flags.${MODULE}.${GRANTED_FLAG}`]: granted });
+  return { ok: true, keys: rows.map(r => attrFactKey(attrId, r.id)) };
+}
 
 /**
  * Everything a character knows of the world, as display records — the world-knowledge surface.

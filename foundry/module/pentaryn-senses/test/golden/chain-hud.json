@@ -1,0 +1,89 @@
+{
+  "chained": {
+    "tag": "div",
+    "class": "col right",
+    "children": [
+      {
+        "tag": "button",
+        "class": "control-icon ps-chain-btn",
+        "type": "button",
+        "data": {
+          "tooltip": "Break chain"
+        },
+        "attrs": {
+          "aria-label": "Break chain"
+        },
+        "html": "<i class=\"fa-solid fa-link-slash\"></i>"
+      }
+    ]
+  },
+  "anchorEnd": [
+    "Break chain"
+  ],
+  "breakClick": {
+    "prevented": true,
+    "stopped": true,
+    "renders": 1,
+    "calls": [
+      {
+        "op": "updateEmbedded",
+        "scene": "scnCellar0000001",
+        "type": "Token",
+        "updates": [
+          {
+            "_id": "tokHulk000000001",
+            "flags.pentaryn-senses.chain": "<_del>"
+          }
+        ]
+      },
+      {
+        "op": "notify",
+        "level": "info",
+        "message": "The chain on Hulk breaks."
+      }
+    ]
+  },
+  "noTargets": 0,
+  "twoTargets": 0,
+  "otherSceneTarget": 0,
+  "selfTarget": 0,
+  "oneTarget": {
+    "tag": "div",
+    "class": "col right",
+    "children": [
+      {
+        "tag": "button",
+        "class": "control-icon ps-chain-btn",
+        "type": "button",
+        "data": {
+          "tooltip": "Chain to Stake"
+        },
+        "attrs": {
+          "aria-label": "Chain to Stake"
+        },
+        "html": "<i class=\"fa-solid fa-link\"></i>"
+      }
+    ]
+  },
+  "linkClick": {
+    "renders": 1,
+    "calls": [
+      {
+        "op": "update",
+        "documentName": "Token",
+        "uuid": "Scene.scnCellar0000001.Token.tokHulk000000001",
+        "changes": {
+          "flags.pentaryn-senses.chain": {
+            "anchor": "tokStake00000001"
+          }
+        }
+      },
+      {
+        "op": "notify",
+        "level": "info",
+        "message": "Hulk is chained to Stake."
+      }
+    ]
+  },
+  "noColumn": 0
+}

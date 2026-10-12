@@ -1,0 +1,27 @@
+[
+  {
+    "level": "warn",
+    "text": "pentaryn-ties | reverse-side relay not registered",
+    "err": "zz socket refused"
+  },
+  {
+    "level": "warn",
+    "text": "pentaryn-ties | study conduit not registered",
+    "err": "zz socket refused"
+  },
+  {
+    "level": "error",
+    "text": "pentaryn-ties | ready step failed: publish api",
+    "err": "Cannot add property ties, object is not extensible"
+  },
+  {
+    "level": "error",
+    "text": "pentaryn-ties | ready step failed: migrate legacy flags",
+    "err": "zz setFlag refused"
+  },
+  {
+    "level": "error",
+    "text": "pentaryn-ties | ready step failed: create macro",
+    "err": "zz macro refused"
+  }
+]

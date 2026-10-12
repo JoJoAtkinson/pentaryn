@@ -93,7 +93,8 @@ game.pentaryn.feedback.open({ category: "feature", text: "…" }) // the dialog,
 await game.pentaryn.feedback.list({ status: "open" })           // GM
 await game.pentaryn.feedback.get({ id: "abc123" })              // GM, prefix ok
 await game.pentaryn.feedback.resolve({ id: "abc123", status: "triaged", note: "…" })
-game.pentaryn.feedback.inspect(game.user)                       // my queue and recent actions
+await game.pentaryn.feedback.inspect(game.user)                 // my queue, reports (GM) and recent actions
+await game.pentaryn.inspect("Talo")                           // .feedback: Talo's players, their queue and reports
 ```
 
 ## Known gaps

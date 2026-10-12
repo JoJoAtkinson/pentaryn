@@ -306,3 +306,12 @@ def test_every_doc_path_a_module_cites_exists():
 @pytest.mark.xfail(strict=True, reason="Wave 7 restart batch edits walls' module.json description")
 def test_the_pending_doc_paths_are_fixed():
     assert not (_unresolved_doc_paths() & _PENDING)
+
+
+def test_a_bare_namespace_prefix_literal_is_not_a_key(tmp_path, capsys):
+    """`k.startsWith("DEMO.")` names the namespace, not a key: no key ends with a dot.
+    ties' frozen i18n test holds exactly that line; the gate read it as a missing key."""
+    body = ('export const label = "DEMO.title";\n'
+            'export const ours = k => k.startsWith("DEMO.");\n')
+    assert modules._check_i18n(i18n_module(tmp_path, body)) == 0
+    assert "not in" not in capsys.readouterr().out

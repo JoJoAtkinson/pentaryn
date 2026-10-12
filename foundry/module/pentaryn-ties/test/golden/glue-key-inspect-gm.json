@@ -1,0 +1,26 @@
+{
+  "out": true,
+  "calls": [
+    {
+      "op": "ChatMessage.create",
+      "data": {
+        "content": "<p class=\"pt-study-stub\">ZZ Caven studies ZZ Brakka.</p>",
+        "speaker": {
+          "alias": "ZZ Caven",
+          "actor": "zzPc000000000001"
+        }
+      }
+    }
+  ],
+  "console": [],
+  "scoping": {
+    "zzPc000000000001": {
+      "count": 1,
+      "anchor": {
+        "x": 100,
+        "y": 100
+      },
+      "sceneId": "zzScene000000001"
+    }
+  }
+}

@@ -1,0 +1,214 @@
+{
+  "{\"kind\":\"light\",\"config\":{\"dim\":10}}": {
+    "text": [
+      "replace (by marker) — dry run: 1 ok, 0 failed",
+      "s1/m1 light: at 250,250 (centre); creates AmbientLight (dim 10 ft)",
+      "remaining: s1=2",
+      "Nothing was written. Repeat the identical call without dryRun to apply."
+    ],
+    "row": {
+      "index": 0,
+      "id": null,
+      "label": "s1/m1",
+      "kind": "light",
+      "ok": true,
+      "sceneId": "s1",
+      "markerId": "m1",
+      "at": "250,250",
+      "placement": "centre",
+      "footprint": null,
+      "lockSize": false,
+      "hidden": false,
+      "creates": [
+        "AmbientLight (dim 10 ft)"
+      ],
+      "warnings": [],
+      "defaults": []
+    },
+    "remaining": {
+      "s1": 2
+    }
+  },
+  "{\"kind\":\"tile\",\"src\":\"a.webp\"}": {
+    "text": [
+      "replace (by marker) — dry run: 1 ok, 0 failed",
+      "s1/m1 tile: at 200,200 (centred), footprint 1x1; creates Tile",
+      "remaining: s1=2",
+      "Nothing was written. Repeat the identical call without dryRun to apply."
+    ],
+    "row": {
+      "index": 0,
+      "id": null,
+      "label": "s1/m1",
+      "kind": "tile",
+      "ok": true,
+      "sceneId": "s1",
+      "markerId": "m1",
+      "at": "200,200",
+      "placement": "centred",
+      "footprint": "1x1",
+      "lockSize": false,
+      "hidden": false,
+      "creates": [
+        "Tile"
+      ],
+      "warnings": [],
+      "defaults": []
+    },
+    "remaining": {
+      "s1": 2
+    }
+  },
+  "{\"kind\":\"none\",\"reason\":\"r\"}": {
+    "text": [
+      "replace (by marker) — dry run: 1 ok, 0 failed",
+      "s1/m1 none: nothing (none: r)",
+      "remaining: s1=2",
+      "Nothing was written. Repeat the identical call without dryRun to apply."
+    ],
+    "row": {
+      "index": 0,
+      "id": null,
+      "label": "s1/m1",
+      "kind": "none",
+      "ok": true,
+      "sceneId": "s1",
+      "markerId": "m1",
+      "at": null,
+      "placement": null,
+      "footprint": null,
+      "lockSize": false,
+      "hidden": false,
+      "creates": [],
+      "warnings": [],
+      "defaults": [],
+      "reason": "r"
+    },
+    "remaining": {
+      "s1": 2
+    }
+  },
+  "{\"kind\":\"note\",\"name\":\"N\",\"html\":\"<p>x</p>\"}": {
+    "text": [
+      "replace (by marker) — dry run: 1 ok, 0 failed",
+      "s1/m1 note: at 250,250 (centre); creates JournalEntry \"N\"; Note",
+      "remaining: s1=2",
+      "Nothing was written. Repeat the identical call without dryRun to apply."
+    ],
+    "row": {
+      "index": 0,
+      "id": null,
+      "label": "s1/m1",
+      "kind": "note",
+      "ok": true,
+      "sceneId": "s1",
+      "markerId": "m1",
+      "at": "250,250",
+      "placement": "centre",
+      "footprint": null,
+      "lockSize": false,
+      "hidden": false,
+      "creates": [
+        "JournalEntry \"N\"",
+        "Note"
+      ],
+      "warnings": [],
+      "defaults": []
+    },
+    "remaining": {
+      "s1": 2
+    }
+  },
+  "{\"kind\":\"light\",\"config\":{\"dim\":10,\"bright\":5,\"color\":\"#9fd3ff\"},\"hidden\":true}": {
+    "text": [
+      "replace (by marker) — dry run: 1 ok, 0 failed",
+      "s1/m1 light: at 250,250 (centre), hidden; creates AmbientLight (dim 10 ft, bright 5 ft, #9fd3ff)",
+      "remaining: s1=2",
+      "Nothing was written. Repeat the identical call without dryRun to apply."
+    ],
+    "row": {
+      "index": 0,
+      "id": null,
+      "label": "s1/m1",
+      "kind": "light",
+      "ok": true,
+      "sceneId": "s1",
+      "markerId": "m1",
+      "at": "250,250",
+      "placement": "centre",
+      "footprint": null,
+      "lockSize": false,
+      "hidden": true,
+      "creates": [
+        "AmbientLight (dim 10 ft, bright 5 ft, #9fd3ff)"
+      ],
+      "warnings": [],
+      "defaults": []
+    },
+    "remaining": {
+      "s1": 2
+    }
+  },
+  "{\"kind\":\"tile\",\"src\":\"b.webp\",\"width\":2,\"height\":3}": {
+    "text": [
+      "replace (by marker) — dry run: 1 ok, 0 failed",
+      "s1/m1 tile: at 150,100 (centred), footprint 2x3; creates Tile",
+      "remaining: s1=2",
+      "Nothing was written. Repeat the identical call without dryRun to apply."
+    ],
+    "row": {
+      "index": 0,
+      "id": null,
+      "label": "s1/m1",
+      "kind": "tile",
+      "ok": true,
+      "sceneId": "s1",
+      "markerId": "m1",
+      "at": "150,100",
+      "placement": "centred",
+      "footprint": "2x3",
+      "lockSize": false,
+      "hidden": false,
+      "creates": [
+        "Tile"
+      ],
+      "warnings": [],
+      "defaults": []
+    },
+    "remaining": {
+      "s1": 2
+    }
+  },
+  "{\"kind\":\"note\",\"name\":\"N2\",\"html\":\"\",\"light\":{\"dim\":5},\"icon\":\"i.webp\"}": {
+    "text": [
+      "replace (by marker) — dry run: 1 ok, 0 failed",
+      "s1/m1 note: at 250,250 (centre); creates JournalEntry \"N2\"; Note; AmbientLight at the pin (dim 5 ft)",
+      "remaining: s1=2",
+      "Nothing was written. Repeat the identical call without dryRun to apply."
+    ],
+    "row": {
+      "index": 0,
+      "id": null,
+      "label": "s1/m1",
+      "kind": "note",
+      "ok": true,
+      "sceneId": "s1",
+      "markerId": "m1",
+      "at": "250,250",
+      "placement": "centre",
+      "footprint": null,
+      "lockSize": false,
+      "hidden": false,
+      "creates": [
+        "JournalEntry \"N2\"",
+        "Note",
+        "AmbientLight at the pin (dim 5 ft)"
+      ],
+      "warnings": [],
+      "defaults": []
+    },
+    "remaining": {
+      "s1": 2
+    }
+  }
+}

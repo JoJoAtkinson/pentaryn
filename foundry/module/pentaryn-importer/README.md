@@ -76,7 +76,9 @@ Every assertion failure names the actor slug, item action, activity id, path, ex
 as a permanent toast and a `console.error`.
 
 **For an LLM.** Always run `{ dryRun: true }` first and read `created`/`updated`/`skipped`. A thrown
-`PentarynAbort` means nothing was written: fix the cause and re-run. A thrown
+`PentarynAbort` means nothing was written: fix the cause and re-run; its `code` (1.1.1) is
+`NOT_FOUND` for a missing file, `NOT_GM`, `BAD_ARGS`, `CONFLICT` (already running), `TIMEOUT`, else
+`REFUSED` (gate, lint, malformed entry, other fetch failures). A thrown
 `PentarynAssertionError` means a partial batch: report it, do not retry blindly. A second call
 while one is running rejects at once with `PentarynAbort` ("An import is already running"): await
 the first, then retry.

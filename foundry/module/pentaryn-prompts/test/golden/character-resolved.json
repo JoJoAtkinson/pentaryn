@@ -1,0 +1,69 @@
+{
+  "docs": {
+    "species": "Elf",
+    "background": "Sage",
+    "cls": "Wizard",
+    "subclass": "Evoker"
+  },
+  "level": 3,
+  "abilities": {
+    "str": 8,
+    "dex": 14,
+    "con": 13,
+    "int": 15,
+    "wis": 12,
+    "cha": 10
+  },
+  "size": "sm",
+  "warnings": [],
+  "planWarnings": [],
+  "defaults": [
+    "Amulet: attunement set to required (its text requires attunement)"
+  ],
+  "spells": {
+    "prepared": [
+      "Magic Missile"
+    ],
+    "book": [
+      "Fire Bolt"
+    ]
+  },
+  "gear": [
+    {
+      "spec": {
+        "name": "Book"
+      },
+      "src": "Book",
+      "data": null
+    },
+    {
+      "spec": {
+        "data": {
+          "name": "Amulet",
+          "type": "equipment",
+          "system": {
+            "description": {
+              "value": "requires attunement"
+            }
+          }
+        },
+        "quantity": 1
+      },
+      "src": null,
+      "data": {
+        "name": "Amulet",
+        "type": "equipment",
+        "system": {
+          "description": {
+            "value": "requires attunement"
+          },
+          "attunement": "required"
+        }
+      }
+    }
+  ],
+  "starting": {
+    "class": "B",
+    "background": "A"
+  }
+}

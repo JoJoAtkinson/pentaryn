@@ -1,0 +1,20 @@
+{
+  "badges": "listBadges",
+  "cardFor": "cardFor",
+  "contract": "string",
+  "describe": "function",
+  "destinations": "destinations",
+  "inspect": "inspect",
+  "link": "link",
+  "lookAt": "lookAt",
+  "open": "open",
+  "redraw": "drawBadges",
+  "settings": "settings",
+  "snapshot": "snapshot",
+  "spreadArrival": "spreadArrival",
+  "teleportParty": "teleportParty",
+  "trace": "trace",
+  "uninstall": "uninstall",
+  "unlink": "unlink",
+  "version": "string"
+}

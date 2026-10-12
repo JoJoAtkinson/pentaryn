@@ -1,0 +1,106 @@
+[
+  {
+    "w": {
+      "level": 0,
+      "abilities": {
+        "str": 1
+      }
+    },
+    "code": "BAD_SPEC",
+    "message": "BAD_SPEC: character: 6 problems — (1) level must be 1-20; (2) needs a name; (3) needs class; (4) needs species; (5) needs background; (6) abilities: missing or non-integer: dex, con, int, wis, cha"
+  },
+  {
+    "w": {
+      "name": "A",
+      "class": "Wizzard",
+      "species": "Elf",
+      "background": "Sage",
+      "abilities": {
+        "str": 8,
+        "dex": 14,
+        "con": 13,
+        "int": 15,
+        "wis": 12,
+        "cha": 10
+      }
+    },
+    "code": "BAD_SPEC",
+    "message": "BAD_SPEC: character: class: no class \"Wizzard\" in dnd-players-handbook.classes, dnd5e.classes24 — nearest: \"Wizard\""
+  },
+  {
+    "w": {
+      "name": "B",
+      "class": "Wizard",
+      "species": "Elf",
+      "background": "Sage",
+      "abilities": {
+        "str": 8,
+        "dex": 14,
+        "con": 13,
+        "int": 15,
+        "wis": 12,
+        "cha": 10
+      },
+      "level": 3
+    },
+    "code": "BAD_SPEC",
+    "message": "BAD_SPEC: character: subclass: Wizard 3 needs a subclass (chosen at level 3)"
+  },
+  {
+    "w": {
+      "name": "C",
+      "class": "Wizard",
+      "subclass": "Champion",
+      "species": "Elf",
+      "background": "Sage",
+      "abilities": {
+        "str": 8,
+        "dex": 14,
+        "con": 13,
+        "int": 15,
+        "wis": 12,
+        "cha": 10
+      },
+      "level": 3,
+      "spells": [
+        "Cure Wounds",
+        "Magic Misile"
+      ],
+      "items": [
+        "Grappling hook",
+        {
+          "data": {
+            "name": "x"
+          }
+        }
+      ],
+      "startingEquipment": "C",
+      "choices": {
+        "Bogus: Thing": 1
+      }
+    },
+    "code": "BAD_SPEC",
+    "message": "BAD_SPEC: character: 7 problems — (1) subclass: Champion is a fighter subclass, not Wizard; (2) choices: unknown key(s) \"Bogus: Thing\"; known for Wizard 3, Elf, Sage: Size, Subclass@3; (3) spells: Cure Wounds is not on the Wizard spell list (allowOffList: true if a feature grants it); (4) spells: no spell \"Magic Misile\" in dnd-players-handbook.spells, dnd5e.spells24 — nearest: \"Magic Missile\"; (5) items: no item \"Grappling hook\" in dnd-players-handbook.equipment, dnd5e.equipment24; or pass {data: {name, type, system}} for a custom item; (6) items[].data needs name and type; (7) startingEquipment: give \"A\" (the book's gear), \"B\" (its gold instead), \"none\", or {class, background}; got \"C\""
+  },
+  {
+    "w": {
+      "name": "D",
+      "class": "Wizard",
+      "species": "Elfish",
+      "background": "Sage",
+      "abilities": {
+        "str": 8,
+        "dex": 14,
+        "con": 13,
+        "int": 15,
+        "wis": 12,
+        "cha": 10
+      },
+      "choices": {
+        "Elf: Thing": 1
+      }
+    },
+    "code": "BAD_SPEC",
+    "message": "BAD_SPEC: character: 2 problems — (1) species: no species \"Elfish\" in dnd-players-handbook.origins, dnd5e.origins24 — nearest: \"Elf\"; (2) choices: unknown key(s) \"Elf: Thing\" — unless they belong to the species above, which did not resolve; known so far: "
+  }
+]

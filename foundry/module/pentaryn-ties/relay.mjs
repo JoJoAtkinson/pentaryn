@@ -53,16 +53,15 @@
  * stands alone — the next Save from anyone on that pair completes it.
  */
 
-import { MODULE, read, write, clampStance, clampStrength, clampNotes, mayWrite, canReach } from "./ties-api.mjs";
+import { read, write, canReach } from "./ties-adapter.mjs";
+import { mayWrite } from "./settings.mjs";
+import { seedReverse, MODULE, clampStance, clampStrength } from "./ties-core.mjs";
+import { listen, send } from "./socket-adapter.mjs";
+import { makeLog } from "./lib/log.mjs";
 
-const CHANNEL = `module.${MODULE}`;
+const log = makeLog(MODULE);
+
 const MIRROR = "mirror-reverse";
-
-/** Is this client the one GM that should act on relayed writes? */
-const isApplyingGM = () => game.user?.isGM === true && game.users?.activeGM?.id === game.user.id;
-
-/** Only a field with nothing in it is ours to fill. */
-const blank = v => !String(v ?? "").trim();
 
 /**
  * Ask a GM to run the reverse write for a tie the sender has just saved on their own side.
@@ -70,12 +69,16 @@ const blank = v => !String(v ?? "").trim();
  * is no GM online to ask.
  */
 export function requestMirror({ source, target }) {
-  if (!source || !target || source.id === target.id) return false;
-  if (target.isOwner) return false; // they can write it themselves; no need to ask
-  if (!game.users?.activeGM) return false; // nobody home — their own side still saved
+  const skip = reason => {
+    log.debug$?.("mirror not requested", { reason, sourceId: source?.id ?? null, targetId: target?.id ?? null });
+    return false;
+  };
+  if (!source || !target || source.id === target.id) return skip("no pair");
+  if (target.isOwner) return skip("target owned: written directly"); // they can write it themselves; no need to ask
+  if (!game.users?.activeGM) return skip("no active GM"); // nobody home — their own side still saved
   // ids only: everything else is re-derived by the GM from documents it can see itself
   // no sender id: the server stamps the authenticated one on for us
-  game.socket.emit(CHANNEL, { action: MIRROR, sourceId: source.id, targetId: target.id });
+  send({ action: MIRROR, sourceId: source.id, targetId: target.id });
   return true;
 }
 
@@ -93,16 +96,17 @@ async function applyMirror(payload, senderId) {
   const user = game.users?.get(senderId);
   const source = game.actors?.get(payload?.sourceId);
   const target = game.actors?.get(payload?.targetId);
-  if (!user || !source || !target || source.id === target.id) return;
+  const drop = reason => log.debug$?.("relay dropped", { reason, senderId, sourceId: payload?.sourceId ?? null, targetId: payload?.targetId ?? null });
+  if (!user || !source || !target || source.id === target.id) return drop("unknown sender, actor or self pair");
 
   // the sender must actually own the side they claim to be writing from
   if (source.testUserPermission(user, "OWNER") !== true) {
-    console.warn(`${MODULE} | relay refused: ${user.name} does not own ${source.name}`);
+    log.warn(`relay refused: ${user.name} does not own ${source.name}`);
     return;
   }
   // and the GM's own kill-switch has to mean what its hint promises
-  if (!mayWrite(user)) return;
-  if (!target.isOwner) return; // even the GM cannot write what it does not own
+  if (!mayWrite(user)) return drop("playerAccess");
+  if (!target.isOwner) return drop("target not owned"); // even the GM cannot write what it does not own
 
   /*
    * A player may write any flag content they like onto their own actor, including a tie
@@ -115,13 +119,13 @@ async function applyMirror(payload, senderId) {
    * two live clients before it was changed. Both halves now share `canReach`.
    */
   if (!canReach(user, target)) {
-    console.warn(`${MODULE} | relay refused: ${user.name} cannot reach ${target.name}`);
+    log.warn(`relay refused: ${user.name} cannot reach ${target.name}`);
     return;
   }
 
   // the forward text comes off the actor, never off the wire
   const mine = read(source).find(x => x.id === target.id);
-  if (!mine) return; // they did not actually save their own side; nothing to mirror
+  if (!mine) return drop("no forward row"); // they did not actually save their own side; nothing to mirror
 
   const theirs = read(target);
   const rev = theirs.find(x => x.id === source.id);
@@ -139,23 +143,15 @@ async function applyMirror(payload, senderId) {
     return;
   }
 
-  // fill the gaps only; anything already written on their side is theirs
-  const word = blank(rev.word) ? mine.word : rev.word;
-  const notes = blank(rev.notes) ? clampNotes(mine.notes) : rev.notes;
-  if (rev.word === word && rev.notes === notes) return;
+  // fill the gaps only; anything already written on their side is theirs (`seedReverse`, ties-core)
+  const { word, notes, changed } = seedReverse(rev, mine);
+  if (!changed) return;
   rev.word = word;
   rev.notes = notes;
   await write(target, theirs);
 }
 
+/** The relay's one action, on the module socket; only the active GM applies it. */
 export function registerRelay() {
-  game.socket.on(CHANNEL, async (payload, senderId) => {
-    if (payload?.action !== MIRROR) return;
-    if (!isApplyingGM()) return;
-    try {
-      await applyMirror(payload, senderId);
-    } catch (err) {
-      console.error(`${MODULE} | relayed mirror write failed`, err);
-    }
-  });
+  listen({ [MIRROR]: { run: applyMirror } }, { failed: err => log.error(`relayed mirror write failed`, err) });
 }

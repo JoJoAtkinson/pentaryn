@@ -1,0 +1,53 @@
+{
+  "actor": [
+    "zzNpc00000000001"
+  ],
+  "byId": [
+    {
+      "id": "zzNpc00000000001",
+      "name": "ZZ Brakka",
+      "img": "icons/zz/zzNpc00000000001.webp",
+      "missing": false,
+      "word": "debtor",
+      "notes": "",
+      "stance": -1,
+      "strength": 4
+    }
+  ],
+  "byName": [
+    {
+      "id": "zzNpc00000000001",
+      "name": "ZZ Brakka",
+      "img": "icons/zz/zzNpc00000000001.webp",
+      "missing": false,
+      "word": "debtor",
+      "notes": "",
+      "stance": -1,
+      "strength": 4
+    }
+  ],
+  "tokenPlaceable": [
+    {
+      "id": "zzNpc00000000001",
+      "name": "ZZ Brakka",
+      "img": "icons/zz/zzNpc00000000001.webp",
+      "missing": false,
+      "word": "debtor",
+      "notes": "",
+      "stance": -1,
+      "strength": 4
+    }
+  ],
+  "tokenDocument": [
+    {
+      "id": "zzNpc00000000001",
+      "name": "ZZ Brakka",
+      "img": "icons/zz/zzNpc00000000001.webp",
+      "missing": false,
+      "word": "debtor",
+      "notes": "",
+      "stance": -1,
+      "strength": 4
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "links": [
+    "details",
+    "ties",
+    "known",
+    "attributes"
+  ],
+  "sections": [
+    "details",
+    "ties",
+    "known",
+    "attributes"
+  ],
+  "seen": [
+    "preventDefault",
+    "stopPropagation"
+  ],
+  "tabGroups": {
+    "primary": "known"
+  },
+  "rootClass": "application sheet tab-known",
+  "active": [
+    "A:known",
+    "SECTION:known"
+  ]
+}

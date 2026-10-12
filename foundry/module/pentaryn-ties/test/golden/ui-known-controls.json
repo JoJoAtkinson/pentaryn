@@ -1,0 +1,533 @@
+{
+  "inventory": [
+    {
+      "nth": 0,
+      "tag": "DIV",
+      "className": "pt-summary",
+      "dataset": {
+        "action": "toggle",
+        "tooltip": "Click to open and write on this entry"
+      },
+      "events": [
+        "click",
+        "keydown"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "DIV",
+      "className": "pt-detail-wrap",
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn pt-kind-btn",
+      "dataset": {
+        "action": "kind",
+        "id": "zzNpc00000000001",
+        "tooltip": "GM: point this creature at the world actor that is its kind, so studying it teaches the kind rather than the individual."
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "SELECT",
+      "dataset": {
+        "action": "release",
+        "id": "zzNpc00000000001"
+      },
+      "events": [
+        "change"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "SELECT",
+      "className": "pt-known-category",
+      "dataset": {
+        "field": "category"
+      },
+      "events": [
+        "change"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "TEXTAREA",
+      "className": "pt-notes-text",
+      "dataset": {
+        "field": "notes"
+      },
+      "events": [
+        "input",
+        "blur"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn pt-lore-btn",
+      "dataset": {
+        "action": "lore",
+        "id": "zzNpc00000000001",
+        "lore": "l1",
+        "tooltip": "Roll Investigation against DC 7 to find out: zz typed label"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "action": "open",
+        "id": "zzNpc00000000001"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "action": "hide",
+        "id": "zzNpc00000000001"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-add-btn",
+      "dataset": {
+        "action": "known-add"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn pt-show-hidden",
+      "dataset": {
+        "action": "show-hidden"
+      },
+      "events": [
+        "click"
+      ]
+    }
+  ],
+  "rows": [
+    {
+      "nth": 0,
+      "tag": "DIV",
+      "className": "pt-summary",
+      "dataset": {
+        "action": "toggle",
+        "tooltip": "Click to open and write on this entry"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-summary",
+        "parent": "pt-row pt-open"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "DIV",
+      "className": "pt-summary",
+      "dataset": {
+        "action": "toggle",
+        "tooltip": "Click to open and write on this entry"
+      },
+      "type": "keydown",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-summary",
+        "parent": "pt-row"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "DIV",
+      "className": "pt-detail-wrap",
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-detail-wrap",
+        "parent": "pt-row",
+        "hidden": true
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn pt-kind-btn",
+      "dataset": {
+        "action": "kind",
+        "id": "zzNpc00000000001",
+        "tooltip": "GM: point this creature at the world actor that is its kind, so studying it teaches the kind rather than the individual."
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "DialogV2.prompt",
+          "title": "The kind of ZZ Brakka"
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-textbtn pt-kind-btn",
+        "parent": "pt-detail"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "SELECT",
+      "dataset": {
+        "action": "release",
+        "id": "zzNpc00000000001"
+      },
+      "type": "change",
+      "calls": [
+        {
+          "op": "update",
+          "documentName": "Actor",
+          "uuid": "Actor.zzKind0000000001",
+          "changes": {
+            "flags.pentaryn-ties.beliefs.zzPc000000000001.kind": {
+              "text": "— Studied (Religion) —\nGrey.\nNothing about it strikes you as proof against anything.",
+              "tier": 25,
+              "total": null,
+              "when": 1790000000000,
+              "delivered": 1790000000000,
+              "claim": null,
+              "sources": null,
+              "pass": null
+            }
+          }
+        },
+        {
+          "op": "update",
+          "documentName": "Actor",
+          "uuid": "Actor.zzPc000000000001",
+          "changes": {
+            "flags.pentaryn-ties.studied": {
+              "kind": {
+                "zzKind0000000001": {
+                  "when": 1790000000000
+                }
+              },
+              "lore": {}
+            },
+            "flags.pentaryn-ties.known": [
+              {
+                "id": "zzNpc00000000001",
+                "name": "ZZ Brakka",
+                "category": "sentient",
+                "notes": "Smells of salt.",
+                "imposter": null,
+                "hidden": false,
+                "when": 1700000000000
+              },
+              {
+                "id": "zzKind0000000001",
+                "name": "ZZ Ghoul",
+                "category": "beasts",
+                "notes": "",
+                "imposter": null,
+                "hidden": true,
+                "when": 1700000000001
+              }
+            ],
+            "flags.pentaryn-ties.granted": {
+              "kind:zzKind0000000001": {
+                "text": "— Studied (Religion) —\nGrey.\nNothing about it strikes you as proof against anything.",
+                "when": 1790000000000,
+                "icon": "icons/zz/zzKind0000000001.webp",
+                "source": "ZZ Ghoul"
+              },
+              "lore:zzNpc00000000001:l1": {
+                "text": "He owes the guild.",
+                "when": 1700000000000,
+                "icon": null,
+                "source": "Debts"
+              }
+            }
+          }
+        },
+        {
+          "op": "notify",
+          "level": "info",
+          "message": "ZZ Caven now knows a ZZ Ghoul to DC 25."
+        },
+        {
+          "op": "rerender"
+        }
+      ],
+      "console": [],
+      "after": {
+        "parent": "pt-release",
+        "value": ""
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "SELECT",
+      "className": "pt-known-category",
+      "dataset": {
+        "field": "category"
+      },
+      "type": "change",
+      "calls": [
+        {
+          "op": "update",
+          "documentName": "Actor",
+          "uuid": "Actor.zzPc000000000001",
+          "changes": {
+            "flags.pentaryn-ties.known": [
+              {
+                "id": "zzNpc00000000001",
+                "name": "ZZ Brakka",
+                "category": "beasts",
+                "notes": "Smells of salt.",
+                "imposter": null,
+                "hidden": false,
+                "when": 1700000000000
+              },
+              {
+                "id": "zzKind0000000001",
+                "name": "ZZ Ghoul",
+                "category": "beasts",
+                "notes": "",
+                "imposter": null,
+                "hidden": true,
+                "when": 1700000000001
+              }
+            ]
+          }
+        },
+        {
+          "op": "rerender"
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-known-category",
+        "parent": "pt-field",
+        "value": "beasts"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "TEXTAREA",
+      "className": "pt-notes-text",
+      "dataset": {
+        "field": "notes"
+      },
+      "type": "input",
+      "calls": [
+        {
+          "op": "update",
+          "documentName": "Actor",
+          "uuid": "Actor.zzPc000000000001",
+          "changes": {
+            "flags.pentaryn-ties.known": [
+              {
+                "id": "zzNpc00000000001",
+                "name": "ZZ Brakka",
+                "category": "beasts",
+                "notes": "zz typed notes",
+                "imposter": null,
+                "hidden": false,
+                "when": 1700000000000
+              },
+              {
+                "id": "zzKind0000000001",
+                "name": "ZZ Ghoul",
+                "category": "beasts",
+                "notes": "",
+                "imposter": null,
+                "hidden": true,
+                "when": 1700000000001
+              }
+            ]
+          }
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-notes-text",
+        "parent": "pt-field pt-field-notes",
+        "value": "zz typed notes"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "TEXTAREA",
+      "className": "pt-notes-text",
+      "dataset": {
+        "field": "notes"
+      },
+      "type": "blur",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-notes-text",
+        "parent": "pt-field pt-field-notes",
+        "value": "zz typed notes"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn pt-lore-btn",
+      "dataset": {
+        "action": "lore",
+        "id": "zzNpc00000000001",
+        "lore": "l1",
+        "tooltip": "Roll Investigation against DC 7 to find out: zz typed label"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "DialogV2.prompt",
+          "title": "Study: zz typed label"
+        },
+        {
+          "op": "rerender"
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-textbtn pt-lore-btn"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "action": "open",
+        "id": "zzNpc00000000001"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "sheet.render",
+          "actor": "zzNpc00000000001",
+          "force": true,
+          "tab": "details"
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-textbtn",
+        "parent": "pt-detail-actions"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "action": "hide",
+        "id": "zzNpc00000000001"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "update",
+          "documentName": "Actor",
+          "uuid": "Actor.zzPc000000000001",
+          "changes": {
+            "flags.pentaryn-ties.known": [
+              {
+                "id": "zzNpc00000000001",
+                "name": "ZZ Brakka",
+                "category": "beasts",
+                "notes": "zz typed notes",
+                "imposter": null,
+                "hidden": true,
+                "when": 1700000000000
+              },
+              {
+                "id": "zzKind0000000001",
+                "name": "ZZ Ghoul",
+                "category": "beasts",
+                "notes": "",
+                "imposter": null,
+                "hidden": true,
+                "when": 1700000000001
+              }
+            ]
+          }
+        },
+        {
+          "op": "rerender"
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-textbtn",
+        "parent": "pt-detail-actions"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-add-btn",
+      "dataset": {
+        "action": "known-add"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "notify",
+          "level": "info",
+          "message": "Nobody left to add — everyone you could name is already on this list."
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-add-btn",
+        "parent": "pt-add-bar"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn pt-show-hidden",
+      "dataset": {
+        "action": "show-hidden"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "rerender"
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-textbtn pt-show-hidden",
+        "parent": "pentaryn-ties pentaryn-known"
+      }
+    }
+  ]
+}

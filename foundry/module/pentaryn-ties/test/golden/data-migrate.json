@@ -1,0 +1,86 @@
+{
+  "bootMigration": [
+    {
+      "op": "update",
+      "documentName": "Actor",
+      "uuid": "Actor.zzLegacy00000001",
+      "changes": {
+        "flags.pentaryn-ties.ties": [
+          {
+            "id": "zzActorA00000001",
+            "word": "old",
+            "notes": "",
+            "stance": 0,
+            "strength": 3
+          }
+        ]
+      }
+    },
+    {
+      "op": "update",
+      "documentName": "Actor",
+      "uuid": "Actor.zzLegacy00000001",
+      "changes": {
+        "flags.world.-=ties": null
+      }
+    }
+  ],
+  "bootWarnings": [
+    {
+      "level": "warn",
+      "text": "pentaryn-ties | ZZ Legacy Both: legacy flags.world.ties left in place — module data already present. Merge by hand, then unsetFlag(\"world\",\"ties\")."
+    },
+    {
+      "level": "log",
+      "text": "pentaryn-ties | migrated ties for 1 actor(s) from flags.world"
+    }
+  ],
+  "player": {
+    "moved": 0
+  },
+  "label": "re-run",
+  "out": {
+    "moved": 0
+  },
+  "calls": [],
+  "console": [
+    {
+      "level": "warn",
+      "text": "pentaryn-ties | ZZ Legacy Both: legacy flags.world.ties left in place — module data already present. Merge by hand, then unsetFlag(\"world\",\"ties\")."
+    }
+  ],
+  "after": {
+    "legacy": {
+      "world": {},
+      "pentaryn-ties": {
+        "ties": [
+          {
+            "id": "zzActorA00000001",
+            "word": "old",
+            "notes": "",
+            "stance": 0,
+            "strength": 3
+          }
+        ]
+      }
+    },
+    "both": {
+      "world": {
+        "ties": [
+          {
+            "id": "zzActorA00000001",
+            "word": "old"
+          }
+        ]
+      },
+      "pentaryn-ties": {
+        "ties": [
+          {
+            "id": "zzActorB00000001",
+            "word": "new"
+          }
+        ]
+      }
+    }
+  }
+}

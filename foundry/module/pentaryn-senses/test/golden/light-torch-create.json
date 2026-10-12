@@ -1,0 +1,135 @@
+{
+  "noActivities": {
+    "value": true,
+    "calls": [
+      {
+        "op": "update",
+        "documentName": "Item",
+        "uuid": "Actor.actHero000000001.Item.itmNewTorch00001",
+        "changes": {
+          "system.activities.psLightToggle000": {
+            "_id": "psLightToggle000",
+            "type": "utility",
+            "name": "Light",
+            "img": "icons/sundries/lights/torch-brown-lit.webp",
+            "activation": {
+              "type": "action",
+              "value": 1,
+              "condition": "",
+              "override": false
+            },
+            "consumption": {
+              "scaling": {
+                "allowed": false,
+                "max": ""
+              },
+              "spellSlot": false,
+              "targets": []
+            },
+            "duration": {
+              "units": "inst",
+              "concentration": false,
+              "override": false
+            },
+            "range": {
+              "units": "self",
+              "override": false
+            },
+            "target": {
+              "prompt": false,
+              "override": false
+            },
+            "flags": {
+              "pentaryn-senses": {
+                "lightToggle": true
+              }
+            },
+            "sort": 0
+          }
+        }
+      }
+    ]
+  },
+  "withActivities": {
+    "value": true,
+    "calls": [
+      {
+        "op": "update",
+        "documentName": "Item",
+        "uuid": "Actor.actHero000000001.Item.itmNewTorch00002",
+        "changes": {
+          "system.activities.psLightToggle000": {
+            "_id": "psLightToggle000",
+            "type": "utility",
+            "name": "Light",
+            "img": "icons/sundries/lights/torch-brown-lit.webp",
+            "activation": {
+              "type": "action",
+              "value": 1,
+              "condition": "",
+              "override": false
+            },
+            "consumption": {
+              "scaling": {
+                "allowed": false,
+                "max": ""
+              },
+              "spellSlot": false,
+              "targets": []
+            },
+            "duration": {
+              "units": "inst",
+              "concentration": false,
+              "override": false
+            },
+            "range": {
+              "units": "self",
+              "override": false
+            },
+            "target": {
+              "prompt": false,
+              "override": false
+            },
+            "flags": {
+              "pentaryn-senses": {
+                "lightToggle": true
+              }
+            },
+            "sort": 100007
+          }
+        }
+      }
+    ]
+  },
+  "alreadyHas": {
+    "value": true,
+    "calls": []
+  },
+  "flagged": {
+    "value": true,
+    "calls": []
+  },
+  "notATorch": {
+    "value": true,
+    "calls": []
+  },
+  "noActivityCollection": {
+    "value": true,
+    "calls": []
+  },
+  "packTorch": {
+    "value": true,
+    "calls": []
+  },
+  "throwingUpdate": {
+    "value": true,
+    "calls": []
+  },
+  "console": [
+    [
+      "warn",
+      "pentaryn-senses | light setup Actor.actHero000000001.Item.itmBadTorch00001",
+      "Error: locked"
+    ]
+  ]
+}

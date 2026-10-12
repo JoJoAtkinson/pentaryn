@@ -1,0 +1,1111 @@
+{
+  "inventory": [
+    {
+      "nth": 0,
+      "tag": "DIV",
+      "className": "pt-summary",
+      "dataset": {
+        "action": "toggle",
+        "tooltip": "Click to open and edit this tie"
+      },
+      "events": [
+        "click",
+        "keydown"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "DIV",
+      "className": "pt-detail-wrap",
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "INPUT",
+      "className": "pt-word-input",
+      "dataset": {
+        "field": "word"
+      },
+      "events": [
+        "change"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "SELECT",
+      "className": "pt-stance",
+      "dataset": {
+        "field": "stance"
+      },
+      "events": [
+        "change"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-pip fill",
+      "dataset": {
+        "action": "strength",
+        "n": "1",
+        "tooltip": "Set strength to 1 of 5"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-pip fill",
+      "dataset": {
+        "action": "strength",
+        "n": "2",
+        "tooltip": "Set strength to 2 of 5"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-pip",
+      "dataset": {
+        "action": "strength",
+        "n": "3",
+        "tooltip": "Set strength to 3 of 5"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-pip",
+      "dataset": {
+        "action": "strength",
+        "n": "4",
+        "tooltip": "Set strength to 4 of 5"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-pip",
+      "dataset": {
+        "action": "strength",
+        "n": "5",
+        "tooltip": "Set strength to 5 of 5"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "TEXTAREA",
+      "className": "pt-notes-text",
+      "dataset": {
+        "field": "notes"
+      },
+      "events": [
+        "change",
+        "input",
+        "blur"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "action": "open",
+        "id": "zzPc000000000001"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn pt-del",
+      "dataset": {
+        "action": "remove",
+        "id": "zzPc000000000001"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "action": "edit-theirs",
+        "id": "zzPc000000000001"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-add-btn",
+      "dataset": {
+        "action": "add"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "SELECT",
+      "dataset": {
+        "action": "set-kind"
+      },
+      "events": [
+        "click"
+      ],
+      "delegated": true
+    },
+    {
+      "nth": 0,
+      "tag": "DIV",
+      "className": "pt-summary pt-lore-summary",
+      "events": [
+        "click",
+        "keydown"
+      ]
+    },
+    {
+      "nth": 1,
+      "tag": "DIV",
+      "className": "pt-detail-wrap",
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "INPUT",
+      "dataset": {
+        "field": "label"
+      },
+      "events": [
+        "change"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "SELECT",
+      "dataset": {
+        "field": "skill"
+      },
+      "events": [
+        "change"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "INPUT",
+      "dataset": {
+        "field": "dc"
+      },
+      "events": [
+        "change"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "SELECT",
+      "dataset": {
+        "field": "hold",
+        "tooltip": "Hold the result until you deliver it, so you can play the moment out first."
+      },
+      "events": [
+        "change"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "TEXTAREA",
+      "dataset": {
+        "field": "text"
+      },
+      "events": [
+        "change"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "TEXTAREA",
+      "dataset": {
+        "field": "miss"
+      },
+      "events": [
+        "change"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn pt-del",
+      "dataset": {
+        "action": "lore-remove",
+        "id": "l1"
+      },
+      "events": [
+        "click"
+      ],
+      "delegated": true
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-add-btn",
+      "dataset": {
+        "action": "lore-add"
+      },
+      "events": [
+        "click"
+      ],
+      "delegated": true
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "action": "belief-reset"
+      },
+      "events": [
+        "click"
+      ],
+      "delegated": true
+    }
+  ],
+  "rows": [
+    {
+      "nth": 0,
+      "tag": "DIV",
+      "className": "pt-summary",
+      "dataset": {
+        "action": "toggle",
+        "tooltip": "Click to open and edit this tie"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-summary",
+        "parent": "pt-row pt-open"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "DIV",
+      "className": "pt-summary",
+      "dataset": {
+        "action": "toggle",
+        "tooltip": "Click to open and edit this tie"
+      },
+      "type": "keydown",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-summary",
+        "parent": "pt-row"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "DIV",
+      "className": "pt-detail-wrap",
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-detail-wrap",
+        "parent": "pt-row",
+        "hidden": true
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "INPUT",
+      "className": "pt-word-input",
+      "dataset": {
+        "field": "word"
+      },
+      "type": "change",
+      "calls": [
+        {
+          "op": "update",
+          "documentName": "Actor",
+          "uuid": "Actor.zzNpc00000000001",
+          "changes": {
+            "flags.pentaryn-ties.ties": [
+              {
+                "id": "zzPc000000000001",
+                "name": "ZZ Caven",
+                "word": "zz typed word",
+                "notes": "Their side.",
+                "stance": 1,
+                "strength": 2
+              }
+            ]
+          }
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-word-input",
+        "parent": "pt-field",
+        "value": "zz typed word"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "SELECT",
+      "className": "pt-stance",
+      "dataset": {
+        "field": "stance"
+      },
+      "type": "change",
+      "calls": [
+        {
+          "op": "update",
+          "documentName": "Actor",
+          "uuid": "Actor.zzNpc00000000001",
+          "changes": {
+            "flags.pentaryn-ties.ties": [
+              {
+                "id": "zzPc000000000001",
+                "name": "ZZ Caven",
+                "word": "zz typed word",
+                "notes": "Their side.",
+                "stance": 0,
+                "strength": 2
+              }
+            ]
+          }
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-stance",
+        "parent": "pt-field",
+        "value": "0"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-pip fill",
+      "dataset": {
+        "action": "strength",
+        "n": "1",
+        "tooltip": "Set strength to 1 of 5"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "update",
+          "documentName": "Actor",
+          "uuid": "Actor.zzNpc00000000001",
+          "changes": {
+            "flags.pentaryn-ties.ties": [
+              {
+                "id": "zzPc000000000001",
+                "name": "ZZ Caven",
+                "word": "zz typed word",
+                "notes": "Their side.",
+                "stance": 0,
+                "strength": 1
+              }
+            ]
+          }
+        },
+        {
+          "op": "app.render",
+          "app": "TiesEditor",
+          "opts": null
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-pip fill",
+        "parent": "pt-pips"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-pip fill",
+      "dataset": {
+        "action": "strength",
+        "n": "2",
+        "tooltip": "Set strength to 2 of 5"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "update",
+          "documentName": "Actor",
+          "uuid": "Actor.zzNpc00000000001",
+          "changes": {
+            "flags.pentaryn-ties.ties": [
+              {
+                "id": "zzPc000000000001",
+                "name": "ZZ Caven",
+                "word": "zz typed word",
+                "notes": "Their side.",
+                "stance": 0,
+                "strength": 2
+              }
+            ]
+          }
+        },
+        {
+          "op": "app.render",
+          "app": "TiesEditor",
+          "opts": null
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-pip",
+        "parent": "pt-pips"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-pip",
+      "dataset": {
+        "action": "strength",
+        "n": "3",
+        "tooltip": "Set strength to 3 of 5"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "update",
+          "documentName": "Actor",
+          "uuid": "Actor.zzNpc00000000001",
+          "changes": {
+            "flags.pentaryn-ties.ties": [
+              {
+                "id": "zzPc000000000001",
+                "name": "ZZ Caven",
+                "word": "zz typed word",
+                "notes": "Their side.",
+                "stance": 0,
+                "strength": 3
+              }
+            ]
+          }
+        },
+        {
+          "op": "app.render",
+          "app": "TiesEditor",
+          "opts": null
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-pip",
+        "parent": "pt-pips"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-pip",
+      "dataset": {
+        "action": "strength",
+        "n": "4",
+        "tooltip": "Set strength to 4 of 5"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "update",
+          "documentName": "Actor",
+          "uuid": "Actor.zzNpc00000000001",
+          "changes": {
+            "flags.pentaryn-ties.ties": [
+              {
+                "id": "zzPc000000000001",
+                "name": "ZZ Caven",
+                "word": "zz typed word",
+                "notes": "Their side.",
+                "stance": 0,
+                "strength": 4
+              }
+            ]
+          }
+        },
+        {
+          "op": "app.render",
+          "app": "TiesEditor",
+          "opts": null
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-pip",
+        "parent": "pt-pips"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-pip",
+      "dataset": {
+        "action": "strength",
+        "n": "5",
+        "tooltip": "Set strength to 5 of 5"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "update",
+          "documentName": "Actor",
+          "uuid": "Actor.zzNpc00000000001",
+          "changes": {
+            "flags.pentaryn-ties.ties": [
+              {
+                "id": "zzPc000000000001",
+                "name": "ZZ Caven",
+                "word": "zz typed word",
+                "notes": "Their side.",
+                "stance": 0,
+                "strength": 5
+              }
+            ]
+          }
+        },
+        {
+          "op": "app.render",
+          "app": "TiesEditor",
+          "opts": null
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-pip",
+        "parent": "pt-pips"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "TEXTAREA",
+      "className": "pt-notes-text",
+      "dataset": {
+        "field": "notes"
+      },
+      "type": "change",
+      "calls": [
+        {
+          "op": "update",
+          "documentName": "Actor",
+          "uuid": "Actor.zzNpc00000000001",
+          "changes": {
+            "flags.pentaryn-ties.ties": [
+              {
+                "id": "zzPc000000000001",
+                "name": "ZZ Caven",
+                "word": "zz typed word",
+                "notes": "zz typed notes",
+                "stance": 0,
+                "strength": 5
+              }
+            ]
+          }
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-notes-text",
+        "parent": "pt-field pt-field-notes",
+        "value": "zz typed notes"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "TEXTAREA",
+      "className": "pt-notes-text",
+      "dataset": {
+        "field": "notes"
+      },
+      "type": "input",
+      "calls": [
+        {
+          "op": "update",
+          "documentName": "Actor",
+          "uuid": "Actor.zzNpc00000000001",
+          "changes": {
+            "flags.pentaryn-ties.ties": [
+              {
+                "id": "zzPc000000000001",
+                "name": "ZZ Caven",
+                "word": "zz typed word",
+                "notes": "zz typed notes",
+                "stance": 0,
+                "strength": 5
+              }
+            ]
+          }
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-notes-text",
+        "parent": "pt-field pt-field-notes",
+        "value": "zz typed notes"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "TEXTAREA",
+      "className": "pt-notes-text",
+      "dataset": {
+        "field": "notes"
+      },
+      "type": "blur",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-notes-text",
+        "parent": "pt-field pt-field-notes",
+        "value": "zz typed notes"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "action": "open",
+        "id": "zzPc000000000001"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "sheet.render",
+          "actor": "zzPc000000000001",
+          "force": true,
+          "tab": "details"
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-textbtn",
+        "parent": "pt-detail-actions"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn pt-del",
+      "dataset": {
+        "action": "remove",
+        "id": "zzPc000000000001"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "DialogV2.confirm",
+          "title": "Remove tie",
+          "content": "<p>Remove the tie between ZZ Brakka and ZZ Caven, in both directions?</p><p class=\"notification warning\">The notes written on this tie go with it.</p>"
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-textbtn pt-del",
+        "parent": "pt-detail-actions"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "action": "edit-theirs",
+        "id": "zzPc000000000001"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "app.render",
+          "app": "TieDialog",
+          "opts": true
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-textbtn",
+        "parent": "pt-detail-actions"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-add-btn",
+      "dataset": {
+        "action": "add"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "app.render",
+          "app": "TieDialog",
+          "opts": true
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-add-btn",
+        "parent": "pt-add-bar"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "SELECT",
+      "dataset": {
+        "action": "set-kind"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "parent": "pt-field",
+        "value": "zzKind0000000001"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "DIV",
+      "className": "pt-summary pt-lore-summary",
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-summary pt-lore-summary",
+        "parent": "pt-row pt-lore-row pt-open"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "DIV",
+      "className": "pt-summary pt-lore-summary",
+      "type": "keydown",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-summary pt-lore-summary",
+        "parent": "pt-row pt-lore-row"
+      }
+    },
+    {
+      "nth": 1,
+      "tag": "DIV",
+      "className": "pt-detail-wrap",
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-detail-wrap",
+        "parent": "pt-row pt-lore-row",
+        "hidden": true
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "INPUT",
+      "dataset": {
+        "field": "label"
+      },
+      "type": "change",
+      "calls": [
+        {
+          "op": "update",
+          "documentName": "Actor",
+          "uuid": "Actor.zzNpc00000000001",
+          "changes": {
+            "flags.pentaryn-ties.lore": [
+              {
+                "id": "l1",
+                "label": "zz typed label",
+                "dc": 12,
+                "skill": "ins",
+                "text": "<p>He owes the guild.</p>",
+                "miss": "<p>Shifty.</p>",
+                "hold": null
+              }
+            ]
+          }
+        },
+        {
+          "op": "app.render",
+          "app": "TiesEditor",
+          "opts": null
+        }
+      ],
+      "console": [],
+      "after": {
+        "parent": "pt-field",
+        "value": "zz typed label"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "SELECT",
+      "dataset": {
+        "field": "skill"
+      },
+      "type": "change",
+      "calls": [
+        {
+          "op": "update",
+          "documentName": "Actor",
+          "uuid": "Actor.zzNpc00000000001",
+          "changes": {
+            "flags.pentaryn-ties.lore": [
+              {
+                "id": "l1",
+                "label": "zz typed label",
+                "dc": 12,
+                "skill": "inv",
+                "text": "<p>He owes the guild.</p>",
+                "miss": "<p>Shifty.</p>",
+                "hold": null
+              }
+            ]
+          }
+        },
+        {
+          "op": "app.render",
+          "app": "TiesEditor",
+          "opts": null
+        }
+      ],
+      "console": [],
+      "after": {
+        "parent": "pt-field",
+        "value": "inv"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "INPUT",
+      "dataset": {
+        "field": "dc"
+      },
+      "type": "change",
+      "calls": [
+        {
+          "op": "update",
+          "documentName": "Actor",
+          "uuid": "Actor.zzNpc00000000001",
+          "changes": {
+            "flags.pentaryn-ties.lore": [
+              {
+                "id": "l1",
+                "label": "zz typed label",
+                "dc": 7,
+                "skill": "inv",
+                "text": "<p>He owes the guild.</p>",
+                "miss": "<p>Shifty.</p>",
+                "hold": null
+              }
+            ]
+          }
+        },
+        {
+          "op": "app.render",
+          "app": "TiesEditor",
+          "opts": null
+        }
+      ],
+      "console": [],
+      "after": {
+        "parent": "pt-field pt-field-dc",
+        "value": "7"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "SELECT",
+      "dataset": {
+        "field": "hold",
+        "tooltip": "Hold the result until you deliver it, so you can play the moment out first."
+      },
+      "type": "change",
+      "calls": [
+        {
+          "op": "update",
+          "documentName": "Actor",
+          "uuid": "Actor.zzNpc00000000001",
+          "changes": {
+            "flags.pentaryn-ties.lore": [
+              {
+                "id": "l1",
+                "label": "zz typed label",
+                "dc": 7,
+                "skill": "inv",
+                "text": "<p>He owes the guild.</p>",
+                "miss": "<p>Shifty.</p>",
+                "hold": true
+              }
+            ]
+          }
+        },
+        {
+          "op": "app.render",
+          "app": "TiesEditor",
+          "opts": null
+        }
+      ],
+      "console": [],
+      "after": {
+        "parent": "pt-field",
+        "value": "on"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "TEXTAREA",
+      "dataset": {
+        "field": "text"
+      },
+      "type": "change",
+      "calls": [
+        {
+          "op": "update",
+          "documentName": "Actor",
+          "uuid": "Actor.zzNpc00000000001",
+          "changes": {
+            "flags.pentaryn-ties.lore": [
+              {
+                "id": "l1",
+                "label": "zz typed label",
+                "dc": 7,
+                "skill": "inv",
+                "text": "zz typed text",
+                "miss": "<p>Shifty.</p>",
+                "hold": true
+              }
+            ]
+          }
+        },
+        {
+          "op": "app.render",
+          "app": "TiesEditor",
+          "opts": null
+        }
+      ],
+      "console": [],
+      "after": {
+        "parent": "pt-field pt-field-notes",
+        "value": "zz typed text"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "TEXTAREA",
+      "dataset": {
+        "field": "miss"
+      },
+      "type": "change",
+      "calls": [
+        {
+          "op": "update",
+          "documentName": "Actor",
+          "uuid": "Actor.zzNpc00000000001",
+          "changes": {
+            "flags.pentaryn-ties.lore": [
+              {
+                "id": "l1",
+                "label": "zz typed label",
+                "dc": 7,
+                "skill": "inv",
+                "text": "zz typed text",
+                "miss": "zz typed miss",
+                "hold": true
+              }
+            ]
+          }
+        },
+        {
+          "op": "app.render",
+          "app": "TiesEditor",
+          "opts": null
+        }
+      ],
+      "console": [],
+      "after": {
+        "parent": "pt-field pt-field-notes",
+        "value": "zz typed miss"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn pt-del",
+      "dataset": {
+        "action": "lore-remove",
+        "id": "l1"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-textbtn pt-del",
+        "parent": "pt-detail-actions"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-add-btn",
+      "dataset": {
+        "action": "lore-add"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-add-btn",
+        "parent": "pt-add-bar"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "action": "belief-reset"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-textbtn",
+        "parent": "pt-belief-actions"
+      }
+    }
+  ]
+}

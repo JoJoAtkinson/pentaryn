@@ -1,0 +1,1739 @@
+[
+  {
+    "label": "unreviewed()",
+    "out": [
+      {
+        "id": "city",
+        "title": "Vel",
+        "reviewState": "unreviewed",
+        "touched": [],
+        "modifiedAt": null,
+        "createdAt": null
+      },
+      {
+        "id": "guild",
+        "title": "Salt Guild",
+        "reviewState": "unreviewed",
+        "touched": [
+          "dc"
+        ],
+        "modifiedAt": 1790000000000,
+        "createdAt": null
+      },
+      {
+        "id": "loner",
+        "title": "Loner",
+        "reviewState": "unreviewed",
+        "touched": [],
+        "modifiedAt": null,
+        "createdAt": null
+      },
+      {
+        "id": "species:elf",
+        "title": "Elvenkind",
+        "reviewState": "unreviewed",
+        "touched": [],
+        "modifiedAt": null,
+        "createdAt": null
+      },
+      {
+        "id": "dockward",
+        "title": "Dock Ward",
+        "reviewState": "unreviewed",
+        "touched": [
+          "dc",
+          "category",
+          "icon"
+        ],
+        "modifiedAt": 1790000000000,
+        "createdAt": 1790000000000
+      }
+    ],
+    "calls": [],
+    "console": []
+  },
+  {
+    "label": "review guild",
+    "out": {
+      "ok": true,
+      "entry": {
+        "id": "guild",
+        "title": "Salt Guild",
+        "category": "Guild",
+        "icon": null,
+        "whenKnown": "enables",
+        "whenCarried": "inherit",
+        "secret": true,
+        "parent": "city",
+        "dc": 17,
+        "skill": "inv",
+        "reveal": "",
+        "miss": "",
+        "hold": null,
+        "lore": [
+          {
+            "id": "g1",
+            "label": "Oath",
+            "dc": 12,
+            "skill": "rel",
+            "text": "<p>Salt.</p>",
+            "miss": "",
+            "hold": null
+          }
+        ],
+        "source": null,
+        "bonuses": [],
+        "createdAt": null,
+        "modifiedAt": 1790000000000,
+        "reviewedAt": 1790000000000,
+        "touched": [],
+        "reviewedSnapshot": {
+          "title": "Salt Guild",
+          "category": "Guild",
+          "whenKnown": "enables",
+          "whenCarried": "inherit",
+          "secret": true,
+          "parent": "city",
+          "dc": 17,
+          "skill": "inv",
+          "reveal": "",
+          "miss": "",
+          "hold": null,
+          "lore": [
+            {
+              "id": "g1",
+              "label": "Oath",
+              "dc": 12,
+              "skill": "rel",
+              "text": "<p>Salt.</p>",
+              "miss": "",
+              "hold": null
+            }
+          ]
+        }
+      }
+    },
+    "calls": [
+      {
+        "op": "settings.set",
+        "id": "pentaryn-ties.attributes",
+        "value": [
+          {
+            "id": "realm",
+            "title": "Old Realm",
+            "category": "Realm",
+            "icon": "icons/sundries/flags/banner-standard-blue.webp",
+            "whenKnown": "enables",
+            "whenCarried": "inherit",
+            "secret": true,
+            "parent": null,
+            "dc": 15,
+            "skill": "his",
+            "reveal": "",
+            "miss": "",
+            "hold": null,
+            "lore": [],
+            "source": null,
+            "bonuses": [],
+            "createdAt": 1,
+            "modifiedAt": 1,
+            "reviewedAt": 2,
+            "touched": [],
+            "reviewedSnapshot": {
+              "title": "Old Realm"
+            }
+          },
+          {
+            "id": "city",
+            "title": "Vel",
+            "category": "City",
+            "icon": "icons/environment/settlement/city-gate.webp",
+            "whenKnown": "enables",
+            "whenCarried": "inherit",
+            "secret": true,
+            "parent": "realm",
+            "dc": 15,
+            "skill": "his",
+            "reveal": "",
+            "miss": "",
+            "hold": null,
+            "lore": [],
+            "source": null,
+            "bonuses": [],
+            "createdAt": null,
+            "modifiedAt": null,
+            "reviewedAt": null,
+            "touched": [],
+            "reviewedSnapshot": null
+          },
+          {
+            "id": "guild",
+            "title": "Salt Guild",
+            "category": "Guild",
+            "icon": null,
+            "whenKnown": "enables",
+            "whenCarried": "inherit",
+            "secret": true,
+            "parent": "city",
+            "dc": 17,
+            "skill": "inv",
+            "reveal": "",
+            "miss": "",
+            "hold": null,
+            "lore": [
+              {
+                "id": "g1",
+                "label": "Oath",
+                "dc": 12,
+                "skill": "rel",
+                "text": "<p>Salt.</p>",
+                "miss": "",
+                "hold": null
+              }
+            ],
+            "source": null,
+            "bonuses": [],
+            "createdAt": null,
+            "modifiedAt": 1790000000000,
+            "reviewedAt": 1790000000000,
+            "touched": [],
+            "reviewedSnapshot": {
+              "title": "Salt Guild",
+              "category": "Guild",
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": "city",
+              "dc": 17,
+              "skill": "inv",
+              "reveal": "",
+              "miss": "",
+              "hold": null,
+              "lore": [
+                {
+                  "id": "g1",
+                  "label": "Oath",
+                  "dc": 12,
+                  "skill": "rel",
+                  "text": "<p>Salt.</p>",
+                  "miss": "",
+                  "hold": null
+                }
+              ]
+            }
+          },
+          {
+            "id": "loner",
+            "title": "Loner",
+            "category": "smugglers' compact",
+            "icon": "icons/zz/custom.webp",
+            "whenKnown": "enables",
+            "whenCarried": "inherit",
+            "secret": true,
+            "parent": null,
+            "dc": 15,
+            "skill": "his",
+            "reveal": "",
+            "miss": "",
+            "hold": null,
+            "lore": [],
+            "source": null,
+            "bonuses": [],
+            "createdAt": null,
+            "modifiedAt": null,
+            "reviewedAt": null,
+            "touched": [],
+            "reviewedSnapshot": null
+          },
+          {
+            "id": "species:elf",
+            "title": "Elvenkind",
+            "category": "Species",
+            "icon": null,
+            "whenKnown": "enables",
+            "whenCarried": "inherit",
+            "secret": false,
+            "parent": null,
+            "dc": 15,
+            "skill": "his",
+            "reveal": "",
+            "miss": "",
+            "hold": null,
+            "lore": [],
+            "source": null,
+            "bonuses": [],
+            "createdAt": null,
+            "modifiedAt": null,
+            "reviewedAt": null,
+            "touched": [],
+            "reviewedSnapshot": null
+          },
+          {
+            "id": "dockward",
+            "title": "Dock Ward",
+            "category": "Street",
+            "icon": "icons/environment/settlement/sign-wood.webp",
+            "whenKnown": "enables",
+            "whenCarried": "inherit",
+            "secret": true,
+            "parent": "city",
+            "dc": 30,
+            "skill": "his",
+            "reveal": "",
+            "miss": "",
+            "hold": null,
+            "lore": [],
+            "source": null,
+            "bonuses": [],
+            "createdAt": 1790000000000,
+            "modifiedAt": 1790000000000,
+            "reviewedAt": null,
+            "touched": [
+              "dc",
+              "category",
+              "icon"
+            ],
+            "reviewedSnapshot": null
+          }
+        ]
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "unreview realm",
+    "out": {
+      "ok": true,
+      "entry": {
+        "id": "realm",
+        "title": "Old Realm",
+        "category": "Realm",
+        "icon": "icons/sundries/flags/banner-standard-blue.webp",
+        "whenKnown": "enables",
+        "whenCarried": "inherit",
+        "secret": true,
+        "parent": null,
+        "dc": 15,
+        "skill": "his",
+        "reveal": "",
+        "miss": "",
+        "hold": null,
+        "lore": [],
+        "source": null,
+        "bonuses": [],
+        "createdAt": 1,
+        "modifiedAt": 1,
+        "reviewedAt": null,
+        "touched": [],
+        "reviewedSnapshot": {
+          "title": "Old Realm"
+        }
+      }
+    },
+    "calls": [
+      {
+        "op": "settings.set",
+        "id": "pentaryn-ties.attributes",
+        "value": [
+          {
+            "id": "realm",
+            "title": "Old Realm",
+            "category": "Realm",
+            "icon": "icons/sundries/flags/banner-standard-blue.webp",
+            "whenKnown": "enables",
+            "whenCarried": "inherit",
+            "secret": true,
+            "parent": null,
+            "dc": 15,
+            "skill": "his",
+            "reveal": "",
+            "miss": "",
+            "hold": null,
+            "lore": [],
+            "source": null,
+            "bonuses": [],
+            "createdAt": 1,
+            "modifiedAt": 1,
+            "reviewedAt": null,
+            "touched": [],
+            "reviewedSnapshot": {
+              "title": "Old Realm"
+            }
+          },
+          {
+            "id": "city",
+            "title": "Vel",
+            "category": "City",
+            "icon": "icons/environment/settlement/city-gate.webp",
+            "whenKnown": "enables",
+            "whenCarried": "inherit",
+            "secret": true,
+            "parent": "realm",
+            "dc": 15,
+            "skill": "his",
+            "reveal": "",
+            "miss": "",
+            "hold": null,
+            "lore": [],
+            "source": null,
+            "bonuses": [],
+            "createdAt": null,
+            "modifiedAt": null,
+            "reviewedAt": null,
+            "touched": [],
+            "reviewedSnapshot": null
+          },
+          {
+            "id": "guild",
+            "title": "Salt Guild",
+            "category": "Guild",
+            "icon": null,
+            "whenKnown": "enables",
+            "whenCarried": "inherit",
+            "secret": true,
+            "parent": "city",
+            "dc": 17,
+            "skill": "inv",
+            "reveal": "",
+            "miss": "",
+            "hold": null,
+            "lore": [
+              {
+                "id": "g1",
+                "label": "Oath",
+                "dc": 12,
+                "skill": "rel",
+                "text": "<p>Salt.</p>",
+                "miss": "",
+                "hold": null
+              }
+            ],
+            "source": null,
+            "bonuses": [],
+            "createdAt": null,
+            "modifiedAt": 1790000000000,
+            "reviewedAt": 1790000000000,
+            "touched": [],
+            "reviewedSnapshot": {
+              "title": "Salt Guild",
+              "category": "Guild",
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": "city",
+              "dc": 17,
+              "skill": "inv",
+              "reveal": "",
+              "miss": "",
+              "hold": null,
+              "lore": [
+                {
+                  "id": "g1",
+                  "label": "Oath",
+                  "dc": 12,
+                  "skill": "rel",
+                  "text": "<p>Salt.</p>",
+                  "miss": "",
+                  "hold": null
+                }
+              ]
+            }
+          },
+          {
+            "id": "loner",
+            "title": "Loner",
+            "category": "smugglers' compact",
+            "icon": "icons/zz/custom.webp",
+            "whenKnown": "enables",
+            "whenCarried": "inherit",
+            "secret": true,
+            "parent": null,
+            "dc": 15,
+            "skill": "his",
+            "reveal": "",
+            "miss": "",
+            "hold": null,
+            "lore": [],
+            "source": null,
+            "bonuses": [],
+            "createdAt": null,
+            "modifiedAt": null,
+            "reviewedAt": null,
+            "touched": [],
+            "reviewedSnapshot": null
+          },
+          {
+            "id": "species:elf",
+            "title": "Elvenkind",
+            "category": "Species",
+            "icon": null,
+            "whenKnown": "enables",
+            "whenCarried": "inherit",
+            "secret": false,
+            "parent": null,
+            "dc": 15,
+            "skill": "his",
+            "reveal": "",
+            "miss": "",
+            "hold": null,
+            "lore": [],
+            "source": null,
+            "bonuses": [],
+            "createdAt": null,
+            "modifiedAt": null,
+            "reviewedAt": null,
+            "touched": [],
+            "reviewedSnapshot": null
+          },
+          {
+            "id": "dockward",
+            "title": "Dock Ward",
+            "category": "Street",
+            "icon": "icons/environment/settlement/sign-wood.webp",
+            "whenKnown": "enables",
+            "whenCarried": "inherit",
+            "secret": true,
+            "parent": "city",
+            "dc": 30,
+            "skill": "his",
+            "reveal": "",
+            "miss": "",
+            "hold": null,
+            "lore": [],
+            "source": null,
+            "bonuses": [],
+            "createdAt": 1790000000000,
+            "modifiedAt": 1790000000000,
+            "reviewedAt": null,
+            "touched": [
+              "dc",
+              "category",
+              "icon"
+            ],
+            "reviewedSnapshot": null
+          }
+        ]
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "review missing",
+    "out": {
+      "ok": false,
+      "reason": "notFound"
+    },
+    "calls": [],
+    "console": []
+  },
+  {
+    "label": "select guild, Vel, nope",
+    "out": {
+      "ok": true,
+      "ids": [
+        "guild",
+        "city"
+      ],
+      "missed": [
+        "nope"
+      ]
+    },
+    "calls": [
+      {
+        "op": "update",
+        "documentName": "User",
+        "uuid": "User.gmUser0000000001",
+        "changes": {
+          "flags.pentaryn-ties.attrSelected": [
+            "guild",
+            "city"
+          ]
+        }
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "select realm (adds)",
+    "out": {
+      "ok": true,
+      "ids": [
+        "guild",
+        "city",
+        "realm"
+      ]
+    },
+    "calls": [
+      {
+        "op": "update",
+        "documentName": "User",
+        "uuid": "User.gmUser0000000001",
+        "changes": {
+          "flags.pentaryn-ties.attrSelected": [
+            "guild",
+            "city",
+            "realm"
+          ]
+        }
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "selected()",
+    "out": [
+      {
+        "id": "guild",
+        "title": "Salt Guild",
+        "category": "Guild",
+        "parent": "city",
+        "reviewState": "reviewed"
+      },
+      {
+        "id": "city",
+        "title": "Vel",
+        "category": "City",
+        "parent": "realm",
+        "reviewState": "unreviewed"
+      },
+      {
+        "id": "realm",
+        "title": "Old Realm",
+        "category": "Realm",
+        "parent": null,
+        "reviewState": "unreviewed"
+      }
+    ],
+    "calls": [],
+    "console": []
+  },
+  {
+    "label": "deselect Vel",
+    "out": {
+      "ok": true,
+      "ids": [
+        "guild",
+        "realm"
+      ]
+    },
+    "calls": [
+      {
+        "op": "update",
+        "documentName": "User",
+        "uuid": "User.gmUser0000000001",
+        "changes": {
+          "flags.pentaryn-ties.attrSelected": [
+            "guild",
+            "realm"
+          ]
+        }
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "select loner, replace",
+    "out": {
+      "ok": true,
+      "ids": [
+        "loner"
+      ]
+    },
+    "calls": [
+      {
+        "op": "update",
+        "documentName": "User",
+        "uuid": "User.gmUser0000000001",
+        "changes": {
+          "flags.pentaryn-ties.attrSelected": [
+            "loner"
+          ]
+        }
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "clearSelection",
+    "out": {
+      "ok": true,
+      "ids": []
+    },
+    "calls": [
+      {
+        "op": "update",
+        "documentName": "User",
+        "uuid": "User.gmUser0000000001",
+        "changes": {
+          "flags.pentaryn-ties.attrSelected": []
+        }
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "player: select",
+    "out": {
+      "ok": false,
+      "reason": "notGM"
+    },
+    "calls": [],
+    "console": []
+  },
+  {
+    "label": "reviewedUpdate on a reviewed entry stays reviewed",
+    "out": {
+      "ok": true,
+      "entry": {
+        "id": "guild",
+        "title": "Salt Guild",
+        "category": "Guild",
+        "icon": null,
+        "whenKnown": "enables",
+        "whenCarried": "inherit",
+        "secret": true,
+        "parent": "city",
+        "dc": 18,
+        "skill": "inv",
+        "reveal": "",
+        "miss": "",
+        "hold": null,
+        "lore": [
+          {
+            "id": "g1",
+            "label": "Oath",
+            "dc": 12,
+            "skill": "rel",
+            "text": "<p>Salt.</p>",
+            "miss": "",
+            "hold": null
+          }
+        ],
+        "source": null,
+        "bonuses": [],
+        "createdAt": null,
+        "modifiedAt": 1790000000000,
+        "reviewedAt": 1790000000000,
+        "touched": [],
+        "reviewedSnapshot": {
+          "title": "Salt Guild",
+          "category": "Guild",
+          "whenKnown": "enables",
+          "whenCarried": "inherit",
+          "secret": true,
+          "parent": "city",
+          "dc": 18,
+          "skill": "inv",
+          "reveal": "",
+          "miss": "",
+          "hold": null,
+          "lore": [
+            {
+              "id": "g1",
+              "label": "Oath",
+              "dc": 12,
+              "skill": "rel",
+              "text": "<p>Salt.</p>",
+              "miss": "",
+              "hold": null
+            }
+          ]
+        }
+      },
+      "changed": [
+        "dc"
+      ]
+    },
+    "calls": [
+      {
+        "op": "settings.set",
+        "id": "pentaryn-ties.attributes",
+        "value": [
+          {
+            "id": "realm",
+            "title": "Old Realm",
+            "category": "Realm",
+            "icon": "icons/sundries/flags/banner-standard-blue.webp",
+            "whenKnown": "enables",
+            "whenCarried": "inherit",
+            "secret": true,
+            "parent": null,
+            "dc": 15,
+            "skill": "his",
+            "reveal": "",
+            "miss": "",
+            "hold": null,
+            "lore": [],
+            "source": null,
+            "bonuses": [],
+            "createdAt": 1,
+            "modifiedAt": 1,
+            "reviewedAt": null,
+            "touched": [],
+            "reviewedSnapshot": {
+              "title": "Old Realm"
+            }
+          },
+          {
+            "id": "city",
+            "title": "Vel",
+            "category": "City",
+            "icon": "icons/environment/settlement/city-gate.webp",
+            "whenKnown": "enables",
+            "whenCarried": "inherit",
+            "secret": true,
+            "parent": "realm",
+            "dc": 15,
+            "skill": "his",
+            "reveal": "",
+            "miss": "",
+            "hold": null,
+            "lore": [],
+            "source": null,
+            "bonuses": [],
+            "createdAt": null,
+            "modifiedAt": null,
+            "reviewedAt": null,
+            "touched": [],
+            "reviewedSnapshot": null
+          },
+          {
+            "id": "guild",
+            "title": "Salt Guild",
+            "category": "Guild",
+            "icon": null,
+            "whenKnown": "enables",
+            "whenCarried": "inherit",
+            "secret": true,
+            "parent": "city",
+            "dc": 18,
+            "skill": "inv",
+            "reveal": "",
+            "miss": "",
+            "hold": null,
+            "lore": [
+              {
+                "id": "g1",
+                "label": "Oath",
+                "dc": 12,
+                "skill": "rel",
+                "text": "<p>Salt.</p>",
+                "miss": "",
+                "hold": null
+              }
+            ],
+            "source": null,
+            "bonuses": [],
+            "createdAt": null,
+            "modifiedAt": 1790000000000,
+            "reviewedAt": 1790000000000,
+            "touched": [],
+            "reviewedSnapshot": {
+              "title": "Salt Guild",
+              "category": "Guild",
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": "city",
+              "dc": 18,
+              "skill": "inv",
+              "reveal": "",
+              "miss": "",
+              "hold": null,
+              "lore": [
+                {
+                  "id": "g1",
+                  "label": "Oath",
+                  "dc": 12,
+                  "skill": "rel",
+                  "text": "<p>Salt.</p>",
+                  "miss": "",
+                  "hold": null
+                }
+              ]
+            }
+          },
+          {
+            "id": "loner",
+            "title": "Loner",
+            "category": "smugglers' compact",
+            "icon": "icons/zz/custom.webp",
+            "whenKnown": "enables",
+            "whenCarried": "inherit",
+            "secret": true,
+            "parent": null,
+            "dc": 15,
+            "skill": "his",
+            "reveal": "",
+            "miss": "",
+            "hold": null,
+            "lore": [],
+            "source": null,
+            "bonuses": [],
+            "createdAt": null,
+            "modifiedAt": null,
+            "reviewedAt": null,
+            "touched": [],
+            "reviewedSnapshot": null
+          },
+          {
+            "id": "species:elf",
+            "title": "Elvenkind",
+            "category": "Species",
+            "icon": null,
+            "whenKnown": "enables",
+            "whenCarried": "inherit",
+            "secret": false,
+            "parent": null,
+            "dc": 15,
+            "skill": "his",
+            "reveal": "",
+            "miss": "",
+            "hold": null,
+            "lore": [],
+            "source": null,
+            "bonuses": [],
+            "createdAt": null,
+            "modifiedAt": null,
+            "reviewedAt": null,
+            "touched": [],
+            "reviewedSnapshot": null
+          },
+          {
+            "id": "dockward",
+            "title": "Dock Ward",
+            "category": "Street",
+            "icon": "icons/environment/settlement/sign-wood.webp",
+            "whenKnown": "enables",
+            "whenCarried": "inherit",
+            "secret": true,
+            "parent": "city",
+            "dc": 30,
+            "skill": "his",
+            "reveal": "",
+            "miss": "",
+            "hold": null,
+            "lore": [],
+            "source": null,
+            "bonuses": [],
+            "createdAt": 1790000000000,
+            "modifiedAt": 1790000000000,
+            "reviewedAt": null,
+            "touched": [
+              "dc",
+              "category",
+              "icon"
+            ],
+            "reviewedSnapshot": null
+          }
+        ]
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "reviewedUpdate on an unreviewed entry keeps its state",
+    "out": {
+      "ok": true,
+      "entry": {
+        "id": "dockward",
+        "title": "Dock Ward",
+        "category": "Street",
+        "icon": "icons/environment/settlement/sign-wood.webp",
+        "whenKnown": "enables",
+        "whenCarried": "inherit",
+        "secret": true,
+        "parent": "city",
+        "dc": 21,
+        "skill": "his",
+        "reveal": "",
+        "miss": "",
+        "hold": null,
+        "lore": [],
+        "source": null,
+        "bonuses": [],
+        "createdAt": 1790000000000,
+        "modifiedAt": 1790000000000,
+        "reviewedAt": null,
+        "touched": [
+          "dc",
+          "category",
+          "icon"
+        ],
+        "reviewedSnapshot": null
+      },
+      "changed": [
+        "dc"
+      ]
+    },
+    "calls": [
+      {
+        "op": "settings.set",
+        "id": "pentaryn-ties.attributes",
+        "value": [
+          {
+            "id": "realm",
+            "title": "Old Realm",
+            "category": "Realm",
+            "icon": "icons/sundries/flags/banner-standard-blue.webp",
+            "whenKnown": "enables",
+            "whenCarried": "inherit",
+            "secret": true,
+            "parent": null,
+            "dc": 15,
+            "skill": "his",
+            "reveal": "",
+            "miss": "",
+            "hold": null,
+            "lore": [],
+            "source": null,
+            "bonuses": [],
+            "createdAt": 1,
+            "modifiedAt": 1,
+            "reviewedAt": null,
+            "touched": [],
+            "reviewedSnapshot": {
+              "title": "Old Realm"
+            }
+          },
+          {
+            "id": "city",
+            "title": "Vel",
+            "category": "City",
+            "icon": "icons/environment/settlement/city-gate.webp",
+            "whenKnown": "enables",
+            "whenCarried": "inherit",
+            "secret": true,
+            "parent": "realm",
+            "dc": 15,
+            "skill": "his",
+            "reveal": "",
+            "miss": "",
+            "hold": null,
+            "lore": [],
+            "source": null,
+            "bonuses": [],
+            "createdAt": null,
+            "modifiedAt": null,
+            "reviewedAt": null,
+            "touched": [],
+            "reviewedSnapshot": null
+          },
+          {
+            "id": "guild",
+            "title": "Salt Guild",
+            "category": "Guild",
+            "icon": null,
+            "whenKnown": "enables",
+            "whenCarried": "inherit",
+            "secret": true,
+            "parent": "city",
+            "dc": 18,
+            "skill": "inv",
+            "reveal": "",
+            "miss": "",
+            "hold": null,
+            "lore": [
+              {
+                "id": "g1",
+                "label": "Oath",
+                "dc": 12,
+                "skill": "rel",
+                "text": "<p>Salt.</p>",
+                "miss": "",
+                "hold": null
+              }
+            ],
+            "source": null,
+            "bonuses": [],
+            "createdAt": null,
+            "modifiedAt": 1790000000000,
+            "reviewedAt": 1790000000000,
+            "touched": [],
+            "reviewedSnapshot": {
+              "title": "Salt Guild",
+              "category": "Guild",
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": "city",
+              "dc": 18,
+              "skill": "inv",
+              "reveal": "",
+              "miss": "",
+              "hold": null,
+              "lore": [
+                {
+                  "id": "g1",
+                  "label": "Oath",
+                  "dc": 12,
+                  "skill": "rel",
+                  "text": "<p>Salt.</p>",
+                  "miss": "",
+                  "hold": null
+                }
+              ]
+            }
+          },
+          {
+            "id": "loner",
+            "title": "Loner",
+            "category": "smugglers' compact",
+            "icon": "icons/zz/custom.webp",
+            "whenKnown": "enables",
+            "whenCarried": "inherit",
+            "secret": true,
+            "parent": null,
+            "dc": 15,
+            "skill": "his",
+            "reveal": "",
+            "miss": "",
+            "hold": null,
+            "lore": [],
+            "source": null,
+            "bonuses": [],
+            "createdAt": null,
+            "modifiedAt": null,
+            "reviewedAt": null,
+            "touched": [],
+            "reviewedSnapshot": null
+          },
+          {
+            "id": "species:elf",
+            "title": "Elvenkind",
+            "category": "Species",
+            "icon": null,
+            "whenKnown": "enables",
+            "whenCarried": "inherit",
+            "secret": false,
+            "parent": null,
+            "dc": 15,
+            "skill": "his",
+            "reveal": "",
+            "miss": "",
+            "hold": null,
+            "lore": [],
+            "source": null,
+            "bonuses": [],
+            "createdAt": null,
+            "modifiedAt": null,
+            "reviewedAt": null,
+            "touched": [],
+            "reviewedSnapshot": null
+          },
+          {
+            "id": "dockward",
+            "title": "Dock Ward",
+            "category": "Street",
+            "icon": "icons/environment/settlement/sign-wood.webp",
+            "whenKnown": "enables",
+            "whenCarried": "inherit",
+            "secret": true,
+            "parent": "city",
+            "dc": 21,
+            "skill": "his",
+            "reveal": "",
+            "miss": "",
+            "hold": null,
+            "lore": [],
+            "source": null,
+            "bonuses": [],
+            "createdAt": 1790000000000,
+            "modifiedAt": 1790000000000,
+            "reviewedAt": null,
+            "touched": [
+              "dc",
+              "category",
+              "icon"
+            ],
+            "reviewedSnapshot": null
+          }
+        ]
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "reviewedLoreUpdate g1 label",
+    "out": {
+      "ok": true,
+      "entry": {
+        "id": "guild",
+        "title": "Salt Guild",
+        "category": "Guild",
+        "icon": null,
+        "whenKnown": "enables",
+        "whenCarried": "inherit",
+        "secret": true,
+        "parent": "city",
+        "dc": 18,
+        "skill": "inv",
+        "reveal": "",
+        "miss": "",
+        "hold": null,
+        "lore": [
+          {
+            "id": "g1",
+            "label": "Salt oath",
+            "dc": 12,
+            "skill": "rel",
+            "text": "<p>Salt.</p>",
+            "miss": "",
+            "hold": null
+          }
+        ],
+        "source": null,
+        "bonuses": [],
+        "createdAt": null,
+        "modifiedAt": 1790000000000,
+        "reviewedAt": 1790000000000,
+        "touched": [],
+        "reviewedSnapshot": {
+          "title": "Salt Guild",
+          "category": "Guild",
+          "whenKnown": "enables",
+          "whenCarried": "inherit",
+          "secret": true,
+          "parent": "city",
+          "dc": 18,
+          "skill": "inv",
+          "reveal": "",
+          "miss": "",
+          "hold": null,
+          "lore": [
+            {
+              "id": "g1",
+              "label": "Salt oath",
+              "dc": 12,
+              "skill": "rel",
+              "text": "<p>Salt.</p>",
+              "miss": "",
+              "hold": null
+            }
+          ]
+        }
+      },
+      "changed": [
+        "lore"
+      ]
+    },
+    "calls": [
+      {
+        "op": "settings.set",
+        "id": "pentaryn-ties.attributes",
+        "value": [
+          {
+            "id": "realm",
+            "title": "Old Realm",
+            "category": "Realm",
+            "icon": "icons/sundries/flags/banner-standard-blue.webp",
+            "whenKnown": "enables",
+            "whenCarried": "inherit",
+            "secret": true,
+            "parent": null,
+            "dc": 15,
+            "skill": "his",
+            "reveal": "",
+            "miss": "",
+            "hold": null,
+            "lore": [],
+            "source": null,
+            "bonuses": [],
+            "createdAt": 1,
+            "modifiedAt": 1,
+            "reviewedAt": null,
+            "touched": [],
+            "reviewedSnapshot": {
+              "title": "Old Realm"
+            }
+          },
+          {
+            "id": "city",
+            "title": "Vel",
+            "category": "City",
+            "icon": "icons/environment/settlement/city-gate.webp",
+            "whenKnown": "enables",
+            "whenCarried": "inherit",
+            "secret": true,
+            "parent": "realm",
+            "dc": 15,
+            "skill": "his",
+            "reveal": "",
+            "miss": "",
+            "hold": null,
+            "lore": [],
+            "source": null,
+            "bonuses": [],
+            "createdAt": null,
+            "modifiedAt": null,
+            "reviewedAt": null,
+            "touched": [],
+            "reviewedSnapshot": null
+          },
+          {
+            "id": "guild",
+            "title": "Salt Guild",
+            "category": "Guild",
+            "icon": null,
+            "whenKnown": "enables",
+            "whenCarried": "inherit",
+            "secret": true,
+            "parent": "city",
+            "dc": 18,
+            "skill": "inv",
+            "reveal": "",
+            "miss": "",
+            "hold": null,
+            "lore": [
+              {
+                "id": "g1",
+                "label": "Salt oath",
+                "dc": 12,
+                "skill": "rel",
+                "text": "<p>Salt.</p>",
+                "miss": "",
+                "hold": null
+              }
+            ],
+            "source": null,
+            "bonuses": [],
+            "createdAt": null,
+            "modifiedAt": 1790000000000,
+            "reviewedAt": 1790000000000,
+            "touched": [],
+            "reviewedSnapshot": {
+              "title": "Salt Guild",
+              "category": "Guild",
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": "city",
+              "dc": 18,
+              "skill": "inv",
+              "reveal": "",
+              "miss": "",
+              "hold": null,
+              "lore": [
+                {
+                  "id": "g1",
+                  "label": "Salt oath",
+                  "dc": 12,
+                  "skill": "rel",
+                  "text": "<p>Salt.</p>",
+                  "miss": "",
+                  "hold": null
+                }
+              ]
+            }
+          },
+          {
+            "id": "loner",
+            "title": "Loner",
+            "category": "smugglers' compact",
+            "icon": "icons/zz/custom.webp",
+            "whenKnown": "enables",
+            "whenCarried": "inherit",
+            "secret": true,
+            "parent": null,
+            "dc": 15,
+            "skill": "his",
+            "reveal": "",
+            "miss": "",
+            "hold": null,
+            "lore": [],
+            "source": null,
+            "bonuses": [],
+            "createdAt": null,
+            "modifiedAt": null,
+            "reviewedAt": null,
+            "touched": [],
+            "reviewedSnapshot": null
+          },
+          {
+            "id": "species:elf",
+            "title": "Elvenkind",
+            "category": "Species",
+            "icon": null,
+            "whenKnown": "enables",
+            "whenCarried": "inherit",
+            "secret": false,
+            "parent": null,
+            "dc": 15,
+            "skill": "his",
+            "reveal": "",
+            "miss": "",
+            "hold": null,
+            "lore": [],
+            "source": null,
+            "bonuses": [],
+            "createdAt": null,
+            "modifiedAt": null,
+            "reviewedAt": null,
+            "touched": [],
+            "reviewedSnapshot": null
+          },
+          {
+            "id": "dockward",
+            "title": "Dock Ward",
+            "category": "Street",
+            "icon": "icons/environment/settlement/sign-wood.webp",
+            "whenKnown": "enables",
+            "whenCarried": "inherit",
+            "secret": true,
+            "parent": "city",
+            "dc": 21,
+            "skill": "his",
+            "reveal": "",
+            "miss": "",
+            "hold": null,
+            "lore": [],
+            "source": null,
+            "bonuses": [],
+            "createdAt": 1790000000000,
+            "modifiedAt": 1790000000000,
+            "reviewedAt": null,
+            "touched": [
+              "dc",
+              "category",
+              "icon"
+            ],
+            "reviewedSnapshot": null
+          }
+        ]
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "reviewedLoreUpdate id (refused)",
+    "out": {
+      "ok": false,
+      "reason": "invalid"
+    },
+    "calls": [],
+    "console": []
+  },
+  {
+    "label": "reviewedLoreUpdate missing row",
+    "out": {
+      "ok": false,
+      "reason": "notFound",
+      "field": "lore"
+    },
+    "calls": [],
+    "console": []
+  },
+  {
+    "label": "authorEntry species:dwarf",
+    "out": {
+      "ok": true,
+      "entry": {
+        "id": "species:dwarf",
+        "title": "Dwarrow",
+        "category": "Species",
+        "icon": null,
+        "whenKnown": "enables",
+        "whenCarried": "inherit",
+        "secret": false,
+        "parent": null,
+        "dc": 15,
+        "skill": "his",
+        "reveal": "",
+        "miss": "",
+        "hold": null,
+        "lore": [],
+        "source": null,
+        "bonuses": [],
+        "createdAt": 1790000000000,
+        "modifiedAt": 1790000000000,
+        "reviewedAt": null,
+        "touched": [],
+        "reviewedSnapshot": null
+      }
+    },
+    "calls": [
+      {
+        "op": "settings.set",
+        "id": "pentaryn-ties.attributes",
+        "value": [
+          {
+            "id": "realm",
+            "title": "Old Realm",
+            "category": "Realm",
+            "icon": "icons/sundries/flags/banner-standard-blue.webp",
+            "whenKnown": "enables",
+            "whenCarried": "inherit",
+            "secret": true,
+            "parent": null,
+            "dc": 15,
+            "skill": "his",
+            "reveal": "",
+            "miss": "",
+            "hold": null,
+            "lore": [],
+            "source": null,
+            "bonuses": [],
+            "createdAt": 1,
+            "modifiedAt": 1,
+            "reviewedAt": null,
+            "touched": [],
+            "reviewedSnapshot": {
+              "title": "Old Realm"
+            }
+          },
+          {
+            "id": "city",
+            "title": "Vel",
+            "category": "City",
+            "icon": "icons/environment/settlement/city-gate.webp",
+            "whenKnown": "enables",
+            "whenCarried": "inherit",
+            "secret": true,
+            "parent": "realm",
+            "dc": 15,
+            "skill": "his",
+            "reveal": "",
+            "miss": "",
+            "hold": null,
+            "lore": [],
+            "source": null,
+            "bonuses": [],
+            "createdAt": null,
+            "modifiedAt": null,
+            "reviewedAt": null,
+            "touched": [],
+            "reviewedSnapshot": null
+          },
+          {
+            "id": "guild",
+            "title": "Salt Guild",
+            "category": "Guild",
+            "icon": null,
+            "whenKnown": "enables",
+            "whenCarried": "inherit",
+            "secret": true,
+            "parent": "city",
+            "dc": 18,
+            "skill": "inv",
+            "reveal": "",
+            "miss": "",
+            "hold": null,
+            "lore": [
+              {
+                "id": "g1",
+                "label": "Salt oath",
+                "dc": 12,
+                "skill": "rel",
+                "text": "<p>Salt.</p>",
+                "miss": "",
+                "hold": null
+              }
+            ],
+            "source": null,
+            "bonuses": [],
+            "createdAt": null,
+            "modifiedAt": 1790000000000,
+            "reviewedAt": 1790000000000,
+            "touched": [],
+            "reviewedSnapshot": {
+              "title": "Salt Guild",
+              "category": "Guild",
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": "city",
+              "dc": 18,
+              "skill": "inv",
+              "reveal": "",
+              "miss": "",
+              "hold": null,
+              "lore": [
+                {
+                  "id": "g1",
+                  "label": "Salt oath",
+                  "dc": 12,
+                  "skill": "rel",
+                  "text": "<p>Salt.</p>",
+                  "miss": "",
+                  "hold": null
+                }
+              ]
+            }
+          },
+          {
+            "id": "loner",
+            "title": "Loner",
+            "category": "smugglers' compact",
+            "icon": "icons/zz/custom.webp",
+            "whenKnown": "enables",
+            "whenCarried": "inherit",
+            "secret": true,
+            "parent": null,
+            "dc": 15,
+            "skill": "his",
+            "reveal": "",
+            "miss": "",
+            "hold": null,
+            "lore": [],
+            "source": null,
+            "bonuses": [],
+            "createdAt": null,
+            "modifiedAt": null,
+            "reviewedAt": null,
+            "touched": [],
+            "reviewedSnapshot": null
+          },
+          {
+            "id": "species:elf",
+            "title": "Elvenkind",
+            "category": "Species",
+            "icon": null,
+            "whenKnown": "enables",
+            "whenCarried": "inherit",
+            "secret": false,
+            "parent": null,
+            "dc": 15,
+            "skill": "his",
+            "reveal": "",
+            "miss": "",
+            "hold": null,
+            "lore": [],
+            "source": null,
+            "bonuses": [],
+            "createdAt": null,
+            "modifiedAt": null,
+            "reviewedAt": null,
+            "touched": [],
+            "reviewedSnapshot": null
+          },
+          {
+            "id": "dockward",
+            "title": "Dock Ward",
+            "category": "Street",
+            "icon": "icons/environment/settlement/sign-wood.webp",
+            "whenKnown": "enables",
+            "whenCarried": "inherit",
+            "secret": true,
+            "parent": "city",
+            "dc": 21,
+            "skill": "his",
+            "reveal": "",
+            "miss": "",
+            "hold": null,
+            "lore": [],
+            "source": null,
+            "bonuses": [],
+            "createdAt": 1790000000000,
+            "modifiedAt": 1790000000000,
+            "reviewedAt": null,
+            "touched": [
+              "dc",
+              "category",
+              "icon"
+            ],
+            "reviewedSnapshot": null
+          },
+          {
+            "id": "species:dwarf",
+            "title": "Dwarrow",
+            "category": "Species",
+            "icon": null,
+            "whenKnown": "enables",
+            "whenCarried": "inherit",
+            "secret": false,
+            "parent": null,
+            "dc": 15,
+            "skill": "his",
+            "reveal": "",
+            "miss": "",
+            "hold": null,
+            "lore": [],
+            "source": null,
+            "bonuses": [],
+            "createdAt": 1790000000000,
+            "modifiedAt": 1790000000000,
+            "reviewedAt": null,
+            "touched": [],
+            "reviewedSnapshot": null
+          }
+        ]
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "authorEntry species:dwarf again (collision)",
+    "out": {
+      "ok": false,
+      "reason": "collision",
+      "existing": {
+        "id": "species:dwarf",
+        "title": "Dwarrow",
+        "category": "Species",
+        "icon": null,
+        "whenKnown": "enables",
+        "whenCarried": "inherit",
+        "secret": false,
+        "parent": null,
+        "dc": 15,
+        "skill": "his",
+        "reveal": "",
+        "miss": "",
+        "hold": null,
+        "lore": [],
+        "source": null,
+        "bonuses": [],
+        "createdAt": 1790000000000,
+        "modifiedAt": 1790000000000,
+        "reviewedAt": null,
+        "touched": [],
+        "reviewedSnapshot": null
+      }
+    },
+    "calls": [],
+    "console": []
+  },
+  {
+    "label": "authorEntry name clash",
+    "out": {
+      "ok": false,
+      "reason": "collision",
+      "existing": {
+        "id": "city",
+        "title": "Vel",
+        "category": "City",
+        "icon": "icons/environment/settlement/city-gate.webp",
+        "whenKnown": "enables",
+        "whenCarried": "inherit",
+        "secret": true,
+        "parent": "realm",
+        "dc": 15,
+        "skill": "his",
+        "reveal": "",
+        "miss": "",
+        "hold": null,
+        "lore": [],
+        "source": null,
+        "bonuses": [],
+        "createdAt": null,
+        "modifiedAt": null,
+        "reviewedAt": null,
+        "touched": [],
+        "reviewedSnapshot": null
+      }
+    },
+    "calls": [],
+    "console": []
+  },
+  {
+    "label": "stampNew(7)",
+    "out": {
+      "createdAt": 7,
+      "modifiedAt": 7,
+      "reviewedAt": null,
+      "touched": []
+    },
+    "calls": [],
+    "console": []
+  }
+]

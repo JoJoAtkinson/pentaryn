@@ -25,6 +25,13 @@ tags: [plans, audit, foundry]
 | transform-creatures-31 | re-anchored — creatures.mjs:366-380 (snapshot :343-357); `status()` should also report `floatOverHud` |
 | transform-creatures-40 | **new** (re-run code) — `placeStrip` polls Argon's DOM every 500 ms on every player client |
 
+> **Status 2026-10-11 (wave 3, migration done offline; live test pending).** Every finding is applied,
+> id → commit: -30 `fdab0bf` (core `isAoeHandle`/`isItemPile`) · -28 characterised at the checkpoint
+> `6e4c7d7` (golden `senses-handoff.json`; the orphan stays a decision, C-L1, Open for Joe) · -29
+> `cdb694e` (warn once; the adjustments-row half is with the integrator) · -31 `008647a` (syncScene
+> ids), `54f2d1b` (ownerSees document), `a8d5ead` (`status()`) · -26 `4b0ebf7` · -25 `2f844f6` ·
+> -27 `a6a0d54` · -40 `23fa387`. Record: [`../addon-blueprint-2026-10/migrate-pentaryn-creatures.md`](../addon-blueprint-2026-10/migrate-pentaryn-creatures.md) §Result.
+
 ## Summary
 
 ### pentaryn-creatures

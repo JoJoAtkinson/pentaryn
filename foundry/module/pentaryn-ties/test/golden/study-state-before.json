@@ -1,0 +1,137 @@
+{
+  "npc": {
+    "kind": "zzKind0000000001",
+    "kindId": "zzKind0000000001",
+    "isOwnKind": false,
+    "spent": false,
+    "content": true,
+    "skill": "rel",
+    "skillLabel": "Religion",
+    "gmOnline": true,
+    "available": true
+  },
+  "kind": {
+    "kind": "zzKind0000000001",
+    "kindId": "zzKind0000000001",
+    "isOwnKind": true,
+    "spent": false,
+    "content": true,
+    "skill": "rel",
+    "skillLabel": "Religion",
+    "gmOnline": true,
+    "available": true
+  },
+  "lone": {
+    "kind": "zzLone0000000001",
+    "kindId": "zzLone0000000001",
+    "isOwnKind": true,
+    "spent": false,
+    "content": false,
+    "skill": "nat",
+    "skillLabel": "Nature",
+    "gmOnline": true,
+    "available": false
+  },
+  "none": {
+    "available": false
+  },
+  "lore": [
+    {
+      "id": "l1",
+      "label": "Debts",
+      "dc": 12,
+      "skill": "ins",
+      "skillLabel": "Insight",
+      "spent": false,
+      "available": true,
+      "gmOnline": true
+    },
+    {
+      "id": "l3",
+      "label": "Held secret",
+      "dc": 10,
+      "skill": "inv",
+      "skillLabel": "Investigation",
+      "spent": false,
+      "available": true,
+      "gmOnline": true
+    },
+    {
+      "id": "l4",
+      "label": "Quiet fail",
+      "dc": 30,
+      "skill": "inv",
+      "skillLabel": "Investigation",
+      "spent": false,
+      "available": true,
+      "gmOnline": true
+    }
+  ],
+  "loreNone": [],
+  "attr": [
+    {
+      "id": "g1",
+      "attrId": "guild",
+      "label": "Oath",
+      "dc": 13,
+      "skill": "rel",
+      "skillLabel": "Religion",
+      "spent": false,
+      "available": true,
+      "gmOnline": true
+    },
+    {
+      "id": "g2",
+      "attrId": "guild",
+      "label": "Held oath",
+      "dc": 10,
+      "skill": "rel",
+      "skillLabel": "Religion",
+      "spent": false,
+      "available": true,
+      "gmOnline": true
+    }
+  ],
+  "attrNone": [],
+  "offers": [
+    {
+      "id": "guild",
+      "title": "The Guild",
+      "icon": "icons/sundries/flags/banner-standard-green.webp",
+      "rows": [
+        {
+          "id": "g1",
+          "attrId": "guild",
+          "label": "Oath",
+          "dc": 13,
+          "skill": "rel",
+          "skillLabel": "Religion",
+          "spent": false,
+          "available": true,
+          "gmOnline": true
+        },
+        {
+          "id": "g2",
+          "attrId": "guild",
+          "label": "Held oath",
+          "dc": 10,
+          "skill": "rel",
+          "skillLabel": "Religion",
+          "spent": false,
+          "available": true,
+          "gmOnline": true
+        }
+      ]
+    }
+  ],
+  "kindActorOf": [
+    "zzKind0000000001",
+    "zzKind0000000001",
+    null
+  ],
+  "skill": {
+    "skill": "rel",
+    "label": "Religion"
+  },
+  "hold": false
+}

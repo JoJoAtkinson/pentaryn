@@ -1,6 +1,6 @@
 ---
 title: Migrating pentaryn-portals to the addon blueprint
-status: plan
+status: done (offline) — live test pending
 last_modified: 2026-10-11
 tags: [foundry, modules, blueprint, migration, portals]
 ---
@@ -305,8 +305,9 @@ assertions on new files, written before the old file is split.
   closes the menu, and the bound `#board` listeners stay (as today: `dataset.ppBound`). `party`
   clears nothing (a WeakMap). `cards` has nothing.
 - Update `seams.mjs` to re-export from the new files.
-- ADJ: `core-portals-relative-uuid.files` → `portals-core.mjs`, `scene-adapter.mjs`, which is where
-  the `relative: behavior` marker now lives.
+- ADJ: `core-portals-relative-uuid.files` → `portals-core.mjs`, `scene-adapter.mjs`, `cards.mjs`.
+  The `relative: behavior` marker now lives in `scene-adapter.mjs`, and `decorate` in `cards.mjs`
+  also resolves destinations with `fromUuidSync(u, { relative: behavior })`.
 
 ### S4 — Logging, no empty catch
 
@@ -452,7 +453,7 @@ every `portals-*` row, and portals has no patches. See the question for Joe in �
 | `core-teleport-replacements-follow` | `replacements` | `party.mjs` | -31 |
 | `core-region-config-portal-card` | `region-appearance` | `cards.mjs` | -31 |
 | `itempiles-portals-pile-pc` | `isValidItemPile` | `scene-adapter.mjs` | C47 |
-| `core-portals-relative-uuid` (existing) | unchanged | `portals-core.mjs`, `scene-adapter.mjs` | S3 |
+| `core-portals-relative-uuid` (existing) | unchanged | `portals-core.mjs`, `scene-adapter.mjs`, `cards.mjs` | S3 |
 | `portals-teleport-default-and-spread` (**renamed `core-teleport-default-and-spread`**, D2 `df661e0`) (existing, adjustments.yml:884-893, added by the re-run) → **rename** `core-teleport-default-and-spread` | `data-action="yes"`, `:scope > p`, `spreadArrival` (was `preferTeleport`, `spreadArrival` — own names that never go stale) | `cards.mjs`, `party.mjs`, `portals-core.mjs` | C32 (fails live), -31 extension |
 
 All rows: `modules: [pentaryn-portals]`, `check: make foundry-portals-check`. Add a
@@ -526,10 +527,136 @@ The structural steps absorb -25, -26, -29 (W7), -31 (ADJ), -33, the C24 part of 
 
 | | |
 |---|---|
-| Live score after the migration | ___ % (___ / ___ fail-class rules) — `conformance.py --module portals --markdown` |
-| Date | ____-__-__ |
-| Commits (Joe-approved) | characterisation: ______ · refactor: ______ · standalone: ______ |
-| Declared changes handed to the live-test workflow | ______ (session L__) |
-| `module.json` edits appended to `wave7-restart-batch.md` | yes / no |
-| Adjustments rows appended to `adjustments-batch.md` | yes / no |
-| Still failing, and why | ______ |
+| Live score after the migration | **91.3 % (42/46)** at `8d3d7736`, after the integrator's adjustments rows (`b3812eda`); fails C07, C09, C37, C51 (all Wave 7). Lane end 87.0 %, checkpoint 67.4 %, wave-3-base 58.1 % |
+| Date | 2026-10-11 (code phase; nothing synced) |
+| Commits | characterisation: `2b412b0a` `49b2484d` `a73d7ad1` `0ca63b97` · S2 oracle `a5a52410` · refactor: S2 `ff66ad35` (+ todo flip `b870dc71`), S3 `f6bbd2dc`, S4 `38c366fd`, S5 `66cb60ae`, S6 `bf362fd4`, D-P1 `d132395c`, S7 `2e15ab61`, S8 `186cdfb1` · standalone: -32 additions `fe8938fe`, hygiene `a3ade332`, -36 `477e39e2`, -27 `6d2785e4` + `6b892145`, D-P3 `0f06790a`, D-P4 `0fe9e4b8`, D-P5 `59a1e99b` + `413fed02`, -43 `ae936c07` + D-P6 `8a060d21`, -38 `b87d8c15`, gate fix `4d6f0c4b` · standalone pass 2 (2026-10-11): -27 rest `09ec04f9` (unawaited draws) + `7f50014c` (badge menu), -33 guard `14f86c48`, -36 README note `24cc1b58`, **[declared] C59** `be2573e3` (switches) + `5c34cda8` (unlink), C59 scan `05b79e3e`, CHANGELOG `aa43f188` |
+| Declared changes handed to the live-test workflow | D-P1, S7, D-P3, D-P4, D-P5, D-P6, -27 snapshot message, C59 batches (session: not yet run) |
+| `module.json` edits appended to `wave7-restart-batch.md` | no — returned to the integrator (shared file); the existing portals row needs four additions (below) · **done by the wave-3 integrator** (`d83d0b11`): the batch row carries the full edit; `module.json` itself waits for the Wave 7 restart |
+| Adjustments rows appended to `adjustments-batch.md` | no — returned to the integrator (shared file); two corrections to the existing rows (below) · **landed by the wave-3 integrator** in `foundry/adjustments.yml` (`b3812eda`), marked in `adjustments-batch.md` (`b631badf`) |
+| Still failing, and why | C07, C09, C37, C51 → Wave 7 (`module.json` flags/recommends/cssPrefix, `lang/`). C32/C47 closed by `b3812eda`. Warn: C06w (Wave 7 styles move), C36 (Wave 7 i18n). C59 passes since `05b79e3e` (at `8d3d7736`, wave-3 code-phase close) |
+| Wave 3 close (code phase, 2026-10-11) | `node test/run.mjs` 191 pass + legacy 52. Frozen-test diff since `0ca63b97`: 32 files (14 new, 18 changed). Untagged pin flip to treat as declared: `a3ade332` (clear-image `-=img` → `_del`). Coverage (node:test, lcov merged per file) 100 / 97.80 / 100 over 2 files → **99.51 / 96.19 / 97.89** over 10. Shared files landed: adjustments `b3812eda` (-31 closed), `scene-links.md` and `markers.md` `e0444215` (-38 table), index `e064e930`, Wave 7 row `d83d0b11`. Open for Joe: W3-P1, W3-P2 (W3-P3 closed). Live checks: [`wave-3-live-plan.md`](wave-3-live-plan.md). Record: [`wave-3-report.md`](wave-3-report.md) §Per module |
+
+### Wave 3 migration notes (2026-10-11)
+
+- **Layout** as §2, with three deviations. (1) The adapter may import only core and lib (C16), so
+  `confirmParty` reads the setting through `configureSceneAdapter({ setting, log })`, called by the
+  entry at evaluation, instead of importing `settings.mjs`. (2) `link`/`unlink` follow use-doc §5.1
+  (one positional ref): `link(ref, { to, twoWay, dryRun })`, `unlink(ref, { to, dryRun })`, not
+  `link(fromRef, toRef, …)`. (3) `regionOf` is not published: every new row resolves its `ref`
+  through the kit's `resolveRef(…, "region")`; the old rows keep their document signatures.
+- **inspect** (C29): read-only; a player view (`as`) drops destinations for a sealed or unrevealed
+  passage and the GM-only passage name; an Actor or Token ref answers `null`, so the root
+  `game.pentaryn.inspect(actor)` gets `null` from portals instead of an error.
+- **D-P5** landed as two commits (one pin each). `teleportParty` still returns `undefined` for a
+  player or a missing region. `spreadArrival` still returns the document (the audit's
+  `{ moved, to }` is not in this guide's list; open below).
+- **Frozen tests changed** (every change in a commit that names it): `seams.mjs` (S3, import
+  paths); `core.test` todo flip (`b870dc71`); D-P1 `glue.test` publish pin + frozen-importer setup,
+  `publish.test`, the surface pin now filters to the seven legacy members (golden unchanged); S7
+  selector renames + nine HTML goldens (rename only, checked line by line); hygiene clear-image
+  payload; -27 snapshot KNOWN; D-P3 hooks pin; D-P4 KNOWN plus the deleteToken failure case (now a
+  different error, so it still proves the warn); D-P5 two pins; D-P6 KNOWN. One undeclared touch:
+  `fe8938fe` loosened the D-P1 key-list pin (added in `d132395c`) to a subset, because the -32
+  additions grow the API and the exact list belongs to `api.test`'s `golden/surface.json`.
+- **Tests** at `4d6f0c4b`: 169 node:test + 52 legacy, all green (run twice); module-check gates
+  (parse, imports, i18n, node-test, vendor, conformance) green. Coverage (lines / branches / funcs):
+  core 100 / 97.4 / 100, adapter 100 / 98.7 / 97.8, badges 100 / 96.9 / 95.5, party 100 / 97.4 /
+  100, cards 100 / 94.2 / 92.3, card-app 100 / 100 / 93.9, api 95 / 84.9 / 100, entry 87.5 / 71.4 /
+  66.7 (the drift-refusal and hot-patch branches).
+- **Known red** for bisecting: C32 / `foundry-adjustments-check` from `f6bbd2dc` until the ADJ batch
+  lands (the two existing rows list `portals.mjs`); the module-check imports gate red from
+  `ae936c07` through `186cdfb1` (4 commits: `ae936c07`, `8a060d21`, `b87d8c15`, `186cdfb1`;
+  `test/aoe-handle.test.mjs` imported `../../pentaryn-aoe/core.mjs`); fixed `4d6f0c4b`.
+
+### Standalone pass 2 (2026-10-11)
+
+Every §4 row and every audit finding was already applied or handed on (above); this pass took what
+was left in the finding texts and the §5.9 checklist. 191 node:test + 52 legacy, green twice;
+conformance 87.0 % with no C59 warn; `vendor.py check portals` identical.
+
+- **-27 (rest)**: the draws nobody awaits (`canvasReady`, `setEditing`) share the debounced redraw's
+  catch (`badge redraw failed`), and the GM badge menu's click goes through the pass-through guard
+  (`badge menu`). Tests `redraw-errors.test.mjs`, `menu-errors.test.mjs`. Console only.
+- **-33**: the audit's `test_module_docs.py` guard, done module-local as `test/readme.test.mjs`
+  (every manifest row, own and contributed, is a row in the README's API table).
+- **-36**: the README Pitfalls note on the Item Piles probe (the code comment was already there).
+- **C59 [declared]**: the card window's switches and `unlinkRegion` write through one
+  `region.updateEmbeddedDocuments("RegionBehavior", …)`. Pins flipped: card-app "edit controls …
+  switches", card-app "unlink: …", api-additions "unlink(ref, { to }) …". The world fixture's
+  regions gain `updateEmbeddedDocuments` (one `updateEmbedded` record; each behaviour applies and
+  fires its own hook). Live check: toggle *Show where it leads* on a passage and remove a
+  destination in the card window; the badge redraws once and the dialog follows the new setting.
+  `05b79e3e` moves the per-card wiring into `_wireCard` so the scan stops reading listener closures
+  as a loop of writes (no change).
+- Not done here: -29 (W7), -31 and the -38 markers.md table (integrator), the -32 shapes and the -36
+  unification (Open for Joe in the wave-3 report).
+
+### For the integrator (shared files)
+
+- **`foundry/adjustments.yml`** (and `adjustments-batch.md`'s portals rows): `core-portals-relative-uuid`
+  files → `portals-core.mjs`, `scene-adapter.mjs`, `cards.mjs` (`decorate` resolves destinations
+  with `relative: behavior` too). `core-teleport-default-and-spread` files →
+  `cards.mjs`, `party.mjs` (**not** `portals-core.mjs`, which holds none of its markers), markers →
+  `data-action="yes"`, `:scope > p`, `spreadArrival`. New rows as the batch lists, with these
+  files: `core-teleport-dialog-cards` → `cards.mjs`, `portals-core.mjs` (markers `dialog-`,
+  `select[name="destination"]`); `core-teleport-replacements-follow` → `party.mjs`;
+  `core-region-config-portal-card` → `cards.mjs`; `itempiles-portals-pile-pc` (packages
+  `[item-piles]`) → `scene-adapter.mjs`.
+- **`wave7-restart-batch.md`** portals row, add: `flagScope: "pentaryn-portals"` (manifest-only; the
+  code already writes there), `generation: 14`, `afterSync` = config.py's tuple (and delete it from
+  the ModuleSpec); `git mv portals.css styles/portals.css` with the `styles` entry; if `version`
+  bumps, `VERSION` in `portals-core.mjs` **and** the frozen `core.test` "version as shipped (0.4.4)"
+  pin move in the same commit; `test/i18n.test.mjs` is written to fail once `languages` exists —
+  the W7 commit replaces it with the lang-key pins.
+- **`context/foundry/README.md`**: run `python -m scripts.foundry.ops module-index` (the Module APIs
+  table is stale: portals now has a describe golden); extend the "Region + teleport scene links"
+  row with "destination cards, travel badges, party teleport (`pentaryn-portals`)" and the module
+  README link.
+- **`context/foundry/scene-links.md`** § Destination cards: the console table (README "API").
+- **`context/foundry/markers.md`**: the "Who checks for Markers and crowd" table (-38).
+
+### Checkpoint (wave 3, 2026-10-11)
+
+**checkpoint: 0ca63b97** (`test(portals): characterisation checkpoint`). The tests and goldens
+under `test/` are frozen from here: during S2–S8 only `test/fixtures/seams.mjs` may change (it
+re-exports the internals from the new files).
+
+- **Re-anchor.** `git diff 4e64f47..wave-3-base -- foundry/module/pentaryn-portals` is empty, so
+  every HEAD `4e64f47` line number in this guide still holds for `portals.mjs` lines 1–966. The
+  only code edit since is the test seam that `a73d7ad1` appends after line 966
+  (`export const _internals = {…}`, with a `state()` getter for `badgeLayer`, `drawRun`, `tip`,
+  `menu` and `drag`). At `wave-3-base` the score is **58.1 % (25/43)**, not the 51.3 % in §1:
+  - C32 passes since D2 renamed the row to `core-teleport-default-and-spread`;
+  - the rule set grew to 43 fail-class rules;
+  - C59 is a new warning (`portals.mjs:842, 847, 851, 871`: per-behaviour `update` in a loop).
+- **S1 commits.** The steps are split across four commits:
+  - `2b412b0a` vendors kit 1.0.2 (full tier);
+  - `49b2484d` moves `run.mjs` to `test/legacy-core.mjs`, kept in `LEGACY`, and gives `run.mjs` the fixed body;
+  - `a73d7ad1` adds the seam;
+  - `0ca63b97` is the checkpoint.
+  After the checkpoint the score is **67.4 % (29/43)**: C14, C20, C41 and C43 now pass.
+- **Coverage** (`node --test --experimental-test-coverage`, line / branch / funcs):
+
+  | File | Before | After |
+  |---|---|---|
+  | `portals.mjs` | not loaded by any test | **100 / 98.02 / 100** |
+  | `portals-core.mjs` | 100 / 92.19 / 100 | **100 / 96.95 / 100** |
+
+  The branches still uncovered are defensive `?.` / `??` fallbacks. The bubble `pointermove`
+  `if (drag) return` cannot be reached: the capture listener stops the event first.
+- **Test files.** 113 node:test tests, plus the 52 legacy checks:
+  - `core`, `glue`, `hooks`, `badges`, `party`, `card-app`, `publish`;
+  - 18 goldens, including `hooks.json` (grouped by hook name, 14 registrations),
+    `surface-legacy.json` and `settings-register.json`. S5 and S6 need the last two.
+- **Todo and KNOWN pins** (each flips in its own [declared] commit):
+  - todo: `VERSION === module.json` (core.test). It passes once S2 adds `VERSION`/`MODULE` to core.
+  - KNOWN (-32): `cardFor(null)` throws a TypeError. D-P5 flips it.
+  - KNOWN (-43): an occupant flagged only through `handleActor` still crowds `spreadArrival`. D-P6 flips it. `recordOf` treats it as a handle, and the tests pin that as intended.
+  - KNOWN (-28): `bringFollowers` rejects on "already exists". D-P4 flips it.
+  - KNOWN (-27): when the image fails to load, `snapshot` rejects with the raw error.
+- **Pins a later step changes on purpose:**
+  - S7 re-pins the `pp-` HTML goldens: `cards-html`, `decorate-*`, `config-fieldset`, `hover`, `menu`, `card-edit`, `card-preview`, `confirm-party`.
+  - The hygiene commit re-pins the clear-image payload `{"flags.pentaryn-portals.-=img": null}`.
+  - D-P3 (debounce) changes the hooks test "each region hook draws once, immediately".
+  - D-P1 changes the publish test ("nothing at ready itself; one tick later") and `surface-legacy.json`.
+- **Not pinned:** whether the C24 silent catches log anything. S4 adds `warnOnce`/`debug` with its own new tests. S1 pins only that drawing still succeeds and nothing throws.

@@ -1,0 +1,20 @@
+{
+  "stanceLabel": {
+    "0": "Neutral",
+    "1": "Friendly",
+    "2": "Devoted",
+    "-2": "Hostile",
+    "-1": "Wary"
+  },
+  "categoryLabel": {
+    "sentient": "Sentient",
+    "beasts": "Beasts"
+  },
+  "derivedCategory": {
+    "type:humanoid": "Creature type",
+    "species:elf": "Species",
+    "background:sage": "Background",
+    "size:med": "Size",
+    "kind:zzNoActor0000001": "Kind"
+  }
+}

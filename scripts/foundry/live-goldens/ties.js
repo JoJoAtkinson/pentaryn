@@ -8,8 +8,9 @@
 //     plus whether D1's new names (attributes.lookup, study.examine) exist yet;
 //   - a lookup of a KNOWN attribute on a ZZ npc: the first registry entry by id (deterministic),
 //     linked to the scratch actor with attributes.link (writes only that actor's flags), then
-//     resolve (by id and by title), describe (today's name for D1's lookup), of() and ids();
-//     plus the hostile reads describe("zz-no-such-attribute") and resolve(null).
+//     resolve (by id and by title), lookup (D1; `describe` until wave 3 B1b — the golden keeps the
+//     `describe*` keys so a before/after diff lines up), of() and ids(); plus the hostile reads
+//     lookup("zz-no-such-attribute") and resolve(null).
 // The registry is read, never written. The ZZ actor is deleted at the end.
 
 const N = 5;
@@ -80,17 +81,17 @@ try {
     resolveByTitle: T.attributes.resolve(entry.title),
     resolveLower: T.attributes.resolve(entry.title.toLowerCase()),
     resolveNull: T.attributes.resolve(null),
-    describe: pick(T.attributes.describe(entry.id)),
-    describeByTitle: pick(T.attributes.describe(entry.title)),
-    describeMissing: T.attributes.describe("zz-no-such-attribute"),
-    describeDerived: pick(T.attributes.describe("size:med")),
+    describe: pick(T.attributes.lookup(entry.id)),
+    describeByTitle: pick(T.attributes.lookup(entry.title)),
+    describeMissing: T.attributes.lookup("zz-no-such-attribute"),
+    describeDerived: pick(T.attributes.lookup("size:med")),
     ids: T.attributes.ids(actor),
     of: T.attributes.of(actor).map(pick),
     flag: actor.getFlag("pentaryn-ties", "attributes") ?? null
   };
 
   out.timings.resolve = await timeIt(() => T.attributes.resolve(entry.title), 9, 200);
-  out.timings.describe = await timeIt(() => T.attributes.describe(entry.id), 9, 200);
+  out.timings.describe = await timeIt(() => T.attributes.lookup(entry.id), 9, 200);
   out.timings.of = await timeIt(() => T.attributes.of(actor), 9, 100);
   out.timings.ids = await timeIt(() => T.attributes.ids(actor), 9, 100);
   out.timings.list = await timeIt(() => T.attributes.list(), 9, 200);

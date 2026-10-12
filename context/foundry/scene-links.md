@@ -210,6 +210,25 @@ To author a card, open Region config, then the Appearance tab, then **Portal car
 
 **Badges replace the tile as the visible sign.** A travel Tile disappears at darkness 1, because tiles are lit like the map. The portal module draws a badge on the interface layer instead, above the darkness; players only see it once its square has been in sight or explored: the destination thumbnail inside a violet ring. Hovering it shows the cards. A GM right-click offers Teleport party, Preview, Edit and Region settings. Keep the tiles for lit maps if you like, but don't rely on them in the Underdark.
 
+**From the console** (`game.pentaryn.portals`; `describe()` lists every row with its params). A
+region ref is a RegionDocument, uuid, 16-character id or exact name (`{ sceneId }` scopes an id or a
+name).
+
+| Call | Who | Returns |
+|---|---|---|
+| `cardFor(region)` | anyone | `{ uuid, title, img, description }`; `null` for no region |
+| `destinations(ref, { sceneId })` | anyone | `[{ uuid, scene, name, card, revealed, choice, behavior }]` |
+| `inspect(ref, { sceneId, as })` | anyone | `{ region, hidden, card, revealed, destinations }`; a player view (`as`) hides a sealed or unrevealed passage |
+| `badges()` · `redraw()` | anyone | this client's badges · redraws them |
+| `snapshot(regionOrUuid, { squaresWide, squaresHigh })` | GM | the saved card image path, or `null` |
+| `lookAt(region)` | GM | pans your view; nobody moves |
+| `teleportParty(region, { confirm: false })` | GM | `{ moved, cancelled }` — the party on `canvas.scene`; without `confirm: false` it waits on a dialog click |
+| `link(ref, { to, twoWay, dryRun })` · `unlink(ref, { to, dryRun })` | GM | `ok({…})` / `fail(code, reason)`, never a throw |
+| `open(region, { edit })` | GM | the Portal card window |
+
+`cardFor`, `lookAt`, `teleportParty` and `open` still take a RegionDocument, not a ref. Full table
+and the data written: the module README.
+
 ## Behavior fields
 
 `system.*` on the `teleportToken` behavior:

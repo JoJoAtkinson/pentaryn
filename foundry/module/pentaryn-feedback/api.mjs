@@ -18,17 +18,57 @@ import { publishedOf } from "./lib/publish.mjs";
 import { refOf, resolveRef } from "./lib/resolve.mjs";
 
 /**
- * @param {object} user  already resolved by buildApi (the row's first param is a `ref` of kind user)
- * @param {{ as?: * }} opts  `as`: a user ref — answer with what that user may see. Pending ids are
- *                        the GM's or that user's own; the rings exist only on the calling client.
+ * inspect's ref. The kit's root `game.pentaryn.inspect(ref)` resolves the ref as an Actor and passes
+ * that to every namespace, so an Actor (or a Token, or a placeable carrying one) means its players:
+ * every non-GM user who OWNs it or has it as their assigned character (journal.inspect's rule, plus
+ * ownership). Anything else resolves as a user ref (NOT_FOUND / AMBIGUOUS / BAD_ARGS thrown).
+ * @returns {{ actor: object|null, users: object[] }}
  */
-function inspect(user, ctx, { as } = {}) {
+function inspected(ref) {
+  const doc = ref?.documentName ? ref : ref?.document?.documentName ? ref.document : null;
+  if (doc?.documentName !== "Actor" && doc?.documentName !== "Token") {
+    return { actor: null, users: [resolveRef(ref, "user")] };
+  }
+  const actor = doc.documentName === "Token" ? doc.actor : doc;
+  const ids = new Set([actor?.id, doc.actorId, actor?.token?.actorId].filter(Boolean));
+  const users = (game.users?.contents ?? [...(game.users ?? [])]).filter(u => !u.isGM && (
+    ids.has(u.character?.id) || actor?.testUserPermission?.(u, "OWNER") === true));
+  return { actor: actor ?? doc, users };
+}
+
+/** Summaries of the reports these users filed, oldest first, the last 20; null when unreadable. */
+async function reportsBy(userIds) {
+  try {
+    return (await readAll()).map(x => x.report)
+      .filter(r => userIds.has(r?.user?.id))
+      .sort((a, b) => (a.t ?? 0) - (b.t ?? 0))
+      .slice(-20)
+      .map(summaryOf);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Read-only state for one user — or, for an Actor/Token ref, for that actor's players together.
+ * @param {*} ref            a user ref, or an Actor/Token (what the root inspect passes)
+ * @param {{ as?: * }} opts  `as`: a user ref — answer with what that user may see. Pending ids and
+ *                        reports are the GM's or that user's own (reports need a GM client: the
+ *                        report files are the GM's); the rings exist only on the calling client.
+ */
+async function inspect(ref, ctx, { as } = {}) {
+  const { actor, users } = inspected(ref);
   const viewer = as === undefined || as === null ? null : resolveRef(as, "user");
-  const sees = !viewer || viewer.isGM === true || viewer.id === user.id;
-  const self = user.id === game.user?.id;
+  const sees = u => !viewer || viewer.isGM === true || viewer.id === u.id;
+  const canRead = isGM() && (!viewer || viewer.isGM === true);
+  const self = users.find(u => u.id === game.user?.id);
+  const visible = users.filter(sees);
+  const pending = visible.length || !users.length ? visible.flatMap(u => ctx.exposed.pending?.(u) ?? []) : null;
+  const reports = canRead ? await reportsBy(new Set(users.map(u => u.id))) : null;
   return toPlain({
-    user: refOf(user),
-    pending: sees ? ctx.exposed.pending?.(user) ?? [] : null,
+    ...(actor ? { actor, users } : { user: users[0] }),
+    pending,
+    reports,
     actions: self ? (ctx.exposed.actions?.() ?? []).slice(-20) : null,
     errors: self ? (ctx.exposed.errors?.() ?? []).slice(-10) : null,
   });
@@ -120,7 +160,7 @@ export function buildApiFor(ctx) {
     return fn(...args);
   };
   return buildApi(MANIFEST, {
-    inspect: (user, opts = {}) => inspect(user, ctx, opts),
+    inspect: (ref, opts = {}) => inspect(ref, ctx, opts),
     selftest: () => selftest(ctx),
     open: door("open"),
     submit: door("submit"),

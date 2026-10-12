@@ -839,8 +839,7 @@ A change that a player or GM could notice, or that changes a failure path, is **
   run reports it.
 
 Known ones: ties `describe` → `describeCard`; ties `attributes.describe` → `attributes.lookup`
-and `study.inspect` → `study.examine` (D1; the old names are aliases that log a compatibility
-warning until ties S8); prompts' gather cut suffix `… (cut, full text: get-character <id>)`
+and `study.inspect` → `study.examine` (D1; the aliases were removed in wave 3, [declared] B1b); prompts' gather cut suffix `… (cut, full text: get-character <id>)`
 with one `gatherChars` default of 400 (D6); combat events renamed with legacy double-fire;
 hook registration moved to `setup`; `requiresReload` replacing hand-written prompts; removing
 existing `!important`; the walls flag-scope data migration (aoe, senses, cursors, attunement,

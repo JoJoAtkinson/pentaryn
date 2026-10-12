@@ -22,15 +22,23 @@
  * Client-side only, like everything else here. Nothing crosses the socket.
  */
 
-import { MODULE, read, stanceOf, stanceLabel } from "./ties-api.mjs";
-import { readWorn } from "./worn.mjs";
+import { MODULE, stanceOf } from "./ties-core.mjs";
+import { readWorn } from "./ties-adapter.mjs";
+import { canSee, read, stanceLabel } from "./ties-adapter.mjs";
+import { makeLog } from "./lib/log.mjs";
+import { PIN_SETTING, setting } from "./settings.mjs";
+
+const log = makeLog(MODULE);
 
 const LAYER_ID = "pentaryn-ties-cards";
-export const PIN_SETTING = "pinnedCards";
+export { PIN_SETTING }; // the setting row lives in settings.mjs (CLIENT_STATE)
 const FALLBACK_ART = "icons/svg/mystery-man.svg";
 
 /** key `${sourceActorId}:${tieId}` -> { el, pinned, sourceId, tieId, anchor, colour } */
 const cards = new Map();
+
+/** How many cards are up (ties-25: the wire painter skips its frame when there are none). */
+export const size = () => cards.size;
 
 const key = (sourceId, tieId) => `${sourceId}:${tieId}`;
 
@@ -246,32 +254,42 @@ export function show(sourceActor, entries, { showNotes = false } = {}) {
   for (const { tie, token } of entries) {
     const k = key(sourceActor.id, tie.id);
     if (cards.has(k)) continue; // already up — probably pinned; don't stamp a second one
-    const { el, close } = buildCard(tie, token, { showNotes });
-    const rec = {
-      el,
-      pinned: false,
+    const rec = mount(k, {
+      tie,
+      token,
       sourceId: sourceActor.id,
-      tieId: tie.id,
-      tokenId: token?.id ?? null,
-      colour: stanceOf(tie.stance).hex,
+      showNotes,
+      pinned: false,
       // top edge of the token, in canvas coords — see the geometry note in overlay.mjs on
       // why this comes off `center` and the document, never `token.x`
       anchor: token ? { x: token.center.x, y: token.center.y - (token.h ?? 0) / 2 } : null
-    };
-    close.addEventListener("click", ev => {
-      ev.stopPropagation();
-      remove(k);
-      savePinned();
-      notify();
     });
-    layer().appendChild(el);
-    cards.set(k, rec);
-    makeDraggable(rec);
     follow(rec);
     shown++;
   }
   notify();
   return shown;
+}
+
+/**
+ * Build one card and put it up (ties-41): its record, the close button (remove → save the pins →
+ * tell the wires), the layer, the card map and dragging. `show` and `restorePinned` differ only in
+ * where it lands and whether it starts pinned.
+ */
+function mount(k, { tie, token, sourceId, showNotes, pinned, anchor }) {
+  const { el, close } = buildCard(tie, token, { showNotes });
+  const rec = { el, pinned, sourceId, tieId: tie.id, tokenId: token?.id ?? null, colour: stanceOf(tie.stance).hex, anchor };
+  if (pinned) el.classList.add("pt-pinned");
+  close.addEventListener("click", ev => {
+    ev.stopPropagation();
+    remove(k);
+    savePinned();
+    notify();
+  });
+  layer().appendChild(el);
+  cards.set(k, rec);
+  makeDraggable(rec);
+  return rec;
 }
 
 /** Park a transient card just above its token, in screen space. */
@@ -327,7 +345,7 @@ function savePinned() {
       });
     game.settings.set(MODULE, PIN_SETTING, keep);
   } catch (err) {
-    console.warn(`${MODULE} | could not save pinned cards`, err);
+    log.warn(`could not save pinned cards`, err);
   }
 }
 
@@ -337,12 +355,7 @@ function savePinned() {
  * as a broken card.
  */
 export function restorePinned() {
-  let saved;
-  try {
-    saved = game.settings.get(MODULE, PIN_SETTING);
-  } catch {
-    return;
-  }
+  const saved = setting(PIN_SETTING);
   if (!Array.isArray(saved) || !saved.length) return;
 
   for (const entry of saved) {
@@ -359,37 +372,13 @@ export function restorePinned() {
      * wire was already safe (paintWires resolves through the filtered lookup); this was the
      * one hole left. Without a token the card falls back to `tie.img`, which is the actor
      * portrait they could already reach.
-     *
-     * Inlined rather than imported: overlay.mjs imports this module, so canSee() cannot come
-     * the other way without a cycle. Canonical version and its `isVisible` vs `visible`
-     * reasoning live there.
      */
-    const seen = p => game.user?.isGM === true || (p.isVisible ?? p.visible) === true;
     const token = canvas?.ready
-      ? canvas.tokens.placeables.find(p => p.actor?.id === tie.id && seen(p)) ?? null
+      ? canvas.tokens.placeables.find(p => p.actor?.id === tie.id && canSee(p)) ?? null
       : null;
     const k = key(actor.id, tie.id);
     if (cards.has(k)) continue;
-    const { el, close } = buildCard(tie, token, { showNotes: true });
-    const rec = {
-      el,
-      pinned: true,
-      sourceId: actor.id,
-      tieId: tie.id,
-      tokenId: token?.id ?? null,
-      colour: stanceOf(tie.stance).hex,
-      anchor: null
-    };
-    el.classList.add("pt-pinned");
-    close.addEventListener("click", ev => {
-      ev.stopPropagation();
-      remove(k);
-      savePinned();
-      notify();
-    });
-    layer().appendChild(el);
-    cards.set(k, rec);
-    makeDraggable(rec);
+    const rec = mount(k, { tie, token, sourceId: actor.id, showNotes: true, pinned: true, anchor: null });
     place(rec, Number(entry.x) || 20, Number(entry.y) || 20);
   }
   notify();

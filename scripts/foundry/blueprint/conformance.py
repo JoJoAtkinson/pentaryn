@@ -127,6 +127,22 @@ class Module:
     def code(self, rel: str) -> str:
         return self.files[rel].code
 
+    def reexports(self, rel: str) -> list[str]:
+        """Module-relative targets of `rel`'s `export … from "./x"` and `export * [as N] from "./x"`."""
+        src, out = self.files[rel], []
+        base = (self.dir / rel).parent
+        marks = [m.group(2) for m in jsscan._RE_EXPORT_LIST.finditer(src.code) if m.group(2)]
+        marks += [m.group(2) for m in jsscan._RE_EXPORT_STAR.finditer(src.code)]
+        for mark in marks:
+            lit = src.str_at(mark)
+            if not lit or not lit.plain or not lit.value.startswith("."):
+                continue
+            try:
+                out.append((base / lit.value).resolve().relative_to(self.dir.resolve()).as_posix())
+            except ValueError:
+                pass
+        return out
+
     def imports(self, rel: str) -> list[tuple[str, jsscan.Import]]:
         """(resolved module-relative target, import) for each relative import of `rel`."""
         out = []
@@ -385,6 +401,7 @@ def c05(m):
             continue
         seen.add(f)
         stack.extend(t for t, _ in m.imports(f) if t in m.files)
+        stack.extend(t for t in m.reexports(f) if t in m.files)   # a barrel reaches what it re-exports
     orphans = sorted(set(m.files) - seen)
     return ok() if not orphans else bad([f"unreachable: {', '.join(orphans)}"])
 
@@ -1292,14 +1309,15 @@ def c49(m):
 def ready_bodies(src) -> list[tuple[bool, int, int]]:
     """(is_async, open brace, close brace) of every `ready` handler body in one file: an inline
     `Hooks.once("ready", () => {…})`, or a named one — `Hooks.once("ready", onReady)` plus
-    `function onReady() {…}` in the same file (the template's hot-patchable entry shape)."""
+    `function onReady() {…}` in the same file (the template's hot-patchable entry shape). The kit's
+    registrar form `reg.once("ready", …)` counts the same."""
     code = src.code
     out = []
-    for rm in re.finditer(r"Hooks\.once\(\s*\x01(\d+)\x01\s*,\s*(async\s*)?\(\)\s*=>\s*\{", code):
+    for rm in re.finditer(r"(?:Hooks|reg)\.once\(\s*\x01(\d+)\x01\s*,\s*(async\s*)?\(\)\s*=>\s*\{", code):
         if src.strings[int(rm.group(1))].value == "ready":
             s = rm.end() - 1
             out.append((bool(rm.group(2)), s, match_paren(code, s)))
-    for rm in re.finditer(r"Hooks\.once\(\s*\x01(\d+)\x01\s*,\s*([A-Za-z_$][\w$]*)\s*\)", code):
+    for rm in re.finditer(r"(?:Hooks|reg)\.once\(\s*\x01(\d+)\x01\s*,\s*([A-Za-z_$][\w$]*)\s*\)", code):
         if src.strings[int(rm.group(1))].value != "ready":
             continue
         fm = re.search(rf"(async\s+)?function\s+{re.escape(rm.group(2))}\s*\([^)]*\)\s*\{{", code)

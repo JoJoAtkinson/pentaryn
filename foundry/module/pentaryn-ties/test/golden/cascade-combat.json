@@ -1,0 +1,94 @@
+[
+  {
+    "label": "first look this round",
+    "out": true,
+    "calls": [
+      {
+        "op": "ChatMessage.create",
+        "data": {
+          "content": "<p class=\"pt-study-stub\">ZZ Caven studies ZZ Nobody.</p>",
+          "speaker": {
+            "alias": "ZZ Caven",
+            "actor": "zzPc000000000001"
+          }
+        }
+      },
+      {
+        "op": "socket.emit",
+        "args": [
+          "module.pentaryn-ties",
+          {
+            "action": "scope-bubble",
+            "tokenId": "zzTokPc000000001",
+            "sceneId": "zzScene000000001",
+            "text": "ZZ Caven gives a second stranger the once-over. People do notice being measured."
+          }
+        ]
+      },
+      {
+        "op": "ChatMessage.create",
+        "data": {
+          "content": "<p class=\"pt-tempo-line\">ZZ Caven gives a second stranger the once-over. People do notice being measured.</p>",
+          "style": 3,
+          "speaker": {
+            "alias": "ZZ Caven",
+            "actor": "zzPc000000000001"
+          }
+        }
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "second look, same round",
+    "out": false,
+    "calls": [
+      {
+        "op": "notify",
+        "level": "warn",
+        "message": "You have already taken a moment to look someone over this round."
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "next round",
+    "out": true,
+    "calls": [
+      {
+        "op": "ChatMessage.create",
+        "data": {
+          "content": "<p class=\"pt-study-stub\">ZZ Caven studies ZZ Nobody.</p>",
+          "speaker": {
+            "alias": "ZZ Caven",
+            "actor": "zzPc000000000001"
+          }
+        }
+      },
+      {
+        "op": "socket.emit",
+        "args": [
+          "module.pentaryn-ties",
+          {
+            "action": "scope-bubble",
+            "tokenId": "zzTokPc000000001",
+            "sceneId": "zzScene000000001",
+            "text": "ZZ Caven is looking people up and down."
+          }
+        ]
+      },
+      {
+        "op": "ChatMessage.create",
+        "data": {
+          "content": "<p class=\"pt-tempo-line\">ZZ Caven is looking people up and down.</p>",
+          "style": 3,
+          "speaker": {
+            "alias": "ZZ Caven",
+            "actor": "zzPc000000000001"
+          }
+        }
+      }
+    ],
+    "console": []
+  }
+]

@@ -1,0 +1,64 @@
+{
+  "ended": {
+    "value": true,
+    "calls": [
+      {
+        "op": "update",
+        "documentName": "Item",
+        "uuid": "Actor.actHero000000001.Item.itmLight00000001",
+        "changes": {
+          "flags.pentaryn-senses.lightCast": null
+        }
+      },
+      {
+        "op": "notify",
+        "level": "info",
+        "message": "The light goes out."
+      },
+      {
+        "op": "updateEmbedded",
+        "scene": "scnCellar0000001",
+        "type": "Token",
+        "updates": [
+          {
+            "_id": "tokHero000000001",
+            "light": {
+              "dim": 60,
+              "bright": 30,
+              "angle": 360,
+              "color": "#ffc266",
+              "alpha": 0.35,
+              "luminosity": 0.5,
+              "negative": false,
+              "darkness": {
+                "min": 0,
+                "max": 1
+              },
+              "animation": {
+                "type": "torch",
+                "speed": 1,
+                "intensity": 1,
+                "reverse": false
+              }
+            },
+            "flags.pentaryn-senses.spellLight": "<_del>"
+          }
+        ]
+      }
+    ]
+  },
+  "none": {
+    "value": false,
+    "calls": [
+      {
+        "op": "notify",
+        "level": "info",
+        "message": "This Light isn't lit anywhere."
+      }
+    ]
+  },
+  "nullItem": {
+    "value": false,
+    "calls": []
+  }
+}

@@ -1,0 +1,214 @@
+[
+  {
+    "label": "legacy no-pass, total below dc",
+    "rowMissed": {
+      "lore": true,
+      "kind": false
+    },
+    "passOfRow": {
+      "lore": false,
+      "member": true,
+      "kind": true
+    },
+    "flatMissed": true,
+    "shareStatus": {
+      "lore": "failed",
+      "ident": "passed",
+      "kind": "failed"
+    }
+  },
+  {
+    "label": "legacy no-pass, total at dc",
+    "rowMissed": {
+      "lore": false,
+      "kind": false
+    },
+    "passOfRow": {
+      "lore": true,
+      "member": true,
+      "kind": true
+    },
+    "flatMissed": false,
+    "shareStatus": {
+      "lore": "passed",
+      "ident": "passed",
+      "kind": "failed"
+    }
+  },
+  {
+    "label": "legacy no-pass, total above dc",
+    "rowMissed": {
+      "lore": false,
+      "kind": false
+    },
+    "passOfRow": {
+      "lore": true,
+      "member": true,
+      "kind": true
+    },
+    "flatMissed": false,
+    "shareStatus": {
+      "lore": "passed",
+      "ident": "passed",
+      "kind": "failed"
+    }
+  },
+  {
+    "label": "pass: true",
+    "rowMissed": {
+      "lore": false,
+      "kind": false
+    },
+    "passOfRow": {
+      "lore": true,
+      "member": true,
+      "kind": true
+    },
+    "flatMissed": false,
+    "shareStatus": {
+      "lore": "passed",
+      "ident": "passed",
+      "kind": "failed"
+    }
+  },
+  {
+    "label": "pass: false",
+    "rowMissed": {
+      "lore": true,
+      "kind": false
+    },
+    "passOfRow": {
+      "lore": false,
+      "member": false,
+      "kind": true
+    },
+    "flatMissed": true,
+    "shareStatus": {
+      "lore": "failed",
+      "ident": "passed",
+      "kind": "failed"
+    }
+  },
+  {
+    "label": "share { from, prior }",
+    "rowMissed": {
+      "lore": false,
+      "kind": false
+    },
+    "passOfRow": {
+      "lore": true,
+      "member": true,
+      "kind": true
+    },
+    "flatMissed": false,
+    "shareStatus": {
+      "lore": "told",
+      "ident": "told",
+      "kind": "failed"
+    }
+  },
+  {
+    "label": "total: null (GM tell)",
+    "rowMissed": {
+      "lore": false,
+      "kind": false
+    },
+    "passOfRow": {
+      "lore": true,
+      "member": true,
+      "kind": true
+    },
+    "flatMissed": false,
+    "shareStatus": {
+      "lore": "told",
+      "ident": "passed",
+      "kind": "failed"
+    }
+  },
+  {
+    "label": "total: null, nothing written",
+    "rowMissed": {
+      "lore": false,
+      "kind": false
+    },
+    "passOfRow": {
+      "lore": null,
+      "member": null,
+      "kind": true
+    },
+    "flatMissed": false,
+    "shareStatus": {
+      "lore": "none",
+      "ident": "none",
+      "kind": "none"
+    }
+  },
+  {
+    "label": "dc non-number",
+    "rowMissed": {
+      "lore": false,
+      "kind": false
+    },
+    "passOfRow": {
+      "lore": false,
+      "member": true,
+      "kind": true
+    },
+    "flatMissed": false,
+    "shareStatus": {
+      "lore": "passed",
+      "ident": "passed",
+      "kind": "failed"
+    }
+  },
+  {
+    "label": "rec null",
+    "rowMissed": {
+      "lore": false,
+      "kind": false
+    },
+    "passOfRow": null,
+    "flatMissed": false,
+    "shareStatus": {
+      "lore": "none",
+      "ident": "none",
+      "kind": "none"
+    }
+  },
+  {
+    "label": "fractional total rounds up to the dc",
+    "rowMissed": {
+      "lore": false,
+      "kind": false
+    },
+    "passOfRow": {
+      "lore": true,
+      "member": true,
+      "kind": true
+    },
+    "flatMissed": false,
+    "shareStatus": {
+      "lore": "passed",
+      "ident": "passed",
+      "kind": "failed"
+    }
+  },
+  {
+    "label": "held (undelivered) legacy pass",
+    "rowMissed": {
+      "lore": false,
+      "kind": false
+    },
+    "passOfRow": {
+      "lore": true,
+      "member": true,
+      "kind": true
+    },
+    "flatMissed": false,
+    "shareStatus": {
+      "lore": "held",
+      "ident": "held",
+      "kind": "failed"
+    }
+  }
+]

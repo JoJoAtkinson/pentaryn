@@ -1,0 +1,62 @@
+{
+  "level": 3,
+  "class": "Wizard 3",
+  "subclass": "Evoker",
+  "species": "Elf",
+  "background": "Sage",
+  "abilities": {
+    "str": 8,
+    "dex": 14,
+    "con": 13,
+    "int": 16,
+    "wis": 12,
+    "cha": 10
+  },
+  "hp": 17,
+  "ac": 12,
+  "prof": 2,
+  "spellDC": 13,
+  "spellAbility": "int",
+  "saves": [
+    "int",
+    "wis"
+  ],
+  "skills": [
+    "arc*",
+    "his"
+  ],
+  "speed": 30,
+  "darkvision": 60,
+  "size": "med",
+  "languages": [
+    "common",
+    "elvish"
+  ],
+  "feats": [
+    "Alert"
+  ],
+  "spellCounts": {
+    "cantrips": 1,
+    "prepared": 1,
+    "always": 2,
+    "spellbook": 1,
+    "maxPrepared": 6,
+    "maxCantrips": 3
+  },
+  "slots": [
+    {
+      "key": "spell1",
+      "level": 1,
+      "type": "leveled",
+      "value": 4,
+      "max": 4
+    },
+    {
+      "key": "spell2",
+      "level": 2,
+      "type": "leveled",
+      "value": 0,
+      "max": 2
+    }
+  ]
+}

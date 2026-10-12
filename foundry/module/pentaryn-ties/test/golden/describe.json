@@ -1,0 +1,2533 @@
+{
+  "module": "pentaryn-ties",
+  "namespace": "ties",
+  "contract": "pentaryn-ties/api@1",
+  "flagScope": "pentaryn-ties",
+  "methods": [
+    {
+      "path": "inspect",
+      "params": [
+        {
+          "name": "ref",
+          "kind": "actor",
+          "type": "Actor|Token|uuid|id|exact name",
+          "doc": "never a substring; a token reads its world actor"
+        },
+        {
+          "name": "opts",
+          "type": "{ as?, sceneId? }",
+          "optional": true,
+          "doc": "as: a user ref — answer with what that user may see"
+        }
+      ],
+      "returns": "{ actor, kind, ties, inbound, known, granted, knowledge, attributes, beliefs, studyTiers, lore, conceal }",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "throws": [
+        "NOT_FOUND",
+        "AMBIGUOUS",
+        "BAD_ARGS"
+      ],
+      "since": "0.20.0",
+      "doc": "Everything ties knows about one actor, plain JSON, depth ≤ 4 (ties-3) — the first call to make. A GM sees all of it; for a player (or opts.as a player) the GM plane (inbound, beliefs, kind, studyTiers, lore, conceal) is null, and ties / known / granted / knowledge only for an actor they own."
+    },
+    {
+      "path": "selftest",
+      "params": [],
+      "returns": "{ ok, checks: [{ label, ok, detail }] }",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "since": "0.20.0",
+      "doc": "Live smoke checks after a sync."
+    },
+    {
+      "path": "show",
+      "params": [],
+      "returns": "undefined",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "Toggle every tie card for the hovered token (key 8)."
+    },
+    {
+      "path": "showAll",
+      "params": [],
+      "returns": "undefined",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "Same as show."
+    },
+    {
+      "path": "showOne",
+      "params": [],
+      "returns": "undefined",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "Selected token → hovered token: that one card (key 7)."
+    },
+    {
+      "path": "cards",
+      "params": [],
+      "returns": "undefined",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "0.3.0 name for show, kept so old macros work."
+    },
+    {
+      "path": "clear",
+      "params": [],
+      "returns": "undefined",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "Close the transient cards and their wires."
+    },
+    {
+      "path": "closeAllCards",
+      "params": [],
+      "returns": "undefined",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "Close every card, pinned ones included."
+    },
+    {
+      "path": "edit",
+      "params": [
+        {
+          "name": "actor",
+          "type": "Actor"
+        }
+      ],
+      "returns": "Promise<Application>",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "Open the standalone ties editor for an actor."
+    },
+    {
+      "path": "addTie",
+      "params": [
+        {
+          "name": "token",
+          "type": "Token",
+          "doc": "default: hovered, then the first controlled token",
+          "optional": true
+        }
+      ],
+      "returns": "Promise<TieDialog|null>",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "Open the add-a-tie dialog for a token (key 6); null when refused."
+    },
+    {
+      "path": "read",
+      "params": [
+        {
+          "name": "ref",
+          "kind": "actor",
+          "type": "Actor|Token|id|uuid|exact name",
+          "resolve": false,
+          "doc": "a token reads its world actor"
+        }
+      ],
+      "returns": "[{ id, name, img, missing, word, notes, stance, strength }]",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "nullWhen": "never — [] on a miss",
+      "legacy": true,
+      "doc": "This actor's ties, sanitised and sorted. Never throws; [] on a miss."
+    },
+    {
+      "path": "inbound",
+      "params": [
+        {
+          "name": "ref",
+          "kind": "actor",
+          "type": "Actor|Token|id|uuid|exact name",
+          "resolve": false,
+          "doc": "a token reads its world actor"
+        }
+      ],
+      "returns": "[{ id, name, img, word, notes, stance, strength, mutual }]",
+      "gm": true,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "Who points AT this actor. GM only (a player gets [])."
+    },
+    {
+      "path": "set",
+      "params": [
+        {
+          "name": "actor",
+          "type": "Actor"
+        },
+        {
+          "name": "target",
+          "type": "Actor"
+        },
+        {
+          "name": "tie",
+          "type": "{ word, notes?, stance, strength }",
+          "optional": true
+        },
+        {
+          "name": "opts",
+          "type": "{ reciprocal = true, reverseWord, reverseStance, reverseNotes }",
+          "optional": true
+        }
+      ],
+      "returns": "Promise<boolean>",
+      "gm": false,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "flags.pentaryn-ties.ties"
+      ],
+      "legacy": true,
+      "doc": "Create or update one edge and, by default, FORCE-mirror its reverse (word and stance overwritten; notes kept unless reverseNotes). True when either side was written."
+    },
+    {
+      "path": "setTie",
+      "params": [
+        {
+          "name": "actor",
+          "type": "Actor"
+        },
+        {
+          "name": "target",
+          "type": "Actor"
+        },
+        {
+          "name": "tie",
+          "type": "{ word, notes?, stance, strength }",
+          "optional": true
+        },
+        {
+          "name": "opts",
+          "type": "object",
+          "optional": true
+        }
+      ],
+      "returns": "Promise<boolean>",
+      "gm": false,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "flags.pentaryn-ties.ties"
+      ],
+      "legacy": true,
+      "doc": "Same as set."
+    },
+    {
+      "path": "setNotes",
+      "params": [
+        {
+          "name": "actor",
+          "type": "Actor"
+        },
+        {
+          "name": "targetId",
+          "type": "string"
+        },
+        {
+          "name": "notes",
+          "type": "string",
+          "optional": true
+        }
+      ],
+      "returns": "Promise<boolean>",
+      "gm": false,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "flags.pentaryn-ties.ties"
+      ],
+      "legacy": true,
+      "doc": "Set just the notes on an existing edge; false when the edge is not there."
+    },
+    {
+      "path": "remove",
+      "params": [
+        {
+          "name": "actor",
+          "type": "Actor"
+        },
+        {
+          "name": "targetId",
+          "type": "string"
+        },
+        {
+          "name": "opts",
+          "type": "{ bothWays = true }",
+          "optional": true
+        }
+      ],
+      "returns": "Promise<boolean>",
+      "gm": false,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "flags.pentaryn-ties.ties"
+      ],
+      "legacy": true,
+      "doc": "Remove an edge and (by default) its mirror."
+    },
+    {
+      "path": "migrate",
+      "params": [],
+      "returns": "Promise<{ moved }>",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "flags.pentaryn-ties.ties",
+        "flags.world.ties"
+      ],
+      "legacy": true,
+      "doc": "GM: move pre-module flags.world.ties onto the module scope (runs at ready)."
+    },
+    {
+      "path": "worn",
+      "params": [
+        {
+          "name": "token",
+          "type": "Token"
+        }
+      ],
+      "returns": "{ by, note } | null",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "The worn mark on a token; never throws."
+    },
+    {
+      "path": "setWorn",
+      "params": [
+        {
+          "name": "token",
+          "type": "Token"
+        },
+        {
+          "name": "mark",
+          "type": "{ by, note }",
+          "optional": true
+        }
+      ],
+      "returns": "Promise<boolean>",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "flags.pentaryn-ties.worn"
+      ],
+      "legacy": true,
+      "doc": "GM: set a token's worn mark."
+    },
+    {
+      "path": "clearWorn",
+      "params": [
+        {
+          "name": "token",
+          "type": "Token"
+        }
+      ],
+      "returns": "Promise<boolean>",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "flags.pentaryn-ties.worn"
+      ],
+      "legacy": true,
+      "doc": "GM: clear a token's worn mark."
+    },
+    {
+      "path": "wornDialog",
+      "params": [
+        {
+          "name": "token",
+          "type": "Token"
+        }
+      ],
+      "returns": "Promise<*>",
+      "gm": true,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "GM: the worn-mark dialog for a token."
+    },
+    {
+      "path": "describeCard",
+      "params": [],
+      "returns": "Promise<Actor|null>",
+      "gm": true,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "since": "0.20.0",
+      "doc": "GM: toggle the hovered actor's private description card (key 9). Was `describe` (B1)."
+    },
+    {
+      "path": "closeDescription",
+      "params": [],
+      "returns": "Promise<void>",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "Close the description card."
+    },
+    {
+      "path": "known.read",
+      "params": [
+        {
+          "name": "ref",
+          "kind": "actor",
+          "type": "Actor|Token|id|uuid|exact name",
+          "resolve": false,
+          "doc": "a token reads its world actor"
+        }
+      ],
+      "returns": "[{ id, name, category, notes, when, hidden?, imposter? }]",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "The Known list. Never throws."
+    },
+    {
+      "path": "known.add",
+      "params": [
+        {
+          "name": "actor",
+          "type": "Actor"
+        },
+        {
+          "name": "target",
+          "type": "Actor|{ id, name }"
+        },
+        {
+          "name": "opts",
+          "type": "{ now }",
+          "optional": true
+        }
+      ],
+      "returns": "Promise<entry|null>",
+      "gm": false,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "flags.pentaryn-ties.known"
+      ],
+      "legacy": true,
+      "doc": "File someone; null if already filed."
+    },
+    {
+      "path": "known.set",
+      "params": [
+        {
+          "name": "actor",
+          "type": "Actor"
+        },
+        {
+          "name": "id",
+          "type": "string"
+        },
+        {
+          "name": "field",
+          "type": "string"
+        },
+        {
+          "name": "value",
+          "type": "*"
+        }
+      ],
+      "returns": "Promise<boolean>",
+      "gm": false,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "flags.pentaryn-ties.known"
+      ],
+      "legacy": true,
+      "doc": "Set one field of a Known entry."
+    },
+    {
+      "path": "known.hide",
+      "params": [
+        {
+          "name": "actor",
+          "type": "Actor"
+        },
+        {
+          "name": "id",
+          "type": "string"
+        },
+        {
+          "name": "hidden",
+          "type": "boolean",
+          "optional": true
+        }
+      ],
+      "returns": "Promise<boolean>",
+      "gm": false,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "flags.pentaryn-ties.known"
+      ],
+      "legacy": true,
+      "doc": "Tuck a Known entry away (true) or put it back (false)."
+    },
+    {
+      "path": "known.purge",
+      "params": [
+        {
+          "name": "actor",
+          "type": "Actor"
+        },
+        {
+          "name": "id",
+          "type": "string"
+        }
+      ],
+      "returns": "Promise<boolean>",
+      "gm": false,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "flags.pentaryn-ties.known"
+      ],
+      "legacy": true,
+      "doc": "Destroy a Known row (nothing in the UI does this)."
+    },
+    {
+      "path": "known.remove",
+      "params": [
+        {
+          "name": "actor",
+          "type": "Actor"
+        },
+        {
+          "name": "id",
+          "type": "string"
+        }
+      ],
+      "returns": "Promise<boolean>",
+      "gm": false,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "flags.pentaryn-ties.known"
+      ],
+      "legacy": true,
+      "doc": "Same as known.purge."
+    },
+    {
+      "path": "known.categories",
+      "params": [
+        {
+          "name": "actor",
+          "type": "Actor"
+        }
+      ],
+      "returns": "[{ key, label? }]",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "The categories this actor files into."
+    },
+    {
+      "path": "known.picker",
+      "params": [
+        {
+          "name": "actor",
+          "type": "Actor"
+        },
+        {
+          "name": "onAdded",
+          "type": "Function",
+          "optional": true
+        }
+      ],
+      "returns": "Promise<*>",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "Open the Known tab's Add… picker."
+    },
+    {
+      "path": "known.file",
+      "params": [
+        {
+          "name": "token",
+          "type": "Token",
+          "doc": "default: hovered",
+          "optional": true
+        }
+      ],
+      "returns": "Promise<*>",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "Key 5: file whoever is hovered and open their page."
+    },
+    {
+      "path": "known.open",
+      "params": [
+        {
+          "name": "actor",
+          "type": "Actor"
+        },
+        {
+          "name": "id",
+          "type": "string"
+        }
+      ],
+      "returns": "Promise<*>",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "Open one Known entry's page."
+    },
+    {
+      "path": "known.notebook",
+      "params": [],
+      "returns": "Actor|null",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "The notebook this client writes into (selected, assigned or owned character)."
+    },
+    {
+      "path": "study.state",
+      "params": [
+        {
+          "name": "ref",
+          "kind": "actor",
+          "type": "Actor|Token|id|uuid|exact name",
+          "resolve": false,
+          "doc": "a token reads its world actor"
+        },
+        {
+          "name": "subject",
+          "type": "Actor|Token|id|uuid|exact name",
+          "doc": "the creature or person studied"
+        }
+      ],
+      "returns": "{ kind, available, spent, content, … }",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "The kind study's state as the sheet draws it."
+    },
+    {
+      "path": "study.request",
+      "params": [
+        {
+          "name": "character",
+          "type": "Actor",
+          "doc": "a player character"
+        },
+        {
+          "name": "subject",
+          "type": "Actor",
+          "doc": "the creature or person studied"
+        }
+      ],
+      "returns": "Promise<boolean>",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "Player gesture: ask to study what this is (opens the study dialog)."
+    },
+    {
+      "path": "study.as",
+      "params": [
+        {
+          "name": "character",
+          "type": "Actor",
+          "doc": "a player character"
+        },
+        {
+          "name": "subject",
+          "type": "Actor",
+          "doc": "the creature or person studied"
+        },
+        {
+          "name": "opts",
+          "type": "{ mode, situational, loreId, attrId }",
+          "optional": true
+        }
+      ],
+      "returns": "Promise<boolean>",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "flags.pentaryn-ties.beliefs",
+        "flags.pentaryn-ties.studied",
+        "flags.pentaryn-ties.granted",
+        "flags.pentaryn-ties.known"
+      ],
+      "legacy": true,
+      "doc": "GM: throw a study check by hand (same handler, same writes as a player's request)."
+    },
+    {
+      "path": "study.kind",
+      "params": [
+        {
+          "name": "actor",
+          "type": "Actor"
+        }
+      ],
+      "returns": "Promise<*>",
+      "gm": true,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "GM: the kind-pointer picker."
+    },
+    {
+      "path": "study.kindOf",
+      "params": [
+        {
+          "name": "actor",
+          "type": "Actor"
+        },
+        {
+          "name": "kindId",
+          "type": "string|null"
+        }
+      ],
+      "returns": "Promise<boolean>",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "flags.pentaryn-ties.kindOf"
+      ],
+      "legacy": true,
+      "doc": "GM: point an actor at its kind."
+    },
+    {
+      "path": "study.kindActor",
+      "params": [
+        {
+          "name": "actor",
+          "type": "Actor"
+        }
+      ],
+      "returns": "Actor|null",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "The actor a kind study reads (the kind pointer, or itself)."
+    },
+    {
+      "path": "study.tiers",
+      "params": [
+        {
+          "name": "actor",
+          "type": "Actor"
+        },
+        {
+          "name": "tiers",
+          "type": "[{ min, text }]"
+        }
+      ],
+      "returns": "Promise<boolean>",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "flags.pentaryn-ties.studyTiers"
+      ],
+      "legacy": true,
+      "doc": "GM: author the study ladder."
+    },
+    {
+      "path": "study.difficulty",
+      "params": [
+        {
+          "name": "kind",
+          "type": "Actor"
+        },
+        {
+          "name": "offset",
+          "type": "number|\"auto\"|null"
+        }
+      ],
+      "returns": "Promise<boolean>",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "flags.pentaryn-ties.studyOffset"
+      ],
+      "legacy": true,
+      "doc": "GM: shift the kind's DC ladder."
+    },
+    {
+      "path": "study.readTiers",
+      "params": [
+        {
+          "name": "actor",
+          "type": "Actor"
+        }
+      ],
+      "returns": "[{ min, text }]",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "The authored study ladder."
+    },
+    {
+      "path": "study.hold",
+      "params": [
+        {
+          "name": "actor",
+          "type": "Actor"
+        },
+        {
+          "name": "hold",
+          "type": "boolean|null"
+        }
+      ],
+      "returns": "Promise<boolean>",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "flags.pentaryn-ties.studyHold"
+      ],
+      "legacy": true,
+      "doc": "GM: per-kind approval gate; null inherits the holdDefault setting."
+    },
+    {
+      "path": "study.beliefs",
+      "params": [
+        {
+          "name": "ref",
+          "kind": "actor",
+          "type": "Actor|Token|id|uuid|exact name",
+          "resolve": false,
+          "doc": "a token reads its world actor"
+        }
+      ],
+      "returns": "[{ character, key, text, tier, total, when, delivered, … }]",
+      "gm": true,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "GM: what each character was told about this actor, and whether it landed (`when`/`delivered` are locale strings)."
+    },
+    {
+      "path": "study.pending",
+      "params": [],
+      "returns": "[{ … }]",
+      "gm": true,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "GM: every undelivered reveal in the world."
+    },
+    {
+      "path": "study.deliver",
+      "params": [
+        {
+          "name": "character",
+          "type": "Actor",
+          "doc": "a player character"
+        },
+        {
+          "name": "subject",
+          "type": "Actor",
+          "doc": "the creature or person studied"
+        },
+        {
+          "name": "loreId",
+          "type": "string",
+          "optional": true
+        },
+        {
+          "name": "attrId",
+          "type": "string",
+          "optional": true
+        }
+      ],
+      "returns": "Promise<boolean>",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "flags.pentaryn-ties.beliefs",
+        "flags.pentaryn-ties.granted"
+      ],
+      "legacy": true,
+      "doc": "GM: release one held reveal."
+    },
+    {
+      "path": "study.reset",
+      "params": [
+        {
+          "name": "character",
+          "type": "Actor",
+          "doc": "a player character"
+        },
+        {
+          "name": "subject",
+          "type": "Actor",
+          "doc": "the creature or person studied"
+        },
+        {
+          "name": "loreId",
+          "type": "string",
+          "optional": true
+        },
+        {
+          "name": "attrId",
+          "type": "string",
+          "optional": true
+        }
+      ],
+      "returns": "Promise<boolean>",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "flags.pentaryn-ties.beliefs",
+        "flags.pentaryn-ties.studied"
+      ],
+      "legacy": true,
+      "doc": "GM: un-spend a study — the honest do-over."
+    },
+    {
+      "path": "study.studied",
+      "params": [
+        {
+          "name": "actor",
+          "type": "Actor"
+        }
+      ],
+      "returns": "{ kind, lore }",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "The player-side `studied` hints (a UI hint, not the lock)."
+    },
+    {
+      "path": "study.fact",
+      "params": [
+        {
+          "name": "spec",
+          "type": "{ ns, subjectId, factId?, attrId? }",
+          "doc": "one fact: ns kind | lore | attr"
+        }
+      ],
+      "returns": "object|null",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "The conduit's resolve seam: one fact's skill, DC, ledger and text."
+    },
+    {
+      "path": "study.lore",
+      "params": [
+        {
+          "name": "ref",
+          "kind": "actor",
+          "type": "Actor|Token|id|uuid|exact name",
+          "resolve": false,
+          "doc": "a token reads its world actor"
+        },
+        {
+          "name": "subject",
+          "type": "Actor|Token|id|uuid|exact name",
+          "doc": "the creature or person studied"
+        }
+      ],
+      "returns": "[{ id, label, skill, dc, available, … }]",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "That actor's lore rows as the character's sheet sees them."
+    },
+    {
+      "path": "study.askLore",
+      "params": [
+        {
+          "name": "character",
+          "type": "Actor",
+          "doc": "a player character"
+        },
+        {
+          "name": "subject",
+          "type": "Actor",
+          "doc": "the creature or person studied"
+        },
+        {
+          "name": "loreId",
+          "type": "string"
+        }
+      ],
+      "returns": "Promise<boolean>",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "Player gesture: roll one lore row."
+    },
+    {
+      "path": "study.askAttr",
+      "params": [
+        {
+          "name": "character",
+          "type": "Actor",
+          "doc": "a player character"
+        },
+        {
+          "name": "subject",
+          "type": "Actor",
+          "doc": "the creature or person studied"
+        },
+        {
+          "name": "attrId",
+          "type": "string"
+        },
+        {
+          "name": "loreId",
+          "type": "string"
+        }
+      ],
+      "returns": "Promise<boolean>",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "Player gesture: roll one attribute-lore row."
+    },
+    {
+      "path": "study.attrOffers",
+      "params": [
+        {
+          "name": "character",
+          "type": "Actor",
+          "doc": "a player character"
+        },
+        {
+          "name": "subject",
+          "type": "Actor",
+          "doc": "the creature or person studied"
+        }
+      ],
+      "returns": "[{ attrId, rows }]",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "The attribute lore this subject offers the character."
+    },
+    {
+      "path": "study.examine",
+      "params": [
+        {
+          "name": "character",
+          "type": "Actor",
+          "doc": "a player character"
+        },
+        {
+          "name": "subject",
+          "type": "Actor",
+          "doc": "the creature or person studied"
+        }
+      ],
+      "returns": "Promise<boolean>",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "The one gesture that starts an identification roll (key 4, the HUD eye, the look menu). Was `study.inspect` (D1)."
+    },
+    {
+      "path": "study.look",
+      "params": [
+        {
+          "name": "subject",
+          "type": "Actor",
+          "doc": "the creature or person studied"
+        },
+        {
+          "name": "character",
+          "type": "Actor",
+          "doc": "default: the user's character",
+          "optional": true
+        }
+      ],
+      "returns": "LookWindow|null",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "The player's read-only Look window on someone (no roll); null for a GM."
+    },
+    {
+      "path": "study.scoping",
+      "params": [
+        {
+          "name": "characterId",
+          "type": "string"
+        }
+      ],
+      "returns": "{ … }",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "The tempo tell's state for one character."
+    },
+    {
+      "path": "study.clearScoping",
+      "params": [
+        {
+          "name": "characterId",
+          "type": "string",
+          "optional": true
+        }
+      ],
+      "returns": "boolean|undefined",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "End a run of looking (one character, or everyone)."
+    },
+    {
+      "path": "study.inspectAs",
+      "params": [
+        {
+          "name": "character",
+          "type": "Actor",
+          "doc": "a player character"
+        },
+        {
+          "name": "subject",
+          "type": "Actor",
+          "doc": "the creature or person studied"
+        }
+      ],
+      "returns": "Promise<boolean>",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "flags.pentaryn-ties.beliefs",
+        "flags.pentaryn-ties.granted"
+      ],
+      "legacy": true,
+      "doc": "GM: run an inspection for a character by hand."
+    },
+    {
+      "path": "study.deliverHeld",
+      "params": [
+        {
+          "name": "character",
+          "type": "Actor",
+          "doc": "a player character"
+        },
+        {
+          "name": "subject",
+          "type": "Actor",
+          "doc": "the creature or person studied"
+        }
+      ],
+      "returns": "Promise<boolean>",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "flags.pentaryn-ties.beliefs",
+        "flags.pentaryn-ties.granted"
+      ],
+      "legacy": true,
+      "doc": "GM: release held identifications on this subject."
+    },
+    {
+      "path": "study.releaseHeld",
+      "params": [
+        {
+          "name": "character",
+          "type": "Actor",
+          "doc": "a player character"
+        },
+        {
+          "name": "attrId",
+          "type": "string"
+        }
+      ],
+      "returns": "Promise<boolean>",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "flags.pentaryn-ties.beliefs",
+        "flags.pentaryn-ties.granted"
+      ],
+      "legacy": true,
+      "doc": "GM: release one held attribute wherever it waits."
+    },
+    {
+      "path": "study.resetIdent",
+      "params": [
+        {
+          "name": "character",
+          "type": "Actor",
+          "doc": "a player character"
+        },
+        {
+          "name": "subject",
+          "type": "Actor",
+          "doc": "the creature or person studied"
+        },
+        {
+          "name": "attrId",
+          "type": "string"
+        }
+      ],
+      "returns": "Promise<boolean>",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "flags.pentaryn-ties.beliefs"
+      ],
+      "legacy": true,
+      "doc": "GM: forget one identification."
+    },
+    {
+      "path": "study.release",
+      "params": [
+        {
+          "name": "character",
+          "type": "Actor",
+          "doc": "a player character"
+        },
+        {
+          "name": "kindOrSubject",
+          "type": "Actor"
+        },
+        {
+          "name": "tier",
+          "type": "number",
+          "optional": true
+        },
+        {
+          "name": "opts",
+          "type": "{ from, quiet, prior }",
+          "optional": true
+        }
+      ],
+      "returns": "Promise<boolean>",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "flags.pentaryn-ties.beliefs",
+        "flags.pentaryn-ties.granted",
+        "flags.pentaryn-ties.known"
+      ],
+      "legacy": true,
+      "doc": "GM: hand a character a kind at a chosen rung, no roll."
+    },
+    {
+      "path": "study.resetInspection",
+      "params": [
+        {
+          "name": "character",
+          "type": "Actor",
+          "doc": "a player character"
+        },
+        {
+          "name": "subject",
+          "type": "Actor",
+          "doc": "the creature or person studied"
+        }
+      ],
+      "returns": "Promise<boolean>",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "flags.pentaryn-ties.beliefs"
+      ],
+      "legacy": true,
+      "doc": "GM: clear an inspection's identifications on this subject."
+    },
+    {
+      "path": "study.preview",
+      "params": [
+        {
+          "name": "subject",
+          "type": "Actor",
+          "doc": "the creature or person studied"
+        }
+      ],
+      "returns": "Promise<InspectPreview|null>",
+      "gm": true,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "GM: the inspect window — player view, who-knows tags, simulated rolls."
+    },
+    {
+      "path": "study.share",
+      "params": [
+        {
+          "name": "spec",
+          "type": "{ ns, subjectId, factId?, attrId? }",
+          "doc": "one fact: ns kind | lore | attr"
+        },
+        {
+          "name": "recipients",
+          "type": "Actor[]"
+        },
+        {
+          "name": "opts",
+          "type": "{ from, notify }",
+          "optional": true
+        }
+      ],
+      "returns": "Promise<*>",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "flags.pentaryn-ties.beliefs",
+        "flags.pentaryn-ties.granted"
+      ],
+      "legacy": true,
+      "doc": "GM: tell characters one fact as if they had passed it (chain-aware)."
+    },
+    {
+      "path": "study.forget",
+      "params": [
+        {
+          "name": "spec",
+          "type": "{ ns, subjectId, factId?, attrId? }",
+          "doc": "one fact: ns kind | lore | attr"
+        },
+        {
+          "name": "character",
+          "type": "Actor",
+          "doc": "a player character"
+        }
+      ],
+      "returns": "Promise<*>",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "flags.pentaryn-ties.beliefs",
+        "flags.pentaryn-ties.granted"
+      ],
+      "legacy": true,
+      "doc": "GM: undo a share, and only a share."
+    },
+    {
+      "path": "study.whoKnows",
+      "params": [
+        {
+          "name": "spec",
+          "type": "{ ns, subjectId, factId?, attrId? }",
+          "doc": "one fact: ns kind | lore | attr"
+        },
+        {
+          "name": "character",
+          "type": "Actor",
+          "doc": "a player character"
+        }
+      ],
+      "returns": "\"passed\"|\"told\"|\"held\"|\"failed\"|\"locked\"|\"none\"",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "Where one character stands on one fact."
+    },
+    {
+      "path": "study.audit.legacyMissCards",
+      "params": [],
+      "returns": "[{ character, characterId, subject, factKey, text }]",
+      "gm": true,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "GM, read-only: cards a FAILURE granted before 2026-10."
+    },
+    {
+      "path": "attributes.list",
+      "params": [],
+      "returns": "[entry]",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "The clamped attribute registry."
+    },
+    {
+      "path": "attributes.of",
+      "params": [
+        {
+          "name": "ref",
+          "kind": "actor",
+          "type": "Actor|Token|id|uuid|exact name",
+          "resolve": false,
+          "doc": "a token reads its world actor"
+        },
+        {
+          "name": "kindResolver",
+          "type": "Function",
+          "optional": true
+        },
+        {
+          "name": "opts",
+          "type": "{ viewer }",
+          "optional": true
+        }
+      ],
+      "returns": "[record]",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "What this actor belongs to (derived + authored), without the kind pointer unless a resolver is passed."
+    },
+    {
+      "path": "attributes.ids",
+      "params": [
+        {
+          "name": "ref",
+          "kind": "actor",
+          "type": "Actor|Token|id|uuid|exact name",
+          "resolve": false,
+          "doc": "a token reads its world actor"
+        },
+        {
+          "name": "kindResolver",
+          "type": "Function",
+          "optional": true
+        }
+      ],
+      "returns": "string[]",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "Attribute ids this actor carries (derived ∪ authored − suppressed)."
+    },
+    {
+      "path": "attributes.derived",
+      "params": [
+        {
+          "name": "actor",
+          "type": "Actor"
+        },
+        {
+          "name": "kindResolver",
+          "type": "Function",
+          "optional": true
+        }
+      ],
+      "returns": "string[]",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "The derived ids only (type:, size:, species:, background:, kind:)."
+    },
+    {
+      "path": "attributes.resolve",
+      "params": [
+        {
+          "name": "attr",
+          "type": "string",
+          "doc": "an attribute id or title (id wins; a miss is refused, never created)"
+        },
+        {
+          "name": "opts",
+          "type": "{ actor }",
+          "optional": true
+        }
+      ],
+      "returns": "string|null",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "Resolve an id or title to one entry's id; null on a miss."
+    },
+    {
+      "path": "attributes.lookup",
+      "params": [
+        {
+          "name": "attr",
+          "type": "string",
+          "doc": "an attribute id or title (id wins; a miss is refused, never created)"
+        }
+      ],
+      "returns": "record|null",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "One attribute's record (authored: 24 keys, derived: 10); null on a miss. Was `attributes.describe` (D1)."
+    },
+    {
+      "path": "attributes.ensure",
+      "params": [
+        {
+          "name": "title",
+          "type": "string"
+        },
+        {
+          "name": "opts",
+          "type": "object",
+          "optional": true
+        }
+      ],
+      "returns": "Promise<{ ok, reason?, entry? }>",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "setting pentaryn-ties.attributes"
+      ],
+      "legacy": true,
+      "doc": "GM: find or create an entry by title."
+    },
+    {
+      "path": "attributes.create",
+      "params": [
+        {
+          "name": "title",
+          "type": "string"
+        },
+        {
+          "name": "opts",
+          "type": "object",
+          "optional": true
+        }
+      ],
+      "returns": "Promise<{ ok, reason?, entry? }>",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "setting pentaryn-ties.attributes"
+      ],
+      "legacy": true,
+      "doc": "GM: a registry entry; refuses an id or name collision."
+    },
+    {
+      "path": "attributes.update",
+      "params": [
+        {
+          "name": "attr",
+          "type": "string",
+          "doc": "an attribute id or title (id wins; a miss is refused, never created)"
+        },
+        {
+          "name": "patch",
+          "type": "object"
+        }
+      ],
+      "returns": "Promise<{ ok, reason?, entry?, changed? }>",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "setting pentaryn-ties.attributes"
+      ],
+      "legacy": true,
+      "doc": "GM: change an entry (un-reviews it and records what it touched)."
+    },
+    {
+      "path": "attributes.remove",
+      "params": [
+        {
+          "name": "attr",
+          "type": "string",
+          "doc": "an attribute id or title (id wins; a miss is refused, never created)"
+        }
+      ],
+      "returns": "Promise<{ ok, reason? }>",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "setting pentaryn-ties.attributes"
+      ],
+      "legacy": true,
+      "doc": "GM: delete an entry."
+    },
+    {
+      "path": "attributes.link",
+      "params": [
+        {
+          "name": "actor",
+          "type": "Actor"
+        },
+        {
+          "name": "attr",
+          "type": "string",
+          "doc": "an attribute id or title (id wins; a miss is refused, never created)"
+        }
+      ],
+      "returns": "Promise<{ ok, reason?, linked? }>",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "flags.pentaryn-ties.attributes",
+        "flags.pentaryn-ties.attributesOff"
+      ],
+      "legacy": true,
+      "doc": "GM: link an actor to an entry (materialises its ancestors)."
+    },
+    {
+      "path": "attributes.unlink",
+      "params": [
+        {
+          "name": "actor",
+          "type": "Actor"
+        },
+        {
+          "name": "attr",
+          "type": "string",
+          "doc": "an attribute id or title (id wins; a miss is refused, never created)"
+        }
+      ],
+      "returns": "Promise<{ ok, reason? }>",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "flags.pentaryn-ties.attributes",
+        "flags.pentaryn-ties.attributesOff"
+      ],
+      "legacy": true,
+      "doc": "GM: unlink (takes descendants; suppresses a derived link)."
+    },
+    {
+      "path": "attributes.search",
+      "params": [
+        {
+          "name": "query",
+          "type": "string"
+        },
+        {
+          "name": "kindResolver",
+          "type": "Function",
+          "optional": true
+        }
+      ],
+      "returns": "[record]",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "Search entries by title."
+    },
+    {
+      "path": "attributes.knows",
+      "params": [],
+      "returns": "{ [characterId]: { [attrId]: row } }",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "The world-knowledge ledger."
+    },
+    {
+      "path": "attributes.known",
+      "params": [
+        {
+          "name": "ref",
+          "kind": "actor",
+          "type": "Actor|Token|id|uuid|exact name",
+          "resolve": false,
+          "doc": "a token reads its world actor"
+        },
+        {
+          "name": "opts",
+          "type": "{ forGM, kindResolver }",
+          "optional": true
+        }
+      ],
+      "returns": "[record]",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "What a character has worked out of the world."
+    },
+    {
+      "path": "attributes.tell",
+      "params": [
+        {
+          "name": "character",
+          "type": "Actor",
+          "doc": "a player character"
+        },
+        {
+          "name": "attr",
+          "type": "string",
+          "doc": "an attribute id or title (id wins; a miss is refused, never created)"
+        },
+        {
+          "name": "opts",
+          "type": "{ withParents }",
+          "optional": true
+        }
+      ],
+      "returns": "Promise<{ ok, reason? }>",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "setting pentaryn-ties.attributeKnowledge"
+      ],
+      "legacy": true,
+      "doc": "GM: disclosure, the only non-roll route into world knowledge."
+    },
+    {
+      "path": "attributes.broken",
+      "params": [
+        {
+          "name": "ref",
+          "kind": "actor",
+          "type": "Actor|Token|id|uuid|exact name",
+          "resolve": false,
+          "doc": "a token reads its world actor"
+        },
+        {
+          "name": "kindResolver",
+          "type": "Function",
+          "optional": true
+        }
+      ],
+      "returns": "[{ id, missing }]",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "Carried entries whose ancestry is broken."
+    },
+    {
+      "path": "attributes.repair",
+      "params": [
+        {
+          "name": "actor",
+          "type": "Actor"
+        },
+        {
+          "name": "attr",
+          "type": "string",
+          "doc": "an attribute id or title (id wins; a miss is refused, never created)"
+        }
+      ],
+      "returns": "Promise<{ ok, reason? }>",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "flags.pentaryn-ties.attributes"
+      ],
+      "legacy": true,
+      "doc": "GM: re-link to repair ancestry (= link)."
+    },
+    {
+      "path": "attributes.stale",
+      "params": [
+        {
+          "name": "attr",
+          "type": "string",
+          "doc": "an attribute id or title (id wins; a miss is refused, never created)"
+        }
+      ],
+      "returns": "[Actor]",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "Actors carrying an entry by a stale link."
+    },
+    {
+      "path": "attributes.openReview",
+      "params": [],
+      "returns": "Promise<AttributeReview>",
+      "gm": true,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "GM: the Attribute Review panel."
+    },
+    {
+      "path": "attributes.selected",
+      "params": [],
+      "returns": "[{ id, title, category, parent, reviewState }]",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "What the GM ticked in the review panel."
+    },
+    {
+      "path": "attributes.select",
+      "params": [
+        {
+          "name": "refs",
+          "type": "string[]"
+        },
+        {
+          "name": "opts",
+          "type": "{ replace }",
+          "optional": true
+        }
+      ],
+      "returns": "Promise<{ ok, ids?, missed?, reason? }>",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "user flags.pentaryn-ties.attrSelected"
+      ],
+      "legacy": true,
+      "doc": "GM: tick entries in the review panel."
+    },
+    {
+      "path": "attributes.deselect",
+      "params": [
+        {
+          "name": "refs",
+          "type": "string[]"
+        }
+      ],
+      "returns": "Promise<{ ok, ids?, reason? }>",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "user flags.pentaryn-ties.attrSelected"
+      ],
+      "legacy": true,
+      "doc": "GM: untick entries."
+    },
+    {
+      "path": "attributes.clearSelection",
+      "params": [],
+      "returns": "Promise<{ ok, ids?, reason? }>",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "user flags.pentaryn-ties.attrSelected"
+      ],
+      "legacy": true,
+      "doc": "GM: untick everything."
+    },
+    {
+      "path": "attributes.review",
+      "params": [
+        {
+          "name": "attr",
+          "type": "string",
+          "doc": "an attribute id or title (id wins; a miss is refused, never created)"
+        }
+      ],
+      "returns": "Promise<{ ok, reason? }>",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "setting pentaryn-ties.attributes"
+      ],
+      "legacy": true,
+      "doc": "GM: sign an entry off as reviewed."
+    },
+    {
+      "path": "attributes.unreview",
+      "params": [
+        {
+          "name": "attr",
+          "type": "string",
+          "doc": "an attribute id or title (id wins; a miss is refused, never created)"
+        }
+      ],
+      "returns": "Promise<{ ok, reason? }>",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "setting pentaryn-ties.attributes"
+      ],
+      "legacy": true,
+      "doc": "GM: put an entry back in review."
+    },
+    {
+      "path": "attributes.unreviewed",
+      "params": [],
+      "returns": "[entry]",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "Entries awaiting the GM's sign-off."
+    },
+    {
+      "path": "attributes.effective",
+      "params": [
+        {
+          "name": "actor",
+          "type": "Actor"
+        }
+      ],
+      "returns": "string[]",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "since": "0.20.0",
+      "doc": "attributes.ids WITH the kind pointer (kind:<id>), as the sheet, the cascade and the planner see it (ties-5)."
+    },
+    {
+      "path": "attributes.ofEffective",
+      "params": [
+        {
+          "name": "actor",
+          "type": "Actor"
+        },
+        {
+          "name": "opts",
+          "type": "{ viewer }",
+          "optional": true
+        }
+      ],
+      "returns": "[record]",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "since": "0.20.0",
+      "doc": "attributes.of WITH the kind pointer, as the sheet sees it (ties-5)."
+    },
+    {
+      "path": "attributes.tree",
+      "params": [
+        {
+          "name": "character",
+          "type": "Actor",
+          "doc": "a player character"
+        },
+        {
+          "name": "opts",
+          "type": "{ forGM, kindResolver }",
+          "optional": true
+        }
+      ],
+      "returns": "[node]",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "since": "0.20.0",
+      "doc": "A character's world-knowledge tree (a player's view contracts away what they do not know; forGM shows failed/unknown)."
+    },
+    {
+      "path": "attributes.branch",
+      "params": [
+        {
+          "name": "attrId",
+          "type": "string"
+        },
+        {
+          "name": "character",
+          "type": "Actor",
+          "optional": true
+        },
+        {
+          "name": "opts",
+          "type": "{ forGM }",
+          "optional": true
+        }
+      ],
+      "returns": "[node]",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "since": "0.20.0",
+      "doc": "Everything beneath one attribute, flat (GM-gated by forGM)."
+    },
+    {
+      "path": "attributes.describeId",
+      "params": [
+        {
+          "name": "attrId",
+          "type": "string"
+        }
+      ],
+      "returns": "record",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "since": "0.20.0",
+      "doc": "One attribute's record by exact id (a derived id gets its derived record; lookup also takes a title)."
+    },
+    {
+      "path": "study.factStatus",
+      "params": [
+        {
+          "name": "spec",
+          "type": "{ ns, subjectId, factId?, attrId? }",
+          "doc": "one fact: ns kind | lore | attr"
+        },
+        {
+          "name": "character",
+          "type": "Actor",
+          "doc": "a player character"
+        }
+      ],
+      "returns": "\"passed\"|\"told\"|\"held\"|\"failed\"|\"locked\"|\"none\"",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "since": "0.20.0",
+      "doc": "Same as study.whoKnows (its own name, ties-6)."
+    },
+    {
+      "path": "study.shareFact",
+      "params": [
+        {
+          "name": "spec",
+          "type": "{ ns, subjectId, factId?, attrId? }",
+          "doc": "one fact: ns kind | lore | attr"
+        },
+        {
+          "name": "recipients",
+          "type": "Actor[]"
+        },
+        {
+          "name": "opts",
+          "type": "{ from, notify }",
+          "optional": true
+        }
+      ],
+      "returns": "Promise<*>",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "flags.pentaryn-ties.beliefs",
+        "flags.pentaryn-ties.granted"
+      ],
+      "since": "0.20.0",
+      "doc": "Same as study.share (its own name, ties-6)."
+    },
+    {
+      "path": "study.forgetFact",
+      "params": [
+        {
+          "name": "spec",
+          "type": "{ ns, subjectId, factId?, attrId? }",
+          "doc": "one fact: ns kind | lore | attr"
+        },
+        {
+          "name": "character",
+          "type": "Actor",
+          "doc": "a player character"
+        }
+      ],
+      "returns": "Promise<*>",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "flags.pentaryn-ties.beliefs",
+        "flags.pentaryn-ties.granted"
+      ],
+      "since": "0.20.0",
+      "doc": "Same as study.forget (its own name, ties-6)."
+    },
+    {
+      "path": "study.knowsAbout",
+      "params": [
+        {
+          "name": "ref",
+          "kind": "actor",
+          "type": "Actor|Token|id|uuid|exact name",
+          "resolve": false,
+          "doc": "the character"
+        },
+        {
+          "name": "subject",
+          "type": "Actor|Token|id|uuid|exact name",
+          "doc": "the creature or person studied"
+        }
+      ],
+      "returns": "[{ group, key, ns, attrId, icon, source, text }]",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "since": "0.20.0",
+      "doc": "What this character has learned about this subject: the granted cards that pass the secrecy gate, in the Look window's order (ties-8)."
+    },
+    {
+      "path": "study.loreRows",
+      "params": [
+        {
+          "name": "actor",
+          "type": "Actor"
+        }
+      ],
+      "returns": "[{ id, label, dc, skill, text, miss, hold }]",
+      "gm": true,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "since": "0.20.0",
+      "doc": "GM: an actor's authored lore rows (ties-9)."
+    },
+    {
+      "path": "study.setLoreRows",
+      "params": [
+        {
+          "name": "actor",
+          "type": "Actor"
+        },
+        {
+          "name": "rows",
+          "type": "[{ id, label, dc, skill, text, miss, hold }]"
+        }
+      ],
+      "returns": "{ ok, rows } | { ok: false, reason }",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "flags.pentaryn-ties.lore"
+      ],
+      "since": "0.20.0",
+      "doc": "GM: write an actor's lore rows (each sanitised; an empty list deletes the flag) (ties-9)."
+    },
+    {
+      "path": "study.conceal",
+      "params": [
+        {
+          "name": "actor",
+          "type": "Actor"
+        }
+      ],
+      "returns": "number | { default, [attrId]: number } | null",
+      "gm": true,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "since": "0.20.0",
+      "doc": "GM: the actor's concealment (raises the identification DC, never printed) (ties-9)."
+    },
+    {
+      "path": "study.setConceal",
+      "params": [
+        {
+          "name": "actor",
+          "type": "Actor"
+        },
+        {
+          "name": "value",
+          "type": "number | { default, [attrId]: number } | null"
+        }
+      ],
+      "returns": "{ ok, conceal } | { ok: false, reason }",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "flags.pentaryn-ties.conceal"
+      ],
+      "since": "0.20.0",
+      "doc": "GM: set or (null) clear the actor's concealment (ties-9)."
+    },
+    {
+      "path": "attributes.markLearned",
+      "params": [
+        {
+          "name": "character",
+          "type": "Actor",
+          "doc": "a player character"
+        },
+        {
+          "name": "attr",
+          "type": "string",
+          "doc": "an attribute id or title (id wins; a miss is refused, never created)"
+        },
+        {
+          "name": "loreIds",
+          "type": "\"all\" | string | string[]",
+          "optional": true
+        }
+      ],
+      "returns": "{ ok, keys } | { ok: false, reason }",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "flags.pentaryn-ties.granted"
+      ],
+      "since": "0.20.0",
+      "doc": "GM: hand a character an attribute's lore rows as granted cards, no roll — the Attributes tab's Mark as learned (ties-9)."
+    },
+    {
+      "path": "study.identified",
+      "params": [
+        {
+          "name": "subject",
+          "type": "Actor",
+          "doc": "the creature or person studied"
+        },
+        {
+          "name": "character",
+          "type": "Actor",
+          "doc": "a player character"
+        },
+        {
+          "name": "attrId",
+          "type": "string"
+        }
+      ],
+      "returns": "{ settled, carries, held, record? }",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "since": "0.20.0",
+      "doc": "Has this character identified this attribute on this creature? (identifiedState on its beliefs ledger, ties-6)"
+    }
+  ],
+  "queries": [],
+  "settings": [
+    {
+      "key": "macroCreated",
+      "scope": "world",
+      "type": "Boolean",
+      "default": false,
+      "store": true,
+      "doc": "Set once the hotbar macro (game.pentaryn.ties.show()) has been created, so it is never made twice."
+    },
+    {
+      "key": "playerAccess",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "Players may use the tie, notebook and inspect keys, tabs and dialogs on their own character. Off = GM only."
+    },
+    {
+      "key": "holdDefault",
+      "scope": "world",
+      "type": "Boolean",
+      "default": false,
+      "doc": "Hold every study reveal for the GM's Deliver unless the kind says otherwise."
+    },
+    {
+      "key": "attributes",
+      "scope": "world",
+      "type": "Array",
+      "default": [],
+      "store": true,
+      "doc": "The attribute registry (GM-authored entries, their lore rows, review state)."
+    },
+    {
+      "key": "attributeBeliefs",
+      "scope": "world",
+      "type": "Object",
+      "default": {},
+      "store": true,
+      "doc": "Attribute-lore belief rows, keyed `attr:<id>:<loreId>:<characterId>`."
+    },
+    {
+      "key": "attributeKnowledge",
+      "scope": "world",
+      "type": "Object",
+      "default": {},
+      "store": true,
+      "doc": "World knowledge: which attributes each character knows exist, and which they failed to."
+    },
+    {
+      "key": "advantageStacking",
+      "scope": "world",
+      "type": "String",
+      "default": "raw",
+      "doc": "How advantage sources combine on a study roll: raw (2024 PHB, any of each cancels) or net."
+    },
+    {
+      "key": "nearDistance",
+      "scope": "world",
+      "type": "Number",
+      "default": 4,
+      "doc": "How close (in grid squares) a token must be to count as near for the tie cards."
+    },
+    {
+      "key": "sheetTab",
+      "scope": "client",
+      "type": "Boolean",
+      "default": true,
+      "doc": "Show the Ties, Known and Attributes tabs on actor sheets (this browser only)."
+    },
+    {
+      "key": "pinnedCards",
+      "scope": "client",
+      "type": "Array",
+      "default": [],
+      "doc": "Pinned tie cards on this browser: [{ sourceId, tieId, x, y }]."
+    }
+  ],
+  "events": [],
+  "hooks": [
+    {
+      "name": "ready",
+      "label": "conduit: sockets"
+    },
+    {
+      "name": "canvasReady",
+      "label": "tempo: scene change"
+    },
+    {
+      "name": "combatStart",
+      "label": "tempo: combat started"
+    },
+    {
+      "name": "deleteCombat",
+      "label": "tempo: combat ended"
+    },
+    {
+      "name": "updateCombat",
+      "label": "tempo: first round"
+    },
+    {
+      "name": "getSceneControlButtons",
+      "label": "review control"
+    },
+    {
+      "name": "renderTokenHUD",
+      "label": "tie HUD"
+    },
+    {
+      "name": "canvasReady",
+      "label": "look menu: canvas double-click"
+    },
+    {
+      "name": "canvasPan",
+      "label": "look menu: canvasPan"
+    },
+    {
+      "name": "canvasTearDown",
+      "label": "look menu: canvasTearDown"
+    },
+    {
+      "name": "deleteActor",
+      "label": "sheet: forget a deleted actor"
+    },
+    {
+      "name": "renderNPCActorSheet",
+      "label": "sheet: renderNPCActorSheet"
+    },
+    {
+      "name": "renderCharacterActorSheet",
+      "label": "sheet: renderCharacterActorSheet"
+    },
+    {
+      "name": "renderActorSheetV2",
+      "label": "sheet: renderActorSheetV2"
+    },
+    {
+      "name": "renderActorSheet",
+      "label": "sheet: renderActorSheet"
+    },
+    {
+      "name": "canvasTearDown",
+      "label": "overlay: canvasTearDown"
+    },
+    {
+      "name": "canvasReady",
+      "label": "overlay: canvasReady"
+    },
+    {
+      "name": "canvasPan",
+      "label": "overlay: canvasPan"
+    },
+    {
+      "name": "refreshToken",
+      "label": "overlay: refreshToken"
+    },
+    {
+      "name": "sightRefresh",
+      "label": "overlay: sightRefresh"
+    },
+    {
+      "name": "renderTokenHUD",
+      "label": "worn: HUD"
+    },
+    {
+      "name": "canvasTearDown",
+      "label": "worn: canvasTearDown"
+    },
+    {
+      "name": "canvasReady",
+      "label": "worn: canvasReady"
+    },
+    {
+      "name": "refreshToken",
+      "label": "worn: refreshToken"
+    },
+    {
+      "name": "deleteToken",
+      "label": "worn: deleteToken"
+    },
+    {
+      "name": "updateToken",
+      "label": "worn: updateToken"
+    },
+    {
+      "name": "renderBaseActorSheet",
+      "label": "item marks"
+    }
+  ],
+  "patches": [],
+  "flags": {
+    "writes": [
+      "flags.pentaryn-ties.ties",
+      "flags.pentaryn-ties.known",
+      "flags.pentaryn-ties.knownCategories",
+      "flags.pentaryn-ties.granted",
+      "flags.pentaryn-ties.studied",
+      "flags.pentaryn-ties.beliefs",
+      "flags.pentaryn-ties.kindOf",
+      "flags.pentaryn-ties.studyTiers",
+      "flags.pentaryn-ties.studyHold",
+      "flags.pentaryn-ties.studyOffset",
+      "flags.pentaryn-ties.lore",
+      "flags.pentaryn-ties.attributes",
+      "flags.pentaryn-ties.attributesOff",
+      "flags.pentaryn-ties.conceal",
+      "flags.pentaryn-ties.worn",
+      "flags.pentaryn-ties.mark",
+      "flags.pentaryn-ties.attrSelected"
+    ],
+    "reads": [
+      "flags.item-piles.data",
+      "flags.dnd5e.isPolymorphed"
+    ]
+  },
+  "errors": [
+    "NOT_GM",
+    "NO_GM",
+    "NOT_READY",
+    "NOT_FOUND",
+    "AMBIGUOUS",
+    "BAD_ARGS",
+    "REFUSED",
+    "CONFLICT",
+    "UNSUPPORTED",
+    "TIMEOUT",
+    "INTERNAL"
+  ]
+}

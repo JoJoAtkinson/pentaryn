@@ -1,0 +1,6 @@
+{
+  "plain": "<div class=\"ppt-card\"><img class=\"ppt-thumb\" src=\"cards/pit.webp?v=abc\" alt=\"\">\n    <div class=\"ppt-text\"><h4>The Fighting Pit</h4><p class=\"ppt-desc\">Sand, &lt;script&gt;alert(1)&lt;/script&gt;<br>and cheering.</p></div></div>",
+  "radio": "<label class=\"ppt-card ppt-choice\"><input type=\"radio\" name=\"destination\" value=\"Scene.ScnPit.Region.RegPit\" ><img class=\"ppt-thumb\" src=\"cards/pit.webp?v=abc\" alt=\"\">\n    <div class=\"ppt-text\"><h4>The Fighting Pit</h4><p class=\"ppt-desc\">Sand, &lt;script&gt;alert(1)&lt;/script&gt;<br>and cheering.</p></div></label>",
+  "radioChecked": "<label class=\"ppt-card ppt-choice\"><input type=\"radio\" name=\"destination\" value=\"Scene.ScnPit.Region.RegPit\" checked><img class=\"ppt-thumb\" src=\"cards/pit.webp?v=abc\" alt=\"\">\n    <div class=\"ppt-text\"><h4>The Fighting Pit</h4><p class=\"ppt-desc\">Sand, &lt;script&gt;alert(1)&lt;/script&gt;<br>and cheering.</p></div></label>",
+  "noDescription": "<div class=\"ppt-card\"><img class=\"ppt-thumb\" src=\"thumbs/pit.webp\" alt=\"\">\n    <div class=\"ppt-text\"><h4>Fighting Pit</h4></div></div>"
+}

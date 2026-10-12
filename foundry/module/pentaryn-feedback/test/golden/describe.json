@@ -10,8 +10,9 @@
         {
           "name": "ref",
           "kind": "user",
-          "type": "User|id|exact name",
-          "doc": "never a substring"
+          "type": "User|id|exact name|Actor|Token",
+          "resolve": false,
+          "doc": "never a substring; an Actor or Token (what the root game.pentaryn.inspect passes) means its players: every non-GM user who owns it or has it as their assigned character"
         },
         {
           "name": "opts",
@@ -19,7 +20,7 @@
           "optional": true
         }
       ],
-      "returns": "{ user, pending, actions, errors }",
+      "returns": "Promise<{ user, pending, reports, actions, errors }> | for an Actor/Token: Promise<{ actor, users, pending, reports, actions, errors }>",
       "gm": false,
       "writes": false,
       "query": true,
@@ -29,7 +30,7 @@
         "AMBIGUOUS",
         "BAD_ARGS"
       ],
-      "doc": "Read-only state for one user, plain JSON, depth ≤ 4: pending = report ids waiting on that user's queue (the GM or that user only); actions/errors = this client's recorder rings, only when ref is the calling user."
+      "doc": "Read-only state for one user, or an Actor's players together; plain JSON, depth ≤ 4: pending = report ids waiting on their queues (the GM or that user only); reports = summaries of the reports they filed, oldest first, last 20 (a GM client and viewer only, else null); actions/errors = this client's recorder rings, only when the calling user is among them. An Actor with no player gives users: [], pending: [], reports: []."
     },
     {
       "path": "selftest",

@@ -1,0 +1,4 @@
+{
+  "revealed": "<div class=\"ppt-cards\"><div class=\"ppt-card\"><img class=\"ppt-thumb\" src=\"cards/pit.webp?v=abc\" alt>\n    <div class=\"ppt-text\"><h4>The Fighting Pit</h4><p class=\"ppt-desc\">Sand, &lt;script&gt;alert(1)&lt;/script&gt;<br>and cheering.</p></div></div><div class=\"ppt-card\"><img class=\"ppt-thumb\" src=\"icons/svg/door-exit.svg\" alt>\n    <div class=\"ppt-text\"><h4>Drow Prison</h4></div></div></div>",
+  "unrevealed": "<div class=\"ppt-card\"><div class=\"ppt-text\"><h4>A way onward</h4><p class=\"ppt-desc\">You can't tell where it leads.</p></div></div>"
+}

@@ -3,8 +3,12 @@
  *
  * Ability budgets for player characters (the 2024 PHB's standard array / point buy, background
  * increases, level ASIs), matching a caller's short choice words against dnd5e's trait keys, and
- * the lookup order for per-advancement choices. character.mjs is the Foundry half.
+ * the lookup order for per-advancement choices. character-adapter.mjs is the Foundry half.
  */
+
+// moved to core/text.mjs (gather's crop decision, replace's spec-file path); re-exported for existing importers
+import { cropsDecision, specFileUrl } from "./core/text.mjs";
+export { cropsDecision, specFileUrl };
 
 export const ABILITIES = Object.freeze(["str", "dex", "con", "int", "wis", "cha"]);
 export const STANDARD_ARRAY = Object.freeze([15, 14, 13, 12, 10, 8]);
@@ -256,12 +260,6 @@ export function flattenLanguages(tree, out = {}) {
   return out;
 }
 
-/**
- * Language words → dnd5e keys: `["Common", "goblin", "Thieves' Cant"]` → `{keys: ["common", "goblin",
- * "cant"], unknown: []}`. A word matches a key or its label, case and punctuation ignored.
- * `flat` is `flattenLanguages(CONFIG.DND5E.languages)`; a localisation key as label is matched on
- * its last segment too.
- */
 /** Words people write for a dnd5e language that are neither its key nor its label. */
 export const LANGUAGE_ALIASES = Object.freeze({
   elven: "elvish", elf: "elvish", dwarven: "dwarvish", dwarf: "dwarvish", orcish: "orc", gnomic: "gnomish", gnome: "gnomish",
@@ -269,6 +267,12 @@ export const LANGUAGE_ALIASES = Object.freeze({
   deepspeech: "deep", sylvan: "sylvan", infernal: "infernal"
 });
 
+/**
+ * Language words → dnd5e keys: `["Common", "goblin", "Thieves' Cant"]` → `{keys: ["common", "goblin",
+ * "cant"], unknown: []}`. A word matches a key or its label, case and punctuation ignored.
+ * `flat` is `flattenLanguages(CONFIG.DND5E.languages)`; a localisation key as label is matched on
+ * its last segment too.
+ */
 export function languageKeys(words, flat) {
   const norm = s => String(s ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
   const table = Object.entries(flat ?? {}).map(([k, label]) => ({ k, n: [norm(k), norm(label), norm(String(label).split(".").pop())] }));
@@ -450,33 +454,4 @@ export function focusMissing(classId, items, focusTypes = {}) {
  */
 export function isStockLore(html) {
   return /@Embed\[Compendium\.(?:dnd-monster-manual|dnd-players-handbook|dnd-dungeon-masters-guide|dnd5e)\./.test(String(html ?? ""));
-}
-
-/**
- * Crops on `"auto"`: only for scenes with something to look at (a background image or tiles). A
- * blank grey scene's crop is ~800 tokens of nothing. → `{want, note}`.
- */
-export function cropsDecision(crops, scenes) {
-  const list = scenes ?? [];
-  if (crops === true || crops === "on") return { want: true, note: null };
-  if (crops === false || crops === "off") return { want: false, note: "crops: off" };
-  if (list.length !== 1) return { want: false, note: "crops: off for a multi-scene gather (crops: true to render)" };
-  if (!list[0].hasArt) return { want: false, note: "crops: skipped — the scene has no background image or tiles, a crop would be blank" };
-  return { want: true, note: null };
-}
-
-/**
- * A replace spec file's path → the Data-relative path Foundry serves it at: a Data-relative path
- * (`pentaryn-prompts-specs/pm-0e38.json`) as it is, an absolute one under `…/FoundryVTT/Data/`
- * trimmed to it, anything else (a scratchpad, /tmp) null — the browser can only read the Data dir.
- */
-export function specFileUrl(path) {
-  let p = String(path ?? "").trim();
-  if (!p) return null;
-  const m = /\/FoundryVTT\/Data\/(.+)$/.exec(p);
-  if (m) p = m[1];
-  else if (p.startsWith("/") || p.startsWith("~") || /^[A-Za-z]:[\\/]/.test(p)) return null;
-  p = p.replace(/^(\.\/)+/, "");
-  if (p.split("/").includes("..")) return null;
-  return p;
 }

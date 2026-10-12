@@ -258,7 +258,8 @@ MODULES = {
     ),
     "senses": ModuleSpec(
         "pentaryn-senses",
-        # node-test: chain-core.mjs (the token chain's flag reading and line geometry) is pure.
+        # node-test: test/run.mjs runs every suite; the pure code is core/*.mjs behind the
+        # senses-core.mjs barrel (chain flags and line geometry, the Light rules, the glow, migrate).
         check=(*_STATIC, "node-test", *_BLUEPRINT),
         after_sync=(
             "First install: restart Foundry (module.json is read at startup), then reload.",
@@ -351,15 +352,18 @@ MODULES = {
     ),
     "prompts": ModuleSpec(
         "pentaryn-prompts",
-        # node-test: geometry-core.mjs (bands, bearings, nearest-square distance, the pure sight
-        # test, grouping, ids, the gather text, door lines, XP budgets) and build-core.mjs (PC
-        # ability budgets, choice matching) are pure and carry the whole contract.
+        # node-test: test/run.mjs runs the node:test suites and the legacy core one. The pure
+        # code is core/*.mjs (bands, bearings, nearest-square distance, the pure sight test,
+        # grouping, ids, the gather text, door lines, XP budgets; geometry-core.mjs is their
+        # barrel) plus build-core.mjs / npc-core.mjs (PC ability budgets, choice matching), and
+        # it carries the whole contract.
         check=(*_STATIC, "node-test", *_BLUEPRINT),
         after_sync=(
             "First install: restart Foundry (module.json is read at startup), enable",
             "'Pentaryn Prompt Markers', then reload the ONE GM tab. The six 'Prompt ·' actors",
             "appear in the 'Prompt Markers' folder at GM ready.",
             "  game.pentaryn.prompts.status()",
+            "  game.pentaryn.prompts.selftest()   // .ok === true",
             "  await game.pentaryn.prompts.gather({scenes: 'current'})",
             "Marker art: ./.venv/bin/python scripts/foundry/prompt_marker_art.py",
         ),

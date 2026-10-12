@@ -1,0 +1,232 @@
+[
+  {
+    "label": "NPC token, nothing selected",
+    "hud": {
+      "tag": "DIV",
+      "className": "token-hud",
+      "children": [
+        {
+          "tag": "DIV",
+          "className": "col left",
+          "children": [
+            {
+              "tag": "BUTTON",
+              "className": "control-icon pt-tie-btn",
+              "dataset": {
+                "tooltip": "Add or edit a tie with this token"
+              },
+              "attrs": {
+                "aria-label": "Add or edit a tie with this token"
+              },
+              "type": "button",
+              "innerHTML": "<i class=\"fa-solid fa-people-arrows\"></i>",
+              "listeners": [
+                "click"
+              ]
+            },
+            {
+              "tag": "BUTTON",
+              "className": "control-icon pt-preview-btn",
+              "dataset": {
+                "tooltip": "Inspect (GM only): player view and simulated rolls"
+              },
+              "attrs": {
+                "aria-label": "Inspect preview"
+              },
+              "type": "button",
+              "innerHTML": "<i class=\"fa-solid fa-flask\"></i>",
+              "listeners": [
+                "click"
+              ]
+            }
+          ]
+        },
+        {
+          "tag": "DIV",
+          "className": "col right",
+          "children": [
+            {
+              "tag": "BUTTON",
+              "className": "control-icon pt-worn-btn",
+              "dataset": {
+                "tooltip": "Worn — mark who is inside this body tonight (GM only)"
+              },
+              "attrs": {
+                "aria-label": "Worn — mark who is inside this body tonight (GM only)"
+              },
+              "type": "button",
+              "innerHTML": "<i class=\"fa-solid fa-masks-theater\"></i>",
+              "listeners": [
+                "click"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "label": "NPC token, PC selected",
+    "hud": {
+      "tag": "DIV",
+      "className": "token-hud",
+      "children": [
+        {
+          "tag": "DIV",
+          "className": "col left",
+          "children": [
+            {
+              "tag": "BUTTON",
+              "className": "control-icon pt-tie-btn",
+              "dataset": {
+                "tooltip": "Add or edit a tie with this token"
+              },
+              "attrs": {
+                "aria-label": "Add or edit a tie with this token"
+              },
+              "type": "button",
+              "innerHTML": "<i class=\"fa-solid fa-people-arrows\"></i>",
+              "listeners": [
+                "click"
+              ]
+            },
+            {
+              "tag": "BUTTON",
+              "className": "control-icon pt-preview-btn",
+              "dataset": {
+                "tooltip": "Inspect (GM only): player view and simulated rolls"
+              },
+              "attrs": {
+                "aria-label": "Inspect preview"
+              },
+              "type": "button",
+              "innerHTML": "<i class=\"fa-solid fa-flask\"></i>",
+              "listeners": [
+                "click"
+              ]
+            },
+            {
+              "tag": "BUTTON",
+              "className": "control-icon pt-inspect-btn",
+              "dataset": {
+                "tooltip": "Take a moment to look Token zzTokNpc00000001 over."
+              },
+              "attrs": {
+                "aria-label": "Take a closer look"
+              },
+              "type": "button",
+              "innerHTML": "<i class=\"fa-solid fa-eye\"></i>",
+              "listeners": [
+                "click"
+              ]
+            }
+          ]
+        },
+        {
+          "tag": "DIV",
+          "className": "col right",
+          "children": [
+            {
+              "tag": "BUTTON",
+              "className": "control-icon pt-worn-btn",
+              "dataset": {
+                "tooltip": "Worn — mark who is inside this body tonight (GM only)"
+              },
+              "attrs": {
+                "aria-label": "Worn — mark who is inside this body tonight (GM only)"
+              },
+              "type": "button",
+              "innerHTML": "<i class=\"fa-solid fa-masks-theater\"></i>",
+              "listeners": [
+                "click"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "label": "PC's own token, PC selected",
+    "hud": {
+      "tag": "DIV",
+      "className": "token-hud",
+      "children": [
+        {
+          "tag": "DIV",
+          "className": "col left",
+          "children": [
+            {
+              "tag": "BUTTON",
+              "className": "control-icon pt-tie-btn",
+              "dataset": {
+                "tooltip": "Add or edit a tie with this token"
+              },
+              "attrs": {
+                "aria-label": "Add or edit a tie with this token"
+              },
+              "type": "button",
+              "innerHTML": "<i class=\"fa-solid fa-people-arrows\"></i>",
+              "listeners": [
+                "click"
+              ]
+            },
+            {
+              "tag": "BUTTON",
+              "className": "control-icon pt-preview-btn",
+              "dataset": {
+                "tooltip": "Inspect (GM only): player view and simulated rolls"
+              },
+              "attrs": {
+                "aria-label": "Inspect preview"
+              },
+              "type": "button",
+              "innerHTML": "<i class=\"fa-solid fa-flask\"></i>",
+              "listeners": [
+                "click"
+              ]
+            }
+          ]
+        },
+        {
+          "tag": "DIV",
+          "className": "col right",
+          "children": [
+            {
+              "tag": "BUTTON",
+              "className": "control-icon pt-worn-btn",
+              "dataset": {
+                "tooltip": "Worn — mark who is inside this body tonight (GM only)"
+              },
+              "attrs": {
+                "aria-label": "Worn — mark who is inside this body tonight (GM only)"
+              },
+              "type": "button",
+              "innerHTML": "<i class=\"fa-solid fa-masks-theater\"></i>",
+              "listeners": [
+                "click"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "label": "no token",
+    "hud": {
+      "tag": "DIV",
+      "className": "token-hud",
+      "children": [
+        {
+          "tag": "DIV",
+          "className": "col left"
+        },
+        {
+          "tag": "DIV",
+          "className": "col right"
+        }
+      ]
+    }
+  }
+]

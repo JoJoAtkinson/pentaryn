@@ -1,0 +1,70 @@
+[
+  {
+    "kind": "once",
+    "name": "init"
+  },
+  {
+    "kind": "once",
+    "name": "ready"
+  },
+  {
+    "kind": "once",
+    "name": "ready"
+  },
+  {
+    "kind": "on",
+    "name": "canvasReady"
+  },
+  {
+    "kind": "on",
+    "name": "combatStart"
+  },
+  {
+    "kind": "on",
+    "name": "deleteCombat"
+  },
+  {
+    "kind": "on",
+    "name": "updateCombat"
+  },
+  {
+    "kind": "on",
+    "name": "getSceneControlButtons"
+  },
+  {
+    "kind": "on",
+    "name": "renderTokenHUD"
+  },
+  {
+    "kind": "on",
+    "name": "canvasReady"
+  },
+  {
+    "kind": "on",
+    "name": "canvasPan"
+  },
+  {
+    "kind": "on",
+    "name": "canvasTearDown"
+  },
+  {
+    "kind": "on",
+    "name": "deleteActor"
+  },
+  {
+    "kind": "on",
+    "name": "renderNPCActorSheet"
+  },
+  {
+    "kind": "on",
+    "name": "renderCharacterActorSheet"
+  },
+  {
+    "kind": "on",
+    "name": "renderActorSheetV2"
+  },
+  {
+    "kind": "on",
+    "name": "renderActorSheet"
+  }
+]

@@ -1,6 +1,6 @@
 /**
- * Pure helpers for pentaryn-creatures (creatures.mjs). No Foundry globals, so test/run.mjs proves
- * them in node. Everything here takes plain summaries built by creatures.mjs, never documents.
+ * Pure helpers for pentaryn-creatures. No Foundry globals, so the tests prove them in node.
+ * Everything here takes plain summaries or plain flag objects, never documents.
  *
  *   token.flags["pentaryn-creatures"].light = { bright, dim }   // the light WE set, or null
  *   token.flags["pentaryn-creatures"].light = false              // our light was switched off by hand: hands off
@@ -9,7 +9,38 @@
  */
 
 export const MODULE = "pentaryn-creatures";
+export const SHORT = "creatures";
+export const NS = "creatures";
+export const VERSION = "0.1.1";
+export const CONTRACT = "pentaryn-creatures/api@1";
+export const I18N = "PENTARYN_CREATURES";
+export const CSS = "pcr-";
+export const FLAG_SCOPE = MODULE;
+/** This module emits no hooks of its own. */
+export const HOOKS = Object.freeze({});
 export const LIGHT_FLAG = "light";
+
+/* -------------------------------------------- */
+/*  Other modules' flags (hand copies, tested)  */
+/* -------------------------------------------- */
+
+/**
+ * A pentaryn-aoe spell-area handle: an `npc` every player owns (`default: OWNER`), so it would
+ * otherwise count as a player's creature. A hand copy of pentaryn-aoe/core.mjs `isHandleTarget`
+ * (the token flag `handle`, or the actor flag `handleActor`) WITHOUT aoe's `doc.token` branch:
+ * module isolation forces the copy, and adding that branch would change behaviour
+ * (transform-creatures-30). If aoe changes its handle flags, change this and its fixture together.
+ * @param {object} [tokenFlags]  the token's `flags`
+ * @param {object} [actorFlags]  its actor's `flags`
+ */
+export function isAoeHandle(tokenFlags, actorFlags) {
+  return !!(tokenFlags?.["pentaryn-aoe"]?.handle || actorFlags?.["pentaryn-aoe"]?.handleActor);
+}
+
+/** An Item Piles pile: `flags.item-piles.data.enabled` on the token or its actor. */
+export function isItemPile(tokenFlags, actorFlags) {
+  return !!(tokenFlags?.["item-piles"]?.data?.enabled || actorFlags?.["item-piles"]?.data?.enabled);
+}
 
 const num = v => (typeof v === "number" && Number.isFinite(v) ? v : 0);
 
@@ -136,4 +167,103 @@ export function stripDock(hud, viewH, { gap = 8 } = {}) {
   if (!hud || !(hud.height > 0) || !(hud.width > 0) || !(viewH > 0)) return null;
   if (hud.top >= viewH) return null;                       // collapsed off-screen
   return { bottom: Math.round(Math.max(0, viewH - hud.top + gap)), left: Math.round(Math.max(8, hud.left)) };
+}
+
+/** `"bottom,left"` for a dock, or null when docked: write the strip's styles only when this changes. */
+export function dockKey(dock) {
+  return dock ? `${dock.bottom},${dock.left}` : null;
+}
+
+/**
+ * Is the 500 ms dock poll worth running? Only while the strip is on the page, the GM has
+ * `floatOverHud` on and Argon's Combat HUD module is active (transform-creatures-40).
+ */
+export function shouldPollDock({ stripPresent, floatOverHud, argonActive } = {}) {
+  return stripPresent === true && floatOverHud === true && argonActive === true;
+}
+
+/* -------------------------------------------- */
+/*  Which document changes matter               */
+/* -------------------------------------------- */
+
+const keysOf = changes => (changes && typeof changes === "object" ? changes : {});
+
+/** Token changes that can turn the creature light on or off. A token that only moved is skipped. */
+export const LIGHT_KEYS = Object.freeze(["light", "actorId", "actorLink", "delta", "flags"]);
+
+/**
+ * Should an `updateToken` queue the token for a light pass? Not for our own write (it carries
+ * `options.pentarynCreatures`), and not for a change no light rule reads (transform-creatures-27).
+ */
+export function shouldQueueLight(changes, options) {
+  if (options?.pentarynCreatures) return false;
+  const c = keysOf(changes);
+  return LIGHT_KEYS.some(k => k in c);
+}
+
+/** Token fields the strip's summary reads (summarize: name, image, actor, hidden, pile/handle flags). */
+export const STRIP_KEYS = Object.freeze(["name", "texture", "hidden", "actorId", "actorLink", "delta", "flags"]);
+
+/** Can this `updateToken` change what the strip shows? A move (x, y, elevation, rotation) cannot. */
+export function stripMayChange(changes) {
+  const c = keysOf(changes);
+  return STRIP_KEYS.some(k => k in c);
+}
+
+/* -------------------------------------------- */
+/*  Timing, failure and counting seams          */
+/* -------------------------------------------- */
+
+/**
+ * One timer that runs `run` after `delayMs`. `mode: "debounce"` re-arms on every `arm()` (steady
+ * traffic pushes the run back); `mode: "window"` arms once and is never pushed back, so the run
+ * happens at most `delayMs` after the first `arm()` (transform-creatures-26). The timers are
+ * passed in, so the core stays pure and the tests drive a fake clock.
+ * @param {number} delayMs
+ * @param {() => *} run
+ * @param {{ setTimeout: Function, clearTimeout: Function, mode?: "debounce"|"window" }} timers
+ */
+export function makeCoalescer(delayMs, run, { setTimeout: set, clearTimeout: clear, mode = "debounce" }) {
+  let timer = null;
+  const fire = () => {
+    timer = null;
+    return run();
+  };
+  return {
+    arm() {
+      if (mode === "window") {
+        if (timer === null) timer = set(fire, delayMs);
+        return;
+      }
+      clear(timer);
+      timer = set(fire, delayMs);
+    },
+    cancel() {
+      clear(timer);
+      timer = null;
+    },
+    get pending() {
+      return timer !== null;
+    },
+  };
+}
+
+/**
+ * Run `fn`; on a throw call `onError(err)` and return `fallback`. For the visibility override,
+ * which core calls inside a getter and which must never throw (transform-creatures-29).
+ */
+export function safely(fn, onError, fallback = false) {
+  try {
+    return fn();
+  } catch (err) {
+    onError?.(err);
+    return fallback;
+  }
+}
+
+/** How many of these `flags["pentaryn-creatures"].light` values are a light we set (an object). */
+export function countLit(lightFlags) {
+  let n = 0;
+  for (const v of lightFlags ?? []) if (v && typeof v === "object" && !Array.isArray(v)) n++;
+  return n;
 }

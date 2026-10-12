@@ -1,0 +1,310 @@
+[
+  {
+    "label": "setKindOf to an unknown actor",
+    "out": false,
+    "calls": [
+      {
+        "op": "notify",
+        "level": "warn",
+        "message": "That actor no longer exists — the pointer was not set."
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "setKindOf to KIND",
+    "out": true,
+    "calls": [
+      {
+        "op": "Hooks.call",
+        "name": "preUpdateActor"
+      },
+      {
+        "op": "update",
+        "documentName": "Actor",
+        "uuid": "Actor.zzLone0000000001",
+        "changes": {
+          "flags.pentaryn-ties.kindOf": "zzKind0000000001"
+        }
+      },
+      {
+        "op": "Hooks.callAll",
+        "name": "updateActor"
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "setKindOf to itself clears",
+    "out": true,
+    "calls": [
+      {
+        "op": "Hooks.call",
+        "name": "preUpdateActor"
+      },
+      {
+        "op": "update",
+        "documentName": "Actor",
+        "uuid": "Actor.zzLone0000000001",
+        "changes": {
+          "flags.pentaryn-ties.-=kindOf": null
+        }
+      },
+      {
+        "op": "Hooks.callAll",
+        "name": "updateActor"
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "setStudyTiers junk → cleared",
+    "out": [],
+    "calls": [
+      {
+        "op": "Hooks.call",
+        "name": "preUpdateActor"
+      },
+      {
+        "op": "update",
+        "documentName": "Actor",
+        "uuid": "Actor.zzLone0000000001",
+        "changes": {
+          "flags.pentaryn-ties.-=studyTiers": null
+        }
+      },
+      {
+        "op": "Hooks.callAll",
+        "name": "updateActor"
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "setStudyTiers two rungs",
+    "out": [
+      {
+        "min": 15,
+        "text": "fifteen"
+      }
+    ],
+    "calls": [
+      {
+        "op": "Hooks.call",
+        "name": "preUpdateActor"
+      },
+      {
+        "op": "update",
+        "documentName": "Actor",
+        "uuid": "Actor.zzLone0000000001",
+        "changes": {
+          "flags.pentaryn-ties.studyTiers": [
+            {
+              "min": 15,
+              "text": "fifteen"
+            }
+          ]
+        }
+      },
+      {
+        "op": "Hooks.callAll",
+        "name": "updateActor"
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "readTiers",
+    "out": [
+      {
+        "min": 15,
+        "text": "fifteen"
+      }
+    ],
+    "calls": [],
+    "console": []
+  },
+  {
+    "label": "setStudyOffset +5",
+    "out": 5,
+    "calls": [
+      {
+        "op": "Hooks.call",
+        "name": "preUpdateActor"
+      },
+      {
+        "op": "update",
+        "documentName": "Actor",
+        "uuid": "Actor.zzLone0000000001",
+        "changes": {
+          "flags.pentaryn-ties.studyOffset": 5
+        }
+      },
+      {
+        "op": "Hooks.callAll",
+        "name": "updateActor"
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "setStudyOffset auto",
+    "out": "auto",
+    "calls": [
+      {
+        "op": "Hooks.call",
+        "name": "preUpdateActor"
+      },
+      {
+        "op": "update",
+        "documentName": "Actor",
+        "uuid": "Actor.zzLone0000000001",
+        "changes": {
+          "flags.pentaryn-ties.studyOffset": "auto"
+        }
+      },
+      {
+        "op": "Hooks.callAll",
+        "name": "updateActor"
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "setStudyOffset 0 clears",
+    "out": 0,
+    "calls": [
+      {
+        "op": "Hooks.call",
+        "name": "preUpdateActor"
+      },
+      {
+        "op": "update",
+        "documentName": "Actor",
+        "uuid": "Actor.zzLone0000000001",
+        "changes": {
+          "flags.pentaryn-ties.-=studyOffset": null
+        }
+      },
+      {
+        "op": "Hooks.callAll",
+        "name": "updateActor"
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "setStudyHold true",
+    "out": true,
+    "calls": [
+      {
+        "op": "Hooks.call",
+        "name": "preUpdateActor"
+      },
+      {
+        "op": "update",
+        "documentName": "Actor",
+        "uuid": "Actor.zzLone0000000001",
+        "changes": {
+          "flags.pentaryn-ties.studyHold": true
+        }
+      },
+      {
+        "op": "Hooks.callAll",
+        "name": "updateActor"
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "setStudyHold null inherits",
+    "out": false,
+    "calls": [
+      {
+        "op": "Hooks.call",
+        "name": "preUpdateActor"
+      },
+      {
+        "op": "update",
+        "documentName": "Actor",
+        "uuid": "Actor.zzLone0000000001",
+        "changes": {
+          "flags.pentaryn-ties.-=studyHold": null
+        }
+      },
+      {
+        "op": "Hooks.callAll",
+        "name": "updateActor"
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "player: setKindOf",
+    "out": false,
+    "calls": [],
+    "console": []
+  },
+  {
+    "label": "player: setStudyTiers",
+    "out": false,
+    "calls": [],
+    "console": []
+  },
+  {
+    "label": "player: setStudyOffset",
+    "out": false,
+    "calls": [],
+    "console": []
+  },
+  {
+    "label": "player: setStudyHold",
+    "out": false,
+    "calls": [],
+    "console": []
+  },
+  {
+    "label": "kindDialog: pick KIND",
+    "out": true,
+    "calls": [
+      {
+        "op": "DialogV2.prompt",
+        "title": "The kind of ZZ Lone Beast"
+      },
+      {
+        "op": "Hooks.call",
+        "name": "preUpdateActor"
+      },
+      {
+        "op": "update",
+        "documentName": "Actor",
+        "uuid": "Actor.zzLone0000000001",
+        "changes": {
+          "flags.pentaryn-ties.kindOf": "zzKind0000000001"
+        }
+      },
+      {
+        "op": "Hooks.callAll",
+        "name": "updateActor"
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "kindDialog: cancelled",
+    "out": false,
+    "calls": [
+      {
+        "op": "DialogV2.prompt",
+        "title": "The kind of ZZ Lone Beast"
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "player: kindDialog",
+    "out": false,
+    "calls": [],
+    "console": []
+  }
+]

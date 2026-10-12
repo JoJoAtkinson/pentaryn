@@ -1,0 +1,217 @@
+[
+  {
+    "label": "character does not exist",
+    "out": null,
+    "calls": [],
+    "console": [
+      {
+        "level": "warn",
+        "text": "pentaryn-ties | study refused: ZZ Player named a character that does not exist"
+      }
+    ]
+  },
+  {
+    "label": "not a character sheet",
+    "out": null,
+    "calls": [],
+    "console": [
+      {
+        "level": "warn",
+        "text": "pentaryn-ties | study refused: ZZ Brakka is not a character sheet"
+      }
+    ]
+  },
+  {
+    "label": "fact does not resolve",
+    "out": null,
+    "calls": [],
+    "console": [
+      {
+        "level": "warn",
+        "text": "pentaryn-ties | study refused: ZZ Player named a fact that does not resolve"
+      }
+    ]
+  },
+  {
+    "label": "sender does not own the character",
+    "out": null,
+    "calls": [],
+    "console": [
+      {
+        "level": "warn",
+        "text": "pentaryn-ties | study refused: ZZ Player does not own ZZ Wren"
+      }
+    ]
+  },
+  {
+    "label": "subject out of reach",
+    "out": null,
+    "calls": [],
+    "console": [
+      {
+        "level": "warn",
+        "text": "pentaryn-ties | study refused: ZZ Player cannot see ZZ Faraway"
+      }
+    ]
+  },
+  {
+    "label": "playerAccess off",
+    "out": null,
+    "calls": [],
+    "console": [
+      {
+        "level": "warn",
+        "text": "pentaryn-ties | study refused: playerAccess is off for ZZ Player"
+      }
+    ]
+  },
+  {
+    "label": "a valid kind request: rolls 11 (tier 0, no authored rung 0: silent)",
+    "out": null,
+    "calls": [
+      {
+        "op": "Hooks.call",
+        "name": "preUpdateActor"
+      },
+      {
+        "op": "update",
+        "documentName": "Actor",
+        "uuid": "Actor.zzKind0000000001",
+        "changes": {
+          "flags.pentaryn-ties.beliefs.zzPc000000000001.kind": {
+            "claim": "rid0000000000002",
+            "when": 1790000000000
+          }
+        }
+      },
+      {
+        "op": "Hooks.callAll",
+        "name": "updateActor"
+      },
+      {
+        "op": "rollSkill",
+        "actor": "zzPc000000000001",
+        "config": {
+          "skill": "rel",
+          "target": 15,
+          "advantage": true,
+          "disadvantage": false,
+          "rolls": [
+            {
+              "parts": [
+                "@situational"
+              ],
+              "data": {
+                "situational": 100
+              }
+            }
+          ]
+        },
+        "dialog": {
+          "configure": false
+        },
+        "message": {
+          "rollMode": "mapped:blindroll",
+          "data": {
+            "flavor": "Study: ZZ Ghoul (Religion)",
+            "flags": {
+              "dice-so-nice": {
+                "skip": true
+              }
+            }
+          }
+        },
+        "total": 11
+      },
+      {
+        "op": "Hooks.call",
+        "name": "preUpdateActor"
+      },
+      {
+        "op": "update",
+        "documentName": "Actor",
+        "uuid": "Actor.zzKind0000000001",
+        "changes": {
+          "flags.pentaryn-ties.beliefs.zzPc000000000001.kind": {
+            "text": "",
+            "tier": 0,
+            "total": 11,
+            "when": 1790000000000,
+            "delivered": 1790000000000,
+            "claim": null,
+            "sources": {
+              "adv": 1,
+              "dis": 0,
+              "shared": [],
+              "declared": "advantage",
+              "rule": "raw",
+              "resolved": "advantage"
+            },
+            "pass": false
+          }
+        }
+      },
+      {
+        "op": "Hooks.callAll",
+        "name": "updateActor"
+      },
+      {
+        "op": "Hooks.call",
+        "name": "preUpdateActor"
+      },
+      {
+        "op": "update",
+        "documentName": "Actor",
+        "uuid": "Actor.zzPc000000000001",
+        "changes": {
+          "flags.pentaryn-ties.studied": {
+            "kind": {
+              "zzKind0000000001": {
+                "when": 1790000000000
+              }
+            },
+            "lore": {
+              "lore:zzNpc00000000001:l4": {
+                "when": 1790000000000
+              },
+              "lore:zzNpc00000000001:l3": {
+                "when": 1790000000000
+              }
+            }
+          }
+        }
+      },
+      {
+        "op": "Hooks.callAll",
+        "name": "updateActor"
+      },
+      {
+        "op": "ChatMessage.create",
+        "data": {
+          "content": "<p class=\"pt-study-stub\">ZZ Caven studies ZZ Brakka.</p>",
+          "speaker": {
+            "alias": "ZZ Caven",
+            "actor": "zzPc000000000001"
+          }
+        }
+      },
+      {
+        "op": "notify",
+        "level": "info",
+        "message": "ZZ Caven studied ZZ Ghoul and missed."
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "the same again (already studied)",
+    "out": null,
+    "calls": [],
+    "console": [
+      {
+        "level": "warn",
+        "text": "pentaryn-ties | study refused: ZZ Caven has already studied ZZ Ghoul"
+      }
+    ]
+  }
+]

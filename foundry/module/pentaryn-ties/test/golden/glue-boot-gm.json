@@ -1,0 +1,102 @@
+[
+  {
+    "op": "keybindings.register",
+    "id": "pentaryn-ties.showWeb",
+    "name": "PENTARYN_TIES.keybind.show"
+  },
+  {
+    "op": "keybindings.register",
+    "id": "pentaryn-ties.addTie",
+    "name": "PENTARYN_TIES.keybind.add"
+  },
+  {
+    "op": "keybindings.register",
+    "id": "pentaryn-ties.fileKnown",
+    "name": "PENTARYN_TIES.keybind.known"
+  },
+  {
+    "op": "keybindings.register",
+    "id": "pentaryn-ties.inspect",
+    "name": "PENTARYN_TIES.keybind.inspect"
+  },
+  {
+    "op": "keybindings.register",
+    "id": "pentaryn-ties.showOneTie",
+    "name": "PENTARYN_TIES.keybind.one"
+  },
+  {
+    "op": "keybindings.register",
+    "id": "pentaryn-ties.showDescription",
+    "name": "PENTARYN_TIES.keybind.describe"
+  },
+  {
+    "op": "settings.register",
+    "id": "pentaryn-ties.macroCreated"
+  },
+  {
+    "op": "settings.register",
+    "id": "pentaryn-ties.playerAccess"
+  },
+  {
+    "op": "settings.register",
+    "id": "pentaryn-ties.holdDefault"
+  },
+  {
+    "op": "settings.register",
+    "id": "pentaryn-ties.attributes"
+  },
+  {
+    "op": "settings.register",
+    "id": "pentaryn-ties.attributeBeliefs"
+  },
+  {
+    "op": "settings.register",
+    "id": "pentaryn-ties.attributeKnowledge"
+  },
+  {
+    "op": "settings.register",
+    "id": "pentaryn-ties.advantageStacking"
+  },
+  {
+    "op": "settings.register",
+    "id": "pentaryn-ties.nearDistance"
+  },
+  {
+    "op": "settings.register",
+    "id": "pentaryn-ties.pinnedCards"
+  },
+  {
+    "op": "settings.register",
+    "id": "pentaryn-ties.sheetTab"
+  },
+  {
+    "op": "Hooks.callAll",
+    "name": "pentaryn-ties.ready"
+  },
+  {
+    "op": "Hooks.callAll",
+    "name": "pentaryn.ready"
+  },
+  {
+    "op": "socket.on",
+    "channel": "module.pentaryn-ties"
+  },
+  {
+    "op": "socket.on",
+    "channel": "module.pentaryn-ties"
+  },
+  {
+    "op": "Macro.create",
+    "data": {
+      "name": "Ties Web",
+      "type": "script",
+      "img": "icons/sundries/gaming/chess-pawn-white.webp",
+      "command": "game.pentaryn.ties.show();"
+    }
+  },
+  {
+    "op": "settings.set",
+    "id": "pentaryn-ties.macroCreated",
+    "value": true
+  }
+]

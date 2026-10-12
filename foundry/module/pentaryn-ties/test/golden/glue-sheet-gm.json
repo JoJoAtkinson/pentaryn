@@ -1,0 +1,418 @@
+[
+  {
+    "label": "character sheet",
+    "tabGroups": {
+      "primary": "details"
+    },
+    "sheet": {
+      "tag": "DIV",
+      "className": "application sheet tab-details",
+      "children": [
+        {
+          "tag": "HEADER",
+          "className": "window-header",
+          "children": [
+            {
+              "tag": "H1"
+            },
+            {
+              "tag": "BUTTON",
+              "className": "header-control icon fa-solid fa-people-arrows pentaryn-ties-btn",
+              "dataset": {
+                "tooltip": "Ties"
+              },
+              "attrs": {
+                "aria-label": "Ties"
+              },
+              "type": "button",
+              "listeners": [
+                "click"
+              ]
+            },
+            {
+              "tag": "BUTTON",
+              "className": "header-control fa-xmark"
+            }
+          ]
+        },
+        {
+          "tag": "NAV",
+          "className": "tabs",
+          "dataset": {
+            "group": "primary"
+          },
+          "children": [
+            {
+              "tag": "A",
+              "className": "item active",
+              "dataset": {
+                "tab": "details"
+              }
+            },
+            {
+              "tag": "A",
+              "className": "item control",
+              "dataset": {
+                "tab": "ties",
+                "group": "primary",
+                "tooltip": "Ties",
+                "ptBound": "1"
+              },
+              "innerHTML": "<i class=\"fa-solid fa-people-arrows\"></i>",
+              "listeners": [
+                "click"
+              ]
+            },
+            {
+              "tag": "A",
+              "className": "item control",
+              "dataset": {
+                "tab": "known",
+                "group": "primary",
+                "tooltip": "Known",
+                "ptBound": "1"
+              },
+              "innerHTML": "<i class=\"fa-solid fa-book-skull\"></i>",
+              "listeners": [
+                "click"
+              ]
+            },
+            {
+              "tag": "A",
+              "className": "item control",
+              "dataset": {
+                "tab": "attributes",
+                "group": "primary",
+                "tooltip": "Attributes",
+                "ptBound": "1"
+              },
+              "innerHTML": "<i class=\"fa-solid fa-tags\"></i>",
+              "listeners": [
+                "click"
+              ]
+            }
+          ]
+        },
+        {
+          "tag": "DIV",
+          "className": "tab-body",
+          "children": [
+            {
+              "tag": "SECTION",
+              "className": "tab active",
+              "dataset": {
+                "tab": "details"
+              }
+            },
+            {
+              "tag": "SECTION",
+              "className": "tab",
+              "dataset": {
+                "tab": "ties",
+                "group": "primary"
+              },
+              "innerHTML": "<div class=\"pentaryn-ties\" data-actor-id=\"zzPc000000000001\">\n    \n    <ul class=\"pt-list\"><li class=\"pt-empty\">No ties recorded.</li></ul>\n    \n    <div class=\"pt-add-bar\">\n        <button type=\"button\" class=\"pt-add-btn\" data-action=\"add\">\n          <i class=\"fa-solid fa-plus\"></i> Add\n        </button>\n        <span class=\"pt-add-hint\">or hover someone on the map and press 6</span>\n      </div>\n    <div class=\"pt-inbound-head\">\n        <span class=\"pt-inbound-title\">On their sheets only</span>\n        <span class=\"pt-gm-badge\"><i class=\"fa-solid fa-eye-slash\" aria-hidden=\"true\"></i> GM only</span>\n      </div>\n      <p class=\"pt-inbound-hint\">People who have written this character down without being written down back. This section is never shown to a player — to let one see a connection, write it on their own character&#39;s sheet.</p>\n      <ul class=\"pt-list pt-list-inbound\">\n        <li class=\"pt-row pt-inbound\" data-id=\"zzNpc00000000001\" data-inbound=\"1\">\n    <div class=\"pt-summary\" role=\"button\" tabindex=\"0\" aria-expanded=\"false\" data-action=\"toggle\"\n         aria-label=\"ZZ Brakka — recorded on their sheet, not on this one\"\n         data-tooltip=\"Written on ZZ Brakka&#39;s sheet. Click to read it.\">\n      <img class=\"pt-portrait\" src=\"icons/zz/zzNpc00000000001.webp\" alt=\"\" loading=\"lazy\" />\n      <span class=\"pt-who\"><span class=\"pt-name\">ZZ Brakka</span><span class=\"pt-note-preview pt-note-none\"><em>Nothing written on this tie yet.</em></span></span>\n      <span class=\"pt-word pt-wary\">debtor</span>\n      <span class=\"pt-chip\" data-tooltip=\"Wary\"><span class=\"pt-dot pt-wary\"></span><span class=\"pt-chip-label\">Wary</span></span>\n      <span class=\"pt-pips\" role=\"group\" aria-label=\"Strength 4 of 5 — orders this list\" data-tooltip=\"Strength 4 of 5 — orders this list\"><span class=\"pt-pip fill\"></span><span class=\"pt-pip fill\"></span><span class=\"pt-pip fill\"></span><span class=\"pt-pip fill\"></span><span class=\"pt-pip\"></span></span>\n      <span class=\"pt-hint\" aria-hidden=\"true\"><i class=\"fa-solid fa-reply\"></i></span>\n    </div>\n    <div class=\"pt-detail-wrap\" hidden>\n      <div class=\"pt-detail\">\n        <div class=\"pt-notes-prose pt-note-none\"><em>Nothing written on this tie yet.</em></div>\n        <div class=\"pt-detail-actions\">\n          <button type=\"button\" class=\"pt-textbtn\" data-action=\"open\" data-id=\"zzNpc00000000001\">\n            <i class=\"fa-solid fa-arrow-up-right-from-square\"></i> Open ZZ Brakka&#39;s sheet\n          </button>\n          <button type=\"button\" class=\"pt-textbtn\" data-action=\"edit-theirs\" data-id=\"zzNpc00000000001\">\n            <i class=\"fa-solid fa-pen\"></i> Edit ZZ Brakka&#39;s side\n          </button>\n        </div>\n      </div>\n    </div>\n  </li>\n      </ul>\n    <section class=\"pt-authoring\">\n    <div class=\"pt-inbound-head\">\n      <span class=\"pt-inbound-title\">Authoring</span>\n      <span class=\"pt-gm-badge\"><i class=\"fa-solid fa-eye-slash\" aria-hidden=\"true\"></i> GM only</span>\n    </div>\n    <div class=\"pt-kind-picker\">\n    <label class=\"pt-field\">\n      <span class=\"pt-field-label\">Kind</span>\n      <select data-action=\"set-kind\">\n        <option value=\"\" selected>ZZ Caven is its own kind</option>\n        \n        <optgroup label=\"Every other NPC\"><option value=\"zzNpc00000000001\">ZZ Brakka</option><option value=\"zzNpc00000000002\">ZZ Quill</option></optgroup>\n      </select>\n    </label>\n    <p class=\"pt-hint\">Studying this creature reads its own stat block. Point it at another actor to share one bestiary page across every copy.</p>\n  </div>\n    <section class=\"pt-lore-editor\" data-lore-key=\"lore:zzPc000000000001\">\n    <div class=\"pt-group-head\" role=\"heading\" aria-level=\"3\">\n      <span class=\"pt-group-title\">What a check can reveal</span>\n    </div>\n    <p class=\"pt-hint pt-lore-warning\">Everything you write here reaches every client. Nothing goes in a row that would ruin the game if read with devtools.</p>\n    <p class=\"pt-empty\">No rows yet. Add one and give it a name, a skill and a DC.</p>\n    <div class=\"pt-add-bar\">\n      <button type=\"button\" class=\"pt-add-btn\" data-action=\"lore-add\">\n        <i class=\"fa-solid fa-plus\"></i> Add a fact\n      </button>\n    </div>\n  </section>\n    <div class=\"pt-group-head\" role=\"heading\" aria-level=\"3\">\n      <span class=\"pt-group-title\">What they believe</span>\n    </div>\n    <p class=\"pt-hint\">Exactly what each character was told, kept so you do not have to remember it mid-scene. Held rolls wait here until you deliver them.</p>\n    <p class=\"pt-empty\">Nobody has studied this one yet.</p>\n  </section>\n  </div>"
+            },
+            {
+              "tag": "SECTION",
+              "className": "tab",
+              "dataset": {
+                "tab": "known",
+                "group": "primary"
+              },
+              "innerHTML": "<div class=\"pentaryn-ties pentaryn-known\" data-actor-id=\"zzPc000000000001\">\n    <p class=\"pt-known-intro\">What this character knows about the people and creatures they have met — in their own words. Written here, kept here.</p>\n    <ul class=\"pt-list\"><li class=\"pt-empty\">Nothing written down yet. Add someone you have met, then write what you know about them.</li></ul>\n    <div class=\"pt-add-bar\">\n        <button type=\"button\" class=\"pt-add-btn\" data-action=\"known-add\">\n          <i class=\"fa-solid fa-plus\"></i> Add…\n        </button>\n        <span class=\"pt-add-hint\">anyone this character could have met — or hover them on the map and press 5</span>\n      </div>\n    \n  </div>"
+            },
+            {
+              "tag": "SECTION",
+              "className": "tab",
+              "dataset": {
+                "tab": "attributes",
+                "group": "primary"
+              },
+              "innerHTML": "<div class=\"pentaryn-ties pentaryn-attributes\" data-actor-id=\"zzPc000000000001\">\n    \n    <p class=\"pt-hint\">What this one belongs to. Some are worked out from the stat block; the rest you link yourself. Lore you write here is shared by every carrier.</p>\n    <p class=\"pt-empty\">Nothing yet.</p>\n    <div class=\"pt-add-bar pt-attr-add\">\n        <input type=\"search\" class=\"pt-attr-search\" placeholder=\"Link an attribute, or type a new name…\"\n               aria-label=\"Link an attribute, or type a new name…\">\n        <div class=\"pt-attr-results\" hidden></div>\n      </div>\n    <div class=\"pt-world\" data-character=\"zzPc000000000001\">\n    <div class=\"pt-group-head\" role=\"heading\" aria-level=\"3\">\n      <span class=\"pt-group-title\">What you know of the world</span>\n    </div>\n    <p class=\"pt-hint\">Everything in the world, as this character sees it. Marked rows are things they have not been told — open a place to find what sits under it.</p>\n    <div class=\"pt-world-filter\" role=\"group\" aria-label=\"Filter the world tree\">\n        <button type=\"button\" class=\"pt-chip pt-chip-on\"\n                    data-action=\"world-filter\" data-filter=\"all\">All</button><button type=\"button\" class=\"pt-chip\"\n                    data-action=\"world-filter\" data-filter=\"unknown\">Not told</button><button type=\"button\" class=\"pt-chip\"\n                    data-action=\"world-filter\" data-filter=\"pending\">Waiting on you</button><button type=\"button\" class=\"pt-chip\"\n                    data-action=\"world-filter\" data-filter=\"failed\">Missed it</button>\n        <button type=\"button\" class=\"pt-chip pt-chip-quiet\" data-action=\"world-collapse\">Collapse all</button>\n        <button type=\"button\" class=\"pt-chip pt-chip-quiet\" data-action=\"world-expand\">Expand all</button>\n      </div>\n    <p class=\"pt-empty\">Nothing yet. Look people over and you will start to piece the world together.</p>\n    <div class=\"pt-add-bar pt-attr-add pt-grant-control\" data-character=\"zzPc000000000001\">\n    <div class=\"pt-inbound-head\">\n      <span class=\"pt-inbound-title\">Tell them about something</span>\n      <span class=\"pt-gm-badge\"><i class=\"fa-solid fa-eye-slash\" aria-hidden=\"true\"></i> GM only</span>\n    </div>\n    <input type=\"search\" class=\"pt-attr-search pt-grant-search\"\n           placeholder=\"Something they have learned, or a new name to create…\"\n           aria-label=\"Something they have learned, or a new name to create…\">\n    <label class=\"pt-field pt-field-check\">\n      <input type=\"checkbox\" class=\"pt-grant-parents\">\n      <span>Also tell them everything it belongs to</span>\n    </label>\n    <p class=\"pt-hint\">Off by default: they get exactly what you name. Told about a guild but not its city, they know it exists and still cannot spot a member — turn this on when you meant them to start recognising people.</p>\n    <div class=\"pt-attr-results pt-grant-results\" hidden></div>\n  </div>\n  </div>\n  </div>"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "label": "NPC sheet",
+    "tabGroups": {
+      "primary": "details"
+    },
+    "sheet": {
+      "tag": "DIV",
+      "className": "application sheet tab-details",
+      "children": [
+        {
+          "tag": "HEADER",
+          "className": "window-header",
+          "children": [
+            {
+              "tag": "H1"
+            },
+            {
+              "tag": "BUTTON",
+              "className": "header-control icon fa-solid fa-people-arrows pentaryn-ties-btn",
+              "dataset": {
+                "tooltip": "Ties"
+              },
+              "attrs": {
+                "aria-label": "Ties"
+              },
+              "type": "button",
+              "listeners": [
+                "click"
+              ]
+            },
+            {
+              "tag": "BUTTON",
+              "className": "header-control fa-xmark"
+            }
+          ]
+        },
+        {
+          "tag": "NAV",
+          "className": "tabs",
+          "dataset": {
+            "group": "primary"
+          },
+          "children": [
+            {
+              "tag": "A",
+              "className": "item active",
+              "dataset": {
+                "tab": "details"
+              }
+            },
+            {
+              "tag": "A",
+              "className": "item control",
+              "dataset": {
+                "tab": "ties",
+                "group": "primary",
+                "tooltip": "Ties",
+                "ptBound": "1"
+              },
+              "innerHTML": "<i class=\"fa-solid fa-people-arrows\"></i>",
+              "listeners": [
+                "click"
+              ]
+            },
+            {
+              "tag": "A",
+              "className": "item control",
+              "dataset": {
+                "tab": "attributes",
+                "group": "primary",
+                "tooltip": "Attributes",
+                "ptBound": "1"
+              },
+              "innerHTML": "<i class=\"fa-solid fa-tags\"></i>",
+              "listeners": [
+                "click"
+              ]
+            }
+          ]
+        },
+        {
+          "tag": "DIV",
+          "className": "tab-body",
+          "children": [
+            {
+              "tag": "SECTION",
+              "className": "tab active",
+              "dataset": {
+                "tab": "details"
+              }
+            },
+            {
+              "tag": "SECTION",
+              "className": "tab",
+              "dataset": {
+                "tab": "ties",
+                "group": "primary"
+              },
+              "innerHTML": "<div class=\"pentaryn-ties\" data-actor-id=\"zzNpc00000000001\">\n    \n    <ul class=\"pt-list\"><li class=\"pt-row\" data-id=\"zzPc000000000001\">\n    <div class=\"pt-summary\" role=\"button\" tabindex=\"0\" aria-expanded=\"false\"\n      data-action=\"toggle\" data-tooltip=\"Click to open and edit this tie\"\n      aria-label=\"ZZ Caven — open and edit this tie\">\n    <img class=\"pt-portrait\" src=\"icons/zz/zzPc000000000001.webp\" alt=\"\" />\n    <span class=\"pt-who\"><span class=\"pt-name\">ZZ Caven</span><span class=\"pt-note-preview pt-note-none\"><em>Nothing written on this tie yet.</em></span></span>\n    <span class=\"pt-word pt-wary\">debtor</span>\n    <span class=\"pt-chip\" data-tooltip=\"Wary\"><span class=\"pt-dot pt-wary\"></span><span class=\"pt-chip-label\">Wary</span></span>\n    <span class=\"pt-pips\" role=\"group\" aria-label=\"Strength 4 of 5 — orders this list\" data-tooltip=\"Strength 4 of 5 — orders this list\"><span class=\"pt-pip fill\"></span><span class=\"pt-pip fill\"></span><span class=\"pt-pip fill\"></span><span class=\"pt-pip fill\"></span><span class=\"pt-pip\"></span></span>\n    <span class=\"pt-hint\" aria-hidden=\"true\"><i class=\"fa-solid fa-pen\"></i></span>\n  </div>\n    <div class=\"pt-detail-wrap\" hidden><div class=\"pt-detail\">\n    <div class=\"pt-fields\">\n      <label class=\"pt-field\">\n        <span class=\"pt-field-label\">One word — what this character is to ZZ Caven</span>\n        <input type=\"text\" class=\"pt-word-input\" data-field=\"word\" value=\"debtor\"\n               placeholder=\"one word — sister, rival, client…\" />\n      </label>\n      <label class=\"pt-field\">\n        <span class=\"pt-field-label\">Stance</span>\n        <select class=\"pt-stance\" data-field=\"stance\"><option value=\"2\">Devoted</option><option value=\"1\">Friendly</option><option value=\"0\">Neutral</option><option value=\"-1\" selected>Wary</option><option value=\"-2\">Hostile</option></select>\n      </label>\n      <span class=\"pt-field\">\n        <span class=\"pt-field-label\">Strength</span>\n        <span class=\"pt-pips\" role=\"group\" aria-label=\"Strength 4 of 5 — orders this list\" data-tooltip=\"Strength 4 of 5 — orders this list\"><button type=\"button\" class=\"pt-pip fill\" data-action=\"strength\" data-n=\"1\"\n          aria-label=\"Set strength to 1 of 5\" data-tooltip=\"Set strength to 1 of 5\"></button><button type=\"button\" class=\"pt-pip fill\" data-action=\"strength\" data-n=\"2\"\n          aria-label=\"Set strength to 2 of 5\" data-tooltip=\"Set strength to 2 of 5\"></button><button type=\"button\" class=\"pt-pip fill\" data-action=\"strength\" data-n=\"3\"\n          aria-label=\"Set strength to 3 of 5\" data-tooltip=\"Set strength to 3 of 5\"></button><button type=\"button\" class=\"pt-pip fill\" data-action=\"strength\" data-n=\"4\"\n          aria-label=\"Set strength to 4 of 5\" data-tooltip=\"Set strength to 4 of 5\"></button><button type=\"button\" class=\"pt-pip\" data-action=\"strength\" data-n=\"5\"\n          aria-label=\"Set strength to 5 of 5\" data-tooltip=\"Set strength to 5 of 5\"></button></span>\n      </span>\n    </div>\n    <label class=\"pt-field pt-field-notes\">\n      <span class=\"pt-field-label\">Notes — yours, on your side of this tie</span>\n      <textarea class=\"pt-notes-text\" data-field=\"notes\" rows=\"5\" maxlength=\"4000\"\n                placeholder=\"The long version — how they met, what is owed, what is not said in front of ZZ Caven. Only ever visible here.\"></textarea>\n    </label>\n    <div class=\"pt-detail-actions\">\n      <button type=\"button\" class=\"pt-textbtn\" data-action=\"open\" data-id=\"zzPc000000000001\">\n        <i class=\"fa-solid fa-arrow-up-right-from-square\"></i> Open their sheet\n      </button>\n      <button type=\"button\" class=\"pt-textbtn pt-del\" data-action=\"remove\" data-id=\"zzPc000000000001\">\n        <i class=\"fa-solid fa-trash\"></i> Remove this tie\n      </button>\n    </div>\n    \n  </div></div>\n  </li></ul>\n    \n    <div class=\"pt-add-bar\">\n        <button type=\"button\" class=\"pt-add-btn\" data-action=\"add\">\n          <i class=\"fa-solid fa-plus\"></i> Add\n        </button>\n        <span class=\"pt-add-hint\">or hover someone on the map and press 6</span>\n      </div>\n    \n    <section class=\"pt-authoring\">\n    <div class=\"pt-inbound-head\">\n      <span class=\"pt-inbound-title\">Authoring</span>\n      <span class=\"pt-gm-badge\"><i class=\"fa-solid fa-eye-slash\" aria-hidden=\"true\"></i> GM only</span>\n    </div>\n    <div class=\"pt-kind-picker\">\n    <label class=\"pt-field\">\n      <span class=\"pt-field-label\">Kind</span>\n      <select data-action=\"set-kind\">\n        <option value=\"\" selected>ZZ Brakka is its own kind</option>\n        \n        <optgroup label=\"Every other NPC\"><option value=\"zzNpc00000000002\">ZZ Quill</option></optgroup>\n      </select>\n    </label>\n    <p class=\"pt-hint\">Studying this creature reads its own stat block. Point it at another actor to share one bestiary page across every copy.</p>\n  </div>\n    <section class=\"pt-lore-editor\" data-lore-key=\"lore:zzNpc00000000001\">\n    <div class=\"pt-group-head\" role=\"heading\" aria-level=\"3\">\n      <span class=\"pt-group-title\">What a check can reveal</span>\n    </div>\n    <p class=\"pt-hint pt-lore-warning\">Everything you write here reaches every client. Nothing goes in a row that would ruin the game if read with devtools.</p>\n    <p class=\"pt-empty\">No rows yet. Add one and give it a name, a skill and a DC.</p>\n    <div class=\"pt-add-bar\">\n      <button type=\"button\" class=\"pt-add-btn\" data-action=\"lore-add\">\n        <i class=\"fa-solid fa-plus\"></i> Add a fact\n      </button>\n    </div>\n  </section>\n    <div class=\"pt-group-head\" role=\"heading\" aria-level=\"3\">\n      <span class=\"pt-group-title\">What they believe</span>\n    </div>\n    <p class=\"pt-hint\">Exactly what each character was told, kept so you do not have to remember it mid-scene. Held rolls wait here until you deliver them.</p>\n    <p class=\"pt-empty\">Nobody has studied this one yet.</p>\n  </section>\n  </div>"
+            },
+            {
+              "tag": "SECTION",
+              "className": "tab",
+              "dataset": {
+                "tab": "attributes",
+                "group": "primary"
+              },
+              "innerHTML": "<div class=\"pentaryn-ties pentaryn-attributes\" data-actor-id=\"zzNpc00000000001\">\n    \n    <p class=\"pt-hint\">What this one belongs to. Some are worked out from the stat block; the rest you link yourself. Lore you write here is shared by every carrier.</p>\n    <p class=\"pt-empty\">Nothing yet.</p>\n    <div class=\"pt-add-bar pt-attr-add\">\n        <input type=\"search\" class=\"pt-attr-search\" placeholder=\"Link an attribute, or type a new name…\"\n               aria-label=\"Link an attribute, or type a new name…\">\n        <div class=\"pt-attr-results\" hidden></div>\n      </div>\n    \n  </div>"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "label": "re-render while on Ties",
+    "tabGroups": {
+      "primary": "ties"
+    },
+    "sheet": {
+      "tag": "DIV",
+      "className": "application sheet tab-ties",
+      "children": [
+        {
+          "tag": "HEADER",
+          "className": "window-header",
+          "children": [
+            {
+              "tag": "H1"
+            },
+            {
+              "tag": "BUTTON",
+              "className": "header-control icon fa-solid fa-people-arrows pentaryn-ties-btn",
+              "dataset": {
+                "tooltip": "Ties"
+              },
+              "attrs": {
+                "aria-label": "Ties"
+              },
+              "type": "button",
+              "listeners": [
+                "click"
+              ]
+            },
+            {
+              "tag": "BUTTON",
+              "className": "header-control fa-xmark"
+            }
+          ]
+        },
+        {
+          "tag": "NAV",
+          "className": "tabs",
+          "dataset": {
+            "group": "primary"
+          },
+          "children": [
+            {
+              "tag": "A",
+              "className": "item",
+              "dataset": {
+                "tab": "details"
+              }
+            },
+            {
+              "tag": "A",
+              "className": "item control active",
+              "dataset": {
+                "tab": "ties",
+                "group": "primary",
+                "tooltip": "Ties",
+                "ptBound": "1"
+              },
+              "innerHTML": "<i class=\"fa-solid fa-people-arrows\"></i>",
+              "listeners": [
+                "click"
+              ]
+            },
+            {
+              "tag": "A",
+              "className": "item control",
+              "dataset": {
+                "tab": "attributes",
+                "group": "primary",
+                "tooltip": "Attributes",
+                "ptBound": "1"
+              },
+              "innerHTML": "<i class=\"fa-solid fa-tags\"></i>",
+              "listeners": [
+                "click"
+              ]
+            }
+          ]
+        },
+        {
+          "tag": "DIV",
+          "className": "tab-body",
+          "children": [
+            {
+              "tag": "SECTION",
+              "className": "tab",
+              "dataset": {
+                "tab": "details"
+              }
+            },
+            {
+              "tag": "SECTION",
+              "className": "tab active",
+              "dataset": {
+                "tab": "ties",
+                "group": "primary"
+              },
+              "innerHTML": "<div class=\"pentaryn-ties\" data-actor-id=\"zzNpc00000000001\">\n    \n    <ul class=\"pt-list\"><li class=\"pt-row\" data-id=\"zzPc000000000001\">\n    <div class=\"pt-summary\" role=\"button\" tabindex=\"0\" aria-expanded=\"false\"\n      data-action=\"toggle\" data-tooltip=\"Click to open and edit this tie\"\n      aria-label=\"ZZ Caven — open and edit this tie\">\n    <img class=\"pt-portrait\" src=\"icons/zz/zzPc000000000001.webp\" alt=\"\" />\n    <span class=\"pt-who\"><span class=\"pt-name\">ZZ Caven</span><span class=\"pt-note-preview pt-note-none\"><em>Nothing written on this tie yet.</em></span></span>\n    <span class=\"pt-word pt-wary\">debtor</span>\n    <span class=\"pt-chip\" data-tooltip=\"Wary\"><span class=\"pt-dot pt-wary\"></span><span class=\"pt-chip-label\">Wary</span></span>\n    <span class=\"pt-pips\" role=\"group\" aria-label=\"Strength 4 of 5 — orders this list\" data-tooltip=\"Strength 4 of 5 — orders this list\"><span class=\"pt-pip fill\"></span><span class=\"pt-pip fill\"></span><span class=\"pt-pip fill\"></span><span class=\"pt-pip fill\"></span><span class=\"pt-pip\"></span></span>\n    <span class=\"pt-hint\" aria-hidden=\"true\"><i class=\"fa-solid fa-pen\"></i></span>\n  </div>\n    <div class=\"pt-detail-wrap\" hidden><div class=\"pt-detail\">\n    <div class=\"pt-fields\">\n      <label class=\"pt-field\">\n        <span class=\"pt-field-label\">One word — what this character is to ZZ Caven</span>\n        <input type=\"text\" class=\"pt-word-input\" data-field=\"word\" value=\"debtor\"\n               placeholder=\"one word — sister, rival, client…\" />\n      </label>\n      <label class=\"pt-field\">\n        <span class=\"pt-field-label\">Stance</span>\n        <select class=\"pt-stance\" data-field=\"stance\"><option value=\"2\">Devoted</option><option value=\"1\">Friendly</option><option value=\"0\">Neutral</option><option value=\"-1\" selected>Wary</option><option value=\"-2\">Hostile</option></select>\n      </label>\n      <span class=\"pt-field\">\n        <span class=\"pt-field-label\">Strength</span>\n        <span class=\"pt-pips\" role=\"group\" aria-label=\"Strength 4 of 5 — orders this list\" data-tooltip=\"Strength 4 of 5 — orders this list\"><button type=\"button\" class=\"pt-pip fill\" data-action=\"strength\" data-n=\"1\"\n          aria-label=\"Set strength to 1 of 5\" data-tooltip=\"Set strength to 1 of 5\"></button><button type=\"button\" class=\"pt-pip fill\" data-action=\"strength\" data-n=\"2\"\n          aria-label=\"Set strength to 2 of 5\" data-tooltip=\"Set strength to 2 of 5\"></button><button type=\"button\" class=\"pt-pip fill\" data-action=\"strength\" data-n=\"3\"\n          aria-label=\"Set strength to 3 of 5\" data-tooltip=\"Set strength to 3 of 5\"></button><button type=\"button\" class=\"pt-pip fill\" data-action=\"strength\" data-n=\"4\"\n          aria-label=\"Set strength to 4 of 5\" data-tooltip=\"Set strength to 4 of 5\"></button><button type=\"button\" class=\"pt-pip\" data-action=\"strength\" data-n=\"5\"\n          aria-label=\"Set strength to 5 of 5\" data-tooltip=\"Set strength to 5 of 5\"></button></span>\n      </span>\n    </div>\n    <label class=\"pt-field pt-field-notes\">\n      <span class=\"pt-field-label\">Notes — yours, on your side of this tie</span>\n      <textarea class=\"pt-notes-text\" data-field=\"notes\" rows=\"5\" maxlength=\"4000\"\n                placeholder=\"The long version — how they met, what is owed, what is not said in front of ZZ Caven. Only ever visible here.\"></textarea>\n    </label>\n    <div class=\"pt-detail-actions\">\n      <button type=\"button\" class=\"pt-textbtn\" data-action=\"open\" data-id=\"zzPc000000000001\">\n        <i class=\"fa-solid fa-arrow-up-right-from-square\"></i> Open their sheet\n      </button>\n      <button type=\"button\" class=\"pt-textbtn pt-del\" data-action=\"remove\" data-id=\"zzPc000000000001\">\n        <i class=\"fa-solid fa-trash\"></i> Remove this tie\n      </button>\n    </div>\n    \n  </div></div>\n  </li></ul>\n    \n    <div class=\"pt-add-bar\">\n        <button type=\"button\" class=\"pt-add-btn\" data-action=\"add\">\n          <i class=\"fa-solid fa-plus\"></i> Add\n        </button>\n        <span class=\"pt-add-hint\">or hover someone on the map and press 6</span>\n      </div>\n    \n    <section class=\"pt-authoring\">\n    <div class=\"pt-inbound-head\">\n      <span class=\"pt-inbound-title\">Authoring</span>\n      <span class=\"pt-gm-badge\"><i class=\"fa-solid fa-eye-slash\" aria-hidden=\"true\"></i> GM only</span>\n    </div>\n    <div class=\"pt-kind-picker\">\n    <label class=\"pt-field\">\n      <span class=\"pt-field-label\">Kind</span>\n      <select data-action=\"set-kind\">\n        <option value=\"\" selected>ZZ Brakka is its own kind</option>\n        \n        <optgroup label=\"Every other NPC\"><option value=\"zzNpc00000000002\">ZZ Quill</option></optgroup>\n      </select>\n    </label>\n    <p class=\"pt-hint\">Studying this creature reads its own stat block. Point it at another actor to share one bestiary page across every copy.</p>\n  </div>\n    <section class=\"pt-lore-editor\" data-lore-key=\"lore:zzNpc00000000001\">\n    <div class=\"pt-group-head\" role=\"heading\" aria-level=\"3\">\n      <span class=\"pt-group-title\">What a check can reveal</span>\n    </div>\n    <p class=\"pt-hint pt-lore-warning\">Everything you write here reaches every client. Nothing goes in a row that would ruin the game if read with devtools.</p>\n    <p class=\"pt-empty\">No rows yet. Add one and give it a name, a skill and a DC.</p>\n    <div class=\"pt-add-bar\">\n      <button type=\"button\" class=\"pt-add-btn\" data-action=\"lore-add\">\n        <i class=\"fa-solid fa-plus\"></i> Add a fact\n      </button>\n    </div>\n  </section>\n    <div class=\"pt-group-head\" role=\"heading\" aria-level=\"3\">\n      <span class=\"pt-group-title\">What they believe</span>\n    </div>\n    <p class=\"pt-hint\">Exactly what each character was told, kept so you do not have to remember it mid-scene. Held rolls wait here until you deliver them.</p>\n    <p class=\"pt-empty\">Nobody has studied this one yet.</p>\n  </section>\n  </div>"
+            },
+            {
+              "tag": "SECTION",
+              "className": "tab",
+              "dataset": {
+                "tab": "attributes",
+                "group": "primary"
+              },
+              "innerHTML": "<div class=\"pentaryn-ties pentaryn-attributes\" data-actor-id=\"zzNpc00000000001\">\n    \n    <p class=\"pt-hint\">What this one belongs to. Some are worked out from the stat block; the rest you link yourself. Lore you write here is shared by every carrier.</p>\n    <p class=\"pt-empty\">Nothing yet.</p>\n    <div class=\"pt-add-bar pt-attr-add\">\n        <input type=\"search\" class=\"pt-attr-search\" placeholder=\"Link an attribute, or type a new name…\"\n               aria-label=\"Link an attribute, or type a new name…\">\n        <div class=\"pt-attr-results\" hidden></div>\n      </div>\n    \n  </div>"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "label": "not an Actor",
+    "sheet": {
+      "tag": "DIV",
+      "className": "application sheet tab-details",
+      "children": [
+        {
+          "tag": "HEADER",
+          "className": "window-header",
+          "children": [
+            {
+              "tag": "H1"
+            },
+            {
+              "tag": "BUTTON",
+              "className": "header-control fa-xmark"
+            }
+          ]
+        },
+        {
+          "tag": "NAV",
+          "className": "tabs",
+          "dataset": {
+            "group": "primary"
+          },
+          "children": [
+            {
+              "tag": "A",
+              "className": "item active",
+              "dataset": {
+                "tab": "details"
+              }
+            }
+          ]
+        },
+        {
+          "tag": "DIV",
+          "className": "tab-body",
+          "children": [
+            {
+              "tag": "SECTION",
+              "className": "tab active",
+              "dataset": {
+                "tab": "details"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+]

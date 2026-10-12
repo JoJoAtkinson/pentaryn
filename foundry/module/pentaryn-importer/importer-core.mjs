@@ -109,7 +109,7 @@ export const MODULE = "pentaryn-importer";
 export const SHORT = "importer";
 export const NS = "importer";
 /** module.json `version`; test/version-gate.test.mjs pins them equal. */
-export const VERSION = "1.1.0";
+export const VERSION = "1.1.1";
 /**
  * The kit API contract of `game.pentaryn.importer` (describe(), buildApi). NOT the actors.json
  * contract — that is CONTRACT_ID below, which the generator and the version gate speak.
@@ -205,11 +205,22 @@ class PentarynError extends Error {
 /**
  * A whole-run refusal: version gate, `@ref` lint, malformed manifest, missing file.
  * Nothing has been written when this is thrown.
+ *
+ * `code` is a kit code (lib/errors.mjs CODES) so pentaryn-write and other kit callers can tell the
+ * refusals apart without parsing prose: NOT_FOUND (the file is not there), NOT_GM, BAD_ARGS (an
+ * option), CONFLICT (an import already running), TIMEOUT (the fetch), REFUSED (everything else:
+ * the gate, the lint, a malformed entry, a non-404 HTTP error, a network failure). The message
+ * carries no `CODE:` prefix — its text is pinned (test/golden/refusals.json) and shown in toasts.
  */
 class PentarynAbort extends PentarynError {
-  constructor(message) {
+  /**
+   * @param {string} message
+   * @param {string} [code="REFUSED"]
+   */
+  constructor(message, code = "REFUSED") {
     super(message);
     this.name = "PentarynAbort";
+    this.code = code;
   }
 }
 

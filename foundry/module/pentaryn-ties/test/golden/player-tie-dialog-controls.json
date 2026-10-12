@@ -1,0 +1,366 @@
+{
+  "inventory": [
+    {
+      "nth": 0,
+      "tag": "A",
+      "className": "pt-dlg-fixed pt-dlg-link",
+      "dataset": {
+        "action": "open",
+        "id": "zzPc000000000001",
+        "tooltip": "Open their sheet"
+      },
+      "events": [
+        "click",
+        "keydown"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "A",
+      "className": "pt-dlg-fixed pt-dlg-link",
+      "dataset": {
+        "action": "open",
+        "id": "zzNpc00000000001",
+        "tooltip": "Open their sheet"
+      },
+      "events": [
+        "click",
+        "keydown"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-pip fill",
+      "dataset": {
+        "action": "strength",
+        "n": "1",
+        "tooltip": "Set strength to 1 of 5"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-pip fill",
+      "dataset": {
+        "action": "strength",
+        "n": "2",
+        "tooltip": "Set strength to 2 of 5"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-pip fill",
+      "dataset": {
+        "action": "strength",
+        "n": "3",
+        "tooltip": "Set strength to 3 of 5"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-pip fill",
+      "dataset": {
+        "action": "strength",
+        "n": "4",
+        "tooltip": "Set strength to 4 of 5"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-pip",
+      "dataset": {
+        "action": "strength",
+        "n": "5",
+        "tooltip": "Set strength to 5 of 5"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-dlg-save",
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-dlg-cancel",
+      "events": [
+        "click"
+      ]
+    }
+  ],
+  "rows": [
+    {
+      "nth": 0,
+      "tag": "A",
+      "className": "pt-dlg-fixed pt-dlg-link",
+      "dataset": {
+        "action": "open",
+        "id": "zzPc000000000001",
+        "tooltip": "Open their sheet"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "sheet.render",
+          "actor": "zzPc000000000001",
+          "force": true,
+          "tab": "known"
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-dlg-fixed pt-dlg-link",
+        "parent": "pt-dlg-side"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "A",
+      "className": "pt-dlg-fixed pt-dlg-link",
+      "dataset": {
+        "action": "open",
+        "id": "zzPc000000000001",
+        "tooltip": "Open their sheet"
+      },
+      "type": "keydown",
+      "calls": [
+        {
+          "op": "sheet.render",
+          "actor": "zzPc000000000001",
+          "force": true,
+          "tab": "known"
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-dlg-fixed pt-dlg-link",
+        "parent": "pt-dlg-side"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "A",
+      "className": "pt-dlg-fixed pt-dlg-link",
+      "dataset": {
+        "action": "open",
+        "id": "zzNpc00000000001",
+        "tooltip": "Open their sheet"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "sheet.render",
+          "actor": "zzNpc00000000001",
+          "force": true,
+          "tab": "details"
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-dlg-fixed pt-dlg-link",
+        "parent": "pt-dlg-side"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "A",
+      "className": "pt-dlg-fixed pt-dlg-link",
+      "dataset": {
+        "action": "open",
+        "id": "zzNpc00000000001",
+        "tooltip": "Open their sheet"
+      },
+      "type": "keydown",
+      "calls": [
+        {
+          "op": "sheet.render",
+          "actor": "zzNpc00000000001",
+          "force": true,
+          "tab": "details"
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-dlg-fixed pt-dlg-link",
+        "parent": "pt-dlg-side"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-pip fill",
+      "dataset": {
+        "action": "strength",
+        "n": "1",
+        "tooltip": "Set strength to 1 of 5"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-pip fill",
+        "parent": "pt-pips"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-pip fill",
+      "dataset": {
+        "action": "strength",
+        "n": "2",
+        "tooltip": "Set strength to 2 of 5"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-pip fill",
+        "parent": "pt-pips"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-pip fill",
+      "dataset": {
+        "action": "strength",
+        "n": "3",
+        "tooltip": "Set strength to 3 of 5"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-pip fill",
+        "parent": "pt-pips"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-pip fill",
+      "dataset": {
+        "action": "strength",
+        "n": "4",
+        "tooltip": "Set strength to 4 of 5"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-pip fill",
+        "parent": "pt-pips"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-pip",
+      "dataset": {
+        "action": "strength",
+        "n": "5",
+        "tooltip": "Set strength to 5 of 5"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-pip fill",
+        "parent": "pt-pips"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-dlg-save",
+      "type": "click",
+      "calls": [
+        {
+          "op": "update",
+          "documentName": "Actor",
+          "uuid": "Actor.zzPc000000000001",
+          "changes": {
+            "flags.pentaryn-ties.ties": [
+              {
+                "id": "zzHidden00000001",
+                "name": "ZZ Hidden",
+                "word": "shadow",
+                "notes": "",
+                "stance": -2,
+                "strength": 5
+              },
+              {
+                "id": "zzNpc00000000001",
+                "name": "ZZ Brakka",
+                "word": "debtor",
+                "notes": "Owes forty.",
+                "stance": -1,
+                "strength": 4
+              }
+            ]
+          }
+        },
+        {
+          "op": "socket.emit",
+          "args": [
+            "module.pentaryn-ties",
+            {
+              "action": "mirror-reverse",
+              "sourceId": "zzPc000000000001",
+              "targetId": "zzNpc00000000001"
+            }
+          ]
+        },
+        {
+          "op": "app.close",
+          "app": "TieDialog"
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-dlg-save",
+        "parent": "pt-dlg-actions"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-dlg-cancel",
+      "type": "click",
+      "calls": [
+        {
+          "op": "app.close",
+          "app": "TieDialog"
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-dlg-cancel",
+        "parent": "pt-dlg-actions"
+      }
+    }
+  ]
+}

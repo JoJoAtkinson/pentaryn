@@ -1,0 +1,17 @@
+{
+  "same": true,
+  "target": "zzPc000000000002",
+  "source": null,
+  "calls": [
+    {
+      "op": "app.render",
+      "app": "TieDialog",
+      "opts": true
+    },
+    {
+      "op": "app.render",
+      "app": "TieDialog",
+      "opts": true
+    }
+  ]
+}

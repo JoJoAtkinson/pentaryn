@@ -1,0 +1,56 @@
+[
+  {
+    "input": [
+      -3
+    ],
+    "out": "Hostile"
+  },
+  {
+    "input": [
+      -2
+    ],
+    "out": "Hostile"
+  },
+  {
+    "input": [
+      -1
+    ],
+    "out": "Wary"
+  },
+  {
+    "input": [
+      0
+    ],
+    "out": "Neutral"
+  },
+  {
+    "input": [
+      1
+    ],
+    "out": "Friendly"
+  },
+  {
+    "input": [
+      2
+    ],
+    "out": "Devoted"
+  },
+  {
+    "input": [
+      3
+    ],
+    "out": "Devoted"
+  },
+  {
+    "input": [
+      "x"
+    ],
+    "out": "Neutral"
+  },
+  {
+    "input": [
+      null
+    ],
+    "out": "Neutral"
+  }
+]

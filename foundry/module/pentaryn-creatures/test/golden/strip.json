@@ -1,0 +1,94 @@
+{
+  "tag": "nav",
+  "id": "pentaryn-creatures",
+  "attributes": {
+    "aria-label": "Your creatures"
+  },
+  "children": [
+    {
+      "tag": "span",
+      "className": "pcr-label",
+      "text": "Your creatures"
+    },
+    {
+      "tag": "button",
+      "className": "pcr-token rank-0",
+      "attributes": {
+        "aria-label": "Talo"
+      },
+      "dataset": {
+        "tokenId": "tPC",
+        "tooltipHtml": "<strong>Talo</strong><br>Click: select and show · Double-click: open sheet"
+      },
+      "type": "button",
+      "children": [
+        {
+          "tag": "img",
+          "src": "tokens/tPC.webp",
+          "alt": "",
+          "draggable": false
+        }
+      ]
+    },
+    {
+      "tag": "button",
+      "className": "pcr-token rank-2",
+      "attributes": {
+        "aria-label": "Arcane Eye"
+      },
+      "dataset": {
+        "tokenId": "tEye",
+        "tooltipHtml": "<strong>Arcane Eye</strong><br>Click: select and show · Double-click: open sheet"
+      },
+      "type": "button",
+      "children": [
+        {
+          "tag": "img",
+          "src": "actors/eye.webp",
+          "alt": "",
+          "draggable": false
+        }
+      ]
+    },
+    {
+      "tag": "button",
+      "className": "pcr-token rank-2",
+      "attributes": {
+        "aria-label": "Imp <i>&"
+      },
+      "dataset": {
+        "tokenId": "tImp",
+        "tooltipHtml": "<strong>Imp &lt;i&gt;&amp;</strong><br>Click: select and show · Double-click: open sheet"
+      },
+      "type": "button",
+      "children": [
+        {
+          "tag": "img",
+          "src": "tokens/tImp.webp",
+          "alt": "",
+          "draggable": false
+        }
+      ]
+    },
+    {
+      "tag": "button",
+      "className": "pcr-token rank-2",
+      "attributes": {
+        "aria-label": "Imp with torch"
+      },
+      "dataset": {
+        "tokenId": "tTorch",
+        "tooltipHtml": "<strong>Imp with torch</strong><br>Click: select and show · Double-click: open sheet"
+      },
+      "type": "button",
+      "children": [
+        {
+          "tag": "img",
+          "src": "tokens/tTorch.webp",
+          "alt": "",
+          "draggable": false
+        }
+      ]
+    }
+  ]
+}

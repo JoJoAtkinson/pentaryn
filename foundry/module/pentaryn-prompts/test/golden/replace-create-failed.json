@@ -1,0 +1,171 @@
+{
+  "result": {
+    "dryRun": false,
+    "call": null,
+    "text": [
+      "replace (by marker) — real run: 0 ok, 1 failed",
+      "s1/rf actor: FAIL CREATE_FAILED: stub: Token create refused (markerDeleted=false)",
+      "  s1/rf cleanup: deleted Actor \"Guard\" [<id1>]",
+      "remaining: s1=3"
+    ],
+    "results": [
+      {
+        "index": 0,
+        "id": null,
+        "label": "s1/rf",
+        "sceneId": "s1",
+        "markerId": "rf",
+        "kind": "actor",
+        "ok": false,
+        "created": [],
+        "ids": [],
+        "markerDeleted": false,
+        "sheet": null,
+        "patched": [],
+        "defaults": [],
+        "warnings": [],
+        "notes": [],
+        "discarded": [
+          "deleted Actor \"Guard\" [<id1>]"
+        ],
+        "code": "CREATE_FAILED",
+        "error": "CREATE_FAILED: stub: Token create refused"
+      }
+    ],
+    "remaining": {
+      "s1": 3
+    },
+    "encounters": []
+  },
+  "calls": [
+    {
+      "op": "Actor.create",
+      "data": {
+        "documentName": "Actor",
+        "id": "actorGuard000001",
+        "name": "Guard",
+        "system": {
+          "details": {
+            "cr": 0.125,
+            "biography": {
+              "value": "<p>A bored town guard.</p>"
+            },
+            "type": {
+              "value": "humanoid"
+            }
+          },
+          "attributes": {
+            "ac": {
+              "value": 16
+            },
+            "hp": {
+              "value": 11,
+              "max": 11
+            }
+          },
+          "traits": {
+            "size": "med"
+          }
+        },
+        "flags": {},
+        "ownership": {
+          "default": 0
+        },
+        "type": "npc",
+        "img": "tokens/guard.webp",
+        "prototypeToken": {
+          "name": "Guard",
+          "width": 1,
+          "height": 1,
+          "disposition": 1,
+          "texture": {
+            "src": "tokens/guard.webp"
+          }
+        }
+      }
+    },
+    {
+      "op": "createEmbeddedDocuments",
+      "scene": "s1",
+      "type": "Token",
+      "data": [
+        {
+          "name": "Guard",
+          "actorId": "<id1>",
+          "x": 1800,
+          "y": 800,
+          "width": 1,
+          "height": 1,
+          "texture": {
+            "src": "tokens/guard.webp"
+          },
+          "disposition": 1,
+          "actorLink": false,
+          "flags": {
+            "pentaryn-prompts": {
+              "provenance": {
+                "prompt": "doomed",
+                "size": "mid",
+                "footprint": "1x1",
+                "sceneId": "s1",
+                "markerId": "rf",
+                "call": null,
+                "pid": null,
+                "at": 1760000000000,
+                "kind": "actor",
+                "note": ""
+              }
+            }
+          },
+          "hidden": false,
+          "elevation": 0
+        }
+      ],
+      "options": {}
+    },
+    {
+      "op": "createEmbeddedDocuments",
+      "scene": "s1",
+      "type": "Token",
+      "data": [
+        {
+          "name": "Guard",
+          "actorId": "<id1>",
+          "x": 1800,
+          "y": 800,
+          "width": 1,
+          "height": 1,
+          "texture": {
+            "src": "tokens/guard.webp"
+          },
+          "disposition": 1,
+          "actorLink": false,
+          "flags": {
+            "pentaryn-prompts": {
+              "provenance": {
+                "prompt": "doomed",
+                "size": "mid",
+                "footprint": "1x1",
+                "sceneId": "s1",
+                "markerId": "rf",
+                "call": null,
+                "pid": null,
+                "at": 1760000000000,
+                "kind": "actor",
+                "note": ""
+              }
+            }
+          },
+          "hidden": false,
+          "elevation": 0
+        }
+      ],
+      "options": {}
+    },
+    {
+      "op": "delete",
+      "documentName": "Actor",
+      "uuid": "Actor.<id1>"
+    }
+  ]
+}

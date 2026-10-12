@@ -1,0 +1,76 @@
+{
+  "attributes.filter.": {
+    "PENTARYN_TIES.attributes.filter.all": "All",
+    "PENTARYN_TIES.attributes.filter.unknown": "Not told",
+    "PENTARYN_TIES.attributes.filter.pending": "Waiting on you",
+    "PENTARYN_TIES.attributes.filter.failed": "Missed it"
+  },
+  "attributes.carried.": {
+    "PENTARYN_TIES.attributes.carried.inherit": "same as knowing it",
+    "PENTARYN_TIES.attributes.carried.advantage": "gives advantage",
+    "PENTARYN_TIES.attributes.carried.auto": "they just know their own"
+  },
+  "attributes.help.": {
+    "PENTARYN_TIES.attributes.help.enables": "lets them roll, no help",
+    "PENTARYN_TIES.attributes.help.advantage": "gives advantage",
+    "PENTARYN_TIES.attributes.help.auto": "they just spot it"
+  },
+  "attributes.ns.": {
+    "PENTARYN_TIES.attributes.ns.type": "Creature type",
+    "PENTARYN_TIES.attributes.ns.species": "Species",
+    "PENTARYN_TIES.attributes.ns.background": "Background",
+    "PENTARYN_TIES.attributes.ns.size": "Size",
+    "PENTARYN_TIES.attributes.ns.kind": "Kind"
+  },
+  "known.category.": {
+    "PENTARYN_TIES.known.category.sentient": "Sentient",
+    "PENTARYN_TIES.known.category.beasts": "Beasts"
+  },
+  "known.share.skip.": {
+    "PENTARYN_TIES.known.share.skip.held": "held — use Deliver",
+    "PENTARYN_TIES.known.share.skip.knows": "already knows",
+    "PENTARYN_TIES.known.share.skip.noText": "nothing authored to share",
+    "PENTARYN_TIES.known.share.skip.notGM": "GM only",
+    "PENTARYN_TIES.known.share.skip.invalid": "that fact no longer resolves",
+    "PENTARYN_TIES.known.share.skip.notCarried": "they do not carry that",
+    "PENTARYN_TIES.known.share.skip.notTold": "only a shared fact can be forgotten"
+  },
+  "known.study.mode.": {
+    "PENTARYN_TIES.known.study.mode.normal": "Normal",
+    "PENTARYN_TIES.known.study.mode.advantage": "Advantage",
+    "PENTARYN_TIES.known.study.mode.disadvantage": "Disadvantage"
+  },
+  "known.inspect.scope": {
+    "PENTARYN_TIES.known.inspect.scope2": "{name} gives a second stranger the once-over. People do notice being measured.",
+    "PENTARYN_TIES.known.inspect.scope3": "{name} is looking people up and down.",
+    "PENTARYN_TIES.known.inspect.scope5": "Careful now, {name}.",
+    "PENTARYN_TIES.known.inspect.scope6": "{name} looks openly paranoid."
+  },
+  "review.sort.": {
+    "PENTARYN_TIES.review.sort.review": "Needs review first",
+    "PENTARYN_TIES.review.sort.title": "Title",
+    "PENTARYN_TIES.review.sort.modified": "Last modified",
+    "PENTARYN_TIES.review.sort.category": "Category"
+  },
+  "review.tab.": {
+    "PENTARYN_TIES.review.tab.world": "Global",
+    "PENTARYN_TIES.review.tab.personal": "Personal"
+  },
+  "stance.": {
+    "PENTARYN_TIES.stance.devoted": "Devoted",
+    "PENTARYN_TIES.stance.friendly": "Friendly",
+    "PENTARYN_TIES.stance.neutral": "Neutral",
+    "PENTARYN_TIES.stance.wary": "Wary",
+    "PENTARYN_TIES.stance.hostile": "Hostile"
+  },
+  "group.": {
+    "PENTARYN_TIES.group.onScene": "On this scene",
+    "PENTARYN_TIES.group.elsewhere": "Elsewhere",
+    "PENTARYN_TIES.group.inSight": "In sight",
+    "PENTARYN_TIES.group.notInSight": "Not in sight"
+  },
+  "dialog.reverse": {
+    "PENTARYN_TIES.dialog.reverseWordLabel": "…and what {a} is to {b}",
+    "PENTARYN_TIES.dialog.reverseNotesLabel": "…and {a}'s notes on {b}"
+  }
+}

@@ -1,0 +1,89 @@
+{
+  "sheetTabOff": {
+    "tag": "DIV",
+    "className": "application sheet tab-details",
+    "children": [
+      {
+        "tag": "HEADER",
+        "className": "window-header",
+        "children": [
+          {
+            "tag": "H1"
+          },
+          {
+            "tag": "BUTTON",
+            "className": "header-control icon fa-solid fa-people-arrows pentaryn-ties-btn",
+            "dataset": {
+              "tooltip": "Ties"
+            },
+            "attrs": {
+              "aria-label": "Ties"
+            },
+            "type": "button",
+            "listeners": [
+              "click"
+            ]
+          },
+          {
+            "tag": "BUTTON",
+            "className": "header-control fa-xmark"
+          }
+        ]
+      },
+      {
+        "tag": "NAV",
+        "className": "tabs",
+        "dataset": {
+          "group": "primary"
+        },
+        "children": [
+          {
+            "tag": "A",
+            "className": "item active",
+            "dataset": {
+              "tab": "details"
+            }
+          }
+        ]
+      },
+      {
+        "tag": "DIV",
+        "className": "tab-body",
+        "children": [
+          {
+            "tag": "SECTION",
+            "className": "tab active",
+            "dataset": {
+              "tab": "details"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "noNav": {
+    "tag": "DIV",
+    "children": [
+      {
+        "tag": "HEADER",
+        "className": "window-header",
+        "children": [
+          {
+            "tag": "BUTTON",
+            "className": "header-control icon fa-solid fa-people-arrows pentaryn-ties-btn",
+            "dataset": {
+              "tooltip": "Ties"
+            },
+            "attrs": {
+              "aria-label": "Ties"
+            },
+            "type": "button",
+            "listeners": [
+              "click"
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

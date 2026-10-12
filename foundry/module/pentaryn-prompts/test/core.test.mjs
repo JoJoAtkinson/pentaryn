@@ -15,7 +15,7 @@ test("prompts-lookup-28: stripHtml over the shared seven-input table", () => {
 });
 
 test("prompts-lookup-11: checkPatch's known keys, and BAD_SPEC naming them for anything else", async () => {
-  const { checkPatch } = await import("../patch.mjs");
+  const { checkPatch } = await import("../actor-patch-adapter.mjs");
   const known = ["ac", "addItems", "biography", "cr", "creatureType", "disposition", "hp", "img", "itemUpdates",
     "languages", "name", "recharge", "removeItems", "set", "size", "speed", "traits"];
   const err = await checkPatch({ bogus: 1 }).then(() => null, e => e);
