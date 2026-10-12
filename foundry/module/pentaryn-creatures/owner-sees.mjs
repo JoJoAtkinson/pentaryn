@@ -2,7 +2,9 @@
  * Pentaryn Creatures — FEATURE: owners always see their own tokens. A token you own stays drawn on
  * your screen even when nothing you control can see it (an Invisible Arcane Eye in the dark). A
  * per-client override of Token#isVisible that only ever adds tokens the user owns, never GM-hidden
- * ones; core's ownerShouldSee decides.
+ * ones. The setting, GM and owner gates are checked here (the setting and GM gates outside
+ * `safely`, so a GM never pays for it); core's ownerShouldSee decides the hidden/preview/filtered/
+ * culled reasons.
  *
  * The wrap goes through the kit's wrapMethod: libWrapper (WRAPPER on the dotted path) when
  * lib-wrapper is active, else the getter is replaced on the prototype (a registration failure
