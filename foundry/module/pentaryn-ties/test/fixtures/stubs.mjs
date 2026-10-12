@@ -45,6 +45,8 @@ globalThis.foundry = {
   applications: { api: { ApplicationV2: class {}, DialogV2: {} }, ux: { TextEditor: { implementation: {} } } },
   utils: { escapeHTML: esc, deepClone: x => structuredClone(x), randomID: () => "r", flattenObject: o => o }
 };
+// Foundry v14's `_loc` is `game.i18n.localize` bound, which formats when given data (guide S10)
+globalThis._loc = (k, data) => (data ? globalThis.game.i18n.format(k, data) : globalThis.game.i18n.localize(k));
 globalThis.Hooks = { on() {}, once() {}, off() {} };
 globalThis.CONFIG = { DND5E: { skills: {} } };
 globalThis.ui = { notifications: { info() {}, warn() {} } };
