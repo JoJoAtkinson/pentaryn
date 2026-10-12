@@ -230,8 +230,14 @@ export async function sweep(scene = canvas.scene) {
     await scene.updateEmbeddedDocuments("Token", unlocked);
     out.sizeLocked = unlocked.length;
   }
+  // One batched write for every template region still owned by its author alone (§5.9.1, C59).
+  const unshared = scene.regions.filter(r => isTemplateRegion(r) && r.ownership.default !== OWNER)
+    .map(r => ({ _id: r.id, "ownership.default": OWNER }));
+  if (unshared.length) {
+    await scene.updateEmbeddedDocuments("Region", unshared);
+    out.ownershipFixed = unshared.length;
+  }
   for (const r of scene.regions.filter(isTemplateRegion)) {
-    if (r.ownership.default !== OWNER) { await r.update({ "ownership.default": OWNER }); out.ownershipFixed++; }
     if (setting("handleTokens") && !attachedElsewhere(r) && !handleFor(r) && r.shapes.length === 1) {
       if (await createHandle(r)) out.handlesCreated++;
     }

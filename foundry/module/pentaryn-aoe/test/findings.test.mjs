@@ -173,3 +173,19 @@ test("-9 a failed Careful Spell usage bind warns 'pentaryn-aoe | careful bind us
   assert.deepEqual(out1, { names: [], max: 3 });
   assert.deepEqual(lines(), [`warn: ${MODULE} | careful bind usage`]);
 });
+
+/* ── 8.5 performance: the sweep shares template regions in one batched write ──────────────── */
+
+test("8.5 sweep: every unshared template region in ONE Region update (was one write per region)", async () => {
+  const s = W.scene({ id: "FindingScene0085" });
+  for (const id of ["regionBatch00001", "regionBatch00002", "regionBatch00003"]) {
+    W.region(s, { id, flags: { dnd5e: { activity: "Item.x.Activity.y" } }, ownership: { default: 0 }, shapes: [{}, {}] });
+  }
+  W.region(s, { id: "regionBatchPort1", ownership: { default: 0 } });
+  F.calls.length = 0;
+  const outcome = await S.areas.sweep(s);
+  assert.equal(outcome.ownershipFixed, 3);
+  const writes = F.calls.filter(c => c.documentName === "Region" && ["update", "updateEmbedded"].includes(c.op));
+  assert.deepEqual(writes.map(c => [c.op, c.updates?.map(u => u._id)]), [["updateEmbedded", ["regionBatch00001", "regionBatch00002", "regionBatch00003"]]]);
+  assert.equal(s.regions.get("regionBatchPort1").ownership.default, 0, "a portal region is never touched");
+});
