@@ -135,7 +135,10 @@ export function patches() {
   return records.map(({ moduleId, label, name, marker, via, adjustments }) => ({ moduleId, label, name, marker, via, adjustments }));
 }
 
-/** Undo every patch, newest first. */
+/**
+ * Undo every patch, newest first. Each handle drops its own record only when its undo succeeded, so
+ * a patch another wrapper keeps live stays listed and a later wrap with its marker reuses it (KIT-R1).
+ */
 export function unwrapAll() {
-  for (const r of records.splice(0).reverse()) r.handle.unwrap();
+  for (const r of [...records].reverse()) r.handle.unwrap();
 }

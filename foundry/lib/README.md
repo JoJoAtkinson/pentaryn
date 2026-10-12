@@ -71,3 +71,6 @@ or exact name itself; `describe()` keeps it, conformance C62 accepts it, and the
 approved by Joe 2026-10-12) — the version bump that carries the record's kit-source fixes; each
 declared fix lands under this entry with its finding id. Re-vendored into every module with a lock
 (walls included on disk; walls is still never synced live). Reload only — no `module.json` change.
+KIT-R1 (declared): `unwrapAll()` undoes newest first and drops only the records whose undo succeeded —
+a patch a foreign wrapper keeps live stays in `patches()`, and a later wrap with its marker returns
+the live handle instead of stacking a second copy.
