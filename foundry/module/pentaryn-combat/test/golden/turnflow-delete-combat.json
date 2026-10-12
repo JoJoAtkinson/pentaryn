@@ -13,15 +13,12 @@
       "documentName": "Actor",
       "uuid": "Actor.fighter000000001",
       "changes": {
-        "flags.pentaryn-combat.-=turn": null
-      }
-    },
-    {
-      "op": "update",
-      "documentName": "Actor",
-      "uuid": "Actor.fighter000000001",
-      "changes": {
-        "flags.pentaryn-combat.-=reaction": null
+        "flags": {
+          "pentaryn-combat": {
+            "turn": "<_del>",
+            "reaction": "<_del>"
+          }
+        }
       }
     }
   ],
@@ -31,7 +28,11 @@
       "documentName": "Actor",
       "uuid": "Actor.rogue00000000001",
       "changes": {
-        "flags.pentaryn-combat.-=reaction": null
+        "flags": {
+          "pentaryn-combat": {
+            "reaction": "<_del>"
+          }
+        }
       }
     }
   ],

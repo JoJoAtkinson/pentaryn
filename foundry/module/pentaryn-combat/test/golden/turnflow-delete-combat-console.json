@@ -1,12 +1,1 @@
-[
-  {
-    "level": "warn",
-    "text": "pentaryn-combat | end-of-combat cleanup",
-    "err": "unset refused"
-  },
-  {
-    "level": "warn",
-    "text": "pentaryn-combat | orphan flag sweep",
-    "err": "unset refused"
-  }
-]
+[]

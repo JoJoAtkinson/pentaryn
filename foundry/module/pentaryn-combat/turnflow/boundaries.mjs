@@ -96,9 +96,20 @@ const onCombatDeleted = (combat) => {
   }
 };
 
+/**
+ * combat-riders-38 [declared, perf]: an actor's stale combat flags go in ONE write, with the deletion
+ * form v14's Document#unsetFlag uses ({flags: {scope: {key: _del}}}), instead of one write per key.
+ * @returns {Promise<number>} keys dropped
+ */
+async function dropCombatFlags(actor, keys) {
+  if (!keys.length) return 0;
+  await actor.update({ flags: { [MODULE]: Object.fromEntries(keys.map(k => [k, _del])) } });
+  return keys.length;
+}
+
 async function clearCombatFlags(actor, combatId) {
   const stale = core.staleCombatFlags({ turn: actor.getFlag?.(MODULE, "turn"), reaction: actor.getFlag?.(MODULE, "reaction") }, combatId);
-  for (const key of stale) await actor.unsetFlag(MODULE, key);
+  await dropCombatFlags(actor, stale);
 }
 
 /**
@@ -112,7 +123,7 @@ async function sweepOrphanFlags() {
   let n = 0;
   for (const actor of game.actors) {
     const keys = core.orphanCombatFlags({ turn: actor.getFlag?.(MODULE, "turn"), reaction: actor.getFlag?.(MODULE, "reaction") }, live);
-    for (const key of keys) { await actor.unsetFlag(MODULE, key); n++; }
+    n += await dropCombatFlags(actor, keys);
   }
   return n;
 }
