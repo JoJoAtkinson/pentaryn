@@ -10,7 +10,7 @@
 
 import {
   BOOKSETS, EDITIONS, MONSTER_PACKS, findPage, foundFromDoc, nonPageWarning, knownLists, listFor as listForIn, matchMonster,
-  MONSTER_INDEX_FIELDS, missingPackError, monsterDigest, monsterQuery, monsterRow, pageMonsters, renderPage, renderTable, resolveBookIds,
+  MONSTER_INDEX_FIELDS, missingPackError, monsterDigest, monsterQuery, monsterRow, pageMonsters, pickByName, renderPage, renderTable, resolveBookIds,
   searchBooks, sortMonsters, embeddedTableUuids, groupListUuids, spellListRows, NAME_SOURCES, groupNames,
 } from "./lookup-core.mjs";
 import {
@@ -130,8 +130,7 @@ async function monster(name, opts = {}) {
     const idx = await readIndex(packId);
     if (!idx) continue;
     tried.push(packId);
-    const entry = idx.find(e => e.name.toLowerCase() === wanted.toLowerCase())
-               ?? idx.find(e => e.name.toLowerCase().includes(wanted.toLowerCase()));
+    const entry = pickByName(idx, wanted);
     if (!entry) continue;
     const actor = await readDocument(packId, entry._id);
     const out = monsterDigest({

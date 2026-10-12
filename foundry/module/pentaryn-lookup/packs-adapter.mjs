@@ -8,7 +8,7 @@
  * `log` at debug level: `CONFIG.debug["pentaryn-lookup"] = true` shows it (prompts-lookup-34).
  */
 
-import { EDITIONS, SPELL_PACKS, featureRow, toBook } from "./lookup-core.mjs";
+import { EDITIONS, SPELL_PACKS, featureRow, pickByName, toBook } from "./lookup-core.mjs";
 
 /**
  * The plain books, one load per LOCKED pack per session: pack id → Promise<book> (the promise, so two
@@ -101,7 +101,7 @@ export async function findSpell(ref, log = null) {
   for (const id of SPELL_PACKS) {
     const pack = game.packs.get(id);
     if (!pack) continue;
-    const hit = (await pack.getIndex()).find(e => e.name.toLowerCase() === s.toLowerCase());
+    const hit = pickByName(await pack.getIndex(), s, { substring: false });
     if (hit) return pack.getDocument(hit._id);
   }
   return null;

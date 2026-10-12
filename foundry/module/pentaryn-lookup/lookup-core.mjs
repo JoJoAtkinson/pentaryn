@@ -274,6 +274,16 @@ export function nonPageWarning(uuid, documentName) {
   return `${uuid} is a ${documentName}, not a JournalEntryPage — pass a page UUID from search()`;
 }
 
+/**
+ * The first entry whose name equals `wanted` (case-insensitive), else — unless `substring` is off —
+ * the first whose name contains it. `entries.find` only, so a Foundry index Collection works as-is.
+ */
+export function pickByName(entries, wanted, { substring = true } = {}) {
+  const w = String(wanted).toLowerCase();
+  return entries.find(e => e.name.toLowerCase() === w)
+      ?? (substring ? entries.find(e => e.name.toLowerCase().includes(w)) : undefined);
+}
+
 // ── one page ─────────────────────────────────────────────────────────────────
 /** Find a page by exact-then-loose name across books. Never returns undefined. */
 export function findPage(books, name) {

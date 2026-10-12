@@ -360,3 +360,13 @@ test("featureRow: activation, recharge and text rules", () => {
   eq(row({}, "<p>Hit ( 1d6 ) .</p>").text, tidy(toPlainText("<p>Hit ( 1d6 ) .</p>")));
   eq(featureRow({ name: "Bite", type: "weapon", system: undefined }, "").name, "Bite");
 });
+
+test("pickByName: exact beats an earlier substring, case-insensitive, substring off, miss", () => {
+  const { pickByName } = core;
+  const boss = { name: "Goblin Boss" }, goblin = { name: "Goblin" };
+  const entries = [boss, goblin];
+  assert.equal(pickByName(entries, "goblin"), goblin);
+  assert.equal(pickByName(entries, "GOB"), boss);
+  assert.equal(pickByName(entries, "gob", { substring: false }), undefined);
+  assert.equal(pickByName(entries, "zzz"), undefined);
+});
