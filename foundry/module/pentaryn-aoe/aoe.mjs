@@ -33,7 +33,7 @@ import { emitter, hookRegistry } from "./lib/hooks.mjs";
 import { publishNamespace } from "./lib/publish.mjs";
 import { registerSettings, migrateSettings, setting } from "./settings.mjs";
 import { buildApiFor } from "./api.mjs";
-import { guardArgonBind } from "./argon.mjs";
+import { guardArgonBind, unguardArgonBind } from "./argon.mjs";
 import * as areas from "./areas.mjs";
 import * as careful from "./careful.mjs";
 import * as resolvePart from "./resolve.mjs";
@@ -76,9 +76,10 @@ function installHooks() {
   }
 }
 
-/** Remove every hook and feature state (hot patch: then re-import the entry to re-wire). */
+/** Remove every hook, patch and feature state (hot patch: then re-import the entry to re-wire). */
 function uninstall() {
   for (const feature of [...FEATURES].reverse()) feature.uninstall();
+  unguardArgonBind();   // [declared] D-A2 (-15): Argon gets its own bind back
   reg.offAll();
   installed = false;
 }

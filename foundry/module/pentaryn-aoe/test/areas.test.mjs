@@ -497,17 +497,17 @@ test("-15 guardArgonBind: wraps once, a handle target resolves to undefined, a c
   delete F.ui.ARGON;
 });
 
-test("KNOWN -15: uninstall() leaves the Argon bind wrap installed (D-A2 flips this)", () => {
+test("[declared] D-A2 -15: uninstall() no longer leaves the Argon bind wrap installed", () => {
   const orig = () => "orig";
   F.ui.ARGON = { bind: orig };
   A.guardArgonBind();
-  game.pentaryn.aoe.uninstall();
-  assert.notEqual(F.ui.ARGON.bind, orig);
   assert.equal(F.ui.ARGON.bind._aoeGuard, true);
+  game.pentaryn.aoe.uninstall();
+  assert.equal(F.ui.ARGON.bind, orig);
   delete F.ui.ARGON;
 });
 
-test("-15 uninstall restores ui.ARGON.bind (D-A2)", { todo: "S6: argon.mjs wraps through wrapMethod; uninstall unwraps" }, () => {
+test("-15 uninstall restores ui.ARGON.bind (D-A2)", () => {
   const orig = () => "orig";
   F.ui.ARGON = { bind: orig };
   A.guardArgonBind();
