@@ -20,7 +20,7 @@
  */
 
 import {
-  MODULE, FLAGS, CHAIN_FLAG, readChain, chainPairs, linksTouching, chainThickness, resolveTokenRef, linkSpriteSpecs, unsetPath,
+  MODULE, FLAGS, readChain, chainPairs, linksTouching, chainThickness, resolveTokenRef, linkSpriteSpecs, unsetPath,
 } from "./senses-core.mjs";
 import { isAnyGM } from "./lib/election.mjs";
 
@@ -78,7 +78,7 @@ export async function link(chained, anchor) {
   if (!isAnyGM()) return false;
   const c = docOf(chained), a = docOf(anchor);
   if (!c?.update || !a?.id || c.id === a.id || c.parent !== a.parent || c.documentName !== "Token" || a.documentName !== "Token") return false;
-  await c.update({ [`flags.${MODULE}.${CHAIN_FLAG}`]: { anchor: a.id } });
+  await c.update({ [FLAGS.chain]: { anchor: a.id } });
   return true;
 }
 

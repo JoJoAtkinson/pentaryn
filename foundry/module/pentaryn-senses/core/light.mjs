@@ -273,7 +273,7 @@ export function planSpellLight({ desired = null, existing = [] } = {}) {
 export function spellLightUpdate(doc, source, current) {
   const had = readSpellLight(doc);
   const prior = had ? had.prior : (isObj(current) ? clone(current) : null);
-  return { light: clone(SPELL_LIGHT), [`flags.${MODULE}.spellLight`]: { source, prior } };
+  return { light: clone(SPELL_LIGHT), [FLAGS.spellLight]: { source, prior } };
 }
 
 /** The light a token goes back to when the spell leaves it. */
