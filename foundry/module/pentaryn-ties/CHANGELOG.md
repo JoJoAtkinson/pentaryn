@@ -53,6 +53,10 @@ flight or stranded by a client that closed mid-roll) is no longer listed by `stu
 undelivered reveal, and **Deliver** on one is refused with "Nothing is pending…" instead of spending
 the roll and handing over nothing. `reset` stays the cure for a stranded claim. ES-1, ES-2.
 
+Fixed (declared): a **late claim** — a second GM session's stake that lands after the first session
+already rolled and wrote the answer — no longer wins, so a finished kind or lore fact is never rolled a
+second time over the first answer. The late session hands its stray stake back and stays silent. AC-4.
+
 ## 0.19.4 (2026-10-10, usability run, Area 7 re-run)
 
 - **The inspect window's Share switches are the table's PCs only** (`tablePCs`): each player's
