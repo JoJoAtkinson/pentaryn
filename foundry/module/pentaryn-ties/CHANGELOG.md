@@ -43,6 +43,11 @@ Fixed (declared): the tempo bubble ("… is studying the room") is drawn only ov
 can see. A player whose client cannot see the looker's token gets no bubble at that spot, so it no
 longer reveals where a hidden character stands. The GM still sees it, and the chat line still posts. ES-4.
 
+Fixed (declared): the GM's **hold prompt** ("A check came in") names an attribute fact as it does a
+lore row — "The Guild — Held oath — DC 10, rolled 15" — instead of "Tier null on a total of 15"; only
+a kind prints a tier. A held row with no roll behind it (an auto kind, a GM tell) shows its total as
+"—", not "null". EXT-1.
+
 ## 0.19.4 (2026-10-10, usability run, Area 7 re-run)
 
 - **The inspect window's Share switches are the table's PCs only** (`tablePCs`): each player's

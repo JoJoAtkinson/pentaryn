@@ -46,14 +46,16 @@ import { setting } from "../settings.mjs";
 export async function promptDeliver(character, fact) {
   const rec = readBelief(fact, character.id);
   if (!rec || rec.delivered) return;
+  // only a kind has a tier; a row with no roll behind it (auto kind, GM tell) has no total (EXT-1)
+  const total = rec.total ?? "—";
   const ok = await foundry.applications.api.DialogV2.confirm({
     window: { title: _loc("PENTARYN_TIES.known.study.holdTitle") },
     content:
       `<p>${esc(_loc("PENTARYN_TIES.known.study.holdWho", { character: character.name, subject: fact.subject?.name ?? fact.name }))}</p>` +
       `<p class="pt-study-hold-meta">${esc(
-        fact.ns === "lore"
-          ? _loc("PENTARYN_TIES.known.study.holdMetaLore", { fact: fact.name, dc: fact.dc, total: rec.total })
-          : _loc("PENTARYN_TIES.known.study.holdMeta", { tier: rec.tier, total: rec.total })
+        fact.ns === "kind"
+          ? _loc("PENTARYN_TIES.known.study.holdMeta", { tier: rec.tier, total })
+          : _loc("PENTARYN_TIES.known.study.holdMetaLore", { fact: fact.name, dc: fact.dc, total })
       )}</p>` +
       // a silent outcome has no prose to preview — say so, or the GM reads an empty box as a bug
       `<div class="pt-study-hold-text">${
