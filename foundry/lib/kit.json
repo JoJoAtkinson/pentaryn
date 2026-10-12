@@ -9,7 +9,7 @@
     "settings": { "deps": ["errors"] },
     "api":      { "deps": ["errors", "resolve"] },
     "queries":  { "deps": ["errors", "api", "resolve"] },
-    "election": { "deps": [] },
+    "election": { "deps": ["errors"] },
     "patch":    { "deps": ["log"] },
     "patch-libwrapper": { "deps": ["patch", "log"], "packages": ["lib-wrapper"] },
     "flags":    { "deps": [] },

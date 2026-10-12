@@ -33,7 +33,7 @@ Bump `kit.json` `version`, `errors.mjs` `KIT_VERSION` and every header together.
 | `api.mjs` | `buildApi`, `describe`, `surfaceOf`, `maxDepth`, `toPlain` | drift and reserved names throw at load; a `ref` row resolves per call with that call's `opts.sceneId`/`opts.base`; a write row returns `fail()` on an unresolvable ref; an `unlisted` table is published as a frozen **copy** — the caller's objects are never frozen (1.0.1); a row's `dryRun: true` shows in `describe()`, and a first `ref` with `resolve: "self"` is passed raw like `resolve: false` (the function resolves strings itself; the marker shows in `describe()`) (1.1.0) |
 | `queries.mjs` | `guarded`, `relayed`, `registerQueries`, `queryNameOf`, `queryGM` | `CONFIG.queries` from `query: true` rows; `guarded(fn, { sender: "any" })` and `fn(data, ctx)`; `relayed` = any sender, active-GM receiver (`relay: true` rows, whose API function gets ctx as a trailing argument, 1.2.0 AC-1); `row.queryName` when the query name ≠ the row path (1.0.1) |
 | `publish.mjs` | `publishNamespace`, `installRoot`, `apiOf`, `publishedOf` | `module.api` canonical; assigns into the plain `game.pentaryn` (no frozen-root guard, no re-alias tick since 1.0.2) |
-| `election.mjs` | `isActiveGM`, `isAnyGM`, `isActiveGMOrLoneGM`, `pickRunner`, `claimDocument`, `claimMessage` | distinct truth tables — keep each call site's |
+| `election.mjs` | `isActiveGM`, `isAnyGM`, `isActiveGMOrLoneGM`, `pickRunner`, `claimDocument`, `claimMessage` | distinct truth tables — keep each call site's; a failed claim write → false if the doc is gone, else coded `INTERNAL` (1.2.0 KIT-R3) |
 | `patch.mjs` | `wrapMethod`, `defineAccessor`, `patches`, `unwrapAll` | names no third-party package; `kind: "getter"` wraps an accessor such as `Token#isVisible` (1.0.1) |
 | `patch-libwrapper.mjs` | `libWrapperRoute` | `packages: [lib-wrapper]` — vendored only where used |
 | `flags.mjs` | `readFlag`, `flagPath` | delete with `{[flagPath(s,k)]: _del}` at the call site |
@@ -115,3 +115,9 @@ most `wrapMethod` calls) sees only the repeated legacy warning stop.
 KIT-R2 (declared): the root `game.pentaryn.inspect(ref, opts)` treats a null or non-object `opts` as
 `{}` — before, `inspect(ref, null)` threw an uncoded TypeError reading `kind`. Each namespace's
 `inspect(doc, opts)` now gets that same normalised object. An object `opts` is unchanged.
+KIT-R3 (declared): `claimDocument`/`claimMessage` wrap the claim write. If it rejects and the
+reread finds the document gone (no id), the claim returns false — it was deleted under us, nobody
+acts; otherwise it rejects `INTERNAL: claim <key> on <uuid>: <message>`, so a caller's coded-error
+handling reports it (before: the raw uncoded error). Kept and now documented: no socket id, or a null
+or id-less doc → true (aoe's glue test -30 pins it). kit.json gives election an `errors` dep (every
+lock already vendors errors). The success path is unchanged.

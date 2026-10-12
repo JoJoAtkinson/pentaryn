@@ -651,6 +651,8 @@ claim on that document with that key stands down in every tab, including after a
 tabs have new socket ids. Claim with a fixed key only on a document that is itself the one-time event
 (a new chat message, a new combat), never for a repeatable request on a long-lived document such as
 an actor.
+If the claim write itself fails, `claimDocument` returns false when the document was deleted under
+it, and otherwise rejects coded `INTERNAL` — let the caller's coded-error handling report it.
 
 Shared value, one store (the relay must still be idempotent or request-keyed — two GM tabs race):
 ```js
