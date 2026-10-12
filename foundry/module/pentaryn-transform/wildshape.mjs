@@ -13,6 +13,7 @@ import {
   isRevertItem, original, wildShapeActivity, isWildShapeForm, exists, activeFormOf, blockedShift, say, RETURN_LINES,
   revert, returnToNormal, endOnDruid, doShift, metaFor, shaping, isRunner, isReverting, pendingMeta, trackShift
 } from "./wildshape-adapter.mjs";
+import { claimed } from "./claim-adapter.mjs";
 
 const log = makeLog(MODULE);
 
@@ -141,7 +142,9 @@ function maybeAutoRevert(actor, reason) {
   // exists(): the effect-expiry update and the world-time check can both fire for one ending; the
   // second must not run dnd5e's revert again on the already-deleted form.
   if (!exists(actor) || !isWildShapeForm(actor) || isReverting(actor.uuid) || !isRunner(actor)) return;
-  revert(actor, { reason }).catch(err => log.warn("auto-revert failed", err));
+  // One tab of the runner user reverts (transform-core-async-2, [declared]); re-checked after the claim.
+  claimed(actor, "revert", () => (exists(actor) && isWildShapeForm(actor) ? revert(actor, { reason }) : null))
+    .catch(err => log.warn("auto-revert failed", err));
 }
 
 // 0 HP: the 2024 form uses the druid's own HP; at 0 they are Unconscious, so the form ends.
@@ -182,7 +185,9 @@ function onEffectDelete(effect) {
   if (!carried.includes(effect.id) || isReverting(actor.uuid) || !isRunner(actor)) return;
   const host = original(actor);
   if (!host || host === actor) return;                    // a token's form: revert carries it back
-  endOnDruid(host, [effect.id])
+  const copy = host.effects.get(effect.id);
+  if (!copy) return;                                      // already ended on the druid
+  claimed(copy, "end", () => endOnDruid(host, [effect.id]))   // one tab (transform-core-async-2)
     .catch(err => log.warn(`ending ${effect.name} on ${host.name} failed`, err));
 }
 

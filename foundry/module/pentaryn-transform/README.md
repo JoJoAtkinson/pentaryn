@@ -143,8 +143,14 @@ rest hooks, core document hooks and Argon's render hooks (`test/golden/hooks.jso
 - A shift, Change Form, Return and the Starry buttons run on the clicking user's client, with that
   user's permissions (dnd5e refuses a non-owner's revert).
 - The automatic endings (0 HP, Incapacitated, expiry, a carried effect ending) run on **one user**:
-  the active GM, else the first active owner by id (`isRunner`). With the MCP bridge tab and a GM
-  browser tab open, both tabs are that user and both act (see Pitfalls).
+  the active GM, else the first active owner by id (`isRunner`).
+- Two sessions: every tab of that user (the MCP bridge tab plus a GM browser tab) passes `isRunner`,
+  so each automatic write is then claimed per tab with the kit's `claimDocument`
+  (`flags.pentaryn-transform.claims.<key>`, `claim-adapter.mjs`): the form (`revert`), the druid's
+  copy of a carried effect (`end`), the Starry effect (`end`) and each spent form (`sweep`). Only the
+  winning tab writes, ~750 ms after the trigger; a loser, or a claim refused because the document is
+  already gone, stands down with a debug line; the winner clears its claim after the write. The
+  Starry combat-time tick is not claimed (both tabs write the same value). [declared]
 - The sweep of spent forms runs on the active GM's client (`activeGM.isSelf`), 3 s after token
   traffic (one timer, never pushed back), 1.5 s after a form loses `isPolymorphed` (a player's
   revert), and 3 s after ready; it deletes transformed copies with no token on any scene that are
@@ -171,8 +177,8 @@ rest hooks, core document hooks and Argon's render hooks (`test/golden/hooks.jso
 - An unlinked token druid's form is its own original and keeps its own Wild Shape item.
 - The revert item is optional (without it the HUD adds its own Return button); if used, keep it a
   `feat` with one bonus-action utility activity, so the Wild Shape preset carries it onto the form.
-- Two GM tabs (bridge + browser) both run the automatic endings and the sweep; the second revert
-  finds the form gone. Watch for a doubled chat line in the live phase.
+- Two GM tabs (bridge + browser) both run the automatic endings and the sweep, but only the tab that
+  wins the claim writes (Two sessions); a doubled ending chat line in the live phase is a bug.
 - Starry Form counts combat time only (D8, Joe's ruling): the time left is
   `flags.pentaryn-transform.starry.left`, counted down by the runner for every druid in a started
   combat (linked or an unlinked token); the effect has no duration value and dnd5e's `isTemporary`
@@ -193,7 +199,7 @@ rest hooks, core document hooks and Argon's render hooks (`test/golden/hooks.jso
 | `wiring.mjs` | the one log / hook registry / ctx both entries share |
 | `transform-core.mjs`, `core/*.mjs` | pure rules (wildshape, hud, starry, bodyswap) behind the barrel |
 | `settings.mjs`, `patches.mjs` | the keybinding and outside settings reads; the core patch |
-| `wildshape-adapter.mjs`, `sweep-adapter.mjs`, `starry-adapter.mjs`, `argon.mjs` | adapters (documents, Argon) |
+| `wildshape-adapter.mjs`, `sweep-adapter.mjs`, `starry-adapter.mjs`, `claim-adapter.mjs`, `argon.mjs` | adapters (documents, the one-tab claim, Argon) |
 | `form-picker.mjs`, `starry-dialog.mjs` | UI: the Argon components; the constellation dialog |
 | `bodyswap.mjs`, `wildshape.mjs`, `sweep.mjs`, `starry.mjs`, `hud-panels.mjs` | features: `install(reg, ctx)` / `uninstall()` |
 | `api-manifest.mjs`, `api.mjs` | the published API |

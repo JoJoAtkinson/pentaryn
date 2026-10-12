@@ -22,6 +22,8 @@ const lines = () => F.chat.map(c => c.content.replace(/<\/?[^>]+>/g, ""));
 const notes = () => F.calls.filter(c => c.op === "notify").map(c => [c.level, c.message]);
 const ops = (...names) => F.calls.filter(c => names.includes(c.op));
 const flush = async (n = 6) => { for (let i = 0; i < n; i++) await new Promise(r => setImmediate(r)); };
+// An automatic ending claims its write for one tab first (transform-core-async-2): the claim settles in 750 ms.
+const settle = async () => { await flush(); mock.timers.tick(750); await flush(); };
 const light = talo => talo.items.get(IDS.starry).flags["pentaryn-senses"]?.light ?? null;
 
 function fresh(opts) {
@@ -373,7 +375,7 @@ test("Incapacitated while starry: ends after a zero timeout (runner), the Incapa
   const eff = F.W.makeEffect(talo, { id: "stun0000000000001", name: "Stunned", statuses: ["incapacitated"] }, talo.effects);
   Hooks.callAll("createActiveEffect", eff, {}, "u");
   mock.timers.tick(0);
-  await flush();
+  await settle();
   assert.deepEqual(lines(), ["Talo is incapacitated; the starry form fades."]);
 });
 
@@ -386,7 +388,7 @@ test("updateActiveEffect: the Starry effect marked expired ends it (Expired line
   await flush();
   assert.deepEqual(lines(), []);
   Hooks.callAll("updateActiveEffect", talo.effects.get(SID), { duration: { expired: true } }, {}, "u");
-  await flush();
+  await settle();
   assert.deepEqual(lines(), ["Talo's starry form fades after 10 minutes."]);
 });
 
@@ -437,6 +439,7 @@ test("D8-starry: in combat it counts down by combat time and ends at 10 minutes,
     assert.equal(S.starrySecondsLeft(talo), 6);
     F.become({ userId: IDS.gm });
     await tick(6);
+    await settle();                                   // the ending is claimed; the tick is not
     assert.deepEqual(lines().sort(), ["Hedge Druid's starry form fades after 10 minutes.", "Talo's starry form fades after 10 minutes."]);
     assert.equal(S.activeStarry(talo), null);
     assert.equal(S.activeStarry(npc), null, "D8-starry: the unlinked druid's form ends in combat too");
@@ -477,13 +480,13 @@ test("dnd5e.restCompleted (long): the form ends quietly for an owner; a short re
   await S.assumeStarry(talo, "archer");
   talo.effects.get(SID).delete = async () => { throw new Error("x"); };
   Hooks.callAll("dnd5e.restCompleted", talo, {}, { type: "long" });
-  Hooks.callAll("updateActiveEffect", talo.effects.get(SID), { duration: { expired: true } }, {}, "u");
+  Hooks.callAll("dnd5e.restCompleted", talo, {}, { type: "long" });
   await flush();
-  // starry-double-end: the rest and the expiry overlap, so only the first sends a delete and warns.
+  // starry-double-end: the two endings overlap, so only the first sends a delete and warns.
   assert.deepEqual(F.console.map(c => c.slice(0, 2)), [["warn", "pentaryn-transform | ending starry form failed"]]);
   F.console.length = 0;
   Hooks.callAll("updateActiveEffect", talo.effects.get(SID), { duration: { expired: true } }, {}, "u");
-  await flush();
+  await settle();
   assert.deepEqual(F.console.map(c => c.slice(0, 2)), [["warn", "pentaryn-transform | ending starry form failed"]],
     "starry-double-end: a failed ending releases the guard, so the next one tries again");
 });

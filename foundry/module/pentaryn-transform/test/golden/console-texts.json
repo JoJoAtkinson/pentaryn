@@ -10,6 +10,21 @@
     "body-swap animation guard skipped"
   ],
   [
+    "claim-adapter.mjs",
+    "debug",
+    "another session runs ${key} on ${doc.name}"
+  ],
+  [
+    "claim-adapter.mjs",
+    "debug",
+    "clearing the ${key} claim on ${doc.name} failed"
+  ],
+  [
+    "claim-adapter.mjs",
+    "debug",
+    "the ${key} claim on ${doc.name} was refused (already gone)"
+  ],
+  [
     "hud-panels.mjs",
     "error",
     "HUD composition failed"
@@ -68,6 +83,21 @@
     "starry.mjs",
     "warn",
     "starry light off failed"
+  ],
+  [
+    "sweep-adapter.mjs",
+    "debug",
+    "another session sweeps ${spent.length - mine.length} form(s)"
+  ],
+  [
+    "sweep-adapter.mjs",
+    "debug",
+    "clearing the sweep claim on ${a.name} failed"
+  ],
+  [
+    "sweep-adapter.mjs",
+    "debug",
+    "the sweep claim on ${a.name} was refused (already gone)"
   ],
   [
     "sweep-adapter.mjs",

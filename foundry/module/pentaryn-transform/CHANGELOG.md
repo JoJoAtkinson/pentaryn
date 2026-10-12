@@ -4,6 +4,13 @@
 
 ## Unreleased
 
+- **One tab writes each automatic ending (transform-core-async-2, final review).** With the MCP bridge
+  tab and a GM browser tab open, both tabs are the runner user, so both reverted a form at 0 HP, on
+  Incapacitated or at expiry, ended the druid's copy of a carried effect, ended Starry Form and swept
+  spent forms. Each of these writes is now claimed per tab first with the kit's `claimDocument`
+  (`flags.pentaryn-transform.claims.<key>`, added to the manifest's `flags.writes`): only the winning
+  tab writes, about 750 ms after the trigger, and clears its claim afterwards; a loser stands down
+  with a debug line. The Starry combat-time tick stays unclaimed ([declared]).
 - **One Starry Form ending at a time (starry-double-end, final review).** An expiry landing together
   with an Incapacitated or a Long Rest could send two deletes for the same effect and log a failed
   ending. `endStarry` now holds an in-flight guard per druid, as revert does: the overlapping ending

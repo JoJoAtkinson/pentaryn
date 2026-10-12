@@ -135,10 +135,11 @@
       "writes": true,
       "query": false,
       "sideEffects": [
-        "deletes spent form actors"
+        "deletes spent form actors",
+        "flags.pentaryn-transform.claims.sweep"
       ],
       "legacy": true,
-      "doc": "Active GM only: delete transformed copies (flags.dnd5e.originalActor) with no token on any scene and older than 10 s; younger ones are checked again when old enough. Runs by itself after token traffic."
+      "doc": "Active GM only: delete transformed copies (flags.dnd5e.originalActor) with no token on any scene and older than 10 s; younger ones are checked again when old enough. Each form is claimed first, so with two tabs of the GM open only one deletes it. Runs by itself after token traffic."
     },
     {
       "path": "inspect",
@@ -458,7 +459,8 @@
       "flags.pentaryn-transform.revert",
       "flags.pentaryn-transform.starry",
       "flags.pentaryn-senses.light",
-      "flags.dnd5e.previousTokenData.light"
+      "flags.dnd5e.previousTokenData.light",
+      "flags.pentaryn-transform.claims"
     ],
     "reads": [
       "flags.dnd5e.originalActor",

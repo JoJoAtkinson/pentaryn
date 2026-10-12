@@ -150,6 +150,8 @@ test("-2 [declared] T-D6 updateWorldTime: a player's client skips both scans whi
     F.become({ userId: IDS.player });
     Hooks.callAll("updateWorldTime", 30_000, 30_000);
     await flush();
+    mock.timers.tick(750);                                // the one-tab claim settles (transform-core-async-2)
+    await flush();
     assert.equal(scans, 4, "no GM connected: the owner's client scans");
     assert.deepEqual(F.calls.filter(c => c.op === "revertOriginalForm").map(c => c.actor), [wolf.id], "and ends the expired form");
   } finally {

@@ -16,6 +16,7 @@ const REF = { name: "ref", kind: "actor", type: "Actor|Token|uuid|id|exact name"
 const WS = "flags.pentaryn-transform.wildshape";
 const REVERT = "flags.pentaryn-transform.revert";
 const STARRY = "flags.pentaryn-transform.starry";
+const CLAIMS = "flags.pentaryn-transform.claims";   // one tab writes an automatic ending (transform-core-async-2)
 const LIGHT = "flags.pentaryn-senses.light";
 const HAND_LIGHT = "flags.dnd5e.previousTokenData.light";   // light-roundtrip: the druid token's own light
 const SENSES_TOKEN = ["flags.pentaryn-senses.itemLight", "flags.pentaryn-senses.itemLightPrior", "flags.pentaryn-senses.spellLight"];
@@ -71,9 +72,10 @@ export const MANIFEST = Object.freeze({
     },
     {
       path: "sweepSpentForms", legacy: true, params: [],
-      returns: "Promise<void>", gm: true, writes: true, sideEffects: ["deletes spent form actors"],
+      returns: "Promise<void>", gm: true, writes: true, sideEffects: ["deletes spent form actors", `${CLAIMS}.sweep`],
       doc: "Active GM only: delete transformed copies (flags.dnd5e.originalActor) with no token on any scene and "
-        + "older than 10 s; younger ones are checked again when old enough. Runs by itself after token traffic.",
+        + "older than 10 s; younger ones are checked again when old enough. Each form is claimed first, so with "
+        + "two tabs of the GM open only one deletes it. Runs by itself after token traffic.",
     },
     {
       path: "inspect",
@@ -100,7 +102,7 @@ export const MANIFEST = Object.freeze({
     },
   ],
   flags: {
-    writes: [WS, REVERT, STARRY, LIGHT, HAND_LIGHT],
+    writes: [WS, REVERT, STARRY, LIGHT, HAND_LIGHT, CLAIMS],
     reads: ["flags.dnd5e.originalActor", "flags.dnd5e.isPolymorphed", "flags.dnd5e.transformOptions",
       "flags.dnd5e.previousTokenData", "flags.dnd5e.previousActorData", LIGHT, ...SENSES_TOKEN],
   },
