@@ -4,6 +4,11 @@
 
 The version stays 0.3.0 until the next `module.json` restart batch (code only: sync + reload).
 
+- **[declared] ATT-AC-3:** two overlapping `stash` calls on one owner now keep both away entries
+  (was: the second write dropped the first one's), and two overlapping slot drops each keep the slot
+  they were dropped on. Both now run on the per-actor chain the slot hand-back uses (`serial`, moved
+  from `bonds.mjs` to `actor-adapter.mjs`; `uninstall()` still clears it), planning inside the step;
+  a lone stash or drop runs at once, with today's timing. `test/overlap.test.mjs`.
 - **[declared] ATT-AC-2-residual:** the README (Two sessions / who writes) now says an Item Piles
   currency transfer in the same take-all is written by Item Piles with an absolute value outside
   the purse chain, and that the purse's 750 ms claim settle orders the payout after it. Docs only;

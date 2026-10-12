@@ -17,6 +17,32 @@ import { wrapMethod } from "./lib/patch.mjs";
  */
 export const isPileActor = a => !!game.itempiles?.API?.isValidItemPile?.(a);
 
+/** Per-actor tails of in-flight shared writes (hand-backs, stashes, slot drops) and, apart (`:coin`), coin purses. Local to this tab; the claims keep a second tab out. */
+const tails = new Map();
+
+/**
+ * Run `step` after the actor's previous step in the same `lane` settles. Uncontended, it runs
+ * synchronously, so a lone item home, stash or drop takes the same ticks as before. Returns `step`'s own
+ * promise: a rejection still reaches the caller, while the stored tail swallows it so the next step still runs.
+ * @param {Actor} actor
+ * @param {() => Promise<*>} step
+ * @param {string} [lane]
+ */
+export function serial(actor, step, lane = "") {
+  const key = actor.uuid + lane;
+  const prev = tails.get(key);
+  const run = prev ? prev.then(step) : step();
+  const tail = run.catch(() => {});
+  tails.set(key, tail);
+  tail.then(() => { if (tails.get(key) === tail) tails.delete(key); });
+  return run;
+}
+
+/** Forget every tail (uninstall). */
+export function clearSerial() {
+  tails.clear();
+}
+
 /**
  * Persist a slot arrangement. Trailing holes are trimmed so the flag does not
  * grow every time something is unattuned.
@@ -52,7 +78,13 @@ export async function releaseAway(actor, key) {
  *                                   keys of the away entries this call added.
  * @returns {Promise<number|{count: number, created: string[], away: string[]}>}
  */
-export async function stash(owner, container, itemIds, { tag, currency = false, detail = false } = {}) {
+export async function stash(owner, container, itemIds, opts = {}) {
+  // Plans from the owner's away list and slots and writes them whole: one stash at a time per owner,
+  // and in turn with a hand-back or a slot drop on the same owner (ATT-AC-3).
+  return serial(owner, () => stashNow(owner, container, itemIds, opts));
+}
+
+async function stashNow(owner, container, itemIds, { tag, currency = false, detail = false } = {}) {
   const ids = new Set(itemIds);
   const awayBefore = awayOf(owner).length;
   const { creates, away, slots } = planStash(owner, itemIds, {

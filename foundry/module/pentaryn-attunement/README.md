@@ -133,7 +133,10 @@ reads `DND5E.EFFECT.Suppressed.Hint`.
   total (ATT-AC-2). An Item Piles currency transfer in the same take-all is written by Item Piles
   with an absolute value outside this chain; the purse's 750 ms claim settle is what orders the
   payout after it (ATT-AC-2-residual).
-- Sheet drops and `stash` write from the client that calls them.
+- Sheet drops and `stash` write from the client that calls them. In that tab they run in turn
+  with each other and with the slot hand-back on a per-actor chain (`serial` in
+  `actor-adapter.mjs`), each planning from the previous one's write, so two overlapping stashes or
+  drops on one owner keep both away entries and both slots (ATT-AC-3). A lone call runs at once.
 
 ## Extending
 
@@ -181,7 +184,7 @@ node test/run.mjs        # from this folder
 `slots.test` holds the slot fixtures (stale flags, deleted items, duplicates, corrupt flag types,
 over cap, non-default `max`, away entries, coming home) and the proficiency-map patch; `glue.test`,
 `hooks.test`, `api.test`, `strip.test` (a minimal DOM), `listeners`, `hook-errors`, `perf`,
-`stash-safety`, `guard-failure`, `home-race`, `bond-uuid` and `lang-switch` pin the wiring;
+`stash-safety`, `guard-failure`, `home-race`, `overlap`, `bond-uuid` and `lang-switch` pin the wiring;
 `flags-written` scans the sources so every flag path they write is in `describe().flags.writes`; `core-meta` holds the core's identity (it loads
 with no Foundry globals, constants agree with `module.json`, `trimSlots`), `docs` guards this
 README, and `i18n` checks `lang/en.json` against the oracle's former `STRINGS`. Goldens in `test/golden/`.

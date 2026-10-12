@@ -8,7 +8,7 @@
  */
 
 import { AWAY, MODULE, awayOf, computeSlots, safe } from "./attunement-core.mjs";
-import { releaseAway, writeSlots } from "./actor-adapter.mjs";
+import { releaseAway, serial, writeSlots } from "./actor-adapter.mjs";
 import { decorateCounter, mountStrip } from "./strip.mjs";
 
 /* -------------------------------------------- */
@@ -22,6 +22,12 @@ import { decorateCounter, mountStrip } from "./strip.mjs";
  * @param {number} index
  */
 async function attuneToSlot(actor, item, index) {
+  // Plans from the slots and writes them whole: in turn with a stash, a hand-back or another drop on
+  // the same actor (ATT-AC-3). Uncontended, it runs at once.
+  return serial(actor, () => attuneNow(actor, item, index));
+}
+
+async function attuneNow(actor, item, index) {
   const { slots } = computeSlots(actor);
   const occupant = slots[index] ?? null;
   if (occupant === item.id) return;

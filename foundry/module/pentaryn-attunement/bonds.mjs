@@ -12,7 +12,7 @@
  */
 
 import { AWAY, AWAY_FLAG, BOND, MODULE, SLOTS, awayOf, bondChanges, computeSlots, homeSlots, isBondOwner, wouldExceed } from "./attunement-core.mjs";
-import { isPileActor } from "./actor-adapter.mjs";
+import { clearSerial, isPileActor, serial } from "./actor-adapter.mjs";
 import { claimDocument } from "./lib/election.mjs";
 import { flagPath } from "./lib/flags.mjs";
 
@@ -120,24 +120,6 @@ async function onCreateItemBond(item, options, userId) {
   });
 }
 
-/** Per-actor tails of in-flight hand-backs and, apart (`:coin`), coin purses. Local to this tab; the claims keep a second tab out. */
-const tails = new Map();
-
-/**
- * Run `step` after the actor's previous step in the same `lane` settles. Uncontended, it runs
- * synchronously, so a lone item home takes the same ticks as before. Returns `step`'s own promise: a
- * rejection still reaches the reg's labelled catch, while the stored tail swallows it so the next step still runs.
- */
-function serial(actor, step, lane = "") {
-  const key = actor.uuid + lane;
-  const prev = tails.get(key);
-  const run = prev ? prev.then(step) : step();
-  const tail = run.catch(() => {});
-  tails.set(key, tail);
-  tail.then(() => { if (tails.get(key) === tail) tails.delete(key); });
-  return run;
-}
-
 /* -------------------------------------------- */
 /*  Enforcement — warn, never veto              */
 /* -------------------------------------------- */
@@ -190,7 +172,7 @@ export function install(reg) {
   reg.on("createItem", onCreateItemBond, { label: "createItem: bond return" });
 }
 
-/** Session state: the hand-back and coin-purse tails. */
+/** Session state: the per-actor write tails (shared with stash and the sheet's drops). */
 export function uninstall() {
-  tails.clear();
+  clearSerial();
 }

@@ -2,6 +2,7 @@
 // stash() box creates several bonded items in one batch; each createItem hand-back must see the previous
 // one's actor write, or one away entry survives next to its own, attuned item. Document writes are
 // deferred here until drained, which models the server round trip the stub otherwise skips.
+import { registerHooks } from "node:module";
 import { mock, test } from "node:test";
 import assert from "node:assert/strict";
 import { GM, MOD, addItem, attunementWorld, makeActor } from "./fixtures/world.mjs";
@@ -78,12 +79,19 @@ test("ATT-AC-2: two coin purses in one batch: both pay", async () => {
 });
 
 // ATT-AC-1-residual: README "Two sessions / who writes". The MCP bridge tab and a GM browser tab both pass
-// createItem's userId gate, and each keeps its own hand-back chain (a second module instance here, so its
-// `tails` is its own). [declared] Each returning item is claimed (kit claimDocument, key `home`) so exactly
+// createItem's userId gate, and each keeps its own hand-back chain (a second module instance here, and its
+// own actor-adapter instance, so its `tails` is its own: the chain moved there with ATT-AC-3). [declared] Each returning item is claimed (kit claimDocument, key `home`) so exactly
 // one tab clears the bond and hands the slot back: one actor write and one toast per item, no phantom away slot.
 test("[declared] ATT-AC-1-residual: two GM tabs, two bonded items home in one batch — one hand-back per item", async () => {
   const handlers = {};
-  const tabB = await import("../bonds.mjs?tab=browser");
+  // The second tab's bonds.mjs gets its own actor-adapter (and with it its own `tails`).
+  const hooks = registerHooks({
+    resolve(specifier, context, next) {
+      const r = next(specifier, context);
+      return (specifier === "./actor-adapter.mjs" && context.parentURL?.endsWith("?tab=browser")) ? { ...r, url: r.url + "?tab=browser" } : r;
+    },
+  });
+  const tabB = await import("../bonds.mjs?tab=browser").finally(() => hooks.deregister());
   tabB.install({ on: (name, fn) => { handlers[name] = fn; } });
 
   const actor = makeActor(F, { id: "actorTwoTab00001", name: "Talo Twotab",
