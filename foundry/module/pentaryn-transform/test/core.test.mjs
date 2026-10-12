@@ -21,7 +21,7 @@ test("core loads with no Foundry globals present", () => {
   }
 });
 
-// Guide step 2's explicit additive delta: the blueprint constants. The checkpoint golden stays the 39 names.
+// Guide step 2's explicit additive delta: the blueprint constants. The checkpoint golden is the 39 names less the dropped id alias (EXT-8: 38).
 const ADDED_S2 = ["CONTRACT", "CSS", "FLAG_SCOPE", "HOOKS", "I18N", "MODULE", "NS", "SHORT", "VERSION"];
 // Guide step 3's: the pure seams (-1, -2, -3, -4, -5, -6, -7, -10, -11, -13, -17, -22, -23).
 const ADDED_S3 = ["STARRY_IMG", "canRunAny", "constellationImgOf", "coveredMultiattackId", "earnsChalice", "formEntries",
@@ -42,15 +42,15 @@ test("export list of transform-core.mjs (step 2's barrel must re-export every na
   const names = Object.keys(core).sort();
   pinJSON("core-exports", names.filter(n => !ADDED.includes(n)).map(k => [k, typeof core[k]]), file);
   for (const n of ADDED) assert.ok(names.includes(n), n);
-  assert.equal(names.length, 39 + ADDED.length);
+  assert.equal(names.length, 38 + ADDED.length);
 });
 
-test("constants: MODULE_ID is the manifest id; EFFECT_ID, Starry constants", () => {
+test("constants: MODULE is the manifest id; EFFECT_ID, Starry constants", () => {
   const manifest = manifestOf(ROOT);
-  assert.equal(core.MODULE_ID, manifest.id);
+  assert.equal(core.MODULE, manifest.id);
   assert.equal(core.EFFECT_ID.length, 16);
   pinJSON("core-constants", {
-    MODULE_ID: core.MODULE_ID, EFFECT_ID: core.EFFECT_ID, CONSTELLATIONS: core.CONSTELLATIONS,
+    MODULE: core.MODULE, EFFECT_ID: core.EFFECT_ID, CONSTELLATIONS: core.CONSTELLATIONS,
     STARRY_LIGHT: core.STARRY_LIGHT, STARRY_SECONDS: core.STARRY_SECONDS,
     frozen: [Object.isFrozen(core.CONSTELLATIONS), Object.isFrozen(core.STARRY_LIGHT)]
   }, file);

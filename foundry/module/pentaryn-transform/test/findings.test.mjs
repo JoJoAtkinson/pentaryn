@@ -369,3 +369,17 @@ test("EXT-7 [declared] core/starry.mjs's frozen STARRY_FORM is the one identity:
     assert.doesNotMatch(src, /identifier === "starry-form"|"starry-form", /, `${f} hard-codes no Starry Form identifier of its own`);
   }
 });
+
+/* ── EXT-8 the barrel exports MODULE only, no MODULE_ID alias (C12) ─────── */
+
+test("EXT-8 [declared] transform-core.mjs exports MODULE and no `MODULE as MODULE_ID` alias; the tests import MODULE", async () => {
+  const { readFileSync } = await import("node:fs");
+  const C = await import("../transform-core.mjs");
+  assert.equal(typeof C.MODULE, "string", "EXT-8: MODULE through the barrel");
+  assert.equal("MODULE_ID" in C, false, "EXT-8: no MODULE_ID alias on the barrel (C12)");
+  assert.doesNotMatch(readFileSync(new URL("../transform-core.mjs", import.meta.url), "utf8"), /\bas\s+MODULE_ID\b/, "EXT-8: no aliased re-export");
+  for (const f of ["test/core-legacy.mjs", "test/core.test.mjs", "test/core-split.test.mjs"]) {
+    const src = readFileSync(new URL(`../${f}`, import.meta.url), "utf8");
+    assert.doesNotMatch(src, /\bMODULE_ID\b/, `${f} uses MODULE, not MODULE_ID`);
+  }
+});

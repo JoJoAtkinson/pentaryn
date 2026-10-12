@@ -55,7 +55,7 @@ export const FLAG_SCOPE = MODULE;
 /** Events this module emits: none (it listens only). */
 export const HOOKS = Object.freeze({});
 
-export { MODULE, MODULE as MODULE_ID, EFFECT_ID };
+export { MODULE, EFFECT_ID };
 
 export {
   activitiesOf, isWildShapeActivity, findWildShapeItem, isStarryFormData, stripReason,

@@ -4,6 +4,10 @@
 
 ## Unreleased
 
+- **The barrel exports `MODULE` only (EXT-8, defect wave 2).** transform-core.mjs dropped its
+  `MODULE as MODULE_ID` alias, which C12 bans; core-legacy.mjs, core.test.mjs and core-split.test.mjs
+  use `MODULE`. No behaviour change ([declared]; golden/core-exports.json loses the `MODULE_ID` row,
+  golden/core-constants.json pins the id under `MODULE`).
 - **One Starry Form identity (EXT-7, defect wave 2).** core/starry.mjs exports a frozen
   `STARRY_FORM = { identifier: "starry-form", name: "Starry Form" }` through the barrel; core
   `isStarryFormData` and starry-adapter.mjs `starryItem` both match by its identifier first and its
