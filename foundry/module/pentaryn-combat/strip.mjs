@@ -324,15 +324,15 @@ export function pickWeapon(tiles, { title = "" } = {}) {
     const done = (id) => {
       document.removeEventListener("pointerdown", outside, true);
       document.removeEventListener("keydown", key, true);
-      pickerEl?.remove();
-      pickerEl = null;
+      me.remove();
+      if (pickerEl === me) pickerEl = null;
       resolve(id);
     };
-    const outside = (ev) => { if (pickerEl && !pickerEl.contains(ev.target)) done(null); };
+    const outside = (ev) => { if (!me.contains(ev.target)) done(null); };
     const key = (ev) => { if (ev.key === "Escape") { ev.preventDefault(); ev.stopPropagation(); done(null); } };
-    pickerEl = document.createElement("div");
-    pickerEl.className = "pentaryn-combat-strip pentaryn-combat-picker";
-    pickerEl.innerHTML = `<div class="pc-head"><strong>${esc(title)}</strong><span class="pc-what">${esc(_loc("PENTARYN_COMBAT.Picker.Hint"))}</span></div>
+    const me = pickerEl = document.createElement("div");
+    me.className = "pentaryn-combat-strip pentaryn-combat-picker";
+    me.innerHTML = `<div class="pc-head"><strong>${esc(title)}</strong><span class="pc-what">${esc(_loc("PENTARYN_COMBAT.Picker.Hint"))}</span></div>
       <div class="pc-weapons">${tiles.map(t => `
         <button type="button" data-id="${esc(t.id)}">
           <img src="${esc(t.img)}" alt="">
@@ -340,12 +340,12 @@ export function pickWeapon(tiles, { title = "" } = {}) {
           <span class="pc-stats">${esc([t.toHit, t.damage].filter(Boolean).join(" · "))}</span>
           <span class="pc-swings">${esc(_loc("PENTARYN_COMBAT.Picker.Swings", { n: t.swings }))}</span>
         </button>`).join("")}</div>`;
-    pickerEl.addEventListener("click", ev => {
+    me.addEventListener("click", ev => {
       const b = ev.target.closest("button[data-id]");
       if (b) done(b.dataset.id);
     });
-    document.body.appendChild(pickerEl);
-    pickerEl.style.bottom = `${anchor()}px`;
+    document.body.appendChild(me);
+    me.style.bottom = `${anchor()}px`;
     // Next tick: the right-click that opened it must not count as "outside".
     setTimeout(() => {
       document.addEventListener("pointerdown", outside, true);
