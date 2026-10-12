@@ -7,7 +7,7 @@
  * Files, in load order:
  *   loot-core.mjs, ledger-core.mjs   PURE rules (MODULE is defined once, in loot-core)
  *   dropbin-core.mjs     PURE barrel: constants, both cores, pile flags, the backfill planners
- *   settings.mjs         SETTINGS (the ledger's log and counter store rows), readLog, writeLedger
+ *   settings.mjs         SETTINGS (the ledger's log and counter store rows), readLog, appendLedger, clearLog
  *   piles.mjs            ADAPTER: every game.itempiles touch (API, drop hook, Svelte store)
  *   socketlib-adapter.mjs ADAPTER: the player → GM ledger relay
  *   corpses.mjs          FEATURE: dead NPCs become lootable piles, the drawn eye, the GM HUD
