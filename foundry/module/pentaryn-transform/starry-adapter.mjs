@@ -93,10 +93,10 @@ export function starrySecondsLeft(actor) {
 /**
  * The world clock moved dt seconds while the druid is in a started combat: count the form's time
  * down (D8: only combat time counts). "expired" when it has run out, "ticked" after the write,
- * null when there is no combat-timed form (none up, or one put on before D8).
+ * null when there is no combat-timed form (none up, or one put on before D8). `effect` is the form
+ * the caller already found (perf-2: one lookup per druid per tick).
  */
-export async function tickStarry(actor, dt) {
-  const effect = activeStarry(actor);
+export async function tickStarry(actor, dt, effect = activeStarry(actor)) {
   const left = effect?.getFlag?.(MODULE, "starry")?.left;
   if (!Number.isFinite(left) || !Number.isFinite(dt) || dt === 0) return null;
   const next = Math.min(STARRY_SECONDS, left - dt);
@@ -241,8 +241,16 @@ const ending = new Set();   // actor uuids, like wildshape-adapter's `reverting`
  * Dismiss the starry form (no action required). One ending at a time per druid on this client: an
  * expiry and an Incapacitated (or a Long Rest) landing together delete once and post one line.
  */
-export async function endStarry(actor, { quiet = false, reason = "manual" } = {}) {
-  const effect = activeStarry(actor);
+export async function endStarry(actor, opts = {}) {
+  return endStarryEffect(actor, activeStarry(actor), opts);
+}
+
+/**
+ * endStarry for a form the caller already found (perf-2). One that is no longer on the druid (gone
+ * while the ending was claimed) falls back to a fresh lookup, as endStarry's own would.
+ */
+export async function endStarryEffect(actor, found, { quiet = false, reason = "manual" } = {}) {
+  const effect = found && actor?.effects?.get?.(found.id) === found ? found : activeStarry(actor);
   if (!effect || ending.has(actor.uuid)) return false;
   ending.add(actor.uuid);
   try {

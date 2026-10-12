@@ -4,6 +4,11 @@
 
 ## Unreleased
 
+- **Starry Form's combat clock looks the form up once per druid per tick (perf-2, defect wave 2).**
+  `onWorldTime` found the effect, then `tickStarry`, `maybeEnd` and `endStarry` each looked it up
+  again. The tick now hands the one effect down: `tickStarry(actor, dt, effect)` and the new
+  `endStarryEffect(actor, effect, opts)` (endStarry's body; a form gone while its ending was claimed
+  falls back to a fresh lookup). No behaviour change; `starry.end` keeps its signature ([declared]).
 - **A Long Rest taken while shifted is never lost (transform-core-async-3, defect wave 2).** The
   `dnd5e.longRest` listener always vetoed the rest and rested the druid only when `revert()` answered,
   so a rest that landed while a revert was already running, or on a form already deleted, vanished.

@@ -10,7 +10,7 @@ import { isRunner } from "./wildshape-adapter.mjs";
 import { claimed } from "./claim-adapter.mjs";
 import {
   STARRY_EFFECT_ID, starryItem, wildShapeItemOf, isStarryConsume, activeStarry, constellationOf, tickStarry,
-  setLight, applyStarry, BLOCKS, assumeStarry, endStarry, announceStarryOn
+  setLight, applyStarry, BLOCKS, assumeStarry, endStarry, endStarryEffect, announceStarryOn
 } from "./starry-adapter.mjs";
 import { pickConstellation } from "./starry-dialog.mjs";
 import { STARRY_ROWS } from "./api-manifest.mjs";
@@ -47,11 +47,11 @@ function onSheetPostUse(activity, usageConfig) {
 
 /* ── ending without a click ──────────────────────────────────────────────── */
 
-function maybeEnd(actor, reason) {
-  const effect = actor ? activeStarry(actor) : null;
+// `effect`: the form the caller already looked up (perf-2), else it is looked up here.
+function maybeEnd(actor, reason, effect = actor ? activeStarry(actor) : null) {
   if (!effect || !isRunner(actor)) return;
-  // One tab of the runner user ends it (transform-core-async-2, [declared]); endStarry re-checks.
-  claimed(effect, "end", () => endStarry(actor, { reason })).catch(err => log.warn("ending starry form failed", err));
+  // One tab of the runner user ends it (transform-core-async-2, [declared]); endStarryEffect re-checks.
+  claimed(effect, "end", () => endStarryEffect(actor, effect, { reason })).catch(err => log.warn("ending starry form failed", err));
 }
 
 // Incapacitated (or anything that implies it).
@@ -89,10 +89,11 @@ function onWorldTime(worldTime, dt) {
       const actor = combatant?.actor;
       if (!actor || seen.has(actor.uuid)) continue;   // one druid, two tokens in the fight: counted once
       seen.add(actor.uuid);
-      if (!activeStarry(actor) || !isRunner(actor)) continue;
+      const effect = activeStarry(actor);             // perf-2: the one lookup this tick, handed down
+      if (!effect || !isRunner(actor)) continue;
       // Unclaimed: two tabs of the runner write the same time left; the ending itself is claimed.
-      tickStarry(actor, dt)
-        .then(done => { if (done === "expired") maybeEnd(actor, "expired"); })
+      tickStarry(actor, dt, effect)
+        .then(done => { if (done === "expired") maybeEnd(actor, "expired", effect); })
         .catch(err => log.warn("starry form timing failed", err));
     }
   }

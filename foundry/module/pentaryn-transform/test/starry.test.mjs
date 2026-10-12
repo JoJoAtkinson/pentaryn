@@ -448,6 +448,38 @@ test("D8-starry: in combat it counts down by combat time and ends at 10 minutes,
   }
 });
 
+// perf-2: onWorldTime looks the form up once per druid per tick and hands it to the tick and the ending.
+test("perf-2: one Starry Form lookup per druid per tick, on a counting tick and on the expiring one", async () => {
+  const { talo } = fresh();
+  await S.assumeStarry(talo, "archer");
+  const npc = hedgeDruid(12);
+  F.chat.length = 0;
+  // Counted: lookups on the tick's own path. The updateActiveEffect listener (onEffectChange) that the
+  // time-left write fires does its own, as any effect update does; that is not the tick's.
+  const lookups = new Map();
+  const count = a => { if (!new Error().stack.includes("onEffectChange")) lookups.set(a.name, (lookups.get(a.name) ?? 0) + 1); };
+  for (const a of [talo, npc]) {
+    const get = a.effects.get.bind(a.effects), find = a.effects.find.bind(a.effects);
+    a.effects.get = id => { if (id === SID) count(a); return get(id); };
+    a.effects.find = fn => { count(a); return find(fn); };
+  }
+  startCombat(talo, npc);
+  try {
+    await tick(6);
+    assert.deepEqual(Object.fromEntries(lookups), { "Talo": 1, "Hedge Druid": 1 }, "perf-2: a counting tick looks each form up once");
+    assert.equal(S.starrySecondsLeft(npc), 6);
+    lookups.clear();
+    await tick(6);                                    // the Hedge Druid's form runs out on this one
+    assert.deepEqual(Object.fromEntries(lookups), { "Talo": 1, "Hedge Druid": 1 }, "perf-2: the expiring tick looks each form up once");
+    await settle();
+    assert.deepEqual(lines(), ["Hedge Druid's starry form fades after 10 minutes."]);
+    assert.equal(S.activeStarry(npc), null);
+    assert.ok(S.activeStarry(talo));
+  } finally {
+    game.combats.clear();
+  }
+});
+
 test("D8-starry: a failed combat-time write warns 'starry form timing failed'; a form from before D8 is left to the world clock", async () => {
   const { talo } = fresh();
   await S.assumeStarry(talo, "archer");
