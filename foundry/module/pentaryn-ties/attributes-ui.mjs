@@ -150,7 +150,7 @@ function grantsFor(viewer, attrId) {
  * this they have already decided.
  */
 function offersBlock(actor, subject, attrId) {
-  if (!game.user?.isGM) return "";
+  if (!game.user?.isGM || !actor) return ""; // nobody to grant to: no button rather than a dead one
   const rows = attrLoreStateFor(actor, subject, attrId).filter(r => r.available);
   if (!rows.length) return "";
   return `<div class="pt-lore-offers pt-gm-only">
@@ -639,20 +639,24 @@ function ancestryWarning(actor) {
 }
 
 /**
- * `viewer` is whose knowledge is shown; `actor` is whose attributes are listed.
+ * Whose knowledge an Attributes tab is for — **one rule for build and bind** (ties-ui-M11).
  *
- * On a character's own tab they are the same actor. On an NPC's tab a GM is looking at the
- * NPC's attributes, and there is no viewer whose grants make sense to show — so grants and
- * offers are simply absent there rather than borrowed from someone.
+ * A character's own sheet is its own viewer. On anyone else's sheet — an NPC, including one a
+ * player happens to own — it is the user's assigned character, player and GM alike, so a GM who
+ * presses Mark as learned on an NPC tab grants to the character they have assigned. No assigned
+ * character means no viewer: grants and offers are absent rather than drawn as dead buttons.
+ * An explicit `viewer` wins.
+ */
+export function viewerFor(actor, viewer = null) {
+  return viewer ?? (actor?.type === "character" ? actor : game.user?.character ?? null);
+}
+
+/**
+ * `viewer` is whose knowledge is shown; `actor` is whose attributes are listed. See `viewerFor`.
  */
 export function buildAttributesHTML(actor, viewer = null) {
   const isGM = game.user?.isGM === true;
-  /*
-   * Whose knowledge filters this sheet. Their own character is themselves; on anyone else's sheet
-   * — including an NPC a player happens to own — it is the character they play, so what they see
-   * is what that character has actually worked out.
-   */
-  const who = viewer ?? (actor?.type === "character" ? actor : game.user?.character ?? null);
+  const who = viewerFor(actor, viewer);
   const rows = attributesOf(actor, resolver, { viewer: who });
   const open = openFor(actor.id);
   // One registry read per paint, and only if an authored row asks: it cannot change mid-paint.
@@ -695,7 +699,7 @@ export function buildAttributesHTML(actor, viewer = null) {
   </div>`;
 }
 
-export function bindAttributes(root, actor, rerender = () => {}) {
+export function bindAttributes(root, actor, rerender = () => {}, viewerArg = null) {
   /*
    * ⚠ `root` **is** the `.pentaryn-attributes` element, not a wrapper around it.
    *
@@ -715,7 +719,7 @@ export function bindAttributes(root, actor, rerender = () => {}) {
   if (!box || !actor) return;
   const isGM = game.user?.isGM === true;
   const open = openFor(actor.id);
-  const viewer = actor?.type === "character" ? actor : null;
+  const viewer = viewerFor(actor, viewerArg); // the same viewer the build drew for
 
   for (const head of box.querySelectorAll(".pt-attr-summary")) {
     const li = head.closest(".pt-row");
@@ -732,7 +736,8 @@ export function bindAttributes(root, actor, rerender = () => {}) {
    * pass text straight into the viewer's granted flag, which is the same store the identification
    * cascade commits to, so it renders identically to something they worked out themselves.
    */
-  for (const btn of box.querySelectorAll("[data-action='attr-learned']")) {
+  // double-quoted so the test DOM (fixtures/dom.mjs) binds it too and the goldens press it for real
+  for (const btn of box.querySelectorAll('[data-action="attr-learned"]')) {
     btn.addEventListener("click", async () => {
       if (!game.user?.isGM || !viewer) return;
       btn.disabled = true;

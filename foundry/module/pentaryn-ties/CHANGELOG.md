@@ -100,6 +100,11 @@ Fixed (declared): a **pinned card** left flush against the left or top edge of t
 there after a reload instead of 20px in — a saved 0 is a real position (`pinnedCoord` in `popups.mjs`);
 only a missing or non-numeric coordinate still falls back to 20. ties-ui-E5.
 
+Fixed (declared): **Mark as learned on an NPC's Attributes tab** grants to your assigned character
+(GM or player alike) and the toast names who received it; before, the button drew but did nothing.
+With no assigned character the button is not drawn. One `viewerFor` in `attributes-ui.mjs` now
+decides the tab's viewer for both drawing and clicking. ties-ui-M11.
+
 ## 0.19.4 (2026-10-10, usability run, Area 7 re-run)
 
 - **The inspect window's Share switches are the table's PCs only** (`tablePCs`): each player's

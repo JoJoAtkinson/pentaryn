@@ -167,8 +167,7 @@
       },
       "events": [
         "click"
-      ],
-      "delegated": true
+      ]
     },
     {
       "nth": 0,
@@ -1466,7 +1465,43 @@
         "tooltip": "Hand “Walls” over now. No roll — you have already decided."
       },
       "type": "click",
-      "calls": [],
+      "calls": [
+        {
+          "op": "update",
+          "documentName": "Actor",
+          "uuid": "Actor.zzPc000000000001",
+          "changes": {
+            "flags.pentaryn-ties.granted": {
+              "kind:zzKind0000000001": {
+                "text": "— Studied (Religion) —\nGrey.\nNothing about it strikes you as proof against anything.",
+                "when": 1790000000000,
+                "icon": "icons/zz/zzKind0000000001.webp",
+                "source": "ZZ Ghoul"
+              },
+              "lore:zzNpc00000000001:l1": {
+                "text": "He owes the guild.",
+                "when": 1700000000000,
+                "icon": null,
+                "source": "Debts"
+              },
+              "attr:city:c1": {
+                "text": "<p>Three rings.</p>",
+                "when": 1790000000000,
+                "icon": "icons/environment/settlement/city-night.webp",
+                "source": "Vel — Walls"
+              }
+            }
+          }
+        },
+        {
+          "op": "notify",
+          "level": "info",
+          "message": "ZZ Caven has learned “Walls”."
+        },
+        {
+          "op": "rerender"
+        }
+      ],
       "console": [],
       "after": {
         "className": "pt-textbtn pt-lore-btn"

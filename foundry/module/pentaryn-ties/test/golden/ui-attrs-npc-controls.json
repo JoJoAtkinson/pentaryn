@@ -11,21 +11,6 @@
     },
     {
       "nth": 0,
-      "tag": "BUTTON",
-      "className": "pt-textbtn pt-lore-btn",
-      "dataset": {
-        "action": "attr-learned",
-        "attr": "city",
-        "lore": "c1",
-        "tooltip": "Hand “zz typed label” over now. No roll — you have already decided."
-      },
-      "events": [
-        "click"
-      ],
-      "delegated": true
-    },
-    {
-      "nth": 0,
       "tag": "INPUT",
       "dataset": {
         "attrField": "title",
@@ -347,23 +332,6 @@
       "after": {
         "className": "pt-summary pt-attr-summary",
         "parent": "pt-row pt-attr-row"
-      }
-    },
-    {
-      "nth": 0,
-      "tag": "BUTTON",
-      "className": "pt-textbtn pt-lore-btn",
-      "dataset": {
-        "action": "attr-learned",
-        "attr": "city",
-        "lore": "c1",
-        "tooltip": "Hand “zz typed label” over now. No roll — you have already decided."
-      },
-      "type": "click",
-      "calls": [],
-      "console": [],
-      "after": {
-        "className": "pt-textbtn pt-lore-btn"
       }
     },
     {
