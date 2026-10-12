@@ -406,7 +406,7 @@ suite would not catch; they are rows here, marked **(R)**.
 | 4 disk check | `_build` | `_check_backup_disk` replaces main's inline check (this branch's own-regular-snapshot estimate + Σ `missing`) |
 | 5 staging | `_build`, before the world tar | **(R, M1)** stage **per job**: `tmp/bundles/<job name>/<bundle>` — never the shared `tmp/bundles/<bundle>`. Two queued jobs can stage the same name (job 2 built while job 1 still queued, so the cloud still lacks it), and job 1's `drop()` would delete the tar job 2 still needs. `.building` per bundle; `Job.save()` last. `upload_missing(…, rebuild=_rebuilder(rebuilt))` already turns a vanished staged tar into a rebuild or a `StorageError` (never `FileNotFoundError`, which escapes `_run_job`/`_drain`/`upload_pending` and leaves the job stuck holding the session's world) |
 | 6 upload order + verify | `_upload_job`: bundles (`upload_missing`, which sets each staged tar's mtime to now — **(R, M2)** a job may wait days); `_refresh_reused` (touch old reused bundles); `_verify_bundles` (first look); the sidecar `write_text`; the world tar; `_verify_bundles` again | **(R)** the second verify runs on **both** paths — after `st.upload` *and* when `there is not None and there.size == size` skips the upload (a re-run after a crash). Every verify lists `bundles/` fresh, never the build-time `have` **(R)**. `have` for the upload half is a fresh listing taken at the start of `_upload_job`, not the one `_build` used |
-| 6 verify failure | `_upload_job` / `_run_job` | **(R)** Any `_Incomplete`, from **either** verify, is permanent and ends that job — never `die()`. Here `_backup` turns it into `die()` (`SystemExit`); in the uploader that is a stuck queue: `_run_job` re-raises `SystemExit`, `_drain` catches only `StorageError`, `upload_pending` returns 1 with "that job and the rest stay queued", so the job is retried forever, every later `vtt-down` job queues behind it, `in_flight()` stays set (boot keeps local for good) and cloud backups stop with only a status line. How it happens: the job reuses bundle X (often after a host switch, from the other host's snapshot), the other host coalesces that snapshot and its GC sweeps X (past the grace) while the job sits queued, and meanwhile `foundry-<m>-sync` changed the live folder, so `_rebuilder` returns None. What the merged code does: (1) **verify-1** (before the sidecar) publishes nothing — bundles already uploaded are orphans the GC sweeps; (2) **verify-2** (after the world tar, or on the skip-the-world re-run) first removes the snapshot and its sidecar, as here; then for both: `_run_job` catches `_Incomplete` itself (not via `SystemExit`), writes `state=failed` with the reason ("`<kind> <id>`: its bundle vanished and the folder changed — job dropped"), logs an ops `dropped` event, moves the world tar out of the queue to `tmp/incomplete/<name>` (only the newest is kept; the next job's status overwrites `state=failed`, so `_upload_lines()` in `status()` names `tmp/incomplete/<name>` for as long as it exists), `job.drop()`s the job file and its staging folder, and **returns** so `_drain` / `upload_pending` go on to the next job. Never leave it queued, never retry it: the later jobs already hold a newer state of the same world, and with none queued the next backup uploads the tree (the dropped job's digest was never recorded). `_rebuilder` must build into the **job's own** staging folder `tmp/bundles/<job>/` (M1), so `job.drop()` removes the rebuilt tars too |
+| 6 verify failure | `_upload_job` / `_run_job` | **(R)** Any `_Incomplete`, from **either** verify, is permanent and ends that job — never `die()`. Here `_backup` turns it into `die()` (`SystemExit`); in the uploader that is a stuck queue: `_run_job` re-raises `SystemExit`, `_drain` catches only `StorageError`, `upload_pending` returns 1 with "that job and the rest stay queued", so the job is retried forever, every later `vtt-down` job queues behind it, `in_flight()` stays set (boot keeps local for good) and cloud backups stop with only a status line. How it happens: the job reuses bundle X (often after a host switch, from the other host's snapshot), the other host coalesces that snapshot and its GC sweeps X (past the grace) while the job sits queued, and meanwhile `foundry-<m>-sync` changed the live folder, so `_rebuilder` returns None. What the merged code does (review round 3 corrected the catch site, the lineage of the next job and the cleanup on a re-run): (1) on **any** `_Incomplete`, whichever verify fired, the snapshot and its sidecar are removed from the cloud whenever the job's name is there — `there is not None` or a fresh check of `world-backups/` — because a re-run after a crash past the sidecar or the world tar (say verify-2's listing hit a network drop) has already published them, and an attempt that died between the sidecar and the tar leaves a sidecar alone; bundles already uploaded are orphans the GC sweeps. (2) `_run_job` then writes `state=failed` with the reason ("`<kind> <id>`: its bundle vanished and the folder changed — job dropped"), logs an ops `dropped` event, moves the world tar out of the queue to `tmp/incomplete/<name>` (only the newest is kept; the next job's status overwrites `state=failed`, so `_upload_lines()` in `status()` names `tmp/incomplete/<name>` for as long as it exists) and `job.drop()`s the job file and its staging folder. (3) Still under `UPLOAD_LOCK`, it **re-parents the next pending job**: on main `_build` with a non-empty queue sets `parent = queued[-1].name`, so the job behind the dropped J1 has `parent = J1.name`, which was never recorded; set it to `J1.parent` (the true parent, since J1 never landed) and save it, otherwise every job behind it uploads `linked=False` — no ancestors in its sidecar, not recorded, never coalesced. (4) `_run_job` then raises `JobDropped` — a plain exception, **not** `SystemExit`, and **not** a `return None`: on main `_run_job` is also the foreground path (`_backup` = `_drain`; `_build`; `return _run_job(st, job)`), and every caller of `_backup` reads None as "skipped, unchanged" — `restore()` would take the missing safety copy as "none needed" and go on to `apply_snapshot`, clearing a world that has no cloud copy. The queue loops (`_drain`, `upload_pending`) catch `JobDropped`, print the reason and go on to the next job (`upload_pending` exits 0 when every remaining job uploaded; the drop is in `status()`); `_backup` turns it into `die()` naming the module, so `make foundry-backup`, `vtt-down WAIT=1` and vtt-up's `foundry-backup-safe` fail loudly and a restore's safety copy aborts the restore before anything local is touched. Never leave it queued, never retry it: the later jobs already hold a newer state of the same world, and with none queued the next backup uploads the tree (the dropped job's digest was never recorded). `_rebuilder` must build into the **job's own** staging folder `tmp/bundles/<job>/` (M1), so `job.drop()` removes the rebuilt tars too |
 | 7 record / GC | `_upload_job`, after prune | `_gc_after_backup` (mark + `recheck`). `referenced_bundles`/`_mark` add the manifests of `uploadq.pending()` jobs (this host's GC only — the other host never sees them; M2's fresh mtime + `_refresh_reused` are what protect a queued job's bundles from the other host) |
 | — | `_upload_job`'s tail | **(R)** delete `mirror_systems(st)` (and `mirror_systems` itself, `KEEP_SYSTEM_MIRRORS`): systems are bundles |
 | **(R)** jobs queued by pre-merge code | `uploadq.pending()` → `Job(**known)` gives `manifest=None` | such a job's tar is **full** (worlds+Config+modules). The upload half must treat `manifest is None` as full: lineage-only sidecar (no `"bundled"`), no bundle uploads, no verify, no reused-bundle refresh. Otherwise it crash-loops or publishes a "bundled" sidecar over a full tar. §10 step 0 also requires an empty queue |
@@ -416,7 +416,7 @@ suite would not catch; they are rows here, marked **(R)**.
 | `status()` | `_upload_lines()` first, then the bundle line | |
 | `main()` | both add subcommands | keep both |
 | `test_cloud_snapshots.py` | both append tests at the end | keep both |
-| `test_cloud_background_upload.py` (main) | builds full tars today | its tests must pass against bundled jobs; add: two queued jobs staging the same bundle (drop job 1, job 2 still uploads), a pre-merge `manifest=None` job uploads as full, the skip-the-world re-run still verifies, a job built 8 days before it runs lands bundles with a fresh mtime, and a job whose reused bundle was swept while queued and whose folder changed since — once at verify-1, once at verify-2 — is dropped with `state=failed` while the job queued behind it uploads, `upload_pending` returns 0, `in_flight()` is clear and `status()` names the kept tar |
+| `test_cloud_background_upload.py` (main) | builds full tars today | its tests must pass against bundled jobs; add: two queued jobs staging the same bundle (drop job 1, job 2 still uploads), a pre-merge `manifest=None` job uploads as full, the skip-the-world re-run still verifies, a job built 8 days before it runs lands bundles with a fresh mtime, and a job whose reused bundle was swept while queued and whose folder changed since — once at verify-1, once at verify-2 — is dropped with `state=failed` while the job queued behind it uploads, `upload_pending` returns 0, `in_flight()` is clear and `status()` names the kept tar; plus (review round 3): a restore whose safety-copy job hits `_Incomplete` refuses before `apply_snapshot` with the local tree unchanged (hash before/after), `make foundry-backup` exits non-zero on the same drop, the job queued behind a dropped one uploads **linked** and records its based-on, and a re-run whose verify-1 fires after an earlier attempt published the sidecar and tar removes both |
 | `ops.md` §3, `rclone-two-hosts` §14 | both add paragraphs | keep both |
 
 Expected conflict hunks: `cloud.py` docstring, `_backup`/`_build`/`_upload_job`,
@@ -433,7 +433,7 @@ vtt-up`, `make -n vtt-down WAIT=1`, `make -n foundry-bundles-gc` must show the e
 | Bundle upload interrupted | Only `<name>.partial` exists; `ls` hides it; swept after 24 h by `ensure_cloud`; the snapshot name never appeared; the next backup stages and uploads it again |
 | Crash after the bundles, before the world tar | Orphan bundles; swept after the grace period; the next backup finds them listed and skips re-uploading |
 | World tar upload fails | Dies as today, naming the tars left on disk; state not recorded; bundles already up are reused next time |
-| A referenced bundle vanished between listing and the snapshot landing (other host's GC) | The verify — before the sidecar and again after the world tar, over a **fresh** listing — re-uploads it (staged tar, or rebuilt from the live folder); if the local folder changed meanwhile the backup dies naming the module (after the world tar: the new snapshot is removed again). In the background uploader (after the §5 merge) that job is dropped and named instead, never left queued (§5 row "6 verify failure") |
+| A referenced bundle vanished between listing and the snapshot landing (other host's GC) | The verify — before the sidecar and again after the world tar, over a **fresh** listing — re-uploads it (staged tar, or rebuilt from the live folder); if the local folder changed meanwhile the backup dies naming the module (after the world tar: the new snapshot is removed again). In the background uploader (after the §5 merge) that job is dropped and named instead, never left queued, and the job behind it re-parented; a foreground backup (`make foundry-backup`, `WAIT=1`, a restore's safety copy) still dies, so a restore aborts before the clear (§5 row "6 verify failure") |
 | The other host's GC marks while this host's whole backup reuses an old unreferenced bundle (review DL2) | This backup touched it (cloud mtime → now) before its sidecar, so a sweep listing taken after that skips it; the GC's re-mark just before deleting reads the new sidecar and keeps it. Left open: this host's sidecar landing between that re-mark and the delete *and* its post-upload verify finishing before the delete — seconds; the next backup's healing (unchanged tree) or upload (changed tree) puts the bundle back from the still-local folder |
 | Restore: a needed bundle missing from the cloud | Dies before any download beyond the listing; nothing local touched; names the bundle(s) and the module(s) |
 | Restore: network drop mid-download | `StorageError` → die; nothing local touched; temp files removed |
@@ -814,3 +814,78 @@ the bundled safety copy cannot hold) and PL1 (staged tars of a failed run outliv
 | Second review round, test gap: R2's world half (`bundles.read_all(local_tar)` in `fetch_snapshot`) untested | `test_a_full_snapshot_damaged_past_its_first_member_is_refused_before_the_clear`: a legacy full tar whose first member reads but whose deflate stream breaks further in, same size; `cloud.restore` refuses "nothing local was touched", `Data/worlds`, `Data/modules` and `Config` byte-identical. Without the line the restore clears all three and fails part-way (mutation-checked) (`c2417693`) | The damage is a 4 KiB `0xFF` block at an offset the test searches for (the first member still reads, a full extract hits `zlib.error`), not one flipped byte: a flipped byte usually inflates to wrong literals, and `tarfile` neither checks the gzip CRC nor fails on a later bad header — without `read_all` such a tar would restore silently corrupted rather than fail part-way. Searched, not hard-coded, because zlib builds compress differently |
 | Merge map (h), second review round: an `_Incomplete` in the merged `_upload_job` became `die()`, and main's uploader leaves a job that raised `SystemExit` queued for good (`_run_job` re-raises, `_drain` catches only `StorageError`, `upload_pending` returns 1) — the queue, `in_flight()` and every later backup stuck behind one job whose reused bundle was swept while it waited | §5 row "6 verify failure" rewritten: any `_Incomplete`, from verify-1 or verify-2, ends that job — `state=failed` with the reason, an ops `dropped` event, the world tar kept as `tmp/incomplete/<name>` and named by `status()`, `job.drop()`, and the uploader goes on to the next job; `_rebuilder` builds into the job's own staging folder. §6's verify row points at it; `test_cloud_background_upload.py`'s list gains the two drop tests | Docs only on this branch (the uploader exists only on main). The review said "keep or name its tar": it is kept (one, the newest) because with no later job queued it may be the only copy of that world state once Foundry runs again; a status line alone would be overwritten by the next job's |
 | Docs | `ops.md` §3 "rules that keep it safe": whole-download reads, the symlink refusal and `pentaryn-replaced/`, the GC's lost-sidecar mark and re-check, the reused-bundle refresh, fresh listings (`a267c2cf`); this plan's §3.5, §3.7, §6 and §10 step 0 | — |
+
+---
+
+## 15. Go-live (separate workflow, when Joe is back and nothing else runs)
+
+The ordered checklist for the follow-up workflow. §5 is the merge brief, §10 the per-step
+expected output, §11 the rollback; this section only sequences them. **Precondition for the whole
+workflow:** `live-checks-and-push` (and any other workflow touching the live Foundry, the main
+checkout or the cloud) has finished, Joe is at a terminal, and on the Mac every boot stays
+`FROM=local`.
+
+**A. Merge (agent, worktree only, no Foundry, no cloud).**
+1. `feature/vtt-down-background-upload` is already on main (`938c36d4`); this branch's merge
+   base is `bb74bf6b`. Merge **main into `feature/module-bundles`** in
+   `pentaryn-bundles-wt` (never the other way first) — that also picks up whatever
+   `live-checks-and-push` lands.
+2. Expected conflicts (§5 last paragraph): `cloud.py` docstring, `_backup` → `_build` /
+   `_upload_job`, `restore_snapshot` → `_restore_locked`, `status`, `main`; the tail of
+   `test_cloud_snapshots.py`; `ops.md` §3; the `Makefile` help. Resolve by re-inserting this
+   branch's helper calls at the sites in §5's table — every **(R)** row is a design decision, not
+   a mechanical pick: fresh listings, per-job staging, both verifies on both paths, the
+   `JobDropped` drop rule with re-parenting (row "6 verify failure"), `manifest=None` jobs as
+   full, `mirror_systems` deleted. Add the tests §5 lists for `test_cloud_background_upload.py`.
+3. Gates: the **whole** `scripts/tests` suite green (baseline here: 1406 passed, 2 skipped, 8
+   strict xfails); `make check-context` clean; `make -n vtt-up`, `make -n vtt-down WAIT=1`,
+   `make -n vtt-down`, `make -n foundry-bundles-gc` show the expected commands; an adversarial
+   review of the merged `_build`/`_upload_job` against §5 (Opus), then a Sonnet verify.
+4. Merge `feature/module-bundles` into main (agent commits; Joe never commits); the Mac checkout
+   on main. **Before that checkout, the Mac's upload queue must be empty** (§10 step 0).
+
+**B. First bundled backup on the Mac (Joe at the terminal, agent checks each line).** §10 steps
+1–3: reads only (`make foundry-cloud`, `make foundry-bundles`, `boot choose --json` → `local`);
+then `make foundry-backup REASON=first-bundled` (or `make vtt-down WAIT=1` if Foundry is up) —
+the **one-time ~3.5 GB** upload (46 module bundles + dnd5e, ~10 min), then a ~45 MB world tar,
+and the 3.24 GB full `-mac` snapshot is coalesced away; then the skip and launch test (a launch
+plus `vtt-down` must upload **world only, 0 new bundles**). From then on a backup is ~45 MB plus
+any module that actually changed (typically a few small `pentaryn-*` modules after a sync).
+
+**C. Verify in OneDrive, read-only.** `rclone lsf onedrive:DnD/foundry/bundles` → 47 names of the
+form `module@<id>@<version>@<fp>.tar.gz` / `system@dnd5e@…`, no `.partial`; `rclone lsf
+onedrive:DnD/foundry/world-backups` → the new `-mac.tar.gz` + `.parent`, the old full `-mac`
+gone, the 10 untagged untouched; `rclone cat onedrive:DnD/foundry/world-backups/<new>.parent`
+→ JSON with `"bundled": true` and a manifest naming every one of the 47 bundles; `make
+foundry-cloud` → `bundles 47 … all in the cloud`, 0 unreferenced. Nothing in this step writes.
+
+**D. Dress rehearsal on the Mac (Q6, default yes).** §10 step 4: restore the Mac's own newest
+bundled snapshot with Foundry down → `0 bundles to fetch`, `46 unchanged`, ~45 MB; `make vtt-up`
+(FROM=local) works.
+
+**E. BOSS.** §10 steps 5 and 7: BOSS's checkout on the merged main **first** (old code must never
+restore a bundled snapshot); ≥ 8 GB free under `FOUNDRY_DATA`; Foundry installed per
+`rclone-two-hosts-2026-10.md` §15 step 5; `ssh -t boss '… make vtt-up'` → Enter fetches the
+Mac's newest + all 47 bundles (~3.5 GB once); open a seafoot map and a Monster Manual entry,
+check dnd5e's version; `make vtt-down` on BOSS → world + 0 bundles. Hand BOSS's Claude the
+addendum (§10 step 7).
+
+**F. The 11 existing full snapshots.** The full `-mac` one is coalesced by step B (it is this
+tree's based-on inside the 5-day window). The 10 untagged ones (~30 GB) stay restorable and
+untouched until BOSS has proven the bundles (step E); then `make foundry-prune-untagged` (Joe
+types `delete`). `system-backup/` can go by hand any time after.
+
+**G. Rollback.** §11: revert the merge on main; before the old code restores anything, take one
+full backup with it on the machine whose world you keep; old code never restores a bundled
+snapshot; `bundles/` (~3.5 GB) can be deleted by hand after a revert.
+
+### Joe's open questions (the build used the default; say if you want otherwise)
+
+| # | Question | Default (built) |
+| --- | --- | --- |
+| Q1 | Flat `bundles/` with `kind@id@version@fp.tar.gz` names instead of nested `module-bundles/<id>/<version>-<fp>.tar.gz` | Flat — one rclone listing instead of ~50 per backup, restore and GC |
+| Q2 | Bundle `Data/systems` (dnd5e) too and retire `system-backup/` | Yes — dnd5e drift between hosts is the hazard the old mirror never closed |
+| Q3 | On restore, remove local modules the snapshot does not list | Remove (they are in the safety copy first); with no local world (BOSS's first boot) leave and list them |
+| Q4 | GC after every uploaded backup on both hosts, 7-day grace, `make foundry-bundles-gc` dry run (`YES=1` deletes) | Yes, 7 days |
+| Q5 | Order for the old snapshots | Coalesce the full `-mac` at step B; prune the 10 untagged only after step E |
+| Q6 | Dress-rehearsal restore on the Mac before BOSS | Do it (step D) |

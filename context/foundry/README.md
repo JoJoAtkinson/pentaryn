@@ -99,7 +99,7 @@ The table is generated from each `module.json`, the module's code and its
 | Attributes, what a study reveals, turning backstory into discoverables | [`attributes.md`](attributes.md) |
 | Reviewing attributes, "the selected attributes", what Claude changed | [`attribute-review.md`](attribute-review.md) |
 | New in-house module, or bringing an existing one up to the blueprint — kit, tiers, conformance, the migration order | [`addon-blueprint.md`](addon-blueprint.md) · order and per-module guides: [`../plans/addon-blueprint-2026-10/README.md`](../plans/addon-blueprint-2026-10/README.md) |
-| Day-to-day server ops — start/stop, tunnel, OneDrive sync and the boot choice between the Mac and BOSS (`host.py`), module install | [`ops.md`](ops.md) |
+| Day-to-day server ops — start/stop, tunnel, OneDrive backups (world snapshots + module bundles, §3) and the boot choice between the Mac and BOSS (`host.py`), module install | [`ops.md`](ops.md) |
 | Who can reach vtt.atjoseph.com — the Google login, whitelisting a player's Gmail (**two lists: Google test users + Cloudflare policy**), session length | [`cloudflare-access.md`](cloudflare-access.md) |
 | Adding or changing an MCP bridge tool (`mcp__foundry__*`), the fork repo, its build, logs and upstream footprint | [`mcp-fork.md`](mcp-fork.md) |
 | "Put X here" / "replace the red one" — anything naming a spot on a map | [`markers.md`](markers.md) |
