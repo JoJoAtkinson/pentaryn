@@ -141,10 +141,15 @@ async function writePool(actor, pool, delta) {
   return actor.items.get(pool.id)?.update({ "system.hd.spent": Math.max(0, pool.spent + delta) });
 }
 
-/** Spend one Hit Die (the largest left, or of `faces` if given). Returns the faces spent, or null. */
+/**
+ * Spend one Hit Die (the largest left, or of `faces` if given). `faces` is a number or a numeric
+ * string ("6"); anything else ("d6", junk) reads as no faces, as battle-medic's relay does (rob-3).
+ * Returns the faces spent, or null.
+ */
 export async function spendHitDie(actor, { faces } = {}) {
   const pools = hdPools(actor);
-  const pool = (faces && pools.find(p => p.faces === faces && p.value > 0)) || pickSpend(pools);
+  const want = Number(faces) || null;
+  const pool = (want && pools.find(p => p.faces === want && p.value > 0)) || pickSpend(pools);
   if (!pool) return null;
   await writePool(actor, pool, +1);
   return pool.faces;

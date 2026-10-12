@@ -61,7 +61,7 @@ object. Ask it: `describe()` (offline: `test/golden/describe.json`), `settings()
 | `retireManual(actor)` | the flag; deletes Affinity's damage activities | `"<item>: <activity>"[]` |
 | `installBattleMedic(actor, { replace })` | the Healer feat's activities | `{ ok, item, kit, kitFound, updated, removed }` / `{ ok: false, why }` |
 | `battleMedic(healer, token)` | the patient's Hit Die and HP | `{ faces, healed, hp, value, max }` / `null` — runs the flow without spending the kit |
-| `spendHitDie(actor, { faces })` / `restoreHitDie(actor)` | Hit Dice `spent` | the faces, or `null` |
+| `spendHitDie(actor, { faces })` (faces a number or numeric string) / `restoreHitDie(actor)` | Hit Dice `spent` | the faces, or `null` |
 | `hdPools(actor)` | — | `{ id, faces, value, spent }[]` |
 | `preview(formula, opts)` | — | the formula with a rider applied (`core.transformFormula`) |
 | `rules`, `core` | — | frozen copies of the `RULES` table and the riders-core exports |

@@ -276,6 +276,15 @@ test("spendHitDie / restoreHitDie: largest available / largest spent; faces pick
   ]);
 });
 
+test("rob-3 [declared]: spendHitDie takes a numeric-string faces (\"6\" spends a d6); \"d6\" or junk reads as no faces → the largest", async () => {
+  const before = F.calls.length;
+  assert.equal(await api.spendHitDie(wiz, { faces: "6" }), 6, "a numeric string picks that pool");
+  assert.equal(await api.spendHitDie(wiz, { faces: "d6" }), 10, "not a number → the largest, as before");
+  assert.equal(await api.spendHitDie(wiz, { faces: "junk" }), 10);
+  const writes = F.calls.slice(before).filter(c => c.op === "update").map(c => c.uuid);
+  assert.deepEqual(writes, [`Actor.${IDS.wiz}.Item.wizclass00000001`, `Actor.${IDS.wiz}.Item.ftrclass00000001`, `Actor.${IDS.wiz}.Item.ftrclass00000001`]);
+});
+
 test("preview: core.transformFormula with dnd5e's damage types", () => {
   assert.equal(api.preview("1d6[fire]", { rollType: "damage", types: ["fire"], modifier: "min2" }), "1d6min2[fire]");
   assert.equal(api.preview("8d6", { rollType: "fire", types: ["fire"], modifier: "min2", bonus: { value: 4, label: "Elemental Affinity", type: "fire" } }), "8d6min2 + 4[Elemental Affinity]");

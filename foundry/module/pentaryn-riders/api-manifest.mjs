@@ -88,7 +88,7 @@ export const MANIFEST = Object.freeze({
       returns: "number|null (the faces spent)",
       gm: false, writes: true, legacy: true,
       sideEffects: ["Actor.system.attributes.hd.spent (NPC) | Item(class).system.hd.spent"],
-      doc: "Spend one Hit Die: the largest left, or of `faces` when the actor has one left of that size.",
+      doc: "Spend one Hit Die: the largest left, or of `faces` (a number or numeric string) when the actor has one left of that size.",
     },
     {
       path: "restoreHitDie",
