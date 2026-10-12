@@ -289,6 +289,20 @@ def newest_core_bundle() -> Path | None:
     return bundles[-1] if bundles else None
 
 
+def _tar_to(out: Path, src: Path, arcname: str) -> None:
+    """Write ``out`` via a ``.partial`` sibling, renamed onto ``out`` only once the tar
+    closes cleanly. An interrupted write leaves nothing at ``out``, so a later run's
+    ``if out.exists(): return out`` only ever finds a complete archive (ROB-8)."""
+    tmp = out.with_name(out.name + ".partial")
+    try:
+        with open(tmp, "wb") as f, tarfile.open(out, "w:gz", fileobj=f) as tar:
+            tar.add(src, arcname=arcname)
+        tmp.replace(out)
+    except BaseException:
+        tmp.unlink(missing_ok=True)
+        raise
+
+
 def stash_system(system_id: str, version: str) -> Path:
     """Copy the installed system aside before anything can overwrite it."""
     SYSTEM_ASIDE_DIR.mkdir(parents=True, exist_ok=True)
@@ -296,8 +310,7 @@ def stash_system(system_id: str, version: str) -> Path:
     if out.exists():
         return out
     src = FOUNDRY_DATA / "Data/systems" / system_id
-    with tarfile.open(out, "w:gz") as tar:
-        tar.add(src, arcname=system_id)
+    _tar_to(out, src, system_id)
     for stale in sorted(SYSTEM_ASIDE_DIR.glob(f"{system_id}-*.tar.gz"),
                         key=_natural_key)[:-3]:
         stale.unlink()
@@ -317,8 +330,7 @@ def stash_core(version: str, keep: int = 2) -> Path:
     out = CORE_ROLLBACK_DIR / f"app-{version}.tar.gz"
     if out.exists():
         return out
-    with tarfile.open(out, "w:gz") as tar:
-        tar.add(APP_PAYLOAD, arcname=APP_PAYLOAD.name)
+    _tar_to(out, APP_PAYLOAD, APP_PAYLOAD.name)
     for stale in sorted(CORE_ROLLBACK_DIR.glob("app-*.tar.gz"), key=_natural_key)[:-keep]:
         stale.unlink()
     return out

@@ -123,6 +123,9 @@ Runtime state (all gitignored) lives in `.state/`: `vtt-update.lock/` (a **direc
 macOS has no `flock`), `vtt-update.status`, `vtt-update.entry`, `vtt-update.seen.json`,
 `vtt-update-cache/`, `vtt-update-analysis/` (T1 cache, one JSON per package × key),
 `vtt-update-dry-plans/` (plans from dry runs), `core-rollback/`, `system-aside/`, `logs/`.
+The rollback tars in `core-rollback/` and `system-aside/` are written as `<name>.partial`
+and renamed only once complete, so an interrupted stash leaves nothing at the final name
+and the next run takes a fresh copy instead of trusting a truncated one.
 
 ---
 
