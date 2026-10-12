@@ -36,6 +36,8 @@ function onKey(ev) {
   if (lastCtx?.status === "paused") {
     ev.preventDefault();
     ev.stopPropagation();
+    // Picking a new target (Retarget): no choice is pending, so do what the Stop button does.
+    if (!pending) { cancelWaits(); handlers.onStop?.(); }
     choose({ type: "stop" });
     return;
   }

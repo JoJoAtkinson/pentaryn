@@ -297,6 +297,31 @@ test("abortFor ends a sequence waiting on the fallback Retarget pick", async () 
   F.calls.length = 0;
 });
 
+test("Esc while picking a new target stops the sequence (strip: Esc while paused = Stop)", async () => {
+  F.game.user.targets.clear();
+  F.game.user.targets.add(gtok);
+  const a = act(fig, "longsword0000001");
+  a.script.attack.push(null);
+  const run = api.fullAttack(fig);
+  let out = "unsettled";
+  run.then(v => { out = v; });
+  await drain();
+  await click("retarget");
+  assert.ok(stripEl().classList.contains("picking"));
+  await doc.fire("keydown", { key: "Escape" });
+  await drain();
+  try {
+    assert.deepEqual(out, { rolled: 0, status: "stopped" }, "Esc during the pick settles the run");
+  } finally {
+    if (out === "unsettled" && stripEl()) { await click("stop"); await run; }
+  }
+  assert.equal(F.listeners("targetToken"), 0, "the fallback's targetToken hook is gone");
+  assert.equal(stripEl(), null);
+  await tick(400);
+  reset(fig);
+  F.calls.length = 0;
+});
+
 test("retarget through a registered picker: picked / cancelled (targets restored) / can't run / throws", async () => {
   const a = act(fig, "longsword0000001");
   const rows = [];
