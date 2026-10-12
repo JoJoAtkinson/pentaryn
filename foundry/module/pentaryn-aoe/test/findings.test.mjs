@@ -75,3 +75,39 @@ test("-7 the id is 16 alphanumerics; losing the create race returns the winner's
   Actor.implementation.create = create;
   F.game.actors.set(winner.id, winner);
 });
+
+/* ── -8: the resolve pipeline's silent stops leave a trace (debug only) ──────────────────────── */
+
+test("-8 with CONFIG.debug off: the same nulls, no trace, no console line", async () => {
+  F.calls.length = 0;
+  out.length = 0;
+  F.become({ userId: "plUser0000000001" });
+  assert.equal(await R.resolve("x"), null);
+  assert.equal(await R.applyRows("x"), null);
+  F.become({ userId: "gmUser0000000001" });
+  assert.deepEqual(game.pentaryn.aoe.trace(), []);
+  assert.deepEqual(out, []);
+});
+
+test("-8 with CONFIG.debug on: resolve, apply and careful stops are traced (the return values unchanged)", async () => {
+  F.CONFIG.debug = { [MODULE]: true };
+  out.length = 0;
+  F.become({ userId: "plUser0000000001" });
+  assert.equal(await R.resolve("x"), null);
+  assert.equal(await R.applyRows("x"), null);
+  F.become({ userId: "gmUser0000000001" });
+  assert.equal(await R.resolve("missingMessage01"), null);
+  assert.equal(await R.applyRows("missingMessage01"), null);
+  assert.equal(await R.carefulFor(ctx.wizard, [], { casterActorId: ctx.wizard.id, usage: IDS.usage, scene: ctx.s, onSave: "half", rows: [] }), null);
+  const traces = game.pentaryn.aoe.trace().map(t => [t.op, t.data.id, t.data.outcome]);
+  assert.deepEqual(traces, [
+    ["resolve", "x", "not the active GM"],
+    ["apply", "x", "not a GM"],
+    ["resolve", "missingMessage01", "not a damage message"],
+    ["apply", "missingMessage01", "no resolution"],
+    ["careful", IDS.usage, "no flag"],
+  ]);
+  assert.ok(out.every(o => o.level === "debug" && o.text.startsWith(`${MODULE} | `)));
+  assert.equal(out.length, 5);
+  F.CONFIG.debug = {};
+});

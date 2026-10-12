@@ -60,6 +60,16 @@ export function mutate(messageId, fn) {
 /** Messages with a write still queued on this client (debugging and tests). */
 export const pendingWrites = () => queues.size;
 
+/**
+ * -8: why the pipeline stopped, for "why did no tray appear / why was my ally not protected?".
+ * Recorded in the log's trace ring (api.trace()) and printed at debug, both only while
+ * CONFIG.debug["pentaryn-aoe"] is true. Returns undefined, so a hook body may `return why(…)`.
+ */
+function why(job, id, outcome, extra = {}) {
+  log.trace(job, { id: id ?? null, outcome, ...extra });
+  log.debug(`${job}: ${outcome}`, id ?? "");
+}
+
 /* -------------------------------------------- */
 /*  Who is affected                             */
 /* -------------------------------------------- */
@@ -146,11 +156,12 @@ function damagesOf(message) {
  * @param {{regionId?: string|null}} [opts]
  */
 export async function resolve(messageOrId, { regionId = undefined } = {}) {
-  if (!game.users.activeGM?.isSelf) return null;
+  const ref = typeof messageOrId === "string" ? messageOrId : messageOrId?.id;
+  if (!game.users.activeGM?.isSelf) { why("resolve", ref, "not the active GM"); return null; }
   const message = typeof messageOrId === "string" ? game.messages.get(messageOrId) : messageOrId;
-  if (!message || message.type !== "damage") return null;
+  if (!message || message.type !== "damage") { why("resolve", ref, "not a damage message"); return null; }
   const activity = activityOf(message);
-  if (!activity?.save) return null;
+  if (!activity?.save) { why("resolve", ref, "its activity has no save"); return null; }
 
   const scene = game.scenes.get(message.speaker?.scene) ?? canvas.scene;
   const candidates = scene ? areasFor(activity.uuid, scene) : [];
@@ -230,9 +241,11 @@ export function carefulKey(actor) {
  * @returns {Promise<{names: string[], max: number}|null>}
  */
 async function carefulFor(caster, described, { casterActorId, usage, scene, onSave, rows }) {
-  if (!caster || !setting("carefulSpell")) return null;
+  if (!caster || !setting("carefulSpell")) { why("careful", usage, caster ? "off" : "no caster"); return null; }
   const flag = aoeFlags(caster).careful;
-  if (!carefulApplies(flag, { now: Date.now(), combatKey: carefulKey(caster), usage })) return null;
+  const combatKey = carefulKey(caster);
+  if (!flag) { why("careful", usage, "no flag"); return null; }
+  if (!carefulApplies(flag, { now: Date.now(), combatKey, usage })) { why("careful", usage, "not applicable", { combatKey, flag }); return null; }
   const own = caster.token ?? caster.getActiveTokens?.(false, true)?.find(tk => tk.parent === scene) ?? null;
   const max = Math.max(1, Number(caster.system?.abilities?.cha?.mod) || 1);
   const ids = carefulTargets(described, { casterActorId, casterDisposition: own?.disposition ?? CONST.TOKEN_DISPOSITIONS.FRIENDLY, max });
@@ -247,7 +260,7 @@ async function onCarefulUsed(activity) {
   const item = activity?.item;
   if ((item?.system?.identifier || "") !== "careful-spell") return;
   const actor = activity.actor;
-  if (!actor?.isOwner) return;
+  if (!actor?.isOwner) return why("careful", null, "used, but this client does not own the caster");
   await actor.update({ [`flags.${MODULE}.careful`]: { at: Date.now(), key: carefulKey(actor), usage: null } });
   const max = Math.max(1, Number(actor.system?.abilities?.cha?.mod) || 1);
   ui.notifications?.info?.(_loc("PENTARYN_AOE.Careful.Armed", { n: max }));
@@ -399,11 +412,11 @@ export async function pingPlayers(messageId) {
 
 /** Apply damage for ticked, resolved, unapplied rows (all of them, or rowIds). Safe to repeat. */
 export async function applyRows(messageId, rowIds = null) {
-  if (!game.user.isGM) return null;
+  if (!game.user.isGM) { why("apply", messageId, "not a GM"); return null; }
   const message = game.messages.get(messageId);
   const res = aoeFlags(message).resolution;
-  if (!res) return null;
-  if (res.superseded) { ui.notifications.warn(_loc("PENTARYN_AOE.Tray.Superseded")); return null; }
+  if (!res) { why("apply", messageId, "no resolution"); return null; }
+  if (res.superseded) { why("apply", messageId, "superseded"); ui.notifications.warn(_loc("PENTARYN_AOE.Tray.Superseded")); return null; }
   const todo = applicableRows(res.rows, rowIds);
   const damages = res.damages.map(d => ({ ...d, properties: new Set(d.properties ?? []) }));
   const done = {};
@@ -473,12 +486,13 @@ export function install(reg, ctx) {
   reg.on("createChatMessage", reg.guardSwallowAsync("createChatMessage", async (message) => {
     if (!game.users.activeGM?.isSelf) return;
     if (isAbilitySave(message)) return onSaveMessage(message);
-    if (message.type !== "damage" || !setting("resolveSaves")) return;
-    if (aoeFlags(message).resolution) return;
-    if (!activityOf(message)?.save) return;
+    if (message.type !== "damage") return;
+    if (!setting("resolveSaves")) return why("resolve", message.id, "resolveSaves is off");
+    if (aoeFlags(message).resolution) return why("resolve", message.id, "already resolved");
+    if (!activityOf(message)?.save) return why("resolve", message.id, "its activity has no save");
     // Two sessions on the GM account would both resolve: doubled NPC saves and request cards.
-    if (!(await claimMessage(message, "resolve", { scope: MODULE }))) return;
-    if (aoeFlags(game.messages.get(message.id)).resolution) return;
+    if (!(await claimMessage(message, "resolve", { scope: MODULE }))) return why("resolve", message.id, "another session claimed it");
+    if (aoeFlags(game.messages.get(message.id)).resolution) return why("resolve", message.id, "resolved meanwhile");
     return resolve(message);
   }), { guard: false, label: "createChatMessage" });
 
