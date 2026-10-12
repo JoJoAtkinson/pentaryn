@@ -288,8 +288,9 @@ function onEffectRender(component) {
 /* ── badge refresh: the Wild Shape item lives on the original, not the bound form ── */
 
 function refreshLive(item) {
+  pruneDisconnected(liveButtons);
   for (const b of liveButtons) {
-    if (!b.element.isConnected) { if (b.panel) liveButtons.delete(b); continue; }
+    if (!b.element.isConnected) continue;
     if (!item || b.wildShapeItem === item) b.refreshCount();
   }
 }
