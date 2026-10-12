@@ -116,7 +116,6 @@
         "field": "notes"
       },
       "events": [
-        "change",
         "input",
         "blur"
       ]
@@ -607,40 +606,6 @@
       "after": {
         "className": "pt-pip",
         "parent": "pt-pips"
-      }
-    },
-    {
-      "nth": 0,
-      "tag": "TEXTAREA",
-      "className": "pt-notes-text",
-      "dataset": {
-        "field": "notes"
-      },
-      "type": "change",
-      "calls": [
-        {
-          "op": "update",
-          "documentName": "Actor",
-          "uuid": "Actor.zzNpc00000000001",
-          "changes": {
-            "flags.pentaryn-ties.ties": [
-              {
-                "id": "zzPc000000000001",
-                "name": "ZZ Caven",
-                "word": "zz typed word",
-                "notes": "zz typed notes",
-                "stance": 0,
-                "strength": 5
-              }
-            ]
-          }
-        }
-      ],
-      "console": [],
-      "after": {
-        "className": "pt-notes-text",
-        "parent": "pt-field pt-field-notes",
-        "value": "zz typed notes"
       }
     },
     {

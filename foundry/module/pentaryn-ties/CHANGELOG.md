@@ -50,6 +50,10 @@ Changed (declared, no table-visible change): each `SHEET_TABS` row in `sheet.mjs
 `forget(actorId)`, and the `deleteActor` sweep loops over the rows instead of a hand list, so a new
 sheet tab says what it forgets. ties-ui-EXT-2.
 
+Fixed (declared): the Ties tab's **notes** save the same way the Known tab's do — one shared autosave
+(`bindNotesAutosave` and `replaceSummary` in `core/html.mjs`), so leaving the box saves the last words
+typed once, not twice (its extra `change` save is gone). ties-ui-EXT-3.
+
 Fixed (declared): the chat cards — the "… studies …" stub, the tempo line and the GM's share
 whisper — name every creature by its **token** name, never its actor name, so a GM-only world actor
 name cannot reach player chat. The token is found on any scene, not only the one the posting

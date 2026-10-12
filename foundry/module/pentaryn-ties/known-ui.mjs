@@ -40,7 +40,7 @@ import {
 } from "./known-core.mjs";
 import { studyStateFor, requestStudy, kindDialog, loreStateFor, requestLore, kindActorOf, grantKind as releaseKind } from "./study.mjs";
 import { attributeIdsOf, registry as registryOf } from "./attributes.mjs";
-import { esc, bindRowToggle, makeOpenState, notesPreview, notesProse } from "./core/html.mjs";
+import { esc, bindRowToggle, makeOpenState, notesPreview, notesProse, bindNotesAutosave, replaceSummary } from "./core/html.mjs";
 import { makeLog } from "./lib/log.mjs";
 import { categoriesFor, categoryLabel, readKnown, hideKnown, addKnown, setKnownField, notebookActor } from "./known-data.mjs";
 
@@ -698,48 +698,25 @@ export function bindKnown(root, actor, rerender = () => {}) {
       rerender();
     });
 
-    /**
-     * A textarea only fires `change` on blur, and closing the sheet removes the element
-     * without ever blurring it — which would quietly bin a page of notes. Autosave while
-     * typing, on the ties panel's 700ms.
-     *
-     * Blur FLUSHES a pending save rather than cancelling it (ties-ui-M1): cancelling lost
-     * whatever was typed in the last 700ms before focus left — and the sheet's close button
-     * takes focus first, so closing the sheet lost it too.
+    /*
+     * Autosave while typing, on the Ties tab's 700 ms; blur flushes a pending save rather than
+     * cancelling it (ties-ui-M1). Shared with the Ties tab (ties-ui-EXT-3). The preview line is
+     * hidden by CSS while the row is open, so the swap is invisible until the row closes — which is
+     * exactly when it must already be right.
      */
     const notes = row.querySelector('[data-field="notes"]');
     if (notes) {
-      let pending = null;
-      const save = async () => {
-        pending = null;
-        if (!(await setKnownField(actor, id, "notes", notes.value))) return;
-        const entry = readKnown(actor).find(e => e.id === id);
-        const head = row.querySelector(".pt-summary");
-        if (!entry || !head) return;
-        const fresh = document.createElement("div");
-        fresh.innerHTML = summary(entry, { open: row.classList.contains("pt-open"), canEdit });
-        /*
-         * Grab the node BEFORE the swap. `replaceWith` moves it out of `fresh`, so reading
-         * `fresh.firstElementChild` afterwards is null — and the rebind then threw on every
-         * autosave, leaving the new summary with no click handler until the next full
-         * repaint. Caught in the console on the first typing test; `editor.mjs` gets this
-         * right and this is the line that was not copied from it.
-         */
-        const next = fresh.firstElementChild;
-        // the preview is hidden by CSS while the row is open, so this is invisible until
-        // the row closes — which is exactly when it must already be right
-        head.replaceWith(next);
-        bindSummary(next, row, actor);
-      };
-      notes.addEventListener("input", () => {
-        clearTimeout(pending);
-        pending = setTimeout(save, 700);
-      });
-      notes.addEventListener("blur", () => {
-        if (pending === null) return;
-        clearTimeout(pending);
-        save();
-      });
+      bindNotesAutosave(
+        notes,
+        async value => {
+          if (!(await setKnownField(actor, id, "notes", value))) return;
+          const entry = readKnown(actor).find(e => e.id === id);
+          if (!entry) return;
+          const html = summary(entry, { open: row.classList.contains("pt-open"), canEdit });
+          replaceSummary(row, html, next => bindSummary(next, row, actor));
+        },
+        { ms: 700 }
+      );
     }
   });
 

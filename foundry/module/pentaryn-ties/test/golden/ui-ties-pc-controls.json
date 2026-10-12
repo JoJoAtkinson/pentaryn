@@ -116,7 +116,6 @@
         "field": "notes"
       },
       "events": [
-        "change",
         "input",
         "blur"
       ]
@@ -273,7 +272,6 @@
         "field": "notes"
       },
       "events": [
-        "change",
         "input",
         "blur"
       ]
@@ -683,48 +681,6 @@
       "after": {
         "className": "pt-pip",
         "parent": "pt-pips"
-      }
-    },
-    {
-      "nth": 0,
-      "tag": "TEXTAREA",
-      "className": "pt-notes-text",
-      "dataset": {
-        "field": "notes"
-      },
-      "type": "change",
-      "calls": [
-        {
-          "op": "update",
-          "documentName": "Actor",
-          "uuid": "Actor.zzPc000000000001",
-          "changes": {
-            "flags.pentaryn-ties.ties": [
-              {
-                "id": "zzNpc00000000001",
-                "name": "ZZ Brakka",
-                "word": "zz typed word",
-                "notes": "zz typed notes",
-                "stance": -2,
-                "strength": 5
-              },
-              {
-                "id": "zzGone0000000001",
-                "name": "Old Friend",
-                "word": "lost",
-                "notes": "",
-                "stance": 1,
-                "strength": 2
-              }
-            ]
-          }
-        }
-      ],
-      "console": [],
-      "after": {
-        "className": "pt-notes-text",
-        "parent": "pt-field pt-field-notes",
-        "value": "zz typed notes"
       }
     },
     {
@@ -1209,48 +1165,6 @@
       "after": {
         "className": "pt-pip",
         "parent": "pt-pips"
-      }
-    },
-    {
-      "nth": 1,
-      "tag": "TEXTAREA",
-      "className": "pt-notes-text",
-      "dataset": {
-        "field": "notes"
-      },
-      "type": "change",
-      "calls": [
-        {
-          "op": "update",
-          "documentName": "Actor",
-          "uuid": "Actor.zzPc000000000001",
-          "changes": {
-            "flags.pentaryn-ties.ties": [
-              {
-                "id": "zzGone0000000001",
-                "name": "Old Friend",
-                "word": "zz typed word",
-                "notes": "zz typed notes",
-                "stance": 0,
-                "strength": 5
-              },
-              {
-                "id": "zzNpc00000000001",
-                "name": "ZZ Brakka",
-                "word": "zz typed word",
-                "notes": "zz typed notes",
-                "stance": -2,
-                "strength": 5
-              }
-            ]
-          }
-        }
-      ],
-      "console": [],
-      "after": {
-        "className": "pt-notes-text",
-        "parent": "pt-field pt-field-notes",
-        "value": "zz typed notes"
       }
     },
     {

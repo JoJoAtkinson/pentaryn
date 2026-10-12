@@ -20,7 +20,7 @@
 import { MODULE, STANCES, NOTES_MAX, clampStance, clampStrength, stanceOf } from "./ties-core.mjs";
 import { read, inbound, presentActorIds, editTie, removeTie, stanceLabel } from "./ties-adapter.mjs";
 import { authoringHTML, bindAuthoring } from "./authoring-ui.mjs";
-import { esc, bindRowToggle, makeOpenState, notesPreview, notesProse, wordCell } from "./core/html.mjs";
+import { esc, bindRowToggle, makeOpenState, notesPreview, notesProse, wordCell, bindNotesAutosave, replaceSummary } from "./core/html.mjs";
 import { makeLog } from "./lib/log.mjs";
 
 const log = makeLog(MODULE);
@@ -453,17 +453,14 @@ export function bind(root, actor, rerender = () => {}) {
      */
     const repaintSummary = () => {
       const tie = read(actor).find(x => x.id === id);
-      const head = row.querySelector(".pt-summary");
-      if (!tie || !head) return;
-      const fresh = document.createElement("div");
+      if (!tie) return;
       const reply = replies.get(id) ?? null;
-      fresh.innerHTML = summary(tie, { open: row.classList.contains("pt-open"), canEdit, reply });
-      const next = fresh.firstElementChild;
-      head.replaceWith(next);
-      bindSummary(next, row, actor);
+      const html = summary(tie, { open: row.classList.contains("pt-open"), canEdit, reply });
+      replaceSummary(row, html, next => bindSummary(next, row, actor));
     };
 
-    row.querySelectorAll("[data-field]").forEach(input => {
+    // notes are the autosave's below; a `change` here as well saved the same text twice on blur
+    row.querySelectorAll('[data-field]:not([data-field="notes"])').forEach(input => {
       input.addEventListener("change", async () => {
         const value = input.dataset.field === "stance" ? Number(input.value) : input.value;
         if (!(await saveField(input.dataset.field, value))) return;
@@ -479,21 +476,17 @@ export function bind(root, actor, rerender = () => {}) {
       });
     });
 
-    /**
-     * A textarea only fires `change` on blur, and closing the sheet removes the element
-     * without ever blurring it — which would quietly bin a paragraph. Autosave while typing.
-     */
+    // autosave while typing; blur flushes the last keystrokes rather than dropping them (ties-ui-EXT-3)
     const notes = row.querySelector('[data-field="notes"]');
     if (notes) {
-      let pending = null;
-      notes.addEventListener("input", () => {
-        clearTimeout(pending);
-        pending = setTimeout(async () => {
-          await saveField("notes", notes.value);
+      bindNotesAutosave(
+        notes,
+        async value => {
+          if (!(await saveField("notes", value))) return;
           repaintSummary();
-        }, 700);
-      });
-      notes.addEventListener("blur", () => clearTimeout(pending));
+        },
+        { ms: 700 }
+      );
     }
   });
 

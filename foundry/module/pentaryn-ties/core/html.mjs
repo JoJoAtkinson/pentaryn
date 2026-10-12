@@ -75,6 +75,55 @@ export function bindRowToggle(head, row, { wrap, mode = "attr", onToggle = () =>
   });
 }
 
+/* ── notes autosave and summary swap (ties-ui-EXT-3) ─────────────────────── */
+
+/**
+ * Autosave a row's notes while typing: `save(value)` runs `ms` after the last keystroke. A textarea
+ * fires `change` only on blur, and closing the sheet removes it without a blur, so `change` alone
+ * would quietly bin a paragraph.
+ *
+ * Blur FLUSHES a pending save, never cancels it (ties-ui-M1): cancelling lost whatever was typed in
+ * the last `ms` before focus left — and the sheet's close button takes focus first. A blur with
+ * nothing pending saves nothing, and a flushed save does not run again when its timer would have.
+ * The Ties and Known tabs each carried a copy of this, and the copies drifted (M1 was the Known one).
+ */
+export function bindNotesAutosave(textarea, save, { ms = 700 } = {}) {
+  let pending = null;
+  const fire = () => {
+    pending = null;
+    return save(textarea.value);
+  };
+  textarea.addEventListener("input", () => {
+    clearTimeout(pending);
+    pending = setTimeout(fire, ms);
+  });
+  textarea.addEventListener("blur", () => {
+    if (pending === null) return;
+    clearTimeout(pending);
+    fire();
+  });
+}
+
+/**
+ * Swap a row's `.pt-summary` for fresh markup in place — a full repaint would tear the caret out of
+ * the textarea still being typed in — and hand the new node to `rebind`. Returns it, or null when the
+ * row has no summary.
+ *
+ * The node is taken BEFORE the swap: `replaceWith` moves it out of its holder, so reading
+ * `holder.firstElementChild` afterwards is null (the Known tab's copy once did, and every autosave
+ * threw).
+ */
+export function replaceSummary(row, html, rebind) {
+  const head = row.querySelector(".pt-summary");
+  if (!head) return null;
+  const holder = document.createElement("div");
+  holder.innerHTML = html;
+  const next = holder.firstElementChild;
+  head.replaceWith(next);
+  rebind?.(next);
+  return next;
+}
+
 /**
  * Which rows are open, per owner (an actor id, or a mount key) — cosmetic, in memory, never
  * persisted (ties-16). One shape for the four lists that each kept their own Map:
