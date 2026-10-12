@@ -12,6 +12,10 @@
   (`Actor.updateDocuments`) each actor's tokens follow from its own old name. The old name is now
   kept per actor id in the update options (`pentarynOldNames[id]`, was `pentarynOldName`); before,
   every actor in the batch was given the last actor's old name, so the others' labels stayed put.
+- [declared] names-rob-2 (final review 2026-10-12): `api.sync` with a missing or non-string
+  `oldName`/`newName` returns `fail("BAD_ARGS", "oldName and newName must be strings")`, writing
+  nothing and toasting nothing (new failure path). Before, it blanked every matching token label and
+  toasted "undefined".
 
 ## 0.1.1 — 2026-10-11 (play-test fix, fix/playtest-2026-10-11)
 

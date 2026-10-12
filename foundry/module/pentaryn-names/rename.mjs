@@ -11,7 +11,7 @@
  */
 
 import { planTokenRelabels, relabel } from "./names-core.mjs";
-import { CODES, errorCode, toFail } from "./lib/errors.mjs";
+import { CODES, errorCode, fail, toFail } from "./lib/errors.mjs";
 import { resolveRef } from "./lib/resolve.mjs";
 
 /**
@@ -80,8 +80,11 @@ async function relabelEmbedded(parents, collection, embeddedName, canEdit, actor
  * update to its ActorDelta, which has no prototypeToken — the prototype relabel would be dropped
  * while still counted. Legacy row: a miss reaches `sync` as null and rejects with a TypeError; a
  * coded resolve error (AMBIGUOUS, BAD_ARGS) comes back as fail(code, reason), writing nothing.
+ * names-rob-2: a missing or non-string oldName/newName is refused first with fail("BAD_ARGS"); before,
+ * it blanked every matching label and toasted "undefined".
  */
 export function syncRef(ref, oldName, newName) {
+  if (typeof oldName !== "string" || typeof newName !== "string") return fail("BAD_ARGS", "oldName and newName must be strings");
   let actor;
   try {
     actor = resolveRef(ref, "actor", { base: true, required: false });

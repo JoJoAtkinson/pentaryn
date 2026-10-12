@@ -65,3 +65,29 @@ test("W2-B4: describe() marks sync's ref resolve:\"self\" (the kit leaves it to 
   const sync = describe(MANIFEST).methods.find(m => m.path === "sync");
   assert.deepEqual(sync.params[0], { name: "ref", kind: "actor", resolve: "self" });
 });
+
+// [declared] names-rob-2 (final review 2026-10-12): api.sync type-checks oldName and newName. Before,
+// a missing or non-string name reached the relabel, so `api.sync(actor, "Bob")` blanked every
+// matching label and toasted "undefined". Now it returns fail("BAD_ARGS") (the wrong-kind ref shape)
+// before resolving the ref: nothing is written and no toast fires.
+test("names-rob-2: api.sync with a missing or non-string oldName/newName returns fail(\"BAD_ARGS\") and writes nothing", async () => {
+  const cases = [
+    ["newName missing", ["Bob"]],
+    ["oldName missing", [undefined, "Rob"]],
+    ["newName null", ["Bob", null]],
+    ["oldName a number", [42, "Rob"]],
+    ["newName an object", ["Bob", { name: "Rob" }]],
+  ];
+  for (const [label, names] of cases) {
+    reset(F);
+    tok.name = "Bob";
+    const before = game.actors.get(IDS.bob).prototypeToken.name;
+    const r = await api.sync(IDS.bob, ...names);
+    assert.equal(r?.ok, false, label);
+    assert.equal(r.code, "BAD_ARGS", label);
+    assert.equal(r.reason, "oldName and newName must be strings", label);
+    assert.deepEqual(effects(F.calls), [], `${label}: nothing written, no toast`);
+    assert.equal(tok.name, "Bob", label);
+    assert.equal(game.actors.get(IDS.bob).prototypeToken.name, before, label);
+  }
+});
