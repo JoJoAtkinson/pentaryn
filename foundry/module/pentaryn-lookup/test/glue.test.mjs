@@ -32,9 +32,10 @@ test("hook registration manifest (golden/hooks.json)", () => {
   assert.deepEqual(hooksAtLoad, [{ kind: "once", name: "init" }, { kind: "once", name: "ready" }]);
 });
 
-test("ready logs exactly one console.log line", () => {
+// [declared] LKM-13: the line named 5 of the 8 lookups; it now counts them and points at describe().
+test("ready logs exactly one console.log line (LKM-13: all 8 lookups, via describe())", () => {
   assert.deepEqual(logLines, [
-    "pentaryn-lookup | game.pentaryn.rules ready — search(), page(), monster(), packs(), selftest()",
+    "pentaryn-lookup | game.pentaryn.rules ready — 8 lookups (describe() lists them), selftest()",
   ]);
 });
 

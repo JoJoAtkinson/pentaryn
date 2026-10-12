@@ -50,6 +50,8 @@
 - [declared] `onList` reads the registry's list options only when the list is unknown (they feed
   the `no such list; known: …` hint); a found list no longer reads them, so a throwing `options`
   leaves no debug trace there. An unknown list traces the list read, then the options read (LKM-12).
+- [declared] The ready console line counts every lookup and points at `describe()` — "8 lookups
+  (describe() lists them), selftest()" — instead of naming 5 of the 8 (LKM-13).
 
 ## 0.3.0 — 2026-10-10
 

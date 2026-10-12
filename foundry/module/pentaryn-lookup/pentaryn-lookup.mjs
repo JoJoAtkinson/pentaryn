@@ -61,7 +61,8 @@ function onReady() {
     return;
   }
   publishNamespace(NS, ctx.api, { moduleId: MODULE });
-  console.log("pentaryn-lookup | game.pentaryn.rules ready — search(), page(), monster(), packs(), selftest()");
+  const lookups = MANIFEST.rows.filter(row => row.query).length;
+  console.log(`pentaryn-lookup | game.pentaryn.rules ready — ${lookups} lookups (describe() lists them), selftest()`);
 }
 
 install();
