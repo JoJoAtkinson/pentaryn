@@ -1,7 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { buildApi, describe, maxDepth, surfaceOf, toPlain } from "../api.mjs";
-import { CODES } from "../errors.mjs";
+import { CODES, RESERVED } from "../errors.mjs";
+import { maxDepth as harnessDepth } from "../test-kit/harness.mjs";
 
 const doc = { documentName: "Actor", id: "aaaaaaaaaaaaaaaa", name: "Aldric", uuid: "Actor.aaaaaaaaaaaaaaaa" };
 globalThis.game = { actors: new Map([[doc.id, doc]]) };   // resolveRef's default global, for ref rows
@@ -50,6 +51,16 @@ test("reserved names: never as rows, contributions or nested; inspect/selftest o
   assert.throws(() => buildApi({ ...MANIFEST, rows: [...MANIFEST.rows, { ...row("selftest"), legacy: true }] }, { ...impl, selftest: () => 1 }), /is reserved/);
   assert.doesNotThrow(() => buildApi({ ...MANIFEST, rows: [...MANIFEST.rows, row("selftest")] }, { ...impl, selftest: () => 1 }));
   assert.throws(() => buildApi(MANIFEST, impl, { members: { describe: () => 1 } }), /not a kit member/);
+});
+
+test("every RESERVED name is refused as a row and wired on the built API", () => {
+  const row = path => ({ path, params: [], returns: "x", gm: false, writes: false, doc: "" });
+  const optional = ["inspect", "selftest"];
+  const api = buildApi(MANIFEST, impl);
+  for (const name of RESERVED.filter(n => !optional.includes(n))) {
+    assert.throws(() => buildApi({ ...MANIFEST, rows: [...MANIFEST.rows, row(name)] }, { ...impl, [name]: () => 1 }), /is reserved/, name);
+    assert.ok(typeof api[name] === "function" || typeof api[name] === "string", `${name} is wired`);
+  }
 });
 
 test("contributions merge before validation and show in describe()", () => {
@@ -195,4 +206,13 @@ test("kit 1.1.0 (W2-B4): a first ref with resolve:\"self\" reaches the function 
   assert.equal(api.sync("Some Name", "x"), "x");
   assert.equal(seen, "Some Name", "the kit did not resolve it");
   assert.equal(describe(M).methods[0].params[0].resolve, "self");
+});
+
+test("kit and harness maxDepth stay identical", () => {
+  // The harness keeps its own copy on purpose (self-contained); this pins the two together.
+  assert.equal(String(harnessDepth), String(maxDepth));
+  const cyclic = { a: {} };
+  cyclic.a.back = cyclic;
+  for (const v of [1, {}, { a: { b: [1] } }, null, cyclic]) assert.equal(harnessDepth(v), maxDepth(v));
+  assert.equal(maxDepth(cyclic), 2);
 });

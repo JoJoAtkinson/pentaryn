@@ -59,6 +59,12 @@ test("rows register in table order; literal labels win; derivation is the fallba
   assert.deepEqual(defineSettings("pentaryn-x", SETTINGS, { i18nRoot: "PENTARYN_X", g }), []);
 });
 
+test("defineSettings forwards filePicker to register", () => {
+  const g = fakeGame();
+  defineSettings("pentaryn-x", [{ key: "img", scope: "world", config: true, type: String, default: "", filePicker: "image", doc: "img" }], { g });
+  assert.equal(g.registry.get("pentaryn-x.img").filePicker, "image");
+});
+
 test("setting(): live value, the default when unreadable, undefined for an unknown key", () => {
   const g = fakeGame();
   const setting = settingReader("pentaryn-x", SETTINGS, { g });
