@@ -3,8 +3,9 @@
  * clearTargetsAfterTurn, drawerNearButton). At a turn change the active GM ends Dodge / Dash /
  * Disengage / Reckless and gives the Reaction back; the drawers of the creatures whose turn ended or
  * began close; a player's stale targets are released and the HUD follows their combatant. A combat
- * deleted mid-turn has its turn and Reaction flags cleared (and orphans swept on load and 1.5 s after
- * any delete). Clicking one token of a selected group binds the HUD to the one left.
+ * deleted mid-turn has its turn and Reaction flags cleared (and orphans swept on load and once,
+ * 1.5 s after the last of a burst of deletes). Clicking one token of a selected group binds the HUD
+ * to the one left.
  *
  * Registration order (the hooks golden pins it): combatTurnChange, deleteCombat (cleanup),
  * once(ready) orphan sweep, deleteCombat (orphan sweep), controlToken.
@@ -131,9 +132,24 @@ async function sweepOrphanFlags() {
   return n;
 }
 
-const onReadySweep = () => { sweepOrphanFlags().catch(err => log.warn("orphan flag sweep", err)); };
+/**
+ * perf-4 [declared]: one sweep at a time, and one per burst of deletes. Deleting several combats at
+ * once used to schedule a sweep per delete; the debounce runs one 1.5 s after the last. A sweep
+ * still running is never re-entered: the request is put back on the debounce for another look.
+ */
+let sweeping = false;
+let sweepSoon = null;
+
+async function sweepOnce() {
+  if (sweeping) { sweepSoon?.(); return; }
+  sweeping = true;
+  try { await sweepOrphanFlags(); } catch (err) { log.warn("orphan flag sweep", err); } finally { sweeping = false; }
+}
+
+const onReadySweep = () => { void sweepOnce(); };
 const onCombatDeletedSweep = () => {
-  setTimeout(() => sweepOrphanFlags().catch(err => log.warn("orphan flag sweep", err)), core.DELAYS.orphanSweep);
+  sweepSoon ??= foundry.utils.debounce(sweepOnce, core.DELAYS.orphanSweep);
+  sweepSoon();
 };
 
 // Clicking one token of a selected group releases the others but never "controls" the clicked one
@@ -174,4 +190,6 @@ export function install(reg) {
 export function uninstall() {
   followLeft?.cancel?.();
   followLeft = null;
+  sweepSoon?.cancel?.();
+  sweepSoon = null;
 }
