@@ -9,7 +9,7 @@
 import { CONTRACT, MODULE, NS, VERSION } from "./attunement-core.mjs";
 
 const ACTOR = { name: "actor", kind: "actor", type: "Actor|uuid|id|exact name", resolve: false,
-  doc: "an Actor passes through unchanged; a string resolves exactly (never a substring)" };
+  doc: "an Actor (any object with items and getFlag) passes through unchanged; a string resolves exactly (never a substring)" };
 const FLAGS = [`flags.${MODULE}.slots`, `flags.${MODULE}.away`, `flags.${MODULE}.bond`];
 /** Item claim flags claimDocument stamps so one GM tab acts; gone with the paid purse / cleared on the hand-back. */
 const CLAIMS = [`flags.${MODULE}.claims.coinBack`, `flags.${MODULE}.claims.home`];
@@ -40,7 +40,7 @@ export const MANIFEST = Object.freeze({
       returns: "{ slots: (itemId|'away:<key>'|null)[], max, value, over } | null",
       gm: false, writes: false, legacy: true,
       throws: ["AMBIGUOUS"],
-      nullWhen: "a string that names no actor",
+      nullWhen: "a string that names no actor, or an object that is not actor-like (no items or getFlag)",
       doc: "The reconciled slot order the strip draws (stored order, holes kept, newcomers in the first hole).",
     },
     {
@@ -75,7 +75,8 @@ export const MANIFEST = Object.freeze({
       returns: "{ key, name, img }[]",
       gm: false, writes: false, legacy: true,
       throws: ["AMBIGUOUS"],
-      doc: "The actor's away entries (attuned items not on the actor); [] when there are none or no actor.",
+      doc: "The actor's away entries (attuned items not on the actor); [] when there are none or no actor "
+        + "(a string that names no actor, or an object that is not actor-like: no items or getFlag).",
     },
     {
       path: "inspect",

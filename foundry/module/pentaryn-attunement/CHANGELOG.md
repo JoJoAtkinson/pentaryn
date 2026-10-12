@@ -4,6 +4,10 @@
 
 The version stays 0.3.0 until the next `module.json` restart batch (code only: sync + reload).
 
+- **[declared] ATT-ROB-6:** the legacy `computeSlots(actor)` / `away(actor)` pass an object through
+  only when it is actor-like (has `items` and `getFlag`); any other object is a miss, so
+  `computeSlots` returns `null` and `away` returns `[]`, as for a name that matches nothing (was:
+  every object passed through and `computeSlots` threw an uncoded TypeError). `test/api.test.mjs`.
 - **[declared] EXT-8:** `selftest()`'s "item hooks and the sheet hook registered" check now
   checks each hook by name (`sheet.mjs` and `bonds.mjs` export a frozen `HOOK_NAMES`; the entry
   passes them to the API) and its `detail` lists the missing names, `null` when none (was: passed on

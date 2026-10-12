@@ -76,11 +76,22 @@ const legacyShapes = () => {
     actor(["a", "b", "c", "d"], undefined), actor(["a"], [], 0), actor(["a"], ["away:k"], 3, [{ key: "k" }])];
 };
 
-test("computeSlots/away: any object passes through — results equal the core's", () => {
+test("computeSlots/away: an actor-like object passes through — results equal the core's", () => {
   for (const a of legacyShapes()) {
     assert.deepEqual(api.computeSlots(a), core.computeSlots(a));
     assert.deepEqual(api.away(a), core.awayOf(a));
   }
+});
+
+test("ATT-ROB-6: computeSlots/away pass only an actor-like object (items + getFlag); any other is a miss", () => {
+  const notActors = [{}, { name: "Refs Quinn" }, { items: [] }, { items: [], getFlag: "no" },
+    { getFlag: () => [{ key: "k", name: "Orb", img: "o" }] }, [], new Date(0)];
+  for (const ref of notActors) {
+    assert.equal(api.computeSlots(ref), null, JSON.stringify(ref));
+    assert.deepEqual(api.away(ref), [], JSON.stringify(ref));
+  }
+  const bare = { items: [], getFlag: () => undefined };
+  assert.deepEqual(api.computeSlots(bare), core.computeSlots(bare));
 });
 
 test("computeSlots/away also take an id, a uuid or an exact name; a miss is null / []", () => {

@@ -56,11 +56,14 @@ function report(target, { quiet = false } = {}) {
 }
 
 /**
- * The legacy methods' argument: any object passes through unchanged (the same reference, as
- * before); a string resolves exactly — id, uuid, then name (items-journal-16). A miss is null.
+ * The legacy methods' argument: an actor-like object (it has `items` and `getFlag`, the core's
+ * contract) passes through unchanged (the same reference, as before); a string resolves exactly —
+ * id, uuid, then name (items-journal-16). A miss is null.
+ * [declared] ATT-ROB-6: any other object is a miss too (was: passed through, and computeSlots threw
+ * an uncoded TypeError).
  */
 function actorOf(ref) {
-  if (ref && typeof ref === "object") return ref;
+  if (ref && typeof ref === "object") return (ref.items != null && typeof ref.getFlag === "function") ? ref : null;
   if (typeof ref !== "string" || !ref) return null;
   return resolveRef(ref, "actor", { required: false });
 }
