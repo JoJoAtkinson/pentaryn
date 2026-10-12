@@ -54,3 +54,11 @@ test("lockedContainer: only an enabled, locked container", () => {
     assert.equal(core.lockedContainer(d), null, JSON.stringify(d));
   }
 });
+
+test("listLast: last n means none for n <= 0, null or non-numeric", () => {
+  const log = [{ n: 1 }, { n: 2 }, { n: 3 }];
+  for (const x of [0, -1, null, NaN, "abc"]) assert.deepEqual(core.listLast(log, x), [], String(x));
+  assert.deepEqual(core.listLast(log, "2"), [{ n: 3 }, { n: 2 }]);
+  assert.deepEqual(core.listLast(log, 2.7), [{ n: 3 }, { n: 2 }]);
+  assert.deepEqual(core.listLast(log, undefined), [{ n: 3 }, { n: 2 }, { n: 1 }]);
+});
