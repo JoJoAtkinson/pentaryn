@@ -9,6 +9,7 @@
 
 import { MODULE } from "./geometry-core.mjs";
 import { assetUrl } from "./core/text.mjs";
+import { DEFAULTS } from "./core/defaults.mjs";
 import { makeLog } from "./lib/log.mjs";
 
 const log = makeLog(MODULE);
@@ -73,7 +74,7 @@ function label(ctx, text, x, y, colour) {
  * Returns `[{encounter, scene, png (base64 webp), mime, mimeType, squares}]`; failures come back as
  * `{encounter, scene, error}` so one bad image never sinks the gather.
  */
-export async function renderCrops(manifest, encounterIds, { longSide = 768 } = {}) {
+export async function renderCrops(manifest, encounterIds, { longSide = DEFAULTS.cropLongSidePx } = {}) {
   const sceneIdOf = Object.fromEntries(Object.entries(manifest.scenes).map(([sid, id]) => [id, sid]));
   const cache = new Map();
   const out = [];

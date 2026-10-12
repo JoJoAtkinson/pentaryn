@@ -2,11 +2,12 @@
  * pentaryn-prompts — the one-call context export (plan §5), the manifest ring, list and show.
  */
 
-import { MODULE, VERSION, GATHER_CHARS, buildView, renderGather, codedError, idCompare, sceneRefs, CURRENT_SCENE } from "./geometry-core.mjs";
+import { MODULE, VERSION, buildView, renderGather, codedError, idCompare, sceneRefs, CURRENT_SCENE } from "./geometry-core.mjs";
 import { sceneModel, promptTokens, resolveItemEmbeds } from "./scene-adapter.mjs";
 import { promptText } from "./markers-adapter.mjs";
 import { renderCrops } from "./crops-adapter.mjs";
 import { cropsDecision } from "./core/text.mjs";
+import { DEFAULTS } from "./core/defaults.mjs";
 import { pageScenes } from "./core/paging.mjs";
 import { setting, manifests, manifestFor, storeManifest } from "./settings.mjs";
 import { CROP_DIR } from "./prompts-core.mjs";
@@ -74,8 +75,8 @@ export { manifests, manifestFor };
  */
 export async function gather(opts = {}) {
   const {
-    scenes = "all", crops = setting("cropsDefault", "auto"), chars = setting("gatherChars", GATHER_CHARS),
-    unseenWithinFt = setting("unseenWithinFt", 60), builtWithoutProvenance = true, maxPrompts = 60, from = null,
+    scenes = "all", crops = setting("cropsDefault", DEFAULTS.cropsDefault), chars = setting("gatherChars", DEFAULTS.gatherChars),
+    unseenWithinFt = setting("unseenWithinFt", DEFAULTS.unseenWithinFt), builtWithoutProvenance = true, maxPrompts = 60, from = null,
     party: partyArg = null, cropsAs = "files"
   } = opts ?? {};
   const worldParty = setting("party", "") || null;
@@ -113,9 +114,9 @@ export async function gather(opts = {}) {
   const wantCrops = cropPlan.want;
   let images = [];
   if (wantCrops && Object.keys(manifest.encounters).length) {
-    const max = setting("cropMaxPerCall", 6);
+    const max = setting("cropMaxPerCall", DEFAULTS.cropMaxPerCall);
     const ids = Object.keys(manifest.encounters).sort(idCompare).slice(0, max);
-    images = await renderCrops(manifest, ids, { longSide: setting("cropLongSidePx", 768) });
+    images = await renderCrops(manifest, ids, { longSide: setting("cropLongSidePx", DEFAULTS.cropLongSidePx) });
     if (cropsAs === "files") images = await cropsToFiles(manifest.call, images);
   }
   const tEnd = performance.now();
@@ -175,8 +176,8 @@ export async function crops({ call, encounters, cropsAs = "files" } = {}) {
   if (!manifest) throw codedError("CALL_UNKNOWN", String(call));
   const ids = (encounters?.length ? encounters : Object.keys(manifest.encounters)).filter(e => manifest.encounters[e]);
   if (!ids.length) throw codedError("BAD_SPEC", "no such encounter in this call");
-  const max = setting("cropMaxPerCall", 6);
-  const images = await renderCrops(manifest, ids.slice(0, max), { longSide: setting("cropLongSidePx", 768) });
+  const max = setting("cropMaxPerCall", DEFAULTS.cropMaxPerCall);
+  const images = await renderCrops(manifest, ids.slice(0, max), { longSide: setting("cropLongSidePx", DEFAULTS.cropLongSidePx) });
   return { crops: cropsAs === "files" ? await cropsToFiles(call, images) : images };
 }
 

@@ -50,6 +50,10 @@ cssPrefix `pp-`, afterSync). Each **[declared]** change goes to the live check.
 - **[declared] A keyless keydown no longer throws in the type-ahead** (prompts-core-R4): an event
   whose `key` is not a string (synthetic or some IME/accessibility events) is swallowed while a
   note is capturing, exactly as a composing key is, and the typed text is left as it was.
+- **[declared] The setting defaults are written once** (prompts-core-EXT-2): `core/defaults.mjs`
+  `DEFAULTS` (`unseenWithinFt` 60, `cropMaxPerCall` 6, `cropLongSidePx` 768, `cropsDefault` auto,
+  `gatherChars` = `GATHER_CHARS`) feeds the setting rows, gather's/the panel's/the crops' fallbacks
+  and the core's default parameters. Same values, no behaviour change.
 - `ensureMarkers` repairs every drifted actor in one batch update. A hot re-import after
   `uninstall()` re-wires and republishes at once.
 - Console only (DP9): a core token API that throws warns once; swallowed failures log at debug

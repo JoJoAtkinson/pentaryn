@@ -3,6 +3,7 @@
  * PURE (split out of geometry-core.mjs, which re-exports the public names): no Foundry global.
  */
 
+import { DEFAULTS } from "./defaults.mjs";
 import { band } from "./grid.mjs";
 import { DND_SIZE_WIDTH, fmtNum } from "./size.mjs";
 import { isSeen } from "./sight.mjs";
@@ -42,7 +43,7 @@ export function needsLockSize(w, dndSize) {
  * distance, bearing and sight. The door/wall pass (`r.los`) runs only for what the "Out of sight"
  * list can show (within `unseenWithinFt`); everything else further out is "blocked".
  */
-export function panelRels(items, rel, key, unseenWithinFt = 60) {
+export function panelRels(items, rel, key, unseenWithinFt = DEFAULTS.unseenWithinFt) {
   const rels = [];
   for (const it of items) {
     if (it.key === key) continue;
@@ -70,7 +71,7 @@ export function seenCount(items, rel, key) {
  * Split relations for the panel: in sight (LOS) nearest first, and the out-of-sight ones within
  * `unseenWithinFt`. `rels`: `[{key, ft, bearing, los, ...}]`.
  */
-export function panelSplit(rels, { rows = 12, unseenWithinFt = 60 } = {}) {
+export function panelSplit(rels, { rows = 12, unseenWithinFt = DEFAULTS.unseenWithinFt } = {}) {
   const byNear = (a, b) => (a.ft - b.ft) || String(a.key).localeCompare(String(b.key));
   const seen = rels.filter(r => r.los === "LOS").sort(byNear);
   const unseen = rels.filter(r => r.los !== "LOS" && r.ft <= unseenWithinFt).sort(byNear);

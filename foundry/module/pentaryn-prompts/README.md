@@ -57,6 +57,8 @@ name. Every marker token is born hidden, sightless and size-locked. Art: `assets
 | `lastCalls` | world, hidden store | `[]` | The last five gather manifests (replace and crops read them) |
 
 Every read is live (`settings.mjs` `setting()`), so a change applies without a reload.
+The defaults of `gatherChars`, `unseenWithinFt`, `cropMaxPerCall`, `cropLongSidePx` and
+`cropsDefault` live once in `core/defaults.mjs` `DEFAULTS`; change a default there, not in a fallback.
 
 ## API — `game.pentaryn.prompts`
 

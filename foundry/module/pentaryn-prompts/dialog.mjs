@@ -22,6 +22,7 @@ import { panelFor, resolveItemEmbeds } from "./scene-adapter.mjs";
 import { cancel as cancelTyping, start as startTyping, take as takeTyped } from "./typeahead-adapter.mjs";
 import { tokenDataFrom } from "./tokens-adapter.mjs";
 import { setting } from "./settings.mjs";
+import { DEFAULTS } from "./core/defaults.mjs";
 import { makeLog } from "./lib/log.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -442,7 +443,7 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
     if (!box || !tok || this.#closing) return;
     let p;
     try {
-      p = panelFor(tok, { rows: setting("panelRows", 12), unseenWithinFt: setting("unseenWithinFt", 60) });
+      p = panelFor(tok, { rows: setting("panelRows", 12), unseenWithinFt: setting("unseenWithinFt", DEFAULTS.unseenWithinFt) });
       // compendium monsters' biographies are often only `@Embed[<page>]`: show the page's words
       await resolveItemEmbeds([...p.shown, ...p.more, ...p.unseen].map(r => r.item));
     } catch (err) {
@@ -487,7 +488,7 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
       ? `<p class="pp-door"><i class="fa-solid fa-door-closed"></i> ${esc(_loc("PENTARYN_PROMPTS.panel.behindDoor", { list: door.list.join(", ") + (door.extra ? ` +${door.extra}` : "") }))}</p>`
       : "";
     const unseen = p.unseen.length
-      ? `<details class="pp-out"><summary>${esc(_loc("PENTARYN_PROMPTS.panel.outOfSight", { ft: setting("unseenWithinFt", 60), n: p.unseen.length }))}</summary><ol class="pp-rows">${p.unseen.map(r => row(r, false, true)).join("")}</ol></details>`
+      ? `<details class="pp-out"><summary>${esc(_loc("PENTARYN_PROMPTS.panel.outOfSight", { ft: setting("unseenWithinFt", DEFAULTS.unseenWithinFt), n: p.unseen.length }))}</summary><ol class="pp-rows">${p.unseen.map(r => row(r, false, true)).join("")}</ol></details>`
       : "";
     box.innerHTML = `${head}${warn}${doorLine}${empty}<ol class="pp-rows">${shown}</ol>${more}${unseen}`;
   }
