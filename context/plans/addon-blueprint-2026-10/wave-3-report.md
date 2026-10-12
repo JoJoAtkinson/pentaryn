@@ -213,3 +213,70 @@ Conformance (`conformance.py`, fail-class rules) before → after integration:
 | senses | 91.5 % | **93.6 %** | C07, C09, C37 (Wave 7) |
 
 No other module's score moved.
+
+## Integration review (wave 3, 2026-10-11)
+
+A review of the whole branch: `wave-3-base..HEAD` (296 commits after the two fixes below) and the
+fork's `origin/pentaryn..HEAD` (1 commit). It found nothing from `foundry/logs/**` and no secrets.
+Kit copies are byte-identical (`vendor.py check --all`). Every gate is green again after the fixes.
+`make check-lore` is red (47 links), but this branch touches no lore file, so the red is not
+from wave 3.
+
+**Lanes.** Only one commit touches another lane's module: `ff72c4d4` (prompts) edits a comment in
+`pentaryn-lookup/lookup-core.mjs`, and its subject says so. No shared-scope commit (plans, adjustments,
+ops, blueprint) touches module code.
+
+**Contracts.**
+- prompts and lookup: the TWIN copies agree. `SIZE_WORDS` equals `SIZE_KEYS`, and `parseCr`
+  equals `crNum`.
+- prompts and the fork: the five `pentaryn-prompts.*` query names match. The fork-mode contract
+  test passes, 225/225.
+- ties' D1: `attributes.lookup` and `study.examine` are the names in use. The old names appear
+  only in history lines, the d1-rename test and the live golden's labelled keys.
+- portals `ppt-` and prompts `pp-`: there is no overlap and no `[class*=…]` selector. Before S7,
+  portals did not depend on any rule in `prompts.css`; its one shared name, `.pp-text`, was
+  scoped on both sides.
+- The scaffolding rules: `markers.md` matches `isScenery` and `isScaffold`.
+- senses and walls: the two modules share no code and no flags. Their only link is the shared
+  audit file.
+- describe goldens: `test/golden/describe.json` exists for all five migrated modules, and the
+  index rows are generated from it.
+
+**Fixed in this review.**
+- `9ec64a79`: eight ties comments still named `look.mjs`, `preview.mjs` and `lore.mjs` after the
+  S12 renames. Comments only; the frozen test comments are left as they are.
+- `cd1ce5b5`: the context half of senses -27 had been handed to the docs batch and had not
+  landed. `context/foundry/README.md` now gives senses its own routing row. The senses clause no
+  longer says token vision follows sheet Darkvision. The Look window is now named `look-app.mjs`.
+
+**Frozen tests.** Each module was diffed from its checkpoint to HEAD:
+ties `7395a708`, prompts `bc12443e`, senses `5e76c4a1`, portals `0ca63b97` and creatures `6e4c7d7c`.
+Every edit to a checkpoint test file falls into one of these groups:
+- a [declared] commit or its golden commit;
+- an import path;
+- additive new tests;
+- a fixture that only adds a stub;
+- a change the guide planned: ties S8's survival check `2a006ff8`, and S10's format-only fixtures
+  `771f1716` and `a673a72b`.
+
+These edits change a pin but carry no [declared] tag. They are the same kind of gap as ties B3:
+- portals `a3ade332` (hygiene) changes the clear-image write from `-=img: null` to
+  `img: _del` and re-pins `card-app.test.mjs`. It is recorded as "hygiene" in the guide's Result.
+- senses `ff544d99` (finding -22) flips the post-checkpoint KNOWN pin "200 epoch builds" to ≤ 40.
+  It is perf only, with no visible change.
+- ties `ae89ff94` and `8f3e120e` are the golden commits for [declared] `2257ae61` and `171c6e4f`.
+  They pair with those commits but do not name them.
+
+Treat all four as declared when bisecting. History is not rewritten.
+
+**Not consistent across lanes (recorded, not built).** §5.9.1 says batching is a MUST (C59), and
+portals landed its two loops as [declared] perf steps on that ground. Senses (`setupLight`,
+`syncAll`) and ties (Share's per-PC writes, `migrateLegacy`) recorded theirs under Open for Joe as
+"its own declared perf step" and did not build them. Senses' two-GM-tab Light reconcile is also a
+§5.9.1 MUST (pick one *tab*, not one user), and it is recorded the same way. These items need a
+decision on whether a later lane builds them in wave 3, not a review fix.
+
+**Small, not fixed.** `live-goldens/ties.js` keeps the label `"describe (top, the card toggle)"`
+for `typeof T.describe`. Since B1, that is the kit's `describe()`, and the card is
+`describeCard`. The key is kept so a before/after diff lines up, and the value is still
+`"function"`.
