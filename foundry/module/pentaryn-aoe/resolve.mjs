@@ -25,6 +25,7 @@ import {
 import { setting } from "./settings.mjs";
 import { claimMessage } from "./lib/election.mjs";
 import { makeLog } from "./lib/log.mjs";
+import { FEATURE_ROWS } from "./api-manifest.mjs";
 import { areasFor, removeArea, handleActor, isPile } from "./scene-adapter.mjs";
 import { activityOf, usageIdOf, recordedTarget } from "./messages-adapter.mjs";
 
@@ -476,6 +477,8 @@ export function install(reg, ctx) {
     if (!foundry.utils.getProperty(changes, "flags.dnd5e.requestResult")) return;
     if (isAbilitySave(message)) return onSaveMessage(message);
   }), { guard: false, label: "updateChatMessage" });
+
+  return { rows: FEATURE_ROWS.resolve, impl: { resolve, applyRows, rollNpcSaves, rollForPlayer, pingPlayers, setRow } };
 }
 
 /** The request handler goes with the hooks; the registry unwinds the hooks. */

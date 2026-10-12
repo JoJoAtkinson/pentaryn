@@ -22,6 +22,7 @@ import { handleActor, handleFor, removeArea, spellAreas } from "./scene-adapter.
 import { activityOf } from "./messages-adapter.mjs";
 import { setting } from "./settings.mjs";
 import { makeLog } from "./lib/log.mjs";
+import { FEATURE_ROWS } from "./api-manifest.mjs";
 
 const OWNER = 3;
 const HANDLE_ICON = "icons/svg/target.svg";
@@ -345,6 +346,8 @@ export function install(reg, ctx) {
       if (ids.length) await s.deleteEmbeddedDocuments("Region", ids);
     }
   }), { guard: false, label: "deleteActiveEffect" });
+
+  return { rows: FEATURE_ROWS.areas, impl: { sweep, ensureHandleActor, createHandle } };
 }
 
 /**

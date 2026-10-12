@@ -478,3 +478,31 @@ export function playerStatus(res) {
   if (!res.rows?.some(r => r.apply)) return null;
   return allApplied(res.rows) ? "applied" : "waiting";
 }
+
+/**
+ * A resolution as an LLM or the console reads it (finding -10): no images, no message ids, the
+ * Apply count, and the players' status. null for no resolution. Plain data, depth 3.
+ * @returns {{item: string, ability: string, dc: number|null, onSave: string, region: string|null,
+ *   superseded: boolean, applicable: number, rows: object[], careful: object|null,
+ *   playerStatus: "waiting"|"applied"|"superseded"|null}|null}
+ */
+export function summariseResolution(res) {
+  if (!res) return null;
+  const rows = res.rows ?? [];
+  return {
+    item: res.itemName ?? "",
+    ability: res.ability ?? null,
+    dc: res.dc ?? null,
+    onSave: res.onSave ?? null,
+    region: res.region ?? null,
+    superseded: !!res.superseded,
+    applicable: applicableRows(rows).length,
+    rows: rows.map(r => ({
+      id: r.id, name: r.name, kind: r.kind, apply: !!r.apply,
+      save: r.save ? { total: r.save.total ?? null, success: !!r.save.success } : null,
+      multiplier: r.multiplier ?? null, applied: !!r.applied, hp: r.hp ?? null, caster: !!r.caster, protected: !!r.protected,
+    })),
+    careful: res.careful ?? null,
+    playerStatus: playerStatus(res),
+  };
+}

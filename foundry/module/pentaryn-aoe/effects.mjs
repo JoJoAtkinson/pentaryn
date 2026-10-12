@@ -27,6 +27,7 @@ import { MODULE, aoeFlags, selfApplyReason, pendingEffects, sameSpellEffect } fr
 import { setting } from "./settings.mjs";
 import { claimMessage } from "./lib/election.mjs";
 import { makeLog } from "./lib/log.mjs";
+import { FEATURE_ROWS } from "./api-manifest.mjs";
 import { cardEffects, recordedTarget, spellOf } from "./messages-adapter.mjs";
 
 const esc = s => foundry.utils.escapeHTML(String(s ?? ""));
@@ -288,6 +289,8 @@ export function install(reg, ctx) {
   }), { guard: false, label: "createChatMessage(selfApply)" });
   reg.on("dnd5e.renderChatMessage", reg.guardSwallowAsync("renderChatMessage(effects)", decorate), { guard: false, label: "renderChatMessage(effects)" });
   reg.on("preCreateActiveEffect", reg.guardSwallowAsync("preCreateActiveEffect(noStacking)", onPreCreateEffect), { guard: false, label: "preCreateActiveEffect(noStacking)" });
+
+  return { rows: FEATURE_ROWS.effects, impl: { selfApply, pendingFor } };
 }
 
 export function uninstall() {}

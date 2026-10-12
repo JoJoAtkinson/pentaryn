@@ -20,6 +20,7 @@
 
 import { MODULE, placementInProgress } from "./core.mjs";
 import { makeLog } from "./lib/log.mjs";
+import { FEATURE_ROWS } from "./api-manifest.mjs";
 
 // Registered at init, before any install(): the module's log line format, from its own logger.
 const log = makeLog(MODULE);
@@ -78,7 +79,9 @@ export function disableEscape() {
 }
 
 /** Part E registers no hooks: its keybinding is registered at init (registerEscape, from the entry). */
-export function install() {}
+export function install() {
+  return { rows: FEATURE_ROWS.escape, impl: { activePlacement } };
+}
 
 export function uninstall() {
   disableEscape();
