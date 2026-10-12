@@ -443,13 +443,6 @@ export function protectRows(rows, ids, onSave) {
 }
 
 /**
- * Is a Careful Spell use still waiting for this cast? In combat: the same turn it was used on.
- * Out of combat: ten minutes. Bound to the first usage card it protected, so re-rolling that card
- * keeps the protection and a later, different spell does not get it.
- * @param {{at?: number, key?: string|null, usage?: string|null}|null} flag
- * @param {{now?: number, combatKey?: string|null, usage?: string|null, maxAgeMs?: number}} o
- */
-/**
  * A Careful Spell use bound to a combat turn ("combatId:round:combatant") of a combat that was
  * deleted: it can never apply again, so it is cleared (usability Area 9 found one on Marrith).
  * An out-of-combat use (no key) expires by time and is left alone.
@@ -458,6 +451,14 @@ export function carefulStale(flag, combatId) {
   return !!(combatId && flag && typeof flag === "object" && typeof flag.key === "string" && flag.key.startsWith(`${combatId}:`));
 }
 
+/**
+ * Is a Careful Spell use still waiting for this cast? In combat: the same turn it was used on.
+ * Out of combat: ten minutes. Bound to the first usage card it protected, so re-rolling that card
+ * keeps the protection and a later, different spell does not get it.
+ * @param {{at?: number, key?: string|null, usage?: string|null}|null} flag
+ * @param {{now?: number, combatKey?: string|null, usage?: string|null, maxAgeMs?: number}} o
+ * @returns {boolean}
+ */
 export function carefulApplies(flag, { now = 0, combatKey = null, usage = null, maxAgeMs = 10 * 60 * 1000 } = {}) {
   if (!flag || typeof flag !== "object") return false;
   if (flag.usage && flag.usage !== usage) return false;
