@@ -943,6 +943,35 @@ def test_dl8_the_updaters_full_extract_keeps_what_no_bundle_holds(two_hosts, tmp
     assert not (mac / "Data/modules/maps").exists()
 
 
+# ── R2 (final review 2026-10-12): a local tar is read whole before anything is cleared ─
+
+def _files(root):
+    return {p.relative_to(root).as_posix(): p.read_bytes()
+            for p in sorted(root.rglob("*")) if p.is_file()}
+
+
+@pytest.mark.parametrize("damage", ["truncated", "not-gzip"])
+def test_r2_extract_snapshot_refuses_an_unreadable_local_tar_before_clearing(
+        two_hosts, tmp_path, damage):
+    mac = _install(two_hosts.data["mac"])
+    _edit(mac, "the only copy of tonight's session")
+    (mac / "Config").mkdir(exist_ok=True)
+    (mac / "Config/options.json").write_text('{"dataPath": "here"}')
+    tar = tmp_path / "w.tar.gz"
+    if damage == "truncated":
+        # The first member (Config/options.json) reads fine; the cut is deep in the stream.
+        _full_tar(tar, {**_LEGACY_WORLD, "Data/worlds/w/zz-big.bin": os.urandom(200_000)})
+        data = tar.read_bytes()
+        tar.write_bytes(data[:len(data) * 2 // 3])
+    else:
+        tar.write_bytes(b"this is not a gzip file at all\n" * 40)
+    before = _files(mac)
+    with two_hosts.use("mac"), pytest.raises(cloud.RestoreError) as exc:
+        cloud.extract_snapshot(tar, systems=False)
+    assert "nothing was touched" in str(exc.value) and tar.name in str(exc.value)
+    assert _files(mac) == before
+
+
 # ── R4: healing re-uploads only what the based-on snapshot names ─────────────
 
 def _reads(monkeypatch):
