@@ -173,8 +173,9 @@ class ModuleSpec:
 _STATIC = ("parse", "imports", "i18n")
 
 # The blueprint gates (W3), last because they ask a different question — not "can it
-# load" but "does it still match the kit and the blueprint". Both skip a module with no
-# lib/kit.lock.json (not migrated); conformance is advisory until migration Stage 5.
+# load" but "does it still match the kit and the blueprint". Strict since migration Stage 5
+# (2026-10-12): both fail a module with no lib/kit.lock.json, and conformance fails on any
+# fail-class rule without a row in scripts/foundry/blueprint/exceptions.json.
 #   vendor       every vendored kit file byte-identical to foundry/lib
 #   conformance  the scorer's fail-class rules (scripts/foundry/blueprint/conformance.py)
 _BLUEPRINT = ("vendor", "conformance")

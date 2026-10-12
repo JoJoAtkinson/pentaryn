@@ -351,21 +351,21 @@ def _check_node_test(spec: cfg.ModuleSpec) -> int:
 
 
 # ── blueprint gates (W3): vendored kit identity, conformance ─────────────────
-# Both skip a module that has not adopted the kit (no lib/kit.lock.json): migrating is a
-# per-module step, and an unmigrated module is not failing anything it agreed to.
-
-#: Stage 5 of the migration (addon-blueprint-2026-10/README.md §3) turns conformance
-#: from advisory to failing for every module. Until then it reports and never fails, so
-#: a module mid-migration keeps a green `make foundry-<m>-check` while its score climbs.
-CONFORMANCE_FAILS = False
+# Strict since migration Stage 5 step 2 (2026-10-12): every module has adopted the kit, so both
+# gates FAIL a module — a missing lib/kit.lock.json included. The one way a failing fail-class
+# rule passes is an explicit row in scripts/foundry/blueprint/exceptions.json (reason, the
+# decision that accepted it, what retires it); a row whose rule no longer fails also fails the
+# gate, so the list cannot go stale. wait.json no longer exempts anything here: it says who may
+# edit a module, not what its gate accepts. The vendor gate has no exceptions.
 
 
 def _gate_vendor(spec: cfg.ModuleSpec) -> GateResult:
     """`vendor.py check <module>`: each vendored kit file byte-identical to foundry/lib."""
     from scripts.foundry.blueprint import vendor
     if spec.kit is None:
-        return GateResult("vendor", True, f"{spec.name}: no lib/kit.lock.json — not migrated, "
-                                          "vendor gate skipped", skipped=True)
+        return GateResult("vendor", False, f"{spec.name}: no lib/kit.lock.json — every module "
+                                           "vendors the kit since Stage 5",
+                          problems=[f"{spec.name}: run vendor.py sync {spec.name} --tier full|small"])
     problems = vendor.check(spec.src)
     if problems:
         return GateResult("vendor", False, f"{spec.name}: vendored kit differs from foundry/lib",
@@ -378,31 +378,37 @@ def _gate_vendor(spec: cfg.ModuleSpec) -> GateResult:
 def _gate_conformance(spec: cfg.ModuleSpec) -> GateResult:
     """The blueprint scorer, fail-class rules only (warn/manual rules never move a gate).
 
-    Advisory until Stage 5 (`CONFORMANCE_FAILS`); a WAIT module is reported, never failed."""
+    Fails on any failing rule exceptions.json does not accept, and on a stale exception row."""
     from scripts.foundry.blueprint import conformance
     if spec.kit is None:
-        return GateResult("conformance", True, f"{spec.name}: not migrated — conformance "
-                                               "gate skipped", skipped=True)
+        return GateResult("conformance", False, f"{spec.name}: no lib/kit.lock.json — not "
+                                                "migrated, so not scored (see the vendor gate)",
+                          problems=[f"{spec.name}: not migrated"])
     report = conformance.score_dir(spec.src)
     failing = list(report["failing"])
+    blocking, accepted, stale = report["blocking"], report["accepted"], report["stale"]
     counts = {"score": report["score"], "passed": report["passed"],
-              "failClassRules": report["failClassRules"], "failing": failing}
+              "failClassRules": report["failClassRules"], "failing": failing,
+              "blocking": blocking, "accepted": sorted(accepted), "stale": stale}
     head = (f"{spec.name} conformance {report['score']} % "
             f"({report['passed']}/{report['failClassRules']} fail-class rules)")
-    if not failing:
-        return GateResult("conformance", True, head, counts=counts)
     detail = {r["id"]: "; ".join(r["detail"])[:200] for r in report["results"]
               if r["id"] in failing}
-    problems = [f"{rid} {detail.get(rid, '')}".rstrip() for rid in failing]
-    if report.get("wait"):
-        return GateResult("conformance", True, f"{head} — WAIT ({report['wait']}), reported only",
-                          notes=problems, counts=counts)
-    if not CONFORMANCE_FAILS:
-        return GateResult("conformance", True, f"{head} — advisory until Stage 5, failing: "
-                                               f"{', '.join(failing)}",
-                          notes=problems, counts=counts)
-    return GateResult("conformance", False, f"{head} — failing {', '.join(failing)}",
-                      problems=problems, counts=counts)
+    notes = [f"{rid} accepted (exceptions.json): {accepted[rid]}"[:300] for rid in sorted(accepted)]
+    problems = [f"{rid} {detail.get(rid, '')}".rstrip() for rid in blocking]
+    problems += [f"{rid} stale exception: it no longer fails — delete its row from "
+                 "scripts/foundry/blueprint/exceptions.json" for rid in stale]
+    if problems:
+        why = ([f"failing {', '.join(blocking)}"] if blocking else []) + \
+              ([f"stale exception {', '.join(stale)}"] if stale else [])
+        return GateResult("conformance", False, f"{head} — {'; '.join(why)}",
+                          problems=problems, notes=notes, counts=counts)
+    if accepted:
+        return GateResult("conformance", True, f"{head} — accepted exception"
+                                               f"{'' if len(accepted) == 1 else 's'}: "
+                                               f"{', '.join(sorted(accepted))}",
+                          notes=notes, counts=counts)
+    return GateResult("conformance", True, head, counts=counts)
 
 
 def _check_vendor(spec: cfg.ModuleSpec) -> int:

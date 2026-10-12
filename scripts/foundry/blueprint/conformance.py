@@ -3,9 +3,12 @@
 
     conformance.py [--root foundry/module] [--snapshot DIR] [--module m …] [--json | --markdown]
 
-Exit status: 0 when every scored module passes every fail-class rule, 1 when any fails (so
-`conformance.py --module <short>` works as a gate), 2 for an unknown module. Modules listed in
-wait.json beside this file are printed as WAIT: the fix phase does not edit them yet.
+Exit status: 0 when every scored module passes every fail-class rule or holds an exception for it,
+1 when any fails without one or an exception is stale (so `conformance.py --module <short>` works as
+the same gate `make foundry-<short>-check` runs), 2 for an unknown module. Exceptions are the rows
+of exceptions.json beside this file (module id → rule id → reason, decision, until; Stage 5 step 2);
+a stale row is one whose rule no longer fails. Modules listed in wait.json beside this file are
+printed as WAIT: the fix phase does not edit them yet (it does not exempt them from the gate).
 
 Every rule has a class — `fail`, `warn` or `manual` — and resolves to `pass | fail | warn | n/a |
 manual`. The score is pass / (pass + fail) over the fail-class rules; warnings and the manual list
@@ -47,6 +50,9 @@ MODULE_ROOT = REPO_ROOT / "foundry" / "module"
 PACKAGES = json.loads((Path(__file__).with_name("packages.json")).read_text(encoding="utf-8"))
 # module id → why the fix phase must not touch it now (wait.json; printed as WAIT)
 WAIT: dict[str, str] = json.loads((Path(__file__).with_name("wait.json")).read_text(encoding="utf-8"))["modules"]
+# module id → rule id → {reason, decision, until}: the only failing rules the strict gate accepts
+EXCEPTIONS: dict[str, dict[str, dict]] = json.loads(
+    (Path(__file__).with_name("exceptions.json")).read_text(encoding="utf-8"))["modules"]
 
 RESERVED_API = ("describe", "inspect", "settings", "trace", "version", "contract", "uninstall", "selftest")
 README_SECTIONS = ("What the player sees", "Settings", "API", "Data written", "Flags other modules read",
@@ -1858,8 +1864,27 @@ def score(m: Module) -> dict:
         "manual": [r.id for r in results if r.status == "manual"
                    or (r.status == "warn" and r.cls == "warn+manual")],
         "wait": WAIT.get(m.id),
+        **verdict(m.id, results),
         "results": [r.__dict__ for r in results],
     }
+
+
+def verdict(module_id: str, results) -> dict:
+    """The strict gate over one module's results (Stage 5 step 2): `blocking` = failing rules with no
+    exceptions.json row, `accepted` = failing rules a row accepts (rule → reason), `stale` = rows
+    whose rule no longer fails. The gate passes iff `blocking` and `stale` are both empty."""
+    rows = EXCEPTIONS.get(module_id, {})
+    failing = [r.id for r in results if r.status == "fail"]
+    return {
+        "blocking": [rid for rid in failing if rid not in rows],
+        "accepted": {rid: rows[rid]["reason"] for rid in failing if rid in rows},
+        "stale": sorted(rid for rid in rows if rid not in failing),
+    }
+
+
+def gate_ok(report: dict) -> bool:
+    """True when the strict gate passes this report (no blocking rule, no stale exception)."""
+    return not report["blocking"] and not report["stale"]
 
 
 def score_dir(module_dir: Path, *, root: Path | None = None, registry_path: Path | None = None,
@@ -1893,6 +1918,14 @@ def to_markdown(reports: list[dict], *, title: str) -> str:
     waiting = [r["module"] for r in reports if r.get("wait")]
     if waiting:
         lines += ["", f"**WAIT — do not edit yet** (scripts/foundry/blueprint/wait.json): {', '.join(waiting)}"]
+    gated = [r for r in reports if r.get("accepted") or r.get("stale") or r.get("blocking")]
+    if gated:
+        lines += ["", "**Strict gate** (exceptions: scripts/foundry/blueprint/exceptions.json):", ""]
+        for r in gated:
+            parts = [f"blocking {', '.join(r['blocking'])}"] if r.get("blocking") else []
+            parts += [f"accepted {', '.join(r['accepted'])}"] if r.get("accepted") else []
+            parts += [f"STALE exception {', '.join(r['stale'])}"] if r.get("stale") else []
+            lines.append(f"- `{r['module']}`: {'; '.join(parts)}")
     counts: dict[str, int] = {}
     for r in reports:
         for rid in r["failing"]:
@@ -1950,13 +1983,15 @@ def main(argv: list[str] | None = None) -> int:
         print(to_markdown(reports, title="Conformance"))
     else:
         for r in reports:
+            accepted = f"  accepted: {', '.join(r['accepted'])}" if r["accepted"] else ""
+            stale = f"  STALE exception: {', '.join(r['stale'])}" if r["stale"] else ""
             print(f"  {r['module']:<22} {r['score']:>5} %  {'WAIT  ' if r.get('wait') else ''}"
                   f"fail: {', '.join(r['failing']) or '—'}  warn: {', '.join(r['warnings']) or '—'}"
-                  f"  manual: {', '.join(r['manual']) or '—'}")
+                  f"  manual: {', '.join(r['manual']) or '—'}{accepted}{stale}")
         waiting = [f"{r['module']} ({r['wait']})" for r in reports if r.get("wait")]
         if waiting:
             print("  WAIT — do not edit yet (wait.json): " + "; ".join(waiting))
-    return 1 if any(r["failing"] for r in reports) else 0
+    return 0 if all(gate_ok(r) for r in reports) else 1
 
 
 if __name__ == "__main__":

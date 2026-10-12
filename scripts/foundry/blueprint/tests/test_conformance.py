@@ -711,3 +711,27 @@ def test_c06w_exempts_a_vendored_kit_stylesheet_listed_from_lib(tmp_path):
     (d / "module.json").write_text(json.dumps({"id": "pentaryn-kitcss", "esmodules": ["a.mjs"], "styles": ["a.css"]}))
     (d / "a.css").write_text("")
     assert res(conformance.score_dir(d), "C06w")["status"] == "warn"
+
+
+# ── exceptions.json: the strict gate's explicit list (Stage 5 step 2) ─────────────────────────
+
+def test_exceptions_rows_are_explicit_and_name_real_fail_class_rules():
+    fail_class = {rid for rid, cls, _, _ in conformance.RULES if cls == "fail"}
+    for module_id, rows in conformance.EXCEPTIONS.items():
+        assert (conformance.MODULE_ROOT / module_id / "module.json").exists(), module_id
+        assert rows, f"{module_id}: an empty exception block"
+        for rid, row in rows.items():
+            assert rid in fail_class, f"{module_id} {rid}: not a fail-class rule (warn/manual never gate)"
+            assert set(row) == {"reason", "decision", "until"}, f"{module_id} {rid}: {sorted(row)}"
+            assert all(isinstance(v, str) and len(v.strip()) >= 5 for v in row.values()), (module_id, rid)
+
+
+def test_verdict_splits_blocking_accepted_and_stale(monkeypatch):
+    row = {"reason": "why", "decision": "who", "until": "when"}
+    monkeypatch.setattr(conformance, "EXCEPTIONS", {"pentaryn-x": {"C07": row, "C37": row}})
+    results = [conformance.Result("C05", "fail", "fail", [], ""), conformance.Result("C07", "fail", "fail", [], ""),
+               conformance.Result("C37", "fail", "pass", [], "")]
+    v = conformance.verdict("pentaryn-x", results)
+    assert v == {"blocking": ["C05"], "accepted": {"C07": "why"}, "stale": ["C37"]}
+    assert not conformance.gate_ok(v)
+    assert conformance.gate_ok(conformance.verdict("pentaryn-x", results[1:2] + [conformance.Result("C37", "fail", "fail", [], "")]))

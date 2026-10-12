@@ -1,0 +1,62 @@
+{
+  "doc": "Strict-gate exceptions (migration Stage 5 step 2, README §7 W3). Since 2026-10-12 the vendor and conformance gates FAIL every module (make foundry-<m>-check, make foundry-modules-check). The only way a failing fail-class rule passes the gate is a row here: module id → rule id → {reason, decision, until}. Every row names the decision that accepted it (an Open-for-Joe row with Joe's decision, or a parked step) and what retires it. The gate also FAILS on a stale row — a listed rule that no longer fails — so this list cannot outlive its reason: when the work in `until` lands, delete the row in the same commit. Never add a row to make a red gate green without a decision to cite; fix the module instead. The vendor gate has no exceptions.",
+  "modules": {
+    "pentaryn-attunement": {
+      "C35": {
+        "reason": "lang/en.json is inert (STRINGS verbatim): the _loc switch is guide step 8, a declared change that touches bonds.mjs — the fixes lane's (fix/overnight-2-2026-10-12) bond code — so it waits for that lane",
+        "decision": "wave7-restart-batch.md attunement row (Joe 2026-10-12)",
+        "until": "attunement guide step 8 (_loc switch) lands"
+      }
+    },
+    "pentaryn-combat": {
+      "C21": {
+        "reason": "turn-riders.mjs reads pentaryn-aoe.autoDamageOnHit with game.settings.get: aoe's kit settings() is only published at ready, and Foundry renders the chat log before ready, so the C23-clean read would show a per-swing Damage button on every card rendered at load",
+        "decision": "W4-C3 (wave-4-report.md): Joe 2026-10-12 keep — C21/C23 a documented exception",
+        "until": "aoe publishes a pre-ready settings read (or an event) combat can use"
+      },
+      "C23": {
+        "reason": "same read as C21: combat reads another module's (pentaryn-aoe) setting directly",
+        "decision": "W4-C3 (wave-4-report.md): Joe 2026-10-12 keep",
+        "until": "as C21"
+      }
+    },
+    "pentaryn-journal": {
+      "C56": {
+        "reason": "personal.mjs assigns CONFIG.queries by hand: the kit's query/relay rows do not forward the sender, which the personal-journal relay needs",
+        "decision": "W2-J2 (wave-2-report.md): Joe 2026-10-12 not taken — kit does not forward the sender",
+        "until": "the kit forwards the sender (kit bump), then journal moves the relay to a manifest row"
+      }
+    },
+    "pentaryn-riders": {
+      "C37": {
+        "reason": "styles/riders.css keeps Argon's click-through rule (#tooltip.ech-tooltip-container, #tooltip .ech-tooltip { pointer-events: none }; adjustments row argon-tooltip-click-through): moving it into the shared lib/argon-tooltip.css would make every Argon hover tooltip click-through whenever combat or transform is on",
+        "decision": "W4-R9 (wave-4-report.md): Joe 2026-10-12 keep the rule in riders.css",
+        "until": "Argon (enhancedcombathud) stops needing the click-through, or the rule gains a riders-owned root"
+      },
+      "C56": {
+        "reason": "battle-medic.mjs assigns CONFIG.queries by hand (through guarded): same kit gap as journal — the relay needs the sender",
+        "decision": "W4-R4 (wave-4-report.md): Joe 2026-10-12 keep (kit 1.1.0 does not forward the sender)",
+        "until": "as journal C56"
+      }
+    },
+    "pentaryn-ties": {
+      "C05": {
+        "reason": "ties-api.mjs is a compat barrel for outside import() callers (world macros); nothing in the module imports it",
+        "decision": "W3-T6 (wave-3-report.md): Joe 2026-10-12 keep it one release",
+        "until": "the next ties version after grepping the world's macros: delete ties-api.mjs and this row"
+      },
+      "C37": {
+        "reason": "the canvas card layer's bare #pentaryn-ties-cards selector: a class would churn seven canvas goldens for an invisible change",
+        "decision": "W3-T1 (wave-3-report.md): Joe 2026-10-12 accept C37 for ties",
+        "until": "revisited with D7's shared CSS"
+      }
+    },
+    "pentaryn-walls": {
+      "C07": {
+        "reason": "flagScope stays 'wall-autocomplete' (module.json and core/engine.mjs): the flag-scope DATA migration is parked, not wired, not run — walls stays OFF in Joe's world",
+        "decision": "wave7-restart-batch.md walls row (Joe 2026-10-12; overnight plan §10: walls stays off)",
+        "until": "walls is turned on and its flag-scope data migration runs"
+      }
+    }
+  }
+}

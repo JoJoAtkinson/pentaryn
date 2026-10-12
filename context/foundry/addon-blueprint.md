@@ -757,14 +757,19 @@ listener. `F.fire("ready")` sets `game.ready = true` first, as Foundry does.
 `GOLDEN_UPDATE=1 node test/run.mjs` on a module mid-refactor. A missing golden fails.
 
 Gates: `make foundry-<short>-check` runs the module's ModuleSpec gates — parse, imports, i18n,
-node-test (`node test/run.mjs` from the module folder), then `vendor` and `conformance` for a
-migrated module (one with `lib/kit.lock.json`; an unmigrated one skips both, it does not fail).
-Conformance is **advisory until Stage 5**: it reports failing rules but keeps the check green
-(`CONFORMANCE_FAILS` in `scripts/foundry/ops/modules.py`), and a WAIT module is reported, never
-failed. `make foundry-modules-check` runs every module and keeps going (`JSON=1` for `--json`).
-Kit: `make foundry-lib-check`. Scores: `make foundry-conformance [M=<short>] [MD=1]` — it calls
-`conformance.py` directly, which exits 1 while any scored module fails a fail-class rule, so make
-reports an error until Stage 5 is done; read the scores, not the exit code. Python:
+node-test (`node test/run.mjs` from the module folder), then `vendor` and `conformance`. Both are
+**strict** (since migration Stage 5, 2026-10-12): a module without `lib/kit.lock.json` fails both,
+a vendored file that differs from `foundry/lib` fails `vendor`, and `conformance` fails on any
+failing fail-class rule that has no row in
+[`scripts/foundry/blueprint/exceptions.json`](../../scripts/foundry/blueprint/exceptions.json) —
+and on a **stale** row, one whose rule no longer fails, so the list cannot outlive its
+reason. Each row is module id → rule id → `reason`, `decision` (the Open-for-Joe row or parked step
+that accepted it), `until` (what retires it); delete the row in the commit that retires it. Never
+add a row to turn a red gate green without a decision to cite. `wait.json` exempts nothing from the
+gate (it says who may edit a module). `make foundry-modules-check` runs every module and keeps
+going (`JSON=1` for `--json`). Kit: `make foundry-lib-check`. Scores: `make foundry-conformance
+[M=<short>] [MD=1]` — `conformance.py` exits 1 exactly when the gate would fail (it prints
+`accepted:` and `STALE exception:` beside each module). Python:
 `make test` (pytest, blueprint tests included). Everything: `make check-all`.
 
 After a migration changes a module's published API, run `make foundry-module-index` and commit
@@ -941,6 +946,6 @@ Wired in wave 1 (README §7): `make foundry-<m>-check` with the vendor and confo
 W3), `module-new` / `module-vendor` / `module-conformance` / `module-check --all --json` in ops
 (W1), the Makefile targets in §6 (W4), the updater's exposure skip and pytest paths (W5), the
 routing rows and the generated Module APIs table (W6, W7) and the plans index row (W8). What stays
-open: conformance is advisory until Stage 5 (§6), and names and pings run `node-test` only once they
-have a `test/run.mjs`. The list with status is
+open: nothing in W1–W9. Stage 5 step 2 (2026-10-12) made the vendor and conformance gates strict,
+with explicit per-module exceptions in `scripts/foundry/blueprint/exceptions.json` (§6). The list with status is
 [`../plans/addon-blueprint-2026-10/README.md`](../plans/addon-blueprint-2026-10/README.md) §7.

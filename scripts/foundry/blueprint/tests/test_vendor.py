@@ -162,14 +162,20 @@ def test_all_touches_only_locked_modules(tmp_path, capsys):
     out = capsys.readouterr().out
     assert "skipped" in out and "pentaryn-unlocked" in out
 
-    # check --all: a lock-less module is skipped, not failed
+    # check --all: a lock-less module FAILS (Stage 5: every module vendors the kit)
+    assert vendor.main(["check", "--all", "--root", str(root)]) == 1
+    assert "pentaryn-unlocked" in capsys.readouterr().out
+    assert vendor.main(["check", "--all", "--root", str(root), "--json"]) == 1
+    report = json.loads(capsys.readouterr().out)
+    assert report["skipped"] == ["pentaryn-unlocked"] and report["modules"]["pentaryn-locked"] == []
+    vendor.sync(unlocked, tier="full")
     assert vendor.main(["check", "--all", "--root", str(root)]) == 0
     (locked / "lib/log.mjs").write_text("// drifted\n")
     assert vendor.main(["check", "--all", "--root", str(root)]) == 1
     capsys.readouterr()
     assert vendor.main(["check", "--all", "--root", str(root), "--json"]) == 1
     report = json.loads(capsys.readouterr().out)
-    assert report["skipped"] == ["pentaryn-unlocked"] and report["modules"]["pentaryn-locked"]
+    assert report["skipped"] == [] and report["modules"]["pentaryn-locked"]
 
 
 def test_sync_records_the_tier_in_the_lock_and_keeps_it(tmp_path):

@@ -8,9 +8,10 @@ foundry/lib, a byte-identical copy in each module's lib/, and this gate proving 
     vendor.py sync  <module…|--all> [--tier small|full] [--kit a,b] [--root DIR]
     vendor.py check <module…|--all> [--root DIR] [--json]
 
-`--all` means every module that already HAS a lib/kit.lock.json — the migrated ones. A module
-without a lock is skipped (listed, never written, never failed): adopting the kit is a per-module
-step, `vendor.py sync <short> --tier full`, never a side effect of a bulk re-vendor.
+`--all` means every module that already HAS a lib/kit.lock.json — the migrated ones. `sync --all`
+skips a module without a lock (listed, never written): adopting the kit is a per-module step,
+`vendor.py sync <short> --tier full`, never a side effect of a bulk re-vendor. `check --all` FAILS
+one (since migration Stage 5, 2026-10-12, every module vendors the kit — the strict gate).
 
 A module names its kit in `lib/kit.lock.json` — `{"version", "tier", "files"}` — written only by
 `sync`. `tier` is what `--tier` chose (kept on a re-sync); the scorer falls back to it while
@@ -294,7 +295,10 @@ def main(argv: list[str] | None = None) -> int:
     if not targets and not skipped:
         ap.error("name a module or pass --all")
     if skipped and not getattr(args, "json", False):
-        print(f"  · skipped (no lib/kit.lock.json, not migrated): {', '.join(skipped)}")
+        if args.cmd == "check":
+            print(f"  ✗ no lib/kit.lock.json (every module vendors the kit since Stage 5): {', '.join(skipped)}")
+        else:
+            print(f"  · skipped (no lib/kit.lock.json, not migrated): {', '.join(skipped)}")
 
     if args.cmd == "sync":
         rc = 0
@@ -318,7 +322,7 @@ def main(argv: list[str] | None = None) -> int:
                     print(f"  ✗ {p}")
             else:
                 print(f"  ✓ {name}: vendored kit identical to foundry/lib")
-    return 1 if any(report.values()) else 0
+    return 1 if any(report.values()) or skipped else 0
 
 
 if __name__ == "__main__":
