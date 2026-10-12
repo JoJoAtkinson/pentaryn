@@ -55,7 +55,7 @@ test("describe(): the four legacy rows, clear the one write, the settings table,
   assert.deepEqual(d.methods.find(m => m.path === "recent").params.map(p => [p.name, p.default]), [["n", 10]]);
   for (const m of d.methods) assert.equal(typeof api[m.path], "function", m.path);
   assert.deepEqual(d.settings.map(s => [s.key, s.type, s.store ?? false]), [["log", "Array", true], ["max", "Number", false]]);
-  assert.deepEqual(d.patches, [{ label: "ControlsLayer#handlePing", marker: "__pentarynPatched", via: "direct", adjustments: "pings-core-ping-handle" }]);
+  assert.deepEqual(d.patches, [{ label: "ControlsLayer#handlePing", marker: "__pentarynPingsPatched", via: "direct", adjustments: "pings-core-ping-handle" }]);
   assert.deepEqual([d.hooks, d.events, d.queries], [[], [], []]);
   assert.deepEqual(d.flags, { writes: [], reads: [] });
   assert.equal(d.published.when, "ready:gm");
@@ -106,7 +106,7 @@ test("uninstall() unwraps handlePing, stops listening, drops a pending flush; a 
   const again = F.game.pentaryn.pings;
   assert.notEqual(again, api, "a new API object");
   assert.equal(F.game.modules.get(MODULE).api, again);
-  assert.equal(W.ControlsLayer.prototype.handlePing.__pentarynPatched, true, "wrapped again");
+  assert.equal(W.ControlsLayer.prototype.handlePing.__pentarynPingsPatched, true, "wrapped again");
   assert.deepEqual(W.socket.map(([e]) => e), ["userActivity"]);
   // [declared] pings-edge-1: the unflushed ping at 10 sat only in the pending list, which uninstall()
   // dropped; it never reached the settings cache

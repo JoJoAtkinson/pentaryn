@@ -14,18 +14,18 @@ W.captureConsole();
 await import("../pings.mjs");
 const { patches } = await import("../lib/patch.mjs");
 
-test("one kit patch record: ControlsLayer#handlePing, marker __pentarynPatched, row pings-core-ping-handle", async () => {
+test("one kit patch record: ControlsLayer#handlePing, marker __pentarynPingsPatched, row pings-core-ping-handle", async () => {
   F.fire("init");
   F.fire("ready");
   assert.deepEqual(patches(), [{
     moduleId: "pentaryn-pings",
     label: "ControlsLayer#handlePing",
     name: "handlePing",
-    marker: "__pentarynPatched",
+    marker: "__pentarynPingsPatched",
     via: "direct",
     adjustments: "pings-core-ping-handle",
   }]);
-  assert.equal(W.ControlsLayer.prototype.handlePing.__pentarynPatched, true);
+  assert.equal(W.ControlsLayer.prototype.handlePing.__pentarynPingsPatched, true);
   assert.equal(await new W.ControlsLayer().handlePing(F.game.users.get(GM), { x: 5, y: 6 }, { scene: ALPHA }), "drawn");
   mock.timers.tick(250);
   await drain();

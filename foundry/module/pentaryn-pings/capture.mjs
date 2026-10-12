@@ -130,12 +130,10 @@ function patchControlsLayer() {
     log.warn("no ControlsLayer#handlePing to patch — local pings will rely on the socket path only");
     return false;
   }
-  if (Layer.prototype.handlePing.__pentarynPatched) return true;
-
   handle = wrapMethod(MODULE, {
     target: Layer.prototype,
     name: "handlePing",
-    marker: "__pentarynPatched",
+    marker: "__pentarynPingsPatched",
     label: "ControlsLayer#handlePing",
     adjustments: "pings-core-ping-handle",
   }, function (wrapped, user, position, options = {}) {

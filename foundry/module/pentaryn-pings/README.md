@@ -80,7 +80,7 @@ Emits no events of its own (`HOOKS` is empty). Registers only `init` and `ready`
 
 | Adjustments row | What | Why |
 |---|---|---|
-| `pings-core-ping-handle` | wraps `ControlsLayer.prototype.handlePing` through `wrapMethod`, marker `__pentarynPatched` | the only place a ping drawn on this client is visible. On the prototype: layers are rebuilt on every scene change |
+| `pings-core-ping-handle` | wraps `ControlsLayer.prototype.handlePing` through `wrapMethod`, marker `__pentarynPingsPatched` | the only place a ping drawn on this client is visible. On the prototype: layers are rebuilt on every scene change |
 | `core-pings-user-activity-socket` | `game.socket.on("userActivity", …)` — core's private socket event; core v14 sends `{cursor: {x, y}, ping: {scene, …}}`, recorded as `cursor` on `ping.scene` | pings from clients on scenes the GM is not viewing never reach `handlePing` |
 
 The two paths overlap, so a record that repeats the last one (same user, scene and rounded point,
@@ -108,7 +108,7 @@ what that tab had not yet written — a `clear()` in one tab stays cleared.
 1. A pure rule → `pings-core.mjs`, with a table row in `test/core.test.mjs` (it runs on the oracle
    and on core) or a test in `test/core-meta.test.mjs` when the oracle has no counterpart.
 2. A new reader → a row in `api-manifest.mjs` and its implementation in `impl` in `pings.mjs`.
-3. Capture changes → `capture.mjs`; keep the `__pentarynPatched` literal there (the adjustments row
+3. Capture changes → `capture.mjs`; keep the `__pentarynPingsPatched` literal there (the adjustments row
    greps for it).
 
 ## Pitfalls

@@ -92,7 +92,7 @@ test("GM ready: wraps the prototype once, listens on userActivity, publishes fou
   F.fire("ready");
   const patched = W.ControlsLayer.prototype.handlePing;
   assert.notEqual(patched, W.original);
-  assert.equal(patched.__pentarynPatched, true);
+  assert.equal(patched.__pentarynPingsPatched, true);
   assert.equal(Object.hasOwn(layer, "handlePing"), false, "patched on the prototype, not an instance");
   assert.deepEqual([GlobalLayer.prototype.handlePing, ConfigLayer.prototype.handlePing], decoys, "foundry.canvas.layers wins");
   assert.deepEqual(W.socket.map(([e]) => e), ["userActivity"]);
