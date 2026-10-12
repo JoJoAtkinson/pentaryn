@@ -823,3 +823,28 @@ def test_py_blueprint_rob_2_a_broken_or_missing_registry_fails_c47_and_c32(tmp_p
     for rep in json.loads(out.out):
         assert next(r for r in rep["results"] if r["id"] == "C47")["status"] == "fail"
     assert out.err.count("adjustments registry cannot be loaded") == 1, out.err
+
+
+def test_py_blueprint_perf_1_a_full_run_loads_the_registry_and_manifests_once(tmp_path, monkeypatch, capsys):
+    """py-blueprint-perf-1: main() parses adjustments.yml once and each module.json twice at most
+    (its own load plus one sibling scan), not N registry parses and N² manifest reads; and the
+    reports are byte-identical to scoring each module alone with score_dir's defaults."""
+    root = tmp_path / "mods"
+    for n in ("one", "two", "three", "four"):
+        _tiny(root, name=f"pentaryn-{n}")
+    capsys.readouterr()
+    conformance.main(["--root", str(root), "--json"])
+    before = capsys.readouterr().out
+    alone = json.dumps([conformance.score_dir(p, root=root) for p in sorted(root.iterdir())], indent=2)
+    assert before == alone + "\n"
+
+    loads, reads = [], []
+    real_load, real_read = conformance.adj.load, Path.read_text
+    monkeypatch.setattr(conformance.adj, "load", lambda *a, **k: (loads.append(a), real_load(*a, **k))[1])
+    monkeypatch.setattr(Path, "read_text", lambda self, *a, **k: (reads.append(self.name), real_read(self, *a, **k))[1])
+    conformance.main(["--root", str(root), "--json"])
+    after = capsys.readouterr().out
+    monkeypatch.undo()
+    assert after == before
+    assert len(loads) == 1, loads
+    assert reads.count("module.json") <= 2 * 4, reads.count("module.json")

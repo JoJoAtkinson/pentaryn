@@ -1900,21 +1900,35 @@ def gate_ok(report: dict) -> bool:
     return not report["blocking"] and not report["stale"]
 
 
+def load_registry(reg_path: Path) -> tuple[adj.Registry | None, str | None]:
+    """(registry, None), or (None, why) when it is broken or missing: C47 and C32 FAIL with that text."""
+    try:
+        return adj.load(reg_path), None
+    except adj.RegistryError as exc:
+        return None, str(exc)
+
+
+def load_manifests(root: Path) -> dict[str, dict]:
+    """Every sibling module.json under root, by folder name (C38's cssPrefix-clash check reads these)."""
+    return {p.name: json.loads((p / "module.json").read_text(encoding="utf-8"))
+            for p in root.iterdir() if (p / "module.json").exists()}
+
+
 def score_dir(module_dir: Path, *, root: Path | None = None, registry_path: Path | None = None,
-              installed: bool | None = None) -> dict:
-    """Score one module directory (the entry point new_module.py and the tests use)."""
+              installed: bool | None = None,
+              registry: tuple[adj.Registry | None, str | None] | None = None,
+              manifests: dict[str, dict] | None = None) -> dict:
+    """Score one module directory (the entry point new_module.py and the tests use). A caller scoring
+    many modules passes `registry` (load_registry's pair) and `manifests` (load_manifests of root),
+    loaded once; omitted, each is loaded here."""
     module_dir = module_dir.resolve()
     root = (root or module_dir.parent).resolve()
     reg_path = registry_path or adj.REGISTRY_PATH
-    registry, registry_error = None, None
-    try:
-        registry = adj.load(reg_path)
-    except adj.RegistryError as exc:     # broken or missing: C47 and C32 FAIL with this text
-        registry_error = str(exc)
+    registry, registry_error = registry if registry is not None else load_registry(reg_path)
     if installed is None:
         installed = root == MODULE_ROOT.resolve()
-    manifests = {p.name: json.loads((p / "module.json").read_text(encoding="utf-8"))
-                 for p in root.iterdir() if (p / "module.json").exists()}
+    if manifests is None:
+        manifests = load_manifests(root)
     reg_root = reg_path.parent.parent if reg_path == adj.REGISTRY_PATH else reg_path.parent
     m = load_module(module_dir, installed=installed, registry=registry, registry_root=reg_root,
                     all_manifests=manifests, registry_error=registry_error)
@@ -1990,11 +2004,17 @@ def main(argv: list[str] | None = None) -> int:
     if not targets:
         targets = sorted(p for p in root.iterdir() if (p / "module.json").exists())
 
-    try:
-        adj.load(reg_path)
-    except adj.RegistryError as exc:
-        print(f"  ✗ {registry_failure(str(exc))}", file=sys.stderr)
-    reports = [score_dir(t, root=t.resolve().parent, registry_path=reg_path, installed=installed) for t in targets]
+    registry = load_registry(reg_path)     # once per run, not once per module
+    if registry[1]:
+        print(f"  ✗ {registry_failure(registry[1])}", file=sys.stderr)
+    manifests: dict[Path, dict[str, dict]] = {}   # one sibling scan per root, not one per module
+    reports = []
+    for t in targets:
+        parent = t.resolve().parent
+        if parent not in manifests:
+            manifests[parent] = load_manifests(parent)
+        reports.append(score_dir(t, root=parent, registry_path=reg_path, installed=installed,
+                                 registry=registry, manifests=manifests[parent]))
     if args.json:
         print(json.dumps(reports, indent=2))
     elif args.markdown:
