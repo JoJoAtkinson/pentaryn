@@ -6,7 +6,7 @@
 Exit status: 0 when every scored module passes every fail-class rule or holds an exception for it,
 1 when any fails without one or an exception is stale (so `conformance.py --module <short>` works as
 the same gate `make foundry-<short>-check` runs), 2 for an unknown module. Exceptions are the rows
-of exceptions.json beside this file (module id → rule id → reason, decision, until; Stage 5 step 2);
+of exceptions.json beside this file (module id → rule id → reason, decision, until, match; Stage 5 step 2);
 a stale row is one whose rule no longer fails. Modules listed in wait.json beside this file are
 printed as WAIT: the fix phase does not edit them yet (it does not exempt them from the gate).
 
@@ -50,7 +50,8 @@ MODULE_ROOT = REPO_ROOT / "foundry" / "module"
 PACKAGES = json.loads((Path(__file__).with_name("packages.json")).read_text(encoding="utf-8"))
 # module id → why the fix phase must not touch it now (wait.json; printed as WAIT)
 WAIT: dict[str, str] = json.loads((Path(__file__).with_name("wait.json")).read_text(encoding="utf-8"))["modules"]
-# module id → rule id → {reason, decision, until}: the only failing rules the strict gate accepts
+# module id → rule id → {reason, decision, until, match}: the only failing rules (and, by `match`,
+# the only findings of each) the strict gate accepts
 EXCEPTIONS: dict[str, dict[str, dict]] = json.loads(
     (Path(__file__).with_name("exceptions.json")).read_text(encoding="utf-8"))["modules"]
 
@@ -1869,16 +1870,29 @@ def score(m: Module) -> dict:
     }
 
 
+def _unmatched(row: dict, detail: list[str]) -> list[str]:
+    """The failing details a row's `match` patterns (regexes, `re.search`) do not cover. A row
+    accepts the findings it was decided for, not every future finding of the same rule: a new
+    unprefixed selector in a module with a C37 row is blocking, like in any other module."""
+    pats = row.get("match")
+    if not pats:
+        return []
+    return [d for d in detail if not any(re.search(p, d) for p in pats)]
+
+
 def verdict(module_id: str, results) -> dict:
     """The strict gate over one module's results (Stage 5 step 2): `blocking` = failing rules with no
-    exceptions.json row, `accepted` = failing rules a row accepts (rule → reason), `stale` = rows
+    exceptions.json row, or with a finding the row's `match` patterns do not cover (`unmatched`:
+    rule → those findings); `accepted` = failing rules a row accepts (rule → reason); `stale` = rows
     whose rule no longer fails. The gate passes iff `blocking` and `stale` are both empty."""
     rows = EXCEPTIONS.get(module_id, {})
-    failing = [r.id for r in results if r.status == "fail"]
+    failing = [r for r in results if r.status == "fail"]
+    unmatched = {r.id: u for r in failing if r.id in rows and (u := _unmatched(rows[r.id], r.detail))}
     return {
-        "blocking": [rid for rid in failing if rid not in rows],
-        "accepted": {rid: rows[rid]["reason"] for rid in failing if rid in rows},
-        "stale": sorted(rid for rid in rows if rid not in failing),
+        "blocking": [r.id for r in failing if r.id not in rows or r.id in unmatched],
+        "accepted": {r.id: rows[r.id]["reason"] for r in failing if r.id in rows and r.id not in unmatched},
+        "unmatched": unmatched,
+        "stale": sorted(rid for rid in rows if rid not in {r.id for r in failing}),
     }
 
 

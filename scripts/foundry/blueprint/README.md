@@ -10,7 +10,7 @@ scorer. **Not this file:** the playbook → `context/foundry/addon-blueprint.md`
 | `conformance.py [--snapshot DIR] [--module m] [--json\|--markdown]` | scores modules on rules C01–C62; prints WAIT modules and each module's `accepted:` / `STALE exception:` rules; exit 1 exactly when the strict gate fails (a failing fail-class rule with no `exceptions.json` row, or a stale row), 2 for an unknown module (playbook §6). Tier = `flags.pentaryn.tier`, else the lock's `tier`, else full | nothing |
 | `packages.json` | third-party package names and code tokens the scripts match (aliases ⊇ `foundry/adjustments.yml` `aliases`; the registry's are merged in at run time too) | — |
 | `wait.json` | modules the fix phase must not edit yet, with the reason; edit it when a workflow starts or stops on a module (it exempts nothing from the gates) | — |
-| `exceptions.json` | the strict conformance gate's only exceptions: module id → rule id → `reason`, `decision`, `until`. A stale row (its rule no longer fails) fails the gate; delete it in the commit that retires it. A pytest checks every row names a real module and a fail-class rule | — |
+| `exceptions.json` | the strict conformance gate's only exceptions: module id → rule id → `reason`, `decision`, `until`, `match` (regexes for the findings the decision covers; a failing finding none matches blocks). A stale row (its rule no longer fails) fails the gate; delete it in the commit that retires it. A pytest checks every row names a real module and a fail-class rule, and every `match` pattern a live finding | — |
 
 Package names live in `packages.json`, not in the `.py` files: `scripts/foundry/**/*.py` is in the
 Saturday updater's exposure grep, and a literal here would make the scanner look exposed.

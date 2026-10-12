@@ -395,7 +395,9 @@ def _gate_conformance(spec: cfg.ModuleSpec) -> GateResult:
     detail = {r["id"]: "; ".join(r["detail"])[:200] for r in report["results"]
               if r["id"] in failing}
     notes = [f"{rid} accepted (exceptions.json): {accepted[rid]}"[:300] for rid in sorted(accepted)]
-    problems = [f"{rid} {detail.get(rid, '')}".rstrip() for rid in blocking]
+    unmatched = report.get("unmatched") or {}
+    problems = [(f"{rid} not covered by its exceptions.json row: {'; '.join(unmatched[rid])[:200]}"
+                 if rid in unmatched else f"{rid} {detail.get(rid, '')}".rstrip()) for rid in blocking]
     problems += [f"{rid} stale exception: it no longer fails — delete its row from "
                  "scripts/foundry/blueprint/exceptions.json" for rid in stale]
     if problems:

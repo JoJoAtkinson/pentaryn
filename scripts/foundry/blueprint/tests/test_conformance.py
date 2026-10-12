@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import shutil
 from pathlib import Path
 
@@ -722,8 +723,21 @@ def test_exceptions_rows_are_explicit_and_name_real_fail_class_rules():
         assert rows, f"{module_id}: an empty exception block"
         for rid, row in rows.items():
             assert rid in fail_class, f"{module_id} {rid}: not a fail-class rule (warn/manual never gate)"
-            assert set(row) == {"reason", "decision", "until"}, f"{module_id} {rid}: {sorted(row)}"
-            assert all(isinstance(v, str) and len(v.strip()) >= 5 for v in row.values()), (module_id, rid)
+            assert set(row) == {"reason", "decision", "until", "match"}, f"{module_id} {rid}: {sorted(row)}"
+            assert all(isinstance(row[k], str) and len(row[k].strip()) >= 5
+                       for k in ("reason", "decision", "until")), (module_id, rid)
+            assert row["match"] and all(isinstance(p, str) and re.compile(p) for p in row["match"]), (module_id, rid)
+
+
+def test_every_exception_pattern_names_a_live_finding():
+    """A `match` pattern pins the findings the decision covers; one that matches nothing today is a
+    typo or a finding already fixed — either way the row says more than the code does."""
+    for module_id, rows in conformance.EXCEPTIONS.items():
+        results = {r["id"]: r for r in conformance.score_dir(conformance.MODULE_ROOT / module_id)["results"]}
+        for rid, row in rows.items():
+            detail = results[rid]["detail"]
+            for p in row["match"]:
+                assert any(re.search(p, d) for d in detail), f"{module_id} {rid}: {p!r} matches none of {detail}"
 
 
 def test_verdict_splits_blocking_accepted_and_stale(monkeypatch):
@@ -732,6 +746,19 @@ def test_verdict_splits_blocking_accepted_and_stale(monkeypatch):
     results = [conformance.Result("C05", "fail", "fail", [], ""), conformance.Result("C07", "fail", "fail", [], ""),
                conformance.Result("C37", "fail", "pass", [], "")]
     v = conformance.verdict("pentaryn-x", results)
-    assert v == {"blocking": ["C05"], "accepted": {"C07": "why"}, "stale": ["C37"]}
+    assert v == {"blocking": ["C05"], "accepted": {"C07": "why"}, "unmatched": {}, "stale": ["C37"]}
     assert not conformance.gate_ok(v)
     assert conformance.gate_ok(conformance.verdict("pentaryn-x", results[1:2] + [conformance.Result("C37", "fail", "fail", [], "")]))
+
+
+def test_a_row_with_match_accepts_only_the_findings_it_names(monkeypatch):
+    row = {"reason": "why", "decision": "who", "until": "when", "match": [r"^styles/a\.css: #tooltip$"]}
+    monkeypatch.setattr(conformance, "EXCEPTIONS", {"pentaryn-x": {"C37": row}})
+    decided = conformance.Result("C37", "fail", "fail", ["styles/a.css: #tooltip"], "")
+    v = conformance.verdict("pentaryn-x", [decided])
+    assert v["accepted"] == {"C37": "why"} and not v["blocking"] and not v["unmatched"] and conformance.gate_ok(v)
+    # a later, unreviewed finding of the same rule blocks, and is named
+    later = conformance.Result("C37", "fail", "fail", ["styles/a.css: #tooltip", "styles/a.css: .new"], "")
+    v = conformance.verdict("pentaryn-x", [later])
+    assert v["blocking"] == ["C37"] and v["unmatched"] == {"C37": ["styles/a.css: .new"]} and not v["accepted"]
+    assert not conformance.gate_ok(v)

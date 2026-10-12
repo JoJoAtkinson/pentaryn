@@ -157,6 +157,20 @@ def test_conformance_gate_accepts_only_the_listed_exceptions(tmp_path, monkeypat
     assert not res.ok and res.counts["blocking"] == [failing[0]]
 
 
+def test_conformance_gate_blocks_a_finding_the_row_does_not_match(tmp_path, monkeypatch):
+    from scripts.foundry.blueprint import conformance
+    spec = _migrated_failing(tmp_path)
+    monkeypatch.setattr(conformance, "EXCEPTIONS", {})
+    failing = modules._gate_conformance(spec).counts["failing"]
+    row = {"reason": "test", "decision": "test", "until": "test"}
+    rows = {rid: row for rid in failing}
+    rows[failing[0]] = row | {"match": [r"^a finding nobody has$"]}
+    monkeypatch.setattr(conformance, "EXCEPTIONS", {"pentaryn-demo": rows})
+    res = modules._gate_conformance(spec)
+    assert not res.ok and res.counts["blocking"] == [failing[0]]
+    assert res.problems[0].startswith(f"{failing[0]} not covered by its exceptions.json row: ")
+
+
 def test_conformance_gate_fails_a_stale_exception(tmp_path, monkeypatch):
     from scripts.foundry.blueprint import conformance
     spec = _migrated_failing(tmp_path)

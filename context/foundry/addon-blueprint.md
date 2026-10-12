@@ -764,7 +764,8 @@ failing fail-class rule that has no row in
 [`scripts/foundry/blueprint/exceptions.json`](../../scripts/foundry/blueprint/exceptions.json) —
 and on a **stale** row, one whose rule no longer fails, so the list cannot outlive its
 reason. Each row is module id → rule id → `reason`, `decision` (the Open-for-Joe row or parked step
-that accepted it), `until` (what retires it); delete the row in the commit that retires it. Never
+that accepted it), `until` (what retires it), `match` (regexes for the findings that decision
+covers: a later finding of the same rule that none matches blocks the gate); delete the row in the commit that retires it. Never
 add a row to turn a red gate green without a decision to cite. `wait.json` exempts nothing from the
 gate (it says who may edit a module). `make foundry-modules-check` runs every module and keeps
 going (`JSON=1` for `--json`). Kit: `make foundry-lib-check`. Scores: `make foundry-conformance
