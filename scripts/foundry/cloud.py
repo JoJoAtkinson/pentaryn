@@ -78,7 +78,6 @@ import argparse
 import hashlib
 import io
 import json
-import math
 import re
 import os
 import shutil
@@ -425,12 +424,8 @@ class Ancestry:
     mtimes: tuple[float | None, ...] = ()
 
 
-def _finite(x) -> float | None:
-    """`x` as a finite float, else None — never NaN or ±Infinity (non-strict JSON)."""
-    if isinstance(x, bool) or not isinstance(x, (int, float)):
-        return None
-    x = float(x)
-    return x if math.isfinite(x) else None
+# `x` as a finite float, else None — never NaN or ±Infinity (non-strict JSON).
+_finite = bootstate._finite
 
 
 def read_lineage(st: Storage, snap: Snapshot) -> Ancestry | None:
