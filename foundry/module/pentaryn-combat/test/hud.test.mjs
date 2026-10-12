@@ -566,6 +566,44 @@ test("other triggers: sequenceEnd, a new turn/round (aborting a stale sequence),
   F.calls.length = 0;
 });
 
+test("ac-3: a refresh that throws after a settled sequence or a deleted combat is logged at debug, never an unhandled rejection or a timer throw", async () => {
+  onTurn(fig);
+  reset(fig);
+  const h = buildHud(fig, { mainSlot: "longsword0000001", offSlot: "dagger0000000001" });
+  renderAll(h, fig);
+  await drain();
+  const fa = h.action._buttons[0];
+  fa.refresh = () => { throw new Error("reading 'items' of null"); };
+  const unhandled = [];
+  const onUnhandled = err => unhandled.push(err?.message ?? String(err));
+  process.on("unhandledRejection", onUnhandled);
+  const debugs = [];
+  const debug = console.debug;
+  console.debug = (...args) => debugs.push([args[0], args[1]?.message ?? null]);
+  globalThis.CONFIG.debug = { ...(globalThis.CONFIG.debug ?? {}), [MODULE]: true };
+  const timerThrows = [];
+  try {
+    F.Hooks.callAll("pentarynCombat.sequenceEnd", fig);
+    await drain();
+    await new Promise(r => setImmediate(r));
+    F.Hooks.callAll("deleteCombat", combat);
+    try { mock.timers.tick(0); mock.timers.tick(60); } catch (err) { timerThrows.push(err.message); }
+  } finally {
+    process.off("unhandledRejection", onUnhandled);
+    console.debug = debug;
+    delete globalThis.CONFIG.debug[MODULE];
+    row.textContent = "";
+  }
+  assert.deepEqual(unhandled, [], "sequenceEnd: no unhandled rejection");
+  assert.deepEqual(timerThrows, [], "deleteCombat: the timer body never throws");
+  assert.deepEqual(debugs.filter(d => d[1] === "reading 'items' of null"), [
+    [`${MODULE} | bars: sequence ended`, "reading 'items' of null"],
+    [`${MODULE} | bars: combat over (HUD closed)`, "reading 'items' of null"],
+  ]);
+  reset(fig);
+  F.calls.length = 0;
+});
+
 test("Pole Strike gate: greyed with its reason; a left mouseup is stopped with a note; the tooltip says why", async () => {
   onTurn(sly);
   reset(sly);

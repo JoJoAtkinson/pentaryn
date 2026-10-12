@@ -385,7 +385,9 @@ function recheckSlots(actor) {
 // The last swing's flag write can land after the sequence ended; re-check once it has.
 const onSequenceEnd = (actor) => {
   if (!actor || actor !== ui.ARGON?._actor) return;
-  turnSettled(actor).then(() => stateBurst(() => { refreshAll(); checkBars(actor); recheckSlots(actor); }));
+  return turnSettled(actor)
+    .then(() => stateBurst(() => { refreshAll(); checkBars(actor); recheckSlots(actor); }))
+    .catch(err => log.debug("bars: sequence ended", err));   // the HUD may have closed meanwhile (ac-3)
 };
 
 const onCombatUpdated = (combat, changes) => {
@@ -403,7 +405,11 @@ const onCombatUpdated = (combat, changes) => {
 
 // Combat over (in-combat → nocombat key, "New turn" may appear); a weapon equipped or a Focus Point
 // spent elsewhere (follow-ups depend on both).
-const onCombatDeleted = () => { const a = ui.ARGON?._actor; if (a) setTimeout(() => { refreshAll(); checkBars(a); }, core.DELAYS.afterArgon); };
+const onCombatDeleted = () => {
+  const a = ui.ARGON?._actor;
+  if (!a) return;
+  setTimeout(() => { try { refreshAll(); checkBars(a); } catch (err) { log.debug("bars: combat over (HUD closed)", err); } }, core.DELAYS.afterArgon);
+};
 const onItemUpdated = (item) => { const a = ui.ARGON?._actor; if (a && item?.parent === a) checkBars(a); };
 // Reckless on/off (from our toggle, the sheet, or its expiry at turn start) flips the Special-bar toggle.
 const onEffectChanged = (effect) => { const a = ui.ARGON?._actor; if (a && effect?.parent === a) checkBars(a); };
