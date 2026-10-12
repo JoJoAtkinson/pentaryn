@@ -60,6 +60,15 @@ export function destinationsOf(region) {
   return out;
 }
 
+/**
+ * The one "revealed" rule (EXT-1): every enabled teleport behavior with at least one resolvable
+ * destination — what a player can actually travel through — is revealed. A stub with nowhere to go
+ * does not count. The card's hint and switch, the badge and inspect() all read this.
+ */
+export function passageRevealed(region) {
+  return destinationsOf(region).every(d => d.behavior.system.revealed);
+}
+
 /* -------------------------------------------- */
 /*  Snapshot: crop the scene art around a region */
 /* -------------------------------------------- */

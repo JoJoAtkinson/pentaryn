@@ -8,7 +8,7 @@
  */
 
 import { MODULE, cardHTML, esc } from "./portals-core.mjs";
-import { cardFor, destinationsOf, linkPair, lookAt, snapshot, teleportBehaviors, unlinkRegion } from "./scene-adapter.mjs";
+import { cardFor, destinationsOf, linkPair, lookAt, passageRevealed, snapshot, teleportBehaviors, unlinkRegion } from "./scene-adapter.mjs";
 import { flagPath } from "./lib/flags.mjs";
 
 const deps = { setEditing: () => {}, guard: (label, fn) => fn };
@@ -52,7 +52,7 @@ export class PortalCard extends foundry.applications.api.ApplicationV2 {
   async _renderHTML() {
     const dests = destinationsOf(this.region).map(d => d.region);
     const behaviors = teleportBehaviors(this.region);
-    const revealedAll = behaviors.every(b => b.system.revealed);
+    const revealedAll = passageRevealed(this.region);
     if (!this.edit) {
       const note = revealedAll ? "" : `<p class="hint"><i class="fa-solid fa-eye-slash"></i> ${_loc("PENTARYN_PORTALS.Card.Unrevealed")}</p>`;
       const sealed = this.region.hidden ? `<p class="hint"><i class="fa-solid fa-lock"></i> ${_loc("PENTARYN_PORTALS.Card.Sealed")}</p>` : "";

@@ -18,7 +18,7 @@
  */
 
 import { cardHTML, esc, samplePoints as samplePointsAt } from "./portals-core.mjs";
-import { cardFor, destinationsOf, lookAt, moveRegionDocs, teleportParty } from "./scene-adapter.mjs";
+import { cardFor, destinationsOf, lookAt, moveRegionDocs, passageRevealed, teleportParty } from "./scene-adapter.mjs";
 import { PortalCard, configureCardApp } from "./card-app.mjs";
 import { BADGE_ROWS } from "./api-manifest.mjs";
 import { toPlain } from "./lib/api.mjs";
@@ -74,7 +74,7 @@ export async function drawBadges() {
     const dests = destinationsOf(region);
     if (!dests.length) continue;
     if (region.hidden && !game.user.isGM) continue;
-    const revealed = dests.every(d => d.behavior.system.revealed) || game.user.isGM;
+    const revealed = passageRevealed(region) || game.user.isGM;
     const b = region.bounds ?? region.object?.bounds;
     if (!b) continue;
     const r = g * 0.36;

@@ -17,7 +17,10 @@ migration record → `context/plans/addon-blueprint-2026-10/migrate-pentaryn-por
   "Teleport X to <region> in <scene>?" reads "Teleport X to <card title>?". The dialog opens with
   **Teleport** focused (Enter goes; Esc and the X still decline).
 - **Secrecy.** A behavior with `revealed: false` shows players no card (core shows them no name
-  either); its badge shows "?" and the hover says "A way onward".
+  either); its badge shows "?" and the hover says "A way onward". A passage counts as revealed when
+  every enabled teleport behavior that leads somewhere real is revealed — one rule for the card's
+  hint and Revealed switch, the badge and `inspect()`; a behavior whose destinations are all gone
+  does not count.
 - **Travel badges.** Every region with an enabled Teleport Token behavior gets a violet ring badge
   on `canvas.interface`, just above its square, with the first destination's image inside and a
   count when there are several. It draws above lighting, so it shows at darkness 1 (a Tile does

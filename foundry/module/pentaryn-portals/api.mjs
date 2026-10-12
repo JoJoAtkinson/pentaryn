@@ -7,7 +7,7 @@
 
 import { HOOKS, NS } from "./portals-core.mjs";
 import { MANIFEST } from "./api-manifest.mjs";
-import { behaviorsLeadingTo, cardFor, destinationsOf, linkPair, lookAt, snapshot, teleportParty, unlinkRegion } from "./scene-adapter.mjs";
+import { behaviorsLeadingTo, cardFor, destinationsOf, linkPair, lookAt, passageRevealed, snapshot, teleportParty, unlinkRegion } from "./scene-adapter.mjs";
 import { SETTINGS, settingsSnapshot } from "./settings.mjs";
 import { buildApi, toPlain } from "./lib/api.mjs";
 import { fail, ok, toFail } from "./lib/errors.mjs";
@@ -43,7 +43,7 @@ function inspect(ref, { sceneId, as } = {}) {
   const viewer = as === undefined || as === null ? game.user : resolveRef(as, "user");
   const gmView = viewer?.isGM === true;
   const list = destinationList(region);
-  const revealed = list.every(d => d.revealed);
+  const revealed = passageRevealed(region);
   const shown = gmView || (!region.hidden && revealed);
   return toPlain({
     region: gmView ? refOf(region) : { ...refOf(region), name: null },   // the passage name is GM-only
