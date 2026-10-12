@@ -165,7 +165,7 @@ export async function shareFact(spec, recipients, { from = null, notify = true }
   if (!game.user?.isGM) return { ...out, reason: "notGM" };
   const subject = game.actors?.get(spec?.subjectId);
   if (!subject || !["ident", "attr", "lore", "kind"].includes(spec?.ns)) return { ...out, reason: "invalid" };
-  const fromId = from ? from.id : "gm";
+  const fromId = from ? (typeof from === "string" ? from : from.id) : "gm";
   const fromActor = from && typeof from === "object" ? from : null;
   const sourceBy = source => (fromActor ? _loc("PENTARYN_TIES.known.share.sourceBy", { source, name: fromActor.name }) : source);
 
