@@ -2499,7 +2499,6 @@
     "writes": [
       "flags.pentaryn-ties.ties",
       "flags.pentaryn-ties.known",
-      "flags.pentaryn-ties.knownCategories",
       "flags.pentaryn-ties.granted",
       "flags.pentaryn-ties.studied",
       "flags.pentaryn-ties.beliefs",
@@ -2512,10 +2511,11 @@
       "flags.pentaryn-ties.attributesOff",
       "flags.pentaryn-ties.conceal",
       "flags.pentaryn-ties.worn",
-      "flags.pentaryn-ties.mark",
       "flags.pentaryn-ties.attrSelected"
     ],
     "reads": [
+      "flags.pentaryn-ties.knownCategories",
+      "flags.pentaryn-ties.mark",
       "flags.item-piles.data",
       "flags.dnd5e.isPolymorphed"
     ]

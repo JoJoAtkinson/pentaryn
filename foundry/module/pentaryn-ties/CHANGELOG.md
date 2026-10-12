@@ -121,6 +121,10 @@ Fixed (declared, no table-visible change): the kind study's pass rung (15) is on
 `kindPassed(tier)` in `core/rules.mjs`, read off `STUDY_RUNGS` (now kept in `core/shared.mjs`, still
 exported by `core/study.mjs`), instead of a hand-written `>= 15` at nine sites. ext-7.
 
+API description (declared, no table-visible change): `describe()` lists `flags.pentaryn-ties.knownCategories`
+and `flags.pentaryn-ties.mark` under `flags.reads`, not `flags.writes` — the GM authors them by hand and the
+module only reads them. Pinned by `test/review-flag-reads.test.mjs`. ext-9.
+
 ## 0.19.4 (2026-10-10, usability run, Area 7 re-run)
 
 - **The inspect window's Share switches are the table's PCs only** (`tablePCs`): each player's

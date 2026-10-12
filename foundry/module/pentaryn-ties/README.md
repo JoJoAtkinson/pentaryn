@@ -93,14 +93,20 @@ they own. Renamed in the 2026-10 blueprint migration: `describe` (the card) → 
 | Where | Key | What |
 |---|---|---|
 | Actor | `flags.pentaryn-ties.ties` | `[{ id, name, word, notes, stance, strength }]` — what this actor is to each |
-| Actor (character) | `.known`, `.knownCategories`, `.granted`, `.studied` | the notebook, its categories, the cards handed over, the player-side study hint |
+| Actor (character) | `.known`, `.granted`, `.studied` | the notebook, the cards handed over, the player-side study hint |
 | Actor (subject) | `.beliefs` | the GM-plane ledger: what each character was told, rung, total, delivery, claims |
 | Actor | `.kindOf`, `.studyTiers`, `.studyHold`, `.studyOffset`, `.lore`, `.conceal` | GM authoring: kind pointer, ladder, hold, DC shift, lore rows, concealment |
 | Actor | `.attributes`, `.attributesOff` | authored attribute links; suppressed derived links |
 | Token | `.worn` | `{ by, note }` — the GM's possession mark |
-| Item | `.mark` | `{ icon, tip, color }` — the item mark |
 | User (GM) | `.attrSelected` | the review panel's ticks |
 | World settings | `attributes`, `attributeBeliefs`, `attributeKnowledge` | registry, attribute-lore beliefs, world knowledge |
+
+Read but never written — the GM authors these by hand (`flags.reads` in `describe()`):
+
+| Where | Key | What |
+|---|---|---|
+| Actor (character) | `flags.pentaryn-ties.knownCategories` | `[{ key, label }]` — extra notebook categories, or a rename of a seeded one |
+| Item | `flags.pentaryn-ties.mark` | `{ icon, tip, color }` — the item mark |
 
 Writes use `render: false` where a re-render would destroy the injected tab mid-edit.
 
