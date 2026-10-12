@@ -29,7 +29,7 @@ from scripts.foundry.update import escalate as esc
 from scripts.foundry.update import llm
 from scripts.foundry.update.escalate import Tier
 
-STUDY = "foundry/module/pentaryn-ties/study.mjs"
+STUDY = "foundry/module/pentaryn-ties/study/apply.mjs"
 ADMIN = "scripts/foundry/update/admin.py"
 PORTALS = "foundry/module/pentaryn-portals/portals-core.mjs"
 
@@ -1369,7 +1369,7 @@ def test_make_checks_pinned(monkeypatch):
     monkeypatch.setattr(esc, "_MAKE_TARGETS", None)
     assert esc.make_checks() == MAKE_CHECKS_PIN
     assert esc.checks_for(["foundry/module/pentaryn-walls/wall-engine.mjs",
-                           "foundry/module/pentaryn-ties/look.mjs"]) == [
+                           "foundry/module/pentaryn-ties/look-app.mjs"]) == [
         "make foundry-adjustments-check", "make foundry-ties-check"]
 
 
