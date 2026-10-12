@@ -82,7 +82,9 @@ false }` skips them). `onList`'s `spell` is a spell name or an Item UUID; a UUID
 is not a spell Item answers `{ notFound, spell, hint }` naming what it is. `monsters`' `cr` is a
 value (`"1/4"`, `3`, `"CR 3"`) or a range split by `-`, an en/em dash or ` to ` (`"1/2-2"`,
 `"CR 1/2 to 2"`); a `cr` it cannot read filters nothing and answers
-`warning: "cr not understood: <cr> — use '3', '1/4' or '1/2-2'"`. Kit members: `describe()`, `version`, `contract`, `settings()`, `trace()`,
+`warning: "cr not understood: <cr> — use '3', '1/4' or '1/2-2'"`. `monsters` lists each name
+once, from the first pack that has it (the MM before the SRD): a creature the MM has but the filter
+drops is not answered from the SRD's copy (lookup-edge-7). Kit members: `describe()`, `version`, `contract`, `settings()`, `trace()`,
 `uninstall()`.
 
 **Queries (GM only):** `pentaryn-lookup.search`, `.page`, `.monster`, `.monsters`, `.names`,

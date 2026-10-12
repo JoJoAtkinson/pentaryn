@@ -167,22 +167,25 @@ async function monster(name, opts = {}) {
 
 /**
  * Monsters by size, type and CR, from the Monster Manual first, then the 2024 SRD (one entry per
- * name). `monsters({size: "large", type: "construct", cr: "5-8"})`; `cr` is a value ("1/4", 3) or a
+ * name, the MM's: a creature the MM has is answered from the MM or not at all; a later pack adds only
+ * names the earlier packs lack). `monsters({size: "large", type: "construct", cr: "5-8"})`; `cr` is a value ("1/4", 3) or a
  * range ("1/2-2", "CR 1/2 to 2"), an unreadable one filters nothing and warns; `name` a substring; `limit` (default 40). → `{count, monsters: [{name, cr, size,
  * type, uuid, pack}]}`, lowest CR first. Picks candidates without guessing from memory.
  */
 async function monsters(q = {}) {
   const query = monsterQuery(q ?? {});
-  const seen = new Set(), out = [];
+  // a name an earlier pack has is that pack's, filtered in or out — never a later pack's copy
+  const earlier = new Set(), seen = new Set(), out = [];
   for (const id of query.packIds) {
     const idx = await readIndex(id, [...MONSTER_INDEX_FIELDS], log);
     if (!idx) continue;
     for (const e of idx) {
-      if (!matchMonster(e, query)) continue;
+      if (earlier.has(e.name) || !matchMonster(e, query)) continue;
       if (seen.has(e.name)) continue;
       seen.add(e.name);
       out.push(monsterRow(e, id));
     }
+    for (const e of idx) earlier.add(e.name);
   }
   return withWarning(pageMonsters(sortMonsters(out), query.limit), query.warning);
 }

@@ -64,6 +64,10 @@
 - [declared] An empty `books: []` or `packs: []` is the same as leaving it out: `search`/`page`
   read the rules set instead of answering `compendium pack(s) not found:  —`, and `monsters` lists
   the default packs instead of answering 0 silently (lookup-edge-6).
+- [declared] `monsters()` answers a name from the first pack that has it or not at all: a
+  Monster Manual creature the filter drops is no longer replaced by the 2024 SRD's same-named copy
+  (e.g. a CR the SRD's copy has but the MM's does not); a later pack adds only names the earlier
+  packs lack (lookup-edge-7).
 
 ## 0.3.0 — 2026-10-10
 
