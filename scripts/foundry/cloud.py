@@ -738,9 +738,10 @@ def _tree_digest(paths: list[str]) -> str:
             continue
         for p in sorted(base.rglob("*")):
             if p.is_file():
+                s = p.stat()
                 h.update(str(p.relative_to(root)).encode())
-                h.update(str(p.stat().st_size).encode())
-                h.update(str(int(p.stat().st_mtime)).encode())
+                h.update(str(s.st_size).encode())
+                h.update(str(int(s.st_mtime)).encode())
     return h.hexdigest()
 
 
