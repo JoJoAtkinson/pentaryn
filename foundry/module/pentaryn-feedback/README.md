@@ -60,8 +60,11 @@ whose queue held it — never from the payload), world, scene (viewed/active), c
 targeted tokens with hp, combat round/turn, open windows, active module versions, client (UA,
 viewport, language, time zone), the reporter's own last 10 chat cards (flavor and roll total;
 whisper as a yes/no), the error ring and the action ring. Never: other users' chat, whisper or
-chat content, setting values, form input values, journal text. Every string is clipped and passed
-through `redact()` (secret-looking `key=value`, Bearer tokens, URL query strings).
+chat content, setting values, form input values, journal text. Every string is clipped. Every
+error message (the error ring, the recorder's own failures, `sectionErrors`), error location and
+stack line, chat flavor, window title, click label and notification text also passes through
+`redact()` (secret-looking `key=value`, Bearer tokens, URL query strings). The player's own report
+text and document/user names are clipped only, never redacted.
 
 Nothing in world settings (blueprint §5.3).
 
@@ -138,7 +141,7 @@ wraps stay in place after `uninstall()` and record nothing until the next instal
   `!canvas.ready`. `/bug` and `game.pentaryn.feedback.open()` still work.
 - **Anything under `Data/` is served by URL** while the tunnel is up. Ids are 16 random
   characters, Foundry does not list folders, and a report holds only the reporter's own activity
-  (redacted). Acceptable at this table; never put a secret in a report field.
+  (errors and recorded free text redacted; their own text and names only clipped). Acceptable at this table; never put a secret in a report field.
 - A queued report rides on the User document every client receives: the queue is capped at 5
   (oldest dropped, the player is told) and each report at 256 KB.
 - The kit's `registerQueries` (1.1.0) passes no sender to a row's implementation (its inner

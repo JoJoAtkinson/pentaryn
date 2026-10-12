@@ -20,7 +20,7 @@ const section = fn => {
   try {
     return fn();
   } catch (err) {
-    return { error: clip(messageOf(err), LIMITS.message) };
+    return { error: redact(messageOf(err), LIMITS.message) };
   }
 };
 
@@ -29,7 +29,7 @@ const row = (fn, fallback = {}) => x => {
   try {
     return fn(x);
   } catch (err) {
-    return { ...fallback, error: clip(messageOf(err), LIMITS.message) };
+    return { ...fallback, error: redact(messageOf(err), LIMITS.message) };
   }
 };
 

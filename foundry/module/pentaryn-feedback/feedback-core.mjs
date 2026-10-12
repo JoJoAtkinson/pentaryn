@@ -5,7 +5,8 @@
  * here runs in node on plain fixtures. Glue files import from here; nothing here imports glue.
  *
  * What lives here: the three categories and their help keys, the caps (LIMITS), the text hygiene
- * every recorded string goes through (clip, redact), the ring buffer, the report schema
+ * (clip for every string; redact as well for every error, flavor, title, label and toast — the
+ * player's report text and document/user names are clipped only), the ring buffer, the report schema
  * (buildReport → validateReport → normaliseReport), where a report is stored (reportPath), the
  * offline queue's trim rule, and the status transitions the GM API and the Python reader share.
  */
@@ -118,7 +119,9 @@ const LINE_COL = /(?::\d+){1,2}$/;   // a stack frame's :line:col after the quer
 /**
  * Clip, then strip what looks like a credential: `password=…` / `secret: …` (any value), `token=…`
  * / `key=…` / `session=…` when the value is credential-shaped (12+ characters), a Bearer token, and
- * the query string (`?a=b`) of any URL or path. Applied to every free-text field the recorder and snapshot keep.
+ * the query string (`?a=b`) of any URL or path. Applied to every error message (ring, recorder's own,
+ * sectionErrors), error location and stack line, chat flavor, window title, click label and toast.
+ * Not to the player's report text or document/user names: those are clipped only.
  */
 export function redact(value, n = LIMITS.field) {
   let s = clip(value, n);
@@ -395,7 +398,7 @@ export function sectionsOf(snapshot) {
     if (Array.isArray(v)) out[k] = v;
     else {
       out[k] = [];
-      if (failed(v)) sectionErrors[k] = clip(v.error, LIMITS.message);
+      if (failed(v)) sectionErrors[k] = redact(v.error, LIMITS.message);
       else if (v !== undefined && v !== null) sectionErrors[k] = `not a list (${typeof v})`;
     }
   }
@@ -403,7 +406,7 @@ export function sectionsOf(snapshot) {
     const v = snap[k];
     if (failed(v)) {
       out[k] = null;
-      sectionErrors[k] = clip(v.error, LIMITS.message);
+      sectionErrors[k] = redact(v.error, LIMITS.message);
     } else out[k] = v && typeof v === "object" && !Array.isArray(v) ? v : null;
   }
   return { ...out, sectionErrors };

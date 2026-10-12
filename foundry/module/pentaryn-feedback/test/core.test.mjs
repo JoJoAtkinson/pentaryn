@@ -248,6 +248,15 @@ test("buildReport: schema v1 with every key in file order", () => {
   assert.equal(sample({ draft: { category: "wat", text: "t" } }).category, "bug");
 });
 
+test("feedback-M2: buildReport keeps the player's text verbatim (clipped, not redacted)", () => {
+  assert.equal(core.buildReport({ id: ID, t: 1, draft: { text: "password=hunter2" } }).text, "password=hunter2");
+});
+
+test("feedback-M2: a failed section's error is redacted under sectionErrors", () => {
+  const r = sample({ snapshot: { world: { error: "world broke token=abcdefghijklmnop" }, chat: { error: "GET /chat?sid=x failed" } } });
+  assert.deepEqual(r.sectionErrors, { chat: "GET /chat?[redacted] failed", world: "world broke token=[redacted]" });
+});
+
 test("buildReport: every snapshot section in a shape validateReport accepts; failures under sectionErrors", () => {
   const r = sample({ snapshot: { world: { error: "w broke" }, combat: { error: "c broke" }, chat: { error: "chat broke" }, windows: "junk", modules: null } });
   assert.equal(r.world, null);

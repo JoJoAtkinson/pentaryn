@@ -95,6 +95,15 @@ test("snapshot: every section present; a throwing section becomes { error } and 
   assert.equal(broken.world.id, "test-world");
 });
 
+test("feedback-M2: a throwing section or row keeps a redacted error", () => {
+  const g = { ...globalThis, game: { ...game, get combat() { throw new Error("combat broke token=abcdefghijklmnop"); } } };
+  assert.deepEqual(snapshot({ g }).combat, { error: "combat broke token=[redacted]" });
+  class BrokenSheet { get title() { throw new Error("title broke Bearer abc.def"); } }
+  const apps = new Map([["bad", Object.assign(new BrokenSheet(), { id: "bad" })]]);
+  const g2 = { ...globalThis, foundry: { ...foundry, applications: { ...foundry.applications, instances: apps } } };
+  assert.equal(snapshot({ g: g2 }).windows.find(w => w.cls === "?").error, "title broke Bearer [redacted]");
+});
+
 test("windowRow / attachSummary", () => {
   class ActorSheet5eCharacter {}
   assert.deepEqual(windowRow(Object.assign(new ActorSheet5eCharacter(), { id: "s1", title: "Caven" })), { id: "s1", cls: "ActorSheet5eCharacter", title: "Caven" });

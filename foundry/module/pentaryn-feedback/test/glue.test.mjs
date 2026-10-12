@@ -276,6 +276,14 @@ test("recorder: notifications are recorded and still shown (wrapMethod on Notifi
   assert.deepEqual(actionsOf().slice(n).map(({ t, ...rest }) => rest), [{ kind: "notify", level: "warning", text: "The door is locked token=[redacted]" }]);
 });
 
+test("feedback-M2: the recorder's own failure is redacted like every other error", () => {
+  const level = { toString() { throw new Error("cannot label token=abcdefghijklmnop"); } };
+  ui.notifications.notify("hello", level);
+  const own = errorsOf().at(-1);
+  assert.equal(own.source, "recorder");
+  assert.equal(own.message, "cannot label token=[redacted]");
+});
+
 test("recorder: a body click on a [data-action] element (capture phase), never an input value; plain clicks ignored", () => {
   assert.equal(F.bodyListeners.filter(l => l.name === "click" && l.capture === true).length, 1);
   const n = clearRings();

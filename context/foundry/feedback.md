@@ -102,6 +102,7 @@ await game.pentaryn.inspect("Talo")                           // .feedback: Talo
 - Not tested live yet; the `afterSync` lines in `module.json` are the first-sync checklist.
 - The toolbar button does nothing with no scene viewed (core's `canvas.ready` gate) — use `/bug`.
 - Reports are under `Data/`, which Foundry serves by URL while the tunnel is up (ids are random,
-  folders are not listed, content is the reporter's own and redacted).
+  folders are not listed, content is the reporter's own; errors and recorded free text are redacted, the report text and
+  names only clipped).
 - A player is not told when their report is resolved; tell them.
 - No screenshot is attached; no "Report this" button on error toasts yet.

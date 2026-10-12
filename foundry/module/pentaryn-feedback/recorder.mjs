@@ -66,7 +66,7 @@ const pushError = entry => {
 };
 /** The recorder's own failure, kept without going through the console (that would recurse). */
 const pushOwnError = e => {
-  ringPush(errors, { t: now(), source: "recorder", message: clip(messageOf(e), LIMITS.message) }, LIMITS.errorsMax);
+  ringPush(errors, { t: now(), source: "recorder", message: redact(messageOf(e), LIMITS.message) }, LIMITS.errorsMax);
 };
 
 /* ── sessionStorage: the rings survive a reload of this tab ───────────── */

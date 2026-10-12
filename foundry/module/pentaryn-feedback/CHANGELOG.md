@@ -17,6 +17,11 @@
   "console wraps match captureConsole", passes only when every wrap's adjustments row is present
   exactly when `captureConsole` is on, and its detail is `{ captureConsole, wraps: { "console.error",
   "console.warn" } }` (each true when wrapped). describe() is unchanged.
+- **[declared] Every error message in a report is redacted** (feedback-M2): the recorder's own
+  failures and a failed snapshot section or row (`sectionErrors`, a window row's `error`) were only
+  clipped, so `token=…`, Bearer tokens and URL query strings survived there; they now go through
+  `redact()` like the error ring. The player's report text and document/user names stay clip-only,
+  and the README privacy line, the core header and the `redact()` doc now say exactly that.
 
 ## 0.1.2 — 2026-10-11 (live-check fix)
 
