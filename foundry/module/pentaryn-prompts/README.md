@@ -74,7 +74,7 @@ query and the version. The twelve calls published before the migration keep thei
 |---|---|
 | `gather({scenes, crops, chars, unseenWithinFt, builtWithoutProvenance, maxPrompts, from, party, cropsAs})` | `{call, text, counts, manifest, crops, next, ms, version, party, partySource, cropsNote}` |
 | `list()` | `{scenes: [{id, name, nav, prompts, empty}]}` |
-| `crops({call, encounters, cropsAs})` | `{crops: [{encounter, scene, path \| png, mime, mimeType, squares}]}` |
+| `crops({call, encounters, cropsAs})` | `{crops: [{encounter, scene, path \| png, mime, mimeType, squares} \| {encounter, scene, error}]}` |
 | `replaceMany({call, replacements, dryRun, force, skipDryRun, party})` or `({specFile, dryRun})` — the batch | `{dryRun, call, text, results, remaining, encounters}` |
 | `replace(spec, opts)` — ONE replacement (run options from `opts` or the spec) | same |
 | `show({call, id})` / `show({sceneId, markerId})` | `{ok, sceneId, x, y}` (views the scene, pans, pings) |

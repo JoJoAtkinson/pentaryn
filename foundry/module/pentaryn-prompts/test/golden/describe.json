@@ -52,7 +52,7 @@
           "type": "{ call, encounters?: string[], cropsAs?: \"files\" | \"base64\" }"
         }
       ],
-      "returns": "{ crops: [{ encounter, scene, png | path, mime, squares } | { encounter, error }] }",
+      "returns": "{ crops: [{ encounter, scene, png | path, mime, mimeType, squares } | { encounter, scene, error }] }",
       "gm": true,
       "writes": false,
       "query": true,
@@ -210,7 +210,7 @@
           "doc": "default: the viewed scene"
         }
       ],
-      "returns": "{ key, name, gridFt, doors, walls, squares, mapFt, regions, levels, warn, notes, dims, items, rel(aKey, bKey) }",
+      "returns": "{ key, name, nav, gridFt, doors, walls, squares, mapFt, regions, levels, warn, notes, dims, items, rel(aKey, bKey) }",
       "gm": false,
       "writes": false,
       "query": false,

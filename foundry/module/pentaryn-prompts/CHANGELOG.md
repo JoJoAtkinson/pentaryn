@@ -78,6 +78,11 @@ cssPrefix `pp-`, afterSync). Each **[declared]** change goes to the live check.
 - **[declared] One box per marker, even when reopened mid-save** (EC-6): two opens of a marker
   whose box is still saving (Esc, then straight back in, twice) now share one box instead of each
   making their own.
+- **[declared] The manifest's `returns` strings match what crops and model return** (EXT-3): crops
+  names `mimeType` and the error row's `scene` (`{encounter, scene, error}`), and model names `nav`.
+  `test/ext3-returns.test.mjs` compares each row's key list with a real sample (the `crop-row`
+  golden, a renderCrops error row, a stub scene model), so the next drift fails the gate; the
+  `describe` golden is re-pinned. No behaviour change: only describe()'s text differs.
 - **[declared] Two gathers at once keep both manifests**: the ring writes through one
   `serialStore` (a parallel gather no longer makes the other's call id `CALL_UNKNOWN`).
 - **[declared] `ensureMarkers` no longer duplicates across two GM tabs** (§5.9.1): the folder and
