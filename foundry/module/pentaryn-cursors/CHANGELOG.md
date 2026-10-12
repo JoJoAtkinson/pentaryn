@@ -16,6 +16,11 @@
   resync still runs, so a blanked cursor is still repaired.
 - [declared] `keyFor(null)` returns `null` (the system arrow) like `keyFor()` and
   `keyFor(undefined)`, instead of throwing a TypeError (cursors-rob-1).
+- [declared] `scripts/foundry/cursors/build.mjs` checks every key before writing anything
+  (cursors-rob-4): a hotspot mismatch or a throwing key is named (`✗ <key>: <message>`) and the run
+  exits 1 with `assets/cursors/` untouched. The centre hotspot floors with the same `+ 0.01` as the
+  other extremes (cursors-edge-5), and `--check-sources` rejects an unknown `extreme` (EXT-4).
+  Today's assets rebuild byte-identical.
 
 ## Unreleased — 2026-10-11 (addon blueprint, wave 1)
 

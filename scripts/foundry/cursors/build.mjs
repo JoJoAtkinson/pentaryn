@@ -12,8 +12,9 @@
  *
  *   cd "$(mktemp -d)" && npm i @resvg/resvg-js@2.6.2 && node <repo>/scripts/foundry/cursors/build.mjs
  *
- * `--check-sources` needs no @resvg: it only proves every KEYS[key].src exists under src/ (exit 1
- * naming the missing ones), and is what scripts/tests/test_cursors_build.py runs.
+ * `--check-sources` needs no @resvg: it only proves every KEYS[key].src exists under src/ and every
+ * KEYS[key].extreme is one the build knows (exit 1 naming each bad key), and is what
+ * scripts/tests/test_cursors_build.py runs.
  *
  * Steps per key:
  *   1. strip the game-icons black background square, keep every glyph path;
@@ -23,6 +24,8 @@
  *   4. recompute the hotspot from the fitted glyph (a 10× alpha mask) and fail unless it equals
  *      KEYS[key].hotspot (so a changed glyph cannot ship with a stale hotspot);
  *   5. rasterise at 32 and 64 px.
+ * Steps 1–4 run for every key first; a key that fails or throws is named (`✗ <key>: <message>`)
+ * and the run exits 1 having written nothing, so assets/cursors/ is never left half rebuilt.
  */
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { createRequire } from "node:module";
@@ -35,12 +38,17 @@ const MODULE_ROOT = join(REPO, "foundry", "module", "pentaryn-cursors");
 const SRC = join(HERE, "src");
 const OUT = join(MODULE_ROOT, "assets", "cursors");
 const { KEYS } = await import(pathToFileURL(join(MODULE_ROOT, "cursors-core.mjs")).href);
+const EXTREMES = ["centre", "up-right", "down-left", "bottom"];
 
 if (process.argv.includes("--check-sources")) {
-  const missing = Object.entries(KEYS).filter(([, k]) => !existsSync(join(SRC, k.src)));
-  for (const [key, k] of missing) console.error(`  ✗ ${key}: source ${k.src} not in ${SRC}`);
-  if (!missing.length) console.log(`  ✓ all ${Object.keys(KEYS).length} cursor sources present in ${SRC}`);
-  process.exit(missing.length ? 1 : 0);
+  const bad = [];
+  for (const [key, k] of Object.entries(KEYS)) {
+    if (!existsSync(join(SRC, k.src))) bad.push(`${key}: source ${k.src} not in ${SRC}`);
+    if (!EXTREMES.includes(k.extreme)) bad.push(`${key}: unknown extreme ${JSON.stringify(k.extreme)} (one of ${EXTREMES.join(", ")})`);
+  }
+  for (const line of bad) console.error(`  ✗ ${line}`);
+  if (!bad.length) console.log(`  ✓ all ${Object.keys(KEYS).length} cursor sources present in ${SRC}, every extreme known`);
+  process.exit(bad.length ? 1 : 0);
 }
 
 function loadResvg() {
@@ -97,7 +105,7 @@ function cursorSvg(d, { s, tx, ty }, fill, outline) {
 function measureHotspot(d, f, extreme) {
   if (extreme === "centre") {
     const { x0, y0, x1, y1 } = f.bbox;
-    return [Math.floor((x0 + x1) / 2), Math.floor((y0 + y1) / 2)];
+    return [Math.floor((x0 + x1) / 2 + 0.01), Math.floor((y0 + y1) / 2 + 0.01)];
   }
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${SIZE}" height="${SIZE}" viewBox="0 0 ${SIZE} ${SIZE}">` +
     `<path transform="translate(${f.tx} ${f.ty}) scale(${f.s})" d="${d}"/></svg>`;
@@ -123,19 +131,32 @@ function png(svg, px) {
   return new Resvg(svg, { fitTo: { mode: "width", value: px }, background: "rgba(0,0,0,0)" }).render().asPng();
 }
 
-mkdirSync(OUT, { recursive: true });
+const built = [];
 let failed = false;
 for (const [key, k] of Object.entries(KEYS)) {
-  const raw = readFileSync(join(SRC, k.src), "utf8");
-  const d = glyphPaths(raw);
-  const f = fit(d, viewBoxOf(raw));
-  const hot = measureHotspot(d, f, k.extreme);
-  const b = f.bbox;
-  console.log(`${key.padEnd(7)} bbox ${n(b.x0)},${n(b.y0)}–${n(b.x1)},${n(b.y1)}  hotspot ${hot.join(" ")} (KEYS ${k.hotspot.join(" ")})`);
-  if (hot[0] !== k.hotspot[0] || hot[1] !== k.hotspot[1]) {
-    console.error(`  ✗ ${key}: measured hotspot ${hot.join(" ")} ≠ KEYS.${key}.hotspot — update cursors-core.mjs`);
+  try {
+    const raw = readFileSync(join(SRC, k.src), "utf8");
+    const d = glyphPaths(raw);
+    const f = fit(d, viewBoxOf(raw));
+    const hot = measureHotspot(d, f, k.extreme);
+    const b = f.bbox;
+    console.log(`${key.padEnd(7)} bbox ${n(b.x0)},${n(b.y0)}–${n(b.x1)},${n(b.y1)}  hotspot ${hot.join(" ")} (KEYS ${k.hotspot.join(" ")})`);
+    if (hot[0] !== k.hotspot[0] || hot[1] !== k.hotspot[1]) {
+      console.error(`  ✗ ${key}: measured hotspot ${hot.join(" ")} ≠ KEYS.${key}.hotspot — update cursors-core.mjs`);
+      failed = true;
+    } else built.push([key, k, d, f]);
+  } catch (e) {
+    console.error(`  ✗ ${key}: ${e.message}`);
     failed = true;
   }
+}
+if (failed) {
+  console.error(`  nothing written to ${OUT}`);
+  process.exit(1);
+}
+
+mkdirSync(OUT, { recursive: true });
+for (const [key, k, d, f] of built) {
   for (const [suffix, fill, outline] of [["", k.colour, DARK], ["-pointer", "#FFFFFF", k.colour]]) {
     const svg = cursorSvg(d, f, fill, outline);
     writeFileSync(join(OUT, `${key}${suffix}.svg`), svg);
@@ -143,6 +164,5 @@ for (const [key, k] of Object.entries(KEYS)) {
     writeFileSync(join(OUT, `${key}${suffix}@2x.png`), png(svg, SIZE * 2));
   }
 }
-if (failed) process.exit(1);
 
 console.log(`wrote ${Object.keys(KEYS).length * 6} files (svg + png 1x/2x, normal and pointer)`);

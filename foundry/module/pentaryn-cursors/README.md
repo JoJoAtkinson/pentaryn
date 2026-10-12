@@ -99,7 +99,8 @@ To add a key (e.g. a GM wall cursor): add it to `KEYS` and a line to `keyFor()` 
 `CREDITS.md`), run the build (Files), and add the row to
 the `keyFor` table in `test/core.test.mjs`. The build fails unless the measured hotspot equals
 `KEYS[key].hotspot`, so a new glyph can't ship with a stale one — update `KEYS` to the printed
-value if the new one is right.
+value if the new one is right. A failed build writes no file at all, so `assets/cursors/` is never
+left half rebuilt.
 
 The key list is pinned exactly in several more places; miss one and the suite goes red with no
 hint why. A new key also has to change:
@@ -142,7 +143,7 @@ hint why. A new key also has to change:
 | `lib/` | vendored kit (`lib/kit.lock.json`) |
 | `assets/cursors/` | built `<key>.png`, `@2x`, `-pointer`, `-pointer@2x`, and the outlined `.svg` they came from. **Committed; do not hand-edit.** |
 | `scripts/foundry/cursors/src/` (repo, not shipped) | unmodified icon sources and credited alternates (`CREDITS.md`) |
-| `scripts/foundry/cursors/build.mjs` (repo, not shipped) | rebuild after changing a glyph or colour in `KEYS`: `cd "$(mktemp -d)" && npm i @resvg/resvg-js@2.6.2 && node <repo>/scripts/foundry/cursors/build.mjs`. Fits each glyph to 26×26, adds the 2 px dark outline and 1 px white halo, measures the hotspot. `--check-sources` (no resvg) proves every `KEYS` source exists; `scripts/tests/test_cursors_build.py` runs it. |
+| `scripts/foundry/cursors/build.mjs` (repo, not shipped) | rebuild after changing a glyph or colour in `KEYS`: `cd "$(mktemp -d)" && npm i @resvg/resvg-js@2.6.2 && node <repo>/scripts/foundry/cursors/build.mjs`. Fits each glyph to 26×26, adds the 2 px dark outline and 1 px white halo, measures the hotspot. `--check-sources` (no resvg) proves every `KEYS` source exists and every `extreme` is known; `scripts/tests/test_cursors_build.py` runs it. |
 | `test/` | node:test suites, goldens, fixtures, vendored test kit |
 
 ## Tests
