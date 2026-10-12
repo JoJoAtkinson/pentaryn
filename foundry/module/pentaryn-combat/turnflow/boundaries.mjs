@@ -44,7 +44,7 @@ const onTurnChange = (combat, previous, current) => {
   if (game.users.activeGM?.isSelf) {
     sweep(prior?.actor, "turnEnd").catch(err => log.warn("turn-end sweep", err));
     sweep(next?.actor, "turnStart").catch(err => log.warn("turn-start sweep", err));
-    // The Reaction comes back at the start of your turn (combat.mjs records it; hud.mjs relights the pip).
+    // The Reaction comes back at the start of your turn (counting.mjs records it; hud/bars.mjs onActorUpdated relights the pip).
     if (next?.actor?.getFlag?.(MODULE, "reaction")) next.actor.setFlag(MODULE, "reaction", null).catch(err => { log.debug("Reaction reset", err); return null; });
   }
   closeDrawersOf([prior?.actor, next?.actor], { enabled: setting("drawerNearButton") });
@@ -96,6 +96,9 @@ const onCombatDeleted = (combat) => {
   }
 };
 
+// Every combat-scoped flag key, read in one place so the cleanup and the orphan sweep agree.
+const combatFlagsOf = (actor) => ({ turn: actor.getFlag?.(MODULE, "turn"), reaction: actor.getFlag?.(MODULE, "reaction") });
+
 /**
  * combat-riders-38 [declared, perf]: an actor's stale combat flags go in ONE write, with the deletion
  * form v14's Document#unsetFlag uses ({flags: {scope: {key: _del}}}), instead of one write per key.
@@ -108,7 +111,7 @@ async function dropCombatFlags(actor, keys) {
 }
 
 async function clearCombatFlags(actor, combatId) {
-  const stale = core.staleCombatFlags({ turn: actor.getFlag?.(MODULE, "turn"), reaction: actor.getFlag?.(MODULE, "reaction") }, combatId);
+  const stale = core.staleCombatFlags(combatFlagsOf(actor), combatId);
   await dropCombatFlags(actor, stale);
 }
 
@@ -122,7 +125,7 @@ async function sweepOrphanFlags() {
   const live = game.combats.map(c => c.id);
   let n = 0;
   for (const actor of game.actors) {
-    const keys = core.orphanCombatFlags({ turn: actor.getFlag?.(MODULE, "turn"), reaction: actor.getFlag?.(MODULE, "reaction") }, live);
+    const keys = core.orphanCombatFlags(combatFlagsOf(actor), live);
     n += await dropCombatFlags(actor, keys);
   }
   return n;

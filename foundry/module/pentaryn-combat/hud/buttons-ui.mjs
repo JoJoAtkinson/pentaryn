@@ -33,7 +33,7 @@ export function wireButtons({ rerender }) {
 
 /* ── which weapon, how many swings ───────────────────────────────────────── */
 
-export function multiattack(actor) {
+function multiattack(actor) {
   return multiattackFor(actor, { enabled: setting("multiattack") });
 }
 
@@ -84,6 +84,11 @@ async function chooseWeapon(actor) {
 
 /* ── components ──────────────────────────────────────────────────────────── */
 
+/** Argon's `ranges` for an attack activity: its range, else the item's reach, else `fallback()`. */
+function rangesOf(a, fallback = () => 5) {
+  return { normal: a?.range?.value ?? a?.item?.system?.range?.reach ?? fallback(), long: a?.range?.long ?? null };
+}
+
 export function argonClasses() {
   if (built) return built;
   const A = CONFIG.ARGON;
@@ -109,11 +114,7 @@ export function argonClasses() {
     // Argon opens its target picker before _onLeftClick only when this is > 0: once, and never
     // when something is already targeted (its picker would clear the target first).
     get targets() { return game.user.targets.size || running() ? 0 : 1; }
-    get ranges() {
-      const a = this.activity;
-      const reach = a?.item?.system?.range?.reach;
-      return { normal: a?.range?.value ?? reach ?? canvas?.scene?.grid?.distance ?? 5, long: a?.range?.long ?? null };
-    }
+    get ranges() { return rangesOf(this.activity, () => canvas?.scene?.grid?.distance ?? 5); }
     get hasTooltip() { return true; }
 
     async getTooltipData() {
@@ -183,7 +184,7 @@ export function argonClasses() {
     }
   }
 
-  /** One follow-up (Off-hand, Nick, Flurry, Martial Arts, Hew). */
+  /** One follow-up (Off-hand, Nick, Flurry, Martial Arts, Hew, Pole Strike). */
   class FollowUpButton extends ItemButton {
     constructor({ hudActor, followUp }) {
       const w = hudActor.items.get(followUp.weaponId);
@@ -199,10 +200,7 @@ export function argonClasses() {
     async activateTooltipListeners() { await super.activateTooltipListeners(); bindTooltipLeave(this); }
     // A greyed button (Flurry with no Focus) warns at once: no target picker first.
     get targets() { return this.followUp.disabled || game.user.targets.size || running() ? 0 : 1; }
-    get ranges() {
-      const a = attackActivityOf(this.hudActor.items.get(this.followUp.weaponId));
-      return { normal: a?.range?.value ?? a?.item?.system?.range?.reach ?? 5, long: a?.range?.long ?? null };
-    }
+    get ranges() { return rangesOf(attackActivityOf(this.hudActor.items.get(this.followUp.weaponId))); }
 
     async getTooltipData() {
       const k = this.followUp.kind;
@@ -250,10 +248,7 @@ export function argonClasses() {
       this._activity = activity;
     }
     get targets() { return 1; }
-    get ranges() {
-      const a = this._activity;
-      return { normal: a?.range?.value ?? a?.item?.system?.range?.reach ?? 5, long: a?.range?.long ?? null };
-    }
+    get ranges() { return rangesOf(this._activity); }
   }
 
   built = { FullAttackButton, FollowUpButton, CommandButton, PickerProbe, ItemButton };

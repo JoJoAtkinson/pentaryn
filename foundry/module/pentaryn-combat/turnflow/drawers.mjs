@@ -78,7 +78,7 @@ function placeWhenLaidOut(button, panel, tries = 10) {
   });
 }
 
-/** Re-place the open drawers of a bar whose buttons moved (hud.mjs calls it after recomposing). */
+/** Re-place the open drawers of a bar whose buttons moved (hud/bars.mjs passes it to applyButtons as `after` when it recomposes a bar). */
 export function placeOpenDrawers(actionPanel) {
   for (const b of actionPanel?._buttons ?? []) {
     const p = b?.panel;
