@@ -20,7 +20,7 @@ const placeables = F.canvas.tokens.placeables;
 Object.defineProperty(F.canvas.tokens, "placeables", { configurable: true, get() { reads++; return placeables; } });
 
 const act = [...rog.items.get("scimitar00000001").system.activities.values()][0];
-const card = (stamp) => makeMessage({ type: "attack", author: F.game.user, speaker: { actor: rog.id },
+const card = (stamp, author = F.game.user) => makeMessage({ type: "attack", author, speaker: { actor: rog.id },
   system: { activity: { uuid: act.uuid, type: "attack" }, targets: [{ token: gt.document.uuid }], origin: { id: "u" } },
   flags: { [MODULE]: { turnKey: stamp } }, rolls: [{ hasAdvantage: true, options: {} }] });
 const render = (m) => {
@@ -42,7 +42,8 @@ test("not the owner (a player): no row and no canvas read", () => {
   reads = 0;
   F.become({ userId: "player0000000001" });
   rog.isOwner = false;
-  const m = card("c9:1:cb9");
+  const m = card("c9:1:cb9", F.game.users.get("gmUser0000000001"));
+  assert.equal(m.isAuthor, false);
   try {
     assert.equal(render(m).querySelector(".pentaryn-combat-riders"), null);
     assert.equal(reads, 0);
