@@ -121,3 +121,21 @@ test("every patch record names an adjustments row; no settings; selftest passes 
   const st = api.selftest();
   assert.equal(st.ok, true, JSON.stringify(st.checks));
 });
+
+test("manifest reason unions match the reason tables", async () => {
+  const { RETURN_LINES } = await import("../wildshape-adapter.mjs");
+  const core = await import("../transform-core.mjs");
+  const union = row => {
+    const opts = row.params.find(p => p.name === "opts");
+    const m = /reason\?:\s*([^,}]+)/.exec(opts.type);
+    assert.ok(m, `${row.path} has no reason union`);
+    return m[1].split("|").map(s => s.trim().replace(/^'|'$/g, ""));
+  };
+  const revert = union(MANIFEST.rows.find(r => r.path === "revert"));
+  assert.deepEqual(new Set(revert), new Set(Object.keys(RETURN_LINES)));
+  assert.equal(revert.length, Object.keys(RETURN_LINES).length);
+  const end = union(STARRY_ROWS.find(r => r.path === "starry.end"));
+  assert.ok(end.includes("manual"));
+  assert.equal(core.starryEndKey("manual"), "StarryEnd");
+  for (const reason of end.filter(r => r !== "manual")) assert.notEqual(core.starryEndKey(reason), "StarryEnd", reason);
+});
