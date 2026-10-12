@@ -64,6 +64,10 @@ still honours `ignoreTokens`. Verified on core 14.369 / dnd5e 6.0.6.
 
 `status().settings` lists the same keys with their scopes.
 
+The two client settings live in the browser's storage, so they are shared by every tab of that
+browser: flipping the ghost button or *Show my own tokens on top* in one tab redraws the other tabs
+too (they re-read the setting; nothing is written).
+
 ## API — game.pentaryn.movement
 
 Canonical: `game.modules.get("pentaryn-movement").api`; `game.pentaryn.movement` is the same

@@ -34,6 +34,9 @@ manifest); the kit is vendored. What a player or GM can notice:
 - **[declared]** `combatActive(scene)` and `status(opts)` take a scene id or a Scene document, and
   `status("sceneId")` takes a bare id, instead of answering for the wrong scene; `status().sceneId`
   is always the id string (rob-3).
+- **[declared]** with two tabs open on one player account, switching the ghost button or "Show my
+  own tokens on top" in one tab now takes effect in the other tab as well, instead of that tab
+  carrying on with the old value until something else redrew it (movement-edge-3, movement-async-2).
 - Performance: the per-token paths (drag, arrow keys, token refresh, the layer sort) read the
   settings and the combats once per change instead of once per token (F-M1).
 

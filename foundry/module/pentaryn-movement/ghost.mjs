@@ -353,6 +353,18 @@ const ON_SETTING = Object.freeze({
   ownedOnTop: () => { invalidate(); refreshTokens(); },
 });
 
+/**
+ * A client setting written in another tab of this browser reaches this one only as a window
+ * "storage" event (Foundry keeps client settings in localStorage; this tab's onChange never runs).
+ * Run that key's handler here too, so the cached ghost context is not stale (movement-edge-3).
+ * Nothing is written: the handler re-reads what localStorage already holds.
+ */
+const STORAGE_KEYS = new Map(["ghost", "ownedOnTop"].map(key => [`${MODULE}.${key}`, key]));
+function onStorage(event) {
+  const key = STORAGE_KEYS.get(event?.key);
+  if (key) ON_SETTING[key]();
+}
+
 /* -------------------------------------------- */
 /*  Install / uninstall                         */
 /* -------------------------------------------- */
@@ -369,6 +381,7 @@ export function install(reg, ctx) {
   feature = ctx;
   log = ctx.log;
   for (const [key, fn] of Object.entries(ON_SETTING)) ctx.onSettingChange(key, fn);
+  globalThis.window?.addEventListener?.("storage", onStorage);
 
   if (ctx.late) patchAll();
   else reg.once("setup", patchAll, { guard: false, label: "setup: wrap drag and keyboard" });
@@ -427,5 +440,6 @@ export function uninstall() {
   lastToolKey = null;
   clearedBy = clearedScene = null;
   if (feature) for (const key of Object.keys(ON_SETTING)) feature.onSettingChange(key, null);
+  globalThis.window?.removeEventListener?.("storage", onStorage);
   feature = null;
 }
