@@ -52,18 +52,32 @@ export function awayOf(actor) {
 }
 
 /**
- * What a bonded item's source becomes as it is created on `actorId` (the bond decision of
- * restoreBond). Its real name always comes back; on the bonded actor its attunement category and
+ * Whether `actor` is the bond's owner. `bond.actor` is the owner's uuid, so an unlinked token is told
+ * apart from its base actor and its siblings, which share one id (ATT-ROB-2). A legacy bond holds the
+ * bare id (an id has no ".") and matches on the id, as before.
+ * @param {object|null} bond
+ * @param {{id?: string, uuid?: string}|null} actor
+ * @returns {boolean}
+ */
+export function isBondOwner(bond, actor) {
+  const ref = bond?.actor;
+  if (typeof ref !== "string" || !actor) return false;
+  return ref.includes(".") ? ref === actor.uuid : ref === actor.id;
+}
+
+/**
+ * What a bonded item's source becomes as it is created on the actor `actorId`/`actorUuid` (the bond
+ * decision of restoreBond). Its real name always comes back; on the bonded actor its attunement category and
  * equipped state too, and `attuned` only when the actor still lists the bond's key as away.
  * Key order is part of the contract: name, attunement, attuned, equipped.
  * @param {object|null} bond
- * @param {{actorId: string, awayKeys?: string[], fallbackName?: string}} opts
+ * @param {{actorId: string, actorUuid?: string, awayKeys?: string[], fallbackName?: string}} opts
  * @returns {object|null}  null when there is no bond
  */
-export function bondChanges(bond, { actorId, awayKeys = [], fallbackName } = {}) {
+export function bondChanges(bond, { actorId, actorUuid, awayKeys = [], fallbackName } = {}) {
   if (!bond) return null;
   const changes = { name: bond.name ?? fallbackName };
-  if (actorId !== bond.actor) return changes;
+  if (!isBondOwner(bond, { id: actorId, uuid: actorUuid })) return changes;
   if (bond.attunement != null) changes["system.attunement"] = bond.attunement;
   if (awayKeys.includes(bond.key)) changes["system.attuned"] = true;
   if (bond.equipped) changes["system.equipped"] = true;
@@ -81,7 +95,7 @@ export const shortName = name => name.split(/[ ,]/)[0];
  * Move-out plan for stash(): the container's creates, the owner's new away list and slot order.
  * Container contents are flattened; plain duplicates (two stacks of torches) merge.
  *
- * @param {object} owner          actor-like: name, id, system.currency, items (get/filter), getFlag
+ * @param {object} owner          actor-like: name, id, uuid (the bond's owner), system.currency, items (get/filter), getFlag
  * @param {string[]} itemIds
  * @param {{tag?: string, currency?: boolean, randomID: () => string,
  *   setProperty: (obj: object, path: string, value: *) => void}} opts
@@ -110,7 +124,7 @@ export function planStash(owner, itemIds, { tag, currency = false, randomID, set
     if ("equipped" in data.system) data.system.equipped = false;
     if ("attuned" in data.system) data.system.attuned = false;
     setProperty(data, `flags.${MODULE}.${BOND}`, {
-      actor: owner.id, key, name: item._source.name,
+      actor: owner.uuid, key, name: item._source.name,
       equipped: !!item._source.system?.equipped,
       attuned: wasAttuned,
       attunement: item._source.system?.attunement ?? ""
@@ -132,7 +146,7 @@ export function planStash(owner, itemIds, { tag, currency = false, randomID, set
       creates.push({
         name: `Coin Purse (${tag})`, type: "loot", img: "icons/containers/bags/coinpouch-simple-leather-tan.webp",
         system: { quantity: 1, type: { value: "treasure" }, description: { value: `<p>${label}.</p>` } },
-        flags: { [MODULE]: { [BOND]: { actor: owner.id, key: randomID(), name: "Coin Purse", currency: coin } } }
+        flags: { [MODULE]: { [BOND]: { actor: owner.uuid, key: randomID(), name: "Coin Purse", currency: coin } } }
       });
     }
   }
@@ -320,32 +334,4 @@ export function safe(label, fn, log = null) {
       return Promise.resolve();
     }
   };
-}
-
-/* -------------------------------------------- */
-/*  Strings                                     */
-/* -------------------------------------------- */
-
-/** Strings live here; `t()` reads them directly (see below). */
-export const STRINGS = {
-  OverBy: "{n} over the limit",
-  NotOnActor: "That item belongs to a different actor.",
-  NotAttunable: "{name} does not require attunement.",
-  WouldExceed: "{actor} is already attuned to {max} items — attuning {name} makes {value}.",
-  ArrivedAttuned: "{name} arrived already attuned; {actor} is now over the attunement limit.",
-  AwayBody: "Still attuned, but not on {actor}. Its power is dormant until it is back in hand.",
-  Release: "End Attunement",
-  ReleaseConfirm: "End attunement to <strong>{name}</strong>? It is not on you, so it will come back as an ordinary, unattuned item.",
-  SlotHeld: "That slot is held by {name}, which is attuned but not on you. End that attunement first.",
-  BackInHand: "{name} is back with {actor} — attunement restored.",
-  CoinBack: "{actor} recovers their coin."
-};
-
-/**
- * Not routed through game.i18n: merging into `game.i18n.translations` at init
- * did not survive to render time in v14, so every string printed as its key.
- * A placeholder missing from `data` stays as `{name}`.
- */
-export function t(key, data = {}) {
-  return (STRINGS[key] ?? key).replace(/\{(\w+)\}/g, (m, k) => (k in data ? String(data[k]) : m));
 }

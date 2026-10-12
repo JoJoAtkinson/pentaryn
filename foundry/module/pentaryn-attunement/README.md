@@ -56,7 +56,7 @@ system's `☀ value / max` counter in the inventory row, which turns **red when 
 all NPC sheets get.
 
 **Warnings.** Attuning past the cap, or an item arriving already attuned onto an actor at the cap,
-shows a warning toast. Nothing is ever vetoed: a vetoed Foundry update resolves without applying
+shows a warning toast. A drop onto a filled slot is a swap (one out, one in), so it does not warn. Nothing is ever vetoed: a vetoed Foundry update resolves without applying
 and without throwing, so an MCP script would carry on believing it succeeded. The cap is
 unenforceable anyway — expire the effect that raised `attunement.max` and no item hook fires.
 
@@ -89,7 +89,7 @@ inert in play. Nothing in `inspect` is GM-only.
 |---|---|---|
 | actor `flags.pentaryn-attunement.slots` | `(itemId \| "away:<key>" \| null)[]`; trailing holes trimmed by a drop and by an item coming home; `stash` writes the reconciled order padded to `max` (`computeSlots()` re-pads on read, so both forms render the same) | a drop onto a slot; `stash`; an item coming home |
 | actor `flags.pentaryn-attunement.away` | `[{ key, name, img }]` | `stash`; `releaseAway`; an item coming home |
-| item `flags.pentaryn-attunement.bond` | `{ actor, key, name, equipped, attuned, attunement, currency? }` | `stash` (on the copies); cleared (`_del`) when the item is home |
+| item `flags.pentaryn-attunement.bond` | `{ actor, key, name, equipped, attuned, attunement, currency? }`; `actor` is the owner's **uuid**, so an unlinked token is told apart from its base actor and its siblings (a bond written before 2026-10-12 holds the bare id and still matches on it) | `stash` (on the copies); cleared (`_del`) when the item is home |
 
 The slot flag is only ever a **hint**: `computeSlots()` reconciles it on every render (gone,
 unattuned or duplicated ids become holes; attuned items without a slot drop into the first hole),
@@ -123,7 +123,9 @@ reads `DND5E.EFFECT.Suppressed.Hint`.
   user, but in **every tab** of that user (the MCP bridge tab and a GM browser tab both, for a
   GM-made change). The slot hand-back writes the same values from either tab. The coin purse is
   claimed first (kit `claimDocument`, key `coinBack` on the purse item, 750 ms settle), so exactly
-  one tab pays and deletes it; a purse already gone stands down (W2-A1).
+  one tab pays and deletes it; a purse already gone stands down (W2-A1). Several purses in one
+  batch pay in turn on a per-actor coin chain, apart from the hand-backs, so each adds to the last
+  total (ATT-AC-2).
 - Sheet drops and `stash` write from the client that calls them.
 
 ## Extending
@@ -143,16 +145,18 @@ method is a row in `api-manifest.mjs` plus an impl in `api.mjs`, then
   effect (`{} of the War Mage, +1`), and the prepared name would double the suffix on the way home.
 - Two counts exist: the warning uses dnd5e's `attunement.value` (+ away), the strip counts items
   whose prepared `attuned` is true (+ away). They can differ; `inspect().counts.mismatch` says so.
-- Strings are inline (`STRINGS` / `t()` in the core): merging into `game.i18n.translations` at init
-  did not survive to render in v14. `lang/en.json` (the same values) ships with `languages` since the
-  Wave 7 batch but is inert; switching the `t()` sites to `_loc` is a later, declared step (guide step 8).
+- Strings live in `lang/en.json` (`languages` in `module.json`) and every site reads a full-key literal
+  through `_loc("PENTARYN_ATTUNEMENT.X", data)`. Foundry prints `undefined` for a placeholder missing
+  from `data`, so `lang-switch.test` checks each call passes every placeholder. (The old inline
+  `STRINGS` / `t()` existed because merging into `game.i18n.translations` at init did not survive to
+  render in v14; a shipped lang file is Foundry's own path.)
 
 ## Files
 
 | File | Role |
 |---|---|
 | `attunement.mjs` | entry: init, ready (guard, build, publish), installs `sheet` then `bonds` |
-| `attunement-core.mjs` | pure: constants, `computeSlots`, `homeSlots`, `planStash`, `bondChanges`, `wouldExceed`, `patchProficiencyMap`, `safe`, strings |
+| `attunement-core.mjs` | pure: constants, `computeSlots`, `homeSlots`, `planStash`, `bondChanges`, `wouldExceed`, `patchProficiencyMap`, `safe` |
 | `actor-adapter.mjs` | `stash`, `releaseAway`, `writeSlots`, `isPileActor`, the two dnd5e adjustments |
 | `strip.mjs` | UI: the strip, the counter's over-cap class |
 | `sheet.mjs`, `bonds.mjs` | features: the render hook and slot gestures; the item hooks |
@@ -170,9 +174,9 @@ node test/run.mjs        # from this folder
 `slots.test` holds the slot fixtures (stale flags, deleted items, duplicates, corrupt flag types,
 over cap, non-default `max`, away entries, coming home) and the proficiency-map patch; `glue.test`,
 `hooks.test`, `api.test`, `strip.test` (a minimal DOM), `listeners`, `hook-errors`, `perf`,
-`stash-safety` and `guard-failure` pin the wiring; `core-meta` holds the core's identity (it loads
+`stash-safety`, `guard-failure`, `home-race`, `bond-uuid` and `lang-switch` pin the wiring; `core-meta` holds the core's identity (it loads
 with no Foundry globals, constants agree with `module.json`, `trimSlots`), `docs` guards this
-README, and `i18n` checks `STRINGS` ↔ `lang/en.json` parity. Goldens in `test/golden/`.
+README, and `i18n` checks `lang/en.json` against the oracle's former `STRINGS`. Goldens in `test/golden/`.
 
 ## Sync
 

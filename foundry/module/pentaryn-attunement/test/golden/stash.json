@@ -12,7 +12,7 @@
       "flags": {
         "pentaryn-attunement": {
           "bond": {
-            "actor": "actorOwnr0000001",
+            "actor": "Actor.actorOwnr0000001",
             "key": "r1",
             "name": "Cloak",
             "equipped": true,
@@ -32,7 +32,7 @@
       "flags": {
         "pentaryn-attunement": {
           "bond": {
-            "actor": "actorOwnr0000001",
+            "actor": "Actor.actorOwnr0000001",
             "key": "r2",
             "name": "Torch",
             "equipped": false,
@@ -58,7 +58,7 @@
       "flags": {
         "pentaryn-attunement": {
           "bond": {
-            "actor": "actorOwnr0000001",
+            "actor": "Actor.actorOwnr0000001",
             "key": "r4",
             "name": "Coin Purse",
             "currency": {

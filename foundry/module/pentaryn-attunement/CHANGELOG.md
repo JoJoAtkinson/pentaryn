@@ -9,6 +9,22 @@ The version stays 0.3.0 until the next `module.json` restart batch (code only: s
   window carried that tab's socket stamp, so every tab on the new actor read the claim as held and
   stood down — the coin was never paid. Now the purse is claimed afresh and pays once. A purse
   arriving in an Item Piles pile keeps its stamp (it never pays there).
+- **[declared] EC-3:** dropping an item onto a filled slot at the cap no longer warns "makes 4".
+  The drop passes `swapFrom` (the occupant) in the update options and the over-cap warning
+  subtracts it, since the occupant is unattuned in the same batch. A drop into an empty slot still warns.
+- **[declared] ATT-AC-2:** two bonded Coin Purses taken in one batch both pay (gp 10 + 5 + 3 = 18,
+  was 13). Payouts run in turn on a per-actor chain keyed `actor.uuid + ":coin"`, separate from the
+  slot hand-back chain, so hand-back timing is unchanged and a lone purse pays in the same ticks.
+- **[declared] ATT-ROB-2:** `stash` keys the bond on the owner's uuid (`bond.actor`), and the bond
+  restore and hand-back match on it (`isBondOwner`). Unlinked tokens share their base actor's id, so
+  an item stashed from token A used to come home equipped, and lose its bond, on token B or the base
+  actor. Now only token A gets it back; elsewhere only the tag goes and the bond stays. A legacy bond
+  holding the bare id still matches on the id, as before.
+- **[declared] lang-switch (guide step 8):** the strings now come from `lang/en.json` through
+  `_loc("PENTARYN_ATTUNEMENT.X", data)`; the inline `STRINGS` / `t()` are gone. The English is
+  byte-identical, so nothing reads differently, but a fix or translation in the lang file now reaches
+  the sheet and the toasts. Needs `languages` live (it is in `module.json` since 0.3.0): if the running
+  world predates that, a restart, otherwise a reload. Retires the C35 exception.
 
 ## 0.3.0 — 2026-10-12 (Wave 7 restart batch, wave 5; kit 1.1.0)
 

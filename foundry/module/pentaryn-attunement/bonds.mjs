@@ -11,7 +11,7 @@
  * an async ready, so restoreBond runs first. Moving this install to setup would change that order.
  */
 
-import { AWAY, AWAY_FLAG, BOND, MODULE, SLOTS, awayOf, bondChanges, computeSlots, homeSlots, t, wouldExceed } from "./attunement-core.mjs";
+import { AWAY, AWAY_FLAG, BOND, MODULE, SLOTS, awayOf, bondChanges, computeSlots, homeSlots, isBondOwner, wouldExceed } from "./attunement-core.mjs";
 import { isPileActor } from "./actor-adapter.mjs";
 import { claimDocument } from "./lib/election.mjs";
 import { flagPath } from "./lib/flags.mjs";
@@ -54,7 +54,7 @@ function restoreBond(item, data, options) {
   // Into another container (box to box): leave it tagged.
   if (isPileActor(actor)) return;
 
-  const changes = bondChanges(bond, { actorId: actor.id, awayKeys: awayOf(actor).map(a => a.key), fallbackName: item.name });
+  const changes = bondChanges(bond, { actorId: actor.id, actorUuid: actor.uuid, awayKeys: awayOf(actor).map(a => a.key), fallbackName: item.name });
   // A purse copied inside another actor's 750 ms claim window carries that tab's stamp; left in
   // place, every tab here reads the claim as held by someone else and nobody pays (W2-A1).
   if (item.getFlag?.(MODULE, "claims")?.coinBack) changes[`flags.${MODULE}.claims.coinBack`] = _del;
@@ -84,15 +84,18 @@ async function onCreateItemBond(item, options, userId) {
     // already gone (paid by the other tab) re-reads as {} and stands down.
     const won = await claimDocument(item, "coinBack", { scope: MODULE, reread: d => d.parent?.items?.get?.(d.id) ?? {} });
     if (!won) return;
-    const update = {};
-    for (const [k, v] of Object.entries(bond.currency)) update[`system.currency.${k}`] = (actor.system.currency?.[k] ?? 0) + v;
-    await actor.update(update);
-    await item.delete();
-    ui.notifications.info(t("CoinBack", { actor: actor.name }));
-    return;
+    // Two purses in one batch each add onto the other's write, not the same read (ATT-AC-2). Their own
+    // chain, so a purse never waits on a hand-back. Item Piles' own currency write is outside any chain.
+    return serial(actor, async () => {
+      const update = {};
+      for (const [k, v] of Object.entries(bond.currency)) update[`system.currency.${k}`] = (actor.system.currency?.[k] ?? 0) + v;
+      await actor.update(update);
+      await item.delete();
+      ui.notifications.info(_loc("PENTARYN_ATTUNEMENT.CoinBack", { actor: actor.name }));
+    }, ":coin");
   }
 
-  if (actor.id !== bond.actor) return;
+  if (!isBondOwner(bond, actor)) return;
   // Home for good: the bond has done its job. Anywhere else it stays, so the
   // item still knows its way back if it is handed over later.
   await item.update({ [flagPath(MODULE, BOND)]: _del });
@@ -106,20 +109,20 @@ async function onCreateItemBond(item, options, userId) {
       [`flags.${MODULE}.${AWAY_FLAG}`]: away.filter(a => a.key !== bond.key),
       [`flags.${MODULE}.${SLOTS}`]: slots
     });
-    ui.notifications.info(t("BackInHand", { name: item.name, actor: actor.name }));
+    ui.notifications.info(_loc("PENTARYN_ATTUNEMENT.BackInHand", { name: item.name, actor: actor.name }));
   });
 }
 
-/** Per-actor tail of in-flight hand-backs. Local to this tab; two tabs still race (recorded). */
+/** Per-actor tails of in-flight hand-backs and, apart (`:coin`), coin purses. Local to this tab; two tabs still race (recorded). */
 const tails = new Map();
 
 /**
- * Run `step` after the actor's previous hand-back settles. Uncontended, it runs synchronously, so a
- * lone item home takes the same ticks as before. Returns `step`'s own promise: a rejection still
- * reaches the reg's labelled catch, while the stored tail swallows it so the next step still runs.
+ * Run `step` after the actor's previous step in the same `lane` settles. Uncontended, it runs
+ * synchronously, so a lone item home takes the same ticks as before. Returns `step`'s own promise: a
+ * rejection still reaches the reg's labelled catch, while the stored tail swallows it so the next step still runs.
  */
-function serial(actor, step) {
-  const key = actor.uuid;
+function serial(actor, step, lane = "") {
+  const key = actor.uuid + lane;
   const prev = tails.get(key);
   const run = prev ? prev.then(step) : step();
   const tail = run.catch(() => {});
@@ -137,21 +140,24 @@ function serial(actor, step) {
  * @param {Item} item
  * @param {string} key
  */
-function warnOverCap(actor, item, key) {
+function warnOverCap(actor, item, key, freed = 0) {
   const att = actor?.system?.attributes?.attunement;
   if (!att) return;
-  const { exceed, after } = wouldExceed({ value: att.value, max: att.max, awayCount: awayOf(actor).length });
+  const { exceed, after } = wouldExceed({ value: att.value - freed, max: att.max, awayCount: awayOf(actor).length });
   if (!exceed) return;
-  ui.notifications.warn(t(key, {
+  ui.notifications.warn(_loc(key, {
     name: item.name, actor: actor.name, value: after, max: att.max
   }));
 }
 
-function onPreUpdateItem(item, changes) {
+function onPreUpdateItem(item, changes, options) {
   if (foundry.utils.getProperty(changes, "system.attuned") !== true) return;
   if (item.system?.attuned) return;             // already attuned: no delta
   if (!item.system?.attunement) return;         // does not count against the cap
-  warnOverCap(item.parent, item, "WouldExceed");
+  // A slot swap unattunes the occupant in the same batch, so it frees one (EC-3).
+  const from = item.parent?.items?.get?.(options?.[MODULE]?.swapFrom);
+  const freed = (from?.system?.attuned && from.system.attunement) ? 1 : 0;
+  warnOverCap(item.parent, item, "PENTARYN_ATTUNEMENT.WouldExceed", freed);
 }
 
 function onPreCreateItem(item, data, options) {
@@ -159,7 +165,7 @@ function onPreCreateItem(item, data, options) {
   if (item.getFlag?.(MODULE, BOND)) return;
   if (!item.system?.attuned) return;
   if (!(item.parent instanceof Actor)) return;
-  warnOverCap(item.parent, item, "ArrivedAttuned");
+  warnOverCap(item.parent, item, "PENTARYN_ATTUNEMENT.ArrivedAttuned");
 }
 
 export function install(reg) {
@@ -168,7 +174,7 @@ export function install(reg) {
   reg.on("createItem", onCreateItemBond, { label: "createItem: bond return" });
 }
 
-/** Session state: the hand-back tails. */
+/** Session state: the hand-back and coin-purse tails. */
 export function uninstall() {
   tails.clear();
 }

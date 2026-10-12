@@ -3,7 +3,7 @@
  * DOM only; the slot reconciliation is the core's computeSlots. sheet.mjs mounts and wires it.
  */
 
-import { AWAY, awayOf, computeSlots, shortName, t } from "./attunement-core.mjs";
+import { AWAY, awayOf, computeSlots, shortName } from "./attunement-core.mjs";
 
 /* -------------------------------------------- */
 /*  Rendering                                   */
@@ -122,7 +122,7 @@ export function buildAwaySlot(actor, key, index, overflow, editable, li, awayByK
     rm.type = "button";
     rm.className = "deletion-control unbutton";
     rm.dataset.action = "release";
-    rm.setAttribute("aria-label", t("Release"));
+    rm.setAttribute("aria-label", _loc("PENTARYN_ATTUNEMENT.Release"));
     rm.innerHTML = `<i class="fas fa-circle-xmark" inert></i>`;
     fig.append(rm);
   }
@@ -130,10 +130,10 @@ export function buildAwaySlot(actor, key, index, overflow, editable, li, awayByK
 
   const name = foundry.utils.escapeHTML(entry?.name ?? "");
   const short = shortName(actor.name);
-  const body = t("AwayBody", { actor: foundry.utils.escapeHTML(short) });
+  const body = _loc("PENTARYN_ATTUNEMENT.AwayBody", { actor: foundry.utils.escapeHTML(short) });
   li.dataset.tooltip = `<div class="pentaryn-attunement-away-tip"><strong>${name}</strong><p>${body}</p></div>`;
   li.dataset.tooltipDirection = "RIGHT";
-  const rawBody = t("AwayBody", { actor: short });
+  const rawBody = _loc("PENTARYN_ATTUNEMENT.AwayBody", { actor: short });
   li.setAttribute("aria-label", `${entry?.name ?? ""} — ${rawBody}`);
   return li;
 }
@@ -181,7 +181,7 @@ export function buildStrip(actor, editable, state = computeSlots(actor)) {
   if (over) {
     const note = document.createElement("p");
     note.className = "over-cap-note roboto-upper";
-    note.textContent = t("OverBy", { n: value - max });
+    note.textContent = _loc("PENTARYN_ATTUNEMENT.OverBy", { n: value - max });
     root.append(note);
   }
 

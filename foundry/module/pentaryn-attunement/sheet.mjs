@@ -7,7 +7,7 @@
  * handler without patching anything.
  */
 
-import { AWAY, MODULE, awayOf, computeSlots, safe, t } from "./attunement-core.mjs";
+import { AWAY, MODULE, awayOf, computeSlots, safe } from "./attunement-core.mjs";
 import { releaseAway, writeSlots } from "./actor-adapter.mjs";
 import { decorateCounter, mountStrip } from "./strip.mjs";
 
@@ -27,7 +27,7 @@ async function attuneToSlot(actor, item, index) {
   if (occupant === item.id) return;
   if (occupant?.startsWith(AWAY)) {
     const name = awayOf(actor).find(a => AWAY + a.key === occupant)?.name ?? "";
-    ui.notifications.warn(t("SlotHeld", { name }));
+    ui.notifications.warn(_loc("PENTARYN_ATTUNEMENT.SlotHeld", { name }));
     return;
   }
 
@@ -40,7 +40,9 @@ async function attuneToSlot(actor, item, index) {
   while (next.length <= index) next.push(null);
   next[index] = item.id;
 
-  if (updates.length) await actor.updateEmbeddedDocuments("Item", updates);
+  // A drop onto a filled slot is a swap: the over-cap warning subtracts the occupant (EC-3).
+  const options = occupant ? { [MODULE]: { swapFrom: occupant } } : {};
+  if (updates.length) await actor.updateEmbeddedDocuments("Item", updates, options);
   await writeSlots(actor, next);
 }
 
@@ -63,8 +65,8 @@ async function unattune(actor, itemId) {
 async function confirmRelease(actor, key) {
   const entry = awayOf(actor).find(a => a.key === key);
   const ok = await foundry.applications.api.DialogV2.confirm({
-    window: { title: t("Release") },
-    content: `<p>${t("ReleaseConfirm", { name: foundry.utils.escapeHTML(entry?.name ?? "") })}</p>`
+    window: { title: _loc("PENTARYN_ATTUNEMENT.Release") },
+    content: `<p>${_loc("PENTARYN_ATTUNEMENT.ReleaseConfirm", { name: foundry.utils.escapeHTML(entry?.name ?? "") })}</p>`
   });
   if (ok) return releaseAway(actor, key);
 }
@@ -90,11 +92,11 @@ async function onDrop(event, actor) {
   if (!item) return;
 
   if (item.parent?.uuid !== actor.uuid) {
-    ui.notifications.warn(t("NotOnActor"));
+    ui.notifications.warn(_loc("PENTARYN_ATTUNEMENT.NotOnActor"));
     return;
   }
   if (!item.system?.attunement) {
-    ui.notifications.warn(t("NotAttunable", { name: item.name }));
+    ui.notifications.warn(_loc("PENTARYN_ATTUNEMENT.NotAttunable", { name: item.name }));
     return;
   }
 
