@@ -32,6 +32,7 @@ import {
   studySkill,
   tierOf
 } from "../known-core.mjs";
+import { CONCEAL_FLAG, concealFor } from "../core/rules.mjs";
 import { attackItems, composeStudyPayload } from "./compose.mjs";
 import { readFlag } from "../lib/flags.mjs";
 import { setting } from "../settings.mjs";
@@ -208,6 +209,8 @@ export function resolveFact(spec) {
 
 export const studiedOf = actor => readStudied(readFlag(actor, MODULE, STUDIED_FLAG));
 export const beliefsOf = actor => readBeliefs(readFlag(actor, MODULE, BELIEFS_FLAG));
+/** Concealment: raises the DC without ever appearing in the printed one. */
+export const concealmentFor = (subject, attrId) => concealFor(readFlag(subject, MODULE, CONCEAL_FLAG), attrId);
 export const studyTiersOf = actor => readStudyTiers(readFlag(actor, MODULE, STUDY_TIERS_FLAG));
 
 /** The registry, read defensively — a setting can be unregistered when a hook fires early. */

@@ -112,7 +112,7 @@ test("ties-32: an item mark's icon is one fa- class or the flame", async () => {
 });
 
 test("concealmentFor: never throws, reads the conceal flag", async () => {
-  const { concealmentFor } = await import("../study/cascade.mjs");
+  const { concealmentFor } = await import("../study/resolve.mjs");
   const { makeDoc } = await import("./kit/foundry-stub.mjs");
   assert.equal(concealmentFor(null, "guild"), 0);
   assert.equal(concealmentFor("zzNpc", "guild"), 0);

@@ -39,10 +39,10 @@ import {
   shareStatus
 } from "../known-core.mjs";
 import { applyPlayerWrites, knownListWith, putBelief } from "./apply.mjs";
-import { applyInspect, concealmentFor, grantKind, writeIdentification } from "./cascade.mjs";
+import { applyInspect, grantKind, writeIdentification } from "./cascade.mjs";
 import { dropRow } from "./claim.mjs";
 import { factFrom, reset, rowMissed } from "./gate.mjs";
-import { beliefsOf, kindActorOf, reg, resolveFact, studyStateFor, studyTiersOf } from "./resolve.mjs";
+import { beliefsOf, concealmentFor, kindActorOf, reg, resolveFact, studyStateFor, studyTiersOf } from "./resolve.mjs";
 import { esc, INSPECT } from "./shared.mjs";
 import { readFlag } from "../lib/flags.mjs";
 import { setting } from "../settings.mjs";

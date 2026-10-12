@@ -22,8 +22,7 @@ import {
   STUDY_TIERS_FLAG,
   studyOffsetOf
 } from "../known-core.mjs";
-import { concealmentFor } from "./cascade.mjs";
-import { beliefsOf, kindActorOf, studyHoldFor } from "./resolve.mjs";
+import { beliefsOf, concealmentFor, kindActorOf, studyHoldFor } from "./resolve.mjs";
 import { esc } from "./shared.mjs";
 import { readFlag } from "../lib/flags.mjs";
 

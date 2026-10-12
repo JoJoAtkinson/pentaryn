@@ -9,7 +9,7 @@ import { attributeIdsOf, describeAttribute, knowledge, setKnowledge } from "../a
 import { MODULE } from "../ties-core.mjs";
 import { canReach } from "../ties-adapter.mjs";
 import { mayWrite } from "../settings.mjs";
-import { CONCEAL_FLAG, concealFor, isIdentKey } from "../core/rules.mjs";
+import { isIdentKey } from "../core/rules.mjs";
 import {
   BELIEFS_FLAG,
   combineAdvantage,
@@ -29,6 +29,7 @@ import { claimInspect, dropRow, releaseInspect } from "./claim.mjs";
 import { composeStudyPayload } from "./compose.mjs";
 import {
   beliefsOf,
+  concealmentFor,
   holdDefault,
   kindActorOf,
   reg,
@@ -505,9 +506,6 @@ export async function deliverHeldIdentifications(character, subject) {
   // resume: the ledgers changed, so the planner will now return the next rung
   return guardedCascade(character, subject);
 }
-
-/** Concealment: raises the DC without ever appearing in the printed one. */
-export const concealmentFor = (subject, attrId) => concealFor(readFlag(subject, MODULE, CONCEAL_FLAG), attrId);
 
 /**
  * **Hand a character a kind at a chosen rung** — no roll, the GM's decision.
