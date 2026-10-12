@@ -23,43 +23,29 @@ export const onUsage = (activity, kind) => {
   } catch (err) { log.warn("action economy", err); }
 };
 
+// Spend one of Argon's own pips for the bound actor: the setting, the bound actor, combat (unless the
+// pip is spent on any turn), the panel, then — for the Action pip — whether our own pips count it already.
+function spendPip(actor, key, label, { combatOnly = true, unlessOurs = false } = {}) {
+  if (!setting(key) || actor !== ui.ARGON?._actor || (combatOnly && !combatContext(actor).inCombat)) return;
+  const panel = mainPanel(label);
+  if (!panel || (unlessOurs && panel._pentarynPips?.())) return;
+  panel.isActionUsed = true;
+  panel.updateActionUse();
+}
+
 // Out of combat Argon shows no pips and never resets them, so nothing is marked there.
-export const onBonusSpent = (actor) => {
-  if (!setting("offhandPip") || actor !== ui.ARGON?._actor || !combatContext(actor).inCombat) return;
-  const bonus = mainPanel("DND5E.BonusAction");
-  if (!bonus) return;
-  bonus.isActionUsed = true;
-  bonus.updateActionUse();
-};
+export const onBonusSpent = (actor) => spendPip(actor, "offhandPip", "DND5E.BonusAction");
 
 // A Bonus-action feature or spell used on your turn (Rage, Steady Aim, Divine Smite…): Argon's item
 // buttons never spent its pip (setting bonusPip; the turn flag was written in counting.mjs).
-export const onBonusAction = (actor) => {
-  if (!setting("bonusPip") || actor !== ui.ARGON?._actor || !combatContext(actor).inCombat) return;
-  const bonus = mainPanel("DND5E.BonusAction");
-  if (!bonus) return;
-  bonus.isActionUsed = true;
-  bonus.updateActionUse();
-};
+export const onBonusAction = (actor) => spendPip(actor, "bonusPip", "DND5E.BonusAction");
 
 // A spell or feature that is an Action (Fire Bolt, Fireball, Magic): Argon's item buttons never spent its
 // single Action pip (usability Area 5 re-run, S5). With 2+ swings our own pips already count it.
-export const onOtherAction = (actor) => {
-  if (!setting("spellPips") || actor !== ui.ARGON?._actor || !combatContext(actor).inCombat) return;
-  const action = mainPanel("DND5E.Action");
-  if (!action || action._pentarynPips?.()) return;
-  action.isActionUsed = true;
-  action.updateActionUse();
-};
+export const onOtherAction = (actor) => spendPip(actor, "spellPips", "DND5E.Action", { unlessOurs: true });
 
 // A Reaction (Counterspell, Shield…), on any turn (S14).
-export const onReaction = (actor) => {
-  if (!setting("spellPips") || actor !== ui.ARGON?._actor) return;
-  const reaction = mainPanel("DND5E.Reaction");
-  if (!reaction) return;
-  reaction.isActionUsed = true;
-  reaction.updateActionUse();
-};
+export const onReaction = (actor) => spendPip(actor, "spellPips", "DND5E.Reaction", { combatOnly: false });
 
 /**
  * A re-bound HUD builds new panels with every pip lit, and Argon lights every pip at a new round
