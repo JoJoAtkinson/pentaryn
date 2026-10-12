@@ -37,7 +37,7 @@ published synchronously at `ready` (`pentaryn-cursors.ready` fires with it). Ask
 `game.pentaryn.cursors.describe()` (offline: `test/golden/describe.json`).
 
 - `current()` — the key on `#board` now, or `null`. `refresh()` — recompute and apply; returns the key.
-- `keys` — the frozen `KEYS` table. `keyFor({control, tool, templatesActive})` — pure, ignores the setting.
+- `keys` — the frozen `KEYS` table. `keyFor({control, tool, templatesActive})` — pure, ignores the setting; no state (or `null`) gives `null`.
 - `status()` — one read-only diagnosis of a wrong cursor:
   `{ enabled, key, control, tool, placementActive, boardCursor, dataset, imageSet, expected }`.
   `expected` is `keyFor`'s answer; `key` is what should be on the board (`null` while the setting is off).

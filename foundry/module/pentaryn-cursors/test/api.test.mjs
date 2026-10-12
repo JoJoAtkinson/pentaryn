@@ -39,6 +39,11 @@ test("the 0.2.0 surface is a subset: refresh, current, keys, keyFor", () => {
   assert.deepEqual(Object.keys(api.keys), Object.keys(KEYS));
 });
 
+test("game.pentaryn.cursors.keyFor(null) returns null, like keyFor() (cursors-rob-1)", () => {
+  assert.equal(game.pentaryn.cursors.keyFor(null), null);
+  assert.equal(game.pentaryn.cursors.keyFor(), null);
+});
+
 test("drift fails at build: a manifest row without an implementation", () => {
   assert.throws(() => buildApi(MANIFEST, {}), /has no implementation/);
 });

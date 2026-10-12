@@ -14,6 +14,8 @@
 - [declared] The `canvasReady` and `ready` ticks catch their own throws (cursors-rob-2): a throwing
   resync logs `resync failed`; in the `ready` tick a throwing attach logs `refresh failed` and the
   resync still runs, so a blanked cursor is still repaired.
+- [declared] `keyFor(null)` returns `null` (the system arrow) like `keyFor()` and
+  `keyFor(undefined)`, instead of throwing a TypeError (cursors-rob-1).
 
 ## Unreleased — 2026-10-11 (addon blueprint, wave 1)
 
