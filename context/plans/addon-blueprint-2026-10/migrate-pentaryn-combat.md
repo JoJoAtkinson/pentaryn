@@ -9,6 +9,13 @@ tags: [foundry, modules, blueprint, migration, pentaryn-combat]
 
 > **WAIT lifted 2026-10-11** (D9: live usability work finished; `wait.json` is empty). The WAIT wording below is history; the re-anchor step still applies.
 
+> **Re-anchored again for wave 4 (2026-10-11, base `a5a1a906`):** since 28ccc87 only PT1-6 touched the
+> module (`d7a7c7b6`, `99102603`): `hud.mjs:157` `TT` gained `pentaryn-combat-tt` (same line), and
+> `styles/combat.css` gained 15 lines after `:47` (already reflected below). No `.mjs` line moved, so
+> every JS anchor in this guide holds. Live score at the base: 50.0 % (23/46): the scorer now has 46
+> fail-class rules (42 when §1 was written) and the 23 failing are exactly §1's (C59 is a new warning).
+> Checkpoint below.
+
 **Read this when:** you are about to restructure `foundry/module/pentaryn-combat` to the blueprint,
 or you need to know which 2026-10 audit findings (`combat-riders-*`) the restructure absorbs and
 which stay separate fixes. **Not this file:** the general procedure is in
@@ -701,11 +708,42 @@ the prototype as well.
 |---|---|
 | Live score after the migration | ___ % (___ / ___ fail-class rules) — `conformance.py --module combat --markdown` |
 | Date | ____-__-__ |
-| Commits (Joe-approved) | characterisation: ______ · refactor: ______ · standalone: ______ |
+| Commits (Joe-approved) | characterisation: **`6e802ebb`** (runner + test kit `12e86e58` before it) · refactor: ______ · standalone: ______ |
 | Declared changes handed to the live-test workflow | ______ (session L__) |
 | `module.json` edits appended to `wave7-restart-batch.md` | yes / no |
 | Adjustments rows appended to `adjustments-batch.md` | yes / no |
 | Still failing, and why | ______ |
+
+**S1 checkpoint (wave 4, 2026-10-11): `6e802ebb`** — `test(combat): characterisation checkpoint`, on
+`migrate/wave-4`; tests and goldens only (no `lib/`: the kit is vendored by the kit step, C14 still
+fails). `12e86e58` before it: `test/run.mjs` is the fixed body with `LEGACY = ["test/core-fixtures.mjs"]`
+(the old suite moved byte for byte), `test/kit/` = `foundry/lib/test-kit` 1.0.2, `core.test.mjs`.
+
+- Files: `hooks`, `glue`, `core`, `counting`, `shapes`, `sequence`, `strip`, `riders`, `hud`, `turnflow`,
+  `turnflow-player`, `api`, `i18n`, `failure-paths`, `publish-frozen`, `publish-open` `.test.mjs`;
+  fixtures `dom`, `argon`, `world`, `actors`, `legacy-combat` (the S1 oracles, verbatim); 100 goldens
+  (`hooks.json` 62 rows, `surface-legacy.json` 23 members, `argon-bars.json`, `document-listeners.json`,
+  `graph.json`, `core-exports.json` 81 names, …). Mocked timers (setTimeout + Date) throughout.
+- Results: node:test 179 (175 pass, 4 todo, 0 fail); legacy 326 fixtures pass; `make foundry-combat-check`
+  green; pytest 1199 passed (unchanged).
+- Coverage (node:test, module files, `lib/` and `test/` excluded): before — no node:test suite (the
+  legacy suite loaded `combat-core.mjs` only: 99.76 / 89.21 / 99.32); at the checkpoint 99.78 / 87.01 /
+  98.92 L / B / F over all 10 files (combat.mjs, settings, offhand, shapes, strip, turnflow, sequence,
+  hud 100 % lines; riders 99.80; combat-core 99.19, the rest of it is the legacy suite's).
+- Conformance: 50.0 % (23/46) → 58.7 % (27/46); C20, C40, C41, C43 now pass.
+- KNOWN pins, each with a todo test that flips it: **combat-riders-22** (`sequence.test`: Multiattack +
+  Action Surge plans nothing; §4), **combat-riders-12** (`api.test` + `golden/api-bad-*.json`: legacy
+  members throw or read nothing on a bad ref; S11, D-c2), **W4-C1** (new: Adv/Dis pressed on the strip
+  while a swing's roll window is open is cleared by that swing's `rolled`, so the next swing rolls
+  without it; `sequence.test`; recorded under Open for Joe in `wave-4-report.md`), and `VERSION ===
+  module.json` (todo until S2).
+- Seen, pinned, not a todo: a Martial Arts / Hew / Pole Strike follow-up emits
+  `pentarynCombat.bonusSpent` twice (once from the roll's counting, once from `runFollowUp`); hud's
+  listener is idempotent. S9 should keep the count or note the change.
+- Fixture notes for S6–S12: `test/fixtures/world.mjs`'s `actor.update` applies `_replace` (v14
+  ForcedReplacement) before the update hooks fire; activities fire dnd5e's hooks in dnd5e's order.
+  Goldens hold message ids, so a test added to a frozen file mid-refactor would shift them: add new
+  tests in new files.
 
 Fixed outside the migration, on `fix/playtest-2026-10-11` (module 0.2.5): **PT1-6** — the Full
 Attack tooltip subtitle ("2 of 2 swings left this turn, + Nick: Scimitar") was cut at both edges.
