@@ -54,6 +54,11 @@ Fixed (declared): the Ties tab's **notes** save the same way the Known tab's do 
 (`bindNotesAutosave` and `replaceSummary` in `core/html.mjs`), so leaving the box saves the last words
 typed once, not twice (its extra `change` save is gone). ties-ui-EXT-3.
 
+Changed (declared): the fact groups' headings in the player's Look window and the GM's Player view
+come from one `GROUP_LABEL` table in `facts.mjs` instead of string ladders. The four groups read as
+before; a group the table does not know is headed with its own name instead of "What they are".
+ties-ui-EXT-4.
+
 Fixed (declared): the chat cards — the "… studies …" stub, the tempo line and the GM's share
 whisper — name every creature by its **token** name, never its actor name, so a GM-only world actor
 name cannot reach player chat. The token is found on any scene, not only the one the posting

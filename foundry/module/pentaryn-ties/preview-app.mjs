@@ -68,7 +68,7 @@ import {
   kindActorOf, studySkillFor, studyStateFor, composeStudyPayload, factStatus, shareFact, forgetFact
 } from "./study.mjs";
 import { grantCard, grantedHead } from "./known-ui.mjs";
-import { subjectFacts } from "./facts.mjs";
+import { subjectFacts, groupLabelKey } from "./facts.mjs";
 import {
   rollableLore, loreOfferable, loreOutcome, tierOf, studyOffsetOf, STUDY_OFFSET_FLAG, LORE_FLAG,
   planStep, identificationLadder, indexRegistry, identifiedKey, holdResolved, combineAdvantage,
@@ -461,7 +461,7 @@ export class InspectPreview extends ApplicationV2 {
         blank: !reveal.trim() ? _loc("PENTARYN_TIES.known.share.blankReveal") : null, note
       });
     });
-    if (idCards.length) groups.push([_loc("PENTARYN_TIES.known.share.groupIdent"), idCards]);
+    if (idCards.length) groups.push([_loc(groupLabelKey("ident", "preview")), idCards]);
 
     const attrCards = [];
     for (const x of facts.filter(x => x.group === "attr")) {
@@ -475,21 +475,21 @@ export class InspectPreview extends ApplicationV2 {
           note: x.secret ? _loc("PENTARYN_TIES.known.share.secretLore", { name: subject.name, attr: e.title }) : null }
       ));
     }
-    if (attrCards.length) groups.push([_loc("PENTARYN_TIES.known.share.groupAttr"), attrCards]);
+    if (attrCards.length) groups.push([_loc(groupLabelKey("attr", "preview")), attrCards]);
 
     const ownCards = facts.filter(x => x.group === "lore").map(x => ownRows.get(x.factId)).filter(Boolean).map(row => this.factCard(
       { icon: subject.img, source: row.label, text: row.text },
       { ns: "lore", subjectId: subject.id, factId: row.id }, pcs,
       { blank: !row.text.trim() ? _loc("PENTARYN_TIES.known.share.blankText") : null }
     ));
-    if (ownCards.length) groups.push([_loc("PENTARYN_TIES.known.share.groupLore", { name: subject.name }), ownCards]);
+    if (ownCards.length) groups.push([_loc(groupLabelKey("lore", "preview"), { name: subject.name }), ownCards]);
 
     const state = studyStateFor(null, subject);
     const kind = state.kind ?? null;
     if (kind && state.content) {
       const text = await composeStudyPayload(kind, 25, state.skillLabel);
       // a separate kind actor's study files under the KIND's page on the Known tab, not this one's
-      const kindLabel = kind.id !== subject.id ? _loc("PENTARYN_TIES.known.share.groupKindPage", { kind: kind.name }) : _loc("PENTARYN_TIES.known.share.groupKind");
+      const kindLabel = _loc(groupLabelKey("kind", "preview", { kindPage: kind.id !== subject.id }), { kind: kind.name });
       groups.push([kindLabel, [this.factCard(
         { icon: kind.img, source: kind.name, text }, { ns: "kind", subjectId: subject.id }, pcs,
         { note: studyOffsetOf(readFlag(kind, MODULE, STUDY_OFFSET_FLAG)) === "auto" ? _loc("PENTARYN_TIES.known.share.kindAuto") : null }

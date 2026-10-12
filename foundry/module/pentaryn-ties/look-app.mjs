@@ -69,7 +69,7 @@ import { LiveHooks } from "./ties-adapter.mjs";
 import { mayWrite } from "./settings.mjs";
 import { kindActorOf } from "./study.mjs";
 import { grantCard, grantedHead } from "./known-ui.mjs";
-import { subjectFacts, knowsAbout } from "./facts.mjs";
+import { subjectFacts, knowsAbout, groupLabelKey } from "./facts.mjs";
 import { REGISTRY_SETTING, touchesFlagScope } from "./known-core.mjs";
 import { makeLog } from "./lib/log.mjs";
 
@@ -163,11 +163,10 @@ export class LookWindow extends ApplicationV2 {
 
   groupLabel(group, base, kind) {
     const name = this.subject?.name ?? base?.name ?? "?";
-    if (group === "ident") return _loc("PENTARYN_TIES.known.look.groupIdent");
-    if (group === "attr") return _loc("PENTARYN_TIES.known.look.groupAttr");
-    if (group === "lore") return _loc("PENTARYN_TIES.known.look.groupLore", { name });
     // a separate kind actor's study files under the KIND's page on the Known tab
-    return kind && base && kind.id !== base.id ? _loc("PENTARYN_TIES.known.look.groupKindPage", { kind: kind.name }) : _loc("PENTARYN_TIES.known.look.groupKind");
+    const key = groupLabelKey(group, "look", { kindPage: !!(kind && base && kind.id !== base.id) });
+    // a group GROUP_LABEL does not know is headed with its own name, never another group's
+    return key ? _loc(key, { name, kind: kind?.name ?? "" }) : String(group);
   }
 
   /** The whole window body, as a string. Sync, so a live refresh can compare before it paints. */
