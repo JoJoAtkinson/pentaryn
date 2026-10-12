@@ -8,6 +8,7 @@
     "op": "create",
     "documentName": "Actor",
     "data": {
+      "_id": "pentarynAoeHndl0",
       "name": "Area handle",
       "type": "npc",
       "img": "icons/svg/target.svg",
@@ -67,7 +68,9 @@
         }
       }
     },
-    "options": null
+    "options": {
+      "keepId": true
+    }
   },
   {
     "op": "deleteEmbedded",
@@ -134,7 +137,7 @@
           }
         },
         "_id": "regionBare000001",
-        "actorId": "0000000000000001",
+        "actorId": "pentarynAoeHndl0",
         "x": 475,
         "y": 475,
         "elevation": 0,

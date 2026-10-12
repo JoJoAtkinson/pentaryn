@@ -515,7 +515,7 @@ test("-15 uninstall restores ui.ARGON.bind (D-A2)", { todo: "S6: argon.mjs wraps
   assert.equal(F.ui.ARGON.bind, orig);
 });
 
-test("-7 two GM sessions at ready create one handle actor (D-A6)", { todo: "standalone -7: deterministic _id pentarynAoeHndl0 + keepId" }, async () => {
+test("-7 two GM sessions at ready create one handle actor (D-A6)", async () => {
   const actor = HANDLE();
   F.game.actors.delete(actor.id);
   reset();

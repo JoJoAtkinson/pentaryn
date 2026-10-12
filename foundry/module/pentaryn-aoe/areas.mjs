@@ -26,6 +26,8 @@ import { FEATURE_ROWS } from "./api-manifest.mjs";
 
 const OWNER = 3;
 const HANDLE_ICON = "icons/svg/target.svg";
+/** The handle actor's fixed id (16 alphanumerics): two sessions creating it at once make one actor. */
+const HANDLE_ACTOR_ID = "pentarynAoeHndl0";
 
 /** A template region dnd5e attached to a token that is not our handle (an emanation on its caster). */
 const attachedElsewhere = region => attachedToOther(region, id => region?.parent?.tokens?.get(id));
@@ -78,7 +80,21 @@ export async function ensureHandleActor() {
   }
   if (existing || !game.user.isGM) return existing;
   const folder = game.folders.find(f => f.type === "Actor" && f.name === "Scene Props");
-  return Actor.implementation.create({
+  // -7: a fixed id with keepId, as the handle tokens have. Two GM sessions at ready (the bridge tab
+  // and a GM browser tab) both get here on a world without the actor; the server keeps one.
+  try {
+    return await Actor.implementation.create({
+      _id: HANDLE_ACTOR_ID,
+      ...handleActorData(folder)
+    }, { keepId: true });
+  } catch (err) {
+    if (/already exists/i.test(err?.message ?? "")) return handleActor();   // the other session won
+    throw err;
+  }
+}
+
+function handleActorData(folder) {
+  return {
     name: "Area handle",
     type: "npc",
     img: HANDLE_ICON,
@@ -87,7 +103,7 @@ export async function ensureHandleActor() {
     system: { attributes: { hp: { value: 0, max: 0 }, movement: { hover: true } }, traits: { size: "tiny" } },
     prototypeToken: handlePrototype(),
     flags: { [MODULE]: { handleActor: true } }
-  });
+  };
 }
 
 /* -------------------------------------------- */

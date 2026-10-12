@@ -15,7 +15,7 @@
 
 import { mock } from "node:test";
 import { readFileSync } from "node:fs";
-import { installFoundry, makeDoc, makeUser, makeToken, makeScene, StubCollection } from "../kit/foundry-stub.mjs";
+import { installFoundry, makeDoc, makeUser, makeToken, makeScene, StubCollection, stubId } from "../kit/foundry-stub.mjs";
 import { document, FakeElement } from "./dom.mjs";
 
 export const MODULE = "pentaryn-aoe";
@@ -314,7 +314,14 @@ export async function boot({ user = null, users = [], settings = {}, entry = fal
       create: async (data, opts) => {
         F.calls.push({ op: "create", documentName: "Actor", data: F.plain(data), options: F.plain(opts) ?? null });
         if (F._actorCreateError) throw new Error(F._actorCreateError);
-        return actor({ ...data, hp: data.system?.attributes?.hp });
+        // core: with keepId the given _id is kept, and the server refuses an id that exists
+        const { _id, ...rest } = data;
+        const id = opts?.keepId && _id ? _id : undefined;
+        if (id && g.actors.has(id)) throw new Error(`The Actor ${id} already exists in the world collection`);
+        // A kept id still advances the stub's id sequence, as a generated one did, so the ids of
+        // every later stub document (and the goldens that carry them) do not shift.
+        if (id) stubId("Act");
+        return actor({ ...rest, ...(id ? { id } : {}), hp: data.system?.attributes?.hp });
       },
     },
   };

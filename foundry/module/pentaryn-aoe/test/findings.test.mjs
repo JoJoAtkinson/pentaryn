@@ -54,3 +54,24 @@ test("-6 a write queued behind another keeps the entry until the last settles; t
   assert.equal(R.pendingWrites(), 0);
   assert.equal((await R.mutate(m.id, r => { r.n++; return r; })).n, 11);
 });
+
+/* ── -7 (D-A6): one handle actor, whichever GM session creates it ───────────────────────────── */
+
+test("-7 the id is 16 alphanumerics; losing the create race returns the winner's actor; another error is thrown", async () => {
+  const A = S.areas;
+  const winner = A.handleActor();
+  assert.equal(winner.id, "pentarynAoeHndl0");
+  assert.match(winner.id, /^[A-Za-z0-9]{16}$/);
+  F.game.actors.delete(winner.id);
+  const create = Actor.implementation.create;
+  Actor.implementation.create = async () => {   // the other session's actor lands first
+    F.game.actors.set(winner.id, winner);
+    throw new Error(`The Actor ${winner.id} already exists in the world collection`);
+  };
+  assert.equal(await A.ensureHandleActor(), winner);
+  F.game.actors.delete(winner.id);
+  Actor.implementation.create = async () => { throw new Error("server down"); };
+  await assert.rejects(A.ensureHandleActor(), /server down/);
+  Actor.implementation.create = create;
+  F.game.actors.set(winner.id, winner);
+});

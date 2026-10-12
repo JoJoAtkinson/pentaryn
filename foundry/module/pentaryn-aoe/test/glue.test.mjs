@@ -135,10 +135,10 @@ test("ready (active GM): legacy roll mode migrated, handle actor created, viewed
   pinJSON("ready-calls", pinned, import.meta.url);
   assert.equal(game.settings.get(MODULE, "npcSaveRollMode"), "gm");
   assert.ok(readyLines.includes(`info: ${MODULE} | npcSaveRollMode gmroll → gm`), readyLines.join("\n"));
-  // -7: the actor is created with a random id and no keepId (two GM sessions can each create one)
+  // [declared] D-A6 (-7): the actor is created with the fixed id pentarynAoeHndl0 and keepId
   const create = readyCalls.find(c => c.op === "create" && c.documentName === "Actor");
-  assert.equal(create.data._id, undefined);
-  assert.equal(create.options, null);
+  assert.equal(create.data._id, "pentarynAoeHndl0");
+  assert.deepEqual(create.options, { keepId: true });
 });
 
 test("ready: a canvasReady sweep is registered through on() (it is in hookIds)", () => {
