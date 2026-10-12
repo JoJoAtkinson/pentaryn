@@ -47,9 +47,12 @@ const gmBadge = () =>
  */
 function kindPicker(actor) {
   const current = actor.getFlag(MODULE, KIND_OF_FLAG) ?? "";
-  const all = (game.actors?.contents ?? []).filter(a => a.id !== actor.id && a.type === "npc");
+  // one pass over the world (ties-28): the candidates, and every actor something points at or
+  // that has its own ladder — both in the world's order, as the two passes produced them
+  const all = [];
   const evident = new Set();
   for (const a of game.actors?.contents ?? []) {
+    if (a.id !== actor.id && a.type === "npc") all.push(a);
     const p = a.getFlag(MODULE, KIND_OF_FLAG);
     if (p) evident.add(p);
     if ((a.getFlag(MODULE, STUDY_TIERS_FLAG) ?? []).length) evident.add(a.id);
