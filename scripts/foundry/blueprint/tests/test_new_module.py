@@ -110,6 +110,16 @@ def test_bad_or_reserved_short_names_are_refused(tmp_path, short):
     assert not target.exists()
 
 
+@pytest.mark.parametrize("kit", [["--kit", "nosuchfile"], ["--kit", "argon-kit"]])
+def test_a_refused_kit_leaves_nothing_behind(tmp_path, kit):
+    # docstring promise: "2 refused (nothing written)" — a vendoring refusal must not leave the
+    # rendered folder behind, or the plain rerun is refused with "… exists"
+    rc, target = gen(tmp_path, "demo", "--no-run", *kit)
+    assert rc == 2
+    assert not target.exists()
+    assert gen(tmp_path, "demo", "--no-run")[0] == 0
+
+
 def _fake_module(root, name, *, flags=None, source=None, css=None):
     d = root / name
     d.mkdir(parents=True)

@@ -393,6 +393,8 @@ def main(argv: list[str] | None = None) -> int:
         vendored = vendor.sync(target, tier=None if (rerender and has_lock) else args.tier,
                                extra=[k for k in args.kit.split(",") if k])
     except (Refused, vendor.VendorError) as exc:
+        if not existing:  # "2 refused (nothing written)": drop only the folder this run created
+            shutil.rmtree(target, ignore_errors=True)
         print(f"  ✗ refused: {exc}", file=sys.stderr)
         return 2
     print(f"  ✓ pentaryn-{short} → {target} ({len(files)} template files, {len(vendored)} vendored, tier {args.tier}, "
