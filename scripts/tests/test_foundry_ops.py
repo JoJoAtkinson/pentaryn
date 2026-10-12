@@ -9,6 +9,7 @@ verification must refuse to pass on anything except a positive 404.
 from __future__ import annotations
 
 import signal
+import sys
 import time
 
 import pytest
@@ -719,6 +720,22 @@ def test_pick_user_menu_defaults_to_the_gamemaster(monkeypatch):
              {"_id": "p1", "name": "Kristine", "role": 2}]
     assert login._pick_user(users, None, prompt=True)["_id"] == "gm"
     assert seen["options"][seen["default_index"]][1]["_id"] == "gm"
+
+
+@pytest.mark.parametrize("raw", ["0", "-1"])
+def test_numbered_picker_rejects_zero_and_negatives(monkeypatch, raw):
+    """The fallback prompt says [1-N]. '0' or '-1' used to index from the end of the
+    list — in _ensure_world that picked 'yes, switch' and disconnected players."""
+    monkeypatch.setitem(sys.modules, "questionary", None)
+    monkeypatch.setattr("builtins.input", lambda _p: raw)
+    with pytest.raises(RuntimeError, match="not one of 1-2"):
+        login._choose("p", [("a", 1), ("b", 2)])
+
+
+def test_numbered_picker_still_takes_a_number_in_range(monkeypatch):
+    monkeypatch.setitem(sys.modules, "questionary", None)
+    monkeypatch.setattr("builtins.input", lambda _p: "2")
+    assert login._choose("p", [("a", 1), ("b", 2)]) == 2
 
 
 def test_pick_world_rejects_a_name_that_is_not_on_disk(monkeypatch):
