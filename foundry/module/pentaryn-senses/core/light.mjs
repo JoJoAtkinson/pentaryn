@@ -1,6 +1,7 @@
 /**
- * Pure helpers for the Light cantrip and lit items (light.mjs, senses.mjs). No Foundry globals,
- * so test/light-core.test.mjs proves them in node. Design: context/plans/senses-light-cantrip.md.
+ * Pure helpers for the Light cantrip and lit items (carried.mjs, light.mjs, light-ui.mjs,
+ * core/inspect.mjs). No Foundry globals, so test/light-core.test.mjs proves them in node.
+ * Design: context/plans/senses-light-cantrip.md.
  *
  *   Item (Light spell)   flags.pentaryn-senses.lightCast  = { scene, token } | { scene, x, y } | null
  *   Token / AmbientLight flags.pentaryn-senses.spellLight = { source: "<Light item uuid>", prior }
@@ -273,7 +274,7 @@ export function planSpellLight({ desired = null, existing = [] } = {}) {
 export function spellLightUpdate(doc, source, current) {
   const had = readSpellLight(doc);
   const prior = had ? had.prior : (isObj(current) ? clone(current) : null);
-  return { light: clone(SPELL_LIGHT), [`flags.${MODULE}.spellLight`]: { source, prior } };
+  return { light: clone(SPELL_LIGHT), [FLAGS.spellLight]: { source, prior } };
 }
 
 /** The light a token goes back to when the spell leaves it. */
@@ -310,7 +311,7 @@ export function torchActivityData(name = "Light") {
 
 /**
  * The update that brings a token (or a prototype) in line with its carried light, or null
- * (senses.mjs `lightUpdate`, finding -12). A hand-set light that a carried light covers is kept in
+ * (carried.mjs `lightUpdate`, finding -12). A hand-set light that a carried light covers is kept in
  * itemLightPrior and comes back when the carried light goes, not DARK. Foundry's helpers come in:
  * `flatten` = foundry.utils.flattenObject, `clone` = foundry.utils.deepClone, and `del` is what
  * clears the prior — `_del` on v14, else a null VALUE on the plain key (not "-=").

@@ -123,6 +123,10 @@ test("dead exports gone (combat-riders-34, guide S3): no re-export of attackActi
   assert.deepEqual(sourceScan(ROOT, /import[^;]*weaponShape[^;]*from "\.\/sequence\.mjs"/), []);
 });
 
+test("dead exports gone (final review): ownTooltip and multiattack are file-private", () => {
+  assert.deepEqual(sourceScan(ROOT, /export function (ownTooltip|multiattack)\b/).map(h => `${h.file}:${h.line}`), []);
+});
+
 test("Hooks.on/once call sites per file at indent ≤ 2, and hook loops (C17 today)", () => {
   const scan = sourceScan(ROOT, /^Hooks\.(on|once)\(|^\s{0,2}Hooks\.(on|once)\(|^for \(const hook of/).map(h => h.file);
   const byFile = scan.reduce((m, f) => ({ ...m, [f]: (m[f] ?? 0) + 1 }), {});

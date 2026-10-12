@@ -33,6 +33,11 @@ def test_env_beats_file_beats_default(tmp_path, monkeypatch):
     assert host.primary_host() == "mac"                   # default
 
 
+def test_parse_env_strips_quotes_before_a_trailing_comment():
+    text = "A=\"x y\"  # c\nB='q' # d\nD=\"a # b\"\nC=plain # e\n"
+    assert host.parse_env(text) == {"A": "x y", "B": "q", "D": "a # b", "C": "plain"}
+
+
 def test_missing_env_file_is_fine(monkeypatch, tmp_path):
     monkeypatch.setenv("PENTARYN_ENV_FILE", str(tmp_path / "nope"))
     assert host.file_values() == {}

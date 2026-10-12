@@ -35,7 +35,7 @@ export function applyButtons(panel, next, fresh, after) {
 }
 
 /** Argon's hover tooltip, when it belongs to this button. */
-export function ownTooltip(button) {
+function ownTooltip(button) {
   const t = ui.ARGON?._tooltip;
   return t && t._triggerElement === button?.element ? t : null;
 }

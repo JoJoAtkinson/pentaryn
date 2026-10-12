@@ -14,7 +14,7 @@
  * ## The gate
  *
  * `authoringHTML` returns `""` for a non-GM, and it checks that **itself** rather than
- * trusting a caller to. Same discipline as `inbound()` in `ties-api.mjs`: the gate lives with
+ * trusting a caller to. Same discipline as `inbound()` in `ties-adapter.mjs`: the gate lives with
  * the data, so no renderer can leak the section by forgetting to ask. There is a second,
  * independent refusal on every write below — a GM-only *view* is presentation, and phase 3's
  * conduit already established that presentation is never the boundary.

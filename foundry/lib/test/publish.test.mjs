@@ -28,6 +28,20 @@ test("module.api is canonical, game.pentaryn.<ns> the alias, both ready hooks fi
   assert.equal(publishedOf("x", { g }).when, "ready");
 });
 
+test("publishedOf returns when/at/module/alias (the shape modules put in describe().published)", () => {
+  const g = env();
+  assert.equal(publishedOf("x", { g }), null);
+  publishNamespace("x", api("x"), { moduleId: "pentaryn-x", g });
+  publishNamespace("chain", api("chain"), { moduleId: "pentaryn-y", g, alias: true });
+  const x = publishedOf("x", { g });
+  assert.deepEqual(Object.keys(x).sort(), ["alias", "at", "module", "when"]);
+  assert.equal(typeof x.at, "number");
+  assert.deepEqual({ ...x, at: 0 }, { when: "ready", at: 0, module: "pentaryn-x", alias: false });
+  assert.deepEqual({ ...publishedOf("chain", { g }), at: 0 }, { when: "ready", at: 0, module: "pentaryn-y", alias: true });
+  publishedOf("x", { g }).when = "mutated";
+  assert.equal(publishedOf("x", { g }).when, "ready", "a copy, not the stored record");
+});
+
 test("J10: no frozen-root guard and no re-alias tick — an extensible root is assigned into, a frozen one throws", () => {
   const g = env();
   const root = { importer: { run() {} } };
