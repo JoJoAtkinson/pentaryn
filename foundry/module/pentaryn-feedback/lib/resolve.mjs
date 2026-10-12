@@ -105,6 +105,10 @@ export function resolveRef(ref, kind = "actor", { base = false, sceneId, require
     } catch {
       doc = null;
     }
+    // An unloaded compendium document comes back as its index entry, which has no documentName (KIT-R5).
+    if (doc && !doc.documentName && ref.startsWith("Compendium.")) {
+      throw codedError("NOT_FOUND", `${ref}: compendium document not loaded; load it with fromUuid first`);
+    }
     if (doc) return adapt(doc, kind, base, g) ?? miss();
     if (UUID.test(ref)) return miss();
     // a name with a period in it ("Mr. Brine") falls through to the name lookup

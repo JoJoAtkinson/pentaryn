@@ -68,6 +68,24 @@ test("never a substring; ambiguity and misses are coded", () => {
   assert.equal(r(null, "actor", { required: false }), null);
 });
 
+// [declared] KIT-R5 (kit 1.2.0, final review 2026-10-12): fromUuidSync on a Compendium UUID whose document
+// is not loaded returns the pack's index entry (no documentName). Before, adapt() threw a misleading
+// BAD_ARGS "expected Actor, got undefined"; now it is NOT_FOUND naming the fix (load with fromUuid).
+test("KIT-R5: an unloaded compendium UUID (index entry) is NOT_FOUND telling you to load it", () => {
+  const uuid = "Compendium.dnd5e.monsters.Actor.gggggggggggggggg";
+  const entry = { _id: "gggggggggggggggg", name: "Goblin", type: "npc", uuid };
+  const gi = { ...g, fromUuidSync: u => (u === uuid ? entry : g.fromUuidSync(u)) };
+  let err = null;
+  try { resolveRef(uuid, "actor", { g: gi }); } catch (e) { err = e; }
+  assert.equal(err?.code, "NOT_FOUND");
+  assert.match(err.message, /compendium document not loaded; load it with fromUuid first/);
+  assert.ok(err.message.includes(uuid));
+  assert.equal(code(() => resolveRef(uuid, "actor", { g: gi, required: false })), "NOT_FOUND");
+  const loaded = { documentName: "Actor", id: "gggggggggggggggg", name: "Goblin", uuid };
+  const gl = { ...g, fromUuidSync: u => (u === uuid ? loaded : null) };
+  assert.equal(resolveRef(uuid, "actor", { g: gl }), loaded);
+});
+
 test("tokens: every scene unless scoped; no implicit canvas.scene", () => {
   assert.equal(code(() => r("Goblin Scout", "token")), "AMBIGUOUS");
   assert.equal(r("Goblin Scout", "token", { sceneId: s1.id }), tok);

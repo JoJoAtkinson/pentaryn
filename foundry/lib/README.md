@@ -130,3 +130,8 @@ multi-key setting transaction, so `write` sets the keys in table order as separa
 Each `onChange` sees the intermediate state, and a failure part-way leaves a torn pair. The JSDoc
 and the settings row now say so and name the mitigation: list the counter key first, so a torn
 write has already advanced the counter and never reuses an id. No code change.
+KIT-R5 (declared): `resolveRef` given a `Compendium.*` UUID whose document is not loaded — so
+`fromUuidSync` returns the pack's index entry, or anything without `documentName` — throws
+`NOT_FOUND: <uuid>: compendium document not loaded; load it with fromUuid first`, even with
+`required: false`. Before, adapt() threw a misleading `BAD_ARGS: expected Actor, got undefined`.
+A loaded compendium document resolves as before.
