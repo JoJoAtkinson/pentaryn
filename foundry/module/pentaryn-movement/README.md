@@ -67,7 +67,7 @@ still honours `ignoreTokens`. Verified on core 14.369 / dnd5e 6.0.6.
 
 Canonical: `game.modules.get("pentaryn-movement").api`; `game.pentaryn.movement` is the same
 frozen object. Ask it what it offers: `game.pentaryn.movement.describe()` (offline:
-`test/golden/describe.json`). Every row is `legacy` (today's signatures).
+`test/golden/describe.json`). Every row except `selftest` is `legacy` (today's signatures).
 
 | Method | GM | Writes | Returns |
 |---|---|---|---|
