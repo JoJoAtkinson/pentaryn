@@ -347,7 +347,8 @@ export function renderTable(t) {
   const rows = (t.results ?? []).map(r => {
     const [lo, hi] = r.range ?? [];
     const span = lo === hi ? `${lo}` : `${lo}-${hi}`;
-    const text = toPlainText(r.description ?? r.text ?? r.name ?? "");
+    // v14 document results keep their label in `name` with `description` "" (lookup-edge-1)
+    const text = toPlainText(r.description || r.name || r.text || "");
     return `${span} ${text}`.trim();
   });
   return { name: t.name, formula: t.formula ?? "", uuid: t.uuid, rows };

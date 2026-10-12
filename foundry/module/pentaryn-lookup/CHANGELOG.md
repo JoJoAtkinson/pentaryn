@@ -16,6 +16,10 @@
   not a junk one-key object.
 - Failed reads are traced at debug level (`CONFIG.debug["pentaryn-lookup"] = true`).
 - The node test suite runs on `node:test` (`node test/run.mjs`).
+- [declared] An embedded roll table's row whose result is a linked document (v14: `description`
+  empty, the label in `name`) prints its label after the range, not the bare range ("21" → "21 A
+  single row"); tables no longer read `TableResult#text`, so v13's deprecation warning is gone
+  (lookup-edge-1).
 
 ## 0.3.0 — 2026-10-10
 

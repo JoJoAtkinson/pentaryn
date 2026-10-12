@@ -86,12 +86,13 @@ export async function readPageDoc(raw, log = null) {
   };
 }
 
-/** A RollTable by UUID → renderTable's input, or null when it cannot be read. */
+/** A RollTable by UUID → renderTable's input, or null when it cannot be read. `r.text` is not read:
+ *  v13 deprecates it (a console warning per result) and description/name carry the row (lookup-edge-1). */
 export async function readTable(uuid, log = null) {
   const t = await fromUuid(uuid).catch(err => (log?.debug("fromUuid failed", { uuid }, err), null));
   if (!t) return null;
   return { name: t.name, formula: t.formula, uuid,
-    results: t.results.contents.map(r => ({ range: r.range, description: r.description, name: r.name, text: r.text })) };
+    results: t.results.contents.map(r => ({ range: r.range, description: r.description, name: r.name })) };
 }
 
 /** A spell document by uuid or name: PHB first, then the 2024 SRD, then the 2014 SRD (SPELL_PACKS order). */
