@@ -96,6 +96,10 @@ Fixed (declared): a **late claim** — a second GM session's stake that lands af
 already rolled and wrote the answer — no longer wins, so a finished kind or lore fact is never rolled a
 second time over the first answer. The late session hands its stray stake back and stays silent. AC-4.
 
+Fixed (declared): a **pinned card** left flush against the left or top edge of the screen comes back
+there after a reload instead of 20px in — a saved 0 is a real position (`pinnedCoord` in `popups.mjs`);
+only a missing or non-numeric coordinate still falls back to 20. ties-ui-E5.
+
 ## 0.19.4 (2026-10-10, usability run, Area 7 re-run)
 
 - **The inspect window's Share switches are the table's PCs only** (`tablePCs`): each player's

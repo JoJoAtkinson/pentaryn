@@ -350,6 +350,15 @@ function savePinned() {
 }
 
 /**
+ * A saved pin coordinate, or 20 when it is missing or not a number. 0 is kept — place() clamps a
+ * card dragged to the screen edge to 0, so the edge is a position we save (ties-ui-E5).
+ */
+export function pinnedCoord(v) {
+  const n = Number(v);
+  return v == null || v === "" || !Number.isFinite(n) ? 20 : n;
+}
+
+/**
  * Rebuild the pinned cards after a reload. Defensive throughout: a tie that has since been
  * deleted, or an actor this user can no longer read, is simply dropped rather than restored
  * as a broken card.
@@ -380,7 +389,7 @@ export function restorePinned() {
     const k = key(actor.id, tie.id);
     if (cards.has(k)) continue;
     const rec = mount(k, { tie, token, sourceId: actor.id, showNotes: true, pinned: true, anchor: null });
-    place(rec, Number(entry.x) || 20, Number(entry.y) || 20);
+    place(rec, pinnedCoord(entry.x), pinnedCoord(entry.y));
   }
   notify();
 }
