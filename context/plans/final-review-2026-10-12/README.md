@@ -272,3 +272,37 @@ allowlist. Reverts: none.
 
 **Foundry state.** Foundry is up, world `pentaryn` is loaded, and exactly one GM tab (Gamemaster) answers
 `get-world-info`. No restart, no fork rebuild.
+
+## Integration INT-1518
+
+| Area | Status | Merge SHA | Revert SHA | Synced modules | Reason |
+|---|---|---|---|---|---|
+| importer | merged | eba97845 | — | importer (`foundry-importer-install`) | — |
+| walls | merged | 8d77dab4 | — | — (never deployed; off in the world) | — |
+
+**Reality check (15:23Z).** Both merges were already on main and pushed (origin/main = 8d77dab4). A prior
+attempt had already taken the importer rollback copy, run `make foundry-importer-install` at 15:22:55Z
+(stamp git 8d77dab4, `diff -r` against main clean) and reloaded the one GM tab (timeOrigin 15:22:59Z),
+but saved no goldens. No `module.json`, lang, style or fork file changed between 07479452 and 8d77dab4, so
+there was no restart and no fork rebuild. walls was not synced.
+
+**Rollback copy.** `.state/live-rollback/INT-1518/pentaryn-importer`, stamp git 380a5348 synced 07:46:59Z:
+the pre-merge deployed code.
+
+**Before-golden.** The tab had already loaded the merged code and this lane does not reload twice, so
+`before/importer.json` is `wave5/after/importer.run1.json` (about 08:04Z, on the same 07:46Z deploy as the
+rollback copy). `INT-1518/PROVENANCE.txt` records this.
+
+**Probe** (merged code confirmed loaded: documents-adapter.mjs no longer exports `moduleExpectations`,
+`assertValue`, `isManagedItem`): importer `describe().version` 1.1.1 equals `module.json`, both described
+paths are functions, `selftest().ok` is true. No errors in the Foundry error log since the reload and none
+from pentaryn-* in the tab console (tracked from 15:25Z, after the reload). `pentaryn-read` importer
+describe and `get-world-info` answer through the bridge.
+
+**Goldens.** `after/importer.json` taken at 15:24:48Z. `diff.mjs before after` without `--declared` exits
+0: shared is identical, 0 declared differences, both cleanups clean. The after-golden also exits 0 against
+all four wave5 pre-merge runs. The golden's two ZZ actors were deleted (0 ZZ actors left). No allowlist.
+Reverts: none.
+
+**Foundry state.** Foundry is up, world `pentaryn` is loaded, and exactly one GM tab (Gamemaster) answers
+`get-world-info`. No restart, no fork rebuild.

@@ -21,9 +21,14 @@ them is the `@2` contract bump). Tier `full`; no UI, no settings, one hook (`rea
 
 ## What the player sees
 
-Nothing. The importer is GM-only and console-first. A GM sees permanent error toasts when an import
-is refused or a readback fails, an info toast with the counts after a real run, and a permanent
-"delete `Data/<path>`" toast after a successful one. Players never see a toast.
+Nothing. The importer is GM-only and console-first. A GM sees a permanent error toast when the
+version gate or the @ref lint refuses a run, when a non-GM calls it, when an entry cannot be
+prepared (e.g. a missing slug), and when a readback fails; an info toast with the counts after a
+real run; and a permanent "delete `Data/<path>`" toast after a successful one. Players see a
+toast only if they call `import()` themselves: the `NOT_GM` refusal. Some refusals throw a `PentarynAbort` with **no** toast — read `err.code` /
+`err.message`: a fetch failure (missing file, HTML body, network error, timeout), a bad option
+(`BAD_ARGS`), a `module.json` without `flags.pentaryn`, and a call while an import is already
+running (`CONFLICT`).
 
 ## Settings
 
@@ -59,8 +64,9 @@ await game.pentaryn.import({
 });
 ```
 
-The result is `{ ok, path, url, dryRun, manifest, counts: { total, selected, created, updated,
-skipped, failed, assertions }, created, updated, skipped, failed: [{ slug, error }], deleteJson }`.
+The result is `{ ok, path, url, dryRun, manifest: { generator, generatorVersion, generatedAt,
+sourceRevision, skippedRows }, counts: { total, selected, created, updated, skipped, failed,
+assertions }, created, updated, skipped, failed: [{ slug, error }], deleteJson }`.
 `deleteJson.required` is `true` only after a non-dry run with zero failures; a run that left work
 undone should be re-run against the same file.
 
@@ -122,13 +128,16 @@ Emits nothing of its own. Listens to: `ready` only (pinned in `test/golden/hooks
 ## Patches and adjustments
 
 Patches nothing. One `foundry/adjustments.yml` row: `dnd5e-importer-gate` (the dnd5e minor this
-code and `build_actors.py` target; markers `targetSystemVersion`, `TARGET_SYSTEM_VERSION` in
-`importer-core.mjs`, `documents-adapter.mjs` and `scripts/foundry/build_actors.py`).
+code and `build_actors.py` target). Its markers are matched across the row's files combined:
+`targetSystemVersion` (the `module.json` `flags.pentaryn` gate key the importer reads) appears in
+`importer-core.mjs` and `documents-adapter.mjs`; `TARGET_SYSTEM_VERSION` is the generator's
+constant in `scripts/foundry/build_actors.py`. The importer has no constant of its own holding the
+number.
 
 ## Two sessions / who writes
 
 Only the GM tab that calls `import()` writes; nothing runs by itself. A player calling it gets a
-`PentarynAbort`. A second call on the same tab while one is running is refused with
+`PentarynAbort` (code `NOT_GM`) and a permanent error toast. A second call on the same tab while one is running is refused with
 `PentarynAbort` (`items-journal-4`); the guard is per tab, so two GM tabs (the MCP bridge tab and a
 browser tab) can still overlap — run imports from one place.
 
@@ -141,6 +150,9 @@ browser tab) can still overlap — run imports from one place.
    `api.mjs` `importActors`.
 4. A new API member → a row in `api-manifest.mjs`, its implementation in `api.mjs`, then
    `GOLDEN_UPDATE=1 node --test test/api.test.mjs` and review the `describe`/`surface` diff.
+5. Moving the dnd5e target minor → `module.json` `flags.pentaryn.targetSystemVersion` (a Foundry
+   restart, playbook §10), `TARGET_SYSTEM_VERSION` in `scripts/foundry/build_actors.py`, and the
+   `dnd5e-importer-gate` row in `foundry/adjustments.yml`, together.
 
 ## Pitfalls
 
