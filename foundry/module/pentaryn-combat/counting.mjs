@@ -115,7 +115,7 @@ async function onPostUseActivity(activity) {
     const ctx = combatContext(actor);
     if (core.pipFor({ activation: "reaction", inCombat: ctx.inCombat, isOwnTurn: ctx.isOwnTurn }) !== "reaction") return;
     why("Reaction");
-    await actor.setFlag(MODULE, "reaction", { combatId: ctx.combat?.id ?? null }).catch(err => { log.debug("Reaction flag", err); return null; });
+    await actor.setFlag(MODULE, "reaction", { combatId: ctx.combat?.id ?? null }).catch(err => { log.warn("Reaction flag", err); return null; });
     emit("reaction", actor, activity);
     return;
   }

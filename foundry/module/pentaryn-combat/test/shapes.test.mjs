@@ -339,5 +339,5 @@ test("installOffhand: createActor seeds a new character 500 ms later, on the act
   F.Hooks.callAll("createActor", failing);
   mock.timers.tick(500);
   await drain();
-  assert.deepEqual(lines.filter(l => l.level === "warn"), [], "the createActor seed swallows its failure silently");
+  assert.deepEqual(lines.filter(l => l.level === "warn"), [{ level: "warn", text: "pentaryn-combat | weapon-set seed (new character)", err: "locked" }], "combat-core-ROB-5: the createActor seed warns its failure, never throws");
 });

@@ -366,7 +366,7 @@ export async function runSwings(actor, swings, { event = null, title = null, ori
   } finally {
     const first = current?.state?.swings?.[0];
     if (first?.kind === "main" && actor.isOwner && actor.items.get(first.weaponId)) {
-      rememberWeapon(actor, first.weaponId).catch(err => { log.debug("remember weapon", err); return null; });
+      rememberWeapon(actor, first.weaponId).catch(err => { log.warn("remember weapon", err); return null; });
     }
     const created = [...(current?.created ?? [])];
     current = null;

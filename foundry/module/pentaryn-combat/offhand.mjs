@@ -77,7 +77,7 @@ function registerSeed(reg) {
     // Items arrive with the actor; give the sheet's own creation flow a beat.
     const t = setTimeout(() => {
       timers.delete(t);
-      seedWeaponSets(actor).catch(err => { log.debug("weapon-set seed (new character)", err); return null; });
+      seedWeaponSets(actor).catch(err => { log.warn("weapon-set seed (new character)", err); return null; });
     }, core.DELAYS.seedAfterCreate);
     timers.add(t);
   }, { label: "seed a new character's weapon sets" });
