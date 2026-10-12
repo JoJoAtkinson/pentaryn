@@ -106,14 +106,16 @@ async function report(scene, result, {committed, backend, ms}) {
 /*  API                                         */
 /* -------------------------------------------- */
 
-async function preview({sceneId, ...opts} = {}) {
+async function preview(arg) {
+  const {sceneId, ...opts} = arg ?? {};   // null means the defaults (walls-rob-5)
   const scene = targetScene(sceneId);
   const {result, backend, ms} = evaluate(scene, opts);
   await report(scene, result, {committed: false, backend, ms});
   return result;
 }
 
-async function run({sceneId, ...opts} = {}) {
+async function run(arg) {
+  const {sceneId, ...opts} = arg ?? {};   // null means the defaults (walls-rob-5)
   const scene = targetScene(sceneId);
   const {result, backend, ms} = evaluate(scene, opts);
 
@@ -130,7 +132,8 @@ async function run({sceneId, ...opts} = {}) {
  * The engine's answer for a scene with no side effect at all: no chat card, no pings, no console
  * output, no writes (senses-walls-cursors-33). For the console and the MCP bridge.
  */
-async function analyze({sceneId, ...opts} = {}) {
+async function analyze(arg) {
+  const {sceneId, ...opts} = arg ?? {};   // null means the defaults (walls-rob-5)
   const scene = targetScene(sceneId);
   const {result, backend, ms} = evaluate(scene, opts);
   return {sceneId: scene.id, sceneName: scene.name, backend, ms, ...result};
@@ -144,7 +147,8 @@ async function analyze({sceneId, ...opts} = {}) {
  *
  * This is what makes "just run it and look" a safe workflow: the run is the unit of undo.
  */
-async function undo({sceneId, all = false} = {}) {
+async function undo(arg) {
+  const {sceneId, all = false} = arg ?? {};   // null means the defaults (walls-rob-5)
   const scene = targetScene(sceneId);
 
   // Plain data, never getFlag: "wall-autocomplete" is no package id, so Foundry 14's getFlag

@@ -6,6 +6,9 @@
 (`flagScope` stays `wall-autocomplete`), `languages`, `minimum: "14"`, `verified: "14.369"` and the
 description fix; the flag-scope migration is **parked** while walls stays off (Joe).
 
+- **[declared] `preview`/`run`/`analyze`/`undo(null)` mean the defaults** (`walls-rob-5`): a `null`
+  argument hit the parameter destructuring and rejected with a `TypeError`. Each action now reads
+  `arg ?? {}`, so `null` is the same as calling with no argument (the viewed scene, the settings).
 - **[declared] The GM report card escapes the scene name** (`walls-edge-7`): `reportHtml` put
   `scene.name` into the card raw, so a name with `<`, `&` or quotes rendered as markup. It now goes
   through a small pure escape in `walls-core` (same table as `foundry.utils.escapeHTML`, which node
