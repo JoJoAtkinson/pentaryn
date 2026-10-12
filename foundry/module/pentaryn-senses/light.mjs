@@ -246,14 +246,14 @@ async function deleteLive(scene, type, ids, live) {
   return there.length;
 }
 
-/** Bring the world in line with one Light item's flag (or clean up after a vanished item). */
-async function reconcile(source) {
-  if (!isActiveGM() || !source) return null;
-  const item = itemFrom(source);
+/**
+ * The flag as the world allows it now. A cast on a token that is gone, or on a scene that is gone,
+ * is cleared (the token case whispers "Gone" once); a token that moved scenes is followed silently.
+ * → the desired cast, or null.
+ */
+async function resolveDesired(item, done) {
   let desired = item ? readSpellCast(item) : null;
   const castAt = desired ? item.getFlag?.(MODULE, "lightCast")?.at ?? 0 : 0;   // this cast's own claim key
-  const done = { source, restored: 0, removed: 0, lit: null, created: false, released: null, cleared: false };
-
   if (desired?.token) {
     const tok = findToken(desired.token, desired.scene);
     if (!tok) {
@@ -275,11 +275,11 @@ async function reconcile(source) {
     done.cleared = true;
     await item.update({ [CAST]: null });
   }
+  return desired;
+}
 
-  const existing = litBy(source);
-  const plan = planSpellLight({ desired, existing });
-
-  // Lights that are no longer wanted.
+/** Tokens no longer wanted get their own light back, one Token batch per scene. → the actors touched. */
+async function restoreTokens(plan, done) {
   const byScene = new Map();
   for (const r of plan.restore) {
     const t = game.scenes.get(r.scene)?.tokens.get(r.id);
@@ -294,17 +294,24 @@ async function reconcile(source) {
     done.restored += updates.length;
     for (const u of updates) { const a = scene.tokens.get(u._id)?.actor; if (a) touchedActors.add(a); }
   }
-  const removeByScene = new Map();
+  return touchedActors;
+}
+
+/** Squares no longer wanted are deleted, one AmbientLight batch per scene. */
+async function removeSquares(plan, done) {
+  const byScene = new Map();
   for (const r of plan.remove) {
-    if (!removeByScene.has(r.scene)) removeByScene.set(r.scene, []);
-    removeByScene.get(r.scene).push(r.id);
+    if (!byScene.has(r.scene)) byScene.set(r.scene, []);
+    byScene.get(r.scene).push(r.id);
   }
-  for (const [sid, ids] of removeByScene) {
+  for (const [sid, ids] of byScene) {
     const scene = game.scenes.get(sid);
     done.removed += await deleteLive(scene, "AmbientLight", ids, scene?.lights);
   }
+}
 
-  // The light that is wanted.
+/** The light that is wanted: the token lit (newest caster wins), or the square made. */
+async function applyWanted(source, plan, done) {
   if (plan.light) {
     const tok = game.scenes.get(plan.light.scene)?.tokens.get(plan.light.token);
     if (tok) {
@@ -339,19 +346,39 @@ async function reconcile(source) {
       done.created = true;
     }
   }
+}
 
-  // A restored token may carry a lit torch: let the carried-light path re-apply it.
+/** A restored token may carry a lit torch: let the carried-light path re-apply it. */
+async function resyncCarried(touchedActors) {
   const syncLight = state.ctx?.exposed?.syncLight;
   // Always the base actor: syncLight walks its tokens and reads each unlinked one's own items.
   if (syncLight) for (const id of new Set([...touchedActors].map(a => a.id))) {
     const base = game.actors.get(id);
     if (base) await syncLight(base);
   }
+}
+
+/** The summary: kept in the last-20 ring (its own copy) and logged at debug. → the summary. */
+function remember(plan, done, desired) {
   const summary = summarise(plan, { ...done, desired });
   state.recent.push({ ...summary, desired: summary.desired && { ...summary.desired } });   // the ring's own copy
   if (state.recent.length > RECENT) state.recent.splice(0, state.recent.length - RECENT);
   state.ctx?.log.debug("reconcile", summary);
   return summary;
+}
+
+/** Bring the world in line with one Light item's flag (or clean up after a vanished item). */
+async function reconcile(source) {
+  if (!isActiveGM() || !source) return null;
+  const item = itemFrom(source);
+  const done = { source, restored: 0, removed: 0, lit: null, created: false, released: null, cleared: false };
+  const desired = await resolveDesired(item, done);
+  const plan = planSpellLight({ desired, existing: litBy(source) });
+  const touchedActors = await restoreTokens(plan, done);
+  await removeSquares(plan, done);
+  await applyWanted(source, plan, done);
+  await resyncCarried(touchedActors);
+  return remember(plan, done, desired);
 }
 
 /** The last 20 reconcile summaries on this client, oldest first (copies). */

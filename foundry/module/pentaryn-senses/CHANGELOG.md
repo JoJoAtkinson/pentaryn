@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **[declared senses-M2] The Light reconcile is split into named steps** (final review
+  2026-10-12): `reconcile()` is now resolveDesired → plan → restoreTokens → removeSquares →
+  applyWanted → resyncCarried → remember, awaited in the same order as before. Same writes, same
+  summary, goldens byte-identical (senses-ac-1 had already landed in de58b860, so this is its own
+  change). New `test/light-reconcile-split.test.mjs`.
+
 - **[declared senses-EXT-9] Hood tells a non-owner why nothing happened** (final review
   2026-10-12): one `ownerOrWarn(item)` guards cast, end, toggle and hood. Lowering the hood on
   someone else's hooded lantern now warns "Only {name}'s owner can do that." (was: silent), as the
