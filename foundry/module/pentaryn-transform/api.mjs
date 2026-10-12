@@ -13,18 +13,20 @@ import { buildApi, toPlain } from "./lib/api.mjs";
 import { patches } from "./lib/patch.mjs";
 import { publishedOf } from "./lib/publish.mjs";
 import { refOf, resolveRef } from "./lib/resolve.mjs";
-import { shift, revert, forms, wildShapeActivity, original, isRevertItem, isWildShapeForm } from "./wildshape-adapter.mjs";
+import { shift, revert, forms, wildShapeActivity, original, isRevertItem, isWildShapeForm, activeFormOf } from "./wildshape-adapter.mjs";
 import { sweepSpentForms } from "./sweep-adapter.mjs";
 import { constellationOf, starrySecondsLeft } from "./starry-adapter.mjs";
 
 /**
- * @param {object} actor  resolved by buildApi (the row's first param is `ref`)
+ * @param {object} asked  resolved by buildApi (the row's first param is `ref`)
  * @param {{ as?: * }} opts  a user ref: without OBSERVER on the actor that user sees `{ actor }` only
  */
-function inspect(actor, { as } = {}) {
+function inspect(asked, { as } = {}) {
   const viewer = as === undefined || as === null ? null : resolveRef(as, "user");
-  const sees = !viewer || viewer.isGM === true || actor.testUserPermission?.(viewer, "OBSERVER") === true;
-  if (!sees) return toPlain({ actor: refOf(actor) });
+  const sees = !viewer || viewer.isGM === true || asked.testUserPermission?.(viewer, "OBSERVER") === true;
+  if (!sees) return toPlain({ actor: refOf(asked) });
+  // A linked druid in a form: its name still resolves to the original, so read the body that is out.
+  const actor = activeFormOf(asked) ?? asked;
   const host = original(actor);
   const activity = wildShapeActivity(actor);
   const wsItem = activity?.item ?? null;

@@ -71,7 +71,8 @@ The legacy methods take an Actor document (not a ref) and keep their old shapes.
 name, never a substring. Shape: `{ actor, original, shifted, wildShapeForm, form: { name, profileId,
 sourceUuid, endsAt, secondsLeft } | null, wildShape: { itemId, usesLeft, max } | null, starry: {
 constellation, secondsLeft } | null, forms: [{ id, name }] }`. `opts.as` a user without OBSERVER on
-the actor gets `{ actor }` only. Kit members: `describe()`, `version`, `contract`, `settings()`,
+the actor gets `{ actor }` only. A linked druid that is in a form answers for the form (the body that
+is out): `inspect("Talo")` and `inspect(<the form>)` give the same read. Kit members: `describe()`, `version`, `contract`, `settings()`,
 `trace()`, `uninstall()`.
 
 ## Data written

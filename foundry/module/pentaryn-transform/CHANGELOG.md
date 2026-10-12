@@ -2,6 +2,12 @@
 
 **Read this when:** you need what changed in a version. How the module works now: [`README.md`](README.md).
 
+## Unreleased
+
+- **`inspect(ref)` on a shifted linked druid** reads the form that is out (`shifted: true`, the time
+  left), the same answer as inspecting the form; before, the druid's name answered `shifted: false`
+  (PT TF-3, [declared]).
+
 ## 0.4.0 — 2026-10-12 (the blueprint migration, released by the Wave 7 restart batch)
 
 Wave 7 batch: `module.json` 0.3.3 → 0.4.0 with `VERSION`, `flags.pentaryn` blueprint keys

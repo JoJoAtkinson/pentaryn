@@ -81,6 +81,19 @@ test("inspect(the Dire Wolf form): shifted, its original, the time left, the dru
   assert.deepEqual(out.wildShape, { itemId: IDS.ws, usesLeft: 1, max: 3 });
 });
 
+test("inspect(the druid) while shifted reads the body that is out: the form, the time left (PT TF-3)", async () => {
+  const { talo } = fresh();
+  const wolf = await T.shift(talo, "p1");
+  game.time.worldTime = 60;
+  const out = api.inspect("Talo");
+  assert.ok(maxDepth(out) <= 4);
+  assert.deepEqual(out, api.inspect(wolf), "the druid's ref and the form's ref give one answer");
+  assert.equal(out.shifted, true);
+  assert.equal(out.form.secondsLeft, 21540);
+  assert.deepEqual(out.original, { documentName: "Actor", id: IDS.talo, uuid: `Actor.${IDS.talo}`, name: "Talo" });
+  assert.deepEqual(Object.keys(api.inspect("Talo", { as: IDS.player2 })), ["actor"]);
+});
+
 test("inspect: Starry Form up → constellation and seconds left", async () => {
   const { talo } = fresh();
   await S.assumeStarry(talo, "archer");
