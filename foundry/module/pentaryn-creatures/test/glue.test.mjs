@@ -399,3 +399,28 @@ test("controlToken with no strip on the page does nothing", () => {
   F.fire("controlToken", W.p("tImp"), true);
   assert.equal(W.strip(), null);
 });
+
+test("creatures-edge-1 [declared]: after uninstall() a lightRadius change writes no token; a re-import re-registers it", async () => {
+  await tick(200);
+  writes();
+  const live = api();
+  live.uninstall();
+  W.reads.length = 0;
+  await F.game.settings.set(MODULE, "lightRadius", 0);
+  await drain();
+  await F.game.settings.set(MODULE, "lightRadius", 7);
+  await drain();
+  await tick(2000);
+  assert.deepEqual(writes(), [], "no syncAll after uninstall");
+  assert.equal(W.passes(), 0);
+
+  await import("../creatures.mjs?v=2");
+  assert.notEqual(api(), live);
+  await tick(200);
+  writes();
+  await F.game.settings.set(MODULE, "lightRadius", 5);
+  await drain();
+  assert.ok(writes().length > 0, "the re-imported entry's handler runs syncAll");
+  await tick(200);
+  api().uninstall();
+});

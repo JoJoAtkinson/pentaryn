@@ -25,6 +25,9 @@ a player or GM can notice:
 - **[declared] C-D8** — the strip's Combat HUD poll runs only with Argon enabled and
   `floatOverHud` on, and writes styles only when the dock changes; turning `floatOverHud` off or on
   applies at once.
+- **[declared] creatures-edge-1** — `uninstall()` also drops the settings' change handlers: after
+  a hot-patch uninstall, toggling `showStrip` no longer redraws the strip (or its dock poll) and a
+  `lightRadius` change no longer rewrites every light; re-importing the entry wires them again.
 
 ## 0.1.1 — 2026-10-10
 
