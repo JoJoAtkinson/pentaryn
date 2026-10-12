@@ -201,6 +201,44 @@ test("the swing pips: 2+ swings read the turn flag (Action Surge widens); 1 swin
   F.calls.length = 0;
 });
 
+test("perf-1: one burst (a flag write, a settled sequence, a turn change) works out fullAttackState once per actor", async () => {
+  onTurn(fig);
+  reset(fig);
+  const { fullAttackState } = await import("../hud/buttons-ui.mjs");
+  const h = buildHud(fig, { mainSlot: "longsword0000001", offSlot: "dagger0000000001" });
+  renderAll(h, fig);
+  await drain();
+  mock.timers.tick(60);
+  // Each fullAttackState works the actor's Multiattack out from the setting: its reads count the computations.
+  const get = F.game.settings.get;
+  let reads = 0;
+  F.game.settings.get = function (ns, key) { if (ns === MODULE && key === "multiattack") reads += 1; return get.call(this, ns, key); };
+  const count = async (fn) => { reads = 0; await fn(); return reads; };
+  try {
+    const one = await count(() => fullAttackState(fig));
+    const rows = {
+      "one call": one,
+      "a flag write": await count(() => fig.update({ [`flags.${MODULE}.turn`]: { key: "c1:1:cb1", attackAction: { swings: 1 } } })),
+      "a settled sequence": await count(async () => { F.Hooks.callAll("pentarynCombat.sequenceEnd", fig); await drain(); }),
+      "a turn change": await count(() => F.Hooks.callAll("updateCombat", combat, { round: 1 })),
+      "outside a burst, each read works it out again": await count(() => { h.action.maxActions; h.action.currentActions; }),
+    };
+    assert.deepEqual(rows, {
+      "one call": one,
+      "a flag write": one,
+      "a settled sequence": one,
+      "a turn change": one,
+      "outside a burst, each read works it out again": 2 * one,
+    });
+  } finally {
+    F.game.settings.get = get;
+  }
+  mock.timers.tick(60);
+  await drain();
+  reset(fig);
+  F.calls.length = 0;
+});
+
 test("Full Attack clicks: runs the plan; asks for a weapon once when nothing is remembered; warns with no swings left", async () => {
   onTurn(fig);
   reset(fig);

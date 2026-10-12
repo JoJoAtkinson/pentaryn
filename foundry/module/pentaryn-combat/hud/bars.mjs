@@ -20,7 +20,7 @@ import { makeLog } from "../lib/log.mjs";
 import { setting, riderMode, setRiderMode } from "../settings.mjs";
 import { weaponsOf, featuresOf, combatContext, turnOf, newTurn, turnSettled, isReckless, riderDiceFor, followUpsFor } from "../shapes.mjs";
 import { applyButtons, dropStrayTooltip, itemButtonClass, mainPanel, protoDescriptor, settlePips } from "../argon.mjs";
-import { FALLBACK_IMG, argonClasses, fullAttackState, liveButtons, wireButtons } from "./buttons-ui.mjs";
+import { FALLBACK_IMG, argonClasses, fullAttackState, liveButtons, stateBurst, wireButtons } from "./buttons-ui.mjs";
 import { onBonusAction, onBonusSpent, onOffhand, onOtherAction, onPanelRenderedPips, onReaction, onRoundPips, onUsage } from "./pips-bar.mjs";
 import { running, abortFor, pruneSession as pruneRolls } from "../sequence.mjs";
 import { setReckless, pruneSession as pruneRiders } from "../turn-riders.mjs";
@@ -369,11 +369,9 @@ const onActorUpdated = (actor, changes) => {
     const reaction = mainPanel("DND5E.Reaction");
     if (reaction?.isActionUsed) { reaction.isActionUsed = false; reaction.updateActionUse(); }
   }
-  refreshAll();
   // Follow-ups appear as soon as they are earned (also mid-sequence: Hew after a crit on swing 1);
-  // a bar is rebuilt only when what it shows changed.
-  checkBars(actor);
-  recheckSlots(actor);
+  // a bar is rebuilt only when what it shows changed. One burst: fullAttackState is worked out once (perf-1).
+  stateBurst(() => { refreshAll(); checkBars(actor); recheckSlots(actor); });
 };
 
 /** Nick spent leaves the Bonus bar's buttons unchanged, so its off-hand slot is re-checked on its own. */
@@ -387,7 +385,7 @@ function recheckSlots(actor) {
 // The last swing's flag write can land after the sequence ended; re-check once it has.
 const onSequenceEnd = (actor) => {
   if (!actor || actor !== ui.ARGON?._actor) return;
-  turnSettled(actor).then(() => { refreshAll(); checkBars(actor); recheckSlots(actor); });
+  turnSettled(actor).then(() => stateBurst(() => { refreshAll(); checkBars(actor); recheckSlots(actor); }));
 };
 
 const onCombatUpdated = (combat, changes) => {
@@ -400,8 +398,7 @@ const onCombatUpdated = (combat, changes) => {
   if (r?.actor) { const c = combatContext(r.actor); if (c.inCombat && !c.isOwnTurn) abortFor(r.actor); }
   const actor = ui.ARGON?._actor;
   if (!actor) return;
-  refreshAll();
-  checkBars(actor);
+  stateBurst(() => { refreshAll(); checkBars(actor); });
 };
 
 // Combat over (in-combat → nocombat key, "New turn" may appear); a weapon equipped or a Focus Point
