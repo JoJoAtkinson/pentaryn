@@ -49,6 +49,10 @@
   longer shows the bar (whose click did nothing visible): the footer and the
   `pentaryn-journal-readable` class come off, as for a window with no target, and come back once a
   page is shown. The api's `targetOf`/`shouldShowBar`/`status` rules are unchanged.
+- **[declared] journal-EC-5:** an `@Embed[…]{label}` with no uuid is reduced to its label as-is (it
+  is already HTML from the page, as the uuid branch keeps it), no longer escaped a second time, so
+  "Tom &amp; Jerry" no longer shows a literal `&amp;`. A saved copy containing such an embed may show
+  "Update my copy" once, because its hash changes.
 
 ## Unreleased (blueprint migration, wave 2)
 

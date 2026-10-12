@@ -154,7 +154,8 @@ function absolute(uuid, resolve) {
 
 /**
  * `@Embed[<cfg>]{label}` → `@UUID[<uuid>]{label}`. The uuid is `uuid=` from the config, else its
- * first bare token. An embed with no recognisable uuid is reduced to its label.
+ * first bare token. An embed with no recognisable uuid is reduced to its label, kept as-is: it is
+ * already HTML from the page, as in the uuid branch.
  */
 export function embedsToLinks(html, { resolve, embeddedLabel = "embedded content" } = {}) {
   if (typeof html !== "string") return "";
@@ -163,7 +164,7 @@ export function embedsToLinks(html, { resolve, embeddedLabel = "embedded content
     const named = tokens.find(t => /^uuid=/i.test(t));
     let uuid = named ? named.slice(5).replace(/^["']|["']$/g, "") : tokens.find(t => !t.includes("="));
     const text = label?.trim() || embeddedLabel;
-    if (!uuid) return escapeHTML(label ?? "");
+    if (!uuid) return label ?? "";
     uuid = absolute(uuid, resolve);
     return `@UUID[${uuid}]{${text}}`;
   });
