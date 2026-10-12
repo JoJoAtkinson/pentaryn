@@ -343,3 +343,87 @@ $ echo restore | make foundry-restore SNAP=world-2026-10-12-024111-fvtt14.369-ma
 - Console: the buffer was cleared, then the tab reloaded. **0 errors** on load. Two warnings,
   both v13 deprecation notices from third-party modules (scene-packer `JournalSheet`,
   lib-wrapper `CompendiumCollection`); both were there before.
+
+## J. Clean up, then the final confirmed snapshot — S_ok
+
+- The ZZ acceptance journal was deleted through MCP (`eval-js`, guarded by id + name prefix):
+  `{deleted: true, name: "ZZ bundles acceptance 20261012T023213Z", stillThere: false,
+  zzJournalsLeft: []}`. The probe module was already gone (stage E). No ZZ document from this run
+  remains.
+- `make foundry-down` → `✓ foundry stopped`. `make foundry-bundles` after this second launch is
+  again byte-identical to the one taken before stage G, so the fingerprints held across this
+  launch too.
+- `make foundry-backup REASON=acceptance-final`, blocking, 03:08:04 → 03:09:34 UTC (90 s, exit 0):
+
+```
+  uploading world-2026-10-12-030832-fvtt14.369-mac.tar.gz (18.9 MB, acceptance-final) to onedrive:DnD/foundry...
+  snapshot → world-2026-10-12-030832-fvtt14.369-mac.tar.gz (18.9 MB, acceptance-final)
+  replaced world-2026-10-12-024111-fvtt14.369-mac.tar.gz (0.0 days old, inside the 5-day window)
+  1 of 10 snapshots kept for mac
+  swept 0 bundles (none unreferenced for 7 days)
+```
+
+**0 new bundles**: the upload line has no "with N new bundle(s)" clause, and `bundles/` stayed at 48.
+
+### The snapshot Joe moves forward with
+
+**S_ok = `world-2026-10-12-030832-fvtt14.369-mac.tar.gz`**
+
+| | |
+| --- | --- |
+| World tar | 18,919,427 B (18.9 MB) in `onedrive:DnD/foundry/world-backups/` |
+| Sidecar | `.parent` 4,104 B: `bundled: 1`, host `mac`, parent S_final; ancestors S_final → S_probe2 → S_probe1 → S_save → S_first → the old full `-mac` snapshot |
+| Bundles it names | **46**: 45 modules + `system@dnd5e@6.0.6@b3a588b209538344.tar.gz` (3.32 GB in the cloud). The manifest is identical to S_final's, which stage G restored byte for byte |
+| All 46 in the cloud | yes: every name is in `rclone lsf bundles/`; `make foundry-bundles` shows 46 local rows, all `yes`, 0 `no` |
+| `make foundry-cloud` | `based on world-2026-10-12-030832-fvtt14.369-mac.tar.gz`; `snapshots mac: 1`; `bundles 48 in the cloud (3.32 GB); 2 unreferenced (0.0 MB, swept after 7 days); local: 45 modules + 1 system, all in the cloud` |
+| Cloud hygiene | `world-backups/` = S_ok + sidecar only; 0 `.partial` anywhere under `onedrive:DnD/foundry`; no job queued, `.pentaryn-tmp/bundles/` empty, no `pentaryn-replaced/` |
+| Not in it | `zz-bundles-probe`. The two probe bundles are the only unreferenced ones, and the first backup on or after 2026-10-19 sweeps them |
+| Fallback | `pre-bundles-2026-10/` still holds the old 3.24 GB full snapshot (untouched since stage A) |
+
+**S_ok restored from nothing (added check).** Foundry was still down after the backup. S_ok was
+restored into a fresh scratch root, `~/pentaryn-restore-test/FoundryVTT-final`, the same way as
+stage G: 03:09:59 → 03:17:43 UTC (7 min 43 s, exit 0). Output: `downloading 46 bundle(s)
+(3.32 GB)`, `no local world to snapshot — skipped`, `restored …: world 18.9 MB; modules: 45
+installed (3.21 GB) …; systems: 1 installed (108.4 MB)`.
+
+Compared with the live tree that S_ok was taken from: 10,019 files identical, 3.63 GB compared.
+`Data/worlds` is **byte-identical, every file, housekeeping included**. The only differences are
+the expected two: `options.json` `dataPath`, and the `desktop.ini` junk in
+`dnd-players-handbook`. Fresh fingerprints: 46 of 46 match the manifest. No probe module, no
+extra folders. The scratch root was then deleted, along with the stage-I local copy and the
+whole `~/pentaryn-restore-test/`.
+
+## K. Left running
+
+- `make foundry-up FROM=local` → `▸ boot: local world (FROM=local)`, `✓ foundry up`. Then
+  `make login WORLD=pentaryn NO_OPEN=1` → `✓ logged in as Gamemaster`, in the existing localhost
+  tab, which is the only GM tab.
+- `get-world-info`: `pentaryn`, dnd5e 6.0.6, Foundry 14.369, 1 active user (Gamemaster).
+  The ZZ journal is gone (0 `ZZ bundles…` journals). Caven, Marrith and Talo are present
+  (read only). 20 `pentaryn-*` modules are active; walls is off on purpose. 0 console errors.
+- `make vtt-status`: foundry UP, tunnel down. The updater was not touched.
+
+## Verdict against Joe's bar
+
+- **"Foundry saves out to it."** D: a GM edit made in the live world was in the cloud snapshot
+  after `make foundry-backup` (token found inside the downloaded tar). It survived 4 further
+  backups and came back out of a restore (G, I).
+- **"Can restore from it."** It restores from nothing: S_final in G, and S_ok in J, each with
+  46 bundles + the world, byte-identical to the live tree. It restores in place (I): 0 bundles
+  fetched, world identical, Foundry boots clean. It restores differentially (H2): only the
+  changed module was fetched.
+- **"Doing the whole thing I designed it to do."** Each design point was checked in this run:
+  - Per-module content-addressed bundles uploaded once (C: 46).
+  - Only changed modules upload, and a version-less content change is caught (E).
+  - Launches do not churn fingerprints (D, J).
+  - The skip on no change (C′).
+  - The manifest is in the sidecar and in the tar, and they agree (C–J).
+  - Rolling copies coalesce (each stage).
+  - Old bundle versions are kept and restorable (H1).
+  - GC keeps referenced bundles and keeps unreferenced ones for 7 days (E, J).
+  - `dnd5e` is a bundle (Q2).
+  - The flat `bundles/` layout (Q1).
+  - Extras: left in place with no local world (Q3, H2). The with-world removal path was not run
+    live, by design: the house rules allowed no restore that would delete local modules.
+  - The dress rehearsal (Q6, I).
+- **Not proven live:** BOSS. The second host's first boot (plan §10 step 5) is still to come.
