@@ -27,7 +27,7 @@ _TRANSPORT_MODE: Optional[str] = None  # "jsonl" | "lsp"
 # tools/list stay inline because they're sub-millisecond. _STDOUT_LOCK
 # serializes byte writes so concurrent JSON-RPC responses don't interleave.
 # Pool size is tunable via DND_MCP_MAX_WORKERS (default 8 — Open5e tolerates
-# this comfortably and SQLite's per-connection locking handles the rest).
+# this comfortably).
 _STDOUT_LOCK = threading.Lock()
 
 # Sentinel returned by _read_message for a malformed-but-recoverable frame: the
@@ -52,7 +52,7 @@ def _safe_int_env(name: str, default: int) -> int:
 _DEFAULT_MAX_WORKERS = max(1, _safe_int_env("DND_MCP_MAX_WORKERS", 8))
 # Hard cap on in-flight tool calls to prevent a fast sender from queueing
 # unbounded work. `tools/call` requests beyond this limit get an immediate
-# JSON-RPC error rather than silently piling up. Default = 4× workers, leaving
+# JSON-RPC error rather than silently piling up. Default = max(4× workers, 32), leaving
 # headroom for short bursts without letting them grow without bound.
 _INFLIGHT_LIMIT = max(_DEFAULT_MAX_WORKERS * 4, 32)
 _inflight_slots = threading.Semaphore(_INFLIGHT_LIMIT)
@@ -581,7 +581,7 @@ def discover_tools(*, repo_root: Path) -> DiscoveryResult:
     # TODO: cache discovery output keyed on (path, mtime) to skip AST re-parse
     # for unchanged files on server restart.
     # TODO: add streaming progress notifications for slow subprocess-dispatched tools
-    # (dnd_pass*, build_timeline_*) via MCP `notifications/progress`.
+    # (build_timeline_*) via MCP `notifications/progress`.
     scripts_dir = (repo_root / "scripts").resolve()
     skipped: list[tuple[Path, str]] = []
     runners: list[ToolRunner] = []
@@ -761,8 +761,9 @@ def main() -> int:
         return _serve_loop(tools, runner_by_name, executor)
     finally:
         # On stdin EOF, finish in-flight tool calls before exiting so we don't
-        # truncate a response mid-write. Bounded by the per-call HTTP timeout
-        # (~10s in srd5_2), so worst-case shutdown delay is small.
+        # truncate a response mid-write. Waits for running and queued calls (up to
+        # _INFLIGHT_LIMIT); each subprocess call is capped by DND_MCP_TOOL_TIMEOUT
+        # (default 60s), and in-process handlers have no cap.
         executor.shutdown(wait=True)
 
 
