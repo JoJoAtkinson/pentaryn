@@ -2,6 +2,10 @@
 
 ## Unreleased (Wave 7 restart batch, wave 5, 2026-10-12)
 
+- **[declared] journal-M9:** docs only. The headers (`bar.mjs`, `journal.mjs`, README "What the
+  player sees", `module.json` description and afterSync) no longer say the bar is only for eye pins:
+  they state the rule the code already follows — any journal the player can observe but not own, and
+  any item in an eye pile they can inspect. No behaviour change.
 - `module.json`: `flags.pentaryn` blueprint keys (`flagScope` `journal` → `pentaryn-journal`,
   manifest-only), `relationships.systems` dnd5e, `recommends` item-piles, `verified: "14.369"`,
   `styles/journal.css` (moved).

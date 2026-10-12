@@ -1,7 +1,7 @@
 /**
- * Pentaryn Player Journal — FEATURE: the bar. "Add to my journal" under every eye readable (a
- * JournalEntry opened from a scene Note pin, its image popout, an item opened from an eye pile):
- * the footer itself, saving into the personal journal, the glow on the new entry, the single-page
+ * Pentaryn Player Journal — FEATURE: the bar. "Add to my journal" under any journal (or its image
+ * popout) the player can observe but does not own, pinned by a scene Note or not, and under any item
+ * in an inspectable eye pile (README "Who sees it"): the footer itself, saving into the personal journal, the glow on the new entry, the single-page
  * view for one-page eyes, and the provenance line (only names the player already sees).
  *
  * ⚠ Privacy. The copy is made on the player's own client, from the raw HTML that client already

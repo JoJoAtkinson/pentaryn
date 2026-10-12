@@ -5,11 +5,12 @@ or duplicated, or you are changing `pentaryn-journal`.
 
 ## What the player sees
 
-Every eye readable gets a gold footer bar with one button, **Add to my journal**. That covers a
-JournalEntry opened from a scene Note pin, its image popout, and an item opened from an eye pile.
-Clicking it copies what the player was shown into their own journal. That journal then opens in
-single-page view with the sidebar expanded, the new entry selected, glowing gold and marked **New**,
-and a toast confirms the save. The window the copy came from closes.
+Any journal a player can observe but does not own gets a gold footer bar with one button, **Add to
+my journal**, whether or not a scene Note pins it. That covers its image popout too, and any item
+opened from an eye pile the player can inspect (the full rule is **Who sees it** below). Clicking it
+copies what the player was shown into their own journal. That journal then opens in single-page view
+with the sidebar expanded, the new entry selected, glowing gold and marked **New**, and a toast
+confirms the save. The window the copy came from closes.
 
 - **Bar states:** *Add to my journal* → *In your journal · Open* → *Update my copy* + *Open* when the
   original has changed since it was saved. Updating replaces that copy's text, including anything the
