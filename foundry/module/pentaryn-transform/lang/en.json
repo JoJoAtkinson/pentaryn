@@ -83,7 +83,7 @@
       "End": "End Starry Form",
       "EndShort": "End",
       "EndText": "Dismiss the starry form (no action required). The light goes out.",
-      "Ends": "Ends after 10 minutes, if you are Incapacitated, if you dismiss it, or if you use Wild Shape.",
+      "Ends": "Ends after 10 minutes of combat (out of combat it stays on), if you are Incapacitated, if you dismiss it, or if you use Wild Shape.",
       "Pick": "Starry Form — choose a constellation",
       "None": "{name} has no Starry Form.",
       "BlockShifted": "{name} is in a Beast form. Starry Form is taken instead of shape-shifting; return to normal form first."

@@ -98,7 +98,9 @@ test("inspect: Starry Form up → constellation and seconds left", async () => {
   const { talo } = fresh();
   await S.assumeStarry(talo, "archer");
   game.time.worldTime = 60;
-  assert.deepEqual(api.inspect(talo).starry, { constellation: "archer", secondsLeft: 540 });
+  assert.deepEqual(api.inspect(talo).starry, { constellation: "archer", secondsLeft: 600 }, "D8-starry: out-of-combat time does not count");
+  await talo.effects.get(S.STARRY_EFFECT_ID).update({ [`flags.${MODULE}.starry.left`]: 540 });
+  assert.deepEqual(api.inspect(talo).starry, { constellation: "archer", secondsLeft: 540 }, "the combat time left");
 });
 
 test("inspect opts.as: a user without OBSERVER sees the identity only; the owner and a GM see it all", () => {

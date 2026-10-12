@@ -171,9 +171,16 @@ export function usesLeft(uses) {
   return Math.max(0, max - (Number(uses.spent) || 0));
 }
 
+/** True when an item source's uses max sets a limit: a positive number or a non-numeric formula. */
+function hasUseLimit(max) {
+  const n = Number(max);
+  return Number.isFinite(n) ? n > 0 : typeof max === "string" && max.trim() !== "";
+}
+
 /**
  * Item updates that copy the form's spent uses and spent Hit Dice back onto the original, for every
  * item present on both by id and type. dnd5e's own revert copies only HP, temp HP and spell slots.
+ * Items are source data, so a uses max may be a formula (`@scale.druid.wild-shape-uses`).
  *
  * @param {object[]} formItems      the form's items before revert
  * @param {object[]} originalItems  the original's items after revert
@@ -187,7 +194,7 @@ export function useSyncUpdates(formItems, originalItems) {
     if (!o || o.type !== f.type) continue;
     const u = { _id: f._id };
     const fs = f.system?.uses?.spent;
-    if (Number(f.system?.uses?.max) > 0 && Number.isFinite(fs) && fs !== o.system?.uses?.spent) {
+    if (hasUseLimit(f.system?.uses?.max) &&Number.isFinite(fs) && fs !== o.system?.uses?.spent) {
       u["system.uses.spent"] = fs;
     }
     const fh = f.system?.hd?.spent;
@@ -368,7 +375,7 @@ export function canRunAny({ activeGMId = null, selfId } = {}) {
 
 /**
  * The actors the world-time fallback checks for an expired Wild Shape: every world actor, then the
- * unlinked tokens' actors on the viewed scene (transform-creatures-22; Starry keeps world actors).
+ * unlinked tokens' actors on the viewed scene (transform-creatures-22).
  * @param {Iterable<object>} actors
  * @param {Iterable<{ actorLink: boolean, actor: object|null }>} sceneTokens
  */
@@ -460,4 +467,63 @@ export function shapingPlan({ meta, source, items, effects, keepWildShape = fals
     carried: (effects ?? []).map(e => e?._id).filter(id => id && hostEffects.has(id))
   };
   return { keep, stripped, renames, effect, flag };
+}
+
+/**
+ * True for a wildcard token image path: a `*` in it (core's randomImg pattern). A `?` is left alone:
+ * it is also a URL's query mark.
+ */
+export function isWildcardPath(src) {
+  return typeof src === "string" && src.includes("*");
+}
+
+/**
+ * The token image a Wild Shape form gets, the same every time (wildcard-art, Joe's ruling): the
+ * beast's concrete prototype token image; for a wildcard, the first matching file in sorted order;
+ * if none resolves, the beast's portrait. Never a random pick, never the placeholder.
+ *
+ * @param {{ src?: string|null, wildcard?: boolean, images?: string[], portrait?: string|null }} args
+ *        src: the prototype token's texture.src; wildcard: randomImg or a wildcard path; images: the
+ *        files the wildcard matches, in any order
+ * @returns {string|null}  null when the beast has no image at all
+ */
+export function pickFormImage({ src = null, wildcard = false, images = [], portrait = null } = {}) {
+  const real = s => typeof s === "string" && s !== "" && !isWildcardPath(s);
+  if (!wildcard && real(src)) return src;
+  const first = (Array.isArray(images) ? images : []).filter(real).sort()[0];
+  return first ?? (real(portrait) ? portrait : null);
+}
+
+/* ── the token's own light (light-roundtrip) ─────────────────────────────── */
+
+/** Foundry's unlit token light: what a token goes back to when its own light was off. */
+const UNLIT = Object.freeze({
+  dim: 0, bright: 0, color: null, alpha: 0.5, luminosity: 0.5,
+  animation: Object.freeze({ type: null, speed: 5, intensity: 5, reverse: false })
+});
+
+const isPlain = v => !!v && typeof v === "object" && !Array.isArray(v);
+
+/**
+ * The light a druid's token goes back to after a Wild Shape: its own, hand-set light (light-roundtrip,
+ * Joe's ruling; PT TF-2). dnd5e rebuilds the token from the prototype on revert, so without this the
+ * prototype's light came back. A light pentaryn-senses put on the token (a carried torch, Starry Form's
+ * starlight, the Light cantrip) is not the token's own: senses keeps the light it replaced as the prior
+ * (`flags.pentaryn-senses.itemLightPrior` / `.spellLight.prior`), and that one comes back — unlit when
+ * there was none; senses lights the token again if the source is still lit.
+ *
+ * @param {object} token  the token's source data ({ light, flags })
+ * @returns {object|null}  a plain copy of the light, or null when the token has none
+ */
+export function handLight(token) {
+  const light = token?.light;
+  if (!isPlain(light)) return null;
+  const senses = token.flags?.["pentaryn-senses"] ?? {};
+  let own = light;
+  if (isPlain(senses.spellLight) && typeof senses.spellLight.source === "string" && senses.spellLight.source) {
+    own = isPlain(senses.spellLight.prior) ? senses.spellLight.prior : { ...light, ...UNLIT };
+  } else if (senses.itemLight === true) {
+    own = isPlain(senses.itemLightPrior) ? senses.itemLightPrior : { ...light, ...UNLIT };
+  }
+  return JSON.parse(JSON.stringify(own));
 }

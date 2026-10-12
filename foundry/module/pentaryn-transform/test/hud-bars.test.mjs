@@ -7,6 +7,7 @@ import assert from "node:assert/strict";
 import { pinJSON } from "./kit/harness.mjs";
 import { setup, IDS, MODULE } from "./fixtures/world.mjs";
 import { EFFECT_ID } from "../transform-core.mjs";
+import { StubCollection } from "./kit/foundry-stub.mjs";
 
 mock.timers.enable({ apis: ["setTimeout", "Date"], now: 0 });
 const F = await setup({ modules: ["pentaryn-senses", { id: "pentaryn-combat", active: false }] });
@@ -279,7 +280,7 @@ test("portrait: a form with no end time shows the effect name; Starry Form shows
   assert.equal(P.hp.children[0].textContent, "111");
   ({ talo } = fresh());
   await S.assumeStarry(talo, "dragon");
-  game.time.worldTime = 90;
+  await talo.effects.get(S.STARRY_EFFECT_ID).update({ "flags.pentaryn-transform.starry.left": 510 });   // combat time counted (D8-starry)
   P = portraitEl();
   Hooks.callAll("renderPortraitPanelArgonComponent", {}, P.el, talo);
   assert.equal(P.detail.textContent, "Starry Form: Dragon · 9 minutes left");
@@ -330,7 +331,7 @@ test("renderEffect: the Wild Shape and Starry effects get the big class and a li
   ui.ARGON._actor = t2;
   const sc = { effect: { uuid: `${t2.uuid}.ActiveEffect.${S.STARRY_EFFECT_ID}` }, element: F.D.el("div", ""), label: "Starry Form: Archer" };
   Hooks.callAll("renderEffectArgonComponent", sc);
-  game.time.worldTime = 60;
+  await t2.effects.get(S.STARRY_EFFECT_ID).update({ "flags.pentaryn-transform.starry.left": 540 });   // combat time counted (D8-starry)
   assert.deepEqual(await sc.getTooltipData(), { title: "Starry Form: Archer", description: "<p><strong>Time left:</strong> 9 minutes</p>", classes: ["pentaryn-tt"] });
   ui.ARGON._actor = null;
   assert.deepEqual(await sc.getTooltipData(), { title: "Starry Form: Archer", description: "", classes: ["pentaryn-tt"] });
@@ -380,6 +381,29 @@ test("a Starry effect created/changed/deleted on the HUD's actor rebuilds the Bo
   ui.ARGON._actor = talo;
   await S.endStarry(talo, { quiet: true });
   assert.equal(p.renders, 2, "no Bonus panel on the HUD");
+  mock.timers.tick(50);
+});
+
+test("D8-starry: a combat tick (only the time-left flag changes) does not rebuild the Bonus bar; a constellation change still does", async () => {
+  const { talo } = fresh();
+  const p = A.panel("DND5E.BonusAction", [slot()]);
+  ui.ARGON.components.main = [p];
+  ui.ARGON._actor = talo;
+  fire(p, talo);
+  await flush();
+  await S.assumeStarry(talo, "archer");
+  assert.equal(p.renders, 1);
+  game.combats.set("cmb", { id: "cmb", started: true, combatants: new StubCollection([{ id: "c1", actor: talo }]) });
+  for (let i = 0; i < 3; i++) {
+    game.time.worldTime += 6;
+    Hooks.callAll("updateWorldTime", game.time.worldTime, 6, {}, IDS.gm);
+    await flush();
+  }
+  assert.equal(S.starrySecondsLeft(talo), 582, "the ticks were counted");
+  assert.equal(p.renders, 1, "D8-starry: a time-left write must not rebuild the Bonus bar (or close an open picker)");
+  await talo.effects.get(S.STARRY_EFFECT_ID).update({ "flags.pentaryn-transform.starry.constellation": "dragon" });
+  assert.equal(p.renders, 2, "any other change to the form still rebuilds");
+  game.combats.clear();
   mock.timers.tick(50);
 });
 

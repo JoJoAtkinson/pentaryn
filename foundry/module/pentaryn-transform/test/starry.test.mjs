@@ -5,6 +5,7 @@
 import { test, mock } from "node:test";
 import assert from "node:assert/strict";
 import { pinJSON } from "./kit/harness.mjs";
+import { StubCollection } from "./kit/foundry-stub.mjs";
 import { setup, IDS, MODULE } from "./fixtures/world.mjs";
 import { STARRY_LIGHT } from "../transform-core.mjs";
 
@@ -35,6 +36,17 @@ function fresh(opts) {
   F.become({ userId: IDS.gm });
   return F.W.talo(opts);
 }
+
+function hedgeDruid(left = 600) {
+  return F.W.makeActor({ id: "npcDruid00000001", name: "Hedge Druid", isToken: true,
+    effects: [{ id: SID, name: "Starry Form: Archer", flags: { [MODULE]: { starry: { constellation: "archer", left } }, dnd5e: { isTemporary: true } },
+      start: { time: 0 }, duration: { value: null, units: "seconds", expiry: null } }] });
+}
+function startCombat(...actors) {
+  const combatants = new StubCollection(actors.map((actor, i) => ({ id: `combatant0000000${i}`, actor })));
+  game.combats.set("combat0000000001", { id: "combat0000000001", started: true, combatants });
+}
+const tick = async (dt) => { game.time.worldTime += dt; Hooks.callAll("updateWorldTime", game.time.worldTime, dt, {}, IDS.gm); await flush(); };
 
 /* ── lookups ──────────────────────────────────────────────────────────────── */
 
@@ -174,10 +186,37 @@ test("assumeStarry: a vetoed or failed use returns false and applies nothing", a
   assert.deepEqual(lines(), []);
 });
 
+test("R2-refund: the use is spent but the form fails to go up → the use comes back, the error still surfaces", async () => {
+  // A fresh form whose effect write fails, and a constellation change without Twinkling whose update fails.
+  let { talo } = fresh();
+  talo.createEmbeddedDocuments = async () => { throw new Error("db"); };
+  await assert.rejects(S.assumeStarry(talo, "archer"), /db/);
+  assert.equal(ops("activity.use").length, 1, "the use was spent");
+  assert.equal(talo.items.get(IDS.ws).system.uses.spent, 1, "spent then refunded");
+  assert.equal(S.activeStarry(talo), null);
+  assert.deepEqual(lines(), []);
+  ({ talo } = fresh());
+  await S.assumeStarry(talo, "archer");
+  S.activeStarry(talo).update = async () => { throw new Error("db"); };
+  await assert.rejects(S.assumeStarry(talo, "chalice"), /db/);
+  assert.equal(talo.items.get(IDS.ws).system.uses.spent, 2, "the second use refunded; the first stands");
+  assert.equal(S.constellationOf(talo), "archer");
+});
+
+test("R2-refund: the form is up and only the light fails → no refund (the form happened)", async () => {
+  const { talo } = fresh();
+  talo.items.get(IDS.starry).setFlag = async () => { throw new Error("light"); };
+  await assert.rejects(S.assumeStarry(talo, "archer"), /light/);
+  assert.equal(S.constellationOf(talo), "archer");
+  assert.equal(talo.items.get(IDS.ws).system.uses.spent, 2);
+});
+
 test("changing constellation with Twinkling: free, the time left kept, StarrySwap line; without it: another use, a fresh 10 minutes", async () => {
   let { talo } = fresh({ twinkling: true });
   await S.assumeStarry(talo, "archer");
-  game.time.worldTime = 120;
+  startCombat(talo);
+  await tick(120);                                    // 20 rounds of combat (D8: only combat time counts)
+  game.combats.clear();
   F.calls.length = 0;
   F.chat.length = 0;
   assert.equal(await S.assumeStarry(talo, "chalice"), true);
@@ -218,6 +257,26 @@ test("endStarry: none → false; the effect deleted, the light off (runner), the
   F.chat.length = 0;
   await S.endStarry(talo, { quiet: true });
   assert.deepEqual(lines(), []);
+});
+
+test("starry-double-end: two overlapping endings delete once and post one line; the second answers false", async () => {
+  const { talo } = fresh();
+  await S.assumeStarry(talo, "archer");
+  F.chat.length = 0;
+  F.calls.length = 0;
+  // A real delete is a server round trip: the effect stays on the actor until the reply comes back.
+  const eff = talo.effects.get(SID);
+  const realDelete = eff.delete.bind(eff);
+  eff.delete = async (...args) => { await new Promise(r => setImmediate(r)); return realDelete(...args); };
+  const deletes = () => ops("delete").length;
+  const [a, b] = await Promise.all([S.endStarry(talo, { reason: "expired" }), S.endStarry(talo, { reason: "expired" })]);
+  await flush();
+  assert.deepEqual([a, b], [true, false], "starry-double-end: the second ending is a no-op while the first is in flight");
+  assert.equal(deletes(), 1, "starry-double-end: one expiry deletes the effect once");
+  assert.deepEqual(lines(), ["Talo's starry form fades after 10 minutes."]);
+  assert.equal(S.activeStarry(talo), null);
+  await S.assumeStarry(talo, "archer");
+  assert.equal(await S.endStarry(talo), true, "starry-double-end: the guard is released after the ending settles");
 });
 
 test("the light: nothing written without pentaryn-senses active; a hand-set light is not overwritten; a player's delete leaves it to the runner", async () => {
@@ -331,30 +390,77 @@ test("updateActiveEffect: the Starry effect marked expired ends it (Expired line
   assert.deepEqual(lines(), ["Talo's starry form fades after 10 minutes."]);
 });
 
-test("updateWorldTime: world actors past 10 minutes end (runner); KNOWN -22: an unlinked token druid is not checked", async () => {
+// D8 (Joe's ruling): out of combat there are no turns to track, so Starry Form stays on and world time
+// does not count; in combat it counts down by combat time to its 10 minutes. Linked and unlinked alike.
+test("D8-starry: the effect is not on Foundry's world clock (no duration value, dnd5e isTemporary), 10 minutes of combat left", async () => {
   const { talo } = fresh();
   await S.assumeStarry(talo, "archer");
-  const npc = F.W.makeActor({ id: "npcDruid00000001", name: "Hedge Druid", isToken: true,
-    effects: [{ id: SID, name: "Starry Form: Archer", flags: { [MODULE]: { starry: { constellation: "archer" } } }, start: { time: 0 }, duration: { value: 600 } }] });
-  const scene = F.W.makeScene({ id: "viewedScene00001" });
-  scene.tokens.set("t", { id: "t", actorLink: false, actor: npc });
-  canvas.scene = scene;
+  const e = talo.effects.get(SID);
+  assert.equal(e.duration.value, null, "D8-starry: Foundry's registry must not expire it by world time");
+  assert.equal(e.flags.dnd5e?.isTemporary, true, "D8-starry: still a temporary effect (token icon), not expiry-tracked");
+  assert.equal(e.flags[MODULE].starry.left, 600);
+  assert.equal(S.starrySecondsLeft(talo), 600);
+});
+
+test("D8-starry: out of combat world time never ends Starry Form, linked or unlinked, and nothing is written", async () => {
+  const { talo } = fresh();
+  await S.assumeStarry(talo, "archer");
+  const npc = hedgeDruid();
   F.chat.length = 0;
-  game.time.worldTime = 599;
-  Hooks.callAll("updateWorldTime", 599, 1);
-  await flush();
-  assert.deepEqual(lines(), []);
-  game.time.worldTime = 600;
-  F.become({ userId: IDS.player });
-  Hooks.callAll("updateWorldTime", 600, 1);
-  await flush();
-  assert.deepEqual(lines(), [], "not the runner");
-  F.become({ userId: IDS.gm });
-  Hooks.callAll("updateWorldTime", 600, 1);
-  await flush();
-  canvas.scene = null;
-  assert.deepEqual(lines(), ["Talo's starry form fades after 10 minutes."]);
-  assert.ok(S.activeStarry(npc), "KNOWN -22 (D8, a live decision): the unlinked druid's form is left on");
+  F.calls.length = 0;
+  await tick(599);
+  await tick(3600);
+  assert.deepEqual(lines(), [], "D8-starry: out of combat the form stays on");
+  assert.ok(S.activeStarry(talo), "D8-starry: the linked druid's form stays on out of combat");
+  assert.ok(S.activeStarry(npc), "D8-starry: the unlinked druid's form stays on out of combat");
+  assert.equal(S.starrySecondsLeft(talo), 600, "D8-starry: out-of-combat time does not count");
+  assert.deepEqual(ops("update", "delete"), []);
+});
+
+test("D8-starry: in combat it counts down by combat time and ends at 10 minutes, linked and unlinked (runner only)", async () => {
+  const { talo } = fresh();
+  await S.assumeStarry(talo, "archer");
+  const npc = hedgeDruid();
+  F.chat.length = 0;
+  await tick(1800);                                   // out of combat first: not counted
+  startCombat(talo, npc, talo);                       // a linked druid with two combatants counts once
+  try {
+    await tick(6);
+    assert.equal(S.starrySecondsLeft(talo), 594);
+    assert.equal(S.starrySecondsLeft(npc), 594);
+    await tick(588);
+    assert.equal(S.starrySecondsLeft(talo), 6);
+    assert.deepEqual(lines(), []);
+    F.become({ userId: IDS.player });
+    await tick(6);
+    assert.deepEqual(lines(), [], "not the runner");
+    assert.equal(S.starrySecondsLeft(talo), 6);
+    F.become({ userId: IDS.gm });
+    await tick(6);
+    assert.deepEqual(lines().sort(), ["Hedge Druid's starry form fades after 10 minutes.", "Talo's starry form fades after 10 minutes."]);
+    assert.equal(S.activeStarry(talo), null);
+    assert.equal(S.activeStarry(npc), null, "D8-starry: the unlinked druid's form ends in combat too");
+  } finally {
+    game.combats.clear();
+  }
+});
+
+test("D8-starry: a failed combat-time write warns 'starry form timing failed'; a form from before D8 is left to the world clock", async () => {
+  const { talo } = fresh();
+  await S.assumeStarry(talo, "archer");
+  const old = hedgeDruid();
+  delete old.effects.get(SID).flags[MODULE].starry.left;
+  startCombat(talo, old);
+  try {
+    F.calls.length = 0;
+    talo.effects.get(SID).update = async () => { throw new Error("x"); };
+    await tick(6);
+    assert.deepEqual(F.console.map(c => c.slice(0, 2)), [["warn", "pentaryn-transform | starry form timing failed"]]);
+    assert.deepEqual(ops("update", "delete"), [], "the pre-D8 form is not written");
+    assert.ok(S.activeStarry(old));
+  } finally {
+    game.combats.clear();
+  }
 });
 
 test("dnd5e.restCompleted (long): the form ends quietly for an owner; a short rest leaves it; a failure warns", async () => {
@@ -373,7 +479,13 @@ test("dnd5e.restCompleted (long): the form ends quietly for an owner; a short re
   Hooks.callAll("dnd5e.restCompleted", talo, {}, { type: "long" });
   Hooks.callAll("updateActiveEffect", talo.effects.get(SID), { duration: { expired: true } }, {}, "u");
   await flush();
-  assert.deepEqual(F.console.map(c => c.slice(0, 2)), [["warn", "pentaryn-transform | ending starry form failed"], ["warn", "pentaryn-transform | ending starry form failed"]]);
+  // starry-double-end: the rest and the expiry overlap, so only the first sends a delete and warns.
+  assert.deepEqual(F.console.map(c => c.slice(0, 2)), [["warn", "pentaryn-transform | ending starry form failed"]]);
+  F.console.length = 0;
+  Hooks.callAll("updateActiveEffect", talo.effects.get(SID), { duration: { expired: true } }, {}, "u");
+  await flush();
+  assert.deepEqual(F.console.map(c => c.slice(0, 2)), [["warn", "pentaryn-transform | ending starry form failed"]],
+    "starry-double-end: a failed ending releases the guard, so the next one tries again");
 });
 
 test("a beast shift ends Starry Form; Starry Form is never carried into the form (PT3-4)", async () => {

@@ -8,7 +8,7 @@ import { MODULE, starryBlock, refundUpdate, canRunAny } from "./transform-core.m
 import { makeLog } from "./lib/log.mjs";
 import { isRunner } from "./wildshape-adapter.mjs";
 import {
-  STARRY_EFFECT_ID, starryItem, wildShapeItemOf, isStarryConsume, activeStarry, constellationOf, starrySecondsLeft,
+  STARRY_EFFECT_ID, starryItem, wildShapeItemOf, isStarryConsume, activeStarry, constellationOf, tickStarry,
   setLight, applyStarry, BLOCKS, assumeStarry, endStarry, announceStarryOn
 } from "./starry-adapter.mjs";
 import { pickConstellation } from "./starry-dialog.mjs";
@@ -73,15 +73,24 @@ function onStarryDelete(effect) {
   setLight(starryItem(actor), false).catch(err => log.warn("starry light off failed", err));
 }
 
-// 10 minutes of world time.
-function onWorldTime() {
-  // hot: no cache — every world actor, every tick, but only on a client that can be the runner (-2);
-  // -22: unlinked druid tokens are not checked, a live decision (D8).
+// 10 minutes of combat time (D8, Joe's ruling): out of combat there are no turns to track, so the form
+// stays on; in combat the clock's advance counts down, for every druid in a started combat — a linked
+// one and an unlinked token druid alike (a combatant's actor is the token's own).
+function onWorldTime(worldTime, dt) {
+  // hot: no cache — only started combats' combatants, and only on a client that can be the runner (-2).
   if (!canRunAny({ activeGMId: game.users.activeGM?.id ?? null, selfId: game.user.id })) return;
-  for (const actor of game.actors) {
-    if (!activeStarry(actor)) continue;
-    const left = starrySecondsLeft(actor);
-    if (left !== null && left <= 0) maybeEnd(actor, "expired");
+  const seen = new Set();
+  for (const combat of game.combats ?? []) {
+    if (!combat?.started) continue;
+    for (const combatant of combat.combatants ?? []) {
+      const actor = combatant?.actor;
+      if (!actor || seen.has(actor.uuid)) continue;   // one druid, two tokens in the fight: counted once
+      seen.add(actor.uuid);
+      if (!activeStarry(actor) || !isRunner(actor)) continue;
+      tickStarry(actor, dt)
+        .then(done => { if (done === "expired") maybeEnd(actor, "expired"); })
+        .catch(err => log.warn("starry form timing failed", err));
+    }
   }
 }
 

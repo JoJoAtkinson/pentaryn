@@ -135,6 +135,9 @@ test("-2 [declared] T-D6 updateWorldTime: a player's client skips both scans whi
   let scans = 0;
   const realIter = game.actors[Symbol.iterator];
   game.actors[Symbol.iterator] = function () { scans++; return realIter.call(this); };
+  // Starry Form scans the started combats' combatants (D8-starry: only combat time counts).
+  const realCombats = game.combats[Symbol.iterator];
+  game.combats[Symbol.iterator] = function () { scans++; return realCombats.call(this); };
   try {
     F.become({ userId: IDS.player });
     Hooks.callAll("updateWorldTime", 30_000, 30_000);
@@ -151,6 +154,7 @@ test("-2 [declared] T-D6 updateWorldTime: a player's client skips both scans whi
     assert.deepEqual(F.calls.filter(c => c.op === "revertOriginalForm").map(c => c.actor), [wolf.id], "and ends the expired form");
   } finally {
     game.actors[Symbol.iterator] = realIter;
+    game.combats[Symbol.iterator] = realCombats;
     game.users.get(IDS.gm).active = true;
     F.become({ userId: IDS.gm });
   }

@@ -13,7 +13,9 @@ import { buildApi, toPlain } from "./lib/api.mjs";
 import { patches } from "./lib/patch.mjs";
 import { publishedOf } from "./lib/publish.mjs";
 import { refOf, resolveRef } from "./lib/resolve.mjs";
-import { shift, revert, forms, wildShapeActivity, original, isRevertItem, isWildShapeForm, activeFormOf } from "./wildshape-adapter.mjs";
+import {
+  shift, revert, forms, wildShapeActivity, original, isRevertItem, isWildShapeForm, activeFormOf, formImageFor
+} from "./wildshape-adapter.mjs";
 import { sweepSpentForms } from "./sweep-adapter.mjs";
 import { constellationOf, starrySecondsLeft } from "./starry-adapter.mjs";
 
@@ -62,6 +64,7 @@ function selftest(ctx) {
 export function buildApiFor(ctx) {
   return buildApi(MANIFEST, {
     shift, revert, forms, wildShapeActivity, original, isRevertItem, sweepSpentForms,
+    formImage: opts => formImageFor(opts ?? {}),
     inspect: (actor, opts = {}) => inspect(actor, opts),
     selftest: () => selftest(ctx),
   }, {

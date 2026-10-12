@@ -21,6 +21,10 @@
   },
   {
     "kind": "on",
+    "name": "preUpdateToken"
+  },
+  {
+    "kind": "on",
     "name": "updateActor"
   },
   {

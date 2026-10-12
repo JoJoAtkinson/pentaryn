@@ -25,7 +25,8 @@
       "sideEffects": [
         "flags.pentaryn-transform.wildshape",
         "the Wild Shape item's uses",
-        "a new form actor (linked) or the token's actor (unlinked)"
+        "a new form actor (linked) or the token's actor (unlinked)",
+        "flags.dnd5e.previousTokenData.light (the token's own light, which dnd5e's revert puts back)"
       ],
       "nullWhen": "a shift for this actor is already running (double-click); no Wild Shape; an unknown profile; a block (busy, no permission, incapacitated, 0 HP, no token on the viewed scene, no uses — each warns); the old form's revert failed; the transform did not happen (the use is refunded)",
       "legacy": true,
@@ -168,6 +169,24 @@
       "doc": "Read-only shape state for one actor, plain JSON, depth ≤ 4. opts.sceneId scopes a token ref; opts.as = a user ref answers with that user's view (without OBSERVER on the actor: { actor } only)."
     },
     {
+      "path": "formImage",
+      "params": [
+        {
+          "name": "opts",
+          "type": "{ uuid: string }",
+          "doc": "the beast Actor's uuid (a Wild Shape profile's)"
+        }
+      ],
+      "returns": "Promise<string|null> — the token image path",
+      "gm": false,
+      "writes": false,
+      "query": true,
+      "relay": true,
+      "sideEffects": [],
+      "nullWhen": "the uuid is not an Actor; the beast has no image at all",
+      "doc": "The token image a Wild Shape form of this beast gets, the same every time: its concrete prototype token image; for a wildcard, the first matching file in sorted order; else its portrait. Also a relay query (active GM answers): a player who may not browse files gets the image a GM would."
+    },
+    {
       "path": "selftest",
       "params": [],
       "returns": "{ ok, checks: [{ label, ok, detail }] }",
@@ -217,7 +236,7 @@
           "optional": true
         }
       ],
-      "returns": "Promise<boolean> — false when no Starry Form was up",
+      "returns": "Promise<boolean> — false when no Starry Form was up, or this client is already ending it",
       "gm": false,
       "writes": true,
       "query": false,
@@ -263,7 +282,9 @@
       "doc": "The constellation glimmering now, or null."
     }
   ],
-  "queries": [],
+  "queries": [
+    "pentaryn-transform.formImage"
+  ],
   "settings": [],
   "events": [],
   "hooks": [
@@ -286,6 +307,10 @@
     {
       "name": "dnd5e.transformActor",
       "label": "dnd5e.transformActor: shape the form"
+    },
+    {
+      "name": "preUpdateToken",
+      "label": "preUpdateToken: a shift keeps the token's own light for the revert"
     },
     {
       "name": "updateActor",
@@ -432,7 +457,8 @@
       "flags.pentaryn-transform.wildshape",
       "flags.pentaryn-transform.revert",
       "flags.pentaryn-transform.starry",
-      "flags.pentaryn-senses.light"
+      "flags.pentaryn-senses.light",
+      "flags.dnd5e.previousTokenData.light"
     ],
     "reads": [
       "flags.dnd5e.originalActor",
@@ -440,7 +466,10 @@
       "flags.dnd5e.transformOptions",
       "flags.dnd5e.previousTokenData",
       "flags.dnd5e.previousActorData",
-      "flags.pentaryn-senses.light"
+      "flags.pentaryn-senses.light",
+      "flags.pentaryn-senses.itemLight",
+      "flags.pentaryn-senses.itemLightPrior",
+      "flags.pentaryn-senses.spellLight"
     ]
   },
   "errors": [

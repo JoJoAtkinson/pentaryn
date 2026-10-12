@@ -110,8 +110,11 @@ export async function setup({ user = null, users = null, modules = [], worldTime
   F.game.time = { worldTime };
   F.game.combat = null;
   F.game.combats = new StubCollection();
-  F.can = new Map();                  // userId → false to deny ACTOR_CREATE
-  for (const u of F.game.users) Object.defineProperty(u, "can", { value: (perm) => F.can.get(u.id) ?? true, enumerable: false });
+  F.can = new Map();                  // userId → false to deny ACTOR_CREATE (or perm => boolean, per permission)
+  for (const u of F.game.users) Object.defineProperty(u, "can", { value: (perm) => {
+    const rule = F.can.get(u.id);
+    return typeof rule === "function" ? rule(perm) : rule ?? true;
+  }, enumerable: false });
   F.tooltipCalls = [];
   F.game.tooltip = { element: null, deactivate() { F.tooltipCalls.push("deactivate"); } };
   F.game.settings.register("dnd5e", "allowPolymorphing", { default: true, scope: "world" });
@@ -142,6 +145,7 @@ export async function setup({ user = null, users = null, modules = [], worldTime
 
   /* uuids: compendium beasts live outside game.actors */
   F.compendium = new Map();
+  F.tokenImages = new Map();          // beast uuid → the files its wildcard token path matches (server order)
   const baseSync = globalThis.fromUuidSync;
   const sync = uuid => F.compendium.get(uuid) ?? resolveEmbedded(F, uuid) ?? baseSync(uuid);
   Object.defineProperty(globalThis, "fromUuidSync", { value: sync, configurable: true, writable: true });
@@ -302,6 +306,17 @@ function makeWorldBuilders(F) {
       system: { attributes: { hp: { ...host.system.attributes.hp, temp: 12 } }, favorites: F.plain(host.system.favorites ?? []) },
       flags: { dnd5e: { originalActor: host.id, isPolymorphed: true, transformOptions: { ...settings } } }
     };
+    // dnd5e copies the source's token image; a wildcard one it picks at random from getTokenImages()
+    // (a player who may not browse files gets [] there, so no image at all) — wildcard-art.
+    if (source.prototypeToken) {
+      const p = source.prototypeToken;
+      let src = p.texture?.src ?? null;
+      if (p.randomImg) {
+        const images = await source.getTokenImages();
+        src = images[Math.floor(Math.random() * images.length)];
+      }
+      d.prototypeToken = { texture: { src } };
+    }
     if (host.isToken) {
       // An unlinked token's actor is transformed in place: no dnd5e.transformActor, no new world actor.
       const form = makeActor({
@@ -312,6 +327,7 @@ function makeWorldBuilders(F) {
       form.token = host.token;
       form._tokens = host._tokens;
       host.token.actor = form;
+      if (d.prototypeToken) host.token.texture = { ...(host.token.texture ?? {}), src: d.prototypeToken.texture.src };
       return form;
     }
     if (F.Hooks.call("dnd5e.transformActor", host, source, d, settings, options) === false) return null;
@@ -350,10 +366,38 @@ function makeWorldBuilders(F) {
     consumption: { targets: [{ type: "itemUses", target: "" }] }, availableProfiles: profiles
   });
 
-  /** Beast sources (compendium-like: fromUuid finds them, game.actors does not hold them). */
-  function beast(id, name, { items = [], img = `${id}.webp`, effects = [], system = {} } = {}) {
-    const b = makeActor({ id, name, img, type: "npc", items, effects, system });
+  /**
+   * Beast sources (compendium-like: fromUuid finds them, game.actors does not hold them). With
+   * `prototypeToken`, getTokenImages() and clone() as core has them: a wildcard lists
+   * `F.tokenImages.get(uuid)` for a user who may browse files (or owns the beast), else core's error
+   * toast and []; clone() (keepId) is the same beast with the changes merged over it.
+   */
+  function beast(id, name, { items = [], img = `${id}.webp`, effects = [], system = {}, prototypeToken = null } = {}) {
+    const b = makeActor({ id, name, img, type: "npc", items, effects, system, ...(prototypeToken ? { isOwner: false } : {}) });
     b.collection = null;
+    if (prototypeToken) {
+      const hide = (k, v) => Object.defineProperty(b, k, { value: v, enumerable: false, writable: true });
+      hide("prototypeToken", prototypeToken);
+      hide("getTokenImages", async function () {
+        F.calls.push({ op: "getTokenImages", actor: this.id, user: game.user.id });
+        const p = this.prototypeToken;
+        if (!p.randomImg) return [p.texture.src];
+        if (!game.user.can("FILES_BROWSE") && !this.isOwner) {
+          F.calls.push({ op: "notify", level: "error", message: "Error retrieving wildcard tokens" });
+          return [];
+        }
+        return [...(F.tokenImages.get(this.uuid) ?? [])];
+      });
+      hide("clone", function (data = {}, context = {}) {
+        F.calls.push({ op: "clone", actor: this.id, data: F.plain(data), context: F.plain(context) });
+        const c = Object.create(this);
+        const p = data.prototypeToken ?? {};
+        Object.defineProperty(c, "prototypeToken", { value: {
+          ...this.prototypeToken, ...p, texture: { ...this.prototypeToken.texture, ...(p.texture ?? {}) }
+        }, enumerable: false });
+        return c;
+      });
+    }
     F.compendium.set(b.uuid, b);                       // resolvable, but not in game.actors
     return b;
   }

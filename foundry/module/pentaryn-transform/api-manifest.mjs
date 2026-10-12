@@ -17,6 +17,8 @@ const WS = "flags.pentaryn-transform.wildshape";
 const REVERT = "flags.pentaryn-transform.revert";
 const STARRY = "flags.pentaryn-transform.starry";
 const LIGHT = "flags.pentaryn-senses.light";
+const HAND_LIGHT = "flags.dnd5e.previousTokenData.light";   // light-roundtrip: the druid token's own light
+const SENSES_TOKEN = ["flags.pentaryn-senses.itemLight", "flags.pentaryn-senses.itemLightPrior", "flags.pentaryn-senses.spellLight"];
 
 export const MANIFEST = Object.freeze({
   module: MODULE,
@@ -29,7 +31,8 @@ export const MANIFEST = Object.freeze({
       path: "shift", legacy: true,
       params: [ACTOR, { name: "profileId", type: "string", doc: "the transform profile's _id (forms(actor)[].id)" }],
       returns: "Promise<Actor|null> — the new form", gm: false, writes: true,
-      sideEffects: [WS, "the Wild Shape item's uses", "a new form actor (linked) or the token's actor (unlinked)"],
+      sideEffects: [WS, "the Wild Shape item's uses", "a new form actor (linked) or the token's actor (unlinked)",
+        `${HAND_LIGHT} (the token's own light, which dnd5e's revert puts back)`],
       nullWhen: "a shift for this actor is already running (double-click); no Wild Shape; an unknown profile; a block "
         + "(busy, no permission, incapacitated, 0 HP, no token on the viewed scene, no uses — each warns); the old "
         + "form's revert failed; the transform did not happen (the use is refunded)",
@@ -82,15 +85,24 @@ export const MANIFEST = Object.freeze({
         + "user ref answers with that user's view (without OBSERVER on the actor: { actor } only).",
     },
     {
+      path: "formImage",
+      params: [{ name: "opts", type: "{ uuid: string }", doc: "the beast Actor's uuid (a Wild Shape profile's)" }],
+      returns: "Promise<string|null> — the token image path", gm: false, writes: false, query: true, relay: true,
+      nullWhen: "the uuid is not an Actor; the beast has no image at all",
+      doc: "The token image a Wild Shape form of this beast gets, the same every time: its concrete prototype token "
+        + "image; for a wildcard, the first matching file in sorted order; else its portrait. Also a relay query "
+        + "(active GM answers): a player who may not browse files gets the image a GM would.",
+    },
+    {
       path: "selftest", params: [],
       returns: "{ ok, checks: [{ label, ok, detail }] }", gm: false, writes: false, since: "0.4.0",
       doc: "Live smoke checks after a sync.",
     },
   ],
   flags: {
-    writes: [WS, REVERT, STARRY, LIGHT],
+    writes: [WS, REVERT, STARRY, LIGHT, HAND_LIGHT],
     reads: ["flags.dnd5e.originalActor", "flags.dnd5e.isPolymorphed", "flags.dnd5e.transformOptions",
-      "flags.dnd5e.previousTokenData", "flags.dnd5e.previousActorData", LIGHT],
+      "flags.dnd5e.previousTokenData", "flags.dnd5e.previousActorData", LIGHT, ...SENSES_TOKEN],
   },
   unlisted: [],
 });
@@ -108,7 +120,7 @@ export const STARRY_ROWS = Object.freeze([
   {
     path: "starry.end", legacy: true,
     params: [ACTOR, { name: "opts", type: "{ quiet?: boolean, reason?: 'manual'|'incapacitated'|'expired' }", optional: true }],
-    returns: "Promise<boolean> — false when no Starry Form was up", gm: false, writes: true, sideEffects: [STARRY, LIGHT],
+    returns: "Promise<boolean> — false when no Starry Form was up, or this client is already ending it", gm: false, writes: true, sideEffects: [STARRY, LIGHT],
     doc: "Dismiss Starry Form (no action required); one chat line for the reason unless quiet.",
   },
   {

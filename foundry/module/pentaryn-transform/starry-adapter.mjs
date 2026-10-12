@@ -10,7 +10,7 @@
  *
  * The PHB item ships a "Consume Wild Shape" activity whose card lists three effects to apply by
  * hand. Here one click on a constellation spends the use through that activity (no dialog, no card)
- * and puts one effect on the druid: "Starry Form: Archer", timed 10 minutes, carrying the Dragon's
+ * and puts one effect on the druid: "Starry Form: Archer", 10 minutes of combat time (D8), carrying the Dragon's
  * roll floors (and Twinkling's flight) when the Dragon is chosen. The light is the feature item's
  * flags.pentaryn-senses.light while the form lasts — pentaryn-senses' carried-light path writes it
  * to every token of the druid and puts any hand-set light back afterwards.
@@ -22,7 +22,7 @@
 import {
   MODULE, activitiesOf, usesLeft, formatDuration, CONSTELLATIONS, STARRY_LIGHT, STARRY_SECONDS,
   constellationOfActivity, starryEffectData, starryBlock, findWildShapeItem, secondsLeft, constellationImgOf,
-  pickStarryBase, starryEndKey
+  pickStarryBase, starryEndKey, refundUpdate
 } from "./transform-core.mjs";
 import { readFlag, flagPath } from "./lib/flags.mjs";
 import { say, markBonusUsed } from "./wildshape-adapter.mjs";
@@ -82,10 +82,27 @@ export function constellationOf(actor) {
   return activeStarry(actor)?.getFlag(MODULE, "starry")?.constellation ?? null;
 }
 
-/** Seconds left on the form, or null. */
+/** Seconds of combat time left on the form, or null. A form put on before D8 is timed by world time. */
 export function starrySecondsLeft(actor) {
   const e = activeStarry(actor);
+  const left = e?.getFlag?.(MODULE, "starry")?.left;
+  if (Number.isFinite(left)) return left;
   return secondsLeft({ start: e?.start?.time ?? e?._source?.start?.time, seconds: e?._source?.duration?.value, now: game.time.worldTime });
+}
+
+/**
+ * The world clock moved dt seconds while the druid is in a started combat: count the form's time
+ * down (D8: only combat time counts). "expired" when it has run out, "ticked" after the write,
+ * null when there is no combat-timed form (none up, or one put on before D8).
+ */
+export async function tickStarry(actor, dt) {
+  const effect = activeStarry(actor);
+  const left = effect?.getFlag?.(MODULE, "starry")?.left;
+  if (!Number.isFinite(left) || !Number.isFinite(dt) || dt === 0) return null;
+  const next = Math.min(STARRY_SECONDS, left - dt);
+  if (next <= 0) return "expired";
+  await effect.update({ [flagPath(MODULE, "starry.left")]: next });
+  return "ticked";
 }
 
 export const constellationLabel = c => _loc(`PENTARYN_TRANSFORM.Starry.${c[0].toUpperCase()}${c.slice(1)}`);
@@ -137,8 +154,9 @@ export async function applyStarry(actor, c, { keepTime = false } = {}) {
   const start = keepTime ? (current?._source?.start?.time ?? now) : now;
   const label = constellationLabel(c);
   const ends = _loc("PENTARYN_TRANSFORM.Starry.Ends");
+  const left = keepTime ? (starrySecondsLeft(actor) ?? STARRY_SECONDS) : STARRY_SECONDS;
   const data = starryEffectData({
-    base, constellation: c, label, img: constellationImg(actor, c), now: start, seconds: STARRY_SECONDS,
+    base, constellation: c, label, img: constellationImg(actor, c), now: start, seconds: left,
     description: `<p>${constellationText(actor, c)}</p><p>${ends}</p>`, origin: item?.uuid, id: STARRY_EFFECT_ID
   });
   if (current) {
@@ -201,7 +219,15 @@ export async function assumeStarry(actor, constellation) {
     );
     if (!used) return false;
     markBonusUsed(actor);
-    await applyStarry(actor, constellation);
+    try {
+      await applyStarry(actor, constellation);
+    } catch (err) {
+      // The use is spent but the form did not go up: it comes back, as a failed shift's does (doShift).
+      // A form that is up (only its light failed) keeps the use.
+      const update = constellationOf(actor) === constellation ? null : refundUpdate(ws?.system?.uses);
+      if (update) await ws.update(update);
+      throw err;
+    }
     announceStarryOn(actor, constellation);
     return true;
   } finally {
@@ -209,11 +235,21 @@ export async function assumeStarry(actor, constellation) {
   }
 }
 
-/** Dismiss the starry form (no action required). */
+const ending = new Set();   // actor uuids, like wildshape-adapter's `reverting`
+
+/**
+ * Dismiss the starry form (no action required). One ending at a time per druid on this client: an
+ * expiry and an Incapacitated (or a Long Rest) landing together delete once and post one line.
+ */
 export async function endStarry(actor, { quiet = false, reason = "manual" } = {}) {
   const effect = activeStarry(actor);
-  if (!effect) return false;
-  await effect.delete();
+  if (!effect || ending.has(actor.uuid)) return false;
+  ending.add(actor.uuid);
+  try {
+    await effect.delete();
+  } finally {
+    ending.delete(actor.uuid);
+  }
   if (!quiet) say(actor, _loc(`PENTARYN_TRANSFORM.Chat.${starryEndKey(reason)}`, { name: actor.name }));
   return true;
 }

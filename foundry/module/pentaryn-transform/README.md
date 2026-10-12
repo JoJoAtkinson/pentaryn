@@ -20,6 +20,11 @@ ordinary ability. Requires dnd5e 6 (verified 6.0.6) on Foundry v14.
 - A shift spends the use only when it happens (a failed shift refunds it). Each shift and revert
   posts one chat line instead of a dnd5e card — including a revert from the sheet, the sidebar or a
   macro. The sheet still works: Wild Shape → Use opens dnd5e's form dialog, then shifts at once.
+- The form's token image is the same every time, never random and never the placeholder
+  (wildcard-art, Joe's ruling): the beast's own token image; for wildcard token art (the Monster
+  Manual Wolf, Cat), the first matching file in sorted order; if none resolves, the beast's portrait.
+  A player who may not browse files gets the image from the active GM (the `formImage` relay); with
+  no GM online, the portrait.
 - The portrait line reads `Wild Shape: Dire Wolf · 5 hours 59 minutes left`; the form's effect
   (`Wild Shape: Dire Wolf`) is larger, with a gold ring, and its tooltip has the time left.
   HP with temp HP reads `99+12 / 99`.
@@ -29,13 +34,19 @@ ordinary ability. Requires dnd5e 6 (verified 6.0.6) on Foundry v14.
 - Features that would spend Wild Shape uses or spell slots never come along into the form; item
   uses, Hit Dice, exhaustion, inspiration and conditions gained there come back on revert, and a
   Concentration broken in beast form ends on the druid too.
+- A light set by hand on the druid's token comes back on revert (light-roundtrip, Joe's ruling):
+  dnd5e rebuilds the token from the prototype, so the prototype's light used to return. A light
+  pentaryn-senses put there (a torch, Starry Form, the Light cantrip) is not the token's own; the
+  light senses replaced comes back instead, and senses relights the token if its source is still lit.
 - **Starry Form:** one click on Archer, Chalice or Dragon spends the Wild Shape use, puts one effect
   on the druid (`Starry Form: Archer`, 10 minutes; the Dragon's carries the roll floors and, with
   Twinkling Constellations, Fly 20) and the starlight (Bright 10, Dim 10 more, through
-  pentaryn-senses). With Twinkling Constellations a change is free. It ends after 10 minutes, when
-  Incapacitated, at a Long Rest, or on a beast shift. While the Chalice glimmers, a slot-spending
+  pentaryn-senses). With Twinkling Constellations a change is free. It ends after 10 minutes of
+  combat time (out of combat it stays on and world time does not count, D8), when Incapacitated, at a
+  Long Rest, or on a beast shift. While the Chalice glimmers, a slot-spending
   heal makes the Chalice button pulse for a minute. From the sheet, Consume Wild Shape opens a
-  three-button dialog; closing it refunds the use.
+  three-button dialog; closing it refunds the use. A use spent from the HUD comes back if the form
+  then fails to go up.
 - **Escape** cancels Argon's target picker ("0/1 Targets"), else closes an open Wild Shape / Starry
   Form picker; with nothing open it still reaches core. The target picker is also cancelled when the
   HUD's token changes body.
@@ -61,8 +72,9 @@ The legacy methods take an Actor document (not a ref) and keep their old shapes.
 | `original(actor)` | the actor a form was made from | a linked form whose original is gone | — | — |
 | `isRevertItem(item)` | boolean | — | — | — |
 | `sweepSpentForms()` | — | not the active GM | yes | yes |
+| `formImage({ uuid })` | the token image a form of that beast gets | not an Actor; no image at all | — | — |
 | `starry.assume(actor, "archer"\|"chalice"\|"dragon")` | boolean | shifted, incapacitated, no uses, no feature | — | yes |
-| `starry.end(actor, { quiet, reason })` | boolean | no Starry Form up | — | yes |
+| `starry.end(actor, { quiet, reason })` | boolean | no Starry Form up; already ending on this client | — | yes |
 | `starry.active(actor)` / `starry.constellation(actor)` | the effect / the constellation | none up | — | — |
 | `inspect(ref, opts)` | shape state, plain JSON | throws `NOT_FOUND` / `AMBIGUOUS` / `BAD_ARGS` | — | — |
 | `selftest()` | `{ ok, checks }` | — | — | — |
@@ -75,6 +87,10 @@ the actor gets `{ actor }` only. A linked druid that is in a form answers for th
 is out): `inspect("Talo")` and `inspect(<the form>)` give the same read. Kit members: `describe()`, `version`, `contract`, `settings()`,
 `trace()`, `uninstall()`.
 
+`formImage` is also the module's one query, `pentaryn-transform.formImage` (a relay row: any sender,
+the active GM answers; read-only). A player's shift asks it when the beast's token art is a wildcard
+the player may not list (core's wildcard listing needs `FILES_BROWSE` or ownership of the beast).
+
 ## Data written
 
 | Where | Key | What |
@@ -82,9 +98,10 @@ is out): `inspect("Talo")` and `inspect(<the form>)` give the same read. Kit mem
 | a form actor | `flags.pentaryn-transform.wildshape` | `{ original, source, profile, endsAt, carried }` — the sweep, the auto-revert, the HUD and `inspect` read it |
 | the form's duration effect | `_id pentarynWildShp0`, `flags.pentaryn-transform.wildshape` | the timed effect Argon's portrait strip shows |
 | an item | `flags.pentaryn-transform.revert` | set by hand: using it reverts its actor (`keepInForm` keeps a feat in the form) |
-| the druid's Starry effect | `_id pentarynStarry00`, `flags.pentaryn-transform.starry.constellation` | the constellation glimmering |
+| the druid's Starry effect | `_id pentarynStarry00`, `flags.pentaryn-transform.starry.constellation`, `.left` | the constellation glimmering; seconds of combat time left (D8) |
 | the Starry Form item | `flags.pentaryn-senses.light` | `STARRY_LIGHT` while the form lasts (pentaryn-senses lights the tokens) |
 | form actors | created / deleted | dnd5e creates them; the active GM sweeps spent ones |
+| the druid's token, on a shift | `flags.dnd5e.previousTokenData.light` | the token's own light (`handLight`), added to dnd5e's snapshot in the same swap write; dnd5e's revert merges it back (light-roundtrip) |
 
 ## Flags other modules read
 
@@ -100,7 +117,9 @@ is out): `inspect("Talo")` and `inspect(<the form>)` give the same read. Kit mem
 - **pentaryn-combat's tooltips** use the `pentaryn-tt` classes too; both modules load the same kit
   `lib/argon-tooltip.css` (D7), so neither depends on the other for them.
 - Transform reads dnd5e's `flags.dnd5e.originalActor`, `isPolymorphed`, `transformOptions`,
-  `previousTokenData`, `previousActorData`.
+  `previousTokenData`, `previousActorData`, and adds `light` to `previousTokenData` on a shift.
+- Transform reads pentaryn-senses' token flags `itemLight`, `itemLightPrior` and `spellLight.prior`
+  on a shift, to tell the token's own light from a senses light (`core/wildshape.mjs` `handLight`).
 
 ## Events
 
@@ -154,8 +173,10 @@ rest hooks, core document hooks and Argon's render hooks (`test/golden/hooks.jso
   `feat` with one bonus-action utility activity, so the Wild Shape preset carries it onto the form.
 - Two GM tabs (bridge + browser) both run the automatic endings and the sweep; the second revert
   finds the form gone. Watch for a doubled chat line in the live phase.
-- Starry Form's world-time expiry checks world actors only: an unlinked druid token's Starry Form is
-  not ended there while no GM is connected (transform-creatures-22, a live decision, D8).
+- Starry Form counts combat time only (D8, Joe's ruling): the time left is
+  `flags.pentaryn-transform.starry.left`, counted down by the runner for every druid in a started
+  combat (linked or an unlinked token); the effect has no duration value and dnd5e's `isTemporary`
+  flag, so Foundry's world clock never expires it. A form put on before D8 keeps the world-time timing.
 - A Chrome tab that isn't visible runs no animation frames and drops synthetic clicks; size
   animations and clicks "that did nothing" there are the harness, not the module.
 - Debug lines: `CONFIG.debug["pentaryn-transform"] = true` (the stripped-items list, swallowed

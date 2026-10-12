@@ -15,7 +15,8 @@
 //
 // Lifecycle: the patch, then every feature installs synchronously while this file loads (the moment
 // their module-scope hooks always registered; moving them to `setup` would reorder them against
-// other modules — golden/hooks.json) · ready → build the API (api.mjs), publish it (kit publishNamespace).
+// other modules — golden/hooks.json); the manifest's query rows register at load too · ready → build the
+// API (api.mjs), publish it (kit publishNamespace).
 //   api-manifest.mjs       PURE API rows (+ STARRY_ROWS, starry.mjs's contribution)
 //   api.mjs                implementations, inspect(), selftest(), buildApiFor(ctx)
 //
@@ -24,6 +25,8 @@
 import { installPatches } from "./patches.mjs";
 import { MODULE, NS } from "./transform-core.mjs";
 import { publishNamespace } from "./lib/publish.mjs";
+import { registerQueries } from "./lib/queries.mjs";
+import { MANIFEST } from "./api-manifest.mjs";
 import { installFeature, ctx, log } from "./wiring.mjs";
 import { buildApiFor } from "./api.mjs";
 import {
@@ -47,6 +50,9 @@ const FEATURES = [bodyswap, wildshape, sweep];
 installPatches();
 
 for (const feature of FEATURES) installFeature(feature);
+
+/* ── the manifest's query rows (formImage's relay), on every client: a player's queryGM needs it too ── */
+registerQueries(MANIFEST, () => ctx.api, { log });
 
 /**
  * Ready: build the API first (a manifest drift is one error line and nothing is published), then

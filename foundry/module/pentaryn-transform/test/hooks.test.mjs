@@ -6,6 +6,8 @@
 // starry's rows land between transform's and hud's. Checkpoint: 40 rows (the guide's 39 plus PT3-7's
 // dnd5e.revertOriginalForm, registered right after preUpdateToken). [declared] guide step 8 (-16): 39 —
 // starry's `once ready` (row 26) went: api.starry is a contribution built into the one frozen API.
+// [declared] light-roundtrip: 40 — wildshape's preUpdateToken (row 6, after dnd5e.transformActor) puts
+// the druid token's own light into dnd5e's previousTokenData on a shift.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { pinJSON } from "./kit/harness.mjs";
@@ -20,25 +22,25 @@ const patched = TD._preUpdateOperation;
 await import("../hud.mjs");
 const atLoad = F.hooks.slice();
 
-test("registration manifest equals golden/hooks.json (39 rows; [declared] -16 removed starry's ready)", () => {
-  assert.equal(atLoad.length, 39);
+test("registration manifest equals golden/hooks.json (40 rows; [declared] -16 removed starry's ready, light-roundtrip added a preUpdateToken)", () => {
+  assert.equal(atLoad.length, 40);
   pinJSON("hooks", atLoad, import.meta.url);
 });
 
-test("entry 0 (transform.mjs) registers rows 1-18; starry.mjs (via hud.mjs) 19-25; hud.mjs 26-39", () => {
-  assert.equal(afterEntry0, 18);
+test("entry 0 (transform.mjs) registers rows 1-19; starry.mjs (via hud.mjs) 20-26; hud.mjs 27-40", () => {
+  assert.equal(afterEntry0, 19);
   assert.deepEqual(atLoad.slice(0, 3).map(h => h.name), ["preUpdateToken", "dnd5e.revertOriginalForm", "dnd5e.preUseActivity"]);
-  assert.deepEqual(atLoad.slice(16, 18), [{ kind: "once", name: "ready" }, { kind: "once", name: "ready" }]);
-  assert.deepEqual(atLoad.slice(18, 25).map(h => h.name), ["dnd5e.preUseActivity", "dnd5e.postUseActivity", "createActiveEffect",
+  assert.deepEqual(atLoad.slice(17, 19), [{ kind: "once", name: "ready" }, { kind: "once", name: "ready" }]);
+  assert.deepEqual(atLoad.slice(19, 26).map(h => h.name), ["dnd5e.preUseActivity", "dnd5e.postUseActivity", "createActiveEffect",
     "updateActiveEffect", "deleteActiveEffect", "updateWorldTime", "dnd5e.restCompleted"]);
-  assert.deepEqual(atLoad.slice(25, 28), [{ kind: "on", name: "updateToken" }, { kind: "on", name: "deleteToken" }, { kind: "once", name: "init" }]);
+  assert.deepEqual(atLoad.slice(26, 29), [{ kind: "on", name: "updateToken" }, { kind: "on", name: "deleteToken" }, { kind: "once", name: "init" }]);
 });
 
 test("one capture-phase pointermove listener, added by hud.mjs before its first hook row", () => {
   const moves = F.D.listeners.filter(l => l.type === "pointermove");
   assert.equal(moves.length, 1);
   assert.deepEqual(moves[0].options, { passive: true, capture: true });
-  assert.equal(moves[0].at, 25, "registered after starry's 7 rows, before hud's updateToken");
+  assert.equal(moves[0].at, 26, "registered after starry's 7 rows, before hud's updateToken");
   assert.equal(F.D.listeners.length, 1, "no other document listener");
 });
 

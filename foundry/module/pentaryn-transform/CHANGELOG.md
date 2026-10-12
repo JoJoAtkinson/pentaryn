@@ -4,6 +4,39 @@
 
 ## Unreleased
 
+- **One Starry Form ending at a time (starry-double-end, final review).** An expiry landing together
+  with an Incapacitated or a Long Rest could send two deletes for the same effect and log a failed
+  ending. `endStarry` now holds an in-flight guard per druid, as revert does: the overlapping ending
+  answers false, so the form is deleted once with one chat line ([declared]).
+- **A failed Starry Form from the HUD refunds the Wild Shape use (R2-refund, final review).** The use
+  was spent before the form's effect was written, and a failure there kept it spent. Now, as a failed
+  shift does, the use comes back when the form did not go up; a form that is up (only its light
+  failed) keeps the use. The error still surfaces as before ([declared]).
+- **Uses spent in a form come back on revert when the uses max is a formula (EC-1, final review).**
+  The revert's use sync read the item source's max as a number, so a formula max such as Wild
+  Shape's `@scale.druid.wild-shape-uses` counted as no limit and the spent uses were dropped. A
+  positive number or a non-empty formula now counts as a limit; an empty, null or zero max still
+  does not ([declared]).
+- **A hand-set token light survives a Wild Shape round trip (light-roundtrip, Joe's ruling; PT TF-2).**
+  dnd5e rebuilt the druid's token from the prototype on revert, so a light set by hand on the token
+  was lost and the prototype's came back. A shift now adds the token's own light to dnd5e's
+  `flags.dnd5e.previousTokenData` in the same swap write, and every revert path puts it back. A light
+  pentaryn-senses put there (torch, Starry Form, Light cantrip) is not the token's own: senses' prior
+  is carried instead. One new `preUpdateToken` listener (hooks 39 → 40) ([declared]).
+- **A Wild Shape form's token image is the same every time (wildcard-art, Joe's ruling; PT TF-1/TF-2/
+  D7-1).** A beast with wildcard token art (the Monster Manual Wolf, Cat) gave a random file to a GM
+  and, to a player who may not browse files, no image at all (the mystery-man token and "Invalid
+  Asset"). Now the form gets the beast's concrete token image; for a wildcard, the first matching file
+  in sorted order (a player asks the active GM through the new `formImage` relay row); if none
+  resolves, the beast's portrait. dnd5e is handed a copy of the beast with that one image, so linked
+  and unlinked druids alike get it ([declared]).
+- **Starry Form counts combat time only (D8, Joe's ruling).** Out of combat there are no turns to
+  track, so the form stays on and world time does not count; in combat it counts down by combat time
+  to its 10 minutes, for a linked druid and an unlinked token druid alike. Before, Foundry's world
+  clock (and the world-time fallback, world actors only) ended a linked druid out of combat but not an
+  unlinked one. The effect has no duration value plus dnd5e's `isTemporary` flag; the time left is
+  `flags.pentaryn-transform.starry.left`. A combat tick writes only that flag and does
+  not rebuild the Bonus bar (an open Wild Shape or Starry picker stays open) ([declared]).
 - **A form tile's tooltip and right-click on a compendium form** (the Monster Manual Wolf, Cat, Giant
   Badger) load the beast first: `fromUuidSync` gives only the pack's index entry, and the hover threw
   `src.items is not iterable`, so no CR/AC/speeds/attacks tooltip and no sheet (PT TF-1, [declared]).
