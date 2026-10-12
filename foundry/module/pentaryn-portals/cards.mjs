@@ -14,19 +14,22 @@
  */
 
 import { MODULE, cardHTML, dialogIdParts, esc } from "./portals-core.mjs";
-import { behaviorOf, cardFor, snapshot } from "./scene-adapter.mjs";
+import { behaviorDestinations, behaviorOf, cardFor, snapshot } from "./scene-adapter.mjs";
 import { setting } from "./settings.mjs";
+
+/** The hook hands an element or (older callers) a jQuery wrapper: → the element. */
+const rootOf = el => (el instanceof HTMLElement ? el : el?.[0]);
 
 export function decorate(app, element) {
   const behavior = behaviorOf(app);
   if (!behavior) return;
   const sys = behavior.system;
   if (!sys.revealed && !game.user.isGM) return; // keep an unrevealed destination secret
-  const root = element instanceof HTMLElement ? element : element?.[0];
+  const root = rootOf(element);
   const content = root?.querySelector(".dialog-content");
   if (!content || content.querySelector(".ppt-cards")) return;
 
-  const dests = [...(sys.destinations ?? [])].map(u => fromUuidSync(u, { relative: behavior })).filter(Boolean).map(cardFor);
+  const dests = behaviorDestinations(behavior).map(cardFor);
   if (!dests.length) return;
 
   const wrap = document.createElement("div");
@@ -71,7 +74,7 @@ export function plainQuestion(app, behavior, content, card) {
  */
 export function preferTeleport(app, element) {
   if (!setting("teleportDefault") || !behaviorOf(app)) return;
-  const root = element instanceof HTMLElement ? element : element?.[0];
+  const root = rootOf(element);
   const yes = root?.querySelector('button[data-action="yes"]');
   if (!yes || yes.disabled) return;
   root.querySelector('button[data-action="no"]')?.removeAttribute("autofocus");
@@ -83,7 +86,7 @@ export function preferTeleport(app, element) {
 export function injectConfig(app, element) {
   if (!game.user.isGM) return;
   const region = app.document;
-  const root = element instanceof HTMLElement ? element : element?.[0];
+  const root = rootOf(element);
   const tab = root?.querySelector("section.tab.region-appearance, section.tab[data-tab='appearance']");
   if (!tab || tab.querySelector(".ppt-config")) return;
   const f = region.flags?.[MODULE] ?? {};

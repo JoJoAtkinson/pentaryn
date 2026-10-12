@@ -2,8 +2,9 @@
  * Pentaryn Portal Cards — the API manifest. PURE DATA: node imports it without a Foundry stub,
  * describe() reports it, and buildApi() refuses to load when it and the implementations drift.
  *
- * The four own rows keep today's signatures (`legacy: true`): documents in, the old return shapes.
- * Features contribute the rest from install(): badges → open, redraw; party → spreadArrival.
+ * Eight own rows; the first four keep their old signatures (`legacy: true`): documents in, the old
+ * return shapes. Features contribute the rest from install(): badges → open, redraw, badges;
+ * party → spreadArrival.
  */
 
 import { CONTRACT, MODULE, NS, VERSION } from "./portals-core.mjs";
