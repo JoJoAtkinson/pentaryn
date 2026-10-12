@@ -21,8 +21,8 @@ import { setting, riderMode, setRiderMode } from "../settings.mjs";
 import { weaponsOf, featuresOf, combatContext, turnOf, newTurn, turnSettled, isReckless, riderDiceFor, followUpsFor } from "../shapes.mjs";
 import { applyButtons, dropStrayTooltip, itemButtonClass, mainPanel, protoDescriptor, settlePips } from "../argon.mjs";
 import { FALLBACK_IMG, argonClasses, fullAttackState, liveButtons, wireButtons } from "./buttons-ui.mjs";
-import { running, abortFor } from "../sequence.mjs";
-import { setReckless } from "../turn-riders.mjs";
+import { running, abortFor, pruneSession as pruneRolls } from "../sequence.mjs";
+import { setReckless, pruneSession as pruneRiders } from "../turn-riders.mjs";
 import { placeOpenDrawers } from "../turnflow/drawers.mjs";
 
 const log = makeLog(MODULE);
@@ -380,6 +380,9 @@ const onSequenceEnd = (actor) => {
 
 const onCombatUpdated = (combat, changes) => {
   if (!("turn" in changes) && !("round" in changes)) return;
+  // combat-riders-29: the session maps' stale entries go at each turn change.
+  pruneRiders();
+  pruneRolls();
   // The turn moved on under a running or paused sequence: its remaining swings belong to that turn.
   const r = running();
   if (r?.actor) { const c = combatContext(r.actor); if (c.inCombat && !c.isOwnTurn) abortFor(r.actor); }

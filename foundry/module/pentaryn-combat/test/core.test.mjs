@@ -21,7 +21,9 @@ const ADDED_S2 = ["CONTRACT", "CSS", "HOOKS", "I18N", "MODULE", "NS", "SHORT", "
 const ADDED_S4 = ["I18N_KEYS", "keyFor"];
 // Guide S8's: the Full Attack plan moved out of sequence.mjs, the cancelled-area test out of combat.mjs.
 const ADDED_S8 = ["areaPlacementSkipped", "fullAttackPlanFrom"];
-const ADDED = [...ADDED_S2, ...ADDED_S4, ...ADDED_S8];
+// §4 combat-riders-29's pure session-map pruner.
+const ADDED_29 = ["pruneOlder"];
+const ADDED = [...ADDED_S2, ...ADDED_S4, ...ADDED_S8, ...ADDED_29];
 
 test("export surface (golden/core-exports.json): 81 names", () => {
   const names = Object.keys(core).sort();

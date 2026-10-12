@@ -256,6 +256,8 @@ export function updateTurn(actor, fn) {
     return after;
   }).catch(err => { log.warn("turn flag write failed", err); return null; });
   writeChains.set(id, next);
+  // combat-riders-29: a settled chain is forgotten (unless a newer write already replaced it).
+  next.finally(() => { if (writeChains.get(id) === next) writeChains.delete(id); });
   return next;
 }
 

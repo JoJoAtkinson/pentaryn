@@ -52,6 +52,11 @@ export function expectRoll(activityUuid, kind) {
   if (activityUuid) expected.set(activityUuid, { kind, at: Date.now() });
 }
 
+/** combat-riders-29: forget announced rolls past the two-minute window (taggedKind ignores them). */
+export function pruneSession(now = Date.now()) {
+  return core.pruneOlder(expected, now, 120000, v => v.at);
+}
+
 export function forgetRoll(activityUuid) {
   expected.delete(activityUuid);
 }

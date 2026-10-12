@@ -272,6 +272,11 @@ export function attackMessageFor(activity, message) {
 const autoApplied = new Map();
 const AUTO_GUARD_MS = 4000;
 
+/** combat-riders-29: forget auto riders older than the guard window (never read again). */
+export function pruneSession(now = Date.now()) {
+  return core.pruneOlder(autoApplied, now, AUTO_GUARD_MS);
+}
+
 /** In dnd5e.preRollDamageV2: add an auto rider's dice to a weapon damage roll. @returns {object[]} applied */
 export function autoRiders(config, message) {
   if (!setting("riderOffers")) return [];

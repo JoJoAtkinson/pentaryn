@@ -261,3 +261,15 @@ export function orphanCombatFlags(flags, liveIds = []) {
   if (r && typeof r === "object" && typeof r.combatId === "string" && r.combatId && !live.has(r.combatId)) out.push("reaction");
   return out;
 }
+
+/**
+ * Drop the entries of a session map older than `maxAge` ms at `now` (`at(value)` = the entry's
+ * time). For maps whose stale entries are never read again (combat-riders-29). @returns {number} dropped
+ */
+export function pruneOlder(map, now, maxAge, at = v => v) {
+  let n = 0;
+  for (const [k, v] of map) {
+    if (now - (Number(at(v)) || 0) >= maxAge) { map.delete(k); n++; }
+  }
+  return n;
+}

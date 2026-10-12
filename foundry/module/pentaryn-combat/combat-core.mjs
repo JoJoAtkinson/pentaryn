@@ -162,7 +162,7 @@ import {
   attackActions, classifySwing, freshTurn, orphanCombatFlags, otherActionsOf, pickCombat, pipFor,
   pipState, reactionSpent, readTurn, recordBonusAction, recordFollowUp, recordKill,
   recordOtherAction, recordQuickened, recordQuickenedCast, recordSurge, recordSwing, setRider,
-  spentPips, staleCombatFlags, swingsLeft, turnKey
+  spentPips, staleCombatFlags, swingsLeft, turnKey, pruneOlder
 } from "./core/turn.mjs";
 import {
   followUps, hideOffhandSlot, poleStrikeOpen
@@ -198,5 +198,5 @@ export {
   damageAtZero, damageBonuses, steadyAimAfterAttack, steadyAimChanges, multiattackPlan,
   overridePlan, parseMultiattack, SPECIAL_ACTIONS, actionsLeft, areaPlacementSkipped, dashChanges,
   deltasConsumed, expiringAt, hudFollowPlan, orphanUsage, portraitExtras, recordSpecialAction,
-  specialActionOf, turnBoundary, clampToView, dockRect, drawerLeft, swingTag
+  specialActionOf, turnBoundary, clampToView, dockRect, drawerLeft, swingTag, pruneOlder
 };

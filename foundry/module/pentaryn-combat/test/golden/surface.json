@@ -145,6 +145,7 @@
   "core.planSummary": "planSummary",
   "core.poleStrikeOpen": "poleStrikeOpen",
   "core.portraitExtras": "portraitExtras",
+  "core.pruneOlder": "pruneOlder",
   "core.reactionSpent": "reactionSpent",
   "core.readTurn": "readTurn",
   "core.recklessChanges": "recklessChanges",
