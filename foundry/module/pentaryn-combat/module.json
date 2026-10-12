@@ -1,12 +1,12 @@
 {
   "id": "pentaryn-combat",
   "title": "Pentaryn Combat",
-  "description": "Melee on the Argon Combat HUD with fewer clicks and nothing taken away. Full Attack runs every swing the Attack action gives (Extra Attack, Two/Three Extra Attacks, Nick, an NPC's or Wild Shape form's Multiattack), each through dnd5e's own roll dialog, with a pause bar to retarget, switch weapon or stop. The Action pips count swings (2 → 1 → 0), also for weapons clicked by hand. Off-hand, Nick, Flurry of Blows, Martial Arts and Hew appear as one-click follow-ups only when the character qualifies. Sneak Attack (and Frenzy, Colossus Slayer, Divine Strike) is offered on the attack card once per turn, with the crit carried and the damage type set; each player can switch it to Auto. Off-hand attacks spend the Bonus pip and no longer stick, Two-Weapon Fighting and Great Weapon Master damage is added, and empty weapon sets are filled once. Every change is a setting. Exposes game.pentaryn.combat.",
-  "version": "0.2.5",
-  "compatibility": { "minimum": "14", "verified": "14" },
+  "description": "Melee on the Argon Combat HUD with fewer clicks and nothing taken away. Full Attack runs every swing the Attack action gives (Extra Attack, Two/Three Extra Attacks, Nick, an NPC's or Wild Shape form's Multiattack), each through dnd5e's own roll dialog, with a pause bar to retarget, switch weapon or stop. The Action pips count swings (2 → 1 → 0), also for weapons clicked by hand. Off-hand, Nick, Flurry of Blows, Martial Arts and Hew appear as one-click follow-ups only when the character qualifies. Sneak Attack (and Frenzy, Colossus Slayer, Divine Strike) is offered on the attack card once per turn, with the crit carried and the damage type set; each player can switch it to Auto. Off-hand attacks spend the Bonus pip and no longer stick, Two-Weapon Fighting and Great Weapon Master damage is added, and empty weapon sets are filled once. On the turn: Dash, Disengage, Dodge, Hide, Ready and Shove spend the Action; the Reaction slot is an Opportunity Attack; Action and Reaction spells grey their pips; after Quickened Spell the next spell spends the Bonus pip; the HUD follows your creature at turn start, and goes back to your caster when an area handle or summon you had selected is deleted. Every change is a setting. Exposes game.pentaryn.combat.",
+  "version": "0.3.0",
+  "compatibility": { "minimum": "14", "verified": "14.369" },
   "authors": [{ "name": "Joseph Atkinson" }],
   "esmodules": ["combat.mjs", "hud.mjs"],
-  "styles": ["styles/combat.css"],
+  "styles": ["styles/combat.css", "lib/argon-tooltip.css"],
   "languages": [{ "lang": "en", "name": "English", "path": "lang/en.json" }],
   "relationships": {
     "systems": [{ "id": "dnd5e", "type": "system", "compatibility": { "minimum": "6.0", "verified": "6.0.6" } }],
@@ -19,5 +19,20 @@
   },
   "socket": false,
   "protected": false,
-  "flags": { "pentaryn": { "flagScope": "combat", "generation": 14 } }
+  "flags": {
+    "pentaryn": {
+      "tier": "full",
+      "namespace": "combat",
+      "flagScope": "pentaryn-combat",
+      "cssPrefix": "pc-",
+      "generation": 14,
+      "afterSync": [
+        "First install: restart Foundry (module.json is read at startup), enable",
+        "'Pentaryn Combat', then reload the ONE GM tab and any player tabs.",
+        "Every behaviour is a world setting (default on) — README → Settings.",
+        "  game.pentaryn.combat.plan(actor)      // the swings Full Attack would make",
+        "  game.pentaryn.combat.report()         // riders per PC and the turn flags"
+      ]
+    }
+  }
 }

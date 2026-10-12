@@ -299,13 +299,7 @@ MODULES = {
         # node-test: combat-core.mjs (attack counts, the Full Attack state machine, the turn flag,
         # follow-up and Sneak Attack eligibility, Multiattack parsing, weapon-set seeds) is pure.
         check=(*_STATIC, "node-test", *_BLUEPRINT),
-        after_sync=(
-            "First install: restart Foundry (module.json is read at startup), enable",
-            "'Pentaryn Combat', then reload the ONE GM tab and any player tabs.",
-            "Every behaviour is a world setting (default on) — README → Settings.",
-            "  game.pentaryn.combat.plan(actor)      // the swings Full Attack would make",
-            "  game.pentaryn.combat.report()         // riders per PC and the turn flags",
-        ),
+        # after_sync comes from module.json flags.pentaryn.afterSync (Wave 7 batch).
     ),
     "pings": ModuleSpec(
         "pentaryn-pings",

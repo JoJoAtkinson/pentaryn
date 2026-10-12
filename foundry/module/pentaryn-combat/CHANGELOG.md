@@ -1,9 +1,13 @@
 # Changelog — Pentaryn Combat (`pentaryn-combat`)
 
-## Unreleased — 2026-10-11 (migrated to the addon blueprint, wave 4)
+## 0.3.0 — 2026-10-12 (migrated to the addon blueprint, wave 4; released by the Wave 7 restart batch)
 
-`module.json` still says 0.2.5; the version bump to 0.3.0 (and `core.VERSION` with it) lands with the
-Wave 7 restart batch. The table behaviour is unchanged except the declared items (each its own commit;
+The Wave 7 batch bumped `module.json` and `core.VERSION` to 0.3.0 together and added the
+`flags.pentaryn` blueprint keys (`flagScope` `combat` → `pentaryn-combat`, manifest-only),
+`verified: "14.369"` and the turn-flow sentence in the description (combat-riders-15). W4-C6: the kit's
+`lib/argon-tooltip.css` is listed in `styles`; `styles/combat.css` no longer `@import`s it (same rules).
+
+The table behaviour is unchanged except the declared items (each its own commit;
 live checks in the migration guide §5).
 
 - **Blueprint layout.** Kit 1.0.2 vendored (full tier + election, patch, perf, argon-kit, argon-tooltip).
