@@ -34,9 +34,10 @@ name. Every marker token is born hidden, sightless and size-locked. Art: `assets
   A fresh marker closed empty is deleted; one emptied by hand stays, red-tinted. A marker whose
   text failed to save is never deleted (it stays, with the save-failed toast).
 - Reopen: **double-click** a marker, the **Token HUD** bubble button, Shift+P, or `open(id)`.
-- **Size chips** swap the marker for another size centred on the same point, text carried (no swap
-  when the text failed to save). One swap at a time: the chips grey out while it runs, a second
-  click (a double click) is ignored, and closing or Delete waits for it to finish.
+- **Size chips** swap the marker for another size centred on the same point, text carried — keys
+  typed while the swap runs included (no swap when the text failed to save). One swap at a time:
+  the chips grey out while it runs, a second click (a double click) is ignored, and closing or
+  Delete waits for it to finish.
 - **Side panel:** what this marker can see (unlimited darkvision, doors as they stand, light
   ignored), nearest first; *Out of sight (within 60 ft)* with `door` / `wall` tags; anything blocked
   only by a door named above the list. Click pans, ⌘-click opens the sheet or box. It redraws when a

@@ -74,6 +74,7 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
   #fresh = false;
   #opened = "";
   #saved = "";
+  #pendingText = null;   // the textarea a size swap re-renders with, read once by _prepareContext (EC-4)
   #timer = null;
   #saving = Promise.resolve();
   #closing = false;
@@ -172,8 +173,10 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
   async _prepareContext() {
     const tok = this.token;
     const size = tok ? markerSizeOfToken(tok) : "mid";
+    const text = this.#pendingText ?? this.#saved;
+    this.#pendingText = null;
     return {
-      text: this.#saved,
+      text,
       size,
       footprint: footprintLabel(size, tok?.parent?.grid?.distance ?? 5),
       sizes: SIZE_KEYS.map(k => ({ key: k, active: k === size, title: footprintLabel(k, tok?.parent?.grid?.distance ?? 5) })),
@@ -408,7 +411,8 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
     const data = await tokenDataFrom(actor, scene, { at: { x: cx - w / 2, y: cy - w / 2 },
       x: Math.round(cx - w / 2), y: Math.round(cy - w / 2), extra: { elevation: tok.elevation, level: tok.level } });
     if (this.#lost(tok)) return;   // the marker went while its data was built: no orphan new marker (R4)
-    foundry.utils.setProperty(data, `flags.${MODULE}.prompt`, this.#saved);
+    // the text as it stands now, keys typed during the swap included (EC-4)
+    foundry.utils.setProperty(data, `flags.${MODULE}.prompt`, normalisePrompt(this.#currentText()));
     foundry.utils.setProperty(data, `flags.${MODULE}.updatedAt`, Date.now());
     // a replace still holding the old id can say "resized (now marker X)" instead of a bare MARKER_GONE
     foundry.utils.setProperty(data, `flags.${MODULE}.swappedFrom`, tok.id);
@@ -417,9 +421,14 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
     if (this.#lost(tok)) return;   // the marker went mid-create: the new one stays, no second delete (R4)
     this.#tokenId = made.id;   // before the delete: its deleteToken hook must not close this dialog
     await tok.delete();
+    await this.#saving;   // an autosave from mid-swap typing lands first, then #saved is what the new marker holds
+    this.#saved = made.flags?.[MODULE]?.prompt ?? "";
     if (this.#closing) return;
+    // keys typed during the swap survive the re-render (EC-4), and autosave onto the new marker
+    this.#pendingText = this.#currentText();
     // the frame (and its title) is only drawn on first render unless the title is passed again
     await this.render({ force: true, window: { title: this.title } });
+    this.#schedule();
   }
 
   static async #onDelete() {

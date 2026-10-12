@@ -51,6 +51,10 @@ cssPrefix `pp-`, afterSync). Each **[declared]** change goes to the live check.
   tab, a replace) while a size chip is swapping it no longer gets a new marker made; if the new
   marker was already created, it stays in place with the text, and the gone marker is not deleted a
   second time.
+- **[declared] Keys typed during a size swap are kept** (EC-4): the new marker is made with the
+  text as it stands at the end of the swap, the box redraws with exactly what was typed, and an
+  autosave follows so anything typed mid-swap lands on the new marker (it used to snap back to the
+  text from when the chip was clicked).
 - **[declared] Two gathers at once keep both manifests**: the ring writes through one
   `serialStore` (a parallel gather no longer makes the other's call id `CALL_UNKNOWN`).
 - **[declared] `ensureMarkers` no longer duplicates across two GM tabs** (§5.9.1): the folder and
