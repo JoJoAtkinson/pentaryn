@@ -201,8 +201,10 @@ export async function endOnDruid(host, ids) {
     if (effect.statuses?.has("concentrating") && typeof host.endConcentration === "function") await host.endConcentration(effect);
     else plain.push(id);
   }
-  // One round trip for the rest (§5.9.1, C59); deleteActiveEffect still fires per effect.
-  if (plain.length) await host.deleteEmbeddedDocuments("ActiveEffect", plain);
+  // One round trip for the rest (§5.9.1, C59); ending Concentration may already have deleted its
+  // dependents (Bless...) and Foundry's batch throws on a missing id, so batch only those still here.
+  const live = plain.filter(id => host.effects.has(id));
+  if (live.length) await host.deleteEmbeddedDocuments("ActiveEffect", live);
 }
 
 /**

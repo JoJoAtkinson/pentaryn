@@ -153,6 +153,32 @@ test("C59 [declared, perf] revert: the druid's effects that ended in the form ar
   assert.equal(talo.effects.get("guidanceEff00001"), undefined);
 });
 
+test("C59 review: a dependent Concentration's end already deleted (listed before it) is left out of the batch, and revert still resolves", async () => {
+  const { talo } = fresh({ effects: [{ id: IDS.bless, name: "Bless" }, { id: IDS.conc, name: "Concentrating", statuses: ["concentrating"] },
+    { id: "guidanceEff00001", name: "Guidance" }] });
+  // dnd5e on the active GM: ending Concentration deletes its dependents, and the delete waits for it
+  talo.endConcentration = async effect => {
+    F.calls.push({ op: "endConcentration", actor: talo.id, effect: effect?.id ?? null });
+    await effect?.delete();
+    await talo.effects.get(IDS.bless)?.delete();
+  };
+  // Foundry's batch delete looks each id up strictly and throws on one that is gone
+  const loose = talo.deleteEmbeddedDocuments;
+  talo.deleteEmbeddedDocuments = async (type, ids, options) => {
+    const coll = type === "Item" ? talo.items : talo.effects;
+    for (const id of ids) if (!coll.has(id)) throw new Error(`${type} "${id}" does not exist`);
+    return loose.call(talo, type, ids, options);
+  };
+  const wolf = await T.shift(talo, "p1");
+  for (const id of [IDS.bless, IDS.conc, "guidanceEff00001"]) wolf.effects.delete(id);   // ended in the form (no hooks)
+  F.calls.length = 0;
+  const back = await T.revert(wolf, { quiet: true });
+  assert.equal(back, talo, "revert resolves to the druid");
+  const ops = F.calls.filter(c => ["endConcentration", "deleteEmbedded"].includes(c.op) && c.actor === IDS.talo);
+  assert.deepEqual(ops.map(c => [c.op, c.ids ?? c.effect]), [["endConcentration", IDS.conc], ["deleteEmbedded", ["guidanceEff00001"]]]);
+  for (const id of [IDS.bless, IDS.conc, "guidanceEff00001"]) assert.equal(talo.effects.get(id), undefined, id);
+});
+
 /* ── §5.8 the senses light flag is deleted with _del, never unsetFlag ─────── */
 
 test("§5.8 [declared] Starry Form ending removes flags.pentaryn-senses.light with update(_del), never unsetFlag on the foreign scope", async () => {
