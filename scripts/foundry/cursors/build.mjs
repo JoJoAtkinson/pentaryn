@@ -12,9 +12,11 @@
  *
  *   cd "$(mktemp -d)" && npm i @resvg/resvg-js@2.6.2 && node <repo>/scripts/foundry/cursors/build.mjs
  *
- * `--check-sources` needs no @resvg: it only proves every KEYS[key].src exists under src/ and every
- * KEYS[key].extreme is one the build knows (exit 1 naming each bad key), and is what
- * scripts/tests/test_cursors_build.py runs.
+ * `--check-sources` needs no @resvg: it runs checkKeys(KEYS, SRC), which proves every KEYS[key].src
+ * exists under src/, every KEYS[key].extreme is in EXTREMES and every KEYS[key].hotspot is two
+ * integers in 0..31 (exit 1 naming each problem); scripts/tests/test_cursors_build.py runs it. The
+ * full build runs the same check first. Importing this file runs nothing: it exports EXTREMES,
+ * SCORES and checkKeys (pinned by the module's test/build-check.test.mjs).
  *
  * Steps per key:
  *   1. strip the game-icons black background square, keep every glyph path;
@@ -27,7 +29,7 @@
  * Steps 1–4 run for every key first; a key that fails or throws is named (`✗ <key>: <message>`)
  * and the run exits 1 having written nothing, so assets/cursors/ is never left half rebuilt.
  */
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { existsSync, readFileSync, realpathSync, writeFileSync, mkdirSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -38,17 +40,27 @@ const MODULE_ROOT = join(REPO, "foundry", "module", "pentaryn-cursors");
 const SRC = join(HERE, "src");
 const OUT = join(MODULE_ROOT, "assets", "cursors");
 const { KEYS } = await import(pathToFileURL(join(MODULE_ROOT, "cursors-core.mjs")).href);
-const EXTREMES = ["centre", "up-right", "down-left", "bottom"];
 
-if (process.argv.includes("--check-sources")) {
+const SIZE = 32, BOX = 26, OUTLINE = 2, HALO = 1, DARK = "#101216", ZOOM = 10;
+const BACKGROUND = /^M0 0h512v512H0z$/;
+
+/** Every `extreme` a key may name: "centre" (the bbox centre) or a key of SCORES. */
+export const EXTREMES = ["centre", "up-right", "down-left", "bottom"];
+/** Every EXTREMES entry but "centre": the hotspot is the glyph pixel maximising this score. */
+export const SCORES = { "up-right": (x, y) => x - y, "down-left": (x, y) => y - x, bottom: (x, y) => y };
+
+/** Problems with a KEYS table, as `<key>: <what>` lines (empty when all is well); pure but for
+ *  existsSync on each source under srcDir. */
+export function checkKeys(keys, srcDir) {
   const bad = [];
-  for (const [key, k] of Object.entries(KEYS)) {
-    if (!existsSync(join(SRC, k.src))) bad.push(`${key}: source ${k.src} not in ${SRC}`);
+  for (const [key, k] of Object.entries(keys)) {
+    if (!existsSync(join(srcDir, k.src))) bad.push(`${key}: source ${k.src} not in ${srcDir}`);
     if (!EXTREMES.includes(k.extreme)) bad.push(`${key}: unknown extreme ${JSON.stringify(k.extreme)} (one of ${EXTREMES.join(", ")})`);
+    const h = k.hotspot;
+    if (!(Array.isArray(h) && h.length === 2 && h.every(v => Number.isInteger(v) && v >= 0 && v < SIZE)))
+      bad.push(`${key}: hotspot ${JSON.stringify(h)} is not two integers in 0..${SIZE - 1}`);
   }
-  for (const line of bad) console.error(`  ✗ ${line}`);
-  if (!bad.length) console.log(`  ✓ all ${Object.keys(KEYS).length} cursor sources present in ${SRC}, every extreme known`);
-  process.exit(bad.length ? 1 : 0);
+  return bad;
 }
 
 function loadResvg() {
@@ -59,10 +71,7 @@ function loadResvg() {
     "  cd \"$(mktemp -d)\" && npm i @resvg/resvg-js@2.6.2 && node " + fileURLToPath(import.meta.url));
   process.exit(2);
 }
-const Resvg = loadResvg();
-
-const SIZE = 32, BOX = 26, OUTLINE = 2, HALO = 1, DARK = "#101216", ZOOM = 10;
-const BACKGROUND = /^M0 0h512v512H0z$/;
+let Resvg;
 
 /** Every glyph path `d` in a source SVG, minus the game-icons background square. */
 function glyphPaths(svg) {
@@ -111,8 +120,8 @@ function measureHotspot(d, f, extreme) {
     `<path transform="translate(${f.tx} ${f.ty}) scale(${f.s})" d="${d}"/></svg>`;
   const img = new Resvg(svg, { fitTo: { mode: "width", value: SIZE * ZOOM } }).render();
   const { width, height, pixels } = img;
-  const score = { "up-right": (x, y) => x - y, "down-left": (x, y) => y - x, bottom: (x, y) => y }[extreme];
-  if (!score) throw new Error(`unknown extreme ${extreme}`);
+  if (!EXTREMES.includes(extreme)) throw new Error(`unknown extreme ${extreme}`);
+  const score = SCORES[extreme];
   const pts = [];
   let best = -Infinity;
   for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
@@ -131,38 +140,57 @@ function png(svg, px) {
   return new Resvg(svg, { fitTo: { mode: "width", value: px }, background: "rgba(0,0,0,0)" }).render().asPng();
 }
 
-const built = [];
-let failed = false;
-for (const [key, k] of Object.entries(KEYS)) {
-  try {
-    const raw = readFileSync(join(SRC, k.src), "utf8");
-    const d = glyphPaths(raw);
-    const f = fit(d, viewBoxOf(raw));
-    const hot = measureHotspot(d, f, k.extreme);
-    const b = f.bbox;
-    console.log(`${key.padEnd(7)} bbox ${n(b.x0)},${n(b.y0)}–${n(b.x1)},${n(b.y1)}  hotspot ${hot.join(" ")} (KEYS ${k.hotspot.join(" ")})`);
-    if (hot[0] !== k.hotspot[0] || hot[1] !== k.hotspot[1]) {
-      console.error(`  ✗ ${key}: measured hotspot ${hot.join(" ")} ≠ KEYS.${key}.hotspot — update cursors-core.mjs`);
+/** Steps 1–5 for every key in KEYS; writes nothing unless every key passes. */
+function build(resvg) {
+  Resvg = resvg;
+  const built = [];
+  let failed = false;
+  for (const [key, k] of Object.entries(KEYS)) {
+    try {
+      const raw = readFileSync(join(SRC, k.src), "utf8");
+      const d = glyphPaths(raw);
+      const f = fit(d, viewBoxOf(raw));
+      const hot = measureHotspot(d, f, k.extreme);
+      const b = f.bbox;
+      console.log(`${key.padEnd(7)} bbox ${n(b.x0)},${n(b.y0)}–${n(b.x1)},${n(b.y1)}  hotspot ${hot.join(" ")} (KEYS ${k.hotspot.join(" ")})`);
+      if (hot[0] !== k.hotspot[0] || hot[1] !== k.hotspot[1]) {
+        console.error(`  ✗ ${key}: measured hotspot ${hot.join(" ")} ≠ KEYS.${key}.hotspot — update cursors-core.mjs`);
+        failed = true;
+      } else built.push([key, k, d, f]);
+    } catch (e) {
+      console.error(`  ✗ ${key}: ${e.message}`);
       failed = true;
-    } else built.push([key, k, d, f]);
-  } catch (e) {
-    console.error(`  ✗ ${key}: ${e.message}`);
-    failed = true;
+    }
   }
-}
-if (failed) {
-  console.error(`  nothing written to ${OUT}`);
-  process.exit(1);
+  if (failed) {
+    console.error(`  nothing written to ${OUT}`);
+    process.exit(1);
+  }
+
+  mkdirSync(OUT, { recursive: true });
+  for (const [key, k, d, f] of built) {
+    for (const [suffix, fill, outline] of [["", k.colour, DARK], ["-pointer", "#FFFFFF", k.colour]]) {
+      const svg = cursorSvg(d, f, fill, outline);
+      writeFileSync(join(OUT, `${key}${suffix}.svg`), svg);
+      writeFileSync(join(OUT, `${key}${suffix}.png`), png(svg, SIZE));
+      writeFileSync(join(OUT, `${key}${suffix}@2x.png`), png(svg, SIZE * 2));
+    }
+  }
+
+  console.log(`wrote ${Object.keys(KEYS).length * 6} files (svg + png 1x/2x, normal and pointer)`);
 }
 
-mkdirSync(OUT, { recursive: true });
-for (const [key, k, d, f] of built) {
-  for (const [suffix, fill, outline] of [["", k.colour, DARK], ["-pointer", "#FFFFFF", k.colour]]) {
-    const svg = cursorSvg(d, f, fill, outline);
-    writeFileSync(join(OUT, `${key}${suffix}.svg`), svg);
-    writeFileSync(join(OUT, `${key}${suffix}.png`), png(svg, SIZE));
-    writeFileSync(join(OUT, `${key}${suffix}@2x.png`), png(svg, SIZE * 2));
+const MAIN = !!process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href;
+if (MAIN) {
+  const bad = checkKeys(KEYS, SRC);
+  for (const line of bad) console.error(`  ✗ ${line}`);
+  if (process.argv.includes("--check-sources")) {
+    if (!bad.length) console.log(`  ✓ all ${Object.keys(KEYS).length} cursor sources present in ${SRC}, every extreme and hotspot valid`);
+    process.exit(bad.length ? 1 : 0);
   }
+  if (bad.length) {
+    console.error(`  nothing written to ${OUT}`);
+    process.exit(1);
+  }
+  build(loadResvg());
 }
-
-console.log(`wrote ${Object.keys(KEYS).length * 6} files (svg + png 1x/2x, normal and pointer)`);

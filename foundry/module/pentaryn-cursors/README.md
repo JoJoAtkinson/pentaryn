@@ -143,7 +143,7 @@ hint why. A new key also has to change:
 | `lib/` | vendored kit (`lib/kit.lock.json`) |
 | `assets/cursors/` | built `<key>.png`, `@2x`, `-pointer`, `-pointer@2x`, and the outlined `.svg` they came from. **Committed; do not hand-edit.** |
 | `scripts/foundry/cursors/src/` (repo, not shipped) | unmodified icon sources and credited alternates (`CREDITS.md`) |
-| `scripts/foundry/cursors/build.mjs` (repo, not shipped) | rebuild after changing a glyph or colour in `KEYS`: `cd "$(mktemp -d)" && npm i @resvg/resvg-js@2.6.2 && node <repo>/scripts/foundry/cursors/build.mjs`. Fits each glyph to 26×26, adds the 2 px dark outline and 1 px white halo, measures the hotspot. `--check-sources` (no resvg) proves every `KEYS` source exists and every `extreme` is known; `scripts/tests/test_cursors_build.py` runs it. |
+| `scripts/foundry/cursors/build.mjs` (repo, not shipped) | rebuild after changing a glyph or colour in `KEYS`: `cd "$(mktemp -d)" && npm i @resvg/resvg-js@2.6.2 && node <repo>/scripts/foundry/cursors/build.mjs`. Fits each glyph to 26×26, adds the 2 px dark outline and 1 px white halo, measures the hotspot. `--check-sources` (no resvg) proves every `KEYS` source exists, every `extreme` is one of `EXTREMES` and every hotspot is two integers in 0..31 (the full build runs the same `checkKeys` first); `scripts/tests/test_cursors_build.py` runs it and `test/build-check.test.mjs` pins `checkKeys`. |
 | `test/` | node:test suites, goldens, fixtures, vendored test kit |
 
 ## Tests

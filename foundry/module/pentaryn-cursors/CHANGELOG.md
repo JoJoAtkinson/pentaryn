@@ -21,6 +21,11 @@
   exits 1 with `assets/cursors/` untouched. The centre hotspot floors with the same `+ 0.01` as the
   other extremes (cursors-edge-5), and `--check-sources` rejects an unknown `extreme` (EXT-4).
   Today's assets rebuild byte-identical.
+- [declared] `scripts/foundry/cursors/build.mjs` validates `KEYS` without a resvg build
+  (cursors-EXT-4): one `EXTREMES` list drives both the hotspot score table and a pure
+  `checkKeys(KEYS, srcDir)`, which names a missing source, an `extreme` not in `EXTREMES`, or a
+  hotspot that is not two integers in 0..31. `--check-sources` prints them and exits 1; the full
+  build runs the same check before loading resvg. Importing `build.mjs` no longer runs the build.
 
 ## Unreleased — 2026-10-11 (addon blueprint, wave 1)
 

@@ -1,7 +1,8 @@
 """The cursor build tool and its icon sources, outside the module (cursors guide step 7).
 
-`build.mjs --check-sources` proves every KEYS source exists and every extreme is known without
-@resvg; a copy of build.mjs over a stub @resvg pins write-nothing-on-failure; the credits check is
+`build.mjs --check-sources` proves every KEYS source exists, every extreme is known and every
+hotspot is two integers in 0..31 without @resvg (checkKeys itself is pinned by the module's
+test/build-check.test.mjs); a copy of build.mjs over a stub @resvg pins write-nothing-on-failure; the credits check is
 finding -35's recipe: every credited alternate (`src/alt-*.svg`) is named in `src/CREDITS.md`.
 """
 
