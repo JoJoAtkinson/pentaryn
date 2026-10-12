@@ -40,6 +40,8 @@ cssPrefix `pp-`, afterSync). Each **[declared]** change goes to the live check.
   `BAD_SPEC: patch.disposition: hostile|neutral|friendly|secret`, checked after every other patch
   field so a second bad field keeps its own message. The real run now refuses it at plan time, so
   nothing is imported, copied or stamped first (no cleanup line, no `discarded` entry).
+- **[declared] `markerActorIds` is retired from `markers-adapter.mjs`** (M16): nothing called it;
+  `markerActor(size)` still finds each of the six, and `api.status()` lists them through it.
 - **[declared] The type-ahead orphan toast is localised on every path** (M12): the adapter's
   no-sink fallback reads `PENTARYN_PROMPTS.typeahead.orphan` through `_loc`, as the entry's sink
   does; English is only the fallback where `_loc` is undefined (node). No change in English.
