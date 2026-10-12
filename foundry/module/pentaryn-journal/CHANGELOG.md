@@ -8,6 +8,10 @@
 - **[declared]** `folderName` has label keys (`PENTARYN_JOURNAL.settings.folderName.{name,hint}`,
   W2-J1); it stays hidden (`config: false`). The relay stays hand-wired (W2-J2: the kit does not
   forward the sender yet).
+- **[declared] bar-stuck:** a throw while the bar redraws itself to "Adding…" no longer leaves the
+  bar stuck there: the redraw is inside the click's try, so the player gets the "failed" warning and
+  the button comes back. A throwing bar click (including "open") is logged as a warning, not an
+  unhandled rejection.
 
 ## Unreleased (blueprint migration, wave 2)
 

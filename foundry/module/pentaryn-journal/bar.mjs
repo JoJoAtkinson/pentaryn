@@ -208,8 +208,8 @@ async function onBarClick(app, ev) {
   }
   if (busy.has(app)) return;
   busy.add(app);
-  decorate(app);
   try {
+    decorate(app);   // inside the try: a throw here must not leave the bar on "Adding…" (bar-stuck)
     const result = await save(target, { near: app });
     // The copy is in the journal now; the window it came from has done its job.
     if (result && app !== personalSheet()) await app.close();
@@ -243,7 +243,7 @@ function decorate(app) {
     bar.className = "pj-bar";
     const content = root.querySelector(":scope > .window-content");
     if (content) content.after(bar); else root.append(bar);
-    bar.addEventListener("click", ev => onBarClick(app, ev));
+    bar.addEventListener("click", ev => onBarClick(app, ev).catch(err => ctx.log.warn("bar click failed", err)));
   }
   root.classList.add("pentaryn-journal-readable");
   fillBar(app, bar, target);
