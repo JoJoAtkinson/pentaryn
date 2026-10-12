@@ -1403,7 +1403,16 @@ def _rebuilder(rebuilt: list[Path], dest_dir: Path | None = None):
     """`rebuild(name)`: the bundle `name` built again from the live folder when that
     folder's fingerprint still matches it (the inventory re-hashed, no cache, once per
     rebuilder), else None. Each tar built is appended to `rebuilt` for the caller to
-    delete."""
+    delete.
+
+    Only a stopped tree is tarred (review MC2): the upload half runs in the background
+    uploader, which may still be going when vtt-up starts Foundry — and Foundry rewrites
+    every pack's LevelDB housekeeping at launch, so a live tar can hold a CURRENT naming a
+    MANIFEST it lacks (an unopenable pack under a content-addressed name nothing ever
+    re-uploads). With the server running this raises StorageError: the job stays queued
+    and a later run with Foundry stopped rebuilds it. An OSError from the hash or the tar
+    (a file replaced mid-walk: Foundry's launch, a module sync swapping the folder) is a
+    StorageError too, never a bare exception that escapes _run_job."""
     live: dict | None = None
 
     def rebuild(n: str) -> Path | None:
@@ -1411,12 +1420,21 @@ def _rebuilder(rebuilt: list[Path], dest_dir: Path | None = None):
         ref = bundles.parse_bundle(n)
         if ref is None:
             return None
-        if live is None:
-            live = bundles.local_inventory(cache=False, warn=lambda _m: None)
-        loc = live.get(ref.key)
-        if loc is None or loc.name != n:
-            return None
-        src = bundles.build(loc, dest_dir or (tmp_dir() / bundles.STAGING))
+        if server_running():
+            raise StorageError(
+                f"bundle {n} must be rebuilt from its module folder, and Foundry is "
+                "running — a live folder is never tarred; a backup with Foundry stopped "
+                "rebuilds it", verb="copyto")
+        try:
+            if live is None:
+                live = bundles.local_inventory(cache=False, warn=lambda _m: None)
+            loc = live.get(ref.key)
+            if loc is None or loc.name != n:
+                return None
+            src = bundles.build(loc, dest_dir or (tmp_dir() / bundles.STAGING))
+        except OSError as exc:
+            raise StorageError(f"rebuilding bundle {n} from its module folder failed: "
+                               f"{exc} — the next backup retries it", verb="copyto") from exc
         rebuilt.append(src)
         return src
     return rebuild

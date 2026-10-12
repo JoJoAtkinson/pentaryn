@@ -96,14 +96,6 @@ def _reused_bundle_swept_while_queued(two_hosts, data):
     return j1, x
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "MC2: the uploader (_verify_bundles / upload_missing → _rebuilder → bundles.build) "
-    "tars a module folder from the live tree with Foundry running. vtt-up's pre-launch "
-    "backup hands a crashed or slept upload to a background uploader and then starts "
-    "Foundry, which rewrites every pack's LevelDB housekeeping at launch: the bundle can "
-    "capture CURRENT → a MANIFEST it lacks (an unopenable pack, under a content-addressed "
-    "name nothing ever re-uploads) — the build half exists precisely so that only a "
-    "stopped tree is tarred"))
 def test_mc2_the_uploader_never_tars_a_live_module_folder_while_foundry_runs(
         two_hosts, spawned, monkeypatch):
     with two_hosts.use("mac") as data:
@@ -123,13 +115,6 @@ def test_mc2_the_uploader_never_tars_a_live_module_folder_while_foundry_runs(
         assert [n for n, live in built if live] == []
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "MC2b: an OSError from a rebuild in the upload half (a pack file replaced between the "
-    "tar's walk and its add — Foundry's launch, or foundry-<m>-sync swapping the folder, "
-    "neither holds a queue lock) escapes _run_job (it catches only _Incomplete, "
-    "StorageError, SystemExit): upload_pending dies with a traceback and the status file "
-    "is left at 'uploading' with no live process — §5 row 5 / review M1: a rebuild is a "
-    "StorageError, never a bare FileNotFoundError"))
 def test_mc2b_a_rebuild_racing_a_pack_rewrite_is_a_handled_failure_never_a_crash(
         two_hosts, spawned, monkeypatch):
     with two_hosts.use("mac") as data:
