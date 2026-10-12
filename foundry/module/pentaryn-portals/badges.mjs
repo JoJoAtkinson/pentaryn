@@ -221,7 +221,7 @@ export function bindBoard() {
     const move = !!(b && editing.has(b.region.uuid));
     if (move) {
       if (board.style.cursor !== "move") { priorCursor = board.style.cursor; board.style.cursor = "move"; }
-    } else if (!move && priorCursor !== null) {
+    } else if (priorCursor !== null) {
       if (board.style.cursor === "move") board.style.cursor = priorCursor;
       priorCursor = null;
     }
