@@ -24,6 +24,9 @@
   `log` row has an onChange: an empty log (a clear from either tab) drops the unwritten pings.
   Readers now always trail a new ping until its write (the SF3 "no lag before the first flush" and
   "max+1 on a trim" cases are gone); a `clear()` with a flush due is one write, not two.
+- [declared] pings-rob-1 (fixed by the edge-1 design, now pinned): a hot re-import — a second `ready`
+  without `uninstall()` — keeps this tab's pings not yet written and their flush; they are merged
+  into the stored log instead of being dropped and the old log rewritten over them.
 
 - Rebuilt on the blueprint (tier small, kit `settings, api, patch, election`): pure core
   `pings-core.mjs`, `settings.mjs`, `api-manifest.mjs`, the `capture.mjs` feature; the

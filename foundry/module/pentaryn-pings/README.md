@@ -125,6 +125,8 @@ what that tab had not yet written — a `clear()` in one tab stays cleared.
 - Canvas ≠ image space: subtract the padding offset (`image`) for a pixel in the background image.
 - A ping is recorded even where core draws nothing (a scene nobody is viewing).
 - `uninstall()` drops pings not yet written (≤ 250 ms).
+- A hot re-import keeps pings not yet written: a second `ready` without `uninstall()` flushes what
+  the first load captured, merged into the stored log.
 - `lib/` and `test/kit/` are vendored copies: edit `foundry/lib/`, then `vendor.py sync`.
 
 ## Files

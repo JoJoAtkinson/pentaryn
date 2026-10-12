@@ -168,7 +168,11 @@ export function uninstall() {
   last = null;
 }
 
-/** ready, GM clients: hear log changes, take the newest stored record, wrap handlePing, listen on userActivity. */
+/**
+ * ready, GM clients: hear log changes, take the newest stored record, wrap handlePing, listen on
+ * userActivity. A second ready without uninstall() (pings-rob-1) keeps `pending` and its flush timer:
+ * the store is re-read only through onChange and the serialStore write, never copied over pending.
+ */
 export function start() {
   onLogChange(onStoreChange);
   last = pending.at(-1) ?? readLog({ log }).at(-1) ?? null;
