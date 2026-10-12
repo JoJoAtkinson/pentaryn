@@ -12,7 +12,7 @@
  * also deletes with `replacements`, and does not drag anything along.
  */
 
-import { MODULE, FLAG_SCOPE, crowded, followersOf, isAoeHandle, tokenBox } from "./portals-core.mjs";
+import { MODULE, FLAG_SCOPE, crowded, followersOf, isAoeHandle, tokenBox, tokenCentre } from "./portals-core.mjs";
 import { carryTo, destinationsOf, docOf, gmUserIds, landingPlaces, recordOf } from "./scene-adapter.mjs";
 import { setting } from "./settings.mjs";
 import { PARTY_ROWS } from "./api-manifest.mjs";
@@ -43,7 +43,7 @@ function stepOff(arrived) {
   // An aoe area handle is invisible scaffolding, flagged on its token or only on its actor (-43).
   const others = dest.tokens.filter(t => t.id !== arrived.id && !t.hidden && !isAoeHandle(t.flags, t.actor?.flags)).map(box);
   if (!crowded(box(arrived), others)) return null;
-  const cx = arrived.x + arrived.width * g / 2, cy = arrived.y + arrived.height * g / 2;
+  const { x: cx, y: cy } = tokenCentre(arrived, g);
   const [place] = landingPlaces(dest, [arrived], cx, cy);
   if (!place || (place.x === arrived.x && place.y === arrived.y)) return null;
   return place;
@@ -98,8 +98,7 @@ export async function bringFollowers(scene, deleted, replacements) {
     const followers = followersOf(group, remaining.filter(x => scene.tokens.has(x.id))).map(x => x.doc);
     if (!followers.length) continue;
     const dest = arrived.parent;
-    const g = dest.grid.size;
-    const cx = arrived.x + arrived.width * g / 2, cy = arrived.y + arrived.height * g / 2;
+    const { x: cx, y: cy } = tokenCentre(arrived, dest.grid.size);
     try {
       await carryTo(followers, dest, cx, cy);
     } catch (err) {

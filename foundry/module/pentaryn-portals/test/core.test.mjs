@@ -249,3 +249,18 @@ test("M8: flagPath calls use FLAG_SCOPE; core no longer exports behaviorUuidFrom
   assert.ok(calls >= 5, `found ${calls} flagPath calls`);
   assert.equal("behaviorUuidFromDialogId" in core, false);
 });
+
+// [declared] EXT-7: box- and token-centre arithmetic lives once in portals-core (boxCentre, tokenCentre);
+// scene-adapter and party call them instead of each copying `x + width / 2`. Landing goldens unchanged.
+test("EXT-7: boxCentre / tokenCentre in core; scene-adapter and party no longer copy the centre arithmetic", async () => {
+  const { readFileSync } = await import("node:fs");
+  assert.equal(typeof core.boxCentre, "function");
+  assert.equal(typeof core.tokenCentre, "function");
+  assert.deepEqual(core.boxCentre({ x: 100, y: 200, width: 300, height: 50 }), { x: 250, y: 225 });
+  assert.deepEqual(core.tokenCentre({ x: 100, y: 200, width: 2, height: 1 }, 100), { x: 200, y: 250 });
+  assert.deepEqual(core.tokenCentre({ x: 0, y: 0, width: 0.5, height: 0.5 }, 140), { x: 35, y: 35 });
+  for (const file of ["scene-adapter.mjs", "party.mjs", "portals-core.mjs"]) {
+    const src = readFileSync(new URL(file, ROOT), "utf8").replace(/export (const|function) (boxCentre|tokenCentre)[^\n]*\n/g, "");
+    assert.doesNotMatch(src, /\.width\s*(\*\s*[\w$.]+\s*)?\/\s*2/, `${file} still computes a centre by hand`);
+  }
+});

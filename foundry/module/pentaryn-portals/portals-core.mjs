@@ -388,6 +388,12 @@ export const blockingWallCoords = walls => walls.filter(w => w.move > 0 && !(w.d
 /** A token's box in pixels on a grid of `g`. */
 export const tokenBox = (t, g) => ({ x: t.x, y: t.y, w: t.width * g, h: t.height * g });
 
+/** The centre of a `{x, y, width, height}` box in pixels (a region's bounds). */
+export const boxCentre = b => ({ x: b.x + b.width / 2, y: b.y + b.height / 2 });
+
+/** A token's centre in pixels on a grid of `g` (its width and height are in squares). */
+export const tokenCentre = (t, g) => ({ x: t.x + t.width * g / 2, y: t.y + t.height * g / 2 });
+
 /**
  * `(x, y, w?, h?) => boolean`: does a point fall inside one of these boxes, or, given a size, does
  * the box at (x, y) overlap one (portals-edge-2: a Large token is tested by its footprint)?
@@ -401,7 +407,7 @@ export function occupiedBy(standing) {
 export function samplePoints(b, gridSize) {
   const q = Math.min(gridSize / 4, b.width / 4, b.height / 4);
   return [
-    { x: b.x + b.width / 2, y: b.y + b.height / 2 },
+    boxCentre(b),
     { x: b.x + q, y: b.y + q }, { x: b.x + b.width - q, y: b.y + q },
     { x: b.x + q, y: b.y + b.height - q }, { x: b.x + b.width - q, y: b.y + b.height - q }
   ];

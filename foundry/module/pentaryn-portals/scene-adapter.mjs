@@ -7,7 +7,7 @@
  * before any hook can fire).
  */
 
-import { MODULE, FLAG_SCOPE, SNAP_DIR, esc, cardData, dialogIdParts, cropWindow, translateShapes, blockingWallCoords, tokenBox,
+import { MODULE, FLAG_SCOPE, SNAP_DIR, esc, cardData, dialogIdParts, cropWindow, translateShapes, blockingWallCoords, tokenBox, boxCentre,
   occupiedBy, crowded, isAoeHandle, summonerActorId, playerOwners, isScenery, partySelection, ringSpots, wallBlocker, assignSpots,
   partyPreview, hasDestination, withoutDestination, TELEPORT_TYPE, NEW_TELEPORT_BEHAVIOR } from "./portals-core.mjs";
 import { flagPath } from "./lib/flags.mjs";
@@ -106,8 +106,7 @@ export async function snapshot(regionOrUuid, { squaresWide = 8, squaresHigh = 5 
 
   const b = region.bounds ?? region.object?.bounds;
   const shape = region.shapes?.[0];
-  const cx = b ? b.x + b.width / 2 : (shape?.x ?? 0) + (shape?.width ?? 0) / 2;
-  const cy = b ? b.y + b.height / 2 : (shape?.y ?? 0) + (shape?.height ?? 0) / 2;
+  const { x: cx, y: cy } = boxCentre(b ?? { x: shape?.x ?? 0, y: shape?.y ?? 0, width: shape?.width ?? 0, height: shape?.height ?? 0 });
 
   const img = await new Promise((resolve, reject) => {
     const i = new Image();
@@ -187,8 +186,7 @@ export async function lookAt(regionOrUuid) {
   if (!game.user.isGM) return;
   const destRegion = docOf(regionOrUuid, "Region", "lookAt");
   if (!destRegion) return;
-  const b = destRegion.bounds;
-  const x = b.x + b.width / 2, y = b.y + b.height / 2;
+  const { x, y } = boxCentre(destRegion.bounds);
   if (canvas.scene?.id !== destRegion.parent.id) {
     await destRegion.parent.view(); // resolves once the new canvas is drawn
   }
@@ -352,8 +350,7 @@ export async function teleportParty(regionOrUuid, { confirm = true } = {}) {
     party = kept;
   }
   const toks = party.map(r => r.doc);
-  const b = destRegion.bounds;
-  const cx = b.x + b.width / 2, cy = b.y + b.height / 2;
+  const { x: cx, y: cy } = boxCentre(destRegion.bounds);
   if (dest === from) {
     const places = landingPlaces(dest, toks, cx, cy, party);
     await from.updateEmbeddedDocuments("Token", toks.map((t, i) => ({ _id: t.id, ...places[i] })), { teleport: true, animate: false });
