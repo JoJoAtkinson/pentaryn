@@ -207,6 +207,22 @@ function injectHeaderButton(app, element) {
 }
 
 /**
+ * ApplicationV2 fires `render<Class>` once per class in the sheet's chain, so one render of a
+ * character sheet reaches two or three of the four hooks below with the same element. The first
+ * does the work; the rest return before the setting reads and selector sweeps (ties-26). The mark
+ * clears on the next microtask, so a genuine later re-render is never skipped.
+ */
+const handled = new WeakSet();
+function firstThisDispatch(element) {
+  const root = element instanceof HTMLElement ? element : element?.[0];
+  if (!root || typeof root !== "object") return true;
+  if (handled.has(root)) return false;
+  handled.add(root);
+  queueMicrotask(() => handled.delete(root));
+  return true;
+}
+
+/**
  * FEATURE install — synchronous, from the entry body: the deleteActor sweep (unguarded, as it always
  * was), then the four sheet render hooks (each keeps its own try/catch; the text is pinned).
  */
@@ -224,6 +240,7 @@ export function install(reg) {
 
   for (const hook of ["renderNPCActorSheet", "renderCharacterActorSheet", "renderActorSheetV2", "renderActorSheet"]) {
     reg.on(hook, (app, element) => {
+      if (!firstThisDispatch(element)) return; // ties-26: the chain fires 2–3 of these per render
       try {
         injectHeaderButton(app, element);
         injectTab(app, element);

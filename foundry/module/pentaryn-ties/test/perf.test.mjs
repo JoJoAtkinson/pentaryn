@@ -34,3 +34,23 @@ test("ties-24 / B7 [declared]: a player's drawBadges schedules no frame; the GM'
   assert.equal(F.frames.length, 1);
   F.flushFrames();
 });
+
+test("ties-26 / B7 [declared]: one sheet render through the four hooks injects once; a later render runs again", async () => {
+  const { el } = await import("./fixtures/dom.mjs");
+  const actor = game.actors.get("zzNpc00000000001");
+  const reads = [];
+  const get = game.settings.get.bind(game.settings);
+  game.settings.get = (ns, key) => (reads.push(key), get(ns, key));
+  const sheet = () => el("div", { children: [el("header", { className: "window-header" }), el("nav", { className: "tabs", dataset: { group: "primary" } }), el("div", { className: "tab-body" })] });
+  const root = sheet();
+  const app = { document: actor, tabGroups: { primary: "details" } };
+  for (const hook of ["renderNPCActorSheet", "renderActorSheetV2", "renderActorSheet"]) F.fire(hook, app, root);
+  const first = reads.filter(k => k === "sheetTab").length;
+  await Promise.resolve();
+  F.fire("renderActorSheetV2", app, root);
+  const second = reads.filter(k => k === "sheetTab").length - first;
+  game.settings.get = get;
+  assert.equal(first, 1, "the chain's other two hooks returned before reading anything");
+  assert.equal(second, 1, "a later render (next microtask) is handled");
+  assert.equal(root.querySelectorAll('nav.tabs [data-tab="ties"]').length, 1, "each tab once");
+});
