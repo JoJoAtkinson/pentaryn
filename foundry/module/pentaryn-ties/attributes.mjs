@@ -44,6 +44,7 @@ import {
   planEnsure,
   derivedNamespace,
   clampAttribute,
+  planKindIdRepairs,
   readRegistry,
   deriveAttributes,
   attributeIdsFor,
@@ -420,6 +421,27 @@ async function repairIconsNow() {
   }
   if (fixed) await saveRegistry(list);
   return fixed;
+}
+
+/**
+ * R1 [declared], one-shot: rewrite the dead `kind:` rows stored while `clampAttribute` lowercased
+ * the slug (`planKindIdRepairs` decides which) to the actor id they meant, and any child's `parent`
+ * that named the old id with it. A dead row with no single actor to match is left alone. GM only;
+ * → how many rows were rewritten.
+ */
+export const repairKindIds = () => serial(repairKindIdsNow);
+
+async function repairKindIdsNow() {
+  if (!game.user?.isGM) return 0;
+  const list = registry();
+  const fixes = planKindIdRepairs(list, (game.actors?.contents ?? []).map(a => a.id));
+  if (!fixes.length) return 0;
+  const to = new Map(fixes.map(f => [f.from, f.to]));
+  for (const entry of list) {
+    if (to.has(entry.id)) entry.id = to.get(entry.id);
+    if (to.has(entry.parent)) entry.parent = to.get(entry.parent);
+  }
+  return (await saveRegistry(list)) ? fixes.length : 0;
 }
 
 /**

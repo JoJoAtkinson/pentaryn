@@ -270,6 +270,10 @@ time and cannot be edited:
 | `background:` | the embedded `background` item | `background:entertainer` |
 | `kind:` | the kind pointer, when it points elsewhere | `kind:<actorId>` |
 
+A `kind:` id is an actor id, so it keeps its case (only `A–Z a–z 0–9`, at most 64). Entries
+written for one before 2026-10-12 were stored lowercased and never matched; the GM's ready step
+rewrites each to the one actor it matches ignoring case, and leaves it alone otherwise.
+
 To make one *not* apply to one creature, `A.unlink(actor, "type:humanoid")` — it is suppressed
 rather than deleted, because it would otherwise be recomputed a moment later. (`kind:` cannot be
 suppressed this way: unlink does not have the kind resolver.)

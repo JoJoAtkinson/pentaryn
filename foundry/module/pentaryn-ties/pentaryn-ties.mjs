@@ -30,7 +30,7 @@ import { toggle as toggleDescription, close as closeDescription } from "./descri
 import { openTieDialogFor } from "./tie-dialog.mjs";
 import { openLook } from "./look-app.mjs";
 import { fileHovered } from "./known-ui.mjs";
-import { repairIcons } from "./attributes.mjs";
+import { repairIcons, repairKindIds } from "./attributes.mjs";
 import { inspect } from "./study.mjs";
 import { buildApiFor } from "./api.mjs";
 import { makeLog } from "./lib/log.mjs";
@@ -141,6 +141,7 @@ async function readySteps(publishError) {
     }],
     ["migrate legacy flags", async () => game.user.isGM && migrateLegacy()],
     ["repair dead attribute icons", async () => game.user.isGM && repairIcons()],
+    ["repair dead kind ids", async () => game.user.isGM && repairKindIds()],
     ["create macro", async () => game.user.isGM && ensureMacro()],
     ["restore pinned cards", async () => restorePinned()]
   ]) {

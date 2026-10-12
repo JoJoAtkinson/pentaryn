@@ -33,6 +33,13 @@ sender must own their character and have removed their own side). ties-ui-E3.
 Fixed (declared): the Known tab's **notes** keep the last words typed before you click away or close
 the sheet — leaving the box now saves a pending autosave at once instead of dropping it. ties-ui-M1.
 
+Fixed (declared): **Write an entry for this** on a kind row stores the kind actor's own id. The
+`kind:` id was lowercased, so the entry never matched its actor and a second click said
+"collision" on a row that still read unauthored. The id now keeps its case (still only letters and
+digits, at most 64). At load the GM's client rewrites each entry stored the old way to the one actor
+it matches ignoring case (and any child pointing at it). If no actor matches, two actors match, or
+the actor already has an entry, the entry is left alone. R1.
+
 Fixed (declared): the chat cards — the "… studies …" stub, the tempo line and the GM's share
 whisper — name every creature by its **token** name, never its actor name, so a GM-only world actor
 name cannot reach player chat. The token is found on any scene, not only the one the posting
