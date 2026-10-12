@@ -22,7 +22,7 @@ import { readFlag } from "./lib/flags.mjs";
  *
  * The listener sits on the canvas element and reads the hovered token, so it fires whatever the
  * token's permission, and only for a token this client can actually see (hover already requires
- * that). The menu is identical for every target, for the same reason the HUD eye is (see above).
+ * that). The menu is identical for every target, for the same reason the HUD eye is (see token-hud.mjs).
  * Item piles (corpses, chests) keep their own double-click and get no menu.
  */
 let lookMenu = null;

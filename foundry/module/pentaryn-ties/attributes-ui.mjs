@@ -424,13 +424,6 @@ function detail(row, { actor, isGM, viewer }) {
 }
 
 /**
- * `viewer` is whose knowledge is shown; `actor` is whose attributes are listed.
- *
- * On a character's own tab they are the same actor. On an NPC's tab a GM is looking at the
- * NPC's attributes, and there is no viewer whose grants make sense to show — so grants and
- * offers are simply absent there rather than borrowed from someone.
- */
-/**
  * **What you know of the world** — the second half of the tab, and the payoff for a character who
  * invests in knowing things.
  *
@@ -624,6 +617,13 @@ function ancestryWarning(actor) {
   </div>`;
 }
 
+/**
+ * `viewer` is whose knowledge is shown; `actor` is whose attributes are listed.
+ *
+ * On a character's own tab they are the same actor. On an NPC's tab a GM is looking at the
+ * NPC's attributes, and there is no viewer whose grants make sense to show — so grants and
+ * offers are simply absent there rather than borrowed from someone.
+ */
 export function buildAttributesHTML(actor, viewer = null) {
   const isGM = game.user?.isGM === true;
   /*
