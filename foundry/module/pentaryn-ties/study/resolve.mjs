@@ -256,11 +256,10 @@ export function studyStateFor(character, subject) {
   const kind = kindActorOf(subject);
   if (!kind) return { available: false };
   const spent = !!studiedOf(character).kind[kind.id];
-  const content = kindHasContent({
-    biography: kind.system?.details?.biography?.value ?? "",
-    tiers: studyTiersOf(kind),
-    attacks: attackItems(kind)
-  });
+  // the item walk is the dear part, so it runs only when biography and tiers leave it undecided
+  const biography = kind.system?.details?.biography?.value ?? "";
+  const tiers = studyTiersOf(kind);
+  const content = kindHasContent({ biography, tiers }) || kindHasContent({ attacks: attackItems(kind) });
   const { skill, label } = studySkillFor(kind);
   return {
     kind,
