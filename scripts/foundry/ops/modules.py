@@ -39,6 +39,11 @@ from . import config as cfg, jsscan
 from .digest import SYNC_STAMP, tree_digest  # noqa: F401 — re-exported for callers and tests
 from .out import FAIL, OK, append_jsonl, event, now_iso, say as _say
 
+try:
+    import fcntl
+except ImportError:  # pragma: no cover — native Windows; BOSS runs Foundry in WSL
+    fcntl = None  # type: ignore[assignment]
+
 # Build output and vendored code are not ours to check.
 _SKIP_DIRS = {"node_modules", "target", ".git"}
 
@@ -575,9 +580,25 @@ def install(src: Path, dst: Path, *, cmd: str = "module-sync") -> dict:
     The stamp (`SYNC_STAMP`: module, version, digest, git, dirty, synced_at) is written into the copy
     before the swap; after it, one line goes to `foundry/logs/ops-YYYY-MM.jsonl` with `cmd`
     (`module-sync`, `stage` or `importer-install`). Returns the stamp.
+
+    The whole run holds an exclusive `flock` on `<Data>/../.pentaryn-sync/<id>.lock` (py-ops-ac-1),
+    so two syncs of one module never share `<id>.new`/`<id>.old`: the second waits, then installs
+    on top. The lock file is permanent; the lock goes with the process, so a killed run frees it.
     """
     staging = staging_dir(dst)
     staging.mkdir(parents=True, exist_ok=True)
+    if fcntl is None:  # pragma: no cover
+        return _install_locked(src, dst, staging, cmd)
+    with open(staging / f"{dst.name}.lock", "a") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)  # a second sync of this module waits here (py-ops-ac-1)
+        try:
+            return _install_locked(src, dst, staging, cmd)
+        finally:
+            fcntl.flock(lock, fcntl.LOCK_UN)
+
+
+def _install_locked(src: Path, dst: Path, staging: Path, cmd: str) -> dict:
+    """`install`'s body, run while it holds `staging/<id>.lock`."""
     new, old = staging / f"{dst.name}.new", staging / f"{dst.name}.old"
     if not dst.exists() and old.is_dir():
         dst.parent.mkdir(parents=True, exist_ok=True)

@@ -19,6 +19,11 @@ def _tree(root: Path) -> list[str]:
     return sorted(p.relative_to(root).as_posix() for p in root.rglob("*"))
 
 
+def _staged(staging: Path) -> list[str]:
+    """What a run left in the staging folder, minus the permanent `<id>.lock` (py-ops-ac-1)."""
+    return sorted(p.name for p in staging.iterdir() if p.suffix != ".lock")
+
+
 def _installed(root: Path) -> list[str]:
     """An installed tree minus the sync stamp (python-tooling-10), to compare with its source."""
     return [p for p in _tree(root) if p != modules.SYNC_STAMP]
@@ -79,7 +84,7 @@ def test_a_failed_copy_leaves_the_old_install_serving(module, monkeypatch):
     assert (module.dst / "zz.mjs").read_text() == "the old, working build"
     assert _tree(module.dst) == ["zz.mjs"]
     staging = modules.staging_dir(module.dst)
-    assert list(staging.iterdir()) == [], "the half copy is cleaned up"
+    assert _staged(staging) == [], "the half copy is cleaned up"
     monkeypatch.setattr(modules.shutil, "copytree", real)
     modules.install(module.src, module.dst)
     assert _installed(module.dst) == _tree(module.src)
@@ -107,7 +112,7 @@ def test_a_failed_swap_puts_the_old_install_back(module, monkeypatch):
 def test_the_staging_folder_is_outside_data_modules(module):
     modules.install(module.src, module.dst)
     staging = modules.staging_dir(module.dst)
-    assert staging.is_dir() and list(staging.iterdir()) == []
+    assert staging.is_dir() and _staged(staging) == []
     assert cfg.FOUNDRY_MODULES not in staging.parents and cfg.FOUNDRY_DATA_DIR not in staging.parents
     assert [p.name for p in cfg.FOUNDRY_MODULES.iterdir()] == ["pentaryn-zz"], "nothing else lands where Foundry scans"
 
@@ -118,7 +123,7 @@ def test_leftovers_of_a_crashed_run_are_cleared(module):
     (staging / "pentaryn-zz.new" / "junk").write_text("x")
     (staging / "pentaryn-zz.old").mkdir()
     modules.install(module.src, module.dst)
-    assert list(staging.iterdir()) == []
+    assert _staged(staging) == []
     assert _installed(module.dst) == _tree(module.src)
 
 
@@ -152,7 +157,7 @@ def test_a_crash_mid_swap_is_repaired_and_the_next_run_installs(module):
     _crashed_mid_swap(module)
     modules.install(module.src, module.dst)
     assert _installed(module.dst) == _tree(module.src)
-    assert list(modules.staging_dir(module.dst).iterdir()) == []
+    assert _staged(modules.staging_dir(module.dst)) == []
 
 
 def test_an_interrupt_after_setting_the_old_install_aside_puts_it_back(module, monkeypatch):
@@ -349,3 +354,75 @@ def test_importer_install_failing_check_installs_nothing(importer, monkeypatch):
     monkeypatch.setattr(modules, "check", lambda name: 1)
     assert pipeline.install_importer() == 1
     assert not spec.dst.exists()
+
+
+# ── one install of a module at a time (py-ops-ac-1) ──────────────────────────────────────────
+
+def _lock_path(module) -> Path:
+    return modules.staging_dir(module.dst) / "pentaryn-zz.lock"
+
+
+def test_install_holds_the_module_lock_while_it_copies_py_ops_ac_1(module, monkeypatch):
+    """Two `make foundry-<m>-sync` runs shared `<id>.new`/`<id>.old` with no lock, so the second
+    could rmtree the first one's half-built copy or its set-aside install (py-ops-ac-1)."""
+    import fcntl
+
+    real = modules.shutil.copytree
+    held = []
+
+    def probe(src, dst, *a, **k):
+        if not str(dst).endswith(".new"):  # copytree recurses through itself for subfolders
+            return real(src, dst, *a, **k)
+        with open(_lock_path(module), "a") as fh:
+            try:
+                fcntl.flock(fh, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError:
+                held.append(True)
+            else:
+                fcntl.flock(fh, fcntl.LOCK_UN)
+                held.append(False)
+        return real(src, dst, *a, **k)
+
+    monkeypatch.setattr(modules.shutil, "copytree", probe)
+    modules.install(module.src, module.dst)
+    assert held == [True], "another install cannot take the lock mid-copy"
+    assert _lock_path(module).is_file(), "the lock file stays as a sibling of .new/.old"
+    with open(_lock_path(module), "a") as fh:
+        fcntl.flock(fh, fcntl.LOCK_EX | fcntl.LOCK_NB)  # released once install returns
+
+
+def test_a_second_install_waits_for_the_first_then_installs_py_ops_ac_1(module, monkeypatch):
+    import fcntl
+    import threading
+
+    calls = []
+    real = modules.shutil.copytree
+    def counted(src, dst, *a, **k):
+        if str(dst).endswith(".new"):  # copytree recurses through itself for subfolders
+            calls.append(1)
+        return real(src, dst, *a, **k)
+
+    monkeypatch.setattr(modules.shutil, "copytree", counted)
+    _lock_path(module).parent.mkdir(parents=True, exist_ok=True)
+    with open(_lock_path(module), "a") as fh:
+        fcntl.flock(fh, fcntl.LOCK_EX)  # the first sync, mid-install
+        second = threading.Thread(target=modules.install, args=(module.src, module.dst))
+        second.start()
+        second.join(0.3)
+        assert second.is_alive() and calls == [], "the second sync waits rather than touching staging"
+    second.join(10)
+    assert not second.is_alive() and calls == [1]
+    assert _installed(module.dst) == _tree(module.src)
+
+
+def test_the_lock_is_released_when_the_install_fails_py_ops_ac_1(module, monkeypatch):
+    import fcntl
+
+    def no_copy(src, dst, *a, **k):
+        raise OSError("disk full")
+
+    monkeypatch.setattr(modules.shutil, "copytree", no_copy)
+    with pytest.raises(OSError):
+        modules.install(module.src, module.dst)
+    with open(_lock_path(module), "a") as fh:
+        fcntl.flock(fh, fcntl.LOCK_EX | fcntl.LOCK_NB)
