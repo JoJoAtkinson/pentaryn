@@ -759,3 +759,22 @@ def test_py_mcp_rob_6_handler_body_type_error_keeps_its_message(monkeypatch, cap
     assert sent[0]["error"]["code"] == -32000
     assert "Invalid arguments" not in sent[0]["error"]["message"]
     assert "str" in sent[0]["error"]["message"]
+
+
+# ---------------------------------------------------------------------------
+# py-mcp-rob-7: value_flags render list/dict as JSON, the same way placeholders do
+# ---------------------------------------------------------------------------
+
+def test_py_mcp_rob_7_value_flags_render_list_and_dict_as_json():
+    """py-mcp-rob-7: a list/dict value_flags argument reached the child as a Python
+    repr (``['a', 'b']``). It is now json.dumps(ensure_ascii=False), matching the
+    placeholder path; scalars still go through str() and None is skipped."""
+    runner = server.ToolRunner(
+        tool=server.Tool(name="vf", description="", input_schema={}),
+        script_path=_SERVER_PATH, argv_template=(), bool_flags={},
+        value_flags={"tags": "--tags", "meta": "--meta", "n": "--n",
+                     "s": "--s", "gone": "--gone"})
+    argv = runner._build_argv({"tags": ["a", "é"], "meta": {"k": 1}, "n": 3,
+                               "s": " x ", "gone": None})
+    assert argv == ["--meta", '{"k": 1}', "--n", "3", "--s", "x",
+                    "--tags", '["a", "é"]']

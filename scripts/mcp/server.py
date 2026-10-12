@@ -364,7 +364,11 @@ class ToolRunner:
                 continue
             if isinstance(value, bool):
                 raise ValueError(f"Argument '{key}' must not be a boolean")
-            rendered = str(value).strip()
+            # Same rendering as placeholders: list/dict as JSON, not a Python repr (py-mcp-rob-7).
+            if isinstance(value, (str, int, float)):
+                rendered = str(value).strip()
+            else:
+                rendered = json.dumps(value, ensure_ascii=False)
             if not rendered:
                 continue
             argv.extend([self.value_flags[key], rendered])
