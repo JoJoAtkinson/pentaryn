@@ -13,12 +13,16 @@
  *     core/light.mjs    light profiles, the carried-light rule, the Light cantrip's plan
  *     core/migrate.mjs  the darkvision reset plan
  *     core/glow.mjs     the broken glow's wave maths
+ *     core/inspect.mjs  inspect()'s shape
  *   settings.mjs      SETTINGS (the sightReset store row) and the setting readers
  *   api-manifest.mjs  PURE API rows (describe() reads them)
  *   api.mjs           the rows bound to what the features exposed; buildApiFor(ctx)
  *   glow.mjs          feature: the "Broken glow (wandering)" light animation, added at init
  *   chain.mjs         feature: token chains (drawing, Token HUD, link/break)
  *   light.mjs         feature: the Light cantrip and lit torches, lamps and lanterns
+ *     light-ui.mjs      its UI: the prompt, the map pick, card and sheet buttons, the Token HUD
+ *     light-adapter.mjs its adapter: Foundry documents → what light.mjs decides on (reads only)
+ *     argon.mjs         its adapter for Argon (enhancedcombathud): closes the Combat HUD's panels
  *   carried.mjs       feature: lights carried by items
  *   migrate.mjs       feature: the one-shot darkvision sight reset
  *   lib/*.mjs         vendored kit — never edited here (scripts/foundry/blueprint/vendor.py)

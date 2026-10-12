@@ -4,6 +4,7 @@
 
 import { MODULE, SIGHT_RESET, SIGHT_RESET_DONE, planSightReset, systemReady } from "./senses-core.mjs";
 import { setSetting, setting, systemSetting } from "./settings.mjs";
+import { isActiveGM } from "./lib/election.mjs";
 
 /**
  * Run the reset in this world if it is due. Active GM only, dnd5e 6+ only, and only while dnd5e's
@@ -11,7 +12,7 @@ import { setSetting, setting, systemSetting } from "./settings.mjs";
  * regardless of the setting. Returns { prototypes, tokens } written, or null when it did not run.
  */
 export async function resetSight({ force = false } = {}) {
-  if (!game.users.activeGM?.isSelf) return null;
+  if (!isActiveGM()) return null;
   if (!systemReady(game.system?.id, game.system?.version)) return null;
   const native = systemSetting("dnd5e", "senseVisionSync") === true;   // undefined when absent
   if (!native) {

@@ -11,16 +11,17 @@
  * Token HUD (GM only): "Break chain" on either end removes every chain touching that token.
  * "Chain to target" appears on an unchained token while you have exactly one other token targeted.
  *
- *   game.pentaryn.chain.link(chained, anchor)   token / doc / id
+ *   game.pentaryn.chain.link(chained, anchor)   token / doc / Token uuid / id
  *   game.pentaryn.chain.break(token)            removes every chain touching it
  *   game.pentaryn.chain.links()                 [{chained, anchor}] on the viewed scene
+ *   game.pentaryn.chain.repaint()               redraws the viewed scene's chains on the next frame
  *
  * Every hook body is guarded: a bug here logs a warning and draws nothing. It never throws into
  * token rendering. A feature: the entry calls install(reg, ctx); the entry's ready publishes the API.
  */
 
 import {
-  MODULE, FLAGS, CHAIN_FLAG, readChain, chainPairs, linksTouching, chainThickness, resolveTokenRef, linkSpriteSpecs, unsetPath,
+  MODULE, FLAGS, readChain, chainPairs, linksTouching, chainThickness, resolveTokenRef, linkSpriteSpecs, unsetPath,
 } from "./senses-core.mjs";
 import { isAnyGM } from "./lib/election.mjs";
 
@@ -77,8 +78,8 @@ function forgetPairs(doc) {
 export async function link(chained, anchor) {
   if (!isAnyGM()) return false;
   const c = docOf(chained), a = docOf(anchor);
-  if (!c?.update || !a?.id || c.id === a.id || c.parent !== a.parent) return false;
-  await c.update({ [`flags.${MODULE}.${CHAIN_FLAG}`]: { anchor: a.id } });
+  if (!c?.update || !a?.id || c.id === a.id || c.parent !== a.parent || c.documentName !== "Token" || a.documentName !== "Token") return false;
+  await c.update({ [FLAGS.chain]: { anchor: a.id } });
   return true;
 }
 
@@ -336,9 +337,10 @@ export function install(reg, ctx) {
     schedule();
   });
   on("updateToken", (doc, changes) => {
-    const chainChanged = foundry.utils.getProperty(changes ?? {}, `flags.${MODULE}`) !== undefined;
-    if (chainChanged) forgetPairs(doc);
-    if (chainChanged || "hidden" in (changes ?? {}) || "elevation" in (changes ?? {})) schedule();
+    // The whole flag scope is tested on purpose: a chain deletion arrives as `-=chain` / `_del`, which a narrow `flags.<scope>.chain` path test would miss.
+    const ourFlagsChanged = foundry.utils.getProperty(changes ?? {}, `flags.${MODULE}`) !== undefined;
+    if (ourFlagsChanged) forgetPairs(doc);
+    if (ourFlagsChanged || "hidden" in (changes ?? {}) || "elevation" in (changes ?? {})) schedule();
   });
   on("renderTokenHUD", (app, element) => injectHUD(app, element));
 
