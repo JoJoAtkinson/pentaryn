@@ -113,6 +113,7 @@
       "argon.mjs",
       "combat-core.mjs",
       "hud/buttons-ui.mjs",
+      "hud/pips-bar.mjs",
       "lib/log.mjs",
       "sequence.mjs",
       "settings.mjs",
@@ -135,6 +136,13 @@
       "lib/log.mjs",
       "sequence.mjs",
       "settings.mjs"
+    ],
+    "hud/pips-bar.mjs": [
+      "argon.mjs",
+      "combat-core.mjs",
+      "lib/log.mjs",
+      "settings.mjs",
+      "shapes.mjs"
     ],
     "hud/tooltips.mjs": [
       "argon.mjs",
@@ -289,6 +297,7 @@
     "hud/buttons-ui.mjs",
     "hud/bars.mjs",
     "turn-riders.mjs",
+    "hud/pips-bar.mjs",
     "context.mjs",
     "combat.mjs",
     "roll-dock.mjs",

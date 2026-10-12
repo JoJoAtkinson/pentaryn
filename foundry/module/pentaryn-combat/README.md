@@ -238,7 +238,7 @@ Load order: `combat.mjs` (esmodules[0]) installs `roll-dock.mjs` as it evaluates
 (esmodules[1]) installs `turnflow/*` and `patches.mjs`, then `hud/tooltips.mjs`, `hud/picker.mjs`,
 `hud/bars.mjs`. `context.mjs` is their shared ctx. Pure: `combat-core.mjs` + `core/*.mjs`. Settings:
 `settings.mjs`. API: `api-manifest.mjs`, `api.mjs`. Adapters: `shapes.mjs`, `argon.mjs`,
-`dialog-adapter.mjs`. UI: `strip.mjs`, `hud/buttons-ui.mjs`. Vendored kit: `lib/` (never edited here).
+`dialog-adapter.mjs`. UI: `strip.mjs`, `hud/buttons-ui.mjs`, `hud/pips-bar.mjs`. Vendored kit: `lib/` (never edited here).
 
 ## Tests
 
