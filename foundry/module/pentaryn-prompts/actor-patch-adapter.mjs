@@ -62,6 +62,11 @@ export function patchSize(patch) {
   return k;
 }
 
+/** The token disposition value a patch word names, or undefined. */
+function dispositionValue(word) {
+  return globalThis.CONST?.TOKEN_DISPOSITIONS?.[String(word).toUpperCase()];
+}
+
 /**
  * Throw BAD_SPEC on anything a dry run can catch (unknown keys, bad items, bad words).
  * → `{notes, defaults}`: what the patch will add, and what it decided for the caller (attunement).
@@ -120,6 +125,10 @@ export async function checkPatch(patch) {
   }
   for (const [n, v] of Object.entries(patch.recharge ?? {})) {
     if (!isRechargeDie(v)) throw codedError("BAD_SPEC", `patch.recharge["${n}"]: 2-6`);
+  }
+  // last, so a patch with another bad field keeps that field's message (R2)
+  if (patch.disposition && globalThis.CONST?.TOKEN_DISPOSITIONS && dispositionValue(patch.disposition) === undefined) {
+    throw codedError("BAD_SPEC", "patch.disposition: hostile|neutral|friendly|secret");
   }
   return { notes, defaults };
 }
@@ -189,8 +198,7 @@ export async function applyPatch(actor, patch) {
   if (patch.cr !== undefined) { u["system.details.cr"] = parseCr(patch.cr) ?? Number(patch.cr); changed.push(`cr ${patch.cr}`); }
   if (patch.speed !== undefined) { u["system.attributes.movement.walk"] = Number(patch.speed); changed.push(`speed ${patch.speed}`); }
   if (patch.disposition) {
-    const D = CONST.TOKEN_DISPOSITIONS;
-    const v = D[String(patch.disposition).toUpperCase()];
+    const v = dispositionValue(patch.disposition);
     if (v === undefined) throw codedError("BAD_SPEC", `patch.disposition: hostile|neutral|friendly|secret`);
     u["prototypeToken.disposition"] = v;
     changed.push(`disposition ${patch.disposition}`);

@@ -29,6 +29,10 @@ cssPrefix `pp-`, afterSync). Each **[declared]** change goes to the live check.
   actor in view (core renames its linked tokens with a name-only update) shows the new name.
 - **[declared] A patch's fractional CR** (`"1/2"`) is written as 0.5, not `NaN`, so a real run's
   encounter XP matches its dry run.
+- **[declared] A bad `patch.disposition` word** (`"angry"`) is refused by the dry run too (R2):
+  `BAD_SPEC: patch.disposition: hostile|neutral|friendly|secret`, checked after every other patch
+  field so a second bad field keeps its own message. The real run now refuses it at plan time, so
+  nothing is imported, copied or stamped first (no cleanup line, no `discarded` entry).
 - **[declared] Two gathers at once keep both manifests**: the ring writes through one
   `serialStore` (a parallel gather no longer makes the other's call id `CALL_UNKNOWN`).
 - **[declared] `ensureMarkers` no longer duplicates across two GM tabs** (§5.9.1): the folder and

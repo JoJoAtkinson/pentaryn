@@ -105,7 +105,7 @@ row in replace), `NOT_GM` (every query), `CREATE_FAILED` (replace rows) and `DRY
 - `actor` — `{actorId}` (place a world actor; `copy: true` duplicates it) or `{uuid}` (a compendium
   actor, imported into `Foundry MCP Creatures`), plus `patch` (`actor-patch-adapter.mjs`, keys
   `PATCH_KEYS`): name, size, img, biography, hp, ac, cr (fractions read as numbers), speed,
-  disposition, `removeItems`, `addItems` (by name / uuid / inline `{data}`), `traits`, `recharge`,
+  disposition (hostile|neutral|friendly|secret), `removeItems`, `addItems` (by name / uuid / inline `{data}`), `traits`, `recharge`,
   `itemUpdates`, `set`, `creatureType`, `languages` (words → dnd5e keys). A type change without
   `languages` clears the inherited ones; inline items whose text requires attunement are marked so.
 - `npc` — `{npc, features, patch}`, built here through the bridge module's own handlers

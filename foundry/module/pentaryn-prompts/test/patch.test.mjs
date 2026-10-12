@@ -75,6 +75,17 @@ test("checkPatch refusals", async () => {
   F.CONFIG.DND5E.creatureTypes = saved;
 });
 
+test("[declared] R2: checkPatch refuses an unknown disposition word, as the real run does, and only after every earlier check", async () => {
+  await assert.rejects(P.checkPatch({ disposition: "angry" }), { code: "BAD_SPEC", message: "BAD_SPEC: patch.disposition: hostile|neutral|friendly|secret" });
+  for (const disposition of ["hostile", "neutral", "friendly", "SECRET"]) {
+    assert.deepEqual(await P.checkPatch({ disposition }), { notes: [], defaults: [] }, disposition);
+  }
+  // a second bad field keeps the message it gave before: the disposition check is the last one
+  await assert.rejects(P.checkPatch({ size: "big", disposition: "angry" }), { message: "BAD_SPEC: patch.size must be tiny|small|medium|large|huge|gargantuan, got big" });
+  await assert.rejects(P.checkPatch({ disposition: "angry", recharge: { Breath: 1 } }), { message: "BAD_SPEC: patch.recharge[\"Breath\"]: 2-6" });
+  await assert.rejects(P.checkPatch({ disposition: "angry", traits: [{ name: "T", recharge: 7 }] }), { message: "BAD_SPEC: patch.traits[T].recharge: 2-6 (5 means \"Recharge 5-6\")" });
+});
+
 /** A world actor this run owns, logging its writes. */
 function stubActor() {
   const items = new StubCollection([

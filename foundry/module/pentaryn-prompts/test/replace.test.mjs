@@ -435,3 +435,21 @@ test("a marker delete that fails after its replacement exists is warned, and the
   assert.deepEqual([r.results[0].ok, r.results[0].markerDeleted], [true, false]);
   F.s1.tokens.delete("md");
 });
+
+test("[declared] R2: a real run with patch.disposition \"angry\" is refused at plan time, as its dry run is: no writes, nothing to discard", async t => {
+  t.mock.timers.enable({ apis: ["Date"], now: NOW });
+  marker("rd", "mid", 1800, 3000, "an angry guard");
+  const spec = { replacements: [{ sceneId: "s1", markerId: "rd", with: { kind: "actor", actorId: "actorGuard000001", copy: true, patch: { disposition: "angry" } } }] };
+  const dry = await run(spec, { dryRun: true });
+  const n0 = F.calls.length;
+  const r = await run(spec);
+  const writes = F.calls.slice(n0).filter(c => !c.op.startsWith("Hooks"));
+  for (const row of [dry.results[0], r.results[0]]) {
+    assert.deepEqual([row.ok, row.code, row.error], [false, "BAD_SPEC", "BAD_SPEC: patch.disposition: hostile|neutral|friendly|secret"]);
+  }
+  assert.deepEqual(writes, []);
+  assert.deepEqual(r.results[0].discarded ?? [], []);
+  assert.ok(!r.text.includes("cleanup"), r.text);
+  assert.ok(F.s1.tokens.get("rd"));
+  F.s1.tokens.delete("rd");
+});
