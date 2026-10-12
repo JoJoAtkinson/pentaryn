@@ -74,3 +74,13 @@ test("removePatches restores every original and forgets the records", () => {
   assert.equal(W.TE.enrichHTML, original.enrich);
   assert.deepEqual(patchRecords(), []);
 });
+
+test("riders-maint-01: patchRecords has one definition — api.mjs exports it, patches.mjs re-exports it", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const api = await import("../api.mjs");
+  const { patchRecords: fromPatches } = await import("../patches.mjs");
+  assert.equal(typeof api.patchRecords, "function", "api.mjs exports patchRecords");
+  assert.equal(fromPatches, api.patchRecords, "patches.mjs re-exports api.mjs's function");
+  const src = await readFile(new URL("../patches.mjs", import.meta.url), "utf8");
+  assert.doesNotMatch(src, /function patchRecords\b/, "patches.mjs keeps no second copy");
+});

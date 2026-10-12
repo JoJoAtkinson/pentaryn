@@ -138,8 +138,9 @@ async function arcaneRecovery(actor, ctx) {
   return ok({ actor: refOf(actor), recovered: recovered ?? null });
 }
 
-/** This module's live patch records (a symbol marker by its description). */
-function patchRecords() {
+/** `describe().patches`: this module's live patch records (a symbol marker by its description).
+ *  The one definition; patches.mjs re-exports it (riders-maint-01). */
+export function patchRecords() {
   return patches().filter(p => p.moduleId === MODULE).map(({ moduleId: _m, ...p }) => ({
     ...p, marker: typeof p.marker === "symbol" ? p.marker.description : p.marker,
   }));

@@ -19,15 +19,15 @@
  *     6. its `getTooltipData`        marks the item while its tooltip is built (for 2)
  *        marker _prTooltip                                     row riders-argon-tooltip-item-rolldata
  *
- * GLUE: the entry imports it; it reads core, the settings readers and the Argon adapter. Bodies are
- * today's, verbatim (the wraps of 2-6 were hand patches in argon-tidy.mjs and cast-flow.mjs).
+ * GLUE: the entry imports it; it reads core, the settings readers and the Argon adapter, and re-exports
+ * api.mjs's patchRecords (riders-maint-01). Bodies are today's, verbatim (the wraps of 2-6 were hand patches in argon-tidy.mjs and cast-flow.mjs).
  */
 
 import { MODULE } from "./riders-core.mjs";
 import { isWildcardPath, placeSummonsDefault, skipsTargetPicker } from "./table-core.mjs";
 import { settingOr } from "./settings.mjs";
 import { buttonPanelButtonClass } from "./argon.mjs";
-import { patches, wrapMethod } from "./lib/patch.mjs";
+import { wrapMethod } from "./lib/patch.mjs";
 
 /** The Rituals wrap's marker (it was a flag on the prototype; now on the replacement function). */
 const WRAPPED = Symbol.for(`${MODULE}.ritualsWrapped`);
@@ -181,9 +181,5 @@ export function removePatches() {
   tooltipItems.clear();
 }
 
-/** `describe().patches`: this module's live patch records (a symbol marker by its description). */
-export function patchRecords() {
-  return patches().filter(p => p.moduleId === MODULE).map(({ moduleId: _m, ...p }) => ({
-    ...p, marker: typeof p.marker === "symbol" ? p.marker.description : p.marker,
-  }));
-}
+/** `describe().patches`: defined once in api.mjs (riders-maint-01). */
+export { patchRecords } from "./api.mjs";
