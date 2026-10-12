@@ -98,6 +98,17 @@ test("legacy actor members resolve an id / UUID / name and return null on a miss
   assert.deepEqual(api.turn("Fighter"), api.turn(cast.fighter));
 });
 
+test("every ACTOR-param legacy row answers null for a bad ref", async () => {
+  const { MANIFEST } = await import("../api-manifest.mjs");
+  const rows = MANIFEST.rows.filter(r => r.legacy && r.params?.[0]?.type === "Actor|Token|uuid|id|exact name" && r.params[0].resolve === false);
+  assert.deepEqual(rows.map(r => r.path).sort(),
+    ["count", "plan", "turn", "newTurn", "multiattack", "weapons", "fullAttack", "followUp", "reckless", "setReckless", "fixFeats", "seedWeaponSets"].sort());
+  for (const r of rows) {
+    const v = api[r.path](undefined);
+    assert.equal(r.returns.startsWith("Promise") ? await v : v, null, r.path);
+  }
+});
+
 test("write members: newTurn, setQuick, setRiderMode, setReckless, abort, offers / rollRider through a card", async () => {
   const f = cast.fighter;
   F.calls.length = 0;
