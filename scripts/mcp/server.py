@@ -841,7 +841,11 @@ def _serve_loop(
                             },
                         })
                     continue
-                executor.submit(_run_call_worker, msg_id, runner, arguments)
+                try:
+                    executor.submit(_run_call_worker, msg_id, runner, arguments)
+                except BaseException:
+                    _inflight_slots.release()   # the worker never ran to release it
+                    raise
                 continue
 
             # Ignore notifications like "initialized".
