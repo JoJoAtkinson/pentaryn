@@ -170,7 +170,9 @@ node test/run.mjs        # from this folder
 `slots.test` holds the slot fixtures (stale flags, deleted items, duplicates, corrupt flag types,
 over cap, non-default `max`, away entries, coming home) and the proficiency-map patch; `glue.test`,
 `hooks.test`, `api.test`, `strip.test` (a minimal DOM), `listeners`, `hook-errors`, `perf`,
-`stash-safety` and `guard-failure` pin the wiring. Goldens in `test/golden/`.
+`stash-safety` and `guard-failure` pin the wiring; `core-meta` holds the core's identity (it loads
+with no Foundry globals, constants agree with `module.json`, `trimSlots`), `docs` guards this
+README, and `i18n` checks `STRINGS` ↔ `lang/en.json` parity. Goldens in `test/golden/`.
 
 ## Sync
 
