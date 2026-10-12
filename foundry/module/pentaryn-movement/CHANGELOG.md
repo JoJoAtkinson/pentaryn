@@ -23,6 +23,9 @@ manifest); the kit is vendored. What a player or GM can notice:
 - **[declared]** a quick double click on the GM ghost button no longer toasts a mode that never takes
   effect: the clicks (and `setPolicy`) are applied one after another on that client, each flipping
   from the previous result, and the toast names the mode actually in effect (movement-async-1).
+- **[declared]** `selftest()`'s "settings readable" check can fail now: it passes only when every
+  setting is registered and reads back a value of its default's type, and its `detail` lists the
+  keys that did not (rob-4).
 - Performance: the per-token paths (drag, arrow keys, token refresh, the layer sort) read the
   settings and the combats once per change instead of once per token (F-M1).
 

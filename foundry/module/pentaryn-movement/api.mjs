@@ -8,7 +8,7 @@
 import * as core from "./movement-core.mjs";
 import { HOOKS, MODULE, NS } from "./movement-core.mjs";
 import { MANIFEST } from "./api-manifest.mjs";
-import { SETTINGS, policyWrite, setting, settingsSnapshot } from "./settings.mjs";
+import { SETTINGS, policyWrite, settingsSnapshot, unreadableSettings } from "./settings.mjs";
 import { pinInputs } from "./combat-adapter.mjs";
 import { buildApi } from "./lib/api.mjs";
 import { patches } from "./lib/patch.mjs";
@@ -36,10 +36,11 @@ function pinsUnderTokens(scene = canvas?.scene) {
 
 function selftest(ctx) {
   const patched = ctx.exposed.patched?.() ?? {};
+  const unreadable = unreadableSettings();
   const checks = [
     { label: "published as module.api", ok: game.modules.get(MODULE)?.api === ctx.api },
     { label: `game.pentaryn.${NS} is this API`, ok: game.pentaryn?.[NS] === ctx.api },
-    { label: "settings readable", ok: SETTINGS.every(r => typeof setting(r.key) === typeof r.default) },
+    { label: "settings readable", ok: unreadable.length === 0, detail: unreadable },
     { label: "Token#_getDragConstrainOptions wrapped", ok: patched.drag === true },
     { label: "TokenLayer#_prepareKeyboardMovementUpdates wrapped", ok: patched.keyboard === true },
     { label: "hooks registered", ok: ctx.reg.ids().length > 0, detail: ctx.reg.ids().length },

@@ -65,6 +65,21 @@ export function registerSettings() {
 /** The live value; the row default when unregistered or unreadable. */
 export const setting = settingReader(MODULE, SETTINGS);
 
+/**
+ * Keys whose row is not registered, or whose raw read throws or returns a value of another type
+ * than the row default (rob-4: the selftest check, which `setting()`'s default fallback would hide).
+ */
+export function unreadableSettings() {
+  return SETTINGS.filter(r => {
+    if (!game.settings.settings.has(`${MODULE}.${r.key}`)) return true;
+    try {
+      return typeof game.settings.get(MODULE, r.key) !== typeof r.default;
+    } catch {
+      return true;
+    }
+  }).map(r => r.key);
+}
+
 /** One queue for every policy write on this client (created on first use). */
 let policySem = null;
 
