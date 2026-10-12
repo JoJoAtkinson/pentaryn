@@ -114,10 +114,10 @@ module. Baseline: [`wave-3-baseline.md`](wave-3-baseline.md).
   writes; recorded, not built. Migration `4e9cc5bf`.
 
 - **ties — `ties-api.mjs` keeps C05 red (integrator, 2026-10-11).** With the scorer now following
-  `export … from` (`6ceb2460`), ties' only unreachable file is `ties-api.mjs`, the macro-only compat
-  barrel nothing in the module imports (world macros `import()` it by URL). Decide: keep it (and
-  accept C05 for ties, or teach C05 an "external entry" allow-list), or retire it once no macro
-  imports it (grep the world's macros first).
+  `export … from` (`6ceb2460`), ties' only unreachable file is `ties-api.mjs`, the README's
+  "one-release barrel over core, adapter and settings" that nothing in the module imports (for
+  outside `import()` callers). Decide: keep it a release (and accept C05 for ties), or retire it
+  (grep the world's macros for `ties-api.mjs` first).
 
 ## Known red commits and ranges (bisecting)
 
