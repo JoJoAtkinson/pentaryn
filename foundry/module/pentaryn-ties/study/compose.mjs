@@ -15,7 +15,7 @@ import {
   traitsLine
 } from "../known-core.mjs";
 import { studyTiersOf } from "./resolve.mjs";
-import { ATTACK_LINES_MAX, f, log, t } from "./shared.mjs";
+import { ATTACK_LINES_MAX, log } from "./shared.mjs";
 
 /* -------------------------------------------- */
 /*  Deriving the truth off the sheet            */
@@ -109,10 +109,10 @@ function kindTraits(kind) {
       conditionImmune: list("ci", "conditionTypes")
     },
     {
-      immune: t("known.study.trait.immune"),
-      resist: t("known.study.trait.resist"),
-      vulnerable: t("known.study.trait.vulnerable"),
-      conditionImmune: t("known.study.trait.conditionImmune")
+      immune: _loc("PENTARYN_TIES.known.study.trait.immune"),
+      resist: _loc("PENTARYN_TIES.known.study.trait.resist"),
+      vulnerable: _loc("PENTARYN_TIES.known.study.trait.vulnerable"),
+      conditionImmune: _loc("PENTARYN_TIES.known.study.trait.conditionImmune")
     }
   );
 }
@@ -146,7 +146,7 @@ export async function composeStudyPayload(kind, tier, skillLabel) {
    */
   const derived = capProse(safeFlatten(await enrich(kind.system?.details?.biography?.value ?? "", kind)) ?? "");
   const attacks = await attackLines(kind);
-  const traits = kindTraits(kind) || t("known.study.derived.noTraits");
+  const traits = kindTraits(kind) || _loc("PENTARYN_TIES.known.study.derived.noTraits");
 
   /*
    * ⚠ The derived description is gated at **15**, and it was not.
@@ -169,9 +169,9 @@ export async function composeStudyPayload(kind, tier, skillLabel) {
     authored: authoredTier(studyTiersOf(kind), tier),
     derived,
     tier,
-    none: t("known.study.derived.none")
+    none: _loc("PENTARYN_TIES.known.study.derived.none")
   });
   if (!description) return "";
 
-  return composeReveal({ tier, header: f("known.study.header", { skill: skillLabel }), description, traits, attacks });
+  return composeReveal({ tier, header: _loc("PENTARYN_TIES.known.study.header", { skill: skillLabel }), description, traits, attacks });
 }

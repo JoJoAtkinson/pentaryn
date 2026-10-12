@@ -43,7 +43,7 @@ import { applyInspect, concealmentFor, grantKind, writeIdentification } from "./
 import { dropRow } from "./claim.mjs";
 import { factFrom, pending, reset, rowMissed } from "./gate.mjs";
 import { beliefsOf, kindActorOf, reg, resolveFact, studyStateFor, studyTiersOf } from "./resolve.mjs";
-import { esc, f, INSPECT } from "./shared.mjs";
+import { esc, INSPECT } from "./shared.mjs";
 import { readFlag } from "../lib/flags.mjs";
 import { setting } from "../settings.mjs";
 
@@ -128,7 +128,7 @@ async function whisperShare(character, subject) {
   const whisper = ownersOf(character);
   if (!whisper.length) return false;
   await ChatMessage.create({
-    content: `<p class="pt-study-stub">${esc(f("known.share.whisper", { name: character.name, subject: subject.name }))}</p>`,
+    content: `<p class="pt-study-stub">${esc(_loc("PENTARYN_TIES.known.share.whisper", { name: character.name, subject: subject.name }))}</p>`,
     whisper,
     speaker: { alias: game.user?.name ?? "GM" }
   });
@@ -167,7 +167,7 @@ export async function shareFact(spec, recipients, { from = null, notify = true }
   if (!subject || !["ident", "attr", "lore", "kind"].includes(spec?.ns)) return { ...out, reason: "invalid" };
   const fromId = from ? from.id : "gm";
   const fromActor = from && typeof from === "object" ? from : null;
-  const sourceBy = source => (fromActor ? f("known.share.sourceBy", { source, name: fromActor.name }) : source);
+  const sourceBy = source => (fromActor ? _loc("PENTARYN_TIES.known.share.sourceBy", { source, name: fromActor.name }) : source);
 
   // resolve the fact once; a fact that cannot be said is refused for everyone
   let entry = null;

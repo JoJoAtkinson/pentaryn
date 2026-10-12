@@ -11,7 +11,7 @@ import { mayWrite } from "../settings.mjs";
 import { attrFactKey, LORE_FLAG, loreFactKey, loreOfferable, rollableLore } from "../known-core.mjs";
 import { applyStudy } from "./apply.mjs";
 import { kindActorOf, studiedOf, studyStateFor } from "./resolve.mjs";
-import { esc, f, log, SITUATIONAL_MAX, SITUATIONAL_MIN, STUDY, t } from "./shared.mjs";
+import { esc, log, SITUATIONAL_MAX, SITUATIONAL_MIN, STUDY } from "./shared.mjs";
 import { send } from "../socket-adapter.mjs";
 import { readFlag } from "../lib/flags.mjs";
 
@@ -31,32 +31,32 @@ import { readFlag } from "../lib/flags.mjs";
  */
 async function studyDialog(kindName) {
   const modes = [
-    ["normal", "known.study.mode.normal"],
-    ["advantage", "known.study.mode.advantage"],
-    ["disadvantage", "known.study.mode.disadvantage"]
+    ["normal", "PENTARYN_TIES.known.study.mode.normal"],
+    ["advantage", "PENTARYN_TIES.known.study.mode.advantage"],
+    ["disadvantage", "PENTARYN_TIES.known.study.mode.disadvantage"]
   ]
     .map(
       ([value, key], i) =>
         `<label class="pt-study-mode"><input type="radio" name="mode" value="${value}"${
           i === 0 ? " checked" : ""
-        }/> ${esc(t(key))}</label>`
+        }/> ${esc(_loc(key))}</label>`
     )
     .join("");
 
   return foundry.applications.api.DialogV2.prompt({
-    window: { title: f("known.study.dialogTitle", { name: kindName }) },
+    window: { title: _loc("PENTARYN_TIES.known.study.dialogTitle", { name: kindName }) },
     classes: ["pentaryn-tie-dialog"],
     content: `<div class="pt-study-dialog">
-      <p class="pt-study-hint">${esc(t("known.study.dialogHint"))}</p>
+      <p class="pt-study-hint">${esc(_loc("PENTARYN_TIES.known.study.dialogHint"))}</p>
       <div class="pt-study-modes">${modes}</div>
       <label class="pt-field">
-        <span class="pt-field-label">${esc(t("known.study.situational"))}</span>
+        <span class="pt-field-label">${esc(_loc("PENTARYN_TIES.known.study.situational"))}</span>
         <input type="number" name="situational" value="0" step="1"
                min="${SITUATIONAL_MIN}" max="${SITUATIONAL_MAX}" />
       </label>
     </div>`,
     ok: {
-      label: t("known.study.roll"),
+      label: _loc("PENTARYN_TIES.known.study.roll"),
       callback: (event, button) => ({
         mode: button.form.elements.mode.value,
         situational: Number(button.form.elements.situational.value) || 0
@@ -75,7 +75,7 @@ async function studyDialog(kindName) {
 export async function requestStudy(character, subject) {
   const state = studyStateFor(character, subject);
   if (!state.available) {
-    ui.notifications.warn(t(state.spent ? "known.study.notify.spent" : "known.study.notify.noContent"));
+    ui.notifications.warn(_loc(state.spent ? "PENTARYN_TIES.known.study.notify.spent" : "PENTARYN_TIES.known.study.notify.noContent"));
     return false;
   }
   return requestFact(character, subject, { ns: "kind" }, state.kind.name);
@@ -94,7 +94,7 @@ export async function requestLore(character, subject, loreId) {
   const row = rows.find(r => r.id === loreId);
   if (!row) return false;
   if (!row.available) {
-    ui.notifications.warn(t("known.lore.notify.spent"));
+    ui.notifications.warn(_loc("PENTARYN_TIES.known.lore.notify.spent"));
     return false;
   }
   return requestFact(character, subject, { ns: "lore", factId: loreId }, row.label);
@@ -113,7 +113,7 @@ export async function requestAttrLore(character, subject, attrId, loreId) {
   const row = rows.find(r => r.id === loreId);
   if (!row) return false;
   if (!row.available) {
-    ui.notifications.warn(t("known.lore.notify.spent"));
+    ui.notifications.warn(_loc("PENTARYN_TIES.known.lore.notify.spent"));
     return false;
   }
   return requestFact(character, subject, { ns: "attr", attrId, factId: loreId }, row.label);
@@ -180,7 +180,7 @@ async function requestFact(character, subject, spec, label) {
    * dice must not fall while nobody is watching them. Same contract `requestMirror` uses.
    */
   if (!game.users?.activeGM) {
-    ui.notifications.warn(t("known.study.notify.noGM"));
+    ui.notifications.warn(_loc("PENTARYN_TIES.known.study.notify.noGM"));
     return false;
   }
 
@@ -192,8 +192,8 @@ async function requestFact(character, subject, spec, label) {
    */
   if (game.combat?.started && character.inCombat) {
     const go = await foundry.applications.api.DialogV2.confirm({
-      window: { title: t("known.study.combatTitle") },
-      content: `<p>${esc(f("known.study.combat", { name: character.name }))}</p>`
+      window: { title: _loc("PENTARYN_TIES.known.study.combatTitle") },
+      content: `<p>${esc(_loc("PENTARYN_TIES.known.study.combat", { name: character.name }))}</p>`
     });
     if (!go) return false;
   }

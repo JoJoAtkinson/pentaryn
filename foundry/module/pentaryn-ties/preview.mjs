@@ -91,9 +91,6 @@ const skillLabel = s => CONFIG.DND5E?.skills?.[s]?.label ?? s;
 
 const PROF = { none: 0, prof: 1, expert: 2 };
 
-const t = k => game.i18n.localize(`PENTARYN_TIES.${k}`);
-const f = (k, data) => game.i18n.format(`PENTARYN_TIES.${k}`, data);
-
 /** Debounce for live refreshes: a share or a cascade lands as several writes in a burst. */
 const LIVE_MS = 150;
 
@@ -325,7 +322,7 @@ export class InspectPreview extends ApplicationV2 {
   modeBar() {
     const b = (mode, icon, label) => `<button type="button" data-mode="${mode}" class="${this.mode === mode ? "active" : ""}"
       aria-pressed="${this.mode === mode}"><i class="fa-solid ${icon}"></i> ${esc(label)}</button>`;
-    return `<nav class="pv-mode">${b("player", "fa-book-open-reader", t("known.share.modePlayer"))}${b("simulate", "fa-dice-d20", t("known.share.modeSimulate"))}</nav>`;
+    return `<nav class="pv-mode">${b("player", "fa-book-open-reader", _loc("PENTARYN_TIES.known.share.modePlayer"))}${b("simulate", "fa-dice-d20", _loc("PENTARYN_TIES.known.share.modeSimulate"))}</nav>`;
   }
 
   /** The simulate-rolls body — the original preview, unchanged. */
@@ -443,12 +440,12 @@ export class InspectPreview extends ApplicationV2 {
     const idCards = facts.filter(x => x.group === "ident").map(x => {
       const e = describeAttribute(x.attrId);
       const reveal = String(e.reveal ?? "");
-      const note = x.parentId ? f("known.share.afterParent", { parent: describeAttribute(x.parentId).title }) : null;
+      const note = x.parentId ? _loc("PENTARYN_TIES.known.share.afterParent", { parent: describeAttribute(x.parentId).title }) : null;
       return this.factCard({ icon: e.icon, source: e.title, text: reveal }, { ns: "ident", subjectId: subject.id, attrId: x.attrId }, pcs, {
-        blank: !reveal.trim() ? t("known.share.blankReveal") : null, note
+        blank: !reveal.trim() ? _loc("PENTARYN_TIES.known.share.blankReveal") : null, note
       });
     });
-    if (idCards.length) groups.push([t("known.share.groupIdent"), idCards]);
+    if (idCards.length) groups.push([_loc("PENTARYN_TIES.known.share.groupIdent"), idCards]);
 
     const attrCards = [];
     for (const x of facts.filter(x => x.group === "attr")) {
@@ -458,44 +455,44 @@ export class InspectPreview extends ApplicationV2 {
       attrCards.push(this.factCard(
         { icon: e.icon, source: `${e.title} — ${row.label}`, text: row.text },
         { ns: "attr", subjectId: subject.id, attrId: x.attrId, factId: x.factId }, pcs,
-        { blank: !row.text.trim() ? t("known.share.blankText") : null,
-          note: x.secret ? f("known.share.secretLore", { name: subject.name, attr: e.title }) : null }
+        { blank: !row.text.trim() ? _loc("PENTARYN_TIES.known.share.blankText") : null,
+          note: x.secret ? _loc("PENTARYN_TIES.known.share.secretLore", { name: subject.name, attr: e.title }) : null }
       ));
     }
-    if (attrCards.length) groups.push([t("known.share.groupAttr"), attrCards]);
+    if (attrCards.length) groups.push([_loc("PENTARYN_TIES.known.share.groupAttr"), attrCards]);
 
     const ownCards = facts.filter(x => x.group === "lore").map(x => ownRows.get(x.factId)).filter(Boolean).map(row => this.factCard(
       { icon: subject.img, source: row.label, text: row.text },
       { ns: "lore", subjectId: subject.id, factId: row.id }, pcs,
-      { blank: !row.text.trim() ? t("known.share.blankText") : null }
+      { blank: !row.text.trim() ? _loc("PENTARYN_TIES.known.share.blankText") : null }
     ));
-    if (ownCards.length) groups.push([f("known.share.groupLore", { name: subject.name }), ownCards]);
+    if (ownCards.length) groups.push([_loc("PENTARYN_TIES.known.share.groupLore", { name: subject.name }), ownCards]);
 
     const state = studyStateFor(null, subject);
     const kind = state.kind ?? null;
     if (kind && state.content) {
       const text = await composeStudyPayload(kind, 25, state.skillLabel);
       // a separate kind actor's study files under the KIND's page on the Known tab, not this one's
-      const kindLabel = kind.id !== subject.id ? f("known.share.groupKindPage", { kind: kind.name }) : t("known.share.groupKind");
+      const kindLabel = kind.id !== subject.id ? _loc("PENTARYN_TIES.known.share.groupKindPage", { kind: kind.name }) : _loc("PENTARYN_TIES.known.share.groupKind");
       groups.push([kindLabel, [this.factCard(
         { icon: kind.img, source: kind.name, text }, { ns: "kind", subjectId: subject.id }, pcs,
-        { note: studyOffsetOf(readFlag(kind, MODULE, STUDY_OFFSET_FLAG)) === "auto" ? t("known.share.kindAuto") : null }
+        { note: studyOffsetOf(readFlag(kind, MODULE, STUDY_OFFSET_FLAG)) === "auto" ? _loc("PENTARYN_TIES.known.share.kindAuto") : null }
       )]]);
     }
 
     const head = `<div class="pt-summary pv-entry-head">
       <img class="pt-portrait" src="${esc(subject.img || "icons/svg/mystery-man.svg")}" alt="" />
       <span class="pt-who"><span class="pt-name">${esc(subject.name)}</span>
-      ${kind && kind.id !== subject.id ? `<span class="pt-known-kind">${esc(f("known.study.kindLine", { name: kind.name }))}</span>` : ""}</span>
+      ${kind && kind.id !== subject.id ? `<span class="pt-known-kind">${esc(_loc("PENTARYN_TIES.known.study.kindLine", { name: kind.name }))}</span>` : ""}</span>
     </div>`;
 
-    let html = `<p class="pv-note"><i class="fa-solid fa-eye-slash"></i> ${esc(t("known.share.playerNote"))}</p>`;
-    if (!pcs.length) html += `<p class="pv-silent">${esc(t("known.share.noPCs"))}</p>`;
+    let html = `<p class="pv-note"><i class="fa-solid fa-eye-slash"></i> ${esc(_loc("PENTARYN_TIES.known.share.playerNote"))}</p>`;
+    if (!pcs.length) html += `<p class="pv-silent">${esc(_loc("PENTARYN_TIES.known.share.noPCs"))}</p>`;
     html += `<div class="pentaryn-ties pentaryn-known pv-player">${head}`;
     if (free.length) html += `<p class="pv-free">Seen without a roll: ${free.map(e => esc(e.title)).join(" · ")}</p>`;
-    if (!groups.length) html += `<p class="pv-silent">${esc(t("known.share.nothing"))}</p>`;
+    if (!groups.length) html += `<p class="pv-silent">${esc(_loc("PENTARYN_TIES.known.share.nothing"))}</p>`;
     else {
-      html += `<section class="pt-granted" aria-label="${esc(t("known.granted.label"))}">${grantedHead()}`;
+      html += `<section class="pt-granted" aria-label="${esc(_loc("PENTARYN_TIES.known.granted.label"))}">${grantedHead()}`;
       for (const [label, cards] of groups)
         html += `<h4 class="pv-group">${esc(label)}</h4><ul class="pt-granted-list">${cards.join("")}</ul>`;
       html += `</section>`;
@@ -521,8 +518,8 @@ export class InspectPreview extends ApplicationV2 {
   switchState(spec, pc) {
     const st = factStatus(spec, pc);
     const name = this.pcLabels?.get(pc.id) ?? firstName(pc.name);
-    const rolled = st.total != null ? f("known.share.rolled", { total: st.total, dc: st.dc ?? "?" }) : "";
-    const tier = spec.ns === "kind" && st.tier != null ? f("known.share.sw.tier", { tier: st.tier }) : "";
+    const rolled = st.total != null ? _loc("PENTARYN_TIES.known.share.rolled", { total: st.total, dc: st.dc ?? "?" }) : "";
+    const tier = spec.ns === "kind" && st.tier != null ? _loc("PENTARYN_TIES.known.share.sw.tier", { tier: st.tier }) : "";
     const by = st.from && st.from !== "gm" ? game.actors.get(st.from)?.name ?? null : null;
     let state = "off";
     let act = "share";
@@ -533,30 +530,30 @@ export class InspectPreview extends ApplicationV2 {
         // a kind held below the top tier is not "knows it all": the click tells them the rest
         act = spec.ns === "kind" && Number(st.tier ?? 0) < 25 ? "raise" : "rolled";
         tip = st.total != null
-          ? f("known.share.sw.passed", { name, how: `${rolled}${tier}` })
-          : f("known.share.sw.auto", { name });
-        tip += ` · ${act === "raise" ? t("known.share.sw.clickRaise") : t("known.share.sw.clickRolled")}`;
+          ? _loc("PENTARYN_TIES.known.share.sw.passed", { name, how: `${rolled}${tier}` })
+          : _loc("PENTARYN_TIES.known.share.sw.auto", { name });
+        tip += ` · ${act === "raise" ? _loc("PENTARYN_TIES.known.share.sw.clickRaise") : _loc("PENTARYN_TIES.known.share.sw.clickRolled")}`;
         break;
       case "told":
         state = "on";
         act = "forget";
-        tip = `${by ? f("known.share.sw.toldBy", { name, by }) : f("known.share.sw.told", { name })} · ${t("known.share.sw.clickForget")}`;
+        tip = `${by ? _loc("PENTARYN_TIES.known.share.sw.toldBy", { name, by }) : _loc("PENTARYN_TIES.known.share.sw.told", { name })} · ${_loc("PENTARYN_TIES.known.share.sw.clickForget")}`;
         break;
       case "held":
         state = "pending";
         act = "held";
-        tip = `${f("known.share.sw.held", { name })}${rolled ? ` (${rolled}${tier})` : ""} · ${t("known.share.sw.clickHeld")}`;
+        tip = `${_loc("PENTARYN_TIES.known.share.sw.held", { name })}${rolled ? ` (${rolled}${tier})` : ""} · ${_loc("PENTARYN_TIES.known.share.sw.clickHeld")}`;
         break;
       case "failed":
         state = "failed";
-        tip = `${f("known.share.sw.failed", { name })}${rolled ? ` (${rolled}${tier})` : ""} · ${t("known.share.sw.clickOverride")}`;
+        tip = `${_loc("PENTARYN_TIES.known.share.sw.failed", { name })}${rolled ? ` (${rolled}${tier})` : ""} · ${_loc("PENTARYN_TIES.known.share.sw.clickOverride")}`;
         break;
       case "locked":
         state = "failed";
-        tip = `${f("known.share.sw.locked", { name })} · ${t("known.share.sw.clickOverride")}`;
+        tip = `${_loc("PENTARYN_TIES.known.share.sw.locked", { name })} · ${_loc("PENTARYN_TIES.known.share.sw.clickOverride")}`;
         break;
       default:
-        tip = `${f("known.share.sw.none", { name })} · ${t("known.share.sw.clickShare")}`;
+        tip = `${_loc("PENTARYN_TIES.known.share.sw.none", { name })} · ${_loc("PENTARYN_TIES.known.share.sw.clickShare")}`;
     }
     return { st, state, act, tip, name };
   }
@@ -571,7 +568,7 @@ export class InspectPreview extends ApplicationV2 {
           class="pv-sw pv-sw-${s.state}" aria-checked="${s.state === "on" || s.state === "pending"}"
           aria-label="${esc(s.tip)}" data-tooltip="${esc(s.tip)}"><span class="pv-slider"></span><span class="pv-sw-name">${esc(s.name)}</span></button>`).join("")}
       <button type="button" class="pv-share-all" data-action="share-all" ${anyOff ? "" : "disabled"}
-        data-tooltip="${esc(t("known.share.sw.allTip"))}">${esc(t("known.share.sw.all"))}</button>
+        data-tooltip="${esc(_loc("PENTARYN_TIES.known.share.sw.allTip"))}">${esc(_loc("PENTARYN_TIES.known.share.sw.all"))}</button>
     </div>`;
   }
 
@@ -621,11 +618,11 @@ export class InspectPreview extends ApplicationV2 {
   /** What a share did, said once. */
   reportShare(res, label) {
     const names = ids => ids.map(id => game.actors.get(id)?.name ?? id).join(", ");
-    if (!res.ok) ui.notifications.warn(t(`known.share.skip.${res.reason}`));
-    if (res.shared?.length) ui.notifications.info(f("known.share.done", { who: names(res.shared), fact: label }));
+    if (!res.ok) ui.notifications.warn(_loc(`PENTARYN_TIES.known.share.skip.${res.reason}`));
+    if (res.shared?.length) ui.notifications.info(_loc("PENTARYN_TIES.known.share.done", { who: names(res.shared), fact: label }));
     if (res.skipped?.length)
-      ui.notifications.warn(res.skipped.map(x => `${names([x.pcId])}: ${t(`known.share.skip.${x.reason}`)}`).join(" · "));
-    if (res.unseen?.length) ui.notifications.info(f("known.share.unseen", { who: names(res.unseen), name: this.subject.name }));
+      ui.notifications.warn(res.skipped.map(x => `${names([x.pcId])}: ${_loc(`PENTARYN_TIES.known.share.skip.${x.reason}`)}`).join(" · "));
+    if (res.unseen?.length) ui.notifications.info(_loc("PENTARYN_TIES.known.share.unseen", { who: names(res.unseen), name: this.subject.name }));
   }
 
   /** One click on one switch. Decides from the ledger, not from what the switch looked like. */
@@ -635,14 +632,14 @@ export class InspectPreview extends ApplicationV2 {
     const key = `${i}:${pcId}`;
     if (!spec || !pc || this.busy.has(key)) return;
     const s = this.switchState(spec, pc);
-    if (s.act === "rolled") return ui.notifications.info(f("known.share.sw.cantUnlearn", { name: s.name }));
-    if (s.act === "held") return ui.notifications.info(f("known.share.sw.useDeliver", { name: s.name }));
+    if (s.act === "rolled") return ui.notifications.info(_loc("PENTARYN_TIES.known.share.sw.cantUnlearn", { name: s.name }));
+    if (s.act === "held") return ui.notifications.info(_loc("PENTARYN_TIES.known.share.sw.useDeliver", { name: s.name }));
     this.busy.add(key);
     this.optimistic(btn, s.act === "forget" ? "off" : "on");
     try {
       if (s.act === "forget") {
         const res = await forgetFact(spec, pc);
-        if (!res.ok) ui.notifications.warn(t(`known.share.skip.${res.reason}`));
+        if (!res.ok) ui.notifications.warn(_loc(`PENTARYN_TIES.known.share.skip.${res.reason}`));
       } else this.reportShare(await shareFact(spec, [pc], { from: null, notify: true }), label);
     } catch (err) {
       log.error(`switch`, err);
@@ -658,7 +655,7 @@ export class InspectPreview extends ApplicationV2 {
     const { spec, label } = this.specs[i] ?? {};
     if (!spec || this.busy.has(`${i}:*`)) return;
     const targets = this.playerCharacters().filter(pc => this.switchState(spec, pc).act === "share");
-    if (!targets.length) return ui.notifications.info(t("known.share.allKnow"));
+    if (!targets.length) return ui.notifications.info(_loc("PENTARYN_TIES.known.share.allKnow"));
     const keys = [`${i}:*`, ...targets.map(pc => `${i}:${pc.id}`)];
     keys.forEach(k => this.busy.add(k));
     for (const pc of targets) {

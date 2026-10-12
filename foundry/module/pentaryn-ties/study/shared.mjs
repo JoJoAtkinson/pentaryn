@@ -24,6 +24,4 @@ export const ATTACK_LINES_MAX = 12;
 export const SITUATIONAL_MIN = -100;
 export const SITUATIONAL_MAX = 100;
 
-export const t = k => game.i18n.localize(`PENTARYN_TIES.${k}`);
-export const f = (k, data) => game.i18n.format(`PENTARYN_TIES.${k}`, data);
 export { esc } from "../core/html.mjs";

@@ -11,7 +11,6 @@ import { BELIEFS_FLAG, KIND_KEY } from "../known-core.mjs";
 import { putBelief, readBelief } from "./apply.mjs";
 import { readFlag } from "../lib/flags.mjs";
 
-
 /**
  * ⚠ **`activeGM` identifies a USER, not a session — and one GM can be logged in twice.**
  *

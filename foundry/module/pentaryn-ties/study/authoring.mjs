@@ -24,7 +24,7 @@ import {
 import { concealmentFor } from "./cascade.mjs";
 import { pending } from "./gate.mjs";
 import { beliefsOf, kindActorOf, studyHoldFor } from "./resolve.mjs";
-import { esc, f, t } from "./shared.mjs";
+import { esc } from "./shared.mjs";
 import { readFlag } from "../lib/flags.mjs";
 
 /* -------------------------------------------- */
@@ -49,19 +49,19 @@ export async function kindDialog(actor) {
     .join("");
 
   const chosen = await foundry.applications.api.DialogV2.prompt({
-    window: { title: f("known.study.kindTitle", { name: actor.name }) },
+    window: { title: _loc("PENTARYN_TIES.known.study.kindTitle", { name: actor.name }) },
     classes: ["pentaryn-tie-dialog"],
     content: `<div class="pt-known-picker">
-      <p class="pt-study-hint">${esc(t("known.study.kindHint"))}</p>
+      <p class="pt-study-hint">${esc(_loc("PENTARYN_TIES.known.study.kindHint"))}</p>
       <label class="pt-field">
-        <span class="pt-field-label">${esc(t("known.study.kindLabel"))}</span>
+        <span class="pt-field-label">${esc(_loc("PENTARYN_TIES.known.study.kindLabel"))}</span>
         <select name="kind">
-          <option value="">${esc(t("known.study.kindSelf"))}</option>
+          <option value="">${esc(_loc("PENTARYN_TIES.known.study.kindSelf"))}</option>
           ${options}
         </select>
       </label>
     </div>`,
-    ok: { label: t("known.study.kindSave"), callback: (event, button) => button.form.elements.kind.value ?? "" },
+    ok: { label: _loc("PENTARYN_TIES.known.study.kindSave"), callback: (event, button) => button.form.elements.kind.value ?? "" },
     rejectClose: false
   });
   if (chosen === null || chosen === undefined) return false;
@@ -74,7 +74,7 @@ export async function setKindOf(actor, kindId) {
   const id = String(kindId ?? "").trim();
   if (!id || id === actor.id) await actor.unsetFlag(MODULE, KIND_OF_FLAG);
   else if (!game.actors?.get(id)) {
-    ui.notifications.warn(t("known.study.notify.noKind"));
+    ui.notifications.warn(_loc("PENTARYN_TIES.known.study.notify.noKind"));
     return false;
   } else await actor.setFlag(MODULE, KIND_OF_FLAG, id);
   return true;

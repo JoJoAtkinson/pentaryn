@@ -77,9 +77,6 @@ const log = makeLog(MODULE);
 // re-exported so the entry point registers the settings by the same names this file reads
 export { REGISTRY_SETTING, ATTR_BELIEFS_SETTING, KNOWLEDGE_SETTING } from "./known-core.mjs";
 
-const t = k => game.i18n.localize(`PENTARYN_TIES.${k}`);
-const f = (k, data) => game.i18n.format(`PENTARYN_TIES.${k}`, data);
-
 /**
  * A default icon per category, so a new attribute looks like the thing it is without anyone
  * picking art. Joe: *"let's have a generic icon if no custom is given that feels good — city,
@@ -473,7 +470,7 @@ async function commitNow(ref, patch, { review = false } = {}) {
    * the whole loop and everything under it disappear (see `forestOf`). Cheap to refuse here.
    */
   if (next.parent && wouldCycle(id, next.parent, list)) {
-    ui.notifications?.warn(t("attributes.cycleRefused"));
+    ui.notifications?.warn(_loc("PENTARYN_TIES.attributes.cycleRefused"));
     return fail("cycle");
   }
   /*
@@ -485,7 +482,7 @@ async function commitNow(ref, patch, { review = false } = {}) {
   if ("title" in next) {
     const clash = renameCollision(id, String(next.title ?? "").trim() || list[i].id, list);
     if (clash) {
-      ui.notifications?.warn(f("attributes.renameRefused", { title: clash.title, id: clash.id }));
+      ui.notifications?.warn(_loc("PENTARYN_TIES.attributes.renameRefused", { title: clash.title, id: clash.id }));
       return fail("collision", { existing: clash });
     }
   }
@@ -733,7 +730,7 @@ export function describeAttribute(id) {
   return {
     id,
     title: derivedTitle(ns, slug),
-    category: ns ? f("attributes.derivedCategory", { ns: t(`attributes.ns.${ns}`) }) : "",
+    category: ns ? _loc("PENTARYN_TIES.attributes.derivedCategory", { ns: _loc(`PENTARYN_TIES.attributes.ns.${ns}`) }) : "",
     icon: ns ? DERIVED_ICONS[ns] ?? CATEGORY_ICONS.default : CATEGORY_ICONS.default,
     // no entry means the GM has said nothing about it — and `source` must be null on BOTH branches
     // or a consumer sees an object one way and `undefined` the other

@@ -42,9 +42,6 @@ import {
 } from "./known-core.mjs";
 import { esc } from "./core/html.mjs";
 
-const t = k => game.i18n.localize(`PENTARYN_TIES.${k}`);
-const f = (k, data) => game.i18n.format(`PENTARYN_TIES.${k}`, data);
-
 /** Which rows are expanded, keyed by the mount's own id — cosmetic, never persisted. */
 const open = new Map();
 
@@ -66,7 +63,7 @@ function skillOptions(selected) {
   entries.sort((a, b) => a[1].localeCompare(b[1]));
   // a row authored against a skill this world no longer defines keeps its value rather than
   // silently retargeting to whatever sorts first
-  if (selected && !skills[selected]) entries.unshift([selected, f("lore.skillMissing", { skill: selected })]);
+  if (selected && !skills[selected]) entries.unshift([selected, _loc("PENTARYN_TIES.lore.skillMissing", { skill: selected })]);
   return entries
     .map(([id, label]) => `<option value="${esc(id)}"${id === selected ? " selected" : ""}>${esc(label)}</option>`)
     .join("");
@@ -75,9 +72,9 @@ function skillOptions(selected) {
 function holdOptions(hold) {
   const v = hold === true ? "on" : hold === false ? "off" : "";
   return [
-    ["", t("lore.holdDefault")],
-    ["on", t("lore.holdOn")],
-    ["off", t("lore.holdOff")]
+    ["", _loc("PENTARYN_TIES.lore.holdDefault")],
+    ["on", _loc("PENTARYN_TIES.lore.holdOn")],
+    ["off", _loc("PENTARYN_TIES.lore.holdOff")]
   ]
     .map(([id, label]) => `<option value="${id}"${id === v ? " selected" : ""}>${esc(label)}</option>`)
     .join("");
@@ -85,11 +82,11 @@ function holdOptions(hold) {
 
 /** The collapsed line: what the row costs. Nothing nags for a miss — a failure hands over nothing. */
 function summary(row) {
-  const label = row.label.trim() || t("lore.untitled");
+  const label = row.label.trim() || _loc("PENTARYN_TIES.lore.untitled");
   const skill = CONFIG.DND5E?.skills?.[row.skill]?.label ?? row.skill;
   return `<div class="pt-summary pt-lore-summary" role="button" tabindex="0"
-       aria-label="${esc(f("lore.rowAria", { label, skill, dc: row.dc }))}">
-    <span class="pt-lore-dc" data-tooltip="${esc(f("lore.dcTip", { skill, dc: row.dc }))}">${row.dc}</span>
+       aria-label="${esc(_loc("PENTARYN_TIES.lore.rowAria", { label, skill, dc: row.dc }))}">
+    <span class="pt-lore-dc" data-tooltip="${esc(_loc("PENTARYN_TIES.lore.dcTip", { skill, dc: row.dc }))}">${row.dc}</span>
     <span class="pt-lore-label">${esc(label)}</span>
     <span class="pt-lore-skill">${esc(skill)}</span>
     <i class="fa-solid fa-chevron-down pt-caret" aria-hidden="true"></i>
@@ -99,38 +96,38 @@ function summary(row) {
 function detail(row) {
   return `<div class="pt-detail pt-lore-detail">
     <label class="pt-field">
-      <span class="pt-field-label">${esc(t("lore.labelLabel"))}</span>
+      <span class="pt-field-label">${esc(_loc("PENTARYN_TIES.lore.labelLabel"))}</span>
       <input type="text" data-field="label" maxlength="${LORE_LABEL_MAX}"
-             value="${esc(row.label)}" placeholder="${esc(t("lore.labelPlaceholder"))}">
+             value="${esc(row.label)}" placeholder="${esc(_loc("PENTARYN_TIES.lore.labelPlaceholder"))}">
     </label>
     <div class="pt-fields pt-lore-price">
       <label class="pt-field">
-        <span class="pt-field-label">${esc(t("lore.skillLabel"))}</span>
+        <span class="pt-field-label">${esc(_loc("PENTARYN_TIES.lore.skillLabel"))}</span>
         <select data-field="skill">${skillOptions(row.skill)}</select>
       </label>
       <label class="pt-field pt-field-dc">
-        <span class="pt-field-label">${esc(t("lore.dcLabel"))}</span>
+        <span class="pt-field-label">${esc(_loc("PENTARYN_TIES.lore.dcLabel"))}</span>
         <input type="number" data-field="dc" min="${LORE_DC_MIN}" max="${LORE_DC_MAX}" value="${row.dc}">
       </label>
       <label class="pt-field">
-        <span class="pt-field-label">${esc(t("lore.holdLabel"))}</span>
-        <select data-field="hold" data-tooltip="${esc(t("lore.holdTip"))}">${holdOptions(row.hold)}</select>
+        <span class="pt-field-label">${esc(_loc("PENTARYN_TIES.lore.holdLabel"))}</span>
+        <select data-field="hold" data-tooltip="${esc(_loc("PENTARYN_TIES.lore.holdTip"))}">${holdOptions(row.hold)}</select>
       </label>
     </div>
     <label class="pt-field pt-field-notes">
-      <span class="pt-field-label">${esc(t("lore.textLabel"))}</span>
+      <span class="pt-field-label">${esc(_loc("PENTARYN_TIES.lore.textLabel"))}</span>
       <textarea data-field="text" rows="4" maxlength="${LORE_TEXT_MAX}"
-                placeholder="${esc(t("lore.textPlaceholder"))}">${esc(row.text)}</textarea>
+                placeholder="${esc(_loc("PENTARYN_TIES.lore.textPlaceholder"))}">${esc(row.text)}</textarea>
     </label>
     <label class="pt-field pt-field-notes">
-      <span class="pt-field-label">${esc(t("lore.missLabel"))}</span>
+      <span class="pt-field-label">${esc(_loc("PENTARYN_TIES.lore.missLabel"))}</span>
       <textarea data-field="miss" rows="3" maxlength="${LORE_TEXT_MAX}"
-                placeholder="${esc(t("lore.missPlaceholder"))}">${esc(row.miss)}</textarea>
-      <span class="pt-hint">${esc(t("lore.missHint"))}</span>
+                placeholder="${esc(_loc("PENTARYN_TIES.lore.missPlaceholder"))}">${esc(row.miss)}</textarea>
+      <span class="pt-hint">${esc(_loc("PENTARYN_TIES.lore.missHint"))}</span>
     </label>
     <div class="pt-detail-actions">
       <button type="button" class="pt-textbtn pt-del" data-action="lore-remove" data-id="${esc(row.id)}">
-        <i class="fa-solid fa-trash"></i> ${esc(t("lore.remove"))}
+        <i class="fa-solid fa-trash"></i> ${esc(_loc("PENTARYN_TIES.lore.remove"))}
       </button>
     </div>
   </div>`;
@@ -152,17 +149,17 @@ export function loreEditorHTML(rawRows, key = "lore") {
           </li>`
         )
         .join("")}</ul>`
-    : `<p class="pt-empty">${esc(t("lore.empty"))}</p>`;
+    : `<p class="pt-empty">${esc(_loc("PENTARYN_TIES.lore.empty"))}</p>`;
 
   return `<section class="pt-lore-editor" data-lore-key="${esc(key)}">
     <div class="pt-group-head" role="heading" aria-level="3">
-      <span class="pt-group-title">${esc(t("lore.heading"))}</span>
+      <span class="pt-group-title">${esc(_loc("PENTARYN_TIES.lore.heading"))}</span>
     </div>
-    <p class="pt-hint pt-lore-warning">${esc(t("lore.plaintextWarning"))}</p>
+    <p class="pt-hint pt-lore-warning">${esc(_loc("PENTARYN_TIES.lore.plaintextWarning"))}</p>
     ${body}
     <div class="pt-add-bar">
       <button type="button" class="pt-add-btn" data-action="lore-add">
-        <i class="fa-solid fa-plus"></i> ${esc(t("lore.add"))}
+        <i class="fa-solid fa-plus"></i> ${esc(_loc("PENTARYN_TIES.lore.add"))}
       </button>
     </div>
   </section>`;
@@ -253,10 +250,10 @@ export function bindLoreEditor(root, { rows, save, key = "lore", rerender }) {
       ev.stopPropagation();
       const id = btn.dataset.id;
       const row = current().find(r => r.id === id);
-      const named = row?.label?.trim() || t("lore.untitled");
+      const named = row?.label?.trim() || _loc("PENTARYN_TIES.lore.untitled");
       const go = await foundry.applications.api.DialogV2.confirm({
-        window: { title: t("lore.removeTitle") },
-        content: `<p>${esc(f("lore.removeBody", { label: named }))}</p>`
+        window: { title: _loc("PENTARYN_TIES.lore.removeTitle") },
+        content: `<p>${esc(_loc("PENTARYN_TIES.lore.removeBody", { label: named }))}</p>`
       });
       if (!go) return;
       expanded.delete(id);

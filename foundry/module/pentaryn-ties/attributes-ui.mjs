@@ -45,9 +45,6 @@ import { kindActorOf, attrLoreStateFor, releaseHeldAttribute } from "./study.mjs
 import { grantsForEntry, GRANTED_FLAG, HELP_SCALE, CARRIED_SCALE, helpFor, rollableLore, LORE_FLAG, attrFactKey } from "./known-core.mjs";
 import { esc } from "./core/html.mjs";
 
-const t = k => game.i18n.localize(`PENTARYN_TIES.${k}`);
-const f = (k, data) => game.i18n.format(`PENTARYN_TIES.${k}`, data);
-
 export const ATTR_TAB_ID = "attributes";
 
 /** Which rows are expanded, per actor — cosmetic, never persisted. */
@@ -112,10 +109,10 @@ function grantsFor(viewer, attrId) {
 
 function grantedBlock(grants) {
   if (!grants.length) return "";
-  return `<section class="pt-granted" aria-label="${esc(t("known.granted.label"))}">
+  return `<section class="pt-granted" aria-label="${esc(_loc("PENTARYN_TIES.known.granted.label"))}">
     <div class="pt-granted-head">
       <i class="fa-solid fa-book-open-reader"></i>
-      <span>${esc(t("known.granted.label"))}</span>
+      <span>${esc(_loc("PENTARYN_TIES.known.granted.label"))}</span>
     </div>
     <ul class="pt-granted-list">
       ${grants
@@ -153,7 +150,7 @@ function offersBlock(actor, subject, attrId) {
   return `<div class="pt-lore-offers pt-gm-only">
     <div class="pt-lore-offers-head">
       <i class="fa-solid fa-book-open-reader" aria-hidden="true"></i>
-      <span>${esc(t("attributes.learnedHeading"))}</span>
+      <span>${esc(_loc("PENTARYN_TIES.attributes.learnedHeading"))}</span>
     </div>
     <ul class="pt-lore-offer-list">
       ${rows
@@ -161,9 +158,9 @@ function offersBlock(actor, subject, attrId) {
           r => `<li>
             <button type="button" class="pt-textbtn pt-lore-btn" data-action="attr-learned"
                 data-attr="${esc(attrId)}" data-lore="${esc(r.id)}"
-                data-tooltip="${esc(f("attributes.learnedTip", { label: r.label }))}">
+                data-tooltip="${esc(_loc("PENTARYN_TIES.attributes.learnedTip", { label: r.label }))}">
               <span class="pt-lore-offer-label">${esc(r.label)}</span>
-              <span class="pt-lore-offer-price">${esc(t("attributes.learnedAction"))}</span>
+              <span class="pt-lore-offer-price">${esc(_loc("PENTARYN_TIES.attributes.learnedAction"))}</span>
             </button>
           </li>`
         )
@@ -192,15 +189,15 @@ function chainTags(row) {
 
 function summary(row, isGM) {
   return `<div class="pt-summary pt-attr-summary" role="button" tabindex="0"
-       aria-label="${esc(f("attributes.rowAria", { title: row.title }))}">
+       aria-label="${esc(_loc("PENTARYN_TIES.attributes.rowAria", { title: row.title }))}">
     <img class="pt-attr-icon" src="${esc(row.icon)}" alt="">
     <span class="pt-attr-title">${esc(row.title)}</span>
     ${row.category ? `<span class="pt-attr-category">${esc(row.category)}</span>` : ""}
     ${isGM ? chainTags(row) : ""}
     ${
       row.derived && !row.authored
-        ? `<span class="pt-attr-tag pt-attr-derived" data-tooltip="${esc(t("attributes.derivedTip"))}">${esc(
-            t("attributes.derived")
+        ? `<span class="pt-attr-tag pt-attr-derived" data-tooltip="${esc(_loc("PENTARYN_TIES.attributes.derivedTip"))}">${esc(
+            _loc("PENTARYN_TIES.attributes.derived")
           )}</span>`
         : ""
     }
@@ -212,8 +209,8 @@ function summary(row, isGM) {
       */ ""}
     ${
       isGM && row.authored && (helpFor(row) !== "enables" || helpFor(row, { carried: true }) !== "enables")
-        ? `<i class="fa-solid fa-dice-d20 pt-attr-adv" aria-label="${esc(t("attributes.grantsAdvantage"))}"
-             data-tooltip="${esc(t("attributes.grantsAdvantage"))}"></i>`
+        ? `<i class="fa-solid fa-dice-d20 pt-attr-adv" aria-label="${esc(_loc("PENTARYN_TIES.attributes.grantsAdvantage"))}"
+             data-tooltip="${esc(_loc("PENTARYN_TIES.attributes.grantsAdvantage"))}"></i>`
         : ""
     }
     ${/*
@@ -248,14 +245,14 @@ function sourceBlock(row) {
   const src = row.source;
   if (!src) return "";
   const version = src.blob
-    ? f("attributes.sourceVersion", { hash: src.blob.slice(0, 7) })
-    : t("attributes.sourceNoVersion");
+    ? _loc("PENTARYN_TIES.attributes.sourceVersion", { hash: src.blob.slice(0, 7) })
+    : _loc("PENTARYN_TIES.attributes.sourceNoVersion");
   return `<div class="pt-field pt-source" data-id="${esc(row.id)}">
-      <span class="pt-field-label">${esc(t("attributes.sourceLabel"))}</span>
+      <span class="pt-field-label">${esc(_loc("PENTARYN_TIES.attributes.sourceLabel"))}</span>
       <code class="pt-source-path" data-tooltip="${esc(src.path)}">${esc(src.path)}</code>
       <span class="pt-source-version">${esc(version)}</span>
       <button type="button" class="pt-textbtn" data-action="source-clear" data-id="${esc(row.id)}"
-              data-tooltip="${esc(t("attributes.sourceClearTip"))}">${esc(t("attributes.sourceClear"))}</button>
+              data-tooltip="${esc(_loc("PENTARYN_TIES.attributes.sourceClearTip"))}">${esc(_loc("PENTARYN_TIES.attributes.sourceClear"))}</button>
     </div>`;
 }
 
@@ -274,18 +271,18 @@ function identifyBlock(row) {
   const skills = Object.entries(CONFIG.DND5E?.skills ?? {});
   const opt = skills.map(([k, v]) => `<option value="${k}"${k === row.skill ? " selected" : ""}>${esc(game.i18n.localize(v.label ?? k))}</option>`).join("");
   return `<div class="pt-identify">
-      <div class="pt-identify-head"><i class="fa-solid fa-eye" aria-hidden="true"></i> ${esc(t("attributes.identifyHeading"))}
+      <div class="pt-identify-head"><i class="fa-solid fa-eye" aria-hidden="true"></i> ${esc(_loc("PENTARYN_TIES.attributes.identifyHeading"))}
         <select data-attr-field="skill" data-id="${esc(row.id)}">${opt}</select>
-        <span>${esc(t("attributes.identifyDC"))}</span>
+        <span>${esc(_loc("PENTARYN_TIES.attributes.identifyDC"))}</span>
         <input type="number" min="1" max="40" data-attr-field="dc" data-id="${esc(row.id)}" value="${esc(row.dc ?? 15)}">
       </div>
       <label class="pt-field pt-field-stacked">
-        <span class="pt-field-label">${esc(t("attributes.identifySuccess"))}</span>
+        <span class="pt-field-label">${esc(_loc("PENTARYN_TIES.attributes.identifySuccess"))}</span>
         <textarea rows="4" data-attr-field="reveal" data-id="${esc(row.id)}">${esc(row.reveal ?? "")}</textarea>
-        <span class="pt-hint">${esc(t("attributes.identifyFailHint"))}</span>
+        <span class="pt-hint">${esc(_loc("PENTARYN_TIES.attributes.identifyFailHint"))}</span>
       </label>
       <label class="pt-field pt-field-stacked">
-        <span class="pt-field-label">${esc(t("attributes.identifyFailure"))}</span>
+        <span class="pt-field-label">${esc(_loc("PENTARYN_TIES.attributes.identifyFailure"))}</span>
         <textarea rows="3" data-attr-field="miss" data-id="${esc(row.id)}">${esc(row.miss ?? "")}</textarea>
       </label>
     </div>`;
@@ -322,10 +319,10 @@ export function personalCluesHTML(entry) {
     }
     const list = rows.length
       ? rows.map(r => `${r.label} (${skill(r.skill)} ${r.dc})`).join(", ")
-      : t("attributes.cluesNone");
-    return `<p class="pt-clues" data-tooltip="${esc(t("attributes.cluesTip"))}">
+      : _loc("PENTARYN_TIES.attributes.cluesNone");
+    return `<p class="pt-clues" data-tooltip="${esc(_loc("PENTARYN_TIES.attributes.cluesTip"))}">
       <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
-      <b>${esc(f("attributes.cluesOn", { name: a.name }))}</b> ${esc(list)}</p>`;
+      <b>${esc(_loc("PENTARYN_TIES.attributes.cluesOn", { name: a.name }))}</b> ${esc(list)}</p>`;
   });
   return `<div class="pt-clues-box">${lines.join("")}</div>`;
 }
@@ -341,7 +338,7 @@ function detail(row, { actor, isGM, viewer }) {
      * use still leaks that a secret is there. The GM grants from their side; see `offersBlock`.
      */
     return `<div class="pt-detail pt-attr-detail">
-      ${grants ? "" : `<p class="pt-empty">${esc(t("attributes.playerEmpty"))}</p>`}
+      ${grants ? "" : `<p class="pt-empty">${esc(_loc("PENTARYN_TIES.attributes.playerEmpty"))}</p>`}
       ${grants}
     </div>`;
   }
@@ -354,29 +351,29 @@ function detail(row, { actor, isGM, viewer }) {
       row.authored
         ? `<div class="pt-fields pt-attr-fields">
             <label class="pt-field">
-              <span class="pt-field-label">${esc(t("attributes.titleLabel"))}</span>
+              <span class="pt-field-label">${esc(_loc("PENTARYN_TIES.attributes.titleLabel"))}</span>
               <input type="text" data-attr-field="title" data-id="${esc(row.id)}" value="${esc(row.title)}">
             </label>
             <label class="pt-field">
-              <span class="pt-field-label">${esc(t("attributes.categoryLabel"))}</span>
+              <span class="pt-field-label">${esc(_loc("PENTARYN_TIES.attributes.categoryLabel"))}</span>
               <input type="text" data-attr-field="category" data-id="${esc(row.id)}" value="${esc(row.category)}">
             </label>
             <label class="pt-field">
-              <span class="pt-field-label">${esc(t("attributes.whenKnownLabel"))}</span>
+              <span class="pt-field-label">${esc(_loc("PENTARYN_TIES.attributes.whenKnownLabel"))}</span>
               <select data-attr-field="whenKnown" data-id="${esc(row.id)}">
                 ${HELP_SCALE.map(
                   v => `<option value="${v}"${v === row.whenKnown ? " selected" : ""}>${esc(
-                    t(`attributes.help.${v}`)
+                    _loc(`PENTARYN_TIES.attributes.help.${v}`)
                   )}</option>`
                 ).join("")}
               </select>
             </label>
             <label class="pt-field">
-              <span class="pt-field-label">${esc(t("attributes.whenCarriedLabel"))}</span>
+              <span class="pt-field-label">${esc(_loc("PENTARYN_TIES.attributes.whenCarriedLabel"))}</span>
               <select data-attr-field="whenCarried" data-id="${esc(row.id)}">
                 ${CARRIED_SCALE.map(
                   v => `<option value="${v}"${v === row.whenCarried ? " selected" : ""}>${esc(
-                    t(`attributes.carried.${v}`)
+                    _loc(`PENTARYN_TIES.attributes.carried.${v}`)
                   )}</option>`
                 ).join("")}
               </select>
@@ -384,32 +381,32 @@ function detail(row, { actor, isGM, viewer }) {
             ${sourceBlock(row)}
             <label class="pt-field pt-field-check">
               <input type="checkbox" data-attr-field="secret" data-id="${esc(row.id)}"${row.secret ? " checked" : ""}>
-              <span>${esc(t("attributes.secretLabel"))}</span>
+              <span>${esc(_loc("PENTARYN_TIES.attributes.secretLabel"))}</span>
             </label>
           </div>
-          <p class="pt-hint">${esc(t("attributes.helpHint"))}</p>
+          <p class="pt-hint">${esc(_loc("PENTARYN_TIES.attributes.helpHint"))}</p>
           ${identifyBlock(row)}
           <div class="pt-shared-head">
             <i class="fa-solid fa-globe" aria-hidden="true"></i>
-            ${esc(f("attributes.sharedWarning", { title: row.title }))}
+            ${esc(_loc("PENTARYN_TIES.attributes.sharedWarning", { title: row.title }))}
           </div>
           ${loreEditorHTML(row.lore, `attr:${row.id}`)}
           <div class="pt-detail-actions">
             <button type="button" class="pt-textbtn pt-del" data-action="attr-delete" data-id="${esc(row.id)}">
-              <i class="fa-solid fa-trash"></i> ${esc(t("attributes.deleteEntry"))}
+              <i class="fa-solid fa-trash"></i> ${esc(_loc("PENTARYN_TIES.attributes.deleteEntry"))}
             </button>
             <button type="button" class="pt-textbtn" data-action="attr-unlink" data-id="${esc(row.id)}">
-              <i class="fa-solid fa-link-slash"></i> ${esc(t("attributes.unlink"))}
+              <i class="fa-solid fa-link-slash"></i> ${esc(_loc("PENTARYN_TIES.attributes.unlink"))}
             </button>
           </div>`
-        : `<p class="pt-hint">${esc(f("attributes.unauthoredHint", { title: row.title }))}</p>
+        : `<p class="pt-hint">${esc(_loc("PENTARYN_TIES.attributes.unauthoredHint", { title: row.title }))}</p>
           <div class="pt-detail-actions">
             <button type="button" class="pt-textbtn" data-action="attr-author" data-id="${esc(row.id)}">
-              <i class="fa-solid fa-feather"></i> ${esc(t("attributes.authorEntry"))}
+              <i class="fa-solid fa-feather"></i> ${esc(_loc("PENTARYN_TIES.attributes.authorEntry"))}
             </button>
             <button type="button" class="pt-textbtn" data-action="attr-unlink" data-id="${esc(row.id)}">
               <i class="fa-solid fa-link-slash"></i> ${esc(
-                row.derived ? t("attributes.suppress") : t("attributes.unlink")
+                row.derived ? _loc("PENTARYN_TIES.attributes.suppress") : _loc("PENTARYN_TIES.attributes.unlink")
               )}
             </button>
           </div>`
@@ -442,7 +439,7 @@ function worldKnowledgeSection(character, isGM) {
   const forest = knowledgeTree(character, { forGM: isGM });
   const body = forest.length
     ? `<ul class="pt-list pt-world-tree">${forest.map(n => worldNode(n, isGM, character.id)).join("")}</ul>`
-    : `<p class="pt-empty">${esc(t("attributes.worldEmpty"))}</p>`;
+    : `<p class="pt-empty">${esc(_loc("PENTARYN_TIES.attributes.worldEmpty"))}</p>`;
 
   /*
    * The GM's filter. Not offered to a player and not needed by one: their tree holds only things
@@ -452,15 +449,15 @@ function worldKnowledgeSection(character, isGM) {
   const active = worldFilter.get(character.id) ?? "all";
   const filters = ["all", "unknown", "pending", "failed"];
   const bar = isGM
-    ? `<div class="pt-world-filter" role="group" aria-label="${esc(t("attributes.filterLabel"))}">
+    ? `<div class="pt-world-filter" role="group" aria-label="${esc(_loc("PENTARYN_TIES.attributes.filterLabel"))}">
         ${filters
           .map(
             k => `<button type="button" class="pt-chip${k === active ? " pt-chip-on" : ""}"
-                    data-action="world-filter" data-filter="${k}">${esc(t(`attributes.filter.${k}`))}</button>`
+                    data-action="world-filter" data-filter="${k}">${esc(_loc(`PENTARYN_TIES.attributes.filter.${k}`))}</button>`
           )
           .join("")}
-        <button type="button" class="pt-chip pt-chip-quiet" data-action="world-collapse">${esc(t("attributes.collapseAll"))}</button>
-        <button type="button" class="pt-chip pt-chip-quiet" data-action="world-expand">${esc(t("attributes.expandAll"))}</button>
+        <button type="button" class="pt-chip pt-chip-quiet" data-action="world-collapse">${esc(_loc("PENTARYN_TIES.attributes.collapseAll"))}</button>
+        <button type="button" class="pt-chip pt-chip-quiet" data-action="world-expand">${esc(_loc("PENTARYN_TIES.attributes.expandAll"))}</button>
       </div>`
     : "";
 
@@ -472,9 +469,9 @@ function worldKnowledgeSection(character, isGM) {
    */
   return `<div class="pt-world" data-character="${esc(character.id)}">
     <div class="pt-group-head" role="heading" aria-level="3">
-      <span class="pt-group-title">${esc(t("attributes.worldHeading"))}</span>
+      <span class="pt-group-title">${esc(_loc("PENTARYN_TIES.attributes.worldHeading"))}</span>
     </div>
-    <p class="pt-hint">${esc(t(isGM ? "attributes.worldHintGM" : "attributes.worldHint"))}</p>
+    <p class="pt-hint">${esc(_loc(isGM ? "PENTARYN_TIES.attributes.worldHintGM" : "PENTARYN_TIES.attributes.worldHint"))}</p>
     ${bar}
     ${body}
     ${isGM ? grantControl(character) : ""}
@@ -503,18 +500,18 @@ function worldNode(node, isGM, characterId) {
 
   const twisty = node.children.length
     ? `<button type="button" class="pt-twisty" data-action="world-toggle" aria-expanded="${open}"
-         aria-label="${esc(t(open ? "attributes.collapseBranch" : "attributes.expandBranch"))}">
+         aria-label="${esc(_loc(open ? "PENTARYN_TIES.attributes.collapseBranch" : "PENTARYN_TIES.attributes.expandBranch"))}">
         <i class="fa-solid fa-chevron-${open ? "down" : "right"}" aria-hidden="true"></i>
       </button>`
     : `<span class="pt-twisty pt-twisty-leaf" aria-hidden="true"></span>`;
 
   const tag =
     node.state === "failed"
-      ? `<span class="pt-attr-tag pt-state-failed">${esc(t("attributes.state.failed"))}</span>`
+      ? `<span class="pt-attr-tag pt-state-failed">${esc(_loc("PENTARYN_TIES.attributes.state.failed"))}</span>`
       : node.state === "pending"
-        ? `<span class="pt-attr-tag pt-state-pending">${esc(t("attributes.state.pending"))}</span>`
+        ? `<span class="pt-attr-tag pt-state-pending">${esc(_loc("PENTARYN_TIES.attributes.state.pending"))}</span>`
         : node.state === "unknown"
-          ? `<span class="pt-attr-tag pt-state-unknown">${esc(t("attributes.state.unknown"))}</span>`
+          ? `<span class="pt-attr-tag pt-state-unknown">${esc(_loc("PENTARYN_TIES.attributes.state.unknown"))}</span>`
           : "";
 
   /*
@@ -525,7 +522,7 @@ function worldNode(node, isGM, characterId) {
    */
   const tally = isGM && node.children.length ? branchTally(node) : null;
   const count = tally
-    ? `<span class="pt-world-count" data-tooltip="${esc(t("attributes.tallyTip"))}">${tally.known}/${tally.total}</span>`
+    ? `<span class="pt-world-count" data-tooltip="${esc(_loc("PENTARYN_TIES.attributes.tallyTip"))}">${tally.known}/${tally.total}</span>`
     : "";
 
   /*
@@ -538,13 +535,13 @@ function worldNode(node, isGM, characterId) {
       ? ""
       : node.state === "pending"
         ? `<button type="button" class="pt-textbtn pt-tell-btn" data-action="release-one" data-id="${esc(node.id)}"
-             data-tooltip="${esc(t("attributes.releaseOneTip"))}">
-            <i class="fa-solid fa-unlock"></i> ${esc(t("attributes.releaseOne"))}
+             data-tooltip="${esc(_loc("PENTARYN_TIES.attributes.releaseOneTip"))}">
+            <i class="fa-solid fa-unlock"></i> ${esc(_loc("PENTARYN_TIES.attributes.releaseOne"))}
           </button>`
         : node.state === "unknown" || node.state === "failed"
           ? `<button type="button" class="pt-textbtn pt-tell-btn" data-action="tell-one" data-id="${esc(node.id)}"
-               data-tooltip="${esc(t("attributes.tellOneTip"))}">
-              <i class="fa-solid fa-comment"></i> ${esc(t("attributes.tellOne"))}
+               data-tooltip="${esc(_loc("PENTARYN_TIES.attributes.tellOneTip"))}">
+              <i class="fa-solid fa-comment"></i> ${esc(_loc("PENTARYN_TIES.attributes.tellOne"))}
             </button>`
           : "";
 
@@ -581,17 +578,17 @@ function worldNode(node, isGM, characterId) {
 function grantControl(character) {
   return `<div class="pt-add-bar pt-attr-add pt-grant-control" data-character="${esc(character.id)}">
     <div class="pt-inbound-head">
-      <span class="pt-inbound-title">${esc(t("attributes.grantHeading"))}</span>
-      <span class="pt-gm-badge"><i class="fa-solid fa-eye-slash" aria-hidden="true"></i> ${esc(t("gmOnly"))}</span>
+      <span class="pt-inbound-title">${esc(_loc("PENTARYN_TIES.attributes.grantHeading"))}</span>
+      <span class="pt-gm-badge"><i class="fa-solid fa-eye-slash" aria-hidden="true"></i> ${esc(_loc("PENTARYN_TIES.gmOnly"))}</span>
     </div>
     <input type="search" class="pt-attr-search pt-grant-search"
-           placeholder="${esc(t("attributes.grantPlaceholder"))}"
-           aria-label="${esc(t("attributes.grantPlaceholder"))}">
+           placeholder="${esc(_loc("PENTARYN_TIES.attributes.grantPlaceholder"))}"
+           aria-label="${esc(_loc("PENTARYN_TIES.attributes.grantPlaceholder"))}">
     <label class="pt-field pt-field-check">
       <input type="checkbox" class="pt-grant-parents">
-      <span>${esc(t("attributes.grantParents"))}</span>
+      <span>${esc(_loc("PENTARYN_TIES.attributes.grantParents"))}</span>
     </label>
-    <p class="pt-hint">${esc(t("attributes.grantParentsHint"))}</p>
+    <p class="pt-hint">${esc(_loc("PENTARYN_TIES.attributes.grantParentsHint"))}</p>
     <div class="pt-attr-results pt-grant-results" hidden></div>
   </div>`;
 }
@@ -611,9 +608,9 @@ function ancestryWarning(actor) {
   if (!bad.length) return "";
   const names = [...new Set(bad.map(b => describeAttribute(b.missing).title))].join(", ");
   return `<div class="pt-ancestry-warning">
-    <div>${esc(f("attributes.ancestryBroken", { names }))}</div>
+    <div>${esc(_loc("PENTARYN_TIES.attributes.ancestryBroken", { names }))}</div>
     <button type="button" class="pt-textbtn" data-action="attr-repair">
-      <i class="fa-solid fa-wrench"></i> ${esc(t("attributes.ancestryFix"))}
+      <i class="fa-solid fa-wrench"></i> ${esc(_loc("PENTARYN_TIES.attributes.ancestryFix"))}
     </button>
   </div>`;
 }
@@ -642,19 +639,19 @@ export function buildAttributesHTML(actor, viewer = null) {
           </li>`
         )
         .join("")}</ul>`
-    : `<p class="pt-empty">${esc(t("attributes.empty"))}</p>`;
+    : `<p class="pt-empty">${esc(_loc("PENTARYN_TIES.attributes.empty"))}</p>`;
 
   const add = isGM
     ? `<div class="pt-add-bar pt-attr-add">
-        <input type="search" class="pt-attr-search" placeholder="${esc(t("attributes.searchPlaceholder"))}"
-               aria-label="${esc(t("attributes.searchPlaceholder"))}">
+        <input type="search" class="pt-attr-search" placeholder="${esc(_loc("PENTARYN_TIES.attributes.searchPlaceholder"))}"
+               aria-label="${esc(_loc("PENTARYN_TIES.attributes.searchPlaceholder"))}">
         <div class="pt-attr-results" hidden></div>
       </div>`
     : "";
 
   return `<div class="pentaryn-ties pentaryn-attributes" data-actor-id="${esc(actor.id)}">
     ${ancestryWarning(actor)}
-    <p class="pt-hint">${esc(isGM ? t("attributes.gmHint") : t("attributes.playerHint"))}</p>
+    <p class="pt-hint">${esc(isGM ? _loc("PENTARYN_TIES.attributes.gmHint") : _loc("PENTARYN_TIES.attributes.playerHint"))}</p>
     ${body}
     ${add}
     ${who ? worldKnowledgeSection(who, isGM) : ""}
@@ -725,7 +722,7 @@ export function bindAttributes(root, actor, rerender = () => {}) {
           source: `${entry.title} — ${row.label}`
         };
         await viewer.update({ [`flags.${MODULE}.${GRANTED_FLAG}`]: granted });
-        ui.notifications.info(f("attributes.learnedDone", { label: row.label, who: viewer.name }));
+        ui.notifications.info(_loc("PENTARYN_TIES.attributes.learnedDone", { label: row.label, who: viewer.name }));
       }
       rerender();
     });
@@ -790,10 +787,10 @@ export function bindAttributes(root, actor, rerender = () => {}) {
       ev.stopPropagation();
       const row = describeAttribute(btn.dataset.id);
       const go = await foundry.applications.api.DialogV2.confirm({
-        window: { title: t("attributes.deleteTitle") },
+        window: { title: _loc("PENTARYN_TIES.attributes.deleteTitle") },
         content:
-          `<p>${esc(f("attributes.deleteBody", { title: row.title }))}</p>` +
-          `<p class="pt-hint">${esc(t("attributes.deleteKeeps"))}</p>`
+          `<p>${esc(_loc("PENTARYN_TIES.attributes.deleteBody", { title: row.title }))}</p>` +
+          `<p class="pt-hint">${esc(_loc("PENTARYN_TIES.attributes.deleteKeeps"))}</p>`
       });
       if (!go) return;
       await deleteAttribute(btn.dataset.id);
@@ -828,7 +825,7 @@ export function bindAttributes(root, actor, rerender = () => {}) {
       if (!who) return;
       btn.disabled = true;
       const freed = await releaseHeldAttribute(who, btn.dataset.id);
-      if (!freed) ui.notifications?.warn(t("attributes.releaseNone"));
+      if (!freed) ui.notifications?.warn(_loc("PENTARYN_TIES.attributes.releaseNone"));
       rerender();
     });
   }
@@ -905,7 +902,7 @@ function bindWorldTree(box) {
     if (!hits && !empty) {
       empty = document.createElement("p");
       empty.className = "pt-empty pt-world-none";
-      empty.textContent = t("attributes.filterNone");
+      empty.textContent = _loc("PENTARYN_TIES.attributes.filterNone");
       wrap.querySelector(".pt-world-tree")?.after(empty);
     } else if (hits && empty) empty.remove();
   };
@@ -948,17 +945,17 @@ function bindGrant(box, rerender) {
         return `<button type="button" class="pt-attr-hit${failed ? " pt-attr-hit-failed" : ""}" data-id="${esc(m.id)}">
           <img src="${esc(m.icon)}" alt="">
           <span class="pt-attr-hit-title">${esc(m.title)}</span>
-          ${failed ? `<span class="pt-attr-tag">${esc(t("attributes.theyFailedThis"))}</span>` : ""}
+          ${failed ? `<span class="pt-attr-tag">${esc(_loc("PENTARYN_TIES.attributes.theyFailedThis"))}</span>` : ""}
         </button>`;
       })
       .join("");
     const create =
       input.value.trim() && canCreate
         ? `<button type="button" class="pt-attr-hit pt-attr-create" data-create="1">
-            <i class="fa-solid fa-plus"></i> ${esc(f("attributes.createOne", { title: input.value.trim() }))}
+            <i class="fa-solid fa-plus"></i> ${esc(_loc("PENTARYN_TIES.attributes.createOne", { title: input.value.trim() }))}
           </button>`
         : "";
-    results.innerHTML = hits + create || `<p class="pt-hint">${esc(t("attributes.noMatches"))}</p>`;
+    results.innerHTML = hits + create || `<p class="pt-hint">${esc(_loc("PENTARYN_TIES.attributes.noMatches"))}</p>`;
     results.hidden = false;
 
     for (const b of results.querySelectorAll(".pt-attr-hit")) {
@@ -996,7 +993,7 @@ function bindSearch(box, actor, rerender) {
         m => `<button type="button" class="pt-attr-hit" data-id="${esc(m.id)}">
           <img src="${esc(m.icon)}" alt="">
           <span class="pt-attr-hit-title">${esc(m.title)}</span>
-          ${m.derived && !m.authored ? `<span class="pt-attr-tag">${esc(t("attributes.derived"))}</span>` : ""}
+          ${m.derived && !m.authored ? `<span class="pt-attr-tag">${esc(_loc("PENTARYN_TIES.attributes.derived"))}</span>` : ""}
         </button>`
       )
       .join("");
@@ -1009,12 +1006,12 @@ function bindSearch(box, actor, rerender) {
     const create =
       input.value.trim() && canCreate
         ? `<button type="button" class="pt-attr-hit pt-attr-create" data-create="1">
-            <i class="fa-solid fa-plus"></i> ${esc(f("attributes.createOne", { title: input.value.trim() }))}
+            <i class="fa-solid fa-plus"></i> ${esc(_loc("PENTARYN_TIES.attributes.createOne", { title: input.value.trim() }))}
           </button>`
         : input.value.trim() && collidesWith && !carried.has(collidesWith.id)
-          ? `<p class="pt-hint">${esc(f("attributes.collides", { title: collidesWith.title, id: collidesWith.id }))}</p>`
+          ? `<p class="pt-hint">${esc(_loc("PENTARYN_TIES.attributes.collides", { title: collidesWith.title, id: collidesWith.id }))}</p>`
           : "";
-    results.innerHTML = rows + create || `<p class="pt-hint">${esc(t("attributes.noMatches"))}</p>`;
+    results.innerHTML = rows + create || `<p class="pt-hint">${esc(_loc("PENTARYN_TIES.attributes.noMatches"))}</p>`;
     results.hidden = !input.value.trim() && !rows;
 
     for (const b of results.querySelectorAll(".pt-attr-hit")) {
@@ -1029,7 +1026,7 @@ function bindSearch(box, actor, rerender) {
         }
         // a hit can name an id whose entry is gone (the autocomplete lists every id any actor
         // carries); link refuses those rather than spreading a dangling link, so say so
-        if (linked && !linked.ok) ui.notifications?.warn(f("attributes.linkRefused", { reason: linked.reason }));
+        if (linked && !linked.ok) ui.notifications?.warn(_loc("PENTARYN_TIES.attributes.linkRefused", { reason: linked.reason }));
         input.value = "";
         rerender();
       });

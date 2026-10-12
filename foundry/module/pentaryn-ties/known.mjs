@@ -60,9 +60,6 @@ const log = makeLog(MODULE);
  */
 export const KNOWN_TAB_ID = "known";
 
-const t = k => game.i18n.localize(`PENTARYN_TIES.${k}`);
-const f = (k, data) => game.i18n.format(`PENTARYN_TIES.${k}`, data);
-
 const FALLBACK_ART = "icons/svg/mystery-man.svg";
 
 /**
@@ -278,7 +275,7 @@ export async function fileHovered(token = canvas?.tokens?.hover ?? null) {
 
   const actor = notebookActor();
   if (!actor) {
-    ui.notifications.warn(t("known.notify.needCharacter"));
+    ui.notifications.warn(_loc("PENTARYN_TIES.known.notify.needCharacter"));
     return null;
   }
 
@@ -286,7 +283,7 @@ export async function fileHovered(token = canvas?.tokens?.hover ?? null) {
   // compared by ACTOR, not by token: with your own character on the map twice, hovering the
   // other copy is still asking to file yourself
   if (!subject || subject.id === actor.id) {
-    ui.notifications.warn(t("known.notify.needTarget"));
+    ui.notifications.warn(_loc("PENTARYN_TIES.known.notify.needTarget"));
     return null;
   }
 
@@ -299,7 +296,7 @@ export async function fileHovered(token = canvas?.tokens?.hover ?? null) {
     return entry;
   } catch (err) {
     log.error(`filing ${subject.id} on ${actor.id} failed`, err);
-    ui.notifications.error(t("known.notify.fileFailed"));
+    ui.notifications.error(_loc("PENTARYN_TIES.known.notify.fileFailed"));
     return null;
   }
 }
@@ -353,7 +350,7 @@ function filedCell(entry) {
   if (!entry.when) return `<span class="pt-known-when"></span>`;
   const d = new Date(entry.when);
   const short = d.toLocaleDateString(game.i18n.lang, { month: "short", day: "numeric" });
-  return `<span class="pt-known-when" data-tooltip="${esc(f("known.filedTip", { date: d.toLocaleString() }))}">${esc(
+  return `<span class="pt-known-when" data-tooltip="${esc(_loc("PENTARYN_TIES.known.filedTip", { date: d.toLocaleString() }))}">${esc(
     short
   )}</span>`;
 }
@@ -371,15 +368,15 @@ function categorySelect(entry, categories) {
 function summary(entry, { open, canEdit }) {
   const hasNotes = !!entry.notes.trim();
   const name = `<span class="pt-name${entry.missing ? " pt-missing" : ""}">${esc(
-    entry.name || t("row.missingName")
+    entry.name || _loc("PENTARYN_TIES.row.missingName")
   )}</span>`;
   const preview = hasNotes
     ? `<span class="pt-note-preview">${esc(entry.notes)}</span>`
-    : `<span class="pt-note-preview pt-note-none"><em>${esc(t("known.notesEmpty"))}</em></span>`;
+    : `<span class="pt-note-preview pt-note-none"><em>${esc(_loc("PENTARYN_TIES.known.notesEmpty"))}</em></span>`;
 
   return `<div class="pt-summary" role="button" tabindex="0" aria-expanded="${open}"
-      data-action="toggle" data-tooltip="${esc(t(canEdit ? "known.expandEdit" : "known.expandRead"))}"
-      aria-label="${esc(f(canEdit ? "known.expandEditOf" : "known.expandReadOf", { name: entry.name }))}">
+      data-action="toggle" data-tooltip="${esc(_loc(canEdit ? "PENTARYN_TIES.known.expandEdit" : "PENTARYN_TIES.known.expandRead"))}"
+      aria-label="${esc(_loc(canEdit ? "PENTARYN_TIES.known.expandEditOf" : "PENTARYN_TIES.known.expandReadOf", { name: entry.name }))}">
     <img class="pt-portrait" src="${esc(artFor(entry))}" alt="" loading="lazy" />
     <span class="pt-who">${name}${preview}</span>
     ${filedCell(entry)}
@@ -411,7 +408,7 @@ function studyControls(entry, { canEdit, isGM, study }) {
    */
   if (!study.isOwnKind) {
     bits.push(
-      `<div class="pt-known-kind">${esc(f("known.study.kindLine", { name: study.kind.name }))}</div>`
+      `<div class="pt-known-kind">${esc(_loc("PENTARYN_TIES.known.study.kindLine", { name: study.kind.name }))}</div>`
     );
   }
 
@@ -419,33 +416,33 @@ function studyControls(entry, { canEdit, isGM, study }) {
   if (canEdit && study.content) {
     const disabled = study.spent || !study.gmOnline;
     const tip = study.spent
-      ? t("known.study.spentTip")
+      ? _loc("PENTARYN_TIES.known.study.spentTip")
       : study.gmOnline
-        ? f("known.study.tip", { skill: study.skillLabel, name: study.kind.name })
-        : t("known.study.noGMTip");
+        ? _loc("PENTARYN_TIES.known.study.tip", { skill: study.skillLabel, name: study.kind.name })
+        : _loc("PENTARYN_TIES.known.study.noGMTip");
     // spent is not "disabled": the button is GONE, so nothing on the row says a roll was made
     if (!study.spent) {
       actions.push(`<button type="button" class="pt-textbtn pt-study-btn" data-action="study"
           data-id="${esc(entry.id)}"${disabled ? " disabled" : ""} data-tooltip="${esc(tip)}">
-        <i class="fa-solid fa-magnifying-glass"></i> ${esc(t("known.study.button"))}
+        <i class="fa-solid fa-magnifying-glass"></i> ${esc(_loc("PENTARYN_TIES.known.study.button"))}
       </button>`);
     }
   }
   if (isGM) {
     actions.push(`<button type="button" class="pt-textbtn pt-kind-btn" data-action="kind"
-        data-id="${esc(entry.id)}" data-tooltip="${esc(t("known.study.kindTip"))}">
-      <i class="fa-solid fa-sitemap"></i> ${esc(t("known.study.kindButton"))}
+        data-id="${esc(entry.id)}" data-tooltip="${esc(_loc("PENTARYN_TIES.known.study.kindTip"))}">
+      <i class="fa-solid fa-sitemap"></i> ${esc(_loc("PENTARYN_TIES.known.study.kindButton"))}
     </button>`);
     /*
      * The GM's release control — the story route into a kind, since a study roll is one attempt
      * and a failure is final. Rungs are offered as a menu rather than a free number because the
      * ladder has exactly four, and typing 17 would silently mean 15.
      */
-    actions.push(`<label class="pt-release" data-tooltip="${esc(t("known.study.releaseTip"))}">
-      <span>${esc(t("known.study.release"))}</span>
+    actions.push(`<label class="pt-release" data-tooltip="${esc(_loc("PENTARYN_TIES.known.study.releaseTip"))}">
+      <span>${esc(_loc("PENTARYN_TIES.known.study.release"))}</span>
       <select data-action="release" data-id="${esc(entry.id)}">
         <option value="">—</option>
-        ${STUDY_RUNGS.map(r => `<option value="${r}">${r === 0 ? esc(t("known.study.rung0")) : `DC ${r}`}</option>`).join("")}
+        ${STUDY_RUNGS.map(r => `<option value="${r}">${r === 0 ? esc(_loc("PENTARYN_TIES.known.study.rung0")) : `DC ${r}`}</option>`).join("")}
       </select>
     </label>`);
   }
@@ -491,17 +488,17 @@ export function grantCard(g, { extra = "", textHTML = null } = {}) {
 /** The region head, shared with the inspect window's player view. */
 export const grantedHead = () => `<div class="pt-granted-head">
       <i class="fa-solid fa-book-open-reader"></i>
-      <span>${esc(t("known.granted.label"))}</span>
+      <span>${esc(_loc("PENTARYN_TIES.known.granted.label"))}</span>
     </div>`;
 
 function grantedRegion(grants) {
   if (!grants?.length) return "";
   const rows = grants.map(g => grantCard(g)).join("");
   if (!rows) return ""; // every card was blank: no region, no "What you have learned" head
-  return `<section class="pt-granted" aria-label="${esc(t("known.granted.label"))}">
+  return `<section class="pt-granted" aria-label="${esc(_loc("PENTARYN_TIES.known.granted.label"))}">
     <div class="pt-granted-head">
       <i class="fa-solid fa-book-open-reader"></i>
-      <span>${esc(t("known.granted.label"))}</span>
+      <span>${esc(_loc("PENTARYN_TIES.known.granted.label"))}</span>
     </div>
     <ul class="pt-granted-list">${rows}</ul>
   </section>`;
@@ -528,7 +525,7 @@ function loreOffers(entry, lore, canEdit) {
   return `<div class="pt-lore-offers">
     <div class="pt-lore-offers-head">
       <i class="fa-solid fa-magnifying-glass-plus" aria-hidden="true"></i>
-      <span>${esc(t("known.lore.heading"))}</span>
+      <span>${esc(_loc("PENTARYN_TIES.known.lore.heading"))}</span>
     </div>
     <ul class="pt-lore-offer-list">
       ${open
@@ -538,11 +535,11 @@ function loreOffers(entry, lore, canEdit) {
                 data-id="${esc(entry.id)}" data-lore="${esc(r.id)}"${r.gmOnline ? "" : " disabled"}
                 data-tooltip="${esc(
                   r.gmOnline
-                    ? f("known.lore.tip", { label: r.label, skill: r.skillLabel, dc: r.dc })
-                    : t("known.study.noGMTip")
+                    ? _loc("PENTARYN_TIES.known.lore.tip", { label: r.label, skill: r.skillLabel, dc: r.dc })
+                    : _loc("PENTARYN_TIES.known.study.noGMTip")
                 )}">
               <span class="pt-lore-offer-label">${esc(r.label)}</span>
-              <span class="pt-lore-offer-price">${esc(f("known.lore.price", { skill: r.skillLabel, dc: r.dc }))}</span>
+              <span class="pt-lore-offer-price">${esc(_loc("PENTARYN_TIES.known.lore.price", { skill: r.skillLabel, dc: r.dc }))}</span>
             </button>
           </li>`
         )
@@ -555,14 +552,14 @@ function detail(entry, { canEdit, categories, isGM, study, grants, lore }) {
   const openSheet = entry.missing
     ? ""
     : `<button type="button" class="pt-textbtn" data-action="open" data-id="${esc(entry.id)}">
-        <i class="fa-solid fa-arrow-up-right-from-square"></i> ${esc(t("row.openSheet"))}
+        <i class="fa-solid fa-arrow-up-right-from-square"></i> ${esc(_loc("PENTARYN_TIES.row.openSheet"))}
       </button>`;
   const controls = studyControls(entry, { canEdit, isGM, study });
 
   if (!canEdit) {
     const prose = entry.notes.trim()
       ? `<div class="pt-notes-prose">${esc(entry.notes)}</div>`
-      : `<div class="pt-notes-prose pt-note-none"><em>${esc(t("known.notesEmpty"))}</em></div>`;
+      : `<div class="pt-notes-prose pt-note-none"><em>${esc(_loc("PENTARYN_TIES.known.notesEmpty"))}</em></div>`;
     return `<div class="pt-detail">
       ${controls}
       ${prose}
@@ -576,14 +573,14 @@ function detail(entry, { canEdit, categories, isGM, study, grants, lore }) {
     ${controls}
     <div class="pt-fields">
       <label class="pt-field">
-        <span class="pt-field-label">${esc(t("known.categoryLabel"))}</span>
+        <span class="pt-field-label">${esc(_loc("PENTARYN_TIES.known.categoryLabel"))}</span>
         ${categorySelect(entry, categories)}
       </label>
     </div>
     <label class="pt-field pt-field-notes">
-      <span class="pt-field-label">${esc(t("known.notesLabel"))}</span>
+      <span class="pt-field-label">${esc(_loc("PENTARYN_TIES.known.notesLabel"))}</span>
       <textarea class="pt-notes-text" data-field="notes" rows="6" maxlength="${KNOWN_NOTES_MAX}"
-                placeholder="${esc(f("known.notesPlaceholder", { name: entry.name }))}">${esc(entry.notes)}</textarea>
+                placeholder="${esc(_loc("PENTARYN_TIES.known.notesPlaceholder", { name: entry.name }))}">${esc(entry.notes)}</textarea>
     </label>
     ${grantedRegion(grants)}
     ${loreOffers(entry, lore, canEdit)}
@@ -591,7 +588,7 @@ function detail(entry, { canEdit, categories, isGM, study, grants, lore }) {
       ${openSheet}
       <button type="button" class="pt-textbtn" data-action="hide" data-id="${esc(entry.id)}">
         <i class="fa-solid fa-${entry.hidden ? "eye" : "eye-slash"}"></i> ${esc(
-          t(entry.hidden ? "known.unhide" : "known.hide")
+          _loc(entry.hidden ? "PENTARYN_TIES.known.unhide" : "PENTARYN_TIES.known.hide")
         )}
       </button>
     </div>
@@ -692,7 +689,7 @@ export function buildKnownHTML(actor) {
       .join("");
 
   const body = !visible.length
-    ? `<ul class="pt-list"><li class="pt-empty">${esc(t("known.empty"))}</li></ul>`
+    ? `<ul class="pt-list"><li class="pt-empty">${esc(_loc("PENTARYN_TIES.known.empty"))}</li></ul>`
     : groups
         .map(
           g =>
@@ -709,7 +706,7 @@ export function buildKnownHTML(actor) {
   const hiddenToggle = hiddenCount
     ? `<button type="button" class="pt-textbtn pt-show-hidden" data-action="show-hidden">
         <i class="fa-solid fa-${showHidden ? "eye-slash" : "eye"}"></i> ${esc(
-          f(showHidden ? "known.hideHidden" : "known.showHidden", { count: hiddenCount })
+          _loc(showHidden ? "PENTARYN_TIES.known.hideHidden" : "PENTARYN_TIES.known.showHidden", { count: hiddenCount })
         )}
       </button>`
     : "";
@@ -717,14 +714,14 @@ export function buildKnownHTML(actor) {
   const add = canEdit
     ? `<div class="pt-add-bar">
         <button type="button" class="pt-add-btn" data-action="known-add">
-          <i class="fa-solid fa-plus"></i> ${esc(t("known.add"))}
+          <i class="fa-solid fa-plus"></i> ${esc(_loc("PENTARYN_TIES.known.add"))}
         </button>
-        <span class="pt-add-hint">${esc(f("known.addHint", { key: knownKey() }))}</span>
+        <span class="pt-add-hint">${esc(_loc("PENTARYN_TIES.known.addHint", { key: knownKey() }))}</span>
       </div>`
     : "";
 
   return `<div class="pentaryn-ties pentaryn-known" data-actor-id="${esc(actor.id)}">
-    <p class="pt-known-intro">${esc(t("known.hint"))}</p>
+    <p class="pt-known-intro">${esc(_loc("PENTARYN_TIES.known.hint"))}</p>
     ${body}
     ${add}
     ${hiddenToggle}
@@ -932,7 +929,7 @@ function bindSummary(head, row, actor) {
 export async function openAddPicker(actor, onAdded = () => {}) {
   const options = await knownCandidates(actor);
   if (!options.length) {
-    ui.notifications.info(t("known.picker.empty"));
+    ui.notifications.info(_loc("PENTARYN_TIES.known.picker.empty"));
     return null;
   }
   const opts = options
@@ -940,20 +937,20 @@ export async function openAddPicker(actor, onAdded = () => {}) {
     .join("");
   const content = `<div class="pt-known-picker">
     <label class="pt-field">
-      <span class="pt-field-label">${esc(t("known.picker.label"))}</span>
+      <span class="pt-field-label">${esc(_loc("PENTARYN_TIES.known.picker.label"))}</span>
       <select name="target">
-        <option value="">${esc(t("known.picker.placeholder"))}</option>
+        <option value="">${esc(_loc("PENTARYN_TIES.known.picker.placeholder"))}</option>
         ${opts}
       </select>
     </label>
   </div>`;
 
   const chosen = await foundry.applications.api.DialogV2.prompt({
-    window: { title: t("known.picker.title") },
+    window: { title: _loc("PENTARYN_TIES.known.picker.title") },
     classes: ["pentaryn-tie-dialog"],
     content,
     ok: {
-      label: t("known.picker.add"),
+      label: _loc("PENTARYN_TIES.known.picker.add"),
       callback: (event, button) => button.form.elements.target.value
     },
     rejectClose: false
@@ -962,7 +959,7 @@ export async function openAddPicker(actor, onAdded = () => {}) {
 
   const entry = await addKnown(actor, chosen);
   if (!entry) {
-    ui.notifications.warn(f("known.notify.exists", { name: game.actors.get(chosen)?.name ?? chosen }));
+    ui.notifications.warn(_loc("PENTARYN_TIES.known.notify.exists", { name: game.actors.get(chosen)?.name ?? chosen }));
     return null;
   }
   // open the new row on arrival: the gesture that files someone is meant to end in writing

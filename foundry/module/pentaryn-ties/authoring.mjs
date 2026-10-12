@@ -34,11 +34,8 @@ import { loreEditorHTML, bindLoreEditor } from "./lore.mjs";
 import { beliefs, deliver, reset, kindActorOf, setKindOf } from "./study.mjs";
 import { esc } from "./core/html.mjs";
 
-const t = k => game.i18n.localize(`PENTARYN_TIES.${k}`);
-const f = (k, data) => game.i18n.format(`PENTARYN_TIES.${k}`, data);
-
 const gmBadge = () =>
-  `<span class="pt-gm-badge"><i class="fa-solid fa-eye-slash" aria-hidden="true"></i> ${esc(t("gmOnly"))}</span>`;
+  `<span class="pt-gm-badge"><i class="fa-solid fa-eye-slash" aria-hidden="true"></i> ${esc(_loc("PENTARYN_TIES.gmOnly"))}</span>`;
 
 /**
  * The kind dropdown.
@@ -64,17 +61,17 @@ function kindPicker(actor) {
 
   return `<div class="pt-kind-picker">
     <label class="pt-field">
-      <span class="pt-field-label">${esc(t("authoring.kindLabel"))}</span>
+      <span class="pt-field-label">${esc(_loc("PENTARYN_TIES.authoring.kindLabel"))}</span>
       <select data-action="set-kind">
-        <option value=""${current ? "" : " selected"}>${esc(f("authoring.kindSelf", { name: actor.name }))}</option>
-        ${known.length ? `<optgroup label="${esc(t("authoring.kindKnown"))}">${known.map(opt).join("")}</optgroup>` : ""}
-        ${rest.length ? `<optgroup label="${esc(t("authoring.kindOther"))}">${rest.map(opt).join("")}</optgroup>` : ""}
+        <option value=""${current ? "" : " selected"}>${esc(_loc("PENTARYN_TIES.authoring.kindSelf", { name: actor.name }))}</option>
+        ${known.length ? `<optgroup label="${esc(_loc("PENTARYN_TIES.authoring.kindKnown"))}">${known.map(opt).join("")}</optgroup>` : ""}
+        ${rest.length ? `<optgroup label="${esc(_loc("PENTARYN_TIES.authoring.kindOther"))}">${rest.map(opt).join("")}</optgroup>` : ""}
       </select>
     </label>
     <p class="pt-hint">${esc(
       resolved.id === actor.id
-        ? t("authoring.kindHintSelf")
-        : f("authoring.kindHintPointed", { kind: resolved.name })
+        ? _loc("PENTARYN_TIES.authoring.kindHintSelf")
+        : _loc("PENTARYN_TIES.authoring.kindHintPointed", { kind: resolved.name })
     )}</p>
   </div>`;
 }
@@ -83,8 +80,8 @@ function kindPicker(actor) {
 function beliefRow(row) {
   const meta =
     row.ns === "kind"
-      ? f("authoring.beliefMetaKind", { tier: row.tier ?? "—", total: row.total ?? "—" })
-      : f("authoring.beliefMetaLore", { total: row.total ?? "—" });
+      ? _loc("PENTARYN_TIES.authoring.beliefMetaKind", { tier: row.tier ?? "—", total: row.total ?? "—" })
+      : _loc("PENTARYN_TIES.authoring.beliefMetaLore", { total: row.total ?? "—" });
   return `<li class="pt-belief${row.pending ? " pt-belief-pending" : ""}"
       data-character="${esc(row.characterId)}" data-ns="${esc(row.ns)}" data-fact="${esc(row.factId)}">
     <div class="pt-belief-head">
@@ -94,23 +91,23 @@ function beliefRow(row) {
       ${
         // a failure hands the player nothing (2026-10), so the empty text box below cannot tell
         // a miss from a pass into an unauthored side — the verdict says it here
-        row.pass === false ? `<span class="pt-belief-tag pt-belief-missed">${esc(t("authoring.beliefMissed"))}</span>` : ""
+        row.pass === false ? `<span class="pt-belief-tag pt-belief-missed">${esc(_loc("PENTARYN_TIES.authoring.beliefMissed"))}</span>` : ""
       }
-      ${row.pending ? `<span class="pt-belief-tag">${esc(t("authoring.pending"))}</span>` : ""}
+      ${row.pending ? `<span class="pt-belief-tag">${esc(_loc("PENTARYN_TIES.authoring.pending"))}</span>` : ""}
     </div>
     <div class="pt-belief-text">${
-      String(row.text ?? "").trim() ? esc(row.text) : `<em>${esc(t("authoring.beliefSilent"))}</em>`
+      String(row.text ?? "").trim() ? esc(row.text) : `<em>${esc(_loc("PENTARYN_TIES.authoring.beliefSilent"))}</em>`
     }</div>
     <div class="pt-belief-actions">
       ${
         row.pending
           ? `<button type="button" class="pt-textbtn" data-action="belief-deliver">
-              <i class="fa-solid fa-paper-plane"></i> ${esc(t("known.study.deliver"))}
+              <i class="fa-solid fa-paper-plane"></i> ${esc(_loc("PENTARYN_TIES.known.study.deliver"))}
             </button>`
-          : `<span class="pt-belief-when">${esc(f("authoring.delivered", { when: row.delivered }))}</span>`
+          : `<span class="pt-belief-when">${esc(_loc("PENTARYN_TIES.authoring.delivered", { when: row.delivered }))}</span>`
       }
       <button type="button" class="pt-textbtn" data-action="belief-reset">
-        <i class="fa-solid fa-rotate-left"></i> ${esc(t("authoring.reset"))}
+        <i class="fa-solid fa-rotate-left"></i> ${esc(_loc("PENTARYN_TIES.authoring.reset"))}
       </button>
     </div>
   </li>`;
@@ -122,19 +119,19 @@ export function authoringHTML(actor) {
   const rows = beliefs(actor);
   return `<section class="pt-authoring">
     <div class="pt-inbound-head">
-      <span class="pt-inbound-title">${esc(t("authoring.heading"))}</span>
+      <span class="pt-inbound-title">${esc(_loc("PENTARYN_TIES.authoring.heading"))}</span>
       ${gmBadge()}
     </div>
     ${kindPicker(actor)}
     ${loreEditorHTML(actor.getFlag(MODULE, LORE_FLAG), `lore:${actor.id}`)}
     <div class="pt-group-head" role="heading" aria-level="3">
-      <span class="pt-group-title">${esc(t("authoring.beliefsHeading"))}</span>
+      <span class="pt-group-title">${esc(_loc("PENTARYN_TIES.authoring.beliefsHeading"))}</span>
     </div>
-    <p class="pt-hint">${esc(t("authoring.beliefsHint"))}</p>
+    <p class="pt-hint">${esc(_loc("PENTARYN_TIES.authoring.beliefsHint"))}</p>
     ${
       rows.length
         ? `<ul class="pt-list pt-belief-list">${rows.map(beliefRow).join("")}</ul>`
-        : `<p class="pt-empty">${esc(t("authoring.beliefsEmpty"))}</p>`
+        : `<p class="pt-empty">${esc(_loc("PENTARYN_TIES.authoring.beliefsEmpty"))}</p>`
     }
   </section>`;
 }
@@ -177,11 +174,11 @@ export function bindAuthoring(root, actor, rerender = () => {}) {
 
     li.querySelector("[data-action='belief-reset']")?.addEventListener("click", async () => {
       const go = await foundry.applications.api.DialogV2.confirm({
-        window: { title: t("authoring.resetTitle") },
+        window: { title: _loc("PENTARYN_TIES.authoring.resetTitle") },
         content:
-          `<p>${esc(f("authoring.resetBody", { character: character?.name ?? "?", actor: actor.name }))}</p>` +
+          `<p>${esc(_loc("PENTARYN_TIES.authoring.resetBody", { character: character?.name ?? "?", actor: actor.name }))}</p>` +
           // decision 22, said where the GM is about to act on it rather than only in the plan
-          `<p class="pt-hint">${esc(t("authoring.resetKeeps"))}</p>`
+          `<p class="pt-hint">${esc(_loc("PENTARYN_TIES.authoring.resetKeeps"))}</p>`
       });
       if (!go) return;
       await reset(character, actor, loreId);

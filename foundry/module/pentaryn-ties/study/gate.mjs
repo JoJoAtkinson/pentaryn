@@ -25,7 +25,7 @@ import {
 import { applyPlayerWrites, putBelief, readBelief } from "./apply.mjs";
 import { concealmentFor } from "./cascade.mjs";
 import { beliefsOf, resolveFact, studiedOf, studyTiersOf } from "./resolve.mjs";
-import { esc, f, t } from "./shared.mjs";
+import { esc } from "./shared.mjs";
 import { readFlag } from "../lib/flags.mjs";
 import { setting } from "../settings.mjs";
 
@@ -48,20 +48,20 @@ export async function promptDeliver(character, fact) {
   const rec = readBelief(fact, character.id);
   if (!rec || rec.delivered) return;
   const ok = await foundry.applications.api.DialogV2.confirm({
-    window: { title: t("known.study.holdTitle") },
+    window: { title: _loc("PENTARYN_TIES.known.study.holdTitle") },
     content:
-      `<p>${esc(f("known.study.holdWho", { character: character.name, subject: fact.subject?.name ?? fact.name }))}</p>` +
+      `<p>${esc(_loc("PENTARYN_TIES.known.study.holdWho", { character: character.name, subject: fact.subject?.name ?? fact.name }))}</p>` +
       `<p class="pt-study-hold-meta">${esc(
         fact.ns === "lore"
-          ? f("known.study.holdMetaLore", { fact: fact.name, dc: fact.dc, total: rec.total })
-          : f("known.study.holdMeta", { tier: rec.tier, total: rec.total })
+          ? _loc("PENTARYN_TIES.known.study.holdMetaLore", { fact: fact.name, dc: fact.dc, total: rec.total })
+          : _loc("PENTARYN_TIES.known.study.holdMeta", { tier: rec.tier, total: rec.total })
       )}</p>` +
       // a silent outcome has no prose to preview — say so, or the GM reads an empty box as a bug
       `<div class="pt-study-hold-text">${
-        !isBlankProse(rec.text) ? esc(rec.text) : `<em>${esc(t("known.study.holdSilent"))}</em>`
+        !isBlankProse(rec.text) ? esc(rec.text) : `<em>${esc(_loc("PENTARYN_TIES.known.study.holdSilent"))}</em>`
       }</div>`,
-    yes: { label: t("known.study.deliver") },
-    no: { label: t("known.study.later") }
+    yes: { label: _loc("PENTARYN_TIES.known.study.deliver") },
+    no: { label: _loc("PENTARYN_TIES.known.study.later") }
   });
   if (ok) await deliverFact(fact, character);
 }
@@ -78,7 +78,7 @@ async function deliverFact(fact, character) {
   const rec = readBelief(fact, character?.id);
   if (!rec) {
     ui.notifications.warn(
-      f("known.study.notify.noPending", { character: character?.name ?? "?", kind: fact.name })
+      _loc("PENTARYN_TIES.known.study.notify.noPending", { character: character?.name ?? "?", kind: fact.name })
     );
     return false;
   }
@@ -96,7 +96,7 @@ async function deliverFact(fact, character) {
   if (!(await applyPlayerWrites(character, fact, { text: rec.text, silent, tier: rec.tier }, now))) return false;
   await putBelief(fact, character.id, { ...rec, delivered: now, claim: null });
   ui.notifications.info(
-    f(missed ? "known.study.notify.missed" : "known.study.notify.delivered", { character: character.name, kind: fact.name })
+    _loc(missed ? "PENTARYN_TIES.known.study.notify.missed" : "PENTARYN_TIES.known.study.notify.delivered", { character: character.name, kind: fact.name })
   );
   return true;
 }
@@ -241,6 +241,6 @@ export async function reset(character, subject, loreId = null, attrId = null) {
    * to protect and nothing to take back. A reset means *roll again*; the re-roll replaces the
    * grant under its own key, so nothing duplicates and nothing stale survives.
    */
-  ui.notifications.info(f("known.study.notify.reset", { character: character.name, kind: fact.name }));
+  ui.notifications.info(_loc("PENTARYN_TIES.known.study.notify.reset", { character: character.name, kind: fact.name }));
   return true;
 }

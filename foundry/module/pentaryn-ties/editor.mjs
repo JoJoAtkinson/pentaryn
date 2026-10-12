@@ -25,9 +25,6 @@ import { makeLog } from "./lib/log.mjs";
 
 const log = makeLog(MODULE);
 
-const t = k => game.i18n.localize(`PENTARYN_TIES.${k}`);
-const f = (k, data) => game.i18n.format(`PENTARYN_TIES.${k}`, data);
-
 /** What a tie with no portrait — or no actor left at all — shows. Foundry ships it. */
 const FALLBACK_ART = "icons/svg/mystery-man.svg";
 
@@ -98,11 +95,11 @@ export function stanceSelect(value, { field = "stance" } = {}) {
  */
 export function pips(strength, interactive) {
   const n = clampStrength(strength);
-  const tip = esc(f("row.strengthTip", { n }));
+  const tip = esc(_loc("PENTARYN_TIES.row.strengthTip", { n }));
   const cell = i =>
     interactive
       ? `<button type="button" class="pt-pip${i <= n ? " fill" : ""}" data-action="strength" data-n="${i}"
-          aria-label="${esc(f("row.strengthSet", { n: i }))}" data-tooltip="${esc(f("row.strengthSet", { n: i }))}"></button>`
+          aria-label="${esc(_loc("PENTARYN_TIES.row.strengthSet", { n: i }))}" data-tooltip="${esc(_loc("PENTARYN_TIES.row.strengthSet", { n: i }))}"></button>`
       : `<span class="pt-pip${i <= n ? " fill" : ""}"></span>`;
   // aria-label, not just data-tooltip: core's TooltipManager binds pointer events only and
   // sets aria-describedby only while the tooltip is up, so it names nothing for a screen
@@ -143,7 +140,7 @@ function replyFragment(reply) {
     ? `<span class="pt-reply-word">${esc(reply.word)}</span>`
     : `<span class="pt-reply-word pt-noword">${esc(stanceLabel(reply.stance))}</span>`;
   return `<span class="pt-reply" data-tooltip="${esc(
-    f("reply.tip", { name: reply.name, word: reply.word || stanceLabel(reply.stance) })
+    _loc("PENTARYN_TIES.reply.tip", { name: reply.name, word: reply.word || stanceLabel(reply.stance) })
   )}"><i class="fa-solid fa-reply" aria-hidden="true"></i>${word}<span class="pt-dot pt-${s.key}"></span></span>`;
 }
 
@@ -161,7 +158,7 @@ function summary(tie, { open, canEdit, reply = null }) {
    */
   const preview = hasNotes
     ? `<span class="pt-note-preview">${esc(tie.notes)}</span>`
-    : `<span class="pt-note-preview pt-note-none"><em>${esc(t("row.notesEmpty"))}</em></span>`;
+    : `<span class="pt-note-preview pt-note-none"><em>${esc(_loc("PENTARYN_TIES.row.notesEmpty"))}</em></span>`;
 
   const word = tie.word
     ? `<span class="pt-word${stance.value ? ` pt-${stance.key}` : ""}">${esc(tie.word)}</span>`
@@ -173,8 +170,8 @@ function summary(tie, { open, canEdit, reply = null }) {
    * a click handler on the <li> would have given the mouse only.
    */
   return `<div class="pt-summary" role="button" tabindex="0" aria-expanded="${open}"
-      data-action="toggle" data-tooltip="${esc(t(canEdit ? "row.expandEdit" : "row.expandRead"))}"
-      aria-label="${esc(f(canEdit ? "row.expandEditOf" : "row.expandReadOf", { name: tie.name }))}">
+      data-action="toggle" data-tooltip="${esc(_loc(canEdit ? "PENTARYN_TIES.row.expandEdit" : "PENTARYN_TIES.row.expandRead"))}"
+      aria-label="${esc(_loc(canEdit ? "PENTARYN_TIES.row.expandEditOf" : "PENTARYN_TIES.row.expandReadOf", { name: tie.name }))}">
     <img class="pt-portrait" src="${esc(artFor(tie))}" alt="" />
     <span class="pt-who">${name}${preview}${replyFragment(reply)}</span>
     ${word}
@@ -192,11 +189,11 @@ function theirSide(reply) {
     : `<span class="pt-word pt-noword">${esc(stanceLabel(reply.stance))}</span>`;
   const prose = reply.notes.trim()
     ? `<div class="pt-notes-prose">${esc(reply.notes)}</div>`
-    : `<div class="pt-notes-prose pt-note-none"><em>${esc(t("row.notesEmpty"))}</em></div>`;
+    : `<div class="pt-notes-prose pt-note-none"><em>${esc(_loc("PENTARYN_TIES.row.notesEmpty"))}</em></div>`;
   return `<div class="pt-their-side">
     <div class="pt-their-head">
-      <span class="pt-their-title">${esc(f("reply.heading", { name: reply.name }))}</span>
-      <span class="pt-gm-badge"><i class="fa-solid fa-eye-slash" aria-hidden="true"></i> ${esc(t("gmOnly"))}</span>
+      <span class="pt-their-title">${esc(_loc("PENTARYN_TIES.reply.heading", { name: reply.name }))}</span>
+      <span class="pt-gm-badge"><i class="fa-solid fa-eye-slash" aria-hidden="true"></i> ${esc(_loc("PENTARYN_TIES.gmOnly"))}</span>
     </div>
     <div class="pt-their-line">${word}${stanceChip(reply.stance, { labelled: !!reply.word })}${pips(
       reply.strength,
@@ -205,7 +202,7 @@ function theirSide(reply) {
     ${prose}
     <div class="pt-detail-actions">
       <button type="button" class="pt-textbtn" data-action="edit-theirs" data-id="${esc(reply.id)}">
-        <i class="fa-solid fa-pen"></i> ${esc(f("inbound.editTheirs", { name: reply.name }))}
+        <i class="fa-solid fa-pen"></i> ${esc(_loc("PENTARYN_TIES.inbound.editTheirs", { name: reply.name }))}
       </button>
     </div>
   </div>`;
@@ -216,13 +213,13 @@ function detail(tie, { canEdit, reply = null }) {
   const openSheet = tie.missing
     ? ""
     : `<button type="button" class="pt-textbtn" data-action="open" data-id="${esc(tie.id)}">
-        <i class="fa-solid fa-arrow-up-right-from-square"></i> ${esc(t("row.openSheet"))}
+        <i class="fa-solid fa-arrow-up-right-from-square"></i> ${esc(_loc("PENTARYN_TIES.row.openSheet"))}
       </button>`;
 
   if (!canEdit) {
     const prose = tie.notes.trim()
       ? `<div class="pt-notes-prose">${esc(tie.notes)}</div>`
-      : `<div class="pt-notes-prose pt-note-none"><em>${esc(t("row.notesEmpty"))}</em></div>`;
+      : `<div class="pt-notes-prose pt-note-none"><em>${esc(_loc("PENTARYN_TIES.row.notesEmpty"))}</em></div>`;
     return `<div class="pt-detail">
       ${prose}
       <div class="pt-detail-actions">${openSheet}</div>
@@ -233,28 +230,28 @@ function detail(tie, { canEdit, reply = null }) {
   return `<div class="pt-detail">
     <div class="pt-fields">
       <label class="pt-field">
-        <span class="pt-field-label">${esc(f("row.wordLabelOf", { name: tie.name }))}</span>
+        <span class="pt-field-label">${esc(_loc("PENTARYN_TIES.row.wordLabelOf", { name: tie.name }))}</span>
         <input type="text" class="pt-word-input" data-field="word" value="${esc(tie.word)}"
-               placeholder="${esc(t("row.wordPlaceholder"))}" />
+               placeholder="${esc(_loc("PENTARYN_TIES.row.wordPlaceholder"))}" />
       </label>
       <label class="pt-field">
-        <span class="pt-field-label">${esc(t("row.stanceLabel"))}</span>
+        <span class="pt-field-label">${esc(_loc("PENTARYN_TIES.row.stanceLabel"))}</span>
         ${stanceSelect(tie.stance)}
       </label>
       <span class="pt-field">
-        <span class="pt-field-label">${esc(t("row.strengthLabel"))}</span>
+        <span class="pt-field-label">${esc(_loc("PENTARYN_TIES.row.strengthLabel"))}</span>
         ${pips(tie.strength, true)}
       </span>
     </div>
     <label class="pt-field pt-field-notes">
-      <span class="pt-field-label">${esc(t("row.notesLabel"))}</span>
+      <span class="pt-field-label">${esc(_loc("PENTARYN_TIES.row.notesLabel"))}</span>
       <textarea class="pt-notes-text" data-field="notes" rows="5" maxlength="${NOTES_MAX}"
-                placeholder="${esc(f("row.notesPlaceholder", { name: tie.name }))}">${esc(tie.notes)}</textarea>
+                placeholder="${esc(_loc("PENTARYN_TIES.row.notesPlaceholder", { name: tie.name }))}">${esc(tie.notes)}</textarea>
     </label>
     <div class="pt-detail-actions">
       ${openSheet}
       <button type="button" class="pt-textbtn pt-del" data-action="remove" data-id="${esc(tie.id)}">
-        <i class="fa-solid fa-trash"></i> ${esc(t("row.remove"))}
+        <i class="fa-solid fa-trash"></i> ${esc(_loc("PENTARYN_TIES.row.remove"))}
       </button>
     </div>
     ${theirSide(reply)}
@@ -282,15 +279,15 @@ function inboundRow(row, { open }) {
     : `<span class="pt-word pt-noword">${esc(stanceLabel(row.stance))}</span>`;
   const preview = row.notes.trim()
     ? `<span class="pt-note-preview">${esc(row.notes)}</span>`
-    : `<span class="pt-note-preview pt-note-none"><em>${esc(t("row.notesEmpty"))}</em></span>`;
+    : `<span class="pt-note-preview pt-note-none"><em>${esc(_loc("PENTARYN_TIES.row.notesEmpty"))}</em></span>`;
   const prose = row.notes.trim()
     ? `<div class="pt-notes-prose">${esc(row.notes)}</div>`
-    : `<div class="pt-notes-prose pt-note-none"><em>${esc(t("row.notesEmpty"))}</em></div>`;
+    : `<div class="pt-notes-prose pt-note-none"><em>${esc(_loc("PENTARYN_TIES.row.notesEmpty"))}</em></div>`;
 
   return `<li class="pt-row pt-inbound${open ? " pt-open" : ""}" data-id="${esc(row.id)}" data-inbound="1">
     <div class="pt-summary" role="button" tabindex="0" aria-expanded="${open}" data-action="toggle"
-         aria-label="${esc(f("inbound.rowLabel", { name: row.name }))}"
-         data-tooltip="${esc(f("inbound.rowTip", { name: row.name }))}">
+         aria-label="${esc(_loc("PENTARYN_TIES.inbound.rowLabel", { name: row.name }))}"
+         data-tooltip="${esc(_loc("PENTARYN_TIES.inbound.rowTip", { name: row.name }))}">
       <img class="pt-portrait" src="${esc(row.img || FALLBACK_ART)}" alt="" loading="lazy" />
       <span class="pt-who"><span class="pt-name">${esc(row.name)}</span>${preview}</span>
       ${word}
@@ -303,10 +300,10 @@ function inboundRow(row, { open }) {
         ${prose}
         <div class="pt-detail-actions">
           <button type="button" class="pt-textbtn" data-action="open" data-id="${esc(row.id)}">
-            <i class="fa-solid fa-arrow-up-right-from-square"></i> ${esc(f("inbound.openSheet", { name: row.name }))}
+            <i class="fa-solid fa-arrow-up-right-from-square"></i> ${esc(_loc("PENTARYN_TIES.inbound.openSheet", { name: row.name }))}
           </button>
           <button type="button" class="pt-textbtn" data-action="edit-theirs" data-id="${esc(row.id)}">
-            <i class="fa-solid fa-pen"></i> ${esc(f("inbound.editTheirs", { name: row.name }))}
+            <i class="fa-solid fa-pen"></i> ${esc(_loc("PENTARYN_TIES.inbound.editTheirs", { name: row.name }))}
           </button>
         </div>
       </div>
@@ -353,10 +350,10 @@ export function buildHTML(actor) {
     list.map(tie => tieRow(tie, { open: open.has(tie.id), canEdit, reply: replies.get(tie.id) ?? null })).join("");
 
   const groupHead = key =>
-    `<div class="pt-group-head" role="heading" aria-level="3"><span class="pt-group-title">${esc(t(key))}</span></div>`;
+    `<div class="pt-group-head" role="heading" aria-level="3"><span class="pt-group-title">${esc(_loc(key))}</span></div>`;
 
   const rows = !ties.length
-    ? `<li class="pt-empty">${esc(t("empty"))}</li>`
+    ? `<li class="pt-empty">${esc(_loc("PENTARYN_TIES.empty"))}</li>`
     : split
       ? `${renderRows(here)}`
       : renderRows(ties);
@@ -364,9 +361,9 @@ export function buildHTML(actor) {
   const add = canEdit
     ? `<div class="pt-add-bar">
         <button type="button" class="pt-add-btn" data-action="add">
-          <i class="fa-solid fa-plus"></i> ${esc(t("add"))}
+          <i class="fa-solid fa-plus"></i> ${esc(_loc("PENTARYN_TIES.add"))}
         </button>
-        <span class="pt-add-hint">${esc(f("addHint", { key: addTieKey() }))}</span>
+        <span class="pt-add-hint">${esc(_loc("PENTARYN_TIES.addHint", { key: addTieKey() }))}</span>
       </div>`
     : "";
 
@@ -376,10 +373,10 @@ export function buildHTML(actor) {
    */
   const inboundSection = orphans.length
     ? `<div class="pt-inbound-head">
-        <span class="pt-inbound-title">${esc(t("inbound.heading"))}</span>
-        <span class="pt-gm-badge"><i class="fa-solid fa-eye-slash" aria-hidden="true"></i> ${esc(t("gmOnly"))}</span>
+        <span class="pt-inbound-title">${esc(_loc("PENTARYN_TIES.inbound.heading"))}</span>
+        <span class="pt-gm-badge"><i class="fa-solid fa-eye-slash" aria-hidden="true"></i> ${esc(_loc("PENTARYN_TIES.gmOnly"))}</span>
       </div>
-      <p class="pt-inbound-hint">${esc(t("inbound.hint"))}</p>
+      <p class="pt-inbound-hint">${esc(_loc("PENTARYN_TIES.inbound.hint"))}</p>
       <ul class="pt-list pt-list-inbound">
         ${orphans.map(r => inboundRow(r, { open: open.has(r.id) })).join("")}
       </ul>`
@@ -392,12 +389,12 @@ export function buildHTML(actor) {
    */
   const isGM = game.user?.isGM === true;
   const elsewhereBlock = split
-    ? `${groupHead(isGM ? "group.elsewhere" : "group.notInSight")}
+    ? `${groupHead(isGM ? "PENTARYN_TIES.group.elsewhere" : "PENTARYN_TIES.group.notInSight")}
        <ul class="pt-list pt-list-elsewhere">${renderRows(elsewhere)}</ul>`
     : "";
 
   return `<div class="pentaryn-ties" data-actor-id="${esc(actor.id)}">
-    ${split ? groupHead(isGM ? "group.onScene" : "group.inSight") : ""}
+    ${split ? groupHead(isGM ? "PENTARYN_TIES.group.onScene" : "PENTARYN_TIES.group.inSight") : ""}
     <ul class="pt-list">${rows}</ul>
     ${elsewhereBlock}
     ${add}
@@ -462,7 +459,7 @@ export function bind(root, actor, rerender = () => {}) {
         TieDialog.open({ source: author, target: actor, onSaved: rerender });
       } catch (err) {
         log.error("the tie dialog failed to open", err);
-        ui.notifications.error(t("notify.dialogUnavailable"));
+        ui.notifications.error(_loc("PENTARYN_TIES.notify.dialogUnavailable"));
       }
     });
   });
@@ -539,14 +536,14 @@ export function bind(root, actor, rerender = () => {}) {
       const target = game.actors.get(btn.dataset.id);
       const losing = read(actor).some(x => x.id === btn.dataset.id && x.notes.trim());
       const ok = await foundry.applications.api.DialogV2.confirm({
-        window: { title: t("confirm.removeTitle") },
+        window: { title: _loc("PENTARYN_TIES.confirm.removeTitle") },
         content:
           `<p>${esc(
             game.i18n.format("PENTARYN_TIES.confirm.removeBoth", {
               a: actor.name,
-              b: target?.name ?? t("row.missingName")
+              b: target?.name ?? _loc("PENTARYN_TIES.row.missingName")
             })
-          )}</p>` + (losing ? `<p class="notification warning">${esc(t("confirm.removeNotes"))}</p>` : "")
+          )}</p>` + (losing ? `<p class="notification warning">${esc(_loc("PENTARYN_TIES.confirm.removeNotes"))}</p>` : "")
       });
       if (!ok) return;
       await removeTie(actor, btn.dataset.id, { bothWays: true });
@@ -561,7 +558,7 @@ export function bind(root, actor, rerender = () => {}) {
       TieDialog.open({ source: actor, onSaved: rerender });
     } catch (err) {
       log.error("the tie dialog failed to open", err);
-      ui.notifications.error(t("notify.dialogUnavailable"));
+      ui.notifications.error(_loc("PENTARYN_TIES.notify.dialogUnavailable"));
     }
   });
 }

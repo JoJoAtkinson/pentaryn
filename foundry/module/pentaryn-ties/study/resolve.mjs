@@ -36,7 +36,6 @@ import { attackItems, composeStudyPayload } from "./compose.mjs";
 import { readFlag } from "../lib/flags.mjs";
 import { setting } from "../settings.mjs";
 
-
 /* -------------------------------------------- */
 /*  Resolution                                  */
 /* -------------------------------------------- */

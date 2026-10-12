@@ -40,8 +40,6 @@ const BY_MAX = 200;
 const ACCENT = 0x9b59b6;
 const DISC = 0x141311;
 
-const t = k => game.i18n.localize(`PENTARYN_TIES.${k}`);
-
 /** Token placeable or TokenDocument in, TokenDocument out. */
 const docOf = token => token?.document ?? token ?? null;
 
@@ -210,8 +208,8 @@ function injectHUD(app, element) {
   btn.type = "button";
   btn.className = "control-icon pt-worn-btn";
   if (readWorn(doc)) btn.classList.add("active");
-  btn.dataset.tooltip = t("worn.hudTooltip");
-  btn.setAttribute("aria-label", t("worn.hudTooltip"));
+  btn.dataset.tooltip = _loc("PENTARYN_TIES.worn.hudTooltip");
+  btn.setAttribute("aria-label", _loc("PENTARYN_TIES.worn.hudTooltip"));
   btn.innerHTML = '<i class="fa-solid fa-masks-theater"></i>';
   btn.addEventListener("click", ev => {
     ev.preventDefault();
@@ -230,20 +228,20 @@ export async function openDialog(token) {
 
   const content = `<div class="pt-worn-dialog">
     <div class="form-group">
-      <label>${esc(t("worn.by"))}</label>
-      <input type="text" name="by" value="${esc(current.by)}" placeholder="${esc(t("worn.byPlaceholder"))}" />
+      <label>${esc(_loc("PENTARYN_TIES.worn.by"))}</label>
+      <input type="text" name="by" value="${esc(current.by)}" placeholder="${esc(_loc("PENTARYN_TIES.worn.byPlaceholder"))}" />
     </div>
     <div class="form-group">
-      <label>${esc(t("worn.note"))}</label>
+      <label>${esc(_loc("PENTARYN_TIES.worn.note"))}</label>
       <textarea name="note" rows="5" maxlength="${NOTES_MAX}"
-                placeholder="${esc(t("worn.notePlaceholder"))}">${esc(current.note)}</textarea>
+                placeholder="${esc(_loc("PENTARYN_TIES.worn.notePlaceholder"))}">${esc(current.note)}</textarea>
     </div>
   </div>`;
 
   const buttons = [
     {
       action: "set",
-      label: t("worn.set"),
+      label: _loc("PENTARYN_TIES.worn.set"),
       icon: "fa-solid fa-masks-theater",
       default: true,
       callback: (_ev, button) => ({
@@ -252,8 +250,8 @@ export async function openDialog(token) {
       })
     }
   ];
-  if (readWorn(doc)) buttons.push({ action: "clear", label: t("worn.clear"), icon: "fa-solid fa-broom" });
-  buttons.push({ action: "cancel", label: t("worn.cancel") });
+  if (readWorn(doc)) buttons.push({ action: "clear", label: _loc("PENTARYN_TIES.worn.clear"), icon: "fa-solid fa-broom" });
+  buttons.push({ action: "cancel", label: _loc("PENTARYN_TIES.worn.cancel") });
 
   const result = await foundry.applications.api.DialogV2.wait({
     window: { title: game.i18n.format("PENTARYN_TIES.worn.title", { name: doc.name ?? "" }), icon: "fa-solid fa-masks-theater" },

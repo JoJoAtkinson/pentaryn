@@ -97,7 +97,6 @@ export function presentActorIds() {
   return ids;
 }
 
-
 /** Sanitised, resolved ties for an actor. Never throws. Never returns non-array. */
 export function read(actor) {
   if (!actor) return [];

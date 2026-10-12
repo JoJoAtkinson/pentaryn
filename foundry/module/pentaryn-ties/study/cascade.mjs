@@ -38,7 +38,7 @@ import {
   stackingRule,
   studySkillFor
 } from "./resolve.mjs";
-import { esc, f, INSPECT, log, t } from "./shared.mjs";
+import { esc, INSPECT, log } from "./shared.mjs";
 import { send } from "../socket-adapter.mjs";
 import { announceTempo } from "./tempo.mjs";
 import { readFlag } from "../lib/flags.mjs";
@@ -78,7 +78,7 @@ export async function inspect(character, subject) {
   if (!mayWrite()) return refused("playerAccess");
   if (!character?.isOwner || !subject) return refused(character?.isOwner ? "no subject" : "not the owner");
   if (!game.users?.activeGM) {
-    ui.notifications.warn(t("known.study.notify.noGM"));
+    ui.notifications.warn(_loc("PENTARYN_TIES.known.study.notify.noGM"));
     return false;
   }
   if (!combatAllows(character)) return refused("one inspection per combatant per round");
@@ -124,7 +124,7 @@ function combatAllows(character) {
   if (!combatant) return true;
   const key = `${game.combat.id}:${game.combat.round}:${combatant.id}`;
   if (inspected.has(key)) {
-    ui.notifications.warn(t("known.inspect.spentThisRound"));
+    ui.notifications.warn(_loc("PENTARYN_TIES.known.inspect.spentThisRound"));
     return false;
   }
   inspected.set(key, true);
@@ -387,25 +387,25 @@ async function promptCascadeDeliver(character, subject) {
         <div class="pt-belief-head">
           <span class="pt-belief-who">${esc(entry.title)}</span>
           <span class="pt-belief-meta">${esc(
-            f("known.inspect.holdMeta", { total: rec.total ?? "—", dc: entry.dc })
+            _loc("PENTARYN_TIES.known.inspect.holdMeta", { total: rec.total ?? "—", dc: entry.dc })
           )}</span>
         </div>
         <div class="pt-belief-text">${
           passed
             ? esc(rec.text)
-            : `<em>${esc(t(missed ? "known.study.holdSilent" : "authoring.beliefSilent"))}</em>`
+            : `<em>${esc(_loc(missed ? "PENTARYN_TIES.known.study.holdSilent" : "PENTARYN_TIES.authoring.beliefSilent"))}</em>`
         }</div>
       </li>`;
     })
     .join("");
 
   const ok = await foundry.applications.api.DialogV2.confirm({
-    window: { title: t("known.study.holdTitle") },
+    window: { title: _loc("PENTARYN_TIES.known.study.holdTitle") },
     content:
-      `<p>${esc(f("known.inspect.holdWho", { character: character.name, subject: subject.name }))}</p>` +
+      `<p>${esc(_loc("PENTARYN_TIES.known.inspect.holdWho", { character: character.name, subject: subject.name }))}</p>` +
       `<ul class="pt-list pt-belief-list pentaryn-ties">${rows}</ul>`,
-    yes: { label: t("known.study.deliver") },
-    no: { label: t("known.study.later") }
+    yes: { label: _loc("PENTARYN_TIES.known.study.deliver") },
+    no: { label: _loc("PENTARYN_TIES.known.study.later") }
   });
   if (!ok) return;
   await deliverHeldIdentifications(character, subject);
@@ -523,7 +523,7 @@ export async function grantKind(character, kindOrSubject, tier = 15, { from = nu
 
   const held = beliefsOf(kind)[character.id]?.[KIND_KEY];
   if (held && Number(held.tier ?? -1) >= tier) {
-    if (!quiet) ui.notifications.info(f("known.study.notify.alreadyKnows", { character: character.name, kind: kind.name }));
+    if (!quiet) ui.notifications.info(_loc("PENTARYN_TIES.known.study.notify.alreadyKnows", { character: character.name, kind: kind.name }));
     return false;
   }
 
@@ -535,7 +535,7 @@ export async function grantKind(character, kindOrSubject, tier = 15, { from = nu
 
   // `from` is a share's provenance (a character id or "gm"); a plain release leaves it off
   const fromId = from ? (typeof from === "string" ? from : from.id) : null;
-  const source = from && typeof from === "object" ? f("known.share.sourceBy", { source: kind.name, name: from.name }) : undefined;
+  const source = from && typeof from === "object" ? _loc("PENTARYN_TIES.known.share.sourceBy", { source: kind.name, name: from.name }) : undefined;
   // a flag update MERGES into the stored row: a plain release over a shared one would keep its
   // stale `from`/`prior` and still read as a share, so drop that row first
   if (held?.from && !fromId) await putBelief(fact, character.id, null);
@@ -543,7 +543,7 @@ export async function grantKind(character, kindOrSubject, tier = 15, { from = nu
   await putBelief(fact, character.id, { text, tier, total: null, when: now, delivered: now, from: fromId, prior });
   // "Mark as failed" (tier 0) composes to "" unless rung 0 is authored: lock and ledger, no card
   await applyPlayerWrites(character, fact, { text, silent: !text, tier, source }, now);
-  if (!quiet) ui.notifications.info(f("known.study.notify.released", { character: character.name, kind: kind.name, tier }));
+  if (!quiet) ui.notifications.info(_loc("PENTARYN_TIES.known.study.notify.released", { character: character.name, kind: kind.name, tier }));
   return true;
 }
 
@@ -580,7 +580,7 @@ export async function resetIdentification(character, subject, attrId) {
     await character.update({ [`flags.${MODULE}.${GRANTED_FLAG}.-=${missKey}`]: null });
 
   ui.notifications.info(
-    f("known.inspect.resetDone", { character: character.name, subject: subject.name, attr: describeAttribute(attrId).title })
+    _loc("PENTARYN_TIES.known.inspect.resetDone", { character: character.name, subject: subject.name, attr: describeAttribute(attrId).title })
   );
   return true;
 }

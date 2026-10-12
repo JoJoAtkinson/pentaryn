@@ -27,8 +27,6 @@
 
 import { MODULE } from "./ties-core.mjs";
 
-const t = (k, d) => game.i18n.localize(`PENTARYN_TIES.${k}`) || d;
-
 /** The single live window, and who it is about. */
 let current = { app: null, actorId: null };
 
@@ -73,7 +71,7 @@ export async function toggle() {
   }
 
   if (!actor) {
-    ui.notifications.warn(t("notify.noTarget", "Hover a token, or select one."));
+    ui.notifications.warn((_loc("PENTARYN_TIES.notify.noTarget") || "Hover a token, or select one."));
     return null;
   }
 
@@ -84,7 +82,7 @@ export async function toggle() {
   const raw = bio.value || bio.public || "";
   const body = raw
     ? await editor().enrichHTML(raw, { async: true, relativeTo: actor, secrets: true })
-    : `<p><em>${t("describe.empty", "No description written.")}</em></p>`;
+    : `<p><em>${(_loc("PENTARYN_TIES.describe.empty") || "No description written.")}</em></p>`;
 
   const art = actor.img || actor.prototypeToken?.texture?.src || "icons/svg/mystery-man.svg";
   const content = `<div class="pt-describe">
@@ -99,7 +97,7 @@ export async function toggle() {
     buttons: [
       {
         action: "sheet",
-        label: t("describe.openSheet", "Open Full Sheet"),
+        label: (_loc("PENTARYN_TIES.describe.openSheet") || "Open Full Sheet"),
         icon: "fa-solid fa-user",
         callback: () => actor.sheet?.render(true)
       },
@@ -107,7 +105,7 @@ export async function toggle() {
       // KeyboardManager treats a focused <button> as "something has focus" and suppresses
       // every keybinding — so the default button would silently eat the second press of 9,
       // which is the whole open-glance-close gesture this key exists for.
-      { action: "close", label: t("describe.close", "Close") }
+      { action: "close", label: (_loc("PENTARYN_TIES.describe.close") || "Close") }
     ],
     // Closing by any route — the ✕, Escape, the button — must clear the handle, or the
     // next press thinks a dead window is still open and swallows itself as a "toggle off".

@@ -24,7 +24,7 @@ import {
 import { claimFact, dropRow, releaseFact } from "./claim.mjs";
 import { promptDeliver } from "./gate.mjs";
 import { beliefsOf, resolveFact, stackingRule, studiedOf } from "./resolve.mjs";
-import { esc, f, log, SITUATIONAL_MAX, SITUATIONAL_MIN } from "./shared.mjs";
+import { esc, log, SITUATIONAL_MAX, SITUATIONAL_MIN } from "./shared.mjs";
 import { readFlag } from "../lib/flags.mjs";
 import { setting, mayWrite } from "../settings.mjs";
 
@@ -68,7 +68,7 @@ export async function throwBlind(character, fact, { mode, situational, silent = 
           // default (public) and the Study roll would land face-up in the player's chat.
           rollMode: foundry.dice.Roll._mapLegacyRollMode(CONST.DICE_ROLL_MODES.BLIND),
           data: {
-            flavor: f("known.study.rollFlavor", { name: fact.name, skill: fact.skillLabel }),
+            flavor: _loc("PENTARYN_TIES.known.study.rollFlavor", { name: fact.name, skill: fact.skillLabel }),
             // Dice So Nice reads `flags["dice-so-nice"].skip` (6.x); it never read the old
             // `suppressRollDiceSoNice`, so blind study rolls animated on the GM's screen.
             flags: { "dice-so-nice": { skip: true } }
@@ -231,7 +231,7 @@ export async function applyStudy(payload, senderId) {
   if (hold) await promptDeliver(character, fact);
   else
     ui.notifications.info(
-      f(graded.pass ? "known.study.notify.delivered" : "known.study.notify.missed", { character: character.name, kind: fact.name })
+      _loc(graded.pass ? "PENTARYN_TIES.known.study.notify.delivered" : "PENTARYN_TIES.known.study.notify.missed", { character: character.name, kind: fact.name })
     );
   return true;
 }
@@ -420,7 +420,7 @@ export function knownListWith(character, entryActor, now) {
  */
 export async function postStub(character, subject) {
   await ChatMessage.create({
-    content: `<p class="pt-study-stub">${esc(f("known.study.stub", { character: character.name, subject: subject.name }))}</p>`,
+    content: `<p class="pt-study-stub">${esc(_loc("PENTARYN_TIES.known.study.stub", { character: character.name, subject: subject.name }))}</p>`,
     speaker: ChatMessage.getSpeaker({ actor: character })
   });
 }

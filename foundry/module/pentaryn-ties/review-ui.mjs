@@ -54,8 +54,6 @@ const log = makeLog(MODULE);
 
 const { ApplicationV2 } = foundry.applications.api;
 
-const t = k => game.i18n.localize(`PENTARYN_TIES.${k}`);
-const f = (k, data) => game.i18n.format(`PENTARYN_TIES.${k}`, data);
 const esc = s => foundry.utils.escapeHTML(String(s ?? ""));
 const skillLabel = s => CONFIG.DND5E?.skills?.[s]?.label ?? s;
 const CARRIERS_SHOWN = 8;
@@ -63,7 +61,7 @@ const SETTING_KEY = `${MODULE}.${REGISTRY_SETTING}`;
 
 /** "2h ago" with the ISO time as tooltip; `null` → the "before timestamps" dash. */
 function when(ms) {
-  if (typeof ms !== "number") return `<span class="pt-review-time" data-tooltip="${esc(t("review.untimedTip"))}">${esc(t("review.never"))}</span>`;
+  if (typeof ms !== "number") return `<span class="pt-review-time" data-tooltip="${esc(_loc("PENTARYN_TIES.review.untimedTip"))}">${esc(_loc("PENTARYN_TIES.review.never"))}</span>`;
   let ago;
   try {
     ago = foundry.utils.timeSince(ms);
@@ -77,7 +75,7 @@ async function copyText(text) {
   try {
     if (game.clipboard?.copyPlainText) await game.clipboard.copyPlainText(text);
     else await navigator.clipboard.writeText(text);
-    ui.notifications.info(t("review.copied"));
+    ui.notifications.info(_loc("PENTARYN_TIES.review.copied"));
   } catch (err) {
     log.warn(`copy failed`, err);
   }
@@ -103,7 +101,7 @@ export class AttributeReview extends ApplicationV2 {
   /** The one window. Refuses a non-GM with a notification and returns `null`. */
   static open() {
     if (!game.user?.isGM) {
-      ui.notifications.warn(t("review.gmOnly"));
+      ui.notifications.warn(_loc("PENTARYN_TIES.review.gmOnly"));
       return null;
     }
     const existing = foundry.applications.instances?.get?.(AttributeReview.DEFAULT_OPTIONS.id);
@@ -184,7 +182,7 @@ export class AttributeReview extends ApplicationV2 {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "pt-review-stale";
-    btn.innerHTML = `<i class="fa-solid fa-rotate"></i> ${esc(t("review.stale"))}`;
+    btn.innerHTML = `<i class="fa-solid fa-rotate"></i> ${esc(_loc("PENTARYN_TIES.review.stale"))}`;
     btn.addEventListener("click", () => {
       this.pendingRender = false;
       this.render();
@@ -268,35 +266,35 @@ export class AttributeReview extends ApplicationV2 {
     this.stale.clear();
 
     const sortOpts = REVIEW_SORTS.map(
-      m => `<option value="${m}" ${m === this.sort ? "selected" : ""}>${esc(t(`review.sort.${m}`))}</option>`
+      m => `<option value="${m}" ${m === this.sort ? "selected" : ""}>${esc(_loc(`PENTARYN_TIES.review.sort.${m}`))}</option>`
     ).join("");
     const chip = (k, label) =>
       `<button type="button" class="pt-chip ${this.filter === k ? "pt-chip-on" : ""}" data-filter="${k}">${label}</button>`;
 
     // Scope filter, beside the others: Global (reusable world-building) or Personal (one character's history)
     const scope = k =>
-      `<button type="button" class="pt-chip pt-review-tab ${this.tab === k ? "pt-chip-on" : ""}" data-tab="${k}">${esc(t(`review.tab.${k}`))} (<span data-count="tab-${k}">0</span>)</button>`;
+      `<button type="button" class="pt-chip pt-review-tab ${this.tab === k ? "pt-chip-on" : ""}" data-tab="${k}">${esc(_loc(`PENTARYN_TIES.review.tab.${k}`))} (<span data-count="tab-${k}">0</span>)</button>`;
     const head = `<header class="pt-review-head">
       <div class="pt-review-bar">
-        <input type="search" class="pt-review-search" placeholder="${esc(t("review.search"))}" value="${esc(this.search)}">
+        <input type="search" class="pt-review-search" placeholder="${esc(_loc("PENTARYN_TIES.review.search"))}" value="${esc(this.search)}">
         <select class="pt-review-sort" aria-label="sort">${sortOpts}</select>
-        <button type="button" class="pt-textbtn" data-act="resort" data-tooltip="${esc(t("review.resortTip"))}"><i class="fa-solid fa-arrow-down-short-wide"></i> ${esc(t("review.resort"))}</button>
+        <button type="button" class="pt-textbtn" data-act="resort" data-tooltip="${esc(_loc("PENTARYN_TIES.review.resortTip"))}"><i class="fa-solid fa-arrow-down-short-wide"></i> ${esc(_loc("PENTARYN_TIES.review.resort"))}</button>
       </div>
       <div class="pt-review-bar">
         ${scope("world")}${scope("personal")}
         <span class="pt-review-divider"></span>
-        ${chip("all", esc(t("review.filter.all")))}
-        ${chip("needs", `${esc(t("review.filter.needs"))} (<span data-count="needs">0</span>)`)}
-        ${chip("selected", `${esc(t("review.filter.selected"))} (<span data-count="selected">0</span>)`)}
+        ${chip("all", esc(_loc("PENTARYN_TIES.review.filter.all")))}
+        ${chip("needs", `${esc(_loc("PENTARYN_TIES.review.filter.needs"))} (<span data-count="needs">0</span>)`)}
+        ${chip("selected", `${esc(_loc("PENTARYN_TIES.review.filter.selected"))} (<span data-count="selected">0</span>)`)}
         <span class="pt-review-spacer"></span>
-        <button type="button" class="pt-textbtn" data-act="select-visible"><i class="fa-regular fa-square-check"></i> ${esc(t("review.selectVisible"))}</button>
-        <button type="button" class="pt-textbtn" data-act="select-none"><i class="fa-regular fa-square"></i> ${esc(t("review.selectNone"))}</button>
-        <button type="button" class="pt-textbtn" data-act="copy-selected"><i class="fa-regular fa-copy"></i> ${esc(t("review.copySelected"))}</button>
+        <button type="button" class="pt-textbtn" data-act="select-visible"><i class="fa-regular fa-square-check"></i> ${esc(_loc("PENTARYN_TIES.review.selectVisible"))}</button>
+        <button type="button" class="pt-textbtn" data-act="select-none"><i class="fa-regular fa-square"></i> ${esc(_loc("PENTARYN_TIES.review.selectNone"))}</button>
+        <button type="button" class="pt-textbtn" data-act="copy-selected"><i class="fa-regular fa-copy"></i> ${esc(_loc("PENTARYN_TIES.review.copySelected"))}</button>
       </div>
       <p class="pt-review-counts"></p>
     </header>`;
 
-    if (!list.length) return `<div class="pentaryn-ties pt-review">${head}<p class="pt-empty">${esc(t("review.empty"))}</p></div>`;
+    if (!list.length) return `<div class="pentaryn-ties pt-review">${head}<p class="pt-empty">${esc(_loc("PENTARYN_TIES.review.empty"))}</p></div>`;
 
     const body = rows.map(e => this.row(e, byId, list, carriers)).join("");
     return `<div class="pentaryn-ties pt-review">${head}
@@ -319,18 +317,18 @@ export class AttributeReview extends ApplicationV2 {
 
     const badge =
       state === "unreviewed"
-        ? `<span class="pt-review-badge pt-review-warn"><i class="fa-solid fa-triangle-exclamation"></i> ${esc(t("review.state.unreviewed"))}</span>`
+        ? `<span class="pt-review-badge pt-review-warn"><i class="fa-solid fa-triangle-exclamation"></i> ${esc(_loc("PENTARYN_TIES.review.state.unreviewed"))}</span>`
         : state === "changed"
           ? `<span class="pt-review-badge pt-review-warn"><i class="fa-solid fa-pen"></i> ${esc(
-              f("review.changedFields", { fields: e.touched.length ? e.touched.join(", ") : t("review.state.changed") })
+              _loc("PENTARYN_TIES.review.changedFields", { fields: e.touched.length ? e.touched.join(", ") : _loc("PENTARYN_TIES.review.state.changed") })
             )}</span>`
           : `<span class="pt-review-badge pt-review-ok" data-tooltip="${esc(
-              f("review.reviewedAt", { when: new Date(e.reviewedAt).toLocaleString() })
-            )}"><i class="fa-solid fa-check"></i> ${esc(t("review.state.reviewed"))}</span>`;
+              _loc("PENTARYN_TIES.review.reviewedAt", { when: new Date(e.reviewedAt).toLocaleString() })
+            )}"><i class="fa-solid fa-check"></i> ${esc(_loc("PENTARYN_TIES.review.state.reviewed"))}</span>`;
     const signBtn =
       state === "reviewed"
-        ? `<button type="button" class="pt-textbtn pt-review-quiet" data-act="unreview" data-tooltip="${esc(t("review.unmarkTip"))}">${esc(t("review.unmark"))}</button>`
-        : `<button type="button" class="pt-review-sign" data-act="review"><i class="fa-solid fa-check"></i> ${esc(t("review.markReviewed"))}</button>`;
+        ? `<button type="button" class="pt-textbtn pt-review-quiet" data-act="unreview" data-tooltip="${esc(_loc("PENTARYN_TIES.review.unmarkTip"))}">${esc(_loc("PENTARYN_TIES.review.unmark"))}</button>`
+        : `<button type="button" class="pt-review-sign" data-act="review"><i class="fa-solid fa-check"></i> ${esc(_loc("PENTARYN_TIES.review.markReviewed"))}</button>`;
 
     const summary = `<div class="pt-review-summary" data-act="toggle">
       <input type="checkbox" class="pt-review-sel" data-act="select" ${this.selection.has(e.id) ? "checked" : ""} aria-label="select">
@@ -338,13 +336,13 @@ export class AttributeReview extends ApplicationV2 {
       <span class="pt-review-main">
         <span class="pt-review-line"><b class="pt-review-title">${esc(e.title)}</b>
           ${e.category ? `<span class="pt-review-cat">${esc(e.category)}</span>` : ""}
-          <code class="pt-review-id" data-act="copy-id" data-tooltip="${esc(t("review.copyId"))}">${esc(e.id)}</code></span>
+          <code class="pt-review-id" data-act="copy-id" data-tooltip="${esc(_loc("PENTARYN_TIES.review.copyId"))}">${esc(e.id)}</code></span>
         <span class="pt-review-line pt-review-meta">
           ${parent || e.parent ? `<span class="pt-review-link pt-review-parent" data-tooltip="Can only be rolled after ${esc(parent?.title ?? e.parent)} is identified"><i class="fa-solid fa-lock"></i> needs ${esc(parent?.title ?? e.parent)}</span>` : ""}
           ${kids.length ? `<span class="pt-review-link pt-review-kids" data-tooltip="Identifying this unlocks: ${esc(kids.map(k => k.title).join(", "))}"><i class="fa-solid fa-key"></i> unlocks ${esc(kids.map(k => k.title).join(", "))}</span>` : ""}
-          <span>${esc(f("review.facts", { n: lore.length }))}</span>
-          <span>${esc(f("review.carrierCount", { n: who.length }))}</span>
-          <span>${esc(t("review.modified"))} ${when(e.modifiedAt)}</span>
+          <span>${esc(_loc("PENTARYN_TIES.review.facts", { n: lore.length }))}</span>
+          <span>${esc(_loc("PENTARYN_TIES.review.carrierCount", { n: who.length }))}</span>
+          <span>${esc(_loc("PENTARYN_TIES.review.modified"))} ${when(e.modifiedAt)}</span>
           ${badge}</span>
       </span>
       ${signBtn}
@@ -375,33 +373,33 @@ export class AttributeReview extends ApplicationV2 {
     const shown = v => (v === null || v === undefined || v === "" ? "—" : typeof v === "string" ? v : JSON.stringify(v));
     const was = (k, cur, label = "") =>
       snap && k in snap && !same(snap[k], cur)
-        ? `<p class="pt-review-was"><b>${esc(t("review.was"))}</b>${label ? ` ${esc(label)}:` : ""} ${esc(k === "skill" ? skillLabel(snap[k]) : shown(snap[k]))}</p>`
+        ? `<p class="pt-review-was"><b>${esc(_loc("PENTARYN_TIES.review.was"))}</b>${label ? ` ${esc(label)}:` : ""} ${esc(k === "skill" ? skillLabel(snap[k]) : shown(snap[k]))}</p>`
         : "";
     const fields = `<div class="pt-review-fields">
-      ${field(t("review.field.title"), `<input type="text" data-field="title" value="${esc(e.title)}">`)}
-      ${field(t("review.field.category"), `<input type="text" data-field="category" value="${esc(e.category)}">`)}
-      ${field(t("review.field.skill"), this.skillSelect("skill", e.skill))}
-      ${field(t("review.field.dc"), `<input type="number" min="1" max="40" step="1" data-field="dc" value="${e.dc}">`)}
+      ${field(_loc("PENTARYN_TIES.review.field.title"), `<input type="text" data-field="title" value="${esc(e.title)}">`)}
+      ${field(_loc("PENTARYN_TIES.review.field.category"), `<input type="text" data-field="category" value="${esc(e.category)}">`)}
+      ${field(_loc("PENTARYN_TIES.review.field.skill"), this.skillSelect("skill", e.skill))}
+      ${field(_loc("PENTARYN_TIES.review.field.dc"), `<input type="number" min="1" max="40" step="1" data-field="dc" value="${e.dc}">`)}
     </div>
-    ${["title", "category", "skill", "dc"].map(k => was(k, e[k], t(`review.field.${k}`))).join("")}
-    ${field(t("review.field.reveal"), `<textarea data-field="reveal">${esc(e.reveal)}</textarea>`)}
+    ${["title", "category", "skill", "dc"].map(k => was(k, e[k], _loc(`PENTARYN_TIES.review.field.${k}`))).join("")}
+    ${field(_loc("PENTARYN_TIES.review.field.reveal"), `<textarea data-field="reveal">${esc(e.reveal)}</textarea>`)}
     ${was("reveal", e.reveal)}
-    ${field(t("review.field.miss"), `<textarea data-field="miss">${esc(e.miss)}</textarea>`)}
+    ${field(_loc("PENTARYN_TIES.review.field.miss"), `<textarea data-field="miss">${esc(e.miss)}</textarea>`)}
     ${was("miss", e.miss)}`;
 
     const others = ["parent", "secret", "whenKnown", "whenCarried", "hold"].map(k => was(k, e[k], k)).join("");
     const carriersShown = who.slice(0, CARRIERS_SHOWN).map(esc).join(", ");
-    const more = who.length > CARRIERS_SHOWN ? ` ${esc(f("review.more", { n: who.length - CARRIERS_SHOWN }))}` : "";
+    const more = who.length > CARRIERS_SHOWN ? ` ${esc(_loc("PENTARYN_TIES.review.more", { n: who.length - CARRIERS_SHOWN }))}` : "";
     const hold = e.hold === true ? "held" : e.hold === false ? "not held" : "world default";
     const rel = `<dl class="pt-review-rel">
-      <dt>${esc(t("review.parent"))}</dt><dd>${
-        e.parent ? `${esc(parent?.title ?? "?")} <code>${esc(e.parent)}</code>${parent ? "" : ` ${esc(t("review.dangling"))}`}` : esc(t("review.root"))
+      <dt>${esc(_loc("PENTARYN_TIES.review.parent"))}</dt><dd>${
+        e.parent ? `${esc(parent?.title ?? "?")} <code>${esc(e.parent)}</code>${parent ? "" : ` ${esc(_loc("PENTARYN_TIES.review.dangling"))}`}` : esc(_loc("PENTARYN_TIES.review.root"))
       }</dd>
-      <dt>${esc(t("review.children"))}</dt><dd>${
-        kids.length ? kids.map(k => `${esc(k.title)} <code>${esc(k.id)}</code>`).join(", ") : esc(t("review.none"))
+      <dt>${esc(_loc("PENTARYN_TIES.review.children"))}</dt><dd>${
+        kids.length ? kids.map(k => `${esc(k.title)} <code>${esc(k.id)}</code>`).join(", ") : esc(_loc("PENTARYN_TIES.review.none"))
       }</dd>
-      <dt>${esc(t("review.carriers"))}</dt><dd>${who.length ? `${who.length}: ${carriersShown}${more}` : esc(t("review.none"))}</dd>
-      <dt>${esc(t("review.flags"))}</dt><dd>secret: ${e.secret ? "yes" : "no"} · whenKnown: ${esc(e.whenKnown)} · whenCarried: ${esc(
+      <dt>${esc(_loc("PENTARYN_TIES.review.carriers"))}</dt><dd>${who.length ? `${who.length}: ${carriersShown}${more}` : esc(_loc("PENTARYN_TIES.review.none"))}</dd>
+      <dt>${esc(_loc("PENTARYN_TIES.review.flags"))}</dt><dd>secret: ${e.secret ? "yes" : "no"} · whenKnown: ${esc(e.whenKnown)} · whenCarried: ${esc(
         e.whenCarried
       )} · hold: ${hold}${e.source?.path ? ` · source: <code>${esc(e.source.path)}</code>` : ""}</dd>
     </dl>${others}`;
@@ -410,13 +408,13 @@ export class AttributeReview extends ApplicationV2 {
     const loreTag = r => {
       if (!snapLore) return "";
       const old = snapLore.get(r.id);
-      if (!old) return `<span class="pt-review-lore-tag">${esc(t("review.loreNew"))}</span>`;
-      return same(old, r) ? "" : `<span class="pt-review-lore-tag">${esc(t("review.loreChanged"))}</span>`;
+      if (!old) return `<span class="pt-review-lore-tag">${esc(_loc("PENTARYN_TIES.review.loreNew"))}</span>`;
+      return same(old, r) ? "" : `<span class="pt-review-lore-tag">${esc(_loc("PENTARYN_TIES.review.loreChanged"))}</span>`;
     };
     const loreWas = (r, k) => {
       const old = snapLore?.get(r.id);
       if (!old || same(old[k], r[k])) return "";
-      return `<p class="pt-review-was"><b>${esc(t("review.was"))}</b> ${esc(k === "skill" ? skillLabel(old[k]) : shown(old[k]))}</p>`;
+      return `<p class="pt-review-was"><b>${esc(_loc("PENTARYN_TIES.review.was"))}</b> ${esc(k === "skill" ? skillLabel(old[k]) : shown(old[k]))}</p>`;
     };
     const removed = snapLore ? [...snapLore.values()].filter(o => !lore.some(r => r.id === o.id)) : [];
 
@@ -425,38 +423,38 @@ export class AttributeReview extends ApplicationV2 {
           .map(
             (r, n) => `<div class="pt-review-lore ${loreTag(r) ? "pt-review-lore-changed" : ""}" data-lore="${esc(r.id)}">
           <div class="pt-review-fields">
-            ${field(`${n + 1}. ${t("review.field.label")}`, `<input type="text" data-lore-field="label" value="${esc(r.label)}">`)}
-            ${field(t("review.field.skill"), this.skillSelect("", r.skill, `data-lore-field="skill"`))}
-            ${field(t("review.field.dc"), `<input type="number" min="1" max="40" step="1" data-lore-field="dc" value="${r.dc}">`)}
+            ${field(`${n + 1}. ${_loc("PENTARYN_TIES.review.field.label")}`, `<input type="text" data-lore-field="label" value="${esc(r.label)}">`)}
+            ${field(_loc("PENTARYN_TIES.review.field.skill"), this.skillSelect("", r.skill, `data-lore-field="skill"`))}
+            ${field(_loc("PENTARYN_TIES.review.field.dc"), `<input type="number" min="1" max="40" step="1" data-lore-field="dc" value="${r.dc}">`)}
             <span class="pt-review-loreid"><code>${esc(r.id)}</code> ${loreTag(r)}</span>
           </div>
           ${["label", "skill", "dc"].map(k => loreWas(r, k)).join("")}
-          ${field(t("review.field.text"), `<textarea data-lore-field="text">${esc(r.text)}</textarea>`)}
+          ${field(_loc("PENTARYN_TIES.review.field.text"), `<textarea data-lore-field="text">${esc(r.text)}</textarea>`)}
           ${loreWas(r, "text")}
-          ${field(t("review.field.miss"), `<textarea data-lore-field="miss">${esc(r.miss)}</textarea>`)}
+          ${field(_loc("PENTARYN_TIES.review.field.miss"), `<textarea data-lore-field="miss">${esc(r.miss)}</textarea>`)}
           ${loreWas(r, "miss")}
         </div>`
           )
           .join("")
-      : `<p class="pt-empty">${esc(t("review.noFacts"))}</p>`;
+      : `<p class="pt-empty">${esc(_loc("PENTARYN_TIES.review.noFacts"))}</p>`;
     const removedLine = removed.length
-      ? `<p class="pt-review-was">${esc(f("review.loreRemoved", { labels: removed.map(o => `${o.label || "(unlabelled)"} [${o.id}]`).join("; ") }))}</p>`
+      ? `<p class="pt-review-was">${esc(_loc("PENTARYN_TIES.review.loreRemoved", { labels: removed.map(o => `${o.label || "(unlabelled)"} [${o.id}]`).join("; ") }))}</p>`
       : "";
 
     const timeline = `<p class="pt-review-timeline">
-      ${esc(t("review.created"))} ${when(e.createdAt)} · ${esc(t("review.modified"))} ${when(e.modifiedAt)} · ${esc(t("review.reviewed"))} ${when(e.reviewedAt)}
-      ${e.touched.length ? ` · ${esc(f("review.touched", { fields: e.touched.join(", ") }))}` : ""}</p>`;
+      ${esc(_loc("PENTARYN_TIES.review.created"))} ${when(e.createdAt)} · ${esc(_loc("PENTARYN_TIES.review.modified"))} ${when(e.modifiedAt)} · ${esc(_loc("PENTARYN_TIES.review.reviewed"))} ${when(e.reviewedAt)}
+      ${e.touched.length ? ` · ${esc(_loc("PENTARYN_TIES.review.touched", { fields: e.touched.join(", ") }))}` : ""}</p>`;
 
     return `<div class="pt-review-detail">
-      <p class="pt-review-shared"><i class="fa-solid fa-users"></i> ${esc(f("attributes.sharedWarning", { title: e.title }))}</p>
+      <p class="pt-review-shared"><i class="fa-solid fa-users"></i> ${esc(_loc("PENTARYN_TIES.attributes.sharedWarning", { title: e.title }))}</p>
       ${fields}
-      <h4>${esc(t("review.relationships"))}</h4>${rel}
+      <h4>${esc(_loc("PENTARYN_TIES.review.relationships"))}</h4>${rel}
       ${personalCluesHTML(e)}
-      <h4>${esc(t("review.factsHeading"))}</h4>${loreCards}${removedLine}
+      <h4>${esc(_loc("PENTARYN_TIES.review.factsHeading"))}</h4>${loreCards}${removedLine}
       ${timeline}
       <div class="pt-review-actions">
-        <button type="button" class="pt-textbtn" data-act="copy-id"><i class="fa-regular fa-copy"></i> ${esc(t("review.copyId"))}</button>
-        <button type="button" class="pt-textbtn" data-act="copy-summary"><i class="fa-regular fa-clipboard"></i> ${esc(t("review.copySummary"))}</button>
+        <button type="button" class="pt-textbtn" data-act="copy-id"><i class="fa-regular fa-copy"></i> ${esc(_loc("PENTARYN_TIES.review.copyId"))}</button>
+        <button type="button" class="pt-textbtn" data-act="copy-summary"><i class="fa-regular fa-clipboard"></i> ${esc(_loc("PENTARYN_TIES.review.copySummary"))}</button>
       </div>
     </div>`;
   }
@@ -517,11 +515,11 @@ export class AttributeReview extends ApplicationV2 {
     const nomatch = root.querySelector(".pt-review-nomatch");
     if (nomatch) {
       nomatch.hidden = shown > 0;
-      nomatch.textContent = this.filter === "needs" && !q ? t("review.allReviewed") : t("review.noMatches");
+      nomatch.textContent = this.filter === "needs" && !q ? _loc("PENTARYN_TIES.review.allReviewed") : _loc("PENTARYN_TIES.review.noMatches");
     }
     const sel = this.selection.size;
     const counts = root.querySelector(".pt-review-counts");
-    if (counts) counts.textContent = f("review.counts", { needs, total, selected: sel });
+    if (counts) counts.textContent = _loc("PENTARYN_TIES.review.counts", { needs, total, selected: sel });
     for (const [k, v] of [["needs", needs], ["selected", sel]]) {
       const span = root.querySelector(`[data-count="${k}"]`);
       if (span) span.textContent = String(v);
@@ -597,7 +595,7 @@ export class AttributeReview extends ApplicationV2 {
 
   refuseStale(id, key, el) {
     const e = registry().find(x => x.id === id);
-    ui.notifications.warn(f("review.staleRefused", { field: key, title: e?.title ?? id }));
+    ui.notifications.warn(_loc("PENTARYN_TIES.review.staleRefused", { field: key, title: e?.title ?? id }));
     this.flagStale(id);
   }
 

@@ -57,8 +57,6 @@ const log = makeLog(MODULE);
  */
 const state = { wires: null, actorId: null, mode: null, tieId: null };
 
-const t = k => game.i18n.localize(`PENTARYN_TIES.${k}`);
-
 /* -------------------------------------------- */
 /*  Who, and how far                            */
 /* -------------------------------------------- */
@@ -313,11 +311,11 @@ export function showAll() {
 
   if (!actor) {
     if (showing) clear();
-    else ui.notifications.warn(t("notify.noTarget"));
+    else ui.notifications.warn(_loc("PENTARYN_TIES.notify.noTarget"));
     return;
   }
   if (!permitted(actor)) {
-    ui.notifications.warn(t("notify.notYours"));
+    ui.notifications.warn(_loc("PENTARYN_TIES.notify.notYours"));
     return;
   }
 
@@ -347,7 +345,7 @@ export function showAll() {
         })
       );
     } else {
-      ui.notifications.info(t("notify.noneInSight"));
+      ui.notifications.info(_loc("PENTARYN_TIES.notify.noneInSight"));
     }
     return;
   }
@@ -405,11 +403,11 @@ export function showOne() {
 
   const src = sourceToken();
   if (!src?.actor) {
-    ui.notifications.warn(t("notify.needSource"));
+    ui.notifications.warn(_loc("PENTARYN_TIES.notify.needSource"));
     return;
   }
   if (!permitted(src.actor)) {
-    ui.notifications.warn(t("notify.notYours"));
+    ui.notifications.warn(_loc("PENTARYN_TIES.notify.notYours"));
     return;
   }
 
@@ -426,7 +424,7 @@ export function showOne() {
   // other token is still asking about yourself, and should get the neutral answer rather
   // than "you have no tie recorded to you"
   if (!target?.actor || target.actor.id === src.actor.id || !canSee(target)) {
-    ui.notifications.warn(t("notify.needTarget"));
+    ui.notifications.warn(_loc("PENTARYN_TIES.notify.needTarget"));
     return;
   }
 
@@ -446,7 +444,7 @@ export function showOne() {
             source: src.actor.name,
             target: target.actor.name
           })
-        : t("notify.noTieHere")
+        : _loc("PENTARYN_TIES.notify.noTieHere")
     );
     return;
   }

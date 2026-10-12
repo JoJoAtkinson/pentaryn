@@ -5,7 +5,7 @@
  */
 
 import { MODULE } from "../ties-core.mjs";
-import { BUBBLE, esc, f, log } from "./shared.mjs";
+import { BUBBLE, esc, log } from "./shared.mjs";
 import { send } from "../socket-adapter.mjs";
 
 /* -------------------------------------------- */
@@ -43,10 +43,10 @@ import { send } from "../socket-adapter.mjs";
  * the strings quietly describing the wrong rung.
  */
 const SCOPE_STEPS = [
-  { at: 2, key: "known.inspect.scope2" },
-  { at: 3, key: "known.inspect.scope3" },
-  { at: 5, key: "known.inspect.scope5" },
-  { at: 6, key: "known.inspect.scope6" }
+  { at: 2, key: "known.inspect.scope2", label: "PENTARYN_TIES.known.inspect.scope2" },
+  { at: 3, key: "known.inspect.scope3", label: "PENTARYN_TIES.known.inspect.scope3" },
+  { at: 5, key: "known.inspect.scope5", label: "PENTARYN_TIES.known.inspect.scope5" },
+  { at: 6, key: "known.inspect.scope6", label: "PENTARYN_TIES.known.inspect.scope6" }
 ];
 
 /** Feet of movement that reads as "they moved on" and clears the count. */
@@ -125,7 +125,7 @@ export async function announceTempo(character) {
   if (!own) return;
   const line = scopeTell(character, own);
   if (!line) return;
-  const text = f(line, { name: character.name });
+  const text = _loc(SCOPE_STEPS.find(s => s.key === line).label, { name: character.name });
 
   broadcastBubble(own.id, canvas.scene?.id, text);
 

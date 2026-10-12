@@ -79,8 +79,6 @@ const log = makeLog(MODULE);
 const { ApplicationV2 } = foundry.applications.api;
 
 const esc = s => foundry.utils.escapeHTML(String(s ?? ""));
-const t = k => game.i18n.localize(`PENTARYN_TIES.${k}`);
-const f = (k, data) => game.i18n.format(`PENTARYN_TIES.${k}`, data);
 
 /** Debounce for live refreshes — a cascade lands as several writes in a burst. Same as preview. */
 const LIVE_MS = 150;
@@ -137,7 +135,7 @@ export class LookWindow extends ApplicationV2 {
   }
 
   get title() {
-    return f("known.look.title", { name: this.subject?.name ?? "?" });
+    return _loc("PENTARYN_TIES.known.look.title", { name: this.subject?.name ?? "?" });
   }
 
   /* ------------------------------------------ the filter */
@@ -188,11 +186,11 @@ export class LookWindow extends ApplicationV2 {
 
   groupLabel(group, base, kind) {
     const name = this.subject?.name ?? base?.name ?? "?";
-    if (group === "ident") return t("known.look.groupIdent");
-    if (group === "attr") return t("known.look.groupAttr");
-    if (group === "lore") return f("known.look.groupLore", { name });
+    if (group === "ident") return _loc("PENTARYN_TIES.known.look.groupIdent");
+    if (group === "attr") return _loc("PENTARYN_TIES.known.look.groupAttr");
+    if (group === "lore") return _loc("PENTARYN_TIES.known.look.groupLore", { name });
     // a separate kind actor's study files under the KIND's page on the Known tab
-    return kind && base && kind.id !== base.id ? f("known.look.groupKindPage", { kind: kind.name }) : t("known.look.groupKind");
+    return kind && base && kind.id !== base.id ? _loc("PENTARYN_TIES.known.look.groupKindPage", { kind: kind.name }) : _loc("PENTARYN_TIES.known.look.groupKind");
   }
 
   /** The whole window body, as a string. Sync, so a live refresh can compare before it paints. */
@@ -202,7 +200,7 @@ export class LookWindow extends ApplicationV2 {
     const { base, kind, groups } = this.shownGroups();
     // the Known tab's own condition and key for the "Kind: X" line
     const kindLine = kind && base && kind.id !== base.id
-      ? `<span class="pt-known-kind">${esc(f("known.study.kindLine", { name: kind.name }))}</span>` : "";
+      ? `<span class="pt-known-kind">${esc(_loc("PENTARYN_TIES.known.study.kindLine", { name: kind.name }))}</span>` : "";
     const head = `<div class="pt-summary pt-look-head">
       <img class="pt-portrait" src="${esc(subject?.img || "icons/svg/mystery-man.svg")}" alt="">
       <span class="pt-who"><span class="pt-name">${esc(name)}</span>${kindLine}</span>
@@ -210,9 +208,9 @@ export class LookWindow extends ApplicationV2 {
 
     let body;
     // one line for every reason there is nothing: nothing learned, nothing arrived, no GM
-    if (!groups.size) body = `<p class="pt-look-empty">${esc(f("known.look.empty", { name }))}</p>`;
+    if (!groups.size) body = `<p class="pt-look-empty">${esc(_loc("PENTARYN_TIES.known.look.empty", { name }))}</p>`;
     else {
-      body = `<section class="pt-granted" aria-label="${esc(t("known.granted.label"))}">${grantedHead()}`;
+      body = `<section class="pt-granted" aria-label="${esc(_loc("PENTARYN_TIES.known.granted.label"))}">${grantedHead()}`;
       for (const [group, cards] of groups)
         body += `<h4 class="pt-look-group">${esc(this.groupLabel(group, base, kind))}</h4><ul class="pt-granted-list">${cards.join("")}</ul>`;
       body += `</section>`;

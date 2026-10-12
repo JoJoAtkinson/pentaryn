@@ -34,9 +34,6 @@ import { makeLog } from "./lib/log.mjs";
 
 const log = makeLog(MODULE);
 
-const t = k => game.i18n.localize(`PENTARYN_TIES.${k}`);
-const f = (k, data) => game.i18n.format(`PENTARYN_TIES.${k}`, data);
-
 const FALLBACK_ART = "icons/svg/mystery-man.svg";
 const artOf = actor => actor?.img || FALLBACK_ART;
 
@@ -199,7 +196,7 @@ export class TieDialog extends ApplicationV2 {
   };
 
   get title() {
-    return t("dialog.title");
+    return _loc("PENTARYN_TIES.dialog.title");
   }
 
   /** The tie as it currently stands on the source's sheet, or a blank one. */
@@ -284,25 +281,25 @@ export class TieDialog extends ApplicationV2 {
     const sourcePicker =
       this.sourceLocked && source
         ? `<a class="pt-dlg-fixed pt-dlg-link" data-action="open" data-id="${esc(source.id)}"
-             data-tooltip="${esc(t("row.openSheet"))}" role="link" tabindex="0">${esc(source.name)}</a>`
+             data-tooltip="${esc(_loc("PENTARYN_TIES.row.openSheet"))}" role="link" tabindex="0">${esc(source.name)}</a>`
         : options.length === 1
           ? `<a class="pt-dlg-fixed pt-dlg-link" data-action="open" data-id="${esc(options[0].id)}"
-               data-tooltip="${esc(t("row.openSheet"))}" role="link" tabindex="0">${esc(options[0].name)}</a>`
+               data-tooltip="${esc(_loc("PENTARYN_TIES.row.openSheet"))}" role="link" tabindex="0">${esc(options[0].name)}</a>`
           : options.length
-            ? `<select class="pt-dlg-source" aria-label="${esc(t("dialog.source"))}" data-tooltip="${esc(t("dialog.sourceHint"))}">
-                <option value=""${source ? "" : " selected"}>${esc(t("dialog.pickSource"))}</option>
+            ? `<select class="pt-dlg-source" aria-label="${esc(_loc("PENTARYN_TIES.dialog.source"))}" data-tooltip="${esc(_loc("PENTARYN_TIES.dialog.sourceHint"))}">
+                <option value=""${source ? "" : " selected"}>${esc(_loc("PENTARYN_TIES.dialog.pickSource"))}</option>
                 ${options
                   .map(a => `<option value="${esc(a.id)}"${a.id === source?.id ? " selected" : ""}>${esc(a.name)}</option>`)
                   .join("")}
               </select>`
-            : `<span class="pt-dlg-fixed">${esc(t("dialog.noOwned"))}</span>`;
+            : `<span class="pt-dlg-fixed">${esc(_loc("PENTARYN_TIES.dialog.noOwned"))}</span>`;
 
     const targetPicker =
       target && this.targetLocked
         ? `<a class="pt-dlg-fixed pt-dlg-link" data-action="open" data-id="${esc(target.id)}"
-             data-tooltip="${esc(t("row.openSheet"))}" role="link" tabindex="0">${esc(targetFace.name)}</a>`
-        : `<select class="pt-dlg-target" aria-label="${esc(t("dialog.target"))}">
-            <option value="">${esc(t("dialog.pickTarget"))}</option>
+             data-tooltip="${esc(_loc("PENTARYN_TIES.row.openSheet"))}" role="link" tabindex="0">${esc(targetFace.name)}</a>`
+        : `<select class="pt-dlg-target" aria-label="${esc(_loc("PENTARYN_TIES.dialog.target"))}">
+            <option value="">${esc(_loc("PENTARYN_TIES.dialog.pickTarget"))}</option>
             ${targetCandidates(source?.id, this.targetScope)
               .map(
                 c =>
@@ -336,13 +333,13 @@ export class TieDialog extends ApplicationV2 {
 
     const status = !source
       ? options.length
-        ? `<p class="pt-dlg-note">${esc(t("dialog.pickSourceFirst"))}</p>`
-        : `<p class="pt-dlg-note notification warning">${esc(t("dialog.noOwned"))}</p>`
+        ? `<p class="pt-dlg-note">${esc(_loc("PENTARYN_TIES.dialog.pickSourceFirst"))}</p>`
+        : `<p class="pt-dlg-note notification warning">${esc(_loc("PENTARYN_TIES.dialog.noOwned"))}</p>`
       : !target
-        ? `<p class="pt-dlg-note">${esc(t("dialog.pickTargetFirst"))}</p>`
+        ? `<p class="pt-dlg-note">${esc(_loc("PENTARYN_TIES.dialog.pickTargetFirst"))}</p>`
         : tie
-          ? `<p class="pt-dlg-note">${esc(f("dialog.editing", { a: source.name, b: targetFace.name }))}</p>`
-          : `<p class="pt-dlg-note">${esc(f("dialog.creating", { a: source.name, b: targetFace.name }))}</p>`;
+          ? `<p class="pt-dlg-note">${esc(_loc("PENTARYN_TIES.dialog.editing", { a: source.name, b: targetFace.name }))}</p>`
+          : `<p class="pt-dlg-note">${esc(_loc("PENTARYN_TIES.dialog.creating", { a: source.name, b: targetFace.name }))}</p>`;
 
     /*
      * ── The mirror pair ──────────────────────────────────────────────────
@@ -384,25 +381,25 @@ export class TieDialog extends ApplicationV2 {
       const common = `class="pt-dlg-mirror-input${isDiverged ? " pt-diverged" : ""}" data-field="${field}"
         data-mirrors="${field === "reverseNotes" ? "notes" : "word"}" data-seeded="${esc(seeded)}"`;
       return `<label class="pt-field pt-dlg-reverse">
-        <span class="pt-field-label">${esc(f(labelKey, { a: targetFace.name, b: source.name }))}</span>
+        <span class="pt-field-label">${esc(_loc(labelKey, { a: targetFace.name, b: source.name }))}</span>
         ${
           long
             ? `<textarea ${common} rows="3" maxlength="${NOTES_MAX}"
-                 data-empty-hint="${esc(t("dialog.mirrorNothingYet"))}"
-                 placeholder="${esc(draft.notes || t("dialog.mirrorNothingYet"))}">${esc(shown)}</textarea>`
+                 data-empty-hint="${esc(_loc("PENTARYN_TIES.dialog.mirrorNothingYet"))}"
+                 placeholder="${esc(draft.notes || _loc("PENTARYN_TIES.dialog.mirrorNothingYet"))}">${esc(shown)}</textarea>`
             : `<input type="text" ${common} value="${esc(shown)}"
-                 data-empty-hint="${esc(t("dialog.mirrorNothingYet"))}"
-                 placeholder="${esc(draft.word || t("dialog.mirrorNothingYet"))}" />`
+                 data-empty-hint="${esc(_loc("PENTARYN_TIES.dialog.mirrorNothingYet"))}"
+                 placeholder="${esc(draft.word || _loc("PENTARYN_TIES.dialog.mirrorNothingYet"))}" />`
         }
-        <span class="pt-dlg-mirror-hint">${esc(t(isDiverged ? "dialog.mirrorDiverged" : "dialog.mirrorLinked"))}</span>
+        <span class="pt-dlg-mirror-hint">${esc(_loc(isDiverged ? "PENTARYN_TIES.dialog.mirrorDiverged" : "PENTARYN_TIES.dialog.mirrorLinked"))}</span>
       </label>`;
     };
 
     const reverseWordField = writableReverse
-      ? mirrorBox("reverseWord", rev?.word, tie?.word, "dialog.reverseWordLabel")
+      ? mirrorBox("reverseWord", rev?.word, tie?.word, "PENTARYN_TIES.dialog.reverseWordLabel")
       : "";
     const reverseNotesField = writableReverse
-      ? mirrorBox("reverseNotes", rev?.notes, tie?.notes, "dialog.reverseNotesLabel")
+      ? mirrorBox("reverseNotes", rev?.notes, tie?.notes, "PENTARYN_TIES.dialog.reverseNotesLabel")
       : "";
 
     /*
@@ -420,13 +417,13 @@ export class TieDialog extends ApplicationV2 {
       <div class="pt-dlg-pair">
         <span class="pt-dlg-side">
           <img class="pt-portrait" src="${esc(artOf(source))}" alt="" />
-          <span class="pt-dlg-side-label">${esc(t("dialog.source"))}</span>
+          <span class="pt-dlg-side-label">${esc(_loc("PENTARYN_TIES.dialog.source"))}</span>
           ${sourcePicker}
         </span>
         <span class="pt-dlg-arrow" aria-hidden="true"><i class="fa-solid fa-arrow-right"></i></span>
         <span class="pt-dlg-side">
           <img class="pt-portrait" src="${esc(target ? targetFace.img : FALLBACK_ART)}" alt="" />
-          <span class="pt-dlg-side-label">${esc(t("dialog.target"))}</span>
+          <span class="pt-dlg-side-label">${esc(_loc("PENTARYN_TIES.dialog.target"))}</span>
           ${targetPicker}
         </span>
       </div>
@@ -436,18 +433,18 @@ export class TieDialog extends ApplicationV2 {
       <div class="pt-fields">
         <label class="pt-field">
           <span class="pt-field-label">${esc(
-            ready ? f("row.wordLabelOf", { name: targetFace.name }) : t("row.wordLabelPending")
+            ready ? _loc("PENTARYN_TIES.row.wordLabelOf", { name: targetFace.name }) : _loc("PENTARYN_TIES.row.wordLabelPending")
           )}</span>
           <input type="text" class="pt-dlg-word" data-field="word" value="${esc(draft.word)}"
-                 placeholder="${esc(t("row.wordPlaceholder"))}"${dis} />
+                 placeholder="${esc(_loc("PENTARYN_TIES.row.wordPlaceholder"))}"${dis} />
         </label>
         ${reverseWordField}
         <label class="pt-field">
-          <span class="pt-field-label">${esc(t("row.stanceLabel"))}</span>
+          <span class="pt-field-label">${esc(_loc("PENTARYN_TIES.row.stanceLabel"))}</span>
           ${stanceSelect(draft.stance).replace("<select", `<select${dis}`)}
         </label>
         <span class="pt-field">
-          <span class="pt-field-label">${esc(t("row.strengthLabel"))}</span>
+          <span class="pt-field-label">${esc(_loc("PENTARYN_TIES.row.strengthLabel"))}</span>
           <span class="pt-dlg-strength" data-strength="${clampStrength(draft.strength)}">${pips(
             draft.strength,
             ready
@@ -456,18 +453,18 @@ export class TieDialog extends ApplicationV2 {
       </div>
 
       <label class="pt-field pt-field-notes">
-        <span class="pt-field-label">${esc(t("row.notesLabel"))}</span>
+        <span class="pt-field-label">${esc(_loc("PENTARYN_TIES.row.notesLabel"))}</span>
         <textarea class="pt-dlg-notes" data-field="notes" rows="5" maxlength="${NOTES_MAX}"
                   placeholder="${esc(
-                    ready ? f("row.notesPlaceholder", { name: targetFace.name }) : t("row.notesPending")
+                    ready ? _loc("PENTARYN_TIES.row.notesPlaceholder", { name: targetFace.name }) : _loc("PENTARYN_TIES.row.notesPending")
                   )}"${dis}>${esc(draft.notes)}</textarea>
       </label>
 
       ${reverseNotesField}
 
       <div class="pt-dlg-actions">
-        <button type="button" class="pt-dlg-save"${dis}><i class="fa-solid fa-check"></i> ${esc(t("dialog.save"))}</button>
-        <button type="button" class="pt-dlg-cancel">${esc(t("dialog.cancel"))}</button>
+        <button type="button" class="pt-dlg-save"${dis}><i class="fa-solid fa-check"></i> ${esc(_loc("PENTARYN_TIES.dialog.save"))}</button>
+        <button type="button" class="pt-dlg-cancel">${esc(_loc("PENTARYN_TIES.dialog.cancel"))}</button>
       </div>
     </div>`;
   }
@@ -544,7 +541,7 @@ export class TieDialog extends ApplicationV2 {
         strength.querySelectorAll(".pt-pip").forEach((p, i) => p.classList.toggle("fill", i < n));
         // the group names itself "Strength n of 5"; leaving that stale lies to a screen reader
         const group = strength.querySelector(".pt-pips");
-        const label = f("row.strengthTip", { n });
+        const label = _loc("PENTARYN_TIES.row.strengthTip", { n });
         group?.setAttribute("aria-label", label);
         group?.setAttribute("data-tooltip", label);
       });
@@ -575,7 +572,7 @@ export class TieDialog extends ApplicationV2 {
       box.addEventListener("input", () => {
         box.classList.toggle("pt-diverged", !!box.value.trim());
         const hint = box.parentElement?.querySelector(".pt-dlg-mirror-hint");
-        if (hint) hint.textContent = t(box.value.trim() ? "dialog.mirrorDiverged" : "dialog.mirrorLinked");
+        if (hint) hint.textContent = _loc(box.value.trim() ? "PENTARYN_TIES.dialog.mirrorDiverged" : "PENTARYN_TIES.dialog.mirrorLinked");
       });
     });
 
@@ -590,7 +587,7 @@ export class TieDialog extends ApplicationV2 {
         // an actor deleted under the window, or permission yanked mid-edit: say so and
         // leave the dialog open with the text still in it rather than dying quietly
         log.error("saving a tie failed", err);
-        ui.notifications.error(t("dialog.saveFailed"));
+        ui.notifications.error(_loc("PENTARYN_TIES.dialog.saveFailed"));
         return;
       }
       if (ok) {
@@ -605,11 +602,11 @@ export class TieDialog extends ApplicationV2 {
     const { source, target, draft } = this;
     if (!source || !target || !draft) return false;
     if (source.id === target.id) {
-      ui.notifications.warn(t("dialog.noSelfTie"));
+      ui.notifications.warn(_loc("PENTARYN_TIES.dialog.noSelfTie"));
       return false;
     }
     if (!source.isOwner) {
-      ui.notifications.error(f("dialog.cannotWrite", { a: source.name }));
+      ui.notifications.error(_loc("PENTARYN_TIES.dialog.cannotWrite", { a: source.name }));
       return false;
     }
 
