@@ -486,29 +486,29 @@ Each row is an item from the list below, with an id and the default this report 
 says nothing, the default applies. "Closed" means the item was resolved during the wave, so there is
 nothing to decide. The prose under this table is the detail, kept as the lanes wrote it.
 
-| # | Item | Default | Why |
-|---|---|---|---|
-| W3-SE4 | senses: a chain whose anchor is hidden is drawn for players | **hide it**: one condition in `paint()`, as a `[declared]` visual commit | It leaks the hidden token's square on screen, and on-screen leaks are the ones that matter at this table |
-| W3-C1 | creatures/senses: the orphan 5/5 light after a senses hand-off (C-L1) | **keep**; watch for it in the live phase | Rare, and the GM can set the light to 0. Arbitrating needs a contract on both sides |
-| W3-P1 | portals' Item Piles probe differs from aoe's | **keep them different**; revisit when aoe migrates in wave 4 | Documented on purpose (-36): aoe tolerates a false positive, portals must not |
-| W3-P2 | portals: `spreadArrival → { moved, to }`, `teleportParty(ref, { from })`, refs on the legacy rows | **don't build now** | They are shape changes outside the guide's list. The new rows already take refs |
-| W3-P3 | portals: C59 batching of the card's writes | **closed**: `be2573e3`, `5c34cda8` | — |
-| W3-PR1 | prompts: the type-ahead's window listeners are never removed | **keep the permanent listener** | It only swallows releases of keys it already swallowed. Removing it extends a frozen export golden for a dev-path gain |
-| W3-PR2 | prompts-lookup-18 log lines | **closed**: built as debug lines, `25fd3172`. Making the replace summary always-on is optional; default no | — |
-| W3-PR3 | prompts: the `replace` query is not idempotent across GM tabs | **keep it bridge-only**, as the README documents | The bridge calls it in one tab. A request-id key is a new mechanism |
-| W3-PR4 | fork halves of mcp-fork-15 and prompts-lookup-11/-12 | **schedule in the fork lane alongside wave 4** | The module side and its contract test (`KNOWN_DRIFT`) are done. Widening the fork's strict schemas is a declared fork change |
-| W3-T1 | ties: the card layer's bare `#pentaryn-ties-cards` selector (C37) | **accept C37 for ties** for now; revisit with D7's shared CSS | A class would churn seven canvas goldens for an invisible change |
-| W3-T2 | ties-38: two socket listeners, one per caller | **keep two** | Works today. Merging them flips three frozen socket pins |
-| W3-T3 | ties B5 keeps `false` for a player write; B10 not taken | **keep both as they are** | B10 waits on blueprint gap G3 |
-| W3-T4 | ties-24 item 3 | **closed**: `6f1fca29` | — |
-| W3-T5 | ties C59: Share's per-PC writes; `migrateLegacy` | **batch Share** as one `[declared]` perf commit at the start of wave 4 (flips its named conduit pins); **leave `migrateLegacy`** | §5.9.1 makes batching a MUST, and portals set the precedent. `migrateLegacy` is a one-time copy-verify-clear, where going one actor at a time is safer. Overnight FX (2026-10-12) did **not** take it: each PC's share writes the subject's beliefs flag, the PC, the knowledge setting and a whisper through `writeIdentification` / `putBelief` / `applyPlayerWrites` / `grantKind`, so batching means reworking those writers, not one batched call. Still wave 4 |
-| W3-SE1 | senses: both GM tabs run the Light reconcile (duplicate square, doubled whisper) | **build it**: a deterministic square `_id` with `keepId`, `[declared]`, after the live phase confirms keepId replace behaviour | §5.9.1 MUST. It is the same mechanism as prompts DP11, so one probe covers both |
-| W3-SE2 | senses: `setupLight()` updates one torch at a time | **leave it** | A one-off GM command. The cost is paid once |
-| W3-SE3 | senses: `syncAll` writes prototypes one actor at a time | **batch it** per world, as `resetSight` does, in one `[declared]` perf commit (flips the ready-chain order pins) | It runs at every ready. §5.9.1 / §5.9.4. **Done** on `fix/overnight-2026-10-12` (`191d58c8`): ready goldens unchanged, one frozen error-path test flipped |
-| W3-T6 | ties: `ties-api.mjs` keeps C05 red | **keep it for one release** (the README's promise); retire it at the next ties version after grepping the world's macros | It is a compat barrel for outside `import()` callers |
-| W3-L1 | live: deploy the fork's `a5ce74c` in the same session | **yes** | One `kill -9`, and the GM reload happens anyway |
-| W3-L2 | live: skip the checks that need a second GM tab (portals D-P4, prompts DP11) | **skip**, but run DP11's keepId probe once if W3-SE1 is wanted | Node tests cover the rest |
-| W3-L3 | live: take a "before" run of `prompt-markers` for DP3 | **yes** | — |
+| # | Item | Default | Why | Decided |
+|---|---|---|---|---|
+| W3-SE4 | senses: a chain whose anchor is hidden is drawn for players | **hide it**: one condition in `paint()`, as a `[declared]` visual commit | It leaks the hidden token's square on screen, and on-screen leaks are the ones that matter at this table | Joe 2026-10-12: hide it — the fx2 lane (`fix/overnight-2-2026-10-12`, senses SE4) — no change in wave 5 |
+| W3-C1 | creatures/senses: the orphan 5/5 light after a senses hand-off (C-L1) | **keep**; watch for it in the live phase | Rare, and the GM can set the light to 0. Arbitrating needs a contract on both sides | Joe 2026-10-12: keep — no change |
+| W3-P1 | portals' Item Piles probe differs from aoe's | **keep them different**; revisit when aoe migrates in wave 4 | Documented on purpose (-36): aoe tolerates a false positive, portals must not | Joe 2026-10-12: keep them different — no change |
+| W3-P2 | portals: `spreadArrival → { moved, to }`, `teleportParty(ref, { from })`, refs on the legacy rows | **don't build now** | They are shape changes outside the guide's list. The new rows already take refs | Joe 2026-10-12: don't build — no change |
+| W3-P3 | portals: C59 batching of the card's writes | **closed**: `be2573e3`, `5c34cda8` | — | Joe 2026-10-12: closed — no change |
+| W3-PR1 | prompts: the type-ahead's window listeners are never removed | **keep the permanent listener** | It only swallows releases of keys it already swallowed. Removing it extends a frozen export golden for a dev-path gain | Joe 2026-10-12: keep — no change |
+| W3-PR2 | prompts-lookup-18 log lines | **closed**: built as debug lines, `25fd3172`. Making the replace summary always-on is optional; default no | — | Joe 2026-10-12: closed; summary stays debug — no change |
+| W3-PR3 | prompts: the `replace` query is not idempotent across GM tabs | **keep it bridge-only**, as the README documents | The bridge calls it in one tab. A request-id key is a new mechanism | Joe 2026-10-12: keep it bridge-only — no change |
+| W3-PR4 | fork halves of mcp-fork-15 and prompts-lookup-11/-12 | **schedule in the fork lane alongside wave 4** | The module side and its contract test (`KNOWN_DRIFT`) are done. Widening the fork's strict schemas is a declared fork change | Joe 2026-10-12: fork lane follow-up, recorded with W4-L3 — not built here |
+| W3-T1 | ties: the card layer's bare `#pentaryn-ties-cards` selector (C37) | **accept C37 for ties** for now; revisit with D7's shared CSS | A class would churn seven canvas goldens for an invisible change | Joe 2026-10-12: accept C37 for ties — no change |
+| W3-T2 | ties-38: two socket listeners, one per caller | **keep two** | Works today. Merging them flips three frozen socket pins | Joe 2026-10-12: keep two — no change |
+| W3-T3 | ties B5 keeps `false` for a player write; B10 not taken | **keep both as they are** | B10 waits on blueprint gap G3 | Joe 2026-10-12: keep both — no change |
+| W3-T4 | ties-24 item 3 | **closed**: `6f1fca29` | — | Joe 2026-10-12: closed — no change |
+| W3-T5 | ties C59: Share's per-PC writes; `migrateLegacy` | **batch Share** as one `[declared]` perf commit at the start of wave 4 (flips its named conduit pins); **leave `migrateLegacy`** | §5.9.1 makes batching a MUST, and portals set the precedent. `migrateLegacy` is a one-time copy-verify-clear, where going one actor at a time is safer. Overnight FX (2026-10-12) did **not** take it: each PC's share writes the subject's beliefs flag, the PC, the knowledge setting and a whisper through `writeIdentification` / `putBelief` / `applyPlayerWrites` / `grantKind`, so batching means reworking those writers, not one batched call. Still wave 4 | Joe 2026-10-12: **deferred** — no change |
+| W3-SE1 | senses: both GM tabs run the Light reconcile (duplicate square, doubled whisper) | **build it**: a deterministic square `_id` with `keepId`, `[declared]`, after the live phase confirms keepId replace behaviour | §5.9.1 MUST. It is the same mechanism as prompts DP11, so one probe covers both | Joe 2026-10-12: **deferred** — no change |
+| W3-SE2 | senses: `setupLight()` updates one torch at a time | **leave it** | A one-off GM command. The cost is paid once | Joe 2026-10-12: leave it — no change |
+| W3-SE3 | senses: `syncAll` writes prototypes one actor at a time | **batch it** per world, as `resetSight` does, in one `[declared]` perf commit (flips the ready-chain order pins) | It runs at every ready. §5.9.1 / §5.9.4. **Done** on `fix/overnight-2026-10-12` (`191d58c8`): ready goldens unchanged, one frozen error-path test flipped | Joe 2026-10-12: done on `fix/overnight-2026-10-12` (`191d58c8`) — no change in wave 5 |
+| W3-T6 | ties: `ties-api.mjs` keeps C05 red | **keep it for one release** (the README's promise); retire it at the next ties version after grepping the world's macros | It is a compat barrel for outside `import()` callers | Joe 2026-10-12: keep it one release — no change |
+| W3-L1 | live: deploy the fork's `a5ce74c` in the same session | **yes** | One `kill -9`, and the GM reload happens anyway | Joe 2026-10-12: yes — no change (live) |
+| W3-L2 | live: skip the checks that need a second GM tab (portals D-P4, prompts DP11) | **skip**, but run DP11's keepId probe once if W3-SE1 is wanted | Node tests cover the rest | Joe 2026-10-12: skip — no change (live) |
+| W3-L3 | live: take a "before" run of `prompt-markers` for DP3 | **yes** | — | Joe 2026-10-12: yes — no change (live) |
 
 The integration review's "write batching applied unevenly" note is answered by W3-T5, W3-SE2 and
 W3-SE3. Its four untagged pin flips need no decision: they are listed in the Summary, and should be

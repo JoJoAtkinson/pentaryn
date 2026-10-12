@@ -911,39 +911,39 @@ Checked with `git merge-tree --write-tree` on 2026-10-12 against the branches as
 One row per item, with its recommended default. If Joe says nothing, the default applies.
 "Closed" means it was resolved during the wave. The detail stays in the lane sections above.
 
-| # | Item | Default | Status |
-|---|---|---|---|
-| W4-CK | The four checkpoints were committed by the workflow, not after Joe's approval (aoe's S1.5 asks for it) | **approve** after a look at each `test/golden/` before the merge | open |
-| W4-L1 | Live: sync the four modules from the branch as it is, or merge main first | **as it is**; merge after a green live phase | open, **before live** |
-| W4-L2 | Live: skip the two-GM-tab checks (riders -41 / R7 / R8, transform T1, aoe D-A6) | **skip**; run D-A6 only if the fixed handle id matters now | open, **before live** |
-| W4-L3 | Fork: `pentaryn-read` still calls these four namespaces "eval-js only" | **follow-up fork commit** (description only) | open |
-| W4-L4 | The Wave 7 restart batch | **its own session** (wave 5) | open |
-| D8 / W4-T2 | Starry / Wild Shape world-time expiry for an unlinked druid with no GM connected | **record live, build nothing** | open (live) |
-| W4-R1 | Riders' D2 row renames | take them | **closed** `e1a9aade` |
-| W4-R2 | Once-per-casting index | — | **closed** `79e29f8d` (dnd5e's registry, no hook) |
-| W4-R3 | Riders C59 in one-off GM commands | **leave** | open |
-| W4-R4 | Riders C56 hand `CONFIG.queries` | **keep** until the kit forwards the sender (W2-J2) | open |
-| W4-R5 / W4-D7a / W4-R9 | Riders and D7: vendor `argon-tooltip.css` in the W7 batch; where the `#tooltip` click-through rule lives | **vendor in W7; keep the rule in riders.css** | open |
-| W4-R6, aoe 0.4.0, W4-T3 | Version bumps: riders 0.3.0, aoe 0.4.0, transform 0.4.0, combat 0.3.0 | **in the W7 batch**, each with its core `VERSION` | open |
-| W4-R7, W4-R8 | Riders' two document-hook writers run in every GM tab | **accept, no claim** | open |
-| W4-R10 | Riders relay (new here, from the standalone review): a stamp counts as stale after 60 s by comparing two tabs' clocks. Machines more than 60 s apart could both win | **accept**. The bridge tab and Joe's GM browser run on the same Mac; revisit if the bridge moves to another machine | open |
-| W4-R11 | Riders relay (new here): a winner slower than 7 s lets the losing tab's timeout reach the player first. The heal still happens, but the player sees "failed" | **accept**; live check -41 records it if it happens. The fix would be a [declared] loser wait longer than the query's 8 s | open |
-| W4-A1 | aoe declared changes (D-A1…D-A4, D-A6, D-A7, -6, -9, the two 8.5 batches) | **approve each after its live check** | open (live) |
-| W4-P1 | W3-P1 revisited: aoe's Item Piles probe (API, else the flag) vs portals' (API only) | **keep them different**; both rows say so (`itempiles-aoe-skip-piles`, `itempiles-portals-pile-pc`) | open |
-| W4-C1 | Strip Adv / Dis lost while a roll window is open | fix | **closed** `affd3273` |
-| W4-C2 | combat-riders-1 per-task memo | **leave** | open |
-| W4-C3 | Combat reads aoe's `autoDamageOnHit` directly (C21 / C23) | **keep** | open |
-| W4-C4 | Combat reading aoe's own refund decision | **wait for an aoe event** (a feature; not built) | open |
-| W4-C5 | hud's listeners on the legacy `pentarynCombat.*` names | **keep** until combat 0.4.0 | open |
-| W4-C6 | Combat's tooltips styled only through transform.css | — | **closed** `24e961a0` (combat imports the kit file) |
-| W4-C7 | Per-actor writes in `sweepOrphanFlags` / `seedAll` | **keep** | open |
-| W4-C8 | combat-riders-17: step 4 guard test; step 3 shared `insertCardNote` | step 4 landed; **step 3 waits** for a kit helper | step 4 **closed** `0b414108`; step 3 open |
-| W4-T1 | Transform's automatic endings run in every tab of the runner's account | **accept, watch live** | open (live) |
-| W4-T4 | Transform `@import` vs a `styles` entry for the kit CSS | **keep the @import** | open |
-| W4-T5 | T-D8 guarded hooks | **keep** | **closed** `d0882eac` |
-| W4-I1 | `context/foundry/argon.md` (combat-riders-18 phase 1: every Argon hook and prototype touch, by module and order) not written | **write it** as a docs commit in wave 5, before the restart's live smoke (it is what to read when the Argon bar misbehaves) | open |
-| W4-I2 | `conformance.py` C59 cannot see a per-document write behind a local helper | **leave**: C59 is `warn+manual`, and the §5.9.4 checklist caught both cases | open |
-| W4-I3 | `796fdf63` flips a pin without `[declared]` | **treat as declared** when bisecting; no change | **closed** (recorded) |
+| # | Item | Default | Status | Decided |
+|---|---|---|---|---|
+| W4-CK | The four checkpoints were committed by the workflow, not after Joe's approval (aoe's S1.5 asks for it) | **approve** after a look at each `test/golden/` before the merge | open | Joe 2026-10-12: approve — no change |
+| W4-L1 | Live: sync the four modules from the branch as it is, or merge main first | **as it is**; merge after a green live phase | open, **before live** | Joe 2026-10-12: as it is — no change (live) |
+| W4-L2 | Live: skip the two-GM-tab checks (riders -41 / R7 / R8, transform T1, aoe D-A6) | **skip**; run D-A6 only if the fixed handle id matters now | open, **before live** | Joe 2026-10-12: skip — no change (live) |
+| W4-L3 | Fork: `pentaryn-read` still calls these four namespaces "eval-js only" | **follow-up fork commit** (description only) | open | Joe 2026-10-12: fork follow-up commit (description only), recorded with W3-PR4 — not built here |
+| W4-L4 | The Wave 7 restart batch | **its own session** (wave 5) | open | Joe 2026-10-12: its own session: wave 5 (`migrate/wave-5`) — the batch commits |
+| D8 / W4-T2 | Starry / Wild Shape world-time expiry for an unlinked druid with no GM connected | **record live, build nothing** | open (live) | Joe 2026-10-12: record live, build nothing — no change |
+| W4-R1 | Riders' D2 row renames | take them | **closed** `e1a9aade` | Joe 2026-10-12: closed — no change |
+| W4-R2 | Once-per-casting index | — | **closed** `79e29f8d` (dnd5e's registry, no hook) | Joe 2026-10-12: closed — no change |
+| W4-R3 | Riders C59 in one-off GM commands | **leave** | open | Joe 2026-10-12: leave — no change |
+| W4-R4 | Riders C56 hand `CONFIG.queries` | **keep** until the kit forwards the sender (W2-J2) | open | Joe 2026-10-12: keep (kit 1.1.0 does not forward the sender) — no change |
+| W4-R5 / W4-D7a / W4-R9 | Riders and D7: vendor `argon-tooltip.css` in the W7 batch; where the `#tooltip` click-through rule lives | **vendor in W7; keep the rule in riders.css** | open | Joe 2026-10-12: vendored in the W7 batch and listed in `styles`; the `#tooltip` rule stays in `styles/riders.css` — `33e22823` |
+| W4-R6, aoe 0.4.0, W4-T3 | Version bumps: riders 0.3.0, aoe 0.4.0, transform 0.4.0, combat 0.3.0 | **in the W7 batch**, each with its core `VERSION` | open | Joe 2026-10-12: in the W7 batch, each with its `VERSION` — riders `33e22823`, aoe `36573303`, transform `fb707298`, combat `249b5cd1` |
+| W4-R7, W4-R8 | Riders' two document-hook writers run in every GM tab | **accept, no claim** | open | Joe 2026-10-12: accept, no claim — no change |
+| W4-R10 | Riders relay (new here, from the standalone review): a stamp counts as stale after 60 s by comparing two tabs' clocks. Machines more than 60 s apart could both win | **accept**. The bridge tab and Joe's GM browser run on the same Mac; revisit if the bridge moves to another machine | open | Joe 2026-10-12: accept — no change |
+| W4-R11 | Riders relay (new here): a winner slower than 7 s lets the losing tab's timeout reach the player first. The heal still happens, but the player sees "failed" | **accept**; live check -41 records it if it happens. The fix would be a [declared] loser wait longer than the query's 8 s | open | Joe 2026-10-12: accept — no change |
+| W4-A1 | aoe declared changes (D-A1…D-A4, D-A6, D-A7, -6, -9, the two 8.5 batches) | **approve each after its live check** | open (live) | Joe 2026-10-12: approve each after its live check — no change |
+| W4-P1 | W3-P1 revisited: aoe's Item Piles probe (API, else the flag) vs portals' (API only) | **keep them different**; both rows say so (`itempiles-aoe-skip-piles`, `itempiles-portals-pile-pc`) | open | Joe 2026-10-12: keep them different — no change |
+| W4-C1 | Strip Adv / Dis lost while a roll window is open | fix | **closed** `affd3273` | Joe 2026-10-12: closed — no change |
+| W4-C2 | combat-riders-1 per-task memo | **leave** | open | Joe 2026-10-12: leave — no change |
+| W4-C3 | Combat reads aoe's `autoDamageOnHit` directly (C21 / C23) | **keep** | open | Joe 2026-10-12: keep (C21/C23 a documented exception) — no change |
+| W4-C4 | Combat reading aoe's own refund decision | **wait for an aoe event** (a feature; not built) | open | Joe 2026-10-12: **deferred** — no change |
+| W4-C5 | hud's listeners on the legacy `pentarynCombat.*` names | **keep** until combat 0.4.0 | open | Joe 2026-10-12: keep until combat 0.4.0 — no change |
+| W4-C6 | Combat's tooltips styled only through transform.css | — | **closed** `24e961a0` (combat imports the kit file) | Joe 2026-10-12: load `lib/argon-tooltip.css` through `styles`, drop the `@import` and its pin — `249b5cd1` |
+| W4-C7 | Per-actor writes in `sweepOrphanFlags` / `seedAll` | **keep** | open | Joe 2026-10-12: keep — no change |
+| W4-C8 | combat-riders-17: step 4 guard test; step 3 shared `insertCardNote` | step 4 landed; **step 3 waits** for a kit helper | step 4 **closed** `0b414108`; step 3 open | Joe 2026-10-12: step 3 waits for a kit helper — no change |
+| W4-T1 | Transform's automatic endings run in every tab of the runner's account | **accept, watch live** | open (live) | Joe 2026-10-12: accept, watch live — no change |
+| W4-T4 | Transform `@import` vs a `styles` entry for the kit CSS | **keep the @import** | open | Joe 2026-10-12: through `styles` (not the default @import): `@import` dropped, css.test pin flipped — `fb707298` |
+| W4-T5 | T-D8 guarded hooks | **keep** | **closed** `d0882eac` | Joe 2026-10-12: closed — no change |
+| W4-I1 | `context/foundry/argon.md` (combat-riders-18 phase 1: every Argon hook and prototype touch, by module and order) not written | **write it** as a docs commit in wave 5, before the restart's live smoke (it is what to read when the Argon bar misbehaves) | open | Joe 2026-10-12: written — `context/foundry/argon.md`, `b231ebd1` |
+| W4-I2 | `conformance.py` C59 cannot see a per-document write behind a local helper | **leave**: C59 is `warn+manual`, and the §5.9.4 checklist caught both cases | open | Joe 2026-10-12: leave — no change |
+| W4-I3 | `796fdf63` flips a pin without `[declared]` | **treat as declared** when bisecting; no change | **closed** (recorded) | Joe 2026-10-12: closed — no change |
 
 Six rows are closed, and W4-C8 is half closed (step 4 landed). W4-L1 and W4-L2 must be answered before the live phase runs. The rest have
 defaults that can stand.

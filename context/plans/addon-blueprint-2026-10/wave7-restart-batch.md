@@ -1,7 +1,7 @@
 ---
 title: Addon blueprint — Wave 7 restart batch (module.json edits, consolidated)
 status: plan
-last_modified: 2026-10-11
+last_modified: 2026-10-12
 tags: [foundry, modules, blueprint, plan, migration, wave7]
 ---
 
@@ -69,6 +69,51 @@ edit, source step). Keep one row per edit.
 | 2026-10-12 | aoe | `flags.pentaryn = { tier: "full", namespace: "aoe", flagScope: "pentaryn-aoe", cssPrefix: "pa-", generation: 14, afterSync }` (tuple moved, deleted from config.py); `recommends` enhancedcombathud + item-piles (reasons); `git mv aoe.css styles/aoe.css` + `styles: ["styles/aoe.css"]`; `compatibility.verified: "14.369"`; `version: "0.4.0"` with `core.mjs` `VERSION = "0.4.0"` in the same commit (two tests pin them equal; the API rows already say `since: "0.4.0"`). Clears C07, C09, C37 | aoe migration lane |
 | 2026-10-12 | transform | `flags.pentaryn = { tier: "full", namespace: "transform", flagScope: "pentaryn-transform", cssPrefix: "ptf-", generation: 14, afterSync: ["After a sync: reload every client (a module.json change needs a Foundry restart).", "  game.pentaryn.transform.describe()   game.pentaryn.transform.selftest()   game.pentaryn.transform.inspect(\"Talo\")"] }` (and delete config.py's transform tuple, made version-neutral in `fb3361b9`); `compatibility.minimum: "14"` (-24); `version: "0.4.0"` with `transform-core.mjs` `VERSION = "0.4.0"`; `esmodules` stays `["transform.mjs", "hud.mjs"]`; flip transform's `core.test` "manifest today" pin (0.3.3, minimum 13, flagScope `transform`) **[declared]** in the same commit. Optional (W4-T4): `styles: ["styles/transform.css", "lib/argon-tooltip.css"]`, drop the `@import` line and flip the D7 import pin in `test/css.test.mjs` | transform migration lane + D7 |
 | 2026-10-12 | combat | `flags.pentaryn = { tier: "full", namespace: "combat", flagScope: "pentaryn-combat", cssPrefix: "pc-", generation: 14, afterSync }` (the config.py tuple, already pointing at "README → Settings" since `fb3361b9`; delete it from config.py); `compatibility.verified: "14.369"`; `version: "0.3.0"` with `combat-core.mjs` `VERSION = "0.3.0"` and the literal "0.2.5" pin in `test/core.test.mjs` flipped **[declared]** in the same commit; `description`: insert before " Every change is a setting." the turn-flow sentence from the wave-4 report "Integrator — combat (review)" (combat-riders-15). D7 (W4-C6): combat already loads the kit stylesheet through `styles/combat.css`'s `@import` (`24e961a0`); listing `lib/argon-tooltip.css` in `styles` is optional and then drops that `@import` and flips its pin | combat migration lane + review + D7 |
+
+## Applied on `migrate/wave-5` (lane W5c, code only, 2026-10-12)
+
+Every row above, one commit per module, on top of kit 1.1.0 (`a9ce0b18`, re-vendored per module).
+Decided column: Joe 2026-10-12 ("They all look minor" — take the recommendations). Nothing is synced
+or restarted yet: the batch checklist below (sync, **one** restart, live smoke) is the live lane's.
+
+| Module | Commit | Decided / note | Conformance after |
+|---|---|---|---|
+| importer | `d3d9cb29` | Joe 2026-10-12: merged into the existing `flags.pentaryn`; `import` row `dryRun: true` (W2-B3) — `d3d9cb29` | 100 % |
+| names | `5835ac59` | Joe 2026-10-12: `sync`'s `ref` `resolve: "self"` (W2-B4) — `5835ac59`; manifest landed earlier | 100 % |
+| pings, cursors | — | landed earlier (wave 1). The pings "still open" `max` pin is done: `languages` + `lang/en.json` are on main. Their duplicate config.py tuples dropped (`8037e674`) | 100 % / 91.5 % (cursors C05/C13/C24/C25, not in the batch) |
+| lookup | `dbd8c58a` | Joe 2026-10-12: as the row — `dbd8c58a` | 100 % |
+| movement | `28e73b21` | Joe 2026-10-12: as the row — `28e73b21` | 100 % |
+| walls | `320879a2` | Joe 2026-10-12: `languages`, lang keys (W2-WALLS-1), toasts through `log.notify` (W2-WALLS-3), description, minimum/verified, flags — `320879a2`. **The flag-scope DATA migration is PARKED, not wired, not run**: walls stays off in Joe's world, so `flagScope` stays `wall-autocomplete` in `module.json` and `core/engine.mjs`, `migrations.mjs` stays dormant, and the frozen `test/core.test.mjs` FLAG_SCOPE pin is untouched. Run it (this row's "Code in the same batch" column) only when Joe turns walls back on | 98.0 % (C07: flagScope, the parked migration) |
+| attunement | `a7e1395b` | Joe 2026-10-12: as the row; `stash`/`releaseAway` docs say eval-js only (C62). `lang/en.json` is INERT (STRINGS verbatim): the `_loc` switch (guide step 8, declared) touches `bonds.mjs`, the fx2 lane's bond code, so it waits — a reload then, no restart, since `languages` is already in | 97.9 % (C35 until step 8) |
+| journal | `08ac3c3d` | Joe 2026-10-12: as the row + W2-J1 `folderName` labels ([declared] pin) — `08ac3c3d`; W2-J2 not taken (kit does not forward the sender) | 98.0 % (C56) |
+| dropbin | `61b65058` | Joe 2026-10-12: as the row; version unchanged — `61b65058` | 98.0 % (C50) |
+| prompts | `4b9d5e49` | Joe 2026-10-12: as the row — `4b9d5e49` | 100 % |
+| ties | `11149c59` | Joe 2026-10-12: as the row; version stays 0.19.4 — `11149c59` | 96.1 % (C05 W3-T6, C37 W3-T1) |
+| creatures | `ba10619e` | Joe 2026-10-12: as the row — `ba10619e` | 100 % |
+| portals | `2ce4a806` | Joe 2026-10-12: as the row + i18n (-29, [declared] D-P2), version 0.4.4 → 0.5.0 with `VERSION` and the frozen pin — `2ce4a806` | 100 % |
+| senses | `0c7036e8` | Joe 2026-10-12: manifest only, no `paint()`/chain code — `0c7036e8` | 100 % |
+| riders | `33e22823` | Joe 2026-10-12: as the row, 0.3.0 (W4-R6), D7 vendor + `styles` (W4-R5), `#tooltip` rule kept (W4-R9) — `33e22823` | 96.0 % (C37 `#tooltip` ×2, C56) |
+| aoe | `36573303` | Joe 2026-10-12: as the row, 0.4.0 — `36573303` | 100 % |
+| transform | `fb707298` | Joe 2026-10-12: as the row, 0.4.0 (W4-T3), kit CSS through `styles` (W4-T4) — `fb707298` | 100 % |
+| combat | `249b5cd1` | Joe 2026-10-12: as the row, 0.3.0, description sentence, kit CSS through `styles` (W4-C6) — `249b5cd1` | 96.0 % (C21/C23 W4-C3) |
+
+**Strict-gate exceptions (documented, the gate stays advisory in this lane):** riders C37 (two
+`#tooltip` selectors, W4-R9) and C56 (W4-R4), combat C21/C23 (W4-C3), journal C56 (W2-J2), dropbin
+C50, ties C05/C37 (W3-T6/W3-T1), cursors C05/C13/C24/C25, walls C07 (the parked migration) and
+attunement C35 (until its `_loc` step).
+
+**Follow-ups recorded, not built:**
+
+- Fork (K2): `pentaryn-call.ts` `needsDoc` treats any first `ref` whose `resolve !== false` as
+  kit-resolved, so `resolve: "self"` on `names.sync` already passes. A **non-first** param carrying
+  the marker is still refused; the follow-up is one line (`if (p?.resolve === 'self') return false;`)
+  plus its vitest, and the fork's doc comment naming names.sync as refused is stale. Its
+  `takesDryRun` already honours `row.dryRun === true` (K1).
+- Fork lane: W3-PR4 (the fork halves of mcp-fork-15 and prompts-lookup-11/-12) and W4-L3
+  (pentaryn-read's description still calls four namespaces "eval-js only").
+- Deferred by Joe: W3-SE1, W3-T5, W4-C4. Closed: W2-MOV-1, W2-B1 (pointer to P7).
+- attunement guide step 8 (`_loc`, declared) after the fx2 lane's bond-code work merges.
+- walls flag-scope DATA migration: parked until walls is back on (above).
 
 ## Batch checklist
 
