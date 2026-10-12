@@ -14,7 +14,7 @@
         },
         {
           "name": "opts",
-          "type": "{ books?: 'rules' (PHB, DMG, 2024 SRD; default) | 'monsters' | 'all' | '2014' | pack id[], limit? (5, max 20), snippet? (240, max 600), regex? }",
+          "type": "{ books?: 'rules' (PHB, DMG, 2024 SRD; default) | 'monsters' | 'all' | '2014' | pack id | pack id[] (an unknown word answers the rules set with a warning), limit? (5, max 20), snippet? (240, max 600), regex? }",
           "optional": true
         }
       ],
@@ -37,7 +37,7 @@
         },
         {
           "name": "opts",
-          "type": "{ books?: 'rules' (PHB, DMG, 2024 SRD; default) | 'monsters' | 'all' | '2014' | pack id[], maxChars? (6000), offset?, raw?, tables? (true) }",
+          "type": "{ books?: 'rules' (PHB, DMG, 2024 SRD; default) | 'monsters' | 'all' | '2014' | pack id | pack id[] (an unknown word answers the rules set with a warning), maxChars? (6000), offset?, raw?, tables? (true) }",
           "optional": true
         }
       ],
@@ -77,11 +77,11 @@
       "params": [
         {
           "name": "q",
-          "type": "{ size?, type?, cr? ('1/4', 3, '1/2-2'), minCr?, maxCr?, name?, limit? (40, max 200), packs? }",
+          "type": "{ size?, type?, cr? ('1/4', 3, '1/2-2'), minCr?, maxCr?, name?, limit? (40, max 200), packs? (pack id | pack id[]; anything else answers the default packs with a warning) }",
           "optional": true
         }
       ],
-      "returns": "{ count, shown, monsters: [{ name, cr, size, type, uuid, pack }], hint? }",
+      "returns": "{ count, shown, monsters: [{ name, cr, size, type, uuid, pack }], hint?, warning? }",
       "gm": false,
       "writes": false,
       "query": true,

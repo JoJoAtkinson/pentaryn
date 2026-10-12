@@ -10,7 +10,7 @@
 
 import {
   BOOKSETS, EDITIONS, MONSTER_PACKS, findPage, foundFromDoc, nonPageWarning, knownLists, listFor as listForIn, matchMonster,
-  MONSTER_INDEX_FIELDS, missingPackError, monsterDigest, monsterQuery, monsterRow, pageMonsters, pickByName, renderPage, renderTable, resolveBookIds,
+  MONSTER_INDEX_FIELDS, missingPackError, monsterDigest, monsterQuery, monsterRow, pageMonsters, pickByName, renderPage, renderTable, resolveBooks,
   searchBooks, sortMonsters, embeddedTableUuids, groupListUuids, spellListRows, NAME_SOURCES, groupNames,
 } from "./lookup-core.mjs";
 import {
@@ -36,12 +36,12 @@ export function uninstall() {
 /** Full-text search across the owned books. */
 async function search(query, opts = {}) {
   opts ??= {};
-  const ids = resolveBookIds(opts.books);
+  const { ids, warning } = resolveBooks(opts.books);
   const { books, missing } = await loadBooks(ids, log);
-  if (!books.length) return missingPackError(missing);
+  if (!books.length) return withWarning(missingPackError(missing), warning);
   const result = searchBooks(books, query, opts);
-  if (missing.length) result.warning = `skipped missing pack(s): ${missing.join(", ")}`;
-  return result;
+  const skipped = missing.length ? `skipped missing pack(s): ${missing.join(", ")}` : null;
+  return withWarning(result, [warning, skipped].filter(Boolean).join("; "));
 }
 
 /** One page, by UUID or by name. */
@@ -60,10 +60,16 @@ async function page(ref, opts = {}) {
     return withTables(warning ? { ...out, warning } : out, found, opts);
   }
 
-  const { books, missing } = await loadBooks(resolveBookIds(opts.books), log);
-  if (!books.length) return missingPackError(missing);
+  const { ids, warning } = resolveBooks(opts.books);
+  const { books, missing } = await loadBooks(ids, log);
+  if (!books.length) return withWarning(missingPackError(missing), warning);
   const found = findPage(books, raw);
-  return withTables(renderPage(found, opts), found, opts);
+  return withWarning(await withTables(renderPage(found, opts), found, opts), warning);
+}
+
+/** `out` with `warning` added when there is one (R5: a misread `books` / `packs` says so). */
+function withWarning(out, warning) {
+  return warning && out ? { ...out, warning } : out;
 }
 
 /** Append the page's embedded roll tables (`tables: false` to skip). */
@@ -176,7 +182,7 @@ async function monsters(q = {}) {
       out.push(monsterRow(e, id));
     }
   }
-  return pageMonsters(sortMonsters(out), query.limit);
+  return withWarning(pageMonsters(sortMonsters(out), query.limit), query.warning);
 }
 
 /**

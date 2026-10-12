@@ -15,7 +15,8 @@
 
 import { CONTRACT, MODULE, NS, VERSION } from "./lookup-core.mjs";
 
-const BOOKS = "'rules' (PHB, DMG, 2024 SRD; default) | 'monsters' | 'all' | '2014' | pack id[]";
+const BOOKS = "'rules' (PHB, DMG, 2024 SRD; default) | 'monsters' | 'all' | '2014' | pack id | pack id[] "
+  + "(an unknown word answers the rules set with a warning)";
 
 export const MANIFEST = Object.freeze({
   module: MODULE,
@@ -67,9 +68,10 @@ export const MANIFEST = Object.freeze({
     {
       path: "monsters",
       params: [
-        { name: "q", type: "{ size?, type?, cr? ('1/4', 3, '1/2-2'), minCr?, maxCr?, name?, limit? (40, max 200), packs? }", optional: true },
+        { name: "q", type: "{ size?, type?, cr? ('1/4', 3, '1/2-2'), minCr?, maxCr?, name?, limit? (40, max 200), "
+          + "packs? (pack id | pack id[]; anything else answers the default packs with a warning) }", optional: true },
       ],
-      returns: "{ count, shown, monsters: [{ name, cr, size, type, uuid, pack }], hint? }",
+      returns: "{ count, shown, monsters: [{ name, cr, size, type, uuid, pack }], hint?, warning? }",
       gm: false, writes: false, legacy: true, query: true,
       args: d => [d],
       doc: "NPCs by size, type and CR from the Monster Manual then the 2024 SRD, one per name, lowest CR first. "

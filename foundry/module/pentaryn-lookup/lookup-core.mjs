@@ -46,11 +46,23 @@ export const MONSTER_LIST_PACKS = Object.freeze(["dnd-monster-manual.actors", "d
 /** Where onList() looks a spell up by name: the PHB first, then the 2024 SRD, then the 2014 SRD. */
 export const SPELL_PACKS = ["dnd-players-handbook.spells", "dnd5e.spells24", "dnd5e.spells"];
 
-/** `opts.books` → pack ids: an array as given, a BOOKSETS name, else the rules set. */
+/**
+ * `opts.books` → `{ids, warning?}`: an array as given, a BOOKSETS name its set, any other string with a
+ * dot one pack id; anything else is the rules set with a warning, so a typo is not answered silently (R5).
+ */
+export function resolveBooks(books) {
+  if (!books) return { ids: BOOKSETS.rules };
+  if (Array.isArray(books)) return { ids: books };
+  const s = String(books);
+  if (Object.hasOwn(BOOKSETS, s)) return { ids: BOOKSETS[s] };
+  if (typeof books === "string" && s.includes(".")) return { ids: [s] };
+  return { ids: BOOKSETS.rules,
+           warning: `books ignored: expected ${Object.keys(BOOKSETS).map(k => `'${k}'`).join(", ")}, a pack id or an array` };
+}
+
+/** `opts.books` → pack ids (resolveBooks without its warning). */
 export function resolveBookIds(books) {
-  if (!books) return BOOKSETS.rules;
-  if (Array.isArray(books)) return books;
-  return BOOKSETS[String(books)] ?? BOOKSETS.rules;
+  return resolveBooks(books).ids;
 }
 
 export function missingPackError(missing) {
@@ -439,8 +451,12 @@ export function monsterQuery(q = {}) {
   if (q.maxCr !== undefined) hi = crNum(q.maxCr);
   const name = q.name ? String(q.name).toLowerCase() : null;
   const limit = Math.max(1, Math.min(Number(q.limit) || 40, 200));
-  const packIds = q.packs ?? [...MONSTER_LIST_PACKS];
-  return { size, type, lo, hi, name, limit, packIds };
+  // R5: a string is one pack id (not its characters); a number or object is ignored, with a warning.
+  const packs = q.packs ?? null;
+  const usable = packs === null || typeof packs === "string" || Array.isArray(packs);
+  const packIds = typeof packs === "string" ? [packs] : Array.isArray(packs) ? packs : [...MONSTER_LIST_PACKS];
+  return { size, type, lo, hi, name, limit, packIds,
+           ...(usable ? {} : { warning: "packs ignored: expected a pack id or an array" }) };
 }
 
 /** The index fields matchMonster and monsterRow read (getIndex({fields})). */

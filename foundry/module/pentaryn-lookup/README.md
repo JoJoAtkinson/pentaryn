@@ -37,7 +37,9 @@ eval-js route over `page.text.content` has five traps that all fail **silently**
 
 **Defaults.** PHB + DMG + 2024 SRD; Monster Manual text is opt-in (`books: "monsters"` or
 `"all"`). The 2014 SRD is searched only when asked (`books: "2014"`) and its hits carry
-`edition: "2014"`. Five hits, ~240-character snippets, an 8 KB payload ceiling; `total` reports
+`edition: "2014"`. `books` also takes one pack id (`"dnd5e.content24"`) or an array of them; an
+unknown word answers the rules set with a `warning`. `monsters({ packs })` takes a pack id or an
+array; anything else answers the default packs with a `warning`. Five hits, ~240-character snippets, an 8 KB payload ceiling; `total` reports
 every matching page. One hit per page, with `matches: n`. World journals are out of scope
 (`find_lore`, `search-journals`).
 
@@ -64,7 +66,7 @@ remaining checks still run (R4).
 | `search(query, { books, limit, snippet, regex })` | `{ query, books, total, shown, hits: [{ book, journal, page, uuid, matches, snippet, edition? }], note?, truncated?, warning? }` \| `{ error }` |
 | `page(ref, { books, maxChars, offset, raw, tables })` | `{ book, journal, page, uuid, text, edition?, truncated?, totalChars?, nextOffset?, warning?, tables? }` \| `{ journal, page, uuid, raw }` \| `{ notFound, name, closest, hint }` \| `{ error }` |
 | `monster(name, { text })` | `{ name, pack, uuid, cr, ac, hp, size, type, features, warning? }` (+ `languages`, `speed`, feature `text` with `text: true`) \| `{ notFound, name, searched, hint }` \| `{ error }` |
-| `monsters({ size, type, cr, minCr, maxCr, name, limit, packs })` | `{ count, shown, monsters: [{ name, cr, size, type, uuid, pack }], hint? }` |
+| `monsters({ size, type, cr, minCr, maxCr, name, limit, packs })` | `{ count, shown, monsters: [{ name, cr, size, type, uuid, pack }], hint?, warning? }` |
 | `names(kind)` | `{ classes, subclasses: { <class>: [] }, species, backgrounds, feats: { origin, general, … } }`, or one key |
 | `packs()` | `{ world, foundry, system, packs: [{ id, present, label?, type?, entries?, edition? }] }` |
 | `onList(spell, cls, { type })` | `{ spell, uuid, level, list, onList: true \| false \| null, hint? }` \| `{ notFound, spell, hint }` |

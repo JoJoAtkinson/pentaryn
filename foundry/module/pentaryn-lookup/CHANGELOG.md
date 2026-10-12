@@ -42,6 +42,11 @@
 - [declared] A page's embedded `@Embed[….RollTable.…]` whose uuid resolves to something that is not
   a roll table lists that table as `{ uuid, error: "not found" }` and the rest of the page still
   answers, instead of `page()` throwing a TypeError on `results.contents` (R3).
+- [declared] `monsters({ packs: "<pack id>" })` lists that one pack instead of answering 0 (it
+  iterated the id's characters); a `packs` that is neither a string nor an array answers the default
+  packs with `warning: "packs ignored: expected a pack id or an array"`. `search`/`page` take a
+  single pack id as `books` (any string with a dot) instead of falling back to the rules set; an
+  unknown word still answers the rules set, now with a `books ignored: …` warning (R5).
 
 ## 0.3.0 — 2026-10-10
 
