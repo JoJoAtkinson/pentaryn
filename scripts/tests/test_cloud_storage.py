@@ -318,6 +318,14 @@ def test_ensure_cloud_rewrites_a_stale_readme_that_describes_bundles(fake_cloud)
     assert "legacy" in legacy.splitlines()[0].lower()
 
 
+def test_readme_retention_is_the_host_default():
+    from scripts.foundry import cloud, host
+    assert cloud.KEEP_SNAPSHOTS == host.DEFAULT_KEEP_SNAPSHOTS
+    # The README line is the text it was before cloud took the number from host.
+    assert ("                Each machine keeps its own most recent 10, and a snapshot\n"
+            in cloud.README_TEXT)
+
+
 # ── PENTARYN_CLOUD selection (§1.8) ─────────────────────────────────────────
 
 def test_select_a_path_is_a_folder(tmp_path):

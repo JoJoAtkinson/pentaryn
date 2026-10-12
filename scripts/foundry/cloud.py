@@ -113,7 +113,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 MANIFEST = REPO_ROOT / "foundry" / "assets-manifest.json"
 
 # Default per-host retention; PENTARYN_KEEP_SNAPSHOTS overrides (host.keep_snapshots()).
-KEEP_SNAPSHOTS = 10
+KEEP_SNAPSHOTS = host.DEFAULT_KEEP_SNAPSHOTS
 
 # Restore safety copies are kept apart from the rolling ten: this many per host, so
 # repeated "take the latest" boots on the alt never push regular snapshots out.
