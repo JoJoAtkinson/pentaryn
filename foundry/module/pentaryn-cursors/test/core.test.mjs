@@ -129,10 +129,7 @@ function pngSize(file) {
 
 test("built assets: PNG sizes and hotspots", () => {
   for (const [key, k] of Object.entries(KEYS)) {
-    // The icon sources move out of the module in guide step 7 (assets/src → scripts/foundry/cursors/src);
-    // either location satisfies the old "source exists" check until the build tool's own check owns it.
-    const sources = [join(ROOT, "assets", "src", k.src), join(REPO, "scripts", "foundry", "cursors", "src", k.src)];
-    check(`${key} source exists`, sources.some(existsSync), true);
+    check(`${key} source exists`, existsSync(join(REPO, "scripts", "foundry", "cursors", "src", k.src)), true);
     check(`${key} hotspot inside 32×32`, k.hotspot.every(n => Number.isInteger(n) && n >= 0 && n < 32), true);
     for (const s of ["", "-pointer"]) {
       for (const [at, px] of [["", 32], ["@2x", 64]]) {

@@ -81,14 +81,6 @@ class Package:
     def is_local(self) -> bool:
         return self.id.startswith(LOCAL_PREFIX)
 
-    @property
-    def min_core(self) -> str | None:
-        return self.compatibility.get("minimum")
-
-    @property
-    def verified_core(self) -> str | None:
-        return self.compatibility.get("verified")
-
     def to_json(self) -> dict:
         return {
             "type": self.type, "id": self.id, "title": self.title,

@@ -1,7 +1,8 @@
 // Live golden — pentaryn-walls (`game.pentaryn.walls`).
 //
 // RUN ONLY WHEN JOE RE-ENABLES WALLS. walls is switched off in Joe's world; with the module
-// inactive this script returns `{ skipped: "pentaryn-walls is not active" }` and writes nothing.
+// inactive this script returns `{ skipped: "pentaryn-walls is not active (run only when Joe re-enables walls)" }`
+// and writes nothing.
 // Never enable the module to run it: enabling is a world-settings change and needs a reload.
 //
 // Body of an async function for the foundry `eval-js` MCP tool (paste the file as `script`,

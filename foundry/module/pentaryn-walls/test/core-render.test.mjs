@@ -102,6 +102,27 @@ test("exclusive: wrappers sharing one lock exclude each other", async () => {
   assert.equal(await b(), "b");
 });
 
+test("exclusive: a stale call settling after the lock was force-released does not free the next holder", async () => {
+  const lock = { busy: false };
+  let busy = 0;
+  let releaseA, releaseB;
+  const gateA = new Promise(r => { releaseA = r; });
+  const gateB = new Promise(r => { releaseB = r; });
+  const a = core.exclusive(() => gateA, { lock });
+  const b = core.exclusive(() => gateB, { lock });
+  const c = core.exclusive(() => "c", { lock, onBusy: () => busy++ });
+  const pa = a();
+  lock.busy = false;                     // uninstall() force-releases mid-run
+  const pb = b();
+  releaseA("a");
+  assert.equal(await pa, "a");
+  assert.equal(c(), null, "b still holds the lock after the stale a settles");
+  assert.equal(busy, 1);
+  releaseB("b");
+  assert.equal(await pb, "b");
+  assert.notEqual(c(), null, "released by its holder: c runs");
+});
+
 test("walls-core.mjs defines MODULE once and the entry has no MODULE_ID", () => {
   const entry = readFileSync(new URL("pentaryn-walls.mjs", ROOT), "utf8");
   assert.doesNotMatch(entry, /MODULE_ID/);

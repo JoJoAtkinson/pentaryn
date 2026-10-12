@@ -195,7 +195,6 @@ function toSeg(w, idx) {
     threshold: w.threshold ?? null,
     levels: w.levels ?? [],
     keepOpen: flags.keepOpen === true,
-    generated: flags.generated === true,
     isNew: false,
     dirty: false
   };
@@ -692,6 +691,7 @@ function enumerate(segs, verts, cfg) {
   // carrier until it hits something. Fires last, which is why the shell always closes first.
   for (const v of dang) {
     const hit = castRay(v, segs, cfg);
+    rayOf.set(v, hit);
     if (hit && !hit.refusal) {
       out.push({rule: "E1", cost: Math.sqrt(dist2(v.p, hit.H)), lex: [v.p, hit.H], anchors: [v.key],
                 act: {kind: "create", walls: [[...v.p, ...hit.H]], srcs: [v.ends[0].seg]}});
@@ -700,6 +700,14 @@ function enumerate(segs, verts, cfg) {
 
   return out;
 }
+
+/**
+ * The last ray enumerate cast from each vertex, so the refusal sweep does not cast it again.
+ * Keyed weakly, not as a vertex property: move acts carry the vertex and get JSON.stringify'd.
+ * Cannot go stale — vertices are fresh per buildGraph and segs do not change between the
+ * final enumerate and diagnose.
+ */
+const rayOf = new WeakMap();
 
 /**
  * Cast the outward ray from a dangling endpoint and find the nearest obstacle contact.
@@ -831,7 +839,6 @@ function applyInstance(inst, segs, runId) {
     return;
   }
   inst.act.walls.forEach((c, i) => {
-    const donor = inst.anchors.length ? inst.anchors[0] : null;
     const src = inst.act.srcs?.[i];
     segs.push({
       idx: segs.length,
@@ -840,12 +847,10 @@ function applyInstance(inst, segs, runId) {
       ...(src ? profileFrom(src) : {...SOLID}),
       levels: inst.levels ?? [],
       keepOpen: false,
-      generated: true,
       isNew: true,
       dirty: false,
       rule: inst.rule,
-      sources: inst.anchors,
-      donor
+      sources: inst.anchors
     });
   });
 }
@@ -854,7 +859,7 @@ function applyInstance(inst, segs, runId) {
 /*  Refusal diagnosis (P4)                      */
 /* -------------------------------------------- */
 
-function diagnose(v, segs, verts, cfg, ambiguous) {
+function diagnose(v, segs, dang, cfg, ambiguous) {
   if (ambiguous.has(v.key)) {
     const {rule, candidates} = ambiguous.get(v.key);
     const where = candidates.map(c => c.corner ? `(${c.corner})` : `(${c.lex[1]})`).join(" and ");
@@ -863,7 +868,7 @@ function diagnose(v, segs, verts, cfg, ambiguous) {
   const reasons = [];
   const coll2 = cfg.collEps * cfg.collEps;
   const A = v.ends[0].seg;
-  for (const w of danglingOf(verts)) {
+  for (const w of dang) {
     if (w.key === v.key) continue;
     const B = w.ends[0].seg;
     if (A.idx === B.idx) continue;
@@ -895,7 +900,7 @@ function diagnose(v, segs, verts, cfg, ambiguous) {
       }
     }
   }
-  const ray = castRay(v, segs, cfg);
+  const ray = rayOf.get(v) ?? castRay(v, segs, cfg);
   // F1's "aligned but too far" and E1's "an aligned wall lies along this line" are the same
   // finding seen from two rules. Say it once.
   if (ray?.refusal && !reasons.some(r => {
@@ -929,10 +934,11 @@ export function analyze(walls, opts = {}) {
   const lints = lint(segs, cfg);
   const verts = buildGraph(segs, cfg);
   const amb = ambiguousAnchors(enumerate(segs, verts, cfg));
+  const dang = danglingOf(verts);
   return {
     lints,
-    refusals: danglingOf(verts).map(v => ({
-      at: v.p, wall: v.ends[0].seg.id, why: diagnose(v, segs, verts, cfg, amb)
+    refusals: dang.map(v => ({
+      at: v.p, wall: v.ends[0].seg.id, why: diagnose(v, segs, dang, cfg, amb)
     })),
     components: components(segs, verts).map(c => ({
       walls: c.segs.length, dangling: c.dangling, closed: c.dangling === 0
@@ -1075,8 +1081,9 @@ export function runEngine(walls, opts = {}) {
     if (iterations > cfg.iterCap) throw new Error(`wall-autocomplete: hit the ${cfg.iterCap}-iteration cap; nothing was committed.`);
 
     // P4 — refusal sweep. Reports only; geometry is untouched.
-    for (const v of danglingOf(verts)) {
-      refusals.push({at: v.p, wall: v.ends[0].seg.id, why: diagnose(v, segs, verts, cfg, ambiguous)});
+    const dang = danglingOf(verts);
+    for (const v of dang) {
+      refusals.push({at: v.p, wall: v.ends[0].seg.id, why: diagnose(v, segs, dang, cfg, ambiguous)});
     }
 
     componentReport = componentReport.concat(components(segs, verts).map(c => ({
