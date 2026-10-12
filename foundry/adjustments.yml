@@ -275,12 +275,23 @@ adjustments:
     check: make foundry-transform-check
 
   - id: creatures-libwrapper
-    packages: [lib-wrapper]
+    packages: [lib-wrapper, core]
     modules: [pentaryn-creatures]
-    files: [foundry/module/pentaryn-creatures/creatures.mjs]
-    markers: ["libWrapper.register"]
-    what: wraps core methods through libWrapper when it is active, with a manual-patch fallback
-    why: plays nicely with other modules wrapping the same methods
+    files: [foundry/module/pentaryn-creatures/owner-sees.mjs]
+    markers: ["isVisible", "_testCulled", "_previewType", "__pentarynCreaturesVisible"]
+    what: Token#isVisible getter wrapped through wrapMethod (libWrapper WRAPPER when lib-wrapper is active, else the getter is replaced on the prototype, marker __pentarynCreaturesVisible) so an owner always sees their own summons and familiars (setting ownerSees); reads private _testCulled, _preview._previewType, isFilteredOut
+    why: core hides a token nothing the player controls can see, even one they own (an Invisible Arcane Eye in darkness); core has no hook to add an owner override to visibility
+    native_when: core lets owners always see owned tokens
+    retire_class: guarded
+    check: make foundry-creatures-check
+
+  - id: itempiles-creatures-pile-flag
+    packages: [item-piles]
+    modules: [pentaryn-creatures]
+    files: [foundry/module/pentaryn-creatures/creatures-core.mjs]
+    markers: ["item-piles"]
+    what: reads flags.item-piles.data.enabled on the token or its actor to leave piles out of the summon light and the Your creatures strip
+    why: an Item Piles container is a token with an owner; without the check a loot pile gets a light and a portrait
     native_when: n/a
     retire_class: never
     check: make foundry-creatures-check
@@ -881,10 +892,10 @@ adjustments:
     retire_class: safe
     check: make foundry-senses-check
 
-  - id: creatures-strip-over-argon
+  - id: argon-creatures-strip-float
     packages: [enhancedcombathud]
     modules: [pentaryn-creatures]
-    files: [foundry/module/pentaryn-creatures/creatures.mjs, foundry/module/pentaryn-creatures/creatures-core.mjs]
+    files: [foundry/module/pentaryn-creatures/strip.mjs, foundry/module/pentaryn-creatures/creatures-core.mjs]
     markers: ["stripDock", ".extended-combat-hud"]
     what: while Argon's HUD is up, the Your creatures strip floats just above the HUD's action bar instead of sitting behind it (setting floatOverHud)
     why: the strip sat behind the HUD's bars and a click on a summon's portrait hit Projected Ward (Area 6 re-run W8)
