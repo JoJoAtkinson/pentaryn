@@ -27,6 +27,10 @@
 - [declared] pings-rob-1 (fixed by the edge-1 design, now pinned): a hot re-import — a second `ready`
   without `uninstall()` — keeps this tab's pings not yet written and their flush; they are merged
   into the stored log instead of being dropped and the old log rewritten over them.
+- [declared] pings-async-1 (fixed by the edge-1 design, now pinned): every log write on one tab — a
+  flush and `clear()` — goes through the log's one `serialStore` queue (a Foundry `Semaphore(1)`), so
+  a write slower than FLUSH_MS never overlaps the next flush or a `clear()`, and with no Setting
+  document yet only one create happens.
 
 - Rebuilt on the blueprint (tier small, kit `settings, api, patch, election`): pure core
   `pings-core.mjs`, `settings.mjs`, `api-manifest.mjs`, the `capture.mjs` feature; the
