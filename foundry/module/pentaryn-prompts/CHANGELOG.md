@@ -58,6 +58,10 @@ cssPrefix `pp-`, afterSync). Each **[declared]** change goes to the live check.
   hooks and their scopes are one table, `core/cache.mjs` `INVALIDATION` (hook → `scene` | `self` |
   `world` | `setting`), and `INVALIDATING_HOOKS` is its keys. `deleteActor` joins it as a world-wide
   drop, as `updateActor` already was.
+- **[declared] The placed document types are one list** (prompts-core-EXT-3): `replace.mjs`'s
+  private `PLACED` table (type → scene collection: Token, Note, AmbientLight, Tile) gives both the
+  per-scene create order and the order a gone marker's replacement is looked up in. Same order as
+  before, no behaviour change.
 - `ensureMarkers` repairs every drifted actor in one batch update. A hot re-import after
   `uninstall()` re-wires and republishes at once.
 - Console only (DP9): a core token API that throws warns once; swallowed failures log at debug

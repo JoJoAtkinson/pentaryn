@@ -44,7 +44,14 @@ export const EYE = "assets/tokens/custom/props/icon-eye.webp";
 export const HOTSPOT_TEMPLATE = "Hotspot · Look (template)";
 export const CREATURE_FOLDER = "Foundry MCP Creatures";
 const DRY_RUN_OVER = 5;
-const TYPES = ["Token", "Note", "AmbientLight", "Tile"];
+/** The placed document types (type → the scene's collection), in create order: TYPES and whyGone read it. */
+const PLACED = Object.freeze([
+  ["Token", s => s.tokens],
+  ["Note", s => s.notes],
+  ["AmbientLight", s => s.lights],
+  ["Tile", s => s.tiles]
+]);
+const TYPES = PLACED.map(([type]) => type);
 
 /** Marker sets that have been dry-run this session (signature → ms). */
 const dryRuns = new Map();
@@ -95,8 +102,8 @@ function resolveOne(spec, index, { call, force }) {
 /** A gone marker: the document built from it (provenance), or the marker a size chip swapped it for. */
 function whyGone(scene, markerId) {
   try {
-    for (const coll of [scene.tokens, scene.notes, scene.lights, scene.tiles]) {
-      const doc = coll?.find(d => provenanceOf(d)?.markerId === markerId && provenanceOf(d)?.sceneId === scene.id);
+    for (const [, collectionOf] of PLACED) {
+      const doc = collectionOf(scene)?.find(d => provenanceOf(d)?.markerId === markerId && provenanceOf(d)?.sceneId === scene.id);
       if (doc) return { replacedBy: createdText({ type: doc.documentName, id: doc.id, name: doc.name || doc.text || doc.entry?.name || (doc.documentName === "AmbientLight" ? "Light" : "") }) };
     }
     let id = markerId, next = null;
