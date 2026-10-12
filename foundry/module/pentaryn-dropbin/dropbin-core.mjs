@@ -25,7 +25,7 @@ export {
 
 export const SHORT = "dropbin";
 export const NS = "dropbin";
-export const VERSION = "0.2.2";                          // === module.json version (a test pins it)
+export const VERSION = "0.2.3";                          // === module.json version (a test pins it)
 export const CONTRACT = "pentaryn-dropbin/api@1";
 export const I18N = "PENTARYN_DROPBIN";
 export const CSS = "pd-";

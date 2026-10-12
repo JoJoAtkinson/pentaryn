@@ -650,9 +650,17 @@ def test_failed_upload_leaves_the_temp_tar_and_names_it(two_hosts, monkeypatch, 
         cloud.backup("shutdown")
     err = capsys.readouterr().err
     [left] = list((two_hosts.data["mac"] / ".pentaryn-tmp").glob("world-*-mac.tar.gz"))
-    assert str(left) in err and "rclone copyto" in err
+    assert str(left) in err and "the next backup retries it" in err
     assert cloud.snapshots(cloud.store()) == []
     assert bootstate.load().based_on is None  # nothing recorded for a failed upload
+    # still queued: the next backup uploads it (and records it) before anything else
+    from scripts.foundry import uploadq
+    assert [j.name for j in uploadq.pending()] == [left.name]
+    del fake.fail_always["copyto"]
+    with two_hosts.use("mac"):
+        assert cloud.backup("manual") == 0
+    assert [s.name for s in cloud.snapshots(cloud.store())] == [left.name]
+    assert bootstate.load().based_on == left.name and not left.exists()
 
 
 def _cloud_down(fake):
@@ -907,8 +915,13 @@ def _tree_hash(root):
 
 
 def _tmp_files(root):
+    """Files left in the temp dir, except the upload queue's own bookkeeping (its lock
+    files, status file and log — uploadq.py), which outlive every backup by design."""
+    from scripts.foundry import uploadq
+    keep = {uploadq.BUILD_LOCK, uploadq.UPLOAD_LOCK, uploadq.STATUS_FILE, uploadq.LOG_FILE}
     tmp = root / cloud.TMP_DIRNAME
-    return sorted(p.relative_to(tmp).as_posix() for p in tmp.rglob("*") if p.is_file()) \
+    return sorted(p.relative_to(tmp).as_posix() for p in tmp.rglob("*")
+                  if p.is_file() and p.relative_to(tmp).as_posix() not in keep) \
         if tmp.exists() else []
 
 
@@ -1666,7 +1679,15 @@ def test_verify_dies_naming_the_module_when_its_folder_changed_meanwhile(two_hos
         after = bootstate.load()
     assert (after.based_on, after.digest) == (first.based_on, first.digest)   # nothing recorded
     assert _names(two_hosts.cloud) == [first.based_on]      # the incomplete one is gone
-    assert _tmp_files(mac) == []
+    # the queue dropped it (never retried); its world tar is kept and named
+    [kept] = _tmp_files(mac)
+    assert kept.startswith("incomplete/world-") and "job dropped" in err and kept in err
+    from scripts.foundry import uploadq
+    with two_hosts.use("mac"):
+        assert uploadq.pending() == []
+        assert cloud.backup("shutdown") == 0                # the tree as it is now: lands
+        assert bootstate.load().based_on != first.based_on
+    assert _tmp_files(mac) == [kept]                        # kept until Joe deletes it
 
 
 # healing (§3.5 step 3)

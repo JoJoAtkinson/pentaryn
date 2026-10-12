@@ -48,7 +48,7 @@ test("PT3-1: a corpse revived from the HUD gives back the base actor's ownership
   assert.equal(tok.flags[MOD].corpse, true);
   await corpses.revive(tok);
   assert.equal(tok.flags[MOD].corpse, undefined, "no longer our corpse");
-  assert.equal(tok.delta.ownership, null, "the delta inherits the base actor again");
+  assert.equal(tok.delta.ownership ?? null, null, "the delta inherits the base actor again");
   assert.equal(playerLevel(tok), NONE);
   assert.deepEqual(tok.flags[MOD], {}, "no dropbin flag left behind");
 });
@@ -64,7 +64,7 @@ test("PT3-1: a delta map set before death (a creature shared with a player) come
 test("PT3-1: a corpse made before the fix (no saved ownership) reverts to the base actor's", async () => {
   const tok = goblin({ default: OBSERVER }, { [MOD]: { corpse: true, sight: true } });
   await corpses.fromCorpse(tok);
-  assert.equal(tok.delta.ownership, null);
+  assert.equal(tok.delta.ownership ?? null, null);
   assert.equal(playerLevel(tok), NONE);
   assert.equal(tok.sight.enabled, true);
   assert.deepEqual(tok.flags[MOD], {});
@@ -78,6 +78,50 @@ test("PT3-1: a corpse that stopped being a pile and is re-piled keeps the pre-de
   await corpses.toCorpse(tok);
   assert.equal(tok.flags[MOD].ownership, null, "the saved pre-death map survives a re-pile");
   await corpses.fromCorpse(tok);
-  assert.equal(tok.delta.ownership, null);
+  assert.equal(tok.delta.ownership ?? null, null);
   assert.equal(playerLevel(tok), NONE);
+});
+
+/* ── PT3-1 live (wave 2): the server's copy of delta.ownership can differ from the clients' ──────── */
+
+// Foundry 14.369 (seen live on fresh scenes): the server can drop a delta write it already broadcast,
+// so every client shows the corpse's {default: OBSERVER} while the server holds the old value. A
+// write equal to the SERVER's copy is then no change: nothing goes out and the clients keep OBSERVER.
+// `serverSide` makes the stub's token behave like that; a ForcedDeletion always goes out.
+function serverSide(tok, serverOwnership) {
+  const server = { ownership: serverOwnership };
+  const update = tok.update.bind(tok);
+  tok.update = async (changes = {}, options = {}) => {
+    const c = { ...changes };
+    if ("delta.ownership" in c) {
+      const v = c["delta.ownership"];
+      if (foundry.data?.operators?.ForcedDeletion && v instanceof foundry.data.operators.ForcedDeletion) server.ownership = null;
+      else if (JSON.stringify(v ?? null) === JSON.stringify(server.ownership ?? null)) delete c["delta.ownership"];
+      else server.ownership = v;
+    }
+    if ("delta.-=ownership" in c) server.ownership = null;
+    return update(c, options);
+  };
+  return server;
+}
+
+test("PT3-1 live: the server lost the corpse map (server null, clients OBSERVER): a revival still clears the clients", async () => {
+  const tok = goblin(null);
+  await corpses.toCorpse(tok);
+  assert.deepEqual(tok.delta.ownership, { default: OBSERVER });
+  serverSide(tok, null);                                   // the server never kept {default: OBSERVER}
+  await corpses.revive(tok);
+  assert.equal(tok.delta.ownership ?? null, null, "the clients' OBSERVER map is gone");
+  assert.equal(playerLevel(tok), NONE, "the ZZ player no longer observes the revived NPC");
+});
+
+test("PT3-1 live: a saved per-token map the server still holds comes back on the clients too", async () => {
+  const shared = { default: NONE, [PLAYER]: OBSERVER };
+  const tok = goblin({ ...shared });
+  await corpses.toCorpse(tok);
+  assert.deepEqual(tok.delta.ownership, { default: OBSERVER, [PLAYER]: OBSERVER });
+  const server = serverSide(tok, { ...shared });           // the corpse map was lost server-side
+  await corpses.fromCorpse(tok);
+  assert.deepEqual(tok.delta.ownership, shared, "the clients get the saved map, not OBSERVER");
+  assert.deepEqual(server.ownership, shared, "and the server holds it");
 });

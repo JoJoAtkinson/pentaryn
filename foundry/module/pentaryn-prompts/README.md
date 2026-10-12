@@ -225,6 +225,8 @@ source, since dnd5e's derived data of an unidentified item hides both) or a crea
 provenance `note` as `Why:`, and the description cut at a sentence (`previewSentences`, `gatherChars` 400).
 A description is printed once per actor: further unlinked tokens of that actor with the same text say
 `Description: same as t4 "Goblin"` (0.4.4, play test PT2-5); a token whose text differs prints its own.
+When that own (delta) text is cut, the pointer names the token, not `get-character <base id>` (which
+prints the base actor's text): `… (cut, this token's own text: eval-js fromUuidSync("<token uuid>").actor.system.details.biography.value)` (0.4.5).
 
 Not modelled: wall heights / Levels elevations (the gather prints a `WARN` line). Hex grids count
 hexes (cube distance over core's occupied offsets); notes, lights and tiles occupy the hex under their
@@ -232,6 +234,7 @@ centre.
 
 ## Status and known limits (2026-10-10)
 
+0.4.5 (wave 2 live check: a cut token's own biography points at the token, not the base actor).
 0.4.4 (wave 1 play-test fixes, branch fix/playtest-2026-10-11: PT2-2 a new character's spell slots
 start full; PT2-5 gather prints one description per actor).
 0.4.3 (usability Area 10 fixer pass: a built Monk's weapons get the Martial Arts enchantment).

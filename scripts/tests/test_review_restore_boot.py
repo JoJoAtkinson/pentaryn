@@ -75,8 +75,13 @@ def _manifests(cloud_dir):
 
 
 def _tmp_files(root):
+    """Files left in the temp dir, except the upload queue's own bookkeeping (its lock
+    files, status file and log — uploadq.py), which outlive every backup by design."""
+    from scripts.foundry import uploadq
+    keep = {uploadq.BUILD_LOCK, uploadq.UPLOAD_LOCK, uploadq.STATUS_FILE, uploadq.LOG_FILE}
     tmp = root / cloud.TMP_DIRNAME
-    return sorted(p.relative_to(tmp).as_posix() for p in tmp.rglob("*") if p.is_file()) \
+    return sorted(p.relative_to(tmp).as_posix() for p in tmp.rglob("*")
+                  if p.is_file() and p.relative_to(tmp).as_posix() not in keep) \
         if tmp.exists() else []
 
 

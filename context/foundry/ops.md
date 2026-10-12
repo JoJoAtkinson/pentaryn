@@ -33,7 +33,7 @@ Where this one and `foundry-vtt.md` overlap — the actors import pipeline and i
 
 | I want to… | Do |
 | ---------- | -- |
-| Play tonight | `make vtt-up` → players at <https://vtt.atjoseph.com> → `make vtt-down` after |
+| Play tonight | `make vtt-up` → players at <https://vtt.atjoseph.com> → `make vtt-down` after (returns at once; the snapshot uploads in the background — `make foundry-cloud` shows it, and don't sleep the laptop until it says done; `WAIT=1` waits instead) |
 | Get **yourself** into the world, no dropdown, no typed password | `make login` — §2's login box |
 | Know if anything's running | `make vtt` — Foundry, tunnel pid, and public reachability, three separate probes |
 | Add art (tokens/maps/tiles/portraits/audio) | Drop `<kind>-<nn>.zip` in `OneDrive/DnD/foundry/assets/`, then `make foundry-assets` (or just `make vtt-up`) |
@@ -165,7 +165,7 @@ pack (`pentaryn-seafoot-maps.scenes` is unlocked in both worlds).
 
 ```
 make vtt-up      foundry-boot → foundry-backup-safe → foundry-assets-safe → foundry-up → tunnel-up
-make vtt-down    tunnel-down → foundry-down → foundry-backup REASON=shutdown
+make vtt-down    tunnel-down → foundry-down → foundry-backup REASON=shutdown BACKGROUND=1   (WAIT=1: no BACKGROUND)
 make vtt         status only (alias: vtt-status)
 ```
 
@@ -181,6 +181,26 @@ The order is not arbitrary. Each step needs the previous one's state:
 
 `vtt-down` reverses it exactly: close the public surface first, stop the app, *then* snapshot —
 because the snapshot is the step that requires "stopped".
+
+**The upload runs in the background.** `vtt-down` builds the tar while Foundry is stopped (that
+part needs "stopped", so it finishes before the command returns — the world tar and a tar of any
+module/system bundle the cloud lacks), then hands the upload (~45 MB + those bundles) to a
+detached process and prints one line: the name, `make foundry-cloud` for progress, and *don't
+sleep the laptop until it finishes* (on the Mac `caffeinate` holds off idle sleep while it runs,
+but closing the lid still sleeps). `make vtt-down WAIT=1` is the old blocking behaviour. The
+queue, the locks and the status file live in `FOUNDRY_DATA/.pentaryn-tmp/`
+([`uploadq.py`](../../scripts/foundry/uploadq.py)); the uploader's own output is `upload.log`
+there, and each upload adds `cloud-upload` lines (queued, uploading, done/failed) to
+`foundry/logs/ops-YYYY-MM.jsonl`.
+
+| While an upload is running or queued… | What happens |
+| ------------------------------------- | ------------ |
+| `make foundry-cloud` | First line: `upload  in progress: <name>`, or `pending: <name>` (not running — interrupted), or `last: <name> done/FAILED` |
+| `make vtt-up` | The boot step **keeps local** without asking (the cloud does not show this world's newest state yet). The pre-launch backup skips while an upload runs; an interrupted one is restarted in the background, so the launch never waits for it |
+| A second `make vtt-down` | Unchanged world → nothing new is built. Changed → a new tar is queued **behind** the first, based on it; both go up in order. Never a duplicate |
+| `make foundry-backup`, `foundry-restore`, `FROM=latest\|<name>`, the updater | Wait for the running upload ("waiting for the background upload of …"), upload anything still queued, then do their own work — so the based-on record is never stale and a restore is never overwritten by an upload finishing after it |
+| The upload fails or the machine sleeps/crashes | The tar and its job stay queued in `.pentaryn-tmp/`; the based-on record has **not** moved. The next backup of any kind (or `make vtt-down`) retries it; a `.partial` left in the cloud is swept after a day as before |
+| A bundle the queued snapshot reuses was swept from the cloud while it waited, and the module changed since | That upload can never be complete, so it is **dropped**, not retried: what of it landed is removed again, its world tar is kept as `.pentaryn-tmp/incomplete/<name>` (`make foundry-cloud` names it), and the uploader goes on to the next queued one. A blocking backup that hits the same thing fails with a message instead (§3) |
 
 | Target | Does |
 | ------ | ---- |
@@ -328,10 +348,10 @@ the bundle each module and system was at. Snapshots from before bundles (untagge
 | ------ | --------- | ------------ |
 | `make foundry-boot` | ⬇ maybe | **The boot choice** (below). Part of `vtt-up` and `foundry-up`; `FROM=latest\|local\|<name>` decides without asking |
 | `make foundry-assets` | ⬇ down | Unpacks any new `<kind>-<nn>.zip` into `Data/assets/<kind>/<kind>-<nn>/`. Tracked in `foundry/assets-manifest.json` (sha256, bytes, mtime); a zip whose size and mtime match is skipped **without a download** |
-| `make foundry-backup` | ⬆ up | Tars `Data/worlds` + `Config` (**~45 MB**) in `FOUNDRY_DATA/.pentaryn-tmp/`, with the bundle manifest as its first member and in the `.parent` sidecar. Uploads any module/system bundle the cloud lacks **first** (fingerprint = a content hash that ignores LevelDB housekeeping, so a launch changes nothing), then the sidecar, then the world tar (as `<name>.partial`, renamed, size-checked), then checks every bundle it names is still there. Keeps **10 per host** (plus that host's last 3 restore `.safety` copies, counted apart); a snapshot within 5 days of this host's newest **replaces** it; skips when the world tree and the manifest are unchanged (re-uploading any bundle its snapshot names that was deleted by hand — after a restore of a full snapshot, nothing). A backup that uploaded ends with the bundle sweep |
+| `make foundry-backup` | ⬆ up | Tars `Data/worlds` + `Config` (**~45 MB**) in `FOUNDRY_DATA/.pentaryn-tmp/`, with the bundle manifest as its first member and in the `.parent` sidecar, and stages a tar of every module/system bundle the cloud lacks (fingerprint = a content hash that ignores LevelDB housekeeping, so a launch changes nothing). The upload sends those bundles **first**, then the sidecar, then the world tar (as `<name>.partial`, renamed, size-checked), checking before the sidecar and again after the tar that every bundle it names is still there. Keeps **10 per host** (plus that host's last 3 restore `.safety` copies, counted apart); a snapshot within 5 days of this host's newest **replaces** it; skips when the world tree and the manifest are unchanged (re-uploading any bundle its snapshot names that was deleted by hand — after a restore of a full snapshot, nothing). A backup that uploaded ends with the bundle sweep. With `BACKGROUND=1` (what `vtt-down` passes) the upload runs in a detached process |
 | `make foundry-backup-safe` | ⬆ up | Same, `--if-stopped` — the lifecycle variant |
-| `make foundry-restore` | manual | No `SNAP` → lists every host's snapshots (name, host, UTC time, version, size, `bundled`/`full`). `SNAP=<name>` (any host's, or `major-release/`) → download the world tar and **only the bundles this machine lacks**, **archive current state first**, replace worlds + Config, swap only the changed modules, remove modules the snapshot does not have (they are in the safety copy; with no local world they are left and listed); demands you type `restore`. A full snapshot clears and extracts worlds, Config and modules, as before — keeping in place whatever in `Data/modules` is not a bundle (the safety copy cannot hold it) |
-| `make foundry-cloud` | — | Status: storage (rclone/folder + root), host and role, what this world is based on, newest per host, untagged count, bundles (in the cloud, unreferenced, local ones not yet uploaded) |
+| `make foundry-restore` | manual | No `SNAP` → lists every host's snapshots (name, host, UTC time, version, size, `bundled`/`full`). `SNAP=<name>` (any host's, or `major-release/`) → finish any queued upload, download the world tar and **only the bundles this machine lacks**, **archive current state first**, replace worlds + Config, swap only the changed modules, remove modules the snapshot does not have (they are in the safety copy; with no local world they are left and listed); demands you type `restore`. A full snapshot clears and extracts worlds, Config and modules, as before — keeping in place whatever in `Data/modules` is not a bundle (the safety copy cannot hold it) |
+| `make foundry-cloud` | — | Status: this host's background upload (in progress / pending / last result; a dropped one names the tar kept in `.pentaryn-tmp/incomplete/`), storage (rclone/folder + root), host and role, what this world is based on, newest per host, untagged count, bundles (in the cloud, unreferenced, local ones not yet uploaded) |
 | `make foundry-bundles` | — | Every local module and system with its version, fingerprint, size and whether its bundle is in the cloud; then the cloud bundles no snapshot references |
 | `make foundry-bundles-gc` | manual | The sweep every uploading backup runs, by hand: lists the bundles no retained snapshot references that are older than 7 days. A dry run; `YES=1` deletes them |
 | `make foundry-prune-untagged` | manual | Lists the untagged (pre-2026-10-11) snapshots and deletes them **only** on a typed `delete`. Nothing else ever deletes them |
@@ -421,20 +441,31 @@ Restore `.safety` copies and `major-release/` are never offered as "newer".
   after a restore, this host's next backup digest-skips instead of re-uploading the world.
 - **A `.partial` is never a snapshot.** Uploads land as `<name>.partial` and are renamed when
   complete; one older than 24 h is swept as a crash leftover (younger ones may be the other
-  machine mid-upload). A failed upload leaves the tar in `FOUNDRY_DATA/.pentaryn-tmp/` and prints
-  the `rclone copyto` that finishes it; the bundle tars it staged are removed by the next backup
-  once the cloud has them. The temp dir needs ~2× (the world tar + the bundles it
-  stages or fetches) free; backup and restore check, and name both numbers.
+  machine mid-upload). A failed upload leaves the tar **queued** in `FOUNDRY_DATA/.pentaryn-tmp/`
+  and the next backup retries it before anything else; the bundle tars a failed blocking
+  backup staged are removed by the next backup once the cloud has them. The temp dir needs ~2×
+  (the world tar + the bundles it stages or fetches) free; backup and restore check, and name
+  both numbers.
+- **The based-on record moves only when an upload completes**, background or not.
+- **A queued upload whose bundle is gone for good is dropped, not retried.** When a bundle the
+  queued snapshot reuses was swept from the cloud while it waited *and* the module folder has
+  changed since (so it cannot be rebuilt), that upload can never be complete: the uploader
+  removes whatever of it already landed, keeps its world tar as
+  `.pentaryn-tmp/incomplete/<name>` (named by `make foundry-cloud`), and goes on with the next
+  queued one — which still uploads linked. A foreground backup (`make foundry-backup`,
+  `vtt-down WAIT=1`, the pre-launch and pre-restore snapshots) fails loudly instead, so a
+  restore stops before touching anything.
 - **A bundle is deleted only by the mark-and-sweep**, never by name, never younger than 7 days —
   not even by an upload's size check: in `bundles/` a different size after the upload is the
   other machine's copy of the same bundle landing a moment later, and it is kept.
-  The mark is every sidecar in `world-backups/` and `major-release/` (safety copies included); a
-  snapshot whose sidecar is missing or torn is marked from its tar's own first member, and one
-  that cannot be read either way stops the sweep. Right before deleting, GC looks again for
-  snapshots that landed while it was marking. A backup refreshes the cloud date of any old
-  bundle it reuses (so the other host's GC sees it as new), checks the bundles before writing
-  its sidecar and again after its snapshot lands, and re-uploads anything swept under it. Every
-  check of what the cloud holds lists it fresh (rclone otherwise reuses a listing per process).
+  The mark is every sidecar in `world-backups/` and `major-release/` (safety copies included)
+  plus this host's queued uploads; a snapshot whose sidecar is missing or torn is marked from
+  its tar's own first member, and one that cannot be read either way stops the sweep. Right
+  before deleting, GC looks again for snapshots that landed while it was marking. A backup
+  refreshes the cloud date of any old bundle it reuses (so the other host's GC sees it as new),
+  checks the bundles before writing its sidecar and again after its snapshot lands, and
+  re-uploads anything swept under it. Every check of what the cloud holds lists it fresh
+  (rclone otherwise reuses a listing per process).
 - **A full (legacy) snapshot restores exactly as before.** The sidecar says which kind a snapshot
   is and the tar's first member confirms it; when they disagree the restore refuses before
   touching anything. A restore whose bundles are not all in the cloud refuses the same way.
@@ -444,7 +475,8 @@ Restore `.safety` copies and `major-release/` are never offered as "newer".
   changed after extraction is **refused with a message**, not silently re-applied.
 - **One folder per pack**, so cross-pack collisions are structurally impossible.
 - **Filenames kebab-case at extraction only** — never rename inside an extracted pack.
-- **Backup and restore hard-refuse while Foundry is running.**
+- **Backup and restore hard-refuse while Foundry is running.** (The background *upload* of an
+  already-built tar does not care: it reads only the tar.)
 - **Art never goes in git.** OneDrive holds the bytes; `foundry/assets-manifest.json` holds the
   inventory and is committed.
 - **Only the primary runs the tunnel and the updater.** On the alt `tunnel-up` prints why and
@@ -484,6 +516,10 @@ The Mac needs no file at all. `python -m scripts.foundry.host show` prints what 
 
 Until this is done the Mac keeps using the OneDrive app's folder, exactly as before; the day it
 is done, the Mac switches to rclone on its own (`make foundry-cloud` shows which).
+
+**Done on the Mac 2026-10-11:** `make foundry-cloud` reads `rclone onedrive:DnD/foundry`, and the
+first Mac snapshot over rclone is `world-2026-10-11-212143-fvtt14.369-mac.tar.gz`. BOSS's
+`onedrive:` remote works too; BOSS's go-live is still to do (rclone plan §15).
 
 1. `brew install rclone` (already present: `/opt/homebrew/bin/rclone`).
 2. `rclone config`, then:

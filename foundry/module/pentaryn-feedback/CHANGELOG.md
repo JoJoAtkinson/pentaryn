@@ -1,5 +1,12 @@
 # Changelog — Pentaryn Feedback (`pentaryn-feedback`)
 
+## 0.1.1 — 2026-10-11
+
+- `/bug` in chat opens the dialog again on Foundry 14: the chat input is a ProseMirror editor, so the
+  `chatMessage` hook gets `<p>/bug …</p>`. `parseBugCommand` now reads the line's text content
+  (`chatText`: `<br>` and paragraph breaks become newlines, tags drop, entities decode), as core's
+  ChatLog.parse does. A line that does not start with a tag is still read as plain text.
+
 ## 0.1.0 — 2026-10-11
 
 - First version, generated from the Pentaryn addon blueprint (tier `full`, kit + `election`, `patch`).

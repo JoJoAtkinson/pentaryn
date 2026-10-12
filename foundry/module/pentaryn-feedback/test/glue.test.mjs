@@ -123,6 +123,18 @@ test("/bug <text> opens the dialog pre-filled and is not posted; other chat pass
   await app.close();
 });
 
+test("/bug from Foundry 14's chat editor (<p>-wrapped HTML) opens the dialog and is not posted", async () => {
+  const before = F.rendered.length;
+  assert.equal(F.fireCall("chatMessage", {}, "<p>/bug ZZ live &amp; check</p>", {}), false, "the line is swallowed");
+  await settle();
+  const app = F.rendered.at(-1);
+  assert.equal(F.rendered.length, before + 1);
+  assert.match(app.html, /<textarea[^>]*>ZZ live &amp; check<\/textarea>/);
+  assert.equal(F.fireCall("chatMessage", {}, "<p>/roll 1d20</p>", {}), true);
+  assert.equal(F.fireCall("chatMessage", {}, "<p>hello /bug</p>", {}), true);
+  await app.close();
+});
+
 test("api.open({ category, text }) pre-fills; an unknown category falls back to Bug", async () => {
   assert.deepEqual(await api.open({ category: "feature", text: "a map tab" }), { ok: true, open: true });
   assert.match(F.rendered.at(-1).html, /value="feature" checked/);

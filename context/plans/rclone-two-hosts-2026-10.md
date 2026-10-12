@@ -813,6 +813,31 @@ The final review found one high defect and one minor issue.
 | --- | --- | --- |
 | 13 | When the lineage list was cut at `LINEAGE_CAP`, the edge moved to the `based_on` snapshot's own mtime. After enough generations a diverged line read as "newer" and Enter = latest. In the reproduction, the Mac's Saturday session was replaced by BOSS's "addon test 2". With no safety copy, the Mac's next backup then coalesced Saturday away. The alt side failed the same way. Minor: a sidecar without `origin_before` could put `Infinity` (not valid strict JSON) into the state file and later sidecars | Sidecars carry `ancestor_mtimes` and `BootState` carries `lineage_mtimes`. At the cut, the edge is the newest dropped ancestor's mtime. If that mtime is unknown, the oldest kept known mtime is used instead, and failing that the based-on mtime. It is never read from a name. `LINEAGE_CAP` is now 2000. Coalescing replaces only a snapshot the new tree contains (its based-on or lineage). With no record, nothing is coalesced. An unbounded edge is written as `null`, and a sidecar reads it back as unbounded. The boot state stores it as None, meaning the based-on snapshot's own mtime. Tests set `LINEAGE_CAP` to 3 and cover the primary, the alt, a straight line past the cap, and coalescing |
 
+
+### After the merge: `vtt-down` uploads in the background (2026-10-11)
+
+Joe chose to have `make vtt-down` return at once instead of waiting out a ~3 GB upload. Built on
+`feature/vtt-down-background-upload`; tests: `scripts/tests/test_cloud_background_upload.py`.
+Use-doc: `ops.md` §2 ("The upload runs in the background").
+
+| Design said | Built | Why |
+| --- | --- | --- |
+| `vtt-down` = `foundry-backup REASON=shutdown`, blocking (§7) | `vtt-down` passes `BACKGROUND=1` → `cloud backup --background`: the tar is built in the foreground (Foundry stopped), queued as a job in `.pentaryn-tmp/` (`scripts/foundry/uploadq.py`), and a detached `cloud upload-pending` (own session; `caffeinate -i -w` on the Mac) uploads it. `make vtt-down WAIT=1` is the old blocking path | Joe's choice. Only the tar needs "stopped"; the upload reads only the tar |
+| `_backup` builds and uploads in one function | Split: `_build` (digest skip, name, disk check, tar → job file written last) and `_upload_job` (major-release promotion, sidecar, `.partial` copy + rename, record, coalesce, prune, system mirrors). Every blocking caller runs both; the background path runs the second later | The upload half had to be runnable by another process, any time later, and re-runnable after a crash |
+| Lineage and coalescing computed when the tar is built | Computed when it is **uploaded**, from the based-on record at that moment, and only if that record is still the one the tar extends (`job.parent`); otherwise the snapshot goes up with `"ancestors": null` and the record is left alone | The record must move only when the upload completes, and a second tar queued behind an unfinished one must extend it, not its parent |
+| No lock — each host prunes only its own (§0) | Two `flock` locks per machine, `snapshot-build.lock` then `snapshot-upload.lock` (always in that order). Blocking backup, restore and an explicit `FROM=` boot take both, wait ("waiting for the background upload of …"), and upload anything queued first. The pre-launch backup skips while an upload runs, and restarts an interrupted one in the background | No duplicate upload, no stale or overwritten based-on record. `flock` dies with its process, so "locked" always means "uploading now" |
+| Boot choice compares the cloud's newest with the based-on record (§6.2) | While this host's own upload is queued or running, the boot keeps local without asking; `FROM=latest\|<name>` finishes the upload first | The cloud does not show this world's newest state yet; without this, a restore could race the upload that would then record the old world as based-on |
+| A failed upload prints the `rclone copyto` that finishes it by hand | The tar stays queued; the next backup of any kind (or `vtt-down`) retries it. A snapshot already in the cloud at the right size (a crash after the rename) is recorded, not uploaded again | A hand copy skipped the sidecar and the record |
+| Restore's safety backup protects the restore target (§review #2) | The restore's drain of the queue protects it too: a queued upload that would coalesce the snapshot about to be restored keeps it | Otherwise `foundry-restore SNAP=<own newest>` behind a queued tar would download nothing |
+| — | `make foundry-cloud` starts with `upload  in progress: <name>` / `pending: <name>` / `last: <name> done\|FAILED`; each upload adds `cloud-upload` lines to `foundry/logs/ops-YYYY-MM.jsonl` | Where to see progress |
+
+Not changed: `REASON=shutdown`, the 5-day coalescing, the 10-per-host roll, safety copies, the
+lineage sidecar format, the stale-`.partial` sweep. Not covered: the updater's in-run rollback
+(`recover._restore_world_tar`) takes no lock — its own blocking `back_up` has already emptied the
+queue and `vtt-up`/`vtt-down` refuse while it runs. The updater's `cloud backup` has a 900 s
+timeout; if it ever lands behind a running 3 GB upload it fails loudly ("no fresh restore point")
+rather than updating.
+
 ---
 
 ## 15. Go-live checklist (for Joe, after the merge)

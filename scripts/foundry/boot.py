@@ -13,7 +13,10 @@ the boot step says so and offers it as the default:
   as pending so this host's next backup cannot bury it (asked at the next terminal);
 * a newer snapshot that does not contain this world's based-on one (its ``.parent``
   lineage lacks it) is "diverged": offered, but Enter keeps local;
-* ``FROM=latest | local | <snapshot name>`` decides without asking.
+* ``FROM=latest | local | <snapshot name>`` decides without asking;
+* while this world's own snapshot is still uploading in the background (``make
+  vtt-down``), boots local without asking; an explicit ``FROM=latest|<name>`` waits for
+  that upload to finish first.
 
 "Newer" is by the cloud listing's mtime (the only clock comparable across hosts) and
 "based on" is the local record in ``bootstate.py``. A snapshot this host just uploaded
@@ -177,6 +180,14 @@ def decide(from_: str | None, interactive: bool, *, st=None, adopt: bool = True)
             names = "\n".join(f"      {s.name}" for s in cloud.by_mtime(snaps)) or "      (none)"
             raise BootError(f"FROM={from_}: no such snapshot. The cloud has:\n{names}")
         return Decision("restore", chosen, f"FROM={from_}", warning=warning)
+
+    # 5b. this world's own snapshot is still uploading (make vtt-down hands the upload to
+    #     a background process): the cloud does not show this world's newest state yet,
+    #     so nothing there can be judged newer. Explicit FROM= finishes it first (choose).
+    inflight = cloud.upload_in_flight()
+    if inflight:
+        return Decision("local", None, f"this world's snapshot {inflight} is still uploading "
+                        "in the background (make foundry-cloud shows it)", warning=warning)
 
     # 6.
     if newest is None:
@@ -366,6 +377,19 @@ def choose(from_: str | None = None, interactive: bool | None = None) -> int:
     """Decide, say why, and act (restore if chosen). Exit status for the make step."""
     from_ = from_ if from_ is not None else os.environ.get("FROM")
     interactive = is_interactive() if interactive is None else interactive
+    explicit = (from_ or "").strip() not in ("", "local")
+    if explicit and not host.is_running() and cloud.upload_in_flight():
+        # FROM=latest must see this world's own newest snapshot, and a restore must not
+        # race the upload that would record the old world as based-on afterwards.
+        say(f"▸ boot: finishing this world's background upload first (FROM={from_})")
+        try:
+            cloud.finish_uploads()
+        except SystemExit as exc:
+            if exc.code not in (0, None):
+                print("  ✗ the queued upload did not finish — nothing was restored.\n"
+                      "    boot the local world instead: make foundry-up FROM=local",
+                      file=sys.stderr)
+                return FAIL
     try:
         d = decide(from_, interactive)
     except BootError as exc:

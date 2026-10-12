@@ -23,9 +23,10 @@ from scripts.foundry.storage import RcloneStorage
 
 
 def _tree_hash(root) -> str:
+    """Every file under the data root, except the upload queue's (empty) lock files."""
     h = hashlib.sha256()
     for p in sorted(root.rglob("*")):
-        if p.is_file():
+        if p.is_file() and not (p.parent.name == ".pentaryn-tmp" and p.suffix == ".lock"):
             h.update(str(p.relative_to(root)).encode())
             h.update(p.read_bytes())
     return h.hexdigest()

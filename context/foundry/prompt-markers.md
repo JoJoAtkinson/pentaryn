@@ -123,7 +123,8 @@ potions, anything magic), a `Light:` placed with it (`dim 10 ft, #9fd3ff, pulse`
 characters of its description cut at a sentence; a description cut short ends
 `… (cut, full text: get-character <id>)` — if a neighbour matters to the design, read its full
 sheet. A description prints once per actor: further unlinked tokens of that actor with the same text
-say `Description: same as t4 "Goblin"` (a token whose own copy differs prints its own). A stock monster this system built without a new
+say `Description: same as t4 "Goblin"` (a token whose own copy differs prints its own; cut, it
+points at the token: `… (cut, this token's own text: eval-js fromUuidSync("<token uuid>")…)`). A stock monster this system built without a new
 biography prints no Description (the book's lore is not the builder's); its prompt and `Why:` say what it
 is. That is enough to design a neighbour without opening its sheet.
 

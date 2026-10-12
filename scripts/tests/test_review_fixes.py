@@ -724,10 +724,11 @@ def test_pl1_a_rerun_after_the_folder_changed_leaves_no_staged_tar(two_hosts, mo
     with two_hosts.use("mac"), pytest.raises(SystemExit):
         cloud.backup("shutdown")                   # nothing landed; both bundles staged
     staging = mac / cloud.TMP_DIRNAME / bundles.STAGING
-    assert any(p.name.startswith("module@tools@") for p in staging.iterdir())
+    # since the upload queue: staged in the job's own folder, the job still queued
+    assert any(p.name.startswith("module@tools@") for p in staging.rglob("*"))
     (mac / "Data/modules/tools/scripts/main.js").write_text("// changed since\n")
     with two_hosts.use("mac"):
-        assert cloud.backup("shutdown") == 0       # old tools tar: no longer this tree's
+        assert cloud.backup("shutdown") == 0       # the queued job first, then this tree
     assert list(staging.iterdir()) == []
 
 
