@@ -14,7 +14,7 @@ import { SETTINGS, CLIENT_STATE, settingsSnapshot, setting } from "./settings.mj
 import { read, inbound, setTie, setNotes, removeTie, migrateLegacy } from "./ties-adapter.mjs";
 import {
   readKnown, addKnown, setKnownField, hideKnown, removeKnown, categoriesFor, notebookActor
-} from "./known.mjs";
+} from "./known-data.mjs";
 import {
   studyStateFor, requestStudy, studyAs, kindDialog, setKindOf, kindActorOf, setStudyTiers, setStudyOffset,
   studyTiersOf, setStudyHold, beliefs, pending, deliver, reset, studiedOf, resolveFact, loreStateFor, requestLore,
