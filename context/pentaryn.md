@@ -610,7 +610,7 @@ Plan: `plans/table-feedback-2026-10-08.md` (see its Built section). Backup `worl
 
 ## Talo's Wild Shape on the HUD (2026-10-09/10)
 
-Plan/record: `plans/druid-wild-shape.md`. Use-doc: `foundry/module/pentaryn-transform/README.md`. Module `pentaryn-transform` 0.2.0 installed 2026-10-09, now at **0.3.1** (adds `hud.mjs`, `starry.mjs`, `styles/transform.css`). Backup `world-2026-10-09-232812-fvtt14.367.tar.gz` (taken with `make foundry-backup REASON=pre-transform-0.2`; replaced `world-2026-10-09-185930-fvtt14.367.tar.gz`).
+Plan/record: `plans/druid-wild-shape.md`. Use-doc: `foundry/module/pentaryn-transform/README.md`. Module `pentaryn-transform` 0.2.0 installed 2026-10-09, now at **0.3.3** (adds `hud.mjs` and `styles/transform.css`; since wave 4 Starry Form is a feature that `hud.mjs` no longer imports). Backup `world-2026-10-09-232812-fvtt14.367.tar.gz` (taken with `make foundry-backup REASON=pre-transform-0.2`; replaced `world-2026-10-09-185930-fvtt14.367.tar.gz`).
 
 - **What changed for Talo:** Wild Shape (item `CVPK5NrDGJ841krP`, 3 uses) and Starry Form now live on the Argon Bonus bar: one click on a form tile shifts, **Return to Talo** / **Change Form** while shifted, one chat line per shift. Auto-revert at 0 HP, Incapacitated, 6 hours, and on a Long Rest. His data needed no edits; the 0.1 revert item `i9A691XB3y95S2ei` (flag `flags.pentaryn-transform.revert`) is kept and copied onto each form.
 - **2024 rules used:** uses by druid level, one back on a Short Rest, all on a Long Rest, Bonus Action to shift and to revert, duration 6 hours (PHB).
