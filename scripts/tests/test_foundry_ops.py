@@ -889,6 +889,29 @@ def test_ensure_world_launches_when_nothing_is_running(fake_admin):
     assert not fa.deactivated and fa.launched == ["space-journey"]
 
 
+def test_login_asks_foundry_for_its_status_once(monkeypatch, fake_admin):
+    """M15: login() read ``fa.status().world if fa.status().active`` — two GET /api/status
+    calls, which could also disagree if the world changed between them."""
+    fa = fake_admin(True, "ardenhaven")
+    calls = []
+    real_status = fa.status
+    fa.status = lambda: calls.append(1) or real_status()
+    picked = {}
+
+    def stop_at_pick(active, world, prompt):
+        picked["active"] = active
+        raise RuntimeError("stop here")
+
+    monkeypatch.setattr(login.service, "up", lambda: login.OK)
+    monkeypatch.setattr(login, "foundry_admin_password", lambda: "pw")
+    monkeypatch.setattr(login, "FoundryAdmin", lambda **kw: fa)
+    monkeypatch.setattr(login, "_pick_world", stop_at_pick)
+    monkeypatch.setattr(login, "_say", lambda *a, **k: None)
+    assert login.login(world="ardenhaven", user="Gamemaster", prompt=False) == login.FAIL
+    assert picked["active"] == "ardenhaven"
+    assert len(calls) == 1
+
+
 def test_handoff_is_single_use_and_nonce_guarded():
     """One request, at the nonce path only, and the port is closed afterwards."""
     import urllib.error

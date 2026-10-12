@@ -423,7 +423,8 @@ def login(user: str | None = None, world: str | None = None,
 
     fa = FoundryAdmin(base_url=base_url, admin_password=password)
     try:
-        active = fa.status().world if fa.status().active else None
+        st = fa.status()
+        active = st.world if st.active else None
         target = _pick_world(active, world, prompt)
 
         fa.authenticate()
