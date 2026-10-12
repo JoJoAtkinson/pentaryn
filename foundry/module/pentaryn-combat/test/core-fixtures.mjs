@@ -249,7 +249,7 @@ check("129 Monk: Flurry + Martial Arts (no Attack action needed in 2024)",
   followUps({ turn: freshTurn(K), weapons: [unarmed], features: ["monks-focus", "martial-arts"], focus: 2, unarmedId: "unarmed" }),
   [{ kind: "flurry", weaponId: "unarmed", count: 2 }, { kind: "martial-arts", weaponId: "unarmed", count: 1 }]);
 check("130 Monk 10 Heightened Focus: 3 strikes", followUps({ turn: freshTurn(K), features: ["monks-focus", "heightened-focus"], focus: 1, unarmedId: "unarmed" })[0].count, 3);
-check("131 Monk no Focus left: Martial Arts only", followUps({ turn: freshTurn(K), features: ["monks-focus", "martial-arts"], focus: 0, unarmedId: "unarmed" }).map(f => f.kind), ["martial-arts"]);
+check("131 Monk no Focus left: Flurry greyed, Martial Arts live (combat-core-EXT-12)", followUps({ turn: freshTurn(K), features: ["monks-focus", "martial-arts"], focus: 0, unarmedId: "unarmed" }).map(f => [f.kind, f.disabled ?? null]), [["flurry", "focus"], ["martial-arts", null]]);
 check("132 Monk after Flurry: nothing", followUps({ turn: recordFollowUp(freshTurn(K), "flurry"), features: ["monks-focus", "martial-arts"], focus: 2, unarmedId: "unarmed" }), []);
 check("133 Hew after crit", followUps({ turn: recordSwing(freshTurn(K), { kind: "main", weaponId: "greatsword", crit: true }), weapons: [greatsword], features: ["great-weapon-master"] }),
   [{ kind: "hew", weaponId: "greatsword" }]);

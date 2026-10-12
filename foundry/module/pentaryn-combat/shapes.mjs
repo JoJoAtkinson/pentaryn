@@ -421,11 +421,6 @@ export function followUpsFor(actor, { bonusFree = true } = {}) {
   for (const f of list) {
     if (f.kind === "offhand") f.via = core.offhandVia({ weapon: weapons.find(w => w.id === f.weaponId) ?? null, turn, offered: list });
   }
-  // Usability (area 3, C3): Flurry with no Focus left stays on the bar, greyed with its reason, instead of
-  // vanishing — a player who sees Martial Arts but no Flurry wonders whether the feature broke.
-  if (ctx.isOwnTurn && unarmed && features.has("monks-focus") && (focus ?? 0) < 1 && bonusFree && !turn.bonusUsed
-    && !turn.followUps.includes("flurry") && !turn.followUps.includes("martial-arts")) {
-    list.unshift({ kind: "flurry", weaponId: unarmed.id, count: features.has("heightened-focus") ? 3 : 2, disabled: "focus" });
-  }
+  // Flurry with no Focus left comes back greyed (`disabled: "focus"`) from core.followUps itself (combat-core-EXT-12).
   return list;
 }

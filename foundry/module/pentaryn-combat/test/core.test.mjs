@@ -91,3 +91,23 @@ test("tidyDiceCount: a resolver that throws leaves the part alone", () => {
   assert.equal(core.tidyDiceCount("(@scale.barbarian.rage-damage)d6", () => "2"), "2d6");
   assert.equal(core.tidyDiceCount(7), 7);
 });
+
+test("combat-core-EXT-12: core.followUps greys Flurry itself when no Focus is left; the strike count lives in core once", () => {
+  const turn = core.freshTurn("c1:1:cb1");
+  const monk = { turn, features: ["monks-focus", "martial-arts"], focus: 0, unarmedId: "unarmed" };
+  assert.deepEqual(core.followUps(monk), [
+    { kind: "flurry", weaponId: "unarmed", count: 2, disabled: "focus" },
+    { kind: "martial-arts", weaponId: "unarmed", count: 1 },
+  ]);
+  assert.deepEqual(core.followUps({ ...monk, features: ["monks-focus", "heightened-focus"], focus: null }),
+    [{ kind: "flurry", weaponId: "unarmed", count: 3, disabled: "focus" }], "no Focus pool, Heightened Focus: 3, greyed");
+  assert.deepEqual(core.followUps({ ...monk, focus: 1 })[0], { kind: "flurry", weaponId: "unarmed", count: 2 }, "Focus left: live");
+  // Not greyed-offered when the live one would not be: off-turn, Bonus spent, no Unarmed Strike, Martial Arts or Flurry used.
+  assert.deepEqual(core.followUps({ ...monk, isOwnTurn: false }), []);
+  assert.deepEqual(core.followUps({ ...monk, bonusFree: false }), []);
+  assert.deepEqual(core.followUps({ ...monk, turn: { ...turn, bonusUsed: true } }), []);
+  assert.deepEqual(core.followUps({ ...monk, unarmedId: null }), []);
+  assert.deepEqual(core.followUps({ ...monk, turn: core.recordFollowUp(turn, "martial-arts") }), []);
+  assert.deepEqual(core.followUps({ ...monk, turn: core.recordFollowUp(turn, "flurry") }), []);
+  assert.deepEqual(core.followUps({ ...monk, features: ["martial-arts"] }).map(f => f.kind), ["martial-arts"], "no Monk's Focus: no Flurry at all");
+});
