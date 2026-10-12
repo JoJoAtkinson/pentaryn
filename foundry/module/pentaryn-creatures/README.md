@@ -72,9 +72,9 @@ they are looking at.
 - **Left out:** GM-hidden tokens, Item Piles piles, `pentaryn-aoe` spell-area handles, tokens
   without an actor.
 - **Nothing is stored.** The list is computed from the scene every time it draws. It redraws on
-  token create and delete, on token updates that change its name, image, hiding, actor or flags
-  (not on a move), on scene change (`canvasReady`), on actor ownership/name/image changes, and on
-  the user's character change. A dismissed, killed or deleted summon simply stops being there.
+  token create and delete, on token updates that change its name, image, hiding, actor (id, link
+  or delta) or flags (not on a move), on scene change (`canvasReady`), on actor
+  ownership/name/image changes, and on the user's character change. A dismissed, killed or deleted summon simply stops being there.
 - **Over the Combat HUD (U-6-12):** while Argon's HUD is up it covers the hotbar, so the strip
   floats 8 px above the HUD's action bar, left-aligned with it, and drops back above the hotbar
   when the HUD closes. It looks twice a second, only while the strip is up, `floatOverHud` is on
