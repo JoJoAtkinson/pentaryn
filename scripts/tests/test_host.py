@@ -265,6 +265,42 @@ def test_stop_cmd_hook_runs_via_bash(monkeypatch, runs):
     assert runs == [["bash", "-c", "systemctl --user stop foundry"]]
 
 
+def _hung_hook(monkeypatch):
+    """subprocess.run that hangs (TimeoutExpired) on the bash hook — but only when a timeout
+    was asked for; without one the real run would block forever, which the test calls out."""
+    seen = []
+
+    def fake_run(argv, *a, **kw):
+        seen.append(kw.get("timeout"))
+        if argv[0] == "bash":
+            assert kw.get("timeout") == host.HOOK_TIMEOUT, "hook ran with no timeout"
+            raise subprocess.TimeoutExpired(argv, kw["timeout"])
+        return subprocess.CompletedProcess(argv, 0, "", "")
+
+    monkeypatch.setattr(host.platform, "system", lambda: "Linux")
+    monkeypatch.setattr(host.subprocess, "run", fake_run)
+    return seen
+
+
+def test_hung_stop_cmd_hook_is_not_delivered(monkeypatch):
+    """py-cloud-ac-4: a hung PENTARYN_STOP_CMD times out at 30s; request_stop says False so
+    stop() forces instead of waiting forever."""
+    assert getattr(host, "HOOK_TIMEOUT", None) == 30
+    _hung_hook(monkeypatch)
+    monkeypatch.setenv("PENTARYN_STOP_CMD", "systemctl --user stop foundry")
+    assert host.request_stop() is False
+
+
+def test_hung_start_cmd_hook_is_a_host_error(monkeypatch):
+    """py-cloud-ac-4: a hung PENTARYN_START_CMD raises HostError naming the hook and the
+    timeout, not a bare TimeoutExpired (or a hang)."""
+    assert getattr(host, "HOOK_TIMEOUT", None) == 30
+    _hung_hook(monkeypatch)
+    monkeypatch.setenv("PENTARYN_START_CMD", "systemctl --user start foundry")
+    with pytest.raises(host.HostError, match=r"PENTARYN_START_CMD.*30s"):
+        host.start()
+
+
 def test_mac_start_is_open_a(monkeypatch, runs):
     monkeypatch.setattr(host.platform, "system", lambda: "Darwin")
     monkeypatch.delenv("FOUNDRY_APP_ROOT", raising=False)

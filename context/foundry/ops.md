@@ -204,7 +204,7 @@ there, and each upload adds `cloud-upload` lines (queued, uploading, done/failed
 
 | Target | Does |
 | ------ | ---- |
-| `make foundry-up` / `foundry-down` | App only (plus the boot choice before `foundry-up`). Via `host.py`: `foundry-down` is `osascript quit`, falling back to `pkill` on the Mac; `PENTARYN_STOP_CMD` on BOSS |
+| `make foundry-up` / `foundry-down` | App only (plus the boot choice before `foundry-up`). Via `host.py`: `foundry-down` is `osascript quit`, falling back to `pkill` on the Mac; `PENTARYN_STOP_CMD` on BOSS (hooks get 30s: a hung stop hook is forced, a hung start hook fails naming the hook) |
 | `make foundry-boot` | The boot choice alone — `FROM=` to decide it |
 | `make tunnel-up` / `tunnel-down` | Tunnel only. `tunnel-up` starts cloudflared detached, writes the pidfile, and checks it survived 3 s |
 | `make tunnel-logs` | Last 40 lines of the cloudflared log |

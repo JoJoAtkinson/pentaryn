@@ -338,6 +338,9 @@ def pid() -> int | None:
         return None
 
 
+HOOK_TIMEOUT = 30  # seconds a PENTARYN_START_CMD / PENTARYN_STOP_CMD hook may take
+
+
 def _hook(name: str) -> str | None:
     return get(name)
 
@@ -349,7 +352,11 @@ def start() -> None:
     (BOSS's supervisor — the whole story), else a detached `node main.js`."""
     cmd = _hook("PENTARYN_START_CMD")
     if cmd:
-        subprocess.run(["bash", "-c", cmd], check=True)
+        try:
+            subprocess.run(["bash", "-c", cmd], check=True, timeout=HOOK_TIMEOUT)
+        except subprocess.TimeoutExpired:
+            raise HostError(f"PENTARYN_START_CMD did not return within {HOOK_TIMEOUT}s "
+                            "(it must start Foundry and return promptly)") from None
         return
     if is_mac():
         bundle = _mac_bundle()
@@ -375,7 +382,10 @@ def request_stop() -> bool:
     """Ask politely (a graceful quit closes LevelDB cleanly). True if the ask was delivered."""
     cmd = _hook("PENTARYN_STOP_CMD")
     if cmd:
-        return subprocess.run(["bash", "-c", cmd]).returncode == 0
+        try:
+            return subprocess.run(["bash", "-c", cmd], timeout=HOOK_TIMEOUT).returncode == 0
+        except subprocess.TimeoutExpired:
+            return False  # a hung hook is not delivered — stop() forces instead
     if is_mac():
         try:
             return subprocess.run(["osascript", "-e", f'quit app "{MAC_APP_NAME}"'],

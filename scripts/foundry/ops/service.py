@@ -151,6 +151,9 @@ def up() -> int:
     _say("▸ starting Foundry...")
     try:
         host.start()  # Mac: open -a · BOSS: PENTARYN_START_CMD (host.py)
+    except host.HostError as exc:
+        _say(f"✗ {exc}")
+        return FAIL
     except (subprocess.CalledProcessError, FileNotFoundError, OSError):
         _say(f"✗ can't launch Foundry ({host.foundry_app_root()}) — is it installed?")
         return FAIL
