@@ -877,7 +877,7 @@ both Warnings and Manual.
 | C03 | fail | dnd5e in `relationships.systems` iff the sources touch dnd5e (including the Token5e movement option `ignoreTokens`, packages.json `codePatterns`, D4) |
 | C04 | fail | `languages` iff any i18n key literal or call |
 | C05 | fail | every non-test, non-lib `.mjs` reachable from `esmodules` |
-| C06 / C06w | fail / warn | `styles` paths exist / live under `styles/` |
+| C06 / C06w | fail / warn | `styles` paths exist / live under `styles/` (a vendored `lib/*.css` kit stylesheet, D7, is exempt) |
 | C07 | fail | `flags.pentaryn` has tier, namespace, flagScope == id, cssPrefix, generation (says DATA migration only when the code writes under the old scope) |
 | C08 | fail | `socket: true` iff the module uses its `module.<id>` channel |
 | C09 | fail | recommends carry reasons; every package named in code is in `relationships` |

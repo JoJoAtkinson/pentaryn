@@ -680,3 +680,14 @@ def test_c62_is_na_without_a_describe_golden(tmp_path):
     d = tmp_path / "pentaryn-nogold"
     write(d, {"module.json": json.dumps({"id": "pentaryn-nogold", "esmodules": ["a.mjs"]}), "a.mjs": "export const a = 1;\n"})
     assert res(conformance.score_dir(d), "C62")["status"] == "n/a"
+
+
+def test_c06w_exempts_a_vendored_kit_stylesheet_listed_from_lib(tmp_path):
+    d = tmp_path / "pentaryn-kitcss"
+    write(d, {"module.json": json.dumps({"id": "pentaryn-kitcss", "esmodules": ["a.mjs"],
+                                         "styles": ["styles/a.css", "lib/argon-tooltip.css"]}),
+              "a.mjs": "export const a = 1;\n", "styles/a.css": "", "lib/argon-tooltip.css": ""})
+    assert res(conformance.score_dir(d), "C06w")["status"] == "pass"
+    (d / "module.json").write_text(json.dumps({"id": "pentaryn-kitcss", "esmodules": ["a.mjs"], "styles": ["a.css"]}))
+    (d / "a.css").write_text("")
+    assert res(conformance.score_dir(d), "C06w")["status"] == "warn"

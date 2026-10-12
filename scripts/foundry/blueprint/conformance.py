@@ -413,9 +413,11 @@ def c06(m):
     return ok() if not missing else bad([f"missing: {', '.join(missing)}"])
 
 
-@rule("C06w", "warn", "stylesheets live under styles/")
+@rule("C06w", "warn", "stylesheets live under styles/ (vendored lib/*.css kit files exempt)")
 def c06w(m):
-    outside = [s for s in m.manifest.get("styles") or [] if isinstance(s, str) and not s.startswith("styles/")]
+    # a vendored kit stylesheet (D7) is listed as lib/<name>.css by design (vendor.py docstring)
+    outside = [s for s in m.manifest.get("styles") or [] if isinstance(s, str)
+               and not s.startswith("styles/") and not re.fullmatch(r"lib/[\w-]+\.css", s)]
     return ok() if not outside else ("warn", [f"move to styles/ in Wave 7: {', '.join(outside)}"])
 
 
