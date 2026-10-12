@@ -94,7 +94,7 @@ the first, then retry.
 
 | What | How |
 |---|---|
-| world Actors | created, or **updated in place** — never deleted and recreated (placed tokens hold the id) |
+| world Actors | created (a new one under an `_id` derived from its slug, `importer-AC-2`), or **updated in place** — never deleted and recreated (placed tokens hold the id) |
 | embedded Items | the managed ones (those with `flags.pentaryn.action`) are deleted and recreated; hand-added Items are kept unless `unmanagedItems: "delete"` |
 | `flags.pentaryn.*` | the generator's **contract scope** (slug, contentHash, action, sources … — CONTRACT §9.2), written as ordinary document data. It is not this module's id and is **never migrated**: moving it would change every slug lookup and contentHash (decision D5) |
 | `flags.pentaryn.contentHash` | stamped **last**, after the Items are written and every assertion passed, so an interrupted run is retried |
@@ -139,8 +139,14 @@ number.
 
 Only the GM tab that calls `import()` writes; nothing runs by itself. A player calling it gets a
 `PentarynAbort` (code `NOT_GM`) and a permanent error toast. A second call on the same tab while one is running is refused with
-`PentarynAbort` (`items-journal-4`); the guard is per tab, so two GM tabs (the MCP bridge tab and a
-browser tab) can still overlap — run imports from one place.
+`PentarynAbort` (`items-journal-4`). That guard is per tab, so two GM tabs (the MCP bridge tab and
+a browser tab) can still overlap; a concurrent create is then refused per slug rather than
+duplicated (`importer-AC-2`): a new actor is created with an `_id` derived from its slug
+(`idForSlug`, `keepId`), so whichever tab comes second gets
+`{ slug, error: "created concurrently by another GM tab — re-run" }` in `failed[]` and goes on with
+the rest. A re-run finds the actor by slug and updates it. Actors already in the world keep their
+random ids and are found by slug as before. Updates from two tabs at once are not guarded — run
+imports from one place.
 
 ## Extending
 

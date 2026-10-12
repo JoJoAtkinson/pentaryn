@@ -523,6 +523,33 @@ function toCreatePayload(data) {
   return payload;
 }
 
+const ID_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+
+/**
+ * The `_id` a NEW actor is created with (importer-AC-2): 16 characters of [A-Za-z0-9], a pure
+ * function of the slug, so two GM tabs creating the same slug at once ask for the same id and the
+ * server refuses the second (`keepId`) instead of storing a duplicate. Sixteen independently seeded
+ * FNV-1a lanes, each finished with murmur3's fmix32, one base-62 character per lane. Never change it:
+ * the ids of actors already imported would stop matching (they are still found by slug).
+ * @param {string} slug
+ * @returns {string}
+ */
+function idForSlug(slug) {
+  if (typeof slug !== "string" || slug === "") throw new TypeError(`idForSlug needs a non-empty slug string, got ${typeof slug}`);
+  let id = "";
+  for (let lane = 0; lane < 16; lane++) {
+    let h = (0x811c9dc5 ^ Math.imul(lane + 1, 0x9e3779b1)) >>> 0;
+    for (let i = 0; i < slug.length; i++) h = Math.imul(h ^ slug.charCodeAt(i), 0x01000193);
+    h ^= h >>> 16;
+    h = Math.imul(h, 0x85ebca6b);
+    h ^= h >>> 13;
+    h = Math.imul(h, 0xc2b2ae35);
+    h ^= h >>> 16;
+    id += ID_ALPHABET[(h >>> 0) % 62];
+  }
+  return id;
+}
+
 /* -------------------------------------------------------------------------------------------- */
 /*  Assertions (CONTRACT.md §8)                                                                   */
 /* -------------------------------------------------------------------------------------------- */
@@ -573,5 +600,5 @@ export {
   FLAG_SCOPE, CONTRACT_ID, DEFAULT_TIMEOUT_MS, FORMULA_OK, FORMULA_GLOBS, FORMULA_PATTERNS,
   STRIPPED_KEYS, STRIPPED_ACTOR_KEYS, STRIPPED_ITEM_KEYS, PentarynError, PentarynAbort, PentarynAssertionError,
   isPlainObject, normalise, cloneJson, walkStrings, walkLeaves, getPath, indexBySlug, versionProblems, lintFormulas,
-  preparePayload, toUpdatePayload, toCreatePayload, valuesMatch, assertionMessage,
+  preparePayload, toUpdatePayload, toCreatePayload, idForSlug, valuesMatch, assertionMessage,
 };

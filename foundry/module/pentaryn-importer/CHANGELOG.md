@@ -13,6 +13,12 @@
 
 `module.json` stays 1.1.0 until the Wave 7 restart batch adds the blueprint keys.
 
+- **[declared] Two GM tabs importing the same new slug no longer both create it** (`importer-AC-2`):
+  a new actor is created with a slug-derived `_id` (`idForSlug` in importer-core, 16 chars of
+  [A-Za-z0-9]) and `keepId`, so the server refuses the second create; that tab reports
+  `{ slug, error: "created concurrently by another GM tab — re-run" }` in `failed[]` and continues.
+  Existing actors with random ids are found by slug and updated as before. golden/write-full.json
+  carries the `_id` and `keepId`.
 - **[declared] A malformed entry anywhere in `actors.json` refuses the whole run before any write**
   (`importer-R1`): every entry is prepared first, so a missing slug or a null entry after a good one
   no longer leaves the earlier actors created and hash-stamped. A thrown `PentarynAbort` again means

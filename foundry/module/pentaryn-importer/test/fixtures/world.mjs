@@ -14,6 +14,11 @@
  *   regenIds        activity `_id`s are regenerated instead of honoured (contract U7)
  *   stripAction     action names whose flags.pentaryn.action is stripped on create
  *   failCreate      slugs whose Actor.create throws a plain Error (a per-actor failure)
+ *   raceCreate      slugs another GM tab creates first, between our slug index and our create
+ *                   (importer-AC-2): its copy lands with the same `_id` when keepId is asked for
+ *
+ * Actor.create honours `data._id` under `{keepId: true}` and rejects an `_id` already in game.actors,
+ * as Foundry's server does.
  *
  * Every write lands in F.calls in order, so a test pins effects, not returns.
  */
@@ -50,7 +55,7 @@ function tokenOf(data) {
 }
 
 export function makeWorld(F, knobs = {}) {
-  const K = { dropTypes: new Set(), regenIds: false, stripAction: new Set(), failCreate: new Set(), ...knobs };
+  const K = { dropTypes: new Set(), regenIds: false, stripAction: new Set(), failCreate: new Set(), raceCreate: new Set(), ...knobs };
   let seq = 0;
 
   function makeItem(actor, data) {
@@ -67,9 +72,10 @@ export function makeWorld(F, knobs = {}) {
     return item;
   }
 
-  function makeActor(data, { items = [] } = {}) {
-    const { prototypeToken, ...rest } = clone(data);
-    const actor = makeDoc("Actor", { id: `actor${String(++seq).padStart(11, "0")}`, ...rest }, { collection: F.game.actors });
+  function makeActor(data, { items = [], id = null } = {}) {
+    const { prototypeToken, _id, ...rest } = clone(data);
+    const auto = `actor${String(++seq).padStart(11, "0")}`;     // seq advances either way (stable item ids)
+    const actor = makeDoc("Actor", { id: id ?? auto, ...rest }, { collection: F.game.actors });
     hidden(actor, "prototypeToken", tokenOf(prototypeToken));
     hidden(actor, "items", new StubCollection());
     for (const d of items) {
@@ -111,8 +117,12 @@ export function makeWorld(F, knobs = {}) {
   class StubActor {
     static async create(data, options) {
       F.calls.push({ op: "Actor.create", data: F.plain(data), options: F.plain(options) });
-      if (K.failCreate.has(data?.flags?.pentaryn?.slug)) throw new Error(`Actor validation errors: ${data.flags.pentaryn.slug}`);
-      return makeActor(data);
+      const slug = data?.flags?.pentaryn?.slug;
+      if (K.failCreate.has(slug)) throw new Error(`Actor validation errors: ${slug}`);
+      const id = options?.keepId ? data._id : null;
+      if (K.raceCreate.has(slug)) makeActor(data, { id });           // the other tab got there first
+      if (id && F.game.actors.get(id)) throw new Error(`An Actor with _id [${id}] already exists in the database`);
+      return makeActor(data, { id });
     }
   }
   globalThis.getDocumentClass = name => (name === "Actor" ? StubActor : null);

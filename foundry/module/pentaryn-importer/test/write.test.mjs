@@ -6,7 +6,8 @@
 // must survive the move to failAssertion/refuse unchanged.
 //
 // Pins and the steps that may touch them: golden/write-console.json — step 4b ([declared] console prefix,
-// D-I2) and importer-R1 ([declared] malformedLater key) only. golden/write-*.json otherwise — no step may change them.
+// D-I2) and importer-R1 ([declared] malformedLater key) only. golden/write-full.json — importer-AC-2
+// ([declared] a create carries `_id: idForSlug(slug)` and `keepId`) only. golden/write-*.json otherwise — no step may change them.
 import { mock, test } from "node:test";
 import assert from "node:assert/strict";
 import { installFoundry } from "./kit/foundry-stub.mjs";

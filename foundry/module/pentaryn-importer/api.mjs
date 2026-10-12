@@ -6,7 +6,7 @@
 
 import {
   CONTRACT_ID, DEFAULT_TIMEOUT_MS, FLAG_SCOPE, HOOKS, MODULE, NS, PentarynAbort, PentarynAssertionError,
-  lintFormulas, normalise, preparePayload, toCreatePayload, toUpdatePayload, valuesMatch
+  idForSlug, lintFormulas, normalise, preparePayload, toCreatePayload, toUpdatePayload, valuesMatch
 } from "./importer-core.mjs";
 import {
   TAG, assertItemsAddressable, assertNoBadFormulas, assertPrototypeToken, assertVersionGate,
@@ -82,6 +82,7 @@ export async function importActors(options = {}) {
   }
   // Not re-entrant (items-journal-4): a second call while one is awaiting would read the same stored
   // contentHash and replace the same managed Items. Refused, not queued; per tab (module scope).
+  // Across tabs, a new slug's create is made idempotent instead (importer-AC-2, below).
   if (running) throw new PentarynAbort("An import is already running; await it or reload.", "CONFLICT");
   running = true;
   try {
@@ -197,7 +198,17 @@ async function importOnce({ path, dryRun, only, force, timeout, unmanagedItems }
         await actor.update(toUpdatePayload(data), { render: false });
         updated.push(slug);
       } else {
-        actor = await ActorClass.create(toCreatePayload(data), { renderSheet: false });
+        // CREATE under the slug's own id (importer-AC-2): another GM tab creating the same slug at the
+        // same moment asks for the same id, and the server refuses whichever comes second.
+        const id = idForSlug(slug);
+        try {
+          actor = await ActorClass.create({ ...toCreatePayload(data), _id: id }, { keepId: true, renderSheet: false });
+        } catch (cause) {
+          if (foundry.utils.getProperty(game.actors.get(id) ?? {}, `flags.${FLAG_SCOPE}.slug`) === slug) {
+            throw new Error("created concurrently by another GM tab — re-run", { cause });
+          }
+          throw cause;
+        }
         if (!actor) throw new Error("Actor.create returned nothing");
         bySlug.set(slug, actor);                 // a later entry with the same slug updates it
         created.push(slug);
