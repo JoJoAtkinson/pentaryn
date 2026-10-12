@@ -27,6 +27,10 @@
 - [declared] `page(<uuid>)` of a document that is not a page (a JournalEntry, Actor, Item) answers
   the caller's uuid verbatim as `uuid`, not a fabricated `…JournalEntry.<id>.JournalEntryPage.<id>`
   that resolves to nothing; page uuids are unchanged (LKM-11).
+- [declared] A labelled inline roll reduces to its label like `@UUID[...]{Label}` does —
+  `[[/r 4d6kh3]]{ability scores}` reads "ability scores", not "r 4d6kh3{ability scores}" — and a
+  bare roll command loses its `/r ` (`[[/r 4d6kh3]]` reads "4d6kh3"); `[[/save dex 15]]` still
+  reads "save dex 15" (lookup-edge-2).
 
 ## 0.3.0 — 2026-10-10
 

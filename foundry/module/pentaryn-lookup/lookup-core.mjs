@@ -87,8 +87,10 @@ const ENRICHERS = [
   [/&(?:amp;)?[A-Za-z]+\[[^\]]*\]\{([^}]*)\}/g, "$1"],
   // &Reference[Half Cover] -> Half Cover
   [/&(?:amp;)?[A-Za-z]+\[([^\]]*)\]/g, "$1"],
-  // [[/save dex 15]] -> save dex 15   [[3d6]] -> 3d6
-  [/\[\[\/?([^\]]*)\]\]/g, "$1"],
+  // [[/r 4d6kh3]]{Label} / [[2d6]]{Label} -> Label   (the formula is dropped, like a UUID target)
+  [/\[\[[^\]]*\]\]\{([^}]*)\}/g, "$1"],
+  // [[/r 4d6kh3]] -> 4d6kh3   [[/save dex 15]] -> save dex 15   [[3d6]] -> 3d6
+  [/\[\[(?:\/(?:r|roll|gmr|gmroll|br|broll|blindroll|sr|selfroll|pr|publicroll)\s+|\/)?([^\]]*)\]\]/g, "$1"],
 ];
 
 const ENTITIES = {
