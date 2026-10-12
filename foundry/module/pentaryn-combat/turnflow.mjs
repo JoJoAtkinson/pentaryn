@@ -20,7 +20,7 @@
 import * as core from "./combat-core.mjs";
 import { MODULE } from "./combat-core.mjs";
 import { makeLog } from "./lib/log.mjs";
-import { setting } from "./settings.mjs";
+import { setting, argonSetting } from "./settings.mjs";
 import { combatContext, turnOf, updateTurn, countFor, chosenWeapon } from "./shapes.mjs";
 import { expectRoll, forgetRoll, running } from "./sequence.mjs";
 
@@ -195,7 +195,7 @@ function releaseTargets() {
 }
 
 function argonOn() {
-  try { return !!(ui.ARGON?.enabled || game.settings.get("enhancedcombathud", "alwaysOn")); } catch { return false; }
+  try { return !!(ui.ARGON?.enabled || argonSetting("alwaysOn")); } catch { return false; }
 }
 
 Hooks.on("combatTurnChange", (combat, previous, current) => {

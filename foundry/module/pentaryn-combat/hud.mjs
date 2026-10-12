@@ -13,7 +13,7 @@
 import * as core from "./combat-core.mjs";
 import { MODULE } from "./combat-core.mjs";
 import { makeLog } from "./lib/log.mjs";
-import { setting, riderMode, setRiderMode } from "./settings.mjs";
+import { setting, riderMode, setRiderMode, argonSetting, setArgonSetting, hasArgonSetting } from "./settings.mjs";
 import {
   weaponsOf, featuresOf, countFor, multiattackOf, usesMultiattack, combatContext, turnOf, newTurn, attackActivityOf,
   unarmedStrike, focusLeft, turnSettled, setPrimaryId, chosenWeapon, featureItem
@@ -27,7 +27,6 @@ import { placeOpenDrawers } from "./turnflow.mjs";
 
 const log = makeLog(MODULE);
 
-const ARGON = "enhancedcombathud";
 const FALLBACK_IMG = "icons/skills/melee/blade-tips-triple-steel.webp";
 
 let DND5eItemButton = null;      // Argon dnd5e's closure-private button class, borrowed from the weapon-set slot
@@ -213,7 +212,7 @@ async function chooseWeapon(actor) {
 /* ── Argon's target picker, reused through a hidden button ───────────────── */
 
 function argonPickerOn() {
-  try { return !!game.settings.get(ARGON, "rangepicker"); } catch { return false; }
+  return !!argonSetting("rangepicker", () => false);
 }
 
 /** Release this user's targets (the sequence restores them if the pick is then cancelled). */
@@ -243,17 +242,15 @@ registerTargetPicker(async (activity) => {
 // it seen on ready. The tutorial's one tip a player needs at the moment of picking, right-click
 // cancels, goes on Argon's own cursor label instead (CSS ::after, styles/combat.css).
 
-const GUIDE_KEY = `${ARGON}.targetPickerGuideShown`;
-
 function applyPickerGuide() {
   const on = !!setting("skipPickerGuide");
   try {
     document.body.classList.toggle("pentaryn-combat-picker-cue", on);
     if (on) document.body.style.setProperty("--pentaryn-combat-picker-cue", JSON.stringify(_loc("PENTARYN_COMBAT.Hud.PickerCue")));
   } catch (err) { log.debug("picker cue (no body yet)", err); }
-  if (!on || !game.settings.settings.has(GUIDE_KEY)) return;
+  if (!on || !hasArgonSetting("targetPickerGuideShown")) return;
   try {
-    if (!game.settings.get(ARGON, "targetPickerGuideShown")) game.settings.set(ARGON, "targetPickerGuideShown", true);
+    if (!argonSetting("targetPickerGuideShown")) setArgonSetting("targetPickerGuideShown", true);
   } catch (err) { log.warn("marking Argon's picker tutorial seen failed", err); }
 }
 

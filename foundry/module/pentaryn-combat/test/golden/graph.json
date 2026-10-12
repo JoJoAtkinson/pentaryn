@@ -1,7 +1,12 @@
 {
   "graph": {
+    "argon.mjs": [
+      "combat-core.mjs",
+      "lib/log.mjs"
+    ],
     "combat-core.mjs": [],
     "combat.mjs": [
+      "argon.mjs",
       "combat-core.mjs",
       "lib/log.mjs",
       "offhand.mjs",
@@ -40,7 +45,8 @@
       "strip.mjs"
     ],
     "settings.mjs": [
-      "combat-core.mjs"
+      "combat-core.mjs",
+      "lib/settings.mjs"
     ],
     "shapes.mjs": [
       "combat-core.mjs",
@@ -66,10 +72,12 @@
     "lib/log.mjs",
     "combat-core.mjs",
     "settings.mjs",
+    "lib/settings.mjs",
     "sequence.mjs",
     "strip.mjs",
     "riders.mjs",
     "combat.mjs",
-    "offhand.mjs"
+    "offhand.mjs",
+    "argon.mjs"
   ]
 }

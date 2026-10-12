@@ -24,6 +24,7 @@ import * as core from "./combat-core.mjs";
 import { MODULE } from "./combat-core.mjs";
 import { makeLog } from "./lib/log.mjs";
 import { registerSettings, setting, setQuickMode, quickMode, setRiderMode, riderMode } from "./settings.mjs";
+import { renderHud } from "./argon.mjs";
 import {
   weaponShape, weaponsOf, featuresOf, countFor, multiattackOf, combatContext, turnOf, updateTurn, newTurn,
   chosenWeapon
@@ -256,7 +257,7 @@ function publish() {
 }
 
 Hooks.once("init", () => {
-  registerSettings();
+  registerSettings({ onChange: renderHud });
 });
 
 Hooks.once("setup", () => {
