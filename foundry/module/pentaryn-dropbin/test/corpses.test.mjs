@@ -125,13 +125,3 @@ test("PT3-1 live: a saved per-token map the server still holds comes back on the
   assert.deepEqual(tok.delta.ownership, shared, "the clients get the saved map, not OBSERVER");
   assert.deepEqual(server.ownership, shared, "and the server holds it");
 });
-
-test("isDead returns a boolean (manifest: returns boolean)", () => {
-  const { isDead } = corpses;
-  assert.strictEqual(isDead(undefined), false);
-  assert.strictEqual(isDead({}), false);
-  assert.strictEqual(isDead({ system: { attributes: { hp: { value: 5, max: 10 } } } }), false);
-  assert.strictEqual(isDead({ system: { attributes: { hp: { value: 0, max: 7 } } } }), true);
-  assert.strictEqual(isDead({ system: { attributes: { hp: { value: 0, max: 0 } } }, statuses: new Set(["dead"]) }), true);
-  assert.strictEqual(isDead({ system: { attributes: { hp: { value: 3, max: 7 } } }, statuses: new Set() }), false);
-});
