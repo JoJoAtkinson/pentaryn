@@ -508,6 +508,13 @@
           "name": "messageOrId",
           "type": "ChatMessage|id",
           "resolve": false
+        },
+        {
+          "name": "opts",
+          "type": "{ effects? }",
+          "resolve": false,
+          "optional": true,
+          "doc": "effects: the card's effects, when the caller already fetched them (-14)"
         }
       ],
       "returns": "Promise<string[]>",

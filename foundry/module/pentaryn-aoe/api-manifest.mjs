@@ -119,7 +119,7 @@ export const FEATURE_ROWS = Object.freeze({
     legacy("selfApply", [MESSAGE, p("opts", "{ force? }", { optional: true, doc: "force: ignore the autoApplySelf setting and the claim" })], "Promise<{ reason, actor, effects }|null>",
       "Put a usage card's one effect on its caster when the card is meant for them; null when it is not, or it was already applied.",
       { writes: true, sideEffects: ["ActiveEffect (on the caster)", "flags.pentaryn-aoe.effectsApplied", "flags.pentaryn-aoe.claims"] }),
-    legacy("pendingFor", [MESSAGE], "Promise<string[]>",
+    legacy("pendingFor", [MESSAGE, p("opts", "{ effects? }", { optional: true, doc: "effects: the card's effects, when the caller already fetched them (-14)" })], "Promise<string[]>",
       "Effect ids on a usage card nobody has applied yet ([] once one is applied, or for a card over an hour old)."),
   ],
   escape: [

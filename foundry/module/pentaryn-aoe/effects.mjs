@@ -69,11 +69,11 @@ function appliedIds(message) {
  * Effect ids on the card still waiting. Applied = recorded on the message, or already on every
  * creature the card targeted (covers a GM who applied it some other way).
  */
-export async function pendingFor(message) {
+export async function pendingFor(message, { effects = null } = {}) {
   // A settled card never lights up (pendingEffects says so too); answer before resolving its
   // effects, which on dnd5e 6 is an async fromUuid per card (a pack fetch for dnd5e.effects).
   if (Date.now() - (message?.timestamp ?? 0) > HIGHLIGHT_MAX_AGE) return [];
-  const effects = await cardEffects(message);
+  effects ??= await cardEffects(message);   // -14: a caller that already has them passes them
   if (!effects.length) return [];
   const applied = new Set(appliedIds(message));
   const targets = targetActors(message);
@@ -229,8 +229,8 @@ function decorate(message, html) {
   if (!tray || tray.dataset.pentarynAoe) return;
   tray.dataset.pentarynAoe = "1";
 
-  const light = async msg => {
-    if (!(await pendingFor(msg)).length) return;
+  const light = async (msg, effects = null) => {
+    if (!(await pendingFor(msg, { effects })).length) return;
     tray.classList.add("pentaryn-aoe-unapplied");
     tray.style.setProperty("--pentaryn-aoe-unapplied", JSON.stringify(_loc("PENTARYN_AOE.Effects.Unapplied")));
   };
@@ -242,8 +242,11 @@ function decorate(message, html) {
   const age = Date.now() - (message.timestamp ?? 0);
   if (setting("highlightUnapplied")) {
     (async () => {
-      const autoSoon = setting("autoApplySelf") && !flag?.auto && age < AUTO_GRACE && !!(await selfReason(message));
-      if (!autoSoon) return light(message);
+      // -14: one effects fetch per render for a fresh card (selfReason and the highlight shared
+      // it); a settled card fetches nothing. The re-check after the grace fetches fresh.
+      const effects = age > HIGHLIGHT_MAX_AGE ? null : await cardEffects(message);
+      const autoSoon = setting("autoApplySelf") && !flag?.auto && age < AUTO_GRACE && !!(await selfReason(message, effects ?? undefined));
+      if (!autoSoon) return light(message, effects);
       setTimeout(() => {
         const live = game.messages.get(message.id);
         if (live && tray.isConnected && !aoeFlags(live).effectsApplied?.auto) light(live).catch(warn);
