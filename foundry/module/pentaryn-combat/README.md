@@ -1,15 +1,16 @@
-# Pentaryn Combat
+# Pentaryn Combat (`pentaryn-combat`)
 
 **Read this when:** using, playtesting, switching off or changing Full Attack, the swing pips, the
-Bonus-bar follow-ups (Off-hand, Nick, Flurry, Martial Arts, Hew), the Sneak Attack offer, or NPC /
-Wild Shape Multiattack on the Argon HUD.
-**Design history:** [`context/plans/melee-streamlining.md`](../../../context/plans/melee-streamlining.md).
+Bonus-bar follow-ups (Off-hand, Nick, Flurry, Martial Arts, Hew, Pole Strike), the Sneak Attack offer,
+NPC / Wild Shape Multiattack or the Argon turn flow; or calling `game.pentaryn.combat`.
+**Not this file:** design history → [`context/plans/melee-streamlining.md`](../../../context/plans/melee-streamlining.md) ·
+how the module was migrated → [`context/plans/addon-blueprint-2026-10/migrate-pentaryn-combat.md`](../../../context/plans/addon-blueprint-2026-10/migrate-pentaryn-combat.md) ·
+table use → [`context/foundry/melee.md`](../../../context/foundry/melee.md).
 
-dnd5e 6.0.6 (2024 rules), Foundry 14, Argon (`enhancedcombathud` 5.0.1 + `-dnd5e` 5.2.2). Argon's
-files are never edited; the bars are recomposed from `render*ArgonComponent` hooks like
-`pentaryn-transform/hud.mjs` does.
+dnd5e 6.0.6 (2024 rules), Foundry 14, Argon (`enhancedcombathud` 5.0.1 + `-dnd5e` 5.2.2). Argon's files
+are never edited: the bars are recomposed in `render*ArgonComponent` hooks.
 
-## What a player sees
+## What the player sees
 
 | Where | What | Click |
 |---|---|---|
@@ -33,7 +34,7 @@ Settings → Dice Configuration → *Manual* gives a type-in box per d20 and per
 *dialog*, never the manual-dice box. Players who'd rather just say the number at the table can
 ignore the cards; nothing is applied without the GM's damage tray.
 
-### Clicks (target budget from the plan)
+Clicks per case (target budget from the plan):
 
 | Case | Before | Now |
 |---|---|---|
@@ -46,10 +47,11 @@ ignore the cards; nothing is applied without the GM's damage tray.
 | Rage | 3 (Rage, usage dialog, Apply on the card) | 2 (Rage, usage dialog) |
 | Steady Aim then the attack at Advantage | 4 + remember to click Advantage | 3 (Steady Aim, weapon, Enter — the window opens on Advantage) |
 
-## Adjustments — what each setting changes and how to turn it off
+## Settings
 
-Every behaviour is one **world setting, default on** (Configure Settings → Pentaryn Combat). Off =
-the HUD as it was before this module for that behaviour. The playtest case is from plan §13.
+Every behaviour is one **world setting, default on** (Configure Settings → Pentaryn Combat), a row of
+`SETTINGS` in `settings.mjs` with literal `PENTARYN_COMBAT.Setting.<key>.Name/Hint` keys; each is read
+live, so a change applies at the next HUD render. Off = the HUD as it was for that behaviour.
 
 | Setting key | What it changes | Off restores | Case |
 |---|---|---|---|
@@ -93,6 +95,42 @@ target itself, so it works either way.
 Per player (user flags, not settings): **Quick** (`flags.pentaryn-combat.quick`, the strip's
 checkbox) and **rider Ask/Auto** (`flags.pentaryn-combat.riders.<key>`, the Special-bar toggle).
 
+Per player (user flags, not settings): **Quick** (`flags.pentaryn-combat.quick`, the strip's checkbox)
+and **rider Ask/Auto** (`flags.pentaryn-combat.riders.<key>`, the Special-bar toggle).
+
+## API — game.pentaryn.combat
+
+Built from `api-manifest.mjs` by the kit, frozen, published at `ready` (`game.modules.get("pentaryn-combat").api`
+is canonical; `game.pentaryn.combat` the alias; `pentaryn-combat.ready` fires). `describe()` lists every row.
+
+| Member | Does |
+|---|---|
+| `count(actor, weaponId?)` | swings the Attack action gives |
+| `plan(actor, weaponId?)` | `{swings, count, left, weaponId}` Full Attack would make now |
+| `turn(actor)` · `newTurn(actor)` | this turn's flag (fresh if stale) · out-of-combat reset (writes) |
+| `multiattack(actor)` · `weapons(actor)` | parsed Multiattack `{total, groups, plan, source}` · weapon shapes |
+| `offers(message)` · `rollRider(message, key)` | rider eligibility on an attack card · roll one rider |
+| `fullAttack(actor, weaponId?, opts?)` · `followUp(actor, followUp, opts?)` | what the buttons do |
+| `reckless(actor)` · `setReckless(actor, on)` | Reckless Attack state · toggle |
+| `running()` · `abort(actor?)` | the sequence running on this client · stop it |
+| `quick()` · `setQuick(on)` · `riderMode(key)` · `setRiderMode(key, mode)` | this user's choices |
+| `report(actorOrName?)` | GM audit: riders, dice, turn flags, remembered weapons |
+| `fixFeats(actor, {apply})` | native rule-effect plan for TWF / GWM (report only) |
+| `seedWeaponSets(actor)` · `seedAll()` | GM: fill empty Argon weapon sets |
+| `inspect(ref, {as})` | read-only state, plain JSON depth ≤ 4: key, turn, stored/stale, plan, pips, spentPips, reaction, followUps (computed without the Argon panel), riders, reckless, running, settings. A viewer without OBSERVER (`as`) gets actor, key, inCombat, isOwnTurn only |
+| `coversMultiattack(ref)` | the Multiattack item id when Full Attack runs it (transform hides that button) |
+| `selftest()` · `describe()` · `settings()` · `trace()` · `uninstall()` · `version` · `contract` | kit members |
+| `core` | a frozen copy of the pure core |
+
+The legacy members that take an actor accept an Actor, Token, UUID, 16-character id or exact name
+(never a substring); a miss answers `null`. `inspect` and `coversMultiattack` throw `NOT_FOUND` /
+`AMBIGUOUS` / `BAD_ARGS` instead.
+
+```js
+game.pentaryn.combat.plan("ZZ Fighter 5"); await game.pentaryn.combat.fullAttack("ZZ Fighter 5");
+CONFIG.debug["pentaryn-combat"] = true; game.pentaryn.combat.trace();   // why a swing counted
+```
+
 ## Data written
 
 | Where | Key | When |
@@ -108,26 +146,62 @@ checkbox) and **rider Ask/Auto** (`flags.pentaryn-combat.riders.<key>`, the Spec
 | damage message | `flags.pentaryn-combat.undone` | `["sneak-attack"]` when that card's auto rider was Undone (written by the card's author or the GM; 0.2.4) |
 | actor effect | "Dash" / "Disengage", `flags.pentaryn-combat.{until: "turnEnd", special}`, `flags.dnd5e.isTemporary` | Argon's Dash / Disengage on your turn; deleted at your turn end |
 | actor | `system.attributes.death.failure` | damage at 0 HP (`deathSaveDamage`) |
+| actor effect | Reckless, `flags.pentaryn-combat.reckless` | the Special-bar toggle; removed at the actor's turn start |
+| actor effect | "Steady Aim", `flags.pentaryn-combat.{until: "turnEnd", special: "steady-aim"}` | Steady Aim used (`steadyAim`) |
+| damage message | `flags.pentaryn-combat.attack` | a rider roll: the attack card it rode |
 
 Optional overrides on an actor: `flags.pentaryn-combat.attacks` (integer swing count),
 `.multiattack` (`[{item, count}]`), `.pactWeapon` on a weapon (Thirsting Blade).
 
-## API — `game.pentaryn.combat`
+## Flags other modules read
 
-```js
-const a = game.actors.getName("ZZ Fighter 5");
-game.pentaryn.combat.count(a)               // swings the Attack action gives
-game.pentaryn.combat.plan(a)                // {swings, count, left, weaponId} Full Attack would make now
-await game.pentaryn.combat.fullAttack(a)    // what the button does
-game.pentaryn.combat.turn(a)                // this turn's flag (fresh if stale)
-await game.pentaryn.combat.newTurn(a)       // out-of-combat reset
-game.pentaryn.combat.multiattack(npc)       // parsed Multiattack {total, groups, plan}
-game.pentaryn.combat.report()               // riders per PC, turn flags, remembered weapons
-game.pentaryn.combat.fixFeats(a)            // native rule-effect plan for TWF/GWM (report only, see below)
-await game.pentaryn.combat.seedAll()        // GM: seed empty weapon sets now
-```
+None directly. pentaryn-transform reads this module's `fullAttack` / `multiattack` settings and
+`multiattack()` to hide a covered Multiattack button; `coversMultiattack(ref)` is the API for it
+(transform-creatures-13). This module reads `flags.pentaryn-aoe.handle` (an area handle) and
+pentaryn-aoe's `autoDamageOnHit` setting.
 
-## Known gaps
+## Events
+
+Core `HOOKS` rows, fired with `ctx.emit`; none is vetoable. Each also fires under its old name (after
+the new one) until `pentaryn-combat 0.4.0`.
+
+| Event | Args | Old name |
+|---|---|---|
+| `pentaryn-combat.usage` | `(activity, kind)` the runner used the item | `pentarynCombat.usage` |
+| `pentaryn-combat.offhand` | `(actor, {bySequence})` an off-hand swing was rolled | `pentarynCombat.offhand` |
+| `pentaryn-combat.bonusSpent` | `(actor, kind)` a swing or follow-up spent the Bonus Action | `pentarynCombat.bonusSpent` |
+| `pentaryn-combat.bonusAction` | `(actor, activity)` a Bonus-action feature or spell used | `pentarynCombat.bonusAction` |
+| `pentaryn-combat.reaction` | `(actor, activity)` a Reaction used (any turn) | `pentarynCombat.reaction` |
+| `pentaryn-combat.otherAction` | `(actor, activity)` a non-attack Action on your turn | `pentarynCombat.otherAction` |
+| `pentaryn-combat.sequenceEnd` | `(actor)` a Full Attack or follow-up ended | `pentarynCombat.sequenceEnd` |
+
+## Patches and adjustments
+
+Prototype patches go through the kit (`wrapMethod` / `defineAccessor`) and show in `describe().patches`:
+`PreciseText#destroy`, `#x`, `#y`, `InterfaceCanvasGroup#createScrollingText`, `ChatLog#notify`
+(`scrollingTextGuard`), `PortraitPanel#getEffects` (`portraitConditions`), `ActionPanel#updateActionUse`
+(the pip settle). Argon buttons are wrapped per instance in their render hooks. Every wrap, private read
+and foreign flag has a row in `foundry/adjustments.yml` (`combat-*` patch rows; `argon-*` / `dnd5e-*` /
+`core-*` workarounds).
+
+## Two sessions / who writes
+
+The turn flag is written by the actor's owner (`updateTurn`, serialised per actor on one client).
+The active GM alone sweeps effects at a turn boundary, gives the Reaction back, clears a deleted
+combat's flags (one write per actor), sweeps orphans at load and seeds weapon sets. Two GM tabs both
+run those sweeps; each write is idempotent (a delete of a key already gone does nothing).
+
+## Extending
+
+- **A setting:** a `SETTINGS` row (key, literal Name/Hint, doc), the two lang keys, `setting(key)` where it applies.
+- **A turn rider:** a `TURN_RIDERS` row in `core/turn-riders.mjs`, its `Rider.Name/Rule` keys in `I18N_KEYS` and lang.
+- **A follow-up kind:** `core/followups.mjs` `followUps`, a `runFollowUp` branch in `sequence.mjs`, its `FollowUp*` keys.
+- **A special action:** `SPECIAL_ACTIONS` / `recordSpecialAction` in `core/turnflow.mjs`, its after-click in `turnflow/action-buttons.mjs`.
+
+**Which riders module?** Once-per-turn attack-card riders (Sneak Attack, Frenzy, Colossus Slayer, Divine
+Strike) are here; damage/heal rule riders, rituals, concentration and Argon tidy-ups are pentaryn-riders.
+
+## Pitfalls
 
 - **A Cunning Action or Step of the Wind Dash / Disengage** (an item of the actor's, Bonus action) runs
   through dnd5e and gets no Dash effect; add the movement by hand. (Argon's own item-less Dash /
@@ -154,13 +228,23 @@ await game.pentaryn.combat.seedAll()        // GM: seed empty weapon sets now
   (players don't), so a miss needs the **Undo** on the card.
 - **Multiattack "in any combination"** runs the first listed weapon for every swing; right-click
   Full Attack to pick another, or pause and swap per swing.
+- **C23 open:** this module still reads pentaryn-aoe's `autoDamageOnHit` setting directly: aoe's
+  `settings()` member is published at `ready`, but chat cards first render before it.
 
 ## Files
 
-`combat.mjs` entry, swing counting, API · `combat-core.mjs` pure rules (node-tested, `test/run.mjs`)
-· `shapes.mjs` Foundry → plain data, turn flag · `sequence.mjs` the swing loop · `strip.mjs` strip
-and weapon picker DOM · `hud.mjs` Argon bars · `riders.mjs` once-per-turn riders · `offhand.mjs`
-mode reset, weapon-set seed · `settings.mjs`.
+Load order: `combat.mjs` (esmodules[0]) installs `roll-dock.mjs` as it evaluates; at setup `counting.mjs`,
+`turn-riders.mjs`, `offhand.mjs`, `sequence.mjs`; at ready `api.mjs` builds the API. `hud.mjs`
+(esmodules[1]) installs `turnflow/*` and `patches.mjs`, then `hud/tooltips.mjs`, `hud/picker.mjs`,
+`hud/bars.mjs`. `context.mjs` is their shared ctx. Pure: `combat-core.mjs` + `core/*.mjs`. Settings:
+`settings.mjs`. API: `api-manifest.mjs`, `api.mjs`. Adapters: `shapes.mjs`, `argon.mjs`,
+`dialog-adapter.mjs`. UI: `strip.mjs`, `hud/buttons-ui.mjs`. Vendored kit: `lib/` (never edited here).
 
-`make foundry-combat-check` (parse, imports, i18n, 298 fixtures) · `make foundry-combat-sync` to install.
-Registry rows `combat-*` in `foundry/adjustments.yml`.
+## Tests
+
+`node test/run.mjs` from the module folder (node:test files + the legacy core fixtures; goldens in
+`test/golden/`, re-pin one file with `GOLDEN_UPDATE=1 node --test test/<file>.test.mjs`).
+
+## Sync
+
+`make foundry-combat-check`, then `make foundry-combat-sync` and a reload (`module.json`: restart).
