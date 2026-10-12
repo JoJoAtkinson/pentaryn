@@ -31,6 +31,10 @@
   the first name, matched nothing, and the first write then left them on the middle name. A failed
   relabel does not hold up the next one. Renames from two different clients are not chained: repair
   with `sync(actor, middle, final)`.
+- [declared] names-maint-2-manifest (final review 2026-10-12): the `sync` row's doc (what
+  `describe()` and the bridge show) now says a ref of the wrong kind (a number, a plain object, an
+  Item) or a missing or non-string `oldName`/`newName` returns `fail("BAD_ARGS")`, writing nothing.
+  Doc only: the behaviour already shipped; `throws` stays `["TypeError"]`.
 
 ## 0.1.1 — 2026-10-11 (play-test fix, fix/playtest-2026-10-11)
 

@@ -116,3 +116,31 @@ test("names-maint-1: api.sync returns a Promise on every outcome (count, BAD_ARG
   assert.ok(miss instanceof Promise, "miss: a Promise");
   await assert.rejects(miss, TypeError, "miss: the legacy TypeError arrives as a rejection");
 });
+
+// [declared] names-maint-2-manifest (final review 2026-10-12): the sync row's doc named only
+// AMBIGUOUS and the TypeError of a miss, so describe() (what the bridge and agents read) hid the
+// BAD_ARGS failure of a wrong-kind ref and of a non-string oldName/newName. Now the doc names both;
+// `throws` stays ["TypeError"] (fail() is a return, not a throw). Behaviour pin alongside: a number
+// and an Item ref each return fail("BAD_ARGS"), writing nothing.
+test("names-maint-2-manifest: the sync row documents fail(\"BAD_ARGS\") for a wrong-kind ref and non-string names", async () => {
+  const { MANIFEST } = await import("../api-manifest.mjs");
+  const { describe } = await import("../lib/api.mjs");
+  const sync = describe(MANIFEST).methods.find(m => m.path === "sync");
+  const row = MANIFEST.rows.find(r => r.path === "sync");
+  assert.deepEqual(row.throws, ["TypeError"]);
+  for (const doc of [row.doc, sync.doc]) {
+    assert.match(doc, /ref of the wrong kind[^.]*fail\("BAD_ARGS"\)/, "a wrong-kind ref → BAD_ARGS");
+    assert.match(doc, /non-string oldName or newName[^.]*fail\("BAD_ARGS"\)/, "non-string names → BAD_ARGS");
+    assert.match(doc, /fail\("AMBIGUOUS"\)/);
+  }
+  const item = makeDoc("Item", { id: "itmZZwrongKind01", name: "Rope" });
+  for (const [label, ref] of [["a number", 42], ["a plain object", { name: "Bob" }], ["an Item", item]]) {
+    reset(F);
+    tok.name = "Bob";
+    const r = await api.sync(ref, "Bob", "Rob");
+    assert.equal(r?.ok, false, label);
+    assert.equal(r.code, "BAD_ARGS", label);
+    assert.deepEqual(effects(F.calls), [], `${label}: nothing written, no toast`);
+    assert.equal(tok.name, "Bob", label);
+  }
+});
