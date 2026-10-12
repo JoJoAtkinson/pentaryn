@@ -138,10 +138,14 @@ export function buildRows(tokens, { casterActorId = null } = {}) {
   return rows;
 }
 
-/** Fill a row from a save result (mutates and returns the row). An overridden multiplier is kept. */
+/**
+ * Fill a row from a save result (mutates and returns the row). An overridden multiplier is kept.
+ * R5: success null (no DC to judge it against) stays null, and so does the multiplier ('?').
+ */
 export function fillSave(row, { total, success, messageId = null }, onSave) {
-  row.save = { total, success: !!success, messageId };
-  if (!row.overridden) row.multiplier = multiplierFor(!!success, onSave);
+  const passed = success === null || success === undefined ? null : !!success;
+  row.save = { total, success: passed, messageId };
+  if (!row.overridden) row.multiplier = multiplierFor(passed, onSave);
   return row;
 }
 
@@ -507,7 +511,7 @@ export function summariseResolution(res) {
     applicable: applicableRows(rows).length,
     rows: rows.map(r => ({
       id: r.id, name: r.name, kind: r.kind, apply: !!r.apply,
-      save: r.save ? { total: r.save.total ?? null, success: !!r.save.success } : null,
+      save: r.save ? { total: r.save.total ?? null, success: r.save.success ?? null } : null,
       multiplier: r.multiplier ?? null, applied: !!r.applied, hp: r.hp ?? null, caster: !!r.caster, protected: !!r.protected,
     })),
     careful: res.careful ?? null,

@@ -22,6 +22,7 @@
       "AreaLocked": "This tray's area can no longer change: damage has been applied from it, or a newer roll superseded it.",
       "Waiting": "waiting",
       "WaitingTip": "Waiting for the player to roll from the request card.",
+      "NoDcTip": "This save has no DC, so it is neither a pass nor a fail. Set the multiplier by hand.",
       "Reroll": "Re-roll this save",
       "RollFor": "Roll this save for the player",
       "Applied": "applied",

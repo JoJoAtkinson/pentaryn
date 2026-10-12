@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **A save with no DC is neither a pass nor a fail** (declared, R5): with a null DC a monster save
+  came out a success (`total >= null`) and a player save a failure (`!!null`). One
+  `Number.isFinite(res.dc)` guard (`saveSuccess`) now serves `rollOne` and `onSaveMessage`; the
+  save is recorded with `success: null`, `fillSave` keeps that null and the multiplier '?', so
+  Apply skips the row until the GM sets it. The tray shows the total with a '?' (new string
+  `PENTARYN_AOE.Tray.NoDcTip`); `summary()` reports `success: null`. README Part B says so.
 - **One monster save that fails to roll no longer throws away the rest** (declared, R4): a
   rejecting `rollSavingThrow` threw out of `rollNpcSaves`, discarding every save already rolled in
   that pass, and `resolve()` then skipped the player request card and `autoApplyNpc`. Each row is

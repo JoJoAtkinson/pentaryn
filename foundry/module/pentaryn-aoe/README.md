@@ -26,7 +26,8 @@ dnd5e 6 only. Chat data is read from typed messages (`message.type` `usage` / `a
   the monsters' saves (`npcSaveRollMode`), post one request card for the players, and show a
   GM-only tray after dnd5e's own damage tray: tick, save, multiplier, the damage that would land,
   Apply. Every save is threaded under the spell's usage card, so dnd5e's outcomes and half-damage
-  pill agree. An older Damage click on the same area (or the same card after its area went) greys
+  pill agree. A save activity with no DC judges no save: each shows its total with a '?', the
+  multiplier stays '?', and the GM sets it by hand. An older Damage click on the same area (or the same card after its area went) greys
   out. Players see one status line on their own card (waiting / applied / re-rolled), never
   monster numbers; the GM-only monster saves are hidden from their chat.
 - **Careful Spell** (`careful.mjs`). Metamagic is tracked, not forced onto a spell (Joe's ruling,

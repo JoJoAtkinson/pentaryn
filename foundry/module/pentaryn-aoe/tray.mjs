@@ -40,6 +40,10 @@ function saveCell(row) {
       ? `<span class="pa-wait" data-tooltip="${esc(_loc("PENTARYN_AOE.Tray.WaitingTip"))}"><i class="fa-solid fa-hourglass-half" inert></i> ${esc(_loc("PENTARYN_AOE.Tray.Waiting"))}</span>`
       : `<span class="pa-wait">—</span>`;
   }
+  // R5: no DC, so neither pass nor fail — the GM reads the total and picks the multiplier.
+  if (row.save.success === null || row.save.success === undefined) {
+    return `<span class="pa-wait" data-tooltip="${esc(_loc("PENTARYN_AOE.Tray.NoDcTip"))}"><i class="fa-solid fa-question" inert></i> ${esc(row.save.total)}</span>`;
+  }
   const cls = row.save.success ? "pa-pass" : "pa-fail";
   const icon = row.save.success ? "fa-check" : "fa-xmark";
   return `<span class="${cls}"><i class="fa-solid ${icon}" inert></i> ${esc(row.save.total)}</span>`;

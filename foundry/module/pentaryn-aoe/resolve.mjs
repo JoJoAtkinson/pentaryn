@@ -238,6 +238,15 @@ async function supersedeOlder(message, res) {
 /*  Monster saves                               */
 /* -------------------------------------------- */
 
+/**
+ * R5: did this save pass? Only against a real DC. With none (null, '', an unset formula) the answer
+ * is null, never a guessed pass or fail: the row's multiplier stays '?' and the GM sets it by hand.
+ */
+function saveSuccess(roll, dc) {
+  if (!Number.isFinite(dc)) return null;
+  return roll.isSuccess ?? (roll.total >= dc);
+}
+
 async function rollOne(row, res, scene) {
   const actor = fromUuidSync(row.actor);
   if (!actor) return null;
@@ -249,7 +258,7 @@ async function rollOne(row, res, scene) {
   });
   const roll = rolls?.[0];
   if (!roll) return null;
-  return { total: roll.total, success: roll.isSuccess ?? (roll.total >= res.dc), messageId: roll.parent?.id ?? null };
+  return { total: roll.total, success: saveSuccess(roll, res.dc), messageId: roll.parent?.id ?? null };
 }
 
 /** Roll (or re-roll) the auto rows. rowIds limits it; force re-rolls rows that already have a save. */
@@ -336,7 +345,7 @@ async function onSaveMessage(message) {
     const idx = matchSave(res, info, { createdAfter: m.timestamp ?? 0 });
     if (idx < 0) continue;
     const rowId = res.rows[idx].id;
-    const success = roll.isSuccess ?? (Number.isFinite(res.dc) ? roll.total >= res.dc : null);
+    const success = saveSuccess(roll, res.dc);
     if (!(await claimMessage(message, "matchSave", { scope: MODULE }))) return why("matchSave", message.id, "another session claimed it");
     await mutate(m.id, r => {
       const row = r.rows.find(x => x.id === rowId);
