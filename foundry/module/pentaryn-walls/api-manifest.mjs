@@ -7,7 +7,7 @@
  * the engine and registry functions themselves.
  */
 
-import { CONTRACT, MODULE, NS, READ_SCOPES, VERSION } from "./walls-core.mjs";
+import { CONTRACT, FLAG_SCOPE, MODULE, NS, READ_SCOPES, VERSION } from "./walls-core.mjs";
 
 const SCENE_OPTS = {
   name: "opts", optional: true,
@@ -18,13 +18,15 @@ const ENGINE_RESULT = "{ creates, updates, refusals, lints, log, report }";
 const BUSY = " One at a time: while preview/run/undo is running, another call warns and returns null.";
 /** A stamp key under every scope stampOf() reads: the module id first, then the legacy scope. */
 const underEveryScope = key => READ_SCOPES.map(scope => `flags.${scope}.${key}`);
+/** Every key runEngine stamps, under the one scope it writes (walls-EXT-6: FLAG_SCOPE, not a literal). */
+const STAMPED = ["generated", "run", "rule", "kind", "sources", "moves.<run>"];
 
 export const MANIFEST = Object.freeze({
   module: MODULE,
   namespace: NS,
   version: VERSION,
   contract: CONTRACT,
-  flagScope: "wall-autocomplete",
+  flagScope: FLAG_SCOPE,
   rows: [
     {
       path: "preview",
@@ -42,7 +44,7 @@ export const MANIFEST = Object.freeze({
       returns: `${ENGINE_RESULT} | null`,
       gm: true, writes: true,
       sideEffects: ["Wall update batch", "Wall create batch", "ChatMessage (GM whisper)",
-        "flags.wall-autocomplete.{generated,run,rule,kind,sources,moves.<run>}"],
+        `flags.${FLAG_SCOPE}.{${STAMPED.join(",")}}`],
       throws: ["Error"],
       doc: "Complete the scene's walls: one update batch (trims/welds), one create batch, then the chat card. "
         + "A created wall is stamped with the run id; a trimmed or welded one gets moves.<run id> = its prior "
@@ -54,7 +56,7 @@ export const MANIFEST = Object.freeze({
       returns: "{ deleted, restored, run } | null",
       gm: true, writes: true, legacy: true,
       sideEffects: ["Wall update batch", "Wall delete batch", "ChatMessage (GM whisper)",
-        "flags.pentaryn-walls and flags.wall-autocomplete: the undone run's moves entry deleted on restored walls, "
+        `${READ_SCOPES.map(scope => `flags.${scope}`).join(" and ")}: the undone run's moves entry deleted on restored walls, `
           + "or the whole stamp once no run is left"],
       throws: ["Error"],
       doc: "Undo the latest run on a scene (or all of them): delete the walls it created and restore those it trimmed. "
@@ -104,7 +106,7 @@ export const MANIFEST = Object.freeze({
   flags: {
     // Every key runEngine stamps: generated/run/kind/sources on creates, rule on both, moves.<run> on
     // updates (walls-M11). priorC is read-only now — only pre-walls-edge-2 walls carry it.
-    writes: ["generated", "run", "rule", "kind", "sources", "moves.<run>"].map(k => `flags.wall-autocomplete.${k}`),
+    writes: STAMPED.map(k => `flags.${FLAG_SCOPE}.${k}`),
     reads: ["keepOpen", "generated", "run", "priorC", "moves"].flatMap(underEveryScope),
   },
   unlisted: [],

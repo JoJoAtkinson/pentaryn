@@ -9,7 +9,7 @@ import { wallsWorld } from "./fixtures/world.mjs";
 const ROOT = new URL("..", import.meta.url);
 const F = await wallsWorld();
 await import("../pentaryn-walls.mjs");
-const { MODULE, VERSION } = await import("../walls-core.mjs");
+const { FLAG_SCOPE, MODULE, READ_SCOPES, VERSION } = await import("../walls-core.mjs");
 const { MANIFEST } = await import("../api-manifest.mjs");
 const { SETTINGS } = await import("../settings.mjs");
 const { buildApi, surfaceOf } = await import("../lib/api.mjs");
@@ -75,6 +75,14 @@ test("the flags contract names the (pre-migration) scope it writes and both scop
   const both = k => [`flags.pentaryn-walls.${k}`, `flags.wall-autocomplete.${k}`];
   assert.deepEqual(d.flags.reads, ["keepOpen", "generated", "run", "priorC", "moves"].flatMap(both));
   assert.ok(d.flags.writes.includes("flags.wall-autocomplete.run"));
+});
+
+test("walls-EXT-6: the manifest's flag scope comes from FLAG_SCOPE, never a hard-coded literal", async () => {
+  assert.equal(MANIFEST.flagScope, FLAG_SCOPE);
+  assert.ok(MANIFEST.flags.writes.every(p => p.startsWith(`flags.${FLAG_SCOPE}.`)));
+  const { readFile } = await import("node:fs/promises");
+  const src = await readFile(new URL("api-manifest.mjs", ROOT), "utf8");
+  for (const scope of READ_SCOPES) assert.ok(!src.includes(scope), `api-manifest.mjs hard-codes "${scope}"`);
 });
 
 test("undo() describes the stamp deletion under both scopes", () => {

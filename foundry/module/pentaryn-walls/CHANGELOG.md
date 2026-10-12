@@ -6,6 +6,10 @@
 (`flagScope` stays `wall-autocomplete`), `languages`, `minimum: "14"`, `verified: "14.369"` and the
 description fix; the flag-scope migration is **parked** while walls stays off (Joe).
 
+- **[declared] The manifest's flag scope comes from `FLAG_SCOPE`** (`walls-EXT-6`): `api-manifest.mjs`
+  hard-coded `"wall-autocomplete"` in `flagScope`, `flags.writes` and `run`'s side effects (and both
+  read scopes in `undo`'s), so a future scope migration would have left `describe()` naming the old
+  scope. They are now built from `FLAG_SCOPE` and `READ_SCOPES`; `describe()` output is unchanged.
 - **[declared] An empty scene reports 0 passes on wasm too** (`walls-edge-6`): with no walls the
   compiled engine counted one pass where js counts none, so the card said "1 pass" and `compare()`
   reported a difference. `runWasm` now hands a wall-less scene to the js engine, whose result is
