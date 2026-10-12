@@ -58,8 +58,11 @@ export function mutate(messageId, fn) {
 /*  Who is affected                             */
 /* -------------------------------------------- */
 
-/** Describe a TokenDocument as the plain object core.buildRows expects. */
-export function describeToken(token) {
+/**
+ * Describe a TokenDocument as the plain object core.buildRows expects. `handleActorId` (finding
+ * -2): the handle actor's id, looked up once by the caller; omitted, it is looked up here.
+ */
+export function describeToken(token, { handleActorId } = {}) {
   const actor = token.actor;
   return {
     id: token.id,
@@ -73,7 +76,8 @@ export function describeToken(token) {
     hidden: !!token.hidden,
     disposition: token.disposition ?? null,
     handle: isHandle(token),
-    isHandleActor: !!aoeFlags(actor).handleActor || token.actorId === handleActor()?.id,
+    isHandleActor: !!aoeFlags(actor).handleActor
+      || (handleActorId === undefined ? token.actorId === handleActor()?.id : !!handleActorId && token.actorId === handleActorId),
     isPile: isPile(token),
     hasPlayerOwner: !!actor?.hasPlayerOwner
   };
@@ -156,7 +160,8 @@ export async function resolve(messageOrId, { regionId = undefined } = {}) {
   const dc = activity.save.dc?.value;
   const onSave = message.system?.onSave ?? activity.damage?.onSave ?? "half";
   const casterActorId = activity.actor?.id ?? null;
-  const described = tokens.map(describeToken);
+  const handleActorId = handleActor()?.id ?? null;   // once, not once per token (-2)
+  const described = tokens.map(tk => describeToken(tk, { handleActorId }));
   const rows = buildRows(described, { casterActorId });
   const usage = usageIdOf(message);
   const careful = await carefulFor(activity.actor, described, { casterActorId, usage, scene, onSave, rows });
