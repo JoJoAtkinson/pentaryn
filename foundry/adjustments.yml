@@ -476,7 +476,7 @@ adjustments:
   - id: argon-tooltip-click-through
     packages: [enhancedcombathud]
     modules: [pentaryn-riders]
-    files: [foundry/module/pentaryn-riders/riders.css]
+    files: [foundry/module/pentaryn-riders/styles/riders.css]
     markers: ["#tooltip .ech-tooltip"]
     what: CSS pointer-events none on Argon's live hover tooltip (#tooltip .ech-tooltip); locked tooltips (core clones without the id) keep pointer events
     why: Argon sets pointer-events:all on .ech-tooltip, so a tall tooltip clamped over its own button ate the click (Scorching Ray could not be cast from the HUD at 1299x848)

@@ -6,7 +6,7 @@
  * per-button wraps of parts 3 and 4 and the enrichHTML wrap are in patches.mjs. Nothing in Argon's
  * files is edited. Registered in foundry/adjustments.yml (argon-shared-uses-badge,
  * argon-collapse-on-area-placement, riders-argon-metamagic-no-picker,
- * riders-argon-tooltip-item-rolldata); the tooltip CSS is in riders.css (argon-tooltip-click-through).
+ * riders-argon-tooltip-item-rolldata); the tooltip CSS is in styles/riders.css (argon-tooltip-click-through).
  *
  * 1. Shared-uses badges. A button whose activity spends ANOTHER item's uses (`itemUses`
  *    consumption: every Metamagic option spends Font of Magic) shows that item's uses as its

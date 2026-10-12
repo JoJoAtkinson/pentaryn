@@ -190,7 +190,7 @@ concentration line before the card note; `dnd5e.postUseActivity` runs Arcane Rec
 | `patches.mjs` | the six wraps |
 | `rituals.mjs`, `concentration.mjs`, `argon-tidy.mjs`, `cast-flow.mjs` | features: table fixes |
 | `damage-riders.mjs`, `card-note.mjs`, `tray-preset.mjs`, `battle-medic.mjs`, `hd-sheet.mjs` | features: the riders, Battle Medic, the sheet − / + |
-| `riders.css`, `lang/en.json`, `lib/` | styles (`.pr-*`), strings, the vendored kit |
+| `styles/riders.css`, `lang/en.json`, `lib/` | styles (`.pr-*`, and the `#tooltip` click-through rule), strings, the vendored kit (with `lib/argon-tooltip.css`, D7: listed in `styles`, inert for riders alone) |
 
 ## Tests
 

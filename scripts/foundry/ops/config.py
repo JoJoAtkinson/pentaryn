@@ -293,10 +293,7 @@ MODULES = {
         "pentaryn-riders",
         # node-test: riders-core.mjs (the RULES table and roll-term edits) is pure.
         check=(*_STATIC, "node-test", *_BLUEPRINT),
-        after_sync=(
-            "First install: restart Foundry (module.json is read at startup), enable 'Pentaryn Feature Riders', then reload.",
-            "Audit feat riders per actor:  game.pentaryn.riders.report()",
-        ),
+        # after_sync comes from module.json flags.pentaryn.afterSync (Wave 7 batch).
     ),
     "prompts": ModuleSpec(
         "pentaryn-prompts",
