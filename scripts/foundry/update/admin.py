@@ -49,7 +49,8 @@ keychain at the point of use, never from a file in this repo and never in argv.
 
 Without one, ``sessions.authenticateAdmin`` returns ``{success: true}`` but leaves
 ``session.admin`` **false**, which quietly breaks the two calls that check that flag
-directly: ``loginAsUser`` (the smoke test's GM login) and ``POST /join {shutdown}``.
+directly: ``loginAsUser`` (the smoke test's GM login) and the world deactivate —
+``POST /setup {worldShutdown}`` on 14.369+, ``POST /join {shutdown}`` before it.
 """
 
 from __future__ import annotations
@@ -146,7 +147,7 @@ class Status:
 # ── Process lifecycle ────────────────────────────────────────────────────────
 
 def port_open(timeout: float = 2.0) -> bool:
-    """The server answers on :30000 when up. `cloud.py` uses the same probe, and
+    """The server answers on ``host.foundry_port()`` when up. `cloud.py` uses the same probe, and
     several of its operations `die()` while it is true."""
     try:
         requests.get(BASE_URL, timeout=timeout, allow_redirects=False)
@@ -259,7 +260,7 @@ class FoundryAdmin:
         With a world active, ``/setup`` is the route that works: ``setup.mjs`` runs
         ``authenticateAdmin`` *before* its world-active test and gates only the package
         actions on the result, so the flag gets set and the action is then refused with
-        a 403 we expect and ignore. The body must carry neither ``shutdown`` nor
+        a status (400 on 14.369, 403 before) we expect and ignore. The body must carry neither ``shutdown`` nor
         ``editWorld`` — both are handled above that 403 and would deactivate or mutate
         the live world. ``isAdmin`` in the ``getJoinData`` payload is Foundry's own
         report of the resulting flag, so the check is authoritative rather than

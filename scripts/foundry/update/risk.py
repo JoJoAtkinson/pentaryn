@@ -10,10 +10,11 @@ Three buckets:
 
 ``auto``    apply without asking. Patch/minor bumps whose compatibility and
             relationships all check out against what is installed.
-``review``  hand to Claude with the release notes. Major bumps, packages never seen
-            before, and anything Foundry's own compatibility preview flagged.
+``review``  hand to Claude with the release notes. Major bumps and packages never
+            seen before.
 ``hold``    do not apply; report it. Core generation changes, anything that would
-            need a core upgrade we are not doing, anything unresolvable.
+            need a core upgrade we are not doing, anything Foundry's own
+            compatibility preview blocks, anything unresolvable.
 
 "Never seen before" is tracked in ``.state/vtt-update.seen.json``. A module Joe
 installed on Thursday should not silently auto-update on Saturday before anyone has
