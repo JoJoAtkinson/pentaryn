@@ -863,7 +863,7 @@ function applyInstance(inst, segs, runId) {
 /*  Refusal diagnosis (P4)                      */
 /* -------------------------------------------- */
 
-function diagnose(v, segs, verts, cfg, ambiguous) {
+function diagnose(v, segs, dang, cfg, ambiguous) {
   if (ambiguous.has(v.key)) {
     const {rule, candidates} = ambiguous.get(v.key);
     const where = candidates.map(c => c.corner ? `(${c.corner})` : `(${c.lex[1]})`).join(" and ");
@@ -872,7 +872,7 @@ function diagnose(v, segs, verts, cfg, ambiguous) {
   const reasons = [];
   const coll2 = cfg.collEps * cfg.collEps;
   const A = v.ends[0].seg;
-  for (const w of danglingOf(verts)) {
+  for (const w of dang) {
     if (w.key === v.key) continue;
     const B = w.ends[0].seg;
     if (A.idx === B.idx) continue;
@@ -938,10 +938,11 @@ export function analyze(walls, opts = {}) {
   const lints = lint(segs, cfg);
   const verts = buildGraph(segs, cfg);
   const amb = ambiguousAnchors(enumerate(segs, verts, cfg));
+  const dang = danglingOf(verts);
   return {
     lints,
-    refusals: danglingOf(verts).map(v => ({
-      at: v.p, wall: v.ends[0].seg.id, why: diagnose(v, segs, verts, cfg, amb)
+    refusals: dang.map(v => ({
+      at: v.p, wall: v.ends[0].seg.id, why: diagnose(v, segs, dang, cfg, amb)
     })),
     components: components(segs, verts).map(c => ({
       walls: c.segs.length, dangling: c.dangling, closed: c.dangling === 0
@@ -1084,8 +1085,9 @@ export function runEngine(walls, opts = {}) {
     if (iterations > cfg.iterCap) throw new Error(`wall-autocomplete: hit the ${cfg.iterCap}-iteration cap; nothing was committed.`);
 
     // P4 — refusal sweep. Reports only; geometry is untouched.
-    for (const v of danglingOf(verts)) {
-      refusals.push({at: v.p, wall: v.ends[0].seg.id, why: diagnose(v, segs, verts, cfg, ambiguous)});
+    const dang = danglingOf(verts);
+    for (const v of dang) {
+      refusals.push({at: v.p, wall: v.ends[0].seg.id, why: diagnose(v, segs, dang, cfg, ambiguous)});
     }
 
     componentReport = componentReport.concat(components(segs, verts).map(c => ({
