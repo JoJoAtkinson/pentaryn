@@ -1,7 +1,7 @@
 ---
 title: "Code audit 2026-10 — pentaryn-prompts"
 status: active
-last_modified: 2026-10-10
+last_modified: 2026-10-11
 tags: [plans, audit, foundry]
 ---
 
@@ -653,3 +653,38 @@ Doc guard in foundry/module/pentaryn-prompts/test/run.mjs: take the README text 
 - `typeahead.mjs` (107 lines): prompts-lookup-31, -32, -33.
 - `readback-core.mjs` (185 lines): reviewed. It is pure and node-tested through `test/eval2-fixes.mjs`, `test/eval3-fixes.mjs` and `test/usability-fixes.mjs`, all three run by `test/run.mjs:413–415`. Its header documents both row shapes, real run and dry run. Nothing found.
 - `styles/prompts.css` (49 lines): reviewed. Every rule is scoped under `.pentaryn-prompts` or `.pentaryn-prompts-tip` with the `.pp-` prefix, as the §2.1 prefix table expects. Nothing found.
+
+## Status — wave 3 migration (2026-10-11, branch `migrate/wave-3`, code phase)
+
+Each finding → the commit that applied it (`[declared]` ones go to the live check). The guide's
+Result section has the step map and the deviations.
+
+| Finding | Status |
+|---|---|
+| prompts-lookup-7 | done `ce91ee83` (panelRels / seenCount; pinned against the pasted loop) |
+| prompts-lookup-8 | done, narrower, `aa12d127` [declared] DP8: the hover tip reads the cache; the panel builds fresh and writes it through |
+| prompts-lookup-9 | done `a4f3d32c` (SIZE_WORDS, PC_SIZE_WORDS, parseCr in `core/size.mjs`) |
+| prompts-lookup-10 | done `9b597ba3` (packs-adapter, FIND_TYPE), `ee0108a9` (poolIndex) |
+| prompts-lookup-11 | module half done `452f1465` (PATCH_KEYS), `3451fdb7` (KNOWN_DRIFT); fork half open (fork lane) |
+| prompts-lookup-12 | module half done `876f2899` (the manifest is the query table, `queryName: "replace"`); fork half open |
+| prompts-lookup-13 | done `5a759893` (PLANNERS, bodies moved verbatim) |
+| prompts-lookup-14 | done `1e376f51` [declared] DP6; the fake harness is the checkpoint's `test/fixtures/world.mjs` |
+| prompts-lookup-15 | done `e00bb70f` [declared] DP7 (`core/text.mjs` assetUrl) |
+| prompts-lookup-16 | done `5ba6516c` (`settings.mjs`; gatherChars already agreed since D6) |
+| prompts-lookup-17 | done `f131b6ee` [declared] DP9 (warn once on a throwing core token API; debug elsewhere) |
+| prompts-lookup-18 | not done: the gather and replace console lines are pinned exactly by frozen tests; logging is outside the wave's rule (open for Joe) |
+| prompts-lookup-19 | done `a86a769e` (inspect, markersOn, manifest, selftest, describe; module.api) |
+| prompts-lookup-20 | done `b60f4dd4` (geometry-core → `core/*.mjs` behind the barrel) |
+| prompts-lookup-21 | done `a4f3d32c` (LINK_FT, FORMATION_FT) |
+| prompts-lookup-22 | done `9b597ba3` (`core/walls.mjs` wallSegmentsOf) |
+| prompts-lookup-23 | done `2bf05359` |
+| prompts-lookup-24 | done `7130fade` (`tokens-adapter.mjs` tokenDataFrom) |
+| prompts-lookup-27 | done `f1b06537` (errors paragraph, languageKeys docblock, Extending; routing row is the integrator's) |
+| prompts-lookup-28 | pinned at the checkpoint |
+| prompts-lookup-31 | done `bc8ef0f3` (typeahead-core createTypeahead) |
+| prompts-lookup-32 | item 2 done `1ea35e09` [declared] DP5; item 3 (README line) `f1b06537`; item 1 (uninstall the listeners) open for Joe — the frozen per-file surface golden pins the adapter's five exports |
+| prompts-lookup-33 | done `be5c783b` (the live toast is localised through the entry's sink) |
+| mcp-fork-15 | module half done (`prompts-core.mjs` KINDS/PATCH_KEYS, contract.test vocabularies); fork half open |
+| mcp-fork-24 | done `876f2899` (kit guarded through registerQueries) |
+| new (checkpoint) | fractional patch CR written as NaN — fixed `0dfb854a` [declared] |
+
