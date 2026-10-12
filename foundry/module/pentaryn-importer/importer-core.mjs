@@ -507,9 +507,8 @@ function preparePayload(entry) {
  * @returns {object}
  */
 function toUpdatePayload(data) {
-  const payload = cloneJson(data);
+  const payload = toCreatePayload(data);
   if (payload.system?.attributes?.hp) delete payload.system.attributes.hp.value;
-  if (payload.flags?.[FLAG_SCOPE]) delete payload.flags[FLAG_SCOPE].contentHash;
   return payload;
 }
 
