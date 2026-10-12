@@ -49,6 +49,8 @@ Resolved by the re-run: none. Obsolete: none.
 | combat-riders-41 | fixed `[declared]` `c8ce8381` (claim first on the patient) |
 | combat-riders-16 (riders half) | rows and files moves written up for the integrator (adjustments.yml is shared) |
 | combat-riders-12 / -13 / -17 / -31 (riders halves) | -12 `[declared]` `32a0a8e6`; -13 `3dacbbe1`; -17 README table `d42a1164` (combat README / melee.md mirror with the integrator); -31 `b81fa95d` + `d42a1164` |
+| Summary "Performance": once-per-casting guard scans the whole chat log (no id; guide §4) | fixed `79e29f8d`: reads dnd5e's `registry.messages.get(origin)`, the whole log only as a fallback |
+| `#tooltip` click-through selectors (riders.css; C37, D7) | open: vendoring `lib/argon-tooltip.css` waits for the W7 `relationships` edit; moving the rule into the kit file is Joe's call (wave-4 report W4-R9) |
 
 Id note: the new findings are -39 and -40 because combat.md already uses combat-riders-36, -37 and -38 (the shared numbering continues across both files).
 

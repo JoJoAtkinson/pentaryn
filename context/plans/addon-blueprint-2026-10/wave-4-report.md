@@ -145,3 +145,39 @@ Combat README and `context/foundry/melee.md`: mirror riders' "Which riders modul
 6. -23: Summon Beast, drop concentration → the beast goes; Dodge ending removes nothing.
 7. D-r5: Place Summons opens ticked; Animate Dead previews a real skeleton image; Careful Spell has no
    target picker; Scorching Ray's tooltip says 3 rays; a failed concentration save still ends concentration.
+
+## riders — standalone findings lane (2026-10-11)
+
+Guide §4 and every finding in `code-audit-2026-10/riders.md`, checked against the branch:
+
+| Item | Result |
+|---|---|
+| combat-riders-23 | already applied `6516b872` |
+| combat-riders-12 (riders half) | already applied `32a0a8e6`; the additive half (`battleMedic(healer, Actor)` resolving the Actor's token) is new behaviour, not built |
+| Once-per-casting guard (W4-R2) | **applied `79e29f8d`**, superseding W4-R2's "not built": dnd5e 6 keeps the index itself (`dnd5e.registry.messages.get(origin)`), so no hook and no `golden/hooks.json` flip. Fallback to the whole-log scan when the registry is missing, answers a non-array, or throws (debug line) |
+| C59 batching (W4-R3) | still **leave**: `api.test` pins one `update` per item for `setType` (the last-four-writes oracle) and `deleteActivity` per activity for `retireManual` |
+| C37 `#tooltip` selectors / D7 (W4-R5) | **blocked, not Joe's**: combat's argon-kit has landed (`87be8cd4`, `3a29eb4f`), but `vendor.py sync pentaryn-riders --kit argon-tooltip` refuses until `module.json` `relationships` names `enhancedcombathud` (the W7 `recommends` edit). The rule placement is W4-R9 below |
+| All other audit ids (-25, -26, -27, -32, -39, -40, -41, -16) | already applied (audit status table) |
+
+Gates after `79e29f8d`: `node test/run.mjs` 173 pass, 0 todo, LEGACY 103 / 22 / 39; conformance
+89.6 % (unchanged); `vendor.py check pentaryn-riders` clean.
+
+### Open for Joe — riders (standalone lane)
+
+| # | Item | Default | Why |
+|---|---|---|---|
+| W4-R9 | Where riders' Argon click-through rule (`#tooltip.ech-tooltip-container`, `#tooltip .ech-tooltip { pointer-events: none }`, adjustments row `argon-tooltip-click-through`) lives under D7 | **keep it in riders.css** (C37 stays failing on those two selectors) | Moving it into `foundry/lib/argon-tooltip.css` makes every Argon hover tooltip click-through whenever combat or transform is on, even with riders off: a kit-wide behaviour change (guide D-r4). If Joe wants it moved: one canonical edit, re-vendor combat/transform/riders, and the adjustments row's `files` gains `foundry/lib/argon-tooltip.css` |
+
+### Integrator — riders (standalone lane)
+
+- After the W7 `module.json` edit (`relationships.recommends` enhancedcombathud, already in the
+  riders W7 list above): run `vendor.py sync pentaryn-riders --kit argon-tooltip` and add
+  `"lib/argon-tooltip.css"` to riders' `styles` beside `styles/riders.css` (D7: byte-identical copy
+  in combat, transform and riders). Riders renders no `.pentaryn-tt` tooltip today, so this is inert
+  for riders alone.
+- Seen, not mine: `vendor.py`'s refusal for a CSS kit file names it `argon-tooltip.mjs`
+  ("argon-tooltip.mjs names enhancedcombathud — add it to module.json relationships first"); it
+  should print `kit_file(n)` (`argon-tooltip.css`).
+- Optional: `foundry/adjustments.yml` `dnd5e-chat-message-types` could add the marker
+  `registry.messages` with `foundry/module/pentaryn-riders/shapes.mjs` in `files` (riders now reads
+  dnd5e's message registry); the fallback keeps riders working if dnd5e drops it.
