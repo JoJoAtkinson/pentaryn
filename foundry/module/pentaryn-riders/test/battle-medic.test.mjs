@@ -167,7 +167,8 @@ test("relay oracle: clamps to the die + the healer's PB, spends that die, return
 });
 
 test("relay oracle: the four refusals, verbatim, and the no-Hit-Dice throw", async () => {
-  await asPlayer(() => assert.rejects(relay(payload(), { user: W.player }), { message: "not the active GM" }));
+  // D-r1 [declared, failure path]: a non-GM receiver is refused by the kit's guarded wrapper first
+  await asPlayer(() => assert.rejects(relay(payload(), { user: W.player }), { message: "NOT_GM: this client is not a GM" }));
   await assert.rejects(relay(payload({ healerUuid: "Actor.nobody0000000001" }), { user: W.player }), { message: "unknown actor" });
   await assert.rejects(relay(payload({ targetUuid: `Actor.${IDS.npc}.Item.x` }), { user: W.player }), { message: "unknown actor" });
   await assert.rejects(relay(null, { user: W.player }), { message: "unknown actor" });

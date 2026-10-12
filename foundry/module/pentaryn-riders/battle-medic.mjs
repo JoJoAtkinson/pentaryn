@@ -13,6 +13,7 @@
 
 import { MODULE, battleMedicFormula, clampHeal, matchRule, pickSpend } from "./riders-core.mjs";
 import { settingRaw } from "./settings.mjs";
+import { guarded } from "./lib/queries.mjs";
 import { HEALER, hdPools, hdSummary, isBattleMedic, itemInfo, spendHitDie } from "./shapes.mjs";
 
 const QUERY = `${MODULE}.battleMedic`;
@@ -144,9 +145,15 @@ async function installBattleMedic(actor, { replace = true } = {}) {
 
 /* ── the GM relay ─────────────────────────────────────────────────────── */
 
-/** Called from the entry's `init`, on every client (a player's `gm.query` needs the name registered). */
+/**
+ * Called from the entry's `init`, on every client (a player's `gm.query` needs the name registered).
+ * Through the kit's `guarded` with `sender: "any"`: the receiver must be a GM (else
+ * `NOT_GM: this client is not a GM`), any sender may ask — the handler checks that the sender owns
+ * the healer. Still a hand registration (C56): the kit's registerQueries does not pass the query
+ * context (the sender) to a manifest row's implementation yet (W2-J2).
+ */
 export function registerRelay() {
-  CONFIG.queries[QUERY] = relay;
+  CONFIG.queries[QUERY] = guarded(relay, { sender: "any" });
 }
 
 /**
