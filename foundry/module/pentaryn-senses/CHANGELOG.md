@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **[declared senses-R5] A failed carried-light sync no longer skips the ready Light sweep**
+  (final review 2026-10-12): on the active GM's ready, the carried sync now has its own catch and
+  warns `carried sync`, then the Light sweep runs anyway (was: one bad Actor batch warned
+  `ready sweep` and skipped the sweep). `test/glue-ready-errors.test.mjs` flipped to expect the
+  `carried sync` warning and the sweep's Token writes.
+
 - **[declared senses-EXT-11] `light.onMe` and `light.prompt` return false when On me can't cast**
   (final review 2026-10-12): with no scene viewed, or no token of the caster on the viewed scene,
   onMe still warns ("Open a scene first." / "Your token isn't on this scene. Use Pick a target.")

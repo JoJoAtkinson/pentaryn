@@ -91,7 +91,7 @@ function onInit() {
  * Build the API first (a drift throw stops here with one clear line), publish it as
  * game.pentaryn.senses and module.api, then the chain alias (game.pentaryn.chain, the same frozen
  * object as senses.chain), then — on the writer's client only — the reset → the carried-light sync
- * → the Light sweep. A frozen game.pentaryn throws in publishNamespace (kit 1.0.2, J10).
+ * → the Light sweep, each step with its own warn so one failure never skips the next. A frozen game.pentaryn throws in publishNamespace (kit 1.0.2, J10).
  */
 function onReady() {
   try {
@@ -105,7 +105,7 @@ function onReady() {
   const ex = ctx.exposed;
   if (isActiveGMOrLoneGM()) ex.resetSight()
     .catch(e => log.warn("sight reset", e))
-    .then(() => ex.syncAll())
+    .then(() => ex.syncAll().catch(e => log.warn("carried sync", e)))
     .then(() => (isActiveGM() ? ex.light.sweep() : null))
     .catch(e => log.warn("ready sweep", e));
 }
