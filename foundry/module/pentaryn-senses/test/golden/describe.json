@@ -566,7 +566,8 @@
       "flags.pentaryn-senses.lit",
       "flags.pentaryn-senses.hooded",
       "flags.pentaryn-senses.chain",
-      "flags.pentaryn-senses.claims"
+      "flags.pentaryn-senses.claims",
+      "flags.pentaryn-senses.lightToggle"
     ],
     "reads": [
       "flags.pentaryn-senses.light",

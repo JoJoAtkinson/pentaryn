@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **[declared senses-EXT-6] `describe().flags.writes` lists `lightToggle`** (final review
+  2026-10-12): setupLight writes `flags.pentaryn-senses.lightToggle` into the Light activity it adds
+  to a torch, so the manifest now declares it as a write (it stays in `reads`). A new api.test check
+  collects every pentaryn-senses flag key in the goldens' recorded write calls and fails on one the
+  manifest leaves out. Goldens: describe.json (flags.writes). No runtime behaviour change.
+
 - **[declared senses-R4] `inspect(ref, null)` and `resetSight(null)` act as if opts were omitted**
   (final review 2026-10-12): an explicit null (what the MCP bridge sends for JSON `opts: null`) no
   longer throws a TypeError; both functions read `opts` as `{}` when it is null or not an object,

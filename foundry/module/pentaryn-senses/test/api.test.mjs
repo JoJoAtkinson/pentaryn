@@ -60,3 +60,37 @@ test("publish: module.api is canonical; game.pentaryn.chain is senses.chain; the
   assert.equal(game.pentaryn.published().chain.alias, true);
   assert.deepEqual(game.pentaryn.namespaces(), ["senses"], "the alias is not a namespace of its own");
 });
+
+// senses-EXT-6: every flag key the module writes is declared in MANIFEST.flags.writes. "Writes" is
+// every pentaryn-senses flag key in a recorded write call (the `calls` of every golden), so a new
+// write that a golden pins and the manifest leaves out fails here.
+import { readdirSync, readFileSync } from "node:fs";
+
+test("flags.writes: every flag key a recorded call writes is declared (senses-EXT-6)", () => {
+  const goldens = new URL("./golden/", import.meta.url);
+  const written = new Map();   // key → the golden that shows it written
+  const keysIn = (v, file) => {
+    if (!v || typeof v !== "object") return;
+    for (const [k, x] of Object.entries(v)) {
+      const flat = k.match(/^flags\.pentaryn-senses\.(?:-=)?([^.]+)/);
+      if (flat) written.set(flat[1], file);
+      if (k === "pentaryn-senses" && x && typeof x === "object") {
+        for (const key of Object.keys(x)) written.set(key.replace(/^-=/, ""), file);
+      }
+      keysIn(x, file);
+    }
+  };
+  const visit = (v, file) => {
+    if (!v || typeof v !== "object") return;
+    if (Array.isArray(v.calls)) for (const c of v.calls) keysIn(c, file);
+    for (const x of Object.values(v)) visit(x, file);
+  };
+  for (const f of readdirSync(goldens).filter(f => f.endsWith(".json"))) {
+    visit(JSON.parse(readFileSync(new URL(f, goldens), "utf8")), f);
+  }
+  assert.ok(written.has("lightToggle"), "setupLight's torch activity is pinned as a write");
+  const declared = new Set(MANIFEST.flags.writes);
+  for (const [key, file] of written) {
+    assert.ok(declared.has(`flags.pentaryn-senses.${key}`), `${key} (written in ${file}) is not in MANIFEST.flags.writes`);
+  }
+});

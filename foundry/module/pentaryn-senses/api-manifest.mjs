@@ -221,6 +221,7 @@ export const MANIFEST = Object.freeze({
       `flags.${MODULE}.itemLight`, `flags.${MODULE}.itemLightPrior`, `flags.${MODULE}.spellLight`,
       `flags.${MODULE}.lightCast`, `flags.${MODULE}.lit`, `flags.${MODULE}.hooded`, `flags.${MODULE}.chain`,
       `flags.${MODULE}.claims`,   // on a Light item: which GM tab whispers "Gone" for a cast (senses-ac-1)
+      `flags.${MODULE}.lightToggle`,   // on the torch activity setupLight adds (senses-EXT-6)
     ],
     // `light` on an item is also written by pentaryn-transform (the Starry form).
     reads: [`flags.${MODULE}.light`, `flags.${MODULE}.lightItem`, `flags.${MODULE}.lightToggle`],
