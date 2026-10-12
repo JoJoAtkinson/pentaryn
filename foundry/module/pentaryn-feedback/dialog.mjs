@@ -78,6 +78,9 @@ export class ReportDialog extends ApplicationV2 {
   /** The one open instance. */
   static current = null;
 
+  /** The first render while it is in flight, so a second open() waits for it instead of building a twin. */
+  #opening = null;
+
   static DEFAULT_OPTIONS = {
     id: DIALOG_ID,
     classes: ["pentaryn-feedback", `${CSS}dialog`],
@@ -103,7 +106,11 @@ export class ReportDialog extends ApplicationV2 {
 
   /** Open (or refresh and focus) the dialog. Resolves once it is rendered. */
   static async open(opts) {
-    const existing = ReportDialog.current;
+    let existing = ReportDialog.current;
+    if (existing && !existing.rendered && existing.#opening) {
+      await existing.#opening.catch(() => {});
+      existing = ReportDialog.current;
+    }
     if (existing?.rendered) {
       if (opts?.draft) existing.draft = mergeDraft(existing.draft, opts.draft);
       if (opts?.summary) existing.summary = opts.summary;
@@ -114,7 +121,12 @@ export class ReportDialog extends ApplicationV2 {
     }
     const app = new ReportDialog(opts);
     ReportDialog.current = app;
-    await app.render({ force: true });
+    app.#opening = app.render({ force: true });
+    try {
+      await app.#opening;
+    } finally {
+      app.#opening = null;
+    }
     app.focusText();
     return app;
   }

@@ -3,18 +3,24 @@
  * one render 60 ms later (a burst renders once); the drawing itself is strip.mjs.
  */
 
-import { stripMayChange } from "./creatures-core.mjs";
+import { makeCoalescer, stripMayChange } from "./creatures-core.mjs";
 import { forget, list, markControlled, placeStrip, remove, render } from "./strip.mjs";
 
 let log = null;
-let renderTimer = null;
+/**
+ * Render 60 ms from now; a later call pushes it back. A render failure is one console line. The
+ * timers are read at call time (tests mock them).
+ */
+const renderer = makeCoalescer(60, () => {
+  try { render(); } catch (err) { log.warn("strip render failed", err); }
+}, {
+  setTimeout: (fn, ms) => setTimeout(fn, ms),
+  clearTimeout: id => clearTimeout(id),
+  mode: "debounce",
+});
 
-/** Render 60 ms from now; a later call pushes it back. A render failure is one console line. */
 function scheduleRender() {
-  clearTimeout(renderTimer);
-  renderTimer = setTimeout(() => {
-    try { render(); } catch (err) { log.warn("strip render failed", err); }
-  }, 60);
+  renderer.arm();
 }
 
 /**
@@ -46,7 +52,6 @@ export function install(reg, ctx) {
 
 /** Cancel a pending render and take the strip off the page. */
 export function uninstall() {
-  clearTimeout(renderTimer);
-  renderTimer = null;
+  renderer.cancel();
   remove();
 }

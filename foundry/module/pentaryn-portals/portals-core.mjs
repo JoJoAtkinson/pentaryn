@@ -5,10 +5,13 @@
  *
  * A "token record" is a plain object the Foundry side builds from a TokenDocument:
  *
- *   { id, actorId, type, linked, pile, excluded, hidden, handle,
- *     owners:   string[]   non-GM user ids with OWNER on the token's actor (explicit, not default),
- *     summoner: string|null actor id from flags.dnd5e.summon.origin ("Actor.<id>.Item.<id>"),
- *     handle:   boolean      a pentaryn-aoe area handle (the token a spell area is attached to) }
+ *   { id, name, actorId, type, linked, pile, excluded, owners, summoner, polymorphed, handle, doc }
+ *
+ *     owners:      string[]    non-GM user ids with OWNER on the token's actor (explicit, not default)
+ *     summoner:    string|null actor id from flags.dnd5e.summon.origin ("Actor.<id>.Item.<id>")
+ *     polymorphed: boolean     flags.dnd5e.isPolymorphed on the token's actor
+ *     handle:      boolean     a pentaryn-aoe area handle (the token a spell area is attached to)
+ *     doc:         TokenDocument  the source document (Foundry side only)
  */
 
 export const MODULE = "pentaryn-portals";

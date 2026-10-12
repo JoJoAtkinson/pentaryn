@@ -4,9 +4,10 @@
  * so it never vanishes in the dark. Never on a PC or its Wild Shape form. The decision per token is
  * core's lightUpdate; this file decides when to run it and writes the result.
  *
- * Who writes: the active GM's client only (isActiveGM, no fallback: lights wait until a GM
- * connects). Every change is queued per scene and flushed at most 200 ms after the first one, in
- * one updateEmbeddedDocuments per scene.
+ * Who writes: the active GM user (isActiveGM, no fallback: lights wait until a GM connects). Every
+ * tab on that account writes (the MCP bridge and the browser), harmlessly: lightUpdate is
+ * deterministic, so a duplicate sends the same data (README "Two sessions"). Every change is queued
+ * per scene and flushed at most 200 ms after the first one, in one updateEmbeddedDocuments per scene.
  */
 
 import { isPlayerCreature, lightUpdate, makeCoalescer, shouldQueueLight } from "./creatures-core.mjs";
