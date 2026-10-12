@@ -1,6 +1,7 @@
 // Live golden — pentaryn-prompts. Body of an async function for the foundry `eval-js` MCP tool
 // (paste the file as `script`, timeoutMs 60000). GM client only. Returns a JSON string of
-// { module, golden, timings, cleanup }: `golden` is deterministic (ids normalised, timestamps
+// { module, golden, timings, cleanup } (or { module, skipped } when game.pentaryn.prompts or its
+// settings are missing): `golden` is deterministic (ids normalised, timestamps
 // and dates dropped), `timings` are medians of N runs (performance.now) — the performance baseline.
 //
 // What it exercises (the real glue, no stubs): prompts.status(); then a ZZ scratch scene (Foundry's
@@ -44,8 +45,15 @@ const settle = async (pred, ms = 3000) => {
 
 const MOD = "pentaryn-prompts";
 const out = { module: "prompts", golden: {}, timings: {}, cleanup: {} };
-const P = game.pentaryn.prompts;
-const ringBefore = foundry.utils.deepClone(game.settings.get(MOD, "lastCalls") ?? []);
+const P = game.pentaryn?.prompts;
+// module disabled (no API, or its lastCalls setting unregistered): skip before any write, as
+// walls.js does (LG-R4)
+let ringBefore = null;
+if (P) { try { ringBefore = foundry.utils.deepClone(game.settings.get(MOD, "lastCalls") ?? []); } catch { ringBefore = null; } }
+if (!P || !ringBefore) {
+  out.skipped = "pentaryn-prompts API is missing";
+  return JSON.stringify(out);
+}
 const PROMPT = "ZZ a rusted iron brazier with a wolf-skull helm on top; the coals are still warm";
 const BIO = [
   "<p>ZZ Varr the Ash-Keeper tends the brazier line for the warren. He is old, slow and patient, and he has outlived three chiefs by never wanting to be one.</p>",

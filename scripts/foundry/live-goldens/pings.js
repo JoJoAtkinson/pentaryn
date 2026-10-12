@@ -1,6 +1,7 @@
 // Live golden — pentaryn-pings. Body of an async function for the foundry `eval-js` MCP tool
 // (paste the file as `script`, timeoutMs 60000). GM client only. Returns a JSON string of
-// { module, golden, timings, cleanup }: `golden` is deterministic (ids normalised, timestamps
+// { module, golden, timings, cleanup } (or { module, skipped } when game.pentaryn.pings or its
+// settings are missing): `golden` is deterministic (ids normalised, timestamps
 // dropped), `timings` are medians of N runs (performance.now) — the performance baseline.
 //
 // What it exercises (the real glue, no stubs): the patched ControlsLayer#handlePing on the GM's
@@ -58,7 +59,7 @@ const settle = async (pred, ms = 3000) => {
 };
 
 const out = { module: "pings", golden: {}, timings: {}, cleanup: {} };
-const API = game.pentaryn.pings;
+const API = game.pentaryn?.pings;
 const MOD = "pentaryn-pings";
 let scene = null;
 // The stored Setting document, not game.settings.get: get returns the cached array the module's
@@ -71,8 +72,14 @@ const storedLog = () => {
   const parsed = typeof v === "string" ? JSON.parse(v) : (v ?? []);
   return Array.isArray(parsed) ? foundry.utils.deepClone(parsed) : [];
 };
-// before the first ping
-const savedLog = storedLog();
+// before the first ping; module disabled (no API, or its log setting unregistered): skip before any
+// write, as walls.js does (LG-R4)
+let savedLog = null;
+if (API) { try { savedLog = storedLog(); } catch { savedLog = null; } }
+if (!API || !savedLog) {
+  out.skipped = "pentaryn-pings API is missing";
+  return JSON.stringify(out);
+}
 /** Put the saved log back, in the store, the settings cache and the module's buffer (hot patch). → true when exact. */
 async function restorePingLog() {
   try {

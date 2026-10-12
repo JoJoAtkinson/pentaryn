@@ -1,6 +1,7 @@
 // Live golden — pentaryn-cursors. Body of an async function for the foundry `eval-js` MCP tool
 // (paste the file as `script`, timeoutMs 60000). GM client only. Returns a JSON string of
-// { module, golden, timings, cleanup }: `golden` is deterministic (ids normalised, timestamps
+// { module, golden, timings, cleanup } (or { module, skipped } when game.pentaryn.cursors is
+// missing): `golden` is deterministic (ids normalised, timestamps
 // dropped), `timings` are medians of N runs (performance.now) — the performance baseline.
 //
 // What it exercises (the real glue, no stubs): the GM's own scene controls are switched through
@@ -42,7 +43,12 @@ const settle = async (pred, ms = 3000) => {
 };
 
 const out = { module: "cursors", golden: {}, timings: {}, cleanup: {} };
-const API = game.pentaryn.cursors;
+const API = game.pentaryn?.cursors;
+// module disabled: skip before any control switch, as walls.js does (LG-R4)
+if (!API) {
+  out.skipped = "pentaryn-cursors API is missing";
+  return JSON.stringify(out);
+}
 const VARS = ["--cursor-default", "--cursor-default-down", "--cursor-pointer", "--cursor-pointer-down"];
 const TOOLS = [["tokens", "select"], ["tokens", "target"], ["tokens", "ruler"], ["notes", "journal"], ["drawings", "rect"]];
 const start = { control: ui.controls?.control?.name, tool: ui.controls?.tool?.name };
@@ -52,7 +58,7 @@ const read = () => {
   return {
     control: ui.controls?.control?.name ?? null,
     tool: ui.controls?.tool?.name ?? null,
-    current: API.current(),
+    current: API?.current?.() ?? null,
     dataset: el?.dataset?.pentarynCursor ?? null,
     styleCursor: el?.style?.cursor ?? null,
     vars: Object.fromEntries(VARS.map(v => [v, el?.style?.getPropertyValue(v) || null]))
