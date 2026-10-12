@@ -8,18 +8,23 @@
 import * as core from "./movement-core.mjs";
 import { HOOKS, MODULE, NS } from "./movement-core.mjs";
 import { MANIFEST } from "./api-manifest.mjs";
-import { SETTINGS, setting, settingsSnapshot } from "./settings.mjs";
+import { SETTINGS, policyWrite, setting, settingsSnapshot } from "./settings.mjs";
 import { pinInputs } from "./combat-adapter.mjs";
 import { buildApi } from "./lib/api.mjs";
 import { patches } from "./lib/patch.mjs";
 import { publishedOf } from "./lib/publish.mjs";
 
-/** GM: set the policy directly. A mode other than off is also what the GM button restores. */
+/**
+ * GM: set the policy directly. A mode other than off is also what the GM button restores. Queued
+ * behind any policy write already running on this client (movement-async-1).
+ */
 async function setPolicy(value) {
   if (!game.user.isGM) throw new Error("GM only");
   const p = core.normalizePolicy(value);
-  if (p !== "off") await game.settings.set(MODULE, "ghostPolicyLast", p);
-  return game.settings.set(MODULE, "ghostPolicy", p);
+  return policyWrite(async () => {
+    if (p !== "off") await game.settings.set(MODULE, "ghostPolicyLast", p);
+    return game.settings.set(MODULE, "ghostPolicy", p);
+  });
 }
 
 /** Pins on a scene whose centre sits under a visible token; player-owned tokens first. */

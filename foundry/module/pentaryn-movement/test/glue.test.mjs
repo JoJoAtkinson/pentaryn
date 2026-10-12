@@ -466,6 +466,44 @@ test("GM button onChange flips the policy off and back and toasts the localized 
   await reset();
 });
 
+test("movement-async-1: a quick GM double flip and setPolicy queue; each toast names the mode in effect", async () => {
+  await reset();
+  const lastBefore = game.settings.get(MOD, "ghostPolicyLast");
+  await set("ghostPolicy", "always");
+  await set("ghostPolicyLast", "exploration");
+  asGM();
+  const controls = { tokens: { tools: {} } };
+  F.fire("getSceneControlButtons", controls);
+  const flip = controls.tokens.tools.pentarynGhostPolicy.onChange;
+  let from = mark();
+  // Double click: off then on, the second fired before the first's writes land.
+  await Promise.all([flip(null, false), flip(null, true)]);
+  assert.deepEqual(since(from, "settings.set").map(c => [c.id, c.value]), [
+    [`${MOD}.ghostPolicyLast`, "always"], [`${MOD}.ghostPolicy`, "off"], [`${MOD}.ghostPolicy`, "always"],
+  ], "the second flip reads the first flip's result");
+  assert.equal(game.settings.get(MOD, "ghostPolicy"), "always");
+  assert.deepEqual(toasts(from).map(t => t[1]), [
+    "Player ghost movement: OFF (click to allow)",
+    "Player ghost movement: always allowed (click to turn off)",
+  ], "the last toast names the mode actually in effect");
+  // setPolicy shares the queue: a flip fired while setPolicy writes sees setPolicy's result.
+  await set("ghostPolicy", "off");
+  from = mark();
+  await Promise.all([game.pentaryn.movement.setPolicy("exploration"), flip(null, false)]);
+  assert.deepEqual(since(from, "settings.set").map(c => [c.id, c.value]), [
+    [`${MOD}.ghostPolicyLast`, "exploration"], [`${MOD}.ghostPolicy`, "exploration"], [`${MOD}.ghostPolicy`, "off"],
+  ]);
+  assert.equal(game.settings.get(MOD, "ghostPolicy"), "off");
+  assert.deepEqual(toasts(from).map(t => t[1]), ["Player ghost movement: OFF (click to allow)"]);
+  // A player is still refused with "GM only", before anything is queued.
+  asPlayer();
+  from = mark();
+  await assert.rejects(game.pentaryn.movement.setPolicy("always"), { message: "GM only" });
+  assert.deepEqual(since(from, "settings.set"), []);
+  await set("ghostPolicyLast", lastBefore);
+  await reset();
+});
+
 test("renderSceneControls toggles pm-blocked on the player button only in the combat state", async () => {
   await reset();
   const toggles = [];

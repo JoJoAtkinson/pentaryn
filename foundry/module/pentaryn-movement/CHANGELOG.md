@@ -20,6 +20,9 @@ manifest); the kit is vendored. What a player or GM can notice:
 - **[declared]** after a fight switched a player's ghost off, moving to another map while that fight
   still runs no longer toasts "The fight is over" (which used up the one-time toast); the toast now
   comes once, when the fight on the map it was cleared on really ends (movement-edge-1).
+- **[declared]** a quick double click on the GM ghost button no longer toasts a mode that never takes
+  effect: the clicks (and `setPolicy`) are applied one after another on that client, each flipping
+  from the previous result, and the toast names the mode actually in effect (movement-async-1).
 - Performance: the per-token paths (drag, arrow keys, token refresh, the layer sort) read the
   settings and the combats once per change instead of once per token (F-M1).
 

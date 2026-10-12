@@ -36,7 +36,8 @@ Built from the 2026-10-08 table feedback (plan item C2, `context/plans/table-fee
 - *Settings → Pentaryn Movement → Player ghost movement*: **Off** (no button), **Exploration only**
   (default: off while a combat runs on the scene), **Always allowed**.
 - **GM toolbar button** (token tools, next to core's own ghost): pressed = players may ghost. Click
-  it to turn ghost off for everyone; click again to restore the previous mode.
+  it to turn ghost off for everyone; click again to restore the previous mode. Quick repeat clicks
+  (and `setPolicy` calls) apply one after another, and each toast names the mode then in effect.
 - **"A combat is running on the scene"** = an **active** encounter linked to the scene that has a
   combatant or has started, or an unlinked one with a combatant standing there. An empty encounter
   does not count, and **hidden combatants don't count** (a hidden ambush tips no one off).

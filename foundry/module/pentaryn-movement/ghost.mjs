@@ -18,7 +18,7 @@ import {
   CSS, GHOST_ALPHA, GM_CLIP_KEYS, GM_ICONS, GM_KEYS, GM_TOOL, MODULE, NOTIFY_BLOCKED, NOTIFY_CLEARED,
   TOOL, TOOL_CLIP_KEYS, TOOL_KEYS, VERSION
 } from "./movement-core.mjs";
-import { SETTINGS, setting } from "./settings.mjs";
+import { SETTINGS, policyWrite, setting } from "./settings.mjs";
 import { combatSummaries } from "./combat-adapter.mjs";
 import { defineAccessor, wrapMethod } from "./lib/patch.mjs";
 
@@ -259,13 +259,20 @@ async function onPlayerToggle(active) {
   }
 }
 
+/**
+ * The GM's button. The flip is computed from the live policy inside the policy queue, so a quick
+ * double click flips from the first click's result; the toast names the mode in effect after the
+ * write (movement-async-1).
+ */
 async function onGmFlip(active) {
   if (!game.user.isGM) return;
   try {
-    const next = core.flipPolicy(policy(), setting("ghostPolicyLast"), !!active);
-    if (next.last !== setting("ghostPolicyLast")) await game.settings.set(MODULE, "ghostPolicyLast", next.last);
-    await game.settings.set(MODULE, "ghostPolicy", next.policy);
-    ui.notifications.info(game.i18n.localize(GM_KEYS[next.policy]));
+    await policyWrite(async () => {
+      const next = core.flipPolicy(policy(), setting("ghostPolicyLast"), !!active);
+      if (next.last !== setting("ghostPolicyLast")) await game.settings.set(MODULE, "ghostPolicyLast", next.last);
+      await game.settings.set(MODULE, "ghostPolicy", next.policy);
+      ui.notifications.info(game.i18n.localize(GM_KEYS[policy()]));
+    });
   } catch (err) {
     log.warn("policy flip failed", err);
   }
