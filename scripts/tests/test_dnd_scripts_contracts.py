@@ -49,6 +49,23 @@ def test_tools_without_annotations(runners):
     assert {n for n, r in runners.items() if not r.tool.annotations} == NO_ANNOTATIONS
 
 
+# scripts/mcp/README.md: every tool declares these five keys and this file fails if one is missing.
+REQUIRED_ANNOTATIONS = {"title", "readOnlyHint", "destructiveHint", "idempotentHint", "openWorldHint"}
+# KNOWN gap (final review py-mcp ext-1), recorded for Joe: the feedback_reports.py tools
+# carry no `title`. Adding one changes tools/list, so it is not made here.
+KNOWN_MISSING_ANNOTATIONS: dict[str, list[str]] = {
+    "feedback_list": ["title"], "feedback_next": ["title"],
+    "feedback_get": ["title"], "feedback_resolve": ["title"],
+}
+
+
+@pytest.mark.repo
+def test_every_tool_declares_the_five_annotation_keys(runners):
+    gaps = {n: sorted(REQUIRED_ANNOTATIONS - (r.tool.annotations or {}).keys())
+            for n, r in runners.items()}
+    assert {n: miss for n, miss in gaps.items() if miss} == KNOWN_MISSING_ANNOTATIONS
+
+
 @pytest.mark.repo
 @pytest.mark.parametrize("name, read_only, destructive", [
     ("year_to_age", True, False), ("age_to_year", True, False), ("age_convert", True, False),
