@@ -173,12 +173,10 @@ export function searchBooks(books, query, opts = {}) {
       for (const page of doc.pages ?? []) {
         const text = page.text ?? toPlainText(page.html);
         if (!text) continue;
-        re.lastIndex = 0;
         const found = text.match(re);
         if (!found) continue;
         total += 1;
-        re.lastIndex = 0;
-        const at = text.search(new RegExp(re.source, "i"));
+        const at = text.search(re);
         const hit = {
           book: book.label ?? book.id,
           journal: doc.name,
