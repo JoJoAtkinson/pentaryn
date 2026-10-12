@@ -35,6 +35,7 @@ import { KINDS, SPEC_DIR } from "./prompts-core.mjs";
 import { SIZE_WORDS, parseCr } from "./core/size.mjs";
 import { replaceLogLine } from "./core/log-lines.mjs";
 import { makeLog } from "./lib/log.mjs";
+import { claimDocument } from "./lib/election.mjs";
 
 const log = makeLog(MODULE);
 
@@ -607,7 +608,67 @@ export async function replaceMany(input, opts = {}) {
   if (!Array.isArray(replacements) || !replacements.length) throw codedError("BAD_SPEC", "replacements must be a non-empty array");
   for (const r of replacements) if (r?.ring) ringData(r.ring, null);   // BAD_SPEC on a bad tier, before anything runs
 
-  const entries = replacements.map((spec, i) => resolveOne(spec, i, { call, force }));
+  const resolveAll = () => replacements.map((spec, i) => resolveOne(spec, i, { call, force }));
+  if (dryRun) return replaceResolved(args, resolveAll(), t0);
+  // a real run waits for this tab's earlier runs on its scenes, then resolves again (prompts-core-AC-1)
+  const sceneIds = resolveAll().map(e => e.scene?.id).filter(Boolean);
+  return inSceneQueue(sceneIds, () => replaceResolved(args, resolveAll(), t0));
+}
+
+/** This tab's replace runs, per scene: sceneId → the tail of its queue (prompts-core-AC-1). */
+const sceneQueue = new Map();
+
+/** Run `fn` once every earlier run queued on any of `sceneIds` has settled. */
+function inSceneQueue(sceneIds, fn) {
+  const ids = [...new Set(sceneIds)];
+  const ahead = ids.map(id => sceneQueue.get(id)).filter(Boolean);
+  const done = Promise.all(ahead).then(fn);
+  const tail = done.then(() => {}, () => {});
+  for (const id of ids) sceneQueue.set(id, tail);
+  void tail.then(() => { for (const id of ids) if (sceneQueue.get(id) === tail) sceneQueue.delete(id); });
+  return done;
+}
+
+const CLAIM = "replace";
+
+/**
+ * Claim each marker this run will replace, across tabs (prompts-core-AC-1): the bridge tab and a
+ * GM browser tab are both the active GM. A marker another tab holds fails its row as MARKER_GONE;
+ * the other rows go on. `force` takes over a claim left by a tab that went away mid-run.
+ */
+async function claimMarkers(entries, force) {
+  const me = game.socket?.id;
+  await Promise.all(entries.filter(e => e.ok).map(async e => {
+    const { scene, marker } = e;
+    let won = false, failed = null;
+    try {
+      const held = marker.flags?.[MODULE]?.claims?.[CLAIM];
+      if (force && held && held !== me) await marker.update({ [`flags.${MODULE}.claims.${CLAIM}`]: null });
+      won = await claimDocument(marker, CLAIM, { scope: MODULE, reread: m => scene.tokens.get(m.id) ?? {} });
+    } catch (err) { failed = err; log.debug(`claim on ${marker.id} failed`, err); }
+    if (won) return;
+    const who = e.pid ?? marker.id;
+    e.ok = false; e.code = "MARKER_GONE";
+    e.error = !scene.tokens.get(marker.id) ? goneMessage({ pid: e.pid, markerId: marker.id, sceneName: scene.name, ...whyGone(scene, marker.id) })
+      : failed ? `${who} on ${scene.name}: could not claim the marker (${failed?.message ?? failed}); this row was skipped`
+        : `${who} on ${scene.name} is being replaced by another GM tab; this row was skipped (gather again when it is done, or force to take it over)`;
+  }));
+}
+
+/** Take this tab's claim off markers it claimed but did not replace (a failed row). */
+async function releaseClaims(entries) {
+  const me = game.socket?.id;
+  if (!me) return;
+  for (const e of entries) {
+    const m = e.marker && e.scene?.tokens.get(e.marker.id);
+    if (m?.flags?.[MODULE]?.claims?.[CLAIM] !== me) continue;
+    try { await m.unsetFlag(MODULE, "claims"); } catch (err) { log.debug(`claim release on ${m.id} failed`, err); }
+  }
+}
+
+/** replaceMany past argument checks: `entries` resolved (and, for a real run, queued on its scenes). */
+async function replaceResolved(args, entries, t0) {
+  const { call = null, dryRun = false, force = false } = args;
   const seen = new Set();
   for (const e of entries) {
     if (!e.ok) continue;
@@ -638,6 +699,9 @@ export async function replaceMany(input, opts = {}) {
   if (needsDryRun({ requested, seen: dryRuns.has(signature(entries)), skip: !!args.skipDryRun, over: DRY_RUN_OVER })) {
     throw codedError("DRY_RUN_REQUIRED", `${requested} replacements (over ${DRY_RUN_OVER}): run the same set with dryRun: true first, read the plan, then repeat it without dryRun`);
   }
+
+  // 0. Claim the markers across tabs; a row another tab holds fails alone.
+  await claimMarkers(entries, force);
 
   // 1. Actors and journals first, per replacement; then the placed document data.
   const rows = [];
@@ -684,6 +748,7 @@ export async function replaceMany(input, opts = {}) {
   for (const e of entries) {
     if (!e.ok && e.owned?.length) e.discarded = await discard(e.owned);
   }
+  await releaseClaims(entries);
 
   // 4. Readback from the scenes: flat rows (no object below a row), and the text the tool prints.
   const results = entries.map(e => {

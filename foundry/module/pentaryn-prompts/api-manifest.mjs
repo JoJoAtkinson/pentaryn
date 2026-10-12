@@ -63,10 +63,11 @@ export const MANIFEST = Object.freeze({
       returns: "{ dryRun, call, text, results: [flat row], remaining: { sceneId: n }, encounters }",
       gm: true, writes: true, query: true, queryName: "replace", legacy: true,
       sideEffects: ["Token/Note/AmbientLight/Tile creates on the marker's scene", "Actor/JournalEntry creates (npc, import, copy, hotspot, note, character)",
-        "flags.pentaryn-prompts.provenance", "the replaced markers deleted"],
+        "flags.pentaryn-prompts.provenance", "flags.pentaryn-prompts.claims.replace on each marker (cross-tab claim)", "the replaced markers deleted"],
       throws: ["BAD_SPEC", "CALL_UNKNOWN", "DRY_RUN_REQUIRED"],
       doc: "Replace markers with the real thing on their footprints, provenance stamped, markers deleted only after their "
-        + "replacement exists; a readback from the scene. Per-row failures come back in results; more than five need a dry run first.",
+        + "replacement exists; a readback from the scene. Per-row failures come back in results; more than five need a dry run first. "
+        + "Overlapping runs queue per scene; a marker another GM tab is replacing fails its row MARKER_GONE.",
     },
     {
       path: "show",

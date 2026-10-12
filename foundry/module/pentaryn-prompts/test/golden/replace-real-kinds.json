@@ -86,6 +86,30 @@
   },
   "calls": [
     {
+      "op": "update",
+      "documentName": "Token",
+      "uuid": "Scene.s1.Token.rt",
+      "changes": {
+        "flags.pentaryn-prompts.claims.replace": "socket-gm-1"
+      }
+    },
+    {
+      "op": "update",
+      "documentName": "Token",
+      "uuid": "Scene.s1.Token.rn",
+      "changes": {
+        "flags.pentaryn-prompts.claims.replace": "socket-gm-1"
+      }
+    },
+    {
+      "op": "update",
+      "documentName": "Token",
+      "uuid": "Scene.s1.Token.rx",
+      "changes": {
+        "flags.pentaryn-prompts.claims.replace": "socket-gm-1"
+      }
+    },
+    {
       "op": "JournalEntry.create",
       "data": {
         "name": "A letter",

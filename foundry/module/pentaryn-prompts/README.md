@@ -91,7 +91,7 @@ file under the Data dir (`pentaryn-prompts-specs/<name>.json`): replacements, or
 `pentaryn-prompts.list`, `.gather`, `.crops`, `.replace` (= `replaceMany`), `.show`; a query before
 the API is published answers `NOT_READY`. **Errors are** `Error("<CODE>: detail")`: `TEXT_CHANGED`
 (replace: the prompt was edited after the gather), `MARKER_GONE` (show, replace: the marker is gone;
-replace says what replaced it or what it was resized to), `CALL_UNKNOWN` (crops, show, replace: no
+replace says what replaced it, what it was resized to, or that another GM tab is replacing it), `CALL_UNKNOWN` (crops, show, replace: no
 stored manifest), `SCENE_UNKNOWN` (gather, show, replace, `model`), `BAD_SPEC` (any bad argument, per
 row in replace), `NOT_GM` (every query), `CREATE_FAILED` (replace rows) and `DRY_RUN_REQUIRED`
 (replace: more than 5 without a dry run of the same set). The fork adds `MODULE_MISSING` and
@@ -178,8 +178,12 @@ subclass (the box): no row, nothing of core's is changed.
 Everything is GM-only. `ensureMarkers` runs on the active GM, which is every tab of that user;
 its creates use fixed ids with `keepId`, so two tabs make one folder and one actor per size. The
 queries are GM-guarded; the fork reaches them through the bridge module, which calls the handler in
-its own GM tab. A `User#query` to the GM would run in **every** tab of that user, and `replace` is
-not idempotent across tabs — keep calling it through the bridge. The side panel, hover tip and keyboard capture are per client.
+its own GM tab. A `User#query` to the GM would run in **every** tab of that user — keep calling
+`replace` through the bridge. Overlapping `replace` runs in one tab queue per scene (the later one
+re-reads its markers, so one the earlier run built reports `MARKER_GONE`), and a real run claims
+each marker across tabs (`claimDocument`, `flags.pentaryn-prompts.claims.replace`) before it builds:
+a marker another tab holds fails that row only. A claim left on a marker that was not replaced is
+taken off; `force` takes over one left by a tab that went away mid-run. The side panel, hover tip and keyboard capture are per client.
 
 ## Extending
 

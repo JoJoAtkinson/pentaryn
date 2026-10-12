@@ -36,6 +36,12 @@ cssPrefix `pp-`, afterSync). Each **[declared]** change goes to the live check.
   16) and `keepId`, so when the bridge tab and a GM browser tab both find one missing, the second
   create replaces the first instead of adding a second `Prompt Markers` folder or `Prompt · <size>`
   actor. A folder holding that id is found even after a rename. Existing markers keep their ids.
+- **[declared] Overlapping `replaceMany` runs no longer build a marker twice** (prompts-core-AC-1):
+  in one tab, real runs queue per scene and the later one re-reads its markers, so one the earlier
+  run replaced reports `MARKER_GONE` ("already replaced … now …"); across tabs, each marker is
+  claimed with the kit's `claimDocument` (`flags.pentaryn-prompts.claims.replace`, about 0.75 s per
+  run) before anything is built, and a marker another GM tab holds fails that row only. A failed
+  row's claim is taken off its marker; `force` takes over a stale one. `lib/election.mjs` vendored.
 - `ensureMarkers` repairs every drifted actor in one batch update. A hot re-import after
   `uninstall()` re-wires and republishes at once.
 - Console only (DP9): a core token API that throws warns once; swallowed failures log at debug
