@@ -591,7 +591,7 @@ Verified as neutral in the steps:
 | Live score after the migration | **89.6 % (43/48)** (`conformance.py --module riders`, offline, branch `migrate/wave-4`); was 47.8 % (22/46) at `wave-4-base`, 54.3 % at the checkpoint |
 | Date | 2026-10-11 (code phase only; nothing synced) |
 | Commits | vendor `a972ccdf` · S2 `111ac454` · S4 `d70ed29b` · S3 i18n `5a536025` · S5 `b81fa95d` · S3 log (-40) `0f1c1822` · S6 `3dacbbe1` · S7 `d6dbb324` · C05/C50 `065d0d22` · S9 `d42a1164` · todos `d3a12e5b` |
-| Declared (each its own commit) | S6 API frozen + additive members `3dacbbe1` · W2-K1 publishNamespace `6c159d58` · D-r1 relay through `guarded` `62d4eda1` · -27 audit lines `50d4f655` · -12 legacy refs `32a0a8e6` · -23 concentration early return `6516b872` · parseFormula `@` argument `3cc5fd7f` · -41 claim-first relay `c8ce8381` |
+| Declared (each its own commit) | S6 API frozen + additive members `3dacbbe1` · W2-K1 publishNamespace `6c159d58` · D-r1 relay through `guarded` `62d4eda1` · -27 audit lines `50d4f655` · -12 legacy refs `32a0a8e6` · -23 concentration early return `6516b872` · parseFormula `@` argument `3cc5fd7f` · -41 claim-first relay `c8ce8381` · -41 late tab answers the recorded result `8f525b11` |
 | Tests | `node test/run.mjs`: 168 node:test pass, 0 todo (checkpoint: 121 + 8 todo) + LEGACY 103 / 22 / 39. Coverage 99.62 / 88.58 / 98.00 (L/B/F; checkpoint 99.00 / 86.64 / 97.72) |
 | `module.json` edits appended to `wave7-restart-batch.md` | no — shared file; the exact edit is in the wave-4 report's integrator list |
 | Adjustments rows appended to `adjustments-batch.md` | no — shared file; exact `foundry/adjustments.yml` edits in the wave-4 report's integrator list |
@@ -651,7 +651,7 @@ refactor):
 | W2-K1 frozen `game.pentaryn` is replaced by a copy | `publish-frozen.test` | S6 `publishNamespace`: a frozen root throws a TypeError |
 | combat-riders-12 a name/id/UUID string is not resolved | `api.test` | legacy rows resolve Actor/Token/UUID/id/exact name (§4) |
 | combat-riders-23 a status-less effect still takes stamped tokens | `concentration.test` | `isConcentration` early return (§4, D-r2) |
-| combat-riders-41 two GM tabs heal twice, two Hit Dice | `battle-medic.test` | claim-first relay: one heal, one die, same result in both tabs |
+| combat-riders-41 two GM tabs heal twice, two Hit Dice | `battle-medic.test` | claim-first relay: one heal, one die, same result in both tabs; a tab arriving after the record answers with it (`8f525b11`) |
 | combat-riders-27 audit lines | `battle-medic.test` (todo only; relay console output deliberately unpinned) | S6: one info on success, one warn per refusal |
 | METAMAGIC is a mutable Set | `core.test` | S6: nothing mutable reachable from `api.core` |
 | S2 constants | `core.test` (todo only) | `MODULE` + version constant (C41 still fails until S2 writes that test) |
