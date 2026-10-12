@@ -79,12 +79,17 @@ export function install(reg, ctx) {
   reg.on("deleteCombat", reg.guardSwallowAsync("deleteCombat(careful)", async (combat) => {
     if (!game.users.activeGM?.isSelf) return;
     const done = new Set();
+    const stale = [];
     for (const c of combat.combatants ?? []) {
       const actor = c.actor;
       if (!actor || done.has(actor.uuid)) continue;
       done.add(actor.uuid);
-      if (carefulStale(aoeFlags(actor).careful, combat.id)) await actor.unsetFlag(MODULE, "careful");
+      if (carefulStale(aoeFlags(actor).careful, combat.id)) stale.push(actor);
     }
+    // One write for the world actors (§5.9.1, C59); an unlinked token's synthetic actor writes its own delta.
+    const world = stale.filter(a => !a.isToken);
+    if (world.length) await Actor.implementation.updateDocuments(world.map(a => ({ _id: a.id, [`flags.${MODULE}.careful`]: _del })));
+    await Promise.all(stale.filter(a => a.isToken).map(a => a.unsetFlag(MODULE, "careful")));
   }), { guard: false, label: "deleteCombat(careful)" });
 }
 

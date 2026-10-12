@@ -189,3 +189,17 @@ test("8.5 sweep: every unshared template region in ONE Region update (was one wr
   assert.deepEqual(writes.map(c => [c.op, c.updates?.map(u => u._id)]), [["updateEmbedded", ["regionBatch00001", "regionBatch00002", "regionBatch00003"]]]);
   assert.equal(s.regions.get("regionBatchPort1").ownership.default, 0, "a portal region is never touched");
 });
+
+test("8.5 deleteCombat: stale Careful Spell flags of world actors go in ONE Actor update; a synthetic actor writes its own", async () => {
+  const key = "combat0000000085:1:x";
+  const a = W.actor({ id: "actCareful850001", name: "Sorc A", type: "character", flags: { [MODULE]: { careful: { at: 1, key } } } });
+  const b = W.actor({ id: "actCareful850002", name: "Sorc B", type: "character", flags: { [MODULE]: { careful: { at: 1, key } } } });
+  const synth = W.actor({ id: "actCareful850003", name: "Unlinked", type: "npc", flags: { [MODULE]: { careful: { at: 1, key } } } });
+  Object.defineProperty(synth, "isToken", { value: true });
+  F.calls.length = 0;
+  F.fire("deleteCombat", { id: "combat0000000085", combatants: [{ actor: a }, { actor: b }, { actor: synth }, { actor: a }] });
+  await flush();
+  const batch = F.calls.filter(c => c.op === "updateDocuments");
+  assert.deepEqual(batch.map(c => c.updates.map(u => u._id)), [["actCareful850001", "actCareful850002"]]);
+  for (const x of [a, b, synth]) assert.equal(x.flags[MODULE].careful, undefined, x.name);
+});

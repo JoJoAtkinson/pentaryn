@@ -323,6 +323,16 @@ export async function boot({ user = null, users = [], settings = {}, entry = fal
         if (id) stubId("Act");
         return actor({ ...rest, ...(id ? { id } : {}), hp: data.system?.attributes?.hp });
       },
+      // core: one request for many world actors; each still gets its own update (and its hooks)
+      updateDocuments: async (updates, opts) => {
+        F.calls.push({ op: "updateDocuments", documentName: "Actor", updates: F.plain(updates) });
+        const done = [];
+        for (const { _id, ...changes } of updates) {
+          const a = g.actors.get(_id);
+          if (a) done.push(await a.update(changes, opts));
+        }
+        return done;
+      },
     },
   };
   globalThis.ActiveEffect = {
