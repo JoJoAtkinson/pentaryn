@@ -130,7 +130,7 @@ export const RETURN_LINES = {
 /* ── bonus-action bookkeeping ────────────────────────────────────────────── */
 // Argon keeps "bonus action used" on the panel instance, and every shift or revert rebinds the HUD
 // to a different actor, which builds fresh panels. The token survives both, so the mark is kept per
-// token and per turn; hud.mjs applies it when it composes the Bonus bar.
+// token and per turn; hud-panels.mjs applies it when it composes the Bonus bar.
 
 let bonusMark = null;
 
