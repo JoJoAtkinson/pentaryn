@@ -23,9 +23,11 @@ live, no `module.json` was edited, and nothing was merged into `main`. The live 
 down but has not run: [`wave-4-live-plan.md`](wave-4-live-plan.md).
 
 - **Branches.** pentaryn `migrate/wave-4` is `wave-4-base` (`a5a1a906`, origin/main when the wave
-  started) plus 181 commits before this report's closing commit. It never merged `migrate/wave-3`.
-  The fork's `migrate/wave-4` has **no commits** past `origin/pentaryn` (`59ffcf2`): no module guide
-  needed a fork change. The one fork-side wish (W4-L3, the `pentaryn-read` description) is a
+  started) plus 182 commits before this report's closing commit `464024ce`. It never merged
+  `migrate/wave-3`. The fork's `migrate/wave-4` has **no commits** of its own: it sits at `59ffcf2`,
+  where `origin/pentaryn` was when the wave started, and no module guide needed a fork change.
+  `origin/pentaryn` has since moved to `2fd6eb0` (the wave-3 bridge lane and the optional fixes,
+  merged for the go-live), so the fork branch is now 7 commits behind it. The one fork-side wish (W4-L3, the `pentaryn-read` description) is a
   follow-up.
 - **Checkpoints.** riders `67fe16a3`, aoe `7a12ffad`, transform `f06e6b18`, combat `6e802ebb`. None
   of the four had a checkpoint before this wave.
@@ -727,7 +729,7 @@ How each column was measured:
 | riders | `67fe16a3` | 20 files (13 A, 7 M), +1557 −55 | 47.8 → 54.3 → 89.6 → **91.7 %**; fails C07, C09, C37, C56 | before: 3 of 8 files loaded (828 of 2197 lines) · checkpoint 99.00 / 86.64 / 97.72 · lane end 99.62 / 88.58 / 98.00 · HEAD lines **99.62** (21 files) | 121 + 8 todo → **175** (0 todo); legacy 103 / 22 / 39 both |
 | aoe | `7a12ffad` | 27 files (15 A, 12 M), +1909 −67 | 50.0 → 58.7 → 89.6 → **93.8 %**; fails C07, C09, C37 | before: none (hand-rolled runner) · checkpoint 100 / ≈77 / 94.0 (12 files) · HEAD lines **99.90** (17 files) | 324 + 5 todo → **411** (0 todo); legacy 160 both |
 | transform | `f06e6b18` | 35 files (15 A, 20 M), +1833 −152 | 55.6 → 60.0 → 93.6 → **95.7 %**; fails C07, C37 | before 51.48 / 50.67 / 23.48 · checkpoint 99.88 / 91.38 / 98.50 · lane end 99.92 / 92.75 / 98.88 · HEAD lines **99.92** (24 files) | 184 + 2 todo → **248** (0 todo); legacy 155 both |
-| combat | `6e802ebb` | 55 files (25 A, 30 M), +3462 −253 | 50.0 → 58.7 → 91.7 → **93.8 %**; fails C07, C21, C23 | before: no node:test (legacy loaded `combat-core.mjs` only, 99.76 / 89.21 / 99.32) · checkpoint 99.78 / 87.01 / 98.92 · lane end 99.71 / 87.83 / 98.45 · HEAD lines **99.68** (44 files) | 175 + 4 todo → **244** (0 todo); legacy 326 fixtures both |
+| combat | `6e802ebb` | 55 files (25 A, 30 M), +3462 −253 | 50.0 → 58.7 → 91.7 → **93.8 %**; fails C07, C21, C23 | before: no node:test (legacy loaded `combat-core.mjs` only, 99.76 / 89.21 / 99.32) · checkpoint 99.78 / 87.01 / 98.92 · lane end 99.71 / 87.83 / 98.45 · HEAD lines **99.71** (44 files) | 175 + 4 todo → **244** (0 todo); legacy 326 fixtures both |
 
 The file counts grow because each refactor split its module into more files. Each module's full
 record is in its guide's **Result** and its audit's **Status**.
@@ -766,7 +768,8 @@ record is in its guide's **Result** and its audit's **Status**.
 
 - **Frozen tests.** Commits touching a checkpoint file: its `[declared]` commits; the
   structural steps `03322772` (S2), `4bc7d44c` (S4), `41b51b43` (S5) and `536bbcf3` (8.6 split), which
-  edit only the seams shim and import paths; and `fb931b3d`, which changes the test world's
+  edit only the seams shim and import paths (`03322772` also turns the planned VERSION todo into a
+  test); and `fb931b3d`, which changes the test world's
   `Actor.create` to model v14 (a keepId create of an existing world actor replaces it rather than
   being refused). That is a fixture correction from the review, not a module behaviour change.
 - **Findings → commit** (also in the audit's Status):
@@ -897,7 +900,8 @@ Checked with `git merge-tree --write-tree` on 2026-10-12 against the branches as
 5. **Order** (W4-L1): sync the four modules from the branch as it is for the live phase. Merge main
    in (or merge the branch into main) only after a green live phase. Never sync any other module
    from this branch: it would roll wave 3 back.
-6. **Fork:** nothing to merge (`migrate/wave-4` = `origin/pentaryn`).
+6. **Fork:** nothing to merge. The fork's `migrate/wave-4` (`59ffcf2`) has no commits of its own and
+   is an ancestor of today's `origin/pentaryn` (`2fd6eb0`).
 7. **Not in this branch:** every `module.json` edit (the Wave 7 batch rows, `d0d8e771`), and the
    version bumps. riders 0.3.0, aoe 0.4.0, transform 0.4.0 and combat 0.3.0 are in "Unreleased"
    CHANGELOG sections until the batch moves `module.json` and each core `VERSION` together.
@@ -1025,10 +1029,34 @@ not run" section above summarises it. Per-module live checks are in each lane se
 - **Untagged pin flip:** transform `796fdf63` (W4-I3). **Fixture correction without a tag:** aoe
   `fb931b3d` (the test world models v14's world-actor replace).
 
+## Critic pass (2026-10-12)
+
+Every claim above was checked against git and the files at `464024ce`, all static.
+
+- **Confirmed.** Every cited hash exists, on this branch or (wave 3, bundles, main, the fork) where
+  the text says. The commit list matches `git log`. There are 43 `[declared]` subjects, split
+  10 / 10 / 12 / 11. The frozen-test shortstats and A / M counts are right, and every commit that
+  touches an M file is named. Conformance at base, at each checkpoint, at the lanes' end
+  (`a202a6f1`) and at HEAD equals `conformance.py --json`, and main's scorer gives the same HEAD
+  scores. node:test counts at the checkpoints, the lane ends and HEAD are right, and so are the
+  legacy suites. pytest is 1199 at the base, 1208 at the integrator, 1210 at the review and 1217 at
+  HEAD (2 skipped, 3 xfailed). The make gates are green, the adjustments check has 106 rows, and
+  vendor is identical. The known-red ranges are right: the registry turns red at `b81fa95d`,
+  `4bc7d44c`, `91dd98db` and `9d4b0af9`, then green at `e1a9aade`; the i18n gate and `c69a5e22` are
+  red as stated. The `merge-tree` conflicts are right, and finding ids trace to their commits or to
+  the audit Status rows.
+- **Corrected.**
+  - The commit count was 181 and is now 182: `da11e0e3` came after `1d86bd5a`.
+  - The fork base was `origin/pentaryn` (`59ffcf2`). `origin/pentaryn` is now `2fd6eb0`, and the
+    fork branch is an ancestor of it.
+  - Combat's HEAD line coverage was 99.68 and is now 99.71. It was re-measured twice and is the
+    same as the lane end.
+  - `03322772` also flips aoe's VERSION todo.
+
 ## Commit lists
 
-`git log --oneline wave-4-base..HEAD` (181 commits before this report's closing commit, newest
-first). The fork's `migrate/wave-4` has none.
+`git log --oneline wave-4-base..HEAD` (182 commits before this report's closing commit `464024ce`,
+newest first). The fork's `migrate/wave-4` has none.
 
 **`[declared]` commits (43)**, each a behaviour change for the live phase:
 
@@ -1045,9 +1073,10 @@ first). The fork's `migrate/wave-4` has none.
   -22 · `affd3273` W4-C1 · `de84b8a5` D-c3 · `9448deea` D-c4 · `06755b88` -38 · `51912021` D-c3
   follow-up · `24e961a0` D7
 
-<details><summary>All 181 commits</summary>
+<details><summary>All 182 commits</summary>
 
 ```
+da11e0e3 docs(plans): wave-4 guides — Result gains the code-phase close (HEAD score, tests, later commits, frozen-test diff); status done (code phase)
 1d86bd5a docs(plans): wave-4 report — live phase prepared (plan, goldens) and its Open for Joe rows W4-L1..L4, D8
 488c7e24 docs(plans): wave-4 live plan — the gated live sequence for riders, aoe, transform, combat
 3c37a9eb test(foundry): riders live golden reads api.core's frozenness and Sets, not a METAMAGIC key neither build exposes there
