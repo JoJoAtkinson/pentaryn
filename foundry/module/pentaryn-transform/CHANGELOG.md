@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+- **A hot re-import past ready still sweeps (EC-4, defect wave 2).** sweep.mjs `install` registered
+  its first sweep on `Hooks.once("ready")`, which never fires again after ready, so a hot re-import
+  left spent forms in the sidebar until the next token change. It now schedules the 3 s sweep at once
+  when `game.ready` is already true (the shape transform.mjs uses to publish), and registers the ready
+  hook only before ready ([declared]; the hot-patch test in features.test.mjs expects golden/hooks.json
+  less row 17 too; the golden itself is unchanged).
 - **The barrel exports `MODULE` only (EXT-8, defect wave 2).** transform-core.mjs dropped its
   `MODULE as MODULE_ID` alias, which C12 bans; core-legacy.mjs, core.test.mjs and core-split.test.mjs
   use `MODULE`. No behaviour change ([declared]; golden/core-exports.json loses the `MODULE_ID` row,

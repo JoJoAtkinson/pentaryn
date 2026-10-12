@@ -399,3 +399,24 @@ test("scheduleSweep: a polymorphed form update, or a player's client, schedules 
   Actor.implementation.deleteDocuments = real;
   assert.deepEqual(F.console.filter(c => c[1].includes("sweep")).map(c => c.slice(0, 2)), [["warn", "pentaryn-transform | sweep failed"]]);
 });
+
+test("[declared] EC-4 a hot re-import past ready still gets its first sweep, 3 s after install, with no ready hook left waiting", async () => {
+  game.actors.clear();
+  game.scenes.clear();
+  F.calls.length = 0;
+  F.become({ userId: IDS.gm });
+  assert.equal(game.ready, true, "ready has already fired");
+  F.W.add(F.W.makeActor({ id: "spentHotReimport", flags: { dnd5e: { originalActor: IDS.talo } }, _stats: { createdTime: Date.now() - 60_000 } }));
+  const { hookRegistry } = await import("../lib/hooks.mjs");
+  const reg = hookRegistry(MODULE, { error() {}, warn() {} });
+  const sweep = await import("../sweep.mjs?ec4");
+  sweep.install(reg);
+  assert.deepEqual(reg.ids().filter(r => r.name === "ready"), [], "no ready hook that would never fire");
+  mock.timers.tick(2_999);
+  await flush();
+  assert.deepEqual(ops("Actor.deleteDocuments"), [], "not before 3 s");
+  mock.timers.tick(1);
+  await settle();
+  assert.deepEqual(ops("Actor.deleteDocuments").map(c => c.ids), [["spentHotReimport"]]);
+  reg.offAll();
+});

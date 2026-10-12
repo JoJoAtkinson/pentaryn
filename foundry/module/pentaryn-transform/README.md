@@ -157,8 +157,8 @@ rest hooks, core document hooks and Argon's render hooks (`test/golden/hooks.jso
 - The sweep of spent forms runs on the active GM's client (`activeGM.isSelf`), 3 s after a token
   is deleted or changes its actor, link, delta or `flags.dnd5e` (one timer, never pushed back; a drag,
   light, hidden or elevation change schedules nothing), 1.5 s after a form loses `isPolymorphed` (a player's
-  revert), and 3 s after ready; it deletes transformed copies with no token on any scene that are
-  over 10 s old.
+  revert), and 3 s after ready (or after a hot re-import past ready); it deletes transformed copies
+  with no token on any scene that are over 10 s old.
 
 ## Extending
 

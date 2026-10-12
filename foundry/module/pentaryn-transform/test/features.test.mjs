@@ -63,7 +63,8 @@ test("hot patch after ready: uninstall(), then re-import both entries — every 
   const before = game.modules.get("pentaryn-transform").api;
   await import("../transform.mjs?v=2");
   await import("../hud.mjs?v=2");
-  assert.deepEqual(W.reg.ids().map(r => ({ kind: r.kind, name: r.name })), golden.filter((_, i) => i !== 18));
+  // Past ready, sweep.mjs sweeps at once instead of registering row 17's ready (EC-4).
+  assert.deepEqual(W.reg.ids().map(r => ({ kind: r.kind, name: r.name })), golden.filter((_, i) => i !== 17 && i !== 18));
   const api = game.modules.get("pentaryn-transform").api;
   assert.notEqual(api, before, "a new API object");
   assert.equal(game.pentaryn.transform, api);

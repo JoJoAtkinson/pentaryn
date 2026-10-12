@@ -2,7 +2,8 @@
  * Pentaryn Transform — FEATURE: when the active GM sweeps spent forms (sweep-adapter.mjs): 3 s after
  * a token is deleted or changes its actor, link, delta or dnd5e flags (one timer, never pushed back;
  * a drag, light, hidden or elevation change schedules nothing — perf-1), 1.5 s after a form loses
- * isPolymorphed (a player's revert), and once 3 s after ready.
+ * isPolymorphed (a player's revert), and once 3 s after ready (3 s after install on a hot re-import
+ * past ready — EC-4).
  */
 
 import { scheduleSweep, cancelSweep } from "./sweep-adapter.mjs";
@@ -24,7 +25,9 @@ export function install(reg) {
   reg.on("updateToken", onTokenUpdate, { label: "updateToken: sweep spent forms" });
   reg.on("deleteToken", sweepSoon, { label: "deleteToken: sweep spent forms" });
   reg.on("updateActor", onFormUpdate, { label: "updateActor: a reverted form, sweep soon" });
-  reg.once("ready", sweepSoon, { label: "ready: first sweep" });
+  // A hot re-import after ready (EC-4) sweeps at once instead of waiting on a ready that has fired.
+  if (globalThis.game?.ready) sweepSoon();
+  else reg.once("ready", sweepSoon, { label: "ready: first sweep" });
 }
 
 export function uninstall() {
