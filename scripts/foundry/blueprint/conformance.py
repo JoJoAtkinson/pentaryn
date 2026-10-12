@@ -1704,7 +1704,10 @@ def c57(m):
     return ok() if not detail else bad(detail)
 
 
-@rule("C58", "fail", "one serialStore per key across the module")
+_MEMO_STORE = re.compile(r"(?<![\w$.])[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)?\s*\?\?=\s*$")
+
+
+@rule("C58", "fail", "one serialStore per key across the module, at module scope or memoised (`x ??= serialStore(`)")
 def c58(m):
     seen: dict[str, str] = {}
     tuples: dict[tuple, str] = {}
@@ -1713,6 +1716,8 @@ def c58(m):
         code = src.code
         for mm in re.finditer(r"(?<![\w$.])serialStore\(\s*(?:[\w$.]+|\x01\d+\x01)\s*,\s*", code):
             where = f"{rel}:{src.line_of(mm.start())}"
+            if depth_at(code, mm.start()) > 0 and not _MEMO_STORE.search(code[max(0, mm.start() - 200):mm.start()]):
+                detail.append(f"{where} serialStore not at module scope (use `x ??= serialStore(` or hoist)")
             lit = lit_after(src, mm.end())
             if lit is not None and lit.plain:
                 keys = (lit.value,)

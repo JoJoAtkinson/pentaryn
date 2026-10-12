@@ -534,6 +534,26 @@ def test_c58_one_serial_store_per_key(tmp_path, code, want):
     assert res(one(tmp_path, code), "C58")["status"] == want
 
 
+C58_SCOPE_CASES = [                                                              # py-blueprint-AC-8
+    ('export function store() { return serialStore(MODULE, "ledger"); }', "fail"),
+    ('function f() { const s = serialStore(MODULE, "ledger"); }', "fail"),
+    ('let s;\nexport function store() { s ??= serialStore(MODULE, "ledger"); return s; }', "pass"),
+    ('const stores = {};\nexport function store() { return (stores.ledger ??= serialStore(MODULE, "ledger")); }',
+     "pass"),
+    ('export const store = () => (stores.k ??= serialStore(MODULE, "k"));', "pass"),
+    ('const a = serialStore(MODULE, "ledger");', "pass"),
+]
+
+
+@pytest.mark.parametrize("code,want", C58_SCOPE_CASES)
+def test_c58_serial_store_at_module_scope_py_blueprint_ac_8(tmp_path, code, want):
+    r = res(one(tmp_path, code), "C58")
+    assert r["status"] == want
+    if want == "fail":
+        assert any("serialStore not at module scope (use `x ??= serialStore(` or hoist)" in d
+                   for d in r["detail"]), r["detail"]
+
+
 def test_c58_counts_keys_across_files(tmp_path):
     report = one(tmp_path, 'import "./b.mjs";\nconst a = serialStore(MODULE, "ledger");',
                  extra={"b.mjs": 'const b = serialStore(MODULE, "ledger");\n'})

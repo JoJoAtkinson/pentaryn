@@ -935,7 +935,7 @@ both Warnings and Manual.
 | C55 | fail | every `User#query` / `User.queryMany` passes `timeout` (`queryGM` exempt; unknown receivers → manual) |
 | C56 | fail | no hand-written `CONFIG.queries` assignment (`[…] =`, `.x =`, `??=`, `Object.assign`); reads pass |
 | C57 | fail | a `game.socket` `module.*` channel is exactly `module.<module.json id>` (C08 owns `socket: true`) |
-| C58 | fail | one `serialStore` per key across the module |
+| C58 | fail | one `serialStore` per key across the module, at module scope or memoised (`x ??= serialStore(`) |
 | C59 | warn+manual | `await <doc>.update/create/delete/setFlag/unsetFlag(` inside a loop body, or an `await f(…)` there where `f` is a same-file function that awaits one (batch it) |
 | C60 | warn | no `async` listener or `await` in a hot-hook handler unless it defers via `perFrame`/`debounce`/`coalesce` |
 | C61 | warn+manual | a writing `create*/update*/delete*` listener has an active-GM gate, the initiator gate (`userId !== game.user.id`) or a claim (an any-GM gate alone → manual). The active-GM and initiator gates pick one *user*, not one tab: every tab of that user passes, so where two tabs on one account matter the review checks for a claim (§5.9.4); the write and the gate are looked for in the listener and the functions it calls by name, in its file or the module files it imports |
