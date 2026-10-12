@@ -13,7 +13,8 @@
  * To keep a 0-HP NPC alive and unlootable (knocked out for questioning), set
  * `flags.pentaryn-dropbin.noLoot = true` on its token or actor; it is then never converted.
  *
- * Only the active GM converts, so several connected clients never race each other.
+ * Only the active GM user converts (activeGM.isSelf: every tab of that account, W2-D1), so other
+ * players' and GMs' clients never race it.
  *
  * Pile settings:
  *   - `type: "pile"`, keeping the creature's own token art, so the body stays a body on the map.
