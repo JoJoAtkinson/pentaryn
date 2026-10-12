@@ -65,11 +65,10 @@ export async function stash(owner, container, itemIds, { tag, currency = false, 
   // them either way (message and `err.created`); `err.rolledBack` says whether they are gone. A
   // rollback that fails (an Item Piles pile may refuse) leaves them there, and the message says why.
   const accepted = made?.length ?? 0;
+  const created = (made ?? []).map(d => d?.id ?? d?._id ?? null);
   if (accepted !== creates.length) {
     const msg = `${MODULE} | stash: container accepted ${accepted}/${creates.length}; originals NOT deleted`;
-    console.error(`${MODULE} | stash: container accepted ${accepted}/${creates.length}; originals NOT deleted`,
-      { owner: owner.id, container: container.id });
-    const created = (made ?? []).map(d => d?.id ?? d?._id ?? null);
+    console.error(msg, { owner: owner.id, container: container.id });
     let tail = "";
     let rolledBack = true;
     if (created.length) {
@@ -92,7 +91,6 @@ export async function stash(owner, container, itemIds, { tag, currency = false, 
   const update = { [`flags.${MODULE}.${AWAY_FLAG}`]: away, [`flags.${MODULE}.${SLOTS}`]: slots };
   if (currency) for (const k of Object.keys(owner.system.currency ?? {})) update[`system.currency.${k}`] = 0;
   await owner.update(update);
-  const created = (made ?? []).map(d => d?.id ?? d?._id ?? null);
   // Audit line for a cross-user write (playbook §5.1: info, with the ids written and `by`), read
   // back after an eval-js run.
   console.info(`${MODULE} | stash: ${creates.length} moved to ${container.name}`,
