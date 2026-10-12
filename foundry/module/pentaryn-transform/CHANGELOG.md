@@ -4,6 +4,11 @@
 
 ## Unreleased
 
+- **One Starry Form identity (EXT-7, defect wave 2).** core/starry.mjs exports a frozen
+  `STARRY_FORM = { identifier: "starry-form", name: "Starry Form" }` through the barrel; core
+  `isStarryFormData` and starry-adapter.mjs `starryItem` both match by its identifier first and its
+  name as the fallback, instead of each hard-coding the pair. No behaviour change ([declared];
+  core.test.mjs ADDED lists `STARRY_FORM`, so golden/core-exports.json stays the 39 checkpoint rows).
 - **Wild Shape and Starry Form end through one shared helper (EXT-2, defect wave 2).** The
   Incapacitated check (after the effect lands, `setTimeout(0)`), the expiry check on the feature's own
   effect, the runner gate and the per-tab claim were copied in wildshape.mjs and starry.mjs; they are

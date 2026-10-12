@@ -17,6 +17,7 @@
  */
 
 import { EFFECT_ID, MODULE, UNIT_SECONDS } from "./constants.mjs";
+import { STARRY_FORM } from "./starry.mjs";
 
 /* ── activities ──────────────────────────────────────────────────────────── */
 
@@ -43,9 +44,9 @@ const consumptionTargets = a => a?.consumption?.targets ?? [];
 
 /* ── shaping the form ────────────────────────────────────────────────────── */
 
-/** The Circle of the Stars "Starry Form" feature: by identifier, else by name (starry-adapter.mjs starryItem: same identifier, same name fallback; keep the two in step). */
+/** The Circle of the Stars Starry Form feature: by STARRY_FORM's identifier, else its name (starry-adapter.mjs starryItem reads the same constant). */
 export function isStarryFormData(item) {
-  return item?.system?.identifier === "starry-form" || item?.name === "Starry Form";
+  return item?.system?.identifier === STARRY_FORM.identifier || item?.name === STARRY_FORM.name;
 }
 
 /**

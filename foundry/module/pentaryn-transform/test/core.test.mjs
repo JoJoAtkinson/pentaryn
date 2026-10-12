@@ -34,7 +34,9 @@ const ADDED_86 = ["shapingPlan"];
 const ADDED_WILDCARD_ART = ["isWildcardPath", "pickFormImage"];
 // light-roundtrip: the druid token's own light, carried back on revert.
 const ADDED_LIGHT_ROUNDTRIP = ["handLight"];
-const ADDED = [...ADDED_S2, ...ADDED_S3, ...ADDED_86, ...ADDED_WILDCARD_ART, ...ADDED_LIGHT_ROUNDTRIP];
+// EXT-7: the one Starry Form identity (identifier, name) the core and the adapter both match by.
+const ADDED_EXT7 = ["STARRY_FORM"];
+const ADDED = [...ADDED_S2, ...ADDED_S3, ...ADDED_86, ...ADDED_WILDCARD_ART, ...ADDED_LIGHT_ROUNDTRIP, ...ADDED_EXT7];
 
 test("export list of transform-core.mjs (step 2's barrel must re-export every name)", () => {
   const names = Object.keys(core).sort();

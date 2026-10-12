@@ -20,7 +20,7 @@
  */
 
 import {
-  MODULE, activitiesOf, usesLeft, formatDuration, CONSTELLATIONS, STARRY_LIGHT, STARRY_SECONDS,
+  MODULE, activitiesOf, usesLeft, formatDuration, CONSTELLATIONS, STARRY_FORM, STARRY_LIGHT, STARRY_SECONDS,
   constellationOfActivity, starryEffectData, starryBlock, findWildShapeItem, secondsLeft, constellationImgOf,
   pickStarryBase, starryEndKey
 } from "./transform-core.mjs";
@@ -39,7 +39,7 @@ const byIdentifier = (actor, ident, name) =>
 
 /** The Starry Form feature on this actor, or null. */
 export function starryItem(actor) {
-  return byIdentifier(actor, "starry-form", "Starry Form");
+  return byIdentifier(actor, STARRY_FORM.identifier, STARRY_FORM.name);
 }
 
 /** The Wild Shape item whose uses Starry Form spends. */

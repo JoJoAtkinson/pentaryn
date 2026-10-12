@@ -345,3 +345,27 @@ test("EXT-2 [declared] claim-adapter's endingListeners holds the incapacitated /
     assert.doesNotMatch(src, /duration\.expired/, `${f} has no expiry check of its own`);
   }
 });
+
+/* ── EXT-7 one Starry Form identity for the core and the adapter ──────────── */
+
+test("EXT-7 [declared] core/starry.mjs's frozen STARRY_FORM is the one identity: isStarryFormData and starryItem both match identifier first, name as the fallback", async () => {
+  const { readFileSync } = await import("node:fs");
+  const C = await import("../transform-core.mjs");
+  const S = await import("../starry-adapter.mjs");
+  assert.deepEqual(C.STARRY_FORM, { identifier: "starry-form", name: "Starry Form" }, "EXT-7: STARRY_FORM through the barrel");
+  assert.ok(Object.isFrozen(C.STARRY_FORM), "frozen");
+  const byId = { _id: "a", name: "Renamed Stars", system: { identifier: "starry-form" } };
+  const byName = { _id: "b", name: "Starry Form", system: { identifier: "" } };
+  const other = { _id: "c", name: "Wild Shape", system: { identifier: "wild-shape" } };
+  assert.deepEqual([byId, byName, other].map(C.isStarryFormData), [true, true, false], "core: identifier, else name");
+  assert.equal(S.starryItem({ items: [byName, byId, other] }), byId, "adapter: the identifier wins over an earlier name match");
+  assert.equal(S.starryItem({ items: [other, byName] }), byName, "adapter: the name is the fallback");
+  assert.equal(S.starryItem({ items: [other] }), null);
+  for (const f of ["core/wildshape.mjs", "starry-adapter.mjs"]) {
+    const src = readFileSync(new URL(`../${f}`, import.meta.url), "utf8");
+    assert.match(src, /STARRY_FORM\.identifier/, `${f} matches by STARRY_FORM.identifier`);
+    assert.match(src, /STARRY_FORM\.name/, `${f} falls back to STARRY_FORM.name`);
+    assert.doesNotMatch(src, /"Starry Form"/, `${f} hard-codes no Starry Form name of its own`);
+    assert.doesNotMatch(src, /identifier === "starry-form"|"starry-form", /, `${f} hard-codes no Starry Form identifier of its own`);
+  }
+});
