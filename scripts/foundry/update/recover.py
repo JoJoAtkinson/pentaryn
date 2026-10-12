@@ -46,6 +46,7 @@ from scripts.foundry.update import admin as admin_mod
 from scripts.foundry.update.admin import FOUNDRY_DATA
 from scripts.foundry.update.admin import APP_PAYLOAD, FoundryAdmin
 from scripts.foundry.update.state import CORE_ROLLBACK_DIR, SYSTEM_ASIDE_DIR
+from scripts.foundry.update.upstream import _parts
 
 
 @dataclass
@@ -228,7 +229,9 @@ def _restore_system_from_aside(system_id: str, version: str, rec: Recovery) -> N
     """
     aside = SYSTEM_ASIDE_DIR / f"{system_id}-{version}.tar.gz"
     if not aside.exists():
-        candidates = sorted(SYSTEM_ASIDE_DIR.glob(f"{system_id}-*.tar.gz"))
+        prefix = f"{system_id}-"
+        candidates = sorted(SYSTEM_ASIDE_DIR.glob(f"{prefix}*.tar.gz"),
+                            key=lambda p: _version_key(p, prefix))
         if not candidates:
             raise RuntimeError(
                 f"no set-aside copy of {system_id} {version}; the snapshot's "
@@ -243,6 +246,12 @@ def _restore_system_from_aside(system_id: str, version: str, rec: Recovery) -> N
 
 
 # ── Artefacts the recovery paths depend on ──────────────────────────────────
+
+def _version_key(path: Path, prefix: str) -> tuple[list[int], str]:
+    """Order ``<prefix><version>.tar.gz`` by version (``6.0.10`` after ``6.0.9``), name
+    as tie-breaker, so a digit rollover never makes the newest artefact sort oldest."""
+    return (_parts(path.name.removeprefix(prefix).removesuffix(".tar.gz")), path.name)
+
 
 def newest_world_snapshot(host: str | None = None) -> "cloud.Snapshot | None":
     """This machine's rollback point: the snapshot its world is based on.
@@ -272,7 +281,8 @@ def newest_world_snapshot(host: str | None = None) -> "cloud.Snapshot | None":
 
 
 def newest_core_bundle() -> Path | None:
-    bundles = sorted(CORE_ROLLBACK_DIR.glob("app-*.tar.gz"))
+    bundles = sorted(CORE_ROLLBACK_DIR.glob("app-*.tar.gz"),
+                     key=lambda p: _version_key(p, "app-"))
     return bundles[-1] if bundles else None
 
 
@@ -285,7 +295,9 @@ def stash_system(system_id: str, version: str) -> Path:
     src = FOUNDRY_DATA / "Data/systems" / system_id
     with tarfile.open(out, "w:gz") as tar:
         tar.add(src, arcname=system_id)
-    for stale in sorted(SYSTEM_ASIDE_DIR.glob(f"{system_id}-*.tar.gz"))[:-3]:
+    prefix = f"{system_id}-"
+    for stale in sorted(SYSTEM_ASIDE_DIR.glob(f"{prefix}*.tar.gz"),
+                        key=lambda p: _version_key(p, prefix))[:-3]:
         stale.unlink()
     return out
 
@@ -305,7 +317,8 @@ def stash_core(version: str, keep: int = 2) -> Path:
         return out
     with tarfile.open(out, "w:gz") as tar:
         tar.add(APP_PAYLOAD, arcname=APP_PAYLOAD.name)
-    for stale in sorted(CORE_ROLLBACK_DIR.glob("app-*.tar.gz"))[:-keep]:
+    for stale in sorted(CORE_ROLLBACK_DIR.glob("app-*.tar.gz"),
+                        key=lambda p: _version_key(p, "app-"))[:-keep]:
         stale.unlink()
     return out
 
