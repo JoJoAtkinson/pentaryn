@@ -32,6 +32,7 @@ import re
 import shutil
 import subprocess
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
@@ -96,6 +97,10 @@ def _emit(res: GateResult) -> int:
     return OK if res.ok else FAIL
 
 
+def _node_check(path: Path) -> subprocess.CompletedProcess:
+    return subprocess.run(["node", "--check", str(path)], capture_output=True, text=True)
+
+
 def _gate_parse(spec: cfg.ModuleSpec) -> GateResult:
     """JSON.parse every .json the module declares, and `node --check` every .mjs.
 
@@ -114,13 +119,16 @@ def _gate_parse(spec: cfg.ModuleSpec) -> GateResult:
         return GateResult("parse", True, "node not installed — skipping the syntax check",
                           skipped=True)
 
+    # One node process per file, run side by side (final-review py-ops perf-1): serially
+    # this was ~25 s for --all. `map` yields in sorted file order, so the file reported is
+    # still the first failure by name, never whichever process happened to finish first.
     files = _sources(spec)
-    for f in files:
-        proc = subprocess.run(["node", "--check", str(f)],
-                              capture_output=True, text=True)
-        if proc.returncode != 0:
-            return GateResult("parse", False, f"syntax error in {f}",
-                              problems=[proc.stderr.rstrip("\n")])
+    with ThreadPoolExecutor(max_workers=os.cpu_count() or 1) as pool:
+        for f, proc in zip(files, pool.map(_node_check, files)):
+            if proc.returncode != 0:
+                pool.shutdown(cancel_futures=True)
+                return GateResult("parse", False, f"syntax error in {f}",
+                                  problems=[proc.stderr.rstrip("\n")])
 
     return GateResult("parse", True, f"{spec.name} sources parse", counts={"files": len(files)})
 

@@ -272,3 +272,49 @@ def test_imports_gate_reports_a_malformed_manifest_M3(tmp_path):
     res = modules._gate_imports(TmpSpec(_malformed_manifest(tmp_path), check=("imports",)))
     assert res.ok is False
     assert any("module.json is malformed JSON" in p for p in res.problems)
+
+
+# ── parallel parse gate (final-review py-ops perf-1) ──────────────────────────
+
+def _fake_node(monkeypatch, failing: dict[str, str], barrier=None):
+    """Stand in for `node --check`: fail the named files, optionally rendezvous first."""
+    import subprocess
+    import threading
+
+    monkeypatch.setattr(modules, "_node_available", lambda: True)
+    monkeypatch.setattr(modules.os, "cpu_count", lambda: 4)
+    met = []
+
+    def fake(f):
+        if barrier is not None:
+            try:
+                barrier.wait()
+                met.append(threading.get_ident())
+            except threading.BrokenBarrierError:
+                pass
+        err = failing.get(f.name)
+        return subprocess.CompletedProcess(["node", "--check", str(f)],
+                                           1 if err else 0, "", err or "")
+
+    monkeypatch.setattr(modules, "_node_check", fake)
+    return met
+
+
+def test_parse_gate_runs_node_check_concurrently_perf_1(tmp_path, monkeypatch):
+    import threading
+
+    root = _module(tmp_path, {"a.mjs": "", "b.mjs": ""})
+    barrier = threading.Barrier(2, timeout=2)
+    met = _fake_node(monkeypatch, {}, barrier)
+    res = modules._gate_parse(TmpSpec(root, check=("parse",)))
+    assert res.ok is True and res.counts == {"files": 2}
+    assert len(met) == 2, "node --check ran one file at a time"
+
+
+def test_parse_gate_reports_the_first_failure_in_sorted_order_perf_1(tmp_path, monkeypatch):
+    root = _module(tmp_path, {"a.mjs": "", "b.mjs": "", "c.mjs": ""})
+    _fake_node(monkeypatch, {"b.mjs": "b broke\n", "c.mjs": "c broke\n"})
+    res = modules._gate_parse(TmpSpec(root, check=("parse",)))
+    assert res.ok is False
+    assert res.summary == f"syntax error in {root / 'b.mjs'}"
+    assert res.problems == ["b broke"]
