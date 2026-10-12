@@ -537,7 +537,8 @@ function readDoc(scene, type, id) {
 
 /**
  * Each encounter this run built into: its creatures' XP now (new actors plus built members) against
- * the party budget from the gather (or `party` on the replace call). Hostile-or-neutral npcs only.
+ * the party budget from the gather (or `party` on the replace call). Each built creature's XP comes
+ * from actorXp(actor, token), which decides who counts.
  */
 function encounterXp(entries, results, args) {
   const byPid = new Map(results.filter(r => r.ok && r.id).map(r => [r.id, r]));

@@ -77,6 +77,9 @@ cssPrefix `pp-`, afterSync). Each **[declared]** change goes to the live check.
 - **[declared] A lone Scene document passed to `gather` is stored by id** (prompts-core-EC-1): the
   manifest's `opts.scenes` (kept in the `lastCalls` world setting) now holds `["<id>"]`, as a list
   of Scene documents already did; before, the whole document was written into the setting.
+- **[declared] `encounterXp`'s docblock says who counts** (prompts-core-M1): each built creature's
+  XP comes from `actorXp(actor, token)`, which decides who counts; the wrong "Hostile-or-neutral npcs
+  only" sentence is gone. Comment only, no behaviour change.
 - `ensureMarkers` repairs every drifted actor in one batch update. A hot re-import after
   `uninstall()` re-wires and republishes at once.
 - Console only (DP9): a core token API that throws warns once; swallowed failures log at debug
