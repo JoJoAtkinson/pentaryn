@@ -243,3 +243,38 @@ def test_bad_ext_is_refused(tmp_path):
     kit = {"files": {"x": {"deps": [], "ext": "scss"}}}
     with pytest.raises(vendor.VendorError, match="ext"):
         vendor.kit_file("x", kit)
+
+
+def test_a_copy_vendored_at_an_older_kit_names_both_versions(tmp_path):
+    """'differs' alone hid the cause: a copy left at an older kit than the lock (FX-L, 2026-10-12)."""
+    d = make_module(tmp_path)
+    vendor.sync(d)
+    lock_v = json.loads((d / "lib/kit.lock.json").read_text())["version"]
+    p = d / "lib/log.mjs"
+    text = p.read_text(encoding="utf-8")
+    p.write_text(text.replace(f"// pentaryn kit {lock_v} ", "// pentaryn kit 1.0.2 ", 1), encoding="utf-8")
+    msgs = [x for x in vendor.check(d) if "lib/log.mjs" in x]
+    assert len(msgs) == 1
+    assert "lib/log.mjs differs" in msgs[0]
+    assert f"vendored at 1.0.2, lock is {lock_v}" in msgs[0]
+    assert "vendor.py sync pentaryn-demo" in msgs[0]
+
+
+def test_a_css_copy_at_an_older_kit_names_both_versions(tmp_path):
+    d = make_module(tmp_path, relationships={"requires": [{"id": "enhancedcombathud"}]})
+    vendor.sync(d, extra=["argon-tooltip"])
+    lock_v = json.loads((d / "lib/kit.lock.json").read_text())["version"]
+    p = d / "lib/argon-tooltip.css"
+    text = p.read_text(encoding="utf-8")
+    assert text.startswith(f"/* pentaryn kit {lock_v} ")
+    p.write_text(text.replace(f"/* pentaryn kit {lock_v} ", "/* pentaryn kit 1.0.2 ", 1), encoding="utf-8")
+    assert any(f"vendored at 1.0.2, lock is {lock_v}" in x for x in vendor.check(d))
+
+
+def test_a_same_version_edit_still_says_never_edit_a_copy(tmp_path):
+    d = make_module(tmp_path)
+    vendor.sync(d)
+    p = d / "lib/log.mjs"
+    p.write_bytes(p.read_bytes() + b" ")
+    msg = next(x for x in vendor.check(d) if "lib/log.mjs differs" in x)
+    assert "never edit a copy" in msg and "vendored at" not in msg

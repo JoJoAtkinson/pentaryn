@@ -87,6 +87,16 @@ def _is_kit_copy(path: Path) -> bool:
     return head.startswith(KIT_HEADER) or head.startswith(CSS_KIT_HEADER)
 
 
+def header_version(path: Path) -> str | None:
+    """The kit version a copy's first line names (`// pentaryn kit 1.1.0 · …`), or None."""
+    head = path.read_text(encoding="utf-8", errors="replace")[:80]
+    for prefix in (KIT_HEADER, CSS_KIT_HEADER):
+        if head.startswith(prefix):
+            word = head[len(prefix):].split(None, 1)
+            return word[0] if word else None
+    return None
+
+
 def sha(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
@@ -245,8 +255,13 @@ def check(module_dir: Path, *, lib_root: Path = LIB_ROOT) -> list[str]:
         if not copy.exists():
             problems.append(f"{name}: lib/{fname} is locked but missing")
         elif canon.exists() and sha(copy) != sha(canon):
-            problems.append(f"{name}: lib/{fname} differs from foundry/lib/{fname} — never edit a copy; "
-                            f"edit the canonical file and re-vendor")
+            at, locked = header_version(copy), lock.get("version")
+            if at and locked and at != locked:
+                problems.append(f"{name}: lib/{fname} differs from foundry/lib/{fname} — vendored at {at}, "
+                                f"lock is {locked}; run vendor.py sync {name}")
+            else:
+                problems.append(f"{name}: lib/{fname} differs from foundry/lib/{fname} — never edit a copy; "
+                                f"edit the canonical file and re-vendor")
     lib_dir = module_dir / "lib"
     for f in _lib_files(lib_dir):
         if f.name not in locked_names:
