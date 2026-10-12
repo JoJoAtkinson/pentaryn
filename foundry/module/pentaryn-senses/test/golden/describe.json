@@ -209,7 +209,7 @@
           "doc": "the Item (a clone from a use hook is resolved to the live one)"
         }
       ],
-      "returns": "Promise<boolean> | notification",
+      "returns": "Promise<boolean>",
       "gm": false,
       "writes": true,
       "query": false,

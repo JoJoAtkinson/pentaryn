@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- **[declared senses-EXT-11] `light.onMe` and `light.prompt` return false when On me can't cast**
+  (final review 2026-10-12): with no scene viewed, or no token of the caster on the viewed scene,
+  onMe still warns ("Open a scene first." / "Your token isn't on this scene. Use Pick a target.")
+  and now returns false instead of the notification object, so `prompt` resolves boolean |
+  undefined as its describe row says. Goldens: describe.json (onMe returns `Promise<boolean>`),
+  light-onme.json (noScene, ilsaOnRoad values). New `test/light-prompt-return.test.mjs`.
+
 - **[declared senses-M11] The `syncAll` describe row says it batches** (final review 2026-10-12):
   the row said "one after another", but since W3-SE3 syncAll writes one Actor batch for the
   prototypes, then one Token batch per scene. The row now says so. Goldens: describe.json (the

@@ -83,9 +83,15 @@ export async function end(item) {
 
 export async function onMe(item) {
   item = realItem(item);
-  if (!canvas?.scene) return ui.notifications.warn(_loc("PENTARYN_SENSES.Light.NoScene"));
+  if (!canvas?.scene) {
+    ui.notifications.warn(_loc("PENTARYN_SENSES.Light.NoScene"));
+    return false;
+  }
   const tok = casterToken(item?.actor);
-  if (!tok) return ui.notifications.warn(_loc("PENTARYN_SENSES.Light.NoToken"));
+  if (!tok) {
+    ui.notifications.warn(_loc("PENTARYN_SENSES.Light.NoToken"));
+    return false;
+  }
   return cast(item, { scene: tok.parent.id, token: tok.id });
 }
 

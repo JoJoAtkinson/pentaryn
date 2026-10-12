@@ -3,7 +3,7 @@
  * describe() reports it, and buildApi() refuses to load when it and api.mjs drift apart.
  *
  * Every row keeps today's published signature (`legacy: true`): positional documents, not refs;
- * booleans, counts, null or a notification for a refusal. `chain.*` is also published as
+ * booleans, counts, or false/null for a refusal. `chain.*` is also published as
  * `game.pentaryn.chain` (an alias; the same frozen object).
  */
 
@@ -116,7 +116,7 @@ export const MANIFEST = Object.freeze({
     {
       path: "light.onMe",
       params: [ITEM],
-      returns: "Promise<boolean> | notification",
+      returns: "Promise<boolean>",
       gm: false, writes: true, legacy: true,
       sideEffects: ["Item update (flags.pentaryn-senses.lightCast)"],
       doc: "Cast the Light on the caster's own token on the viewed scene (a controlled one first).",
