@@ -167,20 +167,22 @@ const POLL_MS = 50;
  * server's order wins (core.claimWinner) and runs ensureFor. The loser does not answer early — the
  * server keeps the first answer — it waits for the winner's journal to arrive and answers with that.
  * Each tab removes its own stamp when it is done. With one tab this is one extra User update.
+ * Stamps are server time (game.time.serverTime), not Date.now(): the tabs may run on machines whose
+ * clocks disagree, and a fast clock would read another tab's fresh stamp as stale (journal-EC-4).
  */
 async function relayEnsure(user) {
   const me = game.socket?.id ?? null;
   if (!me || !user?.id || user.isGM || personal(user)) return ensureFor(user);   // nothing to race for
   const mine = flagPath(MODULE, `${CLAIM}.${me}`);
   try {
-    await user.update({ [mine]: Date.now() });
+    await user.update({ [mine]: game.time.serverTime });
   } catch (err) {
     // e.g. an Assistant GM who may not update Users: answer as before rather than not at all
     ctx?.log.warn("ensure (relay): could not stamp the claim — answering without it", err);
     return ensureFor(user);
   }
   try {
-    if (claimWinner(readFlag(user, MODULE, CLAIM), me, Date.now(), CLAIM_STALE_MS)) return await ensureFor(user);
+    if (claimWinner(readFlag(user, MODULE, CLAIM), me, game.time.serverTime, CLAIM_STALE_MS)) return await ensureFor(user);
     ctx?.log.debug("ensure (relay): another GM tab claimed it — waiting for its journal", { user: user.id });
     return await waitForPersonal(user);
   } finally {

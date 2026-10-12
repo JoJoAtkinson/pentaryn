@@ -22,6 +22,9 @@
 - **[declared] journal-async-1:** with two GM tabs open (the MCP bridge and a browser), `ready`'s
   `ensureAll` and the `createUser` hook no longer make the folder and each new player's journal twice:
   they take the relay's per-tab claim, so one tab creates and the other waits for its journal.
+- **[declared] journal-EC-4:** the per-tab claim is stamped and judged in server time
+  (`game.time.serverTime`), not each machine's `Date.now()`, so a GM tab on a machine whose clock is a
+  minute or more off no longer reads the other tab's fresh claim as stale and makes a second journal.
 
 ## Unreleased (blueprint migration, wave 2)
 
