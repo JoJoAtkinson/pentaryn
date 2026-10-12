@@ -8,7 +8,7 @@
 export const MODULE = "pentaryn-aoe";
 export const SHORT = "aoe";
 export const NS = "aoe";
-export const VERSION = "0.3.1";                          // === module.json version (core.test pins it)
+export const VERSION = "0.4.0";                          // === module.json version (core.test pins it)
 export const CONTRACT = "pentaryn-aoe/api@1";            // bump the major on a published-shape change
 export const I18N = "PENTARYN_AOE";
 export const CSS = "pa-";

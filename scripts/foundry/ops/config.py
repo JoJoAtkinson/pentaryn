@@ -255,12 +255,7 @@ MODULES = {
         # node-test: core.mjs decides who is caught in an area, what a save is worth and which
         # waiting row a save answers — proved on fixtures before anything reaches Data/.
         check=(*_STATIC, "node-test", *_BLUEPRINT),
-        after_sync=(
-            "First install: restart Foundry (module.json is read at startup), then reload.",
-            "core.moduleConfiguration['pentaryn-aoe'] can be pre-set so it loads enabled.",
-            "Spell areas get a draggable/deletable handle; save spells get a GM tray on the damage roll.",
-            "  game.pentaryn.aoe.sweep(canvas.scene)",
-        ),
+        # after_sync comes from module.json flags.pentaryn.afterSync (Wave 7 batch).
     ),
     "dropbin": ModuleSpec(
         "pentaryn-dropbin",

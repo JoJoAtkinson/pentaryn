@@ -316,10 +316,12 @@ check("player status line: waiting, applied, superseded, nothing to say",
 
 /* ── checkpoint additions (guide S1.4, core.test.mjs) ─────────────────────────────────────────── */
 
-test("module.json is pentaryn-aoe 0.3.1", () => {
+// [declared] Wave 7 batch (W4 version bumps, Joe 2026-10-12): flipped from 0.3.1 — aoe ships 0.4.0 with
+// core.VERSION (the API rows already say since: "0.4.0").
+test("module.json is pentaryn-aoe 0.4.0", () => {
   const manifest = manifestOf(ROOT);
   assert.equal(manifest.id, core.MODULE);
-  assert.equal(manifest.version, "0.3.1");
+  assert.equal(manifest.version, "0.4.0");
 });
 
 test("VERSION === module.json version", () => {

@@ -193,7 +193,7 @@ feature's function is reached through `ctx.exposed`, never an import.
 | `api-manifest.mjs`, `api.mjs` | API rows; own implementations, `inspect`, `buildApiFor` |
 | `scene-adapter.mjs`, `messages-adapter.mjs`, `argon.mjs` | adapters: scenes/regions/Item Piles, dnd5e messages, Argon |
 | `areas.mjs`, `careful.mjs`, `resolve.mjs`, `tray.mjs`, `attacks.mjs`, `effects.mjs`, `refund.mjs`, `aim.mjs`, `escape.mjs` | features (Parts A–G) |
-| `aoe.css`, `lang/en.json`, `lib/` | styles; strings; vendored kit |
+| `styles/aoe.css`, `lang/en.json`, `lib/` | styles; strings; vendored kit |
 | `test/` | node:test suites, goldens, fixtures (`seams.mjs` maps the checkpoint names), the legacy suite |
 
 ## Tests
@@ -206,7 +206,7 @@ node test/run.mjs                                  # from the module folder
 
 ## Sync
 
-`make foundry-aoe-sync`. `.mjs`, `lang/` and `aoe.css` changes need a reload; `module.json` needs a
+`make foundry-aoe-sync`. `.mjs`, `lang/` and `styles/aoe.css` changes need a reload; `module.json` needs a
 restart. **Hot patch** (to test before a restart): `game.pentaryn.aoe.uninstall()`; fetch each file
 from `/modules/pentaryn-aoe/`, rewrite the relative imports to blob URLs, set
 `globalThis.__pentarynAoeHot = true`, import `aoe.mjs`, then call `install({ sweepOnReady: false })`.
