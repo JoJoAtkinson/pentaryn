@@ -2,15 +2,29 @@
   "id": "pentaryn-portals",
   "title": "Pentaryn Portal Cards",
   "description": "Turns Foundry's teleport confirmation into destination cards: a thumbnail of the spot, a title and a GM-written description, so players see where each exit leads before they choose. With several destinations the cards are the choice. Card data lives on the destination region (flags.pentaryn-portals) and is edited in the Region config, which also has a Snapshot button that crops the scene art around the region. Respects unrevealed destinations. Teleport party moves PCs with their summons, and summons follow a PC through a scene link. Exposes game.pentaryn.portals.",
-  "version": "0.4.4",
-  "compatibility": { "minimum": "14", "verified": "14" },
+  "version": "0.5.0",
+  "compatibility": { "minimum": "14", "verified": "14.369" },
   "authors": [{ "name": "Joseph Atkinson" }],
   "esmodules": ["portals.mjs"],
-  "styles": ["portals.css"],
+  "styles": ["styles/portals.css"],
+  "languages": [{ "lang": "en", "name": "English", "path": "lang/en.json" }],
   "relationships": {
-    "systems": [{ "id": "dnd5e", "type": "system", "compatibility": { "minimum": "6.0", "verified": "6.0.6" } }]
+    "systems": [{ "id": "dnd5e", "type": "system", "compatibility": { "minimum": "6.0", "verified": "6.0.6" } }],
+    "recommends": [{ "id": "item-piles", "type": "module", "reason": "A party teleport leaves no pile-PC behind: it asks Item Piles whether a token is a pile (no flag fallback)." }]
   },
   "socket": false,
   "protected": false,
-  "flags": { "pentaryn": { "flagScope": "portals", "generation": 14 } }
+  "flags": {
+    "pentaryn": {
+      "tier": "full",
+      "namespace": "portals",
+      "flagScope": "pentaryn-portals",
+      "cssPrefix": "ppt-",
+      "generation": 14,
+      "afterSync": [
+        "First install: restart Foundry (module.json is read at startup), then reload.",
+        "Teleport confirmations now show destination cards; author them in Region config → Portal card."
+      ]
+    }
+  }
 }

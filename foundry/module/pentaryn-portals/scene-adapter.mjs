@@ -76,7 +76,7 @@ export async function snapshot(regionOrUuid, { squaresWide = 8, squaresHigh = 5 
   const region = typeof regionOrUuid === "string" ? fromUuidSync(regionOrUuid) : regionOrUuid;
   const scene = region?.parent;
   const src = scene?.background?.src;
-  if (!src) { ui.notifications.warn("That region's scene has no background image to snapshot."); return null; }
+  if (!src) { ui.notifications.warn(_loc("PENTARYN_PORTALS.Notify.NoBackground")); return null; }
 
   const b = region.bounds ?? region.object?.bounds;
   const shape = region.shapes?.[0];
@@ -158,7 +158,7 @@ export async function lookAt(destRegion) {
   }
   await canvas.animatePan({ x, y, scale: Math.max(canvas.stage.scale.x, 0.6), duration: 600 });
   // No canvas.ping here: pings broadcast, and a player on that scene would see the GM looking.
-  ui.notifications.info(`Looking at ${cardFor(destRegion).title}. Nobody moved; players can't see this.`);
+  ui.notifications.info(_loc("PENTARYN_PORTALS.Notify.Looking", { title: cardFor(destRegion).title }));
 }
 
 /* Who counts as party. The rules are pure (portals-core.mjs); this turns a TokenDocument into
@@ -253,17 +253,21 @@ export async function carryTo(toks, dest, cx, cy, party = null) {
 export async function confirmParty(party, title) {
   if (!deps.setting("confirmPartyTeleport")) return true;
   if (!party.length) {
-    ui.notifications.warn("Teleport party: nobody on this scene counts as the party.");
+    ui.notifications.warn(_loc("PENTARYN_PORTALS.Party.Nobody"));
     return false;
   }
   const rows = partyPreview(party).map(r => `<li>${esc(r.name)}${r.follower
-    ? ` <span class="ppt-follows">${r.leaderName ? `lands beside ${esc(r.leaderName)}` : "follower"}</span>` : ""}</li>`).join("");
+    ? ` <span class="ppt-follows">${r.leaderName
+      ? _loc("PENTARYN_PORTALS.Party.LandsBeside", { name: esc(r.leaderName) })
+      : _loc("PENTARYN_PORTALS.Party.Follower")}</span>` : ""}</li>`).join("");
   return foundry.applications.api.DialogV2.confirm({
-    window: { title: "Teleport party", icon: "fa-solid fa-person-walking-arrow-right" },
-    content: `<p>Move ${party.length === 1 ? "this token" : `these ${party.length} tokens`} to <strong>${esc(title)}</strong>?</p>
+    window: { title: _loc("PENTARYN_PORTALS.Party.Title"), icon: "fa-solid fa-person-walking-arrow-right" },
+    content: `<p>${party.length === 1
+      ? _loc("PENTARYN_PORTALS.Party.ConfirmOne", { title: esc(title) })
+      : _loc("PENTARYN_PORTALS.Party.ConfirmMany", { n: party.length, title: esc(title) })}</p>
       <ul class="ppt-party">${rows}</ul>`,
-    yes: { label: "Teleport", icon: "fa-solid fa-check", default: true },
-    no: { label: "Cancel" },
+    yes: { label: _loc("PENTARYN_PORTALS.Party.Teleport"), icon: "fa-solid fa-check", default: true },
+    no: { label: _loc("PENTARYN_PORTALS.Party.Cancel") },
     rejectClose: false
   }).catch(err => { deps.log?.warn("party confirm failed", err); return false; });
 }
@@ -290,7 +294,8 @@ export async function teleportParty(destRegion, { confirm = true } = {}) {
     dest.pullUsers(game.users.filter(u => !u.isGM && u.active));
     await dest.view();
   }
-  ui.notifications.info(`${toks.length} party token${toks.length === 1 ? "" : "s"} moved to ${cardFor(destRegion).title}.`);
+  ui.notifications.info(_loc(toks.length === 1 ? "PENTARYN_PORTALS.Notify.PartyMovedOne" : "PENTARYN_PORTALS.Notify.PartyMovedMany",
+    { n: toks.length, title: cardFor(destRegion).title }));
   return { moved: toks.length, cancelled: false };
 }
 

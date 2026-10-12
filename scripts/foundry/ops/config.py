@@ -247,10 +247,7 @@ MODULES = {
         "pentaryn-portals",
         # node-test: portals-core.mjs decides who a party teleport carries and who follows a PC.
         check=(*_STATIC, "node-test", *_BLUEPRINT),
-        after_sync=(
-            "First install: restart Foundry (module.json is read at startup), then reload.",
-            "Teleport confirmations now show destination cards; author them in Region config → Portal card.",
-        ),
+        # after_sync comes from module.json flags.pentaryn.afterSync (Wave 7 batch).
     ),
     "journal": ModuleSpec(
         "pentaryn-journal",

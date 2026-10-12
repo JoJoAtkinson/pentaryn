@@ -59,7 +59,9 @@ export function plainQuestion(app, behavior, content, card) {
   const tokenId = dialogIdParts(app?.id ?? "")?.tokenId;
   const token = behavior.parent?.parent?.tokens?.get(tokenId);
   const who = token?.name;
-  p.textContent = who ? `Teleport ${who} to ${card.title}?` : `Teleport to ${card.title}?`;
+  p.textContent = who
+    ? _loc("PENTARYN_PORTALS.Dialog.Question", { name: who, title: card.title })
+    : _loc("PENTARYN_PORTALS.Dialog.QuestionNoToken", { title: card.title });
 }
 
 /**
@@ -89,15 +91,15 @@ export function injectConfig(app, element) {
   const fs = document.createElement("fieldset");
   fs.className = "ppt-config";
   fs.innerHTML = `
-    <legend>Portal card</legend>
-    <p class="hint">Shown to a player choosing to travel <em>here</em> from a linked teleport region.</p>
-    <div class="form-group"><label>Title</label>
+    <legend>${_loc("PENTARYN_PORTALS.Config.Legend")}</legend>
+    <p class="hint">${_loc("PENTARYN_PORTALS.Config.Hint")}</p>
+    <div class="form-group"><label>${_loc("PENTARYN_PORTALS.Config.Title")}</label>
       <div class="form-fields"><input type="text" name="flags.${MODULE}.title" value="${esc(f.title ?? "")}" placeholder="${esc(card.title)}"></div></div>
-    <div class="form-group"><label>Image</label>
-      <div class="form-fields"><input type="text" name="flags.${MODULE}.img" value="${esc(f.img ?? "")}" placeholder="scene thumbnail">
-      <button type="button" class="ppt-snap" data-tooltip="Crop the map art around this region and use it"><i class="fa-solid fa-camera"></i></button></div></div>
-    <div class="form-group stacked"><label>Description</label>
-      <textarea name="flags.${MODULE}.description" rows="4" placeholder="What players read before they choose.">${esc(f.description ?? "")}</textarea></div>
+    <div class="form-group"><label>${_loc("PENTARYN_PORTALS.Config.Image")}</label>
+      <div class="form-fields"><input type="text" name="flags.${MODULE}.img" value="${esc(f.img ?? "")}" placeholder="${_loc("PENTARYN_PORTALS.Config.ImagePlaceholder")}">
+      <button type="button" class="ppt-snap" data-tooltip="${_loc("PENTARYN_PORTALS.Config.Snap")}"><i class="fa-solid fa-camera"></i></button></div></div>
+    <div class="form-group stacked"><label>${_loc("PENTARYN_PORTALS.Config.Description")}</label>
+      <textarea name="flags.${MODULE}.description" rows="4" placeholder="${_loc("PENTARYN_PORTALS.Config.DescriptionPlaceholder")}">${esc(f.description ?? "")}</textarea></div>
     <div class="ppt-preview">${cardHTML(card)}</div>`;
   tab.append(fs);
   fs.querySelector(".ppt-snap").addEventListener("click", guard("config snapshot", async ev => {

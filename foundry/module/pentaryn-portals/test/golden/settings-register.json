@@ -1,7 +1,7 @@
 [
   {
-    "name": "Teleport is the default answer",
-    "hint": "The teleport question opens with Teleport focused (Enter teleports). Off: core's default, Don't Teleport.",
+    "name": "PENTARYN_PORTALS.Setting.teleportDefault.Name",
+    "hint": "PENTARYN_PORTALS.Setting.teleportDefault.Hint",
     "scope": "world",
     "config": true,
     "type": "Boolean",
@@ -10,8 +10,8 @@
     "key": "teleportDefault"
   },
   {
-    "name": "Arrivals step off an occupied square",
-    "hint": "A player character who comes through a portal onto a square someone already stands on moves to the nearest free square around it (the GM's client does it).",
+    "name": "PENTARYN_PORTALS.Setting.spreadArrivals.Name",
+    "hint": "PENTARYN_PORTALS.Setting.spreadArrivals.Hint",
     "scope": "world",
     "config": true,
     "type": "Boolean",
@@ -20,8 +20,8 @@
     "key": "spreadArrivals"
   },
   {
-    "name": "Confirm a party teleport",
-    "hint": "The GM's Teleport party first lists who will move (each follower beside its PC) and asks. Off: it moves at once.",
+    "name": "PENTARYN_PORTALS.Setting.confirmPartyTeleport.Name",
+    "hint": "PENTARYN_PORTALS.Setting.confirmPartyTeleport.Hint",
     "scope": "world",
     "config": true,
     "type": "Boolean",

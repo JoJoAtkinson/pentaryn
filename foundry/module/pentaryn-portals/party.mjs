@@ -92,7 +92,7 @@ export async function bringFollowers(scene, deleted, replacements) {
       continue;
     }
     const names = followers.map(f => f.name).join(", ");
-    ui.notifications.info(`${arrived.name} brought ${names} to ${dest.navName || dest.name}.`);
+    ui.notifications.info(_loc("PENTARYN_PORTALS.Notify.Followed", { name: arrived.name, names, place: dest.navName || dest.name }));
   }
 }
 

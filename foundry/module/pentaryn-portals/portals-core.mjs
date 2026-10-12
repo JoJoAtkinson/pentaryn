@@ -14,7 +14,7 @@
 export const MODULE = "pentaryn-portals";
 export const SHORT = "portals";
 export const NS = "portals";
-export const VERSION = "0.4.4";                        // === module.json version (core.test pins it)
+export const VERSION = "0.5.0";                        // === module.json version (core.test pins it)
 export const CONTRACT = "pentaryn-portals/api@1";     // bump the major on a published-shape change
 export const I18N = "PENTARYN_PORTALS";
 export const CSS = "ppt-";                             // every class this module puts in the DOM starts ppt- (S7)

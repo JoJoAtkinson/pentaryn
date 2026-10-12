@@ -130,7 +130,7 @@ are queued in the adjustments batch (`context/plans/addon-blueprint-2026-10/adju
 - Foundry reads/writes → `scene-adapter.mjs` (it may import only core and lib).
 - An API method → a row in `api-manifest.mjs` plus an implementation in `api.mjs` (or a feature's
   contribution), then re-pin `golden/describe.json` and `surface.json`.
-- CSS → `portals.css` under `ppt-`. A string → `lang/en.json` once Wave 7 ships it (`_loc` with full keys).
+- CSS → `styles/portals.css` under `ppt-`. A string → `lang/en.json` and `_loc("PENTARYN_PORTALS.…")` with the full key (never a prefix wrapper).
 
 ## Pitfalls
 
@@ -158,7 +158,8 @@ are queued in the adjustments batch (`context/plans/addon-blueprint-2026-10/adju
 | `card-app.mjs` | ui: the Portal card window |
 | `party.mjs` · `badges.mjs` · `cards.mjs` | features: summons follow · badges, hover, menu, drag · dialog cards, Region-config fieldset |
 | `api-manifest.mjs` · `api.mjs` | API rows · implementations, `inspect`, `buildApiFor` |
-| `portals.css` | styles, every class `ppt-` |
+| `styles/portals.css` | styles, every class `ppt-` |
+| `lang/en.json` | every on-screen string, `PENTARYN_PORTALS.*` |
 | `lib/` | vendored kit — never edited here |
 
 ## Tests

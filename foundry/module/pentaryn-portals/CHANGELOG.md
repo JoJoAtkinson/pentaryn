@@ -1,6 +1,18 @@
 # Changelog — pentaryn-portals
 
-## Unreleased (addon-blueprint migration, wave 3)
+## 0.5.0 — 2026-10-12 (Wave 7 restart batch, wave 5)
+
+Releases the wave-3 blueprint migration (next section) together with the batch. `module.json`: `flags.pentaryn` blueprint keys
+(`flagScope` `portals` → `pentaryn-portals`, manifest-only; the code already wrote
+`flags.pentaryn-portals`), `recommends` item-piles, `verified: "14.369"`, `styles/portals.css`
+(moved), `languages`.
+
+- **[declared] D-P2** — every on-screen string comes from `lang/en.json` through
+  `_loc("PENTARYN_PORTALS.…")` (finding -29): the teleport question, the dialog cards' hover, the GM
+  menu, the party confirm, the Portal card window, the Region config fieldset, the notifications and
+  the three settings. The English is unchanged; the party plurals are now two keys each.
+
+### Addon-blueprint migration (wave 3)
 
 Code layout follows the blueprint (entry, core, settings, scene adapter, the `party`, `badges` and
 `cards` features, the card window, API manifest); the kit is vendored. What a player or GM can
