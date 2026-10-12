@@ -99,6 +99,8 @@ export function runWasm(walls, opts = {}) {
 
   const out = new Int32Array(mod.memory.buffer, mod.out_ptr(), len);
   const [nc, nu, nr, iterations, nComp] = out;
+  // lib.rs reports iter_cap + 1 when the cap ran out; refuse the partial result as js does (walls-rob-1).
+  if (iterations > cfg.iterCap) throw new Error(`wall-autocomplete: hit the ${cfg.iterCap}-iteration cap; nothing was committed.`);
 
   let p = 5;
   const creates = [];

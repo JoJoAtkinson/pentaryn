@@ -77,3 +77,18 @@ test("senses-walls-cursors-3: over the corpus, levels agree across backends; rul
   const drift = readJSON(new URL("test/golden/backend-drift.json", ROOT));
   assert.deepEqual(ruleDrift, Object.keys(drift).filter(k => drift[k].updateRules));
 });
+
+test("walls-rob-1: wasm honours the iteration cap — it throws js's exact message instead of committing a partial result", async () => {
+  const { FIXTURES } = await import("./fixtures/corpus.mjs");
+  await core.wasmReady;
+  const js = core.get("js").run, wasm = core.get("wasm").run;
+  // Any corpus scene that needs two or more passes overflows a cap of 1.
+  const fx = FIXTURES.find(f => f.walls && (f.expect?.iterations ?? 0) >= 2 && core.get("wasm").accepts(f.walls, f.opts));
+  assert.ok(fx, "the corpus has a multi-pass scene the wasm accepts");
+  const opts = { ...fx.opts, runId: "rob1", iterCap: 1 };
+  const want = "wall-autocomplete: hit the 1-iteration cap; nothing was committed.";
+  assert.throws(() => js(fx.walls, opts), { message: want });
+  assert.throws(() => wasm(fx.walls, opts), { message: want });
+  // Uncapped, the same scene still runs on both.
+  assert.doesNotThrow(() => wasm(fx.walls, { ...fx.opts, runId: "rob1" }));
+});

@@ -6,6 +6,9 @@
 (`flagScope` stays `wall-autocomplete`), `languages`, `minimum: "14"`, `verified: "14.369"` and the
 description fix; the flag-scope migration is **parked** while walls stays off (Joe).
 
+- **[declared] The compiled engine honours the iteration cap** (`walls-rob-1`): a run that hit the
+  cap on wasm committed its partial result where js throws. It now throws js's exact
+  `hit the <iterCap>-iteration cap; nothing was committed.` and writes nothing.
 - **[declared] A `weldEps`/`pinEps` override runs on the JavaScript engine** (`walls-EXT-1`): the
   compiled engine hard-codes both, so it ignored the override while the card echoed it. The wasm
   row's `accepts(walls, opts)` now refuses such opts, and the card names js, the backend that ran.
