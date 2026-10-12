@@ -1,0 +1,15 @@
+{
+  "about": "The shared oracle for 'is this an aoe area handle?'. pentaryn-aoe owns the flags (core.isHandle, core.isHandleTarget). Hand copies elsewhere must agree on the column they implement: creatures' and portals' isAoeHandle = 'prop' (aoe-movement-portals-43, transform-creatures-30); combat's turnflow, senses' light and portals' spreadArrival read the token flag = 'handle'. token/actor are whole `flags` objects (keyed by scope); null = no such document. Columns: handle = the token's own flags.pentaryn-aoe.handle; prop = handle OR the actor's flags.pentaryn-aoe.handleActor; bind = isHandleTarget(a Token placeable); bindActor = isHandleTarget(the token's synthetic actor).",
+  "rows": [
+    { "name": "area handle token on the handle actor", "token": { "pentaryn-aoe": { "handle": true, "region": "regionA000000001" }, "dnd5e": { "lockSize": true } }, "actor": { "pentaryn-aoe": { "handleActor": true } }, "want": { "handle": true, "prop": true, "bind": true, "bindActor": true } },
+    { "name": "handle token whose actor lost its flag", "token": { "pentaryn-aoe": { "handle": true } }, "actor": {}, "want": { "handle": true, "prop": true, "bind": true, "bindActor": true } },
+    { "name": "handle flag holding a token id (truthy, not boolean)", "token": { "pentaryn-aoe": { "handle": "tok0000000000001" } }, "actor": {}, "want": { "handle": true, "prop": true, "bind": true, "bindActor": true } },
+    { "name": "unflagged token dragged out of the handle actor", "token": {}, "actor": { "pentaryn-aoe": { "handleActor": true } }, "want": { "handle": false, "prop": true, "bind": false, "bindActor": true } },
+    { "name": "creature token", "token": {}, "actor": {}, "want": { "handle": false, "prop": false, "bind": false, "bindActor": false } },
+    { "name": "creature with an empty aoe scope", "token": { "pentaryn-aoe": {} }, "actor": { "pentaryn-aoe": {} }, "want": { "handle": false, "prop": false, "bind": false, "bindActor": false } },
+    { "name": "region flag only", "token": { "pentaryn-aoe": { "region": "regionA000000001" } }, "actor": {}, "want": { "handle": false, "prop": false, "bind": false, "bindActor": false } },
+    { "name": "handle false", "token": { "pentaryn-aoe": { "handle": false } }, "actor": { "pentaryn-aoe": { "handleActor": false } }, "want": { "handle": false, "prop": false, "bind": false, "bindActor": false } },
+    { "name": "another module's handle flag", "token": { "pentaryn-portals": { "handle": true } }, "actor": { "pentaryn-portals": { "handleActor": true } }, "want": { "handle": false, "prop": false, "bind": false, "bindActor": false } },
+    { "name": "no flags object at all", "token": null, "actor": null, "want": { "handle": false, "prop": false, "bind": false, "bindActor": false } }
+  ]
+}
