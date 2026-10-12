@@ -78,6 +78,23 @@ test("selftest passes on a healthy load", () => {
   assert.equal(out.ok, true, JSON.stringify(out.checks));
 });
 
+test("selftest: settings readable is false when a Boolean setting reads non-boolean", () => {
+  const get = game.settings.get;
+  game.settings.get = function (moduleId, key) {
+    if (moduleId === "pentaryn-journal" && key === "singlePageReadables") return "x";
+    return get.call(this, moduleId, key);
+  };
+  try {
+    const out = api.selftest();
+    const check = out.checks.find(c => c.label === "settings readable");
+    assert.equal(check.ok, false);
+    assert.equal(out.ok, false);
+  } finally {
+    game.settings.get = get;
+  }
+  assert.equal(api.selftest().ok, true);
+});
+
 test("settings() reports the three rows' live values", () => {
   assert.deepEqual(api.settings(), { gmButton: false, singlePageReadables: true, folderName: "Player Journals" });
 });

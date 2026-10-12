@@ -8,7 +8,7 @@
  * `log` at debug level: `CONFIG.debug["pentaryn-lookup"] = true` shows it (prompts-lookup-34).
  */
 
-import { EDITIONS, SPELL_PACKS, tidy, toBook, toPlainText } from "./lookup-core.mjs";
+import { EDITIONS, SPELL_PACKS, featureRow, pickByName, toBook } from "./lookup-core.mjs";
 
 /**
  * The plain books, one load per LOCKED pack per session: pack id → Promise<book> (the promise, so two
@@ -94,14 +94,14 @@ export async function readTable(uuid, log = null) {
     results: t.results.contents.map(r => ({ range: r.range, description: r.description, name: r.name, text: r.text })) };
 }
 
-/** A spell document by uuid or name: PHB first, then the 2024 SRD (SPELL_PACKS order). */
+/** A spell document by uuid or name: PHB first, then the 2024 SRD, then the 2014 SRD (SPELL_PACKS order). */
 export async function findSpell(ref, log = null) {
   const s = String(ref ?? "").trim();
   if (s.startsWith("Compendium.")) return fromUuid(s).catch(err => (log?.debug("fromUuid failed", { uuid: s }, err), null));
   for (const id of SPELL_PACKS) {
     const pack = game.packs.get(id);
     if (!pack) continue;
-    const hit = (await pack.getIndex()).find(e => e.name.toLowerCase() === s.toLowerCase());
+    const hit = pickByName(await pack.getIndex(), s, { substring: false });
     if (hit) return pack.getDocument(hit._id);
   }
   return null;
@@ -153,10 +153,7 @@ export async function featureTexts(actor, log = null) {
       // fall back to the raw text; toPlainText still strips the enrichers
       log?.debug("enrichHTML failed", { item: i.uuid }, err);
     }
-    const act = i.system?.activities?.contents?.[0]?.activation?.type ?? i.system?.activation?.type ?? null;
-    const rch = i.system?.uses?.recovery?.find?.(r => r.period === "recharge");
-    features.push({ name: i.name, type: i.type, activation: act || null,
-      recharge: rch ? `${rch.formula ?? "6"}-6` : null, text: tidy(toPlainText(enriched)) });
+    features.push(featureRow(i, enriched));
   }
   return features;
 }

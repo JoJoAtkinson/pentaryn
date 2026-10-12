@@ -117,3 +117,15 @@ test("uninstall() unwraps handlePing, stops listening, drops a pending flush; a 
   assert.deepEqual(W.log().at(-1).value.map(r => r.x), [1, 10, 13]);
   again.uninstall();
 });
+
+test("drift guard: manifest RECORD keys = a reader record's keys; the log row doc keys = a stored record's keys", async () => {
+  // runs last: the uninstall test above left a real capture (x 13) as the newest stored record
+  const { RECORD } = await import("../api-manifest.mjs");
+  const { SETTINGS } = await import("../settings.mjs");
+  const recordKeys = RECORD.replace(/:\s*\{[^}]*\}/g, "").replace(/[{}\s]/g, "").split(",");
+  assert.deepEqual(Object.keys(api.last()), recordKeys);
+  const stored = W.stored().at(-1);
+  assert.equal(stored.x, 13, "the newest stored record is the real capture");
+  const docKeys = SETTINGS.find(r => r.key === "log").doc.match(/\{([^}]*)\}/)[1].replace(/\s/g, "").split(",");
+  assert.deepEqual(Object.keys(stored), docKeys);
+});

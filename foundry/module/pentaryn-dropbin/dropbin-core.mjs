@@ -56,6 +56,15 @@ export function pinnedEntryIds(scenes) {
   return s;
 }
 
+/** One of our corpses: a token this module turned into a pile (never revert one we didn't make). */
+export const isOurCorpse = doc => !!doc.flags?.[MODULE]?.corpse;
+
+/** Opted out of looting: `noLoot` on the token or on its actor. */
+export const hasNoLoot = tokenDoc => !!(tokenDoc.flags?.[MODULE]?.noLoot || tokenDoc.actor?.flags?.[MODULE]?.noLoot);
+
+/** The active GM user's own client (every tab of that account, W2-D1). */
+export const isActiveGMSelf = users => users?.activeGM?.isSelf === true;
+
 /** The corpse eye's disc is redrawn only when its size changed. */
 export const needsRedraw = (prev, size) => prev !== size;
 

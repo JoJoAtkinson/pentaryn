@@ -1,15 +1,15 @@
 // Core characterisation (guide step 1; behaviour tests of transform-creatures-36 and the decorate half
-// of -39). One table per pure function, run against every entry of fixtures/impls.mjs — today the
-// verbatim oracle, from step 2 also pings-core.mjs. Key order is compared with JSON.stringify where it
-// is part of the record contract (the live golden's recentShape).
+// of -39). One table per pure function, run against every entry of fixtures/impls.mjs — the verbatim
+// oracle and pings-core.mjs. Key order is compared with JSON.stringify where it is part of the record
+// contract (the live golden's recentShape).
 //
 // Documented quirks are pinned as they are, not called bugs (guide §3 step 2: "do not fix"):
 //   recentOf(list, 0) returns the whole list, recentOf(list, -1) drops the first record,
 //   `snapped` is canvas-space floor(x / g) * g whatever the grid type, a fractional max below 1 never trims.
-// Named pin that a later [declared] step flips:
-//   "pin transform-creatures-39: decorate has no numeric age" — step 6 adds `ageMs` after `age`, deletes
-//   this pin and drops the `todo` flag of the "transform-creatures-39 target" test beside it. Every other
-//   decorate assertion (here and in glue.test / golden/record.json) checks the leading keys only.
+// The -39 pin and its target:
+//   "pin transform-creatures-39: decorate has no numeric age" runs for the oracle only; core runs the
+//   "transform-creatures-39 target" test instead (step 6: `ageMs` follows `age`). Every other decorate
+//   assertion (here and in glue.test / golden/record.json) checks the leading keys only.
 import { IMPLS } from "./fixtures/impls.mjs";
 import { test } from "node:test";
 import assert from "node:assert/strict";
