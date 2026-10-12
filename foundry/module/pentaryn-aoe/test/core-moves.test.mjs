@@ -80,3 +80,7 @@ test("-10 summariseResolution: rows without images or message ids, the Apply cou
   assert.deepEqual(core.summariseResolution({ superseded: true }).playerStatus, "superseded");
   assert.deepEqual(core.summariseResolution({}).rows, []);
 });
+
+test("RECENT_MESSAGES is the 60-message window the manifest documents", () => {
+  assert.equal(core.RECENT_MESSAGES, 60);
+});
