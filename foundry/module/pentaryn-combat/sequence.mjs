@@ -423,6 +423,20 @@ export function abortFor(actor) {
 /* ── follow-ups ──────────────────────────────────────────────────────────── */
 
 /**
+ * The one-swing follow-ups (combat-core-EXT-4): each kind's swing mode and strip kind, and whether a
+ * rolled swing records the follow-up on the turn flag (and emits bonusSpent). Off-hand and Nick record
+ * through the off-hand swing itself. Pole Strike's weapon is the Polearm Master item's own attack
+ * activity (its usage card, its 1d4 Bludgeoning).
+ */
+const SINGLE_SWING = Object.freeze({
+  offhand: Object.freeze({ mode: "offhand", kind: "offhand", records: false }),
+  nick: Object.freeze({ mode: "offhand", kind: "nick", records: false }),
+  "martial-arts": Object.freeze({ mode: null, kind: "bonus", records: true }),
+  hew: Object.freeze({ mode: null, kind: "bonus", records: true }),
+  "pole-strike": Object.freeze({ mode: null, kind: "bonus", records: true }),
+});
+
+/**
  * One Bonus-bar (or free) follow-up.
  * @param {Actor} actor
  * @param {{kind: string, weaponId: string, count?: number}} f
@@ -430,12 +444,14 @@ export function abortFor(actor) {
 export async function runFollowUp(actor, f, { event = null } = {}) {
   if (!f || typeof f !== "object") return { rolled: 0, status: "unknown" };   // a console caller's bad argument (combat-core-ROB-6)
   const label = _loc(core.keyFor("FollowUp", f.kind), { weapon: actor.items.get(f.weaponId)?.name ?? "" });
-  if (f.kind === "offhand") {
-    const out = await runSwings(actor, [{ weaponId: f.weaponId, mode: "offhand", kind: "offhand" }], { event, title: label, swappable: false });
+  const one = Object.hasOwn(SINGLE_SWING, f.kind) ? SINGLE_SWING[f.kind] : null;
+  if (one) {
+    const out = await runSwings(actor, [{ weaponId: f.weaponId, mode: one.mode, kind: one.kind }], { event, title: label, swappable: false });
+    if (one.records && out.rolled) {
+      await updateTurn(actor, t => core.recordFollowUp(t, f.kind));
+      emit("bonusSpent", actor, f.kind);
+    }
     return out;
-  }
-  if (f.kind === "nick") {
-    return runSwings(actor, [{ weaponId: f.weaponId, mode: "offhand", kind: "nick" }], { event, title: label, swappable: false });
   }
   if (f.kind === "flurry") {
     const act = flurryActivity(actor);
@@ -450,15 +466,6 @@ export async function runFollowUp(actor, f, { event = null } = {}) {
     const n = f.count ?? 2;
     const swings = Array.from({ length: n }, () => ({ weaponId: unarmed.id, mode: null, kind: "bonus" }));
     return runSwings(actor, swings, { event, title: label, origins: new Map([[unarmed.id, res.message?.id]]), swappable: false, paid: true });
-  }
-  // Pole Strike: the Polearm Master item's own attack activity (its usage card, its 1d4 Bludgeoning).
-  if (f.kind === "martial-arts" || f.kind === "hew" || f.kind === "pole-strike") {
-    const out = await runSwings(actor, [{ weaponId: f.weaponId, mode: null, kind: "bonus" }], { event, title: label, swappable: false });
-    if (out.rolled) {
-      await updateTurn(actor, t => core.recordFollowUp(t, f.kind));
-      emit("bonusSpent", actor, f.kind);
-    }
-    return out;
   }
   return { rolled: 0, status: "unknown" };
 }

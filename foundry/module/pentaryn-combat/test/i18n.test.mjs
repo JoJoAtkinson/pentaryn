@@ -88,7 +88,11 @@ test("follow-ups: FollowUp / FollowUpText for every kind core.followUps offers (
   const offered = [...new Set([...coreSrc.matchAll(/kind: "([a-z-]+)"/g)].map(m => m[1]))].filter(k => kinds.includes(k));
   assert.deepEqual(offered.sort(), [...kinds].sort(), "every kind core offers has strings");
   const seqSrc = readFileSync(new URL("../sequence.mjs", import.meta.url), "utf8");
-  for (const k of kinds) assert.match(seqSrc, new RegExp(`f\\.kind === "${k}"`), `runFollowUp branch for ${k}`);
+  const table = seqSrc.match(/^const SINGLE_SWING = Object\.freeze\(\{\n([\s\S]*?)\n\}\);/m)?.[1] ?? "";   // combat-core-EXT-4
+  for (const k of kinds) {
+    const row = new RegExp(`^\\s+"?${k}"?: Object\\.freeze\\(`, "m").test(table);
+    assert.ok(row || new RegExp(`f\\.kind === "${k}"`).test(seqSrc), `runFollowUp branch (or SINGLE_SWING row) for ${k}`);
+  }
   assert.deepEqual(Object.keys(lang.PENTARYN_COMBAT.FollowUp).filter(k => !kinds.includes(k)), ["NoFocus"]);
 });
 

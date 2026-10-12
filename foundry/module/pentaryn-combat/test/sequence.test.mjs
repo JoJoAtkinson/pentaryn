@@ -711,3 +711,29 @@ test("combat-core-M9: runSwings delegates the paused branch (onPaused) and the r
   const n = body.split("\n").length;
   assert.ok(n <= 95, `runSwings is ${n} lines (was ~128)`);
 });
+
+// combat-core-EXT-4: runFollowUp was an if-ladder with duplicated offhand / nick branches. A frozen,
+// file-private SINGLE_SWING table (kind → { mode, kind, records }) drives every one-swing follow-up;
+// Flurry keeps its own branch. golden/sequence-followups.json and sequence-flurry.json pin the results
+// and the recordFollowUp / bonusSpent order unchanged.
+test("combat-core-EXT-4: runFollowUp's one-swing follow-ups come from a frozen SINGLE_SWING table", async () => {
+  const { readFileSync } = await import("node:fs");
+  const src = readFileSync(new URL("../sequence.mjs", import.meta.url), "utf8");
+  const decl = src.match(/^const SINGLE_SWING = Object\.freeze\(\{\n([\s\S]*?)\n\}\);/m);
+  assert.ok(decl, "combat-core-EXT-4: SINGLE_SWING is a file-private frozen table");
+  assert.doesNotMatch(src, /^export const SINGLE_SWING\b/m, "SINGLE_SWING is not exported");
+  const rows = Object.fromEntries([...decl[1].matchAll(/^\s+"?([a-z-]+)"?: Object\.freeze\(\{ mode: (null|"[a-z]+"), kind: "([a-z-]+)", records: (true|false) \}\),?$/gm)]
+    .map(m => [m[1], { mode: JSON.parse(m[2]), kind: m[3], records: m[4] === "true" }]));
+  assert.deepEqual(rows, {
+    offhand: { mode: "offhand", kind: "offhand", records: false },
+    nick: { mode: "offhand", kind: "nick", records: false },
+    "martial-arts": { mode: null, kind: "bonus", records: true },
+    hew: { mode: null, kind: "bonus", records: true },
+    "pole-strike": { mode: null, kind: "bonus", records: true },
+  }, "combat-core-EXT-4: the table's rows");
+  const start = src.indexOf("export async function runFollowUp(");
+  const body = src.slice(start, src.indexOf("\n}\n", start));
+  assert.match(body, /SINGLE_SWING\[f\.kind\]/, "runFollowUp looks the kind up in SINGLE_SWING");
+  assert.doesNotMatch(body, /f\.kind === "(offhand|nick|martial-arts|hew|pole-strike)"/, "no per-kind branch left for the table's kinds");
+  assert.match(body, /f\.kind === "flurry"/, "Flurry keeps its own branch");
+});
