@@ -363,7 +363,29 @@ test("report('nope') with no controlled token: undefined and one console.warn", 
   let out = "unset";
   const lines = await withConsole(() => { out = game.pentaryn.attunement.report("nope"); });
   assert.equal(out, undefined);
-  assert.deepEqual(lines, [["warn", "pentaryn-attunement | no actor"]]);
+  assert.deepEqual(lines, [["warn", 'pentaryn-attunement | no actor "nope"']]);   // [declared] EC-6: names the string
+});
+
+test("[declared] EC-6: a misspelt name or a non-Actor object never falls back to the controlled token", async () => {
+  const held = makeActor(F, { id: "actorHeld0000001", name: "Held Token", attunement: { value: 0, max: 3 } });
+  const keep = canvas.tokens.controlled;
+  canvas.tokens.controlled = [{ actor: held }];
+  try {
+    const api = game.pentaryn.attunement;
+    let miss = "unset", obj = "unset", none = "unset";
+    const lines = await withConsole(() => {
+      miss = api.report("Misspelt Name");
+      obj = api.report({ name: "Held Token" });
+    });
+    assert.equal(miss, undefined, "a string that names no actor is a miss, not the controlled token");
+    assert.equal(obj, undefined, "a non-Actor object is a miss");
+    assert.deepEqual(lines, [["warn", 'pentaryn-attunement | no actor "Misspelt Name"'], ["warn", "pentaryn-attunement | no actor"]]);
+    await withConsole(() => { none = api.report(undefined, { quiet: true }); });
+    assert.equal(none?.actor, "Held Token", "no target still defaults to the controlled token");
+    assert.equal(api.report(null, { quiet: true })?.actor, "Held Token");
+  } finally {
+    canvas.tokens.controlled = keep;
+  }
 });
 
 test("computeSlots is idempotent over the legacy fixture shapes (items-journal-13 seam)", () => {

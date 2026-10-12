@@ -4,6 +4,10 @@
 
 The version stays 0.3.0 until the next `module.json` restart batch (code only: sync + reload).
 
+- **[declared] EC-6:** `report(target)` falls back to the controlled token only when no target is
+  given. A string that names no actor (by id, then name) or a non-Actor object now returns
+  `undefined` with the `no actor` warn, which names the string (was: silently reported the
+  controlled token's actor). `test/glue.test.mjs`.
 - **[declared] ATT-AC-3:** two overlapping `stash` calls on one owner now keep both away entries
   (was: the second write dropped the first one's), and two overlapping slot drops each keep the slot
   they were dropped on. Both now run on the per-actor chain the slot hand-back uses (`serial`, moved

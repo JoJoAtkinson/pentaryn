@@ -20,10 +20,15 @@ import { refOf, resolveRef } from "./lib/resolve.mjs";
  * @param {{quiet?: boolean}} [opts]  quiet: return the result without printing it
  */
 function report(target, { quiet = false } = {}) {
-  const actor = (target instanceof Actor) ? target
-    : (typeof target === "string" ? (game.actors.get(target) ?? game.actors.getName(target)) : null)
-    ?? canvas.tokens?.controlled?.[0]?.actor;
-  if (!actor) return quiet ? undefined : console.warn(`${MODULE} | no actor`);
+  // [declared] EC-6: only a missing target falls back to the controlled token; a string that
+  // names no actor, or a non-Actor object, is a miss.
+  const actor = (target == null) ? canvas.tokens?.controlled?.[0]?.actor
+    : (target instanceof Actor) ? target
+    : (typeof target === "string" ? (game.actors.get(target) ?? game.actors.getName(target)) : null);
+  if (!actor) {
+    return quiet ? undefined
+      : console.warn(`${MODULE} | no actor${typeof target === "string" ? ` ${JSON.stringify(target)}` : ""}`);
+  }
 
   const { slots, max, value, over } = computeSlots(actor);
   const rows = actor.items
