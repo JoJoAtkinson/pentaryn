@@ -234,7 +234,6 @@ function categorySelect(entry, categories) {
 }
 
 function summary(entry, { open, canEdit }) {
-  const hasNotes = !!entry.notes.trim();
   const name = `<span class="pt-name${entry.missing ? " pt-missing" : ""}">${esc(
     entry.name || _loc("PENTARYN_TIES.row.missingName")
   )}</span>`;

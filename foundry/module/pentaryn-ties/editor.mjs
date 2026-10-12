@@ -146,7 +146,6 @@ function replyFragment(reply) {
 /** The always-visible half of a row: what you scan, and the whole click target. */
 function summary(tie, { open, canEdit, reply = null }) {
   const stance = stanceOf(tie.stance);
-  const hasNotes = !!tie.notes.trim();
 
   const name = `<span class="pt-name${tie.missing ? " pt-missing" : ""}">${esc(tie.name)}</span>`;
 
