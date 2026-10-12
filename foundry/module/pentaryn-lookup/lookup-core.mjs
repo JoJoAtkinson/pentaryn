@@ -380,6 +380,18 @@ export function monsterDigest(raw) {
 /** Enriched roll text leaves spaces before punctuation ("+4 , reach 5 ft ."): close them up. */
 export const tidy = t => t.replace(/\s+([,.;:!?)])/g, "$1").replace(/\(\s+/g, "(");
 
+/**
+ * One featureTexts() row from an item and its enriched description HTML: the first activity's
+ * activation (else the legacy system.activation; "" reads as null), a recharge recovery as "n-6"
+ * (no formula reads "6-6"), and the text as tidy plain text. Key order is the published shape.
+ */
+export function featureRow({ name, type, system }, enriched) {
+  const act = system?.activities?.contents?.[0]?.activation?.type ?? system?.activation?.type ?? null;
+  const rch = system?.uses?.recovery?.find?.(r => r.period === "recharge");
+  return { name, type, activation: act || null,
+    recharge: rch ? `${rch.formula ?? "6"}-6` : null, text: tidy(toPlainText(enriched)) };
+}
+
 // ── monsters(): the query grammar, filter, order and page ────────────────────
 // TWIN: pentaryn-prompts keeps its own copies — SIZE_WORDS and parseCr (core/size.mjs; used by
 // actor-patch-adapter.mjs). Modules never import each other (prompts-lookup-9), so a

@@ -336,3 +336,27 @@ test("renderTable prints ranges and stripped text", () => {
   eq(r.rows, ["1-20 You can speak Abyssal.", "21 Single"]);
   eq(r.formula, "1d100");
 });
+
+// ── featureTexts' row rules (LKM-3): pinned here, not only through the Goblin Boss golden ──
+test("featureRow: activation, recharge and text rules", () => {
+  const { featureRow, tidy } = core;
+  const row = (system, html = "") => featureRow({ name: "N", type: "feat", system }, html);
+  // key order is the published shape
+  eq(Object.keys(row({})), ["name", "type", "activation", "recharge", "text"]);
+  // the first activity's activation beats the legacy system.activation
+  eq(row({ activities: { contents: [{ activation: { type: "bonus" } }] }, activation: { type: "action" } }).activation, "bonus");
+  eq(row({ activation: { type: "action" } }).activation, "action");
+  eq(row({}).activation, null);
+  // an empty-string activation is null, not ""
+  eq(row({ activities: { contents: [{ activation: { type: "" } }] } }).activation, null);
+  // recharge: no formula reads as 6-6; a formula n reads n-6
+  eq(row({ uses: { recovery: [{ period: "recharge" }] } }).recharge, "6-6");
+  eq(row({ uses: { recovery: [{ period: "lr" }, { period: "recharge", formula: "5" }] } }).recharge, "5-6");
+  eq(row({ uses: { recovery: [{ period: "lr" }] } }).recharge, null);
+  eq(row({ uses: { recovery: {} } }).recharge, null);
+  eq(row({ uses: {} }).recharge, null);
+  // text is tidy(toPlainText(html))
+  eq(row({}, "<p>+4 , reach</p>").text, "+4, reach");
+  eq(row({}, "<p>Hit ( 1d6 ) .</p>").text, tidy(toPlainText("<p>Hit ( 1d6 ) .</p>")));
+  eq(featureRow({ name: "Bite", type: "weapon", system: undefined }, "").name, "Bite");
+});

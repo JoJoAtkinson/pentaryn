@@ -8,7 +8,7 @@
  * `log` at debug level: `CONFIG.debug["pentaryn-lookup"] = true` shows it (prompts-lookup-34).
  */
 
-import { EDITIONS, SPELL_PACKS, tidy, toBook, toPlainText } from "./lookup-core.mjs";
+import { EDITIONS, SPELL_PACKS, featureRow, toBook } from "./lookup-core.mjs";
 
 /**
  * The plain books, one load per LOCKED pack per session: pack id → Promise<book> (the promise, so two
@@ -153,10 +153,7 @@ export async function featureTexts(actor, log = null) {
       // fall back to the raw text; toPlainText still strips the enrichers
       log?.debug("enrichHTML failed", { item: i.uuid }, err);
     }
-    const act = i.system?.activities?.contents?.[0]?.activation?.type ?? i.system?.activation?.type ?? null;
-    const rch = i.system?.uses?.recovery?.find?.(r => r.period === "recharge");
-    features.push({ name: i.name, type: i.type, activation: act || null,
-      recharge: rch ? `${rch.formula ?? "6"}-6` : null, text: tidy(toPlainText(enriched)) });
+    features.push(featureRow(i, enriched));
   }
   return features;
 }
