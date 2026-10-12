@@ -317,11 +317,7 @@ MODULES = {
         "pentaryn-movement",
         # node-test: test/run.mjs runs every test/**/*.test.mjs (core, glue, api, patches …).
         check=(*_STATIC, "node-test", *_BLUEPRINT),
-        after_sync=(
-            "First install: restart Foundry (module.json is read at startup), enable 'Pentaryn Movement', then reload.",
-            "Players get a Ghost toggle in the token tools; the GM sets the policy in settings.",
-            "  game.pentaryn.movement.status()",
-        ),
+        # after_sync comes from module.json flags.pentaryn.afterSync (Wave 7 batch).
     ),
     "creatures": ModuleSpec(
         "pentaryn-creatures",
