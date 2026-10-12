@@ -147,6 +147,20 @@ def test_import_deletes_on_interrupt(monkeypatch, staged):
     assert not staged.exists(), "Ctrl-C must not leave a public file behind"
 
 
+def test_import_deletes_when_the_prompt_raises(monkeypatch, staged):
+    """An unexpected error out of the prompt (a non-UTF-8 byte on the tty) still deletes."""
+    before = signal.getsignal(signal.SIGINT)
+
+    def garbled():
+        raise UnicodeDecodeError("utf-8", b"\xff", 0, 1, "bad")
+
+    monkeypatch.setattr(pipeline, "_ask", garbled)
+    with pytest.raises(UnicodeDecodeError):
+        pipeline.run_import()
+    assert not staged.exists(), "an error in the prompt must not leave a public file behind"
+    assert signal.getsignal(signal.SIGINT) is before
+
+
 def test_import_restores_the_previous_signal_handlers(monkeypatch, staged):
     before = signal.getsignal(signal.SIGINT)
     monkeypatch.setattr(pipeline, "_ask", lambda: "n")

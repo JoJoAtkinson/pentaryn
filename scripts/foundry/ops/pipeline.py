@@ -225,6 +225,10 @@ def run_import() -> int:
     previous = {s: signal.signal(s, _on_signal) for s in (signal.SIGINT, signal.SIGTERM)}
     try:
         answer = _ask()
+    except BaseException:
+        # Anything else out of the prompt (a garbled tty byte, a bug) still deletes.
+        cfg.ACTORS_STAGED.unlink(missing_ok=True)
+        raise
     finally:
         for s, handler in previous.items():
             signal.signal(s, handler)
