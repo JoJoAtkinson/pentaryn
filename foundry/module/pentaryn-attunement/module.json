@@ -4,8 +4,8 @@
   "description": "Renders attunement as physical slots in the character sheet sidebar, directly under the stats block, so the icons sit beside the AC badge they change. Drag an item from the inventory onto a slot to attune it; drop onto an occupied slot to replace its occupant; right-click a slot to unattune. Slot positions are persisted per-actor, so an item stays where you put it instead of resorting when its neighbours change. dnd5e tracks attunement but enforces nothing — a character can attune seven items and the system will apply every one — so this also warns on every path that can exceed the cap, including macros and MCP scripts, without ever vetoing the write. Exposes game.pentaryn.attunement.",
   "version": "0.2.1",
   "compatibility": {
-    "minimum": "13",
-    "verified": "14"
+    "minimum": "14",
+    "verified": "14.369"
   },
   "authors": [
     {
@@ -16,7 +16,14 @@
     "attunement.mjs"
   ],
   "styles": [
-    "attunement.css"
+    "styles/attunement.css"
+  ],
+  "languages": [
+    {
+      "lang": "en",
+      "name": "English",
+      "path": "lang/en.json"
+    }
   ],
   "relationships": {
     "systems": [
@@ -28,14 +35,31 @@
           "verified": "6.0.6"
         }
       }
+    ],
+    "recommends": [
+      {
+        "id": "item-piles",
+        "type": "module",
+        "reason": "away bonds skip pile actors; confiscation stashes into Item Piles containers"
+      }
     ]
   },
   "socket": false,
   "protected": false,
   "flags": {
     "pentaryn": {
-      "flagScope": "attunement",
-      "generation": 14
+      "tier": "full",
+      "namespace": "attunement",
+      "flagScope": "pentaryn-attunement",
+      "cssPrefix": "pentaryn-attunement-",
+      "generation": 14,
+      "afterSync": [
+        "Enable 'Pentaryn Attunement Slots' in Manage Modules, then reload.",
+        "The strip renders in the character sheet sidebar, under the stats card.",
+        "Drag an inventory item onto a slot to attune; drop onto a filled slot to",
+        "replace it; right-click a slot (or its ✕) to unattune.",
+        "Audit an actor:  game.pentaryn.attunement.report('Ballad Quinn')"
+      ]
     }
   }
 }

@@ -207,13 +207,7 @@ MODULES = {
         # (stale flags, deleted items, over-cap) that are tedious to stage in a browser
         # and must never throw — computeSlots runs inside a render hook.
         check=(*_STATIC, "node-test", *_BLUEPRINT),
-        after_sync=(
-            "Enable 'Pentaryn Attunement Slots' in Manage Modules, then reload.",
-            "The strip renders in the character sheet sidebar, under the stats card.",
-            "Drag an inventory item onto a slot to attune; drop onto a filled slot to",
-            "replace it; right-click a slot (or its ✕) to unattune.",
-            "Audit an actor:  game.pentaryn.attunement.report('Ballad Quinn')",
-        ),
+        # after_sync comes from module.json flags.pentaryn.afterSync (Wave 7 batch).
     ),
     "lookup": ModuleSpec(
         "pentaryn-lookup",

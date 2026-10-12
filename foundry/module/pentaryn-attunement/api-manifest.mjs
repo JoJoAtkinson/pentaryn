@@ -55,7 +55,8 @@ export const MANIFEST = Object.freeze({
       gm: false, writes: true, legacy: true,
       sideEffects: [...FLAGS, "container Items (created)", "owner Items (deleted)", "owner system.currency (with currency)"],
       doc: "Confiscation: move items into a container, tagged and bonded so they come home attuned; "
-        + "attuned items keep their slot as away entries. Resolves the number of items created.",
+        + "attuned items keep their slot as away entries. Resolves the number of items created. "
+        + "owner and container are live Actor documents (eval-js only).",
     },
     {
       path: "releaseAway",
@@ -63,7 +64,8 @@ export const MANIFEST = Object.freeze({
       returns: "Promise<Actor> (setFlag's)",
       gm: false, writes: true, legacy: true,
       sideEffects: [`flags.${MODULE}.away`],
-      doc: "End attunement to an away item: drop its away entry (the item comes back unattuned).",
+      doc: "End attunement to an away item: drop its away entry (the item comes back unattuned). "
+        + "actor is a live Actor document (eval-js only).",
     },
     {
       path: "away",

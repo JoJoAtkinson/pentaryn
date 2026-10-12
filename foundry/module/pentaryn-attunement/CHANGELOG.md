@@ -1,5 +1,12 @@
 # Changelog — Pentaryn Attunement Slots (`pentaryn-attunement`)
 
+## Unreleased — 2026-10-12 (Wave 7 restart batch, wave 5; kit 1.1.0)
+
+`module.json`: `flags.pentaryn` blueprint keys (`flagScope` `attunement` → `pentaryn-attunement`,
+manifest-only), `recommends` item-piles, `minimum: "14"`, `verified: "14.369"`,
+`styles/attunement.css` (moved), `languages` + `lang/en.json` (STRINGS verbatim, inert until the
+`_loc` step). The `stash` and `releaseAway` rows say "eval-js only" (live Actor params; C62).
+
 ## Unreleased — 2026-10-11 (migrated to the addon blueprint, wave 2; kit 1.0.2)
 
 Structure (no behaviour change): pure core `attunement-core.mjs`; `actor-adapter.mjs` (document

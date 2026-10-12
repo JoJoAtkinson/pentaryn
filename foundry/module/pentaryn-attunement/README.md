@@ -144,7 +144,8 @@ method is a row in `api-manifest.mjs` plus an impl in `api.mjs`, then
 - Two counts exist: the warning uses dnd5e's `attunement.value` (+ away), the strip counts items
   whose prepared `attuned` is true (+ away). They can differ; `inspect().counts.mismatch` says so.
 - Strings are inline (`STRINGS` / `t()` in the core): merging into `game.i18n.translations` at init
-  did not survive to render in v14. A `lang/en.json` is a later, declared step.
+  did not survive to render in v14. `lang/en.json` (the same values) ships with `languages` since the
+  Wave 7 batch but is inert; switching the `t()` sites to `_loc` is a later, declared step (guide step 8).
 
 ## Files
 
@@ -156,8 +157,8 @@ method is a row in `api-manifest.mjs` plus an impl in `api.mjs`, then
 | `strip.mjs` | UI: the strip, the counter's over-cap class |
 | `sheet.mjs`, `bonds.mjs` | features: the render hook and slot gestures; the item hooks |
 | `api-manifest.mjs`, `api.mjs` | the published API |
-| `attunement.css` | every rule under `.pentaryn-attunement` / `.pentaryn-attunement-*` |
-| `lib/` | vendored kit 1.0.2 (full + `patch`) — never edited here |
+| `styles/attunement.css` | every rule under `.pentaryn-attunement` / `.pentaryn-attunement-*` |
+| `lib/` | vendored kit 1.1.0 (full + `patch`) — never edited here |
 
 ## Tests
 
