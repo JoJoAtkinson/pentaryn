@@ -135,6 +135,16 @@ def test_known_zone_never_reaches_the_script(runners, tmp_path):
     assert json.loads(r.run(arguments={"zone": "world/x"})) == []
 
 
+def test_placeholder_values_with_braces_render_verbatim(runners, tmp_path):
+    """Only template tokens are format-parsed; a value's own braces reach argv unchanged."""
+    echo = tmp_path / "echo_argv.py"
+    echo.write_text("import json, sys\nprint(json.dumps(sys.argv[1:]))\n")
+    r = dataclasses.replace(
+        runners["check_lore_links"], script_path=echo, argv_template=("{q}",),
+        bool_flags={}, value_flags={}, handler=None,
+    )
+    assert json.loads(r.run(arguments={"q": "a {b} }{ {0}"})) == ["a {b} }{ {0}"]
+
 def test_known_timeline_key_output_can_leave_the_repo(tmp_path, monkeypatch):
     """KNOWN python-tooling-49: a ../ output resolves outside REPO_ROOT (nothing is written
     here; the builder is stubbed). The fix refuses it."""

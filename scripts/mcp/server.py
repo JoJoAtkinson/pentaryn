@@ -283,8 +283,9 @@ class ToolRunner:
                 return result
             return json.dumps(result, indent=2, ensure_ascii=False)
 
-        # TODO: replace token.format(**fmt_args) below with explicit {name} substitution so
-        # values containing literal `{` or `}` don't break argv construction.
+        # Only braces in the template token are interpreted; argument values are substituted
+        # verbatim. A template token with a stray non-placeholder brace raises at format time
+        # (only KeyError is mapped to Missing required argument).
         python = _python_bin()
         argv: list[str] = []
         fmt_args: dict[str, str] = {}
