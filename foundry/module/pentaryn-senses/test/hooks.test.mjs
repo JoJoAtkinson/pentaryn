@@ -20,7 +20,7 @@ test("hooks: listener counts before init", () => {
   assert.deepEqual(F.listeners(), {
     // [declared S-3] chain's own `once ready` is gone: the entry's ready publishes the chain alias.
     init: 2, ready: 1,
-    canvasTearDown: 2, canvasReady: 1, refreshToken: 1, destroyToken: 1, createToken: 3, deleteToken: 2, updateToken: 1,
+    canvasTearDown: 2, canvasReady: 1, refreshToken: 1, destroyToken: 1, createToken: 3, deleteToken: 2, updateToken: 2, // [declared PT TF-2] + carried updateToken
     renderTokenHUD: 2, "dnd5e.preUseActivity": 1, "dnd5e.postUseActivity": 1, "dnd5e.renderChatMessage": 1,
     renderBaseActorSheet: 1, createItem: 2, updateItem: 2, deleteItem: 2, deleteActor: 1, deleteAmbientLight: 1,
     updateAmbientLight: 1, deleteScene: 1, updateActor: 1, createActiveEffect: 1, updateActiveEffect: 1, deleteActiveEffect: 1,
@@ -33,7 +33,7 @@ test("hooks: init and ready are once-hooks and leave nothing behind", async () =
   await new Promise(r => setImmediate(r));
   assert.equal(F.listeners("init"), 0);
   assert.equal(F.listeners("ready"), 0);
-  assert.equal(F.hooks.length, 34, "nothing registers after import ([declared S-3]: 35 → 34)");
+  assert.equal(F.hooks.length, 35, "nothing registers after import ([declared S-3]: 35 → 34; [declared PT TF-2]: + carried updateToken → 35)");
 });
 
 // [declared S-1] flipped from "chain.uninstall() removes chain's 8 listeners, light.uninstall() light's 15;

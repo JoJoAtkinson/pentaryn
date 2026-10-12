@@ -226,3 +226,23 @@ test("hooks: what schedules a sync and what does not", async () => {
     createToken_withActor: true, createToken_noActor: false, updateActor_notAnActor: false, worldItem: false, packActor: false,
   });
 });
+
+// [declared PT TF-2] A token that changes actor (dnd5e's Wild Shape / polymorph swap, either way) takes
+// its new actor's carried lights: before, the swapped token was never synced, so a druid's starlight
+// (or a lit torch) stayed on the beast form after Starry Form ended or the torch stayed behind.
+test("hooks: a token that changes actor schedules its new actor's sync; other token updates do not", async () => {
+  const hero = game.actors.get(ID.hero);
+  const torch = hero.items.get(ID.torch);
+  const run = async (...args) => {
+    torch.flags[MODULE] = { lit: !torch.flags[MODULE]?.lit };
+    const mark = F.calls.length;
+    F.fire("updateToken", ...args);
+    await settle(mock);
+    return since(mark).filter(c => c.op === "update" || c.op === "updateEmbedded").length > 0;
+  };
+  assert.deepEqual({
+    actorSwap: await run({ actor: hero }, { actorId: hero.id }),
+    moved: await run({ actor: hero }, { x: 100 }),
+    swapNoActor: await run({ actor: null }, { actorId: "gone000000000000" }),
+  }, { actorSwap: true, moved: false, swapNoActor: false });
+});

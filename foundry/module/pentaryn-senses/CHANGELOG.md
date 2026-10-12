@@ -1,5 +1,13 @@
 # Changelog — Pentaryn Senses (`pentaryn-senses`)
 
+## Unreleased
+
+- **[declared PT TF-2] A token that changes actor is re-synced** (play test 2026-10-12): carried's new
+  `updateToken` hook schedules the token's new actor when `actorId` changes. Before, dnd5e's Wild
+  Shape swap moved the token to the form actor, the druid's sync no longer found it, and the beast
+  form kept Starry Form's starlight (or a lit torch) for the whole form. Hook manifest goldens,
+  listener counts (updateToken 1 → 2, 34 → 35 registrations) and `describe()` hooks (32 → 33) follow.
+
 ## 0.5.0 — 2026-10-12 (blueprint migration, wave 3; released by the Wave 7 restart batch, wave 5)
 
 Releases the wave-3 blueprint migration and overnight FX batch 2 (W3-SE4) together with the batch.

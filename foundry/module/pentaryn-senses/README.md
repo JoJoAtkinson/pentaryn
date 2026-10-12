@@ -23,7 +23,9 @@ sight its retired 0.3 sync stored on tokens.
 Caven's Shattered Amethyst Dragon Shard) lights whoever carries it; drop it, trade it or lose it
 and the carrier goes dark. A lit torch, lamp, lantern or candle does the same. With several, the
 strongest (largest dim, then bright) wins. A light set by hand (a rune glow) is never lost: a
-carried light covering it keeps it aside and gives it back when the carried light goes.
+carried light covering it keeps it aside and gives it back when the carried light goes. A token
+that changes body (Wild Shape, polymorph, and back) takes the carried lights of the actor it now
+shows: a beast form carries none, so a druid's starlight or torch does not come along.
 
 **Torches, lamps, lanterns, candles.** A **flame button** on the inventory row (grey unlit, orange
 lit) lights or puts out the item and posts one chat line in the user's chat mode (a GM on "GM only"

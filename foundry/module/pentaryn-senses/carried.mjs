@@ -156,6 +156,11 @@ export function install(reg, ctx) {
   }
   // A token placed from a stale prototype, or before this module existed.
   reg.on("createToken", (token) => { if (token.actor) schedule(token.actor); }, { ...raw, label: "carried createToken" });
+  // [declared PT TF-2] A token that changes actor (dnd5e's Wild Shape / polymorph swap, either way)
+  // takes its new actor's carried lights: the old actor's sync no longer finds that token.
+  reg.on("updateToken", (token, changes) => {
+    if (changes && "actorId" in changes && token.actor) schedule(token.actor);
+  }, { ...raw, label: "carried updateToken" });
   ctx.expose({ syncLight, carriedLight, syncAll });
 }
 

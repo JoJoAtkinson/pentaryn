@@ -6,7 +6,7 @@
     "destroyToken": 1,
     "createToken": 3,
     "deleteToken": 2,
-    "updateToken": 1,
+    "updateToken": 2,
     "renderTokenHUD": 2,
     "dnd5e.preUseActivity": 1,
     "dnd5e.postUseActivity": 1,

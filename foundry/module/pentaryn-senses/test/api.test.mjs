@@ -36,7 +36,7 @@ test("describe(): the manifest as JSON (golden); flags and settings as declared"
   pinJSON("describe", normaliseDescribe(d), import.meta.url);
   assert.equal(d.flagScope, "pentaryn-senses");
   assert.deepEqual(d.settings.map(s => [s.key, s.store === true]), [["sightReset", true]]);
-  assert.equal(d.hooks.length, 32, "glow 1 + chain 8 + light 15 + carried 8 (the entry's own init/ready are not reg records)");
+  assert.equal(d.hooks.length, 33, "glow 1 + chain 8 + light 15 + carried 9 ([declared PT TF-2] + carried updateToken; the entry's own init/ready are not reg records)");
   assert.deepEqual(d.events, []);
 });
 

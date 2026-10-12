@@ -550,6 +550,10 @@
     {
       "name": "createToken",
       "label": "carried createToken"
+    },
+    {
+      "name": "updateToken",
+      "label": "carried updateToken"
     }
   ],
   "patches": [],
