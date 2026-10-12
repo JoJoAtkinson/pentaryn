@@ -80,13 +80,13 @@ or restarted yet: the batch checklist below (sync, **one** restart, live smoke) 
 |---|---|---|---|
 | importer | `d3d9cb29` | Joe 2026-10-12: merged into the existing `flags.pentaryn`; `import` row `dryRun: true` (W2-B3) — `d3d9cb29` | 100 % |
 | names | `5835ac59` | Joe 2026-10-12: `sync`'s `ref` `resolve: "self"` (W2-B4) — `5835ac59`; manifest landed earlier | 100 % |
-| pings, cursors | — | landed earlier (wave 1). The pings "still open" `max` pin is done: `languages` + `lang/en.json` are on main. Their duplicate config.py tuples dropped (`8037e674`) | 100 % / 91.5 % (cursors C05/C13/C24/C25, not in the batch) |
+| pings, cursors | — | landed earlier (wave 1). The pings "still open" `max` pin is done: `languages` + `lang/en.json` are on main. Their duplicate config.py tuples dropped (`8037e674`) | 100 % / 100 % (cursors C05/C13/C24/C25 cleared by its guide steps 7–8, `83af47a1`, W5c) |
 | lookup | `dbd8c58a` | Joe 2026-10-12: as the row — `dbd8c58a` | 100 % |
 | movement | `28e73b21` | Joe 2026-10-12: as the row — `28e73b21` | 100 % |
 | walls | `320879a2` | Joe 2026-10-12: `languages`, lang keys (W2-WALLS-1), toasts through `log.notify` (W2-WALLS-3), description, minimum/verified, flags — `320879a2`. **The flag-scope DATA migration is PARKED, not wired, not run**: walls stays off in Joe's world, so `flagScope` stays `wall-autocomplete` in `module.json` and `core/engine.mjs`, `migrations.mjs` stays dormant, and the frozen `test/core.test.mjs` FLAG_SCOPE pin is untouched. Run it (this row's "Code in the same batch" column) only when Joe turns walls back on | 98.0 % (C07: flagScope, the parked migration) |
 | attunement | `a7e1395b` | Joe 2026-10-12: as the row; `stash`/`releaseAway` docs say eval-js only (C62). `lang/en.json` is INERT (STRINGS verbatim): the `_loc` switch (guide step 8, declared) touches `bonds.mjs`, the fx2 lane's bond code, so it waits — a reload then, no restart, since `languages` is already in | 97.9 % (C35 until step 8) |
 | journal | `08ac3c3d` | Joe 2026-10-12: as the row + W2-J1 `folderName` labels ([declared] pin) — `08ac3c3d`; W2-J2 not taken (kit does not forward the sender) | 98.0 % (C56) |
-| dropbin | `61b65058` | Joe 2026-10-12: as the row; version unchanged — `61b65058` | 98.0 % (C50) |
+| dropbin | `61b65058` | Joe 2026-10-12: as the row; version unchanged — `61b65058` | 100 % (C50 was a scorer gap, fixed `5c54ae0f`) |
 | prompts | `4b9d5e49` | Joe 2026-10-12: as the row — `4b9d5e49` | 100 % |
 | ties | `11149c59` | Joe 2026-10-12: as the row; version stays 0.19.4 — `11149c59` | 96.1 % (C05 W3-T6, C37 W3-T1) |
 | creatures | `ba10619e` | Joe 2026-10-12: as the row — `ba10619e` | 100 % |
@@ -97,10 +97,13 @@ or restarted yet: the batch checklist below (sync, **one** restart, live smoke) 
 | transform | `fb707298` | Joe 2026-10-12: as the row, 0.4.0 (W4-T3), kit CSS through `styles` (W4-T4) — `fb707298` | 100 % |
 | combat | `249b5cd1` | Joe 2026-10-12: as the row, 0.3.0, description sentence, kit CSS through `styles` (W4-C6) — `249b5cd1` | 96.0 % (C21/C23 W4-C3) |
 
-**Strict-gate exceptions (documented, the gate stays advisory in this lane):** riders C37 (two
-`#tooltip` selectors, W4-R9) and C56 (W4-R4), combat C21/C23 (W4-C3), journal C56 (W2-J2), dropbin
-C50, ties C05/C37 (W3-T6/W3-T1), cursors C05/C13/C24/C25, walls C07 (the parked migration) and
-attunement C35 (until its `_loc` step).
+**Strict-gate exceptions:** the gates are strict since Stage 5 step 2 (`3eaef7c5`, same branch);
+these are the rows of `scripts/foundry/blueprint/exceptions.json`, each with its reason, decision
+and retirement condition: riders C37 (two `#tooltip` selectors, W4-R9) and C56 (W4-R4), combat
+C21/C23 (W4-C3), journal C56 (W2-J2), ties C05/C37 (W3-T6/W3-T1), walls C07 (the parked migration)
+and attunement C35 (until its `_loc` step — the fixes lane that lands it deletes the row in the
+same commit, or the gate fails on a stale exception). Cleared instead of excepted: dropbin C50
+(scorer gap, `5c54ae0f`) and cursors C05/C13/C24/C25 (guide steps 7–8, `83af47a1`).
 
 **Follow-ups recorded, not built:**
 
