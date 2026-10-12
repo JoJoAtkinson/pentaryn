@@ -99,14 +99,16 @@ export function makeLog(moduleId, { console: c = globalThis.console, traceSize =
       }
     },
 
-    /** The one way to put a toast on screen. Logs one console line itself; no-op without `ui`. */
+    /**
+     * The one way to put a toast on screen. Always logs one console line first; the toast only
+     * when `ui.notifications[level]` exists (its result, else undefined).
+     */
     notify(level, message, opts = {}) {
-      const n = g.ui?.notifications;
-      if (typeof n?.[level] !== "function") return undefined;
-      const out = n[level](message, { console: false, ...opts });
       const method = level === "error" ? "error" : level === "warn" ? "warn" : "info";
       c[method](line(message));
-      return out;
+      const n = g.ui?.notifications;
+      if (typeof n?.[level] !== "function") return undefined;
+      return n[level](message, { console: false, ...opts });
     },
   };
   return log;

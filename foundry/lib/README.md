@@ -26,7 +26,7 @@ Bump `kit.json` `version`, `errors.mjs` `KIT_VERSION` and every header together.
 | File | Exports | Notes |
 |---|---|---|
 | `errors.mjs` | `KIT_VERSION`, `CODES`, `RESERVED`, `PentarynError`, `codedError`, `errorCode`, `isCoded`, `ok`, `fail`, `toFail` | the message prefix `CODE: detail` is the wire format |
-| `log.mjs` | `makeLog(moduleId)` → `error/warn/warnOnce/info/debug/debug$/enabled/trace/traces/swallow/notify`; `logOrConsole(moduleId, log)` | lines are `<module> \| <event>`; debug gated by `CONFIG.debug[moduleId]`; `logOrConsole` is the one fallback when a kit function got no `log` — a console stand-in (`error/warn/warnOnce`, its own once-Set) used by hooks, patch and patch-libwrapper (1.2.0 kit-ext-2) |
+| `log.mjs` | `makeLog(moduleId)` → `error/warn/warnOnce/info/debug/debug$/enabled/trace/traces/swallow/notify`; `logOrConsole(moduleId, log)` | lines are `<module> \| <event>`; debug gated by `CONFIG.debug[moduleId]`; `notify` always writes its console line, the toast only with `ui.notifications` (1.2.0 kit-edge-8); `logOrConsole` is the one fallback when a kit function got no `log` — a console stand-in (`error/warn/warnOnce`, its own once-Set) used by hooks, patch and patch-libwrapper (1.2.0 kit-ext-2) |
 | `hooks.mjs` | `hookRegistry(moduleId, log)` → `on/once/off/offAll/ids/guard/guardSwallowAsync`; `emitter(moduleId, HOOKS)` | `guard` passes vetoes through; `guardSwallowAsync` is aoe's old guard; `reg.on(n, fn, { guard: "warn" })` logs a throw at warn instead of error (1.0.1) |
 | `settings.mjs` | `defineSettings`, `settingReader`, `settingsSnapshot`, `defineKeybindings`, `serialStore` | `serialStore(MODULE, ["counter", "log"])` serialises several keys on one queue (1.0.1) — a partial `mutate` result keeps the omitted keys (1.2.0 KIT-R4); a multi-key write is not atomic — keys go in table order as separate Setting writes, `onChange` sees the intermediate states and a failure can leave a torn pair, so list the counter key first (1.2.0 AC-6); rows carry literal `name`/`hint` keys; both define calls skip rows already registered, and `defineKeybindings` registers nothing once Foundry has built its bindings (after `setup`), so a hot patch never throws |
 | `resolve.mjs` | `resolveRef`, `refOf`, `toIdSet`, `withRef` | exact name, then a unique case-insensitive exact name; never a substring (1.2.0 KIT-M2 wording); explicit scene scope |
@@ -141,3 +141,8 @@ KIT-R6 (declared): `applyButtons` stays synchronous but catches each fresh butto
 unhandled rejection. Combat's adapter and transform's three bar composers pass their `log`; a
 synchronous throw from `render()` still propagates as before. Re-vendored into combat and transform
 (riders vendors only `argon-tooltip.css`, not `argon-kit`).
+kit-edge-8 (declared): `log.notify` writes its `<module> | <message>` console line first,
+unconditionally, then shows the toast only when `ui.notifications[level]` is a function and returns
+its result (undefined otherwise). Before, a missing `ui.notifications` (or level method) dropped the
+console line too. With a toast present the output is byte-identical; the stub's early
+`ui.notifications` install is unchanged.
