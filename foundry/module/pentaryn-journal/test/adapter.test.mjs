@@ -91,3 +91,48 @@ test("targetOf dispatches entry, image page, text page and item with the bar's r
   assert.equal(A.targetOf(e), null, "GM without gmButton");
   assert.deepEqual(A.targetOf(e, { gmButton: true }), { kind: "entry", entry: e });
 });
+
+test("targetOf equals rawTargetOf gated by the bar's rule", () => {
+  const before = game.user;
+  const player = game.users.get(P1);
+  const gm = game.users.get("gmUser0000000001");
+  const e = makeDoc("JournalEntry", { id: "readable00000004", ownership: { default: 2 } });
+  const img = makeDoc("JournalEntryPage", { type: "image" }, { parent: e });
+  const txt = makeDoc("JournalEntryPage", { type: "text" }, { parent: e });
+  const orphan = makeDoc("JournalEntryPage", { type: "text" });
+  const mine = makeDoc("JournalEntry", { id: "personal00000004", ownership: { default: 2 },
+    flags: { "pentaryn-journal": { kind: "personal", userId: P1 } } });
+  const minePage = makeDoc("JournalEntryPage", { type: "text" }, { parent: mine });
+  const { actor, real } = pileActor();
+  game.actors.set(actor.id, actor);
+  const loose = makeDoc("Item", { id: "looseItem0000004", name: "Loose" }, { parent: makeDoc("Actor", {}) });
+  const docs = [e, img, txt, orphan, mine, minePage, real, loose, null, makeDoc("Actor", {})];
+  const gate = t => t.kind === "item"
+    ? A.shouldShowItemBar(t.src, undefined, { gmButton: opts.gmButton })
+    : A.shouldShowBar(t.entry, undefined, { gmButton: opts.gmButton });
+  let opts;
+  try {
+    for (const [user, all] of [[player, [{}]], [gm, [{}, { gmButton: false }, { gmButton: true }]]]) {
+      game.user = user;
+      for (opts of all) {
+        for (const d of docs) {
+          const raw = A.rawTargetOf(d);
+          assert.deepEqual(A.targetOf(d, opts), raw && gate(raw) ? raw : null, `${user.id} ${JSON.stringify(opts)} ${d?.documentName}`);
+        }
+      }
+    }
+    game.user = player;
+    assert.equal(A.targetOf(minePage), null, "a personal journal's page has no bar");
+    assert.deepEqual(A.rawTargetOf(minePage), { kind: "entry", entry: mine });
+    assert.equal(A.targetOf(loose), null);
+    assert.equal(A.rawTargetOf(loose), null);
+    assert.deepEqual(A.targetOf(real), { kind: "item", src: { item: real, pile: actor, pileName: "Chest" } });
+    let asked = 0;
+    const packed = { documentName: "JournalEntry", flags: {}, pack: "w.p", testUserPermission: () => { asked++; return true; } };
+    assert.equal(A.targetOf(packed), null);
+    assert.equal(asked, 0, "a pack entry never reaches the permission calls through targetOf");
+  } finally {
+    game.user = before;
+    game.actors.delete(actor.id);
+  }
+});
