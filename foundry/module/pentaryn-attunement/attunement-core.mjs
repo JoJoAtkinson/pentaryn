@@ -335,31 +335,3 @@ export function safe(label, fn, log = null) {
     }
   };
 }
-
-/* -------------------------------------------- */
-/*  Strings                                     */
-/* -------------------------------------------- */
-
-/** Strings live here; `t()` reads them directly (see below). */
-export const STRINGS = {
-  OverBy: "{n} over the limit",
-  NotOnActor: "That item belongs to a different actor.",
-  NotAttunable: "{name} does not require attunement.",
-  WouldExceed: "{actor} is already attuned to {max} items — attuning {name} makes {value}.",
-  ArrivedAttuned: "{name} arrived already attuned; {actor} is now over the attunement limit.",
-  AwayBody: "Still attuned, but not on {actor}. Its power is dormant until it is back in hand.",
-  Release: "End Attunement",
-  ReleaseConfirm: "End attunement to <strong>{name}</strong>? It is not on you, so it will come back as an ordinary, unattuned item.",
-  SlotHeld: "That slot is held by {name}, which is attuned but not on you. End that attunement first.",
-  BackInHand: "{name} is back with {actor} — attunement restored.",
-  CoinBack: "{actor} recovers their coin."
-};
-
-/**
- * Not routed through game.i18n: merging into `game.i18n.translations` at init
- * did not survive to render time in v14, so every string printed as its key.
- * A placeholder missing from `data` stays as `{name}`.
- */
-export function t(key, data = {}) {
-  return (STRINGS[key] ?? key).replace(/\{(\w+)\}/g, (m, k) => (k in data ? String(data[k]) : m));
-}

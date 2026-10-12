@@ -5,7 +5,11 @@
  * deterministic `foundry.utils.randomID`.
  */
 
+import { readFileSync } from "node:fs";
 import { StubCollection, installFoundry, makeDoc, makeUser } from "../kit/foundry-stub.mjs";
+
+/** The shipped lang/en.json, so `_loc` renders what Foundry would (lang-switch). */
+const LANG = JSON.parse(readFileSync(new URL("../../lang/en.json", import.meta.url), "utf8"));
 
 export const GM = "gmUser0000000001";
 export const MOD = "pentaryn-attunement";
@@ -16,6 +20,7 @@ export async function attunementWorld({ withTooltips = true } = {}) {
   const F = await installFoundry({
     user: makeUser({ id: GM, name: "Gamemaster", isGM: true }),
     modules: [MOD],
+    lang: LANG,
   });
   globalThis.Actor = Actor;
   F.CONFIG.DND5E = { armorProficienciesMap: { natural: true, clothing: true, light: "lgt", medium: "med", heavy: "hvy", shield: "shl" } };

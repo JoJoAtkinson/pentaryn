@@ -20,6 +20,11 @@ The version stays 0.3.0 until the next `module.json` restart batch (code only: s
   an item stashed from token A used to come home equipped, and lose its bond, on token B or the base
   actor. Now only token A gets it back; elsewhere only the tag goes and the bond stays. A legacy bond
   holding the bare id still matches on the id, as before.
+- **[declared] lang-switch (guide step 8):** the strings now come from `lang/en.json` through
+  `_loc("PENTARYN_ATTUNEMENT.X", data)`; the inline `STRINGS` / `t()` are gone. The English is
+  byte-identical, so nothing reads differently, but a fix or translation in the lang file now reaches
+  the sheet and the toasts. Needs `languages` live (it is in `module.json` since 0.3.0): if the running
+  world predates that, a restart, otherwise a reload. Retires the C35 exception.
 
 ## 0.3.0 — 2026-10-12 (Wave 7 restart batch, wave 5; kit 1.1.0)
 

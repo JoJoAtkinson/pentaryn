@@ -86,7 +86,8 @@ for (const [label, M] of IMPLS) {
     assert.equal(purse.system.description.value, "<p>5 gp.</p>");
   });
 
-  test(`${label}: t (items-journal-14)`, () => {
+  // The core has no t() since lang-switch: its strings are lang/en.json through _loc (i18n.test pins parity).
+  test(`${label}: t (items-journal-14)`, { skip: !M.t && "strings moved to lang/en.json (lang-switch)" }, () => {
     assert.equal(M.t("OverBy", { n: 2 }), "2 over the limit");
     assert.equal(M.t("WouldExceed", { actor: "A", max: 3, name: "N", value: 4 }), "A is already attuned to 3 items — attuning N makes 4.");
     assert.equal(M.t("Missing"), "Missing");

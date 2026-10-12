@@ -11,7 +11,7 @@
  * an async ready, so restoreBond runs first. Moving this install to setup would change that order.
  */
 
-import { AWAY, AWAY_FLAG, BOND, MODULE, SLOTS, awayOf, bondChanges, computeSlots, homeSlots, isBondOwner, t, wouldExceed } from "./attunement-core.mjs";
+import { AWAY, AWAY_FLAG, BOND, MODULE, SLOTS, awayOf, bondChanges, computeSlots, homeSlots, isBondOwner, wouldExceed } from "./attunement-core.mjs";
 import { isPileActor } from "./actor-adapter.mjs";
 import { claimDocument } from "./lib/election.mjs";
 import { flagPath } from "./lib/flags.mjs";
@@ -91,7 +91,7 @@ async function onCreateItemBond(item, options, userId) {
       for (const [k, v] of Object.entries(bond.currency)) update[`system.currency.${k}`] = (actor.system.currency?.[k] ?? 0) + v;
       await actor.update(update);
       await item.delete();
-      ui.notifications.info(t("CoinBack", { actor: actor.name }));
+      ui.notifications.info(_loc("PENTARYN_ATTUNEMENT.CoinBack", { actor: actor.name }));
     }, ":coin");
   }
 
@@ -109,7 +109,7 @@ async function onCreateItemBond(item, options, userId) {
       [`flags.${MODULE}.${AWAY_FLAG}`]: away.filter(a => a.key !== bond.key),
       [`flags.${MODULE}.${SLOTS}`]: slots
     });
-    ui.notifications.info(t("BackInHand", { name: item.name, actor: actor.name }));
+    ui.notifications.info(_loc("PENTARYN_ATTUNEMENT.BackInHand", { name: item.name, actor: actor.name }));
   });
 }
 
@@ -145,7 +145,7 @@ function warnOverCap(actor, item, key, freed = 0) {
   if (!att) return;
   const { exceed, after } = wouldExceed({ value: att.value - freed, max: att.max, awayCount: awayOf(actor).length });
   if (!exceed) return;
-  ui.notifications.warn(t(key, {
+  ui.notifications.warn(_loc(key, {
     name: item.name, actor: actor.name, value: after, max: att.max
   }));
 }
@@ -157,7 +157,7 @@ function onPreUpdateItem(item, changes, options) {
   // A slot swap unattunes the occupant in the same batch, so it frees one (EC-3).
   const from = item.parent?.items?.get?.(options?.[MODULE]?.swapFrom);
   const freed = (from?.system?.attuned && from.system.attunement) ? 1 : 0;
-  warnOverCap(item.parent, item, "WouldExceed", freed);
+  warnOverCap(item.parent, item, "PENTARYN_ATTUNEMENT.WouldExceed", freed);
 }
 
 function onPreCreateItem(item, data, options) {
@@ -165,7 +165,7 @@ function onPreCreateItem(item, data, options) {
   if (item.getFlag?.(MODULE, BOND)) return;
   if (!item.system?.attuned) return;
   if (!(item.parent instanceof Actor)) return;
-  warnOverCap(item.parent, item, "ArrivedAttuned");
+  warnOverCap(item.parent, item, "PENTARYN_ATTUNEMENT.ArrivedAttuned");
 }
 
 export function install(reg) {

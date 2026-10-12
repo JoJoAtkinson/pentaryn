@@ -145,16 +145,18 @@ method is a row in `api-manifest.mjs` plus an impl in `api.mjs`, then
   effect (`{} of the War Mage, +1`), and the prepared name would double the suffix on the way home.
 - Two counts exist: the warning uses dnd5e's `attunement.value` (+ away), the strip counts items
   whose prepared `attuned` is true (+ away). They can differ; `inspect().counts.mismatch` says so.
-- Strings are inline (`STRINGS` / `t()` in the core): merging into `game.i18n.translations` at init
-  did not survive to render in v14. `lang/en.json` (the same values) ships with `languages` since the
-  Wave 7 batch but is inert; switching the `t()` sites to `_loc` is a later, declared step (guide step 8).
+- Strings live in `lang/en.json` (`languages` in `module.json`) and every site reads a full-key literal
+  through `_loc("PENTARYN_ATTUNEMENT.X", data)`. Foundry prints `undefined` for a placeholder missing
+  from `data`, so `lang-switch.test` checks each call passes every placeholder. (The old inline
+  `STRINGS` / `t()` existed because merging into `game.i18n.translations` at init did not survive to
+  render in v14; a shipped lang file is Foundry's own path.)
 
 ## Files
 
 | File | Role |
 |---|---|
 | `attunement.mjs` | entry: init, ready (guard, build, publish), installs `sheet` then `bonds` |
-| `attunement-core.mjs` | pure: constants, `computeSlots`, `homeSlots`, `planStash`, `bondChanges`, `wouldExceed`, `patchProficiencyMap`, `safe`, strings |
+| `attunement-core.mjs` | pure: constants, `computeSlots`, `homeSlots`, `planStash`, `bondChanges`, `wouldExceed`, `patchProficiencyMap`, `safe` |
 | `actor-adapter.mjs` | `stash`, `releaseAway`, `writeSlots`, `isPileActor`, the two dnd5e adjustments |
 | `strip.mjs` | UI: the strip, the counter's over-cap class |
 | `sheet.mjs`, `bonds.mjs` | features: the render hook and slot gestures; the item hooks |
@@ -172,9 +174,9 @@ node test/run.mjs        # from this folder
 `slots.test` holds the slot fixtures (stale flags, deleted items, duplicates, corrupt flag types,
 over cap, non-default `max`, away entries, coming home) and the proficiency-map patch; `glue.test`,
 `hooks.test`, `api.test`, `strip.test` (a minimal DOM), `listeners`, `hook-errors`, `perf`,
-`stash-safety`, `guard-failure`, `home-race` and `bond-uuid` pin the wiring; `core-meta` holds the core's identity (it loads
+`stash-safety`, `guard-failure`, `home-race`, `bond-uuid` and `lang-switch` pin the wiring; `core-meta` holds the core's identity (it loads
 with no Foundry globals, constants agree with `module.json`, `trimSlots`), `docs` guards this
-README, and `i18n` checks `STRINGS` ↔ `lang/en.json` parity. Goldens in `test/golden/`.
+README, and `i18n` checks `lang/en.json` against the oracle's former `STRINGS`. Goldens in `test/golden/`.
 
 ## Sync
 

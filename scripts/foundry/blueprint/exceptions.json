@@ -1,16 +1,6 @@
 {
   "doc": "Strict-gate exceptions (migration Stage 5 step 2, README §7 W3). Since 2026-10-12 the vendor and conformance gates FAIL every module (make foundry-<m>-check, make foundry-modules-check). The only way a failing fail-class rule passes the gate is a row here: module id → rule id → {reason, decision, until, match}. `match` lists regexes (re.search) for the findings the decision covers: a failing finding no pattern matches blocks the gate, so a row never accepts a later, unreviewed finding of the same rule. Every row names the decision that accepted it (an Open-for-Joe row with Joe's decision, or a parked step) and what retires it. The gate also FAILS on a stale row — a listed rule that no longer fails — so this list cannot outlive its reason: when the work in `until` lands, delete the row in the same commit. Never add a row to make a red gate green without a decision to cite; fix the module instead. The vendor gate has no exceptions.",
   "modules": {
-    "pentaryn-attunement": {
-      "C35": {
-        "reason": "lang/en.json is inert (STRINGS verbatim): the _loc switch is guide step 8, a declared change that touches bonds.mjs — the fixes lane's (fix/overnight-2-2026-10-12) bond code — so it waits for that lane",
-        "decision": "wave7-restart-batch.md attunement row (Joe 2026-10-12)",
-        "until": "attunement guide step 8 (_loc switch) lands",
-        "match": [
-          "^definite coverage \\d+% \\(\\d+/\\d+\\)$"
-        ]
-      }
-    },
     "pentaryn-combat": {
       "C21": {
         "reason": "turn-riders.mjs reads pentaryn-aoe.autoDamageOnHit with game.settings.get: aoe's kit settings() is only published at ready, and Foundry renders the chat log before ready, so the C23-clean read would show a per-swing Damage button on every card rendered at load",
