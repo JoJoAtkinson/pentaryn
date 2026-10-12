@@ -10,7 +10,7 @@
  */
 
 import {
-  MODULE, FLAGS, SPELL_LIGHT, profileFor, profileKey, isLit, isHooded, isLightSpellData, isLightToggle,
+  MODULE, FLAGS, SPELL_LIGHT, ACTIVITY_PROFILES, profileFor, profileKey, isLit, isHooded, isLightSpellData, isLightToggle,
   readSpellCast, readSpellLight, castFlag, planSpellLight, squareId, spellLightUpdate, restoredLight,
   sourcesUnder, isPHBLightActorSource, torchActivityData, TORCH_ACTIVITY_ID, summarise, handSquareEdit,
   esc, unsetPath
@@ -157,9 +157,9 @@ export async function setup() {
   return n;
 }
 
-/** One torch item: add the Light activity if it has none. → true when it was added. */
+/** One item of an ACTIVITY_PROFILES profile: add the Light activity if it has none. → true when it was added. */
 async function ensureTorchActivity(item) {
-  if (profileKey(item) !== "torch" || !item?.system?.activities) return false;
+  if (!ACTIVITY_PROFILES.includes(profileKey(item)) || !item?.system?.activities) return false;
   const has = item.system.activities.has?.(TORCH_ACTIVITY_ID)
     || [...item.system.activities.values()].some(a => a?.flags?.[MODULE]?.lightToggle === true);
   if (has) return false;

@@ -53,6 +53,12 @@ export const LIGHT_PROFILES = Object.freeze({
   "lantern-bullseye": Object.freeze({ bright: 60, dim: 120, angle: 360, color: "#ffc266", alpha: 0.35, luminosity: 0.5, ...PLAIN, animation: flame(1, 1) })
 });
 
+/**
+ * The LIGHT_PROFILES keys setupLight() and the torch-on-create hook give a "Light" activity
+ * (senses-EXT-4). Lamps, lanterns and candles ship with their own, so today only the torch.
+ */
+export const ACTIVITY_PROFILES = Object.freeze(["torch"]);
+
 /** Other spellings of the same item, by slugged name. */
 const ALIASES = Object.freeze({
   "torches": "torch",

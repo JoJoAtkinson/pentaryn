@@ -139,7 +139,9 @@ made first (a square, an old summon token) counts as done.
 ## Extending
 
 - **A light source:** a `LIGHT_PROFILES` row (and an `ALIASES` spelling) in `core/light.mjs`, plus a
-  row in `test/light-core.test.mjs`.
+  row in `test/light-core.test.mjs`. If the item ships without a way to light it (as the torch does),
+  add its key to `ACTIVITY_PROFILES` there too, so `setupLight()` and the on-create hook give it the
+  "Light" activity, and to the expected list in `test/activity-profiles.test.mjs`.
 - **A Light action** (prompt button, spell-card button): a row in `LIGHT_ACTIONS` in `light-ui.mjs`
   (`dialog` / `card` say where it shows; `handler` names light.mjs's action), its label in
   `lang/en.json`, and the expected table in `test/light-actions.test.mjs`.

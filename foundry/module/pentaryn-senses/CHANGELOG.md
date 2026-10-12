@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- **[declared senses-EXT-4] Which light sources get a Light activity is one list** (final review
+  2026-10-12): `setupLight()` and the torch-on-create hook now test membership in the frozen
+  `ACTIVITY_PROFILES` list in `core/light.mjs` (today `["torch"]`, exported through the core barrel)
+  instead of a hard-coded `"torch"`. Torches still get the activity; lamps, lanterns and candles
+  still keep their own. README's "A light source" recipe says when to add a key. Goldens unchanged.
+  New `test/activity-profiles.test.mjs`.
+
 - **[declared senses-EXT-2] One table for the Light actions** (final review 2026-10-12): the prompt's
   buttons and the spell card's action row are now both built from the frozen `LIGHT_ACTIONS` table
   in `light-ui.mjs` (action, icon, label key, handler), so they keep the same labels, icons and order.
