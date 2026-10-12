@@ -329,12 +329,17 @@ test("isRunner: the active GM; with no GM, the first active non-GM owner by id",
 
 /* ── console texts ────────────────────────────────────────────────────────── */
 
-test("every console text in the three files (golden/console-texts.json; step 9 moves them, [declared])", () => {
-  const hits = sourceScan(ROOT, /console\.(log|warn|error)\(/);
+test("every console text in the module's files (golden/console-texts.json; step 9 moves them, [declared])", () => {
+  // Step 9 moved every line onto the kit log, so no raw console call is left; the texts are pinned
+  // at the kit calls instead (review follow-up: the step-1 pins do not move, only their call site).
+  assert.deepEqual(sourceScan(ROOT, /console\.(log|warn|error)\(/).map(h => [h.file, h.text]), []);
+  const call = /\blog\.(warn|error|debug|warnOnce)\(\s*(?:"[^"]*",\s*)?["`]([^"`]*)["`]/;
+  const hits = sourceScan(ROOT, /\blog\.(warn|error|debug|warnOnce)\(/);
   const rows = hits.map(h => {
-    const m = /console\.(log|warn|error)\(`\$\{MODULE_ID\} \| ([^`]*)`/.exec(h.text);
+    const m = call.exec(h.text);
     return [h.file, m?.[1] ?? "?", m?.[2] ?? h.text];
   }).sort((a, b) => (a.join("|") < b.join("|") ? -1 : 1));
+  assert.deepEqual(rows.filter(r => r[1] === "?"), [], "every kit log call names its text inline");
   pinJSON("console-texts", rows, import.meta.url);
   // [declared] T-D3 (-15, guide step 9): no silent catch is left — each logs at debug (or warn-once).
   const silent = sourceScan(ROOT, /catch\s*(\(\w*\))?\s*\{\s*(return null;\s*)?\}/);
