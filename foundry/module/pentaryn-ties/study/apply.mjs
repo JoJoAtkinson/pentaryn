@@ -286,8 +286,7 @@ async function applyClaimed(character, fact, payload, rollMode, refuse) {
  *
  * `kind:` and `lore:` records sit in a flag on a document; `attr:` records sit in a world
  * setting, because an attribute is not a document. Every caller goes through here so the
- * difference is stated once instead of at each of the seven call sites that would otherwise
- * have to know.
+ * difference is stated once instead of at each call site that would otherwise have to know.
  */
 export function readBelief(fact, characterId) {
   if (fact.ns === "attr") {
@@ -314,7 +313,7 @@ export async function putBelief(fact, characterId, record) {
   /*
    * ⚠ A setting is rewritten WHOLE, not merged. That cuts both ways: deletion is just leaving
    * the key out (no `-=` syntax needed, and none available), but two GM sessions writing
-   * different rows in the same instant would clobber each other. The claim protocol below
+   * different rows in the same instant would clobber each other. The claim protocol (claim.mjs)
    * already serialises rolls per character-and-fact, which is the only concurrency this
    * ledger actually sees — a GM hand-editing the registry at the same moment is a person, not
    * a race.

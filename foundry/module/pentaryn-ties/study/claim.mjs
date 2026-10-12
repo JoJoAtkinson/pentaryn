@@ -58,9 +58,9 @@ export async function stakeAndConfirm({ write, readBack, token, settleMs = 250, 
  *
  * The claim doubles as the lock while the roll runs: a claim record reads back through
  * `readBeliefs` as a spent belief, so a second request for the same character and kind is
- * refused by `mayStudy` rather than racing the first. A claim left behind by a client that died
- * mid-roll therefore *does* strand the roll — deliberately the safe direction, and `reset` is
- * the one-line cure because it deletes the whole row.
+ * refused by applyStudy's `readBelief` lock (apply.mjs) rather than racing the first. A claim
+ * left behind by a client that died mid-roll therefore *does* strand the roll — deliberately the
+ * safe direction, and `reset` is the one-line cure because it deletes the whole row.
  */
 /** Stake this fact before rolling — two GM sessions of one account are both `activeGM`. */
 export async function claimFact(fact, characterId, now) {
