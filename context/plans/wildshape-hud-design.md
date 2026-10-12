@@ -1,6 +1,6 @@
 ---
 title: "Wild Shape on the HUD — design for pentaryn-transform 0.2"
-status: built (module 0.2.0), adversarially reviewed 2026-10-09 (§10) — not yet synced or playtested
+status: superseded — history only (built as module 0.2.0, reviewed 2026-10-09 §10). For use, read foundry/module/pentaryn-transform/README.md
 created: 2026-10-09
 subject: Talo (actor pfCQRWnqsQjkZQnB, user OiDkYUo0NsT5Mc5X), druid 12, Circle of the Stars
 stack: Foundry v14.367 · dnd5e 5.3.3 · Argon enhancedcombathud 5.0.1 + enhancedcombathud-dnd5e 5.2.2 · lib-wrapper present (not needed)
@@ -8,9 +8,14 @@ stack: Foundry v14.367 · dnd5e 5.3.3 · Argon enhancedcombathud 5.0.1 + enhance
 
 # Wild Shape on the HUD
 
-**Read this when:** building or reviewing the Wild Shape rework in `pentaryn-transform`. It is a
-design, not a use-doc; when it ships, the player-facing summary goes in `context/pentaryn.md`
-§"Summons and forms" and the operator notes in this module's README.
+> **Superseded by the README for use; history only.** Moved out of the module folder on 2026-10-12
+> (transform-creatures-19): it shipped to Data/ with the module. Its line references target dnd5e
+> 5.3.3 and the pre-blueprint files (`transform.mjs`, `hud.mjs`, `starry.mjs`); the code now lives
+> in the files `foundry/module/pentaryn-transform/README.md` § Files lists. Build record:
+> [`druid-wild-shape.md`](druid-wild-shape.md).
+
+**Read this when:** you want the reasoning behind the Wild Shape HUD design (rules basis, dnd5e and
+Argon behaviour as of 0.2). Not for operating the module — that is its README.
 
 **The complaint:** shifting takes five interactions across the HUD, a dialog and a chat card; the
 use is spent before the player confirms; "Return to Normal Form" is always on screen; nothing shows

@@ -19,7 +19,7 @@
 //   api-manifest.mjs       PURE API rows (+ STARRY_ROWS, starry.mjs's contribution)
 //   api.mjs                implementations, inspect(), selftest(), buildApiFor(ctx)
 //
-// Design and verified line references: WILDSHAPE-DESIGN.md (this folder).
+// How it works and the API: README.md. The 0.2 design (history): context/plans/wildshape-hud-design.md.
 
 import { installPatches } from "./patches.mjs";
 import { MODULE, NS } from "./transform-core.mjs";

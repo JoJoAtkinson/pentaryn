@@ -1,227 +1,191 @@
 # pentaryn-transform
 
-Wild Shape on the Argon Combat HUD, and leaving any transformation as an ordinary ability.
+**Read this when:** a druid's Wild Shape or Starry Form misbehaves on the Argon HUD, a form is left
+behind in the Actors sidebar, or you are changing or calling `pentaryn-transform`. **Not this file:**
+the build record → [`context/plans/druid-wild-shape.md`](../../../context/plans/druid-wild-shape.md) ·
+the 0.2 design (history) → [`context/plans/wildshape-hud-design.md`](../../../context/plans/wildshape-hud-design.md)
+· how every addon is built → [`context/foundry/addon-blueprint.md`](../../../context/foundry/addon-blueprint.md)
+· version notes → [`CHANGELOG.md`](CHANGELOG.md).
 
-**Read this when:** a druid's Wild Shape misbehaves, a form is left behind in the Actors sidebar,
-or something about the HUD's Wild Shape / Return / Change Form buttons needs changing. The design
-and every dnd5e/Argon line reference it leans on: [`WILDSHAPE-DESIGN.md`](WILDSHAPE-DESIGN.md).
+Wild Shape and Starry Form as one-click Argon HUD actions, and leaving any transformation as an
+ordinary ability. Requires dnd5e 6 (verified 6.0.6) on Foundry v14.
 
-## What the player sees (0.2)
+## What the player sees
 
 | State | Bonus bar | Action bar |
 |---|---|---|
-| Normal form | **Wild Shape** with a uses badge (greyed at 0) → a panel of the known forms; hover a tile for CR, AC, speeds, senses, attacks, traits; click shifts at once. No Return button. | unchanged |
-| In a form | **Return to Talo** (his portrait, highlighted) and **Change Form** (same picker, one use) | every beast weapon and action monster feature (Bite, Claw, Multiattack) as front-row buttons; the weapon-set slot is hidden |
+| Normal form | **Wild Shape** with a uses badge (greyed at 0) → a picker of the known forms; hover a tile for CR, AC, speeds, senses, attacks, traits; a click shifts at once. **Starry Form** beside it (Circle of the Stars). | unchanged |
+| In a form | **Return to Talo** (his portrait, highlighted; the HUD's own button when the form has no revert item) and **Change Form** (same picker, one use) | every beast weapon and action monster feature (Bite, Claw, Multiattack) as front-row buttons; the weapon-set slot is hidden; the Reaction slot reads **Opportunity Attack** |
 
-The portrait strip shows a **Wild Shape: Dire Wolf** effect; its tooltip has the time left, the end
-conditions and the beast's passive traits. Each shift and revert posts one chat line instead of a
-dnd5e card. The sheet still works: Wild Shape → Use opens dnd5e's form dialog, then shifts at once.
+- A shift spends the use only when it happens (a failed shift refunds it). Each shift and revert
+  posts one chat line instead of a dnd5e card — including a revert from the sheet, the sidebar or a
+  macro. The sheet still works: Wild Shape → Use opens dnd5e's form dialog, then shifts at once.
+- The portrait line reads `Wild Shape: Dire Wolf · 5 hours 59 minutes left`; the form's effect
+  (`Wild Shape: Dire Wolf`) is larger, with a gold ring, and its tooltip has the time left.
+  HP with temp HP reads `99+12 / 99`.
+- The form ends by itself at 0 HP, when Incapacitated, when its time runs out, when its effect is
+  deleted, and before a Long Rest (the druid then rests). Short Rest in a form also gives the druid
+  their one use back.
+- Features that would spend Wild Shape uses or spell slots never come along into the form; item
+  uses, Hit Dice, exhaustion, inspiration and conditions gained there come back on revert, and a
+  Concentration broken in beast form ends on the druid too.
+- **Starry Form:** one click on Archer, Chalice or Dragon spends the Wild Shape use, puts one effect
+  on the druid (`Starry Form: Archer`, 10 minutes; the Dragon's carries the roll floors and, with
+  Twinkling Constellations, Fly 20) and the starlight (Bright 10, Dim 10 more, through
+  pentaryn-senses). With Twinkling Constellations a change is free. It ends after 10 minutes, when
+  Incapacitated, at a Long Rest, or on a beast shift. While the Chalice glimmers, a slot-spending
+  heal makes the Chalice button pulse for a minute. From the sheet, Consume Wild Shape opens a
+  three-button dialog; closing it refunds the use.
+- **Escape** cancels Argon's target picker ("0/1 Targets"), else closes an open Wild Shape / Starry
+  Form picker; with nothing open it still reaches core. The target picker is also cancelled when the
+  HUD's token changes body.
 
-## Starry Form (0.3)
+## Settings
 
-Circle of the Stars, PHB 2024. The Bonus bar's **Starry Form** button (Wild Shape uses badge, kept
-in step with the Wild Shape button) opens three tiles — **Archer, Chalice, Dragon** — each with its
-numbers in the tooltip (+11 to hit, 2d8 + 5 Radiant…). One click on a tile:
+n/a for world or client settings. One keybinding: **Cancel the HUD's target picker** (`Escape`,
+PRIORITY; Configure Controls). Reads two others' settings: dnd5e's Allow Polymorphing (a player
+shift needs it, and `ACTOR_CREATE`), and pentaryn-combat's `fullAttack` / `multiattack` (below).
 
-- spends the Wild Shape use through the feature's own "Consume Wild Shape" activity (no dialog, no
-  card), refused when shifted, Incapacitated or out of uses;
-- puts **one** effect on the druid, `Starry Form: Archer` (`_id pentarynStarry00`, 10 minutes from
-  now, `flags.pentaryn-transform.starry.constellation`). The Dragon's carries the item's Dragon
-  changes (roll floors; with Twinkling Constellations also Fly 20 and hover);
-- lights the druid: the feature item gets `flags.pentaryn-senses.light` (Bright 10, Dim 10 more,
-  starlight), which pentaryn-senses' carried-light path writes to every token of the druid and
-  undoes when the flag goes (a hand-set light comes back);
-- posts one chat line. The button becomes **Starry Form: Archer**; while the Archer or Chalice
-  glimmers, its own button (Archer (Starry Form) / Chalice (Starry Form)) sits right beside it.
+## API — game.pentaryn.transform
 
-The button then offers the other constellations and **End**. With Twinkling Constellations a change
-is free (the rule: at the start of your turn); without it, a new constellation is a new use. The
-form ends by itself after 10 minutes of world time, when the druid is Incapacitated, at a Long Rest,
-or when the druid Wild Shapes into a beast (it is taken "rather than shape-shifting"). However it
-ends, the light goes. Starry Form is removed from the Special bar (Argon listed it there for the
-Chalice/Dragon "special" activations). From the sheet, Starry Form → Consume Wild Shape → Use opens
-a three-button constellation dialog instead of a card with effects to apply by hand; closing it
-refunds the use. API: `game.pentaryn.transform.starry.{assume, end, active, constellation}`.
+Canonical: `game.modules.get("pentaryn-transform").api`; `game.pentaryn.transform` is the same
+frozen object. Ask it: `game.pentaryn.transform.describe()` (offline: `test/golden/describe.json`).
+The legacy methods take an Actor document (not a ref) and keep their old shapes.
 
-## HUD clean-up (0.3)
+| Method | Returns | null / false when | GM | Writes |
+|---|---|---|---|---|
+| `shift(actor, profileId)` | the new form | double-click; no Wild Shape; unknown profile; blocked (busy, no permission, incapacitated, 0 HP, no token on the viewed scene, no uses — each warns); the old form's revert failed; the transform did not happen (refunded) | — | yes |
+| `revert(actor, { quiet, reason })` | the original | not transformed; a stale form; not the owner; already reverting; dnd5e returned nothing | — | yes |
+| `forms(actor)` | `[{ id, name, uuid, actor }]` | `[]` without Wild Shape | — | — |
+| `wildShapeActivity(actor)` | the activity | no Wild Shape | — | — |
+| `original(actor)` | the actor a form was made from | a linked form whose original is gone | — | — |
+| `isRevertItem(item)` | boolean | — | — | — |
+| `sweepSpentForms()` | — | not the active GM | yes | yes |
+| `starry.assume(actor, "archer"\|"chalice"\|"dragon")` | boolean | shifted, incapacitated, no uses, no feature | — | yes |
+| `starry.end(actor, { quiet, reason })` | boolean | no Starry Form up | — | yes |
+| `starry.active(actor)` / `starry.constellation(actor)` | the effect / the constellation | none up | — | — |
+| `inspect(ref, opts)` | shape state, plain JSON | throws `NOT_FOUND` / `AMBIGUOUS` / `BAD_ARGS` | — | — |
+| `selftest()` | `{ ok, checks }` | — | — | — |
 
-- **Tooltips.** The Wild Shape tooltip is a short summary plus Uses, Duration, Recovery and Cost (the
-  full feature text is a right-click away); it no longer scrolls or clips. Beast and constellation
-  tooltips list one stat per row, wrapped, never overlapping. Our tooltips never catch the pointer.
-- **No stale tooltips.** Argon anchors a tooltip to the hovered button; a shift or revert rebuilds
-  the HUD without a pointerleave, so the tooltip stayed up. Any tooltip whose anchor left the DOM is
-  dropped after each HUD render and on the next pointer move; clicking a picker button drops its own.
-- **Pickers appear in place** (no 0.3 s slide-in), so a tile is clickable as soon as it is visible.
-- **Portrait line:** `Wild Shape: Dire Wolf · 5 hours 59 minutes left` / `Starry Form: Archer · 9
-  minutes left` instead of "Level 12 Druid (null)", updated as world time passes; the effect icon is
-  larger with a gold ring.
-- The Reaction bar's weapon slot in a beast form reads **Opportunity Attack** (0.3.1; it read "Bite (Opportunity Attack)", which looked like Bite listed twice).
-- **Sweep timing.** One timer that token traffic can't keep pushing back, plus a quick sweep as soon
-  as a player's revert clears the form's `isPolymorphed` flag (the Long-Rest orphan).
-- **Core v14 shim.** A non-recursive token update (dnd5e's swap) turns root keys into
-  `ForcedReplacement` operators that region identification can't read
-  (`point.x.almostEqual is not a function`), so a form standing in a Region could not return.
-  `TokenDocument._preUpdateOperation` is wrapped to unwrap scalar operators first.
+`inspect(ref, { sceneId, base, as })` — `ref` is an Actor, Token, UUID, 16-character id or exact
+name, never a substring. Shape: `{ actor, original, shifted, wildShapeForm, form: { name, profileId,
+sourceUuid, endsAt, secondsLeft } | null, wildShape: { itemId, usesLeft, max } | null, starry: {
+constellation, secondsLeft } | null, forms: [{ id, name }] }`. `opts.as` a user without OBSERVER on
+the actor gets `{ actor }` only. Kit members: `describe()`, `version`, `contract`, `settings()`,
+`trace()`, `uninstall()`.
 
-## Playtest fixes (0.3.3, wave-1 play test PT3)
+## Data written
 
-- **Return without a revert item (PT3-3).** A druid whose form carries no item flagged
-  `revert` still gets "Return to {name}" (the druid's portrait, highlighted) on the Bonus bar of a
-  Wild Shape form (not a Polymorph spell's form, which is not ended as a Bonus Action); it
-  runs the same path as the item (`returnToNormal`: bonus pip, then `revert`). A form with the item
-  shows only the item.
-- **Starry Form never in a beast form (PT3-4).** Stripped by identity (identifier `starry-form`,
-  else the name; reason `starry-form`) even when its Consume Wild Shape target is not this druid's
-  Wild Shape id, and dropped from the Bonus bar of any form that still carries it.
-- **Escape closes the Wild Shape / Starry Form picker (PT3-6)** when no target picker is up (same
-  keybinding); with nothing open it still reaches core.
-- **Every Wild Shape revert says so in chat (PT3-7).** A revert this module did not start (the
-  sheet's Restore Transformation, the sidebar, a macro) posts the "returns to normal form" line via
-  `dnd5e.revertOriginalForm`; the module's own revert posts its line once, as before.
+| Where | Key | What |
+|---|---|---|
+| a form actor | `flags.pentaryn-transform.wildshape` | `{ original, source, profile, endsAt, carried }` — the sweep, the auto-revert, the HUD and `inspect` read it |
+| the form's duration effect | `_id pentarynWildShp0`, `flags.pentaryn-transform.wildshape` | the timed effect Argon's portrait strip shows |
+| an item | `flags.pentaryn-transform.revert` | set by hand: using it reverts its actor (`keepInForm` keeps a feat in the form) |
+| the druid's Starry effect | `_id pentarynStarry00`, `flags.pentaryn-transform.starry.constellation` | the constellation glimmering |
+| the Starry Form item | `flags.pentaryn-senses.light` | `STARRY_LIGHT` while the form lasts (pentaryn-senses lights the tokens) |
+| form actors | created / deleted | dnd5e creates them; the active GM sweeps spent ones |
 
-## Playtest fixes (0.3.1)
+## Flags other modules read
 
-- **Argon's target picker** ("0/1 Targets") is cancelled when the HUD's token changes body (any
-  shift or revert, including the GM's auto-revert), when a Wild Shape / Starry Form button or tile
-  is clicked, and on **Escape** (a PRIORITY keybinding; before, Escape fell through to core and
-  opened the game menu). Argon's picker instance is private to its bundle, so the module sends the
-  right-button `mouseup` that is Argon's own cancel.
-- **No duplicate panels in a form.** Argon's "Use Feature" (Multiattack) and "Use Item" (the beast's
-  weapons, via `showWeaponsItems`) panels are dropped from the Action bar when everything they hold
-  already has a front-row button (`coveredPanel`). Normal form is untouched.
-- **No text-only Multiattack beside Full Attack (U-4-1).** When pentaryn-combat's Full Attack runs
-  the form's parsed Multiattack (`fullAttack` + `multiattack` settings on), the Multiattack button is
-  left off the front row; an unparsed Multiattack or either setting off keeps it.
-- **Spellcasting** (the passive class feature, identifier `spellcasting`) is no longer carried into
-  the form: "You can't cast spells" (`stripReason` → `no-spellcasting`).
-- **Temp HP.** The Wild Shape temp HP stay after reverting — that is the 2024 rule (they last until
-  spent or a Long Rest). The portrait of a Wild Shape druid or form shows them as `99+12 / 99 HP`
-  (tooltip spells it out) instead of Argon's `111/99`. Temp HP don't stack, so a druid holding more
-  than the grant keeps the higher number (dnd5e's preset always overwrote it with 12).
-- **Concentration cards are not from shifting.** Traced live on both clients: a shift, a Change
-  Form and a revert never call `challengeConcentration` (dnd5e's revert passes
-  `concentrationCheck: false`; the shift creates a new actor rather than updating HP). Cards appear
-  only when HP actually drops — real damage to the beast, or a GM setting temp HP 12 → 0, which
-  dnd5e counts as 12 damage (the "DC 10" cards in the 2026-10-10 playtest came from its own setup
-  evals; the "DC 30" from its 120-damage step).
+- **pentaryn-senses** reads `flags.pentaryn-senses.light` on the Starry Form item through its
+  carried-light path (`light-core.mjs` `lightEntries` / `carriedLightOf`): `{ bright, dim, color,
+  alpha, luminosity, coloration, animation }`. Transform writes it (`starry-adapter.mjs` `setLight`)
+  only while pentaryn-senses is active. A cross-module contract test is drafted for
+  `scripts/tests/` (transform-creatures-21).
+- **pentaryn-combat** → transform: the Action bar drops the text-only Multiattack when combat's Full
+  Attack runs it (U-4-1). Today transform reads combat's `fullAttack` / `multiattack` settings and
+  `game.pentaryn.combat.multiattack(actor)` (C23, adjustments row `transform-reads-combat-multiattack`).
+- **transform → pentaryn-combat:** combat's tooltips use the `pentaryn-tt` classes, styled by the
+  kit's `lib/argon-tooltip.css`, which `styles/transform.css` imports (D7).
+- Transform reads dnd5e's `flags.dnd5e.originalActor`, `isPolymorphed`, `transformOptions`,
+  `previousTokenData`, `previousActorData`.
 
-## dnd5e 6 port (0.3.2)
+## Events
 
-Requires dnd5e 6.0 (verified 6.0.6). What changed and what was checked to need no change:
+n/a — transform emits no hooks (`HOOKS` is empty). It listens on dnd5e's use, transform, revert and
+rest hooks, core document hooks and Argon's render hooks (`test/golden/hooks.json` pins the order).
 
-- **Starry Form's Twinkling flight** is recognised from either key: `system.attributes.movement.fly`
-  (the PHB item's stored effect; dnd5e redirects it on apply) or `system.attributes.movement.speeds.fly`
-  (effects written under 6.0). Pure check: `grantsFly`.
-- **Carried conditions** lose both origins before landing on the druid: core's `origin` string and
-  dnd5e 6's structured `system.origin` (both point into the form actor the revert deletes).
-  Pure: `withoutOrigin`.
-- **Exhaustion** is unchanged in code: 6.0 derives the level from the `dnd5eexhaustion` effect's
-  `system.level`, and writing `system.attributes.exhaustion` on revert still becomes that effect
-  (`Actor5e#_onUpdateExhaustion`). Fixtures 69d/69e.
-- **Form tooltips** read speeds from `movement.speeds` first (the flat keys are a dnd5e shim until 7.0).
-- **"form" transform mode** (new in 6.0, effects on the actor instead of a new actor) is refused with
-  a refund and a warning. 6.0.6's Wild Shape is still mode `cr`; this guard is defensive only.
-- **No change:** the `dnd5e.transformActor` hook (6.0 fires `transformActorV2` alongside it, neither
-  deprecated); `hud.mjs` (Argon's `isPolymorphed`, movement shim and `senses.ranges` reads hold).
+## Patches and adjustments
 
-Testing note: a Chrome tab that isn't visible runs no animation frames and drops synthetic clicks
-until a screenshot renders it. Size animations and clicks "that did nothing" in such a tab are the
-harness, not the module.
+| Row (`foundry/adjustments.yml`) | Where | What |
+|---|---|---|
+| `transform-preupdate-unwrap` | `patches.mjs` | wraps `TokenDocument._preUpdateOperation` (marker `pentarynUnwrapped`): a non-recursive token swap's scalar `ForcedReplacement` operators are unwrapped, so a form standing in a Region can revert |
+| `core-token-swap-no-animation` | `bodyswap.mjs`, `wildshape-adapter.mjs` | a body swap never animates; tokens are settled before dnd5e reads them |
+| `argon-panel-injection` | `hud-panels.mjs`, `form-picker.mjs` | the Bonus / Action / Special bars recomposed in `render*ArgonComponent` |
+| `argon-target-picker-cancel` | `argon.mjs` | a right-button `mouseup` cancels Argon's private target picker |
+| `argon-bonus-used-tracking` | `wildshape-adapter.mjs`, `hud-panels.mjs` | the bonus pip re-marked after the HUD rebinds |
+| `argon-portrait-hp` | `hud-panels.mjs` | `99+12 / 99` instead of `111/99` |
+| `argon-tooltip-clear` | `argon.mjs` | stale tooltips dropped |
 
-## What the module does
+## Two sessions / who writes
 
-- **Shift on use** (`dnd5e.postUseActivity`). A `transform` activity with the `wildshape` preset
-  transforms its actor straight away into the chosen profile; the chat card (and its Transform
-  button) is suppressed. If the shift fails — source actor gone, no permission, `transformInto`
-  throws — the use is refunded. `shift(actor, profileId)` is the HUD's entry point; from a form it
-  reverts first, then shifts (the 2024 "use Wild Shape again"), so there is never a nested
-  "Talo (Dire Wolf) (Brown Bear)". Using Wild Shape from the druid's own sheet while a form is out
-  (the player's character sheet is the druid) does the same: the form ends, then the form dialog.
-- **Refuses a shift before any use is spent** (`dnd5e.preUseActivity`, and `shift()`) when: a shift
-  for that druid is already running (a double-click would spend two uses); the user can't transform
-  (needs `ACTOR_CREATE` and dnd5e's Allow Polymorphing); the druid is Incapacitated or at 0 HP (the
-  form would be created already over, and conditions embedded at creation fire no hooks, so it
-  would never end); the druid has **no token on the scene the user is viewing** (dnd5e swaps only
-  those tokens — the form would be an orphan actor the sweep deletes, with the use gone); no uses.
-- **Shapes the form** (`dnd5e.transformActor`, wildshape preset only). Strips from the form every
-  feat of the druid that would spend Wild Shape uses or spell slots there — dnd5e's revert copies
-  back only HP, temp HP and slots, so a use spent on the form's copy is lost — plus species traits
-  with an activity (the 2024 rule retains creature type, not species traits). On Talo that is Wild
-  Shape, Wild Companion, Starry Form, Wild Resurgence, Large Form and Stone's Endurance. Opt an item
-  out with `flags["pentaryn-transform"].keepInForm = true`. Renames the form's revert item to
-  "Return to {name}" with the druid's portrait, and adds the timed effect (`_id pentarynWildShp0`,
-  duration from the activity — 6 h at druid 12). Records which of the druid's effects went into the
-  form (`flags.pentaryn-transform.wildshape.carried`). Talo's own documents are never touched here.
-- **Unlinked token druids** (an NPC druid): dnd5e transforms the token in place and fires no
-  `transformActor`, so the same shaping is applied to the token's actor right after. That form
-  keeps its own Wild Shape item — no world actor holds that token's uses — and `original(form)` is
-  the form itself; uses spent there come back by id on revert.
-- **Reverts on use** any item flagged `flags["pentaryn-transform"].revert = true`, on the clicking
-  user's client (dnd5e's owner check applies). On every revert: item uses and class Hit Dice spent
-  on the form are copied back by id; exhaustion level and Heroic Inspiration are copied back; and
-  the druid's tokens on scenes other than the one being viewed are pointed back at the druid first
-  (dnd5e moves only the viewed scene's tokens, then deletes the form). On a Wild Shape form also:
-  conditions gained in the form (Unconscious, Stunned…) stay on the druid, and the druid's own
-  effects that ended in the form are ended on the druid.
-- **Concentration in beast form.** dnd5e copies the druid's effects into the form under the same
-  ids and never back, and its dependents registry tracks the *druid's* copy. When a carried effect
-  is deleted on the form (Concentration broken by damage to the beast), the druid's copy is ended
-  at once on the runner client (below) — through `endConcentration` for Concentration — so the
-  druid doesn't come back concentrating on a spell that already ended.
-- **Ends the form without a click**, on one client (the active GM, else the first active owner):
-  HP reaches 0; the form gains Incapacitated (or anything that implies it); the effect's time runs
-  out (Foundry v14's effect registry marks it expired; a world-time check backs it up); the effect is
-  deleted.
-- **Rests.** Long Rest while shifted — on the form, or on the druid while a form is out (a party
-  rest request lists the druid) — reverts first, then rests the druid, after the rest dialog
-  (cancelling leaves the form alone). Short Rest on the form is allowed and also short-rests the
-  druid quietly (no dialog, no HD, no chat), so the one Wild Shape use comes back. Short Rest on the
-  druid while a form is out is redirected to the form, which is the body with the HP and Hit Dice
-  (a rest on the druid would be overwritten at revert).
-- **Blocks any other transform used while transformed** (Polymorph on a shifted druid) — it would
-  nest a copy of the copy.
-- **Sweeps spent forms.** A player can't delete the form actor dnd5e makes. The active GM deletes
-  any transformed copy (`flags.dnd5e.originalActor`) with no token on any scene that is over 10 s
-  old, 12 s after token activity settles and once at ready.
+- A shift, Change Form, Return and the Starry buttons run on the clicking user's client, with that
+  user's permissions (dnd5e refuses a non-owner's revert).
+- The automatic endings (0 HP, Incapacitated, expiry, a carried effect ending) run on **one user**:
+  the active GM, else the first active owner by id (`isRunner`). With the MCP bridge tab and a GM
+  browser tab open, both tabs are that user and both act (see Pitfalls).
+- The sweep of spent forms runs on the active GM's client (`activeGM.isSelf`), 3 s after token
+  traffic (one timer, never pushed back), 1.5 s after a form loses `isPolymorphed` (a player's
+  revert), and 3 s after ready; it deletes transformed copies with no token on any scene that are
+  over 10 s old.
 
-## HUD composition
+## Extending
 
-`hud.mjs` recomposes Argon's Bonus and Action panels in `renderActionPanelArgonComponent` (no
-lib-wrapper). Argon's dnd5e button class is borrowed from the weapon-set slot's constructor. The
-Wild Shape button's uses badge is ItemButton's `.quantity-1` markup — Argon's `has-count` class
-with `data-item-count` paints no number. The
-pure plan is `planBonusBar` / `frontRowItems` in `transform-core.mjs`. The bonus pip spent by a
-shift or revert is re-applied after the HUD rebinds to the new actor (per token, per turn).
-Actors without Wild Shape or a revert item are left exactly as Argon builds them.
+- A druid or form rule: the pure decision in `core/wildshape.mjs` (or `core/starry.mjs`) with a row
+  in `test/core-legacy.mjs` or a node:test; the hook in `wildshape.mjs` / `starry.mjs`; the work on
+  documents in `wildshape-adapter.mjs` / `starry-adapter.mjs`.
+- A HUD element: a planner in `core/hud.mjs` (like `planBonusBar`), the component in
+  `form-picker.mjs`, the composition in `hud-panels.mjs`. Argon's private state only through
+  `argon.mjs`.
+- An API method: a row in `api-manifest.mjs`, the implementation in `api.mjs` (or a feature's
+  contribution, as Starry's rows are), then `GOLDEN_UPDATE=1 node --test test/api.test.mjs`.
 
-## API — `game.pentaryn.transform`
+## Pitfalls
 
-`shift(actor, profileId)`, `revert(actor, { quiet, reason })`, `forms(actor)` →
-`[{ id, name, uuid, actor }]`, `wildShapeActivity(actor)`, `original(actor)`, `isRevertItem(item)`,
-`sweepSpentForms()`, `starry.assume(actor, "archer"|"chalice"|"dragon")`, `starry.end(actor)`,
-`starry.active(actor)`, `starry.constellation(actor)`.
-
-## Setup facts
-
-- The revert item is optional (without it the HUD adds its own Return button). If used, it is an
-  ordinary class feature with one bonus-action utility activity and no consumption. Keep it a `feat` so the Wild Shape preset (`keep: feats`) carries it onto the form.
-- Players need `ACTOR_CREATE` (Trusted at this table) and `dnd5e.allowPolymorphing` to shift, and
-  ownership of the form actors the profiles point at. Reverting needs only ownership.
+- Call the API, not the files: `game.pentaryn.transform.starry.assume(actor, "archer")`, never
+  `import("/modules/pentaryn-transform/starry.mjs")` (a feature file since the blueprint
+  migration; it exports `install` only).
 - Transform updates tokens on the **viewed** scene only (dnd5e), so a shift needs the druid's token
-  there (refused otherwise). Revert also fixes the tokens on other scenes.
+  there (refused otherwise). Revert also fixes tokens on other scenes.
+- An unlinked token druid's form is its own original and keeps its own Wild Shape item.
+- The revert item is optional (without it the HUD adds its own Return button); if used, keep it a
+  `feat` with one bonus-action utility activity, so the Wild Shape preset carries it onto the form.
+- Two GM tabs (bridge + browser) both run the automatic endings and the sweep; the second revert
+  finds the form gone. Watch for a doubled chat line in the live phase.
+- Starry Form's world-time expiry checks world actors only: an unlinked druid token's Starry Form is
+  not ended there while no GM is connected (transform-creatures-22, a live decision, D8).
+- A Chrome tab that isn't visible runs no animation frames and drops synthetic clicks; size
+  animations and clicks "that did nothing" there are the harness, not the module.
+- Debug lines: `CONFIG.debug["pentaryn-transform"] = true` (the stripped-items list, swallowed
+  failures).
+- Open from the play test: Talo's Revivify is a `damage` activity (should be `heal`); Cosmic Omen
+  has no HUD display; the rest chat line names the form.
+
+## Files
+
+| File | Role |
+|---|---|
+| `transform.mjs` | entry 0: the patch, then `bodyswap`, `wildshape`, `sweep`; publishes at ready |
+| `hud.mjs` | entry 1: `starry`, then `hud-panels` |
+| `wiring.mjs` | the one log / hook registry / ctx both entries share |
+| `transform-core.mjs`, `core/*.mjs` | pure rules (wildshape, hud, starry, bodyswap) behind the barrel |
+| `settings.mjs`, `patches.mjs` | the keybinding and outside settings reads; the core patch |
+| `wildshape-adapter.mjs`, `sweep-adapter.mjs`, `starry-adapter.mjs`, `argon.mjs` | adapters (documents, Argon) |
+| `form-picker.mjs`, `starry-dialog.mjs` | UI: the Argon components; the constellation dialog |
+| `bodyswap.mjs`, `wildshape.mjs`, `sweep.mjs`, `starry.mjs`, `hud-panels.mjs` | features: `install(reg, ctx)` / `uninstall()` |
+| `api-manifest.mjs`, `api.mjs` | the published API |
+| `lib/` | vendored kit (`vendor.py`), never edited here |
+| `styles/transform.css`, `lang/en.json` | `ptf-*` classes; strings |
+
+## Tests
+
+`node test/run.mjs` from this folder: every `test/*.test.mjs` (node:test, one process per file, the
+kit's Foundry stub plus `test/fixtures/world.mjs`) and the legacy core suite `test/core-legacy.mjs`.
+One file: `node --test test/api.test.mjs`; its goldens: `GOLDEN_UPDATE=1 node --test test/api.test.mjs`
+(never the whole suite). `test/fixtures/legacy-*.mjs` are the checkpoint's verbatim oracles.
 
 ## Sync
 
-`make foundry-transform-check` (parse, imports, i18n, `node test/run.mjs`) /
-`make foundry-transform-sync`. 0.2 adds `hud.mjs` and `styles/transform.css` to `module.json`, which
-is read at startup: restart Foundry once, then reload clients. 0.3 adds `starry.mjs`, imported by
-`hud.mjs` (not listed in `module.json`), so a client reload is enough.
-
-## Status and open items (playtest 2026-10-10, module 0.3.1)
-
-Core flow passed with real clicks as Talo: pick a form, Change Form, Return to Talo, use count 3/3
-down to 0 (Change Form greys out), Short Rest +1, Long Rest all (reverts first), auto-revert at 0 HP,
-Incapacitated and after 6 hours, Starry Form spends a use. Open: Talo's Revivify is still a `damage`
-activity (should be `heal`); Cosmic Omen has no HUD omen/Weal/Woe display; Argon's target picker shows
-no cue until the mouse moves; the form panel opens at the far left; the rest chat line names the form
-("Talo (Giant Bat) takes a short rest."). Build record: `context/plans/druid-wild-shape.md`.
+`make foundry-transform-check`, then `make foundry-transform-sync` and reload the clients. A
+`module.json` change needs a Foundry restart. Live smoke: `game.pentaryn.transform.describe().version`
+equals `module.json`, `selftest().ok`, `inspect("Talo")` while shifted.
