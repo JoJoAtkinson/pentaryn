@@ -4,6 +4,11 @@
 
 The version stays 0.3.0 until the next `module.json` restart batch (code only: sync + reload).
 
+- **[declared] EC-4:** a batch that attunes several items, or creates several already attuned, now
+  warns for the first item past the cap and every one after it (was: no warning, since none of the
+  batch's writes had landed when each pre-hook read the count). The pre-hooks count the batch's
+  attunes in its shared options (`options["pentaryn-attunement"].pending`); `restoreBond` merges its
+  `bond` tag into that object instead of replacing it. Still a warning, never a veto.
 - **[declared] ATT-AC-1-residual:** an item coming home is claimed (kit `claimDocument`, key
   `flags.pentaryn-attunement.claims.home` on the item, 750 ms settle) before the bond is cleared and
   the slot handed back, as the coin purse is. The MCP bridge tab and a GM browser tab each kept their

@@ -56,7 +56,8 @@ system's `☀ value / max` counter in the inventory row, which turns **red when 
 all NPC sheets get.
 
 **Warnings.** Attuning past the cap, or an item arriving already attuned onto an actor at the cap,
-shows a warning toast. A drop onto a filled slot is a swap (one out, one in), so it does not warn. Nothing is ever vetoed: a vetoed Foundry update resolves without applying
+shows a warning toast. A batch (several items attuned or created attuned in one write) counts the
+ones before each item, so the first past the cap and every one after it warns. A drop onto a filled slot is a swap (one out, one in), so it does not warn. Nothing is ever vetoed: a vetoed Foundry update resolves without applying
 and without throwing, so an MCP script would carry on believing it succeeded. The cap is
 unenforceable anyway — expire the effect that raised `attunement.max` and no item hook fires.
 

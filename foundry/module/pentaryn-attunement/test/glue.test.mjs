@@ -142,6 +142,34 @@ test("preCreateItem of an attuned item (no bond) onto an actor at cap: ArrivedAt
   assert.deepEqual(since(from, "notify").map(c => c.message), ["Amulet arrived already attuned; Full is now over the attunement limit."]);
 });
 
+test("EC-4: a batch of attunes counts the ones before it; the first past the cap and every later one warns", () => {
+  // As Foundry does: one options object for the whole batch, every pre-hook before any write.
+  const actor = makeActor(F, { id: "actorBtch0000001", name: "Batch", attunement: { value: 2, max: 3 } });
+  const items = ["A", "B", "C"].map(n => addItem(F, actor, { id: `itemBtc${n}00000000`, name: `Ring ${n}`, system: { attunement: "required", attuned: false } }));
+  const options = {};
+  const from = mark();
+  for (const it of items) assert.equal(F.fireCall("preUpdateItem", it, { system: { attuned: true } }, options), true);
+  assert.deepEqual(since(from, "notify").map(c => c.message), [
+    "Batch is already attuned to 3 items — attuning Ring B makes 4.",
+    "Batch is already attuned to 3 items — attuning Ring C makes 5.",   // the message names the cap; the count runs on
+  ]);
+
+  // Created already attuned, in one batch; a bonded item coming home holds its own away slot and is not counted.
+  const full = makeActor(F, { id: "actorBtch0000002", name: "Batch Two", attunement: { value: 2, max: 3 }, flags: { [MOD]: { away: [] } } });
+  const bond = { actor: full.uuid, key: "kB", name: "Orb", equipped: true, attuned: true, attunement: "required" };
+  const arrivals = [
+    addItem(F, null, { id: "itemArrA00000001", name: "Amulet", system: { attuned: true, attunement: "required" } }),
+    addItem(F, null, { id: "itemArrB00000001", name: "Orb (Batch)", flags: { [MOD]: { bond } } }),
+    addItem(F, null, { id: "itemArrC00000001", name: "Brooch", system: { attuned: true, attunement: "required" } }),
+  ];
+  const created = {};
+  const quiet = mark();
+  for (const it of arrivals) { it.parent = full; F.fireCall("preCreateItem", it, {}, created); }
+  assert.deepEqual(since(quiet, "notify").map(c => c.message), [
+    "Brooch arrived already attuned; Batch Two is now over the attunement limit.",
+  ]);
+});
+
 test("createItem (own user, bond, home): bond cleared, away/slots written, BackInHand toast — in that order", async () => {
   const actor = makeActor(F, { id: "actorHome0000001", name: "Talo Home",
     flags: { [MOD]: { away: [{ key: "k1", name: "Staff", img: "i" }], slots: ["away:k1", "itemCloak0000001", null] } },

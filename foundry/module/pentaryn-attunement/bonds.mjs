@@ -61,7 +61,8 @@ function restoreBond(item, data, options) {
   if (claims?.coinBack) changes[`flags.${MODULE}.claims.coinBack`] = _del;
   if (claims?.home) changes[`flags.${MODULE}.claims.home`] = _del;   // the same, for a hand-back (ATT-AC-1-residual)
   item.updateSource(changes);
-  if (options) options[MODULE] = { bond };
+  // Merged, not replaced: the batch's pending-attune count and swapFrom live here too (EC-4).
+  if (options) options[MODULE] = { ...options[MODULE], bond };
 }
 
 /**
@@ -142,14 +143,23 @@ function serial(actor, step, lane = "") {
 /* -------------------------------------------- */
 
 /**
+ * Warn when this item's attunement takes the actor past the cap. One batch shares one `options`
+ * object across every pre-hook, and none of its writes has landed yet, so the attunes already seen
+ * in the batch are counted there (`pending`) and added to the away slots: the first item over the
+ * cap and every one after it warns (EC-4).
  * @param {Actor} actor
  * @param {Item} item
  * @param {string} key
+ * @param {number} [freed]   slots the same batch frees (a swap's occupant)
+ * @param {object} [options] the batch's options
  */
-function warnOverCap(actor, item, key, freed = 0) {
+function warnOverCap(actor, item, key, freed = 0, options) {
   const att = actor?.system?.attributes?.attunement;
   if (!att) return;
-  const { exceed, after } = wouldExceed({ value: att.value - freed, max: att.max, awayCount: awayOf(actor).length });
+  const batch = options ? (options[MODULE] ??= {}) : {};
+  const pending = batch.pending ?? 0;
+  batch.pending = pending + 1;
+  const { exceed, after } = wouldExceed({ value: att.value - freed, max: att.max, awayCount: awayOf(actor).length + pending });
   if (!exceed) return;
   ui.notifications.warn(_loc(key, {
     name: item.name, actor: actor.name, value: after, max: att.max
@@ -163,7 +173,7 @@ function onPreUpdateItem(item, changes, options) {
   // A slot swap unattunes the occupant in the same batch, so it frees one (EC-3).
   const from = item.parent?.items?.get?.(options?.[MODULE]?.swapFrom);
   const freed = (from?.system?.attuned && from.system.attunement) ? 1 : 0;
-  warnOverCap(item.parent, item, "PENTARYN_ATTUNEMENT.WouldExceed", freed);
+  warnOverCap(item.parent, item, "PENTARYN_ATTUNEMENT.WouldExceed", freed, options);
 }
 
 function onPreCreateItem(item, data, options) {
@@ -171,7 +181,7 @@ function onPreCreateItem(item, data, options) {
   if (item.getFlag?.(MODULE, BOND)) return;
   if (!item.system?.attuned) return;
   if (!(item.parent instanceof Actor)) return;
-  warnOverCap(item.parent, item, "PENTARYN_ATTUNEMENT.ArrivedAttuned");
+  warnOverCap(item.parent, item, "PENTARYN_ATTUNEMENT.ArrivedAttuned", 0, options);
 }
 
 export function install(reg) {
