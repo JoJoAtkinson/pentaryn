@@ -73,7 +73,7 @@ async function runBattleMedic(healer, token) {
       result = await gm.query(QUERY, { healerUuid: healer.uuid, targetUuid: target.uuid, faces: pool.faces, amount }, { timeout: 8000 });
     }
   } catch (err) {
-    log.warn("Battle Medic write failed", err);
+    log.warn("Battle Medic write failed", err, { healer: healer.uuid, target: target.uuid });
     ui.notifications.warn(_loc("PENTARYN_RIDERS.battleMedic.failed", { name: token.name }));
     return null;
   }
@@ -161,14 +161,28 @@ export function registerRelay() {
  * healer, the healer must have the Healer feat, and the amount is clamped to what the die could roll.
  */
 async function relay(data, { user } = {}) {
-  if (!game.user.isGM || !game.users.activeGM?.isSelf) throw new Error("not the active GM");
+  // Audit lines (combat-riders-27, use-doc §5.1): one warn before each refusal, one info on success.
+  const who = { healer: data?.healerUuid ?? null, target: data?.targetUuid ?? null, by: game.user?.id ?? null, for: user?.id ?? null };
+  const refuse = reason => {
+    log.warn(`battle medic relay refused: ${reason}`, who);
+    return new Error(reason);
+  };
+  if (!game.user.isGM || !game.users.activeGM?.isSelf) throw refuse("not the active GM");
   const healer = await fromUuid(data?.healerUuid);
   const target = await fromUuid(data?.targetUuid);
-  if (!(healer instanceof Actor) || !(target instanceof Actor)) throw new Error("unknown actor");
-  if (!user || !healer.testUserPermission(user, "OWNER")) throw new Error("sender does not own the healer");
-  if (!healer.items.some(i => matchRule(HEALER, itemInfo(i)))) throw new Error("healer has no Healer feat");
+  if (!(healer instanceof Actor) || !(target instanceof Actor)) throw refuse("unknown actor");
+  if (!user || !healer.testUserPermission(user, "OWNER")) throw refuse("sender does not own the healer");
+  if (!healer.items.some(i => matchRule(HEALER, itemInfo(i)))) throw refuse("healer has no Healer feat");
   const faces = Number(data?.faces) || 0;
-  return applyBattleMedic(target, { faces, amount: data?.amount, prof: healer.system?.attributes?.prof ?? 0 });
+  let result;
+  try {
+    result = await applyBattleMedic(target, { faces, amount: data?.amount, prof: healer.system?.attributes?.prof ?? 0 });
+  } catch (err) {
+    log.warn(`battle medic relay refused: ${err.message}`, who);
+    throw err;
+  }
+  log.info("battle medic relay", { uuid: target.uuid, ids: [healer.uuid], by: game.user.id, for: user.id, healed: result.healed, faces: result.faces });
+  return result;
 }
 
 /* ── wiring ───────────────────────────────────────────────────────────── */

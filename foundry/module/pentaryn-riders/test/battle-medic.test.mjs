@@ -6,7 +6,7 @@
 // active GM's account, and the handler's gate (`isGM && activeGM.isSelf`) passes in every one of
 // those tabs, so two GM tabs heal twice and spend two Hit Dice. Pinned below; the [declared] claim-
 // first commit after the structural refactor flips it (todo at the end).
-// Not pinned: the relay's console output — S6 adds the audit lines of combat-riders-27 (todo).
+// The relay's console output is pinned by the combat-riders-27 test at the end (S6 added the lines).
 import { mock, test } from "node:test";
 import assert from "node:assert/strict";
 import { pinJSON } from "./kit/harness.mjs";
@@ -116,6 +116,7 @@ test("postUse on a player's client, target not theirs: the GM relay is queried w
 });
 
 test("runner failures: no Hit Dice left, no GM, the write throws, the roll throws", async () => {
+  W.take();   // combat-riders-27: the relay above logged its audit line (pinned in the -27 test below)
   assert.equal(await api.battleMedic(healer, target(wisp, "Wisp token")), null);
   assert.equal(await asPlayer(async () => { W.gm.active = false; try { return await api.battleMedic(healer, target(npc, "Grisk token")); } finally { W.gm.active = true; } }), null);
   const RealRoll = globalThis.Roll;
@@ -202,4 +203,41 @@ test("KNOWN combat-riders-41: the same payload reaching two GM tabs heals twice 
 });
 
 test.todo("combat-riders-41 [declared]: two GM tabs, one payload → one heal, one Hit Die, both tabs resolve to the same result");
-test.todo("combat-riders-27 (S6): the relay logs one info line on success and one warn before each refusal; runBattleMedic's warn names the uuids");
+test("combat-riders-27: the relay logs one info line on success and one warn before each refusal; runBattleMedic's warn names the uuids", async () => {
+  const seen = [];
+  const { info, warn } = console;
+  console.info = (...a) => seen.push(["info", ...a]);
+  console.warn = (...a) => seen.push(["warn", ...a]);
+  const quiet = p => p.then(() => "ok", e => e.message);
+  try {
+    npc.system.attributes.hd.spent = 0;
+    const ok = await relay(payload({ amount: 3 }), { user: W.player });
+    assert.equal(ok.faces, 8);
+    assert.equal(await quiet(relay(payload({ healerUuid: "Actor.nobody0000000001" }), { user: W.player })), "unknown actor");
+    assert.equal(await quiet(relay(payload(), {})), "sender does not own the healer");
+    assert.equal(await quiet(relay(payload({ healerUuid: `Actor.${IDS.sorc}` }), { user: W.player })), "healer has no Healer feat");
+    assert.equal(await quiet(relay(payload({ targetUuid: `Actor.${IDS.noHd}` }), { user: W.player })), "Wisp has no Hit Dice left");
+    const { makeUser } = await import("./kit/foundry-stub.mjs");
+    const gm0 = makeUser({ id: "gmUser0000000000", name: "Other GM", isGM: true, active: true });
+    F.game.users.set(gm0.id, gm0);
+    assert.equal(await quiet(relay(payload(), { user: W.player })), "not the active GM");
+    F.game.users.delete(gm0.id);
+    await asPlayer(async () => { W.gm.active = false; try { await api.battleMedic(healer, target(npc, "Grisk token")); } finally { W.gm.active = true; } });
+  } finally { console.info = info; console.warn = warn; }
+  const P = `${MODULE} | `;
+  assert.deepEqual(seen.map(l => [l[0], l[1]]), [
+    ["info", `${P}battle medic relay`],
+    ["warn", `${P}battle medic relay refused: unknown actor`],
+    ["warn", `${P}battle medic relay refused: sender does not own the healer`],
+    ["warn", `${P}battle medic relay refused: healer has no Healer feat`],
+    ["warn", `${P}battle medic relay refused: Wisp has no Hit Dice left`],
+    ["warn", `${P}battle medic relay refused: not the active GM`],
+    ["warn", `${P}Battle Medic write failed`],
+  ]);
+  assert.deepEqual(seen[0][2], { uuid: `Actor.${IDS.npc}`, ids: [`Actor.${IDS.healer}`], by: IDS.gm, for: IDS.player, healed: seen[0][2].healed, faces: 8 });
+  assert.equal(typeof seen[0][2].healed, "number");
+  assert.deepEqual(seen[2][2], { healer: `Actor.${IDS.healer}`, target: `Actor.${IDS.npc}`, by: IDS.gm, for: null });
+  assert.equal(seen[6][2].message, "no GM");
+  assert.deepEqual(seen[6][3], { healer: `Actor.${IDS.healer}`, target: `Actor.${IDS.npc}` });
+  newNotes();
+});
