@@ -194,4 +194,17 @@ One sync each from `main` after the merge, one Foundry restart, `FROM=local`:
 
 ## Live phase
 
-Not run. Filled in by W5L ([`wave-5-live-plan.md`](wave-5-live-plan.md) §13).
+Done 2026-10-12 overnight (W5L), green. Full record:
+[`merge-and-go-live-2026-10-11.md`](../merge-and-go-live-2026-10-11.md) "W5L — wave 5 restart
+batch + fixes batch 2 live (overnight)".
+
+- Fixes batch 2 merged into this branch first (`0ef92fb4`), so the deploy list above moved two
+  rows: **senses 0.5.0** and **attunement 0.3.0** (`8f6a8924`, [declared]).
+- Main merge `380a5348`; 19 modules synced (stamps `380a5348`, dirty false), one restart
+  `FROM=local`. Walls, the fork and the bridge were not deployed. Snapshot
+  `world-2026-10-12-073936-fvtt14.369-mac.tar.gz`.
+- Boot probe, lang (GM and player) and styles all pass. After-goldens differ only in declared
+  lines. The fixes-batch-2 live checks pass: SE4, A1 and A2.
+- Two golden-script fixes, no module change: movement `85af01b5` (merge `13c53cbb`) and attunement
+  `df161e4d` + `ab677200` (merge `56c2f39a`).
+- Pushed `7b444c6f..fb40383c`, plus this record.

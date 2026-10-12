@@ -129,5 +129,7 @@ blocks the gate instead of riding on the row. The same review made the i18n gate
    (and C04/C09/C38 where listed) pass.
 3. One sync of all touched modules, **one** Foundry restart, then per module the live smoke (use-doc
    §6): `describe().version`, every described path a function, and (full tier) `inspect`, `selftest`.
+   **Done 2026-10-12 (W5L):** 19 modules synced from main `380a5348`, one restart `FROM=local`,
+   boot probe clean for all 19 (kit 1.1.0, selftest ok for the 12 that have one). Walls not synced.
 4. Walls: run the migration on a copy of a stamped scene first; then live; `undo()` still peels back.
 5. Fill each guide's Result row "`module.json` edits appended" and the date here.
