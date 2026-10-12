@@ -66,15 +66,18 @@ function actionSig(actor) {
 
 function bonusSig(actor, panel) {
   const gate = setting("gateFollowUps") ? core.poleStrikeOpen({ turn: turnOf(actor), weapons: weaponsOf(actor) }) : null;
-  const fu = setting("followUps") ? followUpsNow(actor, panel).filter(f => !f.free).map(f => [f.kind, f.weaponId, f.count ?? null, f.disabled ?? null]) : [];
+  const fu = setting("followUps") ? bonusFollowUps(actor, panel).map(f => [f.kind, f.weaponId, f.count ?? null, f.disabled ?? null]) : [];
   return JSON.stringify([gate, fu]);
 }
 
+// Anything this turn already spent or offered: out of combat, it is what puts "New turn" on the Special bar.
+const turnTouched = (turn) => !!(turn.attackAction.swings || Object.keys(turn.riders).length || turn.followUps.length || turn.nick);
+
 function specialSig(actor) {
-  const fu = setting("followUps") ? followUpsNow(actor, mainPanel("DND5E.BonusAction")).filter(f => f.free).map(f => [f.kind, f.weaponId]) : [];
+  const fu = setting("followUps") ? freeFollowUps(actor).map(f => [f.kind, f.weaponId]) : [];
   const riders = setting("riderOffers") ? core.ridersFor(featuresOf(actor)).filter(r => r.auto).map(r => [r.key, riderMode(r.key)]) : [];
   const turn = turnOf(actor);
-  const touched = !!(turn.attackAction.swings || Object.keys(turn.riders).length || turn.followUps.length || turn.nick);
+  const touched = turnTouched(turn);
   const reckless = recklessShown(actor) ? isReckless(actor) : null;
   return JSON.stringify([fu, riders, !combatContext(actor).inCombat && touched, reckless]);
 }
@@ -83,13 +86,19 @@ function recklessShown(actor) {
   return setting("recklessToggle") && featuresOf(actor).has("reckless-attack");
 }
 
-const SIGS = { "DND5E.Action": (a) => actionSig(a), "DND5E.BonusAction": (a, p) => bonusSig(a, p), "DND5E.Special": (a) => specialSig(a) };
+// Each bar by its label: its signature and its composer (function declarations, hoisted). Insertion
+// order is the order checkBars re-renders stale bars in: Action, Bonus, Special.
+const BARS = {
+  "DND5E.Action": { sig: (a) => actionSig(a), compose: composeActionBar },
+  "DND5E.BonusAction": { sig: (a, p) => bonusSig(a, p), compose: composeBonusBar },
+  "DND5E.Special": { sig: (a) => specialSig(a), compose: composeSpecialBar }
+};
 
 /** Re-render the bars whose signature changed since they were composed. */
 function checkBars(actor) {
   if (!actor || actor !== ui.ARGON?._actor) return;
   const stale = [];
-  for (const [label, sig] of Object.entries(SIGS)) {
+  for (const [label, { sig }] of Object.entries(BARS)) {
     const p = mainPanel(label);
     if (!p || p._pcSig === undefined) continue;
     try { if (sig(actor, p) !== p._pcSig) stale.push(label); } catch (err) { log.debug("bar signature (next render recomposes)", err); }
@@ -118,6 +127,10 @@ function followUpsNow(actor, bonusPanel) {
   const bonusFree = !combatContext(actor).inCombat || !bonusPanel || bonusPanel.currentActions !== 0;
   return followUpsFor(actor, { bonusFree });
 }
+
+/** The follow-ups that cost a bonus action (the Bonus bar's) and the free ones (the Special bar's). */
+function bonusFollowUps(actor, bonusPanel) { return followUpsNow(actor, bonusPanel).filter(f => !f.free); }
+function freeFollowUps(actor) { return followUpsNow(actor, mainPanel("DND5E.BonusAction")).filter(f => f.free); }
 
 /**
  * Polearm Master's Pole Strike (its bonus-action attack activity). Not the feat as a whole: its
@@ -168,7 +181,7 @@ function composeBonusBar(panel, actor) {
   if (!setting("followUps")) return;
   const C = argonClasses();
   if (!C) return;
-  const fu = followUpsNow(actor, panel).filter(f => !f.free);
+  const fu = bonusFollowUps(actor, panel);
   const kept = panel._buttons.filter(b => !(b instanceof C.FollowUpButton));
   if (!fu.length) {
     panel._pcFuSeen = { actor: actor.uuid, keys: new Set() };
@@ -229,7 +242,7 @@ function composeSpecialBar(panel, actor) {
   const kept = panel._buttons.filter(b => !(b instanceof C.FollowUpButton) && !(b instanceof C.CommandButton));
   const fresh = [];
   if (setting("followUps")) {
-    for (const f of followUpsNow(actor, mainPanel("DND5E.BonusAction")).filter(x => x.free)) fresh.push(new C.FollowUpButton({ hudActor: actor, followUp: f }));
+    for (const f of freeFollowUps(actor)) fresh.push(new C.FollowUpButton({ hudActor: actor, followUp: f }));
   }
   if (setting("riderOffers")) {
     for (const r of core.ridersFor(featuresOf(actor))) {
@@ -263,7 +276,7 @@ function composeSpecialBar(panel, actor) {
   }
   const ctx = combatContext(actor);
   const turn = turnOf(actor);
-  const touched = turn.attackAction.swings || Object.keys(turn.riders).length || turn.followUps.length || turn.nick;
+  const touched = turnTouched(turn);
   if (!ctx.inCombat && touched) {
     fresh.push(new C.CommandButton({
       id: "pentaryn-combat-new-turn", name: _loc("PENTARYN_COMBAT.Hud.NewTurn"), img: "icons/svg/clockwork.svg",
@@ -282,9 +295,7 @@ const onPanelRendered = (panel, element, actor) => {
     const a = actor ?? panel.actor;
     if (!a) return;
     itemButtonClass(panel);
-    if (panel?.label === "DND5E.Action") composeActionBar(panel, a);
-    else if (panel?.label === "DND5E.BonusAction") composeBonusBar(panel, a);
-    else if (panel?.label === "DND5E.Special") composeSpecialBar(panel, a);
+    if (Object.hasOwn(BARS, panel?.label)) BARS[panel.label].compose(panel, a);
   } catch (err) {
     log.error("HUD composition failed", err);
   }
@@ -322,7 +333,7 @@ async function refillWeaponSlots(panel) {
   for (const s of slots) await s._onSetChange(data);
 }
 
-/** Re-render some bars of the HUD (debounced): a turn-flag write lands as several updates. */
+/** Re-render some bars of the HUD (batched): a turn-flag write lands as several updates. */
 function rerender(labels = ["DND5E.Action", "DND5E.BonusAction", "DND5E.Special"]) {
   queued = new Set([...(queued ?? []), ...labels]);
   setTimeout(() => {
@@ -369,7 +380,7 @@ const onActorUpdated = (actor, changes) => {
 function recheckSlots(actor) {
   try {
     const bonus = mainPanel("DND5E.BonusAction");
-    if (bonus && setting("followUps")) hideDuplicateSlots(bonus, followUpsNow(actor, bonus).filter(f => !f.free), actor);
+    if (bonus && setting("followUps")) hideDuplicateSlots(bonus, bonusFollowUps(actor, bonus), actor);
   } catch (err) { log.debug("off-hand slot re-check (the next render re-checks)", err); }
 }
 
@@ -408,7 +419,7 @@ const onItemButtonRendered = (button, element, actor) => {
     const bonus = mainPanel("DND5E.BonusAction");
     const a = actor ?? ui.ARGON?._actor;
     if (!bonus || !a || !bonus._buttons?.includes(button)) return;
-    hideDuplicateSlots(bonus, followUpsNow(a, bonus).filter(f => !f.free), a);
+    hideDuplicateSlots(bonus, bonusFollowUps(a, bonus), a);
   } catch (err) { log.debug("off-hand slot check", err); }   // never break Argon's render
 };
 

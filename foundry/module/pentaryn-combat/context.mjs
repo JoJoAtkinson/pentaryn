@@ -43,4 +43,5 @@ export function installFeature(feature) {
 function uninstall() {
   for (const f of installed.splice(0).reverse()) f.uninstall?.();
   reg.offAll();
+  ctx.contributions.length = 0; // a hot re-import contributes them again (combat.mjs)
 }

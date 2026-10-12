@@ -48,7 +48,7 @@
 /*
  * A BARREL since S4b (ties-35): the conduit lives in study/*.mjs, one concern per file —
  *
- *   study/shared.mjs     private plumbing: channel and action names, i18n/escape, the applying-GM test
+ *   study/shared.mjs     private plumbing: logger, socket action names, attack-line cap, situational bounds, esc
  *   study/claim.mjs      the two-GM-sessions claim protocol (facts and inspections)
  *   study/resolve.mjs    the fact seam (`resolveFact`), the ledger readers, the settings it reads
  *   study/compose.mjs    deriving the truth off the sheet: description, attacks, traits, the payload

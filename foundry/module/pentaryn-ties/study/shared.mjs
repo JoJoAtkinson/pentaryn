@@ -1,10 +1,10 @@
 /**
- * The conduit's private plumbing every study/ file reads: the socket channel and action names, the
- * situational-bonus range, the i18n and escape helpers, the applying-GM test and the never-throwing
- * flag read. NOT re-exported by the study.mjs barrel except SITUATIONAL_MIN/MAX, which it always
- * exported.
+ * The conduit's private plumbing the study/ files read: the one logger, the three socket action
+ * names (STUDY, INSPECT, BUBBLE), the attack-line cap (ATTACK_LINES_MAX), the situational-bonus
+ * bounds (SITUATIONAL_MIN/MAX) and their clamp (clampSituational), and an `esc` re-export. NOT re-exported by the study.mjs barrel
+ * except SITUATIONAL_MIN/MAX, which it always exported.
  *
- * Split out of study.mjs (S4b, ties-35); study.mjs re-exports this file's public names.
+ * Split out of study.mjs (S4b, ties-35).
  */
 
 import { MODULE } from "../ties-core.mjs";
@@ -23,5 +23,8 @@ export const ATTACK_LINES_MAX = 12;
 /** Situational bonus range. Wide enough for the indistinguishability run's ±100 forcing. */
 export const SITUATIONAL_MIN = -100;
 export const SITUATIONAL_MAX = 100;
+
+/** The situational bonus, rounded and clamped — one copy for the request and the handler. */
+export const clampSituational = v => Math.max(SITUATIONAL_MIN, Math.min(SITUATIONAL_MAX, Math.round(Number(v) || 0)));
 
 export { esc } from "../core/html.mjs";

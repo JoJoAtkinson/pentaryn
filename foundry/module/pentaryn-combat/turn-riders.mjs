@@ -198,6 +198,11 @@ function weaponDamageType(activity) {
   return null;
 }
 
+/** The actor|rider|turn once-key: one place builds it, so Undo clears exactly the key the auto guard set. */
+function riderOnce(actor, key, turnKey = combatContext(actor).key) {
+  return `${actor.uuid}|${key}|${turnKey}`;
+}
+
 /** actor|rider|turn keys with a rider roll in flight on this client (two quick clicks = one roll). */
 const inFlight = new Set();
 
@@ -217,7 +222,7 @@ export async function rollRider(message, key) {
     ui.notifications.info(_loc("PENTARYN_COMBAT.Rider.Stale"));
     return null;
   }
-  const once = `${actor.uuid}|${key}|${turnKey}`;
+  const once = riderOnce(actor, key, turnKey);
   if (inFlight.has(once) || turnOf(actor).riders[key]) {
     ui.notifications.info(_loc("PENTARYN_COMBAT.Rider.Used", { name: _loc(core.keyFor("Rider.Name", key)) }));
     return null;
@@ -299,7 +304,7 @@ export function autoRiders(config, message) {
       trace("auto rider", { rider: o.rider.key, applied: false, why: !o.auto ? "not eligible" : o.state ? `already ${o.state}` : !o.dice ? "no dice" : "ask mode" });
       continue;
     }
-    const once = `${actor.uuid}|${o.rider.key}|${combatContext(actor).key}`;
+    const once = riderOnce(actor, o.rider.key);
     if (Date.now() - (autoApplied.get(once) ?? 0) < AUTO_GUARD_MS) { trace("auto rider", { rider: o.rider.key, applied: false, why: "4 s guard" }); continue; }
     autoApplied.set(once, Date.now());
     trace("auto rider", { rider: o.rider.key, applied: true, dice: o.dice, attack: attackMsg.id });
@@ -355,7 +360,7 @@ function renderAutoNote(message, html) {
       ui.notifications.info(_loc("PENTARYN_COMBAT.Rider.Stale"));
       return;
     }
-    autoApplied.delete(`${actor.uuid}|${key}|${combatContext(actor).key}`);
+    autoApplied.delete(riderOnce(actor, key));
     await updateTurn(actor, t => (t.riders?.[key] === `auto:${entry.attack}` ? core.setRider(t, key, null) : t));
     // Mark the card (its author or the GM can write it): the note re-renders struck through.
     if (message.isOwner) {

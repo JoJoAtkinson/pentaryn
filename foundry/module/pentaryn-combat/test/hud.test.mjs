@@ -1,4 +1,4 @@
-// hud.mjs, the Argon bars (guide S6b: hud/{bars,buttons,pips,picker,tooltips}.mjs + argon.mjs).
+// hud.mjs, the Argon bars (guide S6b: hud/{bars,buttons-ui,pips-bar,picker,tooltips}.mjs + argon.mjs).
 // A fake Argon HUD (fixtures/argon.mjs) is rendered through every renderActionPanelArgonComponent
 // listener in registration order (turnflow's, hud's bars, hud's pips), as Argon fires them, and the
 // resulting bars are pinned (golden/argon-bars.json), with the tooltips, the pips, the clicks, the
@@ -267,6 +267,14 @@ test("Full Attack's targets/ranges: Argon's picker opens only when nothing is ta
   fig.flags[MODULE] = { last: { weapon: "shortbow00000001" } };
   assert.deepEqual(fa.ranges, { normal: 80, long: 320 });
   reset(fig);
+});
+
+test("PickerProbe.ranges: range, reach, then 5", async () => {
+  const { argonClasses } = await import("../hud/buttons-ui.mjs");
+  const { PickerProbe } = argonClasses();
+  assert.deepEqual(new PickerProbe({ activity: { range: { value: 80, long: 320 } } }).ranges, { normal: 80, long: 320 });
+  assert.deepEqual(new PickerProbe({ activity: { item: { system: { range: { reach: 10 } } } } }).ranges, { normal: 10, long: null });
+  assert.deepEqual(new PickerProbe({ activity: {} }).ranges, { normal: 5, long: null });
 });
 
 test("follow-up and command clicks (golden/argon-clicks.json)", async () => {

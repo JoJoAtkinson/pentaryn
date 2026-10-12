@@ -32,16 +32,39 @@ function lightUpdate(doc, light) {
   return itemLightUpdate(doc, light, { flatten: foundry.utils.flattenObject, clone: foundry.utils.deepClone, del: globalThis._del ?? null });
 }
 
-/** The actor's tokens, scene by scene: from `index` (tokensByActor) when given, else a scan. */
+/** The actor's tokens, scene by scene, lazily: a scene is read after the previous write. */
 function* scanTokens(actor) {
-  // lazily, scene by scene, as the loop it replaces did: a scene is read after the previous write
   for (const scene of game.scenes) yield { scene, tokens: scene.tokens.filter(t => t.actorId === actor.id) };
 }
 
+/** The actor's tokens, scene by scene: from `index` (tokensByActor) when given, else a scan. */
 function tokensOf(actor, index) {
   if (!index) return scanTokens(actor);
-  // a token deleted since the index was built is skipped (syncAll awaits between actors)
+  // an index built before this call may hold tokens since deleted; syncAll's write phase does not re-check
   return (index.get(actor.id) ?? []).map(({ scene, tokens }) => ({ scene, tokens: tokens.filter(t => scene.tokens.get(t.id) === t) }));
+}
+
+/**
+ * The prototype's update, its keys prefixed `prototypeToken.`, or null when converged. An unlinked
+ * token's synthetic actor has no prototype of its own (its ActorDelta has no prototypeToken): null.
+ */
+function protoUpdate(actor, light) {
+  const p = actor.isToken ? null : lightUpdate(actor.prototypeToken, light);
+  if (!p) return null;
+  const u = {};
+  for (const [k, v] of Object.entries(p)) u[`prototypeToken.${k}`] = v;
+  return u;
+}
+
+/** One scene's token updates, `[{_id, …}]`: a linked token takes `light`, an unlinked one its own items'. */
+function tokenUpdates(tokens, actor, light) {
+  const updates = [];
+  for (const t of tokens) {
+    if (actor.isToken && t.actorLink) continue;   // the base actor's linked token is not the synthetic's
+    const u = lightUpdate(t, t.actorLink ? light : carriedLight(t.actor ?? actor));
+    if (u) updates.push({ _id: t.id, ...u });
+  }
+  return updates;
 }
 
 /**
@@ -50,19 +73,10 @@ function tokensOf(actor, index) {
  */
 function planLight(actor, index) {
   const light = carriedLight(actor);
-  const p = actor.isToken ? null : lightUpdate(actor.prototypeToken, light);
-  let proto = null;
-  if (p) {
-    proto = {};
-    for (const [k, v] of Object.entries(p)) proto[`prototypeToken.${k}`] = v;
-  }
+  const proto = protoUpdate(actor, light);
   const scenes = [];
   for (const { scene, tokens } of tokensOf(actor, index)) {
-    const updates = [];
-    for (const t of tokens) {
-      const u = lightUpdate(t, t.actorLink ? light : carriedLight(t.actor ?? actor));
-      if (u) updates.push({ _id: t.id, ...u });
-    }
+    const updates = tokenUpdates(tokens, actor, light);
     if (updates.length) scenes.push({ scene, updates });
   }
   return { proto, scenes };
@@ -71,26 +85,19 @@ function planLight(actor, index) {
 /**
  * Bring the actor's prototype and every token of it (on every scene) in line. → documents written.
  * `opts.index`: a tokensByActor(game.scenes) map, so a whole-world sync walks the scenes once.
+ * A synthetic actor (an unlinked token's) has no prototype: only its own tokens are synced.
  */
 async function syncLight(actor, { index = null } = {}) {
   if (!actor || actor.pack) return 0;
   let count = 0;
   const light = carriedLight(actor);
-  // An unlinked token's synthetic actor has no prototype of its own (its ActorDelta has no
-  // prototypeToken): only its tokens are synced, each from its own items.
-  const proto = actor.isToken ? null : lightUpdate(actor.prototypeToken, light);
+  const proto = protoUpdate(actor, light);
   if (proto) {
-    const u = {};
-    for (const [k, v] of Object.entries(proto)) u[`prototypeToken.${k}`] = v;
-    await actor.update(u);
+    await actor.update(proto);
     count++;
   }
   for (const { scene, tokens } of tokensOf(actor, index)) {
-    const updates = [];
-    for (const t of tokens) {
-      const u = lightUpdate(t, t.actorLink ? light : carriedLight(t.actor ?? actor));
-      if (u) updates.push({ _id: t.id, ...u });
-    }
+    const updates = tokenUpdates(tokens, actor, light);
     if (updates.length) {
       await scene.updateEmbeddedDocuments("Token", updates);
       count += updates.length;
