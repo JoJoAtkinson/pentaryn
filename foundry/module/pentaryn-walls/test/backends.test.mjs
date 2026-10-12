@@ -136,3 +136,12 @@ test("walls-rob-2: compare() reports js throwing as a diff instead of a TypeErro
     on = false;
   }
 });
+
+test("walls-edge-6: an empty scene reports the same result on wasm as on js (0 passes, not 1)", async () => {
+  await core.wasmReady;
+  const js = core.get("js").run([], { runId: "edge6" });
+  const wasm = core.get("wasm").run([], { runId: "edge6" });
+  assert.equal(js.report.iterations, 0);
+  assert.deepEqual(wasm, js);
+  assert.equal(core.compare([], { runId: "edge6" }).identical, true);
+});

@@ -88,6 +88,9 @@ export const accepts = (walls, opts = {}) => !usesLevels(walls) && !overridesAbi
 
 export function runWasm(walls, opts = {}) {
   if (!accepts(walls, opts)) return runEngine(walls, opts);   // a direct caller; the glue never gets here
+  // lib.rs counts its one empty pass where js counts none; with no walls the results are otherwise
+  // identical by construction, so js answers and the card and compare() agree (walls-edge-6).
+  if (walls.length === 0) return runEngine(walls, opts);
   if (!mod) throw new Error(`wasm backend not loaded${loadError ? `: ${loadError.message}` : ""}`);
   const cfg = resolveConfig(opts);
   const runId = runKey(opts.runId);

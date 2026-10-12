@@ -6,6 +6,10 @@
 (`flagScope` stays `wall-autocomplete`), `languages`, `minimum: "14"`, `verified: "14.369"` and the
 description fix; the flag-scope migration is **parked** while walls stays off (Joe).
 
+- **[declared] An empty scene reports 0 passes on wasm too** (`walls-edge-6`): with no walls the
+  compiled engine counted one pass where js counts none, so the card said "1 pass" and `compare()`
+  reported a difference. `runWasm` now hands a wall-less scene to the js engine, whose result is
+  otherwise identical. `lib.rs` is unchanged.
 - **[declared] Undo ranks run ids by time, not string** (`walls-edge-5`): `planUndo` picked the
   latest run by string sort, so a non-ISO run id (a short id from a test or the bridge) sorted after
   every timestamp and stayed "latest" forever. ISO-stamped ids now rank by their time and always
