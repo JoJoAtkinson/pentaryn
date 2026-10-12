@@ -291,14 +291,17 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
     this.#timer = setTimeout(() => this.#save(), AUTOSAVE_MS);
   }
 
-  /** Save `text` (default: the textarea) onto the token, skipped when unchanged. Serialised. */
+  /**
+   * Save `text` (default: the textarea) onto the token, skipped when unchanged. Serialised.
+   * Resolves true, or false when the update was rejected (#saved is then left as it was).
+   */
   #save(text) {
     const wanted = text ?? this.#currentText();
     this.#saving = this.#saving.then(async () => {
       const tok = this.token;
-      if (!tok || this.#deleted) return;
+      if (!tok || this.#deleted) return true;
       const norm = normalisePrompt(wanted);
-      if (norm === this.#saved) return;
+      if (norm === this.#saved) return true;
       const size = markerSizeOfToken(tok);
       await tok.update({
         [`flags.${MODULE}.prompt`]: norm,
@@ -307,9 +310,11 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
         "texture.tint": norm ? FULL_TINT : EMPTY_TINT
       });
       this.#saved = norm;
+      return true;
     }).catch(err => {
       log.error("saving the prompt failed", err);
       ui.notifications?.error(_loc("PENTARYN_PROMPTS.dialog.saveFailed"));
+      return false;
     });
     return this.#saving;
   }
@@ -318,9 +323,10 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
   async #finish(text) {
     clearTimeout(this.#timer);
     if (this.#deleted) return;
-    await this.#save(this.#discard ? this.#opened : text);
+    const ok = await this.#save(this.#discard ? this.#opened : text);
     const tok = this.token;
-    if (tok && this.#fresh && !this.#saved && setting("deleteEmptyOnClose", true)) {
+    // never delete a marker whose words did not save: it stays (tinted empty) with the error toast
+    if (ok && tok && this.#fresh && !this.#saved && setting("deleteEmptyOnClose", true)) {
       this.#deleted = true;
       await tok.delete();
       ui.notifications?.info(_loc("PENTARYN_PROMPTS.dialog.removedEmpty"));
@@ -368,7 +374,7 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
     const size = target?.dataset?.size;
     const tok = this.token;
     if (!tok || !SIZE_BY_KEY[size] || size === markerSizeOfToken(tok)) return;
-    await this.#save();
+    if (!(await this.#save())) return;   // a failed save: no swap, so stale text is never carried
     const actor = markerActor(size);
     if (!actor) { ui.notifications?.warn(_loc("PENTARYN_PROMPTS.dialog.noActor", { size })); return; }
     const scene = tok.parent;
