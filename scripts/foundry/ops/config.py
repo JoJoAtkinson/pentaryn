@@ -258,7 +258,8 @@ MODULES = {
     ),
     "senses": ModuleSpec(
         "pentaryn-senses",
-        # node-test: chain-core.mjs (the token chain's flag reading and line geometry) is pure.
+        # node-test: test/run.mjs runs every suite; the pure code is core/*.mjs behind the
+        # senses-core.mjs barrel (chain flags and line geometry, the Light rules, the glow, migrate).
         check=(*_STATIC, "node-test", *_BLUEPRINT),
         after_sync=(
             "First install: restart Foundry (module.json is read at startup), then reload.",
