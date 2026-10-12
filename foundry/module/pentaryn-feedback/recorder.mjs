@@ -224,7 +224,7 @@ export function install(reg, ctx) {
     const row = appRow("render", app);
     if (!row) return;
     const t = now();
-    const key = row.id ?? row.cls;
+    const key = row.id || row.cls;                 // clip() turns a null id into "", so || not ??
     if (t - (lastRender.get(key) ?? -Infinity) < LIMITS.renderThrottleMs) return;
     lastRender.set(key, t);
     push(row);
@@ -232,7 +232,7 @@ export function install(reg, ctx) {
   const onClose = app => {
     const row = appRow("close", app);
     if (!row) return;
-    lastRender.delete(row.id ?? row.cls);
+    lastRender.delete(row.id || row.cls);
     push(row);
   };
   // AppV2 fires render<Class> once per class in the chain: the base name catches every window once

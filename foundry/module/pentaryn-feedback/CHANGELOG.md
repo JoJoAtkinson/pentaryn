@@ -2,6 +2,11 @@
 
 ## Unreleased — 2026-10-12 (W3L live-check fix; `module.json` stays 0.1.2, code-only sync)
 
+- **[declared] Windows without an id are throttled per class** (feedback-EC-5 + perf-4): the
+  render throttle keyed on `row.id ?? row.cls`, but `clip()` had already turned a null id into
+  `""`, so every id-less window shared one empty key and a second id-less window opened inside
+  2 s was dropped from the action log. Both the throttle and the close now key on
+  `row.id || row.cls`.
 - **[declared] "What gets attached" lists every section a report carries** (feedback-EXT-7): the
   fold-out left out the world/system/Foundry versions, the selected and targeted tokens, the combat
   round/turn and the browser details. Rows now come from `ATTACH_ROWS` in `dialog.mjs`, one per

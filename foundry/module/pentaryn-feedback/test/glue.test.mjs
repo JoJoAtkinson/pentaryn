@@ -300,6 +300,27 @@ test("recorder: windows — render throttled per id for 2 s, close recorded, noi
   ]);
 });
 
+test("feedback-EC-5: a window with a null id throttles on its class name, not a shared empty key", () => {
+  mock.timers.tick(LIMITS.renderThrottleMs);
+  const n = clearRings();
+  class IdlessPanelA {}
+  class IdlessPanelB {}
+  const a = Object.assign(new IdlessPanelA(), { id: null, title: "A" });
+  const b = Object.assign(new IdlessPanelB(), { id: null, title: "B" });
+  F.fire("renderApplicationV2", a);
+  F.fire("renderApplicationV2", b);                     // another class: its own key, recorded
+  F.fire("renderApplicationV2", a);                     // same class inside 2 s: throttled
+  F.fire("closeApplicationV2", a);
+  F.fire("renderApplicationV2", a);                     // close cleared the class key: recorded
+  const got = actionsOf().slice(n).map(({ t, ...rest }) => rest);
+  assert.deepEqual(got, [
+    { kind: "app", op: "render", cls: "IdlessPanelA", id: "", title: "A" },
+    { kind: "app", op: "render", cls: "IdlessPanelB", id: "", title: "B" },
+    { kind: "app", op: "close", cls: "IdlessPanelA", id: "", title: "A" },
+    { kind: "app", op: "render", cls: "IdlessPanelA", id: "", title: "A" },
+  ]);
+});
+
 test("recorder: the user's own document changes (keys only), never another user's", async () => {
   const n = clearRings();
   const caven = game.actors.get(IDS.caven);
