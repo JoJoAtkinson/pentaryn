@@ -205,6 +205,7 @@
     "turnflow/boundaries.mjs": [
       "argon.mjs",
       "combat-core.mjs",
+      "lib/election.mjs",
       "lib/log.mjs",
       "settings.mjs"
     ],
@@ -290,6 +291,7 @@
     "lib/hooks.mjs",
     "turnflow/death.mjs",
     "turnflow/boundaries.mjs",
+    "lib/election.mjs",
     "turnflow/action-buttons.mjs",
     "patches.mjs",
     "hud/tooltips.mjs",
@@ -303,7 +305,6 @@
     "roll-dock.mjs",
     "offhand.mjs",
     "lib/publish.mjs",
-    "lib/election.mjs",
     "counting.mjs",
     "api.mjs",
     "lib/resolve.mjs",

@@ -1,8 +1,8 @@
 /**
  * Turn and combat boundaries (feature; settings specialActions, recklessToggle, hudFollows,
- * clearTargetsAfterTurn, drawerNearButton). At a turn change the active GM ends Dodge / Dash /
- * Disengage / Reckless and gives the Reaction back; the drawers of the creatures whose turn ended or
- * began close; a player's stale targets are released and the HUD follows their combatant. A combat
+ * clearTargetsAfterTurn, drawerNearButton). At a turn change the active GM (one tab: a claim on the
+ * Combat) ends Dodge / Dash / Disengage / Reckless and gives the Reaction back; the drawers of the
+ * creatures whose turn ended or began close; a player's stale targets are released and the HUD follows their combatant. A combat
  * deleted mid-turn has its turn and Reaction flags cleared (and orphans swept on load and once,
  * 1.5 s after the last of a burst of deletes). Clicking one token of a selected group binds the HUD
  * to the one left.
@@ -16,6 +16,7 @@ import { MODULE } from "../combat-core.mjs";
 import { makeLog } from "../lib/log.mjs";
 import { setting, argonSetting } from "../settings.mjs";
 import { releaseTargets, closeDrawersOf } from "../argon.mjs";
+import { claimDocument } from "../lib/election.mjs";
 
 const log = makeLog(MODULE);
 
@@ -28,7 +29,23 @@ async function sweep(actor, event) {
     id: e.id, statuses: [...(e.statuses ?? [])], until: e.getFlag?.(MODULE, "until") ?? null,
     reckless: !!e.getFlag?.(MODULE, "reckless") || core.isRecklessEffect(e)
   })), event, on);
-  if (ids.length) await actor.deleteEmbeddedDocuments("ActiveEffect", ids);
+  await deleteEffects(actor, ids);
+}
+
+/**
+ * ac-4 [declared]: a delete another GM tab already made is success. The ids are filtered against
+ * the actor's effects at call time, and the server's "does not exist" (the other tab's delete
+ * landed between our read and our request) is logged at debug, never warned.
+ */
+async function deleteEffects(actor, ids) {
+  const live = ids.filter(id => actor.effects.has(id));
+  if (!live.length) return;
+  try {
+    await actor.deleteEmbeddedDocuments("ActiveEffect", live);
+  } catch (err) {
+    if (!/does not exist/i.test(String(err?.message ?? err))) throw err;
+    log.debug("effect already deleted", err);
+  }
 }
 
 function argonOn() {
@@ -42,12 +59,7 @@ const onTurnChange = (combat, previous, current) => {
   if (!ended && !began) return;
   const prior = ended ? combat.combatants.get(ended) ?? null : null;
   const next = began ? combat.combatants.get(began) ?? null : null;
-  if (game.users.activeGM?.isSelf) {
-    sweep(prior?.actor, "turnEnd").catch(err => log.warn("turn-end sweep", err));
-    sweep(next?.actor, "turnStart").catch(err => log.warn("turn-start sweep", err));
-    // The Reaction comes back at the start of your turn (counting.mjs records it; hud/bars.mjs onActorUpdated relights the pip).
-    if (next?.actor?.getFlag?.(MODULE, "reaction")) next.actor.setFlag(MODULE, "reaction", null).catch(err => { log.debug("Reaction reset", err); return null; });
-  }
+  if (game.users.activeGM?.isSelf) gmBoundary(combat, current, prior, next).catch(err => log.debug("turn boundary claim", err));
   closeDrawersOf([prior?.actor, next?.actor], { enabled: setting("drawerNearButton") });
   if (game.user.isGM) return;
   // Your turn ended: last turn's target is stale (it used to send the next swing at a creature 15 ft away).
@@ -67,6 +79,20 @@ const onTurnChange = (combat, previous, current) => {
     if (combat.combatant?.id === next.id && argonOn() && ui.ARGON?._token !== token && !token.destroyed) followTo(token);
   }, ms);
 };
+
+/**
+ * ac-4 [declared]: every tab on the GM account is activeGM.isSelf (the MCP bridge tab plus a GM
+ * browser tab), so both used to sweep and reset the Reaction. One tab claims the turn on the
+ * Combat's flags (`claims.t<round>_<turn>`, gone with the combat) and does the work; the other
+ * stands down silently. The claim settles in 750 ms, so the sweep lands that much after the turn.
+ */
+async function gmBoundary(combat, current, prior, next) {
+  if (!(await claimDocument(combat, `t${current?.round}_${current?.turn}`, { scope: MODULE }))) return;
+  sweep(prior?.actor, "turnEnd").catch(err => log.warn("turn-end sweep", err));
+  sweep(next?.actor, "turnStart").catch(err => log.warn("turn-start sweep", err));
+  // The Reaction comes back at the start of your turn (counting.mjs records it; hud/bars.mjs onActorUpdated relights the pip).
+  if (next?.actor?.getFlag?.(MODULE, "reaction")) next.actor.setFlag(MODULE, "reaction", null).catch(err => { log.debug("Reaction reset", err); return null; });
+}
 
 /**
  * Show this token on the HUD. Selecting it is the normal way (Argon follows the selection). When it

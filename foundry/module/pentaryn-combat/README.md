@@ -138,6 +138,7 @@ CONFIG.debug["pentaryn-combat"] = true; game.pentaryn.combat.trace();   // why a
 | actor | `flags.pentaryn-combat.turn` | each swing / rider / follow-up / Action Surge — `{key: "combat:round:combatantId", …}` — the combat is the started one the actor is in, not merely the one this client views (U-4-0) — `{attackAction, riders, followUps, nick, bonusUsed, otherActions, surges}`; self-invalidating (another turn's key reads as fresh). Always written whole (v14 `_replace`): a plain `setFlag` merges nested objects and carried last turn's used Sneak Attack into every later turn. Removed by the active GM when its combat is deleted (0.2.1; the out-of-combat `nocombat` turn stays) |
 | actor | `flags.pentaryn-combat.reaction` | `{combatId}` when a Reaction is taken in combat; set to null at the actor's turn start, removed when that combat is deleted (0.2.1) |
 | actor | (sweep) | the active GM removes every world actor's `turn` / `reaction` flag whose combat no longer exists, on load and once 1.5 s after the last of a burst of combat deletes, never two sweeps at a time (perf-4; 0.2.2; a combat deleted with no GM online, or before 0.2.1, left them for good) |
+| combat | `flags.pentaryn-combat.claims.t<round>_<turn>` | the claiming GM tab's socket id at each turn change (ac-4: one GM tab sweeps); gone with the combat |
 | actor | `flags.pentaryn-combat.last.weapon` | after a Full Attack / weapon pick |
 | actor (character) | `flags.enhancedcombathud.weaponSets` | once, only if never written (`seedWeaponSets`) |
 | item | `flags.dnd5e.last.<activity>.attackMode` | reset to main-hand after an off-hand roll |
@@ -187,8 +188,8 @@ and foreign flag has a row in `foundry/adjustments.yml` (`combat-*` patch rows; 
 
 The turn flag is written by the actor's owner (`updateTurn`, serialised per actor on one client).
 The active GM alone sweeps effects at a turn boundary, gives the Reaction back, clears a deleted
-combat's flags (one write per actor), sweeps orphans at load and seeds weapon sets. Two GM tabs both
-run those sweeps; each write is idempotent (a delete of a key already gone does nothing).
+combat's flags (one write per actor), sweeps orphans at load and seeds weapon sets. Of two GM tabs, one claims each turn on the Combat (`claimDocument`) and sweeps; the other stands down (ac-4).
+A deleted combat's cleanup runs in both, idempotently: an effect already gone is skipped or its "does not exist" is success (debug); a gone flag key is a no-op.
 
 ## Extending
 

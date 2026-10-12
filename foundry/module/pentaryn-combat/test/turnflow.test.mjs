@@ -289,6 +289,8 @@ test("turn boundaries on the GM: sweeps at turn end / start, the Reaction back, 
   F.calls.length = 0;
   F.Hooks.callAll("combatTurnChange", combat, { round: 1, turn: 0, combatantId: "cb1" }, { round: 1, turn: 1, combatantId: "cb2" });
   await drain();
+  mock.timers.tick(750);   // ac-4: the turn's claim on the Combat settles first
+  await drain();
   const calls = F.calls.splice(0).filter(c => !["Hooks.call", "Hooks.callAll"].includes(c.op) || c.name.startsWith("pentaryn"));
   const state = {
     fig: { effects: fig.effects.contents.map(e => e.name) },
@@ -369,6 +371,78 @@ test("a deleted combat: its combatants' effects swept and their combat flags cle
   fig.unsetFlag = unset;
   pinJSON("turnflow-delete-combat-console", lines.splice(0), import.meta.url);
   reset(fig, rog, brb);
+  F.calls.length = 0;
+});
+
+test("ac-4: two GM tabs at one turn change: one claims the turn on the Combat and sweeps, the other stands down", async () => {
+  reset(fig, rog);
+  const c5 = makeCombat({ id: "c5", viewed: false, entries: [fig, rog].map((a, i) => ({ id: `cb${i + 1}`, actor: a, token: toks[a.id] })) });
+  const arm = async () => {
+    reset(fig, rog);
+    await fig.createEmbeddedDocuments("ActiveEffect", [{ name: "Dash", flags: { [MODULE]: { until: "turnEnd" } } }]);
+    await rog.createEmbeddedDocuments("ActiveEffect", [{ name: "Dodging", statuses: ["dodging"] }]);
+    rog.flags[MODULE] = { reaction: { combatId: "c5" } };
+    F.calls.length = 0;
+  };
+  const writes = () => F.calls.filter(c => c.op === "deleteEmbedded" || (c.op === "update" && c.documentName === "Actor"));
+  // the other tab (same GM user, another socket) claimed this turn first: this tab does nothing
+  await arm();
+  c5.flags[MODULE] = { claims: { t2_1: "socket-gm-2" } };
+  F.Hooks.callAll("combatTurnChange", c5, { round: 2, turn: 0, combatantId: "cb1" }, { round: 2, turn: 1, combatantId: "cb2" });
+  await drain();
+  mock.timers.tick(750);
+  await drain();
+  assert.deepEqual(writes(), [], "claimed by the other tab: no sweep, no Reaction reset here");
+  assert.deepEqual([fig.effects.size, rog.effects.size], [1, 1]);
+  // both tabs race: this one stamps its claim, the other's stamp lands after (last writer wins)
+  await arm();
+  F.Hooks.callAll("combatTurnChange", c5, { round: 3, turn: 0, combatantId: "cb1" }, { round: 3, turn: 1, combatantId: "cb2" });
+  await drain();
+  assert.equal(c5.flags[MODULE].claims.t3_1, "socket-gm-1", "this tab stamped its socket id on the Combat");
+  c5.flags[MODULE].claims.t3_1 = "socket-gm-2";
+  mock.timers.tick(750);
+  await drain();
+  assert.deepEqual(writes(), [], "the other tab's later stamp wins: this tab stands down silently");
+  // this tab's claim stands: it sweeps and gives the Reaction back
+  await arm();
+  F.Hooks.callAll("combatTurnChange", c5, { round: 4, turn: 0, combatantId: "cb1" }, { round: 4, turn: 1, combatantId: "cb2" });
+  await drain();
+  assert.deepEqual(writes(), [], "nothing before the claim settles");
+  mock.timers.tick(750);
+  await drain();
+  assert.deepEqual([fig.effects.size, rog.effects.size, rog.flags[MODULE].reaction], [0, 0, null], "the winning tab sweeps and resets the Reaction");
+  F.game.combats.delete(c5.id);
+  reset(fig, rog);
+  F.calls.length = 0;
+});
+
+test("ac-4: a deleted combat cleaned up by two GM tabs: an effect the other tab already deleted is success, flags still cleared", async () => {
+  reset(fig);
+  fig.flags[MODULE] = { turn: { key: "c8:1:cb1" }, reaction: { combatId: "c8" } };
+  await fig.createEmbeddedDocuments("ActiveEffect", [{ name: "Dash", flags: { [MODULE]: { until: "turnEnd" } } }]);
+  const gone = fig.effects.contents[0].id;
+  const del = fig.deleteEmbeddedDocuments;
+  // the other tab's delete landed between this tab's read and its request: the server refuses ours
+  fig.deleteEmbeddedDocuments = async () => { fig.effects.delete(gone); throw new Error(`ActiveEffect "${gone}" does not exist!`); };
+  lines.length = 0;
+  F.Hooks.callAll("deleteCombat", { id: "c8", combatants: [{ actor: fig }] });
+  await drain();
+  fig.deleteEmbeddedDocuments = del;
+  assert.deepEqual(lines.filter(l => l.level === "warn"), [], "no end-of-combat cleanup warn");
+  assert.deepEqual(fig.flags[MODULE], {}, "the combat's turn and Reaction flags still cleared");
+  // an effect already gone from this tab's copy is not asked for at all
+  await fig.createEmbeddedDocuments("ActiveEffect", [{ name: "Dash", flags: { [MODULE]: { until: "turnEnd" } } }]);
+  const stale = fig.effects.contents[0];
+  const map = fig.effects.map.bind(fig.effects);
+  fig.effects.map = fn => { const out = map(fn); fig.effects.delete(stale.id); return out; };
+  F.calls.length = 0;
+  F.Hooks.callAll("deleteCombat", { id: "c8", combatants: [{ actor: fig }] });
+  await drain();
+  delete fig.effects.map;
+  assert.deepEqual(F.calls.filter(c => c.op === "deleteEmbedded"), [], "nothing to delete: no request");
+  mock.timers.tick(1500);
+  await drain();
+  reset(fig);
   F.calls.length = 0;
 });
 
