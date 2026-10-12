@@ -57,6 +57,11 @@ export function patchSize(patch) {
   return k;
 }
 
+/** The token disposition value a patch word names, or undefined. */
+function dispositionValue(word) {
+  return globalThis.CONST?.TOKEN_DISPOSITIONS?.[String(word).toUpperCase()];
+}
+
 /**
  * Throw BAD_SPEC on anything a dry run can catch (unknown keys, bad items, bad words).
  * → `{notes, defaults}`: what the patch will add, and what it decided for the caller (attunement).
@@ -68,6 +73,9 @@ export async function checkPatch(patch) {
   const extra = Object.keys(patch).filter(k => !known.includes(k));
   if (extra.length) throw codedError("BAD_SPEC", `patch: unknown key(s) ${extra.join(", ")} (known: ${known.join(", ")})`);
   patchSize(patch);
+  if (patch.disposition && globalThis.CONST?.TOKEN_DISPOSITIONS && dispositionValue(patch.disposition) === undefined) {
+    throw codedError("BAD_SPEC", "patch.disposition: hostile|neutral|friendly|secret");
+  }
   const notes = [];
   const defaults = [];
   if (patch.creatureType !== undefined) {

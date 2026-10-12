@@ -65,7 +65,8 @@ test("checkPatch refusals", async () => {
     [{ traits: [{ name: "T", activation: "free" }] }, "BAD_SPEC: patch.traits[T].activation: passive|action|bonus|reaction|special|minute|hour"],
     [{ traits: [{ name: "T", recharge: 7 }] }, "BAD_SPEC: patch.traits[T].recharge: 2-6 (5 means \"Recharge 5-6\")"],
     [{ recharge: { Breath: 1 } }, "BAD_SPEC: patch.recharge[\"Breath\"]: 2-6"],
-    [{ size: "big" }, "BAD_SPEC: patch.size must be tiny|small|medium|large|huge|gargantuan, got big"]
+    [{ size: "big" }, "BAD_SPEC: patch.size must be tiny|small|medium|large|huge|gargantuan, got big"],
+    [{ disposition: "angry" }, "BAD_SPEC: patch.disposition: hostile|neutral|friendly|secret"]
   ];
   for (const [patch, msg] of cases) await assert.rejects(P.checkPatch(patch), { code: "BAD_SPEC", message: msg }, JSON.stringify(patch));
   // no creature-type table configured: any word passes the type check
@@ -73,6 +74,12 @@ test("checkPatch refusals", async () => {
   delete F.CONFIG.DND5E.creatureTypes;
   assert.deepEqual((await P.checkPatch({ creatureType: "dragon" })).notes, ["a changed type clears the inherited languages (pass patch.languages to keep some)"]);
   F.CONFIG.DND5E.creatureTypes = saved;
+});
+
+test("checkPatch accepts every disposition word", async () => {
+  for (const disposition of ["hostile", "neutral", "friendly", "SECRET"]) {
+    assert.deepEqual(await P.checkPatch({ disposition }), { notes: [], defaults: [] }, disposition);
+  }
 });
 
 /** A world actor this run owns, logging its writes. */
