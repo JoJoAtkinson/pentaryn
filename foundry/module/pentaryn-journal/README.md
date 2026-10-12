@@ -46,11 +46,13 @@ Published at `ready` on `game.modules.get("pentaryn-journal").api` and `game.pen
 (frozen). `describe()` lists every method with its params and return shape.
 
 - For anyone (these answer as the **calling** user):
-  - `personal(user?)` → the user's journal, or `null`.
+  - `personal(userRef?)` → that user's journal, or `null`. `userRef` here, in `shouldShowBar` and in
+    `ensure` is a User, an id or an exact name (never a substring); one that matches nobody throws
+    `NOT_FOUND`, two throw `AMBIGUOUS`. Left out, it is the calling user.
   - `add(entry | page | item)` → what the button does: `{journal, pageIds, created, updated}`, or `null`
     when there is no bar for that document, no journal, nothing visible, or it is too large.
   - `status(doc)` → `none` / `partial` / `saved` / `changed`, or `null` when there is no bar for it.
-  - `open(pageId?)` opens the user's journal; `shouldShowBar(entry, user?)` says whether that user gets the bar.
+  - `open(pageId?)` opens the user's journal; `shouldShowBar(entry, userRef?)` says whether that user gets the bar.
   - `report()` (not gated; it returns ids, names and counts only) →
     `{folder, users: [{user, userId, isGM, journalId, pages, duplicates}], atRoot}`.
   - `core` holds the pure helpers published before the migration (`sanitize`, `planSave`, `status`, …).
@@ -62,7 +64,8 @@ Published at `ready` on `game.modules.get("pentaryn-journal").api` and `game.pen
   - `statusFor(doc, {as: userRef})` → `status()` for that user, without the bar's visibility rule.
   - `lastReason()` → why this client's last `add()`/`status()` was `null`:
     `no-target` / `no-journal` / `nothing-visible` / `too-large`.
-- GM writes: `ensure(user)` creates that player's journal (rejects `GM only` on a player client);
+- GM writes: `ensure(userRef)` creates that player's journal (rejects `GM only` on a player client,
+  `NOT_FOUND`/`AMBIGUOUS` for a bad ref);
   `ensureAll()` creates every player's journal and moves strays into the folder (`null` for a player).
 - Kit members: `describe()`, `settings()`, `trace()`, `selftest()`, `uninstall()`, `version`, `contract`.
 

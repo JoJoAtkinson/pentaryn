@@ -35,10 +35,16 @@ function inspectedUser(ref) {
   return game.users.find(u => !u.isGM && ids.has(u.character?.id)) ?? null;
 }
 
+/**
+ * The user param of the legacy User-taking rows (journal-rob-3): a User, an id or an exact name, resolved
+ * as statusFor's `as` is — NOT_FOUND / AMBIGUOUS for a bad string. Nothing given means the caller.
+ */
+const userOrCaller = ref => (ref === undefined || ref === null ? game.user : resolveRef(ref, "user"));
+
 function impl(ctx) {
   const x = ctx.exposed;
   return {
-    personal: (user = game.user) => x.personal(user),
+    personal: user => x.personal(userOrCaller(user)),
     async add(doc) {
       const target = targetOf(doc);
       if (!target) { lastReason = "no-target"; return null; }
@@ -60,8 +66,14 @@ function impl(ctx) {
       if (!j) return null;
       return x.openSaved(j, pageId ?? j.pages.contents.at(-1)?.id);
     },
-    shouldShowBar: (entry, user = game.user) => barFor(entry, user, gmOpts()),
-    ensure: user => x.ensureFor(user),
+    shouldShowBar: (entry, user) => barFor(entry, userOrCaller(user), gmOpts()),
+    ensure(user) {
+      let found = user;
+      if (user !== undefined && user !== null) {
+        try { found = resolveRef(user, "user"); } catch (err) { return Promise.reject(err); }
+      }
+      return x.ensureFor(found);
+    },
     ensureAll: () => x.ensureAll(),
     report: () => x.report(),
     inspect(ref) {
@@ -77,7 +89,7 @@ function impl(ctx) {
     },
     entriesOf: user => toPlain(core.entryRows(x.personal(user)?.pages.contents), { maxDepth: 3 }),
     statusFor(doc, { as } = {}) {
-      const user = as === undefined || as === null ? game.user : resolveRef(as, "user");
+      const user = userOrCaller(as);
       const target = rawTargetOf(doc);
       if (!target) return null;
       const pages = x.personal(user)?.pages.contents ?? [];

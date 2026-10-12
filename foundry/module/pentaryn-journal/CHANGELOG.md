@@ -29,6 +29,12 @@
   to 3 s (was 1 s) for the new journal, found by its flag or by the id in the GM's answer. If it still
   has not arrived, the player gets the "Couldn't add this to your journal — tell the GM." warning and a
   console warning, instead of the save silently doing nothing.
+- **[declared] journal-rob-3:** `personal(user?)`, `shouldShowBar(entry, user?)` and `ensure(user)` resolve
+  their user as a user ref (a User, an id or an exact name, never a substring), the way `inspect` and
+  `statusFor`'s `as` do, so a string from the MCP bridge names the right player instead of answering
+  `null` / `false` / "no such user". A string matching nobody throws (`ensure`: rejects) `NOT_FOUND`;
+  two matches, `AMBIGUOUS`. `null` now means the calling user, as leaving it out does. The params are
+  `kind: "user", resolve: "self"` with `throws` in `describe()`.
 
 ## Unreleased (blueprint migration, wave 2)
 
