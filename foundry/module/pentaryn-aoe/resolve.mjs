@@ -20,7 +20,7 @@
 
 import {
   MODULE, RECENT_MESSAGES, aoeFlags, buildRows, fillSave, matchSave, applicableRows, allApplied, newestRegion,
-  supersedes, isHandle, isTemplateRegion, hydrateDamages, protectRows, unprotectRow
+  supersedes, isHandle, isTemplateRegion, hydrateDamages, protectRows, unprotectRow, areaLocked
 } from "./core.mjs";
 import { setting } from "./settings.mjs";
 import { claimMessage } from "./lib/election.mjs";
@@ -162,6 +162,12 @@ export async function resolve(messageOrId, { regionId = undefined } = {}) {
   if (!game.users.activeGM?.isSelf) { why("resolve", ref, "not the active GM"); return null; }
   const message = typeof messageOrId === "string" ? game.messages.get(messageOrId) : messageOrId;
   if (!message || message.type !== "damage") { why("resolve", ref, "not a damage message"); return null; }
+  if (areaLocked(aoeFlags(message).resolution)) {
+    // aoe-edge-2: rebuilding would revive a superseded tray or reset applied rows.
+    why("resolve", ref, "tray superseded or already applied");
+    ui.notifications.warn(_loc("PENTARYN_AOE.Tray.AreaLocked"));
+    return null;
+  }
   const activity = activityOf(message);
   if (!activity?.save) { why("resolve", ref, "its activity has no save"); return null; }
 

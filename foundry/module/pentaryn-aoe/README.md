@@ -93,7 +93,7 @@ row with its params, returns and null cases (`api-manifest.mjs`). Kit members: `
 | `sweep(scene = canvas.scene)` | `Promise<{ orphansDeleted, ownershipFixed, handlesCreated, sizeLocked }>` | GM (zeros otherwise) |
 | `ensureHandleActor()` | `Promise<Actor \| null>` | GM creates (fixed id `pentarynAoeHndl0`); a player gets the existing one or null |
 | `createHandle(region)` | `Promise<TokenDocument \| null>` | null: not a template, handled, attached elsewhere, or another client won |
-| `resolve(messageOrId, { regionId? })` | `Promise<resolution \| null>` | active GM; null: not a damage message from a save activity |
+| `resolve(messageOrId, { regionId? })` | `Promise<resolution \| null>` | active GM; null: not a damage message from a save activity, or its tray is superseded or has an applied row (warning toast; the tray's area picker is disabled then too) |
 | `applyRows(messageId, rowIds?)` | `Promise<resolution \| null>` | GM; null when superseded (warning toast) or no tray; when a row's damage fails, the other rows still land and are marked applied, a warning toast names the failed rows, and the first error rejects (Apply again retries only those) |
 | `rollNpcSaves(messageId, { rowIds?, force? })` | `Promise<resolution \| null>` | GM |
 | `rollForPlayer(messageId, rowId, { event? })` | `Promise<Roll[] \| null>` | GM |

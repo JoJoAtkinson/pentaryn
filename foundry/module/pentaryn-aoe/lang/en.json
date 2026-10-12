@@ -19,6 +19,7 @@
       "FromTargets": "the roller's targets",
       "Empty": "No creatures inside the area.",
       "Superseded": "Superseded by a newer damage roll for this area. Apply from that one.",
+      "AreaLocked": "This tray's area can no longer change: damage has been applied from it, or a newer roll superseded it.",
       "Waiting": "waiting",
       "WaitingTip": "Waiting for the player to roll from the request card.",
       "Reroll": "Re-roll this save",

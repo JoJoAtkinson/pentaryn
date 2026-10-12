@@ -327,7 +327,7 @@
         "flags.pentaryn-aoe.resolution",
         "ChatMessage (NPC saves, request card)"
       ],
-      "nullWhen": "not the active GM, not a damage message, or its activity has no save",
+      "nullWhen": "not the active GM, not a damage message, its activity has no save, or its tray is superseded or has an applied row (warning toast)",
       "legacy": true,
       "doc": "Active GM: build (or rebuild) the tray on a damage message from a save activity, roll the NPC saves and post the players' request card. Returns the resolution."
     },

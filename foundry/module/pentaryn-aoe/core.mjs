@@ -151,6 +151,14 @@ export function applicableRows(rows, rowIds = null) {
     && (!rowIds || rowIds.includes(r.id)));
 }
 
+/**
+ * aoe-edge-2: a tray whose area can no longer change — superseded, or any row already applied.
+ * Re-resolving it would revive it or reset applied rows, so the same damage could land twice.
+ */
+export function areaLocked(res) {
+  return !!res && (!!res.superseded || (res.rows ?? []).some(r => r.applied));
+}
+
 /** True once every ticked row has been applied (instantaneous areas are then removed). */
 export function allApplied(rows) {
   const ticked = rows.filter(r => r.apply);

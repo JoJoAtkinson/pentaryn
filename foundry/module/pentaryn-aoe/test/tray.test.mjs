@@ -30,11 +30,12 @@ test("trayHTML over the resolution states (golden/tray-html.json)", () => {
   protectRows(careful.rows, [IDS.cv], "half");
   careful.careful = { names: ["Caven"], ids: [IDS.cv] };
   const picker = { ...clone(base), regions: [{ id: IDS.region, name: "Fireball" }, { id: "regionOther00001", name: "Fireball <2>" }] };
+  const pickerLocked = { ...clone(picker), superseded: true };   // aoe-edge-2: the picker is disabled
   const targets = { ...clone(base), region: null, rows: [] };
   const unknownAbility = { ...clone(base), ability: "str", dc: undefined };
   pinJSON("tray-html", {
     fresh: T.trayHTML(base, msg), applied: T.trayHTML(applied, msg), superseded: T.trayHTML(superseded, msg),
-    careful: T.trayHTML(careful, msg), picker: T.trayHTML(picker, msg), targets: T.trayHTML(targets), unknownAbility: T.trayHTML(unknownAbility),
+    careful: T.trayHTML(careful, msg), picker: T.trayHTML(picker, msg), pickerLocked: T.trayHTML(pickerLocked, msg), targets: T.trayHTML(targets), unknownAbility: T.trayHTML(unknownAbility),
   }, import.meta.url);
 });
 

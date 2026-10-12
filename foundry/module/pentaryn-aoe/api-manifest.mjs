@@ -99,7 +99,7 @@ export const FEATURE_ROWS = Object.freeze({
   resolve: [
     legacy("resolve", [MESSAGE, p("opts", "{ regionId? }", { optional: true, doc: "regionId: another candidate area; null = the roller's targets" })], "Promise<object|null>",
       "Active GM: build (or rebuild) the tray on a damage message from a save activity, roll the NPC saves and post the players' request card. Returns the resolution.",
-      { gm: true, writes: true, nullWhen: "not the active GM, not a damage message, or its activity has no save", sideEffects: [...WRITES_RESOLUTION, "ChatMessage (NPC saves, request card)"] }),
+      { gm: true, writes: true, nullWhen: "not the active GM, not a damage message, its activity has no save, or its tray is superseded or has an applied row (warning toast)", sideEffects: [...WRITES_RESOLUTION, "ChatMessage (NPC saves, request card)"] }),
     legacy("applyRows", [MESSAGE_ID, p("rowIds", "string[]|null", { optional: true, doc: "default: every applicable row" })], "Promise<object|null>",
       "GM: apply damage to the ticked, resolved, unapplied rows (safe to repeat). Returns the updated resolution.",
       { gm: true, writes: true, nullWhen: "not a GM, no resolution, or superseded (a warning toast)", sideEffects: [...WRITES_RESOLUTION, "Actor hp (applyDamage)", "Region (instantaneous area, deleted)"] }),

@@ -10,7 +10,7 @@
  * section.icon-row, then <damage-application>; this tray goes right after the native one.
  */
 
-import { aoeFlags, MULTIPLIERS, playerStatus, applicableRows, hydrateDamages } from "./core.mjs";
+import { aoeFlags, MULTIPLIERS, playerStatus, applicableRows, hydrateDamages, areaLocked } from "./core.mjs";
 import { setting } from "./settings.mjs";
 
 const esc = s => foundry.utils.escapeHTML(String(s ?? ""));
@@ -71,8 +71,10 @@ export function trayHTML(res, message = null) {
   const ability = CONFIG.DND5E.abilities[res.ability]?.label ?? res.ability;
   const n = applicableRows(res.rows).length;
   const guarded = res.rows.filter(r => r.protected).map(r => r.name);   // as the rows stand (the GM may toggle)
+  // aoe-edge-2: once superseded or partly applied, the area is fixed (resolve() refuses too).
+  const pickLock = areaLocked(res) ? ` disabled data-tooltip="${esc(_loc("PENTARYN_AOE.Tray.AreaLocked"))}"` : "";
   const picker = (res.regions?.length ?? 0) > 1
-    ? `<select data-pa="region">${res.regions.map(r => `<option value="${esc(r.id)}" ${r.id === res.region ? "selected" : ""}>${esc(r.name)}</option>`).join("")}</select>`
+    ? `<select data-pa="region"${pickLock}>${res.regions.map(r => `<option value="${esc(r.id)}" ${r.id === res.region ? "selected" : ""}>${esc(r.name)}</option>`).join("")}</select>`
     : "";
   const body = res.rows.length
     ? `<ol class="pa-rows">${res.rows.map(r => rowHTML(r, res, message)).join("")}</ol>`

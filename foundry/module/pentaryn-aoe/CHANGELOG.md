@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- **A superseded or partly applied tray keeps its area** (declared, aoe-edge-2): the tray's area
+  picker re-resolved any tray, so picking another area on a superseded tray revived it, and on a
+  tray with applied rows reset them — the same damage could then be applied twice. The picker is
+  now disabled (tooltip `PENTARYN_AOE.Tray.AreaLocked`) once the tray is superseded or any row is
+  applied, and `resolve(message, { regionId })` on such a tray returns null with that warning toast
+  and leaves it untouched. A fresh tray still switches areas freely. Live check: Fireball with two
+  areas on the scene, Apply one goblin, the picker is greyed out; a newer Fireball roll greys out
+  the older tray's picker too.
 - **The API's flags contract names everything aoe touches outside its own scope** (declared,
   EXT-1): `describe().flags.writes` adds `flags.dnd5e.lockSize` (handle tokens) and
   `flags.dnd5e.requestResult` (save rolls threaded under the request card); `flags.reads` adds
