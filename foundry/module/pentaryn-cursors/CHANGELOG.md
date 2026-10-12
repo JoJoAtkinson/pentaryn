@@ -1,5 +1,13 @@
 # Changelog — Pentaryn Tool Cursors (`pentaryn-cursors`)
 
+## Unreleased — 2026-10-12 (addon blueprint, Stage 5)
+
+- The build tool and the icon sources leave the module (guide steps 7–8; C05, C13, C24, C25):
+  `tools/build.mjs` → `scripts/foundry/cursors/build.mjs` (gains `--check-sources`),
+  `assets/src/` (with `CREDITS.md` and every credited `alt-*`) → `scripts/foundry/cursors/src/`,
+  `DESIGN.md` → `context/plans/cursors-design.md`. No runtime file changes; the module folder
+  simply stops shipping `tools/` and `assets/src/`.
+
 ## Unreleased — 2026-10-11 (addon blueprint, wave 1)
 
 The version stays 0.2.0 until the Wave 7 `module.json` restart batch.

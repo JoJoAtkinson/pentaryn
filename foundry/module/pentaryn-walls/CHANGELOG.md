@@ -2,8 +2,15 @@
 
 ## Unreleased — blueprint migration (wave 2, 2026-10-11)
 
-`module.json` stays 0.2.0 until the Wave 7 restart batch adds the blueprint keys, `languages`,
-`minimum: "14"` and the flag-scope migration.
+`module.json` stays 0.2.0. The Wave 7 restart batch (wave 5, 2026-10-12) added the blueprint keys
+(`flagScope` stays `wall-autocomplete`), `languages`, `minimum: "14"`, `verified: "14.369"` and the
+description fix; the flag-scope migration is **parked** while walls stays off (Joe).
+
+- **[declared] Labels and toasts from `lang/en.json`** (`senses-walls-cursors-36`, W2-WALLS-1): the
+  setting, its choices and the three keybindings register `PENTARYN_WALLS.*` keys; the backend hint
+  says "the same fixture corpus" instead of "the same 44 fixtures" (-8).
+- **[declared] Toasts through `log.notify`** (W2-WALLS-3): each adds `{console: false}` and logs one
+  `pentaryn-walls | …` line; a failed keybinding action logs `keybinding action failed` with the error.
 
 - **[declared] `undo()` works** (`senses-walls-cursors-1`). It read the run stamps with
   `getFlag("wall-autocomplete", …)`, which Foundry 14 rejects (not a package id), so undo threw on

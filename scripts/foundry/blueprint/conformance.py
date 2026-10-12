@@ -3,9 +3,12 @@
 
     conformance.py [--root foundry/module] [--snapshot DIR] [--module m …] [--json | --markdown]
 
-Exit status: 0 when every scored module passes every fail-class rule, 1 when any fails (so
-`conformance.py --module <short>` works as a gate), 2 for an unknown module. Modules listed in
-wait.json beside this file are printed as WAIT: the fix phase does not edit them yet.
+Exit status: 0 when every scored module passes every fail-class rule or holds an exception for it,
+1 when any fails without one or an exception is stale (so `conformance.py --module <short>` works as
+the same gate `make foundry-<short>-check` runs), 2 for an unknown module. Exceptions are the rows
+of exceptions.json beside this file (module id → rule id → reason, decision, until, match; Stage 5 step 2);
+a stale row is one whose rule no longer fails. Modules listed in wait.json beside this file are
+printed as WAIT: the fix phase does not edit them yet (it does not exempt them from the gate).
 
 Every rule has a class — `fail`, `warn` or `manual` — and resolves to `pass | fail | warn | n/a |
 manual`. The score is pass / (pass + fail) over the fail-class rules; warnings and the manual list
@@ -47,6 +50,10 @@ MODULE_ROOT = REPO_ROOT / "foundry" / "module"
 PACKAGES = json.loads((Path(__file__).with_name("packages.json")).read_text(encoding="utf-8"))
 # module id → why the fix phase must not touch it now (wait.json; printed as WAIT)
 WAIT: dict[str, str] = json.loads((Path(__file__).with_name("wait.json")).read_text(encoding="utf-8"))["modules"]
+# module id → rule id → {reason, decision, until, match}: the only failing rules (and, by `match`,
+# the only findings of each) the strict gate accepts
+EXCEPTIONS: dict[str, dict[str, dict]] = json.loads(
+    (Path(__file__).with_name("exceptions.json")).read_text(encoding="utf-8"))["modules"]
 
 RESERVED_API = ("describe", "inspect", "settings", "trace", "version", "contract", "uninstall", "selftest")
 README_SECTIONS = ("What the player sees", "Settings", "API", "Data written", "Flags other modules read",
@@ -413,9 +420,11 @@ def c06(m):
     return ok() if not missing else bad([f"missing: {', '.join(missing)}"])
 
 
-@rule("C06w", "warn", "stylesheets live under styles/")
+@rule("C06w", "warn", "stylesheets live under styles/ (vendored lib/*.css kit files exempt)")
 def c06w(m):
-    outside = [s for s in m.manifest.get("styles") or [] if isinstance(s, str) and not s.startswith("styles/")]
+    # a vendored kit stylesheet (D7) is listed as lib/<name>.css by design (vendor.py docstring)
+    outside = [s for s in m.manifest.get("styles") or [] if isinstance(s, str)
+               and not s.startswith("styles/") and not re.fullmatch(r"lib/[\w-]+\.css", s)]
     return ok() if not outside else ("warn", [f"move to styles/ in Wave 7: {', '.join(outside)}"])
 
 
@@ -1327,6 +1336,27 @@ def ready_bodies(src) -> list[tuple[bool, int, int]]:
     return out
 
 
+def on_ready_bodies(src) -> list[tuple[bool, int, int]]:
+    """`ready_bodies` plus the entry-ctx helper form `ctx.onReady(() => {…})` (dropbin: the helper
+    runs `fn` at once when the world is ready, else registers it with `reg.once("ready", …)`)."""
+    code = src.code
+    out = list(ready_bodies(src))
+    for rm in re.finditer(r"(?<![\w$])(?:[\w$]+\.)?onReady\(\s*(async\s*)?\(\)\s*=>\s*\{", code):
+        s = rm.end() - 1
+        out.append((bool(rm.group(1)), s, match_paren(code, s)))
+    return out
+
+
+def _enclosing_function(code: str, i: int) -> tuple[str, bool, int] | None:
+    """(name, is_async, body open) of the innermost `function NAME(…) {…}` holding offset `i`."""
+    best = None
+    for fm in re.finditer(r"(async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\([^)]*\)\s*\{", code):
+        s = fm.end() - 1
+        if s < i < match_paren(code, s) and (best is None or s > best[2]):
+            best = (fm.group(2), bool(fm.group(1)), s)
+    return best
+
+
 # a role gate before the publish in the synchronous ready body: `if (!isAnyGM()) return;`,
 # `if (!game.user.isGM) return`, an active-GM check — then when: "ready:gm" (or "ready:<role>") is allowed
 ROLE_GATE = re.compile(r"(?<![\w$])(?:isAnyGM|isActiveGM|isActiveGMOrLoneGM)\(|\.isGM\b|activeGM\b")
@@ -1346,10 +1376,26 @@ def c50(m):
                 when = src.strings[int(wm.group(1))].value
             sync = False
             gated = False
+            inside = False
             for is_async, s, e in ready_bodies(src):
                 if s < mm.start() < e:
+                    inside = True
                     sync = not is_async and "await" not in code[s:mm.start()]
                     gated = ROLE_GATE.search(code[s:mm.start()]) is not None
+            if not inside:
+                # A named publisher (`function publish() {… publishNamespace(…) …}`) called, before
+                # any await, from a synchronous ready body in any module file (dropbin: the ledger's
+                # `ctx.onReady(() => { …; ctx.publish(); })`) publishes in the ready tick too.
+                fn = _enclosing_function(code, mm.start())
+                if fn and not fn[1] and "await" not in code[fn[2]:mm.start()]:
+                    call = re.compile(rf"(?<![\w$])(?:[\w$]+\.)?{re.escape(fn[0])}\(")
+                    pre_gate = ROLE_GATE.search(code[fn[2]:mm.start()]) is not None
+                    for other in m.files.values():
+                        for is_async, s, e in on_ready_bodies(other):
+                            cm = call.search(other.code, s, e)
+                            if cm and not is_async and "await" not in other.code[s:cm.start()]:
+                                sync = True
+                                gated = pre_gate or ROLE_GATE.search(other.code[s:cm.start()]) is not None
             calls.append((rel, src.line_of(mm.start()), when, sync, gated))
     if not calls:
         return na("publishNamespace not used yet")
@@ -1750,7 +1796,9 @@ def c61(m):
 # C62 mirrors the bridge's needsDoc (foundry-vtt-mcp packages/mcp-server/src/fork/tools/
 # pentaryn-call.ts): a param with one of these kinds, or named `ref`, that the kit does not resolve
 # (only a FIRST `ref` without resolve:false is) is refused over pentaryn-read/-write unless its
-# `type` names a string form. Scope: a Document `kind` or a `ref` (a bare `type: "Actor"` with no
+# `type` names a string form. Kit 1.1.0's `resolve: "self"` marker (W2-B4) passes anywhere: the
+# function resolves a uuid/id/exact name itself. The bridge honours it on a first `ref` today (its
+# test is `resolve !== false`); a non-first param carrying it is a recorded fork follow-up. Scope: a Document `kind` or a `ref` (a bare `type: "Actor"` with no
 # kind is a live-Document param by design and is left alone).
 DOC_KINDS = ("actor", "token", "item", "scene", "user", "journal", "message", "macro", "region",
              "combat", "table", "folder", "playlist")
@@ -1759,7 +1807,7 @@ EVAL_JS_ONLY = re.compile(r"eval-js[ -]only", re.I)
 
 
 @rule("C62", "fail", "a Document param the kit does not resolve names its string forms in `type` "
-                     "(uuid/id/name) or says eval-js only")
+                     "(uuid/id/name), carries resolve:\"self\", or says eval-js only")
 def c62(m):
     path = m.dir / "test/golden/describe.json"
     if not path.exists():
@@ -1776,6 +1824,8 @@ def c62(m):
             if is_ref and i == 0 and p.get("resolve") is not False:
                 continue                                     # the kit resolves it per call
             if not (is_ref or p.get("kind") in DOC_KINDS):
+                continue
+            if p.get("resolve") == "self":                   # kit 1.1.0 (W2-B4): the function resolves strings
                 continue
             type_text = p.get("type") if isinstance(p.get("type"), str) else ""
             if any(w in STRING_FORMS for w in re.split(r"[^a-z0-9_]+", type_text.lower())):
@@ -1815,8 +1865,40 @@ def score(m: Module) -> dict:
         "manual": [r.id for r in results if r.status == "manual"
                    or (r.status == "warn" and r.cls == "warn+manual")],
         "wait": WAIT.get(m.id),
+        **verdict(m.id, results),
         "results": [r.__dict__ for r in results],
     }
+
+
+def _unmatched(row: dict, detail: list[str]) -> list[str]:
+    """The failing details a row's `match` patterns (regexes, `re.search`) do not cover. A row
+    accepts the findings it was decided for, not every future finding of the same rule: a new
+    unprefixed selector in a module with a C37 row is blocking, like in any other module."""
+    pats = row.get("match")
+    if not pats:
+        return []
+    return [d for d in detail if not any(re.search(p, d) for p in pats)]
+
+
+def verdict(module_id: str, results) -> dict:
+    """The strict gate over one module's results (Stage 5 step 2): `blocking` = failing rules with no
+    exceptions.json row, or with a finding the row's `match` patterns do not cover (`unmatched`:
+    rule → those findings); `accepted` = failing rules a row accepts (rule → reason); `stale` = rows
+    whose rule no longer fails. The gate passes iff `blocking` and `stale` are both empty."""
+    rows = EXCEPTIONS.get(module_id, {})
+    failing = [r for r in results if r.status == "fail"]
+    unmatched = {r.id: u for r in failing if r.id in rows and (u := _unmatched(rows[r.id], r.detail))}
+    return {
+        "blocking": [r.id for r in failing if r.id not in rows or r.id in unmatched],
+        "accepted": {r.id: rows[r.id]["reason"] for r in failing if r.id in rows and r.id not in unmatched},
+        "unmatched": unmatched,
+        "stale": sorted(rid for rid in rows if rid not in {r.id for r in failing}),
+    }
+
+
+def gate_ok(report: dict) -> bool:
+    """True when the strict gate passes this report (no blocking rule, no stale exception)."""
+    return not report["blocking"] and not report["stale"]
 
 
 def score_dir(module_dir: Path, *, root: Path | None = None, registry_path: Path | None = None,
@@ -1850,6 +1932,14 @@ def to_markdown(reports: list[dict], *, title: str) -> str:
     waiting = [r["module"] for r in reports if r.get("wait")]
     if waiting:
         lines += ["", f"**WAIT — do not edit yet** (scripts/foundry/blueprint/wait.json): {', '.join(waiting)}"]
+    gated = [r for r in reports if r.get("accepted") or r.get("stale") or r.get("blocking")]
+    if gated:
+        lines += ["", "**Strict gate** (exceptions: scripts/foundry/blueprint/exceptions.json):", ""]
+        for r in gated:
+            parts = [f"blocking {', '.join(r['blocking'])}"] if r.get("blocking") else []
+            parts += [f"accepted {', '.join(r['accepted'])}"] if r.get("accepted") else []
+            parts += [f"STALE exception {', '.join(r['stale'])}"] if r.get("stale") else []
+            lines.append(f"- `{r['module']}`: {'; '.join(parts)}")
     counts: dict[str, int] = {}
     for r in reports:
         for rid in r["failing"]:
@@ -1907,13 +1997,15 @@ def main(argv: list[str] | None = None) -> int:
         print(to_markdown(reports, title="Conformance"))
     else:
         for r in reports:
+            accepted = f"  accepted: {', '.join(r['accepted'])}" if r["accepted"] else ""
+            stale = f"  STALE exception: {', '.join(r['stale'])}" if r["stale"] else ""
             print(f"  {r['module']:<22} {r['score']:>5} %  {'WAIT  ' if r.get('wait') else ''}"
                   f"fail: {', '.join(r['failing']) or '—'}  warn: {', '.join(r['warnings']) or '—'}"
-                  f"  manual: {', '.join(r['manual']) or '—'}")
+                  f"  manual: {', '.join(r['manual']) or '—'}{accepted}{stale}")
         waiting = [f"{r['module']} ({r['wait']})" for r in reports if r.get("wait")]
         if waiting:
             print("  WAIT — do not edit yet (wait.json): " + "; ".join(waiting))
-    return 1 if any(r["failing"] for r in reports) else 0
+    return 0 if all(gate_ok(r) for r in reports) else 1
 
 
 if __name__ == "__main__":

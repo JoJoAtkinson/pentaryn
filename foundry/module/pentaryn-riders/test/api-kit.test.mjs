@@ -35,7 +35,7 @@ test("the legacy surface is a subset of the kit-built one (same kinds)", () => {
   const legacy = readJSON(new URL("./golden/surface-legacy.json", import.meta.url));
   for (const [k, kind] of Object.entries(legacy)) assert.equal(typeof api[k], kind, k);
   assert.ok(Object.isFrozen(api));
-  assert.equal(api.version, "0.2.0");
+  assert.equal(api.version, "0.3.0");   // [declared] W4-R6 (Joe 2026-10-12): the Wave 7 batch bumps 0.2.0 -> 0.3.0
   assert.equal(api.contract, "pentaryn-riders/api@1");
 });
 

@@ -68,9 +68,9 @@ The table is generated from each `module.json`, the module's code and its
 
 | Namespace | Module | Version | Blueprint | API (describe golden) | Docs |
 |---|---|---|---|---|---|
-| `aoe` | `pentaryn-aoe` | 0.3.1 | full tier | `areasFor`, `spellAreas`, `handleFor`, `removeArea`, `cardEffects`, `setting`, `hookIds`, `resolution` … (+15) | [`aoe.md`](aoe.md) · [README](../../foundry/module/pentaryn-aoe/README.md) |
-| `attunement` | `pentaryn-attunement` | 0.2.1 | full tier | `report`, `computeSlots`, `stash`, `releaseAway`, `away` | [README](../../foundry/module/pentaryn-attunement/README.md) |
-| `combat` | `pentaryn-combat` | 0.2.5 | full tier | `count`, `plan`, `turn`, `newTurn`, `multiattack`, `weapons`, `offers`, `fullAttack` … (+15) | [README](../../foundry/module/pentaryn-combat/README.md) |
+| `aoe` | `pentaryn-aoe` | 0.4.0 | full tier | `areasFor`, `spellAreas`, `handleFor`, `removeArea`, `cardEffects`, `setting`, `hookIds`, `resolution` … (+15) | [`aoe.md`](aoe.md) · [README](../../foundry/module/pentaryn-aoe/README.md) |
+| `attunement` | `pentaryn-attunement` | 0.3.0 | full tier | `report`, `computeSlots`, `stash`, `releaseAway`, `away` | [README](../../foundry/module/pentaryn-attunement/README.md) |
+| `combat` | `pentaryn-combat` | 0.3.0 | full tier | `count`, `plan`, `turn`, `newTurn`, `multiattack`, `weapons`, `offers`, `fullAttack` … (+15) | [README](../../foundry/module/pentaryn-combat/README.md) |
 | `creatures` | `pentaryn-creatures` | 0.1.1 | full tier | `list`, `render`, `syncScene`, `syncAll`, `isCreature`, `ownerSees`, `patchedWith`, `status` | [README](../../foundry/module/pentaryn-creatures/README.md) |
 | `cursors` | `pentaryn-cursors` | 0.2.0 | small tier | `refresh`, `current`, `keyFor`, `status` | [README](../../foundry/module/pentaryn-cursors/README.md) |
 | `dropbin` | `pentaryn-dropbin` | 0.2.3 | full tier | `corpses.sync`, `corpses.toCorpse`, `corpses.fromCorpse`, `corpses.isDead`, `corpses.revive`, `corpses.paintEye`, `corpses.paintAllEyes`, `corpses.migrateLegacyEyes` … (+11) | [README](../../foundry/module/pentaryn-dropbin/README.md) |
@@ -81,12 +81,12 @@ The table is generated from each `module.json`, the module's code and its
 | `movement` | `pentaryn-movement` | 0.1.2 | full tier | `status`, `ghostFor`, `combatActive`, `setGhost`, `setPolicy`, `pinsUnderTokens` | [README](../../foundry/module/pentaryn-movement/README.md) |
 | `names` | `pentaryn-names` | 0.1.1 | small tier | — (no describe golden yet) | [README](../../foundry/module/pentaryn-names/README.md) |
 | `pings` | `pentaryn-pings` | 0.1.1 | small tier | — (no describe golden yet) | [README](../../foundry/module/pentaryn-pings/README.md) |
-| `portals` | `pentaryn-portals` | 0.4.4 | full tier | `snapshot`, `cardFor`, `teleportParty`, `lookAt`, `destinations`, `link`, `unlink`, `spreadArrival` … (+3) | [README](../../foundry/module/pentaryn-portals/README.md) |
+| `portals` | `pentaryn-portals` | 0.5.0 | full tier | `snapshot`, `cardFor`, `teleportParty`, `lookAt`, `destinations`, `link`, `unlink`, `spreadArrival` … (+3) | [README](../../foundry/module/pentaryn-portals/README.md) |
 | `prompts` | `pentaryn-prompts` | 0.4.5 | full tier | `list`, `gather`, `crops`, `replaceMany`, `show`, `replace`, `open`, `place` … (+6) | [README](../../foundry/module/pentaryn-prompts/README.md) |
-| `riders` | `pentaryn-riders` | 0.2.0 | full tier | `arcaneRecovery`, `featuresOf`, `report`, `setType`, `retireManual`, `spendHitDie`, `restoreHitDie`, `hdPools` … (+3) | [README](../../foundry/module/pentaryn-riders/README.md) |
-| `chain`, `senses` | `pentaryn-senses` | 0.4.1 | full tier | `syncLight`, `carriedLight`, `resetSight`, `light.cast`, `light.end`, `light.pick`, `light.toggle`, `light.hood` … (+14) | [README](../../foundry/module/pentaryn-senses/README.md) |
+| `riders` | `pentaryn-riders` | 0.3.0 | full tier | `arcaneRecovery`, `featuresOf`, `report`, `setType`, `retireManual`, `spendHitDie`, `restoreHitDie`, `hdPools` … (+3) | [README](../../foundry/module/pentaryn-riders/README.md) |
+| `chain`, `senses` | `pentaryn-senses` | 0.5.0 | full tier | `syncLight`, `carriedLight`, `resetSight`, `light.cast`, `light.end`, `light.pick`, `light.toggle`, `light.hood` … (+14) | [README](../../foundry/module/pentaryn-senses/README.md) |
 | `ties` | `pentaryn-ties` | 0.19.4 | full tier | `show`, `showAll`, `showOne`, `cards`, `clear`, `closeAllCards`, `edit`, `addTie` … (+101) | [README](../../foundry/module/pentaryn-ties/README.md) |
-| `transform` | `pentaryn-transform` | 0.3.3 | full tier | `shift`, `revert`, `forms`, `wildShapeActivity`, `original`, `isRevertItem`, `sweepSpentForms`, `starry.assume` … (+3) | [README](../../foundry/module/pentaryn-transform/README.md) |
+| `transform` | `pentaryn-transform` | 0.4.0 | full tier | `shift`, `revert`, `forms`, `wildShapeActivity`, `original`, `isRevertItem`, `sweepSpentForms`, `starry.assume` … (+3) | [README](../../foundry/module/pentaryn-transform/README.md) |
 | `walls` | `pentaryn-walls` | 0.2.0 | full tier | `preview`, `run`, `undo`, `makeMacro`, `analyze`, `runEngine`, `backends` | [`walls.md`](walls.md) · [README](../../foundry/module/pentaryn-walls/README.md) |
 
 <!-- module-index:end -->
@@ -110,6 +110,7 @@ The table is generated from each `module.json`, the module's code and its
 | "Set it on fire" / "the building goes up" — the Fire Kit | [`fire.md`](fire.md) |
 | Who-knows-who, social graph, possession marks — at the table | [`../../foundry/module/pentaryn-ties/README.md`](../../foundry/module/pentaryn-ties/README.md) |
 | Full Attack, swing pips, off-hand / Nick / Flurry, Sneak Attack offers on the HUD — `pentaryn-combat` | [`melee.md`](melee.md) |
+| The Argon Combat HUD misbehaves — a button missing or doubled, wrong pips, a tooltip that sticks or eats a click, the HUD on the wrong token; every Argon hook and patch by module and order | [`argon.md`](argon.md) |
 | One-click Sneak Attack, off-hand damage with no ability mod | [`attack-activities.md`](attack-activities.md) |
 | Spell circles you can't move/delete, "damage isn't rolled", monster saves off an area — `pentaryn-aoe` | [`aoe.md`](aoe.md) |
 | Completing hand-drawn walls | [`walls.md`](walls.md) (API: [README](../../foundry/module/pentaryn-walls/README.md)) |

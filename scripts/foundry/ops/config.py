@@ -173,8 +173,9 @@ class ModuleSpec:
 _STATIC = ("parse", "imports", "i18n")
 
 # The blueprint gates (W3), last because they ask a different question — not "can it
-# load" but "does it still match the kit and the blueprint". Both skip a module with no
-# lib/kit.lock.json (not migrated); conformance is advisory until migration Stage 5.
+# load" but "does it still match the kit and the blueprint". Strict since migration Stage 5
+# (2026-10-12): both fail a module with no lib/kit.lock.json, and conformance fails on any
+# fail-class rule without a row in scripts/foundry/blueprint/exceptions.json.
 #   vendor       every vendored kit file byte-identical to foundry/lib
 #   conformance  the scorer's fail-class rules (scripts/foundry/blueprint/conformance.py)
 _BLUEPRINT = ("vendor", "conformance")
@@ -185,24 +186,12 @@ MODULES = {
         # node-test: test/run.mjs (the blueprint's fixed body) runs the converted suites and
         # the legacy known/look/reach ones (python-tooling-7).
         check=(*_STATIC, "node-test", *_BLUEPRINT),
-        after_sync=(
-            "Already enabled? A browser RELOAD (F5) is enough — .mjs and .css are",
-            "served fresh. But module.json is read once at STARTUP, so the version",
-            "in Manage Modules stays stale until you restart. Don't trust it to tell",
-            "you whether the new code is live; check the behaviour.",
-            "First install, or a new file in module.json:",
-            "  make vtt-down && make vtt-up",
-            "then enable 'Pentaryn NPC Ties' in Manage Modules and reload.",
-            "Key defaults to 8 — rebind in Configure Controls → Ties.",
-        ),
+        # after_sync comes from module.json flags.pentaryn.afterSync (Wave 7 batch).
     ),
     "walls": ModuleSpec(
         "pentaryn-walls",
         check=(*_STATIC, "node-test", *_BLUEPRINT),
-        after_sync=(
-            "Enable 'Pentaryn Wall Autocomplete' in Manage Modules, reload, then:",
-            "  await game.pentaryn.walls.preview()",
-        ),
+        # after_sync comes from module.json flags.pentaryn.afterSync (Wave 7 batch).
     ),
     "attunement": ModuleSpec(
         "pentaryn-attunement",
@@ -210,144 +199,84 @@ MODULES = {
         # (stale flags, deleted items, over-cap) that are tedious to stage in a browser
         # and must never throw — computeSlots runs inside a render hook.
         check=(*_STATIC, "node-test", *_BLUEPRINT),
-        after_sync=(
-            "Enable 'Pentaryn Attunement Slots' in Manage Modules, then reload.",
-            "The strip renders in the character sheet sidebar, under the stats card.",
-            "Drag an inventory item onto a slot to attune; drop onto a filled slot to",
-            "replace it; right-click a slot (or its ✕) to unattune.",
-            "Audit an actor:  game.pentaryn.attunement.report('Ballad Quinn')",
-        ),
+        # after_sync comes from module.json flags.pentaryn.afterSync (Wave 7 batch).
     ),
     "lookup": ModuleSpec(
         "pentaryn-lookup",
         # node-test: the whole point of the module is that its text handling is proved
         # rather than retyped. lookup-core.mjs is pure, so its fixtures run in node (`node test/run.mjs`).
         check=(*_STATIC, "node-test", *_BLUEPRINT),
-        after_sync=(
-            "Enable 'Pentaryn Rules Lookup' in Manage Modules, then reload.",
-            "Confirm against the live world:",
-            "  await game.pentaryn.rules.selftest()",
-            "Then:",
-            "  await game.pentaryn.rules.search('half cover')",
-            "  await game.pentaryn.rules.monster('Adult Black Dragon')",
-        ),
+        # after_sync comes from module.json flags.pentaryn.afterSync (Wave 7 batch).
     ),
     "transform": ModuleSpec(
         "pentaryn-transform",
         # node-test: transform-core.mjs decides what is stripped from a Wild Shape form, what
         # is carried back on revert, and how the Argon Bonus/Action bars are recomposed.
         check=(*_STATIC, "node-test", *_BLUEPRINT),
-        after_sync=(
-            "A module.json change needs a Foundry restart (make vtt-down && make vtt-up); otherwise reload every client.",
-            "Wild Shape and Starry Form live on the Argon Bonus bar:",
-            "  game.pentaryn.transform.inspect(\"Talo\")",
-            "  await game.pentaryn.transform.shift(actor, game.pentaryn.transform.forms(actor)[0].id)",
-            "  await game.pentaryn.transform.revert(actor)",
-        ),
+        # after_sync comes from module.json flags.pentaryn.afterSync (Wave 7 batch).
     ),
     "names": ModuleSpec(
         "pentaryn-names",
         # node-test: test/run.mjs runs the characterisation suites (names guide; C39).
         check=(*_STATIC, "node-test", *_BLUEPRINT),
-        after_sync=(
-            "First install: restart Foundry (module.json is read at startup), then reload.",
-            "Rename an actor: token labels that were its name (or the part before the",
-            "first comma) follow; nicknames stay.",
-        ),
+        # after_sync comes from module.json flags.pentaryn.afterSync (Wave 7 batch).
     ),
     "senses": ModuleSpec(
         "pentaryn-senses",
         # node-test: test/run.mjs runs every suite; the pure code is core/*.mjs behind the
         # senses-core.mjs barrel (chain flags and line geometry, the Light rules, the glow, migrate).
         check=(*_STATIC, "node-test", *_BLUEPRINT),
-        after_sync=(
-            "First install: restart Foundry (module.json is read at startup), then reload.",
-            "Already enabled? A browser RELOAD (F5) picks up new .mjs files and assets.",
-            "Token vision is dnd5e's senseVisionSync (6.0+); the one-shot reset of stored",
-            "darkvision runs at GM ready — check game.settings.get('pentaryn-senses', 'sightReset') === 1",
-            "Token chains: game.pentaryn.chain.links() · Token HUD → Break chain.",
-        ),
+        # after_sync comes from module.json flags.pentaryn.afterSync (Wave 7 batch).
     ),
     "portals": ModuleSpec(
         "pentaryn-portals",
         # node-test: portals-core.mjs decides who a party teleport carries and who follows a PC.
         check=(*_STATIC, "node-test", *_BLUEPRINT),
-        after_sync=(
-            "First install: restart Foundry (module.json is read at startup), then reload.",
-            "Teleport confirmations now show destination cards; author them in Region config → Portal card.",
-        ),
+        # after_sync comes from module.json flags.pentaryn.afterSync (Wave 7 batch).
     ),
     "journal": ModuleSpec(
         "pentaryn-journal",
         # node-test: sanitize() is what keeps GM secrets out of a player-owned copy; it is proved
         # on synthetic fixtures before anything reaches Data/.
         check=(*_STATIC, "node-test", *_BLUEPRINT),
-        after_sync=(
-            "First install: restart Foundry (module.json is read at startup), enable 'Pentaryn Player Journal', then reload.",
-            "Players get an 'Add to my journal' bar on every eye readable.",
-            "GM prep (optional, also runs on GM ready): game.pentaryn.journal.ensureAll()",
-            "Test from your own client: Settings → Pentaryn Player Journal → Show the Add button to the GM",
-        ),
+        # after_sync comes from module.json flags.pentaryn.afterSync (Wave 7 batch).
     ),
     "aoe": ModuleSpec(
         "pentaryn-aoe",
         # node-test: core.mjs decides who is caught in an area, what a save is worth and which
         # waiting row a save answers — proved on fixtures before anything reaches Data/.
         check=(*_STATIC, "node-test", *_BLUEPRINT),
-        after_sync=(
-            "First install: restart Foundry (module.json is read at startup), then reload.",
-            "core.moduleConfiguration['pentaryn-aoe'] can be pre-set so it loads enabled.",
-            "Spell areas get a draggable/deletable handle; save spells get a GM tray on the damage roll.",
-            "  game.pentaryn.aoe.sweep(canvas.scene)",
-        ),
+        # after_sync comes from module.json flags.pentaryn.afterSync (Wave 7 batch).
     ),
     "dropbin": ModuleSpec(
         "pentaryn-dropbin",
         # node-test: loot-core.mjs decides when the Loot all button shows and greys out.
         check=(*_STATIC, "node-test", *_BLUEPRINT),
-        after_sync=(
-            "Already enabled? A browser RELOAD (F5) picks up .mjs changes; module.json needs a restart.",
-            "Item Piles loot windows get a 'Loot all' button; corpses show Dead as the overlay plus a drawn eye.",
-            "  game.pentaryn.dropbin.corpses.migrateLegacyEyes()",
-        ),
+        # after_sync comes from module.json flags.pentaryn.afterSync (Wave 7 batch).
     ),
     "cursors": ModuleSpec(
         "pentaryn-cursors",
         # node-test: cursors-core.mjs picks the cursor for the active control/tool.
         check=(*_STATIC, "node-test", *_BLUEPRINT),
-        after_sync=(
-            "First install: restart Foundry (module.json is read at startup), enable 'Pentaryn Tool Cursors', then reload.",
-            "Each canvas tool gets its own cursor; check with  game.pentaryn.cursors.current()",
-        ),
+        # after_sync comes from module.json flags.pentaryn.afterSync (Wave 7 batch).
     ),
     "movement": ModuleSpec(
         "pentaryn-movement",
         # node-test: test/run.mjs runs every test/**/*.test.mjs (core, glue, api, patches …).
         check=(*_STATIC, "node-test", *_BLUEPRINT),
-        after_sync=(
-            "First install: restart Foundry (module.json is read at startup), enable 'Pentaryn Movement', then reload.",
-            "Players get a Ghost toggle in the token tools; the GM sets the policy in settings.",
-            "  game.pentaryn.movement.status()",
-        ),
+        # after_sync comes from module.json flags.pentaryn.afterSync (Wave 7 batch).
     ),
     "creatures": ModuleSpec(
         "pentaryn-creatures",
         # node-test: creatures-core.mjs (who gets light, strip order) is pure.
         check=(*_STATIC, "node-test", *_BLUEPRINT),
-        after_sync=(
-            "First install: restart Foundry (module.json is read at startup), enable 'Pentaryn Creatures', then reload.",
-            "Player-owned NPC tokens get a small light; players with 2+ tokens get a 'Your creatures' strip.",
-            "  game.pentaryn.creatures.syncAll()",
-        ),
+        # after_sync comes from module.json flags.pentaryn.afterSync (Wave 7 batch).
     ),
     "riders": ModuleSpec(
         "pentaryn-riders",
         # node-test: riders-core.mjs (the RULES table and roll-term edits) is pure.
         check=(*_STATIC, "node-test", *_BLUEPRINT),
-        after_sync=(
-            "First install: restart Foundry (module.json is read at startup), enable 'Pentaryn Feature Riders', then reload.",
-            "Audit feat riders per actor:  game.pentaryn.riders.report()",
-        ),
+        # after_sync comes from module.json flags.pentaryn.afterSync (Wave 7 batch).
     ),
     "prompts": ModuleSpec(
         "pentaryn-prompts",
@@ -357,38 +286,20 @@ MODULES = {
         # barrel) plus build-core.mjs / npc-core.mjs (PC ability budgets, choice matching), and
         # it carries the whole contract.
         check=(*_STATIC, "node-test", *_BLUEPRINT),
-        after_sync=(
-            "First install: restart Foundry (module.json is read at startup), enable",
-            "'Pentaryn Prompt Markers', then reload the ONE GM tab. The six 'Prompt ·' actors",
-            "appear in the 'Prompt Markers' folder at GM ready.",
-            "  game.pentaryn.prompts.status()",
-            "  game.pentaryn.prompts.selftest()   // .ok === true",
-            "  await game.pentaryn.prompts.gather({scenes: 'current'})",
-            "Marker art: ./.venv/bin/python scripts/foundry/prompt_marker_art.py",
-        ),
+        # after_sync comes from module.json flags.pentaryn.afterSync (Wave 7 batch).
     ),
     "combat": ModuleSpec(
         "pentaryn-combat",
         # node-test: combat-core.mjs (attack counts, the Full Attack state machine, the turn flag,
         # follow-up and Sneak Attack eligibility, Multiattack parsing, weapon-set seeds) is pure.
         check=(*_STATIC, "node-test", *_BLUEPRINT),
-        after_sync=(
-            "First install: restart Foundry (module.json is read at startup), enable",
-            "'Pentaryn Combat', then reload the ONE GM tab and any player tabs.",
-            "Every behaviour is a world setting (default on) — README → Settings.",
-            "  game.pentaryn.combat.plan(actor)      // the swings Full Attack would make",
-            "  game.pentaryn.combat.report()         // riders per PC and the turn flags",
-        ),
+        # after_sync comes from module.json flags.pentaryn.afterSync (Wave 7 batch).
     ),
     "pings": ModuleSpec(
         "pentaryn-pings",
         # node-test: test/run.mjs runs the characterisation suites (pings guide step 9; C39).
         check=(*_STATIC, "node-test", *_BLUEPRINT),
-        after_sync=(
-            "First install: restart Foundry (module.json is read at startup), enable",
-            "'Pentaryn Ping Log', then reload the GM tab (GM clients are the only writers).",
-            "  game.pentaryn.pings.recent(5)",
-        ),
+        # after_sync comes from module.json flags.pentaryn.afterSync (Wave 7 batch).
     ),
     "feedback": ModuleSpec(
         "pentaryn-feedback",

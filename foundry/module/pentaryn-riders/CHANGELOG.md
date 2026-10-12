@@ -1,6 +1,12 @@
 # Changelog — pentaryn-riders
 
-## Unreleased (addon blueprint migration, wave 4; the version bump ships with the Wave 7 restart batch)
+## 0.3.0 — 2026-10-12 (addon blueprint migration, wave 4; released by the Wave 7 restart batch)
+
+- Wave 7 batch: `module.json` `flags.pentaryn` blueprint keys (`flagScope` `riders` →
+  `pentaryn-riders`, metadata only), `recommends` enhancedcombathud and enhancedcombathud-dnd5e,
+  `styles/riders.css` (moved), `verified: "14.369"`. D7: the kit's `lib/argon-tooltip.css` is
+  vendored and listed in `styles` (inert for riders alone); the `#tooltip` click-through rule stays in
+  `styles/riders.css` (W4-R9).
 
 - Rebuilt to the addon blueprint: `riders.mjs` is wiring only; nine features (`rituals`,
   `concentration`, `argon-tidy`, `cast-flow`, `damage-riders`, `card-note`, `tray-preset`,

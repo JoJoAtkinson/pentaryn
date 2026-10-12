@@ -62,8 +62,8 @@ client computes the same wave from the server clock.
 **Token chains.** An iron chain drawn from an anchor token's centre to a chained token's, just
 under the tokens (fog and vision hide it like the map); it follows drags and moves. Graphics only:
 the GM judges the reach. Token HUD (GM): **Break chain** on either end; **Chain to <anchor>** on an
-unchained token while exactly one other token is targeted. A chain whose chained token is hidden
-shows to the GM only.
+unchained token while exactly one other token is targeted. A chain with either end hidden (the
+chained token or its anchor) shows to the GM only.
 
 **Darkvision reset.** At the active GM's first ready on dnd5e 6 (with `senseVisionSync` on), every
 stored darkvision sight our old sync wrote goes back to basic / 0 so the sheet drives vision.

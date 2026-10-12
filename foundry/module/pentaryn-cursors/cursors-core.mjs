@@ -1,7 +1,7 @@
-// Pentaryn Tool Cursors — pure rules. No Foundry globals: test/*.test.mjs and tools/build.mjs import this.
+// Pentaryn Tool Cursors — pure rules. No Foundry globals: test/*.test.mjs and scripts/foundry/cursors/build.mjs import this.
 //
 // keyFor() maps the active scene control + tool (and whether a spell-area placement is following the
-// mouse) to a cursor key, or null for the plain system arrow. KEYS is the cursor set from DESIGN.md: the
+// mouse) to a cursor key, or null for the plain system arrow. KEYS is the cursor set from context/plans/cursors-design.md: the
 // build script rasterises from it and writes cursors.css; the module and README read it.
 
 export const MODULE = "pentaryn-cursors";

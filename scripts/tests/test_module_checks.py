@@ -279,10 +279,9 @@ _CITED = re.compile(r"\b(?:context|playbooks)/[\w./-]+\.md\b")
 _SCANNED = {".mjs", ".js", ".json", ".md", ".css", ".rs", ".hbs", ".html"}
 _SKIPPED = ("lib/", "test/kit/", "node_modules/", "wasm/target/", "wasm/pkg/")
 # Cited paths a later batch fixes; each must still be broken (strict xfail below).
-_PENDING = {
-    # walls module.json `description` — the Wave 7 restart batch rewrites it.
-    ("foundry/module/pentaryn-walls/module.json", "playbooks/foundry-wall-autocomplete.md"),
-}
+# Doc paths a module cites that are known stale and scheduled for a fix (none since the Wave 7
+# batch rewrote walls' module.json description, 320879a2).
+_PENDING: set[tuple[str, str]] = set()
 
 
 def _unresolved_doc_paths() -> set[tuple[str, str]]:
@@ -303,7 +302,6 @@ def test_every_doc_path_a_module_cites_exists():
     assert _unresolved_doc_paths() - _PENDING == set()
 
 
-@pytest.mark.xfail(strict=True, reason="Wave 7 restart batch edits walls' module.json description")
 def test_the_pending_doc_paths_are_fixed():
     assert not (_unresolved_doc_paths() & _PENDING)
 
@@ -315,3 +313,17 @@ def test_a_bare_namespace_prefix_literal_is_not_a_key(tmp_path, capsys):
             'export const ours = k => k.startsWith("DEMO.");\n')
     assert modules._check_i18n(i18n_module(tmp_path, body)) == 0
     assert "not in" not in capsys.readouterr().out
+
+
+def test_a_key_under_a_mistyped_pentaryn_root_fails(tmp_path, capsys):
+    """W5c review: the namespaces came from the lang file alone, so a `PENTARYN_*` key whose
+    root is a typo (`PENTARYN_DEM.title` beside `PENTARYN_DEMO.*`) was outside every namespace
+    and never checked; Foundry would show it raw."""
+    lang = {"PENTARYN_DEMO.title": "Demo"}
+    good = 'export const a = () => _loc("PENTARYN_DEMO.title");\n'
+    assert modules._check_i18n(i18n_module(tmp_path / "ok", good, lang)) == 0
+    capsys.readouterr()
+    bad = good + 'export const b = () => _loc("PENTARYN_DEM.title");\n'
+    assert modules._check_i18n(i18n_module(tmp_path / "typo", bad, lang)) == 1
+    out = capsys.readouterr().out
+    assert "PENTARYN_DEM.title" in out and "main.mjs:2" in out

@@ -1,14 +1,19 @@
 #!/usr/bin/env node
 /**
- * Build the cursor set: assets/src/*.svg → assets/cursors/<key>[-pointer].svg + .png (1×) + @2x.png,
- * from KEYS in cursors-core.mjs. Run by hand; the outputs are committed. board.mjs reads the
+ * Build the cursor set: scripts/foundry/cursors/src/*.svg → the module's
+ * assets/cursors/<key>[-pointer].svg + .png (1×) + @2x.png, from KEYS in cursors-core.mjs. Run by
+ * hand; the outputs are committed. The tool and its sources live outside the module so neither
+ * ships to Data/modules (cursors guide step 7). board.mjs reads the
  * hotspots from KEYS (through core's cursorValues), so the build fails unless the measured hotspot
  * equals KEYS exactly.
  *
  * Needs @resvg/resvg-js (a dev tool, not a module dependency). It is looked up next to this script,
  * then in the current directory, so the simplest run is:
  *
- *   cd "$(mktemp -d)" && npm i @resvg/resvg-js@2.6.2 && node <repo>/foundry/module/pentaryn-cursors/tools/build.mjs
+ *   cd "$(mktemp -d)" && npm i @resvg/resvg-js@2.6.2 && node <repo>/scripts/foundry/cursors/build.mjs
+ *
+ * `--check-sources` needs no @resvg: it only proves every KEYS[key].src exists under src/ (exit 1
+ * naming the missing ones), and is what scripts/tests/test_cursors_build.py runs.
  *
  * Steps per key:
  *   1. strip the game-icons black background square, keep every glyph path;
@@ -19,16 +24,24 @@
  *      KEYS[key].hotspot (so a changed glyph cannot ship with a stale hotspot);
  *   5. rasterise at 32 and 64 px.
  */
-import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const ROOT = join(HERE, "..");
-const SRC = join(ROOT, "assets", "src");
-const OUT = join(ROOT, "assets", "cursors");
-const { KEYS } = await import(pathToFileURL(join(ROOT, "cursors-core.mjs")).href);
+const REPO = join(HERE, "..", "..", "..");
+const MODULE_ROOT = join(REPO, "foundry", "module", "pentaryn-cursors");
+const SRC = join(HERE, "src");
+const OUT = join(MODULE_ROOT, "assets", "cursors");
+const { KEYS } = await import(pathToFileURL(join(MODULE_ROOT, "cursors-core.mjs")).href);
+
+if (process.argv.includes("--check-sources")) {
+  const missing = Object.entries(KEYS).filter(([, k]) => !existsSync(join(SRC, k.src)));
+  for (const [key, k] of missing) console.error(`  ✗ ${key}: source ${k.src} not in ${SRC}`);
+  if (!missing.length) console.log(`  ✓ all ${Object.keys(KEYS).length} cursor sources present in ${SRC}`);
+  process.exit(missing.length ? 1 : 0);
+}
 
 function loadResvg() {
   for (const base of [import.meta.url, pathToFileURL(join(process.cwd(), "x.js")).href]) {

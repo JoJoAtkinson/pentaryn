@@ -295,13 +295,14 @@ The manifest (`api-manifest.mjs`) is pure data. **Manifest-level fields:**
 | Field | Type | Meaning |
 |---|---|---|
 | `path` | string | dotted path under the namespace (`"store.list"`); no reserved name at any depth (§5.1) |
-| `params` | `{name, kind?, type?, optional?, resolve?, doc?}[]` | a first param named `ref` is resolved per call (`kind`: `actor` default, `token`, `user`, …; `resolve: false` opts out). A param with a Document `kind`, or a `ref`, that the kit does **not** resolve must name its string forms in `type` (`"Actor\|uuid\|id\|exact name"`) when the function resolves strings itself, or say `eval-js only` in its (or the row's) `doc`: the bridge refuses it over `pentaryn-read`/`-write` otherwise (C62) |
+| `params` | `{name, kind?, type?, optional?, resolve?, doc?}[]` | a first param named `ref` is resolved per call (`kind`: `actor` default, `token`, `user`, …; `resolve: false` opts out). A param with a Document `kind`, or a `ref`, that the kit does **not** resolve must say how a string reaches it: `resolve: "self"` (kit 1.1.0) when the function resolves a uuid, id or exact name itself, or its string forms in `type` (`"Actor\|uuid\|id\|exact name"`), or `eval-js only` in its (or the row's) `doc`: the bridge refuses it over `pentaryn-read`/`-write` otherwise (C62) |
 | `returns` | string | the shape, in words or TS-ish (`"{ ok, checks }"`) |
 | `gm` | boolean | GM-only |
 | `writes` | boolean | changes world data → returns `ok()/fail()`, accepts `dryRun` when bulk; the fork routes it to `pentaryn-write` (D14) |
 | `query` | boolean | also registered as `CONFIG.queries["<id>.<queryName ?? path>"]` |
 | `queryName` | string | the query name when it differs from `path` (kit 1.0.1, K8) |
 | `relay` | boolean | register through `relayed` (any sender, active-GM receiver) instead of `guarded` (kit 1.0.1, K4) |
+| `dryRun` | boolean | the row takes a dry run (`opts.dryRun`); the bridge's `pentaryn-write` forwards its `dryRun` only to such a row (kit 1.1.0, W2-B3) |
 | `wire` | `data => data` | fills query-payload defaults before the call (prompts' `cropsAs: "base64"`) |
 | `sideEffects` | string[] | flag paths / documents written |
 | `nullWhen` | string | when a legacy read returns null instead of throwing |
@@ -314,7 +315,7 @@ The manifest (`api-manifest.mjs`) is pure data. **Manifest-level fields:**
 **`describe()` keys** (both tiers; a small module has the same keys with empty lists):
 `module, namespace, version, contract, flagScope, kit, published, methods, queries, settings,
 events, hooks, patches, flags {writes, reads}, errors`. `methods[]` carries `path, params, returns,
-gm, writes, query, sideEffects, doc` plus `queryName, relay, nullWhen, throws, legacy, since` when
+gm, writes, query, sideEffects, doc` plus `queryName, relay, dryRun, nullWhen, throws, legacy, since` when
 set. The goldens normalise away `version`, `kit`, `published` and patch routes.
 
 **`inspect(ref, { as })`** — read-only, plain JSON, depth ≤ 4. With no `as` it answers as the
@@ -756,14 +757,20 @@ listener. `F.fire("ready")` sets `game.ready = true` first, as Foundry does.
 `GOLDEN_UPDATE=1 node test/run.mjs` on a module mid-refactor. A missing golden fails.
 
 Gates: `make foundry-<short>-check` runs the module's ModuleSpec gates — parse, imports, i18n,
-node-test (`node test/run.mjs` from the module folder), then `vendor` and `conformance` for a
-migrated module (one with `lib/kit.lock.json`; an unmigrated one skips both, it does not fail).
-Conformance is **advisory until Stage 5**: it reports failing rules but keeps the check green
-(`CONFORMANCE_FAILS` in `scripts/foundry/ops/modules.py`), and a WAIT module is reported, never
-failed. `make foundry-modules-check` runs every module and keeps going (`JSON=1` for `--json`).
-Kit: `make foundry-lib-check`. Scores: `make foundry-conformance [M=<short>] [MD=1]` — it calls
-`conformance.py` directly, which exits 1 while any scored module fails a fail-class rule, so make
-reports an error until Stage 5 is done; read the scores, not the exit code. Python:
+node-test (`node test/run.mjs` from the module folder), then `vendor` and `conformance`. Both are
+**strict** (since migration Stage 5, 2026-10-12): a module without `lib/kit.lock.json` fails both,
+a vendored file that differs from `foundry/lib` fails `vendor`, and `conformance` fails on any
+failing fail-class rule that has no row in
+[`scripts/foundry/blueprint/exceptions.json`](../../scripts/foundry/blueprint/exceptions.json) —
+and on a **stale** row, one whose rule no longer fails, so the list cannot outlive its
+reason. Each row is module id → rule id → `reason`, `decision` (the Open-for-Joe row or parked step
+that accepted it), `until` (what retires it), `match` (regexes for the findings that decision
+covers: a later finding of the same rule that none matches blocks the gate); delete the row in the commit that retires it. Never
+add a row to turn a red gate green without a decision to cite. `wait.json` exempts nothing from the
+gate (it says who may edit a module). `make foundry-modules-check` runs every module and keeps
+going (`JSON=1` for `--json`). Kit: `make foundry-lib-check`. Scores: `make foundry-conformance
+[M=<short>] [MD=1]` — `conformance.py` exits 1 exactly when the gate would fail (it prints
+`accepted:` and `STALE exception:` beside each module). Python:
 `make test` (pytest, blueprint tests included). Everything: `make check-all`.
 
 After a migration changes a module's published API, run `make foundry-module-index` and commit
@@ -876,7 +883,7 @@ both Warnings and Manual.
 | C03 | fail | dnd5e in `relationships.systems` iff the sources touch dnd5e (including the Token5e movement option `ignoreTokens`, packages.json `codePatterns`, D4) |
 | C04 | fail | `languages` iff any i18n key literal or call |
 | C05 | fail | every non-test, non-lib `.mjs` reachable from `esmodules` |
-| C06 / C06w | fail / warn | `styles` paths exist / live under `styles/` |
+| C06 / C06w | fail / warn | `styles` paths exist / live under `styles/` (a vendored `lib/*.css` kit stylesheet, D7, is exempt) |
 | C07 | fail | `flags.pentaryn` has tier, namespace, flagScope == id, cssPrefix, generation (says DATA migration only when the code writes under the old scope) |
 | C08 | fail | `socket: true` iff the module uses its `module.<id>` channel |
 | C09 | fail | recommends carry reasons; every package named in code is in `relationships` |
@@ -932,7 +939,7 @@ both Warnings and Manual.
 | C59 | warn+manual | `await <doc>.update/create/delete/setFlag/unsetFlag(` inside a loop body (batch it) |
 | C60 | warn | no `async` listener or `await` in a hot-hook handler unless it defers via `perFrame`/`debounce`/`coalesce` |
 | C61 | warn+manual | a writing `create*/update*/delete*` listener has an active-GM gate, the initiator gate (`userId !== game.user.id`) or a claim (an any-GM gate alone → manual). The active-GM and initiator gates pick one *user*, not one tab: every tab of that user passes, so where two tabs on one account matter the review checks for a claim (§5.9.4); the write and the gate are looked for in the listener and the functions it calls by name, in its file or the module files it imports |
-| C62 | fail | a manifest param with a Document `kind` (`actor token item scene user journal message macro region combat table folder playlist`), or a `ref`, that the kit does not resolve (`resolve: false`, or not the first param) names a string form in `type` (`uuid`, `id`, `name`, `string`), or its `doc` or the row's says `eval-js only`. Read from `test/golden/describe.json` (n/a without one). Mirrors the bridge's `needsDoc` (`pentaryn-call.ts`): without it the row is refused live as "eval-js only" (senses.inspect, W3L) |
+| C62 | fail | a manifest param with a Document `kind` (`actor token item scene user journal message macro region combat table folder playlist`), or a `ref`, that the kit does not resolve (`resolve: false`, or not the first param) names a string form in `type` (`uuid`, `id`, `name`, `string`), carries `resolve: "self"` (kit 1.1.0), or its `doc` or the row's says `eval-js only`. Read from `test/golden/describe.json` (n/a without one). Mirrors the bridge's `needsDoc` (`pentaryn-call.ts`): without it the row is refused live as "eval-js only" (senses.inspect, W3L) |
 
 ## 12. Wiring status
 
@@ -940,6 +947,6 @@ Wired in wave 1 (README §7): `make foundry-<m>-check` with the vendor and confo
 W3), `module-new` / `module-vendor` / `module-conformance` / `module-check --all --json` in ops
 (W1), the Makefile targets in §6 (W4), the updater's exposure skip and pytest paths (W5), the
 routing rows and the generated Module APIs table (W6, W7) and the plans index row (W8). What stays
-open: conformance is advisory until Stage 5 (§6), and names and pings run `node-test` only once they
-have a `test/run.mjs`. The list with status is
+open: nothing in W1–W9. Stage 5 step 2 (2026-10-12) made the vendor and conformance gates strict,
+with explicit per-module exceptions in `scripts/foundry/blueprint/exceptions.json` (§6). The list with status is
 [`../plans/addon-blueprint-2026-10/README.md`](../plans/addon-blueprint-2026-10/README.md) §7.

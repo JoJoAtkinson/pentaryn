@@ -1,4 +1,4 @@
-// CSS scope (guide step 8): every rule in creatures.css is scoped on the strip's own id + class
+// CSS scope (guide step 8): every rule in styles/creatures.css is scoped on the strip's own id + class
 // (`#pentaryn-creatures.pcr-strip`), and the strip the module mounts carries that class.
 import { mock, test } from "node:test";
 import assert from "node:assert/strict";

@@ -1,4 +1,4 @@
-// pentaryn kit 1.0.2 · vendored from foundry/lib/argon-kit.mjs — edit the canonical file, then run scripts/foundry/blueprint/vendor.py
+// pentaryn kit 1.1.0 · vendored from foundry/lib/argon-kit.mjs — edit the canonical file, then run scripts/foundry/blueprint/vendor.py
 /**
  * The Argon Combat HUD helpers that pentaryn-combat and pentaryn-transform each hand-copied
  * (transform-creatures-12, combat-riders-3/-5, -18 phase 1; audit Wave 8.6, decision D7).

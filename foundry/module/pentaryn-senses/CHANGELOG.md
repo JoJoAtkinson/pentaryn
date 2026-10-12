@@ -1,10 +1,15 @@
 # Changelog — Pentaryn Senses (`pentaryn-senses`)
 
-## Unreleased — blueprint migration (wave 3, 2026-10-11)
+## 0.5.0 — 2026-10-12 (blueprint migration, wave 3; released by the Wave 7 restart batch, wave 5)
 
-`module.json` stays 0.4.1 until the Wave 7 restart batch adds the blueprint keys
-(`tier`, `namespace`, `flagScope: "pentaryn-senses"`, `cssPrefix: "ps-"`), `minimum: "14"` and
-`recommends: enhancedcombathud`.
+Releases the wave-3 blueprint migration and overnight FX batch 2 (W3-SE4) together with the batch.
+`module.json`: the blueprint keys (`tier`, `namespace`, `flagScope: "pentaryn-senses"`,
+`cssPrefix: "ps-"`), `minimum: "14"` and `recommends: enhancedcombathud`; `version` 0.4.1 → 0.5.0
+with `senses-core.mjs` `VERSION` (the `api.test` version pin follows).
+
+- **[declared] A chain on a hidden anchor is GM-only** (W3-SE4, Joe 2026-10-12): `paint()` now
+  hides a chain from non-GM viewers when either end is hidden, not just the chained token, so a
+  player's screen never shows the hidden anchor's square. Pin flipped in `chain.test.mjs`.
 
 - **[declared] `syncAll` batches its writes** (W3-SE3, 2026-10-12, performance): every prototype in
   one `Actor.updateDocuments`, then every token in one `updateEmbeddedDocuments` per scene (was one

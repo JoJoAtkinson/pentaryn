@@ -35,7 +35,9 @@ test("the legacy surface is kept: its seven members equal golden/surface-legacy.
   pinJSON("surface-legacy", Object.fromEntries(Object.entries(surfaceOf(game.pentaryn.portals)).filter(([k]) => legacy.includes(k))), import.meta.url);
 });
 
-test("settings: three world Boolean rows registered at init, plain English (golden/settings-register.json)", () => {
+// [declared] D-P2 / -29 (Wave 7 batch, Joe 2026-10-12), flipped from "plain English": the three rows
+// register PENTARYN_PORTALS.Setting.<key>.Name/Hint keys (lang/en.json carries the same English).
+test("settings: three world Boolean rows registered at init, lang keys as labels (golden/settings-register.json)", () => {
   const rows = [...game.settings.settings.values()].filter(s => s.namespace === MODULE);
   pinJSON("settings-register", rows.map(r => ({ ...r, type: r.type?.name })), import.meta.url);
   assert.deepEqual(rows.map(r => r.key), ["teleportDefault", "spreadArrivals", "confirmPartyTeleport"]);

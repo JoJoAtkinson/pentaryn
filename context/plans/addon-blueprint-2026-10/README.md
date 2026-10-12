@@ -171,6 +171,11 @@ If WAIT lifts before Stage 3 runs, fold those modules' manifest edits in. Otherw
 form a second, final restart batch (**Wave 7b**) at the end of Stage 4. Two restarts total, never
 one per module.
 
+**Status 2026-10-12 (W5c):** batches 1 and 2 are applied together on `migrate/wave-5`, one commit
+per module (WAIT lifted, so one restart, not two): [`wave-5-report.md`](wave-5-report.md). The sync,
+the one restart and the live smoke are lane W5L: [`wave-5-live-plan.md`](wave-5-live-plan.md). The
+walls flag-scope data migration is parked (walls stays off).
+
 ### Stage 4 — Formerly-WAIT modules (audit Wave 8); all `wait.json` entries lifted 2026-10-11 (D9: live test done)
 
 Order: **creatures → portals → senses → riders → aoe → transform → combat.**
@@ -192,6 +197,12 @@ Order: **creatures → portals → senses → riders → aoe → transform → c
 1. Remove `publish.mjs`'s frozen-root guard and `setTimeout 0` re-alias tick (safe once the
    importer change has been live for a session), bump the kit, `vendor.py sync --all`.
 2. Turn the vendor and conformance gates from advisory to failing for every module (W3).
+   **Done 2026-10-12 (W5c, `migrate/wave-5`, `3eaef7c5`):** both gates fail every module, a
+   lock-less one included; the only exceptions are the rows of
+   `scripts/foundry/blueprint/exceptions.json` (reason, decision, until; a stale row fails too) —
+   attunement C35, combat C21/C23, journal C56, riders C37/C56, ties C05/C37, walls C07. Cleared
+   rather than excepted: dropbin C50 (scorer gap, `5c54ae0f`), cursors C05/C13/C24/C25 (its
+   guide steps 7–8, `83af47a1`).
 3. Consider the phase-2 `pentaryn-lib` library module ([design record](../addon-blueprint-2026-10.md) §9, decision 1).
 
 ### Live-test sessions (declared changes only)
@@ -305,6 +316,9 @@ their module id (manifest-only). The design record and the use-doc now say so.
 W6–W8 routing rows were already present. Conformance stays advisory until Stage 5
 (`CONFORMANCE_FAILS`); names and pings get `node-test` once they have a `test/run.mjs`. The table
 below is the original suggestion list, kept as history.
+
+**Status 2026-10-12 (Stage 5 step 2, W5c):** W3 is strict — `CONFORMANCE_FAILS` and the WAIT and
+no-lock skips are gone; exceptions live in `scripts/foundry/blueprint/exceptions.json` (`3eaef7c5`).
 
 | Id | File | Suggested edit |
 |---|---|---|

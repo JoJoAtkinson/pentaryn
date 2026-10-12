@@ -25,7 +25,7 @@ export function configureCardApp({ setEditing, guard } = {}) {
 export class PortalCard extends foundry.applications.api.ApplicationV2 {
   static DEFAULT_OPTIONS = {
     classes: ["ppt-app", "ppt-dialog"],
-    window: { title: "Portal card", icon: "fa-solid fa-door-open", resizable: true },
+    window: { title: "Portal card", icon: "fa-solid fa-door-open", resizable: true },   // shown only through get title()
     position: { width: 600, height: "auto" }
   };
 
@@ -46,29 +46,29 @@ export class PortalCard extends foundry.applications.api.ApplicationV2 {
     return super.close(options);
   }
 
-  get title() { return `Portal card — ${this.region.name}`; }
+  get title() { return _loc("PENTARYN_PORTALS.Card.Title", { name: this.region.name }); }
 
   async _renderHTML() {
     const dests = destinationsOf(this.region).map(d => d.region);
     const behaviors = teleportBehaviors(this.region);
     const revealedAll = behaviors.every(b => b.system.revealed);
     if (!this.edit) {
-      const note = revealedAll ? "" : `<p class="hint"><i class="fa-solid fa-eye-slash"></i> This passage is <strong>unrevealed</strong>: players see no cards, only "a way onward".</p>`;
-      const sealed = this.region.hidden ? `<p class="hint"><i class="fa-solid fa-lock"></i> <strong>Sealed:</strong> players can't see or use it.</p>` : "";
-      return `<p class="hint">What a player sees on hover and in the travel prompt.</p>${sealed}${note}<div class="ppt-cards">${dests.map(d => cardHTML(cardFor(d))).join("")}</div>`;
+      const note = revealedAll ? "" : `<p class="hint"><i class="fa-solid fa-eye-slash"></i> ${_loc("PENTARYN_PORTALS.Card.Unrevealed")}</p>`;
+      const sealed = this.region.hidden ? `<p class="hint"><i class="fa-solid fa-lock"></i> ${_loc("PENTARYN_PORTALS.Card.Sealed")}</p>` : "";
+      return `<p class="hint">${_loc("PENTARYN_PORTALS.Card.Intro")}</p>${sealed}${note}<div class="ppt-cards">${dests.map(d => cardHTML(cardFor(d))).join("")}</div>`;
     }
 
     const sw = (key, on, label, hint) => `<label class="ppt-switch" data-tooltip="${esc(hint)}">
       <input type="checkbox" data-set="${key}" ${on ? "checked" : ""}><span class="ppt-slider"></span><span>${esc(label)}</span></label>`;
     const choice = behaviors.every(b => b.system.choice);
     const head = `<section class="ppt-passage">
-      <input class="ppt-name" type="text" data-set="name" value="${esc(this.region.name)}" data-tooltip="Passage name (GM only)">
+      <input class="ppt-name" type="text" data-set="name" value="${esc(this.region.name)}" data-tooltip="${_loc("PENTARYN_PORTALS.Card.PassageName")}">
       <div class="ppt-switches">
-        ${sw("open", !this.region.hidden, "Open", "Off = sealed: players can't see the badge or use it")}
-        ${sw("revealed", revealedAll, "Show where it leads", "Off = players see '?' and 'a way onward'")}
-        ${sw("choice", choice, "Ask before moving", "Off = stepping on it moves them at once")}
+        ${sw("open", !this.region.hidden, _loc("PENTARYN_PORTALS.Card.Open"), _loc("PENTARYN_PORTALS.Card.OpenHint"))}
+        ${sw("revealed", revealedAll, _loc("PENTARYN_PORTALS.Card.Revealed"), _loc("PENTARYN_PORTALS.Card.RevealedHint"))}
+        ${sw("choice", choice, _loc("PENTARYN_PORTALS.Card.Choice"), _loc("PENTARYN_PORTALS.Card.ChoiceHint"))}
       </div>
-      <p class="hint"><i class="fa-solid fa-up-down-left-right"></i> Drag this passage's badge on the map to move it. Each card below is the place it leads to.</p>
+      <p class="hint"><i class="fa-solid fa-up-down-left-right"></i> ${_loc("PENTARYN_PORTALS.Card.DragHint")}</p>
     </section>`;
 
     const cards = dests.map(d => {
@@ -78,17 +78,17 @@ export class PortalCard extends foundry.applications.api.ApplicationV2 {
         <figure class="ppt-imgedit">
           <img class="ppt-thumb" src="${esc(c.img)}" alt="">
           <div class="ppt-imgtools">
-            <button type="button" data-act="pick" data-tooltip="Choose an image"><i class="fa-solid fa-folder-open"></i></button>
-            <button type="button" data-act="snap" data-tooltip="Snap it from the map around that spot"><i class="fa-solid fa-camera"></i></button>
-            ${f.img ? `<button type="button" data-act="clearimg" data-tooltip="Back to the scene thumbnail"><i class="fa-solid fa-rotate-left"></i></button>` : ""}
+            <button type="button" data-act="pick" data-tooltip="${_loc("PENTARYN_PORTALS.Card.PickImage")}"><i class="fa-solid fa-folder-open"></i></button>
+            <button type="button" data-act="snap" data-tooltip="${_loc("PENTARYN_PORTALS.Card.SnapImage")}"><i class="fa-solid fa-camera"></i></button>
+            ${f.img ? `<button type="button" data-act="clearimg" data-tooltip="${_loc("PENTARYN_PORTALS.Card.ClearImage")}"><i class="fa-solid fa-rotate-left"></i></button>` : ""}
           </div>
         </figure>
         <div class="ppt-text">
           <input class="ppt-title" type="text" data-f="title" value="${esc(f.title ?? "")}" placeholder="${esc(c.title)}">
-          <textarea class="ppt-descedit" data-f="description" rows="5" placeholder="What players read before they choose…">${esc(f.description ?? "")}</textarea>
+          <textarea class="ppt-descedit" data-f="description" rows="5" placeholder="${_loc("PENTARYN_PORTALS.Card.DescriptionPlaceholder")}">${esc(f.description ?? "")}</textarea>
           <div class="ppt-meta"><i class="fa-solid fa-location-dot"></i> ${esc(d.parent.name)} · ${esc(d.name)}
-            <a data-act="look" data-tooltip="Look there (only you)"><i class="fa-solid fa-binoculars"></i></a>
-            <a data-act="unlink" data-tooltip="Remove this destination"><i class="fa-solid fa-link-slash"></i></a></div>
+            <a data-act="look" data-tooltip="${_loc("PENTARYN_PORTALS.Card.Look")}"><i class="fa-solid fa-binoculars"></i></a>
+            <a data-act="unlink" data-tooltip="${_loc("PENTARYN_PORTALS.Card.Unlink")}"><i class="fa-solid fa-link-slash"></i></a></div>
         </div>
       </article>`;
     }).join("");
@@ -99,11 +99,11 @@ export class PortalCard extends foundry.applications.api.ApplicationV2 {
       .filter(r => !taken.has(r.uuid) && !r.behaviors.some(b => b.type !== "teleportToken"))
       .map(r => `<option value="${esc(r.uuid)}">${esc(sc.name)} — ${esc(r.name)}</option>`)).join("");
     const add = `<section class="ppt-add">
-      <select data-act="addsel"><option value="">Add a destination…</option>${opts}</select>
-      <label class="ppt-switch" data-tooltip="Also make that spot lead back here"><input type="checkbox" data-act="twoway" checked><span class="ppt-slider"></span><span>Two-way</span></label>
+      <select data-act="addsel"><option value="">${_loc("PENTARYN_PORTALS.Card.AddDestination")}</option>${opts}</select>
+      <label class="ppt-switch" data-tooltip="${_loc("PENTARYN_PORTALS.Card.TwoWayHint")}"><input type="checkbox" data-act="twoway" checked><span class="ppt-slider"></span><span>${_loc("PENTARYN_PORTALS.Card.TwoWay")}</span></label>
     </section>`;
 
-    return head + `<div class="ppt-cards">${cards || `<p class="hint">No destinations yet.</p>`}</div>` + add;
+    return head + `<div class="ppt-cards">${cards || `<p class="hint">${_loc("PENTARYN_PORTALS.Card.NoDestinations")}</p>`}</div>` + add;
   }
 
   _replaceHTML(result, content) {
@@ -174,7 +174,7 @@ export class PortalCard extends foundry.applications.api.ApplicationV2 {
     const header = frame.querySelector(".window-header");
     const toggle = document.createElement("label");
     toggle.className = "ppt-toggle";
-    toggle.dataset.tooltip = "Toggle edit mode";
+    toggle.dataset.tooltip = _loc("PENTARYN_PORTALS.Card.ToggleEdit");
     toggle.innerHTML = `<input type="checkbox" ${this.edit ? "checked" : ""}><span class="ppt-slider"></span>`;
     toggle.querySelector("input").addEventListener("change", ev => {
       this.edit = ev.target.checked;

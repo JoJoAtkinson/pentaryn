@@ -1,4 +1,4 @@
-// pentaryn kit 1.0.2 · vendored from foundry/lib/patch-libwrapper.mjs — edit the canonical file, then run scripts/foundry/blueprint/vendor.py
+// pentaryn kit 1.1.0 · vendored from foundry/lib/patch-libwrapper.mjs — edit the canonical file, then run scripts/foundry/blueprint/vendor.py
 /**
  * The libWrapper route for `wrapMethod`. Vendored only into a module whose module.json names
  * lib-wrapper in `relationships` (vendor.py refuses otherwise), because these bytes name the

@@ -1,5 +1,5 @@
 {
-  "version": "1.0.2",
+  "version": "1.1.0",
   "tier": "full",
   "files": [
     "errors",
@@ -11,6 +11,7 @@
     "api",
     "queries",
     "patch",
-    "flags"
+    "flags",
+    "argon-tooltip"
   ]
 }

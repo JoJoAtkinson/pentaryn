@@ -1,4 +1,4 @@
-// pentaryn kit 1.0.2 · vendored from foundry/lib/flags.mjs — edit the canonical file, then run scripts/foundry/blueprint/vendor.py
+// pentaryn kit 1.1.0 · vendored from foundry/lib/flags.mjs — edit the canonical file, then run scripts/foundry/blueprint/vendor.py
 /**
  * Flag reads that never throw, and the update path for a flag.
  *

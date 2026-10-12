@@ -1,7 +1,7 @@
 ---
 title: Wall Autocomplete
 status: active
-last_modified: 2026-10-11
+last_modified: 2026-10-12
 tags: [foundry, module, pentaryn-walls, maps, walls]
 ---
 
@@ -145,9 +145,10 @@ await game.pentaryn.walls.undo({all: true})
 
 ## Known gaps
 
-- The flags still live under `wall-autocomplete`, not the module id; the Wave 7 batch migrates
-  them (and `keepOpen`) to `flags.pentaryn-walls` with a one-shot GM migration.
-- Setting and keybinding labels are literal English until the same batch adds `lang/en.json`.
+- The flags still live under `wall-autocomplete`, not the module id. The one-shot GM migration
+  to `flags.pentaryn-walls` (and `keepOpen`) is written (`migrations.mjs`) but **parked**: walls
+  stays off in Joe's world, so the Wave 7 batch left `flagScope: "wall-autocomplete"` (C07 stays
+  red on that alone).
 - The compiled engine does not reproduce the `rule` stamp, the create flags or the mutation log
   (geometry only); the JS engine stays the reference.
 - Worth doing independently: run the engine in a Web Worker. It is already pure, so it drops in

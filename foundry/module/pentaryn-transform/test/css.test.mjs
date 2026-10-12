@@ -1,12 +1,14 @@
 // Guide step 10 [declared] T-D4 (transform-creatures-14's test): transform's own classes are
 // ptf-* (cssPrefix); every one the code adds is styled in styles/transform.css or is a marker the
 // code queries; the shared tooltip classes come from the kit's lib/argon-tooltip.css (D7), which
-// transform.css imports; no old pentaryn-<class> is left; every own selector is scoped.
+// module.json `styles` lists (W4-T4, the Wave 7 batch; it was an @import in transform.css); no old
+// pentaryn-<class> is left; every own selector is scoped.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { sourceScan, pinJSON } from "./kit/harness.mjs";
-import { rulesFor } from "./css-rules.mjs";
+import { manifestOf } from "./kit/harness.mjs";
+import { rulesForManifest } from "./css-rules.mjs";
 
 const ROOT = new URL("..", import.meta.url);
 const css = readFileSync(new URL("../styles/transform.css", import.meta.url), "utf8");
@@ -42,11 +44,13 @@ test("every ptf-* class the code uses is styled here (or is a marker); the toolt
   }
 });
 
-test("D7: transform.css imports the vendored kit stylesheet and keeps no copy of its rules", () => {
-  assert.match(css, /@import "\.\.\/lib\/argon-tooltip\.css";/);
+// [declared] W4-T4 (Joe 2026-10-12, Wave 7 batch), flipped from "transform.css imports the vendored kit
+// stylesheet (@import first)": module.json `styles` lists lib/argon-tooltip.css after transform.css, and
+// transform.css has neither the @import nor a copy of the kit's rules.
+test("D7: module.json styles lists the vendored kit stylesheet; transform.css neither imports nor copies it", () => {
+  assert.deepEqual(manifestOf(ROOT).styles, ["styles/transform.css", "lib/argon-tooltip.css"]);
+  assert.equal(/@import/.test(strip(css)), false);
   assert.equal(strip(css).includes(".ech-tooltip.pentaryn-tt"), false);
-  const firstRule = strip(css).trim().split("\n").find(l => l.trim());
-  assert.match(firstRule, /^@import /, "@import comes before every rule");
 });
 
 test("every own selector is scoped under .ptf-* or .pentaryn-transform (C37)", () => {
@@ -57,8 +61,9 @@ test("every own selector is scoped under .ptf-* or .pentaryn-transform (C37)", (
   }
 });
 
-test("D7: the .pentaryn-tt rules transform.css applies, kit import inlined, are its pre-D7 block in order (golden/tooltip-rules.json)", () => {
+test("D7: the .pentaryn-tt rules transform's styles apply, in module.json order, are its pre-D7 block in order (golden/tooltip-rules.json)", () => {
   // The golden was computed from styles/transform.css at origin/main (rules :70-113, before the kit
-  // import), so the shared stylesheet changes no rule, value or order a transform tooltip gets.
-  pinJSON("tooltip-rules", rulesFor(new URL("../styles/transform.css", import.meta.url), /\.pentaryn-tt\b/), import.meta.url);
+  // import), so the shared stylesheet changes no rule, value or order a transform tooltip gets. Since
+  // W4-T4 the loader reads module.json `styles` (unchanged golden: only the kit file has these rules).
+  pinJSON("tooltip-rules", rulesForManifest(ROOT, /\.pentaryn-tt\b/), import.meta.url);
 });

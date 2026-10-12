@@ -2,16 +2,32 @@
   "id": "pentaryn-riders",
   "title": "Pentaryn Feature Riders",
   "description": "Does the riders dnd5e leaves to the player, from a small rules table keyed by feature identity and active only while the actor has the feature. Elemental Adept: 1s on the chosen type's damage dice of your spells count as 2 (core min2), and the damage tray starts with the target's resistance to that type ignored (the GM can switch it back; Apply keeps the choice). The card names what was applied under its dice row. Elemental Affinity: +CHA once per casting to a spell of your type. Potent Spellcasting (druid or cleric): +WIS to that class's cantrip damage. Healer: 1s rerolled on spell healing dice, and one Battle Medic activity that spends the TARGET's Hit Die and rolls it (1s rerolled) + PB; the active GM writes a target the player doesn't own, through a v14 user query. Also a -/+ on the character sheet's Hit Dice bar outside edit mode. Exposes game.pentaryn.riders.",
-  "version": "0.2.0",
-  "compatibility": { "minimum": "14", "verified": "14" },
+  "version": "0.3.0",
+  "compatibility": { "minimum": "14", "verified": "14.369" },
   "authors": [{ "name": "Joseph Atkinson" }],
   "esmodules": ["riders.mjs"],
-  "styles": ["riders.css"],
+  "styles": ["styles/riders.css", "lib/argon-tooltip.css"],
   "languages": [{ "lang": "en", "name": "English", "path": "lang/en.json" }],
   "relationships": {
-    "systems": [{ "id": "dnd5e", "type": "system", "compatibility": { "minimum": "6.0", "verified": "6.0.6" } }]
+    "systems": [{ "id": "dnd5e", "type": "system", "compatibility": { "minimum": "6.0", "verified": "6.0.6" } }],
+    "recommends": [
+      { "id": "enhancedcombathud", "type": "module", "reason": "Ritual Adept's Rituals group, the Longer casts group, shared-uses badges and panel collapse live on the Argon HUD" },
+      { "id": "enhancedcombathud-dnd5e", "type": "module", "reason": "the Cast Spell panel the Rituals and Longer casts groups are added to; Metamagic buttons skip its target picker; its spell tooltips get the spell's roll data" }
+    ]
   },
   "socket": false,
   "protected": false,
-  "flags": { "pentaryn": { "flagScope": "riders", "generation": 14 } }
+  "flags": {
+    "pentaryn": {
+      "tier": "full",
+      "namespace": "riders",
+      "flagScope": "pentaryn-riders",
+      "cssPrefix": "pr-",
+      "generation": 14,
+      "afterSync": [
+        "First install: restart Foundry (module.json is read at startup), enable 'Pentaryn Feature Riders', then reload.",
+        "Audit feat riders per actor:  game.pentaryn.riders.report()"
+      ]
+    }
+  }
 }

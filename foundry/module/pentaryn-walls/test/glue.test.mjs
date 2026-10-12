@@ -33,27 +33,27 @@ test("hook registration manifest (golden/hooks.json): once init, once ready", ()
   assert.deepEqual(hooksAtLoad, [{ kind: "once", name: "init" }, { kind: "once", name: "ready" }]);
 });
 
-test("(a) init registers the backend setting and three keybindings, exactly as today", () => {
+// [declared] W2-WALLS-1 (Joe 2026-10-12; Wave 7 batch, guide step 10, -36), flipped from "the literal
+// English labels": the rows register full-key literals into lang/en.json, which Foundry localizes on the
+// settings and controls screens (module.json now has `languages`). The text behind each key is today's
+// English, except the backend hint's "the same 44 fixtures" → "the same fixture corpus" (-8); see
+// i18n.test.mjs.
+test("(a) init registers the backend setting and three keybindings, with lang keys as labels", () => {
   F.fire("init");
   const s = game.settings.settings.get(`${MOD}.backend`);
+  const K = "PENTARYN_WALLS";
   assert.deepEqual({ ...s, type: s.type.name }, {
-    name: "Engine backend",
-    hint: "Automatic uses the compiled (WASM) engine when it loads, falling back to JavaScript. " +
-          "Both produce identical geometry — verified against the same 44 fixtures — so this " +
-          "only affects speed. Compiled is ~12x faster on large scenes.",
+    name: `${K}.settings.backend.name`,
+    hint: `${K}.settings.backend.hint`,
     scope: "world", config: true, type: "String", default: "auto",
-    choices: { auto: "Automatic (compiled when available)", wasm: "Compiled (WASM)", js: "JavaScript" },
+    choices: { auto: `${K}.settings.backend.choices.auto`, wasm: `${K}.settings.backend.choices.wasm`, js: `${K}.settings.backend.choices.js` },
     namespace: MOD, key: "backend",
   });
   const binds = [...game.keybindings.actions.entries()].filter(([id]) => id.startsWith(`${MOD}.`));
   assert.deepEqual(binds.map(([id, b]) => [id, b.name, b.hint, b.editable, b.restricted, typeof b.onDown]), [
-    [`${MOD}.run`, "Wall autocomplete: run", "Complete the walls on the current scene. Reversible — undo removes exactly this run.",
-      [{ key: "KeyW", modifiers: ["Alt"] }], true, "function"],
-    [`${MOD}.undo`, "Wall autocomplete: undo last run",
-      "Remove the walls the last run created and restore any it trimmed. Press again to peel back the run before it.",
-      [{ key: "KeyZ", modifiers: ["Alt"] }], true, "function"],
-    [`${MOD}.preview`, "Wall autocomplete: preview", "Report what would be built without writing anything.",
-      [{ key: "KeyW", modifiers: ["Alt", "Shift"] }], true, "function"],
+    [`${MOD}.run`, `${K}.keys.run.name`, `${K}.keys.run.hint`, [{ key: "KeyW", modifiers: ["Alt"] }], true, "function"],
+    [`${MOD}.undo`, `${K}.keys.undo.name`, `${K}.keys.undo.hint`, [{ key: "KeyZ", modifiers: ["Alt"] }], true, "function"],
+    [`${MOD}.preview`, `${K}.keys.preview.name`, `${K}.keys.preview.hint`, [{ key: "KeyW", modifiers: ["Alt", "Shift"] }], true, "function"],
   ]);
 });
 
@@ -188,9 +188,15 @@ test("(h) keybinding guard: a second press while running warns; a rejection logs
     await flush();
   });
   delete F.hold.createEmbeddedDocuments;
-  assert.deepEqual(since(from, "console.error").map(c => c.args), [["pentaryn-walls |", "Error: db locked"]]);
+  // [declared] W2-WALLS-3 (Joe 2026-10-12), flipped from one bare console.error and a raw
+  // ui.notifications.error(…, {permanent: true}): the failure logs through the kit log (with the
+  // error), and the toast goes through log.notify, which adds {console: false} and its own line.
+  assert.deepEqual(since(from, "console.error").map(c => c.args), [
+    ["pentaryn-walls | keybinding action failed", "Error: db locked"],
+    ["pentaryn-walls | Wall autocomplete: db locked"],
+  ]);
   assert.deepEqual(since(from, "notify").map(c => [c.level, c.message, c.opts]), [
-    ["error", "Wall autocomplete: db locked", { permanent: true }],
+    ["error", "Wall autocomplete: db locked", { console: false, permanent: true }],
   ]);
   from = mark();
   await withConsole(F, async () => {

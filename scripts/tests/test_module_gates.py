@@ -97,9 +97,10 @@ def test_node_test_capture_keeps_stdout_clean(tmp_path, capsys):
 
 # ── vendor gate ───────────────────────────────────────────────────────────────
 
-def test_vendor_gate_skips_an_unmigrated_module(tmp_path):
+def test_vendor_gate_fails_an_unmigrated_module(tmp_path):
+    """Stage 5: every module vendors the kit, so a missing lock is a failure, not a skip."""
     res = modules._gate_vendor(TmpSpec(_module(tmp_path, {"main.mjs": ""}), check=("vendor",)))
-    assert res.ok and res.skipped
+    assert not res.ok and not res.skipped and res.problems
 
 
 def test_vendor_gate_passes_identical_and_fails_drift(tmp_path):
@@ -117,10 +118,10 @@ def test_vendor_gate_passes_identical_and_fails_drift(tmp_path):
 
 # ── conformance gate ──────────────────────────────────────────────────────────
 
-def test_conformance_gate_skips_an_unmigrated_module(tmp_path):
+def test_conformance_gate_fails_an_unmigrated_module(tmp_path):
     res = modules._gate_conformance(TmpSpec(_module(tmp_path, {"main.mjs": ""}),
                                             check=("conformance",)))
-    assert res.ok and res.skipped
+    assert not res.ok and not res.skipped
 
 
 def _migrated_failing(tmp_path):
@@ -129,27 +130,65 @@ def _migrated_failing(tmp_path):
     return TmpSpec(root, check=("conformance",))
 
 
-def test_conformance_gate_is_advisory_until_stage_5(tmp_path, monkeypatch):
-    monkeypatch.setattr(modules, "CONFORMANCE_FAILS", False)
-    res = modules._gate_conformance(_migrated_failing(tmp_path))
-    assert res.ok and not res.skipped
-    assert res.counts["failing"], "a bare module fails fail-class rules"
-    assert res.notes and "advisory" in res.summary
-
-
-def test_conformance_gate_fails_on_fail_class_rules_when_enforced(tmp_path, monkeypatch):
-    monkeypatch.setattr(modules, "CONFORMANCE_FAILS", True)
+def test_conformance_gate_fails_on_fail_class_rules(tmp_path, monkeypatch):
+    from scripts.foundry.blueprint import conformance
+    monkeypatch.setattr(conformance, "EXCEPTIONS", {})
     res = modules._gate_conformance(_migrated_failing(tmp_path))
     assert not res.ok and res.problems
     assert {p.split()[0] for p in res.problems} == set(res.counts["failing"])
+    assert not hasattr(modules, "CONFORMANCE_FAILS"), "no switch back to advisory"
 
 
-def test_conformance_gate_reports_a_wait_module_without_failing(tmp_path, monkeypatch):
+def test_conformance_gate_accepts_only_the_listed_exceptions(tmp_path, monkeypatch):
     from scripts.foundry.blueprint import conformance
-    monkeypatch.setattr(modules, "CONFORMANCE_FAILS", True)
+    spec = _migrated_failing(tmp_path)
+    monkeypatch.setattr(conformance, "EXCEPTIONS", {})
+    failing = modules._gate_conformance(spec).counts["failing"]
+    assert len(failing) >= 2, "the bare module fails several rules"
+    row = {"reason": "test", "decision": "test", "until": "test"}
+    # every failing rule listed: passes, and says which it accepted and why
+    monkeypatch.setattr(conformance, "EXCEPTIONS", {"pentaryn-demo": {rid: row for rid in failing}})
+    res = modules._gate_conformance(spec)
+    assert res.ok and res.counts["accepted"] == sorted(failing) and "accepted" in res.summary
+    assert len(res.notes) == len(failing)
+    # one left off the list: fails on exactly that one
+    monkeypatch.setattr(conformance, "EXCEPTIONS", {"pentaryn-demo": {rid: row for rid in failing[1:]}})
+    res = modules._gate_conformance(spec)
+    assert not res.ok and res.counts["blocking"] == [failing[0]]
+
+
+def test_conformance_gate_blocks_a_finding_the_row_does_not_match(tmp_path, monkeypatch):
+    from scripts.foundry.blueprint import conformance
+    spec = _migrated_failing(tmp_path)
+    monkeypatch.setattr(conformance, "EXCEPTIONS", {})
+    failing = modules._gate_conformance(spec).counts["failing"]
+    row = {"reason": "test", "decision": "test", "until": "test"}
+    rows = {rid: row for rid in failing}
+    rows[failing[0]] = row | {"match": [r"^a finding nobody has$"]}
+    monkeypatch.setattr(conformance, "EXCEPTIONS", {"pentaryn-demo": rows})
+    res = modules._gate_conformance(spec)
+    assert not res.ok and res.counts["blocking"] == [failing[0]]
+    assert res.problems[0].startswith(f"{failing[0]} not covered by its exceptions.json row: ")
+
+
+def test_conformance_gate_fails_a_stale_exception(tmp_path, monkeypatch):
+    from scripts.foundry.blueprint import conformance
+    spec = _migrated_failing(tmp_path)
+    monkeypatch.setattr(conformance, "EXCEPTIONS", {})
+    failing = modules._gate_conformance(spec).counts["failing"]
+    row = {"reason": "test", "decision": "test", "until": "test"}
+    rows = {rid: row for rid in failing} | {"C01": row}   # C01 (module.json id) passes here
+    monkeypatch.setattr(conformance, "EXCEPTIONS", {"pentaryn-demo": rows})
+    res = modules._gate_conformance(spec)
+    assert not res.ok and res.counts["stale"] == ["C01"] and "stale" in res.summary
+
+
+def test_conformance_gate_does_not_exempt_a_wait_module(tmp_path, monkeypatch):
+    from scripts.foundry.blueprint import conformance
+    monkeypatch.setattr(conformance, "EXCEPTIONS", {})
     monkeypatch.setitem(conformance.WAIT, "pentaryn-demo", "live test running")
     res = modules._gate_conformance(_migrated_failing(tmp_path))
-    assert res.ok and "WAIT" in res.summary
+    assert not res.ok
 
 
 # ── registry wiring ───────────────────────────────────────────────────────────

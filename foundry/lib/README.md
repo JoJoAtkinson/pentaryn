@@ -30,7 +30,7 @@ Bump `kit.json` `version`, `errors.mjs` `KIT_VERSION` and every header together.
 | `hooks.mjs` | `hookRegistry(moduleId, log)` → `on/once/off/offAll/ids/guard/guardSwallowAsync`; `emitter(moduleId, HOOKS)` | `guard` passes vetoes through; `guardSwallowAsync` is aoe's old guard; `reg.on(n, fn, { guard: "warn" })` logs a throw at warn instead of error (1.0.1) |
 | `settings.mjs` | `defineSettings`, `settingReader`, `settingsSnapshot`, `defineKeybindings`, `serialStore` | `serialStore(MODULE, ["counter", "log"])` serialises several keys on one queue (1.0.1); rows carry literal `name`/`hint` keys; both define calls skip rows already registered, and `defineKeybindings` registers nothing once Foundry has built its bindings (after `setup`), so a hot patch never throws |
 | `resolve.mjs` | `resolveRef`, `refOf`, `toIdSet`, `withRef` | exact match only, explicit scene scope |
-| `api.mjs` | `buildApi`, `describe`, `surfaceOf`, `maxDepth`, `toPlain` | drift and reserved names throw at load; a `ref` row resolves per call with that call's `opts.sceneId`/`opts.base`; a write row returns `fail()` on an unresolvable ref; an `unlisted` table is published as a frozen **copy** — the caller's objects are never frozen (1.0.1) |
+| `api.mjs` | `buildApi`, `describe`, `surfaceOf`, `maxDepth`, `toPlain` | drift and reserved names throw at load; a `ref` row resolves per call with that call's `opts.sceneId`/`opts.base`; a write row returns `fail()` on an unresolvable ref; an `unlisted` table is published as a frozen **copy** — the caller's objects are never frozen (1.0.1); a row's `dryRun: true` shows in `describe()`, and a first `ref` with `resolve: "self"` is passed raw like `resolve: false` (the function resolves strings itself; the marker shows in `describe()`) (1.1.0) |
 | `queries.mjs` | `guarded`, `relayed`, `registerQueries`, `queryNameOf`, `queryGM` | `CONFIG.queries` from `query: true` rows; `guarded(fn, { sender: "any" })` and `fn(data, ctx)`; `relayed` = any sender, active-GM receiver (`relay: true` rows); `row.queryName` when the query name ≠ the row path (1.0.1) |
 | `publish.mjs` | `publishNamespace`, `installRoot`, `apiOf`, `publishedOf` | `module.api` canonical; assigns into the plain `game.pentaryn` (no frozen-root guard, no re-alias tick since 1.0.2) |
 | `election.mjs` | `isActiveGM`, `isAnyGM`, `isActiveGMOrLoneGM`, `pickRunner`, `claimDocument`, `claimMessage` | distinct truth tables — keep each call site's |
@@ -61,3 +61,9 @@ was re-vendored. K2 (top-level-only reserved names) waits for Joe's decision D1.
 `unwrap()` drops the kit's record, so the same marker can wrap again (J16, declared); `publish.mjs`
 loses the COMPAT frozen-root guard and `realiasTick` — a frozen `game.pentaryn` now throws (J10,
 declared). Re-vendored into every module with a lock.
+1.1.0 (wave 5, 2026-10-12; wave-2 report W2-B3, W2-B4, decided by Joe 2026-10-12) — additive only:
+a row field `dryRun: true` (the row takes a dry run; `describe()` emits it, and the bridge's
+pentaryn-write forwards a dry run only to such a row or to one whose param text names `dryRun`); a
+param marker `resolve: "self"` (the kit does not resolve the param, the function resolves a uuid, id
+or exact name itself; `describe()` keeps it, conformance C62 accepts it, and the bridge treats a first
+`ref` carrying it as resolvable). Re-vendored into every module with a lock.

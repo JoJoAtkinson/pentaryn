@@ -43,8 +43,10 @@ test("object exports are frozen tables, rows and arrays included", () => {
   for (const [k, v] of objects) assert.ok(deepFrozen(v), k);
 });
 
-test("module.json version is 0.2.5 (play-test fix PT1-6 kept)", () => {
-  assert.equal(manifest.version, "0.2.5");
+// [declared] Wave 7 batch (W4 version bumps, Joe 2026-10-12), flipped from "0.2.5 (play-test fix PT1-6
+// kept)": combat ships the blueprint migration as 0.3.0, with combat-core VERSION.
+test("module.json version is 0.3.0 (the Wave 7 batch release)", () => {
+  assert.equal(manifest.version, "0.3.0");
   assert.equal(manifest.id, core.MOD);
 });
 

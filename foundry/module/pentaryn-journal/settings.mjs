@@ -5,8 +5,8 @@
  * `singlePageReadables` is labelled `PENTARYN_JOURNAL.settings.singlePage.*` — the key path differs
  * from the setting key, which a literal row makes fine.
  *
- * `folderName` is registered as it always was: world, hidden (`config: false`), no label. It is
- * never shown in the settings menu; a GM changes it from the console.
+ * `folderName` is world and hidden (`config: false`): never shown in the settings menu; a GM changes
+ * it from the console. Its labels (W2-J1, Joe 2026-10-12) exist for C51 and describe() readers.
  *
  * A change reaches the features through `whenChanged(key, fn)`: the rows' `onChange` call the
  * listeners a feature registered, so this file never imports a feature (C16).
@@ -50,13 +50,15 @@ export const SETTINGS = Object.freeze([
   },
   {
     key: "folderName", scope: "world", config: false, type: String, default: "Player Journals",
+    name: "PENTARYN_JOURNAL.settings.folderName.name",
+    hint: "PENTARYN_JOURNAL.settings.folderName.hint",
     doc: "The folder personal journals live in (hidden; set from the console). Empty → the localised default. Read live.",
   },
 ]);
 
 /**
  * Called from the entry's `init` handler, and again by a hot patch (rows already registered are
- * skipped). No i18n root: every visible row names its labels, and `folderName` stays unlabelled.
+ * skipped). No i18n root: every row names its labels.
  */
 export function registerSettings() {
   defineSettings(MODULE, SETTINGS);

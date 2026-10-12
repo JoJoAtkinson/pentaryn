@@ -1,0 +1,87 @@
+{
+  "PENTARYN_PORTALS": {
+    "Setting": {
+      "teleportDefault": {
+        "Name": "Teleport is the default answer",
+        "Hint": "The teleport question opens with Teleport focused (Enter teleports). Off: core's default, Don't Teleport."
+      },
+      "spreadArrivals": {
+        "Name": "Arrivals step off an occupied square",
+        "Hint": "A player character who comes through a portal onto a square someone already stands on moves to the nearest free square around it (the GM's client does it)."
+      },
+      "confirmPartyTeleport": {
+        "Name": "Confirm a party teleport",
+        "Hint": "The GM's Teleport party first lists who will move (each follower beside its PC) and asks. Off: it moves at once."
+      }
+    },
+    "Dialog": {
+      "Question": "Teleport {name} to {title}?",
+      "QuestionNoToken": "Teleport to {title}?"
+    },
+    "Config": {
+      "Legend": "Portal card",
+      "Hint": "Shown to a player choosing to travel <em>here</em> from a linked teleport region.",
+      "Title": "Title",
+      "Image": "Image",
+      "ImagePlaceholder": "scene thumbnail",
+      "Snap": "Crop the map art around this region and use it",
+      "Description": "Description",
+      "DescriptionPlaceholder": "What players read before they choose."
+    },
+    "Hover": {
+      "Unknown": {
+        "Title": "A way onward",
+        "Text": "You can't tell where it leads."
+      }
+    },
+    "Menu": {
+      "Look": "Look at {title}",
+      "TeleportParty": "Teleport party → {title}",
+      "Preview": "Preview card (player view)",
+      "Edit": "Edit card",
+      "RegionSettings": "Region settings"
+    },
+    "Notify": {
+      "Followed": "{name} brought {names} to {place}.",
+      "NoBackground": "That region's scene has no background image to snapshot.",
+      "Looking": "Looking at {title}. Nobody moved; players can't see this.",
+      "PartyMovedOne": "{n} party token moved to {title}.",
+      "PartyMovedMany": "{n} party tokens moved to {title}."
+    },
+    "Party": {
+      "Nobody": "Teleport party: nobody on this scene counts as the party.",
+      "Title": "Teleport party",
+      "ConfirmOne": "Move this token to <strong>{title}</strong>?",
+      "ConfirmMany": "Move these {n} tokens to <strong>{title}</strong>?",
+      "LandsBeside": "lands beside {name}",
+      "Follower": "follower",
+      "Teleport": "Teleport",
+      "Cancel": "Cancel"
+    },
+    "Card": {
+      "Title": "Portal card — {name}",
+      "Intro": "What a player sees on hover and in the travel prompt.",
+      "Unrevealed": "This passage is <strong>unrevealed</strong>: players see no cards, only \"a way onward\".",
+      "Sealed": "<strong>Sealed:</strong> players can't see or use it.",
+      "PassageName": "Passage name (GM only)",
+      "Open": "Open",
+      "OpenHint": "Off = sealed: players can't see the badge or use it",
+      "Revealed": "Show where it leads",
+      "RevealedHint": "Off = players see '?' and 'a way onward'",
+      "Choice": "Ask before moving",
+      "ChoiceHint": "Off = stepping on it moves them at once",
+      "DragHint": "Drag this passage's badge on the map to move it. Each card below is the place it leads to.",
+      "PickImage": "Choose an image",
+      "SnapImage": "Snap it from the map around that spot",
+      "ClearImage": "Back to the scene thumbnail",
+      "DescriptionPlaceholder": "What players read before they choose…",
+      "Look": "Look there (only you)",
+      "Unlink": "Remove this destination",
+      "AddDestination": "Add a destination…",
+      "TwoWay": "Two-way",
+      "TwoWayHint": "Also make that spot lead back here",
+      "NoDestinations": "No destinations yet.",
+      "ToggleEdit": "Toggle edit mode"
+    }
+  }
+}

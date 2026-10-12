@@ -4,7 +4,7 @@
   "description": "Headless importer for generated Pentaryn NPC Actors. Exposes game.pentaryn.import() and nothing else — no UI, no settings, no canvas hooks. See foundry/CONTRACT.md.",
   "version": "1.1.1",
   "compatibility": {
-    "minimum": "13",
+    "minimum": "14",
     "verified": "14"
   },
   "authors": [
@@ -35,7 +35,17 @@
       "targetSystem": "dnd5e",
       "targetSystemVersion": "6.0",
       "generation": 14,
-      "defaultFileName": "actors.json"
+      "defaultFileName": "actors.json",
+      "tier": "full",
+      "namespace": "importer",
+      "flagScope": "pentaryn-importer",
+      "cssPrefix": "pim-",
+      "afterSync": [
+        "The actor pipeline stages this module (make foundry-import), not module-sync.",
+        "A module.json change needs a Foundry restart; then, as the GM:",
+        "  game.pentaryn.importer.describe().version   await game.pentaryn.importer.selftest()",
+        "  await game.pentaryn.import({ dryRun: true })"
+      ]
     }
   }
 }

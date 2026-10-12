@@ -169,7 +169,8 @@ export function showTip(badge, ev) {
     tip.dataset.key = key;
     tip.innerHTML = badge.revealed
       ? `<div class="ppt-cards">${badge.cards.map(c => cardHTML(c)).join("")}</div>`
-      : `<div class="ppt-card"><div class="ppt-text"><h4>A way onward</h4><p class="ppt-desc">You can't tell where it leads.</p></div></div>`;
+      : `<div class="ppt-card"><div class="ppt-text"><h4>${_loc("PENTARYN_PORTALS.Hover.Unknown.Title")}</h4>`
+        + `<p class="ppt-desc">${_loc("PENTARYN_PORTALS.Hover.Unknown.Text")}</p></div></div>`;
   }
   tip.style.left = `${ev.clientX + 18}px`;
   tip.style.top = `${ev.clientY + 18}px`;
@@ -186,12 +187,12 @@ export function openMenu(badge, ev) {
   menu.className = "ppt-menu";
   const items = [];
   for (const c of badge.cards) {
-    items.push({ icon: "fa-binoculars", label: `Look at ${c.title}`, run: () => lookAt(fromUuidSync(c.uuid)) });
-    items.push({ icon: "fa-person-walking-arrow-right", label: `Teleport party → ${c.title}`, run: () => teleportParty(fromUuidSync(c.uuid)) });
+    items.push({ icon: "fa-binoculars", label: _loc("PENTARYN_PORTALS.Menu.Look", { title: c.title }), run: () => lookAt(fromUuidSync(c.uuid)) });
+    items.push({ icon: "fa-person-walking-arrow-right", label: _loc("PENTARYN_PORTALS.Menu.TeleportParty", { title: c.title }), run: () => teleportParty(fromUuidSync(c.uuid)) });
   }
-  items.push({ icon: "fa-eye", label: "Preview card (player view)", run: () => PortalCard.open(badge.region, { edit: false }) });
-  items.push({ icon: "fa-pen", label: "Edit card", run: () => PortalCard.open(badge.region, { edit: true }) });
-  items.push({ icon: "fa-gear", label: "Region settings", run: () => badge.region.sheet.render(true) });
+  items.push({ icon: "fa-eye", label: _loc("PENTARYN_PORTALS.Menu.Preview"), run: () => PortalCard.open(badge.region, { edit: false }) });
+  items.push({ icon: "fa-pen", label: _loc("PENTARYN_PORTALS.Menu.Edit"), run: () => PortalCard.open(badge.region, { edit: true }) });
+  items.push({ icon: "fa-gear", label: _loc("PENTARYN_PORTALS.Menu.RegionSettings"), run: () => badge.region.sheet.render(true) });
   menu.innerHTML = items.map((it, i) => `<a data-i="${i}"><i class="fa-solid ${it.icon}"></i> ${esc(it.label)}</a>`).join("");
   menu.style.left = `${ev.clientX}px`;
   menu.style.top = `${ev.clientY}px`;

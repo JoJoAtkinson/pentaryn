@@ -1,11 +1,11 @@
 {
   "id": "pentaryn-walls",
   "title": "Pentaryn Wall Autocomplete",
-  "description": "Deterministic completion of hand-drawn walls. Rough in the windows, doors and hint stubs; the engine infers the rest or refuses and says why. Ships a compiled (WASM) engine that is ~12x faster than the JS one and verified byte-identical against the same 44 fixtures. Exposes game.pentaryn.walls.preview() / .run() / .undo(). See playbooks/foundry-wall-autocomplete.md.",
+  "description": "Deterministic completion of hand-drawn walls. Rough in the windows, doors and hint stubs; the engine infers the rest or refuses and says why. Ships a compiled (WASM) engine that is ~12x faster than the JS one and produces identical geometry, verified against the same fixture corpus. Exposes game.pentaryn.walls.preview() / .run() / .undo(). See context/foundry/walls.md.",
   "version": "0.2.0",
   "compatibility": {
-    "minimum": "13",
-    "verified": "14"
+    "minimum": "14",
+    "verified": "14.369"
   },
   "authors": [
     {
@@ -15,12 +15,26 @@
   "esmodules": [
     "pentaryn-walls.mjs"
   ],
+  "languages": [
+    {
+      "lang": "en",
+      "name": "English",
+      "path": "lang/en.json"
+    }
+  ],
   "socket": false,
   "protected": false,
   "flags": {
     "pentaryn": {
+      "tier": "full",
+      "namespace": "walls",
       "flagScope": "wall-autocomplete",
-      "generation": 14
+      "cssPrefix": "pw-",
+      "generation": 14,
+      "afterSync": [
+        "Enable 'Pentaryn Wall Autocomplete' in Manage Modules, reload, then:",
+        "  await game.pentaryn.walls.preview()"
+      ]
     }
   }
 }

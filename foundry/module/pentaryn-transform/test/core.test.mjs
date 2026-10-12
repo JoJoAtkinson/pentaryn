@@ -50,12 +50,17 @@ test("constants: MODULE_ID is the manifest id; EFFECT_ID, Starry constants", () 
   }, file);
 });
 
-test("manifest today: version 0.3.3, generation 14, flagScope 'transform' (C07, Wave 7)", () => {
+// [declared] Wave 7 batch (W4-T3, Joe 2026-10-12), flipped from "manifest today: version 0.3.3, minimum
+// 13, flags.pentaryn { flagScope: 'transform', generation: 14 }": 0.4.0 with VERSION, minimum 14, the
+// blueprint keys (flagScope pentaryn-transform is manifest-only), esmodules unchanged.
+test("manifest after the Wave 7 batch: version 0.4.0, minimum 14, the blueprint flags (C07)", () => {
   const m = manifestOf(ROOT);
-  assert.equal(m.version, "0.3.3");
+  assert.equal(m.version, "0.4.0");
   assert.deepEqual(m.esmodules, ["transform.mjs", "hud.mjs"]);
-  assert.deepEqual(m.flags.pentaryn, { flagScope: "transform", generation: 14 });
-  assert.equal(m.compatibility.minimum, "13");
+  const { afterSync, ...flags } = m.flags.pentaryn;
+  assert.deepEqual(flags, { tier: "full", namespace: "transform", flagScope: "pentaryn-transform", cssPrefix: "ptf-", generation: 14 });
+  assert.ok(Array.isArray(afterSync) && afterSync.length > 0);
+  assert.equal(m.compatibility.minimum, "14");
 });
 
 test("VERSION === module.json version", () => {

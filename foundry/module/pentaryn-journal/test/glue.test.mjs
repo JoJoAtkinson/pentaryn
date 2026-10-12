@@ -36,6 +36,9 @@ test("foundry.utils is Foundry's own common/ code", () => {
   if (process.env.PENTARYN_TEST_SHIMS !== "1") assert.equal(F.utilsSource, "foundry");
 });
 
+// [declared] W2-J1 (Joe 2026-10-12; guide step 3, C51): golden/settings-register.json's folderName row
+// flipped from name/hint null to its PENTARYN_JOURNAL.settings.folderName.{name,hint} keys. The row is
+// config:false, so nothing visible changes.
 test("init: three settings registered exactly as today (golden/settings-register.json); the relay query exists", () => {
   F.fire("init");
   const rows = [...game.settings.settings.values()].filter(s => s.namespace === MOD).map(s => ({

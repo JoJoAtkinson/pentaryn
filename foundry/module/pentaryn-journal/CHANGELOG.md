@@ -1,5 +1,14 @@
 # Changelog — pentaryn-journal
 
+## Unreleased (Wave 7 restart batch, wave 5, 2026-10-12)
+
+- `module.json`: `flags.pentaryn` blueprint keys (`flagScope` `journal` → `pentaryn-journal`,
+  manifest-only), `relationships.systems` dnd5e, `recommends` item-piles, `verified: "14.369"`,
+  `styles/journal.css` (moved).
+- **[declared]** `folderName` has label keys (`PENTARYN_JOURNAL.settings.folderName.{name,hint}`,
+  W2-J1); it stays hidden (`config: false`). The relay stays hand-wired (W2-J2: the kit does not
+  forward the sender yet).
+
 ## Unreleased (blueprint migration, wave 2)
 
 - Rebuilt into the blueprint layout: `journal.mjs` is wiring only; `personal.mjs` and `bar.mjs` are the

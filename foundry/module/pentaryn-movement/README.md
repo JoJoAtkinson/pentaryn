@@ -149,7 +149,7 @@ stops being allowed; only a GM writes the world settings.
 | `combat-adapter.mjs` | combats and scenes → plain core inputs |
 | `ghost.mjs` | the feature: patches, sort, toolbar, refresh |
 | `api-manifest.mjs`, `api.mjs` | the published API |
-| `movement.css` | the dimmed combat badge (`.pm-blocked`) |
+| `styles/movement.css` | the dimmed combat badge (`.pm-blocked`) |
 | `lib/` | the vendored kit (`vendor.py`; never edited here) |
 
 ## Tests

@@ -2,10 +2,10 @@
   "id": "pentaryn-senses",
   "title": "Pentaryn Senses",
   "description": "Lights, glow and chains for dnd5e 6. Token vision from the sheet's senses is dnd5e's own now (senseVisionSync); this module only resets, once per world, the darkvision sight its retired 0.3 sync stored on tokens, so a removed sense really goes dark (setting pentaryn-senses.sightReset, active GM, on ready). Lights carried by items (flags.pentaryn-senses.light) light whoever carries them and go dark when the item leaves. Torches, lamps, lanterns and candles get a Light/Douse button on the inventory row (flags.pentaryn-senses.lit), hooded lanterns a hood. The Light cantrip lights a token or a square instead of summoning a floor token (\"On me\" / \"Pick a target\" on cast, and On me / Pick a target / End as icons in the spell card's action row). Adds the \"Broken glow (wandering)\" light animation (pentaryn-brokenglow), whose size and brightness ride a wave that never repeats, and token chains drawn between two tokens. Writes run on the active GM's client only. Exposes game.pentaryn.senses.",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "compatibility": {
-    "minimum": "13",
-    "verified": "14"
+    "minimum": "14",
+    "verified": "14.369"
   },
   "relationships": {
     "systems": [
@@ -16,6 +16,13 @@
           "minimum": "6.0",
           "verified": "6.0.6"
         }
+      }
+    ],
+    "recommends": [
+      {
+        "id": "enhancedcombathud",
+        "type": "module",
+        "reason": "Light's Pick a target closes open Combat HUD panels first (argon.mjs)"
       }
     ]
   },
@@ -41,8 +48,18 @@
   "protected": false,
   "flags": {
     "pentaryn": {
-      "flagScope": "senses",
-      "generation": 14
+      "tier": "full",
+      "namespace": "senses",
+      "flagScope": "pentaryn-senses",
+      "cssPrefix": "ps-",
+      "generation": 14,
+      "afterSync": [
+        "First install: restart Foundry (module.json is read at startup), then reload.",
+        "Already enabled? A browser RELOAD (F5) picks up new .mjs files and assets.",
+        "Token vision is dnd5e's senseVisionSync (6.0+); the one-shot reset of stored",
+        "darkvision runs at GM ready — check game.settings.get('pentaryn-senses', 'sightReset') === 1",
+        "Token chains: game.pentaryn.chain.links() · Token HUD → Break chain."
+      ]
     }
   }
 }

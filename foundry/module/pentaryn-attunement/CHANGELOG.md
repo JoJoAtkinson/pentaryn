@@ -1,6 +1,17 @@
 # Changelog — Pentaryn Attunement Slots (`pentaryn-attunement`)
 
-## Unreleased — 2026-10-11 (migrated to the addon blueprint, wave 2; kit 1.0.2)
+## 0.3.0 — 2026-10-12 (Wave 7 restart batch, wave 5; kit 1.1.0)
+
+Releases the wave-2 blueprint migration (next section) and overnight FX batch 2 (W2-A1, W2-A2)
+together with the batch: `version` 0.2.1 → 0.3.0 with `attunement-core.mjs` `VERSION`.
+
+
+`module.json`: `flags.pentaryn` blueprint keys (`flagScope` `attunement` → `pentaryn-attunement`,
+manifest-only), `recommends` item-piles, `minimum: "14"`, `verified: "14.369"`,
+`styles/attunement.css` (moved), `languages` + `lang/en.json` (STRINGS verbatim, inert until the
+`_loc` step). The `stash` and `releaseAway` rows say "eval-js only" (live Actor params; C62).
+
+## Released in 0.3.0 — 2026-10-11 (migrated to the addon blueprint, wave 2; kit 1.0.2)
 
 Structure (no behaviour change): pure core `attunement-core.mjs`; `actor-adapter.mjs` (document
 writes, Item Piles, the dnd5e adjustments); `strip.mjs` (UI); features `sheet.mjs` and `bonds.mjs`
@@ -19,8 +30,15 @@ Declared changes:
 - **D-A3** CSS classes `.pentaryn-over-cap` → `.pentaryn-attunement-over-cap`,
   `.pentaryn-away-tip` → `.pentaryn-attunement-away-tip` (C37). Visual-neutral.
 - **D-A4** `stash()` refuses to delete the owner's items, logs an error and rejects when the
-  container accepted fewer copies than asked (items-journal-10). The copies it did accept stay in
-  the container, bonded; the rejection names their ids (in the message and as `err.created`).
+  container accepted fewer copies than asked (items-journal-10). The rejection names the copies
+  the container did accept (in the message and as `err.created`). **W2-A2** (Joe 2026-10-12): those
+  copies are rolled back (`container.deleteEmbeddedDocuments`) before the rejection, so a shortfall
+  leaves nothing behind; `err.rolledBack` says whether that worked, and a failed rollback's message
+  says why and that the copies are still there.
+- **W2-A1** (Joe 2026-10-12) A returning coin purse pays once with two tabs open on one account
+  (the MCP bridge tab plus a GM browser tab): `createItem` claims the purse item
+  (`flags.pentaryn-attunement.claims.coinBack`, kit `election` vendored) and pays 750 ms later in
+  the winning tab only.
 - A failing tooltip-guard install warns `tooltip guard skipped` and no longer stops the API publish
   (items-journal-39).
 - A bonded item's bond is cleared with `_del` instead of the deprecated `-=bond` key.

@@ -13,6 +13,7 @@
 
 import { AWAY, AWAY_FLAG, BOND, MODULE, SLOTS, awayOf, bondChanges, computeSlots, homeSlots, t, wouldExceed } from "./attunement-core.mjs";
 import { isPileActor } from "./actor-adapter.mjs";
+import { claimDocument } from "./lib/election.mjs";
 import { flagPath } from "./lib/flags.mjs";
 
 /* -------------------------------------------- */
@@ -59,7 +60,10 @@ function restoreBond(item, data, options) {
 
 /**
  * After the item exists: hand its slot back and say so. Only on the client that
- * created it, so it happens once.
+ * created it — one user, but every tab of that user (the MCP bridge tab and a GM
+ * browser tab both pass the userId gate). The coin purse is therefore claimed
+ * first, so exactly one tab pays (W2-A1); the slot hand-back writes the same
+ * values from either tab and needs no claim.
  */
 async function onCreateItemBond(item, options, userId) {
   if (userId !== game.user.id) return;
@@ -72,6 +76,10 @@ async function onCreateItemBond(item, options, userId) {
   if (isPileActor(actor)) return;
 
   if (bond.currency) {
+    // Single-use key: the purse is a one-time event and deletes itself. A purse
+    // already gone (paid by the other tab) re-reads as {} and stands down.
+    const won = await claimDocument(item, "coinBack", { scope: MODULE, reread: d => d.parent?.items?.get?.(d.id) ?? {} });
+    if (!won) return;
     const update = {};
     for (const [k, v] of Object.entries(bond.currency)) update[`system.currency.${k}`] = (actor.system.currency?.[k] ?? 0) + v;
     await actor.update(update);

@@ -11,6 +11,10 @@
  */
 import { mock } from "node:test";
 import { installFoundry, makeDoc, makeToken, makeScene, StubCollection } from "../kit/foundry-stub.mjs";
+import { readJSON } from "../kit/harness.mjs";
+
+/** lang/en.json, so _loc renders every string as Foundry would (Wave 7 batch, -29). */
+const LANG = readJSON(new URL("../../lang/en.json", import.meta.url));
 import { installDom, FakeElement } from "./dom.mjs";
 import { seams } from "./seams.mjs";
 
@@ -258,6 +262,7 @@ export async function boot({ settings = {} } = {}) {
     settings,
     modules: [MODULE],
     activeScopes: ["pentaryn", "pentaryn-aoe"],
+    lang: LANG,
   });
   globalThis.PIXI = { Container, Graphics, Sprite, Text, throwOnDestroy: false };
   foundry.abstract = { Document: Object };            // parseUuid's relative branch checks instanceof

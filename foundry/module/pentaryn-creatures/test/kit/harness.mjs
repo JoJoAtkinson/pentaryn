@@ -1,4 +1,4 @@
-// pentaryn kit 1.0.2 · vendored from foundry/lib/test-kit/harness.mjs — edit the canonical file, then run scripts/foundry/blueprint/vendor.py
+// pentaryn kit 1.1.0 · vendored from foundry/lib/test-kit/harness.mjs — edit the canonical file, then run scripts/foundry/blueprint/vendor.py
 /**
  * Test helpers for `node:test` suites: golden pins, characterisation tables, source scans.
  *

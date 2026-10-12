@@ -10,6 +10,14 @@
 import {MODULE, READ_SCOPES, get as getBackend, planUndo, reportHtml, undoHtml, exclusive} from "./walls-core.mjs";
 import {setting} from "./settings.mjs";
 
+/**
+ * Every toast goes through the kit's log.notify (one console line, W2-WALLS-3) with a full-key
+ * literal from lang/en.json (-36). `log` is set at install, before any action can run.
+ */
+function toast(level, key, data, opts) {
+  return log.notify(level, game.i18n.format(key, data ?? {}), opts);
+}
+
 function targetScene(sceneId) {
   const scene = sceneId ? game.scenes.get(sceneId) : canvas?.scene;
   if (!scene) throw new Error("pentaryn-walls: no scene — open one, or pass a sceneId.");
@@ -34,7 +42,7 @@ function pickBackend(requested) {
   if (want !== "auto") {
     const b = getBackend(want);
     if (b?.available()) return b;
-    ui.notifications.warn(`Wall autocomplete: backend "${want}" unavailable, using JavaScript.`);
+    toast("warn", "PENTARYN_WALLS.notify.backendUnavailable", {want});
   } else {
     const wasm = getBackend("wasm");
     if (wasm?.available()) return wasm;
@@ -139,7 +147,7 @@ async function undo({sceneId, all = false} = {}) {
   const walls = scene.walls.map(w => ({...w.toObject(), _id: w.id}));
   const plan = planUndo(walls, {all});
   if (!plan.stamped) {
-    ui.notifications.info("Wall autocomplete: nothing of mine on this scene to undo.");
+    toast("info", "PENTARYN_WALLS.notify.nothingToUndo");
     return {deleted: 0, restored: 0, run: null};
   }
   const {generated, latest, remaining} = plan;
@@ -153,7 +161,7 @@ async function undo({sceneId, all = false} = {}) {
   if (generated.length) await scene.deleteEmbeddedDocuments("Wall", generated);
 
   await postCard(undoHtml({generated: generated.length, restored: restores.length, all, latest, remaining}));
-  ui.notifications.info(`Undid ${generated.length} created, ${restores.length} restored.`);
+  toast("info", "PENTARYN_WALLS.notify.undone", {created: generated.length, restored: restores.length});
   return {deleted: generated.length, restored: restores.length, run: all ? "all" : latest};
 }
 
@@ -172,7 +180,7 @@ async function makeMacro(action = "preview", slot) {
   });
   if (macro.command !== command) await macro.update({command});
   await game.user.assignHotbarMacro(macro, slot);
-  ui.notifications.info(`Macro "${name}" ready on the hotbar.`);
+  toast("info", "PENTARYN_WALLS.notify.macroReady", {name});
   return macro;
 }
 
@@ -183,7 +191,7 @@ async function makeMacro(action = "preview", slot) {
 // One run at a time. On a large scene a run takes a moment, and a held or double-tapped
 // key would otherwise start a second pass over geometry the first is still committing.
 const lock = {busy: false};
-const onBusy = () => ui.notifications.warn("Wall autocomplete is already running.");
+const onBusy = () => toast("warn", "PENTARYN_WALLS.notify.busy");
 
 /**
  * preview/run/undo as published: exclusive across all three and every caller — keybinding, API,
@@ -199,8 +207,8 @@ const exclusiveActions = {
 function keybindingGuard(fn) {
   return () => {
     fn()?.catch(err => {
-      console.error(`${MODULE} |`, err);
-      ui.notifications.error(`Wall autocomplete: ${err.message}`, {permanent: true});
+      log.error("keybinding action failed", err);
+      toast("error", "PENTARYN_WALLS.notify.failed", {message: err.message}, {permanent: true});
     });
     return true;
   };

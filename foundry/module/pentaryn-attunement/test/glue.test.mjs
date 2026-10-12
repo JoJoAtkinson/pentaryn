@@ -170,19 +170,67 @@ test("createItem: another user's create, or a bond for another actor, does nothi
   assert.deepEqual(since(from).filter(c => ["update", "notify", "delete"].includes(c.op)), []);
 });
 
-test("createItem with a coin-purse bond: currency summed, purse deleted, CoinBack toast", async () => {
+test("createItem with a coin-purse bond: claimed, currency summed, purse deleted, CoinBack toast", async () => {
   const actor = makeActor(F, { id: "actorCoin0000001", name: "Coiner", currency: { gp: 2, sp: 1 } });
   const bond = { actor: actor.id, key: "kc", name: "Coin Purse", currency: { gp: 5, cp: 3 } };
   const purse = addItem(F, actor, { id: "itemPurse0000001", name: "Coin Purse (Coiner)", type: "loot", flags: { [MOD]: { bond } } });
   const from = mark();
   F.fire("createItem", purse, {}, GM);
   await flush();
+  mock.timers.tick(750);                      // [declared] W2-A1: the claim settles before paying
+  await flush();
   const seq = since(from).filter(c => ["update", "delete", "notify"].includes(c.op)).map(c => [c.op, c.documentName ?? c.message, c.changes ?? null]);
   assert.deepEqual(seq, [
+    ["update", "Item", { "flags.pentaryn-attunement.claims.coinBack": "socket-gm-1" }],
     ["update", "Actor", { "system.currency.gp": 7, "system.currency.cp": 3 }],
     ["delete", "Item", null],
     ["notify", "Coiner recovers their coin.", null],
   ]);
+});
+
+test("[declared] W2-A1: two GM tabs see one coin-purse createItem — the purse pays once", async () => {
+  const actor = makeActor(F, { id: "actorCoin0000002", name: "Twotab", currency: { gp: 2 } });
+  const bond = { actor: actor.id, key: "kc2", name: "Coin Purse", currency: { gp: 5 } };
+  const purse = addItem(F, actor, { id: "itemPurse0000002", name: "Coin Purse (Twotab)", type: "loot", flags: { [MOD]: { bond } } });
+  const from = mark();
+  try {
+    F.become({ socketId: "socket-bridge" });
+    F.fire("createItem", purse, {}, GM);         // the MCP bridge tab
+    F.become({ socketId: "socket-browser" });
+    F.fire("createItem", purse, {}, GM);         // a GM browser tab, same user
+    await flush();
+    mock.timers.tick(750);
+    await flush();
+  } finally {
+    F.become({ socketId: "socket-gm-1" });
+  }
+  const pays = since(from).filter(c => c.op === "update" && c.documentName === "Actor");
+  assert.deepEqual(pays.map(c => c.changes), [{ "system.currency.gp": 7 }], "paid once");
+  assert.equal(since(from, "delete").length, 1, "deleted once");
+  assert.equal(since(from, "notify").length, 1, "one toast");
+});
+
+test("[declared] W2-A1: the later claim wins when both tabs write before either reads back", async () => {
+  const actor = makeActor(F, { id: "actorCoin0000003", name: "Racer", currency: { gp: 0 } });
+  const bond = { actor: actor.id, key: "kc3", name: "Coin Purse", currency: { gp: 4 } };
+  const purse = addItem(F, actor, { id: "itemPurse0000003", name: "Coin Purse (Racer)", type: "loot", flags: { [MOD]: { bond } } });
+  const from = mark();
+  try {
+    F.become({ socketId: "socket-bridge" });
+    F.fire("createItem", purse, {}, GM);
+    // the browser tab's claim lands second on the server; it read no claim before writing
+    purse.flags[MOD].claims = { coinBack: "socket-browser" };
+    F.become({ socketId: "socket-browser" });
+    F.fire("createItem", purse, {}, GM);
+    await flush();
+    mock.timers.tick(750);
+    await flush();
+  } finally {
+    F.become({ socketId: "socket-gm-1" });
+  }
+  const pays = since(from).filter(c => c.op === "update" && c.documentName === "Actor");
+  assert.deepEqual(pays.map(c => c.changes), [{ "system.currency.gp": 4 }], "paid once");
+  assert.equal(since(from, "delete").length, 1, "deleted once");
 });
 
 test("stash(): container creates, owner deletes, owner update — in that order; resolves the create count (golden/stash.json)", async () => {

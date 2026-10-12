@@ -1,10 +1,9 @@
 /* Pentaryn Transform — Wild Shape and Starry Form on the Argon HUD. */
 
 /* The compact Argon tooltip rules (.ech-tooltip.pentaryn-tt, -list) are the kit's shared stylesheet
-   (D7: lib/argon-tooltip.css, byte-identical in combat, transform and riders), imported here so the
-   module.json in place loads it; pentaryn-combat's TT classes rely on it too. They never catch the
-   pointer, so a tooltip over a picker can't swallow the click on a tile. */
-@import "../lib/argon-tooltip.css";
+   (D7: lib/argon-tooltip.css, byte-identical in combat, transform and riders), loaded by module.json
+   `styles` since the Wave 7 batch (W4-T4; it was an @import here). They never catch the pointer, so a
+   tooltip over a picker can't swallow the click on a tile. */
 
 /* "Return to Talo" while shifted: the one button that matters. */
 .extended-combat-hud .action-element.ptf-return {

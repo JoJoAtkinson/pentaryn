@@ -3,15 +3,28 @@
   "title": "Pentaryn Movement",
   "description": "Players' own tokens draw on top for them (client-side: their tokens take the click when tokens overlap; nothing is written to the scene). A ghost button in the token tools lets a player move their own tokens through walls and creatures, reusing core's unconstrained-movement constrain options (ignoreWalls, ignoreCost, and dnd5e's ignoreTokens); their tokens look see-through while it is on. The GM governs it with a world setting (Off / Exploration only / Always allowed; Exploration only switches it off while a combat is running on the scene) and a toolbar button that flips it off and back. Exposes game.pentaryn.movement.",
   "version": "0.1.2",
-  "compatibility": { "minimum": "14", "verified": "14" },
+  "compatibility": { "minimum": "14", "verified": "14.369" },
   "authors": [{ "name": "Joseph Atkinson" }],
   "relationships": {
     "systems": [{ "id": "dnd5e", "type": "system", "compatibility": { "minimum": "6.0", "verified": "6.0.6" } }]
   },
   "esmodules": ["movement.mjs"],
-  "styles": ["movement.css"],
+  "styles": ["styles/movement.css"],
   "languages": [{ "lang": "en", "name": "English", "path": "lang/en.json" }],
   "socket": false,
   "protected": false,
-  "flags": { "pentaryn": { "flagScope": "movement", "generation": 14 } }
+  "flags": {
+    "pentaryn": {
+      "tier": "full",
+      "namespace": "movement",
+      "flagScope": "pentaryn-movement",
+      "cssPrefix": "pm-",
+      "generation": 14,
+      "afterSync": [
+        "First install: restart Foundry (module.json is read at startup), enable 'Pentaryn Movement', then reload.",
+        "Players get a Ghost toggle in the token tools; the GM sets the policy in settings.",
+        "  game.pentaryn.movement.status()"
+      ]
+    }
+  }
 }

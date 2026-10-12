@@ -131,7 +131,7 @@ plus a descriptor. New API methods: a row in `api-manifest.mjs` and an impl in `
 | `personal.mjs` | feature: personal journals, `ensure*`, `report`, the relay |
 | `bar.mjs` | feature: the bar, saving, the glow, single-page eyes, provenance |
 | `api-manifest.mjs`, `api.mjs` | the published API |
-| `journal.css`, `lang/en.json`, `lib/` (vendored kit) | |
+| `styles/journal.css`, `lang/en.json`, `lib/` (vendored kit) | |
 
 ## Tests
 

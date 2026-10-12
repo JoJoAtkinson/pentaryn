@@ -1,9 +1,12 @@
 # Changelog — Pentaryn AoE (`pentaryn-aoe`)
 
-## Unreleased — 2026-10-11 (migrated to the addon blueprint, wave 4)
+## 0.4.0 — 2026-10-12 (migrated to the addon blueprint, wave 4; released by the Wave 7 restart batch)
 
-`module.json` still says 0.3.1; the version bump (and `core.VERSION` with it) lands with the Wave 7
-restart batch. Code, tests and the API changed; the table behaviour did not, except the declared
+The Wave 7 batch bumped `module.json` and `core.VERSION` to 0.4.0 together and added the
+`flags.pentaryn` blueprint keys (`flagScope` `aoe` → `pentaryn-aoe`, a declaration fix),
+`recommends` enhancedcombathud and item-piles, `styles/aoe.css` (moved) and `verified: "14.369"`.
+
+Code, tests and the API changed; the table behaviour did not, except the declared
 items below (each its own commit; live checks in the migration guide §5).
 
 - **Blueprint layout.** Kit 1.0.2 vendored (full tier + election, patch). Features export

@@ -47,13 +47,16 @@ test("a sync throw in preCreateItem is logged with its label", async () => {
   assert.deepEqual(lines.map(l => [l[0], l[1].message]), [["pentaryn-attunement | preCreateItem: bond restore", "bang"]]);
 });
 
-test("a rejected createItem bond return is logged with its label, not left unhandled", async () => {
+test("a rejected createItem bond return is logged with its label, not left unhandled", async t => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });     // [declared] W2-A1: the purse claim settles first
   const actor = makeActor(F, { id: "actorRjct0000001", name: "Rejecter", currency: { gp: 1 } });
   const purse = addItem(F, actor, { id: "itemRjct00000001", name: "Coin Purse", type: "loot",
     flags: { [MOD]: { bond: { actor: actor.id, key: "kc", name: "Coin Purse", currency: { gp: 5 } } } } });
   actor.update = async () => { throw new Error("no permission"); };
   const lines = await errorsOf(async () => {
     F.fire("createItem", purse, {}, GM);
+    await flush();
+    t.mock.timers.tick(750);
     await flush();
   });
   assert.deepEqual(lines.map(l => [l[0], l[1].message]), [["pentaryn-attunement | createItem: bond return", "no permission"]]);

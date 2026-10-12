@@ -21,10 +21,12 @@ test("core loads with no Foundry globals present", () => {
   assert.equal(core.OWNER, 3);
 });
 
-test("module.json: id and version as shipped (0.4.4)", () => {
+// [declared] Wave 7 batch (Joe 2026-10-12): flipped from "as shipped (0.4.4)" — the batch bumps portals
+// to 0.5.0 (the blueprint migration's API additions, lang/en.json, D-P1…D-P6) with VERSION.
+test("module.json: id and version as shipped (0.5.0)", () => {
   const manifest = manifestOf(ROOT);
   assert.equal(manifest.id, "pentaryn-portals");
-  assert.equal(manifest.version, "0.4.4");
+  assert.equal(manifest.version, "0.5.0");
 });
 
 test("VERSION === module.json version (C41; live since S2 moved VERSION/MODULE into core)", () => {

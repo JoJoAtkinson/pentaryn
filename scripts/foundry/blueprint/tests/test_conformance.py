@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import shutil
 from pathlib import Path
 
@@ -627,6 +628,26 @@ def test_c50_reads_the_kit_registrar_ready_body(tmp_path):
     assert status(conformance.score_dir(d), "C50") == "fail"
 
 
+def test_c50_follows_a_named_publisher_called_from_another_files_ready_body(tmp_path):
+    """dropbin's shape: the entry's `function publish()` is called from a feature's
+    `ctx.onReady(() => {…})` — the publish is in the ready tick, so `when` stays "ready"."""
+    d = tmp_path / "pentaryn-led"
+    entry = ('import { publishNamespace } from "./lib/publish.mjs";\nconst api = {};\n'
+             'export function publish() {\n  publishNamespace("led", api, { moduleId: "pentaryn-led" });\n}\n')
+    feature = 'export function install(reg, ctx) {\n  ctx.onReady(() => {\n  hook();\n  ctx.publish();\n  }, "x");\n}\n'
+    write(d, {"module.json": json.dumps({"id": "pentaryn-led", "esmodules": ["led.mjs"]}),
+              "led.mjs": entry, "ledger.mjs": feature})
+    assert status(conformance.score_dir(d), "C50") == "pass"
+    # an await before the call makes it late: then the publish must record `when`
+    (d / "ledger.mjs").write_text(feature.replace("ctx.onReady(() => {", "ctx.onReady(async () => {"))
+    assert status(conformance.score_dir(d), "C50") == "fail"
+    (d / "ledger.mjs").write_text(feature.replace("  hook();\n", "  await hook();\n"))
+    assert status(conformance.score_dir(d), "C50") == "fail"
+    # nobody calls it from a ready body: late, unrecorded
+    (d / "ledger.mjs").write_text('export function install(reg, ctx) { reg.on("canvasReady", () => ctx.publish()); }\n')
+    assert status(conformance.score_dir(d), "C50") == "fail"
+
+
 # ── C62: a Document param the kit does not resolve names its string forms (FX item 5) ────────
 # The bridge (pentaryn-call.ts needsDoc) refuses a call that fills such a param with BAD_ARGS
 # "eval-js only" unless its `type` names uuid / id / name / string; senses.inspect's ref
@@ -654,6 +675,8 @@ C62_CASES = [
     ({"name": "doc", "type": "JournalEntry", "resolve": False}, "pass"),                           # no kind: out of scope
     ({"name": "query", "type": "string"}, "pass"),
     ({"name": "x", "kind": "identifier", "resolve": False}, "pass"),                               # not a Document kind
+    ({"name": "ref", "kind": "actor", "resolve": "self"}, "pass"),                                # kit 1.1.0: names.sync (W2-B4)
+    ({"name": "owner", "kind": "actor", "type": "Actor", "resolve": "self"}, "pass"),              # the function resolves strings
 ]
 
 
@@ -678,3 +701,64 @@ def test_c62_is_na_without_a_describe_golden(tmp_path):
     d = tmp_path / "pentaryn-nogold"
     write(d, {"module.json": json.dumps({"id": "pentaryn-nogold", "esmodules": ["a.mjs"]}), "a.mjs": "export const a = 1;\n"})
     assert res(conformance.score_dir(d), "C62")["status"] == "n/a"
+
+
+def test_c06w_exempts_a_vendored_kit_stylesheet_listed_from_lib(tmp_path):
+    d = tmp_path / "pentaryn-kitcss"
+    write(d, {"module.json": json.dumps({"id": "pentaryn-kitcss", "esmodules": ["a.mjs"],
+                                         "styles": ["styles/a.css", "lib/argon-tooltip.css"]}),
+              "a.mjs": "export const a = 1;\n", "styles/a.css": "", "lib/argon-tooltip.css": ""})
+    assert res(conformance.score_dir(d), "C06w")["status"] == "pass"
+    (d / "module.json").write_text(json.dumps({"id": "pentaryn-kitcss", "esmodules": ["a.mjs"], "styles": ["a.css"]}))
+    (d / "a.css").write_text("")
+    assert res(conformance.score_dir(d), "C06w")["status"] == "warn"
+
+
+# ── exceptions.json: the strict gate's explicit list (Stage 5 step 2) ─────────────────────────
+
+def test_exceptions_rows_are_explicit_and_name_real_fail_class_rules():
+    fail_class = {rid for rid, cls, _, _ in conformance.RULES if cls == "fail"}
+    for module_id, rows in conformance.EXCEPTIONS.items():
+        assert (conformance.MODULE_ROOT / module_id / "module.json").exists(), module_id
+        assert rows, f"{module_id}: an empty exception block"
+        for rid, row in rows.items():
+            assert rid in fail_class, f"{module_id} {rid}: not a fail-class rule (warn/manual never gate)"
+            assert set(row) == {"reason", "decision", "until", "match"}, f"{module_id} {rid}: {sorted(row)}"
+            assert all(isinstance(row[k], str) and len(row[k].strip()) >= 5
+                       for k in ("reason", "decision", "until")), (module_id, rid)
+            assert row["match"] and all(isinstance(p, str) and re.compile(p) for p in row["match"]), (module_id, rid)
+
+
+def test_every_exception_pattern_names_a_live_finding():
+    """A `match` pattern pins the findings the decision covers; one that matches nothing today is a
+    typo or a finding already fixed — either way the row says more than the code does."""
+    for module_id, rows in conformance.EXCEPTIONS.items():
+        results = {r["id"]: r for r in conformance.score_dir(conformance.MODULE_ROOT / module_id)["results"]}
+        for rid, row in rows.items():
+            detail = results[rid]["detail"]
+            for p in row["match"]:
+                assert any(re.search(p, d) for d in detail), f"{module_id} {rid}: {p!r} matches none of {detail}"
+
+
+def test_verdict_splits_blocking_accepted_and_stale(monkeypatch):
+    row = {"reason": "why", "decision": "who", "until": "when"}
+    monkeypatch.setattr(conformance, "EXCEPTIONS", {"pentaryn-x": {"C07": row, "C37": row}})
+    results = [conformance.Result("C05", "fail", "fail", [], ""), conformance.Result("C07", "fail", "fail", [], ""),
+               conformance.Result("C37", "fail", "pass", [], "")]
+    v = conformance.verdict("pentaryn-x", results)
+    assert v == {"blocking": ["C05"], "accepted": {"C07": "why"}, "unmatched": {}, "stale": ["C37"]}
+    assert not conformance.gate_ok(v)
+    assert conformance.gate_ok(conformance.verdict("pentaryn-x", results[1:2] + [conformance.Result("C37", "fail", "fail", [], "")]))
+
+
+def test_a_row_with_match_accepts_only_the_findings_it_names(monkeypatch):
+    row = {"reason": "why", "decision": "who", "until": "when", "match": [r"^styles/a\.css: #tooltip$"]}
+    monkeypatch.setattr(conformance, "EXCEPTIONS", {"pentaryn-x": {"C37": row}})
+    decided = conformance.Result("C37", "fail", "fail", ["styles/a.css: #tooltip"], "")
+    v = conformance.verdict("pentaryn-x", [decided])
+    assert v["accepted"] == {"C37": "why"} and not v["blocking"] and not v["unmatched"] and conformance.gate_ok(v)
+    # a later, unreviewed finding of the same rule blocks, and is named
+    later = conformance.Result("C37", "fail", "fail", ["styles/a.css: #tooltip", "styles/a.css: .new"], "")
+    v = conformance.verdict("pentaryn-x", [later])
+    assert v["blocking"] == ["C37"] and v["unmatched"] == {"C37": ["styles/a.css: .new"]} and not v["accepted"]
+    assert not conformance.gate_ok(v)

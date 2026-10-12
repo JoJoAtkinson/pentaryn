@@ -95,3 +95,12 @@ test("selftest fails when module.json lost its gate flags", () => {
     game.modules.get(MODULE).flags = flags;
   }
 });
+
+// Wave 7 batch (guide step 9): the blueprint keys were MERGED into flags.pentaryn; the version gate's
+// keys stay beside them (the glue stub above reads the real flags, so a replaced object fails there too).
+test("module.json flags.pentaryn carries the gate keys and the blueprint keys together", () => {
+  const f = manifest.flags.pentaryn;
+  for (const k of ["contract", "targetSystem", "targetSystemVersion", "generation"]) assert.ok(k in f, k);
+  assert.deepEqual([f.tier, f.namespace, f.flagScope, f.cssPrefix], ["full", "importer", "pentaryn-importer", "pim-"]);
+  assert.equal(manifest.compatibility.minimum, "14");
+});
