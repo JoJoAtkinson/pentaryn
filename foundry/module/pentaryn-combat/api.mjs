@@ -61,8 +61,9 @@ function inspect(actor, ctx, { as } = {}) {
   const stored = actor.getFlag?.(MODULE, "turn") ?? null;
   const ma = multiattackFor(actor, { enabled: setting("multiattack") });
   const weaponId = ma ? null : chosenWeapon(actor);
-  const count = ma ? ma.total : countFor(actor, weaponId);
-  const pipCount = ma ? ma.total : Math.max(count, countFor(actor, null));
+  const on = { multiattackOn: setting("multiattack") };
+  const count = ma ? ma.total : countFor(actor, weaponId, on);
+  const pipCount = ma ? ma.total : Math.max(count, countFor(actor, null, on));
   const reaction = actor.getFlag?.(MODULE, "reaction") ?? null;
   const r = ctx.exposed.running?.() ?? null;
   const mine = !!r && (r.actor === actor || r.actor?.uuid === actor.uuid);
@@ -128,7 +129,7 @@ const refRows = impl => Object.fromEntries(Object.entries(impl ?? {}).map(([k, f
 export function buildApiFor(ctx) {
   return buildApi(MANIFEST, {
     ...refRows({
-      count: function count(actor, weaponId) { return countFor(actor, weaponId); },
+      count: function count(actor, weaponId) { return countFor(actor, weaponId, { multiattackOn: setting("multiattack") }); },
       plan,
       turn: turnOf,
       newTurn,

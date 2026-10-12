@@ -423,10 +423,11 @@ const onItemButtonRendered = (button, element, actor) => {
   } catch (err) { log.debug("off-hand slot check", err); }   // never break Argon's render
 };
 
-// A shift or revert (a new body) ends a running sequence.
+// A shift or revert (a new body) of the running creature's own token ends its sequence (edge-2).
 const onTokenUpdated = (doc, changes) => {
-  if (!running() || !("actorId" in (changes ?? {}))) return;
-  abortFor(running().actor);
+  const r = running();
+  if (!r || !("actorId" in (changes ?? {})) || !r.tokenIds?.has(doc?.id)) return;
+  abortFor(r.actor);
 };
 
 /* ── install ─────────────────────────────────────────────────────────────── */

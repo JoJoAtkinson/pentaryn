@@ -5,7 +5,7 @@
 import { mock, test } from "node:test";
 import assert from "node:assert/strict";
 import { characterise, pinJSON } from "./kit/harness.mjs";
-import { MODULE, captureConsole, drain, makeCombat, makeMessage, makeToken, setupWorld } from "./fixtures/world.mjs";
+import { MODULE, captureConsole, drain, feat, makeActor, makeCombat, makeMessage, makeToken, setupWorld } from "./fixtures/world.mjs";
 import { barbarian, druid, fighter, monk, rogue, slayer, wolf } from "./fixtures/actors.mjs";
 import * as legacy from "./fixtures/legacy-combat.mjs";
 
@@ -170,4 +170,29 @@ test("core: the module namespace, every export reachable through the API", async
   for (const k of Object.keys(core)) if (typeof core[k] === "function") assert.equal(api.core[k], core[k], k);
   assert.equal(api.core.MOD, "pentaryn-combat");
   assert.equal(Object.keys(api.core).length, 81 + 14, "S1's 81 plus S2's eight blueprint constants, S4's I18N_KEYS, keyFor, S8's fullAttackPlanFrom, areaPlacementSkipped, -29's pruneOlder and -37's DELAYS");
+});
+
+test("EC-6: Multiattack Off sizes Full Attack from class features, not the Multiattack (wolf 1, Extra Attack 2)", async () => {
+  const { fullAttackState } = await import("../hud/buttons-ui.mjs");
+  const wolf = cast.wolf;
+  // An NPC with a Multiattack of three and the Extra Attack class feature: Off → Extra Attack's 2.
+  const vet = makeActor({ id: "veteranNpc000001", name: "Veteran", type: "npc", items: [
+    { id: "multiattack00009", name: "Multiattack", type: "feat", system: { description: { value: "<p>The veteran makes three [[/item .blade]] attacks.</p>" } } },
+    feat("extraAttackNpc01", "Extra Attack"),
+    { id: "blade", name: "Blade", type: "weapon", system: { equipped: true, type: { value: "martialM" } }, activities: [{ id: "bladeAtk00000001" }] },
+  ] });
+  assert.equal(api.count(wolf), 2, "On: the Multiattack's two");
+  assert.equal(api.count(vet), 3, "On: the Multiattack's three");
+  await F.game.settings.set(MODULE, "multiattack", false);
+  try {
+    assert.equal(api.count(wolf), 1, "Off: an NPC with no class features gets 1");
+    assert.equal(api.plan(wolf).swings.length, 1);
+    assert.equal(api.inspect(wolf).pips, null, "Off: one swing, no pips");
+    assert.equal(fullAttackState(wolf).pipCount, 1);
+    assert.equal(api.count(vet), 2, "Off: Extra Attack's two, not the Multiattack's three");
+    assert.equal(api.plan(vet).swings.length, 2);
+    assert.equal(fullAttackState(vet).count, 2);
+  } finally {
+    await F.game.settings.set(MODULE, "multiattack", true);
+  }
 });

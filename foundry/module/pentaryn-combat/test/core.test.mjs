@@ -74,6 +74,16 @@ test("riderDice: a scale value given as number + faces", () => {
   assert.equal(core.riderDice(null), "");
 });
 
+test("EC-5: Frenzy's dice are its Rage Damage bonus in d6s; no positive bonus is no dice, never 0d6", () => {
+  const frenzy = core.riderByKey("frenzy");
+  for (const none of [null, undefined, "", 0, "0", -1, 2.5, "x", { value: 0 }, { value: null }, { value: "" }]) {
+    assert.equal(core.riderDice(frenzy, none), "", `scale ${JSON.stringify(none)}`);
+  }
+  assert.equal(core.riderDice(frenzy, 3), "3d6");
+  assert.equal(core.riderDice(frenzy, { value: 3 }), "3d6");
+  assert.equal(core.riderDice(frenzy, "4"), "4d6");
+});
+
 test("tidyDiceCount: a resolver that throws leaves the part alone", () => {
   assert.equal(core.tidyDiceCount("(@scale.barbarian.rage-damage)d6", () => { throw new Error("x"); }), "(@scale.barbarian.rage-damage)d6");
   assert.equal(core.tidyDiceCount("(@scale.barbarian.rage-damage)d6", () => "2"), "2d6");

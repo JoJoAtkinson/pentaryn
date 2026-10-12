@@ -257,6 +257,8 @@ export async function runSwings(actor, swings, { event = null, title = null, ori
   const keyed = !!(event && (event.shiftKey || event.altKey || event.ctrlKey || event.metaKey));
   current = {
     actor,
+    // edge-2: the creature's own token(s), so another token's shape change leaves this sequence alone
+    tokenIds: new Set([actor.token?.id, ...(actor.getActiveTokens?.() ?? []).map(t => t.id)].filter(Boolean)),
     state: core.sequenceReducer(null, { type: "start", swings }),
     origins: new Map(origins ?? []),
     title: title ?? _loc("PENTARYN_COMBAT.FullAttack"),

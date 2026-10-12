@@ -39,7 +39,7 @@ function specialNames() {
 }
 
 function swingsPerAction(actor) {
-  try { return countFor(actor, chosenWeapon(actor)); } catch { return 1; }
+  try { return countFor(actor, chosenWeapon(actor), { multiattackOn: setting("multiattack") }); } catch { return 1; }
 }
 
 async function addTurnEffect(actor, kind, img) {
@@ -151,7 +151,11 @@ function wrapReactionSlot(btn) {
     if (!used) return;
     // Argon spends the weapon's own activation (the Action) on your own turn: give it back, spend the Reaction.
     if (action && action.isActionUsed !== actionWas) { action.isActionUsed = actionWas; paint(action); }
-    if (reaction && combatContext(actor).inCombat) { reaction.isActionUsed = true; paint(reaction); }
+    const ctx = combatContext(actor);
+    if (!ctx.inCombat) return;
+    if (reaction) { reaction.isActionUsed = true; paint(reaction); }
+    // Recorded like any other Reaction (counting.mjs), so the turn-start relight, restorePips and inspect() see it.
+    await actor.setFlag(MODULE, "reaction", { combatId: ctx.combat?.id ?? null }).catch(err => { log.debug("Reaction flag", err); return null; });
   };
   if (btn.element?.isConnected) btn.render?.();
 }
