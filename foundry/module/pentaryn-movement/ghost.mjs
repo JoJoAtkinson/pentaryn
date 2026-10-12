@@ -329,6 +329,13 @@ async function refresh() {
 }
 const queueRefresh = foundry.utils.debounce(() => refresh(), 50);
 
+/** The settings this feature reacts to, in registration order. */
+const ON_SETTING = Object.freeze({
+  ghostPolicy: () => { invalidate(); queueRefresh(); },
+  ghost: () => { invalidate(); queueRefresh(); },
+  ownedOnTop: () => { invalidate(); refreshTokens(); },
+});
+
 /* -------------------------------------------- */
 /*  Install / uninstall                         */
 /* -------------------------------------------- */
@@ -344,9 +351,7 @@ const COMBAT_HOOKS = ["createCombat", "updateCombat", "deleteCombat", "createCom
 export function install(reg, ctx) {
   feature = ctx;
   log = ctx.log;
-  ctx.onSettingChange("ghostPolicy", () => { invalidate(); queueRefresh(); });
-  ctx.onSettingChange("ghost", () => { invalidate(); queueRefresh(); });
-  ctx.onSettingChange("ownedOnTop", () => { invalidate(); refreshTokens(); });
+  for (const [key, fn] of Object.entries(ON_SETTING)) ctx.onSettingChange(key, fn);
 
   if (ctx.late) patchAll();
   else reg.once("setup", patchAll, { guard: false, label: "setup: wrap drag and keyboard" });
@@ -404,6 +409,6 @@ export function uninstall() {
   dragPatched = keyboardPatched = false;
   lastToolKey = null;
   clearedBy = null;
-  if (feature) for (const key of ["ghostPolicy", "ghost", "ownedOnTop"]) feature.onSettingChange(key, null);
+  if (feature) for (const key of Object.keys(ON_SETTING)) feature.onSettingChange(key, null);
   feature = null;
 }
