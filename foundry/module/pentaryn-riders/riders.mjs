@@ -26,9 +26,10 @@
  * `await import("/modules/pentaryn-riders/riders.mjs?v=2")`. Any edit to another file needs a reload.
  */
 
-import { HOOKS, MODULE, VERSION } from "./riders-core.mjs";
+import { HOOKS, MODULE, NS, VERSION } from "./riders-core.mjs";
 import { makeLog } from "./lib/log.mjs";
 import { emitter, hookRegistry } from "./lib/hooks.mjs";
+import { publishNamespace } from "./lib/publish.mjs";
 import { registerSettings, setting } from "./settings.mjs";
 import { installPatches, removePatches, wrapItemButton } from "./patches.mjs";
 import { buildApiFor } from "./api.mjs";
@@ -90,14 +91,9 @@ function onReady() {
     log.error("API manifest drift — not published", err);
     return;
   }
-  // pentaryn-importer replaced game.pentaryn with a frozen object in its own ready hook; defer a
-  // tick and rebuild rather than assign (same as pentaryn-journal / -portals).
-  setTimeout(() => {
-    const api = ctx.api;
-    const current = game.pentaryn;
-    if (current && !Object.isExtensible(current)) game.pentaryn = { ...current, riders: api };
-    else { game.pentaryn ??= {}; game.pentaryn.riders = api; }
-  }, 0);
+  // Synchronous at ready (game.pentaryn is a plain, extensible object since the importer merges
+  // into it); a frozen root now throws a TypeError here instead of being replaced (W2-K1).
+  publishNamespace(NS, ctx.api, { moduleId: MODULE });
 }
 
 install();

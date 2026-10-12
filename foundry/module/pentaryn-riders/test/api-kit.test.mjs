@@ -119,9 +119,9 @@ test("inspect: the tokens the actor's concentration effects keep, on every scene
   F.game.scenes.delete(scene.id);
 });
 
-test("selftest(): every check passes after ready but module.api (the legacy publish sets only game.pentaryn)", () => {
+test("selftest(): every check passes after ready", () => {
   const out = api.selftest();
-  assert.deepEqual(out.checks.filter(c => !c.ok).map(c => c.label), ["published as module.api"]);
+  assert.equal(out.ok, true, JSON.stringify(out.checks.filter(c => !c.ok)));
   assert.deepEqual(out.checks.map(c => c.label), [
     "published as module.api", "game.pentaryn.riders is this API", "settings readable", "hooks registered",
     "Battle Medic relay registered", "patches installed",
