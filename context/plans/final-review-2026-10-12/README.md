@@ -306,3 +306,25 @@ Reverts: none.
 
 **Foundry state.** Foundry is up, world `pentaryn` is loaded, and exactly one GM tab (Gamemaster) answers
 `get-world-info`. No restart, no fork rebuild.
+
+## Integration INT-1557
+
+| Area | Status | Merge SHA | Revert SHA | Synced modules | Reason |
+|---|---|---|---|---|---|
+| live-goldens | merged | 5885159b | — | — (tooling only) | — |
+| py-update | merged | 3b3dbd38 | — | — (Python only) | — |
+
+**Reality check (16:03Z).** Both merges were already on main and pushed (origin/main = 3b3dbd38). Between
+b6cb5b78 and 3b3dbd38 nothing changed under `foundry/modules`, no `module.json`, and nothing in the fork, so
+nothing was synced or rebuilt. That meant no rollback copies, no before/after goldens, no restart and no
+reload: the tab still runs the 15:22:59Z load from INT-1518. Every deployed `.pentaryn-sync.json` stamp is
+unchanged (newest: importer 8d77dab4 at 15:22:55Z).
+
+**Checks.** The two areas' tests (`test_live_goldens_{bodies,diff_declared,preamble}`,
+`test_update_{admin,escalation}`): 180 passed, 1 xfailed. The merged `diff.mjs` was run without `--declared`
+on the prior lanes' saved pairs (INT-1508 cursors/movement, INT-1518 importer). It exits 0 on all three,
+the same as the pre-merge `diff.mjs`. No ZZ fixtures were created, and 0 ZZ actors, scenes, journals or
+items exist. Reverts: none.
+
+**Foundry state.** Foundry is up and world `pentaryn` is loaded. Exactly one GM tab (Gamemaster, the only
+active user) answers `get-world-info`. There was no restart, no reload and no fork rebuild.
