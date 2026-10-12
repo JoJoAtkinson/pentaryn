@@ -43,7 +43,7 @@ import { loreEditorHTML, bindLoreEditor } from "./lore-ui.mjs";
 // `requestAttrLore` (the player-initiated roll) is deliberately no longer imported: attribute
 // facts are handed over by the GM via "Mark as learned", never rolled for from the player's side.
 import { kindActorOf, attrLoreStateFor, releaseHeldAttribute } from "./study.mjs";
-import { grantsForEntry, GRANTED_FLAG, HELP_SCALE, CARRIED_SCALE, helpFor, rollableLore, LORE_FLAG, attrFactKey } from "./known-core.mjs";
+import { grantsForEntry, GRANTED_FLAG, HELP_SCALE, CARRIED_SCALE, helpFor, rollableLore, LORE_FLAG } from "./known-core.mjs";
 import { esc } from "./core/html.mjs";
 
 /** The help-scale labels (literal keys, so the i18n gate sees each one). */

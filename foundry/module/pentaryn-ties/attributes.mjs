@@ -59,7 +59,6 @@ import {
   forestOf,
   subtreeOf,
   contractForest,
-  childrenOf,
   changedFields,
   clampTouched,
   reviewState,
