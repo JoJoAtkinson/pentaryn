@@ -28,9 +28,14 @@ export function combatSummaries(combats = game.combats?.contents) {
 export function pinInputs(scene) {
   const size = scene.grid?.size ?? canvas?.grid?.size ?? 100;
   const notes = scene.notes.map(n => ({ id: n.id, x: n.x, y: n.y, label: n.text || n.entry?.name || n.label || "" }));
-  const tokens = scene.tokens.filter(t => !t.hidden).map(t => ({
-    id: t.id, name: t.name, x: t.x, y: t.y, w: (t.width ?? 1) * size, h: (t.height ?? 1) * size,
-    playerOwned: game.users.some(u => !u.isGM && t.testUserPermission?.(u, "OWNER"))
-  }));
+  // TokenDocument#getSize applies the hex correction; on square and gridless grids it equals width × size.
+  const tokens = scene.tokens.filter(t => !t.hidden).map(t => {
+    const s = typeof t.getSize === "function" ? t.getSize() : null;
+    return {
+      id: t.id, name: t.name, x: t.x, y: t.y,
+      w: s?.width ?? (t.width ?? 1) * size, h: s?.height ?? (t.height ?? 1) * size,
+      playerOwned: game.users.some(u => !u.isGM && t.testUserPermission?.(u, "OWNER"))
+    };
+  });
   return { notes, tokens };
 }

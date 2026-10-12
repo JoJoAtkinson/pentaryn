@@ -60,7 +60,9 @@ function apply(el, key) {
  * pointer tile ($("#board").css({cursor: ""})). Re-issuing the current mode restores whatever
  * Foundry meant — the tool glyph, its pointer variant, or Foundry's hands.
  */
-export function resync(el = boardEl()) {
+// hot: runs from the #board style observer on every PIXI cursor-mode change (hover in/out); keep the
+// non-empty style.cursor return first: no setting read, lookup or allocation before it.
+function resync(el = boardEl()) {
   const events = canvas?.app?.renderer?.events;
   if (!el || !events || el.style.cursor || !enabled()) return;
   const mode = events.currentCursor;
@@ -82,8 +84,9 @@ function guardBoard() {
 
 /**
  * Is a spell-area placement following the mouse? (dnd5e 6: core RegionLayer#placeRegions; see placementActive.)
- * pentaryn-aoe reads the same `_placementContext` to ask "can it be cancelled?" (core.placementInProgress);
- * keep the two separate. One adjustments row covers both: core-region-placement-escape (-39).
+ * pentaryn-aoe reads the same `_placementContext` to ask "can it be cancelled?" (core.placementInProgress).
+ * `_placementContext` is listed in two adjustments rows: core-board-cursor-vars (this module) and
+ * core-region-placement-escape (shared with pentaryn-aoe's placementInProgress); keep the two readers separate.
  */
 function previewActive() {
   const layer = canvas?.regions;
@@ -107,7 +110,7 @@ function watchPreview() {
 }
 
 /** Recompute the cursor for the current control, tool and layer. Returns the key or null. */
-export function refresh() {
+function refresh() {
   const el = boardEl();
   if (!el) { current = null; return null; }
   const templatesActive = !!canvas?.ready && previewActive();
@@ -169,6 +172,13 @@ export function onEnabledChange() {
   resync();
 }
 
+/** Clear the board's cursor variables and forget the current cursor. */
+function clear() {
+  const el = boardEl();
+  if (el) apply(el, null);
+  current = null;
+}
+
 export function install(reg, ctx) {
   log = ctx.log;
   ctx.expose({ refresh, current: () => current, snapshot });
@@ -193,11 +203,7 @@ export function install(reg, ctx) {
     checkInternals();
     setTimeout(() => resync(), 0);
   }, { guard: false, label: "canvasReady: attach" });
-  reg.on("canvasTearDown", () => {
-    const el = boardEl();
-    if (el) apply(el, null);
-    current = null;
-  }, { guard: false, label: "canvasTearDown: clear" });
+  reg.on("canvasTearDown", () => clear(), { guard: false, label: "canvasTearDown: clear" });
 
   const ready = () => setTimeout(() => { attach(); resync(); }, 0);
   if (globalThis.game?.ready) ready();   // hot patch: ready has already fired
@@ -206,7 +212,5 @@ export function install(reg, ctx) {
 
 /** Clear the board; the hooks go with the entry's reg.offAll(). Wrapped onChanges stay (they only refresh). */
 export function uninstall() {
-  const el = boardEl();
-  if (el) apply(el, null);
-  current = null;
+  clear();
 }

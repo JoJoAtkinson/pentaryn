@@ -45,7 +45,8 @@ from typing import Callable
 
 from scripts.foundry.ops import config as ops_cfg
 from scripts.foundry.update import adjustments as adj_mod
-from scripts.foundry.update import llm
+from scripts.foundry.update import llm, risk
+from scripts.foundry.update.report import IPV4, IPV6
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 CACHE_DIR = REPO_ROOT / ".state" / "vtt-update-analysis"
@@ -932,8 +933,14 @@ def cache_key(f: dict, registry: adj_mod.Registry, bundle_hash: str) -> str:
     return hashlib.sha256(blob.encode()).hexdigest()[:24]
 
 
+def _safe_name(pkg: str) -> str:
+    """A package id as a filename part. The cache files, the globs that find them and the
+    plan names all go through here, so they cannot drift apart."""
+    return re.sub(r"[^A-Za-z0-9._-]", "_", pkg)
+
+
 def _cache_path(pkg: str, key: str, cache_dir: Path) -> Path:
-    safe = re.sub(r"[^A-Za-z0-9._-]", "_", pkg)
+    safe = _safe_name(pkg)
     return cache_dir / f"{safe}--{key}.json"
 
 
@@ -966,7 +973,7 @@ def reusable_held(f: dict, cache_dir: Path = CACHE_DIR, *, now: datetime,
     a month per held major, and at once when the installed version or the major moves."""
     if max_age_days <= 0:
         return None
-    safe = re.sub(r"[^A-Za-z0-9._-]", "_", f["id"])
+    safe = _safe_name(f["id"])
     try:
         paths = sorted(cache_dir.glob(f"{safe}--*.json"),
                        key=lambda p: p.stat().st_mtime, reverse=True)
@@ -988,7 +995,7 @@ def reusable_held(f: dict, cache_dir: Path = CACHE_DIR, *, now: datetime,
 
 
 def _fail_path(pkg: str, key: str, cache_dir: Path) -> Path:
-    safe = re.sub(r"[^A-Za-z0-9._-]", "_", pkg)
+    safe = _safe_name(pkg)
     return cache_dir / f"{safe}--{key}.failures"
 
 
@@ -1010,7 +1017,7 @@ def record_failure(pkg: str, key: str, error: str, cache_dir: Path = CACHE_DIR, 
 
 
 def previous_analysis(pkg: str, key: str, cache_dir: Path = CACHE_DIR) -> dict | None:
-    safe = re.sub(r"[^A-Za-z0-9._-]", "_", pkg)
+    safe = _safe_name(pkg)
     try:
         older = sorted((p for p in cache_dir.glob(f"{safe}--*.json")
                         if not p.name.endswith(f"--{key}.json")),
@@ -1128,7 +1135,6 @@ def render_plan(run_id: str, f: dict, analysis: dict, *, cached_since: str | Non
               "- the system or core: `make foundry-restore SNAP=<snapshot>` — a launched world "
               "has already migrated; restoring the code alone is not enough", ""]
     # The plan is committed and pushed (a public repo), like the report — same IP scrub.
-    from scripts.foundry.update.report import IPV4, IPV6
     return IPV6.sub("<ip>", IPV4.sub("<ip>", "\n".join(lines)))
 
 
@@ -1137,7 +1143,7 @@ def write_plan(run_id: str, f: dict, analysis: dict, *, dry: bool, cached_since:
                analysed_pair: str | None = None) -> Path:
     target_dir = plans_dir or (DRY_PLANS_DIR if dry else PLANS_DIR)
     target_dir.mkdir(parents=True, exist_ok=True)
-    safe = re.sub(r"[^A-Za-z0-9._-]", "_", f["id"])
+    safe = _safe_name(f["id"])
     path = target_dir / f"{run_id}-{safe}.md"
     path.write_text(render_plan(run_id, f, analysis, cached_since=cached_since,
                                 held_reason=held_reason, analysed_pair=analysed_pair),
@@ -1214,8 +1220,7 @@ def run(plan: dict, policy: dict, *, run_id: str, dry: bool, forced: bool = Fals
     record["cost_usd"] = llm.total_cost(record["calls"])
     record["charged_usd"] = llm.charged(record["calls"])
     if record["plans"] or record["held"]:
-        plan["buckets"] = {b: [d["id"] for d in plan.get("decisions") or []
-                               if d.get("bucket") == b] for b in ("auto", "review", "hold")}
+        plan["buckets"] = risk.bucket_index(plan.get("decisions"))
     return record
 
 
@@ -1586,17 +1591,6 @@ def render_preview(pv: dict) -> str:
     return "\n".join(lines)
 
 
-def cost_line(calls: list[dict]) -> str:
-    """``LLM cost this run: $0.42 (adjudicator $0.05, T0 $0.00, T1 $0.37)``, plus what a
-    call killed on timeout may have spent without reporting it."""
-    by: dict[str, float] = {}
-    for c in calls:
-        if c:
-            by[c.get("tier", "?")] = by.get(c.get("tier", "?"), 0.0) + float(c.get("cost_usd") or 0)
-    total = sum(by.values())
-    parts = ", ".join(f"{k} ${v:.2f}" for k, v in by.items())
-    unmeasured = llm.charged([c for c in calls if c]) - llm.total_cost([c for c in calls if c])
-    return (f"LLM cost this run: ${total:.2f}" + (f" ({parts})" if parts else "")
-            + (f" + up to ${unmeasured:.2f} unreported (timed-out calls)"
-               if unmeasured > 0.005 else ""))
+# Lives in llm (it needs nothing else); kept here because callers and tests use esc.cost_line.
+cost_line = llm.cost_line
 

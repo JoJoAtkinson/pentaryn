@@ -2,6 +2,7 @@
 // internals that are missing, statusOf is the shape api.status() returns. New functions, pinned
 // when they are added; core is imported bare (no Foundry stub), as in core.test.mjs.
 import { probeInternals, statusOf } from "../cursors-core.mjs";
+import { MANIFEST } from "../api-manifest.mjs";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
@@ -47,4 +48,10 @@ test("statusOf: expected follows keyFor; key is null while disabled", () => {
     enabled: false, key: null, control: null, tool: null, placementActive: false,
     boardCursor: null, dataset: null, imageSet: false, expected: null,
   });
+});
+
+test("manifest status row returns lists exactly statusOf()'s keys, in order", () => {
+  // describe() reports this hand-written string; tie it to the shape statusOf really returns.
+  const row = MANIFEST.rows.find((r) => r.path === "status");
+  assert.deepEqual(row.returns.replace(/[{}\s]/g, "").split(","), Object.keys(statusOf()));
 });

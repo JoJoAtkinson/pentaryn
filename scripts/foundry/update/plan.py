@@ -83,10 +83,7 @@ def build(*, admin: FoundryAdmin | None = None, notes: bool = True,
     if notes and core_decision.target and core_target:
         plan["upstream"]["core"] = core_upstream(core_version, core_target)
 
-    plan["buckets"] = {
-        bucket: [d["id"] for d in plan["decisions"] if d["bucket"] == bucket]
-        for bucket in (risk.AUTO, risk.REVIEW, risk.HOLD)
-    }
+    plan["buckets"] = risk.bucket_index(plan["decisions"])
     return plan
 
 

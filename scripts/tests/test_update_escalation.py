@@ -815,6 +815,24 @@ def test_adjudicator_failure_holds_all_and_keeps_the_record():
     assert call["error"] == "timed out after 600s"
 
 
+def test_adjudicator_prompt_tolerates_a_release_with_no_date():
+    # upstream._attach_notes sets published to null for a GitHub draft release.
+    from scripts.foundry.update import adjudicate
+    plan = make_plan(decision("some-module", bucket="review", bump="minor", target="1.1"))
+    plan["upstream"]["some-module"]["notes"] = [
+        {"version": "1.1", "published": None, "body": "x"}]
+    prompt, ids = adjudicate.build_prompt(plan)
+    assert ids == ["some-module"] and "--- 1.1 () ---" in prompt
+
+    def caller(spec, stdin, **kw):
+        return llm.Result(llm.CallRecord(tier="adjudicator", model=spec.model,
+                                         effort=spec.effort, ok=True),
+                          text='{"verdicts":[{"id":"some-module","verdict":"apply",'
+                               '"rationale":"fine"}]}')
+    verdicts, error, _ = adjudicate.run(plan, caller=caller)
+    assert error is None and [v.verdict for v in verdicts] == ["apply"]
+
+
 def test_report_writer_model_comes_from_policy():
     from scripts.foundry.update import report
     seen = {}
@@ -1080,6 +1098,29 @@ def test_a_held_major_reuses_its_analysis_across_patches(tmp_path):
     assert esc.package_floor(f) is Tier.ANALYZE
 
 
+
+def test_safe_name_is_shared_by_cache_and_plan_paths(tmp_path):
+    # The cache file name, the globs that find it again and the plan name must sanitise a
+    # package id the same way, or a held major silently stops reusing its analysis.
+    assert esc._cache_path("a/b c", "k", tmp_path).name == "a_b_c--k.json"
+    now = datetime(2026, 10, 10, 4, 30)
+    rec = {"key": "k", "id": "a/b c", "installed": "1.0.0", "target": "7.0.0",
+           "prompt_version": esc.PROMPT_VERSION, "created": now.isoformat(),
+           "analysis": {"x": 1}}
+    esc.cache_write("a/b c", "k", rec, tmp_path)
+    f = {"id": "a/b c", "installed": "1.0.0", "target": "7.0.1"}
+    assert esc.reusable_held(f, tmp_path, now=now, max_age_days=30) == rec
+    assert esc.previous_analysis("a/b c", "other", tmp_path) == rec
+    facts = esc.package_facts(decision("dice-so-nice", bucket="hold", bump="major"), {},
+                              registry(), {})
+    a = esc.validate_analysis(analysis("dice-so-nice", rec="hold"), pkg="dice-so-nice",
+                              row_ids=[], bundle_files=[])
+    path = esc.write_plan("r1", {**facts, "id": "a/b c", "modules": [], "exposure": []}, a,
+                          dry=True, cached_since=None, held_reason=None,
+                          plans_dir=tmp_path / "plans")
+    assert path.name.endswith("-a_b_c.md")
+
+
 # ── what upstream controls cannot write the plan ─────────────────────────────
 
 def test_upstream_strings_are_flattened_in_facts_and_plan(tmp_path):
@@ -1143,6 +1184,18 @@ def test_exposure_matches_code_not_prose(tmp_path):
     assert reg.exposure("multi-token-edit", root=tmp_path) == []   # the updater's own docs
     assert reg.exposure("mad-endlesswiz", root=tmp_path) == []     # a comment
     assert reg.exposure("wall-height", root=tmp_path) == ["scripts/foundry/other.py"]
+
+
+def test_exposure_cache_is_per_root(tmp_path):
+    roots = {}
+    for name in ("a", "b"):
+        mod = tmp_path / name / "foundry/module/pentaryn-x"
+        mod.mkdir(parents=True)
+        (mod / f"{name}.mjs").write_text('flags["dice-so-nice"] = {};\n')
+        roots[name] = tmp_path / name
+    reg = adj_mod.Registry()
+    assert reg.exposure("dice-so-nice", root=roots["a"]) == ["foundry/module/pentaryn-x/a.mjs"]
+    assert reg.exposure("dice-so-nice", root=roots["b"]) == ["foundry/module/pentaryn-x/b.mjs"]
 
 
 @pytest.mark.repo
@@ -1385,3 +1438,20 @@ def test_exposure_skips_blueprint_tooling(tmp_path):
     (other / "x.py").write_text('Y = "wall-height"\n')
     reg = adj_mod.Registry()
     assert reg.exposure("wall-height", root=tmp_path) == ["scripts/foundry/ops/x.py"]
+
+
+def test_bucket_index_matches_the_old_comprehension():
+    from scripts.foundry.update import risk
+    ds = [
+        {"id": "a", "bucket": "auto"},
+        {"id": "s", "bucket": "skip"},
+        {"id": "h", "bucket": "hold"},
+        {"id": "nobucket"},
+        {"id": "r", "bucket": "review"},
+        {"id": "a2", "bucket": "auto"},
+    ]
+    old = {b: [d["id"] for d in ds or [] if d.get("bucket") == b]
+           for b in ("auto", "review", "hold")}
+    assert json.dumps(risk.bucket_index(ds)) == json.dumps(old)
+    assert list(risk.bucket_index(ds)) == ["auto", "review", "hold"]
+    assert risk.bucket_index(None) == {"auto": [], "review": [], "hold": []}

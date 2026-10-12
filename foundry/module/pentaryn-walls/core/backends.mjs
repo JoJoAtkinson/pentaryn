@@ -4,7 +4,8 @@
  *
  * The JS engine is the **reference**. Any other backend is correct exactly insofar as it
  * produces byte-identical mutations for the same input; `compare()` is what decides that,
- * and `test/run.mjs --backend=<name>` runs all fixtures against it.
+ * and `node test/corpus.mjs --backend=<name>` runs all fixtures against it (the gate,
+ * test/corpus.test.mjs, runs every available backend).
  *
  * A backend is `{name, run(walls, opts) -> result, available() -> bool, accepts?(walls) -> bool}`
  * where `result` has the same shape `runEngine` returns. `accepts` is optional: a backend that

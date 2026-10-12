@@ -8,7 +8,7 @@ a fork appears it is picked up with no config change — which is the same prope
 package inventory has, and for the same reason.
 
 It **reports only**. Merging upstream into a fork is a code change with conflicts and
-judgement in it; that is a job for a session with a human in it, not a 06:00 cron.
+judgement in it; that is a job for a session with a human in it, not a 04:06 cron.
 """
 
 from __future__ import annotations

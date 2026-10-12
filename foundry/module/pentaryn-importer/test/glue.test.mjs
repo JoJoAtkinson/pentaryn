@@ -549,6 +549,29 @@ test("a kit module publishing BEFORE the importer: present at ready, beside the 
   pinKey("root", "kitBefore", { atReady, afterTick: shape(), namespaces: game.pentaryn.namespaces() });
 });
 
+// Last of the import() tests: before the fix the stuck re-entrancy guard would refuse every later import().
+test("a body that stalls after the headers still times out (TIMEOUT) and releases the guard", async () => {
+  respond = async (url, init) => ({
+    ok: true, status: 200, statusText: "OK",
+    text: () => new Promise((_, reject) => init.signal.addEventListener("abort", () => reject(init.signal.reason))),
+  });
+  let o;
+  const pending = outcome(() => imp({ dryRun: true, timeout: 50 })).then(v => { o = v; });
+  await flush();
+  mock.timers.tick(50);
+  await flush();
+  assert.notEqual(o, undefined, "settled once the 50 ms timeout fired");
+  await pending;
+  assert.equal(o.error.name, "PentarynAbort");
+  assert.equal(o.code, "TIMEOUT");
+  assert.equal(o.error.message, "Timed out after 50 ms fetching /worlds/w/actors.json");
+  assert.deepEqual(o.toasts, []);
+  serve(valid());
+  const after = await outcome(() => imp({ dryRun: true }));
+  assert.equal(after.error, null, "the guard was released: not CONFLICT");
+  assert.ok(after.result);
+});
+
 /* ── whole-file pins (keep LAST) ──────────────────────────────────────────────────────────────── */
 
 test("keyed goldens hold exactly the keys this file pins", () => {
