@@ -4,6 +4,10 @@
 
 ## Unreleased
 
+- **A failed HUD button render is logged as transform's (KIT-R6, kit 1.2.0).** The kit's
+  `applyButtons` now catches a fresh button's rejected render and warns `pentaryn-transform | argon
+  button render failed` instead of leaving an unhandled rejection; the three bar composers pass
+  their `log` ([declared]).
 - **One Starry Form ending at a time (starry-double-end, final review).** An expiry landing together
   with an Incapacitated or a Long Rest could send two deletes for the same effect and log a failed
   ending. `endStarry` now holds an in-flight guard per druid, as revert does: the overlapping ending
