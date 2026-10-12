@@ -73,7 +73,7 @@ published at `ready`. Ask it: `game.pentaryn.dropbin.describe()` (offline: `test
 | `export()` | yes | the mirror | `true`, or `false` for a player or a failed upload |
 | `clear()` | yes | `log`, the mirror | `false` unless confirmed; **keeps the counter** |
 | `inspect(ref, { sceneId })` | — | — | a token's (or an actor's tokens') corpse state: `dead, corpse, noLoot, pile, saved {sight, ownership}` |
-| `corpses.sync/toCorpse/fromCorpse/revive/migrateLegacyEyes` | yes | see Data written | legacy; run on the active GM |
+| `corpses.sync/toCorpse/fromCorpse/revive/migrateLegacyEyes` | yes | see Data written | legacy; run on the active GM; without Item Piles, or given the wrong document (`sync` an Actor, the others a TokenDocument), one console warning and nothing done |
 | `corpses.isDead/paintEye/paintAllEyes` | — | — | legacy |
 | `loot.install(app)` / `loot.refreshAll()` / `loot.recipientFor(app)` | — | — | legacy |
 | `selftest()` | — | — | `{ ok, checks }` |

@@ -55,7 +55,20 @@ function eligible(tokenDoc) {
 
 const isPile = isValidItemPile;
 
+/**
+ * The public writers' guard (dropbin-R6): Item Piles active and the right document (`Token` or
+ * `Actor`), else one prefixed console warning and the caller returns. They threw raw TypeErrors.
+ */
+function refused(fn, doc, want) {
+  const label = want === "Token" ? "a TokenDocument" : "an Actor";
+  const why = !itemPilesApi() ? "Item Piles is not active"
+    : doc?.documentName !== want ? `expected ${label}, got ${doc?.documentName ?? (doc === null ? "null" : typeof doc)}` : null;
+  if (why) console.warn(`${MODULE} | corpses.${fn}: ${why}; nothing done`);
+  return !!why;
+}
+
 async function toCorpse(tokenDoc) {
+  if (refused("toCorpse", tokenDoc, "Token")) return;
   if (isPile(tokenDoc)) return;
   // The delta's own ownership before death (usually null: inherit the base actor), for a revival.
   // Already our corpse (Item Piles reverted the pile, the body is still dead): its delta is our
@@ -70,8 +83,15 @@ async function toCorpse(tokenDoc) {
   const fresh = tokenDoc.parent?.tokens.get(tokenDoc.id) ?? tokenDoc;
   // Players observe the body, and an observed token with sight is a vision source for a player
   // with nothing selected: a dead drow would keep lighting its room. Remember it for a revival.
-  await fresh.update({ [`flags.${MODULE}.corpse`]: true, [`flags.${MODULE}.sight`]: !!fresh.sight.enabled,
-    [`flags.${MODULE}.ownership`]: ownership, "sight.enabled": false, "delta.ownership": { default: OBSERVER } });
+  try {
+    await fresh.update({ [`flags.${MODULE}.corpse`]: true, [`flags.${MODULE}.sight`]: !!fresh.sight.enabled,
+      [`flags.${MODULE}.ownership`]: ownership, "sight.enabled": false, "delta.ownership": { default: OBSERVER } });
+  } catch (err) {
+    // dropbin-R6: a pile without our corpse flag is never reverted by a revival; undo it, then report.
+    try { await revertTokensFromItemPiles([fresh]); }
+    catch (e) { console.warn(`${MODULE} | corpses.toCorpse: could not revert the pile on ${fresh.name}`, e); }
+    throw err;
+  }
   // Dead as core's full-body overlay. The "lootable" eye is not a document: every client draws
   // it on top of the token (paintEye below) while the body still holds something.
   await deadAsOverlay(fresh.actor);
@@ -97,6 +117,7 @@ async function removeLegacyEye(actor) {
 }
 
 async function fromCorpse(tokenDoc) {
+  if (refused("fromCorpse", tokenDoc, "Token")) return;
   if (!ourCorpse(tokenDoc)) return; // never revert a pile we didn't make
   await revertTokensFromItemPiles([tokenDoc]);
   const fresh = tokenDoc.parent?.tokens.get(tokenDoc.id) ?? tokenDoc;
@@ -143,7 +164,7 @@ async function convert(t) {
 }
 
 async function sync(actor) {
-  if (!isGMRunner() || !itemPilesApi()) return;
+  if (!isGMRunner() || refused("sync", actor, "Actor")) return;
   for (const t of tokensOf(actor)) {
     if (!eligible(t)) continue;
     try {
@@ -157,8 +178,9 @@ async function sync(actor) {
 // Debounce per actor: a damage roll can fire several updates in a row.
 const pending = new Map();
 function queue(actor) {
-  // sync() runs on the active GM only; no other client needs the timer (items-journal-30)
-  if (!actor || !isGMRunner()) return;
+  // sync() runs on the active GM only; no other client needs the timer (items-journal-30). Without
+  // Item Piles there is nothing to convert, and sync would warn on every hp change (dropbin-R6).
+  if (!actor || !isGMRunner() || !itemPilesApi()) return;
   const key = actor.uuid;
   clearTimeout(pending.get(key));
   pending.set(key, setTimeout(() => { pending.delete(key); sync(actor); }, 150));

@@ -74,6 +74,11 @@ Declared changes:
   synthetic actor's token, else the first token holding that same actor object. It matched by actor
   id, so with two unlinked chests of one base actor it could float over the other chest; no match is
   no float (the toast still shows).
+- dropbin-R6: `corpses.toCorpse`/`fromCorpse`/`sync` return early with one console warning
+  (`pentaryn-dropbin | corpses.<fn>: …; nothing done`) when Item Piles is not active or the argument
+  is not a TokenDocument (`sync`: an Actor); they threw raw TypeErrors. A failed corpse-flag write in
+  `toCorpse` reverts the pile it just made and rejects, instead of leaving a pile no revival undoes.
+  Without Item Piles the hp/effect hooks no longer queue a sync at all.
 
 Added: `list(n, { brief })`, `restoreResult`, `inspect`, `selftest` (items-journal-28).
 - A restore another module refuses (a `preCreateItem` veto) is `{ ok: false, reason: "not-created" }`

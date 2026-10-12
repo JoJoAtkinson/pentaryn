@@ -165,3 +165,62 @@ test("dropbin-EC-4: HUD Revive cancels the debounced sync its own hp write queue
   assert.equal(reverts() - before, 1, "one revert, not a second from the timer");
   assert.equal(tok.delta.ownership ?? null, null);
 });
+
+/* ── dropbin-R6: the legacy writers refuse bad input with one warning and never half-apply ──────── */
+
+/** Run fn with console.warn captured; returns the warnings' first arguments. */
+async function warnings(fn) {
+  const seen = [];
+  const keep = console.warn;
+  console.warn = (...a) => seen.push(String(a[0]));
+  try { await fn(); } finally { console.warn = keep; }
+  return seen;
+}
+
+test("dropbin-R6: without Item Piles, toCorpse/fromCorpse/sync return early with one prefixed warning", async () => {
+  const live = goblin(null);
+  const dead = goblin({ default: OBSERVER }, { [MOD]: { corpse: true, sight: true, ownership: null } });
+  const ip = F.game.itempiles;
+  F.game.itempiles = undefined;
+  const before = F.calls.length;
+  try {
+    for (const run of [() => corpses.toCorpse(live), () => corpses.fromCorpse(dead), () => corpses.sync(live.actor)]) {
+      const seen = await warnings(run);
+      assert.equal(seen.length, 1, JSON.stringify(seen));
+      assert.match(seen[0], /^pentaryn-dropbin \| corpses\.\w+: Item Piles is not active/);
+    }
+  } finally {
+    F.game.itempiles = ip;
+  }
+  assert.equal(F.calls.slice(before).filter(c => c.op === "update").length, 0, "nothing written");
+  assert.equal(live.flags[MOD]?.corpse, undefined);
+  assert.equal(dead.flags[MOD].corpse, true);
+});
+
+test("dropbin-R6: a wrong argument is one prefixed warning, not a raw TypeError", async () => {
+  const tok = goblin(null);
+  const cases = [
+    [() => corpses.toCorpse(tok.actor), /corpses\.toCorpse: expected a TokenDocument, got Actor/],
+    [() => corpses.toCorpse(undefined), /corpses\.toCorpse: expected a TokenDocument/],
+    [() => corpses.fromCorpse(null), /corpses\.fromCorpse: expected a TokenDocument/],
+    [() => corpses.sync(tok), /corpses\.sync: expected an Actor, got Token/],
+    [() => corpses.sync(undefined), /corpses\.sync: expected an Actor/],
+  ];
+  for (const [run, re] of cases) {
+    const seen = await warnings(run);
+    assert.equal(seen.length, 1, JSON.stringify(seen));
+    assert.match(seen[0], /^pentaryn-dropbin \| /);
+    assert.match(seen[0], re);
+  }
+  assert.equal(tok.flags[MOD]?.corpse, undefined, "the token was not converted");
+});
+
+test("dropbin-R6: a failed corpse-flag write reverts the pile toCorpse just made", async () => {
+  const tok = goblin(null);
+  const boom = new Error("server refused");
+  tok.update = async () => { throw boom; };
+  const reverts = () => F.calls.filter(c => c.op === "revertTokensFromItemPiles").length;
+  const before = reverts();
+  await assert.rejects(corpses.toCorpse(tok), err => err === boom);
+  assert.equal(reverts() - before, 1, "the new pile is reverted, not left without corpse flags");
+});
