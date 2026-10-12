@@ -53,8 +53,10 @@ live, and nothing was merged into `main`. The live phase is written down but has
   - senses 51.1 → **93.6 %**
 
   What still fails:
-  - C07, C09 and C37 (plus C51 for portals) wait for the Wave 7 `module.json` batch.
-  - Ties also fails C05 (`ties-api.mjs`, W3-T6) and C37 (card layer, W3-T1).
+  - prompts fails only C07. Ties, portals, creatures and senses fail C07, C09 and C37 (plus C51
+    for portals), which wait for the Wave 7 `module.json` batch (C37 clears with each `cssPrefix`).
+  - Ties also fails C05 (`ties-api.mjs`, W3-T6), and keeps C37 after Wave 7 for the card layer's
+    `#pentaryn-ties-cards` alone (W3-T1; checked on a copy with `cssPrefix: "pt-"`).
 - **Gates at the close** (`8d3d7736`, re-run for this report; all static):
   - `make foundry-modules-check`: all 20 modules pass their gates.
   - Each `node test/run.mjs` exits 0:
@@ -85,7 +87,8 @@ How each column was measured:
   excluded). It is measured with `node --test --experimental-test-coverage` over every `*.test.mjs`
   (node:test only, not the LEGACY suites), with lcov merged per file. The checkpoint was measured on
   a `git archive` of the checkpoint and HEAD on the tree, both by this report. It is a gap finder,
-  not a target.
+  not a target. Lines and functions repeat exactly; node's branch figures move by about ±0.2 between
+  runs of the same tree (re-measured at HEAD: prompts 86.07–86.15, ties 78.88–78.93).
 - **Lane figures:** each lane's checkpoint record used a different method (some included LEGACY
   suites). Those figures are in the guide Results.
 
@@ -93,7 +96,7 @@ How each column was measured:
 |---|---|---|---|---|---|
 | prompts | `bc12443e` | 43 files (23 A, 20 M), +2044 −62 | 56.5 → 58.7 → 93.8 → **97.9 %**; fails C07 | 98.84 / 85.59 / 96.30 (16 files) → **98.83 / 85.94 / 96.99** (50 files) | 155 + 3 todo + 2 skip → 225 (6 skip, 0 todo); legacy 415 both |
 | ties | `7395a708` | 56 files (26 A, 30 M), +4993 −125 | 55.3 → 61.7 → 87.8 → **91.8 %**; fails C05, C07, C09, C37 | 95.18 / 76.91 / 90.53 (21) → **96.37 / 78.97 / 91.50** (55) | 142 + 2 todo → 250 (0 todo); legacy 183 / 9 / reach both |
-| portals | `0ca63b97` | 32 files (14 A, 18 M), +1400 −85 | 58.1 → 67.4 → 87.0 → **91.3 %**; fails C07, C09, C37, C51 | 100 / 97.80 / 100 (2) → **99.51 / 96.19 / 97.89** (10) | 113 → 191; legacy 52 both |
+| portals | `0ca63b97` | 32 files (14 A, 18 M), +1400 −85 | 58.1 → 67.4 → 87.0 → **91.3 %**; fails C07, C09, C37, C51 | 100 / 97.80 / 100 (2) → **99.51 / 96.19 / 97.89** (10) | 113 (1 todo) → 191 (0 todo); legacy 52 both |
 | creatures | `6e4c7d7c` | 15 files (11 A, 4 M), +1109 −84 | 57.8 → 64.4 → 89.6 → **93.8 %**; fails C07, C09, C37 | 100 / 90.42 / 92.75 (2) → **99.73 / 95.19 / 99.08** (10) | 61 + 7 todo → 105 (2 skip, 0 todo); legacy 73 both |
 | senses | `5e76c4a1` | 40 files (11 A, 29 M), +1661 −207 | 51.1 → 55.6 → 91.5 → **93.6 %**; fails C07, C09, C37 | 98.96 / 91.46 / 98.64 (7) → **99.61 / 92.03 / 98.94** (20) | 104 (1 todo) → 150 (0 todo) |
 
@@ -117,8 +120,8 @@ deviations, and live checks.
 ### prompts — `prompts-lookup-7…33`, mcp-fork-2/-10/-15/-20/-24, aoe-movement-portals-38
 
 **Frozen files touched** (20 M). Nothing else changed.
-- **Import paths only:** step 10 `ec66c6df` touched 11 test files, and step 11 `bc8ef0f3` touched
-  `dialog`, `surface` and `typeahead`.
+- **Import paths only:** step 10 `ec66c6df` touched 13 test files, and step 11 `bc8ef0f3` touched
+  `dialog`, `i18n`, `surface` and `typeahead` (plus the new `typeahead-core.test`).
 - **`contract.test`** reads the query names from the manifest (DP3 `876f2899`), and `3451fdb7` adds
   `KNOWN_DRIFT`.
 - **One fixture** gains `Actor.updateDocuments` (`30c47bf2`). No assertion changed.
@@ -150,7 +153,9 @@ deviations, and live checks.
 - -22 `9b597ba3`
 - -23 `2bf05359`
 - -24 `7130fade`
-- -27 `f1b06537`, plus the routing row `ff72c4d4`
+- -27 `f1b06537`; the routing rows for prompts and lookup (`prompt-markers.md`, `rules-lookup.md`)
+  were already in `context/foundry/README.md` before wave 3, and `ff72c4d4` updates the
+  `prompt-markers.md` use-doc
 - -28 pinned at the checkpoint
 - -31 `bc8ef0f3`
 - -32 item 2 `1ea35e09`, item 3 `f1b06537`
@@ -353,7 +358,9 @@ client and write nothing.
 ### senses — `senses-walls-cursors-10…38`
 
 **Frozen files touched** (29 M).
-- **Import paths only:** `0bd574da` (`core`, `light-core`, `migrate`, three oracles).
+- **Import paths:** `0bd574da` (`core`, `light-core`, `migrate` and the two `legacy-*` oracle
+  fixtures). The same commit appends two tests: `core.test`'s VERSION row and `glow.test`'s -22a
+  KNOWN pin (the one `ff544d99` later flips).
 - **Appended rows** at steps 2 and 5: `a3388e0b` (`util.test`) and `a1ea3e1a` (`hooks.test`).
 - **Pin flips, each in a named `[declared]` commit:**
   - S-1/S-2 `88f85d98` (`surface.json`, `hooks-uninstall.json`, published keys);
@@ -416,7 +423,8 @@ and neither is needed for the fix.
 1. **`migrate/wave-3` into `main`:** clean. `main` has one commit since `wave-3-base` (`3ab3610f`,
    a wave-2 report line). It touches no file this branch touches, and `git merge-tree` reports no
    conflict.
-2. **`feature/module-bundles`** (54 commits on top of `main` `3ab3610f`; backup and boot code in
+2. **`feature/module-bundles`** (57 commits on top of `main` `3ab3610f` at the critic check, and still
+   growing; backup and boot code in
    `scripts/foundry/cloud.py`, `storage.py`, `boot.py` and others): the only shared file is
    `context/foundry/README.md`.
    - Bundles edits the make table; wave 3 regenerated the Module APIs table. They are different
@@ -672,6 +680,12 @@ conformance is still 87.8 %.
   | `f7aa8929` (B6) | `8bf658c6` |
   | `28b913e2` (ties-46) | `313c7df8` |
 
+  The same holds for every other ties `[declared]` commit whose golden follows in its own commit
+  (critic check, each tree's `node test/run.mjs` exit code): B1b `0b322d2e` → `99d13957`, B1
+  `fc593f98` → `c32fc76b`, B11 `a0985d1f` → `c6222b13`, `2257ae61` → `ae89ff94`, `171c6e4f` →
+  `8f3e120e`, `e45a3a96` → `aa63fff2`. Every other `[declared]` commit in the five modules is green
+  at its own tree.
+
 ## Integration (wave 3, 2026-10-11)
 
 The integrator applied every lane's shared-file list on `migrate/wave-3` (code phase; nothing
@@ -786,9 +800,43 @@ for `typeof T.describe`. Since B1, that is the kit's `describe()`, and the card 
 ## Live phase (planned, not run)
 
 The gated sequence is [`wave-3-live-plan.md`](wave-3-live-plan.md). Goldens: `portals.js`,
-`creatures.js` and `senses.js` are new, in the wave-2 shared/declared split. `prompts.js` and `ties.js`
-are unchanged; their expected declared differences are in the plan's §6 table. No `module.json`
+`creatures.js` and `senses.js` are new, in the wave-2 shared/declared split. `prompts.js` is
+unchanged. `ties.js` changed only in `0291ce2a`: it calls `attributes.lookup` where it called the
+removed `describe` alias, and keeps the `describe*` keys so a before/after diff lines up. Their
+expected declared differences are in the plan's §6 table. No `module.json`
 changes on this branch, so a GM tab reload deploys it; there is no Foundry restart. Nothing has run.
+
+## Critic check (2026-10-11)
+
+Every claim in this report was checked against git and the files. Nothing was run live.
+
+**What was checked and holds:**
+- Every hash resolves: 309 in pentaryn and 2 in the fork.
+- The commit lists match `git log`: 299 commits, 65 `[declared]`, 8 tagged goldens.
+- The frozen-test diff stats, and the commits behind each frozen-file edit.
+- Every finding → commit pair, against the commit message or the audit's status line.
+- The conformance scores at wave-3-base, at each checkpoint, before integration (`b7d00d54`) and at
+  HEAD, each read with the scorer of its own tree.
+- The node:test counts at each checkpoint and at HEAD, and the legacy counts.
+- Prompts in fork mode: 225/225.
+- `pytest`: 1203 / 2 / 3. `foundry-lib-check`: 82/82. `foundry-adjustments-check`: 112 rows.
+  `check-context`: 5 warnings. `foundry-modules-check`: 20/20. `vendor.py check --all`: identical.
+- Fork: vitest 275 + 43, typecheck clean, footprint OK.
+- Checkpoint coverage and the line and function figures at HEAD.
+- The merge-tree checks, the cross-lane commit, and the `check-lore` red (47 links).
+
+**Corrected in place:**
+- prompts:
+  - step 10 touched 13 test files, not 11;
+  - step 11 also touched `i18n`;
+  - -27's "routing row `ff72c4d4`": the routing rows predate wave 3.
+- portals: the checkpoint's node:test count had 1 todo.
+- senses: `0bd574da` is not import paths only. It also appends the VERSION row and the -22a KNOWN pin.
+- ties: six more `[declared]` → golden red windows were missing.
+- The Summary's "what still fails" list was imprecise per module.
+- Coverage: the branch figures jitter by about ±0.2 between runs.
+- Bundles has 57 commits, not 54.
+- Live phase: `live-goldens/ties.js` did change, in `0291ce2a`.
 
 ## Commit lists
 
