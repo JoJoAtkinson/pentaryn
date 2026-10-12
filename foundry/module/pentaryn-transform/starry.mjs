@@ -21,7 +21,6 @@ import {
 import { makeLog } from "./lib/log.mjs";
 import { say, isRunner, markBonusUsed } from "./transform.mjs";
 
-const T = (key, data) => (data ? game.i18n.format(key, data) : game.i18n.localize(key));
 const log = makeLog(MODULE_ID);
 
 /** The druid's Starry Form effect. Static, 16 characters. */
@@ -88,7 +87,7 @@ export function starrySecondsLeft(actor) {
   return start + secs - game.time.worldTime;
 }
 
-export const constellationLabel = c => T(`PENTARYN_TRANSFORM.Starry.${c[0].toUpperCase()}${c.slice(1)}`);
+export const constellationLabel = c => _loc(`PENTARYN_TRANSFORM.Starry.${c[0].toUpperCase()}${c.slice(1)}`);
 
 const IMG = {
   archer: "icons/weapons/bows/bow-ornamental-gold-blue.webp",
@@ -109,14 +108,14 @@ const firstLabel = arr => (Array.isArray(arr) ? arr : []).map(d => d.label ?? d.
 export function constellationText(actor, c) {
   const a = constellationActivity(actor, c);
   if (c === "archer") {
-    return T("PENTARYN_TRANSFORM.Starry.ArcherText", {
+    return _loc("PENTARYN_TRANSFORM.Starry.ArcherText", {
       toHit: a?.labels?.toHit ?? "", damage: firstLabel(a?.labels?.damage) || "1d8 Radiant"
     });
   }
   if (c === "chalice") {
-    return T("PENTARYN_TRANSFORM.Starry.ChaliceText", { heal: firstLabel(a?.labels?.damage) || "1d8" });
+    return _loc("PENTARYN_TRANSFORM.Starry.ChaliceText", { heal: firstLabel(a?.labels?.damage) || "1d8" });
   }
-  return T("PENTARYN_TRANSFORM.Starry.DragonText") + (hasTwinkling(actor) ? ` ${T("PENTARYN_TRANSFORM.Starry.DragonFly")}` : "");
+  return _loc("PENTARYN_TRANSFORM.Starry.DragonText") + (hasTwinkling(actor) ? ` ${_loc("PENTARYN_TRANSFORM.Starry.DragonFly")}` : "");
 }
 
 /** The item effect whose changes the constellation brings (the Dragon's floors), or the bare one. */
@@ -149,7 +148,7 @@ async function applyStarry(actor, c, { keepTime = false } = {}) {
   const now = game.time.worldTime;
   const start = keepTime ? (current?._source?.start?.time ?? now) : now;
   const label = constellationLabel(c);
-  const ends = T("PENTARYN_TRANSFORM.Starry.Ends");
+  const ends = _loc("PENTARYN_TRANSFORM.Starry.Ends");
   const data = starryEffectData({
     base, constellation: c, label, img: constellationImg(actor, c), now: start, seconds: STARRY_SECONDS,
     description: `<p>${constellationText(actor, c)}</p><p>${ends}</p>`, origin: item?.uuid, id: STARRY_EFFECT_ID
@@ -184,7 +183,7 @@ export async function assumeStarry(actor, constellation) {
   const item = starryItem(actor);
   const act = consumeActivity(item);
   if (!item || !act) {
-    ui.notifications.warn(T("PENTARYN_TRANSFORM.Starry.None", { name: actor.name }));
+    ui.notifications.warn(_loc("PENTARYN_TRANSFORM.Starry.None", { name: actor.name }));
     return false;
   }
   if (busy.has(actor.uuid)) return false;
@@ -199,12 +198,12 @@ export async function assumeStarry(actor, constellation) {
       usesLeft: usesLeft(ws?.system?.uses), spends: !free
     });
     if (why) {
-      ui.notifications.warn(T(BLOCKS[why], { name: actor.name }));
+      ui.notifications.warn(_loc(BLOCKS[why], { name: actor.name }));
       return false;
     }
     if (free) {
       await applyStarry(actor, constellation, { keepTime: true });
-      say(actor, T("PENTARYN_TRANSFORM.Chat.StarrySwap", { name: actor.name, constellation: constellationLabel(constellation) }));
+      say(actor, _loc("PENTARYN_TRANSFORM.Chat.StarrySwap", { name: actor.name, constellation: constellationLabel(constellation) }));
       return true;
     }
     const used = await act.use(
@@ -216,7 +215,7 @@ export async function assumeStarry(actor, constellation) {
     markBonusUsed(actor);
     await applyStarry(actor, constellation);
     const uses = wildShapeItemOf(actor)?.system?.uses;
-    say(actor, T("PENTARYN_TRANSFORM.Chat.StarryOn", {
+    say(actor, _loc("PENTARYN_TRANSFORM.Chat.StarryOn", {
       name: actor.name, constellation: constellationLabel(constellation),
       left: usesLeft(uses) ?? 0, max: uses?.max ?? 0, duration: formatDuration(STARRY_SECONDS)
     }));
@@ -233,7 +232,7 @@ export async function endStarry(actor, { quiet = false, reason = "manual" } = {}
   await effect.delete();
   if (!quiet) {
     const key = reason === "incapacitated" ? "StarryIncapacitated" : (reason === "expired" ? "StarryExpired" : "StarryEnd");
-    say(actor, T(`PENTARYN_TRANSFORM.Chat.${key}`, { name: actor.name }));
+    say(actor, _loc(`PENTARYN_TRANSFORM.Chat.${key}`, { name: actor.name }));
   }
   return true;
 }
@@ -245,7 +244,7 @@ Hooks.on("dnd5e.preUseActivity", (activity, usageConfig, dialogConfig, messageCo
   const actor = activity.actor;
   const why = starryBlock({ shifted: !!actor?.isPolymorphed, incapacitated: !!actor?.statuses?.has("incapacitated"), spends: false });
   if (why) {
-    ui.notifications.warn(T(BLOCKS[why], { name: actor?.name ?? "?" }));
+    ui.notifications.warn(_loc(BLOCKS[why], { name: actor?.name ?? "?" }));
     return false;
   }
   messageConfig.create = false;                   // no card with effects to apply by hand
@@ -263,7 +262,7 @@ Hooks.on("dnd5e.postUseActivity", (activity, usageConfig) => {
     }
     await applyStarry(actor, c);
     const uses = wildShapeItemOf(actor)?.system?.uses;
-    say(actor, T("PENTARYN_TRANSFORM.Chat.StarryOn", {
+    say(actor, _loc("PENTARYN_TRANSFORM.Chat.StarryOn", {
       name: actor.name, constellation: constellationLabel(c),
       left: usesLeft(uses) ?? 0, max: uses?.max ?? 0, duration: formatDuration(STARRY_SECONDS)
     }));
@@ -274,7 +273,7 @@ Hooks.on("dnd5e.postUseActivity", (activity, usageConfig) => {
 async function pickConstellation(actor) {
   const DialogV2 = foundry.applications.api.DialogV2;
   return DialogV2.wait({
-    window: { title: T("PENTARYN_TRANSFORM.Starry.Pick") },
+    window: { title: _loc("PENTARYN_TRANSFORM.Starry.Pick") },
     content: `<div class="pentaryn-starry-pick">${CONSTELLATIONS.map(c =>
       `<p><strong>${constellationLabel(c)}.</strong> ${constellationText(actor, c)}</p>`).join("")}</div>`,
     buttons: CONSTELLATIONS.map((c, i) => ({ action: c, label: constellationLabel(c), default: i === 0 })),

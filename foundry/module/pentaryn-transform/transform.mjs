@@ -15,7 +15,6 @@ import {
 } from "./transform-core.mjs";
 import { makeLog } from "./lib/log.mjs";
 
-const T = (key, data) => (data ? game.i18n.format(key, data) : game.i18n.localize(key));
 const log = makeLog(MODULE_ID);
 
 /* ── Foundry v14 core bug (seen v14.367, still present in v14.369): token swaps with operator-wrapped sizes ── */
@@ -166,7 +165,7 @@ function blockedShift(body, wildShapeItem) {
     hasToken: (body?.getActiveTokens?.(true, true)?.length ?? 0) > 0,
     usesLeft: usesLeft(wildShapeItem?.system?.uses)
   });
-  if (why) ui.notifications.warn(T(BLOCK_MESSAGES[why], { name: body?.name ?? "?" }));
+  if (why) ui.notifications.warn(_loc(BLOCK_MESSAGES[why], { name: body?.name ?? "?" }));
   return why;
 }
 
@@ -273,7 +272,7 @@ async function endOnDruid(host, ids) {
  */
 export async function revert(actor, { quiet = false, reason = "manual" } = {}) {
   if (!actor?.isPolymorphed) {
-    if (!quiet) ui.notifications.info(T("PENTARYN_TRANSFORM.NotTransformed", { name: actor?.name ?? "?" }));
+    if (!quiet) ui.notifications.info(_loc("PENTARYN_TRANSFORM.NotTransformed", { name: actor?.name ?? "?" }));
     return null;
   }
   if (!exists(actor)) return null;
@@ -318,7 +317,7 @@ export async function revert(actor, { quiet = false, reason = "manual" } = {}) {
       if (carried.length) await back.createEmbeddedDocuments("ActiveEffect", carried, { keepId: true });
     }
 
-    if (!quiet) say(back, T(RETURN_LINES[reason] ?? RETURN_LINES.manual, { name: back.name }));
+    if (!quiet) say(back, _loc(RETURN_LINES[reason] ?? RETURN_LINES.manual, { name: back.name }));
     return back;
   } finally {
     reverting.delete(key);
@@ -336,7 +335,7 @@ Hooks.on("dnd5e.revertOriginalForm", (actor) => {
       ?? (actor.isToken ? game.actors.get(actor.token?.actorId) : null);
     if (!host) return;                                    // dnd5e warns and does not revert
     const name = (actor.isToken ? actor.token?.getFlag?.("dnd5e", "previousActorData")?.name : null) ?? host.name;
-    say(host, T(RETURN_LINES.manual, { name }));
+    say(host, _loc(RETURN_LINES.manual, { name }));
   } catch (err) {
     log.warn("chat line failed", err);
   }
@@ -379,11 +378,11 @@ export async function shift(actor, profileId) {
     let host = original(actor);
     let activity = wildShapeActivity(host);
     if (!host || !activity) {
-      ui.notifications.warn(T("PENTARYN_TRANSFORM.NoWildShape", { name: actor?.name ?? "?" }));
+      ui.notifications.warn(_loc("PENTARYN_TRANSFORM.NoWildShape", { name: actor?.name ?? "?" }));
       return null;
     }
     if (!activity.availableProfiles.some(p => p._id === profileId)) {
-      ui.notifications.warn(T("PENTARYN_TRANSFORM.UnknownForm"));
+      ui.notifications.warn(_loc("PENTARYN_TRANSFORM.UnknownForm"));
       return null;
     }
     // The body that is out now: this form, or the druid's form elsewhere when the HUD is bound to
@@ -455,11 +454,11 @@ function shaping({ meta, source, items, effects, keepWildShape = false }) {
 
   const now = game.time.worldTime;
   const seconds = meta.seconds;
-  const end = seconds ? T("PENTARYN_TRANSFORM.Effect.Ends", { name: meta.hostName, duration: formatDuration(seconds) })
-    : T("PENTARYN_TRANSFORM.Effect.EndsNoTime", { name: meta.hostName });
+  const end = seconds ? _loc("PENTARYN_TRANSFORM.Effect.Ends", { name: meta.hostName, duration: formatDuration(seconds) })
+    : _loc("PENTARYN_TRANSFORM.Effect.EndsNoTime", { name: meta.hostName });
   const effect = {
     _id: EFFECT_ID,
-    name: T("PENTARYN_TRANSFORM.Effect.Name", { form: source.name }),
+    name: _loc("PENTARYN_TRANSFORM.Effect.Name", { form: source.name }),
     img: source.img,
     transfer: false,
     disabled: false,
@@ -508,13 +507,13 @@ async function doShift(host, activity, profileId, uuid) {
   // 6.0.6 is still mode "cr"; a form-mode Wild Shape would half-shift here, so refuse it loudly.
   if (activity.transform?.mode === "form") {
     await refund(host, itemId);
-    ui.notifications.warn(T("PENTARYN_TRANSFORM.FormMode", { name: activity.item.name }));
+    ui.notifications.warn(_loc("PENTARYN_TRANSFORM.FormMode", { name: activity.item.name }));
     return null;
   }
   const source = uuid ? await fromUuid(uuid) : null;
   if (!source) {
     await refund(host, itemId);
-    ui.notifications.error(T("PENTARYN_TRANSFORM.SourceMissing"));
+    ui.notifications.error(_loc("PENTARYN_TRANSFORM.SourceMissing"));
     return null;
   }
   const seconds = durationSeconds(activity.duration);
@@ -547,7 +546,7 @@ async function doShift(host, activity, profileId, uuid) {
   }
   if (!form) {
     await refund(host, itemId);
-    ui.notifications.error(T("PENTARYN_TRANSFORM.ShiftFailed", { name: meta.hostName }));
+    ui.notifications.error(_loc("PENTARYN_TRANSFORM.ShiftFailed", { name: meta.hostName }));
     return null;
   }
   if (token) {
@@ -555,7 +554,7 @@ async function doShift(host, activity, profileId, uuid) {
     await shapeTokenForm(form, source, meta).catch(err => log.error("shaping the token form failed", err));
   }
   const uses = (token ? form : host).items.get(itemId)?.system.uses;
-  say(token ? form : host, T("PENTARYN_TRANSFORM.Chat.Shift", {
+  say(token ? form : host, _loc("PENTARYN_TRANSFORM.Chat.Shift", {
     name: meta.hostName, form: withArticle(source.name), left: usesLeft(uses) ?? 0, max: uses?.max ?? 0,
     duration: seconds ? formatDuration(seconds) : "—"
   }));
@@ -574,7 +573,7 @@ Hooks.on("dnd5e.preUseActivity", (activity, usageConfig, dialogConfig, messageCo
   if (!isWildShapeActivity(activity)) {
     // A transform from inside a transform nests a copy of the copy ("Talo (Badger) (Badger)").
     if (actor?.isPolymorphed) {
-      ui.notifications.warn(T("PENTARYN_TRANSFORM.AlreadyTransformed", { name: actor.name }));
+      ui.notifications.warn(_loc("PENTARYN_TRANSFORM.AlreadyTransformed", { name: actor.name }));
       return false;
     }
     return;

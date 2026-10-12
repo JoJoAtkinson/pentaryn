@@ -31,9 +31,10 @@ test("template-built keys exist: constellation labels and the Starry chat ending
   for (const k of ["StarryIncapacitated", "StarryExpired", "StarryEnd"]) assert.ok(keys.has(`PENTARYN_TRANSFORM.Chat.${k}`), k);
 });
 
-test("the three two-branch T wrappers, as today (C35; step 7 removes them)", () => {
+test("no two-branch T wrapper is left: every string goes through _loc (C35; guide step 7 removed the three)", () => {
   const hits = sourceScan(ROOT, /const T = \(key, data\) => \(data \? game\.i18n\.format\(key, data\) : game\.i18n\.localize\(key\)\);/);
-  assert.deepEqual(hits.map(h => h.file), ["hud.mjs", "starry.mjs", "transform.mjs"]);
+  assert.deepEqual(hits.map(h => h.file), []);
+  assert.deepEqual(sourceScan(ROOT, /(?<![\w$.])T\(/).map(h => `${h.file}:${h.line}`), []);
 });
 
 test("every lang key is used (as a literal, or template-built)", () => {

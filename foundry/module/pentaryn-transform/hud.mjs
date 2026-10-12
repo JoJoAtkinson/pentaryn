@@ -21,7 +21,6 @@ import {
   constellationLabel, constellationImg, constellationText, constellationActivity, assumeStarry, endStarry
 } from "./starry.mjs";
 
-const T = (key, data) => (data ? game.i18n.format(key, data) : game.i18n.localize(key));
 const log = makeLog(MODULE_ID);
 
 let DND5eItemButton = null;      // borrowed from the weapon-set slot, once seen
@@ -171,7 +170,7 @@ function recoveryText(item) {
   const periods = CONFIG.DND5E.limitedUsePeriods ?? {};
   return (item.system.uses?.recovery ?? []).map(r => {
     const when = periods[r.period]?.label ?? r.period;
-    const what = r.type === "recoverAll" ? T("PENTARYN_TRANSFORM.Hud.All") : (r.formula || "1");
+    const what = r.type === "recoverAll" ? _loc("PENTARYN_TRANSFORM.Hud.All") : (r.formula || "1");
     return `${when}: ${what}`;
   }).join(" · ");
 }
@@ -219,7 +218,7 @@ function argonClasses() {
         details: f.details,
         propertiesLabel: "PENTARYN_TRANSFORM.Hud.Traits",
         properties: f.traits.map(label => ({ label, secondary: true })),
-        footerText: T("PENTARYN_TRANSFORM.Hud.TileHint"),
+        footerText: _loc("PENTARYN_TRANSFORM.Hud.TileHint"),
         classes: TT_LIST
       };
     }
@@ -254,7 +253,7 @@ function argonClasses() {
     get hasTooltip() { return true; }
 
     async getTooltipData() {
-      return { title: this.label, subtitle: T("PENTARYN_TRANSFORM.Hud.BonusAction"), description: "", classes: TT };
+      return { title: this.label, subtitle: _loc("PENTARYN_TRANSFORM.Hud.BonusAction"), description: "", classes: TT };
     }
 
     async _onLeftClick(event) {
@@ -291,16 +290,16 @@ function argonClasses() {
       // four numbers that matter. The full text stays on the sheet (right-click).
       const temp = original(this.hudActor)?.classes?.druid?.system?.levels;
       return {
-        title: T(this.label),
-        subtitle: T("PENTARYN_TRANSFORM.Hud.FormsKnown", { n: forms(this.hudActor).length }),
-        description: `<p>${T(this.shifted ? "PENTARYN_TRANSFORM.Hud.ChangeFormText" : "PENTARYN_TRANSFORM.Hud.WildShapeText", { temp: temp ?? "—" })}</p>`,
+        title: _loc(this.label),
+        subtitle: _loc("PENTARYN_TRANSFORM.Hud.FormsKnown", { n: forms(this.hudActor).length }),
+        description: `<p>${_loc(this.shifted ? "PENTARYN_TRANSFORM.Hud.ChangeFormText" : "PENTARYN_TRANSFORM.Hud.WildShapeText", { temp: temp ?? "—" })}</p>`,
         details: [
-          { label: T("PENTARYN_TRANSFORM.Hud.Uses"), value: `${usesLeft(uses) ?? "—"} / ${uses?.max ?? "—"}` },
-          { label: T("PENTARYN_TRANSFORM.Hud.Duration"), value: seconds ? formatDuration(seconds) : "—" },
-          { label: T("PENTARYN_TRANSFORM.Hud.Recovery"), value: recoveryText(item) || "—" },
-          { label: T("PENTARYN_TRANSFORM.Hud.Cost"), value: T("PENTARYN_TRANSFORM.Hud.BonusAction") }
+          { label: _loc("PENTARYN_TRANSFORM.Hud.Uses"), value: `${usesLeft(uses) ?? "—"} / ${uses?.max ?? "—"}` },
+          { label: _loc("PENTARYN_TRANSFORM.Hud.Duration"), value: seconds ? formatDuration(seconds) : "—" },
+          { label: _loc("PENTARYN_TRANSFORM.Hud.Recovery"), value: recoveryText(item) || "—" },
+          { label: _loc("PENTARYN_TRANSFORM.Hud.Cost"), value: _loc("PENTARYN_TRANSFORM.Hud.BonusAction") }
         ],
-        footerText: T("PENTARYN_TRANSFORM.Hud.WildShapeHint"),
+        footerText: _loc("PENTARYN_TRANSFORM.Hud.WildShapeHint"),
         classes: TT
       };
     }
@@ -327,7 +326,7 @@ function argonClasses() {
       dropTooltip();
       cancelTargetPicker();
       if (usesLeft(this.wildShapeItem?.system.uses) === 0) {   // null = no use limit
-        ui.notifications.warn(T("PENTARYN_TRANSFORM.NoUses"));
+        ui.notifications.warn(_loc("PENTARYN_TRANSFORM.NoUses"));
         return;
       }
       this.panel.toggle();
@@ -353,7 +352,7 @@ function argonClasses() {
       super({
         item: {
           id: `pentaryn-starry-${constellation}`,
-          name: end ? T("PENTARYN_TRANSFORM.Starry.EndShort") : constellationLabel(constellation),
+          name: end ? _loc("PENTARYN_TRANSFORM.Starry.EndShort") : constellationLabel(constellation),
           img: end ? "icons/svg/cancel.svg" : constellationImg(hudActor, constellation)
         },
         inActionPanel: false
@@ -368,17 +367,17 @@ function argonClasses() {
     async getTooltipData() {
       const actor = this.hudActor;
       if (this.constellation === "end") {
-        return { title: T("PENTARYN_TRANSFORM.Starry.End"), description: `<p>${T("PENTARYN_TRANSFORM.Starry.EndText")}</p>`, classes: TT };
+        return { title: _loc("PENTARYN_TRANSFORM.Starry.End"), description: `<p>${_loc("PENTARYN_TRANSFORM.Starry.EndText")}</p>`, classes: TT };
       }
       const current = constellationOf(actor);
       const free = !!current && hasTwinkling(actor);
-      const cost = current === this.constellation ? T("PENTARYN_TRANSFORM.Starry.CostCurrent")
-        : free ? T("PENTARYN_TRANSFORM.Starry.CostFree") : T("PENTARYN_TRANSFORM.Starry.CostUse");
+      const cost = current === this.constellation ? _loc("PENTARYN_TRANSFORM.Starry.CostCurrent")
+        : free ? _loc("PENTARYN_TRANSFORM.Starry.CostFree") : _loc("PENTARYN_TRANSFORM.Starry.CostUse");
       return {
         title: constellationLabel(this.constellation),
-        subtitle: T("PENTARYN_TRANSFORM.Starry.Title"),
+        subtitle: _loc("PENTARYN_TRANSFORM.Starry.Title"),
         description: `<p>${constellationText(actor, this.constellation)}</p>`,
-        details: [{ label: T("PENTARYN_TRANSFORM.Hud.Cost"), value: cost }],
+        details: [{ label: _loc("PENTARYN_TRANSFORM.Hud.Cost"), value: cost }],
         classes: TT_LIST
       };
     }
@@ -408,7 +407,7 @@ function argonClasses() {
     get constellation() { return constellationOf(this.hudActor); }
     get label() {
       const c = this.constellation;
-      return c ? `${T("PENTARYN_TRANSFORM.Starry.Title")}: ${constellationLabel(c)}` : T("PENTARYN_TRANSFORM.Starry.Title");
+      return c ? `${_loc("PENTARYN_TRANSFORM.Starry.Title")}: ${constellationLabel(c)}` : _loc("PENTARYN_TRANSFORM.Starry.Title");
     }
     get icon() { return this.constellation ? constellationImg(this.hudActor, this.constellation) : (this.item?.img ?? ""); }
     get colorScheme() { return 1; }
@@ -419,18 +418,18 @@ function argonClasses() {
       const c = this.constellation;
       const left = starrySecondsLeft(this.hudActor);
       const details = [
-        { label: T("PENTARYN_TRANSFORM.Hud.Uses"), value: `${usesLeft(uses) ?? "—"} / ${uses?.max ?? "—"}` },
-        { label: c ? T("PENTARYN_TRANSFORM.Hud.TimeLeftLabel") : T("PENTARYN_TRANSFORM.Hud.Duration"),
+        { label: _loc("PENTARYN_TRANSFORM.Hud.Uses"), value: `${usesLeft(uses) ?? "—"} / ${uses?.max ?? "—"}` },
+        { label: c ? _loc("PENTARYN_TRANSFORM.Hud.TimeLeftLabel") : _loc("PENTARYN_TRANSFORM.Hud.Duration"),
           value: formatDuration(c && left !== null ? left : STARRY_SECONDS) },
-        { label: T("PENTARYN_TRANSFORM.Starry.Light"), value: T("PENTARYN_TRANSFORM.Starry.LightValue") },
-        { label: T("PENTARYN_TRANSFORM.Hud.Cost"), value: T("PENTARYN_TRANSFORM.Hud.BonusAction") }
+        { label: _loc("PENTARYN_TRANSFORM.Starry.Light"), value: _loc("PENTARYN_TRANSFORM.Starry.LightValue") },
+        { label: _loc("PENTARYN_TRANSFORM.Hud.Cost"), value: _loc("PENTARYN_TRANSFORM.Hud.BonusAction") }
       ];
       return {
         title: this.label,
-        subtitle: c ? T("PENTARYN_TRANSFORM.Starry.Active") : T("PENTARYN_TRANSFORM.Starry.Spends"),
-        description: `<p>${c ? constellationText(this.hudActor, c) : T("PENTARYN_TRANSFORM.Starry.Text")}</p>`,
+        subtitle: c ? _loc("PENTARYN_TRANSFORM.Starry.Active") : _loc("PENTARYN_TRANSFORM.Starry.Spends"),
+        description: `<p>${c ? constellationText(this.hudActor, c) : _loc("PENTARYN_TRANSFORM.Starry.Text")}</p>`,
         details,
-        footerText: T(c ? (hasTwinkling(this.hudActor) ? "PENTARYN_TRANSFORM.Starry.HintActiveFree" : "PENTARYN_TRANSFORM.Starry.HintActive")
+        footerText: _loc(c ? (hasTwinkling(this.hudActor) ? "PENTARYN_TRANSFORM.Starry.HintActiveFree" : "PENTARYN_TRANSFORM.Starry.HintActive")
           : "PENTARYN_TRANSFORM.Starry.Hint"),
         classes: TT
       };
@@ -455,7 +454,7 @@ function argonClasses() {
       dropTooltip();
       cancelTargetPicker();
       if (!this.constellation && usesLeft(this.wildShapeItem?.system.uses) === 0) {
-        ui.notifications.warn(T("PENTARYN_TRANSFORM.NoUses"));
+        ui.notifications.warn(_loc("PENTARYN_TRANSFORM.NoUses"));
         return;
       }
       this.panel.toggle();
@@ -645,7 +644,7 @@ Hooks.on("renderItemButtonArgonComponent", (button) => {
   const actor = ui.ARGON?._actor;
   if (!actor?.isPolymorphed || !button.item) return;
   const title = button.element.querySelector(".feature-element-title, .action-element-title");
-  if (title) title.textContent = T("PENTARYN_TRANSFORM.Hud.OpportunityAttack", { name: button.item.name });
+  if (title) title.textContent = _loc("PENTARYN_TRANSFORM.Hud.OpportunityAttack", { name: button.item.name });
 });
 
 /* ── the portrait: what Talo is, and for how long ────────────────────────── */
@@ -658,12 +657,12 @@ function portraitLine(actor) {
   if (ws) {
     const endsAt = actor.getFlag(MODULE_ID, "wildshape")?.endsAt;
     const left = Number.isFinite(endsAt) ? formatDuration(endsAt - game.time.worldTime) : null;
-    return left ? T("PENTARYN_TRANSFORM.Hud.PortraitLeft", { what: ws.name, left }) : ws.name;
+    return left ? _loc("PENTARYN_TRANSFORM.Hud.PortraitLeft", { what: ws.name, left }) : ws.name;
   }
   const starry = activeStarry(actor);
   if (starry) {
     const left = starrySecondsLeft(actor);
-    return left !== null ? T("PENTARYN_TRANSFORM.Hud.PortraitLeft", { what: starry.name, left: formatDuration(left) }) : starry.name;
+    return left !== null ? _loc("PENTARYN_TRANSFORM.Hud.PortraitLeft", { what: starry.name, left: formatDuration(left) }) : starry.name;
   }
   return null;
 }
@@ -684,7 +683,7 @@ function paintHP(element, actor) {
   const t = hpText(hp);
   if (!t.hasTemp) return;
   first.textContent = t.current;
-  first.dataset.tooltip = T("PENTARYN_TRANSFORM.Hud.HPTemp", { value: hp.value, temp: hp.temp });
+  first.dataset.tooltip = _loc("PENTARYN_TRANSFORM.Hud.HPTemp", { value: hp.value, temp: hp.temp });
   first.classList.add("pentaryn-hp-temp");
 }
 
@@ -728,7 +727,7 @@ function onEffectRender(component) {
       const endsAt = actor?.getFlag(MODULE_ID, "wildshape")?.endsAt;
       if (Number.isFinite(endsAt)) secs = endsAt - game.time.worldTime;
     } else secs = starrySecondsLeft(actor);
-    const left = secs !== null ? `<p><strong>${T("PENTARYN_TRANSFORM.Hud.TimeLeft")}</strong> ${formatDuration(secs)}</p>` : "";
+    const left = secs !== null ? `<p><strong>${_loc("PENTARYN_TRANSFORM.Hud.TimeLeft")}</strong> ${formatDuration(secs)}</p>` : "";
     return { title: this.label, description: left + (this.effect.tooltip ?? ""), classes: TT };
   };
 }
