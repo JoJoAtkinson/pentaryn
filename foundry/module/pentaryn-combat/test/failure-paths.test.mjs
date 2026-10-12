@@ -311,3 +311,30 @@ test("shapes: a Multiattack formula whose Roll throws counts as unparsed; turnfl
   slot.item = { name: "" };
   assert.equal(slot.label, "", "no name: the base label (the item's name)");
 });
+
+test("ac-2: renderHud swallows a render that rejects after the HUD closed, at debug, never as an unhandled rejection", async () => {
+  const { renderHud } = await import("../argon.mjs");
+  const unhandled = [];
+  const onUnhandled = err => unhandled.push(err?.message ?? String(err));
+  process.on("unhandledRejection", onUnhandled);
+  const debugs = [];
+  const debug = console.debug;
+  console.debug = (...args) => debugs.push([args[0], args[1]?.message ?? null]);
+  const render = A.ARGON.render;
+  const actor = A.ARGON._actor;
+  globalThis.CONFIG.debug = { ...(globalThis.CONFIG.debug ?? {}), [MODULE]: true };
+  try {
+    A.ARGON._actor = fig;
+    A.ARGON.render = async () => { throw new Error("reading 'system' of null"); };
+    renderHud();
+    await drain();
+  } finally {
+    process.off("unhandledRejection", onUnhandled);
+    console.debug = debug;
+    A.ARGON.render = render;
+    A.ARGON._actor = actor;
+    delete globalThis.CONFIG.debug[MODULE];
+  }
+  assert.deepEqual(unhandled, [], "no unhandled rejection");
+  assert.deepEqual(debugs, [[`${MODULE} | HUD re-render (HUD closed)`, "reading 'system' of null"]]);
+});
