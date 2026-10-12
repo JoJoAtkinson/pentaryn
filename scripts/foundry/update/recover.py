@@ -33,6 +33,7 @@ success because an HTTP call did not error is not a recovery.
 
 from __future__ import annotations
 
+import re
 import shutil
 import subprocess
 import tarfile
@@ -228,7 +229,8 @@ def _restore_system_from_aside(system_id: str, version: str, rec: Recovery) -> N
     """
     aside = SYSTEM_ASIDE_DIR / f"{system_id}-{version}.tar.gz"
     if not aside.exists():
-        candidates = sorted(SYSTEM_ASIDE_DIR.glob(f"{system_id}-*.tar.gz"))
+        candidates = sorted(SYSTEM_ASIDE_DIR.glob(f"{system_id}-*.tar.gz"),
+                            key=_natural_key)
         if not candidates:
             raise RuntimeError(
                 f"no set-aside copy of {system_id} {version}; the snapshot's "
@@ -243,6 +245,17 @@ def _restore_system_from_aside(system_id: str, version: str, rec: Recovery) -> N
 
 
 # ── Artefacts the recovery paths depend on ──────────────────────────────────
+
+def _natural_key(path: "Path | str") -> list[int | str]:
+    """Natural-sort key on the full filename: digit runs compare as numbers.
+
+    ``6.0.10`` after ``6.0.9``, ``14.100`` after ``14.99``, and ``6.1.0-beta.1`` below
+    ``6.1.0`` (``-`` sorts before ``.``). A plain string sort pruned the copy just
+    written on a digit rollover and restored the older artefact (EC-1).
+    """
+    name = path.name if isinstance(path, Path) else path
+    return [int(t) if t.isdigit() else t for t in re.split(r"(\d+)", name)]
+
 
 def newest_world_snapshot(host: str | None = None) -> "cloud.Snapshot | None":
     """This machine's rollback point: the snapshot its world is based on.
@@ -272,7 +285,7 @@ def newest_world_snapshot(host: str | None = None) -> "cloud.Snapshot | None":
 
 
 def newest_core_bundle() -> Path | None:
-    bundles = sorted(CORE_ROLLBACK_DIR.glob("app-*.tar.gz"))
+    bundles = sorted(CORE_ROLLBACK_DIR.glob("app-*.tar.gz"), key=_natural_key)
     return bundles[-1] if bundles else None
 
 
@@ -285,7 +298,8 @@ def stash_system(system_id: str, version: str) -> Path:
     src = FOUNDRY_DATA / "Data/systems" / system_id
     with tarfile.open(out, "w:gz") as tar:
         tar.add(src, arcname=system_id)
-    for stale in sorted(SYSTEM_ASIDE_DIR.glob(f"{system_id}-*.tar.gz"))[:-3]:
+    for stale in sorted(SYSTEM_ASIDE_DIR.glob(f"{system_id}-*.tar.gz"),
+                        key=_natural_key)[:-3]:
         stale.unlink()
     return out
 
@@ -305,7 +319,7 @@ def stash_core(version: str, keep: int = 2) -> Path:
         return out
     with tarfile.open(out, "w:gz") as tar:
         tar.add(APP_PAYLOAD, arcname=APP_PAYLOAD.name)
-    for stale in sorted(CORE_ROLLBACK_DIR.glob("app-*.tar.gz"))[:-keep]:
+    for stale in sorted(CORE_ROLLBACK_DIR.glob("app-*.tar.gz"), key=_natural_key)[:-keep]:
         stale.unlink()
     return out
 
