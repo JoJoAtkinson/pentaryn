@@ -213,6 +213,14 @@ def server_running() -> bool:
     return host.is_running()
 
 
+def foundry_live() -> bool:
+    """Foundry is up or coming up: its port answers, or its process exists. The process
+    test (host.pid) sees a launch from the moment it starts — before the port binds,
+    while it is already opening packs — which the port check alone misses (review MC2).
+    For a guard that must never touch a folder Foundry may be writing."""
+    return server_running() or host.pid() is not None
+
+
 def sha256_file(path: Path) -> str:
     h = hashlib.sha256()
     with path.open("rb") as fh:
@@ -1409,10 +1417,13 @@ def _rebuilder(rebuilt: list[Path], dest_dir: Path | None = None):
     uploader, which may still be going when vtt-up starts Foundry — and Foundry rewrites
     every pack's LevelDB housekeeping at launch, so a live tar can hold a CURRENT naming a
     MANIFEST it lacks (an unopenable pack under a content-addressed name nothing ever
-    re-uploads). With the server running this raises StorageError: the job stays queued
-    and a later run with Foundry stopped rebuilds it. An OSError from the hash or the tar
-    (a file replaced mid-walk: Foundry's launch, a module sync swapping the folder) is a
-    StorageError too, never a bare exception that escapes _run_job."""
+    re-uploads). With Foundry up or launching (its port or its process — foundry_live),
+    before the tar or once it is written, this raises StorageError and keeps no tar: the
+    job stays queued and a later run with Foundry stopped rebuilds it. A folder whose
+    fingerprint changed by the time the tar is written (a module sync's swap) is a None.
+    An OSError from the hash or the tar (a file replaced mid-walk: Foundry's launch, a
+    module sync swapping the folder) is a StorageError too, never a bare exception that
+    escapes _run_job."""
     live: dict | None = None
 
     def rebuild(n: str) -> Path | None:
@@ -1420,11 +1431,13 @@ def _rebuilder(rebuilt: list[Path], dest_dir: Path | None = None):
         ref = bundles.parse_bundle(n)
         if ref is None:
             return None
-        if server_running():
-            raise StorageError(
-                f"bundle {n} must be rebuilt from its module folder, and Foundry is "
-                "running — a live folder is never tarred; a backup with Foundry stopped "
-                "rebuilds it", verb="copyto")
+        refuse = StorageError(
+            f"bundle {n} must be rebuilt from its module folder, and Foundry is running "
+            "— a live folder is never tarred; a backup with Foundry stopped rebuilds it",
+            verb="copyto")
+        if foundry_live():
+            raise refuse
+        src: Path | None = None
         try:
             if live is None:
                 live = bundles.local_inventory(cache=False, warn=lambda _m: None)
@@ -1432,7 +1445,21 @@ def _rebuilder(rebuilt: list[Path], dest_dir: Path | None = None):
             if loc is None or loc.name != n:
                 return None
             src = bundles.build(loc, dest_dir or (tmp_dir() / bundles.STAGING))
+            # Checked again once the tar is written (review MC2): a launch that began
+            # during the tar rewrites CURRENT -> a new MANIFEST before it deletes the old
+            # one — no OSError, just a tar holding a CURRENT naming a MANIFEST it lacks.
+            if foundry_live():
+                src.unlink(missing_ok=True)
+                raise refuse
+            # …and the folder must still be the content the name says: a module sync
+            # that swapped it between the inventory and the tar would otherwise put new
+            # content under the old content-addressed name, for good.
+            if bundles.fingerprint(Path(loc.path)).fp != loc.fp:
+                src.unlink(missing_ok=True)
+                return None
         except OSError as exc:
+            if src is not None:
+                src.unlink(missing_ok=True)
             raise StorageError(f"rebuilding bundle {n} from its module folder failed: "
                                f"{exc} — the next backup retries it", verb="copyto") from exc
         rebuilt.append(src)

@@ -134,6 +134,10 @@ def fake_cloud(monkeypatch, tmp_path_factory):
 @pytest.fixture(autouse=True)
 def fake_data(monkeypatch, tmp_path_factory, fake_cloud):
     """`FOUNDRY_DATA` → a tiny temp data root; the based-on state file lives under it."""
+    from scripts.foundry import host as host_mod
+    # No Foundry process unless a test says: cloud.foundry_live() asks pgrep, and the Mac
+    # running the suite may well have Foundry open.
+    monkeypatch.setattr(host_mod, "pid", lambda: None)
     root = make_data_root(tmp_path_factory.mktemp("foundry-data"))
     monkeypatch.setenv("FOUNDRY_DATA", str(root))
     monkeypatch.setenv("PENTARYN_BOOT_STATE", str(root / "pentaryn-boot.json"))

@@ -136,6 +136,83 @@ def test_mc2b_a_rebuild_racing_a_pack_rewrite_is_a_handled_failure_never_a_crash
         assert uploadq.read_status().get("state") in ("failed", "done")
 
 
+def _pack_opens(tar_path, pack_rel="tools/packs/items"):
+    """The tar's pack CURRENT names a MANIFEST the tar holds (LevelDB can open it)."""
+    import tarfile
+    with tarfile.open(tar_path) as tf:
+        names = set(tf.getnames())
+        target = tf.extractfile(f"{pack_rel}/CURRENT").read().decode().strip()
+    return f"{pack_rel}/{target}" in names
+
+
+def test_mc2c_foundry_starting_during_the_rebuild_tar_never_uploads_that_tar(
+        two_hosts, spawned, monkeypatch):
+    """The re-review's residual: the server check ran once, before the tar. A launch
+    during the tar writes the new MANIFEST and repoints CURRENT before deleting the old
+    one — no OSError — so the tar named X held a CURRENT naming a MANIFEST it lacked."""
+    with two_hosts.use("mac") as data:
+        pack = make_leveldb_pack(data / "Data/modules/tools/packs/items")
+        j1, x = _reused_bundle_swept_while_queued(two_hosts, data)
+        running, fired = {"on": False}, []
+        monkeypatch.setattr(host_mod, "is_running", lambda port=None: running["on"])
+        real_members = bundles._members
+
+        def members(root):
+            out = real_members(root)
+            if root.name == "tools" and not fired:
+                fired.append(1)
+                running["on"] = True                  # Foundry is up now
+                (pack / "MANIFEST-000151").write_bytes(b"new manifest")
+                (pack / "CURRENT").write_text("MANIFEST-000151\n")
+            return out
+        monkeypatch.setattr(bundles, "_members", members)
+        assert cloud.upload_pending() == 1
+        assert not (two_hosts.cloud / "bundles" / x).exists()
+        assert [j.name for j in uploadq.pending()] == [j1.name]
+        assert not [p for p in j1.staging.glob("**/*") if p.name == x]  # live tar not kept
+
+        running["on"] = False                                  # Foundry stopped again
+        assert cloud.upload_pending() == 0
+        assert uploadq.pending() == []
+        assert bootstate.load().based_on == j1.name
+        assert _pack_opens(two_hosts.cloud / "bundles" / x)
+
+
+def test_mc2d_a_launch_before_its_port_binds_is_seen_by_the_rebuild(
+        two_hosts, spawned, monkeypatch):
+    """The port check misses a launch until the port binds; the process does not."""
+    with two_hosts.use("mac") as data:
+        make_leveldb_pack(data / "Data/modules/tools/packs/items")
+        j1, x = _reused_bundle_swept_while_queued(two_hosts, data)
+        monkeypatch.setattr(host_mod, "pid", lambda: 777)     # launching, port not bound
+        built = []
+        monkeypatch.setattr(bundles, "build", lambda loc, d: built.append(loc.name))
+        assert cloud.upload_pending() == 1
+        assert built == [] and [j.name for j in uploadq.pending()] == [j1.name]
+
+
+def test_mc2e_a_module_sync_between_inventory_and_tar_never_lands_new_content_under_the_old_name(
+        two_hosts, spawned, monkeypatch):
+    """A foundry-<m>-sync swap that finishes between the rebuild's inventory and its tar:
+    no OSError, and the tar of v2 would go up as X, whose name says v1."""
+    import tarfile
+    with two_hosts.use("mac") as data:
+        j1, x = _reused_bundle_swept_while_queued(two_hosts, data)
+        real_build = bundles.build
+
+        def build(loc, dest_dir):
+            if loc.id == "tools":
+                _tool(data, "// v2\n")                        # the sync lands now
+            return real_build(loc, dest_dir)
+        monkeypatch.setattr(bundles, "build", build)
+        assert cloud.upload_pending() in (0, 1)
+        up = two_hosts.cloud / "bundles" / x
+        if up.exists():
+            with tarfile.open(up) as tf:
+                assert tf.extractfile("tools/main.js").read() == b"// v1\n"
+        assert not [p for p in j1.staging.glob("**/*") if p.name == x]
+
+
 # ── MC3: re-parenting misses the job a concurrent build is writing ────────────
 
 @pytest.mark.xfail(strict=True, reason=(
