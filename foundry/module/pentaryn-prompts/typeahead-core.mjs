@@ -85,6 +85,7 @@ export function createTypeahead({ setTimer, clearTimer, timeoutMs = 3500, onOrph
     keyDown(ev) {
       const buf = newest();
       if (!buf) return false;
+      if (typeof ev.key !== "string") return false;                        // no key (an autofill keydown): not the box's
       if (MODIFIERS.has(ev.key)) return false;                              // modifier state stays with core
       if ((ev.metaKey || ev.ctrlKey) && ev.key !== "Enter") return false;   // browser/OS shortcuts (⌘R, ⌘C …)
       swallowedUps.add(ev.code);

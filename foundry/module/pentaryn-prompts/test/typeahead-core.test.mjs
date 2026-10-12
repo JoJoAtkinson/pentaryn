@@ -107,3 +107,11 @@ test("DP5: blur() forgets every swallowed code", () => {
   assert.equal(T.keyUp("KeyW"), false);
   assert.equal(T.keyUp("KeyQ"), false);
 });
+
+test("keyDown: an event with no key passes through", () => {
+  const { T } = rig();
+  const a = T.start();
+  assert.equal(T.keyDown({ code: "KeyA" }), false);
+  assert.equal(T.keyUp("KeyA"), false);
+  assert.equal(T.take(a).text, "");
+});
