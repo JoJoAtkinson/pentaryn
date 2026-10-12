@@ -16,7 +16,9 @@ tags: [plans, audit, foundry]
 > the blueprint migration (record: `../addon-blueprint-2026-10/migrate-pentaryn-aoe.md` Result).
 > -2 `c0a75a64` · -4 `03322772` + `0f83d5fe` (D-A1) · -5 `4bc7d44c` · -6 `f54ba674` · -7 `5009afc4`
 > (D-A6) · -8 `130fb3c3` · -9 `515776c0`, `84c847df`, `097c9e67` · -10 `4644e577`, `0cbbab0e` ·
-> -11, -12 `47bc85c7` (README; the use-doc rows are an integrator edit) · -13 `87959748` · -14
+> -11 `47bc85c7` (README) + the review fix that put the 8 setting rows, Parts F/G and the Console
+> pointer into `context/foundry/aoe.md` with the docs-drift guard `test/docs-drift.test.mjs` (a node
+> test reading SETTINGS / MANIFEST / FEATURE_ROWS, not the pytest regexes) · -12 `47bc85c7` · -13 `87959748` · -14
 > `7198fe70` · -15 `515776c0` + `18addee4` (D-A2) · -30 `41b51b43` · -39 `0b9b13fd` (+ the
 > `core-region-placement-escape` widening, integrator) · -40 checkpoint `7a12ffad` · -44 `515776c0`
 > + `0d51383e` (D-A7). Line numbers below are the pre-migration ones.
