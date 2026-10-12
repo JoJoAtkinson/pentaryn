@@ -33,6 +33,10 @@ export { findItem, notFound, suggest };
 
 /* ── what the advancements will ask (dry-run check of `choices` keys) ───── */
 
+// one reading of an advancement's ASI limits and choice kind, shared by the dry run and the real run (§14)
+const asiLimits = cfg => ({ points: cfg.points, cap: cfg.cap ?? 2, locked: [...(cfg.locked ?? [])] });
+const choiceKind = cfg => (cfg.type === "spell" ? "spell" : "feat");
+
 function advancementsOf(item) {
   const byId = item?.advancement?.byId;
   if (byId && Object.keys(byId).length) return Object.values(byId);
@@ -144,7 +148,7 @@ async function collectAdvancements(docs, level, choices) {
             problems.push(`${where}: give {feat: "<name>"} or increases like {str: 2} / {str: 1, cha: 1}, got ${JSON.stringify(v)}`);
             continue;
           }
-          const c = checkIncrease(v.assignments ?? v, { points: cfg.points, cap: cfg.cap ?? 2, locked: [...(cfg.locked ?? [])] });
+          const c = checkIncrease(v.assignments ?? v, asiLimits(cfg));
           if (!c.ok) problems.push(`${where}: ${c.errors.join("; ")}`);
           continue;
         }
@@ -164,7 +168,7 @@ async function collectAdvancements(docs, level, choices) {
           }
           continue;
         }
-        const kind = cfg.type === "spell" ? "spell" : "feat";
+        const kind = choiceKind(cfg);
         for (const w of words) {
           const doc = await findItem(w, kind);
           if (!doc) { problems.push(`${where}: ${await notFound(kind, w, kind)}`); continue; }
@@ -398,7 +402,7 @@ async function chooseData(adv, level, item, ctx) {
       const words = given?.items ?? given?.spells ?? (given && typeof given === "object" && !Array.isArray(given) ? [] : [].concat(given ?? []));
       // a spell choice without a fixed pool (Magic Initiate): the spells come from a list, by name
       if (!pool.length) {
-        const kind = adv.configuration.type === "spell" ? "spell" : "feat";
+        const kind = choiceKind(adv.configuration);
         const docs = (await Promise.all(words.map(x => findItem(x, kind)))).filter(Boolean);
         if (!docs.length) {
           ctx.report.warnings.push(notChosenHint(item.name, adv.title, adv.configuration, n, kind) + (level ? ` (level ${level})` : ""));
@@ -443,7 +447,7 @@ async function chooseData(adv, level, item, ctx) {
     }
     case "AbilityScoreImprovement": {
       const cfg = adv.configuration;
-      const locked = [...(cfg.locked ?? [])];
+      const limits = asiLimits(cfg);
       if (given?.feat) {
         const feat = await findItem(given.feat, "feat");
         if (!feat) throw codedError("BAD_SPEC", `${where}: no feat "${given.feat}"`);
@@ -452,11 +456,11 @@ async function chooseData(adv, level, item, ctx) {
       const scores = Object.fromEntries(ABILITIES.map(k => [k, adv.actor.system._source.abilities[k]?.value ?? 10]));
       let assign = given && typeof given === "object" ? given.assignments ?? given : null;
       if (assign) {
-        const c = checkIncrease(assign, { points: cfg.points, cap: cfg.cap ?? 2, locked });
+        const c = checkIncrease(assign, limits);
         if (!c.ok) throw codedError("BAD_SPEC", `${where}: ${c.errors.join("; ")}`);
         assign = c.assignments;
       } else {
-        assign = defaultIncrease(scores, { points: cfg.points, cap: cfg.cap ?? 2, locked, prefer: ctx.primary });
+        assign = defaultIncrease(scores, { ...limits, prefer: ctx.primary });
         def(`ability increase ${Object.entries(assign).map(([k, v]) => `${k} +${v}`).join(", ")} (no choice given)`);
       }
       return { type: "asi", assignments: assign };
