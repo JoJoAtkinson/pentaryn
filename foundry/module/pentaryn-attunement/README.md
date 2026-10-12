@@ -121,9 +121,9 @@ reads `DND5E.EFFECT.Suppressed.Hint`.
   the bond restore mutates the item's source there (for an Item Piles Take, the GM's).
 - `createItem` (slot hand-back, coin purse) runs only where `userId === game.user.id` — once per
   user, but in **every tab** of that user (the MCP bridge tab and a GM browser tab both, for a
-  GM-made change). The slot hand-back writes the same values from either tab; the **coin purse adds
-  `actor.currency + purse` from each tab**, so a GM Take with two GM tabs open can pay twice. Not
-  fixed (no claim yet): recorded in the wave-2 report, Open for Joe.
+  GM-made change). The slot hand-back writes the same values from either tab. The coin purse is
+  claimed first (kit `claimDocument`, key `coinBack` on the purse item, 750 ms settle), so exactly
+  one tab pays and deletes it; a purse already gone stands down (W2-A1).
 - Sheet drops and `stash` write from the client that calls them.
 
 ## Extending
@@ -157,7 +157,7 @@ method is a row in `api-manifest.mjs` plus an impl in `api.mjs`, then
 | `sheet.mjs`, `bonds.mjs` | features: the render hook and slot gestures; the item hooks |
 | `api-manifest.mjs`, `api.mjs` | the published API |
 | `attunement.css` | every rule under `.pentaryn-attunement` / `.pentaryn-attunement-*` |
-| `lib/` | vendored kit 1.0.2 (full + `patch`) — never edited here |
+| `lib/` | vendored kit 1.0.2 (full + `patch`, `election`) — never edited here |
 
 ## Tests
 

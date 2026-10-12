@@ -21,6 +21,10 @@ Declared changes:
 - **D-A4** `stash()` refuses to delete the owner's items, logs an error and rejects when the
   container accepted fewer copies than asked (items-journal-10). The copies it did accept stay in
   the container, bonded; the rejection names their ids (in the message and as `err.created`).
+- **W2-A1** (Joe 2026-10-12) A returning coin purse pays once with two tabs open on one account
+  (the MCP bridge tab plus a GM browser tab): `createItem` claims the purse item
+  (`flags.pentaryn-attunement.claims.coinBack`, kit `election` vendored) and pays 750 ms later in
+  the winning tab only.
 - A failing tooltip-guard install warns `tooltip guard skipped` and no longer stops the API publish
   (items-journal-39).
 - A bonded item's bond is cleared with `_del` instead of the deprecated `-=bond` key.
