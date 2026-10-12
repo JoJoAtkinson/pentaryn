@@ -372,22 +372,8 @@ export async function pingPlayers(messageId) {
 /*  Apply                                       */
 /* -------------------------------------------- */
 
-const applying = new Map();
-/**
- * Apply damage for ticked, resolved, unapplied rows (all of them, or rowIds). Safe to repeat.
- * Overlapping calls for one message in this tab are serialised, so each sees the earlier one's rows as applied.
- */
-export function applyRows(messageId, rowIds = null) {
-  const prev = applying.get(messageId);
-  const run = () => applyRowsNow(messageId, rowIds);
-  const next = prev ? prev.then(run, run) : run();
-  applying.set(messageId, next);
-  const done = () => { if (applying.get(messageId) === next) applying.delete(messageId); };
-  next.then(done, done);
-  return next;
-}
-
-async function applyRowsNow(messageId, rowIds) {
+/** Apply damage for ticked, resolved, unapplied rows (all of them, or rowIds). Safe to repeat. */
+export async function applyRows(messageId, rowIds = null) {
   if (!game.user.isGM) { why("apply", messageId, "not a GM"); return null; }
   const message = game.messages.get(messageId);
   const res = aoeFlags(message).resolution;
@@ -476,4 +462,4 @@ export function uninstall() {
 
 // Test seam (characterisation checkpoint): tests import this through test/fixtures/seams.mjs only,
 // so the blueprint refactor edits that shim, not the frozen tests. Not part of the API.
-export const _internals = { tokensForTargets, keysOnly, saveSystem, damagesOf, supersedeOlder, rollOne, postRequest, onSaveMessage, cleanupInstant, isAbilitySave, queues, applying };
+export const _internals = { tokensForTargets, keysOnly, saveSystem, damagesOf, supersedeOlder, rollOne, postRequest, onSaveMessage, cleanupInstant, isAbilitySave, queues };
