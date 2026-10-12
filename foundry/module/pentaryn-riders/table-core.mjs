@@ -33,6 +33,18 @@ export function concentrationEffectFor(effects, itemId, status = "concentrating"
 }
 
 /**
+ * Is this effect a concentration effect (it carries the concentrating status)? The same Set-or-array
+ * reading as concentrationEffectFor. The summon cleanup returns early for every other deleted
+ * effect (Dodge, Dash, Reckless…) before it scans any scene (combat-riders-23).
+ * @param {{ statuses?: Set<string>|string[] }} effect
+ * @param {string} [status="concentrating"]
+ */
+export function isConcentration(effect, status = "concentrating") {
+  const statuses = effect?.statuses instanceof Set ? effect.statuses : new Set(effect?.statuses ?? []);
+  return statuses.has(status);
+}
+
+/**
  * Ids of the tokens (of one scene) that a deleted concentration effect was keeping on the map.
  * @param {Iterable<{ id: string, flags?: object }>} tokens
  * @param {string} effectUuid

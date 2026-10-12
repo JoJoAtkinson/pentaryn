@@ -164,6 +164,8 @@ in `riders.mjs` at the place its hook order needs; a wrap goes in `patches.mjs` 
 - **Battle Medic in two GM tabs** (the bridge tab plus a GM browser tab): the relay runs in both
   and heals twice, spending two Hit Dice (combat-riders-41, open).
 - `battleMedic(healer, token)` wants a Token placeable; an Actor reads as "no Hit Dice".
+- **Summon cleanup reacts to concentration effects only**: an effect whose `concentrating` status
+  was stripped before it was deleted leaves its summons on the map (dnd5e never does that).
 - `preview()` is a string transform for checking; the live riders edit real roll terms.
 
 ## Files

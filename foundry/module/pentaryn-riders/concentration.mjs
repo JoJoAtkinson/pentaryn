@@ -37,7 +37,7 @@
  * Setting: pentaryn-riders.concentrationSummons (world, default on) turns part 1 off.
  */
 
-import { MODULE, SUMMON_FLAG, concentrationEffectFor, summonTokenIds, concentrationResult } from "./table-core.mjs";
+import { MODULE, SUMMON_FLAG, concentrationEffectFor, summonTokenIds, concentrationResult, isConcentration } from "./table-core.mjs";
 import { settingOr } from "./settings.mjs";
 import { featureKeys } from "./shapes.mjs";
 
@@ -66,6 +66,8 @@ function cleanupSummons(effect, options, userId) {
     const gm = game.users.activeGM;
     if (gm ? !gm.isSelf : userId !== game.user.id) return;
     const uuid = effect.uuid;
+    // Only a concentration effect keeps summons: return before scanning every scene (combat-riders-23).
+    if (!isConcentration(effect, CONFIG.specialStatusEffects?.CONCENTRATING ?? "concentrating")) return;
     for (const scene of game.scenes) {
       const ids = summonTokenIds(scene.tokens, uuid).filter(id => scene.tokens.get(id)?.canUserModify(game.user, "delete"));
       if (!ids.length) continue;

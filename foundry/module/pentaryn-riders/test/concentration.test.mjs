@@ -3,9 +3,9 @@
 // (deleteActiveEffect, GM-elected), 2 the Break Concentration label, 3 the auto-break on a failed
 // save (createChatMessage) and the DC/result line (dnd5e.renderChatMessage).
 //
-// KNOWN combat-riders-23 (guide §4, D-r2): the cleanup runs for EVERY deleted Actor effect and scans
-// every scene's tokens; an effect without the concentrating status whose uuid a token carries still
-// takes that token with it. The [declared, edge] isConcentration early return flips the pin (todo).
+// combat-riders-23 [declared, edge] (guide §4, D-r2): the cleanup used to run for EVERY deleted
+// Actor effect and scan every scene's tokens, so an effect without the concentrating status whose
+// uuid a token carried took that token with it. It now returns early for those (flipped pin below).
 // combat-riders-40: resultOf's comment-only catch prints nothing today (pinned; S3 makes it debug).
 import { mock, test } from "node:test";
 import assert from "node:assert/strict";
@@ -112,15 +112,23 @@ test("cleanup: not an Actor's effect, the setting off → nothing; a failed dele
   assert.deepEqual(W.take(), [["warn", `${MODULE} | concentration summon cleanup skipped`, "odd effect"]]);
 });
 
-test("KNOWN combat-riders-23: an effect WITHOUT the concentrating status still takes the tokens stamped with its uuid", async () => {
+test("combat-riders-23 [declared, edge]: a deleted effect without the concentrating status returns before scanning scenes (nothing deleted)", async () => {
   const { deleted } = world();
+  let scanned = 0;
+  const scenes = F.game.scenes;
+  const realIter = scenes[Symbol.iterator].bind(scenes);
+  scenes[Symbol.iterator] = () => { scanned += 1; return realIter(); };
   F.fire("deleteActiveEffect", effect({ statuses: new Set(["dodging"]), name: "Dodge" }), {}, IDS.gm);
+  F.fire("deleteActiveEffect", effect({ statuses: undefined, name: "No statuses" }), {}, IDS.gm);
   await drain();
-  assert.deepEqual(deleted.map(d => d[0]), ["One", "Two"]);
+  assert.deepEqual(deleted, []);
+  assert.equal(scanned, 0, "no scene was scanned");
+  F.fire("deleteActiveEffect", effect({ statuses: ["concentrating"] }), {}, IDS.gm);
+  await drain();
+  assert.deepEqual(deleted.map(d => d[0]), ["One", "Two"], "a concentration effect (array statuses) still cleans up");
+  delete scenes[Symbol.iterator];
   W.take();
 });
-
-test.todo("combat-riders-23 [declared, edge]: a deleted effect without the concentrating status returns before scanning scenes (nothing deleted)");
 
 /* ── 2. the break button's label ─────────────────────────────────────────── */
 
