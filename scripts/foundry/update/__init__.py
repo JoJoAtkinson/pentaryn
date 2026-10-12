@@ -5,8 +5,9 @@ Two halves, deliberately separable:
 * **Deterministic Python** (this package) does the scanning, backing up, applying,
   smoke-testing and recovering. It needs no LLM and no tokens, and a run in which
   every Claude step fails still updates the safe packages and still reports.
-* **LLM glue** (``adjudicate.py``, ``report.py``) supplies judgement on top: reading
-  release notes to decide whether a major bump is safe, and writing the human report.
+* **LLM glue** (``llm.py``, ``adjudicate.py``, ``escalate.py``, ``report.py``) supplies
+  judgement on top: reading release notes to decide whether a major bump is safe,
+  escalating what it cannot settle, and writing the human report.
 
 The rule that runs through all of it: **never treat an API "OK" as truth.** Foundry's
 setup API is largely fire-and-forget — ``createSnapshot``, ``restoreSnapshot``,

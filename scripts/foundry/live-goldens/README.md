@@ -1,9 +1,14 @@
 # Live goldens
 
 **Read this when:** writing, running or diffing a live golden — a `<module>.js` here that runs in
-the one GM tab through the foundry `eval-js` MCP tool and returns `{ module, env, golden, timings,
-cleanup }` as a JSON string. Which goldens a wave runs, in what order, and what may differ: that
+the one GM tab through the foundry `eval-js` MCP tool and returns `{ module, env?, golden, timings,
+cleanup }` as a JSON string (the wave-1 goldens — names, pings, cursors, importer, ties, prompts —
+carry no top-level `env`). Which goldens a wave runs, in what order, and what may differ: that
 wave's live plan in `context/plans/addon-blueprint-2026-10/`.
+
+Run one golden at a time per tab: a golden swaps `ui.notifications` / `console` / `fetch` for its
+duration and counts ZZ documents world-wide, so two overlapping runs report each other's scratch
+and can leave a spy installed.
 
 ## Diffing
 
@@ -17,6 +22,11 @@ Exit 0 when `golden.shared` is equal (or every difference is declared) and both 
 array: `*` stays inside one segment, `**` crosses segments, `[` `]` are literal — so
 `stash.chest[*]`, `stash.chest[*].*` and `purseHome` each cover only what they spell. A glob that
 matched nothing is named. Keep the globs to what the wave's plan declares.
+
+**Cleanup keys.** `diff.mjs` judges a `cleanup` by its top-level key names only. Report leftovers
+as `<thing>Left: <count>` (fails above 0) and restores as `<thing>Restored: <boolean>` (fails when
+`false`); a top-level string containing `REFUSED` or `NOT ` also fails. Any other key — nested
+objects included — is printed but never judged.
 
 ## Known run-to-run noise
 
@@ -36,4 +46,7 @@ either decides nothing and timings stretch. Await the document operation or hook
 golden must wait out wall time (a module's own debounce or claim window), use the `tick()` /
 `sleep()` / `settle()` helpers the goldens already carry (a `MessageChannel` macrotask plus
 `performance.now()`, not throttled in a hidden tab). The same holds for one-off probes run by
-`eval-js`.
+`eval-js`. Copy the helper preamble from an existing golden; only `DROP` and `settle` may differ
+(`scripts/tests/test_live_goldens_preamble.py` checks this). `settle()` comes in two forms: most
+goldens return as soon as `pred()` holds; `creatures` and `senses` then sleep a further 1.2 s for a
+module that debounces a second write after the first. Copy the form that matches the module.

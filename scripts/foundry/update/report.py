@@ -36,7 +36,6 @@ MODEL = "opus"
 EFFORT = "medium"
 TIMEOUT_SECONDS = 600
 BUDGET_USD = 0.50
-DENIED_TOOLS = llm.DENIED_TOOLS
 
 IPV4 = re.compile(r"\b\d{1,3}(?:\.\d{1,3}){3}\b")
 # IPv6 in two precise alternatives rather than one loose "hex groups separated by
@@ -165,8 +164,7 @@ def llm_calls(record: dict) -> list[dict]:
 
 
 def cost_line(record: dict) -> str:
-    from scripts.foundry.update.escalate import cost_line as _line
-    return _line(llm_calls(record))
+    return llm.cost_line(llm_calls(record))
 
 
 def spec(policy: dict | None = None) -> llm.Spec:
