@@ -17,7 +17,7 @@
  * its caster) gets no handle: re-attaching it to a handle would leave it behind when the caster moves.
  */
 
-import { MODULE, aoeFlags, centreOf, isTemplateRegion, attachedToOther, handleVertical, stillListing, isHandle } from "./core.mjs";
+import { MODULE, aoeFlags, centreOf, isTemplateRegion, attachedToOther, handleVertical, stillListing, isHandle, alreadyExists, doesNotExist } from "./core.mjs";
 import { handleActor, handleFor, removeArea, spellAreas } from "./scene-adapter.mjs";
 import { activityOf } from "./messages-adapter.mjs";
 import { setting } from "./settings.mjs";
@@ -93,7 +93,7 @@ export async function ensureHandleActor() {
       ...handleActorData(folder)
     }, { keepId: true });
   } catch (err) {
-    if (/already exists/i.test(err?.message ?? "")) return handleActor();   // fallback: a server that refuses
+    if (alreadyExists(err)) return handleActor();   // fallback: a server that refuses
     throw err;
   }
 }
@@ -177,7 +177,7 @@ export async function createHandle(region) {
         flags: { ...(proto.flags ?? {}), dnd5e: { ...(proto.flags?.dnd5e ?? {}), lockSize: true }, [MODULE]: { handle: true, region: region.id } }
       }], { keepId: true });
     } catch (err) {
-      if (/already exists/i.test(err?.message ?? "")) return null;   // the other client won
+      if (alreadyExists(err)) return null;   // the other client won
       throw err;
     }
     if (!token) return null;
@@ -351,7 +351,7 @@ export function install(reg, ctx) {
     if (userId === game.user.id) await deleteHandlesOf(region);
     else if (game.users.activeGM?.isSelf) {
       // -9: the handle is often gone already (the deleting client got there): only another error is news.
-      setTimeout(() => deleteHandlesOf(region).catch(err => (/does not exist/i.test(err?.message ?? "") ? null : log.warn("backstop handle delete", err))), 1500);
+      setTimeout(() => deleteHandlesOf(region).catch(err => (doesNotExist(err) ? null : log.warn("backstop handle delete", err))), 1500);
     }
   }), { guard: false, label: "deleteRegion" });
 

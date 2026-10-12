@@ -24,6 +24,12 @@ export function aoeFlags(doc) {
 /** Is this token (a TokenDocument) one of our area handles? The token flag only; see isHandleTarget. */
 export const isHandle = t => !!aoeFlags(t).handle;
 
+/** A server refusal because the document is already there (the other session's create won). */
+export const alreadyExists = err => /already exists/i.test(err?.message ?? "");
+
+/** A server refusal because the document is already gone (the other session's delete won). */
+export const doesNotExist = err => /does not exist/i.test(err?.message ?? "");
+
 /**
  * A resolution's stored damages as `actor.applyDamage` / `calculateDamage` want them: each row's
  * `properties` array becomes a Set. The input is not mutated; no damages → [].
