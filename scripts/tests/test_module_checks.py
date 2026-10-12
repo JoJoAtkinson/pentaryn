@@ -279,10 +279,9 @@ _CITED = re.compile(r"\b(?:context|playbooks)/[\w./-]+\.md\b")
 _SCANNED = {".mjs", ".js", ".json", ".md", ".css", ".rs", ".hbs", ".html"}
 _SKIPPED = ("lib/", "test/kit/", "node_modules/", "wasm/target/", "wasm/pkg/")
 # Cited paths a later batch fixes; each must still be broken (strict xfail below).
-_PENDING = {
-    # walls module.json `description` — the Wave 7 restart batch rewrites it.
-    ("foundry/module/pentaryn-walls/module.json", "playbooks/foundry-wall-autocomplete.md"),
-}
+# Doc paths a module cites that are known stale and scheduled for a fix (none since the Wave 7
+# batch rewrote walls' module.json description, 320879a2).
+_PENDING: set[tuple[str, str]] = set()
 
 
 def _unresolved_doc_paths() -> set[tuple[str, str]]:
@@ -303,7 +302,6 @@ def test_every_doc_path_a_module_cites_exists():
     assert _unresolved_doc_paths() - _PENDING == set()
 
 
-@pytest.mark.xfail(strict=True, reason="Wave 7 restart batch edits walls' module.json description")
 def test_the_pending_doc_paths_are_fixed():
     assert not (_unresolved_doc_paths() & _PENDING)
 
