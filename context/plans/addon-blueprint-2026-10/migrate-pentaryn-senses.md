@@ -608,7 +608,7 @@ and **-34** (step 7).
 |---|---|
 | Live score after the migration | **91.5 %** (43/47 fail-class rules) at `4e9cc5bf` — was 55.6 % at the checkpoint, 51.1 % at base |
 | Date | 2026-10-11 (code phase only; nothing synced or run live) |
-| Commits | characterisation: `5e76c4a1` · refactor (steps 1–11): `0a2d50ad` `0bd574da` `a3388e0b` `13bd7517` `902cde6f` `a1ea3e1a` `a6561663` `92cc591f` `4110d70a` `f76e7f91` `88f85d98` `9e0c3a20` `7b5d79fd` `a269f91d` `c5af5e88` `92d0834c` `4e9cc5bf` · standalone: `c1478be1` `59870f95` `90273143` `2ae44ef8` `282d6c16` `42c4cfb7` `ff544d99` `9fda315e` `6d43eb7e` `cece01a2` `763dda0f` `980958eb` `ab430bed` |
+| Commits | characterisation: `5e76c4a1` · refactor (steps 1–11): `0a2d50ad` `0bd574da` `a3388e0b` `13bd7517` `902cde6f` `a1ea3e1a` `a6561663` `92cc591f` `4110d70a` `f76e7f91` `88f85d98` `9e0c3a20` `7b5d79fd` `a269f91d` `c5af5e88` `92d0834c` `4e9cc5bf` · standalone: `c1478be1` `59870f95` `90273143` `2ae44ef8` `282d6c16` `42c4cfb7` `ff544d99` `9fda315e` `6d43eb7e` `cece01a2` `763dda0f` `980958eb` `ab430bed` · review fixes: `41cc0954` (inspect, S-12) `e4a8f0c7` (-13 deleteItem half) |
 | Declared changes handed to the live-test workflow | S-1 … S-8, S-11 … S-14, J10, glow label (table below); live session not yet run |
 | `module.json` edits appended to `wave7-restart-batch.md` | no — a shared file: returned to the integrator (step 13 rows, unchanged from the guide) |
 | Adjustments rows appended to `adjustments-batch.md` | no — a shared file: returned to the integrator (step 12 rows + the two moved-marker rows) |
@@ -647,11 +647,19 @@ How it differs from the guide as written:
 - **inspect.** `lightSpells[].litBy` is a list of `Scene.<id>.Token|AmbientLight.<id>` uuids, not
   `{kind, scene, id}` objects (those would make the answer 5 deep; cap 4). `light.status` keeps the
   objects. `inspectShape` lives in `core/inspect.mjs` (it needs chain and light).
+  `token.spellLight.prior` (a `toObject()` light, with `animation` and `darkness`) is one flat level
+  of Foundry-style dotted keys (`"animation.type"`): nested, they sat at depth 4 and `toPlain` cut
+  them to `"[max depth]"` (review fix `41cc0954`; `inspect.test` asserts no `"[max depth]"` leaf).
 - **Glow on hot import.** The glow feature registers at once when the world is already ready (the
   entry's hot path never fires `init`).
 - **Extra, in the spirit of the guide:** `handSquareEdit` (the hand-moved/deleted Light square rule)
   is pure in core, which keeps `light.mjs` under 500 lines; `tokensByActor`, `summarise`,
   `linkSpriteSpecs`, `shouldReinit` likewise.
+
+Review fixes (after `4e9cc5bf`): `41cc0954` inspect's spell prior (above); `e4a8f0c7` finding -13's
+deleteItem half — the hook asks the burst memo (`sourcesNow().has(item.uuid)`) instead of
+`anyLitBy`, so a batch delete of N items walks the world once (`light-perf` row; the frozen
+`light-gm-hooks` golden unchanged). `node test/run.mjs`: 149 cases, 149 pass.
 
 Live-test handoff (gated live phase; walls-style "nothing live" until then):
 
@@ -670,7 +678,7 @@ Live-test handoff (gated live phase; walls-style "nothing live" until then):
 | S-14 | a broken-glow light with a Bright radius brightens on each swell (not only after a token refresh) |
 | J10 | nothing at the table (`game.pentaryn` is never frozen) |
 | glow label | Token / Ambient Light config: the animation still reads "Broken glow (wandering)" |
-| perf | a scene with many tokens: drags with a chain drawn stay smooth; a batch delete of tokens is one sweep |
+| perf | a scene with many tokens: drags with a chain drawn stay smooth; a batch delete of tokens (or of items, `e4a8f0c7`) is one sweep |
 | two GM tabs | see wave-3 report: duplicate Light square from two GM tabs (not changed) |
 
 ### Checkpoint `5e76c4a1` (wave 3, 2026-10-11)
