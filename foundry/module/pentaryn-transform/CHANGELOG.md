@@ -4,6 +4,14 @@
 
 ## Unreleased
 
+- **A Long Rest taken while shifted is never lost (transform-core-async-3, defect wave 2).** The
+  `dnd5e.longRest` listener always vetoed the rest and rested the druid only when `revert()` answered,
+  so a rest that landed while a revert was already running, or on a form already deleted, vanished.
+  `revert()` now keeps its in-flight promise (`revertInFlight(uuid)` in wildshape-adapter.mjs); the
+  rest waits on it, then the druid rests. A revert that answers null rests the original as it stands
+  (marked `pentarynTransformRestSync`, which the listener now passes). With no original at all it
+  warns (`long rest: no original for <form>, resting the form`) and does not veto, so dnd5e rests the
+  form ([declared]; golden/console-texts.json: one new row).
 - **A failed form, constellation or Return click no longer leaves a stuck tooltip (R1 + M5, final
   review).** Argon's `itemButton.js` calls `_onLeftClick` without `await`, so a `shift()` or
   `assumeStarry()` that threw became an unhandled promise rejection and skipped `dropStaleTooltip()`.

@@ -30,8 +30,9 @@ ordinary ability. Requires dnd5e 6 (verified 6.0.6) on Foundry v14.
   (`Wild Shape: Dire Wolf`) is larger, with a gold ring, and its tooltip has the time left.
   HP with temp HP reads `99+12 / 99`.
 - The form ends by itself at 0 HP, when Incapacitated, when its time runs out, when its effect is
-  deleted, and before a Long Rest (the druid then rests). Short Rest in a form also gives the druid
-  their one use back.
+  deleted, and before a Long Rest (the druid then rests — after a revert already under way, or as
+  they stand if the form was already gone). Short Rest in a form also gives the druid their one use
+  back.
 - Features that would spend Wild Shape uses or spell slots never come along into the form; item
   uses, Hit Dice, exhaustion, inspiration and conditions gained there come back on revert, and a
   Concentration broken in beast form ends on the druid too.

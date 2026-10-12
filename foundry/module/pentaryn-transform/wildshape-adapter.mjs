@@ -157,7 +157,7 @@ export function bonusUsedNow(tokenId) {
 
 /* ── revert ──────────────────────────────────────────────────────────────── */
 
-const reverting = new Set();   // form actor uuids
+const reverting = new Map();   // form actor uuid → Promise<Actor|null>: this client's revert in flight
 
 /**
  * dnd5e's revert moves back only the tokens on this client's canvas, then (as GM) deletes the
@@ -228,46 +228,57 @@ export async function revert(actor, { quiet = false, reason = "manual" } = {}) {
   }
   const key = actor.uuid;
   if (reverting.has(key)) return null;
-  reverting.add(key);
+  // Registered before the first await: dnd5e.revertOriginalForm (onOutsideRevert) reads it, and a
+  // Long Rest that lands mid-revert waits on it (transform-core-async-3).
+  let settle;
+  reverting.set(key, new Promise(resolve => { settle = resolve; }));
+  let back = null;
   try {
-    const ws = actor.getFlag(MODULE, "wildshape") ?? null;
-    const formItems = actor.items.map(i => i.toObject());
-    const formEffects = actor.effects.map(e => e.toObject());
-    const fa = actor.system.attributes ?? {};
-    const formAttributes = { exhaustion: fa.exhaustion, inspiration: fa.inspiration };
-    const sourceUuid = ws?.source;
-    const sourceEffectIds = (sourceUuid ? fromUuidSync(sourceUuid)?.effects?.map(e => e.id) : null) ?? [];
-
-    if (!actor.isToken) await restoreTokensElsewhere(actor);
-    settleTokens(actor);
-
-    const result = await actor.revertOriginalForm({ renderSheet: false });
-    const back = result instanceof Actor ? result : (result?.actor ?? null);
-    if (!back) return null;
-
-    const updates = useSyncUpdates(formItems, back.items.map(i => i.toObject()));
-    if (updates.length) await back.updateEmbeddedDocuments("Item", updates);
-    const ba = back.system.attributes ?? {};
-    const attributes = attributeSync(formAttributes, { exhaustion: ba.exhaustion, inspiration: ba.inspiration });
-    if (!foundry.utils.isEmpty(attributes)) await back.update(attributes);
-
-    // Effects only for Wild Shape forms this module shaped: it knows which effects went in and
-    // which are the beast's own. A Polymorph form's beast effects must not land on the original.
-    if (ws) {
-      await endOnDruid(back, endedInForm(ws.carried, formEffects, back.effects.map(e => e.toObject())));
-      const carried = carriedConditions(formEffects, {
-        originalEffectIds: back.effects.map(e => e.id),
-        originalStatuses: Array.from(back.statuses ?? []),
-        sourceEffectIds
-      }).map(withoutOrigin);
-      if (carried.length) await back.createEmbeddedDocuments("ActiveEffect", carried, { keepId: true });
-    }
-
-    if (!quiet) say(back, _loc(RETURN_LINES[reason] ?? RETURN_LINES.manual, { name: back.name }));
+    back = await carryBack(actor, { quiet, reason });
     return back;
   } finally {
     reverting.delete(key);
+    settle(back);
   }
+}
+
+/** revert()'s body, once the form is claimed in `reverting`. */
+async function carryBack(actor, { quiet, reason }) {
+  const ws = actor.getFlag(MODULE, "wildshape") ?? null;
+  const formItems = actor.items.map(i => i.toObject());
+  const formEffects = actor.effects.map(e => e.toObject());
+  const fa = actor.system.attributes ?? {};
+  const formAttributes = { exhaustion: fa.exhaustion, inspiration: fa.inspiration };
+  const sourceUuid = ws?.source;
+  const sourceEffectIds = (sourceUuid ? fromUuidSync(sourceUuid)?.effects?.map(e => e.id) : null) ?? [];
+
+  if (!actor.isToken) await restoreTokensElsewhere(actor);
+  settleTokens(actor);
+
+  const result = await actor.revertOriginalForm({ renderSheet: false });
+  const back = result instanceof Actor ? result : (result?.actor ?? null);
+  if (!back) return null;
+
+  const updates = useSyncUpdates(formItems, back.items.map(i => i.toObject()));
+  if (updates.length) await back.updateEmbeddedDocuments("Item", updates);
+  const ba = back.system.attributes ?? {};
+  const attributes = attributeSync(formAttributes, { exhaustion: ba.exhaustion, inspiration: ba.inspiration });
+  if (!foundry.utils.isEmpty(attributes)) await back.update(attributes);
+
+  // Effects only for Wild Shape forms this module shaped: it knows which effects went in and
+  // which are the beast's own. A Polymorph form's beast effects must not land on the original.
+  if (ws) {
+    await endOnDruid(back, endedInForm(ws.carried, formEffects, back.effects.map(e => e.toObject())));
+    const carried = carriedConditions(formEffects, {
+      originalEffectIds: back.effects.map(e => e.id),
+      originalStatuses: Array.from(back.statuses ?? []),
+      sourceEffectIds
+    }).map(withoutOrigin);
+    if (carried.length) await back.createEmbeddedDocuments("ActiveEffect", carried, { keepId: true });
+  }
+
+  if (!quiet) say(back, _loc(RETURN_LINES[reason] ?? RETURN_LINES.manual, { name: back.name }));
+  return back;
 }
 
 /**
@@ -567,6 +578,11 @@ export function isRunner(actor) {
 /** True while this client's revert() of that form is running. */
 export function isReverting(uuid) {
   return reverting.has(uuid);
+}
+
+/** The promise of this client's revert of that form while it runs (resolves to the original, or null). */
+export function revertInFlight(uuid) {
+  return reverting.get(uuid);
 }
 
 /** The druid's shaping meta doShift() left for dnd5e.transformActor, if a shift is in flight. */

@@ -232,6 +232,11 @@
   [
     "wildshape.mjs",
     "warn",
+    "long rest: no original for ${form.name}, resting the form"
+  ],
+  [
+    "wildshape.mjs",
+    "warn",
     "short rest on the form failed"
   ],
   [

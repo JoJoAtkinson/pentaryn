@@ -11,7 +11,7 @@ import { MODULE, EFFECT_ID, isWildShapeActivity, isExpired, pruneFavorites, form
 import { makeLog } from "./lib/log.mjs";
 import {
   isRevertItem, original, wildShapeActivity, isWildShapeForm, exists, activeFormOf, blockedShift, say, RETURN_LINES,
-  revert, returnToNormal, endOnDruid, doShift, metaFor, shaping, isRunner, isReverting, pendingMeta, trackShift
+  revert, returnToNormal, endOnDruid, doShift, metaFor, shaping, isRunner, isReverting, revertInFlight, pendingMeta, trackShift
 } from "./wildshape-adapter.mjs";
 import { claimed } from "./claim-adapter.mjs";
 
@@ -217,7 +217,7 @@ function onWorldTime(worldTime) {
 
 /* ── rests ───────────────────────────────────────────────────────────────── */
 
-// Marks the druid-side short rest this module starts itself, so it is not redirected again. No dot
+// Marks the druid-side rest this module starts itself, so it is not redirected again. No dot
 // in the key: initiateRest runs the config through mergeObject, which expands dotted keys.
 const REST_SYNC = "pentarynTransformRestSync";
 
@@ -225,12 +225,23 @@ const REST_SYNC = "pentarynTransformRestSync";
 // request lists the druid, not the form): the form ends, then the druid rests. Hooked after the
 // rest dialog, so cancelling it leaves the form alone. Without this, a rest on the druid is undone
 // at revert, which copies the form's HP and Hit Dice back over it.
+// The rest is never dropped (transform-core-async-3): a revert already in flight is waited on; a
+// revert that answers null (stale form, failed revert) rests the original as it stands, marked so
+// this hook passes it; no original at all warns and lets dnd5e rest the form.
 function onLongRest(actor, config) {
+  if (config?.[REST_SYNC]) return;
   const form = isWildShapeForm(actor) ? actor : activeFormOf(actor);
   if (!form) return;
+  const host = original(form);
+  if (!host) {
+    log.warn(`long rest: no original for ${form.name}, resting the form`);
+    return;
+  }
   const { type, ...rest } = config ?? {};
-  revert(form, { reason: "longRest" })
-    .then(host => host?.longRest({ ...rest, dialog: false }))
+  (revertInFlight(form.uuid) ?? revert(form, { reason: "longRest" }))
+    .then(back => back
+      ? back.longRest({ ...rest, dialog: false })
+      : host.longRest({ ...rest, dialog: false, [REST_SYNC]: true }))
     .catch(err => log.warn("long rest after revert failed", err));
   return false;
 }

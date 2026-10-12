@@ -211,6 +211,44 @@ test("dnd5e.longRest: a failing revert warns 'long rest after revert failed'", a
   assert.deepEqual(F.console.map(c => c.slice(0, 2)), [["warn", "pentaryn-transform | long rest after revert failed"]]);
 });
 
+test("dnd5e.longRest is never dropped silently (transform-core-async-3): in-flight revert, stale form, no original", async () => {
+  // A revert already in flight: the rest waits for it, then the druid rests.
+  let { talo, wolf } = await shifted();
+  const job = T.revert(wolf);
+  assert.equal(Hooks.call("dnd5e.longRest", talo, { type: "long", newDay: true }), false, "in flight: vetoed");
+  await job;
+  await flush();
+  assert.equal(ops("revertOriginalForm").length, 1, "one revert, not two");
+  assert.deepEqual(ops("longRest").map(c => [c.actor, c.config]), [[IDS.talo, { dialog: false, newDay: true }]], "in flight");
+
+  // The in-flight revert came back empty: the druid rests anyway.
+  ({ talo, wolf } = await shifted());
+  F.revertReturns = null;
+  const empty = T.revert(wolf);
+  Hooks.call("dnd5e.longRest", wolf, { type: "long" });
+  await empty;
+  await flush();
+  delete F.revertReturns;
+  assert.deepEqual(ops("longRest").map(c => [c.actor, c.config]), [[IDS.talo, { dialog: false, pentarynTransformRestSync: true }]], "in flight, null");
+
+  // A stale form (already deleted by a revert elsewhere): revert() answers null, the druid rests directly.
+  ({ talo, wolf } = await shifted());
+  game.actors.delete(wolf.id);
+  assert.equal(Hooks.call("dnd5e.longRest", wolf, { type: "long" }), false, "stale: vetoed");
+  await flush();
+  assert.deepEqual(ops("revertOriginalForm"), [], "stale: no revert");
+  assert.deepEqual(ops("longRest").map(c => [c.actor, c.config]), [[IDS.talo, { dialog: false, pentarynTransformRestSync: true }]], "stale");
+  assert.equal(Hooks.call("dnd5e.longRest", talo, { pentarynTransformRestSync: true }), true, "the module's own rest passes");
+
+  // No original anywhere: warn, and let dnd5e's own rest run.
+  ({ talo, wolf } = await shifted());
+  game.actors.delete(talo.id);
+  assert.equal(Hooks.call("dnd5e.longRest", wolf, { type: "long" }), true, "no original: not vetoed");
+  await flush();
+  assert.deepEqual(ops("revertOriginalForm", "longRest"), []);
+  assert.deepEqual(F.console.map(c => c.slice(0, 2)), [["warn", `pentaryn-transform | long rest: no original for ${wolf.name}, resting the form`]]);
+});
+
 test("dnd5e.preShortRest on the druid with a form out: the form rests instead; the module's own sync passes", async () => {
   const { talo, wolf } = await shifted();
   assert.equal(Hooks.call("dnd5e.preShortRest", talo, { type: "short", dialog: true }), false);
