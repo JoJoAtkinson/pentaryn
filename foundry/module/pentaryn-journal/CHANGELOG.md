@@ -2,6 +2,10 @@
 
 ## Unreleased (Wave 7 restart batch, wave 5, 2026-10-12)
 
+- **[declared] journal-EXT-6:** the skip-reason vocabulary is one list, `SKIP_REASONS` in
+  `journal-core.mjs` (`no-target`, `no-journal`, `nothing-visible`, `too-large`): `skipReason` and
+  `api.mjs` use its members, the manifest's `lastReason` row builds its `returns` from it, and a doc
+  test pins the README line to exactly those names. Same reasons as before; not published on `core`.
 - **[declared] journal-M9:** docs only. The headers (`bar.mjs`, `journal.mjs`, README "What the
   player sees", `module.json` description and afterSync) no longer say the bar is only for eye pins:
   they state the rule the code already follows — any journal the player can observe but not own, and

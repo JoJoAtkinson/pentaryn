@@ -14,6 +14,8 @@ import { refOf, resolveRef } from "./lib/resolve.mjs";
 
 /** Why this client's last add()/status() returned null (items-journal-35); null after a result. */
 let lastReason = null;
+/** The doc gets no bar (a SKIP_REASONS member, journal-EXT-6). */
+const NO_TARGET = core.SKIP_REASONS[0];
 
 const gmOpts = () => ({ gmButton: setting("gmButton") });
 /** Turn an entry, a page or an item into a target, applying the same rules as the bar. */
@@ -47,7 +49,7 @@ function impl(ctx) {
     personal: user => x.personal(userOrCaller(user)),
     async add(doc) {
       const target = targetOf(doc);
-      if (!target) { lastReason = "no-target"; return null; }
+      if (!target) { lastReason = NO_TARGET; return null; }
       lastReason = null;                    // an add that throws leaves no earlier call's reason behind
       const out = await x.save(target);
       lastReason = out ? null : x.lastSkip();
@@ -55,7 +57,7 @@ function impl(ctx) {
     },
     status(doc) {
       const target = targetOf(doc);
-      if (!target) { lastReason = "no-target"; return null; }
+      if (!target) { lastReason = NO_TARGET; return null; }
       lastReason = null;
       const pages = x.personal()?.pages.contents ?? [];
       const { sources } = x.savedStatus(target, pages);

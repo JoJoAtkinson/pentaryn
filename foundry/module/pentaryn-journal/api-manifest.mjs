@@ -12,7 +12,7 @@
  * `core.<name>` are the pure helpers, published as `unlisted` constants and functions (a frozen copy).
  */
 
-import { CONTRACT, MODULE, NS, VERSION } from "./journal-core.mjs";
+import { CONTRACT, MODULE, NS, SKIP_REASONS, VERSION } from "./journal-core.mjs";
 
 /** The 18 core names published as `journal.core` since before the migration (golden/core-keys.json). */
 export const CORE_NAMES = Object.freeze([
@@ -136,7 +136,7 @@ export const MANIFEST = Object.freeze({
     {
       path: "lastReason",
       params: [],
-      returns: '"no-target" | "no-journal" | "nothing-visible" | "too-large" | null',
+      returns: [...SKIP_REASONS.map(r => `"${r}"`), "null"].join(" | "),
       gm: false, writes: false,
       since: "0.1.0",
       doc: "Why this client's last add() or status() returned null (null after a non-null result).",

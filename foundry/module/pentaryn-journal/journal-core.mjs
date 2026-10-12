@@ -403,15 +403,23 @@ export const singlePage = f =>
 /* -------------------------------------------- */
 
 /**
+ * Every reason lastReason() can report (journal-EXT-6: the one list; api.mjs, the manifest's
+ * lastReason row and the README are built from or checked against it). "no-target" is api.mjs's own
+ * (the doc gets no bar); the other three are skipReason's.
+ */
+export const SKIP_REASONS = Object.freeze(["no-target", "no-journal", "nothing-visible", "too-large"]);
+const [, NO_JOURNAL, NOTHING_VISIBLE, TOO_LARGE] = SKIP_REASONS;
+
+/**
  * The reason an add stops before writing, in the order the save checks them: no journal, nothing
  * the user can see, a body over MAX_BODY. null = it goes ahead.
  * @param {{journal?: object|null, sources?: object[], plan?: {tooLarge?: boolean}|null}} s
- * @returns {"no-journal"|"nothing-visible"|"too-large"|null}
+ * @returns {"no-journal"|"nothing-visible"|"too-large"|null} a SKIP_REASONS member, or null
  */
 export function skipReason({ journal, sources, plan } = {}) {
-  if (!journal) return "no-journal";
-  if (!sources?.length) return "nothing-visible";
-  if (plan?.tooLarge) return "too-large";
+  if (!journal) return NO_JOURNAL;
+  if (!sources?.length) return NOTHING_VISIBLE;
+  if (plan?.tooLarge) return TOO_LARGE;
   return null;
 }
 

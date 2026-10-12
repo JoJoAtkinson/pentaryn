@@ -41,3 +41,26 @@ test("journal-M9: the headers state the bar's real rule, not eye/pin-only", () =
     assert.match(flat, /eye pile/i, `${where} does not mention eye-pile items`);
   }
 });
+
+// journal-EXT-6: the skip-reason vocabulary was written by hand in four places (core.skipReason,
+// api.mjs, the manifest's lastReason row, README) with nothing checking they agree. It now lives in
+// core.SKIP_REASONS; the code uses its members, the manifest builds its string from it, and this
+// test pins the README line to exactly those names.
+test("journal-EXT-6: one skip-reason list — core, manifest and README agree", async () => {
+  const core = await import("../journal-core.mjs");
+  const { MANIFEST } = await import("../api-manifest.mjs");
+  assert.ok(Array.isArray(core.SKIP_REASONS), "journal-core exports SKIP_REASONS");
+  assert.ok(Object.isFrozen(core.SKIP_REASONS));
+  assert.deepEqual([...core.SKIP_REASONS], ["no-target", "no-journal", "nothing-visible", "too-large"]);
+  for (const r of [core.skipReason({}), core.skipReason({ journal: {} }),
+    core.skipReason({ journal: {}, sources: [1], plan: { tooLarge: true } })]) {
+    assert.ok(core.SKIP_REASONS.includes(r), `skipReason returned ${r}, not a SKIP_REASONS member`);
+  }
+  const row = MANIFEST.rows.find(r => r.path === "lastReason");
+  assert.equal(row.returns, [...core.SKIP_REASONS.map(r => `"${r}"`), "null"].join(" | "));
+  const line = README.split("`lastReason()`")[1].split("\n- ")[0].split(":").slice(1).join(":"); // the list after "was `null`:"
+  const named = [...line.matchAll(/`([a-z-]+)`/g)].map(m => m[1]);
+  assert.deepEqual(named, [...core.SKIP_REASONS], "README's lastReason line names exactly SKIP_REASONS");
+  const api = readFileSync(new URL("../api.mjs", import.meta.url), "utf8");
+  assert.doesNotMatch(api, /lastReason = "/, "api.mjs sets lastReason from SKIP_REASONS, not a string literal");
+});
