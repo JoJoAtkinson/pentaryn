@@ -2,7 +2,8 @@
  * Cast-flow fixes from the sorcerer re-run (usability Area 5 re-run).
  * ===================================================================
  *
- * Imported by riders.mjs. Pure helpers in table-core.mjs (`node test/table.mjs`).
+ * FEATURE: install(reg, ctx) / uninstall(). Pure helpers in table-core.mjs (`node test/table.mjs`).
+ * The two SummonActivity wraps of parts 3 and 5 are in patches.mjs (installed at `ready`).
  *
  * 1. A summon keeps the sidebar where it was and says how to place (S13). The first cast of a
  *    summon from a compendium profile (Flaming Sphere) imports the creature with core's
@@ -48,41 +49,42 @@
  *    pentaryn-riders.arcaneRecovery. Row riders-arcane-recovery-picker.
  */
 
-import { MODULE, restoreSlotScaling, placeSummonsDefault, isWildcardPath, arcaneRecoveryCap, arcaneRecoveryDefault,
-  arcaneRecoveryCheck, isArcaneRecovery, ARCANE_RECOVERY_MAX_LEVEL } from "./table-core.mjs";
+import { restoreSlotScaling, arcaneRecoveryCap, arcaneRecoveryDefault, arcaneRecoveryCheck, isArcaneRecovery,
+  ARCANE_RECOVERY_MAX_LEVEL } from "./table-core.mjs";
 import { settingOr } from "./settings.mjs";
+import { restoreSidebar, sidebarState } from "./shapes.mjs";
+
+let log = null;
 
 /* ── 1. summons ─────────────────────────────────────────────────────────── */
 
 let summoning = null;   // { tab, collapsed, until }
 
-Hooks.on("dnd5e.preSummon", (activity, profile) => {
+function keepSidebar(activity, profile) {
   try {
-    const sidebar = ui.sidebar;
-    summoning = { tab: sidebar?.tabGroups?.primary ?? null, collapsed: sidebar ? !sidebar.expanded : false, until: Date.now() + 60_000 };
+    summoning = { ...sidebarState(), until: Date.now() + 60_000 };
     if (activity?.summon?.prompt !== false) {
       const name = profile?.name || activity?.item?.name || "";
       ui.notifications?.info?.(_loc("PENTARYN_RIDERS.summon.place", { name }));
     }
-  } catch (err) { console.warn(`${MODULE} | summon sidebar keep skipped`, err); }
-});
+  } catch (err) { log.warn("summon sidebar keep skipped", err); }
+}
 
-Hooks.on("changeSidebarTab", (app) => {
+function putSidebarBack(app) {
   const s = summoning;
   if (!s || Date.now() > s.until || !s.tab || app?.tabName !== "actors" || s.tab === "actors") return;
   setTimeout(() => {
     try {
-      ui.sidebar.changeTab(s.tab, "primary");
-      if (s.collapsed && ui.sidebar.expanded) ui.sidebar.collapse();
+      restoreSidebar(s);
     } catch { /* leave it */ }
   }, 0);
-});
+}
 
-Hooks.on("dnd5e.postSummon", () => { summoning = null; });
+function summonDone() { summoning = null; }
 
 /* ── 2. restoring a slot opens on the highest spent level ─────────────────── */
 
-Hooks.on("dnd5e.preUseActivity", (activity, usageConfig) => {
+function restoreSlotDefault(activity, usageConfig) {
   try {
     // dnd5e's _prepareUsageConfig ends with `scaling ??= 0`, so 0 is its default here (false = a fixed level).
     if (!usageConfig || (usageConfig.scaling !== undefined && usageConfig.scaling !== 0)) return;
@@ -99,8 +101,8 @@ Hooks.on("dnd5e.preUseActivity", (activity, usageConfig) => {
       slots
     });
     if (scaling !== null && scaling > 0) usageConfig.scaling = scaling;
-  } catch (err) { console.warn(`${MODULE} | restore-slot default skipped`, err); }
-});
+  } catch (err) { log.warn("restore-slot default skipped", err); }
+}
 
 /* ── settings for parts 3 and 6 (rows in settings.mjs) ──────────────────── */
 
@@ -108,46 +110,23 @@ const on = key => settingOr(key, false);
 
 /* ── 3. summons ticked to place; a self-only card keeps no stale target ──── */
 
-Hooks.on("dnd5e.preUseActivity", (activity, usageConfig, dialogConfig, messageConfig) => {
+function dropStaleTargets(activity, usageConfig, dialogConfig, messageConfig) {
   try {
     if (!on("castDefaults")) return;
     const tpl = activity?.target?.template?.type;
     if (activity?.target?.affects?.type === "self" && !tpl && messageConfig?.data?.system?.targets?.length) {
       messageConfig.data.system.targets = [];
     }
-  } catch (err) { console.warn(`${MODULE} | cast defaults skipped`, err); }
-});
+  } catch (err) { log.warn("cast defaults skipped", err); }
+}
 
-// The tick goes in SummonActivity#_prepareUsageConfig, where "the caller said nothing" (create.summons
-// undefined, dnd5e then fills it from summon.prompt) can still be told apart from an explicit false.
-Hooks.once("ready", () => {
-  try {
-    const proto = CONFIG.DND5E?.activityTypes?.summon?.documentClass?.prototype;
-    if (!proto?._prepareUsageConfig || proto._prPlaceDefault) return;
-    const own = proto._prepareUsageConfig;
-    proto._prepareUsageConfig = function _prepareUsageConfig(config = {}) {
-      const asked = config?.create === false ? false : config?.create?.summons;
-      const out = own.call(this, config);
-      try {
-        if (asked === undefined && on("castDefaults") && out?.create && typeof out.create === "object") {
-          const tick = placeSummonsDefault({
-            type: this.type, create: out.create.summons, canSummon: !!this.canSummon,
-            hasScene: !!canvas?.scene, profiles: this.availableProfiles?.length ?? 0
-          });
-          if (tick) out.create.summons = true;
-        }
-      } catch (err) { console.warn(`${MODULE} | Place Summons default skipped`, err); }
-      return out;
-    };
-    proto._prPlaceDefault = true;
-  } catch (err) { console.warn(`${MODULE} | Place Summons default not installed`, err); }
-});
+// The Place Summons tick is a wrap of SummonActivity#_prepareUsageConfig: patches.mjs.
 
 /* ── 4. the first click on Use counts after typing a number ──────────────── */
 
 const USE = 'button[data-action="use"]';
 
-Hooks.on("renderActivityUsageDialog", (app, element) => {
+function firstClick(app, element) {
   try {
     const root = element instanceof HTMLElement ? element : app?.element;
     if (!root) return;
@@ -171,33 +150,11 @@ Hooks.on("renderActivityUsageDialog", (app, element) => {
     root.addEventListener("click", ev => {
       if (ev.target?.closest?.(USE)) app._prUseAfterRender = null;
     }, true);
-  } catch (err) { console.warn(`${MODULE} | usage dialog first click skipped`, err); }
-});
+  } catch (err) { log.warn("usage dialog first click skipped", err); }
+}
 
-/* ── 5. a wildcard summon image previews as a real image ─────────────────── */
-
-Hooks.once("ready", () => {
-  try {
-    const Summon = CONFIG.DND5E?.activityTypes?.summon?.documentClass;
-    const proto = Summon?.prototype;
-    if (!proto?.getPlacement || proto._prWildcard) return;
-    const own = proto.getPlacement;
-    proto.getPlacement = async function getPlacement(token, profile, options) {
-      try {
-        const src = token?.texture?.src;
-        if (isWildcardPath(src)) {
-          const actor = token.parent;
-          let images = [];
-          if (game.user.can("FILES_BROWSE")) { try { images = await actor.getTokenImages(); } catch { images = []; } }
-          const real = images.find(i => !isWildcardPath(i)) ?? actor?.img;
-          if (real && !isWildcardPath(real)) token = token.clone({ "texture.src": real });
-        }
-      } catch (err) { console.warn(`${MODULE} | summon preview image kept`, err); }
-      return own.call(this, token, profile, options);
-    };
-    proto._prWildcard = true;
-  } catch (err) { console.warn(`${MODULE} | summon wildcard preview skipped`, err); }
-});
+/* ── 5. a wildcard summon image previews as a real image: a wrap of SummonActivity#getPlacement,
+   patches.mjs ─────────────────────────────────────────────────────────────── */
 
 /* ── 6. Arcane Recovery: pick the slots ──────────────────────────────────── */
 
@@ -272,15 +229,35 @@ async function arcaneRecoveryDialog(actor) {
   return result;
 }
 
-Hooks.on("dnd5e.postUseActivity", (activity) => {
+function arcaneRecoveryPicker(activity) {
   try {
     if (!on("arcaneRecovery")) return;
     const item = activity?.item;
     const actor = item?.actor;
     if (!actor?.isOwner || !isArcaneRecovery({ type: item.type, identifier: item.system?.identifier, name: item.name })) return;
     // Only the client that used it: postUseActivity runs on the user's own client.
-    setTimeout(() => arcaneRecoveryDialog(actor).catch(err => console.warn(`${MODULE} | Arcane Recovery dialog`, err)), 0);
-  } catch (err) { console.warn(`${MODULE} | Arcane Recovery picker skipped`, err); }
-});
+    setTimeout(() => arcaneRecoveryDialog(actor).catch(err => log.warn("Arcane Recovery dialog", err)), 0);
+  } catch (err) { log.warn("Arcane Recovery picker skipped", err); }
+}
+
+/* ── wiring ───────────────────────────────────────────────────────────── */
+
+export function install(reg, ctx) {
+  log = ctx.log;
+  // Today's order; every handler has its own try/catch (or none, as changeSidebarTab's guard
+  // clauses), so the kit guard is off (guard: false).
+  reg.on("dnd5e.preSummon", keepSidebar, { guard: false, label: "summon sidebar keep" });
+  reg.on("changeSidebarTab", putSidebarBack, { guard: false, label: "summon sidebar keep" });
+  reg.on("dnd5e.postSummon", summonDone, { guard: false, label: "summon sidebar keep" });
+  reg.on("dnd5e.preUseActivity", restoreSlotDefault, { guard: false, label: "restore-slot default" });
+  reg.on("dnd5e.preUseActivity", dropStaleTargets, { guard: false, label: "cast defaults" });
+  reg.on("renderActivityUsageDialog", firstClick, { guard: false, label: "usage dialog first click" });
+  reg.on("dnd5e.postUseActivity", arcaneRecoveryPicker, { guard: false, label: "Arcane Recovery picker" });
+  ctx.expose({ arcaneRecoveryDialog });
+}
+
+export function uninstall() {
+  summoning = null;
+}
 
 export { arcaneRecoveryDialog };

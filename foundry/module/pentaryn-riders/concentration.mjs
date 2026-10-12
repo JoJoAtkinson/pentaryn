@@ -2,8 +2,8 @@
  * Concentration summons leave with the concentration; the break button says what it does.
  * =========================================================================================
  *
- * Imported by riders.mjs (not a module.json esmodule, so no Foundry restart was needed to ship it).
- * Pure helpers in table-core.mjs (`node test/table.mjs`).
+ * FEATURE: install(reg, ctx) / uninstall(). Pure helpers in table-core.mjs (`node test/table.mjs`);
+ * the actor reads in shapes.mjs.
  *
  * 1. Summon cleanup. dnd5e 6.0.6 removes an enchantment or an applied effect when concentration
  *    ends (flags.dnd5e.dependents), but never a summoned TOKEN: Flaming Sphere, Summon Dragon,
@@ -39,12 +39,15 @@
 
 import { MODULE, SUMMON_FLAG, concentrationEffectFor, summonTokenIds, concentrationResult } from "./table-core.mjs";
 import { settingOr } from "./settings.mjs";
+import { featureKeys } from "./shapes.mjs";
 
 const enabled = () => settingOr("concentrationSummons", false);
 
+let log = null;
+
 /* ── 1a. stamp a concentration summon ─────────────────────────────────── */
 
-Hooks.on("dnd5e.summonToken", (activity, profile, tokenData) => {
+function stampSummon(activity, profile, tokenData) {
   try {
     if (!enabled() || !tokenData) return;
     const actor = activity?.actor ?? activity?.item?.actor;
@@ -52,12 +55,12 @@ Hooks.on("dnd5e.summonToken", (activity, profile, tokenData) => {
     const effect = concentrationEffectFor(actor?.effects ?? [], activity?.item?.id, status);
     if (!effect?.uuid) return;
     foundry.utils.setProperty(tokenData, `flags.${MODULE}.${SUMMON_FLAG}`, effect.uuid);
-  } catch (err) { console.warn(`${MODULE} | concentration summon stamp skipped`, err); }
-});
+  } catch (err) { log.warn("concentration summon stamp skipped", err); }
+}
 
 /* ── 1b. concentration ends → its summons go ──────────────────────────── */
 
-Hooks.on("deleteActiveEffect", (effect, options, userId) => {
+function cleanupSummons(effect, options, userId) {
   try {
     if (!enabled() || effect?.parent?.documentName !== "Actor") return;
     const gm = game.users.activeGM;
@@ -66,15 +69,15 @@ Hooks.on("deleteActiveEffect", (effect, options, userId) => {
     for (const scene of game.scenes) {
       const ids = summonTokenIds(scene.tokens, uuid).filter(id => scene.tokens.get(id)?.canUserModify(game.user, "delete"));
       if (!ids.length) continue;
-      console.info(`${MODULE} | concentration on ${effect.name} ended: removing ${ids.length} summon token(s) from ${scene.name}`);
-      scene.deleteEmbeddedDocuments("Token", ids).catch(err => console.warn(`${MODULE} | summon cleanup failed`, err));
+      log.info(`concentration on ${effect.name} ended: removing ${ids.length} summon token(s) from ${scene.name}`);
+      scene.deleteEmbeddedDocuments("Token", ids).catch(err => log.warn("summon cleanup failed", err));
     }
-  } catch (err) { console.warn(`${MODULE} | concentration summon cleanup skipped`, err); }
-});
+  } catch (err) { log.warn("concentration summon cleanup skipped", err); }
+}
 
 /* ── 2. label the break button ────────────────────────────────────────── */
 
-Hooks.on("dnd5e.renderChatMessage", (message, html) => {
+function labelBreakButton(message, html) {
   try {
     const root = html instanceof HTMLElement ? html : html?.[0];
     for (const btn of root?.querySelectorAll?.('button[data-action="breakConcentration"]') ?? []) {
@@ -85,22 +88,14 @@ Hooks.on("dnd5e.renderChatMessage", (message, html) => {
       btn.append(span);
       btn.classList.add("pr-labelled");
     }
-  } catch (err) { console.warn(`${MODULE} | break-concentration label skipped`, err); }
-});
+  } catch (err) { log.warn("break-concentration label skipped", err); }
+}
 
 /* ── 3. a failed concentration save ends it; the card says DC and result ── */
 
 const autoBreakOn = () => settingOr("concentrationAutoBreak", false);
 
 const isConcSave = m => m?.type === "save" && m.system?.type === "concentration";
-
-/** The actor's feature identifiers and effect names, lowercased (for AFTER_FAIL_FEATURES). */
-function featureKeys(actor) {
-  const out = [];
-  for (const i of actor?.items ?? []) out.push(String(i.system?.identifier || i.name || "").toLowerCase());
-  for (const e of actor?.appliedEffects ?? actor?.effects ?? []) out.push(String(e.name ?? "").toLowerCase().replace(/\s+/g, "-"));
-  return out;
-}
 
 function resultOf(message) {
   const roll = message.rolls?.[0];
@@ -113,7 +108,8 @@ function resultOf(message) {
   });
 }
 
-Hooks.on("createChatMessage", async (message, options, userId) => {
+// async on a non-vetoable hook: Foundry ignores the promise, as before (the catch below ends it).
+async function autoBreak(message, options, userId) {
   try {
     if (userId !== game.user.id || !isConcSave(message)) return;
     const res = resultOf(message);
@@ -122,10 +118,10 @@ Hooks.on("createChatMessage", async (message, options, userId) => {
     if (!actor?.isOwner) return;
     const ended = await actor.endConcentration();
     if (ended?.length) await message.update({ "system.outcome": "broken" });
-  } catch (err) { console.warn(`${MODULE} | concentration auto-break skipped`, err); }
-});
+  } catch (err) { log.warn("concentration auto-break skipped", err); }
+}
 
-Hooks.on("dnd5e.renderChatMessage", (message, html) => {
+function resultLine(message, html) {
   try {
     if (!isConcSave(message) || !message.isContentVisible) return;
     const root = html instanceof HTMLElement ? html : html?.[0];
@@ -143,5 +139,20 @@ Hooks.on("dnd5e.renderChatMessage", (message, html) => {
     p.textContent = _loc(key, { dc: Number(dc) });
     const at = root.querySelector(".dice-roll") ?? root.querySelector(".message-content");
     if (at?.classList?.contains("dice-roll")) at.after(p); else (at ?? root).append(p);
-  } catch (err) { console.warn(`${MODULE} | concentration result line skipped`, err); }
-});
+  } catch (err) { log.warn("concentration result line skipped", err); }
+}
+
+/* ── wiring ───────────────────────────────────────────────────────────── */
+
+export function install(reg, ctx) {
+  log = ctx.log;
+  // Today's order; every handler has its own try/catch, so the kit guard is off (guard: false).
+  reg.on("dnd5e.summonToken", stampSummon, { guard: false, label: "concentration summon stamp" });
+  reg.on("deleteActiveEffect", cleanupSummons, { guard: false, label: "concentration summon cleanup" });
+  reg.on("dnd5e.renderChatMessage", labelBreakButton, { guard: false, label: "break-concentration label" });
+  reg.on("createChatMessage", autoBreak, { guard: false, label: "concentration auto-break" });
+  reg.on("dnd5e.renderChatMessage", resultLine, { guard: false, label: "concentration result line" });
+}
+
+/** Nothing to clear: the summon stamps live on the tokens. */
+export function uninstall() {}

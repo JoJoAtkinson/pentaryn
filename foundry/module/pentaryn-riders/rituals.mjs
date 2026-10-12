@@ -2,8 +2,9 @@
  * Ritual Adept (wizard): rituals reachable from the HUD, and cast without a slot by default.
  * ==========================================================================================
  *
- * Imported by riders.mjs (not a module.json esmodule, so no Foundry restart was needed to ship it).
- * The rules and the spell filter are pure, in rituals-core.mjs (`node test/rituals.mjs`).
+ * FEATURE: install(reg, ctx) / uninstall(). The rules and the spell filter are pure, in
+ * rituals-core.mjs (`node test/rituals.mjs`). The Argon wrap itself is in patches.mjs (installed at
+ * `ready`); it calls `addRituals`, which this feature exposes through `ctx.expose`.
  *
  * 1. Usage default — `dnd5e.preUseActivity` fires after dnd5e has filled the usage config and
  *    before the dialog. For an unprepared ritual spell of an actor with Ritual Adept (castable only
@@ -15,11 +16,11 @@
  *    `enhancedcombathud-dnd5e.showPrepared`, unset = prepared only). Its spell button builds its
  *    accordion categories in its constructor (`_spells`) and turns them into the panel in
  *    `_renderInner` → `_getPanel`. Our wrap of the BASE `ButtonPanelButton.prototype._renderInner`
- *    (Argon's dnd5e subclass does not override it) appends one "Rituals" category to the ACTION
- *    bar's spell button, once per instance, before the panel is built. Buttons are made with the
- *    same class Argon uses for the other spells, taken from an existing category's button.
- *    Nothing in Argon's files is edited. Registered in foundry/adjustments.yml
- *    (argon-ritual-adept-list).
+ *    (Argon's dnd5e subclass does not override it; patches.mjs) runs `addRituals`, which appends one
+ *    "Rituals" category to the ACTION bar's spell button, once per instance, before the panel is
+ *    built. Buttons are made with the same class Argon uses for the other spells, taken from an
+ *    existing category's button. Nothing in Argon's files is edited. Registered in
+ *    foundry/adjustments.yml (riders-argon-ritual-adept-list).
  *
  * 3. Longer casts (usability Area 6 re-run, W7). Argon puts a spell on a bar only when one of its
  *    activities is an action, bonus action, reaction or special. Animate Dead (1 minute) was on no
@@ -36,7 +37,6 @@ import { MODULE } from "./riders-core.mjs";
 import { settingOr } from "./settings.mjs";
 
 const DONE = Symbol.for(`${MODULE}.ritualsAdded`);
-const WRAPPED = Symbol.for(`${MODULE}.ritualsWrapped`);
 
 const enabled = () => settingOr("rituals", false);
 const longEnabled = () => settingOr("longCasts", false);
@@ -50,9 +50,11 @@ function hasRitualAdept(actor) {
   }));
 }
 
+let log = null;
+
 /* ── 1. slot unticked by default ──────────────────────────────────────── */
 
-Hooks.on("dnd5e.preUseActivity", (activity, usageConfig) => {
+function slotDefault(activity, usageConfig) {
   try {
     if (!enabled()) return;
     const item = activity?.item;
@@ -60,8 +62,8 @@ Hooks.on("dnd5e.preUseActivity", (activity, usageConfig) => {
     if (!hasRitualAdept(item.actor)) return;
     const consume = usageConfig?.consume;
     if (consume && typeof consume === "object" && consume.spellSlot === true) consume.spellSlot = false;
-  } catch (err) { console.warn(`${MODULE} | ritual slot default skipped`, err); }
-});
+  } catch (err) { log.warn("ritual slot default skipped", err); }
+}
 
 /* ── 2. "Rituals" group on Argon's Action-bar Cast Spell panel ─────────── */
 
@@ -97,13 +99,12 @@ function addRituals(button) {
   }
 }
 
-Hooks.once("ready", () => {
-  const Base = CONFIG.ARGON?.MAIN?.BUTTONS?.ButtonPanelButton;
-  if (!Base?.prototype?._renderInner || Base.prototype[WRAPPED]) return;
-  Base.prototype[WRAPPED] = true;
-  const original = Base.prototype._renderInner;
-  Base.prototype._renderInner = async function (...args) {
-    try { addRituals(this); } catch (err) { console.warn(`${MODULE} | Rituals group skipped`, err); }
-    return original.apply(this, args);
-  };
-});
+export function install(reg, ctx) {
+  log = ctx.log;
+  // each handler has its own try/catch (guard: false keeps today's warn text and return values)
+  reg.on("dnd5e.preUseActivity", slotDefault, { guard: false, label: "ritual slot default" });
+  ctx.expose({ addRituals });
+}
+
+/** Nothing to clear: the per-button DONE marks live on Argon's button instances. */
+export function uninstall() {}
