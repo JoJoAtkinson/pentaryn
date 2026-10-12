@@ -80,8 +80,9 @@
  *                                     data. And dnd5e skips auto-creating activities when the
  *                                     source already has some
  *                                     (module/data/item/templates/activities.mjs:256). This is
- *                                     contract U7; `assertActivityIdsSurvived()` below checks it
- *                                     explicitly rather than trusting the reading.
+ *                                     contract U7; `assertActivityIdsSurvived()`
+ *                                     (documents-adapter.mjs) checks it explicitly rather than
+ *                                     trusting the reading.
  *   Explicit `prototypeToken.width`   dnd5e module/data/actor/templates/traits.mjs:147 and :164 —
  *                                     both `preCreateSize` and `preUpdateSize` bail out when the
  *                                     payload already carries `prototypeToken.width`, so our
@@ -235,8 +236,6 @@ class PentarynAssertionError extends PentarynError {
     this.name = "PentarynAssertionError";
   }
 }
-
-/* -------------------------------------------------------------------------------------------- */
 
 /* -------------------------------------------------------------------------------------------- */
 /*  Small utilities                                                                               */
@@ -508,9 +507,8 @@ function preparePayload(entry) {
  * @returns {object}
  */
 function toUpdatePayload(data) {
-  const payload = cloneJson(data);
+  const payload = toCreatePayload(data);
   if (payload.system?.attributes?.hp) delete payload.system.attributes.hp.value;
-  if (payload.flags?.[FLAG_SCOPE]) delete payload.flags[FLAG_SCOPE].contentHash;
   return payload;
 }
 

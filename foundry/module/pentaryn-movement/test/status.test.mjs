@@ -4,6 +4,7 @@ import { mock, test } from "node:test";
 import assert from "node:assert/strict";
 import { OTHER, SCENE, combat, movementWorld } from "./fixtures/world.mjs";
 import { VERSION } from "../movement-core.mjs";
+import { MANIFEST } from "../api-manifest.mjs";
 
 mock.timers.enable({ apis: ["setTimeout"] });
 
@@ -21,6 +22,14 @@ test("appended keys: sceneId, version, settings (key → scope), after the histo
   assert.equal(s.sceneId, SCENE);
   assert.equal(s.version, VERSION);
   assert.deepEqual(s.settings, { ghostPolicy: "world", ghostPolicyLast: "world", ghost: "client", ownedOnTop: "client" });
+});
+
+test("the status row's returns names every status() key, and every patched key", () => {
+  const row = MANIFEST.rows.find((r) => r.path === "status");
+  const s = api.status();
+  for (const k of Object.keys(s)) assert.match(row.returns, new RegExp(`\\b${k}\\b`), k);
+  const patched = row.returns.match(/patched: \{([^}]*)\}/)?.[1] ?? "";
+  for (const k of Object.keys(s.patched)) assert.match(patched, new RegExp(`\\b${k}\\b`), `patched.${k}`);
 });
 
 test("opts.sceneId asks about another scene; the default is the viewed scene", () => {
