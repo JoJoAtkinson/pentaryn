@@ -69,7 +69,8 @@ n/a — patches nothing.
 
 ## Two sessions / who writes
 
-The renaming client records the old name in `preUpdateActor` (pre-hooks run only there); it
+The renaming client records the old name in `preUpdateActor` (pre-hooks run only there), keyed
+by actor id, so a batch rename of several actors gives each its own old name (names-ac-2); it
 travels in the update options. Only that client (`userId === game.user.id`) writes, and it skips tokens it cannot edit
 (`canUserModify(game.user, "update")`). Combatants are written only when that client is a GM
 (`game.user.isGM`, Assistants included): a player's rename relabels its tokens but leaves the tracker.

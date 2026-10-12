@@ -66,7 +66,7 @@ if (which.startsWith("root-")) {
   }
   actor.name = "Rob";
   F.calls.length = 0;
-  F.fire("updateActor", actor, { name: "Rob" }, { pentarynOldName: "Bob" }, IDS.gm);
+  F.fire("updateActor", actor, { name: "Rob" }, { pentarynOldNames: { [IDS.bob]: "Bob" } }, IDS.gm);
   await flush();
   process.once("beforeExit", () => {
     out.rejections = rejections;

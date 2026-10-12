@@ -149,12 +149,12 @@ test("preUpdateActor remembers the old name only when the name changes, and neve
   reset(F);
   const actor = game.actors.get(IDS.bob);
   const cases = [
-    [{ name: "Rob" }, { pentarynOldName: "Bob" }],
+    [{ name: "Rob" }, { pentarynOldNames: { [IDS.bob]: "Bob" } }],
     [{ name: "Bob" }, {}],                                   // unchanged (live: stopped here, SF7)
     [{ img: "x" }, {}],
     [{ prototypeToken: { name: "Rob" } }, {}],               // names' own proto write
-    [{ name: undefined }, { pentarynOldName: "Bob" }],       // "name" in changes, and undefined !== "Bob"
-    [{ name: "" }, { pentarynOldName: "Bob" }],
+    [{ name: undefined }, { pentarynOldNames: { [IDS.bob]: "Bob" } }], // "name" in changes, and undefined !== "Bob"
+    [{ name: "" }, { pentarynOldNames: { [IDS.bob]: "Bob" } }],
   ];
   for (const [changes, want] of cases) {
     const options = {};
@@ -168,7 +168,7 @@ test("preUpdateActor remembers the old name only when the name changes, and neve
 test("preUpdateActor fires the same for any user (the old name is captured on every client that sees it)", () => {
   const options = {};
   F.fireCall("preUpdateActor", game.actors.get(IDS.bob), { name: "Rob" }, options, IDS.player);
-  assert.deepEqual(options, { pentarynOldName: "Bob" });
+  assert.deepEqual(options, { pentarynOldNames: { [IDS.bob]: "Bob" } });
 });
 
 /* ── updateActor ──────────────────────────────────────────────────────────────────────────────── */
@@ -177,10 +177,10 @@ test("updateActor does nothing for another user's change, names' own write, or w
   reset(F);
   const actor = game.actors.get(IDS.bob);
   actor.name = "Rob";
-  F.fire("updateActor", actor, { name: "Rob" }, { pentarynOldName: "Bob" }, IDS.player);
-  F.fire("updateActor", actor, { name: "Rob" }, { pentarynOldName: "Bob", pentarynNames: true }, IDS.gm);
+  F.fire("updateActor", actor, { name: "Rob" }, { pentarynOldNames: { [IDS.bob]: "Bob" } }, IDS.player);
+  F.fire("updateActor", actor, { name: "Rob" }, { pentarynOldNames: { [IDS.bob]: "Bob" }, pentarynNames: true }, IDS.gm);
   F.fire("updateActor", actor, { name: "Rob" }, {}, IDS.gm);
-  F.fire("updateActor", actor, { name: "Rob" }, { pentarynOldName: "" }, IDS.gm);
+  F.fire("updateActor", actor, { name: "Rob" }, { pentarynOldNames: { [IDS.bob]: "" } }, IDS.gm);
   await flush();
   assert.deepEqual(F.calls, []);
   assert.equal(game.scenes.get(IDS.one).tokens.get("tokA1000000000001").name, "Bob");
@@ -190,11 +190,32 @@ test("updateActor ignores an actor whose own change has no name, even when the b
   reset(F);
   const other = game.actors.get(IDS.other);
   other.name = "Zed";
-  F.fire("updateActor", other, { img: "x" }, { pentarynOldName: "Bob" }, IDS.gm);
+  // Even with an old name under this actor's own id, the "name" in changes guard holds.
+  F.fire("updateActor", other, { img: "x" }, { pentarynOldNames: { [IDS.bob]: "Bob", [IDS.other]: "Bob" } }, IDS.gm);
   await flush();
   assert.deepEqual(effects(F.calls), []);
   assert.equal(game.scenes.get(IDS.one).tokens.get("tokOther000000001").name, "Bob");
   assert.equal(other.prototypeToken.name, "Bob");
+  reset(F);
+});
+
+test("names-ac-2: a multi-actor rename batch relabels each actor from its OWN old name, not the last actor's", async () => {
+  reset(F);
+  // Actor.updateDocuments shares one options object across the batch: every preUpdateActor runs,
+  // then every updateActor (client/data/client-backend.mjs). The stub has no batch, so fire it as one.
+  const bob = game.actors.get(IDS.bob), glubbek = game.actors.get(IDS.glubbek);
+  const batch = [[bob, { name: "Rob" }], [glubbek, { name: NEW }]];
+  const options = {};
+  for (const [a, changes] of batch) F.fireCall("preUpdateActor", a, changes, options, IDS.gm);
+  for (const [a, changes] of batch) a.name = changes.name;
+  for (const [a, changes] of batch) F.fire("updateActor", a, changes, options, IDS.gm);
+  await flush();
+  assert.equal(game.scenes.get(IDS.one).tokens.get("tokA1000000000001").name, "Rob", "Bob's token follows Bob's rename");
+  assert.equal(bob.prototypeToken.name, "Rob");
+  assert.equal(game.scenes.get(IDS.live).tokens.get("tokFull0000000001").name, NEW);
+  assert.equal(game.scenes.get(IDS.live).tokens.get("tokShort000000001").name, "ZZ Brakka");
+  // Order-free: the two syncs run concurrently, so their toasts may land in either order.
+  assert.deepEqual(toasts().map(c => c.message).sort(), ['Token labels updated to "Rob" (3).', `Token labels updated to "${NEW}" (3).`].sort());
   reset(F);
 });
 
@@ -240,7 +261,7 @@ test("names' own prototype write carries {pentarynNames: true} and does not re-e
   // reaches this later listener before the outer rename does; live, it follows a server round trip.
   const byText = (a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b));
   assert.deepEqual(seen.sort(byText), [
-    [{ name: "Rob" }, { pentarynOldName: "Bob" }],
+    [{ name: "Rob" }, { pentarynOldNames: { [IDS.bob]: "Bob" } }],
     [{ prototypeToken: { name: "Rob" } }, { pentarynNames: true }],
   ].sort(byText));
   assert.equal(effects(F.calls).filter(c => c.op === "update").length, 2, "one rename, one prototype write: no third");

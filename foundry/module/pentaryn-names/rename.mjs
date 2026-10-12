@@ -6,8 +6,8 @@
  * GLUE, one feature: `install(reg, ctx)` registers the two actor hooks through the registry;
  * `uninstall()` has no state to drop. `syncRef` is the legacy API row `sync`.
  * preUpdateActor runs only on the client that made the rename (§5.9.1) and records the old name
- * in the operation options, which travel with the update to every client; only that client
- * (`userId === game.user.id`) writes, and only to tokens it may edit.
+ * in the operation options, keyed by actor id; they travel with the update to every client. Only
+ * that client (`userId === game.user.id`) writes, and only to tokens it may edit.
  */
 
 import { planTokenRelabels, relabel } from "./names-core.mjs";
@@ -94,15 +94,17 @@ export function syncRef(ref, oldName, newName) {
 }
 
 export function install(reg, ctx) {
-  // Capture the old name before it is overwritten.
+  // Capture the old name before it is overwritten, keyed by actor id: one Actor.updateDocuments
+  // batch shares its options across every actor in it (names-ac-2).
   reg.on("preUpdateActor", (actor, changes, options) => {
-    if ("name" in changes && changes.name !== actor.name) options.pentarynOldName = actor.name;
+    if ("name" in changes && changes.name !== actor.name) (options.pentarynOldNames ??= {})[actor.id] = actor.name;
   }, { label: "preUpdateActor: remember old name" });
 
   // Act only on the client that made the change, never on names' own prototype write.
   reg.on("updateActor", (actor, changes, options, userId) => {
-    if (userId !== game.user.id || options.pentarynNames || !options.pentarynOldName || !("name" in changes)) return;
-    const from = options.pentarynOldName, to = actor.name;
+    const from = options.pentarynOldNames?.[actor.id];
+    if (userId !== game.user.id || options.pentarynNames || !from || !("name" in changes)) return;
+    const to = actor.name;
     sync(actor, from, to).catch(err => ctx.log.warn("relabel after rename failed", { actor: actor.uuid, from, to }, err));
   }, { label: "updateActor: relabel" });
 }
