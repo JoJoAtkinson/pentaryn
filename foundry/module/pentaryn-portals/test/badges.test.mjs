@@ -4,7 +4,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { pinJSON } from "./kit/harness.mjs";
-import { boot, pixiTree, P1, GM } from "./fixtures/world.mjs";
+import { boot, pixiTree, console$, P1, GM } from "./fixtures/world.mjs";
 import { places } from "./fixtures/places.mjs";
 
 const { F, S, W } = await boot();
@@ -109,6 +109,34 @@ test("a texture that fails to load, or a layer that fails to destroy: the badge 
   try { await S.drawBadges(); } finally { PIXI.throwOnDestroy = false; }
   assert.equal(S.badges.length, 3);
   void P;
+});
+
+test("perf-4: every badge's texture loads at once, badges keep region order, a failed load warns once and shows '?'", async () => {
+  const s = W.scene({ id: "ScnPerf4", name: "Perf4", regions: ["A", "B", "C"].map((k, i) => ({
+    id: `RegP4${k}`, name: k, bounds: { x: 100 * i, y: 200, width: 100, height: 100 },
+    behaviors: [{ id: `BhvP4${k}`, destinations: [`Scene.ScnPerf4Dst.Region.RegP4D${k}`] }],
+  })) });
+  W.scene({ id: "ScnPerf4Dst", name: "Perf4Dst", regions: ["A", "B", "C"].map(k => ({ id: `RegP4D${k}`, name: `D${k}`, flags: { "pentaryn-portals": { img: `p4/${k}.webp` } } })) });
+  F.canvas.ready = true;
+  F.canvas.scene = s;
+  const a = deferred(), b = deferred();
+  W.textures["p4/A.webp"] = a.promise;
+  W.textures["p4/B.webp"] = b.promise;
+  W.textures["p4/C.webp"] = "reject";
+  const n = F.calls.length, c0 = console$.length;
+  const draw = S.drawBadges();
+  await W.tick();
+  assert.deepEqual(F.calls.slice(n).filter(c => c.op === "loadTexture").map(c => c.src), ["p4/A.webp", "p4/B.webp", "p4/C.webp"], "all three started before any resolved");
+  b.resolve({ src: "p4/B.webp", width: 100, height: 100 });
+  a.resolve({ src: "p4/A.webp", width: 100, height: 100 });
+  await draw;
+  assert.deepEqual(S.badges.map(x => x.region.name), ["A", "B", "C"]);
+  const sprite = i => S.badges[i].sprite.children.find(c => c.constructor.name === "Sprite")?.texture.src;
+  assert.deepEqual([sprite(0), sprite(1), sprite(2)], ["p4/A.webp", "p4/B.webp", undefined]);
+  assert.equal(S.badges[2].sprite.children.some(c => c.text === "?"), true, "a failed image falls back to the '?' glyph");
+  assert.equal(console$.slice(c0).filter(([, text]) => String(text).includes("card image p4/C.webp")).length, 1);
+  await S.drawBadges();
+  assert.equal(console$.slice(c0).filter(([, text]) => String(text).includes("card image p4/C.webp")).length, 1, "warnOnce per image");
 });
 
 test("edit mode: setEditing redraws with a dashed square and a move glyph; off removes them", async () => {

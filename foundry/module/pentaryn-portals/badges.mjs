@@ -26,7 +26,7 @@ import { refOf } from "./lib/resolve.mjs";
 
 let badgeLayer = null;
 /**
- * Bumped by every draw and by canvas teardown. drawBadges awaits each badge's texture; a scene
+ * Bumped by every draw and by canvas teardown. drawBadges awaits the badges' textures; a scene
  * activation (canvasTearDown → badgeLayer = null) or a second draw (a region hook, canvasReady) in
  * that gap left the first draw adding to a null layer: "Cannot read properties of null (reading
  * 'addChild')" on the player client (usability Area 9). A draw that is no longer the latest stops.
@@ -70,6 +70,7 @@ export async function drawBadges() {
   canvas.interface.addChild(layer);
   const stale = () => run !== drawRun || layer.destroyed || !canvas?.ready;
   const g = canvas.grid.size;
+  const todo = [];
   for (const region of canvas.scene.regions) {
     const dests = destinationsOf(region);
     if (!dests.length) continue;
@@ -77,6 +78,13 @@ export async function drawBadges() {
     const revealed = passageRevealed(region) || game.user.isGM;
     const b = region.bounds ?? region.object?.bounds;
     if (!b) continue;
+    todo.push({ region, dests, revealed, b, img: revealed ? cardFor(dests[0].region).img : null });
+  }
+  // perf-4: every badge's texture loads at once, not one badge after another. Keep the ?v=
+  // cache-buster: PIXI caches by the full URL, so a re-snapshot's new ?v= loads the new crop.
+  const loads = await Promise.allSettled(todo.map(t => (t.img ? foundry.canvas.loadTexture(t.img) : null)));
+  if (stale()) return;
+  todo.forEach(({ region, dests, revealed, b, img }, i) => {
     const r = g * 0.36;
     const x = b.x + b.width / 2, y = b.y - r * 0.55;
     const c = new PIXI.Container();
@@ -84,24 +92,19 @@ export async function drawBadges() {
     c.alpha = region.hidden ? 0.35 : 1;
     const back = new PIXI.Graphics().beginFill(0x120a24, 0.9).drawCircle(0, 0, r).endFill();
     c.addChild(back);
-    const first = cardFor(dests[0].region);
-    if (revealed && first.img) {
-      try {
-        // keep the ?v= cache-buster: PIXI caches by the full URL, so a re-snapshot's new ?v= loads the new crop
-        const tex = await foundry.canvas.loadTexture(first.img);
-        if (tex) {
-          const spr = new PIXI.Sprite(tex);
-          const scale = (2 * r) / Math.min(tex.width, tex.height);
-          spr.scale.set(scale);
-          spr.anchor.set(0.5);
-          const mask = new PIXI.Graphics().beginFill(0xffffff).drawCircle(0, 0, r - 3).endFill();
-          c.addChild(spr, mask);
-          spr.mask = mask;
-        }
-      } catch (err) {
-        log?.warnOnce(`card image ${first.img}`, `card image ${first.img}`, err);
-      }
+    const load = loads[i];
+    if (img && load.status === "rejected") log?.warnOnce(`card image ${img}`, `card image ${img}`, load.reason);
+    const tex = load.status === "fulfilled" ? load.value : null;
+    if (tex) {
+      const spr = new PIXI.Sprite(tex);
+      const scale = (2 * r) / Math.min(tex.width, tex.height);
+      spr.scale.set(scale);
+      spr.anchor.set(0.5);
+      const mask = new PIXI.Graphics().beginFill(0xffffff).drawCircle(0, 0, r - 3).endFill();
+      c.addChild(spr, mask);
+      spr.mask = mask;
     } else {
+      // unrevealed, no card image, or the image failed to load
       const q = new PIXI.Text("?", { fontFamily: "Signika", fontSize: r * 1.1, fill: 0xd9c8ff });
       q.anchor.set(0.5);
       c.addChild(q);
@@ -125,13 +128,9 @@ export async function drawBadges() {
       mv.anchor.set(0.5); mv.position.set(-r * 0.72, -r * 0.72);
       c.addChild(sq, mv);
     }
-    if (stale()) {
-      try { c.destroy({ children: true }); } catch (err) { log?.debug("stale badge destroy", err); }
-      return;
-    }
     layer.addChild(c);
     badges.push({ region, x, y, r, revealed, bounds: b, sprite: c, cards: dests.map(d => cardFor(d.region)) });
-  }
+  });
   refreshBadgeSight();
 }
 
