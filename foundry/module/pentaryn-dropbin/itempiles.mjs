@@ -19,7 +19,7 @@
  */
 
 import {
-  MODULE, LOCK_SOUND, lockedContainer, pileFlags, isPileFlagged, pinnedEntryIds, planLockSounds, planEyesNeedView,
+  MODULE, LOCK_SOUND, lockedContainer, lockFloatToken, pileFlags, isPileFlagged, pinnedEntryIds, planLockSounds, planEyesNeedView,
   isActiveGMSelf,
 } from "./dropbin-core.mjs";
 
@@ -112,14 +112,15 @@ function lockedContainerData(target) {
   return data ? { actor, data } : null;
 }
 
-function announceLocked(actor, { playSound }) {
+/** The toast names the actor; the float goes on the hook's own chest (lockFloatToken, dropbin-R9). */
+function announceLocked(target, actor, { playSound }) {
   if (playSound) {
     try { foundry.audio.AudioHelper.play({ src: LOCK_SOUND, volume: 0.8 }, true); }
     catch (err) { console.warn(`${MODULE} | could not play the lock sound`, err); }
   }
   ui.notifications.warn(_loc("PENTARYN_DROPBIN.lock.toast", { name: actor?.name ?? "It" }));
   try {
-    const tok = canvas.tokens?.placeables.find(t => t.actor?.id === actor?.id);
+    const tok = lockFloatToken(target, actor, canvas.tokens?.placeables);
     if (tok) canvas.interface.createScrollingText(tok.center, _loc("PENTARYN_DROPBIN.lock.float"), {
       anchor: CONST.TEXT_ANCHOR_POINTS.TOP, fontSize: 28, fill: "#d8433a", stroke: 0x000000, strokeThickness: 4 });
   } catch (err) { log?.debug("announceLocked: no canvas (off-screen); the notification is enough", err); }
@@ -222,7 +223,7 @@ async function armLocks(reg) {
     if (game.user.isGM) return;
     const hit = lockedContainerData(target);
     if (!hit) return;
-    announceLocked(hit.actor, { playSound: true });
+    announceLocked(target, hit.actor, { playSound: true });
     return false;                       // cancels the render — this is the actual lock
   }, { label: "lock: interface" });
 
@@ -237,7 +238,7 @@ async function armLocks(reg) {
     if (game.user.isGM) return;
     const hit = lockedContainerData(doc);
     if (!hit) return;
-    announceLocked(hit.actor, { playSound: true });
+    announceLocked(doc, hit.actor, { playSound: true });
     return false;
   }, { label: "lock: actor sheet" });
 
@@ -246,7 +247,7 @@ async function armLocks(reg) {
   // RATTLE, which item-piles broadcasts to everyone.
   reg.on("item-piles-preRattleItemPile", (actor) => {
     if (game.user.isGM) return;
-    announceLocked(actor, { playSound: false });
+    announceLocked(actor, actor, { playSound: false });
   }, { label: "lock: rattle" });
 
   // The directory hooks above were registered at load time, but the sidebar has

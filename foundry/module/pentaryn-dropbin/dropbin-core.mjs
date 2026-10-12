@@ -49,6 +49,20 @@ export function lockedContainer(data) {
   return data?.enabled && data.type === "container" && data.locked ? data : null;
 }
 
+/**
+ * The token a locked container's 'Locked' float goes on (dropbin-R9): the hook's own token when it
+ * passed a TokenDocument, else a synthetic actor's own token, else the first placeable holding this
+ * very actor object — identity, not id, because every unlinked chest of one base actor shares the
+ * id. null means no float (the toast is enough).
+ */
+export function lockFloatToken(target, actor, placeables) {
+  if (target?.documentName === "Token") return target.object ?? null;
+  if (actor?.token) return actor.token.object ?? null;
+  if (!actor) return null;
+  for (const t of placeables ?? []) if (t.actor === actor) return t;
+  return null;
+}
+
 /** Every journal id pinned to a Note on any scene. Built once per directory render. */
 export function pinnedEntryIds(scenes) {
   const s = new Set();

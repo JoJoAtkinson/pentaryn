@@ -39,7 +39,8 @@ merchants, vaults, locked or closed containers, for a GM with no character, or w
 native *Take All* is already there. **Needs a GM online.**
 
 **Locked containers** stay shut from every door: canvas, Actors sidebar, API and Ctrl-click. A
-player hears the lock and reads "<name> is locked." and a floating *Locked*. The GM is exempt.
+player hears the lock and reads "<name> is locked." and a floating *Locked* over the chest they
+tried (no float when that chest is not on the canvas). The GM is exempt.
 
 **Sidebar:** players do not see pile actors in their Actors sidebar, or journals pinned to a scene
 Note in their Journal sidebar (a readable is found by looking at it). Handouts stay.

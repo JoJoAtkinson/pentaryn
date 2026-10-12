@@ -63,6 +63,10 @@ Declared changes:
   on the Token as `_pdWantsEye` and recomputed only on drawToken, updateToken, the updateActor and
   item hooks, canvasReady and a direct `corpses.paintEye`; `refreshToken` (every animation frame)
   only places and sizes the eye from the cached answer.
+- dropbin-R9: the 'Locked' float goes on the chest the player tried: the hook's own token, else a
+  synthetic actor's token, else the first token holding that same actor object. It matched by actor
+  id, so with two unlinked chests of one base actor it could float over the other chest; no match is
+  no float (the toast still shows).
 
 Added: `list(n, { brief })`, `restoreResult`, `inspect`, `selftest` (items-journal-28).
 - A restore another module refuses (a `preCreateItem` veto) is `{ ok: false, reason: "not-created" }`
