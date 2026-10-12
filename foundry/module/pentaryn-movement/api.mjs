@@ -9,7 +9,7 @@ import * as core from "./movement-core.mjs";
 import { HOOKS, MODULE, NS } from "./movement-core.mjs";
 import { MANIFEST } from "./api-manifest.mjs";
 import { SETTINGS, policyWrite, settingsSnapshot, unreadableSettings } from "./settings.mjs";
-import { pinInputs } from "./combat-adapter.mjs";
+import { pinInputs, sceneOf } from "./combat-adapter.mjs";
 import { buildApi } from "./lib/api.mjs";
 import { patches } from "./lib/patch.mjs";
 import { publishedOf } from "./lib/publish.mjs";
@@ -27,10 +27,14 @@ async function setPolicy(value) {
   });
 }
 
-/** Pins on a scene whose centre sits under a visible token; player-owned tokens first. */
+/**
+ * Pins on a scene whose centre sits under a visible token; player-owned tokens first. Takes a Scene
+ * or a scene id; an unknown id answers [] like no scene (rob-1).
+ */
 function pinsUnderTokens(scene = canvas?.scene) {
-  if (!scene) return [];
-  const { notes, tokens } = pinInputs(scene);
+  const doc = sceneOf(scene);
+  if (!doc) return [];
+  const { notes, tokens } = pinInputs(doc);
   return core.pinsUnderTokens(notes, tokens);
 }
 

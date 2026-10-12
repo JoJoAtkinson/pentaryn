@@ -2,7 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { OTHER, PLAYER, SCENE, combat, movementWorld } from "./fixtures/world.mjs";
-import { combatSummaries, pinInputs } from "../combat-adapter.mjs";
+import { combatSummaries, pinInputs, sceneIdOf, sceneOf } from "../combat-adapter.mjs";
 import * as core from "../movement-core.mjs";
 
 await movementWorld();
@@ -78,4 +78,20 @@ test("pinInputs: a token's own getSize (hex) wins over width × grid.size; token
   assert.equal(tokens[1].w, 100);
   assert.equal(tokens[1].h, 100);
   assert.deepEqual(core.pinsUnderTokens(notes, tokens).map(r => r.tokenId), ["h"]);
+});
+
+test("sceneOf/sceneIdOf: a Scene or a scene id string; unknown, empty or junk → null (rob-1)", () => {
+  const scene = { id: "zzAdapter", notes: [], tokens: [] };
+  game.scenes.set("zzAdapter", scene);
+  try {
+    assert.equal(sceneOf(scene), scene);
+    assert.equal(sceneOf("zzAdapter"), scene);
+    for (const junk of ["noSuchScene", "", null, undefined, 42, true]) assert.equal(sceneOf(junk), null);
+    assert.equal(sceneIdOf(scene), "zzAdapter");
+    assert.equal(sceneIdOf("zzAdapter"), "zzAdapter");
+    assert.equal(sceneIdOf("noSuchScene"), "noSuchScene");
+    for (const junk of ["", null, undefined, 42, {}, { id: 7 }]) assert.equal(sceneIdOf(junk), null);
+  } finally {
+    game.scenes.delete("zzAdapter");
+  }
 });

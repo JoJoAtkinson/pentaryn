@@ -99,9 +99,9 @@
       "params": [
         {
           "name": "scene",
-          "type": "Scene",
+          "type": "Scene | string",
           "optional": true,
-          "doc": "default: the viewed scene"
+          "doc": "a Scene or a scene id; default: the viewed scene"
         }
       ],
       "returns": "{ noteId, label, tokenId, tokenName, playerOwned }[]",
@@ -110,7 +110,7 @@
       "query": false,
       "sideEffects": [],
       "legacy": true,
-      "doc": "Map pins whose centre sits under a visible token (owned-on-top makes them unclickable for that player); player-owned tokens first. [] without a scene."
+      "doc": "Map pins whose centre sits under a visible token (owned-on-top makes them unclickable for that player); player-owned tokens first. [] without a scene or for an unknown scene id."
     },
     {
       "path": "selftest",

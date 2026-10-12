@@ -26,6 +26,8 @@ manifest); the kit is vendored. What a player or GM can notice:
 - **[declared]** `selftest()`'s "settings readable" check can fail now: it passes only when every
   setting is registered and reads back a value of its default's type, and its `detail` lists the
   keys that did not (rob-4).
+- **[declared]** `pinsUnderTokens(scene)` also takes a scene id: it is looked up in the world's
+  scenes, and an unknown id answers `[]` like no scene, instead of a raw TypeError (rob-1).
 - Performance: the per-token paths (drag, arrow keys, token refresh, the layer sort) read the
   settings and the combats once per change instead of once per token (F-M1).
 

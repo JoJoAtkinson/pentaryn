@@ -21,6 +21,28 @@ export function combatSummaries(combats = game.combats?.contents) {
 }
 
 /**
+ * A scene argument as the API takes it: a Scene document, or a scene id string resolved through
+ * `game.scenes` (rob-1, rob-3). An unknown id, an empty string or nothing answers null.
+ * @param {object|string|null|undefined} scene
+ * @returns {object|null}
+ */
+export function sceneOf(scene) {
+  if (typeof scene === "string") return (scene && game.scenes?.get(scene)) || null;
+  return scene && typeof scene === "object" ? scene : null;
+}
+
+/**
+ * The id of a scene argument: a scene id string as given, or a Scene document's id (rob-1, rob-3).
+ * Anything else answers null.
+ * @param {object|string|null|undefined} scene
+ * @returns {string|null}
+ */
+export function sceneIdOf(scene) {
+  if (typeof scene === "string") return scene || null;
+  return (scene && typeof scene === "object" && typeof scene.id === "string" && scene.id) || null;
+}
+
+/**
  * The pins-under-tokens inputs for a scene: its notes (pin centres) and its visible tokens as
  * pixel rectangles, each flagged when a non-GM user owns it.
  * @returns {{ notes: object[], tokens: object[] }}

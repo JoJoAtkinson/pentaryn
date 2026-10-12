@@ -578,3 +578,23 @@ test("pinsUnderTokens(scene) on a synthetic scene (golden/pins.json)", () => {
   assert.deepEqual(game.pentaryn.movement.pinsUnderTokens(), []);
   canvas.scene = { id: SCENE };
 });
+
+test("pinsUnderTokens takes a scene id too: resolved through game.scenes; an unknown id answers [] (rob-1)", () => {
+  const scene = {
+    id: "zzPins", grid: { size: 100 },
+    notes: [{ id: "n1", x: 150, y: 150, text: "Under the hero" }],
+    tokens: [{ id: "pc", name: "Hero", x: 100, y: 100, width: 1, height: 1, hidden: false,
+      testUserPermission: u => u.id === PLAYER }],
+  };
+  game.scenes.set("zzPins", scene);
+  try {
+    const byDoc = game.pentaryn.movement.pinsUnderTokens(scene);
+    assert.equal(byDoc.length, 1);
+    assert.deepEqual(game.pentaryn.movement.pinsUnderTokens("zzPins"), byDoc);
+    assert.deepEqual(game.pentaryn.movement.pinsUnderTokens("noSuchScene"), []);
+    assert.deepEqual(game.pentaryn.movement.pinsUnderTokens(""), []);
+    assert.deepEqual(game.pentaryn.movement.pinsUnderTokens(null), []);
+  } finally {
+    game.scenes.delete("zzPins");
+  }
+});
