@@ -32,8 +32,9 @@ import { patches, wrapMethod } from "./lib/patch.mjs";
 /** The Rituals wrap's marker (it was a flag on the prototype; now on the replacement function). */
 const WRAPPED = Symbol.for(`${MODULE}.ritualsWrapped`);
 
-/** Items whose Argon tooltip is being built right now (6 adds and removes, 2 reads). */
-const tooltipItems = new Set();
+/** Items whose Argon tooltip is being built right now, each with its count of builds in flight
+ *  (6 counts up and down, 2 reads) — overlapping builds for one item each keep the mark. */
+const tooltipItems = new Map();
 
 const handles = [];
 const keep = handle => { handles.push(handle); return handle; };
@@ -63,7 +64,7 @@ function patchEnrich(ctx) {
   }, function (wrapped, content, options = {}) {
     try {
       const item = options?.relativeTo;
-      if (item && !options.rollData && tooltipItems.has(item) && typeof item.getRollData === "function") {
+      if (item && !options.rollData && (tooltipItems.get(item) ?? 0) > 0 && typeof item.getRollData === "function") {
         options = { ...options, rollData: item.getRollData() };
       }
     } catch (err) { ctx.log.debug("tooltip roll data: enriched as asked", err); }
@@ -165,8 +166,11 @@ export function wrapItemButton(button, ctx) {
     }, async function (wrapped, ...args) {
       const it = this.item;
       if (!it || it.documentName !== "Item") return wrapped(...args);
-      tooltipItems.add(it);
-      try { return await wrapped(...args); } finally { tooltipItems.delete(it); }
+      tooltipItems.set(it, (tooltipItems.get(it) ?? 0) + 1);
+      try { return await wrapped(...args); } finally {
+        const n = (tooltipItems.get(it) ?? 1) - 1;
+        if (n > 0) tooltipItems.set(it, n); else tooltipItems.delete(it);
+      }
     }, { log: ctx.log }));
   }
 }

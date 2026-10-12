@@ -137,6 +137,28 @@ test("base rendered first, then the subclass: still one enrich per tooltip, targ
   assert.equal(enrichLog().length, 1);
 });
 
+test("overlapping tooltip builds for one item both enrich with its roll data", async () => {
+  class Slow {
+    constructor(item, gate) { this.item = item; this.gate = gate; }
+    async getTooltipData() {
+      await this.gate;
+      return { description: await TE().enrichHTML("tip", { relativeTo: this.item }) };
+    }
+  }
+  const ray = spellItem("scorching-ray", "Scorching Ray");
+  render(new Slow(ray, null));
+  let openA, openB;
+  const a = new Slow(ray, new Promise(r => { openA = r; })).getTooltipData();
+  const b = new Slow(ray, new Promise(r => { openB = r; })).getTooltipData();
+  W.takeLog();
+  openA();
+  await a;
+  openB();
+  await b;
+  const want = { item: { level: 2, name: "Scorching Ray" } };
+  assert.deepEqual(enrichLog().map(l => l.rollData), [want, want]);
+});
+
 test("a tooltip that throws still unmarks the item; a non-Item button passes straight through", async () => {
   class Boom { constructor(item) { this.item = item; } async getTooltipData() { throw new Error("tooltip broke"); } }
   const it = spellItem("fire-bolt", "Bolt");

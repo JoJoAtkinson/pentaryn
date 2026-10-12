@@ -15,7 +15,7 @@
  * Adjustment row dnd5e-cancelled-area-refund.
  */
 
-import { MODULE, placementCancelled } from "./core.mjs";
+import { MODULE, placementCancelled, doesNotExist as gone } from "./core.mjs";
 import { setting } from "./settings.mjs";
 import { makeLog } from "./lib/log.mjs";
 
@@ -44,7 +44,6 @@ async function refund(activity, usageConfig, results) {
   const began = (results.effects ?? []).filter(e => e?.parent === activity.actor && e.statuses?.has?.(CONFIG.specialStatusEffects?.CONCENTRATING ?? "concentrating"));
   // -9: log what the clean-up could not do. If neither the card's delete nor its fallback update
   // lands, the card keeps its Refund button and could be refunded twice.
-  const gone = err => /does not exist/i.test(err?.message ?? "");
   for (const e of began) {
     if (activity.actor.effects.has(e.id)) await e.delete().catch(err => (gone(err) ? null : log.warn("refund end concentration", err)));
   }

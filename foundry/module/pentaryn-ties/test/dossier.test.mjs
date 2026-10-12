@@ -58,6 +58,10 @@ test("as a player: the GM plane is null; their own character's ties / known / gr
   for (const k of ["ties", "known", "granted", "knowledge", "inbound", "beliefs", "lore", "conceal"]) assert.equal(theirs[k], null, k);
 });
 
+test("inspect(ref, null) answers like an omitted opts", async () => {
+  for (const id of [PC, NPC]) assert.deepEqual(await T().inspect(get(id), null), await T().inspect(get(id)), id);
+});
+
 test("selftest(): every check passes on a booted world", () => {
   const r = T().selftest();
   assert.equal(r.ok, true, JSON.stringify(r.checks));

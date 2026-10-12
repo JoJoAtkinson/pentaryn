@@ -24,6 +24,12 @@ export function aoeFlags(doc) {
 /** Is this token (a TokenDocument) one of our area handles? The token flag only; see isHandleTarget. */
 export const isHandle = t => !!aoeFlags(t).handle;
 
+/** A server refusal because the document is already there (the other session's create won). */
+export const alreadyExists = err => /already exists/i.test(err?.message ?? "");
+
+/** A server refusal because the document is already gone (the other session's delete won). */
+export const doesNotExist = err => /does not exist/i.test(err?.message ?? "");
+
 /**
  * A resolution's stored damages as `actor.applyDamage` / `calculateDamage` want them: each row's
  * `properties` array becomes a Set. The input is not mutated; no damages → [].
@@ -84,6 +90,9 @@ export function multiplierFor(success, onSave) {
 
 /** The multipliers the tray offers, same set as dnd5e's DamageApplicationElement. */
 export const MULTIPLIERS = [0, 0.25, 0.5, 1, 2];
+
+/** How far back the GM's save matching and api.latestResolution look in the chat log (messages). */
+export const RECENT_MESSAGES = 60;
 
 /**
  * Is this token a creature that can be caught in an area?
@@ -234,7 +243,7 @@ export function attachedToOther(region, tokenById) {
 export function regionFromSpell(flags5e, { itemUuid = null, activityUuid = null } = {}) {
   if (!flags5e) return false;
   if (itemUuid && flags5e.item === itemUuid) return true;
-  if (activityUuid && (flags5e.activity === activityUuid || flags5e.origin === activityUuid)) return true;
+  if (regionOfActivity(flags5e, activityUuid)) return true;
   if (!itemUuid) return false;
   const prefix = `${itemUuid}.Activity.`;
   return [flags5e.activity, flags5e.origin].some(u => typeof u === "string" && u.startsWith(prefix));

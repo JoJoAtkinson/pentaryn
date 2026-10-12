@@ -1,4 +1,4 @@
-// HUD composition (hud.mjs): the Bonus, Action and Special bars recomposed in
+// HUD composition (hud-panels.mjs): the Bonus, Action and Special bars recomposed in
 // renderActionPanelArgonComponent, the Reaction slot's title, the portrait line and HP, the effect
 // tooltip, badge refreshes, the Starry rebuild, the Chalice offer and tooltip hygiene. Argon is the
 // stand-in in fixtures/argon.mjs; each bar is pinned as the list of buttons it ends with.

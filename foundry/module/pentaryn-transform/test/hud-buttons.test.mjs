@@ -1,4 +1,4 @@
-// The module's Argon buttons (hud.mjs argonClasses): Wild Shape / Change Form and its form tiles,
+// The module's Argon buttons (form-picker.mjs argonClasses): Wild Shape / Change Form and its form tiles,
 // the synthesized Return, Starry Form and its constellation tiles — labels, icons, badges, tooltip
 // data (goldens), clicks and right-clicks. Reached the way Argon reaches them: a Bonus bar composed
 // in renderActionPanelArgonComponent, then each button rendered.

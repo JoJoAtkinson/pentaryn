@@ -1,5 +1,6 @@
 /**
- * Pure helpers for concentration.mjs and argon-tidy.mjs (no Foundry globals at import).
+ * Pure helpers for concentration, Argon and cast-flow (concentration.mjs, argon.mjs, cast-flow.mjs,
+ * patches.mjs, shapes.mjs; no Foundry globals at import).
  * Fixtures: test/table.mjs (`node test/table.mjs`, also run from test/run.mjs).
  */
 
@@ -24,8 +25,7 @@ export function concentrationEffectFor(effects, itemId, status = "concentrating"
   if (!itemId) return null;
   let found = null;
   for (const e of effects ?? []) {
-    const statuses = e?.statuses instanceof Set ? e.statuses : new Set(e?.statuses ?? []);
-    if (!statuses.has(status)) continue;
+    if (!isConcentration(e, status)) continue;
     const data = e?.flags?.dnd5e?.item ?? {};
     if (data.id === itemId || data.data?._id === itemId) found = e;
   }

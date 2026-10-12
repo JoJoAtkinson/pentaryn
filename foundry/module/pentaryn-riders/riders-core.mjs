@@ -3,9 +3,9 @@
  * ============================
  *
  * Everything here is plain data in, plain data out: no `game`, no `foundry`, no `CONFIG`. The
- * module file (`riders.mjs`) turns real dnd5e rolls and actors into the shapes below, calls these,
- * and writes the result back. `node test/run.mjs` imports this file bare, which is the proof that
- * it stays pure.
+ * feature files (`damage-riders.mjs`, `battle-medic.mjs`) and the adapter `shapes.mjs` turn real
+ * dnd5e rolls and actors into the shapes below, call these, and write the result back.
+ * `node test/run.mjs` imports this file bare, which is the proof that it stays pure.
  *
  * Shapes
  * ------

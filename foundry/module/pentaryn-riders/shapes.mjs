@@ -109,6 +109,9 @@ export const isHealing = t => t in (CONFIG.DND5E?.healingTypes ?? {});
 
 export const HEALER = ruleByKey("healer");
 
+/** The Battle Medic relay's query name — one source for its registration, selftest and describe(). */
+export const RELAY_QUERY = `${MODULE}.battleMedic`;
+
 /** The Battle Medic activity: our flow flag, or an activity named "Battle Medic" on the Healer feat. */
 export function isBattleMedic(activity) {
   if (!activity) return false;

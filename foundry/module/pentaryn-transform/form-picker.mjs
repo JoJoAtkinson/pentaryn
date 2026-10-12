@@ -2,8 +2,8 @@
  * Pentaryn Transform — UI: the Argon components the HUD adds (Wild Shape / Change Form and its
  * form picker, Return to <druid>, Starry Form and its constellations) and their tooltips.
  *
- * Argon exposes no "add a button to this panel" API; hud.mjs recomposes the bars and builds these.
- * Argon's dnd5e button class is closure-private (argon.mjs borrows it from a weapon-set slot).
+ * Argon exposes no "add a button to this panel" API; hud-panels.mjs recomposes the bars and builds these.
+ * Argon's dnd5e button class is closure-private (the kit's lib/argon-kit.mjs itemButtonClass borrows it from a weapon-set slot).
  * Template rule: an Argon component renders partials/{ParentClassName}.hbs, so each class here
  * subclasses an Argon base directly (never two deep).
  */
@@ -22,7 +22,7 @@ import { paintBadge as paintArgonBadge } from "./lib/argon-kit.mjs";
 
 let built = null;                // { WildShapeButton, FormTile, … }, built on first use
 
-/** Wild Shape / Starry Form buttons, for badge refreshes (hud.mjs prunes and refreshes them). */
+/** Wild Shape / Starry Form buttons, for badge refreshes (hud-panels.mjs prunes and refreshes them). */
 export const liveButtons = new Set();
 
 /** Tooltip classes: compact grid (pentaryn-tt), or one detail per row (pentaryn-tt-list). */

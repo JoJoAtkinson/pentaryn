@@ -22,9 +22,7 @@ import {
   STUDY_TIERS_FLAG,
   studyOffsetOf
 } from "../known-core.mjs";
-import { concealmentFor } from "./cascade.mjs";
-import { pending } from "./gate.mjs";
-import { beliefsOf, kindActorOf, studyHoldFor } from "./resolve.mjs";
+import { beliefsOf, concealmentFor, kindActorOf, studyHoldFor } from "./resolve.mjs";
 import { esc } from "./shared.mjs";
 import { readFlag } from "../lib/flags.mjs";
 
@@ -125,6 +123,7 @@ export function beliefs(actor) {
   // both ledgers this actor can hold: the kind rows it collects as somebody's kind, and the
   // lore rows it collects as itself. An NPC that is its own kind holds both on one document.
   const rows = readLore(readFlag(actor, MODULE, LORE_FLAG));
+  const kind = kindActorOf(actor); // read-only for the whole loop: resolve the pointer once
   /*
    * The roll's verdict, for the "missed" tag: a failure hands the player nothing now (2026-10), so
    * an empty text box alone no longer says whether they missed or passed into an unauthored side.
@@ -147,7 +146,7 @@ export function beliefs(actor) {
     }
     return null;
   };
-  for (const ledger of new Set([kindActorOf(actor), actor].filter(Boolean))) {
+  for (const ledger of new Set([kind, actor].filter(Boolean))) {
     for (const [characterId, facts] of Object.entries(beliefsOf(ledger))) {
       for (const [beliefKey, rec] of Object.entries(facts)) {
         if (!rec) continue;
@@ -155,7 +154,7 @@ export function beliefs(actor) {
         if (!parsed) continue;
         // a kind row belongs to the kind ledger, a lore row to this actor — never cross them,
         // or an NPC pointing at Goblin would list every other goblin-studier's rows as its own
-        if (parsed.ns === "kind" && ledger.id !== kindActorOf(actor)?.id) continue;
+        if (parsed.ns === "kind" && ledger.id !== kind?.id) continue;
         if (parsed.ns !== "kind" && ledger.id !== actor.id) continue;
         out.push({
           ns: parsed.ns,

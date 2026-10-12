@@ -11,7 +11,7 @@
  *   ac (flat number), cr, speed (walk ft), disposition ("hostile"|"neutral"|"friendly"|"secret"),
  *   removeItems: ["Scimitar", <item id>],
  *   addItems: [{uuid | name, quantity, equipped, rename, system: {...merged}} | {data: <item data>}], // gear by name, or a custom item inline
- *   traits: [{name, html, activation: "passive"|"action"|"bonus"|"reaction"|"special", recharge: 5, uses: {max, per: "day"|"lr"|"sr"}}],
+ *   traits: [{name, html, activation: "passive"|"action"|"bonus"|"reaction"|"special"|"minute"|"hour", recharge: 5, uses: {max, per: "day"|"lr"|"sr"}}],
  *   recharge: {"Earthsplitter": 5},                                                // existing items
  *   itemUpdates: [{item: name|id, set: {"system.x": v}}],                           // escape hatch
  *   set: {"system.attributes.movement.climb": 30},                                  // escape hatch
@@ -48,6 +48,11 @@ export { SIZE_WORDS };
 
 const PER = { day: "day", lr: "lr", sr: "sr", long: "lr", short: "sr", dawn: "dawn" };
 const ACTIVATIONS = ["action", "bonus", "reaction", "special", "minute", "hour"];
+
+/** The dnd5e "Recharge n-6" uses block, the one-use consumption target, and the n it accepts. */
+const rechargeUses = n => ({ max: "1", spent: 0, recovery: [{ period: "recharge", formula: String(n), type: "recoverAll" }] });
+const useOne = () => ({ type: "itemUses", target: "", value: "1" });
+const isRechargeDie = v => Number.isInteger(v) && v >= 2 && v <= 6;
 
 /** The dnd5e size key a patch asks for, or null. Throws BAD_SPEC on a word it does not know. */
 export function patchSize(patch) {
@@ -109,12 +114,12 @@ export async function checkPatch(patch) {
     if (t.activation && t.activation !== "passive" && !ACTIVATIONS.includes(t.activation)) {
       throw codedError("BAD_SPEC", `patch.traits[${t.name}].activation: passive|${ACTIVATIONS.join("|")}`);
     }
-    if (t.recharge !== undefined && !(Number.isInteger(t.recharge) && t.recharge >= 2 && t.recharge <= 6)) {
+    if (t.recharge !== undefined && !isRechargeDie(t.recharge)) {
       throw codedError("BAD_SPEC", `patch.traits[${t.name}].recharge: 2-6 (5 means "Recharge 5-6")`);
     }
   }
   for (const [n, v] of Object.entries(patch.recharge ?? {})) {
-    if (!(Number.isInteger(v) && v >= 2 && v <= 6)) throw codedError("BAD_SPEC", `patch.recharge["${n}"]: 2-6`);
+    if (!isRechargeDie(v)) throw codedError("BAD_SPEC", `patch.recharge["${n}"]: 2-6`);
   }
   return { notes, defaults };
 }
@@ -125,11 +130,11 @@ function findOwned(actor, ref) {
 
 /** `system.uses` + activity consumption for "Recharge n-6". */
 function rechargeData(item, n) {
-  const uses = { max: "1", spent: 0, recovery: [{ period: "recharge", formula: String(n), type: "recoverAll" }] };
+  const uses = rechargeUses(n);
   const acts = {};
   for (const a of item?.system?.activities ?? []) {
     const targets = (a.consumption?.targets ?? []).filter(t => t.type !== "itemUses").map(t => (t.toObject?.() ?? t));
-    acts[a.id] = { consumption: { targets: [...targets, { type: "itemUses", target: "", value: "1" }] } };
+    acts[a.id] = { consumption: { targets: [...targets, useOne()] } };
   }
   return { uses, acts };
 }
@@ -141,13 +146,13 @@ function traitItem(t) {
   };
   const act = t.activation && t.activation !== "passive" ? t.activation : null;
   if (t.recharge) {
-    data.system.uses = { max: "1", spent: 0, recovery: [{ period: "recharge", formula: String(t.recharge), type: "recoverAll" }] };
+    data.system.uses = rechargeUses(t.recharge);
   } else if (t.uses?.max) {
     data.system.uses = { max: String(t.uses.max), spent: 0, recovery: [{ period: PER[t.uses.per] ?? "day", type: "recoverAll" }] };
   }
   if (act) {
     const id = foundry.utils.randomID();
-    const targets = data.system.uses ? [{ type: "itemUses", target: "", value: "1" }] : [];
+    const targets = data.system.uses ? [useOne()] : [];
     data.system.activities = { [id]: { _id: id, type: "utility", activation: { type: act }, consumption: { targets } } };
   }
   return data;

@@ -278,6 +278,21 @@ test("sweepSpentForms: GM only; deletes unplaced transformed copies older than 1
   game.scenes.clear();
 });
 
+test("sweepSpentForms: a world with no transformed copy never walks scene tokens", async () => {
+  game.actors.clear();
+  game.scenes.clear();
+  F.calls.length = 0;
+  F.W.add(F.W.makeActor({ id: "plainActor000001", name: "plain", _stats: { createdTime: 0 } }));
+  game.scenes.set("scn", { id: "scn", get tokens() { throw new Error("tokens walked"); } });
+  F.become({ userId: IDS.gm });
+  await T.sweepSpentForms();
+  assert.deepEqual(ops("Actor.deleteDocuments"), []);
+  mock.timers.tick(60_000);
+  await flush();
+  assert.deepEqual(ops("Actor.deleteDocuments"), [], "no sweep was scheduled");
+  game.scenes.clear();
+});
+
 test("scheduleSweep: token traffic schedules one 3 s sweep that is never pushed back; a form losing isPolymorphed sweeps at 1.5 s", async () => {
   game.actors.clear();
   F.calls.length = 0;
