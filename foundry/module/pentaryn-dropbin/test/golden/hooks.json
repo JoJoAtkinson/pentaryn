@@ -57,6 +57,10 @@
   },
   {
     "kind": "on",
+    "name": "item-piles-preRenderActorSheet"
+  },
+  {
+    "kind": "on",
     "name": "renderItemPileInventoryApp"
   },
   {

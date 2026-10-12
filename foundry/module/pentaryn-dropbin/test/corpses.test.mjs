@@ -4,7 +4,7 @@
 // no-op, `null` replaces), which is what left a revived enemy's full sheet open to every player.
 import { mock, test } from "node:test";
 import assert from "node:assert/strict";
-import { PLAYER, addScene, dropbinWorld, makeActor } from "./fixtures/world.mjs";
+import { GM, PLAYER, addScene, dropbinWorld, makeActor } from "./fixtures/world.mjs";
 
 mock.timers.enable({ apis: ["setTimeout"] });
 
@@ -12,7 +12,7 @@ const MOD = "pentaryn-dropbin";
 const F = await dropbinWorld();
 await import("../dropbin.mjs");
 const { corpses } = await import("../corpses.mjs");
-const { OBSERVER, NONE } = CONST.DOCUMENT_OWNERSHIP_LEVELS;
+const { OBSERVER, NONE, OWNER } = CONST.DOCUMENT_OWNERSHIP_LEVELS;
 
 let seq = 0;
 /** An unlinked hostile goblin token at 0 HP on its own scene; `delta.ownership` as given. */
@@ -223,4 +223,91 @@ test("dropbin-R6: a failed corpse-flag write reverts the pile toCorpse just made
   const before = reverts();
   await assert.rejects(corpses.toCorpse(tok), err => err === boom);
   assert.equal(reverts() - before, 1, "the new pile is reverted, not left without corpse flags");
+});
+
+/* ── dropbin-EC-3: a linked NPC's corpse is looted through the loot window, never its sheet ─────── */
+
+// Joe, 2026-10-12: "Just loot, they can't open the char sheet. They're dead, so they can't see their
+// stats or bio." A linked token ignores delta.ownership, so a dead linked NPC became a pile players
+// could not open (Item Piles needs OBSERVER). Players now observe the BASE actor while it is a corpse
+// (its map saved and put back on revival), and no player opens a corpse's actor sheet by any route:
+// Item Piles fires item-piles-preRenderActorSheet from every actor sheet render, the Ctrl bypass and
+// `bypassItemPiles` included; a forced open shows the loot window instead.
+let lseq = 0;
+/** A linked NPC at 0 HP with `count` tokens on one scene; its base actor's ownership as given. */
+function linkedNpc(ownership = { default: NONE, [GM]: OWNER }, count = 1) {
+  const n = String(++lseq).padStart(4, "0");
+  const actor = makeActor(F, { id: `actorLnk0000${n}`, name: "Captain Vey", type: "npc", ownership,
+    system: { attributes: { hp: { value: 0, max: 30 } } } });
+  const statuses = new Set();
+  Object.assign(actor, {
+    isToken: false,
+    statuses,
+    toggleStatusEffect: async (id, { active } = {}) => { if (active) statuses.add(id); else statuses.delete(id); },
+    updateEmbeddedDocuments: async () => [],
+    deleteEmbeddedDocuments: async () => [],
+  });
+  const ids = Array.from({ length: count }, (_, i) => `tokLnk${i}00000${n}`);
+  const scene = addScene(F, { id: `sceneLnk0000${n}`, name: `Linked ${n}`,
+    tokens: ids.map(id => ({ id, name: "Captain Vey", actorId: actor.id, actorLink: true, disposition: -1,
+      sight: { enabled: true }, delta: {} })) });
+  const toks = ids.map(id => scene.tokens.get(id));
+  actor.getActiveTokens = () => toks;
+  return toks;
+}
+const player = () => F.game.users.get(PLAYER);
+const sheetVeto = (...args) => {
+  F.become({ userId: PLAYER });
+  try { return Hooks.call("item-piles-preRenderActorSheet", ...args); } finally { F.become({ userId: GM }); }
+};
+const lootWindows = () => F.calls.filter(c => c.op === "renderItemPileInterface");
+F.game.itempiles.API.renderItemPileInterface = async (target, opts) =>
+  F.calls.push({ op: "renderItemPileInterface", target, opts });
+
+test("dropbin-EC-3: a dead linked NPC gives players OBSERVER on its base actor; a revival puts the saved map back", async () => {
+  const [tok] = linkedNpc();
+  const actor = tok.actor;
+  const before = structuredClone(actor.ownership);
+  assert.equal(actor.testUserPermission(player(), "OBSERVER"), false, "alive: players cannot observe it");
+  await corpses.sync(actor);
+  assert.equal(tok.flags[MOD].corpse, true, "the linked token is our corpse");
+  assert.equal(actor.testUserPermission(player(), "OBSERVER"), true, "Item Piles can render the loot window for a player");
+  assert.deepEqual(actor.flags[MOD].ownership, before, "the base actor's map is saved");
+  assert.equal(tok.delta.ownership ?? null, null, "no delta map on a linked token: Foundry ignores it");
+  await corpses.revive(tok);
+  assert.equal(tok.flags[MOD].corpse, undefined);
+  assert.deepEqual(actor.ownership, before, "the saved map comes back exactly");
+  assert.equal(actor.testUserPermission(player(), "OBSERVER"), false);
+  assert.deepEqual(actor.flags[MOD] ?? {}, {}, "no dropbin flag left on the actor");
+});
+
+test("dropbin-EC-3: a second token of the same dead linked NPC keeps the first death's saved map", async () => {
+  const shared = { default: NONE, [GM]: OWNER, [PLAYER]: OBSERVER };
+  const [a, b] = linkedNpc({ ...shared }, 2);
+  await corpses.sync(a.actor);
+  assert.equal(a.flags[MOD].corpse && b.flags[MOD].corpse, true);
+  assert.deepEqual(a.actor.flags[MOD].ownership, shared, "not the corpse's own OBSERVER map");
+  await corpses.revive(a);
+  assert.deepEqual(a.actor.ownership, shared);
+  assert.equal(b.flags[MOD].corpse, undefined);
+});
+
+test("dropbin-EC-3: no player opens a corpse's actor sheet by any route; a forced open shows the loot window", async () => {
+  const [tok] = linkedNpc();
+  const actor = tok.actor;
+  const gob = goblin(null);
+  assert.equal(sheetVeto(actor, true, {}), true, "alive: the sheet opens as usual");
+  await corpses.sync(actor);
+  await corpses.toCorpse(gob);
+  const from = lootWindows().length;
+  assert.equal(sheetVeto(actor, true, { bypassItemPiles: true }), false, "the bypass (Ctrl, the HUD option) is refused");
+  assert.equal(sheetVeto(actor, { force: true }), false, "an ApplicationV2 open is refused");
+  assert.equal(sheetVeto(gob.actor, true, {}), false, "an unlinked corpse's synthetic actor too");
+  assert.equal(sheetVeto(actor, false, {}), false, "a non-forced render is refused, and opens nothing");
+  assert.deepEqual(lootWindows().slice(from).map(c => [c.target, c.opts.useDefaultCharacter]),
+    [[actor, true], [actor, true], [gob.actor, true]], "each forced open shows the loot window instead");
+  assert.equal(Hooks.call("item-piles-preRenderActorSheet", actor, true, { bypassItemPiles: true }), true,
+    "the GM still opens it (HUD: Open character sheet)");
+  await corpses.revive(tok);
+  assert.equal(sheetVeto(actor, true, {}), true, "revived: a creature again");
 });

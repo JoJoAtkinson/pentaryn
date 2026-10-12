@@ -53,6 +53,9 @@ export const turnTokensIntoItemPiles = (docs, opts) => api().turnTokensIntoItemP
 /** Turn piles back into plain tokens. */
 export const revertTokensFromItemPiles = docs => api().revertTokensFromItemPiles(docs);
 
+/** Open Item Piles' loot window on a pile for this user, as its own double-click does. */
+export const renderItemPileInterface = (target, opts) => api()?.renderItemPileInterface?.(target, opts);
+
 /** Item Piles' Svelte store for this loot window, if we can reach it: it tracks the Change button. */
 export function storeOf(app) {
   try {

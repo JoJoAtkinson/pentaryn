@@ -1,4 +1,4 @@
-// The hook manifest (guide step 1.6): the 29 load-time registrations, in today's order, pinned in
+// The hook manifest (guide step 1.6): the 30 load-time registrations, in today's order, pinned in
 // golden/hooks.json (the post-ready sequence is pinned in glue.test as golden/hooks-after-ready.json).
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -14,6 +14,7 @@ test("load-time registrations equal golden/hooks.json", () => {
     // corpses
     "on:updateActor", "on:createActiveEffect", "on:deleteActiveEffect", "on:updateActiveEffect", "on:drawToken", "on:refreshToken",
     "on:canvasReady", "on:updateToken", "on:updateActor", "on:createItem", "on:updateItem", "on:deleteItem", "once:ready", "on:renderTokenHUD",
+    "on:item-piles-preRenderActorSheet",
     // loot
     "on:renderItemPileInventoryApp", "on:item-piles-openInterface", "on:updateActor", "on:createItem", "on:updateItem", "on:deleteItem", "on:updateToken",
     // shim, entry, ledger, item piles

@@ -23,13 +23,18 @@
  *   - Natural weapons, feats and spells never show (the world's `item-piles.itemFilters`).
  *   - Token sight is switched off while it is a corpse (and restored on revival): players observe
  *     it, and an observed token with sight would let them see what the body "sees".
- *   - Players get OBSERVER on the token's own actor delta, never on the base actor, so no stat
- *     block in the sidebar is exposed. Item Piles cannot render a pile for a user without it.
- *     The delta's own map is remembered and put back on revival (null: the base actor's again).
+ *   - Players get OBSERVER on the token's own actor delta (an unlinked token), so no other token of
+ *     the base actor is exposed. Item Piles cannot render a pile for a user without it. The delta's
+ *     own map is remembered and put back on revival (null: the base actor's again).
+ *   - A linked token ignores its delta's ownership, so a linked NPC's corpse grants OBSERVER on the
+ *     base actor itself, its map saved on the actor and put back on revival (dropbin-EC-3).
+ *   - No player opens a corpse's actor sheet, by any route (Joe: "Just loot, they can't open the
+ *     char sheet"): see sheetGuard.
  */
 
 import { MODULE, showEye, eyePlacement, needsRedraw, isActiveGMSelf, isOurCorpse as ourCorpse, hasNoLoot as noLoot } from "./dropbin-core.mjs";
-import { api as itemPilesApi, isValidItemPile, isItemPileEmpty, turnTokensIntoItemPiles, revertTokensFromItemPiles } from "./piles.mjs";
+import { api as itemPilesApi, isValidItemPile, isItemPileEmpty, turnTokensIntoItemPiles, revertTokensFromItemPiles,
+  renderItemPileInterface } from "./piles.mjs";
 
 const OBSERVER = CONST.DOCUMENT_OWNERSHIP_LEVELS.OBSERVER;
 const EYE = "assets/tokens/custom/props/icon-eye.webp";
@@ -70,10 +75,12 @@ function refused(fn, doc, want) {
 async function toCorpse(tokenDoc) {
   if (refused("toCorpse", tokenDoc, "Token")) return;
   if (isPile(tokenDoc)) return;
+  const linked = !!tokenDoc.actorLink;
   // The delta's own ownership before death (usually null: inherit the base actor), for a revival.
   // Already our corpse (Item Piles reverted the pile, the body is still dead): its delta is our
   // OBSERVER map, so keep the map saved at the first death (none saved: a pre-fix corpse, null).
-  const ownership = ourCorpse(tokenDoc) ? (tokenDoc.flags[MODULE].ownership ?? null)
+  // A linked token has no delta map of its own: its base actor's is saved instead (observeBase).
+  const ownership = linked ? null : ourCorpse(tokenDoc) ? (tokenDoc.flags[MODULE].ownership ?? null)
     : foundry.utils.deepClone(tokenDoc.delta?.ownership ?? null);
   await turnTokensIntoItemPiles([tokenDoc], {
     pileSettings: { type: "pile", distance: 1, deleteWhenEmpty: false, closed: false, locked: false,
@@ -85,7 +92,8 @@ async function toCorpse(tokenDoc) {
   // with nothing selected: a dead drow would keep lighting its room. Remember it for a revival.
   try {
     await fresh.update({ [`flags.${MODULE}.corpse`]: true, [`flags.${MODULE}.sight`]: !!fresh.sight.enabled,
-      [`flags.${MODULE}.ownership`]: ownership, "sight.enabled": false, "delta.ownership": { default: OBSERVER } });
+      "sight.enabled": false, ...(linked ? {} : { [`flags.${MODULE}.ownership`]: ownership, "delta.ownership": { default: OBSERVER } }) });
+    if (linked) await observeBase(fresh.actor);
   } catch (err) {
     // dropbin-R6: a pile without our corpse flag is never reverted by a revival; undo it, then report.
     try { await revertTokensFromItemPiles([fresh]); }
@@ -95,6 +103,44 @@ async function toCorpse(tokenDoc) {
   // Dead as core's full-body overlay. The "lootable" eye is not a document: every client draws
   // it on top of the token (paintEye below) while the body still holds something.
   await deadAsOverlay(fresh.actor);
+}
+
+/**
+ * dropbin-EC-3: a linked corpse's players observe its base actor (Item Piles needs OBSERVER to render
+ * the loot window). The base actor's map is saved in its own `corpse`/`ownership` flags at the first
+ * death only: a second token of the same actor, or a re-pile, finds it already ours and keeps it.
+ */
+async function observeBase(actor) {
+  if (!actor || ourCorpse(actor)) return;
+  await actor.update({ [`flags.${MODULE}.corpse`]: true,
+    [`flags.${MODULE}.ownership`]: foundry.utils.deepClone(actor.ownership ?? null), "ownership.default": OBSERVER });
+}
+
+/** Revival: the base actor's saved map written back whole (missing: players back to NONE), our flags gone. */
+async function unobserveBase(actor) {
+  if (!actor || !ourCorpse(actor)) return;
+  const del = () => new foundry.data.operators.ForcedDeletion();
+  const saved = revivedOwnership(actor.flags[MODULE].ownership) ?? { default: CONST.DOCUMENT_OWNERSHIP_LEVELS.NONE };
+  await actor.update({ [`flags.${MODULE}.corpse`]: del(), [`flags.${MODULE}.ownership`]: del(), ownership: saved });
+}
+
+/** A corpse's actor: a linked corpse's base actor, or an unlinked corpse's synthetic actor. */
+const isCorpseActor = actor => !!actor && (ourCorpse(actor) || (!!actor.isToken && !!actor.token && ourCorpse(actor.token)));
+
+/**
+ * dropbin-EC-3 (Joe, 2026-10-12: "Just loot, they can't open the char sheet. They're dead, so they
+ * can't see their stats or bio"). Item Piles fires `item-piles-preRenderActorSheet` from every actor
+ * sheet's render: the canvas double-click, its Ctrl "open the sheet" bypass, the Actors sidebar, a
+ * link, the combat tracker, any `bypassItemPiles` render. A player's render of a corpse's sheet is
+ * vetoed there; a forced open shows the loot window instead. The GM is exempt (HUD: Open sheet).
+ */
+function sheetGuard(actor, forced) {
+  if (game.user.isGM || !isCorpseActor(actor)) return;
+  if (forced === true || forced?.force === true) {
+    Promise.resolve(renderItemPileInterface(actor, { useDefaultCharacter: true }))
+      .catch(err => console.warn(`${MODULE} | loot window failed for ${actor.name}`, err));
+  }
+  return false;
 }
 
 /** Make sure the actor carries Dead as the big overlay (adding it, or promoting a corner icon). */
@@ -119,6 +165,8 @@ async function removeLegacyEye(actor) {
 async function fromCorpse(tokenDoc) {
   if (refused("fromCorpse", tokenDoc, "Token")) return;
   if (!ourCorpse(tokenDoc)) return; // never revert a pile we didn't make
+  // first, so a failure below leaves a corpse the next sync reverts again, never an observed creature
+  if (tokenDoc.actorLink) await unobserveBase(tokenDoc.actor);
   await revertTokensFromItemPiles([tokenDoc]);
   const fresh = tokenDoc.parent?.tokens.get(tokenDoc.id) ?? tokenDoc;
   await removeLegacyEye(fresh.actor);
@@ -384,7 +432,7 @@ function addHudButtons(app, element) {
 /*  Lifecycle                                   */
 /* -------------------------------------------- */
 
-/** Registration order (golden/hooks.json): conversion, eye painting, migration, the GM HUD. */
+/** Registration order (golden/hooks.json): conversion, eye painting, migration, the GM HUD, the sheet guard. */
 export function install(reg, ctx) {
   ctx.expose({ corpses });
   const on = (name, fn, label) => reg.on(name, fn, { label });
@@ -401,6 +449,7 @@ export function install(reg, ctx) {
   }
   ctx.onReady(() => migrateLegacyEyes(), "corpse eye migration");
   on("renderTokenHUD", addHudButtons, "corpse HUD");
+  on("item-piles-preRenderActorSheet", sheetGuard, "corpse: no sheet");
 }
 
 /** Cancel the pending debounced syncs. */

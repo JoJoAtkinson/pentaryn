@@ -24,9 +24,21 @@ the dnd5e 6 rarity keys).
 - **GM token HUD on a corpse:** *Open character sheet (GM)* (Item Piles otherwise takes over the
   double-click) and *Revive (1 HP)*. A Revive that fails leaves the HUD open with one warning toast
   (details in the console as `pentaryn-dropbin | revive failed for <token>`).
-- **Ownership:** players get OBSERVER on the token's own actor delta while it is a corpse (Item
-  Piles needs it), never on the base actor. A revival gives back the delta map saved at death
-  (none saved: the base actor's again). Sight is off on a corpse and restored on revival.
+- **Loot, never the sheet** (Joe, 2026-10-12: "Just loot, they can't open the char sheet. They're
+  dead, so they can't see their stats or bio"). A player opens a corpse only through the loot
+  window. Every other way to its actor sheet (Item Piles' Ctrl-double-click bypass, the Actors
+  sidebar, a link, the combat tracker, any `bypassItemPiles` render) is refused, and a forced open
+  shows the loot window instead. The GM is exempt (HUD: *Open character sheet (GM)*). The guard is
+  Item Piles' `item-piles-preRenderActorSheet` hook, so it needs Item Piles active; a sheet a player
+  already had open when the creature died stays open until they close it.
+- **Ownership:** Item Piles needs players to observe a pile. An unlinked corpse gives them OBSERVER
+  on the token's own actor delta, and a revival gives back the delta map saved at death (none
+  saved: the base actor's again). A **linked** NPC's token ignores its delta, so its corpse gives
+  players OBSERVER (`ownership.default`) on the base actor itself, saved at the first death in the
+  actor's own `corpse`/`ownership` flags and written back on revival (dropbin-EC-3). Its Actors
+  sidebar row stays hidden from players (it is a pile actor). `inspect`'s `saved.ownership` is the
+  token's delta map; a linked corpse's lives on the actor. Sight is off on a corpse and restored on
+  revival.
 - **Old corpses** (before October 2026) carried a "Lootable" effect and Dead as a corner icon; the
   active GM's client fixes them at every `ready` (`corpses.migrateLegacyEyes()`, safe to re-run).
 
@@ -95,6 +107,7 @@ itemName, itemType, quantity, sceneId, sceneName, x, y, pileUuid, item}`.
 | `Data/assets/drop-bin/drop-log.json` | the mirror, ~2 s after a burst; `export()` at once | the recording GM |
 | token `flags.pentaryn-dropbin.corpse`, `.sight`, `.ownership` | our corpse, its sight and pre-death delta ownership | active GM |
 | token `delta.ownership`, `sight.enabled`; Item Piles pile flags | while a corpse | active GM |
+| linked NPC actor `flags.pentaryn-dropbin.corpse`, `.ownership`; `ownership.default` | a linked corpse: its pre-death map, players OBSERVER | active GM |
 | actor/token `flags.item-piles.data.lockedSound`; pile `sight.enabled`; Note `global` | ready backfills | active GM |
 | ActiveEffect Dead (`flags.core.overlay`) | the corpse overlay | active GM |
 | `system.attunement` on items Item Piles creates | the repair (`preCreateItem`, in memory before the create) | the creating client |
@@ -107,7 +120,7 @@ n/a — no other module reads `flags.pentaryn-dropbin.*`. This module reads `fla
 ## Events
 
 n/a — emits none of its own beyond the kit's `pentaryn-dropbin.ready` (api) and `pentaryn.ready`.
-Listens to the 29 load-time and 6 post-ready hooks pinned in `test/golden/hooks.json` and
+Listens to the 30 load-time and 6 post-ready hooks pinned in `test/golden/hooks.json` and
 `test/golden/hooks-after-ready.json`.
 
 ## Patches and adjustments
@@ -120,6 +133,7 @@ Listens to the 29 load-time and 6 post-ready hooks pinned in `test/golden/hooks.
   registers inside an async `ready` after the pack indexes load, so attunement's runs first.
 - container locks: `item-piles-preRenderInterface`, `item-piles-preRenderActorSheet` (vetoes) and
   `item-piles-preRattleItemPile` (words only)
+- corpse sheets: `item-piles-preRenderActorSheet` (veto for players) and `renderItemPileInterface`
 - directory hiding: `renderActorDirectory`, `renderJournalDirectory`
 - Loot all reads Item Piles' private Svelte state (`app.svelte.appShell.$$.ctx`) to follow *Change*
 - Loot all finds the loot window's footer, its Close Lid / Leave buttons and the native Take All

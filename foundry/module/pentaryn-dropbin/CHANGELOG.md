@@ -79,6 +79,14 @@ Declared changes:
   is not a TokenDocument (`sync`: an Actor); they threw raw TypeErrors. A failed corpse-flag write in
   `toCorpse` reverts the pile it just made and rejects, instead of leaving a pile no revival undoes.
   Without Item Piles the hp/effect hooks no longer queue a sync at all.
+- dropbin-EC-3 (Joe, 2026-10-12: "Just loot, they can't open the char sheet"): a dead **linked**
+  NPC is now lootable. Its token ignores `delta.ownership`, so players never got the OBSERVER Item
+  Piles needs and the pile would not open; its base actor now gets `ownership.default: OBSERVER`
+  while it is a corpse, the pre-death map saved in the actor's `corpse`/`ownership` flags at the
+  first death and written back on revival. No player opens any corpse's actor sheet by any route
+  (Ctrl-double-click bypass, sidebar, links, `bypassItemPiles`): `item-piles-preRenderActorSheet`
+  vetoes it and a forced open shows the loot window instead; unlinked corpses' sheets were reachable
+  through the Ctrl bypass too. One more load-time hook (30).
 - dropbin-R7: a failed HUD *Revive* is one console warning
   (`pentaryn-dropbin | revive failed for <token>`) and one warn toast ("Could not revive <token>. See
   the console."), and the HUD stays open; it was an unhandled, unprefixed rejection with nothing on
