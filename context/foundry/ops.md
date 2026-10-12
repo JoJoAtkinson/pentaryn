@@ -474,7 +474,9 @@ Restore `.safety` copies and `major-release/` are never offered as "newer".
 - **Packs are append-only.** Never edit a published zip; add `<kind>-<nn+1>.zip`. A zip whose hash
   changed after extraction is **refused with a message**, not silently re-applied.
 - **One folder per pack**, so cross-pack collisions are structurally impossible.
-- **Filenames kebab-case at extraction only** — never rename inside an extracted pack.
+- **Filenames kebab-case at extraction only** — never rename inside an extracted pack. A folder
+  whose name kebabs to nothing (e.g. `地图/`) is dropped from the path; a *file* whose name kebabs
+  to nothing, or two members that kebab to the same path, refuse the whole pack with a message.
 - **Backup and restore hard-refuse while Foundry is running.** (The background *upload* of an
   already-built tar does not care: it reads only the tar.)
 - **Art never goes in git.** OneDrive holds the bytes; `foundry/assets-manifest.json` holds the

@@ -690,7 +690,8 @@ def unpack_assets(dry_run: bool = False, if_reachable: bool = False) -> int:
 
 def _extract_pack(zp: Path, zname: str, pack: str, dest: Path, problems: list) -> int | None:
     """Extract to a temp dir, then move into place, so an interrupted run never leaves a
-    half-populated pack the manifest would later call complete. None on a collision."""
+    half-populated pack the manifest would later call complete. None on a collision or a
+    member whose name normalises to nothing; folders that normalise to nothing are dropped."""
     dest.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(dir=str(dest.parent)) as tmp:
         staging = Path(tmp) / pack
@@ -704,7 +705,12 @@ def _extract_pack(zp: Path, zname: str, pack: str, dest: Path, problems: list) -
                          if p not in ("__MACOSX",) and not p.startswith("._")]
                 if not parts or parts[-1] in JUNK_NAMES or parts[-1].startswith("."):
                     continue
-                rel = "/".join(kebab(p) for p in parts)
+                if not kebab(parts[-1]):
+                    problems.append(
+                        f"{zname}: '{info.filename}' normalises to nothing — "
+                        f"rename it inside the zip")
+                    return None
+                rel = "/".join(k for k in (kebab(p) for p in parts) if k)
                 if rel in seen:
                     problems.append(
                         f"{zname}: '{info.filename}' and '{seen[rel]}' both "
