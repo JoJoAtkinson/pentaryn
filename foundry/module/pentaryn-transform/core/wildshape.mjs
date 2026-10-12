@@ -43,7 +43,7 @@ const consumptionTargets = a => a?.consumption?.targets ?? [];
 
 /* ── shaping the form ────────────────────────────────────────────────────── */
 
-/** The Circle of the Stars "Starry Form" feature: by identifier, else by name (starry.mjs starryItem). */
+/** The Circle of the Stars "Starry Form" feature: by identifier, else by name (starry-adapter.mjs starryItem: same identifier, same name fallback; keep the two in step). */
 export function isStarryFormData(item) {
   return item?.system?.identifier === "starry-form" || item?.name === "Starry Form";
 }
