@@ -88,6 +88,10 @@ attribute and it reads `auto`) now takes the `#inspect` claim before writing any
 rung does, so with one GM signed in twice only the session that wins the claim writes the ledger rows
 and hands over the grant. A cascade with nothing to do still takes no claim. AC-3.
 
+Fixed (declared): an **inspection relayed for an actor that is not a character sheet** (an NPC named
+as the inspector) is now refused before anything is written, the same refusal a study roll makes —
+no ledger rows or grants land under an NPC's id. rob-5.
+
 ## 0.19.4 (2026-10-10, usability run, Area 7 re-run)
 
 - **The inspect window's Share switches are the table's PCs only** (`tablePCs`): each player's

@@ -157,6 +157,7 @@ export async function applyInspect(payload, senderId, { postStubCard = false } =
     return false;
   };
   if (!user || !character || !subject) return refuse("unknown actor");
+  if (character.type !== "character") return refuse(`${character.name} is not a character sheet`);
   if (character.testUserPermission(user, "OWNER") !== true) return refuse(`${user.name} does not own ${character.name}`);
   if (!mayWrite(user)) return refuse(`playerAccess is off for ${user.name}`);
   if (!canReach(user, subject)) return refuse(`${user.name} cannot see ${subject.name}`);
