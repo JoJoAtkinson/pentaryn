@@ -158,7 +158,7 @@ def _gate_imports(spec: cfg.ModuleSpec) -> GateResult:
         return target
 
     def exported(path: Path, name: str, seen: set[Path] | None = None) -> bool:
-        """Membership, following `export * from` / `export {x} from` one hop at a time."""
+        """Membership, following `export * from` one hop at a time."""
         seen = seen or set()
         if path in seen:
             return False
