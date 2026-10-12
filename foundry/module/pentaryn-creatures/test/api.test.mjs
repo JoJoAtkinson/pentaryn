@@ -124,6 +124,17 @@ test("creatures-rob-2: list(null, scene) / list(user, null) fall to the defaults
   assert.deepEqual(api.list(rook, null), api.list(rook), "null scene = the viewed scene");
 });
 
+test("creatures-rob-5 [declared]: isCreature reads a Token placeable through its document; null/undefined answer false", () => {
+  for (const id of ["tImp", "tEye", "tPC", "tHandle", "tHandle2", "tPile", "tPile2", "tGob"]) {
+    assert.equal(api.isCreature(W.p(id)), api.isCreature(W.tok(id)), `${id}: the placeable answers like its document`);
+  }
+  assert.equal(api.isCreature(W.p("tHandle2")), false, "the token-level pentaryn-aoe handle flag is read off the placeable's document");
+  assert.equal(api.isCreature(W.p("tPile")), false, "the token-level Item Piles flag is read off the placeable's document");
+  assert.equal(api.isCreature(null), false, "was: TypeError");
+  assert.equal(api.isCreature(undefined), false);
+  assert.equal(api.isCreature(), false);
+});
+
 test("creatures-rob-4 [declared]: syncScene resolves a scene id, uuid or exact name; a missing one rejects coded on every client", async () => {
   const alpha = W.scene("sceneAlpha000001");
   assert.equal(await api.syncScene("sceneAlpha000001"), 0, "an id (ready already lit everything)");

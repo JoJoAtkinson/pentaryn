@@ -102,7 +102,8 @@ Also `game.modules.get("pentaryn-creatures").api`; published at `ready`, frozen,
   or its id, uuid or exact name. Run it as the GM with a player's `User` (or user id) to check what they'd see. `[]` without
   a scene.
 - `render()`: force a redraw of this client's strip.
-- `isCreature(tokenDoc)` → boolean: would this token get the light?
+- `isCreature(tokenDoc)` → boolean: would this token get the light? A Token placeable answers through
+  its document (the same answer); `null`/`undefined` answer `false`.
 - `syncScene(scene, ids?)` → `Promise<number>`, `syncAll()` → `Promise<number>`: active GM client
   only (0 elsewhere). Re-run the light pass; resolves to how many tokens were written. `scene` may be
   a document or its id, uuid or exact name; a missing or unknown one rejects `BAD_ARGS` / `NOT_FOUND`

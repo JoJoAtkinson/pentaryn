@@ -76,7 +76,12 @@ export function buildApiFor(ctx) {
     // documents → a Set; null/undefined = all
     syncScene: async (scene, ids) => x.syncScene(resolveRef(scene, "scene"), ids == null ? null : toIdSet(ids)),
     syncAll: () => x.syncAll(),
-    isCreature: (tokenDoc) => isPlayerCreature(summarize(tokenDoc)),
+    // a Token placeable answers through its document (token-level flags live there); null/undefined → false
+    // (creatures-rob-5)
+    isCreature: (tokenDoc) => {
+      const doc = tokenDoc?.document ?? tokenDoc;
+      return doc ? isPlayerCreature(summarize(doc)) : false;
+    },
     // a TokenDocument answers for its placeable on the viewed scene (a document off-canvas: false)
     ownerSees: (token) => x.ownerSees(token?.object ?? token),
     patchedWith: () => x.patchedWith(),

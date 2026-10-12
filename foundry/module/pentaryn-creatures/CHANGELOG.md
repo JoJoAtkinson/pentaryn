@@ -44,6 +44,10 @@ a player or GM can notice:
   name (what the bridge sends); a missing or unknown scene rejects with a coded `BAD_ARGS` /
   `NOT_FOUND` on every client (was a raw `TypeError` on the active GM and a silent `0` elsewhere).
   A player client with a valid scene still resolves `0`.
+- **[declared] creatures-rob-5** — `isCreature(token)` reads a Token placeable through its
+  document, so a placeable answers like its document (it used to miss token-level flags and call an
+  Item Piles chest or a pentaryn-aoe area handle a creature); `isCreature(null)` answers `false`
+  instead of throwing a `TypeError`.
 
 ## 0.1.1 — 2026-10-10
 

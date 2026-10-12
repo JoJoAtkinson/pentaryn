@@ -60,11 +60,11 @@ export const MANIFEST = Object.freeze({
     },
     {
       path: "isCreature",
-      params: [{ name: "tokenDoc", type: "TokenDocument" }],
+      params: [{ name: "tokenDoc", type: "TokenDocument | Token placeable", doc: "a placeable answers through its document" }],
       returns: "boolean",
       gm: false, writes: false, legacy: true,
       doc: "Does this token get the creature light: a player-owned npc that is not an Item Piles pile or an "
-        + "aoe area handle? Never a PC or its Wild Shape form.",
+        + "aoe area handle? Never a PC or its Wild Shape form. null/undefined answer false.",
     },
     {
       path: "ownerSees",
