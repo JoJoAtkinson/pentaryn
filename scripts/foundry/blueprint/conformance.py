@@ -61,9 +61,17 @@ README_SECTIONS = ("What the player sees", "Settings", "API", "Data written", "F
                    "Tests", "Sync")
 SIZE_CAPS = {"entry": 150, "core": 600, "api": 300, "other": 500, "css": 400, "readme": 250}
 HOT_HOOKS = tuple(PACKAGES["hotHooks"])
+HOT_HOOK_PREFIXES = tuple(PACKAGES.get("hotHookPrefixes", ()))
 READINESS = re.compile("|".join(re.escape(t) for t in PACKAGES["readinessTokens"]))
 PRIVATE_PATTERNS = [re.compile(p) for p in PACKAGES.get("privateInternalPatterns", [])]
 WORLD_ITER = re.compile(r"game\.actors\b|game\.scenes\b|canvas\.tokens\.placeables")
+
+
+def is_hot_hook(name: str) -> bool:
+    """A hook that fires per object per frame (C49, C60): an exact `hotHooks` row, or any name that
+    starts with a `hotHookPrefixes` row (refreshTile, drawTokenLayer, hoverNote…)."""
+    return name in HOT_HOOKS or name.startswith(HOT_HOOK_PREFIXES)
+
 
 # role → roles it may import (use-doc §2). "glue" = a legacy file not yet given a role: allowed
 # anything but the entry and test/, and listed so the migration can classify it.
@@ -1311,7 +1319,7 @@ def c49(m):
         code = src.code
         for mm in re.finditer(r"(?:Hooks|reg)\.on\(\s*\x01(\d+)\x01\s*,\s*", code):
             name = src.strings[int(mm.group(1))].value
-            if name not in HOT_HOOKS:
+            if not is_hot_hook(name):
                 continue
             after = code[mm.end():]
             body = ""
@@ -1824,7 +1832,7 @@ def c59(m):
 def c60(m):
     found = []
     for ls in listeners(m):
-        if ls.name not in HOT_HOOKS:
+        if not is_hot_hook(ls.name):
             continue
         body = ls.body or ""
         if (ls.is_async or re.search(r"(?<![\w$])await\b", body)) and not DEFER.search(body):

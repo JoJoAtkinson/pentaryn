@@ -930,3 +930,21 @@ def test_py_blueprint_rob_5_a_malformed_sibling_manifest_is_skipped_and_the_brok
         assert conformance.main(argv) == 2
         err = capsys.readouterr().err
         assert "✗ pentaryn-broken: module.json is not valid JSON: " in err, err
+
+
+def test_py_blueprint_ac_9_hot_hooks_match_by_prefix_from_packages_json(tmp_path):
+    """py-blueprint-AC-9: `refresh*`, `draw*` and `hover*` fire per object per frame, so C49 and C60
+    treat every hook with those prefixes as hot (refreshTile, drawTokenLayer, hoverNote…), not only
+    the exact names; the prefixes live in packages.json, never in the .py."""
+    assert conformance.PACKAGES["hotHookPrefixes"] == ["refresh", "draw", "hover"]
+    for name in ("refreshTile", "drawTokenLayer", "hoverNote", "refreshToken", "sightRefresh",
+                 "canvasPan", "pointermove"):
+        assert conformance.is_hot_hook(name), name
+    for name in ("updateActor", "renderChatMessage", "createToken", "preRefresh"):
+        assert not conformance.is_hot_hook(name), name
+
+    for hook in ("refreshTile", "drawTokenLayer", "hoverNote"):
+        d = _tiny(tmp_path / hook, files={"one.mjs": f'Hooks.on("{hook}", () => {{ for (const a of game.actors) a; }});\n'})
+        assert status(conformance.score_dir(d), "C49") == "warn", hook
+        report = one(tmp_path / f"{hook}-async", f'reg.on("{hook}", async (t) => {{ await paint(t); }});')
+        assert res(report, "C60")["status"] == "warn", hook

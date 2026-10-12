@@ -380,8 +380,9 @@ is fine at this table; on-screen leaks are not.
 
 ### 5.5 Performance
 
-Hot hooks (`refreshToken`, `drawToken`, `sightRefresh`, `canvasPan`, `hoverToken`,
-`updateWorldTime`, Argon action-panel render, `pointermove`) read from a cache or `memo`, never
+Hot hooks (every `refresh*`, `draw*` and `hover*` hook, plus `sightRefresh`, `canvasPan`,
+`updateWorldTime`, Argon action-panel render, `pointermove`; packages.json `hotHooks` and
+`hotHookPrefixes`) read from a cache or `memo`, never
 iterate `game.actors`/`game.scenes`/`canvas.tokens.placeables`, and carry a `// hot: <cache>`
 comment (C49). World-wide reactions run on one client (`isActiveGM()`, `claimDocument` for two GM
 sessions), with batched writes and `coalesce`/`foundry.utils.debounce` for rebuilds. Who runs what, and why, is §5.9.
