@@ -68,3 +68,17 @@ before-goldens saved, the three syncs re-run (same digests: ties a56fbc19, comba
 
 **Foundry state.** Up, world pentaryn loaded, Gamemaster the only active user, one GM tab answering
 `get-world-info`.
+
+## Integration INT-1259
+
+| Area | Status | Merge SHA | Revert SHA | Synced modules | Reason |
+|---|---|---|---|---|---|
+| combat-hud | merged | 5993178a | — | combat | — |
+| senses | merged | 4db133a1 | — | senses | — |
+| kit | merged | ea8e9d8a | — | none (lib tests only) | — |
+
+**Gates on main (ea8e9d8a).** `make foundry-modules-check` (20 modules), `foundry-lib-check`, `make test` (1581 passed), `check-context` all green. No fork area, no `module.json` change: no restart, no bridge rebuild.
+
+**Deploy.** Rollback copies in `.state/live-rollback/INT-1259/`; `make foundry-{combat,senses}-sync` (FROM=local); one GM-tab reload. Boot probe: combat 0.3.0 and senses 0.5.0 `describe()` match `module.json`, every path a function, combat `selftest().ok` true.
+
+**Goldens.** Before (deployed old code) and after (new code) in the one GM tab, diffed in page: combat and senses `shared`, `declared`, env all empty; cleanups clean. No allowlist. Reverted: none.
