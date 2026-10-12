@@ -93,7 +93,7 @@ test("a rejected refund is logged with the same prefix", async () => {
   assert.deepEqual(lines(), [`error: ${MODULE} | refund cancelled area`]);
 });
 
-test("-9 KNOWN: both cleanup deletes rejecting → refund() resolves true, one info toast, no console output today", async () => {
+test("[declared] -9: both cleanup deletes rejecting → refund() resolves true, one info toast, and two 'pentaryn-aoe | refund …' warnings (was: silent)", async () => {
   const c = cast({
     effects: [{}],
     msgDelete: async () => { throw new Error("gone"); },
@@ -104,7 +104,7 @@ test("-9 KNOWN: both cleanup deletes rejecting → refund() resolves true, one i
   F.calls.length = 0;
   assert.equal(await R.refund(c.activity, c.usageConfig, c.results), true);
   assert.equal(F.calls.filter(x => x.op === "notify").length, 1);
-  assert.deepEqual(out, []);
+  assert.deepEqual(out.map(o => [o.level, o.text]), [["warn", "pentaryn-aoe | refund end concentration"], ["warn", "pentaryn-aoe | refund card cleanup"]]);
 });
 
 test("the Careful arm (resolve) runs before refund's veto on the same hook", async () => {

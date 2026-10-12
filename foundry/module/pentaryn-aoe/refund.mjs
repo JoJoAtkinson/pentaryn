@@ -42,8 +42,15 @@ async function refund(activity, usageConfig, results) {
   await activity.refund(deltas);
   // The concentration this cast began goes too (its effect id is on the card).
   const began = (results.effects ?? []).filter(e => e?.parent === activity.actor && e.statuses?.has?.(CONFIG.specialStatusEffects?.CONCENTRATING ?? "concentrating"));
-  for (const e of began) if (activity.actor.effects.has(e.id)) await e.delete().catch(() => null);
-  if (game.messages.has(message.id)) await message.delete().catch(() => message.update({ "system.deltas": null }).catch(() => null));
+  // -9: log what the clean-up could not do. If neither the card's delete nor its fallback update
+  // lands, the card keeps its Refund button and could be refunded twice.
+  const gone = err => /does not exist/i.test(err?.message ?? "");
+  for (const e of began) {
+    if (activity.actor.effects.has(e.id)) await e.delete().catch(err => (gone(err) ? null : log.warn("refund end concentration", err)));
+  }
+  if (game.messages.has(message.id)) {
+    await message.delete().catch(() => message.update({ "system.deltas": null }).catch(err => log.warn("refund card cleanup", err)));
+  }
   ui.notifications?.info?.(_loc("PENTARYN_AOE.Refund.Done", { item: activity.item?.name ?? "" }));
   return true;
 }
