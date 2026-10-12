@@ -79,8 +79,6 @@ const { ApplicationV2 } = foundry.applications.api;
 
 const esc = s => foundry.utils.escapeHTML(String(s ?? ""));
 
-/** Debounce for live refreshes — a cascade lands as several writes in a burst. Same as preview. */
-
 /** One window per (character, subject) on this client. */
 const open = new Map();
 const pairKey = (character, subject) => `${character.id}:${subject.id}`;
