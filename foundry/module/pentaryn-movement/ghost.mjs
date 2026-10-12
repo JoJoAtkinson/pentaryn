@@ -34,7 +34,7 @@ let log = null;
 const policy = () => core.normalizePolicy(setting("ghostPolicy"));
 const wish = () => !!setting("ghost");
 
-export function combatActive(sceneId = canvas?.scene?.id) {
+function combatActive(sceneId = canvas?.scene?.id) {
   return core.combatOnScene(combatSummaries(), sceneId);
 }
 
@@ -58,13 +58,13 @@ function invalidate() {
 }
 
 /** Ghost in effect for this placeable (Token) on this client? */
-export function ghostFor(token) {
+function ghostFor(token) {
   const doc = token?.document;
   if (!doc) return false;
   return core.ghostForCtx(context(), { isGM: game.user.isGM, isOwner: !!doc.isOwner, sceneId: doc.parent?.id });
 }
 
-export function ownedRankOf(token) {
+function ownedRankOf(token) {
   return core.ownedRank({ isGM: game.user.isGM, enabled: context().ownedOnTop, isOwner: !!token?.document?.isOwner });
 }
 
@@ -76,7 +76,7 @@ const SETTING_SCOPES = Object.freeze(Object.fromEntries(SETTINGS.map(r => [r.key
  * the scene this client views). The first eight keys are the historic ones; sceneId, version and
  * the settings key map are appended after them.
  */
-export function status(opts = {}) {
+function status(opts = {}) {
   const sceneId = opts?.sceneId ?? canvas?.scene?.id ?? null;
   return {
     ...core.statusFrom({
@@ -242,7 +242,7 @@ function addTools(controls) {
 }
 
 /** The player's button, and `setGhost` on the API. */
-export async function onPlayerToggle(active) {
+async function onPlayerToggle(active) {
   try {
     if (active) {
       const { allowed, reason } = core.ghostAllowed({ policy: policy(), combatActive: combatActive() });
