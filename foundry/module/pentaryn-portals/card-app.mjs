@@ -7,7 +7,7 @@
  * that it is a no-op, which cannot happen at runtime — the entry installs features before any render.
  */
 
-import { MODULE, cardHTML, esc } from "./portals-core.mjs";
+import { MODULE, cardHTML, esc, landingCandidate } from "./portals-core.mjs";
 import { cardFor, destinationsOf, docOf, linkPair, lookAt, passageRevealed, snapshot, teleportBehaviors, unlinkRegion } from "./scene-adapter.mjs";
 import { flagPath } from "./lib/flags.mjs";
 
@@ -96,10 +96,11 @@ export class PortalCard extends foundry.applications.api.ApplicationV2 {
       </article>`;
     }).join("");
 
-    // Any other region whose behaviors are all teleports (or none) can be a landing spot.
+    // Any other region whose behaviors are all teleports (or none) can be a landing spot — the same
+    // landingCandidate rule api.link() applies (EXT-9).
     const taken = new Set([this.region.uuid, ...dests.map(d => d.uuid)]);
     const opts = game.scenes.contents.flatMap(sc => sc.regions.contents
-      .filter(r => !taken.has(r.uuid) && !r.behaviors.some(b => b.type !== "teleportToken"))
+      .filter(r => !taken.has(r.uuid) && landingCandidate(r))
       .map(r => `<option value="${esc(r.uuid)}">${esc(sc.name)} — ${esc(r.name)}</option>`)).join("");
     const add = `<section class="ppt-add">
       <select data-act="addsel"><option value="">${_loc("PENTARYN_PORTALS.Card.AddDestination")}</option>${opts}</select>

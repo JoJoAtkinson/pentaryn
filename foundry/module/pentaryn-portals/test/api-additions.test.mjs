@@ -80,6 +80,24 @@ test("link: refusals come back as fail(), never a throw (await a write either wa
   assert.deepEqual(r, [false, "NOT_GM"]);
 });
 
+// [declared] EXT-9 (Joe 2026-10-12): api.link() takes the card's landing-spot rule — a target with any
+// behavior other than Teleport Token is refused (dryRun says the same), and the card does not list it.
+test("link (EXT-9): a target with non-teleport behaviors is not a landing spot — BAD_ARGS, dryRun too, no write; the card omits it", async () => {
+  const P = places(W, "L3");
+  const trap = W.region(P.pit, { id: "RegTrapL3", name: "Trap", behaviors: [{ id: "BhvTrapL3", type: "executeScript" }] });
+  let n = F.calls.length;
+  for (const dryRun of [true, false]) {
+    const r = await api().link(P.passage, { to: trap.uuid, dryRun });
+    assert.deepEqual([r.ok, r.code, r.reason], [false, "BAD_ARGS", "not a landing spot: Trap has non-teleport behaviors"], `dryRun ${dryRun}`);
+  }
+  assert.deepEqual(W.callsSince(n, ["update", "createEmbedded", "updateEmbedded"]), []);
+  const app = await S.PortalCard.open(P.passage, { edit: true });
+  const values = [...app.element.querySelectorAll('[data-act="addsel"] option')].map(o => o.value ?? o.getAttribute("value"));
+  assert.equal(values.includes(trap.uuid), false, "the card does not offer it");
+  assert.equal(values.includes(P.stair.uuid), true, "a plain region is offered");
+  await app.close();
+});
+
 test("unlink(ref, { to }): drops the entry (relative or absolute), counts the behaviors; dryRun counts only", async () => {
   const P = places(W, "U");
   let n = F.calls.length;

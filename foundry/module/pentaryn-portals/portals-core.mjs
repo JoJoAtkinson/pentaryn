@@ -273,6 +273,15 @@ export function withoutDestination(stored, uuid, toAbsolute) {
 }
 
 /**
+ * Can this region be a landing spot (a link's target)? Only when it has no behaviors other than
+ * Teleport Token — one rule for the Portal card's Add-a-destination list and api.link() (EXT-9).
+ * `region.behaviors` is any iterable of `{ type }` (a Foundry collection or a plain array).
+ */
+export function landingCandidate(region) {
+  return ![...(region?.behaviors?.values?.() ?? region?.behaviors ?? [])].some(b => b.type !== "teleportToken");
+}
+
+/**
  * Does a token that just arrived share a square with someone already there? (usability Area 6
  * re-run, W7: two PCs crossing at once, plus the Fighter already there, all stood on the one
  * landing square.) Boxes are {x, y, w, h} in pixels; touching edges do not count.

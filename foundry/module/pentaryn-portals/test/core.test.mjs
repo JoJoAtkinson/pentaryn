@@ -186,3 +186,13 @@ test("crowded", () => {
   assert.equal(crowded({ x: 0, y: 0, w: 100, h: 100 }, null), false);
   assert.equal(crowded({ x: 0, y: 0, w: 100, h: 100 }), false);
 });
+
+// [declared] EXT-9 (Joe 2026-10-12): one landing-spot rule for the card's list and api.link().
+test("landingCandidate (EXT-9): no behaviors, or only teleportToken ones; anything else is not a landing spot", () => {
+  assert.equal(typeof core.landingCandidate, "function");
+  assert.equal(core.landingCandidate({ behaviors: [] }), true);
+  assert.equal(core.landingCandidate({ behaviors: [{ type: "teleportToken" }, { type: "teleportToken" }] }), true);
+  assert.equal(core.landingCandidate({ behaviors: new Map([["a", { type: "teleportToken" }], ["b", { type: "executeScript" }]]) }), false);
+  assert.equal(core.landingCandidate({ behaviors: [{ type: "adjustDarknessLevel" }] }), false);
+  assert.equal(core.landingCandidate({}), true);
+});

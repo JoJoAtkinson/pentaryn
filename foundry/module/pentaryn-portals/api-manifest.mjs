@@ -83,7 +83,8 @@ export const MANIFEST = Object.freeze({
       gm: true, writes: true,
       sideEffects: ["RegionBehavior: system.destinations (update), or a new Teleport Token behavior"],
       doc: "Make the region lead to opts.to, exactly as the Portal card's Add a destination does: added to its first "
-        + "enabled teleport behavior, or a new one (asks first, revealed, fade 1500 ms). twoWay also links back. Already linked is a no-op.",
+        + "enabled teleport behavior, or a new one (asks first, revealed, fade 1500 ms). twoWay also links back. Already linked is a no-op. "
+        + "A target with any behavior other than Teleport Token is not a landing spot: BAD_ARGS (dryRun too), as the card does not list it.",
     },
     {
       path: "unlink",

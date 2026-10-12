@@ -5,7 +5,7 @@
  * implementations arrive as contributions from their install() (ctx.contributions).
  */
 
-import { HOOKS, NS } from "./portals-core.mjs";
+import { HOOKS, NS, landingCandidate } from "./portals-core.mjs";
 import { MANIFEST } from "./api-manifest.mjs";
 import { behaviorsLeadingTo, cardFor, destinationsOf, linkPair, lookAt, passageRevealed, snapshot, teleportParty, unlinkRegion } from "./scene-adapter.mjs";
 import { SETTINGS, settingsSnapshot } from "./settings.mjs";
@@ -64,6 +64,7 @@ async function link(from, ctx, { to, twoWay = false, dryRun = false } = {}) {
   let dest;
   try { dest = otherEnd(to); } catch (err) { return toFail(err); }
   if (dest === from) return fail("BAD_ARGS", "a region cannot lead to itself");
+  if (!landingCandidate(dest)) return fail("BAD_ARGS", `not a landing spot: ${dest.name} has non-teleport behaviors`);   // EXT-9: the card's rule
   const out = { from: refOf(from), to: refOf(dest), twoWay: !!twoWay };
   if (dryRun) return ok({ dryRun: true, ...out });
   try {
