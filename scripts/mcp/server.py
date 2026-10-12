@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import ast
 import importlib.util
+import inspect
 import json
 import os
 import subprocess
@@ -307,10 +308,13 @@ class ToolRunner:
         # In-process dispatch when the script exposes MCP_HANDLERS — skips subprocess startup
         # and lets the script's module-level state (e.g. cached HTTP sessions) persist across calls.
         if self.handler is not None:
+            # Only a signature mismatch is "Invalid arguments"; a TypeError raised inside
+            # the handler body propagates with its own message (py-mcp-rob-6).
             try:
-                result = self.handler(**arguments)
+                inspect.signature(self.handler).bind(**arguments)
             except TypeError as exc:
                 raise ValueError(f"Invalid arguments for {self.tool.name}: {exc}") from exc
+            result = self.handler(**arguments)
             if isinstance(result, str):
                 return result
             return json.dumps(result, indent=2, ensure_ascii=False)

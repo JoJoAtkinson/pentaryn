@@ -731,3 +731,31 @@ def test_py_mcp_rob_3_group_exclusions_are_one_summary_line(tmp_path, monkeypatc
     out = capsys.readouterr().out
     assert "lore_a.py: group filter excludes" in out
     assert "lore_b.py: group filter excludes" in out
+
+
+# ---------------------------------------------------------------------------
+# py-mcp-rob-6 (EC-8): only a signature mismatch is "Invalid arguments"
+# ---------------------------------------------------------------------------
+
+def test_py_mcp_rob_6_handler_body_type_error_keeps_its_message(monkeypatch, capsys):
+    """py-mcp-rob-6: any TypeError raised inside a handler's body was relabelled
+    'Invalid arguments for <tool>'. Now only a bind failure is; a body TypeError
+    propagates with its own message (the worker still returns it as -32000)."""
+    def handler(*, name: str):
+        return name + 1  # TypeError from the body, not from the arguments
+
+    runner = _runner(handler)
+    with pytest.raises(TypeError) as excinfo:
+        runner.run(arguments={"name": "x"})
+    assert "Invalid arguments" not in str(excinfo.value)
+
+    with pytest.raises(ValueError, match=r"^Invalid arguments for probe: "):
+        runner.run(arguments={"nope": 1})
+    with pytest.raises(ValueError, match=r"^Invalid arguments for probe: "):
+        runner.run(arguments={})
+
+    monkeypatch.delenv("PENTARYN_MCP_LOG_DIR", raising=False)
+    sent = _call(monkeypatch, runner, {"name": "x"})
+    assert sent[0]["error"]["code"] == -32000
+    assert "Invalid arguments" not in sent[0]["error"]["message"]
+    assert "str" in sent[0]["error"]["message"]
