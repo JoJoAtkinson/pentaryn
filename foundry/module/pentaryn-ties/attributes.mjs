@@ -650,7 +650,8 @@ function resolveMany(refs) {
 }
 
 /** Tick these (adds to the selection; `{ replace: true }` replaces it). → `{ ok, ids, missed? }`. */
-export async function selectAttributes(refs, { replace = false } = {}) {
+export async function selectAttributes(refs, opts = {}) {
+  const { replace = false } = opts ?? {};
   const r = resolveMany(refs);
   const base = replace ? [] : selectionIds();
   const out = await writeSelection([...base, ...r.ids.filter(id => !base.includes(id))]);
@@ -1121,7 +1122,8 @@ export async function clearKnowledge(characterId, attrId) {
  * `ref` is an id or a name; an unknown one is refused rather than written as a ghost row.
  * → `{ok:true, ids:[…]}` | `{ok:false, reason:"notGM"|"invalid"|"empty"|"notFound"|"ambiguous"|"writeFailed"}`
  */
-export async function grantKnowledge(character, ref, { withParents = false } = {}) {
+export async function grantKnowledge(character, ref, opts = {}) {
+  const { withParents = false } = opts ?? {};
   if (!game.user?.isGM) return fail("notGM");
   if (!character?.id) return fail("invalid");
   const reg = registry();
