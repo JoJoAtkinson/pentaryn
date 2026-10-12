@@ -155,8 +155,8 @@ Optional overrides on an actor: `flags.pentaryn-combat.attacks` (integer swing c
 
 ## Flags other modules read
 
-None directly. pentaryn-transform reads this module's `fullAttack` / `multiattack` settings and `multiattack()`
-to hide a covered Multiattack button; `coversMultiattack(ref)` is the API for it (transform-creatures-13).
+None directly. pentaryn-transform asks this module's published `coversMultiattack(ref)` to hide a covered
+Multiattack button (transform-creatures-13); it reads no combat setting.
 This module reads `flags.pentaryn-aoe.handle` (an area handle) and pentaryn-aoe's `autoDamageOnHit` setting.
 
 ## Events

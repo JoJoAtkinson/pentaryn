@@ -125,7 +125,8 @@ inactive, e.g. hot-patched).
 `flags.pentaryn-aoe.handle` (token), `.handleActor` (actor) and `.region` are a cross-module
 contract. Readers: pentaryn-creatures (a handle is a prop, `isProp`), pentaryn-portals (a
 handle is not spread on arrival), pentaryn-senses (no light on a handle, `light.mjs`), pentaryn-combat
-(no turn for a helper token, `turnflow.mjs`). `test/fixtures/handle-oracle.json` is the shared row
+(no turn for a helper token, `turnflow/helper-token.mjs` through
+`shapes.isAoeHandle`). `test/fixtures/handle-oracle.json` is the shared row
 set every copy pins against; prefer `apiOf("pentaryn-aoe").isHandle(x)` in new code.
 
 ## Events

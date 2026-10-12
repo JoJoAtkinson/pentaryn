@@ -24,6 +24,9 @@ live checks in the migration guide §5).
 - **Performance:** rider offers check permission and turn before the canvas scan; the picker cue's
   listeners only while its setting is on (declared D-c4); one write per actor for flag cleanup
   (declared).
+- **Tooltip styles** (declared D7, `24e961a0`): `styles/combat.css` imports the kit's
+  `lib/argon-tooltip.css`, so the Full Attack, follow-up and command tooltips keep their compact
+  layout with pentaryn-transform off (before, they were styled only by transform.css).
 
 ## 0.2.5 — 2026-10-11
 

@@ -96,8 +96,8 @@ the actor gets `{ actor }` only. Kit members: `describe()`, `version`, `contract
   Attack runs it (U-4-1), asking combat's published `coversMultiattack(actor)` (an item id or null);
   no combat setting is read. Without that method (combat off, not yet published, older) the button
   stays; a throw warns once.
-- **transform → pentaryn-combat:** combat's tooltips use the `pentaryn-tt` classes, styled by the
-  kit's `lib/argon-tooltip.css`, which `styles/transform.css` imports (D7).
+- **pentaryn-combat's tooltips** use the `pentaryn-tt` classes too; both modules load the same kit
+  `lib/argon-tooltip.css` (D7), so neither depends on the other for them.
 - Transform reads dnd5e's `flags.dnd5e.originalActor`, `isPolymorphed`, `transformOptions`,
   `previousTokenData`, `previousActorData`.
 
