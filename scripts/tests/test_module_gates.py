@@ -237,3 +237,38 @@ def test_node_test_runs_from_the_module_folder(tmp_path):
                                               'process.exit(existsSync("module.json") ? 0 : 5);\n'})
     res = modules._gate_node_test(TmpSpec(root, check=("node-test",)), capture=True)
     assert res.ok, res.problems
+
+
+# ── malformed JSON (final-review py-ops M3) ───────────────────────────────────
+
+def _malformed_manifest(tmp_path):
+    root = _module(tmp_path, {"main.mjs": "export const a = 1;\n"})
+    (root / "module.json").write_text('{"id": "pentaryn-demo", ', encoding="utf-8")
+    return root
+
+
+def test_parse_gate_checks_json_even_without_node_M3(tmp_path, monkeypatch):
+    monkeypatch.setattr(modules, "_node_available", lambda: False)
+    res = modules._gate_parse(TmpSpec(_malformed_manifest(tmp_path), check=("parse",)))
+    assert res.ok is False and not res.skipped
+    assert "malformed JSON in module.json" in res.summary
+
+
+def test_parse_gate_checks_a_lang_file_without_node_M3(tmp_path, monkeypatch):
+    monkeypatch.setattr(modules, "_node_available", lambda: False)
+    root = _module(tmp_path, {"main.mjs": "export const a = 1;\n", "lang/en.json": "{,}"})
+    res = modules._gate_parse(TmpSpec(root, check=("parse",)))
+    assert res.ok is False and "malformed JSON in lang/en.json" in res.summary
+
+
+def test_parse_gate_still_skips_syntax_without_node_M3(tmp_path, monkeypatch):
+    monkeypatch.setattr(modules, "_node_available", lambda: False)
+    root = _module(tmp_path, {"main.mjs": "export const a = 1;\n"})
+    res = modules._gate_parse(TmpSpec(root, check=("parse",)))
+    assert res.ok is True and res.skipped
+
+
+def test_imports_gate_reports_a_malformed_manifest_M3(tmp_path):
+    res = modules._gate_imports(TmpSpec(_malformed_manifest(tmp_path), check=("imports",)))
+    assert res.ok is False
+    assert any("module.json is malformed JSON" in p for p in res.problems)

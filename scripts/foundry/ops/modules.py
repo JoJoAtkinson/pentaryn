@@ -92,7 +92,19 @@ def _emit(res: GateResult) -> int:
 
 
 def _gate_parse(spec: cfg.ModuleSpec) -> GateResult:
-    """`node --check` every .mjs, and JSON.parse every .json the module declares."""
+    """JSON.parse every .json the module declares, and `node --check` every .mjs.
+
+    The JSON half needs no node, so it runs first and always: a malformed module.json
+    must fail here, not crash a later gate (final-review py-ops M3)."""
+    for rel in ("module.json", "lang/en.json"):
+        path = spec.src / rel
+        if not path.exists():
+            continue
+        try:
+            json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            return GateResult("parse", False, f"malformed JSON in {rel}: {exc}")
+
     if not _node_available():
         return GateResult("parse", True, "node not installed — skipping the syntax check",
                           skipped=True)
@@ -104,15 +116,6 @@ def _gate_parse(spec: cfg.ModuleSpec) -> GateResult:
         if proc.returncode != 0:
             return GateResult("parse", False, f"syntax error in {f}",
                               problems=[proc.stderr.rstrip("\n")])
-
-    for rel in ("module.json", "lang/en.json"):
-        path = spec.src / rel
-        if not path.exists():
-            continue
-        try:
-            json.loads(path.read_text(encoding="utf-8"))
-        except json.JSONDecodeError as exc:
-            return GateResult("parse", False, f"malformed JSON in {rel}: {exc}")
 
     return GateResult("parse", True, f"{spec.name} sources parse", counts={"files": len(files)})
 
@@ -207,8 +210,12 @@ def _gate_imports(spec: cfg.ModuleSpec) -> GateResult:
     # An entry point named in module.json that does not exist fails exactly the same
     # way — silently, at load — so it belongs in the same gate.
     manifest = spec.src / "module.json"
-    if manifest.exists():
-        data = json.loads(manifest.read_text(encoding="utf-8"))
+    try:
+        data = json.loads(manifest.read_text(encoding="utf-8")) if manifest.exists() else None
+    except json.JSONDecodeError as exc:
+        data = None
+        problems.append(f"module.json is malformed JSON: {exc}")
+    if data is not None:
         declared = [*data.get("esmodules", []), *data.get("styles", []),
                     *(l.get("path", "") for l in data.get("languages", []))]
         for rel in filter(None, declared):
