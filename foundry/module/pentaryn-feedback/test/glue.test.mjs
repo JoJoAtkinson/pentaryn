@@ -170,6 +170,17 @@ test("re-opening the dialog (second bug click, bare /bug) keeps what the player 
   await F.rendered.at(-1).close();
 });
 
+test("two open() calls racing the first render share one dialog and keep both drafts", async () => {
+  const before = F.rendered.length;
+  await Promise.all([api.open({ category: "feature", text: "one" }), api.open({ text: "two" })]);
+  const apps = new Set(F.rendered.slice(before));
+  assert.equal(apps.size, 1, "one dialog at a time");
+  const app = F.rendered.at(-1);
+  assert.match(app.html, />two<\/textarea>/);
+  assert.match(app.html, /value="feature" checked/);
+  await app.close();
+});
+
 /* ── the recorder ────────────────────────────────────────────────────── */
 
 test("recorder: scene, tool (only on change), tab, control, own target", () => {
