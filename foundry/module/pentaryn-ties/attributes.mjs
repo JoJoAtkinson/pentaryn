@@ -370,15 +370,23 @@ async function createNow(title, opts) {
  *   `{ok:false, reason:"ambiguous", candidates}` | `{ok:false, reason:"collision", existing}` when
  *   the title's id belongs to an entry that has since been **renamed** to something else.
  */
-export async function ensureAttribute(title, opts = {}) {
-  const plan = planEnsure(title, registry());
-  if (plan.action === "existing") return { ok: true, entry: plan.entry, existed: true };
-  if (plan.action === "refuse") {
-    const { action, reason, ...rest } = plan;
-    return fail(reason, rest);
-  }
-  const made = await createAttribute(title, opts);
-  return made.ok ? { ...made, existed: false } : made;
+export function ensureAttribute(title, opts = {}) {
+  /*
+   * EC-2 [declared]: the whole of it runs in the queue — planned from the registry read INSIDE
+   * `serial()`, then the unqueued `createNow` (never `createAttribute`, which would wait on
+   * itself). Planned outside, two ensures for one new title both planned "create" and the second
+   * answered `collision` instead of `existed: true`.
+   */
+  return serial(async () => {
+    const plan = planEnsure(title, registry());
+    if (plan.action === "existing") return { ok: true, entry: plan.entry, existed: true };
+    if (plan.action === "refuse") {
+      const { action, reason, ...rest } = plan;
+      return fail(reason, rest);
+    }
+    const made = await createNow(title, opts);
+    return made.ok ? { ...made, existed: false } : made;
+  });
 }
 
 /**

@@ -55,6 +55,10 @@ Fixed (declared): **`attributes.markLearned`** takes its character as an id, a u
 or a token as well as an Actor, and marks the world actor it names. Something that names no actor is
 refused `invalid`; it used to throw `character.getFlag is not a function`. R3.
 
+Fixed (declared): two **`attributes.ensure`** calls for the same new title, made together, now both
+succeed — the first creates it and the second answers `existed: true`. The second used to answer
+`collision`, because both looked at the list before either had written. Same answers otherwise. EC-2.
+
 Fixed (declared): the chat cards — the "… studies …" stub, the tempo line and the GM's share
 whisper — name every creature by its **token** name, never its actor name, so a GM-only world actor
 name cannot reach player chat. The token is found on any scene, not only the one the posting
