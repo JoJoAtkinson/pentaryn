@@ -228,6 +228,7 @@ function settleFocus() {
   setTimeout(() => focusRollWindow(), DELAYS.focusRetry);
 }
 
+// onRollWindow / onRollWindowClose are registered by roll-dock.mjs (a feature installed first in combat.mjs).
 export function onRollWindow(app, { weapon = false } = {}) {
   try { if (app?.element?.classList?.contains("roll-configuration")) readEnter(app); } catch (err) { log.debug("read Enter (the hint stays)", err); }
   try { if (app?.element?.classList?.contains("roll-configuration")) settleFocus(); } catch (err) { log.debug("settle focus (the player clicks)", err); }
@@ -263,8 +264,6 @@ export function onRollWindowClose(app) {
     docked.delete(app);
   } catch (err) { log.debug("roll window close (closing anyway)", err); }
 }
-
-// Registered by roll-dock.mjs (a feature installed first in combat.mjs).
 
 export function hide() {
   if (pending) { const p = pending; pending = null; p({ type: "stop" }); }
