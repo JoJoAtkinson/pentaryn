@@ -37,6 +37,8 @@ manifest); the kit is vendored. What a player or GM can notice:
 - **[declared]** with two tabs open on one player account, switching the ghost button or "Show my
   own tokens on top" in one tab now takes effect in the other tab as well, instead of that tab
   carrying on with the old value until something else redrew it (movement-edge-3, movement-async-2).
+- **[declared]** `combatActive(null)` now answers for the viewed scene, as `status({ sceneId: null })`
+  already did, instead of always answering `false` (movement-edge-4).
 - Performance: the per-token paths (drag, arrow keys, token refresh, the layer sort) read the
   settings and the combats once per change instead of once per token (F-M1).
 

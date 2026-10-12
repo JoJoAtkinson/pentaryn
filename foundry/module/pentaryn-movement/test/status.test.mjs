@@ -74,3 +74,16 @@ test("rob-3: combatActive and status take a scene id or a Scene; status takes a 
     game.combats.contents = [];
   }
 });
+
+test("movement-edge-4: combatActive(null) and status({ sceneId: null }) both mean the viewed scene", () => {
+  game.combats.contents = [combat({ sceneId: SCENE })];
+  try {
+    assert.equal(api.combatActive(), true, "no argument: the viewed scene");
+    assert.equal(api.combatActive(undefined), true);
+    assert.equal(api.combatActive(null), true, "null means the viewed scene, like status({ sceneId: null })");
+    assert.equal(api.status({ sceneId: null }).combatOnScene, api.combatActive(null));
+    assert.equal(api.combatActive(OTHER), false, "an explicit other scene still answers for that scene");
+  } finally {
+    game.combats.contents = [];
+  }
+});

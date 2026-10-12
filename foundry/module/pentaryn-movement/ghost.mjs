@@ -34,9 +34,12 @@ let log = null;
 const policy = () => core.normalizePolicy(setting("ghostPolicy"));
 const wish = () => !!setting("ghost");
 
-/** Takes a scene id or a Scene document (rob-3); default: the viewed scene. */
-function combatActive(scene = canvas?.scene?.id) {
-  return core.combatOnScene(combatSummaries(), sceneIdOf(scene));
+/**
+ * Takes a scene id or a Scene document (rob-3); default: the viewed scene. null also means the
+ * viewed scene, as it does for status({ sceneId: null }) (movement-edge-4).
+ */
+function combatActive(scene) {
+  return core.combatOnScene(combatSummaries(), sceneIdOf(scene ?? canvas?.scene?.id));
 }
 
 /**
