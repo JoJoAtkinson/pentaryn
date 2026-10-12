@@ -384,7 +384,7 @@ export function install(reg, context) {
   // Only an item bar can change with an item (items-journal-33); entry and image bars never read items.
   reg.on("updateItem", () => { if (needsItemRefresh(openBarKinds())) refreshBars(); }, { label: "updateItem: refresh item bars" });
 
-  ctx.expose({ save, openSaved, savedStatus, refreshBars: () => refreshBars(), applySinglePage, lastSkip: () => lastSkip });
+  ctx.expose({ save, openSaved, savedStatus, lastSkip: () => lastSkip });
 }
 
 export function uninstall() {

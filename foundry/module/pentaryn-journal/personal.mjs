@@ -244,7 +244,7 @@ export function install(reg, context) {
     relayEnsure(user).catch(err => ctx.log.warn(`ensure failed for ${user.name}`, err));   // one tab creates (journal-async-1)
   }, { label: "createUser: ensure (active GM)" });
 
-  ctx.expose({ personal, personalsOf, ensurePersonalJournal, ensureFor, ensureAll, report, findFolder });
+  ctx.expose({ personal, personalsOf, ensurePersonalJournal, ensureFor, ensureAll, report });
 }
 
 export function uninstall() {

@@ -200,7 +200,7 @@ test("journal-perf-4: one refresh pass looks up the personal journal once, not o
     });
     const reads = apps.map(a => a.reads);
     lookups = 0;
-    ctx.exposed.refreshBars();
+    F.fire("updateJournalEntryPage");          // a page change schedules the debounced pass (journal-M7: not exposed)
     mock.timers.tick(100);
     assert.deepEqual(apps.map(a => a.reads), reads.map(r => r + 1), "every open bar is redrawn");
     assert.equal(lookups, 1, "one personal() per refresh pass");

@@ -61,6 +61,8 @@
   once and hands its pages to every bar, instead of once per open bar. A window's own render still
   looks it up itself. The lookup happens on the first bar that needs it, so a pass with no bar to fill
   does none.
+- **[declared] journal-M7:** `refreshBars`, `applySinglePage` and `findFolder` are no longer on
+  `ctx.exposed`; only the tests read them and api.mjs never did. Nothing a player or GM sees changes.
 
 ## Unreleased (blueprint migration, wave 2)
 
