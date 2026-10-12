@@ -223,14 +223,7 @@ MODULES = {
         # node-test: the whole point of the module is that its text handling is proved
         # rather than retyped. lookup-core.mjs is pure, so its fixtures run in node (`node test/run.mjs`).
         check=(*_STATIC, "node-test", *_BLUEPRINT),
-        after_sync=(
-            "Enable 'Pentaryn Rules Lookup' in Manage Modules, then reload.",
-            "Confirm against the live world:",
-            "  await game.pentaryn.rules.selftest()",
-            "Then:",
-            "  await game.pentaryn.rules.search('half cover')",
-            "  await game.pentaryn.rules.monster('Adult Black Dragon')",
-        ),
+        # after_sync comes from module.json flags.pentaryn.afterSync (Wave 7 batch).
     ),
     "transform": ModuleSpec(
         "pentaryn-transform",
