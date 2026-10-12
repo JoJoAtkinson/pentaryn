@@ -328,3 +328,22 @@ items exist. Reverts: none.
 
 **Foundry state.** Foundry is up and world `pentaryn` is loaded. Exactly one GM tab (Gamemaster, the only
 active user) answers `get-world-info`. There was no restart, no reload and no fork rebuild.
+
+## Outcome (2026-10-12 17:20Z)
+
+- **Coverage:** all 33 areas plus the optional py-update were reviewed, signed off and merged across 11 merge
+  windows (INT-1228 … INT-1557). Every module change deployed with a reload only; no window reverted anything.
+- **Verdict:** every area came back NEEDS-JOE. The reviews made behaviour-preserving changes only, and recorded
+  real defects whose fixes change behaviour. Each area's record lists them under "For Joe".
+- **Golden check audit:** after LG-R3 was fixed (bfade230), all 22 before/after pairs from the merge windows were
+  re-diffed. None was a hidden skip, so the windows' "no difference" results stand. INT-1508 and INT-1518 used
+  wave-5 copies as their before-goldens (PROVENANCE.txt in their folders).
+- **Follow-up:** Joe's rulings and the urgent defects shipped as defect wave 1 (FIX-1, main 8fd979bd). See
+  [`../defect-wave-2026-10-12/README.md`](../defect-wave-2026-10-12/README.md). Still open for a later batch:
+  - two-GM-tab races (one shared "claim the work" pattern);
+  - kit 1.2.0;
+  - the bridge restart race;
+  - movement's wrong "fight is over" message;
+  - importer, walls, lookup, dropbin, prompts, portals, senses and py-update defects;
+  - the compendium wildcard-art case in transform;
+  - 37 untriaged findings (ties-core 24, prompts-adapters 13).
