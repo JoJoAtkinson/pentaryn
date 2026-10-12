@@ -97,7 +97,7 @@ the player may not list (core's wildcard listing needs `FILES_BROWSE` or ownersh
 |---|---|---|
 | a form actor | `flags.pentaryn-transform.wildshape` | `{ original, source, profile, endsAt, carried }` — the sweep, the auto-revert, the HUD and `inspect` read it |
 | the form's duration effect | `_id pentarynWildShp0`, `flags.pentaryn-transform.wildshape` | the timed effect Argon's portrait strip shows |
-| an item | `flags.pentaryn-transform.revert` | set by hand: using it reverts its actor (`keepInForm` keeps a feat in the form) |
+| an item | `flags.pentaryn-transform.revert`, `.keepInForm` | set by hand, never written by the module (`describe()` lists both under `flags.reads`): using a `revert` item reverts its actor; `keepInForm` keeps a feat in the form |
 | the druid's Starry effect | `_id pentarynStarry00`, `flags.pentaryn-transform.starry.constellation`, `.left` | the constellation glimmering; seconds of combat time left (D8) |
 | the Starry Form item | `flags.pentaryn-senses.light` | `STARRY_LIGHT` while the form lasts (pentaryn-senses lights the tokens) |
 | form actors | created / deleted | dnd5e creates them; the active GM sweeps spent ones |

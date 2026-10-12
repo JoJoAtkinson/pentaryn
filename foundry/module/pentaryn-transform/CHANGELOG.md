@@ -4,6 +4,9 @@
 
 ## Unreleased
 
+- **`describe()` lists the hand-set item flags as reads (EXT-1, final review).** `flags.writes` no
+  longer names `flags.pentaryn-transform.revert`, which the module never writes; `flags.reads` now
+  names it and `flags.pentaryn-transform.keepInForm` ([declared]; golden/describe.json regenerated).
 - **Dragging a token no longer schedules a sweep (perf-1, final review).** Every token update, even an
   x/y drag, scheduled a world-wide sweep of spent forms. Now only a token update that changes
   `actorId`, `actorLink`, `delta` or `flags.dnd5e` schedules it; a deleted token, a form losing

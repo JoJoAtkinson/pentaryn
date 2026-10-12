@@ -14,7 +14,8 @@ const ACTOR = { name: "actor", type: "Actor", doc: "the druid or the form they a
 const REF = { name: "ref", kind: "actor", type: "Actor|Token|uuid|id|exact name", doc: "never a substring" };
 
 const WS = "flags.pentaryn-transform.wildshape";
-const REVERT = "flags.pentaryn-transform.revert";
+const REVERT = "flags.pentaryn-transform.revert";   // set by hand on an item; read, never written (EXT-1)
+const KEEP_IN_FORM = "flags.pentaryn-transform.keepInForm";   // set by hand: a feat that stays in the form
 const STARRY = "flags.pentaryn-transform.starry";
 const CLAIMS = "flags.pentaryn-transform.claims";   // one tab writes an automatic ending (transform-core-async-2)
 const LIGHT = "flags.pentaryn-senses.light";
@@ -102,9 +103,10 @@ export const MANIFEST = Object.freeze({
     },
   ],
   flags: {
-    writes: [WS, REVERT, STARRY, LIGHT, HAND_LIGHT, CLAIMS],
+    writes: [WS, STARRY, LIGHT, HAND_LIGHT, CLAIMS],
     reads: ["flags.dnd5e.originalActor", "flags.dnd5e.isPolymorphed", "flags.dnd5e.transformOptions",
-      "flags.dnd5e.previousTokenData", "flags.dnd5e.previousActorData", LIGHT, ...SENSES_TOKEN],
+      "flags.dnd5e.previousTokenData", "flags.dnd5e.previousActorData", LIGHT, ...SENSES_TOKEN,
+      REVERT, KEEP_IN_FORM],
   },
   unlisted: [],
 });

@@ -154,3 +154,11 @@ test("describe() enums match the implementation tables (revert reasons, constell
   assert.equal(new Set(endReasons.map(starryEndKey)).size, endReasons.length);
   assert.equal(endReasons.length, 3);
 });
+
+test("manifest flag lists: revert and keepInForm are read, never written (EXT-1)", () => {
+  const ns = `flags.${MODULE}`;
+  assert.ok(!MANIFEST.flags.writes.includes(`${ns}.revert`), "nothing writes the revert flag; a GM sets it by hand");
+  assert.deepEqual(MANIFEST.flags.writes,
+    [`${ns}.wildshape`, `${ns}.starry`, "flags.pentaryn-senses.light", "flags.dnd5e.previousTokenData.light", `${ns}.claims`]);
+  for (const key of ["revert", "keepInForm"]) assert.ok(MANIFEST.flags.reads.includes(`${ns}.${key}`), `reads lacks ${key}`);
+});

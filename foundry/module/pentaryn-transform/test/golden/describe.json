@@ -456,7 +456,6 @@
   "flags": {
     "writes": [
       "flags.pentaryn-transform.wildshape",
-      "flags.pentaryn-transform.revert",
       "flags.pentaryn-transform.starry",
       "flags.pentaryn-senses.light",
       "flags.dnd5e.previousTokenData.light",
@@ -471,7 +470,9 @@
       "flags.pentaryn-senses.light",
       "flags.pentaryn-senses.itemLight",
       "flags.pentaryn-senses.itemLightPrior",
-      "flags.pentaryn-senses.spellLight"
+      "flags.pentaryn-senses.spellLight",
+      "flags.pentaryn-transform.revert",
+      "flags.pentaryn-transform.keepInForm"
     ]
   },
   "errors": [
