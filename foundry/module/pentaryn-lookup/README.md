@@ -37,7 +37,7 @@ eval-js route over `page.text.content` has five traps that all fail **silently**
 
 **Defaults.** PHB + DMG + 2024 SRD; Monster Manual text is opt-in (`books: "monsters"` or
 `"all"`). The 2014 SRD is searched only when asked (`books: "2014"`) and its hits carry
-`edition: "2014"`. `books` also takes one pack id (`"dnd5e.content24"`) or an array of them; an
+`edition: "2014"`, as do an `onList` answer and `spellList` rows from the 2014 spell pack. `books` also takes one pack id (`"dnd5e.content24"`) or an array of them; an
 unknown word answers the rules set with a `warning`. `monsters({ packs })` takes a pack id or an
 array; anything else answers the default packs with a `warning`. Five hits, ~240-character snippets, an 8 KB payload ceiling; `total` reports
 every matching page. One hit per page, with `matches: n`. World journals are out of scope
@@ -69,8 +69,8 @@ remaining checks still run (R4).
 | `monsters({ size, type, cr, minCr, maxCr, name, limit, packs })` | `{ count, shown, monsters: [{ name, cr, size, type, uuid, pack }], hint?, warning? }` |
 | `names(kind)` | `{ classes, subclasses: { <class>: [] }, species, backgrounds, feats: { origin, general, … } }`, or one key |
 | `packs()` | `{ world, foundry, system, packs: [{ id, present, label?, type?, entries?, edition? }] }` |
-| `onList(spell, cls, { type })` | `{ spell, uuid, level, list, onList: true \| false \| null, hint? }` \| `{ notFound, spell, hint }` |
-| `spellList(cls, { type, level })` | `{ list, count, spells: [{ name, level, uuid }] }` \| `{ error, known }` |
+| `onList(spell, cls, { type })` | `{ spell, uuid, level, edition?, list, onList: true \| false \| null, hint? }` \| `{ notFound, spell, hint }` |
+| `spellList(cls, { type, level })` | `{ list, count, spells: [{ name, level, uuid, edition? }] }` \| `{ error, known }` |
 | `toPlainText(html)` | string |
 | `selftest()` | `{ ok, passed, failed, checks: [{ label, ok, detail }] }` |
 | `LIMITS` | the limits table, a frozen copy (data, not a method) |

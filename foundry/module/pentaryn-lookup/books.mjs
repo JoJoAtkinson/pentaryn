@@ -105,10 +105,12 @@ async function onList(spell, cls, opts = {}) {
     return { notFound: true, spell, hint: `${spell} is a ${doc.documentName}, not a spell Item` };
   }
   const list = spellListFor(type, cls);
+  // a spell from a 2014 pack says so, as a 2014 search hit does (EXT-5)
+  const ed = EDITIONS[doc.pack] ? { edition: EDITIONS[doc.pack] } : {};
   // the options are read only for the unknown-list hint, never on a found list (LKM-12)
-  if (!list) return { spell: doc.name, uuid: doc.uuid, level: doc.system.level, list: `${type}:${cls}`, onList: null,
+  if (!list) return { spell: doc.name, uuid: doc.uuid, level: doc.system.level, ...ed, list: `${type}:${cls}`, onList: null,
     hint: `no such list; known: ${knownSpellLists().join(", ")}` };
-  return { spell: doc.name, uuid: doc.uuid, level: doc.system.level, list: `${type}:${cls}`, onList: list.has(doc) };
+  return { spell: doc.name, uuid: doc.uuid, level: doc.system.level, ...ed, list: `${type}:${cls}`, onList: list.has(doc) };
 }
 
 /** The names on a class list, optionally one spell level: `spellList("cleric", {level: 3})`. */

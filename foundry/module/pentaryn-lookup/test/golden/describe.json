@@ -134,13 +134,13 @@
           "optional": true
         }
       ],
-      "returns": "{ spell, uuid, level, list, onList: true | false } | { spell, uuid, level, list, onList: null, hint } | { notFound, spell, hint }",
+      "returns": "{ spell, uuid, level, edition?, list, onList: true | false } | { spell, uuid, level, edition?, list, onList: null, hint } | { notFound, spell, hint }",
       "gm": false,
       "writes": false,
       "query": true,
       "sideEffects": [],
       "legacy": true,
-      "doc": "Is a spell on a class's (or subclass's) list, from dnd5e's spell-list registry."
+      "doc": "Is a spell on a class's (or subclass's) list, from dnd5e's spell-list registry. A 2014 spell carries edition: '2014'."
     },
     {
       "path": "spellList",
@@ -155,13 +155,13 @@
           "optional": true
         }
       ],
-      "returns": "{ list, count, spells: [{ name, level, uuid }] } | { error, known }",
+      "returns": "{ list, count, spells: [{ name, level, uuid, edition? }] } | { error, known }",
       "gm": false,
       "writes": false,
       "query": true,
       "sideEffects": [],
       "legacy": true,
-      "doc": "The spells on a list, one per name (the PHB's copy first), by level then name."
+      "doc": "The spells on a list, one per name (the PHB's copy first), by level then name. A 2014 row carries edition: '2014'."
     },
     {
       "path": "toPlainText",

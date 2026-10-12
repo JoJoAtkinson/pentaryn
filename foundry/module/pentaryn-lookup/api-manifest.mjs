@@ -101,11 +101,11 @@ export const MANIFEST = Object.freeze({
         { name: "cls", type: "class (or subclass) identifier, e.g. 'wizard'" },
         { name: "opts", type: "{ type?: 'class' | 'subclass' }", optional: true },
       ],
-      returns: "{ spell, uuid, level, list, onList: true | false } | { spell, uuid, level, list, onList: null, hint } "
+      returns: "{ spell, uuid, level, edition?, list, onList: true | false } | { spell, uuid, level, edition?, list, onList: null, hint } "
         + "| { notFound, spell, hint }",
       gm: false, writes: false, legacy: true, query: true,
       args: d => [d.spell, d.cls, { type: d.type ?? "class" }],
-      doc: "Is a spell on a class's (or subclass's) list, from dnd5e's spell-list registry.",
+      doc: "Is a spell on a class's (or subclass's) list, from dnd5e's spell-list registry. A 2014 spell carries edition: '2014'.",
     },
     {
       path: "spellList",
@@ -113,10 +113,10 @@ export const MANIFEST = Object.freeze({
         { name: "cls", type: "class (or subclass) identifier" },
         { name: "opts", type: "{ type?: 'class' | 'subclass', level? }", optional: true },
       ],
-      returns: "{ list, count, spells: [{ name, level, uuid }] } | { error, known }",
+      returns: "{ list, count, spells: [{ name, level, uuid, edition? }] } | { error, known }",
       gm: false, writes: false, legacy: true, query: true,
       args: d => [d.cls, { type: d.type ?? "class", level: d.level ?? null }],
-      doc: "The spells on a list, one per name (the PHB's copy first), by level then name.",
+      doc: "The spells on a list, one per name (the PHB's copy first), by level then name. A 2014 row carries edition: '2014'.",
     },
     {
       path: "toPlainText",

@@ -54,6 +54,9 @@
   (describe() lists them), selftest()" — instead of naming 5 of the 8 (LKM-13).
 - [declared] `packs()` also lists the spell packs `onList`/`spellList` read and the PHB class,
   origin and feat packs `names()` reads, after the book, 2014 and monster packs (EXT-3).
+- [declared] The 2014 SRD spell pack (`dnd5e.spells`) is stamped 2014: an `onList` answer for a
+  spell found there and a `spellList` row from it carry `edition: "2014"` (2024 answers have no
+  `edition`, as search hits do), and `packs()` reports that pack as 2014, not 2024 (EXT-5).
 
 ## 0.3.0 — 2026-10-10
 

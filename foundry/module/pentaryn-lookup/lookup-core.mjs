@@ -36,7 +36,7 @@ export const BOOKSETS = {
   all: [...RULES_BOOKS, ...MONSTER_BOOKS],
   "2014": ["dnd5e.rules"],
 };
-export const EDITIONS = { "dnd5e.rules": "2014" };
+export const EDITIONS = { "dnd5e.rules": "2014", "dnd5e.spells": "2014" };
 export const MONSTER_PACKS = ["dnd-monster-manual.actors", "dnd5e.actors24",
                               "dnd-players-handbook.actors", "dnd-dungeon-masters-guide.actors"];
 
@@ -539,7 +539,7 @@ export function groupListUuids(uuids) {
  * groupListUuids' groups plus each pack's index (`packId → index with .get(docId)`, or null when the
  * pack is absent) → `[{name, level, uuid}]`: one row per name, the first pack's wins; `level` (when
  * not null) keeps that spell level only; ordered by level, then name. A uuid the index lacks keeps
- * the uuid as its name and a null level.
+ * the uuid as its name and a null level. A row from a pack in EDITIONS carries its `edition` (EXT-5).
  */
 export function spellListRows(groups, indexes, level = null) {
   const seen = new Set(), out = [];
@@ -551,7 +551,7 @@ export function spellListRows(groups, indexes, level = null) {
       if (seen.has(name)) continue;
       if (level !== null && lvl !== Number(level)) continue;
       seen.add(name);
-      out.push({ name, level: lvl, uuid: u });
+      out.push(EDITIONS[id] ? { name, level: lvl, uuid: u, edition: EDITIONS[id] } : { name, level: lvl, uuid: u });
     }
   }
   out.sort((a, b) => ((a.level ?? 0) - (b.level ?? 0)) || String(a.name).localeCompare(String(b.name)));
