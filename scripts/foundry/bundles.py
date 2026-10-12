@@ -41,7 +41,7 @@ FP_LEN = 16
 GC_GRACE_SECONDS = 7 * 86400
 CACHE_FILENAME = "pentaryn-bundle-cache.json"   # beside pentaryn-boot.json, outside snapshots
 CACHE_SCHEMA = 1
-TMP_DIRNAME = ".pentaryn-tmp"             # = cloud.TMP_DIRNAME; same filesystem as Data/
+TMP_DIRNAME = ".pentaryn-tmp"   # uploadq and cloud take the name from here; same fs as Data/
 STAGING = "bundles"                       # under .pentaryn-tmp/
 EXTRACT = "extract"                       # under .pentaryn-tmp/
 LEVELDB_MARKER = "CURRENT"

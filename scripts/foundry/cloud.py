@@ -229,9 +229,7 @@ def sha256_file(path: Path) -> str:
 
 
 def tmp_dir() -> Path:
-    d = data_root() / TMP_DIRNAME
-    d.mkdir(parents=True, exist_ok=True)
-    return d
+    return uploadq.tmp_dir()
 
 
 def _mb(n: int | float) -> str:
