@@ -1,5 +1,5 @@
 {
-  "art": "<img class=\"pt-describe-art\" src=\"icons/zz/a\"b.webp\" alt=\"\" />",
+  "art": "<img class=\"pt-describe-art\" src=\"icons/zz/a&quot;b.webp\" alt=\"\" />",
   "mark": {
     "tag": "LI",
     "dataset": {
@@ -17,7 +17,7 @@
             "children": [
               {
                 "tag": "I",
-                "className": "pt-item-mark fa-solid x onclick=1",
+                "className": "pt-item-mark fa-solid fa-fire",
                 "dataset": {
                   "tooltip": "t"
                 }
