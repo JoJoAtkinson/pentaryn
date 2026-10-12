@@ -36,6 +36,8 @@ function personalsOf(userId) {
     .sort((a, b) => (a._stats?.createdTime ?? 0) - (b._stats?.createdTime ?? 0));
 }
 function personal(user = game.user) { return personalsOf(user?.id)[0] ?? null; }
+/** Every personal journal not in a folder (a player made it at the root). */
+const atRootJournals = () => game.journal.filter(j => isPersonal(j) && !j.folder);
 
 function folderName() {
   return setting("folderName") || game.i18n.localize("PENTARYN_JOURNAL.folder");
@@ -87,7 +89,7 @@ async function ensureAll() {
   for (const u of players) {
     try { await ensureFor(u); } catch (err) { ctx.log.warn(`ensure failed for ${u.name}`, err); }
   }
-  const stray = game.journal.filter(j => isPersonal(j) && !j.folder);
+  const stray = atRootJournals();
   if (stray.length) {
     const folder = await ensureFolder();
     await JournalEntry.updateDocuments(stray.map(j => ({ _id: j.id, folder: folder.id })));
@@ -102,7 +104,7 @@ function report() {
     return { user: u.name, userId: u.id, isGM: u.isGM, journalId: all[0]?.id ?? null,
       pages: all[0]?.pages.size ?? 0, duplicates: all.slice(1).map(j => j.id) };
   });
-  const atRoot = game.journal.filter(j => isPersonal(j) && !j.folder).map(j => j.id);
+  const atRoot = atRootJournals().map(j => j.id);
   return { folder: findFolder()?.id ?? null, users, atRoot };
 }
 
