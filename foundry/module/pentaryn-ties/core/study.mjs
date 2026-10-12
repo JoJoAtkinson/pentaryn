@@ -333,7 +333,9 @@ export function readBeliefs(raw) {
     const kept = {};
     for (const [key, rec] of Object.entries(facts)) {
       if (!key || !rec || typeof rec !== "object") continue;
-      const tier = STUDY_RUNGS.includes(num(rec.tier, NaN)) ? num(rec.tier, 0) : null;
+      // typed first, as priorOf does: `Number(null)` is 0, a real rung, and turned every non-kind
+      // row's "no tier" into tier 0 in pending() and beliefs()
+      const tier = typeof rec.tier === "number" && STUDY_RUNGS.includes(num(rec.tier, NaN)) ? num(rec.tier, 0) : null;
       kept[key] = {
         text: clampKnownNotes(rec.text),
         tier,

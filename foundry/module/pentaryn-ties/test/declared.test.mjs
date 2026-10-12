@@ -129,8 +129,7 @@ test("ties-46 [declared, flipped]: the inspect preview's live hooks gain updateU
 /* ── obvious bugs found while characterising: the intended behaviour, as todo ─────────────────── */
 
 test(
-  "readBeliefs keeps a null tier null (today: Number(null) → rung 0; lore/ident/attr rows read tier 0 in pending() and beliefs())",
-  { todo: "known-core readBeliefs uses num(rec.tier, NaN), and Number(null) is 0 — the same trap priorOf documents and guards. Fix after S4 as its own [declared] commit; pending()/beliefs() rows then show tier null for non-kind rows." },
+  "readBeliefs keeps a null tier null [declared, fixed] (before: Number(null) → rung 0; lore/ident/attr rows read tier 0 in pending() and beliefs())",
   () => {
     const b = Known.readBeliefs({ pc: { [`lore:${NPC}:l1`]: { text: "x", tier: null, total: 9, when: 1, delivered: 2 } } });
     assert.equal(b.pc[`lore:${NPC}:l1`].tier, null);
