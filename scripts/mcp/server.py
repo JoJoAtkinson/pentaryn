@@ -149,6 +149,15 @@ def _read_message() -> Optional[dict[str, Any]]:
         sys.stderr.write(f"[mcp-server] LSP frame has non-integer Content-Length {length_raw!r} — closing.\n")
         sys.stderr.flush()
         return None
+    if length < 0:
+        sys.stderr.write("[mcp-server] LSP frame has negative Content-Length — closing.\n")
+        sys.stderr.flush()
+        return None
+    if length == 0:
+        # An empty body is a bad frame, not EOF: skip it and keep serving.
+        sys.stderr.write("[mcp-server] discarding empty LSP frame\n")
+        sys.stderr.flush()
+        return _SKIP_MESSAGE
     body = _read_exact(sys.stdin.buffer, length)
     if not body:
         return None

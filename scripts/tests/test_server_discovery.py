@@ -600,6 +600,28 @@ def test_py_mcp_rob_1_first_frame_still_sniffs_lsp(monkeypatch):
 
 
 # ---------------------------------------------------------------------------
+# py-mcp-EC-4: an LSP Content-Length of 0 is skipped (not EOF); a negative one is
+# logged and closes — only a genuine empty read from stdin is a silent EOF
+# ---------------------------------------------------------------------------
+
+def test_py_mcp_ec_4_zero_content_length_is_skipped(monkeypatch, capsys):
+    _stdin(monkeypatch, b"Content-Length: 0\r\n\r\n" + _lsp(json.dumps(_INIT).encode()))
+    monkeypatch.setattr(server, "_TRANSPORT_MODE", None)
+    assert server._read_message() is server._SKIP_MESSAGE
+    assert "[mcp-server] discarding empty LSP frame" in capsys.readouterr().err
+    assert server._read_message() == _INIT          # serving continues
+    assert server._read_message() is None           # then real EOF
+
+
+def test_py_mcp_ec_4_negative_content_length_is_logged(monkeypatch, capsys):
+    _stdin(monkeypatch, b"Content-Length: -5\r\n\r\n" + _lsp(json.dumps(_INIT).encode()))
+    monkeypatch.setattr(server, "_TRANSPORT_MODE", None)
+    assert server._read_message() is None
+    assert ("[mcp-server] LSP frame has negative Content-Length — closing."
+            in capsys.readouterr().err)
+
+
+# ---------------------------------------------------------------------------
 # py-mcp-MNT-3: discover_tools' candidate scan and in-process load are their own
 # helpers; the scan's exclusions (and so the skipped order) are unchanged
 # ---------------------------------------------------------------------------
