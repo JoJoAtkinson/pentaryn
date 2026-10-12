@@ -363,15 +363,13 @@ export const grantedHead = () => `<div class="pt-granted-head">
       <span>${esc(_loc("PENTARYN_TIES.known.granted.label"))}</span>
     </div>`;
 
-function grantedRegion(grants) {
+/** The granted cards' region — the Known tab's, and the Attributes tab's detail (ties-17). */
+export function grantedRegion(grants) {
   if (!grants?.length) return "";
   const rows = grants.map(g => grantCard(g)).join("");
   if (!rows) return ""; // every card was blank: no region, no "What you have learned" head
   return `<section class="pt-granted" aria-label="${esc(_loc("PENTARYN_TIES.known.granted.label"))}">
-    <div class="pt-granted-head">
-      <i class="fa-solid fa-book-open-reader"></i>
-      <span>${esc(_loc("PENTARYN_TIES.known.granted.label"))}</span>
-    </div>
+    ${grantedHead()}
     <ul class="pt-granted-list">${rows}</ul>
   </section>`;
 }

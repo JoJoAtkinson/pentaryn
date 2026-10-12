@@ -112,6 +112,11 @@
       "why": "the lore-row editor widget. no shared-widget role: ui files reuse each other's markup helpers (ties-16/17/18 shrink this group)"
     },
     {
+      "from": "attributes-ui.mjs",
+      "to": "known-ui.mjs",
+      "why": "grantedRegion: the Known tab's granted-card region, reused for an attribute's detail (ties-17). no shared-widget role: ui files reuse each other's markup helpers (ties-16/17/18 shrink this group)"
+    },
+    {
       "from": "authoring-ui.mjs",
       "to": "lore-ui.mjs",
       "why": "the lore-row editor widget. no shared-widget role: ui files reuse each other's markup helpers (ties-16/17/18 shrink this group)"

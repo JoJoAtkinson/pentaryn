@@ -40,6 +40,7 @@ import {
   markLearned
 } from "./attributes.mjs";
 import { loreEditorHTML, bindLoreEditor } from "./lore-ui.mjs";
+import { grantedRegion } from "./known-ui.mjs";
 // `requestAttrLore` (the player-initiated roll) is deliberately no longer imported: attribute
 // facts are handed over by the GM via "Mark as learned", never rolled for from the player's side.
 import { kindActorOf, attrLoreStateFor, releaseHeldAttribute } from "./study.mjs";
@@ -136,29 +137,6 @@ function grantsFor(viewer, attrId) {
   if (!viewer) return [];
   const raw = viewer.getFlag?.(MODULE, GRANTED_FLAG) ?? null;
   return grantsForEntry(raw, "", { attributeIds: [attrId] });
-}
-
-function grantedBlock(grants) {
-  if (!grants.length) return "";
-  return `<section class="pt-granted" aria-label="${esc(_loc("PENTARYN_TIES.known.granted.label"))}">
-    <div class="pt-granted-head">
-      <i class="fa-solid fa-book-open-reader"></i>
-      <span>${esc(_loc("PENTARYN_TIES.known.granted.label"))}</span>
-    </div>
-    <ul class="pt-granted-list">
-      ${grants
-        .map(
-          g => `<li class="pt-grant">
-            ${g.icon ? `<img class="pt-grant-icon" src="${esc(g.icon)}" alt="">` : ""}
-            <div class="pt-grant-body">
-              ${g.source ? `<span class="pt-grant-source">${esc(g.source)}</span>` : ""}
-              <div class="pt-grant-text">${esc(g.text)}</div>
-            </div>
-          </li>`
-        )
-        .join("")}
-    </ul>
-  </section>`;
 }
 
 /**
@@ -362,7 +340,7 @@ export function personalCluesHTML(entry, carriersOf = null) {
 }
 
 function detail(row, { actor, isGM, viewer }) {
-  const grants = grantedBlock(grantsFor(viewer, row.id));
+  const grants = grantedRegion(grantsFor(viewer, row.id)); // the Known tab's own region (ties-17)
   const offers = offersBlock(viewer, actor, row.id);
 
   if (!isGM) {

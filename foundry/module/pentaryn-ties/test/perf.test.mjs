@@ -110,3 +110,12 @@ test("ties-22: one Ties-tab paint (build, then bind) scans the world's actors fo
     delete coll.contents;
   }
 });
+
+test("ties-17: the Attributes tab's granted cards are the Known tab's region (one copy of the markup)", async () => {
+  const { grantedRegion } = await import("../known-ui.mjs");
+  const { sourceScan } = await import("./kit/harness.mjs");
+  assert.equal(grantedRegion([]), "");
+  assert.equal(grantedRegion([{ text: "<p></p>", source: "x" }]), "", "only blank cards: no region");
+  assert.match(grantedRegion([{ text: "Owes.", source: "Debts", icon: "i.webp" }]), /pt-granted-head[\s\S]*pt-grant-source">Debts[\s\S]*Owes\./);
+  assert.deepEqual(sourceScan(new URL("..", import.meta.url), /function grantedBlock/), []);
+});
