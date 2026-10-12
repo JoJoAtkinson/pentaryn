@@ -29,6 +29,7 @@ export const MANIFEST = Object.freeze({
       returns: "ImportResult { ok, path, url, dryRun, manifest, counts, created, updated, skipped, failed, deleteJson }",
       gm: true,
       writes: true,
+      dryRun: true,
       legacy: true,
       throws: ["PentarynAbort", "PentarynAssertionError"],
       sideEffects: [
