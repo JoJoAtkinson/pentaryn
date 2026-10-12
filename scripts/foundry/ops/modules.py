@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -231,6 +232,9 @@ def _check_imports(spec: cfg.ModuleSpec) -> int:
     return _emit(_gate_imports(spec))
 
 
+_RE_PENTARYN_KEY = re.compile(r"^(PENTARYN_[A-Z0-9_]+)\.[A-Za-z0-9_][\w.-]*$")
+
+
 def _gate_i18n(spec: cfg.ModuleSpec) -> GateResult:
     """Every i18n key the code asks for must exist in the module's lang file.
 
@@ -255,13 +259,19 @@ def _gate_i18n(spec: cfg.ModuleSpec) -> GateResult:
     if not known:
         return GateResult("i18n", False, f"{spec.name}: {_rel(spec, en)} defines no keys")
     namespaces = {k.split(".", 1)[0] for k in known}
+    scans = [jsscan.scan(f) for f in _sources(spec)]
+    # A `PENTARYN_<X>.…` literal names a key even when its root is not one the lang file has: a
+    # mistyped root (`PENTARYN_PORTAL.Card.Title`) would otherwise be outside every namespace and
+    # never checked — and Foundry shows it raw. (W5c review)
+    namespaces |= {m.group(1) for s in scans for lit in s.strings
+                   if lit.plain and (m := _RE_PENTARYN_KEY.match(lit.value))}
 
     definite: list[jsscan.Ref] = []
     prefixes: set[str] = set()
     soft: set[str] = set()
     opaque: list[jsscan.Ref] = []
-    for f in _sources(spec):
-        use = jsscan.key_uses(jsscan.scan(f), namespaces, set(known))
+    for src in scans:
+        use = jsscan.key_uses(src, namespaces, set(known))
         definite += use.definite
         prefixes |= use.prefixes
         soft |= use.soft

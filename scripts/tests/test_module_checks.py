@@ -313,3 +313,17 @@ def test_a_bare_namespace_prefix_literal_is_not_a_key(tmp_path, capsys):
             'export const ours = k => k.startsWith("DEMO.");\n')
     assert modules._check_i18n(i18n_module(tmp_path, body)) == 0
     assert "not in" not in capsys.readouterr().out
+
+
+def test_a_key_under_a_mistyped_pentaryn_root_fails(tmp_path, capsys):
+    """W5c review: the namespaces came from the lang file alone, so a `PENTARYN_*` key whose
+    root is a typo (`PENTARYN_DEM.title` beside `PENTARYN_DEMO.*`) was outside every namespace
+    and never checked; Foundry would show it raw."""
+    lang = {"PENTARYN_DEMO.title": "Demo"}
+    good = 'export const a = () => _loc("PENTARYN_DEMO.title");\n'
+    assert modules._check_i18n(i18n_module(tmp_path / "ok", good, lang)) == 0
+    capsys.readouterr()
+    bad = good + 'export const b = () => _loc("PENTARYN_DEM.title");\n'
+    assert modules._check_i18n(i18n_module(tmp_path / "typo", bad, lang)) == 1
+    out = capsys.readouterr().out
+    assert "PENTARYN_DEM.title" in out and "main.mjs:2" in out
