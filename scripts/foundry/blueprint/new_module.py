@@ -95,10 +95,12 @@ def namespace_owner(ns: str, roots: list[Path]) -> str | None:
     return None
 
 
-def css_owner(prefix: str, roots: list[Path]) -> str | None:
+def css_owner(prefix: str, roots: list[Path], *, skip: str | None = None) -> str | None:
     sel = re.compile(rf"\.{re.escape(prefix)}[A-Za-z0-9_-]")
     for root in roots:
         for mod in _modules(root):
+            if mod.name == skip:
+                continue
             man = json.loads(_read(mod / "module.json"))
             if ((man.get("flags") or {}).get("pentaryn") or {}).get("cssPrefix") == prefix:
                 return mod.name
@@ -108,10 +110,10 @@ def css_owner(prefix: str, roots: list[Path]) -> str | None:
     return None
 
 
-def pick_css_prefix(short: str, roots: list[Path]) -> str:
+def pick_css_prefix(short: str, roots: list[Path], *, own: str | None = None) -> str:
     for n in range(1, len(short) + 1):
         cand = f"p{short[:n]}-"
-        if CSS_RE.match(cand) and not css_owner(cand, roots):
+        if CSS_RE.match(cand) and not css_owner(cand, roots, skip=own):
             return cand
     raise Refused(f"no free CSS prefix derived from {short!r}; pass --css-prefix")
 
@@ -360,7 +362,7 @@ def main(argv: list[str] | None = None) -> int:
         owner = namespace_owner(ns, others)
         if owner and owner != target.name:
             raise Refused(f"namespace {ns!r} is already published by {owner}")
-        css = args.css_prefix or pick_css_prefix(short, others)
+        css = args.css_prefix or pick_css_prefix(short, others, own=target.name)
         if not CSS_RE.match(css):
             raise Refused(f"CSS prefix {css!r} must match {CSS_RE.pattern}")
         owner = css_owner(css, others)
