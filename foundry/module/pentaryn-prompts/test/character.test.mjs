@@ -289,6 +289,38 @@ test("EC-7: a spell listed twice in one call is added once, with a warning, in t
   }
 });
 
+test("M10: a pool entry whose fromUuid rejects reads as its uuid in the preview and the real run (no throw mid-advancement)", async () => {
+  const unstage = stage();
+  const LOCKED = "Compendium.p.Item.locked";
+  const prevFrom = globalThis.fromUuid;
+  globalThis.fromUuid = async u => { if (u === LOCKED) throw new Error("pack locked"); return prevFrom(u); };
+  STEPS.Mystic = () => [
+    [adv("ItemChoice", "Picked", { configuration: { choices: { 1: { count: 1 } }, pool: [{ uuid: LOCKED }, { uuid: "Compendium.p.Item.a" }] } }), 1],
+    [adv("ItemChoice", "Defaulted", { configuration: { choices: { 1: { count: 2 } }, pool: [{ uuid: "Compendium.p.Item.a" }, { uuid: LOCKED }] } }), 1]
+  ];
+  try {
+    const w = { name: "Locked", class: "Mystic", species: "Elf", background: "Sage", level: 1, abilities: ARRAY,
+      choices: { "Mystic: Picked": ["Light"] } };
+    const resolved = { docs: { species: { name: "Elf", system: {} }, background: { name: "Sage", system: {} },
+      cls: { name: "Mystic", type: "class", system: { identifier: "mystic", levels: 1 } } },
+      level: 1, abilities: ARRAY, size: "sm", warnings: [], spells: { prepared: [], book: [] }, gear: [], starting: null };
+    applied.length = 0;
+    const pre = await C.previewCharacter(w, resolved);
+    const preApplied = applied.filter(([t]) => t === "Picked" || t === "Defaulted");
+    applied.length = 0;
+    const { report } = await C.buildCharacter(w, resolved);
+    const realApplied = applied.filter(([t]) => t === "Picked" || t === "Defaulted");
+    const line = `Mystic: Defaulted (level 1): picked Spell: Light, ${LOCKED} (no choice given; pool: Spell: Light, ${LOCKED})`;
+    for (const r of [pre, report]) assert.ok(r.defaults.includes(line), r.defaults.join(" | "));
+    assert.deepEqual(realApplied, preApplied);
+    assert.deepEqual(realApplied.map(([t, , d]) => [t, d.selected]), [["Picked", ["Compendium.p.Item.a"]], ["Defaulted", ["Compendium.p.Item.a", LOCKED]]]);
+  } finally {
+    delete STEPS.Mystic;
+    globalThis.fromUuid = prevFrom;
+    unstage();
+  }
+});
+
 test("the headless build: an ASI naming a missing feat, an ASI breaking its cap, and a missing subclass are BAD_SPEC; the half-built actor is deleted", async () => {
   const unstage = stage();
   try {

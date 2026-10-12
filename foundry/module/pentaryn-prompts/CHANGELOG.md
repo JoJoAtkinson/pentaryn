@@ -40,6 +40,10 @@ cssPrefix `pp-`, afterSync). Each **[declared]** change goes to the live check.
   `BAD_SPEC: patch.disposition: hostile|neutral|friendly|secret`, checked after every other patch
   field so a second bad field keeps its own message. The real run now refuses it at plan time, so
   nothing is imported, copied or stamped first (no cleanup line, no `discarded` entry).
+- **[declared] A choice pool entry that fails to load reads as its uuid** (M10): an ItemChoice
+  pool entry whose `fromUuid` rejects (a locked or broken pack) is named by its uuid in the real
+  run's matching and `DEFAULTED` line, as the dry run already did, instead of throwing the build
+  mid-advancement.
 - **[declared] A spell listed twice in one call is added once** (EC-7): `spells` or `spellbook`
   naming the same spell twice gives one copy and the warning `<spell> listed twice — added once`,
   in the dry run's preview and the real run alike.

@@ -487,7 +487,7 @@ async function uuidsFor(words, pool) {
 }
 
 async function namesFor(uuids) {
-  return Promise.all(uuids.map(async u => fromUuidSync(u)?.name ?? (await fromUuid(u))?.name ?? u));
+  return Promise.all(uuids.map(async u => fromUuidSync(u)?.name ?? (await docAt(u))?.name ?? u));
 }
 
 /**
