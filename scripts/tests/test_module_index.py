@@ -116,3 +116,11 @@ def test_an_alias_published_in_code_survives_a_describe_golden(tmp_path):
                 code='publishNamespace(NS, api);\npublishNamespace("chain", api.chain, { alias: true });\n',
                 describe={"namespace": "senses", "methods": [{"path": "syncLight"}]})
     assert index.module_row(d)["namespaces"] == ["chain", "senses"]
+
+
+def test_reserved_names_mirror_the_kit():
+    # py-blueprint-ops-index-reserved: _RESERVED is a third hand copy of the kit's errors.RESERVED
+    # (after conformance.RESERVED_API); a kit bump that adds or drops a name must fail here.
+    text = (cfg.REPO_ROOT / "foundry/lib/errors.mjs").read_text(encoding="utf-8")
+    body = re.search(r"export const RESERVED\s*=\s*Object\.freeze\(\[(.*?)\]", text, re.S).group(1)
+    assert set(re.findall(r'"([^"]+)"', body)) == set(index._RESERVED)
