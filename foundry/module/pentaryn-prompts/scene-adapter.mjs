@@ -28,7 +28,15 @@ const DND_RANK = { tiny: 0, sm: 1, med: 2, lg: 3, huge: 4, grg: 5 };
 
 const EYE = "assets/tokens/custom/props/icon-eye.webp";
 
-/** Colour/number markers and anything in a markers folder are scaffolding, not context. */
+/**
+ * Colour/number markers and anything in a markers folder are scaffolding, not context: an actor
+ * named "Marker · " (the space is required), or one in a folder chain reaching "Temp Markers" or
+ * "Markers…" before this module's own "Prompt Markers" folder. Crowd actors are context here.
+ *
+ * One of three different "is this scaffolding?" rules (aoe-movement-portals-38; pentaryn-portals'
+ * portals-core isScenery and pentaryn-aoe's core isCreature are the others) — compared in
+ * context/foundry/markers.md, "Who checks for Markers and crowd". Not merged on purpose.
+ */
 function isScaffold(tok) {
   const actor = tok.actorId ? game.actors.get(tok.actorId) : null;
   if (!actor) return false;

@@ -30,3 +30,15 @@ test("README: a Read-this-when line and the blueprint's sections in order", () =
     at = i;
   }
 });
+
+test("aoe-movement-portals-38: isScaffold's docblock and the README point at markers.md's \"Who checks\" table", () => {
+  const src = readFileSync(new URL("../scene-adapter.mjs", import.meta.url), "utf8");
+  const at = src.indexOf("function isScaffold(");
+  assert.ok(at > 0);
+  const doc = src.slice(src.lastIndexOf("/**", at), at);
+  for (const s of ["context/foundry/markers.md", "Who checks for Markers and crowd", "isScenery", "isCreature", "Not merged on purpose"]) {
+    assert.ok(doc.includes(s), s);
+  }
+  const flags = README.slice(README.indexOf("## Flags other modules read"), README.indexOf("## Events"));
+  assert.ok(flags.includes("context/foundry/markers.md"));
+});
