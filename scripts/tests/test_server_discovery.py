@@ -288,6 +288,33 @@ def test_startup_skip_report_names_a_real_failure(tmp_path, monkeypatch, capsys)
     assert "broken.py: invalid MCP_TOOL: broken: argv must be a list of strings" in err
 
 
+@pytest.mark.parametrize("key", ["bool_flags", "value_flags"])
+def test_flag_map_errors_pinned(tmp_path, key):
+    """Characterisation (holds before and after MNT-6): a non-dict flag map is skipped
+    with the exact reason naming the snake_case key."""
+    repo = _make_repo(tmp_path)
+    (repo / "scripts" / "t.py").write_text(
+        f'MCP_TOOL = {{"name": "t", "argv": [], "{key}": [1]}}\n', encoding="utf-8")
+    result = server.discover_tools(repo_root=repo)
+    assert [r.tool.name for r in result.tools] == []
+    reasons = [why for path, why in result.skipped if path.name == "t.py"]
+    assert reasons == [f"invalid MCP_TOOL: t: {key} must be a dict of argument_name -> flag"]
+
+
+def test_flag_map_camel_case_and_blank_entries(tmp_path):
+    """Characterisation: an empty snake_case map falls through to the camelCase one,
+    keys and flags are stripped, and blank entries are dropped."""
+    repo = _make_repo(tmp_path)
+    (repo / "scripts" / "t.py").write_text(
+        'MCP_TOOL = {"name": "t", "argv": [], "bool_flags": {}, '
+        '"boolFlags": {" quiet ": " --quiet ", "": "--x", "y": " "}, '
+        '"valueFlags": {"n": "--n"}}\n', encoding="utf-8")
+    result = server.discover_tools(repo_root=repo)
+    (runner,) = result.tools
+    assert runner.bool_flags == {"quiet": "--quiet"}
+    assert runner.value_flags == {"n": "--n"}
+
+
 # ---------------------------------------------------------------------------
 # python-tooling-29: the per-call worker (payload pinned before the action log)
 # ---------------------------------------------------------------------------

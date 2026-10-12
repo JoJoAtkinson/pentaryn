@@ -516,6 +516,22 @@ def _normalize_input_schema(raw: Any) -> dict[str, Any]:
     return raw
 
 
+def _flag_map(entry: dict[str, Any], snake: str, camel: str, *, tool: str) -> dict[str, str]:
+    """An entry's argument_name -> flag map (snake_case key first, then camelCase);
+    keys and flags are stripped and blank ones dropped."""
+    raw = entry.get(snake) or entry.get(camel) or {}
+    if not isinstance(raw, dict):
+        raise ValueError(f"{tool}: {snake} must be a dict of argument_name -> flag")
+    flags: dict[str, str] = {}
+    for k, v in raw.items():
+        key = str(k).strip()
+        flag = str(v).strip()
+        if not key or not flag:
+            continue
+        flags[key] = flag
+    return flags
+
+
 def _tools_from_mcp_tool(*, path: Path, mcp_tool: dict[str, Any]) -> list[ToolRunner]:
     tools_raw = mcp_tool.get("tools")
     tool_entries: list[dict[str, Any]]
@@ -540,27 +556,8 @@ def _tools_from_mcp_tool(*, path: Path, mcp_tool: dict[str, Any]) -> list[ToolRu
         if not isinstance(argv_raw, list) or not all(isinstance(a, str) for a in argv_raw):
             raise ValueError(f"{name}: argv must be a list of strings")
 
-        bool_flags_raw = entry.get("bool_flags") or entry.get("boolFlags") or {}
-        if not isinstance(bool_flags_raw, dict):
-            raise ValueError(f"{name}: bool_flags must be a dict of argument_name -> flag")
-        bool_flags: dict[str, str] = {}
-        for k, v in bool_flags_raw.items():
-            key = str(k).strip()
-            flag = str(v).strip()
-            if not key or not flag:
-                continue
-            bool_flags[key] = flag
-
-        value_flags_raw = entry.get("value_flags") or entry.get("valueFlags") or {}
-        if not isinstance(value_flags_raw, dict):
-            raise ValueError(f"{name}: value_flags must be a dict of argument_name -> flag")
-        value_flags: dict[str, str] = {}
-        for k, v in value_flags_raw.items():
-            key = str(k).strip()
-            flag = str(v).strip()
-            if not key or not flag:
-                continue
-            value_flags[key] = flag
+        bool_flags = _flag_map(entry, "bool_flags", "boolFlags", tool=name)
+        value_flags = _flag_map(entry, "value_flags", "valueFlags", tool=name)
 
         runners.append(
             ToolRunner(
