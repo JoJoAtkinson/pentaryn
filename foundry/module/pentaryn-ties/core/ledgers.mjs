@@ -284,7 +284,8 @@ export function combineAdvantage(adv = 0, dis = 0, rule = "raw") {
 export const attrFactKey = (attrId, loreId) => `attr:${String(attrId ?? "")}:${String(loreId ?? "")}`;
 
 /**
- * The ledger setting, sanitised. Keyed `<attrId>:<loreId>:<characterId>` — a flat map rather
+ * The ledger setting, sanitised. Keyed `<attrFactKey>:<characterId>` —
+ * `attr:<attrId>:<loreId>:<characterId>` (split it with `parseLedgerKey`, never `split(":")`) — a flat map rather
  * than a nested one, because a setting is rewritten whole on every write and a flat map keeps
  * that rewrite a single small object.
  */

@@ -25,7 +25,8 @@ const ABILITY_WORDS = {
 export function normaliseAbilities(obj) {
   const out = {}, unknown = [];
   for (const [k, v] of Object.entries(obj ?? {})) {
-    const key = ABILITY_WORDS[String(k).toLowerCase()];
+    const kl = String(k).toLowerCase();
+    const key = Object.hasOwn(ABILITY_WORDS, kl) ? ABILITY_WORDS[kl] : undefined;
     if (!key) { unknown.push(k); continue; }
     out[key] = Number(v);
   }

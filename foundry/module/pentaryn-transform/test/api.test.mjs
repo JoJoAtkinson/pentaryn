@@ -108,6 +108,11 @@ test("inspect opts.as: a user without OBSERVER sees the identity only; the owner
   assert.equal(api.inspect("Talo", { as: IDS.gm }).wildShape.itemId, IDS.ws);
 });
 
+test("inspect(ref, null) answers as inspect(ref)", () => {
+  fresh();
+  assert.deepEqual(api.inspect("Talo", null), api.inspect("Talo"));
+});
+
 test("every patch record names an adjustments row; no settings; selftest passes on a healthy load", () => {
   const d = api.describe();
   assert.deepEqual(d.patches.map(p => [p.label, p.adjustments]), [["TokenDocument._preUpdateOperation", "transform-preupdate-unwrap"]]);
@@ -115,4 +120,35 @@ test("every patch record names an adjustments row; no settings; selftest passes 
   assert.deepEqual(api.settings(), {});
   const st = api.selftest();
   assert.equal(st.ok, true, JSON.stringify(st.checks));
+});
+
+test("manifest reason unions match the reason tables", async () => {
+  const { RETURN_LINES } = await import("../wildshape-adapter.mjs");
+  const core = await import("../transform-core.mjs");
+  const union = row => {
+    const opts = row.params.find(p => p.name === "opts");
+    const m = /reason\?:\s*([^,}]+)/.exec(opts.type);
+    assert.ok(m, `${row.path} has no reason union`);
+    return m[1].split("|").map(s => s.trim().replace(/^'|'$/g, ""));
+  };
+  const revert = union(MANIFEST.rows.find(r => r.path === "revert"));
+  assert.deepEqual(new Set(revert), new Set(Object.keys(RETURN_LINES)));
+  assert.equal(revert.length, Object.keys(RETURN_LINES).length);
+  const end = union(STARRY_ROWS.find(r => r.path === "starry.end"));
+  assert.ok(end.includes("manual"));
+  assert.equal(core.starryEndKey("manual"), "StarryEnd");
+  for (const reason of end.filter(r => r !== "manual")) assert.notEqual(core.starryEndKey(reason), "StarryEnd", reason);
+});
+
+test("describe() enums match the implementation tables (revert reasons, constellations, starry.end reasons)", async () => {
+  const { RETURN_LINES } = await import("../wildshape-adapter.mjs");
+  const { CONSTELLATIONS, starryEndKey } = await import("../transform-core.mjs");
+  const quoted = type => [...type.matchAll(/'([^']+)'/g)].map(m => m[1]);
+  const row = (rows, path) => rows.find(r => r.path === path);
+  assert.deepEqual(quoted(row(MANIFEST.rows, "revert").params[1].type).sort(), Object.keys(RETURN_LINES).sort());
+  assert.deepEqual(quoted(row(STARRY_ROWS, "starry.assume").params[1].type), [...CONSTELLATIONS]);
+  assert.deepEqual(quoted(row(STARRY_ROWS, "starry.constellation").returns), [...CONSTELLATIONS]);
+  const endReasons = quoted(row(STARRY_ROWS, "starry.end").params[1].type);
+  assert.equal(new Set(endReasons.map(starryEndKey)).size, endReasons.length);
+  assert.equal(endReasons.length, 3);
 });
