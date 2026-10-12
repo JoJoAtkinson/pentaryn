@@ -66,3 +66,17 @@ test("recent() is capped at 20; a refused reconcile resolves to null", async () 
   assert.equal(await L().reconcile(light().uuid), null, "not the active GM");
   F.become({ userId: GM });
 });
+
+// Review fix (-14): the ring keeps its own copies. The summary reconcile resolves to and the rows
+// recent() hands out (desired included) can be changed by the caller without touching the ring.
+test("the ring is not shared: mutating reconcile's summary or recent()'s desired leaves recent() as it was", async () => {
+  const { summary } = await castAndReconcile({ x: 300, y: 300 });
+  const kept = structuredClone(L().recent().at(-1));
+  assert.deepEqual(kept.desired, { scene: ID.s1, x: 300, y: 300 });
+  summary.source = "mutated";
+  summary.desired.x = -1;
+  L().recent().at(-1).desired.y = -1;
+  assert.deepEqual(L().recent().at(-1), kept);
+  await light().update({ [CAST]: null });
+  await settle(mock);
+});

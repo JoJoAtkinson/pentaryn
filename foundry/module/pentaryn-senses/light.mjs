@@ -284,7 +284,7 @@ async function reconcile(source) {
     if (base) await syncLight(base);
   }
   const summary = summarise(plan, { ...done, desired });
-  state.recent.push(summary);
+  state.recent.push({ ...summary, desired: summary.desired && { ...summary.desired } });   // the ring's own copy
   if (state.recent.length > RECENT) state.recent.splice(0, state.recent.length - RECENT);
   state.ctx?.log.debug("reconcile", summary);
   return summary;
@@ -292,7 +292,7 @@ async function reconcile(source) {
 
 /** The last 20 reconcile summaries on this client, oldest first (copies). */
 function recent() {
-  return state.recent.map(s => ({ ...s }));
+  return state.recent.map(s => ({ ...s, desired: s.desired && { ...s.desired } }));
 }
 
 /**
