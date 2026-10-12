@@ -42,6 +42,7 @@ async function argonPicker(activity) {
 
 function applyPickerGuide() {
   const on = !!setting("skipPickerGuide");
+  cueListening(on);
   try {
     document.body.classList.toggle("pentaryn-combat-picker-cue", on);
     if (on) document.body.style.setProperty("--pentaryn-combat-picker-cue", JSON.stringify(_loc("PENTARYN_COMBAT.Hud.PickerCue")));
@@ -75,14 +76,42 @@ const placeCue = (records) => {
 
 const opts = label => ({ label });   // guarded (S11, D-c1): a throw is logged with the label; return values pass through
 
+/**
+ * combat-riders-35 [declared D-c4]: the cue's pointer listeners and its observer exist only while
+ * skipPickerGuide is on. At install the setting is not registered yet, so its default (on) adds the
+ * listeners where they always were; switching it off removes them and disconnects the observer,
+ * and switching it back on adds them again (the first pick after that may have no pointer yet).
+ */
+let listening = false;
+let cueReady = false;
+
+function cueListening(on) {
+  if (on && !listening) {
+    document.addEventListener("pointermove", onPointer, { capture: true, passive: true });
+    document.addEventListener("pointerdown", onPointer, { capture: true, passive: true });
+    listening = true;
+  } else if (!on && listening) {
+    document.removeEventListener("pointermove", onPointer, { capture: true, passive: true });
+    document.removeEventListener("pointerdown", onPointer, { capture: true, passive: true });
+    listening = false;
+    pointer = null;
+  }
+  if (on && cueReady && !observer) {
+    observer = new MutationObserver(placeCue);
+    observer.observe(document.body, { childList: true });
+  } else if (!on && observer) {
+    observer.disconnect();
+    observer = null;
+  }
+}
+
 export function install(reg) {
   registerTargetPicker(argonPicker);
   reg.once("ready", applyPickerGuide, opts("Argon's picker tutorial: seen"));
-  document.addEventListener("pointermove", onPointer, { capture: true, passive: true });
-  document.addEventListener("pointerdown", onPointer, { capture: true, passive: true });
+  cueListening(!!setting("skipPickerGuide"));
   reg.once("ready", () => {
-    observer = new MutationObserver(placeCue);
-    observer.observe(document.body, { childList: true });
+    cueReady = true;
+    cueListening(!!setting("skipPickerGuide"));
   }, opts("picker cue: place Argon's target label"));
   // The first change from the default creates the Setting document; later ones update it.
   for (const hook of ["createSetting", "updateSetting"]) {
@@ -92,9 +121,6 @@ export function install(reg) {
 
 export function uninstall() {
   registerTargetPicker(null);
-  document.removeEventListener("pointermove", onPointer, { capture: true, passive: true });
-  document.removeEventListener("pointerdown", onPointer, { capture: true, passive: true });
-  observer?.disconnect?.();
-  observer = null;
-  pointer = null;
+  cueListening(false);
+  cueReady = false;
 }
