@@ -49,13 +49,13 @@ keychain at the point of use, never from a file in this repo and never in argv.
 
 Without one, ``sessions.authenticateAdmin`` returns ``{success: true}`` but leaves
 ``session.admin`` **false**, which quietly breaks the two calls that check that flag
-directly: ``loginAsUser`` (the smoke test's GM login) and ``POST /join {shutdown}``.
+directly: ``loginAsUser`` (the smoke test's GM login) and the world deactivate —
+``POST /setup {worldShutdown}`` on 14.369+, ``POST /join {shutdown}`` before it.
 """
 
 from __future__ import annotations
 
 import json
-import re
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -146,7 +146,7 @@ class Status:
 # ── Process lifecycle ────────────────────────────────────────────────────────
 
 def port_open(timeout: float = 2.0) -> bool:
-    """The server answers on :30000 when up. `cloud.py` uses the same probe, and
+    """The server answers on ``host.foundry_port()`` when up. `cloud.py` uses the same probe, and
     several of its operations `die()` while it is true."""
     try:
         requests.get(BASE_URL, timeout=timeout, allow_redirects=False)
@@ -259,7 +259,7 @@ class FoundryAdmin:
         With a world active, ``/setup`` is the route that works: ``setup.mjs`` runs
         ``authenticateAdmin`` *before* its world-active test and gates only the package
         actions on the result, so the flag gets set and the action is then refused with
-        a 403 we expect and ignore. The body must carry neither ``shutdown`` nor
+        a status (400 on 14.369, 403 before) we expect and ignore. The body must carry neither ``shutdown`` nor
         ``editWorld`` — both are handled above that 403 and would deactivate or mutate
         the live world. ``isAdmin`` in the ``getJoinData`` payload is Foundry's own
         report of the resulting flag, so the check is authoritative rather than
@@ -659,17 +659,10 @@ def installed_version(pkg_type: str, pkg_id: str) -> str | None:
     happens legitimately *mid-install*, while the archive is being extracted."""
     path = PACKAGE_DIR[pkg_type] / pkg_id / MANIFEST_NAME[pkg_type]
     try:
-        return json.loads(path.read_text(encoding="utf-8")).get("version")
+        v = json.loads(path.read_text(encoding="utf-8")).get("version")
     except (OSError, json.JSONDecodeError):
         return None
-
-
-def installed_manifest(pkg_type: str, pkg_id: str) -> dict | None:
-    path = PACKAGE_DIR[pkg_type] / pkg_id / MANIFEST_NAME[pkg_type]
-    try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return None
+    return None if v is None else str(v)
 
 
 def wait_for_package_version(pkg_type: str, pkg_id: str, expected: str,

@@ -18,6 +18,9 @@ export function onSettingChange(key, fn) {
   handlers[key] = fn;
 }
 
+/** A row's onChange: forward to the handler the feature registered for that key. */
+const forward = key => value => handlers[key]?.(value);
+
 /** @type {import("./lib/settings.mjs").SettingRow[]} */
 export const SETTINGS = Object.freeze([
   {
@@ -29,7 +32,7 @@ export const SETTINGS = Object.freeze([
       exploration: "PENTARYN_MOVEMENT.settings.policy.exploration",
       always: "PENTARYN_MOVEMENT.settings.policy.always"
     },
-    onChange: value => handlers.ghostPolicy?.(value),
+    onChange: forward("ghostPolicy"),
     doc: "GM policy for player ghost movement: off, exploration (off while a combat runs on the scene) or always.",
   },
   {
@@ -42,14 +45,14 @@ export const SETTINGS = Object.freeze([
     key: "ghost", scope: "client", config: false, type: Boolean, default: false,
     name: "PENTARYN_MOVEMENT.settings.ghost.name",
     hint: "PENTARYN_MOVEMENT.settings.ghost.hint",
-    onChange: value => handlers.ghost?.(value),
+    onChange: forward("ghost"),
     doc: "This player's ghost button (their wish); in effect only while the policy allows it. Client scope.",
   },
   {
     key: "ownedOnTop", scope: "client", config: true, type: Boolean, default: true,
     name: "PENTARYN_MOVEMENT.settings.ownedOnTop.name",
     hint: "PENTARYN_MOVEMENT.settings.ownedOnTop.hint",
-    onChange: value => handlers.ownedOnTop?.(value),
+    onChange: forward("ownedOnTop"),
     doc: "Draw this player's own tokens on top, on their screen only. Client scope.",
   },
 ]);
