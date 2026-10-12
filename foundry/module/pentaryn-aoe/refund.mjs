@@ -65,3 +65,7 @@ export function installRefund() {
     }
   });
 }
+
+// Test seam (characterisation checkpoint): tests import this through test/fixtures/seams.mjs only,
+// so the blueprint refactor edits that shim, not the frozen tests. Not part of the API.
+export const _internals = { refund, hasConsumed };

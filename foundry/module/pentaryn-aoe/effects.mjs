@@ -308,3 +308,7 @@ export function installEffects() {
   on("dnd5e.renderChatMessage", guard("renderChatMessage(effects)", decorate));
   on("preCreateActiveEffect", guard("preCreateActiveEffect(noStacking)", onPreCreateEffect));
 }
+
+// Test seam (characterisation checkpoint): tests import this through test/fixtures/seams.mjs only,
+// so the blueprint refactor edits that shim, not the frozen tests. Not part of the API.
+export const _internals = { targetActors, targetActorUuid, appliedIds, applyEffect, onPreCreateEffect, spellOf, markApplied, selfReason, isApplier, decorate, applyTargets, inflight, localApplied };
