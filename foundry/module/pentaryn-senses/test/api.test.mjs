@@ -94,3 +94,11 @@ test("flags.writes: every flag key a recorded call writes is declared (senses-EX
     assert.ok(declared.has(`flags.pentaryn-senses.${key}`), `${key} (written in ${file}) is not in MANIFEST.flags.writes`);
   }
 });
+
+// senses-M11: the syncAll row described one write per actor ("one after another"), but syncAll
+// batches (W3-SE3): one Actor batch for every prototype, then one Token batch per scene.
+test("syncAll row: says it batches, as carried.mjs does (senses-M11)", () => {
+  const row = MANIFEST.rows.find(r => r.path === "syncAll");
+  assert.doesNotMatch(row.doc, /one after another/);
+  assert.match(row.doc, /one Actor batch for the prototypes, then one Token batch per scene/);
+});

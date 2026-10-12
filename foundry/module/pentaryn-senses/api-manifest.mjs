@@ -166,7 +166,7 @@ export const MANIFEST = Object.freeze({
       params: [],
       returns: "Promise<number> documents written",
       gm: false, writes: true, legacy: true,
-      doc: "syncLight for every world actor, one after another. Runs at ready on the writer's client.",
+      doc: "syncLight's plan for every world actor, written as one Actor batch for the prototypes, then one Token batch per scene. Runs at ready on the writer's client.",
     },
     {
       path: "chain.link",

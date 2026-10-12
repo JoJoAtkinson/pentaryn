@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **[declared senses-M11] The `syncAll` describe row says it batches** (final review 2026-10-12):
+  the row said "one after another", but since W3-SE3 syncAll writes one Actor batch for the
+  prototypes, then one Token batch per scene. The row now says so. Goldens: describe.json (the
+  syncAll doc). No runtime behaviour change.
+
 - **[declared senses-EXT-6] `describe().flags.writes` lists `lightToggle`** (final review
   2026-10-12): setupLight writes `flags.pentaryn-senses.lightToggle` into the Light activity it adds
   to a torch, so the manifest now declares it as a write (it stays in `reads`). A new api.test check
