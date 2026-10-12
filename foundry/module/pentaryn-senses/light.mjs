@@ -11,12 +11,12 @@
 
 import {
   MODULE, FLAGS, SPELL_LIGHT, profileFor, profileKey, isLit, isHooded, isLightSpellData, isLightToggle,
-  readSpellCast, readSpellLight, castFlag, planSpellLight, spellLightUpdate, restoredLight,
+  readSpellCast, readSpellLight, castFlag, planSpellLight, squareId, spellLightUpdate, restoredLight,
   sourcesUnder, isPHBLightActorSource, torchActivityData, TORCH_ACTIVITY_ID, summarise, handSquareEdit,
   esc, unsetPath
 } from "./senses-core.mjs";
 import { coreRollMode } from "./settings.mjs";
-import { isActiveGM, isAnyGM } from "./lib/election.mjs";
+import { isActiveGM, isAnyGM, claimDocument } from "./lib/election.mjs";
 import { realItem, itemFrom, casterToken, allItems, litBy, anyLitBy, allSources, findToken } from "./light-adapter.mjs";
 import { bindActions, cancelPick, decorateCard, decorateSheet, injectHUD, pick, prompt } from "./light-ui.mjs";
 
@@ -193,11 +193,29 @@ async function tellOwners(item, key) {
   }
 }
 
+/**
+ * Delete what is still there. Every tab of the active GM runs this (senses-ac-1): the other tab's
+ * delete may land first, and the server's "does not exist" refusal then means it is already gone.
+ * → how many are gone now (deleted here or by the other tab).
+ */
+async function deleteLive(scene, type, ids, live) {
+  const there = ids.filter(id => live?.has(id));
+  if (!there.length) return 0;
+  try {
+    await scene.deleteEmbeddedDocuments(type, there);
+  } catch (e) {
+    if (!/does not exist/i.test(e?.message ?? "")) throw e;
+    state.ctx?.log.debug(`${type} already deleted by another GM session`, e);
+  }
+  return there.length;
+}
+
 /** Bring the world in line with one Light item's flag (or clean up after a vanished item). */
 async function reconcile(source) {
   if (!isActiveGM() || !source) return null;
   const item = itemFrom(source);
   let desired = item ? readSpellCast(item) : null;
+  const castAt = desired ? item.getFlag?.(MODULE, "lightCast")?.at ?? 0 : 0;   // this cast's own claim key
   const done = { source, restored: 0, removed: 0, lit: null, created: false, released: null, cleared: false };
 
   if (desired?.token) {
@@ -206,7 +224,12 @@ async function reconcile(source) {
       desired = null;
       done.cleared = true;
       await item.update({ [CAST]: null });
-      await tellOwners(item, "PENTARYN_SENSES.Light.Gone");
+      // Both GM tabs get here; the one that wins this cast's claim whispers (a per-cast key: a
+      // claim key is single-use on a document, blueprint §5.9.2). Off the chain: the claim's
+      // settle delay must not hold up the next reconcile.
+      void claimDocument(item, `gone.${castAt}`, { scope: MODULE })
+        .then(won => won && tellOwners(item, "PENTARYN_SENSES.Light.Gone"))
+        .catch(e => warn("whisper", e));
     } else if (tok.parent.id !== desired.scene) {
       desired = { ...desired, scene: tok.parent.id };
       await item.update({ [`${CAST}.scene`]: tok.parent.id }); // moved scenes (portals): correct silently
@@ -242,9 +265,7 @@ async function reconcile(source) {
   }
   for (const [sid, ids] of removeByScene) {
     const scene = game.scenes.get(sid);
-    const live = ids.filter(id => scene?.lights.has(id));
-    if (live.length) await scene.deleteEmbeddedDocuments("AmbientLight", live);
-    done.removed += live.length;
+    done.removed += await deleteLive(scene, "AmbientLight", ids, scene?.lights);
   }
 
   // The light that is wanted.
@@ -267,11 +288,18 @@ async function reconcile(source) {
   if (plan.create) {
     const scene = game.scenes.get(plan.create.scene);
     if (scene) {
-      await scene.createEmbeddedDocuments("AmbientLight", [{
-        x: plan.create.x, y: plan.create.y, elevation: 0, walls: true, vision: false,
-        config: foundry.utils.deepClone(SPELL_LIGHT),
-        flags: { [MODULE]: { spellLight: { source } } }
-      }]);
+      try {
+        await scene.createEmbeddedDocuments("AmbientLight", [{
+          _id: squareId(source, scene.id, plan.create.x, plan.create.y),
+          x: plan.create.x, y: plan.create.y, elevation: 0, walls: true, vision: false,
+          config: foundry.utils.deepClone(SPELL_LIGHT),
+          flags: { [MODULE]: { spellLight: { source } } }
+        }], { keepId: true });
+      } catch (e) {
+        // The other GM tab's create of this square landed first: the refusal is the election.
+        if (!/already exists/i.test(e?.message ?? "")) throw e;
+        state.ctx?.log.debug("square already made by another GM session", e);
+      }
       done.created = true;
     }
   }
@@ -361,8 +389,7 @@ async function tidyOldSummons() {
     }
     if (ids.length) {
       console.info(`${MODULE} | light: removing ${ids.length} old Light summon token(s) on ${scene.name}`, ids);
-      await scene.deleteEmbeddedDocuments("Token", ids);
-      removed += ids.length;
+      removed += await deleteLive(scene, "Token", ids, scene.tokens);
     }
   }
   return removed;

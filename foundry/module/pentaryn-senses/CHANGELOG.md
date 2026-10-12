@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- **[declared senses-ac-1] Two GM tabs, one Light square, one whisper** (final review 2026-10-12): the
+  Light reconcile runs in every tab of the active GM (the MCP bridge and a browser). A square is now
+  created with an `_id` fixed by its Light item and spot and `keepId`, and the other tab's refused
+  create ("already exists") counts as created, so there is no twin square and a hand delete ends the
+  light. The "Gone" whisper waits on a per-cast `claimDocument` (`claims.gone.<at>`), so the owners
+  get it once. Square and old-summon deletes re-read what is still there and take "does not exist"
+  as done. Goldens: the square create carries `_id` and `keepId`; the Gone path adds the claim write;
+  `describe()` lists `flags.pentaryn-senses.claims` and the reconcile row's two-tab note.
+
 - **[declared PT TF-2] A token that changes actor is re-synced** (play test 2026-10-12): carried's new
   `updateToken` hook schedules the token's new actor when `actorId` changes. Before, dnd5e's Wild
   Shape swap moved the token to the form actor, the druid's sync no longer found it, and the beast

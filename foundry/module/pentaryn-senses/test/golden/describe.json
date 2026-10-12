@@ -251,7 +251,7 @@
       "query": false,
       "sideEffects": [],
       "legacy": true,
-      "doc": "Active GM: bring the world in line with one Light item's flag now (queued behind any running reconcile). Resolves to what it did (restored / removed counts, the token lit, a square created, another Light released, this cast cleared); null off the active GM; undefined when it failed (warned)."
+      "doc": "Active GM: bring the world in line with one Light item's flag now (queued behind any running reconcile). Resolves to what it did (restored / removed counts, the token lit, a square created, another Light released, this cast cleared); null off the active GM; undefined when it failed (warned). Safe in two GM tabs: a square is created with a fixed id (keepId), so the second tab's create is refused, and one tab whispers 'Gone'."
     },
     {
       "path": "light.status",
@@ -565,7 +565,8 @@
       "flags.pentaryn-senses.lightCast",
       "flags.pentaryn-senses.lit",
       "flags.pentaryn-senses.hooded",
-      "flags.pentaryn-senses.chain"
+      "flags.pentaryn-senses.chain",
+      "flags.pentaryn-senses.claims"
     ],
     "reads": [
       "flags.pentaryn-senses.light",

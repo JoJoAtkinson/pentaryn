@@ -130,8 +130,11 @@ third-party reads (rows pending in the adjustments batch): the light-animation s
 Carried lights: the active GM's client, or any GM while none is active. The Light reconcile, the
 torch-on-create hook, the sweep and the darkvision reset: the active GM only. Chains: any GM.
 Players write only their own items (cast, toggle, hood). Two tabs on the GM account both run the
-active-GM paths; the carried-light, torch and reset writes are idempotent, the Light reconcile's
-square creation is not (see the wave-3 report).
+active-GM paths; the carried-light, torch and reset writes are idempotent. The Light reconcile is
+too (senses-ac-1): a Light square is created with an id fixed by its Light and its spot (`keepId`),
+so the server refuses the second tab's create; the "Gone" whisper goes from the tab that wins that
+cast's claim (`flags.pentaryn-senses.claims.gone.<at>` on the Light item); a delete the other tab
+made first (a square, an old summon token) counts as done.
 
 ## Extending
 

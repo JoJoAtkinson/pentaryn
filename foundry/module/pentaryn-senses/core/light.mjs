@@ -267,6 +267,23 @@ export function planSpellLight({ desired = null, existing = [] } = {}) {
 }
 
 /**
+ * The `_id` a Light square is created with (`keepId`): 16 hex characters from the Light item's uuid
+ * and the square's spot. Both tabs of the active GM (the MCP bridge and a browser) reconcile, so both
+ * send the same create; the server takes one and refuses the other ("already exists"), and the
+ * Light never gets a twin square (senses-ac-1). The spot is in the id so a recast to a new square
+ * never reuses the id of the square it replaces, which the other tab may still be deleting.
+ */
+export function squareId(source, scene, x, y) {
+  const key = `${str(source)}|${str(scene)}|${Math.round(x)}|${Math.round(y)}`;
+  const fnv = seed => {
+    let h = seed;
+    for (let i = 0; i < key.length; i++) h = Math.imul(h ^ key.charCodeAt(i), 0x01000193);
+    return (h >>> 0).toString(16).padStart(8, "0");
+  };
+  return fnv(0x811c9dc5) + fnv(0x050c5d1f);
+}
+
+/**
  * The token update that hands its light to the spell. `current` is the token's light right now.
  * A token already lit by another caster keeps the first `prior`, so ending either restores the
  * light it had before any spell.

@@ -135,7 +135,8 @@ export const MANIFEST = Object.freeze({
       gm: true, writes: true, legacy: true,
       doc: "Active GM: bring the world in line with one Light item's flag now (queued behind any running reconcile). "
         + "Resolves to what it did (restored / removed counts, the token lit, a square created, another Light released, "
-        + "this cast cleared); null off the active GM; undefined when it failed (warned).",
+        + "this cast cleared); null off the active GM; undefined when it failed (warned). Safe in two GM tabs: a "
+        + "square is created with a fixed id (keepId), so the second tab's create is refused, and one tab whispers 'Gone'.",
     },
     {
       path: "light.status",
@@ -219,6 +220,7 @@ export const MANIFEST = Object.freeze({
     writes: [
       `flags.${MODULE}.itemLight`, `flags.${MODULE}.itemLightPrior`, `flags.${MODULE}.spellLight`,
       `flags.${MODULE}.lightCast`, `flags.${MODULE}.lit`, `flags.${MODULE}.hooded`, `flags.${MODULE}.chain`,
+      `flags.${MODULE}.claims`,   // on a Light item: which GM tab whispers "Gone" for a cast (senses-ac-1)
     ],
     // `light` on an item is also written by pentaryn-transform (the Starry form).
     reads: [`flags.${MODULE}.light`, `flags.${MODULE}.lightItem`, `flags.${MODULE}.lightToggle`],

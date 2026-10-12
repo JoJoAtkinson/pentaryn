@@ -164,11 +164,15 @@ export function addEmbedded(scene) {
       }
       return out;
     },
-    async createEmbeddedDocuments(type, data) {
-      F.calls.push({ op: "createEmbedded", scene: scene.id, type, data: plain(data) });
+    async createEmbeddedDocuments(type, data, options = {}) {
+      F.calls.push({ op: "createEmbedded", scene: scene.id, type, data: plain(data), ...(options.keepId ? { keepId: true } : {}) });
+      // keepId with an id already there: the server refuses the whole create, as v14 does
+      const taken = options.keepId ? data.find(d => d._id && collFor(type).has(d._id)) : null;
+      if (taken) throw new Error(`The ${type} "${taken._id}" already exists in Scene "${scene.id}"`);
       const out = [];
-      for (const d of data) {
-        const doc = makeDoc(type, { id: `lgtCreated${String(++lightSeq).padStart(6, "0")}`, ...structuredClone(d) }, { parent: scene });
+      for (const { _id, ...d } of data) {
+        const id = options.keepId && _id ? _id : `lgtCreated${String(++lightSeq).padStart(6, "0")}`;
+        const doc = makeDoc(type, { id, ...structuredClone(d) }, { parent: scene });
         doc.collection = collFor(type);
         collFor(type).set(doc.id, doc);
         out.push(doc);

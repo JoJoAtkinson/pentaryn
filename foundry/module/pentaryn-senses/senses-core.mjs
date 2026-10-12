@@ -12,7 +12,7 @@ import { MODULE, CHAIN_FLAG, readChain, chainPairs, linksTouching, chainGeometry
 import {
   DARK, SPELL_LIGHT, LIGHT_PROFILES, PHB_LIGHT_ACTOR, TORCH_ACTIVITY_ID, slug, profileKey, profileFor, lightFor, strongest,
   carriedLightOf, lightingItemId, isLit, isHooded, isLightSpellData, isLightToggle, readSpellCast, castFlag, readSpellLight,
-  planSpellLight, spellLightUpdate, restoredLight, sourcesUnder, isPHBLightActorSource, torchActivityData,
+  planSpellLight, squareId, spellLightUpdate, restoredLight, sourcesUnder, isPHBLightActorSource, torchActivityData,
   itemLightUpdate, collectSources, litByIn, lightEntries, tokensByActor, summarise, handSquareEdit,
 } from "./core/light.mjs";
 import { SIGHT_RESET, SIGHT_RESET_DONE, RESET_SIGHT, needsSightReset, systemReady, planSightReset } from "./core/migrate.mjs";
@@ -24,7 +24,7 @@ export {
   MODULE, CHAIN_FLAG, readChain, chainPairs, linksTouching, chainGeometry, chainThickness, resolveTokenRef, linkSpriteSpecs,
   DARK, SPELL_LIGHT, LIGHT_PROFILES, PHB_LIGHT_ACTOR, TORCH_ACTIVITY_ID, slug, profileKey, profileFor, lightFor, strongest,
   carriedLightOf, lightingItemId, isLit, isHooded, isLightSpellData, isLightToggle, readSpellCast, castFlag, readSpellLight,
-  planSpellLight, spellLightUpdate, restoredLight, sourcesUnder, isPHBLightActorSource, torchActivityData,
+  planSpellLight, squareId, spellLightUpdate, restoredLight, sourcesUnder, isPHBLightActorSource, torchActivityData,
   itemLightUpdate, collectSources, litByIn, lightEntries, tokensByActor, summarise, handSquareEdit, inspectShape, lightStatus,
   SIGHT_RESET, SIGHT_RESET_DONE, RESET_SIGHT, needsSightReset, systemReady, planSightReset,
   LIMITS, EPOCH_CACHE, rng, hashString, epochBuilds, buildEpoch, waveLevel, brightnessFor, shouldReinit,
