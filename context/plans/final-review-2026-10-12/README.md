@@ -41,3 +41,27 @@ not code, so no revert. Goldens under `.state/live-goldens/INT-1228/{before,afte
 **Foundry state.** Up, world pentaryn loaded, one GM tab answering `get-world-info`. No restart, no
 bridge rebuild (no `module.json` or fork change). Review worktrees for the six merged areas removed;
 branches kept.
+
+## Integration INT-1247
+
+| Area | Status | Merge SHA | Revert SHA | Synced modules | Reason |
+|---|---|---|---|---|---|
+| ties-study | merged | b2fa66a6 | — | ties | — |
+| combat-core | merged | a8a079f9 | — | combat | — |
+| aoe | merged | 2b2aadcd | — | aoe | — |
+
+**Gates on main (2b2aadcd).** `make foundry-modules-check` (all 20 modules), `make foundry-lib-check`
+(93), `make test` (1581 passed), `make check-context` all green. No fork area merged; no `module.json`
+changed, so no restart and no bridge rebuild.
+
+**Deploy.** Rollback copies of the three deployed folders in `.state/live-rollback/INT-1247/`; `make
+foundry-{aoe,combat,ties}-sync` with `FROM=local`; one GM-tab reload. Boot probe: aoe 0.4.0, combat
+0.3.0, ties 0.19.4 `describe().version` equals `module.json`, every described path (24/25/111) is a
+function, `selftest().ok` true where present (combat, ties). Deployed folders match main byte for byte.
+
+**Goldens.** Before (deployed code) and after (new code) run in the one GM tab and diffed in page:
+aoe, combat and ties diff empty (`shared`, `declared`, env, cleanup clean, no ZZ fixtures left).
+No allowlist used.
+
+**Foundry state.** Up, world pentaryn loaded, Gamemaster the only active user, one GM tab answering
+`get-world-info`.
