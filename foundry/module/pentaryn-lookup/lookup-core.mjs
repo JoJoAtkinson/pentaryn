@@ -413,6 +413,9 @@ export function monsterQuery(q = {}) {
   return { size, type, lo, hi, name, limit, packIds };
 }
 
+/** The index fields matchMonster and monsterRow read (getIndex({fields})). */
+export const MONSTER_INDEX_FIELDS = Object.freeze(["type", "system.details.cr", "system.traits.size", "system.details.type.value", "system.details.type.subtype"]);
+
 /** One compendium index entry against a parsed query: NPCs only; size, type, CR range, name substring. */
 export function matchMonster(e, { size, type, lo, hi, name }) {
   if (e.type !== "npc") return false;

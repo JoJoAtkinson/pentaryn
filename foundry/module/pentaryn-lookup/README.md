@@ -112,7 +112,8 @@ answer the same read, so the first answer is right.
 1. A pure function in `lookup-core.mjs`, with a case in `test/core.test.mjs`.
 2. Any Foundry read it needs → a function in `packs-adapter.mjs` (plain data out). A pack id
    it reads goes in one of core's tables (`BOOKSETS`, `MONSTER_PACKS`, `MONSTER_LIST_PACKS`,
-   `SPELL_PACKS`, `NAME_SOURCES`), never inline in `books.mjs`.
+   `SPELL_PACKS`, `NAME_SOURCES`), never inline in `books.mjs`; so do the index fields it reads
+   (`NAME_SOURCES`, `MONSTER_INDEX_FIELDS`).
 3. A thin method in `books.mjs`, added to `install()`'s `impl`.
 4. A row in `api-manifest.mjs`: `returns`, `doc`, `legacy: true` only if the answer is an
    `{error}`/`{notFound}` object, and `query: true` + an `args` mapper if the bridge should call it.
