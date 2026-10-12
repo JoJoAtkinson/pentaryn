@@ -56,3 +56,18 @@ test("[declared] T-D8 every registration is guarded: a throwing listener logs '<
     assert.equal(/guard:\s*false/.test(src), false, `${f}: an unguarded registration`);
   }
 });
+
+test("hot patch after ready: uninstall(), then re-import both entries — every hook back once, the API republished with starry", async () => {
+  assert.equal(game.ready, true);
+  W.ctx.uninstall();
+  const before = game.modules.get("pentaryn-transform").api;
+  await import("../transform.mjs?v=2");
+  await import("../hud.mjs?v=2");
+  assert.deepEqual(W.reg.ids().map(r => ({ kind: r.kind, name: r.name })), golden.filter((_, i) => i !== 17));
+  const api = game.modules.get("pentaryn-transform").api;
+  assert.notEqual(api, before, "a new API object");
+  assert.equal(game.pentaryn.transform, api);
+  assert.equal(typeof api.starry.assume, "function", "hud.mjs republished with Starry's rows");
+  assert.equal(F.TokenDocument._preUpdateOperation.pentarynUnwrapped, true, "the patch is back");
+  assert.equal(F.D.listeners.filter(l => l.type === "pointermove").length, 1);
+});
