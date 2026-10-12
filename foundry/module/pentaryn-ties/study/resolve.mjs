@@ -32,6 +32,7 @@ import {
   studySkill,
   tierOf
 } from "../known-core.mjs";
+import { CONCEAL_FLAG, concealFor } from "../core/rules.mjs";
 import { attackItems, composeStudyPayload } from "./compose.mjs";
 import { readFlag } from "../lib/flags.mjs";
 import { setting } from "../settings.mjs";
@@ -63,6 +64,11 @@ export function kindActorOf(actor) {
  * That is the whole of rule 4, and it is worth the indirection for one reason: the conduit is
  * the security boundary. Every branch that re-implements "which ledger, whose reach, which
  * lock" is a branch that can get one of the three subtly wrong on a path nobody re-audits.
+ *
+ * The seam is not airtight: `fact.ns` is still tested downstream — apply.mjs (`readBelief`,
+ * `putBelief`, `applyPlayerWrites`), claim.mjs (`claimFact`, `releaseFact`), gate.mjs
+ * (`promptDeliver`, `deliverFact`, `rowMissed`, and the parsed-key test in `pending`), share.mjs and
+ * authoring.mjs's `beliefs` — so a new namespace must visit those too.
  *
  * Returns `null` for anything it cannot fully resolve. A caller that gets `null` must refuse —
  * never fall back to a default subject, because the default would be the wrong document to
@@ -180,7 +186,7 @@ export function resolveFact(spec) {
       ns: "attr",
       axis: "lore", // it locks in the same axis as a lore row: `studied.lore[factKey]`
       subject,
-      ledger: null, // ⚠ a SETTING, not a document — see `writeBelief`'s branch
+      ledger: null, // ⚠ a SETTING, not a document — see `putBelief`'s setting branch (apply.mjs)
       attrId,
       lockKey: factKey,
       beliefKey: factKey,
@@ -208,6 +214,8 @@ export function resolveFact(spec) {
 
 export const studiedOf = actor => readStudied(readFlag(actor, MODULE, STUDIED_FLAG));
 export const beliefsOf = actor => readBeliefs(readFlag(actor, MODULE, BELIEFS_FLAG));
+/** Concealment: raises the DC without ever appearing in the printed one. */
+export const concealmentFor = (subject, attrId) => concealFor(readFlag(subject, MODULE, CONCEAL_FLAG), attrId);
 export const studyTiersOf = actor => readStudyTiers(readFlag(actor, MODULE, STUDY_TIERS_FLAG));
 
 /** The registry, read defensively — a setting can be unregistered when a hook fires early. */
@@ -248,11 +256,10 @@ export function studyStateFor(character, subject) {
   const kind = kindActorOf(subject);
   if (!kind) return { available: false };
   const spent = !!studiedOf(character).kind[kind.id];
-  const content = kindHasContent({
-    biography: kind.system?.details?.biography?.value ?? "",
-    tiers: studyTiersOf(kind),
-    attacks: attackItems(kind)
-  });
+  // the item walk is the dear part, so it runs only when biography and tiers leave it undecided
+  const biography = kind.system?.details?.biography?.value ?? "";
+  const tiers = studyTiersOf(kind);
+  const content = kindHasContent({ biography, tiers }) || kindHasContent({ attacks: attackItems(kind) });
   const { skill, label } = studySkillFor(kind);
   return {
     kind,

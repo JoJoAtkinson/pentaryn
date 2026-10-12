@@ -30,10 +30,3 @@ export function attackCount(actor = {}, weapon = null) {
   if (weapon?.loading && !feats.has("crossbow-expert") && !(actor.multiattack?.total >= 2)) n = 1;
   return n;
 }
-
-
-/**
- * The shape every function here reads a weapon as (built by combat.mjs `weaponShape`):
- * { id, name, img, equipped, melee, ranged, light, heavy, twoHanded, finesse, reach, thrown,
- *   versatile, mastery, hasMastery, baseItem, activation, attackActivity, natural, unarmed }
- */

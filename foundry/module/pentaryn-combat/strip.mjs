@@ -36,6 +36,8 @@ function onKey(ev) {
   if (lastCtx?.status === "paused") {
     ev.preventDefault();
     ev.stopPropagation();
+    // Picking a new target (Retarget): no choice is pending, so do what the Stop button does.
+    if (!pending) { cancelWaits(); handlers.onStop?.(); }
     choose({ type: "stop" });
     return;
   }
@@ -98,7 +100,7 @@ function onClick(ev) {
     if (lastCtx?.status === "paused") choose({ type: "adv", value: b.dataset.value });
     else handlers.onAdv?.(b.dataset.value);
   } else if (what === "stop") {
-    for (const fn of cancelFns.splice(0)) fn();
+    cancelWaits();
     // A swing's roll window still open closes unrolled (sequence.mjs onStop; U-10-11, which replaced
     // U-10-4's "focus goes back to the open window" — there is no window left to roll).
     handlers.onStop?.();
@@ -226,6 +228,7 @@ function settleFocus() {
   setTimeout(() => focusRollWindow(), DELAYS.focusRetry);
 }
 
+// onRollWindow / onRollWindowClose are registered by roll-dock.mjs (a feature installed first in combat.mjs).
 export function onRollWindow(app, { weapon = false } = {}) {
   try { if (app?.element?.classList?.contains("roll-configuration")) readEnter(app); } catch (err) { log.debug("read Enter (the hint stays)", err); }
   try { if (app?.element?.classList?.contains("roll-configuration")) settleFocus(); } catch (err) { log.debug("settle focus (the player clicks)", err); }
@@ -262,11 +265,9 @@ export function onRollWindowClose(app) {
   } catch (err) { log.debug("roll window close (closing anyway)", err); }
 }
 
-// Registered by roll-dock.mjs (a feature installed first in combat.mjs).
-
 export function hide() {
   if (pending) { const p = pending; pending = null; p({ type: "stop" }); }
-  for (const fn of cancelFns.splice(0)) fn();
+  cancelWaits();
   document.removeEventListener("keydown", onKey, true);
   el?.remove();
   el = null;
@@ -302,6 +303,11 @@ export function onceCancel(fn) {
   cancelFns.push(fn);
 }
 
+/** Run (and drop) every onceCancel wait: Stop, hide() and sequence.mjs abortFor. */
+export function cancelWaits() {
+  for (const fn of cancelFns.splice(0)) fn();
+}
+
 /* ── weapon picker ───────────────────────────────────────────────────────── */
 
 let pickerEl = null;
@@ -317,15 +323,15 @@ export function pickWeapon(tiles, { title = "" } = {}) {
     const done = (id) => {
       document.removeEventListener("pointerdown", outside, true);
       document.removeEventListener("keydown", key, true);
-      pickerEl?.remove();
-      pickerEl = null;
+      me.remove();
+      if (pickerEl === me) pickerEl = null;
       resolve(id);
     };
-    const outside = (ev) => { if (pickerEl && !pickerEl.contains(ev.target)) done(null); };
+    const outside = (ev) => { if (!me.contains(ev.target)) done(null); };
     const key = (ev) => { if (ev.key === "Escape") { ev.preventDefault(); ev.stopPropagation(); done(null); } };
-    pickerEl = document.createElement("div");
-    pickerEl.className = "pentaryn-combat-strip pentaryn-combat-picker";
-    pickerEl.innerHTML = `<div class="pc-head"><strong>${esc(title)}</strong><span class="pc-what">${esc(_loc("PENTARYN_COMBAT.Picker.Hint"))}</span></div>
+    const me = pickerEl = document.createElement("div");
+    me.className = "pentaryn-combat-strip pentaryn-combat-picker";
+    me.innerHTML = `<div class="pc-head"><strong>${esc(title)}</strong><span class="pc-what">${esc(_loc("PENTARYN_COMBAT.Picker.Hint"))}</span></div>
       <div class="pc-weapons">${tiles.map(t => `
         <button type="button" data-id="${esc(t.id)}">
           <img src="${esc(t.img)}" alt="">
@@ -333,12 +339,12 @@ export function pickWeapon(tiles, { title = "" } = {}) {
           <span class="pc-stats">${esc([t.toHit, t.damage].filter(Boolean).join(" · "))}</span>
           <span class="pc-swings">${esc(_loc("PENTARYN_COMBAT.Picker.Swings", { n: t.swings }))}</span>
         </button>`).join("")}</div>`;
-    pickerEl.addEventListener("click", ev => {
+    me.addEventListener("click", ev => {
       const b = ev.target.closest("button[data-id]");
       if (b) done(b.dataset.id);
     });
-    document.body.appendChild(pickerEl);
-    pickerEl.style.bottom = `${anchor()}px`;
+    document.body.appendChild(me);
+    me.style.bottom = `${anchor()}px`;
     // Next tick: the right-click that opened it must not count as "outside".
     setTimeout(() => {
       document.addEventListener("pointerdown", outside, true);

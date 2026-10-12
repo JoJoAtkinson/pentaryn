@@ -6,7 +6,7 @@
  * file only through ctx.
  */
 
-import { MODULE, NS, HOOKS, aoeFlags, isHandleTarget, summariseResolution } from "./core.mjs";
+import { MODULE, NS, HOOKS, RECENT_MESSAGES, aoeFlags, isHandleTarget, summariseResolution } from "./core.mjs";
 import { MANIFEST } from "./api-manifest.mjs";
 import { SETTINGS, setting, settingsSnapshot } from "./settings.mjs";
 import { areasFor, handleFor, removeArea, spellAreas } from "./scene-adapter.mjs";
@@ -17,9 +17,6 @@ import { patches } from "./lib/patch.mjs";
 import { publishedOf } from "./lib/publish.mjs";
 import { refOf, resolveRef } from "./lib/resolve.mjs";
 
-/** How far back latestResolution looks (the same window the GM's save matching uses). */
-const RECENT = 60;
-
 const messageOf = messageOrId => (typeof messageOrId === "string" ? game.messages.get(messageOrId) : messageOrId) ?? null;
 
 function resolution(messageOrId) {
@@ -29,7 +26,7 @@ function resolution(messageOrId) {
 
 function latestResolution({ sceneId = null } = {}) {
   const scene = sceneId === "current" ? canvas?.scene?.id ?? null : sceneId;
-  for (const m of game.messages.contents.slice(-RECENT).reverse()) {
+  for (const m of game.messages.contents.slice(-RECENT_MESSAGES).reverse()) {
     const res = aoeFlags(m).resolution;
     if (!res || res.superseded || (scene && res.scene !== scene)) continue;
     return { messageId: m.id, resolution: foundry.utils.deepClone(res) };

@@ -21,7 +21,8 @@ import { constellationOf, starrySecondsLeft } from "./starry-adapter.mjs";
  * @param {object} asked  resolved by buildApi (the row's first param is `ref`)
  * @param {{ as?: * }} opts  a user ref: without OBSERVER on the actor that user sees `{ actor }` only
  */
-function inspect(asked, { as } = {}) {
+function inspect(asked, opts) {
+  const as = opts?.as;
   const viewer = as === undefined || as === null ? null : resolveRef(as, "user");
   const sees = !viewer || viewer.isGM === true || asked.testUserPermission?.(viewer, "OBSERVER") === true;
   if (!sees) return toPlain({ actor: refOf(asked) });

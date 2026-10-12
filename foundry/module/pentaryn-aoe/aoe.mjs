@@ -18,8 +18,10 @@
  *
  * Hot patch (README-documented): game.pentaryn.aoe.uninstall() removes every hook and patch it
  * added; then set globalThis.__pentarynAoeHot, import this file under a new URL and call its
- * install(). It re-runs the WIRING only (feature, core, api and settings files are the instances
- * already loaded), so a code change needs a reload.
+ * install(). With the README's procedure (every file fetched and its relative imports rewritten
+ * to blob URLs) every file is a fresh copy, so changed code runs without a reload. Importing
+ * only this file under a new URL (as glue.test does) re-runs the WIRING with the feature, core,
+ * api and settings instances already loaded, and a code change then needs a reload.
  */
 
 import { HOOKS, MODULE, NS, VERSION } from "./core.mjs";

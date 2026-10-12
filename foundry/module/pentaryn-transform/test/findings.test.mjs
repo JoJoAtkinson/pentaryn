@@ -44,6 +44,24 @@ test("-10 composing a Bonus bar drops the live buttons Argon's last rebuild left
   assert.equal(liveButtons.size, 2, "the new bar's two (not yet rendered) are kept");
 });
 
+test("refreshLive: a disconnected button without a panel stays and is not refreshed; with a panel it is removed", () => {
+  const { talo } = fresh();
+  const item = talo.items.get(IDS.ws);
+  liveButtons.clear();
+  const refreshed = [];
+  const b = (name, connected, panel) => ({
+    name, panel, wildShapeItem: item,
+    element: { isConnected: connected },
+    refreshCount() { refreshed.push(name); }
+  });
+  const live = b("live", true, {}), gone = b("gone", false, {}), unrendered = b("unrendered", false, undefined);
+  for (const x of [live, gone, unrendered]) liveButtons.add(x);
+  Hooks.callAll("updateItem", item, {}, {}, "u");
+  assert.deepEqual(refreshed, ["live"], "only the connected button is refreshed");
+  assert.deepEqual([...liveButtons], [live, unrendered], "the rendered, disconnected one is dropped");
+  liveButtons.clear();
+});
+
 /* ── -1 isRunner short-circuits on a connected GM ─────────────────────────── */
 
 test("-1 isRunner: with a GM connected no owner permission is tested; the answers are today's", () => {

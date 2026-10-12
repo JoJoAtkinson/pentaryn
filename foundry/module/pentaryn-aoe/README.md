@@ -195,7 +195,7 @@ feature's function is reached through `ctx.exposed`, never an import.
 | `scene-adapter.mjs`, `messages-adapter.mjs`, `argon.mjs` | adapters: scenes/regions/Item Piles, dnd5e messages, Argon |
 | `areas.mjs`, `careful.mjs`, `resolve.mjs`, `tray.mjs`, `attacks.mjs`, `effects.mjs`, `refund.mjs`, `aim.mjs`, `escape.mjs` | features (Parts A–G) |
 | `styles/aoe.css`, `lang/en.json`, `lib/` | styles; strings; vendored kit |
-| `test/` | node:test suites, goldens, fixtures (`seams.mjs` maps the checkpoint names), the legacy suite |
+| `test/` | node:test suites, goldens, fixtures (`seams.mjs` maps the checkpoint names) |
 
 ## Tests
 

@@ -22,8 +22,8 @@
  *     from the message body — the body cannot be trusted to say who wrote it
  *   - the sender must **own the source actor**, checked against the server's permission
  *     record on the GM client
- *   - a non-GM sender must also have at least LIMITED on the target, the same reach rule
- *     the dialog's pickers enforce
+ *   - a non-GM sender must be able to reach the target — `canReach`: LIMITED, or a token of
+ *     them on the active scene or the scene the sender is viewing (the study conduit's rule)
  *   - the sender's own `playerAccess` right is re-checked here, so the GM's kill-switch
  *     really does turn the whole feature off rather than only its buttons
  *   - source and target are resolved from ids on the GM client; a payload naming an actor
@@ -82,7 +82,7 @@ export function requestMirror({ source, target }) {
   return true;
 }
 
-/** GM side: validate hard, re-read everything, then apply the same rule the dialog uses. */
+/** GM side: validate hard, re-read everything, then fill only the blanks (`seedReverse`) — never the dialog's follow rule. */
 async function applyMirror(payload, senderId) {
   /*
    * ⚠ `senderId` is the SERVER's word for who sent this, not the client's.

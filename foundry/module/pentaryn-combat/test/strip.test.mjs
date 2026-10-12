@@ -273,5 +273,27 @@ test("pickWeapon: tiles (golden/picker-html.json), a click picks, Esc or a click
   mock.timers.tick(0);
   await doc.fire("keydown", { key: "Escape" });
   assert.equal(await p2, null);
-  void p;   // the replaced picker's promise never settles (as today)
+  assert.equal(await p, null, "the replaced picker settles null on that same Esc");
+});
+
+test("pickWeapon: a replaced picker never closes the new one — a click elsewhere settles both, no listener left", async () => {
+  const tiles = [
+    { id: "longsword", name: "Longsword", img: "l.webp", toHit: "+5", damage: "", swings: 2 },
+    { id: "dagger", name: "Dagger", img: "d.webp", toHit: "+5", damage: "", swings: 2 },
+  ];
+  const count = type => doc.listeners.filter(l => l.type === type).length;
+  const keys = count("keydown");
+  const p = strip.pickWeapon(tiles);
+  const p2 = strip.pickWeapon(tiles);
+  mock.timers.tick(0);
+  await doc.fire("pointerdown", { target: doc.body });
+  const pending = Symbol("pending");
+  const race = q => Promise.race([q, new Promise(r => setImmediate(() => r(pending)))]);
+  assert.equal(await race(p2), null, "the new picker settles null on a click elsewhere");
+  assert.equal(await race(p), null);
+  assert.equal(doc.body.querySelector(".pentaryn-combat-picker"), null);
+  assert.equal(count("pointerdown"), 0);
+  assert.equal(count("keydown"), keys);
+  const ev = await doc.fire("keydown", { key: "Escape" });
+  assert.equal(ev.defaultPrevented, false, "no leaked picker listener eats a later Esc");
 });

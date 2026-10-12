@@ -36,6 +36,9 @@ export function carefulKey(actor) {
   return combat ? `${combat.id}:${combat.round}:${combat.combatant?.id ?? combat.turn}` : null;
 }
 
+/** How many creatures Careful Spell protects for this caster: the CHA modifier, at least 1. */
+const carefulMax = actor => Math.max(1, Number(actor.system?.abilities?.cha?.mod) || 1);
+
 /**
  * The caster used Careful Spell for this cast: mark their side's rows (up to the CHA mod) as an
  * automatic success with no damage on a half-on-save spell, and bind the use to this usage card.
@@ -48,7 +51,7 @@ async function carefulFor(caster, described, { casterActorId, usage, scene, onSa
   if (!flag) { why("careful", usage, "no flag"); return null; }
   if (!carefulApplies(flag, { now: Date.now(), combatKey, usage })) { why("careful", usage, "not applicable", { combatKey, flag }); return null; }
   const own = caster.token ?? caster.getActiveTokens?.(false, true)?.find(tk => tk.parent === scene) ?? null;
-  const max = Math.max(1, Number(caster.system?.abilities?.cha?.mod) || 1);
+  const max = carefulMax(caster);
   const ids = carefulTargets(described, { casterActorId, casterDisposition: own?.disposition ?? CONST.TOKEN_DISPOSITIONS.FRIENDLY, max });
   protectRows(rows, ids, onSave);
   // -9: if binding fails, a later different spell could still take the protection — say so.
@@ -64,7 +67,7 @@ async function onCarefulUsed(activity) {
   const actor = activity.actor;
   if (!actor?.isOwner) return why("careful", null, "used, but this client does not own the caster");
   await actor.update({ [`flags.${MODULE}.careful`]: { at: Date.now(), key: carefulKey(actor), usage: null } });
-  const max = Math.max(1, Number(actor.system?.abilities?.cha?.mod) || 1);
+  const max = carefulMax(actor);
   ui.notifications?.info?.(_loc("PENTARYN_AOE.Careful.Armed", { n: max }));
 }
 

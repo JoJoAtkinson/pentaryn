@@ -80,3 +80,20 @@ test("-10 summariseResolution: rows without images or message ids, the Apply cou
   assert.deepEqual(core.summariseResolution({ superseded: true }).playerStatus, "superseded");
   assert.deepEqual(core.summariseResolution({}).rows, []);
 });
+
+test("RECENT_MESSAGES is the 60-message window the manifest documents", () => {
+  assert.equal(core.RECENT_MESSAGES, 60);
+});
+
+test("alreadyExists / doesNotExist: the two-session race refusals", () => {
+  const exists = new Error("The Actor x already exists in the world collection");
+  const gone = new Error("ActiveEffect x does not exist");
+  assert.equal(core.alreadyExists(exists), true);
+  assert.equal(core.doesNotExist(gone), true);
+  assert.equal(core.alreadyExists(gone), false);
+  assert.equal(core.doesNotExist(exists), false);
+  for (const fn of [core.alreadyExists, core.doesNotExist]) {
+    assert.equal(fn(null), false);
+    assert.equal(fn({}), false);
+  }
+});

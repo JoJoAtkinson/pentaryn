@@ -130,22 +130,21 @@ export const RETURN_LINES = {
 /* ── bonus-action bookkeeping ────────────────────────────────────────────── */
 // Argon keeps "bonus action used" on the panel instance, and every shift or revert rebinds the HUD
 // to a different actor, which builds fresh panels. The token survives both, so the mark is kept per
-// token and per turn; hud.mjs applies it when it composes the Bonus bar.
+// token and per turn; hud-panels.mjs applies it when it composes the Bonus bar.
 
 let bonusMark = null;
 
-function tokenOf(actor) {
-  return actor?.getActiveTokens?.(false, true)?.[0] ?? null;
+function tokensOf(actor) {
+  return actor?.getActiveTokens?.(false, true) ?? [];
 }
 
 // `game.combat` is only the combat this client VIEWS (a GM activating another encounter flips every
 // client's view), so the mark looks for the started combat whose current turn is this token's.
 export function markBonusUsed(actor) {
-  const token = tokenOf(actor);
-  if (!token) return;
-  const c = [game.combat, ...(game.combats ?? [])].find(x => x?.started && x.combatant?.tokenId === token.id);
-  if (!c) return;
-  bonusMark = { combat: c.id, round: c.round, turn: c.turn, token: token.id };
+  for (const token of tokensOf(actor)) {
+    const c = [game.combat, ...(game.combats ?? [])].find(x => x?.started && x.combatant?.tokenId === token.id);
+    if (c) return void (bonusMark = { combat: c.id, round: c.round, turn: c.turn, token: token.id });
+  }
 }
 
 export function bonusUsedNow(tokenId) {
@@ -471,7 +470,7 @@ export async function doShift(host, activity, profileId, uuid) {
 
 /* ── ending without a click ──────────────────────────────────────────────── */
 
-/** True on exactly one client for this actor: the active GM, else the first active owner. */
+/** True for exactly one user for this actor (the active GM, else the first active owner), in every tab of that user (README "Two sessions"). */
 export function isRunner(actor) {
   const activeGMId = game.users.activeGM?.id ?? null;
   // A connected GM always wins pickRunner: no owner scan (transform-creatures-1).

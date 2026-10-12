@@ -5,6 +5,13 @@
  */
 
 /**
+ * The shape core reads a weapon as (built by shapes.mjs `weaponShape`):
+ * { id, uuid, name, img, isWeapon, quantity, weaponLike, classification, equipped, melee, ranged,
+ *   light, heavy, twoHanded, finesse, reach, thrown, loading, versatile, mastery, hasMastery, baseItem,
+ *   activation, attackActivity, natural, unarmed, pactWeapon, ability }
+ */
+
+/**
  * A weapon the Attack action can swing: weapon-like (not a spell, a cantrip or a consumable such as a
  * Torch — `weaponLike` is false for those), equipped (natural weapons always are), with an action attack.
  */
