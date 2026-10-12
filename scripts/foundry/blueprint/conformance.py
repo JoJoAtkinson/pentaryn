@@ -120,7 +120,7 @@ class Module:
             return self.flags["tier"]
         try:
             lock = vendor.read_lock(self.dir) or {}
-        except (OSError, ValueError):
+        except (OSError, ValueError, vendor.VendorError):
             lock = {}
         return lock.get("tier") or "full"
 

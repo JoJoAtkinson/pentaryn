@@ -296,3 +296,36 @@ def test_a_same_version_edit_still_says_never_edit_a_copy(tmp_path):
     p.write_bytes(p.read_bytes() + b" ")
     msg = next(x for x in vendor.check(d) if "lib/log.mjs differs" in x)
     assert "never edit a copy" in msg and "vendored at" not in msg
+
+
+def test_a_corrupt_lock_is_that_modules_problem_not_a_traceback(tmp_path, capsys):
+    """py-blueprint-ROB-4: a kit.lock.json that is not JSON is reported against its own module —
+    read_lock raises VendorError, check() lists it, `--all` reports it and carries on with the rest."""
+    root = tmp_path / "modules"
+    root.mkdir()
+    bad = make_module(root, "pentaryn-bad")
+    good = make_module(root, "pentaryn-good")
+    vendor.sync(bad)
+    vendor.sync(good)
+    (bad / "lib/kit.lock.json").write_text("{not json\n")
+
+    with pytest.raises(vendor.VendorError, match=r"pentaryn-bad: lib/kit.lock.json is not valid JSON"):
+        vendor.read_lock(bad)
+    problems = vendor.check(bad)
+    assert len(problems) == 1 and "pentaryn-bad: lib/kit.lock.json is not valid JSON" in problems[0]
+
+    assert vendor.main(["check", "--all", "--root", str(root)]) == 1
+    out = capsys.readouterr().out
+    assert "✗ pentaryn-bad: lib/kit.lock.json is not valid JSON" in out
+    assert "✓ pentaryn-good" in out
+    assert vendor.main(["check", "--all", "--root", str(root), "--json"]) == 1
+    report = json.loads(capsys.readouterr().out)
+    assert report["modules"]["pentaryn-good"] == [] and report["modules"]["pentaryn-bad"]
+
+    (good / "lib/log.mjs").write_text("// drifted\n")
+    assert vendor.main(["sync", "--all", "--root", str(root)]) == 1
+    captured = capsys.readouterr()
+    assert "✗ pentaryn-bad: lib/kit.lock.json is not valid JSON" in captured.err
+    assert "✓ pentaryn-good" in captured.out
+    assert vendor.check(good) == []                         # the rest were still synced
+    assert (bad / "lib/kit.lock.json").read_text() == "{not json\n"   # the corrupt lock is left alone

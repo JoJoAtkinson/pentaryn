@@ -130,7 +130,10 @@ def read_lock(module_dir: Path) -> dict | None:
     path = module_dir / "lib" / "kit.lock.json"
     if not path.exists():
         return None
-    return json.loads(path.read_text(encoding="utf-8"))
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except ValueError as exc:  # py-blueprint-ROB-4: that module's problem, not a traceback
+        raise VendorError(f"{module_dir.name}: lib/kit.lock.json is not valid JSON: {exc}") from exc
 
 
 def plan(module_dir: Path, tier: str | None = None, extra: list[str] | None = None, *,
@@ -241,8 +244,11 @@ def check(module_dir: Path, *, lib_root: Path = LIB_ROOT) -> list[str]:
     """Problems that mean the vendored copies are not the canonical kit. Empty = healthy."""
     kit = load_kit(lib_root)
     problems: list[str] = []
-    lock = read_lock(module_dir)
     name = module_dir.name
+    try:
+        lock = read_lock(module_dir)
+    except VendorError as exc:
+        return [str(exc)]
     if lock is None:
         return [f"{name}: no lib/kit.lock.json — run vendor.py sync {name}"]
     if lock.get("version") != kit["version"]:
@@ -316,7 +322,11 @@ def main(argv: list[str] | None = None) -> int:
         if args.all:
             targets = []
             for mod in all_modules(args.root):
-                (targets if read_lock(mod) is not None else skipped).append(mod)
+                try:
+                    locked = read_lock(mod) is not None
+                except VendorError:
+                    locked = True  # a corrupt lock: sync/check report it as that module's ✗
+                (targets if locked else skipped).append(mod)
             skipped = [m.name for m in skipped]
         else:
             targets = [resolve_module(m, args.root) for m in args.modules]

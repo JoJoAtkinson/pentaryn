@@ -214,7 +214,7 @@ def existing_settings(target: Path) -> dict:
     if "tier" not in out:
         try:
             lock_tier = (vendor.read_lock(target) or {}).get("tier")
-        except (OSError, ValueError):
+        except (OSError, ValueError, vendor.VendorError):
             lock_tier = None
         if lock_tier in ("small", "full"):
             out["tier"] = lock_tier

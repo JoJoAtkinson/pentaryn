@@ -247,6 +247,14 @@ def test_tier_falls_back_to_the_lock_before_wave_7(tmp_path):
     assert conformance.score_dir(d)["tier"] == "full"
 
 
+def test_a_corrupt_lock_scores_as_full_not_a_traceback(tmp_path):
+    """py-blueprint-ROB-4: read_lock raises VendorError on a lock that is not JSON; the tier falls back."""
+    d = tmp_path / "pentaryn-tiny"
+    write(d, {"module.json": json.dumps({"id": "pentaryn-tiny", "esmodules": ["tiny.mjs"]}),
+              "tiny.mjs": "export const x = 1;\n", "lib/kit.lock.json": "{not json\n"})
+    assert conformance.score_dir(d)["tier"] == "full"
+
+
 def detail(report, rid):
     return next(r["detail"] for r in report["results"] if r["id"] == rid)
 
