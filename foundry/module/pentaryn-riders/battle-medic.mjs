@@ -218,7 +218,20 @@ async function relay(data, { user } = {}) {
 async function claimedHeal(target, requestId, me, heal) {
   const base = `relay.${requestId}`;
   const mine = flagPath(MODULE, `${base}.claims.${me}`);
+  // Already answered (a slow tab: the winner recorded before this one started) → no stamp, no heal.
+  const done = recordedAnswer(readFlag(target, MODULE, base));
+  if (done) return done();
   await target.update({ [mine]: Date.now() });
+  // The winner's record drops its own stamp, so a stamp that lands after it sees `{ <me>: now }`
+  // and would win: a recorded answer outranks the claim (combat-riders-41, the late tab).
+  const late = recordedAnswer(readFlag(target, MODULE, base));
+  if (late) {
+    try {
+      return late();
+    } finally {
+      await target.update({ [mine]: _del }).catch(err => log.warn("battle medic relay: claim not released", err));
+    }
+  }
   if (!relayClaimWinner(readFlag(target, MODULE, `${base}.claims`), me, Date.now(), CLAIM_STALE_MS)) {
     log.debug("battle medic relay: another GM tab claimed it — waiting for its result", { requestId });
     try {
@@ -242,6 +255,16 @@ async function claimedHeal(target, requestId, me, heal) {
   }
   await record({ result });
   return { result, wrote: true };
+}
+
+/**
+ * A relay entry the winner already recorded → a function answering as a loser does (its result,
+ * or its error thrown); still open → null.
+ */
+function recordedAnswer(entry) {
+  if (entry?.result) return () => ({ result: entry.result, wrote: false });
+  if (entry?.error) return () => { throw new Error(entry.error); };
+  return null;
 }
 
 /** The losing tab: the winner's recorded result (or its error), once it arrives by broadcast. */

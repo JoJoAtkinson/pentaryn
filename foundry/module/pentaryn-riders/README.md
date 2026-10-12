@@ -132,7 +132,8 @@ Non-patch rows: `argon-shared-uses-badge`, `argon-collapse-on-area-placement`,
   (`battle medic relay`) or one warn per refusal. The server sends a query to **every** tab of the
   GM's account (the MCP bridge tab and a GM browser tab), so the payload carries a request id and the
   tabs claim it on the patient first: the first to stamp heals and records its result, the others
-  wait (up to 7 s) and answer with it (combat-riders-41).
+  wait (up to 7 s) and answer with it; a tab that arrives after the result is recorded answers with
+  it too and never heals (combat-riders-41).
 - **Concentration summon cleanup**: the active GM's client (with no GM online, the user who ended
   the concentration) deletes the tokens.
 

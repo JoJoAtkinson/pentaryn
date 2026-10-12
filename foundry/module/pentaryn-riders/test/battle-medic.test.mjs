@@ -321,3 +321,64 @@ test("combat-riders-27: the relay logs one info line on success and one warn bef
   assert.deepEqual(seen[6][3], { healer: `Actor.${IDS.healer}`, target: `Actor.${IDS.npc}` });
   newNotes();
 });
+
+test("combat-riders-41 [declared]: a GM tab whose relay starts after the winner recorded its result answers with it — one heal, one Hit Die", async () => {
+  // The slow tab (the MCP bridge, a busy or background GM browser tab): its stamp reaches the
+  // server after tab A's record dropped A's stamp, so B's claims read `{ B: now }` — B must still
+  // see A's recorded result and not heal again. Two arrivals: B's copy has not yet received A's
+  // broadcasts when B's relay starts (the result shows up only after B's stamp), and B's copy
+  // already holds the result when B's relay starts (B writes nothing).
+  const data = { id: "patient000000002", name: "Patient", type: "npc", system: { isNPC: true, abilities: {}, attributes: { hp: { value: 5, max: 30 }, hd: { denomination: "d8", value: 3, spent: 0 } } } };
+  const tabs = ["socket-tab-A", "socket-tab-B"];
+  const copies = Object.fromEntries(tabs.map(t => [t, makeActor(structuredClone(data))]));
+  const inbox = Object.fromEntries(tabs.map(t => [t, []]));
+  const writes = Object.fromEntries(tabs.map(t => [t, 0]));
+  for (const t of tabs) {
+    const doc = copies[t];
+    const raw = doc.update.bind(doc);
+    const deliver = () => { for (const u of inbox[t].splice(0)) raw(u); };
+    Object.defineProperty(doc, "update", {
+      enumerable: false,
+      value: async changes => {
+        writes[t]++;
+        deliver();
+        for (const o of tabs) if (o !== t) { inbox[o].push(changes); setTimeout(() => { for (const u of inbox[o].splice(0)) copies[o].__raw(u); }, 10); }
+        await raw(changes);
+        return doc;
+      },
+    });
+    Object.defineProperty(doc, "__raw", { value: raw, enumerable: false });
+  }
+  const realFromUuid = globalThis.fromUuid;
+  globalThis.fromUuid = async uuid => (uuid === "Actor.patient000000002" ? copies[F.game.socket.id] : realFromUuid(uuid));
+  const flush = async () => { for (let j = 0; j < 50; j++) await Promise.resolve(); };
+  const settle = async () => { for (let i = 0; i < 200; i++) { await flush(); mock.timers.tick(10); } };
+  const run = async (socketId, body) => { F.become({ socketId }); try { return await relay(body, { user: W.player }); } finally { F.become({ socketId: "socket-gm-1" }); } };
+  W.takeLog();
+  try {
+    for (const [requestId, early] of [["relayreqlatetab1", false], ["relayreqlatetab2", true]]) {
+      const body = payload({ targetUuid: "Actor.patient000000002", amount: 6, requestId });
+      const spentBefore = copies["socket-tab-A"].system.attributes.hd.spent;
+      const a = await run("socket-tab-A", body);
+      if (early) await settle();   // B's copy holds A's result before B's relay starts
+      assert.equal(copies["socket-tab-B"].flags[MODULE]?.relay?.[requestId]?.result !== undefined, early, `${requestId}: B's copy ${early ? "has" : "lacks"} the result when B starts`);
+      const writesBefore = writes["socket-tab-B"];
+      const b = run("socket-tab-B", body);
+      const settled = Promise.allSettled([b]);
+      await settle();
+      const [rb] = await settled;
+      assert.equal(rb.status, "fulfilled", String(rb.reason));
+      assert.deepEqual(rb.value, a, `${requestId}: B answers with A's result`);
+      assert.equal(W.takeLog().filter(l => l.op === "applyDamage").length, 1, `${requestId}: one heal`);
+      if (early) assert.equal(writes["socket-tab-B"], writesBefore, `${requestId}: B writes nothing`);
+      for (const t of tabs) {
+        assert.equal(copies[t].system.attributes.hd.spent, spentBefore + 1, `${requestId} ${t}: one Hit Die spent`);
+        assert.deepEqual(copies[t].flags[MODULE].relay[requestId].claims ?? {}, {}, `${requestId} ${t}: no stamp left behind`);
+        assert.deepEqual(copies[t].flags[MODULE].relay[requestId].result, a, `${requestId} ${t}: A's result stays recorded`);
+      }
+    }
+  } finally {
+    globalThis.fromUuid = realFromUuid;
+    F.become({ socketId: "socket-gm-1" });
+  }
+});

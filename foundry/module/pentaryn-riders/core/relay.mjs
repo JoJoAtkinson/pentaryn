@@ -8,7 +8,9 @@
  * server applies the stamps in one order, and a tab receives every earlier stamp before its own
  * reply, so exactly one tab — the first to stamp — sees no other fresh stamp right after its own.
  * That tab heals and records the result; the others wait for it (pentaryn-journal's ensure relay,
- * items-journal-40, does the same).
+ * items-journal-40, does the same). The winner's record drops its own stamp, so a tab stamping after
+ * it would see only itself: the caller checks for a recorded result before and after stamping and
+ * calls this only while the entry is still open.
  */
 
 /** A request id the relay will claim on: a 16-character Foundry id. Anything else → null. */
