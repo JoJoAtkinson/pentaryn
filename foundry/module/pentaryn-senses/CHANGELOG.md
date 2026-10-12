@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- **[declared senses-edge-4] A hand-authored shard light is applied once, not on every sync** (final
+  review 2026-10-12): the carried-light "already applied" check now compares the item's
+  `flags.pentaryn-senses.light` as Foundry stores it (`new foundry.data.LightData(light).toObject()`:
+  unknown keys dropped, colours lower-cased), on the profile's own keys only, so `#8844FF` or an
+  unknown key no longer makes syncLight/syncAll rewrite and recount the token every time. The write
+  still sends the raw profile; a profile LightData refuses is compared raw as before. Goldens
+  unchanged. New `test/carried-normalise.test.mjs`.
+
 - **[declared senses-R1] A token's own actor no longer cancels its base actor's carried-light sync**
   (final review 2026-10-12): the 250 ms carried-light debounce is keyed by `actor.uuid`, not
   `actor.id`, so an unlinked token's synthetic actor and its world actor each keep their own timer,

@@ -338,16 +338,20 @@ export function torchActivityData(name = "Light") {
  * itemLightPrior and comes back when the carried light goes, not DARK. Foundry's helpers come in:
  * `flatten` = foundry.utils.flattenObject, `clone` = foundry.utils.deepClone, and `del` is what
  * clears the prior — `_del` on v14, else a null VALUE on the plain key (not "-=").
+ * [declared senses-edge-4] `normalise` turns a profile into what Foundry stores (LightData: unknown
+ * keys dropped, colours lower-cased). The "already applied" check compares the profile's own keys as
+ * stored, so a hand-authored shard light converges; the write still sends the raw `light`.
  */
-export function itemLightUpdate(doc, light, { flatten, clone: copy, del = null }) {
+export function itemLightUpdate(doc, light, { flatten, clone: copy, del = null, normalise = v => v }) {
   if (doc.flags?.[MODULE]?.spellLight) return null; // the Light cantrip owns this token's light until it ends
   const lit = doc.flags?.[MODULE]?.itemLight === true;
   const PRIOR = FLAGS.itemLightPrior;
   if (light) {
     const own = doc.light?.toObject?.() ?? doc.light ?? {};
     const current = flatten(own);
-    const want = flatten(light);
-    const same = Object.entries(want).every(([k, v]) => current[k] === v);
+    const stored = flatten(normalise(light));
+    const want = Object.keys(flatten(light)).filter(k => k in stored);
+    const same = want.every(k => current[k] === stored[k]);
     if (same && lit) return null;
     const u = { light, [FLAGS.itemLight]: true };
     if (!lit && ((Number(own.bright) || 0) > 0 || (Number(own.dim) || 0) > 0)) u[PRIOR] = copy(own);

@@ -26,6 +26,9 @@ strongest (largest dim, then bright) wins. A light set by hand (a rune glow) is 
 carried light covering it keeps it aside and gives it back when the carried light goes. A token
 that changes body (Wild Shape, polymorph, and back) takes the carried lights of the actor it now
 shows: a beast form carries none, so a druid's starlight or torch does not come along.
+A hand-authored `flags.pentaryn-senses.light` takes LightData keys (`bright`, `dim`, `color`,
+`animation`, …) with lowercase `#rrggbb` colours; the sync compares it as Foundry stores it
+(unknown keys dropped, colours lower-cased), so either form is applied once and then left alone.
 
 **Torches, lamps, lanterns, candles.** A **flame button** on the inventory row (grey unlit, orange
 lit) lights or puts out the item and posts one chat line in the user's chat mode (a GM on "GM only"

@@ -27,9 +27,23 @@ function carriedLight(actor) {
   return carriedLightOf(actor?.items ?? []);
 }
 
+/**
+ * A light profile as Foundry stores it: LightData drops unknown keys and lower-cases colours
+ * (senses-edge-4). A profile LightData refuses is compared raw, as before.
+ */
+function normalise(light) {
+  const LightData = foundry.data?.LightData;
+  if (!LightData) return light;
+  try {
+    return new LightData(light, { strict: false }).toObject();
+  } catch {
+    return light;
+  }
+}
+
 /** core/light.mjs itemLightUpdate with Foundry's helpers. The prior is cleared with `_del`, else a null value. */
 function lightUpdate(doc, light) {
-  return itemLightUpdate(doc, light, { flatten: foundry.utils.flattenObject, clone: foundry.utils.deepClone, del: globalThis._del ?? null });
+  return itemLightUpdate(doc, light, { flatten: foundry.utils.flattenObject, clone: foundry.utils.deepClone, del: globalThis._del ?? null, normalise });
 }
 
 /** The actor's tokens, scene by scene, lazily: a scene is read after the previous write. */
