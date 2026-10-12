@@ -147,7 +147,9 @@ Touch `HB` first and after every numbered step below.
    - `node $WT/scripts/foundry/live-goldens/diff.mjs OUT/before/<m>.run1.json OUT/before/<m>.run2.json`
      must say shared identical. Known run-to-run noise (W4L): senses' scratch AmbientLight id
      (`inspectCarrier.lightSpells[0].litBy[0]`, `lightStatus.litBy[0].id`), importer's
-     `root.keysInPublishOrder`. Anything else → O.
+     `root.keysInPublishOrder`; (W5L) pings' `ping.settingArrayReplacedByFlush` (true in one run
+     only — timing/cache, not code). The list is kept in `scripts/foundry/live-goldens/README.md`.
+     Anything else → O.
    - On a hidden tab a `false` settle flag (aoe `handlesSettled`, concentration `*Gone`) is J20:
      bring the tab forward, rerun once, then O.
 4. **Rollback copies (module folders):**
@@ -381,8 +383,10 @@ token of each actor. Every surface below is scanned once; record `surface → hi
 One player tab beside the GM's (a different user, so the one-GM-tab rule holds):
 `make -C $LIVE login NO_OPEN=1 USER_NAME=<a player user> WORLD=pentaryn LOGIN_HOST=zz1.localhost`
 (or `127.0.0.1`), opened in a **new** Chrome tab. Before that, the GM gives that user OWNER of
-"ZZ Wave5 Hero" and pulls the user to "ZZ Wave5 Scene" (`game.socket` pull or
-`user.update({viewedScene})`; never activate the scene). Nothing is changed on the player's real PC.
+"ZZ Wave5 Hero"; then the **player tab itself** views the scene:
+`game.scenes.getName("ZZ Wave5 Scene").view()` through `javascript_tool` in that tab (never activate
+the scene). Do not pull from the GM side: `game.socket` `pullToScene` throws a core TypeError when
+the GM tab is hidden (W5L). Nothing is changed on the player's real PC.
 
 Run the §8.2 scan with `javascript_tool` in the player tab on each surface, and record
 `surface → hits` plus a screenshot in `OUT/lang-player.json`:
@@ -424,7 +428,8 @@ for (const s of document.styleSheets) { sheets[s.href ?? "inline"] ??= 0; try { 
 const mine = Object.fromEntries(Object.entries(sheets).filter(([h]) => /modules\/pentaryn-/.test(h)).map(([h, n]) => [h.replace(/^.*\/modules\//, ""), n]));
 const want = {};
 for (const mod of game.modules) if (mod.id.startsWith("pentaryn-") && mod.active)
-  want[mod.id] = [...(mod.styles ?? [])].map(s => String(s.src ?? s)).map(p => ({ p, loaded: Object.keys(mine).some(h => h.startsWith(`${mod.id}/${p}`)) }));
+  want[mod.id] = [...(mod.styles ?? [])].map(s => String(s.src ?? s).replace(new RegExp(`^/?modules/${mod.id}/`), ""))
+    .map(p => ({ p, loaded: Object.keys(mine).some(h => h.startsWith(`${mod.id}/${p}`)) }));
 const probe = document.createElement("div"); probe.className = "ech-tooltip pentaryn-tt";
 probe.innerHTML = `<div class="ech-tooltip-details"><div><span>a</span><span>b</span></div></div>`; document.body.append(probe);
 const cs = getComputedStyle(probe), det = getComputedStyle(probe.querySelector(".ech-tooltip-details"));
@@ -441,18 +446,24 @@ return JSON.stringify({ mine, want, tt, clickThrough });
   `pentaryn-movement/movement.css`, `pentaryn-portals/portals.css`, `pentaryn-riders/riders.css`;
 - for each moved file, the rule count at the new path equals the count at the old path in
   `styles-before.json` (the content is byte-identical);
-- combat and transform: `styles/<m>.css` count = before − 11 (the `@import` is gone) and
-  `lib/argon-tooltip.css` = 11 for each; riders: `lib/argon-tooltip.css` = 11 (new);
+- combat and transform: `styles/<m>.css` count **unchanged** from before (the walk counts an
+  `@import`ed sheet's rules under the imported href, so the 11 never counted toward the parent;
+  W5L) and `lib/argon-tooltip.css` = 11 for each; riders: `lib/argon-tooltip.css` = 11 (new);
 - `tt.rules` = **33** (three copies of 11: combat, transform, riders; 22 before);
 - D7 `.pentaryn-tt`: `tt.pointerEvents: "none"`, `tt.maxWidth: "340px"`, `tt.columns` has two
   track sizes (the `1fr 1fr !important` rule; with no Argon parent the grid may compute as
   `none` — then check `[...document.styleSheets]` holds the rule and record it, not red);
 - `clickThrough: true` (riders' `#tooltip` rule kept, W4-R9).
 
-**D7 isolation (S):** as W4L did — remove riders' and transform's `lib/argon-tooltip.css` sheets
-from the CSSOM (`sheet.disabled = true` on the `<link>` or its `@import` parent), rerun the probe:
-`.pentaryn-tt` still styled from combat's copy; re-enable; then the same with combat's disabled
-(transform's copy carries it); re-enable all. Record each.
+**D7 isolation (S):** one case per eval-js, no timers (`getComputedStyle` sees a CSSOM change
+synchronously; a hidden tab throttles timers). `sheet.disabled` does nothing on an `@import`ed
+sheet (W5L), so each case takes the rules out with `deleteRule` and puts them back with
+`insertRule`, in the same eval: find the `lib/argon-tooltip.css` sheets by href (recursively, as
+the walk above), save each removed rule's `cssText` and index, `deleteRule` from the end, rerun
+the `.pentaryn-tt` probe, then `insertRule(cssText, index)` in ascending index order and return
+the probe plus the restored rule counts (must equal 11 each). Case 1: riders' and transform's
+copies out — `.pentaryn-tt` still styled from combat's copy. Case 2: combat's copy out —
+transform's carries it. Record each; after case 2 `tt.rules` reads 33 again.
 
 **Player tab:** run the same probe once in the §8.4 tab before closing it; same pass rows.
 
