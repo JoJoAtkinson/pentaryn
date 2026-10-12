@@ -6,6 +6,10 @@ cleanup }` as a JSON string (the wave-1 goldens — names, pings, cursors, impor
 carry no top-level `env`). Which goldens a wave runs, in what order, and what may differ: that
 wave's live plan in `context/plans/addon-blueprint-2026-10/`.
 
+Run one golden at a time per tab: a golden swaps `ui.notifications` / `console` / `fetch` for its
+duration and counts ZZ documents world-wide, so two overlapping runs report each other's scratch
+and can leave a spy installed.
+
 ## Diffing
 
 ```sh
