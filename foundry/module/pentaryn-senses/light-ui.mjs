@@ -5,7 +5,7 @@
  * bindActions() (a UI file never imports a feature).
  */
 
-import { MODULE, profileFor, isLit, isHooded, isLightSpellData, lightingItemId, readSpellLight, esc, setTip } from "./senses-core.mjs";
+import { MODULE, profileFor, isLit, isHooded, isLightSpellData, lightingItemId, readSpellLight, esc, setTip, rootOf, hudColumn, hudButton } from "./senses-core.mjs";
 import { realItem, itemFrom } from "./light-adapter.mjs";
 import { collapseArgonPanels } from "./argon.mjs";
 import { isActiveGM } from "./lib/election.mjs";
@@ -173,7 +173,7 @@ export function decorateCard(message, html) {
   if (!uuid) return;
   const item = itemFrom(uuid);
   if (!isLightSpellData(item)) return;
-  const root = html instanceof HTMLElement ? html : html?.[0];
+  const root = rootOf(html);
   if (!root) return;
   // The PHB Light's summon button (not groupable, so it keeps data-action): drop it with its <li>.
   root.querySelectorAll('[data-action="placeSummons"]').forEach(b => (b.closest("li") ?? b).remove());
@@ -235,7 +235,7 @@ function rowButton(cls, icon, tip, disabled, onClick) {
 
 export function decorateSheet(app, element) {
   const actor = app?.actor ?? app?.document;
-  const root = element instanceof HTMLElement ? element : element?.[0];
+  const root = rootOf(element);
   if (!actor?.items || !root) return;
   // With two lights lit only the strongest shows on the token; the other flame is drawn dimmer and
   // says so (usability Area 8, L5: torch + hooded lantern, the hood seemed to do nothing).
@@ -276,25 +276,17 @@ export function injectHUD(app, element) {
   // [declared senses-ac-2] only a viewer who can act sees it: the item's owner, or the active GM
   // (only its reconcile puts an orphan out; another GM's click would do nothing)
   if (!item?.isOwner && !isActiveGM()) return;
-  const root = element instanceof HTMLElement ? element : element?.[0];
-  const col = root?.querySelector(".col.right") ?? root?.querySelector(".right");
-  if (!col || col.querySelector(".ps-light-end")) return;
-  const tip = _loc("PENTARYN_SENSES.Light.End");
-  const btn = document.createElement("button");
-  btn.type = "button";
-  btn.className = "control-icon ps-light-end";
-  setTip(btn, tip);
-  btn.innerHTML = `<i class="fa-solid fa-lightbulb-slash"></i>`;
-  btn.addEventListener("click", ev => {
-    ev.preventDefault();
-    ev.stopPropagation();
-    (async () => {
+  const col = hudColumn(element, "ps-light-end");
+  if (!col) return;
+  hudButton(col, {
+    cls: "ps-light-end", icon: "fa-solid fa-lightbulb-slash", tip: _loc("PENTARYN_SENSES.Light.End"),
+    onClick: async () => {
       if (item?.isOwner) await actions.end(item);
       else if (isActiveGM()) actions.run(sl.source); // the item is gone: put the orphan out
       app.render?.();
-    })().catch(e => warn("hud click", e));
+    },
+    onError: e => warn("hud click", e),
   });
-  col.appendChild(btn);
 }
 
 /** Cancel a pick in progress (canvas teardown, uninstall). */

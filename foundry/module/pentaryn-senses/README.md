@@ -173,6 +173,7 @@ made first (a square, an old summon token) counts as done.
 | `api-manifest.mjs`, `api.mjs` | API rows; their bindings, `inspect`, `light.status` |
 | `carried.mjs`, `light.mjs`, `chain.mjs`, `glow.mjs`, `migrate.mjs` | features |
 | `light-ui.mjs` | UI: prompt, pick, spell card (both from one `LIGHT_ACTIONS` table), inventory row, Token HUD |
+| `core/hud-dom.mjs` | the one Token HUD button builder (`rootOf`, `hudColumn`, `hudButton`) and tip rule (`setTip`) that `chain.mjs` and `light-ui.mjs` share |
 | `light-adapter.mjs`, `argon.mjs` | adapters: documents → plain data; `ui.ARGON` |
 | `lib/` | vendored kit — never edited here |
 

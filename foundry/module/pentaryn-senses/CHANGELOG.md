@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **[declared senses-M10] One Token HUD button builder** (final review 2026-10-12): chain.mjs
+  and light-ui.mjs no longer each build their own HUD button. `core/hud-dom.mjs` now holds
+  `rootOf`, `hudColumn` and `hudButton` beside `setTip` (the senses-edge-3 tip rule), and both
+  files use them. Same buttons, same clicks, same warnings; hooks and describe goldens
+  byte-identical. New `test/hud-dom.test.mjs`.
+
 - **[declared senses-M9] light-ui is handed only the actions it calls** (final review
   2026-10-12): `install()` no longer binds `cast` into light-ui (the UI reaches a cast through
   onMe and pickAndCast), and light-ui.mjs's comment listing the bound actions matches. No

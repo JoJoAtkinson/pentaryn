@@ -21,7 +21,7 @@
  */
 
 import {
-  MODULE, FLAGS, readChain, chainPairs, linksTouching, chainThickness, resolveTokenRef, linkSpriteSpecs, unsetPath, setTip,
+  MODULE, FLAGS, readChain, chainPairs, linksTouching, chainThickness, resolveTokenRef, linkSpriteSpecs, unsetPath, hudColumn, hudButton,
 } from "./senses-core.mjs";
 import { isAnyGM } from "./lib/election.mjs";
 
@@ -250,31 +250,20 @@ export function paint(pairs) {
 /*  Token HUD — GM only                         */
 /* -------------------------------------------- */
 
-function hudButton(col, cls, icon, tip, onClick) {
-  const btn = document.createElement("button");
-  btn.type = "button";
-  btn.className = `control-icon ${cls}`;
-  setTip(btn, tip);
-  btn.innerHTML = `<i class="${icon}"></i>`;
-  btn.addEventListener("click", ev => {
-    ev.preventDefault();
-    ev.stopPropagation();
-    Promise.resolve(onClick()).catch(e => warn("hud click", e));
-  });
-  col.appendChild(btn);
-}
+/** One chain HUD button (core/hud-dom.mjs); a failed click logs `chain hud click`. */
+const chainButton = (col, icon, tip, onClick) =>
+  hudButton(col, { cls: "ps-chain-btn", icon, tip, onClick, onError: e => warn("hud click", e) });
 
 function injectHUD(app, element) {
   if (!isAnyGM()) return;
   const doc = app?.object?.document ?? app?.document ?? null;
   if (!doc?.id || !doc.parent) return;
-  const root = element instanceof HTMLElement ? element : element?.[0];
-  const col = root?.querySelector(".col.right") ?? root?.querySelector(".right");
-  if (!col || col.querySelector(".ps-chain-btn")) return;
+  const col = hudColumn(element, "ps-chain-btn");
+  if (!col) return;
 
   const touching = linksTouching(chainPairs(doc.parent.tokens.contents), doc.id);
   if (touching.length || readChain(doc)) {
-    hudButton(col, "ps-chain-btn", "fa-solid fa-link-slash", _loc("PENTARYN_SENSES.Chain.Break"), async () => {
+    chainButton(col, "fa-solid fa-link-slash", _loc("PENTARYN_SENSES.Chain.Break"), async () => {
       const n = await breakChain(doc);
       if (n) ui.notifications.info(_loc("PENTARYN_SENSES.Chain.Breaks", { name: doc.name }));
       app.render?.();
@@ -284,7 +273,7 @@ function injectHUD(app, element) {
   const targets = [...(game.user.targets ?? [])].filter(t => t?.document?.id !== doc.id && t?.document?.parent === doc.parent);
   if (targets.length !== 1) return;
   const anchor = targets[0].document;
-  hudButton(col, "ps-chain-btn", "fa-solid fa-link", _loc("PENTARYN_SENSES.Chain.LinkTo", { anchor: anchor.name }), async () => {
+  chainButton(col, "fa-solid fa-link", _loc("PENTARYN_SENSES.Chain.LinkTo", { anchor: anchor.name }), async () => {
     if (await link(doc, anchor)) ui.notifications.info(_loc("PENTARYN_SENSES.Chain.Linked", { name: doc.name, anchor: anchor.name }));
     app.render?.();
   });

@@ -8,7 +8,7 @@
 
 import { FLAGS, MODULE } from "./core/ids.mjs";
 import { esc, unsetPath } from "./core/util.mjs";
-import { setTip } from "./core/hud-dom.mjs";
+import { setTip, rootOf, hudColumn, hudButton } from "./core/hud-dom.mjs";
 import { CHAIN_FLAG, readChain, chainPairs, linksTouching, chainGeometry, chainThickness, resolveTokenRef, linkSpriteSpecs } from "./core/chain.mjs";
 import {
   DARK, SPELL_LIGHT, LIGHT_PROFILES, ACTIVITY_PROFILES, PHB_LIGHT_ACTOR, TORCH_ACTIVITY_ID, slug, profileKey, profileFor, lightFor, strongest,
@@ -21,7 +21,7 @@ import { LIMITS, EPOCH_CACHE, rng, hashString, epochBuilds, buildEpoch, waveLeve
 import { inspectShape, lightStatus } from "./core/inspect.mjs";
 
 export {
-  FLAGS, esc, unsetPath, setTip,
+  FLAGS, esc, unsetPath, setTip, rootOf, hudColumn, hudButton,
   MODULE, CHAIN_FLAG, readChain, chainPairs, linksTouching, chainGeometry, chainThickness, resolveTokenRef, linkSpriteSpecs,
   DARK, SPELL_LIGHT, LIGHT_PROFILES, ACTIVITY_PROFILES, PHB_LIGHT_ACTOR, TORCH_ACTIVITY_ID, slug, profileKey, profileFor, lightFor, strongest,
   carriedLightOf, lightingItemId, isLit, isHooded, isLightSpellData, isLightToggle, readSpellCast, castFlag, readSpellLight,
