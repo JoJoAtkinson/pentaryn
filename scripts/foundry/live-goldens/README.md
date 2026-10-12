@@ -43,4 +43,6 @@ golden must wait out wall time (a module's own debounce or claim window), use th
 `sleep()` / `settle()` helpers the goldens already carry (a `MessageChannel` macrotask plus
 `performance.now()`, not throttled in a hidden tab). The same holds for one-off probes run by
 `eval-js`. Copy the helper preamble from an existing golden; only `DROP` and `settle` may differ
-(`scripts/tests/test_live_goldens_preamble.py` checks this).
+(`scripts/tests/test_live_goldens_preamble.py` checks this). `settle()` comes in two forms: most
+goldens return as soon as `pred()` holds; `creatures` and `senses` then sleep a further 1.2 s for a
+module that debounces a second write after the first. Copy the form that matches the module.
