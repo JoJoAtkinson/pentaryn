@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- **A publish throw at ready no longer skips the rest of ready** (declared, R7): on the normal
+  ready path a `publishNamespace` throw (e.g. a frozen `game.pentaryn`) is caught and logged
+  `pentaryn-aoe | publish`; the Argon guard, the settings migration and the startup sweep still
+  run. The hot-patch `install()` still rejects with it (glue.test W2-K1).
 - **A save with no DC is neither a pass nor a fail** (declared, R5): with a null DC a monster save
   came out a success (`total >= null`) and a player save a failure (`!!null`). One
   `Number.isFinite(res.dc)` guard (`saveSuccess`) now serves `rollOne` and `onSaveMessage`; the

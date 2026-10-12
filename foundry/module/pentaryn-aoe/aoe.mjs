@@ -110,7 +110,12 @@ function onReady({ hot = false } = {}) {
     ctx.api = null;
     log.error("API manifest drift — not published", err);
   }
-  if (ctx.api) publishNamespace(NS, ctx.api, { moduleId: MODULE });
+  if (ctx.api) {
+    // [declared] R7: on the normal path a publish throw is logged and ready carries on (the Argon
+    // guard, migration and startup work below); the hot path still throws to install()'s caller.
+    if (hot) publishNamespace(NS, ctx.api, { moduleId: MODULE });
+    else try { publishNamespace(NS, ctx.api, { moduleId: MODULE }); } catch (err) { log.error("publish", err); }
+  }
   api = ctx.api;
   if (hot) return;
   // D-A4: the late-Argon fallback goes through the registry too, so uninstall() removes it.

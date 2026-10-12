@@ -230,4 +230,6 @@ node test/run.mjs                                  # from the module folder
 restart. **Hot patch** (to test before a restart): `game.pentaryn.aoe.uninstall()`; fetch each file
 from `/modules/pentaryn-aoe/`, rewrite the relative imports to blob URLs, set
 `globalThis.__pentarynAoeHot = true`, import `aoe.mjs`, then call `install({ sweepOnReady: false })`.
+A publish that throws (a frozen `game.pentaryn`) rejects `install()`; at a normal ready it is logged
+`pentaryn-aoe | publish` and ready carries on (Argon guard, settings migration, startup sweep).
 After a sync: `game.pentaryn.aoe.describe().version` equals `module.json`'s version.
