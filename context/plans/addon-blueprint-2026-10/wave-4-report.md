@@ -368,11 +368,11 @@ the `@import` line.
 
 `context/foundry/README.md`: re-run `make foundry-module-index` (transform: full tier, its methods,
 the describe golden now exists); add a routing row (-20): *Wild Shape / Starry Form / Return / Change
-Form / a form left in the sidebar* → [`../../foundry/module/pentaryn-transform/README.md`](../../foundry/module/pentaryn-transform/README.md).
+Form / a form left in the sidebar* → `foundry/module/pentaryn-transform/README.md` (landed by the integrator).
 
 `context/plans/druid-wild-shape.md:5`: `Design detail: foundry/module/pentaryn-transform/WILDSHAPE-DESIGN.md`
-→ `Design detail (history): [wildshape-hud-design.md](wildshape-hud-design.md)`.
-`context/plans/README.md` (index): add `| [wildshape-hud-design.md](wildshape-hud-design.md) | The 0.2
+→ a "Design detail (history)" link to `wildshape-hud-design.md`.
+`context/plans/README.md` (index): add a row for `wildshape-hud-design.md`: `| The 0.2
 design for Wild Shape on the HUD (moved out of the module, transform-creatures-19) | superseded; history only |`.
 `context/pentaryn.md:613` (optional): the module is past 0.3.1; `starry.mjs` is no longer imported by hud.mjs.
 
