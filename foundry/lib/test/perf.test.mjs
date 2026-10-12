@@ -32,6 +32,42 @@ test("coalesce shares the in-flight promise, then starts fresh", async () => {
   assert.equal(runs, 2);
 });
 
+test("kit-edge-4: a call from inside fn's synchronous prefix shares the run, and no settle clears a newer run", async () => {
+  let runs = 0;
+  let inner;
+  const releases = [];
+  const f = coalesce(() => {
+    runs++;
+    if (runs === 1) inner = f();
+    return new Promise(r => releases.push(r));
+  });
+  const a = f();
+  assert.equal(runs, 1);
+  assert.equal(inner, a);
+  assert.equal(f(), a);
+  releases[0]("one");
+  assert.equal(await a, "one");
+  assert.equal(await inner, "one");
+  const b = f();
+  assert.notEqual(b, a);
+  assert.equal(f(), b);
+  releases[1]("two");
+  assert.equal(await b, "two");
+  assert.equal(runs, 2);
+});
+
+test("coalesce: a throwing fn rejects the shared run, then the next call starts fresh", async () => {
+  let runs = 0;
+  const f = coalesce(() => {
+    runs++;
+    if (runs === 1) throw new Error("boom");
+    return "ok";
+  });
+  await assert.rejects(f(), /boom/);
+  assert.equal(await f(), "ok");
+  assert.equal(runs, 2);
+});
+
 test("perFrame runs once per frame with the latest args", () => {
   const frames = [];
   const seen = [];

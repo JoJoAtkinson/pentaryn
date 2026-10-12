@@ -32,16 +32,26 @@ export function memo(fn, keyFn = (...args) => args[0], { ttlMs = Infinity, max =
 
 /**
  * One run at a time: a call while a run is in flight gets that run's promise (its own args are
- * ignored). The next call after it settles starts a fresh run.
+ * ignored), including a call from inside fn's own synchronous prefix. The next call after it
+ * settles starts a fresh run.
  */
 export function coalesce(fn) {
   let inflight = null;
   return function (...args) {
     if (inflight) return inflight;
-    inflight = (async () => fn.apply(this, args))().finally(() => {
-      inflight = null;
-    });
-    return inflight;
+    let resolve, reject;
+    const run = new Promise((res, rej) => { resolve = res; reject = rej; });
+    inflight = run;
+    (async () => {
+      try {
+        resolve(await fn.apply(this, args));
+      } catch (err) {
+        reject(err);
+      } finally {
+        if (inflight === run) inflight = null;
+      }
+    })();
+    return run;
   };
 }
 

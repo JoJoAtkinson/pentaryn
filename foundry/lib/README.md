@@ -37,7 +37,7 @@ Bump `kit.json` `version`, `errors.mjs` `KIT_VERSION` and every header together.
 | `patch.mjs` | `wrapMethod`, `defineAccessor`, `patches`, `unwrapAll` | names no third-party package; `kind: "getter"` wraps an accessor such as `Token#isVisible` (1.0.1) |
 | `patch-libwrapper.mjs` | `libWrapperRoute` | `packages: [lib-wrapper]` — vendored only where used |
 | `flags.mjs` | `readFlag`, `flagPath` | delete with `{[flagPath(s,k)]: _del}` at the call site |
-| `perf.mjs` | `memo`, `coalesce`, `perFrame` | debounce/throttle: use `foundry.utils` |
+| `perf.mjs` | `memo`, `coalesce`, `perFrame` | debounce/throttle: use `foundry.utils`; a `coalesce` call from inside its own fn shares the run (1.2.0 kit-edge-4) |
 | `pins.mjs` | `pinnedEntryIds`, `makePinnedCache`, `PIN_HOOKS`, `pinsChanged` | which journals a scene Note pins, null-safe; a cache forgets on the six `PIN_HOOKS` (updateScene only when `pinsChanged`, i.e. its change touches `notes`). In neither tier: journal and dropbin vendor it (1.2.0 journal-EXT-9) |
 | `argon-kit.mjs` | `dropTooltip`, `paintBadge(button, left, emptyClass)`, `applyButtons(panel, next, fresh, { attachDetached, after })`, `itemButtonClass(panel?)`, `slotKind`, `mainPanel(label)`, `settlePips(panel)` | `packages: [enhancedcombathud]`; Argon HUD helpers combat and transform hand-copied (transform-creatures-12, combat-riders-3/-5). `attachDetached` and `after` are combat's superset, opt-in; `itemButtonClass` caches per vendored copy |
 | `argon-tooltip.css` | Argon's compact `.ech-tooltip.pentaryn-tt` / `.pentaryn-tt-list` tooltip rules | `ext: css`, `packages: [enhancedcombathud]`; verbatim from transform.css (D7). Vendored to `lib/argon-tooltip.css`, loaded by listing it in `module.json` `styles`; C37/C37w do not score `lib/*.css`. Vendored by combat and transform (wave 4), each `@import`ing it from its own stylesheet until the Wave 7 batch lists it in `styles`; riders waits on its `relationships` edit |
@@ -93,6 +93,10 @@ kit-edge-3 (declared, test-kit only): the stub's `game.users.activeGM` picks the
 highest role, then the lowest id — Foundry's `getDesignatedUser` order; before, it took the lowest id
 alone, so an Assistant GM could outrank a Gamemaster. No module golden moved; prompts' markers test gives its
 injected second GM `role: 4`, as every real GM has a role.
+kit-edge-4 (declared): `coalesce` claims the run before calling fn — `inflight` is a deferred promise
+set first, settled from fn's result, and cleared only if it is still that run. A call from inside fn's
+synchronous prefix now shares the run instead of starting a second one, and an inner settle can no
+longer clear an outer run. No module calls the kit's `coalesce` today; no golden moved.
 journal-EXT-9 (declared): new file `pins.mjs` — one null-safe `pinnedEntryIds(scenes)`, `makePinnedCache(getScenes)`,
 the six invalidation hooks `PIN_HOOKS` and `pinsChanged` (updateScene only when it touches `notes`).
 Journal and dropbin vendor it and delete their copies (dropbin's threw on a scene without notes);
