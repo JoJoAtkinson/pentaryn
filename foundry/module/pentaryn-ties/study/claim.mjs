@@ -27,9 +27,12 @@ import { readFlag } from "../lib/flags.mjs";
  * between themselves: each stamps a per-load id into the ledger row *before* rolling, waits for
  * the server to broadcast whichever landed last, and only the client whose stamp survived goes
  * on. One extra document write per roll, and the loser is silent.
+ *
+ * One token idiom for every stake and release in this file (EXT-12): lazy, so nothing reads `game`
+ * at import, and user-prefixed, so a stray row names the account that left it.
  */
 let SESSION = null;
-const session = () => (SESSION ??= foundry.utils.randomID());
+const session = () => (SESSION ??= `${game.user?.id ?? "?"}:${foundry.utils.randomID()}`);
 
 /** Sleep on the global timer at call time (tests drive it with `mock.timers`). */
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -133,11 +136,8 @@ async function releaseClaim(ledger, characterId, key = KIND_KEY) {
   });
 }
 
-const inspectSession = () => `${game.user?.id ?? "?"}:${INSPECT_SESSION}`;
-const INSPECT_SESSION = foundry.utils.randomID();
-
 export async function claimInspect(subject, characterId) {
-  const mine = inspectSession();
+  const mine = session();
   const won = await stakeAndConfirm({
     write: () => subject.update({ [`flags.${MODULE}.${BELIEFS_FLAG}.${characterId}.${INSPECT_CLAIM_KEY}`]: { claim: mine } }, { render: false }),
     readBack: () => readFlag(subject, MODULE, BELIEFS_FLAG)?.[characterId]?.[INSPECT_CLAIM_KEY]?.claim,
@@ -149,7 +149,7 @@ export async function claimInspect(subject, characterId) {
 
 export async function releaseInspect(subject, characterId, token = null) {
   const all = readFlag(subject, MODULE, BELIEFS_FLAG) ?? {};
-  const mine = token ?? inspectSession();
+  const mine = token ?? session();
   if (all?.[characterId]?.[INSPECT_CLAIM_KEY]?.claim !== mine) return;
 
   /*

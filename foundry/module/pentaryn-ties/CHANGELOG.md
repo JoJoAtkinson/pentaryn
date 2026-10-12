@@ -103,6 +103,11 @@ and the held-rung prompt already agreed. The effective DC (entry DC plus conceal
 helper, `identDcOf`, and the miss test from `identRowMissed`, both in `study/resolve.mjs`, at every site
 that rolls, judges or reports an identification; the held-rung prompt prints "—" for a missing DC. M13, EXT-9.
 
+Fixed (declared): every claim the study conduit stakes — a fact's or an inspection's — carries one
+per-tab session token, `<userId>:<randomID>`, made on first use (`session()` in `study/claim.mjs`).
+Fact claims used to stake a bare random id while inspection claims were user-prefixed; a stray claim
+row now always names the account that left it. EXT-12.
+
 ## 0.19.4 (2026-10-10, usability run, Area 7 re-run)
 
 - **The inspect window's Share switches are the table's PCs only** (`tablePCs`): each player's

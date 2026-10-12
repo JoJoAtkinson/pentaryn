@@ -17,7 +17,7 @@
         "uuid": "Actor.zzKind0000000001",
         "changes": {
           "flags.pentaryn-ties.beliefs.zzPc000000000001.kind": {
-            "claim": "rid0000000000002",
+            "claim": "gmUser0000000001:rid0000000000001",
             "when": 1790000000000
           }
         }

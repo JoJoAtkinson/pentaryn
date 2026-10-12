@@ -86,3 +86,16 @@ test("claimInspect: returns its token when it wins, null when it loses; payload 
   };
   assert.equal(await settle(claimInspect(lost, "zzPc000000000001")), null);
 });
+
+test("EXT-12: one session idiom — lazy and user-prefixed — for every stake (fact and inspect alike)", async () => {
+  const fact = ledger();
+  assert.equal(await settle(claimFact({ ns: "kind", ledger: fact, beliefKey: "kind" }, "zzPc000000000001", 1)), true);
+  const factToken = fact.calls[0].data["flags.pentaryn-ties.beliefs.zzPc000000000001.kind"].claim;
+  const inspectToken = await settle(claimInspect(ledger(), "zzPc000000000001"));
+  assert.equal(inspectToken, factToken, "claimInspect and claimFact stake the same per-tab token");
+  assert.ok(factToken.startsWith(`${game.user.id}:`), `token ${factToken} is prefixed with the user id`);
+  const { readFileSync } = await import("node:fs");
+  const src = readFileSync(new URL("../study/claim.mjs", import.meta.url), "utf8");
+  assert.equal((src.match(/randomID\(/g) ?? []).length, 1, "exactly one randomID call: the lazy session()");
+  assert.doesNotMatch(src, /INSPECT_SESSION|inspectSession/);
+});
