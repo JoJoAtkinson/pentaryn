@@ -466,7 +466,7 @@ test("damagesOf aggregates through dnd5e (respectProperties) and keeps propertie
   assert.deepEqual(ops("aggregateDamageRolls"), [{ op: "aggregateDamageRolls", n: 1, opts: { respectProperties: true } }]);
 });
 
-test("D-A1 KNOWN: a resolution without damages makes applyRows throw (S2's hydrateDamages returns [])", async () => {
+test("[declared] D-A1: a resolution without damages applies nothing and returns it (hydrateDamages → []; it used to throw)", async () => {
   const m = W.message({ id: "noDamages0000001", flags: { [MODULE]: { resolution: { rows: [] } } } });
-  await assert.rejects(R.applyRows(m.id), TypeError);
+  assert.deepEqual(await R.applyRows(m.id), { rows: [] });
 });

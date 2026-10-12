@@ -10,7 +10,7 @@
  * section.icon-row, then <damage-application>; this tray goes right after the native one.
  */
 
-import { aoeFlags, MULTIPLIERS, playerStatus, applicableRows } from "./core.mjs";
+import { aoeFlags, MULTIPLIERS, playerStatus, applicableRows, hydrateDamages } from "./core.mjs";
 import { setting } from "./settings.mjs";
 
 const esc = s => foundry.utils.escapeHTML(String(s ?? ""));
@@ -24,7 +24,7 @@ function preview(row, res, message = null) {
   if (row.multiplier === null || row.multiplier === undefined) return "—";
   const actor = fromUuidSync(row.actor);
   if (!actor?.calculateDamage) return "—";
-  const damages = res.damages.map(d => ({ ...d, properties: new Set(d.properties ?? []) }));
+  const damages = hydrateDamages(res.damages);
   // originatingMessage as Apply passes it (resolve.applyRows), so a damage-card rider such as
   // Elemental Adept's ignored resistance shows here too, not only once applied.
   const out = actor.calculateDamage(damages, { multiplier: row.multiplier, originatingMessage: message ?? undefined });

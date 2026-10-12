@@ -20,7 +20,7 @@
 
 import {
   MODULE, aoeFlags, buildRows, fillSave, matchSave, applicableRows, allApplied, newestRegion,
-  supersedes, isHandle, isTemplateRegion
+  supersedes, isHandle, isTemplateRegion, hydrateDamages
 } from "./core.mjs";
 import { setting } from "./settings.mjs";
 import { claimMessage } from "./lib/election.mjs";
@@ -380,7 +380,7 @@ export async function applyRows(messageId, rowIds = null) {
   if (!res) { why("apply", messageId, "no resolution"); return null; }
   if (res.superseded) { why("apply", messageId, "superseded"); ui.notifications.warn(_loc("PENTARYN_AOE.Tray.Superseded")); return null; }
   const todo = applicableRows(res.rows, rowIds);
-  const damages = res.damages.map(d => ({ ...d, properties: new Set(d.properties ?? []) }));
+  const damages = hydrateDamages(res.damages);
   const done = {};
   for (const row of todo) {
     const actor = fromUuidSync(row.actor);
