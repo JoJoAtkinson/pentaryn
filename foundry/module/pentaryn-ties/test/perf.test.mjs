@@ -1,6 +1,7 @@
 /**
  * The performance findings, each proven neutral on output (or declared where it is not):
- * ties-24 worn badges (badgePlan; players schedule no frame — B7), and the others as they land.
+ * ties-24 worn badges (badgePlan; players schedule no frame — B7; an unchanged plan is not rebuilt),
+ * and the others as they land.
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -32,6 +33,59 @@ test("ties-24 / B7 [declared]: a player's drawBadges schedules no frame; the GM'
   game.user = gm;
   Worn.drawBadges();
   assert.equal(F.frames.length, 1);
+  F.flushFrames();
+});
+
+test("ties-24 item 3: planKey names every field a badge is drawn from", () => {
+  const b = { tokenId: "a", x: 1, y: 2, r: 15, letter: "O" };
+  assert.equal(Worn.planKey([]), "");
+  assert.equal(Worn.planKey([b]), Worn.planKey([{ ...b }]));
+  for (const [k, v] of Object.entries({ tokenId: "b", x: 9, y: 9, r: 8, letter: "V" })) {
+    assert.notEqual(Worn.planKey([b]), Worn.planKey([{ ...b, [k]: v }]), `${k} changes the key`);
+  }
+  assert.notEqual(Worn.planKey([b, { ...b, tokenId: "c" }]), Worn.planKey([b]), "a second badge changes the key");
+});
+
+test("ties-24 item 3: an unchanged plan is not rebuilt; a move, a teardown or a failed paint rebuilds", async () => {
+  const doc = canvas.tokens.get("zzTokNpc00000001").document;
+  const news = () => F.pixi.filter(c => c.call === "new" && c.id.startsWith("Graphics")).length;
+  const paint = () => (Worn.drawBadges(), F.flushFrames());
+  await Worn.setWorn(doc, { by: "Oz", note: "" });
+  F.flushFrames();
+  paint();
+  const first = news();
+  assert.ok(first >= 1, "the marked token gets a disc");
+  paint();
+  paint();
+  assert.equal(news(), first, "same plan, live layer: nothing destroyed or recreated");
+
+  const x = doc.x;
+  doc.x = x + 100;
+  paint();
+  assert.equal(news(), first + 1, "the badge moved, so the layer is redrawn");
+  doc.x = x;
+  paint();
+  assert.equal(news(), first + 2);
+
+  F.fire("canvasTearDown");
+  paint();
+  assert.equal(news(), first + 3, "a torn-down canvas gets a fresh layer even with the same plan");
+
+  // a throw mid-paint must not record the plan as painted
+  const Graphics = PIXI.Graphics;
+  const warn = console.warn;
+  console.warn = () => {};
+  PIXI.Graphics = function () {
+    throw new Error("boom");
+  };
+  doc.x = x + 50;
+  paint();
+  PIXI.Graphics = Graphics;
+  console.warn = warn;
+  paint();
+  assert.equal(news(), first + 4, "the frame after a failed paint redraws the same plan");
+  doc.x = x;
+  await Worn.clearWorn(doc);
   F.flushFrames();
 });
 

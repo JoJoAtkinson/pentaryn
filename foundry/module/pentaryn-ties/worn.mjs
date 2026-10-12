@@ -78,10 +78,11 @@ export async function clearWorn(token) {
 
 /**
  * Derived, not tracked — the same shape as the wires in overlay.mjs. One container on
- * canvas.interface, thrown away and rebuilt from the token flags on every refresh, so
- * "badge with no mark" and "mark with no badge" are unrepresentable rather than fixed.
+ * canvas.interface, thrown away and rebuilt from the token flags whenever the badge plan changes
+ * (an unchanged plan keeps the layer as drawn), so "badge with no mark" and "mark with no badge"
+ * are unrepresentable rather than fixed.
  */
-const state = { badges: null };
+const state = { badges: null, painted: null };
 
 function badgeLayer() {
   if (state.badges && !state.badges.destroyed) return state.badges;
@@ -102,6 +103,7 @@ function dropBadges() {
     log.warn(`badge teardown`, e);
   }
   state.badges = null;
+  state.painted = null;
 }
 
 /** PIXI 8 replaced the draw-call API. Support both rather than pin a renderer version. */
@@ -150,6 +152,15 @@ export function badgePlan(placeables, gridSize) {
 }
 
 /**
+ * The plan's identity (ties-24 item 3): every field a badge is drawn from. Two plans with the same
+ * key draw the same pixels, so a repaint with an unchanged key and a live layer is skipped whole —
+ * all or nothing, so a badge can never be left stale by a partial diff.
+ */
+export function planKey(plan) {
+  return (plan ?? []).map(b => `${b.tokenId}|${b.x}|${b.y}|${b.r}|${b.letter}`).join("\n");
+}
+
+/**
  * Coalesce to one repaint per frame — refreshToken fires per animation step per token.
  * hot: the badge layer. Players never paint it, so they never schedule the frame (ties-24, B7).
  */
@@ -173,9 +184,14 @@ function paintBadges() {
   const plan = badgePlan(canvas.tokens?.placeables ?? [], canvas.grid?.size);
   if (!plan.length) return dropBadges();
 
+  // refreshToken fires for every token's every animation step; most frames move no marked token
+  const key = planKey(plan);
+  if (key === state.painted && state.badges && !state.badges.destroyed) return;
+
   const layer = badgeLayer();
   if (!layer) return;
   layer.removeChildren().forEach(c => c.destroy({ children: true }));
+  state.painted = null; // set only once every badge is drawn: a throw mid-paint retries next frame
 
   for (const { x, y, r, letter } of plan) {
     const g = new PIXI.Graphics();
@@ -192,6 +208,7 @@ function paintBadges() {
     text.position.set(x, y);
     layer.addChild(text);
   }
+  state.painted = key;
 }
 
 /* -------------------------------------------- */
@@ -298,7 +315,10 @@ export function install(reg) {
   }, { label: "worn: HUD" });
 
   // Foundry destroys canvas.interface under us — drop the handle, same as the wires.
-  reg.on("canvasTearDown", () => (state.badges = null), { label: "worn: canvasTearDown" });
+  reg.on("canvasTearDown", () => {
+    state.badges = null;
+    state.painted = null;
+  }, { label: "worn: canvasTearDown" });
 
   reg.on("canvasReady", () => drawBadges(), { label: "worn: canvasReady" });
   // hot: state.badges — drawBadges only schedules one frame; badges ride their tokens
