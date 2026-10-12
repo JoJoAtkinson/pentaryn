@@ -367,3 +367,17 @@ the 6 modules, the bridge, the old fork dist, fork commit `2fd6eb0` in README.tx
   clock advance. D7: look at the real Argon HUD tooltips at the table. A third-party update dialog
   for "Argon - Combat HUD" is open on the GM tab, left alone. Run `/mcp` in long-running sessions
   to pick up the new pentaryn-read description.
+
+## W5L — attunement golden-diff re-check (2026-10-12, overnight)
+
+Main `56c2f39a`, attunement 0.3.0 deployed. A 5th after-run of `live-goldens/attunement.js`
+gives the same golden as the 4 earlier runs (`after-fix3/attunement.recheck.json`). `diff.mjs`
+against both 0.2.1 before-runs shows the env version (0.2.1 → 0.3.0), the 23 shared W2-A1 paths and
+`stashDetail.created[0]` → `<charmCopy0>`, and nothing else. Each one matches the declared row in
+`wave-5-live-plan.md` §10.2 (ab677200). `chestCurrency` is `{}`, so the purse paid once, and cleanup
+is clean. No timing flag: every before median is below 0.05 ms. `diff.mjs` exits 1 because it
+counts every shared difference as a failure. By §9 that is green: only `[declared]` lines differ.
+Main pushed.
+
+Follow-up (FX): `diff.mjs` could take a declared-paths allowlist so that an all-declared diff
+exits 0.
