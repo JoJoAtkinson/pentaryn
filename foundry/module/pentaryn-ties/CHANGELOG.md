@@ -71,6 +71,13 @@ Fixed (declared): **Deliver** on a held identification whose character or creatu
 deleted actor, a stale id) now does nothing and returns `false` instead of throwing a TypeError —
 `deliverHeldIdentifications` guards both like `resetIdentification`. rob-1.
 
+Fixed (declared): `describe()` now tells the truth about the study API — `study.tiers` and
+`study.difficulty` answer the cleaned value (or `false`), `study.attrOffers` rows are
+`{ id, title, icon, rows }`, `study.beliefs` rows carry `ns/factId/fact/characterId`, and
+`study.whoKnows`/`factStatus` answer `{ status, key, belief, tier, total, from, dc }`; `study.share`,
+`inspectAs` and `deliverHeld` list the Known list and the `attributeKnowledge` setting among their
+writes, `study.deliver` lists `studied` and `known`. Manifest only; no behaviour changed. EXT-2.
+
 ## 0.19.4 (2026-10-10, usability run, Area 7 re-run)
 
 - **The inspect window's Share switches are the table's PCs only** (`tablePCs`): each player's
