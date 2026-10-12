@@ -70,6 +70,26 @@ module. Baseline: [`wave-3-baseline.md`](wave-3-baseline.md).
   test, `ACTION_TABLE`; widening the fork's strict schemas for the two drift keys is a declared fork
   change the audit deferred.
 
+- **ties — the canvas card layer keeps its bare id selector (C37).** `#pentaryn-ties-cards` is the
+  one selector not under `pt-`; giving the layer a `pt-cards` class changes the element seven canvas
+  goldens pin, so it would be its own declared (invisible) DOM change. Decide: take it, or accept
+  C37 for ties. Everything else in `styles/ties.css` is under `pt-` (`5854be46`).
+- **ties — one socket listener per caller kept (ties-38).** The relay and the study conduit both
+  register through `socket-adapter.mjs` `listen()` and both ask the kit's `isActiveGM`, but each still
+  calls `game.socket.on` itself; folding them into one dispatcher flips three frozen socket pins.
+  Decide: a declared merge, or keep two listeners (works; a third GM action would add a third).
+- **ties — B5 keeps `false` for a player write; B10 not taken.** The guide offered `null` for a
+  player-client knowledge write (B5); the serialised store keeps today's `false`. `pinnedCards` stays
+  a hidden client row without labels (`CLIENT_STATE`), waiting on blueprint gap G3. Decide whether
+  either is wanted.
+- **ties — ties-24 item 3 (worn badges diff instead of rebuild) not built.** Items 1–2 landed
+  ([declared] B7). The diff changes the PIXI call pins in the worn goldens. Low value (GM only, few
+  badges).
+- **ties — two C59 sequential-write warnings recorded, not batched.** Share's per-PC writes
+  (`study/share.mjs` ~252: one identification and one granted write per PC) and `migrateLegacy`
+  (`ties-adapter.mjs` ~325, one-time, copy-verify-clear per actor). Batching changes the frozen
+  call-order pins in the conduit goldens. Usually 1–4 PCs; recorded only.
+
 ## Known red commits and ranges (bisecting)
 
 | Where | Range | What |
@@ -79,6 +99,8 @@ module. Baseline: [`wave-3-baseline.md`](wave-3-baseline.md).
 | prompts: module-check i18n gate | `5ba6516c` → `02600db9` | `test/i18n.test.mjs` held a bare `"PENTARYN_PROMPTS."` literal the gate reads as a missing key; node tests stayed green; fixed `02600db9` |
 | prompts: C32 / C47 (advisory) | `f5a05191` → the ADJ batch commit | `wrapMethod` names `prompts-token-dblclick` and the code names item-piles; both rows wait in the integrator list (scored on a copy with them: 97.9 %) |
 | prompts: `scripts/tests/test_update_escalation.py -m repo` (`test_real_exposure_has_no_known_false_positives`) | `ec66c6df` → the integrator's edit of that test | step 10 renamed `los.mjs` → `sight-adapter.mjs` and step 13 added `"flags.wall-height"` to `api-manifest.mjs` `flags.reads`, so `exposure("wall-height")` is `[api-manifest.mjs, sight-adapter.mjs]`, not `[los.mjs]`; shared file, exact edit in the prompts integrator list (also refreshes the `levels` xfail comment: the template is now in `core/gather-text.mjs`). Module tests stayed green |
+| ties: C32 / C47 and `foundry-adjustments-check` (advisory) | `c9276cb8` (S4) / `e688e96f` (S4b) / `cb65b749` (S12) → the ADJ batch commit | `core-ties-flag-wipe`, `dsn-skip-blind-study` and the ties path of `dnd5e-legacy-roll-modes` still list `known-core.mjs`, `look.mjs`, `preview.mjs`, `study.mjs`; the new item-piles row is not in yet. Scored on a copy with them: 96.0 %. Module tests stayed green |
+| ties: module-check i18n gate | checkpoint `7395a708` → (open) | `test/i18n.test.mjs` (frozen) holds a bare `"PENTARYN_TIES."` literal the gate reads as a missing key; node tests green. Same shape as prompts' `02600db9`, but the ties line is in a frozen test, so it is not edited in this wave |
 - **senses — two GM tabs both run the Light reconcile (§5.9 async review).** The reconcile, the
   deletion hooks and the ready sweep are gated on `isActiveGM()`, which elects a *user*; with the MCP
   bridge tab and a GM browser tab open, both run. For a Light cast on a square both tabs create the
