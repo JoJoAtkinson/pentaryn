@@ -11,6 +11,7 @@ from __future__ import annotations
 import dataclasses
 import importlib.util
 import json
+import string
 import sys
 from pathlib import Path
 
@@ -114,8 +115,17 @@ UNMAPPED = {("check_lore_links", "zone")}
 
 
 def _mapped(r) -> set[str]:
-    placeholders = {tok[1:-1] for tok in r.argv_template if tok.startswith("{") and tok.endswith("}")}
+    placeholders = {field for tok in r.argv_template
+                    for _, field, _, _ in string.Formatter().parse(tok) if field}
     return placeholders | set(r.bool_flags) | set(r.value_flags)
+
+
+def test_mapped_sees_embedded_placeholders():
+    """The server formats every template token, so '--zone={zone}' maps `zone` too."""
+    r = server.ToolRunner(tool=server.Tool(name="t", description="", input_schema={}),
+                          script_path=Path("t.py"), argv_template=("--zone={zone}",),
+                          bool_flags={}, value_flags={})
+    assert "zone" in _mapped(r)
 
 
 @pytest.mark.repo
