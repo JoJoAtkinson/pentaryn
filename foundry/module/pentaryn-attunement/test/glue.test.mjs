@@ -120,7 +120,7 @@ test("KNOWN items-journal-12: computeSlots counts 2 where the warning's input is
   assert.deepEqual(oracle.wouldExceed({ value: actor.system.attributes.attunement.value, max: 3, awayCount: 0 }), { exceed: false, after: 2 });
 });
 
-test("preCreateItem with a bond, on the bonded actor at home: updateSource with the home changes; options tagged", () => {
+test("M11: preCreateItem with a bond, on the bonded actor at home: updateSource with the home changes; options left untouched", () => {
   const actor = makeActor(F, { id: "actorTalo0000001", name: "Talo Vesk", flags: { [MOD]: { away: [{ key: "k", name: "Cloak", img: "i" }] } } });
   const bond = { actor: actor.id, key: "k", name: "Cloak", equipped: true, attuned: true, attunement: "required" };
   const item = addItem(F, null, { id: "itemBond00000001", name: "Cloak (Talo)", flags: { [MOD]: { bond } } });
@@ -131,7 +131,7 @@ test("preCreateItem with a bond, on the bonded actor at home: updateSource with 
   assert.deepEqual(since(from, "updateSource").map(c => c.changes), [
     { name: "Cloak", "system.attunement": "required", "system.attuned": true, "system.equipped": true },
   ]);
-  assert.deepEqual(options[MOD], { bond });
+  assert.deepEqual(options, {}, "M11: no unread options tag; the batch's shared options namespace is not written");
   assert.equal(JSON.stringify(since(from, "updateSource")[0].changes),
     JSON.stringify(oracle.bondChanges(bond, { actorId: actor.id, awayKeys: ["k"], fallbackName: item.name })));
 });

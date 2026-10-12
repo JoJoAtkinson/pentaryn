@@ -46,7 +46,7 @@ import { flagPath } from "./lib/flags.mjs";
  * Take that is the GM's — which is why this mutates source rather than writing.
  * @param {Item} item
  */
-function restoreBond(item, data, options) {
+function restoreBond(item) {
   const bond = item.getFlag?.(MODULE, BOND);
   if (!bond) return;
   const actor = item.parent;
@@ -61,8 +61,6 @@ function restoreBond(item, data, options) {
   if (claims?.coinBack) changes[`flags.${MODULE}.claims.coinBack`] = _del;
   if (claims?.home) changes[`flags.${MODULE}.claims.home`] = _del;   // the same, for a hand-back (ATT-AC-1-residual)
   item.updateSource(changes);
-  // Merged, not replaced: the batch's pending-attune count and swapFrom live here too (EC-4).
-  if (options) options[MODULE] = { ...options[MODULE], bond };
 }
 
 /**
@@ -160,7 +158,7 @@ function onPreUpdateItem(item, changes, options) {
 }
 
 function onPreCreateItem(item, data, options) {
-  restoreBond(item, data, options);
+  restoreBond(item);
   if (item.getFlag?.(MODULE, BOND)) return;
   if (!item.system?.attuned) return;
   if (!(item.parent instanceof Actor)) return;

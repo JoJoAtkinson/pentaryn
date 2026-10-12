@@ -4,6 +4,10 @@
 
 The version stays 0.3.0 until the next `module.json` restart batch (code only: sync + reload).
 
+- **[declared] M11:** `restoreBond` (preCreateItem) no longer writes `options["pentaryn-attunement"].bond`.
+  Nothing read that tag, and the batch's shared options namespace now holds only the over-cap
+  count (`pending`) and `swapFrom`; the unused `data`/`options` parameters are gone.
+  `test/glue.test.mjs` asserts options is left untouched.
 - **[declared] EC-10:** the over-cap warning uses the strip's cap. A new pure `capOf(att)` in the
   core (a finite `attunement.max`, floored at 0, else 3) feeds `computeSlots` and `warnOverCap`'s
   threshold and its `{max}` placeholder, so an actor with no (or a NaN) `max` warns at 3 and the toast
