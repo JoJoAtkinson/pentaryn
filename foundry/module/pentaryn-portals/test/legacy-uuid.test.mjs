@@ -2,7 +2,7 @@
 // take the document or its uuid string, the way snapshot already does. A uuid that names nothing
 // (or the wrong kind of document) answers null (cardFor) / undefined (the GM actions) with a log
 // warning — never junk and never a TypeError.
-import { test } from "node:test";
+import { mock, test } from "node:test";
 import assert from "node:assert/strict";
 import { boot, console$, P1 } from "./fixtures/world.mjs";
 import { places } from "./fixtures/places.mjs";
@@ -39,7 +39,9 @@ test("teleportParty takes a region uuid string (ROB-6)", async () => {
 test("spreadArrival takes a token uuid string (ROB-6)", async () => {
   const s = W.scene({ id: "ArrU3", name: "Arrival", tokens: [{ id: "arrU3", name: "Caven", x: 600, y: 1000 }, { id: "occU3", name: "Guard", x: 600, y: 1000 }] });
   const arrived = s.tokens.get("arrU3");
-  assert.equal(await api().spreadArrival(arrived.uuid), arrived);
+  const out = api().spreadArrival(arrived.uuid);
+  for (let i = 0; i < 6; i++) { await W.flush(); mock.timers.tick(750); }   // the spread claim settles (portals-async-1)
+  assert.equal(await out, arrived);
   assert.deepEqual([arrived.x, arrived.y], [500, 900]);
 });
 

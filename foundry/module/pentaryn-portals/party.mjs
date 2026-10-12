@@ -12,10 +12,12 @@
  * also deletes with `replacements`, and does not drag anything along.
  */
 
-import { crowded, followersOf, isAoeHandle, tokenBox } from "./portals-core.mjs";
+import { MODULE, crowded, followersOf, isAoeHandle, tokenBox } from "./portals-core.mjs";
 import { carryTo, destinationsOf, docOf, gmUserIds, landingPlaces, recordOf } from "./scene-adapter.mjs";
 import { setting } from "./settings.mjs";
 import { PARTY_ROWS } from "./api-manifest.mjs";
+import { claimDocument } from "./lib/election.mjs";
+import { flagPath } from "./lib/flags.mjs";
 
 /** Tokens deleted by one operation, gathered so a party walking through together is one pass. */
 const pendingOps = new WeakMap();
@@ -33,25 +35,40 @@ export function cameThroughPortal(token, destScene) {
   });
 }
 
-/**
- * A PC that lands on someone (usability Area 6 re-run, W7: two PCs crossing together plus one
- * already there all stood on the one landing square) steps to the nearest free square around it.
- * GM, after core's teleport created the token. Setting spreadArrivals.
- */
-export async function spreadArrival(tokenOrUuid) {
-  const arrived = docOf(tokenOrUuid, "Token", "spreadArrival");   // ROB-6
-  if (!arrived) return undefined;
-  if (!setting("spreadArrivals")) return arrived;
+/** Where `arrived` should step to, or null when it is not on anyone (or has nowhere to go). */
+function stepOff(arrived) {
   const dest = arrived.parent;
   const g = dest.grid.size;
   const box = t => tokenBox(t, g);
   // An aoe area handle is invisible scaffolding, flagged on its token or only on its actor (-43).
   const others = dest.tokens.filter(t => t.id !== arrived.id && !t.hidden && !isAoeHandle(t.flags, t.actor?.flags)).map(box);
-  if (!crowded(box(arrived), others)) return arrived;
+  if (!crowded(box(arrived), others)) return null;
   const cx = arrived.x + arrived.width * g / 2, cy = arrived.y + arrived.height * g / 2;
   const [place] = landingPlaces(dest, [arrived], cx, cy);
-  if (!place || (place.x === arrived.x && place.y === arrived.y)) return arrived;
-  await arrived.update(place, { teleport: true, animate: false });
+  if (!place || (place.x === arrived.x && place.y === arrived.y)) return null;
+  return place;
+}
+
+/**
+ * A PC that lands on someone (usability Area 6 re-run, W7: two PCs crossing together plus one
+ * already there all stood on the one landing square) steps to the nearest free square around it.
+ * GM, after core's teleport created the token. Setting spreadArrivals.
+ *
+ * Every active-GM tab runs this (the MCP bridge and a GM browser are both activeGM.isSelf), so a
+ * move is claimed first and only the winning tab writes (portals-async-1). The claim flag leaves
+ * in the winner's own write, so core's next teleport (toObject) does not carry it to a new scene.
+ */
+export async function spreadArrival(tokenOrUuid) {
+  const arrived = docOf(tokenOrUuid, "Token", "spreadArrival");   // ROB-6
+  if (!arrived) return undefined;
+  if (!setting("spreadArrivals") || !stepOff(arrived)) return arrived;
+  const won = await claimDocument(arrived, "spread", { scope: MODULE, reread: d => d.parent?.tokens?.get?.(d.id) ?? {} });
+  if (!won) return arrived;
+  const place = stepOff(arrived);                                 // the scene may have moved on meanwhile
+  const changes = { ...place };
+  if (arrived.flags?.[MODULE]?.claims?.spread !== undefined) changes[flagPath(MODULE, "claims.spread")] = _del;
+  if (!Object.keys(changes).length) return arrived;
+  await arrived.update(changes, place ? { teleport: true, animate: false } : {});
   return arrived;
 }
 

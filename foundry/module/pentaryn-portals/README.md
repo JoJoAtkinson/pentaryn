@@ -57,7 +57,7 @@ migration record → `context/plans/addon-blueprint-2026-10/migrate-pentaryn-por
 | Key | Scope | Default | What it does |
 |---|---|---|---|
 | `teleportDefault` | world | on | The teleport question opens with Teleport focused. Off: core's default, Don't Teleport. |
-| `spreadArrivals` | world | on | A PC arriving through a portal onto an occupied square steps to the nearest free one (GM's client). |
+| `spreadArrivals` | world | on | A PC arriving through a portal onto an occupied square steps to the nearest free one (GM's client; with two GM tabs open, one claims the token and moves it). |
 | `confirmPartyTeleport` | world | on | Teleport party lists who moves and asks first. Off: it moves at once. |
 
 Every read is live; no reload. Labels and hints are `PENTARYN_PORTALS.Setting.<key>.Name/Hint` in `lang/en.json`.

@@ -2,7 +2,7 @@
 // party (confirm, same scene, cross scene), lookAt, arrivals stepping off an occupied square, and
 // summons following a PC through a native teleport (deleteToken → bringFollowers).
 // Characterisation of 0.4.4: unchanged code.
-import { test } from "node:test";
+import { mock, test } from "node:test";
 import assert from "node:assert/strict";
 import { pinJSON } from "./kit/harness.mjs";
 import { boot, console$, MODULE, P1, P2, GM } from "./fixtures/world.mjs";
@@ -56,6 +56,13 @@ function hall({ tokens = null } = {}) {
 }
 const ops = n => W.callsSince(n, ["createEmbedded", "deleteEmbedded", "updateEmbedded", "update", "notify", "DialogV2.confirm", "scene.view", "pullUsers", "animatePan"]);
 const strip = r => { const { doc, ...rest } = r; void doc; return rest; };
+/** Await `p` while spreadArrival's claim (portals-async-1)'s 750 ms settle timer (mocked) is advanced. */
+async function settle(p) {
+  let done = false;
+  p.then(() => { done = true; }, () => { done = true; });
+  for (let i = 0; i < 20 && !done; i++) { await W.flush(); mock.timers.tick(750); }
+  return p;
+}
 
 /* ── who counts ───────────────────────────────────────────────────────── */
 
@@ -338,8 +345,9 @@ function arrivalScene(occupant) {
 test("spreadArrival: on an occupied square → one teleport update to the first free ring square", async () => {
   const arrived = arrivalScene({ name: "Guard", actorId: "GUARD" });
   const n = F.calls.length;
-  assert.equal(await S.spreadArrival(arrived), arrived);
-  assert.deepEqual(W.callsSince(n, ["update"]).map(c => c.changes), [{ x: 500, y: 900 }]);
+  assert.equal(await settle(S.spreadArrival(arrived)), arrived);
+  // [declared] portals-async-1: the tab claims the token first; the claim leaves with the move
+  assert.deepEqual(W.callsSince(n, ["update"]).map(c => c.changes), [{ "flags.pentaryn-portals.claims.spread": "socket-gm-1" }, { x: 500, y: 900, "flags.pentaryn-portals.claims.spread": "<_del>" }]);
   assert.deepEqual([arrived.x, arrived.y], [500, 900]);
 });
 
@@ -400,7 +408,7 @@ test("bringFollowers: two PCs to one scene → each PC's own, then the co-owned 
   const H = hall();
   const { deleted, replacements } = await walkThrough(H, ["tCav", "tMar"]);
   const n = F.calls.length;
-  await S.bringFollowers(H.s, deleted, replacements);
+  await settle(S.bringFollowers(H.s, deleted, replacements));   // Marrith lands on Caven: a claimed spread
   assert.deepEqual(ops(n).filter(c => c.op === "notify").map(c => c.message), [
     "Caven brought Skeleton to Fighting Pit.",
     "Marrith brought Arcane Eye to Fighting Pit.",
@@ -480,6 +488,7 @@ test("deleteToken hook: needs replacements and the active GM; one delete operati
   F.fire("deleteToken", deleted[1], options);
   assert.deepEqual(ops(n), [], "deferred a tick");
   await W.tick(12);
+  for (let i = 0; i < 6; i++) { mock.timers.tick(750); await W.flush(); }   // Marrith's spread claim settles
   assert.equal(ops(n).filter(c => c.op === "notify").length, 3, "both PCs in one pass: own summons + the shared steed");
   const H2 = hall();
   const w2 = await walkThrough(H2);
@@ -511,8 +520,8 @@ test("gaps: spreadArrival steps off an off-grid overlap too; its own square is t
   // The guard covers the arrival's top-left quarter. Before, the centre point was free, so it stayed put on him.
   const arrived = arrivalScene({ name: "Guard", actorId: "GUARD", x: 550, y: 950 });
   const n = F.calls.length;
-  await S.spreadArrival(arrived);
-  assert.deepEqual(W.callsSince(n, ["update"]).map(c => c.changes), [{ x: 700, y: 900 }]);
+  await settle(S.spreadArrival(arrived));
+  assert.deepEqual(W.callsSince(n, ["update"]).map(c => c.changes).filter(c => "x" in c), [{ x: 700, y: 900, "flags.pentaryn-portals.claims.spread": "<_del>" }]);
 });
 
 test("gaps: a follower with no PC to stand by reads 'follower'; a destination with no nav name uses its name", async () => {
@@ -551,4 +560,29 @@ test("portals-edge-2: landing tests each token's footprint, so a Large token nev
   const party = S.partyRecords(H.s);
   const ptoks = party.map(r => r.doc);
   assert.deepEqual(overlaps(landedBoxes(ptoks, S.landingPlaces(H.pit, ptoks, 1050, 550, party))), []);
+});
+
+/* ── two GM tabs (portals-async-1) ───────────────────────────────────── */
+
+
+test("portals-async-1 [declared]: two GM tabs see one arrival on an occupied square — one tab claims it and moves it once; the claim leaves with the move", async () => {
+  const arrived = arrivalScene({ name: "Guard", actorId: "GUARD" });
+  // Each tab writes through the server: neither sees the other's write before it has decided.
+  const real = arrived.update;
+  arrived.update = function (changes, options) { return W.flush(1).then(() => real.call(this, changes, options)); };
+  const n = F.calls.length;
+  let a, b;
+  try {
+    F.become({ socketId: "socket-bridge" });
+    a = S.spreadArrival(arrived);              // the MCP bridge tab
+    F.become({ socketId: "socket-browser" });
+    b = S.spreadArrival(arrived);              // a GM browser tab, same user
+  } finally {
+    F.become({ socketId: "socket-gm-1" });
+  }
+  await settle(Promise.all([a, b]));
+  const moves = W.callsSince(n, ["update"]).filter(c => "x" in c.changes);
+  assert.deepEqual(moves.map(c => c.changes), [{ x: 500, y: 900, "flags.pentaryn-portals.claims.spread": "<_del>" }], "moved once");
+  assert.deepEqual([arrived.x, arrived.y], [500, 900]);
+  assert.equal(arrived.flags[MODULE]?.claims?.spread, undefined, "no stale claim rides the next hop's toObject()");
 });
