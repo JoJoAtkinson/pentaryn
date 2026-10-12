@@ -86,3 +86,26 @@ test("inspect(userRef): journal ref, duplicates, entries; plain JSON, depth ≤ 
   assert.equal(JSON.stringify(JSON.parse(JSON.stringify(out))), JSON.stringify(out));
   assert.equal(api.inspect(GM).journal, null);
 });
+
+test("status/statusFor answer saved when nothing is visible but the document itself is saved", () => {
+  const before = page.ownership;
+  page.ownership = { default: 0 };                       // P1 can no longer observe the saved page…
+  try {
+    assert.equal(readable.testUserPermission(game.users.get(P1), "OBSERVER"), true, "…but still the entry");
+    assert.equal(readable.testUserPermission(game.users.get(P1), "OWNER"), false);
+    assert.equal(api.statusFor(page, { as: P1 }), "saved");
+    F.become({ userId: P1 });
+    assert.equal(api.status(page), "saved");
+    assert.equal(api.lastReason(), null);
+
+    const other = makeDoc("JournalEntry", { id: "readable00000008", name: "Sealed Door", ownership: { default: 2 } });
+    const hidden = makeDoc("JournalEntryPage", { id: "page000000000008", name: "Page 1", type: "text", sort: 1, ownership: { default: 0 },
+      text: { content: "<p>Shut.</p>" } }, { parent: other });
+    Object.defineProperty(other, "pages", { value: { contents: [hidden], filter: fn => [hidden].filter(fn) }, enumerable: false });
+    assert.equal(api.status(hidden), "none", "never saved, nothing visible");
+    assert.equal(api.statusFor(hidden, { as: P1 }), "none");
+  } finally {
+    page.ownership = before;
+    F.become({ userId: GM });
+  }
+});

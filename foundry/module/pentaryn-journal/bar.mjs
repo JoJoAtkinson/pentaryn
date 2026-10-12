@@ -163,8 +163,12 @@ const busy = new WeakSet();
 function savedStatus(target, pages = ctx.exposed.personal()?.pages.contents ?? []) {
   const sources = descriptorsFor(target);
   const st = status(pages, sources);
-  const first = sources.map(s => findSaved(pages, s.key)).find(Boolean) ?? null;
-  return { st, saved: first, sources };
+  let first = null;
+  for (const s of sources) {
+    first = findSaved(pages, s.key);
+    if (first) break;
+  }
+  return { st, saved: first ?? null, sources };
 }
 
 function sinceText(ts) {
