@@ -1,0 +1,62 @@
+{
+  "text": [
+    "replace (by marker) — real run: 2 ok, 0 failed",
+    "s1/w1 → Token \"Wolf\" [<id1>] @1200,1200 1x1, Actor \"Wolf\" [<id2>]; markerDeleted=true",
+    "s1/w2 → Token \"Dire wolf\" [<id3>] @1400,1200 1x1, Actor \"Dire wolf\" [<id4>]; markerDeleted=true",
+    "  s1/w2 patched: name Dire wolf",
+    "remaining: s1=2"
+  ],
+  "calls": [
+    {
+      "op": "Folder.create",
+      "data": {
+        "name": "Foundry MCP Creatures",
+        "type": "Actor"
+      }
+    },
+    {
+      "op": "Actor.create",
+      "data": {
+        "name": "Wolf",
+        "type": "npc",
+        "system": {
+          "traits": {
+            "size": "med"
+          },
+          "details": {
+            "cr": 0.25
+          }
+        },
+        "prototypeToken": {
+          "name": "Wolf",
+          "width": 1,
+          "height": 1,
+          "disposition": -1
+        },
+        "folder": "<id5>"
+      }
+    },
+    {
+      "op": "Actor.create",
+      "data": {
+        "name": "Wolf",
+        "type": "npc",
+        "system": {
+          "traits": {
+            "size": "med"
+          },
+          "details": {
+            "cr": 0.25
+          }
+        },
+        "prototypeToken": {
+          "name": "Wolf",
+          "width": 1,
+          "height": 1,
+          "disposition": -1
+        },
+        "folder": "<id5>"
+      }
+    }
+  ]
+}

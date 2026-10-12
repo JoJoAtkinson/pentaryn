@@ -1,0 +1,82 @@
+{
+  "result": {
+    "dryRun": false,
+    "call": null,
+    "text": [
+      "replace (by marker) — real run: 1 ok, 0 failed",
+      "s1/rl → AmbientLight \"Light\" [<id1>] @850,650; markerDeleted=true",
+      "remaining: s1=2"
+    ],
+    "results": [
+      {
+        "index": 0,
+        "id": null,
+        "label": "s1/rl",
+        "sceneId": "s1",
+        "markerId": "rl",
+        "kind": "light",
+        "ok": true,
+        "created": [
+          "AmbientLight \"Light\" [<id1>] @850,650"
+        ],
+        "ids": [
+          "<id1>"
+        ],
+        "markerDeleted": true,
+        "sheet": null,
+        "patched": [],
+        "defaults": [],
+        "warnings": [],
+        "notes": [],
+        "discarded": []
+      }
+    ],
+    "remaining": {
+      "s1": 2
+    },
+    "encounters": []
+  },
+  "calls": [
+    {
+      "op": "createEmbeddedDocuments",
+      "scene": "s1",
+      "type": "AmbientLight",
+      "data": [
+        {
+          "x": 850,
+          "y": 650,
+          "config": {
+            "dim": 10
+          },
+          "hidden": false,
+          "elevation": 0,
+          "flags": {
+            "pentaryn-prompts": {
+              "provenance": {
+                "prompt": "a brazier",
+                "size": "mid",
+                "footprint": "1x1",
+                "sceneId": "s1",
+                "markerId": "rl",
+                "call": null,
+                "pid": null,
+                "at": 1760000000000,
+                "kind": "light",
+                "note": "warm"
+              }
+            }
+          }
+        }
+      ],
+      "options": {}
+    },
+    {
+      "op": "deleteEmbeddedDocuments",
+      "scene": "s1",
+      "type": "Token",
+      "ids": [
+        "rl"
+      ]
+    }
+  ]
+}

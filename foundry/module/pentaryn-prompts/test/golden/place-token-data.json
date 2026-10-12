@@ -1,0 +1,34 @@
+{
+  "data": [
+    {
+      "name": "Prompt · mid — empty",
+      "actorId": "markerActormid00",
+      "x": 500,
+      "y": 300,
+      "width": 1,
+      "height": 1,
+      "texture": {
+        "src": "modules/pentaryn-prompts/assets/marker-mid.webp",
+        "scaleX": 1,
+        "scaleY": 1,
+        "tint": "#ff6b6b"
+      },
+      "disposition": -2,
+      "actorLink": false,
+      "flags": {
+        "dnd5e": {
+          "lockSize": true
+        },
+        "pentaryn-prompts": {
+          "marker": "mid"
+        }
+      },
+      "elevation": 0
+    }
+  ],
+  "options": {
+    "pentarynPrompts": {
+      "placed": true
+    }
+  }
+}

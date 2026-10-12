@@ -1,0 +1,247 @@
+{
+  "result": {
+    "dryRun": false,
+    "call": null,
+    "text": [
+      "replace (by marker) — real run: 3 ok, 0 failed",
+      "s1/rt → Tile \"\" [<id1>] @1200,600 2x2; markerDeleted=true",
+      "s1/rn → Note \"Letter\" [<id2>] @1425,625, AmbientLight \"Light\" [<id3>] @1425,625, JournalEntry \"A letter\" [<id4>]; markerDeleted=true",
+      "s1/rx → nothing (none: cut from the scene); markerDeleted=true",
+      "remaining: s1=2"
+    ],
+    "results": [
+      {
+        "index": 0,
+        "id": null,
+        "label": "s1/rt",
+        "sceneId": "s1",
+        "markerId": "rt",
+        "kind": "tile",
+        "ok": true,
+        "created": [
+          "Tile \"\" [<id1>] @1200,600 2x2"
+        ],
+        "ids": [
+          "<id1>"
+        ],
+        "markerDeleted": true,
+        "sheet": null,
+        "patched": [],
+        "defaults": [],
+        "warnings": [],
+        "notes": [],
+        "discarded": []
+      },
+      {
+        "index": 1,
+        "id": null,
+        "label": "s1/rn",
+        "sceneId": "s1",
+        "markerId": "rn",
+        "kind": "note",
+        "ok": true,
+        "created": [
+          "Note \"Letter\" [<id2>] @1425,625",
+          "AmbientLight \"Light\" [<id3>] @1425,625",
+          "JournalEntry \"A letter\" [<id4>]"
+        ],
+        "ids": [
+          "<id2>",
+          "<id3>",
+          "<id4>"
+        ],
+        "markerDeleted": true,
+        "sheet": null,
+        "patched": [],
+        "defaults": [],
+        "warnings": [],
+        "notes": [],
+        "discarded": []
+      },
+      {
+        "index": 2,
+        "id": null,
+        "label": "s1/rx",
+        "sceneId": "s1",
+        "markerId": "rx",
+        "kind": "none",
+        "ok": true,
+        "created": [],
+        "ids": [],
+        "markerDeleted": true,
+        "sheet": null,
+        "patched": [],
+        "defaults": [],
+        "warnings": [],
+        "notes": [],
+        "discarded": [],
+        "reason": "cut from the scene",
+        "prompt": "never mind"
+      }
+    ],
+    "remaining": {
+      "s1": 2
+    },
+    "encounters": []
+  },
+  "calls": [
+    {
+      "op": "JournalEntry.create",
+      "data": {
+        "name": "A letter",
+        "folder": null,
+        "ownership": {
+          "default": 1,
+          "u1": 3
+        },
+        "pages": [
+          {
+            "name": "A letter",
+            "type": "text",
+            "title": {
+              "show": false,
+              "level": 1
+            },
+            "text": {
+              "format": 1,
+              "content": "<p>Dear…</p>"
+            }
+          }
+        ],
+        "flags": {
+          "pentaryn-prompts": {
+            "provenance": {
+              "prompt": "a letter",
+              "size": "tiny",
+              "footprint": "0.5x0.5",
+              "sceneId": "s1",
+              "markerId": "rn",
+              "call": null,
+              "pid": null,
+              "at": 1760000000000,
+              "kind": "note",
+              "note": ""
+            }
+          }
+        }
+      }
+    },
+    {
+      "op": "createEmbeddedDocuments",
+      "scene": "s1",
+      "type": "Note",
+      "data": [
+        {
+          "entryId": "<id4>",
+          "pageId": "page000000000000",
+          "x": 1425,
+          "y": 625,
+          "texture": {
+            "src": "assets/tokens/custom/props/icon-eye.webp"
+          },
+          "iconSize": 64,
+          "text": "Letter",
+          "fontSize": 24,
+          "textAnchor": 1,
+          "global": false,
+          "elevation": 0,
+          "flags": {
+            "pentaryn-prompts": {
+              "provenance": {
+                "prompt": "a letter",
+                "size": "tiny",
+                "footprint": "0.5x0.5",
+                "sceneId": "s1",
+                "markerId": "rn",
+                "call": null,
+                "pid": null,
+                "at": 1760000000000,
+                "kind": "note",
+                "note": ""
+              }
+            }
+          }
+        }
+      ],
+      "options": {}
+    },
+    {
+      "op": "createEmbeddedDocuments",
+      "scene": "s1",
+      "type": "AmbientLight",
+      "data": [
+        {
+          "x": 1425,
+          "y": 625,
+          "config": {
+            "dim": 5
+          },
+          "hidden": false,
+          "elevation": 0,
+          "flags": {
+            "pentaryn-prompts": {
+              "provenance": {
+                "prompt": "a letter",
+                "size": "tiny",
+                "footprint": "0.5x0.5",
+                "sceneId": "s1",
+                "markerId": "rn",
+                "call": null,
+                "pid": null,
+                "at": 1760000000000,
+                "kind": "note",
+                "note": ""
+              }
+            }
+          }
+        }
+      ],
+      "options": {}
+    },
+    {
+      "op": "createEmbeddedDocuments",
+      "scene": "s1",
+      "type": "Tile",
+      "data": [
+        {
+          "texture": {
+            "src": "rug.webp"
+          },
+          "x": 1200,
+          "y": 600,
+          "width": 200,
+          "height": 200,
+          "hidden": true,
+          "elevation": 0,
+          "flags": {
+            "pentaryn-prompts": {
+              "provenance": {
+                "prompt": "a rug",
+                "size": "large",
+                "footprint": "2x2",
+                "sceneId": "s1",
+                "markerId": "rt",
+                "call": null,
+                "pid": null,
+                "at": 1760000000000,
+                "kind": "tile",
+                "note": ""
+              }
+            }
+          }
+        }
+      ],
+      "options": {}
+    },
+    {
+      "op": "deleteEmbeddedDocuments",
+      "scene": "s1",
+      "type": "Token",
+      "ids": [
+        "rt",
+        "rn",
+        "rx"
+      ]
+    }
+  ]
+}

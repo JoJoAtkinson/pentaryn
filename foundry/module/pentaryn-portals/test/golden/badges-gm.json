@@ -1,0 +1,324 @@
+{
+  "badges": [
+    {
+      "region": "Passage → Pit",
+      "x": 150,
+      "y": 180.2,
+      "r": 36,
+      "revealed": true,
+      "visible": true,
+      "cards": [
+        "The Fighting Pit"
+      ]
+    },
+    {
+      "region": "Fork",
+      "x": 550,
+      "y": 180.2,
+      "r": 36,
+      "revealed": true,
+      "visible": true,
+      "cards": [
+        "The Fighting Pit",
+        "Drow Prison"
+      ]
+    },
+    {
+      "region": "Secret",
+      "x": 1250,
+      "y": 180.2,
+      "r": 36,
+      "revealed": true,
+      "visible": true,
+      "cards": [
+        "Fighting Pit"
+      ]
+    }
+  ],
+  "layer": {
+    "kind": "Container",
+    "children": [
+      {
+        "kind": "Container",
+        "at": [
+          150,
+          180.2
+        ],
+        "children": [
+          {
+            "kind": "Graphics",
+            "ops": [
+              [
+                "beginFill",
+                1182244,
+                0.9
+              ],
+              [
+                "drawCircle",
+                0,
+                0,
+                36
+              ],
+              [
+                "endFill"
+              ]
+            ]
+          },
+          {
+            "kind": "Sprite",
+            "texture": "cards/pit.webp",
+            "scale": 0.72,
+            "anchor": 0.5,
+            "masked": true
+          },
+          {
+            "kind": "Graphics",
+            "ops": [
+              [
+                "beginFill",
+                16777215
+              ],
+              [
+                "drawCircle",
+                0,
+                0,
+                33
+              ],
+              [
+                "endFill"
+              ]
+            ]
+          },
+          {
+            "kind": "Graphics",
+            "ops": [
+              [
+                "lineStyle",
+                4,
+                9067775,
+                1
+              ],
+              [
+                "drawCircle",
+                0,
+                0,
+                36
+              ],
+              [
+                "beginFill",
+                9067775
+              ],
+              [
+                "drawPolygon",
+                [
+                  -7.92,
+                  33.12,
+                  7.92,
+                  33.12,
+                  0,
+                  48.6
+                ]
+              ],
+              [
+                "endFill"
+              ]
+            ]
+          }
+        ]
+      },
+      {
+        "kind": "Container",
+        "at": [
+          550,
+          180.2
+        ],
+        "children": [
+          {
+            "kind": "Graphics",
+            "ops": [
+              [
+                "beginFill",
+                1182244,
+                0.9
+              ],
+              [
+                "drawCircle",
+                0,
+                0,
+                36
+              ],
+              [
+                "endFill"
+              ]
+            ]
+          },
+          {
+            "kind": "Sprite",
+            "texture": "cards/pit.webp",
+            "scale": 0.72,
+            "anchor": 0.5,
+            "masked": true
+          },
+          {
+            "kind": "Graphics",
+            "ops": [
+              [
+                "beginFill",
+                16777215
+              ],
+              [
+                "drawCircle",
+                0,
+                0,
+                33
+              ],
+              [
+                "endFill"
+              ]
+            ]
+          },
+          {
+            "kind": "Graphics",
+            "ops": [
+              [
+                "lineStyle",
+                4,
+                9067775,
+                1
+              ],
+              [
+                "drawCircle",
+                0,
+                0,
+                36
+              ],
+              [
+                "beginFill",
+                9067775
+              ],
+              [
+                "drawPolygon",
+                [
+                  -7.92,
+                  33.12,
+                  7.92,
+                  33.12,
+                  0,
+                  48.6
+                ]
+              ],
+              [
+                "endFill"
+              ]
+            ]
+          },
+          {
+            "kind": "Text",
+            "at": [
+              25.92,
+              -25.92
+            ],
+            "text": "2",
+            "style": {
+              "fontFamily": "Signika",
+              "fontSize": 19.8,
+              "fill": 16777215,
+              "stroke": 0,
+              "strokeThickness": 4
+            },
+            "anchor": 0.5
+          }
+        ]
+      },
+      {
+        "kind": "Container",
+        "at": [
+          1250,
+          180.2
+        ],
+        "alpha": 0.35,
+        "children": [
+          {
+            "kind": "Graphics",
+            "ops": [
+              [
+                "beginFill",
+                1182244,
+                0.9
+              ],
+              [
+                "drawCircle",
+                0,
+                0,
+                36
+              ],
+              [
+                "endFill"
+              ]
+            ]
+          },
+          {
+            "kind": "Sprite",
+            "texture": "thumbs/pit.webp",
+            "scale": 0.72,
+            "anchor": 0.5,
+            "masked": true
+          },
+          {
+            "kind": "Graphics",
+            "ops": [
+              [
+                "beginFill",
+                16777215
+              ],
+              [
+                "drawCircle",
+                0,
+                0,
+                33
+              ],
+              [
+                "endFill"
+              ]
+            ]
+          },
+          {
+            "kind": "Graphics",
+            "ops": [
+              [
+                "lineStyle",
+                4,
+                9067775,
+                1
+              ],
+              [
+                "drawCircle",
+                0,
+                0,
+                36
+              ],
+              [
+                "beginFill",
+                9067775
+              ],
+              [
+                "drawPolygon",
+                [
+                  -7.92,
+                  33.12,
+                  7.92,
+                  33.12,
+                  0,
+                  48.6
+                ]
+              ],
+              [
+                "endFill"
+              ]
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

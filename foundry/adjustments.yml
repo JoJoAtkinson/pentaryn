@@ -101,7 +101,7 @@ adjustments:
   - id: dsn-skip-blind-study
     packages: [dice-so-nice]
     modules: [pentaryn-ties]
-    files: [foundry/module/pentaryn-ties/study.mjs]
+    files: [foundry/module/pentaryn-ties/study/apply.mjs]
     markers: ['"dice-so-nice": { skip: true }']
     what: sets flags["dice-so-nice"].skip on blind Study rolls so the GM's dice do not animate a secret check
     why: DSN animates blind rolls for the roller
@@ -145,7 +145,7 @@ adjustments:
   - id: dnd5e-chat-message-types
     packages: [dnd5e]
     modules: [pentaryn-aoe, pentaryn-senses, pentaryn-riders, pentaryn-combat]
-    files: [foundry/module/pentaryn-aoe/resolve.mjs, foundry/module/pentaryn-aoe/attacks.mjs, foundry/module/pentaryn-aoe/areas.mjs, foundry/module/pentaryn-aoe/effects.mjs, foundry/module/pentaryn-aoe/messages-adapter.mjs, foundry/module/pentaryn-senses/light.mjs, foundry/module/pentaryn-riders/damage-riders.mjs, foundry/module/pentaryn-riders/card-note.mjs, foundry/module/pentaryn-riders/concentration.mjs, foundry/module/pentaryn-riders/shapes.mjs, foundry/module/pentaryn-combat/turn-riders.mjs, foundry/module/pentaryn-combat/turnflow/dialogs.mjs]
+    files: [foundry/module/pentaryn-aoe/resolve.mjs, foundry/module/pentaryn-aoe/attacks.mjs, foundry/module/pentaryn-aoe/areas.mjs, foundry/module/pentaryn-aoe/effects.mjs, foundry/module/pentaryn-aoe/messages-adapter.mjs, foundry/module/pentaryn-senses/light-ui.mjs, foundry/module/pentaryn-riders/damage-riders.mjs, foundry/module/pentaryn-riders/card-note.mjs, foundry/module/pentaryn-riders/concentration.mjs, foundry/module/pentaryn-riders/shapes.mjs, foundry/module/pentaryn-combat/turn-riders.mjs, foundry/module/pentaryn-combat/turnflow/dialogs.mjs]
     markers: ["message.type", "system.targets", "system.origin", "getAssociatedActivity", "registry.messages"]
     what: reads message.type ("usage" / "attack" / "damage" / "save") and message.system.{activity,item,targets,origin,onSave,ability,mode,ammunition} on dnd5e 6 chat messages, plus message.getAssociatedActivity() and message.system.getEffects(); replaces the 5.x flags.dnd5e.roll / .activity / .item / .originatingMessage reads (renamed from dnd5e-chat-card-flags on the 6.0.6 port)
     why: the only way to find the usage / attack / damage message an area, save, effect or rider belongs to
@@ -167,7 +167,7 @@ adjustments:
   - id: dnd5e-legacy-roll-modes
     packages: [dnd5e, core]
     modules: [pentaryn-aoe, pentaryn-ties]
-    files: [foundry/module/pentaryn-aoe/resolve.mjs, foundry/module/pentaryn-aoe/settings.mjs, foundry/module/pentaryn-ties/study.mjs]
+    files: [foundry/module/pentaryn-aoe/resolve.mjs, foundry/module/pentaryn-aoe/settings.mjs, foundry/module/pentaryn-ties/study/apply.mjs]
     markers: ["_mapLegacyRollMode"]
     what: maps legacy roll-mode names ("gmroll", "blindroll", "publicroll") through core's foundry.dice.Roll._mapLegacyRollMode before handing them to dnd5e rolls (NPC area saves, blind Study rolls); pentaryn-aoe.npcSaveRollMode choices are gm / blind / public with a ready-time migration of a stored legacy value
     why: dnd5e 6 passes rollMode to core as messageMode, and core silently replaces an unknown name with the client default (public) — blind Study rolls and GM-side NPC saves would show to players
@@ -233,7 +233,7 @@ adjustments:
   - id: core-portals-relative-uuid
     packages: [core]
     modules: [pentaryn-portals]
-    files: [foundry/module/pentaryn-portals/portals.mjs, foundry/module/pentaryn-portals/portals-core.mjs]
+    files: [foundry/module/pentaryn-portals/portals-core.mjs, foundry/module/pentaryn-portals/scene-adapter.mjs, foundry/module/pentaryn-portals/cards.mjs]
     markers: ["relative: behavior"]
     what: resolves the relative region UUIDs that 14.368+ stores for same-scene destinations (DocumentUUIDField relativize)
     why: comparing raw stored UUIDs misses a same-scene link
@@ -244,10 +244,21 @@ adjustments:
   - id: core-ties-flag-wipe
     packages: [core]
     modules: [pentaryn-ties]
-    files: [foundry/module/pentaryn-ties/known-core.mjs, foundry/module/pentaryn-ties/look.mjs, foundry/module/pentaryn-ties/preview.mjs]
+    files: [foundry/module/pentaryn-ties/core/known.mjs, foundry/module/pentaryn-ties/look-app.mjs, foundry/module/pentaryn-ties/preview-app.mjs]
     markers: ["ForcedDeletion"]
     what: recognises a whole-scope flag deletion with or without the `-=` marker (14.369 migrates `-=` keys to a ForcedDeletion operator)
     why: a wiped scope otherwise reads as an ordinary update and the ledger goes stale
+    native_when: n/a
+    retire_class: never
+    check: make foundry-ties-check
+
+  - id: itempiles-ties-pile-check
+    packages: [item-piles]
+    modules: [pentaryn-ties]
+    files: [foundry/module/pentaryn-ties/look-menu.mjs, foundry/module/pentaryn-ties/preview-app.mjs]
+    markers: ['"item-piles", "data"', "isValidItemPile"]
+    what: the double-click look menu skips a token whose item-piles flag marks it a pile; the inspect window leaves pile actors out of the table's PCs
+    why: an Item Piles container is a token and an actor; without the check a loot pile gets a closer-look menu and can show up as a PC to share with
     native_when: n/a
     retire_class: never
     check: make foundry-ties-check
@@ -264,12 +275,23 @@ adjustments:
     check: make foundry-transform-check
 
   - id: creatures-libwrapper
-    packages: [lib-wrapper]
+    packages: [lib-wrapper, core]
     modules: [pentaryn-creatures]
-    files: [foundry/module/pentaryn-creatures/creatures.mjs]
-    markers: ["libWrapper.register"]
-    what: wraps core methods through libWrapper when it is active, with a manual-patch fallback
-    why: plays nicely with other modules wrapping the same methods
+    files: [foundry/module/pentaryn-creatures/owner-sees.mjs]
+    markers: ["isVisible", "_testCulled", "_previewType", "__pentarynCreaturesVisible"]
+    what: Token#isVisible getter wrapped through wrapMethod (libWrapper WRAPPER when lib-wrapper is active, else the getter is replaced on the prototype, marker __pentarynCreaturesVisible) so an owner always sees their own summons and familiars (setting ownerSees); reads private _testCulled, _preview._previewType, isFilteredOut
+    why: core hides a token nothing the player controls can see, even one they own (an Invisible Arcane Eye in darkness); core has no hook to add an owner override to visibility
+    native_when: core lets owners always see owned tokens
+    retire_class: guarded
+    check: make foundry-creatures-check
+
+  - id: itempiles-creatures-pile-flag
+    packages: [item-piles]
+    modules: [pentaryn-creatures]
+    files: [foundry/module/pentaryn-creatures/creatures-core.mjs]
+    markers: ["item-piles"]
+    what: reads flags.item-piles.data.enabled on the token or its actor to leave piles out of the summon light and the Your creatures strip
+    why: an Item Piles container is a token with an owner; without the check a loot pile gets a light and a portrait
     native_when: n/a
     retire_class: never
     check: make foundry-creatures-check
@@ -862,7 +884,7 @@ adjustments:
   - id: argon-light-pick-collapse-panels
     packages: [enhancedcombathud]
     modules: [pentaryn-senses]
-    files: [foundry/module/pentaryn-senses/light.mjs]
+    files: [foundry/module/pentaryn-senses/argon.mjs]
     markers: ["collapseAllPanels"]
     what: the Light cantrip's "Pick a target" closes Argon's open panels before waiting for the map click
     why: the open Cast Spell panel covered the map and the pick click opened Hypnotic Pattern instead (Area 6 re-run W10)
@@ -870,10 +892,10 @@ adjustments:
     retire_class: safe
     check: make foundry-senses-check
 
-  - id: creatures-strip-over-argon
+  - id: argon-creatures-strip-float
     packages: [enhancedcombathud]
     modules: [pentaryn-creatures]
-    files: [foundry/module/pentaryn-creatures/creatures.mjs, foundry/module/pentaryn-creatures/creatures-core.mjs]
+    files: [foundry/module/pentaryn-creatures/strip.mjs, foundry/module/pentaryn-creatures/creatures-core.mjs]
     markers: ["stripDock", ".extended-combat-hud"]
     what: while Argon's HUD is up, the Your creatures strip floats just above the HUD's action bar instead of sitting behind it (setting floatOverHud)
     why: the strip sat behind the HUD's bars and a click on a summon's portrait hit Projected Ward (Area 6 re-run W8)
@@ -884,8 +906,8 @@ adjustments:
   - id: core-teleport-default-and-spread
     packages: [core]
     modules: [pentaryn-portals]
-    files: [foundry/module/pentaryn-portals/portals.mjs, foundry/module/pentaryn-portals/portals-core.mjs]
-    markers: ["preferTeleport", "spreadArrival"]
+    files: [foundry/module/pentaryn-portals/cards.mjs, foundry/module/pentaryn-portals/party.mjs]
+    markers: ['data-action="yes"', ":scope > p", "spreadArrival"]
     what: the core Teleport Token confirm opens with Teleport focused (setting teleportDefault); a PC who arrives through a portal on an occupied square is moved by the GM to the nearest free one (setting spreadArrivals)
     why: DialogV2.confirm defaults to Don't Teleport; two PCs crossing together plus one already there stacked on one square (Area 6 re-run W7)
     native_when: core's teleport confirm defaults to Teleport, or core spreads teleported tokens
@@ -1211,3 +1233,127 @@ adjustments:
     native_when: pentaryn-aoe publishes a refund / placementCancelled event or member and an isHandle API that combat reads instead
     retire_class: guarded
     check: make foundry-combat-check foundry-aoe-check
+
+  # pentaryn-prompts (wave 3 blueprint migration, 2026-10-11).
+  - id: prompts-token-dblclick
+    packages: [lib-wrapper, core]
+    modules: [pentaryn-prompts]
+    files: [foundry/module/pentaryn-prompts/patches.mjs]
+    markers: ["__pentarynPromptsClick", "_onClickLeft2"]
+    what: wraps CONFIG.Token.objectClass.prototype._onClickLeft2 through wrapMethod (libWrapper MIXED when lib-wrapper is active, else a direct wrap marked __pentarynPromptsClick) so a GM's double-click on a prompt marker opens its prompt box instead of the actor sheet; every other token and every player calls the original
+    why: core has no hook to veto or replace a token's double-click action
+    native_when: core fires a vetoable hook for a token double-click, or lets a token document override its click-left-2 action
+    retire_class: guarded
+    check: make foundry-prompts-check
+
+  - id: itempiles-prompts-hotspot
+    packages: [item-piles]
+    modules: [pentaryn-prompts]
+    files: [foundry/module/pentaryn-prompts/replace.mjs, foundry/module/pentaryn-prompts/scene-adapter.mjs]
+    markers: ["flags.item-piles.data", "Hotspot · Look (template)"]
+    what: a hotspot replacement clones the world's "Hotspot · Look (template)" Item Piles actor and writes flags.item-piles.data (images, description, closed/locked, deleteWhenEmpty) on the actor, its prototype and the token; the scene model reads flags.item-piles.data.enabled/description to tell piles from creatures
+    why: Item Piles keeps its pile configuration only in that flag, and exposes no API for creating a configured pile from a template actor
+    native_when: Item Piles offers a create-pile-from-template API that takes the images, description and lock state
+    retire_class: never
+    check: make foundry-prompts-check
+
+  # pentaryn-senses (wave 3 blueprint migration, 2026-10-11; finding senses-walls-cursors-29).
+  - id: core-light-animation-shader
+    packages: [core]
+    modules: [pentaryn-senses]
+    files: [foundry/module/pentaryn-senses/glow.mjs]
+    markers: ["TorchIlluminationShader", "lightAnimations"]
+    what: the Broken glow light animation subclasses core's TorchIlluminationShader (foundry.canvas.rendering.shaders), splices its own fragment shader and registers itself in CONFIG.Canvas.lightAnimations
+    why: core has no API for a custom light animation; the shader class and the lightAnimations table are the only way in
+    native_when: n/a — a custom animation always rides on core's shader classes
+    retire_class: never
+    check: make foundry-senses-check
+
+  - id: core-token-preview-private
+    packages: [core]
+    modules: [pentaryn-senses]
+    files: [foundry/module/pentaryn-senses/chain.mjs]
+    markers: ["_preview"]
+    what: a chain is drawn to a dragged token's live position by reading the private Token#_preview (the drag preview) and its mesh
+    why: core exposes no public accessor for where a token is drawn mid-drag
+    native_when: core offers a public drag-preview or drawn-position accessor
+    retire_class: guarded
+    check: make foundry-senses-check
+
+  - id: core-primary-sort-layers
+    packages: [core]
+    modules: [pentaryn-senses]
+    files: [foundry/module/pentaryn-senses/chain.mjs]
+    markers: ["SORT_LAYERS"]
+    what: chain sprites sort just under tokens (PrimaryCanvasGroup.SORT_LAYERS.TOKENS - 1, falling back to 699)
+    why: the chain must draw above tiles and below the tokens it joins; core has no named slot for it
+    native_when: n/a
+    retire_class: safe
+    check: make foundry-senses-check
+
+  - id: dnd5e-light-summon-suppress
+    packages: [dnd5e]
+    modules: [pentaryn-senses]
+    files: [foundry/module/pentaryn-senses/light.mjs, foundry/module/pentaryn-senses/light-ui.mjs]
+    markers: ["create.summons", "placeSummons"]
+    what: casting the Light cantrip sets usageConfig.create.summons = false (dnd5e.preUseActivity) and the usage card drops the PHB Light's placeSummons button; senses places its own light instead
+    why: the PHB Light activity summons a light token; senses lights the target or a square itself, so dnd5e's summon would be a second light
+    native_when: n/a — tracks dnd5e's usage-config and chat-card shapes
+    retire_class: guarded
+    check: make foundry-senses-check
+
+  - id: core-teleport-replacements
+    packages: [core]
+    modules: [pentaryn-senses]
+    files: [foundry/module/pentaryn-senses/light.mjs]
+    markers: ["replacements"]
+    what: when core's teleport deletes a token with options.replacements (its id changed on another scene), the active GM moves the Light cast's token pointer to the new token
+    why: a lit token that teleports would otherwise lose its Light; core says where it went only through deleteToken's replacements option
+    native_when: n/a
+    retire_class: guarded
+    check: make foundry-senses-check
+
+  # pentaryn-portals (wave 3 blueprint migration, 2026-10-11; finding aoe-movement-portals-31).
+  - id: core-teleport-dialog-cards
+    packages: [core]
+    modules: [pentaryn-portals]
+    files: [foundry/module/pentaryn-portals/cards.mjs, foundry/module/pentaryn-portals/portals-core.mjs]
+    markers: ["dialog-", 'select[name="destination"]']
+    what: the destination cards decorate core's Teleport Token dialog, found by its id dialog-<behaviorUuid>-<tokenId>, its .dialog-content and its select[name="destination"]; the plain confirm's question is the first :scope > p
+    why: core renders the teleport choice as a bare select; the cards replace it with pictures and names, and core has no hook into that dialog's content
+    native_when: core's teleport dialog offers a hook or a richer destination picker
+    retire_class: guarded
+    check: make foundry-portals-check
+
+  - id: core-teleport-replacements-follow
+    packages: [core]
+    modules: [pentaryn-portals]
+    files: [foundry/module/pentaryn-portals/party.mjs]
+    markers: ["replacements"]
+    what: the active GM carries a PC's followers (summons, familiars) when core deletes the PC with options.replacements after a cross-scene teleport
+    why: core teleports only the token that crossed; deleteToken's replacements option is the only sign of where it went
+    native_when: core teleports a token's followers, or fires a teleport hook naming the new token
+    retire_class: guarded
+    check: make foundry-portals-check
+
+  - id: core-region-config-portal-card
+    packages: [core]
+    modules: [pentaryn-portals]
+    files: [foundry/module/pentaryn-portals/cards.mjs]
+    markers: ["region-appearance"]
+    what: the Region config window gets a Portal card fieldset in its Appearance tab (section.tab.region-appearance, or data-tab="appearance")
+    why: core has no extension point for a region's config form
+    native_when: n/a
+    retire_class: safe
+    check: make foundry-portals-check
+
+  - id: itempiles-portals-pile-pc
+    packages: [item-piles]
+    modules: [pentaryn-portals]
+    files: [foundry/module/pentaryn-portals/scene-adapter.mjs]
+    markers: ["isValidItemPile"]
+    what: the party teleport asks game.itempiles.API.isValidItemPile(actor) for each token, so a pile is never read as a PC and never carried along (no flag fallback, unlike pentaryn-aoe's probe)
+    why: a pile made from a linked character actor looks like a PC to the party rules
+    native_when: n/a
+    retire_class: never
+    check: make foundry-portals-check

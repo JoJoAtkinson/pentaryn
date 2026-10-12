@@ -1,0 +1,70 @@
+[
+  {
+    "label": "pick OTHER",
+    "out": "zzOther000000001",
+    "calls": [
+      {
+        "op": "DialogV2.prompt",
+        "title": "Add to the known list"
+      },
+      {
+        "op": "update",
+        "documentName": "Actor",
+        "uuid": "Actor.zzPc000000000001",
+        "changes": {
+          "flags.pentaryn-ties.known": [
+            {
+              "id": "zzNpc00000000001",
+              "name": "ZZ Brakka",
+              "category": "sentient",
+              "notes": "Salt.",
+              "imposter": null,
+              "hidden": false,
+              "when": 1700000000000
+            },
+            {
+              "id": "zzOther000000001",
+              "name": "ZZ Other",
+              "category": "sentient",
+              "notes": "",
+              "imposter": null,
+              "hidden": false,
+              "when": 1790000000000
+            }
+          ]
+        }
+      },
+      {
+        "op": "onAdded"
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "cancel",
+    "out": null,
+    "calls": [
+      {
+        "op": "DialogV2.prompt",
+        "title": "Add to the known list"
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "pick someone already filed",
+    "out": null,
+    "calls": [
+      {
+        "op": "DialogV2.prompt",
+        "title": "Add to the known list"
+      },
+      {
+        "op": "notify",
+        "level": "warn",
+        "message": "ZZ Other is already on this list."
+      }
+    ],
+    "console": []
+  }
+]

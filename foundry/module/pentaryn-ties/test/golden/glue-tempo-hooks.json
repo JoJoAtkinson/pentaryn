@@ -1,0 +1,75 @@
+[
+  {
+    "label": "canvasReady",
+    "seeded": true,
+    "after": null
+  },
+  {
+    "label": "combatStart",
+    "seeded": true,
+    "after": null
+  },
+  {
+    "label": "deleteCombat",
+    "seeded": true,
+    "after": null
+  },
+  {
+    "label": "updateCombat round 1",
+    "seeded": true,
+    "after": null
+  },
+  {
+    "label": "updateCombat round 2 after round 1",
+    "seeded": true,
+    "after": {
+      "count": 1,
+      "anchor": {
+        "x": 100,
+        "y": 100
+      },
+      "sceneId": "zzScene000000001"
+    }
+  },
+  {
+    "label": "updateCombat round 2, no previous",
+    "seeded": true,
+    "after": null
+  },
+  {
+    "label": "updateCombat round 0",
+    "seeded": true,
+    "after": {
+      "count": 1,
+      "anchor": {
+        "x": 100,
+        "y": 100
+      },
+      "sceneId": "zzScene000000001"
+    }
+  },
+  {
+    "label": "updateCombat no round",
+    "seeded": true,
+    "after": {
+      "count": 1,
+      "anchor": {
+        "x": 100,
+        "y": 100
+      },
+      "sceneId": "zzScene000000001"
+    }
+  },
+  {
+    "label": "canvasPan (closes the menu only)",
+    "seeded": true,
+    "after": {
+      "count": 1,
+      "anchor": {
+        "x": 100,
+        "y": 100
+      },
+      "sceneId": "zzScene000000001"
+    }
+  }
+]

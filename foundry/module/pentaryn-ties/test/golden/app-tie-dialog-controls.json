@@ -1,0 +1,467 @@
+{
+  "inventory": [
+    {
+      "nth": 0,
+      "tag": "A",
+      "className": "pt-dlg-fixed pt-dlg-link",
+      "dataset": {
+        "action": "open",
+        "id": "zzPc000000000001",
+        "tooltip": "Open their sheet"
+      },
+      "events": [
+        "click",
+        "keydown"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "A",
+      "className": "pt-dlg-fixed pt-dlg-link",
+      "dataset": {
+        "action": "open",
+        "id": "zzNpc00000000001",
+        "tooltip": "Open their sheet"
+      },
+      "events": [
+        "click",
+        "keydown"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "INPUT",
+      "className": "pt-dlg-word",
+      "dataset": {
+        "field": "word"
+      },
+      "events": [
+        "input"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "INPUT",
+      "className": "pt-dlg-mirror-input pt-diverged",
+      "dataset": {
+        "field": "reverseWord",
+        "mirrors": "word",
+        "seeded": "mark",
+        "emptyHint": "(nothing on your side yet)"
+      },
+      "events": [
+        "input"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-pip fill",
+      "dataset": {
+        "action": "strength",
+        "n": "1",
+        "tooltip": "Set strength to 1 of 5"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-pip fill",
+      "dataset": {
+        "action": "strength",
+        "n": "2",
+        "tooltip": "Set strength to 2 of 5"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-pip fill",
+      "dataset": {
+        "action": "strength",
+        "n": "3",
+        "tooltip": "Set strength to 3 of 5"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-pip fill",
+      "dataset": {
+        "action": "strength",
+        "n": "4",
+        "tooltip": "Set strength to 4 of 5"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-pip",
+      "dataset": {
+        "action": "strength",
+        "n": "5",
+        "tooltip": "Set strength to 5 of 5"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "TEXTAREA",
+      "className": "pt-dlg-notes",
+      "dataset": {
+        "field": "notes"
+      },
+      "events": [
+        "input"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "TEXTAREA",
+      "className": "pt-dlg-mirror-input pt-diverged",
+      "dataset": {
+        "field": "reverseNotes",
+        "mirrors": "notes",
+        "seeded": "Their side.",
+        "emptyHint": "(nothing on your side yet)"
+      },
+      "events": [
+        "input"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-dlg-save",
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-dlg-cancel",
+      "events": [
+        "click"
+      ]
+    }
+  ],
+  "rows": [
+    {
+      "nth": 0,
+      "tag": "A",
+      "className": "pt-dlg-fixed pt-dlg-link",
+      "dataset": {
+        "action": "open",
+        "id": "zzPc000000000001",
+        "tooltip": "Open their sheet"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "sheet.render",
+          "actor": "zzPc000000000001",
+          "force": true,
+          "tab": "details"
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-dlg-fixed pt-dlg-link",
+        "parent": "pt-dlg-side"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "A",
+      "className": "pt-dlg-fixed pt-dlg-link",
+      "dataset": {
+        "action": "open",
+        "id": "zzPc000000000001",
+        "tooltip": "Open their sheet"
+      },
+      "type": "keydown",
+      "calls": [
+        {
+          "op": "sheet.render",
+          "actor": "zzPc000000000001",
+          "force": true,
+          "tab": "details"
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-dlg-fixed pt-dlg-link",
+        "parent": "pt-dlg-side"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "A",
+      "className": "pt-dlg-fixed pt-dlg-link",
+      "dataset": {
+        "action": "open",
+        "id": "zzNpc00000000001",
+        "tooltip": "Open their sheet"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "sheet.render",
+          "actor": "zzNpc00000000001",
+          "force": true,
+          "tab": "details"
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-dlg-fixed pt-dlg-link",
+        "parent": "pt-dlg-side"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "A",
+      "className": "pt-dlg-fixed pt-dlg-link",
+      "dataset": {
+        "action": "open",
+        "id": "zzNpc00000000001",
+        "tooltip": "Open their sheet"
+      },
+      "type": "keydown",
+      "calls": [
+        {
+          "op": "sheet.render",
+          "actor": "zzNpc00000000001",
+          "force": true,
+          "tab": "details"
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-dlg-fixed pt-dlg-link",
+        "parent": "pt-dlg-side"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "INPUT",
+      "className": "pt-dlg-word",
+      "dataset": {
+        "field": "word"
+      },
+      "type": "input",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-dlg-word",
+        "parent": "pt-field",
+        "value": "zz typed word"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "INPUT",
+      "className": "pt-dlg-mirror-input pt-diverged",
+      "dataset": {
+        "field": "reverseWord",
+        "mirrors": "word",
+        "seeded": "mark",
+        "emptyHint": "(nothing on your side yet)"
+      },
+      "type": "input",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-dlg-mirror-input pt-diverged",
+        "parent": "pt-field pt-dlg-reverse",
+        "value": "zz typed reverseWord"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-pip fill",
+      "dataset": {
+        "action": "strength",
+        "n": "1",
+        "tooltip": "Set strength to 1 of 5"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-pip fill",
+        "parent": "pt-pips"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-pip fill",
+      "dataset": {
+        "action": "strength",
+        "n": "2",
+        "tooltip": "Set strength to 2 of 5"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-pip fill",
+        "parent": "pt-pips"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-pip fill",
+      "dataset": {
+        "action": "strength",
+        "n": "3",
+        "tooltip": "Set strength to 3 of 5"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-pip fill",
+        "parent": "pt-pips"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-pip fill",
+      "dataset": {
+        "action": "strength",
+        "n": "4",
+        "tooltip": "Set strength to 4 of 5"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-pip fill",
+        "parent": "pt-pips"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-pip",
+      "dataset": {
+        "action": "strength",
+        "n": "5",
+        "tooltip": "Set strength to 5 of 5"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-pip fill",
+        "parent": "pt-pips"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "TEXTAREA",
+      "className": "pt-dlg-notes",
+      "dataset": {
+        "field": "notes"
+      },
+      "type": "input",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-dlg-notes",
+        "parent": "pt-field pt-field-notes",
+        "value": "zz typed notes"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "TEXTAREA",
+      "className": "pt-dlg-mirror-input pt-diverged",
+      "dataset": {
+        "field": "reverseNotes",
+        "mirrors": "notes",
+        "seeded": "Their side.",
+        "emptyHint": "(nothing on your side yet)"
+      },
+      "type": "input",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-dlg-mirror-input pt-diverged",
+        "parent": "pt-field pt-dlg-reverse",
+        "value": "zz typed reverseNotes"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-dlg-save",
+      "type": "click",
+      "calls": [
+        {
+          "op": "update",
+          "documentName": "Actor",
+          "uuid": "Actor.zzPc000000000001",
+          "changes": {
+            "flags.pentaryn-ties.ties": [
+              {
+                "id": "zzNpc00000000001",
+                "name": "ZZ Brakka",
+                "word": "debtor",
+                "notes": "Owes.",
+                "stance": -1,
+                "strength": 4
+              }
+            ]
+          }
+        },
+        {
+          "op": "app.close",
+          "app": "TieDialog"
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-dlg-save",
+        "parent": "pt-dlg-actions"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-dlg-cancel",
+      "type": "click",
+      "calls": [
+        {
+          "op": "app.close",
+          "app": "TieDialog"
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-dlg-cancel",
+        "parent": "pt-dlg-actions"
+      }
+    }
+  ]
+}

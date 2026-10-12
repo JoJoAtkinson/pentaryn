@@ -1,0 +1,180 @@
+[
+  {
+    "id": "tCav1",
+    "name": "Caven",
+    "actorId": "CAV",
+    "type": "character",
+    "linked": true,
+    "pile": false,
+    "excluded": false,
+    "owners": [
+      "player0000000001"
+    ],
+    "summoner": null,
+    "polymorphed": false,
+    "handle": false
+  },
+  {
+    "id": "tMar1",
+    "name": "Marrith",
+    "actorId": "MAR",
+    "type": "character",
+    "linked": true,
+    "pile": false,
+    "excluded": false,
+    "owners": [
+      "player0000000002"
+    ],
+    "summoner": null,
+    "polymorphed": false,
+    "handle": false
+  },
+  {
+    "id": "tSkel1",
+    "name": "Skeleton",
+    "actorId": "SKEL",
+    "type": "npc",
+    "linked": false,
+    "pile": false,
+    "excluded": false,
+    "owners": [
+      "player0000000001"
+    ],
+    "summoner": "CAV",
+    "polymorphed": false,
+    "handle": false
+  },
+  {
+    "id": "tEye1",
+    "name": "Arcane Eye",
+    "actorId": "EYE",
+    "type": "npc",
+    "linked": false,
+    "pile": false,
+    "excluded": false,
+    "owners": [],
+    "summoner": "MAR",
+    "polymorphed": false,
+    "handle": false
+  },
+  {
+    "id": "tSteed1",
+    "name": "Steed",
+    "actorId": "STEED",
+    "type": "npc",
+    "linked": false,
+    "pile": false,
+    "excluded": false,
+    "owners": [
+      "player0000000001",
+      "player0000000002"
+    ],
+    "summoner": null,
+    "polymorphed": false,
+    "handle": false
+  },
+  {
+    "id": "tPile1",
+    "name": "Loot",
+    "actorId": "PILE",
+    "type": "npc",
+    "linked": false,
+    "pile": true,
+    "excluded": false,
+    "owners": [
+      "player0000000001"
+    ],
+    "summoner": null,
+    "polymorphed": false,
+    "handle": false
+  },
+  {
+    "id": "tMark1",
+    "name": "Marker · 1",
+    "actorId": "MARK",
+    "type": "npc",
+    "linked": false,
+    "pile": false,
+    "excluded": true,
+    "owners": [
+      "player0000000001",
+      "player0000000002"
+    ],
+    "summoner": null,
+    "polymorphed": false,
+    "handle": false
+  },
+  {
+    "id": "tCrowd1",
+    "name": "Villager (crowd)",
+    "actorId": "CROWD",
+    "type": "npc",
+    "linked": false,
+    "pile": false,
+    "excluded": true,
+    "owners": [
+      "player0000000001"
+    ],
+    "summoner": null,
+    "polymorphed": false,
+    "handle": false
+  },
+  {
+    "id": "tHandle1",
+    "name": "Circle of Death (Caven)",
+    "actorId": "HANDLE",
+    "type": "npc",
+    "linked": false,
+    "pile": false,
+    "excluded": false,
+    "owners": [
+      "player0000000001",
+      "player0000000002"
+    ],
+    "summoner": null,
+    "polymorphed": false,
+    "handle": true
+  },
+  {
+    "id": "tHandleA1",
+    "name": "Spirit Guardians (Caven)",
+    "actorId": "HANDLEA",
+    "type": "npc",
+    "linked": false,
+    "pile": false,
+    "excluded": false,
+    "owners": [
+      "player0000000001",
+      "player0000000002"
+    ],
+    "summoner": null,
+    "polymorphed": false,
+    "handle": true
+  },
+  {
+    "id": "tGuard1",
+    "name": "Guard",
+    "actorId": "GUARD",
+    "type": "npc",
+    "linked": false,
+    "pile": false,
+    "excluded": false,
+    "owners": [],
+    "summoner": null,
+    "polymorphed": false,
+    "handle": false
+  },
+  {
+    "id": "tGhost1",
+    "name": "Ghost",
+    "actorId": "NOBODY",
+    "type": null,
+    "linked": false,
+    "pile": false,
+    "excluded": true,
+    "owners": [],
+    "summoner": null,
+    "polymorphed": false,
+    "handle": false
+  }
+]

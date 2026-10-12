@@ -1,5 +1,24 @@
 # Changelog — Pentaryn Feedback (`pentaryn-feedback`)
 
+## Unreleased — 2026-10-12 (W3L live-check fix; `module.json` stays 0.1.2, code-only sync)
+
+- **[declared] `inspect` reaches an Actor from a string**, which is all the MCP bridge can send:
+  `pentaryn-read {ns:"feedback", path:"inspect", ref:"Actor.<id>"}` answered `expected User, got Actor`,
+  and an actor's name `NOT_FOUND: user <name>`. A string ref is still a user first; otherwise an
+  Actor/Token uuid, or an actor id or exact name, means that actor's players. The manifest `ref` type
+  adds `uuid` and its doc says so (describe() golden updated for those two strings).
+
+## 0.1.2 — 2026-10-11 (live-check fix)
+
+- **[declared] `inspect` accepts an Actor or Token**, as `journal.inspect` does: the root
+  `game.pentaryn.inspect("Talo")` passes an Actor, and feedback answered
+  `BAD_ARGS: expected User, got Actor`. An Actor means its players — every non-GM user who owns it
+  or has it as their assigned character — and returns `{ actor, users, pending, reports, actions,
+  errors }`; an Actor with no player gives empty lists, not an error.
+- **[declared] `inspect` is async and adds `reports`**: summaries of the reports those users filed
+  (oldest first, the last 20), read from the report files, so only on a GM client and for a GM
+  viewer (`null` otherwise). A user ref keeps its other fields.
+
 ## 0.1.1 — 2026-10-11
 
 - `/bug` in chat opens the dialog again on Foundry 14: the chat input is a ProseMirror editor, so the

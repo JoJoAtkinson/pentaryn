@@ -1,0 +1,50 @@
+[
+  {
+    "kind": "on",
+    "name": "canvasTearDown"
+  },
+  {
+    "kind": "on",
+    "name": "canvasReady"
+  },
+  {
+    "kind": "on",
+    "name": "canvasPan"
+  },
+  {
+    "kind": "on",
+    "name": "refreshToken"
+  },
+  {
+    "kind": "on",
+    "name": "sightRefresh"
+  },
+  {
+    "kind": "on",
+    "name": "renderTokenHUD"
+  },
+  {
+    "kind": "on",
+    "name": "canvasTearDown"
+  },
+  {
+    "kind": "on",
+    "name": "canvasReady"
+  },
+  {
+    "kind": "on",
+    "name": "refreshToken"
+  },
+  {
+    "kind": "on",
+    "name": "deleteToken"
+  },
+  {
+    "kind": "on",
+    "name": "updateToken"
+  },
+  {
+    "kind": "on",
+    "name": "renderBaseActorSheet"
+  }
+]

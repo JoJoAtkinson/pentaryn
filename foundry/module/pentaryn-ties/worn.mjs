@@ -27,42 +27,25 @@
  * is absent, a malformed one is absent, an over-long note is truncated.
  */
 
-import { MODULE, NOTES_MAX, clampNotes } from "./ties-api.mjs";
+import { MODULE, NOTES_MAX, clampNotes } from "./ties-core.mjs";
+import { esc } from "./core/html.mjs";
+import { WORN_FLAG, WORN_BY_MAX as BY_MAX, docOf, readWorn } from "./ties-adapter.mjs";
+import { makeLog } from "./lib/log.mjs";
 
-export const WORN_FLAG = "worn";
-const BY_MAX = 200;
+// the read half lives in the adapter (popups reads it too); re-exported for this file's importers
+export { WORN_FLAG, readWorn };
+
+const log = makeLog(MODULE);
+
 
 /** One accent, a render decision (like stance colours) — never stored in the flag. */
 const ACCENT = 0x9b59b6;
 const DISC = 0x141311;
 
-const t = k => game.i18n.localize(`PENTARYN_TIES.${k}`);
-const esc = s =>
-  String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-
-/** Token placeable or TokenDocument in, TokenDocument out. */
-const docOf = token => token?.document ?? token ?? null;
 
 /* -------------------------------------------- */
 /*  Data                                        */
 /* -------------------------------------------- */
-
-/** The mark on a token, sanitised, or null. Never throws, never returns junk. */
-export function readWorn(token) {
-  const doc = docOf(token);
-  if (!doc?.getFlag) return null;
-  let raw;
-  try {
-    raw = doc.getFlag(MODULE, WORN_FLAG);
-  } catch {
-    return null;
-  }
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
-  const by = typeof raw.by === "string" ? raw.by.trim().slice(0, BY_MAX) : "";
-  const note = clampNotes(raw.note);
-  if (!by && !note.trim()) return null;
-  return { by, note };
-}
 
 /**
  * Write the mark. Token flags only — this function must never touch an actor
@@ -95,10 +78,11 @@ export async function clearWorn(token) {
 
 /**
  * Derived, not tracked — the same shape as the wires in overlay.mjs. One container on
- * canvas.interface, thrown away and rebuilt from the token flags on every refresh, so
- * "badge with no mark" and "mark with no badge" are unrepresentable rather than fixed.
+ * canvas.interface, thrown away and rebuilt from the token flags whenever the badge plan changes
+ * (an unchanged plan keeps the layer as drawn), so "badge with no mark" and "mark with no badge"
+ * are unrepresentable rather than fixed.
  */
-const state = { badges: null };
+const state = { badges: null, painted: null };
 
 function badgeLayer() {
   if (state.badges && !state.badges.destroyed) return state.badges;
@@ -116,9 +100,10 @@ function dropBadges() {
   try {
     if (!state.badges.destroyed) state.badges.destroy({ children: true });
   } catch (e) {
-    console.warn(`${MODULE} | badge teardown`, e);
+    log.warn(`badge teardown`, e);
   }
   state.badges = null;
+  state.painted = null;
 }
 
 /** PIXI 8 replaced the draw-call API. Support both rather than pin a renderer version. */
@@ -139,16 +124,56 @@ function makeText(str, style) {
   return major >= 8 ? new PIXI.Text({ text: str, style }) : new PIXI.Text(str, style);
 }
 
-/** Coalesce to one repaint per frame — refreshToken fires per animation step per token. */
+/**
+ * Where each badge goes (ties-24) — pure: the marked tokens in, `{ tokenId, x, y, r, letter }` out,
+ * each token's mark read once. Top-right corner of the token, positioned off the DOCUMENT (Token#x
+ * reads 0 on v14); the letter is the wearer's initial, or a dot.
+ *
+ * @param {{ id, document: { x, y }, w }[]} placeables
+ * @param {number} gridSize
+ */
+export function badgePlan(placeables, gridSize) {
+  const size = gridSize || 100;
+  const r = Math.max(8, size * 0.15);
+  const out = [];
+  for (const p of placeables ?? []) {
+    const worn = readWorn(p.document);
+    if (!worn) continue;
+    out.push({
+      tokenId: p.id ?? p.document?.id ?? null,
+      x: (p.document?.x ?? 0) + (p.w ?? size) - r * 1.15,
+      y: (p.document?.y ?? 0) + r * 1.15,
+      r,
+      // the wearer's initial — enough to say "that one is him" without painting prose on the map
+      letter: (worn.by || "").trimStart().charAt(0).toUpperCase() || "•"
+    });
+  }
+  return out;
+}
+
+/**
+ * The plan's identity (ties-24 item 3): every field a badge is drawn from. Two plans with the same
+ * key draw the same pixels, so a repaint with an unchanged key and a live layer is skipped whole —
+ * all or nothing, so a badge can never be left stale by a partial diff.
+ */
+export function planKey(plan) {
+  return (plan ?? []).map(b => `${b.tokenId}|${b.x}|${b.y}|${b.r}|${b.letter}`).join("\n");
+}
+
+/**
+ * Coalesce to one repaint per frame — refreshToken fires per animation step per token.
+ * hot: the badge layer. Players never paint it, so they never schedule the frame (ties-24, B7).
+ */
 let queued = 0;
 export function drawBadges() {
+  if (!game.user?.isGM) return;
   if (queued) return;
   queued = requestAnimationFrame(() => {
     queued = 0;
     try {
       paintBadges();
     } catch (e) {
-      console.warn(`${MODULE} | badge paint`, e);
+      log.warn(`badge paint`, e);
     }
   });
 }
@@ -156,28 +181,23 @@ export function drawBadges() {
 function paintBadges() {
   if (!canvas?.ready) return;
   if (!game.user?.isGM) return; // the whole layer is GM-only; players never get a frame of it
-  const marked = (canvas.tokens?.placeables ?? []).filter(p => readWorn(p.document));
-  if (!marked.length) return dropBadges();
+  const plan = badgePlan(canvas.tokens?.placeables ?? [], canvas.grid?.size);
+  if (!plan.length) return dropBadges();
+
+  // refreshToken fires for every token's every animation step; most frames move no marked token
+  const key = planKey(plan);
+  if (key === state.painted && state.badges && !state.badges.destroyed) return;
 
   const layer = badgeLayer();
   if (!layer) return;
   layer.removeChildren().forEach(c => c.destroy({ children: true }));
+  state.painted = null; // set only once every badge is drawn: a throw mid-paint retries next frame
 
-  const size = canvas.grid?.size || 100;
-  const r = Math.max(8, size * 0.15);
-
-  for (const p of marked) {
-    const worn = readWorn(p.document);
-    // top-right corner of the token — position off the document, never Token#x (0 on v14)
-    const x = (p.document?.x ?? 0) + (p.w ?? size) - r * 1.15;
-    const y = (p.document?.y ?? 0) + r * 1.15;
-
+  for (const { x, y, r, letter } of plan) {
     const g = new PIXI.Graphics();
     drawDisc(g, x, y, r, Math.max(1.5, r * 0.18));
     layer.addChild(g);
 
-    // the wearer's initial — enough to say "that one is him" without painting prose on the map
-    const letter = (worn.by || "").trimStart().charAt(0).toUpperCase() || "•";
     const text = makeText(letter, {
       fontFamily: "Signika, sans-serif",
       fontSize: Math.round(r * 1.3),
@@ -188,6 +208,7 @@ function paintBadges() {
     text.position.set(x, y);
     layer.addChild(text);
   }
+  state.painted = key;
 }
 
 /* -------------------------------------------- */
@@ -208,8 +229,8 @@ function injectHUD(app, element) {
   btn.type = "button";
   btn.className = "control-icon pt-worn-btn";
   if (readWorn(doc)) btn.classList.add("active");
-  btn.dataset.tooltip = t("worn.hudTooltip");
-  btn.setAttribute("aria-label", t("worn.hudTooltip"));
+  btn.dataset.tooltip = _loc("PENTARYN_TIES.worn.hudTooltip");
+  btn.setAttribute("aria-label", _loc("PENTARYN_TIES.worn.hudTooltip"));
   btn.innerHTML = '<i class="fa-solid fa-masks-theater"></i>';
   btn.addEventListener("click", ev => {
     ev.preventDefault();
@@ -228,20 +249,20 @@ export async function openDialog(token) {
 
   const content = `<div class="pt-worn-dialog">
     <div class="form-group">
-      <label>${esc(t("worn.by"))}</label>
-      <input type="text" name="by" value="${esc(current.by)}" placeholder="${esc(t("worn.byPlaceholder"))}" />
+      <label>${esc(_loc("PENTARYN_TIES.worn.by"))}</label>
+      <input type="text" name="by" value="${esc(current.by)}" placeholder="${esc(_loc("PENTARYN_TIES.worn.byPlaceholder"))}" />
     </div>
     <div class="form-group">
-      <label>${esc(t("worn.note"))}</label>
+      <label>${esc(_loc("PENTARYN_TIES.worn.note"))}</label>
       <textarea name="note" rows="5" maxlength="${NOTES_MAX}"
-                placeholder="${esc(t("worn.notePlaceholder"))}">${esc(current.note)}</textarea>
+                placeholder="${esc(_loc("PENTARYN_TIES.worn.notePlaceholder"))}">${esc(current.note)}</textarea>
     </div>
   </div>`;
 
   const buttons = [
     {
       action: "set",
-      label: t("worn.set"),
+      label: _loc("PENTARYN_TIES.worn.set"),
       icon: "fa-solid fa-masks-theater",
       default: true,
       callback: (_ev, button) => ({
@@ -250,8 +271,8 @@ export async function openDialog(token) {
       })
     }
   ];
-  if (readWorn(doc)) buttons.push({ action: "clear", label: t("worn.clear"), icon: "fa-solid fa-broom" });
-  buttons.push({ action: "cancel", label: t("worn.cancel") });
+  if (readWorn(doc)) buttons.push({ action: "clear", label: _loc("PENTARYN_TIES.worn.clear"), icon: "fa-solid fa-broom" });
+  buttons.push({ action: "cancel", label: _loc("PENTARYN_TIES.worn.cancel") });
 
   const result = await foundry.applications.api.DialogV2.wait({
     window: { title: game.i18n.format("PENTARYN_TIES.worn.title", { name: doc.name ?? "" }), icon: "fa-solid fa-masks-theater" },
@@ -279,23 +300,38 @@ export async function openDialog(token) {
 /*  Hooks                                       */
 /* -------------------------------------------- */
 
-export function registerHooks() {
-  Hooks.on("renderTokenHUD", (app, element) => {
+/**
+ * FEATURE install — called by the entry during `init`, where these hooks have always registered.
+ * The HUD handler keeps its own try/catch (its warning text is pinned); the badge handlers are
+ * guarded (B9): a throw logs `pentaryn-ties | worn: <hook>`.
+ */
+export function install(reg) {
+  reg.on("renderTokenHUD", (app, element) => {
     try {
       injectHUD(app, element);
     } catch (err) {
-      console.warn(`${MODULE} | worn HUD injection skipped`, err);
+      log.warn(`worn HUD injection skipped`, err);
     }
-  });
+  }, { label: "worn: HUD" });
 
   // Foundry destroys canvas.interface under us — drop the handle, same as the wires.
-  Hooks.on("canvasTearDown", () => (state.badges = null));
+  reg.on("canvasTearDown", () => {
+    state.badges = null;
+    state.painted = null;
+  }, { label: "worn: canvasTearDown" });
 
-  Hooks.on("canvasReady", () => drawBadges());
-  Hooks.on("refreshToken", () => drawBadges()); // badges ride their tokens
-  Hooks.on("deleteToken", () => drawBadges());
-  Hooks.on("updateToken", (_doc, changes) => {
+  reg.on("canvasReady", () => drawBadges(), { label: "worn: canvasReady" });
+  // hot: state.badges — drawBadges only schedules one frame; badges ride their tokens
+  reg.on("refreshToken", () => drawBadges(), { label: "worn: refreshToken" });
+  reg.on("deleteToken", () => drawBadges(), { label: "worn: deleteToken" });
+  reg.on("updateToken", (_doc, changes) => {
     // only a flag write can change what is marked; movement is refreshToken's job
     if (foundry.utils.getProperty(changes ?? {}, `flags.${MODULE}`) !== undefined) drawBadges();
-  });
+  }, { label: "worn: updateToken" });
+
+  // the worn-mark API paths (rows in api-manifest.mjs) — GM only, per token
+  return { impl: { worn: readWorn, setWorn, clearWorn, wornDialog: openDialog } };
 }
+
+/** The entry's reg.offAll() removes the hooks; worn keeps no other state worth dropping. */
+export function uninstall() {}

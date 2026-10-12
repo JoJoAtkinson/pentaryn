@@ -1,0 +1,82 @@
+[
+  {
+    "kind": "once",
+    "name": "init"
+  },
+  {
+    "kind": "on",
+    "name": "preCreateToken"
+  },
+  {
+    "kind": "on",
+    "name": "dropCanvasData"
+  },
+  {
+    "kind": "on",
+    "name": "createToken"
+  },
+  {
+    "kind": "on",
+    "name": "renderTokenHUD"
+  },
+  {
+    "kind": "on",
+    "name": "hoverToken"
+  },
+  {
+    "kind": "on",
+    "name": "canvasPan"
+  },
+  {
+    "kind": "on",
+    "name": "renderPromptDialog"
+  },
+  {
+    "kind": "on",
+    "name": "canvasTearDown"
+  },
+  {
+    "kind": "on",
+    "name": "deleteToken"
+  },
+  {
+    "kind": "on",
+    "name": "createWall"
+  },
+  {
+    "kind": "on",
+    "name": "updateWall"
+  },
+  {
+    "kind": "on",
+    "name": "deleteWall"
+  },
+  {
+    "kind": "on",
+    "name": "createToken"
+  },
+  {
+    "kind": "on",
+    "name": "deleteToken"
+  },
+  {
+    "kind": "on",
+    "name": "createNote"
+  },
+  {
+    "kind": "on",
+    "name": "deleteNote"
+  },
+  {
+    "kind": "on",
+    "name": "updateToken"
+  },
+  {
+    "kind": "once",
+    "name": "setup"
+  },
+  {
+    "kind": "once",
+    "name": "ready"
+  }
+]

@@ -1,0 +1,209 @@
+[
+  {
+    "label": "studyAs PC2 on an auto kind",
+    "out": true,
+    "calls": [
+      {
+        "op": "Hooks.call",
+        "name": "preUpdateActor"
+      },
+      {
+        "op": "update",
+        "documentName": "Actor",
+        "uuid": "Actor.zzKind0000000001",
+        "changes": {
+          "flags.pentaryn-ties.beliefs.zzPc000000000002.kind": {
+            "claim": "rid0000000000002",
+            "when": 1790000000000
+          }
+        }
+      },
+      {
+        "op": "Hooks.callAll",
+        "name": "updateActor"
+      },
+      {
+        "op": "Hooks.call",
+        "name": "preUpdateActor"
+      },
+      {
+        "op": "update",
+        "documentName": "Actor",
+        "uuid": "Actor.zzKind0000000001",
+        "changes": {
+          "flags.pentaryn-ties.beliefs.zzPc000000000002.kind": {
+            "text": "— Studied (Religion) —\nGrey hunters of the barrow.\nImmune: Poison, Grief. Vulnerable: Fire. Untroubled by: Charmed.\nClaw: +4 to hit, 1d6 slashing. · Howl",
+            "tier": 25,
+            "total": null,
+            "when": 1790000000000,
+            "delivered": 1790000000000,
+            "claim": null,
+            "sources": {
+              "adv": 0,
+              "dis": 0,
+              "shared": [],
+              "declared": "normal",
+              "rule": "raw",
+              "resolved": "normal"
+            },
+            "pass": true
+          }
+        }
+      },
+      {
+        "op": "Hooks.callAll",
+        "name": "updateActor"
+      },
+      {
+        "op": "Hooks.call",
+        "name": "preUpdateActor"
+      },
+      {
+        "op": "update",
+        "documentName": "Actor",
+        "uuid": "Actor.zzPc000000000002",
+        "changes": {
+          "flags.pentaryn-ties.studied": {
+            "kind": {
+              "zzKind0000000001": {
+                "when": 1790000000000
+              }
+            },
+            "lore": {
+              "attr:guild:g2": {
+                "when": 1790000000000
+              }
+            }
+          },
+          "flags.pentaryn-ties.known": [
+            {
+              "id": "zzNpc00000000001",
+              "name": "ZZ Brakka",
+              "category": "sentient",
+              "notes": "",
+              "imposter": null,
+              "hidden": false,
+              "when": 1790000000000
+            },
+            {
+              "id": "zzKind0000000001",
+              "name": "ZZ Ghoul",
+              "category": "beasts",
+              "notes": "",
+              "imposter": null,
+              "hidden": false,
+              "when": 1790000000000
+            }
+          ],
+          "flags.pentaryn-ties.granted": {
+            "attr:guild:g2": {
+              "text": "<p>Second oath.</p>",
+              "when": 1790000000000,
+              "icon": "icons/sundries/flags/banner-standard-green.webp",
+              "source": "The Guild — Held oath"
+            },
+            "kind:zzKind0000000001": {
+              "text": "— Studied (Religion) —\nGrey hunters of the barrow.\nImmune: Poison, Grief. Vulnerable: Fire. Untroubled by: Charmed.\nClaw: +4 to hit, 1d6 slashing. · Howl",
+              "when": 1790000000000,
+              "icon": "icons/zz/zzKind0000000001.webp",
+              "source": "ZZ Ghoul"
+            }
+          }
+        }
+      },
+      {
+        "op": "Hooks.callAll",
+        "name": "updateActor"
+      },
+      {
+        "op": "ChatMessage.create",
+        "data": {
+          "content": "<p class=\"pt-study-stub\">ZZ Wren studies ZZ Brakka.</p>",
+          "speaker": {
+            "alias": "ZZ Wren",
+            "actor": "zzPc000000000002"
+          }
+        }
+      },
+      {
+        "op": "notify",
+        "level": "info",
+        "message": "ZZ Wren now knows what a ZZ Ghoul is."
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "studyAs PC2, the roll produces nothing",
+    "out": false,
+    "calls": [
+      {
+        "op": "Hooks.call",
+        "name": "preUpdateActor"
+      },
+      {
+        "op": "update",
+        "documentName": "Actor",
+        "uuid": "Actor.zzKind0000000001",
+        "changes": {
+          "flags.pentaryn-ties.beliefs.zzPc000000000002.kind": {
+            "claim": "rid0000000000002",
+            "when": 1790000000000
+          }
+        }
+      },
+      {
+        "op": "Hooks.callAll",
+        "name": "updateActor"
+      },
+      {
+        "op": "rollSkill",
+        "actor": "zzPc000000000002",
+        "config": {
+          "skill": "rel",
+          "target": 15,
+          "advantage": false,
+          "disadvantage": false,
+          "rolls": []
+        },
+        "dialog": {
+          "configure": false
+        },
+        "message": {
+          "rollMode": "mapped:blindroll",
+          "data": {
+            "flavor": "Study: ZZ Ghoul (Religion)",
+            "flags": {
+              "dice-so-nice": {
+                "skip": true
+              }
+            }
+          }
+        },
+        "total": null
+      },
+      {
+        "op": "Hooks.call",
+        "name": "preUpdateActor"
+      },
+      {
+        "op": "update",
+        "documentName": "Actor",
+        "uuid": "Actor.zzKind0000000001",
+        "changes": {
+          "flags.pentaryn-ties.beliefs.-=zzPc000000000002": null
+        }
+      },
+      {
+        "op": "Hooks.callAll",
+        "name": "updateActor"
+      }
+    ],
+    "console": [
+      {
+        "level": "warn",
+        "text": "pentaryn-ties | study refused: ZZ Wren's roll on ZZ Ghoul produced nothing"
+      }
+    ]
+  }
+]

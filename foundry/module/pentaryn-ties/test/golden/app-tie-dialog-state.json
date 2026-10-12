@@ -1,0 +1,113 @@
+{
+  "gm": {
+    "sources": [
+      "zzPc000000000001",
+      "zzNpc00000000001"
+    ],
+    "targetsScene": [
+      "zzNpc00000000001"
+    ],
+    "targetsAll": [
+      "zzNpc00000000001",
+      "zzKind0000000001",
+      "zzPc000000000002"
+    ],
+    "fromToken": {
+      "title": "Record a tie",
+      "source": "zzPc000000000001",
+      "target": "zzNpc00000000001",
+      "sourceLocked": false,
+      "targetLocked": true,
+      "targetScope": "scene",
+      "sourceOptions": [
+        "zzPc000000000001"
+      ],
+      "existing": {
+        "id": "zzNpc00000000001",
+        "name": "ZZ Brakka",
+        "img": "icons/zz/zzNpc00000000001.webp",
+        "missing": false,
+        "word": "debtor",
+        "notes": "Owes.",
+        "stance": -1,
+        "strength": 4
+      },
+      "reverse": {
+        "id": "zzPc000000000001",
+        "name": "ZZ Caven",
+        "img": "icons/zz/zzPc000000000001.webp",
+        "missing": false,
+        "word": "mark",
+        "notes": "Their side.",
+        "stance": 1,
+        "strength": 2
+      }
+    },
+    "fromSheet": {
+      "title": "Record a tie",
+      "source": "zzPc000000000001",
+      "target": "zzNpc00000000001",
+      "sourceLocked": true,
+      "targetLocked": true,
+      "targetScope": "all",
+      "sourceOptions": [
+        "zzPc000000000001"
+      ],
+      "existing": {
+        "id": "zzNpc00000000001",
+        "name": "ZZ Brakka",
+        "img": "icons/zz/zzNpc00000000001.webp",
+        "missing": false,
+        "word": "debtor",
+        "notes": "Owes.",
+        "stance": -1,
+        "strength": 4
+      },
+      "reverse": {
+        "id": "zzPc000000000001",
+        "name": "ZZ Caven",
+        "img": "icons/zz/zzPc000000000001.webp",
+        "missing": false,
+        "word": "mark",
+        "notes": "Their side.",
+        "stance": 1,
+        "strength": 2
+      }
+    },
+    "fresh": {
+      "title": "Record a tie",
+      "source": null,
+      "target": null,
+      "sourceLocked": false,
+      "targetLocked": false,
+      "targetScope": "all",
+      "sourceOptions": [
+        "zzPc000000000001",
+        "zzNpc00000000001"
+      ],
+      "existing": null,
+      "reverse": null
+    }
+  },
+  "player": {
+    "sources": [
+      "zzPc000000000001"
+    ],
+    "targetsScene": [
+      "zzNpc00000000001"
+    ],
+    "fromOwnToken": {
+      "title": "Record a tie",
+      "source": "zzPc000000000001",
+      "target": null,
+      "sourceLocked": true,
+      "targetLocked": false,
+      "targetScope": "scene",
+      "sourceOptions": [
+        "zzPc000000000001"
+      ],
+      "existing": null,
+      "reverse": null
+    }
+  }
+}

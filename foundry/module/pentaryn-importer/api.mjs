@@ -78,11 +78,11 @@ export async function importActors(options = {}) {
 
   if (!game.user?.isGM) {
     const message = "Refusing to import: only a GM can create or update world Actors.";
-    refuse(PentarynAbort, message);
+    refuse(PentarynAbort, message, "NOT_GM");
   }
   // Not re-entrant (items-journal-4): a second call while one is awaiting would read the same stored
   // contentHash and replace the same managed Items. Refused, not queued; per tab (module scope).
-  if (running) throw new PentarynAbort("An import is already running; await it or reload.");
+  if (running) throw new PentarynAbort("An import is already running; await it or reload.", "CONFLICT");
   running = true;
   try {
     return await importOnce({ path, dryRun, only, force, timeout, unmanagedItems });
@@ -98,7 +98,7 @@ export async function importActors(options = {}) {
  */
 async function importOnce({ path, dryRun, only, force, timeout, unmanagedItems }) {
   if (!["keep", "delete"].includes(unmanagedItems)) {
-    throw new PentarynAbort(`unmanagedItems must be "keep" or "delete", got ${JSON.stringify(unmanagedItems)}`);
+    throw new PentarynAbort(`unmanagedItems must be "keep" or "delete", got ${JSON.stringify(unmanagedItems)}`, "BAD_ARGS");
   }
 
   const url = foundry.utils.getRoute(path);

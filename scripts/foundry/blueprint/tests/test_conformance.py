@@ -600,3 +600,28 @@ def test_c61_gate_and_write_in_an_imported_module_file(tmp_path):
               'reg.on("updateActor", (a) => { void react(a); });')
     b = 'export async function react(a) { await a.update({ x: 1 }); }\n'
     assert res(one(tmp_path / "w", write_, extra={"b.mjs": b}), "C61")["status"] == "warn"
+
+
+def test_c05_follows_a_barrel_re_export(tmp_path):
+    """`export * from` / `export { a } from` reach their file (prompts' geometry-core, ties' core/)."""
+    d = tmp_path / "pentaryn-barrel"
+    write(d, {"module.json": json.dumps({"id": "pentaryn-barrel", "esmodules": ["main.mjs"]}),
+              "main.mjs": 'import { a, b } from "./barrel.mjs";\nexport const c = a + b;\n',
+              "barrel.mjs": 'export * from "./core/a.mjs";\nexport { b } from "./core/b.mjs";\n',
+              "core/a.mjs": "export const a = 1;\n",
+              "core/b.mjs": "export const b = 2;\n"})
+    assert status(conformance.score_dir(d), "C05") == "pass"
+    (d / "core/c.mjs").write_text("export const c = 3;\n")
+    assert status(conformance.score_dir(d), "C05") == "fail"
+
+
+def test_c50_reads_the_kit_registrar_ready_body(tmp_path):
+    """`reg.once("ready", onReady)` is a ready body like `Hooks.once("ready", onReady)`."""
+    d = tmp_path / "pentaryn-reg"
+    body = ('import { publishNamespace } from "./lib/publish.mjs";\nconst api = {};\n'
+            'function onReady() {\n  publishNamespace("reg", api, { moduleId: "pentaryn-reg" });\n}\n'
+            'export function install(reg) { reg.once("ready", onReady); }\n')
+    write(d, {"module.json": json.dumps({"id": "pentaryn-reg", "esmodules": ["reg.mjs"]}), "reg.mjs": body})
+    assert status(conformance.score_dir(d), "C50") == "pass"
+    (d / "reg.mjs").write_text(body.replace('{ moduleId: "pentaryn-reg" }', '{ moduleId: "pentaryn-reg", when: "later" }'))
+    assert status(conformance.score_dir(d), "C50") == "fail"

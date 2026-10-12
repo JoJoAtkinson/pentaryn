@@ -698,11 +698,226 @@ once S5 has landed, as long as they stay out of the same files in the same commi
 
 | | |
 |---|---|
-| Live score after the migration | not migrated yet — **55.3 % (26/47)** today (wave start in [`wave-1-baseline.md`](wave-1-baseline.md)), `conformance.py --module ties --markdown`, 2026-10-11 |
+| Live score after the migration | **91.8 % (45/49)** at `8d3d7736`, after the integrator's adjustments rows (`38a9d2e5`) and the scorer's C05 fix (`6ceb2460`); fails C05 (`ties-api.mjs`, W3-T6), C07, C09 (Wave 7), C37 (card layer, W3-T1). Lane end 87.8 %, checkpoint 61.7 %, wave-3-base 55.3 % |
 | Date | 2026-10-11 (wave 1: checkpoint only (wave 1 Stage 0 lane); the refactor is workflow 2) |
 | Commits (Joe-approved) | characterisation: `8d18cad` (kit + run.mjs), `9e955e0` (checkpoint), `58af29d` (node-test gate) · refactor: none yet · other: `8ad6a23` (boot fixture stubs Foundry's `logger`; fixture only, J6), `1411687` **[declared]** D1 (`attributes.lookup`, `study.examine`; old names are `logCompatibilityWarning` aliases until S8; flips the two named `surface-legacy.json` rows), `2c2cb0d` (README) |
 | Declared changes handed to the live-test workflow | D1 — deployed and live-golden-checked in Stage 0 (only the two new names differ) |
-| `module.json` edits appended to `wave7-restart-batch.md` | no (step not reached) |
-| Adjustments rows appended to `adjustments-batch.md` | no (step not reached) |
-| Still failing, and why | C07 C09 C12 C15 C16 C18 C20 C21 C22 C24 C27 C28 C34 C35 C37 C40 C41 C44 C45 C47 C48 — the guide's steps 2+ have not run. Frozen tests: the checkpoint's assertions and goldens are untouched since the checkpoint (see wave-1-report §Frozen tests). |
+| `module.json` edits appended to `wave7-restart-batch.md` | no (step not reached) · **done by the wave-3 integrator** (`d83d0b11`): the batch row carries the full edit; `module.json` itself waits for the Wave 7 restart |
+| Adjustments rows appended to `adjustments-batch.md` | no (step not reached) · **landed by the wave-3 integrator** in `foundry/adjustments.yml` (`38a9d2e5`), marked in `adjustments-batch.md` (`b631badf`) |
+| Still failing, and why | C05 (`ties-api.mjs`, the compat barrel nothing imports — W3-T6), C07 and C09 (Wave 7 `module.json`), C37 (`#pentaryn-ties-cards` — W3-T1). C32/C47 closed by `38a9d2e5`. Warn: C02, C10, C59 (at `8d3d7736`, wave-3 code-phase close) |
 | Wave 2 (kit 1.0.2, code phase; not migrated) | re-vendored `ac307386`, local logger stub removed `d0948f91`, frozen-root guard copy retired `de2dad7a` [declared]. Tests green at `f8fb7377`; conformance unchanged. Not yet synced: [`wave-2-live-plan.md`](wave-2-live-plan.md) (W2-L2) |
+| Wave 3 checkpoint (code phase; nothing live) | **checkpoint: `7395a708e63a461db400cd73235c187c2940ad8f`** ("test(ties): characterisation checkpoint", branch `migrate/wave-3`). It supersedes `9e955e0`: the module had changed since (D1 `1411687`, kit 1.0.2 `ac307386`, J10 `de2dad7a`), and `9e955e0` pinned only the D1 surface and the ties-37 guards. No module code changed in the checkpoint work; tests only. S2 items 1–7 and S1's stub move (`346c815a`: `test/fixtures/stubs.mjs`) are done against today's code. Building commits `4bd0a44d`…`8d37be37`, then the checkpoint. `74328778` restored the two wave-1 goldens `study-inspect-gm.json` / `study-inspect-player.json` that `415eb676` deleted by a cleanup glob — byte-identical to `9e955e0`; the wave-1 frozen tests are otherwise untouched (only the D1 flip and the J6 logger comment differ from `9e955e0`). |
+| Wave 3 checkpoint: what is pinned | 21 `*.test.mjs` + the 3 LEGACY suites, 128 goldens. `glue` / `glue-player` / `glue-steps` (S2 item 1: 6 keys and 10 settings with exact configs, ready effects, every onDown, HUD, sheet header and tabs, look menu, each ready step failing with byte-identical texts) · `hooks` (item 2: 17 load-time + 12 init registrations) · `api` (item 3, wave 1) · `fields` (item 4, wave 1) · `oracles` + `fixtures/legacy-{mirror,miss,gm}.mjs` (item 5; the socket half is run for real in `sockets`) · `i18n` (item 6: the 48 template-built keys, every literal key) · `core` (item 7 pre-S3 clamps; `known-core-exports.json` for S4) · `ties-data`, `sockets`, `study-conduit`, `study-cascade`, `attributes` (the data layer, relay, conduit, cascade, Share/Forget, attribute layer through the published paths) · `ui-sheet`, `ui-apps`, `ui-canvas`, `ui-player` (every tab and window rendered through its own `_renderHTML`/`bind` into a fake DOM that parses markup, and every bound or `data-action` control pressed via `fixtures/ui.mjs`) · `declared` (before-halves of B2, B4, B5, B6, B7, ties-46). Fixtures: `fixtures/world.mjs` (synthetic world, `mock.timers` for the 250 ms claim waits, fixed `Date.now`, en-US/UTC dates, seeded preview dice, recording PIXI/clipboard), `fixtures/dom.mjs`, `fixtures/ui.mjs`. |
+| Wave 3 checkpoint: deviations from S2 as written | Item 3(b) is pinned in its **J10 [declared]** form (`glue-steps`): a frozen `game.pentaryn` is no longer rebuilt into `{ rules, ties }` — the assignment throws, `ready step failed: publish api` is logged, no alias, the later steps run. S9's "replace entry :461–466 (the frozen-root guard)" therefore has nothing left to replace. Item 1's two unreachable warning texts (`could not clear inspection tempo (…)`, `<id> tab injection skipped` with a real throw) have no behavioural pin; the reachable ones do. Item 5's `legacy-socket` is a real-handler matrix (`sockets.test.mjs`), not an oracle copy. |
+| Wave 3 checkpoint: todo pins (found bugs; intended behaviour stated, not failing the run) | (1) `readBeliefs` turns a `null` tier into rung 0 (`num(rec.tier, NaN)` — `Number(null)` is 0, the trap `priorOf` guards), so lore / ident / attr rows show `tier: 0` in `pending()` and `beliefs()`; fix after S4, [declared]. (2) `clampStrength(null \| "" \| [] \| false)` is 1, not the default 3 (`ties-api` `num()` has the same trap); fix after S3, [declared]. Both in `test/declared.test.mjs`. |
+| Wave 3 checkpoint: coverage (gap finder) | module's own files, `lib/` and `test/` excluded, every `*.test.mjs` plus LEGACY, `node --test --experimental-test-coverage`: lines / branches / functions **50.49 / 84.03 / 37.82 → 95.49 / 80.54 / 91.50** (branches dip because far more functions are now entered). Lowest: `tie-dialog.mjs` 88.0 (re-aim and draft paths), `attributes-ui.mjs` 81.1 (mark-as-learned with a viewer, derived authoring), `overlay.mjs` 83.8 (the PIXI 7 stroke path, unseen-wire branches), `worn.mjs` 82.7 (badge disc/text on PIXI 7). (The wave-3 baseline doc's 61.44 / 84.58 / 53.65 was aggregated differently; same-method before is 50.49 / 84.03 / 37.82.) |
+| Wave 3 checkpoint: conformance | **55.3 % → 61.7 % (29/47)**: C20, C40, C41 now pass. Still failing: C07 C09 C12 C15 C16 C18 C21 C22 C24 C27 C28 C34 C35 C37 C44 C45 C47 C48 — the refactor steps (S3+) have not run; C28's `describe.json`/`surface.json` are S8's new goldens. `vendor.py check` identical; `node test/run.mjs` exit 0 (142 pass, 2 todo; LEGACY 183 + 9 + reach all passed); blueprint pytest 155 passed. |
+| Wave 3 refactor (code phase; nothing live; branch `migrate/wave-3`) | S3 `44c8d9ea` `8920256f` `57808739` · S4 `c9276cb8` (+ ties-13 `f1e4891a`, ties-14 `b4479e1a`, concealFor/firstName `f6de047c`) · S4b `29560557` `e688e96f`, `stakeAndConfirm` `0eb4f394` · S5 `4502d41f` `b0cbfeea` `1d7f327d` `372071ed` `59a72de4` `4312f33a`, debug lines `0ff23728` · S6 `806c9e9b` · S7 `0d28d169` · S8 `93dbe68c` `2a006ff8` `5c5821f4` · S9 `9b57dfee` · S10 `771f1716` `a673a72b` `607bc494` `8b7e583b` `5a62c088` · S11 `02b9e0c3` `5854be46` · S12 `fb2a2713` `cb65b749` `92d9dea1` `a029b6b9` · S13 `c5b5fb7b`. Every frozen test stayed green at every step; the only test edits are import paths (S12 renames, the S10 fixture flattening) and the declared flips below. |
+| Wave 3 declared | B1b `0b322d2e` (golden `99d13957`) · B1 `fc593f98` (`c32fc76b`) · B11 = S9 publish through the kit `a0985d1f` (`c6222b13`) · B2 `468c4eee` (`1693599c`) · B3 `5b47b528` (`9bbca55a`) · B4 `c31bd116` (`c9f3e284`) · B5 `77be499b` · B6 `f7aa8929` (`8bf658c6`) · B7 `697b7330` `ade1a595` `ff8f3242` · ties-46 [declared-lite] `28b913e2` (`313c7df8`) · B9 `aac9fd39` · ties-44 `a337f1fb` (i18n key count 473 → 533). Known-bug pins flipped: `readBeliefs` null tier `2257ae61` (`ae89ff94`), clamp default 3 `171c6e4f` (`8f3e120e`). B8 (S10/S11) is byte-identical in the goldens. B10 not taken (G3 still open; `pinnedCards` is a hidden client row without labels in `CLIENT_STATE`). |
+| Wave 3 standalone | additive API `7cb9e4f9` (ties-3) `bf44258f` (ties-5/-6) `fbc7c696` (ties-8) `1d660cc8` (ties-9) · perf `e61d90df` (ties-19) `3d0adb60` (-20) `acca4b22` (-21) `5a3c9e8b` (-22) `ccdbc09f` (-23) `f3a707a4` (-27) `6a97fae5` (-28) · maintainability `691f89e1` (-40) `34c9144c` (-41) `a5150027` (-17) `3efd5a15` (-16/-18) `3b9976ba` `b0785d60` `d3fb7630` (-42) · hardening `43c4c6a5` (-31) · perf `6f1fca29` (-24 item 3). Per-finding status lines are in `code-audit-2026-10/ties.md`. |
+| Wave 3 tests and score | `node test/run.mjs`: 239 pass, 0 fail, 0 todo; LEGACY known-core 183 + look 9 + reach all passed. `vendor.py check`: identical. Conformance **61.7 % → 87.8 %**, failing C05 C07 C09 C32 C37 C47. Projected on a scratch copy with the integrator's edits (Wave 7 manifest fields + the adjustments rows): **96.0 %**, failing only C05 (scorer gap: `jsscan.imports_of` does not follow `export … from`, so the files behind the two barrels read as unreachable) and C37 (`#pentaryn-ties-cards`, the canvas card layer: a class on it changes the DOM seven canvas goldens pin). Module-check i18n gate: red only on `test/i18n.test.mjs`'s bare `"PENTARYN_TIES."` literal (a frozen test since the checkpoint). |
+| Wave 3 deviations | ties-38: one `game.socket.on` per caller kept (both through `socket-adapter.mjs` `listen()`); merging flips three frozen socket pins. The registry keeps its promise-chain queue (`serialStore`'s return contract differs). B5 keeps `false` for a player write (the guide's `null` variant not taken). Pinned exports (`rungsFor`, `IDENT_FLAG`, `STRENGTHS`, `candidates`) and the four frozen-test-called attribute helpers stay, @deprecated. ties-24 item 3 landed later as a whole-plan skip (`6f1fca29`), not a per-badge diff, so no frozen PIXI pin changed. `tie-dialog.mjs` loads eagerly (`openTieDialogFor` moved in). C59 warnings (Share's per-PC writes, `migrateLegacy`) recorded, not batched. |
+| Wave 3 shared-file hand-off: attributes.md (required) | `context/foundry/attributes.md:203–205` still says the old name "still answers, with a console compatibility warning"; [declared] B1b `0b322d2e` removed `attributes.describe` and `study.inspect`, so both now read as undefined. Replace the paragraph from "`A.lookup` was `A.describe` before 2026-10-11" to "Likewise `S.inspect` is now `S.examine`." with: "`A.lookup` was `A.describe`, and `S.examine` was `S.inspect`, before 2026-10-11 (D1: `describe` and `inspect` are names the kit API reserves). The old names were removed in wave 3 ([declared] B1b) and now read as undefined." Integrator's edit (shared file); separate from the optional :606–607 item. |
+| Wave 3 fork-side hand-off: pentaryn-read description (mcp-fork-20 companion) | `foundry-vtt-mcp` `packages/mcp-server/src/fork/tools/pentaryn-read.ts:73` says "Namespaces without describe() (ties, combat, prompts, …) are eval-js only". ties (S8/S9) and prompts (this wave, `api-manifest.mjs`) are now kit-built with `describe()` and a contract, so an LLM reading the tool list is steered away from pentaryn-read/-write for both. Change the parenthetical to `(combat, …)`. Description string only; `pentaryn-write.ts` has no such list. For the fork-side integrator, not edited here. |
+| Wave 3 close (code phase, 2026-10-11) | Review fixes after the lane: [declared] `6cf45894` (a hot re-import re-wires the look menu's double-click; `test/hot-reimport.test.mjs`), [declared] `e45a3a96` + golden `aa63fff2` (`describe()` lists the `attrSelected` User flag), `af666f5b` (literal key maps), `32aa2d24` (entry header), `cad6f949` / `d3bd0e51` (tests for the perf savings and ties-24 item 3), `41fa7d31`, `9ec64a79` (comments). `node test/run.mjs` 250 pass, 0 todo; legacy 183 / 9 / reach. Frozen-test diff since `7395a708`: 56 files (26 new, 30 changed). Untagged pin flips to treat as declared: `ae89ff94`, `8f3e120e` (goldens of `2257ae61`, `171c6e4f`); B3 also covers `7cb9e4f9`, `bf44258f`, `fbc7c696`, `1d660cc8`. Coverage (node:test, lcov merged per file) 95.18 / 76.91 / 90.53 over 21 files → **96.37 / 78.97 / 91.50** over 55. Shared files landed: `38a9d2e5`, `414a6550`, `2cab16e9`, `0291ce2a`, `e064e930`, fork `a5ce74c`. Open for Joe: W3-T1, W3-T2, W3-T3, W3-T5, W3-T6 (W3-T4 closed). Record: [`wave-3-report.md`](wave-3-report.md) §Per module |
+
+
+---
+
+## Appendix — design notes moved out of the module README (S13, 2026-10-11)
+
+The blueprint keeps design history out of the module folder (use-doc §7). These sections of the
+pre-migration README (`foundry/module/pentaryn-ties/README.md` at a5a1a906) are history, kept here
+verbatim; the README now carries only the use-doc sections and CHANGELOG.md the version notes.
+
+### What a tie is
+
+A **directed** edge stored on the actor:
+
+```js
+actor.flags["pentaryn-ties"].ties = [
+  { id: "<actorId>", name: "Vasca Orrin", word: "hire", stance: 1, strength: 3, notes: "" }
+]
+```
+
+**An actor's array says what THAT ACTOR is to each person listed.** Piet's array holds
+`{ brellin, word: "understudy" }`, so hovering Piet puts **understudy** on Brellin's card. Hover
+Brellin instead and Piet's card reads **maestro**. You are always playing the person under the
+cursor, and every card tells you what you are to them.
+
+| Field | | |
+| ----- | - | - |
+| `word` | free text, one word ideally | *sister · rival · client · understudy* |
+| `stance` | −2 … +2 | hostile · wary · **neutral** · friendly · devoted. Colours the dot and the wire |
+| `strength` | 1 … 5 | how much they matter — orders the list, sheet and cards alike |
+| `notes` | prose, up to 4000 chars | the long version — on the sheet and on the card |
+| `name` | cached copy | so a deleted actor degrades to a greyed row instead of vanishing |
+
+**Stance 0 is not the same as no entry.** A grey dot means *they know each other and it's neutral*;
+no entry at all means no card. Absence is information.
+
+### Notes
+
+The one-word label is what you need mid-scene; the notes are what you need when a player asks a
+question you didn't plan for. **Click a row anywhere** and it opens: word, stance, strength and a
+textarea for how they met, what is owed, what neither of them says out loud. The first line of the
+notes shows under the name while the row is shut, so you can read the column at a glance.
+
+Notes ride along on the card, under the name. They are only ever shown to whoever pressed the key —
+a card is drawn in one browser and nothing about it crosses the socket.
+
+Notes save as you type (and again on blur), so closing the sheet mid-sentence doesn't lose the
+paragraph. Deleting a tie deletes its notes, and the confirmation says so when there is prose to
+lose.
+
+Notes are **directed**, like `word`: Piet's notes about Brellin are written from Piet's side. But
+they are not *isolated* — in the tie dialog each of the word and the notes has a second box for the
+other side, showing your text greyed in behind it. **Leave it blank and their side stays the same as
+yours**, this save and every later one; type in it and the two have diverged, and yours stops
+changing theirs. Clearing the box re-links them. Identity is the whole mechanism: two sides that say
+the same thing *are* linked, two that differ are not, and there is no hidden flag to disagree with
+what you can read. From a script: `game.pentaryn.ties.setNotes(actor, targetId, text)`.
+
+### On the canvas
+
+**One key: `8`.** It takes whoever is hovered — or, for a player who has nothing selected, their own
+token if it is the only one they own on the scene. Every tie in sight gets a card over their token:
+the token's own art, the word, the name, the notes.
+
+**Cards stick if you drag them.** A card spawned by the key is *transient*: it follows the canvas as
+you pan and zoom, and the next press sweeps it away. **Drag one and it pins** — it stops following
+the canvas, stops answering the key, and closes only by its own ✕. Dragging is the gesture that
+means *keep this*, so that's what it does. Pinned cards survive scene changes and a reload.
+
+**A wire keeps every card attached to its person.** Two ways a card and its token come apart, so two
+wires, both thin and stance-coloured:
+
+- **reach** — the tie stands more than **4 squares** away (configurable), so the card is floating
+  over a token on the far side of the market. The wire runs from *your* token to theirs.
+- **leash** — you dragged the card to a corner. The wire runs from the card back to whoever it is
+  about, so a memo parked by the edge of the screen still points at a person.
+
+Wires are rebuilt from whatever cards are actually on screen, every pan and every change — so a card
+can never be up without the line that explains it, and a pinned card gets its leash back after a
+reload or a scene change. A tie who walks behind a wall loses their wire mid-pan.
+
+### What a player can and cannot see
+
+The feature is safe to hand to the table because of three rules, none of which is a matter of taste:
+
+1. **Only your own character.** You can run it on a token you own; pointing at an NPC gets nothing.
+   The web on screen is always *yours*.
+2. **Only who you can actually see.** Every tie is tested with **`Token#isVisible`** — the same
+   question the renderer already asked to decide whether to draw the token. Behind a wall, outside
+   your light, or not on this scene: no card, no wire. **And no notification either.** Telling a
+   player "3 contacts not in sight" would hand back exactly the information the wall took away.
+   If nothing is visible they are told only that nobody they know is in sight.
+3. **Only your own list.** Players edit their own character's ties — it's an address book, and
+   keeping it current is theirs to do. Target lists are filtered: from a **sheet**, to actors they
+   already have at least LIMITED permission on, because Foundry ships every Actor document to every
+   client and an unfiltered list would name every NPC in the world; from the **canvas**, to tokens
+   that pass `Token#isVisible`, and a token they do not own is named by its *token* name, so a
+   disguise stays a disguise.
+
+> #### ⚠ Tie notes are not a secrets store
+>
+> **Verified on v14, as a logged-in player:** Foundry ships *every* Actor document — flags and all —
+> to *every* connected client, including actors at permission NONE that don't even appear in their
+> sidebar. A player who opens devtools can read the ties, words and notes on any actor in the world,
+> whatever this module's UI shows them.
+>
+> So the three rules above govern **what is presented**, which is what stops accidental reading and
+> shoulder-surfing. They are not an access-control boundary, and nothing client-side could be one.
+>
+> **Anything that would actually spoil the game — "Vasca is Ozmandius wearing her" — must not be
+> written into the world at all.** Not as a tie note, and **not in a GM-only journal**: measured in
+> a live world from a player's own session, their client holds 9 journals, 4 of them at permission
+> level 0, and the full text of one that is hidden from their sidebar reads straight out of the
+> console. A compendium marked "not visible" to them still serves its whole index and every
+> document on request. Foundry's server does no ownership filtering when it hands documents out.
+>
+> Use notes for what you'd be happy to read out if asked: how they met, what is owed, what they
+> want. Putting a secret on the NPC's side rather than the PC's hides it from the *sheet*, which is
+> worth doing, but it is a tidiness measure and not a lock. A real secret lives in your own notes,
+> outside the VTT, and reaches the table by being said.
+>
+> This is a deliberate, accepted trade: it is a game among friends, and hardening it against people
+> who are not attacking it would buy nothing.
+
+Turn the whole thing back off with **Let players see their own ties** in module settings.
+
+### Rebinding the key
+
+They're real Foundry keybindings, not hotbar macros: **Configure Controls → Ties**. If `5` through
+`9` are already spoken for, rebind them there — the tab's own hint reads whatever they are bound to
+now, so it cannot go stale on you. Number keys were chosen over letters because Foundry
+and dnd5e already own most of the alphabet, and `5`–`9` collide with nothing but hotbar slots. A `Ties Web` macro is also created once on first load for anyone who
+would rather drag it to a hotbar slot.
+
+> **0.4.0 dropped the second key.** 0.3.0 had bare `8` for a one-word badge under each token and
+> `Shift+8` for cards. Cards won at the table, so they moved onto `8` and the badge mode was removed
+> rather than left in as a setting nobody would pick. The keybinding kept its internal id, so a
+> custom binding survives the upgrade — only what it does has changed.
+
+> **Why the dialog has no default button.** Foundry's `KeyboardManager.hasFocus` returns `true` for
+> a focused `<button>` that lives in a form — and DialogV2 renders its buttons in one, then focuses
+> the default. With a default button set, opening the card silently suppressed *every* keybinding,
+> so the second press of `9` never reached the handler and the card could only be closed with the
+> mouse. The fix is two-part: no `default: true`, plus an explicit blur on render, and a keydown
+> listener on the window itself for the case where you click a button and hand focus back to it.
+> Verified both ways — focus released (`hasFocus: false`) and the local listener closing the card
+> while focus is trapped on the Close button.
+
+
+> **This replaces the `Quick View` macro.** It was the same feature, but a macro's key lives in a
+> hotbar slot, and a hotbar slot is one stray drag from empty — the binding did not survive a
+> reboot. A registered keybinding does. The old macro still works if it is still in the world;
+> nothing depends on it any more.
+
+### Design notes
+
+**Flags, not text.** JSON in, JSON out — there is no format to get wrong, so there is no parse step
+to fail. `read()` is contractually forbidden from throwing: a malformed entry is dropped, a missing
+field takes a default, a dead actor id renders greyed.
+
+**Cards are DOM, wires are PIXI.** Cards live in their own fixed layer (`#pentaryn-ties-cards`,
+`pointer-events: none` except on the cards) because they need to be dragged, scrolled and read. The
+wires are a single `PIXI.Graphics` on `canvas.interface` — never Drawing documents, which are world
+documents and would sync one player's web to every connected client.
+
+**Wires are derived, not tracked.** `drawWires()` clears the whole layer and rebuilds it from
+`Cards.live()`, coalesced to one repaint per frame. There is no per-card line handle to keep in step,
+so "card on screen with no line" is not a state the code can reach — which it *was*, in 0.3.0, where
+the lines belonged to a toggle that a pinned card could outlive.
+
+**Visibility is delegated, not re-implemented.** `canSee()` asks **`Token#isVisible`** and nothing
+else. Re-deriving line of sight from wall geometry would be a second, subtly different answer to a
+question Foundry has already answered correctly for this client — and a second thing to get wrong
+every time the vision system changes. (It must be `isVisible`; on v14 `Token#visible` is the
+inherited PIXI flag and reads `true` for walled-off and GM-hidden tokens alike.)
+
+**Sheet injection is best-effort.** dnd5e's sheets are ApplicationV2 with
+`nav.tabs[data-group="primary"]` and a `div.tab-body`; the tab appends one nav item and one
+`section[data-tab="ties"]`, then lets the sheet's own `changeTab()` drive activation. Tabs are
+independent of each other, so this does not interfere with tabs added by anything else.
+
+Two things can stop it appearing, and neither breaks anything:
+
+- **A module that replaces the actor sheet** (Tidy 5e and similar) renders different markup, so
+  there is no `nav.tabs` / `div.tab-body` to append to. Injection bails silently.
+- **dnd5e restructuring its own sheet** in a future release. Same outcome.
+
+In both cases the sheet is untouched and the **header button still opens the editor**. The
+`Show the Ties tab` client setting is the manual escape hatch if the tab ever renders somewhere
+ugly under a different sheet.
+
+**No `world`-scope flags.** Data lives under this module's own id so it can't collide in a shared
+world. Pre-module data on `flags.world.ties` is migrated once, automatically, on first ready.
+
+### Compatibility
+
+Foundry **v13+**, verified on **v14** (14.369). **dnd5e 6.0+**, verified on **6.0.6** (declared in
+`module.json` → `relationships.systems`). Ties themselves touch no system data; the Known/Study side
+reads `details.race`/`background` and rolls through dnd5e's `rollSkill`, and the sheet tab is
+written against dnd5e's sheet markup (unchanged from 5.x in 6.0.6) but degrades to the header
+button anywhere else.

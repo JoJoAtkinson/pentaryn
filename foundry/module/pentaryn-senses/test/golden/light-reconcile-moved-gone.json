@@ -1,0 +1,63 @@
+{
+  "moved": {
+    "value": {
+      "source": "Actor.actHero000000001.Item.itmLight00000001",
+      "desired": {
+        "scene": "scnCellar0000001",
+        "token": "tokGob0000000002"
+      },
+      "restored": 0,
+      "removed": 0,
+      "lit": null,
+      "created": false,
+      "released": null,
+      "cleared": false
+    },
+    "calls": [
+      {
+        "op": "update",
+        "documentName": "Item",
+        "uuid": "Actor.actHero000000001.Item.itmLight00000001",
+        "changes": {
+          "flags.pentaryn-senses.lightCast.scene": "scnCellar0000001"
+        }
+      }
+    ]
+  },
+  "gone": {
+    "value": {
+      "source": "Actor.actHero000000001.Item.itmLight00000001",
+      "desired": null,
+      "restored": 0,
+      "removed": 0,
+      "lit": null,
+      "created": false,
+      "released": null,
+      "cleared": true
+    },
+    "calls": [
+      {
+        "op": "update",
+        "documentName": "Item",
+        "uuid": "Actor.actHero000000001.Item.itmLight00000001",
+        "changes": {
+          "flags.pentaryn-senses.lightCast": null
+        }
+      },
+      {
+        "op": "ChatMessage.create",
+        "data": {
+          "speaker": {
+            "actor": "actHero000000001",
+            "alias": "Marrith"
+          },
+          "content": "<p>The creature your Light was on is gone; the light has ended.</p>",
+          "whisper": [
+            "gmUser0000000001",
+            "plyUser000000001"
+          ]
+        }
+      }
+    ]
+  }
+}

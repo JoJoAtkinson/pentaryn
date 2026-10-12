@@ -1,0 +1,16 @@
+{
+  "swept": [
+    {
+      "op": "deleteEmbedded",
+      "scene": "scnCellar0000001",
+      "type": "AmbientLight",
+      "ids": [
+        "lgtOrphanScene01"
+      ]
+    }
+  ],
+  "noCast": {
+    "value": true,
+    "calls": []
+  }
+}

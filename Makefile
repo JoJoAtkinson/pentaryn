@@ -27,7 +27,8 @@ help:
 	@echo "                           FROM=latest|local|<snapshot> decides the boot choice"
 	@echo "                           (default: asks when the cloud is newer, at a terminal)"
 	@echo "    make login             pick a campaign + user, land in the world logged in"
-	@echo "    make vtt-down          tear both down, snapshot the world (upload in background; WAIT=1 waits)"
+	@echo "    make vtt-down          tear both down, snapshot the world (~45 MB) + changed modules;"
+	@echo "                           upload in background (WAIT=1 waits)"
 	@echo "    make vtt               status: app, tunnel, public reachability"
 	@echo ""
 	@echo "  Content"
@@ -43,11 +44,13 @@ help:
 	@echo "    make foundry-lib-check  the shared kit's tests; foundry-lib-vendor re-vendors it"
 	@echo ""
 	@echo "  Housekeeping"
-	@echo "    make foundry-backup    snapshot the world to OneDrive (tagged with this host)"
+	@echo "    make foundry-backup    snapshot the world (~45 MB) + changed modules to OneDrive"
 	@echo "    make foundry-restore   list snapshots, every host (SNAP=<id> to restore one)"
 	@echo "    make foundry-boot      just the boot choice: newest cloud snapshot or local (FROM=)"
 	@echo "    make foundry-cloud     what is where: storage, host, role, based-on, per host"
 	@echo "    make foundry-prune-untagged  list pre-2026-10-11 snapshots, delete on confirm"
+	@echo "    make foundry-bundles      local modules/systems, their fingerprints, what the cloud has"
+	@echo "    make foundry-bundles-gc   list unreferenced bundles older than 7 days (YES=1 deletes)"
 	@echo "    make vtt-update-dry    what a Saturday run WOULD change"
 	@echo "    make check-context     CLAUDE.md + context/ integrity"
 	@echo "    make check-lore        wikilinks + frontmatter across the lore trees"
@@ -88,7 +91,7 @@ vtt-lock-check:
 
 # foundry-boot comes BEFORE the pre-launch backup: when the cloud's newest is taken, the
 # restore has already archived the local world, and the backup then digest-skips rather
-# than uploading 3 GB that was just replaced. On the alt host tunnel-up is a loud no-op.
+# than uploading a world that was just replaced. On the alt host tunnel-up is a loud no-op.
 vtt-up: vtt-lock-check foundry-boot foundry-backup-safe foundry-assets-safe foundry-up tunnel-up
 	@echo ""
 	@if [ "$$(cd $(ROOT) && $(PY) -m scripts.foundry.host role 2>/dev/null)" = primary ] || [ "$$PENTARYN_ROLE_OVERRIDE" = primary ]; then \
@@ -189,7 +192,7 @@ foundry-verify:     ; @$(OPS) verify
 # the world flows UP. Restore is never silent: foundry-boot offers the newest snapshot at
 # a terminal; see scripts/foundry/cloud.py and context/foundry/ops.md §3.
 .PHONY: foundry-assets foundry-assets-safe foundry-backup foundry-backup-safe foundry-restore foundry-cloud
-.PHONY: foundry-prune-untagged
+.PHONY: foundry-prune-untagged foundry-bundles foundry-bundles-gc
 
 foundry-assets:
 	@cd $(ROOT) && $(PY) -m scripts.foundry.cloud assets
@@ -219,6 +222,14 @@ foundry-cloud:
 # Untagged (pre-2026-10-11) snapshots belong to no host, so nothing prunes them. Interactive.
 foundry-prune-untagged:
 	@cd $(ROOT) && $(PY) -m scripts.foundry.cloud prune-untagged
+
+# Modules and systems travel as content-addressed bundles in bundles/ (ops.md §3).
+foundry-bundles:
+	@cd $(ROOT) && $(PY) -m scripts.foundry.cloud bundles
+
+# The sweep that runs after every uploading backup, by hand. A dry run unless YES=1.
+foundry-bundles-gc:
+	@cd $(ROOT) && $(PY) -m scripts.foundry.cloud bundles-gc $(if $(YES),--yes,)
 
 # ─── In-house modules ───────────────────────────────────────────────────
 # The check step is not optional politeness: a parse error in an esmodule fails

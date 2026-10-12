@@ -15,18 +15,23 @@
  *   game.pentaryn.chain.break(token)            removes every chain touching it
  *   game.pentaryn.chain.links()                 [{chained, anchor}] on the viewed scene
  *
- * Every hook body is wrapped: a bug here logs a warning and draws nothing. It never throws into
- * token rendering. Imported for its side effects by senses.mjs (no module.json change), and safe
- * to hot-import into a running client: a second load uninstalls the first.
+ * Every hook body is guarded: a bug here logs a warning and draws nothing. It never throws into
+ * token rendering. A feature: the entry calls install(reg, ctx); the entry's ready publishes the API.
  */
 
-import { MODULE, CHAIN_FLAG, readChain, chainPairs, linksTouching, chainGeometry, chainThickness } from "./chain-core.mjs";
+import {
+  MODULE, FLAGS, CHAIN_FLAG, readChain, chainPairs, linksTouching, chainThickness, resolveTokenRef, linkSpriteSpecs, unsetPath,
+} from "./senses-core.mjs";
+import { isAnyGM } from "./lib/election.mjs";
 
 const TEX = `modules/${MODULE}/assets/chain-link.webp`;
 const TILE_H = 96; // px height of the source tile
 const SORT_LAYER_FALLBACK = 699; // just under PrimaryCanvasGroup.SORT_LAYERS.TOKENS (700)
 
-const state = { layer: null, tex: null, loading: null, queued: 0, hooks: [] };
+const state = { layer: null, tex: null, loading: null, queued: 0, hooks: [], reg: null };
+
+/** The sprites on the layer, per pair (finding -20): updated in place, rebuilt for a new layer or texture. */
+const drawn = { layer: null, tex: null, sprites: new Map() };
 
 const warn = (label, err) => console.warn(`${MODULE} | chain ${label}`, err);
 
@@ -34,13 +39,11 @@ const warn = (label, err) => console.warn(`${MODULE} | chain ${label}`, err);
 /*  Data                                        */
 /* -------------------------------------------- */
 
-const docOf = t => {
-  if (!t) return null;
-  if (typeof t === "string") return canvas?.scene?.tokens?.get(t) ?? null;
-  return t.document ?? t;
-};
+const docOf = t => resolveTokenRef(t, { viewed: canvas?.scene, fromUuid: uuid => fromUuidSync(uuid, { strict: false }) });
 
+/** Every drawable chain on a scene (a Scene, or its id; default the viewed scene). */
 export function links(scene = canvas?.scene) {
+  if (typeof scene === "string") scene = game.scenes?.get(scene) ?? null;
   try {
     return chainPairs(scene?.tokens?.contents ?? []);
   } catch (e) {
@@ -49,8 +52,30 @@ export function links(scene = canvas?.scene) {
   }
 }
 
+/**
+ * The pairs of a scene for the hot refreshToken check (finding -19), cached per scene id and
+ * dropped by every hook that can change them: token create/delete, a chain flag update, canvas
+ * ready/teardown. paint() and the API's links() always read fresh.
+ */
+const pairsCache = new Map();
+
+function cachedPairs(scene) {
+  const id = scene?.id;
+  if (!id) return links(scene);
+  let pairs = pairsCache.get(id);
+  if (!pairs) pairsCache.set(id, pairs = links(scene));
+  return pairs;
+}
+
+/** Forget a scene's pairs (the scene a changed token is on), or every scene's when unknown. */
+function forgetPairs(doc) {
+  const id = doc?.parent?.id;
+  if (id) pairsCache.delete(id);
+  else pairsCache.clear();
+}
+
 export async function link(chained, anchor) {
-  if (!game.user?.isGM) return false;
+  if (!isAnyGM()) return false;
   const c = docOf(chained), a = docOf(anchor);
   if (!c?.update || !a?.id || c.id === a.id || c.parent !== a.parent) return false;
   await c.update({ [`flags.${MODULE}.${CHAIN_FLAG}`]: { anchor: a.id } });
@@ -59,14 +84,14 @@ export async function link(chained, anchor) {
 
 /** Remove every chain touching this token (as the chained one or as the anchor). */
 export async function breakChain(token) {
-  if (!game.user?.isGM) return 0;
+  if (!isAnyGM()) return 0;
   const doc = docOf(token);
   const scene = doc?.parent;
   if (!doc?.id || !scene?.tokens) return 0;
   const ids = new Set(linksTouching(chainPairs(scene.tokens.contents), doc.id).map(p => p.chained));
   // a dangling flag on this token (anchor already deleted) goes too
   if (readChain(doc)) ids.add(doc.id);
-  const updates = [...ids].map(_id => ({ _id, [`flags.${MODULE}.-=${CHAIN_FLAG}`]: null }));
+  const updates = [...ids].map(_id => ({ _id, ...unsetPath(FLAGS.chain) }));   // _del on v14, "-=" before
   if (updates.length) await scene.updateEmbeddedDocuments("Token", updates);
   return updates.length;
 }
@@ -113,6 +138,8 @@ function layer() {
 function dropLayer() {
   const c = state.layer;
   state.layer = null;
+  drawn.sprites.clear();
+  drawn.layer = null;
   try {
     if (c && !c.destroyed) c.destroy({ children: true });
   } catch (e) {
@@ -133,23 +160,30 @@ function liveCentre(doc) {
   return live.center;
 }
 
-function drawLink(container, tex, a, b, thickness) {
-  const g = chainGeometry(a, b);
-  if (g.length < 1) return;
-  const scale = thickness / TILE_H;
-  const make = () => {
-    const s = new PIXI.TilingSprite(tex, g.length, thickness);
-    s.tileScale.set(scale, scale);
-    s.anchor.set(0, 0.5);
-    s.position.set(g.x, g.y);
-    s.rotation = g.angle;
-    return s;
-  };
-  const shadow = make();
-  shadow.tint = 0x000000;
-  shadow.alpha = 0.45;
-  shadow.position.set(g.x + thickness * 0.1, g.y + thickness * 0.16);
-  container.addChild(shadow, make());
+/** Put a sprite where a linkSpriteSpecs half says. */
+function applySpec(s, spec) {
+  s.width = spec.width;
+  s.height = spec.height;
+  s.tileScale.set(spec.scale, spec.scale);
+  s.anchor.set(0, 0.5);
+  s.position.set(spec.x, spec.y);
+  s.rotation = spec.rotation;
+  if (spec.tint !== undefined) s.tint = spec.tint;
+  if (spec.alpha !== undefined) s.alpha = spec.alpha;
+}
+
+function makeSprite(tex, spec) {
+  const s = new PIXI.TilingSprite(tex, spec.width, spec.height);
+  applySpec(s, spec);
+  return s;
+}
+
+/** Destroy every sprite on the layer and forget them (a new layer, a new texture). */
+function resetSprites(container, tex) {
+  for (const child of container.removeChildren()) child.destroy();
+  drawn.sprites.clear();
+  drawn.layer = container;
+  drawn.tex = tex;
 }
 
 /** Coalesce to one repaint per frame — refreshToken fires per animation step per token. */
@@ -169,7 +203,7 @@ export function paint(pairs) {
   if (!canvas?.ready || !canvas.scene) return;
   const scene = canvas.scene;
   pairs ??= links(scene);
-  const isGM = !!game.user?.isGM;
+  const isGM = isAnyGM();
   const shown = pairs.filter(p => isGM || !scene.tokens.get(p.chained)?.hidden);
   if (!shown.length) return dropLayer();
 
@@ -177,15 +211,34 @@ export function paint(pairs) {
   if (!tex) return; // repaints when it loads
   const c = layer();
   if (!c) return;
-  for (const child of c.removeChildren()) child.destroy();
+  if (drawn.layer !== c || drawn.tex !== tex) resetSprites(c, tex);
 
   const thickness = chainThickness(canvas.grid?.size ?? scene.grid?.size);
   let elevation = Infinity;
+  const kept = new Set();
   for (const p of shown) {
     const cd = scene.tokens.get(p.chained), ad = scene.tokens.get(p.anchor);
     if (!cd || !ad) continue;
     elevation = Math.min(elevation, cd.elevation || 0, ad.elevation || 0);
-    drawLink(c, tex, liveCentre(ad), liveCentre(cd), thickness);
+    const spec = linkSpriteSpecs(liveCentre(ad), liveCentre(cd), thickness, TILE_H);
+    if (!spec) continue;
+    const key = `${p.chained}>${p.anchor}`;
+    kept.add(key);
+    const had = drawn.sprites.get(key);
+    if (had) {
+      applySpec(had.shadow, spec.shadow);
+      applySpec(had.link, spec.link);
+    } else {
+      const pair = { shadow: makeSprite(tex, spec.shadow), link: makeSprite(tex, spec.link) };
+      c.addChild(pair.shadow, pair.link);
+      drawn.sprites.set(key, pair);
+    }
+  }
+  for (const [key, pair] of drawn.sprites) {
+    if (kept.has(key)) continue;
+    pair.shadow.destroy();
+    pair.link.destroy();
+    drawn.sprites.delete(key);
   }
   c.elevation = Number.isFinite(elevation) ? elevation : 0;
   canvas.primary.sortDirty = true;
@@ -211,7 +264,7 @@ function hudButton(col, cls, icon, tip, onClick) {
 }
 
 function injectHUD(app, element) {
-  if (!game.user?.isGM) return;
+  if (!isAnyGM()) return;
   const doc = app?.object?.document ?? app?.document ?? null;
   if (!doc?.id || !doc.parent) return;
   const root = element instanceof HTMLElement ? element : element?.[0];
@@ -220,9 +273,9 @@ function injectHUD(app, element) {
 
   const touching = linksTouching(chainPairs(doc.parent.tokens.contents), doc.id);
   if (touching.length || readChain(doc)) {
-    hudButton(col, "ps-chain-btn", "fa-solid fa-link-slash", "Break chain", async () => {
+    hudButton(col, "ps-chain-btn", "fa-solid fa-link-slash", _loc("PENTARYN_SENSES.Chain.Break"), async () => {
       const n = await breakChain(doc);
-      if (n) ui.notifications.info(`The chain on ${doc.name} breaks.`);
+      if (n) ui.notifications.info(_loc("PENTARYN_SENSES.Chain.Breaks", { name: doc.name }));
       app.render?.();
     });
     return;
@@ -230,8 +283,8 @@ function injectHUD(app, element) {
   const targets = [...(game.user.targets ?? [])].filter(t => t?.document?.id !== doc.id && t?.document?.parent === doc.parent);
   if (targets.length !== 1) return;
   const anchor = targets[0].document;
-  hudButton(col, "ps-chain-btn", "fa-solid fa-link", `Chain to ${anchor.name}`, async () => {
-    if (await link(doc, anchor)) ui.notifications.info(`${doc.name} is chained to ${anchor.name}.`);
+  hudButton(col, "ps-chain-btn", "fa-solid fa-link", _loc("PENTARYN_SENSES.Chain.LinkTo", { anchor: anchor.name }), async () => {
+    if (await link(doc, anchor)) ui.notifications.info(_loc("PENTARYN_SENSES.Chain.Linked", { name: doc.name, anchor: anchor.name }));
     app.render?.();
   });
 }
@@ -240,73 +293,55 @@ function injectHUD(app, element) {
 /*  Hooks                                       */
 /* -------------------------------------------- */
 
+/** reg.on with the body guarded: a throw logs `pentaryn-senses | chain <name>` at warn and is swallowed. */
 function on(name, fn) {
-  const id = Hooks.on(name, (...args) => {
-    try {
-      fn(...args);
-    } catch (e) {
-      warn(name, e);
-    }
-  });
-  state.hooks.push([name, id]);
+  state.hooks.push(state.reg.on(name, fn, { guard: "warn", label: `chain ${name}` }));
 }
 
 export function uninstall() {
-  for (const [name, id] of state.hooks.splice(0)) Hooks.off(name, id);
+  for (const id of state.hooks.splice(0)) state.reg?.off(id);
+  pairsCache.clear();
   if (state.queued) cancelAnimationFrame(state.queued);
   state.queued = 0;
   dropLayer();
 }
 
-const api = { link, break: breakChain, links, repaint: schedule, uninstall };
+/** What api.mjs publishes as `chain.*` (and the `game.pentaryn.chain` alias). */
+const exposed = { link, break: breakChain, links, repaint: schedule };
 
-function publish() {
-  const current = game.pentaryn;
-  // pentaryn-importer freezes game.pentaryn — rebuild the namespace rather than assign into it
-  if (current && !Object.isExtensible(current)) game.pentaryn = { ...current, chain: api };
-  else {
-    game.pentaryn ??= {};
-    game.pentaryn.chain = api;
-  }
-}
-
-function install() {
-  try {
-    globalThis.__pentarynChain?.uninstall?.();
-  } catch (e) {
-    warn("previous uninstall", e);
-  }
-  globalThis.__pentarynChain = api;
+/** FEATURE: called synchronously by the entry, at import. */
+export function install(reg, ctx) {
+  state.reg = reg;
+  ctx.expose({ chain: exposed });
 
   on("canvasTearDown", () => {
     state.layer = null; // Foundry destroys canvas.primary's children under us
+    pairsCache.clear();
   });
-  on("canvasReady", () => schedule());
+  on("canvasReady", () => {
+    pairsCache.clear();
+    schedule();
+  });
   on("refreshToken", () => {
-    if (state.layer || links().length) schedule();
+    if (state.layer || cachedPairs(canvas?.scene).length) schedule();   // hot: pairsCache
   });
   on("destroyToken", () => schedule()); // a drag preview ending
-  on("createToken", () => schedule());
-  on("deleteToken", () => schedule());
-  on("updateToken", (_doc, changes) => {
-    if (foundry.utils.getProperty(changes ?? {}, `flags.${MODULE}`) !== undefined || "hidden" in (changes ?? {}) || "elevation" in (changes ?? {})) schedule();
+  on("createToken", (doc) => {
+    forgetPairs(doc);
+    schedule();
+  });
+  on("deleteToken", (doc) => {
+    forgetPairs(doc);
+    schedule();
+  });
+  on("updateToken", (doc, changes) => {
+    const chainChanged = foundry.utils.getProperty(changes ?? {}, `flags.${MODULE}`) !== undefined;
+    if (chainChanged) forgetPairs(doc);
+    if (chainChanged || "hidden" in (changes ?? {}) || "elevation" in (changes ?? {})) schedule();
   });
   on("renderTokenHUD", (app, element) => injectHUD(app, element));
 
-  if (game.ready) {
-    publish();
-    schedule();
-  } else Hooks.once("ready", () => {
-    try {
-      publish();
-    } catch (e) {
-      warn("publish", e);
-    }
-  });
-}
-
-try {
-  install();
-} catch (e) {
-  warn("install", e);
+  // The entry's ready publishes the chain API (after senses). Installed into a world that is
+  // already drawn (a hot re-import of the entry): draw the chains now.
+  if (game.ready) schedule();
 }

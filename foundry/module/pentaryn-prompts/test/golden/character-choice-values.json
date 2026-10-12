@@ -1,0 +1,56 @@
+[
+  {
+    "choices": {
+      "Cleric: Divine Order": "Protectr",
+      "Ability Score Improvement@4": {
+        "feat": "Toughh"
+      },
+      "Cleric: Blessed Strikes": "Nope",
+      "Cleric: Magic Initiate": [
+        "Guidance",
+        "Zap"
+      ]
+    },
+    "code": "BAD_SPEC",
+    "message": "BAD_SPEC: character: 4 problems — (1) choices: choices[\"Cleric: Divine Order\"] (Cleric: Divine Order at level 1): \"Protectr\" is not one of its options (nearest: Protector); options: Protector, Thaumaturge; (2) choices: choices[\"Ability Score Improvement@4\"] (Cleric: Ability Score Improvement at level 4): no feat \"Toughh\" in dnd-players-handbook.feats, dnd-players-handbook.origins, dnd-players-handbook.classes, dnd5e.feats24 — nearest: \"Tough\"; (3) choices: choices[\"Cleric: Blessed Strikes\"] (Cleric: Blessed Strikes at level 1): no feat \"Nope\" in dnd-players-handbook.feats, dnd-players-handbook.origins, dnd-players-handbook.classes, dnd5e.feats24; (4) choices: choices[\"Cleric: Magic Initiate\"] (Cleric: Magic Initiate at level 1): no spell \"Zap\" in dnd-players-handbook.spells, dnd5e.spells24"
+  },
+  {
+    "choices": {
+      "Cleric: Divine Order": "Thaumaturge",
+      "Ability Score Improvement@4": [
+        1
+      ],
+      "Acolyte: Ability Score Increase": {
+        "str": 3
+      }
+    },
+    "code": "BAD_SPEC",
+    "message": "BAD_SPEC: character: 2 problems — (1) choices: choices[\"Acolyte: Ability Score Increase\"] (Acolyte: Ability Score Increase): at most +2 to one ability: str; (2) choices: choices[\"Ability Score Improvement@4\"] (Cleric: Ability Score Improvement at level 4): give {feat: \"<name>\"} or increases like {str: 2} / {str: 1, cha: 1}, got [1]"
+  },
+  {
+    "choices": {
+      "Cleric: Divine Order": "Protector",
+      "Ability Score Improvement@4": {
+        "feat": "Tough"
+      },
+      "Cleric: Blessed Strikes": "Alert",
+      "Cleric: Magic Initiate": {
+        "spells": [
+          "Guidance"
+        ]
+      },
+      "Divine Order: Protector: Protector Training": [
+        "x"
+      ]
+    },
+    "planWarnings": [],
+    "warnings": []
+  },
+  {
+    "choices": {},
+    "planWarnings": [
+      "Cleric: Magic Initiate: NOT CHOSEN — pass choices[\"Cleric: Magic Initiate\"] = [\"<spell>\", \"<spell>\"] (2 from the cleric/druid lists); the real run would leave it empty"
+    ],
+    "warnings": []
+  }
+]

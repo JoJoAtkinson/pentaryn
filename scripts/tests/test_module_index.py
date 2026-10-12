@@ -106,3 +106,13 @@ def test_real_index_has_every_module_and_published_namespace():
         for ns in index.published_namespaces(cfg.MODULE_SRC_ROOT / name):
             assert f"`{ns}`" in block, (name, ns)
     assert "`pentaryn-pings`" in block
+
+
+def test_an_alias_published_in_code_survives_a_describe_golden(tmp_path):
+    """senses publishes `senses` (its describe golden) and the `chain` alias (kit
+    publishNamespace with a literal name); the row must name both, as before migration."""
+    root = tmp_path / "modules"
+    d = _module(root, "pentaryn-senses",
+                code='publishNamespace(NS, api);\npublishNamespace("chain", api.chain, { alias: true });\n',
+                describe={"namespace": "senses", "methods": [{"path": "syncLight"}]})
+    assert index.module_row(d)["namespaces"] == ["chain", "senses"]

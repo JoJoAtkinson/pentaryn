@@ -1,0 +1,4 @@
+{
+  "open": "<p class=\"hint\">What a player sees on hover and in the travel prompt.</p><div class=\"ppt-cards\"><div class=\"ppt-card\"><img class=\"ppt-thumb\" src=\"cards/pit.webp?v=abc\" alt>\n    <div class=\"ppt-text\"><h4>The Fighting Pit</h4><p class=\"ppt-desc\">Sand, &lt;script&gt;alert(1)&lt;/script&gt;<br>and cheering.</p></div></div></div>",
+  "sealedUnrevealed": "<p class=\"hint\">What a player sees on hover and in the travel prompt.</p><p class=\"hint\"><i class=\"fa-solid fa-lock\"></i> <strong>Sealed:</strong> players can't see or use it.</p><p class=\"hint\"><i class=\"fa-solid fa-eye-slash\"></i> This passage is <strong>unrevealed</strong>: players see no cards, only \"a way onward\".</p><div class=\"ppt-cards\"><div class=\"ppt-card\"><img class=\"ppt-thumb\" src=\"thumbs/pit.webp\" alt>\n    <div class=\"ppt-text\"><h4>Fighting Pit</h4></div></div></div>"
+}

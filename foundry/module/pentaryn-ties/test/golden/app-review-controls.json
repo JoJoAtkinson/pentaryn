@@ -1,0 +1,946 @@
+{
+  "inventory": [
+    {
+      "nth": 0,
+      "tag": "DIV",
+      "className": "pentaryn-ties pt-review",
+      "events": [
+        "focusout"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "INPUT",
+      "className": "pt-review-search",
+      "events": [
+        "input"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "SELECT",
+      "className": "pt-review-sort",
+      "events": [
+        "change"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "act": "resort",
+        "tooltip": "Rows stay where they are while you work; this re-applies the sort"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-chip pt-review-tab pt-chip-on pt-review-tab-warn",
+      "dataset": {
+        "tab": "world"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-chip pt-review-tab pt-review-tab-warn",
+      "dataset": {
+        "tab": "personal"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-chip pt-chip-on",
+      "dataset": {
+        "filter": "all"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-chip ",
+      "dataset": {
+        "filter": "needs"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-chip ",
+      "dataset": {
+        "filter": "selected"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "act": "select-visible"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "act": "select-none"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "act": "copy-selected"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "DIV",
+      "className": "pt-review-summary",
+      "dataset": {
+        "act": "toggle"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "INPUT",
+      "className": "pt-review-sel",
+      "dataset": {
+        "act": "select"
+      },
+      "events": [
+        "click"
+      ],
+      "delegated": true
+    },
+    {
+      "nth": 0,
+      "tag": "CODE",
+      "className": "pt-review-id",
+      "dataset": {
+        "act": "copy-id",
+        "tooltip": "Copy id"
+      },
+      "events": [
+        "click"
+      ],
+      "delegated": true
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-review-sign",
+      "dataset": {
+        "act": "review"
+      },
+      "events": [
+        "click"
+      ],
+      "delegated": true
+    },
+    {
+      "nth": 1,
+      "tag": "DIV",
+      "className": "pt-review-summary",
+      "dataset": {
+        "act": "toggle"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 1,
+      "tag": "INPUT",
+      "className": "pt-review-sel",
+      "dataset": {
+        "act": "select"
+      },
+      "events": [
+        "click"
+      ],
+      "delegated": true
+    },
+    {
+      "nth": 1,
+      "tag": "CODE",
+      "className": "pt-review-id",
+      "dataset": {
+        "act": "copy-id",
+        "tooltip": "Copy id"
+      },
+      "events": [
+        "click"
+      ],
+      "delegated": true
+    },
+    {
+      "nth": 1,
+      "tag": "BUTTON",
+      "className": "pt-review-sign",
+      "dataset": {
+        "act": "review"
+      },
+      "events": [
+        "click"
+      ],
+      "delegated": true
+    },
+    {
+      "nth": 2,
+      "tag": "DIV",
+      "className": "pt-review-summary",
+      "dataset": {
+        "act": "toggle"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 2,
+      "tag": "INPUT",
+      "className": "pt-review-sel",
+      "dataset": {
+        "act": "select"
+      },
+      "events": [
+        "click"
+      ],
+      "delegated": true
+    },
+    {
+      "nth": 2,
+      "tag": "CODE",
+      "className": "pt-review-id",
+      "dataset": {
+        "act": "copy-id",
+        "tooltip": "Copy id"
+      },
+      "events": [
+        "click"
+      ],
+      "delegated": true
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn pt-review-quiet",
+      "dataset": {
+        "act": "unreview",
+        "tooltip": "Withdraw your sign-off — moves it back to the top"
+      },
+      "events": [
+        "click"
+      ],
+      "delegated": true
+    }
+  ],
+  "rows": [
+    {
+      "nth": 0,
+      "tag": "DIV",
+      "className": "pentaryn-ties pt-review",
+      "type": "focusout",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pentaryn-ties pt-review",
+        "parent": "window-content"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "INPUT",
+      "className": "pt-review-search",
+      "type": "input",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-review-search",
+        "parent": "pt-review-bar",
+        "value": "zz typed"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "SELECT",
+      "className": "pt-review-sort",
+      "type": "change",
+      "calls": [
+        {
+          "op": "app.render",
+          "app": "AttributeReview",
+          "opts": null
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-review-sort",
+        "parent": "pt-review-bar",
+        "value": "title"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "act": "resort",
+        "tooltip": "Rows stay where they are while you work; this re-applies the sort"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "app.render",
+          "app": "AttributeReview",
+          "opts": null
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-textbtn",
+        "parent": "pt-review-bar"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-chip pt-review-tab pt-chip-on pt-review-tab-warn",
+      "dataset": {
+        "tab": "world"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-chip pt-review-tab pt-chip-on pt-review-tab-warn",
+        "parent": "pt-review-bar"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-chip pt-review-tab pt-review-tab-warn",
+      "dataset": {
+        "tab": "personal"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-chip pt-review-tab pt-review-tab-warn pt-chip-on",
+        "parent": "pt-review-bar"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-chip pt-chip-on",
+      "dataset": {
+        "filter": "all"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-chip pt-chip-on",
+        "parent": "pt-review-bar"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-chip ",
+      "dataset": {
+        "filter": "needs"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-chip pt-chip-on",
+        "parent": "pt-review-bar"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-chip ",
+      "dataset": {
+        "filter": "selected"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-chip pt-chip-on",
+        "parent": "pt-review-bar"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "act": "select-visible"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "update",
+          "documentName": "User",
+          "uuid": "User.gmUser0000000001",
+          "changes": {
+            "flags.pentaryn-ties.attrSelected": [
+              "guild",
+              "city"
+            ]
+          }
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-textbtn",
+        "parent": "pt-review-bar"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "act": "select-none"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "update",
+          "documentName": "User",
+          "uuid": "User.gmUser0000000001",
+          "changes": {
+            "flags.pentaryn-ties.attrSelected": []
+          }
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-textbtn",
+        "parent": "pt-review-bar"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "act": "copy-selected"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-textbtn",
+        "parent": "pt-review-bar"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "DIV",
+      "className": "pt-review-summary",
+      "dataset": {
+        "act": "toggle"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "app.render",
+          "app": "AttributeReview",
+          "opts": null
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-review-summary",
+        "parent": "pt-review-row"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "INPUT",
+      "className": "pt-review-sel",
+      "dataset": {
+        "act": "select"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "update",
+          "documentName": "User",
+          "uuid": "User.gmUser0000000001",
+          "changes": {
+            "flags.pentaryn-ties.attrSelected": []
+          }
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-review-sel",
+        "parent": "pt-review-summary",
+        "value": "",
+        "checked": false
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "CODE",
+      "className": "pt-review-id",
+      "dataset": {
+        "act": "copy-id",
+        "tooltip": "Copy id"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "clipboard",
+          "text": "guild"
+        },
+        {
+          "op": "notify",
+          "level": "info",
+          "message": "Copied to clipboard."
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-review-id",
+        "parent": "pt-review-line"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-review-sign",
+      "dataset": {
+        "act": "review"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "settings.set",
+          "id": "pentaryn-ties.attributes",
+          "value": [
+            {
+              "id": "city",
+              "title": "Vel",
+              "category": "City",
+              "icon": null,
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": null,
+              "dc": 12,
+              "skill": "his",
+              "reveal": "<p>From Vel.</p>",
+              "miss": "<p>An accent.</p>",
+              "hold": null,
+              "lore": [
+                {
+                  "id": "c1",
+                  "label": "Walls",
+                  "dc": 11,
+                  "skill": "his",
+                  "text": "<p>Three rings.</p>",
+                  "miss": "",
+                  "hold": null
+                }
+              ],
+              "source": null,
+              "bonuses": [],
+              "createdAt": 1,
+              "modifiedAt": 2,
+              "reviewedAt": 3,
+              "touched": [],
+              "reviewedSnapshot": {
+                "title": "Vel",
+                "dc": 12
+              }
+            },
+            {
+              "id": "guild",
+              "title": "Salt Guild",
+              "category": "Guild",
+              "icon": null,
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": "city",
+              "dc": 15,
+              "skill": "inv",
+              "reveal": "<p>Guild hands.</p>",
+              "miss": "",
+              "hold": null,
+              "lore": [],
+              "source": null,
+              "bonuses": [],
+              "createdAt": null,
+              "modifiedAt": 5,
+              "reviewedAt": 1790000000000,
+              "touched": [],
+              "reviewedSnapshot": {
+                "title": "Salt Guild",
+                "category": "Guild",
+                "whenKnown": "enables",
+                "whenCarried": "inherit",
+                "secret": true,
+                "parent": "city",
+                "dc": 15,
+                "skill": "inv",
+                "reveal": "<p>Guild hands.</p>",
+                "miss": "",
+                "hold": null,
+                "lore": []
+              }
+            },
+            {
+              "id": "diary",
+              "title": "Caven's diary",
+              "category": "personal",
+              "icon": null,
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": null,
+              "dc": 15,
+              "skill": "his",
+              "reveal": "<p>Kept a diary.</p>",
+              "miss": "",
+              "hold": null,
+              "lore": [],
+              "source": null,
+              "bonuses": [],
+              "createdAt": null,
+              "modifiedAt": null,
+              "reviewedAt": null,
+              "touched": [],
+              "reviewedSnapshot": null
+            }
+          ]
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-review-sign",
+        "parent": "pt-review-summary"
+      }
+    },
+    {
+      "nth": 1,
+      "tag": "DIV",
+      "className": "pt-review-summary",
+      "dataset": {
+        "act": "toggle"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "app.render",
+          "app": "AttributeReview",
+          "opts": null
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-review-summary",
+        "parent": "pt-review-row"
+      }
+    },
+    {
+      "nth": 1,
+      "tag": "INPUT",
+      "className": "pt-review-sel",
+      "dataset": {
+        "act": "select"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "update",
+          "documentName": "User",
+          "uuid": "User.gmUser0000000001",
+          "changes": {
+            "flags.pentaryn-ties.attrSelected": []
+          }
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-review-sel",
+        "parent": "pt-review-summary",
+        "value": "",
+        "checked": false
+      }
+    },
+    {
+      "nth": 1,
+      "tag": "CODE",
+      "className": "pt-review-id",
+      "dataset": {
+        "act": "copy-id",
+        "tooltip": "Copy id"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "clipboard",
+          "text": "guild"
+        },
+        {
+          "op": "notify",
+          "level": "info",
+          "message": "Copied to clipboard."
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-review-id",
+        "parent": "pt-review-line"
+      }
+    },
+    {
+      "tag": "BUTTON",
+      "className": "pt-review-sign",
+      "dataset": {
+        "act": "review"
+      },
+      "nth": 1,
+      "type": "click",
+      "missing": true
+    },
+    {
+      "nth": 2,
+      "tag": "DIV",
+      "className": "pt-review-summary",
+      "dataset": {
+        "act": "toggle"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "app.render",
+          "app": "AttributeReview",
+          "opts": null
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-review-summary",
+        "parent": "pt-review-row"
+      }
+    },
+    {
+      "nth": 2,
+      "tag": "INPUT",
+      "className": "pt-review-sel",
+      "dataset": {
+        "act": "select"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "update",
+          "documentName": "User",
+          "uuid": "User.gmUser0000000001",
+          "changes": {
+            "flags.pentaryn-ties.attrSelected": []
+          }
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-review-sel",
+        "parent": "pt-review-summary",
+        "value": "",
+        "checked": false
+      }
+    },
+    {
+      "nth": 2,
+      "tag": "CODE",
+      "className": "pt-review-id",
+      "dataset": {
+        "act": "copy-id",
+        "tooltip": "Copy id"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "clipboard",
+          "text": "city"
+        },
+        {
+          "op": "notify",
+          "level": "info",
+          "message": "Copied to clipboard."
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-review-id",
+        "parent": "pt-review-line"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn pt-review-quiet",
+      "dataset": {
+        "act": "unreview",
+        "tooltip": "Withdraw your sign-off — moves it back to the top"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "settings.set",
+          "id": "pentaryn-ties.attributes",
+          "value": [
+            {
+              "id": "city",
+              "title": "Vel",
+              "category": "City",
+              "icon": null,
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": null,
+              "dc": 12,
+              "skill": "his",
+              "reveal": "<p>From Vel.</p>",
+              "miss": "<p>An accent.</p>",
+              "hold": null,
+              "lore": [
+                {
+                  "id": "c1",
+                  "label": "Walls",
+                  "dc": 11,
+                  "skill": "his",
+                  "text": "<p>Three rings.</p>",
+                  "miss": "",
+                  "hold": null
+                }
+              ],
+              "source": null,
+              "bonuses": [],
+              "createdAt": 1,
+              "modifiedAt": 2,
+              "reviewedAt": 3,
+              "touched": [],
+              "reviewedSnapshot": {
+                "title": "Vel",
+                "dc": 12
+              }
+            },
+            {
+              "id": "guild",
+              "title": "Salt Guild",
+              "category": "Guild",
+              "icon": null,
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": "city",
+              "dc": 15,
+              "skill": "inv",
+              "reveal": "<p>Guild hands.</p>",
+              "miss": "",
+              "hold": null,
+              "lore": [],
+              "source": null,
+              "bonuses": [],
+              "createdAt": null,
+              "modifiedAt": 5,
+              "reviewedAt": null,
+              "touched": [],
+              "reviewedSnapshot": {
+                "title": "Salt Guild",
+                "category": "Guild",
+                "whenKnown": "enables",
+                "whenCarried": "inherit",
+                "secret": true,
+                "parent": "city",
+                "dc": 15,
+                "skill": "inv",
+                "reveal": "<p>Guild hands.</p>",
+                "miss": "",
+                "hold": null,
+                "lore": []
+              }
+            },
+            {
+              "id": "diary",
+              "title": "Caven's diary",
+              "category": "personal",
+              "icon": null,
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": null,
+              "dc": 15,
+              "skill": "his",
+              "reveal": "<p>Kept a diary.</p>",
+              "miss": "",
+              "hold": null,
+              "lore": [],
+              "source": null,
+              "bonuses": [],
+              "createdAt": null,
+              "modifiedAt": null,
+              "reviewedAt": null,
+              "touched": [],
+              "reviewedSnapshot": null
+            }
+          ]
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-textbtn pt-review-quiet",
+        "parent": "pt-review-summary"
+      }
+    }
+  ]
+}

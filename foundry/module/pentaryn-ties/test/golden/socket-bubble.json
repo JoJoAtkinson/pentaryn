@@ -1,0 +1,79 @@
+{
+  "one": {
+    "tag": "DIV",
+    "id": "chat-bubbles",
+    "children": [
+      {
+        "tag": "DIV",
+        "className": "chat-bubble pt-tempo",
+        "dataset": {
+          "ptToken": "zzTokPc000000001"
+        },
+        "style": {
+          "left": "200px",
+          "top": "252px"
+        },
+        "textContent": "first look"
+      }
+    ]
+  },
+  "two": {
+    "tag": "DIV",
+    "id": "chat-bubbles",
+    "children": [
+      {
+        "tag": "DIV",
+        "className": "chat-bubble pt-tempo",
+        "dataset": {
+          "ptToken": "zzTokPc000000001"
+        },
+        "style": {
+          "left": "200px",
+          "top": "252px"
+        },
+        "textContent": "second look"
+      }
+    ]
+  },
+  "ignored": {
+    "tag": "DIV",
+    "id": "chat-bubbles",
+    "children": [
+      {
+        "tag": "DIV",
+        "className": "chat-bubble pt-tempo",
+        "dataset": {
+          "ptToken": "zzTokPc000000001"
+        },
+        "style": {
+          "left": "200px",
+          "top": "252px"
+        },
+        "textContent": "second look"
+      }
+    ]
+  },
+  "faded": {
+    "tag": "DIV",
+    "id": "chat-bubbles",
+    "children": [
+      {
+        "tag": "DIV",
+        "className": "chat-bubble pt-tempo",
+        "dataset": {
+          "ptToken": "zzTokPc000000001"
+        },
+        "style": {
+          "left": "200px",
+          "top": "252px",
+          "opacity": "0"
+        },
+        "textContent": "second look"
+      }
+    ]
+  },
+  "gone": {
+    "tag": "DIV",
+    "id": "chat-bubbles"
+  }
+}

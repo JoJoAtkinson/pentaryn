@@ -1,0 +1,68 @@
+[
+  {
+    "id": "showWeb",
+    "out": true,
+    "calls": [
+      {
+        "op": "notify",
+        "level": "warn",
+        "message": "Hover a token, or select one."
+      }
+    ],
+    "console": []
+  },
+  {
+    "id": "addTie",
+    "out": true,
+    "calls": [
+      {
+        "op": "notify",
+        "level": "warn",
+        "message": "Hover a token, or select one."
+      }
+    ],
+    "console": []
+  },
+  {
+    "id": "fileKnown",
+    "out": true,
+    "calls": [
+      {
+        "op": "notify",
+        "level": "warn",
+        "message": "Hover whoever you want to write down."
+      }
+    ],
+    "console": []
+  },
+  {
+    "id": "inspect",
+    "out": true,
+    "calls": [],
+    "console": []
+  },
+  {
+    "id": "showOneTie",
+    "out": true,
+    "calls": [
+      {
+        "op": "notify",
+        "level": "warn",
+        "message": "Select your own token first, then hover the person you're asking about."
+      }
+    ],
+    "console": []
+  },
+  {
+    "id": "showDescription",
+    "out": true,
+    "calls": [
+      {
+        "op": "notify",
+        "level": "warn",
+        "message": "Hover a token, or select one."
+      }
+    ],
+    "console": []
+  }
+]

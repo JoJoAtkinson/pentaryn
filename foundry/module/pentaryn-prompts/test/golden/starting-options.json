@@ -1,0 +1,105 @@
+[
+  [
+    "<undefined>",
+    {
+      "class": "none",
+      "background": "none"
+    }
+  ],
+  [
+    null,
+    {
+      "class": "none",
+      "background": "none"
+    }
+  ],
+  [
+    false,
+    {
+      "class": "none",
+      "background": "none"
+    }
+  ],
+  [
+    true,
+    {
+      "class": "A",
+      "background": "A"
+    }
+  ],
+  [
+    "a",
+    {
+      "class": "A",
+      "background": "A"
+    }
+  ],
+  [
+    "B",
+    {
+      "class": "B",
+      "background": "B"
+    }
+  ],
+  [
+    "none",
+    {
+      "class": "none",
+      "background": "none"
+    }
+  ],
+  [
+    "NONE",
+    {
+      "class": "none",
+      "background": "none"
+    }
+  ],
+  [
+    "x",
+    {
+      "problem": "startingEquipment: give \"A\" (the book's gear), \"B\" (its gold instead), \"none\", or {class, background}; got \"x\""
+    }
+  ],
+  [
+    {
+      "class": "A"
+    },
+    {
+      "class": "A",
+      "background": "none"
+    }
+  ],
+  [
+    {
+      "background": "b"
+    },
+    {
+      "class": "none",
+      "background": "B"
+    }
+  ],
+  [
+    {
+      "class": "A",
+      "extra": 1
+    },
+    {
+      "problem": "startingEquipment: give \"A\" (the book's gear), \"B\" (its gold instead), \"none\", or {class, background} with those values; got {\"class\":\"A\",\"extra\":1}"
+    }
+  ],
+  [
+    {
+      "class": "Q"
+    },
+    {
+      "problem": "startingEquipment: give \"A\" (the book's gear), \"B\" (its gold instead), \"none\", or {class, background} with those values; got {\"class\":\"Q\"}"
+    }
+  ],
+  [
+    [],
+    {
+      "problem": "startingEquipment: give \"A\" (the book's gear), \"B\" (its gold instead), \"none\", or {class, background}; got []"
+    }
+  ]
+]

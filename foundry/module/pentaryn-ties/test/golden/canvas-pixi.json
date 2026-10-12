@@ -1,0 +1,65 @@
+[
+  {
+    "id": "Interface1",
+    "call": "new",
+    "args": []
+  },
+  {
+    "id": "Graphics2",
+    "call": "new",
+    "args": []
+  },
+  {
+    "id": "Graphics2",
+    "call": "set eventMode",
+    "args": [
+      "none"
+    ]
+  },
+  {
+    "id": "Graphics2",
+    "call": "set zIndex",
+    "args": [
+      1000
+    ]
+  },
+  {
+    "id": "Interface1",
+    "call": "addChild",
+    "args": [
+      "<Graphics2>"
+    ]
+  },
+  {
+    "id": "Graphics2",
+    "call": "clear",
+    "args": []
+  },
+  {
+    "id": "Graphics2",
+    "call": "moveTo",
+    "args": [
+      50,
+      40
+    ]
+  },
+  {
+    "id": "Graphics2",
+    "call": "lineTo",
+    "args": [
+      1050,
+      50
+    ]
+  },
+  {
+    "id": "Graphics2",
+    "call": "stroke",
+    "args": [
+      {
+        "width": 2.1999999999999997,
+        "color": 3066944,
+        "alpha": 0.5
+      }
+    ]
+  }
+]

@@ -1,0 +1,187 @@
+[
+  {
+    "input": [
+      {
+        "light": {
+          "bright": 0,
+          "dim": 0
+        },
+        "flags": {}
+      },
+      {
+        "qualifies": true,
+        "radius": 5
+      }
+    ],
+    "out": {
+      "light.bright": 5,
+      "light.dim": 5,
+      "flags.pentaryn-creatures.light": {
+        "bright": 5,
+        "dim": 5
+      }
+    }
+  },
+  {
+    "input": [
+      {
+        "light": {
+          "bright": 10,
+          "dim": 20
+        },
+        "flags": {
+          "pentaryn-creatures": {
+            "light": {
+              "bright": 5,
+              "dim": 5
+            }
+          }
+        }
+      },
+      {
+        "qualifies": true,
+        "radius": 5
+      }
+    ],
+    "out": {
+      "flags.pentaryn-creatures.light": null
+    }
+  },
+  {
+    "input": [
+      {
+        "light": {
+          "bright": 10,
+          "dim": 20
+        },
+        "flags": {
+          "pentaryn-creatures": {
+            "light": {
+              "bright": 5,
+              "dim": 5
+            }
+          }
+        }
+      },
+      {
+        "qualifies": false,
+        "radius": 5
+      }
+    ],
+    "out": {
+      "flags.pentaryn-creatures.light": null
+    }
+  },
+  {
+    "input": [
+      {
+        "light": {
+          "bright": 5,
+          "dim": 5
+        },
+        "flags": {
+          "pentaryn-creatures": {
+            "light": null
+          }
+        }
+      },
+      {
+        "qualifies": true,
+        "radius": 5
+      }
+    ],
+    "out": null
+  },
+  {
+    "input": [
+      {
+        "light": {
+          "bright": 5,
+          "dim": 5
+        },
+        "flags": {
+          "pentaryn-creatures": {
+            "light": null
+          }
+        }
+      },
+      {
+        "qualifies": false,
+        "radius": 5
+      }
+    ],
+    "out": null
+  },
+  {
+    "input": [
+      {
+        "light": {
+          "bright": 0,
+          "dim": 0
+        },
+        "flags": {
+          "pentaryn-creatures": {
+            "light": null
+          }
+        }
+      },
+      {
+        "qualifies": true,
+        "radius": 5
+      }
+    ],
+    "out": {
+      "light.bright": 5,
+      "light.dim": 5,
+      "flags.pentaryn-creatures.light": {
+        "bright": 5,
+        "dim": 5
+      }
+    }
+  },
+  {
+    "input": [
+      {
+        "light": {
+          "bright": 0,
+          "dim": 0
+        },
+        "flags": {
+          "pentaryn-creatures": {
+            "light": {
+              "bright": 5,
+              "dim": 5
+            }
+          }
+        }
+      },
+      {
+        "qualifies": true,
+        "radius": 5
+      }
+    ],
+    "out": {
+      "flags.pentaryn-creatures.light": false
+    }
+  },
+  {
+    "input": [
+      {
+        "light": {
+          "bright": 5,
+          "dim": 5
+        },
+        "flags": {
+          "pentaryn-creatures": {
+            "light": false
+          }
+        }
+      },
+      {
+        "qualifies": false,
+        "radius": 5
+      }
+    ],
+    "out": null
+  }
+]

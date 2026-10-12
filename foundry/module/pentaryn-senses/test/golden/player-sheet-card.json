@@ -1,0 +1,53 @@
+{
+  "row": {
+    "tag": "li",
+    "data": {
+      "itemId": "itmStakeTorch001"
+    },
+    "children": [
+      {
+        "tag": "div",
+        "class": "item-row",
+        "children": [
+          {
+            "tag": "div",
+            "class": "item-name"
+          },
+          {
+            "tag": "div",
+            "class": "ps-light-controls",
+            "children": [
+              {
+                "tag": "button",
+                "class": "unbutton config-button item-control ps-light-toggle",
+                "type": "button",
+                "data": {
+                  "tooltip": "Light it"
+                },
+                "attrs": {
+                  "aria-label": "Light it",
+                  "aria-disabled": "true"
+                },
+                "html": "<i class=\"fa-solid fa-fire\" inert></i>"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "click": {
+    "value": "<undefined>",
+    "calls": []
+  },
+  "card": {
+    "tag": "div",
+    "class": "message-content",
+    "children": [
+      {
+        "tag": "div",
+        "class": "chat-card"
+      }
+    ]
+  }
+}

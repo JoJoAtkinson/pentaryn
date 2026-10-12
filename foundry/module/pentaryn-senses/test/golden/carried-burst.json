@@ -1,0 +1,144 @@
+{
+  "first": [
+    {
+      "op": "update",
+      "documentName": "Actor",
+      "uuid": "Actor.actHero000000001",
+      "changes": {
+        "prototypeToken.light": {
+          "dim": 0,
+          "bright": 0,
+          "color": null,
+          "alpha": 0.5,
+          "luminosity": 0.5,
+          "animation": {
+            "type": null,
+            "speed": 5,
+            "intensity": 5,
+            "reverse": false
+          }
+        },
+        "prototypeToken.flags.pentaryn-senses.itemLight": false
+      }
+    },
+    {
+      "op": "updateEmbedded",
+      "scene": "scnCellar0000001",
+      "type": "Token",
+      "updates": [
+        {
+          "_id": "tokHero000000001",
+          "light": {
+            "dim": 0,
+            "bright": 0,
+            "color": null,
+            "alpha": 0.5,
+            "luminosity": 0.5,
+            "animation": {
+              "type": null,
+              "speed": 5,
+              "intensity": 5,
+              "reverse": false
+            }
+          },
+          "flags.pentaryn-senses.itemLight": false
+        }
+      ]
+    },
+    {
+      "op": "updateEmbedded",
+      "scene": "scnRoad000000002",
+      "type": "Token",
+      "updates": [
+        {
+          "_id": "tokHero000000002",
+          "light": {
+            "dim": 0,
+            "bright": 0,
+            "color": null,
+            "alpha": 0.5,
+            "luminosity": 0.5,
+            "animation": {
+              "type": null,
+              "speed": 5,
+              "intensity": 5,
+              "reverse": false
+            }
+          },
+          "flags.pentaryn-senses.itemLight": false
+        }
+      ]
+    }
+  ],
+  "all": [
+    {
+      "op": "update",
+      "documentName": "Actor",
+      "uuid": "Actor.actHero000000001",
+      "changes": {
+        "prototypeToken.light": {
+          "dim": 0,
+          "bright": 0,
+          "color": null,
+          "alpha": 0.5,
+          "luminosity": 0.5,
+          "animation": {
+            "type": null,
+            "speed": 5,
+            "intensity": 5,
+            "reverse": false
+          }
+        },
+        "prototypeToken.flags.pentaryn-senses.itemLight": false
+      }
+    },
+    {
+      "op": "updateEmbedded",
+      "scene": "scnCellar0000001",
+      "type": "Token",
+      "updates": [
+        {
+          "_id": "tokHero000000001",
+          "light": {
+            "dim": 0,
+            "bright": 0,
+            "color": null,
+            "alpha": 0.5,
+            "luminosity": 0.5,
+            "animation": {
+              "type": null,
+              "speed": 5,
+              "intensity": 5,
+              "reverse": false
+            }
+          },
+          "flags.pentaryn-senses.itemLight": false
+        }
+      ]
+    },
+    {
+      "op": "updateEmbedded",
+      "scene": "scnRoad000000002",
+      "type": "Token",
+      "updates": [
+        {
+          "_id": "tokHero000000002",
+          "light": {
+            "dim": 0,
+            "bright": 0,
+            "color": null,
+            "alpha": 0.5,
+            "luminosity": 0.5,
+            "animation": {
+              "type": null,
+              "speed": 5,
+              "intensity": 5,
+              "reverse": false
+            }
+          },
+          "flags.pentaryn-senses.itemLight": false
+        }
+      ]
+    }
+  ]
+}

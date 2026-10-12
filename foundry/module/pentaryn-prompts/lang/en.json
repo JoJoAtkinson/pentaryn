@@ -25,6 +25,9 @@
       "edit": "Edit prompt",
       "sees": "sees {n}"
     },
+    "typeahead": {
+      "orphan": "Typed before a prompt box opened and not used: \"{text}\""
+    },
     "keybind": {
       "place": "Place a prompt marker",
       "placeHint": "Drops a prompt marker of your default size under the cursor and opens its text box.",

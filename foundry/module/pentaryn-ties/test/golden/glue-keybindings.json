@@ -1,0 +1,74 @@
+{
+  "pentaryn-ties.showWeb": {
+    "name": "PENTARYN_TIES.keybind.show",
+    "hint": "PENTARYN_TIES.keybind.showHint",
+    "editable": [
+      {
+        "key": "Digit8"
+      }
+    ],
+    "restricted": false,
+    "onDown": "function",
+    "namespace": "pentaryn-ties"
+  },
+  "pentaryn-ties.addTie": {
+    "name": "PENTARYN_TIES.keybind.add",
+    "hint": "PENTARYN_TIES.keybind.addHint",
+    "editable": [
+      {
+        "key": "Digit6"
+      }
+    ],
+    "restricted": false,
+    "onDown": "function",
+    "namespace": "pentaryn-ties"
+  },
+  "pentaryn-ties.fileKnown": {
+    "name": "PENTARYN_TIES.keybind.known",
+    "hint": "PENTARYN_TIES.keybind.knownHint",
+    "editable": [
+      {
+        "key": "Digit5"
+      }
+    ],
+    "restricted": false,
+    "onDown": "function",
+    "namespace": "pentaryn-ties"
+  },
+  "pentaryn-ties.inspect": {
+    "name": "PENTARYN_TIES.keybind.inspect",
+    "hint": "PENTARYN_TIES.keybind.inspectHint",
+    "editable": [
+      {
+        "key": "Digit4"
+      }
+    ],
+    "restricted": false,
+    "onDown": "function",
+    "namespace": "pentaryn-ties"
+  },
+  "pentaryn-ties.showOneTie": {
+    "name": "PENTARYN_TIES.keybind.one",
+    "hint": "PENTARYN_TIES.keybind.oneHint",
+    "editable": [
+      {
+        "key": "Digit7"
+      }
+    ],
+    "restricted": false,
+    "onDown": "function",
+    "namespace": "pentaryn-ties"
+  },
+  "pentaryn-ties.showDescription": {
+    "name": "PENTARYN_TIES.keybind.describe",
+    "hint": "PENTARYN_TIES.keybind.describeHint",
+    "editable": [
+      {
+        "key": "Digit9"
+      }
+    ],
+    "restricted": true,
+    "onDown": "function",
+    "namespace": "pentaryn-ties"
+  }
+}

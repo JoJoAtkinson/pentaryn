@@ -1,0 +1,202 @@
+[
+  {
+    "label": "requestStudy NPC → its kind",
+    "out": true,
+    "calls": [
+      {
+        "op": "DialogV2.prompt",
+        "title": "Study: ZZ Ghoul"
+      },
+      {
+        "op": "Hooks.call",
+        "name": "preUpdateActor"
+      },
+      {
+        "op": "update",
+        "documentName": "Actor",
+        "uuid": "Actor.zzKind0000000001",
+        "changes": {
+          "flags.pentaryn-ties.beliefs.zzPc000000000001.kind": {
+            "claim": "rid0000000000002",
+            "when": 1790000000000
+          }
+        }
+      },
+      {
+        "op": "Hooks.callAll",
+        "name": "updateActor"
+      },
+      {
+        "op": "rollSkill",
+        "actor": "zzPc000000000001",
+        "config": {
+          "skill": "rel",
+          "target": 15,
+          "advantage": true,
+          "disadvantage": false,
+          "rolls": [
+            {
+              "parts": [
+                "@situational"
+              ],
+              "data": {
+                "situational": 3
+              }
+            }
+          ]
+        },
+        "dialog": {
+          "configure": false
+        },
+        "message": {
+          "rollMode": "mapped:blindroll",
+          "data": {
+            "flavor": "Study: ZZ Ghoul (Religion)",
+            "flags": {
+              "dice-so-nice": {
+                "skip": true
+              }
+            }
+          }
+        },
+        "total": 22
+      },
+      {
+        "op": "Hooks.call",
+        "name": "preUpdateActor"
+      },
+      {
+        "op": "update",
+        "documentName": "Actor",
+        "uuid": "Actor.zzKind0000000001",
+        "changes": {
+          "flags.pentaryn-ties.beliefs.zzPc000000000001.kind": {
+            "text": "— Studied (Religion) —\nGrey hunters of the barrow.\nImmune: Poison, Grief. Vulnerable: Fire. Untroubled by: Charmed.",
+            "tier": 20,
+            "total": 22,
+            "when": 1790000000000,
+            "delivered": 1790000000000,
+            "claim": null,
+            "sources": {
+              "adv": 1,
+              "dis": 0,
+              "shared": [],
+              "declared": "advantage",
+              "rule": "raw",
+              "resolved": "advantage"
+            },
+            "pass": true
+          }
+        }
+      },
+      {
+        "op": "Hooks.callAll",
+        "name": "updateActor"
+      },
+      {
+        "op": "Hooks.call",
+        "name": "preUpdateActor"
+      },
+      {
+        "op": "update",
+        "documentName": "Actor",
+        "uuid": "Actor.zzPc000000000001",
+        "changes": {
+          "flags.pentaryn-ties.studied": {
+            "kind": {
+              "zzKind0000000001": {
+                "when": 1790000000000
+              }
+            },
+            "lore": {}
+          },
+          "flags.pentaryn-ties.known": [
+            {
+              "id": "zzKind0000000001",
+              "name": "ZZ Ghoul",
+              "category": "beasts",
+              "notes": "",
+              "imposter": null,
+              "hidden": false,
+              "when": 1790000000000
+            }
+          ],
+          "flags.pentaryn-ties.granted": {
+            "kind:zzKind0000000001": {
+              "text": "— Studied (Religion) —\nGrey hunters of the barrow.\nImmune: Poison, Grief. Vulnerable: Fire. Untroubled by: Charmed.",
+              "when": 1790000000000,
+              "icon": "icons/zz/zzKind0000000001.webp",
+              "source": "ZZ Ghoul"
+            }
+          }
+        }
+      },
+      {
+        "op": "Hooks.callAll",
+        "name": "updateActor"
+      },
+      {
+        "op": "ChatMessage.create",
+        "data": {
+          "content": "<p class=\"pt-study-stub\">ZZ Caven studies ZZ Brakka.</p>",
+          "speaker": {
+            "alias": "ZZ Caven",
+            "actor": "zzPc000000000001"
+          }
+        }
+      },
+      {
+        "op": "notify",
+        "level": "info",
+        "message": "ZZ Caven now knows what a ZZ Ghoul is."
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "requestStudy again (spent)",
+    "out": false,
+    "calls": [
+      {
+        "op": "notify",
+        "level": "warn",
+        "message": "You have already worked out what this is."
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "requestStudy on a kind with no content",
+    "out": false,
+    "calls": [
+      {
+        "op": "notify",
+        "level": "warn",
+        "message": "There is nothing here to work out."
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "requestStudy on LONE (an authored tier only), dialog cancelled",
+    "out": false,
+    "calls": [
+      {
+        "op": "DialogV2.prompt",
+        "title": "Study: ZZ Lone Beast"
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "requestStudy, dialog cancelled (PC2)",
+    "out": false,
+    "calls": [
+      {
+        "op": "DialogV2.prompt",
+        "title": "Study: ZZ Ghoul"
+      }
+    ],
+    "console": []
+  }
+]

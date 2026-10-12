@@ -1,0 +1,57 @@
+{
+  "keys": [
+    [
+      "crops",
+      "function"
+    ],
+    [
+      "ensureMarkers",
+      "function"
+    ],
+    [
+      "gather",
+      "function"
+    ],
+    [
+      "list",
+      "function"
+    ],
+    [
+      "manifests",
+      "function"
+    ],
+    [
+      "model",
+      "function"
+    ],
+    [
+      "open",
+      "function"
+    ],
+    [
+      "place",
+      "function"
+    ],
+    [
+      "replace",
+      "function"
+    ],
+    [
+      "replaceMany",
+      "function"
+    ],
+    [
+      "show",
+      "function"
+    ],
+    [
+      "status",
+      "function"
+    ],
+    [
+      "version",
+      "string"
+    ]
+  ],
+  "version": "0.4.5"
+}

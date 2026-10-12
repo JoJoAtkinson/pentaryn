@@ -1,0 +1,142 @@
+[
+  {
+    "label": "8 with nothing hovered: falls to their one owned token",
+    "out": null,
+    "calls": [],
+    "console": []
+  },
+  {
+    "label": "the cards",
+    "out": null,
+    "calls": [],
+    "console": [],
+    "cards": {
+      "tag": "DIV",
+      "id": "pentaryn-ties-cards",
+      "children": [
+        {
+          "tag": "DIV",
+          "className": "pt-card",
+          "style": {
+            "left": "50px",
+            "top": "0px"
+          },
+          "listeners": [
+            "pointerdown",
+            "pointermove",
+            "pointerup",
+            "pointercancel"
+          ],
+          "children": [
+            {
+              "tag": "IMG",
+              "src": "icons/zz/zzNpc00000000001.webp",
+              "className": "pt-card-art",
+              "listeners": [
+                "error"
+              ]
+            },
+            {
+              "tag": "DIV",
+              "className": "pt-card-body",
+              "children": [
+                {
+                  "tag": "DIV",
+                  "className": "pt-card-word",
+                  "children": [
+                    {
+                      "tag": "SPAN",
+                      "className": "pt-dot",
+                      "style": {
+                        "color": "#e1a53a"
+                      },
+                      "textContent": "●"
+                    },
+                    {
+                      "tag": "SPAN",
+                      "textContent": "debtor"
+                    }
+                  ]
+                },
+                {
+                  "tag": "DIV",
+                  "className": "pt-card-name",
+                  "textContent": "ZZ Brakka"
+                },
+                {
+                  "tag": "DIV",
+                  "className": "pt-card-notes",
+                  "textContent": "Owes forty."
+                }
+              ]
+            },
+            {
+              "tag": "BUTTON",
+              "title": "Close this card",
+              "className": "pt-card-close",
+              "type": "button",
+              "innerHTML": "<i class=\"fa-solid fa-xmark\"></i>",
+              "listeners": [
+                "click"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "label": "8 hovering the NPC (not theirs)",
+    "out": null,
+    "calls": [
+      {
+        "op": "notify",
+        "level": "warn",
+        "message": "Hover your own character's token."
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "7 hovering a token they cannot see",
+    "out": null,
+    "calls": [
+      {
+        "op": "notify",
+        "level": "warn",
+        "message": "Hover the person you want the tie to."
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "7 hovering someone with no tie (not named)",
+    "out": null,
+    "calls": [
+      {
+        "op": "notify",
+        "level": "info",
+        "message": "Nothing recorded between you and them."
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "7 hovering the NPC (their sole token is the source)",
+    "out": null,
+    "calls": [],
+    "console": []
+  },
+  {
+    "label": "8 when every tie is out of sight",
+    "out": null,
+    "calls": [
+      {
+        "op": "notify",
+        "level": "info",
+        "message": "Nobody you know is in sight from here."
+      }
+    ],
+    "console": []
+  }
+]

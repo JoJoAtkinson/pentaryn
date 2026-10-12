@@ -1,0 +1,160 @@
+{
+  "shape": {
+    "tag": "NAV",
+    "className": "pt-look-menu",
+    "style": {
+      "left": "1092px",
+      "top": "752px"
+    },
+    "children": [
+      {
+        "tag": "BUTTON",
+        "dataset": {
+          "tooltip": "Take a moment to look Token zzTokNpc00000001 over."
+        },
+        "type": "button",
+        "innerHTML": "<i class=\"fa-solid fa-eye\"></i> Take a closer look",
+        "listeners": [
+          "click"
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "dataset": {
+          "tooltip": "Open your notebook's page on Token zzTokNpc00000001 without taking another look."
+        },
+        "type": "button",
+        "innerHTML": "<i class=\"fa-solid fa-book-open-reader\"></i> What I know about them",
+        "listeners": [
+          "click"
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "dataset": {
+          "tooltip": "Record what Token zzTokNpc00000001 is to you, or edit the tie you already have. Same as hovering them and pressing 6."
+        },
+        "type": "button",
+        "innerHTML": "<i class=\"fa-solid fa-people-arrows\"></i> Add or edit a tie",
+        "listeners": [
+          "click"
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "dataset": {
+          "tooltip": "Open (or start) Token zzTokNpc00000001's page on your sheet's Known tab, to write your own notes. Same as hovering them and pressing 5."
+        },
+        "type": "button",
+        "innerHTML": "<i class=\"fa-solid fa-feather-pointed\"></i> Write about them in my notebook",
+        "listeners": [
+          "click"
+        ]
+      }
+    ]
+  },
+  "items": [
+    {
+      "item": 0,
+      "label": "<i class=\"fa-solid fa-eye\"></i> Take a closer look",
+      "seen": [
+        "preventDefault",
+        "stopPropagation"
+      ],
+      "menuOpen": false,
+      "calls": [
+        {
+          "op": "app.render",
+          "app": "LookWindow",
+          "opts": {
+            "force": true
+          }
+        },
+        {
+          "op": "ChatMessage.create",
+          "data": {
+            "content": "<p class=\"pt-study-stub\">ZZ Caven studies ZZ Brakka.</p>",
+            "speaker": {
+              "alias": "ZZ Caven",
+              "actor": "zzPc000000000001"
+            }
+          }
+        },
+        {
+          "op": "socket.emit",
+          "args": [
+            "module.pentaryn-ties",
+            {
+              "action": "inspect",
+              "characterId": "zzPc000000000001",
+              "subjectId": "zzNpc00000000001"
+            }
+          ]
+        }
+      ],
+      "console": []
+    },
+    {
+      "item": 1,
+      "label": "<i class=\"fa-solid fa-book-open-reader\"></i> What I know about them",
+      "seen": [
+        "preventDefault",
+        "stopPropagation"
+      ],
+      "menuOpen": false,
+      "calls": [
+        {
+          "op": "app.render",
+          "app": "LookWindow",
+          "opts": {
+            "force": true
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "item": 2,
+      "label": "<i class=\"fa-solid fa-people-arrows\"></i> Add or edit a tie",
+      "seen": [
+        "preventDefault",
+        "stopPropagation"
+      ],
+      "menuOpen": false,
+      "calls": [
+        {
+          "op": "app.render",
+          "app": "TieDialog",
+          "opts": true
+        }
+      ],
+      "console": []
+    },
+    {
+      "item": 3,
+      "label": "<i class=\"fa-solid fa-feather-pointed\"></i> Write about them in my notebook",
+      "seen": [
+        "preventDefault",
+        "stopPropagation"
+      ],
+      "menuOpen": false,
+      "calls": [
+        {
+          "op": "sheet.render",
+          "actor": "zzPc000000000001",
+          "force": true,
+          "tab": "known"
+        }
+      ],
+      "console": []
+    }
+  ],
+  "closers": {
+    "pointerdownInside": true,
+    "pointerdownOutside": false,
+    "enter": true,
+    "escape": false,
+    "canvasPan": false,
+    "canvasTearDown": false
+  }
+}

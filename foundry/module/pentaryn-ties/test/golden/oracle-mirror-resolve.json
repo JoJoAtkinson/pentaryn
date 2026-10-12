@@ -1,0 +1,156 @@
+[
+  {
+    "label": "typed text into a blank box",
+    "args": [
+      "new words",
+      "",
+      "mine",
+      "rev",
+      "mine-before"
+    ],
+    "out": {
+      "value": "new words",
+      "followed": false
+    }
+  },
+  {
+    "label": "typed text into a seeded box",
+    "args": [
+      "new words",
+      "their old",
+      "mine",
+      "their now",
+      "mine-before"
+    ],
+    "out": {
+      "value": "new words",
+      "followed": false
+    }
+  },
+  {
+    "label": "untouched seeded box (their text stands, as it reads NOW)",
+    "args": [
+      "their old",
+      "their old",
+      "mine",
+      "their now",
+      "mine-before"
+    ],
+    "out": {
+      "value": "their now",
+      "followed": false
+    }
+  },
+  {
+    "label": "seeded box emptied (re-link)",
+    "args": [
+      "",
+      "their old",
+      "mine",
+      "their now",
+      "mine-before"
+    ],
+    "out": {
+      "value": "mine",
+      "followed": true
+    }
+  },
+  {
+    "label": "blank box, rev blank (linked)",
+    "args": [
+      "",
+      "",
+      "mine",
+      "",
+      "mine-before"
+    ],
+    "out": {
+      "value": "mine",
+      "followed": true
+    }
+  },
+  {
+    "label": "blank box, rev = prevMine (linked)",
+    "args": [
+      "",
+      "",
+      "mine",
+      "mine-before",
+      "mine-before"
+    ],
+    "out": {
+      "value": "mine",
+      "followed": true
+    }
+  },
+  {
+    "label": "blank box, rev = prevMine modulo whitespace",
+    "args": [
+      "",
+      "",
+      "mine",
+      "  mine-before ",
+      "mine-before"
+    ],
+    "out": {
+      "value": "mine",
+      "followed": true
+    }
+  },
+  {
+    "label": "blank box, rev diverged behind our back",
+    "args": [
+      "",
+      "",
+      "mine",
+      "their own",
+      "mine-before"
+    ],
+    "out": {
+      "value": "their own",
+      "followed": false
+    }
+  },
+  {
+    "label": "whitespace-only typed into a blank box",
+    "args": [
+      "   ",
+      "",
+      "mine",
+      "their own",
+      "mine-before"
+    ],
+    "out": {
+      "value": "their own",
+      "followed": false
+    }
+  },
+  {
+    "label": "whitespace-only typed over a seeded box",
+    "args": [
+      "   ",
+      "their old",
+      "mine",
+      "their now",
+      "mine-before"
+    ],
+    "out": {
+      "value": "mine",
+      "followed": true
+    }
+  },
+  {
+    "label": "undefined box and seed",
+    "args": [
+      null,
+      null,
+      "mine",
+      "",
+      null
+    ],
+    "out": {
+      "value": "mine",
+      "followed": true
+    }
+  }
+]

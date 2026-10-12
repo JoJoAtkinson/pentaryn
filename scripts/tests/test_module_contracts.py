@@ -1,5 +1,5 @@
 """transform-creatures-21: pentaryn-transform writes flags.pentaryn-senses.light (STARRY_LIGHT) on the
-Starry Form item; pentaryn-senses' carried-light reader (light-core.mjs carriedLightOf) must keep
+Starry Form item; pentaryn-senses' carried-light reader (core/light.mjs carriedLightOf) must keep
 turning exactly that flag into the token's light. Both cores are pure, so node imports them bare."""
 import json
 import shutil
@@ -10,7 +10,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
 TRANSFORM = ROOT / "foundry/module/pentaryn-transform/transform-core.mjs"
-SENSES = ROOT / "foundry/module/pentaryn-senses/light-core.mjs"
+SENSES = ROOT / "foundry/module/pentaryn-senses/core/light.mjs"
 
 SCRIPT = """
 const t = await import(process.argv[1]);

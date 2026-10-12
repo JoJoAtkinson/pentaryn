@@ -3,16 +3,18 @@
  */
 
 import { MODULE, VERSION, GATHER_CHARS, buildView, renderGather, codedError, idCompare, sceneRefs, CURRENT_SCENE } from "./geometry-core.mjs";
-import { sceneModel, promptTokens, resolveItemEmbeds } from "./model.mjs";
-import { promptText } from "./markers.mjs";
-import { renderCrops } from "./crops.mjs";
-import { cropsDecision } from "./build-core.mjs";
+import { sceneModel, promptTokens, resolveItemEmbeds } from "./scene-adapter.mjs";
+import { promptText } from "./markers-adapter.mjs";
+import { renderCrops } from "./crops-adapter.mjs";
+import { cropsDecision } from "./core/text.mjs";
+import { pageScenes } from "./core/paging.mjs";
+import { setting, manifests, manifestFor, storeManifest } from "./settings.mjs";
+import { CROP_DIR } from "./prompts-core.mjs";
+import { gatherLogLine, gatherPhaseLine } from "./core/log-lines.mjs";
+import { makeLog } from "./lib/log.mjs";
 
-const RING = 5;
+const log = makeLog(MODULE);
 
-const setting = (key, fallback) => {
-  try { return game.settings.get(MODULE, key) ?? fallback; } catch { return fallback; }
-};
 
 /** Scenes in navigation order, then name — the order s# follows. */
 export function scenesInNavOrder() {
@@ -31,11 +33,11 @@ export function resolveScene(ref) {
     ?? game.scenes.find(x => (x.navName ?? "").toLowerCase() === s.toLowerCase()) ?? null;
 }
 
-function pickScenes(scenes, from) {
+function pickScenes(scenes, from, countOf) {
   let list;
   const refs = sceneRefs(scenes);
   if (refs === "all") {
-    list = scenesInNavOrder().filter(s => promptTokens(s).length > 0);
+    list = scenesInNavOrder().filter(s => countOf(s) > 0);
   } else {
     const seen = new Set();
     list = [];
@@ -59,23 +61,9 @@ function pickScenes(scenes, from) {
   return list;
 }
 
-/* ── The manifest ring (hidden world setting `lastCalls`) ───────────────── */
+/* ── The manifest ring lives in settings.mjs (hidden world setting `lastCalls`) ── */
 
-export function manifests() {
-  const v = setting("lastCalls", []);
-  return Array.isArray(v) ? v : [];
-}
-
-export function manifestFor(call) {
-  return manifests().find(m => m?.call === call) ?? null;
-}
-
-async function storeManifest(manifest) {
-  if (!game.user?.isGM) return;
-  const ring = manifests().filter(m => m?.call !== manifest.call);
-  ring.unshift(manifest);
-  await game.settings.set(MODULE, "lastCalls", ring.slice(0, RING));
-}
+export { manifests, manifestFor };
 
 /* ── gather ─────────────────────────────────────────────────────────────── */
 
@@ -93,28 +81,33 @@ export async function gather(opts = {}) {
   const party = partyArg ?? worldParty;
   const partySource = partyArg ? "call" : worldParty ? "setting" : null;
   const t0 = performance.now();
-  const list = pickScenes(scenes, from);
+  // each scene's prompt count once (prompts-lookup-23): the "all" filter and the paging share it
+  const counted = new Map();
+  const countOf = s => {
+    if (!counted.has(s.id)) counted.set(s.id, promptTokens(s).length);
+    return counted.get(s.id);
+  };
+  const list = pickScenes(scenes, from, countOf);
 
   // Page by prompt count: always at least one scene, never past maxPrompts after the first.
-  const models = [];
-  let total = 0, next = null;
-  for (let i = 0; i < list.length; i++) {
-    const n = promptTokens(list[i]).length;
-    if (models.length && total + n > maxPrompts) { next = list[i].id; break; }
-    models.push(sceneModel(list[i], { builtWithoutProvenance }));
-    total += n;
-  }
+  const page = pageScenes(list.map(countOf), maxPrompts);
+  const models = list.slice(0, page.take).map(s => sceneModel(s, { builtWithoutProvenance }));
+  const tModel = performance.now();
+  const next = page.next === null ? null : list[page.next].id;
   // a compendium monster's biography is often only `@Embed[<page>]`: print the page's words instead
   await Promise.all(models.map(m => resolveItemEmbeds(m.items)));
+  const tEmbeds = performance.now();
 
   // crops only where there is a picture: a scene with no background image or tiles crops to grey
   const cropPlan = cropsDecision(crops, models.map(m => ({ hasArt: sceneHasArt(game.scenes.get(m.key)) })));
   const { view, manifest } = buildView(models, { unseenWithinFt, next, party, partySource, cropsNote: cropPlan.note });
   const text = renderGather(view, { chars });
+  const tRender = performance.now();
   manifest.at = Date.now();
   // ids only: an API caller may pass Scene documents, and this lands in a world setting
   manifest.opts = { scenes: Array.isArray(scenes) ? list.map(s => s.id) : scenes, unseenWithinFt, chars, party: view.party };
   await storeManifest(manifest);
+  const tStore = performance.now();
 
   const wantCrops = cropPlan.want;
   let images = [];
@@ -124,8 +117,12 @@ export async function gather(opts = {}) {
     images = await renderCrops(manifest, ids, { longSide: setting("cropLongSidePx", 768) });
     if (cropsAs === "files") images = await cropsToFiles(manifest.call, images);
   }
-  const ms = Math.round(performance.now() - t0);
-  console.log(`${MODULE} | gather ${manifest.call}: ${view.counts.prompts} prompts on ${view.counts.scenes} scene(s), ${images.length} crop(s), ${ms} ms`);
+  const tEnd = performance.now();
+  const ms = Math.round(tEnd - t0);
+  console.log(`${MODULE} | ${gatherLogLine({ call: manifest.call, prompts: view.counts.prompts, scenes: view.counts.scenes, crops: images.length, ms })}`);
+  // where the time went and the manifest's stored size: built only with CONFIG.debug on
+  log.debug$?.(gatherPhaseLine({ call: manifest.call, bytes: new TextEncoder().encode(JSON.stringify(manifest)).length,
+    phases: { model: tModel - t0, embeds: tEmbeds - tModel, render: tRender - tEmbeds, store: tStore - tRender, crops: tEnd - tStore } }));
   return { call: manifest.call, text, counts: view.counts, manifest, crops: images, next, ms, version: VERSION,
     party: view.party ?? null, partySource: view.partySource ?? null, cropsNote: cropPlan.note };
 }
@@ -141,8 +138,7 @@ function sceneHasArt(scene) {
   } catch { return true; }
 }
 
-/** Where crop files go under the Foundry Data directory (see the playbook for the absolute path). */
-export const CROP_DIR = "pentaryn-prompts-crops";
+export { CROP_DIR };
 
 /**
  * Upload crops to `Data/pentaryn-prompts-crops/<call>/E1.webp` and return paths instead of base64.
@@ -152,8 +148,8 @@ export const CROP_DIR = "pentaryn-prompts-crops";
 async function cropsToFiles(call, images) {
   const FP = foundry.applications?.apps?.FilePicker?.implementation ?? globalThis.FilePicker;
   const dir = `${CROP_DIR}/${call}`;
-  try { await FP.createDirectory("data", CROP_DIR); } catch { /* exists */ }
-  try { await FP.createDirectory("data", dir); } catch { /* exists */ }
+  try { await FP.createDirectory("data", CROP_DIR); } catch (err) { log.debug(`crop dir ${CROP_DIR} (exists)`, err); }
+  try { await FP.createDirectory("data", dir); } catch (err) { log.debug(`crop dir ${dir} (exists)`, err); }
   const out = [];
   for (const c of images) {
     if (!c?.png) { out.push(c); continue; }
@@ -227,7 +223,7 @@ export async function show(args = {}) {
   if (canvas?.scene?.id !== scene.id) await scene.view();
   const { x, y } = docCentre(doc, scene.dimensions.size);
   await canvas.animatePan({ x, y, scale: Math.max(canvas.stage?.scale?.x ?? 1, 0.8), duration: 400 });
-  try { canvas.ping({ x, y }); } catch { /* pings are a nicety */ }
+  try { canvas.ping({ x, y }); } catch (err) { log.debug("show: ping (a nicety)", err); }
   return { ok: true, sceneId: scene.id, x: Math.round(x), y: Math.round(y) };
 }
 

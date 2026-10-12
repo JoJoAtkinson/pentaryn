@@ -1,0 +1,36 @@
+{
+  "gm": [
+    {
+      "id": "zzActorB00000001",
+      "name": "ZZ Birch",
+      "img": "icons/zz/zzActorB00000001.webp",
+      "word": "ward",
+      "notes": "",
+      "stance": 2,
+      "strength": 3,
+      "mutual": true
+    },
+    {
+      "id": "zzLegacy00000001",
+      "name": "ZZ Legacy",
+      "img": "icons/zz/zzLegacy00000001.webp",
+      "word": "old",
+      "notes": "",
+      "stance": 0,
+      "strength": 3,
+      "mutual": false
+    },
+    {
+      "id": "zzLocked00000001",
+      "name": "ZZ Locked",
+      "img": "icons/zz/zzLocked00000001.webp",
+      "word": "watcher",
+      "notes": "",
+      "stance": 0,
+      "strength": 3,
+      "mutual": false
+    }
+  ],
+  "player": [],
+  "none": []
+}

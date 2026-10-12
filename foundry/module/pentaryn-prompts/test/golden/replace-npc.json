@@ -1,0 +1,28 @@
+{
+  "text": [
+    "replace (by marker) — real run: 1 ok, 0 failed",
+    "s1/n1 → Token \"Ogre\" [<id1>] @1600,1200 2x2, Actor \"Ogre\" [<id2>]; markerDeleted=true",
+    "  s1/n1 WARN: recharge: no \"Rock\" on Ogre",
+    "remaining: s1=2"
+  ],
+  "updates": [
+    {
+      "name": "Ogre",
+      "prototypeToken.name": "Ogre"
+    },
+    {
+      "flags.pentaryn-prompts.provenance": {
+        "prompt": "an ogre",
+        "size": "large",
+        "footprint": "2x2",
+        "sceneId": "s1",
+        "markerId": "n1",
+        "call": null,
+        "pid": null,
+        "at": 1760000000000,
+        "kind": "npc",
+        "note": ""
+      }
+    }
+  ]
+}

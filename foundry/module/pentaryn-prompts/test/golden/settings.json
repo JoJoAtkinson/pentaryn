@@ -1,0 +1,158 @@
+[
+  {
+    "id": "pentaryn-prompts.panelRows",
+    "name": "PENTARYN_PROMPTS.settings.panelRows.name",
+    "hint": "PENTARYN_PROMPTS.settings.panelRows.hint",
+    "scope": "world",
+    "config": true,
+    "type": "Number",
+    "default": 12,
+    "range": {
+      "min": 3,
+      "max": 40,
+      "step": 1
+    },
+    "choices": null
+  },
+  {
+    "id": "pentaryn-prompts.panelChars",
+    "name": "PENTARYN_PROMPTS.settings.panelChars.name",
+    "hint": "PENTARYN_PROMPTS.settings.panelChars.hint",
+    "scope": "world",
+    "config": true,
+    "type": "Number",
+    "default": 90,
+    "range": {
+      "min": 30,
+      "max": 300,
+      "step": 10
+    },
+    "choices": null
+  },
+  {
+    "id": "pentaryn-prompts.gatherChars",
+    "name": "PENTARYN_PROMPTS.settings.gatherChars.name",
+    "hint": "PENTARYN_PROMPTS.settings.gatherChars.hint",
+    "scope": "world",
+    "config": true,
+    "type": "Number",
+    "default": 400,
+    "range": {
+      "min": 60,
+      "max": 1200,
+      "step": 20
+    },
+    "choices": null
+  },
+  {
+    "id": "pentaryn-prompts.unseenWithinFt",
+    "name": "PENTARYN_PROMPTS.settings.unseenWithinFt.name",
+    "hint": "PENTARYN_PROMPTS.settings.unseenWithinFt.hint",
+    "scope": "world",
+    "config": true,
+    "type": "Number",
+    "default": 60,
+    "range": {
+      "min": 0,
+      "max": 300,
+      "step": 5
+    },
+    "choices": null
+  },
+  {
+    "id": "pentaryn-prompts.cropMaxPerCall",
+    "name": "PENTARYN_PROMPTS.settings.cropMaxPerCall.name",
+    "hint": "PENTARYN_PROMPTS.settings.cropMaxPerCall.hint",
+    "scope": "world",
+    "config": true,
+    "type": "Number",
+    "default": 6,
+    "range": {
+      "min": 0,
+      "max": 12,
+      "step": 1
+    },
+    "choices": null
+  },
+  {
+    "id": "pentaryn-prompts.cropLongSidePx",
+    "name": "PENTARYN_PROMPTS.settings.cropLongSidePx.name",
+    "hint": "PENTARYN_PROMPTS.settings.cropLongSidePx.hint",
+    "scope": "world",
+    "config": true,
+    "type": "Number",
+    "default": 768,
+    "range": {
+      "min": 256,
+      "max": 1568,
+      "step": 64
+    },
+    "choices": null
+  },
+  {
+    "id": "pentaryn-prompts.cropsDefault",
+    "name": "PENTARYN_PROMPTS.settings.cropsDefault.name",
+    "hint": "PENTARYN_PROMPTS.settings.cropsDefault.hint",
+    "scope": "world",
+    "config": true,
+    "type": "String",
+    "default": "auto",
+    "range": null,
+    "choices": {
+      "auto": "PENTARYN_PROMPTS.settings.cropsDefault.auto",
+      "on": "PENTARYN_PROMPTS.settings.cropsDefault.on",
+      "off": "PENTARYN_PROMPTS.settings.cropsDefault.off"
+    }
+  },
+  {
+    "id": "pentaryn-prompts.party",
+    "name": "PENTARYN_PROMPTS.settings.party.name",
+    "hint": "PENTARYN_PROMPTS.settings.party.hint",
+    "scope": "world",
+    "config": true,
+    "type": "String",
+    "default": "",
+    "range": null,
+    "choices": null
+  },
+  {
+    "id": "pentaryn-prompts.deleteEmptyOnClose",
+    "name": "PENTARYN_PROMPTS.settings.deleteEmptyOnClose.name",
+    "hint": "PENTARYN_PROMPTS.settings.deleteEmptyOnClose.hint",
+    "scope": "world",
+    "config": true,
+    "type": "Boolean",
+    "default": true,
+    "range": null,
+    "choices": null
+  },
+  {
+    "id": "pentaryn-prompts.defaultSize",
+    "name": "PENTARYN_PROMPTS.settings.defaultSize.name",
+    "hint": "PENTARYN_PROMPTS.settings.defaultSize.hint",
+    "scope": "client",
+    "config": true,
+    "type": "String",
+    "default": "mid",
+    "range": null,
+    "choices": {
+      "tiny": "tiny",
+      "small": "small",
+      "mid": "mid",
+      "large": "large",
+      "xl": "xl",
+      "xxl": "xxl"
+    }
+  },
+  {
+    "id": "pentaryn-prompts.lastCalls",
+    "name": null,
+    "hint": null,
+    "scope": "world",
+    "config": false,
+    "type": "Array",
+    "default": [],
+    "range": null,
+    "choices": null
+  }
+]

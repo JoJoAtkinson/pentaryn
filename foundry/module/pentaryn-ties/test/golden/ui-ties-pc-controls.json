@@ -1,0 +1,1387 @@
+{
+  "inventory": [
+    {
+      "nth": 0,
+      "tag": "DIV",
+      "className": "pt-summary",
+      "dataset": {
+        "action": "toggle",
+        "tooltip": "Click to open and edit this tie"
+      },
+      "events": [
+        "click",
+        "keydown"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "DIV",
+      "className": "pt-detail-wrap",
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "INPUT",
+      "className": "pt-word-input",
+      "dataset": {
+        "field": "word"
+      },
+      "events": [
+        "change"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "SELECT",
+      "className": "pt-stance",
+      "dataset": {
+        "field": "stance"
+      },
+      "events": [
+        "change"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-pip fill",
+      "dataset": {
+        "action": "strength",
+        "n": "1",
+        "tooltip": "Set strength to 1 of 5"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-pip fill",
+      "dataset": {
+        "action": "strength",
+        "n": "2",
+        "tooltip": "Set strength to 2 of 5"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-pip fill",
+      "dataset": {
+        "action": "strength",
+        "n": "3",
+        "tooltip": "Set strength to 3 of 5"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-pip fill",
+      "dataset": {
+        "action": "strength",
+        "n": "4",
+        "tooltip": "Set strength to 4 of 5"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-pip",
+      "dataset": {
+        "action": "strength",
+        "n": "5",
+        "tooltip": "Set strength to 5 of 5"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "TEXTAREA",
+      "className": "pt-notes-text",
+      "dataset": {
+        "field": "notes"
+      },
+      "events": [
+        "change",
+        "input",
+        "blur"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "action": "open",
+        "id": "zzNpc00000000001"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn pt-del",
+      "dataset": {
+        "action": "remove",
+        "id": "zzNpc00000000001"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "action": "edit-theirs",
+        "id": "zzNpc00000000001"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 1,
+      "tag": "DIV",
+      "className": "pt-summary",
+      "dataset": {
+        "action": "toggle",
+        "tooltip": "Click to open and edit this tie"
+      },
+      "events": [
+        "click",
+        "keydown"
+      ]
+    },
+    {
+      "nth": 1,
+      "tag": "DIV",
+      "className": "pt-detail-wrap",
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 1,
+      "tag": "INPUT",
+      "className": "pt-word-input",
+      "dataset": {
+        "field": "word"
+      },
+      "events": [
+        "change"
+      ]
+    },
+    {
+      "nth": 1,
+      "tag": "SELECT",
+      "className": "pt-stance",
+      "dataset": {
+        "field": "stance"
+      },
+      "events": [
+        "change"
+      ]
+    },
+    {
+      "nth": 1,
+      "tag": "BUTTON",
+      "className": "pt-pip fill",
+      "dataset": {
+        "action": "strength",
+        "n": "1",
+        "tooltip": "Set strength to 1 of 5"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 1,
+      "tag": "BUTTON",
+      "className": "pt-pip fill",
+      "dataset": {
+        "action": "strength",
+        "n": "2",
+        "tooltip": "Set strength to 2 of 5"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 1,
+      "tag": "BUTTON",
+      "className": "pt-pip",
+      "dataset": {
+        "action": "strength",
+        "n": "3",
+        "tooltip": "Set strength to 3 of 5"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 1,
+      "tag": "BUTTON",
+      "className": "pt-pip",
+      "dataset": {
+        "action": "strength",
+        "n": "4",
+        "tooltip": "Set strength to 4 of 5"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 1,
+      "tag": "BUTTON",
+      "className": "pt-pip",
+      "dataset": {
+        "action": "strength",
+        "n": "5",
+        "tooltip": "Set strength to 5 of 5"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 1,
+      "tag": "TEXTAREA",
+      "className": "pt-notes-text",
+      "dataset": {
+        "field": "notes"
+      },
+      "events": [
+        "change",
+        "input",
+        "blur"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn pt-del",
+      "dataset": {
+        "action": "remove",
+        "id": "zzGone0000000001"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-add-btn",
+      "dataset": {
+        "action": "add"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "SELECT",
+      "dataset": {
+        "action": "set-kind"
+      },
+      "events": [
+        "click"
+      ],
+      "delegated": true
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-add-btn",
+      "dataset": {
+        "action": "lore-add"
+      },
+      "events": [
+        "click"
+      ],
+      "delegated": true
+    }
+  ],
+  "rows": [
+    {
+      "nth": 0,
+      "tag": "DIV",
+      "className": "pt-summary",
+      "dataset": {
+        "action": "toggle",
+        "tooltip": "Click to open and edit this tie"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-summary",
+        "parent": "pt-row pt-open"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "DIV",
+      "className": "pt-summary",
+      "dataset": {
+        "action": "toggle",
+        "tooltip": "Click to open and edit this tie"
+      },
+      "type": "keydown",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-summary",
+        "parent": "pt-row"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "DIV",
+      "className": "pt-detail-wrap",
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-detail-wrap",
+        "parent": "pt-row",
+        "hidden": true
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "INPUT",
+      "className": "pt-word-input",
+      "dataset": {
+        "field": "word"
+      },
+      "type": "change",
+      "calls": [
+        {
+          "op": "update",
+          "documentName": "Actor",
+          "uuid": "Actor.zzPc000000000001",
+          "changes": {
+            "flags.pentaryn-ties.ties": [
+              {
+                "id": "zzNpc00000000001",
+                "name": "ZZ Brakka",
+                "word": "zz typed word",
+                "notes": "Owes us forty crowns.",
+                "stance": -1,
+                "strength": 4
+              },
+              {
+                "id": "zzGone0000000001",
+                "name": "Old Friend",
+                "word": "lost",
+                "notes": "",
+                "stance": 1,
+                "strength": 2
+              }
+            ]
+          }
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-word-input",
+        "parent": "pt-field",
+        "value": "zz typed word"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "SELECT",
+      "className": "pt-stance",
+      "dataset": {
+        "field": "stance"
+      },
+      "type": "change",
+      "calls": [
+        {
+          "op": "update",
+          "documentName": "Actor",
+          "uuid": "Actor.zzPc000000000001",
+          "changes": {
+            "flags.pentaryn-ties.ties": [
+              {
+                "id": "zzNpc00000000001",
+                "name": "ZZ Brakka",
+                "word": "zz typed word",
+                "notes": "Owes us forty crowns.",
+                "stance": -2,
+                "strength": 4
+              },
+              {
+                "id": "zzGone0000000001",
+                "name": "Old Friend",
+                "word": "lost",
+                "notes": "",
+                "stance": 1,
+                "strength": 2
+              }
+            ]
+          }
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-stance",
+        "parent": "pt-field",
+        "value": "-2"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-pip fill",
+      "dataset": {
+        "action": "strength",
+        "n": "1",
+        "tooltip": "Set strength to 1 of 5"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "update",
+          "documentName": "Actor",
+          "uuid": "Actor.zzPc000000000001",
+          "changes": {
+            "flags.pentaryn-ties.ties": [
+              {
+                "id": "zzNpc00000000001",
+                "name": "ZZ Brakka",
+                "word": "zz typed word",
+                "notes": "Owes us forty crowns.",
+                "stance": -2,
+                "strength": 1
+              },
+              {
+                "id": "zzGone0000000001",
+                "name": "Old Friend",
+                "word": "lost",
+                "notes": "",
+                "stance": 1,
+                "strength": 2
+              }
+            ]
+          }
+        },
+        {
+          "op": "rerender"
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-pip fill",
+        "parent": "pt-pips"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-pip fill",
+      "dataset": {
+        "action": "strength",
+        "n": "2",
+        "tooltip": "Set strength to 2 of 5"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "update",
+          "documentName": "Actor",
+          "uuid": "Actor.zzPc000000000001",
+          "changes": {
+            "flags.pentaryn-ties.ties": [
+              {
+                "id": "zzGone0000000001",
+                "name": "Old Friend",
+                "word": "lost",
+                "notes": "",
+                "stance": 1,
+                "strength": 2
+              },
+              {
+                "id": "zzNpc00000000001",
+                "name": "ZZ Brakka",
+                "word": "zz typed word",
+                "notes": "Owes us forty crowns.",
+                "stance": -2,
+                "strength": 2
+              }
+            ]
+          }
+        },
+        {
+          "op": "rerender"
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-pip",
+        "parent": "pt-pips"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-pip fill",
+      "dataset": {
+        "action": "strength",
+        "n": "3",
+        "tooltip": "Set strength to 3 of 5"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "update",
+          "documentName": "Actor",
+          "uuid": "Actor.zzPc000000000001",
+          "changes": {
+            "flags.pentaryn-ties.ties": [
+              {
+                "id": "zzGone0000000001",
+                "name": "Old Friend",
+                "word": "lost",
+                "notes": "",
+                "stance": 1,
+                "strength": 2
+              },
+              {
+                "id": "zzNpc00000000001",
+                "name": "ZZ Brakka",
+                "word": "zz typed word",
+                "notes": "Owes us forty crowns.",
+                "stance": -2,
+                "strength": 3
+              }
+            ]
+          }
+        },
+        {
+          "op": "rerender"
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-pip",
+        "parent": "pt-pips"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-pip fill",
+      "dataset": {
+        "action": "strength",
+        "n": "4",
+        "tooltip": "Set strength to 4 of 5"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "update",
+          "documentName": "Actor",
+          "uuid": "Actor.zzPc000000000001",
+          "changes": {
+            "flags.pentaryn-ties.ties": [
+              {
+                "id": "zzNpc00000000001",
+                "name": "ZZ Brakka",
+                "word": "zz typed word",
+                "notes": "Owes us forty crowns.",
+                "stance": -2,
+                "strength": 4
+              },
+              {
+                "id": "zzGone0000000001",
+                "name": "Old Friend",
+                "word": "lost",
+                "notes": "",
+                "stance": 1,
+                "strength": 2
+              }
+            ]
+          }
+        },
+        {
+          "op": "rerender"
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-pip",
+        "parent": "pt-pips"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-pip",
+      "dataset": {
+        "action": "strength",
+        "n": "5",
+        "tooltip": "Set strength to 5 of 5"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "update",
+          "documentName": "Actor",
+          "uuid": "Actor.zzPc000000000001",
+          "changes": {
+            "flags.pentaryn-ties.ties": [
+              {
+                "id": "zzNpc00000000001",
+                "name": "ZZ Brakka",
+                "word": "zz typed word",
+                "notes": "Owes us forty crowns.",
+                "stance": -2,
+                "strength": 5
+              },
+              {
+                "id": "zzGone0000000001",
+                "name": "Old Friend",
+                "word": "lost",
+                "notes": "",
+                "stance": 1,
+                "strength": 2
+              }
+            ]
+          }
+        },
+        {
+          "op": "rerender"
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-pip",
+        "parent": "pt-pips"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "TEXTAREA",
+      "className": "pt-notes-text",
+      "dataset": {
+        "field": "notes"
+      },
+      "type": "change",
+      "calls": [
+        {
+          "op": "update",
+          "documentName": "Actor",
+          "uuid": "Actor.zzPc000000000001",
+          "changes": {
+            "flags.pentaryn-ties.ties": [
+              {
+                "id": "zzNpc00000000001",
+                "name": "ZZ Brakka",
+                "word": "zz typed word",
+                "notes": "zz typed notes",
+                "stance": -2,
+                "strength": 5
+              },
+              {
+                "id": "zzGone0000000001",
+                "name": "Old Friend",
+                "word": "lost",
+                "notes": "",
+                "stance": 1,
+                "strength": 2
+              }
+            ]
+          }
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-notes-text",
+        "parent": "pt-field pt-field-notes",
+        "value": "zz typed notes"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "TEXTAREA",
+      "className": "pt-notes-text",
+      "dataset": {
+        "field": "notes"
+      },
+      "type": "input",
+      "calls": [
+        {
+          "op": "update",
+          "documentName": "Actor",
+          "uuid": "Actor.zzPc000000000001",
+          "changes": {
+            "flags.pentaryn-ties.ties": [
+              {
+                "id": "zzNpc00000000001",
+                "name": "ZZ Brakka",
+                "word": "zz typed word",
+                "notes": "zz typed notes",
+                "stance": -2,
+                "strength": 5
+              },
+              {
+                "id": "zzGone0000000001",
+                "name": "Old Friend",
+                "word": "lost",
+                "notes": "",
+                "stance": 1,
+                "strength": 2
+              }
+            ]
+          }
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-notes-text",
+        "parent": "pt-field pt-field-notes",
+        "value": "zz typed notes"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "TEXTAREA",
+      "className": "pt-notes-text",
+      "dataset": {
+        "field": "notes"
+      },
+      "type": "blur",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-notes-text",
+        "parent": "pt-field pt-field-notes",
+        "value": "zz typed notes"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "action": "open",
+        "id": "zzNpc00000000001"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "sheet.render",
+          "actor": "zzNpc00000000001",
+          "force": true,
+          "tab": "details"
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-textbtn",
+        "parent": "pt-detail-actions"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn pt-del",
+      "dataset": {
+        "action": "remove",
+        "id": "zzNpc00000000001"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "DialogV2.confirm",
+          "title": "Remove tie",
+          "content": "<p>Remove the tie between ZZ Caven and ZZ Brakka, in both directions?</p><p class=\"notification warning\">The notes written on this tie go with it.</p>"
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-textbtn pt-del",
+        "parent": "pt-detail-actions"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "action": "edit-theirs",
+        "id": "zzNpc00000000001"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "app.render",
+          "app": "TieDialog",
+          "opts": true
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-textbtn",
+        "parent": "pt-detail-actions"
+      }
+    },
+    {
+      "nth": 1,
+      "tag": "DIV",
+      "className": "pt-summary",
+      "dataset": {
+        "action": "toggle",
+        "tooltip": "Click to open and edit this tie"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-summary",
+        "parent": "pt-row pt-missing-row pt-open"
+      }
+    },
+    {
+      "nth": 1,
+      "tag": "DIV",
+      "className": "pt-summary",
+      "dataset": {
+        "action": "toggle",
+        "tooltip": "Click to open and edit this tie"
+      },
+      "type": "keydown",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-summary",
+        "parent": "pt-row pt-missing-row"
+      }
+    },
+    {
+      "nth": 1,
+      "tag": "DIV",
+      "className": "pt-detail-wrap",
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-detail-wrap",
+        "parent": "pt-row pt-missing-row",
+        "hidden": true
+      }
+    },
+    {
+      "nth": 1,
+      "tag": "INPUT",
+      "className": "pt-word-input",
+      "dataset": {
+        "field": "word"
+      },
+      "type": "change",
+      "calls": [
+        {
+          "op": "update",
+          "documentName": "Actor",
+          "uuid": "Actor.zzPc000000000001",
+          "changes": {
+            "flags.pentaryn-ties.ties": [
+              {
+                "id": "zzNpc00000000001",
+                "name": "ZZ Brakka",
+                "word": "zz typed word",
+                "notes": "zz typed notes",
+                "stance": -2,
+                "strength": 5
+              },
+              {
+                "id": "zzGone0000000001",
+                "name": "Old Friend",
+                "word": "zz typed word",
+                "notes": "",
+                "stance": 1,
+                "strength": 2
+              }
+            ]
+          }
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-word-input",
+        "parent": "pt-field",
+        "value": "zz typed word"
+      }
+    },
+    {
+      "nth": 1,
+      "tag": "SELECT",
+      "className": "pt-stance",
+      "dataset": {
+        "field": "stance"
+      },
+      "type": "change",
+      "calls": [
+        {
+          "op": "update",
+          "documentName": "Actor",
+          "uuid": "Actor.zzPc000000000001",
+          "changes": {
+            "flags.pentaryn-ties.ties": [
+              {
+                "id": "zzNpc00000000001",
+                "name": "ZZ Brakka",
+                "word": "zz typed word",
+                "notes": "zz typed notes",
+                "stance": -2,
+                "strength": 5
+              },
+              {
+                "id": "zzGone0000000001",
+                "name": "Old Friend",
+                "word": "zz typed word",
+                "notes": "",
+                "stance": 0,
+                "strength": 2
+              }
+            ]
+          }
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-stance",
+        "parent": "pt-field",
+        "value": "0"
+      }
+    },
+    {
+      "nth": 1,
+      "tag": "BUTTON",
+      "className": "pt-pip fill",
+      "dataset": {
+        "action": "strength",
+        "n": "1",
+        "tooltip": "Set strength to 1 of 5"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "update",
+          "documentName": "Actor",
+          "uuid": "Actor.zzPc000000000001",
+          "changes": {
+            "flags.pentaryn-ties.ties": [
+              {
+                "id": "zzNpc00000000001",
+                "name": "ZZ Brakka",
+                "word": "zz typed word",
+                "notes": "zz typed notes",
+                "stance": -2,
+                "strength": 5
+              },
+              {
+                "id": "zzGone0000000001",
+                "name": "Old Friend",
+                "word": "zz typed word",
+                "notes": "",
+                "stance": 0,
+                "strength": 1
+              }
+            ]
+          }
+        },
+        {
+          "op": "rerender"
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-pip fill",
+        "parent": "pt-pips"
+      }
+    },
+    {
+      "nth": 1,
+      "tag": "BUTTON",
+      "className": "pt-pip fill",
+      "dataset": {
+        "action": "strength",
+        "n": "2",
+        "tooltip": "Set strength to 2 of 5"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "update",
+          "documentName": "Actor",
+          "uuid": "Actor.zzPc000000000001",
+          "changes": {
+            "flags.pentaryn-ties.ties": [
+              {
+                "id": "zzNpc00000000001",
+                "name": "ZZ Brakka",
+                "word": "zz typed word",
+                "notes": "zz typed notes",
+                "stance": -2,
+                "strength": 5
+              },
+              {
+                "id": "zzGone0000000001",
+                "name": "Old Friend",
+                "word": "zz typed word",
+                "notes": "",
+                "stance": 0,
+                "strength": 2
+              }
+            ]
+          }
+        },
+        {
+          "op": "rerender"
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-pip",
+        "parent": "pt-pips"
+      }
+    },
+    {
+      "nth": 1,
+      "tag": "BUTTON",
+      "className": "pt-pip",
+      "dataset": {
+        "action": "strength",
+        "n": "3",
+        "tooltip": "Set strength to 3 of 5"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "update",
+          "documentName": "Actor",
+          "uuid": "Actor.zzPc000000000001",
+          "changes": {
+            "flags.pentaryn-ties.ties": [
+              {
+                "id": "zzNpc00000000001",
+                "name": "ZZ Brakka",
+                "word": "zz typed word",
+                "notes": "zz typed notes",
+                "stance": -2,
+                "strength": 5
+              },
+              {
+                "id": "zzGone0000000001",
+                "name": "Old Friend",
+                "word": "zz typed word",
+                "notes": "",
+                "stance": 0,
+                "strength": 3
+              }
+            ]
+          }
+        },
+        {
+          "op": "rerender"
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-pip",
+        "parent": "pt-pips"
+      }
+    },
+    {
+      "nth": 1,
+      "tag": "BUTTON",
+      "className": "pt-pip",
+      "dataset": {
+        "action": "strength",
+        "n": "4",
+        "tooltip": "Set strength to 4 of 5"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "update",
+          "documentName": "Actor",
+          "uuid": "Actor.zzPc000000000001",
+          "changes": {
+            "flags.pentaryn-ties.ties": [
+              {
+                "id": "zzNpc00000000001",
+                "name": "ZZ Brakka",
+                "word": "zz typed word",
+                "notes": "zz typed notes",
+                "stance": -2,
+                "strength": 5
+              },
+              {
+                "id": "zzGone0000000001",
+                "name": "Old Friend",
+                "word": "zz typed word",
+                "notes": "",
+                "stance": 0,
+                "strength": 4
+              }
+            ]
+          }
+        },
+        {
+          "op": "rerender"
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-pip",
+        "parent": "pt-pips"
+      }
+    },
+    {
+      "nth": 1,
+      "tag": "BUTTON",
+      "className": "pt-pip",
+      "dataset": {
+        "action": "strength",
+        "n": "5",
+        "tooltip": "Set strength to 5 of 5"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "update",
+          "documentName": "Actor",
+          "uuid": "Actor.zzPc000000000001",
+          "changes": {
+            "flags.pentaryn-ties.ties": [
+              {
+                "id": "zzNpc00000000001",
+                "name": "ZZ Brakka",
+                "word": "zz typed word",
+                "notes": "zz typed notes",
+                "stance": -2,
+                "strength": 5
+              },
+              {
+                "id": "zzGone0000000001",
+                "name": "Old Friend",
+                "word": "zz typed word",
+                "notes": "",
+                "stance": 0,
+                "strength": 5
+              }
+            ]
+          }
+        },
+        {
+          "op": "rerender"
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-pip",
+        "parent": "pt-pips"
+      }
+    },
+    {
+      "nth": 1,
+      "tag": "TEXTAREA",
+      "className": "pt-notes-text",
+      "dataset": {
+        "field": "notes"
+      },
+      "type": "change",
+      "calls": [
+        {
+          "op": "update",
+          "documentName": "Actor",
+          "uuid": "Actor.zzPc000000000001",
+          "changes": {
+            "flags.pentaryn-ties.ties": [
+              {
+                "id": "zzGone0000000001",
+                "name": "Old Friend",
+                "word": "zz typed word",
+                "notes": "zz typed notes",
+                "stance": 0,
+                "strength": 5
+              },
+              {
+                "id": "zzNpc00000000001",
+                "name": "ZZ Brakka",
+                "word": "zz typed word",
+                "notes": "zz typed notes",
+                "stance": -2,
+                "strength": 5
+              }
+            ]
+          }
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-notes-text",
+        "parent": "pt-field pt-field-notes",
+        "value": "zz typed notes"
+      }
+    },
+    {
+      "nth": 1,
+      "tag": "TEXTAREA",
+      "className": "pt-notes-text",
+      "dataset": {
+        "field": "notes"
+      },
+      "type": "input",
+      "calls": [
+        {
+          "op": "update",
+          "documentName": "Actor",
+          "uuid": "Actor.zzPc000000000001",
+          "changes": {
+            "flags.pentaryn-ties.ties": [
+              {
+                "id": "zzGone0000000001",
+                "name": "Old Friend",
+                "word": "zz typed word",
+                "notes": "zz typed notes",
+                "stance": 0,
+                "strength": 5
+              },
+              {
+                "id": "zzNpc00000000001",
+                "name": "ZZ Brakka",
+                "word": "zz typed word",
+                "notes": "zz typed notes",
+                "stance": -2,
+                "strength": 5
+              }
+            ]
+          }
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-notes-text",
+        "parent": "pt-field pt-field-notes",
+        "value": "zz typed notes"
+      }
+    },
+    {
+      "nth": 1,
+      "tag": "TEXTAREA",
+      "className": "pt-notes-text",
+      "dataset": {
+        "field": "notes"
+      },
+      "type": "blur",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-notes-text",
+        "parent": "pt-field pt-field-notes",
+        "value": "zz typed notes"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn pt-del",
+      "dataset": {
+        "action": "remove",
+        "id": "zzGone0000000001"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "DialogV2.confirm",
+          "title": "Remove tie",
+          "content": "<p>Remove the tie between ZZ Caven and (missing), in both directions?</p><p class=\"notification warning\">The notes written on this tie go with it.</p>"
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-textbtn pt-del",
+        "parent": "pt-detail-actions"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-add-btn",
+      "dataset": {
+        "action": "add"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "app.render",
+          "app": "TieDialog",
+          "opts": true
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-add-btn",
+        "parent": "pt-add-bar"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "SELECT",
+      "dataset": {
+        "action": "set-kind"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "parent": "pt-field",
+        "value": ""
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-add-btn",
+      "dataset": {
+        "action": "lore-add"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-add-btn",
+        "parent": "pt-add-bar"
+      }
+    }
+  ]
+}

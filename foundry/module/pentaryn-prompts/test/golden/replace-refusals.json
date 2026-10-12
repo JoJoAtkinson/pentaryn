@@ -1,0 +1,575 @@
+[
+  {
+    "spec": null,
+    "text": [
+      "replace (by marker) — dry run: 0 ok, 1 failed",
+      "#0: FAIL BAD_SPEC: replacement 0 is not an object",
+      "remaining: unknown (no replacement reached a scene; gather again)",
+      "Nothing was written. Repeat the identical call without dryRun to apply."
+    ],
+    "row": {
+      "index": 0,
+      "id": null,
+      "label": "#0",
+      "kind": null,
+      "ok": false,
+      "code": "BAD_SPEC",
+      "error": "BAD_SPEC: replacement 0 is not an object"
+    }
+  },
+  {
+    "spec": {
+      "sceneId": "s1",
+      "markerId": "m1",
+      "with": {
+        "kind": "x"
+      }
+    },
+    "text": [
+      "replace (by marker) — dry run: 0 ok, 1 failed",
+      "s1/m1 x: FAIL BAD_SPEC: replacement 0: with.kind must be one of actor|npc|character|hotspot|note|light|tile|none",
+      "remaining: unknown (no replacement reached a scene; gather again)",
+      "Nothing was written. Repeat the identical call without dryRun to apply."
+    ],
+    "row": {
+      "index": 0,
+      "id": null,
+      "label": "s1/m1",
+      "kind": "x",
+      "ok": false,
+      "code": "BAD_SPEC",
+      "error": "BAD_SPEC: replacement 0: with.kind must be one of actor|npc|character|hotspot|note|light|tile|none"
+    }
+  },
+  {
+    "spec": {
+      "sceneId": "s1",
+      "markerId": "m1"
+    },
+    "text": [
+      "replace (by marker) — dry run: 0 ok, 1 failed",
+      "s1/m1: FAIL BAD_SPEC: replacement 0: with.kind must be one of actor|npc|character|hotspot|note|light|tile|none",
+      "remaining: unknown (no replacement reached a scene; gather again)",
+      "Nothing was written. Repeat the identical call without dryRun to apply."
+    ],
+    "row": {
+      "index": 0,
+      "id": null,
+      "label": "s1/m1",
+      "kind": null,
+      "ok": false,
+      "code": "BAD_SPEC",
+      "error": "BAD_SPEC: replacement 0: with.kind must be one of actor|npc|character|hotspot|note|light|tile|none"
+    }
+  },
+  {
+    "spec": {
+      "markerId": "m1",
+      "with": {
+        "kind": "none"
+      }
+    },
+    "text": [
+      "replace (by marker) — dry run: 0 ok, 1 failed",
+      "#0 none: FAIL BAD_SPEC: replacement 0: give call + id, or sceneId + markerId",
+      "remaining: unknown (no replacement reached a scene; gather again)",
+      "Nothing was written. Repeat the identical call without dryRun to apply."
+    ],
+    "row": {
+      "index": 0,
+      "id": null,
+      "label": "#0",
+      "kind": "none",
+      "ok": false,
+      "code": "BAD_SPEC",
+      "error": "BAD_SPEC: replacement 0: give call + id, or sceneId + markerId"
+    }
+  },
+  {
+    "spec": {
+      "sceneId": "nope",
+      "markerId": "m1",
+      "with": {
+        "kind": "none"
+      }
+    },
+    "text": [
+      "replace (by marker) — dry run: 0 ok, 1 failed",
+      "nope/m1 none: FAIL SCENE_UNKNOWN: nope",
+      "remaining: unknown (no replacement reached a scene; gather again)",
+      "Nothing was written. Repeat the identical call without dryRun to apply."
+    ],
+    "row": {
+      "index": 0,
+      "id": null,
+      "label": "nope/m1",
+      "kind": "none",
+      "ok": false,
+      "code": "SCENE_UNKNOWN",
+      "error": "SCENE_UNKNOWN: nope"
+    }
+  },
+  {
+    "spec": {
+      "sceneId": "s1",
+      "markerId": "gone",
+      "with": {
+        "kind": "none"
+      }
+    },
+    "text": [
+      "replace (by marker) — dry run: 0 ok, 1 failed",
+      "s1/gone none: FAIL MARKER_GONE: gone no longer on ZZ Characterisation (deleted, or replaced outside this module); gather again",
+      "remaining: s1=2",
+      "Nothing was written. Repeat the identical call without dryRun to apply."
+    ],
+    "row": {
+      "index": 0,
+      "id": null,
+      "label": "s1/gone",
+      "kind": "none",
+      "ok": false,
+      "code": "MARKER_GONE",
+      "error": "MARKER_GONE: gone no longer on ZZ Characterisation (deleted, or replaced outside this module); gather again"
+    }
+  },
+  {
+    "spec": {
+      "sceneId": "s1",
+      "markerId": "tokOrdinary00001",
+      "with": {
+        "kind": "none"
+      }
+    },
+    "text": [
+      "replace (by marker) — dry run: 0 ok, 1 failed",
+      "s1/tokOrdinary00001 none: FAIL BAD_SPEC: tokOrdinary00001 is not a prompt marker",
+      "remaining: s1=2",
+      "Nothing was written. Repeat the identical call without dryRun to apply."
+    ],
+    "row": {
+      "index": 0,
+      "id": null,
+      "label": "s1/tokOrdinary00001",
+      "kind": "none",
+      "ok": false,
+      "code": "BAD_SPEC",
+      "error": "BAD_SPEC: tokOrdinary00001 is not a prompt marker"
+    }
+  },
+  {
+    "spec": {
+      "call": "pm-zzzz",
+      "id": "p1",
+      "with": {
+        "kind": "none"
+      }
+    },
+    "text": [
+      "replace pm-zzzz — dry run: 0 ok, 1 failed",
+      "p1 none: FAIL CALL_UNKNOWN: pm-zzzz (gather again, or pass sceneId + markerId)",
+      "remaining: unknown (no replacement reached a scene; gather again)",
+      "Nothing was written. Repeat the identical call without dryRun to apply."
+    ],
+    "row": {
+      "index": 0,
+      "id": "p1",
+      "label": "p1",
+      "kind": "none",
+      "ok": false,
+      "code": "CALL_UNKNOWN",
+      "error": "CALL_UNKNOWN: pm-zzzz (gather again, or pass sceneId + markerId)"
+    }
+  },
+  {
+    "spec": {
+      "sceneId": "s1",
+      "markerId": "m1",
+      "with": {
+        "kind": "tile"
+      }
+    },
+    "text": [
+      "replace (by marker) — dry run: 0 ok, 1 failed",
+      "s1/m1 tile: FAIL BAD_SPEC: tile needs src",
+      "remaining: s1=2",
+      "Nothing was written. Repeat the identical call without dryRun to apply."
+    ],
+    "row": {
+      "index": 0,
+      "id": null,
+      "label": "s1/m1",
+      "kind": "tile",
+      "ok": false,
+      "code": "BAD_SPEC",
+      "error": "BAD_SPEC: tile needs src"
+    }
+  },
+  {
+    "spec": {
+      "sceneId": "s1",
+      "markerId": "m1",
+      "with": {
+        "kind": "note",
+        "name": "N"
+      }
+    },
+    "text": [
+      "replace (by marker) — dry run: 0 ok, 1 failed",
+      "s1/m1 note: FAIL BAD_SPEC: note needs name and html",
+      "remaining: s1=2",
+      "Nothing was written. Repeat the identical call without dryRun to apply."
+    ],
+    "row": {
+      "index": 0,
+      "id": null,
+      "label": "s1/m1",
+      "kind": "note",
+      "ok": false,
+      "code": "BAD_SPEC",
+      "error": "BAD_SPEC: note needs name and html"
+    }
+  },
+  {
+    "spec": {
+      "sceneId": "s1",
+      "markerId": "m1",
+      "with": {
+        "kind": "light",
+        "config": {
+          "dim": 10,
+          "radius": 3
+        }
+      }
+    },
+    "text": [
+      "replace (by marker) — dry run: 0 ok, 1 failed",
+      "s1/m1 light: FAIL BAD_SPEC: light.config: unknown key(s) radius; known: dim, bright, color, alpha, angle, animation, luminosity",
+      "remaining: s1=2",
+      "Nothing was written. Repeat the identical call without dryRun to apply."
+    ],
+    "row": {
+      "index": 0,
+      "id": null,
+      "label": "s1/m1",
+      "kind": "light",
+      "ok": false,
+      "code": "BAD_SPEC",
+      "error": "BAD_SPEC: light.config: unknown key(s) radius; known: dim, bright, color, alpha, angle, animation, luminosity"
+    }
+  },
+  {
+    "spec": {
+      "sceneId": "s1",
+      "markerId": "m1",
+      "with": {
+        "kind": "light",
+        "config": [
+          1
+        ]
+      }
+    },
+    "text": [
+      "replace (by marker) — dry run: 0 ok, 1 failed",
+      "s1/m1 light: FAIL BAD_SPEC: light.config must be an AmbientLight config object, e.g. {dim: 10, bright: 5, color: \"#9fd3ff\", animation: {type: \"pulse\"}}",
+      "remaining: s1=2",
+      "Nothing was written. Repeat the identical call without dryRun to apply."
+    ],
+    "row": {
+      "index": 0,
+      "id": null,
+      "label": "s1/m1",
+      "kind": "light",
+      "ok": false,
+      "code": "BAD_SPEC",
+      "error": "BAD_SPEC: light.config must be an AmbientLight config object, e.g. {dim: 10, bright: 5, color: \"#9fd3ff\", animation: {type: \"pulse\"}}"
+    }
+  },
+  {
+    "spec": {
+      "sceneId": "s1",
+      "markerId": "m1",
+      "with": {
+        "kind": "note",
+        "name": "N",
+        "html": "",
+        "light": "bright"
+      }
+    },
+    "text": [
+      "replace (by marker) — dry run: 0 ok, 1 failed",
+      "s1/m1 note: FAIL BAD_SPEC: note.light must be an AmbientLight config object, e.g. {dim: 10, bright: 5, color: \"#9fd3ff\", animation: {type: \"pulse\"}}",
+      "remaining: s1=2",
+      "Nothing was written. Repeat the identical call without dryRun to apply."
+    ],
+    "row": {
+      "index": 0,
+      "id": null,
+      "label": "s1/m1",
+      "kind": "note",
+      "ok": false,
+      "code": "BAD_SPEC",
+      "error": "BAD_SPEC: note.light must be an AmbientLight config object, e.g. {dim: 10, bright: 5, color: \"#9fd3ff\", animation: {type: \"pulse\"}}"
+    }
+  },
+  {
+    "spec": {
+      "sceneId": "s1",
+      "markerId": "m1",
+      "with": {
+        "kind": "hotspot",
+        "name": "H"
+      }
+    },
+    "text": [
+      "replace (by marker) — dry run: 0 ok, 1 failed",
+      "s1/m1 hotspot: FAIL BAD_SPEC: no \"Hotspot · Look (template)\" actor in this world",
+      "remaining: s1=2",
+      "Nothing was written. Repeat the identical call without dryRun to apply."
+    ],
+    "row": {
+      "index": 0,
+      "id": null,
+      "label": "s1/m1",
+      "kind": "hotspot",
+      "ok": false,
+      "code": "BAD_SPEC",
+      "error": "BAD_SPEC: no \"Hotspot · Look (template)\" actor in this world"
+    }
+  },
+  {
+    "spec": {
+      "sceneId": "s1",
+      "markerId": "m1",
+      "with": {
+        "kind": "actor"
+      }
+    },
+    "text": [
+      "replace (by marker) — dry run: 0 ok, 1 failed",
+      "s1/m1 actor: FAIL BAD_SPEC: actor needs actorId or uuid",
+      "remaining: s1=2",
+      "Nothing was written. Repeat the identical call without dryRun to apply."
+    ],
+    "row": {
+      "index": 0,
+      "id": null,
+      "label": "s1/m1",
+      "kind": "actor",
+      "ok": false,
+      "code": "BAD_SPEC",
+      "error": "BAD_SPEC: actor needs actorId or uuid"
+    }
+  },
+  {
+    "spec": {
+      "sceneId": "s1",
+      "markerId": "m1",
+      "with": {
+        "kind": "actor",
+        "actorId": "nope"
+      }
+    },
+    "text": [
+      "replace (by marker) — dry run: 0 ok, 1 failed",
+      "s1/m1 actor: FAIL BAD_SPEC: no world actor nope",
+      "remaining: s1=2",
+      "Nothing was written. Repeat the identical call without dryRun to apply."
+    ],
+    "row": {
+      "index": 0,
+      "id": null,
+      "label": "s1/m1",
+      "kind": "actor",
+      "ok": false,
+      "code": "BAD_SPEC",
+      "error": "BAD_SPEC: no world actor nope"
+    }
+  },
+  {
+    "spec": {
+      "sceneId": "s1",
+      "markerId": "m1",
+      "with": {
+        "kind": "actor",
+        "uuid": "Scene.s1"
+      }
+    },
+    "text": [
+      "replace (by marker) — dry run: 0 ok, 1 failed",
+      "s1/m1 actor: FAIL BAD_SPEC: Scene.s1 is not an actor",
+      "remaining: s1=2",
+      "Nothing was written. Repeat the identical call without dryRun to apply."
+    ],
+    "row": {
+      "index": 0,
+      "id": null,
+      "label": "s1/m1",
+      "kind": "actor",
+      "ok": false,
+      "code": "BAD_SPEC",
+      "error": "BAD_SPEC: Scene.s1 is not an actor"
+    }
+  },
+  {
+    "spec": {
+      "sceneId": "s1",
+      "markerId": "m1",
+      "with": {
+        "kind": "actor",
+        "actorId": "actorGuard000001",
+        "patch": {
+          "name": "X"
+        }
+      }
+    },
+    "text": [
+      "replace (by marker) — dry run: 0 ok, 1 failed",
+      "s1/m1 actor: FAIL BAD_SPEC: patch changes the actor: use a compendium uuid, or copy: true for a world actor",
+      "remaining: s1=2",
+      "Nothing was written. Repeat the identical call without dryRun to apply."
+    ],
+    "row": {
+      "index": 0,
+      "id": null,
+      "label": "s1/m1",
+      "kind": "actor",
+      "ok": false,
+      "code": "BAD_SPEC",
+      "error": "BAD_SPEC: patch changes the actor: use a compendium uuid, or copy: true for a world actor"
+    }
+  },
+  {
+    "spec": {
+      "sceneId": "s1",
+      "markerId": "m1",
+      "with": {
+        "kind": "actor",
+        "actorId": "actorGuard000001",
+        "copy": true,
+        "patch": {
+          "bogus": 1
+        }
+      }
+    },
+    "text": [
+      "replace (by marker) — dry run: 0 ok, 1 failed",
+      "s1/m1 actor: FAIL BAD_SPEC: patch: unknown key(s) bogus (known: name, size, img, biography, hp, ac, cr, speed, disposition, removeItems, addItems, traits, recharge, itemUpdates, set, creatureType, languages)",
+      "remaining: s1=2",
+      "Nothing was written. Repeat the identical call without dryRun to apply."
+    ],
+    "row": {
+      "index": 0,
+      "id": null,
+      "label": "s1/m1",
+      "kind": "actor",
+      "ok": false,
+      "code": "BAD_SPEC",
+      "error": "BAD_SPEC: patch: unknown key(s) bogus (known: name, size, img, biography, hp, ac, cr, speed, disposition, removeItems, addItems, traits, recharge, itemUpdates, set, creatureType, languages)"
+    }
+  },
+  {
+    "spec": {
+      "sceneId": "s1",
+      "markerId": "m1",
+      "with": {
+        "kind": "actor",
+        "actorId": "actorGuard000001",
+        "copy": true,
+        "patch": {
+          "size": "colossal"
+        }
+      }
+    },
+    "text": [
+      "replace (by marker) — dry run: 0 ok, 1 failed",
+      "s1/m1 actor: FAIL BAD_SPEC: patch.size must be tiny|small|medium|large|huge|gargantuan, got colossal",
+      "remaining: s1=2",
+      "Nothing was written. Repeat the identical call without dryRun to apply."
+    ],
+    "row": {
+      "index": 0,
+      "id": null,
+      "label": "s1/m1",
+      "kind": "actor",
+      "ok": false,
+      "code": "BAD_SPEC",
+      "error": "BAD_SPEC: patch.size must be tiny|small|medium|large|huge|gargantuan, got colossal"
+    }
+  },
+  {
+    "spec": {
+      "sceneId": "s1",
+      "markerId": "m1",
+      "with": {
+        "kind": "npc"
+      }
+    },
+    "text": [
+      "replace (by marker) — dry run: 0 ok, 1 failed",
+      "s1/m1 npc: FAIL BAD_SPEC: npc needs npc (the dnd5e-create-npc arguments) and optional features, or an actorId",
+      "remaining: s1=2",
+      "Nothing was written. Repeat the identical call without dryRun to apply."
+    ],
+    "row": {
+      "index": 0,
+      "id": null,
+      "label": "s1/m1",
+      "kind": "npc",
+      "ok": false,
+      "code": "BAD_SPEC",
+      "error": "BAD_SPEC: npc needs npc (the dnd5e-create-npc arguments) and optional features, or an actorId"
+    }
+  },
+  {
+    "spec": {
+      "sceneId": "s1",
+      "markerId": "m1",
+      "with": {
+        "kind": "npc",
+        "npc": {
+          "name": "N"
+        }
+      }
+    },
+    "text": [
+      "replace (by marker) — dry run: 0 ok, 1 failed",
+      "s1/m1 npc: FAIL BAD_SPEC: npc.creatureType is required (humanoid | undead | beast | dragon | aberration | construct | elemental | fey | fiend | giant | monstrosity | ooze | plant | celestial | swarm); npc.size is required (tiny | small | medium | large | huge | gargantuan); npc.cr is required (a CR like \"0\", \"1/4\", \"1/2\", \"5\" or a number); npc.hpAverage is required (a whole number >= 1); npc.hpFormula is required (a non-empty string); npc.acMode is required (default | flat); npc.abilities is required ({str, dex, con, int, wis, cha})",
+      "remaining: s1=2",
+      "Nothing was written. Repeat the identical call without dryRun to apply."
+    ],
+    "row": {
+      "index": 0,
+      "id": null,
+      "label": "s1/m1",
+      "kind": "npc",
+      "ok": false,
+      "code": "BAD_SPEC",
+      "error": "BAD_SPEC: npc.creatureType is required (humanoid | undead | beast | dragon | aberration | construct | elemental | fey | fiend | giant | monstrosity | ooze | plant | celestial | swarm); npc.size is required (tiny | small | medium | large | huge | gargantuan); npc.cr is required (a CR like \"0\", \"1/4\", \"1/2\", \"5\" or a number); npc.hpAverage is required (a whole number >= 1); npc.hpFormula is required (a non-empty string); npc.acMode is required (default | flat); npc.abilities is required ({str, dex, con, int, wis, cha})"
+    }
+  },
+  {
+    "spec": {
+      "sceneId": "s1",
+      "markerId": "m1",
+      "with": {
+        "kind": "character"
+      }
+    },
+    "text": [
+      "replace (by marker) — dry run: 0 ok, 1 failed",
+      "s1/m1 character: FAIL BAD_SPEC: character: 5 problems — (1) needs a name; (2) needs class; (3) needs species; (4) needs background; (5) abilities: missing or non-integer: str, dex, con, int, wis, cha",
+      "remaining: s1=2",
+      "Nothing was written. Repeat the identical call without dryRun to apply."
+    ],
+    "row": {
+      "index": 0,
+      "id": null,
+      "label": "s1/m1",
+      "kind": "character",
+      "ok": false,
+      "code": "BAD_SPEC",
+      "error": "BAD_SPEC: character: 5 problems — (1) needs a name; (2) needs class; (3) needs species; (4) needs background; (5) abilities: missing or non-integer: str, dex, con, int, wis, cha"
+    }
+  }
+]

@@ -2,7 +2,7 @@
  * pentaryn-prompts — the pure half of `with: {kind: "npc", npc, features}` (no `game`, node-tested).
  *
  * The npc kind used to be expanded by the bridge server (dnd5e-create-npc + dnd5e-add-feature),
- * so it only worked through the MCP tool. It now runs in the module (npc.mjs), against the same
+ * so it only worked through the MCP tool. It now runs in the module (npc-adapter.mjs), against the same
  * `foundry-mcp-bridge.*` query handlers those tools call, so the eval-js path builds npcs too.
  * This file is the argument checking those tools did with zod: the same fields, enums, ranges
  * and defaults (sourceRules "2014", spells from "dnd5e.spells", exactly as the tools defaulted them), so an
@@ -116,7 +116,7 @@ export const NPC_KEYS = Object.freeze(Object.keys(NPC_SPEC));
 
 /**
  * `npc` (the dnd5e-create-npc arguments) → `{ok, errors, warnings, args}` with every default filled.
- * Languages are left as given; npc.mjs turns them into dnd5e keys against CONFIG.
+ * Languages are left as given; npc-adapter.mjs turns them into dnd5e keys against CONFIG.
  */
 export function normaliseNpc(raw) {
   const { args, errors } = apply(raw, NPC_SPEC, "npc");

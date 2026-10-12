@@ -1,0 +1,286 @@
+{
+  "module": "pentaryn-creatures",
+  "namespace": "creatures",
+  "contract": "pentaryn-creatures/api@1",
+  "flagScope": "pentaryn-creatures",
+  "methods": [
+    {
+      "path": "list",
+      "params": [
+        {
+          "name": "user",
+          "type": "User",
+          "optional": true,
+          "doc": "default: this client's user"
+        },
+        {
+          "name": "scene",
+          "type": "Scene",
+          "optional": true,
+          "doc": "default: the viewed scene"
+        }
+      ],
+      "returns": "{ id, name, img, rank }[]",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "What that user's \"Your creatures\" strip shows on a scene: their own tokens, their character (or its Wild Shape form) first as rank 0, other characters rank 1, the rest rank 2. GM-hidden tokens, Item Piles piles and pentaryn-aoe area handles are left out. [] without a scene."
+    },
+    {
+      "path": "render",
+      "params": [],
+      "returns": "void",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "Redraw this client's strip now (always rebuilds). A GM client never shows a strip."
+    },
+    {
+      "path": "syncScene",
+      "params": [
+        {
+          "name": "scene",
+          "type": "Scene"
+        },
+        {
+          "name": "ids",
+          "type": "string[] | Set<string> | string | TokenDocument[]",
+          "optional": true,
+          "doc": "only these tokens (ids or documents; [] means none); default every token"
+        }
+      ],
+      "returns": "Promise<number>",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "token light.bright/light.dim",
+        "flags.pentaryn-creatures.light"
+      ],
+      "legacy": true,
+      "doc": "Bring one scene's creature lights in line now; resolves to how many tokens were written. Active GM client only (0 elsewhere)."
+    },
+    {
+      "path": "syncAll",
+      "params": [],
+      "returns": "Promise<number>",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "token light.bright/light.dim",
+        "flags.pentaryn-creatures.light"
+      ],
+      "legacy": true,
+      "doc": "syncScene over every scene; resolves to how many tokens were written. Active GM client only (0 elsewhere)."
+    },
+    {
+      "path": "isCreature",
+      "params": [
+        {
+          "name": "tokenDoc",
+          "type": "TokenDocument"
+        }
+      ],
+      "returns": "boolean",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "Does this token get the creature light: a player-owned npc that is not an Item Piles pile or an aoe area handle? Never a PC or its Wild Shape form."
+    },
+    {
+      "path": "ownerSees",
+      "params": [
+        {
+          "name": "token",
+          "type": "Token placeable | TokenDocument",
+          "doc": "a document answers for its placeable"
+        }
+      ],
+      "returns": "boolean",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "Would the owner override draw this token on this client when core says it is not visible? Always false on a GM client, and for a document with no placeable on the viewed scene."
+    },
+    {
+      "path": "patchedWith",
+      "params": [],
+      "returns": "\"libWrapper\" | \"direct\" | null",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "How Token#isVisible was wrapped on this client: libWrapper, directly on the prototype, or null when the getter was not found (owners-see-their-own is off)."
+    },
+    {
+      "path": "status",
+      "params": [],
+      "returns": "{ patchedWith, ownerSees, lightRadius, showStrip, floatOverHud, writer, lit, version }",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "since": "0.1.1",
+      "doc": "One read of this client's state: how Token#isVisible is wrapped (patchedWith), the four settings as this client reads them (showStrip is per client), whether this client writes the lights (writer: the active GM), and how many tokens on every scene carry our light flag (lit)."
+    },
+    {
+      "path": "inspect",
+      "params": [
+        {
+          "name": "ref",
+          "kind": "token",
+          "type": "Token | TokenDocument | uuid | id | exact name"
+        },
+        {
+          "name": "opts",
+          "type": "{ sceneId?, as? }",
+          "optional": true,
+          "doc": "as: a user ref — whose strip `inStrip` answers for (default this client's user)"
+        }
+      ],
+      "returns": "{ token, actorType, qualifies, light: { bright, dim }, ourLight, switchedOff, ownerSees, inStrip }",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "throws": [
+        "NOT_FOUND",
+        "AMBIGUOUS",
+        "BAD_ARGS"
+      ],
+      "since": "0.1.1",
+      "doc": "Read-only plain JSON for one token: does it qualify for the creature light, its current light, the light we set (ourLight, null when not ours), whether it was switched off by hand, whether this client's owner override would draw it, and whether that user's strip shows it (never for a GM)."
+    }
+  ],
+  "queries": [],
+  "settings": [
+    {
+      "key": "lightRadius",
+      "scope": "world",
+      "type": "Number",
+      "default": 5,
+      "doc": "Bright = dim radius (ft) of the light on every player-owned creature token; 0 removes every light we added. The active GM's client rewrites the lights when it changes."
+    },
+    {
+      "key": "ownerSees",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "A player always sees the tokens they own (never GM-hidden ones); anything but false is on."
+    },
+    {
+      "key": "floatOverHud",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "The strip floats just above Argon's Combat HUD while it is open, instead of behind it."
+    },
+    {
+      "key": "showStrip",
+      "scope": "client",
+      "type": "Boolean",
+      "default": true,
+      "doc": "This client draws the \"Your creatures\" strip (players only, from two owned tokens on the scene). Client scope."
+    }
+  ],
+  "events": [],
+  "hooks": [
+    {
+      "name": "createToken",
+      "label": "createToken: queue light"
+    },
+    {
+      "name": "updateToken",
+      "label": "updateToken: queue light"
+    },
+    {
+      "name": "updateActor",
+      "label": "updateActor: queue light"
+    },
+    {
+      "name": "createUser",
+      "label": "createUser: re-check every scene"
+    },
+    {
+      "name": "updateUser",
+      "label": "updateUser: re-check every scene"
+    },
+    {
+      "name": "deleteUser",
+      "label": "deleteUser: re-check every scene"
+    },
+    {
+      "name": "canvasReady",
+      "label": "canvasReady: redraw strip"
+    },
+    {
+      "name": "createToken",
+      "label": "createToken: redraw strip"
+    },
+    {
+      "name": "deleteToken",
+      "label": "deleteToken: redraw strip"
+    },
+    {
+      "name": "updateToken",
+      "label": "updateToken: redraw strip"
+    },
+    {
+      "name": "updateActor",
+      "label": "updateActor: redraw strip"
+    },
+    {
+      "name": "updateUser",
+      "label": "updateUser: redraw strip"
+    },
+    {
+      "name": "controlToken",
+      "label": "controlToken: mark strip"
+    },
+    {
+      "name": "setup",
+      "label": "setup: wrap Token#isVisible"
+    }
+  ],
+  "patches": [
+    {
+      "label": "Token#isVisible",
+      "marker": "__pentarynCreaturesVisible",
+      "adjustments": "creatures-libwrapper"
+    }
+  ],
+  "flags": {
+    "writes": [
+      "flags.pentaryn-creatures.light"
+    ],
+    "reads": [
+      "flags.pentaryn-aoe.handle",
+      "flags.pentaryn-aoe.handleActor",
+      "flags.item-piles.data.enabled",
+      "flags.dnd5e.originalActor"
+    ]
+  },
+  "errors": [
+    "NOT_GM",
+    "NO_GM",
+    "NOT_READY",
+    "NOT_FOUND",
+    "AMBIGUOUS",
+    "BAD_ARGS",
+    "REFUSED",
+    "CONFLICT",
+    "UNSUPPORTED",
+    "TIMEOUT",
+    "INTERNAL"
+  ]
+}

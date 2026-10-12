@@ -23,7 +23,7 @@
  *           still points at a person.
  *
  * Wires are a pure function of the live card set: `drawWires()` throws the whole layer
- * away and rebuilds it from `Cards.live()` on every pan, every scene load, and every
+ * away and rebuilds it from `live()` on every pan, every scene load, and every
  * change to what is on screen. A card can therefore never be up without its wire — which
  * it could be, back when the two were tracked separately and a card outlived the layer
  * that drew its line.
@@ -42,8 +42,13 @@
  * documents and would sync to every connected client.
  */
 
-import { MODULE, read } from "./ties-api.mjs";
-import * as Cards from "./popups.mjs";
+import { MODULE } from "./ties-core.mjs";
+import { anyTransient, closeAll, closeTransient, live as liveCards, reflow, setOnChange, show, size } from "./popups.mjs";
+import { canSee, read } from "./ties-adapter.mjs";
+import { makeLog } from "./lib/log.mjs";
+import { setting } from "./settings.mjs";
+
+const log = makeLog(MODULE);
 
 /**
  * `actorId` is whose web was last raised, `mode` is which key raised it ("all" | "one"),
@@ -51,8 +56,6 @@ import * as Cards from "./popups.mjs";
  * showing" boolean here — see the ⚠ note above showAll().
  */
 const state = { wires: null, actorId: null, mode: null, tieId: null };
-
-const t = k => game.i18n.localize(`PENTARYN_TIES.${k}`);
 
 /* -------------------------------------------- */
 /*  Who, and how far                            */
@@ -86,24 +89,14 @@ function soleOwnedToken() {
 function permitted(actor) {
   if (!actor) return false;
   if (game.user.isGM) return true;
-  if (!game.settings.get(MODULE, "playerAccess")) return false;
+  if (!setting("playerAccess")) return false;
   return actor.isOwner === true;
 }
 
-/**
- * Rule 2. `Token#isVisible` is Foundry's own answer to "can THIS client see that token",
- * folding together walls, light, detection modes and the GM-hidden flag — per client,
- * computed by Foundry, not re-derived here. A GM sees everything by definition.
- *
- * It is `isVisible`, NOT `visible`. On v14 `Token#visible` is the inherited PIXI
- * DisplayObject flag and is `true` for every placeable on the scene, walled off and
- * GM-hidden alike — using it would have leaked exactly what this rule exists to hide.
+/*
+ * Rule 2 — can this client see the token — is `canSee` in ties-adapter.mjs: `Token#isVisible`, never
+ * `visible` (on v14 the PIXI flag is true for every placeable, walled off and GM-hidden alike).
  */
-function canSee(token) {
-  if (!token) return false;
-  if (game.user.isGM) return true;
-  return (token.isVisible ?? token.visible) === true;
-}
 
 /**
  * Token geometry, v14-safe.
@@ -128,11 +121,7 @@ function gridsApart(a, b) {
 }
 
 function nearDistance() {
-  try {
-    return Number(game.settings.get(MODULE, "nearDistance")) || 4;
-  } catch {
-    return 4;
-  }
+  return Number(setting("nearDistance")) || 4;
 }
 
 /** First visible token on this scene for an actor, or null. */
@@ -172,7 +161,7 @@ function dropWires() {
   try {
     if (!state.wires.destroyed) state.wires.destroy({ children: true });
   } catch (e) {
-    console.warn(`${MODULE} | wire teardown`, e);
+    log.warn(`wire teardown`, e);
   }
   state.wires = null;
 }
@@ -184,13 +173,15 @@ function dropWires() {
  */
 let queued = 0;
 export function drawWires() {
+  // hot: state.wires — no card and no wire layer means nothing to paint and nothing to drop (ties-25)
+  if (!size() && !state.wires) return;
   if (queued) return;
   queued = requestAnimationFrame(() => {
     queued = 0;
     try {
       paintWires();
     } catch (e) {
-      console.warn(`${MODULE} | wire paint`, e);
+      log.warn(`wire paint`, e);
     }
   });
 }
@@ -201,7 +192,7 @@ export function drawWires() {
  */
 function paintWires() {
   if (!canvas?.ready) return;
-  const live = Cards.live();
+  const live = liveCards();
   if (!live.length) return dropWires();
 
   const g = wireLayer();
@@ -258,16 +249,7 @@ export function clear() {
   state.actorId = null;
   state.mode = null;
   state.tieId = null;
-  Cards.closeTransient(); // fires onChange -> drawWires()
-}
-
-/**
- * Asked of the cards, not of a flag — for the same reason the two key handlers are.
- * Answers about TRANSIENT cards only and ignores `mode`, so it is true after either key.
- */
-export function isShowing(actorId) {
-  if (!Cards.anyTransient()) return false;
-  return !actorId || state.actorId === actorId;
+  closeTransient(); // fires onChange -> drawWires()
 }
 
 /**
@@ -300,13 +282,13 @@ function visibleGroups(actor) {
  * does. Falling back would turn "what is she to me" into "what is she to her" without
  * saying so, and you would read somebody else's answer to your own question.
  *
- * ⚠ WHETHER THE WEB IS UP is asked of `Cards.anyTransient()`, never of a remembered flag.
+ * ⚠ WHETHER THE WEB IS UP is asked of `anyTransient()`, never of a remembered flag.
  * Dragging a card PINS it, and a pinned card is not transient — so after a drag there is
  * nothing left to sweep. An earlier version kept a separate `state.active` boolean that
  * still said "showing", so the next key press took the toggle-off branch and did nothing
  * at all: press 7, drag the card, press 8, get silence.
  *
- * A pinned card is never duplicated either: `Cards.show()` keys on `sourceId:tieId` and
+ * A pinned card is never duplicated either: `show()` keys on `sourceId:tieId` and
  * skips a key already on screen. Pin a card from 7, then press 8, and you get the REST of
  * the web with the one you parked left exactly where you put it.
  */
@@ -317,16 +299,16 @@ export function showAll() {
 
   const token = targetToken();
   const actor = token?.actor ?? null;
-  const showing = Cards.anyTransient();
+  const showing = anyTransient();
   const sameActor = !!actor && state.actorId === actor.id;
 
   if (!actor) {
     if (showing) clear();
-    else ui.notifications.warn(t("notify.noTarget"));
+    else ui.notifications.warn(_loc("PENTARYN_TIES.notify.noTarget"));
     return;
   }
   if (!permitted(actor)) {
-    ui.notifications.warn(t("notify.notYours"));
+    ui.notifications.warn(_loc("PENTARYN_TIES.notify.notYours"));
     return;
   }
 
@@ -356,23 +338,23 @@ export function showAll() {
         })
       );
     } else {
-      ui.notifications.info(t("notify.noneInSight"));
+      ui.notifications.info(_loc("PENTARYN_TIES.notify.noneInSight"));
     }
     return;
   }
 
   /**
-   * One card per PERSON, said here rather than leaned on downstream. `Cards.show()` dedups
+   * One card per PERSON, said here rather than leaned on downstream. `show()` dedups
    * on `sourceId:tieId` and would collapse a per-token list anyway, but that dedup is a
    * safety net, not the contract — and counting the pre-dedup list is exactly what made the
    * GM's "shown" number below disagree with the number of cards on screen.
    */
   const entries = groups.map(({ tie, tokens }) => ({ tie, token: tokens[0] }));
-  if (showing) Cards.closeTransient();
+  if (showing) closeTransient();
 
   // safe unconditionally: `actor` already passed permitted(), so these notes are the
   // viewer's own — see the note in popups.mjs on where GM secrets belong instead
-  const shown = Cards.show(actor, entries, { showNotes: true }); // fires onChange -> drawWires()
+  const shown = show(actor, entries, { showNotes: true }); // fires onChange -> drawWires()
 
   state.actorId = actor.id;
   state.mode = "all";
@@ -414,11 +396,11 @@ export function showOne() {
 
   const src = sourceToken();
   if (!src?.actor) {
-    ui.notifications.warn(t("notify.needSource"));
+    ui.notifications.warn(_loc("PENTARYN_TIES.notify.needSource"));
     return;
   }
   if (!permitted(src.actor)) {
-    ui.notifications.warn(t("notify.notYours"));
+    ui.notifications.warn(_loc("PENTARYN_TIES.notify.notYours"));
     return;
   }
 
@@ -435,7 +417,7 @@ export function showOne() {
   // other token is still asking about yourself, and should get the neutral answer rather
   // than "you have no tie recorded to you"
   if (!target?.actor || target.actor.id === src.actor.id || !canSee(target)) {
-    ui.notifications.warn(t("notify.needTarget"));
+    ui.notifications.warn(_loc("PENTARYN_TIES.notify.needTarget"));
     return;
   }
 
@@ -455,18 +437,18 @@ export function showOne() {
             source: src.actor.name,
             target: target.actor.name
           })
-        : t("notify.noTieHere")
+        : _loc("PENTARYN_TIES.notify.noTieHere")
     );
     return;
   }
 
   // pressing it again on the same person is how you close it
-  const showing = Cards.anyTransient();
+  const showing = anyTransient();
   const same = state.mode === "one" && state.actorId === src.actor.id && state.tieId === tie.id;
   if (showing && same) return clear();
 
-  if (showing) Cards.closeTransient();
-  const shown = Cards.show(src.actor, [{ tie, token: target }], { showNotes: true });
+  if (showing) closeTransient();
+  const shown = show(src.actor, [{ tie, token: target }], { showNotes: true });
 
   state.actorId = src.actor.id;
   state.mode = "one";
@@ -489,30 +471,46 @@ export const toggle = showAll;
 /*  Hooks                                       */
 /* -------------------------------------------- */
 
-export function registerHooks() {
+/**
+ * FEATURE install — called by the entry during `init`, where these hooks have always registered
+ * (and it contributes the card paths: show, showAll, showOne, cards, clear, closeAllCards)
+ * (golden/hooks-after-init.json pins their order). Guarded (B9): a throw logs
+ * `pentaryn-ties | overlay: <hook>` instead of Foundry's anonymous "Error thrown in hooked function".
+ */
+export function install(reg) {
   // every change to the card set redraws the wires; nothing else may touch them
-  Cards.setOnChange(drawWires);
+  setOnChange(drawWires);
 
-  Hooks.on("canvasTearDown", () => {
+  reg.on("canvasTearDown", () => {
     // Foundry destroys canvas.interface under us — drop the handle rather than the cards.
     state.wires = null;
     state.actorId = null;
     state.mode = null;
     state.tieId = null;
     // transient cards belong to a scene; pinned ones are a memo and travel with you
-    Cards.closeTransient();
-  });
+    closeTransient();
+  }, { label: "overlay: canvasTearDown" });
 
   // a pinned card that travelled here from another scene needs its leash drawn again
-  Hooks.on("canvasReady", () => drawWires());
+  reg.on("canvasReady", () => drawWires(), { label: "overlay: canvasReady" });
 
   // transient cards ride the canvas, and every wire is anchored to it
-  Hooks.on("canvasPan", () => {
-    Cards.reflow();
+  reg.on("canvasPan", () => {
+    reflow();
     drawWires();
-  });
+  }, { label: "overlay: canvasPan" });
 
   // a tie who walks out of sight (or into it) while cards are up
-  Hooks.on("refreshToken", () => drawWires());
-  Hooks.on("sightRefresh", () => drawWires());
+  // hot: state.wires — drawWires only schedules one frame; the paint reads the live card set
+  reg.on("refreshToken", () => drawWires(), { label: "overlay: refreshToken" });
+  // hot: state.wires
+  reg.on("sightRefresh", () => drawWires(), { label: "overlay: sightRefresh" });
+
+  // the cards' API paths (rows in api-manifest.mjs)
+  return { impl: { show: showAll, showAll, showOne, cards: showAll, clear, closeAllCards: closeAll } };
+}
+
+/** The entry's reg.offAll() removes the hooks; this drops the card-set subscription. */
+export function uninstall() {
+  setOnChange(null);
 }

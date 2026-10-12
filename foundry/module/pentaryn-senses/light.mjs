@@ -1,66 +1,33 @@
 /**
- * Light cantrip and lit items. Design and evidence: LIGHT-DESIGN.md (plan C4).
+ * Pentaryn Senses — FEATURE: the Light cantrip and lit items. What the player sees: README; the
+ * design and its evidence: context/plans/senses-light-cantrip.md (plan C4).
  *
- * The cantrip. The PHB Light spell is left as shipped; this recognises it at use time, stops its
- * floor-token summon, and asks "Where does the light go?" → On me · Pick a target · Not now.
- * The answer is written by the caster onto their own Light item:
+ *   Light item    flags.pentaryn-senses.lightCast = { scene, token } | { scene, x, y } | null  (the caster writes)
+ *   Token, square flags.pentaryn-senses.spellLight = { source, prior }  (the active GM reconciles; one light per Light)
+ *   Torch, lamp…  flags.pentaryn-senses.lit / .hooded  (the owner toggles; carried.mjs lights the carrier)
  *
- *   item.flags["pentaryn-senses"].lightCast = { scene, token } | { scene, x, y } | null
- *
- * and the active GM reconciles: the token takes SPELL_LIGHT (its old light kept in
- * flags.pentaryn-senses.spellLight.prior), or an AmbientLight sits on the square. One light per
- * Light item, so casting again moves it. The same three buttons replace Summon on the spell card,
- * and End light sits on the Token HUD for the caster and the GM.
- *
- * Lit items. Torches, lamps, lanterns and candles carry flags.pentaryn-senses.lit, toggled by the
- * item's own "Light" activity (consumes nothing) or the flame button on the inventory row. The
- * existing carried-light path in senses.mjs gives the carrier the glow.
- *
- * Every hook body is wrapped: a bug logs `pentaryn-senses | light …` and never breaks a sheet,
- * a chat card or the HUD. Safe to hot-import: a second load uninstalls the first.
+ * Hooks are guarded at warn ('pentaryn-senses | light <hook>'): a bug never breaks a sheet, a card or the HUD.
  */
 
 import {
-  MODULE, SPELL_LIGHT, profileFor, profileKey, isLit, isHooded, isLightSpellData, isLightToggle, lightingItemId,
+  MODULE, FLAGS, SPELL_LIGHT, profileFor, profileKey, isLit, isHooded, isLightSpellData, isLightToggle,
   readSpellCast, readSpellLight, castFlag, planSpellLight, spellLightUpdate, restoredLight,
-  sourcesUnder, isPHBLightActorSource, torchActivityData, TORCH_ACTIVITY_ID, PHB_LIGHT_ACTOR
-} from "./light-core.mjs";
+  sourcesUnder, isPHBLightActorSource, torchActivityData, TORCH_ACTIVITY_ID, summarise, handSquareEdit,
+  esc, unsetPath
+} from "./senses-core.mjs";
+import { coreRollMode } from "./settings.mjs";
+import { isActiveGM, isAnyGM } from "./lib/election.mjs";
+import { realItem, itemFrom, casterToken, allItems, litBy, anyLitBy, allSources, findToken } from "./light-adapter.mjs";
+import { bindActions, cancelPick, decorateCard, decorateSheet, injectHUD, pick, prompt } from "./light-ui.mjs";
 
-const CAST = `flags.${MODULE}.lightCast`;
-const LIT = `flags.${MODULE}.lit`;
-const HOODED = `flags.${MODULE}.hooded`;
-const SPELL = `flags.${MODULE}.spellLight`;
+const { lightCast: CAST, lit: LIT, hooded: HOODED, spellLight: SPELL } = FLAGS;
 const DEBOUNCE_MS = 250;
-const PICK_TIMEOUT_MS = 60_000;
 
-const state = { hooks: [], timers: new Map(), chain: Promise.resolve(), picking: null };
+const RECENT = 20;
+
+const state = { hooks: [], timers: new Map(), chain: Promise.resolve(), reg: null, ctx: null, recent: [] };
 
 const warn = (label, err) => console.warn(`${MODULE} | light ${label}`, err);
-const L = (key, data) => (data ? game.i18n.format(key, data) : game.i18n.localize(key));
-const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
-const isGM = () => !!game.users?.activeGM?.isSelf;
-
-/** `{path: delete}` in the v14 form, falling back to the older "-=" key. */
-function unset(path) {
-  if (globalThis._del) return { [path]: globalThis._del };
-  const i = path.lastIndexOf(".");
-  return { [`${path.slice(0, i)}.-=${path.slice(i + 1)}`]: null };
-}
-
-/** The live item behind an activity (dnd5e hands hooks a clone of the item). */
-function realItem(item) {
-  if (!item) return null;
-  return item.actor?.items?.get(item.id) ?? fromUuidSync(item.uuid, { strict: false }) ?? item;
-}
-
-function itemFrom(uuid) {
-  try {
-    const doc = fromUuidSync(uuid, { strict: false });
-    return doc?.documentName === "Item" ? doc : null;
-  } catch {
-    return null;
-  }
-}
 
 /* -------------------------------------------- */
 /*  Casting (any client that owns the item)     */
@@ -74,25 +41,25 @@ export async function cast(item, target) {
   item = realItem(item);
   if (!item || !target) return false;
   if (!item.isOwner) {
-    ui.notifications.warn(L("PENTARYN_SENSES.Light.NotOwner", { name: item.actor?.name ?? item.name }));
+    ui.notifications.warn(_loc("PENTARYN_SENSES.Light.NotOwner", { name: item.actor?.name ?? item.name }));
     return false;
   }
   const flag = castFlag(target.scene ?? canvas?.scene?.id, target, Date.now());
   if (!flag) return false;
   await item.update({ [CAST]: flag });
-  if (!game.users.activeGM) ui.notifications.warn(L("PENTARYN_SENSES.Light.NoGM"));
+  if (!game.users.activeGM) ui.notifications.warn(_loc("PENTARYN_SENSES.Light.NoGM"));
   else if (flag.token) {
     const tok = game.scenes.get(flag.scene)?.tokens.get(flag.token);
     // Never name a token whose nameplate this user can't see (crowd extras run displayName NONE).
-    if (tok && canSeeName(tok)) ui.notifications.info(L("PENTARYN_SENSES.Light.OnToken", { name: tok.name }));
-    else ui.notifications.info(L("PENTARYN_SENSES.Light.OnCreature"));
-  } else ui.notifications.info(L("PENTARYN_SENSES.Light.OnSquare"));
+    if (tok && canSeeName(tok)) ui.notifications.info(_loc("PENTARYN_SENSES.Light.OnToken", { name: tok.name }));
+    else ui.notifications.info(_loc("PENTARYN_SENSES.Light.OnCreature"));
+  } else ui.notifications.info(_loc("PENTARYN_SENSES.Light.OnSquare"));
   return true;
 }
 
 /** Would this user see the token's name on the map? GM and owners always; others only on HOVER / ALWAYS. */
 function canSeeName(tok) {
-  if (game.user?.isGM || tok.isOwner) return true;
+  if (isAnyGM() || tok.isOwner) return true;
   const M = CONST.TOKEN_DISPLAY_MODES;
   return tok.displayName === M.HOVER || tok.displayName === M.ALWAYS;
 }
@@ -102,32 +69,23 @@ export async function end(item) {
   item = realItem(item);
   if (!item) return false;
   if (!item.isOwner) {
-    ui.notifications.warn(L("PENTARYN_SENSES.Light.NotOwner", { name: item.actor?.name ?? item.name }));
+    ui.notifications.warn(_loc("PENTARYN_SENSES.Light.NotOwner", { name: item.actor?.name ?? item.name }));
     return false;
   }
   if (!readSpellCast(item) && !anyLitBy(item.uuid)) {
-    ui.notifications.info(L("PENTARYN_SENSES.Light.NoneLit"));
+    ui.notifications.info(_loc("PENTARYN_SENSES.Light.NoneLit"));
     return false;
   }
   await item.update({ [CAST]: null });
-  ui.notifications.info(L("PENTARYN_SENSES.Light.Ended"));
+  ui.notifications.info(_loc("PENTARYN_SENSES.Light.Ended"));
   return true;
-}
-
-/** The caster's token on the scene being viewed: a controlled one first. */
-function casterToken(actor) {
-  const scene = canvas?.scene;
-  if (!actor || !scene) return null;
-  if (actor.isToken) return actor.token?.parent === scene ? actor.token : null;
-  const mine = scene.tokens.filter(t => t.actorId === actor.id);
-  return mine.find(t => t.object?.controlled) ?? mine.find(t => t.actorLink) ?? mine[0] ?? null;
 }
 
 export async function onMe(item) {
   item = realItem(item);
-  if (!canvas?.scene) return ui.notifications.warn(L("PENTARYN_SENSES.Light.NoScene"));
+  if (!canvas?.scene) return ui.notifications.warn(_loc("PENTARYN_SENSES.Light.NoScene"));
   const tok = casterToken(item?.actor);
-  if (!tok) return ui.notifications.warn(L("PENTARYN_SENSES.Light.NoToken"));
+  if (!tok) return ui.notifications.warn(_loc("PENTARYN_SENSES.Light.NoToken"));
   return cast(item, { scene: tok.parent.id, token: tok.id });
 }
 
@@ -135,116 +93,6 @@ export async function pickAndCast(item) {
   const target = await pick();
   if (target) return cast(item, target);
   return false;
-}
-
-/** The "Where does the light go?" prompt, right after the cast. */
-export async function prompt(item) {
-  item = realItem(item);
-  if (!item?.isOwner) return;
-  const DialogV2 = foundry.applications.api.DialogV2;
-  const choice = await DialogV2.wait({
-    window: { title: L("PENTARYN_SENSES.Light.Title"), icon: "fa-solid fa-lightbulb" },
-    content: `<p>${esc(L("PENTARYN_SENSES.Light.Where"))}</p>`,
-    buttons: [
-      { action: "me", label: L("PENTARYN_SENSES.Light.OnMe"), icon: "fa-solid fa-user", default: true },
-      { action: "pick", label: L("PENTARYN_SENSES.Light.Pick"), icon: "fa-solid fa-crosshairs" },
-      { action: "cancel", label: L("PENTARYN_SENSES.Light.NotNow"), icon: "fa-solid fa-xmark" }
-    ],
-    rejectClose: false
-  });
-  if (choice === "me") return onMe(item);
-  if (choice === "pick") return pickAndCast(item);
-}
-
-/* -------------------------------------------- */
-/*  The picker                                  */
-/* -------------------------------------------- */
-
-/**
- * The top-most token a player can see under a canvas point, else that square's centre.
- * A pentaryn-aoe area handle is not a creature (it sits at every area's centre and dies with the
- * area): clicking it lights the square.
- */
-function hitAt(p) {
-  const hits = (canvas.tokens?.placeables ?? []).filter(t => t.visible && t.bounds?.contains(p.x, p.y)
-    && !t.document?.flags?.["pentaryn-aoe"]?.handle);
-  hits.sort((a, b) => ((a.document.elevation ?? 0) - (b.document.elevation ?? 0)) || ((a.document.sort ?? 0) - (b.document.sort ?? 0)));
-  const top = hits.at(-1);
-  if (top) return { scene: canvas.scene.id, token: top.document.id };
-  const c = canvas.grid?.getCenterPoint?.(p) ?? p;
-  return { scene: canvas.scene.id, x: Math.round(c.x), y: Math.round(c.y) };
-}
-
-/**
- * Click a token or a square. → {scene, token} | {scene, x, y} | null (right-click, Esc, 60 s, or the
- * scene changing). Listens in the capture phase on window so the token layer never sees the click.
- */
-export function pick() {
-  if (!canvas?.ready || !canvas.scene) {
-    ui.notifications.warn(L("PENTARYN_SENSES.Light.NoScene"));
-    return Promise.resolve(null);
-  }
-  state.picking?.cancel();
-  // An open Combat HUD panel (Cast Spell) covers the map; the pick click landed on a spell behind
-  // it (usability Area 6 re-run, W10). Close Argon's panels first, as Argon does for another panel.
-  try { ui.ARGON?.collapseAllPanels?.(); } catch (e) { warn("collapse HUD panels", e); }
-  const view = canvas.app?.view ?? canvas.app?.canvas;
-  return new Promise(resolve => {
-    let done = false;
-    const swallow = ev => { if (ev.target === view) { ev.stopImmediatePropagation(); ev.preventDefault(); } };
-    const swallowOnce = (type) => {
-      const fn = ev => { swallow(ev); window.removeEventListener(type, fn, true); };
-      window.addEventListener(type, fn, true);
-      setTimeout(() => window.removeEventListener(type, fn, true), 800);
-    };
-    const finish = (result) => {
-      if (done) return;
-      done = true;
-      window.removeEventListener("pointerdown", onDown, true);
-      window.removeEventListener("keydown", onKey, true);
-      view?.classList.remove("ps-picking");
-      document.body.classList.remove("ps-picking");
-      clearTimeout(timer);
-      try {
-        if (note) (note.remove ? note.remove() : ui.notifications.remove(note));
-      } catch (e) {
-        warn("pick note", e);
-      }
-      if (state.picking === handle) state.picking = null;
-      resolve(result);
-    };
-    const onDown = ev => {
-      if (ev.target !== view) return;
-      ev.stopImmediatePropagation();
-      ev.preventDefault();
-      swallowOnce("pointerup");
-      if (ev.button === 2) {
-        swallowOnce("contextmenu");
-        return finish(null);
-      }
-      if (ev.button !== 0) return;
-      try {
-        finish(hitAt(canvas.canvasCoordinatesFromClient({ x: ev.clientX, y: ev.clientY })));
-      } catch (e) {
-        warn("pick", e);
-        finish(null);
-      }
-    };
-    const onKey = ev => {
-      if (ev.key !== "Escape") return;
-      ev.stopImmediatePropagation();
-      ev.preventDefault();
-      finish(null);
-    };
-    const handle = { cancel: () => finish(null) };
-    state.picking = handle;
-    window.addEventListener("pointerdown", onDown, true);
-    window.addEventListener("keydown", onKey, true);
-    view?.classList.add("ps-picking");
-    document.body.classList.add("ps-picking");
-    const note = ui.notifications.info(L("PENTARYN_SENSES.Light.PickHint"), { permanent: true });
-    const timer = setTimeout(() => finish(null), PICK_TIMEOUT_MS);
-  });
 }
 
 /* -------------------------------------------- */
@@ -256,7 +104,7 @@ export async function toggle(item) {
   item = realItem(item);
   if (!item || !profileFor(item)) return false;
   if (!item.isOwner) {
-    ui.notifications.warn(L("PENTARYN_SENSES.Light.NotOwner", { name: item.actor?.name ?? item.name }));
+    ui.notifications.warn(_loc("PENTARYN_SENSES.Light.NotOwner", { name: item.actor?.name ?? item.name }));
     return false;
   }
   const lit = !isLit(item);
@@ -268,13 +116,13 @@ export async function toggle(item) {
 /** One chat line about a carried light, "{actor} lights the {item}." */
 async function announce(item, key) {
   const actor = item.actor;
-  const text = L(key, { actor: esc(actor?.name ?? ""), item: esc(item.name) });
+  const text = _loc(key, { actor: esc(actor?.name ?? ""), item: esc(item.name) });
   try {
     // The chat mode the user picked applies, as on dnd5e's own cards: a GM on "GM only" lighting a
     // hidden NPC's lantern must not announce it to the table.
     const data = { speaker: ChatMessage.getSpeaker({ actor }), content: `<p>${text}</p>` };
     if (typeof ChatMessage.applyMode === "function") ChatMessage.applyMode(data);
-    else ChatMessage.applyRollMode(data, game.settings.get("core", "rollMode"));
+    else ChatMessage.applyRollMode(data, coreRollMode());
     await ChatMessage.create(data);
   } catch (e) {
     warn("chat", e);
@@ -297,8 +145,8 @@ export async function hood(item) {
  * toggles it. Lamps, lanterns and candles already have one. → number of torches changed.
  */
 export async function setup() {
-  if (!game.user?.isGM) {
-    ui.notifications.warn("pentaryn-senses: setupLight is GM-only.");
+  if (!isAnyGM()) {
+    ui.notifications.warn(_loc("PENTARYN_SENSES.Light.SetupGMOnly"));
     return 0;
   }
   let n = 0;
@@ -316,7 +164,7 @@ async function ensureTorchActivity(item) {
     || [...item.system.activities.values()].some(a => a?.flags?.[MODULE]?.lightToggle === true);
   if (has) return false;
   try {
-    const data = torchActivityData(L("PENTARYN_SENSES.Light.ActivityName"));
+    const data = torchActivityData(_loc("PENTARYN_SENSES.Light.ActivityName"));
     const sort = item.system.activities.size
       ? Math.max(...[...item.system.activities.values()].map(a => a.sort ?? 0)) + CONST.SORT_INTEGER_DENSITY
       : 0;
@@ -332,53 +180,12 @@ async function ensureTorchActivity(item) {
 /*  GM reconcile                                */
 /* -------------------------------------------- */
 
-/** Every item the GM can reach: world actors', unlinked tokens' synthetic actors', world items. */
-function allItems({ worldItems = false } = {}) {
-  const out = [];
-  for (const a of game.actors ?? []) out.push(...a.items);
-  for (const s of game.scenes ?? []) for (const t of s.tokens) {
-    if (!t.actorLink && t.actor) out.push(...t.actor.items);
-  }
-  if (worldItems) out.push(...(game.items ?? []));
-  return out;
-}
-
-/** Every Token and AmbientLight on every scene lit by this source. */
-function litBy(source) {
-  const out = [];
-  for (const s of game.scenes ?? []) {
-    for (const t of s.tokens) if (readSpellLight(t)?.source === source) out.push({ kind: "token", scene: s.id, id: t.id, doc: t });
-    for (const l of s.lights) if (readSpellLight(l)?.source === source) out.push({ kind: "ambient", scene: s.id, id: l.id, x: l.x, y: l.y, doc: l });
-  }
-  return out;
-}
-const anyLitBy = source => litBy(source).length > 0;
-
-function allSources() {
-  const out = new Set();
-  for (const s of game.scenes ?? []) {
-    for (const t of s.tokens) { const sl = readSpellLight(t); if (sl) out.add(sl.source); }
-    for (const l of s.lights) { const sl = readSpellLight(l); if (sl) out.add(sl.source); }
-  }
-  return out;
-}
-
-function findToken(id, hint) {
-  const first = game.scenes.get(hint)?.tokens.get(id);
-  if (first) return first;
-  for (const s of game.scenes) {
-    const t = s.tokens.get(id);
-    if (t) return t;
-  }
-  return null;
-}
-
 async function tellOwners(item, key) {
   try {
     const whisper = game.users.filter(u => item.testUserPermission(u, "OWNER")).map(u => u.id);
     await ChatMessage.create({
       speaker: ChatMessage.getSpeaker({ actor: item.actor }),
-      content: `<p>${esc(L(key))}</p>`,
+      content: `<p>${esc(_loc(key))}</p>`,
       whisper
     });
   } catch (e) {
@@ -388,14 +195,16 @@ async function tellOwners(item, key) {
 
 /** Bring the world in line with one Light item's flag (or clean up after a vanished item). */
 async function reconcile(source) {
-  if (!isGM() || !source) return;
+  if (!isActiveGM() || !source) return null;
   const item = itemFrom(source);
   let desired = item ? readSpellCast(item) : null;
+  const done = { source, restored: 0, removed: 0, lit: null, created: false, released: null, cleared: false };
 
   if (desired?.token) {
     const tok = findToken(desired.token, desired.scene);
     if (!tok) {
       desired = null;
+      done.cleared = true;
       await item.update({ [CAST]: null });
       await tellOwners(item, "PENTARYN_SENSES.Light.Gone");
     } else if (tok.parent.id !== desired.scene) {
@@ -404,6 +213,7 @@ async function reconcile(source) {
     }
   } else if (desired && !game.scenes.get(desired.scene)) {
     desired = null;
+    done.cleared = true;
     await item.update({ [CAST]: null });
   }
 
@@ -416,12 +226,13 @@ async function reconcile(source) {
     const t = game.scenes.get(r.scene)?.tokens.get(r.id);
     if (!t) continue;
     if (!byScene.has(r.scene)) byScene.set(r.scene, []);
-    byScene.get(r.scene).push({ _id: t.id, light: restoredLight(t), ...unset(SPELL) });
+    byScene.get(r.scene).push({ _id: t.id, light: restoredLight(t), ...unsetPath(SPELL) });
   }
   const touchedActors = new Set();
   for (const [sid, updates] of byScene) {
     const scene = game.scenes.get(sid);
     await scene.updateEmbeddedDocuments("Token", updates);
+    done.restored += updates.length;
     for (const u of updates) { const a = scene.tokens.get(u._id)?.actor; if (a) touchedActors.add(a); }
   }
   const removeByScene = new Map();
@@ -433,6 +244,7 @@ async function reconcile(source) {
     const scene = game.scenes.get(sid);
     const live = ids.filter(id => scene?.lights.has(id));
     if (live.length) await scene.deleteEmbeddedDocuments("AmbientLight", live);
+    done.removed += live.length;
   }
 
   // The light that is wanted.
@@ -441,34 +253,66 @@ async function reconcile(source) {
     if (tok) {
       const other = readSpellLight(tok)?.source;
       await tok.update(spellLightUpdate(tok, source, tok.light?.toObject?.() ?? tok.light));
+      done.lit = tok.id;
       // Two casters, one token: newest wins; the first caster's Light lets go.
       if (other && other !== source) {
         const prev = itemFrom(other);
-        if (readSpellCast(prev)?.token === tok.id) await prev.update({ [CAST]: null });
+        if (readSpellCast(prev)?.token === tok.id) {
+          await prev.update({ [CAST]: null });
+          done.released = other;
+        }
       }
     }
   }
   if (plan.create) {
     const scene = game.scenes.get(plan.create.scene);
-    if (scene) await scene.createEmbeddedDocuments("AmbientLight", [{
-      x: plan.create.x, y: plan.create.y, elevation: 0, walls: true, vision: false,
-      config: foundry.utils.deepClone(SPELL_LIGHT),
-      flags: { [MODULE]: { spellLight: { source } } }
-    }]);
+    if (scene) {
+      await scene.createEmbeddedDocuments("AmbientLight", [{
+        x: plan.create.x, y: plan.create.y, elevation: 0, walls: true, vision: false,
+        config: foundry.utils.deepClone(SPELL_LIGHT),
+        flags: { [MODULE]: { spellLight: { source } } }
+      }]);
+      done.created = true;
+    }
   }
 
   // A restored token may carry a lit torch: let the carried-light path re-apply it.
-  const syncLight = game.pentaryn?.senses?.syncLight;
+  const syncLight = state.ctx?.exposed?.syncLight;
   // Always the base actor: syncLight walks its tokens and reads each unlinked one's own items.
   if (syncLight) for (const id of new Set([...touchedActors].map(a => a.id))) {
     const base = game.actors.get(id);
     if (base) await syncLight(base);
   }
+  const summary = summarise(plan, { ...done, desired });
+  state.recent.push({ ...summary, desired: summary.desired && { ...summary.desired } });   // the ring's own copy
+  if (state.recent.length > RECENT) state.recent.splice(0, state.recent.length - RECENT);
+  state.ctx?.log.debug("reconcile", summary);
+  return summary;
+}
+
+/** The last 20 reconcile summaries on this client, oldest first (copies). */
+function recent() {
+  return state.recent.map(s => ({ ...s, desired: s.desired && { ...s.desired } }));
+}
+
+/**
+ * Every spell-light source in the world, computed once per burst of hooks (finding -13): a batch
+ * delete fires deleteToken per token in one task, and each would otherwise walk every scene. The
+ * memo is dropped at the next microtask. A source a just-deleted token carried may still be in it;
+ * queueing that source again only re-arms its debounce (reconcile is idempotent).
+ */
+let sourcesMemo = null;
+function sourcesNow() {
+  if (!sourcesMemo) {
+    sourcesMemo = allSources();
+    queueMicrotask(() => { sourcesMemo = null; });
+  }
+  return sourcesMemo;
 }
 
 /** Queue a reconcile. Bursts coalesce per source; runs are serial so two never interleave. */
 function queue(source) {
-  if (!source || !isGM()) return;
+  if (!source || !isActiveGM()) return;
   clearTimeout(state.timers.get(source));
   state.timers.set(source, setTimeout(() => {
     state.timers.delete(source);
@@ -487,7 +331,7 @@ function run(source) {
  * floor-token summons. Idempotent. → {sources, removed}.
  */
 export async function sweep() {
-  if (!isGM()) return { sources: 0, removed: 0 };
+  if (!isActiveGM()) return { sources: 0, removed: 0 };
   const sources = allSources();
   for (const item of allItems()) if (readSpellCast(item)) sources.add(item.uuid);
   for (const s of sources) run(s);
@@ -507,7 +351,9 @@ async function tidyOldSummons() {
       let from = null;
       try {
         from = fromUuidSync(origin, { strict: false });
-      } catch { /* unresolvable */ }
+      } catch (e) {
+        state.ctx?.log.debug("summon origin unresolvable", e);
+      }
       const spell = from?.documentName === "Item" ? from : from?.item ?? null;
       const base = game.actors.get(t.actorId);
       const phb = isPHBLightActorSource(base?._stats?.compendiumSource) || isPHBLightActorSource(base?.flags?.core?.sourceId);
@@ -523,180 +369,13 @@ async function tidyOldSummons() {
 }
 
 /* -------------------------------------------- */
-/*  The spell card                              */
-/* -------------------------------------------- */
-
-/** An action-row entry shaped like dnd5e 6's own (templates/chat/parts/card-buttons.hbs). */
-function cardButton(icon, label, act) {
-  const li = document.createElement("li");
-  const b = document.createElement("button");
-  b.type = "button";
-  b.className = "icon";
-  b.dataset.psLight = act;
-  b.dataset.tooltip = label;
-  b.setAttribute("aria-label", label);
-  b.innerHTML = `<i class="${icon}" inert></i>`;
-  li.append(b);
-  return li;
-}
-
-/** The card's action row (`section.icon-row` holding a plain `ul.unlist`, not the pill rows). */
-function actionList(root) {
-  for (const ul of root.querySelectorAll("section.icon-row > ul.unlist")) {
-    if (!ul.classList.contains("pills")) return ul;
-  }
-  return null;
-}
-
-function decorateCard(message, html) {
-  if (!message || message.type !== "usage") return;
-  const uuid = message.system?.item?.uuid;
-  if (!uuid) return;
-  const item = itemFrom(uuid);
-  if (!isLightSpellData(item)) return;
-  const root = html instanceof HTMLElement ? html : html?.[0];
-  if (!root) return;
-  // The PHB Light's summon button (not groupable, so it keeps data-action): drop it with its <li>.
-  root.querySelectorAll('[data-action="placeSummons"]').forEach(b => (b.closest("li") ?? b).remove());
-  let list = actionList(root);
-  if (list && !list.children.length) {
-    list.closest("section.icon-row")?.remove();
-    list = null;
-  }
-  if (!item.isOwner) return;
-  if (!list) {
-    const content = root.querySelector(".chat-card") ?? root.querySelector(".message-content");
-    if (!content) return;
-    const section = document.createElement("section");
-    section.className = "icon-row";
-    const lead = document.createElement("i");
-    lead.className = "fa-solid fa-fw fa-circle-play";
-    lead.setAttribute("aria-label", L("DND5E.CHATMESSAGE.Row.Actions"));
-    list = document.createElement("ul");
-    list.className = "unlist";
-    section.append(lead, list);
-    content.append(section);
-  }
-  if (list.querySelector("[data-ps-light]")) return;
-  const row = [
-    cardButton("fa-solid fa-user", L("PENTARYN_SENSES.Light.OnMe"), "me"),
-    cardButton("fa-solid fa-crosshairs", L("PENTARYN_SENSES.Light.Pick"), "pick"),
-    cardButton("fa-solid fa-lightbulb-slash", L("PENTARYN_SENSES.Light.End"), "end")
-  ];
-  for (const li of row) {
-    const b = li.firstElementChild;
-    b.addEventListener("click", ev => {
-      ev.preventDefault();
-      ev.stopPropagation();
-      const live = itemFrom(uuid);
-      if (!live) return;
-      const act = b.dataset.psLight;
-      const p = act === "me" ? onMe(live) : act === "pick" ? pickAndCast(live) : end(live);
-      Promise.resolve(p).catch(e => warn(`card ${act}`, e));
-    });
-    list.append(li);
-  }
-}
-
-/* -------------------------------------------- */
-/*  Inventory row: flame (and hood)             */
-/* -------------------------------------------- */
-
-function rowButton(cls, icon, tip, disabled, onClick) {
-  const b = document.createElement("button");
-  b.type = "button";
-  b.className = `unbutton config-button item-control ${cls}`;
-  b.dataset.tooltip = tip;
-  b.setAttribute("aria-label", tip);
-  b.innerHTML = `<i class="${icon}" inert></i>`;
-  if (disabled) b.setAttribute("aria-disabled", "true");
-  b.addEventListener("click", ev => {
-    ev.preventDefault();
-    ev.stopPropagation();
-    if (disabled) return;
-    Promise.resolve(onClick()).catch(e => warn("row button", e));
-  });
-  return b;
-}
-
-function decorateSheet(app, element) {
-  const actor = app?.actor ?? app?.document;
-  const root = element instanceof HTMLElement ? element : element?.[0];
-  if (!actor?.items || !root) return;
-  // With two lights lit only the strongest shows on the token; the other flame is drawn dimmer and
-  // says so (usability Area 8, L5: torch + hooded lantern, the hood seemed to do nothing).
-  const lighting = lightingItemId(actor.items);
-  for (const li of root.querySelectorAll("li[data-item-id]")) {
-    const item = actor.items.get(li.dataset.itemId);
-    if (!item || !profileFor(item)) continue;
-    const row = li.querySelector(":scope > .item-row") ?? li;
-    const name = row.querySelector(":scope > .item-name");
-    if (!name || row.querySelector(":scope > .ps-light-controls")) continue;
-    const lit = isLit(item);
-    const locked = !item.isOwner;
-    const cell = document.createElement("div");
-    cell.className = "ps-light-controls";
-    const winner = lit && lighting && lighting !== item.id ? actor.items.get(lighting) : null;
-    const tip = winner ? L("PENTARYN_SENSES.Light.Outshone", { item: esc(winner.name) })
-      : L(lit ? "PENTARYN_SENSES.Light.Douse" : "PENTARYN_SENSES.Light.LightIt");
-    cell.append(rowButton(`ps-light-toggle${lit ? " lit" : ""}${winner ? " outshone" : ""}`, "fa-solid fa-fire",
-      tip, locked, () => toggle(item)));
-    if (lit && profileFor(item)?.hooded) {
-      const hooded = isHooded(item);
-      cell.append(rowButton(`ps-light-hood${hooded ? " hooded" : ""}`, hooded ? "fa-solid fa-eye" : "fa-solid fa-eye-slash",
-        L(hooded ? "PENTARYN_SENSES.Light.HoodRaise" : "PENTARYN_SENSES.Light.HoodLower"), locked, () => hood(item)));
-    }
-    name.after(cell);
-  }
-}
-
-/* -------------------------------------------- */
-/*  Token HUD: End light                        */
-/* -------------------------------------------- */
-
-function injectHUD(app, element) {
-  const doc = app?.object?.document ?? app?.document ?? null;
-  const sl = readSpellLight(doc);
-  if (!sl) return;
-  const item = itemFrom(sl.source);
-  if (!game.user?.isGM && !item?.isOwner) return;
-  const root = element instanceof HTMLElement ? element : element?.[0];
-  const col = root?.querySelector(".col.right") ?? root?.querySelector(".right");
-  if (!col || col.querySelector(".ps-light-end")) return;
-  const tip = L("PENTARYN_SENSES.Light.End");
-  const btn = document.createElement("button");
-  btn.type = "button";
-  btn.className = "control-icon ps-light-end";
-  btn.dataset.tooltip = tip;
-  btn.setAttribute("aria-label", tip);
-  btn.innerHTML = `<i class="fa-solid fa-lightbulb-slash"></i>`;
-  btn.addEventListener("click", ev => {
-    ev.preventDefault();
-    ev.stopPropagation();
-    (async () => {
-      if (item?.isOwner) await end(item);
-      else if (game.user.isGM) run(sl.source); // the item is gone: put the orphan out
-      app.render?.();
-    })().catch(e => warn("hud click", e));
-  });
-  col.appendChild(btn);
-}
-
-/* -------------------------------------------- */
 /*  Hooks                                       */
 /* -------------------------------------------- */
 
-/** Hooks.on with the body wrapped. The wrapped function's return value is passed through
- *  (dnd5e.preUseActivity reads `false`). */
+/** reg.on with the body guarded: a throw logs `pentaryn-senses | light <name>` at warn and becomes
+ *  `undefined`; any other return value is passed through (dnd5e.preUseActivity reads `false`). */
 function on(name, fn) {
-  const id = Hooks.on(name, (...args) => {
-    try {
-      return fn(...args);
-    } catch (e) {
-      warn(name, e);
-    }
-  });
-  state.hooks.push([name, id]);
+  state.hooks.push(state.reg.on(name, fn, { guard: "warn", label: `light ${name}` }));
 }
 
 function onUse(activity, usageConfig) {
@@ -719,56 +398,55 @@ function onUsed(activity) {
 }
 
 export function uninstall() {
-  for (const [name, id] of state.hooks.splice(0)) Hooks.off(name, id);
+  for (const id of state.hooks.splice(0)) state.reg?.off(id);
   for (const t of state.timers.values()) clearTimeout(t);
   state.timers.clear();
-  state.picking?.cancel();
+  cancelPick();
 }
 
-export const api = {
-  cast, end, pick, toggle, hood, profileFor, sweep, setup, onMe,
-  prompt, reconcile: run, uninstall, SPELL_LIGHT, PHB_LIGHT_ACTOR
-};
+/** What api.mjs publishes as `light.*` (each function under its own name; reconcile is `run`). */
+const exposed = { cast, end, pick, toggle, hood, profileFor, sweep, setup, onMe, prompt, reconcile: run, recent };
 
-function install() {
-  try {
-    globalThis.__pentarynLight?.uninstall?.();
-  } catch (e) {
-    warn("previous uninstall", e);
-  }
-  globalThis.__pentarynLight = api;
+/** FEATURE: called synchronously by the entry, at import. The hooks keep today's order. */
+export function install(reg, ctx) {
+  state.reg = reg;
+  state.ctx = ctx;
+  ctx.expose({ light: exposed });
+  bindActions({ cast, end, onMe, pickAndCast, toggle, hood, run });
 
   on("dnd5e.preUseActivity", onUse);
   on("dnd5e.postUseActivity", onUsed);
   on("dnd5e.renderChatMessage", decorateCard);
   on("renderBaseActorSheet", decorateSheet);
   on("renderTokenHUD", injectHUD);
-  on("canvasTearDown", () => state.picking?.cancel());
+  on("canvasTearDown", () => cancelPick());
 
   // A Torch that arrives after setupLight (bought, looted, dragged from a compendium) gets its
   // Light activity at once, from the GM (usability Area 6 re-run, W11: it had no flame button
   // until setupLight() was run again).
   on("createItem", (item) => {
-    if (!isGM()) return;
+    // a compendium torch is left as it is (-38): it gets the activity when it lands in the world
+    if (!isActiveGM() || item?.pack) return;
     ensureTorchActivity(item).catch(e => warn("torch on create", e));
   });
 
   // GM side: the item flag is the desired state; tokens and ambient lights follow it.
   on("updateItem", (item, changes) => {
-    if (!isGM()) return;
+    if (!isActiveGM()) return;
     if (foundry.utils.hasProperty(changes ?? {}, CAST)) queue(item.uuid);
   });
   on("deleteItem", (item) => {
-    if (!isGM()) return;
-    if (readSpellCast(item) || anyLitBy(item.uuid)) queue(item.uuid);
+    if (!isActiveGM()) return;
+    // the burst memo (finding -13): a batch delete of N items walks the world once, not N times
+    if (readSpellCast(item) || sourcesNow().has(item.uuid)) queue(item.uuid);
   });
   on("createToken", (token) => {
-    if (!isGM()) return;
+    if (!isActiveGM()) return;
     const sl = readSpellLight(token);
     if (sl) queue(sl.source); // a copy is put back; a portal arrival corrects the flag's scene
   });
   on("deleteToken", (token, options) => {
-    if (!isGM()) return;
+    if (!isActiveGM()) return;
     const sl = readSpellLight(token);
     if (sl) {
       // Core teleport that had to change the token's id says so in `replacements`.
@@ -785,63 +463,36 @@ function install() {
       }
       queue(sl.source);
     }
-    // An unlinked caster deleted: its Light item went with it.
-    for (const s of sourcesUnder(allSources(), token.uuid)) queue(s);
+    // An unlinked caster deleted: its Light item went with it. (A linked token's items are its
+    // world actor's, never under the token's uuid: nothing to look for.)
+    if (!token.actorLink) for (const s of sourcesUnder(sourcesNow(), token.uuid)) queue(s);
   });
   on("deleteActor", (actor) => {
-    if (!isGM()) return;
-    for (const s of sourcesUnder(allSources(), actor.uuid)) queue(s);
+    if (!isActiveGM()) return;
+    for (const s of sourcesUnder(sourcesNow(), actor.uuid)) queue(s);
   });
-  // The GM deleted a Light square by hand: that ends the light. Without this the item still wants
-  // the square and the next sweep (GM reload, scene deleted) puts it back. Our own deletions in
-  // reconcile() never match the wanted square, or leave a duplicate of it standing.
+  // A Light square deleted or dragged by the GM's hand ends or moves the light (core handSquareEdit).
+  const handEdit = (kind, light) => {
+    const sl = readSpellLight(light);
+    if (!sl) return null;
+    const item = itemFrom(sl.source);
+    const edit = handSquareEdit(kind, { want: readSpellCast(item), source: sl.source, light, sceneId: light.parent?.id, lights: light.parent?.lights });
+    return edit && { item, edit };
+  };
   on("deleteAmbientLight", (light) => {
-    if (!isGM()) return;
-    const sl = readSpellLight(light);
-    if (!sl) return;
-    const item = itemFrom(sl.source);
-    const want = readSpellCast(item);
-    const scene = light.parent;
-    if (!want || want.token || want.scene !== scene?.id
-      || want.x !== Math.round(light.x) || want.y !== Math.round(light.y)) return;
-    const twin = scene.lights.some(l => l.id !== light.id && readSpellLight(l)?.source === sl.source
-      && Math.round(l.x) === want.x && Math.round(l.y) === want.y);
-    if (!twin) item.update({ [CAST]: null }).catch(e => warn("hand-deleted square", e));
+    if (!isActiveGM()) return;
+    const h = handEdit("delete", light);
+    if (h) h.item.update({ [CAST]: null }).catch(e => warn("hand-deleted square", e));
   });
-  // The GM dragged a Light square: the light now lives there. reconcile() never moves an
-  // AmbientLight (it creates and deletes), so any x/y change is a hand move.
   on("updateAmbientLight", (light, changes) => {
-    if (!isGM() || !(("x" in (changes ?? {})) || ("y" in (changes ?? {})))) return;
-    const sl = readSpellLight(light);
-    if (!sl) return;
-    const item = itemFrom(sl.source);
-    const want = readSpellCast(item);
-    if (!want || want.token || want.scene !== light.parent?.id) return;
-    const x = Math.round(light.x), y = Math.round(light.y);
-    if (want.x === x && want.y === y) return;
-    const twin = light.parent.lights.some(l => l.id !== light.id && readSpellLight(l)?.source === sl.source
-      && Math.round(l.x) === want.x && Math.round(l.y) === want.y);
-    if (!twin) item.update({ [`${CAST}.x`]: x, [`${CAST}.y`]: y }).catch(e => warn("hand-moved square", e));
+    if (!isActiveGM() || !(("x" in (changes ?? {})) || ("y" in (changes ?? {})))) return;
+    const h = handEdit("move", light);
+    if (h) h.item.update({ [`${CAST}.x`]: h.edit.x, [`${CAST}.y`]: h.edit.y }).catch(e => warn("hand-moved square", e));
   });
   on("deleteScene", () => {
-    if (!isGM()) return;
+    if (!isActiveGM()) return;
     clearTimeout(state.timers.get("__sweep"));
     state.timers.set("__sweep", setTimeout(() => { state.timers.delete("__sweep"); sweep().catch(e => warn("sweep", e)); }, 500));
   });
-
-  // Hot re-import into a running client: republish on the existing namespace.
-  if (game.ready && game.pentaryn?.senses) {
-    try {
-      game.pentaryn.senses.light = api;
-      game.pentaryn.senses.setupLight = setup;
-    } catch (e) {
-      warn("republish", e);
-    }
-  }
 }
 
-try {
-  install();
-} catch (e) {
-  warn("install", e);
-}

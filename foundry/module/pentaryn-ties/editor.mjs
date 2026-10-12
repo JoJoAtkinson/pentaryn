@@ -17,26 +17,13 @@
  * touches it. See `context/plans/foundry-npc-ties-gui.md`.
  */
 
-import {
-  STANCES,
-  NOTES_MAX,
-  read,
-  inbound,
-  presentActorIds,
-  write,
-  removeTie,
-  clampStance,
-  clampStrength,
-  stanceOf,
-  stanceLabel
-} from "./ties-api.mjs";
-import { authoringHTML, bindAuthoring } from "./authoring.mjs";
+import { MODULE, STANCES, NOTES_MAX, clampStance, clampStrength, stanceOf } from "./ties-core.mjs";
+import { read, inbound, presentActorIds, write, removeTie, stanceLabel } from "./ties-adapter.mjs";
+import { authoringHTML, bindAuthoring } from "./authoring-ui.mjs";
+import { esc, bindRowToggle, makeOpenState, notesPreview, notesProse, wordCell } from "./core/html.mjs";
+import { makeLog } from "./lib/log.mjs";
 
-const esc = s =>
-  String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-
-const t = k => game.i18n.localize(`PENTARYN_TIES.${k}`);
-const f = (k, data) => game.i18n.format(`PENTARYN_TIES.${k}`, data);
+const log = makeLog(MODULE);
 
 /** What a tie with no portrait — or no actor left at all — shows. Foundry ships it. */
 const FALLBACK_ART = "icons/svg/mystery-man.svg";
@@ -67,13 +54,12 @@ export function artFor(tie) {
  * mutation repaints the whole block — without this, changing a stance would slam shut the
  * row you were editing. Purely cosmetic state; nothing is lost if it resets.
  */
-const expanded = new Map(); // actorId -> Set(tieId)
-const expandedFor = actorId => expanded.get(actorId) ?? new Set();
-function setExpanded(actorId, tieId, open) {
-  const set = expanded.get(actorId) ?? new Set();
-  open ? set.add(tieId) : set.delete(tieId);
-  set.size ? expanded.set(actorId, set) : expanded.delete(actorId);
-}
+const expanded = makeOpenState(); // actorId -> Set(tieId)
+
+/** The inbound rows the last buildHTML read for an actor, for the bind that follows it (ties-22). */
+const lastInbound = new WeakMap();
+const expandedFor = expanded.of;
+const setExpanded = expanded.set;
 
 /**
  * Whatever key actually opens the tie dialog. Hardcoding "6" in the hint was a lie the
@@ -81,13 +67,13 @@ function setExpanded(actorId, tieId, open) {
  * look to find out what it had become.
  */
 function addTieKey() {
-  const bound = game.keybindings?.get?.("pentaryn-ties", "addTie")?.[0]?.key ?? "";
+  const bound = game.keybindings?.get?.(MODULE, "addTie")?.[0]?.key ?? "";
   return bound.replace(/^Digit/, "").replace(/^Key/, "") || "?";
 }
 
 /** Drop a deleted actor's row state; nothing else holds a reference to it. */
 export function forgetActor(actorId) {
-  expanded.delete(actorId);
+  expanded.forget(actorId);
 }
 
 export function stanceSelect(value, { field = "stance" } = {}) {
@@ -108,11 +94,11 @@ export function stanceSelect(value, { field = "stance" } = {}) {
  */
 export function pips(strength, interactive) {
   const n = clampStrength(strength);
-  const tip = esc(f("row.strengthTip", { n }));
+  const tip = esc(_loc("PENTARYN_TIES.row.strengthTip", { n }));
   const cell = i =>
     interactive
       ? `<button type="button" class="pt-pip${i <= n ? " fill" : ""}" data-action="strength" data-n="${i}"
-          aria-label="${esc(f("row.strengthSet", { n: i }))}" data-tooltip="${esc(f("row.strengthSet", { n: i }))}"></button>`
+          aria-label="${esc(_loc("PENTARYN_TIES.row.strengthSet", { n: i }))}" data-tooltip="${esc(_loc("PENTARYN_TIES.row.strengthSet", { n: i }))}"></button>`
       : `<span class="pt-pip${i <= n ? " fill" : ""}"></span>`;
   // aria-label, not just data-tooltip: core's TooltipManager binds pointer events only and
   // sets aria-describedby only while the tooltip is up, so it names nothing for a screen
@@ -153,14 +139,13 @@ function replyFragment(reply) {
     ? `<span class="pt-reply-word">${esc(reply.word)}</span>`
     : `<span class="pt-reply-word pt-noword">${esc(stanceLabel(reply.stance))}</span>`;
   return `<span class="pt-reply" data-tooltip="${esc(
-    f("reply.tip", { name: reply.name, word: reply.word || stanceLabel(reply.stance) })
+    _loc("PENTARYN_TIES.reply.tip", { name: reply.name, word: reply.word || stanceLabel(reply.stance) })
   )}"><i class="fa-solid fa-reply" aria-hidden="true"></i>${word}<span class="pt-dot pt-${s.key}"></span></span>`;
 }
 
 /** The always-visible half of a row: what you scan, and the whole click target. */
 function summary(tie, { open, canEdit, reply = null }) {
   const stance = stanceOf(tie.stance);
-  const hasNotes = !!tie.notes.trim();
 
   const name = `<span class="pt-name${tie.missing ? " pt-missing" : ""}">${esc(tie.name)}</span>`;
 
@@ -169,13 +154,9 @@ function summary(tie, { open, canEdit, reply = null }) {
    * hidden one costs a click per row per lookup. Clamped to one line by CSS, and hidden by
    * CSS while the row is open, so expanding is a class toggle rather than a repaint.
    */
-  const preview = hasNotes
-    ? `<span class="pt-note-preview">${esc(tie.notes)}</span>`
-    : `<span class="pt-note-preview pt-note-none"><em>${esc(t("row.notesEmpty"))}</em></span>`;
+  const preview = notesPreview(tie.notes, _loc("PENTARYN_TIES.row.notesEmpty"));
 
-  const word = tie.word
-    ? `<span class="pt-word${stance.value ? ` pt-${stance.key}` : ""}">${esc(tie.word)}</span>`
-    : `<span class="pt-word pt-noword">${esc(stanceLabel(tie.stance))}</span>`;
+  const word = wordCell(tie.word, stanceLabel(tie.stance), stance.value ? ` pt-${stance.key}` : "");
 
   /*
    * The whole summary is one button. The ask was "clicking anywhere on the item makes it
@@ -183,8 +164,8 @@ function summary(tie, { open, canEdit, reply = null }) {
    * a click handler on the <li> would have given the mouse only.
    */
   return `<div class="pt-summary" role="button" tabindex="0" aria-expanded="${open}"
-      data-action="toggle" data-tooltip="${esc(t(canEdit ? "row.expandEdit" : "row.expandRead"))}"
-      aria-label="${esc(f(canEdit ? "row.expandEditOf" : "row.expandReadOf", { name: tie.name }))}">
+      data-action="toggle" data-tooltip="${esc(_loc(canEdit ? "PENTARYN_TIES.row.expandEdit" : "PENTARYN_TIES.row.expandRead"))}"
+      aria-label="${esc(_loc(canEdit ? "PENTARYN_TIES.row.expandEditOf" : "PENTARYN_TIES.row.expandReadOf", { name: tie.name }))}">
     <img class="pt-portrait" src="${esc(artFor(tie))}" alt="" />
     <span class="pt-who">${name}${preview}${replyFragment(reply)}</span>
     ${word}
@@ -197,16 +178,12 @@ function summary(tie, { open, canEdit, reply = null }) {
 /** Their half of a mutual pair, read-only, GM only — with a door to edit it properly. */
 function theirSide(reply) {
   if (!reply) return "";
-  const word = reply.word
-    ? `<span class="pt-word">${esc(reply.word)}</span>`
-    : `<span class="pt-word pt-noword">${esc(stanceLabel(reply.stance))}</span>`;
-  const prose = reply.notes.trim()
-    ? `<div class="pt-notes-prose">${esc(reply.notes)}</div>`
-    : `<div class="pt-notes-prose pt-note-none"><em>${esc(t("row.notesEmpty"))}</em></div>`;
+  const word = wordCell(reply.word, stanceLabel(reply.stance));
+  const prose = notesProse(reply.notes, _loc("PENTARYN_TIES.row.notesEmpty"));
   return `<div class="pt-their-side">
     <div class="pt-their-head">
-      <span class="pt-their-title">${esc(f("reply.heading", { name: reply.name }))}</span>
-      <span class="pt-gm-badge"><i class="fa-solid fa-eye-slash" aria-hidden="true"></i> ${esc(t("gmOnly"))}</span>
+      <span class="pt-their-title">${esc(_loc("PENTARYN_TIES.reply.heading", { name: reply.name }))}</span>
+      <span class="pt-gm-badge"><i class="fa-solid fa-eye-slash" aria-hidden="true"></i> ${esc(_loc("PENTARYN_TIES.gmOnly"))}</span>
     </div>
     <div class="pt-their-line">${word}${stanceChip(reply.stance, { labelled: !!reply.word })}${pips(
       reply.strength,
@@ -215,7 +192,7 @@ function theirSide(reply) {
     ${prose}
     <div class="pt-detail-actions">
       <button type="button" class="pt-textbtn" data-action="edit-theirs" data-id="${esc(reply.id)}">
-        <i class="fa-solid fa-pen"></i> ${esc(f("inbound.editTheirs", { name: reply.name }))}
+        <i class="fa-solid fa-pen"></i> ${esc(_loc("PENTARYN_TIES.inbound.editTheirs", { name: reply.name }))}
       </button>
     </div>
   </div>`;
@@ -226,13 +203,11 @@ function detail(tie, { canEdit, reply = null }) {
   const openSheet = tie.missing
     ? ""
     : `<button type="button" class="pt-textbtn" data-action="open" data-id="${esc(tie.id)}">
-        <i class="fa-solid fa-arrow-up-right-from-square"></i> ${esc(t("row.openSheet"))}
+        <i class="fa-solid fa-arrow-up-right-from-square"></i> ${esc(_loc("PENTARYN_TIES.row.openSheet"))}
       </button>`;
 
   if (!canEdit) {
-    const prose = tie.notes.trim()
-      ? `<div class="pt-notes-prose">${esc(tie.notes)}</div>`
-      : `<div class="pt-notes-prose pt-note-none"><em>${esc(t("row.notesEmpty"))}</em></div>`;
+    const prose = notesProse(tie.notes, _loc("PENTARYN_TIES.row.notesEmpty"));
     return `<div class="pt-detail">
       ${prose}
       <div class="pt-detail-actions">${openSheet}</div>
@@ -243,28 +218,28 @@ function detail(tie, { canEdit, reply = null }) {
   return `<div class="pt-detail">
     <div class="pt-fields">
       <label class="pt-field">
-        <span class="pt-field-label">${esc(f("row.wordLabelOf", { name: tie.name }))}</span>
+        <span class="pt-field-label">${esc(_loc("PENTARYN_TIES.row.wordLabelOf", { name: tie.name }))}</span>
         <input type="text" class="pt-word-input" data-field="word" value="${esc(tie.word)}"
-               placeholder="${esc(t("row.wordPlaceholder"))}" />
+               placeholder="${esc(_loc("PENTARYN_TIES.row.wordPlaceholder"))}" />
       </label>
       <label class="pt-field">
-        <span class="pt-field-label">${esc(t("row.stanceLabel"))}</span>
+        <span class="pt-field-label">${esc(_loc("PENTARYN_TIES.row.stanceLabel"))}</span>
         ${stanceSelect(tie.stance)}
       </label>
       <span class="pt-field">
-        <span class="pt-field-label">${esc(t("row.strengthLabel"))}</span>
+        <span class="pt-field-label">${esc(_loc("PENTARYN_TIES.row.strengthLabel"))}</span>
         ${pips(tie.strength, true)}
       </span>
     </div>
     <label class="pt-field pt-field-notes">
-      <span class="pt-field-label">${esc(t("row.notesLabel"))}</span>
+      <span class="pt-field-label">${esc(_loc("PENTARYN_TIES.row.notesLabel"))}</span>
       <textarea class="pt-notes-text" data-field="notes" rows="5" maxlength="${NOTES_MAX}"
-                placeholder="${esc(f("row.notesPlaceholder", { name: tie.name }))}">${esc(tie.notes)}</textarea>
+                placeholder="${esc(_loc("PENTARYN_TIES.row.notesPlaceholder", { name: tie.name }))}">${esc(tie.notes)}</textarea>
     </label>
     <div class="pt-detail-actions">
       ${openSheet}
       <button type="button" class="pt-textbtn pt-del" data-action="remove" data-id="${esc(tie.id)}">
-        <i class="fa-solid fa-trash"></i> ${esc(t("row.remove"))}
+        <i class="fa-solid fa-trash"></i> ${esc(_loc("PENTARYN_TIES.row.remove"))}
       </button>
     </div>
     ${theirSide(reply)}
@@ -287,20 +262,14 @@ function tieRow(tie, { open, canEdit, reply = null }) {
  */
 function inboundRow(row, { open }) {
   const s = stanceOf(row.stance);
-  const word = row.word
-    ? `<span class="pt-word${s.value ? ` pt-${s.key}` : ""}">${esc(row.word)}</span>`
-    : `<span class="pt-word pt-noword">${esc(stanceLabel(row.stance))}</span>`;
-  const preview = row.notes.trim()
-    ? `<span class="pt-note-preview">${esc(row.notes)}</span>`
-    : `<span class="pt-note-preview pt-note-none"><em>${esc(t("row.notesEmpty"))}</em></span>`;
-  const prose = row.notes.trim()
-    ? `<div class="pt-notes-prose">${esc(row.notes)}</div>`
-    : `<div class="pt-notes-prose pt-note-none"><em>${esc(t("row.notesEmpty"))}</em></div>`;
+  const word = wordCell(row.word, stanceLabel(row.stance), s.value ? ` pt-${s.key}` : "");
+  const preview = notesPreview(row.notes, _loc("PENTARYN_TIES.row.notesEmpty"));
+  const prose = notesProse(row.notes, _loc("PENTARYN_TIES.row.notesEmpty"));
 
   return `<li class="pt-row pt-inbound${open ? " pt-open" : ""}" data-id="${esc(row.id)}" data-inbound="1">
     <div class="pt-summary" role="button" tabindex="0" aria-expanded="${open}" data-action="toggle"
-         aria-label="${esc(f("inbound.rowLabel", { name: row.name }))}"
-         data-tooltip="${esc(f("inbound.rowTip", { name: row.name }))}">
+         aria-label="${esc(_loc("PENTARYN_TIES.inbound.rowLabel", { name: row.name }))}"
+         data-tooltip="${esc(_loc("PENTARYN_TIES.inbound.rowTip", { name: row.name }))}">
       <img class="pt-portrait" src="${esc(row.img || FALLBACK_ART)}" alt="" loading="lazy" />
       <span class="pt-who"><span class="pt-name">${esc(row.name)}</span>${preview}</span>
       ${word}
@@ -313,10 +282,10 @@ function inboundRow(row, { open }) {
         ${prose}
         <div class="pt-detail-actions">
           <button type="button" class="pt-textbtn" data-action="open" data-id="${esc(row.id)}">
-            <i class="fa-solid fa-arrow-up-right-from-square"></i> ${esc(f("inbound.openSheet", { name: row.name }))}
+            <i class="fa-solid fa-arrow-up-right-from-square"></i> ${esc(_loc("PENTARYN_TIES.inbound.openSheet", { name: row.name }))}
           </button>
           <button type="button" class="pt-textbtn" data-action="edit-theirs" data-id="${esc(row.id)}">
-            <i class="fa-solid fa-pen"></i> ${esc(f("inbound.editTheirs", { name: row.name }))}
+            <i class="fa-solid fa-pen"></i> ${esc(_loc("PENTARYN_TIES.inbound.editTheirs", { name: row.name }))}
           </button>
         </div>
       </div>
@@ -340,6 +309,7 @@ export function buildHTML(actor) {
    * that already names them; only the asymmetries get a section of their own.
    */
   const inb = inbound(actor);
+  lastInbound.set(actor, inb); // bind reads this rather than scanning every actor again (ties-22)
   const replies = new Map(inb.filter(r => r.mutual).map(r => [r.id, r]));
   const orphans = inb.filter(r => !r.mutual);
 
@@ -363,10 +333,10 @@ export function buildHTML(actor) {
     list.map(tie => tieRow(tie, { open: open.has(tie.id), canEdit, reply: replies.get(tie.id) ?? null })).join("");
 
   const groupHead = key =>
-    `<div class="pt-group-head" role="heading" aria-level="3"><span class="pt-group-title">${esc(t(key))}</span></div>`;
+    `<div class="pt-group-head" role="heading" aria-level="3"><span class="pt-group-title">${esc(_loc(key))}</span></div>`;
 
   const rows = !ties.length
-    ? `<li class="pt-empty">${esc(t("empty"))}</li>`
+    ? `<li class="pt-empty">${esc(_loc("PENTARYN_TIES.empty"))}</li>`
     : split
       ? `${renderRows(here)}`
       : renderRows(ties);
@@ -374,9 +344,9 @@ export function buildHTML(actor) {
   const add = canEdit
     ? `<div class="pt-add-bar">
         <button type="button" class="pt-add-btn" data-action="add">
-          <i class="fa-solid fa-plus"></i> ${esc(t("add"))}
+          <i class="fa-solid fa-plus"></i> ${esc(_loc("PENTARYN_TIES.add"))}
         </button>
-        <span class="pt-add-hint">${esc(f("addHint", { key: addTieKey() }))}</span>
+        <span class="pt-add-hint">${esc(_loc("PENTARYN_TIES.addHint", { key: addTieKey() }))}</span>
       </div>`
     : "";
 
@@ -386,10 +356,10 @@ export function buildHTML(actor) {
    */
   const inboundSection = orphans.length
     ? `<div class="pt-inbound-head">
-        <span class="pt-inbound-title">${esc(t("inbound.heading"))}</span>
-        <span class="pt-gm-badge"><i class="fa-solid fa-eye-slash" aria-hidden="true"></i> ${esc(t("gmOnly"))}</span>
+        <span class="pt-inbound-title">${esc(_loc("PENTARYN_TIES.inbound.heading"))}</span>
+        <span class="pt-gm-badge"><i class="fa-solid fa-eye-slash" aria-hidden="true"></i> ${esc(_loc("PENTARYN_TIES.gmOnly"))}</span>
       </div>
-      <p class="pt-inbound-hint">${esc(t("inbound.hint"))}</p>
+      <p class="pt-inbound-hint">${esc(_loc("PENTARYN_TIES.inbound.hint"))}</p>
       <ul class="pt-list pt-list-inbound">
         ${orphans.map(r => inboundRow(r, { open: open.has(r.id) })).join("")}
       </ul>`
@@ -402,12 +372,12 @@ export function buildHTML(actor) {
    */
   const isGM = game.user?.isGM === true;
   const elsewhereBlock = split
-    ? `${groupHead(isGM ? "group.elsewhere" : "group.notInSight")}
+    ? `${groupHead(isGM ? "PENTARYN_TIES.group.elsewhere" : "PENTARYN_TIES.group.notInSight")}
        <ul class="pt-list pt-list-elsewhere">${renderRows(elsewhere)}</ul>`
     : "";
 
   return `<div class="pentaryn-ties" data-actor-id="${esc(actor.id)}">
-    ${split ? groupHead(isGM ? "group.onScene" : "group.inSight") : ""}
+    ${split ? groupHead(isGM ? "PENTARYN_TIES.group.onScene" : "PENTARYN_TIES.group.inSight") : ""}
     <ul class="pt-list">${rows}</ul>
     ${elsewhereBlock}
     ${add}
@@ -422,7 +392,10 @@ export function bind(root, actor, rerender = () => {}) {
   // the GM authoring section — a no-op for a player, gated inside rather than here
   bindAuthoring(root, actor, rerender);
   const canEdit = actor.isOwner === true;
-  const replies = new Map(inbound(actor).filter(r => r.mutual).map(r => [r.id, r]));
+  // the build that ran just before this bind already scanned every actor for this (ties-22)
+  const inb = lastInbound.get(actor) ?? inbound(actor);
+  lastInbound.delete(actor);
+  const replies = new Map(inb.filter(r => r.mutual).map(r => [r.id, r]));
 
   /* ── expand / collapse: the whole summary, by mouse or keyboard ──────── */
 
@@ -430,22 +403,7 @@ export function bind(root, actor, rerender = () => {}) {
     const row = head.closest(".pt-row");
     const wrap = row?.querySelector(".pt-detail-wrap");
     if (!wrap) return;
-
-    const toggle = () => {
-      const open = wrap.hasAttribute("hidden");
-      wrap.toggleAttribute("hidden", !open);
-      row.classList.toggle("pt-open", open);
-      head.setAttribute("aria-expanded", String(open));
-      setExpanded(actor.id, row.dataset.id, open);
-      if (open) wrap.querySelector('[data-field="word"]')?.focus();
-    };
-
-    head.addEventListener("click", toggle);
-    head.addEventListener("keydown", ev => {
-      if (ev.key !== "Enter" && ev.key !== " ") return;
-      ev.preventDefault(); // Space would scroll the panel instead
-      toggle();
-    });
+    bindRowToggle(head, row, { wrap, onToggle: open => setExpanded(actor.id, row.dataset.id, open), focus: '[data-field="word"]' });
   });
 
   // A click inside the detail must not bubble to the summary and collapse the row you are
@@ -471,8 +429,8 @@ export function bind(root, actor, rerender = () => {}) {
         const { TieDialog } = await import("./tie-dialog.mjs");
         TieDialog.open({ source: author, target: actor, onSaved: rerender });
       } catch (err) {
-        console.error("pentaryn-ties | the tie dialog failed to open", err);
-        ui.notifications.error(t("notify.dialogUnavailable"));
+        log.error("the tie dialog failed to open", err);
+        ui.notifications.error(_loc("PENTARYN_TIES.notify.dialogUnavailable"));
       }
     });
   });
@@ -549,14 +507,14 @@ export function bind(root, actor, rerender = () => {}) {
       const target = game.actors.get(btn.dataset.id);
       const losing = read(actor).some(x => x.id === btn.dataset.id && x.notes.trim());
       const ok = await foundry.applications.api.DialogV2.confirm({
-        window: { title: t("confirm.removeTitle") },
+        window: { title: _loc("PENTARYN_TIES.confirm.removeTitle") },
         content:
           `<p>${esc(
             game.i18n.format("PENTARYN_TIES.confirm.removeBoth", {
               a: actor.name,
-              b: target?.name ?? t("row.missingName")
+              b: target?.name ?? _loc("PENTARYN_TIES.row.missingName")
             })
-          )}</p>` + (losing ? `<p class="notification warning">${esc(t("confirm.removeNotes"))}</p>` : "")
+          )}</p>` + (losing ? `<p class="notification warning">${esc(_loc("PENTARYN_TIES.confirm.removeNotes"))}</p>` : "")
       });
       if (!ok) return;
       await removeTie(actor, btn.dataset.id, { bothWays: true });
@@ -570,8 +528,8 @@ export function bind(root, actor, rerender = () => {}) {
       const { TieDialog } = await import("./tie-dialog.mjs");
       TieDialog.open({ source: actor, onSaved: rerender });
     } catch (err) {
-      console.error("pentaryn-ties | the tie dialog failed to open", err);
-      ui.notifications.error(t("notify.dialogUnavailable"));
+      log.error("the tie dialog failed to open", err);
+      ui.notifications.error(_loc("PENTARYN_TIES.notify.dialogUnavailable"));
     }
   });
 }
@@ -583,22 +541,9 @@ export function bind(root, actor, rerender = () => {}) {
 function bindSummary(head, row, actor) {
   const wrap = row.querySelector(".pt-detail-wrap");
   if (!wrap) return;
-  const toggle = () => {
-    const open = wrap.hasAttribute("hidden");
-    wrap.toggleAttribute("hidden", !open);
-    row.classList.toggle("pt-open", open);
-    head.setAttribute("aria-expanded", String(open));
-    setExpanded(actor.id, row.dataset.id, open);
-    // same behaviour as the full bind's toggle; without it a row behaves differently
-    // depending on whether its summary happened to be repainted since the last render
-    if (open) wrap.querySelector('[data-field="word"]')?.focus();
-  };
-  head.addEventListener("click", toggle);
-  head.addEventListener("keydown", ev => {
-    if (ev.key !== "Enter" && ev.key !== " ") return;
-    ev.preventDefault();
-    toggle();
-  });
+  // the same toggle as the full bind's; without it a row behaves differently depending on
+  // whether its summary happened to be repainted since the last render
+  bindRowToggle(head, row, { wrap, onToggle: open => setExpanded(actor.id, row.dataset.id, open), focus: '[data-field="word"]' });
 }
 
 /** Standalone window — the fallback host, and the one the header button opens. */

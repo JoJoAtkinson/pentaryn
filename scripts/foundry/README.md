@@ -41,11 +41,13 @@ answered, never the value.
 |---|---|
 | `make vtt-up` | The boot choice, then Foundry **and** the Cloudflare tunnel (tunnel on the primary host only). `FROM=latest\|local\|<snapshot>` decides the boot choice without asking |
 | `make foundry-boot` | Just the boot choice: newest cloud snapshot (any host) or the local world — see [`ops.md`](../../context/foundry/ops.md) §3 |
-| `make foundry-restore` | List every host's snapshots; `SNAP=<name>` restores one (archives local first) |
+| `make foundry-restore` | List every host's snapshots (`bundled` / `full`); `SNAP=<name>` restores one: archives local first, downloads the world tar and only the bundles this machine lacks, swaps only the changed modules. A full (legacy) snapshot restores as before |
 | `make foundry-prune-untagged` | List the untagged pre-2026-10-11 snapshots and delete them on a typed confirmation |
-| `make foundry-cloud` | This host's background upload (in progress / pending / last), storage (rclone/folder), host, role, based-on, newest snapshot per host |
+| `make foundry-cloud` | This host's background upload (in progress / pending / last; a dropped one names its kept tar), storage (rclone/folder), host, role, based-on, newest snapshot per host, bundles |
+| `make foundry-bundles` | Every local module/system with its fingerprint and size, whether its bundle is in the cloud, then the unreferenced cloud bundles — see [`ops.md`](../../context/foundry/ops.md) §3 |
+| `make foundry-bundles-gc` | List the bundles no retained snapshot references that are older than 7 days; `YES=1` deletes them (every uploading backup runs this sweep anyway) |
 | `make login` | Pick a campaign and a user from an arrow-key menu, land in the world logged in — no dropdown, no password. Alias: `make vtt-login`. Needs the admin password configured; see [`ops.md`](../../context/foundry/ops.md) §2 |
-| `make vtt-down` | Stop both, build the shutdown snapshot, upload it in the background (`make foundry-cloud` shows it; `WAIT=1` waits for the upload) |
+| `make vtt-down` | Stop both, build the shutdown snapshot — the world (~45 MB) and any module/system bundle the cloud lacks — and upload it in the background (`make foundry-cloud` shows it; `WAIT=1` waits for the upload) |
 | `make vtt` | Status of Foundry, tunnel, and public reachability |
 | `make tunnel-setup` | **One-time** — cloudflared login, create tunnel, route DNS |
 | `make tunnel-logs` | Tail the tunnel log |

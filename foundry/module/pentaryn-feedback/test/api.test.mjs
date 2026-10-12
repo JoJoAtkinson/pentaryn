@@ -119,25 +119,86 @@ test("the file written is the normalised report: pretty JSON via the store, Data
 });
 
 test("inspect: plain JSON, depth ≤ 4; pending for the GM or that user; rings only for the caller", async () => {
+  seed();
   F.gm.active = false;
   F.become({ userId: IDS.player });
   const queued = await api.submit({ text: "waiting" });
   F.become({ userId: gm.id });
   F.gm.active = true;
-  const asGM = api.inspect(IDS.player);
+  const asGM = await api.inspect(IDS.player);
   assert.deepEqual(asGM.user, { documentName: "User", id: IDS.player, uuid: `User.${IDS.player}`, name: "Caven's player" });
   assert.deepEqual(asGM.pending, [queued.id]);
   assert.equal(asGM.actions, null, "another user's rings live on their client");
+  assert.deepEqual(asGM.reports.map(r => r.id), ["aaaaaa0000000001", "aaaaab0000000002", "bbbbbb0000000003"],
+    "the GM sees that user's filed reports, oldest first");
   assert.ok(maxDepth(asGM) <= 4);
   assert.deepEqual(JSON.parse(JSON.stringify(asGM)), asGM);
-  assert.equal(api.inspect(IDS.player, { as: IDS.player2 }).pending, null, "another player does not see the queue");
-  assert.deepEqual(api.inspect(IDS.player, { as: IDS.player }).pending, [queued.id]);
-  const self = api.inspect(gm.id);
+  const asOther = await api.inspect(IDS.player, { as: IDS.player2 });
+  assert.equal(asOther.pending, null, "another player does not see the queue");
+  assert.equal(asOther.reports, null, "nor the reports");
+  assert.deepEqual((await api.inspect(IDS.player, { as: IDS.player })).pending, [queued.id]);
+  const self = await api.inspect(gm.id);
   assert.ok(Array.isArray(self.actions) && self.actions.length <= 20);
+  assert.deepEqual(self.reports, []);
   assert.ok(maxDepth(self) <= 4);
   assert.equal(await code(() => api.inspect("Nobody")), "NOT_FOUND");
   assert.equal(await code(() => api.inspect(42)), "BAD_ARGS");
   await api.ingest({ userId: IDS.player });
+});
+
+// 2026-10-11 live check: the root game.pentaryn.inspect resolves its ref as an Actor and passes that
+// to every namespace; feedback answered "BAD_ARGS: expected User, got Actor". Now, as journal.inspect
+// does, an Actor (or Token) means its owning players: their reports and queue state.
+test("inspect(Actor): the actor's owning non-GM users, their pending ids and reports; none → empty, not an error", async () => {
+  seed();
+  const caven = game.actors.get(IDS.caven);
+  const viaCharacter = await api.inspect(caven);
+  assert.deepEqual(viaCharacter.actor, { documentName: "Actor", id: IDS.caven, uuid: `Actor.${IDS.caven}`, name: "Caven" });
+  assert.deepEqual(viaCharacter.users.map(u => u.id), [IDS.player], "the player whose assigned character it is");
+  assert.deepEqual(viaCharacter.pending, []);
+  assert.deepEqual(viaCharacter.reports.map(r => r.id), ["aaaaaa0000000001", "aaaaab0000000002", "bbbbbb0000000003"]);
+  assert.equal(viaCharacter.actions, null);
+  assert.ok(maxDepth(viaCharacter) <= 4);
+
+  const goblin = game.actors.get(IDS.goblin);
+  const nobody = await api.inspect(goblin);
+  assert.deepEqual(nobody, {
+    actor: { documentName: "Actor", id: IDS.goblin, uuid: `Actor.${IDS.goblin}`, name: "Goblin" },
+    users: [], pending: [], reports: [], actions: null, errors: null,
+  });
+
+  goblin.ownership = { default: 0, [IDS.player2]: 3, [IDS.gm]: 3 };
+  try {
+    const owned = await api.inspect(goblin);
+    assert.deepEqual(owned.users.map(u => u.id), [IDS.player2], "an OWNER who is not a GM");
+    assert.deepEqual(owned.reports, [], "player2 filed nothing");
+  } finally {
+    goblin.ownership = { default: 0 };
+  }
+
+  const token = game.scenes.get(IDS.scene).tokens.get(IDS.token);
+  assert.deepEqual((await api.inspect(token)).users.map(u => u.id), [IDS.player], "a Token means its actor");
+
+  const root = await game.pentaryn.inspect(IDS.caven);
+  assert.deepEqual(root.feedback.users.map(u => u.id), [IDS.player], "the root inspect no longer gets BAD_ARGS");
+});
+
+// 2026-10-12 live check (W3L): over the MCP bridge a ref is a string, so pentaryn-read
+// {ns:"feedback", path:"inspect", ref:"Actor.<id>"} answered "expected User, got Actor" and an actor's
+// name NOT_FOUND (user <name>). A uuid of an Actor/Token, and — when no user matches — an actor's id
+// or exact name, now reach the Actor path; a user ref still wins, and a miss on both is NOT_FOUND.
+test("inspect(string): an Actor/Token uuid, or an actor id / name no user has, means that actor's players", async () => {
+  seed();
+  const byUuid = await api.inspect(`Actor.${IDS.caven}`);
+  assert.equal(byUuid.actor.id, IDS.caven);
+  assert.deepEqual(byUuid.users.map(u => u.id), [IDS.player]);
+  const tok = game.scenes.get(IDS.scene).tokens.get(IDS.token);
+  assert.deepEqual((await api.inspect(tok.uuid)).users.map(u => u.id), [IDS.player], "a Token uuid means its actor");
+  assert.deepEqual((await api.inspect("Goblin")).actor?.id, IDS.goblin, "an actor's exact name");
+  assert.deepEqual((await api.inspect(IDS.goblin)).actor?.id, IDS.goblin, "an actor's id");
+  assert.equal((await api.inspect(IDS.player)).user.id, IDS.player, "a user ref still resolves as the user");
+  assert.equal(await code(() => api.inspect("Nobody")), "NOT_FOUND");
+  assert.equal(await code(() => api.inspect(`Scene.${IDS.scene}`)), "BAD_ARGS", "a uuid of anything else");
 });
 
 test("list: oldest first, status filter, limit, count; a player gets NOT_GM", async () => {

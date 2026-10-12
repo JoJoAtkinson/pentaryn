@@ -1,0 +1,313 @@
+{
+  "preview": {
+    "applied": [
+      [
+        "Ki Features",
+        1,
+        {
+          "granted": true
+        }
+      ],
+      [
+        "Ki Points",
+        1,
+        {
+          "points": 2
+        }
+      ],
+      [
+        "Hit Points",
+        2,
+        {
+          "2": "avg"
+        }
+      ]
+    ],
+    "report": {
+      "defaults": [
+        "starting equipment (Monk): took tool:gaming (first of: tool:gaming | tool:music)",
+        "starting equipment (Monk): any Arcane Focus → Crystal (also fit: Orb; name one in items to choose)"
+      ],
+      "warnings": [
+        "starting equipment (Monk): any holy focus — not resolved; name one in items",
+        "starting equipment (Monk): any martialM weapon — not chosen; name one in items",
+        "starting equipment (Monk): any  armor — not chosen; name one in items",
+        "starting equipment (Monk): a vehicle entry — not resolved",
+        "starting equipment (Monk): Compendium.nope.Item.missing not found"
+      ],
+      "spells": [],
+      "spellbook": [],
+      "items": [
+        "Quarterstaff",
+        "Martial Arts"
+      ],
+      "starting": [
+        "Spear",
+        "Priest's Pack x2",
+        "Dice Set",
+        "Crystal",
+        "Lute",
+        "55 GP"
+      ],
+      "notes": [
+        "starting equipment: Spear, Priest's Pack x2, Dice Set, Crystal, Lute, 55 GP"
+      ],
+      "enchanted": [],
+      "summary": {
+        "level": 0,
+        "class": null,
+        "subclass": null,
+        "species": null,
+        "background": null,
+        "abilities": {
+          "str": 8,
+          "dex": 14,
+          "con": 13,
+          "int": 10,
+          "wis": 15,
+          "cha": 12
+        },
+        "hp": 30,
+        "ac": 14,
+        "prof": 2,
+        "spellDC": 12,
+        "spellAbility": "wis",
+        "saves": [],
+        "skills": [],
+        "speed": 40,
+        "darkvision": 0,
+        "size": "med",
+        "languages": [],
+        "feats": [],
+        "spellCounts": {
+          "cantrips": 0,
+          "prepared": 0,
+          "always": 0,
+          "spellbook": 0,
+          "maxPrepared": null,
+          "maxCantrips": null
+        },
+        "slots": []
+      }
+    }
+  },
+  "real": {
+    "applied": [
+      [
+        "Ki Features",
+        1,
+        {
+          "granted": true
+        }
+      ],
+      [
+        "Ki Points",
+        1,
+        {
+          "points": 2
+        }
+      ],
+      [
+        "Hit Points",
+        2,
+        {
+          "2": "avg"
+        }
+      ],
+      [
+        "createEmbeddedDocuments",
+        [
+          "Quarterstaff",
+          "Martial Arts"
+        ],
+        {
+          "keepId": true
+        }
+      ],
+      [
+        "createEmbeddedDocuments",
+        [
+          "Spear",
+          "Priest's Pack",
+          "Candle",
+          "Dice Set",
+          "Crystal",
+          "Lute"
+        ],
+        {
+          "keepId": true
+        }
+      ]
+    ],
+    "report": {
+      "defaults": [
+        "starting equipment (Monk): took tool:gaming (first of: tool:gaming | tool:music)",
+        "starting equipment (Monk): any Arcane Focus → Crystal (also fit: Orb; name one in items to choose)"
+      ],
+      "warnings": [
+        "starting equipment (Monk): any holy focus — not resolved; name one in items",
+        "starting equipment (Monk): any martialM weapon — not chosen; name one in items",
+        "starting equipment (Monk): any  armor — not chosen; name one in items",
+        "starting equipment (Monk): a vehicle entry — not resolved",
+        "starting equipment (Monk): Compendium.nope.Item.missing not found",
+        "Martial Arts enchantment on Spear failed: no slot"
+      ],
+      "spells": [],
+      "spellbook": [],
+      "items": [
+        "Quarterstaff",
+        "Martial Arts"
+      ],
+      "starting": [
+        "Spear",
+        "Priest's Pack x2",
+        "Dice Set",
+        "Crystal",
+        "Lute",
+        "55 GP"
+      ],
+      "notes": [
+        "starting equipment: Spear, Priest's Pack x2, Dice Set, Crystal, Lute, 55 GP",
+        "Martial Arts enchantment applied: Quarterstaff (DEX and the Martial Arts die)"
+      ],
+      "enchanted": [
+        "Quarterstaff"
+      ],
+      "summary": {
+        "level": 2,
+        "class": "Monk 2",
+        "subclass": null,
+        "species": "Dwarf",
+        "background": "Acolyte",
+        "abilities": {
+          "str": 8,
+          "dex": 14,
+          "con": 13,
+          "int": 10,
+          "wis": 15,
+          "cha": 12
+        },
+        "hp": 30,
+        "ac": 14,
+        "prof": 2,
+        "spellDC": 12,
+        "spellAbility": null,
+        "saves": [],
+        "skills": [],
+        "speed": 40,
+        "darkvision": 0,
+        "size": "med",
+        "languages": [],
+        "feats": [],
+        "spellCounts": {
+          "cantrips": 0,
+          "prepared": 0,
+          "always": 0,
+          "spellbook": 0,
+          "maxPrepared": null,
+          "maxCantrips": null
+        },
+        "slots": []
+      }
+    },
+    "enchants": [
+      [
+        "enchDex000000001",
+        "Quarterstaff"
+      ],
+      [
+        "enchDex000000001",
+        "Spear"
+      ]
+    ],
+    "writes": [
+      {
+        "system.details.race": "<id>"
+      },
+      {
+        "system.details.background": "<id>"
+      },
+      {
+        "system.currency.gp": 55
+      },
+      {
+        "system.attributes.hp.value": 30
+      }
+    ],
+    "items": [
+      [
+        "Dwarf",
+        "race",
+        null,
+        null
+      ],
+      [
+        "Acolyte",
+        "background",
+        null,
+        null
+      ],
+      [
+        "Monk",
+        "class",
+        null,
+        null
+      ],
+      [
+        "Ki",
+        "feat",
+        null,
+        null
+      ],
+      [
+        "Quarterstaff",
+        "weapon",
+        null,
+        null
+      ],
+      [
+        "Martial Arts",
+        "feat",
+        null,
+        null
+      ],
+      [
+        "Spear",
+        "weapon",
+        null,
+        null
+      ],
+      [
+        "Priest's Pack",
+        "container",
+        2,
+        null
+      ],
+      [
+        "Candle",
+        "loot",
+        10,
+        "packTop000000001"
+      ],
+      [
+        "Dice Set",
+        "tool",
+        null,
+        null
+      ],
+      [
+        "Crystal",
+        "equipment",
+        null,
+        null
+      ],
+      [
+        "Lute",
+        "tool",
+        null,
+        null
+      ]
+    ],
+    "folder": 0
+  }
+}

@@ -1,0 +1,674 @@
+{
+  "rows": [
+    {
+      "label": "pending()",
+      "out": [
+        {
+          "ns": "attr",
+          "character": "ZZ Caven",
+          "characterId": "zzPc000000000001",
+          "subject": "ZZ Brakka",
+          "subjectId": "zzNpc00000000001",
+          "beliefKey": "attr:guild:#id",
+          "fact": "ZZ Brakka",
+          "factId": "#id",
+          "tier": null,
+          "total": 17,
+          "when": "<localeDate>",
+          "whenMs": 1790000000000,
+          "text": "<p>Guild hands.</p>"
+        }
+      ],
+      "calls": [],
+      "console": []
+    },
+    {
+      "label": "heldCarriersFor(PC, guild)",
+      "out": [
+        "zzNpc00000000001"
+      ],
+      "calls": [],
+      "console": []
+    },
+    {
+      "label": "heldCarriersFor(PC, city)",
+      "out": [],
+      "calls": [],
+      "console": []
+    },
+    {
+      "label": "releaseHeldAttribute(PC, guild): delivers, resumes — cult 19 (empty reveal), Dockhands 10 (fails)",
+      "out": 1,
+      "calls": [
+        {
+          "op": "Hooks.call",
+          "name": "preUpdateActor"
+        },
+        {
+          "op": "update",
+          "documentName": "Actor",
+          "uuid": "Actor.zzNpc00000000001",
+          "changes": {
+            "flags.pentaryn-ties.beliefs.zzPc000000000001.attr:guild:#id.delivered": 1790000000000
+          }
+        },
+        {
+          "op": "Hooks.callAll",
+          "name": "updateActor"
+        },
+        {
+          "op": "Hooks.call",
+          "name": "preUpdateActor"
+        },
+        {
+          "op": "update",
+          "documentName": "Actor",
+          "uuid": "Actor.zzPc000000000001",
+          "changes": {
+            "flags.pentaryn-ties.granted": {
+              "attr:kin:#id": {
+                "text": "<p>One of us.</p>",
+                "when": 1790000000000,
+                "icon": null,
+                "source": "Kin"
+              },
+              "attr:city:#id": {
+                "text": "<p>From Vel.</p>",
+                "when": 1790000000000,
+                "icon": null,
+                "source": "Vel"
+              },
+              "attr:guild:#id": {
+                "text": "<p>Guild hands.</p>",
+                "when": 1790000000000,
+                "icon": "icons/sundries/flags/banner-standard-green.webp",
+                "source": "Salt Guild"
+              }
+            }
+          }
+        },
+        {
+          "op": "Hooks.callAll",
+          "name": "updateActor"
+        },
+        {
+          "op": "settings.set",
+          "id": "pentaryn-ties.attributeKnowledge",
+          "value": {
+            "zzPc000000000001": {
+              "kin": {
+                "when": 1790000000000,
+                "failed": false,
+                "pending": false,
+                "via": "roll"
+              },
+              "city": {
+                "when": 1790000000000,
+                "failed": false,
+                "pending": false,
+                "via": "roll"
+              },
+              "guild": {
+                "when": 1790000000000,
+                "failed": false,
+                "via": "roll",
+                "pending": false
+              }
+            },
+            "zzPc000000000002": {
+              "city": {
+                "when": 1790000000000,
+                "failed": true,
+                "pending": false,
+                "via": "roll"
+              },
+              "cult": {
+                "when": 1790000000000,
+                "failed": true,
+                "pending": false,
+                "via": "roll"
+              }
+            }
+          }
+        },
+        {
+          "op": "Hooks.call",
+          "name": "preUpdateActor"
+        },
+        {
+          "op": "update",
+          "documentName": "Actor",
+          "uuid": "Actor.zzNpc00000000001",
+          "changes": {
+            "flags.pentaryn-ties.beliefs.zzPc000000000001.#inspect": {
+              "claim": "gmUser0000000001:rid0000000000001"
+            }
+          }
+        },
+        {
+          "op": "Hooks.callAll",
+          "name": "updateActor"
+        },
+        {
+          "op": "rollSkill",
+          "actor": "zzPc000000000001",
+          "config": {
+            "skill": "rel",
+            "target": 18,
+            "advantage": false,
+            "disadvantage": false,
+            "rolls": []
+          },
+          "dialog": {
+            "configure": false
+          },
+          "message": {
+            "create": false
+          },
+          "total": 19
+        },
+        {
+          "op": "settings.set",
+          "id": "pentaryn-ties.attributeKnowledge",
+          "value": {
+            "zzPc000000000001": {
+              "kin": {
+                "when": 1790000000000,
+                "failed": false,
+                "pending": false,
+                "via": "roll"
+              },
+              "city": {
+                "when": 1790000000000,
+                "failed": false,
+                "pending": false,
+                "via": "roll"
+              },
+              "guild": {
+                "when": 1790000000000,
+                "failed": false,
+                "pending": false,
+                "via": "roll"
+              },
+              "cult": {
+                "when": 1790000000000,
+                "failed": false,
+                "via": "roll",
+                "pending": false
+              }
+            },
+            "zzPc000000000002": {
+              "city": {
+                "when": 1790000000000,
+                "failed": true,
+                "pending": false,
+                "via": "roll"
+              },
+              "cult": {
+                "when": 1790000000000,
+                "failed": true,
+                "pending": false,
+                "via": "roll"
+              }
+            }
+          }
+        },
+        {
+          "op": "Hooks.call",
+          "name": "preUpdateActor"
+        },
+        {
+          "op": "update",
+          "documentName": "Actor",
+          "uuid": "Actor.zzNpc00000000001",
+          "changes": {
+            "flags.pentaryn-ties.beliefs.zzPc000000000001.attr:cult:#id": {
+              "text": "",
+              "tier": null,
+              "total": 19,
+              "when": 1790000000000,
+              "delivered": 1790000000000,
+              "claim": null,
+              "sources": null
+            }
+          }
+        },
+        {
+          "op": "Hooks.callAll",
+          "name": "updateActor"
+        },
+        {
+          "op": "rollSkill",
+          "actor": "zzPc000000000001",
+          "config": {
+            "skill": "his",
+            "target": 15,
+            "advantage": false,
+            "disadvantage": false,
+            "rolls": []
+          },
+          "dialog": {
+            "configure": false
+          },
+          "message": {
+            "create": false
+          },
+          "total": 10
+        },
+        {
+          "op": "settings.set",
+          "id": "pentaryn-ties.attributeKnowledge",
+          "value": {
+            "zzPc000000000001": {
+              "kin": {
+                "when": 1790000000000,
+                "failed": false,
+                "pending": false,
+                "via": "roll"
+              },
+              "city": {
+                "when": 1790000000000,
+                "failed": false,
+                "pending": false,
+                "via": "roll"
+              },
+              "guild": {
+                "when": 1790000000000,
+                "failed": false,
+                "pending": false,
+                "via": "roll"
+              },
+              "cult": {
+                "when": 1790000000000,
+                "failed": false,
+                "pending": false,
+                "via": "roll"
+              },
+              "public": {
+                "when": 1790000000000,
+                "failed": true,
+                "via": "roll",
+                "pending": false
+              }
+            },
+            "zzPc000000000002": {
+              "city": {
+                "when": 1790000000000,
+                "failed": true,
+                "pending": false,
+                "via": "roll"
+              },
+              "cult": {
+                "when": 1790000000000,
+                "failed": true,
+                "pending": false,
+                "via": "roll"
+              }
+            }
+          }
+        },
+        {
+          "op": "Hooks.call",
+          "name": "preUpdateActor"
+        },
+        {
+          "op": "update",
+          "documentName": "Actor",
+          "uuid": "Actor.zzNpc00000000001",
+          "changes": {
+            "flags.pentaryn-ties.beliefs.zzPc000000000001.attr:public:#id": {
+              "text": "",
+              "tier": null,
+              "total": 10,
+              "when": 1790000000000,
+              "delivered": 1790000000000,
+              "claim": null,
+              "sources": null
+            }
+          }
+        },
+        {
+          "op": "Hooks.callAll",
+          "name": "updateActor"
+        },
+        {
+          "op": "Hooks.call",
+          "name": "preUpdateActor"
+        },
+        {
+          "op": "update",
+          "documentName": "Actor",
+          "uuid": "Actor.zzNpc00000000001",
+          "changes": {
+            "flags.pentaryn-ties.beliefs.zzPc000000000001.-=#inspect": null
+          }
+        },
+        {
+          "op": "Hooks.callAll",
+          "name": "updateActor"
+        }
+      ],
+      "console": []
+    },
+    {
+      "label": "deliverHeldIdentifications again (nothing held)",
+      "out": false,
+      "calls": [],
+      "console": []
+    },
+    {
+      "label": "player: deliverHeldIdentifications",
+      "out": false,
+      "calls": [],
+      "console": []
+    },
+    {
+      "label": "beliefs(NPC)",
+      "out": [
+        {
+          "ns": "attr",
+          "factId": "#id",
+          "fact": "#id",
+          "character": "ZZ Caven",
+          "characterId": "zzPc000000000001",
+          "tier": null,
+          "total": null,
+          "when": "<localeDate>",
+          "delivered": "<localeDate>",
+          "whenMs": 1790000000000,
+          "deliveredMs": 1790000000000,
+          "pending": false,
+          "pass": true,
+          "text": "<p>One of us.</p>"
+        },
+        {
+          "ns": "attr",
+          "factId": "#id",
+          "fact": "#id",
+          "character": "ZZ Caven",
+          "characterId": "zzPc000000000001",
+          "tier": null,
+          "total": 16,
+          "when": "<localeDate>",
+          "delivered": "<localeDate>",
+          "whenMs": 1790000000000,
+          "deliveredMs": 1790000000000,
+          "pending": false,
+          "pass": true,
+          "text": "<p>From Vel.</p>"
+        },
+        {
+          "ns": "attr",
+          "factId": "#id",
+          "fact": "#id",
+          "character": "ZZ Caven",
+          "characterId": "zzPc000000000001",
+          "tier": null,
+          "total": 17,
+          "when": "<localeDate>",
+          "delivered": "<localeDate>",
+          "whenMs": 1790000000000,
+          "deliveredMs": 1790000000000,
+          "pending": false,
+          "pass": true,
+          "text": "<p>Guild hands.</p>"
+        },
+        {
+          "ns": "attr",
+          "factId": "#id",
+          "fact": "#id",
+          "character": "ZZ Caven",
+          "characterId": "zzPc000000000001",
+          "tier": null,
+          "total": 19,
+          "when": "<localeDate>",
+          "delivered": "<localeDate>",
+          "whenMs": 1790000000000,
+          "deliveredMs": 1790000000000,
+          "pending": false,
+          "pass": true,
+          "text": ""
+        },
+        {
+          "ns": "attr",
+          "factId": "#id",
+          "fact": "#id",
+          "character": "ZZ Caven",
+          "characterId": "zzPc000000000001",
+          "tier": null,
+          "total": 10,
+          "when": "<localeDate>",
+          "delivered": "<localeDate>",
+          "whenMs": 1790000000000,
+          "deliveredMs": 1790000000000,
+          "pending": false,
+          "pass": false,
+          "text": ""
+        },
+        {
+          "ns": "kind",
+          "factId": "kind",
+          "fact": "ZZ Ghoul",
+          "character": "ZZ Legacy Reader",
+          "characterId": "zzPc000000000003",
+          "tier": 0,
+          "total": 4,
+          "when": "<localeDate>",
+          "delivered": "<localeDate>",
+          "whenMs": 1,
+          "deliveredMs": 2,
+          "pending": false,
+          "pass": false,
+          "text": "x"
+        },
+        {
+          "ns": "lore",
+          "factId": "l1",
+          "fact": "Debts",
+          "character": "ZZ Legacy Reader",
+          "characterId": "zzPc000000000003",
+          "tier": null,
+          "total": 9,
+          "when": "<localeDate>",
+          "delivered": "<localeDate>",
+          "whenMs": 1,
+          "deliveredMs": 2,
+          "pending": false,
+          "pass": false,
+          "text": "Shifty eyes."
+        },
+        {
+          "ns": "attr",
+          "factId": "#id",
+          "fact": "#id",
+          "character": "ZZ Wren",
+          "characterId": "zzPc000000000002",
+          "tier": null,
+          "total": 5,
+          "when": "<localeDate>",
+          "delivered": "<localeDate>",
+          "whenMs": 1790000000000,
+          "deliveredMs": 1790000000000,
+          "pending": false,
+          "pass": false,
+          "text": ""
+        },
+        {
+          "ns": "attr",
+          "factId": "#id",
+          "fact": "#id",
+          "character": "ZZ Wren",
+          "characterId": "zzPc000000000002",
+          "tier": null,
+          "total": 10,
+          "when": "<localeDate>",
+          "delivered": "<localeDate>",
+          "whenMs": 1790000000000,
+          "deliveredMs": 1790000000000,
+          "pending": false,
+          "pass": false,
+          "text": ""
+        }
+      ],
+      "calls": [],
+      "console": []
+    }
+  ],
+  "ledgers": {
+    "knowledge": {
+      "zzPc000000000001": {
+        "kin": {
+          "when": 1790000000000,
+          "failed": false,
+          "pending": false,
+          "via": "roll"
+        },
+        "city": {
+          "when": 1790000000000,
+          "failed": false,
+          "pending": false,
+          "via": "roll"
+        },
+        "guild": {
+          "when": 1790000000000,
+          "failed": false,
+          "pending": false,
+          "via": "roll"
+        },
+        "cult": {
+          "when": 1790000000000,
+          "failed": false,
+          "pending": false,
+          "via": "roll"
+        },
+        "public": {
+          "when": 1790000000000,
+          "failed": true,
+          "pending": false,
+          "via": "roll"
+        }
+      },
+      "zzPc000000000002": {
+        "city": {
+          "when": 1790000000000,
+          "failed": true,
+          "pending": false,
+          "via": "roll"
+        },
+        "cult": {
+          "when": 1790000000000,
+          "failed": true,
+          "pending": false,
+          "via": "roll"
+        }
+      }
+    },
+    "npcBeliefs": {
+      "zzPc000000000003": {
+        "lore:zzNpc00000000001:l1": {
+          "text": "Shifty eyes.",
+          "total": 9,
+          "when": 1,
+          "delivered": 2
+        }
+      },
+      "zzPc000000000001": {
+        "attr:kin:#id": {
+          "text": "<p>One of us.</p>",
+          "tier": null,
+          "total": null,
+          "when": 1790000000000,
+          "delivered": 1790000000000,
+          "claim": null,
+          "sources": null
+        },
+        "attr:city:#id": {
+          "text": "<p>From Vel.</p>",
+          "tier": null,
+          "total": 16,
+          "when": 1790000000000,
+          "delivered": 1790000000000,
+          "claim": null,
+          "sources": null
+        },
+        "attr:guild:#id": {
+          "text": "<p>Guild hands.</p>",
+          "tier": null,
+          "total": 17,
+          "when": 1790000000000,
+          "delivered": 1790000000000,
+          "claim": null,
+          "sources": null
+        },
+        "attr:cult:#id": {
+          "text": "",
+          "tier": null,
+          "total": 19,
+          "when": 1790000000000,
+          "delivered": 1790000000000,
+          "claim": null,
+          "sources": null
+        },
+        "attr:public:#id": {
+          "text": "",
+          "tier": null,
+          "total": 10,
+          "when": 1790000000000,
+          "delivered": 1790000000000,
+          "claim": null,
+          "sources": null
+        }
+      },
+      "zzPc000000000002": {
+        "attr:city:#id": {
+          "text": "",
+          "tier": null,
+          "total": 5,
+          "when": 1790000000000,
+          "delivered": 1790000000000,
+          "claim": null,
+          "sources": null
+        },
+        "attr:cult:#id": {
+          "text": "",
+          "tier": null,
+          "total": 10,
+          "when": 1790000000000,
+          "delivered": 1790000000000,
+          "claim": null,
+          "sources": null
+        }
+      }
+    },
+    "granted": {
+      "zzPc000000000001": {
+        "attr:kin:#id": {
+          "text": "<p>One of us.</p>",
+          "when": 1790000000000,
+          "icon": null,
+          "source": "Kin"
+        },
+        "attr:city:#id": {
+          "text": "<p>From Vel.</p>",
+          "when": 1790000000000,
+          "icon": null,
+          "source": "Vel"
+        },
+        "attr:guild:#id": {
+          "text": "<p>Guild hands.</p>",
+          "when": 1790000000000,
+          "icon": "icons/sundries/flags/banner-standard-green.webp",
+          "source": "Salt Guild"
+        }
+      },
+      "zzPc000000000002": {
+        "lore:zzNpc00000000001:#idmiss-city": {
+          "text": "<p>A Vel accent?</p>",
+          "when": 1790000000000,
+          "icon": "icons/zz/zzNpc00000000001.webp",
+          "source": "ZZ Brakka"
+        }
+      }
+    }
+  }
+}

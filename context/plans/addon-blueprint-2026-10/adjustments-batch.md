@@ -53,32 +53,32 @@ flags rows the guides named with the module prefix although they are not patches
 | dropbin | `dropbin-itempiles-directory-hiding` | new, not a patch | (per guide) | `renderActorDirectory` | **fails** — interim `itempiles-dropbin-directory-hiding` | dropbin step 10 — **landed** (wave 2 integration) as `itempiles-dropbin-directory-hiding` |
 | dropbin | `dropbin-itempiles-svelte-store` | new, not a patch | `piles.mjs` | `appShell` | **fails** — interim `itempiles-dropbin-svelte-store` | dropbin step 10 — **landed** (wave 2 integration) as `itempiles-dropbin-svelte-store` |
 | dropbin | `itempiles-corpses`, `itempiles-rarity-i18n` (existing) | files move | per dropbin step 4 | unchanged | ok | dropbin step 4 — **landed** (wave 2 integration): `itempiles-corpses` gains `piles.mjs` (its marker `itempiles` lives there now); `itempiles-rarity-i18n` unchanged |
-| prompts | `prompts-token-dblclick` | new, **patch** | `patches.mjs` | `__pentarynPromptsClick`, `_onClickLeft2` | ok | prompts step 6 |
-| prompts | `prompts-item-piles-hotspot` | new, not a patch | `replace.mjs`, `scene-adapter.mjs` | `flags.item-piles.data`, `Hotspot · Look (template)` | **fails** — interim `itempiles-prompts-hotspot` | prompts step 6 |
-| ties | `ties-item-piles-pile-check` | new, not a patch | `look-menu.mjs`, `preview-app.mjs` | `item-piles`, `data`, `isValidItemPile` | **fails** — interim `itempiles-ties-pile-check` | ties S14 |
-| ties | `core-ties-flag-wipe`, `dsn-skip-blind-study` (existing) | files move | `core/known.mjs` (+ the `ForcedDeletion` comment's file), `look-app.mjs`, `preview-app.mjs`; `study/apply.mjs` | unchanged | ok | ties S4b/S14 (same change set as the move) |
-| ties | `dnd5e-legacy-roll-modes` (existing, **shared with aoe — WAIT**) | files move, **ties path only** | `study/apply.mjs` | unchanged | ok | ties S14, §6 caveat 1 |
+| prompts | `prompts-token-dblclick` | new, **patch** | `patches.mjs` | `__pentarynPromptsClick`, `_onClickLeft2` | ok | prompts step 6 — **landed** (wave 3 integration) |
+| prompts | `prompts-item-piles-hotspot` | new, not a patch | `replace.mjs`, `scene-adapter.mjs` | `flags.item-piles.data`, `Hotspot · Look (template)` | **fails** — interim `itempiles-prompts-hotspot` | prompts step 6 — **landed** (wave 3 integration) as `itempiles-prompts-hotspot` |
+| ties | `ties-item-piles-pile-check` | new, not a patch | `look-menu.mjs`, `preview-app.mjs` | `item-piles`, `data`, `isValidItemPile` | **fails** — interim `itempiles-ties-pile-check` | ties S14 — **landed** (wave 3 integration) as `itempiles-ties-pile-check` |
+| ties | `core-ties-flag-wipe`, `dsn-skip-blind-study` (existing) | files move | `core/known.mjs` (+ the `ForcedDeletion` comment's file), `look-app.mjs`, `preview-app.mjs`; `study/apply.mjs` | unchanged | ok | ties S4b/S14 — **landed** (wave 3 integration); `core-ties-flag-wipe` → `core/known.mjs`, `look-app.mjs`, `preview-app.mjs`; `dsn-skip-blind-study` → `study/apply.mjs` (the moves landed earlier, so adjustments-check was red from `c9276cb8` until this batch) |
+| ties | `dnd5e-legacy-roll-modes` (existing, **shared with aoe — WAIT**) | files move, **ties path only** | `study/apply.mjs` | unchanged | ok | ties S14, §6 caveat 1 — **landed** (wave 3 integration) (ties path only) |
 
 ## Batch B — WAIT modules (Stage 4; each after its `wait.json` entry is lifted)
 
 | Module | Row id | Kind | Files | Markers | C32 | Source |
 |---|---|---|---|---|---|---|
-| creatures | `creatures-libwrapper` (existing) | rewrite, **patch** | `owner-sees.mjs` (+ creatures-core) | `isVisible`, `_testCulled`, `_previewType`, `__pentarynCreaturesVisible` | ok (needs kit K1 — landed) | creatures step 5 |
-| creatures | `creatures-item-piles-flag` | new, not a patch | `creatures-core.mjs` | `item-piles` | **fails** — interim `itempiles-creatures-flag` | creatures step 5 |
-| creatures | `creatures-strip-over-argon` (existing since `17275c9`, adjustments.yml:873-882) | rename (not a patch) + files move | `strip.mjs`, `creatures-core.mjs` | `stripDock`, `.extended-combat-hud` (unchanged) | **fails live** — rename to `argon-creatures-strip-float` | creatures step 5 (re-anchor 2026-10-11) |
-| portals | `core-teleport-dialog-cards` | new | `cards.mjs`, `scene-adapter.mjs` | `dialog-`, `select[name="destination"]` | ok | portals ADJ |
-| portals | `core-teleport-replacements-follow` | new | `party.mjs` | `replacements` | ok | portals ADJ |
-| portals | `core-region-config-portal-card` | new | `cards.mjs` | `region-appearance` | ok | portals ADJ |
-| portals | `itempiles-portals-pile-pc` | new | `scene-adapter.mjs` | `isValidItemPile` | ok | portals ADJ |
-| portals | `core-portals-relative-uuid` (existing) | files move | `portals-core.mjs`, `scene-adapter.mjs` | unchanged | ok | portals S3 |
-| portals | `portals-teleport-default-and-spread` (**renamed `core-teleport-default-and-spread`**, D2 `df661e0`) (existing since `17275c9`, adjustments.yml:884-893) | rename (not a patch) + markers + files move | `cards.mjs`, `party.mjs`, `portals-core.mjs` | `data-action="yes"`, `:scope > p`, `spreadArrival` (was `preferTeleport`, `spreadArrival`) | **fails live** — rename to `core-teleport-default-and-spread` | portals ADJ (re-anchor 2026-10-11; -31 extension) |
-| senses | `core-light-animation-shader` | new | `glow.mjs` | `TorchIlluminationShader`, `lightAnimations` | ok | senses step 12 |
-| senses | `core-token-preview-private` | new | `chain.mjs` | `_preview` | ok | senses step 12 |
-| senses | `core-primary-sort-layers` | new | `chain.mjs` | `SORT_LAYERS` | ok | senses step 12 |
-| senses | `dnd5e-light-summon-suppress` | new | `light.mjs`, `light-ui.mjs` | `create.summons`, `placeSummons` | ok | senses step 12 |
-| senses | `core-teleport-replacements` | new | `light.mjs` | `replacements` | ok | senses step 12 |
-| senses | `senses-light-pick-collapse-hud` (**renamed `argon-light-pick-collapse-panels`**, D2 `df661e0`) (existing, live) | not a patch | `argon.mjs` | — | **fails** — option (b) rename `argon-light-pick-collapse-panels`, or D2 | senses step 12 |
-| senses | `dnd5e-chat-message-types` (existing, shared aoe/riders/combat) | files move | `light.mjs` path follows its move | unchanged | ok | senses step 12 |
+| creatures | `creatures-libwrapper` (existing) | rewrite, **patch** | `owner-sees.mjs` (+ creatures-core) | `isVisible`, `_testCulled`, `_previewType`, `__pentarynCreaturesVisible` | ok (needs kit K1 — landed) | creatures step 5 — **landed** (wave 3 integration): files `owner-sees.mjs` only (no marker in creatures-core), packages `[lib-wrapper, core]`, `retire_class: guarded` |
+| creatures | `creatures-item-piles-flag` | new, not a patch | `creatures-core.mjs` | `item-piles` | **fails** — interim `itempiles-creatures-flag` | creatures step 5 — **landed** (wave 3 integration) as `itempiles-creatures-pile-flag` (the creatures Result's id) |
+| creatures | `creatures-strip-over-argon` (existing since `17275c9`, adjustments.yml:873-882) | rename (not a patch) + files move | `strip.mjs`, `creatures-core.mjs` | `stripDock`, `.extended-combat-hud` (unchanged) | **fails live** — rename to `argon-creatures-strip-float` | creatures step 5 (re-anchor 2026-10-11) — **landed** (wave 3 integration) as `argon-creatures-strip-float` |
+| portals | `core-teleport-dialog-cards` | new | `cards.mjs`, `portals-core.mjs` (the guide's integrator list; `select[name="destination"]` is only in `cards.mjs`) | `dialog-`, `select[name="destination"]` | ok | portals ADJ — **landed** (wave 3 integration) |
+| portals | `core-teleport-replacements-follow` | new | `party.mjs` | `replacements` | ok | portals ADJ — **landed** (wave 3 integration) |
+| portals | `core-region-config-portal-card` | new | `cards.mjs` | `region-appearance` | ok | portals ADJ — **landed** (wave 3 integration) |
+| portals | `itempiles-portals-pile-pc` | new | `scene-adapter.mjs` | `isValidItemPile` | ok | portals ADJ — **landed** (wave 3 integration) |
+| portals | `core-portals-relative-uuid` (existing) | files move | `portals-core.mjs`, `scene-adapter.mjs`, `cards.mjs` | unchanged | ok | portals S3 — **landed** (wave 3 integration) |
+| portals | `portals-teleport-default-and-spread` (**renamed `core-teleport-default-and-spread`**, D2 `df661e0`) (existing since `17275c9`, adjustments.yml:884-893) | rename (not a patch) + markers + files move | `cards.mjs`, `party.mjs` (not `portals-core.mjs`: it holds none of the markers) | `data-action="yes"`, `:scope > p`, `spreadArrival` (was `preferTeleport`, `spreadArrival`) | **fails live** — rename to `core-teleport-default-and-spread` | portals ADJ (re-anchor 2026-10-11; -31 extension) — **landed** (wave 3 integration) |
+| senses | `core-light-animation-shader` | new | `glow.mjs` | `TorchIlluminationShader`, `lightAnimations` | ok | senses step 12 — **landed** (wave 3 integration) |
+| senses | `core-token-preview-private` | new | `chain.mjs` | `_preview` | ok | senses step 12 — **landed** (wave 3 integration) |
+| senses | `core-primary-sort-layers` | new | `chain.mjs` | `SORT_LAYERS` | ok | senses step 12 — **landed** (wave 3 integration) |
+| senses | `dnd5e-light-summon-suppress` | new | `light.mjs`, `light-ui.mjs` | `create.summons`, `placeSummons` | ok | senses step 12 — **landed** (wave 3 integration) |
+| senses | `core-teleport-replacements` | new | `light.mjs` | `replacements` | ok | senses step 12 — **landed** (wave 3 integration) |
+| senses | `senses-light-pick-collapse-hud` (**renamed `argon-light-pick-collapse-panels`**, D2 `df661e0`) (existing, live) | not a patch | `argon.mjs` | — | **fails** — option (b) rename `argon-light-pick-collapse-panels`, or D2 | senses step 12 — **landed** (wave 3 integration): files → `argon.mjs` |
+| senses | `dnd5e-chat-message-types` (existing, shared aoe/riders/combat) | files move | `light.mjs` path follows its move (→ `light-ui.mjs`, the usage-card read) | unchanged | ok | senses step 12 — **landed** (wave 3 integration) |
 | riders | `riders-argon-ritual-adept-list`, `argon-shared-uses-badge`, `argon-collapse-on-area-placement`, `dnd5e-chat-message-types` (existing) | files move | `rituals.mjs`/`patches.mjs`; `argon-tidy.mjs`/`argon.mjs`; `damage-riders.mjs`/`card-note.mjs` | unchanged | check `riders-argon-ritual-adept-list` is named by a `wrapMethod` | riders S8 |
 | riders | `riders-dnd5e-damage-tray-preset` | new | per guide | `getTargetOptions`, `dnd5e.preCalculateDamage` | **fails** unless a patch — interim `dnd5e-riders-damage-tray-preset` | riders S8 |
 | riders | `riders-dnd5e-roll-term-riders` | new | per guide | `postDamageRollConfiguration`, `resetFormula` | as above — interim `dnd5e-riders-roll-term-riders` | riders S8 |

@@ -1,5 +1,6 @@
-/* "Your creatures" strip, docked above the hotbar in #ui-bottom. #ui-middle has pointer-events: none. */
-#pentaryn-creatures {
+/* "Your creatures" strip (nav#pentaryn-creatures.pcr-strip, strip.mjs), docked above the hotbar in #ui-bottom.
+   #ui-middle has pointer-events: none. Every rule is scoped on the strip's own id + class. */
+#pentaryn-creatures.pcr-strip {
   pointer-events: auto;
   flex: none;
   display: flex;
@@ -15,7 +16,7 @@
   box-shadow: 0 0 6px rgba(0, 0, 0, 0.6);
   overflow-x: auto;
 }
-#pentaryn-creatures .pcr-label {
+#pentaryn-creatures.pcr-strip .pcr-label {
   font-size: var(--font-size-11, 11px);
   color: #e8dcc0;
   text-transform: uppercase;
@@ -24,7 +25,7 @@
   padding-right: 2px;
   user-select: none;
 }
-#pentaryn-creatures .pcr-token {
+#pentaryn-creatures.pcr-strip .pcr-token {
   flex: none;
   width: 44px;
   height: 44px;
@@ -38,11 +39,11 @@
   cursor: pointer;
   transition: transform 0.1s ease, border-color 0.1s ease;
 }
-#pentaryn-creatures .pcr-token.rank-0 { border-color: rgba(201, 162, 92, 0.9); }
-#pentaryn-creatures .pcr-token:hover,
-#pentaryn-creatures .pcr-token:focus-visible { transform: scale(1.1); border-color: #ffd27a; outline: none; }
-#pentaryn-creatures .pcr-token.controlled { border-color: #ff9a2e; box-shadow: 0 0 8px #ff9a2e; }
-#pentaryn-creatures .pcr-token img {
+#pentaryn-creatures.pcr-strip .pcr-token.rank-0 { border-color: rgba(201, 162, 92, 0.9); }
+#pentaryn-creatures.pcr-strip .pcr-token:hover,
+#pentaryn-creatures.pcr-strip .pcr-token:focus-visible { transform: scale(1.1); border-color: #ffd27a; outline: none; }
+#pentaryn-creatures.pcr-strip .pcr-token.controlled { border-color: #ff9a2e; box-shadow: 0 0 8px #ff9a2e; }
+#pentaryn-creatures.pcr-strip .pcr-token img {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -50,8 +51,8 @@
   pointer-events: none;
 }
 
-/* Floated above the Combat HUD while it is up (creatures.mjs placeStrip; usability Area 6 re-run). */
-#pentaryn-creatures.pcr-floating {
+/* Floated above the Combat HUD while it is up (strip.mjs placeStrip; usability Area 6 re-run). */
+#pentaryn-creatures.pcr-strip.pcr-floating {
   position: fixed;
   margin: 0;
   z-index: 70;

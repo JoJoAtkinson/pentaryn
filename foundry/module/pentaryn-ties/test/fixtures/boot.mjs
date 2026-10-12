@@ -10,7 +10,18 @@
 import { readFileSync } from "node:fs";
 import { installFoundry } from "../kit/foundry-stub.mjs";
 
-export const LANG = JSON.parse(readFileSync(new URL("../../lang/en.json", import.meta.url), "utf8"));
+/**
+ * lang/en.json as flat dotted keys, whether the file is flat or nested under PENTARYN_TIES (guide S10
+ * nests it; Foundry flattens either shape the same way). Format only — the keys and strings are the file's.
+ */
+const flatten = (node, prefix = "", out = {}) => {
+  for (const [k, v] of Object.entries(node ?? {})) {
+    if (v && typeof v === "object") flatten(v, prefix ? `${prefix}.${k}` : k, out);
+    else out[prefix ? `${prefix}.${k}` : k] = v;
+  }
+  return out;
+};
+export const LANG = flatten(JSON.parse(readFileSync(new URL("../../lang/en.json", import.meta.url), "utf8")));
 
 /** dnd5e 6.0.6's own label keys and English words, for the two derived namespaces that ask CONFIG. */
 export const DND5E_LANG = { "DND5E.SizeMedium": "Medium", "DND5E.CreatureHumanoid": "Humanoid" };

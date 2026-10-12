@@ -1,0 +1,19 @@
+{
+  "gmB": [
+    "zzActorC00000001",
+    "zzLegacy00000001",
+    "zzLegacy00000002",
+    "zzLocked00000001"
+  ],
+  "playerB": [
+    "zzActorC00000001"
+  ],
+  "none": [
+    "zzActorA00000001",
+    "zzActorB00000001",
+    "zzActorC00000001",
+    "zzLegacy00000001",
+    "zzLegacy00000002",
+    "zzLocked00000001"
+  ]
+}

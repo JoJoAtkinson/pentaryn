@@ -1,8 +1,8 @@
 """A fake `rclone` for the cloud tests: no binary, no network, no config.
 
 :class:`FakeRclone` is called exactly like ``subprocess.run`` and implements the verbs
-``RcloneStorage`` uses — ``lsjson cat rcat copyto moveto deletefile mkdir listremotes`` —
-against a temp folder. ``fake:<path>`` maps to ``<base>/<path>``; anything else is a local
+``RcloneStorage`` uses — ``lsjson cat rcat copyto moveto deletefile touch mkdir listremotes``,
+and ``cat --count N`` (binary, the first N bytes) — against a temp folder. ``fake:<path>`` maps to ``<base>/<path>``; anything else is a local
 path. It records every argv and refuses any argv carrying ``--config`` or a token-ish flag or value, so a
 flag change is a visible test diff and a leak is a test failure.
 """
@@ -19,7 +19,7 @@ from pathlib import Path
 
 # Flags that take a value, so the parser can skip the value with the flag.
 _VALUE_FLAGS = {"--retries", "--low-level-retries", "--contimeout", "--timeout",
-                "--stats", "--log-level"}
+                "--stats", "--log-level", "--count", "--offset"}
 
 
 class FakeRclone:
@@ -32,6 +32,7 @@ class FakeRclone:
         self.fail_always: dict[str, tuple[int, str]] = {}
         self.hang: set[str] = set()                        # verbs that time out
         self.truncate_uploads = False                      # copyto to the cloud drops bytes
+        self._text = True                                  # the current call's text= flag
 
     # -- helpers -------------------------------------------------------------
 
@@ -88,6 +89,7 @@ class FakeRclone:
             rc, err = self.fail_always[verb]
             return self._done(argv, rc, "", err)
         pos = self._positional(argv[2:])
+        self._text = text
         return getattr(self, "_" + verb)(argv, pos, input)
 
     def _listremotes(self, argv, pos, _in):
@@ -111,7 +113,13 @@ class FakeRclone:
     def _cat(self, argv, pos, _in):
         p = self._path(pos[0])
         if not p.is_file():
-            return self._done(argv, 3, "", "error: object not found")
+            return self._done(argv, 3, "" if self._text else b"",
+                              "error: object not found" if self._text else b"error: not found")
+        if "--count" in argv:                       # `cat --count N`: the first N bytes
+            n = int(argv[argv.index("--count") + 1])
+            with p.open("rb") as fh:
+                data = fh.read(n)
+            return self._done(argv, 0, data if not self._text else data.decode("utf-8"))
         return self._done(argv, 0, p.read_text(encoding="utf-8"))
 
     def _rcat(self, argv, pos, data):
@@ -144,6 +152,16 @@ class FakeRclone:
         if not p.is_file():
             return self._done(argv, 4, "", "error: object not found")
         p.unlink()
+        return self._done(argv, 0)
+
+    def _touch(self, argv, pos, _in):
+        p = self._path(pos[0])
+        if not p.is_file():
+            if "--no-create" in argv:
+                return self._done(argv, 0)
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.write_bytes(b"")
+        os.utime(p, None)
         return self._done(argv, 0)
 
     def _mkdir(self, argv, pos, _in):

@@ -1,0 +1,12 @@
+[
+  "<header class=\"pp-head\"><span>In sight · 2</span><span class=\"pp-map\">100 × 50 ft</span></header><p class=\"pp-door\"><i class=\"fa-solid fa-door-closed\"></i> Behind a closed door: Prompt · small (25 ft E)</p><ol class=\"pp-rows\"><li class=\"pp-row\" data-action=\"row\" data-key=\"Token.tokOrdinary00001\">",
+  "<span class=\"pp-img\"><img src=\"tokens/guard.webp\" alt=\"\"></span>",
+  "<span class=\"pp-lines\"><span class=\"pp-l1\">Guard</span><span class=\"pp-l2\">15 ft · close · SW</span><span class=\"pp-l3\">A bored town guard.</span></span>",
+  "</li><li class=\"pp-row pp-extra\" data-action=\"row\" data-key=\"Token.m1\">",
+  "<span class=\"pp-img\"><img src=\"modules/pentaryn-prompts/assets/marker-mid.webp\" alt=\"\"></span>",
+  "<span class=\"pp-lines\"><span class=\"pp-l1\">Prompt · mid</span><span class=\"pp-l2\">20 ft · close · W</span><span class=\"pp-l3\">a lantern</span></span>",
+  "</li></ol><button type=\"button\" class=\"pp-more\" data-action=\"more\">+1 more</button><details class=\"pp-out\"><summary>Out of sight (within 60 ft) · 1</summary><ol class=\"pp-rows\"><li class=\"pp-row pp-unseen\" data-action=\"row\" data-key=\"Token.<id>\">",
+  "<span class=\"pp-img\"><img src=\"modules/pentaryn-prompts/assets/marker-small.webp\" alt=\"\"></span>",
+  "<span class=\"pp-lines\"><span class=\"pp-l1\">Prompt · small</span><span class=\"pp-l2\">25 ft · close · E · door</span><span class=\"pp-l3\">a sentry</span></span>",
+  "</li></ol></details>"
+]

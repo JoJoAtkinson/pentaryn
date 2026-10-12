@@ -1,0 +1,118 @@
+[
+  {
+    "id": "showWeb",
+    "out": true,
+    "calls": [
+      {
+        "op": "notify",
+        "level": "warn",
+        "message": "Hover your own character's token."
+      }
+    ],
+    "console": []
+  },
+  {
+    "id": "addTie",
+    "out": true,
+    "calls": [
+      {
+        "op": "app.render",
+        "app": "TieDialog",
+        "opts": true
+      }
+    ],
+    "console": []
+  },
+  {
+    "id": "fileKnown",
+    "out": true,
+    "calls": [
+      {
+        "op": "Hooks.call",
+        "name": "preUpdateActor"
+      },
+      {
+        "op": "update",
+        "documentName": "Actor",
+        "uuid": "Actor.zzPc000000000001",
+        "changes": {
+          "flags.pentaryn-ties.known": [
+            {
+              "id": "zzNpc00000000001",
+              "name": "ZZ Brakka",
+              "category": "sentient",
+              "notes": "",
+              "imposter": null,
+              "hidden": false,
+              "when": 1790000000000
+            }
+          ]
+        }
+      },
+      {
+        "op": "Hooks.callAll",
+        "name": "updateActor"
+      },
+      {
+        "op": "sheet.render",
+        "actor": "zzPc000000000001",
+        "force": true,
+        "tab": "known"
+      }
+    ],
+    "console": []
+  },
+  {
+    "id": "inspect",
+    "out": true,
+    "calls": [
+      {
+        "op": "app.render",
+        "app": "LookWindow",
+        "opts": {
+          "force": true
+        }
+      },
+      {
+        "op": "ChatMessage.create",
+        "data": {
+          "content": "<p class=\"pt-study-stub\">ZZ Caven studies ZZ Brakka.</p>",
+          "speaker": {
+            "alias": "ZZ Caven",
+            "actor": "zzPc000000000001"
+          }
+        }
+      },
+      {
+        "op": "socket.emit",
+        "args": [
+          "module.pentaryn-ties",
+          {
+            "action": "inspect",
+            "characterId": "zzPc000000000001",
+            "subjectId": "zzNpc00000000001"
+          }
+        ]
+      }
+    ],
+    "console": []
+  },
+  {
+    "id": "showOneTie",
+    "out": true,
+    "calls": [
+      {
+        "op": "notify",
+        "level": "info",
+        "message": "Nothing recorded between you and them."
+      }
+    ],
+    "console": []
+  },
+  {
+    "id": "showDescription",
+    "out": true,
+    "calls": [],
+    "console": []
+  }
+]
