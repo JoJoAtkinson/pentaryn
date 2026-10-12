@@ -729,3 +729,107 @@ def test_pl1_a_rerun_after_the_folder_changed_leaves_no_staged_tar(two_hosts, mo
     with two_hosts.use("mac"):
         assert cloud.backup("shutdown") == 0       # old tools tar: no longer this tree's
     assert list(staging.iterdir()) == []
+
+
+# ── DL7: an upload's size check never deletes a same-name bundle ─────────────
+
+@pytest.mark.parametrize("sub", ["bundles", "world-backups"])
+def test_dl7_rclone_size_check_keeps_another_writers_bundle_and_deletes_elsewhere(tmp_path,
+                                                                                  sub):
+    from cloud_fakes import FakeRclone
+    fake = FakeRclone(tmp_path)
+    rc = storage.RcloneStorage("fake:root", bin="rclone", runner=fake, interactive=False)
+    src = tmp_path / "x.tar.gz"
+    src.write_bytes(b"our archive " * 50)
+    there = tmp_path / "root" / sub / "x.tar.gz"
+
+    def racing(argv, **kw):
+        out = fake(argv, **kw)
+        if argv[1] == "moveto":                   # the other host's moveto, right after ours
+            there.write_bytes(b"their archive of the same files " * 3)
+        return out
+    rc.runner = racing
+    with pytest.raises(storage.StorageError) as err:
+        rc.upload(src, f"{sub}/x.tar.gz")
+    if sub == "bundles":
+        assert isinstance(err.value, storage.Superseded)
+        assert there.read_bytes() == b"their archive of the same files " * 3
+    else:                                         # a unique name: a mismatch is ours, deleted
+        assert not isinstance(err.value, storage.Superseded)
+        assert "did not verify" in str(err.value) and not there.exists()
+
+
+@pytest.mark.parametrize("sub", ["bundles", "world-backups"])
+def test_dl7_folder_size_check_keeps_another_writers_bundle_and_deletes_elsewhere(
+        tmp_path, monkeypatch, sub):
+    fs = storage.FolderStorage(tmp_path / "root")
+    src = tmp_path / "x.tar.gz"
+    src.write_bytes(b"our archive " * 50)
+    there = tmp_path / "root" / sub / "x.tar.gz"
+    real = os.replace
+
+    def racing(a, b):
+        real(a, b)
+        if os.fspath(b) == os.fspath(there):      # the sync client lands the other host's
+            there.write_bytes(b"their archive of the same files " * 3)
+    monkeypatch.setattr(storage.os, "replace", racing)
+    with pytest.raises(storage.StorageError) as err:
+        fs.upload(src, f"{sub}/x.tar.gz")
+    monkeypatch.setattr(storage.os, "replace", real)
+    assert isinstance(err.value, storage.Superseded) == (sub == "bundles")
+    assert there.exists() == (sub == "bundles")
+
+
+def test_dl7_a_backup_that_loses_the_same_name_race_succeeds_and_both_snapshots_hold(
+        two_hosts, monkeypatch, capsys):
+    from cloud_fakes import FakeRclone
+    from scripts.foundry import bundles
+    c = two_hosts.cloud
+    _install(two_hosts.data["mac"])
+    with two_hosts.use("mac"):
+        maps = bundles.local_inventory()["module/maps"].name
+    boss_snap = f"world-{time.strftime('%Y-%m-%d-%H%M%S', time.gmtime())}-fvtt14.369-boss.tar.gz"
+    (c / "world-backups" / boss_snap).write_bytes(b"x" * 64)
+    (c / "world-backups" / f"{boss_snap}{cloud.PARENT_SUFFIX}").write_text(json.dumps(
+        {"parent": None, "ancestors": [], "host": "boss", "bundled": 1,
+         "modules": {"maps": maps}, "systems": {}}))
+    fake = FakeRclone(c.parent)
+    rc = storage.RcloneStorage(f"fake:{c.name}", bin="rclone", runner=fake, interactive=False)
+    monkeypatch.setattr(storage, "get", lambda: rc)
+
+    def racing(argv, **kw):
+        out = fake(argv, **kw)
+        if argv[1] == "moveto" and FakeRclone._positional(argv[2:])[1].endswith(f"/{maps}"):
+            (c / "bundles" / maps).write_bytes(b"boss's archive of the same files " * 97)
+        return out
+    rc.runner = racing
+    capsys.readouterr()
+    with two_hosts.use("mac"):
+        assert cloud.backup("shutdown") == 0
+    out = capsys.readouterr().out
+    assert f"bundle {maps}: the other machine's upload" in out, out
+    [mine] = [n for n in _names(c) if n.endswith("-mac.tar.gz")]
+    side = json.loads((c / "world-backups" / f"{mine}{cloud.PARENT_SUFFIX}").read_text())
+    assert side["modules"]["maps"] == maps
+    assert (c / "bundles" / maps).read_bytes() == b"boss's archive of the same files " * 97
+
+
+def test_dl7_upload_one_accepts_superseded_and_raises_anything_else(two_hosts, tmp_path,
+                                                                   monkeypatch):
+    from scripts.foundry import bundles
+    src = tmp_path / "b.tar.gz"
+    src.write_bytes(b"x")
+    calls = []
+
+    def superseded(self, s, rel):
+        calls.append(rel)
+        raise storage.Superseded("theirs landed", verb="moveto")
+    monkeypatch.setattr(storage.FolderStorage, "upload", superseded)
+    bundles.upload_one(cloud.store(), src, "module@m@1@0123456789abcdef.tar.gz")
+    assert calls == ["bundles/module@m@1@0123456789abcdef.tar.gz"]
+
+    def broken(self, s, rel):
+        raise storage.StorageError("connection reset", verb="copyto")
+    monkeypatch.setattr(storage.FolderStorage, "upload", broken)
+    with pytest.raises(storage.StorageError, match="connection reset"):
+        bundles.upload_one(cloud.store(), src, "module@m@1@0123456789abcdef.tar.gz")

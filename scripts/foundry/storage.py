@@ -20,6 +20,10 @@ Two rules that hold for both implementations:
 * **No secret ever reaches an argv or a log.** ``--config`` is never passed (rclone finds
   its own config), the config path is never printed, and the stderr attached to a
   failure is scrubbed of any token-looking line.
+
+An upload whose size check fails deletes what it wrote — except in a
+``CONTENT_ADDRESSED`` folder (``bundles/``), where the file there may be the other
+host's same-name upload: it raises :class:`Superseded` and deletes nothing.
 """
 
 from __future__ import annotations
@@ -38,6 +42,10 @@ from typing import Callable, Protocol
 SUBFOLDERS = ("assets", "world-backups", "system-backup", "major-release", "bundles")
 JUNK_NAMES = {".DS_Store", "Thumbs.db", "desktop.ini"}
 PARTIAL = ".partial"
+# Folders whose file names are content-addressed: a name IS its content, and either host
+# may write it at any time (bundles.py). An upload's size check never deletes there — see
+# `upload` and `Superseded`.
+CONTENT_ADDRESSED = frozenset({"bundles"})
 
 # The Mac's OneDrive app folder: today's cloud, and the fallback when rclone has no remote.
 MAC_FOLDER = Path.home() / "Library/CloudStorage/OneDrive-Personal/DnD/foundry"
@@ -54,6 +62,20 @@ class StorageError(RuntimeError):
         super().__init__(msg)
         self.verb = verb
         self.code = code
+
+
+class Superseded(StorageError):
+    """An upload into a CONTENT_ADDRESSED folder landed, and by the size check the name
+    held another writer's file: the other host uploaded the same name a moment later. By
+    construction that is the same content, archived on another machine (another zlib,
+    other mtimes — so another size). Nothing was deleted; the caller decides (a bundle
+    upload accepts it: the name is there, review DL7)."""
+
+
+def _superseded(rel: str, got: int, want: int) -> Superseded:
+    return Superseded(f"upload of {rel}: the cloud holds {got} B, ours was {want} B — another "
+                      "writer's file of the same name replaced ours; left in place",
+                      verb="moveto")
 
 
 @dataclass(frozen=True)
@@ -201,7 +223,14 @@ class FolderStorage:
         except OSError as exc:
             raise StorageError(f"upload of {rel} failed: {exc}", verb="copyto") from exc
         want = Path(src).stat().st_size
-        if p.stat().st_size != want:
+        try:
+            got = p.stat().st_size
+        except FileNotFoundError:
+            raise StorageError(f"upload of {rel} is gone right after it landed",
+                               verb="moveto") from None
+        if got != want:
+            if _split(rel)[0] in CONTENT_ADDRESSED:
+                raise _superseded(rel, got, want)       # never delete the other host's
             p.unlink(missing_ok=True)
             raise StorageError(f"upload of {rel} arrived with the wrong size", verb="moveto")
 
@@ -477,7 +506,10 @@ class RcloneStorage:
 
         A copyto failure is retried once (rclone's own retries have already run by
         then, but a whole-transfer retry is cheap insurance against a dropped link);
-        a size mismatch is not retried — it deletes and raises."""
+        a size mismatch is not retried — it deletes and raises. In a CONTENT_ADDRESSED
+        folder it never deletes: rclone has already verified the transfer and the move
+        is a server-side rename, so a different size there is the other host's
+        same-name upload landing after ours — `Superseded`, the file left in place."""
         src = Path(src)
         part = _check_rel(rel) + PARTIAL
         try:
@@ -492,6 +524,8 @@ class RcloneStorage:
         head, name = _split(rel)
         got = next((e for e in self._lsjson(head) if e.name == name), None)
         want = src.stat().st_size
+        if got is not None and got.size != want and head in CONTENT_ADDRESSED:
+            raise _superseded(rel, got.size, want)      # never delete the other host's
         if got is None or got.size != want:
             self.delete(rel)
             raise StorageError(

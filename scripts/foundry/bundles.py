@@ -30,9 +30,11 @@ from pathlib import Path
 from typing import Callable, Iterable, NamedTuple
 
 from scripts.foundry import host
-from scripts.foundry.storage import JUNK_NAMES, Entry, Storage, StorageError, refresh
+from scripts.foundry.storage import (CONTENT_ADDRESSED, JUNK_NAMES, Entry, Storage,
+                                     StorageError, Superseded, refresh)
 
 BUNDLES = "bundles"                       # the cloud subfolder (flat, shared by both hosts)
+assert BUNDLES in CONTENT_ADDRESSED       # its uploads never delete on a size mismatch (DL7)
 ROOTS = {"module": "Data/modules", "system": "Data/systems"}
 MANIFEST_FILE = {"module": "module.json", "system": "system.json"}
 FP_LEN = 16
@@ -510,11 +512,25 @@ def upload_missing(st: Storage, staged: dict[str, Path], have: dict[str, Entry],
                                    "local folder no longer matches it — rerun the backup",
                                    verb="copyto")
             src = staged[name] = Path(new)
-        fresh_mtime(src)
         log(f"uploading bundle {name} ({_gb(src.stat().st_size)})")
-        st.upload(src, f"{BUNDLES}/{name}")
+        upload_one(st, src, name)
         up.append(name)
     return up
+
+
+def upload_one(st: Storage, src: Path, name: str) -> None:
+    """Upload one bundle tar as ``bundles/<name>``: its mtime set to now first
+    (:func:`fresh_mtime`). When the other host's upload of the same name lands right after
+    ours, the storage layer's size check sees its archive — the same content, another
+    size — and raises :class:`storage.Superseded` without deleting it (review DL7): the
+    name is in the cloud, which is all a manifest needs, so that is a success here. Any
+    other failure raises :class:`StorageError`."""
+    fresh_mtime(src)
+    try:
+        st.upload(src, f"{BUNDLES}/{name}")
+    except Superseded:
+        log(f"bundle {name}: the other machine's upload of the same bundle landed right "
+            "after ours — the same content, kept")
 
 
 def fresh_mtime(tar: Path) -> None:

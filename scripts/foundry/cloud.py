@@ -1124,8 +1124,7 @@ def _verify_bundles(st: Storage, name: str, manifest: dict, staged: dict[str, Pa
                     f"{ref.kind} {ref.id}: its bundle {n} vanished from the cloud and the "
                     f"local folder changed since — snapshot {name} is incomplete")
         log(f"bundle {n} vanished from the cloud during this backup — uploading it again")
-        bundles.fresh_mtime(src)
-        st.upload(src, f"{bundles.BUNDLES}/{n}")
+        bundles.upload_one(st, src, n)
 
 
 def _rebuilder(rebuilt: list[Path]):

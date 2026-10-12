@@ -293,12 +293,13 @@ def test_dl6b_a_manifest_less_folder_is_never_replaced_without_a_copy(two_hosts)
 
 # ── DL7: the upload size check deletes the other host's same-name bundle ──────
 
-@pytest.mark.xfail(strict=True, reason="DL7: RcloneStorage.upload deletes `rel` when the listed "
-                   "size differs from the local file; for a shared bundle name the other host's "
-                   "equivalent archive (other zlib/mtimes, other size) is what it deletes — §6 "
-                   "calls same-name races benign")
 def test_dl7_a_same_name_upload_race_never_deletes_the_other_hosts_bundle(two_hosts,
                                                                        monkeypatch):
+    """DL7 (fixed): RcloneStorage.upload deleted `rel` when the listed size differed from the
+    local file; for a shared bundle name the other host's equivalent archive (other
+    zlib/mtimes, other size) is what it deleted — §6 calls same-name races benign. In
+    bundles/ (storage.CONTENT_ADDRESSED) a mismatch now raises storage.Superseded and
+    deletes nothing; bundles.upload_one accepts it."""
     c = two_hosts.cloud
     _install(two_hosts.data["mac"])
     with two_hosts.use("mac"):
