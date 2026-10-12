@@ -20,7 +20,7 @@
 
 import {
   MODULE, aoeFlags, buildRows, fillSave, matchSave, applicableRows, allApplied, newestRegion,
-  supersedes, carefulTargets, protectRows, carefulApplies, carefulStale, isHandle, isTemplateRegion
+  supersedes, isHandle, isTemplateRegion
 } from "./core.mjs";
 import { setting } from "./settings.mjs";
 import { claimMessage } from "./lib/election.mjs";
@@ -37,6 +37,8 @@ const abilityLabel = a => CONFIG.DND5E.abilities[a]?.label ?? a;
 /* -------------------------------------------- */
 
 let log = makeLog(MODULE);   // the entry's ctx.log once installed
+/** The ctx install() was given (Careful Spell's carefulFor is ctx.exposed). */
+let context = null;
 
 const queues = new Map();
 /** Run fn(resolution) → resolution for one message, one at a time, then write it back. */
@@ -181,7 +183,8 @@ export async function resolve(messageOrId, { regionId = undefined } = {}) {
   const described = tokens.map(tk => describeToken(tk, { handleActorId }));
   const rows = buildRows(described, { casterActorId });
   const usage = usageIdOf(message);
-  const careful = await carefulFor(activity.actor, described, { casterActorId, usage, scene, onSave, rows });
+  // Careful Spell is its own feature (careful.mjs); it reaches this one through ctx.exposed.
+  const careful = (await context?.exposed.carefulFor?.(activity.actor, described, { casterActorId, usage, scene, onSave, rows })) ?? null;
 
   const res = {
     activity: activity.uuid,
@@ -223,47 +226,6 @@ async function supersedeOlder(message, res) {
   const older = game.messages.filter(m => m.id !== message.id && supersedes(aoeFlags(m).resolution, res)
     && (m.timestamp ?? 0) <= (message.timestamp ?? Infinity));
   for (const m of older) await mutate(m.id, r => { r.superseded = true; return r; });
-}
-
-/* -------------------------------------------- */
-/*  Careful Spell                               */
-/* -------------------------------------------- */
-
-/** The combat turn an actor's Careful Spell belongs to ("combatId:round:combatantId"), or null out of combat. */
-export function carefulKey(actor) {
-  const combat = game.combats?.find?.(c => c.started && c.combatants.some(cb => cb.actor === actor || cb.actorId === actor?.id));
-  return combat ? `${combat.id}:${combat.round}:${combat.combatant?.id ?? combat.turn}` : null;
-}
-
-/**
- * The caster used Careful Spell for this cast: mark their side's rows (up to the CHA mod) as an
- * automatic success with no damage on a half-on-save spell, and bind the use to this usage card.
- * @returns {Promise<{names: string[], max: number}|null>}
- */
-async function carefulFor(caster, described, { casterActorId, usage, scene, onSave, rows }) {
-  if (!caster || !setting("carefulSpell")) { why("careful", usage, caster ? "off" : "no caster"); return null; }
-  const flag = aoeFlags(caster).careful;
-  const combatKey = carefulKey(caster);
-  if (!flag) { why("careful", usage, "no flag"); return null; }
-  if (!carefulApplies(flag, { now: Date.now(), combatKey, usage })) { why("careful", usage, "not applicable", { combatKey, flag }); return null; }
-  const own = caster.token ?? caster.getActiveTokens?.(false, true)?.find(tk => tk.parent === scene) ?? null;
-  const max = Math.max(1, Number(caster.system?.abilities?.cha?.mod) || 1);
-  const ids = carefulTargets(described, { casterActorId, casterDisposition: own?.disposition ?? CONST.TOKEN_DISPOSITIONS.FRIENDLY, max });
-  protectRows(rows, ids, onSave);
-  if (usage && !flag.usage) await caster.update({ [`flags.${MODULE}.careful.usage`]: usage }).catch(() => null);
-  return { names: rows.filter(r => r.protected).map(r => r.name), max };
-}
-
-/** On the caster's client: Careful Spell was used, the next save spell's area protects their side. */
-async function onCarefulUsed(activity) {
-  if (!setting("carefulSpell")) return;
-  const item = activity?.item;
-  if ((item?.system?.identifier || "") !== "careful-spell") return;
-  const actor = activity.actor;
-  if (!actor?.isOwner) return why("careful", null, "used, but this client does not own the caster");
-  await actor.update({ [`flags.${MODULE}.careful`]: { at: Date.now(), key: carefulKey(actor), usage: null } });
-  const max = Math.max(1, Number(actor.system?.abilities?.cha?.mod) || 1);
-  ui.notifications?.info?.(_loc("PENTARYN_AOE.Careful.Armed", { n: max }));
 }
 
 /* -------------------------------------------- */
@@ -465,23 +427,10 @@ const isAbilitySave = message => message?.type === "save" && (message.system?.ty
 
 export function install(reg, ctx) {
   log = ctx.log;
+  context = ctx;
   CONFIG.DND5E.requests[REQUEST_HANDLER] = handleSaveRequest;
   // The tray (a separate feature) reaches these through ctx.exposed, never by importing this file.
   ctx.expose({ resolve, applyRows, rollNpcSaves, rollForPlayer, pingPlayers, setRow });
-
-  reg.on("dnd5e.postUseActivity", reg.guardSwallowAsync("postUseActivity(careful)", (activity) => onCarefulUsed(activity)), { guard: false, label: "postUseActivity(careful)" });
-
-  // A Careful Spell armed for a turn of a combat that is now gone can never apply: clear it.
-  reg.on("deleteCombat", reg.guardSwallowAsync("deleteCombat(careful)", async (combat) => {
-    if (!game.users.activeGM?.isSelf) return;
-    const done = new Set();
-    for (const c of combat.combatants ?? []) {
-      const actor = c.actor;
-      if (!actor || done.has(actor.uuid)) continue;
-      done.add(actor.uuid);
-      if (carefulStale(aoeFlags(actor).careful, combat.id)) await actor.unsetFlag(MODULE, "careful");
-    }
-  }), { guard: false, label: "deleteCombat(careful)" });
 
   reg.on("createChatMessage", reg.guardSwallowAsync("createChatMessage", async (message) => {
     if (!game.users.activeGM?.isSelf) return;
@@ -513,4 +462,4 @@ export function uninstall() {
 
 // Test seam (characterisation checkpoint): tests import this through test/fixtures/seams.mjs only,
 // so the blueprint refactor edits that shim, not the frozen tests. Not part of the API.
-export const _internals = { tokensForTargets, keysOnly, saveSystem, damagesOf, supersedeOlder, carefulFor, onCarefulUsed, rollOne, postRequest, onSaveMessage, cleanupInstant, isAbilitySave, queues };
+export const _internals = { tokensForTargets, keysOnly, saveSystem, damagesOf, supersedeOlder, rollOne, postRequest, onSaveMessage, cleanupInstant, isAbilitySave, queues };

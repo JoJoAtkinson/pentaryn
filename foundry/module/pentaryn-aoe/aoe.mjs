@@ -4,7 +4,8 @@
  * Spell areas you can drag and delete, monster saves rolled off the area, damage applied with a GM
  * confirm, and damage rolled automatically on a hit. Features, in load order (FEATURES):
  *   areas.mjs    Part A  ownership, handle tokens, delete cascade, Remove all templates, cleanup, sweep
- *   resolve.mjs  Part B  who is inside, NPC saves, the players' request card, Apply, Careful Spell
+ *   careful.mjs  Part B  Careful Spell: the caster's side in the next save spell's area is protected
+ *   resolve.mjs  Part B  who is inside, NPC saves, the players' request card, Apply
  *   tray.mjs     Part B  the GM-only tray on the damage message (resolve's actions via ctx.exposed)
  *   attacks.mjs  Part C  auto damage on hit
  *   effects.mjs  Part D  a spell's effects go on you when you are its only target; unapplied trays light up
@@ -34,6 +35,7 @@ import { registerSettings, migrateSettings, setting } from "./settings.mjs";
 import { buildApiFor } from "./api.mjs";
 import { guardArgonBind } from "./argon.mjs";
 import * as areas from "./areas.mjs";
+import * as careful from "./careful.mjs";
 import * as resolvePart from "./resolve.mjs";
 import * as tray from "./tray.mjs";
 import * as attacks from "./attacks.mjs";
@@ -43,7 +45,7 @@ import * as aim from "./aim.mjs";
 import * as escape from "./escape.mjs";
 
 /** Features in load order: their hooks register in this order, and order within a hook name is behaviour. */
-const FEATURES = [areas, resolvePart, tray, attacks, effects, refund, aim, escape];
+const FEATURES = [areas, careful, resolvePart, tray, attacks, effects, refund, aim, escape];
 
 const log = makeLog(MODULE);
 const reg = hookRegistry(MODULE, log);
