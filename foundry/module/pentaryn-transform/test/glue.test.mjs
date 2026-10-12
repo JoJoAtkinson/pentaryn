@@ -308,6 +308,19 @@ test("markBonusUsed / bonusUsedNow: per token and turn, in the started combat wh
   game.combats.clear();
 });
 
+test("markBonusUsed: a druid with two tokens marks the one whose turn it is", () => {
+  const t0 = F.W.makeToken({ id: "druidToken000000", name: "Druid", actorId: "druidActor000000" });
+  const t1 = F.W.makeToken({ id: "druidToken000001", name: "Druid", actorId: "druidActor000000" });
+  const druid = F.W.makeActor({ id: "druidActor000000", tokens: [t0, t1] });
+  const combat = { id: "cmb2", started: true, round: 1, turn: 0, combatant: { tokenId: t1.id } };
+  game.combats.set("cmb2", combat);
+  T.markBonusUsed(druid);
+  assert.equal(T.bonusUsedNow(t1.id), true, "the second token's turn is marked");
+  assert.equal(T.bonusUsedNow(t0.id), false);
+  game.combat = null;
+  game.combats.clear();
+});
+
 /* ── who runs the automatic endings ───────────────────────────────────────── */
 
 test("isRunner: the active GM; with no GM, the first active non-GM owner by id", () => {
