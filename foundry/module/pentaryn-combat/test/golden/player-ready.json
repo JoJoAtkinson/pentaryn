@@ -1,5 +1,13 @@
 [
   {
+    "op": "Hooks.callAll",
+    "name": "pentaryn-combat.ready"
+  },
+  {
+    "op": "Hooks.callAll",
+    "name": "pentaryn.ready"
+  },
+  {
     "op": "settings.set",
     "id": "enhancedcombathud.targetPickerGuideShown",
     "value": true

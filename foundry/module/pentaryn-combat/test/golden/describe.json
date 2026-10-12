@@ -1,0 +1,1093 @@
+{
+  "module": "pentaryn-combat",
+  "namespace": "combat",
+  "contract": "pentaryn-combat/api@1",
+  "flagScope": "pentaryn-combat",
+  "methods": [
+    {
+      "path": "count",
+      "params": [
+        {
+          "name": "actor",
+          "type": "Actor",
+          "resolve": false,
+          "doc": "an Actor document (legacy rows resolve no ref until S11)"
+        },
+        {
+          "name": "weaponId",
+          "type": "string",
+          "optional": true,
+          "doc": "an item id; default: the remembered weapon, else the active set's primary, else the first equipped melee weapon"
+        }
+      ],
+      "returns": "number",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "How many swings the Attack action gives this actor with that weapon (Extra Attack, a Multiattack's total, a flag override)."
+    },
+    {
+      "path": "plan",
+      "params": [
+        {
+          "name": "actor",
+          "type": "Actor",
+          "resolve": false,
+          "doc": "an Actor document (legacy rows resolve no ref until S11)"
+        },
+        {
+          "name": "weaponId",
+          "type": "string",
+          "optional": true,
+          "doc": "an item id; default: the remembered weapon, else the active set's primary, else the first equipped melee weapon"
+        }
+      ],
+      "returns": "{ swings: {weaponId, mode, kind}[], count, left, weaponId }",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "The swings a Full Attack would make right now (left this turn in combat; the whole action out of combat)."
+    },
+    {
+      "path": "turn",
+      "params": [
+        {
+          "name": "actor",
+          "type": "Actor",
+          "resolve": false,
+          "doc": "an Actor document (legacy rows resolve no ref until S11)"
+        }
+      ],
+      "returns": "{ key, attackAction, riders, followUps, nick, bonusUsed, otherActions, surges, quickened }",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "This turn's flag (a fresh one when the stored flag is from another turn)."
+    },
+    {
+      "path": "newTurn",
+      "params": [
+        {
+          "name": "actor",
+          "type": "Actor",
+          "resolve": false,
+          "doc": "an Actor document (legacy rows resolve no ref until S11)"
+        }
+      ],
+      "returns": "Promise<Actor|null>",
+      "gm": false,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "flags.pentaryn-combat.turn"
+      ],
+      "nullWhen": "the caller does not own the actor",
+      "legacy": true,
+      "doc": "Out of combat: a fresh turn flag under the no-combat key (the Special bar's New turn)."
+    },
+    {
+      "path": "multiattack",
+      "params": [
+        {
+          "name": "actor",
+          "type": "Actor",
+          "resolve": false,
+          "doc": "an Actor document (legacy rows resolve no ref until S11)"
+        }
+      ],
+      "returns": "{ plan, total, groups, source } | null",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "nullWhen": "no Multiattack item (and no flags.pentaryn-combat.multiattack override), or it does not parse",
+      "legacy": true,
+      "doc": "The actor's parsed Multiattack (an NPC's or a Wild Shape form's)."
+    },
+    {
+      "path": "weapons",
+      "params": [
+        {
+          "name": "actor",
+          "type": "Actor",
+          "resolve": false,
+          "doc": "an Actor document (legacy rows resolve no ref until S11)"
+        }
+      ],
+      "returns": "weaponShape[]",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "Every item with an attack activity, as the plain weapon shapes the core reads."
+    },
+    {
+      "path": "offers",
+      "params": [
+        {
+          "name": "message",
+          "type": "ChatMessage",
+          "resolve": false
+        }
+      ],
+      "returns": "{ actor, offers: {rider, activity, dice, state, offer, auto, checks}[], turn? }",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "The once-per-turn riders this attack card's actor has, with their eligibility on that card."
+    },
+    {
+      "path": "fullAttack",
+      "params": [
+        {
+          "name": "actor",
+          "type": "Actor",
+          "resolve": false,
+          "doc": "an Actor document (legacy rows resolve no ref until S11)"
+        },
+        {
+          "name": "weaponId",
+          "type": "string",
+          "optional": true,
+          "doc": "an item id; default: the remembered weapon, else the active set's primary, else the first equipped melee weapon"
+        },
+        {
+          "name": "opts",
+          "type": "{ event?, title? }",
+          "optional": true
+        }
+      ],
+      "returns": "Promise<{ rolled, status }>",
+      "gm": false,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "flags.pentaryn-combat.turn",
+        "flags.pentaryn-combat.last",
+        "ChatMessage (usage card per item, one attack card per swing)"
+      ],
+      "legacy": true,
+      "doc": "Run the Full Attack plan: every swing through dnd5e's own roll dialog, with the swing strip."
+    },
+    {
+      "path": "followUp",
+      "params": [
+        {
+          "name": "actor",
+          "type": "Actor",
+          "resolve": false,
+          "doc": "an Actor document (legacy rows resolve no ref until S11)"
+        },
+        {
+          "name": "followUp",
+          "type": "{ kind, weaponId, count? }"
+        },
+        {
+          "name": "opts",
+          "type": "{ event? }",
+          "optional": true
+        }
+      ],
+      "returns": "Promise<{ rolled, status }>",
+      "gm": false,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "flags.pentaryn-combat.turn",
+        "ChatMessage"
+      ],
+      "legacy": true,
+      "doc": "One follow-up (Off-hand, Nick, Flurry of Blows, Martial Arts, Hew, Pole Strike) as the HUD button runs it."
+    },
+    {
+      "path": "rollRider",
+      "params": [
+        {
+          "name": "message",
+          "type": "ChatMessage",
+          "resolve": false
+        },
+        {
+          "name": "key",
+          "type": "\"sneak-attack\"|\"frenzy\"|\"colossus-slayer\"|\"divine-strike\""
+        }
+      ],
+      "returns": "Promise<Roll[] | null>",
+      "gm": false,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "flags.pentaryn-combat.turn",
+        "ChatMessage (the rider's damage roll)"
+      ],
+      "nullWhen": "not the owner, an earlier turn's card, already used this turn, no rider activity",
+      "legacy": true,
+      "doc": "Roll one rider for one attack card (crit carried, damage type narrowed, threaded under the usage card)."
+    },
+    {
+      "path": "reckless",
+      "params": [
+        {
+          "name": "actor",
+          "type": "Actor",
+          "resolve": false,
+          "doc": "an Actor document (legacy rows resolve no ref until S11)"
+        }
+      ],
+      "returns": "boolean",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "Whether a Reckless Attack effect is live on the actor."
+    },
+    {
+      "path": "setReckless",
+      "params": [
+        {
+          "name": "actor",
+          "type": "Actor",
+          "resolve": false,
+          "doc": "an Actor document (legacy rows resolve no ref until S11)"
+        },
+        {
+          "name": "on",
+          "type": "boolean"
+        }
+      ],
+      "returns": "Promise<boolean>",
+      "gm": false,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "ActiveEffect (Reckless, flags.pentaryn-combat.reckless)"
+      ],
+      "legacy": true,
+      "doc": "Turn Reckless Attack on (the item's own effect plus Advantage on Strength attacks) or off."
+    },
+    {
+      "path": "running",
+      "params": [],
+      "returns": "{ actor, state, … } | null",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "nullWhen": "no sequence is running on this client",
+      "legacy": true,
+      "doc": "The sequence running on this client (live object; read only)."
+    },
+    {
+      "path": "abort",
+      "params": [
+        {
+          "name": "actor",
+          "type": "Actor",
+          "optional": true,
+          "resolve": false
+        }
+      ],
+      "returns": "void",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "Stop the running sequence (of that actor, or any)."
+    },
+    {
+      "path": "quick",
+      "params": [],
+      "returns": "boolean",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "This user's quick mode (swings after the first skip the dialog)."
+    },
+    {
+      "path": "setQuick",
+      "params": [
+        {
+          "name": "on",
+          "type": "boolean"
+        }
+      ],
+      "returns": "Promise<User>",
+      "gm": false,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "flags.pentaryn-combat.quick (User)"
+      ],
+      "legacy": true,
+      "doc": "Set this user's quick mode."
+    },
+    {
+      "path": "riderMode",
+      "params": [
+        {
+          "name": "key",
+          "type": "\"sneak-attack\"|\"frenzy\"|\"colossus-slayer\"|\"divine-strike\""
+        }
+      ],
+      "returns": "\"ask\" | \"auto\"",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "This user's mode for one rider."
+    },
+    {
+      "path": "setRiderMode",
+      "params": [
+        {
+          "name": "key",
+          "type": "\"sneak-attack\"|\"frenzy\"|\"colossus-slayer\"|\"divine-strike\""
+        },
+        {
+          "name": "mode",
+          "type": "\"ask\"|\"auto\""
+        }
+      ],
+      "returns": "Promise<User>",
+      "gm": false,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "flags.pentaryn-combat.riders.<key> (User)"
+      ],
+      "legacy": true,
+      "doc": "Set this user's mode for one rider."
+    },
+    {
+      "path": "report",
+      "params": [
+        {
+          "name": "actorOrName",
+          "type": "Actor|string",
+          "optional": true,
+          "resolve": false
+        }
+      ],
+      "returns": "{ actor, riders, turn, lastWeapon }[]",
+      "gm": true,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "Audit: every character's riders, dice, this user's modes, turn flag and remembered weapon (also console.table)."
+    },
+    {
+      "path": "fixFeats",
+      "params": [
+        {
+          "name": "actor",
+          "type": "Actor",
+          "resolve": false,
+          "doc": "an Actor document (legacy rows resolve no ref until S11)"
+        },
+        {
+          "name": "opts",
+          "type": "{ apply? }",
+          "optional": true
+        }
+      ],
+      "returns": "{ actor, plan, applied: false, reason, fallback }",
+      "gm": true,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "Report what native dnd5e rule effects would replace the weaponBonuses fallback; apply is refused until proved."
+    },
+    {
+      "path": "seedWeaponSets",
+      "params": [
+        {
+          "name": "actor",
+          "type": "Actor",
+          "resolve": false,
+          "doc": "an Actor document (legacy rows resolve no ref until S11)"
+        }
+      ],
+      "returns": "Promise<object|null>",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "flags.enhancedcombathud.weaponSets"
+      ],
+      "nullWhen": "setting off, Argon inactive, not a character with a class, a flag already written",
+      "legacy": true,
+      "doc": "Fill an empty Argon weapon set 1/2 for one character (never overwrites)."
+    },
+    {
+      "path": "seedAll",
+      "params": [],
+      "returns": "Promise<{ actor, seed }[]>",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "flags.enhancedcombathud.weaponSets"
+      ],
+      "legacy": true,
+      "doc": "Active GM: seed every character with no weapon-set flag."
+    },
+    {
+      "path": "inspect",
+      "params": [
+        {
+          "name": "ref",
+          "kind": "actor",
+          "type": "Actor|Token|uuid|id|exact name",
+          "doc": "never a substring"
+        },
+        {
+          "name": "opts",
+          "type": "{ sceneId?, as? }",
+          "optional": true
+        }
+      ],
+      "returns": "{ actor, key, inCombat, isOwnTurn, turn, stored, stale, plan, pips, spentPips, reaction, followUps, riders, reckless, running, settings }",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "throws": [
+        "NOT_FOUND",
+        "AMBIGUOUS",
+        "BAD_ARGS"
+      ],
+      "since": "0.3.0",
+      "doc": "Read-only combat state for one actor, plain JSON, depth ≤ 4. followUps is computed without the Argon panel (Bonus free = not spent on the turn flag), an approximation of the HUD. opts.as = a user ref: a viewer without OBSERVER on the actor gets only actor, key, inCombat, isOwnTurn."
+    },
+    {
+      "path": "selftest",
+      "params": [],
+      "returns": "{ ok, checks: [{ label, ok, detail }] }",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "since": "0.3.0",
+      "doc": "Live smoke checks after a sync."
+    },
+    {
+      "path": "coversMultiattack",
+      "params": [
+        {
+          "name": "ref",
+          "kind": "actor",
+          "type": "Actor|Token|uuid|id|exact name",
+          "doc": "never a substring"
+        }
+      ],
+      "returns": "string | null",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "nullWhen": "fullAttack or multiattack off, no parsed Multiattack item with 2+ swings (a flag override does not count)",
+      "throws": [
+        "NOT_FOUND",
+        "AMBIGUOUS",
+        "BAD_ARGS"
+      ],
+      "since": "0.3.0",
+      "doc": "The Multiattack item id when Full Attack runs this actor's Multiattack (transform hides that item's own button)."
+    }
+  ],
+  "queries": [],
+  "settings": [
+    {
+      "key": "fullAttack",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "Full Attack button + swing strip"
+    },
+    {
+      "key": "swingPips",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "Action pips count swings (2 → 1 → 0)"
+    },
+    {
+      "key": "followUps",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "Off-hand / Nick / Flurry / Martial Arts / Hew buttons"
+    },
+    {
+      "key": "gateFollowUps",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "Pole Strike only after the Attack action with a qualifying weapon"
+    },
+    {
+      "key": "riderOffers",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "\"+ Sneak Attack 3d6\" on attack cards; auto mode per player"
+    },
+    {
+      "key": "recklessToggle",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "\"Reckless Attack: On/Off\" on the Special bar (applies the Reckless effect)"
+    },
+    {
+      "key": "weaponBonuses",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "Two-Weapon Fighting @mod / Great Weapon Master +PB in the weapon's damage roll"
+    },
+    {
+      "key": "offhandModeReset",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "a main-hand swing never inherits Offhand from the last roll"
+    },
+    {
+      "key": "offhandPip",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "an off-hand swing spends the Bonus pip, not the Action pip"
+    },
+    {
+      "key": "seedWeaponSets",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "empty Argon weapon set 1/2 filled once for PCs (never overwrites)"
+    },
+    {
+      "key": "multiattack",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "Full Attack for NPC / Wild Shape Multiattack"
+    },
+    {
+      "key": "skipPickerGuide",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "mark Argon's one-time Target Picker Tutorial as seen; \"right-click cancels\" on its cursor label"
+    },
+    {
+      "key": "specialActions",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "Argon's Dash/Disengage/Dodge/Hide/Ready/Shove spend the Action; Dash adds Speed; Dodge ends; Hide rolls"
+    },
+    {
+      "key": "reactionSlot",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "Reaction bar weapon = \"Opportunity Attack\", spends the Reaction, not a swing"
+    },
+    {
+      "key": "escRollDialog",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "Esc closes a dnd5e roll dialog without clicking into it first"
+    },
+    {
+      "key": "tidyCancelledAttacks",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "a cancelled attack roll deletes its own empty usage card"
+    },
+    {
+      "key": "deathSaveDamage",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "damage at 0 HP adds a Death Saving Throw failure (two on a crit)"
+    },
+    {
+      "key": "portraitConditions",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "status conditions (Prone, Poisoned, Dodging…) on the HUD portrait"
+    },
+    {
+      "key": "hudFollows",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "the HUD follows the one token left selected and your combatant's turn"
+    },
+    {
+      "key": "clearTargetsAfterTurn",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "a player's targets are released when their turn ends"
+    },
+    {
+      "key": "dockRollDialogs",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "during a Full Attack each roll window sits just above the swing strip, named \"swing i of n\""
+    },
+    {
+      "key": "scrollingTextGuard",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "background tab: no floating canvas text, no chat-card pop-ups; a double destroy is ignored (core errors)"
+    },
+    {
+      "key": "bonusPip",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "a Bonus-action feature or spell (Rage, Steady Aim, Divine Smite, Lay on Hands…) spends the Bonus pip"
+    },
+    {
+      "key": "selfEffects",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "a self-only feature with one effect (Rage) switches its effect on when used (no Apply click)"
+    },
+    {
+      "key": "steadyAim",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "Steady Aim gives a \"Steady Aim\" effect: next attack defaults to Advantage, Speed 0, gone after that attack"
+    },
+    {
+      "key": "drawerNearButton",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "Argon's drawers (Use Feature, Cast Spell…) open above their own button, not at the HUD's far left"
+    },
+    {
+      "key": "spellPips",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "a spell or feature used from the HUD spends its Action / Reaction pip; pips survive a HUD re-bind"
+    },
+    {
+      "key": "quickenedSpell",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "Quickened Spell makes the next 1-Action spell this turn spend the Bonus pip, not the Action"
+    },
+    {
+      "key": "helperTokenControl",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "your token is selected again when an area handle or a summon you held is deleted"
+    },
+    {
+      "key": "enterUses",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "Enter in a usage window's number box (Lay on Hands' points) uses the ability"
+    }
+  ],
+  "events": [],
+  "hooks": [
+    {
+      "name": "renderRollConfigurationDialog",
+      "label": "dock roll window"
+    },
+    {
+      "name": "renderRollResolver",
+      "label": "dock roll resolver"
+    },
+    {
+      "name": "closeRollConfigurationDialog",
+      "label": "roll window closed"
+    },
+    {
+      "name": "closeRollResolver",
+      "label": "roll resolver closed"
+    },
+    {
+      "name": "renderActionPanelArgonComponent",
+      "label": "turn flow: special actions, Opportunity Attack"
+    },
+    {
+      "name": "combatTurnChange",
+      "label": "turn boundary"
+    },
+    {
+      "name": "deleteCombat",
+      "label": "end-of-combat cleanup"
+    },
+    {
+      "name": "ready",
+      "label": "orphan flag sweep (load)"
+    },
+    {
+      "name": "deleteCombat",
+      "label": "orphan flag sweep (after a delete)"
+    },
+    {
+      "name": "controlToken",
+      "label": "HUD follows the token left selected"
+    },
+    {
+      "name": "deleteToken",
+      "label": "helper token deleted: reselect your own"
+    },
+    {
+      "name": "closeAttackRollConfigurationDialog",
+      "label": "tidy a cancelled attack's card"
+    },
+    {
+      "name": "dnd5e.preApplyDamage",
+      "label": "damage at 0 HP"
+    },
+    {
+      "name": "ready",
+      "label": "portrait conditions: wrap PortraitPanel"
+    },
+    {
+      "name": "init",
+      "label": "patch: scrolling text guard"
+    },
+    {
+      "name": "init",
+      "label": "patch: chat pop-up guard"
+    },
+    {
+      "name": "renderRollResolver",
+      "label": "focus the Roll Resolution box"
+    },
+    {
+      "name": "dnd5e.postUseActivity",
+      "label": "self effect, Steady Aim"
+    },
+    {
+      "name": "dnd5e.postRollAttack",
+      "label": "Steady Aim: the attack it was for"
+    },
+    {
+      "name": "renderButtonPanelButtonArgonComponent",
+      "label": "drawers open by their button"
+    },
+    {
+      "name": "ready",
+      "label": "patch: Argon pip settle"
+    },
+    {
+      "name": "createActiveEffect",
+      "label": "movement readout: effect"
+    },
+    {
+      "name": "deleteActiveEffect",
+      "label": "movement readout: effect"
+    },
+    {
+      "name": "updateActiveEffect",
+      "label": "movement readout: effect"
+    },
+    {
+      "name": "updateActor",
+      "label": "movement readout: Speed"
+    },
+    {
+      "name": "combatTurnChange",
+      "label": "movement readout: turn"
+    },
+    {
+      "name": "renderRollConfigurationDialog",
+      "label": "a window opened: drop the HUD tooltip"
+    },
+    {
+      "name": "renderRollResolver",
+      "label": "a window opened: drop the HUD tooltip"
+    },
+    {
+      "name": "renderDialog5e",
+      "label": "a window opened: drop the HUD tooltip"
+    },
+    {
+      "name": "renderActivityChoiceDialog",
+      "label": "a window opened: drop the HUD tooltip"
+    },
+    {
+      "name": "renderDialogV2",
+      "label": "a window opened: drop the HUD tooltip"
+    },
+    {
+      "name": "ready",
+      "label": "Argon's picker tutorial: seen"
+    },
+    {
+      "name": "ready",
+      "label": "picker cue: place Argon's target label"
+    },
+    {
+      "name": "createSetting",
+      "label": "picker cue setting"
+    },
+    {
+      "name": "updateSetting",
+      "label": "picker cue setting"
+    },
+    {
+      "name": "renderActionPanelArgonComponent",
+      "label": "compose the bars"
+    },
+    {
+      "name": "updateActor",
+      "label": "bars: turn flag"
+    },
+    {
+      "name": "pentarynCombat.sequenceEnd",
+      "label": "bars: sequence ended"
+    },
+    {
+      "name": "updateCombat",
+      "label": "bars: turn moved"
+    },
+    {
+      "name": "deleteCombat",
+      "label": "bars: combat over"
+    },
+    {
+      "name": "updateItem",
+      "label": "bars: item changed"
+    },
+    {
+      "name": "createActiveEffect",
+      "label": "bars: effect changed"
+    },
+    {
+      "name": "deleteActiveEffect",
+      "label": "bars: effect changed"
+    },
+    {
+      "name": "updateActiveEffect",
+      "label": "bars: effect changed"
+    },
+    {
+      "name": "pentarynCombat.usage",
+      "label": "pips: a sequence used the item"
+    },
+    {
+      "name": "pentarynCombat.bonusSpent",
+      "label": "pips: Bonus spent"
+    },
+    {
+      "name": "pentarynCombat.bonusAction",
+      "label": "pips: Bonus action"
+    },
+    {
+      "name": "pentarynCombat.otherAction",
+      "label": "pips: other Action"
+    },
+    {
+      "name": "pentarynCombat.reaction",
+      "label": "pips: Reaction"
+    },
+    {
+      "name": "renderActionPanelArgonComponent",
+      "label": "pips: repaint on render"
+    },
+    {
+      "name": "updateCombat",
+      "label": "pips: repaint at a new round"
+    },
+    {
+      "name": "pentarynCombat.offhand",
+      "label": "pips: off-hand by hand gives the Action back"
+    },
+    {
+      "name": "renderItemButtonArgonComponent",
+      "label": "Argon item buttons: Pole Strike gate, duplicate slot"
+    },
+    {
+      "name": "updateToken",
+      "label": "a shape change ends a running sequence"
+    },
+    {
+      "name": "dnd5e.preRollAttackV2",
+      "label": "swing tag"
+    },
+    {
+      "name": "dnd5e.postRollAttack",
+      "label": "swing count"
+    },
+    {
+      "name": "dnd5e.postUseActivity",
+      "label": "action count"
+    },
+    {
+      "name": "dnd5e.preRollDamageV2",
+      "label": "weapon bonus"
+    },
+    {
+      "name": "updateActor",
+      "label": "Hew: a target dropped"
+    },
+    {
+      "name": "dnd5e.preRollAttackV2",
+      "label": "turn stamp"
+    },
+    {
+      "name": "dnd5e.preRollDamageV2",
+      "label": "rider damage"
+    },
+    {
+      "name": "dnd5e.renderChatMessage",
+      "label": "rider card"
+    },
+    {
+      "name": "combatTurnChange",
+      "label": "rider cards: turn changed"
+    },
+    {
+      "name": "deleteCombat",
+      "label": "rider cards: combat over"
+    },
+    {
+      "name": "updateActor",
+      "label": "rider cards: turn flag"
+    },
+    {
+      "name": "createActiveEffect",
+      "label": "rider cards: Reckless"
+    },
+    {
+      "name": "deleteActiveEffect",
+      "label": "rider cards: Reckless"
+    },
+    {
+      "name": "updateActiveEffect",
+      "label": "rider cards: Reckless"
+    },
+    {
+      "name": "createActor",
+      "label": "seed a new character's weapon sets"
+    }
+  ],
+  "patches": [
+    {
+      "label": "PreciseText#destroy",
+      "marker": "_pentarynPreciseText",
+      "adjustments": "combat-core-scrolling-text-guard"
+    },
+    {
+      "label": "PreciseText#x",
+      "marker": "_pentarynPreciseX",
+      "adjustments": "combat-core-scrolling-text-teardown"
+    },
+    {
+      "label": "PreciseText#y",
+      "marker": "_pentarynPreciseY",
+      "adjustments": "combat-core-scrolling-text-teardown"
+    },
+    {
+      "label": "InterfaceCanvasGroup#createScrollingText",
+      "marker": "_pentaryn",
+      "adjustments": "combat-core-scrolling-text-guard"
+    },
+    {
+      "label": "ChatLog#notify",
+      "marker": "_pentaryn",
+      "adjustments": "combat-core-chat-notify-hidden-tab"
+    },
+    {
+      "label": "PortraitPanel#getEffects",
+      "marker": "_pcConditions",
+      "adjustments": "combat-argon-portrait-conditions"
+    },
+    {
+      "label": "PortraitPanel#_pcConditions",
+      "marker": "_pcConditionsMark",
+      "adjustments": "combat-argon-portrait-conditions"
+    },
+    {
+      "label": "ActionPanel#updateActionUse",
+      "marker": "_pcSettles",
+      "adjustments": "combat-argon-pip-settle"
+    }
+  ],
+  "flags": {
+    "writes": [
+      "flags.pentaryn-combat.turn",
+      "flags.pentaryn-combat.last",
+      "flags.pentaryn-combat.reaction",
+      "flags.pentaryn-combat.quick",
+      "flags.pentaryn-combat.riders",
+      "flags.pentaryn-combat.until",
+      "flags.pentaryn-combat.special",
+      "flags.pentaryn-combat.reckless",
+      "flags.pentaryn-combat.swing",
+      "flags.pentaryn-combat.turnKey",
+      "flags.pentaryn-combat.auto",
+      "flags.pentaryn-combat.rider",
+      "flags.pentaryn-combat.attack",
+      "flags.pentaryn-combat.undone",
+      "flags.enhancedcombathud.weaponSets",
+      "flags.dnd5e.last"
+    ],
+    "reads": [
+      "flags.pentaryn-combat.multiattack",
+      "flags.pentaryn-combat.attacks",
+      "flags.pentaryn-combat.pactWeapon",
+      "flags.enhancedcombathud.weaponSets",
+      "flags.enhancedcombathud.activeWeaponSet",
+      "flags.dnd5e.enhancedDualWielding",
+      "flags.dnd5e.isPolymorphed",
+      "flags.dnd5e.summon",
+      "flags.dnd5e.last",
+      "flags.pentaryn-aoe.handle"
+    ]
+  },
+  "errors": [
+    "NOT_GM",
+    "NO_GM",
+    "NOT_READY",
+    "NOT_FOUND",
+    "AMBIGUOUS",
+    "BAD_ARGS",
+    "REFUSED",
+    "CONFLICT",
+    "UNSUPPORTED",
+    "TIMEOUT",
+    "INTERNAL"
+  ]
+}

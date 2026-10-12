@@ -67,6 +67,11 @@ export async function seedAll() {
 const timers = new Set();
 
 export function install(reg) {
+  registerSeed(reg);
+  return { impl: { seedWeaponSets, seedAll } };
+}
+
+function registerSeed(reg) {
   reg.on("createActor", (actor) => {
     if (!game.users?.activeGM?.isSelf || actor.type !== "character") return;
     // Items arrive with the actor; give the sheet's own creation flow a beat.

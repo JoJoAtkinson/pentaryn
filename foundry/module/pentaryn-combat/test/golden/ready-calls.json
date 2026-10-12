@@ -1,6 +1,14 @@
 {
   "atReady": [
     {
+      "op": "Hooks.callAll",
+      "name": "pentaryn-combat.ready"
+    },
+    {
+      "op": "Hooks.callAll",
+      "name": "pentaryn.ready"
+    },
+    {
       "op": "Hooks.call",
       "name": "preUpdateActor"
     },

@@ -35,10 +35,13 @@ F.calls.length = 0;
 lines.length = 0;
 
 test("the members are the module's own functions (identity), in this order", () => {
-  assert.deepEqual(Object.keys(api), [
+  // W2-K1 [declared]: the kit API adds members (inspect, selftest, coversMultiattack, version, contract,
+  // settings, trace, uninstall, describe); the 23 legacy members keep this order among them.
+  const LEGACY = [
     "count", "plan", "turn", "newTurn", "multiattack", "weapons", "offers", "fullAttack", "followUp", "rollRider", "reckless",
     "setReckless", "running", "abort", "quick", "setQuick", "riderMode", "setRiderMode", "report", "fixFeats", "seedWeaponSets", "seedAll", "core",
-  ]);
+  ];
+  assert.deepEqual(Object.keys(api).filter(k => LEGACY.includes(k)), LEGACY);
   const same = { turn: shapes.turnOf, newTurn: shapes.newTurn, multiattack: shapes.multiattackOf, weapons: shapes.weaponsOf, offers: riders.offersFor,
     followUp: seq.runFollowUp, rollRider: riders.rollRider, reckless: riders.isReckless, setReckless: riders.setReckless, running: seq.running,
     abort: seq.abortFor, quick: settings.quickMode, setQuick: settings.setQuickMode, riderMode: settings.riderMode, setRiderMode: settings.setRiderMode,
@@ -143,7 +146,11 @@ test("report, fixFeats, seedWeaponSets, seedAll through the API (golden/api-gm.j
 
 test("core: the module namespace, every export reachable through the API", async () => {
   const core = await import("../combat-core.mjs");
-  assert.equal(api.core, core);
+  // W2-K1 [declared]: a frozen copy of the namespace (buildApi's unlisted rule), not the namespace itself.
+  assert.notEqual(api.core, core);
+  assert.equal(Object.isFrozen(api.core), true);
+  assert.deepEqual(Object.keys(api.core).sort(), Object.keys(core).sort());
+  for (const k of Object.keys(core)) if (typeof core[k] === "function") assert.equal(api.core[k], core[k], k);
   assert.equal(api.core.MOD, "pentaryn-combat");
   assert.equal(Object.keys(api.core).length, 81 + 12, "S1's 81 plus S2's eight blueprint constants, S4's I18N_KEYS, keyFor and S8's fullAttackPlanFrom, areaPlacementSkipped");
 });

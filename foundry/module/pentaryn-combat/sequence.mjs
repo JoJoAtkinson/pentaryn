@@ -15,7 +15,7 @@
 import * as core from "./combat-core.mjs";
 import { MODULE } from "./combat-core.mjs";
 import { makeLog } from "./lib/log.mjs";
-import { attackActivityOf, weaponsOf, updateTurn, focusLeft, flurryActivity, unarmedStrike, turnOf, damageLabel, rememberWeapon } from "./shapes.mjs";
+import { attackActivityOf, weaponsOf, updateTurn, focusLeft, flurryActivity, unarmedStrike, turnOf, damageLabel, rememberWeapon, planFor } from "./shapes.mjs";
 import { openRollResolvers, isOrphanCard } from "./dialog-adapter.mjs";
 import { choose, hide, onceCancel, picking, show, update, waitChoice } from "./strip.mjs";
 import { quickMode, setQuickMode, setting } from "./settings.mjs";
@@ -419,12 +419,19 @@ export async function runFollowUp(actor, f, { event = null } = {}) {
 /* ── install ─────────────────────────────────────────────────────────────── */
 
 /**
- * The runner registers no hook of its own: it keeps the registry for its temporary hooks and
- * exposes `running` to the API (ctx.exposed). The API rows it contributes come in S7.
+ * The runner registers no hook of its own: it keeps the registry for its temporary hooks, exposes
+ * `running` (ctx.exposed) and contributes the fullAttack, followUp, running and abort rows' impls.
  */
 export function install(reg, ctx) {
   hooks = reg;
   ctx?.expose?.({ running });
+  return { impl: { fullAttack, followUp: runFollowUp, running, abort: abortFor } };
+}
+
+/** api.fullAttack: run the plan api.plan would answer. */
+async function fullAttack(actor, weaponId, opts = {}) {
+  const p = planFor(actor, weaponId, { multiattackOn: setting("multiattack") });
+  return runSwings(actor, p.swings, opts);
 }
 
 /** A running sequence is stopped (its strip goes, its roll window closes); session maps cleared. */

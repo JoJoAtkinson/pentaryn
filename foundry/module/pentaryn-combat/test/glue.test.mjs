@@ -120,7 +120,8 @@ test("setup: registrations only, no calls", () => {
 test("ready (active GM): sweep, picker tutorial, patches; publish and seed one tick later (golden/ready-calls.json)", async () => {
   F.fire("ready");
   await drain();
-  assert.equal(F.game.pentaryn, undefined, "not published synchronously at ready");
+  // W2-K1 [declared]: published synchronously at ready through the kit (was one tick later).
+  assert.equal(typeof F.game.pentaryn.combat, "object", "published synchronously at ready (W2-K1)");
   const atReady = F.calls.splice(0);
   await tick(0);
   const afterTick = F.calls.splice(0);
@@ -138,12 +139,17 @@ test("ready (active GM): sweep, picker tutorial, patches; publish and seed one t
 
 test("legacy surface: 23 members, core included (golden/surface-legacy.json)", async () => {
   const api = F.game.pentaryn.combat;
+  // W2-K1 [declared]: the kit API is a superset of the S1 surface (golden/surface-legacy.json, unchanged),
+  // the 23 legacy members in their old order; it is frozen, `core` is a frozen copy, and module.api is set.
+  const legacyRows = JSON.parse((await import("node:fs")).readFileSync(new URL("./golden/surface-legacy.json", import.meta.url), "utf8"));
   const surface = Object.keys(api).map(k => [k, typeof api[k]]);
-  pinJSON("surface-legacy", surface, import.meta.url);
-  assert.equal(surface.length, 23);
-  assert.equal(api.core, await import("../combat-core.mjs"), "core is the module namespace itself");
-  assert.equal(Object.isFrozen(api), false, "the api object is a plain mutable object today");
-  assert.equal(F.game.modules.get(MODULE).api, undefined, "no module.api");
+  assert.equal(legacyRows.length, 23);
+  assert.deepEqual(surface.filter(([k]) => legacyRows.some(([l]) => l === k)), legacyRows);
+  const core = await import("../combat-core.mjs");
+  assert.deepEqual(Object.keys(api.core).sort(), Object.keys(core).sort(), "core: a copy of every export");
+  assert.equal(Object.isFrozen(api.core), true);
+  assert.equal(Object.isFrozen(api), true, "the kit API is frozen");
+  assert.equal(F.game.modules.get(MODULE).api, api, "module.api is canonical");
   assert.equal(F.game.pentaryn.combat, api);
 });
 

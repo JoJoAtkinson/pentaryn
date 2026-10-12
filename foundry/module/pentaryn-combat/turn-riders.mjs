@@ -451,6 +451,11 @@ export function report(actorOrName) {
 const opts = label => ({ guard: false, label });
 
 export function install(reg) {
+  registerHooks(reg);
+  return { impl: { offers: offersFor, rollRider, reckless: isReckless, setReckless, report } };
+}
+
+function registerHooks(reg) {
   // Every attack roll carries the turn it was made in, so a card's button shows only that turn.
   reg.on("dnd5e.preRollAttackV2", (config, dialog, message) => {
     try {

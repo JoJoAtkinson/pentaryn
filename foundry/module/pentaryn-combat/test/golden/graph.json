@@ -1,5 +1,19 @@
 {
   "graph": {
+    "api-manifest.mjs": [
+      "combat-core.mjs"
+    ],
+    "api.mjs": [
+      "api-manifest.mjs",
+      "combat-core.mjs",
+      "lib/api.mjs",
+      "lib/patch.mjs",
+      "lib/publish.mjs",
+      "lib/resolve.mjs",
+      "lib/settings.mjs",
+      "settings.mjs",
+      "shapes.mjs"
+    ],
     "argon.mjs": [
       "combat-core.mjs",
       "lib/argon-kit.mjs",
@@ -7,15 +21,17 @@
     ],
     "combat-core.mjs": [],
     "combat.mjs": [
+      "api.mjs",
       "argon.mjs",
       "combat-core.mjs",
       "context.mjs",
       "counting.mjs",
+      "lib/election.mjs",
+      "lib/publish.mjs",
       "offhand.mjs",
       "roll-dock.mjs",
       "sequence.mjs",
       "settings.mjs",
-      "shapes.mjs",
       "turn-riders.mjs"
     ],
     "context.mjs": [
@@ -222,6 +238,12 @@
     "combat.mjs",
     "roll-dock.mjs",
     "offhand.mjs",
-    "counting.mjs"
+    "lib/publish.mjs",
+    "lib/election.mjs",
+    "counting.mjs",
+    "api.mjs",
+    "lib/resolve.mjs",
+    "lib/api.mjs",
+    "api-manifest.mjs"
   ]
 }

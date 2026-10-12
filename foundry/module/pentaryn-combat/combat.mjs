@@ -13,24 +13,26 @@
  *
  * Load order (the hooks golden pins it):
  *   combat.mjs  evaluates → roll-dock installs; once(init) settings; once(setup) counting,
- *               turn-riders, offhand; once(ready) publish (one tick later) and the weapon-set seed
+ *               turn-riders, offhand, sequence; once(ready) build + publish the API (api.mjs), then
+ *               the active GM's weapon-set seed one tick later
  *   hud.mjs     evaluates → the turn-flow features, then the HUD features (its own header)
  *
- * Files: combat-core.mjs (pure) · settings.mjs · context.mjs (shared wiring) · shapes.mjs, argon.mjs
- * (adapters) · strip.mjs (ui) · features: roll-dock, counting, turn-riders, offhand, sequence ·
- * hud.mjs and its hud/, turnflow/ features · lib/ (vendored kit).
+ * Files: combat-core.mjs (pure) · settings.mjs · api-manifest.mjs, api.mjs · context.mjs (shared
+ * wiring) · shapes.mjs, argon.mjs, dialog-adapter.mjs (adapters) · strip.mjs (ui) · features:
+ * roll-dock, counting, turn-riders, offhand, sequence · hud.mjs and its hud/, turnflow/ features ·
+ * lib/ (vendored kit).
  *
  * Design: context/plans/melee-streamlining.md · Use: README.md · Exposes game.pentaryn.combat.
  */
 
-import * as core from "./combat-core.mjs";
-import { installFeature, log, reg } from "./context.mjs";
-import { registerSettings, setting, setQuickMode, quickMode, setRiderMode, riderMode } from "./settings.mjs";
+import { MODULE, NS } from "./combat-core.mjs";
+import { ctx, installFeature, log } from "./context.mjs";
+import { registerSettings } from "./settings.mjs";
 import { renderHud } from "./argon.mjs";
-import { weaponsOf, featuresOf, countFor, multiattackOf, turnOf, newTurn, planFor } from "./shapes.mjs";
-import { runSwings, runFollowUp, running, abortFor } from "./sequence.mjs";
-import { report as riderReport, rollRider, offersFor, isReckless, setReckless } from "./turn-riders.mjs";
-import { seedAll, seedWeaponSets } from "./offhand.mjs";
+import { buildApiFor } from "./api.mjs";
+import { publishNamespace } from "./lib/publish.mjs";
+import { isActiveGM } from "./lib/election.mjs";
+import { seedAll } from "./offhand.mjs";
 import * as rollDock from "./roll-dock.mjs";
 import * as counting from "./counting.mjs";
 import * as turnRiders from "./turn-riders.mjs";
@@ -39,74 +41,45 @@ import * as sequence from "./sequence.mjs";
 
 /** Installed while this file evaluates: the roll-window hooks keep their place ahead of everyone. */
 const AT_LOAD = [rollDock];
-/** Installed at setup, in registration order. */
+/** Installed at setup, in registration order (the runner registers no hook; it contributes API rows). */
 const AT_SETUP = [counting, turnRiders, offhand, sequence];
-
-/* ── fixFeats: the native path, once proved ──────────────────────────────── */
-
-/**
- * What native dnd5e 6 rule effects would replace the weaponBonuses fallback. Report-only until the
- * build's live check proves a `damage:bonus` change with a condition on attack mode / Heavy works
- * in 6.0.6 (plan §7.4); `{apply: true}` is refused until then.
- */
-function fixFeats(actor, { apply = false } = {}) {
-  const feats = featuresOf(actor);
-  const plan = [];
-  if (feats.has("two-weapon-fighting")) plan.push({ feature: "two-weapon-fighting", change: "damage bonus @mod", when: "attack mode offhand" });
-  if (feats.has("great-weapon-master")) plan.push({ feature: "great-weapon-master", change: "damage bonus @prof", when: "Heavy weapon, Attack action, own turn" });
-  return { actor: actor?.name, plan, applied: false, reason: apply ? "unverified: native rule conditions not yet proved in 6.0.6 — weaponBonuses fallback is active" : "report only", fallback: setting("weaponBonuses") };
-}
-
-/* ── API ─────────────────────────────────────────────────────────────────── */
-
-const api = {
-  // what the HUD shows
-  count: (actor, weaponId) => countFor(actor, weaponId),
-  plan: (actor, weaponId = null) => planFor(actor, weaponId, { multiattackOn: setting("multiattack") }),
-  turn: turnOf,
-  newTurn,
-  multiattack: multiattackOf,
-  weapons: weaponsOf,
-  offers: offersFor,
-  // what a click does
-  fullAttack: async (actor, weaponId, opts = {}) => {
-    const p = api.plan(actor, weaponId);
-    return runSwings(actor, p.swings, opts);
-  },
-  followUp: runFollowUp,
-  rollRider,
-  reckless: isReckless, setReckless,
-  running,
-  abort: abortFor,
-  // per-user choices
-  quick: quickMode, setQuick: setQuickMode, riderMode, setRiderMode,
-  // GM
-  report: riderReport,
-  fixFeats,
-  seedWeaponSets, seedAll,
-  core
-};
-
-function publish() {
-  const current = game.pentaryn;
-  if (current && !Object.isExtensible(current)) game.pentaryn = { ...current, combat: api };
-  else { game.pentaryn ??= {}; game.pentaryn.combat = api; }
-}
-
-const opts = label => ({ guard: false, label });
 
 for (const feature of AT_LOAD) installFeature(feature);
 
-reg.once("init", () => {
+function onInit() {
   registerSettings({ onChange: renderHud });
-}, opts("init: settings"));
+}
 
-reg.once("setup", () => {
+function onSetup() {
   for (const feature of AT_SETUP) installFeature(feature);
-}, opts("setup: features"));
+}
 
-// pentaryn-importer replaces game.pentaryn with a frozen object in its own ready hook; defer a tick.
-reg.once("ready", () => setTimeout(() => {
-  publish();
-  if (game.users?.activeGM?.isSelf) seedAll().catch(err => log.warn("weapon-set seed failed", err));
-}, 0), opts("ready: publish"));
+/**
+ * Build the API first (a manifest drift stops here with one error line), publish it (module.api,
+ * game.pentaryn.combat, pentaryn-combat.ready) synchronously (W2-K1), then the active GM's
+ * weapon-set seed, still one tick later as before.
+ */
+function onReady() {
+  try {
+    ctx.api = buildApiFor(ctx);
+  } catch (err) {
+    log.error("API manifest drift — not published", err);
+    return;
+  }
+  publishNamespace(NS, ctx.api, { moduleId: MODULE });
+  setTimeout(() => {
+    if (isActiveGM()) seedAll().catch(err => log.warn("weapon-set seed failed", err));
+  }, 0);
+}
+
+if (globalThis.game?.ready) {
+  // A hot re-import after the world is ready (after api.uninstall()): run the phases now, in order.
+  // It re-wires only this entry's features; hud.mjs's need a reload. Registered settings are skipped.
+  onInit();
+  onSetup();
+  onReady();
+} else {
+  Hooks.once("init", onInit);
+  Hooks.once("setup", onSetup);
+  Hooks.once("ready", onReady);
+}
