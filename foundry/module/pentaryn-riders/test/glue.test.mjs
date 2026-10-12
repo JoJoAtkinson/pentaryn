@@ -70,7 +70,7 @@ test("ready wraps the four patch targets, silently", () => {
   assert.notEqual(SummonActivity.prototype._prepareUsageConfig, original.prepare);
   assert.notEqual(SummonActivity.prototype.getPlacement, original.placement);
   assert.notEqual(W.TE.enrichHTML, original.enrich);
-  // adjustments.yml markers (dnd5e-summon-place-default, dnd5e-summon-wildcard-preview, argon-tooltip-item-rolldata)
+  // adjustments.yml markers (riders-summon-place-default, riders-summon-wildcard-preview, riders-argon-tooltip-item-rolldata)
   assert.equal(W.TE.enrichHTML._prItemRollData, true);
   assert.deepEqual(W.lines, []);
 });

@@ -1,7 +1,7 @@
 // rituals.mjs on a client (the pure half is the LEGACY suite test/rituals.mjs): the
 // dnd5e.preUseActivity slot default, and the Argon `ButtonPanelButton#_renderInner` wrap that adds
 // the "Rituals (no slot)" and "Longer casts" groups (adjustments rows riders-argon-ritual-adept-list,
-// riders-argon-long-casts). The wrap is installed at ready; addRituals runs before the original.
+// argon-riders-long-casts). The wrap is installed at ready; addRituals runs before the original.
 import { mock, test } from "node:test";
 import assert from "node:assert/strict";
 import { ButtonPanelButton, IDS, MODULE, makeActor, setupWorld } from "./fixtures/world.mjs";
