@@ -7,12 +7,14 @@ The check step exists because of how Foundry fails here — a broken esmodule fa
 console, no entry in Manage Modules that looks wrong; it is just absent. So nothing
 reaches Data/ until its sources have been proved.
 
-There are four gates, and each one sees something the others cannot:
+There are six gates, and each one sees something the others cannot:
 
-    parse      `node --check` on every .mjs, JSON.parse on every .json
-    imports    every named import exists in the file it is imported FROM
-    i18n       every key the code localises exists in lang/en.json
-    node-test  the module's own suite, where it has one
+    parse        `node --check` on every .mjs, JSON.parse on every .json
+    imports      every named import exists in the file it is imported FROM
+    i18n         every key the code localises exists in lang/en.json
+    node-test    the module's own suite, where it has one
+    vendor       the vendored kit is byte-identical to foundry/lib
+    conformance  the fail-class blueprint rules pass, or exceptions.json accepts them
 
 They run in that order and stop at the first failure. `imports` is the one added
 after 2026-08-22, when an `export` was deleted out from under two importers: every
@@ -322,7 +324,7 @@ def _check_i18n(spec: cfg.ModuleSpec) -> int:
 
 
 def _gate_node_test(spec: cfg.ModuleSpec, *, capture: bool = False) -> GateResult:
-    """Run the module's own test suite. Pure geometry — Foundry can stay stopped.
+    """Run the module's own suite (node, no Foundry needed).
 
     Streams the suite to the terminal, or — `capture=True`, for `--json` — keeps its
     output off stdout and puts the tail of it in `problems` when it fails."""
@@ -565,7 +567,7 @@ def install(src: Path, dst: Path, *, cmd: str = "module-sync") -> dict:
 
     The stamp (`SYNC_STAMP`: module, version, digest, git, dirty, synced_at) is written into the copy
     before the swap; after it, one line goes to `foundry/logs/ops-YYYY-MM.jsonl` with `cmd`
-    (`module-sync`, or `stage` from the actor pipeline). Returns the stamp.
+    (`module-sync`, `stage` or `importer-install`). Returns the stamp.
     """
     staging = staging_dir(dst)
     staging.mkdir(parents=True, exist_ok=True)

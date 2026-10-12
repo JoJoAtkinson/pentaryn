@@ -126,7 +126,8 @@ def lock_check() -> int:
 # ── the Foundry application ───────────────────────────────────────────────────
 
 def _boot_choice() -> int:
-    """The §6 boot choice, once per start.
+    """The boot choice (design §6, context/plans/rclone-two-hosts-2026-10.md;
+    use-doc ops.md §3), once per start.
 
     `make foundry-up` / `vtt-up` run it as their own `foundry-boot` step and set
     PENTARYN_BOOT_DONE so it is not asked twice; `make login` (and anything else that
