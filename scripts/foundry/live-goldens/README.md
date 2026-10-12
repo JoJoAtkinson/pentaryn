@@ -59,3 +59,9 @@ golden must wait out wall time (a module's own debounce or claim window), use th
 (`scripts/tests/test_live_goldens_preamble.py` checks this). `settle()` comes in two forms: most
 goldens return as soon as `pred()` holds; `creatures` and `senses` then sleep a further 1.2 s for a
 module that debounces a second write after the first. Copy the form that matches the module.
+
+The toast spy (`toasts`, `spied`, `takeToasts`) comes in two forms as well: `transform` records a
+toast raised with `{ localize: true }` as its localised text, while `attunement`, `dropbin`,
+`journal` and `riders` record the raw message (their recorded toasts sit in their goldens, so they
+stay). New goldens copy transform's toast spy; `names` keeps its own info-only spy. The same
+preamble test pins these.

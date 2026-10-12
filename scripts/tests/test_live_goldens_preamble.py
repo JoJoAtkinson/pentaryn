@@ -2,7 +2,8 @@
 (median, timeIt, tag, strip, norm, caught, tick, sleep, probe, ...). Nothing shares them, so this pins
 the copies together: a helper is word-for-word the same in every golden that defines it. Only `DROP`
 (extra volatile keys a golden drops) and `settle` (its default wait, and whether it sleeps after the
-predicate holds) may differ, and only within the forms below."""
+predicate holds) may differ, and only within the forms below; so may the toast spy, in one of two
+forms (EXT-7)."""
 import re
 from pathlib import Path
 
@@ -82,3 +83,61 @@ def test_settle_is_a_known_variant():
     assert copies, "no golden defines settle"
     for stem, text in copies.items():
         assert text in SETTLE_FORMS, f"{stem}: settle is a new form: {text!r}"
+
+
+# EXT-7: the toast spy (`toasts` / `spied` / `takeToasts`) is copied into several goldens and the
+# copies record a localised toast differently: transform's form localises a message raised with
+# `{ localize: true }`, the plain form records the raw key. The recorded strings sit inside each
+# golden's `golden.shared`, so the existing copies stay as they are; these are the only two forms,
+# and new goldens copy transform's (the README says so).
+TOAST_SPY = ("const toasts = [];\nconst notes = ui.notifications;\nconst spied = {};\n",
+             "const takeToasts = () => toasts.splice(0);\n")
+_TOAST_SPY = """const toasts = [];
+const notes = ui.notifications;
+const spied = {{}};
+for (const lvl of ["info", "warn", "error"]) {{
+  spied[lvl] = {{ fn: notes[lvl], own: Object.hasOwn(notes, lvl) }};
+  notes[lvl] = function (message, options) {{ toasts.push(`${{lvl}}: {msg}`); return spied[lvl].fn.call(this, message, options); }};
+}}
+const takeToasts = () => toasts.splice(0);
+"""
+TOAST_SPY_LOCALISED = _TOAST_SPY.format(msg="${options?.localize ? game.i18n.localize(message) : message}")
+TOAST_SPY_PLAIN = _TOAST_SPY.format(msg="${message}")
+TOAST_SPY_FORMS = {TOAST_SPY_LOCALISED: "localised (transform)", TOAST_SPY_PLAIN: "plain"}
+# names spies on info alone, with its own one-level form; it predates the shared spy and is pinned
+# to that one golden rather than offered as a form to copy.
+NAMES_INFO_SPY = """const toasts = [];
+const notes = ui.notifications;
+const origInfo = notes.info;
+const hadOwnInfo = Object.hasOwn(notes, "info");
+notes.info = function (message, options) { toasts.push(String(message)); return origInfo.call(this, message, options); };
+"""
+_SPIES_ON_NOTIFICATIONS = re.compile(r"^\s*notes(?:\[\w+\]|\.\w+) = function", re.M)
+
+
+def test_toast_spy_is_a_known_form():
+    """EXT-7: every copy of the toast spy is transform's localised form or the plain one."""
+    copies = _blocks(*TOAST_SPY)
+    assert "transform" in copies, "EXT-7: transform lost its toast spy"
+    assert copies["transform"] == TOAST_SPY_LOCALISED, "EXT-7: transform's spy is no longer the localised form"
+    for stem, text in copies.items():
+        assert text in TOAST_SPY_FORMS, f"EXT-7: {stem}: toast spy is a new form: {text!r}"
+
+
+def test_every_toast_spy_is_pinned():
+    """EXT-7: a golden that wraps ui.notifications does it with the pinned spy, or is names."""
+    spy_copies = _blocks(*TOAST_SPY)
+    for stem, text in TEXTS.items():
+        if not _SPIES_ON_NOTIFICATIONS.search(text):
+            continue
+        if stem == "names":
+            assert NAMES_INFO_SPY in text, "EXT-7: names' info-only spy changed"
+            continue
+        assert stem in spy_copies, f"EXT-7: {stem} wraps ui.notifications without the pinned toast spy"
+
+
+def test_readme_says_new_goldens_copy_transforms_spy():
+    """EXT-7: the README tells a new golden which toast spy to copy."""
+    readme = (GOLDENS / "README.md").read_text(encoding="utf-8")
+    assert "toast spy" in readme and "transform" in readme.split("toast spy", 1)[1][:400], \
+        "EXT-7: README does not say new goldens copy transform's toast spy"
