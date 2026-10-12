@@ -210,16 +210,15 @@ test("preview: core.transformFormula with dnd5e's damage types", () => {
   assert.equal(api.preview("1d4rr1", { rollType: "healing", modifier: "r1" }), "1d4rr1");
 });
 
-// KNOWN (found at the checkpoint, preview/parseFormula only — the live riders edit real terms):
-// a die modifier whose argument is an @reference ("1d8x@mod=8", Sorcerous Burst's explode) is split
-// by the string tokenizer — "x" is read as the die's modifier and "@mod=8" as a separate term —
-// so the new modifier lands between them: "1d8xmin2@mod=8", not a valid formula.
-test("KNOWN parseFormula: a modifier with an @reference argument is split; preview inserts min2 inside it", () => {
-  assert.equal(api.preview("1d8x@mod=8", { rollType: "force", modifier: "min2" }), "1d8xmin2@mod=8");
-  assert.deepEqual(api.core.parseFormula("1d8x@mod=8").map(t => t.kind), ["die", "other"]);
+// [declared, preview only] (found at the checkpoint; the live riders edit real terms): a die modifier
+// whose argument is an @reference ("1d8x@mod=8", Sorcerous Burst's explode) was split by the string
+// tokenizer, so preview inserted min2 inside it ("1d8xmin2@mod=8"). Such a token is now left alone.
+test("parseFormula keeps a die modifier's @reference argument with its modifier (preview gives \"1d8x@mod=8min2\" or leaves the die alone)", () => {
+  assert.equal(api.preview("1d8x@mod=8", { rollType: "force", modifier: "min2" }), "1d8x@mod=8");
+  assert.deepEqual(api.core.parseFormula("1d8x@mod=8").map(t => t.kind), ["other"]);
+  assert.equal(api.preview("1d8x@mod=8 + 2d6", { rollType: "force", modifier: "min2" }), "1d8x@mod=8 + 2d6min2", "the other dice still get it");
+  assert.equal(api.preview("1d8+3", { rollType: "healing", modifier: "r1" }), "1d8r1 + 3");
 });
-
-test.todo("parseFormula keeps a die modifier's @reference argument with its modifier (preview gives \"1d8x@mod=8min2\" or leaves the die alone)");
 
 test("combat-riders-12 [declared]: report/featuresOf/setType/retireManual/installBattleMedic/spendHitDie/restoreHitDie/hdPools resolve an Actor, Token, UUID, id or exact name; a substring or miss gives null", async () => {
   const rows = api.report(sorc);

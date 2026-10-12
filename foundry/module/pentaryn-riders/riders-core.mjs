@@ -281,6 +281,10 @@ export function parseFormula(formula) {
     if ("+-*/".includes(c)) { out.push({ kind: "op", operator: c }); i++; continue; }
     const rest = s.slice(i);
     let m = DIE_RX.exec(rest);
+    // A die whose token runs on past the match ("1d8x@mod=8": an @reference modifier argument) is
+    // not a plain die: the whole token is `other`, left alone.
+    const runsOn = m && m[0].length < rest.length && !/[\s+\-*/]/.test(rest[m[0].length]);
+    if (runsOn) m = null;
     if (m) {
       out.push({
         kind: "die", number: m[1] === "" ? 1 : Number(m[1]), faces: Number(m[2]),
@@ -289,7 +293,7 @@ export function parseFormula(formula) {
       i += m[0].length;
       continue;
     }
-    m = NUM_RX.exec(rest);
+    m = runsOn ? null : NUM_RX.exec(rest);
     if (m) { out.push({ kind: "num", number: Number(m[1]), flavor: m[2] ?? "" }); i += m[0].length; continue; }
     // Anything else up to the next top-level + - * / or space.
     let j = i;
