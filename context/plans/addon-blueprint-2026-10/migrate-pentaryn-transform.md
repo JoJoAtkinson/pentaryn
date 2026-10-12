@@ -1,7 +1,7 @@
 ---
 title: Migration guide — pentaryn-transform to the addon blueprint
-status: plan
-last_modified: 2026-10-11
+status: done (code phase, wave 4)
+last_modified: 2026-10-12
 tags: [foundry, modules, blueprint, plan, migration, transform, wild-shape]
 ---
 
@@ -606,13 +606,30 @@ should absorb `playtest.test.mjs`'s cases. New exports for step 2's barrel/expor
 
 | | |
 |---|---|
-| Live score after the migration | ___ % (___ / ___ fail-class rules) — `conformance.py --module transform --markdown` |
-| Date | ____-__-__ |
-| Commits (Joe-approved) | characterisation: `94991024` (runner move + harness), **`f06e6b18` (checkpoint)** · refactor: ______ · standalone: ______ |
-| Declared changes handed to the live-test workflow | ______ (session L__) |
-| `module.json` edits appended to `wave7-restart-batch.md` | yes / no |
-| Adjustments rows appended to `adjustments-batch.md` | yes / no |
-| Still failing, and why | ______ |
+| Live score after the migration | **93.6 % (44/47)** — `conformance.py --module transform --markdown` (base 55.6 %, checkpoint 60.0 %). With the integrator's edits: C32 clears (adjustments rows), C07 and C37 clear with the Wave 7 `module.json` (cssPrefix `ptf-`) → 100 % |
+| Date | 2026-10-12 (wave 4, code phase only; nothing live) |
+| Commits | characterisation: `94991024`, **`f06e6b18`** · refactor: `4af2a9c2` kit · `a5481159` S2 · `a7d52ce3` S3 · `0f995af9` S9a · `01583116` S9b [declared T-D3] · `702e85a1` S7 · `9d4b0af9` S4 · `395d6573` S5 · `6d436550` S6 · `e24730aa` S8 [declared T-D1 T-D2 W2-K1] · `89c3b57c` [declared] hooks golden −1 row · `d0882eac` [declared T-D8] guarded hooks · `45733d25` S10 [declared T-D4] + D7 · `977e430d` S11 docs · `d7fa35f2` 8.6 argon-kit (-12) · `a5151861` 8.6 size split · standalone: `89fd21a0` -10 · `59d560ba` -1 · `796fdf63` -23 · `0e113e81` -11 [declared T-D7] · `2aa03f5e` -22 extraction · `c25e6a9b` -2 [declared T-D6] · `08b9d901` C59 [declared, perf] · `0dfff3de` §5.8 [declared] · `eb5d576b` -13 step 3 [declared] · `b22643fc` hot-patch test |
+| Declared changes handed to the live-test workflow | T-D1, T-D2, T-D3, T-D4, T-D6, T-D7, T-D8 (new: guarded hooks), -13 step 3, C59 batch, §5.8 `_del` — live checks in `wave-4-report.md` § transform |
+| `module.json` edits appended to `wave7-restart-batch.md` | no — handed to the integrator (shared file); exact edits in `wave-4-report.md` § transform |
+| Adjustments rows appended to `adjustments-batch.md` | no — handed to the integrator (shared file); exact edits in `wave-4-report.md` § transform |
+| Still failing, and why | C07 (Wave 7 `flags.pentaryn`), C37 (the `ptf-` selectors pass once W7 declares `cssPrefix`), C32 (the adjustments rows still name the old files / `core-transform-unwrap`) |
+
+**Deviations from the steps above (recorded on purpose):**
+- Order: S9 (logging) and S7 (`_loc`) ran before the file moves, so the source-scan pins
+  (`console-texts.json`, the T-wrapper list) flipped once instead of twice.
+- S4: `registerKeybindings` registers with `game.keybindings.register` directly — the kit's
+  `defineKeybindings` skips a late registration silently, which would have broken the frozen
+  late-registration warn pin.
+- S6: `starry.mjs` is installed by `hud.mjs` (entry 1), where its rows always registered, not by
+  entry 0 — keeps `golden/hooks.json` and "entry 0 registers rows 1-18" frozen; -9 resolves at the
+  Wave 8 collapse. Handlers registered unguarded during the refactor, guarded in `d0882eac`.
+- S8: the publish stays in entry 0's own `Hooks.once("ready")` body (C50 reads it there); a hot
+  re-import republishes, hud.mjs again with Starry's rows (`ctx.exposed.publish`).
+- Patch row named per D2: `transform-preupdate-unwrap` (the guide said `core-transform-unwrap`).
+- D7: `styles/transform.css` `@import`s `../lib/argon-tooltip.css` (works under today's
+  module.json; Foundry v14 imports module styles with `@import`, so nested imports resolve).
+- 8.6 / -12 done now (combat's argon-kit landed this wave); -13 step 3 done now (combat publishes
+  `coversMultiattack`); -13 step 2 (an adjustments row for the private read) superseded.
 
 ### Checkpoint (wave 4, 2026-10-11) — `f06e6b18`
 

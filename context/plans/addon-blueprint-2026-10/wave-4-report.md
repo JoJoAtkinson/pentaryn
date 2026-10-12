@@ -301,3 +301,176 @@ def test_normalize_name_contracts(tables):
     assert tables["combatNorm"] == ["elemental adept", "a (x) b"]
     assert tables["ridersNorm"] == ["elemental adept", "a b"]
 ```
+
+## transform — migration lane (2026-10-12)
+
+Migrated from the checkpoint `f06e6b18` on `migrate/wave-4` (code phase only, nothing live): guide
+steps 2–11 plus the §4 standalone findings, audit 8.6 (argon-kit adoption, the size split) and the
+§5.9 / §5.8 review items; 28 commits, listed with their findings in
+[`migrate-pentaryn-transform.md`](migrate-pentaryn-transform.md) Result (deviations recorded there).
+Conformance 55.6 % (base) → 60.0 % (checkpoint) → **93.6 % (44/47)**; the three left are shared-file
+edits below (C32 adjustments, C07 + C37 Wave 7). node:test **246 pass, 0 fail, 0 todo** (checkpoint
+186 / 2 todo), legacy core suite 155 pass; every `modules.check_report('transform')` gate green
+(parse, imports, i18n, node-test, vendor, conformance); `vendor.py check pentaryn-transform` clean.
+Coverage (node:test, module files, lcov merged per file, `lib/` and `test/` excluded): **99.92 /
+92.75 / 98.88** L / B / F (checkpoint 99.88 / 91.38 / 98.50); left: the entry's game.ready branch
+(exercised by features.test's hot patch under a `?v=2` URL, so lcov files it apart).
+
+Frozen-pin edits, all named in their commits: planned flips (VERSION todo, the T-wrapper list,
+the console-text source scan, hooks golden 40 → 39); import paths only (`../starry-adapter.mjs` in
+four suites); declared flips (T-D1/W2-K1 publish pins, T-D3 -15 console pins, T-D4 class names,
+T-D8 one console line, -13 step 3, -23 resolver count, §5.8 failure stub). No frozen test went red
+twice; no step was reverted.
+
+**Known red:** repo pytest `test_the_real_registry_matches_the_code` and C32 report the transform
+rows below until the integrator's adjustments edit lands (same as every lane's file moves).
+
+### Open for Joe — transform
+
+| # | Item | Default | Why |
+|---|---|---|---|
+| W4-T1 | §5.9.4 / C61, two tabs on the GM account: the automatic endings (0 HP, Incapacitated, expiry, a carried effect ending) and the spent-form sweep run in every tab of the runner user (`isRunner` / `activeGM.isSelf` pick a user). With the bridge tab and a GM browser tab open, both revert the same form; the second finds it gone (its `revert()` returns null or warns `auto-revert failed`), but a doubled "returns to normal form" chat line is possible if both reach dnd5e before the delete lands | **accept, watch in the live phase** (two GM tabs, Talo shifted, drop him to 0 HP) | A claim would fit — the form actor is a one-time document per shift, so `claimDocument(form, "autoRevert")` is a valid fixed key — but it needs `lib/election.mjs`'s claim (vendored already) and adds a ~750 ms settle before every automatic revert: a declared change for a case not yet seen |
+| W4-T2 | D8 / -22 behaviour half: Starry Form's world-time expiry checks world actors only, so an unlinked druid token's Starry Form is not ended there while no GM is connected | **live decision** (pinned as today, `starry.test`) | the guide's T-L1; build nothing |
+| W4-T3 | Version: module.json stays 0.3.3; the new API rows say `since: 0.4.0` | **bump to 0.4.0 in the Wave 7 batch**, with `transform-core.mjs` `VERSION` in the same commit (core.test pins them equal) | as aoe / riders |
+| W4-T4 | D7 loading: `styles/transform.css` `@import`s `../lib/argon-tooltip.css` so today's module.json loads the shared tooltip rules (and pentaryn-combat's `pentaryn-tt` tooltips keep their style) | **keep the @import**; if the Wave 7 batch lists `lib/argon-tooltip.css` in transform's `styles` (combat's W4-C6 does it for combat), delete the @import line in the same commit | identical rules loaded twice are harmless, but one path is cleaner |
+| W4-T5 | T-D8 (new, not in the guide): every hook registration guarded — a throwing listener logs `pentaryn-transform \| <label>` | **keep** | §5.9.1, combat's D-c1 precedent; console only |
+
+### Integrator — transform (exact edits)
+
+`foundry/adjustments.yml` (rows today at :46-95, :257-265, :599-607):
+- `core-transform-unwrap` → id **`transform-preupdate-unwrap`** (D2: `wrapMethod({adjustments})` names it),
+  `files: [foundry/module/pentaryn-transform/patches.mjs]`, `markers: ["_preUpdateOperation", "pentarynUnwrapped"]`.
+- `argon-panel-injection`: `files: [foundry/module/pentaryn-transform/hud-panels.mjs, foundry/module/pentaryn-transform/form-picker.mjs]` (markers unchanged).
+- `argon-target-picker-cancel`: `files: [foundry/module/pentaryn-transform/argon.mjs]` (markers unchanged).
+- `argon-bonus-used-tracking`: `files: [foundry/module/pentaryn-transform/wildshape-adapter.mjs, foundry/module/pentaryn-transform/hud-panels.mjs]`.
+- `argon-portrait-hp`: `files: [foundry/module/pentaryn-transform/hud-panels.mjs, foundry/module/pentaryn-transform/core/hud.mjs]`.
+- `argon-tooltip-clear`: `files: [foundry/module/pentaryn-transform/argon.mjs]`, `markers: ["dropTooltip"]`
+  (the `ui.ARGON._tooltip` write is the kit's `lib/argon-kit.mjs` now; rows never name lib/).
+- `core-token-swap-no-animation`: `files: [foundry/module/pentaryn-transform/bodyswap.mjs, foundry/module/pentaryn-transform/wildshape-adapter.mjs, foundry/module/pentaryn-transform/core/bodyswap.mjs]` (markers unchanged).
+- No `transform-reads-combat-multiattack` row (guide §4 -13 step 2): superseded — transform reads
+  combat's published `coversMultiattack`, not its settings.
+
+Wave 7 restart batch (`wave7-restart-batch.md` transform row; `foundry/module/pentaryn-transform/module.json`):
+`flags.pentaryn = { tier: "full", namespace: "transform", flagScope: "pentaryn-transform", cssPrefix: "ptf-",
+generation: 14, afterSync: ["After a sync: reload every client (a module.json change needs a Foundry restart).",
+"  game.pentaryn.transform.describe()   game.pentaryn.transform.selftest()   game.pentaryn.transform.inspect(\"Talo\")"] }`;
+`compatibility.minimum: "14"` (-24); `version: "0.4.0"` with `transform-core.mjs` `VERSION = "0.4.0"`
+(W4-T3); `esmodules` stays `["transform.mjs", "hud.mjs"]`. Then flip transform's own
+`core.test` "manifest today" pin (it asserts 0.3.3, minimum 13, flagScope `transform`) in the
+same commit. Optional (W4-T4): `styles: ["styles/transform.css", "lib/argon-tooltip.css"]` and drop
+the `@import` line.
+
+`scripts/foundry/ops/config.py` transform `after_sync` (:240-247, -18): version-neutral text, e.g.
+`("A module.json change needs a Foundry restart (make vtt-down && make vtt-up); otherwise reload every client.",
+"Wild Shape and Starry Form live on the Argon Bonus bar:", "  game.pentaryn.transform.inspect(\"Talo\")",
+"  await game.pentaryn.transform.shift(actor, game.pentaryn.transform.forms(actor)[0].id)",
+"  await game.pentaryn.transform.revert(actor)")` (or read it from module.json `afterSync` once W7 lands).
+
+`context/foundry/README.md`: re-run `make foundry-module-index` (transform: full tier, its methods,
+the describe golden now exists); add a routing row (-20): *Wild Shape / Starry Form / Return / Change
+Form / a form left in the sidebar* → [`../../foundry/module/pentaryn-transform/README.md`](../../foundry/module/pentaryn-transform/README.md).
+
+`context/plans/druid-wild-shape.md:5`: `Design detail: foundry/module/pentaryn-transform/WILDSHAPE-DESIGN.md`
+→ `Design detail (history): [wildshape-hud-design.md](wildshape-hud-design.md)`.
+`context/plans/README.md` (index): add `| [wildshape-hud-design.md](wildshape-hud-design.md) | The 0.2
+design for Wild Shape on the HUD (moved out of the module, transform-creatures-19) | superseded; history only |`.
+`context/pentaryn.md:613` (optional): the module is past 0.3.1; `starry.mjs` is no longer imported by hud.mjs.
+
+New `scripts/tests/test_module_contracts.py` (-21; drafted, 4 passed against this branch at a
+repo-shaped path): transform-core's `STARRY_LIGHT` pinned, and pentaryn-senses'
+`carriedLightOf` / `lightingItemId` turn exactly that `flags.pentaryn-senses.light` into the token's
+light (a quantity-less feature counts, quantity 0 and no flag give none, Starry outshines a torch).
+The draft is at the session scratchpad `repo/scripts/tests/test_module_contracts.py`; text:
+
+```python
+"""transform-creatures-21: pentaryn-transform writes flags.pentaryn-senses.light (STARRY_LIGHT) on the
+Starry Form item; pentaryn-senses' carried-light reader (light-core.mjs carriedLightOf) must keep
+turning exactly that flag into the token's light. Both cores are pure, so node imports them bare."""
+import json
+import shutil
+import subprocess
+from pathlib import Path
+
+import pytest
+
+ROOT = Path(__file__).resolve().parents[2]
+TRANSFORM = ROOT / "foundry/module/pentaryn-transform/transform-core.mjs"
+SENSES = ROOT / "foundry/module/pentaryn-senses/light-core.mjs"
+
+SCRIPT = """
+const t = await import(process.argv[1]);
+const s = await import(process.argv[2]);
+const flag = light => ({ "pentaryn-senses": { light } });
+console.log(JSON.stringify({
+  starry: t.STARRY_LIGHT,
+  one: s.carriedLightOf([{ id: "sf", system: { quantity: 1 }, flags: flag(t.STARRY_LIGHT) }]),
+  feature: s.carriedLightOf([{ id: "sf", system: {}, flags: flag(t.STARRY_LIGHT) }]),
+  none: s.carriedLightOf([{ id: "sf", system: { quantity: 1 }, flags: {} }]),
+  empty: s.carriedLightOf([{ id: "sf", system: { quantity: 0 }, flags: flag(t.STARRY_LIGHT) }]),
+  which: s.lightingItemId([{ id: "torch", system: { quantity: 1 }, flags: flag({ bright: 5, dim: 10 }) },
+                           { id: "sf", system: {}, flags: flag(t.STARRY_LIGHT) }]),
+}));
+"""
+
+
+@pytest.fixture(scope="module")
+def contract():
+    node = shutil.which("node")
+    if not node:
+        pytest.skip("node not on PATH")
+    out = subprocess.run([node, "--input-type=module", "-e", SCRIPT, TRANSFORM.as_uri(), SENSES.as_uri()],
+                         capture_output=True, text=True, check=True, timeout=30)
+    return json.loads(out.stdout)
+
+
+def test_starry_light_shape_pinned(contract):
+    assert contract["starry"] == {"bright": 10, "dim": 20, "color": "#cfe0ff", "alpha": 0.35, "luminosity": 0.5,
+                                  "coloration": 1, "animation": {"type": "starlight", "speed": 2, "intensity": 3,
+                                                                 "reverse": False}}
+
+
+def test_senses_lights_the_starry_flag_as_written(contract):
+    assert contract["one"] == contract["starry"]
+    assert contract["feature"] == contract["starry"], "a feature item has no quantity: it still counts"
+
+
+def test_no_flag_or_no_quantity_gives_no_light(contract):
+    assert contract["none"] is None
+    assert contract["empty"] is None
+
+
+def test_starry_outshines_a_torch(contract):
+    assert contract["which"] == "sf"
+```
+
+Seen, not mine: the old live eval scripts in `foundry/logs/` imported
+`/modules/pentaryn-transform/starry.mjs` for `assumeStarry` / `constellationActivity`; that file is a
+feature now (`install` only). Use `game.pentaryn.transform.starry.*` (README Pitfalls says so).
+
+### Live checks for the gated live phase (transform)
+
+After the sync (+ the Wave 7 restart for module.json) and a reload, as GM with Talo:
+1. T-D1: `game.pentaryn.transform.describe().version` equals module.json; `selftest().ok`;
+   `game.modules.get("pentaryn-transform").api === game.pentaryn.transform`; `Object.isFrozen(...)`.
+2. T-D2: `game.pentaryn.transform.inspect("Talo")` in normal form, then shifted into a Dire Wolf:
+   `form.secondsLeft`, `wildShape.usesLeft`, depth ≤ 4; `.starry.active(talo)` works at ready.
+3. The core flow from the HUD as a player: Wild Shape → Dire Wolf (one use, one chat line), Change
+   Form, Return to Talo; a revert from the sheet's Restore Transformation posts its line (PT3-7).
+4. T-D4: nothing looks different — the picker, the Return / Change Form glow, the Starry button,
+   the Chalice pulse after Cure Wounds under the Chalice, the portrait line and its `99+12` HP, the
+   compact tooltips (also pentaryn-combat's Full Attack tooltip, D7).
+5. -13 step 3: a Dire Wolf form under combat's Full Attack shows no second Multiattack; with combat's
+   Multiattack setting off it does.
+6. T-D6: advance world time 6 h with a GM connected — the form ends (Expired line), once; repeat with
+   no GM connected (the owner's client ends it). Starry Form after 10 min likewise.
+7. T-D7: after a shift, a tooltip left behind disappears on the next mouse move.
+8. C59: a druid concentrating with Bless up shifts, the beast takes damage and fails Concentration —
+   the druid comes back without Bless and not concentrating (one batched delete in the console).
+9. §5.8: Starry Form on → the token's starlight; off → the light is gone (and a hand-set torch
+   light comes back).
+10. W4-T1: two GM tabs (bridge + browser), Talo shifted, drop him to 0 HP — count the "drops to 0
+    HP" chat lines (expected one; record if two).
+11. T-L1 / D8: an unlinked druid token with Starry Form, expiry action off, advance past 600 s with no
+    GM connected — the form stays (decision for Joe).
+12. Escape with the Change Form picker open closes it (PT3-6); `CONFIG.debug["pentaryn-transform"] =
+    true` then a shift prints the stripped-items debug line (T-D3).
