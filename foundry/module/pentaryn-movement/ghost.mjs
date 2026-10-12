@@ -210,10 +210,9 @@ function toolclip(heading, paragraphs) {
 function addTools(controls) {
   const tools = controls?.tokens?.tools;
   if (!tools) return;
-  const p = policy();
-  const combat = combatActive();
+  const now = liveState();
 
-  const pt = core.playerTool({ isGM: game.user.isGM, policy: p, combatActive: combat, wish: wish() });
+  const pt = core.playerTool({ isGM: game.user.isGM, ...now });
   if (pt.visible) {
     tools[TOOL] = {
       name: TOOL,
@@ -227,7 +226,7 @@ function addTools(controls) {
     };
   }
 
-  const gt = core.gmTool({ isGM: game.user.isGM, policy: p });
+  const gt = core.gmTool({ isGM: game.user.isGM, policy: now.policy });
   if (gt.visible) {
     tools[GM_TOOL] = {
       name: GM_TOOL,
@@ -288,7 +287,7 @@ function rerenderControls(force = false, now = liveState()) {
 function markBlocked(element) {
   const btn = (element ?? ui.controls?.element)?.querySelector?.(`button.tool[data-tool="${TOOL}"]`);
   if (!btn) return;
-  const pt = core.playerTool({ isGM: game.user.isGM, policy: policy(), combatActive: combatActive(), wish: wish() });
+  const pt = core.playerTool({ isGM: game.user.isGM, ...liveState() });
   btn.classList.toggle(CSS.blocked, pt.state === "combat");
 }
 
