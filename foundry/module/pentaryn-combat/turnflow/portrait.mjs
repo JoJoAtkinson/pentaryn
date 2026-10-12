@@ -60,7 +60,7 @@ function patchPortrait() {
 
 /* ── install ─────────────────────────────────────────────────────────────── */
 
-const opts = label => ({ guard: false, label });
+const opts = label => ({ label });   // guarded (S11, D-c1): a throw is logged with the label; return values pass through
 
 export function install(reg) {
   reg.once("ready", patchPortrait, opts("portrait conditions: wrap PortraitPanel"));

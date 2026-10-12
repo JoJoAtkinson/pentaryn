@@ -80,7 +80,7 @@ function registerSeed(reg) {
       seedWeaponSets(actor).catch(err => { log.debug("weapon-set seed (new character)", err); return null; });
     }, 500);
     timers.add(t);
-  }, { guard: false, label: "seed a new character's weapon sets" });
+  }, { label: "seed a new character's weapon sets" });
 }
 
 export function uninstall() {

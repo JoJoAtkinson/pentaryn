@@ -11,7 +11,7 @@ import { dropStrayTooltip, dropTooltip } from "../argon.mjs";
 // hot: pointerover reads only ui.ARGON._tooltip (no world iteration)
 const onPointerOver = (ev) => { if (ui.ARGON?._tooltip) dropStrayTooltip(ev.target); };
 
-const opts = label => ({ guard: false, label });
+const opts = label => ({ label });   // guarded (S11, D-c1): a throw is logged with the label; return values pass through
 
 export function install(reg) {
   document.addEventListener("pointerover", onPointerOver, { capture: true, passive: true });

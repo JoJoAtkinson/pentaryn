@@ -23,7 +23,7 @@ const log = makeLog(MODULE);
  */
 let hooks = null;
 const temp = {
-  on: (name, fn, label) => (hooks ? hooks.on(name, fn, { guard: false, label }) : Hooks.on(name, fn)),
+  on: (name, fn, label) => (hooks ? hooks.on(name, fn, { label }) : Hooks.on(name, fn)),
   off: (name, id) => (hooks ? hooks.off(id) : Hooks.off(name, id)),
 };
 
@@ -170,7 +170,7 @@ const onActionPanel = (panel) => {
 
 /* ── install ─────────────────────────────────────────────────────────────── */
 
-const opts = label => ({ guard: false, label });
+const opts = label => ({ label });   // guarded (S11, D-c1): a throw is logged with the label; return values pass through
 
 // hot: per-button markers (_pcSpecial, _pcOA); no world iteration
 export function install(reg) {

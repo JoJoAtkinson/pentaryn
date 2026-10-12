@@ -131,7 +131,7 @@ function settlePipsPatch() {
 
 /* ── install ─────────────────────────────────────────────────────────────── */
 
-const opts = label => ({ guard: false, label });
+const opts = label => ({ label });   // guarded (S11, D-c1): a throw is logged with the label; return values pass through
 
 /** The two init patches (turnflow.mjs registered them after the portrait's ready hook). */
 export function install(reg) {

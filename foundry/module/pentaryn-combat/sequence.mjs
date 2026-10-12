@@ -32,7 +32,7 @@ let emit = emitter(MODULE, HOOKS, { log, version: VERSION });
  */
 let hooks = null;
 const temp = {
-  on: (name, fn, label) => (hooks ? hooks.on(name, fn, { guard: false, label }) : Hooks.on(name, fn)),
+  on: (name, fn, label) => (hooks ? hooks.on(name, fn, { label }) : Hooks.on(name, fn)),
   off: (name, id) => (hooks ? hooks.off(id) : Hooks.off(name, id)),
 };
 

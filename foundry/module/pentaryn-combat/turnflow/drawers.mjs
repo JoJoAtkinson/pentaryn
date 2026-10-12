@@ -89,7 +89,7 @@ export function placeOpenDrawers(actionPanel) {
 
 /* ── install ─────────────────────────────────────────────────────────────── */
 
-const opts = label => ({ guard: false, label });
+const opts = label => ({ label });   // guarded (S11, D-c1): a throw is logged with the label; return values pass through
 
 // hot: per-panel marker (_pcNear); no world iteration
 export function install(reg) {
