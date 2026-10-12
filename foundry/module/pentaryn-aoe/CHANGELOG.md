@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **Changing the area is no longer undone by a save landing at the same moment** (declared,
+  AC-6): `resolve()` wrote the new area's resolution straight to the damage message, outside the
+  per-message write queue, so a write already running on the old area (an NPC save, a row change)
+  could land after it and bring the old area's rows back. The fresh write now waits its turn in the
+  same queue. Pinned by `test/resolve-queue.test.mjs`.
 - **The area picker says why it does nothing on a second GM tab** (declared, aoe-edge-8): on a GM
   tab that is not the active GM, picking another area on the tray did nothing, yet the select kept
   showing the new choice. That tab now gets a warning toast (new string

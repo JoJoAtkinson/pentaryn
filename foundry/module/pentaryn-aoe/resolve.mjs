@@ -41,22 +41,26 @@ let log = makeLog(MODULE);   // the entry's ctx.log once installed
 let context = null;
 
 const queues = new Map();
+/** Chain task() on one message's write queue. task must never reject; returns the new tail. */
+function enqueue(messageId, task) {
+  const next = (queues.get(messageId) ?? Promise.resolve()).then(task);
+  queues.set(messageId, next);
+  // -6: drop the tail once it settles (unless a later call queued behind it), so a session does
+  // not keep every resolution it ever wrote alive.
+  next.finally(() => { if (queues.get(messageId) === next) queues.delete(messageId); });
+  return next;
+}
+
 /** Run fn(resolution) → resolution for one message, one at a time, then write it back. */
 export function mutate(messageId, fn) {
-  const prev = queues.get(messageId) ?? Promise.resolve();
-  const next = prev.then(async () => {
+  return enqueue(messageId, () => (async () => {
     const message = game.messages.get(messageId);
     const res = message && foundry.utils.deepClone(aoeFlags(message).resolution);
     if (!res) return null;
     const out = (await fn(res, message)) ?? res;
     await message.update({ [`flags.${MODULE}.resolution`]: out });
     return out;
-  }).catch(err => { log.error("mutate", err); return null; });
-  queues.set(messageId, next);
-  // -6: drop the tail once it settles (unless a later call queued behind it), so a session does
-  // not keep every resolution it ever wrote alive. `next` never rejects (the catch above).
-  next.finally(() => { if (queues.get(messageId) === next) queues.delete(messageId); });
-  return next;
+  })().catch(err => { log.error("mutate", err); return null; }));
 }
 
 /** Messages with a write still queued on this client (debugging and tests). */
@@ -210,7 +214,10 @@ export async function resolve(messageOrId, { regionId = undefined } = {}) {
   };
 
   // Write the bare state first so the tray appears and later results have somewhere to land.
-  await message.update({ [`flags.${MODULE}.resolution`]: res });
+  // AC-6: queued like every other write, so a mutate already running on the old resolution
+  // cannot land after this one and bring the old area's rows back. A failed write still throws.
+  const failed = await enqueue(message.id, () => message.update({ [`flags.${MODULE}.resolution`]: res }).then(() => null, err => err));
+  if (failed) throw failed;
   await supersedeOlder(message, res);
 
   await rollNpcSaves(message.id);
