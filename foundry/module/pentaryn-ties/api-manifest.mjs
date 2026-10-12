@@ -46,6 +46,7 @@ export const MANIFEST = Object.freeze({
       `${F}.ties`, `${F}.known`, `${F}.knownCategories`, `${F}.granted`, `${F}.studied`, `${F}.beliefs`,
       `${F}.kindOf`, `${F}.studyTiers`, `${F}.studyHold`, `${F}.studyOffset`, `${F}.lore`, `${F}.attributes`,
       `${F}.attributesOff`, `${F}.conceal`, `${F}.worn`, `${F}.mark`,
+      `${F}.attrSelected`, // on the GM's User, not an actor: the review panel's ticks
     ],
     reads: ["flags.item-piles.data", "flags.dnd5e.isPolymorphed"],
   },
