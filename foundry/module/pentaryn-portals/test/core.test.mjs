@@ -196,3 +196,21 @@ test("landingCandidate (EXT-9): no behaviors, or only teleportToken ones; anythi
   assert.equal(core.landingCandidate({ behaviors: [{ type: "adjustDarknessLevel" }] }), false);
   assert.equal(core.landingCandidate({}), true);
 });
+
+// [declared] EXT-2: the Teleport Token behavior type and a new link's defaults live in core, once.
+test("EXT-2: TELEPORT_TYPE and a frozen NEW_TELEPORT_BEHAVIOR in core; no 'teleportToken' literal elsewhere", async () => {
+  const { readFileSync, readdirSync } = await import("node:fs");
+  assert.equal(core.TELEPORT_TYPE, "teleportToken");
+  const nb = core.NEW_TELEPORT_BEHAVIOR;
+  assert.ok(nb && Object.isFrozen(nb) && Object.isFrozen(nb.system) && Object.isFrozen(nb.system.dialog) && Object.isFrozen(nb.system.transition));
+  assert.deepEqual(nb, { name: "Teleport", type: "teleportToken",
+    system: { placement: "center", snap: true, choice: true, revealed: true,
+      dialog: { revealed: null, unrevealed: null }, transition: { type: "fade", duration: 1500 } } });
+  assert.equal("destinations" in nb.system, false);
+  const files = readdirSync(ROOT).filter(f => f.endsWith(".mjs"));
+  assert.ok(files.includes("scene-adapter.mjs") && files.includes("card-app.mjs"));
+  for (const file of files) {
+    const n = (readFileSync(new URL(file, ROOT), "utf8").match(/["']teleportToken["']/g) ?? []).length;
+    assert.equal(n, file === "portals-core.mjs" ? 1 : 0, `${file}: ${n} 'teleportToken' literal(s)`);
+  }
+});

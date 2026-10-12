@@ -26,6 +26,17 @@ export const FLAG_SCOPE = MODULE;
 export const HOOKS = Object.freeze({});
 /** Where Snapshot saves its crops (Data). */
 export const SNAP_DIR = "assets/tokens/custom/portals";
+/** The core RegionBehavior type every link rides on (Teleport Token). */
+export const TELEPORT_TYPE = "teleportToken";
+/**
+ * EXT-2 [declared]: what a new link creates when the region has no teleport behavior yet — ask
+ * first, revealed, fade 1500 ms, centre, snap. linkRegions adds `system.destinations` (first).
+ */
+export const NEW_TELEPORT_BEHAVIOR = Object.freeze({
+  name: "Teleport", type: TELEPORT_TYPE,
+  system: Object.freeze({ placement: "center", snap: true, choice: true, revealed: true,
+    dialog: Object.freeze({ revealed: null, unrevealed: null }), transition: Object.freeze({ type: "fade", duration: 1500 }) })
+});
 /** The fallback card image. */
 export const DOOR_ICON = "icons/svg/door-exit.svg";
 
@@ -278,7 +289,7 @@ export function withoutDestination(stored, uuid, toAbsolute) {
  * `region.behaviors` is any iterable of `{ type }` (a Foundry collection or a plain array).
  */
 export function landingCandidate(region) {
-  return ![...(region?.behaviors?.values?.() ?? region?.behaviors ?? [])].some(b => b.type !== "teleportToken");
+  return ![...(region?.behaviors?.values?.() ?? region?.behaviors ?? [])].some(b => b.type !== TELEPORT_TYPE);
 }
 
 /**

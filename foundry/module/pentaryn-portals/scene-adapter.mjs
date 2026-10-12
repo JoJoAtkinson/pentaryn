@@ -9,7 +9,7 @@
 
 import { MODULE, SNAP_DIR, esc, cardData, dialogIdParts, cropWindow, translateShapes, blockingWallCoords, tokenBox,
   occupiedBy, crowded, isAoeHandle, summonerActorId, playerOwners, isScenery, partySelection, ringSpots, wallBlocker, assignSpots,
-  partyPreview, hasDestination, withoutDestination } from "./portals-core.mjs";
+  partyPreview, hasDestination, withoutDestination, TELEPORT_TYPE, NEW_TELEPORT_BEHAVIOR } from "./portals-core.mjs";
 
 const deps = { setting: () => undefined, log: null };
 
@@ -55,11 +55,11 @@ export function behaviorOf(app) {
   const parts = dialogIdParts(app?.id ?? "");
   if (!parts) return null;
   const behavior = fromUuidSync(parts.behaviorUuid);
-  return behavior?.type === "teleportToken" ? behavior : null;
+  return behavior?.type === TELEPORT_TYPE ? behavior : null;
 }
 
 export function teleportBehaviors(region) {
-  return region.behaviors.filter(b => b.type === "teleportToken" && !b.disabled);
+  return region.behaviors.filter(b => b.type === TELEPORT_TYPE && !b.disabled);
 }
 
 /** Core 14.368+ stores a same-scene destination relative to its behavior; resolve against it. */
@@ -382,11 +382,8 @@ export async function linkRegions(from, to) {
     }
     return;
   }
-  await from.createEmbeddedDocuments("RegionBehavior", [{
-    name: "Teleport", type: "teleportToken",
-    system: { destinations: [to.uuid], placement: "center", snap: true, choice: true, revealed: true,
-      dialog: { revealed: null, unrevealed: null }, transition: { type: "fade", duration: 1500 } }
-  }]);
+  const { system, ...rest } = structuredClone(NEW_TELEPORT_BEHAVIOR);    // a fresh, unfrozen copy (EXT-2)
+  await from.createEmbeddedDocuments("RegionBehavior", [{ ...rest, system: { destinations: [to.uuid], ...system } }]);
 }
 
 /** The card's Add a destination and api.link(): from → to, and back when twoWay. */
