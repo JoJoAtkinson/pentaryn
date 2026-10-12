@@ -59,6 +59,11 @@
   slug repeated in the file is "would create" once, then "would update" (or skipped when its
   content hash matches the earlier entry's), instead of "would create" every time. A dry run still
   writes nothing. golden/dryrun.json (an empty manifest) is unchanged.
+- **[declared] A body read that fails is a `PentarynAbort` `REFUSED`, not the raw error**
+  (`importer-AC-1-half`): when `actors.json`'s body stream errors after the headers (other than the
+  timeout), the importer throws `Network error reading <url>: <cause>`, like the fetch-failure
+  branch, so `pentaryn-write` reports `REFUSED` instead of `INTERNAL`. New key `fetchBodyError` in
+  golden/refusals.json.
 - **[declared] `game.pentaryn` is merged into, never replaced or frozen** (`items-journal-1`). Every
   module's namespace survives whichever order the modules load in; `import`, `moduleId`, `contract`
   and the frozen `_internals` stay on the root.

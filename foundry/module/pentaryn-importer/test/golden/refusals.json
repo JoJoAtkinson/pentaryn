@@ -202,5 +202,11 @@
     "message": "Timed out after 50 ms fetching /worlds/w/actors.json",
     "toasts": [],
     "fetched": 1
+  },
+  "fetchBodyError": {
+    "name": "PentarynAbort",
+    "message": "Network error reading /worlds/w/actors.json: network error",
+    "toasts": [],
+    "fetched": 1
   }
 }

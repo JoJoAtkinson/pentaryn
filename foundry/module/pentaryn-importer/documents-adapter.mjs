@@ -118,7 +118,7 @@ async function fetchJsonWithTimeout(path, { timeout = DEFAULT_TIMEOUT_MS, ...ini
       if (cause?.name === "AbortError") {
         throw new PentarynAbort(`Timed out after ${timeout} ms fetching ${url}`, "TIMEOUT");
       }
-      throw cause;
+      throw new PentarynAbort(`Network error reading ${url}: ${cause?.message ?? cause}`);
     }
   } finally {
     clearTimeout(timer);

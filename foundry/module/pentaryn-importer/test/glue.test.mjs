@@ -649,6 +649,23 @@ test("a body that stalls after the headers still times out (TIMEOUT) and release
   assert.ok(after.result);
 });
 
+// importer-AC-1-half: a body stream that errors (not an abort) used to escape as the raw TypeError,
+// which pentaryn-write reports as INTERNAL. It is now a coded PentarynAbort like the fetch failure.
+test("importer-AC-1-half: a body read that errors is a PentarynAbort REFUSED without a toast, and releases the guard", async () => {
+  respond = async () => ({
+    ok: true, status: 200, statusText: "OK",
+    text: async () => { throw new TypeError("network error"); },
+  });
+  const o = await outcome(() => imp({ dryRun: true }));
+  assert.equal(o.error.name, "PentarynAbort");
+  assert.equal(o.code, "REFUSED");
+  assert.deepEqual(o.toasts, []);
+  pinKey("refusals", "fetchBodyError", refusal(o));
+  serve(valid());
+  const after = await outcome(() => imp({ dryRun: true }));
+  assert.equal(after.error, null, "the guard was released: not CONFLICT");
+});
+
 /* ── whole-file pins (keep LAST) ──────────────────────────────────────────────────────────────── */
 
 test("keyed goldens hold exactly the keys this file pins", () => {
