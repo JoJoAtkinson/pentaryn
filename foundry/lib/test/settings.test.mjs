@@ -151,3 +151,18 @@ test("K6 serialStore over several keys: one queue, keys written in order, concur
   await assert.rejects(store.write(() => { throw new Error("boom"); }), { message: "boom" });
   assert.equal((await append("c")).counter, 3, "a rejected write does not block later ones");
 });
+
+test("KIT-R4 a partial multi-key mutate keeps the omitted key; an explicit null still writes null", async () => {
+  const g = fakeGame();
+  defineSettings("pentaryn-x", [
+    { key: "counter", store: true, scope: "world", type: Number, default: 0 },
+    { key: "ledger", store: true, scope: "world", type: Array, default: [] },
+  ], { g });
+  const store = serialStore("pentaryn-x", ["counter", "ledger"], { g, semaphore: new g.foundry.utils.Semaphore(1) });
+  await store.write(() => ({ counter: 1, ledger: ["a"] }));
+  const out = await store.write(({ counter }) => ({ counter: counter + 1 }));
+  assert.deepEqual(out, { counter: 2, ledger: ["a"] }, "write resolves to the full stored object");
+  assert.deepEqual(store.read(), { counter: 2, ledger: ["a"] });
+  await store.write(() => ({ ledger: null }));
+  assert.deepEqual(store.read(), { counter: 2, ledger: null });
+});

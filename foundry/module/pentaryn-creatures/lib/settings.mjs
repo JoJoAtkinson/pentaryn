@@ -148,6 +148,8 @@ export function defineKeybindings(moduleId, KEYBINDINGS, { i18nRoot, g = globalT
  *
  * Several keys written together (a counter + log pair) share one queue: pass an array of keys.
  * `read()` and `mutate` then see `{ [key]: value }`, and `write` sets the keys in the order given.
+ * `mutate` may return a partial object: a key it omits keeps its current value (an explicit `null`
+ * still writes `null`), and `write` resolves to the full object it stored.
  *
  *   const ledger = serialStore(MODULE, ["counter", "log"]);
  *   await ledger.write(({ counter, log }) => ({ counter: counter + 1, log: [...log, entry] }));
@@ -182,8 +184,9 @@ export function serialStore(moduleId, key, { g = globalThis, log = null, anyGM =
           await g.game.settings.set(moduleId, key, next);
           return next;
         }
-        for (const k of keys) await g.game.settings.set(moduleId, k, next[k]);
-        return next;
+        const stored = Object.fromEntries(keys.map(k => [k, k in next ? next[k] : current[k]]));
+        for (const k of keys) await g.game.settings.set(moduleId, k, stored[k]);
+        return stored;
       });
     },
 
