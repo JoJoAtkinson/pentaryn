@@ -125,6 +125,11 @@ API description (declared, no table-visible change): `describe()` lists `flags.p
 and `flags.pentaryn-ties.mark` under `flags.reads`, not `flags.writes` — the GM authors them by hand and the
 module only reads them. Pinned by `test/review-flag-reads.test.mjs`. ext-9.
 
+Fixed (declared): a PC whose name merely contains "marker", "crowd" or "hotspot" (a "Crowder") keeps its
+**Share switch** in the GM's inspect window and its Simulate roller row. `tablePCs` now leaves out only
+names with one of those as a whole word — "Marker · 1", "Drow Commoner (crowd) 1", "Hotspot · Look".
+Pinned by `test/review-roster-whole-words.test.mjs`. ext-11.
+
 ## 0.19.4 (2026-10-10, usability run, Area 7 re-run)
 
 - **The inspect window's Share switches are the table's PCs only** (`tablePCs`): each player's
