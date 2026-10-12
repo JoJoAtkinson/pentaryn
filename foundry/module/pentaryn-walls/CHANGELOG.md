@@ -6,6 +6,11 @@
 (`flagScope` stays `wall-autocomplete`), `languages`, `minimum: "14"`, `verified: "14.369"` and the
 description fix; the flag-scope migration is **parked** while walls stays off (Joe).
 
+- **[declared] Refusal pings stay on the GM's screen** (`walls-edge-1`): each refused endpoint is
+  drawn locally with `canvas.controls.drawPing(…, {style: PULSE})` instead of `canvas.ping`, which
+  broadcast to every player and, with Alt+Shift held from the preview key, became a pull that
+  panned their views. Players now see nothing, as the README says; pentaryn-pings no longer
+  records them.
 - **[declared] Labels and toasts from `lang/en.json`** (`senses-walls-cursors-36`, W2-WALLS-1): the
   setting, its choices and the three keybindings register `PENTARYN_WALLS.*` keys; the backend hint
   says "the same fixture corpus" instead of "the same 44 fixtures" (-8).

@@ -21,7 +21,8 @@ have to guess, it refuses and names the endpoint and the reason. System-agnostic
 ## What the player sees
 
 Nothing. Every effect is GM-side: walls appear or move on the scene, a GM-whispered chat card
-reports the run, and refused endpoints get a transient `canvas.ping()`.
+reports the run, and refused endpoints get a transient pulse drawn on the GM's own canvas only
+(`canvas.controls.drawPing`, never the broadcast `canvas.ping`).
 
 ## Settings
 

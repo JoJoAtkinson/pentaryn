@@ -20,13 +20,13 @@
       "query": false,
       "sideEffects": [
         "ChatMessage (GM whisper)",
-        "canvas.ping",
+        "canvas.controls.drawPing (local)",
         "console.table"
       ],
       "throws": [
         "Error"
       ],
-      "doc": "Run the engine on a scene and report what it would build, writing no walls. Not a pure read: it posts a GM-whispered chat card, pings each refusal and prints console tables. One at a time: while preview/run/undo is running, another call warns and returns null."
+      "doc": "Run the engine on a scene and report what it would build, writing no walls. Not a pure read: it posts a GM-whispered chat card, pings each refusal on this client only and prints console tables. One at a time: while preview/run/undo is running, another call warns and returns null."
     },
     {
       "path": "run",

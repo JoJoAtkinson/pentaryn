@@ -2,7 +2,7 @@
  * The walls glue's stand-in world (guide step 1.8). A GM client, a scene stub whose wall documents
  * throw Foundry's inactive-scope error from `getFlag("wall-autocomplete", …)` (as Foundry 14 does for
  * a scope that is no active package), embedded-document writes logged to `F.calls`, and spies for
- * ChatMessage, Macro, the hotbar, canvas pings, the console and notifications (with their options).
+ * ChatMessage, Macro, the hotbar, canvas pings (broadcast and local), the console and notifications (with their options).
  */
 
 import { StubCollection, installFoundry, makeDoc, makeUser } from "../kit/foundry-stub.mjs";
@@ -83,6 +83,9 @@ export async function wallsWorld({ isGM = true } = {}) {
     F.calls.push({ op: "assignHotbarMacro", name: macro.name, slot: slot ?? null });
   };
   F.canvas.ping = at => F.calls.push({ op: "canvas.ping", at });
+  // Foundry 14: ControlsLayer#drawPing draws on this client only (canvas.ping broadcasts).
+  F.CONFIG.Canvas = { pings: { types: { PULSE: "pulse", ALERT: "alert", PULL: "chevron", ARROW: "arrow" } } };
+  F.canvas.controls = { drawPing: (at, opts) => F.calls.push({ op: "canvas.controls.drawPing", at, opts: opts ?? null }) };
   for (const level of ["info", "warn", "error"]) {
     F.ui.notifications[level] = (message, opts) => {
       F.calls.push({ op: "notify", level, message: String(message), opts: opts ?? null });

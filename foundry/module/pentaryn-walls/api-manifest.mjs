@@ -31,10 +31,10 @@ export const MANIFEST = Object.freeze({
       params: [SCENE_OPTS],
       returns: `${ENGINE_RESULT} | null`,
       gm: true, writes: true,
-      sideEffects: ["ChatMessage (GM whisper)", "canvas.ping", "console.table"],
+      sideEffects: ["ChatMessage (GM whisper)", "canvas.controls.drawPing (local)", "console.table"],
       throws: ["Error"],
       doc: "Run the engine on a scene and report what it would build, writing no walls. Not a pure read: "
-        + "it posts a GM-whispered chat card, pings each refusal and prints console tables." + BUSY,
+        + "it posts a GM-whispered chat card, pings each refusal on this client only and prints console tables." + BUSY,
     },
     {
       path: "run",

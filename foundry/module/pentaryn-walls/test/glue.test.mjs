@@ -82,16 +82,20 @@ test("(b)+(d) ready as GM on an extensible root {x:1}: the same root gains walls
   ]]);
 });
 
-test("(e) preview(): one whispered chat card (golden/glue.json), a ping per refusal, console tables, no writes", async () => {
+test("(e) preview(): one whispered chat card (golden/glue.json), a local PULSE ping per refusal (walls-edge-1), console tables, no writes", async () => {
   const from = mark();
   const result = await withConsole(F, () => game.pentaryn.walls.preview({ runId: "golden" }));
   const chats = since(from, "ChatMessage.create");
   assert.equal(chats.length, 1);
   assert.deepEqual(chats[0].data.whisper, [GM]);
-  const pings = since(from, "canvas.ping");
+  // walls-edge-1: each refusal is drawn locally as a PULSE (canvas.controls.drawPing), never
+  // broadcast with canvas.ping, so no player sees it and held modifiers cannot make it a pull.
+  assert.deepEqual(since(from, "canvas.ping"), []);
+  const pings = since(from, "canvas.controls.drawPing");
   assert.equal(pings.length, result.refusals.length);
   assert.ok(result.refusals.length > 0, "the fixture scene has refusals");
   assert.deepEqual(pings.map(p => p.at), result.refusals.map(r => ({ x: r.at[0], y: r.at[1] })));
+  assert.deepEqual(new Set(pings.map(p => p.opts?.style)), new Set(["pulse"]));
   assert.deepEqual(since(from, "console.*").map(c => c.op), ["console.group", "console.table", "console.table", "console.groupEnd"]);
   assert.deepEqual(since(from).filter(c => /EmbeddedDocuments$/.test(c.op)), []);
   const ref = runEngine(house.walls.map(w => {

@@ -1,5 +1,6 @@
-// Step 6 (C24): a failing canvas.ping is logged at debug, never swallowed silently, and never
-// stops the report: preview still posts exactly one chat card and returns the result.
+// Step 6 (C24): a failing refusal ping is logged at debug, never swallowed silently, and never
+// stops the report: preview still posts exactly one chat card and returns the result. Since
+// walls-edge-1 the ping is drawn locally with canvas.controls.drawPing (canvas.ping broadcast).
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { wasmReady } from "./fixtures/engine.mjs";
@@ -12,7 +13,7 @@ F.fire("ready");
 await wasmReady;
 for (let i = 0; i < 20; i++) await Promise.resolve();
 const scene = makeScene(F, { id: "scenePing000001", name: "S", walls: houseWalls() });
-canvas.ping = () => { throw new Error("no canvas"); };
+canvas.controls.drawPing = () => { throw new Error("no canvas"); };
 
 const debugLines = async fn => {
   const lines = [];
@@ -46,20 +47,20 @@ test("ping throws, debug on: one debug line per refusal, labelled with the modul
   }
 });
 
-// canvas.ping is async in Foundry 14 (board.mjs `async ping(origin, options)`): a failure arrives
+// drawPing is async in Foundry 14 (ControlsLayer `async drawPing(position, options)`): a failure arrives
 // as a rejected promise, not a throw. It must reach the same debug line, never an unhandled rejection.
 const asyncPing = async fn => {
   const unhandled = [];
   const spy = err => unhandled.push(err);
   process.on("unhandledRejection", spy);
-  canvas.ping = async () => { throw new Error("no canvas"); };
+  canvas.controls.drawPing = async () => { throw new Error("no canvas"); };
   try {
     const got = await debugLines(fn);
     for (let i = 0; i < 20; i++) await Promise.resolve();
     await new Promise(r => setImmediate(r));
     return { ...got, unhandled };
   } finally {
-    canvas.ping = () => { throw new Error("no canvas"); };
+    canvas.controls.drawPing = () => { throw new Error("no canvas"); };
     process.off("unhandledRejection", spy);
   }
 };
