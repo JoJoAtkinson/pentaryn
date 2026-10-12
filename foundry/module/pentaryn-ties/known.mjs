@@ -53,6 +53,12 @@ import { makeLog } from "./lib/log.mjs";
 
 const log = makeLog(MODULE);
 
+/** The two seeded categories' labels (literal keys); a custom key keeps its template. */
+const CATEGORY_LABEL = Object.freeze({
+  sentient: "PENTARYN_TIES.known.category.sentient",
+  beasts: "PENTARYN_TIES.known.category.beasts"
+});
+
 /**
  * The tab id, exported so the entry point and the "open this entry" path cannot drift apart:
  * activating the tab means writing this exact string into `app.tabGroups.primary`, and two
@@ -125,7 +131,7 @@ export function categoriesFor(actor) {
  */
 export function categoryLabel(category) {
   if (category?.label) return category.label;
-  const key = `PENTARYN_TIES.known.category.${category?.key}`;
+  const key = CATEGORY_LABEL[category?.key] ?? `PENTARYN_TIES.known.category.${category?.key}`;
   const localized = game.i18n.localize(key);
   return localized === key ? category?.key ?? "" : localized;
 }

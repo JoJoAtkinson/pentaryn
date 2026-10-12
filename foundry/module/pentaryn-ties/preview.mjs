@@ -79,6 +79,17 @@ import { setting } from "./settings.mjs";
 
 const log = makeLog(MODULE);
 
+/** Why a Share skipped someone (literal keys). */
+const SKIP_LABEL = Object.freeze({
+  held: "PENTARYN_TIES.known.share.skip.held",
+  knows: "PENTARYN_TIES.known.share.skip.knows",
+  noText: "PENTARYN_TIES.known.share.skip.noText",
+  notGM: "PENTARYN_TIES.known.share.skip.notGM",
+  invalid: "PENTARYN_TIES.known.share.skip.invalid",
+  notCarried: "PENTARYN_TIES.known.share.skip.notCarried",
+  notTold: "PENTARYN_TIES.known.share.skip.notTold"
+});
+
 const { ApplicationV2 } = foundry.applications.api;
 
 const d20 = () => 1 + Math.floor(Math.random() * 20);
@@ -618,10 +629,10 @@ export class InspectPreview extends ApplicationV2 {
   /** What a share did, said once. */
   reportShare(res, label) {
     const names = ids => ids.map(id => game.actors.get(id)?.name ?? id).join(", ");
-    if (!res.ok) ui.notifications.warn(_loc(`PENTARYN_TIES.known.share.skip.${res.reason}`));
+    if (!res.ok) ui.notifications.warn(_loc(SKIP_LABEL[res.reason] ?? `PENTARYN_TIES.known.share.skip.${res.reason}`));
     if (res.shared?.length) ui.notifications.info(_loc("PENTARYN_TIES.known.share.done", { who: names(res.shared), fact: label }));
     if (res.skipped?.length)
-      ui.notifications.warn(res.skipped.map(x => `${names([x.pcId])}: ${_loc(`PENTARYN_TIES.known.share.skip.${x.reason}`)}`).join(" · "));
+      ui.notifications.warn(res.skipped.map(x => `${names([x.pcId])}: ${_loc(SKIP_LABEL[x.reason] ?? `PENTARYN_TIES.known.share.skip.${x.reason}`)}`).join(" · "));
     if (res.unseen?.length) ui.notifications.info(_loc("PENTARYN_TIES.known.share.unseen", { who: names(res.unseen), name: this.subject.name }));
   }
 
@@ -639,7 +650,7 @@ export class InspectPreview extends ApplicationV2 {
     try {
       if (s.act === "forget") {
         const res = await forgetFact(spec, pc);
-        if (!res.ok) ui.notifications.warn(_loc(`PENTARYN_TIES.known.share.skip.${res.reason}`));
+        if (!res.ok) ui.notifications.warn(_loc(SKIP_LABEL[res.reason] ?? `PENTARYN_TIES.known.share.skip.${res.reason}`));
       } else this.reportShare(await shareFact(spec, [pc], { from: null, notify: true }), label);
     } catch (err) {
       log.error(`switch`, err);

@@ -19,6 +19,15 @@ import { makeLog } from "./lib/log.mjs";
 
 const log = makeLog(MODULE);
 
+/** The five stance labels (literal keys; stanceOf always lands on one of them). */
+const STANCE_LABEL = Object.freeze({
+  devoted: "PENTARYN_TIES.stance.devoted",
+  friendly: "PENTARYN_TIES.stance.friendly",
+  neutral: "PENTARYN_TIES.stance.neutral",
+  wary: "PENTARYN_TIES.stance.wary",
+  hostile: "PENTARYN_TIES.stance.hostile"
+});
+
 /**
  * Can THIS client see that token? `Token#isVisible` is Foundry's own answer — walls, light,
  * detection modes and the GM-hidden flag folded together, per client. A GM sees everything.
@@ -56,7 +65,7 @@ export function inspectorFor() {
 
 export function stanceLabel(v) {
   const s = stanceOf(v);
-  return game.i18n.localize(`PENTARYN_TIES.stance.${s.key}`);
+  return _loc(STANCE_LABEL[s.key]);
 }
 
 /**

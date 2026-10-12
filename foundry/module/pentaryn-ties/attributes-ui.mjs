@@ -45,6 +45,26 @@ import { kindActorOf, attrLoreStateFor, releaseHeldAttribute } from "./study.mjs
 import { grantsForEntry, GRANTED_FLAG, HELP_SCALE, CARRIED_SCALE, helpFor, rollableLore, LORE_FLAG, attrFactKey } from "./known-core.mjs";
 import { esc } from "./core/html.mjs";
 
+/** The help-scale labels (literal keys, so the i18n gate sees each one). */
+const HELP_LABEL = Object.freeze({
+  enables: "PENTARYN_TIES.attributes.help.enables",
+  advantage: "PENTARYN_TIES.attributes.help.advantage",
+  auto: "PENTARYN_TIES.attributes.help.auto"
+});
+/** The carried-scale labels. */
+const CARRIED_LABEL = Object.freeze({
+  inherit: "PENTARYN_TIES.attributes.carried.inherit",
+  advantage: "PENTARYN_TIES.attributes.carried.advantage",
+  auto: "PENTARYN_TIES.attributes.carried.auto"
+});
+/** The world-tree filter labels. */
+const FILTER_LABEL = Object.freeze({
+  all: "PENTARYN_TIES.attributes.filter.all",
+  unknown: "PENTARYN_TIES.attributes.filter.unknown",
+  pending: "PENTARYN_TIES.attributes.filter.pending",
+  failed: "PENTARYN_TIES.attributes.filter.failed"
+});
+
 export const ATTR_TAB_ID = "attributes";
 
 /** Which rows are expanded, per actor — cosmetic, never persisted. */
@@ -363,7 +383,7 @@ function detail(row, { actor, isGM, viewer }) {
               <select data-attr-field="whenKnown" data-id="${esc(row.id)}">
                 ${HELP_SCALE.map(
                   v => `<option value="${v}"${v === row.whenKnown ? " selected" : ""}>${esc(
-                    _loc(`PENTARYN_TIES.attributes.help.${v}`)
+                    _loc(HELP_LABEL[v] ?? `PENTARYN_TIES.attributes.help.${v}`)
                   )}</option>`
                 ).join("")}
               </select>
@@ -373,7 +393,7 @@ function detail(row, { actor, isGM, viewer }) {
               <select data-attr-field="whenCarried" data-id="${esc(row.id)}">
                 ${CARRIED_SCALE.map(
                   v => `<option value="${v}"${v === row.whenCarried ? " selected" : ""}>${esc(
-                    _loc(`PENTARYN_TIES.attributes.carried.${v}`)
+                    _loc(CARRIED_LABEL[v] ?? `PENTARYN_TIES.attributes.carried.${v}`)
                   )}</option>`
                 ).join("")}
               </select>
@@ -453,7 +473,7 @@ function worldKnowledgeSection(character, isGM) {
         ${filters
           .map(
             k => `<button type="button" class="pt-chip${k === active ? " pt-chip-on" : ""}"
-                    data-action="world-filter" data-filter="${k}">${esc(_loc(`PENTARYN_TIES.attributes.filter.${k}`))}</button>`
+                    data-action="world-filter" data-filter="${k}">${esc(_loc(FILTER_LABEL[k] ?? `PENTARYN_TIES.attributes.filter.${k}`))}</button>`
           )
           .join("")}
         <button type="button" class="pt-chip pt-chip-quiet" data-action="world-collapse">${esc(_loc("PENTARYN_TIES.attributes.collapseAll"))}</button>

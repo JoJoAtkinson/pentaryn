@@ -52,6 +52,26 @@ import { makeLog } from "./lib/log.mjs";
 
 const log = makeLog(MODULE);
 
+/** The review panel's sort labels (literal keys). */
+const SORT_LABEL = Object.freeze({
+  review: "PENTARYN_TIES.review.sort.review",
+  title: "PENTARYN_TIES.review.sort.title",
+  modified: "PENTARYN_TIES.review.sort.modified",
+  category: "PENTARYN_TIES.review.sort.category"
+});
+/** The review panel's tab labels. */
+const TAB_LABEL = Object.freeze({
+  world: "PENTARYN_TIES.review.tab.world",
+  personal: "PENTARYN_TIES.review.tab.personal"
+});
+/** The "was" labels of the four snapshot fields. */
+const FIELD_LABEL = Object.freeze({
+  title: "PENTARYN_TIES.review.field.title",
+  category: "PENTARYN_TIES.review.field.category",
+  skill: "PENTARYN_TIES.review.field.skill",
+  dc: "PENTARYN_TIES.review.field.dc"
+});
+
 const { ApplicationV2 } = foundry.applications.api;
 
 const esc = s => foundry.utils.escapeHTML(String(s ?? ""));
@@ -266,14 +286,14 @@ export class AttributeReview extends ApplicationV2 {
     this.stale.clear();
 
     const sortOpts = REVIEW_SORTS.map(
-      m => `<option value="${m}" ${m === this.sort ? "selected" : ""}>${esc(_loc(`PENTARYN_TIES.review.sort.${m}`))}</option>`
+      m => `<option value="${m}" ${m === this.sort ? "selected" : ""}>${esc(_loc(SORT_LABEL[m] ?? `PENTARYN_TIES.review.sort.${m}`))}</option>`
     ).join("");
     const chip = (k, label) =>
       `<button type="button" class="pt-chip ${this.filter === k ? "pt-chip-on" : ""}" data-filter="${k}">${label}</button>`;
 
     // Scope filter, beside the others: Global (reusable world-building) or Personal (one character's history)
     const scope = k =>
-      `<button type="button" class="pt-chip pt-review-tab ${this.tab === k ? "pt-chip-on" : ""}" data-tab="${k}">${esc(_loc(`PENTARYN_TIES.review.tab.${k}`))} (<span data-count="tab-${k}">0</span>)</button>`;
+      `<button type="button" class="pt-chip pt-review-tab ${this.tab === k ? "pt-chip-on" : ""}" data-tab="${k}">${esc(_loc(TAB_LABEL[k] ?? `PENTARYN_TIES.review.tab.${k}`))} (<span data-count="tab-${k}">0</span>)</button>`;
     const head = `<header class="pt-review-head">
       <div class="pt-review-bar">
         <input type="search" class="pt-review-search" placeholder="${esc(_loc("PENTARYN_TIES.review.search"))}" value="${esc(this.search)}">
@@ -381,7 +401,7 @@ export class AttributeReview extends ApplicationV2 {
       ${field(_loc("PENTARYN_TIES.review.field.skill"), this.skillSelect("skill", e.skill))}
       ${field(_loc("PENTARYN_TIES.review.field.dc"), `<input type="number" min="1" max="40" step="1" data-field="dc" value="${e.dc}">`)}
     </div>
-    ${["title", "category", "skill", "dc"].map(k => was(k, e[k], _loc(`PENTARYN_TIES.review.field.${k}`))).join("")}
+    ${["title", "category", "skill", "dc"].map(k => was(k, e[k], _loc(FIELD_LABEL[k] ?? `PENTARYN_TIES.review.field.${k}`))).join("")}
     ${field(_loc("PENTARYN_TIES.review.field.reveal"), `<textarea data-field="reveal">${esc(e.reveal)}</textarea>`)}
     ${was("reveal", e.reveal)}
     ${field(_loc("PENTARYN_TIES.review.field.miss"), `<textarea data-field="miss">${esc(e.miss)}</textarea>`)}

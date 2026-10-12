@@ -74,6 +74,15 @@ import { setting } from "./settings.mjs";
 
 const log = makeLog(MODULE);
 
+/** The derived namespaces' labels (literal keys). */
+const NS_LABEL = Object.freeze({
+  type: "PENTARYN_TIES.attributes.ns.type",
+  species: "PENTARYN_TIES.attributes.ns.species",
+  background: "PENTARYN_TIES.attributes.ns.background",
+  size: "PENTARYN_TIES.attributes.ns.size",
+  kind: "PENTARYN_TIES.attributes.ns.kind"
+});
+
 // re-exported so the entry point registers the settings by the same names this file reads
 export { REGISTRY_SETTING, ATTR_BELIEFS_SETTING, KNOWLEDGE_SETTING } from "./known-core.mjs";
 
@@ -730,7 +739,7 @@ export function describeAttribute(id) {
   return {
     id,
     title: derivedTitle(ns, slug),
-    category: ns ? _loc("PENTARYN_TIES.attributes.derivedCategory", { ns: _loc(`PENTARYN_TIES.attributes.ns.${ns}`) }) : "",
+    category: ns ? _loc("PENTARYN_TIES.attributes.derivedCategory", { ns: _loc(NS_LABEL[ns] ?? `PENTARYN_TIES.attributes.ns.${ns}`) }) : "",
     icon: ns ? DERIVED_ICONS[ns] ?? CATEGORY_ICONS.default : CATEGORY_ICONS.default,
     // no entry means the GM has said nothing about it — and `source` must be null on BOTH branches
     // or a consumer sees an object one way and `undefined` the other
