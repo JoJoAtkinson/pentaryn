@@ -68,6 +68,8 @@ export const LIMITS = {
   pageChars: 6000,
   payloadBytes: 8192,
 };
+/** page()'s maxChars ceiling (module-local; not part of the published LIMITS). */
+const PAGE_CHARS_MAX = 40000;
 
 // ── enricher + HTML normalization ────────────────────────────────────────────
 // Measured on 2026-08-22: 5,052 `@UUID[...]` across PHB/DMG/MM/content24, plus 312
@@ -303,7 +305,7 @@ export function renderPage(found, opts = {}) {
   if (opts.raw) return { journal: doc.name, page: page.name, uuid, raw: page.html ?? "" };
 
   const full = page.text ?? toPlainText(page.html);
-  const max = clamp(opts.maxChars, LIMITS.pageChars, 40000);
+  const max = clamp(opts.maxChars, LIMITS.pageChars, PAGE_CHARS_MAX);
   const offset = Math.max(0, Number(opts.offset) || 0);
   const slice = full.slice(offset, offset + max);
   const out = { book: book.label ?? book.id, journal: doc.name, page: page.name, uuid, text: slice };

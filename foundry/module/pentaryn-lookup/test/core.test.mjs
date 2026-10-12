@@ -275,6 +275,15 @@ test("page() text is capped with an offset to continue", () => {
   ok(next.text !== r.text, "offset should advance the window");
 });
 
+test("renderPage caps maxChars at 40000", () => {
+  const found = { book: { id: "p" }, doc: { id: "d", name: "D" }, page: { id: "g", name: "G", text: "x".repeat(50000) } };
+  const r = renderPage(found, { maxChars: 999999 });
+  eq(r.text.length, 40000);
+  eq(r.truncated, true);
+  eq(r.totalChars, 50000);
+  eq(r.nextOffset, 40000);
+});
+
 test("page({raw}) returns the original enricher-laden HTML", () => {
   const r = renderPage(findPage(BOOKS, "Cover"), { raw: true });
   has(r.raw, "@UUID[");
