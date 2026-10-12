@@ -36,6 +36,10 @@ cssPrefix `pp-`, afterSync). Each **[declared]** change goes to the live check.
 - **[declared] A failed save never deletes a marker's words** (R1): a fresh marker whose text did
   not save stays on the scene (red tint, the save-failed toast) instead of being removed as empty,
   and a size chip whose save failed does not swap, so the swap never carries stale text.
+- **[declared] A double click on a size chip swaps once** (EC-2): one click makes exactly one new
+  marker and one delete. The chips grey out (`pp-swapping`) while a swap runs and further clicks
+  are ignored; closing the box or Delete waits for the swap, so the closing save lands on the new
+  marker and Delete removes it rather than leaving an orphan.
 - **[declared] Two gathers at once keep both manifests**: the ring writes through one
   `serialStore` (a parallel gather no longer makes the other's call id `CALL_UNKNOWN`).
 - **[declared] `ensureMarkers` no longer duplicates across two GM tabs** (§5.9.1): the folder and

@@ -78,6 +78,7 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
   #saving = Promise.resolve();
   #closing = false;
   #finishing = null;
+  #swapping = null;
   #discard = false;
   #deleted = false;
   #ticket = null;
@@ -347,11 +348,13 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
         this.#ticket = null;
       }
       if (PromptDialog.current === this) PromptDialog.current = null;
-      this.#finishing = this.#finish(text)
+      // a size swap in flight finishes first, so the save lands on the marker it made (EC-2)
+      this.#finishing = Promise.resolve(this.#swapping).catch(() => {}).then(() => this.#finish(text))
         .catch(err => { log.error("closing the prompt dialog", err); })
         .finally(() => PromptDialog.#live.delete(this));
     }
     try {
+      await this.#swapping?.catch(() => {});   // never tear the window down mid-swap
       return await super.close({ animate: false, ...options });
     } finally {
       await this.#finishing;
@@ -370,11 +373,26 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
 
   /* ── size chips: swap for the other marker actor, centred, text carried ── */
 
+  /**
+   * One swap at a time (EC-2): a second chip click while one runs (a double click) returns at once,
+   * the chips grey out meanwhile, and close() waits for it. One click → one new marker, one delete.
+   */
   static async #onSize(event, target) {
+    if (this.#swapping) return;
     const size = target?.dataset?.size;
     const tok = this.token;
     if (!tok || !SIZE_BY_KEY[size] || size === markerSizeOfToken(tok)) return;
+    this.element?.classList.add("pp-swapping");
+    this.#swapping = this.#swap(tok, size).finally(() => {
+      this.#swapping = null;
+      this.element?.classList.remove("pp-swapping");
+    });
+    return this.#swapping;
+  }
+
+  async #swap(tok, size) {
     if (!(await this.#save())) return;   // a failed save: no swap, so stale text is never carried
+    if (this.#deleted || !this.token) return;   // the marker went while saving: nothing to swap
     const actor = markerActor(size);
     if (!actor) { ui.notifications?.warn(_loc("PENTARYN_PROMPTS.dialog.noActor", { size })); return; }
     const scene = tok.parent;
@@ -398,6 +416,8 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   static async #onDelete() {
+    if (this.#closing) return;
+    await this.#swapping?.catch(() => {});   // a swap in flight first, so Delete removes the marker it made
     if (this.#closing) return;
     const tok = this.token;
     clearTimeout(this.#timer);

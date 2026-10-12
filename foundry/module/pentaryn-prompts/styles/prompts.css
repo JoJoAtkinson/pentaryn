@@ -39,6 +39,7 @@
 .pentaryn-prompts .pp-chips { display: flex; gap: 2px; }
 .pentaryn-prompts .pp-chip { padding: 0 6px; min-width: 0; line-height: 22px; height: 24px; flex: none; }
 .pentaryn-prompts .pp-chip.active { background: #5b3fa6; color: #f3e9d2; border-color: #5b3fa6; }
+.pentaryn-prompts.pp-swapping .pp-chip { pointer-events: none; opacity: 0.5; }
 .pentaryn-prompts .pp-delete { flex: none; width: auto; height: 24px; line-height: 22px; padding: 0 8px; }
 .pentaryn-prompts .pp-hint { margin-left: auto; opacity: 0.6; font-size: var(--font-size-11, 11px); white-space: nowrap; }
 
