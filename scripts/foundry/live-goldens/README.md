@@ -15,6 +15,8 @@ and can leave a spy installed.
 ```sh
 node scripts/foundry/live-goldens/diff.mjs before.json after.json
 node scripts/foundry/live-goldens/diff.mjs --declared declared.txt before.json after.json
+node scripts/foundry/live-goldens/diff.mjs --declared scripts/foundry/live-goldens/noise/pings.txt \
+  before/pings.json after/pings.json
 ```
 
 Exit 0 when `golden.shared` is equal (or every difference is declared) and both cleanups are clean,
@@ -23,6 +25,10 @@ exits 2, as does a `golden` that is not an object — a skip never diffs as iden
 `--declared` takes one path glob per line (`#` comments) or a JSON array: `*` stays inside one segment, `**` crosses segments, `[` `]` are literal — so
 `stash.chest[*]`, `stash.chest[*].*` and `purseHome` each cover only what they spell. A glob that
 matched nothing is named. Keep the globs to what the wave's plan declares.
+Pings is always diffed with `--declared noise/pings.txt` (the third command): that file holds the
+known run-to-run noise below as a glob, so a clean pings diff exits 0 without a hand-written file.
+When a wave also declares pings changes, copy its glob into that wave's file (`--declared` takes one
+file). It declares a difference, so a key goes in only with its own row in the noise table.
 
 **Cleanup keys.** `diff.mjs` judges a `cleanup` by its top-level key names only. Report leftovers
 as `<thing>Left: <count>` (fails above 0) and restores as `<thing>Restored: <boolean>` (fails when
@@ -43,7 +49,7 @@ Two runs of the same code can differ here; it is not a regression.
 
 | Golden | Path | Why | Status |
 |---|---|---|---|
-| pings | `ping.settingArrayReplacedByFlush` | true in one run only — ring state / cache timing, not code (W5L) | **live noise** |
+| pings | `ping.settingArrayReplacedByFlush` | true in one run only — ring state / cache timing, not code (W5L) | **live noise** — declared in `noise/pings.txt`; diff pings with `--declared noise/pings.txt` |
 | senses | `inspectCarrier.lightSpells[0].litBy[0]`, `lightStatus.litBy[0].id` | the scratch AmbientLight id | normalised in the golden (W4L follow-up); seen only against an older golden |
 | importer | `root.keysInPublishOrder` | other modules' publish order | gone: the golden sorts `root.keys`, `publishOrder` sits outside `golden` (W4L follow-up) |
 

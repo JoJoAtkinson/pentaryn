@@ -1,0 +1,2 @@
+# pings known run-to-run noise (README "Known run-to-run noise"): true in one run only — ring state / cache timing, not code (W5L). One key per noise-table row; nothing else goes here.
+ping.settingArrayReplacedByFlush
