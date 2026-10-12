@@ -156,7 +156,7 @@ export function argonClasses() {
       const temp = original(this.hudActor)?.classes?.druid?.system?.levels;
       return {
         title: _loc(this.label),
-        subtitle: _loc("PENTARYN_TRANSFORM.Hud.FormsKnown", { n: forms(this.hudActor).length }),
+        subtitle: _loc("PENTARYN_TRANSFORM.Hud.FormsKnown", { n: this.activity?.availableProfiles?.length ?? 0 }),
         description: `<p>${_loc(this.shifted ? "PENTARYN_TRANSFORM.Hud.ChangeFormText" : "PENTARYN_TRANSFORM.Hud.WildShapeText", { temp: temp ?? "—" })}</p>`,
         details: [
           { label: _loc("PENTARYN_TRANSFORM.Hud.Uses"), value: `${usesLeft(uses) ?? "—"} / ${uses?.max ?? "—"}` },

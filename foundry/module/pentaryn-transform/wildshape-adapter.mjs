@@ -15,7 +15,7 @@
 import {
   MODULE, EFFECT_ID, activitiesOf, isWildShapeActivity, stripForForm, isRevertData, returnLabel, durationSeconds, formatDuration,
   usesLeft, useSyncUpdates, carriedConditions, endedInForm, attributeSync, shiftBlock, runnerIs, withArticle,
-  formTempHP, withoutOrigin, pruneFavorites, findWildShapeItem, wildShapeActivityOf, refundUpdate
+  formTempHP, withoutOrigin, pruneFavorites, findWildShapeItem, wildShapeActivityOf, refundUpdate, formEntries
 } from "./transform-core.mjs";
 import { makeLog } from "./lib/log.mjs";
 import { dnd5eAllowsPolymorphing } from "./settings.mjs";
@@ -56,10 +56,7 @@ export function wildShapeActivity(actor) {
 
 /** The known forms: [{ id, name, uuid, actor }] — the activity's available profiles. */
 export function forms(actor) {
-  const activity = wildShapeActivity(actor);
-  return (activity?.availableProfiles ?? []).map(p => ({
-    id: p._id, name: p.name || fromUuidSync(p.uuid)?.name || "?", uuid: p.uuid, actor: fromUuidSync(p.uuid) ?? null
-  }));
+  return formEntries(wildShapeActivity(actor)?.availableProfiles, uuid => fromUuidSync(uuid));   // one resolve per profile (-23)
 }
 
 /** True for a form made by the Wild Shape preset. */

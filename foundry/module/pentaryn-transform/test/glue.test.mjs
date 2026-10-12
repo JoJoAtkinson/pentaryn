@@ -233,7 +233,7 @@ test("original(): normal → itself; null → null; a token's form → itself; a
   assert.equal(T.original(orphan), null);
 });
 
-test("wildShapeActivity / forms: the original's activity; profiles resolved (KNOWN -23: 3 + 1 per empty name resolves)", () => {
+test("wildShapeActivity / forms: the original's activity; profiles resolved ([perf] -23: one resolve per profile)", () => {
   const { talo, wolfSrc, apeSrc } = F.W.talo();
   const form = F.W.makeActor({ isPolymorphed: true, flags: { dnd5e: { originalActor: IDS.talo } } });
   assert.equal(T.wildShapeActivity(talo)?.id, "wsAct");
@@ -247,7 +247,7 @@ test("wildShapeActivity / forms: the original's activity; profiles resolved (KNO
   globalThis.fromUuidSync = real;
   assert.deepEqual(list.map(f => [f.id, f.name, f.uuid]), [["p1", "Dire Wolf", wolfSrc.uuid], ["p2", "Brown Bear", "Actor.brownBearSrc0001"], ["p3", "Ape", apeSrc.uuid]]);
   assert.equal(list[0].actor, wolfSrc);
-  assert.equal(n, 4);
+  assert.equal(n, 3);
   assert.deepEqual(T.forms(F.W.makeActor({})), []);
 });
 

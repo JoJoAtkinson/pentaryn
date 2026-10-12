@@ -5,6 +5,7 @@ import { setup, IDS } from "./fixtures/world.mjs";
 
 mock.timers.enable({ apis: ["setTimeout", "Date"], now: 0 });
 const F = await setup();
+F.CONFIG.DND5E = { actorSizes: {}, creatureTypes: {}, limitedUsePeriods: { lr: { label: "Long Rest" }, sr: { label: "Short Rest" } } };
 const T = await import("../transform.mjs");
 await import("../hud.mjs");
 const { liveButtons } = await import("../form-picker.mjs");
@@ -61,4 +62,20 @@ test("-1 isRunner: with a GM connected no owner permission is tested; the answer
   gm.active = true;
   talo.testUserPermission = real;
   F.become({ userId: IDS.gm });
+});
+
+/* ── -23 the Wild Shape tooltip counts profiles without resolving them ────── */
+
+test("-23 the Wild Shape button's tooltip counts the profiles without resolving any actor", async () => {
+  const { talo } = fresh();
+  const p = A.panel("DND5E.BonusAction", [slot(), btn(talo.items.get(IDS.ws))]);
+  fire(p, talo);
+  const ws = p._buttons.find(b => b.constructor.name === "WildShapeButton");
+  let n = 0;
+  const real = globalThis.fromUuidSync;
+  globalThis.fromUuidSync = uuid => { n++; return real(uuid); };
+  const tip = await ws.getTooltipData();
+  globalThis.fromUuidSync = real;
+  assert.equal(n, 0);
+  assert.equal(tip.subtitle, "3 known forms");
 });
