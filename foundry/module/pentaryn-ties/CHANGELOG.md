@@ -59,6 +59,10 @@ Fixed (declared): two **`attributes.ensure`** calls for the same new title, made
 succeed — the first creates it and the second answers `existed: true`. The second used to answer
 `collision`, because both looked at the list before either had written. Same answers otherwise. EC-2.
 
+Guarded (declared, no table-visible change): `attributes.mjs` exports `NS_LABEL` and `DERIVED_ICONS`
+(module exports, not API paths), and `test/review-derived-ns.test.mjs` fails if a derived namespace
+lacks a label in `lang/en.json`, an icon, or a `deriveAttributes` slot. ext-2.
+
 Fixed (declared): the chat cards — the "… studies …" stub, the tempo line and the GM's share
 whisper — name every creature by its **token** name, never its actor name, so a GM-only world actor
 name cannot reach player chat. The token is found on any scene, not only the one the posting

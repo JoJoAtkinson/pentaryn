@@ -77,8 +77,12 @@ import { setting, knowledgeStore } from "./settings.mjs";
 
 const log = makeLog(MODULE);
 
-/** The derived namespaces' labels (literal keys). */
-const NS_LABEL = Object.freeze({
+/**
+ * The derived namespaces' labels (literal keys). Exported for the guard test
+ * (test/review-derived-ns.test.mjs): every DERIVED_NAMESPACES entry needs a key here, in
+ * lang/en.json, an icon in DERIVED_ICONS and a slot in deriveAttributes (ext-2).
+ */
+export const NS_LABEL = Object.freeze({
   type: "PENTARYN_TIES.attributes.ns.type",
   species: "PENTARYN_TIES.attributes.ns.species",
   background: "PENTARYN_TIES.attributes.ns.background",
@@ -169,13 +173,14 @@ export const iconForCategory = category => {
   return CATEGORY_ICONS[key] ?? CATEGORY_ICONS[CATEGORY_ALIASES[key]] ?? CATEGORY_ICONS.default;
 };
 
-const DERIVED_ICONS = {
+/** Art for a derived row, one per DERIVED_NAMESPACES entry — guarded with NS_LABEL (ext-2). */
+export const DERIVED_ICONS = Object.freeze({
   type: "icons/creatures/abilities/paw-print-pair-purple.webp",
   species: "icons/environment/people/group.webp",
   background: "icons/sundries/books/book-worn-brown.webp",
   size: "icons/tools/scribal/lens-blue.webp",
   kind: "icons/creatures/abilities/paw-print-orange.webp"
-};
+});
 
 /* -------------------------------------------- */
 /*  The registry                                */
