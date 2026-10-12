@@ -388,3 +388,24 @@ test("combat-core-EXT-6: enhancedDualWieldingOf(actor) is the one Enhanced Dual 
     if (file !== "../shapes.mjs") assert.match(src, /enhancedDualWieldingOf\(actor\)/, `${file} calls enhancedDualWieldingOf`);
   }
 });
+
+// combat-core-EXT-7: the Multiattack-item regex was copy-pasted in counting.mjs and shapes.mjs
+// (multiattackOf). One exported shapes.isMultiattackItem(item) is the only copy; matching unchanged.
+test("combat-core-EXT-7: isMultiattackItem(item) is the one Multiattack-item test", async () => {
+  assert.equal(typeof shapes.isMultiattackItem, "function", "combat-core-EXT-7: shapes exports isMultiattackItem");
+  for (const name of ["Multiattack", "multiattack", "MULTIATTACK (Wolf Form)", "Multiattack: two bites"]) {
+    assert.equal(shapes.isMultiattackItem({ name }), true, `"${name}" is a Multiattack item`);
+  }
+  for (const name of ["Multiattacks", "Bite", "Not Multiattack", ""]) {
+    assert.equal(shapes.isMultiattackItem({ name }), false, `"${name}" is not a Multiattack item`);
+  }
+  assert.equal(shapes.isMultiattackItem({}), false, "an item with no name is not one");
+  assert.equal(shapes.isMultiattackItem(null), false, "no item is not one");
+  const { readFileSync } = await import("node:fs");
+  for (const file of ["../shapes.mjs", "../counting.mjs"]) {
+    const src = readFileSync(new URL(file, import.meta.url), "utf8");
+    const copies = src.match(/\/\^multiattack\\b\/i/g) ?? [];
+    assert.equal(copies.length, file === "../shapes.mjs" ? 1 : 0, `combat-core-EXT-7: ${file} has ${copies.length} copy(ies) of the regex`);
+    assert.match(src, /isMultiattackItem\(i(tem)?\)/, `${file} calls isMultiattackItem`);
+  }
+});

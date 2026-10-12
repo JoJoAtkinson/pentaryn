@@ -14,7 +14,7 @@ import { HOOKS, MODULE, VERSION } from "./combat-core.mjs";
 import { emitter } from "./lib/hooks.mjs";
 import { makeLog } from "./lib/log.mjs";
 import { setting } from "./settings.mjs";
-import { weaponShape, featuresOf, combatContext, turnOf, updateTurn, resetOffhandMode, isWeaponAttack } from "./shapes.mjs";
+import { weaponShape, featuresOf, combatContext, turnOf, updateTurn, resetOffhandMode, isWeaponAttack, isMultiattackItem } from "./shapes.mjs";
 import { taggedKind, forgetRoll } from "./sequence.mjs";
 
 const log = makeLog(MODULE);
@@ -145,7 +145,7 @@ async function onPostUseActivity(activity) {
   }
   if (activity.activation?.type !== "action") return;
   if (activity.type === "attack" && isWeaponAttack(activity)) return why("weapon attack: counted on the roll");
-  if (/^multiattack\b/i.test(item?.name ?? "")) return why("Multiattack: the Attack action itself");
+  if (isMultiattackItem(item)) return why("Multiattack: the Attack action itself");
   const ctx = combatContext(actor);
   if (!ctx.inCombat || !ctx.isOwnTurn) return;
   // Unarmed Strike's Grapple / Shove (a save activity) replaces one attack of the Attack action

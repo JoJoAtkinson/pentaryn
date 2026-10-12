@@ -158,13 +158,18 @@ function rollFormula(actor, formula) {
   }
 }
 
+/** Whether this item is the actor's Multiattack (its name starts with the word "Multiattack"). */
+export function isMultiattackItem(item) {
+  return /^multiattack\b/i.test(item?.name ?? "");
+}
+
 /** The actor's parsed Multiattack plan, override first. null when there is none or it won't parse. */
 export function multiattackOf(actor) {
   if (!actor) return null;
   const items = actor.items?.contents ?? [];
   const override = core.overridePlan(actor.getFlag?.(MODULE, "multiattack"), items.map(i => i.id));
   if (override) return { plan: override, total: override.reduce((s, r) => s + r.count, 0), groups: override.map(r => ({ count: r.count, choices: [r.itemId] })), source: "flag" };
-  const ma = items.find(i => /^multiattack\b/i.test(i.name ?? ""));
+  const ma = items.find(i => isMultiattackItem(i));
   if (!ma) return null;
   const parsed = core.parseMultiattack(ma.system?.description?.value ?? "",
     items.map(i => ({ id: i.id, name: i.name, isAttack: !!attackActivityOf(i) })),
