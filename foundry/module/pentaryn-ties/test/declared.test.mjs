@@ -51,7 +51,7 @@ test("B2 / ties-4 [declared, flipped]: read() of an id, a name or a token resolv
   );
 });
 
-test("B4 / ties-29 (before): with Roll._mapLegacyRollMode gone the roll throws after the claim, and the claim is stranded", async () => {
+test("B4 / ties-29 [declared, flipped]: with Roll._mapLegacyRollMode gone the study is refused before any claim, and the fact stays studyable (before: a throw after the claim stranded it)", async () => {
   const keep = foundry.dice.Roll._mapLegacyRollMode;
   delete foundry.dice.Roll._mapLegacyRollMode;
   let threw = null;
@@ -70,8 +70,9 @@ test("B4 / ties-29 (before): with Roll._mapLegacyRollMode gone the roll throws a
     { threw, raw, read: Study.beliefsOf(get(NPC))[PC]?.[`lore:${NPC}:l1`] ?? null, loreState: Study.loreStateFor(get(PC), get(NPC)), again, againConsole: F.console.slice(-1), againCalls: F.calls.slice(mark).length },
     import.meta.url
   );
-  assert.ok(raw?.claim, "the claim row is left behind");
-  assert.equal(again, false, "and the next roll on that fact is refused");
+  assert.equal(threw, null, "refused cleanly, nothing thrown");
+  assert.equal(raw, null, "no claim row is left behind");
+  assert.equal(again, true, "and the next roll on that fact goes ahead");
 });
 
 test("B5 / ties-30 (before): a player-client knowledge write is refused by the GM check (false), not queued", async () => {

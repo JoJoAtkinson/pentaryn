@@ -50,7 +50,20 @@ import { setting, mayWrite } from "../settings.mjs";
  * `create: false` returns the evaluated roll without a `ChatMessage`; the dnd5e hooks that would
  * post one never fire.
  */
-export async function throwBlind(character, fact, { mode, situational, silent = false } = {}) {
+/**
+ * The blind roll mode, as dnd5e 6 must hand it to core: `Roll._mapLegacyRollMode(BLIND)`.
+ *
+ * ⚠ A private core API (adjustments row dnd5e-legacy-roll-modes). Asked BEFORE anything is staked
+ * (ties-29): a core that drops it refuses the study cleanly, never falling back to the legacy key —
+ * an unknown key is silently replaced by the client default, and the card would go public.
+ */
+export function rollModeBlind() {
+  const map = foundry.dice?.Roll?._mapLegacyRollMode;
+  if (typeof map !== "function") throw new Error("Roll._mapLegacyRollMode is missing; a blind study roll cannot be thrown");
+  return map(CONST.DICE_ROLL_MODES.BLIND);
+}
+
+export async function throwBlind(character, fact, { mode, situational, silent = false, rollMode = null } = {}) {
   const rolls = await character.rollSkill(
     {
       skill: fact.skill,
@@ -66,7 +79,7 @@ export async function throwBlind(character, fact, { mode, situational, silent = 
           // dnd5e 6 hands this to core as `messageMode`, which only knows the new keys of
           // CONFIG.ChatMessage.modes; a legacy "blindroll" is silently swapped for the client
           // default (public) and the Study roll would land face-up in the player's chat.
-          rollMode: foundry.dice.Roll._mapLegacyRollMode(CONST.DICE_ROLL_MODES.BLIND),
+          rollMode: rollMode ?? rollModeBlind(),
           data: {
             flavor: _loc("PENTARYN_TIES.known.study.rollFlavor", { name: fact.name, skill: fact.skillLabel }),
             // Dice So Nice reads `flags["dice-so-nice"].skip` (6.x); it never read the old
@@ -123,9 +136,32 @@ export async function applyStudy(payload, senderId) {
   // cannot write, or a setting the server refuses player writes to. Same unforgeability.
   if (readBelief(fact, character.id)) return refuse(`${character.name} has already studied ${fact.name}`);
 
+  // a blind roll needs core's private roll-mode map: ask before staking anything (ties-29)
+  let rollMode = null;
+  if (fact.offset !== "auto" && fact.silentRoll !== true) {
+    try {
+      rollMode = rollModeBlind();
+    } catch (err) {
+      return refuse(err.message);
+    }
+  }
+
   // stake the row before rolling — two GM sessions of one account are both `activeGM`
   if (!(await claimFact(fact, character.id, Date.now())))
     return refuse(`another GM session is already rolling ${character.name} on ${fact.name}`);
+
+  // a throw anywhere past the stake hands the claim back, so nothing is stranded as "already
+  // studied" (ties-29); once the real record is written the release is a no-op
+  try {
+    return await applyClaimed(character, fact, payload, rollMode, refuse);
+  } catch (err) {
+    await releaseFact(fact, character.id);
+    throw err;
+  }
+}
+
+/** applyStudy past the stake: roll, grade, write. Its caller releases the claim on a throw. */
+async function applyClaimed(character, fact, payload, rollMode, refuse) {
 
   const situational = Math.max(
     SITUATIONAL_MIN,
@@ -184,7 +220,7 @@ export async function applyStudy(payload, senderId) {
    */
   const roll = fact.offset === "auto"
     ? { total: null }
-    : await throwBlind(character, fact, { mode, situational, silent: fact.silentRoll === true });
+    : await throwBlind(character, fact, { mode, situational, silent: fact.silentRoll === true, rollMode });
   const graded = await fact.grade(roll?.total ?? null);
   // null = no roll evaluated. NOT a failure, and nothing below this line may run — including
   // the claim, which must be handed back or the roll is stranded on a mishap.
