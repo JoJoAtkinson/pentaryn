@@ -110,3 +110,15 @@ test("ties-32: an item mark's icon is one fa- class or the flame", async () => {
     assert.match(JSON.stringify(serialise(r)), new RegExp(want.replace(/ /g, " ")), String(icon));
   }
 });
+
+test("concealmentFor: never throws, reads the conceal flag", async () => {
+  const { concealmentFor } = await import("../study/cascade.mjs");
+  const { makeDoc } = await import("./kit/foundry-stub.mjs");
+  assert.equal(concealmentFor(null, "guild"), 0);
+  assert.equal(concealmentFor("zzNpc", "guild"), 0);
+  const flat = makeDoc("Actor", { id: "zzConceal0000001", flags: { "pentaryn-ties": { conceal: 3 } } });
+  assert.equal(concealmentFor(flat, "guild"), 3);
+  const keyed = makeDoc("Actor", { id: "zzConceal0000002", flags: { "pentaryn-ties": { conceal: { default: 2, guild: 5 } } } });
+  assert.equal(concealmentFor(keyed, "guild"), 5);
+  assert.equal(concealmentFor(keyed, "city"), 2);
+});

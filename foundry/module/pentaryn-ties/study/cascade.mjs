@@ -507,13 +507,7 @@ export async function deliverHeldIdentifications(character, subject) {
 }
 
 /** Concealment: raises the DC without ever appearing in the printed one. */
-export const concealmentFor = (subject, attrId) => {
-  try {
-    return concealFor(subject?.getFlag(MODULE, CONCEAL_FLAG), attrId);
-  } catch {
-    return 0;
-  }
-};
+export const concealmentFor = (subject, attrId) => concealFor(readFlag(subject, MODULE, CONCEAL_FLAG), attrId);
 
 /**
  * **Hand a character a kind at a chosen rung** — no roll, the GM's decision.
