@@ -4,7 +4,7 @@
 
 /**
  * Is this token update a body swap: a transform or a revert putting another actor (or a polymorphed
- * delta) on the token? Such an update must not animate (transform.mjs, preUpdateToken): core's token
+ * delta) on the token? Such an update must not animate (bodyswap.mjs, preUpdateToken): core's token
  * animation writes its in-flight values back onto the TokenDocument every frame, and in a tab whose
  * canvas is not ticking (a background tab) it never finishes, so the document kept the old form's
  * art and size, dnd5e saved those stale values as previousTokenData, and the revert brought the
