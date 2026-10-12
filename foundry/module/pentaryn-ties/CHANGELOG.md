@@ -48,6 +48,11 @@ lore row — "The Guild — Held oath — DC 10, rolled 15" — instead of "Tier
 a kind prints a tier. A held row with no roll behind it (an auto kind, a GM tell) shows its total as
 "—", not "null". EXT-1.
 
+Fixed (declared): a bare **claim row** (the stake a GM client writes before the dice fall, still in
+flight or stranded by a client that closed mid-roll) is no longer listed by `study.pending()` as an
+undelivered reveal, and **Deliver** on one is refused with "Nothing is pending…" instead of spending
+the roll and handing over nothing. `reset` stays the cure for a stranded claim. ES-1, ES-2.
+
 ## 0.19.4 (2026-10-10, usability run, Area 7 re-run)
 
 - **The inspect window's Share switches are the table's PCs only** (`tablePCs`): each player's
