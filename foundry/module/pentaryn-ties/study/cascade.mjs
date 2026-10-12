@@ -238,15 +238,23 @@ async function runCascade(character, subject, release = []) {
   const grants = {};
   let held = false;
 
+  /*
+   * Loop invariants, read once (ties-21): the loop writes only beliefs and knowledge, never an
+   * attribute link or the registry. ⚠ The cascade must never link an attribute inside this loop —
+   * if it ever does, move these back in.
+   */
+  const registryNow = reg();
+  const carried = attributeIdsOf(subject, kindActorOf);
+  const rollerCarries = attributeIdsOf(character, kindActorOf);
   let guard = 0;
   for (; guard < 24; guard++) {
     const step = planStep({
-      registry: reg(),
-      carried: attributeIdsOf(subject, kindActorOf),
+      registry: registryNow,
+      carried,
       knowledge: knowledge(),
       beliefs: readFlag(subject, MODULE, BELIEFS_FLAG) ?? {},
       characterId: character.id,
-      rollerCarries: attributeIdsOf(character, kindActorOf)
+      rollerCarries
     });
     if (step.done) break;
 
