@@ -82,3 +82,7 @@ before-goldens saved, the three syncs re-run (same digests: ties a56fbc19, comba
 **Deploy.** Rollback copies in `.state/live-rollback/INT-1259/`; `make foundry-{combat,senses}-sync` (FROM=local); one GM-tab reload. Boot probe: combat 0.3.0 and senses 0.5.0 `describe()` match `module.json`, every path a function, combat `selftest().ok` true.
 
 **Goldens.** Before (deployed old code) and after (new code) in the one GM tab, diffed in page: combat and senses `shared`, `declared`, env all empty; cleanups clean. No allowlist. Reverted: none.
+
+**Relaunch (13:10Z).** The first INT run saved no golden files, so the relaunch restored the rollback copies, reloaded, captured before-goldens, re-synced combat and senses (digests unchanged: combat 9b7e03d3, senses e6f875db), reloaded once and captured after-goldens in `.state/live-goldens/INT-1259/{before,after}/`. `diff.mjs before after` (no `--declared`) exits 0 for both modules; cleanups clean. Senses has no `selftest()`.
+
+**Foundry state.** Up, no restart; world pentaryn, dnd5e 6.0.6, Foundry 14.369; one GM tab, Gamemaster the only active user; no ZZ documents or combats left behind.
