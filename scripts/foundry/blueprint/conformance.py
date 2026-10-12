@@ -225,12 +225,17 @@ def depth_at(code: str, pos: int) -> int:
     return code.count("{", 0, pos) - code.count("}", 0, pos)
 
 
+def _is_core_path(rel: str) -> bool:
+    name = rel.split("/")[-1]
+    return rel.startswith("core/") or name.endswith("-core.mjs") or name == "core.mjs"
+
+
 def role_of(m: Module, rel: str, features: set[str]) -> str:
     if rel == m.entry or rel in m.entries:
         return "entry"
-    name = rel.split("/")[-1]
-    if rel.startswith("core/") or name.endswith("-core.mjs") or name == "core.mjs":
+    if _is_core_path(rel):
         return "core"
+    name = rel.split("/")[-1]
     if name == "api-manifest.mjs":
         return "manifest"
     if name == "api.mjs" or name.endswith("-api.mjs"):
@@ -244,11 +249,6 @@ def role_of(m: Module, rel: str, features: set[str]) -> str:
     if UI_NAME.search(rel):
         return "ui"
     return "glue"
-
-
-def _is_core_path(rel: str) -> bool:
-    name = rel.split("/")[-1]
-    return rel.startswith("core/") or name.endswith("-core.mjs") or name == "core.mjs"
 
 
 LIFECYCLE_HOOKS = {"init", "i18nInit", "setup", "ready"}
@@ -539,8 +539,7 @@ CORE_FOUNDRY = re.compile(r"(?<![\w$.])foundry\.(?!utils\.)")
 
 
 def core_files(m: Module) -> list[str]:
-    return [r for r in m.files if r.startswith("core/") or r.split("/")[-1].endswith("-core.mjs")
-            or r.split("/")[-1] == "core.mjs"]
+    return [r for r in m.files if _is_core_path(r)]
 
 
 @rule("C11", "fail", "a pure core exists: no game/canvas/ui/Hooks/CONFIG, only foundry.utils")
@@ -591,7 +590,7 @@ def c15(m):
         for target, imp in m.imports(rel):
             if not imp.namespace:
                 continue
-            if target.startswith("core/") or target.endswith("-core.mjs"):
+            if _is_core_path(target):
                 continue
             if rel in m.entries:
                 src = m.files.get(target)

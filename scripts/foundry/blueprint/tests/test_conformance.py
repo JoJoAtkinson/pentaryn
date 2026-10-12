@@ -769,3 +769,11 @@ def test_a_row_with_match_accepts_only_the_findings_it_names(monkeypatch):
     v = conformance.verdict("pentaryn-x", [later])
     assert v["blocking"] == ["C37"] and v["unmatched"] == {"C37": ["styles/a.css: .new"]} and not v["accepted"]
     assert not conformance.gate_ok(v)
+
+
+def test_c15_namespace_import_of_core_mjs_is_a_core_barrel(tmp_path):
+    # §9 C15: `import * as` is for features and core barrels; a top-level core.mjs is core (C11, role_of)
+    imp = 'import * as core from "./core.mjs";\nexport const y = core.MODULE;\n'
+    d = _tiny(tmp_path, files={"one.mjs": imp, "x.mjs": imp, "core.mjs": 'export const MODULE = "pentaryn-one";\n'})
+    r = next(r for r in conformance.score_dir(d)["results"] if r["id"] == "C15")
+    assert r["status"] == "pass", r["detail"]
