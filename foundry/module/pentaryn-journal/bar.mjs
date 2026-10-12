@@ -186,12 +186,13 @@ function sinceText(ts) {
   try { return foundry.utils.timeSince(ts); } catch { return new Date(ts).toLocaleDateString(); }
 }
 
-function fillBar(app, bar, target) {
-  if (busy.has(app)) {
+/** `shown`: savedStatus(target), or null while the window is busy adding. */
+function fillBar(bar, shown) {
+  if (!shown) {
     bar.innerHTML = `<button type="button" class="pj-add" disabled><i class="fa-solid fa-spinner fa-spin"></i> <span>${barEsc(game.i18n.localize("PENTARYN_JOURNAL.adding"))}</span></button>`;
     return;
   }
-  const { st, saved } = savedStatus(target);
+  const { st, saved } = shown;
   const add = `<button type="button" class="pj-add" data-pj="add"><i class="fa-solid fa-book-medical"></i> <span>${barEsc(game.i18n.localize("PENTARYN_JOURNAL.add"))}</span></button>`;
   if (st === "saved") {
     const when = saved?.flags?.[MODULE]?.source?.updatedAt ?? saved?.flags?.[MODULE]?.source?.savedAt;
@@ -234,7 +235,8 @@ async function onBarClick(app, ev) {
 }
 
 /**
- * Put the bar on a window, refresh it, or take it off. Idempotent; called on every render.
+ * Put the bar on a window, refresh it, or take it off (no target, or no page this user can see).
+ * Idempotent; called on every render.
  * It is a footer on the window ROOT, after .window-content, so part re-renders never touch it.
  */
 function decorate(app) {
@@ -242,7 +244,9 @@ function decorate(app) {
   if (!(root instanceof HTMLElement)) return;
   let bar = root.querySelector(":scope > .pj-bar");
   const target = targetFor(app);
-  if (!target) {
+  const shown = target && !busy.has(app) ? savedStatus(target) : null;
+  // No page this user can see: a bar there would add nothing, so it is hidden too (journal-EC-3).
+  if (!target || shown?.sources.length === 0) {
     barKind.delete(app);
     bar?.remove();
     root.classList.remove("pentaryn-journal-readable");
@@ -257,7 +261,7 @@ function decorate(app) {
     bar.addEventListener("click", ev => onBarClick(app, ev).catch(err => ctx.log.warn("bar click failed", err)));
   }
   root.classList.add("pentaryn-journal-readable");
-  fillBar(app, bar, target);
+  fillBar(bar, shown);
 }
 
 /** app → the kind of target its bar shows ("entry" | "image" | "item"), while it has one. */

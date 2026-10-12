@@ -17,6 +17,8 @@ and a toast confirms the save. The window the copy came from closes.
 - **Who sees it:** players, on any journal they can **observe** but do not own, and on any item in an
   eye pile they can observe (unless the pile forbids inspecting items). Personal journals and compendium
   journals never get it. The GM sees it only with the `gmButton` setting, which exists for testing.
+  A journal with no page the player can observe shows no bar (there would be nothing to add); it
+  appears once a page is shown to them.
 - **One-page eyes open as a single page.** If a scene Note pins a journal and the player can see
   exactly one of its pages, the page list and page arrows are hidden (`.pj-single`). Personal journals
   and the GM's view are never changed.
@@ -54,7 +56,8 @@ Published at `ready` on `game.modules.get("pentaryn-journal").api` and `game.pen
     If the journal window then fails to open, the copy still stands: a console warning
     (`open after save failed`), the added/updated toast, and the result as usual.
   - `status(doc)` → `none` / `partial` / `saved` / `changed`, or `null` when there is no bar for it.
-  - `open(pageId?)` opens the user's journal; `shouldShowBar(entry, userRef?)` says whether that user gets the bar.
+  - `open(pageId?)` opens the user's journal; `shouldShowBar(entry, userRef?)` says whether that user gets the bar
+    on that journal (the window also hides it while none of its pages is visible to them).
   - `report()` (not gated; it returns ids, names and counts only) →
     `{folder, users: [{user, userId, isGM, journalId, pages, duplicates}], atRoot}`.
   - `core` holds the pure helpers published before the migration (`sanitize`, `planSave`, `status`, …).

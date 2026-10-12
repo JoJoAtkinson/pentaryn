@@ -45,6 +45,10 @@
 - **[declared] journal-rob-6:** if the journal window fails to open after a save, the copy is no longer
   reported as failed: the error is a console warning (`open after save failed`), the player still gets
   the added/updated toast, and `add()` answers the saved page instead of rejecting.
+- **[declared] journal-EC-3:** a readable the player can observe but with no page they can see no
+  longer shows the bar (whose click did nothing visible): the footer and the
+  `pentaryn-journal-readable` class come off, as for a window with no target, and come back once a
+  page is shown. The api's `targetOf`/`shouldShowBar`/`status` rules are unchanged.
 
 ## Unreleased (blueprint migration, wave 2)
 
