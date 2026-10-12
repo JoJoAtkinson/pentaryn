@@ -34,6 +34,9 @@
 - [declared] Fix pings-edge-2: a failed log write is retried once, FLUSH_MS (250 ms) later, so the
   readers no longer stay stale until the next ping; if the retry fails too, the pings are kept for
   the next ping's write (one retry, never a loop). Each failure warns as before.
+- [declared] Fix pings-rob-2 (docs only): the README Pitfalls line says `recent(0)`, `recent(null)` and a
+  non-numeric string such as `recent("x")` return everything (a numeric string like `"2"` counts as 2),
+  pinned on core and the oracle; other non-numbers are not claimed (`true` counts as 1, `[2]` as 2).
 
 - Rebuilt on the blueprint (tier small, kit `settings, api, patch, election`): pure core
   `pings-core.mjs`, `settings.mjs`, `api-manifest.mjs`, the `capture.mjs` feature; the

@@ -119,7 +119,8 @@ what that tab had not yet written — a `clear()` in one tab stays cleared.
   record, so the same user pinging the same point again within 400 ms, across one of this tab's
   writes, is kept once. Two GM tabs on machines whose clocks differ by more than 400 ms store
   each ping twice.
-- `recent(0)` returns **everything**, and a negative `n` drops records from the oldest end.
+- `recent(0)`, `recent(null)` and a non-numeric string such as `recent("x")` return **everything**
+  (a numeric string like `"2"` counts as 2); a negative `n` drops records from the oldest end.
 - `snapped` is square-grid maths even on a hex scene.
 - A fractional `max` below 1 never trims the log.
 - Canvas ≠ image space: subtract the padding offset (`image`) for a pixel in the background image.

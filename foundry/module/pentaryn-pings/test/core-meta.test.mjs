@@ -76,6 +76,21 @@ test("seeded sweep: core equals the oracle on 2000 generated cases per function"
   }
 });
 
+test("pings-rob-2: recentOf with n = null or a non-numeric string returns the whole list, newest first; the README says exactly that", () => {
+  const list = ["a", "b", "c"];
+  for (const impl of [core, oracle]) {
+    const who = impl === core ? "core" : "oracle";
+    for (const n of [0, null, "x"]) assert.deepEqual(impl.recentOf(list, n), ["c", "b", "a"], `${who} ${String(n)}`);
+    assert.deepEqual(impl.recentOf(list, "2"), ["c", "b"], `${who} "2" counts as 2`);
+    assert.deepEqual(impl.recentOf(list, true), ["c"], `${who} true counts as 1 (not everything)`);
+    assert.deepEqual(impl.recentOf(list, [2]), ["c", "b"], `${who} [2] counts as 2 (not everything)`);
+    assert.deepEqual(impl.recentOf(list, -1), ["c", "b"], `${who} negative drops from the oldest end`);
+  }
+  assert.deepEqual(list, ["a", "b", "c"]);
+  const readme = readFileSync(new URL("../README.md", import.meta.url), "utf8").replace(/\s+/g, " ");
+  assert.ok(readme.includes('`recent(0)`, `recent(null)` and a non-numeric string such as `recent("x")` return **everything** (a numeric string like `"2"` counts as 2); a negative `n` drops records from the oldest end.'), "README Pitfalls line for recent");
+});
+
 test("drift guard: the settings rows and reader docs quote the core constants", async () => {
   // settings.mjs imports only pings-core and lib/settings, so it loads bare (no Foundry globals)
   const src = readFileSync(new URL("../settings.mjs", import.meta.url), "utf8");

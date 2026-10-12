@@ -5,7 +5,8 @@
  * scene and user fields and passes plain data in; nothing here imports glue.
  *
  * Quirks kept as they are on purpose (transform-creatures-36, README "Pitfalls"):
- *   recentOf(list, 0) returns the whole list, and a negative n drops records from the oldest end;
+ *   recentOf(list, 0 | null | "x") returns the whole list ("2" counts as 2), and a negative n drops
+ *   records from the oldest end;
  *   `snapped` is square-grid maths whatever the grid type; a fractional limit below 1 never trims.
  */
 
