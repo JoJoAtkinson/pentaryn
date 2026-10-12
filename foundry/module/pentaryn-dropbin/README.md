@@ -119,6 +119,8 @@ Listens to the 29 load-time and 6 post-ready hooks pinned in `test/golden/hooks.
   `item-piles-preRattleItemPile` (words only)
 - directory hiding: `renderActorDirectory`, `renderJournalDirectory`
 - Loot all reads Item Piles' private Svelte state (`app.svelte.appShell.$$.ctx`) to follow *Change*
+- Loot all finds the loot window's footer, its Close Lid / Leave buttons and the native Take All
+  icon through `piles.mjs`'s frozen `SELECTORS` table; re-check it after an Item Piles update
 - corpse piles: `turnTokensIntoItemPiles` / `revertTokensFromItemPiles`
 - `i18n-shim.mjs`: `DND5E.ItemRarity*` / `DND5E.Unknown` added at `i18nInit` when missing
 

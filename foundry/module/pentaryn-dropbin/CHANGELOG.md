@@ -56,6 +56,9 @@ Declared changes:
   `pileUuid`, so a second, distinct same-named item lost from the same actor within 2 s is its own
   entry (it was dropped as a duplicate); one event seen on two clients is still one entry. Stored
   entries are unchanged — only the matching rule.
+- dropbin-EXT-3: the Item Piles loot-window selectors Loot all uses (footer, Close Lid / Leave
+  icons, the native Take All icon) are one frozen `SELECTORS` table exported by `piles.mjs`;
+  `loot.mjs` reads them from there. Loot all finds and places its button exactly as before.
 
 Added: `list(n, { brief })`, `restoreResult`, `inspect`, `selftest` (items-journal-28).
 - A restore another module refuses (a `preCreateItem` veto) is `{ ok: false, reason: "not-created" }`
