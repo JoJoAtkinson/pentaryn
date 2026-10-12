@@ -3,6 +3,7 @@
 // so a container can accept fewer copies than asked.
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { attunementWorld, makeActor } from "./fixtures/world.mjs";
 
 const F = await attunementWorld();
@@ -148,4 +149,38 @@ test("items-journal-10: a refused stash logs no info line", async () => {
     Object.assign(console, keep);
   }
   assert.deepEqual(infos, []);
+});
+
+// [declared] M1 (Joe 2026-10-12): the copies' id list is built by one helper, idsOf(made), called
+// in the shortfall branch and on the success path. The helper is not hoisted: the shortfall check
+// still runs first, so the failure path's writes and console.error are unchanged (unlike the
+// reverted 535780c9).
+test("M1: stash builds the created id list through one idsOf(made) helper, called in both branches", () => {
+  const src = readFileSync(new URL("../actor-adapter.mjs", import.meta.url), "utf8")
+    .replace(/\/\*[\s\S]*?\*\//g, " ").replace(/(^|[^:\\'"`])\/\/[^\n]*/g, "$1");
+  assert.equal(src.split("d?.id ?? d?._id ?? null").length - 1, 1, "the id rule is written once");
+  assert.equal(src.split("const created = idsOf(made);").length - 1, 2, "both branches call the helper");
+  assert.ok(src.indexOf("if (accepted !== creates.length)") < src.indexOf("const created = idsOf(made);"),
+    "the shortfall check runs before any id list is built");
+});
+
+// M1 pin (the reason 535780c9 was reverted): a malformed createEmbeddedDocuments result that
+// reports the right length but cannot be mapped still gets the delete and the owner update before
+// stash() rejects; nothing is logged as a shortfall.
+test("M1: a malformed but full-length create result: delete and update still run, then stash rejects", async () => {
+  const box = makeActor(F, { id: "actorBoxS0000008", name: "Box Eight" });
+  box.createEmbeddedDocuments = async (type, data) => ({ length: data.length });
+  const who = owner("actorSafe0000008");
+  const from = F.calls.length;
+  const errors = [];
+  const keep = console.error;
+  console.error = (...a) => errors.push(a);
+  try {
+    await assert.rejects(stash(who, box, ["c", "t"]), TypeError);
+  } finally {
+    console.error = keep;
+  }
+  assert.deepEqual(F.calls.slice(from).filter(c => c.op === "deleteEmbeddedDocuments" || c.op === "update").map(c => c.op),
+    ["deleteEmbeddedDocuments", "update"]);
+  assert.deepEqual(errors, []);
 });

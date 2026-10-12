@@ -84,6 +84,10 @@ export async function stash(owner, container, itemIds, opts = {}) {
   return serial(owner, () => stashNow(owner, container, itemIds, opts));
 }
 
+// The ids of the copies a createEmbeddedDocuments call returned (null where a copy has none). Called
+// in each branch rather than once up front, so the shortfall check still runs first (M1).
+const idsOf = made => (made ?? []).map(d => d?.id ?? d?._id ?? null);
+
 async function stashNow(owner, container, itemIds, { tag, currency = false, detail = false } = {}) {
   const ids = new Set(itemIds);
   const awayBefore = awayOf(owner).length;
@@ -101,7 +105,7 @@ async function stashNow(owner, container, itemIds, { tag, currency = false, deta
     const msg = `${MODULE} | stash: container accepted ${accepted}/${creates.length}; originals NOT deleted`;
     console.error(`${MODULE} | stash: container accepted ${accepted}/${creates.length}; originals NOT deleted`,
       { owner: owner.id, container: container.id });
-    const created = (made ?? []).map(d => d?.id ?? d?._id ?? null);
+    const created = idsOf(made);
     let tail = "";
     let rolledBack = true;
     if (created.length) {
@@ -124,7 +128,7 @@ async function stashNow(owner, container, itemIds, { tag, currency = false, deta
   const update = { [`flags.${MODULE}.${AWAY_FLAG}`]: away, [`flags.${MODULE}.${SLOTS}`]: slots };
   if (currency) for (const k of Object.keys(owner.system.currency ?? {})) update[`system.currency.${k}`] = 0;
   await owner.update(update);
-  const created = (made ?? []).map(d => d?.id ?? d?._id ?? null);
+  const created = idsOf(made);
   // Audit line for a cross-user write (playbook §5.1: info, with the ids written and `by`), read
   // back after an eval-js run.
   console.info(`${MODULE} | stash: ${creates.length} moved to ${container.name}`,

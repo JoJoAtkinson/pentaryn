@@ -4,6 +4,10 @@
 
 The version stays 0.3.0 until the next `module.json` restart batch (code only: sync + reload).
 
+- **[declared] M1:** `stash` builds the copies' id list through one private `idsOf(made)` helper,
+  called in the shortfall branch and on the success path (was: the same `.map` written twice). Not
+  hoisted, so the shortfall check runs first and the failure path's writes and `console.error` are
+  unchanged (unlike the reverted 535780c9); no change in play. `test/stash-safety.test.mjs`.
 - **[declared] perf-1:** a drop onto a slot re-renders the sheet once. The write order stays
   (items, then the slot flag, so preUpdateItem and the `swapFrom` swap still fire), but the item
   write passes `render: false`, so the sheet no longer first draws the new item in the wrong hole.
