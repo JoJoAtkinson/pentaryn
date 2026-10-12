@@ -11,7 +11,8 @@
  *    jumped to the Actors tab (and opened, if it was collapsed), and the placement then waited for
  *    a click with no word on screen. Between `dnd5e.preSummon` and `dnd5e.postSummon` we put the
  *    sidebar back on the tab it had (and collapse it again if it was collapsed), and say "click the
- *    map to place X; right-click cancels". Row dnd5e-summon-keeps-sidebar.
+ *    map to place X; right-click cancels". The keep is one-shot: once it has put the sidebar back,
+ *    a later switch to Actors stands even if postSummon never fires (EC-3). Row dnd5e-summon-keeps-sidebar.
  *
  * 2. Restoring a spell slot opens on the highest spent level (S11). Pearl of Power's slider opened
  *    at 1st level, so restoring a 3rd-level slot took an extra click. `dnd5e.preUseActivity` sets
@@ -73,6 +74,7 @@ function keepSidebar(activity, profile) {
 function putSidebarBack(app) {
   const s = summoning;
   if (!s || Date.now() > s.until || !s.tab || app?.tabName !== "actors" || s.tab === "actors") return;
+  summoning = null;   // one-shot (EC-3): only the import's own jump is reverted; a later switch stands
   setTimeout(() => {
     try {
       restoreSidebar(s);

@@ -50,6 +50,19 @@ test("a summon that jumps to the Actors tab is put back (and collapsed again); t
   assert.deepEqual(newNotes(), [["info", "Click the map to place Sphere. Right-click or Escape cancels."]]);
 });
 
+test("EC-3: the keep is one-shot: with no postSummon, a later deliberate switch to Actors stands", () => {
+  const calls = sidebar({ tab: "chat" });
+  F.fire("dnd5e.preSummon", { summon: { prompt: false } }, {});
+  F.fire("changeSidebarTab", { tabName: "actors" });   // the import's own jump
+  mock.timers.tick(0);
+  assert.deepEqual(calls, [["changeTab", "chat", "primary"]]);
+  // postSummon never fires (placement cancelled); the GM opens Actors on purpose seconds later.
+  F.fire("changeSidebarTab", { tabName: "actors" });
+  mock.timers.tick(0);
+  assert.equal(calls.length, 1, "the deliberate switch is not reverted");
+  F.fire("dnd5e.postSummon");
+});
+
 test("sidebar keep: the profile name, then the item name; no hint with prompt off; other tabs, expired, from Actors → nothing", () => {
   sidebar();
   F.fire("dnd5e.preSummon", { item: { name: "Summon Undead" } }, {});
