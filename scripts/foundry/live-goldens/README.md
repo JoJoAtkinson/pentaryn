@@ -23,7 +23,10 @@ Exit 0 when `golden.shared` is equal (or every difference is declared) and both 
 1 otherwise, 2 on bad input. A run that `skipped` (either side) prints `skipped: <reason>` and
 exits 2, as does a `golden` that is not an object — a skip never diffs as identical.
 `--declared` takes one path glob per line (`#` comments) or a JSON array: `*` stays inside one segment, `**` crosses segments, `[` `]` are literal — so
-`stash.chest[*]`, `stash.chest[*].*` and `purseHome` each cover only what they spell. A glob that
+`stash.chest[*]`, `stash.chest[*].*` and `purseHome` each cover only what they spell. A key holding
+`.`, `[` or `]` prints JSON-quoted in brackets (ties' setting key is `surface.d1["attributes.lookup"]`)
+and `"` is literal in a glob, so that exact spelling or `surface.d1.**` covers it but `surface.d1.*`
+does not (`.**` is everything below, a bracketed segment as much as a dotted one). A glob that
 matched nothing is named. Keep the globs to what the wave's plan declares.
 Pings is always diffed with `--declared noise/pings.txt` (the third command): that file holds the
 known run-to-run noise below as a glob, so a clean pings diff exits 0 without a hand-written file.

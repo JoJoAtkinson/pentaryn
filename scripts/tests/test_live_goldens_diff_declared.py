@@ -194,3 +194,46 @@ def test_cleanup_key_rule_is_what_the_readme_says(tmp_path, cleanup, code):
     after["cleanup"] = cleanup
     r = _write(tmp_path, after=after)
     assert r.returncode == code, r.stdout + r.stderr
+
+
+# LG-E7: a key holding `.`, `[` or `]` (ties' `attributes.lookup` setting key) printed as nested
+# segments — `surface.d1.attributes.lookup` — so `surface.d1.*` could not cover it and nothing
+# told it apart from a real nested path. It now prints JSON-quoted in brackets.
+def _dotted_runs():
+    extra = {"stash": {"chest": [RING, TORCH]}, "purseHome": "no purse in the chest"}
+    before = _run(extra)
+    after = _run(extra)
+    before["golden"]["shared"]["surface"] = {"d1": {"attributes.lookup": 1, "plain": 1, "a[0]": 1}}
+    after["golden"]["shared"]["surface"] = {"d1": {"attributes.lookup": 2, "plain": 2, "a[0]": 2}}
+    return before, after
+
+
+def test_a_dotted_key_prints_bracket_quoted_lg_e7(tmp_path):
+    before, after = _dotted_runs()
+    r = _write(tmp_path, before=before, after=after)
+    assert r.returncode == 1, r.stdout
+    assert '  surface.d1["attributes.lookup"]\n' in r.stdout, r.stdout
+    assert '  surface.d1["a[0]"]\n' in r.stdout, r.stdout
+    assert "  surface.d1.plain\n" in r.stdout, r.stdout
+    assert "surface.d1.attributes.lookup" not in r.stdout, r.stdout
+
+
+def test_one_segment_star_does_not_cover_a_dotted_key_lg_e7(tmp_path):
+    before, after = _dotted_runs()
+    r = _write(tmp_path, before=before, after=after, declared="surface.d1.*\n")
+    assert r.returncode == 1, r.stdout
+    undeclared = r.stdout.split("undeclared")[1].split("### shared, declared")[0]
+    assert 'surface.d1["attributes.lookup"]' in undeclared, r.stdout
+    assert "surface.d1.plain" not in undeclared, r.stdout
+
+
+@pytest.mark.parametrize("globs", [
+    'surface.d1["attributes.lookup"]\nsurface.d1["a[0]"]\nsurface.d1.plain\n',
+    "surface.d1.**\n",
+    '["surface.d1[\\"attributes.lookup\\"]", "surface.d1[\\"a[0]\\"]", "surface.d1.*"]',
+])
+def test_a_quoted_glob_or_double_star_covers_a_dotted_key_lg_e7(tmp_path, globs):
+    before, after = _dotted_runs()
+    r = _write(tmp_path, before=before, after=after, declared=globs)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "3 declared by" in r.stdout and "matched nothing" not in r.stdout, r.stdout
