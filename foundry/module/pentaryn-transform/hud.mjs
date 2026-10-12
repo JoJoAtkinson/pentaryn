@@ -1,80 +1,37 @@
-// Pentaryn Transform — Wild Shape on the Argon Combat HUD.
+// Pentaryn Transform — Wild Shape on the Argon Combat HUD. ENTRY 1 (esmodules[1]).
 //
 // Argon exposes no "add a button to this panel" API, but every component fires
 // render{ParentClass}ArgonComponent after it renders, and the dnd5e panels' parent is
 // ActionPanel. So the Bonus and Action bars are recomposed in that hook: the panel's
 // button list is a plain array and its buttons are plain elements. No lib-wrapper.
-//
-// Argon's dnd5e button class is closure-private; the weapon-set slot every Action/Bonus panel
-// starts with is an instance of it, so its constructor is borrowed from there.
-// Template rule: an Argon component renders partials/{ParentClassName}.hbs, so each class here
-// subclasses an Argon base directly (never two deep).
+// The components are form-picker.mjs's, the Argon reads argon.mjs's.
 
 import {
-  MODULE_ID, EFFECT_ID, activitiesOf, isWildShapeActivity, usesLeft, durationSeconds, formatDuration,
-  formSummary, planBonusBar, planWithout, frontRowItems, coveredPanel, hpText, returnLabel, CONSTELLATIONS, STARRY_SECONDS
+  MODULE_ID, EFFECT_ID, activitiesOf, isWildShapeActivity, planBonusBar, planWithout, frontRowItems, coveredPanel,
+  hpText, portraitText, earnsChalice, coveredMultiattackId, formatDuration
 } from "./transform-core.mjs";
 import { makeLog } from "./lib/log.mjs";
 import { combatSetting, registerKeybindings } from "./settings.mjs";
-import { shift, forms, wildShapeActivity, original, isRevertItem, bonusUsedNow, returnToNormal, isWildShapeForm } from "./transform.mjs";
+import { wildShapeActivity, original, isRevertItem, bonusUsedNow, isWildShapeForm } from "./wildshape-adapter.mjs";
 import {
-  STARRY_EFFECT_ID, starryItem, wildShapeItemOf, hasTwinkling, activeStarry, constellationOf, starrySecondsLeft,
-  constellationLabel, constellationImg, constellationText, constellationActivity, assumeStarry, endStarry
-} from "./starry.mjs";
+  STARRY_EFFECT_ID, starryItem, activeStarry, constellationOf, starrySecondsLeft, constellationActivity
+} from "./starry-adapter.mjs";
+import {
+  onPointerMove, dropStaleTooltip, pickerOpen, cancelTargetPicker, closeOwnPickers, itemButtonClass, describeButton, applyButtons
+} from "./argon.mjs";
+import { argonClasses, liveButtons, TT } from "./form-picker.mjs";
+import "./starry.mjs";                     // the Starry Form hooks register here, before this file's own
+
+export { cancelTargetPicker } from "./argon.mjs";
 
 const log = makeLog(MODULE_ID);
-
-let DND5eItemButton = null;      // borrowed from the weapon-set slot, once seen
-let built = null;                // { WildShapeButton, FormTile, … }, built on first use
-const liveButtons = new Set();   // Wild Shape / Starry Form buttons, for badge refreshes
 
 /* ── tooltips ────────────────────────────────────────────────────────────── */
 // Argon shows its tooltips through Foundry's TooltipManager, anchored to the hovered button. Every
 // shift and revert rebuilds the HUD, so that button leaves the DOM without a pointerleave and the
 // tooltip stayed on screen until the mouse found another tooltipped element. Any tooltip whose
 // anchor is gone is dropped: after each HUD render, and on the next pointer move.
-
-function dropTooltip() {
-  try {
-    game.tooltip?.deactivate?.();
-    if (ui.ARGON?._tooltip) ui.ARGON._tooltip = null;
-  } catch (err) { log.debug("tooltip hygiene", err); }   // never let tooltip hygiene break a click
-}
-
-function dropStaleTooltip() {
-  const anchor = game.tooltip?.element;
-  if (anchor && !anchor.isConnected) dropTooltip();
-}
-
-let staleCheckQueued = false;
-document.addEventListener("pointermove", () => {
-  if (staleCheckQueued) return;
-  staleCheckQueued = true;
-  setTimeout(() => { staleCheckQueued = false; dropStaleTooltip(); }, 60);
-}, { passive: true, capture: true });
-
-/* ── Argon's target picker ───────────────────────────────────────────────── */
-// Clicking an attack opens Argon's "0/1 Targets" picker: it switches the canvas to the Target tool
-// and waits for a target. It is bound to the button that opened it, so a shift or revert in the
-// meantime left it on screen with the canvas still in Target mode — later clicks targeted tokens
-// instead of selecting them, and the attack it finally ran was the old form's. Argon's only cancel
-// is a right-click (its picker listens for a right-button mouseup on the document) and the picker
-// instance is private to Argon's bundle, so the same right-button mouseup is sent to cancel it:
-// when the HUD's token changes body, when a Wild Shape/Starry button is clicked, and on Escape.
-
-function pickerOpen() {
-  return !!document.querySelector(".ech-target-picker");
-}
-
-export function cancelTargetPicker() {
-  if (!pickerOpen()) return false;
-  try {
-    document.dispatchEvent(new MouseEvent("mouseup", { button: 2, buttons: 0, bubbles: true, cancelable: true }));
-  } catch (err) {
-    log.warn("cancelling Argon's target picker failed", err);
-  }
-  return !pickerOpen();
-}
+document.addEventListener("pointermove", onPointerMove, { passive: true, capture: true });
 
 /** The HUD's token became another body (a shift, a revert, a token swap): its pending pick is stale. */
 function onTokenBody(doc, changes) {
@@ -85,13 +42,6 @@ function onTokenBody(doc, changes) {
 }
 Hooks.on("updateToken", onTokenBody);
 Hooks.on("deleteToken", (doc) => onTokenBody(doc, null));
-
-/** Close the module's own open pickers (Change Form / Wild Shape forms, constellations). */
-function closeOwnPickers() {
-  const open = document.querySelectorAll(".pentaryn-picker.show");
-  for (const el of open) el.classList.remove("show");   // what ButtonPanel#toggle(false) does; no saved state (id null)
-  return open.length > 0;
-}
 
 // Escape cancels the target picker, else closes an open Wild Shape / Starry Form picker (PT3-6);
 // either otherwise fell through to core's dismiss and opened the game menu. With nothing open it
@@ -104,399 +54,7 @@ Hooks.once("init", () => registerKeybindings({
   }
 }));
 
-/** Tooltip classes: compact grid (pentaryn-tt), or one detail per row (pentaryn-tt-list). */
-const TT = ["pentaryn-tt"];
-const TT_LIST = ["pentaryn-tt", "pentaryn-tt-list"];
-
-/** The uses badge, as ItemButton's `.quantity-1` markup (Argon's has-count class draws nothing). */
-function paintBadge(button, left) {
-  let badge = button.element.querySelector(":scope > .quantity-1");
-  if (left === null || left === undefined) badge?.remove();
-  else {
-    if (!badge) {
-      badge = document.createElement("div");
-      badge.className = "quantity-1";
-      badge.innerHTML = `<div class="border-triangle"></div><span></span>`;
-      button.element.prepend(badge);
-    }
-    badge.querySelector("span").textContent = String(left);
-  }
-  button.element.classList.toggle("pentaryn-empty", left === 0);
-}
-
-/* ── normalising a beast for its tile tooltip ────────────────────────────── */
-
-function summaryInput(src) {
-  const s = src.system;
-  const attacks = [];
-  const traits = [];
-  for (const item of src.items) {
-    const acts = activitiesOf(item);
-    const attack = acts.find(a => a.type === "attack");
-    if (item.type === "weapon" || attack) {
-      const a = attack ?? acts[0];
-      const dmg = a?.labels?.damage ?? item.labels?.damages ?? [];
-      attacks.push({
-        name: item.name,
-        toHit: a?.labels?.toHit ?? item.labels?.toHit ?? "",
-        damage: (Array.isArray(dmg) ? dmg : []).map(d => d.label ?? d.formula).filter(Boolean).join(" + ")
-      });
-    } else if (item.type === "feat" && item.system.type?.value === "monster" && !acts.length) {
-      traits.push(item.name);                 // passive only: Multiattack and Web are front-row buttons
-    }
-  }
-  return {
-    cr: s.details?.cr,
-    sizeLabel: CONFIG.DND5E.actorSizes[s.traits?.size]?.label ?? "",
-    typeLabel: CONFIG.DND5E.creatureTypes[s.details?.type?.value]?.label ?? s.details?.type?.value ?? "",
-    ac: s.attributes?.ac?.value,
-    movement: s.attributes?.movement ?? {},
-    units: s.attributes?.movement?.units || "ft",
-    senses: s.attributes?.senses?.ranges ?? {},
-    attacks, traits
-  };
-}
-
-function recoveryText(item) {
-  const periods = CONFIG.DND5E.limitedUsePeriods ?? {};
-  return (item.system.uses?.recovery ?? []).map(r => {
-    const when = periods[r.period]?.label ?? r.period;
-    const what = r.type === "recoverAll" ? _loc("PENTARYN_TRANSFORM.Hud.All") : (r.formula || "1");
-    return `${when}: ${what}`;
-  }).join(" · ");
-}
-
-/* ── components ──────────────────────────────────────────────────────────── */
-
-/**
- * Argon slides a panel in from translateY(1000%) over 0.3 s; a click on a tile during the slide
- * lands on the map instead (the "first tile click did nothing" report). Our pickers appear in place
- * and only fade (styles/transform.css), so a tile is clickable the moment it is visible.
- */
-function picker(panel) {
-  panel.element.classList.add("pentaryn-picker");
-  return panel;
-}
-
-function argonClasses() {
-  if (built) return built;
-  const A = CONFIG.ARGON;
-  const ButtonPanelButton = A?.MAIN?.BUTTONS?.ButtonPanelButton;
-  const ItemButton = A?.MAIN?.BUTTONS?.ItemButton;
-  const ButtonPanel = A?.MAIN?.BUTTON_PANELS?.ButtonPanel;
-  if (!ButtonPanelButton || !ItemButton || !ButtonPanel) return null;
-
-  /** One known form in the picker. A pseudo-item keeps ItemButton's label/icon/visible working. */
-  class FormTile extends ItemButton {
-    constructor({ form, hudActor }) {
-      super({ item: { id: form.id, name: form.name, img: form.actor?.img || "icons/svg/mystery-man.svg" }, inActionPanel: false });
-      this.form = form;
-      this.hudActor = hudActor;
-      const current = hudActor?.getFlag?.(MODULE_ID, "wildshape")?.profile;
-      if (hudActor?.isPolymorphed && current === form.id) this.element.classList.add("pentaryn-current");
-    }
-
-    get hasTooltip() { return true; }
-
-    async getTooltipData() {
-      const src = this.form.actor ?? fromUuidSync(this.form.uuid);
-      if (!src) return { title: this.form.name, description: "" };
-      const f = formSummary(summaryInput(src));
-      return {
-        title: this.form.name,
-        subtitle: f.subtitle,
-        description: "",
-        details: f.details,
-        propertiesLabel: "PENTARYN_TRANSFORM.Hud.Traits",
-        properties: f.traits.map(label => ({ label, secondary: true })),
-        footerText: _loc("PENTARYN_TRANSFORM.Hud.TileHint"),
-        classes: TT_LIST
-      };
-    }
-
-    async _onLeftClick(event) {
-      dropTooltip();
-      cancelTargetPicker();
-      ui.ARGON?.collapseAllPanels();
-      await shift(this.hudActor, this.form.id);
-      dropStaleTooltip();
-    }
-
-    async _onRightClick(event) {
-      (this.form.actor ?? fromUuidSync(this.form.uuid))?.sheet?.render(true);
-    }
-  }
-
-  /**
-   * "Return to Talo" for a form with no revert item (PT3-3): the item's label and portrait, and the
-   * item's revert path (returnToNormal). A pseudo-item keeps ItemButton's label/icon/visible working.
-   */
-  class ReturnButton extends ItemButton {
-    constructor({ hudActor }) {
-      const host = game.actors.get(hudActor?.getFlag?.("dnd5e", "originalActor")) ?? null;
-      super({
-        item: { id: "pentarynReturn00", name: returnLabel(host?.name ?? hudActor?.name ?? "?"), img: host?.img || hudActor?.img },
-        inActionPanel: true
-      });
-      this.hudActor = hudActor;
-    }
-
-    get hasTooltip() { return true; }
-
-    async getTooltipData() {
-      return { title: this.label, subtitle: _loc("PENTARYN_TRANSFORM.Hud.BonusAction"), description: "", classes: TT };
-    }
-
-    async _onLeftClick(event) {
-      dropTooltip();
-      cancelTargetPicker();
-      ui.ARGON?.collapseAllPanels?.();
-      await returnToNormal(this.hudActor);
-      dropStaleTooltip();
-    }
-  }
-
-  /** "Wild Shape" in normal form, "Change Form" in a form: uses badge, opens the picker. */
-  class WildShapeButton extends ButtonPanelButton {
-    constructor({ hudActor }) {
-      super();
-      this.hudActor = hudActor;
-      liveButtons.add(this);
-    }
-
-    get shifted() { return !!this.hudActor?.isPolymorphed; }
-    get activity() { return wildShapeActivity(this.hudActor); }
-    get wildShapeItem() { return this.activity?.item ?? null; }
-    get label() { return this.shifted ? "PENTARYN_TRANSFORM.Hud.ChangeForm" : "PENTARYN_TRANSFORM.Hud.WildShape"; }
-    get icon() { return this.wildShapeItem?.img ?? ""; }
-    get colorScheme() { return 1; }
-    get hasTooltip() { return true; }
-
-    async getTooltipData() {
-      const item = this.wildShapeItem;
-      if (!item) return null;
-      const uses = item.system.uses;
-      const seconds = durationSeconds(this.activity.duration);
-      // The feature's full text is ~2000px of scroll; the tooltip says what a click does and the
-      // four numbers that matter. The full text stays on the sheet (right-click).
-      const temp = original(this.hudActor)?.classes?.druid?.system?.levels;
-      return {
-        title: _loc(this.label),
-        subtitle: _loc("PENTARYN_TRANSFORM.Hud.FormsKnown", { n: forms(this.hudActor).length }),
-        description: `<p>${_loc(this.shifted ? "PENTARYN_TRANSFORM.Hud.ChangeFormText" : "PENTARYN_TRANSFORM.Hud.WildShapeText", { temp: temp ?? "—" })}</p>`,
-        details: [
-          { label: _loc("PENTARYN_TRANSFORM.Hud.Uses"), value: `${usesLeft(uses) ?? "—"} / ${uses?.max ?? "—"}` },
-          { label: _loc("PENTARYN_TRANSFORM.Hud.Duration"), value: seconds ? formatDuration(seconds) : "—" },
-          { label: _loc("PENTARYN_TRANSFORM.Hud.Recovery"), value: recoveryText(item) || "—" },
-          { label: _loc("PENTARYN_TRANSFORM.Hud.Cost"), value: _loc("PENTARYN_TRANSFORM.Hud.BonusAction") }
-        ],
-        footerText: _loc("PENTARYN_TRANSFORM.Hud.WildShapeHint"),
-        classes: TT
-      };
-    }
-
-    /**
-     * The uses badge. Argon paints counts only through ItemButton's `.quantity-1` markup — its
-     * `has-count` class + data-item-count draw nothing — so the same markup goes in here.
-     */
-    refreshCount() {
-      paintBadge(this, usesLeft(this.wildShapeItem?.system.uses));
-    }
-
-    async _renderInner() {
-      // ButtonPanelButton appends a fresh panel on every render; drop the old one first.
-      this.panel?.element?.remove();
-      await super._renderInner();
-      this.refreshCount();
-    }
-
-    async _onClick(event) {
-      event.preventDefault();
-      event.stopPropagation();
-      // The button's own tooltip would sit over the picker it opens (and catch the tile click).
-      dropTooltip();
-      cancelTargetPicker();
-      if (usesLeft(this.wildShapeItem?.system.uses) === 0) {   // null = no use limit
-        ui.notifications.warn(_loc("PENTARYN_TRANSFORM.NoUses"));
-        return;
-      }
-      this.panel.toggle();
-    }
-
-    async _onRightClick() { this.wildShapeItem?.sheet?.render(true); }
-
-    async activateListeners(html) {
-      await super.activateListeners(html);
-      this.element.oncontextmenu = (ev) => { ev.preventDefault(); this._onRightClick(ev); };
-    }
-
-    async _getPanel() {
-      // No panel id: Argon would otherwise remember it open and reopen it after the shift rebinds.
-      return picker(new ButtonPanel({ id: null, buttons: forms(this.hudActor).map(form => new FormTile({ form, hudActor: this.hudActor })) }));
-    }
-  }
-
-  /** One constellation in the Starry Form picker, or "End Starry Form". */
-  class ConstellationTile extends ItemButton {
-    constructor({ constellation, hudActor }) {
-      const end = constellation === "end";
-      super({
-        item: {
-          id: `pentaryn-starry-${constellation}`,
-          name: end ? _loc("PENTARYN_TRANSFORM.Starry.EndShort") : constellationLabel(constellation),
-          img: end ? "icons/svg/cancel.svg" : constellationImg(hudActor, constellation)
-        },
-        inActionPanel: false
-      });
-      this.constellation = constellation;
-      this.hudActor = hudActor;
-      if (!end && constellationOf(hudActor) === constellation) this.element.classList.add("pentaryn-current");
-    }
-
-    get hasTooltip() { return true; }
-
-    async getTooltipData() {
-      const actor = this.hudActor;
-      if (this.constellation === "end") {
-        return { title: _loc("PENTARYN_TRANSFORM.Starry.End"), description: `<p>${_loc("PENTARYN_TRANSFORM.Starry.EndText")}</p>`, classes: TT };
-      }
-      const current = constellationOf(actor);
-      const free = !!current && hasTwinkling(actor);
-      const cost = current === this.constellation ? _loc("PENTARYN_TRANSFORM.Starry.CostCurrent")
-        : free ? _loc("PENTARYN_TRANSFORM.Starry.CostFree") : _loc("PENTARYN_TRANSFORM.Starry.CostUse");
-      return {
-        title: constellationLabel(this.constellation),
-        subtitle: _loc("PENTARYN_TRANSFORM.Starry.Title"),
-        description: `<p>${constellationText(actor, this.constellation)}</p>`,
-        details: [{ label: _loc("PENTARYN_TRANSFORM.Hud.Cost"), value: cost }],
-        classes: TT_LIST
-      };
-    }
-
-    async _onLeftClick() {
-      dropTooltip();
-      cancelTargetPicker();
-      ui.ARGON?.collapseAllPanels();
-      if (this.constellation === "end") await endStarry(this.hudActor);
-      else await assumeStarry(this.hudActor, this.constellation);
-      dropStaleTooltip();
-    }
-
-    async _onRightClick() { starryItem(this.hudActor)?.sheet?.render(true); }
-  }
-
-  /** "Starry Form" (or "Starry Form: Archer" while it lasts): Wild Shape uses badge, opens the constellations. */
-  class StarryFormButton extends ButtonPanelButton {
-    constructor({ hudActor }) {
-      super();
-      this.hudActor = hudActor;
-      liveButtons.add(this);
-    }
-
-    get item() { return starryItem(this.hudActor); }
-    get wildShapeItem() { return wildShapeItemOf(this.hudActor); }
-    get constellation() { return constellationOf(this.hudActor); }
-    get label() {
-      const c = this.constellation;
-      return c ? `${_loc("PENTARYN_TRANSFORM.Starry.Title")}: ${constellationLabel(c)}` : _loc("PENTARYN_TRANSFORM.Starry.Title");
-    }
-    get icon() { return this.constellation ? constellationImg(this.hudActor, this.constellation) : (this.item?.img ?? ""); }
-    get colorScheme() { return 1; }
-    get hasTooltip() { return true; }
-
-    async getTooltipData() {
-      const uses = this.wildShapeItem?.system.uses;
-      const c = this.constellation;
-      const left = starrySecondsLeft(this.hudActor);
-      const details = [
-        { label: _loc("PENTARYN_TRANSFORM.Hud.Uses"), value: `${usesLeft(uses) ?? "—"} / ${uses?.max ?? "—"}` },
-        { label: c ? _loc("PENTARYN_TRANSFORM.Hud.TimeLeftLabel") : _loc("PENTARYN_TRANSFORM.Hud.Duration"),
-          value: formatDuration(c && left !== null ? left : STARRY_SECONDS) },
-        { label: _loc("PENTARYN_TRANSFORM.Starry.Light"), value: _loc("PENTARYN_TRANSFORM.Starry.LightValue") },
-        { label: _loc("PENTARYN_TRANSFORM.Hud.Cost"), value: _loc("PENTARYN_TRANSFORM.Hud.BonusAction") }
-      ];
-      return {
-        title: this.label,
-        subtitle: c ? _loc("PENTARYN_TRANSFORM.Starry.Active") : _loc("PENTARYN_TRANSFORM.Starry.Spends"),
-        description: `<p>${c ? constellationText(this.hudActor, c) : _loc("PENTARYN_TRANSFORM.Starry.Text")}</p>`,
-        details,
-        footerText: _loc(c ? (hasTwinkling(this.hudActor) ? "PENTARYN_TRANSFORM.Starry.HintActiveFree" : "PENTARYN_TRANSFORM.Starry.HintActive")
-          : "PENTARYN_TRANSFORM.Starry.Hint"),
-        classes: TT
-      };
-    }
-
-    refreshCount() {
-      paintBadge(this, usesLeft(this.wildShapeItem?.system.uses));
-      this.element.classList.toggle("pentaryn-starry-on", !!this.constellation);
-      // Spent out but the form is up: still clickable (change constellation / end).
-      if (this.constellation) this.element.classList.remove("pentaryn-empty");
-    }
-
-    async _renderInner() {
-      this.panel?.element?.remove();
-      await super._renderInner();
-      this.refreshCount();
-    }
-
-    async _onClick(event) {
-      event.preventDefault();
-      event.stopPropagation();
-      dropTooltip();
-      cancelTargetPicker();
-      if (!this.constellation && usesLeft(this.wildShapeItem?.system.uses) === 0) {
-        ui.notifications.warn(_loc("PENTARYN_TRANSFORM.NoUses"));
-        return;
-      }
-      this.panel.toggle();
-    }
-
-    async _onRightClick() { this.item?.sheet?.render(true); }
-
-    async activateListeners(html) {
-      await super.activateListeners(html);
-      this.element.oncontextmenu = (ev) => { ev.preventDefault(); this._onRightClick(ev); };
-    }
-
-    async _getPanel() {
-      const tiles = CONSTELLATIONS.map(constellation => new ConstellationTile({ constellation, hudActor: this.hudActor }));
-      if (this.constellation) tiles.push(new ConstellationTile({ constellation: "end", hudActor: this.hudActor }));
-      return picker(new ButtonPanel({ id: null, buttons: tiles }));
-    }
-  }
-
-  built = { WildShapeButton, FormTile, StarryFormButton, ReturnButton, ItemButton, SplitButton: A.MAIN.BUTTONS.SplitButton };
-  return built;
-}
-
-function itemButtonClass(panel) {
-  if (DND5eItemButton) return DND5eItemButton;
-  const base = CONFIG.ARGON?.MAIN?.BUTTONS?.ItemButton;
-  const slot = base && panel._buttons.find(b => b instanceof base && b._isWeaponSet);
-  if (slot) DND5eItemButton = slot.constructor;
-  return DND5eItemButton;
-}
-
 /* ── composing the bars ──────────────────────────────────────────────────── */
-
-function describe(button, { ItemButton, SplitButton }) {
-  if (button?._isWeaponSet) return { kind: "weaponSet" };
-  if (button instanceof ItemButton) return { kind: "item", id: button.item?.id ?? null };
-  if (SplitButton && button instanceof SplitButton) return { kind: "split", ids: [button.button1?.item?.id, button.button2?.item?.id] };
-  return { kind: "other" };
-}
-
-/** Replace the panel's buttons with `next`, in order, rendering only the new ones. */
-function applyButtons(panel, next, fresh) {
-  for (const old of panel._buttons) if (!next.includes(old)) old.element.remove();
-  for (const b of next) {
-    b._parent = panel;
-    panel.element.appendChild(b.element);
-  }
-  panel._buttons = next;
-  for (const b of fresh) b.render();
-  panel.updateVisibility();
-}
 
 function composeBonusBar(panel, actor) {
   const C = argonClasses();
@@ -510,7 +68,7 @@ function composeBonusBar(panel, actor) {
   // Shifted, planBonusBar drops a carried Starry Form's button instead of replacing it (PT3-4).
   const starry = starryItem(actor);
 
-  const plan = planBonusBar(panel._buttons.map(b => describe(b, C)), {
+  const plan = planBonusBar(panel._buttons.map(b => describeButton(b, C)), {
     wildShapeId: ownWs?.id ?? null,
     revertIds: revertItems.map(i => i.id),
     shifted,
@@ -564,8 +122,7 @@ function multiattackCoveredByFullAttack(actor) {
     if (!game.modules.get("pentaryn-combat")?.active) return null;
     if (!combatSetting("fullAttack") || !combatSetting("multiattack")) return null;
     const ma = game.pentaryn?.combat?.multiattack?.(actor);
-    if (!ma || ma.source === "flag" || (ma.total ?? 0) < 2 || !actor.items.get(ma.source)) return null;
-    return ma.source;
+    return coveredMultiattackId({ active: true, fullAttack: true, multiattack: true, ma, hasItem: id => !!actor.items.get(id) });
   } catch (err) {
     log.warnOnce("combat-multiattack", "combat multiattack read failed", err);
     return null;
@@ -603,9 +160,9 @@ function composeSpecialBar(panel, actor) {
   const starry = starryItem(actor);
   if (!starry) return;
   const C = argonClasses();
-  const ItemBtn = itemButtonClass(panel) ?? DND5eItemButton;
+  const ItemBtn = itemButtonClass(panel);
   if (!C || !ItemBtn) return;
-  const plan = planWithout(panel._buttons.map(b => describe(b, C)), [starry.id]);
+  const plan = planWithout(panel._buttons.map(b => describeButton(b, C)), [starry.id]);
   if (!plan) return;
   const fresh = [];
   const next = plan.map(p => {
@@ -645,17 +202,13 @@ Hooks.on("renderItemButtonArgonComponent", (button) => {
 function portraitLine(actor) {
   if (!actor) return null;
   const ws = actor.isPolymorphed ? actor.effects.get(EFFECT_ID) : null;
-  if (ws) {
-    const endsAt = actor.getFlag(MODULE_ID, "wildshape")?.endsAt;
-    const left = Number.isFinite(endsAt) ? formatDuration(endsAt - game.time.worldTime) : null;
-    return left ? _loc("PENTARYN_TRANSFORM.Hud.PortraitLeft", { what: ws.name, left }) : ws.name;
-  }
-  const starry = activeStarry(actor);
-  if (starry) {
-    const left = starrySecondsLeft(actor);
-    return left !== null ? _loc("PENTARYN_TRANSFORM.Hud.PortraitLeft", { what: starry.name, left: formatDuration(left) }) : starry.name;
-  }
-  return null;
+  const starry = ws ? null : activeStarry(actor);
+  const p = portraitText({
+    ws, endsAt: ws ? actor.getFlag(MODULE_ID, "wildshape")?.endsAt : null,
+    starry, starryLeft: starry ? starrySecondsLeft(actor) : null, worldTime: game.time.worldTime
+  });
+  if (!p) return null;
+  return p.left === null ? p.what : _loc("PENTARYN_TRANSFORM.Hud.PortraitLeft", { what: p.what, left: p.left });
 }
 
 /**
@@ -770,16 +323,6 @@ function setChalice(actor, on) {
   if (on) chaliceReady.set(actor.uuid, setTimeout(() => { chaliceReady.delete(actor.uuid); paintChalice(actor); }, 60_000));
   else chaliceReady.delete(actor.uuid);
   paintChalice(actor);
-}
-
-/** A leveled spell cast with a slot that has a healing activity part. */
-function earnsChalice(activity, usageConfig) {
-  const item = activity?.item;
-  if (item?.type !== "spell" || !(Number(item.system?.level) > 0)) return false;
-  if (usageConfig?.consume?.spellSlot === false) return false;
-  if (activity.type === "heal") return true;
-  const parts = activity.damage?.parts ?? [];
-  return parts.some(p => (p.types instanceof Set ? [...p.types] : (p.types ?? [])).some(t => t === "healing" || t === "temphp"));
 }
 
 Hooks.on("dnd5e.postUseActivity", (activity, usageConfig) => {
