@@ -14,6 +14,7 @@
     "patch-libwrapper": { "deps": ["patch"], "packages": ["lib-wrapper"] },
     "flags":    { "deps": [] },
     "perf":     { "deps": [] },
+    "pins":     { "deps": [] },
     "argon-kit": { "deps": [], "packages": ["enhancedcombathud"] },
     "argon-tooltip": { "deps": [], "ext": "css", "packages": ["enhancedcombathud"] }
   },

@@ -38,6 +38,7 @@ Bump `kit.json` `version`, `errors.mjs` `KIT_VERSION` and every header together.
 | `patch-libwrapper.mjs` | `libWrapperRoute` | `packages: [lib-wrapper]` — vendored only where used |
 | `flags.mjs` | `readFlag`, `flagPath` | delete with `{[flagPath(s,k)]: _del}` at the call site |
 | `perf.mjs` | `memo`, `coalesce`, `perFrame` | debounce/throttle: use `foundry.utils` |
+| `pins.mjs` | `pinnedEntryIds`, `makePinnedCache`, `PIN_HOOKS`, `pinsChanged` | which journals a scene Note pins, null-safe; a cache forgets on the six `PIN_HOOKS` (updateScene only when `pinsChanged`, i.e. its change touches `notes`). In neither tier: journal and dropbin vendor it (1.2.0 journal-EXT-9) |
 | `argon-kit.mjs` | `dropTooltip`, `paintBadge(button, left, emptyClass)`, `applyButtons(panel, next, fresh, { attachDetached, after })`, `itemButtonClass(panel?)`, `slotKind`, `mainPanel(label)`, `settlePips(panel)` | `packages: [enhancedcombathud]`; Argon HUD helpers combat and transform hand-copied (transform-creatures-12, combat-riders-3/-5). `attachDetached` and `after` are combat's superset, opt-in; `itemButtonClass` caches per vendored copy |
 | `argon-tooltip.css` | Argon's compact `.ech-tooltip.pentaryn-tt` / `.pentaryn-tt-list` tooltip rules | `ext: css`, `packages: [enhancedcombathud]`; verbatim from transform.css (D7). Vendored to `lib/argon-tooltip.css`, loaded by listing it in `module.json` `styles`; C37/C37w do not score `lib/*.css`. Vendored by combat and transform (wave 4), each `@import`ing it from its own stylesheet until the Wave 7 batch lists it in `styles`; riders waits on its `relationships` edit |
 | `test-kit/foundry-stub.mjs` | `installFoundry`, `StubCollection`, `makeDoc`, `makeToken`, `makeScene`, `makeUser` | imports Foundry's own `common/` from the installed app; `Hooks` catches a throwing listener like Foundry's `Hooks.#call` (warn, continue; `F.hookErrors`); `fire("ready")` sets `game.ready`; `doc.update`/`doc.delete` fire the vetoable `preUpdate`/`preDelete<Doc>` first (1.2.0 kit-edge-2) |
@@ -88,6 +89,10 @@ KIT-M2 (declared, docs only): the README `resolve.mjs` row, the `resolve.mjs` he
 `publish.mjs` `inspect()` comment said resolution was "exact match only"; they now say what `byName`
 has always done — exact name, then a unique case-insensitive exact name; never a substring. No code
 change: modules rely on the fallback.
+journal-EXT-9 (declared): new file `pins.mjs` — one null-safe `pinnedEntryIds(scenes)`, `makePinnedCache(getScenes)`,
+the six invalidation hooks `PIN_HOOKS` and `pinsChanged` (updateScene only when it touches `notes`).
+Journal and dropbin vendor it and delete their copies (dropbin's threw on a scene without notes);
+each core re-exports the names for its older suites (a `test/graph-allow.json` debt in each).
 names-ext-3 (declared): `resolveRef(ref, "actor", { base: true })` given a token's synthetic Actor
 (`isToken`, directly, as a placeable's document or by uuid) returns the world actor
 (`game.actors.get(token.actorId ?? id)`, null/NOT_FOUND when it is gone); before, it returned the

@@ -21,6 +21,9 @@
   (`scene.update({notes})`) now refreshes which journals open as one page; before, only the Note
   hooks and Scene create/delete forgot the pinned-journal cache, though the docs said a Scene update
   did too. Scene updates that don't change `notes` keep the cache.
+- **[declared] journal-EXT-9:** which journals a scene Note pins comes from the kit (`lib/pins.mjs`,
+  kit 1.2.0): one null-safe rule shared with dropbin, the cache and its six invalidation hooks.
+  `journal-core` re-exports `pinnedEntryIds`/`makePinnedCache` for the older suites.
 
 ## Unreleased (blueprint migration, wave 2)
 

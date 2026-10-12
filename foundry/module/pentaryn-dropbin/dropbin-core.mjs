@@ -15,6 +15,7 @@ import {
   DIR, FILE, DEDUPE_MS, MIRROR_DEBOUNCE_MS, ledgerKB, dedupeKey, duplicateOfTail, appendEntry, makeEntry, normaliseDeltas, listLast, findEntry,
   briefOf, searchLog, shouldCaptureDelete, restoreTarget,
 } from "./ledger-core.mjs";
+import { pinnedEntryIds } from "./lib/pins.mjs";
 
 // Imported, then exported by name (not `export … from`), so the import-graph tools see both files.
 export {
@@ -49,12 +50,12 @@ export function lockedContainer(data) {
   return data?.enabled && data.type === "container" && data.locked ? data : null;
 }
 
-/** Every journal id pinned to a Note on any scene. Built once per directory render. */
-export function pinnedEntryIds(scenes) {
-  const s = new Set();
-  for (const sc of scenes) for (const n of sc.notes) if (n.entryId) s.add(n.entryId);
-  return s;
-}
+/**
+ * Every journal id pinned to a Note on any scene: the kit's null-safe rule (lib/pins.mjs, journal-EXT-9),
+ * shared with journal. Re-exported for core.test's tables; itempiles.mjs imports the kit directly. The
+ * core → lib edge is a test/graph-allow.json debt.
+ */
+export { pinnedEntryIds };
 
 /** One of our corpses: a token this module turned into a pile (never revert one we didn't make). */
 export const isOurCorpse = doc => !!doc.flags?.[MODULE]?.corpse;
