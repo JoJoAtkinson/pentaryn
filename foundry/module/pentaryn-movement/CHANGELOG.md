@@ -28,6 +28,9 @@ manifest); the kit is vendored. What a player or GM can notice:
   keys that did not (rob-4).
 - **[declared]** `pinsUnderTokens(scene)` also takes a scene id: it is looked up in the world's
   scenes, and an unknown id answers `[]` like no scene, instead of a raw TypeError (rob-1).
+- **[declared]** `ghostFor(token)` also takes a TokenDocument (e.g. `canvas.scene.tokens.get(id)`) and
+  answers like its placeable, instead of a silent `false`; the manifest param type reads
+  "Token placeable | TokenDocument" (rob-2).
 - Performance: the per-token paths (drag, arrow keys, token refresh, the layer sort) read the
   settings and the combats once per change instead of once per token (F-M1).
 

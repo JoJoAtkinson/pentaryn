@@ -27,7 +27,7 @@
       "params": [
         {
           "name": "token",
-          "type": "Token placeable"
+          "type": "Token placeable | TokenDocument"
         }
       ],
       "returns": "boolean",

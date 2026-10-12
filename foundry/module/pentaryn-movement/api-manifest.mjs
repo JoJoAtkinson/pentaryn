@@ -27,7 +27,7 @@ export const MANIFEST = Object.freeze({
     },
     {
       path: "ghostFor",
-      params: [{ name: "token", type: "Token placeable" }],
+      params: [{ name: "token", type: "Token placeable | TokenDocument" }],
       returns: "boolean",
       gm: false, writes: false, legacy: true,
       doc: "Is ghost movement in effect for that token on this client (a player, owner, button on, allowed)? "

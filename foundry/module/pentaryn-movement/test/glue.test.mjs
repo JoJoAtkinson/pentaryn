@@ -220,6 +220,16 @@ test("ghostFor through the API", async () => {
   assert.equal(game.pentaryn.movement.ghostFor(null), false);
 });
 
+test("ghostFor takes a TokenDocument too, answering like its placeable; other objects stay false (rob-2)", async () => {
+  await reset();
+  await set("ghost", true);
+  const doc = owner => ({ ...token({ owner }).document, documentName: "Token" });
+  assert.equal(game.pentaryn.movement.ghostFor(doc(true)), true);
+  assert.equal(game.pentaryn.movement.ghostFor(doc(false)), false);
+  assert.equal(game.pentaryn.movement.ghostFor({ ...doc(true), documentName: "Actor" }), false);
+  assert.equal(game.pentaryn.movement.ghostFor({ isOwner: true, parent: { id: SCENE } }), false);
+});
+
 test("setPolicy: a player rejects 'GM only'; a GM writes ghostPolicyLast then ghostPolicy; 'off' writes one", async () => {
   await reset();
   await assert.rejects(game.pentaryn.movement.setPolicy("always"), { message: "GM only" });

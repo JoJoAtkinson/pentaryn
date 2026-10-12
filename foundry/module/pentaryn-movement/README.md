@@ -73,7 +73,7 @@ frozen object. Ask it what it offers: `game.pentaryn.movement.describe()` (offli
 | Method | GM | Writes | Returns |
 |---|---|---|---|
 | `status(opts?)` | — | — | policy, `combatOnScene`, allowed and why not, the player's switch, `patched.{drag,keyboard}`, then `sceneId`, `version`, `settings` (key → scope). `opts.sceneId` asks about another scene (default: the viewed one) |
-| `ghostFor(token)` | — | — | is ghost in effect for that placeable on this client |
+| `ghostFor(token)` | — | — | is ghost in effect for that token (a placeable or a TokenDocument) on this client |
 | `combatActive(sceneId?)` | — | — | does a combat stop ghosting there |
 | `setGhost(on)` | — | client setting `ghost` | the player's button. **Player clients only:** on a GM client (and so from the MCP bridge) it changes nothing for players |
 | `setPolicy(value)` | yes | world settings `ghostPolicy`, `ghostPolicyLast` | `"off" \| "exploration" \| "always"`; rejects with `Error("GM only")` on a player client |

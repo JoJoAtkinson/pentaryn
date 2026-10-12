@@ -57,9 +57,12 @@ function invalidate() {
   ghostContext = null;
 }
 
-/** Ghost in effect for this placeable (Token) on this client? */
+/**
+ * Ghost in effect for this token on this client? Takes a Token placeable (the drag and keyboard
+ * wraps) or a TokenDocument (rob-2); anything else is false.
+ */
 function ghostFor(token) {
-  const doc = token?.document;
+  const doc = token?.document ?? (token?.documentName === "Token" ? token : null);
   if (!doc) return false;
   return core.ghostForCtx(context(), { isGM: game.user.isGM, isOwner: !!doc.isOwner, sceneId: doc.parent?.id });
 }
