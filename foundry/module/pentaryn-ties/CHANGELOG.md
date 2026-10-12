@@ -26,6 +26,10 @@ Added: `inspect(ref, { as })` (the dossier), `selftest()`, `attributes.effective
 (with the kind pointer), `attributes.tree/branch/describeId`, `study.factStatus/shareFact/forgetFact`,
 `study.identified`.
 
+Fixed (declared): a player's **Remove** on the Ties tab now removes the tie in both directions, as its
+confirm says — the active GM's client removes the NPC's row back (relay action `remove-reverse`; the
+sender must own their character and have removed their own side). ties-ui-E3.
+
 ## 0.19.4 (2026-10-10, usability run, Area 7 re-run)
 
 - **The inspect window's Share switches are the table's PCs only** (`tablePCs`): each player's

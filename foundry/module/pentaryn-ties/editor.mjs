@@ -518,6 +518,11 @@ export function bind(root, actor, rerender = () => {}) {
       });
       if (!ok) return;
       await removeTie(actor, btn.dataset.id, { bothWays: true });
+      // a player cannot write the other side; the confirm said both directions, so ask the GM (ties-ui-E3)
+      if (target && !target.isOwner) {
+        const { requestUnmirror } = await import("./relay.mjs");
+        requestUnmirror({ source: actor, target });
+      }
       setExpanded(actor.id, btn.dataset.id, false);
       rerender();
     });
