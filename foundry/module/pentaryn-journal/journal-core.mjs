@@ -487,7 +487,8 @@ export function pinnedEntryIds(scenes) {
 
 /**
  * pinnedEntryIds(getScenes()), built on first use and kept until invalidate(). The caller
- * invalidates whenever a Note or a Scene is created, updated or deleted.
+ * invalidates whenever a Note or a Scene is created, updated or deleted (bar.mjs: a Scene update only
+ * when it changes `notes`).
  */
 export function makePinnedCache(getScenes) {
   let ids = null;

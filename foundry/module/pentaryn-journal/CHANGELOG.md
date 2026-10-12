@@ -15,6 +15,10 @@
 - **[declared] double-save:** two quick saves (two clicks in different windows, or overlapping
   `add()` calls) no longer make two copies: saves on one client run one at a time, so the second sees
   the first's page and answers it instead of creating another.
+- **[declared] pinned-cache:** re-pointing a scene's Note through the scene itself
+  (`scene.update({notes})`) now refreshes which journals open as one page; before, only the Note
+  hooks and Scene create/delete forgot the pinned-journal cache, though the docs said a Scene update
+  did too. Scene updates that don't change `notes` keep the cache.
 
 ## Unreleased (blueprint migration, wave 2)
 
