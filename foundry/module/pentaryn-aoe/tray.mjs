@@ -16,6 +16,8 @@ import { setting } from "./settings.mjs";
 const esc = s => foundry.utils.escapeHTML(String(s ?? ""));
 /** The ctx install() was given: resolve's actions are ctx.exposed (resolve installs first). */
 let context = null;
+/** -9: the listeners go through the kit's pass-through guard, so a rejected roll or Apply is logged with the module prefix. */
+const listenerGuard = (label, fn) => (context?.reg ? context.reg.guard(label, fn) : fn);
 const MULT_LABEL = { 0: "×0", 0.25: "×¼", 0.5: "×½", 1: "×1", 2: "×2" };
 
 function preview(row, res, message = null) {
@@ -122,14 +124,14 @@ function decorate(message, html) {
   if (native) native.after(tray);
   else host.append(tray);
 
-  tray.addEventListener("change", ev => {
+  tray.addEventListener("change", listenerGuard("tray change", ev => {
     const el = ev.target;
     const rowId = el.closest("[data-row]")?.dataset.row;
-    if (el.dataset.pa === "tick") context.exposed.setRow(message.id, rowId, { apply: el.checked });
-    else if (el.dataset.pa === "mult" && el.value !== "") context.exposed.setRow(message.id, rowId, { multiplier: el.value });
-    else if (el.dataset.pa === "region") context.exposed.resolve(message.id, { regionId: el.value });
-  });
-  tray.addEventListener("click", async ev => {
+    if (el.dataset.pa === "tick") return context.exposed.setRow(message.id, rowId, { apply: el.checked });
+    if (el.dataset.pa === "mult" && el.value !== "") return context.exposed.setRow(message.id, rowId, { multiplier: el.value });
+    if (el.dataset.pa === "region") return context.exposed.resolve(message.id, { regionId: el.value });
+  }));
+  tray.addEventListener("click", listenerGuard("tray click", async ev => {
     const el = ev.target.closest("[data-pa]");
     if (!el || el.tagName === "INPUT" || el.tagName === "SELECT") return;
     ev.preventDefault();
@@ -142,7 +144,7 @@ function decorate(message, html) {
       case "rollfor": return context.exposed.rollForPlayer(message.id, rowId, { event: ev });
       case "ping": return context.exposed.pingPlayers(message.id);
     }
-  });
+  }));
 }
 
 export function install(reg, ctx) {

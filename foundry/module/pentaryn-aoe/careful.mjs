@@ -51,7 +51,8 @@ async function carefulFor(caster, described, { casterActorId, usage, scene, onSa
   const max = Math.max(1, Number(caster.system?.abilities?.cha?.mod) || 1);
   const ids = carefulTargets(described, { casterActorId, casterDisposition: own?.disposition ?? CONST.TOKEN_DISPOSITIONS.FRIENDLY, max });
   protectRows(rows, ids, onSave);
-  if (usage && !flag.usage) await caster.update({ [`flags.${MODULE}.careful.usage`]: usage }).catch(() => null);
+  // -9: if binding fails, a later different spell could still take the protection — say so.
+  if (usage && !flag.usage) await caster.update({ [`flags.${MODULE}.careful.usage`]: usage }).catch(err => log.warn("careful bind usage", err));
   return { names: rows.filter(r => r.protected).map(r => r.name), max };
 }
 

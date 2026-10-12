@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 import { boot, advance, flush, out, MODULE } from "./fixtures/world.mjs";
 import { fireball, damage, IDS } from "./fixtures/fireball.mjs";
 import { seams } from "./fixtures/seams.mjs";
+import { root, dispatch } from "./fixtures/dom.mjs";
 
 const { F, W } = await boot({ entry: true });
 const S = await seams();
@@ -110,4 +111,65 @@ test("-8 with CONFIG.debug on: resolve, apply and careful stops are traced (the 
   assert.ok(out.every(o => o.level === "debug" && o.text.startsWith(`${MODULE} | `)));
   assert.equal(out.length, 5);
   F.CONFIG.debug = {};
+});
+
+/* ── -9: swallowed and unattributed errors are logged with the module prefix ─────────────────── */
+
+const lines = () => out.map(o => `${o.level}: ${o.text}`);
+
+test("-9 the GM's delayed handle delete: 'does not exist' stays quiet, another error warns", async () => {
+  const s = W.scene({ id: "FindingScene0009" });
+  const tmpl = id => W.region(s, { id, flags: { dnd5e: { activity: "Item.x.Activity.y" } }, ownership: { default: 3 } });
+  const r = tmpl("regionFind900001");
+  W.token(s, { id: "regionFind900001", flags: { [MODULE]: { handle: true, region: r.id } } });
+  Object.defineProperty(s, "deleteEmbeddedDocuments", { value: async () => { throw new Error("server down"); }, configurable: true });
+  out.length = 0;
+  F.fire("deleteRegion", r, {}, "plUser0000000001");
+  await advance(1600);
+  assert.deepEqual(lines(), [`warn: ${MODULE} | backstop handle delete`]);
+});
+
+test("-9 a rejected Apply from the tray is logged 'pentaryn-aoe | tray click'", async () => {
+  const msg = damage(W, ctx, { id: "dmgFinding000009" });
+  await R.resolve(msg.id);
+  const host = root(`<div class="message-content"><damage-application></damage-application></div>`);
+  F.fire("dnd5e.renderChatMessage", game.messages.get(msg.id), host);
+  const apply = Object.getOwnPropertyDescriptor(ctx.g2, "applyDamage");
+  Object.defineProperty(ctx.g2, "applyDamage", { value: async () => { throw new Error("hp locked"); }, configurable: true, writable: true });
+  out.length = 0;
+  const ev = dispatch(host.querySelector('[data-pa="apply"]'), "click");
+  await Promise.allSettled(ev.results);
+  await flush();
+  Object.defineProperty(ctx.g2, "applyDamage", apply);
+  assert.deepEqual(lines(), [`error: ${MODULE} | tray click`]);
+});
+
+test("-9 a rejected Remove all templates is logged 'pentaryn-aoe | remove all templates'", async () => {
+  const s = W.scene({ id: "FindingScene0010" });
+  F.canvas.scene = s;
+  const ITEM = ctx.item.uuid;
+  W.region(s, { id: "regionFind900002", flags: { dnd5e: { activity: ctx.activity.uuid, item: ITEM } }, ownership: { default: 3 } });
+  Object.defineProperty(s, "deleteEmbeddedDocuments", { value: async () => { throw new Error("locked"); }, configurable: true });
+  const usage = W.message({ type: "usage", system: { activity: { uuid: ctx.activity.uuid }, item: { uuid: ITEM } }, activity: { target: { template: { type: "sphere" } }, item: ctx.item } });
+  const host = root(`<div class="chat-card"><section class="icon-row"><ul class="unlist"><li><button data-action="placeTemplate">P</button></li></ul></section></div>`);
+  F.fire("dnd5e.renderChatMessage", usage, host);
+  out.length = 0;
+  const btn = host.querySelector("[data-pentaryn-aoe-action]");
+  const ev = dispatch(btn, "click");
+  await Promise.allSettled(ev.results);
+  await flush();
+  assert.deepEqual(lines(), [`error: ${MODULE} | remove all templates`]);
+  assert.equal(btn.disabled, false);
+  F.canvas.scene = ctx.s;
+});
+
+test("-9 a failed Careful Spell usage bind warns 'pentaryn-aoe | careful bind usage'; the protection still applies", async () => {
+  await ctx.wizard.update({ [`flags.${MODULE}.careful`]: { at: Date.now(), key: null, usage: null } });
+  const update = Object.getOwnPropertyDescriptor(ctx.wizard, "update");
+  Object.defineProperty(ctx.wizard, "update", { value: async () => { throw new Error("no write"); }, configurable: true, writable: true });
+  out.length = 0;
+  const out1 = await R.carefulFor(ctx.wizard, [], { casterActorId: ctx.wizard.id, usage: IDS.usage, scene: ctx.s, onSave: "half", rows: [] });
+  if (update) Object.defineProperty(ctx.wizard, "update", update); else delete ctx.wizard.update;
+  assert.deepEqual(out1, { names: [], max: 3 });
+  assert.deepEqual(lines(), [`warn: ${MODULE} | careful bind usage`]);
 });

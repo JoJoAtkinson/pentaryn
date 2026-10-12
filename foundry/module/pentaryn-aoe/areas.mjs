@@ -29,6 +29,9 @@ const HANDLE_ICON = "icons/svg/target.svg";
 /** The handle actor's fixed id (16 alphanumerics): two sessions creating it at once make one actor. */
 const HANDLE_ACTOR_ID = "pentarynAoeHndl0";
 
+/** A DOM listener wrapped like a hook (the kit's pass-through guard), once installed. */
+const listenerGuard = (label, fn) => (hooks ? hooks.guard(label, fn) : fn);
+
 /** A template region dnd5e attached to a token that is not our handle (an emanation on its caster). */
 const attachedElsewhere = region => attachedToOther(region, id => region?.parent?.tokens?.get(id));
 
@@ -264,7 +267,8 @@ function decorateCard(message, html) {
   btn.setAttribute("aria-label", label);
   btn.innerHTML = `<i class="fa-solid fa-eraser" inert></i>`;
   li.append(btn);
-  btn.addEventListener("click", async ev => {
+  // -9: a rejected removal is logged with the module prefix, not an unattributed rejection.
+  btn.addEventListener("click", listenerGuard("remove all templates", async ev => {
     ev.preventDefault();
     ev.stopPropagation();
     const scene = canvas.scene;
@@ -278,7 +282,7 @@ function decorateCard(message, html) {
     } finally {
       btn.disabled = false;
     }
-  });
+  }));
   const placeLi = place?.closest("li");
   if (placeLi) return placeLi.after(li);
   actionRow(html)?.append(li);
@@ -337,7 +341,10 @@ export function install(reg, ctx) {
   reg.on("deleteRegion", reg.guardSwallowAsync("deleteRegion", async (region, options, userId) => {
     if (!isTemplateRegion(region)) return;
     if (userId === game.user.id) await deleteHandlesOf(region);
-    else if (game.users.activeGM?.isSelf) setTimeout(() => deleteHandlesOf(region).catch(() => {}), 1500);
+    else if (game.users.activeGM?.isSelf) {
+      // -9: the handle is often gone already (the deleting client got there): only another error is news.
+      setTimeout(() => deleteHandlesOf(region).catch(err => (/does not exist/i.test(err?.message ?? "") ? null : log.warn("backstop handle delete", err))), 1500);
+    }
   }), { guard: false, label: "deleteRegion" });
 
   // Handles are never combatants and never stay targeted.
