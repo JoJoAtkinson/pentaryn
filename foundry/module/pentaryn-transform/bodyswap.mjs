@@ -27,7 +27,7 @@ function guardBodySwap(doc, changes, options) {
 export function install(reg) {
   const Ops = foundry.data?.operators;
   unwrap = (v) => (Ops?.DataFieldOperator && v instanceof Ops.DataFieldOperator ? Ops.DataFieldOperator.get(v) : v);
-  reg.on("preUpdateToken", guardBodySwap, { label: "preUpdateToken: body swaps never animate", guard: false });
+  reg.on("preUpdateToken", guardBodySwap, { label: "preUpdateToken: body swaps never animate" });
 }
 
 export function uninstall() {}

@@ -16,10 +16,10 @@ function onFormUpdate(actor, changes) {
 }
 
 export function install(reg) {
-  reg.on("updateToken", sweepSoon, { label: "updateToken: sweep spent forms", guard: false });
-  reg.on("deleteToken", sweepSoon, { label: "deleteToken: sweep spent forms", guard: false });
-  reg.on("updateActor", onFormUpdate, { label: "updateActor: a reverted form, sweep soon", guard: false });
-  reg.once("ready", sweepSoon, { label: "ready: first sweep", guard: false });
+  reg.on("updateToken", sweepSoon, { label: "updateToken: sweep spent forms" });
+  reg.on("deleteToken", sweepSoon, { label: "deleteToken: sweep spent forms" });
+  reg.on("updateActor", onFormUpdate, { label: "updateActor: a reverted form, sweep soon" });
+  reg.once("ready", sweepSoon, { label: "ready: first sweep" });
 }
 
 export function uninstall() {

@@ -349,20 +349,20 @@ const POINTER = { passive: true, capture: true };
 
 export function install(reg) {
   document.addEventListener("pointermove", onPointerMove, POINTER);
-  reg.on("updateToken", onTokenBody, { label: "updateToken: the HUD's token changed body", guard: false });
-  reg.on("deleteToken", onTokenDelete, { label: "deleteToken: the HUD's token is gone", guard: false });
-  reg.once("init", registerEscape, { label: "init: Escape keybinding", guard: false });
-  reg.on("renderActionPanelArgonComponent", onActionPanelRender, { label: "renderActionPanelArgonComponent: Bonus / Action / Special bars", guard: false });
-  reg.on("renderItemButtonArgonComponent", onItemButtonRender, { label: "renderItemButtonArgonComponent: Opportunity Attack label", guard: false });
-  reg.on("renderPortraitPanelArgonComponent", onPortraitRender, { label: "renderPortraitPanelArgonComponent: form line and HP", guard: false });
-  reg.on("updateWorldTime", onWorldTime, { label: "updateWorldTime: repaint the portrait", guard: false });
-  reg.on("renderEffectArgonComponent", onEffectRender, { label: "renderEffectArgonComponent: the form's effect", guard: false });
-  reg.on("updateItem", onItemUpdate, { label: "updateItem: Wild Shape uses badge", guard: false });
-  reg.on("createActiveEffect", onStarryChange, { label: "createActiveEffect: Starry Form rebuilds the Bonus bar", guard: false });
-  reg.on("updateActiveEffect", onStarryChange, { label: "updateActiveEffect: Starry Form rebuilds the Bonus bar", guard: false });
-  reg.on("deleteActiveEffect", onStarryChange, { label: "deleteActiveEffect: Starry Form rebuilds the Bonus bar", guard: false });
-  reg.on("dnd5e.postUseActivity", onChaliceUse, { label: "dnd5e.postUseActivity: Chalice offer", guard: false });
-  reg.on("deleteActiveEffect", onStarryEnd, { label: "deleteActiveEffect: no Chalice to take", guard: false });
+  reg.on("updateToken", onTokenBody, { label: "updateToken: the HUD's token changed body" });
+  reg.on("deleteToken", onTokenDelete, { label: "deleteToken: the HUD's token is gone" });
+  reg.once("init", registerEscape, { label: "init: Escape keybinding" });
+  reg.on("renderActionPanelArgonComponent", onActionPanelRender, { label: "renderActionPanelArgonComponent: Bonus / Action / Special bars" });
+  reg.on("renderItemButtonArgonComponent", onItemButtonRender, { label: "renderItemButtonArgonComponent: Opportunity Attack label" });
+  reg.on("renderPortraitPanelArgonComponent", onPortraitRender, { label: "renderPortraitPanelArgonComponent: form line and HP" });
+  reg.on("updateWorldTime", onWorldTime, { label: "updateWorldTime: repaint the portrait" });
+  reg.on("renderEffectArgonComponent", onEffectRender, { label: "renderEffectArgonComponent: the form's effect" });
+  reg.on("updateItem", onItemUpdate, { label: "updateItem: Wild Shape uses badge" });
+  reg.on("createActiveEffect", onStarryChange, { label: "createActiveEffect: Starry Form rebuilds the Bonus bar" });
+  reg.on("updateActiveEffect", onStarryChange, { label: "updateActiveEffect: Starry Form rebuilds the Bonus bar" });
+  reg.on("deleteActiveEffect", onStarryChange, { label: "deleteActiveEffect: Starry Form rebuilds the Bonus bar" });
+  reg.on("dnd5e.postUseActivity", onChaliceUse, { label: "dnd5e.postUseActivity: Chalice offer" });
+  reg.on("deleteActiveEffect", onStarryEnd, { label: "deleteActiveEffect: no Chalice to take" });
 }
 
 /** Remove the pointer listener; drop the live buttons and the Chalice offers (and their timers). */

@@ -217,18 +217,18 @@ function onRestCompleted(actor, result, config) {
 }
 
 export function install(reg) {
-  reg.on("dnd5e.revertOriginalForm", onOutsideRevert, { label: "dnd5e.revertOriginalForm: chat line for an outside revert", guard: false });
-  reg.on("dnd5e.preUseActivity", onPreUse, { label: "dnd5e.preUseActivity: Wild Shape / revert item", guard: false });
-  reg.on("dnd5e.postUseActivity", onPostUse, { label: "dnd5e.postUseActivity: shift / revert", guard: false });
-  reg.on("dnd5e.transformActor", onTransformActor, { label: "dnd5e.transformActor: shape the form", guard: false });
-  reg.on("updateActor", onZeroHP, { label: "updateActor: 0 HP", guard: false });
-  reg.on("createActiveEffect", onEffectChange, { label: "createActiveEffect: incapacitated", guard: false });
-  reg.on("updateActiveEffect", onEffectUpdate, { label: "updateActiveEffect: expired / incapacitated", guard: false });
-  reg.on("deleteActiveEffect", onEffectDelete, { label: "deleteActiveEffect: form effect / carried effect", guard: false });
-  reg.on("updateWorldTime", onWorldTime, { label: "updateWorldTime: form expiry", guard: false });
-  reg.on("dnd5e.longRest", onLongRest, { label: "dnd5e.longRest: revert, then rest", guard: false });
-  reg.on("dnd5e.preShortRest", onPreShortRest, { label: "dnd5e.preShortRest: the form rests", guard: false });
-  reg.on("dnd5e.restCompleted", onRestCompleted, { label: "dnd5e.restCompleted: the druid's short rest", guard: false });
+  reg.on("dnd5e.revertOriginalForm", onOutsideRevert, { label: "dnd5e.revertOriginalForm: chat line for an outside revert" });
+  reg.on("dnd5e.preUseActivity", onPreUse, { label: "dnd5e.preUseActivity: Wild Shape / revert item" });
+  reg.on("dnd5e.postUseActivity", onPostUse, { label: "dnd5e.postUseActivity: shift / revert" });
+  reg.on("dnd5e.transformActor", onTransformActor, { label: "dnd5e.transformActor: shape the form" });
+  reg.on("updateActor", onZeroHP, { label: "updateActor: 0 HP" });
+  reg.on("createActiveEffect", onEffectChange, { label: "createActiveEffect: incapacitated" });
+  reg.on("updateActiveEffect", onEffectUpdate, { label: "updateActiveEffect: expired / incapacitated" });
+  reg.on("deleteActiveEffect", onEffectDelete, { label: "deleteActiveEffect: form effect / carried effect" });
+  reg.on("updateWorldTime", onWorldTime, { label: "updateWorldTime: form expiry" });
+  reg.on("dnd5e.longRest", onLongRest, { label: "dnd5e.longRest: revert, then rest" });
+  reg.on("dnd5e.preShortRest", onPreShortRest, { label: "dnd5e.preShortRest: the form rests" });
+  reg.on("dnd5e.restCompleted", onRestCompleted, { label: "dnd5e.restCompleted: the druid's short rest" });
 }
 
 export function uninstall() {}

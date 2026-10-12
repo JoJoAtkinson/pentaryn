@@ -92,13 +92,13 @@ function onRestCompleted(actor, result, config) {
 }
 
 export function install(reg) {
-  reg.on("dnd5e.preUseActivity", onSheetPreUse, { label: "dnd5e.preUseActivity: Starry Form sheet route", guard: false });
-  reg.on("dnd5e.postUseActivity", onSheetPostUse, { label: "dnd5e.postUseActivity: Starry Form sheet route", guard: false });
-  reg.on("createActiveEffect", onEffectChange, { label: "createActiveEffect: incapacitated ends Starry Form", guard: false });
-  reg.on("updateActiveEffect", onEffectUpdate, { label: "updateActiveEffect: Starry Form expired / incapacitated", guard: false });
-  reg.on("deleteActiveEffect", onStarryDelete, { label: "deleteActiveEffect: the starlight goes", guard: false });
-  reg.on("updateWorldTime", onWorldTime, { label: "updateWorldTime: Starry Form expiry", guard: false });
-  reg.on("dnd5e.restCompleted", onRestCompleted, { label: "dnd5e.restCompleted: a Long Rest ends Starry Form", guard: false });
+  reg.on("dnd5e.preUseActivity", onSheetPreUse, { label: "dnd5e.preUseActivity: Starry Form sheet route" });
+  reg.on("dnd5e.postUseActivity", onSheetPostUse, { label: "dnd5e.postUseActivity: Starry Form sheet route" });
+  reg.on("createActiveEffect", onEffectChange, { label: "createActiveEffect: incapacitated ends Starry Form" });
+  reg.on("updateActiveEffect", onEffectUpdate, { label: "updateActiveEffect: Starry Form expired / incapacitated" });
+  reg.on("deleteActiveEffect", onStarryDelete, { label: "deleteActiveEffect: the starlight goes" });
+  reg.on("updateWorldTime", onWorldTime, { label: "updateWorldTime: Starry Form expiry" });
+  reg.on("dnd5e.restCompleted", onRestCompleted, { label: "dnd5e.restCompleted: a Long Rest ends Starry Form" });
   // game.pentaryn.transform.starry: built into the one frozen API (transform-creatures-16).
   return {
     rows: STARRY_ROWS,

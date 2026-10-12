@@ -392,7 +392,10 @@ test("postUseActivity: doShift throwing → 'shift failed', the in-flight promis
     item: { getFlag: () => undefined, get id() { throw new Error("no item"); } } };
   Hooks.callAll("dnd5e.postUseActivity", bad, {}, {});
   await new Promise(r => setImmediate(r));
-  assert.deepEqual(F.console.filter(c => c[1].startsWith(MODULE)).map(c => c.slice(0, 2)), [["error", "pentaryn-transform | shift failed"]]);
+  // [declared] T-D8: the Starry sheet route's listener throws on the same broken item; the registry's
+  // guard now logs it with the module and the listener's label (was Foundry's unattributed line).
+  assert.deepEqual(F.console.filter(c => c[1].startsWith(MODULE)).map(c => c.slice(0, 2)),
+    [["error", "pentaryn-transform | dnd5e.postUseActivity: Starry Form sheet route"], ["error", "pentaryn-transform | shift failed"]]);
   assert.ok(activity);
 });
 

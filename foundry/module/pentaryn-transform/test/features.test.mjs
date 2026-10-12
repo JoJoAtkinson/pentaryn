@@ -40,3 +40,19 @@ test("ctx.uninstall(): no hook, no pointermove listener, the patch undone, the s
   assert.equal(F.TokenDocument._preUpdateOperation, coreOp);
   mock.timers.tick(10_000);                                       // nothing fires
 });
+
+test("[declared] T-D8 every registration is guarded: a throwing listener logs '<module> | <label>' and the next listener still runs", async () => {
+  const fresh = await import("../lib/hooks.mjs?guarded");
+  const lines = [];
+  const reg = fresh.hookRegistry("pentaryn-transform", { error: (l, e) => lines.push([l, e.message]), warn() {} });
+  let after = 0;
+  reg.on("probeHook", () => { throw new Error("boom"); }, { label: "probe: throws" });
+  Hooks.on("probeHook", () => { after += 1; });
+  assert.equal(Hooks.call("probeHook"), true, "no veto from a throw");
+  assert.deepEqual(lines, [["probe: throws", "boom"]]);
+  assert.equal(after, 1);
+  for (const f of ["bodyswap", "wildshape", "sweep", "starry", "hud-panels"]) {
+    const src = readFileSync(new URL(`../${f}.mjs`, import.meta.url), "utf8");
+    assert.equal(/guard:\s*false/.test(src), false, `${f}: an unguarded registration`);
+  }
+});
