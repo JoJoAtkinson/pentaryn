@@ -463,7 +463,7 @@
         "beliefKey": "lore:zzNpc00000000001:l3",
         "fact": "Held secret",
         "factId": "l3",
-        "tier": 0,
+        "tier": null,
         "total": 18,
         "when": "<localeDate>",
         "whenMs": 1790000000000,
@@ -561,7 +561,7 @@
         "changes": {
           "flags.pentaryn-ties.beliefs.zzPc000000000001.lore:zzNpc00000000001:l3": {
             "text": "<p>He sold the map.</p>",
-            "tier": 0,
+            "tier": null,
             "total": 18,
             "when": 1790000000000,
             "delivered": 1790000000000,

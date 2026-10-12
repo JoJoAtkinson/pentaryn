@@ -40,7 +40,7 @@
       "fact": "Debts",
       "character": "ZZ Caven",
       "characterId": "zzPc000000000001",
-      "tier": 0,
+      "tier": null,
       "total": 5,
       "when": "<localeDate>",
       "delivered": "<localeDate>",
@@ -56,7 +56,7 @@
       "fact": "Quiet fail",
       "character": "ZZ Caven",
       "characterId": "zzPc000000000001",
-      "tier": 0,
+      "tier": null,
       "total": 3,
       "when": "<localeDate>",
       "delivered": "<localeDate>",
@@ -72,7 +72,7 @@
       "fact": "Held secret",
       "character": "ZZ Caven",
       "characterId": "zzPc000000000001",
-      "tier": 0,
+      "tier": null,
       "total": 18,
       "when": "<localeDate>",
       "delivered": "<localeDate>",
@@ -109,7 +109,7 @@
     "zzPc000000000001": {
       "lore:zzNpc00000000001:l1": {
         "text": "<p>Shifty eyes.</p>",
-        "tier": 0,
+        "tier": null,
         "total": 5,
         "when": 1790000000000,
         "delivered": 1790000000000,
@@ -125,7 +125,7 @@
       },
       "lore:zzNpc00000000001:l4": {
         "text": "",
-        "tier": 0,
+        "tier": null,
         "total": 3,
         "when": 1790000000000,
         "delivered": 1790000000000,
@@ -141,7 +141,7 @@
       },
       "lore:zzNpc00000000001:l3": {
         "text": "<p>He sold the map.</p>",
-        "tier": 0,
+        "tier": null,
         "total": 18,
         "when": 1790000000000,
         "delivered": 1790000000000,

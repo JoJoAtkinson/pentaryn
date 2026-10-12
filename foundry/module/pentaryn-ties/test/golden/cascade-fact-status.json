@@ -5,13 +5,13 @@
       "key": "attr:city:#id",
       "belief": {
         "text": "<p>From Vel.</p>",
-        "tier": 0,
+        "tier": null,
         "total": 16,
         "when": 1790000000000,
         "delivered": 1790000000000,
         "sources": null
       },
-      "tier": 0,
+      "tier": null,
       "total": 16,
       "from": null,
       "dc": 12
@@ -21,13 +21,13 @@
       "key": "attr:guild:#id",
       "belief": {
         "text": "<p>Guild hands.</p>",
-        "tier": 0,
+        "tier": null,
         "total": 17,
         "when": 1790000000000,
         "delivered": 1790000000000,
         "sources": null
       },
-      "tier": 0,
+      "tier": null,
       "total": 17,
       "from": null,
       "dc": 15
@@ -37,13 +37,13 @@
       "key": "attr:cult:#id",
       "belief": {
         "text": "",
-        "tier": 0,
+        "tier": null,
         "total": 19,
         "when": 1790000000000,
         "delivered": 1790000000000,
         "sources": null
       },
-      "tier": 0,
+      "tier": null,
       "total": 19,
       "from": null,
       "dc": 18
@@ -91,13 +91,13 @@
       "key": "attr:city:#id",
       "belief": {
         "text": "",
-        "tier": 0,
+        "tier": null,
         "total": 5,
         "when": 1790000000000,
         "delivered": 1790000000000,
         "sources": null
       },
-      "tier": 0,
+      "tier": null,
       "total": 5,
       "from": null,
       "dc": 12
@@ -116,13 +116,13 @@
       "key": "attr:cult:#id",
       "belief": {
         "text": "",
-        "tier": 0,
+        "tier": null,
         "total": 10,
         "when": 1790000000000,
         "delivered": 1790000000000,
         "sources": null
       },
-      "tier": 0,
+      "tier": null,
       "total": 10,
       "from": null,
       "dc": 18

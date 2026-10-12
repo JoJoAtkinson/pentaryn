@@ -137,7 +137,7 @@
               "from": "zzPc000000000001",
               "prior": {
                 "text": "",
-                "tier": 0,
+                "tier": null,
                 "total": 5,
                 "when": 1790000000000,
                 "delivered": 1790000000000
@@ -858,7 +858,7 @@
           "from": "zzPc000000000001",
           "prior": {
             "text": "",
-            "tier": 0,
+            "tier": null,
             "total": 5,
             "when": 1790000000000,
             "delivered": 1790000000000
