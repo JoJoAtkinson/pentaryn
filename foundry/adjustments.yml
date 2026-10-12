@@ -233,7 +233,7 @@ adjustments:
   - id: core-portals-relative-uuid
     packages: [core]
     modules: [pentaryn-portals]
-    files: [foundry/module/pentaryn-portals/portals.mjs, foundry/module/pentaryn-portals/portals-core.mjs]
+    files: [foundry/module/pentaryn-portals/portals-core.mjs, foundry/module/pentaryn-portals/scene-adapter.mjs, foundry/module/pentaryn-portals/cards.mjs]
     markers: ["relative: behavior"]
     what: resolves the relative region UUIDs that 14.368+ stores for same-scene destinations (DocumentUUIDField relativize)
     why: comparing raw stored UUIDs misses a same-scene link
@@ -906,8 +906,8 @@ adjustments:
   - id: core-teleport-default-and-spread
     packages: [core]
     modules: [pentaryn-portals]
-    files: [foundry/module/pentaryn-portals/portals.mjs, foundry/module/pentaryn-portals/portals-core.mjs]
-    markers: ["preferTeleport", "spreadArrival"]
+    files: [foundry/module/pentaryn-portals/cards.mjs, foundry/module/pentaryn-portals/party.mjs]
+    markers: ['data-action="yes"', ":scope > p", "spreadArrival"]
     what: the core Teleport Token confirm opens with Teleport focused (setting teleportDefault); a PC who arrives through a portal on an occupied square is moved by the GM to the nearest free one (setting spreadArrivals)
     why: DialogV2.confirm defaults to Don't Teleport; two PCs crossing together plus one already there stacked on one square (Area 6 re-run W7)
     native_when: core's teleport confirm defaults to Teleport, or core spreads teleported tokens
@@ -1235,3 +1235,48 @@ adjustments:
     native_when: n/a
     retire_class: guarded
     check: make foundry-senses-check
+
+  # pentaryn-portals (wave 3 blueprint migration, 2026-10-11; finding aoe-movement-portals-31).
+  - id: core-teleport-dialog-cards
+    packages: [core]
+    modules: [pentaryn-portals]
+    files: [foundry/module/pentaryn-portals/cards.mjs, foundry/module/pentaryn-portals/portals-core.mjs]
+    markers: ["dialog-", 'select[name="destination"]']
+    what: the destination cards decorate core's Teleport Token dialog, found by its id dialog-<behaviorUuid>-<tokenId>, its .dialog-content and its select[name="destination"]; the plain confirm's question is the first :scope > p
+    why: core renders the teleport choice as a bare select; the cards replace it with pictures and names, and core has no hook into that dialog's content
+    native_when: core's teleport dialog offers a hook or a richer destination picker
+    retire_class: guarded
+    check: make foundry-portals-check
+
+  - id: core-teleport-replacements-follow
+    packages: [core]
+    modules: [pentaryn-portals]
+    files: [foundry/module/pentaryn-portals/party.mjs]
+    markers: ["replacements"]
+    what: the active GM carries a PC's followers (summons, familiars) when core deletes the PC with options.replacements after a cross-scene teleport
+    why: core teleports only the token that crossed; deleteToken's replacements option is the only sign of where it went
+    native_when: core teleports a token's followers, or fires a teleport hook naming the new token
+    retire_class: guarded
+    check: make foundry-portals-check
+
+  - id: core-region-config-portal-card
+    packages: [core]
+    modules: [pentaryn-portals]
+    files: [foundry/module/pentaryn-portals/cards.mjs]
+    markers: ["region-appearance"]
+    what: the Region config window gets a Portal card fieldset in its Appearance tab (section.tab.region-appearance, or data-tab="appearance")
+    why: core has no extension point for a region's config form
+    native_when: n/a
+    retire_class: safe
+    check: make foundry-portals-check
+
+  - id: itempiles-portals-pile-pc
+    packages: [item-piles]
+    modules: [pentaryn-portals]
+    files: [foundry/module/pentaryn-portals/scene-adapter.mjs]
+    markers: ["isValidItemPile"]
+    what: the party teleport asks game.itempiles.API.isValidItemPile(actor) for each token, so a pile is never read as a PC and never carried along (no flag fallback, unlike pentaryn-aoe's probe)
+    why: a pile made from a linked character actor looks like a PC to the party rules
+    native_when: n/a
+    retire_class: never
+    check: make foundry-portals-check
