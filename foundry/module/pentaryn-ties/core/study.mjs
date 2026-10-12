@@ -272,14 +272,6 @@ export function readStudied(raw) {
 }
 
 /**
- * `beliefs`, on the **studied** actor: what each character was actually told.
- *
- * `delivered` unset is the pending state of the approval gate (disguise decision 8) — there is
- * no queue anywhere, because the row of record *is* the queue. `text` is the fully computed
- * payload, parked here at roll time so a held reveal cannot be lost by a reload, a pop, or a
- * GM who closes the prompt.
- */
-/**
  * Why the roll had the advantage state it had (decision 19) — GM-only, on the ledger row.
  *
  * Recorded rather than recomputed: the registry can be edited after a roll, and a GM asking
@@ -325,6 +317,14 @@ export function priorOf(rec) {
   return { prior: { text, tier, total, when: Math.max(0, num(p.when, 0)), delivered, ...fromOf(p), ...passOf(p) } };
 }
 
+/**
+ * `beliefs`, on the **studied** actor: what each character was actually told.
+ *
+ * `delivered` unset is the pending state of the approval gate (disguise decision 8) — there is
+ * no queue anywhere, because the row of record *is* the queue. `text` is the fully computed
+ * payload, parked here at roll time so a held reveal cannot be lost by a reload, a pop, or a
+ * GM who closes the prompt.
+ */
 export function readBeliefs(raw) {
   const out = {};
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return out;
@@ -365,10 +365,9 @@ export function readBeliefs(raw) {
 export function mayStudy({ beliefs = {}, studied = { kind: {}, lore: {} }, characterId = "", key = KIND_KEY } = {}) {
   if (!characterId || !key) return false;
   if (beliefs?.[characterId]?.[key]) return false; // spent, server-side, and unforgeable
-  const axis = key === KIND_KEY ? "kind" : "lore";
-  // A `studied` record with no belief behind it is a leftover — a GM reset that cleared the
-  // ledger, or a hand-written flag. It must NOT block: the ledger is the authority in both
-  // directions, or a reset would only half-undo.
-  void studied?.[axis];
+  // `studied` is accepted and ignored: the ledger is the authority. A `studied` record with no
+  // belief behind it is a leftover — a GM reset that cleared the ledger, or a hand-written flag.
+  // It must NOT block: the ledger is the authority in both directions, or a reset would only
+  // half-undo.
   return true;
 }

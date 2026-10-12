@@ -585,3 +585,22 @@ No fix rounds and no reverts.
 
 **For Joe:** the vtt-status question from W5L is answered: the 302 was the Cloudflare Access login
 redirect, and the status line now says so. Attunement's `_loc` switch (C35) is still open.
+
+## §8 Overnight (2026-10-11 → 12) — morning report
+
+Every lane in [overnight-2026-10-11.md](overnight-2026-10-11.md) ended **green**; none was parked or reverted. OPT, OB-c and OB-m were skipped by design: the optional fixes rode with W3L, and Joe limited the run to branches from the last week.
+
+| Lane | Result | Main / fork |
+|---|---|---|
+| B: module bundles | green; confirmed snapshot `world-2026-10-12-030832-fvtt14.369-mac.tar.gz` (19 MB world + 46 bundles, 3.3 GB). Save, skip-unchanged, changed-module-only upload, clean-room restore and in-place restore all pass; Q3 extras-removal passes in a scratch root | `d98cd867`, `b7b625a7`, `6969aa91` |
+| W3c / W3L: wave 3 + optional fixes | green; prompts, ties, portals, creatures, senses; importer 1.1.1, feedback 0.1.2 | main `b7b625a7..c5aff886`; fork `59ffcf2..2fd6eb0` |
+| W4c / W4L: wave 4 + fixes batch 1 | green; riders, aoe, combat, transform, D7 tooltips; 19 namespaces on the bridge | main `6969aa91..7b444c6f`; fork `2fd6eb0..7712417` |
+| W5c / W5L: wave 5 + fixes batch 2 | green; Wave 7 restart batch, kit 1.1.0 in every module, strict gates on (9 listed exceptions); SE4, A1, A2 | main `7b444c6f..933b78a5` |
+| FX-L: fixes batches 3 + 4 | green; vtt-status no longer reports Access as reachable; vendor message; golden-diff allowlist; test-isolation fixture; attunement stale claim | main `933b78a5..2f3263e1` |
+| PT: play test | green; 40 of 82 items (27 big + 13 seeded `pt-1`): 34 pass, 6 bugs fixed live; record [`playtest-overnight-2026-10-12.md`](playtest-overnight-2026-10-12.md) | `2dd37cbc` |
+
+**Still open:** a bridge backend restart can race between two sessions and drop one session's foundry tools (fork `packages/mcp-server/src/index.ts:172-178`; documented in `context/foundry/README.md`).
+
+**For Joe:** each wave report's "Open for Joe" table (most were decided 2026-10-12 by taking the recommendations), the play-test record's feature and vendor notes (Wild Shape wildcard token art, names in chat cards, fresh-PHB Wild Shape mode, a hand-set light lost on a Wild Shape round trip, the bonus-action HUD, the AoE tray overflow), the attunement language-file switch, the `pre-bundles-2026-10/` fallback copy (delete when happy), and the BOSS go-live (rclone plan §15).
+
+**State at the end:** Foundry is up on the local world (FROM=local) with one GM tab; the tunnel is down; the updater is paused. The final code review (`final-review-2026-10-12/`) is running from a separate cron.

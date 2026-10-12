@@ -21,13 +21,16 @@ const log = makeLog(MODULE);
 const SWEEP_AGE_MS = 10_000;
 export async function sweepSpentForms() {
   if (!game.users.activeGM?.isSelf) return;
+  const forms = game.actors.filter(a => a.getFlag("dnd5e", "originalActor"));
+  if (!forms.length) return;                          // nothing to sweep: skip the walk of every scene's tokens
   const placed = new Set();
   for (const s of game.scenes) for (const t of s.tokens) if (t.actorId) placed.add(t.actorId);
   const now = Date.now();
-  const candidates = game.actors.filter(a => a.getFlag("dnd5e", "originalActor") && !placed.has(a.id));
+  const candidates = forms.filter(a => !placed.has(a.id));
   const spent = candidates.filter(a => now - (a._stats?.createdTime ?? 0) > SWEEP_AGE_MS);
   if (spent.length) await Actor.implementation.deleteDocuments(spent.map(a => a.id));
-  const young = candidates.filter(a => !spent.includes(a));
+  const spentSet = new Set(spent);
+  const young = candidates.filter(a => !spentSet.has(a));
   if (young.length) {
     const wait = Math.max(...young.map(a => SWEEP_AGE_MS - (now - (a._stats?.createdTime ?? now)))) + 500;
     scheduleSweep(wait);

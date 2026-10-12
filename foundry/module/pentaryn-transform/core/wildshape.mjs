@@ -43,7 +43,7 @@ const consumptionTargets = a => a?.consumption?.targets ?? [];
 
 /* ── shaping the form ────────────────────────────────────────────────────── */
 
-/** The Circle of the Stars "Starry Form" feature: by identifier, else by name (starry.mjs starryItem). */
+/** The Circle of the Stars "Starry Form" feature: by identifier, else by name (starry-adapter.mjs starryItem: same identifier, same name fallback; keep the two in step). */
 export function isStarryFormData(item) {
   return item?.system?.identifier === "starry-form" || item?.name === "Starry Form";
 }
@@ -412,6 +412,16 @@ export function shapeStatus({ actor = null, original = null, shifted = false, wi
     starry: starry ? { constellation: starry.constellation ?? null, secondsLeft: starry.secondsLeft ?? null } : null,
     forms: (forms ?? []).map(f => ({ id: f.id, name: f.name }))
   };
+}
+
+/**
+ * Temporary Hit Points don't stack: on assuming a form the druid keeps the better of what they had
+ * and what Wild Shape grants (dnd5e's preset always overwrites with the grant).
+ */
+export function formTempHP(hostTemp, grantTemp) {
+  const a = Math.max(0, Number(hostTemp) || 0);
+  const b = Math.max(0, Number(grantTemp) || 0);
+  return Math.max(a, b);
 }
 
 /**

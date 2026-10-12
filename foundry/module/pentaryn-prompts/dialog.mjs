@@ -17,13 +17,15 @@ import {
   MODULE, SIZE_KEYS, SIZE_BY_KEY, normalisePrompt, nameplate, preview, stripHtml, distanceLine, dialogPosition,
   footprintLabel, behindDoor
 } from "./geometry-core.mjs";
-import { markerSizeOfToken, promptText, markerActor, art, EMPTY_TINT, FULL_TINT } from "./markers-adapter.mjs";
+import { markerSizeOfToken, promptText, markerActor, actorName, art, EMPTY_TINT, FULL_TINT } from "./markers-adapter.mjs";
 import { panelFor, resolveItemEmbeds } from "./scene-adapter.mjs";
 import { cancel as cancelTyping, start as startTyping, take as takeTyped } from "./typeahead-adapter.mjs";
 import { tokenDataFrom } from "./tokens-adapter.mjs";
 import { setting } from "./settings.mjs";
+import { makeLog } from "./lib/log.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
+const log = makeLog(MODULE);
 
 const esc = s => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
@@ -125,7 +127,7 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
     }
     // the same marker's box still saving (Esc, then straight back in): read its text after the save
     const prior = [...PromptDialog.#live].filter(a => a.#closing && a.edits(tokenDoc));
-    if (cur && !cur.#closing) cur.close().catch(err => console.error(`${MODULE} | closing the previous prompt`, err));   // not awaited: it saves from its own snapshot
+    if (cur && !cur.#closing) cur.close().catch(err => { log.error("closing the previous prompt", err); });   // not awaited: it saves from its own snapshot
     if (prior.length) {
       await Promise.all(prior.map(a => a.#finishing));
       tokenDoc = tokenDoc.parent?.tokens.get(tokenDoc.id) ?? null;
@@ -148,7 +150,7 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
     try {
       await app.render({ force: true, position: { left: pos.left, top: pos.top, width: w, height: h } });
     } catch (err) {
-      console.error(`${MODULE} | the prompt dialog failed to render`, err);
+      log.error("the prompt dialog failed to render", err);
       PromptDialog.#live.delete(app);
       if (PromptDialog.current === app) PromptDialog.current = null;
       if (app.#ticket !== null) { cancelTyping(app.#ticket); app.#ticket = null; }
@@ -306,7 +308,7 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
       });
       this.#saved = norm;
     }).catch(err => {
-      console.error(`${MODULE} | saving the prompt failed`, err);
+      log.error("saving the prompt failed", err);
       ui.notifications?.error(_loc("PENTARYN_PROMPTS.dialog.saveFailed"));
     });
     return this.#saving;
@@ -340,7 +342,7 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
       }
       if (PromptDialog.current === this) PromptDialog.current = null;
       this.#finishing = this.#finish(text)
-        .catch(err => console.error(`${MODULE} | closing the prompt dialog`, err))
+        .catch(err => { log.error("closing the prompt dialog", err); })
         .finally(() => PromptDialog.#live.delete(this));
     }
     try {
@@ -444,7 +446,7 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
       // compendium monsters' biographies are often only `@Embed[<page>]`: show the page's words
       await resolveItemEmbeds([...p.shown, ...p.more, ...p.unseen].map(r => r.item));
     } catch (err) {
-      console.warn(`${MODULE} | side panel failed`, err);
+      log.warn("side panel failed", err);
       if (box.isConnected) box.innerHTML = `<p class="pp-empty">${esc(_loc("PENTARYN_PROMPTS.panel.failed"))}</p>`;
       return;
     }
@@ -458,7 +460,7 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
       let img, line1, line3;
       if (it.isPrompt) {
         img = `<img src="${esc(art(it.size))}" alt="">`;
-        line1 = `Prompt · ${it.size}`;
+        line1 = actorName(it.size);
         line3 = it.text ? esc(preview(it.text, chars)) : `<em>${esc(_loc("PENTARYN_PROMPTS.panel.empty"))}</em>`;
       } else {
         img = it.kind === "light" ? `<i class="fa-solid fa-lightbulb"></i>`
@@ -480,7 +482,7 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
     const more = p.more.length ? `<button type="button" class="pp-more" data-action="more">${esc(_loc("PENTARYN_PROMPTS.panel.more", { n: p.more.length }))}</button>` : "";
     const empty = p.total ? "" : `<p class="pp-empty">${esc(_loc("PENTARYN_PROMPTS.panel.nobody"))}</p>`;
     // a door in the way is the thing Joe designs around: say it above the fold (P-9-b)
-    const door = behindDoor(p.unseen.map(r => ({ ...r, name: r.item.isPrompt ? `Prompt · ${r.item.size}` : r.item.name })));
+    const door = behindDoor(p.unseen.map(r => ({ ...r, name: r.item.isPrompt ? actorName(r.item.size) : r.item.name })));
     const doorLine = door
       ? `<p class="pp-door"><i class="fa-solid fa-door-closed"></i> ${esc(_loc("PENTARYN_PROMPTS.panel.behindDoor", { list: door.list.join(", ") + (door.extra ? ` +${door.extra}` : "") }))}</p>`
       : "";

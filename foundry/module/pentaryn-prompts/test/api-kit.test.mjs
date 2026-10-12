@@ -18,6 +18,7 @@ await captureConsole(async () => { F.fire("ready"); await flush(); });
 const api = F.game.pentaryn.prompts;
 const { MANIFEST } = await import("../api-manifest.mjs");
 const { buildApi, surfaceOf } = await import("../lib/api.mjs");
+const { HOOKS } = await import("../prompts-core.mjs");
 const LEGACY = ["gather", "list", "crops", "show", "replace", "replaceMany", "open", "place", "ensureMarkers", "model", "manifests", "status"];
 
 test("published once, synchronously at ready: module.api is game.pentaryn.prompts, frozen; both ready hooks fired", () => {
@@ -43,6 +44,7 @@ test("describe() equals golden/describe.json; queries are the five the fork send
   assert.ok(maxDepth(d) <= 6);
   assert.deepEqual(d.queries, ["list", "gather", "crops", "replace", "show"].map(n => `${MODULE}.${n}`));
   assert.deepEqual(d.patches.map(p => [p.label, p.marker, p.adjustments]), [["Token#_onClickLeft2", "__pentarynPromptsClick", "prompts-token-dblclick"]]);
+  assert.deepEqual(d.events.map(e => e.key), Object.keys(HOOKS), "describe().events is the module's HOOKS table");
   pinJSON("describe", normaliseDescribe(d), import.meta.url);
 });
 

@@ -503,7 +503,7 @@ async function createBatch(scene, type, rows) {
       return doc ? { entry: r.entry, doc } : { entry: r.entry, error: "creation was cancelled by a hook" };
     });
   } catch (err) {
-    console.warn(`${MODULE} | batch ${type} create failed on ${scene.name}; retrying one by one`, err);
+    log.warn(`batch ${type} create failed on ${scene.name}; retrying one by one`, err);
     const out = [];
     for (const r of rows) {
       try {
@@ -675,7 +675,7 @@ export async function replaceMany(input, opts = {}) {
       try {
         await scene.deleteEmbeddedDocuments("Token", dead);
       } catch (err) {
-        console.warn(`${MODULE} | marker delete failed on ${scene.name}`, err);
+        log.warn(`marker delete failed on ${scene.name}`, err);
       }
     }
   }

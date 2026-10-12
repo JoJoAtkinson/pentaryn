@@ -44,12 +44,18 @@ function ftPair(p) {
  *   call, counts: {scenes, prompts, built, encounters, alone},
  *   scenes: [{ id, name, nav, mapFt: [w, h], squares: [w, h], gridFt, regions: [..], levels, warn: [..], notes,
  *              encounters: [{ id, centreFt: [x, y], spanFt, members: [ids], formations: [[ids]],
- *                             prompts: [pids], built: [tids], shared: [tids] }],
- *              relations: [{ from: "E2", to: "E1", ft, bearing, los: bool }],
+ *                             prompts: [pids], built: [tids], shared: [tids], builtXp }],
+ *              relations: [{ from: "E2", to: "E1", ft, bearing, los: bool, block?: "door" | "secret door" | "wall" }],
+ *              aloneNotes: { p#: { of?, ft?, bearing?, los?, built?: { of, name, ft, bearing } } },
+ *              doorLines: [string],
  *              alone: [pids], contextOnly: [tids] }],
- *   prompts: { p1: { id, size, gridFt, atFt: [x, y], regions: [..], text, sees: [rel], unseen: [rel] } },
- *   built:   { t1: { id, docId, actorId, kind, name, type, atFt, regions, hidden, prov: {size, at, prompt} | null, description } },
- *   todo: [pids], next: sceneId | null
+ *   prompts: { p1: { id, size, gridFt, atFt: [x, y], elevation, regions: [..], text, sees: [rel], unseen: [rel] } },
+ *   built:   { t1: { id, docId, actorId, kind, name, type, atFt, elevation, regions, hidden,
+ *                   prov: {size, at, prompt, pid?, call?, note?} | null, description,
+ *                   stats: {cr, ac, hp, hpMax} | null, classes: [{name, levels, subclass}] | null, species,
+ *                   items: [..] | null, disposition, xp, light: string | null, ownTextUuid? } },
+ *   todo: [pids], next: sceneId | null, unseenWithinFt,
+ *   party: parseParty input ({level, size} | "4x5" | [levels]) | null, partySource: "setting" | "call" | null, cropsNote: string | null
  * }
  */
 export function renderGather(view, { chars = GATHER_CHARS } = {}) {
