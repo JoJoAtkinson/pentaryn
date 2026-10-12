@@ -22,8 +22,9 @@ import {
   STARRY_EFFECT_ID, starryItem, activeStarry, constellationOf, starrySecondsLeft, constellationActivity
 } from "./starry-adapter.mjs";
 import {
-  onPointerMove, dropStaleTooltip, pickerOpen, cancelTargetPicker, closeOwnPickers, itemButtonClass, describeButton, applyButtons
+  onPointerMove, dropStaleTooltip, pickerOpen, cancelTargetPicker, closeOwnPickers
 } from "./argon.mjs";
+import { applyButtons, itemButtonClass, slotKind } from "./lib/argon-kit.mjs";
 import { argonClasses, liveButtons, TT } from "./form-picker.mjs";
 
 const log = makeLog(MODULE);
@@ -72,7 +73,7 @@ function composeBonusBar(panel, actor) {
   // Shifted, planBonusBar drops a carried Starry Form's button instead of replacing it (PT3-4).
   const starry = starryItem(actor);
 
-  const plan = planBonusBar(panel._buttons.map(b => describeButton(b, C)), {
+  const plan = planBonusBar(panel._buttons.map(b => slotKind(b, C)), {
     wildShapeId: ownWs?.id ?? null,
     revertIds: revertItems.map(i => i.id),
     shifted,
@@ -166,7 +167,7 @@ function composeSpecialBar(panel, actor) {
   const C = argonClasses();
   const ItemBtn = itemButtonClass(panel);
   if (!C || !ItemBtn) return;
-  const plan = planWithout(panel._buttons.map(b => describeButton(b, C)), [starry.id]);
+  const plan = planWithout(panel._buttons.map(b => slotKind(b, C)), [starry.id]);
   if (!plan) return;
   const fresh = [];
   const next = plan.map(p => {

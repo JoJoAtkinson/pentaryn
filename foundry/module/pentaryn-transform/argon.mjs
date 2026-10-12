@@ -1,15 +1,15 @@
 /**
- * Pentaryn Transform — ADAPTER: the only reads and writes of Argon's private state (ui.ARGON._*,
- * panel._buttons, Argon's target picker) and of the tooltip manager. Rows argon-panel-injection,
+ * Pentaryn Transform — ADAPTER: Argon's target picker and the tooltip manager. The shared Argon helpers
+ * (applyButtons, itemButtonClass, slotKind, paintBadge, dropTooltip) are the kit's lib/argon-kit.mjs,
+ * vendored byte-identical into pentaryn-combat too (transform-creatures-12). Rows
  * argon-target-picker-cancel, argon-tooltip-clear (foundry/adjustments.yml).
  */
 
 import { MODULE } from "./transform-core.mjs";
 import { makeLog } from "./lib/log.mjs";
+import { dropTooltip as dropArgonTooltip } from "./lib/argon-kit.mjs";
 
 const log = makeLog(MODULE);
-
-let DND5eItemButton = null;      // borrowed from the weapon-set slot, once seen
 
 /* ── tooltips ────────────────────────────────────────────────────────────── */
 // Argon shows its tooltips through Foundry's TooltipManager, anchored to the hovered button. Every
@@ -17,11 +17,9 @@ let DND5eItemButton = null;      // borrowed from the weapon-set slot, once seen
 // tooltip stayed on screen until the mouse found another tooltipped element. Any tooltip whose
 // anchor is gone is dropped: after each HUD render, and on the next pointer move.
 
+/** Close core's tooltip and forget Argon's hover tooltip; never throws (kit argon-kit, D7 / -12). */
 export function dropTooltip() {
-  try {
-    game.tooltip?.deactivate?.();
-    if (ui.ARGON?._tooltip) ui.ARGON._tooltip = null;
-  } catch (err) { log.debug("tooltip hygiene", err); }   // never let tooltip hygiene break a click
+  dropArgonTooltip({ log });
 }
 
 export function dropStaleTooltip() {
@@ -66,32 +64,4 @@ export function closeOwnPickers() {
   const open = document.querySelectorAll(".ptf-picker.show");
   for (const el of open) el.classList.remove("show");   // what ButtonPanel#toggle(false) does; no saved state (id null)
   return open.length > 0;
-}
-
-export function itemButtonClass(panel) {
-  if (DND5eItemButton) return DND5eItemButton;
-  const base = CONFIG.ARGON?.MAIN?.BUTTONS?.ItemButton;
-  const slot = base && panel._buttons.find(b => b instanceof base && b._isWeaponSet);
-  if (slot) DND5eItemButton = slot.constructor;
-  return DND5eItemButton;
-}
-
-/** What one bar button is, for the bar plans: weaponSet, item (with its id), split, other. */
-export function describeButton(button, { ItemButton, SplitButton }) {
-  if (button?._isWeaponSet) return { kind: "weaponSet" };
-  if (button instanceof ItemButton) return { kind: "item", id: button.item?.id ?? null };
-  if (SplitButton && button instanceof SplitButton) return { kind: "split", ids: [button.button1?.item?.id, button.button2?.item?.id] };
-  return { kind: "other" };
-}
-
-/** Replace the panel's buttons with `next`, in order, rendering only the new ones. */
-export function applyButtons(panel, next, fresh) {
-  for (const old of panel._buttons) if (!next.includes(old)) old.element.remove();
-  for (const b of next) {
-    b._parent = panel;
-    panel.element.appendChild(b.element);
-  }
-  panel._buttons = next;
-  for (const b of fresh) b.render();
-  panel.updateVisibility();
 }

@@ -75,7 +75,7 @@ test("tooltip hygiene failing: still swallowed; a debug line with debug on", () 
   game.tooltip.element = anchor;
   Hooks.callAll("renderPortraitPanelArgonComponent", {}, null, null);
   mock.timers.tick(0);
-  assert.deepEqual(F.console.map(c => c.slice(0, 2)), [["debug", "pentaryn-transform | tooltip hygiene"]]);
+  assert.deepEqual(F.console.map(c => c.slice(0, 2)), [["debug", "pentaryn-transform | drop tooltip"]]);
   game.tooltip.deactivate = real;
   game.tooltip.element = null;
   debugOn(false);

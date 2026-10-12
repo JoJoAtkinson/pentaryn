@@ -18,6 +18,7 @@ import {
   constellationText, assumeStarry, endStarry
 } from "./starry-adapter.mjs";
 import { dropTooltip, dropStaleTooltip, cancelTargetPicker } from "./argon.mjs";
+import { paintBadge as paintArgonBadge } from "./lib/argon-kit.mjs";
 
 let built = null;                // { WildShapeButton, FormTile, … }, built on first use
 
@@ -30,18 +31,7 @@ const TT_LIST = ["pentaryn-tt", "pentaryn-tt-list"];
 
 /** The uses badge, as ItemButton's `.quantity-1` markup (Argon's has-count class draws nothing). */
 export function paintBadge(button, left) {
-  let badge = button.element.querySelector(":scope > .quantity-1");
-  if (left === null || left === undefined) badge?.remove();
-  else {
-    if (!badge) {
-      badge = document.createElement("div");
-      badge.className = "quantity-1";
-      badge.innerHTML = `<div class="border-triangle"></div><span></span>`;
-      button.element.prepend(badge);
-    }
-    badge.querySelector("span").textContent = String(left);
-  }
-  button.element.classList.toggle("ptf-empty", left === 0);
+  paintArgonBadge(button, left, "ptf-empty");
 }
 
 /* ── normalising a beast for its tile tooltip ────────────────────────────── */
