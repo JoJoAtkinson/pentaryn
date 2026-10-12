@@ -11,11 +11,10 @@
  */
 
 import * as core from "../combat-core.mjs";
-import { MODULE } from "../combat-core.mjs";
 import { setting } from "../settings.mjs";
-import { weaponsOf, countFor, multiattackOf, usesMultiattack, combatContext, turnOf, attackActivityOf, setPrimaryId, chosenWeapon } from "../shapes.mjs";
+import { weaponsOf, countFor, combatContext, turnOf, attackActivityOf, setPrimaryId, chosenWeapon, damageLabel, fullAttackPlanOf, multiattackFor, rememberedWeapon, rememberWeapon } from "../shapes.mjs";
 import { bindTooltipLeave, dropTooltip, paintBadge, refreshOwnTooltip } from "../argon.mjs";
-import { runSwings, runFollowUp, fullAttackPlan, running } from "../sequence.mjs";
+import { runSwings, runFollowUp, running } from "../sequence.mjs";
 import { pickWeapon } from "../strip.mjs";
 
 export const FALLBACK_IMG = "icons/skills/melee/blade-tips-triple-steel.webp";
@@ -35,7 +34,7 @@ export function wireButtons({ rerender }) {
 /* ── which weapon, how many swings ───────────────────────────────────────── */
 
 export function multiattack(actor) {
-  return usesMultiattack(actor) && setting("multiattack") ? multiattackOf(actor) : null;
+  return multiattackFor(actor, { enabled: setting("multiattack") });
 }
 
 /** Everything the Full Attack button and the pips read, in one place. */
@@ -43,10 +42,10 @@ export function fullAttackState(actor) {
   const ctx = combatContext(actor);
   const turn = turnOf(actor);
   const ma = multiattack(actor);
-  const pick = ma ? { "*": actor.getFlag(MODULE, "last")?.weapon ?? null } : null;
+  const pick = ma ? { "*": rememberedWeapon(actor) } : null;
   const weaponId = ma ? null : chosenWeapon(actor);
   const count = ma ? ma.total : countFor(actor, weaponId);
-  const plan = fullAttackPlan(actor, { weaponId, turn, inCombat: ctx.inCombat, multiattack: ma, count, pick });
+  const plan = fullAttackPlanOf(actor, { weaponId, turn, inCombat: ctx.inCombat, multiattack: ma, count, pick });
   const weapons = weaponsOf(actor);
   const nick = !ma && weaponId ? core.extraSwings({ main: weapons.find(w => w.id === weaponId), weapons, turn,
     enhancedDualWielding: !!actor.getFlag?.("dnd5e", "enhancedDualWielding") }).length : 0;
@@ -60,11 +59,10 @@ export function fullAttackState(actor) {
 
 function weaponTile(actor, w, swings) {
   const act = attackActivityOf(actor.items.get(w.id));
-  const dmg = act?.labels?.damage ?? act?.labels?.damages ?? [];
   return {
     id: w.id, name: w.name, img: w.img || FALLBACK_IMG,
     toHit: act?.labels?.toHit ?? "",
-    damage: (Array.isArray(dmg) ? dmg : []).map(d => d.label ?? d.formula).filter(Boolean).join(" + "),
+    damage: damageLabel(act),
     swings
   };
 }
@@ -80,7 +78,7 @@ async function chooseWeapon(actor) {
   }
   if (tiles.length < 2) return tiles[0]?.id ?? null;
   const id = await pickWeapon(tiles, { title: _loc("PENTARYN_COMBAT.Picker.Title") });
-  if (id) await actor.setFlag(MODULE, "last.weapon", id);
+  if (id) await rememberWeapon(actor, id);
   return id;
 }
 
@@ -165,7 +163,7 @@ export function argonClasses() {
       dropTooltip();
       const actor = this.hudActor;
       // Nothing remembered and no weapon set: ask once which weapon (the choice is remembered).
-      if (!actor.getFlag(MODULE, "last")?.weapon && !setPrimaryId(actor) && !multiattack(actor)) {
+      if (!rememberedWeapon(actor) && !setPrimaryId(actor) && !multiattack(actor)) {
         const candidates = weaponsOf(actor).filter(core.canSwing);
         if (candidates.length > 1 && !(await chooseWeapon(actor))) return;
       }

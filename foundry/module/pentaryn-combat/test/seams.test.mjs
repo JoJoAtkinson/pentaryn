@@ -1,0 +1,132 @@
+// Guide S8: the behaviour-neutral seams, each pinned against the code it replaced (the S1 legacy
+// oracles in fixtures/legacy-combat.mjs, or the old inline expression copied here).
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { makeMessage, setupWorld } from "./fixtures/world.mjs";
+import * as legacy from "./fixtures/legacy-combat.mjs";
+import { fighter, rogue, wolf } from "./fixtures/actors.mjs";
+
+const W = await setupWorld();
+const { F, doc } = W;
+const core = await import("../combat-core.mjs");
+const shapes = await import("../shapes.mjs");
+const dialogs = await import("../dialog-adapter.mjs");
+const { protoDescriptor } = await import("../argon.mjs");
+
+test("isWeaponAttack (shapes) equals both legacy predicates on the 60-case table plus null (combat-riders-4)", () => {
+  let n = 0;
+  for (const type of ["attack", "save", "damage"]) {
+    for (const classification of ["weapon", "unarmed", "spell", null]) {
+      for (const itemType of ["weapon", "spell", "feat", "consumable", undefined]) {
+        const a = { type, attack: { type: { classification } }, item: itemType ? { type: itemType } : undefined };
+        assert.equal(shapes.isWeaponAttack(a), legacy.weaponLike(a), JSON.stringify(a));
+        assert.equal(shapes.isWeaponAttack(a), legacy.isWeaponAttack(a), JSON.stringify(a));
+        n++;
+      }
+    }
+  }
+  assert.equal(n, 60);
+  assert.equal(shapes.isWeaponAttack(null), legacy.weaponLike(null));
+  assert.equal(shapes.isWeaponAttack({ type: "attack", attack: { type: { classification: null } }, item: { type: "weapon" } }), true);
+  assert.equal(shapes.isWeaponAttack({ type: "attack", attack: { type: { classification: "spell" } }, item: { type: "weapon" } }), false);
+});
+
+test("damageLabel equals the weapon tile's and the pause-bar tile's legacy strings", () => {
+  const acts = [{ labels: { damage: [{ label: "1d8 + 3 Slashing" }] } }, { labels: { damages: [{ formula: "1d6" }] } }, {}, null,
+    { labels: { damage: [{ label: "1d4" }, { formula: "1d6" }, {}] }, toHit: "+5" }];
+  for (const a of acts) {
+    assert.equal(shapes.damageLabel(a), legacy.weaponTileDamage(a));
+    assert.equal([a?.labels?.toHit ?? "", shapes.damageLabel(a)].filter(Boolean).join(" · "), legacy.swapTileStats(a));
+  }
+});
+
+test("protoDescriptor: the first descriptor up the chain; `accept` skips the rest", () => {
+  class A { get x() { return 1; } }
+  class B extends A { }
+  Object.defineProperty(B.prototype, "y", { value: 2, configurable: true });
+  class C extends B { }
+  const own = new B();
+  Object.defineProperty(own, "x", { value: 9 });
+  assert.equal(protoDescriptor(own, "x").get, Object.getOwnPropertyDescriptor(A.prototype, "x").get, "own property ignored");
+  assert.equal(protoDescriptor(new C(), "y").value, 2);
+  assert.equal(protoDescriptor(new C(), "y", d => !!d.get), null);
+  assert.equal(protoDescriptor(new C(), "nope"), null);
+});
+
+test("rollDialogOf: buttonOnly refuses anything but a button; otherwise the newest window when nothing is focused", () => {
+  const win = doc.createElement("div");
+  win.id = "roll-seam";
+  win.className = "application roll-configuration";
+  doc.body.append(win);
+  const app = { id: "roll-seam" };
+  F.foundry.applications.instances.set("roll-seam", app);
+  const input = doc.createElement("input");
+  win.append(input);
+  const button = doc.createElement("button");
+  win.append(button);
+  assert.equal(dialogs.rollDialogOf(input, { buttonOnly: true }), null);
+  assert.equal(dialogs.rollDialogOf(button, { buttonOnly: true }), app);
+  assert.equal(dialogs.rollDialogOf(input), app);
+  assert.equal(dialogs.rollDialogOf(doc.body, { buttonOnly: true }), null);
+  assert.equal(dialogs.rollDialogOf(doc.body), app, "nothing focused: the newest roll window");
+  assert.equal(dialogs.topRollWindow(), win);
+  win.remove();
+  F.foundry.applications.instances.delete("roll-seam");
+  assert.equal(dialogs.rollDialogOf(doc.body), null);
+  assert.equal(dialogs.topRollWindow(), null);
+});
+
+test("isOrphanCard equals both legacy tidy decisions (combat-riders-5)", () => {
+  const me = F.game.user;
+  const cases = [
+    makeMessage({ type: "usage", author: me, system: { deltas: {} } }),
+    makeMessage({ type: "usage", author: me, system: { deltas: { actor: [{ keyPath: "system.uses.spent", delta: 1 }] } } }),
+    makeMessage({ type: "usage", author: { id: "someoneElse00001" }, system: { deltas: {} } }),
+    makeMessage({ type: "usage", author: me, system: { deltas: {} }, timestamp: Date.now() - 10 * 60 * 1000 }),
+  ];
+  const rolledUnder = makeMessage({ type: "attack", author: me, system: { origin: { id: cases[0].id } } });
+  for (const msg of cases) {
+    for (const running of [null, { actor: {} }]) {
+      const want = legacy.tidyOnClose({ msg, messages: F.game.messages.contents, userId: me.id, now: Date.now(), running });
+      assert.equal(!(!dialogs.isOrphanCard(msg, { sequence: !!running })), want, `${msg.id} running=${!!running}`);
+    }
+    assert.equal(dialogs.isOrphanCard(msg, { sequence: false }), legacy.tidyAtSequenceEnd({ msg, messages: F.game.messages.contents, userId: me.id, now: Date.now() }));
+  }
+  assert.ok(rolledUnder);
+});
+
+test("areaPlacementSkipped equals the old inline expression over all 16 combinations (combat-riders-36)", () => {
+  const inline = (usage, activity, results, scene) => !!(usage?.create?.measuredTemplate && activity?.target?.template?.type && !(results?.templates?.length) && scene);
+  for (const wanted of [false, true]) for (const hasArea of [false, true]) for (const placed of [0, 1]) for (const onScene of [false, true]) {
+    const usage = { create: { measuredTemplate: wanted } };
+    const activity = { target: { template: { type: hasArea ? "sphere" : "" } } };
+    const results = { templates: Array.from({ length: placed }) };
+    const scene = onScene ? {} : null;
+    assert.equal(core.areaPlacementSkipped({ wanted: usage?.create?.measuredTemplate, hasArea: activity?.target?.template?.type, placed: results?.templates?.length, onScene: scene }),
+      inline(usage, activity, results, scene), JSON.stringify({ wanted, hasArea, placed, onScene }));
+  }
+  assert.equal(core.areaPlacementSkipped(), false);
+});
+
+test("fullAttackPlanFrom (core) as recorded; KNOWN: Multiattack ignores Action Surge (combat-riders-22)", () => {
+  const ma = { plan: [{ itemId: "bite", count: 2 }], total: 2, groups: [{ count: 2, choices: ["bite"] }] };
+  const key = "c1:1:cb1";
+  let turn = core.recordSwing(core.recordSwing(core.freshTurn(key), { kind: "main", weaponId: "bite" }), { kind: "main", weaponId: "bite" });
+  turn = core.recordSurge(turn);
+  // KNOWN: two swings made and one Action Surge: the pips show two more, the plan is empty.
+  assert.deepEqual(core.fullAttackPlanFrom({ multiattack: ma, turn, inCombat: true, count: 2 }), { swings: [], count: 2, left: 0, weaponId: "bite" });
+  assert.deepEqual(core.pipState({ count: 2, turn, inCombat: true }), { max: 4, current: 2 });
+  const fresh = core.fullAttackPlanFrom({ multiattack: ma, turn: core.freshTurn(key), inCombat: true, count: 2 });
+  assert.equal(fresh.swings.length, 2);
+  // the PC branch through the shapes wrapper equals the legacy fullAttackPlan oracle on the cast
+  const rog = rogue();
+  const pc = shapes.fullAttackPlanOf(rog, { weaponId: "scimitar00000001", turn: core.freshTurn(key), inCombat: true, count: 2 });
+  assert.deepEqual(pc, legacy.fullAttackPlan(rog, { weaponId: "scimitar00000001", turn: core.freshTurn(key), inCombat: true, count: 2 }));
+  for (const a of [fighter(), rogue({ id: "rogue00000000002" }), wolf()]) {
+    for (const opts of [{}, { inCombat: true, count: 2, turn: core.freshTurn(key) }, { multiattack: shapes.multiattackOf(a), inCombat: true, turn }]) {
+      const w = shapes.weaponsOf(a)[0]?.id ?? null;
+      assert.deepEqual(shapes.fullAttackPlanOf(a, { weaponId: w, ...opts }), legacy.fullAttackPlan(a, { weaponId: w, ...opts }), `${a.name} ${JSON.stringify(Object.keys(opts))}`);
+    }
+  }
+  assert.deepEqual(pc.swings.map(x => [x.weaponId, x.kind]), [["scimitar00000001", "main"], ["scimitar00000001", "main"], ["dagger0000000002", "nick"]]);
+});

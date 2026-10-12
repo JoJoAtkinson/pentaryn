@@ -19,7 +19,9 @@ test("imported bare: no Foundry global needed or added", () => {
 const ADDED_S2 = ["CONTRACT", "CSS", "HOOKS", "I18N", "MODULE", "NS", "SHORT", "VERSION"];
 // Guide S4's: the literal i18n key tables and their reader.
 const ADDED_S4 = ["I18N_KEYS", "keyFor"];
-const ADDED = [...ADDED_S2, ...ADDED_S4];
+// Guide S8's: the Full Attack plan moved out of sequence.mjs, the cancelled-area test out of combat.mjs.
+const ADDED_S8 = ["areaPlacementSkipped", "fullAttackPlanFrom"];
+const ADDED = [...ADDED_S2, ...ADDED_S4, ...ADDED_S8];
 
 test("export surface (golden/core-exports.json): 81 names", () => {
   const names = Object.keys(core).sort();

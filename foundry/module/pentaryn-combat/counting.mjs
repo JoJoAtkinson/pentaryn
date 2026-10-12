@@ -13,7 +13,7 @@ import * as core from "./combat-core.mjs";
 import { MODULE } from "./combat-core.mjs";
 import { makeLog } from "./lib/log.mjs";
 import { setting } from "./settings.mjs";
-import { weaponShape, featuresOf, combatContext, turnOf, updateTurn, resetOffhandMode } from "./shapes.mjs";
+import { weaponShape, featuresOf, combatContext, turnOf, updateTurn, resetOffhandMode, isWeaponAttack } from "./shapes.mjs";
 import { taggedKind, forgetRoll } from "./sequence.mjs";
 
 const log = makeLog(MODULE);
@@ -30,12 +30,6 @@ const lastTag = new Map();
 
 /** This client's swings this turn, for kill detection: [{attacker, key, weaponId, targets: [actorUuid]}]. */
 let mySwings = [];
-
-function weaponLike(activity) {
-  const cls = activity?.attack?.type?.classification;
-  if (activity?.type !== "attack" || cls === "spell" || activity.item?.type === "spell") return false;
-  return cls === "weapon" || cls === "unarmed" || activity.item?.type === "weapon";
-}
 
 /** What kind of swing an attack (or the damage after it) is: the sequence's tag, else the rules. */
 function kindOf(activity, attackMode) {
@@ -62,7 +56,7 @@ async function onPostRollAttack(rolls, { subject } = {}) {
   // Classify before the first await: the sequence's tag is only live while its rollAttack runs.
   // A spell attack is the Magic action, not the Attack action: counted once per cast in
   // onPostUseActivity (Scorching Ray's three rays are one action), never per roll here.
-  const swing = weaponLike(activity) ? kindOf(activity, attackMode) : null;
+  const swing = isWeaponAttack(activity) ? kindOf(activity, attackMode) : null;
 
   await resetOffhandMode(activity, attackMode, { enabled: setting("offhandModeReset") }).catch(err => log.warn("mode reset failed", err));
 
@@ -106,7 +100,7 @@ async function onPostUseActivity(activity) {
   // A Reaction (Counterspell, Shield, Hellish Rebuke…) spends the Reaction pip on any turn: Argon's
   // item buttons, which every spell in Cast Spell is, never spent it (usability Area 5 re-run, S14).
   if (activity.activation?.type === "reaction") {
-    if (!setting("spellPips") || (activity.type === "attack" && weaponLike(activity))) return;
+    if (!setting("spellPips") || (activity.type === "attack" && isWeaponAttack(activity))) return;
     const ctx = combatContext(actor);
     if (core.pipFor({ activation: "reaction", inCombat: ctx.inCombat, isOwnTurn: ctx.isOwnTurn }) !== "reaction") return;
     await actor.setFlag(MODULE, "reaction", { combatId: ctx.combat?.id ?? null }).catch(err => { log.debug("Reaction flag", err); return null; });
@@ -128,7 +122,7 @@ async function onPostUseActivity(activity) {
   // Bonus Action: Argon spends its pip only for buttons bound to an activity, and an item button
   // (most features) never did (usability Area 3). A Bonus-action attack is counted on its roll.
   if (activity.activation?.type === "bonus") {
-    if (!setting("bonusPip") || (activity.type === "attack" && weaponLike(activity))) return;
+    if (!setting("bonusPip") || (activity.type === "attack" && isWeaponAttack(activity))) return;
     const ctx = combatContext(actor);
     if (!ctx.inCombat || !ctx.isOwnTurn) return;
     await updateTurn(actor, core.recordBonusAction);
@@ -136,7 +130,7 @@ async function onPostUseActivity(activity) {
     return;
   }
   if (activity.activation?.type !== "action") return;
-  if (activity.type === "attack" && weaponLike(activity)) return;   // counted on the roll
+  if (activity.type === "attack" && isWeaponAttack(activity)) return;   // counted on the roll
   if (/^multiattack\b/i.test(item?.name ?? "")) return;
   const ctx = combatContext(actor);
   if (!ctx.inCombat || !ctx.isOwnTurn) return;
@@ -190,7 +184,7 @@ export function install(reg) {
   reg.on("dnd5e.postRollAttack", (rolls, data) => { onPostRollAttack(rolls, data).catch(err => log.warn("swing count failed", err)); }, opts("swing count"));
   reg.on("dnd5e.postUseActivity", (activity, usage, results) => {
     // An area spell whose placement was cancelled was not cast (pentaryn-aoe refunds it): no pip, no Action.
-    if (usage?.create?.measuredTemplate && activity?.target?.template?.type && !(results?.templates?.length) && canvas?.scene) return;
+    if (core.areaPlacementSkipped({ wanted: usage?.create?.measuredTemplate, hasArea: activity?.target?.template?.type, placed: results?.templates?.length, onScene: canvas?.scene })) return;
     onPostUseActivity(activity).catch(err => log.warn("action count failed", err));
   }, opts("action count"));
   reg.on("dnd5e.preRollDamageV2", (config) => { try { onPreRollDamage(config); } catch (err) { log.warn("weapon bonus skipped", err); } }, opts("weapon bonus"));

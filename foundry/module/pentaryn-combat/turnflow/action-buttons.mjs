@@ -12,7 +12,7 @@ import { MODULE } from "../combat-core.mjs";
 import { makeLog } from "../lib/log.mjs";
 import { setting } from "../settings.mjs";
 import { combatContext, turnOf, updateTurn, countFor, chosenWeapon } from "../shapes.mjs";
-import { mainPanel, settlePips } from "../argon.mjs";
+import { mainPanel, protoDescriptor, settlePips } from "../argon.mjs";
 import { expectRoll, forgetRoll } from "../sequence.mjs";
 
 const log = makeLog(MODULE);
@@ -123,11 +123,7 @@ function wrapSpecial(btn) {
 /* ── the Reaction bar's weapon: Opportunity Attack ───────────────────────── */
 
 function protoGetter(obj, name) {
-  for (let p = Object.getPrototypeOf(obj); p; p = Object.getPrototypeOf(p)) {
-    const d = Object.getOwnPropertyDescriptor(p, name);
-    if (d?.get) return d.get;
-  }
-  return null;
+  return protoDescriptor(obj, name, d => !!d.get)?.get ?? null;
 }
 
 function wrapReactionSlot(btn) {

@@ -9,6 +9,7 @@
 import { MODULE, dockRect, swingTag, clampToView, keyFor } from "./combat-core.mjs";
 import { makeLog } from "./lib/log.mjs";
 import { setting } from "./settings.mjs";
+import { rollDialogOf, topRollWindow } from "./dialog-adapter.mjs";
 
 const log = makeLog(MODULE);
 
@@ -30,17 +31,6 @@ function anchor() {
   return r && r.height ? Math.max(8, window.innerHeight - r.top + 8) : 120;
 }
 
-/**
- * The dnd5e roll dialog (attack or damage) a focused element sits in, or null. dnd5e autofocuses the
- * dialog's default button (Normal) and Foundry's KeyboardManager ignores every key while a form
- * button has focus, so a plain Esc on a fresh roll dialog did nothing until the player clicked it.
- */
-function rollDialogOf(target) {
-  if (!(target instanceof HTMLButtonElement)) return null;   // text fields and selects keep native Esc
-  const host = target.closest(".application.roll-configuration");
-  return host ? (foundry.applications.instances.get(host.id) ?? null) : null;
-}
-
 function onKey(ev) {
   if (ev.key !== "Escape" || !el) return;
   if (lastCtx?.status === "paused") {
@@ -50,7 +40,10 @@ function onKey(ev) {
     return;
   }
   // A swing's roll dialog is open: Esc closes it, which pauses the sequence (the help line's promise).
-  const dialog = lastCtx?.status === "running" ? rollDialogOf(ev.target) : null;
+  // dnd5e autofocuses the dialog's default button (Normal) and Foundry's KeyboardManager ignores every
+  // key while a form button has focus, so a plain Esc on a fresh roll dialog did nothing until the
+  // player clicked it. Only a focused button counts: text fields and selects keep native Esc.
+  const dialog = lastCtx?.status === "running" ? rollDialogOf(ev.target, { buttonOnly: true }) : null;
   if (!dialog) return;
   ev.preventDefault();
   ev.stopPropagation();
@@ -203,11 +196,6 @@ function readEnter(app) {
 /* ── focus: Enter means what the strip says ───────────────────────────────── */
 // Area 10 (U-R-1): after "New target" the resumed swing's window opened without focus (the pick's
 // canvas click ended after it rendered), so Enter did nothing until the player clicked Normal.
-
-function topRollWindow() {
-  const open = [...document.querySelectorAll(".application.roll-configuration")];
-  return open.sort((a, b) => (Number(getComputedStyle(b).zIndex) || 0) - (Number(getComputedStyle(a).zIndex) || 0))[0] ?? null;
-}
 
 function typingElsewhere(a, win) {
   if (!a || win?.contains(a)) return false;

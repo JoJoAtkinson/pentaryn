@@ -140,7 +140,7 @@ export function setPrimaryId(actor) {
 export function chosenWeapon(actor) {
   return core.defaultWeapon({
     weapons: weaponsOf(actor),
-    remembered: actor?.getFlag?.(MODULE, "last")?.weapon ?? null,
+    remembered: rememberedWeapon(actor),
     setPrimary: setPrimaryId(actor)
   });
 }
@@ -310,4 +310,86 @@ export function allyAdjacent(attackerToken, targetToken) {
 
 export function tokenOf(actor) {
   return actor?.token?.object ?? actor?.getActiveTokens?.()[0] ?? null;
+}
+
+/* ── adapter seams (guide S8: combat-riders-4, -5, -21, -22, -36) ─────────── */
+
+/**
+ * A weapon (or unarmed) attack, not a spell attack: counts as a swing, carries the riders. One
+ * predicate for counting (was combat.mjs weaponLike) and the riders (was riders.mjs
+ * isWeaponAttack); both bodies were the same (combat-riders-4).
+ */
+export function isWeaponAttack(activity) {
+  const cls = activity?.attack?.type?.classification;
+  return activity?.type === "attack" && cls !== "spell" && activity.item?.type !== "spell"
+    && (cls === "weapon" || cls === "unarmed" || activity.item?.type === "weapon");
+}
+
+/** "1d8 + 3 Slashing" from an attack activity's damage labels (weapon tile and pause-bar tile). */
+export function damageLabel(activity) {
+  const dmg = activity?.labels?.damage ?? activity?.labels?.damages ?? [];
+  return (Array.isArray(dmg) ? dmg : []).map(d => d.label ?? d.formula).filter(Boolean).join(" + ");
+}
+
+/** The weapon Full Attack last started with (flags.pentaryn-combat.last.weapon), else null. */
+export function rememberedWeapon(actor) {
+  return actor?.getFlag?.(MODULE, "last")?.weapon ?? null;
+}
+
+/** Remember the weapon Full Attack starts with next time. */
+export function rememberWeapon(actor, weaponId) {
+  return actor.setFlag(MODULE, "last.weapon", weaponId);
+}
+
+/** The actor's Multiattack when it swings by one (NPC, Wild Shape form) and `enabled` (setting multiattack). */
+export function multiattackFor(actor, { enabled = true } = {}) {
+  return usesMultiattack(actor) && enabled ? multiattackOf(actor) : null;
+}
+
+/** core.fullAttackPlanFrom with this actor's weapon shapes and Enhanced Dual Wielding flag. */
+export function fullAttackPlanOf(actor, { weaponId = null, turn = null, inCombat = false, multiattack = null, count = 1, pick = null } = {}) {
+  if (multiattack) return core.fullAttackPlanFrom({ weaponId, turn, inCombat, multiattack, count, pick });
+  const weapons = weaponsOf(actor);
+  return core.fullAttackPlanFrom({ weapons, weaponId, turn, inCombat, count, pick,
+    enhancedDualWielding: !!actor.getFlag?.("dnd5e", "enhancedDualWielding") });
+}
+
+/**
+ * What api.plan answers: the Full Attack plan for this actor and weapon (the remembered or default
+ * one when none is given). `multiattackOn` is setting multiattack. The expression order is the old
+ * api.plan's, so a bad ref fails the way it did until S11 resolves refs (combat-riders-12 KNOWN).
+ */
+export function planFor(actor, weaponId = null, { multiattackOn = true } = {}) {
+  const ctx = combatContext(actor);
+  weaponId ??= chosenWeapon(actor);
+  const ma = (actor.type === "npc" || actor.isPolymorphed) && multiattackOn ? multiattackOf(actor) : null;
+  const pick = ma ? { "*": rememberedWeapon(actor) } : null;
+  return fullAttackPlanOf(actor, { weaponId, turn: turnOf(actor), inCombat: ctx.inCombat, multiattack: ma, count: ma ? ma.total : countFor(actor, weaponId), pick });
+}
+
+/** An area handle pentaryn-aoe placed (its token flag); combat reselects your token when one goes. */
+export function isAoeHandle(flags) {
+  return !!flags?.["pentaryn-aoe"]?.handle;
+}
+
+/* ── rider reads (pure: no write, no DOM) ─────────────────────────────────── */
+
+export function isReckless(actor) {
+  return !!actor?.effects?.some(e => core.isRecklessEffect(e));
+}
+
+/** The rider's damage activity on its feature item. */
+export function riderActivity(actor, rider) {
+  for (const id of rider.identifiers) {
+    const item = featureItem(actor, id);
+    const act = activitiesOf(item).find(a => a.type === "damage");
+    if (act) return act;
+  }
+  return null;
+}
+
+/** "3d6" for the button label. */
+export function riderDiceFor(actor, rider) {
+  const scale = rider.scale ? actor?.system?.scale?.[rider.scale[0]]?.[rider.scale[1]] : null;
+  return core.riderDice(rider, scale);
 }

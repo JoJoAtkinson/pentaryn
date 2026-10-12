@@ -27,11 +27,10 @@ import * as core from "./combat-core.mjs";
 import { installFeature, log, reg } from "./context.mjs";
 import { registerSettings, setting, setQuickMode, quickMode, setRiderMode, riderMode } from "./settings.mjs";
 import { renderHud } from "./argon.mjs";
-import { weaponsOf, featuresOf, countFor, multiattackOf, combatContext, turnOf, newTurn, chosenWeapon } from "./shapes.mjs";
-import { runSwings, runFollowUp, fullAttackPlan, running, abortFor } from "./sequence.mjs";
+import { weaponsOf, featuresOf, countFor, multiattackOf, turnOf, newTurn, planFor } from "./shapes.mjs";
+import { runSwings, runFollowUp, running, abortFor } from "./sequence.mjs";
 import { report as riderReport, rollRider, offersFor, isReckless, setReckless } from "./turn-riders.mjs";
 import { seedAll, seedWeaponSets } from "./offhand.mjs";
-import { MODULE } from "./combat-core.mjs";
 import * as rollDock from "./roll-dock.mjs";
 import * as counting from "./counting.mjs";
 import * as turnRiders from "./turn-riders.mjs";
@@ -63,13 +62,7 @@ function fixFeats(actor, { apply = false } = {}) {
 const api = {
   // what the HUD shows
   count: (actor, weaponId) => countFor(actor, weaponId),
-  plan: (actor, weaponId = null) => {
-    const ctx = combatContext(actor);
-    weaponId ??= chosenWeapon(actor);
-    const ma = (actor.type === "npc" || actor.isPolymorphed) && setting("multiattack") ? multiattackOf(actor) : null;
-    const pick = ma ? { "*": actor.getFlag(MODULE, "last")?.weapon ?? null } : null;
-    return fullAttackPlan(actor, { weaponId, turn: turnOf(actor), inCombat: ctx.inCombat, multiattack: ma, count: ma ? ma.total : countFor(actor, weaponId), pick });
-  },
+  plan: (actor, weaponId = null) => planFor(actor, weaponId, { multiattackOn: setting("multiattack") }),
   turn: turnOf,
   newTurn,
   multiattack: multiattackOf,

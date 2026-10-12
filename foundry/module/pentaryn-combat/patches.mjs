@@ -19,6 +19,7 @@ import { MODULE } from "./combat-core.mjs";
 import { makeLog } from "./lib/log.mjs";
 import { defineAccessor, wrapMethod } from "./lib/patch.mjs";
 import { setting } from "./settings.mjs";
+import { protoDescriptor } from "./argon.mjs";
 
 const log = makeLog(MODULE);
 const handles = [];
@@ -57,10 +58,7 @@ function guardScrollingText() {
     // and core logged the error. Setting x/y on a destroyed PreciseText is now a no-op.
     if (P && !Object.hasOwn(P.prototype, "y")) {
       for (const axis of ["x", "y"]) {
-        let d = null;
-        for (let proto = Object.getPrototypeOf(P.prototype); proto && !d; proto = Object.getPrototypeOf(proto)) {
-          d = Object.getOwnPropertyDescriptor(proto, axis);
-        }
+        const d = protoDescriptor(P.prototype, axis);
         if (!d?.set || !d?.get) continue;
         handles.push(defineAccessor(MODULE, P.prototype, axis, {
           configurable: true, enumerable: d.enumerable,

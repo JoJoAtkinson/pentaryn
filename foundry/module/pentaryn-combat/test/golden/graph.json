@@ -31,6 +31,9 @@
       "settings.mjs",
       "shapes.mjs"
     ],
+    "dialog-adapter.mjs": [
+      "combat-core.mjs"
+    ],
     "hud.mjs": [
       "context.mjs",
       "hud/bars.mjs",
@@ -87,6 +90,7 @@
       "shapes.mjs"
     ],
     "patches.mjs": [
+      "argon.mjs",
       "combat-core.mjs",
       "lib/log.mjs",
       "lib/patch.mjs",
@@ -97,6 +101,7 @@
     ],
     "sequence.mjs": [
       "combat-core.mjs",
+      "dialog-adapter.mjs",
       "lib/log.mjs",
       "settings.mjs",
       "shapes.mjs",
@@ -112,6 +117,7 @@
     ],
     "strip.mjs": [
       "combat-core.mjs",
+      "dialog-adapter.mjs",
       "lib/log.mjs",
       "settings.mjs"
     ],
@@ -142,6 +148,7 @@
     ],
     "turnflow/dialogs.mjs": [
       "combat-core.mjs",
+      "dialog-adapter.mjs",
       "lib/log.mjs",
       "sequence.mjs",
       "settings.mjs"
@@ -161,10 +168,12 @@
     "turnflow/helper-token.mjs": [
       "combat-core.mjs",
       "lib/log.mjs",
-      "settings.mjs"
+      "settings.mjs",
+      "shapes.mjs"
     ],
     "turnflow/manual-dice.mjs": [
       "combat-core.mjs",
+      "dialog-adapter.mjs",
       "lib/log.mjs",
       "settings.mjs"
     ],
@@ -189,9 +198,10 @@
     "lib/log.mjs",
     "turnflow/movement.mjs",
     "turnflow/manual-dice.mjs",
+    "dialog-adapter.mjs",
     "turnflow/helper-token.mjs",
-    "turnflow/effects.mjs",
     "shapes.mjs",
+    "turnflow/effects.mjs",
     "turnflow/drawers.mjs",
     "argon.mjs",
     "lib/argon-kit.mjs",

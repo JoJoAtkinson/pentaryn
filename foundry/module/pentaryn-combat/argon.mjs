@@ -143,3 +143,16 @@ export function closeDrawersOf(actors, { enabled = true } = {}) {
     if (shown) hud.collapseAllPanels?.();
   } catch (err) { log.debug("close drawers", err); }   // never break a turn change
 }
+
+/**
+ * The first own property descriptor of `name` up `obj`'s prototype chain (not `obj` itself) that
+ * `accept` takes, else null: an Argon getter to wrap per instance (the pips, the Reaction slot's
+ * label) or a PIXI accessor (PreciseText x/y).
+ */
+export function protoDescriptor(obj, name, accept = () => true) {
+  for (let p = Object.getPrototypeOf(obj); p; p = Object.getPrototypeOf(p)) {
+    const d = Object.getOwnPropertyDescriptor(p, name);
+    if (d && accept(d)) return d;
+  }
+  return null;
+}

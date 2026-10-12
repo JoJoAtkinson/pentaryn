@@ -7,6 +7,7 @@
 import { MODULE } from "../combat-core.mjs";
 import { makeLog } from "../lib/log.mjs";
 import { setting } from "../settings.mjs";
+import { openRollResolvers } from "../dialog-adapter.mjs";
 
 const log = makeLog(MODULE);
 
@@ -17,11 +18,9 @@ const log = makeLog(MODULE);
 // into it. Tied to `dockRollDialogs` (the manual-dice part of the roll-window handling).
 
 function openResolver() {
-  const R = foundry.applications?.dice?.RollResolver;
-  if (!R) return null;
   let top = null;
-  for (const app of foundry.applications.instances?.values?.() ?? []) {
-    if (!(app instanceof R) || !app.element?.isConnected) continue;
+  for (const app of openRollResolvers()) {
+    if (!app.element?.isConnected) continue;
     if (!top || (Number(app.position?.zIndex) || 0) >= (Number(top.position?.zIndex) || 0)) top = app;
   }
   return top;

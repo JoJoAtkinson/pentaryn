@@ -18,11 +18,11 @@ import * as core from "../combat-core.mjs";
 import { MODULE } from "../combat-core.mjs";
 import { makeLog } from "../lib/log.mjs";
 import { setting, riderMode, setRiderMode } from "../settings.mjs";
-import { weaponsOf, featuresOf, combatContext, turnOf, newTurn, attackActivityOf, unarmedStrike, focusLeft, turnSettled, featureItem } from "../shapes.mjs";
-import { applyButtons, dropStrayTooltip, itemButtonClass, mainPanel, settlePips } from "../argon.mjs";
+import { weaponsOf, featuresOf, combatContext, turnOf, newTurn, attackActivityOf, unarmedStrike, focusLeft, turnSettled, featureItem, isReckless, riderDiceFor } from "../shapes.mjs";
+import { applyButtons, dropStrayTooltip, itemButtonClass, mainPanel, protoDescriptor, settlePips } from "../argon.mjs";
 import { FALLBACK_IMG, argonClasses, fullAttackState, liveButtons, wireButtons } from "./buttons-ui.mjs";
 import { running, abortFor } from "../sequence.mjs";
-import { riderDiceFor, isReckless, setReckless } from "../turn-riders.mjs";
+import { setReckless } from "../turn-riders.mjs";
 import { placeOpenDrawers } from "../turnflow/drawers.mjs";
 
 const log = makeLog(MODULE);
@@ -31,15 +31,8 @@ const log = makeLog(MODULE);
 
 function overridePips(panel, actor) {
   if (!setting("swingPips")) return;
-  const find = (name) => {
-    for (let p = Object.getPrototypeOf(panel); p; p = Object.getPrototypeOf(p)) {
-      const d = Object.getOwnPropertyDescriptor(p, name);
-      if (d) return d;
-    }
-    return null;
-  };
-  const maxD = find("maxActions");
-  const curD = find("currentActions");
+  const maxD = protoDescriptor(panel, "maxActions");
+  const curD = protoDescriptor(panel, "currentActions");
   if (!maxD?.get || !curD?.get) return;
   // null = not ours (fewer than 2 swings): Argon's own single pip and its isActionUsed apply.
   const pips = (self) => {

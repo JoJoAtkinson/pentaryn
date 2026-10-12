@@ -15,9 +15,10 @@
 import * as core from "./combat-core.mjs";
 import { MODULE } from "./combat-core.mjs";
 import { makeLog } from "./lib/log.mjs";
-import { attackActivityOf, weaponsOf, updateTurn, focusLeft, flurryActivity, unarmedStrike, turnOf } from "./shapes.mjs";
+import { attackActivityOf, weaponsOf, updateTurn, focusLeft, flurryActivity, unarmedStrike, turnOf, damageLabel, rememberWeapon } from "./shapes.mjs";
+import { openRollResolvers, isOrphanCard } from "./dialog-adapter.mjs";
 import { choose, hide, onceCancel, picking, show, update, waitChoice } from "./strip.mjs";
-import { quickMode, setting } from "./settings.mjs";
+import { quickMode, setQuickMode, setting } from "./settings.mjs";
 
 const log = makeLog(MODULE);
 
@@ -116,10 +117,7 @@ function targetName() {
 // dnd5e.rollDamageV2), or for no RollResolver to be open (a cancelled resolver fires no hook).
 
 function resolverOpen() {
-  const R = foundry.applications?.dice?.RollResolver;
-  if (!R) return false;
-  for (const app of foundry.applications.instances?.values?.() ?? []) if (app instanceof R) return true;
-  return false;
+  return openRollResolvers().length > 0;
 }
 
 function watchDamage(activity) {
@@ -184,9 +182,7 @@ function swapTile(actor, w) {
   let stats = "";
   try {
     const act = attackActivityOf(actor.items.get(w.id));
-    const dmg = act?.labels?.damage ?? act?.labels?.damages ?? [];
-    const damage = (Array.isArray(dmg) ? dmg : []).map(d => d.label ?? d.formula).filter(Boolean).join(" + ");
-    stats = [act?.labels?.toHit ?? "", damage].filter(Boolean).join(" · ");
+    stats = [act?.labels?.toHit ?? "", damageLabel(act)].filter(Boolean).join(" · ");
   } catch (err) { log.debug("swap tile stats (the name alone)", err); }
   return { id: w.id, name: w.name, img: w.img, stats };
 }
@@ -225,12 +221,7 @@ function tidyOrigins(ids) {
   for (const id of ids) {
     const msg = id ? game.messages.get(id) : null;
     if (!msg || msg.type !== "usage") continue;
-    const rolled = game.messages.contents.some(m => m.id !== msg.id && ((m.system?.origin?.id ?? m.system?.origin) === msg.id));
-    const orphan = core.orphanUsage({
-      mine: msg.author?.id === game.user.id, ageMs: Date.now() - (msg.timestamp ?? 0), rolled,
-      consumed: core.deltasConsumed(msg.system?.deltas), sequence: false
-    });
-    if (orphan) msg.delete().catch(err => log.warn("tidy usage card", err));
+    if (isOrphanCard(msg, { sequence: false })) msg.delete().catch(err => log.warn("tidy usage card", err));
   }
 }
 
@@ -270,7 +261,7 @@ export async function runSwings(actor, swings, { event = null, title = null, ori
   show(stripContext(), {
     onAdv: (value) => dispatch({ type: "adv", value }),
     onStop: () => { dispatch({ type: "stop" }); closeSwingWindow(); choose({ type: "stop" }); },
-    onQuick: async (on) => { await game.user.setFlag(MODULE, "quick", !!on); render(); }
+    onQuick: async (on) => { await setQuickMode(on); render(); }
   });
 
   try {
@@ -360,7 +351,7 @@ export async function runSwings(actor, swings, { event = null, title = null, ori
   } finally {
     const first = current?.state?.swings?.[0];
     if (first?.kind === "main" && actor.isOwner && actor.items.get(first.weaponId)) {
-      actor.setFlag(MODULE, "last.weapon", first.weaponId).catch(err => { log.debug("remember weapon", err); return null; });
+      rememberWeapon(actor, first.weaponId).catch(err => { log.debug("remember weapon", err); return null; });
     }
     const created = [...(current?.created ?? [])];
     current = null;
@@ -424,27 +415,6 @@ export async function runFollowUp(actor, f, { event = null } = {}) {
   return { rolled: 0, status: "unknown" };
 }
 
-/* ── Full Attack ─────────────────────────────────────────────────────────── */
-
-/**
- * The swings a Full Attack would make right now, for the button's badge and for start.
- * @returns {{swings: object[], count: number, left: number, weaponId: string|null}}
- */
-export function fullAttackPlan(actor, { weaponId = null, turn = null, inCombat = false, multiattack = null, count = 1, pick = null } = {}) {
-  if (multiattack) {
-    const plan = pick ? core.multiattackPlan(multiattack, { pick }) : multiattack.plan;
-    const total = plan.reduce((s, r) => s + r.count, 0);
-    const done = inCombat ? (turn?.attackAction?.swings ?? 0) : 0;
-    const swings = inCombat && core.attackActions(turn) === 0 ? [] : core.planSequence({ multiattack: plan, done });
-    return { swings, count: total, left: swings.length, weaponId: plan[0]?.itemId ?? null };
-  }
-  const weapons = weaponsOf(actor);
-  const main = weapons.find(w => w.id === weaponId) ?? null;
-  const left = core.swingsLeft(count, turn, { inCombat });
-  const extras = core.extraSwings({ main, weapons, turn, enhancedDualWielding: !!actor.getFlag?.("dnd5e", "enhancedDualWielding") });
-  const swings = left > 0 ? core.planSequence({ weaponId, count: left, extras }) : [];
-  return { swings, count, left, weaponId };
-}
 
 /* ── install ─────────────────────────────────────────────────────────────── */
 
@@ -464,3 +434,6 @@ export function uninstall() {
   expected.clear();
   picker = null;
 }
+
+/** The swings a Full Attack would make right now (core.fullAttackPlanFrom with this actor's weapons). */
+export { fullAttackPlanOf as fullAttackPlan } from "./shapes.mjs";

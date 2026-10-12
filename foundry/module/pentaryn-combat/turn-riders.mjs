@@ -18,7 +18,10 @@
 import * as core from "./combat-core.mjs";
 import { MODULE } from "./combat-core.mjs";
 import { makeLog } from "./lib/log.mjs";
-import { featuresOf, featureItem, weaponShape, activitiesOf, combatContext, turnOf, updateTurn, rollAdvantage, allyAdjacent, tokenOf } from "./shapes.mjs";
+import { featuresOf, featureItem, weaponShape, combatContext, turnOf, updateTurn, rollAdvantage, allyAdjacent, tokenOf, isWeaponAttack, isReckless, riderActivity, riderDiceFor, rememberedWeapon } from "./shapes.mjs";
+
+// The pure rider reads live in shapes.mjs (guide S8); re-exported for callers of this file.
+export { isReckless, riderActivity, riderDiceFor };
 import { setting, riderMode } from "./settings.mjs";
 
 const log = makeLog(MODULE);
@@ -44,12 +47,6 @@ function attackActivity(message) {
   } catch { return null; }
 }
 
-function isWeaponAttack(activity) {
-  const cls = activity?.attack?.type?.classification;
-  return activity?.type === "attack" && cls !== "spell" && activity.item?.type !== "spell"
-    && (cls === "weapon" || cls === "unarmed" || activity.item?.type === "weapon");
-}
-
 function targetToken(message) {
   const t = message?.system?.targets?.[0];
   if (!t || message.system.targets.length !== 1) return null;
@@ -61,10 +58,6 @@ function targetToken(message) {
 
 function isRaging(actor) {
   return !!actor?.effects?.some(e => !e.disabled && !e.isSuppressed && /^rage$/i.test(e.name ?? ""));
-}
-
-export function isReckless(actor) {
-  return !!actor?.effects?.some(e => core.isRecklessEffect(e));
 }
 
 /**
@@ -96,22 +89,6 @@ export async function setReckless(actor, on) {
   delete data.changes;
   await actor.createEmbeddedDocuments("ActiveEffect", [data]);
   return true;
-}
-
-/** The rider's damage activity on its feature item. */
-export function riderActivity(actor, rider) {
-  for (const id of rider.identifiers) {
-    const item = featureItem(actor, id);
-    const act = activitiesOf(item).find(a => a.type === "damage");
-    if (act) return act;
-  }
-  return null;
-}
-
-/** "3d6" for the button label. */
-export function riderDiceFor(actor, rider) {
-  const scale = rider.scale ? actor?.system?.scale?.[rider.scale[0]]?.[rider.scale[1]] : null;
-  return core.riderDice(rider, scale);
 }
 
 /** Every rider this actor has, with its eligibility on one attack message. */
@@ -463,7 +440,7 @@ export function report(actorOrName) {
       modeForMe: riderMode(r.key)
     })),
     turn: actor.getFlag(MODULE, "turn") ?? null,
-    lastWeapon: actor.getFlag(MODULE, "last")?.weapon ?? null
+    lastWeapon: rememberedWeapon(actor)
   }));
   console.table(rows.map(r => ({ actor: r.actor, riders: r.riders.map(x => `${x.key} ${x.dice} (${x.modeForMe})`).join(", ") || "—", turn: r.turn?.key ?? "—" })));
   return rows;

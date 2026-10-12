@@ -6,6 +6,7 @@
 import { MODULE } from "../combat-core.mjs";
 import { makeLog } from "../lib/log.mjs";
 import { setting } from "../settings.mjs";
+import { isAoeHandle } from "../shapes.mjs";
 
 const log = makeLog(MODULE);
 
@@ -25,7 +26,7 @@ function ownedTokenOf(actor) {
 const onTokenDeleted = (doc) => {
   try {
     if (!setting("helperTokenControl") || doc?.parent !== canvas.scene || !doc.object?.controlled) return;
-    const handle = !!doc.flags?.["pentaryn-aoe"]?.handle;
+    const handle = isAoeHandle(doc.flags);
     const origin = doc.actor?.getFlag?.("dnd5e", "summon.origin") ?? null;
     if (!handle && !origin) return;
     const hud = ui.ARGON?._token?.id ?? null;

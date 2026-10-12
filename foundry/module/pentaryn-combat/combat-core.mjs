@@ -1341,3 +1341,36 @@ export function riderRolled(dice, terms = []) {
   }
   return null;
 }
+
+/* ── Full Attack plan (moved from sequence.mjs, combat-riders-22; the body is unchanged) ── */
+
+/**
+ * The swings a Full Attack would make right now, for the button's badge and for start. Pure: the
+ * caller passes the actor's weapon shapes and its Enhanced Dual Wielding flag.
+ * KNOWN (combat-riders-22): Multiattack ignores Action Surge — a surged turn plans nothing here.
+ * @returns {{swings: object[], count: number, left: number, weaponId: string|null}}
+ */
+export function fullAttackPlanFrom({ weapons = [], weaponId = null, turn = null, inCombat = false, multiattack = null, count = 1, pick = null, enhancedDualWielding = false } = {}) {
+  if (multiattack) {
+    const plan = pick ? multiattackPlan(multiattack, { pick }) : multiattack.plan;
+    const total = plan.reduce((s, r) => s + r.count, 0);
+    const done = inCombat ? (turn?.attackAction?.swings ?? 0) : 0;
+    const swings = inCombat && attackActions(turn) === 0 ? [] : planSequence({ multiattack: plan, done });
+    return { swings, count: total, left: swings.length, weaponId: plan[0]?.itemId ?? null };
+  }
+  const main = weapons.find(w => w.id === weaponId) ?? null;
+  const left = swingsLeft(count, turn, { inCombat });
+  const extras = extraSwings({ main, weapons, turn, enhancedDualWielding });
+  const swings = left > 0 ? planSequence({ weaponId, count: left, extras }) : [];
+  return { swings, count, left, weaponId };
+}
+
+/**
+ * An area spell whose template placement was cancelled was not cast (pentaryn-aoe refunds it):
+ * no pip, no Action. `wanted`: the usage asked for a template; `hasArea`: the activity has one;
+ * `placed`: templates made; `onScene`: a scene is viewed. (combat-riders-36, the move; reading
+ * aoe's own refund decision is a separate, declared change.)
+ */
+export function areaPlacementSkipped({ wanted = false, hasArea = false, placed = 0, onScene = false } = {}) {
+  return !!(wanted && hasArea && !placed && onScene);
+}

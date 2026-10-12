@@ -10,6 +10,7 @@ import { MODULE } from "../combat-core.mjs";
 import { makeLog } from "../lib/log.mjs";
 import { setting } from "../settings.mjs";
 import { running } from "../sequence.mjs";
+import { rollDialogOf, isOrphanCard } from "../dialog-adapter.mjs";
 
 const log = makeLog(MODULE);
 
@@ -25,22 +26,12 @@ const temp = {
 
 /* ── roll dialogs: Esc, and the card a cancelled attack leaves ───────────── */
 
-function rollDialogFor(target) {
-  const host = target?.closest?.(".application.roll-configuration");
-  if (host) return foundry.applications.instances.get(host.id) ?? null;
-  // Nothing focused (the dialog opened under the cursor without taking focus): the newest roll dialog.
-  if (target && target !== document.body && target !== document.documentElement) return null;
-  const open = [...document.querySelectorAll(".application.roll-configuration")];
-  const top = open.sort((a, b) => (Number(getComputedStyle(b).zIndex) || 0) - (Number(getComputedStyle(a).zIndex) || 0))[0];
-  return top ? foundry.applications.instances.get(top.id) ?? null : null;
-}
-
 const onEscKey = (ev) => {
   if (ev.key !== "Escape" || !setting("escRollDialog") || running()) return;   // a Full Attack's strip handles its own
   const t = ev.target;
   // Text fields and selects keep their native Esc (blur); a focused button blocks every keybinding.
   if (t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement || t instanceof HTMLSelectElement) return;
-  const dialog = rollDialogFor(t);
+  const dialog = rollDialogOf(t);
   if (!dialog) return;
   ev.preventDefault();
   ev.stopPropagation();
@@ -94,11 +85,7 @@ const onAttackDialogClosed = (app) => {
     // dnd5e posts the attack (if any) after this hook; look again a moment later before deleting.
     setTimeout(() => {
       if (!game.messages.get(msg.id)) return;
-      const rolled = game.messages.contents.some(m => m.id !== msg.id && ((m.system?.origin?.id ?? m.system?.origin) === msg.id));
-      const keep = !core.orphanUsage({
-        mine: msg.author?.id === game.user.id, ageMs: Date.now() - (msg.timestamp ?? 0), rolled,
-        consumed: core.deltasConsumed(msg.system?.deltas), sequence: !!running()
-      });
+      const keep = !isOrphanCard(msg, { sequence: !!running() });
       if (!keep) msg.delete().catch(err => log.warn("tidy usage card", err));
     }, 250);
   } catch (err) { log.warn("tidy usage card", err); }

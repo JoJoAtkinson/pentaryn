@@ -145,5 +145,5 @@ test("core: the module namespace, every export reachable through the API", async
   const core = await import("../combat-core.mjs");
   assert.equal(api.core, core);
   assert.equal(api.core.MOD, "pentaryn-combat");
-  assert.equal(Object.keys(api.core).length, 81 + 10, "S1's 81 plus S2's eight blueprint constants and S4's I18N_KEYS, keyFor");
+  assert.equal(Object.keys(api.core).length, 81 + 12, "S1's 81 plus S2's eight blueprint constants, S4's I18N_KEYS, keyFor and S8's fullAttackPlanFrom, areaPlacementSkipped");
 });
