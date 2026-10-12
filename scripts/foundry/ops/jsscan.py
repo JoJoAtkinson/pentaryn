@@ -468,7 +468,10 @@ def key_uses(s: Source, namespaces: set[str], known: set[str]) -> KeyUse:
                     use.prefixes.add(f"{ns}.{lit.prefix}")
             continue
         # A bare literal that names a key: `{name: "NS.keybind.show"}` is a real
-        # reference; `"dialog.reverseWordLabel"` passed as a labelKey is a soft one.
+        # reference; `"dialog.reverseWordLabel"` passed as a labelKey is a soft one. A
+        # literal ending in a dot (`k.startsWith("NS.")`) names the namespace, never a key.
+        if lit.value.endswith("."):
+            continue
         if any(lit.value.startswith(ns + ".") for ns in namespaces):
             use.definite.append(Ref(lit.value, s.path, lit.line))
         elif any(ns + "." + lit.value in known for ns in namespaces):
