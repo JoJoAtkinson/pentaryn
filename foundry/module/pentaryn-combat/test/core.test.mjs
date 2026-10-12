@@ -15,16 +15,21 @@ test("imported bare: no Foundry global needed or added", () => {
   assert.deepEqual(Object.keys(globalThis).sort(), before);
 });
 
+// Guide S2's explicit additive delta: the blueprint constants. The S1 golden stays the 81 names.
+const ADDED_S2 = ["CONTRACT", "CSS", "HOOKS", "I18N", "MODULE", "NS", "SHORT", "VERSION"];
+
 test("export surface (golden/core-exports.json): 81 names", () => {
   const names = Object.keys(core).sort();
-  pinJSON("core-exports", names, import.meta.url);
-  assert.equal(names.length, 81);
+  pinJSON("core-exports", names.filter(n => !ADDED_S2.includes(n)), import.meta.url);
+  assert.equal(names.length, 81 + ADDED_S2.length);
+  for (const n of ADDED_S2) assert.ok(names.includes(n), n);
   assert.equal(core.MOD, "pentaryn-combat");
+  assert.equal(core.MODULE, core.MOD);
 });
 
 test("object exports are frozen tables, rows and arrays included", () => {
   const objects = Object.entries(core).filter(([, v]) => v && typeof v === "object");
-  assert.deepEqual(objects.map(([k]) => k).sort(), ["RECKLESS_CHANGE", "SPECIAL_ACTIONS", "TURN_RIDERS"]);
+  assert.deepEqual(objects.map(([k]) => k).sort(), ["HOOKS", "RECKLESS_CHANGE", "SPECIAL_ACTIONS", "TURN_RIDERS"]);
   const deepFrozen = v => !v || typeof v !== "object" || (Object.isFrozen(v) && Object.values(v).every(deepFrozen));
   for (const [k, v] of objects) assert.ok(deepFrozen(v), k);
 });
@@ -34,7 +39,7 @@ test("module.json version is 0.2.5 (play-test fix PT1-6 kept)", () => {
   assert.equal(manifest.id, core.MOD);
 });
 
-test("VERSION === module.json version", { todo: "S2 adds VERSION to combat-core.mjs" }, () => {
+test("VERSION === module.json version", () => {
   assert.equal(core.VERSION, manifest.version);
 });
 

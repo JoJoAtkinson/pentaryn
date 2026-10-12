@@ -27,7 +27,18 @@
  *   riderRolled                                  what an auto rider's dice came to on its damage card (Undo)
  */
 
-export const MOD = "pentaryn-combat";
+/* ── identity (blueprint constants; one MODULE for every file) ──────────────── */
+
+export const MODULE = "pentaryn-combat";
+export { MODULE as MOD };                  // game.pentaryn.combat.core.MOD stays readable for macros
+export const SHORT = "combat";
+export const NS = "combat";                // game.pentaryn.combat
+export const VERSION = "0.2.5";            // === module.json version (core.test pins it)
+export const CONTRACT = "pentaryn-combat/api@1";
+export const I18N = "PENTARYN_COMBAT";
+export const CSS = "pc-";
+/** The module's own events (S9 fills it): `{ name, pre, args, legacyName?, until? }` rows, fired by ctx.emit. */
+export const HOOKS = Object.freeze({});
 
 /* ── names and identity ───────────────────────────────────────────────────── */
 
