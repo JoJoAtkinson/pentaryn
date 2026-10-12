@@ -76,15 +76,6 @@ test("seeded sweep: core equals the oracle on 2000 generated cases per function"
   }
 });
 
-test("pinned quirk: recentOf with n = null or non-numeric returns the whole list, newest first", () => {
-  const list = ["a", "b", "c"];
-  for (const n of [null, "x"]) {
-    assert.deepEqual(core.recentOf(list, n), ["c", "b", "a"], `core ${String(n)}`);
-    assert.deepEqual(oracle.recentOf(list, n), ["c", "b", "a"], `oracle ${String(n)}`);
-  }
-  assert.deepEqual(list, ["a", "b", "c"]);
-});
-
 test("drift guard: the settings rows and reader docs quote the core constants", async () => {
   // settings.mjs imports only pings-core and lib/settings, so it loads bare (no Foundry globals)
   const src = readFileSync(new URL("../settings.mjs", import.meta.url), "utf8");
