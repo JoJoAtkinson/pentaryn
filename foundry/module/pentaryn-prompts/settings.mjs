@@ -10,7 +10,7 @@
 
 import { GATHER_CHARS, SIZE_KEYS } from "./geometry-core.mjs";
 import { MODULE, I18N } from "./prompts-core.mjs";
-import { defineKeybindings, defineSettings, settingsSnapshot as snapshot } from "./lib/settings.mjs";
+import { defineKeybindings, defineSettings, serialStore, settingsSnapshot as snapshot } from "./lib/settings.mjs";
 import { makeLog } from "./lib/log.mjs";
 
 const log = makeLog(MODULE);
@@ -142,10 +142,19 @@ export function manifestFor(call) {
   return manifests().find(m => m?.call === call) ?? null;
 }
 
-/** Newest first, five kept, one per call id. GM clients only; a plain set, not a serialStore (yet). */
+/** The ring's one store (C58), made on first write: writes in this tab queue, never interleave. */
+let lastCalls = null;
+
+/**
+ * Newest first, five kept, one per call id. GM clients only (any GM, as before). Serialised per tab,
+ * so two gathers at once (the bridge runs MCP calls in parallel) can no longer drop each other's
+ * manifest; two GM tabs gathering at the same moment can still race (§5.9.1).
+ */
 export async function storeManifest(manifest) {
-  if (!game.user?.isGM) return;
-  const ring = manifests().filter(m => m?.call !== manifest.call);
-  ring.unshift(manifest);
-  await game.settings.set(MODULE, "lastCalls", ring.slice(0, RING));
+  lastCalls ??= serialStore(MODULE, "lastCalls", { log });
+  await lastCalls.write(current => {
+    const ring = (Array.isArray(current) ? current : []).filter(m => m?.call !== manifest.call);
+    ring.unshift(manifest);
+    return ring.slice(0, RING);
+  });
 }

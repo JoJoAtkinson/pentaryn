@@ -48,3 +48,9 @@ test("settingsSnapshot(): live values, the store as its size", async () => {
   assert.equal(snap.defaultSize, "mid");
   assert.equal(Object.keys(snap).length, 11);
 });
+
+test("the ring through one serialStore: two stores at once both land (no lost manifest)", async () => {
+  await F.game.settings.set(MODULE, "lastCalls", []);
+  await Promise.all([S.storeManifest({ call: "pm-x" }), S.storeManifest({ call: "pm-y" })]);
+  assert.deepEqual(S.manifests().map(m => m.call), ["pm-y", "pm-x"]);
+});
