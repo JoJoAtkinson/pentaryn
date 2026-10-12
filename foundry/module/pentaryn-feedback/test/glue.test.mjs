@@ -412,6 +412,15 @@ test("submit refuses empty text without writing anything (and says so); dryRun b
   assert.equal(F.calls.slice(before).filter(c => c.op === "update" || c.op === "query").length, 0);
 });
 
+test("feedback-rob-2: submit(null), submit(draft, null) and ingest(null) answer a fail(), never throw", async () => {
+  assert.deepEqual(await api.submit(null), { ok: false, code: "BAD_ARGS", reason: "the report text is empty" });
+  assert.deepEqual(await api.submit({ text: "   " }, null), { ok: false, code: "BAD_ARGS", reason: "the report text is empty" });
+  assert.equal((await api.ingest(null)).code, "NOT_FOUND");
+  F.become({ userId: IDS.player });
+  assert.deepEqual(await api.ingest(null), { ok: false, code: "NOT_GM", reason: "only the active GM files reports" });
+  F.become({ userId: IDS.gm });
+});
+
 test("a failed queue write tells the player and leaves nothing half-done", async () => {
   refill();
   F.become({ userId: IDS.player });

@@ -155,7 +155,8 @@ async function get({ id } = {}) {
   return (await find(id)).report;
 }
 
-async function resolve(ctx, { id, status, note = "", force = false, dryRun = false } = {}) {
+async function resolve(ctx, opts) {
+  const { id, status, note = "", force = false, dryRun = false } = opts ?? {};   // null → fail(), rob-2
   if (!isGM()) return fail("NOT_GM", "only a GM changes a report's status");
   let found;
   try {
@@ -192,7 +193,7 @@ export function buildApiFor(ctx) {
     ingest: door("ingest"),
     list: (opts = {}) => list(ctx, opts),
     get: (opts = {}) => get(opts),
-    resolve: (opts = {}) => resolve(ctx, opts),
+    resolve: opts => resolve(ctx, opts ?? {}),
   }, {
     contributions: ctx.contributions,
     members: {

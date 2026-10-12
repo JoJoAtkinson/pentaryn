@@ -311,6 +311,14 @@ test("resolve: transitions, history, dryRun, refusals as fail(); an audit line p
   F.become({ userId: gm.id });
 });
 
+test("feedback-rob-2: resolve(null) answers a fail(), never throws", async () => {
+  seed();
+  assert.equal((await api.resolve(null)).code, "BAD_ARGS");
+  F.become({ userId: IDS.player });
+  assert.equal((await api.resolve(null)).code, "NOT_GM");
+  F.become({ userId: gm.id });
+});
+
 test("every patch record names an adjustments row with the module prefix", () => {
   const patches = api.describe().patches;
   assert.equal(patches.length, 3);

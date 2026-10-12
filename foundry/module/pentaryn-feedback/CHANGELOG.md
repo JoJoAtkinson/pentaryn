@@ -2,6 +2,9 @@
 
 ## Unreleased — 2026-10-12 (W3L live-check fix; `module.json` stays 0.1.2, code-only sync)
 
+- **[declared] A null argument gets a fail(), not a TypeError** (feedback-rob-2): `submit(null)`,
+  `submit(draft, null)`, `ingest(null)` and `resolve(null)` threw while destructuring despite "never
+  throws"; each entry now treats null as `{}`, so the call answers BAD_ARGS / NOT_GM / NOT_FOUND.
 - **[declared] `inspect` reaches an Actor from a string**, which is all the MCP bridge can send:
   `pentaryn-read {ns:"feedback", path:"inspect", ref:"Actor.<id>"}` answered `expected User, got Actor`,
   and an actor's name `NOT_FOUND: user <name>`. A string ref is still a user first; otherwise an
