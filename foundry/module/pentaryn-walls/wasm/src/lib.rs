@@ -690,9 +690,10 @@ pub extern "C" fn out_ptr() -> *const i32 {
     unsafe { (*std::ptr::addr_of!(OUT_BUF)).as_ptr() }
 }
 
-/// Input layout: [n, (x0,y0,x1,y1,door,sight,dir,keepOpen) * n]
-/// Output layout: [creates, updates, refusals, iterations,
-///                 creates*(x0,y0,x1,y1), updates*(segIdx,x0,y0,x1,y1), refusals*(x,y)]
+/// Input layout: [n, (x0,y0,x1,y1,door,sight,dir,keepOpen,light,sound,move) * n]
+/// Output layout: [creates, updates, refusals, iterations, components,
+///                 creates*(x0,y0,x1,y1,light,sight,sound,move), updates*(segIdx,x0,y0,x1,y1),
+///                 refusals*(x,y), components*(walls,dangling)]
 #[no_mangle]
 pub extern "C" fn run(grid_size: f64, gap_max: f64, corner_max: f64, ext_max: f64,
                       coll_eps: f64, glance_sin: f64, trim_on: i32, iter_cap: i32) -> i32 {
@@ -760,7 +761,7 @@ pub extern "C" fn run(grid_size: f64, gap_max: f64, corner_max: f64, ext_max: f6
 
         g = build_graph(&segs, &cfg);
         let d2 = dangling_of(&g).len();
-        if d2 >= d { return -1; } // unsound; caller falls back to JS
+        if d2 >= d { return -1; } // unsound; the JS adapter (backend-wasm.mjs runWasm) throws, nothing is committed
         d = d2;
         iterations = iterations.max(iter + 1);
     }
