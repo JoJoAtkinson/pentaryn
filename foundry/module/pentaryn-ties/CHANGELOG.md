@@ -43,7 +43,7 @@ the actor already has an entry, the entry is left alone. R1.
 Fixed (declared): a lore row or attribute with **no DC** (missing, or its DC box cleared) rolls
 against the default DC 15. It used to read as 0 and clamp up to DC 1. A typed DC still counts, and
 a real 0 is still raised to the floor of 1. The same check now reads every number in the Known and
-study records, so a study rung saved without a `min` is ignored rather than taken as the base rung. M1.
+study records, so a study rung saved without a `min` is ignored rather than taken as the base rung (R7, now pinned by its own test). M1.
 
 Fixed (declared): a **refused save** of a tie, a Known entry or a Mark as learned no longer throws.
 The write logs a console warning and reports failure (`write`/`writeKnown` answer false,
