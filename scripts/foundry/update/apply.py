@@ -483,7 +483,10 @@ def restore_service(entry: state.EntryState, messages: list[str]) -> None:
             except Exception as exc:  # noqa: BLE001
                 messages.append(f"could not relaunch {entry.active_world}: {exc}")
     else:
-        admin_mod.quit_app()
+        try:
+            admin_mod.quit_app()
+        except Exception as exc:  # noqa: BLE001
+            messages.append(f"could not stop Foundry: {exc}")
 
     if entry.tunnel_up and not recover.tunnel_running(REPO_ROOT):
         if not recover.tunnel_up(REPO_ROOT):
