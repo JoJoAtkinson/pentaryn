@@ -3,36 +3,36 @@
     "input": [
       null
     ],
-    "threw": "Cannot read properties of undefined (reading 'getFlag')"
+    "out": null
   },
   {
     "input": [
       null
     ],
-    "threw": "Cannot read properties of null (reading 'getFlag')"
+    "out": null
   },
   {
     "input": [
       "Fighter"
     ],
-    "out": 1
+    "out": 2
   },
   {
     "input": [
       "fighter000000001"
     ],
-    "out": 1
+    "out": 2
   },
   {
     "input": [
       "Actor.fighter000000001"
     ],
-    "out": 1
+    "out": 2
   },
   {
     "input": [
       {}
     ],
-    "out": 1
+    "out": null
   }
 ]

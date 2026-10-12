@@ -1,10 +1,10 @@
 {
   "count": [
     {
-      "threw": "Cannot read properties of undefined (reading 'getFlag')"
+      "ok": true
     },
     {
-      "threw": "Cannot read properties of null (reading 'getFlag')"
+      "ok": true
     },
     {
       "ok": true
@@ -21,10 +21,10 @@
   ],
   "plan": [
     {
-      "threw": "Cannot read properties of undefined (reading 'type')"
+      "ok": true
     },
     {
-      "threw": "Cannot read properties of null (reading 'type')"
+      "ok": true
     },
     {
       "ok": true

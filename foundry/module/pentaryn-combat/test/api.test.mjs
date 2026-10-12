@@ -46,7 +46,13 @@ test("the members are the module's own functions (identity), in this order", () 
     followUp: seq.runFollowUp, rollRider: riders.rollRider, reckless: riders.isReckless, setReckless: riders.setReckless, running: seq.running,
     abort: seq.abortFor, quick: settings.quickMode, setQuick: settings.setQuickMode, riderMode: settings.riderMode, setRiderMode: settings.setRiderMode,
     report: riders.report, seedWeaponSets: off.seedWeaponSets, seedAll: off.seedAll };
-  for (const [k, fn] of Object.entries(same)) assert.equal(api[k], fn, k);
+  // D-c2 [declared] (S11, combat-riders-12): the members that take an actor resolve a ref first, so
+  // they are wrappers named after the function they call; the rest are still the functions themselves.
+  const resolving = new Set(["turn", "newTurn", "multiattack", "weapons", "followUp", "reckless", "setReckless", "seedWeaponSets"]);
+  for (const [k, fn] of Object.entries(same)) {
+    if (resolving.has(k)) assert.equal(api[k].name, fn.name, k);
+    else assert.equal(api[k], fn, k);
+  }
   for (const k of ["count", "plan", "fullAttack", "fixFeats"]) assert.equal(typeof api[k], "function", k);
 });
 
@@ -75,18 +81,18 @@ test("api.plan equals its legacy oracle, with and without an explicit weapon (co
   delete cast.wolf.flags[MODULE];
 });
 
-test("failure paths as they are today (KNOWN combat-riders-12): bad refs throw or answer oddly (golden/api-bad-refs.json)", async () => {
+test("bad refs (D-c2 [declared], was KNOWN combat-riders-12): a miss answers null, an id / UUID / name resolves (golden/api-bad-refs.json)", async () => {
   const bad = [[undefined], [null], ["Fighter"], [cast.fighter.id], [cast.fighter.uuid], [{}]];
   const read = ["count", "plan", "turn", "multiattack", "weapons", "reckless"];
   const out = {};
   for (const k of read) {
-    // KNOWN: no ref resolution; undefined / a name / an id throw a TypeError or read nothing
+    // D-c2: undefined, null and {} answer null; "Fighter", its id and its UUID resolve to the Fighter
     out[k] = await characterise(`api-bad-${k}`, (...args) => api[k](...args), bad, { file: import.meta.url, normalise: v => JSON.parse(JSON.stringify(v ?? null)) });
   }
   pinJSON("api-bad-refs", Object.fromEntries(Object.entries(out).map(([k, rows]) => [k, rows.map(r => ("threw" in r ? { threw: r.threw } : { ok: true }))])), import.meta.url);
 });
 
-test("legacy actor members resolve an id / UUID / name and return null on a miss", { todo: "combat-riders-12 (guide S11, declared D-c2): flips the KNOWN pins above" }, () => {
+test("legacy actor members resolve an id / UUID / name and return null on a miss (D-c2)", () => {
   assert.equal(api.plan(undefined), null);
   assert.deepEqual(api.plan(cast.fighter.id), api.plan(cast.fighter));
   assert.deepEqual(api.turn("Fighter"), api.turn(cast.fighter));

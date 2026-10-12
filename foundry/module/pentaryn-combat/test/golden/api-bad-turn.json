@@ -3,56 +3,20 @@
     "input": [
       null
     ],
-    "out": {
-      "key": "nocombat",
-      "attackAction": {
-        "weapons": [],
-        "swings": 0,
-        "crit": false,
-        "critWeapon": null,
-        "kill": false,
-        "killWeapon": null
-      },
-      "riders": {},
-      "followUps": [],
-      "nick": false,
-      "bonusUsed": false,
-      "otherAction": false,
-      "otherActions": 0,
-      "surges": 0,
-      "quickened": false
-    }
+    "out": null
   },
   {
     "input": [
       null
     ],
-    "out": {
-      "key": "nocombat",
-      "attackAction": {
-        "weapons": [],
-        "swings": 0,
-        "crit": false,
-        "critWeapon": null,
-        "kill": false,
-        "killWeapon": null
-      },
-      "riders": {},
-      "followUps": [],
-      "nick": false,
-      "bonusUsed": false,
-      "otherAction": false,
-      "otherActions": 0,
-      "surges": 0,
-      "quickened": false
-    }
+    "out": null
   },
   {
     "input": [
       "Fighter"
     ],
     "out": {
-      "key": "nocombat",
+      "key": "c1:1:cb1",
       "attackAction": {
         "weapons": [],
         "swings": 0,
@@ -76,7 +40,7 @@
       "fighter000000001"
     ],
     "out": {
-      "key": "nocombat",
+      "key": "c1:1:cb1",
       "attackAction": {
         "weapons": [],
         "swings": 0,
@@ -100,7 +64,7 @@
       "Actor.fighter000000001"
     ],
     "out": {
-      "key": "nocombat",
+      "key": "c1:1:cb1",
       "attackAction": {
         "weapons": [],
         "swings": 0,
@@ -123,24 +87,6 @@
     "input": [
       {}
     ],
-    "out": {
-      "key": "nocombat",
-      "attackAction": {
-        "weapons": [],
-        "swings": 0,
-        "crit": false,
-        "critWeapon": null,
-        "kill": false,
-        "killWeapon": null
-      },
-      "riders": {},
-      "followUps": [],
-      "nick": false,
-      "bonusUsed": false,
-      "otherAction": false,
-      "otherActions": 0,
-      "surges": 0,
-      "quickened": false
-    }
+    "out": null
   }
 ]

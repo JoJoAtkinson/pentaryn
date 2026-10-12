@@ -45,10 +45,5 @@
     "reason": "report only",
     "fallback": true
   },
-  {
-    "plan": [],
-    "applied": false,
-    "reason": "report only",
-    "fallback": true
-  }
+  null
 ]

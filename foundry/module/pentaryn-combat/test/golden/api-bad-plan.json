@@ -3,23 +3,34 @@
     "input": [
       null
     ],
-    "threw": "Cannot read properties of undefined (reading 'type')"
+    "out": null
   },
   {
     "input": [
       null
     ],
-    "threw": "Cannot read properties of null (reading 'type')"
+    "out": null
   },
   {
     "input": [
       "Fighter"
     ],
     "out": {
-      "swings": [],
-      "count": 1,
-      "left": 1,
-      "weaponId": null
+      "swings": [
+        {
+          "weaponId": "longsword0000001",
+          "mode": null,
+          "kind": "main"
+        },
+        {
+          "weaponId": "longsword0000001",
+          "mode": null,
+          "kind": "main"
+        }
+      ],
+      "count": 2,
+      "left": 2,
+      "weaponId": "longsword0000001"
     }
   },
   {
@@ -27,10 +38,21 @@
       "fighter000000001"
     ],
     "out": {
-      "swings": [],
-      "count": 1,
-      "left": 1,
-      "weaponId": null
+      "swings": [
+        {
+          "weaponId": "longsword0000001",
+          "mode": null,
+          "kind": "main"
+        },
+        {
+          "weaponId": "longsword0000001",
+          "mode": null,
+          "kind": "main"
+        }
+      ],
+      "count": 2,
+      "left": 2,
+      "weaponId": "longsword0000001"
     }
   },
   {
@@ -38,21 +60,27 @@
       "Actor.fighter000000001"
     ],
     "out": {
-      "swings": [],
-      "count": 1,
-      "left": 1,
-      "weaponId": null
+      "swings": [
+        {
+          "weaponId": "longsword0000001",
+          "mode": null,
+          "kind": "main"
+        },
+        {
+          "weaponId": "longsword0000001",
+          "mode": null,
+          "kind": "main"
+        }
+      ],
+      "count": 2,
+      "left": 2,
+      "weaponId": "longsword0000001"
     }
   },
   {
     "input": [
       {}
     ],
-    "out": {
-      "swings": [],
-      "count": 1,
-      "left": 1,
-      "weaponId": null
-    }
+    "out": null
   }
 ]

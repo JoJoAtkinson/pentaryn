@@ -3,13 +3,13 @@
     "input": [
       null
     ],
-    "out": false
+    "out": null
   },
   {
     "input": [
       null
     ],
-    "out": false
+    "out": null
   },
   {
     "input": [
@@ -33,6 +33,6 @@
     "input": [
       {}
     ],
-    "out": false
+    "out": null
   }
 ]

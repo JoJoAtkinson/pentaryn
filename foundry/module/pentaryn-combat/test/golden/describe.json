@@ -9,9 +9,9 @@
       "params": [
         {
           "name": "actor",
-          "type": "Actor",
+          "type": "Actor|Token|uuid|id|exact name",
           "resolve": false,
-          "doc": "an Actor document (legacy rows resolve no ref until S11)"
+          "doc": "resolved by the member itself (never a substring); a miss answers null"
         },
         {
           "name": "weaponId",
@@ -33,9 +33,9 @@
       "params": [
         {
           "name": "actor",
-          "type": "Actor",
+          "type": "Actor|Token|uuid|id|exact name",
           "resolve": false,
-          "doc": "an Actor document (legacy rows resolve no ref until S11)"
+          "doc": "resolved by the member itself (never a substring); a miss answers null"
         },
         {
           "name": "weaponId",
@@ -57,9 +57,9 @@
       "params": [
         {
           "name": "actor",
-          "type": "Actor",
+          "type": "Actor|Token|uuid|id|exact name",
           "resolve": false,
-          "doc": "an Actor document (legacy rows resolve no ref until S11)"
+          "doc": "resolved by the member itself (never a substring); a miss answers null"
         }
       ],
       "returns": "{ key, attackAction, riders, followUps, nick, bonusUsed, otherActions, surges, quickened }",
@@ -75,9 +75,9 @@
       "params": [
         {
           "name": "actor",
-          "type": "Actor",
+          "type": "Actor|Token|uuid|id|exact name",
           "resolve": false,
-          "doc": "an Actor document (legacy rows resolve no ref until S11)"
+          "doc": "resolved by the member itself (never a substring); a miss answers null"
         }
       ],
       "returns": "Promise<Actor|null>",
@@ -96,9 +96,9 @@
       "params": [
         {
           "name": "actor",
-          "type": "Actor",
+          "type": "Actor|Token|uuid|id|exact name",
           "resolve": false,
-          "doc": "an Actor document (legacy rows resolve no ref until S11)"
+          "doc": "resolved by the member itself (never a substring); a miss answers null"
         }
       ],
       "returns": "{ plan, total, groups, source } | null",
@@ -115,9 +115,9 @@
       "params": [
         {
           "name": "actor",
-          "type": "Actor",
+          "type": "Actor|Token|uuid|id|exact name",
           "resolve": false,
-          "doc": "an Actor document (legacy rows resolve no ref until S11)"
+          "doc": "resolved by the member itself (never a substring); a miss answers null"
         }
       ],
       "returns": "weaponShape[]",
@@ -150,9 +150,9 @@
       "params": [
         {
           "name": "actor",
-          "type": "Actor",
+          "type": "Actor|Token|uuid|id|exact name",
           "resolve": false,
-          "doc": "an Actor document (legacy rows resolve no ref until S11)"
+          "doc": "resolved by the member itself (never a substring); a miss answers null"
         },
         {
           "name": "weaponId",
@@ -183,9 +183,9 @@
       "params": [
         {
           "name": "actor",
-          "type": "Actor",
+          "type": "Actor|Token|uuid|id|exact name",
           "resolve": false,
-          "doc": "an Actor document (legacy rows resolve no ref until S11)"
+          "doc": "resolved by the member itself (never a substring); a miss answers null"
         },
         {
           "name": "followUp",
@@ -238,9 +238,9 @@
       "params": [
         {
           "name": "actor",
-          "type": "Actor",
+          "type": "Actor|Token|uuid|id|exact name",
           "resolve": false,
-          "doc": "an Actor document (legacy rows resolve no ref until S11)"
+          "doc": "resolved by the member itself (never a substring); a miss answers null"
         }
       ],
       "returns": "boolean",
@@ -256,9 +256,9 @@
       "params": [
         {
           "name": "actor",
-          "type": "Actor",
+          "type": "Actor|Token|uuid|id|exact name",
           "resolve": false,
-          "doc": "an Actor document (legacy rows resolve no ref until S11)"
+          "doc": "resolved by the member itself (never a substring); a miss answers null"
         },
         {
           "name": "on",
@@ -395,9 +395,9 @@
       "params": [
         {
           "name": "actor",
-          "type": "Actor",
+          "type": "Actor|Token|uuid|id|exact name",
           "resolve": false,
-          "doc": "an Actor document (legacy rows resolve no ref until S11)"
+          "doc": "resolved by the member itself (never a substring); a miss answers null"
         },
         {
           "name": "opts",
@@ -418,9 +418,9 @@
       "params": [
         {
           "name": "actor",
-          "type": "Actor",
+          "type": "Actor|Token|uuid|id|exact name",
           "resolve": false,
-          "doc": "an Actor document (legacy rows resolve no ref until S11)"
+          "doc": "resolved by the member itself (never a substring); a miss answers null"
         }
       ],
       "returns": "Promise<object|null>",

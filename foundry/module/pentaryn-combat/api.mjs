@@ -95,26 +95,54 @@ function selftest(ctx) {
   return { ok: checks.every(c => c.ok), checks: checks.map(c => ({ detail: null, ...c })) };
 }
 
+/**
+ * The legacy members that take an actor (S11, declared D-c2, combat-riders-12): an Actor, Token,
+ * UUID, 16-character id or exact name is resolved (never a substring, never canvas.scene by
+ * default); a miss, a bad ref or nothing at all answers null (a Promise of null for an async
+ * member) instead of throwing a TypeError. The row stays `legacy: true`.
+ */
+const ACTOR_ROWS = new Set(["count", "plan", "turn", "newTurn", "multiattack", "weapons", "fullAttack", "followUp", "reckless", "setReckless", "fixFeats", "seedWeaponSets"]);
+
+function legacyActor(fn) {
+  const async = fn.constructor?.name === "AsyncFunction";
+  const wrapped = (ref, ...rest) => {
+    let actor = null;
+    try {
+      actor = resolveRef(ref, "actor", { required: false });
+    } catch {
+      actor = null;   // BAD_ARGS (not a reference) or AMBIGUOUS: a miss for a legacy member
+    }
+    if (!actor) return async ? Promise.resolve(null) : null;
+    return fn(actor, ...rest);
+  };
+  Object.defineProperty(wrapped, "name", { value: fn.name || "legacyActor" });
+  return wrapped;
+}
+
+const refRows = impl => Object.fromEntries(Object.entries(impl ?? {}).map(([k, fn]) => [k, ACTOR_ROWS.has(k) ? legacyActor(fn) : fn]));
+
 /** Build the frozen API. Throws (at ready, in node too) when manifest and implementations drift. */
 export function buildApiFor(ctx) {
   return buildApi(MANIFEST, {
-    count: (actor, weaponId) => countFor(actor, weaponId),
-    plan,
-    turn: turnOf,
-    newTurn,
-    multiattack: multiattackOf,
-    weapons: weaponsOf,
+    ...refRows({
+      count: function count(actor, weaponId) { return countFor(actor, weaponId); },
+      plan,
+      turn: turnOf,
+      newTurn,
+      multiattack: multiattackOf,
+      weapons: weaponsOf,
+      fixFeats,
+    }),
     quick: quickMode,
     setQuick: setQuickMode,
     riderMode,
     setRiderMode,
-    fixFeats,
     inspect: (actor, opts = {}) => inspect(actor, ctx, opts),
     selftest: () => selftest(ctx),
     coversMultiattack,
     core,
   }, {
-    contributions: ctx.contributions,
+    contributions: ctx.contributions.map(c => ({ ...c, impl: refRows(c.impl) })),
     members: {
       settings: () => settingsSnapshot(MODULE, SETTINGS),
       trace: () => ctx.log.traces(),

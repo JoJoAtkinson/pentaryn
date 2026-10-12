@@ -3,8 +3,10 @@
  * Foundry stub, describe() reports it, and buildApi() refuses to load when it and the
  * implementations (api.mjs, plus the features' contributions) drift apart.
  *
- * The 22 legacy members keep their signatures and their order (`legacy: true`): their first param is
- * an `actor` (an Actor document), not a resolved `ref`, until S11 (declared D-c2). The runner
+ * The 22 legacy members keep their signatures and their order (`legacy: true`). Since S11 (declared
+ * D-c2) the twelve that take an actor resolve it themselves (api.mjs legacyActor): an Actor, Token,
+ * UUID, id or exact name; a miss answers null. Their first param is still named `actor`, so
+ * buildApi's own `ref` resolution (which throws) does not apply. The runner
  * (sequence.mjs), the riders (turn-riders.mjs) and the weapon-set seed (offhand.mjs) contribute their
  * implementations from install(); the API never imports a feature. `core` is the pure core, published
  * as a frozen copy (`unlisted`). The new reads take a `ref` (Actor, Token, UUID, id or exact name).
@@ -12,7 +14,7 @@
 
 import { CONTRACT, MODULE, NS, VERSION } from "./combat-core.mjs";
 
-const ACTOR = { name: "actor", type: "Actor", resolve: false, doc: "an Actor document (legacy rows resolve no ref until S11)" };
+const ACTOR = { name: "actor", type: "Actor|Token|uuid|id|exact name", resolve: false, doc: "resolved by the member itself (never a substring); a miss answers null" };
 const WEAPON = { name: "weaponId", type: "string", optional: true, doc: "an item id; default: the remembered weapon, else the active set's primary, else the first equipped melee weapon" };
 const REF = { name: "ref", kind: "actor", type: "Actor|Token|uuid|id|exact name", doc: "never a substring" };
 const RIDER = { name: "key", type: '"sneak-attack"|"frenzy"|"colossus-slayer"|"divine-strike"' };
