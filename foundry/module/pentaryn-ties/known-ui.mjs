@@ -508,6 +508,8 @@ export function buildKnownHTML(actor) {
    * rogue already filed, so the join needs the subject's groups, not just its id.
    */
   const attrsFor = new Map();
+  // the registry cannot change mid-paint: read (and clamp) it once, not once per entry (ties-23)
+  const registryNow = registryOf();
   for (const entry of entries) {
     const subject = game.actors?.get(entry.id);
     studyFor.set(entry.id, subject ? studyStateFor(actor, subject) : null);
@@ -522,7 +524,7 @@ export function buildKnownHTML(actor) {
       subject
         ? visibleAttributesFor({
             carried: attributeIdsOf(subject, kindActorOf),
-            registry: registryOf(),
+            registry: registryNow,
             beliefs: subject.getFlag(MODULE, BELIEFS_FLAG) ?? {},
             characterId: actor.id,
             isGM
