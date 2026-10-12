@@ -174,3 +174,24 @@ The first attempt's after-files are kept as `*.attempt1.json`. `diff.mjs before 
 `--declared`, and for both attunement and portals shared is identical, cleanup is clean and the exit
 code is 0. Feedback has no live golden. Every ZZ fixture was deleted (no ZZ actors, scenes, items or
 journals are left). Reverts: none.
+
+## Integration INT-1417
+
+| Area | Status | Merge SHA | Revert SHA | Synced modules | Reason |
+|---|---|---|---|---|---|
+| dropbin | merged | 20fdd703 | — | dropbin | — |
+| journal | merged | 856f416b | — | journal | — |
+| creatures | merged | 6fa95f4b | — | creatures | — |
+
+**Gates.** On main at 6fa95f4b: `foundry-modules-check`, `foundry-lib-check`, `check-context` (OK, 5 warnings),
+`make test` (1626 passed, 2 skipped, 5 xfailed). No `module.json`, lang or fork file changed, so no restart and
+no fork rebuild.
+
+**Deploy.** Rollback copies of the three deployed folders (git 380a5348) in `.state/live-rollback/INT-1417/`.
+Before-goldens ran on the deployed pre-merge code in the one GM tab, `make foundry-{dropbin,journal,creatures}-sync`
+(FROM=local) at 14:23Z, one GM-tab reload. Probe: dropbin 0.2.3, journal 0.1.0, creatures 0.1.1 equal `module.json`,
+every described path a function, `selftest().ok` true for dropbin and journal (creatures has none).
+
+**Goldens.** Before and after diffed in page (the goldens are kept in the GM tab's localStorage, not as files):
+`golden.shared`, `golden.declared` and env all empty for the three modules, cleanups clean, no ZZ leftovers. No
+allowlist. Reverts: none.
