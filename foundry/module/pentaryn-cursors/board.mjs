@@ -60,6 +60,8 @@ function apply(el, key) {
  * pointer tile ($("#board").css({cursor: ""})). Re-issuing the current mode restores whatever
  * Foundry meant — the tool glyph, its pointer variant, or Foundry's hands.
  */
+// hot: runs from the #board style observer on every PIXI cursor-mode change (hover in/out); keep the
+// non-empty style.cursor return first: no setting read, lookup or allocation before it.
 export function resync(el = boardEl()) {
   const events = canvas?.app?.renderer?.events;
   if (!el || !events || el.style.cursor || !enabled()) return;

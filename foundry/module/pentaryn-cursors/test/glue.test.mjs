@@ -222,6 +222,24 @@ test("(e) resync: a blanked style.cursor re-issues Foundry's mode once; otherwis
   assert.deepEqual(warns, []);
 });
 
+test("(e2) resync hot path: a non-empty style.cursor returns before reading the setting", () => {
+  const get = game.settings.get;
+  const mode = events.currentCursor;
+  let reads = 0;
+  game.settings.get = function (...args) { reads += 1; return get.apply(this, args); };
+  try {
+    events.currentCursor = "pointer";
+    el.style.cursor = "var(--cursor-default)";
+    for (let i = 0; i < 3; i += 1) observers[0].callback([], observers[0]);
+  } finally {
+    game.settings.get = get;
+    events.currentCursor = mode;
+  }
+  assert.equal(reads, 0, "no setting read on the hot path");
+  assert.deepEqual(events.setCursorCalls, []);
+  assert.deepEqual(warns, []);
+});
+
 test("(g) a throwing resync inside the observer warns `resync failed`; currentCursor is left null", () => {
   el.style.cursor = "";
   events.currentCursor = "default";
