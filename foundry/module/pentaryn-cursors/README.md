@@ -43,6 +43,8 @@ published synchronously at `ready` (`pentaryn-cursors.ready` fires with it). Ask
   `expected` is `keyFor`'s answer; `key` is what should be on the board (`null` while the setting is off).
   It writes nothing.
 - Kit members: `describe()`, `version`, `contract`, `settings()`, `trace()`, `uninstall()`.
+  `uninstall()` clears the board and keeps it clear: the wrapped `onChange`s, the preview listeners,
+  the `#board` observer and any pending tick do nothing until a hot re-import installs again.
 
 `document.getElementById("board").dataset.pentarynCursor` shows the key too.
 

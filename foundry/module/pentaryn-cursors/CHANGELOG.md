@@ -7,6 +7,10 @@
   `assets/src/` (with `CREDITS.md` and every credited `alt-*`) → `scripts/foundry/cursors/src/`,
   `DESIGN.md` → `context/plans/cursors-design.md`. No runtime file changes; the module folder
   simply stops shipping `tools/` and `assets/src/`.
+- [declared] `uninstall()` keeps the board clear (cursors-rob-3): the wrapped tool `onChange`s,
+  the spell-area preview listeners, the `#board` observer and the setting's `onChange` are inert
+  while uninstalled, and the pending `canvasReady`/`ready` ticks are cancelled. A hot re-import's
+  `install()` re-arms them.
 
 ## Unreleased — 2026-10-11 (addon blueprint, wave 1)
 

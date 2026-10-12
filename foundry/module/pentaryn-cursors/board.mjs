@@ -19,8 +19,21 @@ import { setting } from "./settings.mjs";
 const WRAPPED = Symbol.for(`${MODULE}.wrapped`);
 let current = null;
 let imageSet = null;
-/** ctx.log of the entry that installed this feature (kept after uninstall: wrapped onChanges still refresh). */
+/** ctx.log of the entry that installed this feature (kept after uninstall for a late throw). */
 let log = null;
+/**
+ * True between install() and uninstall() (cursors-rob-3). What outlives reg.offAll() — the wrapped
+ * onChanges, the preview listeners, the #board observer and the setting's onChange — checks it and
+ * does nothing while uninstalled; a hot re-import's install() sets it again and they resume.
+ */
+let installed = false;
+/** The pending canvasReady and ready ticks, cleared by uninstall(). */
+const ticks = new Set();
+
+function later(fn) {
+  const id = setTimeout(() => { ticks.delete(id); fn(); }, 0);
+  ticks.add(id);
+}
 
 function enabled() {
   return setting("enabled") !== false;
@@ -78,6 +91,7 @@ function guardBoard() {
   if (!el || guarded.has(el) || typeof MutationObserver !== "function") return;
   guarded.add(el);
   new MutationObserver(() => {
+    if (!installed) return;
     try { resync(el); } catch (err) { log.warn("resync failed", err); }
   }).observe(el, { attributes: true, attributeFilter: ["style"] });
 }
@@ -95,6 +109,7 @@ function previewActive() {
 
 /** refresh(), with a throw logged as `refresh failed` (listeners and wrapped onChanges). */
 function refreshLogged() {
+  if (!installed) return;
   try { refresh(); } catch (err) { log.warn("refresh failed", err); }
 }
 
@@ -168,6 +183,7 @@ function checkInternals() {
 
 /** The setting's onChange: refresh, then repair a blanked cursor. */
 export function onEnabledChange() {
+  if (!installed) return;
   refresh();
   resync();
 }
@@ -181,6 +197,7 @@ function clear() {
 
 export function install(reg, ctx) {
   log = ctx.log;
+  installed = true;
   ctx.expose({ refresh, current: () => current, snapshot });
 
   // Raw handlers (guard: false): a throw stays Foundry's `Error thrown in hooked function` report.
@@ -201,16 +218,23 @@ export function install(reg, ctx) {
   reg.on("canvasReady", () => {
     attach();
     checkInternals();
-    setTimeout(() => resync(), 0);
+    later(() => resync());
   }, { guard: false, label: "canvasReady: attach" });
   reg.on("canvasTearDown", () => clear(), { guard: false, label: "canvasTearDown: clear" });
 
-  const ready = () => setTimeout(() => { attach(); resync(); }, 0);
+  const ready = () => later(() => { attach(); resync(); });
   if (globalThis.game?.ready) ready();   // hot patch: ready has already fired
   else reg.once("ready", ready, { guard: false, label: "ready: attach" });
 }
 
-/** Clear the board; the hooks go with the entry's reg.offAll(). Wrapped onChanges stay (they only refresh). */
+/**
+ * Cancel the pending ticks and clear the board; the hooks go with the entry's reg.offAll(). The
+ * wrapped onChanges, preview listeners and #board observer stay attached but inert until the next
+ * install() (cursors-rob-3).
+ */
 export function uninstall() {
+  installed = false;
+  for (const id of ticks) clearTimeout(id);
+  ticks.clear();
   clear();
 }
