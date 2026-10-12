@@ -61,7 +61,10 @@ function, `selftest().ok` true where present (combat, ties). Deployed folders ma
 
 **Goldens.** Before (deployed code) and after (new code) run in the one GM tab and diffed in page:
 aoe, combat and ties diff empty (`shared`, `declared`, env, cleanup clean, no ZZ fixtures left).
-No allowlist used.
+No allowlist used. Re-run with files (no restart, two GM-tab reloads): rollback copies restored,
+before-goldens saved, the three syncs re-run (same digests: ties a56fbc19, combat 1ef0600d, aoe
+263a207e), after-goldens saved to `.state/live-goldens/INT-1247/{before,after}/`; `diff.mjs` without
+`--declared` exits 0 for all three. Nothing reverted.
 
 **Foundry state.** Up, world pentaryn loaded, Gamemaster the only active user, one GM tab answering
 `get-world-info`.
