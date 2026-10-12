@@ -38,6 +38,10 @@
 - **[declared] journal-rob-4:** turning `singlePageReadables` on or off re-applies the one-page look
   to each open journal on its own: a window that throws is warned (`single-page skipped`) and skipped,
   the rest are still updated, and the error no longer escapes into the setting change.
+- **[declared] journal-rob-5:** a create vetoed by another module (a `preCreate` hook returning false) no
+  longer surfaces as a bare TypeError. `ensureAll` leaves stray journals at the root when the folder
+  could not be made, and the player relay rejects `NOT_CREATED: the journal could not be created`, so
+  the player's query fails with a named reason (they still get the "tell the GM" warning).
 
 ## Unreleased (blueprint migration, wave 2)
 

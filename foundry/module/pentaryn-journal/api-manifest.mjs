@@ -94,7 +94,7 @@ export const MANIFEST = Object.freeze({
       gm: true, writes: true, legacy: true,
       sideEffects: ["JournalEntry (one per player)", "Folder (Player Journals)", "JournalEntry.folder (strays moved in)"],
       nullWhen: "called by a player",
-      doc: "GM: a journal for every player, and journals at the root moved into the folder. Returns report().",
+      doc: "GM: a journal for every player, and journals at the root moved into the folder (left there if the folder's create is vetoed). Returns report().",
     },
     {
       path: "report",

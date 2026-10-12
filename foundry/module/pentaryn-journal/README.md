@@ -66,7 +66,8 @@ Published at `ready` on `game.modules.get("pentaryn-journal").api` and `game.pen
     `no-target` / `no-journal` / `nothing-visible` / `too-large`.
 - GM writes: `ensure(userRef)` creates that player's journal (rejects `GM only` on a player client,
   `NOT_FOUND`/`AMBIGUOUS` for a bad ref);
-  `ensureAll()` creates every player's journal and moves strays into the folder (`null` for a player).
+  `ensureAll()` creates every player's journal and moves strays into the folder (`null` for a player);
+  if another module vetoes the folder's create, the strays stay at the root.
 - Kit members: `describe()`, `settings()`, `trace()`, `selftest()`, `uninstall()`, `version`, `contract`.
 
 `add()` and `status()` return `null` for a GM unless `gmButton` is on — use `statusFor`/`entriesOf` instead.
@@ -106,7 +107,8 @@ No patches. One third-party dependency: Item Piles shows a non-owner an unsaved 
   active GM's client does the write; the payload is ignored; the query can create only the sender's own
   journal. Another client answers `NOT_GM: this client is not the active GM`. The query reaches every tab
   of the GM's account (the MCP bridge tab and a browser tab), so the tabs claim it first: the first to
-  stamp its claim creates, the other waits for that journal and answers with it.
+  stamp its claim creates, the other waits for that journal and answers with it. If another module vetoes
+  the journal's create, the query rejects `NOT_CREATED: the journal could not be created`.
 - With no GM online and no journal yet, the player gets a warning and nothing happens.
 - After the GM answers, the player waits up to 3 s for the new journal to reach their client (by its
   flag, or by the id the GM answered). If it never comes, the player gets the "tell the GM" warning

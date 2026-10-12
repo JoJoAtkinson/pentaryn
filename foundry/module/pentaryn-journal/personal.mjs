@@ -21,6 +21,7 @@ import { MODULE, QUERY, claimWinner, isMine, isPersonal, validateEnsure } from "
 import { setting } from "./settings.mjs";
 import { flagPath, readFlag } from "./lib/flags.mjs";
 import { relayed } from "./lib/queries.mjs";
+import { codedError } from "./lib/errors.mjs";
 
 const OWN = () => CONST.DOCUMENT_OWNERSHIP_LEVELS;
 /** A player-facing warning toast (not a console line). */
@@ -95,8 +96,8 @@ async function ensureAll() {
   }
   const stray = atRootJournals();
   if (stray.length) {
-    const folder = await ensureFolder();
-    await JournalEntry.updateDocuments(stray.map(j => ({ _id: j.id, folder: folder.id })));
+    const folder = await ensureFolder();   // undefined when a preCreate hook vetoed it: leave them (journal-rob-5)
+    if (folder?.id) await JournalEntry.updateDocuments(stray.map(j => ({ _id: j.id, folder: folder.id })));
   }
   return report();
 }
@@ -223,6 +224,8 @@ async function waitForPersonal(user) {
 export function registerRelay() {
   CONFIG.queries[QUERY] = relayed(async (_data, { user } = {}) => {
     const j = await relayEnsure(user);
+    // a vetoed create resolves to undefined: name the reason rather than a TypeError (journal-rob-5)
+    if (!j) throw codedError("NOT_CREATED", "the journal could not be created");
     ctx?.log.info("ensure (relay)", { uuid: j.uuid, ids: [j.id], by: game.user.id, for: user?.id ?? null });
     return { entryId: j.id };
   });
