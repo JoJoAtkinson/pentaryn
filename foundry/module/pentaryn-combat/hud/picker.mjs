@@ -10,6 +10,7 @@ import { setting, argonSetting, setArgonSetting, hasArgonSetting } from "../sett
 import { releaseTargets } from "../argon.mjs";
 import { argonClasses } from "./buttons-ui.mjs";
 import { registerTargetPicker } from "../sequence.mjs";
+import { opts } from "../context.mjs";
 
 const log = makeLog(MODULE);
 
@@ -75,8 +76,6 @@ const placeCue = (records) => {
 };
 
 /* ── install ─────────────────────────────────────────────────────────────── */
-
-const opts = label => ({ label });   // guarded (S11, D-c1): a throw is logged with the label; return values pass through
 
 /**
  * combat-riders-35 [declared D-c4]: the cue's pointer listeners and its observer exist only while

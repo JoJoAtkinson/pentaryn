@@ -14,18 +14,12 @@ import { setting } from "../settings.mjs";
 import { combatContext, turnOf, updateTurn, countFor, chosenWeapon } from "../shapes.mjs";
 import { mainPanel, protoDescriptor, settlePips } from "../argon.mjs";
 import { expectRoll, forgetRoll } from "../sequence.mjs";
+import { tempHooks, opts } from "../context.mjs";
 
 const log = makeLog(MODULE);
 
-/**
- * Temporary hooks (one roll, one pick, one dialog) go through the registry the feature was
- * installed with, so uninstall() unwinds a stray one; before install they fall back to Hooks.
- */
-let hooks = null;
-const temp = {
-  on: (name, fn, label) => (hooks ? hooks.on(name, fn, { label }) : Hooks.on(name, fn)),
-  off: (name, id) => (hooks ? hooks.off(id) : Hooks.off(name, id)),
-};
+let hooks = null;                       // the registry install() was given; temporary hooks go through it
+const temp = tempHooks(() => hooks);
 
 /** Argon's updateActionUse paints used pips only when the pip count didn't change; twice settles it. */
 function paint(panel) {
@@ -185,8 +179,6 @@ const onActionPanel = (panel) => {
 };
 
 /* ── install ─────────────────────────────────────────────────────────────── */
-
-const opts = label => ({ label });   // guarded (S11, D-c1): a throw is logged with the label; return values pass through
 
 // hot: per-button markers (_pcSpecial, _pcOA); no world iteration
 export function install(reg) {

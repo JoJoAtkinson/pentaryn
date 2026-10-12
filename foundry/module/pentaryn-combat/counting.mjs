@@ -16,6 +16,7 @@ import { makeLog } from "./lib/log.mjs";
 import { setting } from "./settings.mjs";
 import { weaponShape, featuresOf, combatContext, turnOf, updateTurn, resetOffhandMode, isWeaponAttack } from "./shapes.mjs";
 import { taggedKind, forgetRoll } from "./sequence.mjs";
+import { opts } from "./context.mjs";
 
 const log = makeLog(MODULE);
 
@@ -192,8 +193,6 @@ function onPreRollDamage(config) {
 }
 
 /* ── install ─────────────────────────────────────────────────────────────── */
-
-const opts = label => ({ label });   // guarded (S11, D-c1): a throw is logged with the label; return values pass through
 
 export function install(reg, ctx) {
   if (ctx?.emit) emit = ctx.emit;

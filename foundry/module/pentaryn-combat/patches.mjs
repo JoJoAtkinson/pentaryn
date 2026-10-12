@@ -20,6 +20,7 @@ import { makeLog } from "./lib/log.mjs";
 import { defineAccessor, wrapMethod } from "./lib/patch.mjs";
 import { setting } from "./settings.mjs";
 import { protoDescriptor } from "./argon.mjs";
+import { opts } from "./context.mjs";
 
 const log = makeLog(MODULE);
 const handles = [];
@@ -130,8 +131,6 @@ function settlePipsPatch() {
 }
 
 /* ── install ─────────────────────────────────────────────────────────────── */
-
-const opts = label => ({ label });   // guarded (S11, D-c1): a throw is logged with the label; return values pass through
 
 /** The two init patches (turnflow.mjs registered them after the portrait's ready hook). */
 export function install(reg) {

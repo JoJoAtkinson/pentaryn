@@ -20,21 +20,15 @@ import { attackActivityOf, weaponsOf, updateTurn, focusLeft, flurryActivity, una
 import { openRollResolvers, isOrphanCard } from "./dialog-adapter.mjs";
 import { cancelWaits, choose, hide, onceCancel, picking, show, update, waitChoice } from "./strip.mjs";
 import { quickMode, setQuickMode, setting } from "./settings.mjs";
+import { tempHooks } from "./context.mjs";
 
 const log = makeLog(MODULE);
 
 /** The module's events (core HOOKS rows, legacy name too): ctx.emit once installed. */
 let emit = emitter(MODULE, HOOKS, { log, version: VERSION });
 
-/**
- * Temporary hooks (one roll, one pick, one dialog) go through the registry the feature was
- * installed with, so uninstall() unwinds a stray one; before install they fall back to Hooks.
- */
-let hooks = null;
-const temp = {
-  on: (name, fn, label) => (hooks ? hooks.on(name, fn, { label }) : Hooks.on(name, fn)),
-  off: (name, id) => (hooks ? hooks.off(id) : Hooks.off(name, id)),
-};
+let hooks = null;                       // the registry install() was given; temporary hooks go through it
+const temp = tempHooks(() => hooks);
 
 
 let current = null;            // the running sequence on this client (one at a time)

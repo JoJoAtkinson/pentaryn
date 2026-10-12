@@ -11,18 +11,12 @@ import { makeLog } from "../lib/log.mjs";
 import { setting } from "../settings.mjs";
 import { running } from "../sequence.mjs";
 import { rollDialogOf, isOrphanCard } from "../dialog-adapter.mjs";
+import { tempHooks, opts } from "../context.mjs";
 
 const log = makeLog(MODULE);
 
-/**
- * Temporary hooks (one roll, one pick, one dialog) go through the registry the feature was
- * installed with, so uninstall() unwinds a stray one; before install they fall back to Hooks.
- */
-let hooks = null;
-const temp = {
-  on: (name, fn, label) => (hooks ? hooks.on(name, fn, { label }) : Hooks.on(name, fn)),
-  off: (name, id) => (hooks ? hooks.off(id) : Hooks.off(name, id)),
-};
+let hooks = null;                       // the registry install() was given; temporary hooks go through it
+const temp = tempHooks(() => hooks);
 
 /* ── roll dialogs: Esc, and the card a cancelled attack leaves ───────────── */
 
@@ -92,8 +86,6 @@ const onAttackDialogClosed = (app) => {
 };
 
 /* ── install ─────────────────────────────────────────────────────────────── */
-
-const opts = label => ({ label });   // guarded (S11, D-c1): a throw is logged with the label; return values pass through
 
 export function install(reg) {
   hooks = reg;

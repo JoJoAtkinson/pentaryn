@@ -25,6 +25,7 @@ import { onBonusAction, onBonusSpent, onOffhand, onOtherAction, onPanelRenderedP
 import { running, abortFor, pruneSession as pruneRolls } from "../sequence.mjs";
 import { setReckless, pruneSession as pruneRiders } from "../turn-riders.mjs";
 import { placeOpenDrawers } from "../turnflow/drawers.mjs";
+import { opts } from "../context.mjs";
 
 const log = makeLog(MODULE);
 
@@ -457,8 +458,6 @@ const onTokenUpdated = (doc, changes) => {
 };
 
 /* ── install ─────────────────────────────────────────────────────────────── */
-
-const opts = label => ({ label });   // guarded (S11, D-c1): a throw is logged with the label; return values pass through
 
 export function install(reg) {
   wireButtons({ rerender });

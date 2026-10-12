@@ -17,6 +17,7 @@ import { makeLog } from "../lib/log.mjs";
 import { setting, argonSetting } from "../settings.mjs";
 import { releaseTargets, closeDrawersOf } from "../argon.mjs";
 import { claimDocument } from "../lib/election.mjs";
+import { opts } from "../context.mjs";
 
 const log = makeLog(MODULE);
 
@@ -211,8 +212,6 @@ const onControlToken = (token, controlled) => {
 };
 
 /* ── install ─────────────────────────────────────────────────────────────── */
-
-const opts = label => ({ label });   // guarded (S11, D-c1): a throw is logged with the label; return values pass through
 
 export function install(reg) {
   reg.on("combatTurnChange", onTurnChange, opts("turn boundary"));

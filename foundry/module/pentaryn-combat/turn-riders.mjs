@@ -23,6 +23,7 @@ import { featuresOf, featureItem, weaponShape, combatContext, turnOf, updateTurn
 // The pure rider reads live in shapes.mjs (guide S8); re-exported for callers of this file.
 export { isReckless, riderActivity, riderDiceFor };
 import { setting, riderMode } from "./settings.mjs";
+import { opts } from "./context.mjs";
 
 const log = makeLog(MODULE);
 
@@ -476,8 +477,6 @@ export function report(actorOrName) {
 }
 
 /* ── install ─────────────────────────────────────────────────────────────── */
-
-const opts = label => ({ label });   // guarded (S11, D-c1): a throw is logged with the label; return values pass through
 
 export function install(reg, ctx) {
   if (ctx?.log) trace = (op, data) => ctx.log.trace(op, data);

@@ -236,9 +236,9 @@ Strike) are here; damage/heal rule riders, rituals, concentration and Argon tidy
 Load order: `combat.mjs` (esmodules[0]) installs `roll-dock.mjs` as it evaluates; at setup `counting.mjs`,
 `turn-riders.mjs`, `offhand.mjs`, `sequence.mjs`; at ready `api.mjs` builds the API. `hud.mjs`
 (esmodules[1]) installs `turnflow/*` and `patches.mjs`, then `hud/tooltips.mjs`, `hud/picker.mjs`,
-`hud/bars.mjs`. `context.mjs` is their shared ctx. Pure: `combat-core.mjs` + `core/*.mjs`. Settings:
-`settings.mjs`. API: `api-manifest.mjs`, `api.mjs`. Adapters: `shapes.mjs`, `argon.mjs`,
-`dialog-adapter.mjs`. UI: `strip.mjs`, `hud/buttons-ui.mjs`, `hud/pips-bar.mjs`. Vendored kit: `lib/` (never edited here).
+`hud/bars.mjs`. `context.mjs` is their shared ctx, plus the features' one `opts(label)` and one
+`tempHooks(getReg)`. Pure: `combat-core.mjs` + `core/*.mjs`. Settings: `settings.mjs`. API:
+`api-manifest.mjs`, `api.mjs`. Adapters: `shapes.mjs`, `argon.mjs`, `dialog-adapter.mjs`. UI: `strip.mjs`, `hud/buttons-ui.mjs`, `hud/pips-bar.mjs`. Vendored kit: `lib/` (never edited here).
 
 ## Tests
 
