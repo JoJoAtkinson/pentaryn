@@ -92,13 +92,18 @@ settings were copied on disk with classic-level while both worlds were closed.
   pentaryn-journal (added 2026-10-07: an "Add to my journal" bar on every eye readable and eye-pile
   item; copies what the player saw, secrets stripped, into `Player Journals/<name>'s Journal` and
   opens it on the new entry, highlighted. See [`foundry/module/pentaryn-journal/README.md`](../foundry/module/pentaryn-journal/README.md))
-- **Custom module versions after the 2026-10-11 go-live** (all synced and enabled except walls):
+- **Custom module versions after the wave-3 go-live (2026-10-12)** (all synced and enabled except walls):
   aoe 0.3.1, attunement 0.2.1, combat 0.2.5, creatures 0.1.1, cursors 0.2.0, dropbin 0.2.3,
-  **feedback 0.1.1** (new: player bug/defect/feature reports — bug icon in token controls and
-  `/bug` in chat; reviewed with the `feedback_*` tools, see [`foundry/feedback.md`](foundry/feedback.md)),
-  importer 1.1.0, journal 0.1.0, lookup 0.3.0, movement 0.1.2, names 0.1.1, pings 0.1.1,
-  portals 0.4.4, prompts 0.4.5, riders 0.2.0, senses 0.4.1, ties 0.19.4, transform 0.3.3.
-  Bridge: foundry-mcp-bridge **0.8.3-pentaryn.2** (adds `pentaryn-read` / `pentaryn-write`).
+  **feedback 0.1.2** (player bug/defect/feature reports — bug icon in token controls and
+  `/bug` in chat; reviewed with the `feedback_*` tools, see [`foundry/feedback.md`](foundry/feedback.md);
+  0.1.2: `inspect` takes an Actor/Token), **importer 1.1.1** (abort codes), journal 0.1.0, lookup 0.3.0,
+  movement 0.1.2, names 0.1.1, pings 0.1.1, portals 0.4.4, prompts 0.4.5, riders 0.2.0, senses 0.4.1,
+  ties 0.19.4, transform 0.3.3. Wave 3 kept the version numbers of portals, creatures, senses,
+  prompts and ties but gave each a kit `describe()`, so `pentaryn-read`/`pentaryn-write` reach them
+  (15 namespaces). Sync stamps: `880de701` (wave-3 merge), `c18b74ec` for ties, senses and feedback.
+  Bridge: foundry-mcp-bridge **0.8.3-pentaryn.2** (adds `pentaryn-read` / `pentaryn-write`), built
+  from fork `pentaryn` `2fd6eb0` (toggle-condition without `active` toggles, write-log ids, eval-js
+  `phase: "args"`).
   `pentaryn-walls` 0.2.0 is in the repo but off (below). Record:
   [`plans/merge-and-go-live-2026-10-11.md`](plans/merge-and-go-live-2026-10-11.md).
 
