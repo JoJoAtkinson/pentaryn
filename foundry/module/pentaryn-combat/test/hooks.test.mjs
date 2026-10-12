@@ -34,7 +34,7 @@ const rows = F.hooks.filter(h => !(h.kind === "once" && LIFECYCLE.has(h.name)));
 
 test("hook registration manifest (golden/hooks.json): module evaluation, then setup's registrations", () => {
   pinJSON("hooks", rows, import.meta.url);
-  assert.equal(rows.length, 63);
+  assert.equal(rows.length, 65);   // M8: +2 (the runner's updateCombat/updateToken and the riders' updateCombat; bars' updateToken gone)
 });
 
 test("combat.mjs graph registers strip's four roll-window hooks first, then its own three lifecycle hooks", () => {
@@ -55,13 +55,15 @@ test("the lifecycle once-rows, in order (their effects are glue.test's)", () => 
   ]);
 });
 
-test("setup registers the counting, weapon-bonus, rider and off-hand hooks, in that order", () => {
+test("setup registers the counting, weapon-bonus, rider, off-hand and runner hooks, in that order", () => {
   const setupRows = F.hooks.slice(afterImport.hooks.length).map(h => `${h.kind}:${h.name}`);
   assert.deepEqual(setupRows, [
     "on:dnd5e.preRollAttackV2", "on:dnd5e.postRollAttack", "on:dnd5e.postUseActivity", "on:dnd5e.preRollDamageV2", "on:updateActor",
     "on:dnd5e.preRollAttackV2", "on:dnd5e.preRollDamageV2", "on:dnd5e.renderChatMessage", "on:combatTurnChange", "on:deleteCombat",
+    "on:updateCombat",
     "on:updateActor", "on:createActiveEffect", "on:deleteActiveEffect", "on:updateActiveEffect",
     "on:createActor",
+    "on:updateCombat", "on:updateToken",   // M8: the runner's turn-moved and shape-change listeners
   ]);
 });
 

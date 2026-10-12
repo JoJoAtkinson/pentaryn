@@ -503,6 +503,10 @@ function registerHooks(reg) {
   }, opts("rider card"));
   reg.on("combatTurnChange", () => rerenderShowing(), opts("rider cards: turn changed"));
   reg.on("deleteCombat", () => rerenderShowing(), opts("rider cards: combat over"));
+  // combat-riders-29 (M8): the stale auto-rider guards go at each turn change.
+  reg.on("updateCombat", (combat, changes) => {
+    if ("turn" in (changes ?? {}) || "round" in (changes ?? {})) pruneSession();
+  }, opts("rider session: turn moved"));
   reg.on("updateActor", (actor, changes) => {
     if (foundry.utils.hasProperty(changes, `flags.${MODULE}.turn`) || foundry.utils.hasProperty(changes, `flags.${MODULE}.-=turn`)) rerenderCards(actor);
   }, opts("rider cards: turn flag"));

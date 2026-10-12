@@ -117,7 +117,6 @@
       "hud/buttons-ui.mjs",
       "hud/pips-bar.mjs",
       "lib/log.mjs",
-      "sequence.mjs",
       "settings.mjs",
       "shapes.mjs",
       "turn-riders.mjs",

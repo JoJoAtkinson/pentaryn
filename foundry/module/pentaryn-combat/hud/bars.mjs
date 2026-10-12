@@ -11,7 +11,7 @@
  *
  * Registration order is kept literally (the hooks golden pins it): the composition listener, the
  * bar re-checks, the pip listeners (with their own render and round listeners), then Argon's own
- * item buttons and the shape-change abort.
+ * item buttons (the turn-moved and shape-change aborts are the runner's own listeners, M8).
  */
 
 import * as core from "../combat-core.mjs";
@@ -22,8 +22,7 @@ import { weaponsOf, featuresOf, combatContext, turnOf, newTurn, turnSettled, isR
 import { applyButtons, dropStrayTooltip, itemButtonClass, mainPanel, protoDescriptor, settlePips } from "../argon.mjs";
 import { FALLBACK_IMG, argonClasses, fullAttackState, liveButtons, stateBurst, wireButtons } from "./buttons-ui.mjs";
 import { onBonusAction, onBonusSpent, onOffhand, onOtherAction, onPanelRenderedPips, onReaction, onRoundPips, onUsage } from "./pips-bar.mjs";
-import { running, abortFor, pruneSession as pruneRolls } from "../sequence.mjs";
-import { setReckless, pruneSession as pruneRiders } from "../turn-riders.mjs";
+import { setReckless } from "../turn-riders.mjs";
 import { placeOpenDrawers } from "../turnflow/drawers.mjs";
 import { opts } from "../context.mjs";
 
@@ -414,14 +413,10 @@ const onSequenceEnd = (actor) => {
     .catch(err => log.debug("bars: sequence ended", err));   // the HUD may have closed meanwhile (ac-3)
 };
 
+// The session maps' pruning and the turn-moved / shape-change aborts are the runner's and the
+// riders' own listeners (M8); the bars only repaint.
 const onCombatUpdated = (combat, changes) => {
   if (!("turn" in changes) && !("round" in changes)) return;
-  // combat-riders-29: the session maps' stale entries go at each turn change.
-  pruneRiders();
-  pruneRolls();
-  // The turn moved on under a running or paused sequence: its remaining swings belong to that turn.
-  const r = running();
-  if (r?.actor) { const c = combatContext(r.actor); if (c.inCombat && !c.isOwnTurn) abortFor(r.actor); }
   const actor = ui.ARGON?._actor;
   if (!actor) return;
   stateBurst(() => { refreshAll(); checkBars(actor); });
@@ -450,13 +445,6 @@ const onItemButtonRendered = (button, element, actor) => {
   } catch (err) { log.debug("off-hand slot check", err); }   // never break Argon's render
 };
 
-// A shift or revert (a new body) of the running creature's own token ends its sequence (edge-2).
-const onTokenUpdated = (doc, changes) => {
-  const r = running();
-  if (!r || !("actorId" in (changes ?? {})) || !r.tokenIds?.has(doc?.id)) return;
-  abortFor(r.actor);
-};
-
 /* ── install ─────────────────────────────────────────────────────────────── */
 
 export function install(reg) {
@@ -483,7 +471,6 @@ export function install(reg) {
   reg.on("updateCombat", onRoundPips, opts("pips: repaint at a new round"));
   reg.on("pentarynCombat.offhand", onOffhand, opts("pips: off-hand by hand gives the Action back"));
   reg.on("renderItemButtonArgonComponent", onItemButtonRendered, opts("Argon item buttons: Pole Strike gate, duplicate slot"));
-  reg.on("updateToken", onTokenUpdated, opts("a shape change ends a running sequence"));
 }
 
 export function uninstall() {

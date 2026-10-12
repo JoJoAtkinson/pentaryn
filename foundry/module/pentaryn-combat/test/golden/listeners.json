@@ -24,7 +24,7 @@
   "createSetting": 1,
   "updateSetting": 1,
   "pentarynCombat.sequenceEnd": 1,
-  "updateCombat": 2,
+  "updateCombat": 4,
   "updateItem": 1,
   "pentarynCombat.usage": 1,
   "pentarynCombat.bonusSpent": 1,
@@ -33,9 +33,9 @@
   "pentarynCombat.reaction": 1,
   "pentarynCombat.offhand": 1,
   "renderItemButtonArgonComponent": 1,
-  "updateToken": 1,
   "dnd5e.preRollAttackV2": 2,
   "dnd5e.preRollDamageV2": 2,
   "dnd5e.renderChatMessage": 1,
-  "createActor": 1
+  "createActor": 1,
+  "updateToken": 1
 }
