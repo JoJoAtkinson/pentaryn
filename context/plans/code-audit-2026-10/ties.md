@@ -380,7 +380,7 @@ Stub world (5 NPCs, 2 with kindOf pointing at one, 1 with studyTiers): authoring
 
 **Category:** Maintainability gains · **Impact:** high · **Effort:** S
 
-**Status (wave 3, branch `migrate/wave-3`, 2026-10-11):** open, handed to the integrator: the gate edit is in `scripts/foundry/ops/config.py` (shared file; exact edit in the wave-3 ties return)
+**Status (wave 3, branch `migrate/wave-3`, 2026-10-11):** done outside the module before this wave: `58af29d1` (python-tooling-7) puts `node-test` in the ties ModuleSpec; `test/run.mjs` runs every suite
 
 **Where:** `scripts/foundry/ops/config.py:117`
 
