@@ -328,9 +328,9 @@ the bundle each module and system was at. Snapshots from before bundles (untagge
 | ------ | --------- | ------------ |
 | `make foundry-boot` | ⬇ maybe | **The boot choice** (below). Part of `vtt-up` and `foundry-up`; `FROM=latest\|local\|<name>` decides without asking |
 | `make foundry-assets` | ⬇ down | Unpacks any new `<kind>-<nn>.zip` into `Data/assets/<kind>/<kind>-<nn>/`. Tracked in `foundry/assets-manifest.json` (sha256, bytes, mtime); a zip whose size and mtime match is skipped **without a download** |
-| `make foundry-backup` | ⬆ up | Tars `Data/worlds` + `Config` (**~45 MB**) in `FOUNDRY_DATA/.pentaryn-tmp/`, with the bundle manifest as its first member and in the `.parent` sidecar. Uploads any module/system bundle the cloud lacks **first** (fingerprint = a content hash that ignores LevelDB housekeeping, so a launch changes nothing), then the sidecar, then the world tar (as `<name>.partial`, renamed, size-checked), then checks every bundle it names is still there. Keeps **10 per host** (plus that host's last 3 restore `.safety` copies, counted apart); a snapshot within 5 days of this host's newest **replaces** it; skips when the world tree and the manifest are unchanged (re-uploading any bundle deleted by hand). A backup that uploaded ends with the bundle sweep |
+| `make foundry-backup` | ⬆ up | Tars `Data/worlds` + `Config` (**~45 MB**) in `FOUNDRY_DATA/.pentaryn-tmp/`, with the bundle manifest as its first member and in the `.parent` sidecar. Uploads any module/system bundle the cloud lacks **first** (fingerprint = a content hash that ignores LevelDB housekeeping, so a launch changes nothing), then the sidecar, then the world tar (as `<name>.partial`, renamed, size-checked), then checks every bundle it names is still there. Keeps **10 per host** (plus that host's last 3 restore `.safety` copies, counted apart); a snapshot within 5 days of this host's newest **replaces** it; skips when the world tree and the manifest are unchanged (re-uploading any bundle its snapshot names that was deleted by hand — after a restore of a full snapshot, nothing). A backup that uploaded ends with the bundle sweep |
 | `make foundry-backup-safe` | ⬆ up | Same, `--if-stopped` — the lifecycle variant |
-| `make foundry-restore` | manual | No `SNAP` → lists every host's snapshots (name, host, UTC time, version, size, `bundled`/`full`). `SNAP=<name>` (any host's, or `major-release/`) → download the world tar and **only the bundles this machine lacks**, **archive current state first**, replace worlds + Config, swap only the changed modules, remove modules the snapshot does not have (they are in the safety copy; with no local world they are left and listed); demands you type `restore`. A full snapshot clears and extracts worlds, Config and modules, as before |
+| `make foundry-restore` | manual | No `SNAP` → lists every host's snapshots (name, host, UTC time, version, size, `bundled`/`full`). `SNAP=<name>` (any host's, or `major-release/`) → download the world tar and **only the bundles this machine lacks**, **archive current state first**, replace worlds + Config, swap only the changed modules, remove modules the snapshot does not have (they are in the safety copy; with no local world they are left and listed); demands you type `restore`. A full snapshot clears and extracts worlds, Config and modules, as before — keeping in place whatever in `Data/modules` is not a bundle (the safety copy cannot hold it) |
 | `make foundry-cloud` | — | Status: storage (rclone/folder + root), host and role, what this world is based on, newest per host, untagged count, bundles (in the cloud, unreferenced, local ones not yet uploaded) |
 | `make foundry-bundles` | — | Every local module and system with its version, fingerprint, size and whether its bundle is in the cloud; then the cloud bundles no snapshot references |
 | `make foundry-bundles-gc` | manual | The sweep every uploading backup runs, by hand: lists the bundles no retained snapshot references that are older than 7 days. A dry run; `YES=1` deletes them |
@@ -359,9 +359,12 @@ world is *based on*:
   snapshot, unless it is unchanged since a snapshot still in the cloud, or one the restored
   snapshot's lineage contains), replaces worlds + Config and swaps in the changed modules. The
   bundle line reads `+ all N bundles (x) to fetch` on a new machine and `(every bundle is already
-  on this machine)` when only the world moves; a full (legacy) snapshot shows none. The machine's
-  own `Config/options.json` (its `dataPath`), `admin.txt` and `license.json` are **kept** across
-  every restore.
+  on this machine)` when only the world moves; a full (legacy) snapshot shows none. When the
+  cloud lacks a bundle the restore needs, a line under it says `! 1 of them is missing from the
+  cloud (module maps) — a restore would refuse; Enter keeps local`: Enter then boots local
+  **without** remembering a decline, so the same snapshot is offered again once the other
+  machine's next backup has put the bundle back. The machine's own `Config/options.json` (its
+  `dataPath`), `admin.txt` and `license.json` are **kept** across every restore.
 - **`k`** boots the local world and remembers the answer until a snapshot newer than the one you
   declined appears — by its listing mtime, so if the declined one is later coalesced or pruned
   away, an older snapshot left behind does not ask again.
@@ -408,7 +411,10 @@ Restore `.safety` copies and `major-release/` are never offered as "newer".
   is a **symlink** (a dev checkout linked in) refuses the restore before any download — remove
   the link or boot `FROM=local`. One with **no `module.json`** is moved, whole, to
   `FOUNDRY_DATA/pentaryn-replaced/<UTC stamp>/` and named in the output; nothing deletes that
-  folder — look in it and delete it by hand.
+  folder — look in it and delete it by hand. A **full (legacy)** restore still replaces
+  `Data/modules`, but anything there that is not a bundle (no `module.json`, a hidden or `@`
+  folder, a symlink, a loose file) stays in place — or, when the snapshot brings the same name,
+  goes to `pentaryn-replaced/` the same way.
 - **Each host prunes, coalesces and promotes only its own snapshots.** The other machine's
   snapshot from yesterday is never replaced by this one. Untagged snapshots belong to nobody.
 - **The digest is local.** Neither host skips a backup because the other uploaded identical bytes;
@@ -416,9 +422,12 @@ Restore `.safety` copies and `major-release/` are never offered as "newer".
 - **A `.partial` is never a snapshot.** Uploads land as `<name>.partial` and are renamed when
   complete; one older than 24 h is swept as a crash leftover (younger ones may be the other
   machine mid-upload). A failed upload leaves the tar in `FOUNDRY_DATA/.pentaryn-tmp/` and prints
-  the `rclone copyto` that finishes it. The temp dir needs ~2× (the world tar + the bundles it
+  the `rclone copyto` that finishes it; the bundle tars it staged are removed by the next backup
+  once the cloud has them. The temp dir needs ~2× (the world tar + the bundles it
   stages or fetches) free; backup and restore check, and name both numbers.
-- **A bundle is deleted only by the mark-and-sweep**, never by name, never younger than 7 days.
+- **A bundle is deleted only by the mark-and-sweep**, never by name, never younger than 7 days —
+  not even by an upload's size check: in `bundles/` a different size after the upload is the
+  other machine's copy of the same bundle landing a moment later, and it is kept.
   The mark is every sidecar in `world-backups/` and `major-release/` (safety copies included); a
   snapshot whose sidecar is missing or torn is marked from its tar's own first member, and one
   that cannot be read either way stops the sweep. Right before deleting, GC looks again for
