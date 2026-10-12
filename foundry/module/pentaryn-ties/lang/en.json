@@ -262,7 +262,7 @@
         "scope2": "{name} gives a second stranger the once-over. People do notice being measured.",
         "scope3": "{name} is looking people up and down.",
         "scope5": "Careful now, {name}.",
-        "scope6": "{name} looks openly paranoid."
+        "scope10": "{name} looks openly paranoid."
       },
       "look": {
         "title": "{name} — what you know",

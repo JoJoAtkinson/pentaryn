@@ -41,12 +41,14 @@ import { canSee } from "../ties-adapter.mjs";
  *
  * Keys are named for their count rather than numbered 1-2-3, so changing a threshold cannot leave
  * the strings quietly describing the wrong rung.
+ *
+ * The thresholds are 2, 3, 5, 10 — the last is Joe's "by the tenth you look paranoid" (M5).
  */
 const SCOPE_STEPS = [
   { at: 2, key: "known.inspect.scope2", label: "PENTARYN_TIES.known.inspect.scope2" },
   { at: 3, key: "known.inspect.scope3", label: "PENTARYN_TIES.known.inspect.scope3" },
   { at: 5, key: "known.inspect.scope5", label: "PENTARYN_TIES.known.inspect.scope5" },
-  { at: 6, key: "known.inspect.scope6", label: "PENTARYN_TIES.known.inspect.scope6" }
+  { at: 10, key: "known.inspect.scope10", label: "PENTARYN_TIES.known.inspect.scope10" }
 ];
 
 /** Feet of movement that reads as "they moved on" and clears the count. */

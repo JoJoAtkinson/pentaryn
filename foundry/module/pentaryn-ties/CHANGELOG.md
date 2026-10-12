@@ -39,6 +39,10 @@ name cannot reach player chat. The token is found on any scene, not only the one
 client is viewing (the GM's tab can sit elsewhere); no token on any scene → the prototype token's
 name; the actor name only when there is no token at all. name-leak (play-test TIE-3).
 
+Fixed (declared): the tempo tell's last line ("… looks openly paranoid.") lands on the **tenth** look
+in one spot, as Joe's rule says, not the sixth; the rungs are the 2nd, 3rd, 5th and 10th look. The
+string's key is `known.inspect.scope10` (was `scope6`). M5.
+
 Fixed (declared): the tempo bubble ("… is studying the room") is drawn only over a token the viewer
 can see. A player whose client cannot see the looker's token gets no bubble at that spot, so it no
 longer reveals where a hidden character stands. The GM still sees it, and the chat line still posts. ES-4.
