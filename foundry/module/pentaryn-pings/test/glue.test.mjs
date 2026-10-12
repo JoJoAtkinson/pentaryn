@@ -448,7 +448,14 @@ test("failure texts: capture throw in the wrap, capture throw on the socket, wri
   mock.timers.tick(250);
   await drain();
   assert.deepEqual(lines(), [["warn", "pentaryn-pings | could not persist the log", rejected]]);
-  // the pending list kept the ping; the next flush carries it
+  // [declared] pings-edge-2: the pending list kept the ping and the write is retried once, 250 ms
+  // later, with no new ping needed
+  const writes = W.log().length;
+  mock.timers.tick(250);
+  await drain();
+  assert.equal(W.log().length, writes + 1, "the retry write");
+  assert.deepEqual(W.log().at(-1).value.at(-1).x, 8);
+  assert.deepEqual(lines(), []);
   layer.handlePing(gm, { x: 9, y: 9 }, { scene: BETA });
   mock.timers.tick(250);
   await drain();
@@ -472,6 +479,37 @@ test("failure texts: capture throw in the wrap, capture throw on the socket, wri
     ["warn", "pentaryn-pings | could not read the log", thrown],
     ["warn", "pentaryn-pings | could not read the log", thrown],
   ]);
+});
+
+test("[declared] pings-edge-2: a failed flush is retried once, 250 ms later; a second failure waits for the next ping", async () => {
+  mock.timers.tick(1000);
+  lines();
+  const rejectedCount = () => F.calls.filter(c => c.op === "settings.set:rejected").length;
+  const tries = rejectedCount();
+  const writes = W.log().length;
+  const first = new Error("write refused");
+  const second = new Error("write refused again");
+  W.failSet.push(first, second);
+  layer.handlePing(gm, { x: 21, y: 21 }, { scene: BETA });
+  mock.timers.tick(250);
+  await drain();
+  mock.timers.tick(250);
+  await drain();
+  mock.timers.tick(10_000);
+  await drain();
+  assert.equal(rejectedCount() - tries, 2, "one write and one retry, then no unbounded loop");
+  assert.equal(W.log().length, writes, "nothing stored yet");
+  assert.deepEqual(lines(), [
+    ["warn", "pentaryn-pings | could not persist the log", first],
+    ["warn", "pentaryn-pings | could not persist the log", second],
+  ]);
+  // the next ping's flush carries the kept record
+  layer.handlePing(gm, { x: 22, y: 22 }, { scene: BETA });
+  mock.timers.tick(250);
+  await drain();
+  assert.equal(W.log().length, writes + 1);
+  assert.deepEqual(W.log().at(-1).value.slice(-2).map(r => r.x), [21, 22]);
+  assert.deepEqual(lines(), []);
 });
 
 test("a second module instance's ready does not wrap twice", async () => {

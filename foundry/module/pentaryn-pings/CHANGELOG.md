@@ -31,6 +31,9 @@
   flush and `clear()` — goes through the log's one `serialStore` queue (a Foundry `Semaphore(1)`), so
   a write slower than FLUSH_MS never overlaps the next flush or a `clear()`, and with no Setting
   document yet only one create happens.
+- [declared] Fix pings-edge-2: a failed log write is retried once, FLUSH_MS (250 ms) later, so the
+  readers no longer stay stale until the next ping; if the retry fails too, the pings are kept for
+  the next ping's write (one retry, never a loop). Each failure warns as before.
 
 - Rebuilt on the blueprint (tier small, kit `settings, api, patch, election`): pure core
   `pings-core.mjs`, `settings.mjs`, `api-manifest.mjs`, the `capture.mjs` feature; the

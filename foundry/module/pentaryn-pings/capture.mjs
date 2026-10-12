@@ -14,7 +14,8 @@
  *
  * The two overlap, so a record repeating the last one (user, scene, rounded point) inside
  * DEDUPE_MS is dropped. Records wait in `pending`; a burst costs one world-setting write, FLUSH_MS
- * after its first ping. Only a GM writes: world settings are not player-writable.
+ * after its first ping, and a failed write is retried once. Only a GM writes: world settings are not
+ * player-writable.
  *
  * Two GM tabs (pings-edge-1, [declared]): every GM tab captures and writes. A flush is a
  * read-modify-write through the kit's serialStore — this tab's pending records merged into the log
@@ -42,16 +43,20 @@ let listener = null;
 /** The handlePing patch's kit handle (pings-ext-1): uninstall() undoes this patch only. */
 let handle = null;
 
-function scheduleFlush() {
+function scheduleFlush(retry = false) {
   if (flushTimer) return;
   flushTimer = setTimeout(() => {
     flushTimer = null;
-    flush();
+    flush(retry);
   }, FLUSH_MS);
 }
 
-/** Merge this tab's pending records into the stored log. A failed write keeps them for the next flush. */
-async function flush() {
+/**
+ * Merge this tab's pending records into the stored log. A failed write keeps them and is retried
+ * once, FLUSH_MS later (pings-edge-2, [declared]); a failed retry waits for the next ping's flush.
+ * A flush already armed by a newer ping stands in for the retry.
+ */
+async function flush(retry = false) {
   if (!isAnyGM() || !pending.length) return;
   const batch = pending;
   const at = epoch;
@@ -61,6 +66,7 @@ async function flush() {
   } catch (err) {
     if (at === epoch) pending = [...batch, ...pending];
     log.warn("could not persist the log", err);
+    if (!retry && pending.length) scheduleFlush(true);
   }
 }
 

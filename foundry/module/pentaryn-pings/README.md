@@ -124,6 +124,8 @@ what that tab had not yet written — a `clear()` in one tab stays cleared.
 - A fractional `max` below 1 never trims the log.
 - Canvas ≠ image space: subtract the padding offset (`image`) for a pixel in the background image.
 - A ping is recorded even where core draws nothing (a scene nobody is viewing).
+- A failed write is retried once, 250 ms later; if the retry fails too, the pings wait for the next
+  ping's write (the readers stay stale until then).
 - `uninstall()` drops pings not yet written (≤ 250 ms).
 - A hot re-import keeps pings not yet written: a second `ready` without `uninstall()` flushes what
   the first load captured, merged into the stored log.
