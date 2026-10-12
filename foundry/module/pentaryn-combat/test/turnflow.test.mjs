@@ -5,6 +5,7 @@
 // the turn boundary are in turnflow-player.test.mjs.
 import { mock, test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { pinJSON } from "./kit/harness.mjs";
 import { MODULE, captureConsole, drain, makeCombat, makeEffect, makeMessage, makeToken, setupWorld, setTurn } from "./fixtures/world.mjs";
 import { barbarian, fighter, rogue, wolf } from "./fixtures/actors.mjs";
@@ -176,6 +177,17 @@ test("special actions: second Dash adds the same again; Hide fails / cancelled; 
   assert.equal(bar.panel._buttons.at(-1)._pcSpecial, undefined, "no createChatMessage: never looked at");
   reset(fig);
   F.calls.length = 0;
+});
+
+test("ext-3: afterSpecial reads one frozen AFTER table, a row per special action; the Shove rule (a swing, not the Action) is written once", async () => {
+  const { AFTER } = await import("../turnflow/action-buttons.mjs");
+  const core = await import("../combat-core.mjs");
+  assert.equal(typeof AFTER, "object", "AFTER is exported");
+  assert.deepEqual(Object.keys(AFTER).sort(), [...core.SPECIAL_ACTIONS].sort(), "one row per SPECIAL_ACTIONS kind");
+  assert.ok(Object.isFrozen(AFTER) && Object.values(AFTER).every(Object.isFrozen), "frozen table, rows included");
+  assert.deepEqual(Object.entries(AFTER).filter(([, r]) => r.swing).map(([k]) => k), ["shove"], "only Shove spends a swing instead of the Action");
+  const src = readFileSync(new URL("../turnflow/action-buttons.mjs", import.meta.url), "utf8");
+  assert.deepEqual(src.match(/kind\s*[!=]==\s*"\w+"/g) ?? [], [], "no per-kind if-ladder left in the feature");
 });
 
 test("the Reaction bar's weapon: 'Opportunity Attack: X', spends the Reaction (not the Action), tags its roll", async () => {
