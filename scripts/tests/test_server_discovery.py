@@ -586,3 +586,37 @@ def test_py_mcp_rob_1_first_frame_still_sniffs_lsp(monkeypatch):
     monkeypatch.setattr(server, "_TRANSPORT_MODE", None)
     assert server._read_message() == _INIT
     assert server._TRANSPORT_MODE == "lsp"
+
+
+# ---------------------------------------------------------------------------
+# py-mcp-MNT-3: discover_tools' candidate scan and in-process load are their own
+# helpers; the scan's exclusions (and so the skipped order) are unchanged
+# ---------------------------------------------------------------------------
+
+def test_py_mcp_mnt_3_candidate_scripts_keeps_the_exclusions(tmp_path):
+    scripts = _make_repo(tmp_path) / "scripts"
+    for rel in ("b.py", "a.py", "sub/c.py", "sub/__init__.py", "_private.py",
+                "__pycache__/cached.py", "mcp/server.py", "notes.txt"):
+        (scripts / rel).parent.mkdir(parents=True, exist_ok=True)
+        (scripts / rel).write_text("", encoding="utf-8")
+    found = server._candidate_scripts(scripts)
+    assert [str(p.relative_to(scripts)) for p in found] == ["a.py", "b.py", "sub/c.py"]
+
+
+def test_py_mcp_mnt_3_load_in_process(tmp_path):
+    scripts = _make_repo(tmp_path) / "scripts"
+
+    def load(name, source):
+        path = scripts / name
+        path.write_text(source, encoding="utf-8")
+        return server._load_in_process(path, source, server.ast.parse(source))
+
+    assert load("ast_only.py", _AST_ONLY_MODULE) is None   # no MCP_HANDLERS: AST path
+    literal, handlers = load("inproc_mnt3.py", _INPROC_MODULE)
+    assert literal["name"] == "sample_inproc" and set(handlers) == {"sample_inproc"}
+    literal, handlers = load("many_mnt3.py", _MISSING_HANDLER_MODULE)
+    assert [t["name"] for t in literal["tools"]] == ["wired_tool", "orphan_tool"]
+    assert load("bare_mnt3.py", "MCP_HANDLERS = {}\n") == \
+        "module imported but no usable MCP_TOOLS/MCP_TOOL attribute"
+    assert load("boom_mnt3.py", "MCP_HANDLERS = {}\nraise RuntimeError('boom')\n") == \
+        "in-process import failed: boom"

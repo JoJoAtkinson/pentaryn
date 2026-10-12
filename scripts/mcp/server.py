@@ -596,6 +596,52 @@ def _tools_from_mcp_tool(*, path: Path, mcp_tool: dict[str, Any]) -> list[ToolRu
 _NO_TOOL = "no MCP_TOOL"
 
 
+def _candidate_scripts(scripts_dir: Path) -> list[Path]:
+    """Every .py under scripts/ that could declare a tool, in discovery order (sorted by
+    path relative to scripts/). Skips __pycache__, private names (which covers
+    __init__.py) and the server's own mcp/ directory."""
+    server_dir = (scripts_dir / "mcp").resolve()
+    found = [
+        p for p in scripts_dir.rglob("*.py")
+        if p.is_file()
+        and "__pycache__" not in p.parts
+        and not p.name.startswith("_")
+        and server_dir not in p.resolve().parents
+    ]
+    return sorted(found, key=lambda p: str(p.relative_to(scripts_dir)))
+
+
+def _load_in_process(
+    path: Path, source: str, tree: ast.Module | None,
+) -> tuple[dict[str, Any], Optional[dict[str, Any]]] | str | None:
+    """The in-process discovery path. None when the script has no top-level MCP_HANDLERS
+    assignment (it takes the AST literal path instead); otherwise it is imported and
+    MCP_TOOLS/MCP_TOOL is read from its namespace (so it can use shared dicts, helper
+    calls, etc.), giving (mcp_tool, handlers) — or a skip reason string on failure.
+    AST-based check (not substring) so a comment or string mentioning MCP_HANDLERS
+    doesn't trigger a module import."""
+    if tree is None or not _has_top_level_assignment(source, "MCP_HANDLERS", tree=tree):
+        return None
+    try:
+        module = _load_script_module(path)
+    except Exception as exc:
+        return f"in-process import failed: {exc}"
+    if module is None:
+        return "in-process import returned None"
+    tools_attr = getattr(module, "MCP_TOOLS", None)
+    tool_attr = getattr(module, "MCP_TOOL", None)
+    if isinstance(tools_attr, list):
+        literal: dict[str, Any] = {"tools": tools_attr}
+    elif isinstance(tools_attr, dict):
+        literal = tools_attr
+    elif isinstance(tool_attr, dict):
+        literal = tool_attr
+    else:
+        return "module imported but no usable MCP_TOOLS/MCP_TOOL attribute"
+    handlers_attr = getattr(module, "MCP_HANDLERS", None)
+    return literal, (handlers_attr if isinstance(handlers_attr, dict) else None)
+
+
 def discover_tools(*, repo_root: Path) -> DiscoveryResult:
     # TODO: cache discovery output keyed on (path, mtime) to skip AST re-parse
     # for unchanged files on server restart.
@@ -607,18 +653,6 @@ def discover_tools(*, repo_root: Path) -> DiscoveryResult:
     if not scripts_dir.exists():
         return DiscoveryResult(tools=tuple(), skipped=tuple())
 
-    # Recursively discover all .py files in scripts/ and subdirectories
-    # Skip __pycache__ and other special directories
-    server_dir = (scripts_dir / "mcp").resolve()
-    all_py_files = [
-        p for p in scripts_dir.rglob("*.py")
-        if p.is_file()
-        and "__pycache__" not in p.parts
-        and not p.name.startswith("_")
-        and p.name != "__init__.py"
-        and server_dir not in p.resolve().parents
-    ]
-    
     # Optional group filter: when DND_MCP_TOOLS_GROUP is set, only load modules
     # whose top-level MCP_GROUPS list contains that group name. Massively cuts
     # cold-start latency by skipping unrelated heavy imports (pandas, PIL, etc.)
@@ -626,7 +660,7 @@ def discover_tools(*, repo_root: Path) -> DiscoveryResult:
     # Modules without a MCP_GROUPS declaration are skipped when a filter is active.
     group_filter = os.environ.get("DND_MCP_TOOLS_GROUP", "").strip()
 
-    for path in sorted(all_py_files, key=lambda p: str(p.relative_to(scripts_dir))):
+    for path in _candidate_scripts(scripts_dir):
         try:
             source = path.read_text(encoding="utf-8")
         except Exception as exc:
@@ -649,37 +683,16 @@ def discover_tools(*, repo_root: Path) -> DiscoveryResult:
                 skipped.append((path, f"group filter excludes (DND_MCP_TOOLS_GROUP={group_filter!r}, module groups={module_groups})"))
                 continue
 
-        # Two discovery paths:
-        # - Scripts with a top-level MCP_HANDLERS assignment get imported as
-        #   modules; MCP_TOOLS is read from the imported namespace (so it can
-        #   use shared dicts, helper calls, etc.).
-        # - Other scripts use the safer AST literal_eval path (no execution at
-        #   discovery time).
-        # AST-based check (not substring) so a comment or string mentioning
-        # `MCP_HANDLERS` doesn't trigger a module import.
+        # Two discovery paths: a script with a top-level MCP_HANDLERS assignment is
+        # imported (_load_in_process); any other uses the safer AST literal_eval
+        # path (no execution at discovery time).
         handlers: Optional[dict[str, Any]] = None
-        if tree is not None and _has_top_level_assignment(source, "MCP_HANDLERS", tree=tree):
-            try:
-                module = _load_script_module(path)
-            except Exception as exc:
-                skipped.append((path, f"in-process import failed: {exc}"))
-                continue
-            if module is None:
-                skipped.append((path, "in-process import returned None"))
-                continue
-            tools_attr = getattr(module, "MCP_TOOLS", None)
-            tool_attr = getattr(module, "MCP_TOOL", None)
-            if isinstance(tools_attr, list):
-                literal: Optional[dict[str, Any]] = {"tools": tools_attr}
-            elif isinstance(tools_attr, dict):
-                literal = tools_attr
-            elif isinstance(tool_attr, dict):
-                literal = tool_attr
-            else:
-                skipped.append((path, "module imported but no usable MCP_TOOLS/MCP_TOOL attribute"))
-                continue
-            handlers_attr = getattr(module, "MCP_HANDLERS", None)
-            handlers = handlers_attr if isinstance(handlers_attr, dict) else None
+        loaded = _load_in_process(path, source, tree)
+        if isinstance(loaded, str):
+            skipped.append((path, loaded))
+            continue
+        if loaded is not None:
+            literal, handlers = loaded
         else:
             try:
                 literal = _extract_mcp_tool_literal(source, path=path, tree=tree)
