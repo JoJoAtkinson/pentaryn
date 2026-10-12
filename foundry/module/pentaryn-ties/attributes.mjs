@@ -184,7 +184,9 @@ const DERIVED_ICONS = {
  * back the Setting document's own value object until that document updates, so an unchanged
  * registry is clamped once instead of on every row of every paint and every search keystroke; any
  * write gives a new object and the next read re-clamps. Callers mutate what they get (push, assign),
- * so they always get a COPY — of the whole list, or of the one entry.
+ * so they always get a COPY — of the whole list, or of the one entry. The list's copy is a fresh
+ * clamp of the stored value (W3L: a structuredClone of the whole registry cost more than the clamp
+ * it replaced); read-only id lookups (resolveAttribute) read the memo itself and copy nothing.
  */
 let memo = { raw: undefined, list: null, byId: null };
 function clampedRegistry() {
@@ -200,7 +202,7 @@ function clampedRegistry() {
 
 /** Never throws — a setting can be unregistered when a hook fires early. */
 export function registry() {
-  return structuredClone(clampedRegistry().list);
+  return readRegistry(setting(REGISTRY_SETTING));
 }
 
 export const attributeById = id => {
@@ -281,7 +283,8 @@ const carriedOf = actor => flagList(actor, ATTRIBUTES_FLAG);
  * script can check before it acts: `A.resolve("Ashfall Company")` → `"ashfallcompany"`.
  */
 export function resolveAttribute(ref, { actor = null } = {}) {
-  return resolveAttrRef(ref, registry(), { carried: actor ? carriedOf(actor) : [] }).id;
+  // read-only: resolveAttrRef returns an id and never mutates the list it is given
+  return resolveAttrRef(ref, clampedRegistry().list, { carried: actor ? carriedOf(actor) : [] }).id;
 }
 
 /**

@@ -175,6 +175,32 @@ test("ties-19: the clamped registry is memoised on the setting's value; callers 
   }
 });
 
+test("ties-19 (W3L): resolve, lookup and list never structuredClone the whole registry", async () => {
+  // Live timings (wave-3 §6) showed a full-registry structuredClone per call cost ~0.1 ms — more than
+  // the clamp it replaced. resolve only reads ids (resolveAttrRef re-clamps), so it needs no copy;
+  // list's copy is a fresh clamp, as it was before the memo; lookup clones one entry at most.
+  const A = await import("../attributes.mjs");
+  const reg = [{ id: "guild", title: "Guild", lore: [{ id: "a", text: "x" }] }, { id: "city", title: "City", lore: [] }];
+  const get = game.settings.get.bind(game.settings);
+  game.settings.get = (ns, key) => (key === "attributes" ? reg : get(ns, key));
+  const sc = globalThis.structuredClone;
+  const whole = [];
+  globalThis.structuredClone = v => (Array.isArray(v) && whole.push(v), sc(v));
+  try {
+    assert.equal(A.resolveAttribute("Guild"), "guild");
+    assert.equal(A.describeRef("City").title, "City");
+    const list = A.registry();
+    assert.equal(whole.length, 0, "no whole-registry structuredClone on resolve / lookup / list");
+    list[0].lore.push({ id: "q" });
+    list.push({ id: "x" });
+    assert.equal(A.registry().length, 2, "list still hands back a copy");
+    assert.equal(A.registry()[0].lore.length, 1, "a deep copy");
+  } finally {
+    globalThis.structuredClone = sc;
+    game.settings.get = get;
+  }
+});
+
 test("ties-22: one Ties-tab paint (build, then bind) scans the world's actors for inbound ties once", async () => {
   const { buildHTML, bind } = await import("../editor.mjs");
   const { el } = await import("./fixtures/dom.mjs");
