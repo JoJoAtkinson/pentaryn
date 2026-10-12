@@ -4,7 +4,7 @@ import { mock, test } from "node:test";
 import assert from "node:assert/strict";
 import { maxDepth, normaliseDescribe, pinJSON } from "./kit/harness.mjs";
 import { IDS, WORLD, installClient, memoryStore, queuedReport, settle } from "./fixtures/world.mjs";
-import { MODULE, normaliseReport } from "../feedback-core.mjs";
+import { CATEGORY_KEYS, FLAG_SCOPE, MODULE, QUEUE_KEY, STATUSES, STORE_DIR, normaliseReport } from "../feedback-core.mjs";
 import { MANIFEST } from "../api-manifest.mjs";
 import { SETTINGS } from "../settings.mjs";
 import { buildApi, surfaceOf } from "../lib/api.mjs";
@@ -51,6 +51,23 @@ test("every described method is a function on the API", () => {
 
 test("drift fails at build: a manifest row without an implementation", () => {
   assert.throws(() => buildApi(MANIFEST, {}), /has no implementation/);
+});
+
+test("manifest strings match core tables (categories, statuses, report file, queue flag)", () => {
+  const row = path => MANIFEST.rows.find(r => r.path === path);
+  const union = keys => keys.map(k => `'${k}'`).join("|");
+  assert.equal(row("open").params[0].type, `{ category?: ${union(CATEGORY_KEYS)}, text? }`);
+  assert.equal(row("list").params[0].type, `{ status?: ${union([...STATUSES, "all"])}, limit? }`);
+  const strings = [];
+  const walk = v => typeof v === "string" ? strings.push(v)
+    : v && typeof v === "object" ? Object.values(v).forEach(walk) : undefined;
+  walk(MANIFEST);
+  const files = strings.filter(s => s.includes("Data/"));
+  assert.ok(files.length > 0, "the manifest names the report file");
+  for (const s of files) assert.equal(s, `Data/${STORE_DIR}/<worldId>/<id>.json`);
+  const queue = `flags.${FLAG_SCOPE}.${QUEUE_KEY}`;
+  assert.deepEqual(MANIFEST.flags.writes, [queue]);
+  for (const s of strings.filter(s => s.startsWith("flags."))) assert.equal(s, queue);
 });
 
 test("describe() equals golden/describe.json (version, kit, published and patch routes excluded)", () => {
