@@ -34,7 +34,10 @@ const FEATURES = [sheet, bonds];
 const log = makeLog(MODULE);
 const reg = hookRegistry(MODULE, log);
 
-const ctx = { log, reg, api: null, uninstall };
+/** The hook names the features register; selftest() checks each one is in reg (EXT-8). */
+const hookNames = Object.freeze(FEATURES.flatMap(f => f.HOOK_NAMES));
+
+const ctx = { log, reg, api: null, uninstall, hookNames };
 
 function install() {
   for (const feature of FEATURES) feature.install(reg, ctx);

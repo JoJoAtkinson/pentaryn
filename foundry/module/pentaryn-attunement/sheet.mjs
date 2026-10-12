@@ -188,6 +188,9 @@ function onRenderSheet(app, element) {
   }
 }
 
+/** The hooks install() registers, in order; selftest() checks each is in the registry (EXT-8). */
+export const HOOK_NAMES = Object.freeze(["renderBaseActorSheet"]);
+
 export function install(reg) {
   reg.on("renderBaseActorSheet", onRenderSheet, { label: "renderBaseActorSheet: strip" });
 }

@@ -4,6 +4,10 @@
 
 The version stays 0.3.0 until the next `module.json` restart batch (code only: sync + reload).
 
+- **[declared] EXT-8:** `selftest()`'s "item hooks and the sheet hook registered" check now
+  checks each hook by name (`sheet.mjs` and `bonds.mjs` export a frozen `HOOK_NAMES`; the entry
+  passes them to the API) and its `detail` lists the missing names, `null` when none (was: passed on
+  any four registrations, detail the count). `test/api.test.mjs`.
 - **[declared] EC-6:** `report(target)` falls back to the controlled token only when no target is
   given. A string that names no actor (by id, then name) or a non-Actor object now returns
   `undefined` with the `no actor` warn, which names the string (was: silently reported the

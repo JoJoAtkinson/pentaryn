@@ -166,6 +166,9 @@ function onPreCreateItem(item, data, options) {
   warnOverCap(item.parent, item, "PENTARYN_ATTUNEMENT.ArrivedAttuned", 0, options);
 }
 
+/** The hooks install() registers, in order; selftest() checks each is in the registry (EXT-8). */
+export const HOOK_NAMES = Object.freeze(["preUpdateItem", "preCreateItem", "createItem"]);
+
 export function install(reg) {
   reg.on("preUpdateItem", onPreUpdateItem, { label: "preUpdateItem: over-cap warn" });
   reg.on("preCreateItem", onPreCreateItem, { label: "preCreateItem: bond restore" });

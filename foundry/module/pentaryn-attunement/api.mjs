@@ -94,10 +94,13 @@ function selftest(ctx) {
   // the check as failed rather than let selftest() throw.
   let guarded, guardErr = null;
   try { guarded = tooltipGuarded(); } catch (err) { guarded = false; guardErr = err; }
+  const registered = new Set(ctx.reg.ids().map(r => r.name));
+  const missing = ctx.hookNames.filter(name => !registered.has(name));
   const checks = [
     { label: "published as module.api", ok: game.modules.get(MODULE)?.api === ctx.api },
     { label: `game.pentaryn.${NS} is this API`, ok: game.pentaryn?.[NS] === ctx.api },
-    { label: "item hooks and the sheet hook registered", ok: ctx.reg.ids().length >= 4, detail: ctx.reg.ids().length },
+    // [declared] EXT-8: by name, not a count — detail lists the hooks missing from the registry.
+    { label: "item hooks and the sheet hook registered", ok: missing.length === 0, detail: missing.length ? missing : null },
     { label: "armorProficienciesMap covers the attunement categories",
       ok: PROFICIENCY_CATEGORIES.every(k => map?.[k] != null) },
     { label: "dnd5e item-tooltip guard installed (null: no item tooltips)", ok: guarded !== false,

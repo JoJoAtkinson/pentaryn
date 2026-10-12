@@ -8,6 +8,9 @@ import { attunementWorld, addItem, makeActor, MOD } from "./fixtures/world.mjs";
 import { MANIFEST } from "../api-manifest.mjs";
 import { buildApi, surfaceOf } from "../lib/api.mjs";
 import * as core from "../attunement-core.mjs";
+import { buildApiFor } from "../api.mjs";
+import * as sheet from "../sheet.mjs";
+import * as bonds from "../bonds.mjs";
 
 const manifest = manifestOf(new URL("..", import.meta.url));
 const F = await attunementWorld();
@@ -150,6 +153,34 @@ test("selftest: every check passes on a loaded world", () => {
   const out = api.selftest();
   assert.deepEqual(out.checks.filter(c => !c.ok), []);
   assert.equal(out.ok, true);
+});
+
+// EXT-8: the hook check named no hooks, it counted (>= 4), so four records that are not the four
+// this module registers passed. Each feature now exports the hook names it registers, and the check
+// reports the missing names.
+test("EXT-8: each feature exports the hook names its install registers, in order", () => {
+  assert.deepEqual(sheet.HOOK_NAMES, ["renderBaseActorSheet"]);
+  assert.deepEqual(bonds.HOOK_NAMES, ["preUpdateItem", "preCreateItem", "createItem"]);
+  assert.equal(Object.isFrozen(sheet.HOOK_NAMES), true);
+  assert.equal(Object.isFrozen(bonds.HOOK_NAMES), true);
+  const names = [];
+  const reg = { on: name => { names.push(name); } };
+  sheet.install(reg);
+  bonds.install(reg);
+  assert.deepEqual(names, [...sheet.HOOK_NAMES, ...bonds.HOOK_NAMES]);
+});
+
+test("EXT-8: selftest's hook check names the missing hook even when four hooks are registered", () => {
+  const records = ["renderBaseActorSheet", "preUpdateItem", "preCreateItem", "preCreateItem"]
+    .map((name, id) => ({ kind: "on", name, id, label: name }));
+  const ctx = { log: { traces: () => [] }, reg: { ids: () => records.map(r => ({ ...r })) }, api: null, uninstall: () => {},
+    hookNames: ["renderBaseActorSheet", "preUpdateItem", "preCreateItem", "createItem"] };
+  ctx.api = buildApiFor(ctx);
+  const check = ctx.api.selftest().checks.find(c => /hook/.test(c.label));
+  assert.equal(check.ok, false);
+  assert.deepEqual(check.detail, ["createItem"]);
+  const live = api.selftest().checks.find(c => /hook/.test(c.label));
+  assert.deepEqual([live.ok, live.detail], [true, null]);
 });
 
 test("uninstall(): every module hook off, the tooltip guard unwrapped", () => {
