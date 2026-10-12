@@ -335,7 +335,10 @@ export function install(reg, context) {
   offSettings.push(
     whenChanged("gmButton", () => refreshBars()),
     whenChanged("singlePageReadables", () => {
-      for (const a of foundry.applications.instances.values()) if (a.rendered && a.document?.documentName === "JournalEntry") applySinglePage(a);
+      for (const a of foundry.applications.instances.values()) {
+        if (!(a.rendered && a.document?.documentName === "JournalEntry")) continue;
+        try { applySinglePage(a); } catch (err) { ctx.log.warn("single-page skipped", err); }
+      }
     }),
   );
 

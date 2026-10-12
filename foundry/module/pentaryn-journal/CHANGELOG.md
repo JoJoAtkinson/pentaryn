@@ -35,6 +35,9 @@
   `null` / `false` / "no such user". A string matching nobody throws (`ensure`: rejects) `NOT_FOUND`;
   two matches, `AMBIGUOUS`. `null` now means the calling user, as leaving it out does. The params are
   `kind: "user", resolve: "self"` with `throws` in `describe()`.
+- **[declared] journal-rob-4:** turning `singlePageReadables` on or off re-applies the one-page look
+  to each open journal on its own: a window that throws is warned (`single-page skipped`) and skipped,
+  the rest are still updated, and the error no longer escapes into the setting change.
 
 ## Unreleased (blueprint migration, wave 2)
 
