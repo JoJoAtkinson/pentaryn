@@ -245,6 +245,63 @@ function tidyOrigins(ids) {
 }
 
 /**
+ * runSwings' paused branch (combat-core-M9): wait for the strip's choice (Resume / Retarget /
+ * another weapon / Adv / Stop) and apply it. true = the sequence ends here (Stop, Esc, an abort);
+ * false = go round the loop again (still paused, or running on).
+ */
+async function onPaused(actor, dispatch) {
+  const choice = await waitChoice(stripContext());
+  if (current.abort || !choice || choice.type === "stop") { dispatch({ type: "stop" }); return true; }
+  if (choice.type === "swap") dispatch({ type: "swap", weaponId: choice.weaponId, extras: swapExtras(actor, choice.weaponId) });
+  if (choice.type === "retarget") {
+    const swing = current.state.swings[current.state.index];
+    const act = attackActivityOf(actor.items.get(swing.weaponId));
+    const before = [...game.user.targets];
+    picking(true);
+    let picked;
+    try { picked = await pickTarget(act); } finally { picking(false); }
+    if (current.abort || current.state.status === "stopped") return false;
+    // Picker cancelled (right-click): stay paused on the old target, don't roll at nobody.
+    if (!picked) { restoreTargets(before); render(); return false; }
+  }
+  if (choice.type === "adv") { dispatch({ type: "adv", value: choice.value }); return false; }
+  dispatch({ type: "resume" });
+  return false;
+}
+
+/**
+ * One swing's rollAttack arguments (combat-core-M9): the attack mode, the Adv / Dis to add, the
+ * dialog (quick mode skips it) and the chat message threaded under the usage card. `s` is the state
+ * the swing was read from. Synchronous: nothing runs between the usage card and the roll.
+ */
+function swingRollArgs(s, swing, item, activity, origin, { event, keyed }) {
+  const first = s.rolled === 0;
+  const quick = !first && (quickMode() || keyed);
+  const adv = s.adv ?? (quick ? current.lastAdv : null);
+  const config = {};
+  if (first && event) config.event = event;
+  if (swing.mode) config.attackMode = swing.mode;
+  else if (String(item.getFlag("dnd5e", `last.${activity.id}.attackMode`) ?? "").endsWith("offhand")) {
+    // A main swing never inherits a remembered Offhand (also with offhandModeReset off); any
+    // other remembered mode (Thrown, Two-Handed) stays the player's choice.
+    const main = core.mainMode(item.system?.attackModes ?? []);
+    if (main) config.attackMode = main;
+  }
+  // Only ever ADD advantage or disadvantage: a false here would erase a condition's own (Prone, Blinded…).
+  if (adv) config.rolls = [{ options: { [adv]: true } }];
+  const message = {
+    data: {
+      ...(origin ? { system: { origin } } : {}),
+      flags: { [MODULE]: { swing: { i: s.index + 1, n: s.swings.length, kind: swing.kind } } }
+    }
+  };
+  // Swing 1 leaves `configure` unset so dnd5e's fast-forward keys on the Full Attack click
+  // (Shift / Alt / Ctrl) can skip its dialog too; an explicit `true` would override them.
+  const dialog = first ? {} : { configure: !quick };
+  return { config, dialog, message };
+}
+
+/**
  * Run a list of swings for an actor.
  * @param {Actor} actor
  * @param {{weaponId, mode, kind}[]} swings
@@ -290,22 +347,7 @@ export async function runSwings(actor, swings, { event = null, title = null, ori
       if (current.abort) { dispatch({ type: "stop" }); break; }
 
       if (current.state.status === "paused") {
-        const choice = await waitChoice(stripContext());
-        if (current.abort || !choice || choice.type === "stop") { dispatch({ type: "stop" }); break; }
-        if (choice.type === "swap") dispatch({ type: "swap", weaponId: choice.weaponId, extras: swapExtras(actor, choice.weaponId) });
-        if (choice.type === "retarget") {
-          const swing = current.state.swings[current.state.index];
-          const act = attackActivityOf(actor.items.get(swing.weaponId));
-          const before = [...game.user.targets];
-          picking(true);
-          let picked;
-          try { picked = await pickTarget(act); } finally { picking(false); }
-          if (current.abort || current.state.status === "stopped") continue;
-          // Picker cancelled (right-click): stay paused on the old target, don't roll at nobody.
-          if (!picked) { restoreTargets(before); render(); continue; }
-        }
-        if (choice.type === "adv") { dispatch({ type: "adv", value: choice.value }); continue; }
-        dispatch({ type: "resume" });
+        if (await onPaused(actor, dispatch)) break;
         continue;
       }
 
@@ -330,35 +372,14 @@ export async function runSwings(actor, swings, { event = null, title = null, ori
         emit("usage", activity, swing.kind);
       }
 
-      const first = s.rolled === 0;
-      const quick = !first && (quickMode() || keyed);
-      const adv = s.adv ?? (quick ? current.lastAdv : null);
-      const config = {};
-      if (first && event) config.event = event;
-      if (swing.mode) config.attackMode = swing.mode;
-      else if (String(item.getFlag("dnd5e", `last.${activity.id}.attackMode`) ?? "").endsWith("offhand")) {
-        // A main swing never inherits a remembered Offhand (also with offhandModeReset off); any
-        // other remembered mode (Thrown, Two-Handed) stays the player's choice.
-        const main = core.mainMode(item.system?.attackModes ?? []);
-        if (main) config.attackMode = main;
-      }
-      // Only ever ADD advantage or disadvantage: a false here would erase a condition's own (Prone, Blinded…).
-      if (adv) config.rolls = [{ options: { [adv]: true } }];
-      const message = {
-        data: {
-          ...(origin ? { system: { origin } } : {}),
-          flags: { [MODULE]: { swing: { i: s.index + 1, n: s.swings.length, kind: swing.kind } } }
-        }
-      };
+      const { config, dialog, message } = swingRollArgs(s, swing, item, activity, origin, { event, keyed });
 
       render();
       tag = { activityUuid: activity.uuid, kind: swing.kind };
       const dmg = watchDamage(activity);
       let rolls = null;
       try {
-        // Swing 1 leaves `configure` unset so dnd5e's fast-forward keys on the Full Attack click
-        // (Shift / Alt / Ctrl) can skip its dialog too; an explicit `true` would override them.
-        rolls = await activity.rollAttack(config, first ? {} : { configure: !quick }, message);
+        rolls = await activity.rollAttack(config, dialog, message);
       } finally {
         tag = null;
       }

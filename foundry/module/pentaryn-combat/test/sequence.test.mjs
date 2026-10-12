@@ -692,3 +692,22 @@ test("strip exports used by the loop: show / update / hide / picking / waitChoic
   strip.update({ status: "running" });   // no strip: no-op
   strip.picking(true);
 });
+
+// combat-core-M9: runSwings did three jobs in ~128 lines. The paused-choice branch (onPaused) and the
+// per-swing roll configuration (swingRollArgs) are file-private helpers; the run goldens above
+// (sequence-*.json) and the api-calls / plans / full-attack-plans goldens pin the behaviour unchanged.
+test("combat-core-M9: runSwings delegates the paused branch (onPaused) and the roll args (swingRollArgs)", async () => {
+  const { readFileSync } = await import("node:fs");
+  const src = readFileSync(new URL("../sequence.mjs", import.meta.url), "utf8");
+  assert.ok(/^async function onPaused\(/m.test(src), "onPaused is a file-private async helper");
+  assert.ok(/^function swingRollArgs\(/m.test(src), "swingRollArgs is a file-private sync helper (no await between use() and rollAttack)");
+  assert.doesNotMatch(src, /^export (async )?function (onPaused|swingRollArgs)\b/m, "neither helper is exported");
+  const start = src.indexOf("export async function runSwings(");
+  const end = src.indexOf("\n}\n", start);
+  const body = src.slice(start, end);
+  assert.match(body, /await onPaused\(/, "runSwings awaits onPaused");
+  assert.match(body, /swingRollArgs\(/, "runSwings builds each swing's roll through swingRollArgs");
+  assert.doesNotMatch(body, /waitChoice\(|config\.attackMode|pickTarget\(/, "the paused branch and the roll config left runSwings");
+  const n = body.split("\n").length;
+  assert.ok(n <= 95, `runSwings is ${n} lines (was ~128)`);
+});
