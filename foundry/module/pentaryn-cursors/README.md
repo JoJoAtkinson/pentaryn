@@ -99,6 +99,20 @@ the `keyFor` table in `test/core.test.mjs`. The build fails unless the measured 
 `KEYS[key].hotspot`, so a new glyph can't ship with a stale one — update `KEYS` to the printed
 value if the new one is right.
 
+The key list is pinned exactly in several more places; miss one and the suite goes red with no
+hint why. A new key also has to change:
+
+- `test/core.test.mjs` — the "KEYS are exactly the five" check (rename it too).
+- `test/glue.test.mjs` — case (b), `Object.keys(a.keys)`.
+- `test/golden/surface.json` — seven `keys.<key>.*` rows per key (pinned by `test/api.test.mjs`).
+  Re-pin with `GOLDEN_UPDATE=1 node --test test/api.test.mjs`, read the diff, and commit it as a
+  declared change (blueprint §9).
+- `test/fixtures/live-before.json` — `env.keys` is a live capture: re-capture it from Foundry, do
+  not hand-edit it.
+- Player-facing copies, which list the cursors by colour: the "What the player sees" table and
+  the Credits table here, `scripts/foundry/cursors/src/CREDITS.md`, `lang/en.json`
+  `PENTARYN_CURSORS.Setting.enabled.Hint`, and the `module.json` description.
+
 ## Pitfalls
 
 - **Other scripts blanking the cursor.** Foundry's `setCursor` writes `#board.style.cursor` only
