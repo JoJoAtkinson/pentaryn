@@ -10,8 +10,10 @@ import { isActiveGM } from "./lib/election.mjs";
  * Run the reset in this world if it is due. Active GM only, dnd5e 6+ only, and only while dnd5e's
  * senseVisionSync is on (with it off, a reset would leave every token blind). `force` runs it again
  * regardless of the setting. Returns { prototypes, tokens } written, or null when it did not run.
+ * `opts` null is treated as omitted (declared, senses-R4).
  */
-export async function resetSight({ force = false } = {}) {
+export async function resetSight(opts = {}) {
+  const { force = false } = opts && typeof opts === "object" ? opts : {};
   if (!isActiveGM()) return null;
   if (!systemReady(game.system?.id, game.system?.version)) return null;
   const native = systemSetting("dnd5e", "senseVisionSync") === true;   // undefined when absent

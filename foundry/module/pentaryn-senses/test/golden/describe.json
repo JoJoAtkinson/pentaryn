@@ -46,7 +46,7 @@
           "name": "opts",
           "optional": true,
           "type": "{ force?: boolean }",
-          "doc": "force: run again although sightReset is 1"
+          "doc": "force: run again although sightReset is 1; null = omitted"
         }
       ],
       "returns": "Promise<{ prototypes, tokens } | null>",
@@ -394,7 +394,7 @@
           "name": "opts",
           "optional": true,
           "type": "{ sceneId?, base?, as? }",
-          "doc": "scene scope; base: the world actor; as: answer as that user"
+          "doc": "scene scope; base: the world actor; as: answer as that user; null = omitted"
         }
       ],
       "returns": "{ token: { id, light, itemLight, itemLightPrior, spellLight: { source, prior (dotted keys) } | null } | null, actor: { id, carried, carriers, hooded, lightingItem } | null, chain: { anchor, chainedHere } | null, lightSpells: { item, cast, litBy: uuid[] }[] }",

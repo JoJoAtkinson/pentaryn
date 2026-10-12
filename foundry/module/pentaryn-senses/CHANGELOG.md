@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **[declared senses-R4] `inspect(ref, null)` and `resetSight(null)` act as if opts were omitted**
+  (final review 2026-10-12): an explicit null (what the MCP bridge sends for JSON `opts: null`) no
+  longer throws a TypeError; both functions read `opts` as `{}` when it is null or not an object,
+  in step with the kit's KIT-R2 coercion. The describe()/README opts rows say `null = omitted`.
+  Goldens: describe.json (the two opts docs). New `test/null-opts.test.mjs`.
+
 - **[declared senses-edge-3] Button tips are plain text, set one way** (final review 2026-10-12):
   every senses button (Token HUD Break chain / Chain to <target> / End light, the spell card's
   Light row, the inventory flame and hood) sets its tip through `setTip()` in the new pure `core/hud-dom.mjs` (through the core barrel):

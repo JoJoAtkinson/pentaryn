@@ -39,7 +39,7 @@ export const MANIFEST = Object.freeze({
     },
     {
       path: "resetSight",
-      params: [{ name: "opts", optional: true, type: "{ force?: boolean }", doc: "force: run again although sightReset is 1" }],
+      params: [{ name: "opts", optional: true, type: "{ force?: boolean }", doc: "force: run again although sightReset is 1; null = omitted" }],
       returns: "Promise<{ prototypes, tokens } | null>",
       gm: true, writes: true, legacy: true,
       nullWhen: "not the active GM, not dnd5e 6+, dnd5e senseVisionSync off, or already done without force",
@@ -202,7 +202,7 @@ export const MANIFEST = Object.freeze({
       path: "inspect",
       params: [
         { name: "ref", kind: "token", type: "Token|Actor|uuid|id|exact name", resolve: false, doc: "a token (id, uuid, exact name, document, placeable), else an actor" },
-        { name: "opts", optional: true, type: "{ sceneId?, base?, as? }", doc: "scene scope; base: the world actor; as: answer as that user" },
+        { name: "opts", optional: true, type: "{ sceneId?, base?, as? }", doc: "scene scope; base: the world actor; as: answer as that user; null = omitted" },
       ],
       returns: "{ token: { id, light, itemLight, itemLightPrior, spellLight: { source, prior (dotted keys) } | null } | null, "
         + "actor: { id, carried, carriers, hooded, lightingItem } | null, "

@@ -87,9 +87,9 @@ Also `game.modules.get("pentaryn-senses").api`. Kit members: `describe()`, `vers
 
 | Call | Does |
 |---|---|
-| `inspect(ref, {sceneId?, base?, as?})` | why a token is lit as it is: its light and owner flag, the carried light and every carrier, its chain, the Light cantrips. Read-only; a player without OBSERVER gets no `actor`/`lightSpells` |
+| `inspect(ref, {sceneId?, base?, as?})` | why a token is lit as it is: its light and owner flag, the carried light and every carrier, its chain, the Light cantrips. Read-only; a player without OBSERVER gets no `actor`/`lightSpells`. `opts` optional, null = omitted |
 | `syncLight(actor)` · `syncAll()` · `carriedLight(actor)` | carried lights: sync one actor / the world; what an actor's items give |
-| `resetSight({force})` | rerun the darkvision reset → `{prototypes, tokens}` or null |
+| `resetSight({force})` | rerun the darkvision reset → `{prototypes, tokens}` or null. `opts` optional, null = omitted |
 | `light.cast(item, {token} \| {x, y})` · `.end(item)` · `.onMe(item)` · `.pick()` · `.prompt(item)` | the Light cantrip |
 | `light.status(itemRef)` → `{cast, litBy}` · `light.reconcile(uuid)` → summary · `light.recent()` | what a Light does now; force a reconcile; the last 20 summaries |
 | `light.toggle(item)` · `.hood(item)` · `.profileFor(item)` · `.setup()` (= `setupLight()`) · `.sweep()` | lit items; give every Torch its Light activity; the GM ready sweep |
