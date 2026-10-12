@@ -429,7 +429,16 @@ def _load_script_module(path: Path) -> Any:
         return None
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec_name] = module
-    spec.loader.exec_module(module)
+    # py-mcp-rob-8: a failed import leaves no half-initialised module behind, and a
+    # SystemExit (a script's sys.exit() guard) becomes a plain Exception so discovery
+    # records one skip instead of ending.
+    try:
+        spec.loader.exec_module(module)
+    except (Exception, SystemExit) as exc:
+        sys.modules.pop(spec_name, None)
+        if isinstance(exc, SystemExit):
+            raise Exception(f"SystemExit: {exc}") from exc
+        raise
     return module
 
 

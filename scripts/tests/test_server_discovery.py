@@ -778,3 +778,31 @@ def test_py_mcp_rob_7_value_flags_render_list_and_dict_as_json():
                                "s": " x ", "gone": None})
     assert argv == ["--meta", '{"k": 1}', "--n", "3", "--s", "x",
                     "--tags", '["a", "é"]']
+
+
+# ---------------------------------------------------------------------------
+# py-mcp-rob-8: SystemExit at handler-module import is one skip, not the end of discovery
+# ---------------------------------------------------------------------------
+
+def test_py_mcp_rob_8_system_exit_at_import_is_skipped_and_discovery_continues(tmp_path):
+    """py-mcp-rob-8: a script with MCP_HANDLERS that calls sys.exit() at import (e.g. a
+    missing-dependency guard) escaped `except Exception` and aborted discovery, leaving
+    a half-initialised module in sys.modules. It is now a skip carrying the original
+    text, the module entry is removed, and the other scripts still load."""
+    repo = _make_repo(tmp_path)
+    scripts = repo / "scripts"
+    (scripts / "a_exits_rob8.py").write_text(
+        "import sys\nMCP_HANDLERS = {}\nsys.exit('needs frobnicate')\n", encoding="utf-8")
+    (scripts / "b_raises_rob8.py").write_text(
+        "MCP_HANDLERS = {}\nraise RuntimeError('boom rob8')\n", encoding="utf-8")
+    (scripts / "c_inproc_rob8.py").write_text(_INPROC_MODULE, encoding="utf-8")
+
+    result = server.discover_tools(repo_root=repo)
+
+    assert "sample_inproc" in {r.tool.name for r in result.tools}
+    reasons = {path.name: reason for path, reason in result.skipped}
+    assert reasons["a_exits_rob8.py"] == "in-process import failed: SystemExit: needs frobnicate"
+    assert reasons["b_raises_rob8.py"] == "in-process import failed: boom rob8"
+    assert "_mcp_script_a_exits_rob8" not in sys.modules
+    assert "_mcp_script_b_raises_rob8" not in sys.modules
+    assert "_mcp_script_c_inproc_rob8" in sys.modules
