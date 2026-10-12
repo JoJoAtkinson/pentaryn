@@ -92,17 +92,6 @@ module. Baseline: [`wave-3-baseline.md`](wave-3-baseline.md).
   (`ties-adapter.mjs` ~325, one-time, copy-verify-clear per actor). Batching changes the frozen
   call-order pins in the conduit goldens. Usually 1–4 PCs; recorded only.
 
-## Known red commits and ranges (bisecting)
-
-| Where | Range | What |
-|---|---|---|
-| portals: C32 / `foundry-adjustments-check` | `f6bbd2dc` → the ADJ batch commit | the S3 split moved the markers out of `portals.mjs`, and the two existing `adjustments.yml` rows still list it; fixed when the integrator lands the portals rows |
-| portals: module-check imports gate | `ae936c07` → `186cdfb1` (`ae936c07`, `8a060d21`, `b87d8c15`, `186cdfb1`) | `test/aoe-handle.test.mjs` imported `../../pentaryn-aoe/core.mjs` across modules; fixed `4d6f0c4b` (a cited oracle copy); module tests stayed green |
-| prompts: module-check i18n gate | `5ba6516c` → `02600db9` | `test/i18n.test.mjs` held a bare `"PENTARYN_PROMPTS."` literal the gate reads as a missing key; node tests stayed green; fixed `02600db9` |
-| prompts: C32 / C47 (advisory) | `f5a05191` → the ADJ batch commit | `wrapMethod` names `prompts-token-dblclick` and the code names item-piles; both rows wait in the integrator list (scored on a copy with them: 97.9 %) |
-| prompts: `scripts/tests/test_update_escalation.py -m repo` (`test_real_exposure_has_no_known_false_positives`) | `ec66c6df` → the integrator's edit of that test | step 10 renamed `los.mjs` → `sight-adapter.mjs` and step 13 added `"flags.wall-height"` to `api-manifest.mjs` `flags.reads`, so `exposure("wall-height")` is `[api-manifest.mjs, sight-adapter.mjs]`, not `[los.mjs]`; shared file, exact edit in the prompts integrator list (also refreshes the `levels` xfail comment: the template is now in `core/gather-text.mjs`). Module tests stayed green |
-| ties: C32 / C47 and `foundry-adjustments-check` (advisory) | `c9276cb8` (S4) / `e688e96f` (S4b) / `cb65b749` (S12) → the ADJ batch commit | `core-ties-flag-wipe`, `dsn-skip-blind-study` and the ties path of `dnd5e-legacy-roll-modes` still list `known-core.mjs`, `look.mjs`, `preview.mjs`, `study.mjs`; the new item-piles row is not in yet. Scored on a copy with them: 96.0 %. Module tests stayed green |
-| ties: module-check i18n gate | checkpoint `7395a708` → (open) | `test/i18n.test.mjs` (frozen) holds a bare `"PENTARYN_TIES."` literal the gate reads as a missing key; node tests green. Same shape as prompts' `02600db9`, but the ties line is in a frozen test, so it is not edited in this wave |
 - **senses — two GM tabs both run the Light reconcile (§5.9 async review).** The reconcile, the
   deletion hooks and the ready sweep are gated on `isActiveGM()`, which elects a *user*; with the MCP
   bridge tab and a GM browser tab open, both run. For a Light cast on a square both tabs create the
@@ -123,6 +112,31 @@ module. Baseline: [`wave-3-baseline.md`](wave-3-baseline.md).
   updateDocuments`, as `resetSight` does) is one round trip, but it changes the glue ready-chain call
   order pins, so it would be its own declared perf step. On a converged world it is mostly no-op
   writes; recorded, not built. Migration `4e9cc5bf`.
+
+- **ties — `ties-api.mjs` keeps C05 red (integrator, 2026-10-11).** With the scorer now following
+  `export … from` (`6ceb2460`), ties' only unreachable file is `ties-api.mjs`, the macro-only compat
+  barrel nothing in the module imports (world macros `import()` it by URL). Decide: keep it (and
+  accept C05 for ties, or teach C05 an "external entry" allow-list), or retire it once no macro
+  imports it (grep the world's macros first).
+
+## Known red commits and ranges (bisecting)
+
+| Where | Range | What |
+|---|---|---|
+| portals: C32 / `foundry-adjustments-check` | `f6bbd2dc` → the ADJ batch commit | the S3 split moved the markers out of `portals.mjs`, and the two existing `adjustments.yml` rows still list it; fixed when the integrator lands the portals rows |
+| portals: module-check imports gate | `ae936c07` → `186cdfb1` (`ae936c07`, `8a060d21`, `b87d8c15`, `186cdfb1`) | `test/aoe-handle.test.mjs` imported `../../pentaryn-aoe/core.mjs` across modules; fixed `4d6f0c4b` (a cited oracle copy); module tests stayed green |
+| prompts: module-check i18n gate | `5ba6516c` → `02600db9` | `test/i18n.test.mjs` held a bare `"PENTARYN_PROMPTS."` literal the gate reads as a missing key; node tests stayed green; fixed `02600db9` |
+| prompts: C32 / C47 (advisory) | `f5a05191` → the ADJ batch commit | `wrapMethod` names `prompts-token-dblclick` and the code names item-piles; both rows wait in the integrator list (scored on a copy with them: 97.9 %) |
+| prompts: `scripts/tests/test_update_escalation.py -m repo` (`test_real_exposure_has_no_known_false_positives`) | `ec66c6df` → the integrator's edit of that test | step 10 renamed `los.mjs` → `sight-adapter.mjs` and step 13 added `"flags.wall-height"` to `api-manifest.mjs` `flags.reads`, so `exposure("wall-height")` is `[api-manifest.mjs, sight-adapter.mjs]`, not `[los.mjs]`; shared file, exact edit in the prompts integrator list (also refreshes the `levels` xfail comment: the template is now in `core/gather-text.mjs`). Module tests stayed green |
+| ties: C32 / C47 and `foundry-adjustments-check` (advisory) | `c9276cb8` (S4) / `e688e96f` (S4b) / `cb65b749` (S12) → the ADJ batch commit | `core-ties-flag-wipe`, `dsn-skip-blind-study` and the ties path of `dnd5e-legacy-roll-modes` still list `known-core.mjs`, `look.mjs`, `preview.mjs`, `study.mjs`; the new item-piles row is not in yet. Scored on a copy with them: 96.0 %. Module tests stayed green |
+| ties: module-check i18n gate | checkpoint `7395a708` → (open) | `test/i18n.test.mjs` (frozen) holds a bare `"PENTARYN_TIES."` literal the gate reads as a missing key; node tests green. Same shape as prompts' `02600db9`, but the ties line is in a frozen test, so it is not edited in this wave |
+
+**Closed by the wave-3 integrator (2026-10-11):** the portals, prompts, ties C32/C47 and
+`foundry-adjustments-check` ranges end at the adjustments commits `b3812eda` (portals), `6cf39b60`
+(prompts), `38a9d2e5` (ties), with creatures `f8e50927` and senses `287a945c` closing theirs; the
+prompts `test_update_escalation.py` range ends at `8ae0bec3` (ties' two paths at `414a6550`); the
+ties module-check i18n gate is green from `2cab16e9` (the gate skips a bare `"NS."` literal; the
+frozen test is untouched).
 
 ## ties — standalone-finding review (2026-10-11)
 
@@ -155,3 +169,47 @@ conformance is still 87.8 %.
   | `c31bd116` (B4) | `c9f3e284` |
   | `f7aa8929` (B6) | `8bf658c6` |
   | `28b913e2` (ties-46) | `313c7df8` |
+
+## Integration (wave 3, 2026-10-11)
+
+The integrator applied every lane's shared-file list on `migrate/wave-3` (code phase; nothing
+synced, nothing live). Commits, oldest first:
+
+| Commit | What |
+|---|---|
+| `2cab16e9` | module-check i18n gate skips a bare namespace literal (`"PENTARYN_TIES."`); ties' gate green without touching its frozen test |
+| `38a9d2e5` · `414a6550` | ties adjustments rows (moves + `itempiles-ties-pile-check`); escalation test paths |
+| `6cf39b60` · `8ae0bec3` | prompts rows (`prompts-token-dblclick`, `itempiles-prompts-hotspot`); `wall-height` exposure and the `levels` xfail note |
+| `f8e50927` | creatures rows (`creatures-libwrapper` rewrite, `argon-creatures-strip-float`, `itempiles-creatures-pile-flag`) |
+| `287a945c` | senses rows (five step-12 rows; `argon-light-pick-collapse-panels` → `argon.mjs`; chat-message-types → `light-ui.mjs`) |
+| `b3812eda` | portals rows (two moves, four new) |
+| `b631badf` · `d83d0b11` · `ca85f637` | `adjustments-batch.md` marked; Wave 7 batch rows filled; guides' Result rows |
+| `bc344835` · `5d1cca94` | prompts and senses ModuleSpec comments; prompts after-sync adds `selftest()` |
+| `ff72c4d4` | `prompt-markers.md` (`typeahead-adapter.mjs`, the new reads); lookup's TWIN comment |
+| `0291ce2a` | D1 aliases gone: `addon-blueprint.md`, `attributes.md` (:203 and step 5), `live-goldens/ties.js` |
+| `e3fe7db9` · `e064e930` | module index keeps senses' `chain` alias; index regenerated; ties ref quirk; portals route row |
+| `e0444215` | `scene-links.md` console table; `markers.md` "Who checks for Markers and crowd" |
+| `6ceb2460` | scorer: C05 follows `export … from`, C50 reads `reg.once("ready", …)` |
+| fork `a5ce74c` | `pentaryn-read` description: ties and prompts have `describe()` |
+
+`scripts/foundry/live-goldens/prompts.js` already existed (`8a70e6ff`); its calls (`status`, `gather`,
+`list`, `model`) are unchanged, so nothing new was needed.
+
+Gates at the end (all static): every module's node tests through `make foundry-modules-check` (20/20
+pass their gates); prompts with `FOUNDRY_MCP_FORK` 225/225; `pytest -q` 1203 passed, 2 skipped,
+3 xfailed; `make foundry-lib-check` 82/82; `make check-context` OK; `make foundry-adjustments-check`
+112 rows OK (every new or moved marker misspelt on a copy is caught); `vendor.py check --all` identical.
+Fork: vitest 275 + 43 pass, `npm run typecheck` clean (after `build:shared` into the worktree's own
+`shared/dist`, missing in a fresh worktree), `scripts/fork-footprint.sh` OK.
+
+Conformance (`conformance.py`, fail-class rules) before → after integration:
+
+| Module | Before | After | Still failing |
+|---|---|---|---|
+| prompts | 93.8 % | **97.9 %** | C07 (Wave 7) |
+| ties | 87.8 % | **91.8 %** | C05 (`ties-api.mjs`, the macro-only compat barrel nothing imports), C07, C09, C37 (card layer, Open for Joe) |
+| creatures | 89.6 % | **93.8 %** | C07, C09, C37 (Wave 7) |
+| portals | 87.0 % | **91.3 %** | C07, C09, C37, C51 (Wave 7) |
+| senses | 91.5 % | **93.6 %** | C07, C09, C37 (Wave 7) |
+
+No other module's score moved.
