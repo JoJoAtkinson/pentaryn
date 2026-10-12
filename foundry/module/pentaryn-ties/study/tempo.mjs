@@ -6,6 +6,7 @@
 
 import { BUBBLE, cardName, esc, log } from "./shared.mjs";
 import { send } from "../socket-adapter.mjs";
+import { canSee } from "../ties-adapter.mjs";
 
 /* -------------------------------------------- */
 /*  The tempo tell — scoping a crowd shows      */
@@ -165,13 +166,17 @@ const SCOPE_BUBBLE_MS = 5000;
  * Placement mirrors core's own math (`#chat-bubbles` is canvas-transformed, so token document
  * coordinates are the right space) and the `chat-bubble` class is reused, so it inherits the
  * table's own speech-bubble look and stays consistent with everything else on the canvas.
+ *
+ * ⚠ Never over a token this viewer cannot see (`canSee`: the GM sees all, a player needs
+ * `isVisible`). The broadcast reaches every client, and a bubble pinned to a hidden token's spot
+ * would show the table where it stands. The chat line still posts; only the bubble is withheld. ES-4.
  */
 export function showBubble({ tokenId, sceneId, text }) {
   try {
     if (canvas?.scene?.id !== sceneId) return;
     const token = canvas.tokens?.get(tokenId);
     const container = document.getElementById("chat-bubbles");
-    if (!token || !container) return;
+    if (!token || !container || !canSee(token)) return;
 
     // one tell per token at a time — a fast second look replaces the first rather than stacking
     container.querySelector(`.pt-tempo[data-pt-token="${tokenId}"]`)?.remove();

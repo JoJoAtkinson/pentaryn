@@ -39,6 +39,10 @@ name cannot reach player chat. The token is found on any scene, not only the one
 client is viewing (the GM's tab can sit elsewhere); no token on any scene → the prototype token's
 name; the actor name only when there is no token at all. name-leak (play-test TIE-3).
 
+Fixed (declared): the tempo bubble ("… is studying the room") is drawn only over a token the viewer
+can see. A player whose client cannot see the looker's token gets no bubble at that spot, so it no
+longer reveals where a hidden character stands. The GM still sees it, and the chat line still posts. ES-4.
+
 ## 0.19.4 (2026-10-10, usability run, Area 7 re-run)
 
 - **The inspect window's Share switches are the table's PCs only** (`tablePCs`): each player's
