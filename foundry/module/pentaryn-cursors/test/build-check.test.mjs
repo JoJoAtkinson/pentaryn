@@ -55,3 +55,11 @@ test("EXT-4: every problem of every key is reported, in KEYS order", async () =>
   const problems = checkKeys({ a: { ...real, extreme: "top", hotspot: [40, 0] }, b: { ...real, src: "gone.svg" } }, SRC);
   assert.deepEqual(problems.map(p => p.split(":")[0]), ["a", "a", "b"]);
 });
+
+test("cursors-edge-5: centreHotspot floors the bbox midpoint with the same + 0.01 as the other extremes", async () => {
+  const { centreHotspot } = await build();
+  assert.equal(typeof centreHotspot, "function");
+  assert.deepEqual(centreHotspot({ x0: 3, y0: 3, x1: 28.9998, y1: 28.9998 }), [16, 16], "a midpoint of 15.9999 is 16");
+  assert.deepEqual(centreHotspot({ x0: 3, y0: 3, x1: 29, y1: 29 }), [16, 16]);
+  assert.deepEqual(centreHotspot({ x0: 3, y0: 6, x1: 28.9, y1: 31 }), [15, 18], "a true fraction still floors");
+});

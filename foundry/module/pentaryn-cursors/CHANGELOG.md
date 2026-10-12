@@ -26,6 +26,9 @@
   `checkKeys(KEYS, srcDir)`, which names a missing source, an `extreme` not in `EXTREMES`, or a
   hotspot that is not two integers in 0..31. `--check-sources` prints them and exits 1; the full
   build runs the same check before loading resvg. Importing `build.mjs` no longer runs the build.
+- [declared] The centre-hotspot arithmetic is a pure exported `centreHotspot(bbox)` in
+  `scripts/foundry/cursors/build.mjs`, unit-tested with a 15.9999 midpoint that measures 16
+  (cursors-edge-5). `target` and `aoe` still measure [16, 16]; assets rebuild byte-identical.
 
 ## Unreleased — 2026-10-11 (addon blueprint, wave 1)
 

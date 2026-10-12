@@ -16,7 +16,7 @@
  * exists under src/, every KEYS[key].extreme is in EXTREMES and every KEYS[key].hotspot is two
  * integers in 0..31 (exit 1 naming each problem); scripts/tests/test_cursors_build.py runs it. The
  * full build runs the same check first. Importing this file runs nothing: it exports EXTREMES,
- * SCORES and checkKeys (pinned by the module's test/build-check.test.mjs).
+ * SCORES, checkKeys and centreHotspot (pinned by the module's test/build-check.test.mjs).
  *
  * Steps per key:
  *   1. strip the game-icons black background square, keep every glyph path;
@@ -110,12 +110,15 @@ function cursorSvg(d, { s, tx, ty }, fill, outline) {
     `</g></svg>\n`;
 }
 
+/** The "centre" hotspot of a fitted bbox: its midpoint, floored with the same `+ 0.01` as the
+ *  pixel extremes so float error (15.9999…) cannot move the click point a pixel (cursors-edge-5). */
+export function centreHotspot({ x0, y0, x1, y1 }) {
+  return [Math.floor((x0 + x1) / 2 + 0.01), Math.floor((y0 + y1) / 2 + 0.01)];
+}
+
 /** Hotspot from the fitted glyph's own pixels: the extreme named by `extreme`, ties averaged. */
 function measureHotspot(d, f, extreme) {
-  if (extreme === "centre") {
-    const { x0, y0, x1, y1 } = f.bbox;
-    return [Math.floor((x0 + x1) / 2 + 0.01), Math.floor((y0 + y1) / 2 + 0.01)];
-  }
+  if (extreme === "centre") return centreHotspot(f.bbox);
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${SIZE}" height="${SIZE}" viewBox="0 0 ${SIZE} ${SIZE}">` +
     `<path transform="translate(${f.tx} ${f.ty}) scale(${f.s})" d="${d}"/></svg>`;
   const img = new Resvg(svg, { fitTo: { mode: "width", value: SIZE * ZOOM } }).render();
