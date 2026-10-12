@@ -58,3 +58,14 @@ test("B2 / ties-4: the legacy reads resolve an id, a name or a token to the WORL
   assert.equal(T().read.name, "read");
   assert.equal(T().attributes.ids.name, "attributeIdsOf");
 });
+
+test("ties-10: pending() rows carry whenMs; beliefs() rows carry whenMs and deliveredMs beside the locale strings", async () => {
+  const S = await import("../study.mjs");
+  const rows = S.beliefs(get(GOB));
+  assert.ok(rows.length >= 1);
+  for (const r of rows) {
+    assert.equal(typeof r.when, "string");
+    assert.equal(r.whenMs, 5);
+    assert.equal(r.deliveredMs, 6);
+  }
+});

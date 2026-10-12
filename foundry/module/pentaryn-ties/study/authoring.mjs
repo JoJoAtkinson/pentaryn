@@ -166,6 +166,9 @@ export function beliefs(actor) {
           total: rec.total,
           when: new Date(rec.when).toLocaleString(),
           delivered: rec.delivered ? new Date(rec.delivered).toLocaleString() : null,
+          // numeric siblings (ties-10): sortable and locale-free; the strings above stay for display
+          whenMs: rec.when,
+          deliveredMs: rec.delivered ?? null,
           pending: !rec.delivered,
           pass: passOfRow(parsed, rec),
           text: rec.text

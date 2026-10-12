@@ -175,6 +175,7 @@ export function pending() {
           tier: rec.tier,
           total: rec.total,
           when: new Date(rec.when).toLocaleString(),
+          whenMs: rec.when, // numeric sibling (ties-10)
           text: rec.text
         });
       }
@@ -210,6 +211,7 @@ export function pending() {
       tier: null,
       total: rec.total,
       when: new Date(rec.when).toLocaleString(),
+      whenMs: rec.when, // numeric sibling (ties-10)
       text: rec.text
     });
   }
