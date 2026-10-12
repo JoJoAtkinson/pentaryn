@@ -59,6 +59,11 @@ Fixed (declared): **`attributes.markLearned`** takes its character as an id, a u
 or a token as well as an Actor, and marks the world actor it names. Something that names no actor is
 refused `invalid`; it used to throw `character.getFlag is not a function`. R3.
 
+Fixed (declared): **`attributes.markLearned`** keeps the write contract — no character at all is
+refused `invalid` (it answered `notFound`, which means an unknown attribute), and `noLore` (the
+attribute has no matching lore rows) is now a documented reason in the closed table. A refused save
+answers `writeFailed` (R8). M10.
+
 Fixed (declared): two **`attributes.ensure`** calls for the same new title, made together, now both
 succeed — the first creates it and the second answers `existed: true`. The second used to answer
 `collision`, because both looked at the list before either had written. Same answers otherwise. EC-2.

@@ -267,6 +267,7 @@ function serial(fn) {
  * | `collision` | that name or id is already taken; `existing` is the entry |
  * | `cycle` | the parent would make the entry its own ancestor |
  * | `invalid` | no actor, or a derived id where an entry was required |
+ * | `noLore` | the attribute has no (matching) lore rows |
  * | `writeFailed` | Foundry refused or failed the write |
  *
  * ⚠ `{ ok: false }` is an object, so it is **truthy** — test `.ok`, never the result itself.
@@ -1193,14 +1194,16 @@ export const describeRef = ref => {
  * because the Known tab and the Look window join on that key and that source.
  *
  * @param {Actor|string} character  an Actor, or an id / uuid / exact name / token resolving to the
- *   world actor (R3); anything that resolves to nothing is refused `invalid`, never a throw
+ *   world actor (R3); a missing one, or anything that resolves to nothing, is refused `invalid` (M10),
+ *   never a throw
  * @param {*} attrRef  an attribute id or title
  * @param {"all"|string|string[]} [loreIds]  which rows (default: every row)
- * @returns {Promise<{ ok: true, keys: string[] } | { ok: false, reason }>}
+ * @returns {Promise<{ ok: true, keys: string[] } | { ok: false, reason }>} — reason is
+ *   `notGM` | `invalid` | `notFound` (attribute) | `noLore` | `writeFailed` (the update was refused, R8)
  */
 export async function markLearned(character, attrRef, loreIds = "all", { now = Date.now() } = {}) {
   if (!game.user?.isGM) return fail("notGM");
-  if (!character) return fail("notFound");
+  if (!character) return fail("invalid"); // no actor (M10)
   if (character.documentName !== "Actor") {
     try {
       character = resolveRef(character, "actor", { base: true, required: false });
