@@ -452,9 +452,11 @@ export async function installFoundry({
   /* users */
   const me = user?.documentName ? user : makeUser({ id: "gmUser0000000001", name: "Gamemaster", isGM: true, ...(user ?? {}) });
   const userColl = new StubCollection([me, ...users.map(u => (u.documentName ? u : makeUser(u)))]);
+  // Foundry's UserCollection#getDesignatedUser: the highest role, then the lowest id
+  // (client/documents/collections/users.mjs:87-96)
   Object.defineProperty(userColl, "activeGM", {
     get() {
-      return this.contents.filter(u => u.isGM && u.active).sort((a, b) => a.id.localeCompare(b.id))[0] ?? null;
+      return this.contents.filter(u => u.isGM && u.active).sort((a, b) => (b.role ?? 0) - (a.role ?? 0) || a.id.localeCompare(b.id))[0] ?? null;
     },
   });
 

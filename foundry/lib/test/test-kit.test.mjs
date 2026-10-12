@@ -4,7 +4,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { installFoundry, makeScene, makeToken } from "../test-kit/foundry-stub.mjs";
+import { installFoundry, makeScene, makeToken, makeUser } from "../test-kit/foundry-stub.mjs";
 import { characterise, checkJSON, importGraph, normaliseDescribe, pinJSON, reachable, sourceScan } from "../test-kit/harness.mjs";
 
 const F = await installFoundry({
@@ -73,6 +73,26 @@ test("documents, users, uuids, i18n", () => {
   assert.equal(game.i18n.has("PENTARYN_X.hello"), true);
   const s = makeScene({ name: "Two", tokens: [makeToken({ name: "Bare" })] });
   assert.equal(s.tokens.contents[0].parent, s);
+});
+
+test("kit-edge-3: users.activeGM is the highest-role active GM, then the lowest id (Foundry's getDesignatedUser)", () => {
+  const assistant = makeUser({ id: "aaaaAssistantGM1", name: "Assistant", isGM: true, role: 3 });
+  const gm2 = makeUser({ id: "zzzzGamemaster01", name: "Second GM", isGM: true, role: 4 });
+  const me = game.users.get("gmUser0000000001");
+  game.users.set(assistant.id, assistant).set(gm2.id, gm2);
+  try {
+    assert.equal(game.users.activeGM.id, "gmUser0000000001", "two Gamemasters: the lower id; the Assistant's lower id does not win");
+    me.active = false;
+    assert.equal(game.users.activeGM.id, "zzzzGamemaster01", "a Gamemaster outranks an Assistant GM with a lower id");
+    gm2.active = false;
+    assert.equal(game.users.activeGM.id, "aaaaAssistantGM1");
+    assistant.active = false;
+    assert.equal(game.users.activeGM, null);
+  } finally {
+    me.active = true;
+    game.users.delete(assistant.id);
+    game.users.delete(gm2.id);
+  }
 });
 
 test("harness: pinJSON fails on a missing golden, writes under GOLDEN_UPDATE, compares after", () => {
