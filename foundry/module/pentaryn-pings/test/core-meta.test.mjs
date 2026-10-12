@@ -75,3 +75,12 @@ test("seeded sweep: core equals the oracle on 2000 generated cases per function"
     same(n === undefined ? core.recentOf(list) : core.recentOf(list, n), n === undefined ? oracle.recentOf(list) : oracle.recentOf(list, n), `recentOf #${i}`);
   }
 });
+
+test("pinned quirk: recentOf with n = null or non-numeric returns the whole list, newest first", () => {
+  const list = ["a", "b", "c"];
+  for (const n of [null, "x"]) {
+    assert.deepEqual(core.recentOf(list, n), ["c", "b", "a"], `core ${String(n)}`);
+    assert.deepEqual(oracle.recentOf(list, n), ["c", "b", "a"], `oracle ${String(n)}`);
+  }
+  assert.deepEqual(list, ["a", "b", "c"]);
+});

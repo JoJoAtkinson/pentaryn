@@ -109,7 +109,8 @@ to `serialStore` changes write timing and needs a two-GM live test.
   ping shows at once. A trim detaches it: that ping still shows, `all()` briefly returns `max`+1
   records, and later pings trail until the write (≤ 250 ms). After a flush the readers trail the
   newest ping until the next write. Wait a second after pinging before `last()`.
-- `recent(0)` returns **everything**, and a negative `n` drops records from the oldest end.
+- `recent(0)`, `recent(null)` and a non-numeric `n` return **everything**, and a negative `n` drops
+  records from the oldest end.
 - `snapped` is square-grid maths even on a hex scene.
 - A fractional `max` below 1 never trims the log.
 - Canvas ≠ image space: subtract the padding offset (`image`) for a pixel in the background image.
