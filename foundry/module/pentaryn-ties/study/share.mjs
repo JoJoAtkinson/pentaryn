@@ -41,7 +41,7 @@ import {
 import { applyPlayerWrites, knownListWith, putBelief } from "./apply.mjs";
 import { applyInspect, grantKind, writeIdentification } from "./cascade.mjs";
 import { dropRow } from "./claim.mjs";
-import { factFrom, reset, rowMissed } from "./gate.mjs";
+import { factFrom, missedAndLie, reset } from "./gate.mjs";
 import { beliefsOf, concealmentFor, kindActorOf, reg, resolveFact, studyStateFor, studyTiersOf } from "./resolve.mjs";
 import { esc, INSPECT } from "./shared.mjs";
 import { readFlag } from "../lib/flags.mjs";
@@ -363,11 +363,11 @@ export async function forgetFact(spec, character) {
   /*
    * Was the replaced row a card the player actually holds? Delivered and with text — a failed
    * lore/attribute row's text IS its written failure line, which they were handed (2026-10-08).
-   * The same test `deliverFact` applies, so Forget and Deliver agree: a kind's failure comes back
-   * only when the kind has an authored rung 0 (a legacy row may hold the retired generic line).
+   * The same test `deliverFact` applies (`missedAndLie`), so Forget and Deliver agree: a kind's
+   * failure comes back only when the kind has an authored rung 0 (a legacy row may hold the
+   * retired generic line).
    */
-  const missed = rowMissed(fact, prior);
-  const lie = spec.ns === "kind" && missed && !!authoredTier(studyTiersOf(fact.ledger), 0);
+  const { missed, lie } = missedAndLie(fact, prior);
   const earned = !!prior.delivered && !!String(prior.text ?? "").trim() && (spec.ns !== "kind" || !missed || lie);
   if (earned) {
     const granted = readGranted(readFlag(character, MODULE, GRANTED_FLAG));
