@@ -65,6 +65,10 @@ cssPrefix `pp-`, afterSync). Each **[declared]** change goes to the live check.
 - **[declared] `buildView` is split into private helpers** (prompts-core-M3): the encounter
   relations, the loners' notes and the door groups are `encounterRelations`, `aloneNotes` and
   `doorGroups` in `core/view.mjs`, called in the same order. The gather output is byte-identical.
+- **[declared] `replaceMany`'s write steps are private helpers** (prompts-core-M4): after the
+  marker claims, `buildDocuments`, `placeOnScenes`, `discardFailed` and `readBack` in `replace.mjs`
+  run in the old order; a test pins the call order (per scene, one create per type in Token, Note,
+  AmbientLight, Tile order, then one marker delete). No behaviour change.
 - `ensureMarkers` repairs every drifted actor in one batch update. A hot re-import after
   `uninstall()` re-wires and republishes at once.
 - Console only (DP9): a core token API that throws warns once; swallowed failures log at debug

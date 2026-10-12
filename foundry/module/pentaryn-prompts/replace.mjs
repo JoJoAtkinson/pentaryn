@@ -740,8 +740,28 @@ async function replaceResolved(args, entries, t0) {
 
   // 0. Claim the markers across tabs; a row another tab holds fails alone.
   await claimMarkers(entries, force);
-
   // 1. Actors and journals first, per replacement; then the placed document data.
+  const rows = await buildDocuments(entries);
+  // 2. Per scene: one create per document type, then one delete of the markers that were replaced.
+  await placeOnScenes(scenes, entries, rows);
+  // 3. A replacement that failed after step 1 created its actor/journal: take those back out.
+  await discardFailed(entries);
+  // 4. Readback from the scenes: flat rows (no object below a row), and the text the tool prints.
+  const results = readBack(entries);
+  const encounters = encounterXp(entries, results, args);
+  for (const r of results) { delete r._actorId; delete r._tokenId; }
+  const remaining = remainingFor(scenes);
+  const callOut = call ?? entries.find(e => e.call)?.call ?? null;
+  logSummary({ call: callOut, dryRun: false, rows: results, remaining, t0 });
+  return { dryRun: false, call: callOut, text: renderReplace({ dryRun: false, call: callOut, rows: results, remaining, encounters }),
+    results, remaining, encounters };
+}
+
+/**
+ * Step 1: each claimed replacement runs its plan (actors and journals made here, owned docs noted
+ * on `e.owned`). → the placed-document rows `{entry, type, data, also?}`; a throw fails that row.
+ */
+async function buildDocuments(entries) {
   const rows = [];
   for (const e of entries) {
     if (!e.ok || !e.plan.exec) continue;
@@ -758,8 +778,11 @@ async function replaceResolved(args, entries, t0) {
       e.error = e.code === "CREATE_FAILED" ? `CREATE_FAILED: ${err.message ?? err}` : String(err.message ?? err);
     }
   }
+  return rows;
+}
 
-  // 2. Per scene: one create per document type, then one delete of the markers that were replaced.
+/** Step 2: per scene, one create per document type (TYPES order), then one delete of the replaced markers. */
+async function placeOnScenes(scenes, entries, rows) {
   for (const scene of scenes) {
     for (const type of TYPES) {
       const batch = rows.filter(r => r.entry.scene === scene && r.type === type && r.entry.ok);
@@ -767,22 +790,28 @@ async function replaceResolved(args, entries, t0) {
       for (const res of await createBatch(scene, type, batch)) {
         const also = batch.find(r => r.entry === res.entry)?.also;
         if (res.doc) (res.entry.created ??= []).push({ type, id: res.doc.id, also: !!also });
-        else if (also) {
-          res.entry.report = { ...(res.entry.report ?? {}), warnings: [...(res.entry.report?.warnings ?? []), `${type} not placed: ${res.error}`] };
-        } else { res.entry.ok = false; res.entry.code = "CREATE_FAILED"; res.entry.error = `CREATE_FAILED: ${res.error}`; }
+        else if (also) warnRow(res.entry, `${type} not placed: ${res.error}`);
+        else { res.entry.ok = false; res.entry.code = "CREATE_FAILED"; res.entry.error = `CREATE_FAILED: ${res.error}`; }
       }
     }
     await deleteMarkers(scene, entries.filter(e => e.ok && e.scene === scene && (e.created?.some(c => !c.also) || e.spec.with.kind === "none")));
   }
+}
 
-  // 3. A replacement that failed after step 1 created its actor/journal: take those back out.
+/** Step 3: a row that failed after step 1 made its actor/journal takes them back out; claims come off. */
+async function discardFailed(entries) {
   for (const e of entries) {
     if (!e.ok && e.owned?.length) e.discarded = await discard(e.owned);
   }
   await releaseClaims(entries);
+}
 
-  // 4. Readback from the scenes: flat rows (no object below a row), and the text the tool prints.
-  const results = entries.map(e => {
+/**
+ * Step 4: the flat result rows read back from the scenes (no object below a row). A built row
+ * carries `_actorId` / `_tokenId` for the XP count; the caller drops them before returning.
+ */
+function readBack(entries) {
+  return entries.map(e => {
     const f = { index: e.index, id: e.pid, label: labelOf(e), sceneId: e.scene?.id ?? null, markerId: e.marker?.id ?? null,
       kind: e.spec?.with ? provenanceKind(e.spec.with) : null, ok: !!e.ok, report: e.report, discarded: e.discarded };
     if (!e.ok) {
@@ -794,18 +823,10 @@ async function replaceResolved(args, entries, t0) {
     const none = e.spec.with.kind === "none";
     const r = resultRow({ ...f, created, markerDeleted: !e.scene.tokens.get(e.marker.id),
       ...(none ? { reason: e.spec.with.reason ?? "", prompt: e.text } : {}) });
-    // internal, for the XP count below (dropped before returning)
     r._actorId = created.find(c => c.type === "Actor")?.id ?? null;
     r._tokenId = (e.created ?? []).find(c => c.type === "Token")?.id ?? null;
     return r;
   });
-  const encounters = encounterXp(entries, results, args);
-  for (const r of results) { delete r._actorId; delete r._tokenId; }
-  const remaining = remainingFor(scenes);
-  const callOut = call ?? entries.find(e => e.call)?.call ?? null;
-  logSummary({ call: callOut, dryRun: false, rows: results, remaining, t0 });
-  return { dryRun: false, call: callOut, text: renderReplace({ dryRun: false, call: callOut, rows: results, remaining, encounters }),
-    results, remaining, encounters };
 }
 
 /**
