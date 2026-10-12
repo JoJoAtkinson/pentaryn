@@ -6,10 +6,31 @@
  */
 
 export const MODULE = "pentaryn-aoe";
+export const SHORT = "aoe";
+export const NS = "aoe";
+export const VERSION = "0.3.1";                          // === module.json version (core.test pins it)
+export const CONTRACT = "pentaryn-aoe/api@1";            // bump the major on a published-shape change
+export const I18N = "PENTARYN_AOE";
+export const CSS = "pa-";
+export const FLAG_SCOPE = MODULE;
+/** aoe emits no events of its own. */
+export const HOOKS = Object.freeze({});
 
 /** Read this module's flags without getFlag(): getFlag throws while the module is inactive (hot-patch). */
 export function aoeFlags(doc) {
   return doc?.flags?.[MODULE] ?? {};
+}
+
+/** Is this token (a TokenDocument) one of our area handles? The token flag only; see isHandleTarget. */
+export const isHandle = t => !!aoeFlags(t).handle;
+
+/**
+ * A resolution's stored damages as `actor.applyDamage` / `calculateDamage` want them: each row's
+ * `properties` array becomes a Set. The input is not mutated; no damages → [].
+ * @param {{value: number, type: string, properties?: string[]}[]|undefined|null} damages
+ */
+export function hydrateDamages(damages) {
+  return (damages ?? []).map(d => ({ ...d, properties: new Set(d.properties ?? []) }));
 }
 
 /**

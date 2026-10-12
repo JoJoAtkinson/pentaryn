@@ -10,7 +10,7 @@
  * section.icon-row, then <damage-application>; this tray goes right after the native one.
  */
 
-import { aoeFlags, MULTIPLIERS, playerStatus } from "./core.mjs";
+import { aoeFlags, MULTIPLIERS, playerStatus, applicableRows } from "./core.mjs";
 import { on, guard } from "./hooks.mjs";
 import { setting } from "./settings.mjs";
 import { applyRows, rollNpcSaves, rollForPlayer, pingPlayers, setRow, resolve } from "./resolve.mjs";
@@ -65,7 +65,7 @@ function rowHTML(row, res, message = null) {
 
 export function trayHTML(res, message = null) {
   const ability = CONFIG.DND5E.abilities[res.ability]?.label ?? res.ability;
-  const n = res.rows.filter(r => r.apply && !r.applied && r.multiplier !== null && r.multiplier !== undefined).length;
+  const n = applicableRows(res.rows).length;
   const picker = (res.regions?.length ?? 0) > 1
     ? `<select data-pa="region">${res.regions.map(r => `<option value="${esc(r.id)}" ${r.id === res.region ? "selected" : ""}>${esc(r.name)}</option>`).join("")}</select>`
     : "";

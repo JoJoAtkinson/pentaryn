@@ -322,7 +322,7 @@ test("module.json is pentaryn-aoe 0.3.1", () => {
   assert.equal(manifest.version, "0.3.1");
 });
 
-test("VERSION === module.json version", { todo: "core has no VERSION until S2 (C41); S2 adds it and drops this todo" }, () => {
+test("VERSION === module.json version", () => {
   assert.equal(core.VERSION, manifestOf(ROOT).version);
 });
 

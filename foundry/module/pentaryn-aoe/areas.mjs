@@ -17,15 +17,14 @@
  * its caster) gets no handle: re-attaching it to a handle would leave it behind when the caster moves.
  */
 
-import { MODULE, aoeFlags, centreOf, regionFromSpell, regionOfActivity, isTemplateRegion, attachedToOther, handleVertical, stillListing, isHandleTarget } from "./core.mjs";
+import { MODULE, aoeFlags, centreOf, regionFromSpell, regionOfActivity, isTemplateRegion, attachedToOther, handleVertical, stillListing, isHandleTarget, isHandle } from "./core.mjs";
 import { setting } from "./settings.mjs";
 import { on, guard } from "./hooks.mjs";
 
 const OWNER = 3;
 const HANDLE_ICON = "icons/svg/target.svg";
 
-export { isTemplateRegion };
-export const isHandle = t => !!aoeFlags(t).handle;
+export { isTemplateRegion, isHandle };
 /** A template region dnd5e attached to a token that is not our handle (an emanation on its caster). */
 const attachedElsewhere = region => attachedToOther(region, id => region?.parent?.tokens?.get(id));
 const t = (key, data) => (data ? game.i18n.format(`PENTARYN_AOE.${key}`, data) : game.i18n.localize(`PENTARYN_AOE.${key}`));
@@ -389,7 +388,7 @@ export function installAreas() {
     const itemUuid = concentrationItemUuid(effect);
     if (!itemUuid) return;
     for (const s of game.scenes) {
-      const ids = s.regions.filter(r => isTemplateRegion(r) && regionFromSpell(r.flags?.dnd5e, { itemUuid })).map(r => r.id);
+      const ids = spellAreas({ itemUuid }, s).map(r => r.id);
       if (ids.length) await s.deleteEmbeddedDocuments("Region", ids);
     }
   }));
