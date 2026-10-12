@@ -19,6 +19,9 @@
   warn per refusal. The runner sends a request id and the GM tabs claim it first, so two GM tabs
   heal once, even when one tab's claim lands after the other recorded its result (combat-riders-41).
 - Three silent catches now log at debug (`CONFIG.debug["pentaryn-riders"] = true`).
+- The once-per-casting guard reads the usage card's own messages from dnd5e's message registry
+  (`dnd5e.registry.messages`) instead of scanning the whole chat log on each attack damage roll;
+  it scans the log as before when the registry is missing.
 - Pure kernels for Hit Dice pools, the Battle Medic gate and the report row (`core/hit-dice.mjs`);
   one spell-slot builder (`slotsFrom`).
 

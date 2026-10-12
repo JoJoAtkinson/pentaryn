@@ -15,7 +15,7 @@
 import * as core from "./riders-core.mjs";
 import { MODULE } from "./riders-core.mjs";
 import { settingRaw } from "./settings.mjs";
-import { carriedBy, featuresOf, isHealing, isType } from "./shapes.mjs";
+import { carriedBy, featuresOf, isHealing, isType, messagesOfCard } from "./shapes.mjs";
 
 let log = null;
 
@@ -41,7 +41,15 @@ function originOf(config, message) {
     ?? null;
 }
 
-const usedFrom = origin => core.usedFromMessages(game.messages ?? [], origin);
+/** The once-per-casting guard: the rule keys this card's earlier damage messages already took. */
+function usedFrom(origin) {
+  let messages;
+  try { messages = messagesOfCard(origin); } catch (err) {
+    log.debug("dnd5e message registry unreadable: scanning the chat log", err);
+    messages = game.messages ?? [];
+  }
+  return core.usedFromMessages(messages, origin);
+}
 
 function applyRiders(rolls, config, message) {
   if (!settingRaw("enabled")) return;
@@ -115,5 +123,5 @@ export function install(reg, ctx) {
   reg.on("dnd5e.postDamageRollConfiguration", onRollConfiguration, { guard: false, label: "damage and healing riders" });
 }
 
-/** Nothing to clear: the once-per-casting guard reads the chat log, not a session map. */
+/** Nothing to clear: the once-per-casting guard reads dnd5e's message registry or the chat log. */
 export function uninstall() {}

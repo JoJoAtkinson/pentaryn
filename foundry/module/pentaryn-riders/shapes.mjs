@@ -155,6 +155,28 @@ export async function restoreHitDie(actor) {
   return pool.faces;
 }
 
+/* ── the once-per-casting guard's messages ──────────────────────────────── */
+
+/**
+ * The chat messages rolled from one usage card, for the once-per-casting guard
+ * (`core.usedFromMessages` still filters them by `_source.system.origin`). dnd5e 6 keeps that index
+ * itself: `dnd5e.registry.messages.get(origin)` (ChatMessage5e tracks every non-"base" message by
+ * `_source.system.origin` when it is prepared and untracks it on delete), so the guard reads the
+ * card's few messages instead of the whole log. No origin, no registry, or a registry answering
+ * something other than an array: the whole chat log, as before. Throws what the registry throws
+ * (the caller logs it and scans the log).
+ * @param {string|null} origin  id of the usage card
+ * @returns {Iterable<object>}
+ */
+export function messagesOfCard(origin) {
+  const registry = globalThis.dnd5e?.registry?.messages;
+  if (origin && typeof registry?.get === "function") {
+    const found = registry.get(origin);
+    if (Array.isArray(found)) return found;
+  }
+  return game.messages ?? [];
+}
+
 /* ── concentration ──────────────────────────────────────────────────────── */
 
 /** The actor's feature identifiers and effect names, lowercased (for AFTER_FAIL_FEATURES). */
