@@ -223,8 +223,8 @@ function firstThisDispatch(element) {
 }
 
 /**
- * FEATURE install — synchronous, from the entry body: the deleteActor sweep (unguarded, as it always
- * was), then the four sheet render hooks (each keeps its own try/catch; the text is pinned).
+ * FEATURE install — synchronous, from the entry body: the deleteActor sweep (guarded, B9), then the
+ * four sheet render hooks (each keeps its own try/catch; the text is pinned).
  */
 export function install(reg) {
   // The editor keeps which note panels are open in a module-level Map keyed by actor id.
@@ -236,7 +236,7 @@ export function install(reg) {
     // ties-31: the Attributes tab's and the lore editor's cosmetic state for that actor too
     forgetAttributesActor(actor.id);
     forgetLoreKey(`lore:${actor.id}`);
-  }, { guard: false, label: "sheet: forget a deleted actor" });
+  }, { label: "sheet: forget a deleted actor" });
 
   for (const hook of ["renderNPCActorSheet", "renderCharacterActorSheet", "renderActorSheetV2", "renderActorSheet"]) {
     reg.on(hook, (app, element) => {

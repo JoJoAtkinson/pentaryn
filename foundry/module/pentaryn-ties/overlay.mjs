@@ -474,8 +474,8 @@ export const toggle = showAll;
 /**
  * FEATURE install — called by the entry during `init`, where these hooks have always registered
  * (and it contributes the card paths: show, showAll, showOne, cards, clear, closeAllCards)
- * (golden/hooks-after-init.json pins their order). Unguarded on purpose: a throw in one keeps
- * Foundry's own "Error thrown in hooked function" path, as it always did (declared B9 changes that).
+ * (golden/hooks-after-init.json pins their order). Guarded (B9): a throw logs
+ * `pentaryn-ties | overlay: <hook>` instead of Foundry's anonymous "Error thrown in hooked function".
  */
 export function install(reg) {
   // every change to the card set redraws the wires; nothing else may touch them
@@ -489,22 +489,22 @@ export function install(reg) {
     state.tieId = null;
     // transient cards belong to a scene; pinned ones are a memo and travel with you
     closeTransient();
-  }, { guard: false, label: "overlay: canvasTearDown" });
+  }, { label: "overlay: canvasTearDown" });
 
   // a pinned card that travelled here from another scene needs its leash drawn again
-  reg.on("canvasReady", () => drawWires(), { guard: false, label: "overlay: canvasReady" });
+  reg.on("canvasReady", () => drawWires(), { label: "overlay: canvasReady" });
 
   // transient cards ride the canvas, and every wire is anchored to it
   reg.on("canvasPan", () => {
     reflow();
     drawWires();
-  }, { guard: false, label: "overlay: canvasPan" });
+  }, { label: "overlay: canvasPan" });
 
   // a tie who walks out of sight (or into it) while cards are up
   // hot: state.wires — drawWires only schedules one frame; the paint reads the live card set
-  reg.on("refreshToken", () => drawWires(), { guard: false, label: "overlay: refreshToken" });
+  reg.on("refreshToken", () => drawWires(), { label: "overlay: refreshToken" });
   // hot: state.wires
-  reg.on("sightRefresh", () => drawWires(), { guard: false, label: "overlay: sightRefresh" });
+  reg.on("sightRefresh", () => drawWires(), { label: "overlay: sightRefresh" });
 
   // the cards' API paths (rows in api-manifest.mjs)
   return { impl: { show: showAll, showAll, showOne, cards: showAll, clear, closeAllCards: closeAll } };

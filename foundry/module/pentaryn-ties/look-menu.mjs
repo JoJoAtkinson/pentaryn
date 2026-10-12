@@ -113,8 +113,8 @@ const onKeyDown = ev => { if (ev.key === "Escape") closeLookMenu(); };
 
 /**
  * FEATURE install — synchronous, from the entry body, in today's order: the canvas double-click
- * (canvasReady), the two document listeners, then canvasPan / canvasTearDown. All unguarded, as
- * they always were (declared B9 changes that).
+ * (canvasReady), the two document listeners, then canvasPan / canvasTearDown. Guarded (B9): a throw
+ * logs `pentaryn-ties | look menu: <hook>`.
  */
 export function install(reg) {
   reg.on("canvasReady", () => {
@@ -123,11 +123,11 @@ export function install(reg) {
     view.dataset.ptLook = "1";
     view.addEventListener("dblclick", onDoubleClick);
     watched = view;
-  }, { guard: false, label: "look menu: canvas double-click" });
+  }, { label: "look menu: canvas double-click" });
   document.addEventListener("pointerdown", onPointerDown, true);
   document.addEventListener("keydown", onKeyDown);
-  reg.on("canvasPan", () => closeLookMenu(), { guard: false, label: "look menu: canvasPan" });
-  reg.on("canvasTearDown", () => closeLookMenu(), { guard: false, label: "look menu: canvasTearDown" });
+  reg.on("canvasPan", () => closeLookMenu(), { label: "look menu: canvasPan" });
+  reg.on("canvasTearDown", () => closeLookMenu(), { label: "look menu: canvasTearDown" });
 }
 
 /** Remove the document and canvas listeners and any open menu (the entry's reg.offAll() drops the hooks). */

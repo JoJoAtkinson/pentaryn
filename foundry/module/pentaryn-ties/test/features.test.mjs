@@ -59,3 +59,23 @@ test("look-menu adds the two document listeners at install (pointerdown capture,
   reg.offAll();
   assert.equal(document.listeners.length, n);
 });
+
+test("B9 [declared]: a throw in a once-unguarded handler logs `pentaryn-ties | <label>`, not Foundry's anonymous line", async () => {
+  const lines = [];
+  const err = console.error;
+  console.error = (...a) => lines.push(String(a[0]));
+  const { makeLog } = await import("../lib/log.mjs");
+  const reg = hookRegistry("pentaryn-ties", makeLog("pentaryn-ties"));
+  const sheet = await import("../sheet.mjs");
+  sheet.install(reg, {});
+  const before = F.hookErrors.length;
+  try {
+    F.fire("deleteActor"); // no actor: the sweep's actor.id throws
+  } finally {
+    console.error = err;
+    sheet.uninstall();
+    reg.offAll();
+  }
+  assert.equal(F.hookErrors.length, before, "the guard caught it, not Foundry's hook runner");
+  assert.deepEqual(lines, ["pentaryn-ties | sheet: forget a deleted actor"]);
+});
