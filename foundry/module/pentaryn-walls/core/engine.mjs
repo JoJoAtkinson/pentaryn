@@ -213,7 +213,6 @@ function toSeg(w, idx) {
     sound: w.sound ?? 20,
     move: w.move ?? 20,
     dir: w.dir ?? 0,
-    threshold: w.threshold ?? null,
     levels: w.levels ?? [],
     keepOpen: flags.keepOpen === true,
     movedIn: Object.keys(historyOf(w).moves),
@@ -276,7 +275,7 @@ const KIND_RANK = {solid: 0, terrain: 1, invisible: 2, ethereal: 3, blank: 4};
 function profileFrom(s) {
   if (inferredKind(s) === "solid") return {...SOLID};
   return {light: s.light, sight: s.sight, sound: s.sound, move: s.move,
-          door: 0, ds: 0, dir: 0, ...(s.threshold ? {threshold: s.threshold} : {})};
+          door: 0, ds: 0, dir: 0};
 }
 
 /** Of several source segments, the one whose kind a single bridging wall should take. */
@@ -1118,7 +1117,6 @@ export function runEngine(walls, opts = {}) {
       if (s.isNew) {
         creates.push({c: s.c, light: s.light, sight: s.sight, sound: s.sound, move: s.move,
                       door: 0, ds: 0, dir: 0,
-                      ...(s.threshold ? {threshold: s.threshold} : {}),
                       levels: s.levels,
                       flags: {[FLAG_SCOPE]: {...stamp, rule: s.rule, kind: category(s),
                                              sources: s.sources ?? []}}});

@@ -6,6 +6,10 @@
 (`flagScope` stays `wall-autocomplete`), `languages`, `minimum: "14"`, `verified: "14.369"` and the
 description fix; the flag-scope migration is **parked** while walls stays off (Joe).
 
+- **[declared] The engine no longer carries a wall `threshold`** (`walls-EXT-3`): it was dead
+  code — the wall reader never passed one, and the only preset that sets one (window) infers
+  solid. Dropped from the segment shape, the grown-wall profile and the create payload; goldens
+  are unchanged.
 - **[declared] The compiled engine honours the iteration cap** (`walls-rob-1`): a run that hit the
   cap on wasm committed its partial result where js throws. It now throws js's exact
   `hit the <iterCap>-iteration cap; nothing was committed.` and writes nothing.
