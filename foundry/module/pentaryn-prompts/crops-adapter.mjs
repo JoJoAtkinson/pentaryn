@@ -70,7 +70,7 @@ function label(ctx, text, x, y, colour) {
 
 /**
  * Render crops for encounters of a stored manifest.
- * Returns `[{encounter, scene, png (base64 webp), mime, squares}]`; failures come back as
+ * Returns `[{encounter, scene, png (base64 webp), mime, mimeType, squares}]`; failures come back as
  * `{encounter, scene, error}` so one bad image never sinks the gather.
  */
 export async function renderCrops(manifest, encounterIds, { longSide = 768 } = {}) {
@@ -177,7 +177,7 @@ async function renderOne(scene, eid, enc, manifest, sid, longSide, cache) {
     label(ctx, l.id, x + 2, Math.max(0, y - 20), l.prompt ? "#e4d9ff" : "#d4f1ff");
   }
 
-  // scale bar (5 ft and 25 ft) bottom-left, north arrow top-right
+  // scale bar (5 squares, a tick per square) bottom-left, north arrow top-right
   const sq = g * k;
   ctx.fillStyle = "rgba(0,0,0,0.7)";
   ctx.fillRect(8, H - 46, Math.max(sq * 5, 48) + 16, 38);
