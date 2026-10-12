@@ -33,7 +33,8 @@ name. Every marker token is born hidden, sightless and size-locked. Art: `assets
 - Every open is a **new window**; closing saves in the background, so the next drop never waits.
   A fresh marker closed empty is deleted; one emptied by hand stays, red-tinted. A marker whose
   text failed to save is never deleted (it stays, with the save-failed toast).
-- Reopen: **double-click** a marker, the **Token HUD** bubble button, Shift+P, or `open(id)`.
+- Reopen: **double-click** a marker, the **Token HUD** bubble button, Shift+P, or `open(id)`. A
+  marker never has two boxes: reopening one already open (or still saving) brings that box forward.
 - **Size chips** swap the marker for another size centred on the same point, text carried — keys
   typed while the swap runs included (no swap when the text failed to save). One swap at a time:
   the chips grey out while it runs, a second click (a double click) is ignored, and closing or

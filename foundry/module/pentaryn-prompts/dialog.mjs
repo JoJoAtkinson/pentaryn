@@ -119,14 +119,9 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
     ticket ??= startTyping();
     if (!game.user?.isGM || !tokenDoc || !markerSizeOfToken(tokenDoc)) { cancelTyping(ticket); return null; }
 
+    const reuse = PromptDialog.#reuse(tokenDoc, ticket);
+    if (reuse) return reuse;
     const cur = PromptDialog.current;
-    if (cur && !cur.#closing && cur.edits(tokenDoc)) {
-      cur.bringToFront();
-      cur.#ticket ??= ticket;
-      if (cur.#ticket !== ticket) cancelTyping(ticket);
-      if (cur.rendered) cur.#focus();
-      return cur;
-    }
     // the same marker's box still saving (Esc, then straight back in): read its text after the save
     const prior = [...PromptDialog.#live].filter(a => a.#closing && a.edits(tokenDoc));
     if (cur && !cur.#closing) cur.close().catch(err => { log.error("closing the previous prompt", err); });   // not awaited: it saves from its own snapshot
@@ -134,6 +129,9 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
       await Promise.all(prior.map(a => a.#finishing));
       tokenDoc = tokenDoc.parent?.tokens.get(tokenDoc.id) ?? null;
       if (!tokenDoc) { cancelTyping(ticket); return null; }
+      // another open of this marker may have made its box during the await (EC-6): never two boxes on one marker
+      const raced = PromptDialog.#reuse(tokenDoc, ticket);
+      if (raced) return raced;
     }
 
     const app = new PromptDialog();
@@ -159,6 +157,17 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
       return null;
     }
     return app;
+  }
+
+  /** The open box already editing this marker, brought forward and handed the ticket; else null. */
+  static #reuse(tokenDoc, ticket) {
+    const cur = PromptDialog.current;
+    if (!cur || cur.#closing || !cur.edits(tokenDoc)) return null;
+    cur.bringToFront();
+    cur.#ticket ??= ticket;
+    if (cur.#ticket !== ticket) cancelTyping(ticket);
+    if (cur.rendered) cur.#focus();
+    return cur;
   }
 
   #target(tokenDoc, fresh) {
