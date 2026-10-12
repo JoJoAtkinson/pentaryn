@@ -124,7 +124,11 @@ function provenance(e) {
   };
 }
 
-/** Delete world documents this run created for a replacement that then failed. */
+/**
+ * Delete world documents this run created for a replacement that then failed. One delete per
+ * document on purpose (a failure path, one or two documents): each one's outcome is a row of the
+ * result (`discarded: false` with its error), which a batch delete could not report.
+ */
 async function discard(owned) {
   const out = [];
   for (const { type, id, name } of owned ?? []) {

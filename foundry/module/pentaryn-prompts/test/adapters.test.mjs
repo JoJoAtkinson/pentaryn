@@ -77,3 +77,18 @@ test("prompts-lookup-15 (DP7): assetUrl — today's URLs without a route prefix;
   assert.equal(assetUrl("data:x", plain), "data:x");
   assert.equal(assetUrl("blob:abc", plain), "blob:abc");
 });
+
+test("C59 (§5.9.1): ensureMarkers repairs every drifted actor in one Actor.updateDocuments", async () => {
+  const { installWorld, captureConsole, MODULE } = await import("./fixtures/world.mjs");
+  const F = await installWorld();
+  const M = await import("../markers-adapter.mjs");
+  F.game.actors.get("markerActorxl000")._source.system.traits.size = "med";
+  F.game.actors.get("markerActorlarge")._source.prototypeToken.width = 1;
+  const n0 = F.calls.length;
+  const { value } = await captureConsole(() => M.ensureMarkers());
+  assert.equal(value.repaired.length, 2);
+  const calls = F.calls.slice(n0);
+  assert.deepEqual(calls.filter(c => c.op === "Actor.updateDocuments").map(c => c.ids), [["markerActorlarge", "markerActorxl000"]]);
+  assert.equal(calls.filter(c => c.op === "update").length, 2, "update hooks still fire per actor");
+  assert.equal(MODULE, "pentaryn-prompts");
+});

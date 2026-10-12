@@ -312,6 +312,11 @@ export async function installWorld(opts = {}) {
       F.calls.push({ op: "Actor.createDocuments", data: F.plain(rows) });
       return rows.map(({ id, _id, ...r }) => addActor(r));
     }
+    // Foundry's batch update: one call, then each document's update (and its hooks)
+    static async updateDocuments(rows) {
+      F.calls.push({ op: "Actor.updateDocuments", ids: rows.map(r => r._id) });
+      return Promise.all(rows.map(({ _id, ...changes }) => F.game.actors.get(_id).update(changes)));
+    }
     static async create(data) {
       F.calls.push({ op: "Actor.create", data: F.plain(data) });
       const { id, _id, ...rest } = data;

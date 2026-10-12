@@ -81,7 +81,7 @@ export async function ensureMarkers() {
       folder = await Folder.create({ name: FOLDER_NAME, type: "Actor", color: "#5b3fa6", sorting: "m" });
       summary.folder = "created";
     }
-    const creates = [];
+    const creates = [], updates = [];
     let sort = 0;
     for (const s of SIZES) {
       sort += 10;
@@ -100,10 +100,12 @@ export async function ensureMarkers() {
         if (!same(foundry.utils.getProperty(actor._source, k), v)) diff[k] = v;
       }
       if (Object.keys(diff).length) {
-        await actor.update(diff);
+        updates.push({ _id: actor.id, ...diff });
         summary.repaired.push(`${actor.name}: ${Object.keys(diff).join(", ")}`);
       }
     }
+    // one round trip for every repair and one for every create (§5.9.1); update hooks still fire per actor
+    if (updates.length) await Actor.updateDocuments(updates);
     if (creates.length) await Actor.createDocuments(creates);
     if (summary.folder || summary.created.length || summary.repaired.length) {
       console.log(`${MODULE} | markers ensured`, summary);
