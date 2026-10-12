@@ -124,13 +124,30 @@ function revivedOwnership(saved) {
   return { ...saved, default: saved.default ?? CONST.DOCUMENT_OWNERSHIP_LEVELS.NONE };
 }
 
+// One conversion per token at a time (dropbin-EC-4): HUD Revive's own sync and the debounced one could
+// both see "our corpse" and revert it twice, the second ForcedDeletion erasing the restored map.
+const converting = new Map();
+
+/** Convert one token, after any conversion of it already in flight, re-checking dead/alive then. */
+async function convert(t) {
+  const key = t.uuid ?? t.id;
+  while (converting.has(key)) {
+    await converting.get(key).catch(() => {});
+    t = t.parent?.tokens.get(t.id) ?? t;
+  }
+  if (!eligible(t)) return;
+  const run = isDead(t.actor) ? toCorpse(t) : ourCorpse(t) ? fromCorpse(t) : null;
+  if (!run) return;
+  converting.set(key, run);
+  try { await run; } finally { if (converting.get(key) === run) converting.delete(key); }
+}
+
 async function sync(actor) {
   if (!isGMRunner() || !itemPilesApi()) return;
   for (const t of tokensOf(actor)) {
     if (!eligible(t)) continue;
     try {
-      if (isDead(t.actor)) await toCorpse(t);
-      else if (ourCorpse(t)) await fromCorpse(t);
+      await convert(t);
     } catch (err) {
       console.warn(`${MODULE} | corpse sync failed for ${t.name}`, err);
     }
@@ -145,6 +162,13 @@ function queue(actor) {
   const key = actor.uuid;
   clearTimeout(pending.get(key));
   pending.set(key, setTimeout(() => { pending.delete(key); sync(actor); }, 150));
+}
+
+/** Drop the actor's queued sync: the caller is about to sync it itself. */
+function unqueue(actor) {
+  const key = actor?.uuid;
+  clearTimeout(pending.get(key));
+  pending.delete(key);
 }
 
 function onActorHp(actor, changes) {
@@ -298,7 +322,8 @@ async function revive(tokenDoc) {
   if (!a) return;
   if (a.statuses.has("dead")) await a.toggleStatusEffect("dead", { active: false });
   if ((a.system.attributes.hp.value ?? 0) <= 0) await a.update({ "system.attributes.hp.value": 1 });
-  // the hp/effect hooks revert the pile; run it now too so the HUD closes on a creature
+  // the hp/effect hooks queued a sync; run it now instead, so the HUD closes on a creature
+  unqueue(a);
   await sync(a);
 }
 

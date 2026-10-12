@@ -125,3 +125,43 @@ test("PT3-1 live: a saved per-token map the server still holds comes back on the
   assert.deepEqual(tok.delta.ownership, shared, "the clients get the saved map, not OBSERVER");
   assert.deepEqual(server.ownership, shared, "and the server holds it");
 });
+
+/* ── dropbin-EC-4: two syncs on one token never convert it in parallel ──────────────────────────── */
+
+// HUD Revive runs its own sync while the 150 ms debounced sync (queued by Revive's own hp write) can
+// fire mid-conversion. Both saw "our corpse", both reverted, and the second one's ForcedDeletion of
+// delta.ownership landed after the first had put the saved map back: a creature shared with a
+// player came back unshared. A second sync for a token in flight now waits and re-checks.
+test("dropbin-EC-4: two concurrent syncs on a revived corpse revert it once and keep the saved map", async () => {
+  const shared = { default: NONE, [PLAYER]: OBSERVER };
+  const tok = goblin({ ...shared });
+  await corpses.toCorpse(tok);
+  tok.actor.system.attributes.hp.value = 3;               // healed: the body is alive again
+  tok.actor.statuses.delete("dead");
+  const before = F.calls.filter(c => c.op === "revertTokensFromItemPiles").length;
+  await Promise.all([corpses.sync(tok.actor), corpses.sync(tok.actor)]);
+  assert.equal(F.calls.filter(c => c.op === "revertTokensFromItemPiles").length - before, 1, "reverted once");
+  assert.deepEqual(tok.delta.ownership, shared, "the saved map survives the second sync");
+  assert.deepEqual(tok.flags[MOD], {});
+});
+
+test("dropbin-EC-4: HUD Revive cancels the debounced sync its own hp write queued", async () => {
+  const tok = goblin(null);
+  await corpses.toCorpse(tok);
+  tok.actor.update = async changes => {                    // the hp write fires updateActor, as Foundry does
+    const expanded = foundry.utils.expandObject(changes);
+    foundry.utils.mergeObject(tok.actor, expanded);
+    Hooks.callAll("updateActor", tok.actor, expanded, {}, game.user.id);
+  };
+  const reverts = () => F.calls.filter(c => c.op === "revertTokensFromItemPiles").length;
+  const before = reverts();
+  const p = corpses.revive(tok);
+  // the debounced timer fires while Revive's own sync is still converting
+  await Promise.resolve();
+  mock.timers.tick(200);
+  await p;
+  mock.timers.tick(200);
+  await new Promise(r => setImmediate(r));
+  assert.equal(reverts() - before, 1, "one revert, not a second from the timer");
+  assert.equal(tok.delta.ownership ?? null, null);
+});

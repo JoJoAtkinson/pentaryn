@@ -45,6 +45,9 @@ Declared changes:
 - DB-AC-2: an entry relayed to a GM tab before that tab is `ready` is held and recorded at `ready`,
   in arrival order, and the relay resolves with its ledger number (it called `settings.set` before
   ready and was lost).
+- dropbin-EC-4: HUD Revive cancels the debounced sync its own writes queued, and a second sync for
+  a token already converting waits for it and then re-checks dead/alive, so a corpse is never
+  reverted twice at once (the second revert erased the restored ownership map).
 
 Added: `list(n, { brief })`, `restoreResult`, `inspect`, `selftest` (items-journal-28).
 - A restore another module refuses (a `preCreateItem` veto) is `{ ok: false, reason: "not-created" }`
