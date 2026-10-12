@@ -150,9 +150,12 @@ function renderOffer(message, html) {
   html.querySelector(".pentaryn-combat-riders")?.remove();
   const stamp = message.getFlag?.(MODULE, "turnKey");
   if (!stamp) return;
-  const { actor, offers } = offersFor(message);
+  // combat-riders-2: who may see it and whether the stamp is this turn's, before the offers are
+  // worked out (offersFor reads every token on the canvas for the ally check).
+  const actor = attackActivity(message)?.actor;
   if (!actor || !(game.user.isGM || message.isAuthor || actor.isOwner)) return;
   if (stamp !== combatContext(actor).key) return;
+  const { offers } = offersFor(message);
   // In Auto mode an eligible swing gets the dice in its damage roll; no button for it.
   const show = offers.filter(o => o.offer && !(o.auto && riderMode(o.rider.key) === "auto"));
   if (!show.length) return;
@@ -408,11 +411,13 @@ function rerenderCards(actor) {
     // show one of our buttons or an Undo (so an earlier turn's card loses it). Re-rendering the
     // actor's last 40 cards on every swing was needless chat churn.
     const showing = (id) => !!document.querySelector(`[data-message-id="${id}"] .pentaryn-combat-riders, [data-message-id="${id}"] .pentaryn-combat-auto [data-undo]`);
+    const keys = new Map();   // combat-riders-2: one combatContext per actor, not per card
+    const keyOf = a => { if (!keys.has(a.uuid)) keys.set(a.uuid, combatContext(a).key); return keys.get(a.uuid); };
     for (const m of game.messages.contents.slice(-40)) {
       if (!["attack", "damage"].includes(m.type)) continue;
       const a = attackActivity(m)?.actor ?? m.getAssociatedActor?.();
       if (!a || !uuids.has(a.uuid)) continue;
-      const current = m.type === "attack" && m.getFlag?.(MODULE, "turnKey") === combatContext(a).key;
+      const current = m.type === "attack" && m.getFlag?.(MODULE, "turnKey") === keyOf(a);
       if (!current && !showing(m.id) && !m.getFlag?.(MODULE, "auto")) continue;
       try { ui.chat?.updateMessage?.(m); } catch (err) { log.debug("card re-render (popped out)", err); }
     }
