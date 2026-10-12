@@ -2,9 +2,9 @@
  * WASM backend — loads the compiled Rust engine and registers it alongside the JS one.
  *
  * The JS engine stays the reference. This module only marshals: walls in as a flat i32
- * array, mutations out as another. It deliberately does NOT reproduce refusal *text* —
- * refusal positions are what `compare()` checks, and the diagnostic strings are cheap to
- * produce in JS if ever needed.
+ * array, mutations out as another. Refusals (positions and wording) are recomputed by the
+ * JS `analyze()` over the applied result, and only when the wasm reports any (nr > 0); the
+ * wasm's own refusal positions are skipped, so the wording can never drift from JS.
  *
  * What it does not reproduce (senses-walls-cursors-3; `canonical(r, {extended: true})` shows the
  * first two): the `rule` stamp on updates (always "X1" here), Levels (a scene with any levels runs
