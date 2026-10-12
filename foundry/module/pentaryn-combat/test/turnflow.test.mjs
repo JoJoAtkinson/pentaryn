@@ -189,6 +189,7 @@ test("the Reaction bar's weapon: 'Opportunity Attack: X', spends the Reaction (n
   await F.game.settings.set(MODULE, "reactionSlot", false);
   assert.equal(slot.label, "Longsword", "setting off: Argon's own label");
   await F.game.settings.set(MODULE, "reactionSlot", true);
+  reset(fig);   // the OA recorded the Reaction (edge-1): the next panel would relight it
   F.calls.length = 0;
 });
 
@@ -221,6 +222,30 @@ test("the Reaction slot's click that throws (no use) still forgets the tag", asy
   assert.equal(seq.taggedKind(act.uuid), null);
   assert.equal(reaction.isActionUsed, false);
   assert.equal(F.listeners("dnd5e.postUseActivity"), 2, "its temporary hook is gone (setup's and turnflow's remain)");
+});
+
+test("edge-1: an Opportunity Attack through the Reaction slot records flags.pentaryn-combat.reaction (on and off your turn)", async () => {
+  const oa = async (turnOf) => {
+    reset(fig);
+    onTurn(turnOf);
+    const slot = new A.DND5eItemButton({ item: fig.items.get("longsword0000001"), isWeaponSet: true });
+    const act = [...fig.items.get("longsword0000001").system.activities.values()][0];
+    slot._activity = act;
+    Object.defineProperty(slot, "actor", { get: () => fig });
+    const reaction = new A.ActionPanel({ label: "DND5E.Reaction", buttons: [slot] });
+    A.ARGON.components.main = [new A.ActionPanel({ label: "DND5E.Action" }), reaction];
+    slot._onLeftClick = async function () { F.Hooks.callAll("dnd5e.postUseActivity", act, {}, {}); };
+    F.Hooks.callAll("renderActionPanelArgonComponent", reaction, reaction.element, fig);
+    await slot._onLeftClick({});
+    await drain();
+    seq.forgetRoll(act.uuid);
+    return F.plain(fig.flags[MODULE]?.reaction ?? null);
+  };
+  assert.deepEqual(await oa(fig), { combatId: "c1" }, "own turn: the Reaction is recorded");
+  assert.deepEqual(await oa(gob), { combatId: "c1" }, "off your turn: the Reaction is recorded");
+  assert.equal(F.game.pentaryn.combat.inspect(fig).reaction.spent, true, "inspect().reaction sees it");
+  reset(fig);
+  F.calls.length = 0;
 });
 
 test("turn boundaries on the GM: sweeps at turn end / start, the Reaction back, drawers closed (golden/turnflow-boundary.json)", async () => {
