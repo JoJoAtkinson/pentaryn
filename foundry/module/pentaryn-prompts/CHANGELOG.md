@@ -62,6 +62,9 @@ cssPrefix `pp-`, afterSync). Each **[declared]** change goes to the live check.
   private `PLACED` table (type → scene collection: Token, Note, AmbientLight, Tile) gives both the
   per-scene create order and the order a gone marker's replacement is looked up in. Same order as
   before, no behaviour change.
+- **[declared] `buildView` is split into private helpers** (prompts-core-M3): the encounter
+  relations, the loners' notes and the door groups are `encounterRelations`, `aloneNotes` and
+  `doorGroups` in `core/view.mjs`, called in the same order. The gather output is byte-identical.
 - `ensureMarkers` repairs every drifted actor in one batch update. A hot re-import after
   `uninstall()` re-wires and republishes at once.
 - Console only (DP9): a core token API that throws warns once; swallowed failures log at debug
