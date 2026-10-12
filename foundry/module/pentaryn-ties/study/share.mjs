@@ -43,7 +43,7 @@ import { applyInspect, grantKind, writeIdentification } from "./cascade.mjs";
 import { dropRow } from "./claim.mjs";
 import { factFrom, reset, rowMissed } from "./gate.mjs";
 import { beliefsOf, concealmentFor, kindActorOf, reg, resolveFact, studyStateFor, studyTiersOf } from "./resolve.mjs";
-import { esc, INSPECT } from "./shared.mjs";
+import { cardName, esc, INSPECT } from "./shared.mjs";
 import { readFlag } from "../lib/flags.mjs";
 import { setting } from "../settings.mjs";
 
@@ -128,7 +128,7 @@ async function whisperShare(character, subject) {
   const whisper = ownersOf(character);
   if (!whisper.length) return false;
   await ChatMessage.create({
-    content: `<p class="pt-study-stub">${esc(_loc("PENTARYN_TIES.known.share.whisper", { name: character.name, subject: subject.name }))}</p>`,
+    content: `<p class="pt-study-stub">${esc(_loc("PENTARYN_TIES.known.share.whisper", { name: cardName(character), subject: cardName(subject) }))}</p>`,
     whisper,
     speaker: { alias: game.user?.name ?? "GM" }
   });

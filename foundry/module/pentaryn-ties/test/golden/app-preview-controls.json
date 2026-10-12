@@ -297,7 +297,7 @@
         {
           "op": "ChatMessage.create",
           "data": {
-            "content": "<p class=\"pt-study-stub\">ZZ Caven has learned something about ZZ Brakka. It is in their notebook.</p>",
+            "content": "<p class=\"pt-study-stub\">Token zzTokPc000000001 has learned something about Token zzTokNpc00000001. It is in their notebook.</p>",
             "whisper": [
               "zzPlayerUser0001"
             ],
@@ -417,7 +417,7 @@
         {
           "op": "ChatMessage.create",
           "data": {
-            "content": "<p class=\"pt-study-stub\">ZZ Caven has learned something about ZZ Brakka. It is in their notebook.</p>",
+            "content": "<p class=\"pt-study-stub\">Token zzTokPc000000001 has learned something about Token zzTokNpc00000001. It is in their notebook.</p>",
             "whisper": [
               "zzPlayerUser0001"
             ],
@@ -522,7 +522,7 @@
         {
           "op": "ChatMessage.create",
           "data": {
-            "content": "<p class=\"pt-study-stub\">ZZ Caven has learned something about ZZ Brakka. It is in their notebook.</p>",
+            "content": "<p class=\"pt-study-stub\">Token zzTokPc000000001 has learned something about Token zzTokNpc00000001. It is in their notebook.</p>",
             "whisper": [
               "zzPlayerUser0001"
             ],
@@ -692,7 +692,7 @@
         {
           "op": "ChatMessage.create",
           "data": {
-            "content": "<p class=\"pt-study-stub\">ZZ Caven has learned something about ZZ Brakka. It is in their notebook.</p>",
+            "content": "<p class=\"pt-study-stub\">Token zzTokPc000000001 has learned something about Token zzTokNpc00000001. It is in their notebook.</p>",
             "whisper": [
               "zzPlayerUser0001"
             ],

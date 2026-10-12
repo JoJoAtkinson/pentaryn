@@ -7,9 +7,9 @@
         {
           "op": "ChatMessage.create",
           "data": {
-            "content": "<p class=\"pt-study-stub\">ZZ Caven studies ZZ Brakka.</p>",
+            "content": "<p class=\"pt-study-stub\">Token zzTokPc000000001 studies Token zzTokNpc00000001.</p>",
             "speaker": {
-              "alias": "ZZ Caven",
+              "alias": "Token zzTokPc000000001",
               "actor": "zzPc000000000001"
             }
           }
@@ -260,9 +260,9 @@
         {
           "op": "ChatMessage.create",
           "data": {
-            "content": "<p class=\"pt-study-stub\">ZZ Wren studies ZZ Brakka.</p>",
+            "content": "<p class=\"pt-study-stub\">Token zzTokPc000000002 studies Token zzTokNpc00000001.</p>",
             "speaker": {
-              "alias": "ZZ Wren",
+              "alias": "Token zzTokPc000000002",
               "actor": "zzPc000000000002"
             }
           }
@@ -410,9 +410,9 @@
         {
           "op": "ChatMessage.create",
           "data": {
-            "content": "<p class=\"pt-study-stub\">ZZ Wren studies ZZ Brakka.</p>",
+            "content": "<p class=\"pt-study-stub\">Token zzTokPc000000002 studies Token zzTokNpc00000001.</p>",
             "speaker": {
-              "alias": "ZZ Wren",
+              "alias": "Token zzTokPc000000002",
               "actor": "zzPc000000000002"
             }
           }
@@ -425,17 +425,17 @@
               "action": "scope-bubble",
               "tokenId": "zzTokPc000000002",
               "sceneId": "zzScene000000001",
-              "text": "ZZ Wren gives a second stranger the once-over. People do notice being measured."
+              "text": "Token zzTokPc000000002 gives a second stranger the once-over. People do notice being measured."
             }
           ]
         },
         {
           "op": "ChatMessage.create",
           "data": {
-            "content": "<p class=\"pt-tempo-line\">ZZ Wren gives a second stranger the once-over. People do notice being measured.</p>",
+            "content": "<p class=\"pt-tempo-line\">Token zzTokPc000000002 gives a second stranger the once-over. People do notice being measured.</p>",
             "style": 3,
             "speaker": {
-              "alias": "ZZ Wren",
+              "alias": "Token zzTokPc000000002",
               "actor": "zzPc000000000002"
             }
           }

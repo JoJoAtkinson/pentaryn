@@ -6,9 +6,9 @@
       {
         "op": "ChatMessage.create",
         "data": {
-          "content": "<p class=\"pt-study-stub\">ZZ Caven studies ZZ Nobody.</p>",
+          "content": "<p class=\"pt-study-stub\">Token zzTokPc000000001 studies Token zzTokLone0000001.</p>",
           "speaker": {
-            "alias": "ZZ Caven",
+            "alias": "Token zzTokPc000000001",
             "actor": "zzPc000000000001"
           }
         }
@@ -21,17 +21,17 @@
             "action": "scope-bubble",
             "tokenId": "zzTokPc000000001",
             "sceneId": "zzScene000000001",
-            "text": "ZZ Caven gives a second stranger the once-over. People do notice being measured."
+            "text": "Token zzTokPc000000001 gives a second stranger the once-over. People do notice being measured."
           }
         ]
       },
       {
         "op": "ChatMessage.create",
         "data": {
-          "content": "<p class=\"pt-tempo-line\">ZZ Caven gives a second stranger the once-over. People do notice being measured.</p>",
+          "content": "<p class=\"pt-tempo-line\">Token zzTokPc000000001 gives a second stranger the once-over. People do notice being measured.</p>",
           "style": 3,
           "speaker": {
-            "alias": "ZZ Caven",
+            "alias": "Token zzTokPc000000001",
             "actor": "zzPc000000000001"
           }
         }
@@ -58,9 +58,9 @@
       {
         "op": "ChatMessage.create",
         "data": {
-          "content": "<p class=\"pt-study-stub\">ZZ Caven studies ZZ Nobody.</p>",
+          "content": "<p class=\"pt-study-stub\">Token zzTokPc000000001 studies Token zzTokLone0000001.</p>",
           "speaker": {
-            "alias": "ZZ Caven",
+            "alias": "Token zzTokPc000000001",
             "actor": "zzPc000000000001"
           }
         }
@@ -73,17 +73,17 @@
             "action": "scope-bubble",
             "tokenId": "zzTokPc000000001",
             "sceneId": "zzScene000000001",
-            "text": "ZZ Caven is looking people up and down."
+            "text": "Token zzTokPc000000001 is looking people up and down."
           }
         ]
       },
       {
         "op": "ChatMessage.create",
         "data": {
-          "content": "<p class=\"pt-tempo-line\">ZZ Caven is looking people up and down.</p>",
+          "content": "<p class=\"pt-tempo-line\">Token zzTokPc000000001 is looking people up and down.</p>",
           "style": 3,
           "speaker": {
-            "alias": "ZZ Caven",
+            "alias": "Token zzTokPc000000001",
             "actor": "zzPc000000000001"
           }
         }

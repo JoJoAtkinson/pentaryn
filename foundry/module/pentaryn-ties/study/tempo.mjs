@@ -4,7 +4,7 @@
  * Split out of study.mjs (S4b, ties-35); study.mjs re-exports this file's public names.
  */
 
-import { BUBBLE, esc, log } from "./shared.mjs";
+import { BUBBLE, cardName, esc, log } from "./shared.mjs";
 import { send } from "../socket-adapter.mjs";
 
 /* -------------------------------------------- */
@@ -124,7 +124,8 @@ export async function announceTempo(character) {
   if (!own) return;
   const line = scopeTell(character, own);
   if (!line) return;
-  const text = _loc(SCOPE_STEPS.find(s => s.key === line).label, { name: character.name });
+  // the token name the table sees, never the actor name (TIE-3)
+  const text = _loc(SCOPE_STEPS.find(s => s.key === line).label, { name: own.document.name || cardName(character) });
 
   broadcastBubble(own.id, canvas.scene?.id, text);
 
@@ -142,7 +143,7 @@ export async function announceTempo(character) {
   await ChatMessage.create({
     content: `<p class="pt-tempo-line">${esc(text)}</p>`,
     style: CONST.CHAT_MESSAGE_STYLES.EMOTE,
-    speaker: ChatMessage.getSpeaker({ actor: character })
+    speaker: { ...ChatMessage.getSpeaker({ actor: character, token: own.document }), alias: own.document.name || cardName(character) }
   });
 }
 

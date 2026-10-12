@@ -118,7 +118,7 @@
       {
         "op": "ChatMessage.create",
         "data": {
-          "content": "<p class=\"pt-study-stub\">ZZ Wren studies ZZ Brakka.</p>",
+          "content": "<p class=\"pt-study-stub\">ZZ Wren studies Token zzTokNpc00000001.</p>",
           "speaker": {
             "alias": "ZZ Wren",
             "actor": "zzPc000000000002"

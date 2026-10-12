@@ -157,9 +157,9 @@
       {
         "op": "ChatMessage.create",
         "data": {
-          "content": "<p class=\"pt-study-stub\">ZZ Caven studies ZZ Brakka.</p>",
+          "content": "<p class=\"pt-study-stub\">Token zzTokPc000000001 studies Token zzTokNpc00000001.</p>",
           "speaker": {
-            "alias": "ZZ Caven",
+            "alias": "Token zzTokPc000000001",
             "actor": "zzPc000000000001"
           }
         }
@@ -304,9 +304,9 @@
       {
         "op": "ChatMessage.create",
         "data": {
-          "content": "<p class=\"pt-study-stub\">ZZ Caven studies ZZ Brakka.</p>",
+          "content": "<p class=\"pt-study-stub\">Token zzTokPc000000001 studies Token zzTokNpc00000001.</p>",
           "speaker": {
-            "alias": "ZZ Caven",
+            "alias": "Token zzTokPc000000001",
             "actor": "zzPc000000000001"
           }
         }
@@ -436,9 +436,9 @@
       {
         "op": "ChatMessage.create",
         "data": {
-          "content": "<p class=\"pt-study-stub\">ZZ Caven studies ZZ Brakka.</p>",
+          "content": "<p class=\"pt-study-stub\">Token zzTokPc000000001 studies Token zzTokNpc00000001.</p>",
           "speaker": {
-            "alias": "ZZ Caven",
+            "alias": "Token zzTokPc000000001",
             "actor": "zzPc000000000001"
           }
         }
