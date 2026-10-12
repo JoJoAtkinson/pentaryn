@@ -1206,7 +1206,7 @@ def _upload_job(st: Storage, job: uploadq.Job, protect: str | None = None) -> Sn
             # Bundles, then the sidecar, then the snapshot: by the time the snapshot's
             # name appears, its lineage and every bundle its manifest names exist.
             bundles.upload_missing(st, staged, have,
-                                   rebuild=_rebuilder([], job.staging))
+                                   rebuild=_rebuilder_or_incomplete(job))
             _refresh_reused(st, job.manifest, have, staged, state, others)
             # A first look before the sidecar names them (fresh listing): what vanished
             # since `have` goes up again now; the look after the world tar closes the rest.
@@ -1420,6 +1420,25 @@ def _rebuilder(rebuilt: list[Path], dest_dir: Path | None = None):
         rebuilt.append(src)
         return src
     return rebuild
+
+
+def _rebuilder_or_incomplete(job: uploadq.Job):
+    """`_rebuilder` for the upload half's staged bundles (review MC1): a staged tar that
+    is gone and cannot be rebuilt (the folder changed since) is a bundle that exists
+    nowhere, so the job can never complete — _Incomplete (dropped by _run_job), never
+    the retryable StorageError upload_missing raises on a None."""
+    rebuild = _rebuilder([], job.staging)
+
+    def must(n: str) -> Path:
+        new = rebuild(n)
+        if new is None:
+            ref = bundles.parse_bundle(n)
+            what = f"{ref.kind} {ref.id}" if ref else n
+            raise _Incomplete(
+                f"{what}: its staged bundle {n} is gone from {job.staging} and the local "
+                f"folder changed since — snapshot {job.name} is incomplete")
+        return new
+    return must
 
 
 def referenced_bundles(st: Storage) -> set[str]:

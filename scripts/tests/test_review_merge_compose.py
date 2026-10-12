@@ -59,12 +59,6 @@ def spawned(monkeypatch):
 
 # ── MC1: a never-completable job reported as a retryable StorageError ─────────
 
-@pytest.mark.xfail(strict=True, reason=(
-    "MC1: upload_missing raises StorageError (retryable) when a job's staged tar is gone "
-    "and the live folder no longer matches it — that job can never complete (the bundle "
-    "exists nowhere), so it is retried forever: upload_pending returns 1 every run, every "
-    "later job is stuck behind it and in_flight() keeps the boot local for good. §5 row "
-    "'6 verify failure' says any never-completable job is dropped (_Incomplete)"))
 def test_mc1_a_job_whose_staged_tar_is_gone_and_folder_changed_is_dropped_not_stuck(
         two_hosts, spawned):
     with two_hosts.use("mac") as data:
