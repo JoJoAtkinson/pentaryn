@@ -33,7 +33,7 @@ export function wireButtons({ rerender }) {
 
 /* ── which weapon, how many swings ───────────────────────────────────────── */
 
-export function multiattack(actor) {
+function multiattack(actor) {
   return multiattackFor(actor, { enabled: setting("multiattack") });
 }
 
