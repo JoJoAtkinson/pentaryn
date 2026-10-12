@@ -57,7 +57,7 @@ function levelsOf(adv) {
 }
 
 async function docAt(uuid) {
-  try { return uuid ? await fromUuid(uuid) : null; } catch (err) { log.debug(`docAt ${uuid} (treated as missing)`, err); return null; }
+  try { return uuid ? await fromUuid(uuid) : null; } catch { return null; }
 }
 
 /** The words a choice value names: "Tough", ["Guidance", "Light"], {items: […]}, {spells: […]}. */
@@ -281,7 +281,7 @@ export async function resolveCharacter(w) {
   const spells = { prepared: [], book: [] };
   for (const [field, list] of [["spells", "prepared"], ["spellbook", "book"]]) {
     for (const ref of w[field] ?? []) {
-      const spell = await findItem(ref, "spell").catch(err => (log.debug(`spell lookup ${ref} (treated as not found)`, err), null));
+      const spell = await findItem(ref, "spell").catch(() => null);
       if (!spell) { fail(`${field}: ${await notFound("spell", ref, "spell")}`); continue; }
       if (cls && onClassList(cls, spell) === false && !w.allowOffList) {
         fail(`${field}: ${spell.name} is not on the ${cls.name} spell list (allowOffList: true if a feature grants it)`);
@@ -305,7 +305,7 @@ export async function resolveCharacter(w) {
       gear.push({ spec, data });
       continue;
     }
-    const src = await findItem(spec.uuid ?? spec.name, "item").catch(err => (log.debug(`item lookup ${spec.uuid ?? spec.name} (treated as not found)`, err), null));
+    const src = await findItem(spec.uuid ?? spec.name, "item").catch(() => null);
     if (!src) { fail(`items: ${await notFound("item", spec.uuid ?? spec.name, "item", "; or pass {data: {name, type, system}} for a custom item")}`); continue; }
     gear.push({ spec, src });
   }
@@ -553,7 +553,7 @@ function onClassList(cls, spell) {
   try {
     const list = dnd5e.registry.spellLists.forType("class", cls.system.identifier);
     return list ? list.has(spell) : null;
-  } catch (err) { log.debug("class spell list (unknown, not checked)", err); return null; }
+  } catch { return null; }
 }
 
 async function addSpells(actor, cls, refs, { prepared, report, allowOffList, ghost }) {
@@ -589,7 +589,7 @@ async function itemDataFor(src, { quantity = null, equipped = null, rename = nul
   const Item5e = CONFIG.Item.documentClass;
   let list = null;
   if (src.type === "container" && typeof Item5e.createWithContents === "function") {
-    try { list = await Item5e.createWithContents([src]); } catch (err) { log.debug("createWithContents (the container alone)", err); list = null; }
+    try { list = await Item5e.createWithContents([src]); } catch { list = null; }
   }
   if (!list?.length) list = [{ ...game.items.fromCompendium(src), _id: foundry.utils.randomID() }];
   const top = list[0];
@@ -757,7 +757,7 @@ async function enchantMartialArts(actor, report, ghost) {
   for (const w of actor.items.filter(i => i.type === "weapon" && i.system?.type?.value !== "natural")) {
     if (w.effects?.some?.(e => e.isAppliedEnchantment)) continue;
     let act = null;
-    try { act = acts.find(a => a.canEnchant(w) === true) ?? null; } catch (err) { log.debug("canEnchant (weapon skipped)", err); act = null; }
+    try { act = acts.find(a => a.canEnchant(w) === true) ?? null; } catch { act = null; }
     const profile = act?.availableEnchantments?.[0]?._id ?? act?.effects?.[0]?._id ?? null;
     if (!act || !profile) continue;
     if (!ghost) {
