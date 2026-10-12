@@ -78,11 +78,21 @@ function skipped(facts, target) {
   return null;
 }
 
+/** The last save() on this client; the next one waits for it, settled either way (double-save). */
+let saving = Promise.resolve();
+
 /**
- * Copy a target into the current user's journal and open it on the result.
+ * Copy a target into the current user's journal and open it on the result. Calls on this client run
+ * one at a time, so a second quick save plans from the page the first wrote instead of copying again.
  * @returns {Promise<{journal, pageIds: string[], created: number, updated: number}|null>}
  */
-async function save(target, { near } = {}) {
+function save(target, opts) {
+  const run = saving.then(() => saveNow(target, opts));
+  saving = run.catch(() => {});
+  return run;
+}
+
+async function saveNow(target, { near } = {}) {
   lastSkip = null;
   const journal = await ctx.exposed.ensurePersonalJournal();
   if (!journal) return skipped({ journal }, target);
@@ -208,8 +218,8 @@ async function onBarClick(app, ev) {
   }
   if (busy.has(app)) return;
   busy.add(app);
-  decorate(app);
   try {
+    decorate(app);   // inside the try: a throw here must not leave the bar on "Adding…" (bar-stuck)
     const result = await save(target, { near: app });
     // The copy is in the journal now; the window it came from has done its job.
     if (result && app !== personalSheet()) await app.close();
@@ -243,7 +253,7 @@ function decorate(app) {
     bar.className = "pj-bar";
     const content = root.querySelector(":scope > .window-content");
     if (content) content.after(bar); else root.append(bar);
-    bar.addEventListener("click", ev => onBarClick(app, ev));
+    bar.addEventListener("click", ev => onBarClick(app, ev).catch(err => ctx.log.warn("bar click failed", err)));
   }
   root.classList.add("pentaryn-journal-readable");
   fillBar(app, bar, target);
@@ -274,8 +284,9 @@ const personalSheet = () => ctx.exposed.personal()?.sheet;
 /**
  * Which journals a scene Note pins, cached (items-journal-38): applySinglePage runs on every journal
  * render, and the answer used to walk every scene's notes each time. Forgotten whenever a Note or a
- * Scene is created, updated or deleted. Those five listeners are registered on first use (always after
- * ready: only a journal render asks), not at load — the load-time hook manifest stays as it was.
+ * Scene is created, updated or deleted (a Scene update only when it changes `notes`, pinned-cache).
+ * Those six listeners are registered on first use (always after ready: only a journal render asks),
+ * not at load — the load-time hook manifest stays as it was.
  */
 const pins = makePinnedCache(() => game.scenes);
 const PIN_HOOKS = ["createNote", "updateNote", "deleteNote", "createScene", "deleteScene"];
@@ -285,6 +296,8 @@ function isEyeReadable(entry) {
   if (!watchingPins) {
     watchingPins = true;
     for (const h of PIN_HOOKS) ctx.reg.on(h, () => pins.invalidate(), { label: `${h}: forget pinned journals` });
+    ctx.reg.on("updateScene", (_scene, changed) => { if (changed && "notes" in changed) pins.invalidate(); },
+      { label: "updateScene: forget pinned journals when its notes change" });
   }
   return pins.has(entry.id);
 }

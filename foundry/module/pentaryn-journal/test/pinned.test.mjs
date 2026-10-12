@@ -1,6 +1,6 @@
 // items-journal-38: which journals a scene pin opens is computed once and cached (core.pinnedEntryIds,
-// makePinnedCache), forgotten on Note/Scene create, update and delete. The five listeners are registered on
-// the first single-page decision, so golden/hooks.json (load time) is unchanged.
+// makePinnedCache), forgotten on Note/Scene create, update and delete (updateScene: see pinned-cache.test).
+// The listeners are registered on the first single-page decision, so golden/hooks.json (load time) is unchanged.
 import { mock, test } from "node:test";
 import assert from "node:assert/strict";
 import { StubCollection, makeDoc } from "./kit/foundry-stub.mjs";
