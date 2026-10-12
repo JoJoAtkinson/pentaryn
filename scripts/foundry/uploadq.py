@@ -1,10 +1,11 @@
 """The snapshot upload queue: built tars waiting to go up, the locks, the status file.
 
-``make vtt-down`` builds the snapshot tar while Foundry is stopped (the only moment a
-LevelDB world copies consistently) and hands the ~3 GB upload to a detached process
-(``python -m scripts.foundry.cloud upload-pending``), so the command returns at once.
-This module is the hand-off between the two; ``cloud.py`` does the building and the
-uploading. It imports nothing from ``cloud`` so either side can use it.
+``make vtt-down`` builds the snapshot while Foundry is stopped (the only moment a LevelDB
+world copies consistently) — the ~45 MB world tar and a tar of every module/system bundle
+the cloud lacks — and hands the upload to a detached process (``python -m
+scripts.foundry.cloud upload-pending``), so the command returns at once. This module is the
+hand-off between the two; ``cloud.py`` does the building and the uploading. It imports
+nothing from ``cloud`` so either side can use it.
 
 Everything lives in the data volume's ``.pentaryn-tmp/`` (outside every snapshotted path):
 
@@ -12,7 +13,15 @@ Everything lives in the data volume's ``.pentaryn-tmp/`` (outside every snapshot
   and what its upload needs (reason, tree digest, the based-on record it expects to
   extend). The job file is written last and atomically, so a job file always means a
   complete tar. A job leaves only when its upload is recorded; a crash leaves both
-  files and the next backup or uploader retries them, oldest first.
+  files and the next backup or uploader retries them, oldest first. A job that can never
+  complete (a bundle it reuses was swept while it waited, and the folder changed since)
+  is **dropped**: its tar moves to ``incomplete/`` (the newest one is kept) and the
+  uploader goes on with the next.
+* ``bundles/<job name>/<bundle>.tar.gz`` — the bundle tars a job staged (the ones the
+  cloud lacked when it was built). Per job: two queued jobs may stage the same bundle,
+  and one job's cleanup must never take the other's. ``drop()`` removes the folder.
+* ``heal-<stamp>-<host>`` jobs have no world tar: an unchanged tree whose snapshot names a
+  bundle the cloud lost (deleted by hand) re-uploads it from the background.
 * ``<snapshot>.tar.gz.building`` — a tar being written; a leftover is a crash.
 * ``snapshot-build.lock`` — held while a tar is built or a restore replaces the tree.
 * ``snapshot-upload.lock`` — held while jobs are uploaded (the background process, or a
@@ -27,12 +36,15 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import threading
 import time
 from contextlib import contextmanager
-from dataclasses import asdict, dataclass
+from dataclasses import MISSING, asdict, dataclass, field
 from pathlib import Path
 from typing import Callable, Iterator
+
+from scripts.foundry.bundles import STAGING
 
 try:
     import fcntl
@@ -46,6 +58,10 @@ BUILD_LOCK = "snapshot-build.lock"
 UPLOAD_LOCK = "snapshot-upload.lock"
 STATUS_FILE = "upload-status.json"
 LOG_FILE = "upload.log"
+# A dropped job's world tar is moved here (the newest only): with no later job queued it
+# may be the only copy of that world state once Foundry runs again.
+INCOMPLETE = "incomplete"
+HEAL_PREFIX = "heal-"
 
 
 def _dir() -> Path:
@@ -156,6 +172,12 @@ class Job:
     created: float
     safety: bool = False
     protect: str | None = None  # a restore's target: never coalesced or pruned away
+    # The bundle manifest ({"modules": {id: name}, "systems": {id: name}}) the snapshot
+    # names. None: a FULL tar (worlds+Config+modules) queued by the pre-bundles code —
+    # uploaded as such, with a lineage-only sidecar and no bundle work.
+    manifest: dict | None = None
+    bundles: list[str] = field(default_factory=list)   # names staged in `staging`
+    heal: bool = False          # no world tar: re-upload `bundles` the cloud lost
 
     @property
     def tar(self) -> Path:
@@ -165,6 +187,11 @@ class Job:
     def file(self) -> Path:
         return tmp_dir() / (self.name + JOB_SUFFIX)
 
+    @property
+    def staging(self) -> Path:
+        """This job's own bundle tars: never shared with another job."""
+        return tmp_dir() / STAGING / self.name
+
     def save(self) -> None:
         tmp = self.file.with_name(self.file.name + ".tmp")
         tmp.write_text(json.dumps(asdict(self), indent=2) + "\n", encoding="utf-8")
@@ -173,6 +200,7 @@ class Job:
     def drop(self) -> None:
         self.file.unlink(missing_ok=True)
         self.tar.unlink(missing_ok=True)
+        shutil.rmtree(self.staging, ignore_errors=True)
 
 
 def pending() -> list[Job]:
@@ -185,20 +213,78 @@ def pending() -> list[Job]:
     for p in d.glob("*" + JOB_SUFFIX):
         try:
             data = json.loads(p.read_text(encoding="utf-8"))
-            known = {k: data.get(k) for k in Job.__dataclass_fields__}
+            # A key the job file lacks (written by older code) takes the field's default;
+            # a required one reads as None, as before.
+            known = {k: data[k] if k in data else _default(f)
+                     for k, f in Job.__dataclass_fields__.items()}
+            if not isinstance(known["bundles"], list):
+                known["bundles"] = []
+            known["heal"] = bool(known["heal"])
             jobs.append(Job(**known))
         except (OSError, ValueError, TypeError):
             continue
     return sorted(jobs, key=lambda j: (j.created or 0.0, j.name))
 
 
+def _default(f):
+    """A dataclass field's default; None for a required field."""
+    if f.default is not MISSING:
+        return f.default
+    if f.default_factory is not MISSING:
+        return f.default_factory()
+    return None
+
+
 def sweep_building() -> list[Path]:
-    """Half-written tars from a build that crashed. Call only while holding BUILD_LOCK."""
+    """Half-written tars from a build that crashed, and the staging folder of a job that
+    never got its job file (a build killed after staging). Call only while holding
+    BUILD_LOCK: then no build is running, and a staging folder whose job file exists
+    belongs to a queued job — left alone, `.building` and all (the uploader may be
+    rebuilding a bundle there; the job's drop() removes the folder)."""
     gone = []
-    for p in tmp_dir().glob("*" + BUILDING_SUFFIX):
+    top = tmp_dir()
+    for p in top.glob("*" + BUILDING_SUFFIX):
         p.unlink(missing_ok=True)
         gone.append(p)
+    stage = top / STAGING
+    try:
+        entries = sorted(stage.iterdir())
+    except OSError:
+        return gone
+    for p in entries:
+        if p.is_symlink():
+            continue
+        if p.is_file() and p.name.endswith(BUILDING_SUFFIX):
+            p.unlink(missing_ok=True)
+            gone.append(p)
+        elif p.is_dir() and not (top / (p.name + JOB_SUFFIX)).exists():
+            shutil.rmtree(p, ignore_errors=True)
+            gone.append(p)
     return gone
+
+
+def keep_incomplete(job: Job) -> Path | None:
+    """Move a dropped job's world tar to incomplete/<name>, replacing any older one there;
+    the new path, or None when it has no tar."""
+    if not job.tar.is_file():
+        return None
+    d = tmp_dir() / INCOMPLETE
+    d.mkdir(parents=True, exist_ok=True)
+    for old in d.iterdir():
+        if old.is_file() and not old.is_symlink():
+            old.unlink(missing_ok=True)
+    dest = d / job.name
+    os.replace(job.tar, dest)
+    return dest
+
+
+def incomplete() -> list[Path]:
+    """The kept tar of the last dropped job (at most one), for the status line."""
+    d = _dir() / INCOMPLETE
+    try:
+        return sorted(p for p in d.iterdir() if p.is_file() and not p.is_symlink())
+    except OSError:
+        return []
 
 
 # ── status ───────────────────────────────────────────────────────────────────
@@ -226,7 +312,10 @@ def write_status(**fields) -> None:
 def in_flight() -> str | None:
     """The snapshot this host has not finished uploading — running now, or queued after
     a crash — else None. The boot choice keeps the local world while there is one."""
-    jobs = pending()
+    jobs = [j for j in pending() if not j.heal]   # a heal holds no world state
     if busy(UPLOAD_LOCK):
-        return read_status().get("name") or (jobs[0].name if jobs else "a snapshot")
+        s = read_status()
+        if s.get("heal"):
+            return jobs[0].name if jobs else None
+        return s.get("name") or (jobs[0].name if jobs else "a snapshot")
     return jobs[-1].name if jobs else None

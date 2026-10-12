@@ -20,6 +20,10 @@ Two rules that hold for both implementations:
 * **No secret ever reaches an argv or a log.** ``--config`` is never passed (rclone finds
   its own config), the config path is never printed, and the stderr attached to a
   failure is scrubbed of any token-looking line.
+
+An upload whose size check fails deletes what it wrote — except in a
+``CONTENT_ADDRESSED`` folder (``bundles/``), where the file there may be the other
+host's same-name upload: it raises :class:`Superseded` and deletes nothing.
 """
 
 from __future__ import annotations
@@ -35,9 +39,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable, Protocol
 
-SUBFOLDERS = ("assets", "world-backups", "system-backup", "major-release")
+SUBFOLDERS = ("assets", "world-backups", "system-backup", "major-release", "bundles")
 JUNK_NAMES = {".DS_Store", "Thumbs.db", "desktop.ini"}
 PARTIAL = ".partial"
+# Folders whose file names are content-addressed: a name IS its content, and either host
+# may write it at any time (bundles.py). An upload's size check never deletes there — see
+# `upload` and `Superseded`.
+CONTENT_ADDRESSED = frozenset({"bundles"})
 
 # The Mac's OneDrive app folder: today's cloud, and the fallback when rclone has no remote.
 MAC_FOLDER = Path.home() / "Library/CloudStorage/OneDrive-Personal/DnD/foundry"
@@ -56,6 +64,20 @@ class StorageError(RuntimeError):
         self.code = code
 
 
+class Superseded(StorageError):
+    """An upload into a CONTENT_ADDRESSED folder landed, and by the size check the name
+    held another writer's file: the other host uploaded the same name a moment later. By
+    construction that is the same content, archived on another machine (another zlib,
+    other mtimes — so another size). Nothing was deleted; the caller decides (a bundle
+    upload accepts it: the name is there, review DL7)."""
+
+
+def _superseded(rel: str, got: int, want: int) -> Superseded:
+    return Superseded(f"upload of {rel}: the cloud holds {got} B, ours was {want} B — another "
+                      "writer's file of the same name replaced ours; left in place",
+                      verb="moveto")
+
+
 @dataclass(frozen=True)
 class Entry:
     name: str          # basename
@@ -67,16 +89,31 @@ class Storage(Protocol):
     kind: str          # "folder" | "rclone"
     root: str          # display only
 
-    def ls(self, sub: str) -> list[Entry]: ...
+    def ls(self, sub: str, *, must_exist: bool = False) -> list[Entry]: ...
     def partials(self, sub: str) -> list[Entry]: ...
     def exists(self, rel: str) -> bool: ...
     def read_text(self, rel: str) -> str | None: ...
+    def read_head(self, rel: str, n: int) -> bytes | None: ...
     def write_text(self, rel: str, text: str) -> None: ...
     def download(self, rel: str, dest: Path) -> Path: ...
     def upload(self, src: Path, rel: str) -> None: ...
     def copy(self, src_rel: str, dst_rel: str) -> None: ...
     def delete(self, rel: str) -> None: ...
+    def touch(self, rel: str) -> None: ...
     def mkdirs(self) -> None: ...
+    def refresh(self, sub: str) -> None: ...
+
+
+def refresh(st: "Storage", sub: str) -> None:
+    """Forget any listing of `sub` this process holds, so the next `ls` asks the cloud.
+
+    An `RcloneStorage` keeps each folder's listing for the life of the process and clears
+    it only after its own writes there; what the OTHER host did since is invisible until
+    then. Every check whose point is "what is in the cloud now" (the post-upload verify,
+    the GC mark and sweep, a restore's plan, a backup's first listing) refreshes first."""
+    fn = getattr(st, "refresh", None)
+    if fn is not None:
+        fn(sub)
 
 
 def _visible(name: str) -> bool:
@@ -109,11 +146,14 @@ class FolderStorage:
     def _p(self, rel: str) -> Path:
         return self.path / _check_rel(rel)
 
-    def _entries(self, sub: str) -> list[Entry]:
+    def _entries(self, sub: str, must_exist: bool = False) -> list[Entry]:
         d = self.path / sub if sub else self.path
         try:
             items = list(d.iterdir())
-        except FileNotFoundError:
+        except FileNotFoundError as exc:
+            if must_exist:
+                raise StorageError(f"cannot list {sub or '/'}: the folder is not found",
+                                   verb="ls") from exc
             return []
         except OSError as exc:
             raise StorageError(f"cannot list {sub or '/'}: {exc}", verb="ls") from exc
@@ -128,8 +168,11 @@ class FolderStorage:
             out.append(Entry(p.name, st.st_size, st.st_mtime))
         return sorted(out, key=lambda e: e.name)
 
-    def ls(self, sub: str) -> list[Entry]:
-        return [e for e in self._entries(sub) if _visible(e.name)]
+    def ls(self, sub: str, *, must_exist: bool = False) -> list[Entry]:
+        """The visible files in `sub`. A folder that is not there lists as empty — unless
+        `must_exist`: then it raises StorageError (the GC mark: "cannot tell" is never
+        "nothing is there", review MD1)."""
+        return [e for e in self._entries(sub, must_exist) if _visible(e.name)]
 
     def partials(self, sub: str) -> list[Entry]:
         return [e for e in self._entries(sub) if e.name.endswith(PARTIAL)]
@@ -140,6 +183,15 @@ class FolderStorage:
     def read_text(self, rel: str) -> str | None:
         try:
             return self._p(rel).read_text(encoding="utf-8")
+        except FileNotFoundError:
+            return None
+        except OSError as exc:
+            raise StorageError(f"cannot read {rel}: {exc}", verb="cat") from exc
+
+    def read_head(self, rel: str, n: int) -> bytes | None:
+        try:
+            with self._p(rel).open("rb") as fh:
+                return fh.read(n)
         except FileNotFoundError:
             return None
         except OSError as exc:
@@ -177,7 +229,14 @@ class FolderStorage:
         except OSError as exc:
             raise StorageError(f"upload of {rel} failed: {exc}", verb="copyto") from exc
         want = Path(src).stat().st_size
-        if p.stat().st_size != want:
+        try:
+            got = p.stat().st_size
+        except FileNotFoundError:
+            raise StorageError(f"upload of {rel} is gone right after it landed",
+                               verb="moveto") from None
+        if got != want:
+            if _split(rel)[0] in CONTENT_ADDRESSED:
+                raise _superseded(rel, got, want)       # never delete the other host's
             p.unlink(missing_ok=True)
             raise StorageError(f"upload of {rel} arrived with the wrong size", verb="moveto")
 
@@ -195,12 +254,24 @@ class FolderStorage:
         except OSError as exc:
             raise StorageError(f"cannot delete {rel}: {exc}", verb="deletefile") from exc
 
+    def touch(self, rel: str) -> None:
+        """Set the file's mtime to now; a file that is not there is left not there."""
+        try:
+            os.utime(self._p(rel), None)
+        except FileNotFoundError:
+            return
+        except OSError as exc:
+            raise StorageError(f"cannot touch {rel}: {exc}", verb="touch") from exc
+
     def mkdirs(self) -> None:
         try:
             for sub in SUBFOLDERS:
                 (self.path / sub).mkdir(parents=True, exist_ok=True)
         except OSError as exc:
             raise StorageError(f"cannot create {self.root}: {exc}", verb="mkdir") from exc
+
+    def refresh(self, sub: str) -> None:
+        """Nothing to forget: every `ls` reads the folder."""
 
 
 # ── RcloneStorage ────────────────────────────────────────────────────────────
@@ -213,7 +284,7 @@ Runner = Callable[..., "subprocess.CompletedProcess"]
 COMMON_FLAGS = ("--retries", "3", "--low-level-retries", "10",
                 "--contimeout", "30s", "--timeout", "120s")
 TIMEOUTS = {"lsjson": 60.0, "cat": 60.0, "rcat": 60.0, "moveto": 120.0, "copy": 300.0,
-            "deletefile": 60.0, "mkdir": 60.0, "listremotes": 10.0}
+            "deletefile": 60.0, "touch": 60.0, "mkdir": 60.0, "listremotes": 10.0}
 # rclone exit codes: 3 = directory not found, 4 = file not found.
 NOT_FOUND_CODES = (3, 4)
 _NOT_FOUND_TEXT = ("not found", "doesn't exist", "does not exist")
@@ -278,6 +349,7 @@ class RcloneStorage:
         self.interactive = interactive
         self._dir_cache: dict[str, list[Entry]] = {}
         self._raw_cache: dict[str, list[Entry]] = {}
+        self._missing: set[str] = set()     # cached listings that were "not found"
 
     # -- plumbing -----------------------------------------------------------
 
@@ -298,10 +370,11 @@ class RcloneStorage:
         return ("--stats", "30s", "--stats-one-line", "--log-level", "NOTICE")
 
     def _run(self, verb: str, *args: str, timeout: float | None, input: str | None = None,
-             capture: bool = True, what: str = "") -> subprocess.CompletedProcess:
+             capture: bool = True, what: str = "", text: bool = True
+             ) -> subprocess.CompletedProcess:
         argv = [self.bin, verb, *args, *COMMON_FLAGS]
         assert "--config" not in argv, "never pass --config: rclone finds its own"
-        kwargs: dict = {"text": True, "timeout": timeout}
+        kwargs: dict = {"text": text, "timeout": timeout}
         if input is not None:
             kwargs["input"] = input
         if capture:
@@ -319,7 +392,10 @@ class RcloneStorage:
         return proc
 
     def _fail(self, verb: str, what: str, proc) -> StorageError:
-        err = scrub(getattr(proc, "stderr", "") or "")
+        err = getattr(proc, "stderr", "") or ""
+        if isinstance(err, bytes):
+            err = err.decode("utf-8", "replace")
+        err = scrub(err)
         tail = f": {err.splitlines()[-1]}" if err else ""
         return StorageError(f"rclone {verb} {what} failed (exit {proc.returncode}){tail}",
                             verb=verb, code=proc.returncode)
@@ -328,24 +404,39 @@ class RcloneStorage:
     def _not_found(proc) -> bool:
         if proc.returncode in NOT_FOUND_CODES:
             return True
-        err = (getattr(proc, "stderr", "") or "").lower()
+        err = getattr(proc, "stderr", "") or ""
+        if isinstance(err, bytes):
+            err = err.decode("utf-8", "replace")
+        err = err.lower()
         return proc.returncode != 0 and any(t in err for t in _NOT_FOUND_TEXT)
 
     def _invalidate(self, rel: str) -> None:
         head, _ = _split(rel)
-        self._dir_cache.pop(head, None)
-        self._raw_cache.pop(head, None)
+        self.refresh(head)
+
+    def refresh(self, sub: str) -> None:
+        """Drop the cached listing of `sub`: the next `ls` runs `lsjson` again."""
+        self._dir_cache.pop(sub, None)
+        self._raw_cache.pop(sub, None)
+        self._missing.discard(sub)
 
     # -- listing ------------------------------------------------------------
 
-    def _lsjson(self, sub: str) -> list[Entry]:
+    def _lsjson(self, sub: str, must_exist: bool = False) -> list[Entry]:
         if sub in self._raw_cache:
+            if must_exist and sub in self._missing:
+                raise StorageError(f"rclone lsjson {sub}: the folder is not found",
+                                   verb="lsjson")
             return self._raw_cache[sub]
         proc = self._run("lsjson", "--files-only", "--no-mimetype", self._r(sub),
                          timeout=self.timeouts["lsjson"], what=sub)
         if proc.returncode != 0:
             if self._not_found(proc):
+                if must_exist:
+                    raise StorageError(f"rclone lsjson {sub}: the folder is not found",
+                                       verb="lsjson", code=proc.returncode)
                 self._raw_cache[sub] = []
+                self._missing.add(sub)
                 return []
             raise self._fail("lsjson", sub, proc)
         try:
@@ -365,8 +456,10 @@ class RcloneStorage:
         self._raw_cache[sub] = out
         return out
 
-    def ls(self, sub: str) -> list[Entry]:
-        return [e for e in self._lsjson(sub) if _visible(e.name)]
+    def ls(self, sub: str, *, must_exist: bool = False) -> list[Entry]:
+        """The visible files in `sub`. A folder rclone says is not found lists as empty —
+        unless `must_exist`: then it raises StorageError (the GC mark, review MD1)."""
+        return [e for e in self._lsjson(sub, must_exist) if _visible(e.name)]
 
     def partials(self, sub: str) -> list[Entry]:
         return [e for e in self._lsjson(sub) if e.name.endswith(PARTIAL)]
@@ -384,6 +477,18 @@ class RcloneStorage:
                 return None
             raise self._fail("cat", rel, proc)
         return proc.stdout
+
+    def read_head(self, rel: str, n: int) -> bytes | None:
+        """The first `n` bytes of a cloud file (``rclone cat --count``), or None when it is
+        not there. Binary: a snapshot's gzip head, for its first tar member."""
+        proc = self._run("cat", "--count", str(int(n)), self._r(_check_rel(rel)),
+                         timeout=self.timeouts["cat"], what=rel, text=False)
+        if proc.returncode != 0:
+            if self._not_found(proc):
+                return None
+            raise self._fail("cat", rel, proc)
+        out = proc.stdout or b""
+        return out.encode("utf-8", "surrogateescape") if isinstance(out, str) else out
 
     def write_text(self, rel: str, text: str) -> None:
         proc = self._run("rcat", self._r(_check_rel(rel)), input=text,
@@ -418,7 +523,10 @@ class RcloneStorage:
 
         A copyto failure is retried once (rclone's own retries have already run by
         then, but a whole-transfer retry is cheap insurance against a dropped link);
-        a size mismatch is not retried — it deletes and raises."""
+        a size mismatch is not retried — it deletes and raises. In a CONTENT_ADDRESSED
+        folder it never deletes: rclone has already verified the transfer and the move
+        is a server-side rename, so a different size there is the other host's
+        same-name upload landing after ours — `Superseded`, the file left in place."""
         src = Path(src)
         part = _check_rel(rel) + PARTIAL
         try:
@@ -433,6 +541,8 @@ class RcloneStorage:
         head, name = _split(rel)
         got = next((e for e in self._lsjson(head) if e.name == name), None)
         want = src.stat().st_size
+        if got is not None and got.size != want and head in CONTENT_ADDRESSED:
+            raise _superseded(rel, got.size, want)      # never delete the other host's
         if got is None or got.size != want:
             self.delete(rel)
             raise StorageError(
@@ -453,6 +563,16 @@ class RcloneStorage:
         self._invalidate(rel)
         if proc.returncode != 0 and not self._not_found(proc):
             raise self._fail("deletefile", rel, proc)
+
+    def touch(self, rel: str) -> None:
+        """``rclone touch --no-create``: the cloud file's modification time becomes now (the
+        listing's mtime, which the bundle GC's grace reads); a file that is not there is
+        not created."""
+        proc = self._run("touch", "--no-create", self._r(_check_rel(rel)),
+                         timeout=self.timeouts["touch"], what=rel)
+        self._invalidate(rel)
+        if proc.returncode != 0 and not self._not_found(proc):
+            raise self._fail("touch", rel, proc)
 
     def mkdirs(self) -> None:
         for sub in SUBFOLDERS:

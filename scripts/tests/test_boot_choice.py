@@ -813,3 +813,85 @@ def test_a_sidecar_never_holds_non_strict_json(two_hosts, tty, small_cap):
     strict(two_hosts.state_file("boss").read_text())
     for p in (two_hosts.cloud / "world-backups").glob("*.parent"):
         strict(p.read_text())
+
+
+# ── the prompt shows what a restore would download (module-bundles-2026-10 §3.8) ──
+
+def _bundle_lines(out):
+    return [l.strip() for l in out.splitlines()
+            if l.strip().startswith(("+ ", "(every bundle"))]
+
+
+def _mac_with_maps(two_hosts):
+    from bundle_fakes import make_module
+    make_module(two_hosts.data["mac"] / "Data/modules", "maps", version="2.0.0", packs=1,
+                extra={"art/big.webp": b"map art " * 4096})
+    return _play(two_hosts, "mac", "saturday")
+
+
+def _cloud_bundle_bytes(two_hosts, *prefixes):
+    return sum(p.stat().st_size for p in (two_hosts.cloud / "bundles").iterdir()
+               if p.name.startswith(prefixes))
+
+
+def test_prompt_says_every_bundle_is_already_here(two_hosts, tty, capsys):
+    _play(two_hosts, "mac", "saturday")                   # boss has the same `m`
+    tty(True, ["k"])
+    with two_hosts.use("boss"):
+        assert boot.choose() == 0
+    out = capsys.readouterr().out
+    assert _bundle_lines(out) == ["(every bundle is already on this machine)"]
+    cloud_line = next(i for i, l in enumerate(out.splitlines()) if l.strip().startswith("cloud "))
+    assert out.splitlines()[cloud_line + 1].strip() == "(every bundle is already on this machine)"
+
+
+def test_prompt_counts_the_bundles_this_machine_lacks(two_hosts, tty, capsys):
+    _mac_with_maps(two_hosts)                             # boss has `m`, lacks `maps`
+    tty(True, ["k"])
+    with two_hosts.use("boss"):
+        assert boot.choose() == 0
+    size = boot._gb(_cloud_bundle_bytes(two_hosts, "module@maps@"))
+    assert _bundle_lines(capsys.readouterr().out) == [f"+ 1 bundle ({size}) to fetch"]
+
+
+def test_prompt_says_all_when_this_machine_has_none_of_them(two_hosts, tty, capsys):
+    import shutil
+    _mac_with_maps(two_hosts)
+    shutil.rmtree(two_hosts.data["boss"] / "Data/modules")
+    tty(True, ["k"])
+    with two_hosts.use("boss"):
+        assert boot.choose() == 0
+    size = boot._gb(_cloud_bundle_bytes(two_hosts, "module@"))
+    assert _bundle_lines(capsys.readouterr().out) == [f"+ all 2 bundles ({size}) to fetch"]
+
+
+def test_prompt_shows_nothing_extra_for_a_full_snapshot_or_a_failure(two_hosts, tty, capsys,
+                                                                     monkeypatch):
+    _play(two_hosts, "mac", "saturday")
+    monkeypatch.setattr(cloud, "restore_cost", lambda st, snap: None)
+    tty(True, ["k"])
+    with two_hosts.use("boss"):
+        assert boot.choose() == 0
+    out = capsys.readouterr().out
+    assert _bundle_lines(out) == [] and "cloud has a newer world snapshot" in out
+
+
+def test_prompt_survives_restore_cost_raising(two_hosts, tty, capsys, monkeypatch):
+    _play(two_hosts, "mac", "saturday")
+
+    def boom(st, snap):
+        raise RuntimeError("unexpected")
+    monkeypatch.setattr(cloud, "restore_cost", boom)
+    tty(True, ["k"])
+    with two_hosts.use("boss"):
+        assert boot.choose() == 0
+    assert _bundle_lines(capsys.readouterr().out) == []
+
+
+def test_notice_line_is_unchanged_by_bundles(two_hosts, tty, capsys):
+    snap = _mac_with_maps(two_hosts)
+    tty(False)
+    with two_hosts.use("boss"):
+        assert boot.choose() == 0
+    out = capsys.readouterr().out
+    assert _bundle_lines(out) == [] and f"cloud snapshot {snap}" in out

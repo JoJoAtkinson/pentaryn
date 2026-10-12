@@ -8,8 +8,9 @@ never touch the same files.**
   start unpacks it into ``Data/assets/tokens/tokens-02/``. Extracted once, tracked
   by hash, never re-extracted, never overwritten. Local assets are never uploaded.
 - **The world flows UP.** Every server stop (and every start, before launch)
-  archives the world, Config and modules to OneDrive as a timestamped snapshot,
-  tagged with the machine that took it (``world-<UTC stamp>-fvtt<ver>-<host>.tar.gz``).
+  archives the world and Config to OneDrive as a timestamped snapshot, tagged with
+  the machine that took it (``world-<UTC stamp>-fvtt<ver>-<host>.tar.gz``). Modules
+  and systems travel beside it as content-addressed **bundles** (below).
 - **Restore is never silent.** At an interactive boot, when the newest snapshot in the
   cloud (from either machine) is newer than what this machine's world is based on, the
   boot step *tells you* and offers it as the default (``scripts/foundry/boot.py``).
@@ -30,9 +31,20 @@ snapshots, and resolves conflicts by writing *conflict copies* into the director
 inside a live database. A *stopped* database is copied wholesale, which is always
 consistent. A *running* one is never touched by the cloud at all.
 
-Sizes, re-measured 2026-10: the world is a few MB and Config 8 KB, but ``Data/modules`` is
-~2.7 GB of premium map art, so a snapshot is **~2.5–3.2 GB**. Retention is built around
-that size:
+Sizes, re-measured 2026-10-11: ``Data/worlds`` ~37 MB and ``Config`` ~6 MB, so a world
+snapshot is **~45 MB**. ``Data/modules`` (~3.45 GB, mostly premium map art that almost never
+changes) and ``Data/systems`` (~135 MB) are not in it. Each module and system folder is a
+**bundle** in ``bundles/``, named ``<kind>@<id>@<version>@<fingerprint>.tar.gz``
+(``scripts/foundry/bundles.py``). The fingerprint is a content hash that ignores LevelDB
+housekeeping, so a Foundry launch changes nothing and the same bytes on either machine get
+the same name. A bundle is uploaded only when the cloud lacks that name, so a backup costs
+~45 MB plus whatever modules really changed. Each world snapshot's ``.parent`` sidecar,
+and the tar's first member ``pentaryn-snapshot.json``, list the bundle each module and
+system was at (the manifest). A restore downloads the world tar and only the bundles this
+machine lacks. Snapshots from before bundles (untagged ones, and the first ``-mac``
+snapshot) are **full**: worlds + Config + modules in one tar. They restore exactly as
+before; the sidecar says which kind a snapshot is and the tar's first member confirms it.
+Design: ``context/plans/module-bundles-2026-10.md``. Retention:
 
 - **Ten** rolling snapshots per host (``PENTARYN_KEEP_SNAPSHOTS``).
 - A snapshot taken within **five days** of this host's newest one *replaces* it, so a
@@ -41,21 +53,30 @@ that size:
   ``major-release/`` and never pruned.
 - Uploads land as ``<name>.partial`` and are renamed when complete; a ``.partial`` is
   never a snapshot, and one older than a day is swept as a crash leftover.
-- A backup is two halves: **build** the tar (needs Foundry stopped) and **upload** it.
-  ``make vtt-down`` builds, then hands the upload to a detached ``upload-pending``
-  process and returns (``scripts/foundry/uploadq.py`` is the queue between them);
-  ``WAIT=1`` and every other caller do both halves before returning. Either way the
-  based-on record moves only when the upload completes, and a failed or crashed
-  upload stays queued for the next backup to retry.
+- A backup is two halves: **build** (needs Foundry stopped: the world tar and a tar of
+  every bundle the cloud lacks) and **upload**. ``make vtt-down`` builds, then hands the
+  upload to a detached ``upload-pending`` process and returns
+  (``scripts/foundry/uploadq.py`` is the queue between them); ``WAIT=1`` and every other
+  caller do both halves before returning. Either way the based-on record moves only when
+  the upload completes, and a failed or crashed upload stays queued for the next backup
+  to retry — except one that can never complete (a bundle it reuses was swept while it
+  waited and the module changed since): the uploader drops it, keeps its tar under
+  ``.pentaryn-tmp/incomplete/`` and goes on; a blocking backup fails loudly instead.
+- A bundle is deleted only by a mark-and-sweep after an uploading backup (or
+  ``make foundry-bundles-gc YES=1``): when no retained snapshot, safety copy,
+  ``major-release/`` generation or queued upload references it and it is older than seven
+  days. The uploader lists the cloud again before and after its snapshot lands and
+  re-uploads any referenced bundle that was swept meanwhile.
 
-Systems (132 MB) are mirrored per version and shared by both hosts (the same version is
-the same bytes); the last ``KEEP_SYSTEM_MIRRORS`` versions are kept.
+``system-backup/`` (the per-version system mirrors) is legacy: nothing writes or prunes it
+any more, and Joe deletes it by hand.
 """
 
 from __future__ import annotations
 
 import argparse
 import hashlib
+import io
 import json
 import math
 import re
@@ -67,12 +88,13 @@ import tarfile
 import tempfile
 import time
 import zipfile
+import zlib
 from contextlib import contextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from scripts.foundry import bootstate, host, uploadq
+from scripts.foundry import bootstate, bundles, host, uploadq
 from scripts.foundry import storage as storage_mod
 from scripts.foundry.storage import JUNK_NAMES, Entry, Storage, StorageError
 
@@ -81,7 +103,8 @@ from scripts.foundry.storage import JUNK_NAMES, Entry, Storage, StorageError
 # Cloud subfolders, relative to the cloud root (storage.py resolves the root).
 ASSETS_IN = "assets"              # you put zips here
 WORLD_BACKUPS = "world-backups"   # automatic, rolling, per host
-SYSTEM_BACKUP = "system-backup"   # automatic, one copy per version, shared
+SYSTEM_BACKUP = "system-backup"   # legacy: no longer written (systems are bundles);
+                                  # still swept for stale .partial uploads
 # Never pruned. One snapshot per host per Foundry GENERATION: the last state captured
 # while that host was still on it.
 MAJOR_RELEASES = "major-release"
@@ -99,10 +122,6 @@ KEEP_SAFETY_COPIES = 3
 # A snapshot taken while this host's newest one is younger than this REPLACES it.
 COALESCE_WINDOW_DAYS = 5
 
-# How many versions of each system's mirror to retain. More than one, because a system
-# rollback needs the version you were on *before* the update.
-KEEP_SYSTEM_MIRRORS = 3
-
 # A crash between upload and rename leaves a `.partial`; younger ones may be the other
 # machine mid-upload, so only these are swept.
 STALE_PARTIAL_SECONDS = 24 * 3600
@@ -110,6 +129,12 @@ STALE_PARTIAL_SECONDS = 24 * 3600
 # Where tars are built and downloads land: on the data volume, outside SNAPSHOT_PATHS.
 # The upload queue (uploadq.py) lives there too.
 TMP_DIRNAME = uploadq.TMP_DIRNAME
+
+# The disk check's world-tar estimate when this host has no regular snapshot to measure.
+WORLD_ESTIMATE_BYTES = 64 * 10**6
+
+# A bundle no retained snapshot references is swept once its upload is this old.
+GC_GRACE_DAYS = round(bundles.GC_GRACE_SECONDS / 86400)
 
 # A pack zip is `<kind>-<nn>.zip`. Append-only: published zips are never edited.
 ZIP_NAME = re.compile(r"^([a-z][a-z0-9-]*)-(\d{2})\.zip$")
@@ -133,8 +158,18 @@ KINDS = {
     "audio": "Data/assets/audio",
 }
 
-# What a rolling snapshot contains, relative to FOUNDRY_DATA. Systems are excluded.
+# What a FULL (legacy, before module bundles) snapshot contains, relative to FOUNDRY_DATA.
+# A full restore still clears all three; the boot clock (local_tree_mtime) still reads them.
 SNAPSHOT_PATHS = ["Data/worlds", "Config", "Data/modules"]
+
+# What a BUNDLED snapshot contains: the world and Config only. Every folder under
+# Data/modules and Data/systems is a content-addressed bundle in the cloud's bundles/
+# (scripts/foundry/bundles.py), named by the snapshot's manifest.
+WORLD_PATHS = ["Data/worlds", "Config"]
+
+# The first member of a bundled snapshot's tar: {"bundled": 1, "modules", "systems",
+# "host", "core"}. Authoritative; the `.parent` sidecar carries a copy. Never extracted.
+SNAPSHOT_MARKER = "pentaryn-snapshot.json"
 
 # This machine's own files under Config/, kept across every restore: options.json holds
 # this machine's absolute dataPath (a Mac path planted on BOSS would break Foundry),
@@ -178,6 +213,14 @@ def server_running() -> bool:
     return host.is_running()
 
 
+def foundry_live() -> bool:
+    """Foundry is up or coming up: its port answers, or its process exists. The process
+    test (host.pid) sees a launch from the moment it starts — before the port binds,
+    while it is already opening packs — which the port check alone misses (review MC2).
+    For a guard that must never touch a folder Foundry may be writing."""
+    return server_running() or host.pid() is not None
+
+
 def sha256_file(path: Path) -> str:
     h = hashlib.sha256()
     with path.open("rb") as fh:
@@ -213,7 +256,7 @@ README_TEXT = (
     "                Never edit a zip once added; add the next number instead.\n"
     f"                Kinds: {', '.join(sorted(KINDS))}\n\n"
     "world-backups/  AUTOMATIC — do not edit.\n"
-    "                Snapshots of the campaign, Config and modules (~2.5-3.2 GB each),\n"
+    "                Snapshots of the campaign and Config (~45 MB each),\n"
     "                written on every server stop and start, named\n"
     "                world-<UTC stamp>-fvtt<version>-<machine>.tar.gz.\n"
     f"                Each machine keeps its own most recent {KEEP_SNAPSHOTS}, and a snapshot\n"
@@ -222,17 +265,25 @@ README_TEXT = (
     "                nothing deletes those automatically.\n"
     "                A name ending .safety.tar.gz is the state a restore replaced;\n"
     f"                each machine keeps its last {KEEP_SAFETY_COPIES} of those as well.\n"
-    "                A name ending .tar.gz.parent is that snapshot's lineage (tiny).\n"
+    "                A name ending .parent is that snapshot's lineage and bundle manifest\n"
+    "                (tiny): which bundle each module and system was at.\n"
+    "                Older snapshots (names without a machine, and the first -mac one)\n"
+    "                hold the modules too (~2.5-3.3 GB) and restore as before.\n"
     "                A name ending .partial is an upload in progress (or a crash, swept\n"
     "                after a day) — never a snapshot.\n\n"
     "major-release/  AUTOMATIC — never pruned.\n"
     "                When Foundry moves to a new generation (14 -> 15), the\n"
     "                last snapshot each machine took on the old one is preserved\n"
     "                here. Deleting one is you deciding you are never going back.\n\n"
-    "system-backup/  AUTOMATIC — do not edit.\n"
-    "                One copy per game-system version, shared by both machines.\n"
-    f"                The last {KEEP_SYSTEM_MIRRORS} versions are kept, because rolling a\n"
-    "                system update back needs the code you were on BEFORE it.\n\n"
+    "bundles/        AUTOMATIC — do not edit. Shared by both machines.\n"
+    "                One tar per module or game system per content fingerprint:\n"
+    "                module@<id>@<version>@<fingerprint>.tar.gz, system@... the same.\n"
+    "                A backup uploads only the bundles this folder lacks, so the\n"
+    "                map packs go up once; a restore downloads only the bundles the\n"
+    "                machine lacks. A bundle is deleted only when no kept snapshot\n"
+    f"                lists it and it is older than {GC_GRACE_DAYS} days.\n\n"
+    "system-backup/  LEGACY — no longer written (systems are bundles now).\n"
+    "                Safe to delete by hand.\n\n"
     "Restoring is never silent and never automatic without a terminal. At an\n"
     "interactive `make vtt-up`, when this folder has a newer snapshot than the\n"
     "machine's world, you are told and the default is the newest snapshot; the\n"
@@ -253,7 +304,7 @@ def ensure_cloud(st: Storage | None = None) -> Storage:
         st.mkdirs()
         if st.read_text("README.txt") != README_TEXT:
             st.write_text("README.txt", README_TEXT)
-        for sub in (WORLD_BACKUPS, SYSTEM_BACKUP):
+        for sub in (WORLD_BACKUPS, SYSTEM_BACKUP, bundles.BUNDLES):
             for e in storage_mod.stale_partials(st, sub, max_age=STALE_PARTIAL_SECONDS):
                 st.delete(f"{sub}/{e.name}")
                 log(f"swept a stale upload {sub}/{e.name} "
@@ -295,10 +346,16 @@ def parse_snapshot(entry: Entry, folder: str = WORLD_BACKUPS) -> Snapshot | None
                     safety=bool(m.group(4)))
 
 
-def snapshots(st: Storage | None = None, folder: str = WORLD_BACKUPS) -> list[Snapshot]:
-    """Every parseable snapshot in one folder, oldest first by (stamp, name)."""
+def snapshots(st: Storage | None = None, folder: str = WORLD_BACKUPS, *,
+              fresh: bool = False, must_exist: bool = False) -> list[Snapshot]:
+    """Every parseable snapshot in one folder, oldest first by (stamp, name). `fresh`
+    drops this process's cached listing first (storage.refresh). `must_exist`: a folder
+    the storage cannot find raises StorageError instead of listing as empty."""
     st = st or store()
-    snaps = [s for e in st.ls(folder) if (s := parse_snapshot(e, folder))]
+    if fresh:
+        storage_mod.refresh(st, folder)
+    entries = st.ls(folder, must_exist=True) if must_exist else st.ls(folder)
+    snaps = [s for e in entries if (s := parse_snapshot(e, folder))]
     return sorted(snaps)
 
 
@@ -675,11 +732,11 @@ def _extract_pack(zp: Path, zname: str, pack: str, dest: Path, problems: list) -
 
 # ── World: local → OneDrive, rolling, one-way ────────────────────────────────
 
-def snapshot_digest() -> str:
-    """Content hash (path, size, int mtime) of everything a snapshot covers."""
+def _tree_digest(paths: list[str]) -> str:
+    """Content hash (path, size, int mtime) of every file under `paths`."""
     root = data_root()
     h = hashlib.sha256()
-    for rel in SNAPSHOT_PATHS:
+    for rel in paths:
         base = root / rel
         if not base.exists():
             continue
@@ -689,6 +746,27 @@ def snapshot_digest() -> str:
                 h.update(str(p.stat().st_size).encode())
                 h.update(str(int(p.stat().st_mtime)).encode())
     return h.hexdigest()
+
+
+def world_tree_digest() -> str:
+    """The world snapshot's own files (WORLD_PATHS), by path, size and int mtime."""
+    return _tree_digest(WORLD_PATHS)
+
+
+def legacy_snapshot_digest() -> str:
+    """The pre-bundles formula over SNAPSHOT_PATHS — what `.last-digest` markers hold."""
+    return _tree_digest(SNAPSHOT_PATHS)
+
+
+def snapshot_digest(manifest: dict | None = None) -> str:
+    """What a bundled snapshot of this tree would hold: the world tree plus the manifest
+    (each module/system's bundle name). A Foundry launch changes neither for an untouched
+    module — the fingerprint ignores LevelDB housekeeping — so the digest-skip holds."""
+    if manifest is None:
+        manifest = bundles.manifest(bundles.local_inventory())
+    m = {"modules": manifest.get("modules") or {}, "systems": manifest.get("systems") or {}}
+    return hashlib.sha256((world_tree_digest() + "\n" + json.dumps(m, sort_keys=True))
+                          .encode()).hexdigest()
 
 
 def local_tree_mtime() -> float | None:
@@ -738,9 +816,14 @@ def adopt_legacy_marker(st: Storage, state: bootstate.BootState) -> bootstate.Bo
     except StorageError:
         return state
     base = newest(legacy)
-    if base is None or marker != snapshot_digest():
+    if base is None:
         return state
-    state.record_snapshot(base.name, None, base.mtime, marker, by="adopt-legacy-marker",
+    # The marker holds the old formula (legacy_snapshot_digest). What is recorded is this
+    # tree's digest in the current formula, so the next backup sees "unchanged" and skips.
+    current = snapshot_digest(bundles.manifest(bundles.local_inventory(warn=lambda _m: None)))
+    if marker not in (legacy_snapshot_digest(), current):
+        return state
+    state.record_snapshot(base.name, None, base.mtime, current, by="adopt-legacy-marker",
                           lineage=[])
     log(f"recorded this world as based on {base.name} (the legacy digest marker matches)")
     return state
@@ -793,12 +876,19 @@ def backup(reason: str = "manual", if_stopped: bool = False, background: bool = 
 
 def _in_cloud(st: Storage, name: str, existing: list[Snapshot]) -> bool:
     """Is `name` still a snapshot in the cloud — rolling, or preserved in major-release/?"""
-    if any(s.name == name for s in existing):
-        return True
+    return _find_in_cloud(st, name, existing) is not None
+
+
+def _find_in_cloud(st: Storage, name: str, existing: list[Snapshot]) -> Snapshot | None:
+    """`name` as a snapshot still in the cloud — rolling (`existing`) or preserved in
+    major-release/ — or None (also when major-release/ cannot be listed)."""
+    found = next((s for s in existing if s.name == name), None)
+    if found is not None:
+        return found
     try:
-        return any(s.name == name for s in snapshots(st, MAJOR_RELEASES))
+        return next((s for s in snapshots(st, MAJOR_RELEASES) if s.name == name), None)
     except StorageError:
-        return False
+        return None
 
 
 # ── The two halves: build a tar (stopped world), upload it (any time later) ───
@@ -832,14 +922,25 @@ def _backup(st: Storage, reason: str, *, safety: bool = False,
 
     `protect` is the snapshot a restore is about to extract: this run must not delete it
     (neither coalescing nor pruning may remove the state the based-on record is about to
-    point at), and an unchanged tree it already contains needs no safety copy."""
+    point at), and an unchanged tree it already contains needs no safety copy.
+
+    Its own snapshot dropped as never completable (JobDropped) dies, loudly: every caller
+    reads None as "skipped, unchanged", and a restore would take a missing safety copy as
+    "none needed" and clear a world the cloud has no copy of."""
     _drain(st)
     job = _build(st, reason, safety=safety, protect=protect)
     if job is None:
         return None
     try:
         return _run_job(st, job)
+    except JobDropped as exc:
+        die(f"{exc}\n    nothing was recorded; rerun the backup — it snapshots the tree as it "
+            "is now" + ("\n    the restore stops here — nothing local was touched"
+                        if safety else ""))
     except StorageError as exc:
+        if job.heal:
+            die(f"re-uploading the bundle(s) the cloud lost failed: {exc}\n"
+                "    it stays queued: the next backup retries it (make foundry-backup)")
         die(f"upload failed: {exc}\n"
             f"    the snapshot is still on disk: {job.tar}\n"
             "    it stays queued: the next backup retries it (make foundry-backup)")
@@ -847,23 +948,37 @@ def _backup(st: Storage, reason: str, *, safety: bool = False,
 
 def _build(st: Storage, reason: str, *, safety: bool = False,
            protect: Snapshot | None = None) -> uploadq.Job | None:
-    """Build this tree's tar in tmp and queue it; None when there is nothing to build.
-    The caller holds BUILD_LOCK.
+    """Build this tree's snapshot in tmp and queue it; None when there is nothing to
+    build. The caller holds BUILD_LOCK. Everything is built here, while Foundry is
+    stopped: a tar of every bundle the cloud lacks, in the job's own staging folder
+    (uploadq.Job.staging), then the world tar (SNAPSHOT_MARKER first), then the job file
+    last — a job file always means a complete set.
 
-    With jobs already queued (an upload not finished yet), the tree's effective based-on
-    is the newest queued one: an unchanged tree builds nothing, a changed one is queued
-    behind it, extending it."""
+    With world jobs already queued (an upload not finished yet), the tree's effective
+    based-on is the newest queued one: an unchanged tree builds nothing, a changed one is
+    queued behind it, extending it. An unchanged tree whose snapshot names a bundle the
+    cloud lost queues a heal job instead (_heal_job): those bundles, no world tar."""
     uploadq.sweep_building()
     queued = uploadq.pending()  # before the state: a job finishing now then reads as recorded
     state = adopt_legacy_marker(st, bootstate.load())
-    digest = snapshot_digest()
+    inv = bundles.local_inventory()
+    manifest = bundles.manifest(inv)
+    digest = snapshot_digest(manifest)
+    # Fresh listings: in a boot process the prompt's restore_cost (or the boot choice)
+    # listed both folders earlier, possibly while Joe sat at the prompt.
     try:
-        existing = snapshots(st, WORLD_BACKUPS)
+        existing = snapshots(st, WORLD_BACKUPS, fresh=True)
     except StorageError as exc:
         die(f"cannot list {WORLD_BACKUPS}/: {exc}")
-    if queued:
-        parent = queued[-1].name
-        if queued[-1].digest == digest:
+    try:
+        have = bundles.listing(st, fresh=True)
+    except StorageError as exc:
+        die(f"cannot list {bundles.BUNDLES}/: {exc}")
+    _sweep_staging(manifest, have)
+    worlds = [j for j in queued if not j.heal]   # a heal job holds no world state
+    if worlds:
+        parent = worlds[-1].name
+        if worlds[-1].digest == digest:
             log(f"no change since {parent} — its upload has not finished yet")
             return None
     else:
@@ -872,9 +987,12 @@ def _build(st: Storage, reason: str, *, safety: bool = False,
             # Unchanged since the last upload or restore — but "skip" is only safe while
             # that snapshot still exists. Coalescing, pruning or prune-untagged (on either
             # machine) may have deleted it, and then this tree has no cloud copy at all.
-            if state.based_on and _in_cloud(st, state.based_on, existing):
+            base = _find_in_cloud(st, state.based_on, existing) if state.based_on else None
+            if base is not None:
                 log("no change since the last snapshot — skipped")
-                return None
+                if any(j.heal for j in queued):
+                    return None             # a re-upload of lost bundles is queued already
+                return _heal_job(st, base, inv, have, reason)
             if (safety and protect is not None and state.based_on
                     and descends(st, protect, state.based_on, state.based_on_mtime) is True):
                 log(f"no change since {state.based_on}, which {protect.name} contains — "
@@ -898,57 +1016,158 @@ def _build(st: Storage, reason: str, *, safety: bool = False,
         when += timedelta(seconds=1)
 
     tmp = tmp_dir() / name
-    last = newest(own(existing, me)) or newest(existing)
-    if last:
-        free = shutil.disk_usage(tmp.parent).free
-        if free < 2 * last.size:
-            die(f"only {_mb(free)} free on {tmp.parent} — a snapshot is ~{_mb(last.size)} and "
-                "is built locally before upload; free at least twice that")
+    missing = sorted((loc for loc in inv.values() if loc.name not in have),
+                     key=lambda loc: loc.name)
+    last = newest([s for s in own(existing, me) if not s.safety])
+    _check_backup_disk(tmp.parent, last.size if last else WORLD_ESTIMATE_BYTES, missing)
 
-    # Built under a `.building` name and renamed, then the job file written last: a job
-    # file always means a complete tar.
+    job = uploadq.Job(name=name, reason=reason, digest=digest, parent=parent, host=me,
+                      size=0, created=time.time(), safety=safety,
+                      protect=protect.name if protect else None,
+                      manifest=manifest, bundles=[loc.name for loc in missing])
+    # Staged per job: two queued jobs may stage the same bundle (the second built while
+    # the first still waits), and one job's drop() must never take the other's tar.
     building = tmp.with_name(tmp.name + uploadq.BUILDING_SUFFIX)
     try:
-        with tarfile.open(building, "w:gz") as tar:
-            for rel in SNAPSHOT_PATHS:
-                src = data_root() / rel
-                if src.exists():
-                    tar.add(src, arcname=rel)
+        for loc in missing:
+            bundles.build(loc, job.staging)
+        _build_world_tar(building, {"bundled": 1, "modules": manifest["modules"],
+                                    "systems": manifest["systems"], "host": me, "core": core})
         os.replace(building, tmp)
+        job.size = tmp.stat().st_size
+        job.save()
     except BaseException:
         building.unlink(missing_ok=True)
+        tmp.unlink(missing_ok=True)
+        shutil.rmtree(job.staging, ignore_errors=True)
         raise
-    job = uploadq.Job(name=name, reason=reason, digest=digest, parent=parent, host=me,
-                      size=tmp.stat().st_size, created=time.time(), safety=safety,
-                      protect=protect.name if protect else None)
-    job.save()
+    if missing:
+        log(f"staged {len(missing)} new bundle(s) "
+            f"({_mb(sum((job.staging / n).stat().st_size for n in job.bundles))}) for {name}")
     return job
 
 
+def _heal_job(st: Storage, base: Snapshot, inv: dict, have: dict[str, Entry],
+              reason: str) -> uploadq.Job | None:
+    """The tree is unchanged and its snapshot `base` is in the cloud, but a bundle `base`
+    names is not (deleted by hand): queue a heal job that uploads just those, from the
+    local folders (§3.5 step 3), staged now while Foundry is stopped; the upload runs in
+    the upload half, so a background vtt-down never waits for a 1.9 GB map pack.
+
+    What `base` names, never the local inventory: after a full restore (or an adopted
+    legacy marker) `base` is a full snapshot that names no bundle — its tar holds the
+    modules — so a skip uploads nothing (review R4); the next changed-tree backup uploads
+    them with a manifest that references them. `base`'s sidecar is read only when some
+    local bundle is missing from the cloud: a routine skip costs no read."""
+    local_lost = {loc.name: loc for loc in inv.values() if loc.name not in have}
+    if not local_lost:
+        return None
+    try:
+        named = _snapshot_manifest(st, base)
+    except StorageError as exc:
+        die(f"cannot read which bundles {base.name} names (to re-upload any the cloud lost): "
+            f"{exc} — rerun the backup")
+    lost = [local_lost[n] for n in sorted(bundles.manifest_names(named or {}))
+            if n in local_lost]
+    if not lost:
+        return None
+    _check_backup_disk(tmp_dir(), 0, lost)
+    me = host.host_name()
+    when = datetime.now(timezone.utc)
+    while True:
+        name = f"{uploadq.HEAL_PREFIX}{when:%Y-%m-%d-%H%M%S}-{me}"
+        if not (tmp_dir() / (name + uploadq.JOB_SUFFIX)).exists():
+            break
+        when += timedelta(seconds=1)
+    job = uploadq.Job(name=name, reason=f"{reason}: re-upload what the cloud lost",
+                      digest="", parent=base.name, host=me, size=0, created=time.time(),
+                      manifest=named, bundles=[loc.name for loc in lost], heal=True)
+    try:
+        for loc in lost:
+            bundles.build(loc, job.staging)
+        job.size = sum((job.staging / n).stat().st_size for n in job.bundles)
+        job.save()
+    except BaseException:
+        shutil.rmtree(job.staging, ignore_errors=True)
+        raise
+    log(f"{len(lost)} bundle(s) {base.name} names are gone from the cloud — staged to "
+        "upload again: " + ", ".join(loc.key for loc in lost))
+    return job
+
+
+def _upload_heal(st: Storage, job: uploadq.Job) -> None:
+    """A heal job: upload each of its bundles the cloud still lacks (a fresh listing). A
+    staged tar that is gone and cannot be rebuilt (the folder changed since) is skipped:
+    that bundle is no longer this tree's, and the next backup uploads the folder as it
+    is now."""
+    try:
+        have = bundles.listing(st, fresh=True)
+    except StorageError as exc:
+        raise StorageError(f"cannot list {bundles.BUNDLES}/: {exc}") from exc
+    staged = {n: job.staging / n for n in job.bundles}
+    rebuild = _rebuilder([], job.staging)
+    for n in sorted(staged):
+        if n in have or staged[n].is_file():
+            continue
+        new = rebuild(n)
+        if new is None:
+            log(f"bundle {n}: its staged tar is gone and the folder changed since — not "
+                "re-uploaded (the next backup uploads the folder as it is now)")
+            del staged[n]
+        else:
+            staged[n] = new
+    up = bundles.upload_missing(st, staged, have)
+    job.drop()
+    log(f"uploaded {len(up)} bundle(s) the cloud had lost")
+    return None
+
+
 def _upload_job(st: Storage, job: uploadq.Job, protect: str | None = None) -> Snapshot | None:
-    """Upload one queued tar and do everything that follows it: lineage sidecar,
-    `.partial` copy and rename, the based-on record, coalescing, pruning, system
-    mirrors. The caller holds UPLOAD_LOCK. Safe to re-run after a crash at any point:
-    a snapshot already in the cloud at the right size is not uploaded again.
+    """Upload one queued job and do everything that follows it: the bundles it staged,
+    the sidecar (lineage + manifest), the world tar's `.partial` copy and rename, the
+    checks that every bundle it names is in the cloud, the based-on record, coalescing,
+    pruning, the bundle GC. The caller holds UPLOAD_LOCK. Safe to re-run after a crash at
+    any point: a snapshot already in the cloud at the right size is not uploaded again,
+    and its bundles are checked again.
 
     The record moves only here, and only when this machine's based-on is still the one
     the tar was built to extend (`job.parent`) — otherwise the snapshot is uploaded with
     an unknown lineage and the record is left alone.
 
     `protect` (beside the job's own) is a snapshot a restore waiting on this upload is
-    about to download: neither coalescing nor pruning may take it away first."""
+    about to download: neither coalescing nor pruning may take it away first.
+
+    A job queued by the pre-bundles code (`manifest` None) holds a FULL tar: it goes up as
+    one, with a lineage-only sidecar and no bundle work. A heal job uploads its bundles
+    only (_upload_heal).
+
+    Raises _Incomplete — after removing whatever of the snapshot this or an earlier
+    attempt published — when a bundle it names is gone from the cloud and cannot be
+    rebuilt from the live folder: that job can never complete (`_run_job` drops it)."""
+    if job.heal:
+        return _upload_heal(st, job)
     me = host.host_name()
     keep_names = {job.protect, protect} - {None}
     try:
-        existing = snapshots(st, WORLD_BACKUPS)
+        existing = snapshots(st, WORLD_BACKUPS, fresh=True)
     except StorageError as exc:
         raise StorageError(f"cannot list {WORLD_BACKUPS}/: {exc}") from exc
     there = next((s for s in existing if s.name == job.name), None)
     others = [s for s in existing if s.name != job.name]
     if there is None and not job.tar.is_file():
         log(f"✗ {job.name}: its tar is gone from {tmp_dir()} — dropping it from the queue")
-        job.file.unlink(missing_ok=True)
+        _reparent_next(job)
+        job.drop()
         return None
+    bundled = job.manifest is not None
+    staged = {n: job.staging / n for n in job.bundles} if bundled else {}
+    have: dict[str, Entry] = {}
+    if bundled:
+        # This half's own listing, fresh: the job may have waited days since its build.
+        try:
+            have = bundles.listing(st, fresh=True)
+        except StorageError as exc:
+            raise StorageError(f"cannot list {bundles.BUNDLES}/: {exc}") from exc
 
     # Before writing anything: if the installed generation has moved on since this host's
     # last backup, its newest snapshot from the OLD generation is the last state that still
@@ -975,16 +1194,43 @@ def _upload_job(st: Storage, job: uploadq.Job, protect: str | None = None) -> Sn
         superseded = None
 
     size = job.size
-    # The sidecar first: by the time the snapshot's name appears, its lineage exists.
-    st.write_text(parent_rel(WORLD_BACKUPS, job.name), json.dumps(
-        {"parent": job.parent, "ancestors": ancestors,
-         "ancestor_mtimes": ancestor_mtimes, "origin_before": _finite(origin),
-         "host": me}, allow_nan=False) + "\n")
-    if there is None or there.size != size:
-        log(f"uploading {job.name} ({_mb(size)}, {job.reason}) to {st.root}...")
-        st.upload(job.tar, f"{WORLD_BACKUPS}/{job.name}")
+    sidecar = {"parent": job.parent, "ancestors": ancestors,
+               "ancestor_mtimes": ancestor_mtimes, "origin_before": _finite(origin),
+               "host": me}
+    if bundled:
+        sidecar.update({"bundled": 1, "modules": job.manifest.get("modules") or {},
+                        "systems": job.manifest.get("systems") or {}})
+    upload_world = there is None or there.size != size
+    if upload_world:
+        fresh = {n: p for n, p in staged.items() if n not in have}
+        log(f"uploading {job.name} ({_mb(size)}, {job.reason}) to {st.root}"
+            + (f" with {len(fresh)} new bundle(s) "
+               f"({_mb(sum(p.stat().st_size for p in fresh.values() if p.is_file()))})"
+               if fresh else "") + "...")
     else:
         log(f"{job.name} is already in the cloud (an earlier attempt got that far)")
+    try:
+        if bundled:
+            # Bundles, then the sidecar, then the snapshot: by the time the snapshot's
+            # name appears, its lineage and every bundle its manifest names exist.
+            bundles.upload_missing(st, staged, have,
+                                   rebuild=_rebuilder_or_incomplete(job))
+            _refresh_reused(st, job.manifest, have, staged, state, others)
+            # A first look before the sidecar names them (fresh listing): what vanished
+            # since `have` goes up again now; the look after the world tar closes the rest.
+            _verify_bundles(st, job.name, job.manifest, staged, job.staging)
+        # The sidecar first: by the time the snapshot's name appears, its lineage exists.
+        st.write_text(parent_rel(WORLD_BACKUPS, job.name),
+                      json.dumps(sidecar, allow_nan=False) + "\n")
+        if upload_world:
+            st.upload(job.tar, f"{WORLD_BACKUPS}/{job.name}")
+        if bundled:
+            # The snapshot's name is up — on a re-run too, whose world upload was skipped:
+            # every bundle its manifest names must still be there (the other host's GC
+            # may have swept one between the listing and now).
+            _verify_bundles(st, job.name, job.manifest, staged, job.staging)
+    except _Incomplete as exc:
+        raise _Incomplete(f"{exc}{_unpublish(st, job)}") from exc
 
     entry = next((e for e in st.ls(WORLD_BACKUPS) if e.name == job.name), None)
     snap = parse_snapshot(entry or Entry(job.name, size, time.time()), WORLD_BACKUPS)
@@ -1020,9 +1266,391 @@ def _upload_job(st: Storage, job: uploadq.Job, protect: str | None = None) -> Sn
     log(f"{min(len(regular), keep)} of {keep} snapshots kept for {me}"
         + (f", and {min(len(safeties), KEEP_SAFETY_COPIES)} of {KEEP_SAFETY_COPIES} "
            "restore safety copies" if safeties else ""))
-
-    mirror_systems(st)
+    _gc_after_backup(st)
     return snap
+
+
+def _unpublish(st: Storage, job: uploadq.Job) -> str:
+    """Remove `job`'s snapshot and its sidecar from the cloud — whatever of them this or
+    an earlier attempt published (a re-run after a crash past the tar has both; one that
+    died between the sidecar and the tar left the sidecar alone; deleting a name that is
+    not there is a no-op). A snapshot name must never stand without its bundles: the
+    other host's boot would offer a restore that refuses. The text to add to the reason."""
+    try:
+        st.delete(f"{WORLD_BACKUPS}/{job.name}")
+        st.delete(parent_rel(WORLD_BACKUPS, job.name))
+    except StorageError as exc:
+        return (f"\n    {job.name} could not be removed from the cloud ({exc}); a restore of "
+                "it refuses: a bundle is missing")
+    return ""
+
+
+def _reparent_next(job: uploadq.Job) -> None:
+    """`job` leaves the queue without landing: the job queued behind it was built to
+    extend it (`parent = job.name`, never recorded now) — point it at `job.parent`, the
+    true parent, so it still uploads linked, recorded and coalescible."""
+    for j in uploadq.pending():
+        if j.name != job.name and not j.heal and j.parent == job.name:
+            j.parent = job.parent
+            j.save()
+            log(f"{j.name} now extends {job.parent or 'nothing'} ({job.name} never landed)")
+
+
+def _refresh_reused(st: Storage, manifest: dict, have: dict[str, Entry],
+                    staged: dict[str, Path], state: bootstate.BootState,
+                    existing: list[Snapshot]) -> None:
+    """Before the sidecar: every bundle this snapshot reuses whose cloud mtime is past half
+    the GC grace gets its mtime set to now (storage.touch), so the other host's GC — whose
+    mark may have been taken before this snapshot's sidecar exists — sees it as young
+    and leaves it (§3.7; review DL2). Skipped for the bundles this host's own based-on
+    snapshot names while it is still listed: only this host deletes that one, and only
+    after the new snapshot has landed, so they are referenced throughout."""
+    now = time.time()
+    old = sorted(n for n in bundles.manifest_names(manifest)
+                 if n in have and n not in staged
+                 and now - have[n].mtime > bundles.GC_GRACE_SECONDS / 2)
+    if not old:
+        return
+    me = host.host_name()
+    base = next((s for s in existing if s.name == state.based_on and s.host == me), None)
+    if base is not None:
+        try:
+            kind, m = _read_sidecar(st, base)
+        except StorageError:
+            kind, m = "absent", None
+        if kind == "bundled" and m is not None:
+            safe = bundles.manifest_names(m)
+            old = [n for n in old if n not in safe]
+    for n in old:
+        st.touch(f"{bundles.BUNDLES}/{n}")
+    if old:
+        log(f"refreshed {len(old)} reused bundle(s) older than "
+            f"{bundles.GC_GRACE_SECONDS / 2 / 86400:g} days, so no GC sweeps them meanwhile")
+
+
+class _Incomplete(Exception):
+    """A bundle the new snapshot names is gone from the cloud and cannot be rebuilt."""
+
+
+class JobDropped(Exception):
+    """A queued snapshot that can never be complete was dropped from the queue (_run_job).
+    A plain exception — not SystemExit, not a None return: the queue loops (_drain,
+    upload_pending) go on to the next job; the foreground _backup turns it into die()."""
+
+
+def _sweep_staging(manifest: dict, have: dict[str, Entry]) -> None:
+    """Remove the staged bundle tars an earlier backup left behind (review PL1).
+
+    A backup that failed part-way keeps its staged tars on disk; its rerun stages only
+    what the cloud still lacks, so the tars of the bundles that did land were never
+    removed. Before anything is staged, a staged tar goes when the cloud already holds its
+    bundle (it is reused, never sent again) or when this tree's manifest no longer names
+    it (the folder changed since); what remains is exactly what this run stages again
+    (rebuilt in place) and deletes after its upload. Since the upload queue, staging is per
+    job (uploadq.Job.staging, removed by the job's drop()), so what this finds at the top
+    level is left by the pre-queue code. Top-level bundle tars only: a `.building` is
+    uploadq.sweep_building's, and a folder there is a queued job's — never this one's."""
+    d = tmp_dir() / bundles.STAGING
+    try:
+        entries = sorted(d.iterdir())
+    except OSError:
+        return
+    wanted = bundles.manifest_names(manifest)
+    gone = []
+    for p in entries:
+        if (p.is_symlink() or not p.is_file() or bundles.parse_bundle(p.name) is None
+                or (p.name not in have and p.name in wanted)):
+            continue
+        try:
+            p.unlink()
+        except OSError:
+            continue
+        gone.append(p.name)
+    if gone:
+        log(f"removed {len(gone)} bundle tar(s) an earlier backup left in {d} (in the cloud "
+            "already, or no longer this machine's)")
+
+
+def _check_backup_disk(where: Path, world: int, missing: list) -> None:
+    """free ≥ 2 × (the world tar's estimate + every bundle this backup stages), else die
+    with both numbers: everything is built locally before it is uploaded."""
+    bundle_bytes = sum(loc.bytes for loc in missing)
+    need = world + bundle_bytes
+    free = shutil.disk_usage(where).free
+    if free < 2 * need:
+        die(f"only {_mb(free)} free on {where} — this backup builds ~{_mb(need)} locally "
+            f"before upload (the world ~{_mb(world)} + {len(missing)} new bundle(s) "
+            f"{_mb(bundle_bytes)}); free at least twice that")
+
+
+def _verify_bundles(st: Storage, name: str, manifest: dict, staged: dict[str, Path],
+                    dest_dir: Path) -> None:
+    """§3.5 step 6: re-list bundles/; upload again every manifest name that vanished —
+    from its staged tar, or rebuilt from the live folder (into `dest_dir`, the job's own
+    staging folder) when its fingerprint still matches. Raises _Incomplete naming the
+    module when it does not. The listing is always fresh: over rclone a cached one would
+    never show what the other host swept meanwhile. A fresh rebuilder per look: the live
+    folder is re-hashed right before it is tarred, never trusted from minutes ago."""
+    now = bundles.listing(st, fresh=True)
+    lost = sorted(n for n in bundles.manifest_names(manifest) if n not in now)
+    rebuild = _rebuilder([], dest_dir)
+    for n in lost:
+        src = staged.get(n)
+        if src is None or not src.exists():
+            src = rebuild(n)
+            if src is None:
+                ref = bundles.parse_bundle(n)
+                raise _Incomplete(
+                    f"{ref.kind} {ref.id}: its bundle {n} vanished from the cloud and the "
+                    f"local folder changed since — snapshot {name} is incomplete")
+        log(f"bundle {n} vanished from the cloud during this backup — uploading it again")
+        bundles.upload_one(st, src, n)
+
+
+def _rebuilder(rebuilt: list[Path], dest_dir: Path | None = None):
+    """`rebuild(name)`: the bundle `name` built again from the live folder when that
+    folder's fingerprint still matches it (the inventory re-hashed, no cache, once per
+    rebuilder), else None. Each tar built is appended to `rebuilt` for the caller to
+    delete.
+
+    Only a stopped tree is tarred (review MC2): the upload half runs in the background
+    uploader, which may still be going when vtt-up starts Foundry — and Foundry rewrites
+    every pack's LevelDB housekeeping at launch, so a live tar can hold a CURRENT naming a
+    MANIFEST it lacks (an unopenable pack under a content-addressed name nothing ever
+    re-uploads). With Foundry up or launching (its port or its process — foundry_live),
+    before the tar or once it is written, this raises StorageError and keeps no tar: the
+    job stays queued and a later run with Foundry stopped rebuilds it. A folder whose
+    fingerprint changed by the time the tar is written (a module sync's swap) is a None.
+    An OSError from the hash or the tar (a file replaced mid-walk: Foundry's launch, a
+    module sync swapping the folder) is a StorageError too, never a bare exception that
+    escapes _run_job."""
+    live: dict | None = None
+
+    def rebuild(n: str) -> Path | None:
+        nonlocal live
+        ref = bundles.parse_bundle(n)
+        if ref is None:
+            return None
+        refuse = StorageError(
+            f"bundle {n} must be rebuilt from its module folder, and Foundry is running "
+            "— a live folder is never tarred; a backup with Foundry stopped rebuilds it",
+            verb="copyto")
+        if foundry_live():
+            raise refuse
+        src: Path | None = None
+        try:
+            if live is None:
+                live = bundles.local_inventory(cache=False, warn=lambda _m: None)
+            loc = live.get(ref.key)
+            if loc is None or loc.name != n:
+                return None
+            src = bundles.build(loc, dest_dir or (tmp_dir() / bundles.STAGING))
+            # Checked again once the tar is written (review MC2): a launch that began
+            # during the tar rewrites CURRENT -> a new MANIFEST before it deletes the old
+            # one — no OSError, just a tar holding a CURRENT naming a MANIFEST it lacks.
+            if foundry_live():
+                src.unlink(missing_ok=True)
+                raise refuse
+            # …and the folder must still be the content the name says: a module sync
+            # that swapped it between the inventory and the tar would otherwise put new
+            # content under the old content-addressed name, for good.
+            if bundles.fingerprint(Path(loc.path)).fp != loc.fp:
+                src.unlink(missing_ok=True)
+                return None
+        except OSError as exc:
+            if src is not None:
+                src.unlink(missing_ok=True)
+            raise StorageError(f"rebuilding bundle {n} from its module folder failed: "
+                               f"{exc} — the next backup retries it", verb="copyto") from exc
+        rebuilt.append(src)
+        return src
+    return rebuild
+
+
+def _rebuilder_or_incomplete(job: uploadq.Job):
+    """`_rebuilder` for the upload half's staged bundles (review MC1): a staged tar that
+    is gone and cannot be rebuilt (the folder changed since) is a bundle that exists
+    nowhere, so the job can never complete — _Incomplete (dropped by _run_job), never
+    the retryable StorageError upload_missing raises on a None."""
+    rebuild = _rebuilder([], job.staging)
+
+    def must(n: str) -> Path:
+        new = rebuild(n)
+        if new is None:
+            ref = bundles.parse_bundle(n)
+            what = f"{ref.kind} {ref.id}" if ref else n
+            raise _Incomplete(
+                f"{what}: its staged bundle {n} is gone from {job.staging} and the local "
+                f"folder changed since — snapshot {job.name} is incomplete")
+        return new
+    return must
+
+
+def referenced_bundles(st: Storage) -> set[str]:
+    """GC's mark phase (§3.7): every bundle any tagged snapshot's manifest names — regular
+    and .safety, every host, in world-backups/ and major-release/ — plus this host's
+    queued upload jobs. Untagged snapshots predate sidecars and name nothing; a full-era
+    sidecar names nothing.
+
+    "Cannot tell" never shrinks the mark. A tagged snapshot whose sidecar is missing,
+    empty or torn (not JSON) is marked from its tar's first member instead (the
+    authoritative SNAPSHOT_MARKER, read from the first bytes of the tar): a promotion
+    whose sidecar copy failed, a sidecar cut short. A sidecar or tar head that cannot be
+    read, a sidecar that says bundled but is malformed, or a tar head that cannot be
+    parsed raises StorageError: the caller must not sweep on a partial mark."""
+    return _mark(st)[0]
+
+
+def _remark(st: Storage, seen: set[str]):
+    """GC's second look, right before it deletes: list both folders again and read the
+    sidecars of the tagged snapshots that landed since the first mark (`seen`). Closes
+    the cross-host race in which the other host's whole backup — listing an old bundle,
+    reusing it, writing its sidecar and tar, verifying — runs while this mark reads ~25
+    sidecars; the reused bundle's refreshed mtime (_refresh_reused) closes the rest."""
+    frozen = frozenset(seen)
+    return lambda: _mark(st, frozen)[0]
+
+
+def _mark(st: Storage, skip: frozenset[str] = frozenset()
+          ) -> tuple[set[str], set[str]]:
+    """(referenced bundle names, the snapshots read) over fresh listings; snapshots named
+    in `skip` (by `rel`) were read by an earlier pass and are not read again. This host's
+    queued uploads count too (their snapshots are not in the cloud yet); the other host's
+    GC never sees them — a queued job's fresh upload mtimes and _refresh_reused are what
+    protect its bundles there.
+
+    Both folders must be found (review MD1): ensure_cloud created them, so "not found"
+    is a transient (an OneDrive itemNotFound, the app folder mid-resync) — "cannot tell",
+    which raises StorageError, never "no snapshot references anything"."""
+    out: set[str] = _queued_bundles()
+    seen: set[str] = set()
+    for folder in (WORLD_BACKUPS, MAJOR_RELEASES):
+        for s in snapshots(st, folder, fresh=True, must_exist=True):
+            if s.host is None or s.rel in skip:
+                continue
+            seen.add(s.rel)
+            m = _snapshot_manifest(st, s)
+            if m is not None:
+                out |= bundles.manifest_names(m)
+    return out, seen
+
+
+def _queued_bundles() -> set[str]:
+    """Every bundle this host's queued upload jobs name (a pre-bundles job names none)."""
+    out: set[str] = set()
+    for j in uploadq.pending():
+        try:
+            if j.manifest is not None:
+                out |= bundles.manifest_names(j.manifest)
+            out |= {n for n in (j.bundles or []) if isinstance(n, str)}
+        except (AttributeError, TypeError) as exc:   # "cannot tell" never shrinks the mark
+            raise StorageError(f"the queued upload {j.name} has a malformed manifest",
+                               verb="cat") from exc
+    return out
+
+
+def _snapshot_manifest(st: Storage, s: Snapshot) -> dict | None:
+    """The bundles snapshot `s` references, for GC's mark and the backup's healing: None
+    for a full one — untagged (they predate sidecars), a full-era sidecar, a tar with no
+    marker, a tar gone since the listing. A lost (missing, empty, torn) sidecar is
+    answered from the tar's own marker. Raises StorageError when it cannot tell — an
+    unreadable sidecar or tar head, a sidecar that says bundled with a malformed
+    manifest: "cannot tell" is never "names nothing"."""
+    if s.host is None:
+        return None
+    kind, m = _read_sidecar(st, s)
+    if kind == "bad":
+        raise StorageError(f"the sidecar of {s.rel} says bundled but its manifest is "
+                           "malformed", verb="cat")
+    if kind == "absent":
+        return _manifest_from_tar_head(st, s)
+    return m
+
+
+# How much of a snapshot tar GC reads when its sidecar is lost: the marker is the first
+# member (a few KB of JSON), so the first 256 KiB of the gzip always hold it.
+MARKER_HEAD_BYTES = 256 * 1024
+
+
+def _marker_from_head(head: bytes) -> tuple[bool, dict | None]:
+    """(marker present, its manifest) from the first bytes of a snapshot tar. Raises
+    ValueError when those bytes cannot answer (not gzip, cut inside the first member, a
+    marker that is not a valid manifest)."""
+    try:
+        raw = zlib.decompressobj(16 + zlib.MAX_WBITS).decompress(head, 16 * 1024 * 1024)
+    except zlib.error as exc:
+        raise ValueError(f"not a gzip stream: {exc}") from exc
+    try:
+        with tarfile.open(fileobj=io.BytesIO(raw), mode="r:") as tar:
+            first = tar.next()
+            if first is None:
+                raise ValueError("no first member")
+            if first.name != SNAPSHOT_MARKER:
+                return False, None
+            fh = tar.extractfile(first) if first.isfile() else None
+            body = fh.read() if fh else b""
+            if len(body) != first.size:
+                raise ValueError(f"{SNAPSHOT_MARKER} is cut short")
+    except tarfile.TarError as exc:
+        raise ValueError(f"not a readable tar head: {exc}") from exc
+    try:
+        parsed = _parse_manifest(json.loads(body))
+    except ValueError:
+        parsed = None
+    if parsed is None:
+        raise ValueError(f"its {SNAPSHOT_MARKER} is not a valid manifest")
+    return True, parsed
+
+
+def _manifest_from_tar_head(st: Storage, s: Snapshot) -> dict | None:
+    """The manifest `s`'s tar marker names (None: a full tar, or the tar is gone since
+    the listing — it then needs nothing). Raises StorageError when it cannot tell."""
+    head = st.read_head(s.rel, MARKER_HEAD_BYTES)
+    if head is None:
+        return None
+    try:
+        _marked, m = _marker_from_head(head)
+    except ValueError as exc:
+        raise StorageError(f"the sidecar of {s.rel} is missing or unreadable, and so is its "
+                           f"tar's {SNAPSHOT_MARKER} ({exc})", verb="cat") from exc
+    return m
+
+
+def _gc_after_backup(st: Storage) -> None:
+    """Sweep the bundles no retained snapshot references (after the grace period). Never
+    fatal: the snapshot is already recorded; any failure is one warning line."""
+    try:
+        refs, seen = _mark(st)
+    except StorageError as exc:
+        print(f"  ⚠ bundle GC skipped: cannot read every snapshot's manifest ({exc}) — "
+              "nothing was deleted", file=sys.stderr)
+        return
+    try:
+        swept = bundles.gc(st, referenced=refs, recheck=_remark(st, seen))
+    except StorageError as exc:
+        print(f"  ⚠ bundle GC stopped part-way: {exc} — the next backup sweeps the rest",
+              file=sys.stderr)
+        return
+    if not swept:
+        log(f"swept 0 bundles (none unreferenced for {GC_GRACE_DAYS} days)")
+
+
+def _build_world_tar(tmp: Path, marker: dict) -> None:
+    """The world snapshot: SNAPSHOT_MARKER first (a restore reads only that member to
+    tell bundled from full), then each WORLD_PATHS entry that exists."""
+    data = (json.dumps(marker, sort_keys=True, indent=1) + "\n").encode()
+    try:
+        with tarfile.open(tmp, "w:gz") as tar:
+            info = tarfile.TarInfo(SNAPSHOT_MARKER)
+            info.size, info.mtime, info.mode = len(data), int(time.time()), 0o644
+            tar.addfile(info, io.BytesIO(data))
+            for rel in WORLD_PATHS:
+                src = data_root() / rel
+                if src.exists():
+                    tar.add(src, arcname=rel)
+    except BaseException:
+        tmp.unlink(missing_ok=True)
+        raise
 
 
 # ── The background half: the queue's uploader ────────────────────────────────
@@ -1048,13 +1676,16 @@ def _ops_event(state: str, job: uploadq.Job, **extra) -> None:
 
 def _run_job(st: Storage, job: uploadq.Job, protect: str | None = None) -> Snapshot | None:
     """`_upload_job` with the status file and the ops log kept. Raises on failure (the
-    job stays queued), after recording the failure."""
+    job stays queued), after recording the failure — except a job that can never
+    complete (_Incomplete), which is dropped (_drop_job) and raises JobDropped."""
     t0 = time.time()
     uploadq.write_status(state="uploading", name=job.name, reason=job.reason,
-                         size=job.size, started=t0)
+                         size=job.size, started=t0, **({"heal": True} if job.heal else {}))
     _ops_event("uploading", job)
     try:
         snap = _upload_job(st, job, protect)
+    except _Incomplete as exc:
+        raise _drop_job(job, str(exc), t0) from exc
     except (StorageError, SystemExit) as exc:
         if isinstance(exc, SystemExit) and exc.code in (0, None):
             raise
@@ -1069,9 +1700,42 @@ def _run_job(st: Storage, job: uploadq.Job, protect: str | None = None) -> Snaps
     return snap
 
 
+def _drop_job(job: uploadq.Job, why: str, t0: float) -> JobDropped:
+    """`job` can never complete: a bundle it names vanished from the cloud and its folder
+    changed since (its snapshot is already removed from the cloud again, _upload_job).
+    Never leave it queued — it would be retried forever, every later job stuck behind
+    it, in_flight() set for good — and never retry it: a later job holds a newer state of
+    the same world, and with none queued the next backup uploads the tree (this job's
+    digest was never recorded). Its world tar is kept as incomplete/<name> (with no later
+    job it may be the only copy of that state once Foundry runs again), the job behind it
+    is re-parented, the job and its staging folder dropped, the failure recorded. Called
+    under UPLOAD_LOCK. Returns the JobDropped to raise."""
+    try:
+        kept = uploadq.keep_incomplete(job)
+    except OSError as exc:
+        kept = None
+        log(f"⚠ could not move {job.tar} aside: {exc}")
+    _reparent_next(job)
+    if kept is None and job.tar.is_file():          # never delete the only copy
+        job.file.unlink(missing_ok=True)
+        shutil.rmtree(job.staging, ignore_errors=True)
+        where = f"its world tar stays at {job.tar}"
+    else:
+        job.drop()
+        where = f"its world tar is kept at {kept}" if kept else "it had no world tar left"
+    err = f"{why} — job dropped; {where}"
+    uploadq.write_status(state="failed", name=job.name, reason=job.reason, size=job.size,
+                         started=t0, finished=time.time(), error=err, dropped=True,
+                         kept=str(kept) if kept else None)
+    _ops_event("dropped", job, error=err, seconds=round(time.time() - t0, 1))
+    return JobDropped(err)
+
+
 def _drain(st: Storage, protect: str | None = None) -> None:
     """Upload everything queued, oldest first, blocking. The caller holds UPLOAD_LOCK.
-    A failure dies: what is queued is a world state the cloud does not have yet.
+    A failure dies: what is queued is a world state the cloud does not have yet. A job
+    dropped as never completable is named and the next one goes on (the caller's own
+    backup, after this, snapshots the tree as it is now).
     `protect`: a snapshot about to be restored, kept from coalescing and pruning."""
     seen: set[str] = set()
     while (jobs := uploadq.pending()):
@@ -1082,6 +1746,8 @@ def _drain(st: Storage, protect: str | None = None) -> None:
         log(f"an earlier snapshot is still queued — uploading {job.name} first")
         try:
             _run_job(st, job, protect)
+        except JobDropped as exc:
+            print(f"  ✗ {exc}", file=sys.stderr)
         except StorageError as exc:
             die(f"the queued upload of {job.name} failed again: {exc}\n"
                 f"    it is still on disk: {job.tar} — the next backup retries it")
@@ -1119,10 +1785,24 @@ def _backup_background(st: Storage, reason: str) -> int:
     # Always start one: an uploader already running may be past its last look at the
     # queue. A second one waits for the lock and finds nothing left — never a duplicate.
     _spawn_uploader()
+    if job is not None and job.heal:
+        log(f"▸ re-uploading {len(job.bundles)} bundle(s) the cloud lost "
+            f"({_mb(job.size)}) in the background — progress: make foundry-cloud. "
+            "Don't sleep the laptop until it finishes.")
+        return 0
     what = "uploading" if job is not None else "retrying the unfinished upload of"
-    log(f"▸ {what} {head.name} ({_mb(head.size)}) in the background — progress: "
+    log(f"▸ {what} {head.name} ({_job_size(head)}) in the background — progress: "
         "make foundry-cloud. Don't sleep the laptop until it finishes.")
     return 0
+
+
+def _job_size(job: uploadq.Job) -> str:
+    """"45.0 MB" or "45.0 MB + 2 bundle(s) 1.20 GB": what the job uploads at most."""
+    if job.heal or not job.bundles:
+        return _mb(job.size)
+    staged = [job.staging / n for n in job.bundles]
+    total = sum(p.stat().st_size for p in staged if p.is_file())
+    return f"{_mb(job.size)} + {len(job.bundles)} bundle(s) {_mb(total)}"
 
 
 def _spawn_uploader() -> int:
@@ -1159,7 +1839,9 @@ def _spawn_uploader() -> int:
 def upload_pending() -> int:
     """The detached uploader: take the upload lock (waiting for any other), upload every
     queued job oldest first, re-reading the queue after each so a tar queued meanwhile
-    goes up too. 1 on the first failure — that job and the rest stay queued."""
+    goes up too. 1 on the first failure — that job and the rest stay queued. A job that
+    can never complete is dropped (named here and by `make foundry-cloud`) and the next
+    one goes on: 0 when every remaining job uploaded."""
     with uploadq.lock(uploadq.UPLOAD_LOCK):
         if not uploadq.pending():
             return 0
@@ -1184,6 +1866,9 @@ def upload_pending() -> int:
             seen.add(job.name)
             try:
                 _run_job(st, job)
+            except JobDropped as exc:
+                print(f"  ✗ {exc}", file=sys.stderr)
+                continue
             except (StorageError, SystemExit) as exc:
                 if isinstance(exc, SystemExit) and exc.code in (0, None):
                     raise
@@ -1222,6 +1907,7 @@ def promote_major_release(st: Storage, existing: list[Snapshot] | None = None) -
     me = host.host_name()
     current = generation(core_version())
     mine = own(existing if existing is not None else snapshots(st, WORLD_BACKUPS), me)
+    _repair_preserved_sidecars(st, me, mine)
     last = newest(mine)
     if not current or last is None:
         return None
@@ -1235,84 +1921,559 @@ def promote_major_release(st: Storage, existing: list[Snapshot] | None = None) -
     preserved = snapshots(st, MAJOR_RELEASES)
     if any(s.host == me and generation(s.core) == previous for s in preserved):
         return None  # this host's copy of that generation is already preserved
+    # The sidecar FIRST: a crash between the two copies leaves an orphan sidecar (harmless,
+    # and the next backup promotes again), never a preserved tar without its manifest.
+    _copy_preserved_sidecar(st, source)
     st.copy(source.rel, f"{MAJOR_RELEASES}/{source.name}")
-    try:
-        sidecar = st.read_text(parent_rel(WORLD_BACKUPS, source.name))
-        if sidecar:
-            st.write_text(parent_rel(MAJOR_RELEASES, source.name), sidecar)
-    except StorageError:
-        pass
     log(f"Foundry {previous} → {current}: preserved {source.name} in major-release/ "
         f"({_mb(source.size)}, never pruned)")
     return source
 
 
-def _version_key(v: str) -> tuple:
-    return tuple(int(p) if p.isdigit() else -1 for p in re.split(r"[.\-]", v))
+def _copy_preserved_sidecar(st: Storage, source: Snapshot) -> bool:
+    """Copy `source`'s sidecar (lineage + bundle manifest) into major-release/: read, then
+    write, the write tried twice. A failure is a loud warning, never silent: GC then
+    reads the preserved tar's own marker (referenced_bundles), so its bundles stay marked
+    and the copy stays restorable — only its lineage is lost."""
+    try:
+        sidecar = st.read_text(parent_rel(WORLD_BACKUPS, source.name))
+    except StorageError as exc:
+        _lifecycle_warning(f"could not read the sidecar of {source.name} to preserve it", exc,
+                           "the preserved copy's own marker names its bundles")
+        return False
+    if not sidecar:
+        return False
+    err: StorageError | None = None
+    for _attempt in range(2):
+        try:
+            st.write_text(parent_rel(MAJOR_RELEASES, source.name), sidecar)
+            return True
+        except StorageError as exc:
+            err = exc
+    _lifecycle_warning(f"could not copy the sidecar of {source.name} to {MAJOR_RELEASES}/",
+                       err, "the preserved copy's own marker names its bundles; the next "
+                       "backup copies the sidecar again while its source is still kept")
+    return False
 
 
-def mirror_systems(st: Storage) -> None:
-    """One copy per system version, shared by both hosts — `exists` is the dedupe."""
-    systems = data_root() / "Data/systems"
-    if not systems.is_dir():
+def _repair_preserved_sidecars(st: Storage, me: str, mine: list[Snapshot]) -> None:
+    """This host's preserved snapshots whose sidecar copy failed at promotion: copy it now
+    while the source is still in the rolling window (one major-release/ listing, which
+    the backup reads anyway). Best effort — the preserved tar's marker still names its
+    bundles for GC."""
+    rolling = {s.name for s in mine}
+    try:
+        names = {e.name for e in st.ls(MAJOR_RELEASES)}
+    except StorageError:
         return
-    listing = [e.name for e in st.ls(SYSTEM_BACKUP)]
-    for sysdir in sorted(p for p in systems.iterdir() if p.is_dir()):
-        manifest = sysdir / "system.json"
-        if not manifest.exists():
-            continue
-        try:
-            version = json.loads(manifest.read_text(encoding="utf-8")).get("version", "unknown")
-        except Exception:
-            version = "unknown"
-        name = f"{sysdir.name}-{version}.tar.gz"
-        if name in listing:
-            continue
-        tmp = tmp_dir() / name
-        with tarfile.open(tmp, "w:gz") as tar:
-            tar.add(sysdir, arcname=sysdir.name)
-        try:
-            st.upload(tmp, f"{SYSTEM_BACKUP}/{name}")
-        finally:
-            size = tmp.stat().st_size if tmp.exists() else 0
-            tmp.unlink(missing_ok=True)
-        log(f"system mirror → {name} ({_mb(size)})")
-        listing.append(name)
-        # Keep the last few versions, by version — the rollback needs the one before.
-        pat = re.compile(rf"^{re.escape(sysdir.name)}-(\d[^/]*)\.tar\.gz$")
-        versions = sorted((m.group(1), n) for n in listing if (m := pat.match(n)))
-        versions.sort(key=lambda vn: _version_key(vn[0]))
-        for _, stale in versions[:-KEEP_SYSTEM_MIRRORS]:
-            st.delete(f"{SYSTEM_BACKUP}/{stale}")
-            listing.remove(stale)
-            log(f"pruned system mirror {stale}")
+    for kept in snapshots(st, MAJOR_RELEASES):
+        if (kept.host == me and kept.name in rolling
+                and f"{kept.name}{PARENT_SUFFIX}" not in names
+                and _copy_preserved_sidecar(st, kept)):
+            log(f"copied the missing sidecar of {MAJOR_RELEASES}/{kept.name}")
 
 
 # ── Restore ──────────────────────────────────────────────────────────────────
 
-def extract_snapshot(tar_path: Path) -> None:
-    """Replace worlds/Config/modules from a local snapshot tar, keeping this machine's
-    own KEEP_LOCAL_CONFIG files.
+class RestoreError(RuntimeError):
+    """A restore refused before anything local was touched (fetch_snapshot), or a local
+    tar that cannot be applied here (extract_snapshot). The message says why."""
+
+
+# Downloads for a restore land here (a fixed folder, cleared before and after each fetch,
+# so a crash leftover never mixes with a new fetch); never the backup's staging folder.
+FETCH_DIRNAME = "fetch"
+
+
+def _parse_manifest(data) -> dict | None:
+    """{"modules": {id: name}, "systems": {id: name}} from a sidecar's or a marker's JSON
+    object; None unless it says "bundled" and every entry is a bundle name of its kind
+    and id."""
+    if not isinstance(data, dict) or not data.get("bundled"):
+        return None
+    out: dict[str, dict[str, str]] = {}
+    for kind, plural in (("module", "modules"), ("system", "systems")):
+        section = data.get(plural) or {}
+        if not isinstance(section, dict):
+            return None
+        for id, name in section.items():
+            ref = bundles.parse_bundle(name) if isinstance(name, str) else None
+            if ref is None or ref.kind != kind or ref.id != id:
+                return None
+        out[plural] = dict(sorted(section.items()))
+    return out
+
+
+def _read_sidecar(st: Storage, snap: Snapshot) -> tuple[str, dict | None]:
+    """What `snap`'s sidecar says about bundles: ("absent", None) — no sidecar, or not
+    JSON (lost); ("full", None) — a sidecar without "bundled" (lineage only, the full
+    era); ("bundled", manifest); ("bad", None) — says bundled, entries malformed. A
+    sidecar that cannot be READ raises StorageError."""
+    raw = st.read_text(parent_rel(snap.folder, snap.name))
+    if not raw:
+        return "absent", None
+    try:
+        data = json.loads(raw)
+    except ValueError:
+        return "absent", None
+    if not isinstance(data, dict) or not data.get("bundled"):
+        return "full", None
+    m = _parse_manifest(data)
+    return ("bundled", m) if m is not None else ("bad", None)
+
+
+def read_manifest(st: Storage, snap: Snapshot) -> dict | None:
+    """The bundle manifest `snap`'s sidecar records; None for a full snapshot (no sidecar,
+    an unparsable one, or one without "bundled"). A sidecar that cannot be READ raises
+    StorageError — "unreadable" is never taken to mean "full"."""
+    return _read_sidecar(st, snap)[1]
+
+
+def _read_marker(tar_path: Path) -> tuple[bool, dict | None]:
+    """(marker present, its manifest) from the tar's FIRST member only. A marker that is
+    present but not a valid bundled manifest raises RestoreError."""
+    with tarfile.open(tar_path, "r:gz") as tar:
+        first = tar.next()
+        if first is None or first.name != SNAPSHOT_MARKER:
+            return False, None
+        fh = tar.extractfile(first) if first.isfile() else None
+        try:
+            parsed = _parse_manifest(json.loads(fh.read())) if fh else None
+        except ValueError:
+            parsed = None
+    if parsed is None:
+        raise RestoreError(f"{tar_path.name}: its {SNAPSHOT_MARKER} is not a valid manifest")
+    return True, parsed
+
+
+@dataclass
+class Fetched:
+    """Everything a restore needs, on local disk and verified. `manifest` None → a full
+    (legacy) snapshot, and the three plans below are empty."""
+    snap: Snapshot | None              # None for a local tar path (the updater)
+    tar: Path
+    manifest: dict | None
+    bundle_tars: dict[str, Path]       # bundle name → downloaded tar, for every `needed`
+    needed: dict[str, str]             # "<kind>/<id>" → bundle name to install
+    extras: list[str]                  # "<kind>/<id>" here, absent from the manifest
+    unchanged: list[str]               # "<kind>/<id>" here at the manifest's bundle
+    cleanup: list[Path] = field(default_factory=list)   # temp files/dirs to remove
+
+
+def _bundle_plan(manifest: dict, *, systems: bool = True, warn=None
+                 ) -> tuple[dict[str, str], list[str], list[str]]:
+    """(needed, extras, unchanged) of `manifest` against this machine's inventory. The
+    bundle cache is read, not written: planning a restore changes nothing on disk. With
+    `systems=False` a system is never needed (the caller leaves Data/systems alone)."""
+    inv = bundles.local_inventory(save=False, warn=warn)
+    want = bundles.manifest_keys(manifest)
+    differ = {k: n for k, n in want.items() if inv.get(k) is None or inv[k].name != n}
+    needed = {k: n for k, n in differ.items() if systems or not k.startswith("system/")}
+    extras = sorted(k for k in inv if k not in want)
+    unchanged = sorted(k for k in want if k not in differ)
+    return needed, extras, unchanged
+
+
+def discard_fetched(f: Fetched) -> None:
+    """Remove a fetch's temp files (the downloaded world tar, the bundle downloads)."""
+    for p in f.cleanup:
+        try:
+            if p.is_dir() and not p.is_symlink():
+                shutil.rmtree(p, ignore_errors=True)
+            else:
+                p.unlink(missing_ok=True)
+        except OSError:
+            pass
+
+
+def fetch_snapshot(st: Storage, snap: Snapshot, *, systems: bool = True) -> Fetched:
+    """Download `snap` and every bundle this machine lacks for it, and verify them; touch
+    nothing local. Raises RestoreError (temp files removed) when the cloud lacks a bundle,
+    a download fails or arrives short, or the sidecar and the tar's marker disagree.
+
+    The tar's first member (SNAPSHOT_MARKER) is authoritative. A sidecar that is present
+    must agree with it both ways; a sidecar that is missing (lost, or the tar renamed by
+    hand) is not a disagreement — the marker then names the bundles. With
+    `systems=False` (the updater) no system bundle is needed or downloaded."""
+    try:
+        side, side_manifest = _read_sidecar(st, snap)
+    except StorageError as exc:
+        raise RestoreError(f"cannot read the sidecar of {snap.name} — nothing local was "
+                           f"touched: {exc}") from exc
+    local_tar = tmp_dir() / snap.name
+    fetch_dir = tmp_dir() / FETCH_DIRNAME
+    f = Fetched(snap, local_tar, None, {}, {}, [], [], cleanup=[local_tar, fetch_dir])
+    have: dict[str, Entry] = {}
+
+    def plan(manifest: dict) -> None:
+        nonlocal have
+        f.manifest = manifest
+        f.needed, f.extras, f.unchanged = _bundle_plan(manifest, systems=systems)
+        try:
+            have = bundles.listing(st, fresh=True)
+        except StorageError as exc:
+            raise RestoreError(f"cannot list {bundles.BUNDLES}/ — nothing local was "
+                               f"touched: {exc}") from exc
+        gone = [f"{n} ({k})" for k, n in f.needed.items() if n not in have]
+        if gone:
+            raise RestoreError(f"cannot restore {snap.name} completely — missing from the "
+                               f"cloud: {', '.join(gone)} — nothing local was touched")
+        _refuse_links(_destinations(f.needed, systems)[0], snap.name,
+                      "nothing local was touched")
+
+    def check_disk(world: int) -> None:
+        bundle_bytes = sum(have[n].size for n in f.needed.values())
+        need = world + bundle_bytes
+        free = shutil.disk_usage(tmp_dir()).free
+        if free < 2 * need:
+            raise RestoreError(
+                f"only {_mb(free)} free on {tmp_dir()} — restoring {snap.name} downloads "
+                f"~{_mb(need)} (the world {_mb(world)} + {len(f.needed)} bundle(s) "
+                f"{_mb(bundle_bytes)}); free at least twice that — nothing local was touched")
+
+    try:
+        if side == "bundled":
+            plan(side_manifest)            # before the download: a missing bundle costs 0 B
+        check_disk(snap.size)              # before any download
+        shutil.rmtree(fetch_dir, ignore_errors=True)
+        log(f"downloading {snap.name} ({_mb(snap.size)}, {snap.host_label})...")
+        try:
+            st.download(snap.rel, local_tar)
+        except StorageError as exc:
+            raise RestoreError(f"download of {snap.name} failed — nothing local was touched: "
+                               f"{exc}\n    to boot the local world instead: "
+                               "make foundry-up FROM=local") from exc
+        if local_tar.stat().st_size != snap.size:
+            raise RestoreError(f"download of {snap.name} is {local_tar.stat().st_size} B, the "
+                               f"cloud says {snap.size} B — nothing local was touched")
+        try:
+            marked, in_tar = _read_marker(local_tar)
+            # the whole stream, not just its first member: a corruption deeper in would
+            # otherwise surface in apply_snapshot, after the clear (review R2)
+            bundles.read_all(local_tar)
+        except (tarfile.TarError, OSError, EOFError, zlib.error, ValueError) as exc:
+            raise RestoreError(f"{snap.name} is not a readable snapshot — nothing local was "
+                               f"touched: {exc}") from exc
+        why = None
+        if side == "bad":
+            why = "the sidecar says bundled but its manifest is malformed"
+        elif side == "full" and marked:
+            why = "the snapshot is bundled, its sidecar is not"
+        elif side == "bundled" and not marked:
+            why = "the sidecar says bundled, the snapshot has no marker"
+        elif side == "bundled" and in_tar != side_manifest:
+            why = "the sidecar names other bundles than the snapshot"
+        if why:
+            raise RestoreError(f"sidecar and snapshot disagree for {snap.name} ({why}) — "
+                               "nothing local was touched")
+        if side == "absent" and marked:
+            log(f"{snap.name} has no sidecar — its own {SNAPSHOT_MARKER} names its bundles")
+            plan(in_tar)
+            check_disk(0)                  # the world tar is already here
+        if f.needed:
+            total = sum(have[n].size for n in f.needed.values())
+            log(f"downloading {len(f.needed)} bundle(s) ({_mb(total)})...")
+            try:
+                f.bundle_tars = bundles.fetch(st, f.needed.values(), fetch_dir, have)
+            except StorageError as exc:
+                raise RestoreError(f"fetching the bundles of {snap.name} failed — nothing "
+                                   f"local was touched: {exc}") from exc
+            # A size match is not a whole archive (a zeroed OneDrive block, a bad sync):
+            # read each one end to end and check its members now, while nothing local has
+            # been touched — bundles.extract would find it after the world was cleared.
+            for key, name in sorted(f.needed.items()):
+                try:
+                    bundles.verify(f.bundle_tars[name], *key.split("/", 1))
+                except ValueError as exc:
+                    raise RestoreError(
+                        f"bundle {name} of {snap.name} is not usable — nothing local was "
+                        f"touched: {exc}\n    rerun (a bad download), or delete it from the "
+                        f"cloud's {bundles.BUNDLES}/: the next backup on a machine that has "
+                        f"{key} uploads it again") from exc
+    except BaseException:
+        discard_fetched(f)
+        raise
+    return f
+
+
+class RestoreCost(tuple):
+    """(world_bytes, n_bundles, bundle_bytes) a restore of a bundled snapshot downloads;
+    `.total` is how many bundles its manifest names (n_bundles == total: this machine has
+    none of them); `.missing` the "<kind>/<id>" of every needed bundle the cloud lacks
+    (counted in n_bundles, not in bundle_bytes) — a restore of it would refuse."""
+
+    def __new__(cls, world_bytes: int, n_bundles: int, bundle_bytes: int, total: int,
+                missing: tuple[str, ...] = ()):
+        self = super().__new__(cls, (world_bytes, n_bundles, bundle_bytes))
+        self.total = total
+        self.missing = tuple(missing)
+        return self
+
+    world_bytes = property(lambda self: self[0])
+    n_bundles = property(lambda self: self[1])
+    bundle_bytes = property(lambda self: self[2])
+
+
+def restore_cost(st: Storage, snap: Snapshot) -> RestoreCost | None:
+    """What restoring `snap` here would download (§3.8): one sidecar read, one bundles/
+    listing, the local inventory (its cache read, never written). None for a full
+    snapshot, a lost sidecar, or any failure — the boot prompt then shows nothing extra.
+    A needed bundle the listing lacks is named in `.missing`, never silently dropped: the
+    prompt says the restore would refuse and makes keeping local the default (review
+    R5)."""
+    try:
+        m = read_manifest(st, snap)
+        if m is None:
+            return None
+        needed, _extras, _unchanged = _bundle_plan(m, warn=lambda _m: None)
+        have = bundles.listing(st)
+        size = sum(have[n].size for n in needed.values() if n in have)
+        missing = tuple(k for k, n in sorted(needed.items()) if n not in have)
+        return RestoreCost(snap.size, len(needed), size, len(bundles.manifest_keys(m)),
+                           missing)
+    except Exception:  # noqa: BLE001 — a cost estimate never stops a boot
+        return None
+
+
+def _bundle_summary(plural: str, unchanged: int, installed: list[str], size: int,
+                    removed: list[str], left: list[str]) -> str:
+    if not (installed or removed or left):
+        return f"{plural}: all {unchanged} unchanged" if unchanged else f"{plural}: none"
+    out = (f"{plural}: {len(installed)} installed ({_mb(size)}), {unchanged} unchanged, "
+           f"{len(removed)} removed")
+    if left:
+        out += f", {len(left)} left ({', '.join(k.split('/', 1)[1] for k in left)})"
+    return out
+
+
+# Where a restore puts a folder it must replace but no snapshot or bundle holds (a module
+# folder without module.json): beside the boot state, outside Data/ and Config/, so it is
+# never snapshotted, bundled, inventoried or swept. Nothing deletes it; Joe does.
+REPLACED_DIRNAME = "pentaryn-replaced"
+
+
+def _destinations(needed: dict[str, str], systems: bool = True
+                  ) -> tuple[list[str], list[str]]:
+    """(links, unbundled) among the folders a restore would replace: a needed id whose
+    folder here is a symlink (a dev checkout linked in — the inventory skips it, so no
+    snapshot or bundle holds what it points at), or a folder (or file) the inventory
+    skips (no manifest file). Both are outside every cloud copy; neither may be deleted."""
+    root = data_root()
+    links, unbundled = [], []
+    for key in sorted(needed):
+        kind, id = key.split("/", 1)
+        if kind == "system" and not systems:
+            continue
+        dest = root / bundles.ROOTS[kind] / id
+        if dest.is_symlink():
+            links.append(key)
+        elif dest.exists() and not (dest.is_dir()
+                                    and (dest / bundles.MANIFEST_FILE[kind]).is_file()):
+            unbundled.append(key)
+    return links, unbundled
+
+
+def _refuse_links(links: list[str], label: str, done: str) -> None:
+    if not links:
+        return
+    root = data_root()
+    rels = [f"{bundles.ROOTS[k.split('/', 1)[0]]}/{k.split('/', 1)[1]}" for k in links]
+    where = ", ".join(f"{rel} → {(root / rel).resolve()}" for rel in rels)
+    raise RestoreError(f"{label} names {', '.join(links)}, but here {where} is a symlink — a "
+                       f"restore never replaces a link (no cloud copy holds what it points at). "
+                       f"Remove the link and rerun, or boot FROM=local — {done}")
+
+
+def _move_aside(keys: list[str]) -> list[str]:
+    """Move each folder to REPLACED_DIRNAME/<UTC stamp>/<its relpath>; return the lines."""
+    if not keys:
+        return []
+    rels = []
+    for key in keys:
+        kind, id = key.split("/", 1)
+        rels.append(f"{bundles.ROOTS[kind]}/{id}")
+    return _move_aside_rels(
+        rels, f"not a bundle — no {'/'.join(sorted(set(bundles.MANIFEST_FILE.values())))} "
+              "— so no snapshot holds it")
+
+
+def _aside_stamp() -> str:
+    return datetime.now(timezone.utc).strftime("%Y-%m-%d-%H%M%S")
+
+
+def _move_aside_rels(rels: list[str], why: str, stamp: str | None = None) -> list[str]:
+    """Move each `rel` under the data root (a folder, a file or a link — moved as itself,
+    never followed) to REPLACED_DIRNAME/<UTC stamp>/<rel>; log and return the lines."""
+    root = data_root()
+    stamp = stamp or _aside_stamp()
+    base = root / REPLACED_DIRNAME / stamp
+    out = []
+    for rel in rels:
+        (base / rel).parent.mkdir(parents=True, exist_ok=True)
+        shutil.move(str(root / rel), str(base / rel))
+        out.append(f"{rel} → {REPLACED_DIRNAME}/{stamp}/{rel}")
+    if out:
+        log(f"moved aside ({why}): " + "; ".join(out))
+    return out
+
+
+def _clear_keeping(target: Path, keep: list[Path]) -> None:
+    """Clear `target` (Data/modules, for a full restore) except the entries in `keep`,
+    which no bundle and so no bundled safety copy holds: they stay in place (review DL8).
+    Links are removed as links, never followed."""
+    held = {p.name for p in keep}
+    for p in sorted(target.iterdir()):
+        if p.name in held:
+            continue
+        if p.is_dir() and not p.is_symlink():
+            shutil.rmtree(p)
+        else:
+            p.unlink()
+    rel = target.relative_to(data_root()).as_posix()
+    log(f"cleared {rel}, keeping in place what is not a bundle (no snapshot holds it): "
+        + ", ".join(sorted(held)))
+
+
+def _keep_filter(keep: list[Path]):
+    """tarfile's "data" filter, plus: the first member the snapshot has at or under a kept
+    entry's name moves that entry aside first (_move_aside_rels), so a full snapshot's
+    module never lands inside, over or through it."""
+    prefix = bundles.ROOTS["module"] + "/"
+    pending = {p.name: f"{prefix}{p.name}" for p in keep}
+    stamp = _aside_stamp()
+
+    def guard(member: tarfile.TarInfo, dest: str):
+        name = member.name
+        while name.startswith("./"):
+            name = name[2:]
+        if name.startswith(prefix):
+            child = name[len(prefix):].split("/", 1)[0]
+            if child in pending:
+                _move_aside_rels([pending.pop(child)], "not a bundle, so no snapshot holds "
+                                 "it, and the snapshot brings the same name", stamp)
+        return tarfile.data_filter(member, dest)
+    return guard
+
+
+def apply_snapshot(f: Fetched, *, systems: bool = True) -> None:
+    """Make this machine the snapshot. Full: clear worlds/Config/modules and extract (as
+    before bundles) — except what in Data/modules is not a bundle, which no bundled safety
+    copy holds: it stays, or is moved aside to REPLACED_DIRNAME when the snapshot brings
+    the same name. Bundled: clear worlds/Config, extract the world tar, put each needed
+    bundle in place, leave unchanged modules untouched, remove the extras — unless there
+    was no local world (nothing in the cloud references them then): those are left and
+    listed. Both keep this machine's KEEP_LOCAL_CONFIG files and fix a foreign dataPath.
+    With `systems=False` (the updater, which restores the system from its own aside copy)
+    Data/systems is left alone. A RestoreError means nothing was touched.
 
     Each target is cleared before extracting: `extractall` overlays, so restoring an older
     snapshot over a newer tree would keep every file the newer version added — a
     mixed-version install that runs, the worst kind of failed restore."""
     root = data_root()
-    kept = {rel: (root / rel).read_bytes() for rel in KEEP_LOCAL_CONFIG
-            if (root / rel).is_file()}
-    for rel in SNAPSHOT_PATHS:
-        target = root / rel
-        if target.exists():
-            shutil.rmtree(target)
-            log(f"cleared {rel}")
-    with tarfile.open(tar_path, "r:gz") as tar:
-        tar.extractall(root, filter="data")
+    bundled = f.manifest is not None
+
+    def ours(key: str) -> bool:
+        return systems or not key.startswith("system/")
+
+    with tarfile.open(f.tar, "r:gz") as tar:
+        members = None
+        if bundled:
+            # Before anything is cleared: a bundled world tar holds only WORLD_PATHS, and
+            # every bundle to install is on this disk.
+            members = [m for m in tar.getmembers() if m.name != SNAPSHOT_MARKER]
+            stray = [m.name for m in members if not any(
+                m.name == r or m.name.startswith(r + "/") for r in WORLD_PATHS)]
+            if stray:
+                raise RestoreError(f"{f.tar.name} is bundled but holds {stray[0]!r} outside "
+                                   f"{' and '.join(WORLD_PATHS)} — nothing was touched")
+            unfetched = [n for k, n in f.needed.items() if ours(k) and n not in f.bundle_tars]
+            if unfetched:
+                raise RestoreError(f"bundles not fetched: {', '.join(unfetched)} — nothing "
+                                   "was touched")
+            links, unbundled = _destinations(f.needed, systems)
+            _refuse_links(links, f.snap.name if f.snap else f.tar.name, "nothing was touched")
+        had_world = tree_has_world()
+        kept = {rel: (root / rel).read_bytes() for rel in KEEP_LOCAL_CONFIG
+                if (root / rel).is_file()}
+        # A full snapshot replaces Data/modules whole, but the safety copy just taken is
+        # bundled: a folder the inventory skips (no module.json, hidden, '@', a link) or a
+        # loose file there has no copy anywhere. It stays in place — moved aside only if
+        # the snapshot brings the same name (review DL8). A bundled restore never clears
+        # Data/modules: it removes only inventory extras, which the safety copy holds.
+        mods = root / bundles.ROOTS["module"]
+        keep = [] if bundled or mods.is_symlink() else bundles.unbundled("module", root)
+        for rel in (WORLD_PATHS if bundled else SNAPSHOT_PATHS):
+            target = root / rel
+            if keep and target == mods:
+                _clear_keeping(target, keep)
+            elif target.exists():
+                shutil.rmtree(target)
+                log(f"cleared {rel}")
+        tar.extractall(root, members=members, filter=_keep_filter(keep) if keep else "data")
     for rel, data in kept.items():
         (root / rel).parent.mkdir(parents=True, exist_ok=True)
         (root / rel).write_bytes(data)
     if kept:
         log(f"kept this machine's {', '.join(Path(r).name for r in kept)}")
     _fix_foreign_data_path(root, kept)
+    if not bundled:
+        return
+
+    _move_aside(unbundled)
+    installed, removed, left = [], [], []
+    for key, name in sorted(f.needed.items()):
+        if not ours(key):
+            continue
+        kind, id = key.split("/", 1)
+        bundles.extract(f.bundle_tars[name], kind, id, root)
+        installed.append(key)
+    for key in f.extras:
+        if not ours(key):
+            continue
+        if not had_world:
+            left.append(key)
+            continue
+        kind, id = key.split("/", 1)
+        path = root / bundles.ROOTS[kind] / id
+        if path.is_dir() and not path.is_symlink():
+            shutil.rmtree(path)
+        removed.append(key)
+    if left:
+        log("left in place (no local world, so no cloud copy references them): "
+            + ", ".join(left))
+    parts = []
+    for kind, plural in (("module", "modules"), ("system", "systems")):
+        if kind == "system" and not systems:
+            parts.append(f"{plural}: not touched")
+            continue
+        mine = [k for k in installed if k.startswith(kind + "/")]
+        mine_size = sum(f.bundle_tars[f.needed[k]].stat().st_size for k in mine)
+        parts.append(_bundle_summary(
+            plural, sum(1 for k in f.unchanged if k.startswith(kind + "/")), mine, mine_size,
+            [k for k in removed if k.startswith(kind + "/")],
+            [k for k in left if k.startswith(kind + "/")]))
+    label = f.snap.name if f.snap else f.tar.name
+    log(f"restored {label}: world {_mb(f.tar.stat().st_size)}; {'; '.join(parts)}")
+
+
+def extract_snapshot(tar_path: Path, *, systems: bool = True) -> None:
+    """Restore from a LOCAL snapshot tar (the updater's entry point). A full tar is
+    applied as before bundles. A bundled tar is applied only when every bundle it names
+    is already here at its fingerprint — there is nothing to download them from — else
+    RestoreError (a RuntimeError) names the missing ones before anything is touched."""
+    tar_path = Path(tar_path)
+    marked, manifest = _read_marker(tar_path)
+    if not marked:
+        apply_snapshot(Fetched(None, tar_path, None, {}, {}, [], []), systems=systems)
+        return
+    needed, extras, unchanged = _bundle_plan(manifest, systems=systems)
+    lacking = list(needed.values())
+    if lacking:
+        raise RestoreError(f"{tar_path.name} needs bundles this machine does not have: "
+                           f"{', '.join(lacking)} — restore it from the cloud "
+                           "(make foundry-restore SNAP=…); nothing was touched")
+    apply_snapshot(Fetched(None, tar_path, manifest, {}, needed, extras, unchanged),
+                   systems=systems)
 
 
 def _fix_foreign_data_path(root: Path, kept: dict) -> None:
@@ -1333,9 +2494,11 @@ def _fix_foreign_data_path(root: Path, kept: dict) -> None:
 
 
 def restore_snapshot(st: Storage, snap: Snapshot, reason: str = "manual") -> None:
-    """resolve → download → safety backup → clear → extract. Nothing local is touched
-    until the chosen bytes are on this disk, and the safety backup protects `snap` from
-    its own pruning, so the based-on record never names a snapshot this restore deleted.
+    """fetch (world tar + the bundles this machine lacks, verified) → safety backup →
+    apply. Nothing local is touched until every byte is on this disk, and the safety
+    backup protects `snap` from its own pruning, so the based-on record never names a
+    snapshot this restore deleted; its manifest references every local module before a
+    restore removes any.
 
     Holds both queue locks throughout, and uploads anything still queued first: a
     background upload finishing after the extract would record the old world as this
@@ -1348,18 +2511,11 @@ def restore_snapshot(st: Storage, snap: Snapshot, reason: str = "manual") -> Non
 
 
 def _restore_locked(st: Storage, snap: Snapshot, reason: str) -> None:
-    local_tar = tmp_dir() / snap.name
-    log(f"downloading {snap.name} ({_mb(snap.size)}, {snap.host_label})...")
     try:
-        st.download(snap.rel, local_tar)
-    except StorageError as exc:
-        local_tar.unlink(missing_ok=True)
-        die(f"download of {snap.name} failed — nothing local was touched: {exc}\n"
-            "    to boot the local world instead: make foundry-up FROM=local")
+        f = fetch_snapshot(st, snap)
+    except RestoreError as exc:
+        die(str(exc))
     try:
-        if local_tar.stat().st_size != snap.size:
-            die(f"download of {snap.name} is {local_tar.stat().st_size} B, the cloud says "
-                f"{snap.size} B — nothing local was touched")
         safety = _backup(st, f"pre-restore safety copy ({reason})", safety=True,
                          protect=snap)
         before = safety.name if safety else bootstate.load().based_on
@@ -1374,11 +2530,18 @@ def _restore_locked(st: Storage, snap: Snapshot, reason: str) -> None:
                 back = (f"the previous state ({before}) is contained in {snap.name}: "
                         f"make foundry-restore SNAP={snap.name}")
         try:
-            extract_snapshot(local_tar)
+            apply_snapshot(f)
+        except RestoreError as exc:
+            die(f"restore of {snap.name} refused: {exc}\n    {back}")
         except Exception as exc:  # noqa: BLE001
             die(f"extract of {snap.name} failed part-way: {exc}\n    {back}")
         anc = read_lineage(st, snap)
-        bootstate.load().record_snapshot(snap.name, snap.host, snap.mtime, snapshot_digest(),
+        # The digest of what `snap` holds — its world, as now on disk, and ITS manifest —
+        # not of the local tree: extras a world-less restore left in place are not in
+        # that manifest, so the next backup differs, uploads, and its manifest references
+        # them before any later restore may remove them (review DL5/R1, §1 #9).
+        digest = snapshot_digest(f.manifest) if f.manifest is not None else snapshot_digest()
+        bootstate.load().record_snapshot(snap.name, snap.host, snap.mtime, digest,
                                          by=f"restore:{reason}",
                                          lineage=list(anc.names) if anc else [],
                                          lineage_mtimes=list(anc.mtimes) if anc else [],
@@ -1390,23 +2553,26 @@ def _restore_locked(st: Storage, snap: Snapshot, reason: str) -> None:
                                          clear_pending=True)
         log(f"restored {snap.name}" + (f" (the state it replaced: {before})" if before else ""))
     finally:
-        local_tar.unlink(missing_ok=True)
+        discard_fetched(f)
 
-    # Snapshots cover worlds/Config/modules but NOT Data/systems, mirrored separately.
+
+def _snapshot_kind(st: Storage, s: Snapshot) -> str:
+    """'bundled' / 'full' from the sidecar ('?' when it cannot be read or is malformed).
+    Untagged snapshots predate sidecars: full, without a read."""
+    if s.host is None:
+        return "full"
     try:
-        mirrors = [e.name for e in st.ls(SYSTEM_BACKUP)]
+        kind, _m = _read_sidecar(st, s)
     except StorageError:
-        mirrors = []
-    if mirrors:
-        log("note: systems are NOT part of this snapshot. If you are rolling back a")
-        log("      system update, also restore its code from system-backup/:")
-        for m in mirrors[-KEEP_SYSTEM_MIRRORS:]:
-            log(f"        {m}")
+        return "?"
+    return {"bundled": "bundled", "bad": "?"}.get(kind, "full")
 
 
-def _print_listing(snaps: list[Snapshot]) -> None:
+def _print_listing(snaps: list[Snapshot], st: Storage | None = None) -> None:
+    """One row per snapshot; with `st`, a full/bundled column after the host."""
     for s in by_mtime(snaps):
-        print(f"      {s.name:<58} {s.host_label:<9} {_utc(s.mtime)}  "
+        kind = f"{_snapshot_kind(st, s):<7} " if st is not None else ""
+        print(f"      {s.name:<58} {s.host_label:<9} {kind}{_utc(s.mtime)}  "
               f"{s.core or '?':<8} {_mb(s.size):>9}")
 
 
@@ -1426,10 +2592,10 @@ def restore(which: str | None, yes: bool = False, reason: str = "manual") -> int
     if which is None:
         state = bootstate.load()
         print(f"  snapshots in {st.root}/{WORLD_BACKUPS} (newest last, all machines):")
-        _print_listing(rolling)
+        _print_listing(rolling, st)
         if preserved:
             print(f"\n  preserved past generations in {MAJOR_RELEASES}/ (never pruned):")
-            _print_listing(preserved)
+            _print_listing(preserved, st)
             print("      ⚠ restoring one of these gives you a world last opened by an")
             print("        OLDER Foundry. Reinstall that version first, or it will be")
             print("        migrated forward again on the next launch.")
@@ -1482,11 +2648,14 @@ def prune_untagged(yes: bool = False) -> int:
 
 
 def _upload_lines() -> list[str]:
-    """What `make foundry-cloud` says about this host's queue: running, stuck, last."""
+    """What `make foundry-cloud` says about this host's queue: running, stuck, last — and
+    the kept tar of a job dropped as never completable, for as long as it is there (the
+    next job's status overwrites the "last" line)."""
     try:
         jobs = uploadq.pending()
         running = uploadq.busy(uploadq.UPLOAD_LOCK)
         s = uploadq.read_status()
+        kept = uploadq.incomplete()
     except OSError:
         return []
     lines = []
@@ -1498,16 +2667,23 @@ def _upload_lines() -> list[str]:
                      + (f" (started {_utc(started)})" if started else "")
                      + f" — don't sleep the laptop until it finishes; "
                        f"log: {tmp_dir() / uploadq.LOG_FILE}")
-        lines += [f"queued: {j.name} ({_mb(j.size)})" for j in jobs if j.name != cur]
-        return lines
-    for j in jobs:
-        lines.append(f"pending: {j.name} ({_mb(j.size)}) — not uploading (interrupted?); "
-                     "the next backup or make vtt-down retries it (now: make foundry-backup)")
-    if name and s.get("state") == "done":
-        lines.append(f"last: {name} done {_utc(s.get('finished') or s.get('updated') or 0)}")
-    elif name and s.get("state") == "failed":
-        lines.append(f"last: {name} FAILED {_utc(s.get('finished') or s.get('updated') or 0)}"
-                     f": {s.get('error') or '?'}")
+        lines += [f"queued: {j.name} ({_job_size(j)})" for j in jobs if j.name != cur]
+    else:
+        for j in jobs:
+            lines.append(f"pending: {j.name} ({_job_size(j)}) — not uploading (interrupted?); "
+                         "the next backup or make vtt-down retries it "
+                         "(now: make foundry-backup)")
+        when = _utc(s.get("finished") or s.get("updated") or 0)
+        if name and s.get("state") == "done":
+            lines.append(f"last: {name} done {when}")
+        elif name and s.get("state") == "failed":
+            lines.append(f"last: {name} {'DROPPED' if s.get('dropped') else 'FAILED'} {when}"
+                         f": {s.get('error') or '?'}")
+    for p in kept:
+        if not (s.get("dropped") and s.get("kept") == str(p) and not running):
+            lines.append(f"dropped: {p.name} could never be complete (a bundle it named was "
+                         f"gone from the cloud) — its world tar is kept at {p}; delete it "
+                         "once a newer snapshot is up")
     return lines
 
 
@@ -1542,8 +2718,97 @@ def status() -> int:
     if untagged:
         log(f"untagged     {len(untagged)} ({_mb(sum(s.size for s in untagged))}) — "
             "make foundry-prune-untagged")
+    log(_bundles_status_line(st))
     log(f"keep         {host.keep_snapshots()} per host")
     log(f"foundry      {'RUNNING' if server_running() else 'stopped'}")
+    return 0
+
+
+def _plural(n: int, word: str) -> str:
+    return f"{n} {word}{'' if n == 1 else 's'}"
+
+
+def _bundles_status_line(st: Storage) -> str:
+    """`bundles      N in the cloud (x); M unreferenced (y, swept after 7 days); local: A
+    modules + B systems, all in the cloud` (or `K not yet uploaded`)."""
+    try:
+        have = {n: e for n, e in bundles.listing(st).items() if bundles.parse_bundle(n)}
+    except StorageError as exc:
+        die(f"cannot list {bundles.BUNDLES}/: {exc}")
+    line = f"bundles      {len(have)} in the cloud"
+    if have:
+        line += f" ({_mb(sum(e.size for e in have.values()))})"
+    try:
+        refs = referenced_bundles(st)
+        unref = [e for n, e in have.items() if n not in refs]
+    except StorageError as exc:
+        line += f"; unreferenced: unknown (a manifest cannot be read: {exc})"
+    else:
+        if unref:
+            line += (f"; {len(unref)} unreferenced ({_mb(sum(e.size for e in unref))}, "
+                     f"swept after {GC_GRACE_DAYS} days)")
+    inv = bundles.local_inventory(warn=lambda _m: None)
+    mods = sum(1 for loc in inv.values() if loc.kind == "module")
+    lacking = sum(1 for loc in inv.values() if loc.name not in have)
+    line += (f"; local: {_plural(mods, 'module')} + {_plural(len(inv) - mods, 'system')}, "
+             + (f"{lacking} not yet uploaded" if lacking else "all in the cloud"))
+    return line
+
+
+def bundles_cmd() -> int:
+    """`cloud bundles`: every local module/system with its bundle and whether the cloud
+    has it, then the cloud bundles no retained snapshot references."""
+    st = ensure_cloud()
+    inv = bundles.local_inventory()
+    try:
+        have = bundles.listing(st)
+    except StorageError as exc:
+        die(f"cannot list {bundles.BUNDLES}/: {exc}")
+    print(f"  on this machine ({host.host_name()}): {len(inv)} bundle(s), "
+          f"{_mb(sum(loc.bytes for loc in inv.values()))} — kind, id, version, "
+          "fingerprint, size, in the cloud")
+    for loc in sorted(inv.values(), key=lambda l: (l.kind, l.id)):
+        print(f"      {loc.kind:<6} {loc.id:<40} {loc.version:<12} {loc.fp}  "
+              f"{_mb(loc.bytes):>9}  {'yes' if loc.name in have else 'no'}")
+    try:
+        refs = referenced_bundles(st)
+    except StorageError as exc:
+        print(f"  ⚠ cannot tell which cloud bundles are unreferenced: {exc}", file=sys.stderr)
+        return 0
+    now = time.time()
+    unref = sorted((n, e) for n, e in have.items()
+                   if bundles.parse_bundle(n) and n not in refs)
+    print(f"\n  in the cloud, referenced by no snapshot: {len(unref)} "
+          f"({_mb(sum(e.size for _n, e in unref))}; swept {GC_GRACE_DAYS} days after upload)")
+    for n, e in unref:
+        print(f"      {n}  {_mb(e.size):>9}  {(now - e.mtime) / 86400:.1f} days old")
+    return 0
+
+
+def bundles_gc_cmd(yes: bool = False) -> int:
+    """`cloud bundles-gc [--yes]`: the GC sweep by hand. A dry run unless `yes`."""
+    st = ensure_cloud()
+    try:
+        refs, seen = _mark(st)
+        have = bundles.listing(st, fresh=True)
+    except StorageError as exc:
+        die(f"cannot read every snapshot's manifest — nothing was deleted: {exc}")
+    try:
+        doomed = bundles.gc(st, referenced=refs, dry_run=not yes, recheck=_remark(st, seen))
+    except StorageError as exc:
+        die(f"the sweep stopped part-way: {exc} — rerun it")
+    now = time.time()
+    total = sum(have[n].size for n in doomed if n in have)
+    for n in doomed:
+        e = have.get(n)
+        print(f"      {n}  {_mb(e.size) if e else '?':>9}  "
+              f"{(now - e.mtime) / 86400 if e else 0:.1f} days old")
+    if not doomed:      # gc logs the count and bytes itself when there is something
+        log(f"{'swept' if yes else 'would sweep'} 0 bundle(s) ({_mb(0)}) — every bundle in "
+            f"the cloud is referenced or younger than {GC_GRACE_DAYS} days")
+    elif not yes:
+        log(f"dry run ({_mb(total)}): rerun with --yes (make foundry-bundles-gc YES=1) to "
+            "delete them")
     return 0
 
 
@@ -1554,7 +2819,7 @@ def main(argv: list[str] | None = None) -> int:
     a.add_argument("--dry-run", action="store_true")
     a.add_argument("--if-reachable", action="store_true",
                    help="warn and exit 0 instead of failing when the cloud is unreachable")
-    b = sub.add_parser("backup", help="snapshot world+config+modules to OneDrive (up)")
+    b = sub.add_parser("backup", help="snapshot world+Config (+ new bundles) to OneDrive (up)")
     b.add_argument("--reason", default="manual")
     b.add_argument("--if-stopped", action="store_true",
                    help="skip instead of failing when the server is up")
@@ -1569,6 +2834,9 @@ def main(argv: list[str] | None = None) -> int:
     p = sub.add_parser("prune-untagged", help="list untagged snapshots and delete on confirm")
     p.add_argument("--yes", action="store_true")
     sub.add_parser("status", help="show what is where")
+    sub.add_parser("bundles", help="list local modules/systems and the cloud's bundles")
+    g = sub.add_parser("bundles-gc", help="sweep unreferenced bundles (a dry run unless --yes)")
+    g.add_argument("--yes", action="store_true")
 
     args = ap.parse_args(argv)
     try:
@@ -1585,6 +2853,10 @@ def main(argv: list[str] | None = None) -> int:
             return restore(args.snapshot, args.yes)
         if args.cmd == "prune-untagged":
             return prune_untagged(args.yes)
+        if args.cmd == "bundles":
+            return bundles_cmd()
+        if args.cmd == "bundles-gc":
+            return bundles_gc_cmd(args.yes)
         return status()
     except host.HostError as exc:
         die(str(exc))

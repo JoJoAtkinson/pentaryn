@@ -255,8 +255,10 @@ every package action 400 while `authenticate()` reported success.
 
 ### Backup retention (reworked 2026-08-21; per host since 2026-10-11)
 
-A snapshot is **~2.5–3.2 GB** — `Data/modules` is 2.7 GB of premium map art, not the "2.5 MB"
-`cloud.py` used to claim. So:
+A world snapshot is **~45 MB** (worlds + Config) since module bundles; modules and systems are
+content-addressed bundles in `bundles/`, uploaded only when they change ([`ops.md`](ops.md) §3).
+Snapshots from before that are **~2.5–3.2 GB** (they hold `Data/modules`). The retention below
+was sized for those and still applies to every snapshot:
 
 * **10** rolling snapshots **per host** (was 100 — a 250 GB ceiling). Each machine prunes only
   its own; legacy untagged snapshots are never pruned automatically.
@@ -271,9 +273,10 @@ A snapshot is **~2.5–3.2 GB** — `Data/modules` is 2.7 GB of premium map art,
   what makes the generation rule work without a separate index, the host suffix what scopes
   every rule above. Older names (no host, or no version) parse as "untagged" and "unknown
   version", treated as *nobody's* and *cannot tell*.
-* `KEEP_SYSTEM_MIRRORS = 3`: `mirror_systems()` used to delete every older system tar before
-  writing the new one, which destroyed the only copy of the version a system rollback needs,
-  at exactly the moment it was needed.
+* System mirrors (`system-backup/`, `KEEP_SYSTEM_MIRRORS`, `mirror_systems()`) are retired:
+  systems are bundles now, and a bundle any retained snapshot names is never swept. The
+  rollback's own system copy is still the local aside (`.state/system-aside/`), and the world
+  rollback never downloads or requires a system bundle.
 
 ---
 
