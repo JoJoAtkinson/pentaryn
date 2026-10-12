@@ -300,11 +300,11 @@ export class AttributeReview extends ApplicationV2 {
       m => `<option value="${m}" ${m === this.sort ? "selected" : ""}>${esc(_loc(SORT_LABEL[m] ?? `PENTARYN_TIES.review.sort.${m}`))}</option>`
     ).join("");
     const chip = (k, label) =>
-      `<button type="button" class="pt-chip ${this.filter === k ? "pt-chip-on" : ""}" data-filter="${k}">${label}</button>`;
+      `<button type="button" class="pt-filter-chip ${this.filter === k ? "pt-filter-chip-on" : ""}" data-filter="${k}">${label}</button>`;
 
     // Scope filter, beside the others: Global (reusable world-building) or Personal (one character's history)
     const scope = k =>
-      `<button type="button" class="pt-chip pt-review-tab ${this.tab === k ? "pt-chip-on" : ""}" data-tab="${k}">${esc(_loc(TAB_LABEL[k] ?? `PENTARYN_TIES.review.tab.${k}`))} (<span data-count="tab-${k}">0</span>)</button>`;
+      `<button type="button" class="pt-filter-chip pt-review-tab ${this.tab === k ? "pt-filter-chip-on" : ""}" data-tab="${k}">${esc(_loc(TAB_LABEL[k] ?? `PENTARYN_TIES.review.tab.${k}`))} (<span data-count="tab-${k}">0</span>)</button>`;
     const head = `<header class="pt-review-head">
       <div class="pt-review-bar">
         <input type="search" class="pt-review-search" placeholder="${esc(_loc("PENTARYN_TIES.review.search"))}" value="${esc(this.search)}">
@@ -685,14 +685,14 @@ export class AttributeReview extends ApplicationV2 {
     for (const btn of root.querySelectorAll(".pt-review-tab")) {
       btn.addEventListener("click", () => {
         this.tab = btn.dataset.tab;
-        for (const b of root.querySelectorAll(".pt-review-tab")) b.classList.toggle("pt-chip-on", b === btn);
+        for (const b of root.querySelectorAll(".pt-review-tab")) b.classList.toggle("pt-filter-chip-on", b === btn);
         this.applyFilter();
       });
     }
     for (const btn of root.querySelectorAll("[data-filter]")) {
       btn.addEventListener("click", () => {
         this.filter = btn.dataset.filter;
-        for (const b of root.querySelectorAll("[data-filter]")) b.classList.toggle("pt-chip-on", b === btn);
+        for (const b of root.querySelectorAll("[data-filter]")) b.classList.toggle("pt-filter-chip-on", b === btn);
         this.applyFilter();
       });
     }

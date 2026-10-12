@@ -37,6 +37,11 @@ Fixed (declared): key 5 (or `known.open`) on a **hidden** Known entry opens its 
 showing nothing — that one entry is un-hidden (as its Unhide button would) and the Known tab repaints
 in place, so an already-open sheet shows it too. Other hidden entries stay hidden. ties-ui-E2.
 
+Fixed (declared): the stance chip (the dot plus its word) looks like a chip again, not a filter
+button — the GM's filter and tab buttons (Attributes world filter, Review tabs and filters) are now
+`pt-filter-chip` / `pt-filter-chip-on` / `pt-filter-chip-quiet`, so `.pt-chip` is the stance chip's
+alone and its narrow-sheet dot-only override works again. ties-ui-M2.
+
 Fixed (declared): the chat cards — the "… studies …" stub, the tempo line and the GM's share
 whisper — name every creature by its **token** name, never its actor name, so a GM-only world actor
 name cannot reach player chat. The token is found on any scene, not only the one the posting

@@ -454,12 +454,12 @@ function worldKnowledgeSection(character, isGM) {
     ? `<div class="pt-world-filter" role="group" aria-label="${esc(_loc("PENTARYN_TIES.attributes.filterLabel"))}">
         ${filters
           .map(
-            k => `<button type="button" class="pt-chip${k === active ? " pt-chip-on" : ""}"
+            k => `<button type="button" class="pt-filter-chip${k === active ? " pt-filter-chip-on" : ""}"
                     data-action="world-filter" data-filter="${k}">${esc(_loc(FILTER_LABEL[k] ?? `PENTARYN_TIES.attributes.filter.${k}`))}</button>`
           )
           .join("")}
-        <button type="button" class="pt-chip pt-chip-quiet" data-action="world-collapse">${esc(_loc("PENTARYN_TIES.attributes.collapseAll"))}</button>
-        <button type="button" class="pt-chip pt-chip-quiet" data-action="world-expand">${esc(_loc("PENTARYN_TIES.attributes.expandAll"))}</button>
+        <button type="button" class="pt-filter-chip pt-filter-chip-quiet" data-action="world-collapse">${esc(_loc("PENTARYN_TIES.attributes.collapseAll"))}</button>
+        <button type="button" class="pt-filter-chip pt-filter-chip-quiet" data-action="world-expand">${esc(_loc("PENTARYN_TIES.attributes.expandAll"))}</button>
       </div>`
     : "";
 
@@ -877,7 +877,7 @@ function bindWorldTree(box) {
   const applyFilter = key => {
     worldFilter.set(characterId, key);
     for (const b of wrap.querySelectorAll("[data-action='world-filter']"))
-      b.classList.toggle("pt-chip-on", b.dataset.filter === key);
+      b.classList.toggle("pt-filter-chip-on", b.dataset.filter === key);
 
     const matches = li => key === "all" || li.dataset.state === key;
     const keep = li => {

@@ -39,7 +39,7 @@
     {
       "nth": 0,
       "tag": "BUTTON",
-      "className": "pt-chip pt-review-tab pt-chip-on pt-review-tab-warn",
+      "className": "pt-filter-chip pt-review-tab pt-filter-chip-on pt-review-tab-warn",
       "dataset": {
         "tab": "world"
       },
@@ -50,7 +50,7 @@
     {
       "nth": 0,
       "tag": "BUTTON",
-      "className": "pt-chip pt-review-tab pt-review-tab-warn",
+      "className": "pt-filter-chip pt-review-tab pt-review-tab-warn",
       "dataset": {
         "tab": "personal"
       },
@@ -61,7 +61,7 @@
     {
       "nth": 0,
       "tag": "BUTTON",
-      "className": "pt-chip pt-chip-on",
+      "className": "pt-filter-chip pt-filter-chip-on",
       "dataset": {
         "filter": "all"
       },
@@ -72,7 +72,7 @@
     {
       "nth": 0,
       "tag": "BUTTON",
-      "className": "pt-chip ",
+      "className": "pt-filter-chip ",
       "dataset": {
         "filter": "needs"
       },
@@ -83,7 +83,7 @@
     {
       "nth": 0,
       "tag": "BUTTON",
-      "className": "pt-chip ",
+      "className": "pt-filter-chip ",
       "dataset": {
         "filter": "selected"
       },
@@ -340,7 +340,7 @@
     {
       "nth": 0,
       "tag": "BUTTON",
-      "className": "pt-chip pt-review-tab pt-chip-on pt-review-tab-warn",
+      "className": "pt-filter-chip pt-review-tab pt-filter-chip-on pt-review-tab-warn",
       "dataset": {
         "tab": "world"
       },
@@ -348,14 +348,14 @@
       "calls": [],
       "console": [],
       "after": {
-        "className": "pt-chip pt-review-tab pt-chip-on pt-review-tab-warn",
+        "className": "pt-filter-chip pt-review-tab pt-filter-chip-on pt-review-tab-warn",
         "parent": "pt-review-bar"
       }
     },
     {
       "nth": 0,
       "tag": "BUTTON",
-      "className": "pt-chip pt-review-tab pt-review-tab-warn",
+      "className": "pt-filter-chip pt-review-tab pt-review-tab-warn",
       "dataset": {
         "tab": "personal"
       },
@@ -363,14 +363,14 @@
       "calls": [],
       "console": [],
       "after": {
-        "className": "pt-chip pt-review-tab pt-review-tab-warn pt-chip-on",
+        "className": "pt-filter-chip pt-review-tab pt-review-tab-warn pt-filter-chip-on",
         "parent": "pt-review-bar"
       }
     },
     {
       "nth": 0,
       "tag": "BUTTON",
-      "className": "pt-chip pt-chip-on",
+      "className": "pt-filter-chip pt-filter-chip-on",
       "dataset": {
         "filter": "all"
       },
@@ -378,14 +378,14 @@
       "calls": [],
       "console": [],
       "after": {
-        "className": "pt-chip pt-chip-on",
+        "className": "pt-filter-chip pt-filter-chip-on",
         "parent": "pt-review-bar"
       }
     },
     {
       "nth": 0,
       "tag": "BUTTON",
-      "className": "pt-chip ",
+      "className": "pt-filter-chip ",
       "dataset": {
         "filter": "needs"
       },
@@ -393,14 +393,14 @@
       "calls": [],
       "console": [],
       "after": {
-        "className": "pt-chip pt-chip-on",
+        "className": "pt-filter-chip pt-filter-chip-on",
         "parent": "pt-review-bar"
       }
     },
     {
       "nth": 0,
       "tag": "BUTTON",
-      "className": "pt-chip ",
+      "className": "pt-filter-chip ",
       "dataset": {
         "filter": "selected"
       },
@@ -408,7 +408,7 @@
       "calls": [],
       "console": [],
       "after": {
-        "className": "pt-chip pt-chip-on",
+        "className": "pt-filter-chip pt-filter-chip-on",
         "parent": "pt-review-bar"
       }
     },

@@ -472,7 +472,7 @@
     {
       "nth": 0,
       "tag": "BUTTON",
-      "className": "pt-chip pt-chip-on",
+      "className": "pt-filter-chip pt-filter-chip-on",
       "dataset": {
         "action": "world-filter",
         "filter": "all"
@@ -485,7 +485,7 @@
     {
       "nth": 0,
       "tag": "BUTTON",
-      "className": "pt-chip",
+      "className": "pt-filter-chip",
       "dataset": {
         "action": "world-filter",
         "filter": "unknown"
@@ -498,7 +498,7 @@
     {
       "nth": 0,
       "tag": "BUTTON",
-      "className": "pt-chip",
+      "className": "pt-filter-chip",
       "dataset": {
         "action": "world-filter",
         "filter": "pending"
@@ -511,7 +511,7 @@
     {
       "nth": 0,
       "tag": "BUTTON",
-      "className": "pt-chip",
+      "className": "pt-filter-chip",
       "dataset": {
         "action": "world-filter",
         "filter": "failed"
@@ -524,7 +524,7 @@
     {
       "nth": 0,
       "tag": "BUTTON",
-      "className": "pt-chip pt-chip-quiet",
+      "className": "pt-filter-chip pt-filter-chip-quiet",
       "dataset": {
         "action": "world-collapse"
       },
@@ -536,7 +536,7 @@
     {
       "nth": 0,
       "tag": "BUTTON",
-      "className": "pt-chip pt-chip-quiet",
+      "className": "pt-filter-chip pt-filter-chip-quiet",
       "dataset": {
         "action": "world-expand"
       },
@@ -3126,7 +3126,7 @@
     {
       "nth": 0,
       "tag": "BUTTON",
-      "className": "pt-chip pt-chip-on",
+      "className": "pt-filter-chip pt-filter-chip-on",
       "dataset": {
         "action": "world-filter",
         "filter": "all"
@@ -3135,14 +3135,14 @@
       "calls": [],
       "console": [],
       "after": {
-        "className": "pt-chip pt-chip-on",
+        "className": "pt-filter-chip pt-filter-chip-on",
         "parent": "pt-world-filter"
       }
     },
     {
       "nth": 0,
       "tag": "BUTTON",
-      "className": "pt-chip",
+      "className": "pt-filter-chip",
       "dataset": {
         "action": "world-filter",
         "filter": "unknown"
@@ -3151,14 +3151,14 @@
       "calls": [],
       "console": [],
       "after": {
-        "className": "pt-chip",
+        "className": "pt-filter-chip",
         "parent": "pt-world-filter"
       }
     },
     {
       "nth": 0,
       "tag": "BUTTON",
-      "className": "pt-chip",
+      "className": "pt-filter-chip",
       "dataset": {
         "action": "world-filter",
         "filter": "pending"
@@ -3167,14 +3167,14 @@
       "calls": [],
       "console": [],
       "after": {
-        "className": "pt-chip",
+        "className": "pt-filter-chip",
         "parent": "pt-world-filter"
       }
     },
     {
       "nth": 0,
       "tag": "BUTTON",
-      "className": "pt-chip",
+      "className": "pt-filter-chip",
       "dataset": {
         "action": "world-filter",
         "filter": "failed"
@@ -3183,14 +3183,14 @@
       "calls": [],
       "console": [],
       "after": {
-        "className": "pt-chip",
+        "className": "pt-filter-chip",
         "parent": "pt-world-filter"
       }
     },
     {
       "nth": 0,
       "tag": "BUTTON",
-      "className": "pt-chip pt-chip-quiet",
+      "className": "pt-filter-chip pt-filter-chip-quiet",
       "dataset": {
         "action": "world-collapse"
       },
@@ -3198,14 +3198,14 @@
       "calls": [],
       "console": [],
       "after": {
-        "className": "pt-chip pt-chip-quiet",
+        "className": "pt-filter-chip pt-filter-chip-quiet",
         "parent": "pt-world-filter"
       }
     },
     {
       "nth": 0,
       "tag": "BUTTON",
-      "className": "pt-chip pt-chip-quiet",
+      "className": "pt-filter-chip pt-filter-chip-quiet",
       "dataset": {
         "action": "world-expand"
       },
@@ -3213,7 +3213,7 @@
       "calls": [],
       "console": [],
       "after": {
-        "className": "pt-chip pt-chip-quiet",
+        "className": "pt-filter-chip pt-filter-chip-quiet",
         "parent": "pt-world-filter"
       }
     },
