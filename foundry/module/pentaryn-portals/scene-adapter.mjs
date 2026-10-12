@@ -50,12 +50,13 @@ export function teleportBehaviors(region) {
 /** Core 14.368+ stores a same-scene destination relative to its behavior; resolve against it. */
 export const toAbsolute = behavior => u => foundry.utils.parseUuid(u, { relative: behavior })?.uuid ?? null;
 
+/** One behavior's destination regions, resolved relative to it (core 14.368+), in order; unresolvable entries dropped. */
+export const behaviorDestinations = behavior =>
+  [...(behavior.system.destinations ?? [])].map(u => fromUuidSync(u, { relative: behavior })).filter(Boolean);
+
 export function destinationsOf(region) {
   const out = [];
-  for (const b of teleportBehaviors(region)) for (const u of b.system.destinations ?? []) {
-    const d = fromUuidSync(u, { relative: b });
-    if (d) out.push({ region: d, behavior: b });
-  }
+  for (const b of teleportBehaviors(region)) for (const d of behaviorDestinations(b)) out.push({ region: d, behavior: b });
   return out;
 }
 
