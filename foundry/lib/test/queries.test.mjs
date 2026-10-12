@@ -58,6 +58,20 @@ test("queryGM: NO_GM without a GM, local handler on the GM's own client, user.qu
   assert.deepEqual(await queryGM("q", { a: 1 }, { g: remote, timeout: 5 }), { n: "q", d: { a: 1 }, o: { timeout: 5 } });
 });
 
+test("KIT-R7 queryGM: a remote timeout is TIMEOUT; a remote coded rejection keeps its code; anything else is INTERNAL", async () => {
+  const rejecting = reason => ({ game: { users: { activeGM: { isSelf: false, query: async () => { throw new Error(reason); } } } } });
+  // socket.io's ack timeout reaches User#query as `new Error("operation has timed out")`
+  await assert.rejects(queryGM("pentaryn-x.list", {}, { g: rejecting("operation has timed out") }),
+    { code: "TIMEOUT", message: "TIMEOUT: pentaryn-x.list" });
+  // the GM handler's coded error crosses the socket as its message only; the prefix survives
+  await assert.rejects(queryGM("q", {}, { g: rejecting("NOT_GM: this client is not a GM") }),
+    { code: "NOT_GM", message: "NOT_GM: this client is not a GM" });
+  await assert.rejects(queryGM("q", {}, { g: rejecting("NOT_READY: pentaryn-x") }), { code: "NOT_READY", message: "NOT_READY: pentaryn-x" });
+  await assert.rejects(queryGM("q", {}, { g: rejecting("BAD_ARGS: wait timed out is not a number") }), { code: "BAD_ARGS" }, "a coded message is never re-read as a timeout");
+  await assert.rejects(queryGM("q", {}, { g: rejecting("User [abc] is not active") }),
+    { code: "INTERNAL", message: "INTERNAL: User [abc] is not active" });
+});
+
 test("K3 guarded passes core's ctx through; sender:'any' accepts a player sender, still needs a GM receiver", async () => {
   const g = env(true);
   const player = { isGM: false, name: "P" };

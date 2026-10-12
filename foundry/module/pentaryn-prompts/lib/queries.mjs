@@ -6,7 +6,7 @@
  * `queries.mjs`: the manifest is the one table.
  */
 
-import { codedError } from "./errors.mjs";
+import { codedError, errorCode } from "./errors.mjs";
 import { toPlain } from "./api.mjs";
 
 /**
@@ -87,7 +87,9 @@ export function registerQueries(manifest, getApi, { g = globalThis, log = null }
 
 /**
  * Ask the active GM to run a query. On the GM's own client the handler runs locally.
- * Throws NO_GM when no GM is connected.
+ * Throws NO_GM when no GM is connected. A remote rejection comes back coded (KIT-R7): socket.io's
+ * ack timeout ("operation has timed out") is `TIMEOUT: <name>`; the GM handler's own coded error
+ * (NOT_GM, NOT_READY, …) crosses the socket as its message and keeps its code; anything else is INTERNAL.
  */
 export async function queryGM(name, data, { g = globalThis, timeout = 10000 } = {}) {
   const gm = g.game.users?.activeGM;
@@ -97,5 +99,13 @@ export async function queryGM(name, data, { g = globalThis, timeout = 10000 } = 
     if (typeof handler !== "function") throw codedError("UNSUPPORTED", name);
     return handler(data, { user: g.game.user });
   }
-  return gm.query(name, data, { timeout });
+  try {
+    return await gm.query(name, data, { timeout });
+  } catch (err) {
+    const message = String(err?.message ?? err);
+    const remote = errorCode(err);
+    if (!remote && /timed out/i.test(message)) throw codedError("TIMEOUT", name);
+    const code = remote ?? "INTERNAL";
+    throw codedError(code, message.startsWith(`${code}:`) ? message.slice(code.length + 1).trimStart() : message);
+  }
 }
