@@ -53,6 +53,10 @@
   is already HTML from the page, as the uuid branch keeps it), no longer escaped a second time, so
   "Tom &amp; Jerry" no longer shows a literal `&amp;`. A saved copy containing such an embed may show
   "Update my copy" once, because its hash changes.
+- **[declared] journal-perf-3:** an open item bar no longer re-sanitizes its item's description on
+  every redraw: `sanitize` is remembered per item as it is per page (`sanitizeMemo`, keyed by the
+  item's uuid, `_stats.modifiedTime`, its identified flag and the embed label; an item without a
+  modification time is never cached). The `updateItem` refresh rule (`needsItemRefresh`) is unchanged.
 
 ## Unreleased (blueprint migration, wave 2)
 

@@ -1,4 +1,4 @@
-// items-journal-33 — refresh cost. (1) sanitize is memoised per page (makeMemo; counted through
+// items-journal-33 — refresh cost. (1) sanitize is memoised per page and per item (journal-perf-3) (makeMemo; counted through
 // sanitizeMemo.misses), (2) an item update refreshes bars only while an item bar is open
 // (needsItemRefresh; counted through decorate's element reads), (3) one personal() per bar action.
 import { mock, test } from "node:test";
@@ -64,6 +64,32 @@ test("pageDescriptor: one sanitize per page per modification; a page without _st
   A.pageDescriptor(bare, entry);
   A.pageDescriptor(bare, entry);
   assert.equal(A.sanitizeMemo.misses - before, 4);
+});
+
+test("journal-perf-3: itemDescriptor sanitizes once per item modification, identify flag and label; no modifiedTime, no cache", () => {
+  const pile = makeDoc("Actor", { id: "pileActor0000003", name: "Crate", flags: { "item-piles": { data: { enabled: true } } } });
+  const item = makeDoc("Item", { id: "item000000000003", name: "Lamp", img: "l.webp",
+    system: { identified: true, description: { value: "<p>lit</p>" }, unidentified: { description: "<p>a lamp?</p>" } },
+    _stats: { modifiedTime: 1 } }, { parent: pile });
+  const src = { item, pile, pileName: "Crate" };
+  const before = A.sanitizeMemo.misses;
+  const d1 = A.itemDescriptor(src);
+  const d2 = A.itemDescriptor(src);
+  assert.deepEqual(d1, d2);
+  assert.match(d1.body, /<p>lit<\/p>$/);
+  assert.equal(A.sanitizeMemo.misses - before, 1, "two decorates, one sanitize");
+  item.system.identified = false;
+  assert.match(A.itemDescriptor(src).body, /<p>a lamp\?<\/p>$/, "the identify flag is part of the key");
+  assert.equal(A.sanitizeMemo.misses - before, 2);
+  item.system.identified = true;
+  item.system.description.value = "<p>out</p>";
+  item._stats.modifiedTime = 2;
+  assert.match(A.itemDescriptor(src).body, /<p>out<\/p>$/);
+  assert.equal(A.sanitizeMemo.misses - before, 3);
+  const bare = makeDoc("Item", { id: "item000000000004", name: "Rope", img: "r.webp", system: { description: { value: "<p>r</p>" } } }, { parent: pile });
+  A.itemDescriptor({ item: bare, pile, pileName: "Crate" });
+  A.itemDescriptor({ item: bare, pile, pileName: "Crate" });
+  assert.equal(A.sanitizeMemo.misses - before, 5, "an item without _stats is never cached");
 });
 
 /** A window root decorate() can work on: a footer slot, classList, and a counter of element reads. */
