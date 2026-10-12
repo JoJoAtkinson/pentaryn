@@ -27,6 +27,13 @@
   failed for a reason other than "already exists", so each later `put()` skipped the mkdir and its
   upload was refused until reload. A folder is now remembered only when the create succeeds or the
   error says `EEXIST` / "already exists"; any other failure is retried on the next `put()`.
+- **[declared] One bad report file no longer breaks `list` or `inspect`** (feedback-EC-3, rob-4,
+  perf-5): `readAll` promised "unreadable files skipped", but a corrupt file or a GET answering
+  403/500 made `list()` reject and set `inspect`'s `reports` to null, and an array-valued file
+  listed as a row of nulls. Each file is now read in its own try/catch, only a non-array object
+  is kept, and every skipped path logs one `pentaryn-feedback | report file … skipped` warning;
+  `count` counts only the readable reports. `inspect`'s remaining null case (the folder listing
+  itself failing) also warns now.
 
 ## 0.1.2 — 2026-10-11 (live-check fix)
 

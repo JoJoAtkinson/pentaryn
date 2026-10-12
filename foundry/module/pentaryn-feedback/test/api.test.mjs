@@ -249,6 +249,36 @@ test("list: oldest first, status filter, limit, count; a player gets NOT_GM", as
   F.become({ userId: gm.id });
 });
 
+// feedback-EC-3: readAll promised "unreadable files skipped", but one corrupt file (res.json()
+// rejects), a GET answering 500, or an array-valued .json made list() reject (or list a row of
+// nulls) and set inspect's reports to null. Now each bad file is skipped with one warn line.
+test("feedback-EC-3: a corrupt, a 500 and an array-valued report file are skipped; list() returns the rest", async () => {
+  seed();
+  const bad = {
+    [`${dir}/cccccc0000000004.json`]: async () => { throw new SyntaxError("Unexpected token < in JSON"); },
+    [`${dir}/dddddd0000000005.json`]: async () => { throw codedError("INTERNAL", `fetch ${dir}/dddddd0000000005.json: HTTP 500`); },
+    [`${dir}/eeeeee0000000006.json`]: async () => [{ id: "x" }],
+  };
+  for (const path of Object.keys(bad)) mem.files.set(path, {});
+  const warned = [];
+  const warn = mock.method(console, "warn", (...a) => { warned.push(a); });
+  try {
+    useStore({ ...mem, get: path => bad[path]?.() ?? mem.get(path) });
+    const all = await api.list({ status: "all" });
+    assert.deepEqual(all.reports.map(r => r.id), ["aaaaaa0000000001", "aaaaab0000000002", "bbbbbb0000000003"]);
+    assert.equal(all.count, 3);
+    assert.deepEqual((await api.list()).reports.map(r => r.id), ["aaaaaa0000000001"]);
+    const skipped = warned.filter(([line]) => String(line).startsWith(`${MODULE} | `)).map(([, path]) => path);
+    assert.deepEqual(skipped, [...Object.keys(bad), ...Object.keys(bad)], "one warn per skipped path per read");
+    warned.length = 0;
+    assert.deepEqual((await api.inspect(IDS.player)).reports.map(r => r.id), ["aaaaaa0000000001", "aaaaab0000000002", "bbbbbb0000000003"], "inspect's reports, not null");
+  } finally {
+    warn.mock.restore();
+    useStore(mem);
+    for (const path of Object.keys(bad)) mem.files.delete(path);
+  }
+});
+
 test("get: full id or unique prefix; NOT_FOUND, AMBIGUOUS, BAD_ARGS are thrown (reads throw coded)", async () => {
   seed();
   assert.equal((await api.get({ id: "aaaaab" })).text, "A map tab for the party");

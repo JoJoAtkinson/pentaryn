@@ -51,14 +51,15 @@ function actorOfString(ref) {
 }
 
 /** Summaries of the reports these users filed, oldest first, the last 20; null when unreadable. */
-async function reportsBy(userIds) {
+async function reportsBy(userIds, ctx) {
   try {
-    return (await readAll())
+    return (await readAll(ctx))
       .filter(r => userIds.has(r?.user?.id))
       .sort((a, b) => (a.t ?? 0) - (b.t ?? 0))
       .slice(-20)
       .map(summaryOf);
-  } catch {
+  } catch (err) {
+    ctx.log.warn("inspect: report folder unreadable", err?.message ?? err);
     return null;
   }
 }
@@ -78,7 +79,7 @@ async function inspect(ref, ctx, { as } = {}) {
   const self = users.find(u => u.id === game.user?.id);
   const visible = users.filter(sees);
   const pending = visible.length || !users.length ? visible.flatMap(u => ctx.exposed.pending?.(u) ?? []) : null;
-  const reports = canRead ? (users.length ? await reportsBy(new Set(users.map(u => u.id))) : []) : null;
+  const reports = canRead ? (users.length ? await reportsBy(new Set(users.map(u => u.id)), ctx) : []) : null;
   return toPlain({
     ...(actor ? { actor, users } : { user: users[0] }),
     pending,
@@ -108,12 +109,19 @@ function selftest(ctx) {
 
 const isGM = () => game.user?.isGM === true;
 
-/** Every report file of this world, parsed (unreadable files skipped). */
-async function readAll() {
+/** Every report file of this world, parsed (unreadable or non-object files skipped, one warn each). */
+async function readAll(ctx) {
   const out = [];
   for (const path of await store().list(worldDir(game.world.id))) {
-    const r = await store().get(path);
-    if (r && typeof r === "object") out.push(r);
+    let r;
+    try {
+      r = await store().get(path);
+    } catch (err) {
+      ctx.log.warn("report file unreadable, skipped", path, err?.message ?? err);
+      continue;
+    }
+    if (r && typeof r === "object" && !Array.isArray(r)) out.push(r);
+    else ctx.log.warn("report file is missing or not a JSON object, skipped", path);
   }
   return out;
 }
@@ -132,10 +140,10 @@ async function find(id) {
   return { path: pick[0], report };
 }
 
-async function list({ status = "open", limit = 50 } = {}) {
+async function list(ctx, { status = "open", limit = 50 } = {}) {
   if (!isGM()) throw codedError("NOT_GM", "only a GM lists reports");
   if (status !== "all" && !STATUSES.includes(status)) throw codedError("BAD_ARGS", `status ${status}`);
-  const rows = (await readAll())
+  const rows = (await readAll(ctx))
     .filter(r => status === "all" || r.status === status)
     .sort((a, b) => (a.t ?? 0) - (b.t ?? 0));
   const n = Number.isFinite(limit) && limit > 0 ? Math.floor(limit) : 50;
@@ -182,7 +190,7 @@ export function buildApiFor(ctx) {
     open: door("open"),
     submit: door("submit"),
     ingest: door("ingest"),
-    list: (opts = {}) => list(opts),
+    list: (opts = {}) => list(ctx, opts),
     get: (opts = {}) => get(opts),
     resolve: (opts = {}) => resolve(ctx, opts),
   }, {
