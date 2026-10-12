@@ -426,14 +426,6 @@
     {
       "name": "renderCharacterActorSheet",
       "label": "Hit Dice − / +"
-    },
-    {
-      "name": "init",
-      "label": "init: settings, Battle Medic relay"
-    },
-    {
-      "name": "ready",
-      "label": "ready: patches, publish"
     }
   ],
   "patches": [

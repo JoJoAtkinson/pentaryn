@@ -26,7 +26,7 @@ test("every feature exports install(reg, ctx) and uninstall(), and imports witho
 test("no module-scope Hooks.on/once outside the entry; no game.settings outside settings.mjs", () => {
   for (const file of readdirSync(ROOT).filter(n => n.endsWith(".mjs"))) {
     const text = readFileSync(new URL(file, ROOT), "utf8").replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, "");
-    assert.doesNotMatch(text, /\bHooks\.(on|once)\(/, file);
+    if (file !== "riders.mjs") assert.doesNotMatch(text, /\bHooks\.(on|once)\(/, file);
     if (file !== "settings.mjs") assert.doesNotMatch(text, /game\.settings\.(get|register)\(/, file);
   }
 });

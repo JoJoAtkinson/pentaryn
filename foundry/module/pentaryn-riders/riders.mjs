@@ -102,6 +102,6 @@ if (globalThis.game?.ready) {
   onInit();
   onReady();
 } else {
-  reg.once("init", onInit, { guard: false, label: "init: settings, Battle Medic relay" });
-  reg.once("ready", onReady, { guard: false, label: "ready: patches, publish" });
+  Hooks.once("init", onInit);
+  Hooks.once("ready", onReady);
 }
