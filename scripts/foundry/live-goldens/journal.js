@@ -13,7 +13,9 @@
 // Side effects, all undone in `finally`: the world setting gmButton is switched on and restored;
 // the GM's personal journal gains pages (deleted), and is created first if the GM had none
 // (then deleted, with the Player Journals folder if this run created it); the ZZ source
-// journals are deleted; sheets this run opened are closed. A player's journal is only read:
+// journals are deleted; sheets this run opened are closed (only sheets of those journals: an app
+// with no document is never closed, LG-E5). gmJournal is null on a normal run when the GM had no
+// personal journal and J.add did not create one. A player's journal is only read:
 // ensure() is called only for a player who already has one.
 // Wave 2 live plan: context/plans/addon-blueprint-2026-10/wave-2-live-plan.md.
 
@@ -194,7 +196,9 @@ try {
   for (const [lvl, s] of Object.entries(spied)) { if (s.own) notes[lvl] = s.fn; else delete notes[lvl]; }
   if ("gmButton" in saved && game.settings.get(MOD, "gmButton") !== saved.gmButton) await game.settings.set(MOD, "gmButton", saved.gmButton);
   for (const app of [...foundry.applications.instances.values()]) {
-    if (app.rendered && !openedBefore.has(app.id) && [src?.id, owned?.id, gmJournal?.id].includes(app.document?.id)) await app.close();
+    // LG-E5: an app with no document must never match the null src/owned/gmJournal ids
+    const id = app.document?.id;
+    if (app.rendered && id && !openedBefore.has(app.id) && [src?.id, owned?.id, gmJournal?.id].includes(id)) await app.close();
   }
   let pagesDeleted = 0;
   if (gmJournal && game.journal.get(gmJournal.id)) {
