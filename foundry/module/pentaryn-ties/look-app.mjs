@@ -88,7 +88,7 @@ const pairKey = (character, subject) => `${character.id}:${subject.id}`;
 export class LookWindow extends ApplicationV2 {
   static DEFAULT_OPTIONS = {
     id: "pentaryn-look-{id}",
-    classes: ["pentaryn-look"],
+    classes: ["pentaryn-look", "pt-look-window"],
     window: { icon: "fa-solid fa-eye", resizable: true },
     position: { width: 440, height: 520 }
   };

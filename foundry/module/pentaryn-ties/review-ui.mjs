@@ -113,7 +113,7 @@ const baseOf = e => ({ ...Object.fromEntries(EDITABLE.map(k => [k, e[k]])), lore
 export class AttributeReview extends ApplicationV2 {
   static DEFAULT_OPTIONS = {
     id: "pentaryn-attr-review",
-    classes: ["pentaryn-attr-review"],
+    classes: ["pentaryn-attr-review", "pt-attr-review"],
     window: { title: "PENTARYN_TIES.review.title", icon: "fa-solid fa-tags", resizable: true },
     position: { width: 780, height: 860 }
   };

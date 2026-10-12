@@ -1728,12 +1728,12 @@
  * The window's content is the scroller, so the header can stick. The `.pentaryn-ties` wrapper
  * inside it carries the palette tokens (--pt-wary etc.) and the shared `.pt-*` vocabulary.
  */
-.pentaryn-attr-review .window-content {
+.pt-attr-review .window-content {
   padding: 0;
   overflow-y: auto;
 }
-.pentaryn-attr-review .pt-review { padding: 0 0.6rem 0.8rem; gap: 0.4rem; }
-.pentaryn-attr-review .pt-review-head {
+.pt-attr-review .pt-review { padding: 0 0.6rem 0.8rem; gap: 0.4rem; }
+.pt-attr-review .pt-review-head {
   position: sticky;
   top: 0;
   z-index: 2;
@@ -1743,53 +1743,53 @@
   background: var(--color-cool-5, var(--background, #1e1e24));
   border-bottom: 1px solid color-mix(in srgb, currentColor 18%, transparent);
 }
-.theme-light .pentaryn-attr-review .pt-review-head { background: var(--color-light-1, #f3f1ea); }
-.pentaryn-attr-review .pt-review-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem; }
-.pentaryn-attr-review .pt-review-search { flex: 1 1 16rem; min-width: 10rem; }
-.pentaryn-attr-review .pt-review-sort { flex: 0 0 auto; width: auto; }
-.pentaryn-attr-review .pt-review-spacer { flex: 1 1 auto; }
-.pentaryn-attr-review .pt-review-counts { margin: 0; font-weight: 600; }
+.theme-light .pt-attr-review .pt-review-head { background: var(--color-light-1, #f3f1ea); }
+.pt-attr-review .pt-review-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem; }
+.pt-attr-review .pt-review-search { flex: 1 1 16rem; min-width: 10rem; }
+.pt-attr-review .pt-review-sort { flex: 0 0 auto; width: auto; }
+.pt-attr-review .pt-review-spacer { flex: 1 1 auto; }
+.pt-attr-review .pt-review-counts { margin: 0; font-weight: 600; }
 
-.pentaryn-attr-review .pt-review-list { list-style: none; margin: 0.3rem 0 0; padding: 0; display: grid; gap: 0.4rem; }
-.pentaryn-attr-review .pt-review-row {
+.pt-attr-review .pt-review-list { list-style: none; margin: 0.3rem 0 0; padding: 0; display: grid; gap: 0.4rem; }
+.pt-attr-review .pt-review-row {
   border: 1px solid color-mix(in srgb, currentColor 18%, transparent);
   border-radius: 4px;
 }
-.pentaryn-attr-review .pt-review-row[hidden] { display: none; }
-.pentaryn-attr-review .pt-review-row[data-state="unreviewed"],
-.pentaryn-attr-review .pt-review-row[data-state="changed"] {
+.pt-attr-review .pt-review-row[hidden] { display: none; }
+.pt-attr-review .pt-review-row[data-state="unreviewed"],
+.pt-attr-review .pt-review-row[data-state="changed"] {
   outline: 2px solid var(--pt-wary);
   outline-offset: -1px;
   background: color-mix(in srgb, var(--pt-wary) 8%, transparent);
 }
-.pentaryn-attr-review .pt-review-summary {
+.pt-attr-review .pt-review-summary {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   padding: 0.35rem 0.5rem;
   cursor: pointer;
 }
-.pentaryn-attr-review .pt-review-sel { flex: 0 0 auto; margin: 0; cursor: pointer; }
-.pentaryn-attr-review .pt-review-summary .pt-attr-icon { width: 28px; height: 28px; flex: 0 0 28px; border: 0; object-fit: contain; }
-.pentaryn-attr-review .pt-review-main { flex: 1 1 auto; min-width: 0; display: grid; gap: 0.1rem; }
-.pentaryn-attr-review .pt-review-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.2rem 0.6rem; }
-.pentaryn-attr-review .pt-review-title { font-size: var(--font-size-14, 14px); }
-.pentaryn-attr-review .pt-review-cat { opacity: 0.75; font-style: italic; }
-.pentaryn-attr-review .pt-review-meta { font-size: var(--font-size-11, 11px); opacity: 0.85; }
-.pentaryn-attr-review .pt-review-id,
-.pentaryn-attr-review code {
+.pt-attr-review .pt-review-sel { flex: 0 0 auto; margin: 0; cursor: pointer; }
+.pt-attr-review .pt-review-summary .pt-attr-icon { width: 28px; height: 28px; flex: 0 0 28px; border: 0; object-fit: contain; }
+.pt-attr-review .pt-review-main { flex: 1 1 auto; min-width: 0; display: grid; gap: 0.1rem; }
+.pt-attr-review .pt-review-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.2rem 0.6rem; }
+.pt-attr-review .pt-review-title { font-size: var(--font-size-14, 14px); }
+.pt-attr-review .pt-review-cat { opacity: 0.75; font-style: italic; }
+.pt-attr-review .pt-review-meta { font-size: var(--font-size-11, 11px); opacity: 0.85; }
+.pt-attr-review .pt-review-id,
+.pt-attr-review code {
   font-family: var(--font-mono, monospace);
   font-size: 0.9em;
   padding: 0 0.25em;
   border-radius: 3px;
   background: color-mix(in srgb, currentColor 10%, transparent);
 }
-.pentaryn-attr-review .pt-review-id { cursor: copy; }
-.pentaryn-attr-review .pt-review-parent { font-weight: 600; }
-.pentaryn-attr-review .pt-review-badge { display: inline-flex; align-items: center; gap: 0.25em; font-weight: 600; }
-.pentaryn-attr-review .pt-review-warn { color: var(--pt-wary); }
-.pentaryn-attr-review .pt-review-ok { color: var(--pt-friendly); font-weight: 400; opacity: 0.85; }
-.pentaryn-attr-review .pt-review-sign {
+.pt-attr-review .pt-review-id { cursor: copy; }
+.pt-attr-review .pt-review-parent { font-weight: 600; }
+.pt-attr-review .pt-review-badge { display: inline-flex; align-items: center; gap: 0.25em; font-weight: 600; }
+.pt-attr-review .pt-review-warn { color: var(--pt-wary); }
+.pt-attr-review .pt-review-ok { color: var(--pt-friendly); font-weight: 400; opacity: 0.85; }
+.pt-attr-review .pt-review-sign {
   flex: 0 0 auto;
   width: auto;
   padding: 0.2rem 0.6rem;
@@ -1801,29 +1801,29 @@
   border-radius: 4px;
   white-space: nowrap;
 }
-.pentaryn-attr-review .pt-review-sign:hover { background: color-mix(in srgb, var(--pt-wary) 28%, transparent); }
-.pentaryn-attr-review .pt-review-quiet { flex: 0 0 auto; opacity: 0.6; white-space: nowrap; }
-.pentaryn-attr-review .pt-review-caret { flex: 0 0 auto; opacity: 0.6; }
+.pt-attr-review .pt-review-sign:hover { background: color-mix(in srgb, var(--pt-wary) 28%, transparent); }
+.pt-attr-review .pt-review-quiet { flex: 0 0 auto; opacity: 0.6; white-space: nowrap; }
+.pt-attr-review .pt-review-caret { flex: 0 0 auto; opacity: 0.6; }
 
-.pentaryn-attr-review .pt-review-detail {
+.pt-attr-review .pt-review-detail {
   display: grid;
   gap: 0.45rem;
   padding: 0.4rem 0.7rem 0.7rem 2.6rem;
   border-top: 1px dashed color-mix(in srgb, currentColor 20%, transparent);
 }
-.pentaryn-attr-review .pt-review-detail h4 { margin: 0.3rem 0 0; font-size: var(--font-size-12, 12px); text-transform: uppercase; letter-spacing: 0.04em; opacity: 0.75; border: 0; }
-.pentaryn-attr-review .pt-review-shared { margin: 0; font-size: var(--font-size-11, 11px); color: var(--pt-wary); }
-.pentaryn-attr-review .pt-review-fields { display: grid; grid-template-columns: 2fr 1.4fr 1.2fr 4.5rem; gap: 0.4rem; align-items: end; }
-.pentaryn-attr-review .pt-review-lore .pt-review-fields { grid-template-columns: 2fr 1.2fr 4.5rem auto; }
-.pentaryn-attr-review .pt-review-field { display: grid; gap: 0.15rem; margin: 0; }
-.pentaryn-attr-review .pt-review-field .pt-field-label { font-size: var(--font-size-11, 11px); opacity: 0.75; }
-.pentaryn-attr-review .pt-review-field input,
-.pentaryn-attr-review .pt-review-field select { width: 100%; }
-.pentaryn-attr-review textarea { width: 100%; min-height: 4em; resize: vertical; font-family: inherit; }
-.pentaryn-attr-review .pt-review-rel { display: grid; grid-template-columns: max-content 1fr; gap: 0.2rem 0.7rem; margin: 0; }
-.pentaryn-attr-review .pt-review-rel dt { font-weight: 600; opacity: 0.8; }
-.pentaryn-attr-review .pt-review-rel dd { margin: 0; }
-.pentaryn-attr-review .pt-review-lore {
+.pt-attr-review .pt-review-detail h4 { margin: 0.3rem 0 0; font-size: var(--font-size-12, 12px); text-transform: uppercase; letter-spacing: 0.04em; opacity: 0.75; border: 0; }
+.pt-attr-review .pt-review-shared { margin: 0; font-size: var(--font-size-11, 11px); color: var(--pt-wary); }
+.pt-attr-review .pt-review-fields { display: grid; grid-template-columns: 2fr 1.4fr 1.2fr 4.5rem; gap: 0.4rem; align-items: end; }
+.pt-attr-review .pt-review-lore .pt-review-fields { grid-template-columns: 2fr 1.2fr 4.5rem auto; }
+.pt-attr-review .pt-review-field { display: grid; gap: 0.15rem; margin: 0; }
+.pt-attr-review .pt-review-field .pt-field-label { font-size: var(--font-size-11, 11px); opacity: 0.75; }
+.pt-attr-review .pt-review-field input,
+.pt-attr-review .pt-review-field select { width: 100%; }
+.pt-attr-review textarea { width: 100%; min-height: 4em; resize: vertical; font-family: inherit; }
+.pt-attr-review .pt-review-rel { display: grid; grid-template-columns: max-content 1fr; gap: 0.2rem 0.7rem; margin: 0; }
+.pt-attr-review .pt-review-rel dt { font-weight: 600; opacity: 0.8; }
+.pt-attr-review .pt-review-rel dd { margin: 0; }
+.pt-attr-review .pt-review-lore {
   display: grid;
   gap: 0.35rem;
   padding: 0.45rem 0.55rem;
@@ -1831,18 +1831,18 @@
   border-radius: 4px;
   background: color-mix(in srgb, currentColor 4%, transparent);
 }
-.pentaryn-attr-review .pt-review-loreid { align-self: center; font-size: var(--font-size-11, 11px); opacity: 0.7; }
-.pentaryn-attr-review .pt-review-timeline { margin: 0; font-size: var(--font-size-11, 11px); opacity: 0.8; }
-.pentaryn-attr-review .pt-review-time { text-decoration: underline dotted; }
-.pentaryn-attr-review .pt-review-actions { display: flex; gap: 0.6rem; }
+.pt-attr-review .pt-review-loreid { align-self: center; font-size: var(--font-size-11, 11px); opacity: 0.7; }
+.pt-attr-review .pt-review-timeline { margin: 0; font-size: var(--font-size-11, 11px); opacity: 0.8; }
+.pt-attr-review .pt-review-time { text-decoration: underline dotted; }
+.pt-attr-review .pt-review-actions { display: flex; gap: 0.6rem; }
 
 @container (max-width: 560px) {
-  .pentaryn-attr-review .pt-review-fields,
-  .pentaryn-attr-review .pt-review-lore .pt-review-fields { grid-template-columns: 1fr 1fr; }
+  .pt-attr-review .pt-review-fields,
+  .pt-attr-review .pt-review-lore .pt-review-fields { grid-template-columns: 1fr 1fr; }
 }
 
 /* review: what the text said at the last sign-off, and rows Claude changed under an open edit */
-.pentaryn-attr-review .pt-review-was {
+.pt-attr-review .pt-review-was {
   margin: 0;
   padding: 0.2rem 0.4rem;
   font-size: var(--font-size-11, 11px);
@@ -1850,10 +1850,10 @@
   opacity: 0.85;
   white-space: pre-wrap;
 }
-.pentaryn-attr-review .pt-review-was b { font-weight: 600; }
-.pentaryn-attr-review .pt-review-lore.pt-review-lore-changed { outline: 1px dashed var(--pt-wary); }
-.pentaryn-attr-review .pt-review-lore-tag { font-size: var(--font-size-11, 11px); color: var(--pt-wary); }
-.pentaryn-attr-review .pt-review-stale {
+.pt-attr-review .pt-review-was b { font-weight: 600; }
+.pt-attr-review .pt-review-lore.pt-review-lore-changed { outline: 1px dashed var(--pt-wary); }
+.pt-attr-review .pt-review-lore-tag { font-size: var(--font-size-11, 11px); color: var(--pt-wary); }
+.pt-attr-review .pt-review-stale {
   display: block;
   width: 100%;
   margin: 0 0 0.4rem;
@@ -1866,8 +1866,8 @@
 }
 
 /* review panel scope filter: Global / Personal, in the filter row */
-.pentaryn-attr-review .pt-review-divider { width: 1px; align-self: stretch; background: rgba(128,128,128,0.4); margin: 0 0.25rem; }
-.pentaryn-attr-review .pt-review-tab-warn::after { content: " •"; color: var(--pt-wary, #e1a53a); font-weight: bold; }
+.pt-attr-review .pt-review-divider { width: 1px; align-self: stretch; background: rgba(128,128,128,0.4); margin: 0 0.25rem; }
+.pt-attr-review .pt-review-tab-warn::after { content: " •"; color: var(--pt-wary, #e1a53a); font-weight: bold; }
 
 /* the identification check on an attribute's sheet row */
 .pentaryn-ties .pt-identify { border: 1px solid rgba(128,128,128,0.35); border-radius: 4px; padding: 0.4rem; margin: 0.4rem 0; display: flex; flex-direction: column; gap: 0.35rem; }
@@ -1878,9 +1878,9 @@
 .pentaryn-ties .pt-field-stacked textarea { width: 100%; resize: vertical; }
 
 /* parent/child chain, visible on the collapsed row */
-.pentaryn-attr-review .pt-review-link { font-size: 0.8em; padding: 0 0.4rem; border-radius: 9px; white-space: nowrap; }
-.pentaryn-attr-review .pt-review-parent { background: rgba(225,165,58,0.18); color: var(--pt-wary, #e1a53a); }
-.pentaryn-attr-review .pt-review-kids { background: rgba(138,92,255,0.18); color: #a98bff; }
+.pt-attr-review .pt-review-link { font-size: 0.8em; padding: 0 0.4rem; border-radius: 9px; white-space: nowrap; }
+.pt-attr-review .pt-review-parent { background: rgba(225,165,58,0.18); color: var(--pt-wary, #e1a53a); }
+.pt-attr-review .pt-review-kids { background: rgba(138,92,255,0.18); color: #a98bff; }
 
 /* chain tags on the sheet's attribute rows (GM only) */
 .pentaryn-ties .pt-chain { font-size: 0.75em; padding: 0 0.4rem; border-radius: 9px; white-space: nowrap; }
@@ -1919,10 +1919,10 @@
 .pt-look-menu button + button { border-top: 1px solid rgba(107, 90, 122, 0.5); }
 
 /* The player's Look window (look.mjs) — the grant cards come from .pentaryn-ties .pt-granted* */
-.pentaryn-look .window-content { padding: 0.5rem 0.75rem; overflow-y: auto; }
-.pentaryn-look .pt-look-head { cursor: default; margin-bottom: 0.25rem; }
-.pentaryn-look .pt-look-group { font-size: 0.8em; text-transform: uppercase; letter-spacing: 0.04em; opacity: 0.7; margin: 0.6rem 0 0.2rem; }
-.pentaryn-look .pt-look-empty { opacity: 0.7; font-style: italic; margin: 0.75rem 0; }
+.pt-look-window .window-content { padding: 0.5rem 0.75rem; overflow-y: auto; }
+.pt-look-window .pt-look-head { cursor: default; margin-bottom: 0.25rem; }
+.pt-look-window .pt-look-group { font-size: 0.8em; text-transform: uppercase; letter-spacing: 0.04em; opacity: 0.7; margin: 0.6rem 0 0.2rem; }
+.pt-look-window .pt-look-empty { opacity: 0.7; font-style: italic; margin: 0.75rem 0; }
 
 /* Item marks (item-marks.mjs): a small icon after a flagged item's name on actor sheets */
 .pt-item-mark { color: #ff7a1a; font-size: 0.85em; margin-left: 0.2em; text-shadow: 0 0 4px rgba(255, 120, 20, 0.6); }
