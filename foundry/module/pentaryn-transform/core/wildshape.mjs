@@ -415,6 +415,16 @@ export function shapeStatus({ actor = null, original = null, shifted = false, wi
 }
 
 /**
+ * Temporary Hit Points don't stack: on assuming a form the druid keeps the better of what they had
+ * and what Wild Shape grants (dnd5e's preset always overwrites with the grant).
+ */
+export function formTempHP(hostTemp, grantTemp) {
+  const a = Math.max(0, Number(hostTemp) || 0);
+  const b = Math.max(0, Number(grantTemp) || 0);
+  return Math.max(a, b);
+}
+
+/**
  * What the form gets on top of dnd5e's wildshape preset: the strip, the "Return to Talo" item, the
  * timed effect, and the flag the sweep, auto-revert, the HUD and inspect read. The glue passes the
  * world time and the three localized strings.

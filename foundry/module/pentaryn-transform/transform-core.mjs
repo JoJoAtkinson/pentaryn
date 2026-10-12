@@ -22,11 +22,12 @@ import {
   stripForForm, pruneFavorites, isRevertData, returnLabel, durationSeconds, formatDuration,
   isExpired, usesLeft, useSyncUpdates, carriedConditions, withoutOrigin, endedInForm,
   attributeSync, shiftBlock, pickRunner,
-  wildShapeActivityOf, formEntries, refundUpdate, runnerIs, canRunAny, worldTimeCandidates, shapeStatus, shapingPlan
+  wildShapeActivityOf, formEntries, refundUpdate, runnerIs, canRunAny, worldTimeCandidates, shapeStatus, shapingPlan,
+  formTempHP
 } from "./core/wildshape.mjs";
 
 import {
-  withArticle, formatCR, formSummary, planBonusBar, frontRowItems, coveredPanel, formTempHP,
+  withArticle, formatCR, formSummary, planBonusBar, frontRowItems, coveredPanel,
   hpText, planWithout,
   summaryFromSource, recoveryLines, portraitText, earnsChalice, coveredMultiattackId, pruneDisconnected, shouldQueueStaleCheck
 } from "./core/hud.mjs";
@@ -60,11 +61,12 @@ export {
   stripForForm, pruneFavorites, isRevertData, returnLabel, durationSeconds, formatDuration,
   isExpired, usesLeft, useSyncUpdates, carriedConditions, withoutOrigin, endedInForm,
   attributeSync, shiftBlock, pickRunner,
-  wildShapeActivityOf, formEntries, refundUpdate, runnerIs, canRunAny, worldTimeCandidates, shapeStatus, shapingPlan
+  wildShapeActivityOf, formEntries, refundUpdate, runnerIs, canRunAny, worldTimeCandidates, shapeStatus, shapingPlan,
+  formTempHP
 };
 
 export {
-  withArticle, formatCR, formSummary, planBonusBar, frontRowItems, coveredPanel, formTempHP,
+  withArticle, formatCR, formSummary, planBonusBar, frontRowItems, coveredPanel,
   hpText, planWithout,
   summaryFromSource, recoveryLines, portraitText, earnsChalice, coveredMultiattackId, pruneDisconnected, shouldQueueStaleCheck
 };
