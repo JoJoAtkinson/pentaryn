@@ -17,7 +17,6 @@
  */
 
 import { FLAGS, MODULE } from "./ids.mjs";
-export { MODULE };
 
 /** A light that gives nothing. Written when a carried or spell light ends with nothing before it. */
 export const DARK = Object.freeze({

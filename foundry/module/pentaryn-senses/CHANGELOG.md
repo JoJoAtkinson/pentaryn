@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **[declared senses-M6] MODULE comes from one place** (final review 2026-10-12): the barrel
+  imports `MODULE` from `core/ids.mjs`; the dead `export { MODULE }` re-exports in `core/light`,
+  `core/chain` and `core/migrate` are gone (and `core/migrate`'s now-unused import). Same id, no
+  behaviour change. New `test/core-module-reexport.test.mjs`.
+
 - **[declared senses-M2] The Light reconcile is split into named steps** (final review
   2026-10-12): `reconcile()` is now resolveDesired → plan → restoreTokens → removeSquares →
   applyWanted → resyncCarried → remember, awaited in the same order as before. Same writes, same

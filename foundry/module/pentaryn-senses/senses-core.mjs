@@ -6,10 +6,10 @@
  * tools see each file and this list is the core's whole surface.
  */
 
-import { FLAGS } from "./core/ids.mjs";
+import { FLAGS, MODULE } from "./core/ids.mjs";
 import { esc, unsetPath } from "./core/util.mjs";
 import { setTip } from "./core/hud-dom.mjs";
-import { MODULE, CHAIN_FLAG, readChain, chainPairs, linksTouching, chainGeometry, chainThickness, resolveTokenRef, linkSpriteSpecs } from "./core/chain.mjs";
+import { CHAIN_FLAG, readChain, chainPairs, linksTouching, chainGeometry, chainThickness, resolveTokenRef, linkSpriteSpecs } from "./core/chain.mjs";
 import {
   DARK, SPELL_LIGHT, LIGHT_PROFILES, ACTIVITY_PROFILES, PHB_LIGHT_ACTOR, TORCH_ACTIVITY_ID, slug, profileKey, profileFor, lightFor, strongest,
   carriedLightOf, lightingItemId, isLit, isHooded, isLightSpellData, isLightToggle, readSpellCast, castFlag, readSpellLight,
