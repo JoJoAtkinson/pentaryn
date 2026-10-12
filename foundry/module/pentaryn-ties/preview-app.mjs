@@ -124,7 +124,10 @@ export class InspectPreview extends ApplicationV2 {
   /** @param {Actor} subject */
   static open(subject) {
     if (!game.user?.isGM) return null;
-    if (!subject) return ui.notifications.warn(_loc("PENTARYN_TIES.preview.noToken"));
+    if (!subject) {
+      ui.notifications.warn(_loc("PENTARYN_TIES.preview.noToken"));
+      return null;
+    }
     return new InspectPreview(subject).render(true);
   }
 

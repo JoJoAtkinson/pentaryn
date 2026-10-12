@@ -115,6 +115,10 @@ waits for the first card to finish building, then toggles as usual — same face
 swaps to that face — and an old card's late close no longer makes the next press open a duplicate.
 ties-ui-E4.
 
+Fixed (declared): `study.preview(null)` (no token hovered or selected) still warns "Hover or select a
+token to preview." but now returns `null`, as the manifest's `Promise<InspectPreview|null>` says, instead
+of the warning's notification object. ties-ui-M9.
+
 ## 0.19.4 (2026-10-10, usability run, Area 7 re-run)
 
 - **The inspect window's Share switches are the table's PCs only** (`tablePCs`): each player's

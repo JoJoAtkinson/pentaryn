@@ -148,7 +148,7 @@ test("open paths refuse a player: preview, review", async () => {
   game.user = game.users.get(PLAYER);
   const rows = { preview: InspectPreview.open(get(NPC)), review: AttributeReview.open() };
   game.user = gmUser;
-  rows.previewNoSubject = InspectPreview.open(null) ?? null;
+  rows.previewNoSubject = InspectPreview.open(null); // ties-ui-M9: null itself; the warning is in rows.calls
   rows.calls = F.calls.slice(mark);
   pinJSON("app-open-refusals", rows, import.meta.url);
 });

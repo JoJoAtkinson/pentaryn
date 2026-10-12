@@ -1,10 +1,7 @@
 {
   "preview": null,
   "review": null,
-  "previewNoSubject": {
-    "id": "0000000000000024",
-    "message": "Hover or select a token to preview."
-  },
+  "previewNoSubject": null,
   "calls": [
     {
       "op": "notify",
