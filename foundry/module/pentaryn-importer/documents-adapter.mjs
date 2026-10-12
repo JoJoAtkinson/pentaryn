@@ -89,29 +89,40 @@ async function fetchJsonWithTimeout(path, { timeout = DEFAULT_TIMEOUT_MS, ...ini
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeout);
 
-  let response;
+  // The timer covers the body read too: a body that stalls after the headers must still time out.
+  let text;
   try {
-    response = await fetch(url, { cache: "no-cache", ...init, signal: controller.signal });
-  } catch (cause) {
-    if (cause?.name === "AbortError") {
-      throw new PentarynAbort(`Timed out after ${timeout} ms fetching ${url}`, "TIMEOUT");
+    let response;
+    try {
+      response = await fetch(url, { cache: "no-cache", ...init, signal: controller.signal });
+    } catch (cause) {
+      if (cause?.name === "AbortError") {
+        throw new PentarynAbort(`Timed out after ${timeout} ms fetching ${url}`, "TIMEOUT");
+      }
+      throw new PentarynAbort(`Network error fetching ${url}: ${cause?.message ?? cause}`);
     }
-    throw new PentarynAbort(`Network error fetching ${url}: ${cause?.message ?? cause}`);
+
+    if (!response.ok) {
+      throw new PentarynAbort(
+        `HTTP ${response.status} ${response.statusText} for ${url}. `
+        + "Is the file under Data/? Run `make foundry-sync` first.",
+        response.status === 404 ? "NOT_FOUND" : "REFUSED"
+      );
+    }
+
+    // Read as text first: a miss under express.static can fall through to Foundry's HTML routes and
+    // return 200 with a page body. `response.json()` would give an unhelpful parse error.
+    try {
+      text = await response.text();
+    } catch (cause) {
+      if (cause?.name === "AbortError") {
+        throw new PentarynAbort(`Timed out after ${timeout} ms fetching ${url}`, "TIMEOUT");
+      }
+      throw cause;
+    }
   } finally {
     clearTimeout(timer);
   }
-
-  if (!response.ok) {
-    throw new PentarynAbort(
-      `HTTP ${response.status} ${response.statusText} for ${url}. `
-      + "Is the file under Data/? Run `make foundry-sync` first.",
-      response.status === 404 ? "NOT_FOUND" : "REFUSED"
-    );
-  }
-
-  // Read as text first: a miss under express.static can fall through to Foundry's HTML routes and
-  // return 200 with a page body. `response.json()` would give an unhelpful parse error.
-  const text = await response.text();
   try {
     return JSON.parse(text);
   } catch (cause) {
