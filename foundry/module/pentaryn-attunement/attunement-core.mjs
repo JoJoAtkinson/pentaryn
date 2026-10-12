@@ -71,6 +71,13 @@ export function bondChanges(bond, { actorId, awayKeys = [], fallbackName } = {})
 }
 
 /**
+ * The short name used in the stash tag and the away tooltip: the first word before a space or comma.
+ * @param {string} name
+ * @returns {string}
+ */
+export const shortName = name => name.split(/[ ,]/)[0];
+
+/**
  * Move-out plan for stash(): the container's creates, the owner's new away list and slot order.
  * Container contents are flattened; plain duplicates (two stacks of torches) merge.
  *
@@ -81,7 +88,7 @@ export function bondChanges(bond, { actorId, awayKeys = [], fallbackName } = {})
  * @returns {{creates: object[], away: object[], slots: (string|null)[]}}
  */
 export function planStash(owner, itemIds, { tag, currency = false, randomID, setProperty } = {}) {
-  tag ??= owner.name.split(/[ ,]/)[0];
+  tag ??= shortName(owner.name);
   const ids = new Set(itemIds);
   const away = awayOf(owner);
   const creates = [];
@@ -206,9 +213,7 @@ export function computeSlots(actor) {
  */
 export function homeSlots(slots, awayId, itemId) {
   if (!slots.includes(awayId)) return slots;
-  const out = slots.map(id => (id === itemId) ? null : (id === awayId) ? itemId : id);
-  while ((out.length > 0) && (out.at(-1) === null)) out.pop();
-  return out;
+  return trimSlots(slots.map(id => (id === itemId) ? null : (id === awayId) ? itemId : id));
 }
 
 /**
@@ -248,6 +253,9 @@ export function wouldExceed({ value, max, awayCount = 0 }) {
 /*  "Not Proficient" on a cloak                 */
 /* -------------------------------------------- */
 
+/** The item types patchProficiencyMap fills, in log-line order; selftest checks the same list. */
+export const PROFICIENCY_CATEGORIES = Object.freeze(["wondrous", "ring", "rod", "wand", "trinket"]);
+
 /**
  * Every ring, rod, wand, trinket and wondrous item in the world reports
  * **Not Proficient** — on its tooltip and on its chat card. Two bits of dnd5e that
@@ -277,7 +285,7 @@ export function wouldExceed({ value, max, awayCount = 0 }) {
  */
 export function patchProficiencyMap(map) {
   const added = [];
-  for (const type of ["wondrous", "ring", "rod", "wand", "trinket"]) {
+  for (const type of PROFICIENCY_CATEGORIES) {
     if (map[type] == null) { map[type] = true; added.push(type); }
   }
   return added;

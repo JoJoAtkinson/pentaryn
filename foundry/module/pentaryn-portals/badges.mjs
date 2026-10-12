@@ -32,7 +32,7 @@ let badgeLayer = null;
  * 'addChild')" on the player client (usability Area 9). A draw that is no longer the latest stops.
  */
 let drawRun = 0;
-export const badges = []; // { region, x, y, r, cards, sprite }
+export const badges = []; // { region, x, y, r, revealed, bounds, sprite, cards }
 /** Region uuids this client has seen in sight, so a badge stays once found even before fog saves. */
 export const seen = new Set();
 /** Region uuids whose Portal card window is in edit mode: their badge can be dragged. */
@@ -221,7 +221,7 @@ export function bindBoard() {
     const move = !!(b && editing.has(b.region.uuid));
     if (move) {
       if (board.style.cursor !== "move") { priorCursor = board.style.cursor; board.style.cursor = "move"; }
-    } else if (!move && priorCursor !== null) {
+    } else if (priorCursor !== null) {
       if (board.style.cursor === "move") board.style.cursor = priorCursor;
       priorCursor = null;
     }

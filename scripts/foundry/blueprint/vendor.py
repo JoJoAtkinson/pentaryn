@@ -162,6 +162,8 @@ def sync(module_dir: Path, *, tier: str | None = None, extra: list[str] | None =
         if missing:
             raise VendorError(f"{kit_file(n, kit)} names {', '.join(missing)} — add it to module.json "
                               f"relationships first (refused: {module_dir.name})")
+    for n in names:  # a bad `ext` refuses here, before anything is written
+        kit_file(n, kit)
 
     written: list[str] = []
     lib_dir = module_dir / "lib"

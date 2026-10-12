@@ -294,6 +294,15 @@ def test_an_unwritable_ops_log_never_fails_the_sync(module, monkeypatch, capsys)
     assert (module.dst / modules.SYNC_STAMP).exists()
 
 
+def test_an_unwritable_event_log_never_fails_the_sync(module, monkeypatch, tmp_path, capsys):
+    afile = tmp_path / "afile"
+    afile.write_text("a file, not a folder")
+    monkeypatch.setenv("PENTARYN_OPS_LOG", str(afile / "events.jsonl"))
+    assert modules.sync("zz") == 0
+    assert (module.dst / modules.SYNC_STAMP).exists()
+    assert "ops log not written" in capsys.readouterr().out
+
+
 def test_events_mirror_the_log_when_asked(module, monkeypatch, tmp_path):
     import json
 

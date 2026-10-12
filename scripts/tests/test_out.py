@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import json
 
-from scripts.foundry.ops import login, out, service
+from scripts.foundry.ops import bridge, login, modules, out, pipeline, service
 
 
 def test_say_is_the_old_two_space_line(capsys):
@@ -15,6 +15,13 @@ def test_say_is_the_old_two_space_line(capsys):
     service._say("▸ target world: w")
     login._say("▸ open this once")
     assert capsys.readouterr().out == "  ✓ module → /x\n  ▸ target world: w\n  ▸ open this once\n"
+
+
+def test_ops_modules_share_out_say():
+    """modules, bridge and pipeline print through out.say itself, not a copy or service's alias."""
+    assert modules._say is out.say
+    assert bridge._say is out.say
+    assert pipeline._say is out.say
 
 
 def test_fail_says_and_returns_fail(capsys):

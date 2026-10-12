@@ -190,7 +190,7 @@ test("errorEntry: message capped and redacted, stack head kept, location optiona
 });
 
 test("changedKeys: top-level and system.* / flags.* one level, never values, at most 8", () => {
-  assert.deepEqual(core.changedKeys({ _id: "x", name: "N", system: { attributes: { hp: 3 } }, flags: { dnd5e: {} } }),
+  assert.deepEqual(core.changedKeys({ _id: "x", _stats: {}, name: "N", system: { attributes: { hp: 3 } }, flags: { dnd5e: {} } }),
     ["name", "system.attributes", "flags.dnd5e"]);
   assert.deepEqual(core.changedKeys(null), []);
   const many = Object.fromEntries(Array.from({ length: 12 }, (_, i) => [`k${i}`, i]));
@@ -208,6 +208,23 @@ test("userFields: plain user identity, character optional", () => {
     { id: "u1", name: "Caven", role: 1, isGM: false, character: { id: "a1", name: "Caven" } });
   assert.deepEqual(core.userFields({ id: "g", name: "GM", role: 4, isGM: true }),
     { id: "g", name: "GM", role: 4, isGM: true, character: null });
+});
+
+test("userFieldsOf: a User document's plain fields; null → the empty user", () => {
+  assert.deepEqual(core.userFieldsOf(null), core.userFields({}));
+  assert.deepEqual(core.userFieldsOf(undefined), core.userFields({}));
+  const user = { id: "u1", name: "Caven", role: 1, isGM: false, extra: "ignored", character: { id: "a1", name: "Caven", type: "character" } };
+  // the construction reporter.mjs used before userFieldsOf existed
+  const old = u => core.userFields({ id: u?.id, name: u?.name, role: u?.role, isGM: u?.isGM,
+    character: u.character ? { id: u.character.id, name: u.character.name } : null });
+  assert.deepEqual(core.userFieldsOf(user), old(user));
+  assert.deepEqual(core.userFieldsOf({ ...user, character: null }), old({ ...user, character: null }));
+  assert.equal(core.userFieldsOf({ ...user, character: { id: null, name: "Ghost" } }).character, null);
+  // the snapshot's old ref() path clipped the name once before userFields clipped it again
+  const long = "x".repeat(200);
+  assert.equal(core.userFieldsOf({ ...user, character: { id: "a1", name: long } }).character.name,
+    core.clip(core.clip(long)));
+  assert.equal(core.clip(core.clip(long)), core.clip(long));
 });
 
 const ID = "k3Yx9Qp2LmN7aB4c";
@@ -313,6 +330,16 @@ test("admit: a burst of 5, then one per 5 s; a refusal says how long to wait", (
   assert.equal(core.admit({ tokens: "x" }, 5).ok, true, "a junk bucket starts full");
 });
 
+test("isReportId: 16 letters or digits only", () => {
+  assert.equal(core.isReportId("k3Yx9Qp2LmN7aB4c"), true);
+  assert.equal(core.isReportId("k3Yx9Qp2LmN7aB4"), false);
+  assert.equal(core.isReportId("k3Yx9Qp2LmN7aB4cd"), false);
+  assert.equal(core.isReportId("abcdefghijklmno_"), false);
+  assert.equal(core.isReportId("../xxxxxxxxxxxxx"), false);
+  assert.equal(core.isReportId(null), false);
+  assert.equal(core.isReportId(42), false);
+});
+
 test("validateReport: a good report passes; each broken field is named", () => {
   assert.deepEqual(core.validateReport(sample()), { ok: true });
   const broken = [
@@ -333,6 +360,11 @@ test("validateReport: a good report passes; each broken field is named", () => {
     assert.equal(v.ok, false);
     assert.match(v.reason, want);
   }
+});
+
+test("LIST_KEYS covers every list section plus the two rings", () => {
+  assert.deepEqual(new Set(core.LIST_KEYS), new Set(["actions", "errors", ...core.LIST_SECTIONS]));
+  assert.equal(core.validateReport({ ...sample(), chat: "x", windows: "y" }).reason, "chat must be a list");
 });
 
 test("normaliseReport: the sender's user wins over the payload; status reset; unknown keys dropped; strings re-capped", () => {

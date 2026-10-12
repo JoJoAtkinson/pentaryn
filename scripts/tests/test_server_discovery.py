@@ -177,6 +177,33 @@ def test_extract_mcp_tool_literal_none_without_tool(tmp_path):
     assert literal is None
 
 
+def test_annotated_mcp_tool_is_discovered(tmp_path):
+    """README: discovery reads a module's MCP_TOOL literal — an annotated
+    `MCP_TOOL: dict[...] = {...}` is still that literal, not 'no MCP_TOOL'."""
+    repo = _make_repo(tmp_path)
+    (repo / "scripts" / "ann_tool.py").write_text(
+        'from typing import Any\n'
+        'MCP_TOOL: dict[str, Any] = {"name": "ann_tool", "description": "x", "argv": []}\n',
+        encoding="utf-8")
+
+    result = server.discover_tools(repo_root=repo)
+    by_name = {r.tool.name: r for r in result.tools}
+    assert "ann_tool" in by_name, result.skipped
+    assert by_name["ann_tool"].handler is None
+
+
+def test_annotated_mcp_groups_passes_the_group_filter(tmp_path, monkeypatch):
+    """README: DND_MCP_TOOLS_GROUP loads modules whose top-level MCP_GROUPS
+    list contains the group — an annotated MCP_GROUPS is that list."""
+    monkeypatch.setenv("DND_MCP_TOOLS_GROUP", "combat")
+    repo = _make_repo(tmp_path)
+    (repo / "scripts" / "grouped.py").write_text(
+        'MCP_GROUPS: list[str] = ["combat"]\n' + _AST_ONLY_MODULE, encoding="utf-8")
+
+    result = server.discover_tools(repo_root=repo)
+    assert "sample_subproc" in {r.tool.name for r in result.tools}, result.skipped
+
+
 # ---------------------------------------------------------------------------
 # python-tooling-27: discovery cost and the startup skip report
 # ---------------------------------------------------------------------------
@@ -259,6 +286,33 @@ def test_startup_skip_report_names_a_real_failure(tmp_path, monkeypatch, capsys)
     (repo / "scripts" / "broken.py").write_text(_BROKEN_TOOL, encoding="utf-8")
     err = _startup_stderr(monkeypatch, capsys, repo)
     assert "broken.py: invalid MCP_TOOL: broken: argv must be a list of strings" in err
+
+
+@pytest.mark.parametrize("key", ["bool_flags", "value_flags"])
+def test_flag_map_errors_pinned(tmp_path, key):
+    """Characterisation (holds before and after MNT-6): a non-dict flag map is skipped
+    with the exact reason naming the snake_case key."""
+    repo = _make_repo(tmp_path)
+    (repo / "scripts" / "t.py").write_text(
+        f'MCP_TOOL = {{"name": "t", "argv": [], "{key}": [1]}}\n', encoding="utf-8")
+    result = server.discover_tools(repo_root=repo)
+    assert [r.tool.name for r in result.tools] == []
+    reasons = [why for path, why in result.skipped if path.name == "t.py"]
+    assert reasons == [f"invalid MCP_TOOL: t: {key} must be a dict of argument_name -> flag"]
+
+
+def test_flag_map_camel_case_and_blank_entries(tmp_path):
+    """Characterisation: an empty snake_case map falls through to the camelCase one,
+    keys and flags are stripped, and blank entries are dropped."""
+    repo = _make_repo(tmp_path)
+    (repo / "scripts" / "t.py").write_text(
+        'MCP_TOOL = {"name": "t", "argv": [], "bool_flags": {}, '
+        '"boolFlags": {" quiet ": " --quiet ", "": "--x", "y": " "}, '
+        '"valueFlags": {"n": "--n"}}\n', encoding="utf-8")
+    result = server.discover_tools(repo_root=repo)
+    (runner,) = result.tools
+    assert runner.bool_flags == {"quiet": "--quiet"}
+    assert runner.value_flags == {"n": "--n"}
 
 
 # ---------------------------------------------------------------------------
@@ -355,6 +409,18 @@ def test_log_subprocess_mode_and_truncated_args(monkeypatch, tmp_path):
     assert len(line["args"]["obj"]) < 2100 and line["args"]["obj"].startswith('{"k": "yyy')
 
 
+def test_log_line_survives_a_lone_surrogate(monkeypatch, tmp_path):
+    # README: every tools/call appends one line -- a lone UTF-16 surrogate in an
+    # argument must not drop it (it is written as its JSON escape instead).
+    monkeypatch.setenv("PENTARYN_MCP_LOG_DIR", str(tmp_path))
+    sent = _call(monkeypatch, _runner(lambda **k: "ok"), {"q": "x\ud800", "r": "\u16cf200"})
+    assert sent[0]["result"]["content"][0]["text"] == "ok"
+    [line] = _log_lines(tmp_path)
+    assert line["args"] == {"q": "x\ud800", "r": "\u16cf200"}
+    raw = b"".join(p.read_bytes() for p in tmp_path.glob("dnd-scripts-*.jsonl"))
+    assert "\u16cf200".encode("utf-8") in raw          # encodable text stays raw UTF-8
+
+
 def test_log_dir_that_is_a_file_does_not_break_the_call(monkeypatch, tmp_path, capsys):
     not_a_dir = tmp_path / "file"
     not_a_dir.write_text("", encoding="utf-8")
@@ -380,3 +446,72 @@ def test_log_month_is_taken_per_call(monkeypatch, tmp_path):
     _call(monkeypatch, _runner(lambda **k: "ok"), {})
     assert sorted(p.name for p in tmp_path.iterdir()) == [
         "dnd-scripts-2026-10.jsonl", "dnd-scripts-2026-11.jsonl"]
+
+
+# ---------------------------------------------------------------------------
+# py-mcp-ac-6: the stdin serve loop (inline replies, admission control, slots)
+# ---------------------------------------------------------------------------
+
+class _SyncExecutor:
+    """Runs each submitted call at once, so the serve loop is deterministic."""
+
+    def submit(self, fn, *args):
+        fn(*args)
+
+
+def _serve(monkeypatch, messages, runners=(), slots=2):
+    sent = []
+    feed = iter([*messages, None])
+    monkeypatch.setattr(server, "_read_message", lambda: next(feed))
+    monkeypatch.setattr(server, "_write_message", sent.append)
+    monkeypatch.setattr(server, "_inflight_slots", server.threading.Semaphore(slots))
+    monkeypatch.delenv("PENTARYN_MCP_LOG_DIR", raising=False)
+    tools = tuple(r.tool for r in runners)
+    by_name = {r.tool.name: r for r in runners}
+    assert server._serve_loop(tools, by_name, _SyncExecutor()) == 0
+    return sent
+
+
+def test_serve_loop_inline_payloads_pinned(monkeypatch):
+    """Characterisation: initialize echoes any requested version (EC-7), and the
+    inline error envelopes for an unknown method and an unknown tool."""
+    sent = _serve(monkeypatch, [
+        {"jsonrpc": "2.0", "id": 1, "method": "initialize",
+         "params": {"protocolVersion": "1999-01-01"}},
+        {"jsonrpc": "2.0", "id": 2, "method": "tools/list"},
+        {"jsonrpc": "2.0", "id": 3, "method": "nope"},
+        {"jsonrpc": "2.0", "id": 4, "method": "tools/call", "params": {"name": "x"}},
+        {"jsonrpc": "2.0", "method": "notifications/initialized"},
+    ], runners=(_runner(lambda **k: "ok"),))
+    assert sent == [
+        {"jsonrpc": "2.0", "id": 1, "result": {
+            "protocolVersion": "1999-01-01",
+            "capabilities": {"tools": {"listChanged": False}},
+            "serverInfo": {"name": "dnd-scripts", "version": "0.1.0"}}},
+        {"jsonrpc": "2.0", "id": 2, "result": {"tools": [
+            {"name": "probe", "description": "", "inputSchema": {}}]}},
+        {"jsonrpc": "2.0", "id": 3,
+         "error": {"code": -32601, "message": "Method not found: nope"}},
+        {"jsonrpc": "2.0", "id": 4,
+         "error": {"code": -32000, "message": "Unknown tool: x"}},
+    ]
+
+
+def test_serve_loop_busy_reply_when_slots_exhausted(monkeypatch):
+    calls = []
+    sent = _serve(monkeypatch, [
+        {"jsonrpc": "2.0", "id": 5, "method": "tools/call", "params": {"name": "probe"}},
+    ], runners=(_runner(lambda **k: calls.append(k) or "ok"),), slots=0)
+    assert calls == []
+    assert len(sent) == 1 and sent[0]["id"] == 5
+    assert sent[0]["error"]["code"] == -32000
+    assert sent[0]["error"]["message"].startswith("Server busy: ")
+
+
+def test_serve_loop_releases_slots(monkeypatch):
+    call = {"jsonrpc": "2.0", "method": "tools/call", "params": {"name": "probe"}}
+    sent = _serve(monkeypatch, [{**call, "id": i} for i in (1, 2, 3)],
+                  runners=(_runner(lambda **k: "ok"),), slots=2)
+    assert [m["id"] for m in sent] == [1, 2, 3]
+    assert all("result" in m for m in sent)
+    assert server._inflight_slots._value == 2

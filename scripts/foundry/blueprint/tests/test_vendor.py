@@ -103,6 +103,24 @@ def test_deferred_files_are_refused(tmp_path):
         vendor.sync(d, extra=["later"], lib_root=lib)
 
 
+def test_bad_ext_refuses_before_writing(tmp_path):
+    # VendorError promises "nothing was written": a bad `ext` must refuse before any lib/ copy
+    lib = tmp_path / "lib"
+    lib.mkdir()
+    for f in vendor.LIB_ROOT.glob("*.mjs"):
+        (lib / f.name).write_bytes(f.read_bytes())
+    (lib / "test-kit").mkdir()
+    kit = vendor.load_kit()
+    for f in kit["testKit"]:
+        (lib / "test-kit" / f).write_bytes((vendor.LIB_ROOT / "test-kit" / f).read_bytes())
+    kit["files"]["zz"] = {"deps": [], "ext": "scss"}
+    (lib / "kit.json").write_text(json.dumps(kit))
+    d = make_module(tmp_path)
+    with pytest.raises(vendor.VendorError, match="ext"):
+        vendor.sync(d, extra=["zz"], lib_root=lib)
+    assert not list((d / "lib").glob("*.mjs"))
+
+
 def test_argon_kit_vendors_with_its_package(tmp_path):
     d = make_module(tmp_path, relationships={"recommends": [{"id": "enhancedcombathud", "type": "module", "reason": "x"}]})
     vendor.sync(d, extra=["argon-kit"])

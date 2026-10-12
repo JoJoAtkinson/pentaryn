@@ -52,7 +52,7 @@ migration record → `context/plans/addon-blueprint-2026-10/migrate-pentaryn-por
 | `spreadArrivals` | world | on | A PC arriving through a portal onto an occupied square steps to the nearest free one (GM's client). |
 | `confirmPartyTeleport` | world | on | Teleport party lists who moves and asks first. Off: it moves at once. |
 
-Every read is live; no reload. Labels are plain English until the Wave 7 batch adds `lang/en.json`.
+Every read is live; no reload. Labels and hints are `PENTARYN_PORTALS.Setting.<key>.Name/Hint` in `lang/en.json`.
 
 ## API — game.pentaryn.portals
 
@@ -109,8 +109,7 @@ core 14.368), `core-teleport-default-and-spread` (DialogV2's yes/no buttons, the
 `core-teleport-dialog-cards` (the dialog id `dialog-<behaviorUuid>-<tokenId>`, `.dialog-content`,
 `select[name="destination"]`), `core-teleport-replacements-follow` (`options.replacements` on
 `deleteToken`), `core-region-config-portal-card` (the Appearance tab), `itempiles-portals-pile-pc`
-(`isValidItemPile`, so a pile-PC is never left behind). The first two exist today; the other four
-are queued in the adjustments batch (`context/plans/addon-blueprint-2026-10/adjustments-batch.md`).
+(`isValidItemPile`, so a pile-PC is never left behind). All six rows are in `foundry/adjustments.yml`.
 
 ## Two sessions / who writes
 
