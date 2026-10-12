@@ -24,3 +24,16 @@ test("README API table names every manifest row", async () => {
   assert.ok(paths.length >= 7);
   assert.deepEqual(paths.filter(p => !rows.has(p)), []);
 });
+
+// [declared] ATT-AC-2-residual: an Item Piles take-all can also move coin; Item Piles writes that
+// currency itself with an absolute value, outside the purse chain. The README says so under
+// "Two sessions / who writes", and that the purse's 750 ms claim settle orders the payout after it.
+test("[declared] ATT-AC-2-residual: README says Item Piles' own currency write is outside the purse chain", () => {
+  const start = README.indexOf("## Two sessions / who writes");
+  assert.ok(start >= 0, "README has a Two sessions / who writes section");
+  const sec = README.slice(start, README.indexOf("\n## ", start + 1));
+  assert.match(sec, /Item Piles currency transfer/);
+  assert.match(sec, /absolute value/);
+  assert.match(sec, /outside this chain/);
+  assert.match(sec, /750 ms claim settle/);
+});

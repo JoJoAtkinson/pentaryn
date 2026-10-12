@@ -130,7 +130,9 @@ reads `DND5E.EFFECT.Suppressed.Hint`.
   claimed first (kit `claimDocument`, key `coinBack` on the purse item, 750 ms settle), so exactly
   one tab pays and deletes it; a purse already gone stands down (W2-A1). Several purses in one
   batch pay in turn on a per-actor coin chain, apart from the hand-backs, so each adds to the last
-  total (ATT-AC-2).
+  total (ATT-AC-2). An Item Piles currency transfer in the same take-all is written by Item Piles
+  with an absolute value outside this chain; the purse's 750 ms claim settle is what orders the
+  payout after it (ATT-AC-2-residual).
 - Sheet drops and `stash` write from the client that calls them.
 
 ## Extending

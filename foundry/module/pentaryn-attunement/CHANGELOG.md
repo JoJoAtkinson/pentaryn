@@ -4,6 +4,10 @@
 
 The version stays 0.3.0 until the next `module.json` restart batch (code only: sync + reload).
 
+- **[declared] ATT-AC-2-residual:** the README (Two sessions / who writes) now says an Item Piles
+  currency transfer in the same take-all is written by Item Piles with an absolute value outside
+  the purse chain, and that the purse's 750 ms claim settle orders the payout after it. Docs only;
+  `test/docs.test.mjs` guards the sentence.
 - **[declared] EXT-6:** `describe().flags.writes` and the README Data written table now list the
   item claim flags `flags.pentaryn-attunement.claims.coinBack` and `.claims.home` that
   `claimDocument` writes (a separate `CLAIMS` list in the manifest; `stash`'s side effects are
