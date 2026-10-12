@@ -129,7 +129,7 @@ export function offersFor(message) {
       raging: isRaging(actor), reckless: isReckless(actor),
       used: turn.riders[rider.key]
     })
-  })).filter(o => o.activity);
+  })).filter(o => o.activity && (o.dice || !o.rider.dicePerScale));   // EC-5: Frenzy with no Rage Damage bonus is no rider
   return { actor, offers, turn };
 }
 
@@ -228,7 +228,7 @@ export async function rollRider(message, key) {
     return null;
   }
   const act = riderActivity(actor, rider);
-  if (!act) return null;
+  if (!act || (rider.dicePerScale && !riderDiceFor(actor, rider))) return null;
   inFlight.add(once);
   try {
     const origin = message._source?.system?.origin ?? message.system?.origin?.id ?? null;

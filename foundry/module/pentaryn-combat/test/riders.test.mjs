@@ -6,7 +6,7 @@
 import { mock, test } from "node:test";
 import assert from "node:assert/strict";
 import { pinJSON } from "./kit/harness.mjs";
-import { MODULE, captureConsole, drain, makeCombat, makeMessage, makeToken, setupWorld, setTurn } from "./fixtures/world.mjs";
+import { MODULE, captureConsole, drain, makeCombat, makeEffect, makeMessage, makeToken, setupWorld, setTurn } from "./fixtures/world.mjs";
 import { barbarian, fighter, rogue, slayer, wolf } from "./fixtures/actors.mjs";
 import * as legacy from "./fixtures/legacy-combat.mjs";
 
@@ -408,6 +408,41 @@ test("riderActivity / riderDiceFor / report (golden/riders-report.json)", async 
   const none = riders.report("Nobody");
   pinJSON("riders-report", { all, one, byDoc, none, console: lines.splice(0) }, import.meta.url);
   reset(rog);
+});
+
+test("EC-5: a Frenzy with no Rage Damage bonus is no rider — no button, no auto dice, no spend", async () => {
+  reset(brb);
+  const scale = brb.system.scale;
+  brb.system.scale = {};
+  const core = await import("../combat-core.mjs");
+  const rage = makeEffect(brb, { id: "rageOn0000000002", name: "Rage" });
+  brb.effects.set(rage.id, rage);
+  await riders.setReckless(brb, true);
+  try {
+    const frenzy = core.riderByKey("frenzy");
+    assert.equal(riders.riderDiceFor(brb, frenzy), "");
+    const msg = attackCard(brb, "greataxe00000001", { adv: true, origin: "usageCardFrz001" });
+    msg.system.ability = "str";
+    assert.deepEqual(riders.offersFor(msg).offers.filter(o => o.rider.key === "frenzy"), [], "not offered");
+    assert.equal(render(msg).querySelector(".pentaryn-combat-rider"), null, "no + Frenzy button");
+    await F.game.user.setFlag(MODULE, "riders.frenzy", "auto");
+    const config = { subject: act(brb, "greataxe00000001"), rolls: [{ parts: ["1d12", "@mod"], data: {} }] };
+    assert.deepEqual(riders.autoRiders(config, { data: { system: { origin: "usageCardFrz001" } } }), []);
+    assert.deepEqual(config.rolls[0].parts, ["1d12", "@mod"], "no 0d6 added");
+    await F.game.user.setFlag(MODULE, "riders.frenzy", "ask");
+    F.calls.length = 0;
+    assert.equal(await riders.rollRider(msg, "frenzy"), null);
+    assert.equal(F.calls.find(c => c.op === "activity.rollDamage"), undefined, "nothing rolled");
+    assert.equal(brb.flags[MODULE]?.turn?.riders?.frenzy, undefined, "Frenzy not spent");
+    brb.system.scale = scale;
+    assert.equal(riders.offersFor(msg).offers.find(o => o.rider.key === "frenzy")?.dice, "2d6", "with the bonus: offered");
+  } finally {
+    brb.system.scale = scale;
+    await riders.setReckless(brb, false);
+    brb.effects.delete(rage.id);
+    reset(brb);
+    F.calls.length = 0;
+  }
 });
 
 test("forced failures: each card hook is guarded on its own (golden/riders-console.json)", () => {

@@ -72,11 +72,18 @@ export function riderEligibility({ rider, weapon = {}, attackMode = null, abilit
   return { offer: true, auto: !!rider.auto, checks };
 }
 
-/** "3d6" from a scale value's die count/faces, or the rider's fixed dice. */
+/**
+ * "3d6" from a scale value's die count/faces, or the rider's fixed dice. A die-per-scale rider
+ * (Frenzy: d6s equal to the Rage Damage bonus) needs a whole positive count: none is "" (EC-5:
+ * a missing scale read as 0 gave "0d6").
+ */
 export function riderDice(rider, scale = null) {
   if (!rider) return "";
   if (rider.dice) return rider.dice;
-  if (rider.dicePerScale && Number.isFinite(Number(scale?.value ?? scale))) return `${Number(scale?.value ?? scale)}${rider.dicePerScale}`;
+  if (rider.dicePerScale) {
+    const n = Number(scale?.value ?? scale);
+    return scale !== "" && Number.isInteger(n) && n > 0 ? `${n}${rider.dicePerScale}` : "";
+  }
   if (scale?.formula) return scale.formula;
   if (scale?.number && scale?.faces) return `${scale.number}d${scale.faces}`;
   return "";
