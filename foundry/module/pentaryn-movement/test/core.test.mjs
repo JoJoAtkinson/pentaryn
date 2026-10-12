@@ -170,3 +170,18 @@ check("junk skipped", pinsUnderTokens([null, { id: "x" }], [null, { id: "t", x: 
 test("all 89 legacy checks are ported", () => {
   assert.equal(count, 89);
 });
+
+test("pinsUnderTokens drops pairs on different scene levels; an unlevelled note or token still pairs (movement-edge-5)", () => {
+  const tok = (id, level) => ({ id, name: id, x: 0, y: 0, w: 100, h: 100, playerOwned: false, level });
+  const pin = (id, levels) => ({ id, x: 50, y: 50, label: id, levels });
+  const pairs = pinsUnderTokens(
+    [pin("ground", ["L1"]), pin("both", ["L1", "L2"]), pin("everywhere", []), pin("legacy")],
+    [tok("down", "L1"), tok("up", "L2"), tok("nolevel", null)]
+  ).map(h => `${h.noteId}/${h.tokenId}`);
+  assert.deepEqual(pairs, [
+    "ground/down", "ground/nolevel",
+    "both/down", "both/up", "both/nolevel",
+    "everywhere/down", "everywhere/up", "everywhere/nolevel",
+    "legacy/down", "legacy/up", "legacy/nolevel",
+  ]);
+});

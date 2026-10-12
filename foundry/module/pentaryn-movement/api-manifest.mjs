@@ -68,7 +68,8 @@ export const MANIFEST = Object.freeze({
       returns: "{ noteId, label, tokenId, tokenName, playerOwned }[]",
       gm: false, writes: false, legacy: true,
       doc: "Map pins whose centre sits under a visible token (owned-on-top makes them unclickable for that "
-        + "player); player-owned tokens first. [] without a scene or for an unknown scene id.",
+        + "player); player-owned tokens first. A pin limited to other scene levels than the token's is skipped. "
+        + "[] without a scene or for an unknown scene id.",
     },
     {
       path: "selftest",

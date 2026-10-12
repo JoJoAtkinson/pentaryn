@@ -44,19 +44,22 @@ export function sceneIdOf(scene) {
 
 /**
  * The pins-under-tokens inputs for a scene: its notes (pin centres) and its visible tokens as
- * pixel rectangles, each flagged when a non-GM user owns it.
+ * pixel rectangles, each flagged when a non-GM user owns it. Foundry 14 scene levels: each note
+ * carries the level ids it shows on ([] = every level), each token its level or null (movement-edge-5).
  * @returns {{ notes: object[], tokens: object[] }}
  */
 export function pinInputs(scene) {
   const size = scene.grid?.size ?? canvas?.grid?.size ?? 100;
-  const notes = scene.notes.map(n => ({ id: n.id, x: n.x, y: n.y, label: n.text || n.entry?.name || n.label || "" }));
+  const notes = scene.notes.map(n => ({ id: n.id, x: n.x, y: n.y, label: n.text || n.entry?.name || n.label || "",
+    levels: Array.from(n.levels ?? []) }));
   // TokenDocument#getSize applies the hex correction; on square and gridless grids it equals width × size.
   const tokens = scene.tokens.filter(t => !t.hidden).map(t => {
     const s = typeof t.getSize === "function" ? t.getSize() : null;
     return {
       id: t.id, name: t.name, x: t.x, y: t.y,
       w: s?.width ?? (t.width ?? 1) * size, h: s?.height ?? (t.height ?? 1) * size,
-      playerOwned: game.users.some(u => !u.isGM && t.testUserPermission?.(u, "OWNER"))
+      playerOwned: game.users.some(u => !u.isGM && t.testUserPermission?.(u, "OWNER")),
+      level: t.level ?? null
     };
   });
   return { notes, tokens };

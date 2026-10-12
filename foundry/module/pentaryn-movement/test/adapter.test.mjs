@@ -51,14 +51,14 @@ test("pinInputs: note labels in today's order of preference; hidden tokens dropp
   };
   assert.deepEqual(pinInputs(scene), {
     notes: [
-      { id: "n1", x: 1, y: 2, label: "Text" },
-      { id: "n2", x: 3, y: 4, label: "Entry" },
-      { id: "n3", x: 5, y: 6, label: "Label" },
-      { id: "n4", x: 7, y: 8, label: "" },
+      { id: "n1", x: 1, y: 2, label: "Text", levels: [] },
+      { id: "n2", x: 3, y: 4, label: "Entry", levels: [] },
+      { id: "n3", x: 5, y: 6, label: "Label", levels: [] },
+      { id: "n4", x: 7, y: 8, label: "", levels: [] },
     ],
     tokens: [
-      { id: "a", name: "A", x: 0, y: 0, w: 100, h: 50, playerOwned: true },
-      { id: "c", name: "C", x: 5, y: 5, w: 50, h: 50, playerOwned: false },
+      { id: "a", name: "A", x: 0, y: 0, w: 100, h: 50, playerOwned: true, level: null },
+      { id: "c", name: "C", x: 5, y: 5, w: 50, h: 50, playerOwned: false, level: null },
     ],
   });
 });
@@ -78,6 +78,25 @@ test("pinInputs: a token's own getSize (hex) wins over width × grid.size; token
   assert.equal(tokens[1].w, 100);
   assert.equal(tokens[1].h, 100);
   assert.deepEqual(core.pinsUnderTokens(notes, tokens).map(r => r.tokenId), ["h"]);
+});
+
+test("pinInputs: Foundry 14 levels — a note's levels (Set) as an id array, a token's level or null; cross-level pairs dropped (movement-edge-5)", () => {
+  const scene = {
+    grid: { size: 100 },
+    notes: [
+      { id: "n1", x: 50, y: 50, text: "Cellar door", levels: new Set(["cellar"]) },
+      { id: "n2", x: 50, y: 50, text: "Everywhere", levels: new Set() },
+    ],
+    tokens: [
+      { id: "up", name: "Up", x: 0, y: 0, width: 1, height: 1, hidden: false, level: "attic" },
+      { id: "down", name: "Down", x: 0, y: 0, width: 1, height: 1, hidden: false, level: "cellar" },
+    ],
+  };
+  const { notes, tokens } = pinInputs(scene);
+  assert.deepEqual(notes.map(n => n.levels), [["cellar"], []]);
+  assert.deepEqual(tokens.map(t => t.level), ["attic", "cellar"]);
+  assert.deepEqual(core.pinsUnderTokens(notes, tokens).map(r => `${r.noteId}/${r.tokenId}`),
+    ["n1/down", "n2/up", "n2/down"]);
 });
 
 test("sceneOf/sceneIdOf: a Scene or a scene id string; unknown, empty or junk → null (rob-1)", () => {

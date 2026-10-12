@@ -39,6 +39,9 @@ manifest); the kit is vendored. What a player or GM can notice:
   carrying on with the old value until something else redrew it (movement-edge-3, movement-async-2).
 - **[declared]** `combatActive(null)` now answers for the viewed scene, as `status({ sceneId: null })`
   already did, instead of always answering `false` (movement-edge-4).
+- **[declared]** `pinsUnderTokens` respects Foundry 14 scene levels: a pin shown only on other
+  levels than a token's is no longer reported under it; a pin shown on every level, or a token with
+  no level, pairs as before (movement-edge-5).
 - Performance: the per-token paths (drag, arrow keys, token refresh, the layer sort) read the
   settings and the combats once per change instead of once per token (F-M1).
 
