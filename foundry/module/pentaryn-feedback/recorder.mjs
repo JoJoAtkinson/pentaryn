@@ -71,7 +71,7 @@ const pushOwnError = e => {
 
 /* ── sessionStorage: the rings survive a reload of this tab ───────────── */
 
-const store = { key: null, timer: null, dirty: false };
+const persisted = { key: null, timer: null, dirty: false };
 
 /** `g.sessionStorage`, or null when absent or blocked (the accessor itself can throw). */
 function storage(g = globalThis) {
@@ -84,15 +84,15 @@ function storage(g = globalThis) {
 
 /** Write the rings now (test seam; also the pagehide flush). Never throws. */
 export function persistNow(g = globalThis) {
-  store.dirty = false;
-  if (store.timer !== null) {
-    g.clearTimeout?.(store.timer);
-    store.timer = null;
+  persisted.dirty = false;
+  if (persisted.timer !== null) {
+    g.clearTimeout?.(persisted.timer);
+    persisted.timer = null;
   }
-  const s = store.key ? storage(g) : null;
+  const s = persisted.key ? storage(g) : null;
   if (!s) return false;
   try {
-    s.setItem(store.key, ringsToStore({ actions, errors }));
+    s.setItem(persisted.key, ringsToStore({ actions, errors }));
     return true;
   } catch (err) {
     return false;                       // quota or blocked storage: the in-memory rings still work
@@ -101,10 +101,10 @@ export function persistNow(g = globalThis) {
 
 /** Remove this tab's stored copy (uninstall). False when storage is absent or blocked. */
 function forgetStored(g = globalThis) {
-  const s = store.key ? storage(g) : null;
+  const s = persisted.key ? storage(g) : null;
   if (!s) return false;
   try {
-    s.removeItem(store.key);
+    s.removeItem(persisted.key);
     return true;
   } catch (err) {
     return false;                       // blocked storage: nothing was stored either
@@ -112,14 +112,14 @@ function forgetStored(g = globalThis) {
 }
 
 function persistSoon(g = globalThis) {
-  if (!store.key || !live.on) return;
-  store.dirty = true;
-  if (store.timer !== null || typeof g.setTimeout !== "function") return;
-  store.timer = g.setTimeout(() => {
-    store.timer = null;
-    if (store.dirty) persistNow(g);
+  if (!persisted.key || !live.on) return;
+  persisted.dirty = true;
+  if (persisted.timer !== null || typeof g.setTimeout !== "function") return;
+  persisted.timer = g.setTimeout(() => {
+    persisted.timer = null;
+    if (persisted.dirty) persistNow(g);
   }, LIMITS.persistMs);
-  store.timer?.unref?.();               // node: never hold a test process open
+  persisted.timer?.unref?.();           // node: never hold a test process open
 }
 
 /** Bring back what this tab stored before a reload: older entries first, then this page's. */
@@ -177,8 +177,8 @@ export function install(reg, ctx) {
   live.console = ctx.setting("captureConsole") === true;
   live.historySize = () => ctx.setting("historySize");
   listenWindow(g);
-  store.key = ringsKey(g.game?.world?.id, me());
-  restore(g, store.key);
+  persisted.key = ringsKey(g.game?.world?.id, me());
+  restore(g, persisted.key);
   const onPageHide = () => persistNow(g);
   if (typeof g.addEventListener === "function") {
     g.addEventListener("pagehide", onPageHide);
@@ -344,10 +344,10 @@ export function uninstall() {
   live.early = false;
   for (const fn of undo.splice(0).reverse()) fn();
   windowUndo?.();
-  if (store.timer !== null) globalThis.clearTimeout?.(store.timer);
-  store.timer = null;
+  if (persisted.timer !== null) globalThis.clearTimeout?.(persisted.timer);
+  persisted.timer = null;
   forgetStored();
-  store.key = null;
+  persisted.key = null;
   actions.length = 0;
   errors.length = 0;
   lastRender.clear();

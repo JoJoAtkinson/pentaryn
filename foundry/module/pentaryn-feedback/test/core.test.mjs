@@ -174,6 +174,13 @@ test("feedback-M7: one actionsDefault — settings row, recorder fallback and hi
   assert.match(recorder, /historySize: \(\) => LIMITS\.actionsDefault/);
 });
 
+test("feedback-M8: the recorder's sessionStorage state is `persisted`, not a second `store` beside the report store()", () => {
+  const recorder = readFileSync(new URL("recorder.mjs", ROOT), "utf8");
+  assert.doesNotMatch(recorder, /\b(?:const|let|var)\s+store\b/);
+  assert.doesNotMatch(recorder, /\bstore\.(?:key|timer|dirty)\b/);
+  assert.match(recorder, /^const persisted = \{ key: null, timer: null, dirty: false \};$/m);
+});
+
 test("ringPush keeps the newest max entries, oldest dropped from the front", () => {
   const ring = [];
   for (let i = 1; i <= 7; i++) core.ringPush(ring, { i }, 3);

@@ -2,6 +2,10 @@
 
 ## Unreleased — 2026-10-12 (W3L live-check fix; `module.json` stays 0.1.2, code-only sync)
 
+- **[declared] The recorder's storage state is `persisted`** (feedback-M8): `recorder.mjs` kept
+  its sessionStorage key, flush timer and dirty flag in a file-local `store`, the same name as the
+  report store `store()` elsewhere in the module. Renamed to `persisted` (same shape); a core test
+  pins the name. No behaviour change.
 - **[declared] One history default** (feedback-M7): the `historySize` default of 200 was a bare
   literal in the settings row, the recorder's pre-ready fallback and `historyMax`'s junk case. Core
   now has `LIMITS.actionsDefault = 200` and all three read it; a core test pins the settings row to
