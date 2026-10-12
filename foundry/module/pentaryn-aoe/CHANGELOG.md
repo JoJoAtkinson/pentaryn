@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **One monster save that fails to roll no longer throws away the rest** (declared, R4): a
+  rejecting `rollSavingThrow` threw out of `rollNpcSaves`, discarding every save already rolled in
+  that pass, and `resolve()` then skipped the player request card and `autoApplyNpc`. Each row is
+  now caught on its own (`log.warn("npcSave", row name, err)`), the saves that landed are written,
+  the request card and auto-apply still run, and the failed row stays '—' for a re-roll. README
+  API row says so.
 - **`selfApply` accepts a message id** (declared, R2-selfApply): the manifest and describe already
   said `ChatMessage|id`, but an id string was used as the card itself and nothing was applied.
   It now looks the id up first, as `cardEffects` and `pendingFor` do; an unknown id returns null.

@@ -263,7 +263,8 @@ export async function rollNpcSaves(messageId, { rowIds = null, force = false } =
     if (row.kind !== "auto" || row.applied || row.protected) continue;
     if (rowIds && !rowIds.includes(row.id)) continue;
     if (row.save && !force) continue;
-    results[row.id] = await rollOne(row, res, scene);
+    // R4: one rejecting save must not discard the others; the failed row stays '—' for a re-roll.
+    results[row.id] = await rollOne(row, res, scene).catch(err => { log.warn("npcSave", row.name, err); return null; });
   }
   return mutate(messageId, r => {
     for (const row of r.rows) if (results[row.id]) fillSave(row, results[row.id], r.onSave);
