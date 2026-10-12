@@ -5,7 +5,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { sourceScan } from "./kit/harness.mjs";
+import { sourceScan, pinJSON } from "./kit/harness.mjs";
+import { rulesFor } from "./css-rules.mjs";
 
 const ROOT = new URL("..", import.meta.url);
 const css = readFileSync(new URL("../styles/transform.css", import.meta.url), "utf8");
@@ -54,4 +55,10 @@ test("every own selector is scoped under .ptf-* or .pentaryn-transform (C37)", (
     if (/^\d+%/.test(sel.trim())) continue;
     assert.ok(/\.ptf-|\.pentaryn-transform/.test(sel), sel.trim());
   }
+});
+
+test("D7: the .pentaryn-tt rules transform.css applies, kit import inlined, are its pre-D7 block in order (golden/tooltip-rules.json)", () => {
+  // The golden was computed from styles/transform.css at origin/main (rules :70-113, before the kit
+  // import), so the shared stylesheet changes no rule, value or order a transform tooltip gets.
+  pinJSON("tooltip-rules", rulesFor(new URL("../styles/transform.css", import.meta.url), /\.pentaryn-tt\b/), import.meta.url);
 });
