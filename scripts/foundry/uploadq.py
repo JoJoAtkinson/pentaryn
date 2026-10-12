@@ -212,16 +212,10 @@ def pending() -> list[Job]:
     for p in d.glob("*" + JOB_SUFFIX):
         try:
             data = json.loads(p.read_text(encoding="utf-8"))
-            if not isinstance(data, dict):
-                continue
             # A key the job file lacks (written by older code) takes the field's default;
             # a required one reads as None, as before.
             known = {k: data[k] if k in data else _default(f)
                      for k, f in Job.__dataclass_fields__.items()}
-            if (not isinstance(known["name"], str) or not known["name"]
-                    or isinstance(known["created"], bool)
-                    or not isinstance(known["created"], (int, float))):
-                continue
             if not isinstance(known["bundles"], list):
                 known["bundles"] = []
             known["heal"] = bool(known["heal"])

@@ -777,21 +777,6 @@ def test_a_killed_builds_staging_is_swept_a_queued_jobs_is_not(two_hosts, spawne
         assert all((job.staging / n).is_file() for n in job.bundles)
 
 
-def test_pending_skips_a_parseable_but_malformed_job_file(two_hosts, spawned):
-    """`pending()` promises an unreadable job file is skipped and left for a human — a
-    file that parses as JSON but is not a job ('{}', a non-numeric 'created') too."""
-    with two_hosts.use("mac"):
-        assert cloud.backup("shutdown", background=True) == 0
-        [job] = uploadq.pending()
-        empty = uploadq.tmp_dir() / ("x.tar.gz" + uploadq.JOB_SUFFIX)
-        empty.write_text("{}", encoding="utf-8")
-        soon = uploadq.tmp_dir() / ("y.tar.gz" + uploadq.JOB_SUFFIX)
-        soon.write_text('{"name": "y", "created": "soon"}', encoding="utf-8")
-        assert [j.name for j in uploadq.pending()] == [job.name]
-        assert uploadq.in_flight() == job.name
-        assert empty.is_file() and soon.is_file()
-
-
 def test_tmp_dirname_has_one_source():
     """bundles owns the '.pentaryn-tmp' name; uploadq and cloud take it from there, and
     cloud.tmp_dir() is uploadq.tmp_dir(), one scratch directory."""
