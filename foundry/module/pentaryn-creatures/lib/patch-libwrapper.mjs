@@ -10,6 +10,8 @@
  * (pentaryn-prompts' behaviour).
  */
 
+import { logOrConsole } from "./log.mjs";
+
 export function libWrapperRoute({ g = globalThis, log = null } = {}) {
   return {
     name: "libWrapper",
@@ -20,8 +22,7 @@ export function libWrapperRoute({ g = globalThis, log = null } = {}) {
         const id = g.libWrapper.register(spec.moduleId, spec.path, make, spec.type ?? "WRAPPER");
         return () => g.libWrapper.unregister(spec.moduleId, id ?? spec.path, false);
       } catch (err) {
-        if (log) log.warn("libWrapper registration failed, wrapping by hand", err);
-        else g.console?.warn(`${spec.moduleId} | libWrapper registration failed, wrapping by hand`, err);
+        logOrConsole(spec.moduleId, log, { g }).warn("libWrapper registration failed, wrapping by hand", err);
         return null;
       }
     },

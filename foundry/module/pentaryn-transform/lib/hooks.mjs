@@ -8,14 +8,12 @@
  */
 
 import { codedError } from "./errors.mjs";
+import { logOrConsole } from "./log.mjs";
 
 export function hookRegistry(moduleId, log = null, { g = globalThis } = {}) {
   const records = [];
-  const report = (label, err, level = "error") => {
-    const lvl = level === "warn" ? "warn" : "error";
-    if (log) log[lvl](label, err);
-    else g.console?.[lvl](`${moduleId} | ${label}`, err);
-  };
+  const out = logOrConsole(moduleId, log, { g });
+  const report = (label, err, level = "error") => out[level === "warn" ? "warn" : "error"](label, err);
 
   const reg = {
     /**
@@ -113,6 +111,7 @@ function atLeast(version, target) {
  *    warns once that it is due for removal.
  */
 export function emitter(moduleId, HOOKS, { g = globalThis, log = null, version = null } = {}) {
+  const out = logOrConsole(moduleId, log, { g });
   const overdue = row => {
     const u = parseUntil(row.until);
     if (!u) return false;
@@ -124,9 +123,7 @@ export function emitter(moduleId, HOOKS, { g = globalThis, log = null, version =
     const row = HOOKS?.[key];
     if (!row?.name) throw codedError("BAD_ARGS", `${moduleId}: unknown hook ${key}`);
     if (row.legacyName && overdue(row)) {
-      const msg = `legacy hook ${row.legacyName} is past ${row.until}; remove it`;
-      if (log) log.warnOnce(`legacy:${row.legacyName}`, msg);
-      else g.console?.warn(`${moduleId} | ${msg}`);
+      out.warnOnce(`legacy:${row.legacyName}`, `legacy hook ${row.legacyName} is past ${row.until}; remove it`);
     }
     if (row.pre) {
       if (g.Hooks.call(row.name, ...args) === false) return false;

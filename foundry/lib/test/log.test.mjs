@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { makeLog } from "../log.mjs";
+import { logOrConsole, makeLog } from "../log.mjs";
 
 function sink() {
   const lines = [];
@@ -66,4 +66,19 @@ test("notify: one toast with console:false plus one console line; no-op without 
   assert.deepEqual(toasts, [["Careful", { console: false, permanent: true }]]);
   assert.deepEqual(lines, [["warn", "m | Careful"]]);
   assert.equal(makeLog("m", { console: c, g: {} }).notify("warn", "x"), undefined);
+});
+
+// kit-ext-2 (defect wave 2, Joe 2026-10-12): the one "log or console" fallback the kit shares.
+test("kit-ext-2: logOrConsole returns the log as given, else a console stand-in that warns once per key", () => {
+  const log = makeLog("m", { console: sink().c, g: {} });
+  assert.equal(logOrConsole("m", log), log);
+  const { c, lines } = sink();
+  const out = logOrConsole("pentaryn-x", null, { g: { console: c } });
+  const err = new Error("e");
+  out.error("boom", err);
+  out.warn("careful");
+  out.warnOnce("k", "once");
+  out.warnOnce("k", "once again");
+  assert.deepEqual(lines, [["error", "pentaryn-x | boom", err], ["warn", "pentaryn-x | careful"], ["warn", "pentaryn-x | once"]]);
+  assert.doesNotThrow(() => logOrConsole("m", null, { g: {} }).warnOnce("k", "no console"));
 });

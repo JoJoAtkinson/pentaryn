@@ -12,6 +12,8 @@
  * file, because adjustments rows grep for it there.
  */
 
+import { logOrConsole } from "./log.mjs";
+
 const records = [];
 
 /**
@@ -38,8 +40,7 @@ function recordPatch(row, undo) {
 }
 
 function warn(log, g, moduleId, msg) {
-  if (log) log.warn(msg);
-  else g.console?.warn(`${moduleId} | ${msg}`);
+  logOrConsole(moduleId, log, { g }).warn(msg);
 }
 
 /**

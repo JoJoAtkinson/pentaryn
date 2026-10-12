@@ -7,6 +7,27 @@
  * can flip from the console without a reload.
  */
 
+/**
+ * `log` when the caller passed one, else a console stand-in with the same `<moduleId> | <event>`
+ * lines: `error/warn` and a `warnOnce` whose Set lives in this stand-in. The one fallback for kit
+ * functions that take an optional `log` (hooks, patch, patch-libwrapper) — build it once per
+ * closure so `warnOnce` keeps its promise. `g.console` is read at call time and may be absent.
+ */
+export function logOrConsole(moduleId, log, { g = globalThis } = {}) {
+  if (log) return log;
+  const warned = new Set();
+  const line = event => `${moduleId} | ${event}`;
+  return {
+    error: (event, ...rest) => g.console?.error(line(event), ...rest),
+    warn: (event, ...rest) => g.console?.warn(line(event), ...rest),
+    warnOnce(key, event, ...rest) {
+      if (warned.has(key)) return;
+      warned.add(key);
+      g.console?.warn(line(event), ...rest);
+    },
+  };
+}
+
 export function makeLog(moduleId, { console: c = globalThis.console, traceSize = 200, g = globalThis } = {}) {
   const warned = new Set();
   const ring = [];

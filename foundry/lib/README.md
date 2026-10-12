@@ -26,7 +26,7 @@ Bump `kit.json` `version`, `errors.mjs` `KIT_VERSION` and every header together.
 | File | Exports | Notes |
 |---|---|---|
 | `errors.mjs` | `KIT_VERSION`, `CODES`, `RESERVED`, `PentarynError`, `codedError`, `errorCode`, `isCoded`, `ok`, `fail`, `toFail` | the message prefix `CODE: detail` is the wire format |
-| `log.mjs` | `makeLog(moduleId)` → `error/warn/warnOnce/info/debug/debug$/enabled/trace/traces/swallow/notify` | lines are `<module> \| <event>`; debug gated by `CONFIG.debug[moduleId]` |
+| `log.mjs` | `makeLog(moduleId)` → `error/warn/warnOnce/info/debug/debug$/enabled/trace/traces/swallow/notify`; `logOrConsole(moduleId, log)` | lines are `<module> \| <event>`; debug gated by `CONFIG.debug[moduleId]`; `logOrConsole` is the one fallback when a kit function got no `log` — a console stand-in (`error/warn/warnOnce`, its own once-Set) used by hooks, patch and patch-libwrapper (1.2.0 kit-ext-2) |
 | `hooks.mjs` | `hookRegistry(moduleId, log)` → `on/once/off/offAll/ids/guard/guardSwallowAsync`; `emitter(moduleId, HOOKS)` | `guard` passes vetoes through; `guardSwallowAsync` is aoe's old guard; `reg.on(n, fn, { guard: "warn" })` logs a throw at warn instead of error (1.0.1) |
 | `settings.mjs` | `defineSettings`, `settingReader`, `settingsSnapshot`, `defineKeybindings`, `serialStore` | `serialStore(MODULE, ["counter", "log"])` serialises several keys on one queue (1.0.1); rows carry literal `name`/`hint` keys; both define calls skip rows already registered, and `defineKeybindings` registers nothing once Foundry has built its bindings (after `setup`), so a hot patch never throws |
 | `resolve.mjs` | `resolveRef`, `refOf`, `toIdSet`, `withRef` | exact name, then a unique case-insensitive exact name; never a substring (1.2.0 KIT-M2 wording); explicit scene scope |
@@ -98,3 +98,9 @@ names-ext-3 (declared): `resolveRef(ref, "actor", { base: true })` given a token
 (`game.actors.get(token.actorId ?? id)`, null/NOT_FOUND when it is gone); before, it returned the
 synthetic actor unchanged. `base: false` is unchanged. Names' `syncRef` and ties' `inspect` drop
 their hand-rolled copies; transform's outside-revert hook never resolved through the kit and keeps its.
+kit-ext-2 (declared): without a `log`, `emitter`'s overdue-legacy warning now reaches `console.warn`
+once per legacy name per emitter, as its contract says — before, every emit warned. The four
+hand-copied "log or console" fallbacks (hooks ×2, patch, patch-libwrapper) are one helper,
+`log.mjs` `logOrConsole`; kit.json gives hooks, patch and patch-libwrapper a `log` dep (every lock
+already vendors log). The console lines are byte-identical, so a caller without a log (ties' registry,
+most `wrapMethod` calls) sees only the repeated legacy warning stop.
