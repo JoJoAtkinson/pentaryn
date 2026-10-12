@@ -67,7 +67,8 @@ export async function stash(owner, container, itemIds, { tag, currency = false, 
   const accepted = made?.length ?? 0;
   if (accepted !== creates.length) {
     const msg = `${MODULE} | stash: container accepted ${accepted}/${creates.length}; originals NOT deleted`;
-    console.error(msg, { owner: owner.id, container: container.id });
+    console.error(`${MODULE} | stash: container accepted ${accepted}/${creates.length}; originals NOT deleted`,
+      { owner: owner.id, container: container.id });
     const created = (made ?? []).map(d => d?.id ?? d?._id ?? null);
     let tail = "";
     let rolledBack = true;
