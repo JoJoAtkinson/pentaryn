@@ -11,6 +11,9 @@
   the spell-area preview listeners, the `#board` observer and the setting's `onChange` are inert
   while uninstalled, and the pending `canvasReady`/`ready` ticks are cancelled. A hot re-import's
   `install()` re-arms them.
+- [declared] The `canvasReady` and `ready` ticks catch their own throws (cursors-rob-2): a throwing
+  resync logs `resync failed`; in the `ready` tick a throwing attach logs `refresh failed` and the
+  resync still runs, so a blanked cursor is still repaired.
 
 ## Unreleased — 2026-10-11 (addon blueprint, wave 1)
 

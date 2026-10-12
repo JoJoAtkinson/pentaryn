@@ -84,6 +84,11 @@ function resync(el = boardEl()) {
   events.setCursor(mode);
 }
 
+/** resync(), with a throw logged as `resync failed` (the canvasReady and ready ticks). */
+function resyncLogged() {
+  try { resync(); } catch (err) { log.warn("resync failed", err); }
+}
+
 const guarded = new WeakSet();
 /** Watch #board's style attribute and resync() whenever its cursor is blanked. */
 function guardBoard() {
@@ -214,15 +219,19 @@ export function install(reg, ctx) {
   // the preview leaves the container when the placement is confirmed or cancelled.
   reg.on("activateCanvasLayer", () => refresh(), { guard: false, label: "activateCanvasLayer: refresh" });
   // canvasReady: other modules' canvasReady handlers may blank the cursor (see resync), possibly before
-  // this one runs, so also resync a tick later.
+  // this one runs, so also resync a tick later. A throw inside a tick has no hook to report it, so
+  // the ticks log their own (cursors-rob-2).
   reg.on("canvasReady", () => {
     attach();
     checkInternals();
-    later(() => resync());
+    later(resyncLogged);
   }, { guard: false, label: "canvasReady: attach" });
   reg.on("canvasTearDown", () => clear(), { guard: false, label: "canvasTearDown: clear" });
 
-  const ready = () => later(() => { attach(); resync(); });
+  const ready = () => later(() => {
+    try { attach(); } catch (err) { log.warn("refresh failed", err); }
+    resyncLogged();
+  });
   if (globalThis.game?.ready) ready();   // hot patch: ready has already fired
   else reg.once("ready", ready, { guard: false, label: "ready: attach" });
 }
