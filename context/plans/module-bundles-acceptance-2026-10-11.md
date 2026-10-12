@@ -116,3 +116,79 @@ first member `pentaryn-snapshot.json`, and `Data/worlds/pentaryn/data/journal/00
 it contains `ZZTOKEN-359119f12520b076` — the GM's edit made it into the cloud snapshot.
 S_first was coalesced away by S_save (same lineage, inside the 5-day window) — by design every
 backup in this run replaces the previous one; only the newest stays in `world-backups/`.
+
+## E. Changed-module test — only changed modules upload
+
+Scratch module `Data/modules/zz-bundles-probe/` (never enabled in any world): `module.json`
+(`id zz-bundles-probe`, `title "ZZ bundles probe"`, `version 0.0.1`, `compatibility
+{minimum: 14, verified: 14}`) and `probe.txt`. `make foundry-bundles` then listed 47 local
+bundles, the probe `6d33710313e73218 … no`.
+
+**probe.txt = "v1"** — `make foundry-backup REASON=acceptance-probe-v1` (1 min 56 s):
+
+```
+  staged 1 new bundle(s) (0.0 MB) for world-2026-10-12-023631-fvtt14.369-mac.tar.gz
+  uploading world-2026-10-12-023631-fvtt14.369-mac.tar.gz (18.9 MB, acceptance-probe-v1) to onedrive:DnD/foundry with 1 new bundle(s) (0.0 MB)...
+  uploading bundle module@zz-bundles-probe@0.0.1@6d33710313e73218.tar.gz (0.00 GB)
+  snapshot → world-2026-10-12-023631-fvtt14.369-mac.tar.gz (18.9 MB, acceptance-probe-v1)
+  replaced world-2026-10-12-023333-fvtt14.369-mac.tar.gz (0.0 days old, inside the 5-day window)
+  1 of 10 snapshots kept for mac
+  swept 0 bundles (none unreferenced for 7 days)
+```
+
+**S_probe1 = `world-2026-10-12-023631-fvtt14.369-mac.tar.gz`**: exactly 1 new bundle, the other 46
+reused; its sidecar lists 46 modules incl. `zz-bundles-probe → …@6d33710313e73218.tar.gz`;
+`bundles/` 47.
+
+**probe.txt = "v2"** — `make foundry-backup REASON=acceptance-probe-v2` (2 min 3 s):
+
+```
+  staged 1 new bundle(s) (0.0 MB) for world-2026-10-12-023846-fvtt14.369-mac.tar.gz
+  uploading world-2026-10-12-023846-fvtt14.369-mac.tar.gz (18.9 MB, acceptance-probe-v2) to onedrive:DnD/foundry with 1 new bundle(s) (0.0 MB)...
+  uploading bundle module@zz-bundles-probe@0.0.1@13dafef6009c39f4.tar.gz (0.00 GB)
+  snapshot → world-2026-10-12-023846-fvtt14.369-mac.tar.gz (18.9 MB, acceptance-probe-v2)
+  replaced world-2026-10-12-023631-fvtt14.369-mac.tar.gz (0.0 days old, inside the 5-day window)
+  1 of 10 snapshots kept for mac
+  swept 0 bundles (none unreferenced for 7 days)
+```
+
+**S_probe2 = `world-2026-10-12-023846-fvtt14.369-mac.tar.gz`**: exactly 1 new bundle (same version
+0.0.1, new fingerprint `13dafef6009c39f4` — a content change with no version bump is caught);
+sidecar names the v2 bundle; `bundles/` 48 and the v1 bundle is still there. S_probe1 was
+coalesced away by S_probe2, so the v1 bundle is now unreferenced — kept by the 7-day grace, not by
+a reference.
+
+**Probe folder deleted** — `make foundry-backup REASON=acceptance-probe-removed` (1 min 43 s):
+
+```
+  uploading world-2026-10-12-024111-fvtt14.369-mac.tar.gz (18.9 MB, acceptance-probe-removed) to onedrive:DnD/foundry...
+  snapshot → world-2026-10-12-024111-fvtt14.369-mac.tar.gz (18.9 MB, acceptance-probe-removed)
+  replaced world-2026-10-12-023846-fvtt14.369-mac.tar.gz (0.0 days old, inside the 5-day window)
+  1 of 10 snapshots kept for mac
+  swept 0 bundles (none unreferenced for 7 days)
+```
+
+**S_final = `world-2026-10-12-024111-fvtt14.369-mac.tar.gz`** (18,902,684 B + 4,041 B sidecar): 0
+new bundles; sidecar parent S_probe2, `bundled: 1`, 45 modules + dnd5e, **no
+`zz-bundles-probe`**; the tar's marker equals the sidecar; every bundle it names is in the cloud.
+It still holds the save test's journal (`000122.log` contains `ZZTOKEN-359119f12520b076`).
+
+`make foundry-bundles-gc` (dry run):
+
+```
+  would sweep 0 bundle(s) (0.0 MB) — every bundle in the cloud is referenced or younger than 7 days
+```
+
+`make foundry-cloud`: `based on world-2026-10-12-024111-fvtt14.369-mac.tar.gz`; `snapshots mac: 1`;
+`bundles 48 in the cloud (3.32 GB); 2 unreferenced (0.0 MB, swept after 7 days); local: 45 modules
++ 1 system, all in the cloud`. `make foundry-bundles` lists the two probe bundles under
+"referenced by no snapshot: 2 … 0.0 days old" — the first backup on or after 2026-10-19 sweeps
+them (no action needed). `.pentaryn-tmp/` holds no job and an empty `bundles/` staging folder.
+
+## State handed to the restore stage
+
+- Foundry **down**; tunnel down. `world-backups/` = S_final only. `pre-bundles-2026-10/` = the
+  fallback full snapshot. `bundles/` = 46 live + 2 unreferenced probe bundles.
+- Scratch left in place on purpose: journal `ZZ bundles acceptance 20261012T023213Z`
+  (`ussRnQm9Ou73gPN3`, token `ZZTOKEN-359119f12520b076`) — the restore proof needs it; delete it
+  after the restore stage. The probe module folder is already gone locally.
