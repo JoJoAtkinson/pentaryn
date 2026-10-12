@@ -31,7 +31,7 @@ test("the registry recorded golden/hooks.json less the entry's own ready (row 19
 
 test("ctx.uninstall(): no hook, no pointermove listener, the patch undone, the sweep timer dropped", () => {
   F.fire("ready");                                                // the lifecycle ready runs (and is gone)
-  Hooks.callAll("updateToken", {}, {}, {}, "u");                 // a sweep timer is pending
+  Hooks.callAll("updateToken", {}, { actorId: "x" }, {}, "u");     // a sweep timer is pending
   assert.ok(F.D.listeners.some(l => l.type === "pointermove"));
   W.ctx.uninstall();
   assert.deepEqual(F.listeners(), {}, JSON.stringify(F.listeners()));

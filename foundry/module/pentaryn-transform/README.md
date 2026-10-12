@@ -151,8 +151,9 @@ rest hooks, core document hooks and Argon's render hooks (`test/golden/hooks.jso
   winning tab writes, ~750 ms after the trigger; a loser, or a claim refused because the document is
   already gone, stands down with a debug line; the winner clears its claim after the write. The
   Starry combat-time tick is not claimed (both tabs write the same value). [declared]
-- The sweep of spent forms runs on the active GM's client (`activeGM.isSelf`), 3 s after token
-  traffic (one timer, never pushed back), 1.5 s after a form loses `isPolymorphed` (a player's
+- The sweep of spent forms runs on the active GM's client (`activeGM.isSelf`), 3 s after a token
+  is deleted or changes its actor, link, delta or `flags.dnd5e` (one timer, never pushed back; a drag,
+  light, hidden or elevation change schedules nothing), 1.5 s after a form loses `isPolymorphed` (a player's
   revert), and 3 s after ready; it deletes transformed copies with no token on any scene that are
   over 10 s old.
 

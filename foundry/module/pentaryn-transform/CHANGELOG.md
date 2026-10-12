@@ -4,6 +4,10 @@
 
 ## Unreleased
 
+- **Dragging a token no longer schedules a sweep (perf-1, final review).** Every token update, even an
+  x/y drag, scheduled a world-wide sweep of spent forms. Now only a token update that changes
+  `actorId`, `actorLink`, `delta` or `flags.dnd5e` schedules it; a deleted token, a form losing
+  `isPolymorphed` and the ready sweep schedule it as before ([declared]).
 - **One tab writes each automatic ending (transform-core-async-2, final review).** With the MCP bridge
   tab and a GM browser tab open, both tabs are the runner user, so both reverted a form at 0 HP, on
   Incapacitated or at expiry, ended the druid's copy of a carried effect, ended Starry Form and swept

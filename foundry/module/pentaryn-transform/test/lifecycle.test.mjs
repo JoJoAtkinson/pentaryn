@@ -301,7 +301,7 @@ test("scheduleSweep: token traffic schedules one 3 s sweep that is never pushed 
   game.actors.clear();
   F.calls.length = 0;
   F.W.add(F.W.makeActor({ id: "spent00000000001", flags: { dnd5e: { originalActor: IDS.talo } }, _stats: { createdTime: Date.now() - 60_000 } }));
-  Hooks.callAll("updateToken", {}, {}, {}, "u");
+  Hooks.callAll("updateToken", {}, { actorId: "x" }, {}, "u");
   mock.timers.tick(2_000);
   Hooks.callAll("deleteToken", {}, {}, "u");                // must not push the sweep back
   mock.timers.tick(1_000);
@@ -309,7 +309,7 @@ test("scheduleSweep: token traffic schedules one 3 s sweep that is never pushed 
   assert.equal(ops("Actor.deleteDocuments").length, 1, "swept 3 s after the first update (and its claim)");
   F.W.add(F.W.makeActor({ id: "spent00000000002", flags: { dnd5e: { originalActor: IDS.talo } }, _stats: { createdTime: Date.now() - 60_000 } }));
   const form = F.W.add(F.W.makeActor({ id: "revertedForm0001", flags: { dnd5e: { originalActor: IDS.talo, isPolymorphed: false } }, _stats: { createdTime: Date.now() - 60_000 } }));
-  Hooks.callAll("updateToken", {}, {}, {}, "u");             // 3 s pending
+  Hooks.callAll("updateToken", {}, { actorId: "x" }, {}, "u");   // 3 s pending
   Hooks.callAll("updateActor", form, { flags: { dnd5e: { isPolymorphed: false } } }, {}, "u");   // earlier: 1.5 s
   Hooks.callAll("updateActor", form, { name: "x" }, {}, "u"); // no dnd5e flags: ignored
   mock.timers.tick(1_500);
@@ -321,13 +321,33 @@ test("scheduleSweep: token traffic schedules one 3 s sweep that is never pushed 
   assert.equal(ops("Actor.deleteDocuments").length, 2, "the replaced 3 s timer was cleared");
 });
 
+test("[declared] perf-1 updateToken schedules a sweep only for an actor, link, delta or dnd5e flag change; a drag, light, hidden or elevation change schedules nothing", async () => {
+  game.actors.clear();
+  F.calls.length = 0;
+  F.W.add(F.W.makeActor({ id: "spent00000000003", flags: { dnd5e: { originalActor: IDS.talo } }, _stats: { createdTime: Date.now() - 60_000 } }));
+  for (const changes of [{ x: 100, y: 200 }, { light: { dim: 10 } }, { hidden: true }, { elevation: 5 }, { flags: { other: { a: 1 } } }]) {
+    Hooks.callAll("updateToken", {}, changes, {}, "u");
+  }
+  mock.timers.tick(10_000);
+  await settle();
+  assert.deepEqual(ops("Actor.deleteDocuments"), [], "no sweep for irrelevant token changes");
+  for (const changes of [{ actorId: "x" }, { actorLink: false }, { delta: { name: "y" } }, { flags: { dnd5e: { z: 1 } } }]) {
+    F.calls.length = 0;
+    F.W.add(F.W.makeActor({ id: "spent00000000003", flags: { dnd5e: { originalActor: IDS.talo } }, _stats: { createdTime: Date.now() - 60_000 } }));
+    Hooks.callAll("updateToken", {}, changes, {}, "u");
+    mock.timers.tick(3_000);
+    await settle();
+    assert.equal(ops("Actor.deleteDocuments").length, 1, `swept after ${JSON.stringify(changes)}`);
+  }
+});
+
 test("scheduleSweep: a polymorphed form update, or a player's client, schedules nothing; a failing sweep warns", async () => {
   game.actors.clear();
   F.calls.length = 0;
   const live = F.W.add(F.W.makeActor({ id: "liveForm00000001", flags: { dnd5e: { originalActor: IDS.talo, isPolymorphed: true } }, _stats: { createdTime: -60_000 } }));
   Hooks.callAll("updateActor", live, { flags: { dnd5e: { x: 1 } } }, {}, "u");
   F.become({ userId: IDS.player });
-  Hooks.callAll("updateToken", {}, {}, {}, "u");
+  Hooks.callAll("updateToken", {}, { actorId: "x" }, {}, "u");
   F.become({ userId: IDS.gm });
   mock.timers.tick(10_000);
   await flush();
@@ -335,7 +355,7 @@ test("scheduleSweep: a polymorphed form update, or a player's client, schedules 
   const real = Actor.implementation.deleteDocuments;
   Actor.implementation.deleteDocuments = async () => { throw new Error("db"); };
   game.scenes.clear();
-  Hooks.callAll("updateToken", {}, {}, {}, "u");
+  Hooks.callAll("updateToken", {}, { actorId: "x" }, {}, "u");
   mock.timers.tick(3_000);
   await settle();
   Actor.implementation.deleteDocuments = real;
