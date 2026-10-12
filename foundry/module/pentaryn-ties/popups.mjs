@@ -358,6 +358,7 @@ export function restorePinned() {
   const saved = setting(PIN_SETTING);
   if (!Array.isArray(saved) || !saved.length) return;
   if (!mayWrite()) return; // the playerAccess kill switch: a player's memo waits, untouched, for access to return
+  const at = v => (typeof v === "number" && Number.isFinite(v) ? v : 20); // 0 is a real edge position, not "missing"
 
   for (const entry of saved) {
     const actor = game.actors?.get(entry?.sourceId);
@@ -380,7 +381,7 @@ export function restorePinned() {
     const k = key(actor.id, tie.id);
     if (cards.has(k)) continue;
     const rec = mount(k, { tie, token, sourceId: actor.id, showNotes: true, pinned: true, anchor: null });
-    place(rec, Number(entry.x) || 20, Number(entry.y) || 20);
+    place(rec, at(entry.x), at(entry.y));
   }
   notify();
 }
