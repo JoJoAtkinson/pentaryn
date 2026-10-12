@@ -208,6 +208,7 @@ integrator's S13 batch lands (as for every lane's files moves).
 | W4-C4 | combat-riders-36 rest (read aoe's own refund decision) | **wait for aoe** | aoe publishes no refund event or member yet (its `HOOKS` is empty); add `pentaryn-aoe.refunded` (or a `placementCancelled` member) in aoe first |
 | W4-C5 | hud's listeners on the events stay on the legacy `pentarynCombat.*` names until `pentaryn-combat 0.4.0` | **keep** | emit fires both names, so each runs once; moving them now flips hud.test's 15 legacy-name simulations; move them in the release that drops the legacy names |
 | W4-C6 | D7 tooltip CSS: `lib/argon-tooltip.css` is vendored but not loaded | **load it in the Wave 7 batch** (module.json `styles`) | then transform-creatures-14 step 2 needs no hand copy; until then combat's `pentaryn-tt` class is still styled only by transform.css |
+| W4-C7 | §5.9.4 / C59: `turnflow/boundaries.mjs` sweepOrphanFlags awaits one `actor.update` per actor in a loop (through `dropCombatFlags`, which hides it from the C59 scan); `offhand.mjs` seedAll awaits one `setFlag` per character | **keep one write per actor** (review, 2026-10-11) | seedAll: batching breaks a frozen checkpoint pin. shapes.test "seedAll … a failure is warned per actor" and golden `seed-all.json` require one actor's failed write to leave the others seeded, and a single `Actor.updateDocuments` fails as a whole. sweepOrphanFlags: the guide's -38 chose one write per actor and handed it to the live checks as such. After the first sweep almost no actor carries stale flags, because the end-of-combat cleanup has already cleared them, so a batch saves about nothing. It would also cost a fixture `Actor.updateDocuments`, a flip of golden `ready-calls.json`, and the per-actor isolation. If Joe wants it: one [declared, perf] commit that builds `[{ _id, ["flags." + MODULE]: { k: _del } }]` and calls `Actor.updateDocuments` once, pinning the write count in flag-cleanup.test. The scan blind spot (a per-document write behind a local helper) is a conformance.py note for the integrator, not a combat change |
 | — | isAoeHandle oracle pin (portals / creatures copies) | follow-up | needs migrate/wave-3 code (overnight plan §2); combat's own `shapes.isAoeHandle` is pinned only against its old inline expression |
 
 **Live checks for the gated live phase (combat).** After `make foundry-combat-sync` + reload:
@@ -239,3 +240,7 @@ Shared or other-lane files. Each item is an exact edit for the integrator.
 - **`foundry/module/pentaryn-aoe/test/fixtures/handle-oracle.json` `about`** (aoe lane or
   integrator): `combat's turnflow` → `combat's turnflow/helper-token.mjs (shapes.isAoeHandle)`. Only
   the `about` string changes, no row or column.
+- **`scripts/foundry/blueprint/conformance.py` C59** (integrator, optional): the rule misses a
+  per-document write made behind a local helper. combat's `sweepOrphanFlags` loop awaits
+  `dropCombatFlags(actor, …)`, which wraps `actor.update`. W4-C7 keeps that loop, so this is a note on what
+  the scan can see, not a combat defect. C59 is already `warn+manual`, and the manual checklist (§5.9.4) caught it.

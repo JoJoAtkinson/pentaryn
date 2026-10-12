@@ -1021,7 +1021,7 @@ Core: `Object.isFrozen(DELAYS)`; `DELAYS.tidyAfterSequence > DELAYS.tidyLook`; `
 
 **Status (28ccc87):** new — introduced by the usability re-run (17275c9, 4f9224f).
 
-**Status (wave 4, `migrate/wave-4`, 2026-10-11):** done `06755b88` [declared].
+**Status (wave 4, `migrate/wave-4`, 2026-10-11):** done `06755b88` [declared]. Review note: the orphan sweep still makes one awaited write per actor in its loop, which is §5.9.4's shape, and C59 does not see it behind `dropCombatFlags`. Kept on purpose; wave-4 report Open for Joe W4-C7 (also seedAll).
 
 **Where:** `foundry/module/pentaryn-combat/turnflow.mjs:261–285`
 
