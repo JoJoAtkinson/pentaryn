@@ -320,7 +320,8 @@ export function install(reg, ctx) {
 }
 
 export function uninstall() {
-  chains.clear();
+  // `chains` is left alone: each chain removes itself when it settles, so a hot re-install's ingest
+  // queues behind one still in flight instead of filing the same entry twice (feedback-async-4)
   for (const timer of retries.values()) globalThis.clearTimeout?.(timer);
   retries.clear();
   buckets.clear();

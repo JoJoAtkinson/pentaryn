@@ -2,6 +2,12 @@
 
 ## Unreleased — 2026-10-12 (W3L live-check fix; `module.json` stays 0.1.2, code-only sync)
 
+- **[declared] A hot patch mid-filing no longer files a report twice** (feedback-async-4):
+  `uninstall()` cleared the per-user ingest chains while one could still be writing, so the
+  re-install's `ready` ingest read the same queue entry and uploaded it again (a second toast,
+  audit line and bucket token). `uninstall()` now leaves the chains alone (each removes itself when
+  it settles), so the new ingest waits for the one in flight; retries, buckets and the reporter's
+  gap are still cleared.
 - **[declared] Escape closes a dialog opened while the last one was still closing**
   (feedback-async-1): `open()` during the old dialog's close animation built a new dialog, and the
   old close then deleted the new one's `foundry.applications.instances` entry, so Escape no longer

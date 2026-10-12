@@ -109,7 +109,8 @@ wraps stay in place after `uninstall()` and record nothing until the next instal
   (the server lets only that user, or a GM, write it — so the queue's owner *is* the reporter),
   then `queryGM("pentaryn-feedback.ingest", { userId, ids }, { timeout: 10000 })`.
 - The **active GM** files a user's queue on that query, on `updateUser` (a new queue key), on
-  `userConnected`, and at `ready` (every user). Per tab, one ingest per user at a time.
+  `userConnected`, and at `ready` (every user). Per tab, one ingest per user at a time, even
+  across a hot patch (`uninstall()` leaves an in-flight ingest's chain for the re-install to wait on).
 - A queue entry that fails `validateReport` (including a `t` no Date can hold) or cannot be
   normalised is **dropped** with a `refused report` warning, and the rest of the queue is filed; a
   failed upload instead stays queued for the next ingest.
