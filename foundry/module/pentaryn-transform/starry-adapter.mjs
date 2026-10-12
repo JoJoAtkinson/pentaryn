@@ -15,17 +15,17 @@
  * flags.pentaryn-senses.light while the form lasts — pentaryn-senses' carried-light path writes it
  * to every token of the druid and puts any hand-set light back afterwards.
  *
- * Imports wildshape-adapter.mjs (say, markBonusUsed): the Starry actions spend the Wild Shape use and
+ * Imports wildshape-adapter.mjs (say, markBonusUsed, refund): the Starry actions spend the Wild Shape use and
  * post through the same chat helper (test/graph-allow.json). The hooks are starry.mjs's.
  */
 
 import {
   MODULE, activitiesOf, usesLeft, formatDuration, CONSTELLATIONS, STARRY_LIGHT, STARRY_SECONDS,
   constellationOfActivity, starryEffectData, starryBlock, findWildShapeItem, secondsLeft, constellationImgOf,
-  pickStarryBase, starryEndKey, refundUpdate
+  pickStarryBase, starryEndKey
 } from "./transform-core.mjs";
 import { readFlag, flagPath } from "./lib/flags.mjs";
-import { say, markBonusUsed } from "./wildshape-adapter.mjs";
+import { say, markBonusUsed, refund } from "./wildshape-adapter.mjs";
 
 /** The druid's Starry Form effect. Static, 16 characters. */
 export const STARRY_EFFECT_ID = "pentarynStarry00";
@@ -224,8 +224,7 @@ export async function assumeStarry(actor, constellation) {
     } catch (err) {
       // The use is spent but the form did not go up: it comes back, as a failed shift's does (doShift).
       // A form that is up (only its light failed) keeps the use.
-      const update = constellationOf(actor) === constellation ? null : refundUpdate(ws?.system?.uses);
-      if (update) await ws.update(update);
+      if (constellationOf(actor) !== constellation) await refund(actor, ws);
       throw err;
     }
     announceStarryOn(actor, constellation);

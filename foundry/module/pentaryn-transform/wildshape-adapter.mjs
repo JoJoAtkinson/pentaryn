@@ -361,9 +361,10 @@ async function traitsHtml(source) {
   return parts.join("");
 }
 
-async function refund(host, itemId) {
-  const item = host?.items.get(itemId);
-  const update = refundUpdate(item?.system.uses);
+/** Give back one spent use of `host`'s Wild Shape item (the item or its id); writes nothing when none is spent. */
+export async function refund(host, itemOrId) {
+  const item = typeof itemOrId === "string" ? host?.items.get(itemOrId) : itemOrId;
+  const update = refundUpdate(item?.system?.uses);
   if (update) await item.update(update);
 }
 

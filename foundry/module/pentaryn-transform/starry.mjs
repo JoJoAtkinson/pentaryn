@@ -4,9 +4,9 @@
  * hud.mjs (esmodules[1]) right before the HUD panels, where its hooks always registered.
  */
 
-import { MODULE, starryBlock, refundUpdate, canRunAny } from "./transform-core.mjs";
+import { MODULE, starryBlock, canRunAny } from "./transform-core.mjs";
 import { makeLog } from "./lib/log.mjs";
-import { isRunner } from "./wildshape-adapter.mjs";
+import { isRunner, refund } from "./wildshape-adapter.mjs";
 import { claimed } from "./claim-adapter.mjs";
 import {
   STARRY_EFFECT_ID, starryItem, wildShapeItemOf, isStarryConsume, activeStarry, constellationOf, tickStarry,
@@ -34,12 +34,7 @@ function onSheetPostUse(activity, usageConfig) {
   if (!isStarryConsume(activity) || usageConfig?.pentaryn?.starry) return;
   const actor = activity.actor;
   pickConstellation(actor).then(async c => {
-    if (!c) {                                     // closed: the use comes back
-      const ws = wildShapeItemOf(actor);
-      const update = refundUpdate(ws?.system?.uses);
-      if (update) await ws.update(update);
-      return;
-    }
+    if (!c) return refund(actor, wildShapeItemOf(actor));   // closed: the use comes back
     await applyStarry(actor, c);
     announceStarryOn(actor, c);
   }).catch(err => log.error("starry form failed", err));

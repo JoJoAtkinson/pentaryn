@@ -269,3 +269,27 @@ test("R1 [declared] ReturnButton's click, for symmetry: a throw resolves, warns,
   game.tooltip.element = null;
   liveButtons.clear();
 });
+
+/* ── M7 one refund: the Starry routes call wildshape-adapter's refund() ───── */
+
+test("M7 [declared] wildshape-adapter exports refund(actor, item | id); starry.mjs and starry-adapter.mjs refund through it, never inline", async () => {
+  const { readFileSync } = await import("node:fs");
+  const W = await import("../wildshape-adapter.mjs");
+  assert.equal(typeof W.refund, "function", "refund is exported");
+  const { talo } = fresh();
+  const ws = talo.items.get(IDS.ws);
+  await ws.update({ "system.uses.spent": 2 });
+  await W.refund(talo, ws);
+  assert.equal(ws.system.uses.spent, 1, "by the item");
+  await W.refund(talo, IDS.ws);
+  assert.equal(ws.system.uses.spent, 0, "by its id");
+  F.calls.length = 0;
+  await W.refund(talo, ws);
+  assert.equal(F.calls.filter(c => c.op === "update").length, 0, "nothing spent: nothing written");
+  await assert.doesNotReject(W.refund(talo, null), "no item: nothing to do");
+  for (const f of ["starry.mjs", "starry-adapter.mjs"]) {
+    const src = readFileSync(new URL(`../${f}`, import.meta.url), "utf8");
+    assert.doesNotMatch(src, /refundUpdate/, `${f} computes no refund update of its own`);
+    assert.match(src, /\brefund\(/, `${f} calls the shared refund()`);
+  }
+});

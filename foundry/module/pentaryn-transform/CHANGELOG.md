@@ -4,6 +4,9 @@
 
 ## Unreleased
 
+- **One place computes the Wild Shape refund (M7, defect wave 2).** wildshape-adapter.mjs now exports
+  `refund(actor, item | itemId)`; Starry Form's sheet route (dialog closed) and `assumeStarry`'s failed
+  form call it instead of building the refund update inline. No behaviour change ([declared]).
 - **`starry.assume`'s describe() doc lists every way it answers false (M6, defect wave 2).** Besides
   shifted, incapacitated and out of uses, it now names a druid with no Starry Form feature or consume
   activity (warns), an unknown constellation or no actor, a call already in progress for this druid,
