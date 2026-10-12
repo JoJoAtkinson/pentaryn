@@ -35,6 +35,21 @@ tags: [plans, audit, foundry]
 
 Resolved by the re-run: none. Obsolete: none.
 
+**Status (wave 4, 2026-10-11, branch `migrate/wave-4`, code phase; live checks pending):**
+
+| Id | Status |
+|---|---|
+| combat-riders-23 | fixed `[declared, edge]` `6516b872` (isConcentration early return) |
+| combat-riders-25 | fixed: one MODULE `111ac454`, settings table `d70ed29b`, entry split `b81fa95d` |
+| combat-riders-26 | fixed `d6dbb324` (core/hit-dice.mjs, slotsFrom, concentrationResult reuse) |
+| combat-riders-27 | fixed `[declared, console only]` `50d4f655` |
+| combat-riders-32 | fixed `3dacbbe1` (inspect, settings(), describe(), arcaneRecovery) |
+| combat-riders-39 | fixed `b81fa95d` (patches.mjs, wrapMethod; rows renamed per D2 — adjustments.yml edits with the integrator) |
+| combat-riders-40 | fixed `0f1c1822` |
+| combat-riders-41 | fixed `[declared]` `c8ce8381` (claim first on the patient) |
+| combat-riders-16 (riders half) | rows and files moves written up for the integrator (adjustments.yml is shared) |
+| combat-riders-12 / -13 / -17 / -31 (riders halves) | -12 `[declared]` `32a0a8e6`; -13 `3dacbbe1`; -17 README table `d42a1164` (combat README / melee.md mirror with the integrator); -31 `b81fa95d` + `d42a1164` |
+
 Id note: the new findings are -39 and -40 because combat.md already uses combat-riders-36, -37 and -38 (the shared numbering continues across both files).
 
 ## Summary
