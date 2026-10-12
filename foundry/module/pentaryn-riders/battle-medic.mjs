@@ -34,7 +34,7 @@ function soleTarget() {
 }
 
 /** Why Battle Medic can't run right now, or null. Checked before dnd5e spends the kit. */
-function battleMedicBlock(token) {
+function battleMedicBlock(healer, token) {
   const target = token?.actor ?? null;
   const hasHd = !!target?.system?.attributes?.hd;
   const key = battleMedicBlockReason({
@@ -104,7 +104,7 @@ async function runBattleMedic(healer, token) {
 function veto(activity) {
   try {
     if (!settingRaw("enabled") || !isBattleMedic(activity)) return;
-    const why = battleMedicBlock(soleTarget());
+    const why = battleMedicBlock(activity.actor, soleTarget());
     if (why) { ui.notifications.warn(why); return false; }
   } catch (err) { log.warn("Battle Medic check skipped", err); }
 }
