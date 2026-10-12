@@ -415,7 +415,7 @@ test/glue.mjs: damageLabel with {labels:{damage:[{label:'1d8 + 3 Slashing'}]}}, 
 
 **Status (28ccc87):** open (re-anchored; header unchanged; riders.mjs is now 501 lines, over the 500 feature cap)
 
-**Status (wave 4, `migrate/wave-4`, 2026-10-11):** step 1 (rename to turn-riders.mjs) `91dd98db`; step 2 (the 'Which riders module?' table) in the README `b936d9f6`; melee.md copy returned to the integrator.
+**Status (wave 4, `migrate/wave-4`, 2026-10-11):** step 1 (rename to turn-riders.mjs) `91dd98db`; step 2 (the 'Which riders module?' table) in the README `b936d9f6`; melee.md copy returned to the integrator. Steps 3 (the shared `insertCardNote`) and 4 (`scripts/tests/test_rider_tables.py`, the double-apply guard) are **open**: both are outside the combat lane. Step 4 is drafted for the integrator in the wave-4 report; wave-4 report Open for Joe W4-C8.
 
 **Where:** `foundry/module/pentaryn-combat/riders.mjs:1–16`
 

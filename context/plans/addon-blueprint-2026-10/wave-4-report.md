@@ -209,6 +209,7 @@ integrator's S13 batch lands (as for every lane's files moves).
 | W4-C5 | hud's listeners on the events stay on the legacy `pentarynCombat.*` names until `pentaryn-combat 0.4.0` | **keep** | emit fires both names, so each runs once; moving them now flips hud.test's 15 legacy-name simulations; move them in the release that drops the legacy names |
 | W4-C6 | D7 tooltip CSS: `lib/argon-tooltip.css` is vendored but not loaded | **load it in the Wave 7 batch** (module.json `styles`) | then transform-creatures-14 step 2 needs no hand copy; until then combat's `pentaryn-tt` class is still styled only by transform.css |
 | W4-C7 | §5.9.4 / C59: `turnflow/boundaries.mjs` sweepOrphanFlags awaits one `actor.update` per actor in a loop (through `dropCombatFlags`, which hides it from the C59 scan); `offhand.mjs` seedAll awaits one `setFlag` per character | **keep one write per actor** (review, 2026-10-11) | seedAll: batching breaks a frozen checkpoint pin. shapes.test "seedAll … a failure is warned per actor" and golden `seed-all.json` require one actor's failed write to leave the others seeded, and a single `Actor.updateDocuments` fails as a whole. sweepOrphanFlags: the guide's -38 chose one write per actor and handed it to the live checks as such. After the first sweep almost no actor carries stale flags, because the end-of-combat cleanup has already cleared them, so a batch saves about nothing. It would also cost a fixture `Actor.updateDocuments`, a flip of golden `ready-calls.json`, and the per-actor isolation. If Joe wants it: one [declared, perf] commit that builds `[{ _id, ["flags." + MODULE]: { k: _del } }]` and calls `Actor.updateDocuments` once, pinning the write count in flag-cleanup.test. The scan blind spot (a per-document write behind a local helper) is a conformance.py note for the integrator, not a combat change |
+| W4-C8 | combat-riders-17 steps 3 and 4 are open: (3) one same-named `insertCardNote(html, node)` in combat and riders; (4) the guard test `scripts/tests/test_rider_tables.py` proving TURN_RIDERS and riders' RULES never claim the same feature, and pinning the two `normalizeName` contracts | **step 4: the integrator adds the drafted test below once both lanes have merged; step 3: wait** | Both steps fall outside the combat lane. Step 4 is a new file in `scripts/tests/` that reads `pentaryn-riders/riders-core.mjs`, which the riders lane is still changing on this branch. The draft passes against `migrate/wave-4` today, 3/3: no overlap, TURN_RIDERS keys pinned, combat `'A (x) B'` → `'a (x) b'` and riders → `'a b'`. Step 3 edits riders' `card-note.mjs` (riders lane). Its natural home is a kit helper (`foundry/lib`, a kit minor) rather than two hand copies, and the note bodies differ today: combat builds HTML with an Undo button, riders sets `textContent`. Until step 4 lands, nothing guards against a feature in both tables applying twice |
 | — | isAoeHandle oracle pin (portals / creatures copies) | follow-up | needs migrate/wave-3 code (overnight plan §2); combat's own `shapes.isAoeHandle` is pinned only against its old inline expression |
 
 **Live checks for the gated live phase (combat).** After `make foundry-combat-sync` + reload:
@@ -244,3 +245,59 @@ Shared or other-lane files. Each item is an exact edit for the integrator.
   per-document write made behind a local helper. combat's `sweepOrphanFlags` loop awaits
   `dropCombatFlags(actor, …)`, which wraps `actor.update`. W4-C7 keeps that loop, so this is a note on what
   the scan can see, not a combat defect. C59 is already `warn+manual`, and the manual checklist (§5.9.4) caught it.
+- **New `scripts/tests/test_rider_tables.py`** (integrator, after the riders and combat lanes merge;
+  combat-riders-17 step 4, W4-C8). Drafted and run green (3 passed) against this branch at a
+  repo-shaped path:
+
+```python
+"""combat-riders-17 step 4: pentaryn-combat's TURN_RIDERS and pentaryn-riders' RULES never claim the
+same feature (a row in both would apply twice), and the two normalizeName contracts stay pinned."""
+import json
+import shutil
+import subprocess
+from pathlib import Path
+
+import pytest
+
+ROOT = Path(__file__).resolve().parents[2]
+COMBAT = ROOT / "foundry/module/pentaryn-combat/combat-core.mjs"
+RIDERS = ROOT / "foundry/module/pentaryn-riders/riders-core.mjs"
+
+SCRIPT = """
+const combat = await import(process.argv[1]);
+const riders = await import(process.argv[2]);
+const n = ["Elemental Adept (Fire)", "A (x) B"];
+console.log(JSON.stringify({
+  turn: combat.TURN_RIDERS.map(r => ({ key: r.key, ids: [...r.identifiers] })),
+  rules: riders.RULES.flatMap(r => [r.key, ...(r.match?.identifiers ?? []),
+    ...(r.match?.names ?? []).map(combat.slugify)]),
+  combatNorm: n.map(combat.normalizeName),
+  ridersNorm: n.map(riders.normalizeName),
+}));
+"""
+
+
+@pytest.fixture(scope="module")
+def tables():
+    node = shutil.which("node")
+    if not node:
+        pytest.skip("node not on PATH")
+    out = subprocess.run([node, "--input-type=module", "-e", SCRIPT, COMBAT.as_uri(), RIDERS.as_uri()],
+                         capture_output=True, text=True, check=True, timeout=30)
+    return json.loads(out.stdout)
+
+
+def test_turn_rider_keys_pinned(tables):
+    assert [r["key"] for r in tables["turn"]] == ["sneak-attack", "frenzy", "colossus-slayer", "divine-strike"]
+
+
+def test_no_feature_in_both_tables(tables):
+    turn = {i for r in tables["turn"] for i in [r["key"], *r["ids"]]}
+    assert turn.isdisjoint(tables["rules"]), sorted(turn & set(tables["rules"]))
+
+
+def test_normalize_name_contracts(tables):
+    # combat strips only a trailing parenthetical; riders strips every one.
+    assert tables["combatNorm"] == ["elemental adept", "a (x) b"]
+    assert tables["ridersNorm"] == ["elemental adept", "a b"]
+```
