@@ -17,8 +17,8 @@
 // What it exercises (the real glue): a ZZ scratch scene (padding 0, grid 100, no Levels) holding
 // the five D1 walls (two windows, a window, a door, a hint); preview({sceneId, backend}) for js
 // and, when loaded, wasm; run({sceneId, backend: "js"}) twice; undo({sceneId}). The GM whisper
-// cards it posts are captured, compared with the time stripped, and deleted. The scene (and its
-// walls) is deleted at the end.
+// cards it posts (this GM's own messages only) are captured, compared with the time stripped,
+// and deleted. The scene (and its walls) is deleted at the end.
 // Wave 2 live plan: context/plans/addon-blueprint-2026-10/wave-2-live-plan.md.
 
 const N = 5;
@@ -99,7 +99,8 @@ const sceneWalls = scene => scene.walls.map(w => {
 }).sort((a, b) => JSON.stringify(a.c).localeCompare(JSON.stringify(b.c)));
 
 const chats = [];
-const hookId = Hooks.on("createChatMessage", m => chats.push(m.id));
+// only this GM's own messages: a player's card posted mid-run is never captured or deleted (LG-AC-1)
+const hookId = Hooks.on("createChatMessage", (m, opts, userId) => { if (userId === game.user.id) chats.push(m.id); });
 const lastCard = async n0 => { await settle(() => chats.length > n0, 2000); return chats.length > n0 ? card(game.messages.get(chats.at(-1))) : null; };
 let scene = null;
 try {
