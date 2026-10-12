@@ -35,6 +35,7 @@
 import * as rit from "./rituals-core.mjs";
 import { MODULE } from "./riders-core.mjs";
 import { settingOr } from "./settings.mjs";
+import { itemInfo } from "./shapes.mjs";
 
 const DONE = Symbol.for(`${MODULE}.ritualsAdded`);
 
@@ -42,12 +43,7 @@ const enabled = () => settingOr("rituals", false);
 const longEnabled = () => settingOr("longCasts", false);
 
 function hasRitualAdept(actor) {
-  return !!actor?.items?.some(i => rit.isRitualAdept({
-    type: i.type,
-    identifier: i.system?.identifier ?? "",
-    source: i._stats?.compendiumSource ?? i.flags?.core?.sourceId ?? "",
-    name: i.name
-  }));
+  return !!actor?.items?.some(i => rit.isRitualAdept(itemInfo(i)));
 }
 
 let log = null;
