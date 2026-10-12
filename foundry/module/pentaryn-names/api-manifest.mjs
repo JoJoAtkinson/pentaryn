@@ -18,7 +18,7 @@ export const MANIFEST = Object.freeze({
   rows: [
     {
       path: "sync",
-      params: [{ name: "ref", kind: "actor", resolve: false }, { name: "oldName", type: "string" }, { name: "newName", type: "string" }],
+      params: [{ name: "ref", kind: "actor", resolve: "self" }, { name: "oldName", type: "string" }, { name: "newName", type: "string" }],
       returns: "number",
       gm: false,
       writes: true,

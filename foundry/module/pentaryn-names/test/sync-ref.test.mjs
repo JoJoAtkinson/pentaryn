@@ -56,3 +56,12 @@ test("api.sync given an unlinked token, placeable, token id, token uuid or synth
     assert.equal(writes.at(-1).message, 'Token labels updated to "Rob" (4).', label);
   }
 });
+
+// [declared] kit 1.1.0 (W2-B4, Joe 2026-10-12): sync's ref says it resolves strings itself, so the
+// bridge's pentaryn-write passes a uuid, id or exact name instead of refusing it as "eval-js only".
+test("W2-B4: describe() marks sync's ref resolve:\"self\" (the kit leaves it to rename.mjs)", async () => {
+  const { MANIFEST } = await import("../api-manifest.mjs");
+  const { describe } = await import("../lib/api.mjs");
+  const sync = describe(MANIFEST).methods.find(m => m.path === "sync");
+  assert.deepEqual(sync.params[0], { name: "ref", kind: "actor", resolve: "self" });
+});
