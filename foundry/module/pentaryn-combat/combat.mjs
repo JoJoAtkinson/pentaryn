@@ -36,11 +36,12 @@ import * as rollDock from "./roll-dock.mjs";
 import * as counting from "./counting.mjs";
 import * as turnRiders from "./turn-riders.mjs";
 import * as offhand from "./offhand.mjs";
+import * as sequence from "./sequence.mjs";
 
 /** Installed while this file evaluates: the roll-window hooks keep their place ahead of everyone. */
 const AT_LOAD = [rollDock];
 /** Installed at setup, in registration order. */
-const AT_SETUP = [counting, turnRiders, offhand];
+const AT_SETUP = [counting, turnRiders, offhand, sequence];
 
 /* ── fixFeats: the native path, once proved ──────────────────────────────── */
 

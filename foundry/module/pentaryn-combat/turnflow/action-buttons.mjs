@@ -17,6 +17,16 @@ import { expectRoll, forgetRoll } from "../sequence.mjs";
 
 const log = makeLog(MODULE);
 
+/**
+ * Temporary hooks (one roll, one pick, one dialog) go through the registry the feature was
+ * installed with, so uninstall() unwinds a stray one; before install they fall back to Hooks.
+ */
+let hooks = null;
+const temp = {
+  on: (name, fn, label) => (hooks ? hooks.on(name, fn, { guard: false, label }) : Hooks.on(name, fn)),
+  off: (name, id) => (hooks ? hooks.off(id) : Hooks.off(name, id)),
+};
+
 /** Argon's updateActionUse paints used pips only when the pip count didn't change; twice settles it. */
 function paint(panel) {
   try { settlePips(panel); } catch (err) { log.debug("paint pips (HUD closed)", err); }
@@ -143,8 +153,8 @@ function wrapReactionSlot(btn) {
     // The attack roll dnd5e starts after use() is a reaction: never one of the Attack action's swings.
     if (activity?.uuid) expectRoll(activity.uuid, "reaction");
     let used = false;
-    const hook = Hooks.on("dnd5e.postUseActivity", (a) => { if (a?.uuid && a.uuid === activity?.uuid) used = true; });
-    try { await own.call(btn, event); } finally { Hooks.off("dnd5e.postUseActivity", hook); }
+    const hook = temp.on("dnd5e.postUseActivity", (a) => { if (a?.uuid && a.uuid === activity?.uuid) used = true; }, "Opportunity Attack: was it used");
+    try { await own.call(btn, event); } finally { temp.off("dnd5e.postUseActivity", hook); }
     if (!used) { forgetRoll(activity?.uuid); return; }
     // Argon spends the weapon's own activation (the Action) on your own turn: give it back, spend the Reaction.
     if (action && action.isActionUsed !== actionWas) { action.isActionUsed = actionWas; paint(action); }
@@ -168,7 +178,10 @@ const opts = label => ({ guard: false, label });
 
 // hot: per-button markers (_pcSpecial, _pcOA); no world iteration
 export function install(reg) {
+  hooks = reg;
   reg.on("renderActionPanelArgonComponent", onActionPanel, opts("turn flow: special actions, Opportunity Attack"));
 }
 
-export function uninstall() {}
+export function uninstall() {
+  hooks = null;
+}

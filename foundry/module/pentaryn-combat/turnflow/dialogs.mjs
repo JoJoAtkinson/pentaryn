@@ -13,6 +13,16 @@ import { running } from "../sequence.mjs";
 
 const log = makeLog(MODULE);
 
+/**
+ * Temporary hooks (one roll, one pick, one dialog) go through the registry the feature was
+ * installed with, so uninstall() unwinds a stray one; before install they fall back to Hooks.
+ */
+let hooks = null;
+const temp = {
+  on: (name, fn, label) => (hooks ? hooks.on(name, fn, { guard: false, label }) : Hooks.on(name, fn)),
+  off: (name, id) => (hooks ? hooks.off(id) : Hooks.off(name, id)),
+};
+
 /* ── roll dialogs: Esc, and the card a cancelled attack leaves ───────────── */
 
 function rollDialogFor(target) {
@@ -47,15 +57,16 @@ const ENTER_TYPES = new Set(["number", "text", "range"]);
 
 function pressUse(app) {
   let done = false;
+  let id = null;
   const press = () => {
     if (done) return;
     done = true;
-    Hooks.off("renderActivityUsageDialog", hook);
+    temp.off("renderActivityUsageDialog", id);
     if (!app?.rendered) return;
     app.element?.querySelector?.('[data-action="use"]:not([disabled])')?.click();
   };
   const hook = (rendered) => { if (rendered === app) requestAnimationFrame(press); };
-  Hooks.on("renderActivityUsageDialog", hook);
+  id = temp.on("renderActivityUsageDialog", hook, "Enter uses: wait for the re-render");
   setTimeout(press, 400);   // a value that did not change re-renders nothing
 }
 
@@ -98,12 +109,14 @@ const onAttackDialogClosed = (app) => {
 const opts = label => ({ guard: false, label });
 
 export function install(reg) {
+  hooks = reg;
   document.addEventListener("keydown", onEscKey, true);
   document.addEventListener("keydown", onEnterKey, true);
   reg.on("closeAttackRollConfigurationDialog", onAttackDialogClosed, opts("tidy a cancelled attack's card"));
 }
 
 export function uninstall() {
+  hooks = null;
   document.removeEventListener("keydown", onEscKey, true);
   document.removeEventListener("keydown", onEnterKey, true);
 }

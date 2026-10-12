@@ -21,6 +21,16 @@ import { quickMode, setting } from "./settings.mjs";
 
 const log = makeLog(MODULE);
 
+/**
+ * Temporary hooks (one roll, one pick, one dialog) go through the registry the feature was
+ * installed with, so uninstall() unwinds a stray one; before install they fall back to Hooks.
+ */
+let hooks = null;
+const temp = {
+  on: (name, fn, label) => (hooks ? hooks.on(name, fn, { guard: false, label }) : Hooks.on(name, fn)),
+  off: (name, id) => (hooks ? hooks.off(id) : Hooks.off(name, id)),
+};
+
 
 let current = null;            // the running sequence on this client (one at a time)
 let tag = null;                // { activityUuid, kind } for the attack roll in flight
@@ -72,12 +82,12 @@ async function pickTarget(activity) {
   }
   return new Promise(resolve => {
     ui.notifications.info(_loc("PENTARYN_COMBAT.Strip.PickTarget"));
-    const id = Hooks.on("targetToken", (user, token, targeted) => {
+    const id = temp.on("targetToken", (user, token, targeted) => {
       if (user !== game.user || !targeted) return;
-      Hooks.off("targetToken", id);
+      temp.off("targetToken", id);
       resolve(true);
-    });
-    onceCancel(() => { Hooks.off("targetToken", id); resolve(false); });
+    }, "Retarget: wait for a target");
+    onceCancel(() => { temp.off("targetToken", id); resolve(false); });
   });
 }
 
@@ -114,9 +124,9 @@ function resolverOpen() {
 
 function watchDamage(activity) {
   const w = { started: false, done: false };
-  const pre = Hooks.on("dnd5e.preRollDamageV2", (config) => { if (config?.subject?.uuid === activity.uuid) w.started = true; });
-  const post = Hooks.on("dnd5e.rollDamageV2", (rolls, { subject } = {}) => { if (subject?.uuid === activity.uuid) w.done = true; });
-  w.stop = () => { Hooks.off("dnd5e.preRollDamageV2", pre); Hooks.off("dnd5e.rollDamageV2", post); };
+  const pre = temp.on("dnd5e.preRollDamageV2", (config) => { if (config?.subject?.uuid === activity.uuid) w.started = true; }, "swing damage: started");
+  const post = temp.on("dnd5e.rollDamageV2", (rolls, { subject } = {}) => { if (subject?.uuid === activity.uuid) w.done = true; }, "swing damage: done");
+  w.stop = () => { temp.off("dnd5e.preRollDamageV2", pre); temp.off("dnd5e.rollDamageV2", post); };
   return w;
 }
 
@@ -436,3 +446,21 @@ export function fullAttackPlan(actor, { weaponId = null, turn = null, inCombat =
   return { swings, count, left, weaponId };
 }
 
+/* ── install ─────────────────────────────────────────────────────────────── */
+
+/**
+ * The runner registers no hook of its own: it keeps the registry for its temporary hooks and
+ * exposes `running` to the API (ctx.exposed). The API rows it contributes come in S7.
+ */
+export function install(reg, ctx) {
+  hooks = reg;
+  ctx?.expose?.({ running });
+}
+
+/** A running sequence is stopped (its strip goes, its roll window closes); session maps cleared. */
+export function uninstall() {
+  if (current) abortFor(null);
+  hooks = null;
+  expected.clear();
+  picker = null;
+}
