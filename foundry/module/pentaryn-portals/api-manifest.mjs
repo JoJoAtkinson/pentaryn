@@ -45,7 +45,7 @@ export const MANIFEST = Object.freeze({
         { name: "destRegion", type: "RegionDocument", doc: "where the party lands (its centre)" },
         { name: "opts", type: "{ confirm = true }", optional: true, doc: "confirm: false skips the GM's confirm dialog" },
       ],
-      returns: "{ moved, cancelled } | undefined (not a GM, or no region)",
+      returns: "{ moved, cancelled } | undefined (not a GM, no region, or no scene on the canvas)",
       gm: true, writes: true, legacy: true,
       sideEffects: ["Token: update (same scene) or create + delete (another scene)", "pulls active players to the destination"],
       doc: "Move the party on canvas.scene (PCs, their summons, player-owned tokens) to the region. Opens a "

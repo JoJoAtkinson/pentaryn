@@ -300,6 +300,16 @@ test("teleportParty / lookAt: a player or no region → nothing", async () => {
   assert.deepEqual(ops(n), []);
 });
 
+test("teleportParty with no scene on the canvas: nothing, no TypeError [declared] (portals-edge-5)", async () => {
+  const H = hall();
+  const n = F.calls.length;
+  F.canvas.scene = null;
+  try {
+    assert.equal(await S.teleportParty(H.pitGate, { confirm: false }), undefined);
+    assert.deepEqual(ops(n), []);
+  } finally { F.canvas.scene = H.s; }
+});
+
 test("lookAt: pans the GM's own view (switching scene first if needed) and says nobody moved", async () => {
   const H = hall();
   F.canvas.scene = H.s;

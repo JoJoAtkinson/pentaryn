@@ -78,7 +78,7 @@ or an exact name (`opts.sceneId` scopes an id or a name) — never a substring.
 | `redraw()` | anyone | redraws this client's badges |
 | `snapshot(regionOrUuid, { squaresWide, squaresHigh })` | GM | the saved image path, or `null` (no background, or the upload failed — warns, card image unchanged) |
 | `lookAt(region)` | GM | pans **your** view; nobody moves |
-| `teleportParty(region, { confirm = true })` | GM | `{ moved, cancelled }`. Moves the party on **`canvas.scene`** (the calling client's view). It **opens a confirm dialog** unless `confirmPartyTeleport` is off — a console or bridge caller passes `{ confirm: false }`, or it waits on a click. Nobody counting as party is always the warn and `{ moved: 0, cancelled: true }`, confirm or not: no players pulled, no view change |
+| `teleportParty(region, { confirm = true })` | GM | `{ moved, cancelled }`. Moves the party on **`canvas.scene`** (the calling client's view); no scene on the canvas → `undefined`, nothing moves. It **opens a confirm dialog** unless `confirmPartyTeleport` is off — a console or bridge caller passes `{ confirm: false }`, or it waits on a click. Nobody counting as party is always the warn and `{ moved: 0, cancelled: true }`, confirm or not: no players pulled, no view change |
 | `link(ref, { to, twoWay, dryRun })` | GM | `ok({ from, to, twoWay })` / `fail(code, reason)`; the same writes as the card's Add a destination |
 | `unlink(ref, { to, dryRun })` | GM | `ok({ from, to, removed })` / `fail(…)` |
 | `open(region, { edit })` | GM | the Portal card window |

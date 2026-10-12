@@ -311,10 +311,12 @@ export async function confirmParty(party, title) {
 /**
  * GM: move the party on canvas.scene to `destRegion`'s centre. → `{ moved, cancelled }` (moved =
  * tokens moved; cancelled = the GM said no, nobody counts as party, or every party token was
- * deleted while the confirm was open); undefined for a player or no region.
+ * deleted while the confirm was open); undefined for a player, no region or no scene on the canvas.
  */
 export async function teleportParty(destRegion, { confirm = true } = {}) {
   if (!game.user.isGM || !destRegion) return;
+  // portals-edge-5: no scene on the canvas → nothing to move, not a TypeError.
+  if (!canvas?.scene) { deps.log?.warn("teleportParty: no scene"); return; }
   const from = canvas.scene;
   const dest = destRegion.parent;
   let party = partyRecords(from);
