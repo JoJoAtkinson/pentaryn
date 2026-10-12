@@ -103,7 +103,7 @@ test("B6 / ties-32 [declared, flipped]: describe-card art is escaped; an item ma
   pinJSON("declared-b6-unescaped", { art: content.match(/<img[^>]*>/)?.[0] ?? null, mark: serialise(row) }, import.meta.url);
 });
 
-test("B7 / ties-24 (before): a player's canvasReady still schedules a worn-badge frame (the paint then returns)", () => {
+test("B7 / ties-24 [declared, flipped]: a player's canvasReady schedules no frame at all — no badge frame, and with no card up no wire frame (before: a worn-badge frame whose paint then returned)", () => {
   const gm = game.user;
   game.user = game.users.get(PLAYER);
   F.frames.length = 0;
@@ -112,7 +112,7 @@ test("B7 / ties-24 (before): a player's canvasReady still schedules a worn-badge
   const queued = F.frames.length;
   F.flushFrames();
   game.user = gm;
-  assert.deepEqual({ queued: queued >= 1, painted: F.pixi.length - p0 }, { queued: true, painted: 0 });
+  assert.deepEqual({ queued: queued >= 1, painted: F.pixi.length - p0 }, { queued: false, painted: 0 });
 });
 
 test("ties-46 [declared, flipped]: the inspect preview's live hooks gain updateUser (before: no updateUser, no ownership watch)", async () => {

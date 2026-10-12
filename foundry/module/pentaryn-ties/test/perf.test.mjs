@@ -54,3 +54,12 @@ test("ties-26 / B7 [declared]: one sheet render through the four hooks injects o
   assert.equal(second, 1, "a later render (next microtask) is handled");
   assert.equal(root.querySelectorAll('nav.tabs [data-tab="ties"]').length, 1, "each tab once");
 });
+
+test("ties-25: drawWires schedules nothing with no card and no wire layer; one card schedules one frame", async () => {
+  const Overlay = await import("../overlay.mjs");
+  const Cards = await import("../popups.mjs");
+  F.frames.length = 0;
+  for (let i = 0; i < 100; i++) Overlay.drawWires();
+  assert.equal(Cards.size(), 0);
+  assert.equal(F.frames.length, 0);
+});

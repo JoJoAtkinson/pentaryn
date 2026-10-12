@@ -37,6 +37,9 @@ const FALLBACK_ART = "icons/svg/mystery-man.svg";
 /** key `${sourceActorId}:${tieId}` -> { el, pinned, sourceId, tieId, anchor, colour } */
 const cards = new Map();
 
+/** How many cards are up (ties-25: the wire painter skips its frame when there are none). */
+export const size = () => cards.size;
+
 const key = (sourceId, tieId) => `${sourceId}:${tieId}`;
 
 /**

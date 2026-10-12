@@ -43,7 +43,7 @@
  */
 
 import { MODULE } from "./ties-core.mjs";
-import { anyTransient, closeAll, closeTransient, live as liveCards, reflow, setOnChange, show } from "./popups.mjs";
+import { anyTransient, closeAll, closeTransient, live as liveCards, reflow, setOnChange, show, size } from "./popups.mjs";
 import { canSee, read } from "./ties-adapter.mjs";
 import { makeLog } from "./lib/log.mjs";
 import { setting } from "./settings.mjs";
@@ -173,6 +173,8 @@ function dropWires() {
  */
 let queued = 0;
 export function drawWires() {
+  // hot: state.wires — no card and no wire layer means nothing to paint and nothing to drop (ties-25)
+  if (!size() && !state.wires) return;
   if (queued) return;
   queued = requestAnimationFrame(() => {
     queued = 0;
