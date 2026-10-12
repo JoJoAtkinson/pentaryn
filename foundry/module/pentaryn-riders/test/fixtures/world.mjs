@@ -406,7 +406,9 @@ export async function setupWorld({ user = "gm", gmActive = true, argon = true, s
 
   const TE = {
     enrichHTML(content, options = {}) {
-      logOp("enrichHTML", { content, rollData: options.rollData ?? null, relativeTo: options.relativeTo?.name ?? null });
+      let relativeTo;
+      try { relativeTo = options.relativeTo?.name ?? null; } catch (err) { relativeTo = `<${err.message}>`; }
+      logOp("enrichHTML", { content, rollData: options.rollData ?? null, relativeTo });
       return `<p>${content}</p>`;
     },
   };
