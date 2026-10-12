@@ -9,6 +9,8 @@
 //   transform-creatures-31  FIXED [declared]: api.ownerSees(TokenDocument) answers for its placeable
 //   transform-creatures-40  FIXED [declared]: the poll runs only with Argon enabled and floatOverHud on
 //                           (this world enables Argon; the off cases are glue-dock.test.mjs)
+//   creatures-edge-3        FIXED [declared]: the strip renders at most 60 ms after the first trigger,
+//                           never pushed back by steady token flag traffic
 import { mock, test } from "node:test";
 import assert from "node:assert/strict";
 import { manifestOf, pinJSON } from "./kit/harness.mjs";
@@ -235,7 +237,7 @@ test("transform-creatures-40 [declared]: floatOverHud false docks at once and st
   await tick(500);
 });
 
-test("transform-creatures-25 [declared]: updateToken {x} schedules nothing; a strip field re-renders (60 ms debounce)", async () => {
+test("transform-creatures-25 [declared]: updateToken {x} schedules nothing; a strip field re-renders (60 ms window)", async () => {
   const el = W.strip();
   const built = el.calls.replaceChildren;
   W.reads.length = 0;
@@ -252,12 +254,29 @@ test("transform-creatures-25 [declared]: updateToken {x} schedules nothing; a st
   F.fire("updateToken", W.tok("tImpB", BETA), { name: "x" }, {}, GM);
   await tick(60);
   assert.equal(renders(), 1, "another scene's token: nothing");
-  for (let i = 0; i < 4; i++) {
+  for (let i = 0; i < 3; i++) {
     F.fire("updateToken", W.tok("tImp"), { hidden: false, x: i }, {}, GM);
     await tick(20);
   }
   await tick(60);
-  assert.equal(renders(), 2, "a 60 ms debounce: a burst renders once");
+  assert.equal(renders(), 2, "a 60 ms window: a burst renders once");
+});
+
+test("creatures-edge-3 [declared]: steady token flag traffic cannot starve the strip — one render at most 60 ms after the first trigger", async () => {
+  W.reads.length = 0;
+  const flag = i => ({ flags: { other: { n: i } } });
+  for (let i = 0; i < 3; i++) {
+    F.fire("updateToken", W.tok("tImp"), flag(i), {}, GM);
+    await tick(20);
+  }
+  assert.equal(renders(), 1, "rendered 60 ms after the first change (was: pushed back while traffic lasted)");
+  for (let i = 3; i < 15; i++) {
+    F.fire("updateToken", W.tok("tImp"), flag(i), {}, GM);
+    await tick(20);
+  }
+  assert.equal(renders(), 5, "300 ms of 20 ms traffic: a render every 60 ms (was: none)");
+  await tick(60);
+  assert.equal(renders(), 5, "nothing left over once traffic stops");
 });
 
 test("re-render triggers: create/delete token on the viewed scene, actor name/img/ownership, own character, canvasReady", async () => {

@@ -37,6 +37,9 @@ a player or GM can notice:
   longer stops at the first scene whose write fails: that scene is one console warning naming it
   (`light sync failed on <scene>`, was a scene-less `light sync failed`) and every later scene still
   gets its lights; the returned count covers the scenes that succeeded.
+- **[declared] creatures-edge-3** — the "Your creatures" strip redraws at most 60 ms after the
+  first change, even under steady token flag traffic in combat (the redraw was a debounce that
+  traffic could postpone indefinitely); a quick burst still draws once.
 
 ## 0.1.1 — 2026-10-10
 
