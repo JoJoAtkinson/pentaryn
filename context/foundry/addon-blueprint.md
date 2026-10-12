@@ -159,13 +159,13 @@ prefix declared in `flags.pentaryn.cssPrefix` and unique (`pp-` is prompts'). Re
 | `--kit a,b` | extra kit files on top of the tier, closed over their deps (e.g. `--kit election,perf`) |
 | `--namespace <ns>` | `game.pentaryn.<ns>` when it should differ from the short name (refused if taken) |
 | `--css-prefix <px->` | the CSS prefix (default: the first free `p<short…>-`; refused if taken) |
-| `--no-dnd5e` | no dnd5e system relationship, no dnd5e example code |
+| `--no-dnd5e` | no dnd5e system relationship, no dnd5e example code (`--dnd5e` puts it back on a `--force` re-render) |
 | `--description "…"` | `module.json` description |
 | `--out DIR` | parent folder (default `foundry/module`, which also needs `--install`) |
 | `--install` | allow writing under `foundry/module/` (the folder sync deploys) |
 | `--docs` | write `context/foundry/<short>.md` and `context/plans/<short>-<yyyy-mm>.md`, never overwriting |
 | `--check` | after the suite: ops gates, `vendor.check`, conformance — exit 1 on any failure. Conformance runs as **not installed** even with `--install`: the repo-wiring rules (C39 ModuleSpec, C46 route) are step 10 follow-ups, so they read n/a here; run `conformance.py --module <short>` after step 10 to score them |
-| `--force` | re-render the template files over an existing folder. Keeps `lib/kit.lock.json` (so earlier `--kit` extras stay), re-vendors from it, **never rewrites goldens** (the suite runs without `GOLDEN_UPDATE` and fails on a real difference) |
+| `--force` | re-render the template files over an existing folder. `--tier`, `--namespace`, `--css-prefix` and `--[no-]dnd5e` default to the existing `module.json` (`flags.pentaryn`, `relationships.systems`); an explicit flag wins. Keeps `lib/kit.lock.json` (so earlier `--kit` extras stay) and re-vendors from it — an explicit `--tier` moves the lock to that tier, extras kept. The vendoring plan is checked before anything is rendered, so a refusal leaves the folder untouched. **Never rewrites goldens** (the suite runs without `GOLDEN_UPDATE` and fails on a real difference) |
 | `--no-run` | skip the generated suite |
 
 Vendoring one module by hand (`scripts/foundry/blueprint/vendor.py`):

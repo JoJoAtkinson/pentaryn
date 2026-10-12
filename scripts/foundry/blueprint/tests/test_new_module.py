@@ -294,3 +294,67 @@ def test_force_keeps_the_css_prefix(tmp_path, sibling, expected):
         assert rc == 0
         assert json.loads((target / "module.json").read_text())["flags"]["pentaryn"]["cssPrefix"] == expected
         assert f".{expected}" in (target / "styles" / "demo.css").read_text()
+
+
+def _flags(target):
+    man = json.loads((target / "module.json").read_text())
+    return man["flags"]["pentaryn"], man["relationships"]["systems"]
+
+
+def test_force_rerenders_at_the_existing_tier_namespace_and_system(tmp_path, capsys):
+    # PYB-E7: --force without the original flags must not silently turn a small, custom-namespace,
+    # no-dnd5e module into a full, short-namespace, dnd5e one while the lock stays small
+    rc, target = gen(tmp_path, "demo", "--no-run", "--tier", "small", "--namespace", "demoNs",
+                     "--css-prefix", "dm-", "--no-dnd5e")
+    assert rc == 0
+    capsys.readouterr()
+    assert gen(tmp_path, "demo", "--no-run", "--force")[0] == 0
+    flags, systems = _flags(target)
+    assert (flags["tier"], flags["namespace"], flags["cssPrefix"], systems) == ("small", "demoNs", "dm-", [])
+    assert not (target / "api.mjs").exists()
+    assert json.loads((target / "lib/kit.lock.json").read_text())["tier"] == "small"
+    assert "tier small, namespace demoNs, CSS dm-" in capsys.readouterr().out
+    assert vendor.check(target) == []
+
+
+def test_force_with_an_explicit_tier_moves_the_lock_and_keeps_kit_extras(tmp_path):
+    # PYB-E7: an explicit flag still wins, and --tier is passed to vendor.sync so the lock follows it
+    rc, target = gen(tmp_path, "demo", "--no-run", "--tier", "small", "--kit", "election")
+    assert rc == 0
+    assert gen(tmp_path, "demo", "--no-run", "--force", "--tier", "full", "--namespace", "other")[0] == 0
+    flags, systems = _flags(target)
+    assert (flags["tier"], flags["namespace"]) == ("full", "other")
+    assert [s["id"] for s in systems] == ["dnd5e"]
+    lock = json.loads((target / "lib/kit.lock.json").read_text())
+    assert lock["tier"] == "full"
+    assert set(vendor.load_kit()["tiers"]["full"]) | {"election"} <= set(lock["files"])
+    assert vendor.check(target) == []
+
+
+@pytest.mark.parametrize("kit", [["--kit", "nosuchfile"], ["--kit", "argon-kit"]])
+def test_a_refused_force_leaves_the_existing_folder_untouched(tmp_path, kit):
+    # PYB-E7: the vendoring plan is checked before render(), so a refusal writes nothing
+    rc, target = gen(tmp_path, "demo", "--no-run")
+    assert rc == 0
+    (target / "demo-core.mjs").write_text("// edited\n")
+    before = {p.relative_to(target).as_posix(): p.read_bytes() for p in target.rglob("*") if p.is_file()}
+    assert gen(tmp_path, "demo", "--no-run", "--force", *kit)[0] == 2
+    after = {p.relative_to(target).as_posix(): p.read_bytes() for p in target.rglob("*") if p.is_file()}
+    assert after == before
+
+
+def test_vendor_plan_is_pure_and_refuses_like_sync(tmp_path):
+    # PYB-E7: plan() runs sync's closure/package/ext checks without writing anything
+    d = tmp_path / "pentaryn-p"
+    d.mkdir()
+    (d / "module.json").write_text(json.dumps({"id": "pentaryn-p", "flags": {"pentaryn": {"tier": "small"}}}))
+    planned = vendor.plan(d, None, ["election"])
+    assert planned["tier"] == "small" and "election" in planned["files"]
+    assert sorted(p.name for p in d.iterdir()) == ["module.json"]
+    with pytest.raises(vendor.VendorError):
+        vendor.plan(d, None, ["argon-kit"])
+    assert vendor.plan(d, None, ["argon-kit"], manifest={"relationships": {
+        "recommends": [{"id": "enhancedcombathud"}]}})["files"][-1] == "argon-kit"
+    vendor.sync(d, extra=["election"])                # sync writes exactly what plan() chose
+    lock = json.loads((d / "lib/kit.lock.json").read_text())
+    assert (lock["tier"], lock["files"]) == (planned["tier"], planned["files"])

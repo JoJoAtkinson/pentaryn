@@ -133,11 +133,16 @@ def read_lock(module_dir: Path) -> dict | None:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def sync(module_dir: Path, *, tier: str | None = None, extra: list[str] | None = None,
-         lib_root: Path = LIB_ROOT) -> list[str]:
-    """Copy the kit closure and the test kit into the module. Returns the files written."""
+def plan(module_dir: Path, tier: str | None = None, extra: list[str] | None = None, *,
+         lib_root: Path = LIB_ROOT, manifest: dict | None = None) -> dict:
+    """What `sync` would vendor — `{"tier", "files"}` — after every closure/package/ext check.
+
+    Pure: reads kit.json, the lock and the manifest (or `manifest`, the one about to be written)
+    and raises VendorError on a refusal, so a caller can refuse before writing anything (PYB-E7).
+    """
     kit = load_kit(lib_root)
-    manifest = json.loads((module_dir / "module.json").read_text(encoding="utf-8"))
+    if manifest is None:
+        manifest = json.loads((module_dir / "module.json").read_text(encoding="utf-8"))
     lock = read_lock(module_dir)
 
     # an explicit tier wins; else the existing lock; else the manifest's tier (default full)
@@ -164,6 +169,15 @@ def sync(module_dir: Path, *, tier: str | None = None, extra: list[str] | None =
                               f"relationships first (refused: {module_dir.name})")
     for n in names:  # a bad `ext` refuses here, before anything is written
         kit_file(n, kit)
+    return {"tier": lock_tier, "files": names}
+
+
+def sync(module_dir: Path, *, tier: str | None = None, extra: list[str] | None = None,
+         lib_root: Path = LIB_ROOT) -> list[str]:
+    """Copy the kit closure and the test kit into the module. Returns the files written."""
+    kit = load_kit(lib_root)
+    planned = plan(module_dir, tier, extra, lib_root=lib_root)
+    names, lock_tier = planned["files"], planned["tier"]
 
     written: list[str] = []
     lib_dir = module_dir / "lib"
