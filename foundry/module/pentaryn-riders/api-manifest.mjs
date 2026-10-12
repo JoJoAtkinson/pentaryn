@@ -2,16 +2,16 @@
  * Pentaryn Feature Riders — the API manifest. PURE DATA: node imports it without a Foundry stub,
  * describe() reports it, and buildApi() refuses to load when it and api.mjs drift apart.
  *
- * The legacy rows keep today's signatures and shapes (`legacy: true`): they take Documents, not
- * refs (a name, id or uuid string reads as "no actor"), and the writing ones return their old
- * shapes rather than ok()/fail() (C31, README "API"). Battle Medic's two rows are contributed by
+ * The legacy rows keep today's signatures and shapes (`legacy: true`): their actor argument also
+ * takes a name, id, uuid or Token (a miss answers null; combat-riders-12, shapes.withLegacyActor),
+ * and the writing ones return their old shapes rather than ok()/fail() (C31, README "API"). Battle Medic's two rows are contributed by
  * battle-medic.mjs. New rows take a `ref` (Actor, Token, uuid, id or exact name; never a substring).
  */
 
 import { CONTRACT, MODULE, NS, VERSION } from "./riders-core.mjs";
 
 const REF = { name: "ref", kind: "actor", type: "Actor|Token|uuid|id|exact name", doc: "never a substring" };
-const ACTOR = { name: "actor", type: "Actor", doc: "the Actor document (legacy: a name, id or uuid string is not resolved)" };
+const ACTOR = { name: "actor", type: "Actor|Token|uuid|id|exact name", doc: "never a substring; a miss answers null" };
 
 export const MANIFEST = Object.freeze({
   module: MODULE,
@@ -65,7 +65,7 @@ export const MANIFEST = Object.freeze({
     },
     {
       path: "setType",
-      params: [{ name: "target", type: "Item|Actor" }, { name: "type", type: "string" }, { name: "ruleKey", type: "string", optional: true }],
+      params: [{ name: "target", type: "Item|Actor|Token|uuid|id|exact name", doc: "a string resolves to an actor; a miss answers null" }, { name: "type", type: "string" }, { name: "ruleKey", type: "string", optional: true }],
       returns: "string[] (the names of the items set)",
       gm: false, writes: true, legacy: true,
       sideEffects: ["flags.pentaryn-riders.damageType"],

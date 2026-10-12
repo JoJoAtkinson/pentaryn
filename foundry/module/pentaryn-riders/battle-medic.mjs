@@ -14,7 +14,7 @@
 import { MODULE, battleMedicBlockReason, battleMedicFormula, clampHeal, matchRule, pickSpend } from "./riders-core.mjs";
 import { settingRaw } from "./settings.mjs";
 import { guarded } from "./lib/queries.mjs";
-import { HEALER, hdPools, hdSummary, isBattleMedic, itemInfo, spendHitDie } from "./shapes.mjs";
+import { HEALER, hdPools, hdSummary, isBattleMedic, itemInfo, spendHitDie, withLegacyActor } from "./shapes.mjs";
 
 const QUERY = `${MODULE}.battleMedic`;
 
@@ -200,7 +200,7 @@ export function install(reg, ctx) {
     rows: [
       {
         path: "installBattleMedic",
-        params: [{ name: "actor", type: "Actor" }, { name: "opts", type: "{ replace? }", optional: true }],
+        params: [{ name: "actor", type: "Actor|Token|uuid|id|exact name", doc: "a miss answers null" }, { name: "opts", type: "{ replace? }", optional: true }],
         returns: "{ ok: true, item, kit, kitFound, updated, removed } | { ok: false, why }",
         gm: false, writes: true, legacy: true,
         sideEffects: ["Item(Healer).system.activities", "flags.pentaryn-riders.flow"],
@@ -217,7 +217,7 @@ export function install(reg, ctx) {
           + "Die (1s rerolled) + PB, spend it and heal. Takes a Token, not an Actor (an Actor reads as 'no Hit Dice').",
       },
     ],
-    impl: { installBattleMedic, battleMedic: runBattleMedic },
+    impl: { installBattleMedic: withLegacyActor(installBattleMedic), battleMedic: runBattleMedic },
   };
 }
 

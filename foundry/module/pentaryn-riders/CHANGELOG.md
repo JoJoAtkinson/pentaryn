@@ -10,7 +10,8 @@
   `describe().patches` and undone by `uninstall()`.
 - API: built from the manifest and frozen; new `inspect(ref, { as })`, `selftest()`,
   `arcaneRecovery(ref)`, `describe()`, `settings()`, `trace()`, `uninstall()`, `version`,
-  `contract`. The legacy members answer as before.
+  `contract`. The legacy members answer as before, and their actor argument now also takes a
+  name, id, UUID or Token (a miss answers `null`).
 - Published with the kit's `publishNamespace`, synchronously at `ready`; `module.api` is set and
   `pentaryn-riders.ready` fires. A frozen `game.pentaryn` now throws instead of being replaced.
 - The Battle Medic relay goes through the kit's `guarded` (`sender: "any"`): a query reaching a

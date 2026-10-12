@@ -10,6 +10,34 @@ import {
   resolveTypes, ruleByKey,
 } from "./riders-core.mjs";
 import { SUMMON_FLAG } from "./table-core.mjs";
+import { resolveRef } from "./lib/resolve.mjs";
+
+/* ── the legacy API's actor argument (combat-riders-12) ─────────────────── */
+
+const MISS = Symbol("miss");
+
+/**
+ * A legacy API row's actor argument: a string (exact or case-insensitive name, 16-character id,
+ * UUID; never a substring) or a Token resolves to its actor; anything else — an Actor, an Item for
+ * setType, undefined for report() — is passed through as before. A string or Token that resolves
+ * to nothing is MISS. An ambiguous name throws AMBIGUOUS.
+ */
+function legacyActorArg(ref) {
+  if (typeof ref === "string") return resolveRef(ref, "actor", { required: false }) ?? MISS;
+  const token = ref?.documentName === "Token" ? ref : ref?.document?.documentName === "Token" ? ref.document : null;
+  if (token) return token.actor ?? MISS;
+  return ref;
+}
+
+/** Wrap a legacy row so its first argument goes through legacyActorArg; a miss answers null. */
+export function withLegacyActor(fn) {
+  const isAsync = fn.constructor?.name === "AsyncFunction";
+  const wrapped = isAsync
+    ? async (ref, ...rest) => { const a = legacyActorArg(ref); return a === MISS ? null : fn(a, ...rest); }
+    : (ref, ...rest) => { const a = legacyActorArg(ref); return a === MISS ? null : fn(a, ...rest); };
+  Object.defineProperty(wrapped, "name", { value: fn.name });
+  return wrapped;
+}
 
 /* ── items and features ─────────────────────────────────────────────────── */
 

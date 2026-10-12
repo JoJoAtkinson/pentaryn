@@ -4,9 +4,9 @@
 // `installBattleMedic`, `spendHitDie` / `restoreHitDie` / `hdPools` (the Hit Dice kernel oracle),
 // and `preview`. `battleMedic` (the client runner) is in battle-medic.test.mjs.
 //
-// KNOWN combat-riders-12 (riders half, guide §4): legacy members take documents only. A name, id
-// or UUID string is not resolved: report("Ilsa Vantrel") returns no rows and setType("…") sets
-// nothing. Pinned here; the [declared] withRef change flips the todo at the end.
+// combat-riders-12 [declared] (riders half, guide §4): legacy members took documents only (a name
+// string returned no rows). They now also resolve a name, id, UUID or Token; a miss answers null.
+// The flipped pin is the last test.
 import { mock, test } from "node:test";
 import assert from "node:assert/strict";
 import { pinJSON } from "./kit/harness.mjs";
@@ -221,11 +221,27 @@ test("KNOWN parseFormula: a modifier with an @reference argument is split; previ
 
 test.todo("parseFormula keeps a die modifier's @reference argument with its modifier (preview gives \"1d8x@mod=8min2\" or leaves the die alone)");
 
-test("KNOWN combat-riders-12: a name string is not resolved (report → [], setType → [])", async () => {
-  assert.deepEqual(api.report("Ilsa Vantrel"), []);
-  assert.deepEqual(await api.setType("Ilsa Vantrel", "fire"), []);
-  assert.deepEqual(api.featuresOf(IDS.sorc), []);
+test("combat-riders-12 [declared]: report/featuresOf/setType/retireManual/installBattleMedic/spendHitDie/restoreHitDie/hdPools resolve an Actor, Token, UUID, id or exact name; a substring or miss gives null", async () => {
+  const rows = api.report(sorc);
+  for (const ref of ["Ilsa Vantrel", "ilsa vantrel", IDS.sorc, `Actor.${IDS.sorc}`, { documentName: "Token", actor: sorc }, { document: { documentName: "Token", actor: sorc } }]) {
+    assert.deepEqual(api.report(ref), rows, JSON.stringify(ref.documentName ?? ref.document?.documentName ?? ref));
+    assert.deepEqual(feats(sorc), api.featuresOf(ref).map(f => ({ key: f.key, rule: f.rule.key, items: f.items.map(i => i.name), types: f.types })));
+  }
+  assert.deepEqual(api.hdPools("Grisk"), [{ id: null, faces: 8, value: 3, spent: 1 }]);
+  for (const miss of ["Ilsa", "Nobody", "", "Actor.nobody0000000001", { documentName: "Token", actor: null }]) {
+    assert.equal(api.report(miss), null, JSON.stringify(miss));
+    assert.equal(api.featuresOf(miss), null);
+    assert.equal(api.hdPools(miss), null);
+    assert.equal(await api.setType(miss, "fire"), null);
+    assert.equal(await api.retireManual(miss), null);
+    assert.equal(await api.installBattleMedic(miss), null);
+    assert.equal(await api.spendHitDie(miss), null);
+    assert.equal(await api.restoreHitDie(miss), null);
+  }
+  W.takeLog();
+  assert.deepEqual(await api.setType("Ilsa Vantrel", "fire"), ["Elemental Adept (Fire)", "Elemental Affinity"]);
+  assert.equal(await api.spendHitDie("Grisk"), 8);
+  assert.equal(await api.restoreHitDie(`Actor.${IDS.npc}`), 8);
+  assert.deepEqual(api.report(), api.report(undefined), "no argument: every character, as before");
   W.take();
 });
-
-test.todo("combat-riders-12 [declared]: report/featuresOf/setType/retireManual/installBattleMedic/spendHitDie/restoreHitDie/hdPools resolve an Actor, Token, UUID, id or exact name; a substring or miss gives null");

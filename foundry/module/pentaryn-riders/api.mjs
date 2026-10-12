@@ -12,6 +12,7 @@ import { MANIFEST } from "./api-manifest.mjs";
 import { SETTINGS, settingsSnapshot } from "./settings.mjs";
 import {
   carriedBy, concentrationSummonsOf, featuresOf, hdPools, hdSummary, isBattleMedic, isType, restoreHitDie, spendHitDie,
+  withLegacyActor,
 } from "./shapes.mjs";
 import { buildApi, toPlain } from "./lib/api.mjs";
 import { fail, ok } from "./lib/errors.mjs";
@@ -150,7 +151,9 @@ export function buildApiFor(ctx) {
     inspect: (actor, opts = {}) => inspect(actor, opts),
     selftest: () => selftest(ctx),
     arcaneRecovery: actor => arcaneRecovery(actor, ctx),
-    featuresOf, report, setType, retireManual, spendHitDie, restoreHitDie, hdPools,
+    // legacy rows: a name, id, uuid or Token also resolves; a miss answers null (combat-riders-12)
+    ...Object.fromEntries(Object.entries({ featuresOf, report, setType, retireManual, spendHitDie, restoreHitDie, hdPools })
+      .map(([k, fn]) => [k, withLegacyActor(fn)])),
     preview: (formula, opts) => core.transformFormula(formula, { isType, ...opts }),
     rules: core.RULES,
     core,

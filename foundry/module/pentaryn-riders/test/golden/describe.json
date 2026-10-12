@@ -66,8 +66,8 @@
       "params": [
         {
           "name": "actor",
-          "type": "Actor",
-          "doc": "the Actor document (legacy: a name, id or uuid string is not resolved)"
+          "type": "Actor|Token|uuid|id|exact name",
+          "doc": "never a substring; a miss answers null"
         }
       ],
       "returns": "{ key, rule, items: Item[], types: string[]|null }[]",
@@ -83,7 +83,7 @@
       "params": [
         {
           "name": "actor",
-          "type": "Actor",
+          "type": "Actor|Token|uuid|id|exact name",
           "doc": "omitted: every character actor",
           "optional": true
         }
@@ -101,7 +101,8 @@
       "params": [
         {
           "name": "target",
-          "type": "Item|Actor"
+          "type": "Item|Actor|Token|uuid|id|exact name",
+          "doc": "a string resolves to an actor; a miss answers null"
         },
         {
           "name": "type",
@@ -128,8 +129,8 @@
       "params": [
         {
           "name": "actor",
-          "type": "Actor",
-          "doc": "the Actor document (legacy: a name, id or uuid string is not resolved)"
+          "type": "Actor|Token|uuid|id|exact name",
+          "doc": "never a substring; a miss answers null"
         }
       ],
       "returns": "string[] (\"<item>: <activity>\" per activity deleted)",
@@ -148,8 +149,8 @@
       "params": [
         {
           "name": "actor",
-          "type": "Actor",
-          "doc": "the Actor document (legacy: a name, id or uuid string is not resolved)"
+          "type": "Actor|Token|uuid|id|exact name",
+          "doc": "never a substring; a miss answers null"
         },
         {
           "name": "opts",
@@ -172,8 +173,8 @@
       "params": [
         {
           "name": "actor",
-          "type": "Actor",
-          "doc": "the Actor document (legacy: a name, id or uuid string is not resolved)"
+          "type": "Actor|Token|uuid|id|exact name",
+          "doc": "never a substring; a miss answers null"
         }
       ],
       "returns": "number|null (the faces restored)",
@@ -191,8 +192,8 @@
       "params": [
         {
           "name": "actor",
-          "type": "Actor",
-          "doc": "the Actor document (legacy: a name, id or uuid string is not resolved)"
+          "type": "Actor|Token|uuid|id|exact name",
+          "doc": "never a substring; a miss answers null"
         }
       ],
       "returns": "{ id: string|null, faces, value, spent }[]",
@@ -229,7 +230,8 @@
       "params": [
         {
           "name": "actor",
-          "type": "Actor"
+          "type": "Actor|Token|uuid|id|exact name",
+          "doc": "a miss answers null"
         },
         {
           "name": "opts",

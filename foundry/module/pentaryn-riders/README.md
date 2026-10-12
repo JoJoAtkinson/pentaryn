@@ -66,8 +66,9 @@ object. Ask it: `describe()` (offline: `test/golden/describe.json`), `settings()
 | `rules`, `core` | — | frozen copies of the `RULES` table and the riders-core exports |
 
 `ref` is an Actor, Token, UUID, 16-character id or exact name — never a substring. The legacy
-members (every row but the first three) keep their old signatures: they take **documents**, a name
-string is not resolved, and the writing ones return their old shapes, not `ok()/fail()`.
+members (every row but the first three) keep their old signatures and shapes (the writing ones do
+not return `ok()/fail()`); their actor argument takes the same refs, and a ref that matches nothing
+answers `null` (`setType` still takes an Item too; `battleMedic` still wants a Token).
 
 ```js
 const R = game.pentaryn.riders;
