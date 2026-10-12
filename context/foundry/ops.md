@@ -735,8 +735,10 @@ which is exactly your players, exactly while they're connected. Campaign notes n
 | `make foundry-verify` | **Probes the site root first**, then asserts `actors.json` returns 404 |
 
 `make foundry-import` deletes the staged file on **all three** exit paths — answered, no terminal,
-Ctrl-C — because a target whose whole job is "don't leave a public file lying around" must not have
-an exit that leaves it lying around. Answering "n" only skips the 404 assertion.
+Ctrl-C / kill / closing the terminal (SIGINT, SIGTERM, SIGHUP) — because a target whose whole job is
+"don't leave a public file lying around" must not have an exit that leaves it lying around. The
+signal handlers go in before the copy and come out after the delete, so there is no unguarded
+window. Answering "n" only skips the 404 assertion.
 
 **Why two probes, in that order:** a 404 from a *down* tunnel proves nothing. The gate has to
 positively confirm the file is gone (D10), so it establishes the tunnel is up and only then requires

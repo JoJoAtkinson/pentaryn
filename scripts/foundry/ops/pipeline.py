@@ -206,38 +206,44 @@ def run_import() -> int:
     "don't leave a public file lying around" must not have an exit path that leaves
     it lying around:
 
-        answered      → delete (+ verify on y)
-        no terminal   → skip the prompt, delete anyway
-        Ctrl-C / TERM → handler deletes, then exits 130
+        answered             → delete (+ verify on y)
+        no terminal          → skip the prompt, delete anyway
+        Ctrl-C / TERM / HUP  → handler deletes, then exits 130
+
+    The handlers go in BEFORE stage() copies the file and come out only after the
+    delete, so there is no window — copy-to-prompt, prompt-to-delete — where an
+    interrupt or a closed terminal (SIGHUP) leaves it public (py-ops-ac-5, rob-10).
     """
-    if (rc := stage()) != 0:
-        return rc
-
-    print(_INSTRUCTIONS.replace(_WORLD_PLACEHOLDER, cfg.WORLD_NAME))
-
     def _on_signal(signum, _frame):
         print()
         _say("▸ interrupted — deleting the staged JSON")
         cfg.ACTORS_STAGED.unlink(missing_ok=True)
         sys.exit(130)
 
-    previous = {s: signal.signal(s, _on_signal) for s in (signal.SIGINT, signal.SIGTERM)}
+    previous = {s: signal.signal(s, _on_signal)
+                for s in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP)}
     try:
-        answer = _ask()
-    except BaseException:
-        # Anything else out of the prompt (a garbled tty byte, a bug) still deletes.
-        cfg.ACTORS_STAGED.unlink(missing_ok=True)
-        raise
+        if (rc := stage()) != 0:
+            return rc
+
+        print(_INSTRUCTIONS.replace(_WORLD_PLACEHOLDER, cfg.WORLD_NAME))
+
+        try:
+            answer = _ask()
+        except BaseException:
+            # Anything else out of the prompt (a garbled tty byte, a bug) still deletes.
+            cfg.ACTORS_STAGED.unlink(missing_ok=True)
+            raise
+
+        if answer[:1].lower() == "y":
+            _say("▸ deleting the staged JSON, then asserting it 404s publicly...")
+            return clean()
+
+        _say("▸ deleting the staged JSON anyway — it must not linger in a public dir.")
+        rc = clean_only()
+        _say("▸ skipped the public 404 assertion; re-run it with: make foundry-verify")
+        _say("▸ re-stage when you're ready with: make foundry-import")
+        return rc
     finally:
         for s, handler in previous.items():
             signal.signal(s, handler)
-
-    if answer[:1].lower() == "y":
-        _say("▸ deleting the staged JSON, then asserting it 404s publicly...")
-        return clean()
-
-    _say("▸ deleting the staged JSON anyway — it must not linger in a public dir.")
-    rc = clean_only()
-    _say("▸ skipped the public 404 assertion; re-run it with: make foundry-verify")
-    _say("▸ re-stage when you're ready with: make foundry-import")
-    return rc

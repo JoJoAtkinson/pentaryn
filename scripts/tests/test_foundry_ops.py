@@ -169,6 +169,53 @@ def test_import_restores_the_previous_signal_handlers(monkeypatch, staged):
     assert signal.getsignal(signal.SIGINT) is before
 
 
+@pytest.mark.parametrize("signum", [signal.SIGINT, signal.SIGTERM, signal.SIGHUP])
+def test_import_deletes_on_a_signal_right_after_stage_copies(monkeypatch, staged, signum):
+    """py-ops-ac-5 / rob-10: a signal in the window after stage() copies actors.json
+    (before the prompt) must still delete it. Closing the terminal is SIGHUP."""
+    staged.unlink()
+
+    def stage_then_signal():
+        staged.write_text("{}")                     # stage() has copied the file...
+        handler = signal.getsignal(signum)          # ...and the signal lands now
+        assert callable(handler) and handler is not signal.default_int_handler, (
+            f"no cleanup handler for {signal.Signals(signum).name} while actors.json is staged")
+        handler(signum, None)
+        return 0
+
+    monkeypatch.setattr(pipeline, "stage", stage_then_signal)
+    monkeypatch.setattr(pipeline, "_ask", lambda: pytest.fail("prompted after the signal"))
+    with pytest.raises(SystemExit) as exc:
+        pipeline.run_import()
+    assert exc.value.code == 130
+    assert not staged.exists(), "a signal right after staging must not leave a public file behind"
+
+
+def test_import_deletes_when_the_terminal_closes_at_the_prompt(monkeypatch, staged):
+    """rob-10: closing the terminal at the import prompt sends SIGHUP."""
+    def hangup():
+        handler = signal.getsignal(signal.SIGHUP)
+        assert callable(handler), "no SIGHUP cleanup handler at the import prompt"
+        handler(signal.SIGHUP, None)
+
+    monkeypatch.setattr(pipeline, "_ask", hangup)
+    with pytest.raises(SystemExit) as exc:
+        pipeline.run_import()
+    assert exc.value.code == 130
+    assert not staged.exists()
+
+
+@pytest.mark.parametrize("stage_rc", [0, 1])
+def test_import_restores_every_cleanup_handler(monkeypatch, staged, stage_rc):
+    """py-ops-ac-5: the handlers go in before stage() and come out on every exit."""
+    sigs = (signal.SIGINT, signal.SIGTERM, signal.SIGHUP)
+    before = {s: signal.getsignal(s) for s in sigs}
+    monkeypatch.setattr(pipeline, "stage", lambda: stage_rc)
+    monkeypatch.setattr(pipeline, "_ask", lambda: "n")
+    pipeline.run_import()
+    assert {s: signal.getsignal(s) for s in sigs} == before
+
+
 def test_import_aborts_when_staging_fails(monkeypatch, tmp_path):
     monkeypatch.setattr(pipeline, "stage", lambda: 1)
     called = []
