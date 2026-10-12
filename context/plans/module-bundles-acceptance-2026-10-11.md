@@ -79,3 +79,40 @@ Evidence:
 - Coalescing: the 3.24 GB full `-mac` snapshot was **replaced** (expected). `world-backups/` now
   holds only S_first + sidecar. The fallback copy in `pre-bundles-2026-10/` is intact (3,235,622,773
   B + 99 B).
+
+## C′. Skip check (unchanged tree)
+
+`make foundry-backup REASON=acceptance-skip` (Foundry down, nothing changed since S_first) →
+`no change since the last snapshot — skipped` (28 s, all of it the cloud listing).
+
+## D. Save test — Foundry saves out to it — S_save
+
+- `make foundry-bundles` saved before the launch.
+- `make foundry-up FROM=local` → `▸ boot: local world (FROM=local)`, `✓ foundry up`.
+  `make login WORLD=pentaryn NO_OPEN=1`; its one-time link opened in the existing localhost tab
+  (the only GM tab) → `✓ logged in as Gamemaster`. `get-world-info`: pentaryn, dnd5e 6.0.6,
+  Foundry 14.369, 1 active user (Gamemaster).
+- Created journal **`ZZ bundles acceptance 20261012T023213Z`** (id `ussRnQm9Ou73gPN3`), one text
+  page `token` (id `GmviOL6NzjvHmrNI`) with content **`ZZTOKEN-359119f12520b076`**.
+  `list-journals journalId=ussRnQm9Ou73gPN3` → content `<p>ZZTOKEN-359119f12520b076</p>`.
+- `make foundry-down`. The token is on disk in `Data/worlds/pentaryn/data/journal/000122.log`.
+- **Fingerprints across a launch:** `make foundry-bundles` after the stop is byte-identical to the
+  one before the launch (`diff` empty) — the LevelDB-housekeeping normalisation holds for all 46.
+- `make foundry-backup REASON=acceptance-save`, 02:33:03 → 02:34:42 UTC (1 min 39 s wall, most
+  of it rclone listings):
+
+```
+  uploading world-2026-10-12-023333-fvtt14.369-mac.tar.gz (18.9 MB, acceptance-save) to onedrive:DnD/foundry...
+  snapshot → world-2026-10-12-023333-fvtt14.369-mac.tar.gz (18.9 MB, acceptance-save)
+  replaced world-2026-10-12-020259-fvtt14.369-mac.tar.gz (0.0 days old, inside the 5-day window)
+  1 of 10 snapshots kept for mac
+  swept 0 bundles (none unreferenced for 7 days)
+```
+
+**S_save = `world-2026-10-12-023333-fvtt14.369-mac.tar.gz`** (18,902,684 B). **Zero new bundles**
+(no "with N new bundle(s)" clause; `bundles/` still 46). Sidecar: parent S_first, ancestors
+[S_first, the old full], `bundled: 1`, 45 modules + dnd5e. Downloaded S_save back from the cloud:
+first member `pentaryn-snapshot.json`, and `Data/worlds/pentaryn/data/journal/000122.log` inside
+it contains `ZZTOKEN-359119f12520b076` — the GM's edit made it into the cloud snapshot.
+S_first was coalesced away by S_save (same lineage, inside the 5-day window) — by design every
+backup in this run replaces the previous one; only the newest stays in `world-backups/`.
