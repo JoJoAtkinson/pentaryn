@@ -90,3 +90,25 @@ test("KIT-M3: the argon-tooltip.css README row names every module that lists it 
     assert.match(row, new RegExp(`\\b${short}\\b`), `README row does not name ${short}`);
   }
 });
+
+// KIT-M9 (final review 2026-10-12): the foundry-stub row left out stubId and the harness row left
+// out sourceFiles. Every README table row for a .mjs file must list exactly the module's named
+// exports — a backticked identifier (optionally with its call signature) in the Exports cell is an
+// export; the names after "→" are members of a returned object, not exports.
+test("KIT-M9: each README .mjs row's Exports cell equals that file's named exports", async () => {
+  const readme = readFileSync(fileURLToPath(new URL("../README.md", import.meta.url)), "utf8");
+  const rows = readme.split("\n").filter(l => /^\| `[^`]+\.mjs` \|/.test(l));
+  assert.ok(rows.length > 0, "README.md has no .mjs rows");
+  for (const row of rows) {
+    const [, file, exportsCell] = row.split("|").map(c => c.trim());
+    const rel = file.slice(1, -1);
+    const listed = new Set();
+    for (const m of exportsCell.matchAll(/(→\s*)?`([^`]+)`/g)) {
+      if (m[1]) continue;
+      const id = /^([A-Za-z_$][\w$]*)(\(.*\))?$/.exec(m[2]);
+      if (id) listed.add(id[1]);
+    }
+    const actual = new Set(Object.keys(await import(new URL(`../${rel}`, import.meta.url).href)));
+    assert.deepEqual([...listed].sort(), [...actual].sort(), `README.md \`${rel}\` row lists the wrong exports`);
+  }
+});
