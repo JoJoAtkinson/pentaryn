@@ -418,17 +418,29 @@ function hasWildcardToken(source) {
 }
 
 /**
+ * The files a wildcard token path matches: a FilePicker browse of the path with `{ wildcard: true }`,
+ * as core's token config lists them. For world and compendium beasts alike — core's getTokenImages()
+ * answers a compendium beast's literal wildcard (wildcard-art-compendium). The server refuses a user
+ * without FILES_BROWSE.
+ */
+async function wildcardFiles(src) {
+  const FP = foundry.applications.apps.FilePicker.implementation;
+  const res = await FP.browse(FP.matchS3URL?.(src) ? "s3" : "data", src, { wildcard: true });
+  return Array.isArray(res?.files) ? res.files : [];
+}
+
+/**
  * The token image a Wild Shape form of `source` gets, the same every time (pickFormImage). Listing a
- * wildcard's files needs FILES_BROWSE or ownership of the beast (core's requestTokenImages); a player
- * without either asks the active GM (the `formImage` relay row), and with no GM gets the portrait.
+ * wildcard's files needs FILES_BROWSE; a player without it asks the active GM (the `formImage` relay
+ * row), and with no GM gets the portrait.
  * @returns {Promise<string|null>}
  */
 export async function formImage(source) {
   const src = source?.prototypeToken?.texture?.src ?? null;
   const wildcard = hasWildcardToken(source);
   let images = [];
-  if (wildcard && (game.user.isGM || game.user.can?.("FILES_BROWSE") || source.isOwner)) {
-    images = await source.getTokenImages().catch(err => {
+  if (wildcard && src && (game.user.isGM || game.user.can?.("FILES_BROWSE"))) {
+    images = await wildcardFiles(src).catch(err => {
       log.debug("wildcard token images failed", { source: source.uuid }, err);
       return [];
     });
@@ -453,15 +465,24 @@ export async function formImageFor({ uuid } = {}) {
 }
 
 /**
- * `source`, or for a wildcard beast a copy whose prototype token names its one image, so dnd5e copies
- * that image onto the form and its tokens (linked and unlinked alike) and never picks one at random.
+ * For a wildcard beast, the one image its form gets (null otherwise: dnd5e copies a concrete image as
+ * it is). wildshape.mjs puts it on dnd5e's transform data and on the token swap (wildcard-art-compendium).
  */
-async function withFormImage(source) {
-  if (!hasWildcardToken(source)) return source;              // dnd5e copies a concrete image as it is
-  const img = await formImage(source).catch(err => { log.warn("form token image failed", err); return null; });
-  if (!img) return source;
+async function wildcardFormImage(source) {
+  if (!hasWildcardToken(source)) return null;
+  return formImage(source).catch(err => { log.warn("form token image failed", err); return null; });
+}
+
+/**
+ * The beast dnd5e is handed. For random token art dnd5e lists the files itself (core's listing: an
+ * error toast for a player who may not browse, then a random pick), so it gets a copy with randomImg
+ * off and the one image. The image reaches the form through the hooks either way, so a copy that does
+ * not take (a compendium Actor) changes nothing else.
+ */
+function shiftSource(source, img) {
+  if (!source?.prototypeToken?.randomImg) return source;
   try {
-    return source.clone({ prototypeToken: { randomImg: false, texture: { src: img } } }, { keepId: true });
+    return source.clone({ prototypeToken: { randomImg: false, ...(img ? { texture: { src: img } } : {}) } }, { keepId: true });
   } catch (err) {
     log.warn("form token image not applied", err);
     return source;
@@ -485,10 +506,10 @@ export async function doShift(host, activity, profileId, uuid) {
     return null;
   }
   const seconds = durationSeconds(activity.duration);
-  const shape = await withFormImage(source);
+  const formImg = await wildcardFormImage(source);
   // Snapshot the druid now: for an unlinked token, `host` IS the form once transformInto returns.
   const meta = metaFor(host, {
-    profile: profileId, wildShapeId: itemId, seconds, traitsHtml: await traitsHtml(source).catch(err => {
+    profile: profileId, wildShapeId: itemId, seconds, formImg, traitsHtml: await traitsHtml(source).catch(err => {
       log.debug("traits enrichment failed", { source: source.uuid }, err);
       return "";
     })
@@ -504,7 +525,7 @@ export async function doShift(host, activity, profileId, uuid) {
   let form = null;
   try {
     settleTokens(host);
-    await host.transformInto(shape, activity.settings, { renderSheet: false });
+    await host.transformInto(shiftSource(source, formImg), activity.settings, { renderSheet: false });
     if (token) form = token.actor?.isPolymorphed ? token.actor : null;
     else form = game.actors.find(a => a.isPolymorphed && a.getFlag("dnd5e", "originalActor") === host.id
       && !before.has(a.id)) ?? null;

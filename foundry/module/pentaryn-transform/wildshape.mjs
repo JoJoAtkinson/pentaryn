@@ -110,6 +110,11 @@ function onTransformActor(host, source, d, settings) {
     if (hp) hp.temp = formTempHP(host.system?.attributes?.hp?.temp, hp.temp);
     // What the form remembers about itself (the GM sweep, auto-revert and the HUD read this).
     foundry.utils.setProperty(d, `flags.${MODULE}.wildshape`, plan.flag);
+    // Wildcard token art: the one image doShift resolved, never dnd5e's pick (wildcard-art-compendium).
+    if (meta.formImg) {
+      foundry.utils.setProperty(d, "prototypeToken.texture.src", meta.formImg);
+      foundry.utils.setProperty(d, "prototypeToken.randomImg", false);
+    }
   } catch (err) {
     // Never block the transform over the extras.
     log.error("shaping the form failed", err);
@@ -123,9 +128,16 @@ function onTransformActor(host, source, d, settings) {
 // the token came back as the prototype's (PT TF-2). On a Wild Shape shift's token swap (this client's
 // doShift is in flight for the token's actor) the token's own light joins that snapshot, in the same
 // write; every revert path (linked, unlinked, restoreTokensElsewhere) then brings it back. [declared]
+// The same swap gets a wildcard beast's one image (an unlinked token never fires dnd5e.transformActor,
+// so this is where its image lands; wildcard-art-compendium, [declared]).
 function onPreSwapToken(doc, changes) {
   try {
-    if (!pendingMeta(doc?.actor?.uuid)) return;
+    const meta = pendingMeta(doc?.actor?.uuid);
+    if (!meta || !changes) return;
+    if (meta.formImg) {
+      if (Object.hasOwn(changes, "texture.src")) changes["texture.src"] = meta.formImg;
+      else if (foundry.utils.hasProperty(changes, "texture.src")) foundry.utils.setProperty(changes, "texture.src", meta.formImg);
+    }
     const prev = foundry.utils.getProperty(changes ?? {}, "flags.dnd5e.previousTokenData");
     if (!prev || typeof prev !== "object" || Object.hasOwn(prev, "light")) return;
     const light = handLight(doc._source ?? doc);
@@ -252,7 +264,7 @@ export function install(reg) {
   reg.on("dnd5e.preUseActivity", onPreUse, { label: "dnd5e.preUseActivity: Wild Shape / revert item" });
   reg.on("dnd5e.postUseActivity", onPostUse, { label: "dnd5e.postUseActivity: shift / revert" });
   reg.on("dnd5e.transformActor", onTransformActor, { label: "dnd5e.transformActor: shape the form" });
-  reg.on("preUpdateToken", onPreSwapToken, { label: "preUpdateToken: a shift keeps the token's own light for the revert" });
+  reg.on("preUpdateToken", onPreSwapToken, { label: "preUpdateToken: a shift keeps the token's own light for the revert and gets the form's image" });
   reg.on("updateActor", onZeroHP, { label: "updateActor: 0 HP" });
   reg.on("createActiveEffect", onEffectChange, { label: "createActiveEffect: incapacitated" });
   reg.on("updateActiveEffect", onEffectUpdate, { label: "updateActiveEffect: expired / incapacitated" });

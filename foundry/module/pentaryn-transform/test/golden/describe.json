@@ -311,7 +311,7 @@
     },
     {
       "name": "preUpdateToken",
-      "label": "preUpdateToken: a shift keeps the token's own light for the revert"
+      "label": "preUpdateToken: a shift keeps the token's own light for the revert and gets the form's image"
     },
     {
       "name": "updateActor",

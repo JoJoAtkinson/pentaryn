@@ -4,6 +4,16 @@
 
 ## Unreleased
 
+- **A beast taken straight from the compendium gets a real token image (wildcard-art-compendium,
+  defect wave 2).** A compendium Wolf with wildcard token art still gave the form the literal
+  `wolf-*.webp` placeholder: core's `getTokenImages()` answers a compendium beast's wildcard path as
+  it is, and the copy of the beast dnd5e was handed kept its original token. `formImage` now lists any
+  wildcard path itself (a FilePicker browse with `{ wildcard: true }`), and the chosen image is put on
+  the form through `dnd5e.transformActor` (`prototypeToken.texture.src`, `randomImg: false`) and on
+  the token swap (`preUpdateToken`), so world and compendium beasts, linked and unlinked druids, get
+  the first sorted file, else the portrait. A player who may not browse files still asks the GM; an
+  owner without `FILES_BROWSE` now asks the GM too ([declared]; golden/describe.json: the
+  `preUpdateToken` label).
 - **`describe()` lists the hand-set item flags as reads (EXT-1, final review).** `flags.writes` no
   longer names `flags.pentaryn-transform.revert`, which the module never writes; `flags.reads` now
   names it and `flags.pentaryn-transform.keepInForm` ([declared]; golden/describe.json regenerated).

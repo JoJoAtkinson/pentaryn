@@ -23,7 +23,7 @@ const ops = (...names) => F.calls.filter(c => names.includes(c.op));
 const errors = () => ops("notify").filter(c => c.level === "error").map(c => c.message);
 
 /** Talo with one more known form, a beast whose prototype token is `proto` (profile "pw"). */
-function druid(proto, { files = FILES, token = false } = {}) {
+function druid(proto, { files = FILES, token = false, pack = null } = {}) {
   game.actors.clear();
   F.chat.length = 0;
   F.calls.length = 0;
@@ -33,8 +33,10 @@ function druid(proto, { files = FILES, token = false } = {}) {
   F.become({ userId: IDS.gm });
   game.users.get(IDS.gm).active = true;
   const { talo } = F.W.talo({ revertItem: token });
-  const wolf = F.W.beast("mmWolfSrc0000001", "Wolf", { img: "portraits/wolf.webp", prototypeToken: proto });
+  const wolf = F.W.beast("mmWolfSrc0000001", "Wolf", { img: "portraits/wolf.webp", prototypeToken: proto, pack });
   F.tokenImages.set(wolf.uuid, files);
+  F.wildcardFiles.clear();
+  if (core.isWildcardPath(proto?.texture?.src)) F.wildcardFiles.set(proto.texture.src, files);
   talo.items.get(IDS.ws).system.activities.get("wsAct").availableProfiles.push({ _id: "pw", name: "Wolf", uuid: wolf.uuid });
   if (token) {
     game.actors.delete(talo.id);
@@ -116,7 +118,8 @@ test("wildcard-art: a player's shift asks the active GM for the image — no pla
     assert.ok(form, "the form");
     assert.equal(F.lastTransformData.prototypeToken.texture.src, "tokens/wolf/wolf-1.webp");
     assert.deepEqual(errors(), [], "no 'Error retrieving wildcard tokens'");
-    assert.deepEqual(ops("getTokenImages").map(c => c.user), [IDS.gm], "listed once, by the GM");
+    assert.deepEqual(ops("browse").map(c => c.user), [IDS.gm], "browsed once, by the GM");
+    assert.deepEqual(ops("getTokenImages"), [], "dnd5e's own random pick is skipped");
   } finally { restore(); random.mock.restore(); }
 });
 
@@ -155,4 +158,61 @@ test("wildcard-art: api.formImage({ uuid }) answers the image (the relay row); a
   assert.equal(await api.formImage({ uuid: "Actor.mmWolfSrc0000001" }), "tokens/wolf/wolf-1.webp");
   assert.equal(await api.formImage({ uuid: "Actor.nope000000000001" }), null);
   assert.equal(await api.formImage({}), null);
+});
+
+/* wildcard-art-compendium (defect wave 2): a beast taken straight from the compendium. Core's
+   getTokenImages() answers its literal wildcard path and clone() leaves its prototype token as it
+   was, so the form got the literal `wolf-*.webp` placeholder. formImage now browses the wildcard
+   itself (FilePicker, { wildcard: true }) and the image reaches the form through dnd5e's transform
+   data and the token swap, whether or not a clone takes. */
+
+const PACK = "dnd5e.monsters";
+
+test("wildcard-art-compendium: a GM's shift into a compendium wildcard beast gets the first sorted file, not the literal wildcard", async () => {
+  const random = randomLast();
+  try {
+    const { talo } = druid({ randomImg: true, texture: { src: WILD } }, { pack: PACK });
+    const form = await T.shift(talo, "pw");
+    assert.ok(form, "the form");
+    assert.equal(F.lastTransformData.prototypeToken.texture.src, "tokens/wolf/wolf-1.webp");
+    assert.equal(F.lastTransformData.prototypeToken.randomImg, false, "the form's own tokens never pick at random");
+    assert.equal(ops("clone").length, 1, "the fixture's compendium clone() takes nothing: the image rides dnd5e's transform data");
+    assert.deepEqual(ops("browse").map(c => [c.target, c.options.wildcard]), [[WILD, true]], "the wildcard is browsed");
+    assert.deepEqual(errors(), []);
+  } finally { random.mock.restore(); }
+});
+
+test("wildcard-art-compendium: a wildcard path without randomImg is still resolved", async () => {
+  const { talo } = druid({ randomImg: false, texture: { src: WILD } }, { pack: PACK });
+  await T.shift(talo, "pw");
+  assert.equal(F.lastTransformData.prototypeToken.texture.src, "tokens/wolf/wolf-1.webp");
+});
+
+test("wildcard-art-compendium: an unlinked token druid's token gets the first sorted file from a compendium beast", async () => {
+  const random = randomLast();
+  try {
+    const { talo } = druid({ randomImg: true, texture: { src: WILD } }, { token: true, pack: PACK });
+    const token = talo.token;
+    await T.shift(talo, "pw");
+    assert.equal(token.texture.src, "tokens/wolf/wolf-1.webp");
+  } finally { random.mock.restore(); }
+});
+
+test("wildcard-art-compendium: a compendium wildcard that matches nothing gives the portrait", async () => {
+  const { talo } = druid({ randomImg: true, texture: { src: WILD } }, { files: [], pack: PACK });
+  await T.shift(talo, "pw");
+  assert.equal(F.lastTransformData.prototypeToken.texture.src, "portraits/wolf.webp");
+});
+
+test("wildcard-art-compendium: a player's shift asks the GM, who browses the compendium beast's wildcard", async () => {
+  const { talo } = druid({ randomImg: true, texture: { src: WILD } }, { pack: PACK });
+  const restore = gmAnswers();
+  try {
+    asPlayer();
+    await T.shift(talo, "pw");
+    F.become({ userId: IDS.gm });
+    assert.equal(F.lastTransformData.prototypeToken.texture.src, "tokens/wolf/wolf-1.webp");
+    assert.deepEqual(ops("browse").map(c => c.user), [IDS.gm], "browsed once, by the GM");
+    assert.deepEqual(errors(), []);
+  } finally { restore(); }
 });

@@ -22,9 +22,10 @@ ordinary ability. Requires dnd5e 6 (verified 6.0.6) on Foundry v14.
   macro. The sheet still works: Wild Shape → Use opens dnd5e's form dialog, then shifts at once.
 - The form's token image is the same every time, never random and never the placeholder
   (wildcard-art, Joe's ruling): the beast's own token image; for wildcard token art (the Monster
-  Manual Wolf, Cat), the first matching file in sorted order; if none resolves, the beast's portrait.
-  A player who may not browse files gets the image from the active GM (the `formImage` relay); with
-  no GM online, the portrait.
+  Manual Wolf, Cat), the first matching file in sorted order — for a world beast and a beast taken
+  straight from the compendium alike; if none resolves, the beast's portrait. A player who may not
+  browse files gets the image from the active GM (the `formImage` relay); with no GM online, the
+  portrait.
 - The portrait line reads `Wild Shape: Dire Wolf · 5 hours 59 minutes left`; the form's effect
   (`Wild Shape: Dire Wolf`) is larger, with a gold ring, and its tooltip has the time left.
   HP with temp HP reads `99+12 / 99`.
@@ -89,7 +90,7 @@ is out): `inspect("Talo")` and `inspect(<the form>)` give the same read. Kit mem
 
 `formImage` is also the module's one query, `pentaryn-transform.formImage` (a relay row: any sender,
 the active GM answers; read-only). A player's shift asks it when the beast's token art is a wildcard
-the player may not list (core's wildcard listing needs `FILES_BROWSE` or ownership of the beast).
+the player may not list (the wildcard is listed with a FilePicker browse, which needs `FILES_BROWSE`).
 
 ## Data written
 
