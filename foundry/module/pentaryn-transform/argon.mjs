@@ -63,7 +63,7 @@ export function cancelTargetPicker() {
 
 /** Close the module's own open pickers (Change Form / Wild Shape forms, constellations). */
 export function closeOwnPickers() {
-  const open = document.querySelectorAll(".pentaryn-picker.show");
+  const open = document.querySelectorAll(".ptf-picker.show");
   for (const el of open) el.classList.remove("show");   // what ButtonPanel#toggle(false) does; no saved state (id null)
   return open.length > 0;
 }

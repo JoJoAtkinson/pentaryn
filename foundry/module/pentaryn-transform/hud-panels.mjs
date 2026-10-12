@@ -90,7 +90,7 @@ function composeBonusBar(panel, actor) {
     else if (p.starry) b = new C.StarryFormButton({ hudActor: actor });
     else if (p.revert) b = new C.ReturnButton({ hudActor: actor });
     else b = new ItemBtn({ item: actor.items.get(p.item), inActionPanel: true });
-    if (p.highlight) b.element.classList.add("pentaryn-return");
+    if (p.highlight) b.element.classList.add("ptf-return");
     fresh.push(b);
     next.push(b);
     // While the Archer or the Chalice glimmers, its use sits right beside the form.
@@ -98,10 +98,10 @@ function composeBonusBar(panel, actor) {
     const act = c && c !== "dragon" ? constellationActivity(actor, c) : null;
     if (act) {
       const ab = new ItemBtn({ item: act, inActionPanel: true });
-      ab.element.classList.add("pentaryn-starry-act");
+      ab.element.classList.add("ptf-starry-act");
       if (c === "chalice") {
-        ab.element.classList.add("pentaryn-starry-chalice");
-        ab.element.classList.toggle("pentaryn-chalice-ready", chaliceReady.has(actor.uuid));
+        ab.element.classList.add("ptf-starry-chalice");
+        ab.element.classList.toggle("ptf-chalice-ready", chaliceReady.has(actor.uuid));
       }
       fresh.push(ab);
       next.push(ab);
@@ -143,7 +143,7 @@ function composeActionBar(panel, actor) {
   const covered = multiattackCoveredByFullAttack(actor);
   const ids = frontRowItems(actor.items.contents, onBar).filter(id => id !== covered);
   // The beast's attacks replace the weapon-set slot; showing both would list Bite twice.
-  slot?.element.classList.add("pentaryn-hidden");
+  slot?.element.classList.add("ptf-hidden");
   // Argon's "Use Feature" panel lists the beast's action features (a Brown Bear's Multiattack) that
   // are already front-row buttons: a second way to the same thing. A panel holding nothing else goes.
   const front = [...onBar, ...ids, ...(covered ? [covered] : [])];
@@ -232,7 +232,7 @@ function paintHP(element, actor) {
   if (!t.hasTemp) return;
   first.textContent = t.current;
   first.dataset.tooltip = _loc("PENTARYN_TRANSFORM.Hud.HPTemp", { value: hp.value, temp: hp.temp });
-  first.classList.add("pentaryn-hp-temp");
+  first.classList.add("ptf-hp-temp");
 }
 
 function paintPortrait(element, actor) {
@@ -243,10 +243,10 @@ function paintPortrait(element, actor) {
   if (line) {
     if (detail.dataset.pentarynOriginal === undefined) detail.dataset.pentarynOriginal = detail.textContent.trim();
     detail.textContent = line;
-    detail.classList.add("pentaryn-form-line");
-  } else if (detail.classList.contains("pentaryn-form-line")) {
+    detail.classList.add("ptf-form-line");
+  } else if (detail.classList.contains("ptf-form-line")) {
     detail.textContent = detail.dataset.pentarynOriginal ?? "";
-    detail.classList.remove("pentaryn-form-line");
+    detail.classList.remove("ptf-form-line");
   }
 }
 
@@ -268,7 +268,7 @@ function onEffectRender(component) {
   const isWs = uuid.endsWith(`ActiveEffect.${EFFECT_ID}`);
   const isStarry = uuid.endsWith(`ActiveEffect.${STARRY_EFFECT_ID}`);
   if (!isWs && !isStarry) return;
-  component.element.classList.add("pentaryn-effect");
+  component.element.classList.add("ptf-effect");
   component.getTooltipData = async function () {
     const actor = ui.ARGON?._actor;
     let secs = null;
@@ -316,8 +316,8 @@ const chaliceReady = new Map();   // actor uuid → timer
 function paintChalice(actor) {
   if (actor !== ui.ARGON?._actor) return;
   const on = chaliceReady.has(actor.uuid);
-  for (const el of document.querySelectorAll(".extended-combat-hud .pentaryn-starry-chalice")) {
-    el.classList.toggle("pentaryn-chalice-ready", on);
+  for (const el of document.querySelectorAll(".extended-combat-hud .ptf-starry-chalice")) {
+    el.classList.toggle("ptf-chalice-ready", on);
   }
 }
 

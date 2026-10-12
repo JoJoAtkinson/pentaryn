@@ -63,12 +63,12 @@ test("WildShapeButton (normal form): label, icon, badge, tooltip (golden/tooltip
   pinJSON("tooltip-wildshape", await ws.getTooltipData(), file);
 });
 
-test("WildShapeButton picker: one FormTile per known form, a pentaryn-picker panel without an id; re-render drops the old panel", async () => {
+test("WildShapeButton picker: one FormTile per known form, a ptf-picker panel without an id; re-render drops the old panel", async () => {
   const { talo, wolfSrc } = fresh();
   const { ws } = await bonus(talo);
   const panel = ws.panel;
   assert.equal(panel.id, null);
-  assert.ok(panel.element.classList.contains("pentaryn-picker"));
+  assert.ok(panel.element.classList.contains("ptf-picker"));
   assert.ok(panel.element.classList.contains("features-container"));
   assert.deepEqual(tiles(ws).map(t => [t.constructor.name, t.label, t.icon, t.element.className]),
     [["FormTile", "Dire Wolf", wolfSrc.img, ""], ["FormTile", "Brown Bear", "brownBearSrc0001.webp", ""], ["FormTile", "Ape", "apeSrc0000000001.webp", ""]]);
@@ -91,7 +91,7 @@ test("WildShapeButton click: tooltip dropped, target picker cancelled, the picke
   assert.deepEqual(notes(), [["warn", "No Wild Shape uses left."]]);
   assert.ok(ws.panel.element.classList.contains("show"), "not toggled");
   ws.refreshCount();
-  assert.ok(ws.element.classList.contains("pentaryn-empty"));
+  assert.ok(ws.element.classList.contains("ptf-empty"));
 });
 
 test("WildShapeButton right-click and contextmenu open the Wild Shape item's sheet", async () => {
@@ -112,7 +112,7 @@ test("Change Form (in a form): label, tooltip (golden/tooltip-changeform.json), 
   assert.equal(ws.shifted, true);
   assert.equal(ws.wildShapeItem, talo.items.get(IDS.ws), "the original's item");
   pinJSON("tooltip-changeform", await ws.getTooltipData(), file);
-  assert.deepEqual(tiles(ws).map(t => t.element.classList.contains("pentaryn-current")), [true, false, false]);
+  assert.deepEqual(tiles(ws).map(t => t.element.classList.contains("ptf-current")), [true, false, false]);
   assert.ok(ret);
 });
 
@@ -235,10 +235,10 @@ test("StarryFormButton (on): 'Starry Form: Archer', constellation icon, tooltip 
   const { starry } = await bonus(talo);
   assert.equal(starry.label, "Starry Form: Archer");
   assert.equal(starry.icon, "icons/weapons/bows/bow-ornamental-gold-blue.webp");
-  assert.ok(starry.element.classList.contains("pentaryn-starry-on"));
-  assert.equal(starry.element.classList.contains("pentaryn-empty"), false, "0 uses, but the form is up");
+  assert.ok(starry.element.classList.contains("ptf-starry-on"));
+  assert.equal(starry.element.classList.contains("ptf-empty"), false, "0 uses, but the form is up");
   pinJSON("tooltip-starry-on", await starry.getTooltipData(), file);
-  assert.deepEqual(tiles(starry).map(t => [t.label, t.element.classList.contains("pentaryn-current")]),
+  assert.deepEqual(tiles(starry).map(t => [t.label, t.element.classList.contains("ptf-current")]),
     [["Archer", true], ["Chalice", false], ["Dragon", false], ["End", false]]);
   assert.equal(tiles(starry)[3].icon, "icons/svg/cancel.svg");
   await starry._onClick(ev());

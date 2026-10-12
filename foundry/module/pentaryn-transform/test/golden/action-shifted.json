@@ -3,7 +3,7 @@
     "cls": "DND5eItemButton",
     "label": "Bite",
     "item": "mmBite0000000001",
-    "classes": "pentaryn-hidden",
+    "classes": "ptf-hidden",
     "rendered": 0
   },
   {

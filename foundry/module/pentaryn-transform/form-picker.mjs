@@ -41,7 +41,7 @@ export function paintBadge(button, left) {
     }
     badge.querySelector("span").textContent = String(left);
   }
-  button.element.classList.toggle("pentaryn-empty", left === 0);
+  button.element.classList.toggle("ptf-empty", left === 0);
 }
 
 /* ── normalising a beast for its tile tooltip ────────────────────────────── */
@@ -58,7 +58,7 @@ function recoveryText(item) {
  * and only fade (styles/transform.css), so a tile is clickable the moment it is visible.
  */
 function picker(panel) {
-  panel.element.classList.add("pentaryn-picker");
+  panel.element.classList.add("ptf-picker");
   return panel;
 }
 
@@ -77,7 +77,7 @@ export function argonClasses() {
       this.form = form;
       this.hudActor = hudActor;
       const current = hudActor?.getFlag?.(MODULE, "wildshape")?.profile;
-      if (hudActor?.isPolymorphed && current === form.id) this.element.classList.add("pentaryn-current");
+      if (hudActor?.isPolymorphed && current === form.id) this.element.classList.add("ptf-current");
     }
 
     get hasTooltip() { return true; }
@@ -234,7 +234,7 @@ export function argonClasses() {
       });
       this.constellation = constellation;
       this.hudActor = hudActor;
-      if (!end && constellationOf(hudActor) === constellation) this.element.classList.add("pentaryn-current");
+      if (!end && constellationOf(hudActor) === constellation) this.element.classList.add("ptf-current");
     }
 
     get hasTooltip() { return true; }
@@ -312,9 +312,9 @@ export function argonClasses() {
 
     refreshCount() {
       paintBadge(this, usesLeft(this.wildShapeItem?.system.uses));
-      this.element.classList.toggle("pentaryn-starry-on", !!this.constellation);
+      this.element.classList.toggle("ptf-starry-on", !!this.constellation);
       // Spent out but the form is up: still clickable (change constellation / end).
-      if (this.constellation) this.element.classList.remove("pentaryn-empty");
+      if (this.constellation) this.element.classList.remove("ptf-empty");
     }
 
     async _renderInner() {

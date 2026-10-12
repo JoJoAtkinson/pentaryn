@@ -169,7 +169,7 @@ test("Action bar: not shifted → untouched; nothing to add or drop → only upd
   fire(q, wolf);
   assert.equal(q.visibility, 1);
   assert.deepEqual(bar(q).map(b => b.item), [null, "mmBite0000000001", "mmMultiattack001"]);
-  assert.ok(q._buttons[0].element.classList.contains("pentaryn-hidden"));
+  assert.ok(q._buttons[0].element.classList.contains("ptf-hidden"));
 });
 
 test("Action bar with pentaryn-combat: Multiattack is dropped only when Full Attack runs it (U-4-1); its settings are read directly (C23)", async () => {
@@ -260,13 +260,13 @@ test("portrait: a form shows 'Wild Shape: Dire Wolf · <time> left' and '99+12' 
   Hooks.callAll("renderPortraitPanelArgonComponent", { actor: wolf }, P.el, wolf);
   assert.equal(P.detail.textContent, "Wild Shape: Dire Wolf · 5 hours 59 minutes left");
   assert.equal(P.detail.dataset.pentarynOriginal, "Level 12 Druid (null)");
-  assert.ok(P.detail.classList.contains("pentaryn-form-line"));
+  assert.ok(P.detail.classList.contains("ptf-form-line"));
   assert.equal(P.hp.children[0].textContent, "99+12");
   assert.equal(P.hp.children[0].dataset.tooltip, "99 HP + 12 temporary HP (they last until spent or a Long Rest)");
-  assert.ok(P.hp.children[0].classList.contains("pentaryn-hp-temp"));
+  assert.ok(P.hp.children[0].classList.contains("ptf-hp-temp"));
   Hooks.callAll("renderPortraitPanelArgonComponent", { actor: talo }, P.el, null);
   assert.equal(P.detail.textContent, "Level 12 Druid (null)", "no actor argument: the panel's actor (Talo, normal form)");
-  assert.equal(P.detail.classList.contains("pentaryn-form-line"), false);
+  assert.equal(P.detail.classList.contains("ptf-form-line"), false);
 });
 
 test("portrait: a form with no end time shows the effect name; Starry Form shows its time left; no temp HP leaves Argon's figure", async () => {
@@ -323,7 +323,7 @@ test("renderEffect: the Wild Shape and Starry effects get the big class and a li
   ui.ARGON._actor = wolf;
   const comp = { effect: { uuid: `${wolf.uuid}.ActiveEffect.${EFFECT_ID}`, tooltip: "<p>desc</p>" }, element: F.D.el("div", ""), label: "Wild Shape: Dire Wolf" };
   Hooks.callAll("renderEffectArgonComponent", comp);
-  assert.ok(comp.element.classList.contains("pentaryn-effect"));
+  assert.ok(comp.element.classList.contains("ptf-effect"));
   game.time.worldTime = 600;
   assert.deepEqual(await comp.getTooltipData(), { title: "Wild Shape: Dire Wolf", description: "<p><strong>Time left:</strong> 5 hours 50 minutes</p><p>desc</p>", classes: ["pentaryn-tt"] });
   const { talo: t2 } = fresh();
@@ -354,7 +354,7 @@ test("updateItem on Wild Shape repaints the uses badge of the live buttons; othe
   const item = talo.items.get(IDS.ws);
   await item.update({ "system.uses.spent": 3 });
   assert.equal(badge(), "0");
-  assert.ok(ws.element.classList.contains("pentaryn-empty"));
+  assert.ok(ws.element.classList.contains("ptf-empty"));
   item.system.uses.spent = 1;
   Hooks.callAll("updateItem", talo.items.get(IDS.cure), {}, {}, "u");
   assert.equal(badge(), "0", "not Wild Shape: no refresh");
@@ -393,8 +393,8 @@ test("Chalice: a leveled heal with a slot lights the Chalice button for a minute
   const p = A.panel("DND5E.BonusAction", [slot()]);
   fire(p, talo);
   await flush();
-  const chalice = () => p._buttons.find(b => b.element.classList.contains("pentaryn-starry-chalice"));
-  const lit = () => chalice().element.classList.contains("pentaryn-chalice-ready");
+  const chalice = () => p._buttons.find(b => b.element.classList.contains("ptf-starry-chalice"));
+  const lit = () => chalice().element.classList.contains("ptf-chalice-ready");
   assert.equal(lit(), false);
   const cure = talo.items.get(IDS.cure).system.activities.get("cw1");
   Hooks.callAll("dnd5e.postUseActivity", cure, {}, {});
@@ -402,7 +402,7 @@ test("Chalice: a leveled heal with a slot lights the Chalice button for a minute
   const q = A.panel("DND5E.BonusAction", [slot()]);
   fire(q, talo);
   await flush();
-  assert.ok(q._buttons.some(b => b.element.classList.contains("pentaryn-chalice-ready")), "a rebuilt bar starts lit");
+  assert.ok(q._buttons.some(b => b.element.classList.contains("ptf-chalice-ready")), "a rebuilt bar starts lit");
   Hooks.callAll("dnd5e.postUseActivity", talo.items.get(IDS.starry).system.activities.get("sfChalice"), {}, {});
   assert.equal(lit(), false, "used");
   Hooks.callAll("dnd5e.postUseActivity", cure, { consume: { spellSlot: false } }, {});

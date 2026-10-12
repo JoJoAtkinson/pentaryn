@@ -10,7 +10,7 @@
     "cls": "ReturnButton",
     "label": "Return to Talo",
     "item": "pentarynReturn00",
-    "classes": "pentaryn-return",
+    "classes": "ptf-return",
     "rendered": 1
   },
   {

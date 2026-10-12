@@ -10,7 +10,7 @@
     "cls": "DND5eItemButton",
     "label": "Return to Talo",
     "item": "returnNormal0001",
-    "classes": "pentaryn-return",
+    "classes": "ptf-return",
     "rendered": 1
   },
   {

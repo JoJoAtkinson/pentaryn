@@ -17,14 +17,14 @@
     "cls": "StarryFormButton",
     "label": "Starry Form: Archer",
     "item": "starryForm000001",
-    "classes": "pentaryn-starry-on",
+    "classes": "ptf-starry-on",
     "rendered": 1
   },
   {
     "cls": "DND5eItemButton",
     "label": "Archer",
     "item": "sfArcher",
-    "classes": "pentaryn-starry-act",
+    "classes": "ptf-starry-act",
     "rendered": 1
   }
 ]
