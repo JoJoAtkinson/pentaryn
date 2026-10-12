@@ -103,11 +103,11 @@ GM tabs each publish their own API; a run in one does not lock the other.
 
 - **A rule:** add it in `core/engine.mjs` `enumerate()` with its `PRIORITY`, add a fixture to
   `test/fixtures/corpus.mjs`, then either mirror it in `wasm/src/lib.rs` (rebuild with
-  `make foundry-walls-wasm`) or make `runWasm` delegate the case to js, as it does for Levels.
+  `make foundry-walls-wasm`) or make the wasm `accepts(walls, opts)` refuse the case so it runs on js, as it does for Levels.
   The JS engine is the reference: change it first, then port. Give it a refusal reason in
   `diagnose()` (it re-checks F1/F2 by hand), and a new act kind also needs `applyInstance()` and
   the batch box (`boxOf`) in `runEngine`.
-- **A backend:** `register({name, run(walls, opts), available()})` from its own adapter file,
+- **A backend:** `register({name, run(walls, opts), available(), accepts?(walls, opts)})` from its own adapter file,
   returning the `runEngine` shape. `compare()` then diffs it against js, the bench gains a column,
   and `node test/corpus.mjs --backend=<name>` runs the corpus on it.
 - **An API method:** a row in `api-manifest.mjs`, the action in `actions.mjs` (exposed through
@@ -119,6 +119,8 @@ GM tabs each publish their own API; a run in one does not lock the other.
   `toObject()` (`planUndo` does).
 - The wasm engine knows nothing of Levels, the `rule` stamp (always `X1`), the create flags or
   the log; `canonical(r, {extended: true})` shows the first two. Geometry is identical.
+- `weldEps` and `pinEps` are fixed inside `lib.rs`, not passed over the ABI: a run that overrides
+  either goes to js (the wasm row's `accepts(walls, opts)`), like a Levels scene.
 - Keybindings register at `init` only; a new row needs a reload.
 - Do not add a top-level `await` to `backend-wasm.mjs`: it delayed the entry past `ready` once,
   and the API never attached. The load is fire-and-forget; `ready` awaits its promise.

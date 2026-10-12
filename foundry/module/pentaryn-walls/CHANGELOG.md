@@ -6,6 +6,9 @@
 (`flagScope` stays `wall-autocomplete`), `languages`, `minimum: "14"`, `verified: "14.369"` and the
 description fix; the flag-scope migration is **parked** while walls stays off (Joe).
 
+- **[declared] A `weldEps`/`pinEps` override runs on the JavaScript engine** (`walls-EXT-1`): the
+  compiled engine hard-codes both, so it ignored the override while the card echoed it. The wasm
+  row's `accepts(walls, opts)` now refuses such opts, and the card names js, the backend that ran.
 - **[declared] Undo keeps each run's history** (`walls-edge-2`): a later run that trimmed or moved a
   generated wall overwrote its `run`/`priorC` stamp, so undoing run 2 deleted run 1's wall. A created
   wall now keeps its creating `run`; every trim/weld/move writes `moves.<run>` = the prior coordinates

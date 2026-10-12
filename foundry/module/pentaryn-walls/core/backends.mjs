@@ -7,9 +7,10 @@
  * and `node test/corpus.mjs --backend=<name>` runs all fixtures against it (the gate,
  * test/corpus.test.mjs, runs every available backend).
  *
- * A backend is `{name, run(walls, opts) -> result, available() -> bool, accepts?(walls) -> bool}`
+ * A backend is `{name, run(walls, opts) -> result, available() -> bool, accepts?(walls, opts) -> bool}`
  * where `result` has the same shape `runEngine` returns. `accepts` is optional: a backend that
- * returns false for some walls (wasm on a Levels scene) is passed over for js by the glue.
+ * returns false for some walls or opts (wasm on a Levels scene, or given a weldEps/pinEps override
+ * its ABI does not carry) is passed over for js by the glue.
  */
 
 import {runEngine, stampOf, wallCategory} from "./engine.mjs";

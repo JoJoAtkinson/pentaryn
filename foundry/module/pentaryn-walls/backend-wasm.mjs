@@ -73,8 +73,18 @@ function marshal(walls) {
  */
 const usesLevels = walls => walls.some(w => (w.levels ?? []).length);
 
+/**
+ * Tolerances lib.rs hard-codes rather than takes over the ABI (walls-EXT-1). A run that overrides
+ * one goes to js, as a Levels scene does, so the card's echoed config is the one that ran.
+ */
+const NOT_IN_ABI = ["weldEps", "pinEps"];
+const overridesAbi = opts => NOT_IN_ABI.some(k => opts?.[k] !== undefined);
+
+/** False when the compiled engine cannot reproduce js for these walls and opts. */
+export const accepts = (walls, opts = {}) => !usesLevels(walls) && !overridesAbi(opts);
+
 export function runWasm(walls, opts = {}) {
-  if (usesLevels(walls)) return runEngine(walls, opts);   // a direct caller; the glue never gets here
+  if (!accepts(walls, opts)) return runEngine(walls, opts);   // a direct caller; the glue never gets here
   if (!mod) throw new Error(`wasm backend not loaded${loadError ? `: ${loadError.message}` : ""}`);
   const cfg = resolveConfig(opts);
   const runId = runKey(opts.runId);
@@ -151,5 +161,5 @@ register({
   name: "wasm",
   run: runWasm,
   available: () => mod !== null,
-  accepts: walls => !usesLevels(walls)
+  accepts
 });

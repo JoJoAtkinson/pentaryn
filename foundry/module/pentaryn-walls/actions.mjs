@@ -53,15 +53,13 @@ function pickBackend(requested) {
 function evaluate(scene, opts = {}) {
   const walls = readWalls(scene);
   let backend = pickBackend(opts.backend);
-  // A backend that cannot take these walls (wasm on a Levels scene) would hand them to the js
-  // engine itself; pick js here so the card and analyze() name the backend that ran.
-  if (backend.accepts && !backend.accepts(walls)) backend = getBackend("js");
+  const runOpts = {gridSize: scene.grid.size, runId: new Date().toISOString(), ...opts};
+  // A backend that cannot take these walls or opts (wasm on a Levels scene, or with a weldEps/pinEps
+  // override) would hand them to the js engine itself; pick js here so the card and analyze() name
+  // the backend that ran.
+  if (backend.accepts && !backend.accepts(walls, runOpts)) backend = getBackend("js");
   const t0 = performance.now();
-  const result = backend.run(walls, {
-    gridSize: scene.grid.size,
-    runId: new Date().toISOString(),
-    ...opts
-  });
+  const result = backend.run(walls, runOpts);
   return {walls, result, backend: backend.name, ms: performance.now() - t0};
 }
 
