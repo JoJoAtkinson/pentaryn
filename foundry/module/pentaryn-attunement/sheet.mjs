@@ -116,7 +116,7 @@ const dropSafe = safe("drop", onDrop);
 function activate(strip, actor, editable) {
   strip.addEventListener("click", event => {
     const slotEl = event.target.closest(".attunement-slot");
-    if (slotEl?.dataset.awayKey && event.target.closest('[data-action="release"]')) {
+    if (slotEl?.dataset.awayKey !== undefined && event.target.closest('[data-action="release"]')) {
       event.preventDefault();
       event.stopPropagation();
       return releaseSafe(actor, slotEl.dataset.awayKey);
@@ -132,7 +132,7 @@ function activate(strip, actor, editable) {
 
   strip.addEventListener("contextmenu", event => {
     const slotEl = event.target.closest(".attunement-slot");
-    if (slotEl?.dataset.awayKey && editable) {
+    if (slotEl?.dataset.awayKey !== undefined && editable) {
       event.preventDefault();
       event.stopPropagation();
       return releaseSafe(actor, slotEl.dataset.awayKey);

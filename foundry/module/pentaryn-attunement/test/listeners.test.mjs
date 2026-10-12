@@ -93,3 +93,23 @@ test("a successful path still writes (the wrapper only adds the catch)", async (
   await flush();
   assert.deepEqual(F.calls.slice(from).filter(c => c.op === "itemUpdate").map(c => c.changes), [{ "system.attuned": false }]);
 });
+
+test("an away entry with an empty key can still be released (✕ and right-click)", async () => {
+  const actor = makeActor(F, { id: "actorLstn0000002", name: "Keyless Vesk", attunement: { value: 0, max: 3 },
+    flags: { [MOD]: { away: [{ key: "", name: "X", img: "x" }], slots: ["away:"] } } });
+  actor.isOwner = true;
+  const writes = [];
+  actor.setFlag = async (scope, key, value) => { writes.push([scope, key, value]); };
+  foundry.applications.api.DialogV2 = { confirm: async () => true };
+  const dom = sheetElement();
+  F.fire("renderBaseActorSheet", { actor, isEditable: true }, dom.root);
+  const strip = dom.sidebar.children[1];
+  const [away] = strip.children[1].children;
+  assert.equal(away.dataset.awayKey, "", "the slot renders as the empty-key away entry");
+  const releaseBtn = away.children[0].children.find(c => c.dataset.action === "release");
+  strip.listeners.click[0](domEvent(releaseBtn));
+  await flush();
+  strip.listeners.contextmenu[0](domEvent(away));
+  await flush();
+  assert.deepEqual(writes, [[MOD, "away", []], [MOD, "away", []]]);
+});

@@ -3,7 +3,7 @@
  * DOM only; the slot reconciliation is the core's computeSlots. sheet.mjs mounts and wires it.
  */
 
-import { AWAY, awayOf, computeSlots, t } from "./attunement-core.mjs";
+import { AWAY, awayOf, computeSlots, shortName, t } from "./attunement-core.mjs";
 
 /* -------------------------------------------- */
 /*  Rendering                                   */
@@ -129,10 +129,12 @@ export function buildAwaySlot(actor, key, index, overflow, editable, li, awayByK
   li.append(fig);
 
   const name = foundry.utils.escapeHTML(entry?.name ?? "");
-  const body = t("AwayBody", { actor: foundry.utils.escapeHTML(actor.name.split(/[ ,]/)[0]) });
+  const short = shortName(actor.name);
+  const body = t("AwayBody", { actor: foundry.utils.escapeHTML(short) });
   li.dataset.tooltip = `<div class="pentaryn-attunement-away-tip"><strong>${name}</strong><p>${body}</p></div>`;
   li.dataset.tooltipDirection = "RIGHT";
-  li.setAttribute("aria-label", `${entry?.name} — ${body}`);
+  const rawBody = t("AwayBody", { actor: short });
+  li.setAttribute("aria-label", `${entry?.name ?? ""} — ${rawBody}`);
   return li;
 }
 

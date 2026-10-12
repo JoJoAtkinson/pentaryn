@@ -3,7 +3,7 @@
 // (mount, entries, controls, re-render triggers) and the U-6-12 dock over Argon's Combat HUD with its
 // 500 ms poll. A player never writes light. Timers are mocked.
 //
-// KNOWN rows (pinned as they are; each has its target as a todo test at the end):
+// KNOWN rows (all fixed; each pin is the test named after the row):
 //   transform-creatures-25  FIXED [declared]: updateToken re-renders only when a field the strip reads changed
 //   transform-creatures-29  FIXED [declared]: an override failure still answers false, and warns once
 //   transform-creatures-31  FIXED [declared]: api.ownerSees(TokenDocument) answers for its placeable
@@ -413,5 +413,3 @@ test("throwing setting reads fall back to the defaults: showStrip and floatOverH
   D2.clearArgon();
   await tick(500);
 });
-
-/* ── the targets of the KNOWN rows (guide §4, steps 5 and 7) ─────────────── */

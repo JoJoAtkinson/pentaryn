@@ -18,6 +18,9 @@ let lastReason = null;
 const gmOpts = () => ({ gmButton: setting("gmButton") });
 /** Turn an entry, a page or an item into a target, applying the same rules as the bar. */
 const targetOf = doc => targetForDoc(doc, gmOpts());
+/** core.status, except that a document with no visible sources still reads "saved" when it is itself saved. */
+const statusOrSaved = (pages, sources, doc) =>
+  (!sources.length && doc?.uuid && core.findSaved(pages, doc.uuid)) ? "saved" : core.status(pages, sources);
 
 /**
  * inspect's ref. The kit's root `game.pentaryn.inspect(ref)` resolves the ref as an Actor and passes
@@ -48,9 +51,9 @@ function impl(ctx) {
       const target = targetOf(doc);
       if (!target) { lastReason = "no-target"; return null; }
       lastReason = null;
-      const { st, sources } = x.savedStatus(target);
-      if (!sources.length && doc?.uuid && core.findSaved(x.personal()?.pages.contents, doc.uuid)) return "saved";
-      return st;
+      const pages = x.personal()?.pages.contents ?? [];
+      const { sources } = x.savedStatus(target, pages);
+      return statusOrSaved(pages, sources, doc);
     },
     async open(pageId) {
       const j = x.personal();
@@ -78,9 +81,7 @@ function impl(ctx) {
       const target = rawTargetOf(doc);
       if (!target) return null;
       const pages = x.personal(user)?.pages.contents ?? [];
-      const sources = descriptorsFor(target, user);
-      if (!sources.length && doc?.uuid && core.findSaved(pages, doc.uuid)) return "saved";
-      return core.status(pages, sources);
+      return statusOrSaved(pages, descriptorsFor(target, user), doc);
     },
     lastReason: () => lastReason,
     selftest: () => selftest(ctx),
@@ -91,16 +92,16 @@ function selftest(ctx) {
   const checks = [
     { label: "published as module.api", ok: game.modules.get(core.MODULE)?.api === ctx.api },
     { label: `game.pentaryn.${core.NS} is this API`, ok: game.pentaryn?.[core.NS] === ctx.api },
-    { label: "settings readable", ok: typeof setting("gmButton") === "boolean" && typeof setting("singlePageReadables") === "boolean" },
+    { label: "settings readable", ok: SETTINGS.filter(r => r.type === Boolean).every(r => typeof setting(r.key) === "boolean") },
     { label: "relay query registered", ok: typeof CONFIG.queries?.[core.QUERY] === "function" },
     { label: "hooks registered", ok: ctx.reg.ids().length > 0, detail: ctx.reg.ids().length },
   ];
   return { ok: checks.every(c => c.ok), checks: checks.map(c => ({ detail: null, ...c })) };
 }
 
-/** `core.<name>` for exactly the names published before the migration (`core.MOD` = MODULE). */
+/** `core.<name>` for exactly the names published before the migration (`core.MOD` is journal-core's own alias of MODULE). */
 function coreMembers() {
-  return Object.fromEntries(CORE_NAMES.map(n => [`core.${n}`, n === "MOD" ? core.MODULE : core[n]]));
+  return Object.fromEntries(CORE_NAMES.map(n => [`core.${n}`, core[n]]));
 }
 
 /** Build the frozen API. Throws (at ready, in node too) when manifest and implementations drift. */

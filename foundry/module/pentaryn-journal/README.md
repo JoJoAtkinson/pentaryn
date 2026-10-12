@@ -107,8 +107,8 @@ No patches. One third-party dependency: Item Piles shows a non-owner an unsaved 
 ## Extending
 
 New pure rules go in `journal-core.mjs` with tests under `test/` (synthetic fixtures only). A new kind of
-window is one branch in `sources-adapter.mjs` (`targetFor`, and `targetOf`/`rawTargetOf` for the API)
-plus a descriptor. New API methods: a row in `api-manifest.mjs` and an impl in `api.mjs`, then re-pin
+window is one branch in `sources-adapter.mjs` (`targetFor`, and `rawTargetOf` for the API; `targetOf` is
+`rawTargetOf` plus the bar's visibility rule) plus a descriptor. New API methods: a row in `api-manifest.mjs` and an impl in `api.mjs`, then re-pin
 `describe.json`/`surface.json` (`GOLDEN_UPDATE=1 node --test test/api.test.mjs`).
 
 ## Pitfalls
