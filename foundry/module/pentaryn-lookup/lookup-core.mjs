@@ -27,11 +27,13 @@ export const HOOKS = Object.freeze({});
 // 2014 SRD is excluded from every default: this table runs D&D 2024, and quoting
 // 2014 text at it is the quietest way to be wrong. When it IS asked for, its hits
 // carry `edition: "2014"` so a mixed result cannot masquerade as current.
+// `all` is derived so a book added to rules or monsters cannot drop out of packs().
+const RULES_BOOKS = ["dnd-players-handbook.content", "dnd-dungeon-masters-guide.content", "dnd5e.content24"];
+const MONSTER_BOOKS = ["dnd-monster-manual.content"];
 export const BOOKSETS = {
-  rules: ["dnd-players-handbook.content", "dnd-dungeon-masters-guide.content", "dnd5e.content24"],
-  monsters: ["dnd-monster-manual.content"],
-  all: ["dnd-players-handbook.content", "dnd-dungeon-masters-guide.content",
-        "dnd5e.content24", "dnd-monster-manual.content"],
+  rules: RULES_BOOKS,
+  monsters: MONSTER_BOOKS,
+  all: [...RULES_BOOKS, ...MONSTER_BOOKS],
   "2014": ["dnd5e.rules"],
 };
 export const EDITIONS = { "dnd5e.rules": "2014" };
