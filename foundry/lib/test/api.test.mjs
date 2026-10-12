@@ -223,3 +223,26 @@ test("kit and harness maxDepth stay identical", () => {
   for (const v of [1, {}, { a: { b: [1] } }, null, cyclic]) assert.equal(harnessDepth(v), maxDepth(v));
   assert.equal(maxDepth(cyclic), 2);
 });
+
+test("kit-ext-5: describe()'s optional method fields come from one ordered field table", async () => {
+  const { OPTIONAL_METHOD_FIELDS } = await import("../api.mjs");
+  assert.ok(Array.isArray(OPTIONAL_METHOD_FIELDS), "api.mjs exports OPTIONAL_METHOD_FIELDS");
+  assert.deepEqual(OPTIONAL_METHOD_FIELDS.map(f => f.key),
+    ["queryName", "relay", "dryRun", "nullWhen", "throws", "legacy", "since"]);
+  assert.equal(Object.isFrozen(OPTIONAL_METHOD_FIELDS), true);
+  // every field set: keys land in the published order, each after its anchor
+  const full = { path: "all", params: [], returns: "x", gm: true, writes: true, query: true, queryName: "q",
+    relay: true, dryRun: true, sideEffects: ["s"], nullWhen: "gone", throws: ["NOT_GM"], legacy: true,
+    since: "1.2.0", doc: "d" };
+  const m = describe({ ...MANIFEST, rows: [full] }).methods[0];
+  assert.deepEqual(Object.keys(m), ["path", "params", "returns", "gm", "writes", "query", "queryName", "relay",
+    "dryRun", "sideEffects", "nullWhen", "throws", "legacy", "since", "doc"]);
+  assert.deepEqual([m.queryName, m.relay, m.dryRun, m.nullWhen, m.throws, m.legacy, m.since],
+    ["q", true, true, "gone", ["NOT_GM"], true, "1.2.0"]);
+  // none set: no optional key appears; a queryName without query stays hidden; truthy flags publish as true
+  const bare = describe({ ...MANIFEST, rows: [{ path: "b", queryName: "q", relay: 1, legacy: "yes" }] }).methods[0];
+  assert.deepEqual(Object.keys(bare), ["path", "params", "returns", "gm", "writes", "query", "relay",
+    "sideEffects", "legacy", "doc"]);
+  assert.equal(bare.relay, true);
+  assert.equal(bare.legacy, true);
+});

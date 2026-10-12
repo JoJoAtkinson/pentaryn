@@ -172,6 +172,43 @@ export function buildApi(manifest, impl, { contributions = [], extras = {}, memb
   return freezeDeep(api);
 }
 
+/**
+ * describe()'s optional method fields, in published order (kit-ext-5). Each shows only when
+ * `value(row)` is truthy, right after the always-present key named by `after`.
+ */
+export const OPTIONAL_METHOD_FIELDS = Object.freeze([
+  ["queryName", "query", r => r.query && r.queryName],
+  ["relay", "query", r => !!r.relay],
+  ["dryRun", "query", r => !!r.dryRun],
+  ["nullWhen", "sideEffects", r => r.nullWhen],
+  ["throws", "sideEffects", r => r.throws],
+  ["legacy", "sideEffects", r => !!r.legacy],
+  ["since", "sideEffects", r => r.since],
+].map(([key, after, value]) => Object.freeze({ key, after, value })));
+
+function methodOf(r) {
+  const out = {};
+  const always = {
+    path: r.path,
+    params: (r.params ?? []).map(p => ({ ...p })),
+    returns: r.returns ?? null,
+    gm: !!r.gm,
+    writes: !!r.writes,
+    query: !!r.query,
+    sideEffects: r.sideEffects ?? [],
+    doc: r.doc ?? "",
+  };
+  for (const [key, v] of Object.entries(always)) {
+    out[key] = v;
+    for (const f of OPTIONAL_METHOD_FIELDS) {
+      if (f.after !== key) continue;
+      const x = f.value(r);
+      if (x) out[f.key] = x;
+    }
+  }
+  return out;
+}
+
 const typeName = t => (t === undefined || t === null ? null : t.name ?? t.constructor?.name ?? String(t));
 
 /**
@@ -188,23 +225,7 @@ export function describe(manifest, { settings = [], events = {}, patches = [], q
     flagScope: manifest.flagScope ?? manifest.module,
     kit: kitVersion,
     published,
-    methods: rows.map(r => ({
-      path: r.path,
-      params: (r.params ?? []).map(p => ({ ...p })),
-      returns: r.returns ?? null,
-      gm: !!r.gm,
-      writes: !!r.writes,
-      query: !!r.query,
-      ...(r.query && r.queryName ? { queryName: r.queryName } : {}),
-      ...(r.relay ? { relay: true } : {}),
-      ...(r.dryRun ? { dryRun: true } : {}),
-      sideEffects: r.sideEffects ?? [],
-      ...(r.nullWhen ? { nullWhen: r.nullWhen } : {}),
-      ...(r.throws ? { throws: r.throws } : {}),
-      ...(r.legacy ? { legacy: true } : {}),
-      ...(r.since ? { since: r.since } : {}),
-      doc: r.doc ?? "",
-    })),
+    methods: rows.map(methodOf),
     // row-derived names first, then any extras not already present (kit-ext-1)
     queries: [...new Set([...rows.filter(r => r.query).map(r => `${manifest.module}.${r.queryName ?? r.path}`),
       ...(queries ?? [])])],
