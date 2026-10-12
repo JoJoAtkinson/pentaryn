@@ -112,18 +112,24 @@ const onPointerDown = ev => {
 const onKeyDown = ev => { if (ev.key === "Escape") closeLookMenu(); };
 
 /**
+ * Put the double-click listener on the canvas element, once per element (the `ptLook` mark). Runs on
+ * every canvasReady; the entry also calls it on a hot re-import, when canvasReady has already fired.
+ */
+export function wireCanvas() {
+  const view = canvas.app?.view;
+  if (!view || view.dataset.ptLook) return;
+  view.dataset.ptLook = "1";
+  view.addEventListener("dblclick", onDoubleClick);
+  watched = view;
+}
+
+/**
  * FEATURE install — synchronous, from the entry body, in today's order: the canvas double-click
  * (canvasReady), the two document listeners, then canvasPan / canvasTearDown. Guarded (B9): a throw
  * logs `pentaryn-ties | look menu: <hook>`.
  */
 export function install(reg) {
-  reg.on("canvasReady", () => {
-    const view = canvas.app?.view;
-    if (!view || view.dataset.ptLook) return;
-    view.dataset.ptLook = "1";
-    view.addEventListener("dblclick", onDoubleClick);
-    watched = view;
-  }, { label: "look menu: canvas double-click" });
+  reg.on("canvasReady", () => wireCanvas(), { label: "look menu: canvas double-click" });
   document.addEventListener("pointerdown", onPointerDown, true);
   document.addEventListener("keydown", onKeyDown);
   reg.on("canvasPan", () => closeLookMenu(), { label: "look menu: canvasPan" });

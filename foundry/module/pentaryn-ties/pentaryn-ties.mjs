@@ -174,12 +174,19 @@ function uninstall() {
 }
 
 if (globalThis.game?.ready) {
-  // a hot re-import after the world is ready (after `game.pentaryn.ties.uninstall()`): the lifecycle
-  // hooks have fired already, so run the phases now, in order. Settings and keys already registered
-  // are skipped by the kit; a changed file still needs a reload. Same order as a cold boot.
+  /*
+   * A hot re-import after the world is ready (after `game.pentaryn.ties.uninstall()`): init, ready and
+   * the first canvasReady have fired already, so run their work now — features, init, ready, then the
+   * look menu's canvas wiring (uninstall took its double-click listener off). Settings and keys already
+   * registered are skipped by the kit; a changed file still needs a reload.
+   * The socket listeners are NOT registered again: conduit's `once("ready")` never fires here, and the
+   * listeners from the first load were never removed (uninstall leaves them for the page's life), so
+   * they are reused. Registering again would answer every socket message twice.
+   */
   for (const feature of FEATURES) contribute(feature.install(reg, ctx));
   onInit();
   onReady();
+  if (globalThis.canvas?.ready) lookMenu.wireCanvas();
 } else {
   Hooks.once("init", onInit);
   Hooks.once("ready", onReady);
