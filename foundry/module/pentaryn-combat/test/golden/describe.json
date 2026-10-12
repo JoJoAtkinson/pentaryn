@@ -724,7 +724,64 @@
       "doc": "Enter in a usage window's number box (Lay on Hands' points) uses the ability"
     }
   ],
-  "events": [],
+  "events": [
+    {
+      "key": "usage",
+      "name": "pentaryn-combat.usage",
+      "legacyName": "pentarynCombat.usage",
+      "until": "pentaryn-combat 0.4.0",
+      "pre": false,
+      "args": "(activity, kind) — the runner used the item (one usage card per item per sequence)"
+    },
+    {
+      "key": "offhand",
+      "name": "pentaryn-combat.offhand",
+      "legacyName": "pentarynCombat.offhand",
+      "until": "pentaryn-combat 0.4.0",
+      "pre": false,
+      "args": "(actor, { bySequence }) — an off-hand swing was rolled"
+    },
+    {
+      "key": "bonusSpent",
+      "name": "pentaryn-combat.bonusSpent",
+      "legacyName": "pentarynCombat.bonusSpent",
+      "until": "pentaryn-combat 0.4.0",
+      "pre": false,
+      "args": "(actor, kind) — a swing or follow-up spent the Bonus Action"
+    },
+    {
+      "key": "bonusAction",
+      "name": "pentaryn-combat.bonusAction",
+      "legacyName": "pentarynCombat.bonusAction",
+      "until": "pentaryn-combat 0.4.0",
+      "pre": false,
+      "args": "(actor, activity) — a Bonus-action feature or spell was used on your turn"
+    },
+    {
+      "key": "reaction",
+      "name": "pentaryn-combat.reaction",
+      "legacyName": "pentarynCombat.reaction",
+      "until": "pentaryn-combat 0.4.0",
+      "pre": false,
+      "args": "(actor, activity) — a Reaction was used (any turn)"
+    },
+    {
+      "key": "otherAction",
+      "name": "pentaryn-combat.otherAction",
+      "legacyName": "pentarynCombat.otherAction",
+      "until": "pentaryn-combat 0.4.0",
+      "pre": false,
+      "args": "(actor, activity) — a non-attack Action was taken on your turn"
+    },
+    {
+      "key": "sequenceEnd",
+      "name": "pentaryn-combat.sequenceEnd",
+      "legacyName": "pentarynCombat.sequenceEnd",
+      "until": "pentaryn-combat 0.4.0",
+      "pre": false,
+      "args": "(actor) — a Full Attack or follow-up sequence ended"
+    }
+  ],
   "hooks": [
     {
       "name": "renderRollConfigurationDialog",

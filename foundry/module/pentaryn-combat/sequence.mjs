@@ -13,7 +13,8 @@
  */
 
 import * as core from "./combat-core.mjs";
-import { MODULE } from "./combat-core.mjs";
+import { HOOKS, MODULE, VERSION } from "./combat-core.mjs";
+import { emitter } from "./lib/hooks.mjs";
 import { makeLog } from "./lib/log.mjs";
 import { attackActivityOf, weaponsOf, updateTurn, focusLeft, flurryActivity, unarmedStrike, turnOf, damageLabel, rememberWeapon, planFor } from "./shapes.mjs";
 import { openRollResolvers, isOrphanCard } from "./dialog-adapter.mjs";
@@ -21,6 +22,9 @@ import { choose, hide, onceCancel, picking, show, update, waitChoice } from "./s
 import { quickMode, setQuickMode, setting } from "./settings.mjs";
 
 const log = makeLog(MODULE);
+
+/** The module's events (core HOOKS rows, legacy name too): ctx.emit once installed. */
+let emit = emitter(MODULE, HOOKS, { log, version: VERSION });
 
 /**
  * Temporary hooks (one roll, one pick, one dialog) go through the registry the feature was
@@ -306,7 +310,7 @@ export async function runSwings(actor, swings, { event = null, title = null, ori
         origin = results.message?.id ?? null;
         current.origins.set(item.id, origin);
         if (origin) current.created.add(origin);
-        Hooks.callAll("pentarynCombat.usage", activity, swing.kind);
+        emit("usage", activity, swing.kind);
       }
 
       const first = s.rolled === 0;
@@ -359,7 +363,7 @@ export async function runSwings(actor, swings, { event = null, title = null, ori
     if (created.length) setTimeout(() => { try { tidyOrigins(created); } catch (err) { log.warn("tidy usage card", err); } }, 400);
     hide();
     // The bars re-check their follow-ups (Off-hand, Hew, Nick…) once the last swing's flag lands.
-    Hooks.callAll("pentarynCombat.sequenceEnd", actor);
+    emit("sequenceEnd", actor);
   }
 }
 
@@ -398,7 +402,7 @@ export async function runFollowUp(actor, f, { event = null } = {}) {
     const res = await act.use({ subsequentActions: false }, { configure: false }, { create: true });
     if (!res) return { rolled: 0, status: "cancelled" };
     await updateTurn(actor, t => core.recordFollowUp(t, "flurry"));
-    Hooks.callAll("pentarynCombat.bonusSpent", actor, "flurry");
+    emit("bonusSpent", actor, "flurry");
     const n = f.count ?? 2;
     const swings = Array.from({ length: n }, () => ({ weaponId: unarmed.id, mode: null, kind: "bonus" }));
     return runSwings(actor, swings, { event, title: label, origins: new Map([[unarmed.id, res.message?.id]]), swappable: false, paid: true });
@@ -408,7 +412,7 @@ export async function runFollowUp(actor, f, { event = null } = {}) {
     const out = await runSwings(actor, [{ weaponId: f.weaponId, mode: null, kind: "bonus" }], { event, title: label, swappable: false });
     if (out.rolled) {
       await updateTurn(actor, t => core.recordFollowUp(t, f.kind));
-      Hooks.callAll("pentarynCombat.bonusSpent", actor, f.kind);
+      emit("bonusSpent", actor, f.kind);
     }
     return out;
   }
@@ -424,6 +428,7 @@ export async function runFollowUp(actor, f, { event = null } = {}) {
  */
 export function install(reg, ctx) {
   hooks = reg;
+  if (ctx?.emit) emit = ctx.emit;
   ctx?.expose?.({ running });
   return { impl: { fullAttack, followUp: runFollowUp, running, abort: abortFor } };
 }

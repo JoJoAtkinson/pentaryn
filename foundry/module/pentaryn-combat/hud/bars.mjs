@@ -523,6 +523,8 @@ export function install(reg) {
   for (const hook of ["createActiveEffect", "deleteActiveEffect", "updateActiveEffect"]) {
     reg.on(hook, onEffectChanged, opts("bars: effect changed"));
   }
+  // The pip listeners stay on the legacy event names until core HOOKS' `until` (pentaryn-combat
+  // 0.4.0): emit fires both names, so each runs once; outside listeners get the new name first.
   reg.on("pentarynCombat.usage", onUsage, opts("pips: a sequence used the item"));
   reg.on("pentarynCombat.bonusSpent", onBonusSpent, opts("pips: Bonus spent"));
   reg.on("pentarynCombat.bonusAction", onBonusAction, opts("pips: Bonus action"));

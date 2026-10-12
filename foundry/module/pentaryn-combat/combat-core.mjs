@@ -129,8 +129,21 @@ export function keyFor(family, value) {
   return I18N_KEYS[family]?.[value] ?? `${I18N}.${family}.${value}`;
 }
 
-/** The module's own events (S9 fills it): `{ name, pre, args, legacyName?, until? }` rows, fired by ctx.emit. */
-export const HOOKS = Object.freeze({});
+/**
+ * The module's own events, fired by ctx.emit (guide S9, combat-riders-14). Each also fires under its
+ * pre-blueprint name (`legacyName`, new name first) until `until`; after that the kit warns once.
+ * None is vetoable. hud/bars.mjs listens on the legacy names until then (they fire exactly once too).
+ */
+const UNTIL = "pentaryn-combat 0.4.0";
+export const HOOKS = Object.freeze({
+  usage: Object.freeze({ name: "pentaryn-combat.usage", legacyName: "pentarynCombat.usage", until: UNTIL, pre: false, args: "(activity, kind) — the runner used the item (one usage card per item per sequence)" }),
+  offhand: Object.freeze({ name: "pentaryn-combat.offhand", legacyName: "pentarynCombat.offhand", until: UNTIL, pre: false, args: "(actor, { bySequence }) — an off-hand swing was rolled" }),
+  bonusSpent: Object.freeze({ name: "pentaryn-combat.bonusSpent", legacyName: "pentarynCombat.bonusSpent", until: UNTIL, pre: false, args: "(actor, kind) — a swing or follow-up spent the Bonus Action" }),
+  bonusAction: Object.freeze({ name: "pentaryn-combat.bonusAction", legacyName: "pentarynCombat.bonusAction", until: UNTIL, pre: false, args: "(actor, activity) — a Bonus-action feature or spell was used on your turn" }),
+  reaction: Object.freeze({ name: "pentaryn-combat.reaction", legacyName: "pentarynCombat.reaction", until: UNTIL, pre: false, args: "(actor, activity) — a Reaction was used (any turn)" }),
+  otherAction: Object.freeze({ name: "pentaryn-combat.otherAction", legacyName: "pentarynCombat.otherAction", until: UNTIL, pre: false, args: "(actor, activity) — a non-attack Action was taken on your turn" }),
+  sequenceEnd: Object.freeze({ name: "pentaryn-combat.sequenceEnd", legacyName: "pentarynCombat.sequenceEnd", until: UNTIL, pre: false, args: "(actor) — a Full Attack or follow-up sequence ended" }),
+});
 
 /* ── names and identity ───────────────────────────────────────────────────── */
 

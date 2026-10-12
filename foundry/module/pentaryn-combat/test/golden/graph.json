@@ -42,6 +42,7 @@
     ],
     "counting.mjs": [
       "combat-core.mjs",
+      "lib/hooks.mjs",
       "lib/log.mjs",
       "sequence.mjs",
       "settings.mjs",
@@ -118,6 +119,7 @@
     "sequence.mjs": [
       "combat-core.mjs",
       "dialog-adapter.mjs",
+      "lib/hooks.mjs",
       "lib/log.mjs",
       "settings.mjs",
       "shapes.mjs",
@@ -224,6 +226,7 @@
     "turnflow/dialogs.mjs",
     "sequence.mjs",
     "strip.mjs",
+    "lib/hooks.mjs",
     "turnflow/death.mjs",
     "turnflow/boundaries.mjs",
     "turnflow/action-buttons.mjs",
@@ -234,7 +237,6 @@
     "hud/bars.mjs",
     "turn-riders.mjs",
     "context.mjs",
-    "lib/hooks.mjs",
     "combat.mjs",
     "roll-dock.mjs",
     "offhand.mjs",

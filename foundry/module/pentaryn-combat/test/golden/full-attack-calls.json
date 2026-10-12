@@ -19,6 +19,10 @@
     },
     {
       "op": "Hooks.callAll",
+      "name": "pentaryn-combat.usage"
+    },
+    {
+      "op": "Hooks.callAll",
       "name": "pentarynCombat.usage"
     },
     {
@@ -138,6 +142,10 @@
     {
       "op": "Hooks.callAll",
       "name": "updateActor"
+    },
+    {
+      "op": "Hooks.callAll",
+      "name": "pentaryn-combat.sequenceEnd"
     },
     {
       "op": "Hooks.callAll",

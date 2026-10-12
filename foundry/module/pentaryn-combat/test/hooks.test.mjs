@@ -95,9 +95,11 @@ test("events: the pentarynCombat.* names in the sources (combat-riders-14)", () 
     "pentarynCombat.bonusAction", "pentarynCombat.bonusSpent", "pentarynCombat.offhand", "pentarynCombat.otherAction",
     "pentarynCombat.reaction", "pentarynCombat.sequenceEnd", "pentarynCombat.usage",
   ]);
+  // S9 [declared B2]: no literal emit is left; every event is a core HOOKS row fired through
+  // ctx.emit, which fires the new pentaryn-combat.* name and then this legacy name.
   const emits = sourceScan(ROOT, /Hooks\.callAll\("pentarynCombat\./).map(h => `${h.file}:${h.line}`);
   pinJSON("emits", emits, import.meta.url);
-  assert.equal(emits.length, 10);
+  assert.equal(emits.length, 0);
 });
 
 test("import graph: both entries reach every non-test .mjs; DFS order as recorded (combat-riders-31)", () => {

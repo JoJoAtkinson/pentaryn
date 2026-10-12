@@ -10,13 +10,17 @@
  */
 
 import * as core from "./combat-core.mjs";
-import { MODULE } from "./combat-core.mjs";
+import { HOOKS, MODULE, VERSION } from "./combat-core.mjs";
+import { emitter } from "./lib/hooks.mjs";
 import { makeLog } from "./lib/log.mjs";
 import { setting } from "./settings.mjs";
 import { weaponShape, featuresOf, combatContext, turnOf, updateTurn, resetOffhandMode, isWeaponAttack } from "./shapes.mjs";
 import { taggedKind, forgetRoll } from "./sequence.mjs";
 
 const log = makeLog(MODULE);
+
+/** The module's events (core HOOKS rows, legacy name too): ctx.emit once installed. */
+let emit = emitter(MODULE, HOOKS, { log, version: VERSION });
 
 /* ── counting swings (every attack roll, sequence or by hand) ─────────────── */
 
@@ -66,8 +70,8 @@ async function onPostRollAttack(rolls, { subject } = {}) {
   const melee = weapon ? weaponShape(weapon).melee && !String(attackMode ?? "").startsWith("thrown") && attackMode !== "ranged" : true;
   await updateTurn(actor, t => core.recordSwing(t, { kind, weaponId: weapon?.id, crit: !!roll.isCritical, melee }));
 
-  if (kind === "offhand") Hooks.callAll("pentarynCombat.offhand", actor, { bySequence: !!tagged });
-  if (kind === "offhand" || kind === "bonus") Hooks.callAll("pentarynCombat.bonusSpent", actor, kind);
+  if (kind === "offhand") emit("offhand", actor, { bySequence: !!tagged });
+  if (kind === "offhand" || kind === "bonus") emit("bonusSpent", actor, kind);
 
   const msg = roll.parent ?? null;
   const targets = (msg?.system?.targets ?? []).map(t => t.actor).filter(Boolean);
@@ -104,7 +108,7 @@ async function onPostUseActivity(activity) {
     const ctx = combatContext(actor);
     if (core.pipFor({ activation: "reaction", inCombat: ctx.inCombat, isOwnTurn: ctx.isOwnTurn }) !== "reaction") return;
     await actor.setFlag(MODULE, "reaction", { combatId: ctx.combat?.id ?? null }).catch(err => { log.debug("Reaction flag", err); return null; });
-    Hooks.callAll("pentarynCombat.reaction", actor, activity);
+    emit("reaction", actor, activity);
     return;
   }
   // A 1-Action spell after Quickened Spell: the Bonus Action, not an Action.
@@ -114,7 +118,7 @@ async function onPostUseActivity(activity) {
     if (pip === "bonus") {
       await updateTurn(actor, core.recordQuickenedCast);
       ui.notifications?.info?.(game.i18n.format("PENTARYN_COMBAT.Turn.QuickenedCast", { spell: item.name }));
-      Hooks.callAll("pentarynCombat.bonusAction", actor, activity);
+      emit("bonusAction", actor, activity);
       return;
     }
   }
@@ -126,7 +130,7 @@ async function onPostUseActivity(activity) {
     const ctx = combatContext(actor);
     if (!ctx.inCombat || !ctx.isOwnTurn) return;
     await updateTurn(actor, core.recordBonusAction);
-    Hooks.callAll("pentarynCombat.bonusAction", actor, activity);
+    emit("bonusAction", actor, activity);
     return;
   }
   if (activity.activation?.type !== "action") return;
@@ -142,7 +146,7 @@ async function onPostUseActivity(activity) {
   }
   await updateTurn(actor, core.recordOtherAction);
   // Argon's single Action pip (an actor with one swing): its item buttons never spent it (Area 5 re-run, S5).
-  Hooks.callAll("pentarynCombat.otherAction", actor, activity);
+  emit("otherAction", actor, activity);
 }
 
 /** Hew: a creature one of my swings this turn targeted dropped to 0 HP. */
@@ -179,7 +183,8 @@ function onPreRollDamage(config) {
 
 const opts = label => ({ guard: false, label });
 
-export function install(reg) {
+export function install(reg, ctx) {
+  if (ctx?.emit) emit = ctx.emit;
   reg.on("dnd5e.preRollAttackV2", (config) => { try { onPreRollAttack(config); } catch (err) { log.warn("swing tag skipped", err); } }, opts("swing tag"));
   reg.on("dnd5e.postRollAttack", (rolls, data) => { onPostRollAttack(rolls, data).catch(err => log.warn("swing count failed", err)); }, opts("swing count"));
   reg.on("dnd5e.postUseActivity", (activity, usage, results) => {
