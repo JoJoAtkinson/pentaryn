@@ -171,9 +171,16 @@ export function usesLeft(uses) {
   return Math.max(0, max - (Number(uses.spent) || 0));
 }
 
+/** True when an item source's uses max sets a limit: a positive number or a non-numeric formula. */
+function hasUseLimit(max) {
+  const n = Number(max);
+  return Number.isFinite(n) ? n > 0 : typeof max === "string" && max.trim() !== "";
+}
+
 /**
  * Item updates that copy the form's spent uses and spent Hit Dice back onto the original, for every
  * item present on both by id and type. dnd5e's own revert copies only HP, temp HP and spell slots.
+ * Items are source data, so a uses max may be a formula (`@scale.druid.wild-shape-uses`).
  *
  * @param {object[]} formItems      the form's items before revert
  * @param {object[]} originalItems  the original's items after revert
@@ -187,7 +194,7 @@ export function useSyncUpdates(formItems, originalItems) {
     if (!o || o.type !== f.type) continue;
     const u = { _id: f._id };
     const fs = f.system?.uses?.spent;
-    if (Number(f.system?.uses?.max) > 0 && Number.isFinite(fs) && fs !== o.system?.uses?.spent) {
+    if (hasUseLimit(f.system?.uses?.max) &&Number.isFinite(fs) && fs !== o.system?.uses?.spent) {
       u["system.uses.spent"] = fs;
     }
     const fh = f.system?.hd?.spent;

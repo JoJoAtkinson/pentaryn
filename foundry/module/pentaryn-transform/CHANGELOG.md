@@ -4,6 +4,11 @@
 
 ## Unreleased
 
+- **Uses spent in a form come back on revert when the uses max is a formula (EC-1, final review).**
+  The revert's use sync read the item source's max as a number, so a formula max such as Wild
+  Shape's `@scale.druid.wild-shape-uses` counted as no limit and the spent uses were dropped. A
+  positive number or a non-empty formula now counts as a limit; an empty, null or zero max still
+  does not ([declared]).
 - **A hand-set token light survives a Wild Shape round trip (light-roundtrip, Joe's ruling; PT TF-2).**
   dnd5e rebuilt the druid's token from the prototype on revert, so a light set by hand on the token
   was lost and the prototype's came back. A shift now adds the token's own light to dnd5e's
