@@ -1,0 +1,177 @@
+[
+  {
+    "ns": "pentaryn-aoe",
+    "key": "handleTokens",
+    "name": "PENTARYN_AOE.Setting.handleTokens.Name",
+    "hint": "PENTARYN_AOE.Setting.handleTokens.Hint",
+    "scope": "world",
+    "config": true,
+    "type": "Boolean",
+    "default": true
+  },
+  {
+    "ns": "pentaryn-aoe",
+    "key": "removeAreaButton",
+    "name": "PENTARYN_AOE.Setting.removeAreaButton.Name",
+    "hint": "PENTARYN_AOE.Setting.removeAreaButton.Hint",
+    "scope": "world",
+    "config": true,
+    "type": "Boolean",
+    "default": true
+  },
+  {
+    "ns": "pentaryn-aoe",
+    "key": "instantCleanup",
+    "name": "PENTARYN_AOE.Setting.instantCleanup.Name",
+    "hint": "PENTARYN_AOE.Setting.instantCleanup.Hint",
+    "scope": "world",
+    "config": true,
+    "type": "Boolean",
+    "default": true
+  },
+  {
+    "ns": "pentaryn-aoe",
+    "key": "concentrationCleanup",
+    "name": "PENTARYN_AOE.Setting.concentrationCleanup.Name",
+    "hint": "PENTARYN_AOE.Setting.concentrationCleanup.Hint",
+    "scope": "world",
+    "config": true,
+    "type": "Boolean",
+    "default": true
+  },
+  {
+    "ns": "pentaryn-aoe",
+    "key": "resolveSaves",
+    "name": "PENTARYN_AOE.Setting.resolveSaves.Name",
+    "hint": "PENTARYN_AOE.Setting.resolveSaves.Hint",
+    "scope": "world",
+    "config": true,
+    "type": "Boolean",
+    "default": true
+  },
+  {
+    "ns": "pentaryn-aoe",
+    "key": "autoApplyNpc",
+    "name": "PENTARYN_AOE.Setting.autoApplyNpc.Name",
+    "hint": "PENTARYN_AOE.Setting.autoApplyNpc.Hint",
+    "scope": "world",
+    "config": true,
+    "type": "Boolean",
+    "default": false
+  },
+  {
+    "ns": "pentaryn-aoe",
+    "key": "promptPlayers",
+    "name": "PENTARYN_AOE.Setting.promptPlayers.Name",
+    "hint": "PENTARYN_AOE.Setting.promptPlayers.Hint",
+    "scope": "world",
+    "config": true,
+    "type": "Boolean",
+    "default": true
+  },
+  {
+    "ns": "pentaryn-aoe",
+    "key": "autoDamageOnHit",
+    "name": "PENTARYN_AOE.Setting.autoDamageOnHit.Name",
+    "hint": "PENTARYN_AOE.Setting.autoDamageOnHit.Hint",
+    "scope": "world",
+    "config": true,
+    "type": "Boolean",
+    "default": true
+  },
+  {
+    "ns": "pentaryn-aoe",
+    "key": "autoApplySelf",
+    "name": "PENTARYN_AOE.Setting.autoApplySelf.Name",
+    "hint": "PENTARYN_AOE.Setting.autoApplySelf.Hint",
+    "scope": "world",
+    "config": true,
+    "type": "Boolean",
+    "default": true
+  },
+  {
+    "ns": "pentaryn-aoe",
+    "key": "highlightUnapplied",
+    "name": "PENTARYN_AOE.Setting.highlightUnapplied.Name",
+    "hint": "PENTARYN_AOE.Setting.highlightUnapplied.Hint",
+    "scope": "world",
+    "config": true,
+    "type": "Boolean",
+    "default": true
+  },
+  {
+    "ns": "pentaryn-aoe",
+    "key": "carefulSpell",
+    "name": "PENTARYN_AOE.Setting.carefulSpell.Name",
+    "hint": "PENTARYN_AOE.Setting.carefulSpell.Hint",
+    "scope": "world",
+    "config": true,
+    "type": "Boolean",
+    "default": true
+  },
+  {
+    "ns": "pentaryn-aoe",
+    "key": "refundCancelledArea",
+    "name": "PENTARYN_AOE.Setting.refundCancelledArea.Name",
+    "hint": "PENTARYN_AOE.Setting.refundCancelledArea.Hint",
+    "scope": "world",
+    "config": true,
+    "type": "Boolean",
+    "default": true
+  },
+  {
+    "ns": "pentaryn-aoe",
+    "key": "playerStatus",
+    "name": "PENTARYN_AOE.Setting.playerStatus.Name",
+    "hint": "PENTARYN_AOE.Setting.playerStatus.Hint",
+    "scope": "world",
+    "config": true,
+    "type": "Boolean",
+    "default": true
+  },
+  {
+    "ns": "pentaryn-aoe",
+    "key": "untargetedSelf",
+    "name": "PENTARYN_AOE.Setting.untargetedSelf.Name",
+    "hint": "PENTARYN_AOE.Setting.untargetedSelf.Hint",
+    "scope": "world",
+    "config": true,
+    "type": "Boolean",
+    "default": true
+  },
+  {
+    "ns": "pentaryn-aoe",
+    "key": "noSpellStacking",
+    "name": "PENTARYN_AOE.Setting.noSpellStacking.Name",
+    "hint": "PENTARYN_AOE.Setting.noSpellStacking.Hint",
+    "scope": "world",
+    "config": true,
+    "type": "Boolean",
+    "default": true
+  },
+  {
+    "ns": "pentaryn-aoe",
+    "key": "aimSelfAreas",
+    "name": "PENTARYN_AOE.Setting.aimSelfAreas.Name",
+    "hint": "PENTARYN_AOE.Setting.aimSelfAreas.Hint",
+    "scope": "world",
+    "config": true,
+    "type": "Boolean",
+    "default": true
+  },
+  {
+    "ns": "pentaryn-aoe",
+    "key": "npcSaveRollMode",
+    "name": "PENTARYN_AOE.Setting.npcSaveRollMode.Name",
+    "hint": "PENTARYN_AOE.Setting.npcSaveRollMode.Hint",
+    "scope": "world",
+    "config": true,
+    "type": "String",
+    "default": "gm",
+    "choices": {
+      "gm": "PENTARYN_AOE.Setting.npcSaveRollMode.gm",
+      "blind": "PENTARYN_AOE.Setting.npcSaveRollMode.blind",
+      "public": "PENTARYN_AOE.Setting.npcSaveRollMode.public"
+    }
+  }
+]

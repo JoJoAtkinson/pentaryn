@@ -1,0 +1,73 @@
+{
+  "first": [
+    {
+      "op": "applyDamage",
+      "actor": "Actor.actGoblin0000001",
+      "damages": [
+        {
+          "value": 28,
+          "type": "fire",
+          "properties": [
+            "mgc"
+          ]
+        }
+      ],
+      "multiplier": 1,
+      "originatingMessage": "dmgFireball00004"
+    },
+    {
+      "op": "applyDamage",
+      "actor": "Actor.actGoblin0000002",
+      "damages": [
+        {
+          "value": 28,
+          "type": "fire",
+          "properties": [
+            "mgc"
+          ]
+        }
+      ],
+      "multiplier": 0.25,
+      "originatingMessage": "dmgFireball00004"
+    }
+  ],
+  "rows": [
+    {
+      "id": "tokGoblin0000001",
+      "applied": true,
+      "hp": {
+        "before": 7,
+        "after": -21
+      }
+    },
+    {
+      "id": "tokGoblin0000002",
+      "applied": true,
+      "hp": {
+        "before": 7,
+        "after": 0
+      }
+    },
+    {
+      "id": "tokCaven00000001",
+      "applied": false,
+      "hp": null
+    },
+    {
+      "id": "tokMarrith000001",
+      "applied": false,
+      "hp": null
+    },
+    {
+      "id": "tokGoblinDead001",
+      "applied": false,
+      "hp": null
+    },
+    {
+      "id": "tokGoblinHid0001",
+      "applied": false,
+      "hp": null
+    }
+  ],
+  "second": []
+}

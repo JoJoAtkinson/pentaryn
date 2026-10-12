@@ -1,0 +1,51 @@
+[
+  {
+    "label": "hit",
+    "calls": [
+      {
+        "op": "rollDamage",
+        "config": {},
+        "dialog": {
+          "configure": false
+        },
+        "message": {}
+      }
+    ]
+  },
+  {
+    "label": "miss",
+    "calls": []
+  },
+  {
+    "label": "crit beats AC",
+    "calls": [
+      {
+        "op": "rollDamage",
+        "config": {
+          "isCritical": true
+        },
+        "dialog": {
+          "configure": false
+        },
+        "message": {}
+      }
+    ]
+  },
+  {
+    "label": "fumble",
+    "calls": []
+  },
+  {
+    "label": "unknown AC",
+    "calls": [
+      {
+        "op": "rollDamage",
+        "config": {},
+        "dialog": {
+          "configure": false
+        },
+        "message": {}
+      }
+    ]
+  }
+]

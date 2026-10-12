@@ -1,0 +1,78 @@
+[
+  {
+    "label": "system.origin.item absolute",
+    "deleted": [
+      [
+        "Scene.ConcScene0000001",
+        [
+          "regionConc000001"
+        ]
+      ],
+      [
+        "Scene.ConcScene0000002",
+        [
+          "regionConc000002"
+        ]
+      ]
+    ]
+  },
+  {
+    "label": "relative item uuid",
+    "deleted": [
+      [
+        "Scene.ConcScene0000001",
+        [
+          "regionConc000001"
+        ]
+      ],
+      [
+        "Scene.ConcScene0000002",
+        [
+          "regionConc000002"
+        ]
+      ]
+    ]
+  },
+  {
+    "label": "core origin",
+    "deleted": [
+      [
+        "Scene.ConcScene0000001",
+        [
+          "regionConc000001"
+        ]
+      ],
+      [
+        "Scene.ConcScene0000002",
+        [
+          "regionConc000002"
+        ]
+      ]
+    ]
+  },
+  {
+    "label": "flags.dnd5e.item.uuid",
+    "deleted": [
+      [
+        "Scene.ConcScene0000001",
+        [
+          "regionConc000001"
+        ]
+      ],
+      [
+        "Scene.ConcScene0000002",
+        [
+          "regionConc000002"
+        ]
+      ]
+    ]
+  },
+  {
+    "label": "another spell",
+    "deleted": []
+  },
+  {
+    "label": "migrated: no origin",
+    "deleted": []
+  }
+]
