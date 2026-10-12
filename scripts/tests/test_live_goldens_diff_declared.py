@@ -161,3 +161,20 @@ def test_usage_from_a_path_with_a_space_is_bad_input(tmp_path):
     shutil.copy(DIFF, d / "diff.mjs")
     r = subprocess.run(["node", str(d / "diff.mjs")], capture_output=True, text=True, timeout=30)
     assert r.returncode == 2, r.stdout + r.stderr
+
+
+def test_a_declared_block_difference_is_listed(tmp_path):
+    # README: the exit code follows golden.shared and the cleanups only; golden.declared differences
+    # are listed but never move it. Pins the block byte for byte.
+    extra = {"stash": {"chest": [RING, TORCH]}, "purseHome": "no purse in the chest"}
+    before = _run(extra, declared={"surface": {"keys": ["a"]}})
+    after = _run(extra, declared={"surface": {"keys": ["a", "b"]}})
+    r = _write(tmp_path, before=before, after=after)
+    block = ('## declared — 1 difference(s), each must match a declared change\n'
+             '  surface.keys[1]\n'
+             '    before undefined\n'
+             '    after  "b"\n')
+    assert block in r.stdout, r.stdout
+    assert r.returncode == 0, r.stdout + r.stderr
+    same = _write(tmp_path, before=before, after=before)
+    assert same.returncode == r.returncode, same.stdout
