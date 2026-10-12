@@ -653,3 +653,18 @@ def test_py_mcp_mnt_3_load_in_process(tmp_path):
         "module imported but no usable MCP_TOOLS/MCP_TOOL attribute"
     assert load("boom_mnt3.py", "MCP_HANDLERS = {}\nraise RuntimeError('boom')\n") == \
         "in-process import failed: boom"
+
+
+# py-mcp-MNT-7: the comments on the admission cap, the progress TODO and the shutdown
+# bound match the code. The SQLite line stays (srd5_2 uses a sqlite CachedSession).
+def test_py_mcp_mnt_7_comments_match_the_code():
+    src = _SERVER_PATH.read_text(encoding="utf-8")
+    assert "max(_DEFAULT_MAX_WORKERS * 4, 32)" in src
+    assert "Default = max(4× workers, 32)" in src
+    assert "dnd_pass" not in src
+    assert "(build_timeline_*) via MCP `notifications/progress`" in src
+    assert "~10s in srd5_2" not in src
+    assert "Waits for running and queued calls" in src
+    assert "DND_MCP_TOOL_TIMEOUT\n        # (default 60s)" in src
+    assert "in-process handlers have no cap" in src
+    assert "SQLite's per-connection locking" in src
