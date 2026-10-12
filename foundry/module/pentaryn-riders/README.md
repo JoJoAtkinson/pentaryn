@@ -89,6 +89,7 @@ R.inspect("Marrith Ashcroft").rows;                  // the same rows, plain, by
 | Battle Medic roll message `flags.pentaryn-riders` | `{ flow: "battle-medic", target, faces }` |
 | Activity flag `flags.pentaryn-riders.flow` | `"battle-medic"` on the activity `installBattleMedic` builds |
 | Token flag `flags.pentaryn-riders.concentration` | the uuid of the concentration effect that keeps a summon |
+| Summoned token `flags.pentaryn-riders.claims.summonCleanup` | the socket id of the one tab that deletes that scene's summons (the kit's `claimDocument`, riders-async-3); it goes with the token |
 | Concentration save card `flags.pentaryn-riders.claims.autoBreak` | the socket id of the one tab that ends the concentration (the kit's `claimMessage`, riders-async-1) |
 | Patient flag `flags.pentaryn-riders.relay.<requestId>` | the GM tabs' claim stamps (`claims.<socketId>`, removed when answered) and the winner's `{ result \| error, at }`; the last five kept |
 | Documents | class `system.hd.spent` / NPC `system.attributes.hd.spent`; HP via `applyDamage`; `system.spells.spellN.value` (Arcane Recovery); a concentration save card's `system.outcome = "broken"`; summoned tokens deleted |
@@ -143,7 +144,9 @@ Nothing in Argon's files is edited.
   wait (up to 7 s) and answer with it; a tab that arrives after the result is recorded answers with
   it too and never heals (combat-riders-41).
 - **Concentration summon cleanup**: the active GM's client (with no GM online, the user who ended
-  the concentration) deletes the tokens.
+  the concentration) deletes the tokens. Two tabs on that account both qualify, so per scene each
+  claims the first stamped token first (the kit's `claimDocument`, key `summonCleanup`): one tab
+  deletes that scene's summons, about 750 ms after the concentration ends (riders-async-3).
 
 ## Extending
 

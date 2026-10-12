@@ -15,6 +15,8 @@
  *      Familiar) gets no stamp and is never touched.
  *    - `deleteActiveEffect`: when an effect is deleted, the active GM (or, with no GM online, the
  *      user who deleted it) deletes every token on every scene stamped with that effect's uuid.
+ *      Two tabs on that user's account both qualify: per scene, the kit's claimDocument on the
+ *      first stamped token elects one tab to delete (riders-async-3).
  *      The world actor dnd5e made for the summon ("<PC> - summons & forms") is kept on purpose:
  *      dnd5e reuses it on the next cast.
  *    A re-cast is safe: the new effect has a new uuid, and dnd5e ends the old one after creating
@@ -41,7 +43,7 @@
 import { MODULE, SUMMON_FLAG, concentrationEffectFor, summonTokenIds, concentrationResult, isConcentration } from "./table-core.mjs";
 import { settingOr } from "./settings.mjs";
 import { featureKeys } from "./shapes.mjs";
-import { claimMessage } from "./lib/election.mjs";
+import { claimDocument, claimMessage } from "./lib/election.mjs";
 
 const enabled = () => settingOr("concentrationSummons", false);
 
@@ -73,10 +75,18 @@ function cleanupSummons(effect, options, userId) {
     for (const scene of game.scenes) {
       const ids = summonTokenIds(scene.tokens, uuid).filter(id => scene.tokens.get(id)?.canUserModify(game.user, "delete"));
       if (!ids.length) continue;
-      log.info(`concentration on ${effect.name} ended: removing ${ids.length} summon token(s) from ${scene.name}`);
-      scene.deleteEmbeddedDocuments("Token", ids).catch(err => log.warn("summon cleanup failed", err));
+      removeSummons(scene, ids, effect.name).catch(err => log.warn("summon cleanup failed", err));
     }
   } catch (err) { log.warn("concentration summon cleanup skipped", err); }
+}
+
+// Two tabs on the active GM's account (the MCP bridge tab and a GM browser tab) both pass the gate
+// above: one wins the scene's first stamped token, and only it deletes (riders-async-3). The claim
+// stamp goes with the token.
+async function removeSummons(scene, ids, name) {
+  if (!await claimDocument(scene.tokens.get(ids[0]), "summonCleanup", { scope: MODULE })) return;
+  log.info(`concentration on ${name} ended: removing ${ids.length} summon token(s) from ${scene.name}`);
+  await scene.deleteEmbeddedDocuments("Token", ids);
 }
 
 /* ── 2. label the break button ────────────────────────────────────────── */
