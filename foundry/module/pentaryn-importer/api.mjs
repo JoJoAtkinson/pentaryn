@@ -6,7 +6,7 @@
 
 import {
   CONTRACT_ID, DEFAULT_TIMEOUT_MS, FLAG_SCOPE, GATE_KEYS, HOOKS, MODULE, NS, PentarynAbort,
-  PentarynAssertionError, idForSlug, lintFormulas, normalise, preparePayload, toCreatePayload, toUpdatePayload,
+  PentarynAssertionError, idForSlug, isPlainObject, lintFormulas, normalise, preparePayload, toCreatePayload, toUpdatePayload,
   valuesMatch
 } from "./importer-core.mjs";
 import {
@@ -93,6 +93,21 @@ export async function importActors(options = {}) {
   }
 }
 
+/**
+ * `preparePayload`, shouting its refusal once before rethrowing it: a malformed entry is a contract
+ * violation, not a per-actor hiccup.
+ * @param {*} entry  One element of `manifest.actors`.
+ * @returns {ReturnType<typeof preparePayload>}
+ */
+function prepareOrShout(entry) {
+  try {
+    return preparePayload(entry);
+  } catch (cause) {
+    shout(cause.message);
+    throw cause;
+  }
+}
+
 /** A received option value for a BAD_ARGS message: JSON where it is faithful, else String (NaN, undefined). */
 function shown(value) {
   if (typeof value === "number" || value === undefined) return String(value);
@@ -133,6 +148,9 @@ async function importOnce({ path, dryRun, only, force, timeout, unmanagedItems }
   assertVersionGate(manifest);
 
   // 4 ────────────────────────────────────────────────────────────────────────────────────────────
+  // importer-R4: a non-object entry is refused (preparePayload's PentarynAbort) before the lint walks
+  // it — the lint's slug lookup would otherwise throw a bare TypeError on a string entry.
+  for (const entry of manifest.actors) if (!isPlainObject(entry)) prepareOrShout(entry);
   assertNoBadFormulas(manifest.actors);
 
   log.info(
@@ -156,15 +174,7 @@ async function importOnce({ path, dryRun, only, force, timeout, unmanagedItems }
   // file refuses the whole run, so a thrown PentarynAbort still means nothing was written.
   /** @type {ReturnType<typeof preparePayload>[]} */
   const preparedAll = [];
-  for (const entry of manifest.actors) {
-    try {
-      preparedAll.push(preparePayload(entry));
-    } catch (cause) {
-      // A malformed entry is a contract violation, not a per-actor hiccup.
-      shout(cause.message);
-      throw cause;
-    }
-  }
+  for (const entry of manifest.actors) preparedAll.push(prepareOrShout(entry));
 
   for (const [index, entry] of manifest.actors.entries()) {
     const { data, items, expected, slug } = preparedAll[index];

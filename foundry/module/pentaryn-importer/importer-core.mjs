@@ -473,6 +473,14 @@ function lintFormulas(actors) {
  * @returns {{data: object, items: object[], expected: object|null, slug: string}}
  */
 function preparePayload(entry) {
+  // importer-R4: a non-object entry (null, a string, an array) is a contract violation, refused like
+  // a missing slug rather than escaping as a TypeError from the clone or the slug lookup.
+  if (!isPlainObject(entry)) {
+    throw new PentarynAbort(
+      `An actor entry is not an object (got ${JSON.stringify(entry)}). `
+      + "Each element of actors is one Actor; refusing the run rather than guessing what it meant."
+    );
+  }
   const data = cloneJson(entry);
   const expected = data.expected ?? null;
 

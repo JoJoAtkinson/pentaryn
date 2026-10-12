@@ -14,7 +14,8 @@
 //                         commit ([declared] D-I3).
 //   golden/dryrun.json, golden/results.json, golden/refusals.json (toast text included) — no step
 //   may change them, except declared fixes: importer-M4 renamed the file in gateModuleJson's text
-//   (pentaryn-importer.mjs → importer-core.mjs, where CONTRACT_ID lives).
+//   (pentaryn-importer.mjs → importer-core.mjs, where CONTRACT_ID lives); importer-R4 made nullEntry
+//   a PentarynAbort REFUSED and added stringEntry.
 import { mock, test } from "node:test";
 import assert from "node:assert/strict";
 import { installFoundry } from "./kit/foundry-stub.mjs";
@@ -323,11 +324,23 @@ test("a malformed entry (no slug) is shouted and rethrown as the PentarynAbort i
   pinKey("refusals", "noSlug", refusal(o));
 });
 
-test("a null entry: preparePayload's TypeError is shouted and rethrown unchanged (snapshot :1029)", async () => {
+// importer-R4 [declared]: a non-object entry (null, a string, an array) is refused as PentarynAbort
+// REFUSED, shouted once, before the lint walks it — it used to escape as an uncoded TypeError.
+test("importer-R4: a null entry → PentarynAbort REFUSED, one toast (was preparePayload's TypeError)", async () => {
   serve(valid([null]));
   const o = await outcome(() => imp({ dryRun: true }));
-  assertShouted(o, "TypeError");
+  assertShouted(o, "PentarynAbort");
+  assert.equal(o.code, "REFUSED");
+  assert.match(o.error.message, /^An actor entry is not an object \(got null\)\./);
   pinKey("refusals", "nullEntry", refusal(o));
+});
+
+test("importer-R4: a string entry after a good one → PentarynAbort REFUSED before the lint, one toast", async () => {
+  serve(valid([entry("a", "h"), "a string entry"]));
+  const o = await outcome(() => imp({ dryRun: true }));
+  assertShouted(o, "PentarynAbort");
+  assert.equal(o.code, "REFUSED");
+  pinKey("refusals", "stringEntry", refusal(o));
 });
 
 test("non-GM → PentarynAbort with the guide's text, one toast, no fetch", async () => {
@@ -480,6 +493,8 @@ test("expected aborts carry a kit code: NOT_FOUND for a missing file, NOT_GM, BA
   codes.lint = (await outcome(() => imp({ dryRun: true }))).code;
   serve(valid([{ name: "Nameless" }]));
   codes.noSlug = (await outcome(() => imp({ dryRun: true }))).code;
+  serve(valid([null]));
+  codes.nullEntry = (await outcome(() => imp({ dryRun: true }))).code;
   codes.unmanagedItems = (await outcome(() => imp({ dryRun: true, unmanagedItems: "purge" }))).code;
   game.user.isGM = false;
   try {
@@ -507,7 +522,7 @@ test("expected aborts carry a kit code: NOT_FOUND for a missing file, NOT_GM, BA
   codes.reentrant = second.code;
   assert.deepEqual(codes, {
     fetch404: "NOT_FOUND", fetchHtml: "NOT_FOUND", fetch500: "REFUSED",
-    gate: "REFUSED", lint: "REFUSED", noSlug: "REFUSED", unmanagedItems: "BAD_ARGS",
+    gate: "REFUSED", lint: "REFUSED", noSlug: "REFUSED", nullEntry: "REFUSED", unmanagedItems: "BAD_ARGS",
     notGM: "NOT_GM", timeout: "TIMEOUT", reentrant: "CONFLICT",
   });
 });

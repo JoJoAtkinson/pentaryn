@@ -81,12 +81,27 @@
     "fetched": 1
   },
   "nullEntry": {
-    "name": "TypeError",
-    "message": "Cannot read properties of null (reading 'expected')",
+    "name": "PentarynAbort",
+    "message": "An actor entry is not an object (got null). Each element of actors is one Actor; refusing the run rather than guessing what it meant.",
     "toasts": [
       [
         "error",
-        "[pentaryn-importer] Cannot read properties of null (reading 'expected')",
+        "[pentaryn-importer] An actor entry is not an object (got null). Each element of actors is one Actor; refusing the run rather than guessing what it meant.",
+        {
+          "permanent": true,
+          "console": false
+        }
+      ]
+    ],
+    "fetched": 1
+  },
+  "stringEntry": {
+    "name": "PentarynAbort",
+    "message": "An actor entry is not an object (got \"a string entry\"). Each element of actors is one Actor; refusing the run rather than guessing what it meant.",
+    "toasts": [
+      [
+        "error",
+        "[pentaryn-importer] An actor entry is not an object (got \"a string entry\"). Each element of actors is one Actor; refusing the run rather than guessing what it meant.",
         {
           "permanent": true,
           "console": false

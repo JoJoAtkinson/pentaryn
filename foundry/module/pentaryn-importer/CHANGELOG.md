@@ -38,6 +38,12 @@
   (`importer-M4`): when module.json's `flags.pentaryn.contract` disagrees with the code, the line now
   reads `… module.json and importer-core.mjs are out of step.` — the file that holds `CONTRACT_ID`
   since the core split. golden/refusals.json `gateModuleJson` carries the new text.
+- **[declared] An `actors` entry that is not an object is refused as `PentarynAbort` `REFUSED`**
+  (`importer-R4`): `null`, a string or an array now reads `An actor entry is not an object (got …)`,
+  with one permanent error toast, before the `@ref` lint and before any write. It used to escape as
+  an uncoded `TypeError` (a string entry from the lint, unshouted). golden/refusals.json `nullEntry`
+  carries the new text and `stringEntry` is new; the two non-object rows of golden/prepare.json moved
+  to a core.test case that still pins the oracle's `TypeError`.
 - **[declared] `game.pentaryn` is merged into, never replaced or frozen** (`items-journal-1`). Every
   module's namespace survives whichever order the modules load in; `import`, `moduleId`, `contract`
   and the frozen `_internals` stay on the root.
