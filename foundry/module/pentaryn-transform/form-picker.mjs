@@ -19,6 +19,12 @@ import {
 } from "./starry-adapter.mjs";
 import { dropTooltip, dropStaleTooltip, cancelTargetPicker } from "./argon.mjs";
 import { paintBadge as paintArgonBadge } from "./lib/argon-kit.mjs";
+import { makeLog } from "./lib/log.mjs";
+
+const log = makeLog(MODULE);
+
+/* Argon's itemButton.js calls _onLeftClick without await: a tile click logs its failure and never
+   rejects, and the stale tooltip goes either way (R1). */
 
 let built = null;                // { WildShapeButton, FormTile, … }, built on first use
 
@@ -102,11 +108,16 @@ export function argonClasses() {
     }
 
     async _onLeftClick(event) {
-      dropTooltip();
-      cancelTargetPicker();
-      ui.ARGON?.collapseAllPanels();
-      await shift(this.hudActor, this.form.id);
-      dropStaleTooltip();
+      try {
+        dropTooltip();
+        cancelTargetPicker();
+        ui.ARGON?.collapseAllPanels?.();
+        await shift(this.hudActor, this.form.id);
+      } catch (err) {
+        log.warn("form tile click failed", err);
+      } finally {
+        dropStaleTooltip();
+      }
     }
 
     async _onRightClick(event) {
@@ -135,11 +146,16 @@ export function argonClasses() {
     }
 
     async _onLeftClick(event) {
-      dropTooltip();
-      cancelTargetPicker();
-      ui.ARGON?.collapseAllPanels?.();
-      await returnToNormal(this.hudActor);
-      dropStaleTooltip();
+      try {
+        dropTooltip();
+        cancelTargetPicker();
+        ui.ARGON?.collapseAllPanels?.();
+        await returnToNormal(this.hudActor);
+      } catch (err) {
+        log.warn("return button click failed", err);
+      } finally {
+        dropStaleTooltip();
+      }
     }
   }
 
@@ -261,12 +277,17 @@ export function argonClasses() {
     }
 
     async _onLeftClick() {
-      dropTooltip();
-      cancelTargetPicker();
-      ui.ARGON?.collapseAllPanels();
-      if (this.constellation === "end") await endStarry(this.hudActor);
-      else await assumeStarry(this.hudActor, this.constellation);
-      dropStaleTooltip();
+      try {
+        dropTooltip();
+        cancelTargetPicker();
+        ui.ARGON?.collapseAllPanels?.();
+        if (this.constellation === "end") await endStarry(this.hudActor);
+        else await assumeStarry(this.hudActor, this.constellation);
+      } catch (err) {
+        log.warn("constellation tile click failed", err);
+      } finally {
+        dropStaleTooltip();
+      }
     }
 
     async _onRightClick() { starryItem(this.hudActor)?.sheet?.render(true); }

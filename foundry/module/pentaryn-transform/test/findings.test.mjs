@@ -221,3 +221,51 @@ test("§5.8 [declared] Starry Form ending removes flags.pentaryn-senses.light wi
   assert.ok(upd, JSON.stringify(F.calls.map(c => c.op)));
   assert.equal(item.flags["pentaryn-senses"]?.light, undefined, "gone");
 });
+
+/* ── R1 tile left-clicks: Argon does not await them ───────────────────────── */
+
+test("R1 [declared] a rejecting shift()/assumeStarry() under a FormTile/ConstellationTile click resolves (no unhandled rejection), warns, and still drops the stale tooltip", async () => {
+  const W = await import("../wildshape-adapter.mjs");
+  const S = await import("../starry-adapter.mjs");
+  const { talo } = fresh();
+  ui.ARGON._actor = talo;
+  const p = A.panel("DND5E.BonusAction", [slot()]);
+  fire(p, talo);
+  await flush();
+  const by = name => p._buttons.find(b => b.constructor.name === name);
+  const ws = by("WildShapeButton"), starry = by("StarryFormButton");
+  await ws.render();
+  await starry.render();
+  W.wildShapeActivity(talo).use = async () => { throw new Error("boom"); };
+  const consume = [...talo.items.get(IDS.starry).system.activities.values()].find(S.isStarryConsume);
+  consume.use = async () => { throw new Error("boom"); };
+  for (const [tile, text] of [[ws.panel._buttons[0], "form tile click failed"], [starry.panel._buttons[0], "constellation tile click failed"]]) {
+    F.console.length = 0;
+    F.tooltipCalls.length = 0;
+    game.tooltip.element = { isConnected: false };            // the HUD rebuild took the anchor
+    // Argon's itemButton.js calls _onLeftClick without await: its promise must never reject.
+    await assert.doesNotReject(tile._onLeftClick({}), text);
+    assert.deepEqual(F.tooltipCalls, ["deactivate", "deactivate"], `${text}: the stale tooltip is dropped after the failure`);
+    assert.deepEqual(F.console.map(c => [c[0], c[1]]), [["warn", `pentaryn-transform | ${text}`]]);
+  }
+  game.tooltip.element = null;
+  liveButtons.clear();
+});
+
+test("R1 [declared] ReturnButton's click, for symmetry: a throw resolves, warns, and still drops the stale tooltip", async () => {
+  const { talo } = fresh();
+  const wolf = await T.shift(talo, "p1");
+  const p = A.panel("DND5E.BonusAction", [slot()]);
+  fire(p, wolf);
+  await flush();
+  const ret = p._buttons.find(b => b.constructor.name === "ReturnButton");
+  Object.defineProperty(ret, "hudActor", { get() { throw new Error("boom"); } });
+  F.console.length = 0;
+  F.tooltipCalls.length = 0;
+  game.tooltip.element = { isConnected: false };
+  await assert.doesNotReject(ret._onLeftClick({}));
+  assert.deepEqual(F.tooltipCalls, ["deactivate", "deactivate"]);
+  assert.deepEqual(F.console.map(c => [c[0], c[1]]), [["warn", "pentaryn-transform | return button click failed"]]);
+  game.tooltip.element = null;
+  liveButtons.clear();
+});

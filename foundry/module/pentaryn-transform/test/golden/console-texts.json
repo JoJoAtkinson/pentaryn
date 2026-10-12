@@ -25,6 +25,21 @@
     "the ${key} claim on ${doc.name} was refused (already gone)"
   ],
   [
+    "form-picker.mjs",
+    "warn",
+    "constellation tile click failed"
+  ],
+  [
+    "form-picker.mjs",
+    "warn",
+    "form tile click failed"
+  ],
+  [
+    "form-picker.mjs",
+    "warn",
+    "return button click failed"
+  ],
+  [
     "hud-panels.mjs",
     "error",
     "HUD composition failed"

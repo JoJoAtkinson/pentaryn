@@ -4,6 +4,13 @@
 
 ## Unreleased
 
+- **A failed form, constellation or Return click no longer leaves a stuck tooltip (R1 + M5, final
+  review).** Argon's `itemButton.js` calls `_onLeftClick` without `await`, so a `shift()` or
+  `assumeStarry()` that threw became an unhandled promise rejection and skipped `dropStaleTooltip()`.
+  FormTile, ConstellationTile and ReturnButton now catch the failure and log it at warn (`form tile
+  click failed`, `constellation tile click failed`, `return button click failed`); the stale tooltip
+  is dropped in a `finally`. FormTile and ConstellationTile also call `collapseAllPanels?.()` the way
+  ReturnButton already did ([declared]; golden/console-texts.json: three new rows).
 - **A beast taken straight from the compendium gets a real token image (wildcard-art-compendium,
   defect wave 2).** A compendium Wolf with wildcard token art still gave the form the literal
   `wolf-*.webp` placeholder: core's `getTokenImages()` answers a compendium beast's wildcard path as
