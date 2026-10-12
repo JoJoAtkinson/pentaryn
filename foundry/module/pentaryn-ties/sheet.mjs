@@ -7,7 +7,8 @@ import { MODULE } from "./ties-core.mjs";
 import { setting } from "./settings.mjs";
 import { TiesEditor, buildHTML, bind, forgetActor } from "./editor.mjs";
 import { KNOWN_TAB_ID, buildKnownHTML, bindKnown, forgetKnownActor, openAddPicker, fileHovered, openKnownEntry } from "./known-ui.mjs";
-import { ATTR_TAB_ID, buildAttributesHTML, bindAttributes } from "./attributes-ui.mjs";
+import { ATTR_TAB_ID, buildAttributesHTML, bindAttributes, forgetAttributesActor } from "./attributes-ui.mjs";
+import { forgetLoreKey } from "./lore-ui.mjs";
 import { makeLog } from "./lib/log.mjs";
 
 const log = makeLog(MODULE);
@@ -216,6 +217,9 @@ export function install(reg) {
   reg.on("deleteActor", actor => {
     forgetActor(actor.id);
     forgetKnownActor(actor.id);
+    // ties-31: the Attributes tab's and the lore editor's cosmetic state for that actor too
+    forgetAttributesActor(actor.id);
+    forgetLoreKey(`lore:${actor.id}`);
   }, { guard: false, label: "sheet: forget a deleted actor" });
 
   for (const hook of ["renderNPCActorSheet", "renderCharacterActorSheet", "renderActorSheetV2", "renderActorSheet"]) {

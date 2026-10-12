@@ -101,6 +101,7 @@ export {
 } from "./study/authoring.mjs";
 export {
   deliverHeldIdentifications,
+  forgetCombat,
   grantKind,
   heldCarriersFor,
   inspect,

@@ -6,7 +6,7 @@
 
 import { MODULE } from "./ties-core.mjs";
 import { registerRelay } from "./relay.mjs";
-import { registerStudy, clearScoping } from "./study.mjs";
+import { registerStudy, clearScoping, forgetCombat } from "./study.mjs";
 import { makeLog } from "./lib/log.mjs";
 
 const log = makeLog(MODULE);
@@ -62,7 +62,10 @@ export function install(reg) {
   reg.once("ready", registerSockets, { guard: false, label: "conduit: sockets" });
   reg.on("canvasReady", () => endLookingRun("scene change"), { label: "tempo: scene change" });
   reg.on("combatStart", () => endLookingRun("combat started"), { label: "tempo: combat started" });
-  reg.on("deleteCombat", () => endLookingRun("combat ended"), { label: "tempo: combat ended" });
+  reg.on("deleteCombat", combat => {
+    endLookingRun("combat ended");
+    forgetCombat(combat?.id); // ties-31: the per-round inspection marks of a finished combat
+  }, { label: "tempo: combat ended" });
   /*
    * `combatStart` is not fired by every path that begins a fight (a GM nudging the round forward by
    * hand does not raise it), so watch the round counter too — 0 → 1 is a start whoever caused it.

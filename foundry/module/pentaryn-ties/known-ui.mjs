@@ -91,7 +91,11 @@ function setExpanded(actorId, id, open) {
 /** Drop a deleted actor's row state; nothing else holds a reference to it. */
 export function forgetKnownActor(actorId) {
   expanded.delete(actorId);
+  shownHidden.delete(actorId); // ties-31: a deleted actor's "show hidden" toggle goes with it
 }
+
+/** Test-only: how many actors the session maps hold (ties-31). */
+export const _sizes = () => ({ expanded: expanded.size, shownHidden: shownHidden.size });
 
 /**
  * Who is left to add.

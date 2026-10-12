@@ -11,6 +11,7 @@
   "deliver",
   "deliverHeldIdentifications",
   "factStatus",
+  "forgetCombat",
   "forgetFact",
   "grantKind",
   "heldCarriersFor",

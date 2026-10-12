@@ -89,6 +89,16 @@ const toggledFor = id => {
   return worldToggled.get(id);
 };
 
+/** Drop a deleted actor's cosmetic state — open rows, toggled branches, the filter (ties-31). */
+export function forgetAttributesActor(actorId) {
+  expanded.delete(actorId);
+  worldToggled.delete(actorId);
+  worldFilter.delete(actorId);
+}
+
+/** Test-only: how many entries the session maps hold (ties-31). */
+export const _sizes = () => ({ expanded: expanded.size, worldToggled: worldToggled.size, worldFilter: worldFilter.size });
+
 /**
  * Is this branch open?
  *

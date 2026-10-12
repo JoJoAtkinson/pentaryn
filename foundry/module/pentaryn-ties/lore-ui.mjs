@@ -50,6 +50,14 @@ const openFor = key => {
   return open.get(key);
 };
 
+/** Drop one mount's open rows — a deleted actor's `lore:<id>` (ties-31). */
+export function forgetLoreKey(key) {
+  open.delete(key);
+}
+
+/** Test-only: how many mounts the open-row map holds (ties-31). */
+export const _sizes = () => ({ open: open.size });
+
 /**
  * The skill list, read off the world rather than hardcoded.
  *

@@ -118,6 +118,16 @@ export async function inspect(character, subject) {
  * varied would itself be a probe.
  */
 const inspected = new Map();
+
+/** Forget one combat's per-round inspection marks once the combat is deleted (ties-31). */
+export function forgetCombat(combatId) {
+  if (!combatId) return;
+  for (const key of inspected.keys()) if (key.startsWith(`${combatId}:`)) inspected.delete(key);
+}
+
+/** Test-only: how many combat:round:combatant marks are held (ties-31). */
+export const _sizes = () => ({ inspected: inspected.size });
+
 function combatAllows(character) {
   if (!game.combat?.started || !character.inCombat) return true;
   const combatant = game.combat.combatants.find(c => c.actorId === character.id);
