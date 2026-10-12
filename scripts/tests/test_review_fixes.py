@@ -482,6 +482,86 @@ def test_a_bundle_holding_another_folder_is_refused_before_the_world_is_touched(
     assert (boss / "Data/worlds/w/journal.txt").read_text() == "boss's own session"
 
 
+def _tree(root, *rels):
+    """{relpath: bytes} of every file under root/<rel> for each rel."""
+    out = {}
+    for rel in rels:
+        for p in sorted((root / rel).rglob("*")):
+            if p.is_file():
+                out[p.relative_to(root).as_posix()] = p.read_bytes()
+    return out
+
+
+def _damage_past_first_member(p):
+    """Overwrite one 4 KiB block (a bad sync) at the first offset where the first member
+    still reads but extracting the whole tar — what apply_snapshot's extractall does —
+    hits a deflate error. Searched, not hard-coded: zlib builds compress differently. A
+    flipped byte alone usually decodes to wrong literals, and tarfile neither checks the
+    CRC nor fails on a later bad header, so the search wants a real inflate error."""
+    import io
+    import tarfile
+    import zlib
+    raw = p.read_bytes()
+    for pct in range(10, 90):
+        d = bytearray(raw)
+        i = len(d) * pct // 100
+        d[i:i + 4096] = b"\xff" * 4096
+        with tarfile.open(fileobj=io.BytesIO(bytes(d)), mode="r:gz") as tar:
+            try:
+                tar.extractfile(tar.next()).read()     # the marker check's read
+            except (zlib.error, tarfile.TarError, EOFError):
+                continue                               # too early: the first member broke
+            try:
+                for m in tar:
+                    fh = tar.extractfile(m)
+                    if fh:
+                        fh.read()
+            except zlib.error:
+                p.write_bytes(bytes(d))
+                return
+            except (tarfile.TarError, EOFError):
+                continue
+    raise AssertionError("no offset breaks the stream past the first member")
+
+
+def test_a_full_snapshot_damaged_past_its_first_member_is_refused_before_the_clear(
+        two_hosts, capsys):
+    """R2's world half: a FULL (legacy) tar whose first member reads cleanly — the marker
+    check reads only that one — but whose deflate stream is damaged further in, at the
+    same size. apply_snapshot would rmtree Data/worlds, Config and Data/modules and then
+    fail inside extractall; fetch_snapshot must read the whole stream first."""
+    import random
+    rng = random.Random(7)
+    words = [b"seafoot", b"harbour", b"tide", b"lantern", b"kelp", b"wreck", b"gull"]
+    art = b" ".join(rng.choice(words) + str(rng.randrange(10**6)).encode()
+                    for _ in range(60000))              # compressible: dynamic blocks
+    stamp = time.strftime("%Y-%m-%d-%H%M%S", time.gmtime(time.time() - 2 * DAY))
+    name = f"world-{stamp}-fvtt14.369.tar.gz"
+    p = _gz_tar(two_hosts.cloud / "world-backups" / name, {
+        "Data/worlds/w/world.json": b'{"id": "w"}\n',
+        "Data/modules/old-maps/module.json": b'{"id": "old-maps", "version": "1"}',
+        "Data/modules/old-maps/art.txt": art,
+        "Config/options.json": b'{"dataPath": "/elsewhere"}\n',
+    })
+    _damage_past_first_member(p)
+    os.utime(p, (time.time() - 2 * DAY,) * 2)
+    from scripts.foundry import bundles
+    assert cloud._read_marker(p) == (False, None)       # the first member reads cleanly
+    with pytest.raises(ValueError, match="damaged"):
+        bundles.read_all(p)
+
+    boss = _install(two_hosts.data["boss"])
+    _edit(boss, "boss's own session")
+    before = _tree(boss, "Data/worlds", "Data/modules", "Config")
+    capsys.readouterr()
+    with two_hosts.use("boss"), pytest.raises(SystemExit):
+        cloud.restore(name, yes=True)
+    err = capsys.readouterr().err
+    assert "nothing local was touched" in err, err
+    assert "failed part-way" not in err, err
+    assert _tree(boss, "Data/worlds", "Data/modules", "Config") == before
+
+
 # ── DL6: a destination the inventory skips is refused (link) or kept (folder) ─
 
 def _mac_s1(two_hosts):
