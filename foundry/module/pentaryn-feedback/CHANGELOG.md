@@ -1,5 +1,16 @@
 # Changelog — Pentaryn Feedback (`pentaryn-feedback`)
 
+## 0.1.2 — 2026-10-11 (live-check fix)
+
+- **[declared] `inspect` accepts an Actor or Token**, as `journal.inspect` does: the root
+  `game.pentaryn.inspect("Talo")` passes an Actor, and feedback answered
+  `BAD_ARGS: expected User, got Actor`. An Actor means its players — every non-GM user who owns it
+  or has it as their assigned character — and returns `{ actor, users, pending, reports, actions,
+  errors }`; an Actor with no player gives empty lists, not an error.
+- **[declared] `inspect` is async and adds `reports`**: summaries of the reports those users filed
+  (oldest first, the last 20), read from the report files, so only on a GM client and for a GM
+  viewer (`null` otherwise). A user ref keeps its other fields.
+
 ## 0.1.1 — 2026-10-11
 
 - `/bug` in chat opens the dialog again on Foundry 14: the chat input is a ProseMirror editor, so the

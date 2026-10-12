@@ -84,7 +84,9 @@ game.pentaryn._internals.lintFormulas(actors)                   // lint a JSON a
 ```
 
 A thrown `PentarynAbort` means nothing was written (wrong version, `@ref` lint, bad file, not a
-GM). A thrown `PentarynAssertionError` means the batch is partial. Per-actor failures come back in
+GM). Its `code` says which (1.1.1): `NOT_FOUND` (no file at the path — the usual case after an
+import, which deletes it), `NOT_GM`, `BAD_ARGS`, `CONFLICT` (already running), `TIMEOUT`, else
+`REFUSED`; through `pentaryn-write` that is the result's `code`. A thrown `PentarynAssertionError` means the batch is partial. Per-actor failures come back in
 `result.failed` with `ok: false`.
 
 ## Known gaps

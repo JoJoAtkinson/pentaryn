@@ -7,6 +7,35 @@
       "name": "Caven's player"
     },
     "pending": [],
+    "reports": [
+      {
+        "id": "aaaaaa0000000001",
+        "t": 1791748797000,
+        "category": "bug",
+        "status": "open",
+        "user": "Caven's player",
+        "world": "test-world",
+        "text60": "Loot all did nothing"
+      },
+      {
+        "id": "aaaaab0000000002",
+        "t": 1791748798000,
+        "category": "feature",
+        "status": "triaged",
+        "user": "Caven's player",
+        "world": "test-world",
+        "text60": "A map tab for the party"
+      },
+      {
+        "id": "bbbbbb0000000003",
+        "t": 1791748799000,
+        "category": "defect",
+        "status": "resolved",
+        "user": "Caven's player",
+        "world": "test-world",
+        "text60": "Ruler snaps to the wrong grid"
+      }
+    ],
     "actions": null,
     "errors": null
   },

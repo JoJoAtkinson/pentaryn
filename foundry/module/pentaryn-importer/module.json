@@ -2,7 +2,7 @@
   "id": "pentaryn-importer",
   "title": "Pentaryn Importer",
   "description": "Headless importer for generated Pentaryn NPC Actors. Exposes game.pentaryn.import() and nothing else — no UI, no settings, no canvas hooks. See foundry/CONTRACT.md.",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "compatibility": {
     "minimum": "13",
     "verified": "14"

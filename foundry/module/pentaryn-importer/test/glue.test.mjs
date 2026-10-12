@@ -98,15 +98,17 @@ async function outcome(fn) {
   toasts.length = 0;
   fetches.length = 0;
   let error = null;
+  let code = null;
   let result = null;
   const { lines } = await withConsole(async () => {
     try {
       result = await fn();
     } catch (err) {
       error = { name: err?.name, message: err?.message, isError: err instanceof Error };
+      code = err?.code ?? null;   // beside error, not in it: the frozen refusal pins stay as they are
     }
   });
-  return { error, result, toasts: toasts.slice(), fetches: fetches.slice(), console: lines };
+  return { error, code, result, toasts: toasts.slice(), fetches: fetches.slice(), console: lines };
 }
 
 /** Keyed golden: each test checks its own key; the last test pins the whole file (no stray keys). */
@@ -416,6 +418,56 @@ test("re-entrancy: an overlapping second call rejects PentarynAbort; later calls
   serve(valid());
   const afterFailure = await outcome(() => imp({ dryRun: true }));
   assert.equal(afterFailure.error, null, "a refused run releases the guard");
+});
+
+/* ── import(): abort codes (2026-10-11 live check) ───────────────────────────────────────────── */
+
+// pentaryn-write reports an uncoded throw as INTERNAL; the importer's expected aborts carry a kit
+// code (lib/errors.mjs CODES) on `err.code`. The message is unchanged (golden/refusals.json).
+test("expected aborts carry a kit code: NOT_FOUND for a missing file, NOT_GM, BAD_ARGS, REFUSED, TIMEOUT, CONFLICT", async () => {
+  const codes = {};
+  serve("Not here", { status: 404, statusText: "Not Found" });
+  codes.fetch404 = (await outcome(() => imp({ dryRun: true }))).code;
+  serve("<!DOCTYPE html><html></html>");
+  codes.fetchHtml = (await outcome(() => imp({ dryRun: true }))).code;
+  serve("oops", { status: 500, statusText: "Internal Server Error" });
+  codes.fetch500 = (await outcome(() => imp({ dryRun: true }))).code;
+  serve(valid([], { targetSystemVersion: "5.3" }));
+  codes.gate = (await outcome(() => imp({ dryRun: true }))).code;
+  serve(valid([entry("a", "h", { system: { attributes: { hp: { formula: "@x" } } } })]));
+  codes.lint = (await outcome(() => imp({ dryRun: true }))).code;
+  serve(valid([{ name: "Nameless" }]));
+  codes.noSlug = (await outcome(() => imp({ dryRun: true }))).code;
+  codes.unmanagedItems = (await outcome(() => imp({ dryRun: true, unmanagedItems: "purge" }))).code;
+  game.user.isGM = false;
+  try {
+    codes.notGM = (await outcome(() => imp({ dryRun: true }))).code;
+  } finally {
+    game.user.isGM = true;
+  }
+  respond = (url, init) => new Promise((resolve, reject) => {
+    init.signal.addEventListener("abort", () => reject(init.signal.reason));
+  });
+  let timedOut;
+  const pending = outcome(() => imp({ dryRun: true, timeout: 50 })).then(v => { timedOut = v; });
+  await flush();
+  mock.timers.tick(50);
+  await pending;
+  codes.timeout = timedOut.code;
+  respond = () => new Promise(resolve => setTimeout(() => resolve(response(valid())), 10));
+  let second;
+  await withConsole(async () => {
+    const a = imp({ dryRun: true });
+    second = await imp({ dryRun: true }).catch(e => e);
+    mock.timers.tick(10);
+    await a;
+  });
+  codes.reentrant = second.code;
+  assert.deepEqual(codes, {
+    fetch404: "NOT_FOUND", fetchHtml: "NOT_FOUND", fetch500: "REFUSED",
+    gate: "REFUSED", lint: "REFUSED", noSlug: "REFUSED", unmanagedItems: "BAD_ARGS",
+    notGM: "NOT_GM", timeout: "TIMEOUT", reentrant: "CONFLICT",
+  });
 });
 
 /* ── the shared root under both load orders (items-journal-1) ─────────────────────────────────── */
