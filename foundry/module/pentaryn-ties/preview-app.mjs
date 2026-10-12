@@ -1,6 +1,6 @@
 /**
  * Inspect preview — the GM's test bench for everything an inspection and its follow-up studies
- * could hand a player, with fresh dice every click and **nothing written anywhere**.
+ * could hand a player, with fresh dice every click; **Simulate writes nothing anywhere**.
  *
  * Why it exists: every real roll in this module is one-shot and permanent, so "what would they
  * actually see?" could only be answered by spending a character's attempt and resetting it
@@ -25,9 +25,10 @@
  * Every row also shows the *chance* of passing and, for a chain, the chance of getting that far.
  *
  * ⚠ **GM only, and local only.** It is opened from a HUD button that is only drawn for a GM,
- * refuses to construct for anyone else, posts no chat, emits no socket message and calls no
- * document update. Dice are `Math.random` rather than `Roll` so not even Dice So Nice can show
- * a die on another screen. Safe to use mid-session with players connected.
+ * refuses to construct for anyone else, and in Simulate mode posts no chat, emits no socket
+ * message and calls no document update; the Player-view switches (below) are the one write path.
+ * Dice are `Math.random` rather than `Roll` so not even Dice So Nice can show a die on another
+ * screen. Safe to use mid-session with players connected.
  *
  * ## Two modes
  *
