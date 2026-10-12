@@ -6,6 +6,9 @@
 (`flagScope` stays `wall-autocomplete`), `languages`, `minimum: "14"`, `verified: "14.369"` and the
 description fix; the flag-scope migration is **parked** while walls stays off (Joe).
 
+- **[declared] `compare()` survives js throwing** (`walls-rob-2`): when the js reference threw and
+  another backend did not, the field diff read js's missing result and threw a TypeError. It now
+  reports `identical: false`, `diff: "js threw: <message>"`; a backend's own throw is reported as before.
 - **[declared] The engine no longer carries a wall `threshold`** (`walls-EXT-3`): it was dead
   code — the wall reader never passed one, and the only preset that sets one (window) infers
   solid. Dropped from the segment shape, the grown-wall profile and the create payload; goldens

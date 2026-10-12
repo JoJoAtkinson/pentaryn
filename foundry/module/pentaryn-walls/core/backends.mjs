@@ -68,7 +68,8 @@ export function canonical(result, {extended = false} = {}) {
 
 /**
  * Run every available backend over the same walls and report timing plus whether they agree.
- * Returns {rows, identical, diff} — `diff` names the first field that differs.
+ * Returns {rows, identical, diff} — `diff` names the first field that differs, or which backend
+ * threw (`js threw: …` when the reference itself failed, so there was nothing to diff against).
  */
 export function compare(walls, opts = {}) {
   const rows = [];
@@ -85,6 +86,7 @@ export function compare(walls, opts = {}) {
   for (const row of rows) {
     if (row === ref) continue;
     if (row.error) { identical = false; diff = `${row.backend} threw: ${row.error.message}`; continue; }
+    if (!ref || ref.error) { identical = false; diff = `js threw: ${ref?.error?.message ?? "no js row"}`; continue; }
     for (const field of ["creates", "updates", "refusals"]) {
       const a = ref.canon[field], c = row.canon[field];
       if (a.length !== c.length || a.some((v, i) => v !== c[i])) {

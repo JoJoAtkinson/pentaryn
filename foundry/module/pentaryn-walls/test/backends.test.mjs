@@ -92,3 +92,24 @@ test("walls-rob-1: wasm honours the iteration cap — it throws js's exact messa
   // Uncapped, the same scene still runs on both.
   assert.doesNotThrow(() => wasm(fx.walls, { ...fx.opts, runId: "rob1" }));
 });
+
+test("walls-rob-2: compare() reports js throwing as a diff instead of a TypeError when another backend runs", async () => {
+  const { FIXTURES } = await import("./fixtures/corpus.mjs");
+  await core.wasmReady;
+  // A stand-in backend that never throws, switched on only for this test.
+  let on = true;
+  core.register({ name: "rob2-stub", available: () => on, run: () => ({ creates: [], updates: [], refusals: [] }) });
+  try {
+    const fx = FIXTURES.find(f => f.walls && (f.expect?.iterations ?? 0) >= 2);
+    assert.ok(fx, "the corpus has a multi-pass scene");
+    const opts = { ...fx.opts, runId: "rob2", iterCap: 1 };   // js throws the cap error
+    const out = core.compare(fx.walls, opts);
+    assert.equal(out.identical, false);
+    assert.equal(out.diff, "js threw: wall-autocomplete: hit the 1-iteration cap; nothing was committed.");
+    const js = out.rows.find(r => r.backend === "js");
+    assert.ok(js.error);
+    assert.ok(out.rows.find(r => r.backend === "rob2-stub").result, "the stub's row is still reported");
+  } finally {
+    on = false;
+  }
+});
