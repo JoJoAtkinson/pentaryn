@@ -130,7 +130,7 @@ function main(argv) {
 
   const declared = diffPaths(before.golden.declared ?? {}, after.golden.declared ?? {});
   console.log(`\n## declared — ${declared.length} difference(s), each must match a declared change`);
-  for (const [p, a, b] of declared) console.log(`  ${p}\n    before ${show(a)}\n    after  ${show(b)}`);
+  declared.forEach(row);
 
   console.log("\n## timings (median ms per call)");
   const names = [...new Set([...Object.keys(before.timings ?? {}), ...Object.keys(after.timings ?? {})])];
