@@ -799,3 +799,10 @@ def test_published_literal_keys_are_the_top_level_paths(tmp_path):
         ("one.mjs", 2, "describe"), ("one.mjs", 3, "attributes"), ("one.mjs", 4, "version")]
     assert [p for _, _, p in conformance._published_literal_paths(m)] == [
         "describe", "attributes", "attributes.describe", "attributes.x", "attributes.x.y", "version"]
+
+
+def test_reserved_api_mirrors_the_kit():
+    # C48's RESERVED_API is a hand copy of the kit's errors.RESERVED; a kit bump that adds a name must fail here.
+    text = (conformance.REPO_ROOT / "foundry/lib/errors.mjs").read_text(encoding="utf-8")
+    body = re.search(r"export const RESERVED\s*=\s*Object\.freeze\(\[(.*?)\]", text, re.S).group(1)
+    assert set(re.findall(r'"([^"]+)"', body)) == set(conformance.RESERVED_API)
