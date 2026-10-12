@@ -112,9 +112,10 @@ async function chooseWeapon(actor) {
 
 /* ── components ──────────────────────────────────────────────────────────── */
 
-/** Argon's `ranges` for an attack activity: its range, else the item's reach, else `fallback()`. */
-function rangesOf(a, fallback = () => 5) {
-  return { normal: a?.range?.value ?? a?.item?.system?.range?.reach ?? fallback(), long: a?.range?.long ?? null };
+/** Argon's `ranges` for an attack activity: its range, else the item's reach, else the scene's grid
+ *  distance (the unit Argon's own ranges getter uses for touch), else 5. One fallback for every button (ext-7). */
+function rangesOf(a) {
+  return { normal: a?.range?.value ?? a?.item?.system?.range?.reach ?? canvas?.scene?.grid?.distance ?? 5, long: a?.range?.long ?? null };
 }
 
 export function argonClasses() {
@@ -142,7 +143,7 @@ export function argonClasses() {
     // Argon opens its target picker before _onLeftClick only when this is > 0: once, and never
     // when something is already targeted (its picker would clear the target first).
     get targets() { return game.user.targets.size || running() ? 0 : 1; }
-    get ranges() { return rangesOf(this.activity, () => canvas?.scene?.grid?.distance ?? 5); }
+    get ranges() { return rangesOf(this.activity); }
     get hasTooltip() { return true; }
 
     async getTooltipData() {

@@ -387,12 +387,28 @@ test("Full Attack's targets/ranges: Argon's picker opens only when nothing is ta
   reset(fig);
 });
 
-test("PickerProbe.ranges: range, reach, then 5", async () => {
+test("PickerProbe.ranges: range, reach, then the grid distance, else 5", async () => {
   const { argonClasses } = await import("../hud/buttons-ui.mjs");
   const { PickerProbe } = argonClasses();
   assert.deepEqual(new PickerProbe({ activity: { range: { value: 80, long: 320 } } }).ranges, { normal: 80, long: 320 });
   assert.deepEqual(new PickerProbe({ activity: { item: { system: { range: { reach: 10 } } } } }).ranges, { normal: 10, long: null });
   assert.deepEqual(new PickerProbe({ activity: {} }).ranges, { normal: 5, long: null });
+});
+
+test("ext-7: Full Attack, follow-ups and the picker probe share one fallback, the scene's grid distance", async () => {
+  const { argonClasses } = await import("../hud/buttons-ui.mjs");
+  const { PickerProbe, FollowUpButton } = argonClasses();
+  const had = Object.hasOwn(F.canvas.scene, "grid"), was = F.canvas.scene.grid;
+  F.canvas.scene.grid = { distance: 10 };
+  try {
+    assert.deepEqual(new PickerProbe({ activity: {} }).ranges, { normal: 10, long: null });
+    const fu = new FollowUpButton({ hudActor: fig, followUp: { kind: "offhand", weaponId: "nosuchweapon0001" } });
+    assert.deepEqual(fu.ranges, { normal: 10, long: null });
+    // reach still wins over the fallback
+    assert.deepEqual(new PickerProbe({ activity: { item: { system: { range: { reach: 5 } } } } }).ranges, { normal: 5, long: null });
+  } finally {
+    if (had) F.canvas.scene.grid = was; else delete F.canvas.scene.grid;
+  }
 });
 
 test("follow-up and command clicks (golden/argon-clicks.json)", async () => {
