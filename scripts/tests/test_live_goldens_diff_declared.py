@@ -127,3 +127,37 @@ def test_missing_declared_file_is_bad_input(tmp_path):
 def test_without_declared_the_output_is_unchanged(tmp_path):
     r = _write(tmp_path, after=BEFORE)
     assert r.returncode == 0 and "## shared — identical" in r.stdout, r.stdout
+
+
+def _run_copy(script, tmp_path, *args):
+    b, a = tmp_path / "before.json", tmp_path / "after.json"
+    b.write_text(json.dumps(json.dumps(BEFORE)))
+    a.write_text(json.dumps(json.dumps(AFTER)))
+    files = [str(b), str(a)] if not args else list(args)
+    return subprocess.run(["node", str(script)] + files, capture_output=True, text=True, timeout=30)
+
+
+def test_diff_runs_from_a_path_with_a_space(tmp_path):
+    # README: exit 1 when golden.shared differs — also when the script's path needs URL escaping
+    d = tmp_path / "with space"
+    d.mkdir()
+    shutil.copy(DIFF, d / "diff.mjs")
+    r = _run_copy(d / "diff.mjs", tmp_path)
+    assert r.returncode == 1, r.stdout + r.stderr
+    assert "23 DIFFERENCE(S)" in r.stdout, r.stdout
+
+
+def test_diff_runs_through_a_symlink(tmp_path):
+    link = tmp_path / "link.mjs"
+    link.symlink_to(DIFF)
+    r = _run_copy(link, tmp_path)
+    assert r.returncode == 1, r.stdout + r.stderr
+    assert "23 DIFFERENCE(S)" in r.stdout, r.stdout
+
+
+def test_usage_from_a_path_with_a_space_is_bad_input(tmp_path):
+    d = tmp_path / "with space"
+    d.mkdir()
+    shutil.copy(DIFF, d / "diff.mjs")
+    r = subprocess.run(["node", str(d / "diff.mjs")], capture_output=True, text=True, timeout=30)
+    assert r.returncode == 2, r.stdout + r.stderr

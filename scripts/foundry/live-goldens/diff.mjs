@@ -22,7 +22,8 @@
 // `]`), `**` is anything, `?` one character; `[` and `]` are literal. So `stash.chest[*]` covers
 // `stash.chest[2]` but not `stash.chest[0].name` (that is `stash.chest[*].*`), and `purseHome`
 // covers only `purseHome` itself (`purseHome.**` the rest). A glob that matched nothing is named.
-import { readFileSync } from "node:fs";
+import { readFileSync, realpathSync } from "node:fs";
+import { pathToFileURL } from "node:url";
 
 function load(path) {
   let v = JSON.parse(readFileSync(path, "utf8"));
@@ -146,4 +147,8 @@ function main(argv) {
   return failing.length || bad.length ? 1 : 0;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) process.exit(main(process.argv.slice(2)));
+const isMain = (() => {
+  try { return !!process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href; }
+  catch { return false; }
+})();
+if (isMain) process.exit(main(process.argv.slice(2)));
