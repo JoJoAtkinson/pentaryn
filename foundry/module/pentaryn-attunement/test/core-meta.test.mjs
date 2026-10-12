@@ -25,3 +25,9 @@ test("trimSlots drops trailing holes only and copies (writeSlots, :352–353)", 
   assert.deepEqual(core.trimSlots([null, null]), []);
   assert.deepEqual(core.trimSlots([]), []);
 });
+
+test("patchProficiencyMap({}) adds PROFICIENCY_CATEGORIES in order", () => {
+  assert.deepEqual(core.patchProficiencyMap({}), [...core.PROFICIENCY_CATEGORIES]);
+  assert.deepEqual([...core.PROFICIENCY_CATEGORIES], ["wondrous", "ring", "rod", "wand", "trinket"]);
+  assert.ok(Object.isFrozen(core.PROFICIENCY_CATEGORIES));
+});

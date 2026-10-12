@@ -248,6 +248,9 @@ export function wouldExceed({ value, max, awayCount = 0 }) {
 /*  "Not Proficient" on a cloak                 */
 /* -------------------------------------------- */
 
+/** The item types patchProficiencyMap fills, in log-line order; selftest checks the same list. */
+export const PROFICIENCY_CATEGORIES = Object.freeze(["wondrous", "ring", "rod", "wand", "trinket"]);
+
 /**
  * Every ring, rod, wand, trinket and wondrous item in the world reports
  * **Not Proficient** — on its tooltip and on its chat card. Two bits of dnd5e that
@@ -277,7 +280,7 @@ export function wouldExceed({ value, max, awayCount = 0 }) {
  */
 export function patchProficiencyMap(map) {
   const added = [];
-  for (const type of ["wondrous", "ring", "rod", "wand", "trinket"]) {
+  for (const type of PROFICIENCY_CATEGORIES) {
     if (map[type] == null) { map[type] = true; added.push(type); }
   }
   return added;
