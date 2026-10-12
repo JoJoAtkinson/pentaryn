@@ -87,7 +87,7 @@ inert in play. Nothing in `inspect` is GM-only.
 
 | Where | Shape | Written by |
 |---|---|---|
-| actor `flags.pentaryn-attunement.slots` | `(itemId \| "away:<key>" \| null)[]`, trailing holes trimmed | a drop onto a slot; `stash`; an item coming home |
+| actor `flags.pentaryn-attunement.slots` | `(itemId \| "away:<key>" \| null)[]`; trailing holes trimmed by a drop and by an item coming home; `stash` writes the reconciled order padded to `max` (`computeSlots()` re-pads on read, so both forms render the same) | a drop onto a slot; `stash`; an item coming home |
 | actor `flags.pentaryn-attunement.away` | `[{ key, name, img }]` | `stash`; `releaseAway`; an item coming home |
 | item `flags.pentaryn-attunement.bond` | `{ actor, key, name, equipped, attuned, attunement, currency? }` | `stash` (on the copies); cleared (`_del`) when the item is home |
 
