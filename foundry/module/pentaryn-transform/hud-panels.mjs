@@ -180,6 +180,7 @@ function composeSpecialBar(panel, actor) {
 }
 
 function onActionPanelRender(panel, element, actor) {
+  // hot: the panel's actor only (its items/effects, map lookups, combat's coversMultiattack); no world iteration
   try {
     const a = actor ?? panel.actor;
     if (panel?.label === "DND5E.BonusAction") composeBonusBar(panel, a);
