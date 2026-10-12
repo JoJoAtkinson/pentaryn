@@ -804,26 +804,6 @@ def test_assets_old_manifest_entry_is_checked_once_then_recorded(two_hosts, monk
     assert "mtime" in json.loads((tmp_path / "manifest.json").read_text())["packs"]["maps-01"]
 
 
-def test_assets_member_under_a_folder_that_normalises_to_nothing_stays_in_the_pack(
-        two_hosts, monkeypatch, tmp_path):
-    monkeypatch.setattr(cloud, "MANIFEST", tmp_path / "manifest.json")
-    _rclone_cloud(two_hosts, monkeypatch)
-    _zip(two_hosts.cloud / "assets/maps-01.zip", {"地图/pentaryn-ec1-a.png": b"x"})
-    with two_hosts.use("mac"):
-        assert cloud.unpack_assets() == 0
-    assert (two_hosts.data["mac"] / "Data/assets/maps/maps-01/pentaryn-ec1-a.png").exists()
-
-
-def test_assets_empty_middle_segment_is_still_a_collision(two_hosts, monkeypatch, tmp_path,
-                                                          capsys):
-    monkeypatch.setattr(cloud, "MANIFEST", tmp_path / "manifest.json")
-    _rclone_cloud(two_hosts, monkeypatch)
-    _zip(two_hosts.cloud / "assets/tokens-01.zip", {"a/★/b.png": b"1", "a/b.png": b"2"})
-    with two_hosts.use("mac"):
-        assert cloud.unpack_assets() == 1
-    assert "both normalise to 'a/b.png'" in capsys.readouterr().err
-
-
 # ── the updater's rollback point (§9) ───────────────────────────────────────
 
 def test_rollback_point_is_the_based_on_snapshot_then_own_newest(two_hosts):

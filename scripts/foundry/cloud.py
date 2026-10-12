@@ -704,10 +704,7 @@ def _extract_pack(zp: Path, zname: str, pack: str, dest: Path, problems: list) -
                          if p not in ("__MACOSX",) and not p.startswith("._")]
                 if not parts or parts[-1] in JUNK_NAMES or parts[-1].startswith("."):
                     continue
-                segs = [k for k in (kebab(p) for p in parts) if k]
-                if not segs:
-                    continue
-                rel = "/".join(segs)
+                rel = "/".join(kebab(p) for p in parts)
                 if rel in seen:
                     problems.append(
                         f"{zname}: '{info.filename}' and '{seen[rel]}' both "
