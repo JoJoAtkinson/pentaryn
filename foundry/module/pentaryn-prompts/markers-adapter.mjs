@@ -67,8 +67,18 @@ function same(a, b) {
 let ensuring = null;
 
 /**
+ * Deterministic ids for what ensureMarkers creates (§5.9.1/§5.9.2). The active-GM gate picks a
+ * user, not a tab: the MCP bridge tab and a GM browser tab both pass it and both look before either
+ * creates. Created with `keepId`, the second tab's create replaces the first's document with the
+ * same data instead of adding a duplicate folder or `Prompt · <size>` actor.
+ */
+const FOLDER_ID = "pPromptsFolder00";
+const markerActorId = sizeKey => `pPrompts${sizeKey}`.padEnd(16, "0");
+
+/**
  * Create the folder and any missing marker actor; repair drifted fields; never delete.
- * Runs on the active GM only (two GM clients would both create). Returns a summary.
+ * Runs on the active GM's tabs only; the creates are idempotent across those tabs by id.
+ * Returns a summary.
  */
 export async function ensureMarkers() {
   if (!game.user?.isGM) return { skipped: "not GM" };
@@ -76,9 +86,10 @@ export async function ensureMarkers() {
   if (ensuring) return ensuring;
   ensuring = (async () => {
     const summary = { folder: null, created: [], repaired: [] };
-    let folder = game.folders.find(f => f.type === "Actor" && f.name === FOLDER_NAME);
+    // ours by id first, so a renamed folder is found rather than replaced
+    let folder = game.folders.get(FOLDER_ID) ?? game.folders.find(f => f.type === "Actor" && f.name === FOLDER_NAME);
     if (!folder) {
-      folder = await Folder.create({ name: FOLDER_NAME, type: "Actor", color: "#5b3fa6", sorting: "m" });
+      folder = await Folder.create({ _id: FOLDER_ID, name: FOLDER_NAME, type: "Actor", color: "#5b3fa6", sorting: "m" }, { keepId: true });
       summary.folder = "created";
     }
     const creates = [], updates = [];
@@ -88,7 +99,8 @@ export async function ensureMarkers() {
       const want = wanted(s, folder.id);
       const actor = markerActor(s.key);
       if (!actor) {
-        const data = { type: "npc", sort };
+        // built from SIZES and the folder alone, so both tabs send the same create
+        const data = { _id: markerActorId(s.key), type: "npc", sort };
         for (const [k, v] of Object.entries(want)) foundry.utils.setProperty(data, k, v);
         creates.push(data);
         summary.created.push(actorName(s.key));
@@ -106,7 +118,7 @@ export async function ensureMarkers() {
     }
     // one round trip for every repair and one for every create (§5.9.1); update hooks still fire per actor
     if (updates.length) await Actor.updateDocuments(updates);
-    if (creates.length) await Actor.createDocuments(creates);
+    if (creates.length) await Actor.createDocuments(creates, { keepId: true });
     if (summary.folder || summary.created.length || summary.repaired.length) {
       console.log(`${MODULE} | markers ensured`, summary);
     }

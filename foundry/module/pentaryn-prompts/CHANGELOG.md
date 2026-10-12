@@ -28,6 +28,11 @@ cssPrefix `pp-`, afterSync). Each **[declared]** change goes to the live check.
   encounter XP matches its dry run.
 - **[declared] Two gathers at once keep both manifests**: the ring writes through one
   `serialStore` (a parallel gather no longer makes the other's call id `CALL_UNKNOWN`).
+- **[declared] `ensureMarkers` no longer duplicates across two GM tabs** (§5.9.1): the folder and
+  each marker actor are created with a fixed id (`pPromptsFolder00`, `pPrompts<size>` padded to
+  16) and `keepId`, so when the bridge tab and a GM browser tab both find one missing, the second
+  create replaces the first instead of adding a second `Prompt Markers` folder or `Prompt · <size>`
+  actor. A folder holding that id is found even after a rename. Existing markers keep their ids.
 - `ensureMarkers` repairs every drifted actor in one batch update. A hot re-import after
   `uninstall()` re-wires and republishes at once.
 - Console only (DP9): a core token API that throws warns once; swallowed failures log at debug

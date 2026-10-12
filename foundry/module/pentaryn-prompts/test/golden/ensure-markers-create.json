@@ -2,6 +2,7 @@
   {
     "op": "Folder.create",
     "data": {
+      "_id": "pPromptsFolder00",
       "name": "Prompt Markers",
       "type": "Actor",
       "color": "#5b3fa6",
@@ -12,6 +13,7 @@
     "op": "Actor.createDocuments",
     "data": [
       {
+        "_id": "pPromptstiny0000",
         "type": "npc",
         "sort": 10,
         "name": "Prompt · tiny",
@@ -62,6 +64,7 @@
         }
       },
       {
+        "_id": "pPromptsxxl00000",
         "type": "npc",
         "sort": 60,
         "name": "Prompt · xxl",
