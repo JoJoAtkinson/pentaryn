@@ -74,3 +74,21 @@ test("refOf, toIdSet, withRef", () => {
   assert.deepEqual(w("Aldric Vane", 1), ["Aldric Vane", 1]);
   assert.deepEqual(w("Nobody", 2), [null, 2]);
 });
+
+// KIT-M2: byName falls back to a unique case-insensitive exact name (the "Wren" case above), so no
+// doc may still call resolution "exact match only".
+test("KIT-M2: the README row, the resolve.mjs header and publish.mjs inspect() describe the case-insensitive fallback", async () => {
+  const { readFileSync } = await import("node:fs");
+  const { fileURLToPath } = await import("node:url");
+  const read = rel => readFileSync(fileURLToPath(new URL(`../${rel}`, import.meta.url)), "utf8");
+  const RULE = "exact name, then a unique case-insensitive exact name; never a substring";
+  const row = read("README.md").split("\n").find(l => l.startsWith("| `resolve.mjs` |"));
+  assert.ok(row?.includes(RULE), "README.md resolve.mjs row");
+  const header = read("resolve.mjs").split("*/")[0].replace(/\s*\n\s*\*\s*/g, " ");
+  assert.ok(header.includes(RULE), "resolve.mjs header comment");
+  const inspect = read("publish.mjs").split("\n").filter(l => /^\s*\/\//.test(l)).map(l => l.replace(/^\s*\/\/\s?/, "")).join(" ");
+  assert.ok(inspect.includes(RULE), "publish.mjs inspect() comment");
+  for (const [where, text] of [["README.md row", row], ["resolve.mjs header", header], ["publish.mjs comments", inspect]]) {
+    assert.doesNotMatch(text, /exact match only|\(exact match,/, where);
+  }
+});

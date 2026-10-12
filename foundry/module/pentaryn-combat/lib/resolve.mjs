@@ -1,8 +1,9 @@
 // pentaryn kit 1.2.0 · vendored from foundry/lib/resolve.mjs — edit the canonical file, then run scripts/foundry/blueprint/vendor.py
 /**
  * One reference resolver for every API boundary. A ref may be a Document, a placeable (`.document`),
- * a UUID, a 16-character id, or an exact name — never a substring. Substring matching is a
- * convenience of the MCP bridge's own tools and must not reach a write path here.
+ * a UUID, a 16-character id, or a name matched as: exact name, then a unique case-insensitive
+ * exact name; never a substring. Substring matching is a convenience of the MCP bridge's own tools
+ * and must not reach a write path here.
  *
  * Scene scope is explicit: `sceneId` names a scene, `"current"` means the viewing client's canvas,
  * and nothing at all means every scene in order. There is no implicit `canvas.scene`, because the

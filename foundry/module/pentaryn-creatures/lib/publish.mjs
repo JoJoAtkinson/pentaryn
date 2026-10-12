@@ -80,8 +80,9 @@ export function installRoot(root, { g = globalThis } = {}) {
     }
     return out;
   });
-  // The ref is resolved ONCE (exact match, explicit scene scope), so every namespace inspects the
-  // same Document and an ambiguous name is reported once instead of per module.
+  // The ref is resolved ONCE (explicit scene scope; a name matches as: exact name, then a unique
+  // case-insensitive exact name; never a substring), so every namespace inspects the same Document
+  // and an ambiguous name is reported once instead of per module.
   define(root, "inspect", async (ref, opts = {}) => {
     const r = live();
     const doc = resolveRef(ref, opts.kind ?? "actor", { sceneId: opts.sceneId, base: opts.base, g });

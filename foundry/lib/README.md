@@ -29,7 +29,7 @@ Bump `kit.json` `version`, `errors.mjs` `KIT_VERSION` and every header together.
 | `log.mjs` | `makeLog(moduleId)` → `error/warn/warnOnce/info/debug/debug$/enabled/trace/traces/swallow/notify` | lines are `<module> \| <event>`; debug gated by `CONFIG.debug[moduleId]` |
 | `hooks.mjs` | `hookRegistry(moduleId, log)` → `on/once/off/offAll/ids/guard/guardSwallowAsync`; `emitter(moduleId, HOOKS)` | `guard` passes vetoes through; `guardSwallowAsync` is aoe's old guard; `reg.on(n, fn, { guard: "warn" })` logs a throw at warn instead of error (1.0.1) |
 | `settings.mjs` | `defineSettings`, `settingReader`, `settingsSnapshot`, `defineKeybindings`, `serialStore` | `serialStore(MODULE, ["counter", "log"])` serialises several keys on one queue (1.0.1); rows carry literal `name`/`hint` keys; both define calls skip rows already registered, and `defineKeybindings` registers nothing once Foundry has built its bindings (after `setup`), so a hot patch never throws |
-| `resolve.mjs` | `resolveRef`, `refOf`, `toIdSet`, `withRef` | exact match only, explicit scene scope |
+| `resolve.mjs` | `resolveRef`, `refOf`, `toIdSet`, `withRef` | exact name, then a unique case-insensitive exact name; never a substring (1.2.0 KIT-M2 wording); explicit scene scope |
 | `api.mjs` | `buildApi`, `describe`, `surfaceOf`, `maxDepth`, `toPlain` | drift and reserved names throw at load; a `ref` row resolves per call with that call's `opts.sceneId`/`opts.base`; a write row returns `fail()` on an unresolvable ref; an `unlisted` table is published as a frozen **copy** — the caller's objects are never frozen (1.0.1); a row's `dryRun: true` shows in `describe()`, and a first `ref` with `resolve: "self"` is passed raw like `resolve: false` (the function resolves strings itself; the marker shows in `describe()`) (1.1.0) |
 | `queries.mjs` | `guarded`, `relayed`, `registerQueries`, `queryNameOf`, `queryGM` | `CONFIG.queries` from `query: true` rows; `guarded(fn, { sender: "any" })` and `fn(data, ctx)`; `relayed` = any sender, active-GM receiver (`relay: true` rows, whose API function gets ctx as a trailing argument, 1.2.0 AC-1); `row.queryName` when the query name ≠ the row path (1.0.1) |
 | `publish.mjs` | `publishNamespace`, `installRoot`, `apiOf`, `publishedOf` | `module.api` canonical; assigns into the plain `game.pentaryn` (no frozen-root guard, no re-alias tick since 1.0.2) |
@@ -84,3 +84,7 @@ kit-edge-2 (declared, test-kit only): the stub's `doc.delete()` runs the vetoabl
 `Hooks.call("preDelete<Doc>", doc, options, userId)` first, as Foundry does; a `false` resolves
 undefined, leaves the collection alone and logs no `delete` to `F.calls`. A proceeding delete now
 logs `Hooks.call preDelete<Doc>` before its `delete` entry. No module golden moved.
+KIT-M2 (declared, docs only): the README `resolve.mjs` row, the `resolve.mjs` header and the
+`publish.mjs` `inspect()` comment said resolution was "exact match only"; they now say what `byName`
+has always done — exact name, then a unique case-insensitive exact name; never a substring. No code
+change: modules rely on the fallback.
