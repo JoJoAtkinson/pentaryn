@@ -46,6 +46,7 @@ from typing import Callable
 from scripts.foundry.ops import config as ops_cfg
 from scripts.foundry.update import adjustments as adj_mod
 from scripts.foundry.update import llm, risk
+from scripts.foundry.update.report import IPV4, IPV6
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 CACHE_DIR = REPO_ROOT / ".state" / "vtt-update-analysis"
@@ -1134,7 +1135,6 @@ def render_plan(run_id: str, f: dict, analysis: dict, *, cached_since: str | Non
               "- the system or core: `make foundry-restore SNAP=<snapshot>` — a launched world "
               "has already migrated; restoring the code alone is not enough", ""]
     # The plan is committed and pushed (a public repo), like the report — same IP scrub.
-    from scripts.foundry.update.report import IPV4, IPV6
     return IPV6.sub("<ip>", IPV4.sub("<ip>", "\n".join(lines)))
 
 
@@ -1591,17 +1591,6 @@ def render_preview(pv: dict) -> str:
     return "\n".join(lines)
 
 
-def cost_line(calls: list[dict]) -> str:
-    """``LLM cost this run: $0.42 (adjudicator $0.05, T0 $0.00, T1 $0.37)``, plus what a
-    call killed on timeout may have spent without reporting it."""
-    by: dict[str, float] = {}
-    for c in calls:
-        if c:
-            by[c.get("tier", "?")] = by.get(c.get("tier", "?"), 0.0) + float(c.get("cost_usd") or 0)
-    total = sum(by.values())
-    parts = ", ".join(f"{k} ${v:.2f}" for k, v in by.items())
-    unmeasured = llm.charged([c for c in calls if c]) - llm.total_cost([c for c in calls if c])
-    return (f"LLM cost this run: ${total:.2f}" + (f" ({parts})" if parts else "")
-            + (f" + up to ${unmeasured:.2f} unreported (timed-out calls)"
-               if unmeasured > 0.005 else ""))
+# Lives in llm (it needs nothing else); kept here because callers and tests use esc.cost_line.
+cost_line = llm.cost_line
 

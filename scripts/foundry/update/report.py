@@ -164,8 +164,7 @@ def llm_calls(record: dict) -> list[dict]:
 
 
 def cost_line(record: dict) -> str:
-    from scripts.foundry.update.escalate import cost_line as _line
-    return _line(llm_calls(record))
+    return llm.cost_line(llm_calls(record))
 
 
 def spec(policy: dict | None = None) -> llm.Spec:
