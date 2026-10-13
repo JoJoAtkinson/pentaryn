@@ -35,6 +35,7 @@ import {
   STUDY_RUNGS,
   grantsForEntry,
   visibleAttributesFor,
+  indexRegistry,
   isBlankProse,
   BELIEFS_FLAG
 } from "./known-core.mjs";
@@ -505,8 +506,9 @@ export function buildKnownHTML(actor) {
    * rogue already filed, so the join needs the subject's groups, not just its id.
    */
   const attrsFor = new Map();
-  // the registry cannot change mid-paint: read (and clamp) it once, not once per entry (ties-23)
-  const registryNow = registryOf();
+  // the registry cannot change mid-paint: read (and clamp) it once, not once per entry (ties-23),
+  // and index it once too — the per-entry filter would otherwise re-clamp it per row (ties-ui-perf-7)
+  const registryIndex = indexRegistry(registryOf());
   /*
    * The study state per row, computed once here rather than inside the row builder — it walks
    * the kind's items to answer "is there anything to learn", and a notebook of thirty entries
@@ -526,7 +528,7 @@ export function buildKnownHTML(actor) {
       subject
         ? visibleAttributesFor({
             carried: attributeIdsOf(subject, kindActorOf),
-            registry: registryNow,
+            index: registryIndex,
             beliefs: subject.getFlag(MODULE, BELIEFS_FLAG) ?? {},
             characterId: actor.id,
             isGM

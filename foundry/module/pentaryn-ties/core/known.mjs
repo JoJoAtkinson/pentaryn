@@ -290,9 +290,17 @@ export function grantsForEntry(granted, entryId, { attributeIds = [] } = {}) {
  *
  * A **non-secret** attribute is unfiltered — it was never hidden, so hiding its lore would put a
  * roll in front of a fact already on screen.
+ *
+ * Pass `index` in place of `registry` when calling it in a loop: the list form clamps the whole
+ * registry on every call.
  */
-export function visibleAttributesFor({ carried = [], registry = [], beliefs = {}, characterId = "", isGM = false } = {}) {
-  const byId = new Map(readRegistry(registry).map(e => [e.id, e]));
+export function visibleAttributesFor({ carried = [], registry = [], index = null, beliefs = {}, characterId = "", isGM = false } = {}) {
+  // `index` (an `indexRegistry()` result or its `byId` Map) skips the clamp — a paint that asks
+  // once per Known entry builds it once and passes it; a `registry` list still works (ties-ui-perf-7)
+  const byId =
+    index?.byId instanceof Map ? index.byId
+    : index instanceof Map ? index
+    : new Map(readRegistry(registry).map(e => [e.id, e]));
   return (Array.isArray(carried) ? carried : []).filter(id => {
     if (isGM) return true; // the GM authored the secret; hiding it from them helps nobody
     if (!byId.get(id)?.secret) return true;

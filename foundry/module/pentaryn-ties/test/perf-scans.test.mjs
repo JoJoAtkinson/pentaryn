@@ -195,3 +195,34 @@ test("perf-1: studyStateFor skips the item walk when the biography decides", asy
   assert.ok(armed.reads > 0);
   assert.equal(Study.studyStateFor(get(PC), kindWith("zzStubKind000003", "", [])).content, false, "no biography, tiers or attacks: no content");
 });
+
+test("ties-ui-perf-7: visibleAttributesFor takes an index — same answer as the list it was built from", async () => {
+  const { visibleAttributesFor, indexRegistry } = await import("../known-core.mjs");
+  const carried = ["city", "guild", "kin", "loose"];
+  const beliefs = {};
+  const viaList = visibleAttributesFor({ carried, registry: REGISTRY, beliefs, characterId: PC });
+  assert.deepEqual(viaList, ["loose"], "the secret ones stay hidden until identified");
+  const index = indexRegistry(REGISTRY);
+  assert.deepEqual(visibleAttributesFor({ carried, index, beliefs, characterId: PC }), viaList, "an indexRegistry() result");
+  assert.deepEqual(visibleAttributesFor({ carried, index: index.byId, beliefs, characterId: PC }), viaList, "its byId Map");
+  assert.deepEqual(visibleAttributesFor({ carried, index, beliefs, characterId: PC, isGM: true }), carried);
+});
+
+test("ties-ui-perf-7: one Known-tab paint clamps the registry once, not once per Known entry", async () => {
+  const { buildKnownHTML } = await import("../known-ui.mjs");
+  const real = Array.isArray;
+  let perEntry = 0;
+  let html = "";
+  Array.isArray = function (v) {
+    if (calledFrom("readRegistry", "visibleAttributesFor")) perEntry++;
+    return real(v);
+  };
+  try {
+    html = buildKnownHTML(get(PC));
+  } finally {
+    Array.isArray = real;
+  }
+  assert.equal(get(PC).flags["pentaryn-ties"].known.length, 3);
+  assert.match(String(html), /ZZ Brakka/);
+  assert.equal(perEntry, 0, "the paint hands each row the one index it built, so no row re-clamps the registry");
+});

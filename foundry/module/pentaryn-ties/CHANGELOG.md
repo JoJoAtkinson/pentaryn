@@ -26,6 +26,11 @@ Added: `inspect(ref, { as })` (the dossier), `selftest()`, `attributes.effective
 (with the kind pointer), `attributes.tree/branch/describeId`, `study.factStatus/shareFact/forgetFact`,
 `study.identified`.
 
+Fixed (declared): a Known-tab paint indexes the attribute registry once and hands that index to
+every entry's secrecy filter, instead of each entry re-clamping the whole registry; what the tab shows
+is unchanged. `visibleAttributesFor` takes an `index` (an `indexRegistry()` result or its `byId` Map)
+in place of `registry`; the list form still works. ties-ui-perf-7.
+
 Fixed (declared): the Attributes tab's two GM autocompletes (add an attribute, tell a character)
 repaint once the GM pauses typing (120 ms) instead of on every keystroke, and gather the world's
 attribute ids once per focus instead of walking every actor per letter; focus still paints at once.
