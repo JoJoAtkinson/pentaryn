@@ -22,7 +22,7 @@ const TO_CORPSE_WRITES = ["Item Piles pile flags", ...CORPSE_FLAGS, "delta.owner
 const FROM_CORPSE_WRITES = ["Item Piles pile flags", ...CORPSE_FLAGS, "delta.ownership", "actor ownership (linked)", "sight.enabled", "ActiveEffect (Lootable, removed)"];
 const SYNC_WRITES = [...new Set([...TO_CORPSE_WRITES, ...FROM_CORPSE_WRITES])];
 
-const corpseRow = (path, params, returns, doc, extra = {}) => ({ path, params, returns, gm: false, writes: false, legacy: true, doc, ...extra });
+const legacyRow = (path, params, returns, doc, extra = {}) => ({ path, params, returns, gm: false, writes: false, legacy: true, doc, ...extra });
 
 export const MANIFEST = Object.freeze({
   module: MODULE,
@@ -31,29 +31,29 @@ export const MANIFEST = Object.freeze({
   contract: CONTRACT,
   flagScope: MODULE,
   rows: [
-    corpseRow("corpses.sync", [ACTOR], "Promise<void>",
+    legacyRow("corpses.sync", [ACTOR], "Promise<void>",
       "Active GM: turn each eligible token of the actor, on every scene, into a corpse pile (dead) or back (alive). No-op elsewhere; without Item Piles or given a non-Actor, one console warning and nothing done.",
       { gm: true, writes: true, sideEffects: SYNC_WRITES }),
-    corpseRow("corpses.toCorpse", [TOKEN_DOC], "Promise<void>",
+    legacyRow("corpses.toCorpse", [TOKEN_DOC], "Promise<void>",
       "Make this token a lootable corpse pile now (players get OBSERVER on its delta, a linked token's on its base actor; sight off; Dead as the overlay). Already our corpse pile: only a lost OBSERVER map or sight-off is written again. A failed corpse-flag write reverts the new pile and rejects; without Item Piles or given a non-TokenDocument, one console warning and nothing done.",
       { gm: true, writes: true, sideEffects: TO_CORPSE_WRITES }),
-    corpseRow("corpses.fromCorpse", [TOKEN_DOC], "Promise<void>",
+    legacyRow("corpses.fromCorpse", [TOKEN_DOC], "Promise<void>",
       "Turn a corpse we made back into a creature: revert the pile, give back its sight and pre-death delta ownership (a linked token: its base actor's). Without Item Piles or given a non-TokenDocument, one console warning and nothing done.",
       { gm: true, writes: true, sideEffects: FROM_CORPSE_WRITES }),
-    corpseRow("corpses.isDead", [ACTOR], "boolean",
+    legacyRow("corpses.isDead", [ACTOR], "boolean",
       "Dead by the corpse rule: hp 0 or below with hp.max > 0, or the dead status."),
-    corpseRow("corpses.revive", [TOKEN_DOC], "Promise<void>",
+    legacyRow("corpses.revive", [TOKEN_DOC], "Promise<void>",
       "The HUD's Revive: clear Dead, raise hp to 1, then sync (the pile reverts).",
       { gm: true, writes: true, sideEffects: ["ActiveEffect (Dead)", "system.attributes.hp.value", ...FROM_CORPSE_WRITES] }),
-    corpseRow("corpses.paintEye", [{ name: "token", type: "Token", resolve: false, doc: "the canvas placeable" }], "void",
+    legacyRow("corpses.paintEye", [{ name: "token", type: "Token", resolve: false, doc: "the canvas placeable" }], "void",
       "Draw or hide the lootable eye on one token (this client only; no document)."),
-    corpseRow("corpses.paintAllEyes", [], "void", "paintEye on every token of the viewed scene."),
-    corpseRow("corpses.migrateLegacyEyes", [], "Promise<void>",
+    legacyRow("corpses.paintAllEyes", [], "void", "paintEye on every token of the viewed scene."),
+    legacyRow("corpses.migrateLegacyEyes", [], "Promise<void>",
       "Active GM: remove the pre-overlay 'Lootable' effects and make Dead the overlay. Runs once at ready.",
       { gm: true, writes: true, sideEffects: ["ActiveEffect (Lootable, removed)", "flags.core.overlay"] }),
-    corpseRow("loot.install", [APP], "boolean", "Add (or repaint) the Loot all button in one open loot window; false when it cannot."),
-    corpseRow("loot.refreshAll", [], "void", "Repaint every tracked Loot all button."),
-    corpseRow("loot.recipientFor", [APP], "Actor | null",
+    legacyRow("loot.install", [APP], "boolean", "Add (or repaint) the Loot all button in one open loot window; false when it cannot."),
+    legacyRow("loot.refreshAll", [], "void", "Repaint every tracked Loot all button."),
+    legacyRow("loot.recipientFor", [APP], "Actor | null",
       "Who Loot all would loot into: the window's recipient, else the user's character, else their first owned character (players)."),
     {
       path: "all", params: [], returns: "Entry[]", gm: false, writes: false, legacy: true,

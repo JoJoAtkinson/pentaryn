@@ -128,6 +128,8 @@ Declared changes:
 - dropbin-EXT-8: the corpse eye loads `modules/pentaryn-dropbin/assets/icon-eye.webp`, shipped in
   the module; it loaded `assets/tokens/custom/props/icon-eye.webp` from one world's Data folder, so
   any other world showed no eye on a lootable corpse.
+- dropbin-M13: the manifest's row helper is `legacyRow` (was `corpseRow`; it builds the `loot.*`
+  rows too). Rename only — `describe()` and every row are unchanged.
 
 Added: `list(n, { brief })`, `restoreResult`, `inspect`, `selftest` (items-journal-28).
 - A restore another module refuses (a `preCreateItem` veto) is `{ ok: false, reason: "not-created" }`

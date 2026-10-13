@@ -66,6 +66,14 @@ test("dropbin-EXT-2: corpse rows declare every document write they make (revive 
   has("corpses.revive", ["ActiveEffect (Dead)", "system.attributes.hp.value", ...fx("corpses.fromCorpse")]);
 });
 
+test("dropbin-M13: the legacy-row helper is named legacyRow (it builds the loot.* rows too, not only corpses.*)", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const src = await readFile(new URL("../api-manifest.mjs", import.meta.url), "utf8");
+  assert.ok(!/\bcorpseRow\b/.test(src), "no helper named corpseRow");
+  assert.match(src, /const legacyRow = /);
+  for (const path of ["corpses.sync", "loot.install"]) assert.match(src, new RegExp(`legacyRow\\("${path.replace(".", "\\.")}"`), path);
+});
+
 test("settings() reports the store rows' size, never the ledger itself", () => {
   assert.deepEqual(api.settings(), { log: { store: true, size: 0 }, counter: { store: true, size: null } });
 });
