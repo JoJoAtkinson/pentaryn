@@ -8,7 +8,8 @@ Three layers, and they are not the same thing:
 
     ops up / down / status      one piece — the Foundry application itself
     ops tunnel-up / -down       one piece — the Cloudflare tunnel
-    make vtt-up / vtt-down      the composite: lock check, backup, assets, app, tunnel
+    make vtt-up / vtt-down      the composite: lock check, foundry-up/-down, tunnel
+    make foundry-up / -down     the app with its backups: pre-launch (and assets) / shutdown
 
 `make vtt-up` is what you want at the table. The pieces are what you reach for when
 one of them is the thing that's wrong.

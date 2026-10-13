@@ -150,7 +150,8 @@ Nobody is playing at four in the morning, and leaving a public tunnel up all wee
 exposure for nothing. Bring it back with `make vtt-up` when you want to play; the
 notification and the log both say so.
 
-The shutdown deliberately skips the parting backup `make vtt-down` takes. The run already
+The shutdown deliberately skips the parting backup `make foundry-down` (so `vtt-down`) takes; it
+stops Foundry itself, never through make. The run already
 snapshotted before touching anything, and that snapshot is the week's rollback point — a
 second one minutes later would fall inside the 5-day coalescing window and **replace** it
 with post-update state, destroying the restore point on the very run that made it.

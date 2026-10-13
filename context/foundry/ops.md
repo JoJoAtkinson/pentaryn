@@ -36,7 +36,7 @@ Where this one and `foundry-vtt.md` overlap — the actors import pipeline and i
 | Play tonight | `make vtt-up` → players at <https://vtt.atjoseph.com> → `make vtt-down` after (returns at once; the snapshot uploads in the background — `make foundry-cloud` shows it, and don't sleep the laptop until it says done; `WAIT=1` waits instead) |
 | Get **yourself** into the world, no dropdown, no typed password | `make login` — §2's login box |
 | Know if anything's running | `make vtt` — Foundry, tunnel pid, and public reachability, three separate probes |
-| Add art (tokens/maps/tiles/portraits/audio) | Drop `<kind>-<nn>.zip` in `OneDrive/DnD/foundry/assets/`, then `make foundry-assets` (or just `make vtt-up`) |
+| Add art (tokens/maps/tiles/portraits/audio) | Drop `<kind>-<nn>.zip` in `OneDrive/DnD/foundry/assets/`, then `make foundry-assets` (or just `make foundry-up` / `vtt-up`) |
 | Snapshot the world right now | `make foundry-down` (or `make vtt-down`) — every stop takes the shutdown snapshot itself, in the background (`WAIT=1` waits). With the server already stopped, `make foundry-backup`; it **refuses** while the server is up |
 | Roll back a broken world | `make foundry-restore` to list, `make foundry-restore SNAP=<name>` to do it. Never silent — see §3 |
 | Boot BOSS (the alt) from the Mac's latest world | `make vtt-up` on BOSS → Enter at the boot question (§3). `FROM=latest` without asking, `FROM=local` to keep BOSS's own |
@@ -164,29 +164,39 @@ pack (`pentaryn-seafoot-maps.scenes` is unlocked in both worlds).
 ## 2. Lifecycle — and why the order is the order
 
 ```
-make vtt-up      foundry-boot → foundry-backup-safe → foundry-assets-safe → foundry-up → tunnel-up
-make vtt-down    tunnel-down → foundry-down   (foundry-down: ops down → foundry-backup REASON=shutdown BACKGROUND=1; WAIT=1: no BACKGROUND)
+make foundry-up    foundry-boot → foundry-backup-safe → foundry-assets-safe → ops up
+make foundry-down  ops down → foundry-backup REASON=shutdown BACKGROUND=1   (WAIT=1: no BACKGROUND)
+make vtt-up        vtt-lock-check → foundry-up → tunnel-up
+make vtt-down      vtt-lock-check → tunnel-down → foundry-down
 make vtt         status only (alias: vtt-status)
 ```
 
-The order is not arbitrary. Each step needs the previous one's state:
+**The backups live in `foundry-up` (pre-launch) and `foundry-down` (shutdown)**; `vtt-up` and
+`vtt-down` only add the lock check and the tunnel around them (Joe, 2026-10-13). So every up and
+every down takes exactly one backup, whichever target you run.
+
+The order is not arbitrary. Each step of `vtt-up` needs the previous one's state (0–3 are
+`foundry-up`):
 
 | # | Step | Why here |
 | - | ---- | -------- |
 | 0 | `foundry-boot` | **The boot choice** (§3): when the cloud's newest snapshot — from either machine — is newer than what this world is based on, say so and offer it (Enter = take it). First, so a restore happens while nothing is running, and so the backup after it digest-skips instead of uploading the world that was just replaced. No terminal → never restores, one notice line. `FROM=latest\|local\|<name>` decides without asking |
-| 1 | `foundry-backup-safe` | A LevelDB world copies consistently **only while stopped**. Snapshotting on *start* as well as stop is what catches a crash or force-quit that skipped the shutdown hook. `-safe` = `--if-stopped`: skips quietly if the server is already up, so `make vtt-up` on a live server doesn't abort before starting the tunnel; a cloud that is down (or a failed upload) is a warning naming any tar left on disk, exit 0 — `vtt-down` tries again |
+| 1 | `foundry-backup-safe` | A LevelDB world copies consistently **only while stopped**. Snapshotting on *start* as well as stop is what catches a crash or force-quit that skipped the shutdown hook. `-safe` = `--if-stopped`: skips quietly if the server is already up, so `make vtt-up` on a live server doesn't abort before starting the tunnel; a cloud that is down (or a failed upload) is a warning naming any tar left on disk, exit 0 — `foundry-down` tries again |
 | 2 | `foundry-assets-safe` | New pack folders are on disk before anyone asks for them. A soft constraint — Foundry serves `Data/` per-request, so a later unpack would still be served — but unpacking while the server is down is free and cannot race. `-safe` = `--if-reachable`: a cloud that is down is a warning, exit 0; a badly named or edited pack still stops the start |
-| 3 | `foundry-up` | `host.start()` (`open -a` on the Mac), then polls `localhost:30000` for 40 s. The origin must answer before anything points at it |
+| 3 | `ops up` | `host.start()` (`open -a` on the Mac), then polls `localhost:30000` for 40 s. The origin must answer before anything points at it |
 | 4 | `tunnel-up` | **Last, because this is the step that makes `Data/` public** (§6). Primary host only — on the alt it prints why and exits 0, so Foundry is up with no tunnel. Refuses early if `~/.cloudflared/cert.pem` is missing or the named tunnel doesn't exist → `make tunnel-setup` |
 
 `vtt-down` reverses it exactly: close the public surface first, stop the app, *then* snapshot —
-because the snapshot is the step that requires "stopped". The snapshot belongs to `foundry-down`
-itself (defect wave 3, 2026-10-13), so **every stop backs up**: `make vtt-down`, `make foundry-down`
-alone, and a restart (`make foundry-down` then `make foundry-up`, or `vtt-down` then `vtt-up`) each take
-exactly one shutdown snapshot — `vtt-down` does not take a second. `foundry-up` takes no backup of its
-own. `vtt-up`'s pre-launch backup (`foundry-backup-safe`) adds none either: while the shutdown upload is
-still running it skips ("that upload holds this world"); once that upload is done it digest-skips the
-unchanged world.
+because the snapshot is the step that requires "stopped". **Every stop backs up once and every
+start backs up once**: `make foundry-down` (alone or inside `vtt-down`) takes the shutdown
+snapshot, `make foundry-up` (alone or inside `vtt-up`) takes the pre-launch one; neither `vtt-*`
+target takes a second. A restart (`make foundry-down` then `make foundry-up`, or `vtt-down` then
+`vtt-up`) is one of each, and the pre-launch half costs nothing: while the shutdown upload is still
+running it skips ("that upload holds this world"); once that upload is done it digest-skips the
+unchanged world. The Saturday updater goes through none of these targets — it takes its own
+pre-update backup and starts Foundry itself (only `make tunnel-up`/`tunnel-down` are run), so it
+adds no lifecycle backup. `make login` starts the app through `ops up` directly, with the boot
+choice but no backup.
 Proved live on 2026-10-13: `make foundry-down WAIT=1` took one shutdown snapshot, and that
 snapshot, restored into a side folder (never over the live world), matched the stopped world
 file for file (497/497) — [`../plans/defect-wave-3-2026-10-13/README.md`](../plans/defect-wave-3-2026-10-13/README.md).
@@ -213,7 +223,7 @@ there, and each upload adds `cloud-upload` lines (queued, uploading, done/failed
 
 | Target | Does |
 | ------ | ---- |
-| `make foundry-up` / `foundry-down` | The app (plus the boot choice before `foundry-up`, and the background shutdown snapshot after `foundry-down` — `WAIT=1` waits; Foundry already down still snapshots, digest-skipping an unchanged world). Via `host.py`: `foundry-down` is `osascript quit`, falling back to `pkill` on the Mac; `PENTARYN_STOP_CMD` on BOSS (hooks get 30s: a hung stop hook is forced, a hung start hook fails naming the hook) |
+| `make foundry-up` / `foundry-down` | The app with its backups: `foundry-up` is the boot choice, the pre-launch backup and the asset step (both `-safe`: an unreachable cloud warns, never stops), then the start; `foundry-down` is the stop, then the background shutdown snapshot (`WAIT=1` waits; Foundry already down still snapshots, digest-skipping an unchanged world). Via `host.py`: `foundry-down` is `osascript quit`, falling back to `pkill` on the Mac; `PENTARYN_STOP_CMD` on BOSS (hooks get 30s: a hung stop hook is forced, a hung start hook fails naming the hook) |
 | `make foundry-boot` | The boot choice alone — `FROM=` to decide it |
 | `make tunnel-up` / `tunnel-down` | Tunnel only. `tunnel-up` starts cloudflared detached, writes the pidfile, and checks it survived 3 s. The pidfile is trusted only while its pid is alive **and** `ps` names it cloudflared; otherwise both commands delete it (`▸ stale pidfile removed`) and never signal that process |
 | `make tunnel-logs` | Last 40 lines of the cloudflared log |
@@ -274,8 +284,9 @@ never prompts at all and stays in whatever is already serving, because silently 
 live world is not something an unattended run may do. Logging in as a player is the fast way
 to check what they can actually see.
 
-It is **not** part of `vtt-up`, deliberately: `vtt-up` also runs unattended from the Saturday
-updater, and popping a browser window open there would be wrong. Run both — order doesn't
+It is **not** part of `vtt-up`, deliberately: `vtt-up` must stay safe to run unattended (no
+terminal), and popping a browser window open there would be wrong. (The Saturday updater does not
+call `vtt-up`; it restarts Foundry itself.) Run both — order doesn't
 matter, `login` starts the app itself if it has to.
 
 **No GM password is stored anywhere.** The one secret involved is the *server admin*
@@ -359,7 +370,7 @@ the bundle each module and system was at. Snapshots from before bundles (untagge
 | `make foundry-boot` | ⬇ maybe | **The boot choice** (below). Part of `vtt-up` and `foundry-up`; `FROM=latest\|local\|<name>` decides without asking |
 | `make foundry-assets` | ⬇ down | Unpacks any new `<kind>-<nn>.zip` into `Data/assets/<kind>/<kind>-<nn>/`. Tracked in `foundry/assets-manifest.json` (sha256, bytes, mtime); a zip whose size and mtime match is skipped **without a download** |
 | `make foundry-backup` | ⬆ up | Tars `Data/worlds` + `Config` (**~45 MB**) in `FOUNDRY_DATA/.pentaryn-tmp/`, with the bundle manifest as its first member and in the `.parent` sidecar, and stages a tar of every module/system bundle the cloud lacks (fingerprint = a content hash that ignores LevelDB housekeeping, so a launch changes nothing). The upload sends those bundles **first**, then the sidecar, then the world tar (as `<name>.partial`, renamed, size-checked), checking before the sidecar and again after the tar that every bundle it names is still there. Keeps **10 per host** (plus that host's last 3 restore `.safety` copies, counted apart); a snapshot within 5 days of this host's newest **replaces** it; skips when the world tree and the manifest are unchanged (re-uploading any bundle its snapshot names that was deleted by hand — after a restore of a full snapshot, nothing). A backup that uploaded ends with the bundle sweep. With `BACKGROUND=1` (what `vtt-down` passes) the upload runs in a detached process |
-| `make foundry-backup-safe` | ⬆ up | Same, `--if-stopped` — the lifecycle variant |
+| `make foundry-backup-safe` | ⬆ up | Same, `--if-stopped` — the lifecycle variant, `foundry-up`'s pre-launch backup |
 | `make foundry-restore` | manual | No `SNAP` → lists every host's snapshots (name, host, UTC time, version, size, `bundled`/`full`). `SNAP=<name>` (any host's, or `major-release/`) → finish any queued upload, download the world tar and **only the bundles this machine lacks**, **archive current state first**, replace worlds + Config, swap only the changed modules, remove modules the snapshot does not have (they are in the safety copy; with no local world they are left and listed); demands you type `restore` (without a terminal it refuses unless `--yes` is passed). A full snapshot clears and extracts worlds, Config and modules, as before — keeping in place whatever in `Data/modules` is not a bundle (the safety copy cannot hold it) |
 | `make foundry-cloud` | — | Status: this host's background upload (in progress / pending / last result; a dropped one names the tar kept in `.pentaryn-tmp/incomplete/`), storage (rclone/folder + root), host and role, what this world is based on, newest per host, untagged count, bundles (in the cloud, unreferenced, local ones not yet uploaded) |
 | `make foundry-bundles` | — | Every local module and system with its version, fingerprint, size and whether its bundle is in the cloud; then the cloud bundles no snapshot references |
@@ -990,7 +1001,7 @@ has three levels. Anything that walks scenes should read `levels[]`, not `backgr
 | **A dropped module is invisible until restart + enable** | The `Data/modules` scan runs at server startup, and enablement is per-world (`core.moduleConfiguration` / Manage Modules). Fails by doing nothing at all |
 | **Filesystem module drop skips dependency resolution** | You are the resolver — `enhancedcombathud-dnd5e` needs its CORE module. Check `relationships` in `module.json` before copying |
 | **The Makefile still says `ardenhaven`** | Live world is `space-journey`. `make foundry-import` stages into the wrong world and the 404 gate passes for the wrong reason — every light green, nothing imported (§1's red box) |
-| **`make foundry-backup` refuses while running** | By design. Not a bug — `make vtt-down` first. `foundry-backup-safe` skips silently instead, which is only correct in the lifecycle chain |
+| **`make foundry-backup` refuses while running** | By design. Not a bug — `make foundry-down` (or `vtt-down`) first; it takes the shutdown snapshot itself. `foundry-backup-safe` skips silently instead, which is only correct as `foundry-up`'s pre-launch step |
 | **A republished asset zip is refused** | Packs are append-only. Bump the number; don't edit in place |
 | **A scene built from the raw map `.jpg` has no walls** | The art lives in `maps/` *and* in a 687-scene compendium with walls/sounds/lights authored. Point at the image and you silently get a background and nothing else. See §8 |
 | **`scene.background.src` writes vanish on v14** | `background` is not in the v14 Scene schema — it's a v13 read shim. Creates and updates are dropped **silently**, no error, and the scene renders blank. See §9 |

@@ -206,8 +206,8 @@ def test_vtt_down_backs_up_exactly_once_wave3_1(argv):
 
 
 def test_a_restart_backs_up_once_wave3_1():
-    """down then up: one shutdown backup, before the app starts again. foundry-up takes no
-    pre-launch backup (only vtt-up's foundry-backup-safe does)."""
+    """down then up: one shutdown backup, before the app starts again. (Since wave 3b
+    foundry-up takes the pre-launch backup too: one per half, pinned below.)"""
     out = _dry_args("foundry-down", "foundry-up")
     assert out.count("cloud backup --reason shutdown") == 1
     assert out.index("cloud backup --reason shutdown") < out.index("ops up")
@@ -323,3 +323,95 @@ def test_help_offers_no_sync_for_a_retired_module_walls_retire():
     assert retired == ["walls"]
     assert "walls" not in names and "ties" in names
     assert "retired, -check only: walls" in line
+
+
+# ── wave 3b (2026-10-13): the backups live in foundry-up / foundry-down ──────
+# Joe: "backups live in foundry-up (pre-launch) and foundry-down (shutdown); vtt-up/vtt-down
+# only add the tunnel around them, no double backup."
+
+def _prereqs(target: str) -> list[str]:
+    """The target's prerequisites, in order, from make's own database (`-p`, `-q`: no recipe runs)."""
+    proc = subprocess.run(["make", "-pq", "help"], cwd=cfg.REPO_ROOT, capture_output=True,
+                          text=True, timeout=30)
+    rules = [ln for ln in proc.stdout.splitlines() if ln.startswith(f"{target}:")
+             and not ln.startswith(f"{target}::")]
+    assert len(rules) == 1, rules
+    return rules[0].split(":", 1)[1].split(";", 1)[0].split()
+
+
+def test_vtt_up_is_lock_check_foundry_up_tunnel_up_wave3b():
+    assert _prereqs("vtt-up") == ["vtt-lock-check", "foundry-up", "tunnel-up"]
+
+
+def test_vtt_down_is_lock_check_tunnel_down_foundry_down_wave3b():
+    """A regression guard: vtt-down already had this shape after wave 3's py-ops."""
+    assert _prereqs("vtt-down") == ["vtt-lock-check", "tunnel-down", "foundry-down"]
+
+
+def test_foundry_up_takes_the_prelaunch_backup_after_boot_before_start_wave3b():
+    """foundry-up: the boot choice, then the pre-launch backup and the asset step in their
+    lifecycle variants (an unreachable cloud warns, never stops), then the app."""
+    assert _prereqs("foundry-up") == ["foundry-boot", "foundry-backup-safe",
+                                      "foundry-assets-safe"]
+    out = _dry("foundry-up")
+    order = [out.index(s) for s in ("scripts.foundry.boot choose",
+                                    "cloud backup --reason prelaunch --if-stopped",
+                                    "cloud assets --if-reachable", "ops up")]
+    assert order == sorted(order), out
+
+
+_UPS = [("vtt-up",), ("vtt-up", "FROM=local"), ("foundry-up",), ("foundry-up", "FROM=latest")]
+_DOWNS = [("vtt-down",), ("vtt-down", "WAIT=1"), ("foundry-down",), ("foundry-down", "WAIT=1")]
+
+
+@pytest.mark.parametrize("argv", _UPS)
+def test_every_up_backs_up_exactly_once_wave3b(argv):
+    out = _dry_args(*argv)
+    assert out.count("scripts.foundry.cloud backup") == 1, out
+    assert out.count("cloud backup --reason prelaunch --if-stopped") == 1, out
+    assert out.count("scripts.foundry.cloud assets") == 1, out
+    assert out.count("scripts.foundry.boot choose") == 1, out
+    assert out.count("ops up") == 1, out
+
+
+@pytest.mark.parametrize("argv", _DOWNS)
+def test_every_down_backs_up_exactly_once_wave3b(argv):
+    """A regression guard: wave 3's py-ops already put the one shutdown backup in foundry-down."""
+    out = _dry_args(*argv)
+    assert out.count("scripts.foundry.cloud backup") == 1, out
+    assert out.count("cloud backup --reason shutdown") == 1, out
+    assert out.count("ops down") == 1, out
+
+
+@pytest.mark.parametrize("argv", [("foundry-down", "foundry-up"), ("vtt-down", "vtt-up")])
+def test_a_restart_backs_up_once_per_half_wave3b(argv):
+    """One shutdown backup after the stop, one pre-launch backup before the start. At run
+    time the pre-launch one skips while the shutdown upload is still going, or digest-skips
+    the unchanged world (test_cloud_background_upload.py pins both)."""
+    out = _dry_args(*argv)
+    assert out.count("scripts.foundry.cloud backup") == 2, out
+    order = [out.index(s) for s in ("ops down", "cloud backup --reason shutdown",
+                                    "cloud backup --reason prelaunch", "ops up")]
+    assert order == sorted(order), out
+
+
+def test_the_updater_never_starts_foundry_through_make_wave3b():
+    """The Saturday updater takes its own pre-update backup and starts Foundry itself
+    (admin.start_app); the only make targets it runs are the tunnel's. So moving the
+    pre-launch backup into foundry-up adds no backup to an unattended run."""
+    import re
+    update_dir = cfg.REPO_ROOT / "scripts" / "foundry" / "update"
+    called = set()
+    for path in update_dir.glob("*.py"):
+        called |= set(re.findall(r"\[\s*[\"']make[\"']\s*,\s*[\"']([\w-]+)[\"']",
+                                 path.read_text(encoding="utf-8")))
+    assert called == {"tunnel-up", "tunnel-down"}, called
+
+
+def test_help_says_where_the_backups_live_wave3b():
+    out = _dry_args("help")
+    up = next(ln for ln in out.splitlines() if "make foundry-up " in ln)
+    down = next(ln for ln in out.splitlines() if "make foundry-down " in ln)
+    assert "pre-launch" in up and "shutdown" in down
+    vtt_up = next(ln for ln in out.splitlines() if "make vtt-up " in ln)
+    assert "foundry-up" in vtt_up and "tunnel" in vtt_up
