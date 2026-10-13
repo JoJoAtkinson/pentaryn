@@ -1,5 +1,18 @@
 # Changelog — Pentaryn Drop Bin (`pentaryn-dropbin`)
 
+## Unreleased — 2026-10-13 (defect wave 2 live check, FIX-3)
+
+Declared changes (DB-AC-1 live):
+
+- A drop onto empty ground records the new pile's scene and uuid again. Item Piles 3.3.4 hands its
+  drop hook the new pile as `{tokenUuid, actorUuid}` (`_createItemPile`'s return), an object its
+  `callHook` does not resolve; the capture read only strings and documents, so the row had no scene
+  and no pile. `resolvePile` (ledger-core) takes all three shapes.
+- One drop is one ledger row. Item Piles removes the item from the character on the active GM's
+  client before firing the drop hook, so the sheet-delete capture wrote a `delete` row first. A drop
+  whose item `_id` and actor match the tail `delete` row within 2 s now takes that row's place and
+  number (`dropReplacesTail`). A hand delete, or a drop of another item, still keeps its own row.
+
 ## 0.2.3 — 2026-10-11 (wave 2 live check, PT3-1 again)
 
 - A revived corpse clears its OBSERVER map with a `ForcedDeletion` (then writes a saved per-token
