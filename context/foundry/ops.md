@@ -402,7 +402,10 @@ world is *based on*:
   To use it: make foundry-up FROM=latest   (or: make foundry-restore SNAP=…)`. The snapshot is
   remembered as **pending** in the state file, so the backup that follows (which makes the local
   world the newest) cannot bury it: every later boot repeats the notice, and the next boot at a
-  terminal asks, until it is answered or restored.
+  terminal asks, until it is answered or restored. Once that backup has made it no longer the
+  newest, the prompt says so (`an earlier boot without a terminal noticed it; it is not the newest
+  cloud snapshot`) and never calls it latest: `boot from the offered snapshot or keep [local]?
+  (Enter = local, l/take, k/local, or a number)`.
 - **Cloud unreachable** (no rclone, no network, a 60 s listing timeout): boots local with a warning
   and exits 0, and so do the pre-launch backup and the asset step after it — `make vtt-up` never
   blocks on the cloud. Only a bad `FROM=<name>` or a failed chosen restore stops the start.
