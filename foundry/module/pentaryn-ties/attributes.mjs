@@ -933,10 +933,17 @@ async function writeLinks(actor, { authored = null, off = null }) {
  * so a typo cannot spawn a link to nothing. To create-if-missing, `ensureAttribute` first: two
  * explicit calls is the point.
  *
+ * Runs through `serial()` with the flag reads inside it (ties-core-U3): a backstory script's
+ * `Promise.all` of several links on one actor lands every link, where each used to read the flags
+ * before the others' writes came back and the last write won. ⚠ Never call it from inside a
+ * serialised function — it would wait on itself.
+ *
  * → `{ok:true, id, actorId, added:[…], unsuppressed:[…]}` (both empty = already linked, still ok) |
  *   `{ok:false, reason:"notGM"|"invalid"|"empty"|"notFound"|"ambiguous"|"writeFailed"}`
  */
-export async function linkAttribute(actor, ref) {
+export const linkAttribute = (actor, ref) => serial(() => linkNow(actor, ref));
+
+async function linkNow(actor, ref) {
   if (!game.user?.isGM) return fail("notGM");
   const subject = subjectOf(actor);
   if (!subject) return fail("invalid");
@@ -969,12 +976,15 @@ export async function linkAttribute(actor, ref) {
  *
  * `ref` is an id, a name, or any id the actor carries — including a **dangling** one whose entry
  * is gone, which is how `A.broken()`'s `dangling` rows are cleaned up. Unlinking something the
- * actor does not carry is `{ok:true, removed:[], suppressed:[]}`, not an error.
+ * actor does not carry is `{ok:true, removed:[], suppressed:[]}`, not an error. Queued through
+ * `serial()` like `linkAttribute`, so links and unlinks made together on one actor all land.
  *
  * → `{ok:true, id, actorId, removed:[…], suppressed:[…]}` |
  *   `{ok:false, reason:"notGM"|"invalid"|"empty"|"notFound"|"ambiguous"|"writeFailed"}`
  */
-export async function unlinkAttribute(actor, ref) {
+export const unlinkAttribute = (actor, ref) => serial(() => unlinkNow(actor, ref));
+
+async function unlinkNow(actor, ref) {
   if (!game.user?.isGM) return fail("notGM");
   const subject = subjectOf(actor);
   if (!subject) return fail("invalid");

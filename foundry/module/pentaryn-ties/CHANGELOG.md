@@ -142,6 +142,12 @@ setting cannot be claimed, so no redesign. The comments in `attributes.mjs` and 
 README's "who writes" section no longer say otherwise. Pinned by `test/review-queue-per-tab.test.mjs`.
 ties-core-U2.
 
+Fixed (declared): several attribute links or unlinks on one actor made together (a backstory script's
+`Promise.all`) all land. Each used to read the actor's link flags before the others' writes came
+back, so only the last link survived. `linkAttribute`/`unlinkAttribute` (and `repair`, a link) now run
+through the registry's `serial()` queue with their flag reads inside it. Pinned by
+`test/review-link-race.test.mjs`. ties-core-U3.
+
 ## 0.19.4 (2026-10-10, usability run, Area 7 re-run)
 
 - **The inspect window's Share switches are the table's PCs only** (`tablePCs`): each player's

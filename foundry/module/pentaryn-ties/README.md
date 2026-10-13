@@ -139,7 +139,8 @@ bridge tab and a browser), and both are the active GM, so the conduit **stakes a
 tab rolls. The relay needs no claim: it only fills blanks or removes one row, so a second application changes nothing. The
 stub card and the tempo bubble are posted by the client that made the gesture. World-setting stores
 are GM-written; the registry and the knowledge/belief stores queue their writes one at a time,
-**per tab** only. Two GM tabs writing the same setting at once (a Review-panel save racing a bridge
+**per tab** only. Attribute links and unlinks (`attributes.link`/`unlink`/`repair`) share the
+registry's queue, so a script's `Promise.all` of several links on one actor lands every one. Two GM tabs writing the same setting at once (a Review-panel save racing a bridge
 `A.update`) each rewrite the whole value, and the second write wins — a setting cannot be claimed.
 
 ## Extending
@@ -162,7 +163,7 @@ are GM-written; the registry and the knowledge/belief stores queue their writes 
 
 - **An unlinked token's actor is not the actor.** Ties data lives on the world actor (`baseActorOf`);
   writing through `token.actor` lands on the token's delta and is lost to every other token.
-- **Never nest the registry's queued writes** — a queued write that awaits another waits on itself.
+- **Never nest the registry's queued writes** (links and unlinks included) — a queued write that awaits another waits on itself.
 - **`Actor#update` merges.** Deleting a ledger row needs the deletion syntax (`dropRow`); writing the
   object back without the key does nothing.
 - **`Number(null)` is 0.** Nullable numbers go through `numOrNull`; a "rolled 0" is a different lie.
