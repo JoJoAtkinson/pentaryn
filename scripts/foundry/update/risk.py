@@ -156,22 +156,34 @@ def _compat_ok(up: Upstream, core_version: str, system_version: str | None,
             ok = False
 
     rel = up.relationships or {}
+    malformed = False
     for dep in rel.get("requires", []) or []:
+        if not isinstance(dep, dict):
+            malformed = True
+            continue
         dep_id = dep.get("id") or dep.get("name")
         if dep_id and dep_id not in installed_ids:
             reasons.append(f"requires {dep_id}, which is not installed")
             ok = False
     for conflict in rel.get("conflicts", []) or []:
+        if not isinstance(conflict, dict):
+            malformed = True
+            continue
         c_id = conflict.get("id") or conflict.get("name")
         if c_id and c_id in installed_ids:
             reasons.append(f"declares a conflict with installed {c_id}")
             ok = False
     systems = rel.get("systems", []) or []
     if systems and system_version is not None:
-        ids = {s.get("id") for s in systems if s.get("id")}
+        malformed = malformed or not all(isinstance(s, dict) for s in systems)
+        ids = {s.get("id") for s in systems if isinstance(s, dict) and s.get("id")}
         if ids and "dnd5e" not in ids:
             reasons.append(f"targets systems {sorted(ids)}, not dnd5e")
             ok = False
+    if malformed:
+        # A third-party manifest we cannot read is held for a human, not a crash (ROB-11).
+        reasons.append("malformed manifest")
+        ok = False
     return ok
 
 

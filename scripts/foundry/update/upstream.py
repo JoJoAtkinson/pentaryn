@@ -221,7 +221,14 @@ def gitlab_project(pkg: Package) -> str | None:
 # ── Resolution ───────────────────────────────────────────────────────────────
 
 def _from_manifest(url: str) -> dict | None:
-    return _cached(f"manifest_{url}", lambda: fetch_json(url))
+    data = _cached(f"manifest_{url}", lambda: fetch_json(url))
+    return data if isinstance(data, dict) else None
+
+
+def _mapping(value, fallback: dict) -> dict:
+    """A third-party manifest's sub-object, or ``fallback`` when it is not a mapping
+    (ROB-11) — a string ``compatibility`` must not crash the risk check later."""
+    return value if isinstance(value, dict) and value else fallback
 
 
 def _github_latest(repo: str) -> dict | None:
@@ -263,8 +270,8 @@ def resolve(pkg: Package, *, notes: bool = True) -> Upstream:
     data = _from_manifest(pkg.manifest) if pkg.manifest else None
     if data:
         up.latest = str(data.get("version", "")) or None
-        up.compatibility = data.get("compatibility") or {}
-        up.relationships = data.get("relationships") or {}
+        up.compatibility = _mapping(data.get("compatibility"), {})
+        up.relationships = _mapping(data.get("relationships"), {})
         up.source = "manifest"
 
     # 2. A pinned manifest URL never advances — ask the forge what "latest" is.
@@ -278,8 +285,8 @@ def resolve(pkg: Package, *, notes: bool = True) -> Upstream:
             fresh = _from_manifest(asset) if asset else None
             if fresh and is_newer(str(fresh.get("version", "")), up.latest or pkg.version):
                 up.latest = str(fresh.get("version", "")) or up.latest
-                up.compatibility = fresh.get("compatibility") or up.compatibility
-                up.relationships = fresh.get("relationships") or up.relationships
+                up.compatibility = _mapping(fresh.get("compatibility"), up.compatibility)
+                up.relationships = _mapping(fresh.get("relationships"), up.relationships)
                 up.manifest_url = asset
                 up.source = "github"
 
@@ -287,16 +294,17 @@ def resolve(pkg: Package, *, notes: bool = True) -> Upstream:
     #    download is licence-gated. Forge's bazaar is a third opinion when r2 is silent.
     if not up.latest and pkg.type == "module":
         r2 = _cached(f"r2_{pkg.id}", lambda: fetch_json(R2_MANIFEST.format(id=pkg.id)))
-        if r2:
+        if isinstance(r2, dict) and r2:
             up.latest = str(r2.get("version", "")) or None
-            up.compatibility = r2.get("compatibility") or up.compatibility
-            up.relationships = r2.get("relationships") or up.relationships
+            up.compatibility = _mapping(r2.get("compatibility"), up.compatibility)
+            up.relationships = _mapping(r2.get("relationships"), up.relationships)
             up.manifest_url = up.manifest_url or R2_MANIFEST.format(id=pkg.id)
             up.source = "r2"
     if not up.latest and pkg.type == "module":
         forge = _cached(f"forge_{pkg.id}",
                         lambda: fetch_json(FORGE_BAZAAR.format(id=pkg.id)))
-        version = ((forge or {}).get("package") or {}).get("version")
+        package = forge.get("package") if isinstance(forge, dict) else None
+        version = package.get("version") if isinstance(package, dict) else None
         if version:
             up.latest, up.source = str(version), "forge"
 
