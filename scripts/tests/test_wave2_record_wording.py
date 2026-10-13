@@ -40,3 +40,9 @@ def test_ties_ui_e4_steps_match_the_declared_toggle():
     assert "exactly one card is open" not in step1
     assert "never more than one card is open" in step1
     assert "no card is open afterwards" in step1
+
+
+def test_riders_async_5_sets_the_type_before_retiring():
+    """retireManual leaves a typeless Affinity alone, so setType has to run first."""
+    step = _step(_read("riders.md"), "- **riders-async-5**", "- **riders-maint-02")
+    assert step.index("setType(") < step.index("retireManual(")
