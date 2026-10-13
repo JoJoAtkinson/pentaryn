@@ -325,8 +325,10 @@ def tunnel_logs(lines: int = 40) -> int:
     if not cfg.CF_LOG.exists():
         _say(f"no log yet ({cfg.CF_LOG})")
         return OK
-    tail = cfg.CF_LOG.read_text(errors="replace").splitlines()[-lines:]
-    print("\n".join(tail))
+    lines_ = cfg.CF_LOG.read_text(errors="replace").splitlines()
+    tail = lines_[-lines:] if lines > 0 else []   # [-0:] is the whole log (rob-9)
+    if tail:
+        print("\n".join(tail))
     return OK
 
 

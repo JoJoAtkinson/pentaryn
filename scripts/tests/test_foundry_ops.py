@@ -1455,3 +1455,19 @@ def test_tunnel_setup_fails_when_cloudflared_does_not_answer(monkeypatch, tmp_pa
     out = capsys.readouterr().out
     assert "✗" in out and "cloudflared did not answer" in out
     assert "setup complete" not in out
+
+
+# ── tunnel-logs -n (rob-9) ────────────────────────────────────────────────────
+
+@pytest.mark.parametrize("n,expected", [
+    (2, "three\nfour"),
+    (0, ""),      # [-0:] used to print the whole log
+    (-1, ""),     # [--1:] used to print everything but the first line
+])
+def test_tunnel_logs_prints_only_the_last_n_lines(monkeypatch, tmp_path, capsys, n, expected):
+    """rob-9: `tunnel-logs -n 0` printed the whole log and a negative -n misbehaved."""
+    log = tmp_path / "cloudflared.log"
+    log.write_text("one\ntwo\nthree\nfour\n")
+    monkeypatch.setattr(cfg, "CF_LOG", log)
+    assert service.tunnel_logs(n) == 0
+    assert capsys.readouterr().out == (expected + "\n" if expected else "")
