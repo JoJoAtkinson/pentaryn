@@ -1,6 +1,7 @@
 {
   "abort": "abortFor",
   "contract": "string",
+  "core.ARGON": "string",
   "core.ATTACK_ACTION_KINDS": "object",
   "core.CONTRACT": "string",
   "core.CSS": "string",

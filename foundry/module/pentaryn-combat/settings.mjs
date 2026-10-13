@@ -10,10 +10,10 @@
  * the C23 exception), so no other file calls game.settings.
  */
 
-import { I18N, MODULE } from "./combat-core.mjs";
+import { ARGON, I18N, MODULE } from "./combat-core.mjs";
 import { defineSettings, settingReader } from "./lib/settings.mjs";
 
-const ARGON = "enhancedcombathud";
+export { ARGON };   // Argon's package id, defined once in the core (shapes.mjs, an adapter, imports it there; C16)
 
 export const SETTINGS = Object.freeze([
   { key: "fullAttack", scope: "world", config: true, type: Boolean, default: true,

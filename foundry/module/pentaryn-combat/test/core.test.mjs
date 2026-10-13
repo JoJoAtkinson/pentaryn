@@ -27,7 +27,9 @@ const ADDED_29 = ["pruneOlder"];
 const ADDED_37 = ["DELAYS"];
 // combat-core-EXT-11's shared lists: the Attack action's swing kinds and the five movement keys.
 const ADDED_EXT11 = ["ATTACK_ACTION_KINDS", "MOVEMENT_KEYS"];
-const ADDED = [...ADDED_S2, ...ADDED_S4, ...ADDED_S8, ...ADDED_29, ...ADDED_37, ...ADDED_EXT11];
+// combat-core-EXT-13's Argon package id, written once (settings.mjs re-exports it).
+const ADDED_EXT13 = ["ARGON"];
+const ADDED = [...ADDED_S2, ...ADDED_S4, ...ADDED_S8, ...ADDED_29, ...ADDED_37, ...ADDED_EXT11, ...ADDED_EXT13];
 
 test("export surface (golden/core-exports.json): 81 names", () => {
   const names = Object.keys(core).sort();

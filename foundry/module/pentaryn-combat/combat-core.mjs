@@ -35,6 +35,7 @@ export const VERSION = "0.3.0";            // === module.json version (core.test
 export const CONTRACT = "pentaryn-combat/api@1";
 export const I18N = "PENTARYN_COMBAT";
 export const CSS = "pc-";
+export const ARGON = "enhancedcombathud";  // Argon's package id: its settings, module lookup and flag scope
 /**
  * Every i18n key the code used to build from a template (FollowUp + "." + kind), written
  * out literally so each one is a definite reference for the i18n gate (C35, combat-riders-28). Read

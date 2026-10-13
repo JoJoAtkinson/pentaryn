@@ -14,10 +14,9 @@ import * as core from "./combat-core.mjs";
 import { MODULE } from "./combat-core.mjs";
 import { makeLog } from "./lib/log.mjs";
 import { weaponsOf } from "./shapes.mjs";
-import { setting } from "./settings.mjs";
+import { ARGON, setting } from "./settings.mjs";
 
 const log = makeLog(MODULE);
-const ARGON = "enhancedcombathud";
 
 /* ── weapon sets ─────────────────────────────────────────────────────────── */
 

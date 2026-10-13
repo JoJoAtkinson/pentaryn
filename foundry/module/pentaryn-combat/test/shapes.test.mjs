@@ -409,3 +409,21 @@ test("combat-core-EXT-7: isMultiattackItem(item) is the one Multiattack-item tes
     assert.match(src, /isMultiattackItem\(i(tem)?\)/, `${file} calls isMultiattackItem`);
   }
 });
+
+// combat-core-EXT-13: Argon's package id "enhancedcombathud" was repeated in settings.mjs, offhand.mjs
+// and shapes.mjs (setPrimaryId). It is defined once in the core (combat-core.mjs, so the adapter
+// shapes.mjs may import it under C16) and settings.mjs exports it; offhand.mjs imports it from
+// settings.mjs. api-manifest's sideEffects strings stay literal (documentation data).
+test("combat-core-EXT-13: ARGON is the one Argon package id literal", async () => {
+  assert.equal(settings.ARGON, "enhancedcombathud", "combat-core-EXT-13: settings exports ARGON");
+  const { readFileSync } = await import("node:fs");
+  const imports = { "../offhand.mjs": "settings", "../shapes.mjs": "combat-core" };
+  for (const file of ["../combat-core.mjs", "../settings.mjs", "../offhand.mjs", "../shapes.mjs"]) {
+    const src = readFileSync(new URL(file, import.meta.url), "utf8");
+    const copies = src.match(/["'`]enhancedcombathud["'`]/g) ?? [];
+    assert.equal(copies.length, file === "../combat-core.mjs" ? 1 : 0, `combat-core-EXT-13: ${file} has ${copies.length} copy(ies) of the id`);
+    if (imports[file]) assert.match(src, new RegExp(`import \\{[^}]*\\bARGON\\b[^}]*\\} from "\\./${imports[file]}\\.mjs"`), `${file} imports ARGON from ${imports[file]}.mjs`);
+  }
+  const actor = { getFlag: (scope, key) => (scope === "enhancedcombathud" ? { weaponSets: { 2: { primary: "Actor.a.Item.bow0000000000001" } }, activeWeaponSet: "2" }[key] : undefined) };
+  assert.equal(shapes.setPrimaryId(actor), "bow0000000000001", "setPrimaryId reads the active Argon set's primary");
+});

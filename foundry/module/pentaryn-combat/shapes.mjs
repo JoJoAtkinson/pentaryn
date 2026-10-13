@@ -4,7 +4,7 @@
  */
 
 import * as core from "./combat-core.mjs";
-import { MODULE } from "./combat-core.mjs";
+import { ARGON, MODULE } from "./combat-core.mjs";
 import { makeLog } from "./lib/log.mjs";
 
 const log = makeLog(MODULE);
@@ -129,8 +129,8 @@ export async function resetOffhandMode(activity, attackMode, { enabled = true } 
 /** The active Argon weapon set's primary weapon id, if any. */
 export function setPrimaryId(actor) {
   try {
-    const sets = actor.getFlag("enhancedcombathud", "weaponSets");
-    const active = actor.getFlag("enhancedcombathud", "activeWeaponSet") || "1";
+    const sets = actor.getFlag(ARGON, "weaponSets");
+    const active = actor.getFlag(ARGON, "activeWeaponSet") || "1";
     const uuid = sets?.[active]?.primary;
     return uuid ? uuid.split(".").pop() : null;
   } catch { return null; }
