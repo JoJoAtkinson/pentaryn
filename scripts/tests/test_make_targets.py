@@ -181,3 +181,29 @@ def test_help_names_the_bundle_targets_and_the_world_size():
     assert "make foundry-bundles " in out and "make foundry-bundles-gc" in out
     assert "YES=1 deletes" in out
     assert "~45 MB" in out
+
+
+# ── defect wave 3 (2026-10-13): the shutdown backup belongs to foundry-down ──
+
+def test_foundry_down_takes_the_shutdown_backup_after_the_server_stops_wave3_1():
+    """Joe: the make commands back up on shutdown/restart. `foundry-down` stops the app,
+    then takes the same background shutdown backup vtt-down always took."""
+    out = _dry("foundry-down")
+    assert out.index("ops down") < out.index("cloud backup --reason shutdown --background")
+    waited = _dry_args("foundry-down", "WAIT=1")
+    assert "cloud backup --reason shutdown" in waited and "--background" not in waited
+
+
+@pytest.mark.parametrize("argv", [("vtt-down",), ("vtt-down", "WAIT=1")])
+def test_vtt_down_backs_up_exactly_once_wave3_1(argv):
+    """vtt-down reaches the backup through foundry-down; it must not take a second one."""
+    out = _dry_args(*argv)
+    assert out.count("scripts.foundry.cloud backup") == 1, out
+    assert out.count("ops down") == 1
+
+
+def test_a_restart_backs_up_once_wave3_1():
+    """down then up: the shutdown backup, then the pre-launch one that skips an unchanged world."""
+    out = _dry_args("foundry-down", "foundry-up")
+    assert out.count("cloud backup --reason shutdown") == 1
+    assert out.index("cloud backup --reason shutdown") < out.index("ops up")

@@ -101,10 +101,8 @@ vtt-up: vtt-lock-check foundry-boot foundry-backup-safe foundry-assets-safe foun
 	@echo "  ▸ local:    $(FOUNDRY_URL)"
 	@echo "  ▸ teardown: make vtt-down"
 
-# The shutdown snapshot's tar is built here (Foundry stopped); its upload runs in the
-# background and `make foundry-cloud` shows it. WAIT=1: upload before returning, as before.
+# The shutdown snapshot comes from foundry-down (below), once: vtt-down does not take a second.
 vtt-down: vtt-lock-check tunnel-down foundry-down
-	@$(MAKE) --no-print-directory foundry-backup REASON=shutdown $(if $(WAIT),,BACKGROUND=1)
 	@echo "  ▸ all down"
 
 # Start the app, launch the world, and land in it as GM — no dropdown, no password.
@@ -128,7 +126,12 @@ foundry-boot:
 	@cd $(ROOT) && $(PY) -m scripts.foundry.boot choose $(if $(FROM),--from $(FROM),)
 # PENTARYN_BOOT_DONE: foundry-boot already ran, so service.up() does not ask again.
 foundry-up: foundry-boot ; @export PENTARYN_BOOT_DONE=1; $(OPS) up
-foundry-down:    ; @$(OPS) down
+# Stop the app, then the shutdown snapshot: its tar is built here (Foundry stopped), its upload
+# runs in the background and `make foundry-cloud` shows it. WAIT=1: upload before returning.
+# So every stop backs up — vtt-down, and a restart (foundry-down then foundry-up) — once.
+foundry-down:
+	@$(OPS) down
+	@$(MAKE) --no-print-directory foundry-backup REASON=shutdown $(if $(WAIT),,BACKGROUND=1)
 tunnel-up:       ; @$(OPS) tunnel-up
 tunnel-down:     ; @$(OPS) tunnel-down
 tunnel-logs:     ; @$(OPS) tunnel-logs
@@ -207,7 +210,7 @@ foundry-assets:
 foundry-assets-safe:
 	@cd $(ROOT) && $(PY) -m scripts.foundry.cloud assets --if-reachable
 
-# BACKGROUND=1 (what vtt-down passes): build the tar, upload it from a detached process.
+# BACKGROUND=1 (what foundry-down passes, so vtt-down too): build the tar, upload it from a detached process.
 foundry-backup:
 	@cd $(ROOT) && $(PY) -m scripts.foundry.cloud backup --reason $(or $(REASON),manual)$(if $(BACKGROUND), --background,)
 

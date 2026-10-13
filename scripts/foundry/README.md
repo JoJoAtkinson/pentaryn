@@ -47,7 +47,7 @@ answered, never the value.
 | `make foundry-bundles` | Every local module/system with its fingerprint and size, whether its bundle is in the cloud, then the unreferenced cloud bundles — see [`ops.md`](../../context/foundry/ops.md) §3 |
 | `make foundry-bundles-gc` | List the bundles no retained snapshot references that are older than 7 days; `YES=1` deletes them (every uploading backup runs this sweep anyway) |
 | `make login` | Pick a campaign and a user from an arrow-key menu, land in the world logged in — no dropdown, no password. Alias: `make vtt-login`. Needs the admin password configured; see [`ops.md`](../../context/foundry/ops.md) §2 |
-| `make vtt-down` | Stop both, build the shutdown snapshot — the world (~45 MB) and any module/system bundle the cloud lacks — and upload it in the background (`make foundry-cloud` shows it; `WAIT=1` waits for the upload) |
+| `make vtt-down` | Stop both, build the shutdown snapshot — the world (~45 MB) and any module/system bundle the cloud lacks — and upload it in the background (`make foundry-cloud` shows it; `WAIT=1` waits for the upload). The snapshot is `make foundry-down`'s, so stopping the app alone (or a restart) backs up too, once |
 | `make vtt` | Status of Foundry, tunnel, and public reachability |
 | `make tunnel-setup` | **One-time** — cloudflared login, create tunnel, route DNS |
 | `make tunnel-logs` | Tail the tunnel log |
