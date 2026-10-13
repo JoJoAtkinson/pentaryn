@@ -2334,3 +2334,12 @@ def test_perf3_an_unreadable_sidecar_still_fails_the_pooled_mark(two_hosts, monk
     _unreadable(monkeypatch, names[3])
     with pytest.raises(storage.StorageError, match="I/O error"):
         cloud.referenced_bundles(cloud.store())
+
+
+def test_m1_the_uncalled_snapshot_core_version_is_gone():
+    """M1: snapshot_core_version() had no caller; parse_snapshot already reads the
+    version back out of a name, so the dead helper is deleted."""
+    assert not hasattr(cloud, "snapshot_core_version")
+    snap = parse_snapshot(Entry(name="world-2026-10-12-120000-fvtt14.369-boss.tar.gz",
+                                size=1, mtime=0.0))
+    assert snap is not None and snap.core == "14.369"

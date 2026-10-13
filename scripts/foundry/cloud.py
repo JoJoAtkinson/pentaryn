@@ -531,12 +531,6 @@ def _delete_snapshot(st: Storage, snap: Snapshot) -> None:
         pass
 
 
-def snapshot_core_version(path: Path | str) -> str | None:
-    """Pull the `-fvtt<version>` suffix back out of a snapshot filename."""
-    m = SNAPSHOT_NAME.match(Path(str(path)).name)
-    return m.group(2) if m else None
-
-
 def generation(version: str | None) -> str | None:
     """Foundry's generation is the leading integer: 14.365 -> 14."""
     if not version:
