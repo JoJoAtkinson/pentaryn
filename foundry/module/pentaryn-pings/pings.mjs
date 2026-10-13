@@ -9,7 +9,7 @@
  *   pings-core.mjs     PURE constants and rules: dedupe, cap, image offset, decorate, recent
  *   settings.mjs       SETTINGS (log store, max) and the only game.settings calls
  *   api-manifest.mjs   PURE data: the four legacy API rows
- *   capture.mjs        the feature: handlePing wrap, userActivity listener, pending list + merged flush
+ *   capture.mjs        the feature: handlePing wrap, userActivity listener, buffer + flush
  *   lib/*.mjs          vendored kit — never edited here (scripts/foundry/blueprint/vendor.py)
  *
  * Lifecycle: module body → features install (registers no hook) · init → settings, every client ·
@@ -42,7 +42,7 @@ function install() {
   for (const feature of FEATURES) feature.install(reg, ctx);
 }
 
-/** Remove every hook, the wrap, the listeners and the pending pings (hot patch: then re-import the entry). */
+/** Remove every hook, the wrap, the listener and the buffer (hot patch: then re-import the entry). */
 function uninstall() {
   for (const feature of [...FEATURES].reverse()) feature.uninstall();
   reg.offAll();
@@ -65,7 +65,7 @@ function decorated(rec) {
   return decorate(rec, sceneInfo(rec.sceneId), Date.now());
 }
 
-/** The four legacy methods (api-manifest.mjs rows). The readers read the store, not the pending list. */
+/** The four legacy methods (api-manifest.mjs rows). The readers read the store, not the buffer. */
 const impl = {
   last: () => decorated(readSetting().at(-1)),
   recent: (n = 10) => recentOf(readSetting(), n).map(decorated),

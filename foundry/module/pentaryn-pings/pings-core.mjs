@@ -5,8 +5,7 @@
  * scene and user fields and passes plain data in; nothing here imports glue.
  *
  * Quirks kept as they are on purpose (transform-creatures-36, README "Pitfalls"):
- *   recentOf(list, 0 | null | "x") returns the whole list ("2" counts as 2), and a negative n drops
- *   records from the oldest end;
+ *   recentOf(list, 0) returns the whole list, and a negative n drops records from the oldest end;
  *   `snapped` is square-grid maths whatever the grid type; a fractional limit below 1 never trims.
  */
 
@@ -58,34 +57,14 @@ export function capLimit(raw) {
 }
 
 /**
- * Append `rec` and keep the newest `limit`. Under the cap the SAME array is pushed to and returned;
+ * Append `rec` and keep the newest `limit`. Under the cap the SAME array is pushed to and returned
+ * (live, that array can be the settings cache — the readers then see the ping before the flush);
  * over it, a fresh slice is returned.
  */
 export function appendCapped(buffer, rec, limit) {
   buffer.push(rec);
   if (buffer.length > limit) buffer = buffer.slice(-limit);
   return buffer;
-}
-
-/**
- * pings-edge-1: one tab's flush, merged into the log as stored now (another GM tab may have written
- * since). Appends `pending` in order to a copy of `stored` (not an array → empty), capped as
- * appendCapped. A pending record is dropped when a stored one has the same user, scene and point
- * stamped less than `windowMs` apart either way: two GM tabs both capture every ping. Pending
- * records are never compared with each other (capture already did that).
- * @param {*} stored
- * @param {object[]} pending
- * @param {number} limit
- * @param {number} [windowMs]
- */
-export function mergePending(stored, pending, limit, windowMs = DEDUPE_MS) {
-  const base = Array.isArray(stored) ? stored : [];
-  const seen = rec => base.some(s =>
-    s && s.userId === rec.userId && s.sceneId === rec.sceneId && s.x === rec.x && s.y === rec.y &&
-    Math.abs(rec.t - s.t) < windowMs);
-  let out = [...base];
-  for (const rec of pending) if (!seen(rec)) out = appendCapped(out, rec, limit);
-  return out;
 }
 
 /**

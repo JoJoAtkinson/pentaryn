@@ -57,7 +57,7 @@ export const MANIFEST = Object.freeze({
       writes: true,
       legacy: true,
       sideEffects: ["setting pentaryn-pings.log"],
-      doc: "Drops this tab's pings not yet written and writes an empty log (another GM tab drops its own when it sees the change). Resolves true; a failed write rejects.",
+      doc: "Empties the in-memory buffer and writes an empty log. Resolves true; a failed write rejects.",
     },
   ],
   flags: { writes: [], reads: [] },

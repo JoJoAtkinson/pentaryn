@@ -13,71 +13,32 @@
  *      `core-pings-user-activity-socket`.
  *
  * The two overlap, so a record repeating the last one (user, scene, rounded point) inside
- * DEDUPE_MS is dropped. Records wait in `pending`; a burst costs one world-setting write, FLUSH_MS
- * after its first ping, and a failed write is retried once. Only a GM writes: world settings are not
- * player-writable.
- *
- * Two GM tabs (pings-edge-1, [declared]): every GM tab captures and writes. A flush is a
- * read-modify-write through the kit's serialStore — this tab's pending records merged into the log
- * as stored now (core `mergePending`, which also drops the other tab's copy of the same ping) — so
- * neither tab overwrites the other. The log row's onChange tells this tab about every change; an
- * empty log is a clear (from either tab) and drops what this tab had not yet written.
+ * DEDUPE_MS is dropped. Records go to an in-memory buffer; a burst costs one world-setting write,
+ * FLUSH_MS after its first ping. Only a GM writes: world settings are not player-writable.
  */
 
-import { DEDUPE_MS, FLUSH_MS, MODULE, capLimit, isDuplicate, mergePending } from "./pings-core.mjs";
-import { logStore, maxSetting, onLogChange, readLog } from "./settings.mjs";
+import { DEDUPE_MS, FLUSH_MS, MODULE, appendCapped, capLimit, isDuplicate } from "./pings-core.mjs";
+import { maxSetting, readLog, writeLog } from "./settings.mjs";
 import { isAnyGM } from "./lib/election.mjs";
-import { wrapMethod } from "./lib/patch.mjs";
+import { unwrapAll, wrapMethod } from "./lib/patch.mjs";
 
-/**
- * Session state. `pending`: this tab's records since its last flush, so a burst costs one write.
- * `last`: the newest record this tab knows of (its own, or the store's after a change) — the dedupe
- * compares against it. `epoch` counts clears, so a failed flush never puts back cleared pings.
- */
+/** Session state. `buffer` mirrors the store, so a burst of pings costs one write, not five. */
 let log = null;
-let pending = [];
-let last = null;
-let epoch = 0;
+let buffer = null;
 let flushTimer = null;
 let listener = null;
-/** The handlePing patch's kit handle (pings-ext-1): uninstall() undoes this patch only. */
-let handle = null;
 
-function scheduleFlush(retry = false) {
+function scheduleFlush() {
   if (flushTimer) return;
-  flushTimer = setTimeout(() => {
+  flushTimer = setTimeout(async () => {
     flushTimer = null;
-    flush(retry);
+    if (!isAnyGM() || !buffer) return;
+    try {
+      await writeLog(buffer);
+    } catch (err) {
+      log.warn("could not persist the log", err);
+    }
   }, FLUSH_MS);
-}
-
-/**
- * Merge this tab's pending records into the stored log. A failed write keeps them and is retried
- * once, FLUSH_MS later (pings-edge-2, [declared]); a failed retry waits for the next ping's flush.
- * A flush already armed by a newer ping stands in for the retry.
- */
-async function flush(retry = false) {
-  if (!isAnyGM() || !pending.length) return;
-  const batch = pending;
-  const at = epoch;
-  pending = [];
-  try {
-    await logStore().write(current => mergePending(current, batch, capLimit(maxSetting()), DEDUPE_MS));
-  } catch (err) {
-    if (at === epoch) pending = [...batch, ...pending];
-    log.warn("could not persist the log", err);
-    if (!retry && pending.length) scheduleFlush(true);
-  }
-}
-
-/** The log row's onChange (this tab's write or another GM tab's): an empty log is a clear. */
-function onStoreChange(value) {
-  const list = Array.isArray(value) ? value : [];
-  if (!list.length) {
-    pending = [];
-    epoch++;
-  }
-  last = pending.at(-1) ?? list.at(-1) ?? null;
 }
 
 /**
@@ -88,12 +49,14 @@ function record(userId, sceneId, x, y) {
   if (!isAnyGM()) return;
   if (!Number.isFinite(x) || !Number.isFinite(y)) return;
 
+  buffer ??= readLog({ log });
+
   const px = Math.round(x);
   const py = Math.round(y);
   const t = Date.now();
 
   // de-dupe: the same ping can arrive via both capture paths
-  if (isDuplicate(last, { userId, sceneId, x: px, y: py }, t, DEDUPE_MS)) return;
+  if (isDuplicate(buffer[buffer.length - 1], { userId, sceneId, x: px, y: py }, t, DEDUPE_MS)) return;
 
   const scene = game.scenes.get(sceneId);
   const rec = {
@@ -105,18 +68,15 @@ function record(userId, sceneId, x, y) {
     x: px,
     y: py,
   };
-  pending.push(rec);
-  last = rec;
+  buffer = appendCapped(buffer, rec, capLimit(maxSetting()));
 
   scheduleFlush();
 }
 
-/** Drop this tab's pending records and write an empty log. A flush already due then writes nothing. */
+/** Empty the buffer and the store. A flush already due then writes the emptied buffer. */
 export async function clear() {
-  pending = [];
-  last = null;
-  epoch++;
-  await logStore().write(() => []);
+  buffer = [];
+  await writeLog([]);
   return true;
 }
 
@@ -130,10 +90,12 @@ function patchControlsLayer() {
     log.warn("no ControlsLayer#handlePing to patch — local pings will rely on the socket path only");
     return false;
   }
-  handle = wrapMethod(MODULE, {
+  if (Layer.prototype.handlePing.__pentarynPatched) return true;
+
+  wrapMethod(MODULE, {
     target: Layer.prototype,
     name: "handlePing",
-    marker: "__pentarynPingsPatched",
+    marker: "__pentarynPatched",
     label: "ControlsLayer#handlePing",
     adjustments: "pings-core-ping-handle",
   }, function (wrapped, user, position, options = {}) {
@@ -154,32 +116,21 @@ export function install(reg, ctx) {
 }
 
 /**
- * Undo start(): unwrap handlePing through its own handle, stop listening on userActivity and on the
- * log row, drop the pending records and their flush (pings not yet written, ≤ FLUSH_MS, are lost).
- * When a foreign wrapper sits on top of ours the undo fails and the kit keeps the record
- * (pings-ext-1, [declared]): describe().patches still lists the live patch, and a hot re-import gets
- * that existing handle back instead of wrapping a second time.
+ * Undo start(): unwrap handlePing (this module's kit copy holds only that patch), stop listening on
+ * userActivity, drop the buffer and a pending flush (pings not yet written, ≤ FLUSH_MS, are lost).
  */
 export function uninstall() {
-  handle?.unwrap();
-  handle = null;
+  unwrapAll();
   if (listener) game.socket?.off?.("userActivity", listener);
   listener = null;
-  onLogChange(null);
   clearTimeout(flushTimer);
   flushTimer = null;
-  pending = [];
-  last = null;
+  buffer = null;
 }
 
-/**
- * ready, GM clients: hear log changes, take the newest stored record, wrap handlePing, listen on
- * userActivity. A second ready without uninstall() (pings-rob-1) keeps `pending` and its flush timer:
- * the store is re-read only through onChange and the serialStore write, never copied over pending.
- */
+/** ready, GM clients: read the store into the buffer, wrap handlePing, listen on userActivity. */
 export function start() {
-  onLogChange(onStoreChange);
-  last = pending.at(-1) ?? readLog({ log }).at(-1) ?? null;
+  buffer = readLog({ log });
   patchControlsLayer();
 
   // pings from clients on scenes this GM is not currently viewing. Core v14's payload is

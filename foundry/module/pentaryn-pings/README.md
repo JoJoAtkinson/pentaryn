@@ -33,7 +33,7 @@ offers: `game.pentaryn.pings.describe()`; offline: `test/golden/surface.json` an
 | `last()` | the newest record, decorated, or `null` when the log is empty or unreadable |
 | `recent(n = 10)` | the last `n`, newest first |
 | `all()` | the whole log, oldest first |
-| `clear()` | drops this tab's unwritten pings and writes `[]`; another GM tab drops its own when it sees the change; resolves `true` (a failed write rejects) |
+| `clear()` | empties the buffer and writes `[]`; resolves `true` (a failed write rejects) |
 
 Kit members: `describe()`, `version`, `contract`, `settings()` (`{ log: { store, size }, max }`),
 `trace()`, `uninstall()`.
@@ -57,7 +57,7 @@ A decorated record, keys in this order:
 
 | Where | What | Who |
 |---|---|---|
-| world setting `pentaryn-pings.log` | the stored records `{ t, userId, userName, sceneId, sceneName, x, y }`, newest `max` | every GM client, merged: one read-modify-write per burst (kit `serialStore`), 250 ms after its first ping, appending that tab's pings to the log as stored then; `clear()` |
+| world setting `pentaryn-pings.log` | the stored records `{ t, userId, userName, sceneId, sceneName, x, y }`, newest `max` | GM clients, one write per burst, 250 ms after its first ping; `clear()` |
 
 No document flags.
 
@@ -80,56 +80,41 @@ Emits no events of its own (`HOOKS` is empty). Registers only `init` and `ready`
 
 | Adjustments row | What | Why |
 |---|---|---|
-| `pings-core-ping-handle` | wraps `ControlsLayer.prototype.handlePing` through `wrapMethod`, marker `__pentarynPingsPatched` | the only place a ping drawn on this client is visible. On the prototype: layers are rebuilt on every scene change |
+| `pings-core-ping-handle` | wraps `ControlsLayer.prototype.handlePing` through `wrapMethod`, marker `__pentarynPatched` | the only place a ping drawn on this client is visible. On the prototype: layers are rebuilt on every scene change |
 | `core-pings-user-activity-socket` | `game.socket.on("userActivity", …)` — core's private socket event; core v14 sends `{cursor: {x, y}, ping: {scene, …}}`, recorded as `cursor` on `ping.scene` | pings from clients on scenes the GM is not viewing never reach `handlePing` |
 
 The two paths overlap, so a record that repeats the last one (same user, scene and rounded point,
 less than 400 ms later) is dropped.
 
-`uninstall()` undoes the `handlePing` wrap through its own `wrapMethod` handle, never the kit's
-`unwrapAll()` (pings-ext-1, [declared]). If another module has wrapped `handlePing` on top of ours,
-the undo cannot restore the original without dropping that wrapper, so it leaves the patch live and
-the kit keeps its record: `describe().patches` still lists `pings-core-ping-handle`, and a hot
-re-import gets the existing handle back instead of wrapping a second time.
-
 ## Two sessions / who writes
 
-Every GM client captures and writes; players never write (world settings are not player-writable).
-With two GM tabs (the MCP bridge plus a browser tab) the writes are **merged** (pings-edge-1,
-[declared]): each tab keeps only its own pings since its last write, and a flush re-reads the stored
-log and appends them (kit `serialStore`, read-modify-write), so neither tab overwrites the other.
-Both tabs hear every ping, so a pending ping that matches a stored one (same user, scene and point,
-stamped less than 400 ms apart) is the other tab's copy and is not written again. The `log` row's
-onChange tells each tab about every change: an empty log is a clear, from either tab, and drops
-what that tab had not yet written — a `clear()` in one tab stays cleared.
+Every GM client captures, buffers and writes its own copy; players never write (world settings are
+not player-writable). With two GM tabs (the MCP bridge plus a browser tab) both write the whole log
+and the **last writer wins** — a ping one tab saw and the other did not can be overwritten. Kept as
+is on purpose (finding transform-creatures-37 went to the live-test workflow); switching the store
+to `serialStore` changes write timing and needs a two-GM live test.
 
 ## Extending
 
 1. A pure rule → `pings-core.mjs`, with a table row in `test/core.test.mjs` (it runs on the oracle
    and on core) or a test in `test/core-meta.test.mjs` when the oracle has no counterpart.
 2. A new reader → a row in `api-manifest.mjs` and its implementation in `impl` in `pings.mjs`.
-3. Capture changes → `capture.mjs`; keep the `__pentarynPingsPatched` literal there (the adjustments row
+3. Capture changes → `capture.mjs`; keep the `__pentarynPatched` literal there (the adjustments row
    greps for it).
 
 ## Pitfalls
 
-- **Read lag:** the readers read the stored setting, not this tab's pending pings, so a new ping
-  shows only once it is written (≤ 250 ms). Wait a second after pinging before `last()`.
-- The other tab's copy of a ping is matched on user, scene and point within 400 ms of a *stored*
-  record, so the same user pinging the same point again within 400 ms, across one of this tab's
-  writes, is kept once. Two GM tabs on machines whose clocks differ by more than 400 ms store
-  each ping twice.
-- `recent(0)`, `recent(null)` and a non-numeric string such as `recent("x")` return **everything**
-  (a numeric string like `"2"` counts as 2); a negative `n` drops records from the oldest end.
+- **Read lag:** the readers read the stored setting, not the buffer. Until the first flush, or the
+  first trim (the log already holding `max`), the buffer *is* the cached setting array, so a new
+  ping shows at once. A trim detaches it: that ping still shows, `all()` briefly returns `max`+1
+  records, and later pings trail until the write (≤ 250 ms). After a flush the readers trail the
+  newest ping until the next write. Wait a second after pinging before `last()`.
+- `recent(0)` returns **everything**, and a negative `n` drops records from the oldest end.
 - `snapped` is square-grid maths even on a hex scene.
 - A fractional `max` below 1 never trims the log.
 - Canvas ≠ image space: subtract the padding offset (`image`) for a pixel in the background image.
 - A ping is recorded even where core draws nothing (a scene nobody is viewing).
-- A failed write is retried once, 250 ms later; if the retry fails too, the pings wait for the next
-  ping's write (the readers stay stale until then).
 - `uninstall()` drops pings not yet written (≤ 250 ms).
-- A hot re-import keeps pings not yet written: a second `ready` without `uninstall()` flushes what
-  the first load captured, merged into the stored log.
 - `lib/` and `test/kit/` are vendored copies: edit `foundry/lib/`, then `vendor.py sync`.
 
 ## Files
@@ -137,10 +122,10 @@ what that tab had not yet written — a `clear()` in one tab stays cleared.
 | File | Role |
 |---|---|
 | `pings.mjs` | entry (esmodules[0]): wiring, the API implementations, publish |
-| `pings-core.mjs` | pure constants and rules: dedupe, cap, merge, image offset, decorate, recent |
-| `settings.mjs` | `SETTINGS`, registration, `readLog`/`logStore`/`onLogChange`/`maxSetting` |
+| `pings-core.mjs` | pure constants and rules: dedupe, cap, image offset, decorate, recent |
+| `settings.mjs` | `SETTINGS`, registration, `readLog`/`writeLog`/`maxSetting` |
 | `api-manifest.mjs` | the four API rows (pure data) |
-| `capture.mjs` | the feature: `handlePing` wrap, `userActivity` listener, pending list and merged flush |
+| `capture.mjs` | the feature: `handlePing` wrap, `userActivity` listener, buffer and flush |
 | `lib/` | vendored kit (`lib/kit.lock.json`) |
 | `test/` | node:test suites, goldens, fixtures (the verbatim pre-blueprint oracle), vendored test kit |
 
