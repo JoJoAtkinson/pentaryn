@@ -637,11 +637,12 @@ def _candidate_scripts(scripts_dir: Path) -> list[Path]:
 
 def _load_in_process(
     path: Path, source: str, tree: ast.Module | None,
-) -> tuple[dict[str, Any], Optional[dict[str, Any]]] | str | None:
+) -> tuple[dict[str, Any], dict[str, Any]] | str | None:
     """The in-process discovery path. None when the script has no top-level MCP_HANDLERS
     assignment (it takes the AST literal path instead); otherwise it is imported and
     MCP_TOOLS/MCP_TOOL is read from its namespace (so it can use shared dicts, helper
-    calls, etc.), giving (mcp_tool, handlers) — or a skip reason string on failure.
+    calls, etc.), giving (mcp_tool, handlers) — or a skip reason string on failure
+    (including an MCP_HANDLERS that is not a dict).
     AST-based check (not substring) so a comment or string mentioning MCP_HANDLERS
     doesn't trigger a module import."""
     if tree is None or not _has_top_level_assignment(source, "MCP_HANDLERS", tree=tree):
@@ -663,7 +664,11 @@ def _load_in_process(
     else:
         return "module imported but no usable MCP_TOOLS/MCP_TOOL attribute"
     handlers_attr = getattr(module, "MCP_HANDLERS", None)
-    return literal, (handlers_attr if isinstance(handlers_attr, dict) else None)
+    if not isinstance(handlers_attr, dict):
+        # py-mcp-EC-5: a non-dict MCP_HANDLERS used to yield handlers=None, so the
+        # module's tools registered half-wired on the subprocess path. Skip it whole.
+        return "MCP_HANDLERS is not a dict"
+    return literal, handlers_attr
 
 
 def discover_tools(*, repo_root: Path) -> DiscoveryResult:

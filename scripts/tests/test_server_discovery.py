@@ -899,3 +899,30 @@ def test_py_mcp_ec_3_plain_unicode_stays_unescaped(monkeypatch):
     monkeypatch.setattr(server, "_TRANSPORT_MODE", "jsonl")
     server._write_message({"jsonrpc": "2.0", "id": 1, "result": "café"})
     assert "café".encode("utf-8") in fake.buffer.getvalue()
+
+
+# ---------------------------------------------------------------------------
+# py-mcp-EC-5: a non-dict MCP_HANDLERS skips the module instead of half-wiring it
+# ---------------------------------------------------------------------------
+
+def test_py_mcp_ec_5_non_dict_handlers_skips_whole_module(tmp_path):
+    """py-mcp-EC-5: a module whose MCP_HANDLERS is not a dict (a list, None, …) used
+    to register its tools with handler=None, so they fell through to the subprocess
+    path against a script with no CLI for them. The whole module is now one skip
+    with reason 'MCP_HANDLERS is not a dict', and other scripts still load."""
+    repo = _make_repo(tmp_path)
+    scripts = repo / "scripts"
+    (scripts / "a_listhandlers_ec5.py").write_text(
+        _INPROC_MODULE.replace('MCP_HANDLERS = {"sample_inproc": _handler}',
+                               "MCP_HANDLERS = [_handler]").replace(
+            '"sample_inproc"', '"listed_ec5"'),
+        encoding="utf-8")
+    (scripts / "b_inproc_ec5.py").write_text(_INPROC_MODULE, encoding="utf-8")
+
+    result = server.discover_tools(repo_root=repo)
+
+    names = {r.tool.name for r in result.tools}
+    assert "listed_ec5" not in names
+    assert "sample_inproc" in names
+    reasons = {path.name: reason for path, reason in result.skipped}
+    assert reasons["a_listhandlers_ec5.py"] == "MCP_HANDLERS is not a dict"
