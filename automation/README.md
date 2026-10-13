@@ -107,7 +107,9 @@ Two consequences worth knowing:
 | `make vtt-update-install` / `-uninstall` | The launchd jobs. |
 
 Reports land in [`foundry/logs/auto-updates/`](../foundry/logs/auto-updates/) — one
-markdown write-up and one machine-readable JSON per run — and are committed and pushed.
+markdown write-up and one machine-readable JSON per run — and are committed and pushed
+after the notification has gone out. A git step that hangs gives up (2 min; the push
+5 min) and the run log says the report was written but not pushed.
 
 ### Escalation: when a run thinks harder
 

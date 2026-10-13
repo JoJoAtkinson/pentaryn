@@ -111,14 +111,16 @@ def cmd_run(args) -> int:
     # pathspec, never `-A`. Only paths under the plans directory are accepted.
     plan_paths = _plan_paths(result)
 
+    # Notify first: the commit and push touch the network and must never delay or
+    # lose the week's notification (AC-5).
+    apply_mod.notify_result(result)
+
     policy_report = policy.get("report", {}) or {}
     if policy_report.get("commit", True):
         for message in report_mod.commit_and_push(
                 [md_path, json_path, *plan_paths], push=policy_report.get("push", True)):
             result.messages.append(message)
             print(f"  · {message}")
-
-    apply_mod.notify_result(result)
     return 0 if result.outcome in ("done", "no-op", "skipped", "dry") else 1
 
 
