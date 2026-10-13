@@ -16,3 +16,9 @@ test("M6: each tempo rung names its i18n key once", () => {
   assert.equal(count(rows, /\{ at: \d+, label: "PENTARYN_TIES\.known\.inspect\.scope\d+" \}/g), 4);
   assert.doesNotMatch(rows, /\bkey:/, "no short-key copy beside the full label");
 });
+
+test("M7: the kind descriptor reads the offset flag once for offset and dc", () => {
+  const r = src("study/resolve.mjs");
+  const kind = r.slice(r.indexOf('if (ns === "kind")'), r.indexOf("grade: async total"));
+  assert.equal(count(kind, /readFlag\(kind, MODULE, STUDY_OFFSET_FLAG\)/g), 1);
+});

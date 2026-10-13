@@ -83,6 +83,7 @@ export function resolveFact(spec) {
     const kind = kindActorOf(subject);
     if (!kind) return null;
     const { skill, label } = studySkillFor(kind);
+    const offset = studyOffsetOf(readFlag(kind, MODULE, STUDY_OFFSET_FLAG)); // read once (M7)
     return {
       ns: "kind",
       axis: "kind",
@@ -99,9 +100,8 @@ export function resolveFact(spec) {
        * The kind's own difficulty (Joe's one knob). A number shifts the whole ladder; `"auto"`
        * means common knowledge — inspecting is enough and no dice are thrown at all.
        */
-      offset: studyOffsetOf(readFlag(kind, MODULE, STUDY_OFFSET_FLAG)),
-      dc: STUDY_BASE_DC + (typeof studyOffsetOf(readFlag(kind, MODULE, STUDY_OFFSET_FLAG)) === "number"
-        ? studyOffsetOf(readFlag(kind, MODULE, STUDY_OFFSET_FLAG)) : 0),
+      offset,
+      dc: STUDY_BASE_DC + (typeof offset === "number" ? offset : 0),
       hold: studyHoldFor(kind),
       /** Grade → prose. `null` means no roll happened and nothing may be spent. */
       grade: async total => {
