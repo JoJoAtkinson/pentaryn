@@ -127,23 +127,48 @@ class _CountingFile:
 
 
 def count_tar_reads(monkeypatch, suffix: str = ".tar.gz") -> dict[str, int]:
-    """Patch every way the bundle code opens a file (builtins.open, which gzip uses, and
-    tarfile's own bltn_open) so reads of a `*<suffix>` file are counted by its name.
-    Returns the live {file name: bytes read} map — bytes read / file size is how many
-    times that tar was read end to end (PERF-2)."""
+    """Patch every way the bundle code opens a file so reads of a `*<suffix>` file are
+    counted by its name: builtins.open (which gzip uses), tarfile's own bltn_open, and
+    os.open/os.read — tarfile's stream modes ('r|gz') read through a raw fd
+    (_LowLevelFile), which the first two never see. Returns the live
+    {file name: bytes read} map — bytes read / file size is how many times that tar was
+    read end to end (PERF-2)."""
     import builtins
     import tarfile
 
     counter: dict[str, int] = {}
     real = builtins.open
+    real_os_open, real_os_read, real_os_close = os.open, os.read, os.close
+    fds: dict[int, str] = {}                     # raw fd → tar name, while it is open
+
+    def _counted(file) -> bool:
+        return isinstance(file, (str, os.PathLike)) and os.fspath(file).endswith(suffix)
 
     def counting_open(file, mode="r", *a, **k):
         fh = real(file, mode, *a, **k)
-        if (isinstance(file, (str, os.PathLike)) and os.fspath(file).endswith(suffix)
-                and "r" in mode and "+" not in mode):
+        if _counted(file) and "r" in mode and "+" not in mode:
             return _CountingFile(fh, counter, Path(file).name)
         return fh
 
+    def counting_os_open(path, flags, *a, **k):
+        fd = real_os_open(path, flags, *a, **k)
+        if _counted(path) and flags & (os.O_WRONLY | os.O_RDWR) == 0:
+            fds[fd] = Path(path).name
+        return fd
+
+    def counting_os_read(fd, n):
+        data = real_os_read(fd, n)
+        if fd in fds:
+            counter[fds[fd]] = counter.get(fds[fd], 0) + len(data)
+        return data
+
+    def counting_os_close(fd):
+        fds.pop(fd, None)
+        return real_os_close(fd)
+
     monkeypatch.setattr(builtins, "open", counting_open)
     monkeypatch.setattr(tarfile, "bltn_open", counting_open)
+    monkeypatch.setattr(os, "open", counting_os_open)
+    monkeypatch.setattr(os, "read", counting_os_read)
+    monkeypatch.setattr(os, "close", counting_os_close)
     return counter
