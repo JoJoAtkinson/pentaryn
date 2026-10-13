@@ -9,7 +9,7 @@
 
 import { MODULE, FLAG_SCOPE, SNAP_DIR, esc, cardData, dialogIdParts, cropWindow, translateShapes, blockingWallCoords, tokenBox, boxCentre,
   occupiedBy, crowded, isAoeHandle, summonerActorId, playerOwners, isScenery, partySelection, ringSpots, wallBlocker, assignSpots,
-  partyPreview, hasDestination, withoutDestination, TELEPORT_TYPE, NEW_TELEPORT_BEHAVIOR } from "./portals-core.mjs";
+  partyPreview, hasDestination, withoutDestination, displaceOptions, TELEPORT_TYPE, NEW_TELEPORT_BEHAVIOR } from "./portals-core.mjs";
 import { flagPath } from "./lib/flags.mjs";
 
 const deps = { setting: () => undefined, log: null };
@@ -354,7 +354,8 @@ export async function teleportParty(regionOrUuid, { confirm = true } = {}) {
   const { x: cx, y: cy } = boxCentre(destRegion.bounds);
   if (dest === from) {
     const places = landingPlaces(dest, toks, cx, cy, party);
-    await from.updateEmbeddedDocuments("Token", toks.map((t, i) => ({ _id: t.id, ...places[i] })), { teleport: true, animate: false });
+    const updates = toks.map((t, i) => ({ _id: t.id, ...places[i] }));
+    await from.updateEmbeddedDocuments("Token", updates, displaceOptions(updates));
   } else {
     await carryTo(toks, dest, cx, cy, party);
     dest.pullUsers(game.users.filter(u => !u.isGM && u.active));

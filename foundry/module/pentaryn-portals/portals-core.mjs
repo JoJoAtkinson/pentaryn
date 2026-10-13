@@ -37,6 +37,15 @@ export const NEW_TELEPORT_BEHAVIOR = Object.freeze({
   system: Object.freeze({ placement: "center", snap: true, choice: true, revealed: true,
     dialog: Object.freeze({ revealed: null, unrevealed: null }), transition: Object.freeze({ type: "fade", duration: 1500 }) })
 });
+/**
+ * Update options for an instant token move: one `displace` waypoint per token (core's own
+ * region-teleport shape in v14, RegionDocument#teleportTokens), no animation. Replaces the
+ * `teleport` update option, deprecated since v13 (portals-w3-1b).
+ * @param {{_id: string, x: number, y: number}[]} moves
+ */
+export function displaceOptions(moves) {
+  return { animate: false, movement: Object.fromEntries(moves.map(({ _id, x, y }) => [_id, { waypoints: [{ x, y, action: "displace" }] }])) };
+}
 /** The fallback card image. */
 export const DOOR_ICON = "icons/svg/door-exit.svg";
 

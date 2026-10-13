@@ -12,7 +12,7 @@
  * also deletes with `replacements`, and does not drag anything along.
  */
 
-import { MODULE, FLAG_SCOPE, crowded, followersOf, isAoeHandle, tokenBox, tokenCentre } from "./portals-core.mjs";
+import { MODULE, FLAG_SCOPE, crowded, displaceOptions, followersOf, isAoeHandle, tokenBox, tokenCentre } from "./portals-core.mjs";
 import { carryTo, destinationsOf, docOf, gmUserIds, landingPlaces, recordOf } from "./scene-adapter.mjs";
 import { setting } from "./settings.mjs";
 import { PARTY_ROWS } from "./api-manifest.mjs";
@@ -68,7 +68,7 @@ export async function spreadArrival(tokenOrUuid) {
   const changes = { ...place };
   if (arrived.flags?.[MODULE]?.claims?.spread !== undefined) changes[flagPath(FLAG_SCOPE, "claims.spread")] = _del;
   if (!Object.keys(changes).length) return arrived;
-  await arrived.update(changes, place ? { teleport: true, animate: false } : {});
+  await arrived.update(changes, place ? displaceOptions([{ _id: arrived.id, ...place }]) : {});
   return arrived;
 }
 

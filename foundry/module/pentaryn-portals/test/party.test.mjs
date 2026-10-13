@@ -192,11 +192,14 @@ test("teleportParty, same scene: one teleport update (no animation) and the toas
   const H = hall();
   const cell = W.region(H.s, { id: `Cell${H.k}`, name: "Cell", bounds: { x: 2000, y: 2000, width: 100, height: 100 }, flags: { [MODULE]: { title: "The Cell" } } });
   F.canvas.scene = H.s;
-  const n = F.calls.length;
+  const n = F.calls.length, l = F.logged.length;
   await S.teleportParty(cell, { confirm: false });
   const out = ops(n);
   assert.deepEqual(out.map(c => c.op), ["updateEmbedded", "notify"]);
-  assert.deepEqual(out[0].options, { teleport: true, animate: false });
+  // [declared] portals-w3-1b: v14's displace waypoints (core's own region-teleport shape), not the
+  // deprecated `teleport` option; each token's one waypoint is the square it lands on.
+  assert.deepEqual(out[0].options, { animate: false, movement: Object.fromEntries(out[0].updates.map(u => [u._id, { waypoints: [{ x: u.x, y: u.y, action: "displace" }] }])) });
+  assert.deepEqual(W.deprecationsSince(l), [], "no v14 compatibility warning");
   assert.deepEqual(out[0].updates.map(u => u._id), ["tCav", "tMar", "tSkel", "tEye", "tSteed"].map(i => `${i}${H.k}`));
   assert.equal(out[1].message, "5 party tokens moved to The Cell.");
   pinJSON("teleport-same-scene", out[0].updates, import.meta.url);
@@ -344,8 +347,14 @@ function arrivalScene(occupant) {
 
 test("spreadArrival: on an occupied square → one teleport update to the first free ring square", async () => {
   const arrived = arrivalScene({ name: "Guard", actorId: "GUARD" });
-  const n = F.calls.length;
+  const n = F.calls.length, l = F.logged.length;
+  const options = [];
+  const real = arrived.update;
+  arrived.update = function (changes, opts) { options.push(opts); return real.call(this, changes, opts); };
   assert.equal(await settle(S.spreadArrival(arrived)), arrived);
+  // [declared] portals-w3-1b: the step is a displace waypoint, not the deprecated `teleport` option
+  assert.deepEqual(options.at(-1), { animate: false, movement: { [arrived.id]: { waypoints: [{ x: 500, y: 900, action: "displace" }] } } });
+  assert.deepEqual(W.deprecationsSince(l), [], "no v14 compatibility warning");
   // [declared] portals-async-1: the tab claims the token first; the claim leaves with the move
   assert.deepEqual(W.callsSince(n, ["update"]).map(c => c.changes), [{ "flags.pentaryn-portals.claims.spread": "socket-gm-1" }, { x: 500, y: 900, "flags.pentaryn-portals.claims.spread": "<_del>" }]);
   assert.deepEqual([arrived.x, arrived.y], [500, 900]);
