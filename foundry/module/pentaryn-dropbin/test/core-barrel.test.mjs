@@ -88,3 +88,13 @@ test("isOurCorpse / hasNoLoot tables", () => {
   assert.equal(core.hasNoLoot({ flags: {}, actor: { flags: {} } }), false, "neither");
   assert.equal(core.hasNoLoot({ flags: {}, actor: null }), false, "no actor");
 });
+
+test("listLast(log, 0) is no entries (dropbin-R1); every other n keeps slice(-n)", () => {
+  const log = [{ n: 1 }, { n: 2 }, { n: 3 }];
+  assert.deepEqual(core.listLast(log, 0), [], "dropbin-R1: the last 0 entries are none");
+  // KNOWN (dropbin-R1, declared): the oracle's slice(-0) is slice(0), the whole ledger, for n = 0.
+  assert.deepEqual(oracle.listLast(log, 0).map(e => e.n), [3, 2, 1], "the oracle returned the whole ledger");
+  for (const x of [undefined, 2, "2", 5, -1, null, NaN, "abc", 2.7]) {
+    assert.deepEqual(core.listLast(log, x), oracle.listLast(log, x), String(x));
+  }
+});

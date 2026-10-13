@@ -84,7 +84,7 @@ published at `ready`. Ask it: `game.pentaryn.dropbin.describe()` (offline: `test
 
 | Method | GM | Writes | Returns |
 |---|---|---|---|
-| `list(n = 20, { brief })` | — | — | last n entries, newest first; `brief: true` → `{n, iso, reason, itemName, itemType, quantity, fromActorName, sceneName, pileUuid}` (no item source — use it from the bridge) |
+| `list(n = 20, { brief })` | — | — | last n entries, newest first (`list(0)` is `[]`); `brief: true` → `{n, iso, reason, itemName, itemType, quantity, fromActorName, sceneName, pileUuid}` (no item source — use it from the bridge) |
 | `all()` / `get(n)` / `search(text)` | — | — | the whole ledger / one entry or null / entries whose item name contains text |
 | `restore(n, target?)` | yes | Item on the actor | the created Item, or the warn/error Notification it showed |
 | `restoreResult(n, target?)` | yes | Item on the actor | `{ ok: true, item, actor }` or `{ ok: false, reason: "not-gm" \| "no-entry" \| "no-actor" \| "not-created" }`, no toasts |

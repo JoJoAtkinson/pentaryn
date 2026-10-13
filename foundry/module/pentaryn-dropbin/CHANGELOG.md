@@ -138,6 +138,8 @@ Declared changes:
   probe). No behaviour change.
 - dropbin-EXT-7: `i18n-shim.mjs` exports `LITERAL`, and a test asserts it names exactly the keys of
   `LEGACY_KEYS` (a legacy key with no literal word would have filled `undefined`). No behaviour change.
+- dropbin-R1: `list(0)` (and `listLast(log, 0)`) is `[]`; it returned the whole ledger
+  (`slice(-0)` is `slice(0)`). Only `0` changes: every other `n` gives the same answer as before.
 
 Added: `list(n, { brief })`, `restoreResult`, `inspect`, `selftest` (items-journal-28).
 - A restore another module refuses (a `preCreateItem` veto) is `{ ok: false, reason: "not-created" }`

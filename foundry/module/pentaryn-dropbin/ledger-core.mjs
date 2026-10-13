@@ -106,8 +106,8 @@ export function pileScene(target) {
 /** Item Piles passes one delta or an array of them. */
 export const normaliseDeltas = itemDeltas => (Array.isArray(itemDeltas) ? itemDeltas : [itemDeltas].filter(Boolean));
 
-/** The last `n` entries, newest first. */
-export const listLast = (log, n = 20) => log.slice(-n).reverse();
+/** The last `n` entries, newest first; n === 0 is none (dropbin-R1: slice(-0) is the whole log). */
+export const listLast = (log, n = 20) => (n === 0 ? [] : log.slice(-n).reverse());
 
 /** Entry number `n` (a number or a numeric string), or null. */
 export const findEntry = (log, n) => log.find(e => e.n === Number(n)) ?? null;
