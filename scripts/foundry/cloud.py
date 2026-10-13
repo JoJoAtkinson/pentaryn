@@ -199,15 +199,6 @@ def store() -> Storage:
         die(str(exc))
 
 
-def __getattr__(name: str):
-    # Back-compat for callers that imported the old module constants.
-    if name == "FOUNDRY_DATA":
-        return host.foundry_data()
-    if name == "CLOUD_ROOT":
-        return storage_mod.get().root
-    raise AttributeError(name)
-
-
 def server_running() -> bool:
     """Something is listening on the Foundry port. Several operations refuse while it is.
     A TCP connect (host.is_running): a server answering 4xx or TLS is still live."""

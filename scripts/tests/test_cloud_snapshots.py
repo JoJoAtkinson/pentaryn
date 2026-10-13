@@ -2343,3 +2343,12 @@ def test_m1_the_uncalled_snapshot_core_version_is_gone():
     snap = parse_snapshot(Entry(name="world-2026-10-12-120000-fvtt14.369-boss.tar.gz",
                                 size=1, mtime=0.0))
     assert snap is not None and snap.core == "14.369"
+
+
+def test_m2_the_uncalled_module_getattr_shim_is_gone():
+    """M2: cloud's module __getattr__ shim for the old FOUNDRY_DATA / CLOUD_ROOT
+    constants had no caller; the data root is cloud.data_root() (host.foundry_data())
+    and the cloud root is cloud.store().root, so the shim is deleted."""
+    assert "__getattr__" not in vars(cloud)
+    assert not hasattr(cloud, "FOUNDRY_DATA")
+    assert not hasattr(cloud, "CLOUD_ROOT")
