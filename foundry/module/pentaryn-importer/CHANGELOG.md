@@ -1,5 +1,21 @@
 # Changelog — Pentaryn Importer (`pentaryn-importer`)
 
+## Unreleased — defect wave 3 (2026-10-13)
+
+- **[declared] An update Foundry refuses is a failure, not "updated"** (wave-3 importer item 1):
+  Foundry 14's client drops an invalid update (a blank `name`) with its own error toast and resolves
+  `undefined`; the importer carried on, stamped the new hash and reported the slug as updated, so it
+  was never retried. `updateActor` (documents-adapter) repeats the client's dry run on `undefined`:
+  a throw or non-empty diff → `failed[]` `update refused by Foundry — <reason>`, no Item writes, no
+  stamp. An empty diff (a real no-op) still counts as updated. test/update-refused.test.mjs.
+- **[declared] Two creates in the same instant: one creates, the other joins as an update** (wave-3
+  importer item 2): the tab whose create lands second sees the other tab's `createActor` broadcast
+  before its own response (new feature `create-watch.mjs`, a listener held only for the create's
+  round trip), stands down, waits up to 10 s for the winner's content-hash stamp and takes the update
+  path (skipped on the same hash). The tab that landed first re-reads the live actor before its
+  readback. The look-first case (the id already held by the other tab's actor) joins the same way
+  instead of failing "created concurrently by another GM tab — re-run". test/concurrent-create.test.mjs.
+
 ## Unreleased — FIX-3 live-check fix (2026-10-13)
 
 - **[declared] A new actor's slug id is looked up before the create, never overwritten**

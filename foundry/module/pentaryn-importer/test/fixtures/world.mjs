@@ -20,6 +20,14 @@
  *                   when this run sends its first Actor.create, i.e. after our slug index was built
  *   failItems       slugs whose createEmbeddedDocuments throws a plain Error (a per-actor failure
  *                   after the Actor itself was written — importer-R6)
+ *   raceSame        slug → { hash, items }: another GM tab creates the same slug IN THE SAME INSTANT
+ *                   and the server processes its create FIRST (wave-3 importer item 2). Its create
+ *                   broadcast reaches this tab before our own response (a `createActor` hook with its
+ *                   instance), then our keepId create replaces it. 500 ms later (mocked timers) that tab
+ *                   writes `items` on the live actor and stamps `hash`, as a run that won would.
+ *   raceAfter       slugs another GM tab creates in the same instant but the server processes SECOND:
+ *                   its replace lands right after our create resolves (a new instance under the same
+ *                   id, the old one now stale), and that tab then stands down (writes nothing more)
  *   noopUpdate      slugs whose actor.update resolves undefined because the diff is empty (Foundry's
  *                   client drops a no-op update: no request, no hook — wave-3 importer item 1); the
  *                   content-hash stamp is still a real change
@@ -33,6 +41,9 @@
  * Actor.create honours `data._id` under `{keepId: true}`. An `_id` already in game.actors is silently
  * REPLACED (no error, no delete), as Foundry 14.369's server does for a world document — it checks
  * duplicate ids only inside embedded collections (FIX-3 live probe, importer-AC-2).
+ *
+ * A write through a STALE instance (one a later create replaced in game.actors) lands on the live
+ * one, as Foundry routes it by id; the stale instance's own `items` never see it.
  *
  * Every write lands in F.calls in order, so a test pins effects, not returns.
  */
@@ -79,7 +90,7 @@ function tokenOf(data) {
 }
 
 export function makeWorld(F, knobs = {}) {
-  const K = { dropTypes: new Set(), regenIds: false, stripAction: new Set(), failCreate: new Set(), raceCreate: new Set(), failItems: new Set(), noopUpdate: new Set(), ...knobs };
+  const K = { dropTypes: new Set(), regenIds: false, stripAction: new Set(), failCreate: new Set(), raceCreate: new Set(), failItems: new Set(), noopUpdate: new Set(), raceSame: new Map(), raceAfter: new Set(), ...knobs };
   let seq = 0;
 
   function makeItem(actor, data) {
@@ -108,12 +119,18 @@ export function makeWorld(F, knobs = {}) {
       actor.items.set(item.id, item);
     }
     const update = actor.update.bind(actor);
+    /** The instance game.actors holds now: a later create may have replaced this one (raceAfter). */
+    const live = () => {
+      const now = F.game.actors.get(actor.id);
+      return now && now !== actor ? now : null;
+    };
     hidden(actor, "updateSource", (changes, { dryRun = false } = {}) => {
       if (!dryRun) throw new Error("stub: only a dryRun updateSource is modelled");
       if ("name" in changes && !String(changes.name ?? "").trim()) throw new Error(BLANK_NAME);
       return K.noopUpdate.has(actor.flags?.pentaryn?.slug) ? {} : clone(changes);
     });
     hidden(actor, "update", async (changes, options) => {
+      if (live()) return live().update(changes, options);
       if ("name" in (changes ?? {}) && !String(changes.name ?? "").trim()) {      // Foundry: toast, no request, undefined
         F.calls.push({ op: "update.refused", uuid: actor.uuid, error: BLANK_NAME });
         globalThis.ui?.notifications?.error?.(BLANK_NAME);
@@ -133,6 +150,7 @@ export function makeWorld(F, knobs = {}) {
       return update(other, options);
     });
     hidden(actor, "createEmbeddedDocuments", async (type, list, options) => {
+      if (live()) return live().createEmbeddedDocuments(type, list, options);
       F.calls.push({ op: "createEmbeddedDocuments", uuid: actor.uuid, type, names: list.map(d => d.name), options: F.plain(options) });
       if (K.failItems.has(actor.flags?.pentaryn?.slug)) throw new Error(`Item validation errors: ${actor.flags.pentaryn.slug}`);
       const made = [];
@@ -145,6 +163,7 @@ export function makeWorld(F, knobs = {}) {
       return made;
     });
     hidden(actor, "deleteEmbeddedDocuments", async (type, ids, options) => {
+      if (live()) return live().deleteEmbeddedDocuments(type, ids, options);
       F.calls.push({ op: "deleteEmbeddedDocuments", uuid: actor.uuid, type, names: ids.map(id => actor.items.get(id)?.name), options: F.plain(options) });
       for (const id of ids) actor.items.delete(id);
       return ids;
@@ -169,8 +188,27 @@ export function makeWorld(F, knobs = {}) {
       }
       if (K.failCreate.has(slug)) throw new Error(`Actor validation errors: ${slug}`);
       const id = options?.keepId ? data._id : null;
+      const same = K.raceSame.get(slug);
+      if (same && id) {                                               // theirs first: its broadcast, then our response
+        K.raceSame.delete(slug);
+        F.fire("createActor", makeActor({ ...clone(data), name: `${data.name} (other tab)` }, { id }), {}, F.game.user?.id);
+        setTimeout(async () => {                                      // the other tab finishes: Items, then the stamp
+          const theirs = F.game.actors.get(id);
+          if (same.items?.length) await theirs.createEmbeddedDocuments("Item", same.items, { render: false, keepId: false });
+          await theirs.update({ flags: { pentaryn: { contentHash: same.hash } } }, { render: false });
+        }, 500);
+      }
       if (id && F.game.actors.get(id)) F.calls.push({ op: "Actor.replace", id });   // Foundry 14: no error
-      return makeActor(data, { id });
+      const made = makeActor(data, { id });
+      F.fire("createActor", made, F.plain(options), F.game.user?.id);   // our own response fires it too
+      if (id && K.raceAfter.has(slug)) {                              // theirs second: replaces ours right after
+        K.raceAfter.delete(slug);
+        queueMicrotask(() => {
+          F.calls.push({ op: "Actor.replace", id, by: "other tab" });
+          F.fire("createActor", makeActor({ ...clone(data), name: `${data.name} (other tab)` }, { id }), {}, F.game.user?.id);
+        });
+      }
+      return made;
     }
   }
   globalThis.getDocumentClass = name => (name === "Actor" ? StubActor : null);

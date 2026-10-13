@@ -17,7 +17,8 @@ Stage 2 of the Foundry pipeline. Reads the `actors.json` that Stage 1
 (`scripts/foundry/build_actors.py`) wrote, and upserts the NPC Actors it describes into the live
 world. Target: Foundry **v14** · dnd5e **6.0** (verified 6.0.6). The payload shapes are still the
 5.3 ones on purpose ([CONTRACT §1.2](../../CONTRACT.md): dnd5e 6 migrates them until 7.0; moving
-them is the `@2` contract bump). Tier `full`; no UI, no settings, one hook (`ready`).
+them is the `@2` contract bump). Tier `full`; no UI, no settings, one hook at load (`ready`) and one
+feature, the create watch (`create-watch.mjs`), which listens only while a create is in flight.
 
 ## What the player sees
 
@@ -136,7 +137,9 @@ them back.
 | `pentaryn-importer.ready` | `(api)` | the API is published (kit `publishNamespace`) |
 | `pentaryn.ready` | `("importer", api, { when })` | the same, on the shared hook |
 
-Emits nothing of its own. Listens to: `ready` only (pinned in `test/golden/hooks.json`).
+Emits nothing of its own. Listens to: `ready` at load (pinned in `test/golden/hooks.json`), and
+`createActor` for one id only during a new actor's create round trip (create-watch.mjs; registered on
+the module's hook registry and removed when the create resolves, so `uninstall()` unwinds it).
 
 ## Patches and adjustments
 
@@ -152,17 +155,31 @@ number.
 Only the GM tab that calls `import()` writes; nothing runs by itself. A player calling it gets a
 `PentarynAbort` (code `NOT_GM`) and a permanent error toast. A second call on the same tab while one is running is refused with
 `PentarynAbort` (`items-journal-4`). That guard is per tab, so two GM tabs (the MCP bridge tab and
-a browser tab) can still overlap; a concurrent create is then refused per slug rather than
-duplicated (`importer-AC-2`): a new actor is created with an `_id` derived from its slug
-(`idForSlug`, `keepId`). Foundry 14 does not refuse a `keepId` create over an id a world Actor
-already holds — it silently replaces that actor — so the importer looks in `game.actors` first: a tab
-that finds the id taken by the other tab's actor (same slug) gets
-`{ slug, error: "created concurrently by another GM tab — re-run" }` in `failed[]` and goes on with
-the rest; an id held by any other actor gets `id <id> is already held by Actor "<name>" — not
-overwritten`. Either way the holder is never overwritten. Two creates sent in the same instant (before
-either broadcast arrives) still leave one actor, holding the later tab's identical data. A re-run finds the actor by slug and updates it. Actors already in the world keep their
-random ids and are found by slug as before. Updates from two tabs at once are not guarded — run
-imports from one place.
+a browser tab) can still overlap. Exactly one actor per new slug results, and the second tab's write
+is an update (`importer-AC-2`, wave-3 importer item 2): a new actor is created with an `_id`
+derived from its slug (`idForSlug`, `keepId`). Foundry 14 does not refuse a `keepId` create over an
+id a world Actor already holds — it silently replaces that actor — so:
+
+- the importer looks in `game.actors` first and never sends a create for a held id. An id held by an
+  actor without this slug fails the slug: `id <id> is already held by Actor "<name>" — not
+  overwritten`. One held by the other tab's actor (same slug) is **joined**.
+- two creates sent in the same instant both pass that look. The server answers the first tab before
+  it handles the second, so the tab whose create lands second has the other tab's `createActor`
+  broadcast before its own response (the create watch sees it) and **joins**. The first tab re-reads
+  the live actor before its readback, since the second create swapped the instance.
+
+Joining: wait (polling every 250 ms, up to 10 s) for the other tab's content-hash stamp, then take
+the update path: skipped when the stamped hash is this file's, else updated. With no stamp in 10 s
+(the other tab failed or stopped) the joining tab updates the actor itself. Only a joined actor that
+is deleted while waiting fails the slug ("deleted by another GM tab while this run waited for it —
+re-run"). Actors already in the world keep their random ids and are found by slug as before. Two
+tabs updating the same existing actor at once are not guarded — run imports from one place.
+
+An update Foundry refuses (an invalid change, such as a blank `name`) is a per-actor failure
+(wave-3 importer item 1): Foundry's client shows its own error toast and `update()` resolves
+`undefined` without throwing, so the importer repeats the client's dry run; a throw or a non-empty
+diff fails the slug (`update refused by Foundry — <reason>`) with no Item writes and no hash stamp,
+so the next run retries it. An empty diff is a real no-op and still counts as updated.
 
 ## Extending
 

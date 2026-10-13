@@ -533,6 +533,90 @@ async function replaceItems(actor, itemsData, unmanagedItems, slug) {
   };
 }
 
+/** How long a tab that joins another tab's create waits for that tab's content-hash stamp (ms). */
+const JOIN_WAIT_MS = 10000;
+/** How often it looks while waiting (ms). */
+const JOIN_POLL_MS = 250;
+
+/**
+ * Create a NEW actor under its slug's id — or, when another GM tab is creating the same slug, join
+ * that tab's actor instead (importer-AC-2; wave-3 importer item 2, [declared]).
+ *
+ * Foundry 14.369's server replaces a world Actor on a `keepId` create over an id it already holds,
+ * with no error, so the create itself is not idempotent. Three cases:
+ *
+ *   - the id is already in game.actors (the other tab's create broadcast came before our look):
+ *     never send a create. A holder without this slug is refused; one with it is joined.
+ *   - two creates in the same instant both pass the look. The server handles them one at a time and
+ *     answers the first tab before it handles the second, so the tab whose create lands SECOND has
+ *     the first tab's `createActor` broadcast before its own response. That tab saw a foreign
+ *     instance of the id arrive before its own, so it stands down and joins. Its replace has
+ *     put its own (normally identical) data in place; the first tab writes the Items and the stamp.
+ *   - the first tab sees nothing at once; the second tab's replace swaps the instance in its
+ *     game.actors a moment later. The caller therefore re-reads `game.actors.get(id)` before its
+ *     readback (api.mjs), and its writes, routed by id, land on the live actor.
+ *
+ * Joining = wait for the other tab's content-hash stamp, then let the caller take the update path
+ * (skip when the stamped hash is the incoming one). No stamp within JOIN_WAIT_MS (the other tab failed
+ * or stopped) → the joining tab updates the actor itself. So exactly one actor results and the
+ * second tab's write is an update.
+ *
+ * The `createActor` watch is create-watch.mjs's `watchCreates`, live only for the create's round
+ * trip. Without it (the feature not installed) the same-instant case is not detected.
+ *
+ * @param {typeof Actor} ActorClass
+ * @param {object} payload  the create payload, `_id` = idForSlug(slug)
+ * @param {string} slug
+ * @param {((id: string) => {seen: Actor[], stop: () => void})|null} watchCreates
+ * @returns {Promise<{actor: Actor, joined: boolean}>}
+ * @throws {Error} a per-actor failure: the id is held by an actor without this slug, or the joined
+ *   actor was deleted while waiting
+ */
+async function createOrJoin(ActorClass, payload, slug, watchCreates) {
+  const id = payload._id;
+  const holder = game.actors.get(id);
+  if (holder) {
+    if (foundry.utils.getProperty(holder, `flags.${FLAG_SCOPE}.slug`) !== slug) {
+      throw new Error(`id ${id} is already held by Actor "${holder.name}" — not overwritten`);
+    }
+    log.warn(`${slug}: another GM tab created this actor during the run — joining it as an update`);
+    return { actor: await awaitStamp(id, slug), joined: true };
+  }
+  const { seen, stop } = watchCreates?.(id) ?? { seen: [], stop: () => {} };   // instances of the id, in arrival order
+  let actor;
+  try {
+    actor = await ActorClass.create(payload, { keepId: true, renderSheet: false });
+  } finally {
+    stop();
+  }
+  if (!actor) throw new Error("Actor.create returned nothing");
+  // Second only if a foreign instance arrived BEFORE our own: one that arrives after it is the other
+  // tab's replace of ours, and that tab is the one standing down.
+  const ours = seen.indexOf(actor);
+  if (!seen.slice(0, ours < 0 ? seen.length : ours).some(doc => doc !== actor)) return { actor, joined: false };
+  log.warn(`${slug}: another GM tab created this actor in the same instant — joining it as an update`);
+  return { actor: await awaitStamp(id, slug), joined: true };
+}
+
+/**
+ * Wait for the creating tab's content-hash stamp on actor `id`, up to JOIN_WAIT_MS.
+ * @param {string} id
+ * @param {string} slug
+ * @returns {Promise<Actor>} the live actor, stamped or not
+ */
+async function awaitStamp(id, slug) {
+  for (let waited = 0; ; waited += JOIN_POLL_MS) {
+    const live = game.actors.get(id);
+    if (!live) throw new Error("deleted by another GM tab while this run waited for it — re-run");
+    if (storedHash(live)) return live;
+    if (waited >= JOIN_WAIT_MS) {
+      log.warn(`${slug}: no content hash from the other GM tab after ${JOIN_WAIT_MS} ms — updating it here`);
+      return live;
+    }
+    await new Promise(resolve => setTimeout(resolve, JOIN_POLL_MS));
+  }
+}
+
 /**
  * Update an existing Actor in place, and throw when Foundry refused the change (wave-3 importer
  * item 1, [declared]).
@@ -637,6 +721,6 @@ function reportSummary({ counts, created, updated, skipped, failed, dryRun, url,
 export {
   TAG, log, shout, refuse, failAssertion, fetchJsonWithTimeout,
   assertVersionGate, assertNoBadFormulas, assertPrototypeToken, assertActivityIdsSurvived,
-  assertItemsAddressable, runExpectedAssertions, indexActorsBySlug, storedHash, replaceItems, stampContentHash, updateActor,
+  assertItemsAddressable, runExpectedAssertions, indexActorsBySlug, storedHash, replaceItems, stampContentHash, updateActor, createOrJoin,
   reportSummary
 };
