@@ -55,7 +55,11 @@ async function formSource(form) {
   const near = form.actor ?? fromUuidSync(form.uuid);
   if (typeof near?.items?.[Symbol.iterator] === "function") return near;
   let doc = null;
-  try { doc = await fromUuid(form.uuid); } catch { doc = null; }
+  try {
+    doc = await fromUuid(form.uuid);
+  } catch (err) {
+    log.debug("form source failed", { uuid: form.uuid }, err);   // M6: logged, then no tooltip source
+  }
   return typeof doc?.items?.[Symbol.iterator] === "function" ? doc : null;
 }
 

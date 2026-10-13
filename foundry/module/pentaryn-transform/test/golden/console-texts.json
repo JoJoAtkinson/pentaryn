@@ -26,6 +26,11 @@
   ],
   [
     "form-picker.mjs",
+    "debug",
+    "form source failed"
+  ],
+  [
+    "form-picker.mjs",
     "warn",
     "constellation tile click failed"
   ],

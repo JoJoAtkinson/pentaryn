@@ -4,6 +4,11 @@
 
 ## Unreleased
 
+- **A form whose beast fails to load is logged (M6, defect wave 2).** form-picker.mjs `formSource`
+  swallowed a `fromUuid` failure with `catch { doc = null; }`; it now logs it at debug ("form source
+  failed", with the uuid) and the tile still shows no tooltip source. The glue.test T-D3 scan now also
+  fails a catch whose body only assigns ([declared]; test "every console text…" in glue.test.mjs;
+  golden console-texts.json gains the row).
 - **patches.mjs's GLUE comment names both importers (M1, defect wave 2).** It said only the entry
   imports the file, but wiring.mjs imports `removePatches`. It now says the entry imports
   `installPatches` and wiring.mjs imports `removePatches`. Comment only ([declared]; test "M1" in
