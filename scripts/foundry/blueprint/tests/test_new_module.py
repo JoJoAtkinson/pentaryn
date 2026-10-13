@@ -372,3 +372,51 @@ def test_py_blueprint_rob_5_an_unreadable_sibling_manifest_still_has_its_sources
     assert new_module.css_owner("pz-", [mods]) is None
     rc, target = gen(tmp_path, "demo", "--no-run", modules_root=mods)
     assert rc == 2 and not target.exists()
+
+
+def test_py_blueprint_ext_8_full_only_agrees_with_c40_and_the_template():
+    # py-blueprint-EXT-8: the tier-to-files mapping is written out in several places. Pin the two
+    # that must agree: the test files new_module.FULL_ONLY skips for small are exactly the ones C40
+    # adds for the non-small tier, and every FULL_ONLY file is in the template with each import of
+    # it (from a file both tiers get) inside an `@if full` block.
+    import posixpath
+    import re
+    from types import SimpleNamespace
+
+    def c40_needs(tier, d):
+        stub = SimpleNamespace(tier=tier, dir=d, files=[], code=lambda rel: "")
+        status, detail = conformance._FUNCS["C40"](stub)
+        assert status == "fail"
+        return set(re.findall(r"test/[\w.-]+\.test\.mjs", " ".join(detail)))
+
+    nowhere = new_module.TEMPLATE / "no-such-module"
+    full_only_tests = {p for p in new_module.FULL_ONLY if re.fullmatch(r"test/[\w.-]+\.test\.mjs", p)}
+    assert full_only_tests == c40_needs("full", nowhere) - c40_needs("small", nowhere)
+
+    src_root = new_module.TEMPLATE / "pentaryn-__SHORT__"
+    assert {p for p in new_module.FULL_ONLY if not (src_root / p).is_file()} == set()
+
+    imp = re.compile(r"""(?:\bfrom|\bimport)\s*\(?\s*["'](\.{1,2}/[^"']+)["']""")
+
+    def imports(rel, text):
+        base = posixpath.dirname(rel)
+        return {posixpath.normpath(posixpath.join(base, m)) for m in imp.findall(text)}
+
+    gated = set()
+    for src in sorted(src_root.rglob("*.mjs")):
+        rel = src.relative_to(src_root).as_posix()
+        if rel in new_module.FULL_ONLY or rel.startswith("lib/"):
+            continue
+        text = src.read_text(encoding="utf-8")
+        for flags in ({"small", "dnd5e"}, {"small", "nodnd5e"}):
+            leaked = imports(rel, new_module.apply_blocks(text, flags)) & new_module.FULL_ONLY
+            assert leaked == set(), f"{rel} imports {sorted(leaked)} outside an @if full block"
+        gated |= imports(rel, new_module.apply_blocks(text, {"full", "dnd5e"})) & new_module.FULL_ONLY
+    full_only_code = {p for p in new_module.FULL_ONLY if p.endswith(".mjs") and not p.startswith("test/")}
+    assert full_only_code <= gated, f"never imported under @if full: {sorted(full_only_code - gated)}"
+
+    values = {"__SHORT__": "demo"}
+    langs = lambda tier: [x.get("path") for x in
+                          new_module.planned_manifest(values, tier=tier, dnd5e=True).get("languages", [])]
+    assert ("lang/en.json" in langs("full"), "lang/en.json" in langs("small")) == (True, False)
+    assert "lang/en.json" in new_module.FULL_ONLY
