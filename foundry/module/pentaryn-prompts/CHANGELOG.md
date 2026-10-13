@@ -117,6 +117,10 @@ cssPrefix `pp-`, afterSync). Each **[declared]** change goes to the live check.
   builds "Bands: touching 5 | … | distant 155+." from `core/grid.mjs`'s `BANDS` instead of a hand
   copy, so a band change cannot leave the legend stale. An oracle test pins the old line byte for
   byte, so the gather text is unchanged. No behaviour change.
+- **[declared] Core no longer imports from `build-core.mjs`** (prompts-core-M14): `sameName` moved
+  into `core/text.mjs`; `core/pool.mjs` imports it from there and `build-core.mjs` re-exports the
+  same function, so its pinned surface is unchanged. Core reaches up only to `prompts-core.mjs`'s
+  identity constants. Same name matching, no behaviour change.
 - `ensureMarkers` repairs every drifted actor in one batch update. A hot re-import after
   `uninstall()` re-wires and republishes at once.
 - Console only (DP9): a core token API that throws warns once; swallowed failures log at debug

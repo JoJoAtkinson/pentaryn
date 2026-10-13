@@ -6,10 +6,11 @@
  * the lookup order for per-advancement choices. character-adapter.mjs is the Foundry half.
  */
 
-// cropsDecision and specFileUrl live in core/text.mjs, and gather.mjs and replace.mjs import them from there.
-// build-core keeps re-exporting both because they are part of its pinned surface (golden/core-exports.json).
-import { cropsDecision, specFileUrl } from "./core/text.mjs";
-export { cropsDecision, specFileUrl };
+// cropsDecision, specFileUrl and sameName live in core/text.mjs; gather.mjs, replace.mjs and core/pool.mjs
+// import them from there. build-core keeps re-exporting all three because they are part of its pinned
+// surface (golden/core-exports.json).
+import { cropsDecision, specFileUrl, sameName } from "./core/text.mjs";
+export { cropsDecision, specFileUrl, sameName };
 
 export const ABILITIES = Object.freeze(["str", "dex", "con", "int", "wis", "cha"]);
 export const STANDARD_ARRAY = Object.freeze([15, 14, 13, 12, 10, 8]);
@@ -163,12 +164,6 @@ export function titleForms(title) {
   const t = String(title ?? "");
   const bare = t.replace(/\s+choices?$/i, "").trim();
   return bare && bare !== t ? [t, bare] : [t];
-}
-
-/** Loose name equality for compendium lookups: case, punctuation and word order ignored. */
-export function sameName(a, b) {
-  const words = s => String(s ?? "").toLowerCase().replace(/[^a-z0-9 ]/g, " ").split(/\s+/).filter(Boolean).sort().join(" ");
-  return words(a) === words(b);
 }
 
 /* ── dry-run validation (plan §13): choice keys, names, languages, attunement ── */
