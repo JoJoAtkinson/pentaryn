@@ -87,7 +87,6 @@ The table is generated from each `module.json`, the module's code and its
 | `chain`, `senses` | `pentaryn-senses` | 0.5.0 | full tier | `syncLight`, `carriedLight`, `resetSight`, `light.cast`, `light.end`, `light.pick`, `light.toggle`, `light.hood` … (+14) | [README](../../foundry/module/pentaryn-senses/README.md) |
 | `ties` | `pentaryn-ties` | 0.19.4 | full tier | `show`, `showAll`, `showOne`, `cards`, `clear`, `closeAllCards`, `edit`, `addTie` … (+101) | [README](../../foundry/module/pentaryn-ties/README.md) |
 | `transform` | `pentaryn-transform` | 0.4.0 | full tier | `shift`, `revert`, `forms`, `wildShapeActivity`, `original`, `isRevertItem`, `sweepSpentForms`, `formImage` … (+4) | [README](../../foundry/module/pentaryn-transform/README.md) |
-| `walls` | `pentaryn-walls` | 0.2.0 | full tier · **retired 2026-10-13 — Joe uses prefabs** | `preview`, `run`, `undo`, `makeMacro`, `analyze`, `runEngine`, `backends` | [`walls.md`](walls.md) · [README](../../foundry/module/pentaryn-walls/README.md) |
 
 <!-- module-index:end -->
 
@@ -113,7 +112,6 @@ The table is generated from each `module.json`, the module's code and its
 | The Argon Combat HUD misbehaves — a button missing or doubled, wrong pips, a tooltip that sticks or eats a click, the HUD on the wrong token; every Argon hook and patch by module and order | [`argon.md`](argon.md) |
 | One-click Sneak Attack, off-hand damage with no ability mod | [`attack-activities.md`](attack-activities.md) |
 | Spell circles you can't move/delete, "damage isn't rolled", monster saves off an area — `pentaryn-aoe` | [`aoe.md`](aoe.md) |
-| Completing hand-drawn walls — `pentaryn-walls` is retired 2026-10-13 (Joe uses prefabs); never sync it | [`walls.md`](walls.md) (API: [README](../../foundry/module/pentaryn-walls/README.md)) |
 | Attunement — the sidebar slots, over-cap warnings, "why is this item doing nothing" | [`../../foundry/module/pentaryn-attunement/README.md`](../../foundry/module/pentaryn-attunement/README.md) |
 | Player journal — "Add to my journal" on eye readables, a personal journal missing or duplicated | [`../../foundry/module/pentaryn-journal/README.md`](../../foundry/module/pentaryn-journal/README.md) |
 | "My cursor is wrong / stuck as an arrow" — map cursor per scene tool (target, ruler, spell area, journal pin, drawing); `game.pentaryn.cursors.status()` | [`../../foundry/module/pentaryn-cursors/README.md`](../../foundry/module/pentaryn-cursors/README.md) |
@@ -271,7 +269,7 @@ keep showing the *host's* own relationships. See [`../plans/foundry-npc-ties.md`
   `/license` are 403 through `vtt.atjoseph.com`**, admin is localhost-only
 - `foundry/CONTRACT.md` — the `actors.json` generator ⇄ importer contract
 - `foundry/assets-manifest.json`, `foundry/roll20-maps.json`
-- `foundry/module/` — in-house modules: `pentaryn-ties`, `-walls` (retired 2026-10-13), `-importer`,
+- `foundry/module/` — in-house modules: `pentaryn-ties`, `-importer`,
   `-pings`, `-dropbin`, `-attunement`, `-lookup`, `-feedback` (player bug/defect/feature reports, [`feedback.md`](feedback.md)), `-prompts`, `-journal`, `-combat`, `-transform` (Wild Shape and Starry Form on the Argon Bonus bar: pick a form, Return/Change Form, use count; revert from an item; blocks stacked transforms), `-names` (actor rename carries to token labels;
   nicknames kept), `-cursors` (tool cursors), `-movement` (ghost toggle, owned-on-top), `-creatures` (creature light, Your creatures strip), `-riders` (Elemental Adept/Affinity, Battle Medic, Hit Dice -/+), `-portals`, `-aoe` (draggable/deletable spell areas, area saves with a GM Apply, damage on hit), `-senses` (lights: an item flagged
   `flags.pentaryn-senses.light` lights its carrier; torches, lamps, lanterns and candles get a flame

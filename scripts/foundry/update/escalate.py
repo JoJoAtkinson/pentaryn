@@ -615,13 +615,13 @@ def make_checks(root: Path = REPO_ROOT) -> list[str]:
 
     Derived from ``scripts.foundry.ops.config.MODULES`` (python-tooling-2 step a), not
     scraped from the Makefile: the module set is defined once. Same set as the scrape it
-    replaced — walls stays out (its gate was ``foundry-walls-test``) and the secrets check
+    replaced (walls, which it left out, is no longer in the repo) and the secrets check
     ``foundry-admin-check`` stays in until step (b), a declared change. ``root`` is kept
     for callers; the registry is the repo's."""
     global _MAKE_TARGETS
     if _MAKE_TARGETS is None:
         _MAKE_TARGETS = sorted(
-            {f"make foundry-{k}-check" for k in ops_cfg.MODULES if k not in {"walls", "importer"}}
+            {f"make foundry-{k}-check" for k in ops_cfg.MODULES if k != "importer"}
             | {"make foundry-adjustments-check", "make foundry-admin-check"})
     return _MAKE_TARGETS
 

@@ -320,8 +320,7 @@ def test_rob_12_a_line_continuation_in_a_string_keeps_later_lines(tmp_path):
 # ── doc paths the real modules cite (senses-walls-cursors-8 recipe, repo-wide) ─
 # Unlike the synthetic tests above, these read the real modules: a context/… or
 # playbooks/… path a module's source, README or module.json names must exist, or a
-# reader (human or LLM) following it lands nowhere. walls' own node test covers walls
-# in depth; this is the cross-module net.
+# reader (human or LLM) following it lands nowhere. This is the cross-module net.
 
 
 _CITED = re.compile(r"\b(?:context|playbooks)/[\w./-]+\.md\b")

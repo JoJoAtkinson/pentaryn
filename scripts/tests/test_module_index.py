@@ -171,9 +171,3 @@ def test_a_retired_module_s_row_says_retired_walls_retire(tmp_path, monkeypatch)
     (row,) = [ln for ln in index.render(root).splitlines() if "`pentaryn-zz`" in ln]
     assert "| full tier · **retired 2026-10-13 — gone** |" in row
 
-
-@pytest.mark.repo
-def test_the_real_walls_row_says_retired_walls_retire():
-    text = index.README.read_text(encoding="utf-8")
-    (row,) = [ln for ln in text.splitlines() if "| `pentaryn-walls` |" in ln]
-    assert "**retired 2026-10-13 — Joe uses prefabs**" in row

@@ -89,7 +89,7 @@ def build_parser() -> argparse.ArgumentParser:
     # syncable. Every registered name that is not retired parses for module-sync too:
     # `syncable=False` on the spec (the importer) is refused by `modules.sync()` with a ✗
     # line naming importer-install, which an argparse "invalid choice" never reached (EXT-6,
-    # wave 3). A retired spec (walls, wave 3 walls-retire) is not offered at all; it stays in
+    # wave 3). A retired spec (`ModuleSpec.retired`) is not offered at all; it stays in
     # module-check's choices, and `modules.sync()` still refuses it if called directly.
     names = sorted(k for k, s in cfg.MODULES.items() if not s.retired)
     mcheck = add("module-check", "Prove a module's sources before it can reach Foundry.")
@@ -119,10 +119,6 @@ def build_parser() -> argparse.ArgumentParser:
 
     midx = add("module-index", "Regenerate the Module APIs table in context/foundry/README.md.")
     midx.add_argument("--check", action="store_true", help="exit 1 when the table is stale; write nothing")
-
-    add("walls-wasm", "Build the compiled (WASM) wall engine.")
-    bench = add("walls-bench", "Scaling curve for the wall engine.")
-    bench.add_argument("grid", nargs="?", help="grid size to extend the sweep to")
 
     return p
 
@@ -199,8 +195,6 @@ def main(argv: list[str] | None = None) -> int:
         return modules.check(args.module)
     if c == "module-sync":   return modules.sync(args.module)
     if c == "module-index":  return index.main(check=args.check)
-    if c == "walls-wasm":    return modules.walls_wasm()
-    if c == "walls-bench":   return modules.walls_bench(args.grid)
 
     raise AssertionError(f"unrouted command {c!r}")  # pragma: no cover
 

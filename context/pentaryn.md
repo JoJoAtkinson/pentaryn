@@ -92,7 +92,7 @@ settings were copied on disk with classic-level while both worlds were closed.
   pentaryn-journal (added 2026-10-07: an "Add to my journal" bar on every eye readable and eye-pile
   item; copies what the player saw, secrets stripped, into `Player Journals/<name>'s Journal` and
   opens it on the new entry, highlighted. See [`foundry/module/pentaryn-journal/README.md`](../foundry/module/pentaryn-journal/README.md))
-- **Custom module versions after the wave-5 go-live (2026-10-12)** (all synced and enabled except walls):
+- **Custom module versions after the wave-5 go-live (2026-10-12)** (all synced and enabled):
   aoe 0.4.0, **attunement 0.3.0** (a coin purse pays whoever holds it once, about 750 ms after it
   lands; a stash that comes up short rolls its copies back), combat 0.3.0, creatures 0.1.1, cursors 0.2.0,
   dropbin 0.2.3, **feedback 0.1.2** (player bug/defect/feature reports — bug icon in token controls and
@@ -105,15 +105,16 @@ settings were copied on disk with classic-level while both worlds were closed.
   Bridge: foundry-mcp-bridge **0.8.3-pentaryn.2** (adds `pentaryn-read` / `pentaryn-write`), module
   built from fork `pentaryn` `2fd6eb0` (toggle-condition without `active` toggles, write-log ids,
   eval-js `phase: "args"`); the server runs `7712417` (pentaryn-read description only).
-  `pentaryn-walls` 0.2.0 is retired (2026-10-13, Joe uses prefabs): in the repo, never synced, off, and its
-  `Data/modules/pentaryn-walls/` folder moved to the macOS Trash (defect wave 3), so Foundry no longer lists it (below). Record:
+  `pentaryn-walls` 0.2.0 was retired 2026-10-13 (Joe uses prefabs): never synced, off, its
+  `Data/modules/pentaryn-walls/` folder moved to the macOS Trash (defect wave 3), and then its source
+  left the repo (exact copy on branch `archive/pentaryn-walls`) (below). Record:
   [`plans/merge-and-go-live-2026-10-11.md`](plans/merge-and-go-live-2026-10-11.md).
 
 **Left out**
 
 | Module | Reason |
 |---|---|
-| `pentaryn-walls` | **Retired 2026-10-13** — Joe uses prefabs now; `module-sync` refuses it and nothing reinstalls it; the installed folder went to the Trash the same day (source kept, [`foundry/walls.md`](foundry/walls.md)). Before that: Joe's instruction: do not activate the custom walls add-on. `false` in `core.moduleConfiguration`; `game.pentaryn.walls` absent. Migrated in wave 2, never live-tested, off in the world: do not sync or live-check it (W2-L1, 2026-10-11) |
+| `pentaryn-walls` | **Retired 2026-10-13** — Joe uses prefabs now; the installed folder went to the Trash the same day and the source then left the repo (exact copy on branch `archive/pentaryn-walls`). Before that: Joe's instruction: do not activate the custom walls add-on. `false` in `core.moduleConfiguration`; `game.pentaryn.walls` absent. Migrated in wave 2, never live-tested, off in the world: do not sync or live-check it (W2-L1, 2026-10-11) |
 | "Auto map generator" | No such module exists. The only generator is the bridge's ComfyUI `generate-map` tool: zero calls in the logs, rejected in [`plans/foundry-mcp-fork.md`](plans/foundry-mcp-fork.md). Nothing to switch off |
 
 **Log audit:** no add-on bugged out. Error logs were 0 bytes; the only failures were bridge

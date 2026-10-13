@@ -192,7 +192,7 @@ unrelated.
 
 ⚠️ **`flags.pentaryn` cannot be read with `getFlag`.** Foundry validates flag scopes against
 registered module ids, and `pentaryn` is not one — the modules are `pentaryn-dropbin`,
-`pentaryn-ties`, `pentaryn-walls`. The flag is written and persisted fine by
+`pentaryn-ties` and so on. The flag is written and persisted fine by
 `createEmbeddedDocuments`; only the accessor is fussy. Read it as `tile.flags?.pentaryn?.travel`.
 
 ### The tile does not follow the region

@@ -82,16 +82,6 @@
           "^styles/ties\\.css: #pentaryn-ties-cards$"
         ]
       }
-    },
-    "pentaryn-walls": {
-      "C07": {
-        "reason": "flagScope stays 'wall-autocomplete' (module.json and core/engine.mjs): the flag-scope DATA migration is parked, not wired, not run — walls stays OFF in Joe's world",
-        "decision": "wave7-restart-batch.md walls row (Joe 2026-10-12; overnight plan §10: walls stays off)",
-        "until": "walls is turned on and its flag-scope data migration runs",
-        "match": [
-          "^flagScope 'wall-autocomplete' ≠ 'pentaryn-walls'"
-        ]
-      }
     }
   }
 }

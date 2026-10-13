@@ -486,7 +486,7 @@ def test_a_symlink_left_in_staging_is_cleared_ec_8(module, tmp_path):
 def test_syncable_is_a_spec_field_and_the_importer_row_is_off_ext_6():
     assert cfg.ModuleSpec("pentaryn-zz", check="parse").syncable is True
     assert cfg.MODULES["importer"].syncable is False
-    assert all(s.syncable for k, s in cfg.MODULES.items() if k not in {"importer", "walls"})
+    assert all(s.syncable for k, s in cfg.MODULES.items() if k != "importer")
 
 
 def test_module_sync_choices_are_every_registered_module_ext_6(monkeypatch):
@@ -525,25 +525,21 @@ def test_sync_refuses_a_non_syncable_spec_ext_6(module, monkeypatch, capsys):
     assert "✗" in out and "importer-install" in out
 
 
-# ── a retired module is never synced (wave 3 walls-retire: Joe retired pentaryn-walls 2026-10-13) ──
-
-def test_walls_is_retired_and_not_syncable_walls_retire():
-    spec = cfg.MODULES["walls"]
-    assert spec.retired.startswith("2026-10-13"), "the retirement carries its date"
-    assert spec.syncable is False
-    assert spec.check == cfg.ALL_GATES, "its source stays in the repo and stays proved"
-
+# ── a retired module is never synced (wave 3 walls-retire: Joe retired pentaryn-walls 2026-10-13;
+# walls has since left the repo, context/foundry/retired.md — the mechanism stays) ──
 
 def test_a_retired_spec_is_never_syncable_walls_retire():
     assert cfg.ModuleSpec("pentaryn-zz", check="parse", retired="2026-10-13 — gone").syncable is False
     assert cfg.ModuleSpec("pentaryn-zz", check="parse").retired == ""
 
 
-def test_module_sync_does_not_offer_walls_walls_retire():
+def test_module_sync_does_not_offer_a_retired_spec_walls_retire(monkeypatch):
     from scripts.foundry.ops import cli
+    monkeypatch.setitem(cfg.MODULES, "zz", cfg.ModuleSpec("pentaryn-zz", check="parse",
+                                                          retired="2026-10-13 — gone"))
     with pytest.raises(SystemExit):
-        cli.build_parser().parse_args(["module-sync", "walls"])
-    assert cli.build_parser().parse_args(["module-check", "walls"]).module == "walls"
+        cli.build_parser().parse_args(["module-sync", "zz"])
+    assert cli.build_parser().parse_args(["module-check", "zz"]).module == "zz"
 
 
 def test_sync_refuses_a_retired_spec_and_says_so_walls_retire(module, monkeypatch, capsys):

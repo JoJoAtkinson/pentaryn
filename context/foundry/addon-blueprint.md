@@ -31,7 +31,7 @@ right now, and the scorer prints it as WAIT. The rows marked WAIT below were on 
 | An attack-card once-per-turn rider | `pentaryn-combat` `TURN_RIDERS` | **WAIT** |
 | Area templates, region effects, AoE resolution | `pentaryn-aoe` | **WAIT** |
 | Loot, containers, corpses, anything Item Piles | `pentaryn-dropbin` (its Item Piles adapter) | |
-| A scene-build helper (markers, gather/replace) | `pentaryn-prompts`; walls → `pentaryn-walls` | |
+| A scene-build helper (markers, gather/replace) | `pentaryn-prompts` | |
 | Token light, vision, carried light, chains | `pentaryn-senses` (`creatures` only for player-owned creature lights) | **WAIT** (both) |
 | Region teleport, party moves | `pentaryn-portals` | **WAIT** |
 | Knowledge, ties, attributes, study | `pentaryn-ties` | |
@@ -427,7 +427,8 @@ stylesheet from a module's own CSS.
 
 - **Scope = the module id** (`flags.pentaryn-<short>.*`), the value of `flagScope` in the manifest
   and in `module.json`. A module whose scope is something else migrates its data in the Wave 7
-  restart batch (walls only; C07 says "DATA migration" vs "manifest-only").
+  restart batch (that was walls only, since removed from the repo; C07 says "DATA migration" vs
+  "manifest-only").
 - Every flag the module **writes** is listed in `MANIFEST.flags.writes` (and the row's
   `sideEffects`) and in the README "Data written" table.
 - Every **foreign** flag it reads is listed in `MANIFEST.flags.reads` **and** in the README "Flags

@@ -162,7 +162,8 @@ const tick = () => new Promise(r => { tickQ.push(r); tickChan.port1.ref?.(); tic
 def test_tick_shares_one_channel():
     """perf-1: every golden with tick() carries the shared-channel preamble and builds one channel."""
     with_tick = sorted(stem for stem, text in TEXTS.items() if re.search(r"^const tick = ", text, re.M))
-    assert len(with_tick) == 17, f"perf-1: expected 17 goldens with tick(), found {with_tick}"
+    # 16 since walls.js left with the walls addon (2026-10-13, context/foundry/retired.md)
+    assert len(with_tick) == 16, f"perf-1: expected 16 goldens with tick(), found {with_tick}"
     for stem in with_tick:
         text = TEXTS[stem]
         assert text.count(TICK_PREAMBLE) == 1, f"perf-1: {stem}: tick() is not the shared-channel preamble"

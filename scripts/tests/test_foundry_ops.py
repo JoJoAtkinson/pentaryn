@@ -303,8 +303,7 @@ def test_every_subcommand_routes(monkeypatch):
         monkeypatch.setattr(cli.service, fn, lambda *a, **k: 0)
     for fn in ("build_actors", "stage", "install_importer", "run_import", "clean", "clean_only", "verify"):
         monkeypatch.setattr(cli.pipeline, fn, lambda *a, **k: 0)
-    for fn in ("check", "sync", "walls_wasm", "walls_bench",
-               "module_new", "module_vendor", "module_conformance"):
+    for fn in ("check", "sync", "module_new", "module_vendor", "module_conformance"):
         monkeypatch.setattr(cli.modules, fn, lambda *a, **k: 0)
     monkeypatch.setattr(cli.login_mod, "login", lambda *a, **k: 0)
     monkeypatch.setattr(cli.index, "main", lambda *a, **k: 0)
