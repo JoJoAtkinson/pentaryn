@@ -44,7 +44,18 @@ import { grantedRegion } from "./known-ui.mjs";
 // `requestAttrLore` (the player-initiated roll) is deliberately no longer imported: attribute
 // facts are handed over by the GM via "Mark as learned", never rolled for from the player's side.
 import { kindActorOf, attrLoreStateFor, releaseHeldAttribute } from "./study.mjs";
-import { grantsForEntry, GRANTED_FLAG, HELP_SCALE, CARRIED_SCALE, helpFor, rollableLore, LORE_FLAG } from "./known-core.mjs";
+import {
+  grantsForEntry,
+  GRANTED_FLAG,
+  HELP_SCALE,
+  CARRIED_SCALE,
+  helpFor,
+  rollableLore,
+  LORE_FLAG,
+  LORE_DC_MIN,
+  LORE_DC_MAX,
+  LORE_DC_DEFAULT
+} from "./known-core.mjs";
 import { esc, bindRowToggle, makeOpenState, guardClick } from "./core/html.mjs";
 import { isPersonalEntry } from "./core/rules.mjs";
 import { makeLog } from "./lib/log.mjs";
@@ -292,7 +303,7 @@ function identifyBlock(row) {
       <div class="pt-identify-head"><i class="fa-solid fa-eye" aria-hidden="true"></i> ${esc(_loc("PENTARYN_TIES.attributes.identifyHeading"))}
         <select data-attr-field="skill" data-id="${esc(row.id)}">${opt}</select>
         <span>${esc(_loc("PENTARYN_TIES.attributes.identifyDC"))}</span>
-        <input type="number" min="1" max="40" data-attr-field="dc" data-id="${esc(row.id)}" value="${esc(row.dc ?? 15)}">
+        <input type="number" min="${LORE_DC_MIN}" max="${LORE_DC_MAX}" data-attr-field="dc" data-id="${esc(row.id)}" value="${esc(row.dc ?? LORE_DC_DEFAULT)}">
       </div>
       <label class="pt-field pt-field-stacked">
         <span class="pt-field-label">${esc(_loc("PENTARYN_TIES.attributes.identifySuccess"))}</span>

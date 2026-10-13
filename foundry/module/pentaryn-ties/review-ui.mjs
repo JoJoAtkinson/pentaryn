@@ -47,7 +47,17 @@ import {
 import { kindActorOf } from "./study.mjs";
 import { isPersonalEntry } from "./core/rules.mjs";
 import { personalCluesHTML } from "./attributes-ui.mjs";
-import { reviewState, sortForReview, childrenOf, indexRegistry, readLore, REVIEW_SORTS, REGISTRY_SETTING } from "./known-core.mjs";
+import {
+  reviewState,
+  sortForReview,
+  childrenOf,
+  indexRegistry,
+  readLore,
+  REVIEW_SORTS,
+  REGISTRY_SETTING,
+  LORE_DC_MIN,
+  LORE_DC_MAX
+} from "./known-core.mjs";
 import { LiveHooks } from "./ties-adapter.mjs";
 import { makeLog } from "./lib/log.mjs";
 
@@ -409,7 +419,7 @@ export class AttributeReview extends ApplicationV2 {
       ${field(_loc("PENTARYN_TIES.review.field.title"), `<input type="text" data-field="title" value="${esc(e.title)}">`)}
       ${field(_loc("PENTARYN_TIES.review.field.category"), `<input type="text" data-field="category" value="${esc(e.category)}">`)}
       ${field(_loc("PENTARYN_TIES.review.field.skill"), this.skillSelect("skill", e.skill))}
-      ${field(_loc("PENTARYN_TIES.review.field.dc"), `<input type="number" min="1" max="40" step="1" data-field="dc" value="${e.dc}">`)}
+      ${field(_loc("PENTARYN_TIES.review.field.dc"), `<input type="number" min="${LORE_DC_MIN}" max="${LORE_DC_MAX}" step="1" data-field="dc" value="${e.dc}">`)}
     </div>
     ${Object.keys(FIELD_LABEL).map(k => was(k, e[k], _loc(FIELD_LABEL[k]))).join("")}
     ${field(_loc("PENTARYN_TIES.review.field.reveal"), `<textarea data-field="reveal">${esc(e.reveal)}</textarea>`)}
@@ -455,7 +465,7 @@ export class AttributeReview extends ApplicationV2 {
           <div class="pt-review-fields">
             ${field(`${n + 1}. ${_loc("PENTARYN_TIES.review.field.label")}`, `<input type="text" data-lore-field="label" value="${esc(r.label)}">`)}
             ${field(_loc("PENTARYN_TIES.review.field.skill"), this.skillSelect("", r.skill, `data-lore-field="skill"`))}
-            ${field(_loc("PENTARYN_TIES.review.field.dc"), `<input type="number" min="1" max="40" step="1" data-lore-field="dc" value="${r.dc}">`)}
+            ${field(_loc("PENTARYN_TIES.review.field.dc"), `<input type="number" min="${LORE_DC_MIN}" max="${LORE_DC_MAX}" step="1" data-lore-field="dc" value="${r.dc}">`)}
             <span class="pt-review-loreid"><code>${esc(r.id)}</code> ${loreTag(r)}</span>
           </div>
           ${["label", "skill", "dc"].map(k => loreWas(r, k)).join("")}

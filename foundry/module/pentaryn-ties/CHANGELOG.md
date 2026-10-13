@@ -173,6 +173,11 @@ trimmed, case-blind, `personal`) is one `isPersonalEntry(entry)` in `core/rules.
 World / Personal tab split and the Attributes tab's "Clues on <carrier>" both call it instead of
 spelling it by hand. ties-ui-EXT-6.
 
+Changed (declared, no table-visible change): every DC input — the Attributes tab's identify DC and
+the review panel's entry and lore-row DCs — takes its min, max and default from `LORE_DC_MIN /
+LORE_DC_MAX / LORE_DC_DEFAULT` (core/lore.mjs, via known-core) instead of a literal 1 / 40 / 15, as
+the lore-row editor already did. ties-ui-EXT-7.
+
 ## 0.19.4 (2026-10-10, usability run, Area 7 re-run)
 
 - **The inspect window's Share switches are the table's PCs only** (`tablePCs`): each player's
