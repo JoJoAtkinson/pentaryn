@@ -166,8 +166,12 @@ and the four patches above get their own rows (`adjustments-batch.md`, dropbin s
   scene and uuid are recorded). One drop is one row: Item Piles takes the item off the sheet first,
   which the delete capture records, and the drop row then takes that delete row's place and number
   (same actor and item `_id`, within 2 s) — DB-AC-1 live. Part of a stack is an update, not a delete,
-  so it was only ever the drop row. A drop onto an *existing* pile is still a `delete` row and a
-  `drop` row: Item Piles gives the moved item a new `_id` on the pile, so nothing ties the two. A delete off a sheet is captured by
+  so it was only ever the drop row. A drop onto an *existing* pile is one row too: Item Piles gives
+  the moved item a new `_id` on the pile, so the ledger listens to its `item-piles-preTransferItems`
+  and keeps, per transfer, the items it took off the character (each kept 2 s). The drop's item is
+  matched within that actor's own transfers — by `_id`, else name, type and quantity — and the match
+  is used once; the tail `delete` row may match either that id or the drop item's own. A hand delete
+  is never in a transfer, so it keeps its own row. A delete off a sheet is captured by
   the deleting client; players relay it through socketlib (`executeAsGM`) to a GM, and a GM records
   locally. A relay that reaches a GM tab still loading (before `ready`) is held and recorded at
   `ready`, in arrival order; the player's relay resolves with its number then — DB-AC-2. Appends on one client are serialised and coalesced (one counter + log write per burst). A malformed relayed entry (bad reason, itemName, t, quantity or item) is one

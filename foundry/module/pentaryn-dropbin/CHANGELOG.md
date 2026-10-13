@@ -10,12 +10,18 @@ Declared changes:
   capture) and remembers what that transfer took off the character; the drop's item is matched within
   that one transfer — by `_id`, else name, type and quantity (`movedSourceId`) — and takes the delete
   row's place. A hand delete is never in a transfer, so a same-named hand delete keeps its row
-  (dropbin-EC-2).
+  (dropbin-EC-2). Transfers are kept per transfer for 2 s (`rememberTransfer`), so another actor's
+  transfer in between (a player looting a corpse) does not lose the match; a matched item is taken
+  out (`takeMoved`), so it never matches a later drop; and the tail delete may match either that id
+  or the drop item's own, so a same-named drop onto empty ground right after stays one row.
 - A linked corpse whose last token (or scene) is deleted no longer leaves its base actor a dead
   pile. Item Piles writes its pile flag on a linked token's actor too; the release that gives back
   the ownership map now also writes `flags.item-piles.data.enabled: false` (as Item Piles' own
   revert) and removes Dead when dropbin added it (new actor flag `flags.pentaryn-dropbin.dead`,
-  saved at the first death). A Dead the GM set before the death stays.
+  saved at the first death). A Dead the GM set before the death stays. Dead is removed before the
+  flags are cleared, so a failed removal leaves the actor our corpse and the next release (at the
+  latest the next `ready`) retries it. A corpse made before this change has no `dead` flag: its Dead
+  is treated as the GM's and stays (the pile still goes off).
 
 ## Unreleased — 2026-10-13 (defect wave 2 live check, FIX-3)
 
