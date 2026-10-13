@@ -3,9 +3,17 @@
 **Read this when** you want the history of defect wave 2 for `pentaryn-senses` (what was fixed,
 why, and how to check it live). History only; operate the module from its README.
 
-Branch `fix2/senses-2026-10-12`. Gate `make foundry-senses-check`: 205 tests pass, vendored kit
+Branch `fix2/senses-2026-10-12`. Gate `make foundry-senses-check`: 207 tests pass, vendored kit
 identical, conformance 100 % (49/49). All changes are declared behaviour changes approved by Joe
-(defect wave 2, 2026-10-12). No item was reverted. Module shipped files changed: `.mjs`, README,
+(defect wave 2, 2026-10-12).
+
+**Reverted once, then forward-fixed (FIX-3, 2026-10-13).** Run FIX-2 merged this branch into main
+and reverted the merge (d26ef1db): senses-edge-4's `normalise()` handed Foundry's `LightData` the
+shard item's own light flag, and `LightData` cleans its input in place, so the flag grew from 3
+keys to all 15 defaults; `syncLight` then wrote 15 keys and their `animation: {type: null}` nulled
+a doused torch's animation (an undeclared live golden diff). FIX-3 added a failing test with a
+`LightData` that cleans in place (c0c95c7e), made `normalise()` hand it a deep copy (8d688ad0),
+merged main (8b9cf59a) and re-applied the wave by reverting the revert (efaf50e8). Module shipped files changed: `.mjs`, README,
 CHANGELOG only — no `module.json`, `lang/`, `styles/` or `lib/` changes, so a **reload** is enough.
 
 | id | defect | ruling | what changed (plain words) | commits | test |
@@ -14,6 +22,7 @@ CHANGELOG only — no `module.json`, `lang/`, `styles/` or `lib/` changes, so a 
 | senses-EXT-2 | Light prompt and card buttons built from separate lists | fix | Both come from one list; prompt keeps "Not now", card keeps "End light" | 232a56bd | light-actions |
 | senses-EXT-4 | Which items get a Light activity was spread out | fix | One list decides; a new light source is one line | c0b861a1 | activity-profiles |
 | senses-edge-4 | Hand-written shard light with capital colours / extra keys rewrote every sync | fix | Compared as Foundry stores it, so it's applied once and then left alone | ebafe41e | carried-normalise |
+| senses-edge-4 (FIX-3) | edge-4 expanded the shard's light flag to every LightData default in memory: 15 keys written, a doused torch's animation nulled | fix (forward fix, recommendation) | The comparison works on a copy; the flag keeps its 3 keys, the write is exactly the profile's keys, a doused torch keeps its animation | c0c95c7e, 8d688ad0 | carried-normalise-shape |
 | senses-edge-3 | Button tips rendered names as HTML | fix | Every senses tip shows names exactly as typed; screen readers get the same text | c106f537 | hud-tips, chain, glue-player, glue-second-gm |
 | senses-R4 | `inspect(…, null)` / `resetSight(…, null)` threw | fix | null options behave like no options | 59fa33e4 | null-opts |
 | senses-EXT-6 | Torch light/douse flag not declared in the manifest | fix | Declared; a test fails on any undeclared flag write | 6a2cb0e9 | api |
@@ -52,6 +61,12 @@ beyond the module loading without console errors after a reload.
 - **senses-edge-4**: ZZ actor with a ZZ shard item whose `flags.pentaryn-senses.light` has
   `color: '#FF0000'` plus an extra key. Call `game.pentaryn.senses.syncLight(actor)` twice; the
   second call returns 0.
+- **senses-edge-4 (FIX-3)**: ZZ actor with a ZZ shard item whose `flags.pentaryn-senses.light` is
+  exactly `{bright: 0, dim: 15, color: '#8844ff'}`, plus a ZZ Torch (dnd5e `torch` identifier). Light
+  the torch; the ZZ actor's `prototypeToken.light.animation.type` is `torch`. Douse it;
+  `syncLight` writes only `bright`, `dim`, `color` (the shard item's flag still has exactly those
+  3 keys) and `prototypeToken.light.animation.type` is still `torch`. Re-run the live goldens:
+  the doused-torch row matches the pre-FIX-2 rollback copy (no 15-key write, animation not null).
 - **senses-edge-3**: name a ZZ token `Z & <b>Q</b>`, target it, open the HUD on a second ZZ token;
   the "Chain to" tip shows the literal name, not bold. A ZZ actor with two lit torches shows the
   Outshone tip with a literal `&`.
