@@ -63,7 +63,8 @@ lifecycle:
 
 smoke:
   # "all" smokes every installed world. Migration is per-world and happens on launch,
-  # so a world you skip migrates untested at your next manual launch.
+  # so a world you skip migrates untested at your next manual launch. A list that names
+  # no installed world smokes nothing: the run still finishes, but says so and notifies ⚠️.
   worlds: all
   browser: true
   browser_dwell_seconds: 60

@@ -656,6 +656,9 @@ def _run_locked(result: RunResult, run_id: str, *, dry: bool, force: bool,
                                 touched=touched, error_offset=error_offset,
                                 log_day=log_day)
         result.smoke = [r.to_json() for r in results]
+        miss = smoke.selection_miss(result.plan["worlds"], policy)
+        if miss:
+            result.messages.append(miss)
 
         broken = [r for r in results if not r.ok]
         if broken or result.failed:
@@ -778,10 +781,17 @@ def notify_result(result: RunResult) -> None:
         # v2: the fixer's branch was parked and its package rolled back.
         lines.append(f"fix parked on {fix['branch']} — {fix.get('package', 'package')} "
                      "rolled back")
+    # A smoke selection that matched no world tested nothing: still done, but flagged (EC-12).
+    miss = next((m for m in result.messages if m.startswith(smoke.MISS_PREFIX)), None)
+    if miss:
+        lines += ["", miss]
     if held:
         notify.notify("attention", f"{len(applied)} applied, {len(held)} need you",
                       "\n".join(lines + [""] +
                                 [f"HELD · {d['id']}: {(d['reasons'] or [''])[-1]}"
                                  for d in held[:4]]))
+    elif miss:
+        notify.notify("attention", f"{len(applied)} package(s) updated, nothing smoked",
+                      "\n".join(lines))
     else:
         notify.notify("done", f"{len(applied)} package(s) updated", "\n".join(lines))

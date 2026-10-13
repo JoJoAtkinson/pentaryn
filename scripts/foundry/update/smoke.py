@@ -74,17 +74,39 @@ class WorldResult:
         }
 
 
+MISS_PREFIX = "smoke: policy selection "
+
+
+def _wanted(policy: dict):
+    return (policy.get("smoke", {}) or {}).get("worlds", "all")
+
+
+def select_worlds(worlds: list[dict], policy: dict) -> list[dict]:
+    """The worlds ``policy.smoke.worlds`` picks: ``all``, one id, or a list of ids."""
+    wanted = _wanted(policy)
+    return [w for w in worlds
+            if wanted == "all" or w["id"] in (wanted if isinstance(wanted, list) else [wanted])]
+
+
+def selection_miss(worlds: list[dict], policy: dict) -> str | None:
+    """The report line when the selection names no installed world, else ``None``.
+
+    A miss smokes nothing, so the run would read as clean with nothing tested (EC-12).
+    The run still finishes ``done`` — this only marks it for attention.
+    """
+    if not worlds or select_worlds(worlds, policy):
+        return None
+    wanted = _wanted(policy)
+    shown = ", ".join(map(str, wanted)) if isinstance(wanted, list) else str(wanted)
+    return f"{MISS_PREFIX}{shown} matched no world — nothing was smoked"
+
+
 def run_all(fa: FoundryAdmin, worlds: list[dict], *, policy: dict,
             touched: set[str], error_offset: int,
             log_day: str | None = None) -> list[WorldResult]:
     """Smoke every world in turn, leaving the last one launched."""
-    smoke_policy = policy.get("smoke", {}) or {}
-    wanted = smoke_policy.get("worlds", "all")
-    selected = [w for w in worlds
-                if wanted == "all" or w["id"] in (wanted if isinstance(wanted, list) else [wanted])]
-
     results: list[WorldResult] = []
-    for world in selected:
+    for world in select_worlds(worlds, policy):
         # Foundry serves ONE world at a time, and `launchWorld` is a /setup action —
         # which is refused (400 on 14.369, 403 before) while any world is active. So the previous world has to come down
         # before the next can go up, or every world after the first fails to launch.
