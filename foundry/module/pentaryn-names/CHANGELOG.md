@@ -38,6 +38,13 @@
   the first name, matched nothing, and the first write then left them on the middle name. A failed
   relabel does not hold up the next one. Renames from two different clients are not chained: repair
   with `sync(actor, middle, final)`.
+- [declared] names-ac-3 live (FIX-3, 2026-10-13): two renames of one actor sent before either reply
+  (`a.update({name: Mid}); await a.update({name: Fin})`) now end on `Fin`. Both `preUpdateActor`
+  calls ran before the server replied, so both recorded the first name; the second relabel then
+  looked for it, matched nothing, and labels stayed on `Mid` with one toast. `preUpdateActor` now
+  also puts `pentarynLanded[id]` in the update options (how many renames of that actor had landed on
+  this client); `updateActor` counts landed renames per actor, and when one landed since the send, it
+  relabels from the name that rename left. New update-options key; the chaining is unchanged.
 - [declared] names-maint-2-manifest (final review 2026-10-12): the `sync` row's doc (what
   `describe()` and the bridge show) now says a ref of the wrong kind (a number, a plain object, an
   Item) or a missing or non-string `oldName`/`newName` returns `fail("BAD_ARGS")`, writing nothing.

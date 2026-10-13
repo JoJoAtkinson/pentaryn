@@ -127,18 +127,34 @@ export async function syncRef(ref, oldName, newName) {
   return sync(actor, oldName, newName);
 }
 
+/**
+ * names-ac-3 (FIX-3 live): the renames of each actor that have LANDED on this client (any user),
+ * id → { n, name }: how many, and the name the last one left. preUpdateActor runs before the server
+ * replies, so two sends before either reply (`a.update(Mid); await a.update(Fin)`) both snapshot the
+ * first name. The snapshot also carries `n`; if a rename landed since, the real old name is the one
+ * that rename left, because updateActor fires in server order.
+ */
+const landed = new Map();
+
 export function install(reg, ctx) {
   log = ctx.log;
   // Capture the old name before it is overwritten, keyed by actor id: one Actor.updateDocuments
   // batch shares its options across every actor in it (names-ac-2).
   reg.on("preUpdateActor", (actor, changes, options) => {
-    if ("name" in changes && changes.name !== actor.name) (options.pentarynOldNames ??= {})[actor.id] = actor.name;
+    if (!("name" in changes) || changes.name === actor.name) return;
+    (options.pentarynOldNames ??= {})[actor.id] = actor.name;
+    (options.pentarynLanded ??= {})[actor.id] = landed.get(actor.id)?.n ?? 0;
   }, { label: "preUpdateActor: remember old name" });
 
   // Act only on the client that made the change, never on names' own prototype write.
   reg.on("updateActor", (actor, changes, options, userId) => {
-    const from = options.pentarynOldNames?.[actor.id];
-    if (userId !== game.user.id || options.pentarynNames || !from || !("name" in changes)) return;
+    if (!("name" in changes) || options.pentarynNames) return;
+    const last = landed.get(actor.id);
+    landed.set(actor.id, { n: (last?.n ?? 0) + 1, name: actor.name });
+    const seen = options.pentarynLanded?.[actor.id];
+    let from = options.pentarynOldNames?.[actor.id];
+    if (from && last && seen !== undefined && last.n > seen) from = last.name;
+    if (userId !== game.user.id || !from) return;
     const to = actor.name;
     chained(actor.id, () => sync(actor, from, to)).catch(err => ctx.log.warn("relabel after rename failed", { actor: actor.uuid, from, to }, err));
   }, { label: "updateActor: relabel" });
@@ -146,4 +162,5 @@ export function install(reg, ctx) {
 
 export function uninstall() {
   chains.clear();
+  landed.clear();
 }
