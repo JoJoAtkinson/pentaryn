@@ -524,7 +524,7 @@ def _sweep_after_build(monkeypatch, cloud_dir, name, *, only_safety=False):
             (cloud_dir / "bundles" / name).unlink()
         return job
     monkeypatch.setattr(cloud, "_build", build)
-    monkeypatch.setattr(cloud, "_rebuilder", lambda rebuilt, dest_dir=None: (lambda n: None))
+    monkeypatch.setattr(cloud, "_rebuilder", lambda rebuilt=None, dest_dir=None: (lambda n: None))
 
 
 def test_a_background_job_stages_and_uploads_the_bundles_the_cloud_lacks(two_hosts,

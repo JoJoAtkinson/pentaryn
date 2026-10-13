@@ -666,6 +666,24 @@ def test_perf1_rebuilding_one_bundle_hashes_only_that_folder(two_hosts, tmp_path
     assert walked and set(walked) == {Path(loc.path)}, walked    # never module/maps
 
 
+def test_m4_rebuilder_rebuilt_is_optional_and_tars_land_in_the_job_staging(two_hosts,
+                                                                           tmp_path):
+    """M4: every caller passed a throwaway `[]` for `rebuilt`, and its docstring said the
+    caller deletes those tars — it never does: they land in `dest_dir` (the job's staging
+    folder) and go with job.drop(). `rebuilt` is optional, collected only when given."""
+    from scripts.foundry import bundles
+    loc, tar = _staged(two_hosts, tmp_path)
+    tar.unlink()
+    dest = tmp_path / "job-staging"
+    dest.mkdir()
+    with two_hosts.use("mac"):
+        src = cloud._rebuilder(dest_dir=dest)(loc.name)
+    assert src is not None and src.parent == dest and src.is_file()
+    doc = cloud._rebuilder.__doc__ or ""
+    assert "for the caller to" not in " ".join(doc.split())
+    assert "drop()" in doc
+
+
 def test_a_staged_tar_built_days_ago_lands_with_a_fresh_cloud_mtime(two_hosts, tmp_path):
     from scripts.foundry import bundles
     loc, tar = _staged(two_hosts, tmp_path)

@@ -1116,7 +1116,7 @@ def _upload_heal(st: Storage, job: uploadq.Job) -> None:
     except StorageError as exc:
         raise StorageError(f"cannot list {bundles.BUNDLES}/: {exc}") from exc
     staged = {n: job.staging / n for n in job.bundles}
-    rebuild = _rebuilder([], job.staging)
+    rebuild = _rebuilder(dest_dir=job.staging)
     for n in sorted(staged):
         if n in have or staged[n].is_file():
             continue
@@ -1440,7 +1440,7 @@ def _verify_bundles(st: Storage, name: str, manifest: dict, staged: dict[str, Pa
     folder is re-hashed right before it is tarred, never trusted from minutes ago."""
     now = bundles.listing(st, fresh=True)
     lost = sorted(n for n in bundles.manifest_names(manifest) if n not in now)
-    rebuild = _rebuilder([], dest_dir)
+    rebuild = _rebuilder(dest_dir=dest_dir)
     for n in lost:
         src = staged.get(n)
         if src is None or not src.exists():
@@ -1455,11 +1455,12 @@ def _verify_bundles(st: Storage, name: str, manifest: dict, staged: dict[str, Pa
         bundles.upload_one(st, src, n)
 
 
-def _rebuilder(rebuilt: list[Path], dest_dir: Path | None = None):
+def _rebuilder(rebuilt: list[Path] | None = None, dest_dir: Path | None = None):
     """`rebuild(name)`: the bundle `name` built again from the live folder when that
     folder's fingerprint still matches it (that one folder re-hashed, no cache — never
-    the whole inventory, review PERF-1), else None. Each tar built is appended to `rebuilt` for the caller to
-    delete.
+    the whole inventory, review PERF-1), else None. Each tar lands in `dest_dir` — every
+    caller passes the job's staging folder, so it goes with the job's drop(), never by
+    the caller — and, when `rebuilt` is given, is appended to it too (review M4).
 
     Only a stopped tree is tarred (review MC2): the upload half runs in the background
     uploader, which may still be going when vtt-up starts Foundry — and Foundry rewrites
@@ -1505,7 +1506,8 @@ def _rebuilder(rebuilt: list[Path], dest_dir: Path | None = None):
                 src.unlink(missing_ok=True)
             raise StorageError(f"rebuilding bundle {n} from its module folder failed: "
                                f"{exc} — the next backup retries it", verb="copyto") from exc
-        rebuilt.append(src)
+        if rebuilt is not None:
+            rebuilt.append(src)
         return src
     return rebuild
 
@@ -1515,7 +1517,7 @@ def _rebuilder_or_incomplete(job: uploadq.Job):
     is gone and cannot be rebuilt (the folder changed since) is a bundle that exists
     nowhere, so the job can never complete — _Incomplete (dropped by _run_job), never
     the retryable StorageError upload_missing raises on a None."""
-    rebuild = _rebuilder([], job.staging)
+    rebuild = _rebuilder(dest_dir=job.staging)
 
     def must(n: str) -> Path:
         new = rebuild(n)
