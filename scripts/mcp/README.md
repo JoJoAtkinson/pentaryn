@@ -39,7 +39,7 @@ A failing call reaches the caller one of two ways, and the tool decides which:
 
 | Channel | What the caller sees | Tools |
 |---|---|---|
-| **Raise** (the default) | a JSON-RPC error `-32000` whose message is the exception text; the traceback goes to the server's stderr (Claude Code's MCP log) | every in-process tool (`lore`, `srd5_2`, `ages_converter`, `roll_dice`, `combat_actions_list`); every subprocess tool, when the script exits non-zero (`check_lore_links` does so when a check fails, so its report arrives as the error message) |
+| **Raise** (the default) | a JSON-RPC error `-32000` whose message is the exception text; the traceback goes to the server's stderr (Claude Code's MCP log) | every in-process tool (`lore`, `srd5_2`, `ages_converter`, `roll_dice`, `combat_actions_list`, and `feedback_reports`: `feedback_list`, `feedback_next`, `feedback_get`, `feedback_resolve`); every subprocess tool, when the script exits non-zero (`check_lore_links` does so when a check fails, so its report arrives as the error message) |
 | **`{"ok": false, "error": …}`** in a successful result | a normal tool result; parse `ok` | `combat_action_upsert` only — callers already parse `ok`, so it keeps that shape |
 
 **New tools raise.** Do not add a second `{ok: false}` tool. A subprocess tool's success-path

@@ -11,6 +11,7 @@ from __future__ import annotations
 import dataclasses
 import importlib.util
 import json
+import re
 import string
 import sys
 from pathlib import Path
@@ -113,6 +114,22 @@ def test_error_channels(tmp_path, monkeypatch):
     with pytest.raises(ValueError):
         lore.get_npc("")
 
+
+
+# py-mcp-MNT-9 [declared]: the README's Raise row names every in-process tool, by its module
+# stem or its own name (feedback_reports was left out); combat_action_upsert is the {ok:false} row.
+OK_FALSE_TOOLS = {"combat_action_upsert"}
+
+
+@pytest.mark.repo
+def test_py_mcp_mnt_9_readme_raise_row_names_every_in_process_tool(runners):
+    readme = (REPO_ROOT / "scripts/mcp/README.md").read_text(encoding="utf-8")
+    row = next(line for line in readme.splitlines() if line.startswith("| **Raise**"))
+    named = set(re.findall(r"`([^`]+)`", row))
+    missing = sorted(n for n, r in runners.items()
+                     if r.handler is not None and n not in OK_FALSE_TOOLS
+                     and n not in named and r.script_path.stem not in named)
+    assert missing == []
 
 # ── -49: subprocess argument mapping ─────────────────────────────────────────
 
