@@ -29,13 +29,15 @@ function carriedLight(actor) {
 
 /**
  * A light profile as Foundry stores it: LightData drops unknown keys and lower-cases colours
- * (senses-edge-4). A profile LightData refuses is compared raw, as before.
+ * (senses-edge-4). A profile LightData refuses is compared raw, as before. LightData cleans the
+ * object it is handed in place (every default filled in), so it gets a copy: the item's own flag
+ * keeps its stored shape and the write is still just the keys the profile sets (FIX-3).
  */
 function normalise(light) {
   const LightData = foundry.data?.LightData;
   if (!LightData) return light;
   try {
-    return new LightData(light, { strict: false }).toObject();
+    return new LightData(foundry.utils.deepClone(light), { strict: false }).toObject();
   } catch {
     return light;
   }

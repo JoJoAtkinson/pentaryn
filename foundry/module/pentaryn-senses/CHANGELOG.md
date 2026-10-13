@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- **[declared senses-edge-4, FIX-3 forward fix] normalise() works on a copy** (2026-10-13):
+  Foundry's LightData cleans the object it is handed in place, so senses-edge-4's convergence
+  check filled the shard item's own light flag with every LightData default; syncLight then wrote
+  15 keys instead of the profile's 3, and their `animation: {type: null}` nulled the animation a
+  doused torch left on the token (the live golden diff that reverted senses from main). The check
+  now hands LightData a deep copy: the flag keeps its stored shape, the write is exactly the keys
+  the profile sets, and edge-4's convergence is unchanged. Goldens unchanged. New
+  `test/carried-normalise-shape.test.mjs`.
+
 - **[declared senses-EXT-7] profileFor drift check** (final review 2026-10-12): `test/api.test.mjs`
   now fails if the `light.profileFor` row doc or the README light table stops naming every
   `LIGHT_PROFILES` key in `core/light.mjs`. Test-only; no runtime change, goldens unchanged.
