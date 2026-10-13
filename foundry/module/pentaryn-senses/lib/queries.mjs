@@ -7,7 +7,10 @@
  */
 
 import { codedError, errorCode } from "./errors.mjs";
-import { toPlain } from "./api.mjs";
+import { isRefRow, queryNameOf, toPlain } from "./api.mjs";
+
+/** Re-exported: modules import `queryNameOf` from lib/queries.mjs; the one formula lives in api.mjs (KIT-M1-followup). */
+export { queryNameOf };
 
 /**
  * Wrap a handler so it runs only on a GM client. Core's query dispatch passes `{user}` (the sender);
@@ -41,11 +44,6 @@ export function relayed(fn, { g = globalThis, activeGM = true } = {}) {
     if (!ok) throw codedError("NOT_GM", activeGM ? "this client is not the active GM" : "this client is not a GM");
     return fn(data ?? {}, ctx ?? {});
   };
-}
-
-/** The query name a row registers: `<module>.<row.queryName ?? row.path>`. */
-export function queryNameOf(manifest, row) {
-  return `${manifest.module}.${row.queryName ?? row.path}`;
 }
 
 /** AC-5: how long a query waits for the module to publish before NOT_READY, and how often it looks. */
@@ -93,7 +91,7 @@ export function registerQueries(manifest, getApi, { g = globalThis, log = null }
       const tail = row.relay ? [ctx] : [];
       const out = row.legacy && row.args
         ? await fn(...row.args(d), ...tail)
-        : row.params?.[0]?.name === "ref" ? await fn(d.ref, d, ...tail) : await fn(d, ...tail);
+        : isRefRow(row) ? await fn(d.ref, d, ...tail) : await fn(d, ...tail);
       return toPlain(out, { maxDepth: Infinity });
     };
     g.CONFIG.queries[name] = row.relay ? relayed(handler, { g }) : guarded(handler, { g });

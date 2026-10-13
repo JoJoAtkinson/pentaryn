@@ -2,6 +2,9 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { guarded, queryGM, queryNameOf, registerQueries, relayed } from "../queries.mjs";
 import { describe } from "../api.mjs";
+import * as apiModule from "../api.mjs";
+import * as queriesModule from "../queries.mjs";
+import { readFileSync } from "node:fs";
 
 const doc = { documentName: "Actor", id: "aaaaaaaaaaaaaaaa", name: "Aldric", uuid: "Actor.aaaaaaaaaaaaaaaa" };
 const MANIFEST = {
@@ -179,8 +182,8 @@ test("AC-1 a relay row's API function gets core's ctx as a trailing argument; gu
 });
 
 test("describe().queries equals the names registerQueries registers", () => {
-  // describe() computes the names inline (api.mjs) and registerQueries via queryNameOf: this guards
-  // the two formulas against drifting apart (describe().queries feeds contractDrift and the bridge).
+  // describe() and registerQueries both derive names through api.mjs's queryNameOf (KIT-M1-followup):
+  // this guards them against drifting apart (describe().queries feeds contractDrift and the bridge).
   const M = { module: "pentaryn-q", namespace: "q", version: "1.0.0", contract: 1, rows: [
     { path: "list", params: [], query: true },
     { path: "replaceMany", params: [{ name: "data" }], query: true, queryName: "replace" },
@@ -193,6 +196,29 @@ test("describe().queries equals the names registerQueries registers", () => {
   // plus extras: a hand-registered query is appended after the row-derived names (kit-ext-1)
   const extra = "pentaryn-q.relay";
   assert.deepEqual(describe(M, { queries: [extra] }).queries, [...registered, extra]);
+});
+
+test("KIT-M1-followup: queryNameOf and isRefRow live once, in api.mjs; queries.mjs uses that copy", () => {
+  // describe() (api.mjs) and registerQueries (queries.mjs) each derived query names with their own
+  // copy of the formula. Now one function in api.mjs derives them; queries.mjs imports it (and
+  // re-exports queryNameOf for modules that import it from lib/queries.mjs).
+  assert.equal(typeof apiModule.queryNameOf, "function", "api.mjs exports queryNameOf");
+  assert.equal(typeof apiModule.isRefRow, "function", "api.mjs exports isRefRow");
+  assert.equal(queriesModule.queryNameOf, apiModule.queryNameOf, "queries.mjs re-exports api.mjs's queryNameOf");
+  const M = { module: "pentaryn-q" };
+  assert.equal(apiModule.queryNameOf(M, { path: "list" }), "pentaryn-q.list");
+  assert.equal(apiModule.queryNameOf(M, { path: "replaceMany", queryName: "replace" }), "pentaryn-q.replace");
+  assert.equal(apiModule.isRefRow({ params: [{ name: "ref" }, { name: "opts" }] }), true);
+  assert.equal(apiModule.isRefRow({ params: [{ name: "ref", resolve: false }] }), true, "the wire convention ignores resolve");
+  assert.equal(apiModule.isRefRow({ params: [{ name: "opts" }] }), false);
+  assert.equal(apiModule.isRefRow({ params: [] }), false);
+  assert.equal(apiModule.isRefRow({}), false);
+  // one copy of each in the kit's code (comments aside): queryNameOf's and isRefRow's own bodies
+  const code = ["../api.mjs", "../queries.mjs"]
+    .map(f => readFileSync(new URL(f, import.meta.url), "utf8")).join("\n")
+    .split("\n").filter(l => !/^\s*(\*|\/\*|\/\/)/.test(l)).join("\n");
+  assert.equal(code.match(/queryName \?\? \w+\.path/g)?.length ?? 0, 1, "the query-name formula is written once");
+  assert.equal(code.match(/params\?\.\[0\]\?\.name === "ref"/g)?.length ?? 0, 1, "the ref-row test is written once");
 });
 
 test("kit-ext-1: extras.queries adds to the row-derived describe().queries, deduped, rows first", () => {

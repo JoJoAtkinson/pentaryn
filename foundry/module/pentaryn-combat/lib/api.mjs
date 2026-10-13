@@ -49,10 +49,27 @@ function reservedClash(path, { own, legacy }) {
  *  - Write rows never throw for an expected refusal (use-doc §5.1): a coded resolve error (NOT_FOUND,
  *    AMBIGUOUS, BAD_ARGS) comes back as `fail(code, reason)`. Callers `await` a write either way.
  */
+/**
+ * The query name a row registers: `<module>.<row.queryName ?? row.path>`. The one formula —
+ * describe().queries and queries.mjs's registerQueries both use it (KIT-M1-followup).
+ */
+export function queryNameOf(manifest, row) {
+  return `${manifest.module}.${row.queryName ?? row.path}`;
+}
+
+/**
+ * Whether a row's first param is `ref` — its function takes `(ref, opts)`, so a query calls it
+ * `fn(d.ref, d)`. Wire shape only: a `resolve: false`/`"self"` ref still counts.
+ */
+export function isRefRow(row) {
+  return row.params?.[0]?.name === "ref";
+}
+
 /** The leading `ref` param the kit resolves for this row, or null (absent, or `resolve: false`/`"self"`). */
 function resolvedRef(row) {
-  const first = row.params?.[0];
-  if (first?.name !== "ref" || first.resolve === false || first.resolve === "self") return null;
+  if (!isRefRow(row)) return null;
+  const first = row.params[0];
+  if (first.resolve === false || first.resolve === "self") return null;
   return first;
 }
 
@@ -237,7 +254,7 @@ export function describe(manifest, { settings = [], events = {}, patches = [], q
     published,
     methods: rows.map(methodOf),
     // row-derived names first, then any extras not already present (kit-ext-1)
-    queries: [...new Set([...rows.filter(r => r.query).map(r => `${manifest.module}.${r.queryName ?? r.path}`),
+    queries: [...new Set([...rows.filter(r => r.query).map(r => queryNameOf(manifest, r)),
       ...(queries ?? [])])],
     settings: settings.map(s => ({
       key: s.key,
