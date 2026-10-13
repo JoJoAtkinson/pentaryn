@@ -115,11 +115,14 @@ test("decorate: one revealed destination → one card appended, the question nam
   assert.equal(root.querySelectorAll(".ppt-cards").length, 1, "a second render adds nothing");
 });
 
-test("decorate: width keeps a wider dialog; a jQuery-style [element] works too", () => {
+/** A jQuery wrapper as an AppV1 render hook hands it; the kit's htmlRoot unwraps only these (EXT-8). */
+const jq = el => ({ jquery: "3.7.1", 0: el, length: 1 });
+
+test("decorate: width keeps a wider dialog; a jQuery wrapper works too", () => {
   const { app, root } = teleportDialog(W, P.bPassage, P.caven.id);
   app.position.width = 700;
   const n = F.calls.length;
-  S.decorate(app, [root]);
+  S.decorate(app, jq(root));
   assert.deepEqual(W.callsSince(n, ["setPosition"]).map(c => c.p), [{ width: 700, height: "auto" }]);
 });
 
@@ -337,13 +340,13 @@ test("snapshot: no bounds → the first shape's x/y + half its size; an image th
   await assert.rejects(S.snapshot(P.pitGate), { message: "portal snapshot: cannot load maps/pit.webp" });
 });
 
-test("gaps: [element] forms for preferTeleport and injectConfig; a snapshot that returns null leaves the fields", async () => {
+test("gaps: jQuery-wrapper forms for preferTeleport and injectConfig; a snapshot that returns null leaves the fields", async () => {
   const d = teleportDialog(W, P.bPassage, P.caven.id);
-  S.preferTeleport(d.app, [d.root]);
+  S.preferTeleport(d.app, jq(d.root));
   assert.equal(d.root.querySelector('button[data-action="yes"]').hasAttribute("autofocus"), true);
   W.raf.length = 0;
   const { app, root } = configApp(P.cell);
-  S.injectConfig(app, [root]);
+  S.injectConfig(app, jq(root));
   const img = root.querySelector('input[name="flags.pentaryn-portals.img"]');
   await root.querySelector(".ppt-snap").click();
   assert.equal(img.value, "", "no background: nothing filled in");

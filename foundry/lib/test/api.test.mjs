@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { buildApi, describe, maxDepth, surfaceOf, toPlain } from "../api.mjs";
+import * as kitApi from "../api.mjs";
 import { CODES, RESERVED } from "../errors.mjs";
 import { maxDepth as harnessDepth } from "../test-kit/harness.mjs";
 
@@ -295,4 +296,20 @@ test("kit-ext-3-followup: one MEMBER_DEFAULTS table, keyed by errors.RESERVED, d
   const s = surfaceOf(api);
   for (const k of ["settings", "trace", "uninstall", "describe"]) assert.equal(s[k], "function", k);
   assert.throws(() => buildApi({ ...MANIFEST, version: undefined }, impl), /version missing/);
+});
+
+test("EXT-8: htmlRoot unwraps a render hook's element-or-jQuery argument", () => {
+  const { htmlRoot } = kitApi;
+  assert.equal(typeof htmlRoot, "function", "api.mjs exports htmlRoot");
+  class HTMLElement {}
+  const gEl = { HTMLElement };
+  const el = new HTMLElement();
+  assert.equal(htmlRoot(el, { g: gEl }), el);                                     // element → itself
+  assert.equal(htmlRoot({ jquery: "3.7.1", 0: el, length: 1 }, { g: gEl }), el);  // jQuery wrapper → el[0]
+  assert.equal(htmlRoot({ jquery: "3.7.1", length: 0 }, { g: gEl }), undefined);  // empty wrapper
+  for (const other of [undefined, null, "", 0, {}, [el], { 0: el }, "<div>"]) {
+    assert.equal(htmlRoot(other, { g: gEl }), undefined, `else → undefined: ${String(other)}`);
+  }
+  assert.equal(htmlRoot(el, { g: {} }), undefined);                               // no DOM (node) → undefined, never a ReferenceError
+  assert.equal(htmlRoot(el), undefined);                                          // default g = globalThis; node has no HTMLElement
 });

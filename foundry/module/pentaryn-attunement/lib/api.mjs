@@ -363,3 +363,15 @@ export function toPlain(value, { maxDepth: cap = 4 } = {}) {
   const r = walk(value, 0);
   return r === undefined ? null : r;
 }
+
+/**
+ * A render hook's `html` argument → its root HTMLElement: an element is itself, a jQuery wrapper
+ * (older callers) is its first element, anything else is `undefined` (EXT-8). `g` is injected like
+ * every kit function; with no `HTMLElement` on it (node) the answer is `undefined`.
+ */
+export function htmlRoot(el, { g = globalThis } = {}) {
+  const El = g?.HTMLElement;
+  if (!El || !el || typeof el !== "object") return undefined;
+  if (el instanceof El) return el;
+  return el.jquery && el[0] instanceof El ? el[0] : undefined;
+}

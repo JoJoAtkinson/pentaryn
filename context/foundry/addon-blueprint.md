@@ -349,6 +349,8 @@ unmigrated modules (veto order on `dnd5e.preUseActivity`, Argon render order) an
 change that needs the order fixture (`foundry/lib/test/fixtures/hook-order.mjs`) first. Argon:
 wait for `canvasReady`/`argonInit`, never a timer. v14/dnd5e 6 hygiene: `renderChatMessageHTML`,
 `HTMLElement` in AppV2 render hooks, `_del` not `-=`, `message.system.*`, `movement.speeds.*`.
+A hook whose `html` may still be a jQuery wrapper unwraps it with the kit's `htmlRoot(html)`
+(`lib/api.mjs`, 1.2.0 EXT-8), never a local `el instanceof HTMLElement ? el : el[0]` copy.
 
 **Emitting events.** A module's own events are rows in the `HOOKS` table in core, fired with
 `ctx.emit(key, ...args)` (the kit's `emitter`; an unknown key throws `BAD_ARGS`), not a literal
