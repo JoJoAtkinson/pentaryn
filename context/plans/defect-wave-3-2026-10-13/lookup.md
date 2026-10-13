@@ -26,3 +26,18 @@ Read-only: no ZZ docs needed, nothing is created or changed. One GM tab, after a
    `listedAs` the 2024 "Acid Arrow" uuid — only if the two copies share `system.identifier` in the
    installed packs; if they do not, `false` is the expected (unchanged) answer.
 6. `await game.pentaryn.rules.selftest()` → `ok: true`.
+
+## Live check result (FIX-W3, 2026-10-13)
+
+Run in the MCP bridge GM tab on world `pentaryn` (Foundry 14.369, dnd5e 6.0.6). The served `.mjs` files in `Data/modules/pentaryn-lookup` are byte-identical to main, and the loaded build already returns `listedAs`, so no reload was needed. The check is read-only: no ZZ docs were created and nothing was changed.
+
+| step | result | evidence |
+|---|---|---|
+| 1 | pass | 2014 SRD Fireball is `Compendium.dnd5e.spells.Item.ztgcdrWPshKRpFd0` |
+| 2 | pass | `onList(u, "wizard")` returned `onList: true`, `edition: "2014"`, `uuid` = `u`, `listedAs: "Compendium.dnd-players-handbook.spells.Item.phbsplFireball00"` |
+| 3 | pass | `onList(u, "cleric")` returned `onList: false`, `edition: "2014"`, and no `listedAs` key |
+| 4 | pass | `onList("Fireball", "wizard")` returned `onList: true`, `uuid` = the PHB copy, with no `edition` key and no `listedAs` key (unchanged) |
+| 5 (optional) | pass | The step has the names the wrong way round. In the installed packs the 2014 SRD copy is called **"Acid Arrow"** (`Compendium.dnd5e.spells.Item.4H6YgYdKgnX6ZQ8M`, identifier `acid-arrow`). The PHB 2024 copy is "Melf's Acid Arrow" (`melfs-acid-arrow`), and the SRD 5.2 copy in `dnd5e.spells24` is "Acid Arrow" (`acid-arrow`). Against `"wizard"`, `onList` returned `onList: true` with `listedAs: "Compendium.dnd5e.spells24.Item.phbsplMelfsAcidA"`, which was matched by identifier. |
+| 6 | pass | `selftest()` returned `ok: true` (16 passed, 0 failed) |
+
+Cleanup: none needed, because nothing was created. Exactly one GM is active.
