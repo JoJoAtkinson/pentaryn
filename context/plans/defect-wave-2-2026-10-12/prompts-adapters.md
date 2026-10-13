@@ -60,3 +60,18 @@ All on a ZZ-prefixed scratch scene with ZZ markers/actors created for the check 
 - **EC-4** — Type "abc", click a chip, keep typing "def" during the swap: the box shows "abcdef" and the new marker's flag holds it after 600 ms.
 - **EXT-12** — Gather with crops on a ZZ hex scene holding one marker and one 2×2 built token: the labelled boxes sit on the drawn footprints.
 - **prompts-U1** — Via eval-js make the ZZ marker's `TokenDocument#delete` reject once; click Delete: toast, box stays open, typing still autosaves. Click Delete again: it goes.
+
+## FIX-3 (2026-10-13): EC-6 failed a live spot check, forward fix
+
+**Live failure.** Two `PromptDialog.open()` calls on one marker in the same tick (a fast double-click or Shift+P twice), with or without its previous box mid-save, failed 3 times out of 3. The first open rendered one box. The second rejected with `TypeError: Cannot read properties of undefined (reading 'style')`, thrown from `bringToFront` in `#reuse`. `#reuse` brought the first box forward before its first render, when it had no element yet. The callers (`patches.mjs`, `hud-button.mjs`, placement's edit key) do not catch, so the rejection went unhandled. The test fixture's `bringToFront` never touched the element, which is why the gate missed it.
+
+**Fix (branch `fix2/prompts-adapters-live-2026-10-13`).**
+- `f6000d45`: failing test first. The fixture's `bringToFront` now throws before the first render, as core does. The new `ec6-live-same-tick.test.mjs` runs two same-tick opens.
+- `dd89029f` `[declared]`: `#reuse` brings the box forward only when `cur.rendered`. Its own first render puts it on top. Both opens get the one box. CHANGELOG entry added.
+- Gate: `make foundry-prompts-check` 323 pass, 6 skipped, core 415, conformance 100 %. `make foundry-modules-check` passes all 20 modules. Goldens unchanged. Merged as `7aa95b5e` and pushed. The module is synced and the GM tab reloaded. No restart was needed, because module.json, lang and styles are unchanged.
+
+**Live re-check (passes, 3 of 3).** On a scratch scene `ZZ EC6 Live`, each of three runs placed a `Prompt · mid` marker and then did two things:
+- Two same-tick opens: both fulfilled with the same box, one box rendered. A third open after the render reused it.
+- Esc with an edit, then two same-tick opens while the save was in flight: both fulfilled with the same single box, which showed the saved text.
+
+No `bringToFront` or unhandled error appeared in the console. The scratch scene was deleted, no ZZ documents remain, and `prompts.selftest().ok` is true.
