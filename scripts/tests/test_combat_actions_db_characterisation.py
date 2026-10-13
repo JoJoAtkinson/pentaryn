@@ -165,7 +165,8 @@ def test_writers_lock_a_sidecar_beside_the_db(tmp_db, monkeypatch):
     lock = tmp_db.with_name("actions.jsonl.lock")
     assert lock.exists()
     ino = lock.stat().st_ino
-    assert [op for i, op in held if i == ino] == [fcntl.LOCK_EX, fcntl.LOCK_UN] * 3
+    # py-mcp-ac-3 (declared): the exclusive lock is taken non-blocking under a deadline.
+    assert [op for i, op in held if i == ino] == [fcntl.LOCK_EX | fcntl.LOCK_NB, fcntl.LOCK_UN] * 3
     assert len(held) == 6, "every flock call is on the sidecar beside the tmp DB"
 
 

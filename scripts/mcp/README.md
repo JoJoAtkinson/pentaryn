@@ -28,6 +28,10 @@ Quirks worth knowing before you call something — SRD source filters, v1-slug v
 Set `DND_MCP_TOOLS_GROUP=combat` and only modules whose top-level `MCP_GROUPS` list contains
 that group are loaded — a cold-start speed-up for a session that needs dice and stat blocks
 but not the lore and timeline surface. Nothing sets it automatically; it is opt-in.
+`all` is the same as unset; any other name loads only modules whose `MCP_GROUPS` lists it.
+At startup the left-out scripts are one stderr line, `[mcp-server] N script(s) excluded by
+DND_MCP_TOOLS_GROUP=<name>`, so only real failures are listed one per line; `--list-tools`
+still names each excluded script and its groups.
 
 ## Error channels
 
@@ -35,7 +39,7 @@ A failing call reaches the caller one of two ways, and the tool decides which:
 
 | Channel | What the caller sees | Tools |
 |---|---|---|
-| **Raise** (the default) | a JSON-RPC error `-32000` whose message is the exception text; the traceback goes to the server's stderr (Claude Code's MCP log) | every in-process tool (`lore`, `srd5_2`, `ages_converter`, `roll_dice`, `combat_actions_list`); every subprocess tool, when the script exits non-zero (`check_lore_links` does so when a check fails, so its report arrives as the error message) |
+| **Raise** (the default) | a JSON-RPC error `-32000` whose message is the exception text; the traceback goes to the server's stderr (Claude Code's MCP log) | every in-process tool (`lore`, `srd5_2`, `ages_converter`, `roll_dice`, `combat_actions_list`, and `feedback_reports`: `feedback_list`, `feedback_next`, `feedback_get`, `feedback_resolve`); every subprocess tool, when the script exits non-zero (`check_lore_links` does so when a check fails, so its report arrives as the error message) |
 | **`{"ok": false, "error": …}`** in a successful result | a normal tool result; parse `ok` | `combat_action_upsert` only — callers already parse `ok`, so it keeps that shape |
 
 **New tools raise.** Do not add a second `{ok: false}` tool. A subprocess tool's success-path
@@ -48,7 +52,15 @@ Every tool declares MCP `annotations` (`readOnlyHint`, `destructiveHint`, `idemp
 
 When `PENTARYN_MCP_LOG_DIR` is set (the same switch as the Foundry fork's log), every
 `tools/call` appends one line to `<dir>/dnd-scripts-<YYYY-MM>.jsonl`:
-`{ts, server: "dnd-scripts", tool, mode: "inprocess"|"subprocess", args, ok, ms, error}`.
+`{ts, server: "dnd-scripts", tool, mode: "inprocess"|"subprocess"|"rejected", args, ok, ms, error}`.
+A call the server refuses before running it — unknown tool, non-object `arguments`, or
+server busy — is logged too, with `mode: "rejected"`, the tool name as given, `ok: false`,
+`ms: 0` and the same error text the caller got.
+A call the client cancels (`notifications/cancelled`) while it is still queued never runs:
+it frees its slot and logs one `rejected` line with `error: "Cancelled by the client before
+it ran"`. A call already running when cancelled finishes and logs normally, but sends no reply.
+When the client disconnects (stdin EOF), running calls finish, reply and log; calls still
+queued are dropped without running or logging, since no one is left to read them.
 Argument values longer than 2 KB (after JSON encoding) are truncated with a marker. There is
 no `client` field — a stdio server never learns who called it. Unset, nothing is written; a
 log write that fails goes to stderr and never fails the call. `make foundry-eval-report`
