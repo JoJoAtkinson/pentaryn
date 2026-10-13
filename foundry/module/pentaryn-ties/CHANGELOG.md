@@ -30,6 +30,10 @@ Fixed (declared): a player's **Remove** on the Ties tab now removes the tie in b
 confirm says — the active GM's client removes the NPC's row back (relay action `remove-reverse`; the
 sender must own their character and have removed their own side). ties-ui-E3.
 
+Fixed (declared): a player with **no assigned character** now gets the double-click menu too — the
+tie and notebook items (the notebook still warns that you need a character); *Take a closer look* and
+*What I know about them* show only once a character is assigned. ties-ui-E7.
+
 Fixed (declared): the Known tab's **notes** keep the last words typed before you click away or close
 the sheet — leaving the box now saves a pending autosave at once instead of dropping it. ties-ui-M1.
 
