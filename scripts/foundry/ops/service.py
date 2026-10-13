@@ -111,17 +111,6 @@ def is_access_login(code: int, location: str) -> bool:
     return host in ("", cfg.TUNNEL_HOST) and parts.path.startswith("/cdn-cgi/access/login")
 
 
-def world_is_launched(timeout: float = 3.0) -> bool | None:
-    """True if a world is active, False if the server is parked at /setup, None if
-    the server did not answer at all."""
-    code, location = _probe(cfg.FOUNDRY_URL, timeout)
-    if code == 0:
-        return None
-    if code == 302 and "/setup" in location:
-        return False
-    return True
-
-
 # ── update-run lock ───────────────────────────────────────────────────────────
 
 def lock_check() -> int:

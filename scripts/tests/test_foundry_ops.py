@@ -531,13 +531,10 @@ def test_pipeline_access_gated_shares_the_status_rule(monkeypatch):
     assert pipeline._access_gated(cfg.ACTORS_URL) is True
 
 
-@pytest.mark.parametrize(
-    "code,location,expected",
-    [(0, "", None), (302, "/setup", False), (302, "/join", True), (200, "", True)],
-)
-def test_world_is_launched(monkeypatch, code, location, expected):
-    monkeypatch.setattr(service, "_probe", lambda url, t: (code, location))
-    assert service.world_is_launched() is expected
+def test_world_is_launched_is_gone_M4():
+    # M4: nothing in production called world_is_launched — status_report reads the
+    # /setup redirect itself — so the helper and its test were dead weight.
+    assert not hasattr(service, "world_is_launched")
 
 
 # ── the world guard ───────────────────────────────────────────────────────────
