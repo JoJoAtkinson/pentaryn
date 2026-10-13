@@ -20,7 +20,7 @@
 import { MODULE, STANCES, NOTES_MAX, clampStance, clampStrength, stanceOf } from "./ties-core.mjs";
 import { read, inbound, presentActorIds, editTie, removeTie, stanceLabel } from "./ties-adapter.mjs";
 import { authoringHTML, bindAuthoring } from "./authoring-ui.mjs";
-import { esc, bindRowToggle, bindSummary, makeOpenState, notesPreview, notesProse, wordCell, bindNotesAutosave, replaceSummary, keyLabel, FALLBACK_ART, gmBadge } from "./core/html.mjs";
+import { esc, bindRowToggle, bindSummary, makeOpenState, notesPreview, notesProse, wordCell, bindNotesAutosave, replaceSummary, keyLabel, FALLBACK_ART, gmBadge, openOrFront } from "./core/html.mjs";
 import { makeLog } from "./lib/log.mjs";
 
 const log = makeLog(MODULE);
@@ -559,11 +559,8 @@ export class TiesEditor extends ApplicationV2 {
     if (!actor) return null;
     // ApplicationV2 instances live in foundry.applications.instances, not ui.windows
     const pool = [...(foundry.applications?.instances?.values?.() ?? []), ...Object.values(ui.windows ?? {})];
-    const existing = pool.find(w => w instanceof TiesEditor && w.actor?.id === actor.id);
-    if (existing) {
-      existing.bringToFront?.();
-      return existing;
-    }
-    return new TiesEditor(actor).render(true);
+    return openOrFront(pool, w => w instanceof TiesEditor && w.actor?.id === actor.id, () => new TiesEditor(actor), {
+      onError: err => log.error(`ties editor`, err)
+    });
   }
 }

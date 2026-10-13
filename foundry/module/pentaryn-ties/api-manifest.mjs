@@ -83,7 +83,7 @@ export const MANIFEST = Object.freeze({
     row("closeAllCards", [], "undefined", "Close every card, pinned ones included."),
 
     /* ── the ties ── */
-    row("edit", [p("actor", ACTOR)], "Promise<Application>", "Open the standalone ties editor for an actor."),
+    row("edit", [p("actor", ACTOR)], "Application|null", "Open (or front) the standalone ties editor for an actor."),
     row("addTie", [opt("token", "Token", "default: hovered, then the first controlled token")], "Promise<TieDialog|null>",
       "Open the add-a-tie dialog for a token (key 6); null when refused."),
     row("read", [READ_REF], "[{ id, name, img, missing, word, notes, stance, strength }]",
@@ -182,7 +182,7 @@ export const MANIFEST = Object.freeze({
       "GM: hand a character a kind at a chosen rung, no roll.", { gm: true, writes: true, sideEffects: [`${F}.beliefs`, `${F}.granted`, `${F}.known`] }),
     row("study.resetInspection", [CHAR, SUBJ], "Promise<boolean>", "GM: clear an inspection's identifications on this subject.",
       { gm: true, writes: true, sideEffects: [`${F}.beliefs`] }),
-    row("study.preview", [SUBJ], "Promise<InspectPreview|null>", "GM: the inspect window — player view, who-knows tags, simulated rolls.", { gm: true }),
+    row("study.preview", [SUBJ], "InspectPreview|null", "GM: the inspect window, one per subject — player view, who-knows tags, simulated rolls.", { gm: true }),
     row("study.share", [SPEC, p("recipients", "Actor[]"), opt("opts", "{ from, notify }")], "Promise<*>",
       "GM: tell characters one fact as if they had passed it (chain-aware).", { gm: true, writes: true, sideEffects: [`${F}.beliefs`, `${F}.granted`] }),
     row("study.forget", [SPEC, CHAR], "Promise<*>", "GM: undo a share, and only a share.",
@@ -220,7 +220,7 @@ export const MANIFEST = Object.freeze({
     row("attributes.repair", [p("actor", ACTOR), ATTR], "Promise<{ ok, reason? }>", "GM: re-link to repair ancestry (= link).",
       { gm: true, writes: true, sideEffects: [`${F}.attributes`] }),
     row("attributes.stale", [ATTR], "[Actor]", "Actors carrying an entry by a stale link."),
-    row("attributes.openReview", [], "Promise<AttributeReview>", "GM: the Attribute Review panel.", { gm: true }),
+    row("attributes.openReview", [], "AttributeReview|null", "GM: the Attribute Review panel (one window; a second open fronts it).", { gm: true }),
     row("attributes.selected", [], "[{ id, title, category, parent, reviewState }]", "What the GM ticked in the review panel."),
     row("attributes.select", [p("refs", "string[]"), opt("opts", "{ replace }")], "Promise<{ ok, ids?, missed?, reason? }>",
       "GM: tick entries in the review panel.", { gm: true, writes: true, sideEffects: [`user ${F}.attrSelected`] }),

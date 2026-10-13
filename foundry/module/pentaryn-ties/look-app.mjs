@@ -71,7 +71,7 @@ import { inspect, kindActorOf } from "./study.mjs";
 import { grantCard, grantedHead } from "./known-ui.mjs";
 import { subjectFacts, knowsAbout, groupLabelKey } from "./facts.mjs";
 import { REGISTRY_SETTING, touchesFlagScope } from "./known-core.mjs";
-import { FALLBACK_ART } from "./core/html.mjs";
+import { FALLBACK_ART, openOrFront } from "./core/html.mjs";
 import { makeLog } from "./lib/log.mjs";
 
 const log = makeLog(MODULE);
@@ -105,18 +105,12 @@ export class LookWindow extends ApplicationV2 {
     if (!mayWrite()) return null;
     if (!character?.isOwner || !subject || subject.id === character.id) return null;
     const key = pairKey(character, subject);
-    const existing = open.get(key);
-    if (existing) {
-      if (existing.minimized) existing.maximize?.();
-      existing.render({ force: true }).catch(err => log.error(`look window`, err));
-      existing.bringToFront?.();
-      return existing;
-    }
-    const win = new LookWindow(character, subject);
-    open.set(key, win);
-    // not awaited: a failed render is logged with the prefix rather than left unhandled
-    win.render({ force: true }).catch(err => log.error(`look window`, err));
-    return win;
+    // the render is not awaited: a failed one is logged with the prefix rather than left unhandled
+    return openOrFront(open.values(), w => w.pair === key, () => {
+      const win = new LookWindow(character, subject);
+      open.set(key, win);
+      return win;
+    }, { onError: err => log.error(`look window`, err) });
   }
 
   constructor(character, subject, options = {}) {

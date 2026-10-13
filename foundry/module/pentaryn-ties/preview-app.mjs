@@ -76,7 +76,7 @@ import {
   STUDY_RUNGS, STUDY_BASE_DC
 } from "./known-core.mjs";
 import { CONCEAL_FLAG, concealFor, firstName } from "./core/rules.mjs";
-import { FALLBACK_ART, skillLabelOf } from "./core/html.mjs";
+import { FALLBACK_ART, skillLabelOf, openOrFront } from "./core/html.mjs";
 import { readFlag } from "./lib/flags.mjs";
 import { makeLog } from "./lib/log.mjs";
 import { setting } from "./settings.mjs";
@@ -117,6 +117,13 @@ const PROF = { none: 0, prof: 1, expert: 2 };
 /** Subject/kind actor changes that touch ONLY the ledger — patch the switches, no re-render. */
 const LEDGER_ONLY = new RegExp(`^(_id$|_stats\\.|flags\\.${MODULE.replace(/[-.]/g, "\\$&")}\\.(-=)?beliefs(\\.|$))`);
 
+/**
+ * One preview per subject on this client (ties-ui-EXT-16): a second flask click fronts and re-renders
+ * the open one. Keyed by uuid, so two unlinked tokens of one actor each get their own.
+ */
+const previews = new Map();
+const subjectKey = subject => subject.uuid ?? subject.id;
+
 export class InspectPreview extends ApplicationV2 {
   static DEFAULT_OPTIONS = {
     id: "pentaryn-inspect-preview-{id}",
@@ -132,13 +139,19 @@ export class InspectPreview extends ApplicationV2 {
       ui.notifications.warn(_loc("PENTARYN_TIES.preview.noToken"));
       return null;
     }
-    return new InspectPreview(subject).render(true);
+    const key = subjectKey(subject);
+    return openOrFront(previews.values(), w => w.key === key, () => {
+      const win = new InspectPreview(subject);
+      previews.set(key, win);
+      return win;
+    }, { onError: err => log.error(`inspect preview`, err) });
   }
 
   constructor(subject, options = {}) {
     if (!game.user?.isGM) throw new Error(`${MODULE} | inspect preview is GM only`);
     super(options);
     this.subject = subject;
+    this.key = subjectKey(subject);
     // "player": what a player who passed everything sees, with the GM's per-PC switches.
     // "simulate": the dice bench, unchanged.
     this.mode = "player";
@@ -790,6 +803,7 @@ export class InspectPreview extends ApplicationV2 {
 
   _onClose(options) {
     this.unwatch();
+    if (previews.get(this.key) === this) previews.delete(this.key);
     return super._onClose?.(options);
   }
 

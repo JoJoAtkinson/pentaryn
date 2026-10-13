@@ -30,6 +30,35 @@ export const keyLabel = code => String(code ?? "").replace(/^Digit/, "").replace
 export const gmBadge = () =>
   `<span class="pt-gm-badge"><i class="fa-solid fa-eye-slash" aria-hidden="true"></i> ${esc(globalThis.game?.i18n?.localize?.("PENTARYN_TIES.gmOnly") ?? "PENTARYN_TIES.gmOnly")}</span>`;
 
+/**
+ * Find-or-create for a window (ties-ui-EXT-16). The first window in `pool` that `match` picks is
+ * un-minimized, re-rendered and brought to the front; with none, `make()` builds one (and registers it
+ * wherever the caller keeps it) and it is rendered. Either way `render({ force: true })` is not
+ * awaited: a rejection goes to `onError`. Returns the window — not a promise.
+ *
+ * TiesEditor, AttributeReview, LookWindow and InspectPreview each had their own version of this.
+ * @param {Iterable<object>} pool   the windows to search (an instance registry, a Map's values)
+ * @param {(w: object) => boolean} match
+ * @param {() => object} make
+ * @param {{ onError?: (err: Error) => void }} [options]
+ */
+export function openOrFront(pool, match, make, { onError } = {}) {
+  let win = null;
+  for (const w of pool ?? []) {
+    if (match(w)) {
+      win = w;
+      break;
+    }
+  }
+  const fresh = !win;
+  if (fresh) win = make();
+  else if (win.minimized) win.maximize?.();
+  const shown = win.render({ force: true });
+  if (onError) shown?.catch?.(onError);
+  if (!fresh) win.bringToFront?.();
+  return win;
+}
+
 /* ── skills (ties-ui-EXT-8) ──────────────────────────────────────────────── */
 /*
  * The world's skill list, read off CONFIG at call time rather than hardcoded, so a GM's homebrew skill

@@ -26,7 +26,9 @@
       {
         "op": "app.render",
         "app": "InspectPreview",
-        "opts": true
+        "opts": {
+          "force": true
+        }
       }
     ],
     "console": []

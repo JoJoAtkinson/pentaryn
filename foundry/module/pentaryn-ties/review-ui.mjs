@@ -46,7 +46,7 @@ import {
 } from "./attributes.mjs";
 import { kindActorOf } from "./study.mjs";
 import { isPersonalEntry } from "./core/rules.mjs";
-import { skillOptionsHTML, skillLabelOf } from "./core/html.mjs";
+import { skillOptionsHTML, skillLabelOf, openOrFront } from "./core/html.mjs";
 import { personalCluesHTML } from "./attributes-ui.mjs";
 import {
   reviewState,
@@ -141,13 +141,10 @@ export class AttributeReview extends ApplicationV2 {
       ui.notifications.warn(_loc("PENTARYN_TIES.review.gmOnly"));
       return null;
     }
-    const existing = foundry.applications.instances?.get?.(AttributeReview.DEFAULT_OPTIONS.id);
-    if (existing) {
-      existing.render({ force: true });
-      existing.bringToFront?.();
-      return existing;
-    }
-    return new AttributeReview().render({ force: true });
+    const pool = foundry.applications.instances?.values?.() ?? [];
+    return openOrFront(pool, w => w instanceof AttributeReview, () => new AttributeReview(), {
+      onError: err => log.error(`attribute review`, err)
+    });
   }
 
   constructor(options = {}) {

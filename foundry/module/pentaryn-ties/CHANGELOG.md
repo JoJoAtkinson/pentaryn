@@ -210,6 +210,13 @@ Changed (declared, no table-visible change): the "GM only" badge is written once
 `core/html.mjs`; the authoring section, the two mutual-pair panels and the told-count line call it.
 Markup byte-identical. ties-ui-EXT-15.
 
+Changed (declared): the Inspect preview is one window per subject — a second flask click on the same
+token fronts and re-renders the open preview instead of stacking another (two unlinked tokens of one
+actor still get one each). TiesEditor, AttributeReview, the Look window and the preview share one
+`openOrFront(pool, match, make)` in `core/html.mjs`: an open window is un-minimized, re-rendered and
+fronted (the ties editor used to front without re-rendering). `edit`, `study.preview` and
+`attributes.openReview` return the window (or `null`), not a promise. ties-ui-EXT-16.
+
 ## 0.19.4 (2026-10-10, usability run, Area 7 re-run)
 
 - **The inspect window's Share switches are the table's PCs only** (`tablePCs`): each player's
