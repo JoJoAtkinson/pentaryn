@@ -203,6 +203,11 @@ def call(spec: Spec, stdin: str, *, tier: str, system_prompt: str | None = None,
             record.cost_known = False
             return Result(record)
         return _parse(proc.returncode, out, err, record, schema is not None)
+    except BaseException:
+        # A KeyboardInterrupt (or any other escape) mid-call must not orphan claude -p.
+        if proc is not None and proc.poll() is None:
+            proc.kill()
+        raise
     finally:
         if proc is not None:
             children.forget(proc)

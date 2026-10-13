@@ -26,11 +26,25 @@ GRACE_SECONDS = 3.0
 
 _live: set[subprocess.Popen] = set()
 
+# A SIGTERM that lands between the fork inside Popen and ``_live.add`` would see a child
+# not yet registered and orphan it. While a spawn is in progress the handler only notes
+# the signal; ``spawn`` acts on it once the child is registered.
+_spawning = False
+_deferred = False
+
 
 def spawn(cmd: list[str], **kwargs) -> subprocess.Popen:
     """``subprocess.Popen`` plus registration. ``OSError`` propagates as from Popen."""
-    proc = subprocess.Popen(cmd, **kwargs)
-    _live.add(proc)
+    global _spawning, _deferred
+    _spawning = True
+    try:
+        proc = subprocess.Popen(cmd, **kwargs)
+        _live.add(proc)
+    finally:
+        _spawning = False
+        if _deferred:
+            _deferred = False
+            _on_sigterm(signal.SIGTERM, None)
     return proc
 
 
@@ -46,16 +60,23 @@ def run(cmd: list[str], *, timeout: float, **kwargs) -> subprocess.CompletedProc
     """``subprocess.run(cmd, capture_output=True, text=True, timeout=...)``, registered.
 
     Raises ``subprocess.TimeoutExpired`` (child killed and reaped) and ``OSError`` as
-    ``subprocess.run`` does."""
+    ``subprocess.run`` does, with its failure paths: on a timeout, kill and ``wait`` —
+    never a second ``communicate``, which blocks until every descendant holding the pipes
+    exits; on any other exception (a ``KeyboardInterrupt`` included), kill the child
+    before re-raising. ``with proc`` closes the pipes and reaps it, as in subprocess.run."""
     proc = spawn(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, **kwargs)
     try:
-        try:
-            out, err = proc.communicate(timeout=timeout)
-        except subprocess.TimeoutExpired:
-            proc.kill()
-            proc.communicate()
-            raise
-        return subprocess.CompletedProcess(cmd, proc.returncode, out, err)
+        with proc:
+            try:
+                out, err = proc.communicate(timeout=timeout)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                proc.wait()
+                raise
+            except BaseException:
+                proc.kill()
+                raise
+            return subprocess.CompletedProcess(cmd, proc.returncode, out, err)
     finally:
         forget(proc)
 
@@ -81,6 +102,10 @@ def terminate_all(grace: float = GRACE_SECONDS) -> None:
 
 
 def _on_sigterm(signum, frame) -> None:
+    global _deferred
+    if _spawning:
+        _deferred = True
+        return
     terminate_all()
     raise SystemExit(128 + signum)
 
