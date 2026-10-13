@@ -118,14 +118,19 @@ class ModuleSpec:
     * `after_sync` — `module.json` `flags.pentaryn.afterSync` when the module carries
       it (the generator writes it), else the tuple given here. The tuples moved into
       module.json in the Wave 7 batch; the tuple remains only as a fallback.
+
+    `syncable` decides whether `module-sync` may install the module. False keeps it
+    checkable (`module-check`) but out of `module-sync`'s choices, and `modules.sync()`
+    refuses it — the importer, which the actor pipeline installs (EXT-6).
     """
 
     #: every gate a spec may name — see `modules._CHECKS`
     CHECKS = ("parse", "imports", "i18n", "node-test", "vendor", "conformance")
 
     def __init__(self, name: str, *, check: str | tuple[str, ...],
-                 after_sync: tuple[str, ...] = ()):
+                 after_sync: tuple[str, ...] = (), syncable: bool = True):
         self.name = name
+        self.syncable = syncable
         self.check = (check,) if isinstance(check, str) else tuple(check)
         self._after_sync = tuple(after_sync)
         unknown = [c for c in self.check if c not in self.CHECKS]
@@ -297,5 +302,5 @@ MODULES = {
     # module list — but the static gates are free and it is real code, so it gets them.
     # node-test: test/run.mjs (the blueprint's fixed body) runs the characterisation suites
     # (importer guide step 1.11, items-journal-2; C39).
-    "importer": ModuleSpec("pentaryn-importer", check=ALL_GATES),
+    "importer": ModuleSpec("pentaryn-importer", check=ALL_GATES, syncable=False),
 }

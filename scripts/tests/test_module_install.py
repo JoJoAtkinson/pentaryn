@@ -464,3 +464,33 @@ def test_a_symlink_left_in_staging_is_cleared_ec_8(module, tmp_path):
     modules.install(module.src, module.dst)
     assert _staged(staging) == []
     assert _installed(module.dst) == _tree(module.src)
+
+
+# ── which modules module-sync may sync is a field on the spec, not the key 'importer' (EXT-6) ──
+
+def test_syncable_is_a_spec_field_and_the_importer_row_is_off_ext_6():
+    assert cfg.ModuleSpec("pentaryn-zz", check="parse").syncable is True
+    assert cfg.MODULES["importer"].syncable is False
+    assert all(s.syncable for k, s in cfg.MODULES.items() if k != "importer")
+
+
+def test_module_sync_choices_come_from_the_spec_not_the_key_ext_6(monkeypatch):
+    from scripts.foundry.ops import cli
+    monkeypatch.setitem(cfg.MODULES, "zz", cfg.ModuleSpec("pentaryn-zz", check="parse",
+                                                          syncable=False))
+    sub = next(a for a in cli.build_parser()._subparsers._actions if getattr(a, "choices", None))
+    choices = next(a.choices for a in sub.choices["module-sync"]._actions if a.dest == "module")
+    assert "zz" not in choices and "importer" not in choices
+    assert "ties" in choices
+    check = next(a.choices for a in sub.choices["module-check"]._actions if a.dest == "module")
+    assert "zz" in check and "importer" in check, "module-check still checks every module"
+
+
+def test_sync_refuses_a_non_syncable_spec_ext_6(module, monkeypatch, capsys):
+    monkeypatch.setitem(cfg.MODULES, "zz", cfg.ModuleSpec("pentaryn-zz", check="parse",
+                                                          syncable=False))
+    monkeypatch.setattr(modules, "check", lambda name: pytest.fail("a refused sync runs no gates"))
+    monkeypatch.setattr(modules, "install", lambda *a, **k: pytest.fail("a refused sync installs nothing"))
+    assert modules.sync("zz") == 1
+    out = capsys.readouterr().out
+    assert "✗" in out and "importer-install" in out

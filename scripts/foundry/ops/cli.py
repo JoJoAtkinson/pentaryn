@@ -85,9 +85,9 @@ def build_parser() -> argparse.ArgumentParser:
     add("verify", "Assert the staged actors.json is not served publicly.")
 
     # ── modules ──
-    # Derived, not hardcoded: adding a ModuleSpec is enough to make it syncable.
-    # "importer" is excluded because the actor pipeline stages it, not module-sync.
-    names = sorted(k for k in cfg.MODULES if k != "importer")
+    # Derived, not hardcoded: adding a ModuleSpec is enough to make it syncable, and
+    # `syncable=False` on the spec (the importer) keeps it out (EXT-6).
+    names = sorted(k for k, s in cfg.MODULES.items() if s.syncable)
     mcheck = add("module-check", "Prove a module's sources before it can reach Foundry.")
     # `importer` is checkable but not syncable: the actor pipeline stages it, and a
     # `module-sync importer` would put a second copy where Foundry loads modules from.
