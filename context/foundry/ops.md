@@ -595,7 +595,7 @@ Full detail: [`scripts/foundry/README.md`](../../scripts/foundry/README.md).
 | id | version | Source |
 | -- | ------- | ------ |
 | `pentaryn-importer` | 1.0.0 | `make foundry-importer-install` copies the code alone; `make foundry-sync` copies it with `actors.json` |
-| `pentaryn-walls` | 0.2.0 | Removed from the repo 2026-10-13 (Joe uses prefabs) |
+| `pentaryn-walls` | 0.2.0 | Removed from the repo 2026-10-13 (Joe uses prefabs) — [`retired.md`](retired.md) |
 | `pentaryn-ties` | 0.1.0 | `make foundry-ties-sync` copies it in. Directed NPC relationships on actor flags: Ties tab on actor sheets, GM-only canvas overlay on a rebindable keybinding (default `8`). [README](../../foundry/module/pentaryn-ties/README.md) · [design doc](../plans/foundry-npc-ties.md) |
 
 **The bridge:**
@@ -1006,7 +1006,7 @@ has three levels. Anything that walks scenes should read `levels[]`, not `backgr
 ## Related
 
 - [`foundry-vtt.md`](../plans/foundry-content-pipeline.md) — the content pipeline: decisions D1–D10, actor generation, importer module, Gates 0–4
-- [`foundry-wall-autocomplete.md`](../plans/foundry-wall-autocomplete.md) — the walls addon's design (history; the addon left the repo 2026-10-13)
+- [`foundry-wall-autocomplete.md`](../plans/foundry-wall-autocomplete.md) — the walls addon's design (history; the addon left the repo 2026-10-13, restore: [`retired.md`](retired.md))
 - [`foundry-npc-ties.md`](../plans/foundry-npc-ties.md) · [`pentaryn-ties` README](../../foundry/module/pentaryn-ties/README.md)
 - [`foundry-mcp-fork.md`](../plans/foundry-mcp-fork.md) — bridge fork design (history); operating the fork: [`mcp-fork.md`](mcp-fork.md)
 - [`scripts/foundry/README.md`](../../scripts/foundry/README.md) — license key, make-target table

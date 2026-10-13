@@ -107,14 +107,15 @@ settings were copied on disk with classic-level while both worlds were closed.
   eval-js `phase: "args"`); the server runs `7712417` (pentaryn-read description only).
   `pentaryn-walls` 0.2.0 was retired 2026-10-13 (Joe uses prefabs): never synced, off, its
   `Data/modules/pentaryn-walls/` folder moved to the macOS Trash (defect wave 3), and then its source
-  left the repo (exact copy on branch `archive/pentaryn-walls`) (below). Record:
+  left the repo (exact copy on branch `archive/pentaryn-walls`; how to bring it back:
+  [`foundry/retired.md`](foundry/retired.md)) (below). Record:
   [`plans/merge-and-go-live-2026-10-11.md`](plans/merge-and-go-live-2026-10-11.md).
 
 **Left out**
 
 | Module | Reason |
 |---|---|
-| `pentaryn-walls` | **Retired 2026-10-13** — Joe uses prefabs now; the installed folder went to the Trash the same day and the source then left the repo (exact copy on branch `archive/pentaryn-walls`). Before that: Joe's instruction: do not activate the custom walls add-on. `false` in `core.moduleConfiguration`; `game.pentaryn.walls` absent. Migrated in wave 2, never live-tested, off in the world: do not sync or live-check it (W2-L1, 2026-10-11) |
+| `pentaryn-walls` | **Retired 2026-10-13** — Joe uses prefabs now; the installed folder went to the Trash the same day and the source then left the repo (exact copy on branch `archive/pentaryn-walls`, restore: [`foundry/retired.md`](foundry/retired.md)). Before that: Joe's instruction: do not activate the custom walls add-on. `false` in `core.moduleConfiguration`; `game.pentaryn.walls` absent. Migrated in wave 2, never live-tested, off in the world: do not sync or live-check it (W2-L1, 2026-10-11) |
 | "Auto map generator" | No such module exists. The only generator is the bridge's ComfyUI `generate-map` tool: zero calls in the logs, rejected in [`plans/foundry-mcp-fork.md`](plans/foundry-mcp-fork.md). Nothing to switch off |
 
 **Log audit:** no add-on bugged out. Error logs were 0 bytes; the only failures were bridge
