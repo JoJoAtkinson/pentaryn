@@ -413,3 +413,28 @@ def test_perf_2_an_edited_file_is_scanned_again(tmp_path, monkeypatch):
     assert [s.value for s in jsscan.scan(f).strings] == ["two"]
     f.write_text('export const a = "three";\n', encoding="utf-8")    # new size
     assert [s.value for s in jsscan.scan(f).strings] == ["three"]
+
+
+# ── module root resolved once (perf-3) ────────────────────────────────────────
+
+def test_perf_3_the_imports_gate_resolves_the_module_root_once(tmp_path, monkeypatch):
+    """perf-3: resolve() called spec.src.resolve() again for every import edge."""
+    from pathlib import Path
+    spec = build(tmp_path, {
+        "main.mjs": 'import { alpha } from "./lib.mjs";\nimport { beta } from "./lib.mjs";\n'
+                    'import { gamma } from "./more.mjs";\nexport * from "./more.mjs";\n',
+        "lib.mjs": 'export function alpha() { return 1; }\nexport const beta = 2;\n',
+        "more.mjs": 'export const gamma = 3;\n'})
+    root, calls = spec.src, [0]
+    real = Path.resolve
+
+    def counting(self, *a, **kw):
+        if self == root:
+            calls[0] += 1
+        return real(self, *a, **kw)
+
+    monkeypatch.setattr(Path, "resolve", counting)
+    res = modules._gate_imports(spec)
+    assert res.ok is True, res.problems
+    assert res.counts["edges"] == 3
+    assert calls[0] == 1

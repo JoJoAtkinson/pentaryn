@@ -181,13 +181,15 @@ def _gate_imports(spec: cfg.ModuleSpec) -> GateResult:
     for path, src in scanned.items():
         exports[path], stars[path] = jsscan.exports_of(src)
 
+    src_root = spec.src.resolve()    # once, not per import edge (final-review py-ops perf-3)
+
     def resolve(origin: Path, spec_str: str) -> Path | None:
         # A query or fragment names the same file to the resolver — tests import
         # `../x.mjs?second` to defeat the module cache — so drop it before the lookup.
         spec_str = spec_str.split("?", 1)[0].split("#", 1)[0]
         target = (origin.parent / spec_str).resolve()
         try:
-            target.relative_to(spec.src.resolve())
+            target.relative_to(src_root)
         except ValueError:
             return None          # reaches outside the module — not ours to resolve
         return target
