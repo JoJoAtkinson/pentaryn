@@ -87,7 +87,7 @@ The table is generated from each `module.json`, the module's code and its
 | `chain`, `senses` | `pentaryn-senses` | 0.5.0 | full tier | `syncLight`, `carriedLight`, `resetSight`, `light.cast`, `light.end`, `light.pick`, `light.toggle`, `light.hood` … (+14) | [README](../../foundry/module/pentaryn-senses/README.md) |
 | `ties` | `pentaryn-ties` | 0.19.4 | full tier | `show`, `showAll`, `showOne`, `cards`, `clear`, `closeAllCards`, `edit`, `addTie` … (+101) | [README](../../foundry/module/pentaryn-ties/README.md) |
 | `transform` | `pentaryn-transform` | 0.4.0 | full tier | `shift`, `revert`, `forms`, `wildShapeActivity`, `original`, `isRevertItem`, `sweepSpentForms`, `formImage` … (+4) | [README](../../foundry/module/pentaryn-transform/README.md) |
-| `walls` | `pentaryn-walls` | 0.2.0 | full tier | `preview`, `run`, `undo`, `makeMacro`, `analyze`, `runEngine`, `backends` | [`walls.md`](walls.md) · [README](../../foundry/module/pentaryn-walls/README.md) |
+| `walls` | `pentaryn-walls` | 0.2.0 | full tier · **retired 2026-10-13 — Joe uses prefabs** | `preview`, `run`, `undo`, `makeMacro`, `analyze`, `runEngine`, `backends` | [`walls.md`](walls.md) · [README](../../foundry/module/pentaryn-walls/README.md) |
 
 <!-- module-index:end -->
 

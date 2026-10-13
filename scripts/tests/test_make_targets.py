@@ -181,3 +181,15 @@ def test_help_names_the_bundle_targets_and_the_world_size():
     assert "make foundry-bundles " in out and "make foundry-bundles-gc" in out
     assert "YES=1 deletes" in out
     assert "~45 MB" in out
+
+
+# ── a retired module is check-only in `make help` (wave 3 walls-retire) ──────
+
+def test_help_offers_no_sync_for_a_retired_module_walls_retire():
+    out = _dry_args("help")
+    (line,) = [ln for ln in out.splitlines() if "<m>:" in ln]
+    names = line.split("<m>:", 1)[1].split("(", 1)[0].split()
+    retired = sorted(k for k, s in cfg.MODULES.items() if s.retired)
+    assert retired == ["walls"]
+    assert "walls" not in names and "ties" in names
+    assert "retired, -check only: walls" in line
