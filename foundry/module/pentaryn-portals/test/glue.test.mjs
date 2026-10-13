@@ -297,6 +297,20 @@ test("snapshot: crops the background around the region, marks the square, upload
   pinJSON("snapshot-calls", W.callsSince(n, ["createDirectory", "toBlob", "upload", "update"]), import.meta.url);
 });
 
+test("snapshot reads the art from the scene's first Level, not the deprecated Scene#background [declared] (portals-w3-1a)", async t => {
+  t.mock.method(Date, "now", () => 1700000000000);
+  W.images["maps/pit.webp"] = { naturalWidth: 4000, naturalHeight: 2000 };
+  const l = F.logged.length, n = F.calls.length;
+  assert.equal(await S.snapshot(P.pitGate), `assets/tokens/custom/portals/${P.pit.id}-${P.pitGate.id}.webp`);
+  assert.deepEqual(W.deprecationsSince(l), [], "no v14 compatibility warning");
+  assert.equal(W.callsSince(n, ["upload"]).length, 1, "same crop and upload as before");
+  // No art on the first Level → the same "no background" warning, still without the shim.
+  const m = F.calls.length;
+  assert.equal(await S.snapshot(P.cell), null);
+  assert.deepEqual(W.callsSince(m, ["notify"]).map(c => c.message), ["That region's scene has no background image to snapshot."]);
+  assert.deepEqual(W.deprecationsSince(l), []);
+});
+
 test("snapshot: a uuid string, a crop clamped at the image edge, custom squares", async t => {
   t.mock.method(Date, "now", () => 1700000000000);
   W.images["maps/pit.webp"] = { naturalWidth: 4000, naturalHeight: 2000 };

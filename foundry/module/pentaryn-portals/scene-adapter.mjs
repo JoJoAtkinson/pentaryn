@@ -101,7 +101,8 @@ export async function snapshot(regionOrUuid, { squaresWide = 8, squaresHigh = 5 
   if (!game.user.isGM) return null;
   const region = typeof regionOrUuid === "string" ? fromUuidSync(regionOrUuid) : regionOrUuid;
   const scene = region?.parent;
-  const src = scene?.background?.src;
+  // v14: the art is on the scene's Levels (Scene#background is a deprecated shim reading firstLevel).
+  const src = scene?.firstLevel?.background?.src;
   if (!src) { ui.notifications.warn(_loc("PENTARYN_PORTALS.Notify.NoBackground")); return null; }
 
   const b = region.bounds ?? region.object?.bounds;
