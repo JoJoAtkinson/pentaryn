@@ -41,7 +41,7 @@ import {
 } from "./known-core.mjs";
 import { studyStateFor, requestStudy, kindDialog, loreStateFor, requestLore, kindActorOf, grantKind as releaseKind } from "./study.mjs";
 import { attributeIdsOf, registry as registryOf } from "./attributes.mjs";
-import { esc, bindRowToggle, bindSummary, makeOpenState, notesPreview, notesProse, bindNotesAutosave, replaceSummary, keyLabel, FALLBACK_ART, guardClick } from "./core/html.mjs";
+import { dropSecrets, paintRich, richBox, esc, bindRowToggle, bindSummary, makeOpenState, notesPreview, notesProse, bindNotesAutosave, replaceSummary, keyLabel, FALLBACK_ART, guardClick } from "./core/html.mjs";
 import { makeLog } from "./lib/log.mjs";
 import { categoriesFor, categoryLabel, readKnown, hideKnown, addKnown, setKnownField, notebookActor } from "./known-data.mjs";
 
@@ -345,6 +345,11 @@ function studyControls(entry, { canEdit, isGM, study }) {
  * player view must be the same furniture: `textHTML` replaces the escaped text (already-safe
  * markup, e.g. a `<details>` around a long kind payload) and `extra` is appended inside the body
  * (the GM's who-knows strip). The Known tab itself passes neither.
+ *
+ * Authored HTML is never escaped onto the page (Joe, 2026-10-13: a player reads "From Vel.", not
+ * `<p>From Vel.</p>`): `richBox` draws it as an empty `data-enrich` box, and every place that
+ * inserts this markup calls `paintRich` after, which enriches with `secrets: false`. Plain text is
+ * escaped as before.
  */
 export function grantCard(g, { extra = "", textHTML = null } = {}) {
   /*
@@ -353,12 +358,13 @@ export function grantCard(g, { extra = "", textHTML = null } = {}) {
    * header over nothing, which tells the player a check happened and came back empty. Every
    * caller treats "" as "nothing here" and drops the group when nothing is left.
    */
-  if (textHTML === null && isBlankProse(String(g?.text ?? ""))) return "";
+  // a grant that is only a GM secret block is blank to the player it is drawn for
+  if (textHTML === null && isBlankProse(dropSecrets(String(g?.text ?? "")))) return "";
   return `<li class="pt-grant">
         ${g.icon ? `<img class="pt-grant-icon" src="${esc(g.icon)}" alt="">` : ""}
         <div class="pt-grant-body">
           ${g.source ? `<span class="pt-grant-source">${esc(g.source)}</span>` : ""}
-          ${textHTML ?? `<div class="pt-grant-text">${esc(g.text)}</div>`}
+          ${textHTML ?? richBox("pt-grant-text", String(g.text ?? ""))}
           ${extra}
         </div>
       </li>`;
@@ -614,6 +620,7 @@ export function buildKnownHTML(actor) {
 export function bindKnown(root, actor, rerender = () => {}) {
   if (!root || !actor) return;
   const canEdit = actor.isOwner === true;
+  paintRich(root, { log }); // the granted cards' authored HTML, as clean text (wave 3)
 
   root.querySelectorAll('[data-action="toggle"]').forEach(head => {
     const row = head.closest(".pt-row");

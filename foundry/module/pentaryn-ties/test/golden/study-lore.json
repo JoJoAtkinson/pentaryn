@@ -446,7 +446,7 @@
       {
         "op": "DialogV2.confirm",
         "title": "A check came in",
-        "content": "<p>ZZ Caven studied ZZ Brakka.</p><p class=\"pt-study-hold-meta\">Held secret — DC 10, rolled 18</p><div class=\"pt-study-hold-text\">&lt;p&gt;He sold the map.&lt;/p&gt;</div>"
+        "content": "<p>ZZ Caven studied ZZ Brakka.</p><p class=\"pt-study-hold-meta\">Held secret — DC 10, rolled 18</p><div class=\"pt-study-hold-text pt-rich\"><p>He sold the map.</p></div>"
       }
     ],
     "console": []

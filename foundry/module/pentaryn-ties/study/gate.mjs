@@ -26,6 +26,7 @@ import {
 import { applyPlayerWrites, putBelief, readBelief } from "./apply.mjs";
 import { beliefsOf, identDcOf, identRowMissed, resolveFact, studiedOf, studyTiersOf } from "./resolve.mjs";
 import { esc } from "./shared.mjs";
+import { cleanLoreHTML, hasMarkup } from "../core/html.mjs";
 import { readFlag } from "../lib/flags.mjs";
 import { setting } from "../settings.mjs";
 
@@ -49,6 +50,8 @@ export async function promptDeliver(character, fact) {
   if (!rec || rec.delivered) return;
   // only a kind has a tier; a row with no roll behind it (auto kind, GM tell) has no total (EXT-1)
   const total = rec.total ?? "—";
+  // the prose as the player will read it: clean text, GM secret blocks stripped (wave 3, Joe 2026-10-13)
+  const said = isBlankProse(rec.text) ? null : await cleanLoreHTML(rec.text, { relativeTo: fact.subject ?? null });
   const ok = await foundry.applications.api.DialogV2.confirm({
     window: { title: _loc("PENTARYN_TIES.known.study.holdTitle") },
     content:
@@ -59,8 +62,8 @@ export async function promptDeliver(character, fact) {
           : _loc("PENTARYN_TIES.known.study.holdMetaLore", { fact: fact.name, dc: fact.dc, total })
       )}</p>` +
       // a silent outcome has no prose to preview — say so, or the GM reads an empty box as a bug
-      `<div class="pt-study-hold-text">${
-        !isBlankProse(rec.text) ? esc(rec.text) : `<em>${esc(_loc("PENTARYN_TIES.known.study.holdSilent"))}</em>`
+      `<div class="pt-study-hold-text${said !== null && hasMarkup(rec.text) ? " pt-rich" : ""}">${
+        said ?? `<em>${esc(_loc("PENTARYN_TIES.known.study.holdSilent"))}</em>`
       }</div>`,
     yes: { label: _loc("PENTARYN_TIES.known.study.deliver") },
     no: { label: _loc("PENTARYN_TIES.known.study.later") }

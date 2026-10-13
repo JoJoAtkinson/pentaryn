@@ -327,7 +327,7 @@
       {
         "op": "DialogV2.confirm",
         "title": "A check came in",
-        "content": "<p>ZZ Wren studied ZZ Brakka.</p><p class=\"pt-study-hold-meta\">The Guild — Held oath — DC 10, rolled 15</p><div class=\"pt-study-hold-text\">&lt;p&gt;Second oath.&lt;/p&gt;</div>"
+        "content": "<p>ZZ Wren studied ZZ Brakka.</p><p class=\"pt-study-hold-meta\">The Guild — Held oath — DC 10, rolled 15</p><div class=\"pt-study-hold-text pt-rich\"><p>Second oath.</p></div>"
       }
     ],
     "console": []

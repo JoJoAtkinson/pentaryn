@@ -71,7 +71,7 @@ import { inspect, kindActorOf } from "./study.mjs";
 import { grantCard, grantedHead } from "./known-ui.mjs";
 import { subjectFacts, knowsAbout, groupLabelKey } from "./facts.mjs";
 import { REGISTRY_SETTING, touchesFlagScope } from "./known-core.mjs";
-import { FALLBACK_ART, openOrFront } from "./core/html.mjs";
+import { FALLBACK_ART, openOrFront, paintRich } from "./core/html.mjs";
 import { makeLog } from "./lib/log.mjs";
 
 const log = makeLog(MODULE);
@@ -203,6 +203,7 @@ export class LookWindow extends ApplicationV2 {
     content.innerHTML = result;
     content.scrollTop = top;
     this.lastHTML = result;
+    paintRich(content, { log }); // authored HTML as clean text, GM secrets stripped (wave 3)
   }
 
   /* ------------------------------------------ live */
