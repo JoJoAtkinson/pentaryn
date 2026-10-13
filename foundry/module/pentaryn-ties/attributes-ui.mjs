@@ -726,7 +726,8 @@ export function bindAttributes(root, actor, rerender = () => {}) {
   for (const el of box.querySelectorAll("[data-attr-field]")) {
     el.addEventListener("change", async () => {
       const field = el.dataset.attrField;
-      const value = el.type === "checkbox" ? el.checked : el.type === "number" ? Number(el.value) : el.value;
+      // a cleared number box is null (the clamp's default — DC 15), never Number("") = 0 → 1 (M1)
+      const value = el.type === "checkbox" ? el.checked : el.type === "number" ? (el.value.trim() === "" ? null : Number(el.value)) : el.value;
       await updateAttribute(el.dataset.id, { [field]: value });
       rerender();
     });

@@ -14,7 +14,7 @@ import {
   setKnowledge
 } from "../attributes.mjs";
 import { MODULE } from "../ties-core.mjs";
-import { rolledMiss } from "../core/rules.mjs";
+import { kindPassed, rolledMiss } from "../core/rules.mjs";
 import {
   ATTR_BELIEFS_SETTING,
   authoredTier,
@@ -429,7 +429,7 @@ export function legacyMissCards() {
         subject = kind.name;
         const rec = beliefsOf(kind)[pc.id]?.[KIND_KEY];
         const lie = authoredTier(studyTiersOf(kind), 0);
-        missed = !!rec && !rec.from && !(Number(rec.tier) >= 15) && !(lie && String(card.text ?? "").includes(lie));
+        missed = !!rec && !rec.from && !kindPassed(rec.tier) && !(lie && String(card.text ?? "").includes(lie));
       }
       if (missed) out.push({ character: pc.name, characterId: pc.id, subject, factKey, text: card.text });
     }

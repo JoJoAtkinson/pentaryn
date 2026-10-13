@@ -5,7 +5,7 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { rolledMiss } from "../core/rules.mjs";
+import { kindPassed, rolledMiss } from "../core/rules.mjs";
 import { shareStatus } from "../known-core.mjs";
 import { rowMissed, makePassOfRow, flatMissed, MEMBER_FACT } from "./fixtures/legacy-miss.mjs";
 import { readJSON } from "./kit/harness.mjs";
@@ -44,7 +44,7 @@ test("ties-13: rolledMiss equals the legacy flatMissed on every row × dc", () =
 test("ties-13: rowMissed (study.mjs) — non-kind rows are rolledMiss; kind rows keep their own rule", async () => {
   const now = row => (fact, rec) => {
     if (!rec || rec.from) return false;
-    if (fact.ns === "kind") return rec.total !== null && rec.total !== undefined && !(Number(rec.tier) >= 15);
+    if (fact.ns === "kind") return rec.total !== null && rec.total !== undefined && !kindPassed(rec.tier);
     return rolledMiss(rec, fact.dc);
   };
   const adapter = now();
@@ -59,7 +59,7 @@ test("ties-13: beliefs()' lore verdict — not a rolledMiss (and not NaN) where 
   const rows = [{ id: "f1", dc: 14 }, { id: "f2", dc: "x" }];
   const now = (parsed, rec) => {
     if (rec.from) return true;
-    if (parsed.ns === "kind") return Number(rec.tier) >= 15;
+    if (parsed.ns === "kind") return kindPassed(rec.tier);
     if (typeof rec.pass === "boolean") return rec.pass;
     if (typeof rec.total !== "number") return rec.delivered || String(rec.text ?? "").trim() ? true : null;
     if (parsed.ns === "lore") {
