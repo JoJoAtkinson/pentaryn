@@ -339,7 +339,10 @@ active user) answers `get-world-info`. There was no restart, no reload and no fo
   re-diffed. None was a hidden skip, so the windows' "no difference" results stand. INT-1508 and INT-1518 used
   wave-5 copies as their before-goldens (PROVENANCE.txt in their folders).
 - **Follow-up:** Joe's rulings and the urgent defects shipped as defect wave 1 (FIX-1, main 8fd979bd). See
-  [`../defect-wave-2026-10-12/README.md`](../defect-wave-2026-10-12/README.md). Still open for a later batch:
+  [`../defect-wave-2026-10-12/README.md`](../defect-wave-2026-10-12/README.md). Everything below then shipped
+  as defect wave 2 (FIX-2/FIX-3, 2026-10-13); see
+  [`../defect-wave-2-2026-10-12/README.md`](../defect-wave-2-2026-10-12/README.md) for the record and what
+  is still open (pings parked). The list as it stood before wave 2:
   - two-GM-tab races (one shared "claim the work" pattern);
   - kit 1.2.0;
   - the bridge restart race;
