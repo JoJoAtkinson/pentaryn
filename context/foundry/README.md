@@ -246,6 +246,12 @@ the raw art and the crowd renders 1.5× the ringed NPCs beside it. Sweep snippet
 **Standing quirk:** derived token/actor data goes stale after writes. Verify with
 `actor.reset()` or `await canvas.draw()`, never by reading `_source`.
 
+**A token move "not persisting" is our hidden tab, not a Foundry bug.** The MCP tab is hidden,
+so token animation never advances and the placeable's `tok.x`/`tok.y` keep the old position
+while the document and the server hold the new one. Position is source data, not derived: read
+`tokenDoc._source.x/y` or the server, or update with `{animate: false}`. No throwaway first move
+is needed (wave 3, 2026-10-13, clean-world check).
+
 **Possession is marked per-token, not per-actor** (`pentaryn-ties`). Token HUD →
 masks-theater button, GM-only, `token.flags["pentaryn-ties"].worn = {by, note}`. Never mark
 a host on the actor — the same actor appears in more than one scene, and the ties graph must
