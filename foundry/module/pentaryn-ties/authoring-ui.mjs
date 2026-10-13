@@ -33,6 +33,9 @@ import { LORE_FLAG, KIND_OF_FLAG, STUDY_TIERS_FLAG } from "./known-core.mjs";
 import { loreEditorHTML, bindLoreEditor } from "./lore-ui.mjs";
 import { beliefs, deliver, reset, kindActorOf, setKindOf, writeLoreRows } from "./study.mjs";
 import { esc, gmBadge } from "./core/html.mjs";
+import { makeLog } from "./lib/log.mjs";
+
+const log = makeLog(MODULE);
 
 /**
  * The kind dropdown.
@@ -99,9 +102,13 @@ function beliefRow(row) {
       }
       ${row.pending ? `<span class="pt-belief-tag">${esc(_loc("PENTARYN_TIES.authoring.pending"))}</span>` : ""}
     </div>
-    <div class="pt-belief-text">${
-      String(row.text ?? "").trim() ? esc(row.text) : `<em>${esc(_loc("PENTARYN_TIES.authoring.beliefSilent"))}</em>`
-    }</div>
+    ${
+      // authored lore is HTML (wave 3): the raw text rides in an attribute and bindAuthoring
+      // paints it enriched — never escaped into the box, which showed the GM literal tags
+      String(row.text ?? "").trim()
+        ? `<div class="pt-belief-text" data-enrich="${esc(row.text)}"></div>`
+        : `<div class="pt-belief-text"><em>${esc(_loc("PENTARYN_TIES.authoring.beliefSilent"))}</em></div>`
+    }
     <div class="pt-belief-actions">
       ${
         row.pending
@@ -142,10 +149,33 @@ export function authoringHTML(actor) {
   </section>`;
 }
 
+/**
+ * Paint each belief's authored text as enriched HTML, relative to the studied actor (wave 3).
+ * The build is synchronous and enrichHTML is not, so the row is drawn empty and filled here. A
+ * failed enrich falls back to the escaped text — never an empty box. Resolves when all are painted.
+ */
+function enrichBeliefText(section, actor) {
+  const TE = foundry.applications?.ux?.TextEditor?.implementation ?? globalThis.TextEditor;
+  return Promise.all(
+    [...section.querySelectorAll(".pt-belief-text[data-enrich]")].map(async box => {
+      const raw = box.dataset.enrich ?? "";
+      let html;
+      try {
+        html = await TE.enrichHTML(raw, { relativeTo: actor, rollData: actor.getRollData?.() ?? {}, secrets: true });
+      } catch (err) {
+        log.warn(`belief text enrichment failed for ${actor.name}`, err);
+        html = esc(raw);
+      }
+      box.innerHTML = html;
+    })
+  );
+}
+
 /** Wire it. Every handler re-checks GM itself — a rendered control is never an authorisation. */
 export function bindAuthoring(root, actor, rerender = () => {}) {
   const section = root?.querySelector?.(".pt-authoring");
   if (!section || !actor || game.user?.isGM !== true) return;
+  const painted = enrichBeliefText(section, actor);
 
   section.querySelector("[data-action='set-kind']")?.addEventListener("change", async ev => {
     await setKindOf(actor, ev.currentTarget.value);
@@ -187,4 +217,5 @@ export function bindAuthoring(root, actor, rerender = () => {}) {
       rerender();
     });
   }
+  return painted;
 }
