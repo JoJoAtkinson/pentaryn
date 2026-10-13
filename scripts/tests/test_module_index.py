@@ -7,6 +7,7 @@ import re
 
 import pytest
 
+from scripts.foundry.blueprint import conformance
 from scripts.foundry.ops import config as cfg, index
 
 
@@ -119,8 +120,19 @@ def test_an_alias_published_in_code_survives_a_describe_golden(tmp_path):
 
 
 def test_reserved_names_mirror_the_kit():
-    # py-blueprint-ops-index-reserved: _RESERVED is a third hand copy of the kit's errors.RESERVED
-    # (after conformance.RESERVED_API); a kit bump that adds or drops a name must fail here.
+    # EXT-3: the index reads conformance.RESERVED_API rather than keeping its own copy; the
+    # one remaining Python copy must equal the kit's errors.RESERVED, so a kit bump that adds or
+    # drops a name fails here.
     text = (cfg.REPO_ROOT / "foundry/lib/errors.mjs").read_text(encoding="utf-8")
     body = re.search(r"export const RESERVED\s*=\s*Object\.freeze\(\[(.*?)\]", text, re.S).group(1)
-    assert set(re.findall(r'"([^"]+)"', body)) == set(index._RESERVED)
+    assert set(re.findall(r'"([^"]+)"', body)) == set(conformance.RESERVED_API)
+
+
+def test_index_filters_by_conformance_reserved_not_its_own_copy(tmp_path, monkeypatch):
+    """EXT-3: index.py hand-copied the kit's RESERVED list; it must use conformance.RESERVED_API."""
+    assert not hasattr(index, "_RESERVED")
+    monkeypatch.setattr(conformance, "RESERVED_API", (*conformance.RESERVED_API, "kitOnlyName"))
+    d = _module(tmp_path / "modules", "pentaryn-ext3",
+                describe={"namespace": "ext3",
+                          "methods": [{"path": "describe"}, {"path": "kitOnlyName"}, {"path": "real"}]})
+    assert index.module_row(d)["api"] == ["real"]
