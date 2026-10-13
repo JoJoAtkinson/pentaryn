@@ -82,7 +82,7 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
   #swapping = null;
   #discard = false;
   #deleted = false;
-  #deleting = false;   // our own Delete is in flight: the deleteToken hook leaves this box to it (U1)
+  #deleting = null;   // our own Delete in flight (a promise that settles once it is decided): the box counts as going away (U1)
   #ticket = null;
   #panelRun = 0;
   #panelTimer = null;
@@ -313,7 +313,7 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
     const wanted = text ?? this.#currentText();
     this.#saving = this.#saving.then(async () => {
       const tok = this.token;
-      if (!tok || this.#deleted) return true;
+      if (!tok || this.#deleted || this.#deleting) return true;   // a failed Delete reschedules (U1)
       const norm = normalisePrompt(wanted);
       if (norm === this.#saved) return true;
       const size = markerSizeOfToken(tok);
@@ -336,6 +336,8 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
   /** Everything that must happen once the window is going: save (or discard), empty-delete. */
   async #finish(text) {
     clearTimeout(this.#timer);
+    // Esc during an in-flight Delete: let it land (nothing more to do) or fail (then save as usual) (U1)
+    await this.#deleting;   // never rejects
     if (this.#deleted) return;
     const ok = await this.#save(this.#discard ? this.#opened : text);
     const tok = this.token;
@@ -391,7 +393,7 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
    * the chips grey out meanwhile, and close() waits for it. One click → one new marker, one delete.
    */
   static async #onSize(event, target) {
-    if (this.#swapping) return;
+    if (this.#swapping || this.#deleting) return;   // a Delete in flight: no new marker (U1)
     const size = target?.dataset?.size;
     const tok = this.token;
     if (!tok || !SIZE_BY_KEY[size] || size === markerSizeOfToken(tok)) return;
@@ -405,7 +407,7 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
 
   /** The marker this swap started from is gone (deleted elsewhere, or by the dialog) (R4). */
   #lost(tok) {
-    return this.#deleted || this.token !== tok;
+    return this.#deleted || !!this.#deleting || this.token !== tok;
   }
 
   async #swap(tok, size) {
@@ -442,24 +444,31 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   static async #onDelete() {
-    if (this.#closing) return;
+    if (this.#closing || this.#deleting) return;   // a double click: one delete (U1)
     await this.#swapping?.catch(() => {});   // a swap in flight first, so Delete removes the marker it made
-    if (this.#closing) return;
+    if (this.#closing || this.#deleting) return;
     const tok = this.token;
     clearTimeout(this.#timer);
-    // deleted only once the delete lands: a rejected one leaves the box open and still saving (U1)
-    this.#deleting = true;
+    // deleted only once the delete lands: a rejected one leaves the box open and still saving (U1).
+    // #deleting is set before tok.delete() runs (its deleteToken hook may fire at once) and settles
+    // only after #deleted is decided, so a close() waiting on it knows whether to save.
+    let settle;
+    this.#deleting = new Promise(r => { settle = r; });
     try {
       if (tok) await tok.delete();
+      this.#deleted = true;
     } catch (err) {
-      log.error("deleting the prompt marker failed", err);
-      ui.notifications?.error(_loc("PENTARYN_PROMPTS.dialog.deleteFailed"));
-      return;
+      if (!this.token) this.#deleted = true;   // the marker went anyway (deleted elsewhere meanwhile)
+      else {
+        log.error("deleting the prompt marker failed", err);
+        ui.notifications?.error(_loc("PENTARYN_PROMPTS.dialog.deleteFailed"));
+      }
     } finally {
-      this.#deleting = false;
+      this.#deleting = null;
+      settle();
     }
-    this.#deleted = true;
-    await this.close();
+    if (this.#deleted) await this.close();
+    else if (!this.#closing) this.#schedule();   // words typed just before the click still autosave
   }
 
   /* ── side panel ──────────────────────────────────────────────────────── */

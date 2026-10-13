@@ -93,6 +93,10 @@ cssPrefix `pp-`, afterSync). Each **[declared]** change goes to the live check.
   later save was skipped, so words typed after it were lost. A rejection now logs, shows "The prompt
   marker could not be deleted; see the console." (`PENTARYN_PROMPTS.dialog.deleteFailed`), and the
   box stays editable; the deleteToken hook still leaves a box whose own delete succeeded alone.
+  While the delete is in flight the box counts as going away: a second Delete click, a size chip
+  or Esc does not issue another delete or make a new marker (Esc waits, then saves only if the
+  delete failed); a failed delete reschedules the autosave; and a delete that fails because the
+  marker went elsewhere meanwhile closes the box quietly.
 - **[declared] Two gathers at once keep both manifests**: the ring writes through one
   `serialStore` (a parallel gather no longer makes the other's call id `CALL_UNKNOWN`).
 - **[declared] `ensureMarkers` no longer duplicates across two GM tabs** (§5.9.1): the folder and

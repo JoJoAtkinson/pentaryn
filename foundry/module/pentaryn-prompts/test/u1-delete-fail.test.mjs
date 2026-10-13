@@ -54,3 +54,143 @@ test("prompts-U1: a Delete that lands is not closed a second time by the deleteT
   assert.equal(closes, 1, "the hook skipped the box that deleted its own marker");
   assert.equal(F.calls.slice(n0).filter(c => c.op === "update" || c.op === "updateEmbeddedDocuments").length, 0, "no save after the delete");
 });
+
+/* ── a Delete in flight counts as the box going away (prompts-U1 repair) ── */
+
+const A = PromptDialog.DEFAULT_OPTIONS.actions;
+const markers = () => [...F.s1.tokens.values()].filter(t => t.flags?.[MODULE]?.prompt !== undefined);
+const tick = async () => { for (let i = 0; i < 20; i++) await Promise.resolve(); };
+/**
+ * A realistic in-flight delete: calls run in order like the server's, the first is held until
+ * released, and a delete of a token already gone rejects ("Token does not exist").
+ */
+function gated(tok) {
+  const orig = tok.delete.bind(tok);
+  let release; const gate = new Promise(r => { release = r; });
+  let gone = false, n = 0, chain = Promise.resolve();
+  tok.delete = () => {
+    const first = ++n === 1;
+    const p = chain.then(async () => {
+      if (first) await gate;
+      if (gone) throw new Error("Token does not exist");
+      gone = true;
+      return orig();
+    });
+    chain = p.catch(() => {});
+    return p;
+  };
+  return { release, calls: () => n };
+}
+
+test("prompts-U1: a double click on Delete deletes once, with no false error", async t => {
+  t.mock.timers.enable({ apis: ["setTimeout", "Date"], now: NOW });
+  const tok = await fresh("u1-double", "a cart");
+  const app = await PromptDialog.open(tok);
+  const g = gated(tok);
+  const n0 = notices().length;
+  const { out } = await captureConsole(async () => {
+    const d1 = del(app);
+    await tick();
+    const d2 = del(app);
+    await tick();
+    g.release();
+    await Promise.all([d1, d2]);
+    await tick();
+  });
+  assert.equal(g.calls(), 1, "one delete");
+  assert.equal(F.s1.tokens.get(tok.id), undefined);
+  assert.equal(app.rendered, false);
+  assert.deepEqual(notices().slice(n0), [], "no could-not-delete toast");
+  assert.deepEqual(out, []);
+});
+
+test("prompts-U1: a size chip clicked while Delete is in flight makes no new marker", async t => {
+  t.mock.timers.enable({ apis: ["setTimeout", "Date"], now: NOW });
+  const before = markers().length;
+  const tok = await fresh("u1-chip", "a cart");
+  const app = await PromptDialog.open(tok);
+  const g = gated(tok);
+  const n0 = F.calls.length;
+  const { out } = await captureConsole(async () => {
+    const d = del(app);
+    await tick();
+    const s = A.size.call(app, {}, { dataset: { size: "large" } });
+    await tick();
+    g.release();
+    await Promise.all([d, s]);
+    await tick();
+  });
+  assert.equal(F.calls.slice(n0).filter(c => c.op === "createEmbeddedDocuments").length, 0, "no new marker");
+  assert.equal(markers().length, before, "no orphan");
+  assert.equal(g.calls(), 1);
+  assert.equal(app.rendered, false);
+  assert.deepEqual(out, []);
+});
+
+test("prompts-U1: Esc during an in-flight Delete of a fresh empty marker issues one delete", async t => {
+  t.mock.timers.enable({ apis: ["setTimeout", "Date"], now: NOW });
+  const tok = await fresh("u1-esc", "");
+  const app = await PromptDialog.open(tok, { fresh: true });
+  const g = gated(tok);
+  const { out } = await captureConsole(async () => {
+    const d = del(app);
+    await tick();
+    const c = app.close();
+    await tick();
+    g.release();
+    await Promise.all([d, c]);
+    await tick();
+  });
+  assert.equal(g.calls(), 1, "one delete");
+  assert.equal(F.s1.tokens.get(tok.id), undefined);
+  assert.deepEqual(out, [], "no 'closing the prompt dialog' error");
+});
+
+test("prompts-U1: Esc during a Delete that then fails still saves the words", async t => {
+  t.mock.timers.enable({ apis: ["setTimeout", "Date"], now: NOW });
+  const tok = await fresh("u1-esc-fail", "a cart");
+  const app = await PromptDialog.open(tok);
+  let release; const gate = new Promise(r => { release = r; });
+  tok.delete = async () => { await gate; throw new Error("locked"); };
+  ta(app).value = "a cart, overturned";
+  await captureConsole(async () => {
+    const d = del(app);
+    await tick();
+    const c = app.close();
+    await tick();
+    release();
+    await Promise.all([d, c]);
+  });
+  delete tok.delete;
+  assert.equal(F.s1.tokens.get(tok.id).flags[MODULE].prompt, "a cart, overturned");
+  await F.s1.deleteEmbeddedDocuments("Token", [tok.id]);
+});
+
+test("prompts-U1: words typed just before a failed Delete autosave without more typing", async t => {
+  t.mock.timers.enable({ apis: ["setTimeout", "Date"], now: NOW });
+  const tok = await fresh("u1-autosave", "a cart");
+  const app = await PromptDialog.open(tok);
+  ta(app).value = "a cart, overturned";
+  ta(app).dispatch("input");
+  tok.delete = async () => { throw new Error("locked"); };
+  await captureConsole(() => del(app));
+  delete tok.delete;
+  t.mock.timers.tick(5000);
+  await tick();
+  assert.equal(F.s1.tokens.get(tok.id).flags[MODULE].prompt, "a cart, overturned", "the autosave was rescheduled");
+  await app.close();
+  await F.s1.deleteEmbeddedDocuments("Token", [tok.id]);
+});
+
+test("prompts-U1: our Delete rejects because another tab deleted the marker meanwhile: the box closes quietly", async t => {
+  t.mock.timers.enable({ apis: ["setTimeout", "Date"], now: NOW });
+  const tok = await fresh("u1-elsewhere", "a cart");
+  const app = await PromptDialog.open(tok);
+  const n0 = notices().length;
+  tok.delete = async () => { await F.s1.deleteEmbeddedDocuments("Token", [tok.id]); throw new Error("Token does not exist"); };
+  const { out } = await captureConsole(() => del(app));
+  await tick();
+  assert.equal(app.rendered, false, "the box closed");
+  assert.deepEqual(notices().slice(n0), [], "no could-not-delete toast");
+  assert.deepEqual(out, []);
+});
