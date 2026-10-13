@@ -201,6 +201,11 @@ Changed (declared): "the GM, or player access on and the player owns it" is writ
 (`sheet.mjs`) both ask it. It reads player access through `mayWrite`, so before the settings register a
 player is refused rather than let through on the setting's default. ties-ui-EXT-11.
 
+Changed (declared): the Inspect preview reads the kind-study ladder from `known-core` instead of
+hard-coding it: the dice bench's odds list is the positive `STUDY_RUNGS`, lowest first; the top tier
+(the composed study, the Share switch's "click tells them the rest") is `Math.max(...STUDY_RUNGS)`; the
+pass line is `STUDY_BASE_DC`. Same numbers today. ties-ui-EXT-13.
+
 ## 0.19.4 (2026-10-10, usability run, Area 7 re-run)
 
 - **The inspect window's Share switches are the table's PCs only** (`tablePCs`): each player's

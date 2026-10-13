@@ -72,7 +72,8 @@ import { subjectFacts, groupLabelKey } from "./facts.mjs";
 import {
   rollableLore, loreOfferable, loreOutcome, tierOf, studyOffsetOf, STUDY_OFFSET_FLAG, LORE_FLAG,
   planStep, identificationLadder, indexRegistry, identifiedKey, holdResolved, combineAdvantage,
-  ATTR_BELIEFS_SETTING, KNOWLEDGE_SETTING, REGISTRY_SETTING, touchesFlagScope, tablePCs, switchLabels
+  ATTR_BELIEFS_SETTING, KNOWLEDGE_SETTING, REGISTRY_SETTING, touchesFlagScope, tablePCs, switchLabels,
+  STUDY_RUNGS, STUDY_BASE_DC
 } from "./known-core.mjs";
 import { CONCEAL_FLAG, concealFor, firstName } from "./core/rules.mjs";
 import { FALLBACK_ART, skillLabelOf } from "./core/html.mjs";
@@ -107,6 +108,9 @@ const esc = s => foundry.utils.escapeHTML(String(s ?? ""));
 const pct = p => `${Math.round(Math.max(0, Math.min(1, p)) * 100)}%`;
 /** d20 + mod ≥ dc. Ability checks have no automatic success or failure on a 20 or a 1. */
 const chance = (mod, dc) => Math.max(0, Math.min(1, (21 - (dc - mod)) / 20));
+
+/** The kind study's top tier — what "knows it all" means (ties-ui-EXT-13). */
+const STUDY_TOP = Math.max(...STUDY_RUNGS);
 
 const PROF = { none: 0, prof: 1, expert: 2 };
 
@@ -306,7 +310,7 @@ export class InspectPreview extends ApplicationV2 {
       const { skill, label } = studySkillFor(k);
       const off = studyOffsetOf(readFlag(k, MODULE, STUDY_OFFSET_FLAG));
       if (off === "auto") {
-        kind = { actor: k, skill, auto: true, spent: state.spent, text: await composeStudyPayload(k, 25, label) };
+        kind = { actor: k, skill, auto: true, spent: state.spent, text: await composeStudyPayload(k, STUDY_TOP, label) };
       } else {
         const shift = typeof off === "number" ? off : 0;
         const mod = this.modFor(skill);
@@ -315,7 +319,7 @@ export class InspectPreview extends ApplicationV2 {
         const tier = tierOf(total, shift);
         kind = {
           actor: k, skill, mod, die, total, tier, shift, spent: state.spent,
-          odds: [15, 20, 25].map(t => ({ t, p: chance(mod, t + shift) })),
+          odds: STUDY_RUNGS.filter(r => r > 0).reverse().map(t => ({ t, p: chance(mod, t + shift) })),
           text: await composeStudyPayload(k, tier, label)
         };
       }
@@ -418,11 +422,11 @@ export class InspectPreview extends ApplicationV2 {
       if (k.spent) html += `<p class="pv-note">${_loc("PENTARYN_TIES.preview.spent")}</p>`;
       html += `<div class="pv-row"><div class="pv-head"><img src="${esc(k.actor.img)}"><b>${esc(k.actor.name)}</b> <span class="pv-skill">${esc(skillLabelOf(k.skill))}</span>
         <span class="pv-dice">${k.die} ${k.mod >= 0 ? "+" : "−"} ${Math.abs(k.mod)} = <b>${k.total}</b></span>
-        <span class="${k.tier >= 15 ? "pv-pass" : "pv-fail"}">${_loc("PENTARYN_TIES.preview.tier", { tier: k.tier })}${
-          // below 15 is a failure: nothing at all, unless the GM authored rung 0 (the one lie)
-          k.tier < 15 && k.text?.trim() ? ` · ${_loc("PENTARYN_TIES.preview.rung0Lie")}` : ""}</span>
+        <span class="${k.tier >= STUDY_BASE_DC ? "pv-pass" : "pv-fail"}">${_loc("PENTARYN_TIES.preview.tier", { tier: k.tier })}${
+          // below STUDY_BASE_DC is a failure: nothing at all, unless the GM authored rung 0 (the one lie)
+          k.tier < STUDY_BASE_DC && k.text?.trim() ? ` · ${_loc("PENTARYN_TIES.preview.rung0Lie")}` : ""}</span>
         <span class="pv-odds">${k.odds.map(o => `${o.t}${k.shift ? `(DC ${o.t + k.shift})` : ""}: ${pct(o.p)}`).join(" · ")}</span></div>
-        <details ${k.tier >= 15 ? "" : "open"}><summary>${_loc("PENTARYN_TIES.preview.whatTold")}</summary>${said(k.text, k.tier >= 15)}</details></div>`;
+        <details ${k.tier >= STUDY_BASE_DC ? "" : "open"}><summary>${_loc("PENTARYN_TIES.preview.whatTold")}</summary>${said(k.text, k.tier >= STUDY_BASE_DC)}</details></div>`;
     }
     if (this.missingSkills?.size)
       html = `<p class="pv-silent">${_loc("PENTARYN_TIES.preview.missingSkills", { skills: [...this.missingSkills].map(x => esc(skillLabelOf(x))).join(", ") })}</p>` + html;
@@ -492,7 +496,7 @@ export class InspectPreview extends ApplicationV2 {
     const state = studyStateFor(null, subject);
     const kind = state.kind ?? null;
     if (kind && state.content) {
-      const text = await composeStudyPayload(kind, 25, state.skillLabel);
+      const text = await composeStudyPayload(kind, STUDY_TOP, state.skillLabel);
       // a separate kind actor's study files under the KIND's page on the Known tab, not this one's
       const kindLabel = _loc(groupLabelKey("kind", "preview", { kindPage: kind.id !== subject.id }), { kind: kind.name });
       groups.push([kindLabel, [this.factCard(specs,
@@ -555,7 +559,7 @@ export class InspectPreview extends ApplicationV2 {
       case "passed":
         state = "on";
         // a kind held below the top tier is not "knows it all": the click tells them the rest
-        act = spec.ns === "kind" && Number(st.tier ?? 0) < 25 ? "raise" : "rolled";
+        act = spec.ns === "kind" && Number(st.tier ?? 0) < STUDY_TOP ? "raise" : "rolled";
         tip = st.total != null
           ? _loc("PENTARYN_TIES.known.share.sw.passed", { name, how: `${rolled}${tier}` })
           : _loc("PENTARYN_TIES.known.share.sw.auto", { name });
