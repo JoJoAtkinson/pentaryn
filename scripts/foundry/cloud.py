@@ -2268,7 +2268,7 @@ def fetch_snapshot(st: Storage, snap: Snapshot, *, systems: bool = True) -> Fetc
             for key, name in sorted(f.needed.items()):
                 try:
                     f.bundle_members[name] = bundles.verify(f.bundle_tars[name],
-                                                            *key.split("/", 1))
+                                                            *bundles.split_key(key))
                 except ValueError as exc:
                     raise RestoreError(
                         f"bundle {name} of {snap.name} is not usable — nothing local was "
@@ -2327,7 +2327,7 @@ def _bundle_summary(plural: str, unchanged: int, installed: list[str], size: int
     out = (f"{plural}: {len(installed)} installed ({_mb(size)}), {unchanged} unchanged, "
            f"{len(removed)} removed")
     if left:
-        out += f", {len(left)} left ({', '.join(k.split('/', 1)[1] for k in left)})"
+        out += f", {len(left)} left ({', '.join(bundles.split_key(k)[1] for k in left)})"
     return out
 
 
@@ -2346,7 +2346,7 @@ def _destinations(needed: dict[str, str], systems: bool = True
     root = data_root()
     links, unbundled = [], []
     for key in sorted(needed):
-        kind, id = key.split("/", 1)
+        kind, id = bundles.split_key(key)
         if kind == "system" and not systems:
             continue
         dest = root / bundles.ROOTS[kind] / id
@@ -2362,7 +2362,7 @@ def _refuse_links(links: list[str], label: str, done: str) -> None:
     if not links:
         return
     root = data_root()
-    rels = [f"{bundles.ROOTS[k.split('/', 1)[0]]}/{k.split('/', 1)[1]}" for k in links]
+    rels = [bundles.key_rel(k) for k in links]
     where = ", ".join(f"{rel} → {(root / rel).resolve()}" for rel in rels)
     raise RestoreError(f"{label} names {', '.join(links)}, but here {where} is a symlink — a "
                        f"restore never replaces a link (no cloud copy holds what it points at). "
@@ -2373,13 +2373,10 @@ def _move_aside(keys: list[str]) -> list[str]:
     """Move each folder to REPLACED_DIRNAME/<UTC stamp>/<its relpath>; return the lines."""
     if not keys:
         return []
-    rels = []
-    for key in keys:
-        kind, id = key.split("/", 1)
-        rels.append(f"{bundles.ROOTS[kind]}/{id}")
     return _move_aside_rels(
-        rels, f"not a bundle — no {'/'.join(sorted(set(bundles.MANIFEST_FILE.values())))} "
-              "— so no snapshot holds it")
+        [bundles.key_rel(key) for key in keys],
+        f"not a bundle — no {'/'.join(sorted(set(bundles.MANIFEST_FILE.values())))} "
+        "— so no snapshot holds it")
 
 
 def _aside_stamp() -> str:
@@ -2509,7 +2506,7 @@ def apply_snapshot(f: Fetched, *, systems: bool = True) -> None:
     for key, name in sorted(f.needed.items()):
         if not ours(key):
             continue
-        kind, id = key.split("/", 1)
+        kind, id = bundles.split_key(key)
         bundles.extract(f.bundle_tars[name], kind, id, root,
                         members=f.bundle_members.get(name))
         installed.append(key)
@@ -2519,8 +2516,7 @@ def apply_snapshot(f: Fetched, *, systems: bool = True) -> None:
         if not had_world:
             left.append(key)
             continue
-        kind, id = key.split("/", 1)
-        path = root / bundles.ROOTS[kind] / id
+        path = root / bundles.key_rel(key)
         if path.is_dir() and not path.is_symlink():
             shutil.rmtree(path)
         removed.append(key)

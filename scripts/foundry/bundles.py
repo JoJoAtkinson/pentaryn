@@ -397,6 +397,18 @@ def manifest_keys(m: dict) -> dict[str, str]:
     return out
 
 
+def split_key(key: str) -> tuple[str, str]:
+    """"<kind>/<id>" → (kind, id) — the one place a manifest key is taken apart (EXT-4)."""
+    kind, id = key.split("/", 1)
+    return kind, id
+
+
+def key_rel(key: str) -> str:
+    """"<kind>/<id>" → its folder under the data root, e.g. "Data/modules/<id>"."""
+    kind, id = split_key(key)
+    return f"{ROOTS[kind]}/{id}"
+
+
 def manifest_names(m: dict) -> set[str]:
     return set(manifest_keys(m).values())
 

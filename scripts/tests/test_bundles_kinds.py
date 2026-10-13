@@ -63,3 +63,15 @@ def test_ext1_golden_manifest_bytes_and_digest_unchanged(monkeypatch):
     monkeypatch.setattr(cloud, "world_tree_digest", lambda: "w")
     assert cloud.snapshot_digest(m) == \
         "38b7287a9a770025809c0f9d1d7d0a717193285336a2ea8284e01dbb739af35c"
+
+
+def test_ext4_one_key_splitter_and_no_hand_splits_in_cloud():
+    """Review EXT-4: a "<kind>/<id>" key is split in one place — bundles.split_key — and
+    turned into its folder under the data root by bundles.key_rel; cloud.py splits none by
+    hand."""
+    assert bundles.split_key("module/pentaryn-walls") == ("module", "pentaryn-walls")
+    assert bundles.split_key("system/dnd5e") == ("system", "dnd5e")
+    assert bundles.key_rel("module/pentaryn-walls") == "Data/modules/pentaryn-walls"
+    assert bundles.key_rel("system/dnd5e") == "Data/systems/dnd5e"
+    src = Path(cloud.__file__).read_text(encoding="utf-8")
+    assert not re.search(r"\b(key|k)\.split\(\s*['\"]/['\"]", src)
