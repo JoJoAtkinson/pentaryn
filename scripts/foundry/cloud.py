@@ -1206,7 +1206,7 @@ def _upload_job(st: Storage, job: uploadq.Job, protect: str | None = None) -> Sn
     # Coalescing: note the snapshot this one may replace, but write the new one FIRST and
     # only then delete the old. A safety copy never coalesces in either direction.
     superseded = (None if job.safety
-                  else _coalesce_target(others, me, None, contained))
+                  else _coalesce_target(others, me, contained))
     if superseded is not None and superseded.name in keep_names:
         superseded = None
 
@@ -1968,17 +1968,18 @@ def upload_pending() -> int:
     return 0
 
 
-def _coalesce_target(existing: list[Snapshot], me: str, protect: str | None = None,
+def _coalesce_target(existing: list[Snapshot], me: str,
                      contained: set[str] | None = None) -> Snapshot | None:
     """This host's newest regular snapshot, if young enough to be replaced. Never another
-    host's, never an untagged one, never a safety copy, never `protect` — and only one
-    the new snapshot's tree contains (`contained`: its based-on and lineage). After a
-    restore of another line, this host's newest may be the only copy of a session the
-    restore replaced (no safety copy was made: it was already in the cloud); replacing
-    it with a snapshot of the other line would lose that session."""
+    host's, never an untagged one, never a safety copy — and only one the new snapshot's
+    tree contains (`contained`: its based-on and lineage). After a restore of another
+    line, this host's newest may be the only copy of a session the restore replaced (no
+    safety copy was made: it was already in the cloud); replacing it with a snapshot of
+    the other line would lose that session. A protected snapshot is not filtered
+    here: the caller drops the result when its name is in keep_names."""
     mine = [s for s in own(existing, me) if not s.safety]
     last = newest(mine)
-    if last is None or last.name == protect:
+    if last is None:
         return None
     if contained is not None and last.name not in contained:
         return None

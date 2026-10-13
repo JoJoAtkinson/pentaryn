@@ -2352,3 +2352,13 @@ def test_m2_the_uncalled_module_getattr_shim_is_gone():
     assert "__getattr__" not in vars(cloud)
     assert not hasattr(cloud, "FOUNDRY_DATA")
     assert not hasattr(cloud, "CLOUD_ROOT")
+
+
+def test_m3_coalesce_target_has_no_protect_parameter():
+    """M3: _coalesce_target's `protect` parameter was always None (the one caller passes
+    None and drops a keep_names hit itself afterwards), so it is gone; `contained` is
+    still the only filter beyond own/regular/age."""
+    import inspect
+    params = list(inspect.signature(cloud._coalesce_target).parameters)
+    assert params == ["existing", "me", "contained"]
+    assert "protect" not in (cloud._coalesce_target.__doc__ or "")
