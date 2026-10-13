@@ -158,7 +158,7 @@ array (`serial(actorId, fn)` in `ties-adapter.mjs` — read inside `fn`, after t
   object back without the key does nothing.
 - **`Number(null)` is 0.** Nullable numbers go through `numOrNull`; a "rolled 0" is a different lie.
 - **`isVisible`, never `visible`.** On v14 `Token#visible` is true for walled-off and hidden tokens.
-- **A setting read before `init`** returns the row default through `setting()`; `mayWrite` refuses instead.
+- **A setting read before `init`** returns the row default through `setting()`; `mayWrite` (and `mayActOn`, the per-actor gate the keys and sheet tabs share) refuses instead.
 
 ## Files
 
@@ -167,7 +167,7 @@ array (`serial(actorId, fn)` in `ties-adapter.mjs` — read inside `fn`, after t
 | `pentaryn-ties.mjs` | entry | wiring: keys, init/ready, the features in order, publish |
 | `ties-core.mjs` | core | identity constants, tie clamps, the mirror rules |
 | `known-core.mjs` → `core/*.mjs` | core | barrel over known, study, lore, attributes, ledgers, roster, prose, facts; plus `core/rules.mjs`, `core/html.mjs`, `core/shared.mjs` |
-| `settings.mjs` | settings | `SETTINGS`, `KEYBINDINGS`, `setting()`, `mayWrite` |
+| `settings.mjs` | settings | `SETTINGS`, `KEYBINDINGS`, `setting()`, `mayWrite`, `mayActOn` |
 | `api-manifest.mjs`, `api.mjs` | manifest, api | the rows; implementations, `inspect`, `selftest`, `buildApiFor` |
 | `ties-adapter.mjs`, `socket-adapter.mjs` | adapter | the ties data layer, `canSee`, `inspectorFor`, `readWorn`; the module socket |
 | `conduit.mjs`, `token-hud.mjs`, `look-menu.mjs`, `sheet.mjs`, `overlay.mjs`, `worn.mjs`, `item-marks.mjs` | feature | `install(reg, ctx)` / `uninstall()` each |

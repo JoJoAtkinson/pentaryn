@@ -46,7 +46,7 @@ import { MODULE } from "./ties-core.mjs";
 import { anyTransient, closeAll, closeTransient, live as liveCards, reflow, setOnChange, show, size, teardown } from "./popups.mjs";
 import { canSee, dropLayer, framePainter, interfaceLayer, read } from "./ties-adapter.mjs";
 import { makeLog } from "./lib/log.mjs";
-import { setting } from "./settings.mjs";
+import { mayActOn, setting } from "./settings.mjs";
 
 const log = makeLog(MODULE);
 
@@ -90,10 +90,7 @@ function soleOwnedToken() {
 
 /** Rule 1. A player drives their own character and nobody else's. */
 function permitted(actor) {
-  if (!actor) return false;
-  if (game.user.isGM) return true;
-  if (!setting("playerAccess")) return false;
-  return actor.isOwner === true;
+  return mayActOn(actor);
 }
 
 /*

@@ -4,7 +4,7 @@
  */
 
 import { MODULE } from "./ties-core.mjs";
-import { setting } from "./settings.mjs";
+import { mayActOn, setting } from "./settings.mjs";
 import { TiesEditor, buildHTML, bind, forgetActor } from "./editor.mjs";
 import { KNOWN_TAB_ID, buildKnownHTML, bindKnown, forgetKnownActor, openAddPicker, fileHovered, openKnownEntry } from "./known-ui.mjs";
 import { ATTR_TAB_ID, buildAttributesHTML, bindAttributes, forgetAttributesActor } from "./attributes-ui.mjs";
@@ -33,8 +33,7 @@ const TAB = "ties";
  */
 function mayView(actor) {
   if (!(actor instanceof Actor)) return false;
-  if (game.user?.isGM) return true;
-  return setting("playerAccess") === true && actor.isOwner === true;
+  return mayActOn(actor);
 }
 
 /**

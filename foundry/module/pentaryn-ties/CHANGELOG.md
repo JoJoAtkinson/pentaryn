@@ -196,6 +196,11 @@ player's Look window first, then the inspection) and resolve the creature with `
 in `ties-adapter.mjs`; the GM's flask uses `subjectOfToken` too. Neither door imports the study conduit
 any more (two graph-allow debts retired). Door goldens byte-identical. ties-ui-EXT-10.
 
+Changed (declared): "the GM, or player access on and the player owns it" is written once, as
+`mayActOn(actor)` in `settings.mjs`; the canvas tie keys (`overlay.mjs`) and the sheet tabs
+(`sheet.mjs`) both ask it. It reads player access through `mayWrite`, so before the settings register a
+player is refused rather than let through on the setting's default. ties-ui-EXT-11.
+
 ## 0.19.4 (2026-10-10, usability run, Area 7 re-run)
 
 - **The inspect window's Share switches are the table's PCs only** (`tablePCs`): each player's
