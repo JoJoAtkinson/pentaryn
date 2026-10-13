@@ -140,6 +140,23 @@ function spellName(region) {
   return region.name;
 }
 
+/**
+ * The caster's TOKEN name for the handle label (AO-3-handle-dark: dnd5e's chip shows the handle's
+ * name, which is public — never an actor name). dnd5e 6: flags.dnd5e.origin is the caster's token;
+ * 5.3.3: the activity, whose actor's token on the region's scene is the caster (a synthetic actor
+ * is its own token). Null when no token is found.
+ */
+function casterTokenName(region) {
+  const f = region.flags?.dnd5e ?? {};
+  const origin = f.origin ? fromUuidSync(f.origin, { strict: false }) : null;
+  if (origin?.documentName === "Token") return origin.name ?? null;
+  const item = origin?.item ?? (f.item ? fromUuidSync(f.item, { strict: false }) : null);
+  const actor = item?.actor ?? item?.parent ?? null;
+  if (!actor) return null;
+  const token = actor.token ?? region.parent?.tokens?.find(t => t.actorId === actor.id && !isHandle(t));
+  return token?.name ?? null;
+}
+
 /** A template region that has no handle yet and may get one (not an emanation, not in flight here). */
 const wantsHandle = region => isTemplateRegion(region) && !attachedElsewhere(region) && !pending.has(region.id) && !handleFor(region);
 
@@ -155,7 +172,7 @@ function handleData(region, actor) {
   const { x, y } = centreOf(shape, { gridSize: scene.grid.size });
   const half = (scene.grid.size * 0.5) / 2;
   const authorId = Object.entries(region.ownership ?? {}).find(([k, v]) => k !== "default" && v === OWNER)?.[0];
-  const who = game.users.get(authorId)?.name ?? game.user.name;
+  const who = casterTokenName(region) ?? game.users.get(authorId)?.name ?? game.user.name;
   const proto = actor.prototypeToken.toObject();
   // Never the prepared region.elevation.bottom: a dnd5e 6 region has none, which prepares as
   // -Infinity and fails Token validation (core.handleVertical).
@@ -174,6 +191,9 @@ function handleData(region, actor) {
     elevation,
     ...(level ? { level } : {}),
     hidden: !!region.hidden,
+    // AO-3-handle-dark: a faint dim light of half a square, so the handle and the area's outline
+    // show in darkness to everyone who can see that spot (the handle has no sight of its own).
+    light: { ...(proto.light ?? {}), dim: scene.grid.distance / 2, bright: 0 },
     name: `${spellName(region)} (${who})`,
     flags: { ...(proto.flags ?? {}), dnd5e: { ...(proto.flags?.dnd5e ?? {}), lockSize: true }, [MODULE]: { handle: true, region: region.id } }
   };

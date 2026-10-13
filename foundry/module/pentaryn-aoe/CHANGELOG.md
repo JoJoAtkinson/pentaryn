@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- **A placed area shows in the dark, and its handle is named after the caster's token**
+  (declared, AO-3-handle-dark): a handle had no light and no sight, so in darkness the caster
+  could not see the area they had just placed, and the handle (the name dnd5e's chip shows) was
+  "<Spell> (<user name>)". A new handle now gives a faint dim light of half a square (the scene's
+  grid distance ÷ 2, no bright), so the handle and the area's outline show to anyone who can see
+  that spot, and is named "<Spell> (<caster's token name>)" (dnd5e 6: the origin token; 5.3.3:
+  the activity's actor's token on the scene), falling back to the author's user name, never an
+  actor name. Handles placed before this keep no light. Goldens create-handle and ready-calls
+  change only in the handle's `light.dim`. Pinned by `test/handle-dark.test.mjs`.
 - **The handle actor's invariants are written once** (declared, aoe-mnt-10): the "Area handle"
   name sat in both the actor and its prototype token, and its tiny size and hover were spelled
   out in the new actor's data and again in the repair table. One `HANDLE_NAME` and one

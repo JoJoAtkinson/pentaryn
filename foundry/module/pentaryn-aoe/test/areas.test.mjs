@@ -40,7 +40,7 @@ test("preCreateRegion: a template region becomes owned by everyone (on the creat
 });
 
 test("createRegion by this client: ownership fixed, handle created at the centre and attached (golden/create-handle.json)", async () => {
-  const s = W.scene({ id: "CreateScene00001", levels: [{ id: "lvlGround0000001", elevation: { base: 10 } }] });
+  const s = W.scene({ id: "CreateScene00001", grid: { size: 100, distance: 5 }, levels: [{ id: "lvlGround0000001", elevation: { base: 10 } }] });
   F.canvas.scene = s;
   const r = W.region(s, template({
     id: "regionCircle0001", name: "Fireball area", levels: ["lvlGround0000001"],

@@ -20,7 +20,7 @@ const { F, W } = await boot({
       return reg(ns, key, opts);
     };
     // the viewed scene at ready: one orphan handle, one handle with no lockSize, one template region with no handle
-    const s = W.scene({ id: "SceneReady000001", name: "Ready" });
+    const s = W.scene({ id: "SceneReady000001", name: "Ready", grid: { size: 100, distance: 5 } });
     W.token(s, { id: "orphan0000000001", name: "Orphan", flags: { [MODULE]: { handle: true, region: "gone000000000001" }, dnd5e: { lockSize: true } } });
     W.region(s, { id: "regionKeep000001", name: "Kept", flags: { dnd5e: { activity: "Item.x.Activity.y" } }, ownership: { default: 3 } });
     W.token(s, { id: "regionKeep000001", name: "Kept handle", flags: { [MODULE]: { handle: true, region: "regionKeep000001" } } });

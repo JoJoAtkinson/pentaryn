@@ -18,8 +18,10 @@ dnd5e 6 only. Chat data is read from typed messages (`message.type` `usage` / `a
   everyone and gets a small handle token (`_id` = the region's id) it is attached to: drag the
   handle to move the area (it keeps its direction: a handle never auto-rotates), delete it to
   delete the area; deleting the area deletes the handle. An emanation dnd5e attached to its caster
-  gets no handle. Handles are never combatants and never stay
-  targeted. The spell card gets an eraser icon after *Place Template*: **Remove all templates** of
+  gets no handle. A handle is named "<Spell> (<caster's token name>)" — the author's user name
+  when no caster token is found, never an actor name — and gives a faint dim light of half a
+  square, so it and the area's outline show in darkness to anyone who can see that spot. Handles
+  are never combatants and never stay targeted. The spell card gets an eraser icon after *Place Template*: **Remove all templates** of
   that spell on the viewed scene. When concentration ends, that spell's areas go on every scene.
 - **Part B — saves off the area** (`resolve.mjs`, `tray.mjs`). A damage roll from a save activity
   makes the active GM's client list the creatures inside the area (or the roller's targets), roll
@@ -137,7 +139,7 @@ inactive, e.g. hot-patched).
 
 `flags.pentaryn-aoe.handle` (token), `.handleActor` (actor) and `.region` are a cross-module
 contract. Readers: pentaryn-creatures (a handle is a prop, `isProp`), pentaryn-portals (a
-handle is not spread on arrival), pentaryn-senses (no light on a handle, `light.mjs`), pentaryn-combat
+handle is not spread on arrival), pentaryn-senses (a handle is never offered a creature light, `light-ui.mjs`), pentaryn-combat
 (no turn for a helper token, `turnflow/helper-token.mjs` through
 `shapes.isAoeHandle`). `test/fixtures/handle-oracle.json` is the shared row
 set every copy pins against; prefer `apiOf("pentaryn-aoe").isHandle(x)` in new code.

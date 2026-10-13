@@ -124,7 +124,7 @@
           "enabled": false
         },
         "light": {
-          "dim": 0,
+          "dim": 2.5,
           "bright": 0
         },
         "ring": {
