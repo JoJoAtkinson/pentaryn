@@ -588,15 +588,29 @@ export async function installFoundry({
 
   // `<Doc>.<id>` from the kind's game collection, then each `.<Doc>.<id>` pair from the parent's
   // embedded (Scene tokens/regions) or owned (an Actor's items) collection — a Map or an array.
+  // A Token is Foundry's special parent (TokenDocument#getEmbeddedCollection): its `Actor.<id>` is
+  // its synthetic `actor` (keyed by `actorId`; the actor's own id is accepted too, so the stub's
+  // uuid getter round-trips), and its `Item.<id>` reads that actor's items.
+  const childOf = (coll, id) =>
+    (typeof coll?.get === "function" ? coll.get(id) : Array.isArray(coll) ? coll.find(d => d?.id === id) : null) ?? null;
   const fromUuidSync = uuid => {
     const parts = String(uuid ?? "").split(".");
     if (parts.length < 2 || parts.length % 2) return null;
     const top = KIND_OF_DOC.get(parts[0])?.collection;
     let doc = top ? game[top]?.get?.(parts[1]) ?? null : null;
     for (let i = 2; doc && i < parts.length; i += 2) {
-      const k = KIND_OF_DOC.get(parts[i]);
-      const coll = k ? doc[k.embedded ?? k.collection] : null;
-      doc = (typeof coll?.get === "function" ? coll.get(parts[i + 1]) : Array.isArray(coll) ? coll.find(d => d?.id === parts[i + 1]) : null) ?? null;
+      const [name, id] = [parts[i], parts[i + 1]];
+      if (doc.documentName === "Token" && name === "Actor") {
+        const actor = doc.actor ?? null;
+        doc = actor && (id === doc.actorId || id === actor.id) ? actor : null;
+        continue;
+      }
+      if (doc.documentName === "Token" && name === "Item") {
+        doc = childOf(doc.actor?.items, id);
+        continue;
+      }
+      const k = KIND_OF_DOC.get(name);
+      doc = k ? childOf(doc[k.embedded ?? k.collection], id) : null;
     }
     return doc;
   };

@@ -174,8 +174,12 @@ kinds while `resolve.mjs` resolves thirteen. Both now come from `STUB_KINDS` (ne
 test asserts the two are equal. `game.macros`, `tables`, `combats`, `folders` and `playlists` are
 `StubCollection`s seeded from `installFoundry`'s option of the same name; `fromUuidSync` walks
 `<Doc>.<id>` pairs, so an owned item (`Actor.<id>.Item.<id>`, from the actor's `items` Map or array)
-resolves. A uuid with a trailing odd segment now resolves to `null` instead of its parent. Existing
-collections keep their shape; no module golden changes.
+resolves. A token's synthetic actor resolves as Foundry's `TokenDocument#getEmbeddedCollection` does:
+`Scene.<s>.Token.<t>.Actor.<a>` is the token's `actor` (when `<a>` is its `actorId` or the actor's id,
+else `null`), and `...Token.<t>.Item.<i>` and `...Token.<t>.Actor.<a>.Item.<i>` read that actor's items
+(kit-ext-7 repair; the first cut returned `null` for them — before it, the stub returned the Token
+itself for any `Scene.<s>.Token.<t>.<anything>`). A uuid with a trailing odd segment now resolves to
+`null` instead of its parent. Existing collections keep their shape; no module golden changes.
 kit-ext-9 (declared): `defineSettings` copied four SettingConfig keys and silently dropped any
 other row key (a `step`, a typo). The four are now the exported `SETTING_PASSTHROUGH` (`range`,
 `requiresReload`, `onChange`, `filePicker`; the `SettingRow` typedef gains `filePicker`, the KIT-M11

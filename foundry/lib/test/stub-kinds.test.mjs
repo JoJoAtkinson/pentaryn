@@ -69,3 +69,37 @@ test("kit-ext-7: an owned item given as a plain array is found by id; existing s
     F.restore();
   }
 });
+
+test("kit-ext-7 repair: a token-chain uuid (Scene.<s>.Token.<t>.Actor.<a>[.Item.<i>]) resolves to the token's actor, as Foundry's TokenDocument does", async () => {
+  const owned = stub.makeDoc("Item", { id: ids.owned, name: "Torch" });
+  const synth = stub.makeDoc("Actor", { id: ids.actor, name: "Goblin (synthetic)", items: new stub.StubCollection([owned]) });
+  const F = await stub.installFoundry({
+    actors: [{ id: "base000000000001", name: "Aldric", items: [{ id: ids.item, name: "Rope" }] }],
+    scenes: [{
+      id: "scene00000000001",
+      tokens: [
+        { id: "tokenSynth000001", actorId: ids.actor, actor: synth },         // unlinked: its own synthetic actor
+        { id: "tokenLinked00001", actorId: "base000000000001" },               // linked: the world actor
+      ],
+    }],
+    realFoundryUtils: false,
+  });
+  try {
+    const s = "Scene.scene00000000001";
+    synth.parent = game.scenes.get("scene00000000001").tokens.get("tokenSynth000001");
+    assert.equal(synth.uuid, `${s}.Token.tokenSynth000001.Actor.${ids.actor}`, "the stub's own uuid getter emits the token chain");
+    assert.equal(fromUuidSync(synth.uuid), synth);
+    assert.equal(resolveRef(synth.uuid, "actor"), synth);
+    assert.equal(fromUuidSync(`${synth.uuid}.Item.${ids.owned}`), owned);
+    assert.equal(resolveRef(`${synth.uuid}.Item.${ids.owned}`, "item"), owned);
+    assert.equal(fromUuidSync(`${s}.Token.tokenSynth000001.Item.${ids.owned}`), owned, "Token.<t>.Item reads the actor's items");
+    assert.equal(fromUuidSync(`${s}.Token.tokenSynth000001.Actor.nope000000000001`), null, "an id that is neither actorId nor the actor's id");
+    const linked = `${s}.Token.tokenLinked00001.Actor.base000000000001`;
+    assert.equal(fromUuidSync(linked), game.actors.get("base000000000001"));
+    assert.equal(resolveRef(linked, "actor"), game.actors.get("base000000000001"));
+    assert.equal(fromUuidSync(`${linked}.Item.${ids.item}`)?.name, "Rope");
+    assert.equal(fromUuidSync(`${s}.Token.tokenLinked00001.Region.region0000000001`), null);
+  } finally {
+    F.restore();
+  }
+});
