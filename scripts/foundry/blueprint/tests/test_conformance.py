@@ -1089,3 +1089,18 @@ def test_py_blueprint_maint_10_c10_api_cap_follows_the_api_role(tmp_path):
         assert f"{name} 350/300" in r["detail"], r["detail"]
     report = one(tmp_path / "glue", 'import "./wid.mjs";\n', extra={"wid.mjs": body})
     assert res(report, "C10")["status"] == "pass"                            # other files keep 500
+
+
+def test_pyb_e4_c38_skips_the_module_itself_when_its_folder_name_differs_from_its_id(tmp_path):
+    """PYB-E4: sibling manifests are keyed by folder name. A module whose folder is not named after
+    its id must not clash with itself; a real clash is named by the sibling's manifest id."""
+    root = tmp_path / "mods"
+    man = {"id": "pentaryn-one", "esmodules": ["one.mjs"], "flags": {"pentaryn": {"cssPrefix": "pone-"}}}
+    one = _tiny(root, name="one-checkout", files={"module.json": json.dumps(man)})
+    report = conformance.score_dir(one)
+    c38 = next(r for r in report["results"] if r["id"] == "C38")
+    assert c38["status"] == "pass", c38
+
+    write(root / "two-checkout", {"module.json": json.dumps({**man, "id": "pentaryn-two"})})
+    c38 = next(r for r in conformance.score_dir(one)["results"] if r["id"] == "C38")
+    assert c38["status"] == "fail" and c38["detail"] == ["pone- also declared by pentaryn-two"], c38

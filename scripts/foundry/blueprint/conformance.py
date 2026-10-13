@@ -1120,8 +1120,9 @@ def c38(m):
     prefix = m.flags.get("cssPrefix")
     if not prefix:
         return na("no cssPrefix declared (C07)")
-    clash = [mid for mid, man in m.all_manifests.items()
-             if man is not None and mid != m.id
+    # all_manifests is keyed by folder name; the module itself is the sibling in m.dir or with m.id
+    clash = [man.get("id") or mid for mid, man in m.all_manifests.items()
+             if man is not None and mid != m.dir.name and man.get("id") != m.id
              and ((man.get("flags") or {}).get("pentaryn") or {}).get("cssPrefix") == prefix]
     skipped = [f"{mid}: module.json unreadable — not compared" for mid, man in m.all_manifests.items()
                if man is None and mid != m.dir.name]
