@@ -315,6 +315,18 @@ test("portrait: updateWorldTime repaints the HUD's portrait; failures warn ('por
   assert.deepEqual(F.console.map(c => c.slice(0, 2)), [["warn", "pentaryn-transform | portrait HP failed"], ["warn", "pentaryn-transform | portrait line failed"]]);
 });
 
+test("portrait (R5): a portrait paint that throws on an updateWorldTime tick warns 'portrait line failed', not an error", async () => {
+  const { talo } = fresh();
+  const wolf = await T.shift(talo, "p1");
+  ui.ARGON._actor = wolf;
+  ui.ARGON.components.portrait = { element: { querySelectorAll: () => [], querySelector() { throw new Error("dom"); } } };
+  F.console.length = 0;
+  game.time.worldTime = 60;
+  Hooks.callAll("updateWorldTime", 60, 60);
+  assert.deepEqual(F.console.map(c => c.slice(0, 2)), [["warn", "pentaryn-transform | portrait line failed"]]);
+  ui.ARGON.components.portrait = null;
+});
+
 /* ── the effect on the portrait ───────────────────────────────────────────── */
 
 test("renderEffect: the Wild Shape and Starry effects get the big class and a live time-left tooltip; others untouched", async () => {

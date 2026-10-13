@@ -4,6 +4,11 @@
 
 ## Unreleased
 
+- **A portrait repaint that fails on a world-time tick warns instead of erroring (R5, defect wave
+  2).** hud-panels.mjs `onWorldTime` called `paintPortrait` without the "portrait line failed"
+  guard that `onPortraitRender` has, so a throw surfaced as the hook's error. Both now go through
+  `repaintPortrait`, which logs the same warn ([declared]; test "R5" in hud-bars.test.mjs; no new
+  console text).
 - **Reverting from an unloaded compendium beast no longer gives the druid the beast's effects (R3,
   defect wave 2).** wildshape-adapter.mjs `carryBack` read the beast's effect ids with
   `fromUuidSync`, which answers an unloaded compendium beast with its index entry (no effects), so

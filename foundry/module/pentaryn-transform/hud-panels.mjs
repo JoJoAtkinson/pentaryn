@@ -252,15 +252,20 @@ function paintPortrait(element, actor) {
   }
 }
 
+// Display only: a paint that throws warns and leaves Argon's portrait as it was.
+function repaintPortrait(element, actor) {
+  try { paintPortrait(element, actor); } catch (err) { log.warn("portrait line failed", err); }
+}
+
 function onPortraitRender(panel, element, actor) {
-  try { paintPortrait(element, actor ?? panel.actor); } catch (err) { log.warn("portrait line failed", err); }
+  repaintPortrait(element, actor ?? panel.actor);
   setTimeout(dropStaleTooltip, 0);
 }
 
 function onWorldTime() {
   // hot: reads only the HUD's own actor (ui.ARGON._actor); display only, every client.
   const portrait = hudPortrait();
-  if (portrait?.element) { const actor = hudActor(); if (actor) paintPortrait(portrait.element, actor); }
+  if (portrait?.element) { const actor = hudActor(); if (actor) repaintPortrait(portrait.element, actor); }
 }
 
 /* ── the Wild Shape / Starry Form effect on the portrait: bigger, live time left ── */
