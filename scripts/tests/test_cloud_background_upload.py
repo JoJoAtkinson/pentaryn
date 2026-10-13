@@ -934,3 +934,20 @@ def test_a_record_moved_during_the_upload_is_not_overwritten_py_cloud_ac_1(
     assert (st.based_on, st.by) == ("boss-20990101-000000.tar.gz", "restore")
     assert "unknown lineage, and not recording it" in out
     assert job.name in _snaps(two_hosts.cloud)
+
+
+def test_job_size_survives_a_bundle_dropped_mid_sum_ec_8(tmp_path, monkeypatch):
+    """Review EC-8: `_job_size` checked is_file() then stat()ed each staged bundle tar,
+    so a `Job.drop` landing between the two (another process finishing the job) raised
+    FileNotFoundError out of the status line. A vanished tar now counts as 0 bytes."""
+    monkeypatch.setattr(uploadq, "tmp_dir", lambda: tmp_path)
+    job = uploadq.Job(name="mac-20260101-000000.tar.gz", reason="shutdown", digest="d",
+                      parent=None, host="mac", size=1_000_000, created=0.0,
+                      manifest={"modules": {}, "systems": {}},
+                      bundles=["kept.tar.gz", "dropped.tar.gz"])
+    job.staging.mkdir(parents=True)
+    (job.staging / "kept.tar.gz").write_bytes(b"x" * 2_000_000)
+    # The race: is_file() saw both tars, then the drop removed one before stat().
+    monkeypatch.setattr(type(job.staging), "is_file", lambda self: True)
+    assert cloud._job_size(job) == (f"{cloud._mb(1_000_000)} + 2 bundle(s) "
+                                    f"{cloud._mb(2_000_000)}")

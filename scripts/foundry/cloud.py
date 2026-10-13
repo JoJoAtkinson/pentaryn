@@ -1845,9 +1845,17 @@ def _job_size(job: uploadq.Job) -> str:
     """"45.0 MB" or "45.0 MB + 2 bundle(s) 1.20 GB": what the job uploads at most."""
     if job.heal or not job.bundles:
         return _mb(job.size)
-    staged = [job.staging / n for n in job.bundles]
-    total = sum(p.stat().st_size for p in staged if p.is_file())
+    total = sum(_size_or_zero(job.staging / n) for n in job.bundles)
     return f"{_mb(job.size)} + {len(job.bundles)} bundle(s) {_mb(total)}"
+
+
+def _size_or_zero(p: Path) -> int:
+    """`p`'s size, or 0 when it is gone — another process's `Job.drop` can remove a
+    staged tar while the status line sums them."""
+    try:
+        return p.stat().st_size
+    except OSError:
+        return 0
 
 
 def _spawn_uploader() -> int:
