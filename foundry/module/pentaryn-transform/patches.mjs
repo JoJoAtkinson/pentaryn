@@ -16,8 +16,8 @@
  * update (common/abstract/data.mjs) and testInsideRegion still reads `data.x ?? _source.x` with no
  * unwrap; a wrapped x/y at a region's centre tests outside. Remove only when that changes.
  *
- * GLUE: only the entry imports this file. installPatches() runs at the entry's evaluation, before
- * any preUpdateToken listener, exactly when the old inline block ran.
+ * GLUE: the entry imports installPatches and wiring.mjs imports removePatches. installPatches() runs
+ * at the entry's evaluation, before any preUpdateToken listener, exactly when the old inline block ran.
  */
 
 import { MODULE, unwrapForcedScalars } from "./transform-core.mjs";

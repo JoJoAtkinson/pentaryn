@@ -383,3 +383,17 @@ test("EXT-8 [declared] transform-core.mjs exports MODULE and no `MODULE as MODUL
     assert.doesNotMatch(src, /\bMODULE_ID\b/, `${f} uses MODULE, not MODULE_ID`);
   }
 });
+
+/* ── M1 patches.mjs's GLUE comment names both importers ──────────────────── */
+
+test("M1 [declared] patches.mjs's GLUE comment names both importers: the entry (installPatches) and wiring.mjs (removePatches)", async () => {
+  const { readFileSync } = await import("node:fs");
+  const src = readFileSync(new URL("../patches.mjs", import.meta.url), "utf8");
+  const glue = src.match(/\* GLUE:([\s\S]*?)\*\//)?.[1] ?? "";
+  assert.doesNotMatch(glue, /only the entry imports/, "M1: the entry is not the only importer");
+  assert.match(glue, /installPatches/, "M1: the entry imports installPatches");
+  assert.match(glue, /wiring\.mjs[\s\S]*removePatches|removePatches[\s\S]*wiring\.mjs/, "M1: wiring.mjs imports removePatches");
+  for (const [f, name] of [["transform.mjs", "installPatches"], ["wiring.mjs", "removePatches"]]) {
+    assert.match(readFileSync(new URL(`../${f}`, import.meta.url), "utf8"), new RegExp(`import \\{ ${name} \\} from "\\./patches\\.mjs"`), `M1: ${f} imports ${name}`);
+  }
+});

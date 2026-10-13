@@ -4,6 +4,10 @@
 
 ## Unreleased
 
+- **patches.mjs's GLUE comment names both importers (M1, defect wave 2).** It said only the entry
+  imports the file, but wiring.mjs imports `removePatches`. It now says the entry imports
+  `installPatches` and wiring.mjs imports `removePatches`. Comment only ([declared]; test "M1" in
+  findings.test.mjs; goldens unchanged).
 - **A Starry Form with no known end reads just its name (M5, defect wave 2).** core/hud.mjs
   `portraitText` left `starryLeft` undefined when absent, so the portrait line read "0 minutes" left
   instead of the unknown end its JSDoc promises. `starryLeft` now defaults to null and any non-finite
