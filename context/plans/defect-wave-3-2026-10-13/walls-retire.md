@@ -1,6 +1,6 @@
 # Defect wave 3 (2026-10-13) — walls-retire
 
-**Read this when** you want the history of how `pentaryn-walls` was retired in defect wave 3:
+**Read this when:** you want the history of how `pentaryn-walls` was retired in defect wave 3:
 what stopped shipping it, the commits and tests, and what is left for the live step. History
 only — to operate (or un-retire) walls, read [`../../foundry/walls.md`](../../foundry/walls.md).
 
