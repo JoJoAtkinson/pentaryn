@@ -287,6 +287,22 @@ def test_line_numbers_survive_templates_and_comments(tmp_path):
     assert [(r.key, r.line) for r in uses.definite] == [("DEMO.x", 5)]
 
 
+def test_rob_12_a_line_continuation_in_a_string_keeps_later_lines(tmp_path):
+    """rob-12: a backslash line continuation inside a quoted string consumed a newline
+    the lexer never emitted, so every later diagnostic named the line above."""
+    files = {"main.mjs": ('const msg = "first half \\\n'
+                          'second half";\n'
+                          "const other = 'a \\\n"
+                          "b';\n"
+                          'import { alpha } from "./lib.mjs";\n'),
+             "lib.mjs": "export const alpha = 1;\n"}
+    spec = build(tmp_path, files)
+    src = jsscan.scan(spec.src / "main.mjs")
+    assert src.code.count("\n") == (spec.src / "main.mjs").read_text().count("\n")
+    assert [i.line for i in jsscan.imports_of(src)] == [5]
+    assert [s.line for s in src.strings[:2]] == [1, 3]
+
+
 # ── doc paths the real modules cite (senses-walls-cursors-8 recipe, repo-wide) ─
 # Unlike the synthetic tests above, these read the real modules: a context/… or
 # playbooks/… path a module's source, README or module.json names must exist, or a

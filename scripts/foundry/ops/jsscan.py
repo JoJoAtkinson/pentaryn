@@ -160,6 +160,9 @@ class _Lexer:
                     buf.append(src[j])
                     j += 1
                 self._push("".join(buf), line, template=False)
+                # A `\` line continuation puts a newline inside the string; emit it so
+                # every later line number stays right (rob-12).
+                self._emit_newlines(src.count("\n", i, j))
                 i = j + 1
                 continue
 
