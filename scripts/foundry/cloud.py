@@ -1237,6 +1237,9 @@ def _upload_job(st: Storage, job: uploadq.Job, protect: str | None = None) -> Sn
         st.write_text(parent_rel(WORLD_BACKUPS, job.name),
                       json.dumps(sidecar, allow_nan=False) + "\n")
         if upload_world:
+            # Its cloud mtime is the landing time, as a bundle's is: a tar queued days
+            # ago would otherwise never look newer to the other host (review EC-5).
+            bundles.fresh_mtime(job.tar)
             st.upload(job.tar, f"{WORLD_BACKUPS}/{job.name}")
         if bundled:
             # The snapshot's name is up — on a re-run too, whose world upload was skipped:

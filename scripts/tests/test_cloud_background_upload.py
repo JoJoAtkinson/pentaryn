@@ -646,6 +646,21 @@ def test_a_job_built_days_before_it_runs_lands_its_bundles_with_a_fresh_mtime(tw
             assert time.time() - (two_hosts.cloud / "bundles" / n).stat().st_mtime < 3600
 
 
+def test_a_late_uploaded_world_tar_lands_with_a_fresh_mtime_ec_5(two_hosts, spawned):
+    """Review EC-5: the world tar's cloud mtime is the landing time, as a bundle's is
+    (bundles.fresh_mtime) — a queued tar built days ago must not land with its build
+    mtime, or the other host never sees it as newer."""
+    with two_hosts.use("mac") as data:
+        _edit(data, "late")
+        cloud.backup("shutdown", background=True)
+        [job] = uploadq.pending()
+        old = time.time() - 8 * DAY
+        os.utime(job.tar, (old, old))
+        assert cloud.upload_pending() == 0
+        landed = two_hosts.cloud / "world-backups" / job.name
+        assert time.time() - landed.stat().st_mtime < 3600
+
+
 @pytest.mark.parametrize("at", ["first check", "second check"])
 def test_a_job_whose_reused_bundle_was_swept_and_folder_changed_is_dropped(
         two_hosts, spawned, monkeypatch, capsys, at):
