@@ -269,7 +269,10 @@ foundry-module-new:
 	@$(if $(M),,$(error M=<short> is required))$(if $(TITLE),,$(error TITLE="Pentaryn <Title>" is required))
 	@$(OPS) module-new $(M) --title "$(TITLE)" --tier $(if $(TIER),$(TIER),full) $(ARGS)
 # Regenerate the Module APIs table in context/foundry/README.md (check-context fails when stale).
-foundry-module-index: ; @$(OPS) module-index
+# `--check` (or CHECK=1) only reports a stale table. GNU make reads `--check` as its own
+# --check-symlink-times (-L, by unambiguous prefix), so it reaches us as an L in MAKEFLAGS' flag word.
+INDEX_CHECK = $(if $(or $(CHECK),$(findstring L,$(filter-out -%,$(firstword $(MAKEFLAGS))))),--check,)
+foundry-module-index: ; @$(OPS) module-index $(INDEX_CHECK)
 # Score against rules C01–C62: every module, or M=<short>; MD=1 for the markdown table.
 foundry-conformance: ; @$(OPS) module-conformance $(if $(M),--module $(M),) $(if $(MD),--markdown,)
 

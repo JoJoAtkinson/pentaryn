@@ -63,7 +63,7 @@ answered, never the value.
 | `make foundry-modules-check` | Every registered module, keeps going past a failure; `JSON=1` for `module-check --all --json` |
 | `make foundry-module-new M=<short> TITLE="Pentaryn <Title>"` | Generate a module from the blueprint (`ops module-new` → `blueprint/new_module.py`; `TIER=small`, `ARGS=…`) |
 | `make foundry-conformance [M=<short>] [MD=1]` · `foundry-lib-check` · `foundry-lib-vendor [M=]` | Blueprint scorer, the shared kit's suite, re-vendor the kit (playbook: `context/foundry/addon-blueprint.md`) |
-| `make foundry-module-index` | Regenerate the Module APIs table in `context/foundry/README.md` (`make check-context` fails when it is stale) |
+| `make foundry-module-index` | Regenerate the Module APIs table in `context/foundry/README.md` (`make check-context` fails when it is stale). `--check` (or `CHECK=1`) only reports whether it is current and writes nothing |
 | `make test` | The Python suites (`pytest -q`; `-m 'not repo'` skips the tests that read live repo state) |
 
 Players connect to **<https://vtt.atjoseph.com>**. `cloudflared` runs from a

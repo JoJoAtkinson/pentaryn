@@ -207,3 +207,13 @@ def test_a_restart_backs_up_once_wave3_1():
     out = _dry_args("foundry-down", "foundry-up")
     assert out.count("cloud backup --reason shutdown") == 1
     assert out.index("cloud backup --reason shutdown") < out.index("ops up")
+
+
+def test_foundry_module_index_passes_check_through_wave3_2():
+    """`make foundry-module-index --check`: GNU make reads `--check` as its own
+    `--check-symlink-times` (-L), so it never reached the recipe and the table was
+    rewritten. The target passes it through; CHECK=1 says the same thing."""
+    plain = _dry("foundry-module-index")
+    assert "module-index" in plain and "--check" not in plain
+    assert "module-index --check" in _dry_args("foundry-module-index", "--check")
+    assert "module-index --check" in _dry_args("foundry-module-index", "CHECK=1")
