@@ -150,8 +150,12 @@ file it is Joe's call. The throwaway world was deleted.
   `SUBFOLDERS` and `ensure_cloud` creates it. Small fix for a later wave: drop it there, from the
   `cloud.py` sweep loop and from the cloud README text and `ops.md`.
 - **Optional upstream issue** for the canvas-draw `OBJECTS` error (draft in the bug step). Joe decides.
+  - **Wave 3b, 2026-10-13** ([`upstream-w3b.md`](upstream-w3b.md)): re-confirmed 3/3 on a clean world;
+    two Argon bugs proved in an Argon-only world (world-Item hook error, special-action cards use the
+    actor name); the grid-change one did not reproduce. Three issue drafts there, not posted.
 - **Harness rule to rewrite:** the "one throwaway token change" workaround in older live plans
   should become "read `_source.x/y` or the server, or move with `{animate:false}`".
+  The use-doc now says so (`context/foundry/README.md`, `d8748a7c`); the old plans stay as history.
 - **Hidden-tab timers:** the journal loser wait and rob-2 arrival wait count polls, not time, so in
   a hidden tab 3 s became about 30 s. Nothing broke; same kind of fix as importer's `cb71ccd8`.
 - **combat:** 2014-style SRD Multiattack text ("two with its … and one with its …") does not parse,
