@@ -24,3 +24,15 @@ Use only ZZ-prefixed scratch documents and one GM tab. Never use Caven, Marrith,
 5. Optional: put `@UUID[Actor.<ZZ W3 Belief PC id>]` in a second row's text and give a belief on it. Expect: it renders as a content link, not as the raw `@UUID[...]`.
 6. The player side is code only: `authoringHTML` still returns `""` for a non-GM (covered by the test). Do not create a user to check it.
 7. Delete ZZ W3 Belief NPC and ZZ W3 Belief PC.
+
+## Live check result (FIX-W3, 2026-10-13)
+
+Run in the MCP bridge GM tab on world `pentaryn` (Foundry 14.369, dnd5e 6.0.6, `pentaryn-ties` 0.19.4), with no restart or reload. The served `authoring-ui.mjs` carries the fix (`data-enrich`, `enrichBeliefText`), and the loaded build's `authoringHTML` emits `data-enrich`. Scratch docs were an NPC "ZZ ties-ui W3 Belief NPC" and a character "ZZ ties-ui W3 Belief PC". The lore rows were written with `study.setLoreRows`, the same sanitised writer the Ties tab's Save calls, and the beliefs were given with `study.shareFact({ ns: "lore", … }, [PC], { from: null })`. Both landed delivered (`pending: false`, `pass: true`), so nothing was held.
+
+| item | result | evidence |
+|---|---|---|
+| belief-text (step 4) | pass | Row "Debts" (DC 5, History) with text `<p>He owes the <strong>guild</strong>.</p>`. In both the Ties editor (`api.edit`) and the actor sheet's `ties` tab, the PC's belief box rendered `innerHTML` `<p>He owes the <strong>guild</strong>.</p>` and `textContent` "He owes the guild.". "guild" sits in a real `<strong>` at computed weight 700. No literal `<p>` or `<strong>` appears in the visible text. |
+| belief-text (step 5, optional) | pass | Row "Link" with text `<p>Ask @UUID[Actor.<ZZ PC id>] about it.</p>` rendered as `Ask <a class="content-link" data-uuid="Actor.<ZZ PC id>">…ZZ ties-ui W3 Belief PC</a> about it.`. No raw `@UUID[` appears in the text. |
+| belief-text (step 6, player gate) | pass | One-call GM shadow: `game.user.isGM` was overridden to false only for one `authoringHTML(npc)` call, then restored in `finally`. It returned `""` (the GM call returned 23004 chars). No user was created. |
+
+Cleanup: the sheet and editor were closed, and both ZZ actors were deleted. No "ZZ ties-ui" document or chat message remains. No `pentaryn-ties` world setting or actor flag still names either scratch id. Exactly one GM is active.
