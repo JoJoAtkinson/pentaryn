@@ -219,7 +219,11 @@ def _admin_client() -> FoundryAdmin:
 
 
 def _repair_from(entry: state.EntryState) -> None:
-    """Put service back the way a crashed previous run found it."""
+    """Put service back the way a crashed previous run found it.
+
+    A repair that fails is not fatal — the run goes on — but it is said: the note is
+    parked in _WINDOW_NOTES and lands in the run's messages and report (ROB-10).
+    """
     if entry.foundry_up and not admin_mod.port_open():
         admin_mod.start_app()
     if entry.active_world and admin_mod.port_open():
@@ -228,10 +232,14 @@ def _repair_from(entry: state.EntryState) -> None:
             if not fa.world_active():
                 fa.launch_world(entry.active_world)
                 fa.wait_for_world(entry.active_world, timeout=240)
-        except Exception:  # noqa: BLE001
-            pass
+        except Exception as exc:  # noqa: BLE001
+            _WINDOW_NOTES.append(
+                f"repair after the previous crashed run: could not relaunch "
+                f"{entry.active_world}: {exc}")
     if entry.tunnel_up and not recover.tunnel_running(REPO_ROOT):
-        recover.tunnel_up(REPO_ROOT)
+        if not recover.tunnel_up(REPO_ROOT):
+            _WINDOW_NOTES.append(
+                "repair after the previous crashed run: could not bring the tunnel back up")
 
 
 # ── Phase 1: backups ─────────────────────────────────────────────────────────
@@ -662,6 +670,8 @@ def _run_locked(result: RunResult, run_id: str, *, dry: bool, force: bool,
 
     except Aborted as exc:
         result.outcome = "skipped"
+        # A gate that repaired, then refused, still owes the repair's notes (ROB-10).
+        result.messages.extend(drain_window_notes())
         result.messages.append(str(exc))
         status.finish("skipped", str(exc))
         # A gate abort must not clear an entry file it did not write.
