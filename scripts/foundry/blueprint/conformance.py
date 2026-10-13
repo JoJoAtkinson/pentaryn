@@ -1146,9 +1146,13 @@ def c38(m):
     if not prefix:
         return na("no cssPrefix declared (C07)")
     # all_manifests is keyed by folder name; the module itself is the sibling in m.dir or with m.id
-    clash = [man.get("id") or mid for mid, man in m.all_manifests.items()
-             if man is not None and mid != m.dir.name and man.get("id") != m.id
-             and ((man.get("flags") or {}).get("pentaryn") or {}).get("cssPrefix") == prefix]
+    hits = [(mid, man.get("id") if isinstance(man.get("id"), str) and man.get("id") else mid)
+            for mid, man in sorted(m.all_manifests.items())
+            if man is not None and mid != m.dir.name and man.get("id") != m.id
+            and ((man.get("flags") or {}).get("pentaryn") or {}).get("cssPrefix") == prefix]
+    # named by manifest id (a non-string or empty id falls back to the folder); an id two folders
+    # share also names each folder, so every clashing checkout is listed once
+    clash = [label if [lb for _, lb in hits].count(label) == 1 else f"{label} ({mid}/)" for mid, label in hits]
     skipped = [f"{mid}: module.json unreadable — not compared" for mid, man in m.all_manifests.items()
                if man is None and mid != m.dir.name]
     return ok(skipped) if not clash else bad([f"{prefix} also declared by {', '.join(clash)}"] + skipped)

@@ -1338,3 +1338,23 @@ def test_py_blueprint_maint_6_targets_come_from_vendor(tmp_path, monkeypatch, ca
     assert new_module.namespace_owner("one", [tmp_path / "missing"]) is None
     assert not hasattr(new_module, "_modules")                  # one listing, vendor.all_modules
     capsys.readouterr()
+
+
+def test_pyb_e4_c38_names_a_sibling_with_a_non_string_or_shared_id(tmp_path):
+    """PYB-E4 repair: a sibling whose manifest id is not a string is named by its folder (no
+    TypeError in the clash message); two folders sharing one id are each named once, with the folder."""
+    root = tmp_path / "mods"
+    man = {"id": "pentaryn-one", "esmodules": ["one.mjs"], "flags": {"pentaryn": {"cssPrefix": "pone-"}}}
+    one = _tiny(root, name="pentaryn-one", files={"module.json": json.dumps(man)})
+    for bad_id in (5, ["a"], True, {}):
+        write(root / "weird", {"module.json": json.dumps({**man, "id": bad_id})})
+        c38 = next(r for r in conformance.score_dir(one)["results"] if r["id"] == "C38")
+        assert c38["status"] == "fail" and c38["detail"] == ["pone- also declared by weird"], (bad_id, c38)
+    (root / "weird" / "module.json").unlink()
+    (root / "weird").rmdir()
+
+    write(root / "two-a", {"module.json": json.dumps({**man, "id": "pentaryn-two"})})
+    write(root / "two-b", {"module.json": json.dumps({**man, "id": "pentaryn-two"})})
+    c38 = next(r for r in conformance.score_dir(one)["results"] if r["id"] == "C38")
+    assert c38["status"] == "fail", c38
+    assert c38["detail"] == ["pone- also declared by pentaryn-two (two-a/), pentaryn-two (two-b/)"], c38
