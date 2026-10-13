@@ -134,13 +134,13 @@
           "optional": true
         }
       ],
-      "returns": "{ spell, uuid, level, edition?, list, onList: true | false } | { spell, uuid, level, edition?, list, onList: null, hint } | { notFound, spell, hint }",
+      "returns": "{ spell, uuid, level, edition?, list, onList: true | false, listedAs? } | { spell, uuid, level, edition?, list, onList: null, hint } | { notFound, spell, hint }",
       "gm": false,
       "writes": false,
       "query": true,
       "sideEffects": [],
       "legacy": true,
-      "doc": "Is a spell on a class's (or subclass's) list, from dnd5e's spell-list registry. A 2014 spell carries edition: '2014'."
+      "doc": "Is a spell on a class's (or subclass's) list, from dnd5e's spell-list registry. A 2014 spell carries edition: '2014' and is on a list when its 2024 copy is (listedAs)."
     },
     {
       "path": "spellList",

@@ -101,11 +101,11 @@ export const MANIFEST = Object.freeze({
         { name: "cls", type: "class (or subclass) identifier, e.g. 'wizard'" },
         { name: "opts", type: "{ type?: 'class' | 'subclass' }", optional: true },
       ],
-      returns: "{ spell, uuid, level, edition?, list, onList: true | false } | { spell, uuid, level, edition?, list, onList: null, hint } "
+      returns: "{ spell, uuid, level, edition?, list, onList: true | false, listedAs? } | { spell, uuid, level, edition?, list, onList: null, hint } "
         + "| { notFound, spell, hint }",
       gm: false, writes: false, legacy: true, query: true,
       args: d => [d.spell, d.cls, { type: d.type ?? "class" }],
-      doc: "Is a spell on a class's (or subclass's) list, from dnd5e's spell-list registry. A 2014 spell carries edition: '2014'.",
+      doc: "Is a spell on a class's (or subclass's) list, from dnd5e's spell-list registry. A 2014 spell carries edition: '2014' and is on a list when its 2024 copy is (listedAs).",
     },
     {
       path: "spellList",
