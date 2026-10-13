@@ -104,6 +104,12 @@ Declared changes:
   (`pentaryn-dropbin | ledger entry refused: …`), resolves null, never appended. Any client could
   append an entry in another user's name before. socketlib gives the relay no sender, so this is a
   plausibility check; forging past it needs the console.
+- DB-AC-4: `corpses.sync` converts all of an actor's eligible tokens in one batch: one
+  `turnTokensIntoItemPiles` (or `revertTokensFromItemPiles`) call for all of them, then each token's
+  flag writes, then Dead as the overlay once per distinct actor (a linked NPC's base actor's map is
+  put back once). It made one Item Piles call and one Dead toggle per token before. A failed token
+  is still one `corpse sync failed for <name>` warning and the others go on; single-token syncs
+  are unchanged.
 
 Added: `list(n, { brief })`, `restoreResult`, `inspect`, `selftest` (items-journal-28).
 - A restore another module refuses (a `preCreateItem` veto) is `{ ok: false, reason: "not-created" }`

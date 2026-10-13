@@ -311,3 +311,38 @@ test("dropbin-EC-3: no player opens a corpse's actor sheet by any route; a force
   await corpses.revive(tok);
   assert.equal(sheetVeto(actor, true, {}), true, "revived: a creature again");
 });
+
+/* ── DB-AC-4: one Item Piles call per sync, Dead toggled once per actor ─────────────────────────── */
+
+// A sync of a linked NPC with several tokens on the map made one turnTokensIntoItemPiles (or revert)
+// call per token and toggled Dead on the shared base actor once per token. It now collects the tokens
+// that need converting, makes one call for all of them, writes each token's flags, then makes Dead the
+// overlay once per distinct actor. A single-token sync is unchanged (one call, n: 1).
+test("DB-AC-4: a three-token linked NPC syncs with one Item Piles call each way and one Dead toggle", async () => {
+  const toks = linkedNpc(undefined, 3);
+  const actor = toks[0].actor;
+  let toggles = 0;
+  const toggle = actor.toggleStatusEffect;
+  actor.toggleStatusEffect = async (...a) => { toggles++; return toggle(...a); };
+  const ops = op => F.calls.filter(c => c.op === op);
+  const piles = ops("turnTokensIntoItemPiles").length;
+  await corpses.sync(actor);
+  assert.deepEqual(ops("turnTokensIntoItemPiles").slice(piles).map(c => c.n), [3], "one call for all three tokens");
+  assert.equal(toggles, 1, "Dead toggled once on the shared actor");
+  assert.ok(toks.every(t => t.flags[MOD].corpse === true), "every token is our corpse");
+  assert.equal(toks.every(t => t.sight.enabled === false), true, "each token's sight is off");
+  const reverts = ops("revertTokensFromItemPiles").length;
+  await corpses.revive(toks[0]);
+  assert.deepEqual(ops("revertTokensFromItemPiles").slice(reverts).map(c => c.n), [3], "one revert for all three tokens");
+  assert.ok(toks.every(t => t.flags[MOD].corpse === undefined && t.sight.enabled === true), "every token is a creature again");
+  assert.deepEqual(actor.flags[MOD] ?? {}, {}, "the base actor's map was put back once");
+});
+
+test("DB-AC-4: a single-token sync still makes one call with that token", async () => {
+  const tok = goblin(null);
+  const ops = op => F.calls.filter(c => c.op === op);
+  const piles = ops("turnTokensIntoItemPiles").length;
+  await corpses.sync(tok.actor);
+  assert.deepEqual(ops("turnTokensIntoItemPiles").slice(piles).map(c => c.n), [1]);
+  assert.equal(tok.flags[MOD].corpse, true);
+});

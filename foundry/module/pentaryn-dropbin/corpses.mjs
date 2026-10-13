@@ -72,37 +72,60 @@ function refused(fn, doc, want) {
   return !!why;
 }
 
+const PILE_SETTINGS = { type: "pile", distance: 1, deleteWhenEmpty: false, closed: false, locked: false,
+  displayOne: false, showItemName: false, overrideSingleItemScale: false };
+
+/** Each distinct actor of `docs` once (a linked NPC's tokens share one), by uuid. */
+const actorsOf = docs => [...new Map(docs.map(t => t.actor).filter(Boolean).map(a => [a.uuid ?? a.id, a])).values()];
+
+/** The current document for a token after an Item Piles write replaced it. */
+const freshOf = tokenDoc => tokenDoc.parent?.tokens.get(tokenDoc.id) ?? tokenDoc;
+
 async function toCorpse(tokenDoc) {
   if (refused("toCorpse", tokenDoc, "Token")) return;
-  if (isPile(tokenDoc)) return;
-  const linked = !!tokenDoc.actorLink;
+  const [failure] = await toCorpses([tokenDoc]);
+  if (failure) throw failure.err;
+}
+
+/**
+ * Turn tokens into corpses (DB-AC-4): one Item Piles call for all of them, then each token's flags,
+ * then Dead as the overlay once per distinct actor. Returns the `{ name, err }` of each part that
+ * failed; a failed flag write reverts that token's new pile (dropbin-R6) and the rest go on.
+ */
+async function toCorpses(tokenDocs) {
+  const docs = tokenDocs.filter(t => !isPile(t));
+  if (!docs.length) return [];
   // The delta's own ownership before death (usually null: inherit the base actor), for a revival.
   // Already our corpse (Item Piles reverted the pile, the body is still dead): its delta is our
   // OBSERVER map, so keep the map saved at the first death (none saved: a pre-fix corpse, null).
   // A linked token has no delta map of its own: its base actor's is saved instead (observeBase).
-  const ownership = linked ? null : ourCorpse(tokenDoc) ? (tokenDoc.flags[MODULE].ownership ?? null)
-    : foundry.utils.deepClone(tokenDoc.delta?.ownership ?? null);
-  await turnTokensIntoItemPiles([tokenDoc], {
-    pileSettings: { type: "pile", distance: 1, deleteWhenEmpty: false, closed: false, locked: false,
-      displayOne: false, showItemName: false, overrideSingleItemScale: false },
-    tokenSettings: {}
-  });
-  const fresh = tokenDoc.parent?.tokens.get(tokenDoc.id) ?? tokenDoc;
-  // Players observe the body, and an observed token with sight is a vision source for a player
-  // with nothing selected: a dead drow would keep lighting its room. Remember it for a revival.
-  try {
-    await fresh.update({ [`flags.${MODULE}.corpse`]: true, [`flags.${MODULE}.sight`]: !!fresh.sight.enabled,
-      "sight.enabled": false, ...(linked ? {} : { [`flags.${MODULE}.ownership`]: ownership, "delta.ownership": { default: OBSERVER } }) });
-    if (linked) await observeBase(fresh.actor);
-  } catch (err) {
-    // dropbin-R6: a pile without our corpse flag is never reverted by a revival; undo it, then report.
-    try { await revertTokensFromItemPiles([fresh]); }
-    catch (e) { console.warn(`${MODULE} | corpses.toCorpse: could not revert the pile on ${fresh.name}`, e); }
-    throw err;
+  const saved = docs.map(t => t.actorLink ? null : ourCorpse(t) ? (t.flags[MODULE].ownership ?? null)
+    : foundry.utils.deepClone(t.delta?.ownership ?? null));
+  await turnTokensIntoItemPiles(docs, { pileSettings: PILE_SETTINGS, tokenSettings: {} });
+  const failed = [], made = [];
+  for (const [i, tokenDoc] of docs.entries()) {
+    const linked = !!tokenDoc.actorLink, ownership = saved[i];
+    const fresh = freshOf(tokenDoc);
+    // Players observe the body, and an observed token with sight is a vision source for a player
+    // with nothing selected: a dead drow would keep lighting its room. Remember it for a revival.
+    try {
+      await fresh.update({ [`flags.${MODULE}.corpse`]: true, [`flags.${MODULE}.sight`]: !!fresh.sight.enabled,
+        "sight.enabled": false, ...(linked ? {} : { [`flags.${MODULE}.ownership`]: ownership, "delta.ownership": { default: OBSERVER } }) });
+      if (linked) await observeBase(fresh.actor);
+      made.push(fresh);
+    } catch (err) {
+      // dropbin-R6: a pile without our corpse flag is never reverted by a revival; undo it, then report.
+      try { await revertTokensFromItemPiles([fresh]); }
+      catch (e) { console.warn(`${MODULE} | corpses.toCorpse: could not revert the pile on ${fresh.name}`, e); }
+      failed.push({ name: fresh.name, err });
+    }
   }
   // Dead as core's full-body overlay. The "lootable" eye is not a document: every client draws
   // it on top of the token (paintEye below) while the body still holds something.
-  await deadAsOverlay(fresh.actor);
+  for (const actor of actorsOf(made)) {
+    try { await deadAsOverlay(actor); } catch (err) { failed.push({ name: actor.name, err }); }
+  }
+  return failed;
 }
 
 /**
@@ -164,22 +187,41 @@ async function removeLegacyEye(actor) {
 
 async function fromCorpse(tokenDoc) {
   if (refused("fromCorpse", tokenDoc, "Token")) return;
-  if (!ourCorpse(tokenDoc)) return; // never revert a pile we didn't make
+  const [failure] = await fromCorpses([tokenDoc]);
+  if (failure) throw failure.err;
+}
+
+/**
+ * Revive corpses (DB-AC-4): each linked base actor's map back once, one Item Piles revert for all
+ * the tokens, then each token's flags. Returns the `{ name, err }` of each token that failed.
+ */
+async function fromCorpses(tokenDocs) {
+  const docs = tokenDocs.filter(t => ourCorpse(t)); // never revert a pile we didn't make
+  if (!docs.length) return [];
   // first, so a failure below leaves a corpse the next sync reverts again, never an observed creature
-  if (tokenDoc.actorLink) await unobserveBase(tokenDoc.actor);
-  await revertTokensFromItemPiles([tokenDoc]);
-  const fresh = tokenDoc.parent?.tokens.get(tokenDoc.id) ?? tokenDoc;
-  await removeLegacyEye(fresh.actor);
-  const sight = fresh.flags?.[MODULE]?.sight ?? fresh.sight.enabled;
-  const saved = revivedOwnership(fresh.flags?.[MODULE]?.ownership);
+  for (const actor of actorsOf(docs.filter(t => t.actorLink))) await unobserveBase(actor);
+  await revertTokensFromItemPiles(docs);
+  const failed = [], cleaned = new Set();
   const del = () => new foundry.data.operators.ForcedDeletion();
-  // The corpse map always goes by a ForcedDeletion, never a plain null: Foundry 14 can lose a delta
-  // write on the server after broadcasting it, so the server may already hold null while every client
-  // shows {default: OBSERVER}; a plain null is then no change, nothing goes out, players keep the sheet.
-  await fresh.update({ [`flags.${MODULE}.corpse`]: del(), [`flags.${MODULE}.sight`]: del(),
-    [`flags.${MODULE}.ownership`]: del(), "sight.enabled": sight, "delta.ownership": del() });
-  // A saved map goes on top of the now-empty one, so it differs from whatever the server held.
-  if (saved) await fresh.update({ "delta.ownership": saved });
+  for (const tokenDoc of docs) {
+    const fresh = freshOf(tokenDoc);
+    try {
+      const key = fresh.actor?.uuid ?? fresh.actor?.id;
+      if (!cleaned.has(key)) { cleaned.add(key); await removeLegacyEye(fresh.actor); }
+      const sight = fresh.flags?.[MODULE]?.sight ?? fresh.sight.enabled;
+      const saved = revivedOwnership(fresh.flags?.[MODULE]?.ownership);
+      // The corpse map always goes by a ForcedDeletion, never a plain null: Foundry 14 can lose a delta
+      // write on the server after broadcasting it, so the server may already hold null while every client
+      // shows {default: OBSERVER}; a plain null is then no change, nothing goes out, players keep the sheet.
+      await fresh.update({ [`flags.${MODULE}.corpse`]: del(), [`flags.${MODULE}.sight`]: del(),
+        [`flags.${MODULE}.ownership`]: del(), "sight.enabled": sight, "delta.ownership": del() });
+      // A saved map goes on top of the now-empty one, so it differs from whatever the server held.
+      if (saved) await fresh.update({ "delta.ownership": saved });
+    } catch (err) {
+      failed.push({ name: fresh.name, err });
+    }
+  }
+  return failed;
 }
 
 /**
@@ -196,31 +238,37 @@ function revivedOwnership(saved) {
 // One conversion per token at a time (dropbin-EC-4): HUD Revive's own sync and the debounced one could
 // both see "our corpse" and revert it twice, the second ForcedDeletion erasing the restored map.
 const converting = new Map();
+const keyOf = t => t.uuid ?? t.id;
 
-/** Convert one token, after any conversion of it already in flight, re-checking dead/alive then. */
-async function convert(t) {
-  const key = t.uuid ?? t.id;
-  while (converting.has(key)) {
-    await converting.get(key).catch(() => {});
-    t = t.parent?.tokens.get(t.id) ?? t;
+/** One batch's conversions (DB-AC-4); each failure is one warning naming the token (or actor). */
+async function convertAll(dead, revived) {
+  for (const [docs, run] of [[dead, toCorpses], [revived, fromCorpses]]) {
+    if (!docs.length) continue;
+    let failed;
+    try { failed = await run(docs); } catch (err) { failed = docs.map(t => ({ name: t.name, err })); }
+    for (const { name, err } of failed) console.warn(`${MODULE} | corpse sync failed for ${name}`, err);
   }
-  if (!eligible(t)) return;
-  const run = isDead(t.actor) ? toCorpse(t) : ourCorpse(t) ? fromCorpse(t) : null;
-  if (!run) return;
-  converting.set(key, run);
-  try { await run; } finally { if (converting.get(key) === run) converting.delete(key); }
 }
 
+/**
+ * Convert the actor's eligible tokens in one batch (DB-AC-4): after any conversion of them already in
+ * flight, re-checking dead/alive then, the dead ones become corpses and the living corpses revive.
+ */
 async function sync(actor) {
   if (!isGMRunner() || refused("sync", actor, "Actor")) return;
-  for (const t of tokensOf(actor)) {
-    if (!eligible(t)) continue;
-    try {
-      await convert(t);
-    } catch (err) {
-      console.warn(`${MODULE} | corpse sync failed for ${t.name}`, err);
-    }
+  let toks = tokensOf(actor).filter(eligible);
+  for (let busy; (busy = toks.filter(t => converting.has(keyOf(t)))).length;) {
+    await Promise.all(busy.map(t => converting.get(keyOf(t)).catch(() => {})));
+    toks = toks.map(freshOf);
   }
+  toks = toks.filter(eligible);
+  const dead = toks.filter(t => isDead(t.actor));
+  const revived = toks.filter(t => !isDead(t.actor) && ourCorpse(t));
+  const keys = [...dead, ...revived].map(keyOf);
+  if (!keys.length) return;
+  const run = convertAll(dead, revived);
+  for (const k of keys) converting.set(k, run);
+  try { await run; } finally { for (const k of keys) if (converting.get(k) === run) converting.delete(k); }
 }
 
 // Debounce per actor: a damage roll can fire several updates in a row.
