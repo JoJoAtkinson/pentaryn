@@ -1,6 +1,9 @@
 /**
- * pentaryn-prompts core — placement on a marker's footprint, side-panel rows, dialog position.
- * PURE (split out of geometry-core.mjs, which re-exports the public names): no Foundry global.
+ * pentaryn-prompts core — placement on a marker's footprint (and dnd5e's lockSize), the side
+ * panel's relations and rows (sight split, the behind-a-door line, the distance line), gather's
+ * scene list (`"current"`), feet from the map's corner, and the dialog's screen position.
+ * PURE: no Foundry global. Split out of geometry-core.mjs, which re-exports every name here except
+ * panelRels and seenCount: scene-adapter.mjs imports those two from here.
  */
 
 import { DEFAULTS } from "./defaults.mjs";

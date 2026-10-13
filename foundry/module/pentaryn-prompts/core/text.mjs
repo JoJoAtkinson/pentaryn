@@ -1,6 +1,11 @@
 /**
- * pentaryn-prompts core — hashes, prompt text, HTML stripping, previews, relation text.
- * PURE (split out of geometry-core.mjs, which re-exports the public names): no Foundry global.
+ * pentaryn-prompts core — hashes and call ids; prompt text (normalising, enricher and HTML stripping,
+ * previews, the built description, nameplates, dates); relation text and id order; and three path
+ * decisions: the crop decision, a spec file's Data path and an image's fetch URL.
+ * PURE: no Foundry global. Split out of geometry-core.mjs, which re-exports the hash, text and
+ * relation names. The other three are not on that barrel: cropsDecision (gather.mjs) and
+ * specFileUrl (replace.mjs) are imported from here, and build-core.mjs re-exports both;
+ * assetUrl is imported from here (crops-adapter.mjs).
  */
 
 import { band } from "./grid.mjs";

@@ -105,6 +105,10 @@ cssPrefix `pp-`, afterSync). Each **[declared]** change goes to the live check.
   `renderOverview` and the "which encounters hold this built thing" query is one private `homesOf`
   in `core/gather-text.mjs` (neither exported), used by the Shared-with line, the Built line and a
   shared built's `shared=`. The gather text is byte-identical. No behaviour change.
+- **[declared] Five file headers say what their file holds** (prompts-core-M11): `core/text.mjs`,
+  `core/placement.mjs`, `core/size.mjs`, `prompts-core.mjs` and `build-core.mjs`'s re-export comment
+  now list their names and where each is re-exported or imported from (not every core name is on the
+  geometry-core barrel). Comment only, no behaviour change.
 - `ensureMarkers` repairs every drifted actor in one batch update. A hot re-import after
   `uninstall()` re-wires and republishes at once.
 - Console only (DP9): a core token API that throws warns once; swallowed failures log at debug

@@ -6,7 +6,8 @@
  * the lookup order for per-advancement choices. character-adapter.mjs is the Foundry half.
  */
 
-// moved to core/text.mjs (gather's crop decision, replace's spec-file path); re-exported for existing importers
+// cropsDecision and specFileUrl live in core/text.mjs, and gather.mjs and replace.mjs import them from there.
+// build-core keeps re-exporting both because they are part of its pinned surface (golden/core-exports.json).
 import { cropsDecision, specFileUrl } from "./core/text.mjs";
 export { cropsDecision, specFileUrl };
 

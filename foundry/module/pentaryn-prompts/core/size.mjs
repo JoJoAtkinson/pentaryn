@@ -1,6 +1,10 @@
 /**
- * pentaryn-prompts core — marker sizes, dnd5e size widths, footprints.
- * PURE (split out of geometry-core.mjs, which re-exports the public names): no Foundry global.
+ * pentaryn-prompts core — marker sizes, dnd5e size widths, footprint labels, the size words a spec
+ * may use, and CR parsing.
+ * PURE: no Foundry global. Split out of geometry-core.mjs, which re-exports the marker-size,
+ * dnd5e-width and footprint names. The rest are not on that barrel: fmtNum is core-only (core/text,
+ * placement, gather-text); SIZE_WORDS and parseCr are imported from here by replace.mjs and
+ * actor-patch-adapter.mjs (which re-exports SIZE_WORDS); PC_SIZE_WORDS by character-adapter.mjs.
  */
 
 /* ── Sizes ────────────────────────────────────────────────────────────────── */
