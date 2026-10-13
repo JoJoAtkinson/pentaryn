@@ -120,10 +120,12 @@ Both installed and loaded. `launchctl list | grep pentaryn.vtt`.
 | `foundry/cloudflared/config.yml` | Tunnel ingress; blocks the admin surface. |
 | `foundry/logs/auto-updates/` | Per-run `.md` + `.json`, committed and pushed. |
 
-Runtime state (all gitignored) lives in `.state/`: `vtt-update.lock/` (a **directory** —
-macOS has no `flock`; a lock with no `owner.json` counts as held for its first 60 s, since
-its owner may be between `mkdir` and the write, and any failure breaking a stale lock
-reports it held rather than crashing), `vtt-update.status`, `vtt-update.entry`, `vtt-update.seen.json`,
+Runtime state (all gitignored) lives in `.state/`: `vtt-update.lock/` (a **directory**, so
+the shell side can see it — macOS ships no `flock(1)`; every create, stale-break and
+release of it happens under a Python `fcntl.flock` on `vtt-update.lock.guard`, so two runs
+racing a stale lock get exactly one holder; a lock with no `owner.json` counts as held for
+its first 60 s, a release never removes a lock another run has taken over, and any
+filesystem failure while taking it reports it held rather than crashing), `vtt-update.status`, `vtt-update.entry`, `vtt-update.seen.json`,
 `vtt-update-cache/`, `vtt-update-analysis/` (T1 cache, one JSON per package × key),
 `vtt-update-dry-plans/` (plans from dry runs), `core-rollback/`, `system-aside/`, `logs/`.
 The rollback tars in `core-rollback/` and `system-aside/` are written as `<name>.partial`

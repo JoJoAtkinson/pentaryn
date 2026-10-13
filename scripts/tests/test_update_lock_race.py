@@ -95,6 +95,111 @@ def test_ac4_racer_owner_after_remkdir_is_respected(lock_dir, monkeypatch):
     assert json.loads((lock_dir / "owner.json").read_text())["token"] == "racer"
 
 
+def _stale(lock_dir: Path) -> None:
+    lock_dir.mkdir()
+    (lock_dir / "owner.json").write_text(json.dumps({"pid": _dead_pid()}))
+    _age(lock_dir, 4 * 3600)
+
+
+def test_ac4_second_run_cannot_acquire_inside_a_stale_break(lock_dir, monkeypatch):
+    """Run A has judged the lock stale and is about to remove it; run B tries a whole
+    acquire in that window. The guard makes B wait (here: give up), so A's removal never
+    deletes a lock B believes it holds."""
+    _stale(lock_dir)
+    monkeypatch.setattr(state, "GUARD_WAIT_SECONDS", 0.05)
+    A, B = state.Lock(lock_dir), state.Lock(lock_dir)
+    real_unlink = Path.unlink
+    fired = {"n": 0}
+
+    def unlink(self, *a, **k):
+        if self.name == "owner.json" and fired["n"] == 0:
+            fired["n"] = 1
+            with pytest.raises(state.Locked):
+                B.acquire()
+        return real_unlink(self, *a, **k)
+    monkeypatch.setattr(Path, "unlink", unlink)
+    A.acquire()
+    assert fired["n"] == 1
+    assert A.held and not B.held
+    assert A.owner()["token"] == A.token
+
+
+def test_ac4_owner_write_failure_raises_locked_not_oserror(lock_dir, monkeypatch):
+    """If the directory is gone by the time owner.json is written, that is Locked, not a
+    raw FileNotFoundError that crashes the run."""
+    _stale(lock_dir)
+    real_mkdir = Path.mkdir
+    n = {"k": 0}
+
+    def mkdir(self, *a, **k):
+        r = real_mkdir(self, *a, **k)
+        if self == lock_dir:
+            n["k"] += 1
+            if n["k"] == 1:
+                lock_dir.rmdir()
+        return r
+    monkeypatch.setattr(Path, "mkdir", mkdir)
+    lock = state.Lock(lock_dir)
+    with pytest.raises(state.Locked):
+        lock.acquire()
+    assert not lock.held
+
+
+def test_ac4_release_leaves_a_lock_taken_over_by_another_run(lock_dir):
+    """A run whose lock was broken (it looked stale) must not delete the new owner's."""
+    lock = state.Lock(lock_dir).acquire()
+    (lock_dir / "owner.json").write_text(json.dumps({"pid": os.getpid(), "token": "other"}))
+    lock.release()
+    assert not lock.held
+    assert json.loads((lock_dir / "owner.json").read_text())["token"] == "other"
+
+
+_RACER = r"""
+import sys, time
+sys.path.insert(0, sys.argv[1])
+from pathlib import Path
+from scripts.foundry.update import state
+lock = state.Lock(Path(sys.argv[2]))
+print("ready", flush=True)
+sys.stdin.readline()                      # the start gun
+try:
+    lock.acquire()
+except state.Locked:
+    print("locked", flush=True)
+    sys.exit(0)
+except BaseException as exc:
+    print(f"raw {type(exc).__name__}: {exc}", flush=True)
+    sys.exit(0)
+print("won", flush=True)
+time.sleep(0.1)
+lock.release()
+"""
+
+
+@pytest.mark.parametrize("mode", ["stale", "fresh"])
+def test_ac4_real_processes_racing_get_exactly_one_holder(tmp_path, mode):
+    """Separate processes, released together, race the same lock: exactly one wins every
+    trial, and nothing but Locked comes out of acquire()."""
+    root = str(Path(__file__).resolve().parents[2])
+    for trial in range(12):
+        path = tmp_path / f"t{trial}" / "vtt-update.lock"
+        path.parent.mkdir()
+        if mode == "stale":
+            _stale(path)
+        procs = [subprocess.Popen([sys.executable, "-c", _RACER, root, str(path)],
+                                  stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True)
+                 for _ in range(4)]
+        for p in procs:
+            assert p.stdout.readline().strip() == "ready"
+        for p in procs:
+            p.stdin.write("go\n")
+            p.stdin.flush()
+        results = [p.communicate(timeout=30)[0].strip() for p in procs]
+        assert results.count("won") == 1, results
+        assert all(r in ("won", "locked") for r in results), results
+        assert not path.exists()
+
+
 def test_ac4_live_owner_still_refuses(lock_dir):
     lock_dir.mkdir()
     (lock_dir / "owner.json").write_text(json.dumps({"pid": os.getpid()}))

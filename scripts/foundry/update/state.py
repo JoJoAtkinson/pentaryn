@@ -5,9 +5,14 @@ Three separate things live in ``.state/``, and conflating them is how an unatten
 turns one bad Saturday into a bad month:
 
 ``vtt-update.lock``     a directory. ``mkdir`` is atomic on every filesystem here, and
-                        **macOS has no ``flock``** — the obvious first choice is simply
-                        not available. Also read by ``make vtt-up`` / ``vtt-down`` so a
-                        human cannot start the tunnel underneath a running update.
+                        macOS ships no ``flock(1)`` for the shell side, so the directory
+                        is the lock everyone can see: ``make vtt-up`` / ``vtt-down`` read
+                        it so a human cannot start the tunnel underneath a running update.
+``vtt-update.lock.guard`` a plain file, ``fcntl.flock``-ed (Python has it on macOS) for the
+                        few microseconds it takes to create, judge, break or remove the
+                        directory. Two runs breaking the same stale lock would otherwise
+                        each delete the other's fresh one (AC-4); the kernel drops the
+                        flock if its holder dies, so the guard itself never goes stale.
 ``vtt-update.status``   written at *start* and updated on every phase. The watchdog
                         needs to tell "still downloading a 400 MB core" from "died in
                         phase 4" from "never fired at all", and a heartbeat written only
@@ -22,9 +27,11 @@ turns one bad Saturday into a bad month:
 
 from __future__ import annotations
 
+import fcntl
 import json
 import os
 import time
+from contextlib import contextmanager
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
@@ -48,31 +55,79 @@ class Locked(RuntimeError):
     """Another run holds the lock."""
 
 
+# How long to wait for another run to finish its (microsecond) turn at the guard.
+GUARD_WAIT_SECONDS = 5.0
+
+
+@contextmanager
+def _guard(lock_path: Path):
+    """Serialise every change to the lock directory across processes.
+
+    Only one process at a time may create, judge, break or remove ``lock_path``, so a
+    stale lock is broken exactly once and nobody deletes a directory it did not judge.
+    Raises :class:`Locked` if the guard cannot be had within ``GUARD_WAIT_SECONDS``."""
+    guard = lock_path.with_name(lock_path.name + ".guard")
+    try:
+        guard.parent.mkdir(parents=True, exist_ok=True)
+        fd = os.open(guard, os.O_RDWR | os.O_CREAT, 0o644)
+    except OSError as exc:
+        raise Locked(f"could not open the lock guard: {exc}") from None
+    try:
+        deadline = time.monotonic() + GUARD_WAIT_SECONDS
+        while True:
+            try:
+                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                break
+            except BlockingIOError:
+                if time.monotonic() >= deadline:
+                    raise Locked("another run is taking the lock right now") from None
+                time.sleep(0.01)
+            except OSError as exc:
+                raise Locked(f"could not take the lock guard: {exc}") from None
+        yield
+    finally:
+        os.close(fd)        # closing the descriptor drops the flock
+
+
 class Lock:
-    """Atomic ``mkdir`` lock, with the owning pid recorded for diagnosis."""
+    """Atomic ``mkdir`` lock, with the owning pid recorded for diagnosis. Every change to
+    the directory happens under :func:`_guard`, so at most one run ever holds it."""
 
     def __init__(self, path: Path = LOCK_DIR) -> None:
         self.path = path
         self.held = False
+        self.token: str | None = None
 
     def acquire(self) -> "Lock":
-        try:
-            self.path.mkdir(parents=True)
-        except FileExistsError:
-            self._break_stale()
-        token = f"{os.getpid()}-{time.time_ns()}"
-        (self.path / "owner.json").write_text(
-            json.dumps({"pid": os.getpid(), "started": time.time(), "token": token}),
-            encoding="utf-8")
-        # Another run breaking the same stale lock may have replaced ours in between.
-        if self.owner().get("token") != token:
-            raise Locked("another run took the lock at the same moment")
-        self.held = True
+        with _guard(self.path):
+            try:
+                self.path.mkdir(parents=True)
+            except FileExistsError:
+                self._break_stale()
+            token = f"{os.getpid()}-{time.time_ns()}"
+            try:
+                (self.path / "owner.json").write_text(
+                    json.dumps({"pid": os.getpid(), "started": time.time(),
+                                "token": token}),
+                    encoding="utf-8")
+            except OSError as exc:
+                try:
+                    self.path.rmdir()       # leave nothing owner-less behind if we can
+                except OSError:
+                    pass
+                raise Locked(f"could not record the lock owner: {exc}") from None
+            # Belt and braces: a run outside the guard (an older checkout) may have
+            # replaced ours in between.
+            if self.owner().get("token") != token:
+                raise Locked("another run took the lock at the same moment")
+            self.token = token
+            self.held = True
         return self
 
     def _break_stale(self) -> None:
-        """Remove a stale lock and take it, or raise :class:`Locked`. Any filesystem
-        failure (the lock vanished, filled up, or was re-taken under us) means held."""
+        """Remove a stale lock and take it, or raise :class:`Locked`. Called under the
+        guard. Any filesystem failure (the lock vanished, filled up, or was re-taken
+        under us) means held."""
         try:
             info = self.owner()
             age = time.time() - self.path.stat().st_mtime
@@ -106,14 +161,23 @@ class Lock:
             return {}
 
     def release(self) -> None:
+        """Remove the lock if it is still ours. A lock another run has since taken over
+        (ours looked stale to it) is left alone. If the guard cannot be had, the
+        directory stays behind with our dead pid in it, which the next run breaks."""
         if not self.held:
             return
-        (self.path / "owner.json").unlink(missing_ok=True)
-        try:
-            self.path.rmdir()
-        except OSError:
-            pass
         self.held = False
+        try:
+            with _guard(self.path):
+                if self.owner().get("token") != self.token:
+                    return
+                (self.path / "owner.json").unlink(missing_ok=True)
+                try:
+                    self.path.rmdir()
+                except OSError:
+                    pass
+        except (Locked, OSError):
+            pass
 
     def __enter__(self) -> "Lock":
         return self.acquire()
@@ -132,18 +196,24 @@ def release_if_owner_dead(path: Path | None = None) -> bool:
     path = path or LOCK_DIR
     if not path.is_dir():
         return False
-    pid = Lock(path).owner().get("pid")
     try:
-        if pid is not None and _pid_alive(int(pid)):
-            return False
-    except (TypeError, ValueError):
-        pass
-    (path / "owner.json").unlink(missing_ok=True)
-    try:
-        path.rmdir()
-    except OSError:
+        with _guard(path):
+            if not path.is_dir():
+                return False
+            pid = Lock(path).owner().get("pid")
+            try:
+                if pid is not None and _pid_alive(int(pid)):
+                    return False
+            except (TypeError, ValueError):
+                pass
+            (path / "owner.json").unlink(missing_ok=True)
+            try:
+                path.rmdir()
+            except OSError:
+                return False
+            return True
+    except (Locked, OSError):
         return False
-    return True
 
 
 def _pid_alive(pid: int) -> bool:
