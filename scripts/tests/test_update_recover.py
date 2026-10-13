@@ -13,7 +13,7 @@ import tarfile
 
 import pytest
 
-from scripts.foundry.update import recover
+from scripts.foundry.update import admin, recover
 
 
 def _tar(path, member_dir, marker):
@@ -57,7 +57,7 @@ def test_ec1_stash_system_keeps_the_copy_it_just_wrote(tmp_path, monkeypatch):
     for v in ("6.0.7", "6.0.8", "6.0.9"):
         (aside / f"dnd5e-{v}.tar.gz").write_bytes(b"old")
     monkeypatch.setattr(recover, "SYSTEM_ASIDE_DIR", aside)
-    monkeypatch.setattr(recover, "FOUNDRY_DATA", data)
+    monkeypatch.setattr(admin, "SYSTEMS_DIR", data / "Data/systems")
 
     out = recover.stash_system("dnd5e", "6.0.10")
 
@@ -93,7 +93,7 @@ def test_ec1_restore_fallback_takes_the_highest_version(tmp_path, monkeypatch):
     _tar(aside / "dnd5e-6.0.9.tar.gz", tmp_path / "src9" / "dnd5e", "v9")
     _tar(aside / "dnd5e-6.0.10.tar.gz", tmp_path / "src10" / "dnd5e", "v10")
     monkeypatch.setattr(recover, "SYSTEM_ASIDE_DIR", aside)
-    monkeypatch.setattr(recover, "FOUNDRY_DATA", data)
+    monkeypatch.setattr(admin, "SYSTEMS_DIR", data / "Data/systems")
     rec = recover.Recovery(kind="system", target="dnd5e")
 
     recover._restore_system_from_aside("dnd5e", "6.0.11", rec)
@@ -128,7 +128,7 @@ def test_rob8_interrupted_stash_system_leaves_no_archive(tmp_path, monkeypatch):
     system.mkdir(parents=True)
     (system / "system.json").write_text('{"id": "dnd5e"}')
     monkeypatch.setattr(recover, "SYSTEM_ASIDE_DIR", aside)
-    monkeypatch.setattr(recover, "FOUNDRY_DATA", data)
+    monkeypatch.setattr(admin, "SYSTEMS_DIR", data / "Data/systems")
 
     with monkeypatch.context() as m:
         _fail_add(m)
@@ -162,3 +162,34 @@ def test_rob8_interrupted_stash_core_leaves_no_archive(tmp_path, monkeypatch):
     with tarfile.open(out) as tar:
         assert "app/main.mjs" in tar.getnames()
     assert sorted(p.name for p in rollback.iterdir()) == ["app-14.360.tar.gz"]
+
+
+# ── M14: one systems path — admin.SYSTEMS_DIR, not a hand-built Data/systems ─
+# recover rebuilt ``FOUNDRY_DATA / "Data/systems"`` itself while inventory imported
+# MODULES_DIR/SYSTEMS_DIR and never used them. Both now lean on admin's constant, read
+# at call time, so a relocated or patched SYSTEMS_DIR is the one the rollback touches.
+
+def test_m14_stash_and_restore_use_admin_systems_dir(tmp_path, monkeypatch):
+    systems = tmp_path / "elsewhere" / "systems"
+    (systems / "dnd5e").mkdir(parents=True)
+    (systems / "dnd5e" / "system.json").write_text('{"id": "dnd5e"}')
+    aside = tmp_path / "aside"
+    monkeypatch.setattr(admin, "SYSTEMS_DIR", systems)
+    monkeypatch.setattr(recover, "SYSTEM_ASIDE_DIR", aside)
+
+    out = recover.stash_system("dnd5e", "6.0.6")
+    with tarfile.open(out) as tar:
+        assert "dnd5e/system.json" in tar.getnames()
+
+    (systems / "dnd5e" / "system.json").unlink()
+    recover._restore_system_from_aside("dnd5e", "6.0.6",
+                                       recover.Recovery(kind="system", target="dnd5e"))
+    assert (systems / "dnd5e" / "system.json").exists()
+
+
+def test_m14_no_stale_path_copies_in_inventory_or_recover():
+    from scripts.foundry.update import inventory
+
+    assert not hasattr(inventory, "MODULES_DIR")
+    assert not hasattr(inventory, "SYSTEMS_DIR")
+    assert not hasattr(recover, "FOUNDRY_DATA")

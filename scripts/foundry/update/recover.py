@@ -44,7 +44,6 @@ from pathlib import Path
 from scripts.foundry import bootstate, cloud
 from scripts.foundry import host as host_mod
 from scripts.foundry.update import admin as admin_mod
-from scripts.foundry.update.admin import FOUNDRY_DATA
 from scripts.foundry.update.admin import APP_PAYLOAD, FoundryAdmin
 from scripts.foundry.update.state import CORE_ROLLBACK_DIR, SYSTEM_ASIDE_DIR
 
@@ -247,11 +246,11 @@ def _restore_system_from_aside(system_id: str, version: str, rec: Recovery) -> N
                 f"no set-aside copy of {system_id} {version}; the snapshot's "
                 "Data/modules restore does not cover Data/systems")
         aside = candidates[-1]
-    target = FOUNDRY_DATA / "Data/systems" / system_id
+    target = admin_mod.SYSTEMS_DIR / system_id
     if target.exists():
         shutil.rmtree(target)
     with tarfile.open(aside, "r:gz") as tar:
-        tar.extractall(FOUNDRY_DATA / "Data/systems", filter="data")
+        tar.extractall(admin_mod.SYSTEMS_DIR, filter="data")
     rec.steps.append(f"restored {system_id} from {aside.name}")
 
 
@@ -320,7 +319,7 @@ def stash_system(system_id: str, version: str) -> Path:
     out = SYSTEM_ASIDE_DIR / f"{system_id}-{version}.tar.gz"
     if out.exists():
         return out
-    src = FOUNDRY_DATA / "Data/systems" / system_id
+    src = admin_mod.SYSTEMS_DIR / system_id
     _tar_to(out, src, system_id)
     for stale in sorted(SYSTEM_ASIDE_DIR.glob(f"{system_id}-*.tar.gz"),
                         key=_natural_key)[:-3]:

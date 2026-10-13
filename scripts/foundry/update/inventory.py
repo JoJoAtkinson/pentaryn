@@ -26,12 +26,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from scripts.foundry.ops.digest import tree_digest
-from scripts.foundry.update.admin import (
-    MANIFEST_NAME,
-    MODULES_DIR,
-    PACKAGE_DIR,
-    SYSTEMS_DIR,
-)
+from scripts.foundry.update.admin import MANIFEST_NAME, PACKAGE_DIR
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 REPO_MODULE_SRC = REPO_ROOT / "foundry" / "module"
