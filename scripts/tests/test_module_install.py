@@ -356,6 +356,21 @@ def test_importer_install_failing_check_installs_nothing(importer, monkeypatch):
     assert not spec.dst.exists()
 
 
+def test_pipeline_imports_modules_at_the_top_not_inside_install_importer():
+    """M11: `modules` is a top-level import of pipeline (no cycle — `install` already comes from
+    it), and the module-level `install` name the tests above rely on stays."""
+    import ast
+    import inspect
+
+    from scripts.foundry.ops import pipeline
+
+    assert pipeline.modules is modules
+    assert pipeline.install is modules.install
+    fn = ast.parse(inspect.getsource(pipeline.install_importer))
+    lazy = [n for n in ast.walk(fn) if isinstance(n, (ast.Import, ast.ImportFrom))]
+    assert not lazy, "install_importer imports lazily (M11)"
+
+
 # ── one install of a module at a time (py-ops-ac-1) ──────────────────────────────────────────
 
 def _lock_path(module) -> Path:

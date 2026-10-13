@@ -13,7 +13,7 @@ import signal
 import subprocess
 import sys
 
-from . import config as cfg
+from . import config as cfg, modules
 from .modules import install
 from . import service
 from .out import FAIL, OK, say as _say
@@ -66,7 +66,6 @@ def install_importer() -> int:
     stages actors.json too, which sits public in Data/ until `foundry-clean`. A code-only deploy of
     the importer needs neither. An actors.json some earlier `stage` left is not touched.
     """
-    from . import modules
     spec = cfg.MODULES["importer"]
     if (rc := modules.check("importer")) != 0:
         return rc
