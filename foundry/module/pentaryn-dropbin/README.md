@@ -100,7 +100,9 @@ published at `ready`. Ask it: `game.pentaryn.dropbin.describe()` (offline: `test
 exact name, or an Actor/Token UUID; with no target, the actor the item left — an unlinked token's
 own actor while that token still exists, otherwise the base actor. A target given that
 does not resolve is refused (`no-actor`, the "cannot find an actor" toast), never the original
-actor. `inspect`'s `ref` is a token (uuid, id or exact name — never a substring) or an Actor. An entry is
+actor. `inspect`'s `ref` is a token (uuid, id or exact name — never a substring) or an Actor. By name,
+a token wins; several tokens of that name throw `AMBIGUOUS`, so pass the token uuid/id, a `sceneId`, or
+the actor. An entry is
 `{n, t, iso, reason: "drop" | "delete", userId, userName, fromActorId, fromActorName, fromActorUuid,
 itemName, itemType, quantity, sceneId, sceneName, x, y, pileUuid, item}`.
 

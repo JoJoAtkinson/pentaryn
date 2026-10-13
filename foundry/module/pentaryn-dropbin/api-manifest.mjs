@@ -5,7 +5,8 @@
  * Every row published before the migration keeps its signature (`legacy: true`): `restore`
  * returns the Notification its refusal toasted or the created Item; `export`/`clear` return
  * false for a player. Every param is `resolve: false`, so buildApi resolves nothing per call;
- * `inspect(ref)` resolves its own ref (a Token or an Actor, by document, UUID, id or exact name).
+ * `inspect(ref)` resolves its own ref (a Token or an Actor, by document, UUID, id or exact name;
+ * several tokens of one name throw AMBIGUOUS — the bridge relies on that code).
  */
 
 import { CONTRACT, MODULE, NS, VERSION } from "./dropbin-core.mjs";
@@ -102,7 +103,8 @@ export const MANIFEST = Object.freeze({
     {
       path: "inspect",
       params: [{ name: "ref", kind: "token", type: "Token|TokenDocument|Actor|uuid|id|exact name", resolve: false,
-        doc: "a token (by uuid, id or exact name; never a substring), or an Actor (its tokens on every scene, or opts.sceneId)" }],
+        doc: "a token (by uuid, id or exact name; never a substring), or an Actor (its tokens on every scene, or opts.sceneId). By name, a token wins; several tokens of that name throw AMBIGUOUS, pass the token uuid/id or the actor" },
+        { name: "opts", type: "{ sceneId? }", optional: true, doc: "sceneId: the one scene to look in (\"current\" = this client's canvas); default every scene" }],
       returns: "{ token, actor, dead, corpse, noLoot, pile, saved } | { actor, dead, noLoot, pile, corpses: [...] }",
       gm: false, writes: false, since: "0.2.2",
       throws: ["NOT_FOUND", "AMBIGUOUS", "BAD_ARGS"],

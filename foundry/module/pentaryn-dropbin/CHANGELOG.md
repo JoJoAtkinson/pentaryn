@@ -117,6 +117,10 @@ Declared changes:
   its OBSERVER map (`delta.ownership.default`, an unlinked token) and `sight.enabled: false` when
   either was lost; it returned at the pile check before, so a lost write left players without the
   loot window. The saved flags and everything else are untouched.
+- dropbin-EC-9 (kept, now documented): `inspect('<name>')` when several tokens share that name
+  throws `AMBIGUOUS` (the bridge relies on the code); by name a token wins, so pass the token
+  uuid/id, an `opts.sceneId`, or the actor. The inspect row now declares its optional
+  `opts { sceneId? }` param (M8); describe.json regenerated.
 
 Added: `list(n, { brief })`, `restoreResult`, `inspect`, `selftest` (items-journal-28).
 - A restore another module refuses (a `preCreateItem` veto) is `{ ok: false, reason: "not-created" }`

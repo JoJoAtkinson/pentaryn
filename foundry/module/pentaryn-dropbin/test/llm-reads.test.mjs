@@ -166,3 +166,25 @@ test("dropbin-R5: a throwing create or an entry with no item source is not-creat
   }
   assert.equal((await api.restoreResult(1)).ok, true);
 });
+
+test("dropbin-EC-9: inspect by a name several tokens share throws AMBIGUOUS (kept, documented); a sceneId, uuid or id picks one", async () => {
+  const two = addScene(F, { id: "sceneTwo00000001", name: "Vault", tokens: [
+    { id: "tokGob0000000003", name: "Goblin", actorId: gob.id, sight: { enabled: true }, flags: {} },
+  ] });
+  try {
+    assert.throws(() => api.inspect("Goblin"), /AMBIGUOUS/);
+    assert.equal(api.inspect("Goblin", { sceneId: scene.id }).token.id, "tokGob0000000001");
+    assert.equal(api.inspect("Goblin", { sceneId: two.id }).token.id, "tokGob0000000003");
+    assert.equal(api.inspect("tokGob0000000003").token.id, "tokGob0000000003");
+    assert.equal(api.inspect(gob).actor.id, gob.id, "the actor itself is never ambiguous");
+  } finally {
+    F.game.scenes.delete(two.id);
+  }
+  const row = api.describe().methods.find(m => m.path === "inspect");
+  assert.match(row.params[0].doc, /AMBIGUOUS/, "the ref doc names the AMBIGUOUS throw");
+  assert.deepEqual(row.params.map(p => p.name), ["ref", "opts"], "M8: the opts {sceneId} param is declared");
+  assert.equal(row.params[1].optional, true);
+  const { readFileSync } = await import("node:fs");
+  const readme = readFileSync(new URL("../README.md", import.meta.url), "utf8");
+  assert.match(readme, /several tokens of that name throw `AMBIGUOUS`/, "README documents the AMBIGUOUS throw");
+});
