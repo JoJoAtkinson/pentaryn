@@ -187,6 +187,9 @@ exactly one shutdown snapshot — `vtt-down` does not take a second. `foundry-up
 own. `vtt-up`'s pre-launch backup (`foundry-backup-safe`) adds none either: while the shutdown upload is
 still running it skips ("that upload holds this world"); once that upload is done it digest-skips the
 unchanged world.
+Proved live on 2026-10-13: `make foundry-down WAIT=1` took one shutdown snapshot, and that
+snapshot, restored into a side folder (never over the live world), matched the stopped world
+file for file (497/497) — [`../plans/defect-wave-3-2026-10-13/README.md`](../plans/defect-wave-3-2026-10-13/README.md).
 
 **The upload runs in the background.** `foundry-down` (and so `vtt-down`) builds the tar while Foundry is stopped (that
 part needs "stopped", so it finishes before the command returns — the world tar and a tar of any
@@ -341,7 +344,8 @@ OneDrive/DnD/foundry/
   bundles/          automatic, shared      ← module@<id>@<version>@<fp>.tar.gz, system@…; one per
                                              content fingerprint; deleted only when no retained
                                              snapshot references it and it is older than 7 days
-  system-backup/    legacy — no longer written (systems are bundles); delete by hand
+  system-backup/    legacy — no longer holds anything new (systems are bundles); delete by hand
+                    (the tool still creates the empty folder — defect wave 3 still open)
 ```
 
 A world snapshot holds `Data/worlds` + `Config` only (~45 MB). Every folder under `Data/modules`

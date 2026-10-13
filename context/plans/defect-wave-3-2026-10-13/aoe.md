@@ -1,6 +1,6 @@
 # Defect wave 3 (2026-10-13) — pentaryn-aoe
 
-**Read this when** you want the history of defect wave 3 for the area-of-effect module
+**Read this when:** you want the history of defect wave 3 for the area-of-effect module
 (`pentaryn-aoe`): which defect was fixed, how, and how to check it live. This is a record, not
 instructions. To use the module, read [`context/foundry/aoe.md`](../../foundry/aoe.md).
 

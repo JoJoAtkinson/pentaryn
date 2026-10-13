@@ -1,6 +1,6 @@
 # Defect wave 3 (2026-10-13) — dropbin
 
-**Read this when** you want the history of defect wave 3 for the Drop Bin module
+**Read this when:** you want the history of defect wave 3 for the Drop Bin module
 (`pentaryn-dropbin`): the two items wave 2 left open, what changed, and where each is tested.
 History only; to operate the module read `foundry/module/pentaryn-dropbin/README.md`.
 

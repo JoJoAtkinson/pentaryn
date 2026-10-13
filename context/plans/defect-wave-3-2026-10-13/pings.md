@@ -1,6 +1,6 @@
 # Defect wave 3 (2026-10-13) — pings
 
-**Read this when** you want the history of how the parked wave-2 pings work got back onto main in
+**Read this when:** you want the history of how the parked wave-2 pings work got back onto main in
 defect wave 3: why `make test` was red, what changed, and how to check it live. History, not
 instructions. The use-doc is `foundry/module/pentaryn-pings/README.md`.
 

@@ -370,6 +370,10 @@ FIX-3 forward fix: the shard keeps its 3 light settings, and a doused torch keep
 
 ## Still open
 
+Defect wave 3 (2026-10-13) closed most of this list — see
+[`../defect-wave-3-2026-10-13/README.md`](../defect-wave-3-2026-10-13/README.md) for what it fixed
+and what is still open. The list below is kept as written.
+
 **Parked, reverted or not run.**
 
 - **pings is parked.** `make test` fails
