@@ -288,6 +288,36 @@ def test_parse_gate_still_skips_syntax_without_node_M3(tmp_path, monkeypatch):
     assert res.ok is True and res.skipped
 
 
+# ── every language file (final-review py-ops EXT-4) ───────────────────────────
+
+def test_parse_gate_checks_a_declared_language_path_EXT_4(tmp_path, monkeypatch):
+    monkeypatch.setattr(modules, "_node_available", lambda: False)
+    root = _module(tmp_path, {"main.mjs": "export const a = 1;\n", "i18n/fr.json": "{,}"},
+                   manifest={"id": "pentaryn-demo", "esmodules": ["main.mjs"],
+                             "languages": [{"lang": "fr", "path": "i18n/fr.json"}]})
+    res = modules._gate_parse(TmpSpec(root, check=("parse",)))
+    assert res.ok is False and "malformed JSON in i18n/fr.json" in res.summary
+
+
+def test_parse_gate_checks_every_lang_file_on_disk_EXT_4(tmp_path, monkeypatch):
+    monkeypatch.setattr(modules, "_node_available", lambda: False)
+    root = _module(tmp_path, {"main.mjs": "export const a = 1;\n",
+                              "lang/en.json": "{}", "lang/fr.json": "{,}"})
+    res = modules._gate_parse(TmpSpec(root, check=("parse",)))
+    assert res.ok is False and "malformed JSON in lang/fr.json" in res.summary
+
+
+def test_parse_gate_leaves_a_missing_declared_language_to_imports_EXT_4(tmp_path, monkeypatch):
+    monkeypatch.setattr(modules, "_node_available", lambda: False)
+    root = _module(tmp_path, {"main.mjs": "export const a = 1;\n", "lang/en.json": "{}"},
+                   manifest={"id": "pentaryn-demo", "esmodules": ["main.mjs"],
+                             "languages": [{"lang": "en", "path": "lang/en.json"},
+                                           {"lang": "de", "path": "lang/de.json"}]})
+    assert modules._gate_parse(TmpSpec(root, check=("parse",))).ok is True
+    res = modules._gate_imports(TmpSpec(root, check=("imports",)))
+    assert any("module.json declares lang/de.json" in p for p in res.problems)
+
+
 def test_imports_gate_reports_a_malformed_manifest_M3(tmp_path):
     res = modules._gate_imports(TmpSpec(_malformed_manifest(tmp_path), check=("imports",)))
     assert res.ok is False

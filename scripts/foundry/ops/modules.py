@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import json
 import os
+import posixpath
 import re
 import shutil
 import subprocess
@@ -105,15 +106,34 @@ def _gate_parse(spec: cfg.ModuleSpec) -> GateResult:
     """JSON.parse every .json the module declares, and `node --check` every .mjs.
 
     The JSON half needs no node, so it runs first and always: a malformed module.json
-    must fail here, not crash a later gate (final-review py-ops M3)."""
-    for rel in ("module.json", "lang/en.json"):
+    must fail here, not crash a later gate (final-review py-ops M3).
+
+    The language files are every `languages[].path` the manifest declares plus every
+    lang/*.json on disk, once each (final-review py-ops EXT-4). A declared path that does
+    not exist is skipped here — the imports gate reports it."""
+    def load(rel: str):
+        """Parse one file; None if it is absent, a GateResult if it is malformed."""
         path = spec.src / rel
-        if not path.exists():
-            continue
+        if not path.is_file():
+            return None
         try:
-            json.loads(path.read_text(encoding="utf-8"))
+            return json.loads(path.read_text(encoding="utf-8"))
         except json.JSONDecodeError as exc:
             return GateResult("parse", False, f"malformed JSON in {rel}: {exc}")
+
+    manifest = load("module.json")
+    if isinstance(manifest, GateResult):
+        return manifest
+    langs = manifest.get("languages") if isinstance(manifest, dict) else None
+    declared = [l.get("path") for l in langs if isinstance(l, dict)] \
+        if isinstance(langs, list) else []
+    on_disk = sorted(p.relative_to(spec.src).as_posix()
+                     for p in (spec.src / "lang").glob("*.json"))
+    for rel in dict.fromkeys(posixpath.normpath(p) for p in (*declared, *on_disk)
+                             if isinstance(p, str) and p):
+        res = load(rel)
+        if isinstance(res, GateResult):
+            return res
 
     if not _node_available():
         return GateResult("parse", True, "node not installed — skipping the syntax check",
