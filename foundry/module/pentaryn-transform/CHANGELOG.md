@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+- **Two quick rounds both count against Starry Form (transform-ui/lens-rerun, defect wave 2).**
+  starry-adapter.mjs `tickStarry` read the form's time left and wrote it back minus the clock's
+  advance; a second advance (the GM clicking Next Round twice) landing before the first write came
+  back read the same time left, so one round was lost. Ticks of one form now run one at a time on
+  each client, each reading what the last one wrote ([declared]; test "transform-ui/lens-rerun … two
+  clock advances" in starry.test.mjs; no new strings or hooks).
 - **The Starry Bonus-bar rebuild never overlaps a render of the bar (transform-ui/lens-rerun, defect
   wave 2).** hud-panels.mjs `onStarryChange` called the Bonus panel's `render()` unawaited every time
   the form changed. Argon's ActionPanel render is not re-entrant, so a rebuild landing during another

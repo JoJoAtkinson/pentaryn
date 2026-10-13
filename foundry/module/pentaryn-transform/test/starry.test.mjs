@@ -480,6 +480,27 @@ test("perf-2: one Starry Form lookup per druid per tick, on a counting tick and 
   }
 });
 
+test("transform-ui/lens-rerun [declared]: two clock advances before the first time-left write lands both count", async () => {
+  const { talo } = fresh();
+  await S.assumeStarry(talo, "archer");
+  const effect = talo.effects.get(SID);
+  const write = effect.update.bind(effect);
+  const held = [];
+  effect.update = changes => new Promise(r => held.push(r)).then(() => write(changes));   // the server round trip
+  startCombat(talo);
+  try {
+    const before = () => { game.time.worldTime += 6; Hooks.callAll("updateWorldTime", game.time.worldTime, 6, {}, IDS.gm); };
+    before();
+    before();                                         // the GM clicks Next Round twice
+    await flush();
+    while (held.length) { held.shift()(); await flush(); }
+    assert.equal(S.starrySecondsLeft(talo), 588, "transform-ui/lens-rerun: the second round must not be lost to a stale time-left read");
+  } finally {
+    game.combats.clear();
+    effect.update = write;
+  }
+});
+
 test("D8-starry: a failed combat-time write warns 'starry form timing failed'; a form from before D8 is left to the world clock", async () => {
   const { talo } = fresh();
   await S.assumeStarry(talo, "archer");

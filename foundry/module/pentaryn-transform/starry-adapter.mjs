@@ -90,6 +90,8 @@ export function starrySecondsLeft(actor) {
   return secondsLeft({ start: e?.start?.time ?? e?._source?.start?.time, seconds: e?._source?.duration?.value, now: game.time.worldTime });
 }
 
+const ticking = new Map();   // form effect uuid → its tick in flight on this client
+
 /**
  * The world clock moved dt seconds while the druid is in a started combat: count the form's time
  * down (D8: only combat time counts). "expired" when it has run out, "ticked" after the write,
@@ -97,6 +99,17 @@ export function starrySecondsLeft(actor) {
  * the caller already found (perf-2: one lookup per druid per tick).
  */
 export async function tickStarry(actor, dt, effect = activeStarry(actor)) {
+  // One tick at a time per form on this client (transform-ui/lens-rerun, [declared]): a second clock
+  // advance landing before the first write came back read the same time left, and one tick was lost.
+  const key = effect?.uuid;
+  if (!key) return tickOnce(effect, dt);
+  const run = () => tickOnce(effect, dt);   // after the last tick either way: its caller reported a failure
+  const job = (ticking.get(key) ?? Promise.resolve()).then(run, run);
+  ticking.set(key, job);
+  return job.finally(() => { if (ticking.get(key) === job) ticking.delete(key); });
+}
+
+async function tickOnce(effect, dt) {
   const left = effect?.getFlag?.(MODULE, "starry")?.left;
   if (!Number.isFinite(left) || !Number.isFinite(dt) || dt === 0) return null;
   const next = Math.min(STARRY_SECONDS, left - dt);
