@@ -151,6 +151,32 @@ export function drawBadges() {
   frame.draw();
 }
 
+/**
+ * The ids of this canvas's marked tokens (ties-ui-perf-10) — a scheduling gate, never the paint's
+ * source: the plan is still derived from the token flags, so a stale id costs one idle frame, not a
+ * wrong badge. Rebuilt on canvasReady, kept by createToken / updateToken (flag writes) / deleteToken,
+ * so refreshToken — every token's every animation step — only asks for a frame for a marked token.
+ * GM only, like the layer: a player never fills it.
+ */
+const marked = new Set();
+
+function rebuildMarked() {
+  marked.clear();
+  if (!game.user?.isGM) return;
+  for (const p of canvas?.tokens?.placeables ?? []) {
+    const id = p?.id ?? p?.document?.id;
+    if (id && readWorn(p.document)) marked.add(id);
+  }
+}
+
+/** Re-read one token's mark into the set. */
+function trackMark(doc) {
+  const id = doc?.id;
+  if (!id || !game.user?.isGM) return;
+  if (readWorn(doc)) marked.add(id);
+  else marked.delete(id);
+}
+
 function paintBadges() {
   if (!canvas?.ready) return;
   if (!game.user?.isGM) return; // the whole layer is GM-only; players never get a frame of it
@@ -291,15 +317,33 @@ export function install(reg) {
   reg.on("canvasTearDown", () => {
     state.layer = null;
     state.painted = null;
+    marked.clear();
   }, { label: "worn: canvasTearDown" });
 
-  reg.on("canvasReady", () => drawBadges(), { label: "worn: canvasReady" });
-  // hot: state.layer — drawBadges only schedules one frame; badges ride their tokens
-  reg.on("refreshToken", () => drawBadges(), { label: "worn: refreshToken" });
-  reg.on("deleteToken", () => drawBadges(), { label: "worn: deleteToken" });
-  reg.on("updateToken", (_doc, changes) => {
+  reg.on("canvasReady", () => {
+    rebuildMarked();
+    drawBadges();
+  }, { label: "worn: canvasReady" });
+  // hot: state.layer — drawBadges only schedules one frame; badges ride their tokens, and only a
+  // marked token's step asks for it (ties-ui-perf-10)
+  reg.on("refreshToken", token => {
+    const id = token?.id ?? token?.document?.id;
+    if (id && marked.has(id)) drawBadges();
+  }, { label: "worn: refreshToken" });
+  // a pasted or dragged-in token can arrive already marked
+  reg.on("createToken", doc => {
+    trackMark(doc);
+    if (marked.has(doc?.id)) drawBadges();
+  }, { label: "worn: createToken" });
+  reg.on("deleteToken", doc => {
+    marked.delete(doc?.id);
+    drawBadges();
+  }, { label: "worn: deleteToken" });
+  reg.on("updateToken", (doc, changes) => {
     // only a flag write can change what is marked; movement is refreshToken's job
-    if (foundry.utils.getProperty(changes ?? {}, `flags.${MODULE}`) !== undefined) drawBadges();
+    if (foundry.utils.getProperty(changes ?? {}, `flags.${MODULE}`) === undefined) return;
+    trackMark(doc);
+    drawBadges();
   }, { label: "worn: updateToken" });
 
   // the worn-mark API paths (rows in api-manifest.mjs) — GM only, per token
@@ -310,4 +354,5 @@ export function install(reg) {
 export function uninstall() {
   frame.cancel();
   dropBadges();
+  marked.clear();
 }

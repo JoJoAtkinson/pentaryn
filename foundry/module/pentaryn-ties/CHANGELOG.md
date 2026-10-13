@@ -26,6 +26,11 @@ Added: `inspect(ref, { as })` (the dossier), `selftest()`, `attributes.effective
 (with the kind pointer), `attributes.tree/branch/describeId`, `study.factStatus/shareFact/forgetFact`,
 `study.identified`.
 
+Fixed (declared): the worn badges keep the ids of the scene's marked tokens (rebuilt on
+`canvasReady`, kept by a new `createToken` hook, `updateToken` flag writes and `deleteToken`), so a
+token's animation step asks for a badge repaint only when that token is marked; the badges drawn are
+unchanged. ties-ui-perf-10.
+
 Fixed (declared): the Look window's `updateActor` hook checks the actor against the character, the
 subject and its kind before flattening the change, so an unrelated actor's update returns at once;
 what refreshes the window is unchanged. ties-ui-perf-9.

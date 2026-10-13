@@ -32,7 +32,7 @@ test("each feature's hooks, in order, on a registry of its own; uninstall + offA
     "look-menu": ["on:canvasReady", "on:canvasPan", "on:canvasTearDown"],
     sheet: ["on:deleteActor", "on:renderNPCActorSheet", "on:renderCharacterActorSheet", "on:renderActorSheetV2", "on:renderActorSheet"],
     overlay: ["on:canvasTearDown", "on:canvasReady", "on:canvasPan", "on:refreshToken", "on:sightRefresh"],
-    worn: ["on:renderTokenHUD", "on:canvasTearDown", "on:canvasReady", "on:refreshToken", "on:deleteToken", "on:updateToken"],
+    worn: ["on:renderTokenHUD", "on:canvasTearDown", "on:canvasReady", "on:refreshToken", "on:createToken", "on:deleteToken", "on:updateToken"],
     "item-marks": ["on:renderBaseActorSheet"],
   };
   for (const f of FEATURES) {

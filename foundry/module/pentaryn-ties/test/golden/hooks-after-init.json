@@ -37,6 +37,10 @@
   },
   {
     "kind": "on",
+    "name": "createToken"
+  },
+  {
+    "kind": "on",
     "name": "deleteToken"
   },
   {

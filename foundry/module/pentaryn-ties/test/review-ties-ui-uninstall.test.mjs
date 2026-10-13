@@ -46,8 +46,9 @@ test("ties-ui-M8: uninstall drops the wire and badge layers, cancels queued fram
   F.flushFrames();
   assert.equal(liveLayers().length, 2, "a wire layer and a badge layer are painted");
 
-  // a paint queued for each layer, then uninstall before the frame runs
-  F.fire("refreshToken");
+  // a paint queued for each layer, then uninstall before the frame runs (the marked token's step:
+  // since ties-ui-perf-10 an unmarked or missing token asks for no badge frame)
+  F.fire("refreshToken", canvas.tokens.get("zzTokNpc00000001"));
   assert.ok(F.frames.length >= 2, "both painters queued a frame");
   const writesBefore = pinWrites();
 
