@@ -139,7 +139,11 @@ export function makeApplicationV2() {
       if (this.element) this.element.removed = true;
       return this;
     }
-    bringToFront() { W().calls.push({ op: "app.bringToFront" }); }
+    // core reads this.element.style here: before the first render the element is not there yet and it throws
+    bringToFront() {
+      if (!this.element) throw new TypeError("Cannot read properties of undefined (reading 'style')");
+      W().calls.push({ op: "app.bringToFront" });
+    }
     _onPosition() {}
     _updatePosition(position) { return position; }
   };
