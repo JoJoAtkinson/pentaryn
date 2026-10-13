@@ -182,6 +182,7 @@ function composeSpecialBar(panel, actor) {
 
 function onActionPanelRender(panel, element, actor) {
   // hot: the panel's actor only (its items/effects, map lookups, combat's coversMultiattack); no world iteration
+  if (panel) composed.add(panel);
   try {
     const a = actor ?? panel.actor;
     if (panel?.label === "DND5E.BonusAction") composeBonusBar(panel, a);
@@ -308,9 +309,28 @@ function onStarryChange(effect) {
   if (!effect?.getFlag?.(MODULE, "starry")) return;
   if (effect.parent !== hudActor()) return;
   const bonus = hudPanel("DND5E.BonusAction");
-  if (!bonus?.render) return;
+  if (bonus?.render) rebuildBonus(bonus);
+}
+
+// Argon's ActionPanel render is not re-entrant: two at once leave the first one's buttons in the bar
+// (transform-ui/lens-rerun, [declared]). A panel whose first render is still running composes the live
+// form when it ends, so it is left alone; a change during this module's own rebuild queues one more.
+const composed = new WeakSet();   // panels whose render has reached onActionPanelRender
+const rebuilding = new WeakMap(); // Bonus panel → { again } while this module's rebuild of it runs
+
+function rebuildBonus(bonus) {
+  if (!composed.has(bonus)) return;
+  const running = rebuilding.get(bonus);
+  if (running) { running.again = true; return; }
+  const state = { again: false };
+  rebuilding.set(bonus, state);
   for (const b of bonus._buttons ?? []) if (liveButtons.has(b)) { b.panel?.element?.remove(); liveButtons.delete(b); }
-  bonus.render();
+  Promise.resolve(bonus.render())
+    .catch(err => log.warn("Bonus bar rebuild failed", err))
+    .finally(() => {
+      rebuilding.delete(bonus);
+      if (state.again && hudPanel("DND5E.BonusAction") === bonus) rebuildBonus(bonus);
+    });
   setTimeout(dropStaleTooltip, 50);
 }
 

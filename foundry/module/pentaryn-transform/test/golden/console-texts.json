@@ -82,6 +82,11 @@
   [
     "hud-panels.mjs",
     "warn",
+    "Bonus bar rebuild failed"
+  ],
+  [
+    "hud-panels.mjs",
+    "warn",
     "Chalice offer skipped"
   ],
   [

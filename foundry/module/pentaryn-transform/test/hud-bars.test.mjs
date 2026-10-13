@@ -422,6 +422,41 @@ test("a Starry effect created/changed/deleted on the HUD's actor rebuilds the Bo
   mock.timers.tick(50);
 });
 
+test("transform-ui/lens-rerun [declared]: the Starry rebuild never overlaps a render of the Bonus bar, and a failed one warns", async () => {
+  const { talo } = fresh();
+  const p = A.panel("DND5E.BonusAction", [slot()]);
+  ui.ARGON.components.main = [p];
+  ui.ARGON._actor = talo;
+  await S.assumeStarry(talo, "archer");
+  assert.equal(p.renders, 0, "transform-ui/lens-rerun: a panel still in its first render composes the form itself; a second render would overlap it");
+  fire(p, talo);
+  await flush();
+  const plain = p.render;
+  let release;
+  p.render = async function () { this.renders += 1; await new Promise(r => { release = r; }); };
+  const effect = talo.effects.get(S.STARRY_EFFECT_ID);
+  await effect.update({ "flags.pentaryn-transform.starry.constellation": "dragon" });
+  await effect.update({ "flags.pentaryn-transform.starry.constellation": "chalice" });
+  assert.equal(p.renders, 1, "transform-ui/lens-rerun: a change during the rebuild must wait for it, not render the bar a second time at once");
+  release();
+  await flush();
+  assert.equal(p.renders, 2, "the queued change rebuilds once, after the first");
+  release();
+  await flush();
+  assert.equal(p.renders, 2);
+  F.console.length = 0;
+  p.render = async function () { this.renders += 1; throw new Error("argon"); };
+  await effect.update({ "flags.pentaryn-transform.starry.constellation": "archer" });
+  await flush();
+  assert.equal(p.renders, 3);
+  assert.deepEqual(F.console.filter(c => c[1].startsWith(MODULE)).map(c => c.slice(0, 2)), [["warn", "pentaryn-transform | Bonus bar rebuild failed"]]);
+  p.render = plain;
+  await S.endStarry(talo, { quiet: true });
+  assert.equal(p.renders, 4, "the bar rebuilds again once the failed one settled");
+  ui.ARGON.components.main = [];
+  mock.timers.tick(50);
+});
+
 test("D8-starry: a combat tick (only the time-left flag changes) does not rebuild the Bonus bar; a constellation change still does", async () => {
   const { talo } = fresh();
   const p = A.panel("DND5E.BonusAction", [slot()]);

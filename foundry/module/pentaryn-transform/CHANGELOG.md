@@ -4,6 +4,15 @@
 
 ## Unreleased
 
+- **The Starry Bonus-bar rebuild never overlaps a render of the bar (transform-ui/lens-rerun, defect
+  wave 2).** hud-panels.mjs `onStarryChange` called the Bonus panel's `render()` unawaited every time
+  the form changed. Argon's ActionPanel render is not re-entrant, so a rebuild landing during another
+  render of the same panel (Argon's first render after a rebind, or a second form change) could leave
+  the first render's buttons in the bar, and a failing render was an unhandled rejection. Now a panel
+  whose first render has not finished is left to compose the live form itself, a change during this
+  module's own rebuild queues one more rebuild after it, and a failed rebuild warns "Bonus bar rebuild
+  failed" ([declared]; test "transform-ui/lens-rerun … Starry rebuild" in hud-bars.test.mjs; golden
+  console-texts.json gains the row; no new strings or hooks).
 - **The Chalice offer has no real-time minute (transform-ui/lens-rerun, defect wave 2).**
   hud-panels.mjs put the pulsing Chalice button out after 60 s of wall-clock time, so a slow table
   lost the reminder mid-turn, against "timers count only game time". The offer is now a Set with no
