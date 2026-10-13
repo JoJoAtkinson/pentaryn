@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **A handle is found however its attachment is stored** (declared, aoe-mnt-7): `handleFor` read
+  the region's attached token by hand and missed a bare token id on the live region, falling back
+  to the region flag. It now reads it through `core.attachedTokenId`, which handles the live
+  document and the source string alike; the flag fallback stays. Pinned by
+  `test/areas.test.mjs`.
 - **No-stacking looks up fewer spells** (declared, aoe-perf-2): with `noSpellStacking` on, every
   new effect looked up the source spell of every effect already on the actor before discarding
   the ones with another name or switched off. It now drops those first and looks up only enabled

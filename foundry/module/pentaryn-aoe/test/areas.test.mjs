@@ -170,6 +170,17 @@ test("handleFor: the attached handle, else a token flagged with the region, else
   assert.equal(A.handleFor({ id: "x" }), null);
 });
 
+test("aoe-mnt-7 handleFor reads the attachment through attachedTokenId: a bare id string on the live region finds the handle", () => {
+  const s = W.scene({ id: "FindScene0000007" });
+  const h = W.token(s, { id: "attachedTok00007", flags: { [MODULE]: { handle: true } } });
+  const bare = { id: "regionFind000007", parent: s, attachment: { token: h.id } };
+  assert.equal(A.handleFor(bare), h, "a string attachment with no _source still finds the handle");
+  const live = { id: "regionFind000008", parent: s, attachment: { token: h } };
+  assert.equal(A.handleFor(live), h, "a live token document attachment finds the handle");
+  const src = { id: "regionFind000009", parent: s, attachment: { token: null }, _source: { attachment: { token: h.id } } };
+  assert.equal(A.handleFor(src), h, "the source string finds the handle");
+});
+
 test("areasFor / spellAreas: by activity, by spell item; one scene or all; empty without an id", () => {
   const s1 = W.scene({ id: "FindScene0000002" });
   const s2 = W.scene({ id: "FindScene0000003" });

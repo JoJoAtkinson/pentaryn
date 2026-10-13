@@ -6,7 +6,7 @@
  * that touches `game.itempiles` (adjustments row itempiles-aoe-skip-piles).
  */
 
-import { MODULE, aoeFlags, isHandle, isTemplateRegion, regionFromSpell, regionOfActivity } from "./core.mjs";
+import { MODULE, aoeFlags, attachedTokenId, isHandle, isTemplateRegion, regionFromSpell, regionOfActivity } from "./core.mjs";
 import { makeLog } from "./lib/log.mjs";
 
 const log = makeLog(MODULE);
@@ -20,7 +20,7 @@ export function handleActor() {
 export function handleFor(region) {
   const scene = region?.parent;
   if (!scene) return null;
-  const id = region.attachment?.token?.id ?? region._source?.attachment?.token;
+  const id = attachedTokenId(region);
   const attached = id ? scene.tokens.get(id) : null;
   if (attached && isHandle(attached)) return attached;
   return scene.tokens.find(tk => aoeFlags(tk).region === region.id) ?? null;
