@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **The tray's multiplier labels live beside the multipliers** (declared, EXT-3): the ×0 ×¼ ×½ ×1
+  ×2 labels were a separate table in `tray.mjs`, so a multiplier added to `core.MULTIPLIERS` would
+  have rendered an "undefined" option. They are now `core.MULTIPLIER_LABELS` (frozen, keyed by
+  `MULTIPLIERS`) and the tray imports them. The tray's HTML is unchanged. Pinned by
+  `test/multiplier-labels.test.mjs`, which checks every multiplier has a label.
 - **The sweep makes a scene's missing handles in one go** (declared, AC-7): it created each
   missing area handle with its own Token create and its own Region update — two round trips per
   template region. It now creates every missing handle in one Token create (keepId) and attaches

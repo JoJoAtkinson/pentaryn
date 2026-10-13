@@ -10,7 +10,7 @@
  * section.icon-row, then <damage-application>; this tray goes right after the native one.
  */
 
-import { aoeFlags, MULTIPLIERS, playerStatus, applicableRows, hydrateDamages, areaLocked } from "./core.mjs";
+import { aoeFlags, MULTIPLIERS, MULTIPLIER_LABELS, playerStatus, applicableRows, hydrateDamages, areaLocked } from "./core.mjs";
 import { setting } from "./settings.mjs";
 
 const esc = s => foundry.utils.escapeHTML(String(s ?? ""));
@@ -18,7 +18,6 @@ const esc = s => foundry.utils.escapeHTML(String(s ?? ""));
 let context = null;
 /** -9: the listeners go through the kit's pass-through guard, so a rejected roll or Apply is logged with the module prefix. */
 const listenerGuard = (label, fn) => (context?.reg ? context.reg.guard(label, fn) : fn);
-const MULT_LABEL = { 0: "×0", 0.25: "×¼", 0.5: "×½", 1: "×1", 2: "×2" };
 
 function preview(row, res, message = null) {
   if (row.multiplier === null || row.multiplier === undefined) return "—";
@@ -50,7 +49,7 @@ function saveCell(row) {
 }
 
 function rowHTML(row, res, message = null) {
-  const opts = MULTIPLIERS.map(m => `<option value="${m}" ${row.multiplier === m ? "selected" : ""}>${MULT_LABEL[m]}</option>`).join("");
+  const opts = MULTIPLIERS.map(m => `<option value="${m}" ${row.multiplier === m ? "selected" : ""}>${MULTIPLIER_LABELS[m]}</option>`).join("");
   const blank = row.multiplier === null || row.multiplier === undefined ? `<option value="" selected>?</option>` : "";
   const locked = row.applied || res.superseded ? "disabled" : "";
   const extra = row.kind === "auto"

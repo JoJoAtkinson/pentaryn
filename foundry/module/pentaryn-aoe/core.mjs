@@ -90,6 +90,8 @@ export function multiplierFor(success, onSave) {
 
 /** The multipliers the tray offers, same set as dnd5e's DamageApplicationElement. */
 export const MULTIPLIERS = [0, 0.25, 0.5, 1, 2];
+/** EXT-3: the tray's label for each of MULTIPLIERS, kept beside them (test/multiplier-labels pins the coverage). */
+export const MULTIPLIER_LABELS = Object.freeze({ 0: "×0", 0.25: "×¼", 0.5: "×½", 1: "×1", 2: "×2" });
 
 /** How far back the GM's save matching and api.latestResolution look in the chat log (messages). */
 export const RECENT_MESSAGES = 60;

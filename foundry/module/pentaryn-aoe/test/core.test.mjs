@@ -316,7 +316,7 @@ test("VERSION === module.json version", () => {
 // are dropped; unprotectRow (the GM's tray toggle) is added.
 test("the pure surface core exports today (names; later steps may add, never drop)", () => {
   const want = [
-    "MODULE", "MULTIPLIERS", "allApplied", "aimFromCaster", "aimsFromCaster", "aoeFlags", "applicableRows", "attachedToOther",
+    "MODULE", "MULTIPLIERS", "MULTIPLIER_LABELS", "allApplied", "aimFromCaster", "aimsFromCaster", "aoeFlags", "applicableRows", "attachedToOther",
     "attachedTokenId", "buildRows", "centreOf", "fillSave", "handleVertical", "unprotectRow",
     "isCreature", "isHandleTarget", "isTemplateRegion", "matchSave", "multiplierFor", "newestRegion", "pendingEffects",
     "placementCancelled", "placementInProgress", "playerStatus", "protectRows", "regionFromSpell", "regionOfActivity", "rowKind",
