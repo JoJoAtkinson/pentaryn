@@ -35,7 +35,7 @@ object. Ask it what it offers: `game.pentaryn.names.describe()` (offline: `test/
 
 | Call | Returns | Notes |
 |---|---|---|
-| `sync(actorRef, oldName, newName)` | number of labels changed (prototype + placed tokens this user can edit) | writes. On a GM client it also relabels the actor's combatants by the same rule (not counted, not toasted). `actorRef`: an Actor, a token or placeable, a UUID, an id or a whole name (exact, then case-insensitive; never a substring); a token or a token's synthetic actor means its base (world) actor. An ambiguous name returns `{ok: false, code: "AMBIGUOUS", reason}`; a ref that is not an actor, token, placeable or string (a number, a plain object, an Item) returns `{ok: false, code: "BAD_ARGS", reason}`, writing nothing; a ref that matches nothing rejects with a `TypeError` |
+| `sync(actorRef, oldName, newName)` | number of labels changed (prototype + placed tokens this user can edit) | writes. On a GM client it also relabels the actor's combatants by the same rule (not counted, not toasted). `actorRef`: an Actor, a token or placeable, a UUID, an id or a whole name (exact, then case-insensitive; never a substring); a token or a token's synthetic actor means its base (world) actor. An ambiguous name returns `{ok: false, code: "AMBIGUOUS", reason}`; a ref that is not an actor, token, placeable or string (a number, a plain object, an Item) returns `{ok: false, code: "BAD_ARGS", reason}`, writing nothing, and so does a missing or non-string `oldName`/`newName`; a ref that matches nothing rejects with a `TypeError`. Always async: every outcome, the failures included, arrives through the returned Promise |
 | `relabel(label, oldName, newName)` | the new label, or `null` for a nickname | pure preview, safe to call |
 | `shortName(name)` | the part before the first comma, trimmed | pure |
 
@@ -44,6 +44,12 @@ the GM bridge is that client — but without waiting: `await actor.update({name}
 prototype and scene writes are still in flight. A `sync()` called before they finish sees the old
 labels and repeats them (same values, a non-zero count and a second toast). Call `sync` only to
 repair labels that missed a rename, after the first relabel has finished.
+
+Two renames of one actor on the same client are chained (names-ac-3): the second relabel starts
+after the first settles and reads the labels it wrote, so `Bob → Rob → Robert` lands on `Robert`
+however fast they come. Renames of one actor from two different tabs or users less than a round
+trip apart are not chained and can leave labels on the middle name: call
+`sync(actor, middle, final)` to repair.
 
 Kit members: `describe()`, `version`, `contract`, `settings()` (always `{}`), `trace()`, `uninstall()`.
 
@@ -77,6 +83,9 @@ travels in the update options. Only that client (`userId === game.user.id`) writ
 A GM rename runs in every tab of that GM (the MCP bridge tab and a browser tab both pass the
 initiator gate); both send the same names, so the second write changes nothing. A failed write is logged as
 `pentaryn-names | relabel after rename failed` with `{actor, from, to}` and the error; no toast.
+A refused combatant write (GM only) is logged once as `pentaryn-names | relabel combatants after
+rename failed` with `{actor, from, to}` and the error, and the rename carries on: the token toast
+still shows and `sync` resolves with the token count (names-edge-3).
 
 ## Extending
 

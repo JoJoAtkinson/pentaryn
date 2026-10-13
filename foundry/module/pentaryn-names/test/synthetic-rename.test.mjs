@@ -86,3 +86,27 @@ test("names-edge-1: a nickname on the renamed synthetic actor's token is left al
   assert.deepEqual(effects(F.calls), []);
   assert.equal(scene.tokens.get("tokA1000000000001").name, "Bob");
 });
+
+// [declared] names-edge-3: a refused combatant write after a synthetic rename is logged once and the
+// token toast still shows (before, the rejection skipped it).
+test("names-edge-3: a synthetic rename whose combatant write is refused still toasts and logs once", async () => {
+  reset(F);
+  tok.name = "Bob";
+  synthetic.name = "Bob";
+  const combat = game.combats.get(COMBAT);
+  for (const c of combat.combatants) c.name = "Bob";
+  const keep = combat.updateEmbeddedDocuments;
+  const keepWarn = console.warn;
+  const warns = [];
+  combat.updateEmbeddedDocuments = async () => { throw new Error("ZZ combatant update refused"); };
+  console.warn = (...args) => warns.push(args.map(a => (a instanceof Error ? `${a.name}: ${a.message}` : a)));
+  try {
+    await renameSynthetic("Rob");
+  } finally {
+    combat.updateEmbeddedDocuments = keep;
+    console.warn = keepWarn;
+  }
+  assert.deepEqual(warns, [[`pentaryn-names | relabel combatants after rename failed`, { actor: synthetic.uuid, from: "Bob", to: "Rob" }, "Error: ZZ combatant update refused"]]);
+  assert.deepEqual(effects(F.calls).filter(c => c.op === "notify").map(c => c.message), ['Token labels updated to "Rob" (1).']);
+  assert.equal(tok.name, "Rob");
+});
