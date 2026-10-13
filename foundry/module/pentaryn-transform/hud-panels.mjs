@@ -264,9 +264,10 @@ function onPortraitRender(panel, element, actor) {
 }
 
 function onWorldTime() {
-  // hot: reads only the HUD's own actor (ui.ARGON._actor); display only, every client.
+  // hot: reads only the HUD's own actor (ui.ARGON._actor) and the Chalice offers; display only, every client.
   const portrait = hudPortrait();
   if (portrait?.element) { const actor = hudActor(); if (actor) repaintPortrait(portrait.element, actor); }
+  if (chaliceReady.size) clearChalice();
 }
 
 /* ── the Wild Shape / Starry Form effect on the portrait: bigger, live time left ── */
@@ -327,27 +328,35 @@ function onStarryUpdate(effect, changes) {
 // "Whenever you cast a spell using a spell slot that restores Hit Points to a creature, you or
 // another creature within 30 feet of you can regain Hit Points equal to 1d8 + WIS" (2024 PHB). The
 // Chalice button sat beside Starry Form with nothing saying the second heal was there to take, so it
-// was missed. After such a spell, the Chalice button pulses until it is used or a minute passes.
+// was missed. After such a spell, the Chalice button pulses until it is used or game time moves on.
 // The player still clicks it and rolls (own dice stay possible); nothing is rolled for them.
 // No relay (EC-3): dnd5e.postUseActivity fires on the caster's client, and the druid's HUD is on
 // that client, so the pulse is a reminder on the casting player's own HUD only; other clients (the
 // GM's included) do not see it.
+// No wall clock (transform-ui/lens-rerun, [declared]): timers count only game time, so the offer
+// also ends when the world clock moves on (a round in combat, the GM advancing time out of it).
 
-const chaliceReady = new Map();   // actor uuid → timer
+const chaliceReady = new Set();   // actor uuids with an offer up
 
-function paintChalice(actor) {
-  if (actor !== hudActor()) return;
-  const on = chaliceReady.has(actor.uuid);
+function paintAll(on) {
   for (const el of document.querySelectorAll(".extended-combat-hud .ptf-starry-chalice")) {
     el.classList.toggle("ptf-chalice-ready", on);
   }
 }
 
+function paintChalice(actor) {
+  if (actor === hudActor()) paintAll(chaliceReady.has(actor.uuid));
+}
+
 function setChalice(actor, on) {
-  clearTimeout(chaliceReady.get(actor.uuid));
-  if (on) chaliceReady.set(actor.uuid, setTimeout(() => { chaliceReady.delete(actor.uuid); paintChalice(actor); }, 60_000));
+  if (on) chaliceReady.add(actor.uuid);
   else chaliceReady.delete(actor.uuid);
   paintChalice(actor);
+}
+
+function clearChalice() {
+  chaliceReady.clear();
+  paintAll(false);
 }
 
 function onChaliceUse(activity, usageConfig) {
@@ -393,10 +402,9 @@ export function install(reg) {
   reg.on("deleteActiveEffect", onStarryEnd, { label: "deleteActiveEffect: no Chalice to take" });
 }
 
-/** Remove the pointer listener; drop the live buttons and the Chalice offers (and their timers). */
+/** Remove the pointer listener; drop the live buttons and the Chalice offers. */
 export function uninstall() {
   document.removeEventListener("pointermove", onPointerMove, POINTER);
   liveButtons.clear();
-  for (const t of chaliceReady.values()) clearTimeout(t);
   chaliceReady.clear();
 }

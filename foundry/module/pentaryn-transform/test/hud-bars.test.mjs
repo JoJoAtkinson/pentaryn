@@ -447,7 +447,7 @@ test("D8-starry: a combat tick (only the time-left flag changes) does not rebuil
 
 /* ── Chalice ──────────────────────────────────────────────────────────────── */
 
-test("Chalice: a leveled heal with a slot lights the Chalice button for a minute; using it, ending the form, or time puts it out", async () => {
+test("Chalice: a leveled heal with a slot lights the Chalice button; using it, ending the form, or game time moving on puts it out", async () => {
   const { talo } = fresh();
   await S.assumeStarry(talo, "chalice");
   ui.ARGON._actor = talo;
@@ -475,14 +475,38 @@ test("Chalice: a leveled heal with a slot lights the Chalice button for a minute
   assert.equal(lit(), true, "a temp-HP part on a leveled spell");
   Hooks.callAll("dnd5e.postUseActivity", talo.items.get(IDS.starry).system.activities.get("sfChalice"), {}, {});
   Hooks.callAll("dnd5e.postUseActivity", cure, {}, {});
-  mock.timers.tick(59_999);
-  assert.equal(lit(), true);
-  mock.timers.tick(1);
-  assert.equal(lit(), false, "a minute passed");
+  game.time.worldTime += 6;
+  Hooks.callAll("updateWorldTime", game.time.worldTime, 6, {}, IDS.gm);
+  assert.equal(lit(), false, "game time moved on");
   Hooks.callAll("dnd5e.postUseActivity", cure, {}, {});
   assert.equal(lit(), true);
   await S.endStarry(talo, { quiet: true });
   assert.equal(lit(), false, "Starry Form ended");
+});
+
+test("transform-ui/lens-rerun [declared]: the Chalice offer has no wall-clock minute — it outlasts real time and ends when the world clock moves", async () => {
+  const { talo } = fresh();
+  await S.assumeStarry(talo, "chalice");
+  ui.ARGON._actor = talo;
+  const p = A.panel("DND5E.BonusAction", [slot()]);
+  fire(p, talo);
+  await flush();
+  const lit = () => p._buttons.some(b => b.element.classList.contains("ptf-chalice-ready"));
+  Hooks.callAll("dnd5e.postUseActivity", talo.items.get(IDS.cure).system.activities.get("cw1"), {}, {});
+  mock.timers.tick(10 * 60_000);
+  assert.equal(lit(), true, "transform-ui/lens-rerun: a slow table's ten real minutes must not put out the offer");
+  const q = A.panel("DND5E.BonusAction", [slot()]);
+  fire(q, talo);
+  await flush();
+  assert.ok(q._buttons.some(b => b.element.classList.contains("ptf-chalice-ready")), "a rebuilt bar still starts lit");
+  game.time.worldTime += 6;
+  Hooks.callAll("updateWorldTime", game.time.worldTime, 6, {}, IDS.gm);
+  assert.equal(lit(), false, "a round of combat (the world clock) ends the offer");
+  const r = A.panel("DND5E.BonusAction", [slot()]);
+  fire(r, talo);
+  await flush();
+  assert.ok(!r._buttons.some(b => b.element.classList.contains("ptf-chalice-ready")), "a rebuilt bar after the clock moved is dark");
+  await S.endStarry(talo, { quiet: true });
 });
 
 test("EC-2: a Chalice offer ends when the constellation changes — swap to the Archer and back within a minute: no pulse", async () => {
@@ -505,7 +529,6 @@ test("EC-2: a Chalice offer ends when the constellation changes — swap to the 
   fire(p, talo);
   await flush();
   assert.equal(lit(), false, "EC-2: the offer must not survive a change of constellation");
-  mock.timers.tick(60_000);
 });
 
 test("Chalice: not in the Chalice constellation → nothing; another actor's offer is not painted on this HUD; a failure warns", async () => {

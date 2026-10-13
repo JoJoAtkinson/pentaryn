@@ -4,6 +4,13 @@
 
 ## Unreleased
 
+- **The Chalice offer has no real-time minute (transform-ui/lens-rerun, defect wave 2).**
+  hud-panels.mjs put the pulsing Chalice button out after 60 s of wall-clock time, so a slow table
+  lost the reminder mid-turn, against "timers count only game time". The offer is now a Set with no
+  timer: it ends when the Chalice is used, the form ends or changes constellation, or the world
+  clock moves on (a round in combat, the GM advancing time), via the existing `updateWorldTime`
+  listener; that also drops offers for actors since deleted ([declared]; test
+  "transform-ui/lens-rerun … Chalice" in hud-bars.test.mjs; no new strings or hooks).
 - **wildshape-adapter.mjs is back under the 500-line adapter cap (EXT-8, defect wave 2).** The
   wildcard-art block (`formImage`, `formImageFor`, the wildcard listing, `wildcardFormImage`,
   `shiftSource`) and `traitsHtml` moved, unchanged, to the new `form-image-adapter.mjs`, which
