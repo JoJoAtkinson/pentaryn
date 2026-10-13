@@ -26,6 +26,10 @@ Added: `inspect(ref, { as })` (the dossier), `selftest()`, `attributes.effective
 (with the kind pointer), `attributes.tree/branch/describeId`, `study.factStatus/shareFact/forgetFact`,
 `study.identified`.
 
+Changed (declared, no table-visible change): Deliver and Forget ask one `missedAndLie` (study/gate.mjs)
+for the kind rung-0 lie rule — a failed kind row is a card only when the kind has an authored rung 0 —
+instead of two copies. The rule is now pinned on both paths (`test/kind-lie.test.mjs`). M11.
+
 Changed (declared, no table-visible change): `runCascade` is split into its plan / roll / record steps
 (`cascadePlanner`, `rollRung`, `recordRung`) and `shareFact` into resolve, select recipients, and one
 writer per namespace (`resolveShared`, `shareRecipients`, `shareIdent`, `shareLore`, `shareKind`). The

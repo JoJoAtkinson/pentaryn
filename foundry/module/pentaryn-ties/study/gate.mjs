@@ -93,8 +93,7 @@ async function deliverFact(fact, character) {
    * nothing. The one exception is a KIND below 15 with no authored rung 0 now: rows held before
    * 2026-10 parked the generic "nothing about it means anything" card, which is no longer said.
    */
-  const missed = rowMissed(fact, rec);
-  const lie = fact.ns === "kind" && missed && !!authoredTier(studyTiersOf(fact.ledger), 0);
+  const { missed, lie } = missedAndLie(fact, rec);
   const silent = isBlankProse(String(rec.text ?? "")) || (fact.ns === "kind" && missed && !lie);
   if (!(await applyPlayerWrites(character, fact, { text: rec.text, silent, tier: rec.tier }, now))) return false;
   await putBelief(fact, character.id, { ...rec, delivered: now, claim: null });
@@ -122,6 +121,16 @@ export function rowMissed(fact, rec) {
   if (!rec || rec.from) return false;
   if (fact.ns === "kind") return rec.total !== null && rec.total !== undefined && !(Number(rec.tier) >= 15);
   return rolledMiss(rec, fact.dc);
+}
+
+/**
+ * `rowMissed`, plus whether that miss is a kind's authored rung-0 lie — a failed kind row that
+ * still counts as a card because the kind has an authored rung 0. One test, so `deliverFact` and
+ * `forgetFact` agree on which failures the player holds (M11; pinned by test/kind-lie.test.mjs).
+ */
+export function missedAndLie(fact, rec) {
+  const missed = rowMissed(fact, rec);
+  return { missed, lie: fact.ns === "kind" && missed && !!authoredTier(studyTiersOf(fact.ledger), 0) };
 }
 
 /**
