@@ -49,6 +49,20 @@ export const MONSTER_LIST_PACKS = Object.freeze(["dnd-monster-manual.actors", "d
  */
 export const SPELL_PACKS = ["dnd-players-handbook.spells", "dnd5e.spells24", "dnd5e.spells"];
 
+/** The current (2024) spell packs: SPELL_PACKS without the 2014 ones — where a 2014 spell's counterpart lives. */
+export const CURRENT_SPELL_PACKS = SPELL_PACKS.filter(id => !EDITIONS[id]);
+
+/**
+ * A 2014 spell's counterpart in one current pack's index: the entry with the same
+ * `system.identifier` (2014 "Melf's Acid Arrow" is 2024 "Acid Arrow"), else the same name
+ * (case-insensitive), else undefined (lookup-2014-uuid).
+ */
+export function pickCounterpart(index, spell) {
+  const id = spell?.system?.identifier;
+  return (id ? index.find(e => e.system?.identifier === id) : undefined)
+      ?? pickByName(index, spell?.name ?? "", { substring: false });
+}
+
 /**
  * `opts.books` → `{ids, warning?}`: an array as given, a BOOKSETS name its set, any other string with a
  * dot one pack id; anything else is the rules set with a warning, so a typo is not answered silently (R5).

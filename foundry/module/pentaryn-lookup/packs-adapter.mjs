@@ -9,7 +9,7 @@
  * read that rejects answers as if the pack were absent, traced with the pack id (R4).
  */
 
-import { EDITIONS, SPELL_PACKS, featureRow, pickByName, toBook } from "./lookup-core.mjs";
+import { CURRENT_SPELL_PACKS, EDITIONS, SPELL_PACKS, featureRow, pickByName, pickCounterpart, toBook } from "./lookup-core.mjs";
 
 /**
  * The plain books, one load per LOCKED pack per session: pack id → Promise<book> (the promise, so two
@@ -121,6 +121,22 @@ export async function findSpell(ref, log = null) {
     if (doc) return doc;
   }
   return null;
+}
+
+/**
+ * A 2014 spell's counterparts in the current spell packs (CURRENT_SPELL_PACKS order), as uuids:
+ * the copies dnd5e's spell-list registry holds (lookup-2014-uuid). [] when none is found.
+ */
+export async function spellCounterparts(spell, log = null) {
+  const out = [];
+  for (const id of CURRENT_SPELL_PACKS) {
+    const pack = game.packs.get(id);
+    if (!pack) continue;
+    const index = await packRead(id, "getIndex", () => pack.getIndex({ fields: ["system.identifier"] }), log);
+    const hit = index && pickCounterpart(index, spell);
+    if (hit) out.push(`Compendium.${id}.Item.${hit._id}`);
+  }
+  return out;
 }
 
 /** dnd5e's spell-list registry, read at call time. */
