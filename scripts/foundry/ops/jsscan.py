@@ -249,11 +249,21 @@ class _Lexer:
         return i
 
 
+# (resolved path, st_mtime_ns, st_size) → (code, strings). One check runs the imports
+# gate and then the i18n gate over the same files; this lets the second reuse the
+# first's lex, while an edited file (new mtime or size) is lexed afresh. (perf-2)
+_SCANS: dict[tuple[Path, int, int], tuple[str, list[Str]]] = {}
+
+
 def scan(path: Path) -> Source:
     """Read a file into code-with-markers plus the literals that were lifted out."""
-    lx = _Lexer()
-    lx.feed(path.read_text(encoding="utf-8"))
-    return Source(path, "".join(lx.out), lx.strings)
+    st = path.stat()
+    key = (path.resolve(), st.st_mtime_ns, st.st_size)
+    if (hit := _SCANS.get(key)) is None:
+        lx = _Lexer()
+        lx.feed(path.read_text(encoding="utf-8"))
+        hit = _SCANS[key] = ("".join(lx.out), lx.strings)
+    return Source(path, *hit)
 
 
 # ── imports and exports ───────────────────────────────────────────────────────

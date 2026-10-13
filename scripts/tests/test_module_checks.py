@@ -346,3 +346,40 @@ def test_a_key_under_a_mistyped_pentaryn_root_fails(tmp_path, capsys):
     assert modules._check_i18n(i18n_module(tmp_path / "typo", bad, lang)) == 1
     out = capsys.readouterr().out
     assert "PENTARYN_DEM.title" in out and "main.mjs:2" in out
+
+
+# ── scan cache (perf-2) ───────────────────────────────────────────────────────
+
+def _count_lexes(monkeypatch) -> list[int]:
+    fed = [0]
+
+    class Counting(jsscan._Lexer):
+        def __init__(self) -> None:
+            super().__init__()
+            fed[0] += 1
+
+    monkeypatch.setattr(jsscan, "_Lexer", Counting)
+    return fed
+
+
+def test_perf_2_the_i18n_gate_reuses_the_imports_gates_scan(tmp_path, monkeypatch):
+    """perf-2: one check lexed every source twice — once per gate. Each file once now."""
+    spec = build(tmp_path, GOOD, lang={"DEMO.title": "Demo"})
+    fed = _count_lexes(monkeypatch)
+    modules._gate_imports(spec)
+    assert fed[0] == 2                  # main.mjs and lib.mjs
+    modules._gate_i18n(spec)
+    assert fed[0] == 2                  # nothing lexed a second time
+
+
+def test_perf_2_an_edited_file_is_scanned_again(tmp_path, monkeypatch):
+    import os
+    f = tmp_path / "a.mjs"
+    f.write_text('export const a = "one";\n', encoding="utf-8")
+    assert [s.value for s in jsscan.scan(f).strings] == ["one"]
+    f.write_text('export const a = "two";\n', encoding="utf-8")      # same size
+    st = f.stat()
+    os.utime(f, ns=(st.st_atime_ns, st.st_mtime_ns + 1_000_000))
+    assert [s.value for s in jsscan.scan(f).strings] == ["two"]
+    f.write_text('export const a = "three";\n', encoding="utf-8")    # new size
+    assert [s.value for s in jsscan.scan(f).strings] == ["three"]
