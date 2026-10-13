@@ -175,6 +175,13 @@ function paintWires() {
   const near = nearDistance();
   const width = Math.max(1, canvas.grid.size * 0.022);
 
+  // the first token per actor, from one pass — not a placeables scan per card (ties-ui-perf-4)
+  const firstToken = new Map();
+  for (const p of canvas.tokens.placeables) {
+    const id = p.actor?.id;
+    if (id && !firstToken.has(id)) firstToken.set(id, p);
+  }
+
   for (const card of live) {
     /**
      * The token this card was built above, if it is still on the scene and still visible —
@@ -202,7 +209,7 @@ function paintWires() {
     }
 
     // reach: only worth a line once the card has stopped being obviously "that one there"
-    const src = canvas.tokens.placeables.find(p => p.actor?.id === card.sourceId);
+    const src = firstToken.get(card.sourceId);
     if (src && gridsApart(src, target) > near) {
       strokeLine(g, centerOf(src), to, card.colour, 0.5, width);
     }

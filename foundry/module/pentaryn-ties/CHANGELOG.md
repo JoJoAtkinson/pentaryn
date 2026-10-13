@@ -26,6 +26,9 @@ Added: `inspect(ref, { as })` (the dossier), `selftest()`, `attributes.effective
 (with the kind pointer), `attributes.tree/branch/describeId`, `study.factStatus/shareFact/forgetFact`,
 `study.identified`.
 
+Fixed (declared): the tie wires find each card's source token from one pass over the scene's
+tokens per frame instead of one scan per card; the wires drawn are unchanged. ties-ui-perf-4.
+
 Fixed (declared): a save in the Attribute Review is no longer lost under a write from another GM
 tab (the bridge) that was already on its way. Every registry write stores a version stamp
 `{ rev, by }`; a tab whose write was overwritten by one that never saw it re-applies its own change
