@@ -73,7 +73,7 @@ test("the hp hook's Dead toggle on a revived corpse warns on failure instead of 
   const scene = addScene(F, { id: "sceneOne00000001", tokens: [{ id: "tokGob0000000001", name: "Goblin", actorId: gob.id, flags: { [MOD]: { corpse: true } } }] });
   const tok = scene.tokens.get("tokGob0000000001");
   Object.assign(gob, { statuses: new Set(["dead"]), toggleStatusEffect: async () => { throw new Error("no permission"); } });
-  gob.getActiveTokens = () => [tok];
+  gob.getDependentTokens = () => [tok];
   const lines = await warnings(async () => {
     Hooks.callAll("updateActor", gob, { system: { attributes: { hp: { value: 3 } } } });
     await flush();

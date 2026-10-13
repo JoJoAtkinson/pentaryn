@@ -16,7 +16,8 @@ the dnd5e 6 rarity keys).
 - **Only the dead can be looted.** An NPC at 0 HP, or carrying the Dead status, becomes a pile the
   players open with the usual double-click, from an adjacent square. Healing it above 0 turns it
   back into a creature. Set `flags.pentaryn-dropbin.noLoot = true` on a token or actor to keep a
-  0-HP NPC alive and unlootable (knocked out for questioning).
+  0-HP NPC alive and unlootable (knocked out for questioning). A linked NPC's tokens on every
+  scene convert, not only on the scene the GM is viewing (dropbin-EC-5).
 - **On the body:** the Dead skull as core's **full-body overlay**, and an **eye badge** in the
   token's top-right corner while the body still holds something. Every client draws the eye on the
   token itself; it is not a document. It disappears when the body is emptied or revived, and hides

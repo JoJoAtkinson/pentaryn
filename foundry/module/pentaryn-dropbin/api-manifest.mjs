@@ -31,7 +31,7 @@ export const MANIFEST = Object.freeze({
   flagScope: MODULE,
   rows: [
     corpseRow("corpses.sync", [ACTOR], "Promise<void>",
-      "Active GM: turn each eligible token of the actor into a corpse pile (dead) or back (alive). No-op elsewhere; without Item Piles or given a non-Actor, one console warning and nothing done.",
+      "Active GM: turn each eligible token of the actor, on every scene, into a corpse pile (dead) or back (alive). No-op elsewhere; without Item Piles or given a non-Actor, one console warning and nothing done.",
       { gm: true, writes: true, sideEffects: SYNC_WRITES }),
     corpseRow("corpses.toCorpse", [TOKEN_DOC], "Promise<void>",
       "Make this token a lootable corpse pile now (players get OBSERVER on its delta, a linked token's on its base actor; sight off; Dead as the overlay). A failed corpse-flag write reverts the new pile and rejects; without Item Piles or given a non-TokenDocument, one console warning and nothing done.",

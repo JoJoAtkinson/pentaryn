@@ -30,7 +30,7 @@
         "ActiveEffect (Lootable, removed)"
       ],
       "legacy": true,
-      "doc": "Active GM: turn each eligible token of the actor into a corpse pile (dead) or back (alive). No-op elsewhere; without Item Piles or given a non-Actor, one console warning and nothing done."
+      "doc": "Active GM: turn each eligible token of the actor, on every scene, into a corpse pile (dead) or back (alive). No-op elsewhere; without Item Piles or given a non-Actor, one console warning and nothing done."
     },
     {
       "path": "corpses.toCorpse",

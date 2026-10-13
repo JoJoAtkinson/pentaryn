@@ -110,6 +110,9 @@ Declared changes:
   put back once). It made one Item Piles call and one Dead toggle per token before. A failed token
   is still one `corpse sync failed for <name>` warning and the others go on; single-token syncs
   are unchanged.
+- dropbin-EC-5: `corpses.sync` finds an actor's tokens on every scene (`getDependentTokens`), so a
+  linked NPC killed while the GM views another scene becomes a corpse there too (and revives
+  there); it saw only the viewed scene's tokens before.
 
 Added: `list(n, { brief })`, `restoreResult`, `inspect`, `selftest` (items-journal-28).
 - A restore another module refuses (a `preCreateItem` veto) is `{ ok: false, reason: "not-created" }`

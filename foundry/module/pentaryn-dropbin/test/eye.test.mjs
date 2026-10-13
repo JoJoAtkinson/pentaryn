@@ -39,7 +39,7 @@ test("not the active GM: effect and hp hooks schedule no timer and never sync", 
   globalThis.setTimeout = (...a) => { timers++; return realSetTimeout(...a); };
   const gob = makeActor(F, { id: "actorGob00000001", name: "Goblin", type: "npc" });
   let synced = 0;
-  gob.getActiveTokens = () => { synced++; return []; };
+  gob.getDependentTokens = () => { synced++; return []; };
   try {
     F.become({ userId: PLAYER });
     Hooks.callAll("createActiveEffect", { flags: {}, parent: gob });
@@ -57,7 +57,7 @@ test("not the active GM: effect and hp hooks schedule no timer and never sync", 
 test("the active GM still queues one debounced sync per actor", async () => {
   const gob = makeActor(F, { id: "actorGob00000002", name: "Goblin", type: "npc" });
   let synced = 0;
-  gob.getActiveTokens = () => { synced++; return []; };
+  gob.getDependentTokens = () => { synced++; return []; };
   Hooks.callAll("createActiveEffect", { flags: {}, parent: gob });
   Hooks.callAll("deleteActiveEffect", { flags: {}, parent: gob });
   mock.timers.tick(200);

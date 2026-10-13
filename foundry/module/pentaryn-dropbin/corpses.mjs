@@ -41,9 +41,13 @@ const EYE = "assets/tokens/custom/props/icon-eye.webp";
 
 const isGMRunner = () => isActiveGMSelf(game.users);
 
+/**
+ * The actor's token documents on every scene (dropbin-EC-5): getActiveTokens saw only the GM's viewed
+ * scene, so a linked NPC killed while the GM looked elsewhere never became a corpse there.
+ */
 function tokensOf(actor) {
   if (actor.isToken) return [actor.token].filter(Boolean);
-  return actor.getActiveTokens(false, true);
+  return actor.getDependentTokens();
 }
 
 function isDead(actor) {

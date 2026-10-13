@@ -252,7 +252,7 @@ function linkedNpc(ownership = { default: NONE, [GM]: OWNER }, count = 1) {
     tokens: ids.map(id => ({ id, name: "Captain Vey", actorId: actor.id, actorLink: true, disposition: -1,
       sight: { enabled: true }, delta: {} })) });
   const toks = ids.map(id => scene.tokens.get(id));
-  actor.getActiveTokens = () => toks;
+  actor.getDependentTokens = () => toks;
   return toks;
 }
 const player = () => F.game.users.get(PLAYER);
@@ -279,6 +279,19 @@ test("dropbin-EC-3: a dead linked NPC gives players OBSERVER on its base actor; 
   assert.deepEqual(actor.ownership, before, "the saved map comes back exactly");
   assert.equal(actor.testUserPermission(player(), "OBSERVER"), false);
   assert.deepEqual(actor.flags[MOD] ?? {}, {}, "no dropbin flag left on the actor");
+});
+
+// dropbin-EC-5 [declared]: sync asked getActiveTokens, which sees only the scene the GM is viewing, so a
+// linked NPC killed while the GM looked at another scene stayed a creature there. It now walks every
+// scene's tokens of the actor (getDependentTokens).
+test("dropbin-EC-5: a dead linked NPC on a scene the GM is not viewing becomes a corpse, and revives there", async () => {
+  const [tok] = linkedNpc();
+  const actor = tok.actor;
+  actor.getActiveTokens = () => [];           // the GM's canvas shows another scene
+  await corpses.sync(actor);
+  assert.equal(tok.flags[MOD]?.corpse, true, "converted on the unviewed scene");
+  await corpses.revive(tok);
+  assert.equal(tok.flags[MOD]?.corpse, undefined, "revived on the unviewed scene");
 });
 
 test("dropbin-EC-3: a second token of the same dead linked NPC keeps the first death's saved map", async () => {
