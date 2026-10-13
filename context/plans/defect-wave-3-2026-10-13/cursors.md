@@ -24,3 +24,16 @@ Use the single GM tab. No documents are needed. If you want a scene, use only a 
 2. Keep a handle: `const c = game.pentaryn.cursors`. Run `c.uninstall()`. Expect `c.current() === null`.
 3. Run `c.refresh()`. Expect it to return `null`, `c.current()` to stay `null`, and `#board` (`document.getElementById('board')`) to have no `data-pentaryn-cursor` attribute and no inline `--cursor-*` properties.
 4. Run `await import('/modules/pentaryn-cursors/cursors.mjs?v=3')`. A tick later, expect `game.pentaryn.cursors.refresh() === 'ruler'`. Alternatively, reload the tab.
+
+## Live check result (FIX-W3, 2026-10-13)
+
+Run in the MCP bridge GM tab on world `pentaryn` (Foundry 14.369, dnd5e 6.0.6, `pentaryn-cursors` 0.2.0), with no
+restart or reload. The served `/modules/pentaryn-cursors/board.mjs` contains the gate
+(`installed ? refresh() : null`). No documents and no scratch scene were needed. Only the GM tab's own tool selection
+changed, and it was put back to Select afterwards.
+
+| item | result | evidence |
+|---|---|---|
+| cursors-refresh-gate | pass | Step 1: with Tokens → Ruler active, `refresh()` returned `'ruler'`, `current()` was `'ruler'`, `#board` had `data-pentaryn-cursor="ruler"` and 4 `--cursor-*` properties. Step 2: `uninstall()` returned `null`; then `current()` was `null`, the attribute was gone and there were 0 `--cursor-*` properties. Step 3: `refresh()` on the kept handle returned `null`; `current()` stayed `null`, with no attribute and 0 `--cursor-*` properties. Before the fix it returned `'ruler'` and re-applied the glyph. Step 4: after `import('/modules/pentaryn-cursors/cursors.mjs?v=3')` and a tick, the new `game.pentaryn.cursors.refresh()` returned `'ruler'`, with the attribute back and 4 properties. `status()` reported `enabled: true, key: "ruler", expected: "ruler"`. Switching back to Select gave `current() === null` and removed the attribute, so the re-imported module still follows tool changes |
+
+Cleanup: no ZZ docs were created. The GM tool went back to Tokens → Select. Exactly one GM is active.
