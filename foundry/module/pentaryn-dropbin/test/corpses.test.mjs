@@ -5,6 +5,7 @@
 import { mock, test } from "node:test";
 import assert from "node:assert/strict";
 import { GM, PLAYER, addScene, dropbinWorld, makeActor } from "./fixtures/world.mjs";
+import { makeToken } from "./kit/foundry-stub.mjs";
 
 mock.timers.enable({ apis: ["setTimeout"] });
 
@@ -281,7 +282,10 @@ function linkedNpc(ownership = { default: NONE, [GM]: OWNER }, count = 1) {
     tokens: ids.map(id => ({ id, name: "Captain Vey", actorId: actor.id, actorLink: true, disposition: -1,
       sight: { enabled: true }, delta: {} })) });
   const toks = ids.map(id => scene.tokens.get(id));
-  actor.getDependentTokens = () => toks;
+  // As Foundry 14: an unpersisted clone (a Token Config preview) is a dependent too, unless concreteOnly.
+  actor.ephemeral = [];
+  actor.getDependentTokens = ({ concreteOnly = false } = {}) =>
+    [...toks, ...actor.ephemeral].filter(t => !concreteOnly || t.parent?.tokens.get(t.id) === t);
   return toks;
 }
 const player = () => F.game.users.get(PLAYER);
@@ -324,6 +328,26 @@ test("dropbin-EC-5: a dead linked NPC on a scene the GM is not viewing becomes a
   assert.equal(tok.flags[MOD]?.corpse, true, "converted on the unviewed scene");
   await corpses.revive(tok);
   assert.equal(tok.flags[MOD]?.corpse, undefined, "revived on the unviewed scene");
+});
+
+// Verifier repro: getDependentTokens() without concreteOnly also lists an unpersisted clone (a Token
+// Config preview keeps its scene parent but is not in scene.tokens). It went into the same Item Piles
+// batch, whose fromUuidSync of it is null and throws, so the real token never became a corpse.
+test("dropbin-EC-5: an unpersisted clone of a linked NPC's token is skipped; only the real token converts", async () => {
+  const [tok] = linkedNpc();
+  const actor = tok.actor;
+  const clone = makeToken({ id: "tokPreview000001", name: "Captain Vey", actorId: actor.id, actorLink: true,
+    disposition: -1, sight: { enabled: true }, delta: {} }, tok.parent);
+  actor.ephemeral.push(clone);
+  assert.equal(tok.parent.tokens.get(clone.id), undefined, "the clone is not on the scene");
+  const from = F.calls.length;
+  await corpses.sync(actor);
+  const piles = F.calls.slice(from).filter(c => c.op === "turnTokensIntoItemPiles");
+  assert.deepEqual(piles.map(c => c.n), [1], "one Item Piles call, for the real token only");
+  assert.equal(tok.flags[MOD]?.corpse, true, "the real token converted");
+  assert.equal(clone.flags[MOD]?.corpse, undefined, "the clone was never touched");
+  await corpses.revive(tok);
+  assert.equal(tok.flags[MOD]?.corpse, undefined);
 });
 
 test("dropbin-EC-3: a second token of the same dead linked NPC keeps the first death's saved map", async () => {

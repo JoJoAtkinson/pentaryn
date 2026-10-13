@@ -44,10 +44,13 @@ const isGMRunner = () => isActiveGMSelf(game.users);
 /**
  * The actor's token documents on every scene (dropbin-EC-5): getActiveTokens saw only the GM's viewed
  * scene, so a linked NPC killed while the GM looked elsewhere never became a corpse there.
+ * `concreteOnly`: only tokens their scene really holds, as getActiveTokens and dnd5e. Without it an
+ * unpersisted clone (a Token Config preview) is a dependent too, and Item Piles throws on its uuid,
+ * failing the whole batch with it.
  */
 function tokensOf(actor) {
   if (actor.isToken) return [actor.token].filter(Boolean);
-  return actor.getDependentTokens();
+  return actor.getDependentTokens({ concreteOnly: true });
 }
 
 function isDead(actor) {
@@ -203,7 +206,7 @@ async function releaseBases(actors) {
   for (const actor of actors) {
     try {
       if (!ourCorpse(actor)) continue;
-      if ((actor.getDependentTokens?.() ?? []).some(t => ourCorpse(t) && onLiveScene(t))) continue;
+      if ((actor.getDependentTokens?.({ concreteOnly: true }) ?? []).some(t => ourCorpse(t) && onLiveScene(t))) continue;
       await unobserveBase(actor);
     } catch (err) {
       console.warn(`${MODULE} | corpse: could not give back ${actor?.name}'s ownership`, err);

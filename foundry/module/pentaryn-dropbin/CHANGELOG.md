@@ -123,7 +123,9 @@ Declared changes:
   are unchanged.
 - dropbin-EC-5: `corpses.sync` finds an actor's tokens on every scene (`getDependentTokens`), so a
   linked NPC killed while the GM views another scene becomes a corpse there too (and revives
-  there); it saw only the viewed scene's tokens before.
+  there); it saw only the viewed scene's tokens before. Only tokens a scene really holds
+  (`concreteOnly`, as `getActiveTokens` and dnd5e): an unpersisted clone such as a Token Config
+  preview is skipped, so it can no longer fail the whole Item Piles batch with the real token.
 - dropbin-EC-6: `corpses.toCorpse` (and `sync`) on a token that is already our corpse pile re-writes
   its OBSERVER map (`delta.ownership.default`, an unlinked token) and `sight.enabled: false` when
   either was lost; it returned at the pile check before, so a lost write left players without the
