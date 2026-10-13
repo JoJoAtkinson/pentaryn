@@ -2319,3 +2319,44 @@ def test_m3_coalesce_target_has_no_protect_parameter():
     params = list(inspect.signature(cloud._coalesce_target).parameters)
     assert params == ["existing", "me", "contained"]
     assert "`protect`" not in (cloud._coalesce_target.__doc__ or "")
+
+
+def _cut_marker_tar(path, keep):
+    """A gzip-complete tar whose marker header says more bytes than the archive holds:
+    only `keep` bytes of its body survive (a copy cut short inside its first member)."""
+    import gzip
+    import io
+    data = json.dumps({"bundled": 1, "modules": {}, "systems": {}}).encode()
+    buf = io.BytesIO()
+    with tarfile.open(fileobj=buf, mode="w") as tar:
+        info = tarfile.TarInfo(cloud.SNAPSHOT_MARKER)
+        info.size = len(data)
+        tar.addfile(info, io.BytesIO(data))
+    path.write_bytes(gzip.compress(buf.getvalue()[:512 + keep]))
+    return path
+
+
+@pytest.mark.parametrize("keep", [0, 5, 30])
+def test_a_cut_short_marker_is_refused_by_both_first_member_readers(tmp_path, keep):
+    """Review M16: the local-tar reader (_read_marker) and the cloud head reader
+    (_marker_from_head) parse the first member through one helper. A marker cut short is
+    refused by both — the local one as a RestoreError naming the file, never a raw
+    tarfile error or a marker read as empty."""
+    p = _cut_marker_tar(tmp_path / "world-cut.tar.gz", keep)
+    with pytest.raises(ValueError, match="cut short"):
+        cloud._marker_from_head(p.read_bytes())
+    with pytest.raises(cloud.RestoreError, match=r"world-cut\.tar\.gz.*cut short"):
+        cloud._read_marker(p)
+
+
+def test_both_first_member_readers_agree_on_a_marked_and_an_unmarked_tar(tmp_path):
+    """Review M16: one parse — the same answer from a local tar and from its head."""
+    marked = tmp_path / "marked.tar.gz"
+    _marked_tar(marked, {"m": _bundle("module", "m")})
+    plain = tmp_path / "plain.tar.gz"
+    _legacy_tar(plain, {"Data/worlds/w/world.json": b"{}"})
+    for p in (marked, plain):
+        assert cloud._read_marker(p) == cloud._marker_from_head(p.read_bytes())
+    assert cloud._read_marker(marked) == (True, {"modules": {"m": _bundle("module", "m")},
+                                                 "systems": {}})
+    assert cloud._read_marker(plain) == (False, None)

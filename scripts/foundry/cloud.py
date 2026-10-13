@@ -1644,17 +1644,26 @@ def _marker_from_head(head: bytes) -> tuple[bool, dict | None]:
         raise ValueError(f"not a gzip stream: {exc}") from exc
     try:
         with tarfile.open(fileobj=io.BytesIO(raw), mode="r:") as tar:
-            first = tar.next()
-            if first is None:
-                raise ValueError("no first member")
-            if first.name != SNAPSHOT_MARKER:
-                return False, None
-            fh = tar.extractfile(first) if first.isfile() else None
-            body = fh.read() if fh else b""
-            if len(body) != first.size:
-                raise ValueError(f"{SNAPSHOT_MARKER} is cut short")
+            return _parse_first_member(tar)
     except tarfile.TarError as exc:
         raise ValueError(f"not a readable tar head: {exc}") from exc
+
+
+def _parse_first_member(tar: tarfile.TarFile) -> tuple[bool, dict | None]:
+    """(marker present, its manifest) from `tar`'s FIRST member — the one parse both the
+    cloud head (_marker_from_head) and a local tar (_read_marker) use (review M16). No
+    marker first → (False, None). A marker cut short, or not a valid bundled manifest,
+    raises ValueError: neither is ever read as "no marker" or as an empty one."""
+    first = tar.next()
+    if first is None or first.name != SNAPSHOT_MARKER:
+        return False, None
+    try:
+        fh = tar.extractfile(first) if first.isfile() else None
+        body = fh.read() if fh else b""
+    except (tarfile.TarError, EOFError) as exc:
+        raise ValueError(f"its {SNAPSHOT_MARKER} is cut short ({exc})") from exc
+    if len(body) != first.size:
+        raise ValueError(f"its {SNAPSHOT_MARKER} is cut short")
     try:
         parsed = _parse_manifest(json.loads(body))
     except ValueError:
@@ -2121,20 +2130,14 @@ def read_manifest(st: Storage, snap: Snapshot) -> dict | None:
 
 
 def _read_marker(tar_path: Path) -> tuple[bool, dict | None]:
-    """(marker present, its manifest) from the tar's FIRST member only. A marker that is
-    present but not a valid bundled manifest raises RestoreError."""
+    """(marker present, its manifest) from the tar's FIRST member only, parsed as the
+    cloud head is (_parse_first_member). A marker that is present but cut short or not a
+    valid bundled manifest raises RestoreError naming the file."""
     with tarfile.open(tar_path, "r:gz") as tar:
-        first = tar.next()
-        if first is None or first.name != SNAPSHOT_MARKER:
-            return False, None
-        fh = tar.extractfile(first) if first.isfile() else None
         try:
-            parsed = _parse_manifest(json.loads(fh.read())) if fh else None
-        except ValueError:
-            parsed = None
-    if parsed is None:
-        raise RestoreError(f"{tar_path.name}: its {SNAPSHOT_MARKER} is not a valid manifest")
-    return True, parsed
+            return _parse_first_member(tar)
+        except ValueError as exc:
+            raise RestoreError(f"{tar_path.name}: {exc}") from exc
 
 
 @dataclass
