@@ -88,6 +88,11 @@ cssPrefix `pp-`, afterSync). Each **[declared]** change goes to the live check.
   `tokenImg` (the ring subject when the ring is on) and `EYE` (a note with no icon), so on a hex grid
   the crop draws the same rect the gather measures. Square-grid crops are unchanged (the crop
   goldens are byte-identical); `glue-exports` is re-pinned for the three new exports.
+- **[declared] A failed Delete leaves the box open and still saving** (prompts-U1): the box counts
+  as deleted only once `tok.delete()` lands. Before, a rejected delete left the box open but every
+  later save was skipped, so words typed after it were lost. A rejection now logs, shows "The prompt
+  marker could not be deleted; see the console." (`PENTARYN_PROMPTS.dialog.deleteFailed`), and the
+  box stays editable; the deleteToken hook still leaves a box whose own delete succeeded alone.
 - **[declared] Two gathers at once keep both manifests**: the ring writes through one
   `serialStore` (a parallel gather no longer makes the other's call id `CALL_UNKNOWN`).
 - **[declared] `ensureMarkers` no longer duplicates across two GM tabs** (§5.9.1): the folder and

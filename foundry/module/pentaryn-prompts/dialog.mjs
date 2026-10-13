@@ -82,6 +82,7 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
   #swapping = null;
   #discard = false;
   #deleted = false;
+  #deleting = false;   // our own Delete is in flight: the deleteToken hook leaves this box to it (U1)
   #ticket = null;
   #panelRun = 0;
   #panelTimer = null;
@@ -376,7 +377,7 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
   /** deleteToken hook: the marker a dialog edits is gone (a replace, a delete elsewhere). */
   static onTokenDeleted(doc) {
     for (const app of PromptDialog.#live) {
-      if (!app.edits(doc) || app.#deleted) continue;   // the dialog deleted it itself (Delete, empty fresh marker)
+      if (!app.edits(doc) || app.#deleted || app.#deleting) continue;   // the dialog deleted it itself (Delete, empty fresh marker)
       clearTimeout(app.#timer);
       app.#deleted = true;
       app.close();
@@ -446,8 +447,18 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
     if (this.#closing) return;
     const tok = this.token;
     clearTimeout(this.#timer);
+    // deleted only once the delete lands: a rejected one leaves the box open and still saving (U1)
+    this.#deleting = true;
+    try {
+      if (tok) await tok.delete();
+    } catch (err) {
+      log.error("deleting the prompt marker failed", err);
+      ui.notifications?.error(_loc("PENTARYN_PROMPTS.dialog.deleteFailed"));
+      return;
+    } finally {
+      this.#deleting = false;
+    }
     this.#deleted = true;
-    if (tok) await tok.delete();
     await this.close();
   }
 

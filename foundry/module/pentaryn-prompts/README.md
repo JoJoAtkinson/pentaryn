@@ -32,7 +32,8 @@ name. Every marker token is born hidden, sightless and size-locked. Art: `assets
   claims within 3.5 s goes into the open box, else a toast. A window blur forgets held keys.
 - Every open is a **new window**; closing saves in the background, so the next drop never waits.
   A fresh marker closed empty is deleted; one emptied by hand stays, red-tinted. A marker whose
-  text failed to save is never deleted (it stays, with the save-failed toast).
+  text failed to save is never deleted (it stays, with the save-failed toast). A **Delete** that
+  fails leaves the box open and still saving, with a could-not-delete toast.
 - Reopen: **double-click** a marker, the **Token HUD** bubble button, Shift+P, or `open(id)`. A
   marker never has two boxes: reopening one already open (or still saving) brings that box forward.
 - **Size chips** swap the marker for another size centred on the same point, text carried — keys

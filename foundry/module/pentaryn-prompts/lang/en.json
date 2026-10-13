@@ -8,6 +8,7 @@
       "delete": "Delete",
       "removedEmpty": "Prompt marker removed (empty).",
       "saveFailed": "The prompt could not be saved; see the console.",
+      "deleteFailed": "The prompt marker could not be deleted; see the console.",
       "noActor": "No \"Prompt · {size}\" actor in this world. Reload as GM to recreate it."
     },
     "panel": {
