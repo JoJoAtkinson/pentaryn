@@ -1,6 +1,6 @@
 # Defect wave 2 2026-10-12 — combat-hud
 
-**Read this when** you want the history of defect wave 2 (2026-10-12) for the combat-hud group
+**Read this when:** you want the history of defect wave 2 (2026-10-12) for the combat-hud group
 (module `pentaryn-combat`): what was fixed, why, which goldens moved, and how to check it live.
 History, not instructions — the use-doc is the module's own
 [`README.md`](../../../foundry/module/pentaryn-combat/README.md).
