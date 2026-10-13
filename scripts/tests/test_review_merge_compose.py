@@ -214,13 +214,9 @@ def test_mc2e_a_module_sync_between_inventory_and_tar_never_lands_new_content_un
 
 
 # ── MC3: re-parenting misses the job a concurrent build is writing ────────────
+# Fixed (py-cloud-ac-5): the drop is recorded in dropped-parents.json and _upload_job
+# resolves the job's parent through it before the linked check.
 
-@pytest.mark.xfail(strict=True, reason=(
-    "MC3 (low): _reparent_next runs under UPLOAD_LOCK only; a vtt-down build (BUILD_LOCK "
-    "only) that read the queue before the drop saves its job afterwards with parent = the "
-    "dropped job, so it uploads unlinked — no ancestors in its sidecar, not recorded as "
-    "based-on, never coalesced — the hole §5 row '6 verify failure' (3) closes for jobs "
-    "already queued"))
 def test_mc3_a_job_built_while_the_one_before_it_is_dropped_still_uploads_linked(
         two_hosts, spawned, monkeypatch):
     with two_hosts.use("mac") as data:

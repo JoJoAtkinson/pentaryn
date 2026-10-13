@@ -1189,6 +1189,12 @@ def _upload_job(st: Storage, job: uploadq.Job, protect: str | None = None) -> Sn
     # runs on it. Preserve it now, while it is still inside the rolling window.
     promote_major_release(st, others)
 
+    true_parent = uploadq.resolve_parent(job.parent)
+    if true_parent != job.parent:                 # built while its parent was dropped
+        log(f"{job.name} now extends {true_parent or 'nothing'} "
+            f"({job.parent} never landed)")
+        job.parent = true_parent
+        job.save()
     state = bootstate.load()
     linked = state.based_on == job.parent
     if linked:
@@ -1330,7 +1336,10 @@ def _unpublish(st: Storage, job: uploadq.Job) -> str:
 def _reparent_next(job: uploadq.Job) -> None:
     """`job` leaves the queue without landing: the job queued behind it was built to
     extend it (`parent = job.name`, never recorded now) — point it at `job.parent`, the
-    true parent, so it still uploads linked, recorded and coalescible."""
+    true parent, so it still uploads linked, recorded and coalescible. The drop is also
+    recorded (uploadq.record_dropped), for a job a concurrent build saves only after this
+    ran: _upload_job resolves its parent through that record."""
+    uploadq.record_dropped(job.name, job.parent)
     for j in uploadq.pending():
         if j.name != job.name and not j.heal and j.parent == job.name:
             j.parent = job.parent

@@ -455,7 +455,8 @@ Restore `.safety` copies and `major-release/` are never offered as "newer".
   changed since (so it cannot be rebuilt), that upload can never be complete: the uploader
   removes whatever of it already landed, keeps its world tar as
   `.pentaryn-tmp/incomplete/<name>` (named by `make foundry-cloud`), and goes on with the next
-  queued one — which still uploads linked. A foreground backup (`make foundry-backup`,
+  queued one — which still uploads linked, even one a `vtt-down` was building at that
+  moment (the drop is recorded in `.pentaryn-tmp/dropped-parents.json`). A foreground backup (`make foundry-backup`,
   `vtt-down WAIT=1`, the pre-launch and pre-restore snapshots) fails loudly instead, so a
   restore stops before touching anything.
 - **A bundle is deleted only by the mark-and-sweep**, never by name, never younger than 7 days —
