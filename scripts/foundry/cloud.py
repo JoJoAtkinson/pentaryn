@@ -597,7 +597,7 @@ def unpack_assets(dry_run: bool = False, if_reachable: bool = False) -> int:
     manifest is skipped without a download — over rclone, hashing every zip on every
     start would mean downloading every zip on every start.
 
-    `if_reachable` is for `make vtt-up`: an unreachable cloud (or a pack that will not
+    `if_reachable` is for `make foundry-up` (so `vtt-up`): an unreachable cloud (or a pack that will not
     download) is a warning and exit 0, so a cloud outage never stops a session starting.
     A badly named or edited pack still fails — that is a fix in the cloud folder."""
     try:
@@ -835,14 +835,14 @@ def adopt_legacy_marker(st: Storage, state: bootstate.BootState) -> bootstate.Bo
 
 
 def backup(reason: str = "manual", if_stopped: bool = False, background: bool = False) -> int:
-    """`if_stopped` is for lifecycle hooks: skip quietly rather than fail the target.
-    `make vtt-up` on an already-running server is normal, and must not abort there —
-    and neither must a cloud that is down: the pre-launch snapshot is then a warning
-    (naming any tar left on disk), exit 0, and `make vtt-down` tries again. Nor must an
-    upload this host is still running in the background: that one holds this world.
+    """`if_stopped` is `make foundry-up`'s pre-launch backup (so `vtt-up`'s): skip quietly
+    rather than fail the target. `make vtt-up` on an already-running server is normal, and
+    must not abort there — and neither must a cloud that is down: the pre-launch snapshot is
+    then a warning (naming any tar left on disk), exit 0, and `make foundry-down` tries again.
+    Nor must an upload this host is still running in the background: that one holds this world.
 
-    `background` is `make vtt-down`'s: build the tar now, upload it from a detached
-    process (`upload-pending`), return at once."""
+    `background` is `make foundry-down`'s (so `vtt-down`'s): build the tar now, upload it from
+    a detached process (`upload-pending`), return at once."""
     if server_running():
         if if_stopped:
             log("Foundry already running — skipping the pre-launch snapshot")
@@ -869,7 +869,7 @@ def backup(reason: str = "manual", if_stopped: bool = False, background: bool = 
         if not _is_failure(exc):
             raise
         _lifecycle_warning(f"the {reason} snapshot was not taken", exc,
-                           "starting anyway; the shutdown backup (make vtt-down) tries again")
+                           "starting anyway; the shutdown backup (make foundry-down / vtt-down) tries again")
         try:
             left = sorted(tmp_dir().glob("world-*.tar.gz"), key=lambda p: p.stat().st_mtime)
         except OSError:

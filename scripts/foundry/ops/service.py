@@ -1,8 +1,8 @@
 """Server and tunnel lifecycle: up, down, status.
 
-The composite `make vtt-up` is the app AND the tunnel AND a backup AND an asset
-unpack. The commands here are the individual pieces it composes; run one on its own
-and you get exactly that piece.
+The composite `make vtt-up` is `make foundry-up` (the boot choice, a backup, an asset
+unpack, the app) AND the tunnel. The commands here are the individual pieces they compose;
+run one on its own and you get exactly that piece.
 """
 
 from __future__ import annotations

@@ -16,8 +16,8 @@ RETIRED_MODULES := walls
 # behaves the way it does is in context/foundry/ops.md, not in comments here.
 #
 # Three layers, and they are not the same thing:
-#   vtt-*      the composite — lock check, backup, assets, app, tunnel. Table-facing.
-#   foundry-*  one piece: the application, its data, its modules.
+#   vtt-*      the composite — lock check, then foundry-up/-down, with the tunnel around it.
+#   foundry-*  one piece: the application (its up/down take the backups), its data, its modules.
 #   tunnel-*   one piece: the Cloudflare tunnel.
 # `make vtt-up` is what you want at the table. The pieces are what you reach for when
 # one of them is the thing that's wrong.
@@ -26,12 +26,12 @@ RETIRED_MODULES := walls
 help:
 	@echo ""
 	@echo "  At the table"
-	@echo "    make vtt-up            Foundry + tunnel, players can connect"
+	@echo "    make vtt-up            foundry-up + the tunnel, players can connect"
 	@echo "                           FROM=latest|local|<snapshot> decides the boot choice"
 	@echo "                           (default: asks when the cloud is newer, at a terminal)"
 	@echo "    make login             pick a campaign + user, land in the world logged in"
-	@echo "    make vtt-down          tear both down, snapshot the world (~45 MB) + changed modules;"
-	@echo "                           upload in background (WAIT=1 waits)"
+	@echo "    make vtt-down          the tunnel down, then foundry-down: snapshot the world (~45 MB)"
+	@echo "                           + changed modules; upload in background (WAIT=1 waits)"
 	@echo "    make vtt               status: app, tunnel, public reachability"
 	@echo ""
 	@echo "  Content"
@@ -48,6 +48,8 @@ help:
 	@echo "    make foundry-lib-check  the shared kit's tests; foundry-lib-vendor re-vendors it"
 	@echo ""
 	@echo "  Housekeeping"
+	@echo "    make foundry-up        the app alone: boot choice, pre-launch backup, assets, start"
+	@echo "    make foundry-down      the app alone: stop, then the shutdown snapshot (WAIT=1 waits)"
 	@echo "    make foundry-backup    snapshot the world (~45 MB) + changed modules to OneDrive"
 	@echo "    make foundry-restore   list snapshots, every host (SNAP=<id> to restore one)"
 	@echo "    make foundry-boot      just the boot choice: newest cloud snapshot or local (FROM=)"
@@ -93,10 +95,10 @@ export FROM
 vtt-lock-check:
 	@$(OPS) lock-check
 
-# foundry-boot comes BEFORE the pre-launch backup: when the cloud's newest is taken, the
-# restore has already archived the local world, and the backup then digest-skips rather
-# than uploading a world that was just replaced. On the alt host tunnel-up is a loud no-op.
-vtt-up: vtt-lock-check foundry-boot foundry-backup-safe foundry-assets-safe foundry-up tunnel-up
+# The backups live in foundry-up (pre-launch) and foundry-down (shutdown); vtt-up/vtt-down add
+# only the lock check and the tunnel around them, so each takes exactly one. On the alt host
+# tunnel-up is a loud no-op.
+vtt-up: vtt-lock-check foundry-up tunnel-up
 	@echo ""
 	@if [ "$$(cd $(ROOT) && $(PY) -m scripts.foundry.host role 2>/dev/null)" = primary ] || [ "$$PENTARYN_ROLE_OVERRIDE" = primary ]; then \
 	  echo "  ▸ players:  https://$(TUNNEL_HOST)"; \
@@ -104,13 +106,12 @@ vtt-up: vtt-lock-check foundry-boot foundry-backup-safe foundry-assets-safe foun
 	@echo "  ▸ local:    $(FOUNDRY_URL)"
 	@echo "  ▸ teardown: make vtt-down"
 
-# The shutdown snapshot comes from foundry-down (below), once: vtt-down does not take a second.
 vtt-down: vtt-lock-check tunnel-down foundry-down
 	@echo "  ▸ all down"
 
 # Start the app, launch the world, and land in it as GM — no dropdown, no password.
-# Not folded into vtt-up: that one runs unattended from the updater, where popping a
-# browser window open would be wrong. See scripts/foundry/ops/login.py.
+# Not folded into vtt-up: that one must stay safe to run unattended (no terminal), where
+# popping a browser window open would be wrong. See scripts/foundry/ops/login.py.
 # A player tab beside the GM's: make login USER_NAME=Talo LOGIN_HOST=zz1.localhost (or 127.0.0.1; NO_OPEN=1 prints the URL).
 vtt-login login:
 	@$(OPS) login $(if $(USER_NAME),--user "$(USER_NAME)") $(if $(WORLD),--world "$(WORLD)") $(if $(LOGIN_HOST),--host "$(LOGIN_HOST)") $(if $(NO_OPEN),--no-open)
@@ -127,11 +128,16 @@ vtt-status:
 # terminal and only when the cloud is newer than what this world is based on.
 foundry-boot:
 	@cd $(ROOT) && $(PY) -m scripts.foundry.boot choose $(if $(FROM),--from $(FROM),)
+# The boot choice, then the pre-launch backup, the asset unpack, then the app. foundry-boot
+# comes BEFORE the backup: when the cloud's newest is taken, the restore has already archived
+# the local world, and the backup then digest-skips rather than uploading a world that was just
+# replaced. Both cloud steps are the -safe variants: an unreachable cloud warns, never stops;
+# the backup skips while the server is already up or a shutdown upload is still running.
 # PENTARYN_BOOT_DONE: foundry-boot already ran, so service.up() does not ask again.
-foundry-up: foundry-boot ; @export PENTARYN_BOOT_DONE=1; $(OPS) up
+foundry-up: foundry-boot foundry-backup-safe foundry-assets-safe ; @export PENTARYN_BOOT_DONE=1; $(OPS) up
 # Stop the app, then the shutdown snapshot: its tar is built here (Foundry stopped), its upload
 # runs in the background and `make foundry-cloud` shows it. WAIT=1: upload before returning.
-# So every stop backs up — vtt-down, and a restart (foundry-down then foundry-up) — once.
+# So every stop backs up once (vtt-down through it), and every start once (foundry-up above).
 foundry-down:
 	@$(OPS) down
 	@$(MAKE) --no-print-directory foundry-backup REASON=shutdown $(if $(WAIT),,BACKGROUND=1)
@@ -208,8 +214,8 @@ foundry-importer-install: ; @$(OPS) importer-install
 foundry-assets:
 	@cd $(ROOT) && $(PY) -m scripts.foundry.cloud assets
 
-# Lifecycle variant: a cloud that is down is a warning, not a stop — `make vtt-up` never
-# blocks on the cloud (ops.md §3). A badly named or edited pack still fails.
+# Lifecycle variant (foundry-up's): a cloud that is down is a warning, not a stop — `make
+# foundry-up`/`vtt-up` never block on the cloud (ops.md §3). A badly named or edited pack still fails.
 foundry-assets-safe:
 	@cd $(ROOT) && $(PY) -m scripts.foundry.cloud assets --if-reachable
 
@@ -217,9 +223,9 @@ foundry-assets-safe:
 foundry-backup:
 	@cd $(ROOT) && $(PY) -m scripts.foundry.cloud backup --reason $(or $(REASON),manual)$(if $(BACKGROUND), --background,)
 
-# Lifecycle variant: skips quietly when the server is already up, so `make vtt-up`
-# on a running server does not abort before starting the tunnel; a cloud that is down
-# is a warning, so it does not stop the start either.
+# Lifecycle variant (foundry-up's pre-launch backup): skips quietly when the server is already
+# up, so `make vtt-up` on a running server does not abort before starting the tunnel; a cloud
+# that is down is a warning, so it does not stop the start either.
 foundry-backup-safe:
 	@cd $(ROOT) && $(PY) -m scripts.foundry.cloud backup --reason prelaunch --if-stopped
 
