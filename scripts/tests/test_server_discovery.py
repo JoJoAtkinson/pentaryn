@@ -204,6 +204,17 @@ def test_annotated_mcp_groups_passes_the_group_filter(tmp_path, monkeypatch):
     assert "sample_subproc" in {r.tool.name for r in result.tools}, result.skipped
 
 
+def test_group_all_is_the_same_as_unset(tmp_path, monkeypatch):
+    """py-mcp-ext-6: DND_MCP_TOOLS_GROUP=all loaded only modules that listed "all"
+    (53 of 65 live) — a module with no MCP_GROUPS was dropped. "all" means no filter."""
+    monkeypatch.setenv("DND_MCP_TOOLS_GROUP", "all")
+    repo = _make_repo(tmp_path)
+    (repo / "scripts" / "ungrouped.py").write_text(_AST_ONLY_MODULE, encoding="utf-8")
+
+    result = server.discover_tools(repo_root=repo)
+    assert "sample_subproc" in {r.tool.name for r in result.tools}, result.skipped
+
+
 # ---------------------------------------------------------------------------
 # python-tooling-27: discovery cost and the startup skip report
 # ---------------------------------------------------------------------------
@@ -457,6 +468,9 @@ class _SyncExecutor:
 
     def submit(self, fn, *args):
         fn(*args)
+        done = server.Future()
+        done.set_result(None)
+        return done
 
 
 def _serve(monkeypatch, messages, runners=(), slots=2):
@@ -473,8 +487,9 @@ def _serve(monkeypatch, messages, runners=(), slots=2):
 
 
 def test_serve_loop_inline_payloads_pinned(monkeypatch):
-    """Characterisation: initialize echoes any requested version (EC-7), and the
-    inline error envelopes for an unknown method and an unknown tool."""
+    """Characterisation: initialize answers PROTOCOL_VERSION for an unsupported
+    requested version (py-mcp-EC-7), and the inline error envelopes for an unknown
+    method and an unknown tool."""
     sent = _serve(monkeypatch, [
         {"jsonrpc": "2.0", "id": 1, "method": "initialize",
          "params": {"protocolVersion": "1999-01-01"}},
@@ -485,7 +500,7 @@ def test_serve_loop_inline_payloads_pinned(monkeypatch):
     ], runners=(_runner(lambda **k: "ok"),))
     assert sent == [
         {"jsonrpc": "2.0", "id": 1, "result": {
-            "protocolVersion": "1999-01-01",
+            "protocolVersion": server.PROTOCOL_VERSION,
             "capabilities": {"tools": {"listChanged": False}},
             "serverInfo": {"name": "dnd-scripts", "version": "0.1.0"}}},
         {"jsonrpc": "2.0", "id": 2, "result": {"tools": [
@@ -495,6 +510,22 @@ def test_serve_loop_inline_payloads_pinned(monkeypatch):
         {"jsonrpc": "2.0", "id": 4,
          "error": {"code": -32000, "message": "Unknown tool: x"}},
     ]
+
+
+@pytest.mark.parametrize("params, expected", [
+    ({"protocolVersion": "2025-06-18"}, "2025-06-18"),
+    ({"protocolVersion": "1999-01-01"}, "2025-06-18"),
+    ({"protocolVersion": "2099-12-31"}, "2025-06-18"),
+    ({"protocolVersion": 20250618}, "2025-06-18"),
+    ({}, "2025-06-18"),
+])
+def test_initialize_never_echoes_unsupported_version(monkeypatch, params, expected):
+    """py-mcp-EC-7: the server speaks one MCP version. Per the spec it echoes the
+    requested version only when it supports it; otherwise it answers its own."""
+    assert server.PROTOCOL_VERSION == "2025-06-18"
+    sent = _serve(monkeypatch, [
+        {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": params}])
+    assert sent[0]["result"]["protocolVersion"] == expected
 
 
 def test_serve_loop_busy_reply_when_slots_exhausted(monkeypatch):
@@ -515,3 +546,569 @@ def test_serve_loop_releases_slots(monkeypatch):
     assert [m["id"] for m in sent] == [1, 2, 3]
     assert all("result" in m for m in sent)
     assert server._inflight_slots._value == 2
+
+
+# ---------------------------------------------------------------------------
+# py-mcp-rob-2 (EC-1, py-mcp-ac-1): a non-object JSON frame is skipped, not fatal
+# ---------------------------------------------------------------------------
+
+import io
+import types
+
+
+def _stdin(monkeypatch, data: bytes):
+    monkeypatch.setattr(server.sys, "stdin", types.SimpleNamespace(buffer=io.BytesIO(data)))
+
+
+def _lsp(body: bytes) -> bytes:
+    return b"Content-Length: %d\r\n\r\n%s" % (len(body), body)
+
+
+_INIT = {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}}
+
+
+@pytest.mark.parametrize("frames", [
+    b"[1, 2]\n" + json.dumps(_INIT).encode() + b"\n",          # JSONL batch
+    b"[]\n" + json.dumps(_INIT).encode() + b"\n",              # JSONL empty batch
+    _lsp(b"null") + _lsp(json.dumps(_INIT).encode()),          # LSP null body (was EOF)
+    _lsp(b"5") + _lsp(json.dumps(_INIT).encode()),             # LSP scalar body
+    _lsp(b"[{}]") + _lsp(json.dumps(_INIT).encode()),          # LSP batch body
+], ids=["jsonl-batch", "jsonl-empty-batch", "lsp-null", "lsp-scalar", "lsp-batch"])
+def test_py_mcp_rob_2_non_object_frame_is_skipped(monkeypatch, capsys, frames):
+    _stdin(monkeypatch, frames)
+    monkeypatch.setattr(server, "_TRANSPORT_MODE", None)
+    assert server._read_message() is server._SKIP_MESSAGE
+    assert "[mcp-server] discarding non-object JSON-RPC message" in capsys.readouterr().err
+    assert server._read_message() == _INIT          # serving continues
+    assert server._read_message() is None           # then real EOF
+
+
+def test_py_mcp_rob_2_serve_loop_survives_a_batch(monkeypatch):
+    _stdin(monkeypatch, b"[1]\n" + json.dumps(_INIT).encode() + b"\n")
+    monkeypatch.setattr(server, "_TRANSPORT_MODE", None)
+    sent = []
+    monkeypatch.setattr(server, "_write_message", sent.append)
+    assert server._serve_loop((), {}, _SyncExecutor()) == 0
+    assert [m["id"] for m in sent] == [1]
+
+
+# ---------------------------------------------------------------------------
+# py-mcp-rob-1: once in JSONL mode, a non-JSON line is skipped, not parsed as an
+# LSP header (which would swallow every later request looking for a blank line)
+# ---------------------------------------------------------------------------
+
+def test_py_mcp_rob_1_non_json_line_in_jsonl_mode_is_skipped(monkeypatch, capsys):
+    ping = {"jsonrpc": "2.0", "id": 2, "method": "ping"}
+    _stdin(monkeypatch, json.dumps(_INIT).encode() + b"\n"
+           + b"oops not json\n"
+           + json.dumps(ping).encode() + b"\n")
+    monkeypatch.setattr(server, "_TRANSPORT_MODE", None)
+    assert server._read_message() == _INIT
+    assert server._TRANSPORT_MODE == "jsonl"
+    assert server._read_message() is server._SKIP_MESSAGE
+    assert "[mcp-server] discarding non-JSON line in JSONL mode" in capsys.readouterr().err
+    assert server._read_message() == ping           # later request still served
+    assert server._read_message() is None
+    assert server._TRANSPORT_MODE == "jsonl"
+
+
+def test_py_mcp_rob_1_first_frame_still_sniffs_lsp(monkeypatch):
+    _stdin(monkeypatch, _lsp(json.dumps(_INIT).encode()))
+    monkeypatch.setattr(server, "_TRANSPORT_MODE", None)
+    assert server._read_message() == _INIT
+    assert server._TRANSPORT_MODE == "lsp"
+
+
+# ---------------------------------------------------------------------------
+# py-mcp-EC-4: an LSP Content-Length of 0 is skipped (not EOF); a negative one is
+# logged and closes — only a genuine empty read from stdin is a silent EOF
+# ---------------------------------------------------------------------------
+
+def test_py_mcp_ec_4_zero_content_length_is_skipped(monkeypatch, capsys):
+    _stdin(monkeypatch, b"Content-Length: 0\r\n\r\n" + _lsp(json.dumps(_INIT).encode()))
+    monkeypatch.setattr(server, "_TRANSPORT_MODE", None)
+    assert server._read_message() is server._SKIP_MESSAGE
+    assert "[mcp-server] discarding empty LSP frame" in capsys.readouterr().err
+    assert server._read_message() == _INIT          # serving continues
+    assert server._read_message() is None           # then real EOF
+
+
+def test_py_mcp_ec_4_negative_content_length_is_logged(monkeypatch, capsys):
+    _stdin(monkeypatch, b"Content-Length: -5\r\n\r\n" + _lsp(json.dumps(_INIT).encode()))
+    monkeypatch.setattr(server, "_TRANSPORT_MODE", None)
+    assert server._read_message() is None
+    assert ("[mcp-server] LSP frame has negative Content-Length — closing."
+            in capsys.readouterr().err)
+
+
+# ---------------------------------------------------------------------------
+# py-mcp-MNT-3: discover_tools' candidate scan and in-process load are their own
+# helpers; the scan's exclusions (and so the skipped order) are unchanged
+# ---------------------------------------------------------------------------
+
+def test_py_mcp_mnt_3_candidate_scripts_keeps_the_exclusions(tmp_path):
+    scripts = _make_repo(tmp_path) / "scripts"
+    for rel in ("b.py", "a.py", "sub/c.py", "sub/__init__.py", "_private.py",
+                "__pycache__/cached.py", "mcp/server.py", "notes.txt"):
+        (scripts / rel).parent.mkdir(parents=True, exist_ok=True)
+        (scripts / rel).write_text("", encoding="utf-8")
+    found = server._candidate_scripts(scripts)
+    assert [str(p.relative_to(scripts)) for p in found] == ["a.py", "b.py", "sub/c.py"]
+
+
+def test_py_mcp_mnt_3_load_in_process(tmp_path):
+    scripts = _make_repo(tmp_path) / "scripts"
+
+    def load(name, source):
+        path = scripts / name
+        path.write_text(source, encoding="utf-8")
+        return server._load_in_process(path, source, server.ast.parse(source))
+
+    assert load("ast_only.py", _AST_ONLY_MODULE) is None   # no MCP_HANDLERS: AST path
+    literal, handlers = load("inproc_mnt3.py", _INPROC_MODULE)
+    assert literal["name"] == "sample_inproc" and set(handlers) == {"sample_inproc"}
+    literal, handlers = load("many_mnt3.py", _MISSING_HANDLER_MODULE)
+    assert [t["name"] for t in literal["tools"]] == ["wired_tool", "orphan_tool"]
+    assert load("bare_mnt3.py", "MCP_HANDLERS = {}\n") == \
+        "module imported but no usable MCP_TOOLS/MCP_TOOL attribute"
+    assert load("boom_mnt3.py", "MCP_HANDLERS = {}\nraise RuntimeError('boom')\n") == \
+        "in-process import failed: boom"
+
+
+# py-mcp-MNT-7: the comments on the admission cap, the progress TODO and the shutdown
+# bound match the code. The SQLite line stays (srd5_2 uses a sqlite CachedSession).
+def test_py_mcp_mnt_7_comments_match_the_code():
+    src = _SERVER_PATH.read_text(encoding="utf-8")
+    assert "max(_DEFAULT_MAX_WORKERS * 4, 32)" in src
+    assert "Default = max(4× workers, 32)" in src
+    assert "dnd_pass" not in src
+    assert "(build_timeline_*) via MCP `notifications/progress`" in src
+    assert "~10s in srd5_2" not in src
+    assert "Waits for running calls only; queued ones are\n        # dropped" in src
+    assert "DND_MCP_TOOL_TIMEOUT\n        # (default 60s)" in src
+    assert "in-process handlers are bounded only by their own locks" in src
+    assert "SQLite's per-connection locking" in src
+
+
+# ---------------------------------------------------------------------------
+# py-mcp-ext-5: every JSON-RPC envelope is built by _reply / _error, never by hand
+# ---------------------------------------------------------------------------
+
+def test_py_mcp_ext_5_envelope_helpers(monkeypatch):
+    sent = []
+    monkeypatch.setattr(server, "_write_message", sent.append)
+    assert (server.SERVER_NAME, server._E_SERVER, server._E_NO_METHOD) == (
+        "dnd-scripts", -32000, -32601)
+    server._reply(7, {"ok": True})
+    server._error(8, server._E_NO_METHOD, "Method not found: x")
+    assert sent == [
+        {"jsonrpc": "2.0", "id": 7, "result": {"ok": True}},
+        {"jsonrpc": "2.0", "id": 8, "error": {"code": -32601, "message": "Method not found: x"}},
+    ]
+    assert [list(m) for m in sent] == [["jsonrpc", "id", "result"], ["jsonrpc", "id", "error"]]
+
+
+def test_py_mcp_ext_5_no_hand_built_envelopes():
+    import ast
+    tree = ast.parse(_SERVER_PATH.read_text(encoding="utf-8"))
+    builders = {"_reply", "_error"}
+    offenders = []
+    for fn in ast.walk(tree):
+        if not isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef)) or fn.name in builders:
+            continue
+        for node in ast.walk(fn):
+            if isinstance(node, ast.Constant) and node.value in ("2.0", -32000, -32601, 32000, 32601):
+                offenders.append((fn.name, node.lineno))
+            if isinstance(node, ast.Constant) and node.value == "dnd-scripts":
+                offenders.append((fn.name, node.lineno))
+    assert offenders == []
+
+
+# ---------------------------------------------------------------------------
+# py-mcp-rob-3: group-filter exclusions are one summary line, not startup failures
+# ---------------------------------------------------------------------------
+
+def test_py_mcp_rob_3_group_exclusions_are_one_summary_line(tmp_path, monkeypatch, capsys):
+    """py-mcp-rob-3: under DND_MCP_TOOLS_GROUP every excluded script was listed one per
+    line as a startup failure. Now they collapse into one count line naming the group;
+    a real failure in a grouped module is still listed. --list-tools still lists each."""
+    monkeypatch.setenv("DND_MCP_TOOLS_GROUP", "combat")
+    repo = _make_repo(tmp_path)
+    (repo / "scripts" / "lore_a.py").write_text(_AST_ONLY_MODULE, encoding="utf-8")
+    (repo / "scripts" / "lore_b.py").write_text(
+        'MCP_GROUPS = ["lore"]\n' + _INPROC_MODULE, encoding="utf-8")
+    (repo / "scripts" / "broken.py").write_text(
+        'MCP_GROUPS = ["combat"]\n' + _BROKEN_TOOL, encoding="utf-8")
+
+    err = _startup_stderr(monkeypatch, capsys, repo)
+    assert "[mcp-server] 2 script(s) excluded by DND_MCP_TOOLS_GROUP=combat" in err
+    assert "lore_a.py" not in err and "lore_b.py" not in err
+    assert "[mcp-server] 1 script(s) skipped at discovery:" in err
+    assert "broken.py: invalid MCP_TOOL" in err
+
+    monkeypatch.setattr(sys, "argv", ["server.py", "--list-tools"])
+    assert server.main() == 0
+    out = capsys.readouterr().out
+    assert "lore_a.py: group filter excludes" in out
+    assert "lore_b.py: group filter excludes" in out
+
+
+# ---------------------------------------------------------------------------
+# py-mcp-rob-6 (EC-8): only a signature mismatch is "Invalid arguments"
+# ---------------------------------------------------------------------------
+
+def test_py_mcp_rob_6_handler_body_type_error_keeps_its_message(monkeypatch, capsys):
+    """py-mcp-rob-6: any TypeError raised inside a handler's body was relabelled
+    'Invalid arguments for <tool>'. Now only a bind failure is; a body TypeError
+    propagates with its own message (the worker still returns it as -32000)."""
+    def handler(*, name: str):
+        return name + 1  # TypeError from the body, not from the arguments
+
+    runner = _runner(handler)
+    with pytest.raises(TypeError) as excinfo:
+        runner.run(arguments={"name": "x"})
+    assert "Invalid arguments" not in str(excinfo.value)
+
+    with pytest.raises(ValueError, match=r"^Invalid arguments for probe: "):
+        runner.run(arguments={"nope": 1})
+    with pytest.raises(ValueError, match=r"^Invalid arguments for probe: "):
+        runner.run(arguments={})
+
+    monkeypatch.delenv("PENTARYN_MCP_LOG_DIR", raising=False)
+    sent = _call(monkeypatch, runner, {"name": "x"})
+    assert sent[0]["error"]["code"] == -32000
+    assert "Invalid arguments" not in sent[0]["error"]["message"]
+    assert "str" in sent[0]["error"]["message"]
+
+
+# ---------------------------------------------------------------------------
+# py-mcp-rob-7: value_flags render list/dict as JSON, the same way placeholders do
+# ---------------------------------------------------------------------------
+
+def test_py_mcp_rob_7_value_flags_render_list_and_dict_as_json():
+    """py-mcp-rob-7: a list/dict value_flags argument reached the child as a Python
+    repr (``['a', 'b']``). It is now json.dumps(ensure_ascii=False), matching the
+    placeholder path; scalars still go through str() and None is skipped."""
+    runner = server.ToolRunner(
+        tool=server.Tool(name="vf", description="", input_schema={}),
+        script_path=_SERVER_PATH, argv_template=(), bool_flags={},
+        value_flags={"tags": "--tags", "meta": "--meta", "n": "--n",
+                     "s": "--s", "gone": "--gone"})
+    argv = runner._build_argv({"tags": ["a", "é"], "meta": {"k": 1}, "n": 3,
+                               "s": " x ", "gone": None})
+    assert argv == ["--meta", '{"k": 1}', "--n", "3", "--s", "x",
+                    "--tags", '["a", "é"]']
+
+
+# ---------------------------------------------------------------------------
+# py-mcp-rob-8: SystemExit at handler-module import is one skip, not the end of discovery
+# ---------------------------------------------------------------------------
+
+def test_py_mcp_rob_8_system_exit_at_import_is_skipped_and_discovery_continues(tmp_path):
+    """py-mcp-rob-8: a script with MCP_HANDLERS that calls sys.exit() at import (e.g. a
+    missing-dependency guard) escaped `except Exception` and aborted discovery, leaving
+    a half-initialised module in sys.modules. It is now a skip carrying the original
+    text, the module entry is removed, and the other scripts still load."""
+    repo = _make_repo(tmp_path)
+    scripts = repo / "scripts"
+    (scripts / "a_exits_rob8.py").write_text(
+        "import sys\nMCP_HANDLERS = {}\nsys.exit('needs frobnicate')\n", encoding="utf-8")
+    (scripts / "b_raises_rob8.py").write_text(
+        "MCP_HANDLERS = {}\nraise RuntimeError('boom rob8')\n", encoding="utf-8")
+    (scripts / "c_inproc_rob8.py").write_text(_INPROC_MODULE, encoding="utf-8")
+
+    result = server.discover_tools(repo_root=repo)
+
+    assert "sample_inproc" in {r.tool.name for r in result.tools}
+    reasons = {path.name: reason for path, reason in result.skipped}
+    assert reasons["a_exits_rob8.py"] == "in-process import failed: SystemExit: needs frobnicate"
+    assert reasons["b_raises_rob8.py"] == "in-process import failed: boom rob8"
+    assert "_mcp_script_a_exits_rob8" not in sys.modules
+    assert "_mcp_script_b_raises_rob8" not in sys.modules
+    assert "_mcp_script_c_inproc_rob8" in sys.modules
+
+
+# ---------------------------------------------------------------------------
+# py-mcp-ext-3 (MNT-5): the AST path matches exactly MCP_TOOL / MCP_TOOLS
+# ---------------------------------------------------------------------------
+
+def test_py_mcp_ext_3_mcp_tool_prefixed_helpers_are_ignored(tmp_path):
+    """py-mcp-ext-3: the AST path collected every name starting with MCP_TOOL, so a
+    helper like MCP_TOOL_NAMES (a list) or MCP_TOOL_SCHEMA (a call) turned the script
+    into a discovery failure, and an undocumented MCP_TOOL_<name> dict shape was
+    registered. Now only MCP_TOOL and MCP_TOOLS count, as on the in-process path and
+    in the README: helpers are ignored, a helper-only script is a plain 'no MCP_TOOL'."""
+    repo = _make_repo(tmp_path)
+    scripts = repo / "scripts"
+    (scripts / "a_names_ext3.py").write_text(
+        'MCP_TOOL_NAMES = ["x", "y"]\n'
+        'MCP_TOOL = {"name": "ext3_tool", "description": "d"}\n', encoding="utf-8")
+    (scripts / "b_schema_ext3.py").write_text(
+        'def build():\n    return {}\n'
+        'MCP_TOOL_SCHEMA = build()\n'
+        'MCP_TOOLS = [{"name": "ext3_listed", "description": "d"}]\n', encoding="utf-8")
+    (scripts / "c_helper_only_ext3.py").write_text(
+        'MCP_TOOL_NAMES = ["x"]\n', encoding="utf-8")
+    (scripts / "d_named_ext3.py").write_text(
+        'MCP_TOOL_FOO = {"name": "ext3_undocumented", "description": "d"}\n', encoding="utf-8")
+
+    result = server.discover_tools(repo_root=repo)
+
+    names = {r.tool.name for r in result.tools}
+    assert {"ext3_tool", "ext3_listed"} <= names
+    assert "ext3_undocumented" not in names
+    reasons = {path.name: reason for path, reason in result.skipped}
+    assert "a_names_ext3.py" not in reasons
+    assert "b_schema_ext3.py" not in reasons
+    assert reasons["c_helper_only_ext3.py"] == server._NO_TOOL
+    assert reasons["d_named_ext3.py"] == server._NO_TOOL
+
+
+# ---------------------------------------------------------------------------
+# py-mcp-EC-3: a lone surrogate in a reply must not swallow the reply
+# ---------------------------------------------------------------------------
+
+class _FakeStdout:
+    def __init__(self):
+        import io
+        self.buffer = io.BytesIO()
+
+
+def _surrogate_boom(**kw):
+    raise ValueError("bad \udcff byte")
+
+
+@pytest.mark.parametrize("mode", ["jsonl", "lsp"])
+def test_py_mcp_ec_3_lone_surrogate_error_still_replies(monkeypatch, mode):
+    """py-mcp-EC-3: a handler error message carrying a lone surrogate (e.g. from a
+    surrogateescape-decoded path) made _write_message's .encode('utf-8') raise, so
+    the worker wrote no reply at all and the client hung on that id. Now the frame is
+    re-encoded with ensure_ascii=True (the surrogate becomes \\udcff) and the error
+    reply always reaches the client, on both transports."""
+    monkeypatch.delenv("PENTARYN_MCP_LOG_DIR", raising=False)
+    fake = _FakeStdout()
+    monkeypatch.setattr(sys, "stdout", fake)
+    # The real stderr uses errors="backslashreplace"; a StringIO takes the
+    # traceback's surrogate the same way, unlike pytest's strict capture.
+    import io
+    monkeypatch.setattr(sys, "stderr", io.StringIO())
+    monkeypatch.setattr(server, "_TRANSPORT_MODE", mode)
+    server._inflight_slots.acquire()
+    server._run_call_worker(9, _runner(_surrogate_boom), {})
+
+    raw = fake.buffer.getvalue()
+    assert raw, "no reply was written"
+    if mode == "lsp":
+        head, body = raw.split(b"\r\n\r\n", 1)
+        assert head == f"Content-Length: {len(body)}".encode("ascii")
+    else:
+        assert raw.endswith(b"\n") and raw.count(b"\n") == 1
+        body = raw[:-1]
+    assert b"\\udcff" in body
+    msg = json.loads(body.decode("utf-8"))
+    assert msg["id"] == 9
+    assert msg["error"]["code"] == -32000
+    assert msg["error"]["message"] == "bad \udcff byte"
+
+
+def test_py_mcp_ec_3_plain_unicode_stays_unescaped(monkeypatch):
+    """py-mcp-EC-3: the ASCII fallback is only for the failing case; ordinary
+    non-ASCII text is still written as raw UTF-8."""
+    fake = _FakeStdout()
+    monkeypatch.setattr(sys, "stdout", fake)
+    monkeypatch.setattr(server, "_TRANSPORT_MODE", "jsonl")
+    server._write_message({"jsonrpc": "2.0", "id": 1, "result": "café"})
+    assert "café".encode("utf-8") in fake.buffer.getvalue()
+
+
+# ---------------------------------------------------------------------------
+# py-mcp-EC-5: a non-dict MCP_HANDLERS skips the module instead of half-wiring it
+# ---------------------------------------------------------------------------
+
+def test_py_mcp_ec_5_non_dict_handlers_skips_whole_module(tmp_path):
+    """py-mcp-EC-5: a module whose MCP_HANDLERS is not a dict (a list, None, …) used
+    to register its tools with handler=None, so they fell through to the subprocess
+    path against a script with no CLI for them. The whole module is now one skip
+    with reason 'MCP_HANDLERS is not a dict', and other scripts still load."""
+    repo = _make_repo(tmp_path)
+    scripts = repo / "scripts"
+    (scripts / "a_listhandlers_ec5.py").write_text(
+        _INPROC_MODULE.replace('MCP_HANDLERS = {"sample_inproc": _handler}',
+                               "MCP_HANDLERS = [_handler]").replace(
+            '"sample_inproc"', '"listed_ec5"'),
+        encoding="utf-8")
+    (scripts / "b_inproc_ec5.py").write_text(_INPROC_MODULE, encoding="utf-8")
+
+    result = server.discover_tools(repo_root=repo)
+
+    names = {r.tool.name for r in result.tools}
+    assert "listed_ec5" not in names
+    assert "sample_inproc" in names
+    reasons = {path.name: reason for path, reason in result.skipped}
+    assert reasons["a_listhandlers_ec5.py"] == "MCP_HANDLERS is not a dict"
+
+
+# ---------------------------------------------------------------------------
+# py-mcp-ac-4: busy, unknown-tool and bad-argument calls are logged too
+# ---------------------------------------------------------------------------
+
+def test_py_mcp_ac_4_rejected_calls_write_one_log_line_each(monkeypatch, tmp_path):
+    """py-mcp-ac-4: the README promises one action-log line per tools/call, but the
+    three calls the serve loop refuses before dispatch (unknown tool, non-object
+    arguments, server busy) wrote nothing. Each now writes one line with
+    mode 'rejected', ok false, ms 0 and the same error text the caller got."""
+    sent = []
+    feed = iter([
+        {"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": {"name": "nope"}},
+        {"jsonrpc": "2.0", "id": 2, "method": "tools/call",
+         "params": {"name": "probe", "arguments": [1, 2]}},
+        {"jsonrpc": "2.0", "id": 3, "method": "tools/call",
+         "params": {"name": "probe", "arguments": {"a": 1}}},
+        None,
+    ])
+    monkeypatch.setattr(server, "_read_message", lambda: next(feed))
+    monkeypatch.setattr(server, "_write_message", sent.append)
+    monkeypatch.setattr(server, "_inflight_slots", server.threading.Semaphore(0))
+    monkeypatch.setenv("PENTARYN_MCP_LOG_DIR", str(tmp_path))
+    runner = _runner(lambda **k: "ok")
+    assert server._serve_loop((runner.tool,), {"probe": runner}, _SyncExecutor()) == 0
+
+    errors = [m["error"]["message"] for m in sent]
+    assert [m["id"] for m in sent] == [1, 2, 3]
+    lines = _log_lines(tmp_path)
+    assert len(lines) == 3
+    for line, error in zip(lines, errors):
+        assert set(line) == _LOG_KEYS
+        assert line["server"] == "dnd-scripts" and line["mode"] == "rejected"
+        assert line["ok"] is False and line["ms"] == 0 and line["error"] == error
+    assert [l["tool"] for l in lines] == ["nope", "probe", "probe"]
+    assert lines[0]["args"] == {} and lines[2]["args"] == {"a": 1}
+    assert lines[1]["args"] == [1, 2]
+    assert "Unknown tool" in lines[0]["error"]
+    assert "arguments must be an object" in lines[1]["error"]
+    assert lines[2]["error"].startswith("Server busy: ")
+
+
+# ---------------------------------------------------------------------------
+# py-mcp-ac-5: notifications/cancelled drops a queued call and silences a running one
+# ---------------------------------------------------------------------------
+
+def test_py_mcp_ac_5_cancelled_calls_never_run_or_reply(monkeypatch, tmp_path):
+    """py-mcp-ac-5: the serve loop ignored notifications/cancelled, so a call the
+    client gave up on still ran and still replied. Now a still-queued call never
+    runs (its admission slot comes back and it logs one 'rejected' line), and a
+    call already running finishes but sends no reply. Other calls are untouched."""
+    started, gate, ran = server.threading.Event(), server.threading.Event(), []
+
+    def slow(**kw):
+        ran.append(kw["n"])
+        if kw["n"] == 1:
+            started.set()
+            assert gate.wait(5)
+        return f"done {kw['n']}"
+
+    def call(i):
+        return {"jsonrpc": "2.0", "id": i, "method": "tools/call",
+                "params": {"name": "probe", "arguments": {"n": i}}}
+
+    def cancel(i):
+        return {"jsonrpc": "2.0", "method": "notifications/cancelled",
+                "params": {"requestId": i, "reason": "user gave up"}}
+
+    def feed():
+        yield call(1)
+        assert started.wait(5)       # call 1 is running; call 2 will queue behind it
+        yield call(2)
+        yield cancel(2)
+        yield cancel(1)
+        yield cancel(99)             # an unknown id is ignored
+        gate.set()
+        yield call(3)
+        yield None
+
+    sent = []
+    frames = feed()
+    monkeypatch.setattr(server, "_read_message", lambda: next(frames))
+    monkeypatch.setattr(server, "_write_message", sent.append)
+    monkeypatch.setattr(server, "_inflight_slots", server.threading.Semaphore(4))
+    monkeypatch.setenv("PENTARYN_MCP_LOG_DIR", str(tmp_path))
+    runner = _runner(slow)
+    pool = server.ThreadPoolExecutor(max_workers=1)
+    try:
+        assert server._serve_loop((runner.tool,), {"probe": runner}, pool) == 0
+    finally:
+        gate.set()
+        pool.shutdown(wait=True)
+
+    assert ran == [1, 3]
+    assert sent == [{"jsonrpc": "2.0", "id": 3,
+                     "result": {"content": [{"type": "text", "text": "done 3"}]}}]
+    assert server._inflight_slots._value == 4
+    assert server._pending_calls == {} and server._cancelled_ids == set()
+    lines = _log_lines(tmp_path)
+    assert len(lines) == 3
+    queued = [l for l in lines if l["mode"] == "rejected"]
+    assert len(queued) == 1 and queued[0]["args"] == {"n": 2}
+    assert queued[0]["error"] == "Cancelled by the client before it ran"
+
+
+def test_py_mcp_ac_5_unhashable_id_still_replies(monkeypatch):
+    """py-mcp-ac-5: a malformed (list) id is not tracked for cancellation, and the
+    call still runs and replies instead of crashing the dispatch."""
+    sent = _serve(monkeypatch, [
+        {"jsonrpc": "2.0", "id": [1], "method": "tools/call", "params": {"name": "probe"}},
+        {"jsonrpc": "2.0", "method": "notifications/cancelled", "params": {"requestId": [1]}},
+    ], runners=(_runner(lambda **k: "ok"),))
+    assert sent == [{"jsonrpc": "2.0", "id": [1],
+                     "result": {"content": [{"type": "text", "text": "ok"}]}}]
+    assert server._pending_calls == {}
+
+
+# ---------------------------------------------------------------------------
+# py-mcp-perf-1: stdin EOF finishes running calls but drops queued ones
+# ---------------------------------------------------------------------------
+
+def test_py_mcp_perf_1_eof_drops_queued_calls(monkeypatch):
+    """py-mcp-perf-1: on stdin EOF the server waited for every queued call too, so a
+    full queue could hold shutdown for minutes running work no client would read. Now
+    the running call still finishes and replies (no reply cut off mid-write) and the
+    queued one never runs."""
+    started, gate, ran = server.threading.Event(), server.threading.Event(), []
+
+    def slow(**kw):
+        ran.append(kw["n"])
+        if kw["n"] == 1:
+            started.set()
+            assert gate.wait(5)
+        return f"done {kw['n']}"
+
+    def call(i):
+        return {"jsonrpc": "2.0", "id": i, "method": "tools/call",
+                "params": {"name": "probe", "arguments": {"n": i}}}
+
+    def feed():
+        yield call(1)
+        assert started.wait(5)       # call 1 is running; call 2 queues behind it
+        yield call(2)
+        server.threading.Timer(0.2, gate.set).start()   # call 1 ends during shutdown
+        yield None
+
+    sent = []
+    frames = feed()
+    runner = _runner(slow)
+    monkeypatch.setattr(server, "discover_tools", lambda **kw: server.DiscoveryResult(
+        tools=(runner,), skipped=()))
+    monkeypatch.setattr(server, "_DEFAULT_MAX_WORKERS", 1)
+    monkeypatch.setattr(server, "_read_message", lambda: next(frames))
+    monkeypatch.setattr(server, "_write_message", sent.append)
+    monkeypatch.setattr(server, "_inflight_slots", server.threading.Semaphore(4))
+    monkeypatch.setattr(sys, "argv", ["server.py"])
+    monkeypatch.delenv("PENTARYN_MCP_LOG_DIR", raising=False)
+    try:
+        assert server.main() == 0
+    finally:
+        gate.set()
+
+    assert ran == [1]
+    assert sent == [{"jsonrpc": "2.0", "id": 1,
+                     "result": {"content": [{"type": "text", "text": "done 1"}]}}]

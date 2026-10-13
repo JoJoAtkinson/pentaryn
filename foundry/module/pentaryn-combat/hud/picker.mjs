@@ -10,6 +10,7 @@ import { setting, argonSetting, setArgonSetting, hasArgonSetting } from "../sett
 import { releaseTargets } from "../argon.mjs";
 import { argonClasses } from "./buttons-ui.mjs";
 import { registerTargetPicker } from "../sequence.mjs";
+import { opts } from "../context.mjs";
 
 const log = makeLog(MODULE);
 
@@ -48,9 +49,11 @@ function applyPickerGuide() {
     if (on) document.body.style.setProperty("--pentaryn-combat-picker-cue", JSON.stringify(_loc("PENTARYN_COMBAT.Hud.PickerCue")));
   } catch (err) { log.debug("picker cue (no body yet)", err); }
   if (!on || !hasArgonSetting("targetPickerGuideShown")) return;
+  const warn = err => log.warn("marking Argon's picker tutorial seen failed", err);
   try {
-    if (!argonSetting("targetPickerGuideShown")) setArgonSetting("targetPickerGuideShown", true);
-  } catch (err) { log.warn("marking Argon's picker tutorial seen failed", err); }
+    // ac-1: settings.set is async; a rejected write is warned here, a throwing read by the catch
+    if (!argonSetting("targetPickerGuideShown")) Promise.resolve(setArgonSetting("targetPickerGuideShown", true)).catch(warn);
+  } catch (err) { warn(err); }
 }
 
 
@@ -73,8 +76,6 @@ const placeCue = (records) => {
 };
 
 /* ── install ─────────────────────────────────────────────────────────────── */
-
-const opts = label => ({ label });   // guarded (S11, D-c1): a throw is logged with the label; return values pass through
 
 /**
  * combat-riders-35 [declared D-c4]: the cue's pointer listeners and its observer exist only while

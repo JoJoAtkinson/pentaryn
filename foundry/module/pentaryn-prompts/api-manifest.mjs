@@ -48,7 +48,7 @@ export const MANIFEST = Object.freeze({
     {
       path: "crops",
       params: [{ name: "opts", type: "{ call, encounters?: string[], cropsAs?: \"files\" | \"base64\" }" }],
-      returns: "{ crops: [{ encounter, scene, png | path, mime, squares } | { encounter, error }] }",
+      returns: "{ crops: [{ encounter, scene, png | path, mime, mimeType, squares } | { encounter, scene, error }] }",
       gm: true, writes: false, query: true, legacy: true, wire: BASE64,
       sideEffects: ["Data/pentaryn-prompts-crops/<call>/ (cropsAs \"files\")"],
       throws: ["CALL_UNKNOWN", "BAD_SPEC"],
@@ -63,10 +63,11 @@ export const MANIFEST = Object.freeze({
       returns: "{ dryRun, call, text, results: [flat row], remaining: { sceneId: n }, encounters }",
       gm: true, writes: true, query: true, queryName: "replace", legacy: true,
       sideEffects: ["Token/Note/AmbientLight/Tile creates on the marker's scene", "Actor/JournalEntry creates (npc, import, copy, hotspot, note, character)",
-        "flags.pentaryn-prompts.provenance", "the replaced markers deleted"],
+        "flags.pentaryn-prompts.provenance", "flags.pentaryn-prompts.claims.replace on each marker (cross-tab claim)", "the replaced markers deleted"],
       throws: ["BAD_SPEC", "CALL_UNKNOWN", "DRY_RUN_REQUIRED"],
       doc: "Replace markers with the real thing on their footprints, provenance stamped, markers deleted only after their "
-        + "replacement exists; a readback from the scene. Per-row failures come back in results; more than five need a dry run first.",
+        + "replacement exists; a readback from the scene. Per-row failures come back in results; more than five need a dry run first. "
+        + "Overlapping runs queue per scene; a marker another GM tab is replacing fails its row MARKER_GONE.",
     },
     {
       path: "show",
@@ -111,7 +112,7 @@ export const MANIFEST = Object.freeze({
     {
       path: "model",
       params: [{ name: "sceneId", optional: true, doc: "default: the viewed scene" }],
-      returns: "{ key, name, gridFt, doors, walls, squares, mapFt, regions, levels, warn, notes, dims, items, rel(aKey, bKey) }",
+      returns: "{ key, name, nav, gridFt, doors, walls, squares, mapFt, regions, levels, warn, notes, dims, items, rel(aKey, bKey) }",
       gm: false, writes: false, legacy: true, throws: ["SCENE_UNKNOWN"],
       doc: "The scene model the panel and the gather share: items and the lazy relation function.",
     },

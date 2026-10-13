@@ -185,16 +185,34 @@ export function bindNotesAutosave(textarea, save, { ms = 700 } = {}) {
 }
 
 /**
+ * Is this a write's refused answer — `{ ok: false, reason: "writeFailed" }`, the write contract's
+ * "Foundry refused or failed the write" (attributes.mjs, R8)? Every other answer (`{ ok: true }`, a
+ * refusal such as `noLore`, `undefined`) is not.
+ */
+export const isWriteFailed = out => !!out && typeof out === "object" && out.ok === false && out.reason === "writeFailed";
+
+/**
  * An async click that writes: hold `btn` disabled while `fn` runs — a double-click must not queue a
- * second write — and enable it again in `finally`, so a write that throws does not leave a dead
+ * second write — and enable it again in `finally`, so a write that fails does not leave a dead
  * button. A throw goes to `log.error(op, err)` and `notify(op, err)` (the caller's toast); the
  * handlers used to await with no catch and lost both (ties-ui-rob-7). Pure: the caller hands in its
  * logger and toast.
+ *
+ * A write that no longer throws but ANSWERS `writeFailed` (ties-core R8: `markLearned`,
+ * `grantKnowledge`, `repairAllAncestry`) is the same failure: `fn` returns that answer and it is
+ * logged and toasted exactly as a throw was, with an `Error("writeFailed")` in place of the throw.
+ * Returns `fn`'s answer (undefined after a throw).
  */
 export async function guardClick(op, btn, fn, { log, notify } = {}) {
   btn.disabled = true;
   try {
-    await fn();
+    const out = await fn();
+    if (isWriteFailed(out)) {
+      const err = new Error(out.reason);
+      log?.error(op, err);
+      notify?.(op, err);
+    }
+    return out;
   } catch (err) {
     log?.error(op, err);
     notify?.(op, err);

@@ -744,10 +744,13 @@ export function bindAttributes(root, actor, rerender = () => {}, viewerArg = nul
         const attrId = btn.dataset.attr;
         const loreId = btn.dataset.lore;
         const row = (describeAttribute(attrId)?.lore ?? []).find(r => r.id === loreId);
-        if (row && (await markLearned(viewer, attrId, [loreId])).ok) {
+        // a refused save answers writeFailed (R8); returned, guardClick logs and toasts it
+        const done = row ? await markLearned(viewer, attrId, [loreId]) : null;
+        if (done?.ok) {
           ui.notifications.info(_loc("PENTARYN_TIES.attributes.learnedDone", { label: row.label, who: viewer.name }));
         }
         rerender();
+        return done;
       }, CLICK);
     });
   }
@@ -757,7 +760,8 @@ export function bindAttributes(root, actor, rerender = () => {}, viewerArg = nul
   for (const el of box.querySelectorAll("[data-attr-field]")) {
     el.addEventListener("change", async () => {
       const field = el.dataset.attrField;
-      const value = el.type === "checkbox" ? el.checked : el.type === "number" ? Number(el.value) : el.value;
+      // a cleared number box is null (the clamp's default — DC 15), never Number("") = 0 → 1 (M1)
+      const value = el.type === "checkbox" ? el.checked : el.type === "number" ? (el.value.trim() === "" ? null : Number(el.value)) : el.value;
       await updateAttribute(el.dataset.id, { [field]: value });
       rerender();
     });
@@ -839,8 +843,9 @@ export function bindAttributes(root, actor, rerender = () => {}, viewerArg = nul
       const who = game.actors?.get(btn.closest(".pt-world")?.dataset.character ?? "");
       if (!who) return;
       return guardClick("tell-one", btn, async () => {
-        await grantKnowledge(who, btn.dataset.id);
+        const told = await grantKnowledge(who, btn.dataset.id);
         rerender();
+        return told; // writeFailed (R8) is guardClick's failure path
       }, CLICK);
     });
   }
@@ -862,8 +867,9 @@ export function bindAttributes(root, actor, rerender = () => {}, viewerArg = nul
   // repair = re-link every broken membership in one update, which materialises what it already
   // implied; disabled while it runs so a double-click cannot queue a second pass (ties-ui-ACC-4)
   repair?.addEventListener("click", () => guardClick("attr-repair", repair, async () => {
-    await repairAllAncestry(actor, resolver);
+    const fixed = await repairAllAncestry(actor, resolver);
     rerender();
+    return fixed; // writeFailed (R8) is guardClick's failure path
   }, CLICK));
 }
 

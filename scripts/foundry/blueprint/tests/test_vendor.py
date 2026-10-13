@@ -296,3 +296,63 @@ def test_a_same_version_edit_still_says_never_edit_a_copy(tmp_path):
     p.write_bytes(p.read_bytes() + b" ")
     msg = next(x for x in vendor.check(d) if "lib/log.mjs differs" in x)
     assert "never edit a copy" in msg and "vendored at" not in msg
+
+
+def test_a_corrupt_lock_is_that_modules_problem_not_a_traceback(tmp_path, capsys):
+    """py-blueprint-ROB-4: a kit.lock.json that is not JSON is reported against its own module —
+    read_lock raises VendorError, check() lists it, `--all` reports it and carries on with the rest."""
+    root = tmp_path / "modules"
+    root.mkdir()
+    bad = make_module(root, "pentaryn-bad")
+    good = make_module(root, "pentaryn-good")
+    vendor.sync(bad)
+    vendor.sync(good)
+    (bad / "lib/kit.lock.json").write_text("{not json\n")
+
+    with pytest.raises(vendor.VendorError, match=r"pentaryn-bad: lib/kit.lock.json is not valid JSON"):
+        vendor.read_lock(bad)
+    problems = vendor.check(bad)
+    assert len(problems) == 1 and "pentaryn-bad: lib/kit.lock.json is not valid JSON" in problems[0]
+
+    assert vendor.main(["check", "--all", "--root", str(root)]) == 1
+    out = capsys.readouterr().out
+    assert "✗ pentaryn-bad: lib/kit.lock.json is not valid JSON" in out
+    assert "✓ pentaryn-good" in out
+    assert vendor.main(["check", "--all", "--root", str(root), "--json"]) == 1
+    report = json.loads(capsys.readouterr().out)
+    assert report["modules"]["pentaryn-good"] == [] and report["modules"]["pentaryn-bad"]
+
+    (good / "lib/log.mjs").write_text("// drifted\n")
+    assert vendor.main(["sync", "--all", "--root", str(root)]) == 1
+    captured = capsys.readouterr()
+    assert "✗ pentaryn-bad: lib/kit.lock.json is not valid JSON" in captured.err
+    assert "✓ pentaryn-good" in captured.out
+    assert vendor.check(good) == []                         # the rest were still synced
+    assert (bad / "lib/kit.lock.json").read_text() == "{not json\n"   # the corrupt lock is left alone
+
+
+def test_a_null_pentaryn_flag_is_no_tier_not_a_traceback(tmp_path):
+    """py-blueprint-MAINT-7: `"flags": {"pentaryn": null}` reads as "no tier" (default full),
+    the way conformance.Module.flags reads it — not an AttributeError out of sync."""
+    d = tmp_path / "pentaryn-nullflag"
+    d.mkdir()
+    (d / "module.json").write_text(json.dumps({
+        "id": "pentaryn-nullflag", "relationships": {}, "flags": {"pentaryn": None}}) + "\n")
+    kit = vendor.load_kit()
+    assert vendor.plan(d)["files"] == vendor.closure(kit["tiers"]["full"], kit)
+    vendor.sync(d)
+    assert vendor.check(d) == []
+
+
+def test_re_is_imported_once_at_module_top():
+    """py-blueprint-MAINT-13: `re` is a top-level import of vendor.py, not re-imported inside
+    _lib_imports / _lib_styles."""
+    import ast
+    from pathlib import Path
+
+    tree = ast.parse(Path(vendor.__file__).read_text(encoding="utf-8"))
+    top = {a.name for n in tree.body if isinstance(n, ast.Import) for a in n.names}
+    assert "re" in top
+    local = [f.name for f in ast.walk(tree) if isinstance(f, ast.FunctionDef)
+             for n in ast.walk(f) if isinstance(n, ast.Import) and any(a.name == "re" for a in n.names)]
+    assert local == []

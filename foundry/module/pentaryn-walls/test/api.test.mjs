@@ -9,7 +9,7 @@ import { wallsWorld } from "./fixtures/world.mjs";
 const ROOT = new URL("..", import.meta.url);
 const F = await wallsWorld();
 await import("../pentaryn-walls.mjs");
-const { MODULE, VERSION } = await import("../walls-core.mjs");
+const { FLAG_SCOPE, MODULE, READ_SCOPES, VERSION } = await import("../walls-core.mjs");
 const { MANIFEST } = await import("../api-manifest.mjs");
 const { SETTINGS } = await import("../settings.mjs");
 const { buildApi, surfaceOf } = await import("../lib/api.mjs");
@@ -73,11 +73,42 @@ test("the flags contract names the (pre-migration) scope it writes and both scop
   const d = api.describe();
   assert.equal(d.flagScope, "wall-autocomplete");
   const both = k => [`flags.pentaryn-walls.${k}`, `flags.wall-autocomplete.${k}`];
-  assert.deepEqual(d.flags.reads, ["keepOpen", "generated", "run", "priorC"].flatMap(both));
+  assert.deepEqual(d.flags.reads, ["keepOpen", "generated", "run", "priorC", "moves"].flatMap(both));
   assert.ok(d.flags.writes.includes("flags.wall-autocomplete.run"));
+});
+
+test("walls-EXT-6: the manifest's flag scope comes from FLAG_SCOPE, never a hard-coded literal", async () => {
+  assert.equal(MANIFEST.flagScope, FLAG_SCOPE);
+  assert.ok(MANIFEST.flags.writes.every(p => p.startsWith(`flags.${FLAG_SCOPE}.`)));
+  const { readFile } = await import("node:fs/promises");
+  const src = await readFile(new URL("api-manifest.mjs", ROOT), "utf8");
+  for (const scope of READ_SCOPES) assert.ok(!src.includes(scope), `api-manifest.mjs hard-codes "${scope}"`);
 });
 
 test("undo() describes the stamp deletion under both scopes", () => {
   const undo = api.describe().methods.find(m => m.path === "undo");
   assert.ok(undo.sideEffects.some(e => e.includes("flags.pentaryn-walls") && e.includes("flags.wall-autocomplete") && e.includes("deleted")));
+});
+
+test("walls-M11: run's flag writes are every key the engine stamps; undo lists its batches in commit order", async () => {
+  const { FIXTURES } = await import("./fixtures/corpus.mjs");
+  const stamped = new Set();
+  const leaves = (o, at) => {
+    for (const [k, v] of Object.entries(o)) {
+      const path = `${at}.${k === "R" ? "<run>" : k}`;
+      if (v && typeof v === "object" && !Array.isArray(v)) leaves(v, path);
+      else stamped.add(path);
+    }
+  };
+  for (const fx of FIXTURES.filter(f => Array.isArray(f.walls))) {
+    const r = api.runEngine(fx.walls, { ...fx.opts, runId: "R" });
+    for (const w of [...r.creates, ...r.updates]) leaves(w.flags, "flags");
+  }
+  const d = api.describe();
+  assert.deepEqual([...d.flags.writes].sort(), [...stamped].sort());
+  const run = d.methods.find(m => m.path === "run");
+  const stamp = run.sideEffects.find(e => e.startsWith("flags.wall-autocomplete."));
+  for (const key of stamped) assert.ok(stamp.includes(key.replace("flags.wall-autocomplete.", "")), key);
+  const undo = d.methods.find(m => m.path === "undo").sideEffects;
+  assert.ok(undo.indexOf("Wall update batch") < undo.indexOf("Wall delete batch"), "update batch first (actions.mjs undo)");
 });

@@ -19,7 +19,7 @@
  *                         hintCodes, riderRolled
  *   core/damage.mjs       damageBonuses (TWF / GWM fallback), Steady Aim, damageAtZero
  *   core/multiattack.mjs  parseMultiattack, multiattackPlan, overridePlan
- *   core/turnflow.mjs     Argon's special actions, expiringAt, portraitExtras, orphanUsage, turnBoundary,
+ *   core/turnflow.mjs     Argon's special actions, turnEffectData, expiringAt, portraitExtras, orphanUsage, turnBoundary,
  *                         hudFollowPlan, deltasConsumed, areaPlacementSkipped
  *   core/layout.mjs       dockRect, swingTag, drawerLeft, clampToView
  *   core/timing.mjs       DELAYS: every timer delay, named (combat-riders-37)
@@ -35,6 +35,7 @@ export const VERSION = "0.3.0";            // === module.json version (core.test
 export const CONTRACT = "pentaryn-combat/api@1";
 export const I18N = "PENTARYN_COMBAT";
 export const CSS = "pc-";
+export const ARGON = "enhancedcombathud";  // Argon's package id: its settings, module lookup and flag scope
 /**
  * Every i18n key the code used to build from a template (FollowUp + "." + kind), written
  * out literally so each one is a definite reference for the i18n gate (C35, combat-riders-28). Read
@@ -160,10 +161,10 @@ import {
   stripNumbers
 } from "./core/sequence.mjs";
 import {
-  attackActions, classifySwing, freshTurn, orphanCombatFlags, otherActionsOf, pickCombat, pipFor,
-  pipState, reactionSpent, readTurn, recordBonusAction, recordFollowUp, recordKill,
-  recordOtherAction, recordQuickened, recordQuickenedCast, recordSurge, recordSwing, setRider,
-  spentPips, staleCombatFlags, swingsLeft, turnKey, pruneOlder
+  ATTACK_ACTION_KINDS, actionsLeft, attackActions, classifySwing, freshTurn, orphanCombatFlags,
+  otherActionsOf, pickCombat, pipFor, pipState, reactionSpent, readTurn, recordBonusAction,
+  recordFollowUp, recordKill, recordOtherAction, recordQuickened, recordQuickenedCast, recordSurge,
+  recordSwing, setRider, spentPips, staleCombatFlags, swingsLeft, turnKey, pruneOlder
 } from "./core/turn.mjs";
 import {
   followUps, hideOffhandSlot, poleStrikeOpen
@@ -179,8 +180,8 @@ import {
   multiattackPlan, overridePlan, parseMultiattack
 } from "./core/multiattack.mjs";
 import {
-  SPECIAL_ACTIONS, actionsLeft, areaPlacementSkipped, dashChanges, deltasConsumed, expiringAt,
-  hudFollowPlan, orphanUsage, portraitExtras, recordSpecialAction, specialActionOf, turnBoundary
+  MOVEMENT_KEYS, SPECIAL_ACTIONS, areaPlacementSkipped, dashChanges, deltasConsumed, expiringAt,
+  hudFollowPlan, orphanUsage, portraitExtras, recordSpecialAction, specialActionOf, turnBoundary, turnEffectData
 } from "./core/turnflow.mjs";
 import {
   clampToView, dockRect, drawerLeft, swingTag
@@ -202,5 +203,6 @@ export {
   damageAtZero, damageBonuses, steadyAimAfterAttack, steadyAimChanges, multiattackPlan,
   overridePlan, parseMultiattack, SPECIAL_ACTIONS, actionsLeft, areaPlacementSkipped, dashChanges,
   deltasConsumed, expiringAt, hudFollowPlan, orphanUsage, portraitExtras, recordSpecialAction,
-  specialActionOf, turnBoundary, clampToView, dockRect, drawerLeft, swingTag, pruneOlder, DELAYS
+  specialActionOf, turnBoundary, turnEffectData, clampToView, dockRect, drawerLeft, swingTag, pruneOlder, DELAYS,
+  ATTACK_ACTION_KINDS, MOVEMENT_KEYS
 };

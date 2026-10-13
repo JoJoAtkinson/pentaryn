@@ -2,6 +2,16 @@
 
 ## Unreleased (Wave 7 restart batch, wave 5, 2026-10-12)
 
+- **[declared] kit-ext-1:** `describe().queries` now lists the hand-registered relay query
+  `pentaryn-journal.ensure` (passed as `extras.queries`; kit 1.2.0 merges it after the row-derived names).
+- **[declared] journal-EXT-6:** the skip-reason vocabulary is one list, `SKIP_REASONS` in
+  `journal-core.mjs` (`no-target`, `no-journal`, `nothing-visible`, `too-large`): `skipReason` and
+  `api.mjs` use its members, the manifest's `lastReason` row builds its `returns` from it, and a doc
+  test pins the README line to exactly those names. Same reasons as before; not published on `core`.
+- **[declared] journal-M9:** docs only. The headers (`bar.mjs`, `journal.mjs`, README "What the
+  player sees", `module.json` description and afterSync) no longer say the bar is only for eye pins:
+  they state the rule the code already follows — any journal the player can observe but not own, and
+  any item in an eye pile they can inspect. No behaviour change.
 - `module.json`: `flags.pentaryn` blueprint keys (`flagScope` `journal` → `pentaryn-journal`,
   manifest-only), `relationships.systems` dnd5e, `recommends` item-piles, `verified: "14.369"`,
   `styles/journal.css` (moved).
@@ -19,6 +29,53 @@
   (`scene.update({notes})`) now refreshes which journals open as one page; before, only the Note
   hooks and Scene create/delete forgot the pinned-journal cache, though the docs said a Scene update
   did too. Scene updates that don't change `notes` keep the cache.
+- **[declared] journal-EXT-9:** which journals a scene Note pins comes from the kit (`lib/pins.mjs`,
+  kit 1.2.0): one null-safe rule shared with dropbin, the cache and its six invalidation hooks.
+  `journal-core` re-exports `pinnedEntryIds`/`makePinnedCache` for the older suites.
+- **[declared] journal-async-1:** with two GM tabs open (the MCP bridge and a browser), `ready`'s
+  `ensureAll` and the `createUser` hook no longer make the folder and each new player's journal twice:
+  they take the relay's per-tab claim, so one tab creates and the other waits for its journal.
+- **[declared] journal-EC-4:** the per-tab claim is stamped and judged in server time
+  (`game.time.serverTime`), not each machine's `Date.now()`, so a GM tab on a machine whose clock is a
+  minute or more off no longer reads the other tab's fresh claim as stale and makes a second journal.
+- **[declared] journal-rob-2:** after the GM's client answers a player's first save, the player waits up
+  to 3 s (was 1 s) for the new journal, found by its flag or by the id in the GM's answer. If it still
+  has not arrived, the player gets the "Couldn't add this to your journal — tell the GM." warning and a
+  console warning, instead of the save silently doing nothing.
+- **[declared] journal-rob-3:** `personal(user?)`, `shouldShowBar(entry, user?)` and `ensure(user)` resolve
+  their user as a user ref (a User, an id or an exact name, never a substring), the way `inspect` and
+  `statusFor`'s `as` do, so a string from the MCP bridge names the right player instead of answering
+  `null` / `false` / "no such user". A string matching nobody throws (`ensure`: rejects) `NOT_FOUND`;
+  two matches, `AMBIGUOUS`. `null` now means the calling user, as leaving it out does. The params are
+  `kind: "user", resolve: "self"` with `throws` in `describe()`.
+- **[declared] journal-rob-4:** turning `singlePageReadables` on or off re-applies the one-page look
+  to each open journal on its own: a window that throws is warned (`single-page skipped`) and skipped,
+  the rest are still updated, and the error no longer escapes into the setting change.
+- **[declared] journal-rob-5:** a create vetoed by another module (a `preCreate` hook returning false) no
+  longer surfaces as a bare TypeError. `ensureAll` leaves stray journals at the root when the folder
+  could not be made, and the player relay rejects `NOT_CREATED: the journal could not be created`, so
+  the player's query fails with a named reason (they still get the "tell the GM" warning).
+- **[declared] journal-rob-6:** if the journal window fails to open after a save, the copy is no longer
+  reported as failed: the error is a console warning (`open after save failed`), the player still gets
+  the added/updated toast, and `add()` answers the saved page instead of rejecting.
+- **[declared] journal-EC-3:** a readable the player can observe but with no page they can see no
+  longer shows the bar (whose click did nothing visible): the footer and the
+  `pentaryn-journal-readable` class come off, as for a window with no target, and come back once a
+  page is shown. The api's `targetOf`/`shouldShowBar`/`status` rules are unchanged.
+- **[declared] journal-EC-5:** an `@Embed[…]{label}` with no uuid is reduced to its label as-is (it
+  is already HTML from the page, as the uuid branch keeps it), no longer escaped a second time, so
+  "Tom &amp; Jerry" no longer shows a literal `&amp;`. A saved copy containing such an embed may show
+  "Update my copy" once, because its hash changes.
+- **[declared] journal-perf-3:** an open item bar no longer re-sanitizes its item's description on
+  every redraw: `sanitize` is remembered per item as it is per page (`sanitizeMemo`, keyed by the
+  item's uuid, `_stats.modifiedTime`, its identified flag and the embed label; an item without a
+  modification time is never cached). The `updateItem` refresh rule (`needsItemRefresh`) is unchanged.
+- **[declared] journal-perf-4:** a refresh pass over the open bars looks up the player's journal
+  once and hands its pages to every bar, instead of once per open bar. A window's own render still
+  looks it up itself. The lookup happens on the first bar that needs it, so a pass with no bar to fill
+  does none.
+- **[declared] journal-M7:** `refreshBars`, `applySinglePage` and `findFolder` are no longer on
+  `ctx.exposed`; only the tests read them and api.mjs never did. Nothing a player or GM sees changes.
 
 ## Unreleased (blueprint migration, wave 2)
 

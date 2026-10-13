@@ -81,6 +81,27 @@ export function stampOf(w) {
   return legacy ? {...legacy, ...current} : current;
 }
 
+/**
+ * A run id as stamped: `.` becomes `,` (ISO 8601 allows either before the fraction), so the id is
+ * ONE flag key in `moves.<run>` and in undo's `flags.<scope>.moves.<run>` deletion path.
+ */
+export const runKey = id => String(id ?? "run").replaceAll(".", ",");
+
+/**
+ * A wall's run history (walls-edge-2), read under every scope. `created` is the run that built a
+ * generated wall — kept for good, later runs never rewrite it. `moves` maps each run that trimmed,
+ * welded or moved the wall to the coordinates that run first found it at. The legacy flat stamp
+ * still reads: a non-generated wall's `run` + `priorC` is that run's move.
+ * @returns {{generated: boolean, created: string|null, moves: Object<string, number[]|null>}}
+ */
+export function historyOf(w) {
+  const s = stampOf(w);
+  const generated = s.generated === true;
+  const moves = (!generated && s.run) ? {[s.run]: s.priorC ?? null} : {};
+  for (const scope of [...READ_SCOPES].reverse()) Object.assign(moves, w?.flags?.[scope]?.moves);
+  return {generated, created: generated ? (s.run ?? null) : null, moves};
+}
+
 /** The solid preset — every generated wall is this. APP/client/canvas/layers/walls.mjs:370 */
 export const SOLID = Object.freeze({light: 20, move: 20, sight: 20, sound: 20, door: 0, ds: 0, dir: 0});
 
@@ -192,9 +213,9 @@ function toSeg(w, idx) {
     sound: w.sound ?? 20,
     move: w.move ?? 20,
     dir: w.dir ?? 0,
-    threshold: w.threshold ?? null,
     levels: w.levels ?? [],
     keepOpen: flags.keepOpen === true,
+    movedIn: Object.keys(historyOf(w).moves),
     isNew: false,
     dirty: false
   };
@@ -254,7 +275,7 @@ const KIND_RANK = {solid: 0, terrain: 1, invisible: 2, ethereal: 3, blank: 4};
 function profileFrom(s) {
   if (inferredKind(s) === "solid") return {...SOLID};
   return {light: s.light, sight: s.sight, sound: s.sound, move: s.move,
-          door: 0, ds: 0, dir: 0, ...(s.threshold ? {threshold: s.threshold} : {})};
+          door: 0, ds: 0, dir: 0};
 }
 
 /** Of several source segments, the one whose kind a single bridging wall should take. */
@@ -712,6 +733,8 @@ const rayOf = new WeakMap();
 /**
  * Cast the outward ray from a dangling endpoint and find the nearest obstacle contact.
  * Returns {H, seg} on success, {refusal} when it hits nothing in range or lands mid-door.
+ * A refusal that names a wall in parentheses also carries that wall's id as `wall`, so
+ * diagnose can match it without parsing the text back.
  */
 function castRay(v, segs, cfg) {
   const d = outward(v);
@@ -753,7 +776,7 @@ function castRay(v, segs, cfg) {
     const startT = Math.max(Math.min(t0, t1), 0);
     if (best && startT >= best.t - EPS_T) continue;          // begins at or past the hit
     const away = Math.sqrt(startT * startT * dLen2);
-    return {refusal: `an aligned wall (${s.id}) lies along this line ${(away / cfg.gridSize).toFixed(1)} squares out — close that gap by hand, or nudge the two onto one line`};
+    return {wall: s.id, refusal: `an aligned wall (${s.id}) lies along this line ${(away / cfg.gridSize).toFixed(1)} squares out — close that gap by hand, or nudge the two onto one line`};
   }
   if (!best) return {refusal: "nothing along this line to grow to"};
   const sVec = sub(segB(best.seg), segA(best.seg));
@@ -770,7 +793,7 @@ function castRay(v, segs, cfg) {
   // Stopping mid-door leaves a wall dead-ending into an opening that vanishes when the door
   // opens. Windows are fine — they block movement and stay put (design trace D2).
   if (best.seg.door !== 0 && best.u > EPS_T && best.u < 1 - EPS_T) {
-    return {refusal: `would land mid-door (${best.seg.id}) — move the stub or the door`};
+    return {wall: best.seg.id, refusal: `would land mid-door (${best.seg.id}) — move the stub or the door`};
   }
   return {H, seg: best.seg};
 }
@@ -866,6 +889,7 @@ function diagnose(v, segs, dang, cfg, ambiguous) {
     return `${rule} ambiguous — two equally close candidates at ${where}; finish this one by hand`;
   }
   const reasons = [];
+  const alignedIds = new Set();   // walls F1 already reported as aligned or nearly collinear
   const coll2 = cfg.collEps * cfg.collEps;
   const A = v.ends[0].seg;
   for (const w of dang) {
@@ -876,13 +900,17 @@ function diagnose(v, segs, dang, cfg, ambiguous) {
     const d = Math.sqrt(dist2(v.p, w.p));
     if (onA && isOutward(v, w.p) && d > cfg.gapMaxPx) {
       reasons.push(`aligned with ${B.id} but ${(d / cfg.gridSize).toFixed(1)} squares apart (max ${cfg.gapMax})`);
+      alignedIds.add(B.id);
       continue;
     }
     // Near-collinear-but-not: the band where "fill the gap" and "build a corner" both look
     // plausible. Refusing is the whole point — a rule that guesses here surprises you.
     if (!onA && isOutward(v, w.p) && d <= cfg.gapMaxPx) {
       const off = Math.sqrt(Math.max(distToLine2(segA(B), segA(A), segB(A)), distToLine2(segB(B), segA(A), segB(A))));
-      if (off <= cfg.collEps * 8) reasons.push(`nearly collinear with ${B.id} (off by ${off.toFixed(1)}px, max ${cfg.collEps}) — nudge onto the line`);
+      if (off <= cfg.collEps * 8) {
+        reasons.push(`nearly collinear with ${B.id} (off by ${off.toFixed(1)}px, max ${cfg.collEps}) — nudge onto the line`);
+        alignedIds.add(B.id);
+      }
     }
     const da = outward(v), db = outward(w);
     if (cross(da, db) !== 0) {
@@ -902,11 +930,8 @@ function diagnose(v, segs, dang, cfg, ambiguous) {
   }
   const ray = rayOf.get(v) ?? castRay(v, segs, cfg);
   // F1's "aligned but too far" and E1's "an aligned wall lies along this line" are the same
-  // finding seen from two rules. Say it once.
-  if (ray?.refusal && !reasons.some(r => {
-    const m = ray.refusal.match(/\((\S+?)\)/);
-    return m && (r.includes(`aligned with ${m[1]} `) || r.includes(`nearly collinear with ${m[1]} `));
-  })) reasons.push(ray.refusal);
+  // finding seen from two rules. Say it once — matched by wall id, never by parsing the text.
+  if (ray?.refusal && !(ray.wall !== undefined && alignedIds.has(ray.wall))) reasons.push(ray.refusal);
   return reasons.length ? reasons.join("; ") : "no rule applies";
 }
 
@@ -955,7 +980,7 @@ export function analyze(walls, opts = {}) {
  */
 export function runEngine(walls, opts = {}) {
   const cfg = resolveConfig(opts);
-  const runId = opts.runId ?? "run";
+  const runId = runKey(opts.runId);
   const all = walls.map(toSeg);
 
   // P0 — partition by `levels`. Walls on different levels never interact; edges are
@@ -1096,7 +1121,6 @@ export function runEngine(walls, opts = {}) {
       if (s.isNew) {
         creates.push({c: s.c, light: s.light, sight: s.sight, sound: s.sound, move: s.move,
                       door: 0, ds: 0, dir: 0,
-                      ...(s.threshold ? {threshold: s.threshold} : {}),
                       levels: s.levels,
                       flags: {[FLAG_SCOPE]: {...stamp, rule: s.rule, kind: category(s),
                                              sources: s.sources ?? []}}});
@@ -1104,9 +1128,11 @@ export function runEngine(walls, opts = {}) {
         // Deliberately NOT `...stamp`: that carries `generated: true`, and a hand-drawn wall
         // the engine merely welded or trimmed is not generated. Undo checks `generated`
         // first, so conflating the two made undo DELETE the user's own walls instead of
-        // restoring their length.
+        // restoring their length. Nor `run`: a generated wall keeps the run that created it, and
+        // this run's prior goes under `moves.<run>` — the first one only (walls-edge-2).
         updates.push({_id: s.id, c: s.c,
-                      flags: {[FLAG_SCOPE]: {run: runId, rule: s.rule, priorC: s.priorC}}});
+                      flags: {[FLAG_SCOPE]: {rule: s.rule,
+                                             ...(s.movedIn.includes(runId) ? {} : {moves: {[runId]: s.priorC}})}}});
       }
     }
   }

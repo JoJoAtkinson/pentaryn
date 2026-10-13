@@ -54,7 +54,10 @@
       "settings.mjs"
     ],
     "core/count.mjs": [],
-    "core/damage.mjs": [],
+    "core/damage.mjs": [
+      "core/turn.mjs",
+      "core/turnflow.mjs"
+    ],
     "core/followups.mjs": [
       "core/turn.mjs",
       "core/weapons.mjs"
@@ -71,10 +74,7 @@
     ],
     "core/timing.mjs": [],
     "core/turn-riders.mjs": [],
-    "core/turn.mjs": [
-      "core/followups.mjs",
-      "core/turnflow.mjs"
-    ],
+    "core/turn.mjs": [],
     "core/turnflow.mjs": [
       "core/identity.mjs",
       "core/timing.mjs",
@@ -83,6 +83,7 @@
     "core/weapons.mjs": [],
     "counting.mjs": [
       "combat-core.mjs",
+      "context.mjs",
       "lib/hooks.mjs",
       "lib/log.mjs",
       "sequence.mjs",
@@ -112,10 +113,10 @@
     "hud/bars.mjs": [
       "argon.mjs",
       "combat-core.mjs",
+      "context.mjs",
       "hud/buttons-ui.mjs",
       "hud/pips-bar.mjs",
       "lib/log.mjs",
-      "sequence.mjs",
       "settings.mjs",
       "shapes.mjs",
       "turn-riders.mjs",
@@ -132,6 +133,7 @@
     "hud/picker.mjs": [
       "argon.mjs",
       "combat-core.mjs",
+      "context.mjs",
       "hud/buttons-ui.mjs",
       "lib/log.mjs",
       "sequence.mjs",
@@ -146,11 +148,11 @@
     ],
     "hud/tooltips.mjs": [
       "argon.mjs",
+      "context.mjs",
       "settings.mjs"
     ],
     "offhand.mjs": [
       "combat-core.mjs",
-      "lib/hooks.mjs",
       "lib/log.mjs",
       "settings.mjs",
       "shapes.mjs"
@@ -158,15 +160,18 @@
     "patches.mjs": [
       "argon.mjs",
       "combat-core.mjs",
+      "context.mjs",
       "lib/log.mjs",
       "lib/patch.mjs",
       "settings.mjs"
     ],
     "roll-dock.mjs": [
+      "context.mjs",
       "strip.mjs"
     ],
     "sequence.mjs": [
       "combat-core.mjs",
+      "context.mjs",
       "dialog-adapter.mjs",
       "lib/hooks.mjs",
       "lib/log.mjs",
@@ -190,6 +195,7 @@
     ],
     "turn-riders.mjs": [
       "combat-core.mjs",
+      "context.mjs",
       "lib/log.mjs",
       "settings.mjs",
       "shapes.mjs"
@@ -197,6 +203,7 @@
     "turnflow/action-buttons.mjs": [
       "argon.mjs",
       "combat-core.mjs",
+      "context.mjs",
       "lib/log.mjs",
       "sequence.mjs",
       "settings.mjs",
@@ -205,16 +212,20 @@
     "turnflow/boundaries.mjs": [
       "argon.mjs",
       "combat-core.mjs",
+      "context.mjs",
+      "lib/election.mjs",
       "lib/log.mjs",
       "settings.mjs"
     ],
     "turnflow/death.mjs": [
       "combat-core.mjs",
+      "context.mjs",
       "lib/log.mjs",
       "settings.mjs"
     ],
     "turnflow/dialogs.mjs": [
       "combat-core.mjs",
+      "context.mjs",
       "dialog-adapter.mjs",
       "lib/log.mjs",
       "sequence.mjs",
@@ -223,33 +234,39 @@
     "turnflow/drawers.mjs": [
       "argon.mjs",
       "combat-core.mjs",
+      "context.mjs",
       "lib/log.mjs",
       "settings.mjs"
     ],
     "turnflow/effects.mjs": [
       "combat-core.mjs",
+      "context.mjs",
       "lib/log.mjs",
       "settings.mjs",
       "shapes.mjs"
     ],
     "turnflow/helper-token.mjs": [
       "combat-core.mjs",
+      "context.mjs",
       "lib/log.mjs",
       "settings.mjs",
       "shapes.mjs"
     ],
     "turnflow/manual-dice.mjs": [
       "combat-core.mjs",
+      "context.mjs",
       "dialog-adapter.mjs",
       "lib/log.mjs",
       "settings.mjs"
     ],
     "turnflow/movement.mjs": [
       "combat-core.mjs",
+      "context.mjs",
       "lib/log.mjs"
     ],
     "turnflow/portrait.mjs": [
       "combat-core.mjs",
+      "context.mjs",
       "lib/log.mjs",
       "lib/patch.mjs",
       "settings.mjs"
@@ -264,17 +281,19 @@
     "core/weapons.mjs",
     "core/turnflow.mjs",
     "core/turn.mjs",
-    "core/followups.mjs",
     "core/timing.mjs",
     "core/identity.mjs",
     "core/turn-riders.mjs",
     "core/sequence.mjs",
     "core/multiattack.mjs",
     "core/layout.mjs",
+    "core/followups.mjs",
     "core/damage.mjs",
     "core/count.mjs",
     "lib/patch.mjs",
     "lib/log.mjs",
+    "context.mjs",
+    "lib/hooks.mjs",
     "turnflow/movement.mjs",
     "turnflow/manual-dice.mjs",
     "dialog-adapter.mjs",
@@ -287,9 +306,9 @@
     "turnflow/dialogs.mjs",
     "sequence.mjs",
     "strip.mjs",
-    "lib/hooks.mjs",
     "turnflow/death.mjs",
     "turnflow/boundaries.mjs",
+    "lib/election.mjs",
     "turnflow/action-buttons.mjs",
     "patches.mjs",
     "hud/tooltips.mjs",
@@ -298,12 +317,10 @@
     "hud/bars.mjs",
     "turn-riders.mjs",
     "hud/pips-bar.mjs",
-    "context.mjs",
     "combat.mjs",
     "roll-dock.mjs",
     "offhand.mjs",
     "lib/publish.mjs",
-    "lib/election.mjs",
     "counting.mjs",
     "api.mjs",
     "lib/resolve.mjs",

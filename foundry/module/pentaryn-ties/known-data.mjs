@@ -9,6 +9,7 @@
 import { MODULE } from "./ties-core.mjs";
 import { readFlag } from "./lib/flags.mjs";
 import { baseActorOf, serial } from "./ties-adapter.mjs";
+import { makeLog } from "./lib/log.mjs";
 import {
   KNOWN_FLAG,
   KNOWN_CATEGORIES_FLAG,
@@ -18,6 +19,8 @@ import {
   makeKnownEntry,
   pickNotebook
 } from "./known-core.mjs";
+
+const log = makeLog(MODULE);
 
 /** The two seeded categories' labels (literal keys); a custom key keeps its template. */
 const CATEGORY_LABEL = Object.freeze({
@@ -84,7 +87,12 @@ export function readKnown(actor) {
  */
 async function writeKnownNow(actor, list, { render = false } = {}) {
   if (!actor?.isOwner) return false; // the server would refuse it anyway; fail quietly
-  await actor.update({ [`flags.${MODULE}.${KNOWN_FLAG}`]: toStoredKnown(list) }, { render });
+  try {
+    await actor.update({ [`flags.${MODULE}.${KNOWN_FLAG}`]: toStoredKnown(list) }, { render });
+  } catch (err) {
+    log.warn(`${actor.name}: Known write refused`, err); // R8: answer false, never throw
+    return false;
+  }
   return true;
 }
 

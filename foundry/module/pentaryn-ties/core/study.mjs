@@ -6,8 +6,8 @@
  */
 
 import { isBlankProse } from "./prose.mjs";
-import { ATTR_TITLE_MAX, clampKnownNotes, fromOf, num, numOrNull, passOf, str, timeOrNull } from "./shared.mjs";
-export { SHARE_FROM_MAX } from "./shared.mjs";
+import { ATTR_TITLE_MAX, STUDY_RUNGS, clampKnownNotes, fromOf, num, numOrNull, passOf, str, timeOrNull } from "./shared.mjs";
+export { SHARE_FROM_MAX, STUDY_RUNGS } from "./shared.mjs";
 
 /* ══════════════════════════════════════════════════════════════════════════ */
 /*  Phase 3 — the study ladder, minus Foundry                                 */
@@ -68,9 +68,6 @@ export function studyOffsetOf(raw) {
  */
 export const rungsFor = offset =>
   STUDY_RUNGS.map(r => (r === 0 ? 0 : r + (typeof offset === "number" ? offset : 0)));
-
-/** The rungs, highest first — the order `tierOf` walks and the order an author reads. */
-export const STUDY_RUNGS = [25, 20, 15, 0];
 
 /**
  * The base DC handed to dnd5e as `config.target`. It grades nothing above 15 — the 20 and 25

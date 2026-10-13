@@ -13,7 +13,9 @@
 //   the items-journal-4 re-entrancy test — was a KNOWN row; flipped by the standalone re-entrancy
 //                         commit ([declared] D-I3).
 //   golden/dryrun.json, golden/results.json, golden/refusals.json (toast text included) — no step
-//   may change them.
+//   may change them, except declared fixes: importer-M4 renamed the file in gateModuleJson's text
+//   (pentaryn-importer.mjs → importer-core.mjs, where CONTRACT_ID lives); importer-R4 made nullEntry
+//   a PentarynAbort REFUSED and added stringEntry; importer-EC4 added duplicateAction.
 import { mock, test } from "node:test";
 import assert from "node:assert/strict";
 import { installFoundry } from "./kit/foundry-stub.mjs";
@@ -236,6 +238,26 @@ test("dry run over existing actors: update / create / skip by slug and contentHa
   pinKey("console", "dryRunActors", { plain: plain.console, only: only.console, force: force.console });
 });
 
+test("importer-EC5: a duplicate slug in the file splits created/updated/skipped as the real run would", async () => {
+  // The real run (write.test's full import) creates the first "dup" and updates it from the second;
+  // an entry whose hash matches what an earlier entry in the same file stamped is skipped.
+  serve(valid([
+    entry("dup", "sha256:dup-1"),
+    entry("dup", "sha256:dup-2"),
+    entry("twin", "sha256:twin"),
+    entry("twin", "sha256:twin"),
+    entry("a", "sha256:a-new"),
+    entry("a", "sha256:a-new"),
+  ]));
+  const o = await outcome(() => imp({ dryRun: true }));
+  assert.equal(o.error, null);
+  assert.deepEqual(
+    [o.result.created, o.result.updated, o.result.skipped],
+    [["dup", "twin"], ["dup", "a"], ["twin", "a"]],
+  );
+  assert.equal(game.actors.find(a => a.flags.pentaryn?.slug === "dup"), undefined, "a dry run writes nothing");
+});
+
 test("a custom path and timeout reach getRoute and fetch", async () => {
   serve(valid());
   const o = await outcome(() => imp({ dryRun: true, path: "worlds/other/export.json", timeout: 50 }));
@@ -277,13 +299,16 @@ test("version gate: an empty manifest lists every problem at once", async () => 
   pinKey("refusals", "gateEmpty", refusal(o));
 });
 
-test("version gate: a module.json that disagrees with the code's contract and system", async () => {
+test("version gate: a module.json that disagrees with the code's contract and system names importer-core.mjs (importer-M4)", async () => {
   const flags = game.modules.get(MODULE).flags;
   game.modules.get(MODULE).flags = { pentaryn: { ...flags.pentaryn, contract: "pentaryn/actors.json@0", targetSystem: "pf2e", generation: 13 } };
   try {
     serve(valid());
     const o = await outcome(() => imp({ dryRun: true }));
     assertShouted(o, "PentarynAbort");
+    // importer-M4: CONTRACT_ID lives in importer-core.mjs, so that is the file the refusal names.
+    assert.match(o.error.message, /module\.json and importer-core\.mjs are out of step\./);
+    assert.doesNotMatch(o.error.message, /pentaryn-importer\.mjs/);
     pinKey("refusals", "gateModuleJson", refusal(o));
   } finally {
     game.modules.get(MODULE).flags = flags;
@@ -319,11 +344,34 @@ test("a malformed entry (no slug) is shouted and rethrown as the PentarynAbort i
   pinKey("refusals", "noSlug", refusal(o));
 });
 
-test("a null entry: preparePayload's TypeError is shouted and rethrown unchanged (snapshot :1029)", async () => {
+// importer-R4 [declared]: a non-object entry (null, a string, an array) is refused as PentarynAbort
+// REFUSED, shouted once, before the lint walks it — it used to escape as an uncoded TypeError.
+test("importer-R4: a null entry → PentarynAbort REFUSED, one toast (was preparePayload's TypeError)", async () => {
   serve(valid([null]));
   const o = await outcome(() => imp({ dryRun: true }));
-  assertShouted(o, "TypeError");
+  assertShouted(o, "PentarynAbort");
+  assert.equal(o.code, "REFUSED");
+  assert.match(o.error.message, /^An actor entry is not an object \(got null\)\./);
   pinKey("refusals", "nullEntry", refusal(o));
+});
+
+test("importer-R4: a string entry after a good one → PentarynAbort REFUSED before the lint, one toast", async () => {
+  serve(valid([entry("a", "h"), "a string entry"]));
+  const o = await outcome(() => imp({ dryRun: true }));
+  assertShouted(o, "PentarynAbort");
+  assert.equal(o.code, "REFUSED");
+  pinKey("refusals", "stringEntry", refusal(o));
+});
+
+// importer-EC4 [declared]: two Items on one entry sharing flags.pentaryn.action is a generator
+// contract violation, refused in the pre-pass before the lint and before any write.
+test("importer-EC4: a duplicate item action on one entry → PentarynAbort REFUSED, one toast, nothing imported", async () => {
+  const item = action => ({ name: action, type: "weapon", flags: { pentaryn: { action } } });
+  serve(valid([entry("a", "h"), entry("b", "h", { items: [item("bite"), item("bite")] })]));
+  const o = await outcome(() => imp({ dryRun: true }));
+  assertShouted(o, "PentarynAbort");
+  assert.equal(o.code, "REFUSED");
+  pinKey("refusals", "duplicateAction", refusal(o));
 });
 
 test("non-GM → PentarynAbort with the guide's text, one toast, no fetch", async () => {
@@ -345,6 +393,44 @@ test("unmanagedItems other than keep/delete → PentarynAbort, no toast, no fetc
   assert.deepEqual(o.toasts, []);
   assert.equal(o.fetches.length, 0);
   pinKey("refusals", "unmanagedItems", refusal(o));
+});
+
+// importer-R3 [declared]: only, timeout and path are shape-checked like unmanagedItems — a bad shape
+// is an unshouted BAD_ARGS before any fetch, naming the option and the value it got.
+test("importer-R3: a bad only / timeout / path → PentarynAbort BAD_ARGS, no toast, no fetch", async () => {
+  serve(valid([entry("b", "h")]));
+  const bad = {
+    badOnlyString: { only: "x" },
+    badOnlyItems: { only: ["b", 7] },
+    badTimeoutNull: { timeout: null },
+    badTimeoutZero: { timeout: 0 },
+    badTimeoutNaN: { timeout: NaN },
+    badPathEmpty: { path: "" },
+    badPathNull: { path: null },
+  };
+  for (const [key, opts] of Object.entries(bad)) {
+    const o = await outcome(() => imp({ dryRun: true, ...opts }));
+    assert.equal(o.error?.name, "PentarynAbort", `${key} must reject PentarynAbort`);
+    assert.equal(o.code, "BAD_ARGS", key);
+    assert.deepEqual(o.toasts, [], `${key}: no toast`);
+    assert.equal(o.fetches.length, 0, `${key}: no fetch`);
+    pinKey("refusals", key, refusal(o));
+  }
+});
+
+test("importer-R3: import(null) is import({}); only: [] and only: null are accepted", async () => {
+  serve(valid());   // a real run with no actors: nothing to write
+  const asNull = await outcome(() => imp(null));
+  assert.equal(asNull.error, null, "import(null) runs with the defaults");
+  assert.equal(asNull.result.dryRun, false);
+  assert.equal(asNull.result.path, "worlds/w/actors.json");
+  serve(valid([entry("b", "h")]));
+  const none = await outcome(() => imp({ dryRun: true, only: [] }));
+  assert.equal(none.error, null);
+  assert.equal(none.result.counts.selected, 0);
+  const all = await outcome(() => imp({ dryRun: true, only: null }));
+  assert.equal(all.error, null);
+  assert.equal(all.result.counts.selected, 1);
 });
 
 test("fetch failures are PentarynAbort without a toast: HTTP 404, HTML body, network error", async () => {
@@ -438,6 +524,8 @@ test("expected aborts carry a kit code: NOT_FOUND for a missing file, NOT_GM, BA
   codes.lint = (await outcome(() => imp({ dryRun: true }))).code;
   serve(valid([{ name: "Nameless" }]));
   codes.noSlug = (await outcome(() => imp({ dryRun: true }))).code;
+  serve(valid([null]));
+  codes.nullEntry = (await outcome(() => imp({ dryRun: true }))).code;
   codes.unmanagedItems = (await outcome(() => imp({ dryRun: true, unmanagedItems: "purge" }))).code;
   game.user.isGM = false;
   try {
@@ -465,7 +553,7 @@ test("expected aborts carry a kit code: NOT_FOUND for a missing file, NOT_GM, BA
   codes.reentrant = second.code;
   assert.deepEqual(codes, {
     fetch404: "NOT_FOUND", fetchHtml: "NOT_FOUND", fetch500: "REFUSED",
-    gate: "REFUSED", lint: "REFUSED", noSlug: "REFUSED", unmanagedItems: "BAD_ARGS",
+    gate: "REFUSED", lint: "REFUSED", noSlug: "REFUSED", nullEntry: "REFUSED", unmanagedItems: "BAD_ARGS",
     notGM: "NOT_GM", timeout: "TIMEOUT", reentrant: "CONFLICT",
   });
 });
@@ -570,6 +658,23 @@ test("a body that stalls after the headers still times out (TIMEOUT) and release
   const after = await outcome(() => imp({ dryRun: true }));
   assert.equal(after.error, null, "the guard was released: not CONFLICT");
   assert.ok(after.result);
+});
+
+// importer-AC-1-half: a body stream that errors (not an abort) used to escape as the raw TypeError,
+// which pentaryn-write reports as INTERNAL. It is now a coded PentarynAbort like the fetch failure.
+test("importer-AC-1-half: a body read that errors is a PentarynAbort REFUSED without a toast, and releases the guard", async () => {
+  respond = async () => ({
+    ok: true, status: 200, statusText: "OK",
+    text: async () => { throw new TypeError("network error"); },
+  });
+  const o = await outcome(() => imp({ dryRun: true }));
+  assert.equal(o.error.name, "PentarynAbort");
+  assert.equal(o.code, "REFUSED");
+  assert.deepEqual(o.toasts, []);
+  pinKey("refusals", "fetchBodyError", refusal(o));
+  serve(valid());
+  const after = await outcome(() => imp({ dryRun: true }));
+  assert.equal(after.error, null, "the guard was released: not CONFLICT");
 });
 
 /* ── whole-file pins (keep LAST) ──────────────────────────────────────────────────────────────── */

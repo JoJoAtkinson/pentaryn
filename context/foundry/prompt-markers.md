@@ -80,7 +80,7 @@ token coordinates, do not retype the prompt text anywhere — the gather and the
 | Knob | Default | When to change it |
 |---|---|---|
 | `scenes` | `"all"` (every scene with a prompt) | `"current"`, or a list of scene ids/names (which may include `"current"`), to work one board |
-| `party` | the module's world setting *Party for encounter budgets* (blank = none) | only when you **know** the party (Joe said it, or the scene's own PCs): `"4x5"` (size × level), `{size, level}` or `[5,5,4,5]` — prints the 2024 DMG XP budget per encounter, and replace reports each encounter's difficulty. The text's `<party>` line says which party it used and where from, or `none set`; with none, design by the prompts and say so to Joe — never take `4x5` from this doc |
+| `party` | the module's world setting *Party for encounter budgets* (blank = none) | only when you **know** the party (Joe said it, or the scene's own PCs): `"4x5"` (size × level), `{size, level}` or `[5,5,4,5]` — prints the 2024 DMG XP budget per encounter, and replace reports each encounter's difficulty. The text's `<party>` line says which party it used and where from, or `none set`; a call party it cannot read counts as not given (the world setting stands, and `none set` says so); with none, design by the prompts and say so to Joe — never take `4x5` from this doc |
 | `crops` | `"auto"`: on for a single-scene gather **that has a background image or tiles**; a blank scene says `<crops>crops: skipped — …</crops>` | `true` on a batch when set dressing matters; `false` to save ~800 tokens per crop |
 | `maxPrompts` | 60 | lower only if output is cut; if `next` is set, gather `scenes: ["<next>"]` and continue scene by scene (`list` gives the scenes) |
 | `chars`, `unseenWithinFt`, `builtWithoutProvenance` | 400, 60, true | rarely |
@@ -400,7 +400,9 @@ secret. `note` is one line on **why** this choice — it is stamped into provena
 2. **Real run** — the same call without `dryRun`. Actors and journals are made per replacement
    (an `npc`: the actor, then each feature), then everything is placed in one batch per scene,
    provenance stamped (`flags.pentaryn-prompts.provenance`), markers deleted only after their
-   replacement exists.
+   replacement exists. A marker someone deleted mid-run keeps its replacement (`WARN: marker <id>
+   was already gone…`); a marker whose delete is refused stays, `markerDeleted=false` with a WARN —
+   every other marker on the scene is still deleted.
 3. **Readback** — one line per prompt: what was created (type, name, id, position) and
    `markerDeleted=true|false`; under it the `patched:` list, a character's `sheet:` (abilities,
    HP, AC, PB, spell DC, saves, skills, speed, darkvision, size, languages, feats, spell counts vs limits,

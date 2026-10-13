@@ -1,6 +1,6 @@
 // Part F: a cancelled area placement gives back what it spent. A SYNCHRONOUS, unguarded
 // dnd5e.postUseActivity listener decides, returns a literal false (Hooks.call stops), and the
-// refund runs after. Registered after resolve's Careful arm on the same hook.
+// refund runs after. Registered after Careful Spell's listener on the same hook.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { boot, flush, out, lines, MODULE } from "./fixtures/world.mjs";
@@ -69,10 +69,29 @@ test("not cancelled: placed, nothing spent, no area wanted, no message, or the s
   await flush();
 });
 
-test("nothing spent but concentration began → still vetoed; the refund itself then declines (placementCancelled false)", async () => {
+test("[declared] aoe-mnt-1: nothing spent but concentration began → vetoed AND cleaned up: no activity.refund, the concentration ends, the card goes (was: vetoed, then nothing)", async () => {
   const c = cast({ consumed: false, effects: [{}] });
   F.calls.length = 0;
+  out.length = 0;
   assert.equal(F.fireCall("dnd5e.postUseActivity", c.activity, c.usageConfig, c.results), false);
+  await flush();
+  assert.deepEqual(F.calls.filter(x => ["activity.refund", "delete", "notify", "update"].includes(x.op)), [
+    { op: "delete", documentName: "ActiveEffect", uuid: c.conc[0].uuid },
+    { op: "delete", documentName: "ChatMessage", uuid: c.message.uuid },
+    { op: "notify", level: "info", message: "Fireball: placement cancelled, so its concentration ended and its card was removed." },
+  ]);
+  assert.equal(game.messages.has(c.message.id), false);
+  assert.deepEqual(out, []);
+  // refund() agrees with the veto on the same cast shape.
+  const d = cast({ consumed: false, effects: [{}] });
+  assert.equal(await R.refund(d.activity, d.usageConfig, d.results), true);
+});
+
+test("[declared] aoe-mnt-1: nothing spent and a non-concentration effect → no veto, refund() declines too", async () => {
+  const c = cast({ consumed: false, effects: [{ name: "Blessed", statuses: [] }] });
+  F.calls.length = 0;
+  assert.equal(F.fireCall("dnd5e.postUseActivity", c.activity, c.usageConfig, c.results), true);
+  assert.equal(await R.refund(c.activity, c.usageConfig, c.results), false);
   await flush();
   assert.deepEqual(F.calls.filter(x => ["activity.refund", "delete", "notify"].includes(x.op)), []);
 });
@@ -107,15 +126,17 @@ test("[declared] -9: both cleanup deletes rejecting → refund() resolves true, 
   assert.deepEqual(out.map(o => [o.level, o.text]), [["warn", "pentaryn-aoe | refund end concentration"], ["warn", "pentaryn-aoe | refund card cleanup"]]);
 });
 
-test("the Careful arm (resolve) runs before refund's veto on the same hook", async () => {
+// aoe-careful-select: the Careful listener now opens the player's picker; reaching it is the marker.
+test("the Careful listener runs before refund's veto on the same hook", async () => {
   const c = cast();
+  W.token(scene, { id: "tokSorcerer00001", name: "Sorcerer", actorId: c.caster.id, actor: c.caster });
   const careful = W.item({ name: "Careful Spell", type: "feat", system: { identifier: "careful-spell" } }, c.caster);
   const order = [];
-  const update = c.caster.update.bind(c.caster);
-  Object.defineProperty(c.caster, "update", { value: async ch => { order.push("careful"); return update(ch); } });
+  F.dialog = () => { order.push("careful"); return null; };
   const activity = { ...c.activity, item: careful };
   assert.equal(F.fireCall("dnd5e.postUseActivity", activity, c.usageConfig, c.results), false);
   order.push("after-veto");
   await flush();
-  assert.equal(order[0], "careful", "resolve's listener ran first (it was reached before refund's false)");
+  F.dialog = undefined;
+  assert.equal(order[0], "careful", "the Careful listener ran first (it was reached before refund's false)");
 });

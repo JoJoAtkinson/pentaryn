@@ -1,7 +1,7 @@
 // Item marks — a small icon after an item's name on actor sheets, so a player sees at a glance
 // that something about it is different (Marrith's curse turns her elemental spells to fire).
 //
-//   item.flags["pentaryn-ties"].mark = { icon: "fa-fire", tip: "Hover text", color: "#ff7a1a" }
+//   item.flags["pentaryn-ties"].mark = { icon: "fa-fire", tip: "Hover text (plain)", color: "#ff7a1a" }
 //
 // All three fields are optional; the default is an orange flame with no tooltip. The mark is
 // drawn into every item row on the sheet (spells, features, inventory), on every render.
@@ -27,7 +27,8 @@ export function decorate(app, element) {
     // ties-32: an icon is one Font Awesome class name, or the flame — an item flag is player-writable
     i.className = `${CLASS} fa-solid ${ICON.test(mark.icon ?? "") ? mark.icon : "fa-fire"}`;
     if (mark.color) i.style.color = mark.color;
-    if (mark.tip) i.dataset.tooltip = mark.tip;
+    // ties-core-U4: data-tooltip renders HTML; the tip is player-writable, so it is plain text (v13+)
+    if (mark.tip) i.dataset.tooltipText = mark.tip;
     title.append(" ", i);
   }
 }

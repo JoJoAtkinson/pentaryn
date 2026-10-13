@@ -43,7 +43,7 @@ TIMEOUT_SECONDS = 600
 BUDGET_USD = 1.50
 
 SYSTEM_RULES = """\
-You are grading Foundry VTT package updates for an unattended 06:00 Saturday job.
+You are grading Foundry VTT package updates for an unattended 04:06 Saturday job.
 
 For each candidate you get: the package, the version jump, and the upstream release
 notes between the installed version and the target.
@@ -159,7 +159,8 @@ def run(plan: dict, *, policy: dict | None = None,
         pkg_id, verdict = entry.get("id"), entry.get("verdict")
         # An id that was not offered, or a verdict outside the enum, means the answer
         # is not trustworthy as a whole — not that one row should be dropped.
-        if pkg_id not in allowed or verdict not in ("apply", "hold"):
+        if (not isinstance(pkg_id, str) or pkg_id not in allowed
+                or verdict not in ("apply", "hold")):
             verdicts, reason = _hold_all(
                 ids, f"adjudication returned an unexpected entry: {entry}")
             return verdicts, reason, call

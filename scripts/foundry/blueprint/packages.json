@@ -87,6 +87,11 @@
     "renderActionPanelArgonComponent",
     "pointermove"
   ],
+  "hotHookPrefixes": [
+    "refresh",
+    "draw",
+    "hover"
+  ],
   "readinessTokens": [
     "ready",
     "Ready",

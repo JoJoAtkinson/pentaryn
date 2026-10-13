@@ -1,7 +1,8 @@
 {
   "doc": "Import edges allowed despite the direction table (use-doc §2, context/foundry/addon-blueprint.md). Each entry: {\"from\": \"a.mjs\", \"to\": \"b.mjs\", \"why\": \"…\"}. Every entry is a debt.",
   "allow": [
-    { "from": "starry-adapter.mjs", "to": "wildshape-adapter.mjs", "why": "say / markBonusUsed: the Starry actions spend the Wild Shape use and post through the same chat helper; merging the adapters would cross the 500-line cap and a third 'actors' adapter would only move the edge (guide §2)" },
-    { "from": "wildshape-adapter.mjs", "to": "settings.mjs", "why": "dnd5eAllowsPolymorphing: canTransform repeats dnd5e's own TransformActivity#canTransform test before any use is spent; settings.mjs is the only game.settings reader (C21)" }
+    { "from": "starry-adapter.mjs", "to": "wildshape-adapter.mjs", "why": "say / markBonusUsed / refund: the Starry actions spend (and on failure give back) the Wild Shape use and post through the same chat helper; merging the adapters would cross the 500-line cap and a third 'actors' adapter would only move the edge (guide §2)" },
+    { "from": "wildshape-adapter.mjs", "to": "settings.mjs", "why": "dnd5eAllowsPolymorphing: canTransform repeats dnd5e's own TransformActivity#canTransform test before any use is spent; settings.mjs is the only game.settings reader (C21)" },
+    { "from": "wildshape-adapter.mjs", "to": "form-image-adapter.mjs", "why": "wildcardFormImage / shiftSource / traitsHtml: doShift reads the form's token image and trait text off the beast; the block was split out to keep wildshape-adapter under the 500-line adapter cap (EXT-8), so the edge is the split itself" }
   ]
 }

@@ -1,4 +1,4 @@
-// items-journal-33 — refresh cost. (1) sanitize is memoised per page (makeMemo; counted through
+// items-journal-33 — refresh cost. (1) sanitize is memoised per page and per item (journal-perf-3) (makeMemo; counted through
 // sanitizeMemo.misses), (2) an item update refreshes bars only while an item bar is open
 // (needsItemRefresh; counted through decorate's element reads), (3) one personal() per bar action.
 import { mock, test } from "node:test";
@@ -64,6 +64,32 @@ test("pageDescriptor: one sanitize per page per modification; a page without _st
   A.pageDescriptor(bare, entry);
   A.pageDescriptor(bare, entry);
   assert.equal(A.sanitizeMemo.misses - before, 4);
+});
+
+test("journal-perf-3: itemDescriptor sanitizes once per item modification, identify flag and label; no modifiedTime, no cache", () => {
+  const pile = makeDoc("Actor", { id: "pileActor0000003", name: "Crate", flags: { "item-piles": { data: { enabled: true } } } });
+  const item = makeDoc("Item", { id: "item000000000003", name: "Lamp", img: "l.webp",
+    system: { identified: true, description: { value: "<p>lit</p>" }, unidentified: { description: "<p>a lamp?</p>" } },
+    _stats: { modifiedTime: 1 } }, { parent: pile });
+  const src = { item, pile, pileName: "Crate" };
+  const before = A.sanitizeMemo.misses;
+  const d1 = A.itemDescriptor(src);
+  const d2 = A.itemDescriptor(src);
+  assert.deepEqual(d1, d2);
+  assert.match(d1.body, /<p>lit<\/p>$/);
+  assert.equal(A.sanitizeMemo.misses - before, 1, "two decorates, one sanitize");
+  item.system.identified = false;
+  assert.match(A.itemDescriptor(src).body, /<p>a lamp\?<\/p>$/, "the identify flag is part of the key");
+  assert.equal(A.sanitizeMemo.misses - before, 2);
+  item.system.identified = true;
+  item.system.description.value = "<p>out</p>";
+  item._stats.modifiedTime = 2;
+  assert.match(A.itemDescriptor(src).body, /<p>out<\/p>$/);
+  assert.equal(A.sanitizeMemo.misses - before, 3);
+  const bare = makeDoc("Item", { id: "item000000000004", name: "Rope", img: "r.webp", system: { description: { value: "<p>r</p>" } } }, { parent: pile });
+  A.itemDescriptor({ item: bare, pile, pileName: "Crate" });
+  A.itemDescriptor({ item: bare, pile, pileName: "Crate" });
+  assert.equal(A.sanitizeMemo.misses - before, 5, "an item without _stats is never cached");
 });
 
 /** A window root decorate() can work on: a footer slot, classList, and a counter of element reads. */
@@ -145,6 +171,44 @@ test("savedStatus stops at the first saved source", async () => {
     assert.deepEqual(r.sources, sources);
     assert.equal(finds - byStatus, 1, "one scan after status(), not one per source");
   } finally {
+    F.become({ userId: GM });
+    bar.uninstall();
+    reg.offAll();
+  }
+});
+
+test("journal-perf-4: one refresh pass looks up the personal journal once, not once per open bar", async () => {
+  const { hookRegistry } = await import("../lib/hooks.mjs");
+  const { makeLog } = await import("../lib/log.mjs");
+  const bar = await import("../bar.mjs");
+  const log = makeLog("pentaryn-journal");
+  const reg = hookRegistry("pentaryn-journal", log);
+  let lookups = 0;
+  const ctx = { log, reg, exposed: { personal: () => { lookups++; return null; } }, expose(a) { Object.assign(ctx.exposed, a); } };
+  bar.install(reg, ctx);
+  F.become({ userId: P1 });
+  const JES = F.foundry.applications.sheets.journal.JournalEntrySheet;
+  try {
+    const apps = [1, 2, 3].map(i => {
+      const entry = makeDoc("JournalEntry", { id: `readable0000002${i}`, name: `Hall ${i}`, ownership: { default: 2 } });
+      const page = makeDoc("JournalEntryPage", { id: `page00000000002${i}`, name: "P", type: "text", sort: 1,
+        ownership: { default: 2 }, text: { content: `<p>${i}</p>` } }, { parent: entry });
+      Object.defineProperty(entry, "pages", { value: new StubCollection([page]), enumerable: false });
+      const app = Object.setPrototypeOf(fakeApp(entry), JES.prototype);
+      F.foundry.applications.instances.set(`perf4-${i}`, app);
+      return app;
+    });
+    const reads = apps.map(a => a.reads);
+    lookups = 0;
+    F.fire("updateJournalEntryPage");          // a page change schedules the debounced pass (journal-M7: not exposed)
+    mock.timers.tick(100);
+    assert.deepEqual(apps.map(a => a.reads), reads.map(r => r + 1), "every open bar is redrawn");
+    assert.equal(lookups, 1, "one personal() per refresh pass");
+    lookups = 0;
+    F.fire("renderJournalEntrySheet", apps[0], null, {}, {});
+    assert.ok(lookups >= 1, "a render hook still looks the journal up itself");
+  } finally {
+    F.foundry.applications.instances.clear();
     F.become({ userId: GM });
     bar.uninstall();
     reg.offAll();

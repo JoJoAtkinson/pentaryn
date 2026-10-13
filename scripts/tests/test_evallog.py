@@ -133,3 +133,15 @@ def test_cli_defaults_to_the_mcp_log_env(tmp_path, monkeypatch, capsys):
     monkeypatch.setenv("PENTARYN_MCP_LOG_DIR", str(tmp_path))
     assert cli.main(["eval-report", "--json"]) == 0
     assert json.loads(capsys.readouterr().out)["log_dir"] == str(tmp_path)
+
+
+def test_log_files_selects_by_the_named_globs(tmp_path, monkeypatch):
+    """EXT-7: files are picked by name (LOG_GLOBS), not by shape; only the line kind is."""
+    assert evallog.LOG_GLOBS == ("eval*.jsonl", "mcp-*.jsonl", "dnd-scripts-*.jsonl")
+    (tmp_path / "eval.jsonl").write_text("")
+    (tmp_path / "other-2026-10.jsonl").write_text('{"tool":"x"}\n')   # tool-shaped, unnamed
+    assert [f.name for f in evallog.log_files(tmp_path)] == ["eval.jsonl"]
+    monkeypatch.setattr(evallog, "LOG_GLOBS", ("other-*.jsonl",))
+    assert [f.name for f in evallog.log_files(tmp_path)] == ["other-2026-10.jsonl"]
+    doc = evallog.__doc__
+    assert "by name (LOG_GLOBS)" in doc and "told apart by shape, not by name" not in doc

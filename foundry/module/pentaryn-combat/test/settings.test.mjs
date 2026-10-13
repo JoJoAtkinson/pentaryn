@@ -2,6 +2,7 @@
 // settings.mjs (C21), and the entry's onChange callback.
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readdirSync, readFileSync } from "node:fs";
 import { LANG, MODULE, setupWorld } from "./fixtures/world.mjs";
 
 const W = await setupWorld();
@@ -48,4 +49,36 @@ test("argonSetting: the value; on a throw the call site's fallback, or the throw
     assert.equal(settings.argonSetting("rangepicker", () => false), false);
     assert.throws(() => settings.argonSetting("alwaysOn"), /not registered/);
   } finally { F.game.settings.get = get; }
+});
+
+// combat-core-M6: the header says no other file calls game.settings, but turn-riders.mjs read
+// pentaryn-aoe's autoDamageOnHit itself. The read lives in settings.mjs as aoeAutoDamage().
+test("aoeAutoDamage: true only when pentaryn-aoe is active and autoDamageOnHit is on; false on any failure (combat-core-M6)", async () => {
+  assert.equal(settings.aoeAutoDamage(), false, "aoe not installed");
+  F.game.settings.register("pentaryn-aoe", "autoDamageOnHit", { scope: "world", config: false, type: Boolean, default: true });
+  assert.equal(settings.aoeAutoDamage(), false, "aoe installed but not active");
+  F.game.modules.set("pentaryn-aoe", { id: "pentaryn-aoe", active: true });
+  try {
+    assert.equal(settings.aoeAutoDamage(), true);
+    await F.game.settings.set("pentaryn-aoe", "autoDamageOnHit", false);
+    assert.equal(settings.aoeAutoDamage(), false);
+    const get = F.game.settings.get;
+    F.game.settings.get = () => { throw new Error("not registered"); };
+    try { assert.equal(settings.aoeAutoDamage(), false); } finally { F.game.settings.get = get; }
+  } finally { F.game.modules.delete("pentaryn-aoe"); }
+});
+
+test("no module file but settings.mjs calls game.settings (combat-core-M6)", () => {
+  const root = new URL("../", import.meta.url);
+  const offenders = [];
+  (function walk(dir, rel) {
+    for (const e of readdirSync(dir, { withFileTypes: true })) {
+      if (e.isDirectory()) {
+        if (!["lib", "test", "node_modules"].includes(e.name)) walk(new URL(`${e.name}/`, dir), `${rel}${e.name}/`);
+      } else if (e.name.endsWith(".mjs") && `${rel}${e.name}` !== "settings.mjs") {
+        if (/game\.settings\b/.test(readFileSync(new URL(e.name, dir), "utf8"))) offenders.push(`${rel}${e.name}`);
+      }
+    }
+  })(root, "");
+  assert.deepEqual(offenders, []);
 });

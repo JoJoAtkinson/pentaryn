@@ -38,7 +38,7 @@ def test_every_import_time_foundry_path_is_under_the_temp_data_root(fake_data):
                   "scripts.foundry.ops.config.ACTORS_STAGED",
                   "scripts.foundry.update.admin.FOUNDRY_DATA", "scripts.foundry.update.admin.DATA",
                   "scripts.foundry.update.admin.MODULES_DIR", "scripts.foundry.update.admin.OPTIONS_JSON",
-                  "scripts.foundry.update.inventory.MODULES_DIR", "scripts.foundry.update.recover.FOUNDRY_DATA",
+                  "scripts.foundry.update.admin.SYSTEMS_DIR",
                   "feedback_reports.feedback_dir()"):
         assert root == seen[label] or root in seen[label].parents, f"{label} → {seen[label]} is not under {root}"
 

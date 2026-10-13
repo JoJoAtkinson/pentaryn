@@ -47,6 +47,10 @@ test("list(n, {brief: true}): the nine keys in order, no item source; list(n) un
   assert.deepEqual(api.list(1, {}), api.list(1));
 });
 
+test("dropbin-R2: list(n, null) is list(n), not a destructuring TypeError", () => {
+  assert.deepEqual(api.list(1, null), api.list(1));
+});
+
 test("restoreResult: coded refusals, no toasts; success returns the item and actor", async () => {
   const from = F.calls.length;
   F.become({ userId: PLAYER });
@@ -115,4 +119,76 @@ test("restoreResult: a vetoed create ([] from createEmbeddedDocuments) is not-cr
     if (keep) Object.defineProperty(ann, "createEmbeddedDocuments", keep);
     else delete ann.createEmbeddedDocuments;
   }
+});
+
+test("dropbin-R3: an explicit target that does not resolve is no-actor; a TokenDocument or a UUID resolves to its actor", async () => {
+  const tok = scene.tokens.get("tokGob0000000001");
+  for (const bad of ["nobody", "Actor.nope000000000001", "Scene.sceneOne00000001.Token.nope000000000001", scene.uuid, 7, {}]) {
+    assert.deepEqual(await api.restoreResult(1, bad), { ok: false, reason: "no-actor" }, String(bad));
+  }
+  const from = F.calls.length;
+  const r = await api.restore(1, "nobody");
+  assert.equal(r.message, "Drop bin: cannot find an actor to restore #1 onto.");
+  assert.equal(F.calls.slice(from).filter(c => c.op === "createEmbeddedDocuments").length, 0, "nothing created");
+  for (const target of [tok, gob.uuid, tok.uuid, gob, gob.id, "Goblin"]) {
+    const ok = await api.restoreResult(1, target);
+    assert.equal(ok.ok, true, String(target?.uuid ?? target));
+    assert.equal(ok.actor, gob, String(target?.uuid ?? target));
+  }
+  for (const none of [null, undefined]) assert.equal((await api.restoreResult(1, none)).actor, ann);
+});
+
+test("dropbin-R5: a throwing create or an entry with no item source is not-created (one prefixed warning), never a rejection", async () => {
+  const warns = [];
+  const keepWarn = console.warn;
+  console.warn = (...a) => warns.push(a);
+  const keep = Object.getOwnPropertyDescriptor(ann, "createEmbeddedDocuments");
+  ann.createEmbeddedDocuments = async () => { throw new Error("server refused"); };
+  try {
+    assert.deepEqual(await api.restoreResult(1), { ok: false, reason: "not-created" });
+    assert.equal(warns.length, 1, JSON.stringify(warns));
+    assert.match(String(warns[0][0]), /^pentaryn-dropbin \| /);
+    const r = await api.restore(1);
+    assert.equal(r.message, "Drop bin: #1 was not restored; the item was not created (another module may have refused it).");
+  } finally {
+    console.warn = keepWarn;
+    if (keep) Object.defineProperty(ann, "createEmbeddedDocuments", keep);
+    else delete ann.createEmbeddedDocuments;
+  }
+
+  const entry = api.get(1);
+  const item = entry.item;
+  entry.item = null;
+  const from = F.calls.length;
+  try {
+    assert.deepEqual(await api.restoreResult(1), { ok: false, reason: "not-created" });
+    assert.equal(F.calls.slice(from).filter(c => c.op === "createEmbeddedDocuments").length, 0, "nothing created");
+    const r = await api.restore(1);
+    assert.equal(r.message, "Drop bin: #1 was not restored; the item was not created (another module may have refused it).");
+  } finally {
+    entry.item = item;
+  }
+  assert.equal((await api.restoreResult(1)).ok, true);
+});
+
+test("dropbin-EC-9: inspect by a name several tokens share throws AMBIGUOUS (kept, documented); a sceneId, uuid or id picks one", async () => {
+  const two = addScene(F, { id: "sceneTwo00000001", name: "Vault", tokens: [
+    { id: "tokGob0000000003", name: "Goblin", actorId: gob.id, sight: { enabled: true }, flags: {} },
+  ] });
+  try {
+    assert.throws(() => api.inspect("Goblin"), /AMBIGUOUS/);
+    assert.equal(api.inspect("Goblin", { sceneId: scene.id }).token.id, "tokGob0000000001");
+    assert.equal(api.inspect("Goblin", { sceneId: two.id }).token.id, "tokGob0000000003");
+    assert.equal(api.inspect("tokGob0000000003").token.id, "tokGob0000000003");
+    assert.equal(api.inspect(gob).actor.id, gob.id, "the actor itself is never ambiguous");
+  } finally {
+    F.game.scenes.delete(two.id);
+  }
+  const row = api.describe().methods.find(m => m.path === "inspect");
+  assert.match(row.params[0].doc, /AMBIGUOUS/, "the ref doc names the AMBIGUOUS throw");
+  assert.deepEqual(row.params.map(p => p.name), ["ref", "opts"], "M8: the opts {sceneId} param is declared");
+  assert.equal(row.params[1].optional, true);
+  const { readFileSync } = await import("node:fs");
+  const readme = readFileSync(new URL("../README.md", import.meta.url), "utf8");
+  assert.match(readme, /several tokens of that name throw `AMBIGUOUS`/, "README documents the AMBIGUOUS throw");
 });

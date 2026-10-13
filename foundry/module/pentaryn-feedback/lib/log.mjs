@@ -1,4 +1,4 @@
-// pentaryn kit 1.1.0 · vendored from foundry/lib/log.mjs — edit the canonical file, then run scripts/foundry/blueprint/vendor.py
+// pentaryn kit 1.2.0 · vendored from foundry/lib/log.mjs — edit the canonical file, then run scripts/foundry/blueprint/vendor.py
 /**
  * One logger per module. Every line starts `<moduleId> | <event>`, byte-identical to the
  * hand-written `console.warn(\`${MODULE} | …\`)` lines it replaces, so a glue test can pin them.
@@ -6,6 +6,27 @@
  * Debug output and the trace ring are gated by `CONFIG.debug["<moduleId>"] === true`, which a GM
  * can flip from the console without a reload.
  */
+
+/**
+ * `log` when the caller passed one, else a console stand-in with the same `<moduleId> | <event>`
+ * lines: `error/warn` and a `warnOnce` whose Set lives in this stand-in. The one fallback for kit
+ * functions that take an optional `log` (hooks, patch, patch-libwrapper) — build it once per
+ * closure so `warnOnce` keeps its promise. `g.console` is read at call time and may be absent.
+ */
+export function logOrConsole(moduleId, log, { g = globalThis } = {}) {
+  if (log) return log;
+  const warned = new Set();
+  const line = event => `${moduleId} | ${event}`;
+  return {
+    error: (event, ...rest) => g.console?.error(line(event), ...rest),
+    warn: (event, ...rest) => g.console?.warn(line(event), ...rest),
+    warnOnce(key, event, ...rest) {
+      if (warned.has(key)) return;
+      warned.add(key);
+      g.console?.warn(line(event), ...rest);
+    },
+  };
+}
 
 export function makeLog(moduleId, { console: c = globalThis.console, traceSize = 200, g = globalThis } = {}) {
   const warned = new Set();
@@ -78,14 +99,16 @@ export function makeLog(moduleId, { console: c = globalThis.console, traceSize =
       }
     },
 
-    /** The one way to put a toast on screen. Logs one console line itself; no-op without `ui`. */
+    /**
+     * The one way to put a toast on screen. Always logs one console line first; the toast only
+     * when `ui.notifications[level]` exists (its result, else undefined).
+     */
     notify(level, message, opts = {}) {
-      const n = g.ui?.notifications;
-      if (typeof n?.[level] !== "function") return undefined;
-      const out = n[level](message, { console: false, ...opts });
       const method = level === "error" ? "error" : level === "warn" ? "warn" : "info";
       c[method](line(message));
-      return out;
+      const n = g.ui?.notifications;
+      if (typeof n?.[level] !== "function") return undefined;
+      return n[level](message, { console: false, ...opts });
     },
   };
   return log;

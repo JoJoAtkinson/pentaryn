@@ -19,8 +19,7 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 
 # ── The Foundry application ──
 # Where it lives and how it starts are host.py's (Mac: /Applications, `open -a`;
-# BOSS: FOUNDRY_APP_ROOT and PENTARYN_START_CMD). This name is only for messages.
-FOUNDRY_APP = _host.MAC_APP_NAME
+# BOSS: FOUNDRY_APP_ROOT and PENTARYN_START_CMD); messages name host.foundry_app_root().
 FOUNDRY_URL = f"http://localhost:{_host.foundry_port()}"
 FOUNDRY_BOOT_TIMEOUT = 40  # seconds to wait for the port after host.start()
 
@@ -94,7 +93,8 @@ def module_dirs(root: Path | None = None) -> list[str]:
     return sorted(p.name for p in root.iterdir() if (p / "module.json").is_file())
 
 
-def _read_json(path: Path) -> dict | None:
+def read_json(path: Path) -> dict | None:
+    """The JSON object at `path`, or None when it is missing, unreadable or not an object."""
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError):
@@ -118,17 +118,22 @@ class ModuleSpec:
     * `after_sync` — `module.json` `flags.pentaryn.afterSync` when the module carries
       it (the generator writes it), else the tuple given here. The tuples moved into
       module.json in the Wave 7 batch; the tuple remains only as a fallback.
+
+    `syncable` decides whether `module-sync` may install the module. False keeps it
+    checkable (`module-check`) but out of `module-sync`'s choices, and `modules.sync()`
+    refuses it — the importer, which the actor pipeline installs (EXT-6).
     """
 
     #: every gate a spec may name — see `modules._CHECKS`
     CHECKS = ("parse", "imports", "i18n", "node-test", "vendor", "conformance")
 
     def __init__(self, name: str, *, check: str | tuple[str, ...],
-                 after_sync: tuple[str, ...] = ()):
+                 after_sync: tuple[str, ...] = (), syncable: bool = True):
         self.name = name
+        self.syncable = syncable
         self.check = (check,) if isinstance(check, str) else tuple(check)
         self._after_sync = tuple(after_sync)
-        unknown = [c for c in self.check if c not in (*self.CHECKS, "none")]
+        unknown = [c for c in self.check if c not in self.CHECKS]
         if unknown:
             raise ValueError(f"{name}: unknown check(s) {unknown}")
 
@@ -143,7 +148,7 @@ class ModuleSpec:
     @property
     def after_sync(self) -> tuple[str, ...]:
         """Lines printed after a successful copy (module.json first, then the tuple)."""
-        manifest = _read_json(self.src / "module.json") or {}
+        manifest = read_json(self.src / "module.json") or {}
         lines = (((manifest.get("flags") or {}).get("pentaryn") or {}).get("afterSync"))
         if isinstance(lines, list) and lines:
             return tuple(str(x) for x in lines)
@@ -152,7 +157,7 @@ class ModuleSpec:
     @property
     def kit_lock(self) -> dict | None:
         """`lib/kit.lock.json` — `{version, tier, files}` — or None when unmigrated."""
-        return _read_json(self.src / "lib" / "kit.lock.json")
+        return read_json(self.src / "lib" / "kit.lock.json")
 
     @property
     def kit(self) -> tuple[str, ...] | None:
@@ -297,5 +302,5 @@ MODULES = {
     # module list — but the static gates are free and it is real code, so it gets them.
     # node-test: test/run.mjs (the blueprint's fixed body) runs the characterisation suites
     # (importer guide step 1.11, items-journal-2; C39).
-    "importer": ModuleSpec("pentaryn-importer", check=ALL_GATES),
+    "importer": ModuleSpec("pentaryn-importer", check=ALL_GATES, syncable=False),
 }

@@ -72,6 +72,22 @@
   },
   "calls": [
     {
+      "op": "update",
+      "documentName": "Token",
+      "uuid": "Scene.s1.Token.ra",
+      "changes": {
+        "flags.pentaryn-prompts.claims.replace": "socket-gm-1"
+      }
+    },
+    {
+      "op": "update",
+      "documentName": "Token",
+      "uuid": "Scene.s1.Token.rc",
+      "changes": {
+        "flags.pentaryn-prompts.claims.replace": "socket-gm-1"
+      }
+    },
+    {
       "op": "getTokenDocument",
       "actorId": "actorGuard000001",
       "pos": {

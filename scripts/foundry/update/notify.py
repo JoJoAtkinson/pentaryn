@@ -3,7 +3,8 @@
 
 ``done``       the weekly "here is what changed" — silent by design.
 ``attention``  something is held and needs a human: a high-risk migration, a fork
-               behind upstream, a core generation bump. Notification + sound.
+               behind upstream, a core generation bump, or a smoke selection
+               that matched no world (nothing was tested). Notification + sound.
 ``failed``     an update broke something and was rolled back. Notification + sound.
 
 All three are ordinary Notification Center posts. They respect Focus and Do Not

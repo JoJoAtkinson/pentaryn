@@ -26,7 +26,7 @@ import {
   onPointerMove, dropStaleTooltip, pickerOpen, cancelTargetPicker, closeOwnPickers,
   hudActor, hudTokenDoc, hudTokenId, hudPortrait, hudPanel
 } from "./argon.mjs";
-import { applyButtons, itemButtonClass, slotKind } from "./lib/argon-kit.mjs";
+import { applyButtons, itemButtonClass, settlePips, slotKind } from "./lib/argon-kit.mjs";
 import { argonClasses, liveButtons, TT } from "./form-picker.mjs";
 
 const log = makeLog(MODULE);
@@ -108,12 +108,13 @@ function composeBonusBar(panel, actor) {
       next.push(ab);
     }
   }
-  applyButtons(panel, next, fresh);
+  applyButtons(panel, next, fresh, { log });
 
-  // The shift or revert this turn spent the Bonus Action on a HUD that no longer exists.
+  // The shift or revert this turn spent the Bonus Action on a HUD that no longer exists. settlePips
+  // paints the used pip even when the pip count just changed, without pentaryn-combat's wrap (EC-4).
   if (bonusUsedNow(hudTokenId())) {
     panel.isActionUsed = true;
-    panel.updateActionUse();
+    settlePips(panel);
   }
 }
 
@@ -157,7 +158,7 @@ function composeActionBar(panel, actor) {
   const fresh = ids.map(id => new ItemBtn({ item: actor.items.get(id), inActionPanel: true }));
   const next = [...kept];
   next.splice(slot ? next.indexOf(slot) + 1 : 0, 0, ...fresh);
-  applyButtons(panel, next, fresh);
+  applyButtons(panel, next, fresh, { log });
 }
 
 /** Starry Form lives on the Bonus bar only: drop it from the Special bar (Chalice/Dragon are "special"). */
@@ -176,11 +177,12 @@ function composeSpecialBar(panel, actor) {
     fresh.push(b);
     return b;
   });
-  applyButtons(panel, next, fresh);
+  applyButtons(panel, next, fresh, { log });
 }
 
 function onActionPanelRender(panel, element, actor) {
   // hot: the panel's actor only (its items/effects, map lookups, combat's coversMultiattack); no world iteration
+  if (panel) composed.add(panel);
   try {
     const a = actor ?? panel.actor;
     if (panel?.label === "DND5E.BonusAction") composeBonusBar(panel, a);
@@ -252,15 +254,21 @@ function paintPortrait(element, actor) {
   }
 }
 
+// Display only: a paint that throws warns and leaves Argon's portrait as it was.
+function repaintPortrait(element, actor) {
+  try { paintPortrait(element, actor); } catch (err) { log.warn("portrait line failed", err); }
+}
+
 function onPortraitRender(panel, element, actor) {
-  try { paintPortrait(element, actor ?? panel.actor); } catch (err) { log.warn("portrait line failed", err); }
+  repaintPortrait(element, actor ?? panel.actor);
   setTimeout(dropStaleTooltip, 0);
 }
 
 function onWorldTime() {
-  // hot: reads only the HUD's own actor (ui.ARGON._actor); display only, every client.
+  // hot: reads only the HUD's own actor (ui.ARGON._actor) and the Chalice offers; display only, every client.
   const portrait = hudPortrait();
-  if (portrait?.element) { const actor = hudActor(); if (actor) paintPortrait(portrait.element, actor); }
+  if (portrait?.element) { const actor = hudActor(); if (actor) repaintPortrait(portrait.element, actor); }
+  if (chaliceReady.size) clearChalice();
 }
 
 /* ── the Wild Shape / Starry Form effect on the portrait: bigger, live time left ── */
@@ -301,9 +309,28 @@ function onStarryChange(effect) {
   if (!effect?.getFlag?.(MODULE, "starry")) return;
   if (effect.parent !== hudActor()) return;
   const bonus = hudPanel("DND5E.BonusAction");
-  if (!bonus?.render) return;
+  if (bonus?.render) rebuildBonus(bonus);
+}
+
+// Argon's ActionPanel render is not re-entrant: two at once leave the first one's buttons in the bar
+// (transform-ui/lens-rerun, [declared]). A panel whose first render is still running composes the live
+// form when it ends, so it is left alone; a change during this module's own rebuild queues one more.
+const composed = new WeakSet();   // panels whose render has reached onActionPanelRender
+const rebuilding = new WeakMap(); // Bonus panel → { again } while this module's rebuild of it runs
+
+function rebuildBonus(bonus) {
+  if (!composed.has(bonus)) return;
+  const running = rebuilding.get(bonus);
+  if (running) { running.again = true; return; }
+  const state = { again: false };
+  rebuilding.set(bonus, state);
   for (const b of bonus._buttons ?? []) if (liveButtons.has(b)) { b.panel?.element?.remove(); liveButtons.delete(b); }
-  bonus.render();
+  Promise.resolve(bonus.render())
+    .catch(err => log.warn("Bonus bar rebuild failed", err))
+    .finally(() => {
+      rebuilding.delete(bonus);
+      if (state.again && hudPanel("DND5E.BonusAction") === bonus) rebuildBonus(bonus);
+    });
   setTimeout(dropStaleTooltip, 50);
 }
 
@@ -314,30 +341,42 @@ function onStarryUpdate(effect, changes) {
   const paths = Object.keys(foundry.utils.flattenObject(changes ?? {})).filter(k => k !== "_id" && !k.startsWith("_stats"));
   if (paths.length && paths.every(k => k === STARRY_LEFT)) return;
   onStarryChange(effect);
+  onStarryRecast(effect, changes);
 }
 
 /* ── Chalice: offered when it is earned (Area 4, D6) ─────────────────────── */
 // "Whenever you cast a spell using a spell slot that restores Hit Points to a creature, you or
 // another creature within 30 feet of you can regain Hit Points equal to 1d8 + WIS" (2024 PHB). The
 // Chalice button sat beside Starry Form with nothing saying the second heal was there to take, so it
-// was missed. After such a spell, the Chalice button pulses until it is used or a minute passes.
+// was missed. After such a spell, the Chalice button pulses until it is used or game time moves on.
 // The player still clicks it and rolls (own dice stay possible); nothing is rolled for them.
+// No relay (EC-3): dnd5e.postUseActivity fires on the caster's client, and the druid's HUD is on
+// that client, so the pulse is a reminder on the casting player's own HUD only; other clients (the
+// GM's included) do not see it.
+// No wall clock (transform-ui/lens-rerun, [declared]): timers count only game time, so the offer
+// also ends when the world clock moves on (a round in combat, the GM advancing time out of it).
 
-const chaliceReady = new Map();   // actor uuid → timer
+const chaliceReady = new Set();   // actor uuids with an offer up
 
-function paintChalice(actor) {
-  if (actor !== hudActor()) return;
-  const on = chaliceReady.has(actor.uuid);
+function paintAll(on) {
   for (const el of document.querySelectorAll(".extended-combat-hud .ptf-starry-chalice")) {
     el.classList.toggle("ptf-chalice-ready", on);
   }
 }
 
+function paintChalice(actor) {
+  if (actor === hudActor()) paintAll(chaliceReady.has(actor.uuid));
+}
+
 function setChalice(actor, on) {
-  clearTimeout(chaliceReady.get(actor.uuid));
-  if (on) chaliceReady.set(actor.uuid, setTimeout(() => { chaliceReady.delete(actor.uuid); paintChalice(actor); }, 60_000));
+  if (on) chaliceReady.add(actor.uuid);
   else chaliceReady.delete(actor.uuid);
   paintChalice(actor);
+}
+
+function clearChalice() {
+  chaliceReady.clear();
+  paintAll(false);
 }
 
 function onChaliceUse(activity, usageConfig) {
@@ -352,9 +391,15 @@ function onChaliceUse(activity, usageConfig) {
   } catch (err) { log.warn("Chalice offer skipped", err); }
 }
 
-// Starry Form ended or changed constellation: no Chalice to take.
+// Starry Form ended or changed constellation: no Chalice to take (EC-2: an update clears the offer
+// only when it moves the form off the Chalice, so a swap away and back within the minute is dark).
+const STARRY_CONSTELLATION = `flags.${MODULE}.starry.constellation`;
 function onStarryEnd(effect) {
   if (effect?.getFlag?.(MODULE, "starry") && effect.parent instanceof Actor) setChalice(effect.parent, false);
+}
+function onStarryRecast(effect, changes) {
+  const c = foundry.utils.flattenObject(changes ?? {})[STARRY_CONSTELLATION];
+  if (c !== undefined && c !== "chalice") onStarryEnd(effect);
 }
 
 const POINTER = { passive: true, capture: true };
@@ -377,10 +422,9 @@ export function install(reg) {
   reg.on("deleteActiveEffect", onStarryEnd, { label: "deleteActiveEffect: no Chalice to take" });
 }
 
-/** Remove the pointer listener; drop the live buttons and the Chalice offers (and their timers). */
+/** Remove the pointer listener; drop the live buttons and the Chalice offers. */
 export function uninstall() {
   document.removeEventListener("pointermove", onPointerMove, POINTER);
   liveButtons.clear();
-  for (const t of chaliceReady.values()) clearTimeout(t);
   chaliceReady.clear();
 }

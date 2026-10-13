@@ -43,3 +43,11 @@ test("D7: the .pentaryn-tt rules combat's styles apply are transform.css's pre-D
   // the loader reads module.json `styles` in order (unchanged golden).
   pinJSON("tooltip-rules", rulesForManifest(new URL("..", import.meta.url), /\.pentaryn-tt\b/), import.meta.url);
 });
+
+// css-40 [declared]: the pulse rule's comment names where pulseNew lives (hud/bars.mjs), not hud.mjs.
+test("css-40: the pulse comment points at hud/bars.mjs pulseNew, which defines it", () => {
+  assert.ok(css.includes("(hud/bars.mjs pulseNew)"));
+  assert.equal(css.includes("(hud.mjs pulseNew)"), false);
+  const bars = readFileSync(new URL("../hud/bars.mjs", import.meta.url), "utf8");
+  assert.match(bars, /function pulseNew\(/);
+});

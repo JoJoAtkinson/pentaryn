@@ -16,16 +16,37 @@ the dnd5e 6 rarity keys).
 - **Only the dead can be looted.** An NPC at 0 HP, or carrying the Dead status, becomes a pile the
   players open with the usual double-click, from an adjacent square. Healing it above 0 turns it
   back into a creature. Set `flags.pentaryn-dropbin.noLoot = true` on a token or actor to keep a
-  0-HP NPC alive and unlootable (knocked out for questioning).
+  0-HP NPC alive and unlootable (knocked out for questioning). A linked NPC's tokens on every
+  scene convert, not only on the scene the GM is viewing (dropbin-EC-5).
 - **On the body:** the Dead skull as core's **full-body overlay**, and an **eye badge** in the
   token's top-right corner while the body still holds something. Every client draws the eye on the
   token itself; it is not a document. It disappears when the body is emptied or revived, and hides
-  with the token (out of sight, under fog, GM-hidden).
+  with the token (out of sight, under fog, GM-hidden). If the eye image fails to load, no eye shows
+  and the console says `pentaryn-dropbin | eye texture …` once; it is tried again on the next scene
+  load (canvasReady), not on every frame.
 - **GM token HUD on a corpse:** *Open character sheet (GM)* (Item Piles otherwise takes over the
-  double-click) and *Revive (1 HP)*.
-- **Ownership:** players get OBSERVER on the token's own actor delta while it is a corpse (Item
-  Piles needs it), never on the base actor. A revival gives back the delta map saved at death
-  (none saved: the base actor's again). Sight is off on a corpse and restored on revival.
+  double-click) and *Revive (1 HP)*. A Revive that fails leaves the HUD open with one warning toast
+  (details in the console as `pentaryn-dropbin | revive failed for <token>`).
+- **Loot, never the sheet** (Joe, 2026-10-12: "Just loot, they can't open the char sheet. They're
+  dead, so they can't see their stats or bio"). A player opens a corpse only through the loot
+  window. Every other way to its actor sheet (Item Piles' Ctrl-double-click bypass, the Actors
+  sidebar, a link, the combat tracker, any `bypassItemPiles` render) is refused and opens nothing,
+  also on a body whose pile Item Piles reverted. The loot window is only Item Piles' own plain
+  double-click, which keeps the `distance: 1` check. The GM is exempt (HUD: *Open character sheet
+  (GM)*). The guard is Item Piles' `item-piles-preRenderActorSheet` hook, so it needs Item Piles
+  active; a sheet a player already had open when the creature died stays open until they close it.
+- **Ownership:** Item Piles needs players to observe a pile. An unlinked corpse gives them OBSERVER
+  on the token's own actor delta, and a revival gives back the delta map saved at death (none
+  saved: the base actor's again). A **linked** NPC's token ignores its delta, so its corpse gives
+  players OBSERVER (`ownership.default`) on the base actor itself, saved at the first death in the
+  actor's own `corpse`/`ownership` flags and written back on revival (dropbin-EC-3), or by the
+  active GM once the actor's last corpse token (or its scene) is deleted, checked again at every
+  `ready`. Its Actors
+  sidebar row stays hidden from players (it is a pile actor). `inspect`'s `saved.ownership` is the
+  token's delta map; a linked corpse's lives on the actor. Sight is off on a corpse and restored on
+  revival.
+  A body that is already our corpse pile but lost its OBSERVER map (an unlinked token) or its
+  sight-off write gets just those two fields written again on the next sync (dropbin-EC-6).
 - **Old corpses** (before October 2026) carried a "Lootable" effect and Dead as a corner icon; the
   active GM's client fixes them at every `ready` (`corpses.migrateLegacyEyes()`, safe to re-run).
 
@@ -39,7 +60,8 @@ merchants, vaults, locked or closed containers, for a GM with no character, or w
 native *Take All* is already there. **Needs a GM online.**
 
 **Locked containers** stay shut from every door: canvas, Actors sidebar, API and Ctrl-click. A
-player hears the lock and reads "<name> is locked." and a floating *Locked*. The GM is exempt.
+player hears the lock and reads "<name> is locked." and a floating *Locked* over the chest they
+tried (no float when that chest is not on the canvas). The GM is exempt.
 
 **Sidebar:** players do not see pile actors in their Actors sidebar, or journals pinned to a scene
 Note in their Journal sidebar (a readable is found by looking at it). Handouts stay.
@@ -65,20 +87,25 @@ published at `ready`. Ask it: `game.pentaryn.dropbin.describe()` (offline: `test
 
 | Method | GM | Writes | Returns |
 |---|---|---|---|
-| `list(n = 20, { brief })` | — | — | last n entries, newest first; `brief: true` → `{n, iso, reason, itemName, itemType, quantity, fromActorName, sceneName, pileUuid}` (no item source — use it from the bridge) |
+| `list(n = 20, { brief })` | — | — | last n entries, newest first (`list(0)` is `[]`); `brief: true` → `{n, iso, reason, itemName, itemType, quantity, fromActorName, sceneName, pileUuid}` (no item source — use it from the bridge) |
 | `all()` / `get(n)` / `search(text)` | — | — | the whole ledger / one entry or null / entries whose item name contains text |
 | `restore(n, target?)` | yes | Item on the actor | the created Item, or the warn/error Notification it showed |
 | `restoreResult(n, target?)` | yes | Item on the actor | `{ ok: true, item, actor }` or `{ ok: false, reason: "not-gm" \| "no-entry" \| "no-actor" \| "not-created" }`, no toasts |
 | `export()` | yes | the mirror | `true`, or `false` for a player or a failed upload |
 | `clear()` | yes | `log`, the mirror | `false` unless confirmed; **keeps the counter** |
 | `inspect(ref, { sceneId })` | — | — | a token's (or an actor's tokens') corpse state: `dead, corpse, noLoot, pile, saved {sight, ownership}` |
-| `corpses.sync/toCorpse/fromCorpse/revive/migrateLegacyEyes` | yes | see Data written | legacy; run on the active GM |
+| `corpses.sync/toCorpse/fromCorpse/revive/migrateLegacyEyes` | yes | see Data written | legacy; run on the active GM; without Item Piles, or given the wrong document (`sync` an Actor, the others a TokenDocument), one console warning and nothing done |
 | `corpses.isDead/paintEye/paintAllEyes` | — | — | legacy |
 | `loot.install(app)` / `loot.refreshAll()` / `loot.recipientFor(app)` | — | — | legacy |
 | `selftest()` | — | — | `{ ok, checks }` |
 
-`target` is an Actor, an actor id or exact name (default: the actor the item left). `inspect`'s
-`ref` is a token (uuid, id or exact name — never a substring) or an Actor. An entry is
+`target` is an Actor (a synthetic token actor too), a TokenDocument (its actor), an actor id or
+exact name, or an Actor/Token UUID; with no target, the actor the item left — an unlinked token's
+own actor while that token still exists, otherwise the base actor. A target given that
+does not resolve is refused (`no-actor`, the "cannot find an actor" toast), never the original
+actor. `inspect`'s `ref` is a token (uuid, id or exact name — never a substring) or an Actor. By name,
+a token wins; several tokens of that name throw `AMBIGUOUS`, so pass the token uuid/id, a `sceneId`, or
+the actor. An entry is
 `{n, t, iso, reason: "drop" | "delete", userId, userName, fromActorId, fromActorName, fromActorUuid,
 itemName, itemType, quantity, sceneId, sceneName, x, y, pileUuid, item}`.
 
@@ -86,10 +113,11 @@ itemName, itemType, quantity, sceneId, sceneName, x, y, pileUuid, item}`.
 
 | Where | What | Who |
 |---|---|---|
-| world settings `log`, `counter` | the ledger | a GM client (players relay through socketlib) |
+| world settings `log`, `counter` | the ledger | drops: the active GM; deletes: a GM client (players relay through socketlib) |
 | `Data/assets/drop-bin/drop-log.json` | the mirror, ~2 s after a burst; `export()` at once | the recording GM |
 | token `flags.pentaryn-dropbin.corpse`, `.sight`, `.ownership` | our corpse, its sight and pre-death delta ownership | active GM |
 | token `delta.ownership`, `sight.enabled`; Item Piles pile flags | while a corpse | active GM |
+| linked NPC actor `flags.pentaryn-dropbin.corpse`, `.ownership`; `ownership.default` | a linked corpse: its pre-death map, players OBSERVER | active GM |
 | actor/token `flags.item-piles.data.lockedSound`; pile `sight.enabled`; Note `global` | ready backfills | active GM |
 | ActiveEffect Dead (`flags.core.overlay`) | the corpse overlay | active GM |
 | `system.attunement` on items Item Piles creates | the repair (`preCreateItem`, in memory before the create) | the creating client |
@@ -102,7 +130,7 @@ n/a — no other module reads `flags.pentaryn-dropbin.*`. This module reads `fla
 ## Events
 
 n/a — emits none of its own beyond the kit's `pentaryn-dropbin.ready` (api) and `pentaryn.ready`.
-Listens to the 29 load-time and 6 post-ready hooks pinned in `test/golden/hooks.json` and
+Listens to the 33 load-time and 6 post-ready hooks pinned in `test/golden/hooks.json` and
 `test/golden/hooks-after-ready.json`.
 
 ## Patches and adjustments
@@ -115,8 +143,11 @@ Listens to the 29 load-time and 6 post-ready hooks pinned in `test/golden/hooks.
   registers inside an async `ready` after the pack indexes load, so attunement's runs first.
 - container locks: `item-piles-preRenderInterface`, `item-piles-preRenderActorSheet` (vetoes) and
   `item-piles-preRattleItemPile` (words only)
+- corpse sheets: `item-piles-preRenderActorSheet` (veto for players)
 - directory hiding: `renderActorDirectory`, `renderJournalDirectory`
 - Loot all reads Item Piles' private Svelte state (`app.svelte.appShell.$$.ctx`) to follow *Change*
+- Loot all finds the loot window's footer, its Close Lid / Leave buttons and the native Take All
+  icon through `piles.mjs`'s frozen `SELECTORS` table; re-check it after an Item Piles update
 - corpse piles: `turnTokensIntoItemPiles` / `revertTokensFromItemPiles`
 - `i18n-shim.mjs`: `DND5E.ItemRarity*` / `DND5E.Unknown` added at `i18nInit` when missing
 
@@ -125,10 +156,19 @@ and the four patches above get their own rows (`adjustments-batch.md`, dropbin s
 
 ## Two sessions / who writes
 
-- **Ledger:** players relay through socketlib (`executeAsGM`) to a GM; a GM records locally.
-  Appends on one client are serialised and coalesced (one counter + log write per burst). Two GM
-  tabs on the responsible account both receive a relay and both record it; they compute the same
-  row, and the tail dedupe (same item, actor, quantity within 2 s) catches the sequential case.
+- **Ledger:** a drop onto the canvas (Item Piles' hook, which fires on every client) is recorded
+  by the active GM user only, on the pile token's scene, with that GM as the entry's user (the hook
+  does not say who dropped; `fromActorName` does) — DB-AC-1. A delete off a sheet is captured by
+  the deleting client; players relay it through socketlib (`executeAsGM`) to a GM, and a GM records
+  locally. A relay that reaches a GM tab still loading (before `ready`) is held and recorded at
+  `ready`, in arrival order; the player's relay resolves with its number then — DB-AC-2. Appends on one client are serialised and coalesced (one counter + log write per burst). A malformed relayed entry (bad reason, itemName, t, quantity or item) is one
+  console warning and resolves null, and one entry that fails to append rejects only its own relay; the
+  rest of its burst is still written — dropbin-R10. A relayed entry whose `userId` is not an
+  existing GM, or a player who owns the actor it left (when that actor still exists), is refused
+  the same way — DB-AC-3 (socketlib names no sender, so this is a plausibility check).
+  Two tabs of one GM account both record a drop and both receive a relay; they compute the same
+  row, and the tail dedupe (same item name and source `_id`, actor, quantity and pile within 2 s) catches the
+  sequential case; a second, distinct same-named item lost within 2 s is its own entry (dropbin-EC-2).
 - **Corpses:** conversion, revival and the legacy migration run where `activeGM.isSelf` — every
   tab of the active GM account (see the wave-2 report, W2-D1).
 - **Ready backfills** (lock sounds, in-view rule): the active GM user — every tab on that account
@@ -152,6 +192,9 @@ and the four patches above get their own rows (`adjustments-batch.md`, dropbin s
   against other modules (`golden/hooks.json`).
 - `restore()` returns a Notification on refusal; scripts want `restoreResult()`.
 - `list()`/`all()` carry every item's full source: use `list(n, { brief: true })` from the bridge.
+- The corpse eye is the module's own asset, `assets/icon-eye.webp` (loaded as
+  `modules/pentaryn-dropbin/assets/icon-eye.webp`): never point it at a world's `assets/` folder,
+  the module runs in any dnd5e world (dropbin-EXT-8).
 
 ## Files
 
@@ -164,6 +207,7 @@ and the four patches above get their own rows (`adjustments-batch.md`, dropbin s
 | `piles.mjs`, `socketlib-adapter.mjs` | adapters: Item Piles, socketlib |
 | `ledger.mjs`, `itempiles.mjs`, `corpses.mjs`, `loot.mjs`, `i18n-shim.mjs` | features |
 | `api-manifest.mjs`, `api.mjs` | API rows; implementations, inspect, selftest |
+| `assets/icon-eye.webp` | the corpse eye badge's texture, shipped with the module |
 | `lang/en.json`, `lib/` | strings; vendored kit |
 | `test/` | node:test suites, goldens, fixtures, vendored test kit, the legacy suite |
 

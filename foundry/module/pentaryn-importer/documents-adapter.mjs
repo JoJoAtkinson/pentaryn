@@ -118,7 +118,7 @@ async function fetchJsonWithTimeout(path, { timeout = DEFAULT_TIMEOUT_MS, ...ini
       if (cause?.name === "AbortError") {
         throw new PentarynAbort(`Timed out after ${timeout} ms fetching ${url}`, "TIMEOUT");
       }
-      throw cause;
+      throw new PentarynAbort(`Network error reading ${url}: ${cause?.message ?? cause}`);
     }
   } finally {
     clearTimeout(timer);
@@ -273,7 +273,8 @@ function assertPrototypeToken(actor, requested, slug) {
 function assertActivityIdsSurvived(item, requestedItemData, slug) {
   const requested = Object.keys(requestedItemData?.system?.activities ?? {});
   if (!requested.length) return;
-  const live = new Set(item.system.activities.map(a => a._id));
+  // `?.` / `?? []`: loot, container, class, subclass, background and race have no activities field.
+  const live = new Set(item.system.activities?.map(a => a._id) ?? []);
   const missing = requested.filter(id => !live.has(id));
   if (!missing.length) return;
   failAssertion({
@@ -298,12 +299,12 @@ function assertActivityIdsSurvived(item, requestedItemData, slug) {
  */
 function assertItemsAddressable(actor, items, slug) {
   // Every payload Item must be findable by its `flags.pentaryn.action`. `replaceItems` has
-  // already proved the COUNT matches; this proves the IDENTITY does. The two failures it
-  // separates: Foundry stripped `flags.pentaryn.action` (the item exists but is no longer
-  // addressable, and the next run would treat it as hand-added and leave it behind), or the
-  // generator emitted two rows with the same action name (count matches, one shadows the
-  // other). Silently skipping — the old `if (liveItem)` — is the exact failure class this
-  // module exists to catch.
+  // already proved the COUNT matches; this proves the IDENTITY does: Foundry did not strip
+  // `flags.pentaryn.action` (an item that lost it is no longer addressable, and the next run would
+  // treat it as hand-added and leave it behind), and the payload item carries one at all. Two rows
+  // with the same action name never get here: `preparePayload` refuses them up front, before any
+  // write (importer-EC4) — `find()` below would match both to one live Item. Silently skipping —
+  // the old `if (liveItem)` — is the exact failure class this module exists to catch.
   for (const itemData of items) {
     const action = actionOf(itemData);
     const liveItem = (action === undefined) ? undefined : itemByAction(actor, action);
@@ -408,7 +409,7 @@ function runExpectedAssertions(actor, expected, slug) {
 
     // ── Activity-level ─────────────────────────────────────────────────────────────────────────
     for (const activitySpec of spec.activities ?? []) {
-      const activity = item.system.activities.get(activitySpec.id);   // §8.2 rule 3
+      const activity = item.system.activities?.get(activitySpec.id);  // §8.2 rule 3
       if (!activity) {
         failAssertion({
           slug,
@@ -416,7 +417,7 @@ function runExpectedAssertions(actor, expected, slug) {
           activityId: activitySpec.id,
           path: "system.activities",
           expected: activitySpec.id,
-          actual: item.system.activities.map(a => a._id),
+          actual: item.system.activities?.map(a => a._id) ?? [],
           hint: "Activity id not present on the saved Item — see CONTRACT.md U7."
         });
       }
@@ -577,6 +578,11 @@ function reportSummary({ counts, created, updated, skipped, failed, dryRun, url,
   if (skipped.length) log.info("skipped      ", skipped.join(", "), "(contentHash unchanged)");
   if (failed.length) {
     log.warn("failed       ", failed.length);
+    // through the kit logger too (importer-R8), so the failures are not only in the table
+    for (const { slug, error } of failed) {
+      log.warn(`failed ${slug}: ${error}`);
+      log.trace("import.failed", { slug, error });
+    }
     console.table(failed);
   }
   console.groupEnd();

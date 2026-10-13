@@ -143,6 +143,25 @@ test("ringSpots", () => {
   assert.deepEqual(ringSpots(0, 0, 100, 2, { blocked: () => true, occupied: () => false, maxRing: 3 }), [{ x: 0, y: 0 }, { x: 0, y: 0 }]);
 });
 
+test("portals-edge-2: occupiedBy tests a box by overlap; ringSpots hands occupied each token's footprint", () => {
+  const occ = core.occupiedBy([{ x: 200, y: 200, w: 100, h: 100 }]);
+  assert.deepEqual([occ(100, 100, 200, 200), occ(100, 100, 100, 100), occ(300, 200, 100, 100), occ(250, 250)], [true, false, false, true]);
+  // A 2×2 first, then 1×1s, around (150, 150) on a 100 grid; a stander on (200, 200).
+  const size = i => (i === 0 ? 2 : 1);
+  const footprint = (x, y, i) => {
+    const w = size(i) * 100;
+    return { x: Math.round((x - w / 2) / 100) * 100, y: Math.round((y - w / 2) / 100) * 100, w, h: w };
+  };
+  const seen = [];
+  const spots = ringSpots(150, 150, 100, 6, { occupied: (...a) => { seen.push(a.length); return occ(...a); }, footprint });
+  const boxes = spots.map((s, i) => footprint(s.x, s.y, i));
+  assert.ok(seen.every(n => n === 4), "occupied gets the box");
+  boxes.forEach((b, i) => {
+    assert.equal(occ(b.x, b.y, b.w, b.h), false, `spot ${i} clear of the stander`);
+    assert.equal(crowded(b, boxes.filter((_, j) => j !== i)), false, `spot ${i} clear of the others`);
+  });
+});
+
 test("destinations: core 14.368+ stores same-scene links relative to the behavior", () => {
   const toAbs = u => (u.startsWith("..") && !u.startsWith("...") ? `Scene.S.Region.${u.slice(2)}` : u.startsWith(".") ? null : u);
   const stored = new Set(["..R2", "Scene.T.Region.R9"]);
@@ -166,4 +185,82 @@ test("crowded", () => {
   assert.equal(crowded({ x: 0, y: 0, w: 100, h: 100 }, []), false);
   assert.equal(crowded({ x: 0, y: 0, w: 100, h: 100 }, null), false);
   assert.equal(crowded({ x: 0, y: 0, w: 100, h: 100 }), false);
+});
+
+// [declared] EXT-9 (Joe 2026-10-12): one landing-spot rule for the card's list and api.link().
+test("landingCandidate (EXT-9): no behaviors, or only teleportToken ones; anything else is not a landing spot", () => {
+  assert.equal(typeof core.landingCandidate, "function");
+  assert.equal(core.landingCandidate({ behaviors: [] }), true);
+  assert.equal(core.landingCandidate({ behaviors: [{ type: "teleportToken" }, { type: "teleportToken" }] }), true);
+  assert.equal(core.landingCandidate({ behaviors: new Map([["a", { type: "teleportToken" }], ["b", { type: "executeScript" }]]) }), false);
+  assert.equal(core.landingCandidate({ behaviors: [{ type: "adjustDarknessLevel" }] }), false);
+  assert.equal(core.landingCandidate({}), true);
+});
+
+// [declared] EXT-2: the Teleport Token behavior type and a new link's defaults live in core, once.
+test("EXT-2: TELEPORT_TYPE and a frozen NEW_TELEPORT_BEHAVIOR in core; no 'teleportToken' literal elsewhere", async () => {
+  const { readFileSync, readdirSync } = await import("node:fs");
+  assert.equal(core.TELEPORT_TYPE, "teleportToken");
+  const nb = core.NEW_TELEPORT_BEHAVIOR;
+  assert.ok(nb && Object.isFrozen(nb) && Object.isFrozen(nb.system) && Object.isFrozen(nb.system.dialog) && Object.isFrozen(nb.system.transition));
+  assert.deepEqual(nb, { name: "Teleport", type: "teleportToken",
+    system: { placement: "center", snap: true, choice: true, revealed: true,
+      dialog: { revealed: null, unrevealed: null }, transition: { type: "fade", duration: 1500 } } });
+  assert.equal("destinations" in nb.system, false);
+  const files = readdirSync(ROOT).filter(f => f.endsWith(".mjs"));
+  assert.ok(files.includes("scene-adapter.mjs") && files.includes("card-app.mjs"));
+  for (const file of files) {
+    const n = (readFileSync(new URL(file, ROOT), "utf8").match(/["']teleportToken["']/g) ?? []).length;
+    assert.equal(n, file === "portals-core.mjs" ? 1 : 0, `${file}: ${n} 'teleportToken' literal(s)`);
+  }
+});
+
+// [declared] EXT-4: every card flag path goes through the kit's flagPath(MODULE, key) — no hand-built
+// `flags.${MODULE}.<key>` strings in cards.mjs, card-app.mjs or scene-adapter.mjs (or anywhere else).
+test("EXT-4: card flag paths come from flagPath(MODULE, key); no hand-built `flags.${MODULE}.` strings", async () => {
+  const { readFileSync, readdirSync } = await import("node:fs");
+  const files = readdirSync(ROOT).filter(f => f.endsWith(".mjs"));
+  for (const want of ["cards.mjs", "card-app.mjs", "scene-adapter.mjs"]) {
+    assert.ok(files.includes(want), want);
+    assert.match(readFileSync(new URL(want, ROOT), "utf8"), /import \{[^}]*\bflagPath\b[^}]*\} from "\.\/lib\/flags\.mjs"/, `${want} imports flagPath`);
+  }
+  for (const file of files) {
+    const n = (readFileSync(new URL(file, ROOT), "utf8").match(/flags\.\$\{MODULE\}/g) ?? []).length;
+    assert.equal(n, 0, `${file}: ${n} hand-built flags.\${MODULE} path(s)`);
+  }
+  const { flagPath } = await import("../lib/flags.mjs");
+  assert.equal(flagPath(core.MODULE, "img"), "flags.pentaryn-portals.img");
+});
+
+// [declared] M8: FLAG_SCOPE has a reader — every flagPath( call passes FLAG_SCOPE (=== MODULE), not MODULE;
+// and the dead core export behaviorUuidFromDialogId is gone (dialogIdParts is the one parse; the legacy
+// oracle in test/fixtures keeps its own copy).
+test("M8: flagPath calls use FLAG_SCOPE; core no longer exports behaviorUuidFromDialogId", async () => {
+  const { readFileSync, readdirSync } = await import("node:fs");
+  assert.equal(core.FLAG_SCOPE, core.MODULE);
+  let calls = 0;
+  for (const file of readdirSync(ROOT).filter(f => f.endsWith(".mjs"))) {
+    const src = readFileSync(new URL(file, ROOT), "utf8");
+    for (const m of src.matchAll(/\bflagPath\(\s*([A-Za-z_$][\w$.]*)/g)) {
+      calls++;
+      assert.equal(m[1], "FLAG_SCOPE", `${file}: flagPath(${m[1]}, …)`);
+    }
+  }
+  assert.ok(calls >= 5, `found ${calls} flagPath calls`);
+  assert.equal("behaviorUuidFromDialogId" in core, false);
+});
+
+// [declared] EXT-7: box- and token-centre arithmetic lives once in portals-core (boxCentre, tokenCentre);
+// scene-adapter and party call them instead of each copying `x + width / 2`. Landing goldens unchanged.
+test("EXT-7: boxCentre / tokenCentre in core; scene-adapter and party no longer copy the centre arithmetic", async () => {
+  const { readFileSync } = await import("node:fs");
+  assert.equal(typeof core.boxCentre, "function");
+  assert.equal(typeof core.tokenCentre, "function");
+  assert.deepEqual(core.boxCentre({ x: 100, y: 200, width: 300, height: 50 }), { x: 250, y: 225 });
+  assert.deepEqual(core.tokenCentre({ x: 100, y: 200, width: 2, height: 1 }, 100), { x: 200, y: 250 });
+  assert.deepEqual(core.tokenCentre({ x: 0, y: 0, width: 0.5, height: 0.5 }, 140), { x: 35, y: 35 });
+  for (const file of ["scene-adapter.mjs", "party.mjs", "portals-core.mjs"]) {
+    const src = readFileSync(new URL(file, ROOT), "utf8").replace(/export (const|function) (boxCentre|tokenCentre)[^\n]*\n/g, "");
+    assert.doesNotMatch(src, /\.width\s*(\*\s*[\w$.]+\s*)?\/\s*2/, `${file} still computes a centre by hand`);
+  }
 });

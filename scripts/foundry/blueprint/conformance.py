@@ -61,9 +61,17 @@ README_SECTIONS = ("What the player sees", "Settings", "API", "Data written", "F
                    "Tests", "Sync")
 SIZE_CAPS = {"entry": 150, "core": 600, "api": 300, "other": 500, "css": 400, "readme": 250}
 HOT_HOOKS = tuple(PACKAGES["hotHooks"])
+HOT_HOOK_PREFIXES = tuple(PACKAGES.get("hotHookPrefixes", ()))
 READINESS = re.compile("|".join(re.escape(t) for t in PACKAGES["readinessTokens"]))
 PRIVATE_PATTERNS = [re.compile(p) for p in PACKAGES.get("privateInternalPatterns", [])]
 WORLD_ITER = re.compile(r"game\.actors\b|game\.scenes\b|canvas\.tokens\.placeables")
+
+
+def is_hot_hook(name: str) -> bool:
+    """A hook that fires per object per frame (C49, C60): an exact `hotHooks` row, or any name that
+    starts with a `hotHookPrefixes` row (refreshTile, drawTokenLayer, hoverNote…)."""
+    return name in HOT_HOOKS or name.startswith(HOT_HOOK_PREFIXES)
+
 
 # role → roles it may import (use-doc §2). "glue" = a legacy file not yet given a role: allowed
 # anything but the entry and test/, and listed so the migration can classify it.
@@ -96,7 +104,12 @@ class Module:
     installed: bool                              # under the repo's module root or a snapshot
     registry: adj.Registry | None
     registry_root: Path
-    all_manifests: dict[str, dict] = field(default_factory=dict)
+    all_manifests: dict[str, dict | None] = field(default_factory=dict)   # None: unreadable (C38 says so)
+    registry_error: str | None = None            # why the registry could not be loaded (C47/C32 fail on it)
+    package_scan: dict[bool, dict[str, list[str]]] = field(default_factory=dict, repr=False, compare=False)
+    # memo for tier, imports, reexports, feature_files and listeners: a Module does not change after
+    # load_module, so each is computed once however many rules ask (perf-3). Callers must not mutate.
+    cache: dict = field(default_factory=dict, repr=False, compare=False)
 
     @property
     def id(self) -> str:
@@ -115,13 +128,18 @@ class Module:
         """module.json flags.pentaryn.tier, else lib/kit.lock.json's tier (vendor.py sync --tier
         writes it, so a migrated module is scored by its tier before the Wave 7 restart batch adds
         the flag), else "full"."""
+        if "tier" in self.cache:
+            return self.cache["tier"]
         if self.flags.get("tier"):
-            return self.flags["tier"]
-        try:
-            lock = vendor.read_lock(self.dir) or {}
-        except (OSError, ValueError):
-            lock = {}
-        return lock.get("tier") or "full"
+            tier = self.flags["tier"]
+        else:
+            try:
+                lock = vendor.read_lock(self.dir) or {}
+            except (OSError, ValueError, vendor.VendorError):
+                lock = {}
+            tier = lock.get("tier") or "full"
+        self.cache["tier"] = tier
+        return tier
 
     @property
     def entries(self) -> list[str]:
@@ -136,6 +154,9 @@ class Module:
 
     def reexports(self, rel: str) -> list[str]:
         """Module-relative targets of `rel`'s `export … from "./x"` and `export * [as N] from "./x"`."""
+        key = ("reexports", rel)
+        if key in self.cache:
+            return self.cache[key]
         src, out = self.files[rel], []
         base = (self.dir / rel).parent
         marks = [m.group(2) for m in jsscan._RE_EXPORT_LIST.finditer(src.code) if m.group(2)]
@@ -148,10 +169,14 @@ class Module:
                 out.append((base / lit.value).resolve().relative_to(self.dir.resolve()).as_posix())
             except ValueError:
                 pass
+        self.cache[key] = out
         return out
 
     def imports(self, rel: str) -> list[tuple[str, jsscan.Import]]:
         """(resolved module-relative target, import) for each relative import of `rel`."""
+        key = ("imports", rel)
+        if key in self.cache:
+            return self.cache[key]
         out = []
         base = (self.dir / rel).parent
         for imp in jsscan.imports_of(self.files[rel]):
@@ -162,6 +187,7 @@ class Module:
             except ValueError:
                 target = imp.spec
             out.append((target, imp))
+        self.cache[key] = out
         return out
 
 
@@ -183,11 +209,33 @@ def _scan_dir(d: Path) -> tuple[dict, dict, list, list]:
     return files, raw, lib, tests
 
 
+class ManifestError(ValueError):
+    """The scored module's own module.json cannot be read as a JSON object (main() exits 2 on it)."""
+
+
+def read_manifest(d: Path) -> dict:
+    try:
+        man = json.loads((d / "module.json").read_text(encoding="utf-8"))
+    except OSError as exc:
+        raise ManifestError(f"module.json cannot be read: {exc}") from exc
+    except ValueError as exc:
+        raise ManifestError(f"module.json is not valid JSON: {exc}") from exc
+    if not isinstance(man, dict):
+        raise ManifestError(f"module.json is not valid JSON: a {type(man).__name__}, not an object")
+    return man
+
+
 def load_module(d: Path, *, installed: bool, registry: adj.Registry | None, registry_root: Path,
-                all_manifests: dict[str, dict] | None = None) -> Module:
-    manifest = json.loads((d / "module.json").read_text(encoding="utf-8"))
+                all_manifests: dict[str, dict | None] | None = None, registry_error: str | None = None) -> Module:
+    manifest = read_manifest(d)
     files, raw, lib, tests = _scan_dir(d)
-    return Module(d, manifest, files, raw, lib, tests, installed, registry, registry_root, all_manifests or {})
+    return Module(d, manifest, files, raw, lib, tests, installed, registry, registry_root, all_manifests or {},
+                  registry_error)
+
+
+def registry_failure(err: str) -> str:
+    """The one line C47, C32 and main() report when adjustments.yml cannot be loaded."""
+    return f"adjustments registry cannot be loaded: {err}"
 
 
 # ── helpers ──────────────────────────────────────────────────────────────────
@@ -255,16 +303,15 @@ LIFECYCLE_HOOKS = {"init", "i18nInit", "setup", "ready"}
 
 
 def registered_hook_names(m: Module) -> list[tuple[str, str]]:
-    """(file, hook name) for every literal Hooks.on/once or reg.on/once registration."""
-    out = []
-    for rel, src in m.files.items():
-        for mm in re.finditer(r"(?<![\w$])(?:Hooks|reg|ctx\.reg)\.(?:on|once)\(\s*\x01(\d+)\x01", src.code):
-            out.append((rel, src.strings[int(mm.group(1))].value))
-    return out
+    """(file, hook name) for every literal Hooks.on/once or reg.on/once registration — read off
+    listeners(), so HOOK_REG is the one registration regex (py-blueprint-EXT-6)."""
+    return [(ls.rel, ls.name) for ls in listeners(m)]
 
 
 def feature_files(m: Module) -> set[str]:
-    """The entry's `import * as` targets (D12), plus any file that exports install()."""
+    """The entry's `import * as` targets (D12), plus any file that exports install(). Memoised on the Module."""
+    if "feature_files" in m.cache:
+        return m.cache["feature_files"]
     out: set[str] = set()
     for e in m.entries:
         if e in m.files:
@@ -273,21 +320,27 @@ def feature_files(m: Module) -> set[str]:
         names, _ = jsscan.exports_of(src)
         if "install" in names and rel not in m.entries:
             out.add(rel)
-    return {f for f in out if f in m.files}
+    m.cache["feature_files"] = feats = {f for f in out if f in m.files}
+    return feats
 
 
 def package_hits(m: Module, *, include_lib: bool = True) -> dict[str, list[str]]:
-    """package id → files whose code names it (comments stripped, adjustments.py's id rule + aliases)."""
+    """package id → files whose code names it (comments stripped, adjustments.py's id rule + aliases).
+    Memoised on the Module per include_lib, so C09 and C47 share one scan (perf-2)."""
+    if include_lib in m.package_scan:
+        return m.package_scan[include_lib]
     paths = [m.dir / rel for rel in m.files]
     if include_lib:
         paths += [m.dir / rel for rel in m.lib_files]
+    table = package_aliases(m).items()
     hits: dict[str, list[str]] = {}
     for path in paths:
         code = adj.strip_comments(path.read_text(encoding="utf-8", errors="replace"), path.suffix)
         low = code.lower()
-        for pkg, aliases in package_aliases(m).items():
+        for pkg, aliases in table:
             if adj.id_pattern(pkg).search(code) or any(a.lower() in low for a in aliases):
                 hits.setdefault(pkg, []).append(path.relative_to(m.dir).as_posix())
+    m.package_scan[include_lib] = hits
     return hits
 
 
@@ -362,6 +415,12 @@ def bad(detail):
 
 def na(why):
     return "n/a", [why]
+
+
+def _capped(detail: list[str], n: int = 12) -> list[str]:
+    """The first `n` findings and a "… N more" line, for display only (to_markdown). Rules return
+    every finding: the strict gate's `match` runs on the full list, and --json carries it (PYB-E6)."""
+    return list(detail[:n]) + ([f"… {len(detail) - n} more"] if len(detail) > n else [])
 
 
 @rule("C01", "fail", "module.json id == folder name")
@@ -516,7 +575,7 @@ def c10(m):
     for rel, text in m.raw.items():
         role = role_of(m, rel, feats)
         cap = SIZE_CAPS["entry"] if role == "entry" else SIZE_CAPS["core"] if role == "core" else \
-            SIZE_CAPS["api"] if rel.split("/")[-1] == "api.mjs" else SIZE_CAPS["other"]
+            SIZE_CAPS["api"] if role == "api" else SIZE_CAPS["other"]
         n = text.count("\n") + 1
         if n > cap:
             over.append(f"{rel} {n}/{cap}")
@@ -553,15 +612,18 @@ def c11(m):
         for rx in (CORE_GLOBAL, CORE_FOUNDRY):
             for mm in rx.finditer(code):
                 detail.append(f"{rel}:{m.files[rel].line_of(mm.start())} {code[mm.start():mm.start() + 24].strip()}")
-    return ok() if not detail else bad(detail[:12] + ([f"… {len(detail) - 12} more"] if len(detail) > 12 else []))
+    return ok() if not detail else bad(detail)
 
 
-@rule("C12", "fail", "MODULE defined once; no MOD / MODULE_ID / SCOPE")
+@rule("C12", "fail", "MODULE defined once; no MOD / MODULE_ID / SCOPE, not even as an alias")
 def c12(m):
     defs = [(rel, m.files[rel].line_of(mm.start())) for rel in m.files
             for mm in re.finditer(r"(?:const|let|var)\s+MODULE\s*=", m.code(rel))]
     dups = [f"{rel}:{m.files[rel].line_of(mm.start())} {mm.group(1)}" for rel in m.files
             for mm in re.finditer(r"(?:const|let|var)\s+(MOD|MODULE_ID|SCOPE)\s*=", m.code(rel))]
+    # an alias in an export or import list (`export { MODULE as MOD }`) is the banned name by another route
+    dups += [f"{rel}:{m.files[rel].line_of(mm.start())} MODULE as {mm.group(1)}" for rel in m.files
+             for mm in re.finditer(r"\bMODULE\s+as\s+(MOD|MODULE_ID|SCOPE)\b", m.code(rel))]
     detail = []
     if len(defs) != 1:
         detail.append(f"MODULE defined {len(defs)}×" + (f": {', '.join(f'{r}:{n}' for r, n in defs)}" if defs else ""))
@@ -580,7 +642,7 @@ def c13(m):
 @rule("C14", "fail", "lib/kit.lock.json present and vendor.py check passes")
 def c14(m):
     problems = vendor.check(m.dir)
-    return ok() if not problems else bad(problems[:8])
+    return ok() if not problems else bad(problems)
 
 
 @rule("C15", "fail", "`import * as` only for feature files (from the entry) and core/ barrels")
@@ -647,7 +709,7 @@ def c17(m):
         for mm in re.finditer(r"(?<![\w$.])Hooks\.(on|once)\(", code):
             if depth_at(code, mm.start()) == 0:
                 detail.append(f"{rel}:{m.files[rel].line_of(mm.start())} Hooks.{mm.group(1)}")
-    return ok() if not detail else bad(detail[:12] + ([f"… {len(detail) - 12} more"] if len(detail) > 12 else []))
+    return ok() if not detail else bad(detail)
 
 
 @rule("C18", "fail", "every feature file exports install and uninstall")
@@ -658,7 +720,7 @@ def c18(m):
         if not other:
             return na("no features: the module registers only lifecycle hooks (init/setup/ready) in its entry")
         return bad([f"no feature files (entry `import * as` targets exporting install), but it hooks "
-                    f"{', '.join(other[:6])}{' …' if len(other) > 6 else ''}"])
+                    f"{', '.join(other)}"])
     detail = []
     for rel in sorted(feats):
         names, _ = jsscan.exports_of(m.files[rel])
@@ -711,7 +773,7 @@ def c19(m):
             if not lit.plain and (name == "${}." or name.startswith("${}")):
                 continue
             detail.append(f"{rel}:{lit.line} emits {name!r}")
-    return ok() if not detail else bad(sorted(set(detail))[:12])
+    return ok() if not detail else bad(sorted(set(detail)))
 
 
 @rule("C20", "fail", "test/golden/hooks.json exists (full: hooks.test pins it; small: glue.test pins it)")
@@ -731,7 +793,7 @@ def c20(m):
 def c21(m):
     detail = [f"{rel}:{m.files[rel].line_of(mm.start())}" for rel in m.files if rel.split("/")[-1] != "settings.mjs"
               for mm in re.finditer(r"game\.settings\??\.(register|get)\(", m.code(rel))]
-    return ok() if not detail else bad(detail[:12] + ([f"… {len(detail) - 12} more"] if len(detail) > 12 else []))
+    return ok() if not detail else bad(detail)
 
 
 @rule("C22", "fail", "SETTINGS exported when any setting is registered")
@@ -758,7 +820,7 @@ def c23(m):
 def c24(m):
     detail = [f"{rel}:{m.files[rel].line_of(mm.start())}" for rel in m.files
               for mm in re.finditer(r"catch\s*(?:\([^)]*\))?\s*\{\s*\}", m.code(rel))]
-    return ok() if not detail else bad(detail[:12] + ([f"… {len(detail) - 12} more"] if len(detail) > 12 else []))
+    return ok() if not detail else bad(detail)
 
 
 @rule("C25", "fail", "every console.* line carries the `<module> |` prefix (or the file logs through makeLog)")
@@ -771,7 +833,7 @@ def c25(m):
             if lit and (" | " in text or text.startswith(f"{m.id} |") or text.startswith("${} |")):
                 continue
             detail.append(f"{rel}:{src.line_of(mm.start())} console.{mm.group(1)} without the prefix")
-    return ok() if not detail else bad(detail[:12] + ([f"… {len(detail) - 12} more"] if len(detail) > 12 else []))
+    return ok() if not detail else bad(detail)
 
 
 def _publishes(m: Module, rel: str, call: str) -> bool:
@@ -931,7 +993,9 @@ def c32(m):
                 if not comment_only:
                     detail.append(f"row {r.id} has no wrapMethod patch naming it — a non-patch row takes "
                                   f"its package's prefix (core-, dnd5e-, argon-, …; D2)")
-    return ok() if not detail else bad(detail[:14] + ([f"… {len(detail) - 14} more"] if len(detail) > 14 else []))
+    elif m.registry_error:
+        detail.insert(0, registry_failure(m.registry_error))     # first, so the cap below never hides it
+    return ok() if not detail else bad(detail)
 
 
 def _remap(row: adj.Adjustment, m: Module) -> adj.Adjustment:
@@ -966,7 +1030,7 @@ def c33(m):
     rows = [r.id for r in (m.registry.rows if m.registry else []) if m.id in r.modules]
     if not hits:
         return na("no private-internal access found")
-    return "manual", hits[:10] + [f"rows for this module: {', '.join(rows) or 'none'}"]
+    return "manual", hits + [f"rows for this module: {', '.join(rows) or 'none'}"]
 
 
 @rule("C34", "fail", "lang/en.json nested with one root PENTARYN_<SHORT>")
@@ -978,7 +1042,7 @@ def c34(m):
     want = f"PENTARYN_{m.short.upper().replace('-', '_')}"
     keys = list(data)
     if keys != [want]:
-        return bad([f"top-level keys {keys[:4]}{'…' if len(keys) > 4 else ''}; want [{want!r}]"])
+        return bad([f"top-level keys {keys}; want [{want!r}]"])
     if not isinstance(data[want], dict):
         return bad(["root is not an object"])
     return ok()
@@ -1017,7 +1081,7 @@ def c36(m):
             if idx > 0 and ctx.search(src.code[max(0, idx - 40):idx]):
                 n += 1
                 where.append(f"{rel}:{s.line}")
-    return ok() if not n else ("warn", [f"{n} literal(s): {', '.join(where[:8])}{' …' if n > 8 else ''}"])
+    return ok() if not n else ("warn", [f"{n} literal(s): {', '.join(where)}"])
 
 
 def css_selectors(text: str) -> list[str]:
@@ -1066,7 +1130,7 @@ def c37(m):
                 continue
             if not any(a in sel for a in allowed):
                 detail.append(f"{css.relative_to(m.dir).as_posix()}: {sel[:60]}")
-    return ok() if not detail else bad(detail[:10] + ([f"… {len(detail) - 10} more"] if len(detail) > 10 else []))
+    return ok() if not detail else bad(detail)
 
 
 @rule("C37w", "warn", "!important count")
@@ -1081,9 +1145,17 @@ def c38(m):
     prefix = m.flags.get("cssPrefix")
     if not prefix:
         return na("no cssPrefix declared (C07)")
-    clash = [mid for mid, man in m.all_manifests.items()
-             if mid != m.id and ((man.get("flags") or {}).get("pentaryn") or {}).get("cssPrefix") == prefix]
-    return ok() if not clash else bad([f"{prefix} also declared by {', '.join(clash)}"])
+    # all_manifests is keyed by folder name; the module itself is the sibling in m.dir or with m.id
+    hits = [(mid, man.get("id") if isinstance(man.get("id"), str) and man.get("id") else mid)
+            for mid, man in sorted(m.all_manifests.items())
+            if man is not None and mid != m.dir.name and man.get("id") != m.id
+            and ((man.get("flags") or {}).get("pentaryn") or {}).get("cssPrefix") == prefix]
+    # named by manifest id (a non-string or empty id falls back to the folder); an id two folders
+    # share also names each folder, so every clashing checkout is listed once
+    clash = [label if [lb for _, lb in hits].count(label) == 1 else f"{label} ({mid}/)" for mid, label in hits]
+    skipped = [f"{mid}: module.json unreadable — not compared" for mid, man in m.all_manifests.items()
+               if man is None and mid != m.dir.name]
+    return ok(skipped) if not clash else bad([f"{prefix} also declared by {', '.join(clash)}"] + skipped)
 
 
 def _spec_for(m: Module):
@@ -1139,7 +1211,7 @@ def c41(m):
 def c42(m):
     fx = sorted(p.relative_to(m.dir).as_posix() for p in (m.dir / "test" / "fixtures").rglob("*")
                 if p.is_file()) if (m.dir / "test" / "fixtures").is_dir() else []
-    return ("manual", [f"review: {', '.join(fx[:8])}"]) if fx else na("no test/fixtures")
+    return ("manual", [f"review: {', '.join(fx)}"]) if fx else na("no test/fixtures")
 
 
 @rule("C43", "fail", "test/run.mjs is the fixed body; self-running suites are listed in LEGACY")
@@ -1183,7 +1255,7 @@ def c44(m):
         detail.append("no **Read this when:** line")
     if re.search(r"\b\d+\s+(fixtures|cases|checks|assertions)\b", text):
         detail.append("hard-coded fixture count")
-    return ok() if not detail else bad(detail[:8] + ([f"… {len(detail) - 8} more"] if len(detail) > 8 else []))
+    return ok() if not detail else bad(detail)
 
 
 @rule("C45", "fail", "CHANGELOG.md exists")
@@ -1206,6 +1278,8 @@ def c46(m):
 
 @rule("C47", "fail", "adjustments rows exist for every package the code names")
 def c47(m):
+    if m.registry_error:
+        return bad([registry_failure(m.registry_error)])
     if m.registry is None:
         return na("no registry")
     detail = []
@@ -1270,30 +1344,25 @@ def c48(m):
 
 @rule("C49", "warn+manual", "world iteration inside hot-hook handlers")
 def c49(m):
+    # the shared listeners() (§5.9 below): .once, ctx.reg, the kit's guard wrappers and named
+    # handlers (function or const arrow) are seen exactly as C60 sees them
     found = []
-    for rel, src in m.files.items():
-        code = src.code
-        for mm in re.finditer(r"(?:Hooks|reg)\.on\(\s*\x01(\d+)\x01\s*,\s*", code):
-            name = src.strings[int(mm.group(1))].value
-            if name not in HOT_HOOKS:
-                continue
-            after = code[mm.end():]
-            body = ""
-            fn = re.match(r"(?:async\s*)?(?:function\s*\w*\s*)?\([^)]*\)\s*(?:=>)?\s*\{|(?:async\s*)?\w+\s*=>\s*\{", after)
-            if fn:
-                s = mm.end() + fn.end() - 1
-                body = code[s:match_paren(code, s) + 1]
-            else:
-                ident = re.match(r"([A-Za-z_$][\w$]*)", after)
-                if ident:
-                    dm = re.search(rf"function\s+{re.escape(ident.group(1))}\s*\([^)]*\)\s*\{{", code)
-                    if dm:
-                        body = code[dm.end() - 1:match_paren(code, dm.end() - 1) + 1]
-            n = len(WORLD_ITER.findall(body))
-            if n:
-                hot = "// hot:" in m.raw.get(rel, "")
-                found.append(f"{rel}:{src.line_of(mm.start())} {name} ×{n}{'' if hot else ' (no // hot: comment)'}")
-    return ok() if not found else ("warn", found[:10])
+    for ls in listeners(m):
+        if not is_hot_hook(ls.name):
+            continue
+        n = len(WORLD_ITER.findall(ls.body or ""))
+        if n:
+            hot = "// hot:" in m.raw.get(ls.rel, "")
+            found.append(f"{ls.rel}:{ls.line} {ls.name} ×{n}{'' if hot else ' (no // hot: comment)'}")
+    return ok() if not found else ("warn", found)
+
+
+def _block_after(code: str, close: int) -> tuple[int, str | None]:
+    """(q, block) after the `)` at `close` that ends a parameter list or loop header: `q` is the
+    first non-space offset after it, `block` the `{…}` that starts there (braces included), or None
+    when something else does (an expression body, a single statement)."""
+    q = close + 1 + len(re.match(r"\s*", code[close + 1:]).group(0))
+    return q, (code[q:match_paren(code, q) + 1] if code[q:q + 1] == "{" else None)
 
 
 def ready_bodies(src) -> list[tuple[bool, int, int]]:
@@ -1310,10 +1379,11 @@ def ready_bodies(src) -> list[tuple[bool, int, int]]:
     for rm in re.finditer(r"(?:Hooks|reg)\.once\(\s*\x01(\d+)\x01\s*,\s*([A-Za-z_$][\w$]*)\s*\)", code):
         if src.strings[int(rm.group(1))].value != "ready":
             continue
-        fm = re.search(rf"(async\s+)?function\s+{re.escape(rm.group(2))}\s*\([^)]*\)\s*\{{", code)
+        fm = re.search(rf"(async\s+)?function\s+{re.escape(rm.group(2))}\s*\(", code)
         if fm:
-            s = fm.end() - 1
-            out.append((bool(fm.group(1)), s, match_paren(code, s)))
+            s, body = _block_after(code, match_paren(code, fm.end() - 1))
+            if body:
+                out.append((bool(fm.group(1)), s, s + len(body) - 1))
     return out
 
 
@@ -1331,9 +1401,9 @@ def on_ready_bodies(src) -> list[tuple[bool, int, int]]:
 def _enclosing_function(code: str, i: int) -> tuple[str, bool, int] | None:
     """(name, is_async, body open) of the innermost `function NAME(…) {…}` holding offset `i`."""
     best = None
-    for fm in re.finditer(r"(async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\([^)]*\)\s*\{", code):
-        s = fm.end() - 1
-        if s < i < match_paren(code, s) and (best is None or s > best[2]):
+    for fm in re.finditer(r"(async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(", code):
+        s, body = _block_after(code, match_paren(code, fm.end() - 1))
+        if body and s < i < s + len(body) - 1 and (best is None or s > best[2]):
             best = (fm.group(2), bool(fm.group(1)), s)
     return best
 
@@ -1444,13 +1514,14 @@ HOOK_REG = re.compile(r"(?<![\w$])(?:Hooks|reg|ctx\.reg)\.(?:on|once)\(\s*\x01(\
 VETOABLE = re.compile(r"^(?:[\w-]+\.)?pre[A-Z]")
 PRE_DOC = re.compile(r"^pre(?:Create|Update|Delete)[A-Z]\w*$")
 DOC_EVENT = re.compile(r"^(?:create|update|delete)[A-Z]\w*$")
-# one USER, not one tab: the active GM, a runner pick, or the initiator (`userId !== game.user.id` —
-# the hook's userId is the user who made the change, so every tab of that user passes, e.g. the MCP
-# bridge tab and a GM browser tab). Like isActiveGM, it needs a claim where two tabs on one account
-# matter; C61 accepts all of these and leaves the two-tab question to the manual review (§5.9.4)
+# one USER, not one tab: the active GM, a runner pick, or the initiator (`userId !== game.user.id`,
+# or the positive `userId === game.user.id`, either side, `game.user?.id` too — the hook's userId is
+# the user who made the change, so every tab of that user passes, e.g. the MCP bridge tab and a GM
+# browser tab). Like isActiveGM, it needs a claim where two tabs on one account matter; C61 accepts
+# all of these and leaves the two-tab question to the manual review (§5.9.4)
 ACTIVE_GATE = re.compile(r"(?<![\w$])(?:isActiveGM|isActiveGMOrLoneGM|pickRunner)\(|activeGM\b"
-                         r"|(?<![\w$])\w*[uU]serId\s*!==?\s*game\.(?:userId|user\.id)\b"
-                         r"|game\.(?:userId|user\.id)\s*!==?\s*\w*[uU]serId\b")
+                         r"|(?<![\w$])\w*[uU]serId\s*[!=]==?\s*game\.(?:userId|user\??\.id)\b"
+                         r"|game\.(?:userId|user\??\.id)\s*[!=]==?\s*\w*[uU]serId\b")
 CLAIM = re.compile(r"(?<![\w$])(?:claimDocument|claimMessage)\(")
 DEFER = re.compile(r"(?<![\w$.])(?:perFrame|coalesce)\(|(?<![\w$])debounce\(")
 # a document or setting write in a listener body (a Map's `.delete(key)` is not one: a document's
@@ -1490,6 +1561,35 @@ def _expr_end(code: str, i: int) -> int:
     return i
 
 
+def _call_args(code: str, open_paren: int) -> list[str]:
+    """The top-level arguments of the call whose `(` is at `open_paren`, split on depth-0 `,`
+    only — never `;`, which the lexer injects after every `${…}` of a template literal."""
+    close, args, depth, start = match_paren(code, open_paren), [], 0, open_paren + 1
+    for i in range(open_paren + 1, close):
+        c = code[i]
+        if c in "([{":
+            depth += 1
+        elif c in ")]}":
+            depth -= 1
+        elif c == "," and depth == 0:
+            args.append(code[start:i])
+            start = i + 1
+    if code[start:close].strip():
+        args.append(code[start:close])
+    return args
+
+
+def _has_timeout(code: str, open_paren: int, opts_at: int) -> bool:
+    """The call at `open_paren` passes a timeout. When its last argument is an object literal,
+    that argument must be the options one (index `opts_at`) and name `timeout`; otherwise any
+    `timeout` in the call counts (a variable or spread may carry it)."""
+    args = _call_args(code, open_paren)
+    last = args[-1].strip() if args else ""
+    if last.startswith("{") and match_paren(last, 0) == len(last) - 1:
+        return len(args) > opts_at and bool(re.search(r"\btimeout\b", last))
+    return bool(re.search(r"\btimeout\b", code[open_paren:match_paren(code, open_paren) + 1]))
+
+
 def _arrow_body(code: str, q: int) -> str:
     if q < len(code) and code[q] == "{":
         return code[q:match_paren(code, q) + 1]
@@ -1510,11 +1610,7 @@ def handler_at(code: str, pos: int, *, _depth: int = 0) -> tuple[bool, str | Non
     p = pos + (am.end() if am else 0)
     fm = re.match(r"function\b\s*\*?\s*[\w$]*\s*", code[p:])
     if fm and code[p + fm.end():p + fm.end() + 1] == "(":
-        close = match_paren(code, p + fm.end())
-        q = close + 1 + len(re.match(r"\s*", code[close + 1:]).group(0))
-        if code[q:q + 1] == "{":
-            return is_async, code[q:match_paren(code, q) + 1], None
-        return is_async, None, None
+        return is_async, _block_after(code, match_paren(code, p + fm.end()))[1], None
     if code[p:p + 1] == "(":
         close = match_paren(code, p)
         ar = re.match(r"\s*=>\s*", code[close + 1:])
@@ -1528,10 +1624,7 @@ def handler_at(code: str, pos: int, *, _depth: int = 0) -> tuple[bool, str | Non
         name = re.escape(im.group(1))
         dm = re.search(rf"(?<![\w$.])(async\s+)?function\s*\*?\s*{name}\s*\(", code)
         if dm:
-            close = match_paren(code, dm.end() - 1)
-            q = close + 1 + len(re.match(r"\s*", code[close + 1:]).group(0))
-            body = code[q:match_paren(code, q) + 1] if code[q:q + 1] == "{" else None
-            return bool(dm.group(1)), body, None
+            return bool(dm.group(1)), _block_after(code, match_paren(code, dm.end() - 1))[1], None
         dm = re.search(rf"(?<![\w$.])(?:const|let|var)\s+{name}\s*=\s*", code)
         if dm:
             return handler_at(code, dm.end(), _depth=1)
@@ -1540,12 +1633,16 @@ def handler_at(code: str, pos: int, *, _depth: int = 0) -> tuple[bool, str | Non
 
 
 def listeners(m: Module) -> list[Listener]:
+    """Every hook registration in the module's own files. Memoised on the Module."""
+    if "listeners" in m.cache:
+        return m.cache["listeners"]
     out = []
     for rel, src in m.files.items():
         for mm in HOOK_REG.finditer(src.code):
             name = src.strings[int(mm.group(1))].value
             is_async, body, ident = handler_at(src.code, mm.end())
             out.append(Listener(rel, src.line_of(mm.start()), name, is_async, body, ident))
+    m.cache["listeners"] = out
     return out
 
 
@@ -1558,10 +1655,9 @@ def _with_called(code: str, body: str, more: tuple[str, ...] = ()) -> str:
             dm = re.search(rf"(?<![\w$.])(?:async\s+)?function\s*{re.escape(name)}\s*\(", src)
             if not dm:
                 continue
-            close = match_paren(src, dm.end() - 1)
-            q = close + 1 + len(re.match(r"\s*", src[close + 1:]).group(0))
-            if src[q:q + 1] == "{":
-                extra.append(src[q:match_paren(src, q) + 1])
+            _, block = _block_after(src, match_paren(src, dm.end() - 1))
+            if block:
+                extra.append(block)
             break
     return "\n".join([body, *extra])
 
@@ -1596,7 +1692,7 @@ def c54(m):
     return ok() if not found else ("warn", found)
 
 
-@rule("C55", "fail", "every User#query / User.queryMany passes a timeout (queryGM exempt)")
+@rule("C55", "fail", "every User#query / User.queryMany passes a timeout in its options argument (queryGM exempt)")
 def c55(m):
     detail, unknown = [], []
     for rel, src in m.files.items():
@@ -1611,12 +1707,10 @@ def c55(m):
                 if last not in ("db", "sql", "index", "pool", "client"):
                     unknown.append(f"{where} {recv}.query( — is the receiver a User?")
                 continue
-            args = code[mm.end() - 1:match_paren(code, mm.end() - 1) + 1]
-            if not re.search(r"\btimeout\b", args):
+            if not _has_timeout(code, mm.end() - 1, 2):
                 detail.append(f"{where} {recv}.query( without timeout")
         for mm in re.finditer(r"(?<![\w$])(?:User\.)?queryMany\(", code):
-            args = code[mm.end() - 1:match_paren(code, mm.end() - 1) + 1]
-            if not re.search(r"\btimeout\b", args):
+            if not _has_timeout(code, mm.end() - 1, 3):
                 detail.append(f"{rel}:{src.line_of(mm.start())} queryMany( without timeout")
     if detail:
         return bad(detail + unknown)
@@ -1641,6 +1735,55 @@ def c56(m):
     return ok() if not detail else bad(detail)
 
 
+_NOT_A_FUNCTION = {"if", "for", "while", "switch", "with", "return", "typeof", "await", "new", "in", "of"}
+
+
+def _binds_locally(code: str, name: str, pos: int) -> bool:
+    """`name` is declared in this file (const/let/var, destructuring, function, class) or is a
+    parameter of a function or arrow whose body holds `pos` — so an import of it is not what `pos`
+    sees. Over-approximates: a name that might be shadowed counts as shadowed."""
+    n = re.escape(name)
+    word = rf"(?<![\w$.]){n}(?![\w$])"
+    if re.search(rf"(?<![\w$.])(?:const|let|var)\s*(?:\s{n}(?![\w$])|[{{\[][^=;]*{word})"
+                 rf"|(?<![\w$.])(?:function\s*\*?|class)\s*{n}(?![\w$])", code):
+        return True
+    for am in re.finditer(rf"{word}\s*=>\s*", code):           # `name => …`
+        if am.end() <= pos < am.end() + len(_arrow_body(code, am.end())):
+            return True
+    for pm in re.finditer(r"\(", code):
+        close = match_paren(code, pm.start())
+        if not re.search(word, code[pm.start():close]):
+            continue
+        before = re.search(r"([A-Za-z_$][\w$]*)?\s*$", code[max(0, pm.start() - 64):pm.start()]).group(1)
+        after = re.match(r"\s*(=>\s*|\{)", code[close + 1:])
+        if not after or before in _NOT_A_FUNCTION:
+            continue
+        q = close + 1 + after.end() - (1 if after.group(1) == "{" else 0)
+        if q <= pos < q + len(_arrow_body(code, q)):
+            return True
+    return False
+
+
+def _imported_channel(m: Module, rel: str, name: str) -> jsscan.Str | None:
+    """The module-scope `const <exported> = "module.…"` of the module file that `rel` statically
+    imports `name` from (`{ exported }` or `{ exported as name }`); None when there is none."""
+    for target, imp in m.imports(rel):
+        braces = re.search(r"\{([^}]*)\}", imp.raw)
+        if imp.dynamic or target not in m.files or target == rel or not braces:
+            continue
+        for part in braces.group(1).split(","):
+            pm = re.fullmatch(r"\s*([A-Za-z_$][\w$]*)(?:\s+as\s+([A-Za-z_$][\w$]*))?\s*", part)
+            if not pm or (pm.group(2) or pm.group(1)) != name:
+                continue
+            tsrc = m.files[target]
+            for dm in re.finditer(rf"(?<![\w$.])const\s+{re.escape(pm.group(1))}\s*=\s*", tsrc.code):
+                lit = lit_after(tsrc, dm.end())
+                if depth_at(tsrc.code, dm.start()) == 0 and lit and lit.value.startswith("module."):
+                    return lit
+            return None
+    return None
+
+
 @rule("C57", "fail", "a game.socket module.* channel is exactly module.<module.json id>")
 def c57(m):
     want = f"module.{m.id}"
@@ -1657,6 +1800,8 @@ def c57(m):
             if lit is None:
                 ident = re.match(r"[A-Za-z_$][\w$]*", code[mm.end():])
                 lit = consts.get(ident.group(0)) if ident else None
+                if lit is None and ident and not _binds_locally(code, ident.group(0), mm.start()):
+                    lit = _imported_channel(m, rel, ident.group(0))
             if lit is None or not lit.value.startswith("module."):
                 continue                     # a core event (§5.6, C47) or unresolved
             used = True
@@ -1668,7 +1813,10 @@ def c57(m):
     return ok() if not detail else bad(detail)
 
 
-@rule("C58", "fail", "one serialStore per key across the module")
+_MEMO_STORE = re.compile(r"(?<![\w$.])[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)?\s*\?\?=\s*$")
+
+
+@rule("C58", "fail", "one serialStore per key across the module, at module scope or memoised (`x ??= serialStore(`)")
 def c58(m):
     seen: dict[str, str] = {}
     tuples: dict[tuple, str] = {}
@@ -1677,6 +1825,8 @@ def c58(m):
         code = src.code
         for mm in re.finditer(r"(?<![\w$.])serialStore\(\s*(?:[\w$.]+|\x01\d+\x01)\s*,\s*", code):
             where = f"{rel}:{src.line_of(mm.start())}"
+            if depth_at(code, mm.start()) > 0 and not _MEMO_STORE.search(code[max(0, mm.start() - 200):mm.start()]):
+                detail.append(f"{where} serialStore not at module scope (use `x ??= serialStore(` or hoist)")
             lit = lit_after(src, mm.end())
             if lit is not None and lit.plain:
                 keys = (lit.value,)
@@ -1724,13 +1874,11 @@ def _awaited_call(body: str, i: int) -> str | None:
 
 def loop_bodies(code: str) -> list[tuple[int, str]]:
     out = []
-    for mm in re.finditer(r"(?<![\w$.])(?:for|while)\s*\(", code):
-        close = match_paren(code, mm.end() - 1)
-        q = close + 1 + len(re.match(r"\s*", code[close + 1:]).group(0))
-        if code[q:q + 1] == "{":
-            out.append((mm.start(), code[q:match_paren(code, q) + 1]))
-        else:
-            out.append((mm.start(), code[q:_expr_end(code, q) + 1]))
+    for mm in re.finditer(r"(?<![\w$.])(?:for(?:\s+await)?|while)\s*\(", code):
+        q, block = _block_after(code, match_paren(code, mm.end() - 1))
+        out.append((mm.start(), block if block is not None else code[q:_expr_end(code, q) + 1]))
+    for mm in re.finditer(r"(?<![\w$.])do\s*(?=\{)", code):                   # do { … } while (…)
+        out.append((mm.start(), code[mm.end():match_paren(code, mm.end()) + 1]))
     for mm in re.finditer(r"\.(?:forEach|map)\(\s*(?=async\b)", code):
         _, body, _ = handler_at(code, mm.end())
         if body:
@@ -1738,48 +1886,112 @@ def loop_bodies(code: str) -> list[tuple[int, str]]:
     return out
 
 
+def _awaits_doc_write(body: str) -> bool:
+    return any(_awaited_call(body, am.end()) in LOOP_AWAIT_METHODS
+               for am in re.finditer(r"(?<![\w$])await\s+", body))
+
+
+def _writing_helpers(code: str) -> set[str]:
+    """Names of this file's functions (`function f(`, `const f = async (…) =>`) whose body awaits a
+    LOOP_AWAIT_METHODS call — C59 follows an awaited call one level into these (ac-5)."""
+    out = set()
+    decl = (r"(?<![\w$.])(?:async\s+)?function\s*\*?\s*([A-Za-z_$][\w$]*)\s*(?=\()"
+            r"|(?<![\w$.])(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*")
+    for dm in re.finditer(decl, code):
+        name = dm.group(1) or dm.group(2)
+        _, body, _ = handler_at(code, dm.start() if dm.group(1) else dm.end(), _depth=1)
+        if body and _awaits_doc_write(body):
+            out.add(name)
+    return out
+
+
 @rule("C59", "warn+manual", "no per-document await inside a loop (batch with updateDocuments/modifyBatch)")
 def c59(m):
     found = []
     for rel, src in m.files.items():
+        helpers = None
         for pos, body in loop_bodies(src.code):
-            for am in re.finditer(r"(?<![\w$])await\s+", body):
-                if _awaited_call(body, am.end()) in LOOP_AWAIT_METHODS:
-                    found.append(f"{rel}:{src.line_of(pos)} — batch with updateDocuments/modifyBatch")
+            if _awaits_doc_write(body):
+                found.append(f"{rel}:{src.line_of(pos)} — batch with updateDocuments/modifyBatch")
+                continue
+            # one level of indirection: `await dropFlags(a, keys)` where dropFlags is a same-file
+            # function that awaits the write itself
+            if helpers is None:
+                helpers = _writing_helpers(src.code)
+            for cm in re.finditer(r"(?<![\w$])await\s+([A-Za-z_$][\w$]*)\s*\(", body):
+                if cm.group(1) in helpers:
+                    found.append(f"{rel}:{src.line_of(pos)} — batch with updateDocuments/modifyBatch "
+                                 f"(via {cm.group(1)}())")
                     break
     found = sorted(set(found), key=found.index)
-    return ok() if not found else ("warn", found[:15])
+    return ok() if not found else ("warn", found)
 
 
-@rule("C60", "warn", "no async listener or await in a hot-hook handler (defer via perFrame/debounce/coalesce)")
+def _async_called(code: str, body: str, more: tuple[str, ...] = ()) -> str | None:
+    """The first function `body` calls by bare name (`paint(`, `void paint(`) that is declared
+    `async function paint` in `code` (the listener's file) or in `more` (the files it imports)."""
+    for name in dict.fromkeys(re.findall(r"(?<![\w$.])([A-Za-z_$][\w$]*)\s*\(", body)):
+        decl = re.compile(rf"(?<![\w$.])async\s+function\s*{re.escape(name)}\s*\(")
+        if any(decl.search(src) for src in (code, *more)):
+            return name
+    return None
+
+
+@rule("C60", "warn", "no async listener, await or async-function call in a hot-hook handler (defer via perFrame/debounce/coalesce)")
 def c60(m):
     found = []
     for ls in listeners(m):
-        if ls.name not in HOT_HOOKS:
+        if not is_hot_hook(ls.name):
             continue
         body = ls.body or ""
-        if (ls.is_async or re.search(r"(?<![\w$])await\b", body)) and not DEFER.search(body):
+        if DEFER.search(body):
+            continue
+        if ls.is_async or re.search(r"(?<![\w$])await\b", body):
             found.append(f"{ls.rel}:{ls.line} {ls.name}")
+        elif name := _async_called(m.code(ls.rel), body, _imported_code(m, ls.rel)):
+            # a sync handler that fires `void paint(t)` still starts one async job per frame
+            found.append(f"{ls.rel}:{ls.line} {ls.name} — starts async {name}() per call")
     return ok() if not found else ("warn", found)
+
+
+def _imported_handler(more: tuple[str, ...], ident: str) -> tuple[str, str] | None:
+    """(body, file code) of the handler `ident` declared in one of the imported files `more`."""
+    for code in more:
+        probe = f"{code}\n({ident})"                    # handler_at reads a bare name at `pos`
+        _, body, _ = handler_at(probe, len(probe) - len(ident) - 1)
+        if body:
+            return body, code
+    return None
 
 
 @rule("C61", "warn+manual", "a writing create*/update*/delete* listener runs on one client (active-GM gate or claim)")
 def c61(m):
     found = []
     for ls in listeners(m):
-        if not DOC_EVENT.match(ls.name) or not ls.body:
+        if not DOC_EVENT.match(ls.name):
+            continue
+        more = _imported_code(m, ls.rel)
+        body, code = ls.body, m.code(ls.rel)
+        if not body and ls.ident:                    # `reg.on("updateActor", onUpdate)` imported
+            hit = _imported_handler(more, ls.ident)
+            if not hit:
+                found.append(f"{ls.rel}:{ls.line} {ls.name} → {ls.ident} (not resolved — review by hand)")
+                continue
+            body, code = hit
+            more = (m.code(ls.rel), *more)
+        if not body:
             continue
         # the write and the gate are both looked for in the body plus the functions it calls (same
         # file, then the module files it imports), so `void react(actor)` with the write in react()
         # is checked like an inline write, and an imported `isRunner()` wrapping pickRunner is a gate
-        scope = _with_called(m.code(ls.rel), ls.body, _imported_code(m, ls.rel))
+        scope = _with_called(code, body, more)
         if not DOC_WRITE.search(scope):
             continue
         if ACTIVE_GATE.search(scope) or CLAIM.search(scope):
             continue
         why = "any-GM gate only (runs in every GM tab)" if ROLE_GATE.search(scope) else "no gate"
         found.append(f"{ls.rel}:{ls.line} {ls.name} — {why}")
-    return ok() if not found else ("warn", found[:15])
+    return ok() if not found else ("warn", found)
 
 # C62 mirrors the bridge's needsDoc (foundry-vtt-mcp packages/mcp-server/src/fork/tools/
 # pentaryn-call.ts): a param with one of these kinds, or named `ref`, that the kit does not resolve
@@ -1820,10 +2032,11 @@ def c62(m):
                 continue
             if EVAL_JS_ONLY.search(str(p.get("doc") or "")):
                 continue
-            why = "a non-first ref" if is_ref and i else "resolve:false" if p.get("resolve") is False else "not the first ref"
+            why = ("a non-first ref" if is_ref and i else "resolve:false" if p.get("resolve") is False
+                else "a Document kind the kit does not resolve")
             found.append(f"{row.get('path')}({p.get('name')}) kind {p.get('kind') or 'ref'}, {why}, "
                          f"type {type_text or '(none)'!s} — add uuid|id|exact name, or say eval-js only")
-    return ok() if not found else bad(found[:15])
+    return ok() if not found else bad(found)
 
 
 # ── scoring ──────────────────────────────────────────────────────────────────
@@ -1849,7 +2062,7 @@ def score(m: Module) -> dict:
         "passed": passed, "failClassRules": total,
         "failing": [r.id for r in results if r.status == "fail"],
         "warnings": [r.id for r in results if r.status == "warn"],
-        # warn+manual rules (C36, C49): a hit is a warning AND an item on the manual review list
+        # warn+manual rules (C36, C49, C54, C59, C61): a hit is a warning AND an item on the manual review list
         "manual": [r.id for r in results if r.status == "manual"
                    or (r.status == "warn" and r.cls == "warn+manual")],
         "wait": WAIT.get(m.id),
@@ -1889,23 +2102,45 @@ def gate_ok(report: dict) -> bool:
     return not report["blocking"] and not report["stale"]
 
 
+def load_registry(reg_path: Path) -> tuple[adj.Registry | None, str | None]:
+    """(registry, None), or (None, why) when it is broken or missing: C47 and C32 FAIL with that text."""
+    try:
+        return adj.load(reg_path), None
+    except adj.RegistryError as exc:
+        return None, str(exc)
+
+
+def load_manifests(root: Path) -> dict[str, dict | None]:
+    """Every sibling module.json under root, by folder name (C38's cssPrefix-clash check reads these).
+    An unreadable one maps to None: C38 names it rather than one bad sibling crashing every score."""
+    out: dict[str, dict | None] = {}
+    for p in root.iterdir():
+        if (p / "module.json").exists():
+            try:
+                out[p.name] = read_manifest(p)
+            except ManifestError:
+                out[p.name] = None
+    return out
+
+
 def score_dir(module_dir: Path, *, root: Path | None = None, registry_path: Path | None = None,
-              installed: bool | None = None) -> dict:
-    """Score one module directory (the entry point new_module.py and the tests use)."""
+              installed: bool | None = None,
+              registry: tuple[adj.Registry | None, str | None] | None = None,
+              manifests: dict[str, dict] | None = None) -> dict:
+    """Score one module directory (the entry point new_module.py and the tests use). A caller scoring
+    many modules passes `registry` (load_registry's pair) and `manifests` (load_manifests of root),
+    loaded once; omitted, each is loaded here."""
     module_dir = module_dir.resolve()
     root = (root or module_dir.parent).resolve()
     reg_path = registry_path or adj.REGISTRY_PATH
-    try:
-        registry = adj.load(reg_path)
-    except adj.RegistryError:
-        registry = None
+    registry, registry_error = registry if registry is not None else load_registry(reg_path)
     if installed is None:
         installed = root == MODULE_ROOT.resolve()
-    manifests = {p.name: json.loads((p / "module.json").read_text(encoding="utf-8"))
-                 for p in root.iterdir() if (p / "module.json").exists()}
+    if manifests is None:
+        manifests = load_manifests(root)
     reg_root = reg_path.parent.parent if reg_path == adj.REGISTRY_PATH else reg_path.parent
     m = load_module(module_dir, installed=installed, registry=registry, registry_root=reg_root,
-                    all_manifests=manifests)
+                    all_manifests=manifests, registry_error=registry_error)
     return score(m)
 
 
@@ -1942,7 +2177,7 @@ def to_markdown(reports: list[dict], *, title: str) -> str:
         lines.append("")
         for res in r["results"]:
             if res["status"] in ("fail", "warn"):
-                detail = "; ".join(res["detail"])[:400].replace("|", "\\|")
+                detail = "; ".join(_capped(res["detail"]))[:400].replace("|", "\\|")
                 lines.append(f"- **{res['id']}** {res['status']}: {detail}")
         lines.append("")
     return "\n".join(lines)
@@ -1965,20 +2200,29 @@ def main(argv: list[str] | None = None) -> int:
         installed = True
     targets = []
     for name in args.module:
-        p = Path(name)
-        if (p / "module.json").exists():
-            targets.append(p)
-        else:
-            cand = [root / name, root / f"pentaryn-{name}"]
-            hit = next((c for c in cand if (c / "module.json").exists()), None)
-            if hit is None:
-                print(f"  ✗ no module {name!r} under {root}", file=sys.stderr)
-                return 2
-            targets.append(hit)
+        try:
+            targets.append(vendor.resolve_module(name, root))
+        except vendor.VendorError as exc:
+            print(f"  ✗ {exc}", file=sys.stderr)
+            return 2
     if not targets:
-        targets = sorted(p for p in root.iterdir() if (p / "module.json").exists())
+        targets = vendor.all_modules(root)
 
-    reports = [score_dir(t, root=t.resolve().parent, registry_path=reg_path, installed=installed) for t in targets]
+    registry = load_registry(reg_path)     # once per run, not once per module
+    if registry[1]:
+        print(f"  ✗ {registry_failure(registry[1])}", file=sys.stderr)
+    manifests: dict[Path, dict[str, dict]] = {}   # one sibling scan per root, not one per module
+    reports = []
+    for t in targets:
+        parent = t.resolve().parent
+        if parent not in manifests:
+            manifests[parent] = load_manifests(parent)
+        try:
+            reports.append(score_dir(t, root=parent, registry_path=reg_path, installed=installed,
+                                     registry=registry, manifests=manifests[parent]))
+        except ManifestError as exc:
+            print(f"  ✗ {t.resolve().name}: {exc}", file=sys.stderr)
+            return 2
     if args.json:
         print(json.dumps(reports, indent=2))
     elif args.markdown:

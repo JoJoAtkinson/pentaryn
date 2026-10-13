@@ -26,6 +26,7 @@ const CASES = [
   ["lock.toast", { name: "It" }, "It is locked."],
   ["lock.float", undefined, "Locked"],
   ["corpse.revive", undefined, "Revive (1 HP): no longer lootable"],
+  ["corpse.reviveFailed", { name: "Goblin" }, "Could not revive Goblin. See the console."],
   ["corpse.sheet", undefined, "Open character sheet (GM)"],
 ];
 

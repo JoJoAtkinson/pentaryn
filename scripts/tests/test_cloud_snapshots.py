@@ -15,18 +15,19 @@ import time
 
 import pytest
 
-from cloud_fakes import FakeRclone
+from cloud_fakes import FakeRclone, make_edit
+from cloud_fakes import age as _age
+from cloud_fakes import bundle_names as _bundle_names
+from cloud_fakes import install as _install
+from cloud_fakes import install_system as _system
+from cloud_fakes import names as _names
+from cloud_fakes import newest as _newest
+from cloud_fakes import sidecar as _sidecar
 from scripts.foundry import bootstate, cloud, storage
 from scripts.foundry.cloud import Snapshot, parse_snapshot
 from scripts.foundry.storage import Entry, RcloneStorage
 
 DAY = 86400
-
-
-def _names(cloud_dir, sub="world-backups"):
-    """The files in a cloud subfolder, without the `.parent` lineage sidecars."""
-    return sorted(p.name for p in (cloud_dir / sub).iterdir()
-                  if not p.name.endswith(cloud.PARENT_SUFFIX))
 
 
 def _sidecars(cloud_dir, sub="world-backups"):
@@ -46,16 +47,8 @@ def _stamp(age_days: float) -> str:
     return time.strftime("%Y-%m-%d-%H%M%S", time.gmtime(time.time() - age_days * DAY))
 
 
-_bump = [0]
-
-
-def _edit(data_root, text="edit"):
-    f = data_root / "Data/worlds/w/journal.txt"
-    f.write_text(text)
-    # A new second every call, so the digest (int mtime) cannot repeat a previous state.
-    _bump[0] += 5
-    t = time.time() + _bump[0]
-    os.utime(f, (t, t))
+# A new second every call, so the digest (int mtime) cannot repeat a previous state.
+_edit = make_edit(step=5)
 
 
 # ── the parser (§3) ─────────────────────────────────────────────────────────
@@ -84,6 +77,22 @@ def test_parser_reads_all_three_shapes(name, host, core, safety):
 ])
 def test_parser_rejects(name):
     assert parse_snapshot(Entry(name, 1, 1.0)) is None
+
+
+@pytest.mark.parametrize("core, host_, safety", [
+    ("14.369", "mac", False), ("14.369", "boss", True), ("unknown", "a-b-1", False),
+])
+def test_snapshot_filename_round_trips_through_the_parser(core, host_, safety):
+    """EXT-2: one builder beside the one parser — what _build names, parse_snapshot reads
+    back as the same stamp, core, host and safety flag."""
+    from datetime import datetime, timezone
+    when = datetime(2026, 10, 11, 3, 4, 12, tzinfo=timezone.utc)
+    name = cloud.snapshot_filename(when, core, host_, safety)
+    assert name == (f"world-{when.strftime(cloud.STAMP_FORMAT)}-fvtt{core}-{host_}"
+                    f"{'.safety' if safety else ''}.tar.gz")
+    s = parse_snapshot(Entry(name, 1, 1.0))
+    assert s and (s.stamp, s.core, s.host, s.safety) == (
+        "2026-10-11-030412", core, host_, safety)
 
 
 def test_newest_is_by_mtime_then_name_not_by_stamp():
@@ -287,10 +296,6 @@ def test_an_empty_tree_is_not_archived(two_hosts, capsys):
 
 
 # ── lineage sidecars ────────────────────────────────────────────────────────
-
-def _sidecar(cloud_dir, name, sub="world-backups"):
-    return json.loads((cloud_dir / sub / f"{name}{cloud.PARENT_SUFFIX}").read_text())
-
 
 def _lineage(cloud_dir, name, sub="world-backups"):
     """The sidecar's lineage keys — without the bundle manifest it also carries."""
@@ -734,6 +739,24 @@ def test_backup_and_restore_through_rclone(two_hosts, monkeypatch):
     assert "copyto" in fake.verbs() and "moveto" in fake.verbs()
 
 
+def test_restore_without_yes_and_without_a_terminal_refuses_cleanly(two_hosts, monkeypatch,
+                                                                   capsys):
+    """R8: no tty and no --yes must die with a message, not an EOFError traceback from
+    input() — and the world must be left alone."""
+    (two_hosts.data["mac"] / "Data/worlds/w/journal.txt").write_text("mac world")
+    with two_hosts.use("mac"):
+        cloud.backup("shutdown")
+    [snap] = _names(two_hosts.cloud)
+    boss_journal = two_hosts.data["boss"] / "Data/worlds/w/journal.txt"
+    boss_journal.write_text("boss world")
+    monkeypatch.setattr(cloud.sys.stdin, "isatty", lambda: False, raising=False)
+    monkeypatch.setattr("builtins.input", lambda *_: (_ for _ in ()).throw(EOFError()))
+    with two_hosts.use("boss"), pytest.raises(SystemExit):
+        cloud.restore(snap)
+    assert "pass --yes" in capsys.readouterr().err
+    assert boss_journal.read_text() == "boss world"
+
+
 # ── stale partials, untagged ───────────────────────────────────────────────
 
 def test_ensure_cloud_sweeps_stale_partials_only(two_hosts):
@@ -804,6 +827,60 @@ def test_assets_old_manifest_entry_is_checked_once_then_recorded(two_hosts, monk
     assert "mtime" in json.loads((tmp_path / "manifest.json").read_text())["packs"]["maps-01"]
 
 
+def test_assets_member_under_a_folder_that_normalises_to_nothing_stays_in_the_pack(
+        two_hosts, monkeypatch, tmp_path):
+    """EC-1: '地图/' kebabs to nothing — the member must land inside the pack, not at '/'."""
+    monkeypatch.setattr(cloud, "MANIFEST", tmp_path / "manifest.json")
+    _rclone_cloud(two_hosts, monkeypatch)
+    _zip(two_hosts.cloud / "assets/maps-01.zip", {"地图/pentaryn-ec1-a.png": b"x"})
+    with two_hosts.use("mac"):
+        assert cloud.unpack_assets() == 0
+    assert (two_hosts.data["mac"] / "Data/assets/maps/maps-01/pentaryn-ec1-a.png").exists()
+
+
+def test_assets_empty_middle_segment_is_still_a_collision(two_hosts, monkeypatch, tmp_path,
+                                                          capsys):
+    """EC-1: 'a/★/b.png' and 'a/b.png' are the same path once '★' kebabs to nothing."""
+    monkeypatch.setattr(cloud, "MANIFEST", tmp_path / "manifest.json")
+    _rclone_cloud(two_hosts, monkeypatch)
+    _zip(two_hosts.cloud / "assets/tokens-01.zip", {"a/★/b.png": b"1", "a/b.png": b"2"})
+    with two_hosts.use("mac"):
+        assert cloud.unpack_assets() == 1
+    assert "both normalise to 'a/b.png'" in capsys.readouterr().err
+
+
+def test_assets_member_whose_name_normalises_to_nothing_refuses_the_pack(
+        two_hosts, monkeypatch, tmp_path, capsys):
+    """EC-1: a file named only '★' has no name left — the pack is refused, not unpacked."""
+    monkeypatch.setattr(cloud, "MANIFEST", tmp_path / "manifest.json")
+    _rclone_cloud(two_hosts, monkeypatch)
+    _zip(two_hosts.cloud / "assets/tokens-02.zip", {"ok.png": b"1", "地图/★": b"2"})
+    with two_hosts.use("mac"):
+        assert cloud.unpack_assets() == 1
+    assert "'地图/★' normalises to nothing" in capsys.readouterr().err
+    assert not (two_hosts.data["mac"] / "Data/assets/tokens/tokens-02").exists()
+    manifest = tmp_path / "manifest.json"
+    assert "tokens-02" not in (json.loads(manifest.read_text())["packs"]
+                               if manifest.exists() else {})
+
+
+
+def test_assets_corrupt_zip_is_a_problem_and_the_manifest_still_records_the_rest(
+        two_hosts, monkeypatch, tmp_path, capsys):
+    """R7: a pack that is not a valid zip is named and skipped; the packs unpacked in the
+    same run stay in the manifest, so the next start does not re-download them."""
+    monkeypatch.setattr(cloud, "MANIFEST", tmp_path / "manifest.json")
+    _rclone_cloud(two_hosts, monkeypatch)
+    _zip(two_hosts.cloud / "assets/tokens-01.zip", {"a.png": b"1"})
+    (two_hosts.cloud / "assets/tokens-02.zip").write_bytes(b"not a zip at all " * 8)
+    with two_hosts.use("mac"):
+        assert cloud.unpack_assets() == 1
+    assert "tokens-02.zip: could not be unpacked" in capsys.readouterr().err
+    packs = json.loads((tmp_path / "manifest.json").read_text())["packs"]
+    assert "tokens-01" in packs and "tokens-02" not in packs
+    assert not (two_hosts.data["mac"] / "Data/assets/tokens/tokens-02").exists()
+
+
 # ── the updater's rollback point (§9) ───────────────────────────────────────
 
 def test_rollback_point_is_the_based_on_snapshot_then_own_newest(two_hosts):
@@ -840,31 +917,8 @@ from bundle_fakes import foundry_launch, make_module  # noqa: E402
 from scripts.foundry import bundles  # noqa: E402
 
 
-def _install(root, *, maps_extra: bytes = b"map art " * 512, system: str | None = "5.12"):
-    """Real module content: a map pack with two LevelDB packs, a small tool, a system.
-    Deterministic bytes, so two hosts installing it get the same fingerprints."""
-    mods = root / "Data/modules"
-    make_module(mods, "maps", version="2.0.0", packs=2, extra={"art/big.webp": maps_extra})
-    make_module(mods, "tools", version="1.1", packs=1)
-    if system:
-        _system(root, system)
-    return root
-
-
-def _system(root, version, body="export const dnd5e = 1;\n"):
-    d = root / "Data/systems/dnd5e"
-    d.mkdir(parents=True, exist_ok=True)
-    (d / "system.json").write_text(json.dumps({"id": "dnd5e", "version": version}))
-    (d / "dnd5e.mjs").write_text(body)
-    return d
-
-
 def _packs(root):
     return sorted(p.parent for p in (root / "Data/modules").glob("*/packs/*/CURRENT"))
-
-
-def _bundle_names(cloud_dir):
-    return sorted(p.name for p in (cloud_dir / "bundles").iterdir())
 
 
 def _uploads(monkeypatch):
@@ -916,9 +970,11 @@ def _tree_hash(root):
 
 def _tmp_files(root):
     """Files left in the temp dir, except the upload queue's own bookkeeping (its lock
-    files, status file and log — uploadq.py), which outlive every backup by design."""
+    files, status file, log and dropped-parents record — uploadq.py), which outlive every
+    backup by design."""
     from scripts.foundry import uploadq
-    keep = {uploadq.BUILD_LOCK, uploadq.UPLOAD_LOCK, uploadq.STATUS_FILE, uploadq.LOG_FILE}
+    keep = {uploadq.BUILD_LOCK, uploadq.UPLOAD_LOCK, uploadq.STATUS_FILE, uploadq.LOG_FILE,
+            uploadq.DROPPED_PARENTS}
     tmp = root / cloud.TMP_DIRNAME
     return sorted(p.relative_to(tmp).as_posix() for p in tmp.rglob("*")
                   if p.is_file() and p.relative_to(tmp).as_posix() not in keep) \
@@ -929,10 +985,6 @@ def _first_member(tar_path):
     with tarfile.open(tar_path) as tar:
         first = tar.next()
         return first.name, json.loads(tar.extractfile(first).read())
-
-
-def _newest(cloud_dir, suffix="-mac.tar.gz"):
-    return [n for n in _names(cloud_dir) if n.endswith(suffix)][-1]
 
 
 def test_bundled_backup_uploads_a_world_tar_every_bundle_and_the_manifest(two_hosts,
@@ -1143,6 +1195,27 @@ def test_bundled_restore_downloads_only_what_this_machine_lacks(two_hosts, monke
     assert not (boss / "Data/modules" / cloud.SNAPSHOT_MARKER).exists()
     assert not (boss / cloud.SNAPSHOT_MARKER).exists()
     assert _tmp_files(boss) == []
+
+
+def test_perf2_a_bundled_restore_reads_each_downloaded_bundle_twice(two_hosts, monkeypatch):
+    """PERF-2: fetch_snapshot's verify read each bundle end to end, then apply_snapshot's
+    extract read it twice more (its member list, then the extract). verify's names now
+    reach extract, which streams once: two reads in all, the same checks."""
+    _install(two_hosts.data["mac"], maps_extra=os.urandom(512 * 1024))
+    with two_hosts.use("mac"):
+        cloud.backup("shutdown")
+        maps = bundles.local_inventory()["module/maps"].name
+    snap = [n for n in _names(two_hosts.cloud) if n.startswith("world-")][-1]
+    _install(two_hosts.data["boss"])                       # other maps art, same tools
+    size = (two_hosts.cloud / bundles.BUNDLES / maps).stat().st_size
+    from bundle_fakes import count_tar_reads
+    reads = count_tar_reads(monkeypatch)
+    with two_hosts.use("boss"):
+        assert cloud.restore(snap, yes=True) == 0
+    passes = reads[maps] / size
+    assert passes < 2.5, f"{maps} was read {passes:.2f} times end to end"
+    assert ((two_hosts.data["boss"] / "Data/modules/maps/art/big.webp").read_bytes()
+            == (two_hosts.data["mac"] / "Data/modules/maps/art/big.webp").read_bytes())
 
 
 def cloud_digest(two_hosts, who="boss"):
@@ -1475,6 +1548,33 @@ def test_updater_world_restore_of_a_bundled_snapshot_restores_modules_not_the_sy
     assert len(got) == 1 and got[0].startswith("module@tools@")   # never the system
 
 
+def test_updater_rollback_writes_the_same_record_as_a_restore_M15(two_hosts):
+    """M15: the rollback's bootstate record is `_restore_locked`'s, through one helper —
+    lineage mtimes kept, the snapshot's own manifest digest (not the local tree, whose
+    system the rollback leaves at the new version), and any pending notice answered."""
+    from scripts.foundry.update import recover
+    mac = _install(two_hosts.data["mac"])
+    with two_hosts.use("mac"):
+        cloud.backup("shutdown")
+        m0 = bootstate.load().based_on
+        m0_mtime = cloud.find_snapshot(cloud.store(), m0).mtime
+        _edit(mac, "pre-update")
+        cloud.backup("auto-update")
+        snap = recover.newest_world_snapshot()
+        want_digest = cloud.snapshot_digest()      # what `snap` holds, as backed up
+        bootstate.load().set_pending("boss-20990101-000000.tar.gz", 1.0)
+        _edit(mac, "migrated by a bad update")
+        _system(mac, "5.13", body="the new system\n")
+        rec = recover.Recovery(kind="system", target="dnd5e")
+        recover._restore_world_tar(snap, rec)
+        st = bootstate.load()
+    assert (st.based_on, st.by, st.lineage) == (snap.name, "updater-rollback", [m0])
+    assert st.lineage_mtimes == [m0_mtime]
+    assert st.lineage_origin_before == m0_mtime
+    assert st.digest == want_digest
+    assert (st.pending_newer, st.pending_newer_mtime) == (None, None)
+
+
 def test_updater_world_restore_does_not_need_the_system_bundle(two_hosts):
     from scripts.foundry.update import recover
     mac = _install(two_hosts.data["mac"])
@@ -1499,11 +1599,6 @@ def test_updater_world_restore_does_not_need_the_system_bundle(two_hosts):
 def _disk(monkeypatch, free):
     monkeypatch.setattr(cloud.shutil, "disk_usage",
                         lambda p: shutil._ntuple_diskusage(10**12, 10**12 - free, free))
-
-
-def _age(path, days):
-    t = time.time() - days * DAY
-    os.utime(path, (t, t))
 
 
 def _bundle(kind, id, fp="0123456789abcdef", version="1"):
@@ -1688,6 +1783,23 @@ def test_verify_dies_naming_the_module_when_its_folder_changed_meanwhile(two_hos
         assert cloud.backup("shutdown") == 0                # the tree as it is now: lands
         assert bootstate.load().based_on != first.based_on
     assert _tmp_files(mac) == [kept]                        # kept until Joe deletes it
+
+
+def test_verify_names_an_unparseable_vanished_bundle_instead_of_crashing(monkeypatch,
+                                                                         tmp_path):
+    """Review R5: a manifest name parse_bundle cannot read (a hand-edited or foreign
+    sidecar) that is missing from the cloud cannot be rebuilt — _verify_bundles must say
+    so with an _Incomplete naming it, as _rebuilder_or_incomplete does, never crash with
+    an AttributeError on `None.kind`."""
+    bad = "not-a-bundle-name.tar.gz"
+    assert bundles.parse_bundle(bad) is None
+    monkeypatch.setattr(bundles, "listing", lambda st, fresh=False: {})
+    monkeypatch.setattr(bundles, "manifest_names", lambda m: {bad})
+    with pytest.raises(cloud._Incomplete) as exc:
+        cloud._verify_bundles(None, "world-x", {}, {}, tmp_path)
+    msg = str(exc.value)
+    assert msg.startswith(f"{bad}: its bundle {bad} vanished from the cloud")
+    assert "snapshot world-x is incomplete" in msg
 
 
 # healing (§3.5 step 3)
@@ -2080,3 +2192,220 @@ def test_tree_digests_are_stable(fake_data):
                                          "a00aaa1e002f876dd55e1ae04de4dbf5")
     assert cloud.legacy_snapshot_digest() == ("9d7d27c6399e982930a40d47fac44cb8"
                                              "d6eaff3b24eb982131c3d312287a01b7")
+
+
+def test_updater_world_restore_holds_both_queue_locks_py_cloud_ac_1(two_hosts, monkeypatch):
+    """py-cloud-ac-1: the rollback restore wrote the world and the based-on record with no
+    lock, so a background upload or a build could interleave with it."""
+    import threading
+    from scripts.foundry import uploadq
+    from scripts.foundry.update import recover
+    mac = _install(two_hosts.data["mac"])
+    held: dict[str, bool] = {}
+    real = cloud.apply_snapshot
+
+    def probe():           # another thread: a separate holder, as another process is
+        for name in (uploadq.BUILD_LOCK, uploadq.UPLOAD_LOCK):
+            with uploadq.lock(name, wait=False) as got:
+                held[name] = not got
+
+    def spy(*a, **kw):
+        t = threading.Thread(target=probe)
+        t.start()
+        t.join()
+        return real(*a, **kw)
+    monkeypatch.setattr(cloud, "apply_snapshot", spy)
+    with two_hosts.use("mac"):
+        cloud.backup("auto-update")
+        snap = recover.newest_world_snapshot()
+        _edit(mac, "migrated by a bad update")
+        recover._restore_world_tar(snap, recover.Recovery(kind="system", target="dnd5e"))
+    assert held == {uploadq.BUILD_LOCK: True, uploadq.UPLOAD_LOCK: True}
+
+
+# ── PERF-3: sidecars are read through a small pool, used in the existing order ──
+
+def _paired_sidecar_reads(monkeypatch):
+    """FolderStorage.read_text makes each sidecar read wait (up to 2 s) for a second one
+    to be in flight; returns the list of reads that waited alone — non-empty when the
+    sidecars were read one after another."""
+    import threading
+    real = storage.FolderStorage.read_text
+    gate = threading.Barrier(2, timeout=2)
+    alone: list[str] = []
+
+    def paired(self, rel):
+        if rel.endswith(cloud.PARENT_SUFFIX):
+            try:
+                gate.wait()
+            except threading.BrokenBarrierError:
+                alone.append(rel)
+        return real(self, rel)
+    monkeypatch.setattr(storage.FolderStorage, "read_text", paired)
+    return alone
+
+
+def test_perf3_gc_mark_reads_sidecars_concurrently(two_hosts, monkeypatch):
+    """PERF-3: the GC mark (and status's bundle line) read ~25 sidecars one by one."""
+    c = two_hosts.cloud
+    want = set()
+    for i in range(4):
+        b = _bundle("module", f"m{i}")
+        want.add(b)
+        _hand_snapshot(c, f"world-{_stamp(i + 1)}-fvtt14.369-boss.tar.gz",
+                       sidecar=_bundled_sidecar({f"m{i}": b}))
+    alone = _paired_sidecar_reads(monkeypatch)
+    assert cloud.referenced_bundles(cloud.store()) == want
+    assert alone == []
+
+
+def test_perf3_restore_listing_reads_sidecars_concurrently_in_the_existing_order(
+        two_hosts, monkeypatch, capsys):
+    """PERF-3: the restore listing read each row's sidecar serially; rows still print
+    oldest first, each with its own kind."""
+    c = two_hosts.cloud
+    names = []
+    for i in range(4):
+        name = f"world-{_stamp(4 - i)}-fvtt14.369-boss.tar.gz"
+        side = _bundled_sidecar({f"m{i}": _bundle("module", f"m{i}")})
+        if i % 2:
+            del side["bundled"]
+        _hand_snapshot(c, name, age_days=4 - i, sidecar=side)
+        names.append(name)
+    alone = _paired_sidecar_reads(monkeypatch)
+    capsys.readouterr()
+    assert cloud.restore(None) == 0
+    rows = [line.split() for line in capsys.readouterr().out.splitlines()
+            if line.strip().startswith("world-")]
+    assert [r[0] for r in rows] == names
+    assert [r[2] for r in rows] == ["bundled", "full", "bundled", "full"]
+    assert alone == []
+
+
+def test_perf3_an_unreadable_sidecar_still_fails_the_pooled_mark(two_hosts, monkeypatch):
+    """PERF-3: a StorageError from any one read still propagates out of the mark."""
+    c = two_hosts.cloud
+    names = [f"world-{_stamp(i + 1)}-fvtt14.369-boss.tar.gz" for i in range(5)]
+    for i, n in enumerate(names):
+        _hand_snapshot(c, n, sidecar=_bundled_sidecar({f"a{i}": _bundle("module", f"a{i}")}))
+    _unreadable(monkeypatch, names[3])
+    with pytest.raises(storage.StorageError, match="I/O error"):
+        cloud.referenced_bundles(cloud.store())
+
+
+def test_m1_the_uncalled_snapshot_core_version_is_gone():
+    """M1: snapshot_core_version() had no caller; parse_snapshot already reads the
+    version back out of a name, so the dead helper is deleted."""
+    assert not hasattr(cloud, "snapshot_core_version")
+    snap = parse_snapshot(Entry(name="world-2026-10-12-120000-fvtt14.369-boss.tar.gz",
+                                size=1, mtime=0.0))
+    assert snap is not None and snap.core == "14.369"
+
+
+def test_m2_the_uncalled_module_getattr_shim_is_gone():
+    """M2: cloud's module __getattr__ shim for the old FOUNDRY_DATA / CLOUD_ROOT
+    constants had no caller; the data root is cloud.data_root() (host.foundry_data())
+    and the cloud root is cloud.store().root, so the shim is deleted."""
+    assert "__getattr__" not in vars(cloud)
+    assert not hasattr(cloud, "FOUNDRY_DATA")
+    assert not hasattr(cloud, "CLOUD_ROOT")
+
+
+def test_m3_coalesce_target_has_no_protect_parameter():
+    """M3: _coalesce_target's `protect` parameter was always None (the one caller passes
+    None and drops a keep_names hit itself afterwards), so it is gone; `contained` is
+    still the only filter beyond own/regular/age."""
+    import inspect
+    params = list(inspect.signature(cloud._coalesce_target).parameters)
+    assert params == ["existing", "me", "contained"]
+    assert "`protect`" not in (cloud._coalesce_target.__doc__ or "")
+
+
+def _cut_marker_tar(path, keep):
+    """A gzip-complete tar whose marker header says more bytes than the archive holds:
+    only `keep` bytes of its body survive (a copy cut short inside its first member)."""
+    import gzip
+    import io
+    data = json.dumps({"bundled": 1, "modules": {}, "systems": {}}).encode()
+    buf = io.BytesIO()
+    with tarfile.open(fileobj=buf, mode="w") as tar:
+        info = tarfile.TarInfo(cloud.SNAPSHOT_MARKER)
+        info.size = len(data)
+        tar.addfile(info, io.BytesIO(data))
+    path.write_bytes(gzip.compress(buf.getvalue()[:512 + keep]))
+    return path
+
+
+@pytest.mark.parametrize("keep", [0, 5, 30])
+def test_a_cut_short_marker_is_refused_by_both_first_member_readers(tmp_path, keep):
+    """Review M16: the local-tar reader (_read_marker) and the cloud head reader
+    (_marker_from_head) parse the first member through one helper. A marker cut short is
+    refused by both — the local one as a RestoreError naming the file, never a raw
+    tarfile error or a marker read as empty."""
+    p = _cut_marker_tar(tmp_path / "world-cut.tar.gz", keep)
+    with pytest.raises(ValueError, match="cut short"):
+        cloud._marker_from_head(p.read_bytes())
+    with pytest.raises(cloud.RestoreError, match=r"world-cut\.tar\.gz.*cut short"):
+        cloud._read_marker(p)
+
+
+def test_both_first_member_readers_agree_on_a_marked_and_an_unmarked_tar(tmp_path):
+    """Review M16: one parse — the same answer from a local tar and from its head."""
+    marked = tmp_path / "marked.tar.gz"
+    _marked_tar(marked, {"m": _bundle("module", "m")})
+    plain = tmp_path / "plain.tar.gz"
+    _legacy_tar(plain, {"Data/worlds/w/world.json": b"{}"})
+    for p in (marked, plain):
+        assert cloud._read_marker(p) == cloud._marker_from_head(p.read_bytes())
+    assert cloud._read_marker(marked) == (True, {"modules": {"m": _bundle("module", "m")},
+                                                 "systems": {}})
+    assert cloud._read_marker(plain) == (False, None)
+
+
+@pytest.mark.parametrize("keep", [0, 30])
+def test_a_cut_short_marker_restore_says_nothing_local_was_touched(two_hosts, capsys, keep):
+    """Review M16 repair: _read_marker's refusal (a RestoreError naming the file) still
+    reaches the user with the restore's reassurance, as every other refusal does — and
+    the local tree really is unchanged."""
+    stamp = time.strftime("%Y-%m-%d-%H%M%S", time.gmtime(time.time() - 2 * 86400))
+    name = f"world-{stamp}-fvtt14.369.tar.gz"
+    p = _cut_marker_tar(two_hosts.cloud / "world-backups" / name, keep)
+    os.utime(p, (time.time() - 2 * 86400,) * 2)
+    boss = two_hosts.data["boss"]
+    _install(boss)
+    before = _tree_hash(boss)
+    capsys.readouterr()
+    with two_hosts.use("boss"), pytest.raises(SystemExit):
+        cloud.restore(name, yes=True)
+    err = capsys.readouterr().err
+    assert f"{name}: its {cloud.SNAPSHOT_MARKER} is cut short" in err, err
+    assert "nothing local was touched" in err, err
+    assert _tree_hash(boss) == before
+
+
+def test_a_cut_short_marker_extract_says_nothing_was_touched(tmp_path):
+    """Review M16 repair: the updater's local entry point keeps its reassurance too."""
+    p = _cut_marker_tar(tmp_path / "world-cut.tar.gz", 5)
+    with pytest.raises(cloud.RestoreError) as exc:
+        cloud.extract_snapshot(p)
+    msg = str(exc.value)
+    assert "world-cut.tar.gz: its" in msg and "cut short" in msg and "nothing was touched" in msg
+
+
+def test_a_zero_member_tar_cannot_answer_for_either_reader(tmp_path):
+    """Review M16 repair: a tar whose first block is zeros has no first member. Both
+    readers refuse it (never "a full tar that references nothing"), so the GC mark keeps
+    its DL4 fail-safe (cannot tell → sweep nothing) and a local restore refuses it before
+    the clear instead of applying an empty snapshot."""
+    import gzip
+    import io
+    buf = io.BytesIO()
+    tarfile.open(fileobj=buf, mode="w").close()
+    p = tmp_path / "world-empty.tar.gz"
+    p.write_bytes(gzip.compress(buf.getvalue()))
+    with pytest.raises(ValueError, match="no first member"):
+        cloud._marker_from_head(p.read_bytes())
+    with pytest.raises(cloud.RestoreError, match=r"world-empty\.tar\.gz: .*no first member"):
+        cloud._read_marker(p)
+    with pytest.raises(cloud.RestoreError, match="nothing was touched"):
+        cloud.extract_snapshot(p)

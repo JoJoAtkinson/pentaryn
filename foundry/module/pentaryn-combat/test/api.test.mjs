@@ -48,7 +48,8 @@ test("the members are the module's own functions (identity), in this order", () 
     report: riders.report, seedWeaponSets: off.seedWeaponSets, seedAll: off.seedAll };
   // D-c2 [declared] (S11, combat-riders-12): the members that take an actor resolve a ref first, so
   // they are wrappers named after the function they call; the rest are still the functions themselves.
-  const resolving = new Set(["turn", "newTurn", "multiattack", "weapons", "followUp", "reckless", "setReckless", "seedWeaponSets"]);
+  // combat-core-ROB-2 [declared]: abort resolves its (optional) actor ref the same way.
+  const resolving = new Set(["turn", "newTurn", "multiattack", "weapons", "followUp", "reckless", "setReckless", "abort", "seedWeaponSets"]);
   for (const [k, fn] of Object.entries(same)) {
     if (resolving.has(k)) assert.equal(api[k].name, fn.name, k);
     else assert.equal(api[k], fn, k);
@@ -102,9 +103,10 @@ test("every ACTOR-param legacy row answers null for a bad ref", async () => {
   const { MANIFEST } = await import("../api-manifest.mjs");
   const rows = MANIFEST.rows.filter(r => r.legacy && r.params?.[0]?.type === "Actor|Token|uuid|id|exact name" && r.params[0].resolve === false);
   assert.deepEqual(rows.map(r => r.path).sort(),
-    ["count", "plan", "turn", "newTurn", "multiattack", "weapons", "fullAttack", "followUp", "reckless", "setReckless", "fixFeats", "seedWeaponSets"].sort());
+    ["count", "plan", "turn", "newTurn", "multiattack", "weapons", "fullAttack", "followUp", "reckless", "setReckless", "abort", "fixFeats", "seedWeaponSets"].sort());
   for (const r of rows) {
-    const v = api[r.path](undefined);
+    // an optional actor (abort, combat-core-ROB-2) omitted means "any": a bad ref is a miss instead
+    const v = api[r.path](r.params[0].optional ? "Nobody At All" : undefined);
     assert.equal(r.returns.startsWith("Promise") ? await v : v, null, r.path);
   }
 });
@@ -169,7 +171,7 @@ test("core: the module namespace, every export reachable through the API", async
   assert.deepEqual(Object.keys(api.core).sort(), Object.keys(core).sort());
   for (const k of Object.keys(core)) if (typeof core[k] === "function") assert.equal(api.core[k], core[k], k);
   assert.equal(api.core.MOD, "pentaryn-combat");
-  assert.equal(Object.keys(api.core).length, 81 + 14, "S1's 81 plus S2's eight blueprint constants, S4's I18N_KEYS, keyFor, S8's fullAttackPlanFrom, areaPlacementSkipped, -29's pruneOlder and -37's DELAYS");
+  assert.equal(Object.keys(api.core).length, 81 + 18, "S1's 81 plus S2's eight blueprint constants, S4's I18N_KEYS, keyFor, S8's fullAttackPlanFrom, areaPlacementSkipped, -29's pruneOlder, -37's DELAYS, combat-core-EXT-11's ATTACK_ACTION_KINDS, MOVEMENT_KEYS combat-core-EXT-13's ARGON and ext-8's turnEffectData");
 });
 
 test("EC-6: Multiattack Off sizes Full Attack from class features, not the Multiattack (wolf 1, Extra Attack 2)", async () => {

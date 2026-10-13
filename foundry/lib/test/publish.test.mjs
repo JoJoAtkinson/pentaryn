@@ -1,5 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { apiOf, installRoot, publishNamespace, publishedOf } from "../publish.mjs";
 
 function env() {
@@ -42,6 +44,15 @@ test("publishedOf returns when/at/module/alias (the shape modules put in describ
   assert.equal(publishedOf("x", { g }).when, "ready", "a copy, not the stored record");
 });
 
+test("publishedOf's doc comment names every key it returns (KIT-M10-followup)", () => {
+  const g = env();
+  publishNamespace("x", api("x"), { moduleId: "pentaryn-x", g });
+  const src = readFileSync(fileURLToPath(new URL("../publish.mjs", import.meta.url)), "utf8");
+  const doc = src.match(/\/\*\*([^]*?)\*\/\s*export function publishedOf\b/)?.[1] ?? "";
+  const keys = doc.match(/`\{([^}`]*)\}`/)?.[1].split(",").map(k => k.trim()) ?? [];
+  assert.deepEqual(keys, Object.keys(publishedOf("x", { g })));
+});
+
 test("J10: no frozen-root guard and no re-alias tick — an extensible root is assigned into, a frozen one throws", () => {
   const g = env();
   const root = { importer: { run() {} } };
@@ -79,4 +90,16 @@ test("root helpers count only kit-built namespaces and never sink on one failure
   assert.deepEqual(await root.inspect("Aldric"), { x: { name: "Aldric" }, y: { error: "NOT_FOUND: nope", code: "NOT_FOUND" } });
   await assert.rejects(root.inspect("Ald"), { code: "NOT_FOUND" });
   assert.equal(installRoot(Object.freeze({}), { g }).describe, undefined);
+});
+
+test("KIT-R2: inspect(ref, null) or a non-object opts behaves like {}", async () => {
+  const g = env();
+  const seen = [];
+  publishNamespace("x", api("x", { inspect: (actor, o) => { seen.push(o); return { name: actor.name }; } }), { moduleId: "pentaryn-x", g });
+  const root = g.game.pentaryn;
+  for (const opts of [null, "actor", 7, true]) {
+    assert.deepEqual(await root.inspect("Aldric", opts), { x: { name: "Aldric" } });
+  }
+  assert.deepEqual(seen, [{}, {}, {}, {}]);
+  await assert.rejects(root.inspect("Ald", null), { code: "NOT_FOUND" });
 });

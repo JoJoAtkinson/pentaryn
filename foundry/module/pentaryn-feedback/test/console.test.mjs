@@ -27,8 +27,23 @@ test("captureConsole false: hook and window errors are still recorded", () => {
   assert.equal(errorsOf().at(-1).message, "still seen");
 });
 
-test("selftest agrees: the console wrap matches the setting", () => {
-  const check = api.selftest().checks.find(c => c.label === "console wrap matches captureConsole");
+test("selftest agrees: the console wraps match the setting", () => {
+  const check = api.selftest().checks.find(c => c.label === "console wraps match captureConsole");
   assert.equal(check.ok, true);
-  assert.equal(check.detail, false);
+  assert.deepEqual(check.detail, { captureConsole: false, wraps: { "console.error": false, "console.warn": false } });
+});
+
+test("feedback-EXT-2: a console.warn wrap while captureConsole is off fails selftest", async () => {
+  const { CONSOLE_PATCHES } = await import("../recorder.mjs");
+  const { wrapMethod } = await import("../lib/patch.mjs");
+  const spec = { target: console, ...CONSOLE_PATCHES.find(p => p.name === "warn"), label: "console.warn" };
+  const handle = wrapMethod(MODULE, spec, (wrapped, ...args) => wrapped(...args));
+  try {
+    const check = api.selftest().checks.find(c => c.label === "console wraps match captureConsole");
+    assert.equal(check.ok, false);
+    assert.deepEqual(check.detail.wraps, { "console.error": false, "console.warn": true });
+  } finally {
+    handle.unwrap();
+  }
+  assert.equal(console.warn, plainWarn);
 });

@@ -5,11 +5,12 @@ or duplicated, or you are changing `pentaryn-journal`.
 
 ## What the player sees
 
-Every eye readable gets a gold footer bar with one button, **Add to my journal**. That covers a
-JournalEntry opened from a scene Note pin, its image popout, and an item opened from an eye pile.
-Clicking it copies what the player was shown into their own journal. That journal then opens in
-single-page view with the sidebar expanded, the new entry selected, glowing gold and marked **New**,
-and a toast confirms the save. The window the copy came from closes.
+Any journal a player can observe but does not own gets a gold footer bar with one button, **Add to
+my journal**, whether or not a scene Note pins it. That covers its image popout too, and any item
+opened from an eye pile the player can inspect (the full rule is **Who sees it** below). Clicking it
+copies what the player was shown into their own journal. That journal then opens in single-page view
+with the sidebar expanded, the new entry selected, glowing gold and marked **New**, and a toast
+confirms the save. The window the copy came from closes.
 
 - **Bar states:** *Add to my journal* → *In your journal · Open* → *Update my copy* + *Open* when the
   original has changed since it was saved. Updating replaces that copy's text, including anything the
@@ -17,6 +18,8 @@ and a toast confirms the save. The window the copy came from closes.
 - **Who sees it:** players, on any journal they can **observe** but do not own, and on any item in an
   eye pile they can observe (unless the pile forbids inspecting items). Personal journals and compendium
   journals never get it. The GM sees it only with the `gmButton` setting, which exists for testing.
+  A journal with no page the player can observe shows no bar (there would be nothing to add); it
+  appears once a page is shown to them.
 - **One-page eyes open as a single page.** If a scene Note pins a journal and the player can see
   exactly one of its pages, the page list and page arrows are hidden (`.pj-single`). Personal journals
   and the GM's view are never changed.
@@ -46,11 +49,16 @@ Published at `ready` on `game.modules.get("pentaryn-journal").api` and `game.pen
 (frozen). `describe()` lists every method with its params and return shape.
 
 - For anyone (these answer as the **calling** user):
-  - `personal(user?)` → the user's journal, or `null`.
+  - `personal(userRef?)` → that user's journal, or `null`. `userRef` here, in `shouldShowBar` and in
+    `ensure` is a User, an id or an exact name (never a substring); one that matches nobody throws
+    `NOT_FOUND`, two throw `AMBIGUOUS`. Left out, it is the calling user.
   - `add(entry | page | item)` → what the button does: `{journal, pageIds, created, updated}`, or `null`
     when there is no bar for that document, no journal, nothing visible, or it is too large.
+    If the journal window then fails to open, the copy still stands: a console warning
+    (`open after save failed`), the added/updated toast, and the result as usual.
   - `status(doc)` → `none` / `partial` / `saved` / `changed`, or `null` when there is no bar for it.
-  - `open(pageId?)` opens the user's journal; `shouldShowBar(entry, user?)` says whether that user gets the bar.
+  - `open(pageId?)` opens the user's journal; `shouldShowBar(entry, userRef?)` says whether that user gets the bar
+    on that journal (the window also hides it while none of its pages is visible to them).
   - `report()` (not gated; it returns ids, names and counts only) →
     `{folder, users: [{user, userId, isGM, journalId, pages, duplicates}], atRoot}`.
   - `core` holds the pure helpers published before the migration (`sanitize`, `planSave`, `status`, …).
@@ -62,8 +70,10 @@ Published at `ready` on `game.modules.get("pentaryn-journal").api` and `game.pen
   - `statusFor(doc, {as: userRef})` → `status()` for that user, without the bar's visibility rule.
   - `lastReason()` → why this client's last `add()`/`status()` was `null`:
     `no-target` / `no-journal` / `nothing-visible` / `too-large`.
-- GM writes: `ensure(user)` creates that player's journal (rejects `GM only` on a player client);
-  `ensureAll()` creates every player's journal and moves strays into the folder (`null` for a player).
+- GM writes: `ensure(userRef)` creates that player's journal (rejects `GM only` on a player client,
+  `NOT_FOUND`/`AMBIGUOUS` for a bad ref);
+  `ensureAll()` creates every player's journal and moves strays into the folder (`null` for a player);
+  if another module vetoes the folder's create, the strays stay at the root.
 - Kit members: `describe()`, `settings()`, `trace()`, `selftest()`, `uninstall()`, `version`, `contract`.
 
 `add()` and `status()` return `null` for a GM unless `gmButton` is on — use `statusFor`/`entriesOf` instead.
@@ -74,7 +84,7 @@ Published at `ready` on `game.modules.get("pentaryn-journal").api` and `game.pen
 |---|---|
 | `JournalEntry.flags.pentaryn-journal` | `{kind: "personal", userId}` — how a personal journal is found (never by name) |
 | `JournalEntryPage.flags.pentaryn-journal.source` | `{kind, key, entryId, entryName, pageName, place, noteText, savedAt, worldTime, hash, updatedAt?}`; `key` is the dedup key, `hash` drives *Update my copy* |
-| `User.flags.pentaryn-journal.claims.ensure.<socketId>` | a timestamp, only while a GM tab answers a player's relayed ensure; that key is removed right after, leaving `claims.ensure` an empty object (the parent is never deleted: that would race another tab's stamp). A stamp left by a tab that died mid-claim stays, and is ignored after 60 s |
+| `User.flags.pentaryn-journal.claims.ensure.<socketId>` | a server-time timestamp (`game.time.serverTime`, so tabs on machines with different clocks agree), only while a GM tab makes a player's journal (a relayed ensure, `ensureAll` or `createUser`); that key is removed right after, leaving `claims.ensure` an empty object (the parent is never deleted: that would race another tab's stamp). A stamp left by a tab that died mid-claim stays, and is ignored after 60 s |
 | Folder `Player Journals` | created by the active GM |
 
 ## Flags other modules read
@@ -96,13 +106,19 @@ No patches. One third-party dependency: Item Piles shows a non-owner an unsaved 
 
 - **The copy** is written by the player's own client, into a journal that player owns.
 - **Personal journals** are created by the active GM's client: on `ready` (`ensureAll`) and on `createUser`.
+  Both run in every tab of the GM's account, so they take the same claim as the relay below: one tab
+  creates each player's journal (and the folder), the other waits for it.
   Players cannot create journals (TRUSTED+) or folders (ASSISTANT+); do **not** grant `JOURNAL_CREATE`.
 - **The player relay** `pentaryn-journal.ensure` (a v14 user query): the sender may be a player; the
   active GM's client does the write; the payload is ignored; the query can create only the sender's own
   journal. Another client answers `NOT_GM: this client is not the active GM`. The query reaches every tab
   of the GM's account (the MCP bridge tab and a browser tab), so the tabs claim it first: the first to
-  stamp its claim creates, the other waits for that journal and answers with it.
+  stamp its claim creates, the other waits for that journal and answers with it. If another module vetoes
+  the journal's create, the query rejects `NOT_CREATED: the journal could not be created`.
 - With no GM online and no journal yet, the player gets a warning and nothing happens.
+- After the GM answers, the player waits up to 3 s for the new journal to reach their client (by its
+  flag, or by the id the GM answered). If it never comes, the player gets the "tell the GM" warning
+  rather than nothing.
 
 ## Extending
 

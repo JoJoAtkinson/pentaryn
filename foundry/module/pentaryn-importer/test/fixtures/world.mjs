@@ -6,7 +6,8 @@
  *   actor.update / items / createEmbeddedDocuments / deleteEmbeddedDocuments / reset
  *   actor.prototypeToken.toObject()          → source data; keys outside PrototypeToken's set are
  *                                              dropped on create/update, as Foundry strips them
- *   item.system.activities                   → a Map keyed by `_id` with .get/.map, as ActivityCollection
+ *   item.system.activities                   → a Map keyed by `_id` with .get/.map, as ActivityCollection;
+ *                                              absent on the types without ActivitiesTemplate (NO_ACTIVITIES)
  *   item.labels / activity.labels            → derived from the source (see `labelsOf`)
  *
  * Knobs (all off by default) make Foundry misbehave in the ways the importer's assertions catch:
@@ -14,6 +15,13 @@
  *   regenIds        activity `_id`s are regenerated instead of honoured (contract U7)
  *   stripAction     action names whose flags.pentaryn.action is stripped on create
  *   failCreate      slugs whose Actor.create throws a plain Error (a per-actor failure)
+ *   raceCreate      slugs another GM tab creates first, between our slug index and our create
+ *                   (importer-AC-2): its copy lands with the same `_id` when keepId is asked for
+ *   failItems       slugs whose createEmbeddedDocuments throws a plain Error (a per-actor failure
+ *                   after the Actor itself was written — importer-R6)
+ *
+ * Actor.create honours `data._id` under `{keepId: true}` and rejects an `_id` already in game.actors,
+ * as Foundry's server does.
  *
  * Every write lands in F.calls in order, so a test pins effects, not returns.
  */
@@ -28,6 +36,9 @@ const TOKEN_KEYS = new Set([
 
 const clone = v => (v === undefined ? undefined : JSON.parse(JSON.stringify(v)));
 const hidden = (obj, name, value) => Object.defineProperty(obj, name, { value, configurable: true, writable: true, enumerable: false });
+
+/** dnd5e 6.0.6 Item types whose system data has no ActivitiesTemplate, so no `system.activities`. */
+const NO_ACTIVITIES = new Set(["class", "subclass", "background", "race", "loot", "container"]);
 
 class ActivityCollection extends Map {
   map(fn) {
@@ -50,7 +61,7 @@ function tokenOf(data) {
 }
 
 export function makeWorld(F, knobs = {}) {
-  const K = { dropTypes: new Set(), regenIds: false, stripAction: new Set(), failCreate: new Set(), ...knobs };
+  const K = { dropTypes: new Set(), regenIds: false, stripAction: new Set(), failCreate: new Set(), raceCreate: new Set(), failItems: new Set(), ...knobs };
   let seq = 0;
 
   function makeItem(actor, data) {
@@ -62,14 +73,16 @@ export function makeWorld(F, knobs = {}) {
       acts.set(id, { ...a, _id: id, labels: labelsOf(a) });
     }
     const item = makeDoc("Item", { id: `item${String(++seq).padStart(12, "0")}`, ...src, system: { ...(src.system ?? {}) } }, { parent: actor });
-    hidden(item.system, "activities", acts);
+    if (NO_ACTIVITIES.has(src.type)) delete item.system.activities;   // the schema has no such field
+    else hidden(item.system, "activities", acts);
     hidden(item, "labels", src.system?.uses?.recovery?.[0]?.type === "recharge" ? { recharge: `Recharge ${src.system.uses.recovery[0].formula}` } : {});
     return item;
   }
 
-  function makeActor(data, { items = [] } = {}) {
-    const { prototypeToken, ...rest } = clone(data);
-    const actor = makeDoc("Actor", { id: `actor${String(++seq).padStart(11, "0")}`, ...rest }, { collection: F.game.actors });
+  function makeActor(data, { items = [], id = null } = {}) {
+    const { prototypeToken, _id, ...rest } = clone(data);
+    const auto = `actor${String(++seq).padStart(11, "0")}`;     // seq advances either way (stable item ids)
+    const actor = makeDoc("Actor", { id: id ?? auto, ...rest }, { collection: F.game.actors });
     hidden(actor, "prototypeToken", tokenOf(prototypeToken));
     hidden(actor, "items", new StubCollection());
     for (const d of items) {
@@ -89,6 +102,7 @@ export function makeWorld(F, knobs = {}) {
     });
     hidden(actor, "createEmbeddedDocuments", async (type, list, options) => {
       F.calls.push({ op: "createEmbeddedDocuments", uuid: actor.uuid, type, names: list.map(d => d.name), options: F.plain(options) });
+      if (K.failItems.has(actor.flags?.pentaryn?.slug)) throw new Error(`Item validation errors: ${actor.flags.pentaryn.slug}`);
       const made = [];
       for (const d of list) {
         if (K.dropTypes.has(d.type)) continue;
@@ -111,8 +125,12 @@ export function makeWorld(F, knobs = {}) {
   class StubActor {
     static async create(data, options) {
       F.calls.push({ op: "Actor.create", data: F.plain(data), options: F.plain(options) });
-      if (K.failCreate.has(data?.flags?.pentaryn?.slug)) throw new Error(`Actor validation errors: ${data.flags.pentaryn.slug}`);
-      return makeActor(data);
+      const slug = data?.flags?.pentaryn?.slug;
+      if (K.failCreate.has(slug)) throw new Error(`Actor validation errors: ${slug}`);
+      const id = options?.keepId ? data._id : null;
+      if (K.raceCreate.has(slug)) makeActor(data, { id });           // the other tab got there first
+      if (id && F.game.actors.get(id)) throw new Error(`An Actor with _id [${id}] already exists in the database`);
+      return makeActor(data, { id });
     }
   }
   globalThis.getDocumentClass = name => (name === "Actor" ? StubActor : null);

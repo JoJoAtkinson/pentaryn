@@ -107,7 +107,9 @@ Two consequences worth knowing:
 | `make vtt-update-install` / `-uninstall` | The launchd jobs. |
 
 Reports land in [`foundry/logs/auto-updates/`](../foundry/logs/auto-updates/) — one
-markdown write-up and one machine-readable JSON per run — and are committed and pushed.
+markdown write-up and one machine-readable JSON per run — and are committed and pushed
+after the notification has gone out. A git step that hangs gives up (2 min; the push
+5 min) and the run log says the report was written but not pushed.
 
 ### Escalation: when a run thinks harder
 
@@ -193,8 +195,8 @@ can only move things out of `review`, never out of `hold`.
 | Bucket | Rule |
 |---|---|
 | **auto** | Patch/minor bump of anything — `dnd5e` included — with compatible core and system, no declared conflicts with what is installed, no missing dependency. Core **build** bumps inside generation 14 with a clean compatibility preview. |
-| **review** | Any **major** bump · a package never seen by a previous run · anything Foundry's own `previewCompatibility` flags. Claude reads the release notes and decides. |
-| **hold** | Core **generation** change (14 → 15) — Foundry's own `willDisableModules` · anything needing a core upgrade we are not doing · anything whose upstream will not resolve. |
+| **review** | Any **major** bump · a package never seen by a previous run. Claude reads the release notes and decides. |
+| **hold** | Core **generation** change (14 → 15) — compared in `risk.classify_core`, since Foundry disables every module not re-verified for the new generation · a core build bump whose compatibility preview (`previewCompatibility`) flags a blocking package, or whose preview could not be obtained (`risk.classify_core`) · anything needing a core upgrade we are not doing · anything whose upstream will not resolve. |
 
 `dnd5e` is treated like any other module, by choice: a system update runs an
 irreversible world migration, and the rolling OneDrive snapshots are the answer to that.
@@ -258,9 +260,11 @@ inside the update cannot report. It distinguishes four states from
   its report (and so never sent its own notification). It notifies as a failure. A failed
   run that did write its report already told you, so the watchdog stays quiet.
 * **killed by the backstop** — `vtt-update.sh` kills a run still going after 130 minutes
-  (90 + escalation's 40) and then cleans up itself — status marked, service restored,
-  the dead run's lock removed so `make vtt-up` works, "update run killed" notification —
-  because that kill can land after 06:12. The watchdog says nothing more about it.
+  (90 + escalation's 40; SIGTERM, then SIGKILL ten seconds later — on the TERM the run
+  ends its own `claude -p` and browser smoke children and releases its lock) and then
+  cleans up itself — status marked, service restored, a dead run's lock removed so
+  `make vtt-up` works, "update run killed" notification — because that kill can land
+  after 06:12. The watchdog says nothing more about it.
 * **never fired** — usually the Mac was powered off. launchd catches up a *sleeping*
   Mac, not a powered-off one; nothing can fix that from here, so it just tells you.
 

@@ -415,3 +415,42 @@ test("(h) canvasTearDown clears the vars and current(); a later canvasReady re-a
   canvas.app = app;
   assert.deepEqual(warns, []);
 });
+
+test("cursors-rob-2: a throw inside the canvasReady tick warns `resync failed` instead of escaping", () => {
+  el.style.cursor = "";
+  events.currentCursor = "default";
+  events.throwOnSetCursor = true;
+  try {
+    F.fire("canvasReady");
+    mock.timers.tick(0);
+  } finally {
+    events.throwOnSetCursor = false;
+  }
+  assert.deepEqual(warns.map(w => w[0]), ["pentaryn-cursors | resync failed"]);
+  assert.match(String(warns[0][1]?.message), /setCursor broke/);
+  el.style.cursor = "var(--cursor-default)";
+  events.setCursorCalls.length = 0;
+  warns.length = 0;
+});
+
+test("cursors-rob-2: a throwing attach() in the ready tick warns `refresh failed` and resync still runs", async () => {
+  // Hot patch path (game.ready already true): install() schedules the ready tick at once.
+  api().uninstall();
+  setTool("tokens", "target");
+  const dataset = el.dataset;
+  el.dataset = { set pentarynCursor(_) { throw new Error("dataset broke"); }, get pentarynCursor() { return undefined; } };
+  el.style.cursor = "";
+  events.currentCursor = "default";
+  try {
+    await import("../cursors.mjs?v=rob2");
+    mock.timers.tick(0);
+  } finally {
+    el.dataset = dataset;
+  }
+  assert.deepEqual(warns.map(w => w[0]), ["pentaryn-cursors | refresh failed"]);
+  assert.match(String(warns[0][1]?.message), /dataset broke/);
+  assert.deepEqual(events.setCursorCalls, [{ mode: "default", currentBefore: null }], "resync ran after the throw");
+  el.style.cursor = "var(--cursor-default)";
+  events.setCursorCalls.length = 0;
+  warns.length = 0;
+});

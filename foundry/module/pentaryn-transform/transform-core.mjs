@@ -9,7 +9,7 @@
  *   core/wildshape.mjs   activities, shaping the form, durations, uses, revert carry-back, shiftBlock, pickRunner,
  *                        the form's token image (pickFormImage), the token's own light (handLight)
  *   core/hud.mjs         beast tooltip text, the bar plans, Hit Point text
- *   core/starry.mjs      Starry Form: constellations, the effect, the light, starryBlock
+ *   core/starry.mjs      Starry Form: its identity (STARRY_FORM), constellations, the effect, the light, starryBlock
  *   core/bodyswap.mjs    isBodySwap (the no-animation guard's test)
  *
  * The core/ files never import this barrel (C16 allows core → core/* only, and it would be a
@@ -34,7 +34,7 @@ import {
 } from "./core/hud.mjs";
 
 import {
-  CONSTELLATIONS, STARRY_LIGHT, STARRY_SECONDS, constellationOfActivity, starryEffectData,
+  CONSTELLATIONS, STARRY_FORM, STARRY_LIGHT, STARRY_SECONDS, constellationOfActivity, starryEffectData,
   grantsFly, starryBlock,
   STARRY_IMG, isGenericActivityImg, constellationImgOf, pickStarryBase, secondsLeft, starryEndKey
 } from "./core/starry.mjs";
@@ -55,7 +55,7 @@ export const FLAG_SCOPE = MODULE;
 /** Events this module emits: none (it listens only). */
 export const HOOKS = Object.freeze({});
 
-export { MODULE, MODULE as MODULE_ID, EFFECT_ID };
+export { MODULE, EFFECT_ID };
 
 export {
   activitiesOf, isWildShapeActivity, findWildShapeItem, isStarryFormData, stripReason,
@@ -73,7 +73,7 @@ export {
 };
 
 export {
-  CONSTELLATIONS, STARRY_LIGHT, STARRY_SECONDS, constellationOfActivity, starryEffectData,
+  CONSTELLATIONS, STARRY_FORM, STARRY_LIGHT, STARRY_SECONDS, constellationOfActivity, starryEffectData,
   grantsFly, starryBlock,
   STARRY_IMG, isGenericActivityImg, constellationImgOf, pickStarryBase, secondsLeft, starryEndKey
 };

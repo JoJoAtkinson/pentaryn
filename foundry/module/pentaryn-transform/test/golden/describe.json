@@ -135,10 +135,11 @@
       "writes": true,
       "query": false,
       "sideEffects": [
-        "deletes spent form actors"
+        "deletes spent form actors",
+        "flags.pentaryn-transform.claims.sweep"
       ],
       "legacy": true,
-      "doc": "Active GM only: delete transformed copies (flags.dnd5e.originalActor) with no token on any scene and older than 10 s; younger ones are checked again when old enough. Runs by itself after token traffic."
+      "doc": "Active GM only: delete transformed copies (flags.dnd5e.originalActor) with no token on any scene and first seen by this tab over 10 s ago; younger ones are checked again when old enough. Each form is claimed first, so with two tabs of the GM open only one deletes it. Runs by itself after token traffic."
     },
     {
       "path": "inspect",
@@ -220,7 +221,7 @@
         "the Wild Shape item's uses"
       ],
       "legacy": true,
-      "doc": "Take on Starry Form with this constellation (one Wild Shape use), or with Twinkling Constellations change it for free while the form is up. false (with a warning) when shifted, incapacitated or out of uses."
+      "doc": "Take on Starry Form with this constellation (one Wild Shape use), or with Twinkling Constellations change it for free while the form is up. false (with a warning) when shifted, incapacitated or out of uses, or when the druid has no Starry Form feature or consume activity; false (silently) for an unknown constellation or no actor, while a call is already in progress for this druid, or when the activity's use is refused."
     },
     {
       "path": "starry.end",
@@ -310,7 +311,7 @@
     },
     {
       "name": "preUpdateToken",
-      "label": "preUpdateToken: a shift keeps the token's own light for the revert"
+      "label": "preUpdateToken: a shift keeps the token's own light for the revert and gets the form's image"
     },
     {
       "name": "updateActor",
@@ -455,10 +456,10 @@
   "flags": {
     "writes": [
       "flags.pentaryn-transform.wildshape",
-      "flags.pentaryn-transform.revert",
       "flags.pentaryn-transform.starry",
       "flags.pentaryn-senses.light",
-      "flags.dnd5e.previousTokenData.light"
+      "flags.dnd5e.previousTokenData.light",
+      "flags.pentaryn-transform.claims"
     ],
     "reads": [
       "flags.dnd5e.originalActor",
@@ -469,7 +470,9 @@
       "flags.pentaryn-senses.light",
       "flags.pentaryn-senses.itemLight",
       "flags.pentaryn-senses.itemLightPrior",
-      "flags.pentaryn-senses.spellLight"
+      "flags.pentaryn-senses.spellLight",
+      "flags.pentaryn-transform.revert",
+      "flags.pentaryn-transform.keepInForm"
     ]
   },
   "errors": [

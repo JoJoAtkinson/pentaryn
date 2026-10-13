@@ -497,6 +497,39 @@ test("revert carries back uses, Hit Dice, exhaustion, inspiration, ended effects
   assert.equal(talo.effects.get("stunEffect000001").origin, undefined);
 });
 
+test("R3 [declared] revert with the beast only an index entry here: the beast is loaded, its own effect stays behind", async () => {
+  const { talo, wolfSrc } = fresh();
+  wolfSrc.effects.set("beastOwn00000001", F.W.makeEffect(wolfSrc, { id: "beastOwn00000001", name: "Keen Smell", statuses: ["keen"] }, wolfSrc.effects));
+  const realSync = globalThis.fromUuidSync, realAsync = globalThis.fromUuid;
+  const asked = [];
+  // a compendium beast not loaded on this client: fromUuidSync answers its index entry (no effects)
+  globalThis.fromUuidSync = uuid => uuid === wolfSrc.uuid ? { _id: wolfSrc.id, name: wolfSrc.name, uuid } : realSync(uuid);
+  globalThis.fromUuid = async uuid => { asked.push(uuid); return realAsync(uuid); };
+  try {
+    const wolf = await T.shift(talo, "p1");
+    assert.ok(wolf.effects.get("beastOwn00000001"), "the form has the beast's effect");
+    asked.length = 0;
+    assert.equal(await T.revert(wolf), talo);
+    assert.equal(talo.effects.get("beastOwn00000001"), undefined, "the beast's own effect is not carried");
+    assert.ok(asked.includes(wolfSrc.uuid), "the beast is loaded");
+
+    // the load fails: logged at debug, nothing beast-side known (today's fallback)
+    const w2 = await T.shift(talo, "p2");
+    const src2 = w2.getFlag(MODULE, "wildshape").source;
+    globalThis.fromUuidSync = () => ({ _id: "x", name: "index only" });
+    globalThis.fromUuid = async uuid => { if (uuid === src2) throw new Error("pack gone"); return realAsync(uuid); };
+    CONFIG.debug ??= {};
+    CONFIG.debug["pentaryn-transform"] = true;
+    F.console.length = 0;
+    assert.equal(await T.revert(w2), talo);
+    assert.ok(F.console.some(c => c[0] === "debug" && String(c[1]).endsWith("form source for revert failed")), JSON.stringify(F.console));
+  } finally {
+    globalThis.fromUuidSync = realSync;
+    globalThis.fromUuid = realAsync;
+    if (globalThis.CONFIG?.debug) CONFIG.debug["pentaryn-transform"] = false;
+  }
+});
+
 test("revert reasons choose the chat line; an unknown reason reads as manual; quiet posts none", async () => {
   const reasons = { zeroHP: "drops to 0 HP and returns to normal form.", incapacitated: "is incapacitated and returns to normal form.",
     expired: "'s Wild Shape ends.", longRest: "returns to normal form to take a Long Rest.", nonsense: "returns to normal form." };

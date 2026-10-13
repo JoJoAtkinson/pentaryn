@@ -19,6 +19,9 @@ export function registerRecord(fn) {
 
 export const hasSocket = () => !!socket;
 
+/** Is socketlib loaded at all (a hot re-import after ready registers at once)? */
+export const socketlibPresent = () => !!globalThis.socketlib;
+
 /** Run `name` on a GM's client through socketlib; its promise rejects when no GM is connected. */
 export function executeAsGM(name, data) {
   return socket.executeAsGM(name, data);

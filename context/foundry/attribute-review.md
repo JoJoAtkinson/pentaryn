@@ -96,8 +96,12 @@ return A.list().sort((a, b) => (b.modifiedAt ?? 0) - (a.modifiedAt ?? 0)).slice(
 
 - **The registry syncs to every client**, players included. Nothing in the text is hidden from a
   determined player's console — same rule as [`attributes.md`](attributes.md).
-- **Registry writes are queued** (`serial` in `attributes.mjs`): your `A.update` and a panel save
-  or Reviewed click landing together run one after the other, each on the latest list.
+- **Registry writes are queued per tab only** (`serial` in `attributes.mjs` is an in-memory chain
+  on one client). Your `A.update` runs in the bridge tab; Joe's panel save or Reviewed click runs in
+  his browser tab. If they land together they race: each rewrites the whole registry setting and the
+  **second write wins** at the setting (no merge). The version stamp (below) then has the overwritten
+  tab re-apply its own change once; the reload banner and refused save cover your write landing
+  *before* his save.
 - The panel **live-refreshes** when you write (once, 150 ms after the last write of a burst), but
   defers while Joe has a text field focused (not the search box), so your write cannot eat his draft. If you change an entry whose row he has
   open meanwhile, that row shows **"Changed by Claude — click to reload"**, and a save of a field

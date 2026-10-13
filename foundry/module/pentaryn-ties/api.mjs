@@ -181,8 +181,8 @@ const IMPL = {
 /**
  * The dossier (ties-3): one read of everything ties knows about an actor. buildApi has already
  * resolved `ref` (exact name, id, uuid or token — never a substring). Ties data lives on the WORLD
- * actor, so a token's synthetic actor is read through its base (blueprint gap G5: the kit takes
- * `base` from the call's opts only).
+ * actor, so a token's synthetic actor is read through its base: the kit's `base: true` maps it
+ * (kit 1.2.0, names-ext-3); the call's own opts.base is not required.
  *
  * The viewer is `opts.as` (a user ref) or, without it, the caller. A GM sees everything. A player gets
  * null for the GM plane — inbound ties, the belief ledger, the kind pointer, the study ladder, lore
@@ -191,7 +191,7 @@ const IMPL = {
  */
 function dossier(actor, opts) {
   const as = opts?.as;
-  const subject = actor?.isToken ? game.actors?.get(actor.id) ?? actor : actor;
+  const subject = resolveRef(actor, "actor", { base: true, required: false }) ?? actor;
   const viewer = as === undefined || as === null ? game.user : resolveRef(as, "user");
   const gmView = viewer?.isGM === true;
   const owns = gmView || subject.testUserPermission?.(viewer, "OWNER") === true;

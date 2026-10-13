@@ -6,7 +6,7 @@
 
 import { attributeLore, describeAttribute } from "../attributes.mjs";
 import { MODULE } from "../ties-core.mjs";
-import { rolledMiss } from "../core/rules.mjs";
+import { kindPassed, rolledMiss } from "../core/rules.mjs";
 import {
   ATTR_BELIEFS_SETTING,
   attrFactKey,
@@ -120,7 +120,7 @@ function claimOf(fact, characterId) {
  */
 export function rowMissed(fact, rec) {
   if (!rec || rec.from) return false;
-  if (fact.ns === "kind") return rec.total !== null && rec.total !== undefined && !(Number(rec.tier) >= 15);
+  if (fact.ns === "kind") return rec.total !== null && rec.total !== undefined && !kindPassed(rec.tier);
   return rolledMiss(rec, fact.dc);
 }
 

@@ -16,6 +16,17 @@ F.fire("ready");
 const lines = () => F.chat.map(c => c.content.replace(/<\/?[^>]+>/g, ""));
 const ops = (...names) => F.calls.filter(c => names.includes(c.op));
 const flush = async (n = 6) => { for (let i = 0; i < n; i++) await new Promise(r => setImmediate(r)); };
+// An automatic ending claims its write for one tab first (transform-core-async-2): the claim settles in 750 ms.
+const settle = async () => { await flush(); mock.timers.tick(750); await flush(); };
+// EC-6: the sweep ages a form from this GM tab's first sight of it. sight() lets a sweep see the
+// forms now, drops the recheck it schedules, and lets `ms` pass.
+const SA = await import("../sweep-adapter.mjs");
+async function sight(ms = 10_001) {
+  F.become({ userId: IDS.gm });
+  await SA.sweepSpentForms();
+  SA.cancelSweep();
+  mock.timers.tick(ms);
+}
 
 async function shifted(opts) {
   game.actors.clear();
@@ -36,19 +47,19 @@ test("updateActor: a Wild Shape form at 0 HP reverts (zeroHP line) on the runner
   Hooks.callAll("updateActor", wolf, { name: "x" }, {}, "u");
   wolf.system.attributes.hp.value = 5;
   Hooks.callAll("updateActor", wolf, { system: { attributes: { hp: { value: 5 } } } }, {}, "u");
-  await flush();
+  await settle();
   assert.deepEqual(ops("revertOriginalForm"), [], "no hp change, or above 0");
   F.become({ userId: IDS.player });
   wolf.system.attributes.hp.value = 0;
   Hooks.callAll("updateActor", wolf, { system: { attributes: { hp: { value: 0 } } } }, {}, "u");
-  await flush();
+  await settle();
   assert.deepEqual(ops("revertOriginalForm"), [], "a player's client while a GM is connected");
   F.become({ userId: IDS.gm });
   Hooks.callAll("updateActor", wolf, { system: { attributes: { hp: { value: 0 } } } }, {}, "u");
-  await flush();
+  await settle();
   assert.deepEqual(lines(), ["Talo drops to 0 HP and returns to normal form."]);
   Hooks.callAll("updateActor", wolf, { system: { attributes: { hp: { value: 0 } } } }, {}, "u");
-  await flush();
+  await settle();
   assert.equal(ops("revertOriginalForm").length, 1, "the form is gone: exists() stops a second revert");
 });
 
@@ -57,7 +68,7 @@ test("updateActor at 0 HP: a Polymorph form is left to dnd5e", async () => {
   wolf.flags.dnd5e.transformOptions = { preset: "polymorph" };
   wolf.system.attributes.hp.value = 0;
   Hooks.callAll("updateActor", wolf, { system: { attributes: { hp: { value: 0 } } } }, {}, "u");
-  await flush();
+  await settle();
   assert.deepEqual(ops("revertOriginalForm"), []);
 });
 
@@ -67,15 +78,15 @@ test("createActiveEffect / updateActiveEffect: Incapacitated on a form reverts a
   const { wolf } = await shifted();
   const eff = F.W.makeEffect(wolf, { id: "incapEffect00001", name: "Stunned", statuses: ["stunned", "incapacitated"] }, wolf.effects);
   Hooks.callAll("createActiveEffect", eff, {}, "u");
-  await flush();
+  await settle();
   assert.deepEqual(ops("revertOriginalForm"), [], "not before the timer");
   mock.timers.tick(0);
-  await flush();
+  await settle();
   assert.deepEqual(ops("revertOriginalForm"), [], "statuses not updated yet: nothing");
   wolf.statuses.add("incapacitated");
   Hooks.callAll("updateActiveEffect", eff, { name: "x" }, {}, "u");
   mock.timers.tick(0);
-  await flush();
+  await settle();
   assert.deepEqual(lines(), ["Talo is incapacitated and returns to normal form."]);
 });
 
@@ -87,7 +98,7 @@ test("effect hooks ignore effects on items and on actors that are not Wild Shape
   Hooks.callAll("createActiveEffect", onDruid, {}, "u");
   Hooks.callAll("createActiveEffect", onItem, {}, "u");
   mock.timers.tick(0);
-  await flush();
+  await settle();
   assert.deepEqual(ops("revertOriginalForm"), []);
 });
 
@@ -97,22 +108,22 @@ test("updateActiveEffect: the duration effect marked expired reverts with the Ex
   const { wolf } = await shifted();
   const eff = wolf.effects.get(EFFECT_ID);
   Hooks.callAll("updateActiveEffect", eff, { duration: { expired: false } }, {}, "u");
-  await flush();
+  await settle();
   assert.deepEqual(ops("revertOriginalForm"), []);
   Hooks.callAll("updateActiveEffect", eff, { duration: { expired: true } }, {}, "u");
-  await flush();
+  await settle();
   assert.deepEqual(lines(), ["Talo's Wild Shape ends."]);
 });
 
 test("deleteActiveEffect on the duration effect: before its end → manual Return line; at/after → Expired", async () => {
   let { wolf } = await shifted();
   await wolf.effects.get(EFFECT_ID).delete();
-  await flush();
+  await settle();
   assert.deepEqual(lines(), ["Talo returns to normal form."]);
   ({ wolf } = await shifted());
   game.time.worldTime = 21600;
   await wolf.effects.get(EFFECT_ID).delete();
-  await flush();
+  await settle();
   assert.deepEqual(lines(), ["Talo's Wild Shape ends."]);
 });
 
@@ -120,7 +131,7 @@ test("deleteActiveEffect of a carried druid effect in the form ends the druid's 
   const { talo, wolf } = await shifted({ effects: [{ id: IDS.conc, name: "Concentrating", statuses: ["concentrating"] }, { id: IDS.bless, name: "Bless" }] });
   await wolf.effects.get(IDS.conc).delete();
   await wolf.effects.get(IDS.bless).delete();
-  await flush();
+  await settle();
   assert.deepEqual(ops("endConcentration").map(c => [c.actor, c.effect]), [[IDS.talo, IDS.conc]]);
   assert.equal(talo.effects.get(IDS.conc), undefined);
   assert.equal(talo.effects.get(IDS.bless), undefined);
@@ -135,13 +146,13 @@ test("carried-effect end: skipped on a non-runner, for a non-carried effect; a f
   F.become({ userId: IDS.player });
   await wolf.effects.get(IDS.bless).delete();
   F.become({ userId: IDS.gm });
-  await flush();
+  await settle();
   assert.ok(talo.effects.get(IDS.bless), "the player's client did nothing");
   const again = F.W.makeEffect(wolf, { id: IDS.bless, name: "Bless" }, wolf.effects);
   wolf.effects.set(IDS.bless, again);
   talo.effects.get(IDS.bless).delete = async () => { throw new Error("locked"); };
   await again.delete();
-  await flush();
+  await settle();
   assert.deepEqual(F.console.map(c => c.slice(0, 2)), [["warn", "pentaryn-transform | ending Bless on Talo failed"]]);
 });
 
@@ -150,7 +161,7 @@ test("auto-revert failing warns 'auto-revert failed'; a token's form ends its ca
   wolf.revertOriginalForm = async () => { throw new Error("x"); };
   wolf.system.attributes.hp.value = 0;
   Hooks.callAll("updateActor", wolf, { system: { attributes: { hp: { value: 0 } } } }, {}, "u");
-  await flush();
+  await settle();
   assert.deepEqual(F.console.map(c => c.slice(0, 2)), [["warn", "pentaryn-transform | auto-revert failed"]]);
   const tokForm = F.W.makeActor({ id: "tokenForm0000002", isToken: true, isPolymorphed: true,
     flags: { dnd5e: { transformOptions: { preset: "wildshape" } }, [MODULE]: { wildshape: { carried: ["carriedEff000001"] } } },
@@ -158,7 +169,7 @@ test("auto-revert failing warns 'auto-revert failed'; a token's form ends its ca
   tokForm.token = { id: "tf", parent: { tokens: new Map([["tf", {}]]) } };
   F.calls.length = 0;
   await tokForm.effects.get("carriedEff000001").delete();
-  await flush();
+  await settle();
   assert.deepEqual(ops("endConcentration", "delete").filter(c => c.op !== "delete" || !c.uuid.includes("tokenForm")), []);
 });
 
@@ -176,10 +187,10 @@ test("updateWorldTime: world forms past endsAt revert (Expired); unlinked forms 
   canvas.scene = scene;
   tokForm.revertOriginalForm = async () => { F.calls.push({ op: "revertOriginalForm", actor: tokForm.id }); return null; };
   Hooks.callAll("updateWorldTime", 50, 50);
-  await flush();
+  await settle();
   assert.deepEqual(ops("revertOriginalForm"), []);
   Hooks.callAll("updateWorldTime", 21600, 21550);
-  await flush();
+  await settle();
   canvas.scene = null;
   assert.deepEqual(ops("revertOriginalForm").map(c => c.actor).sort(), [tokForm.id, wolf.id].sort());
   assert.deepEqual(lines(), ["Talo's Wild Shape ends."]);
@@ -207,6 +218,44 @@ test("dnd5e.longRest: a failing revert warns 'long rest after revert failed'", a
   Hooks.call("dnd5e.longRest", wolf, {});
   await flush();
   assert.deepEqual(F.console.map(c => c.slice(0, 2)), [["warn", "pentaryn-transform | long rest after revert failed"]]);
+});
+
+test("dnd5e.longRest is never dropped silently (transform-core-async-3): in-flight revert, stale form, no original", async () => {
+  // A revert already in flight: the rest waits for it, then the druid rests.
+  let { talo, wolf } = await shifted();
+  const job = T.revert(wolf);
+  assert.equal(Hooks.call("dnd5e.longRest", talo, { type: "long", newDay: true }), false, "in flight: vetoed");
+  await job;
+  await flush();
+  assert.equal(ops("revertOriginalForm").length, 1, "one revert, not two");
+  assert.deepEqual(ops("longRest").map(c => [c.actor, c.config]), [[IDS.talo, { dialog: false, newDay: true }]], "in flight");
+
+  // The in-flight revert came back empty: the druid rests anyway.
+  ({ talo, wolf } = await shifted());
+  F.revertReturns = null;
+  const empty = T.revert(wolf);
+  Hooks.call("dnd5e.longRest", wolf, { type: "long" });
+  await empty;
+  await flush();
+  delete F.revertReturns;
+  assert.deepEqual(ops("longRest").map(c => [c.actor, c.config]), [[IDS.talo, { dialog: false, pentarynTransformRestSync: true }]], "in flight, null");
+
+  // A stale form (already deleted by a revert elsewhere): revert() answers null, the druid rests directly.
+  ({ talo, wolf } = await shifted());
+  game.actors.delete(wolf.id);
+  assert.equal(Hooks.call("dnd5e.longRest", wolf, { type: "long" }), false, "stale: vetoed");
+  await flush();
+  assert.deepEqual(ops("revertOriginalForm"), [], "stale: no revert");
+  assert.deepEqual(ops("longRest").map(c => [c.actor, c.config]), [[IDS.talo, { dialog: false, pentarynTransformRestSync: true }]], "stale");
+  assert.equal(Hooks.call("dnd5e.longRest", talo, { pentarynTransformRestSync: true }), true, "the module's own rest passes");
+
+  // No original anywhere: warn, and let dnd5e's own rest run.
+  ({ talo, wolf } = await shifted());
+  game.actors.delete(talo.id);
+  assert.equal(Hooks.call("dnd5e.longRest", wolf, { type: "long" }), true, "no original: not vetoed");
+  await flush();
+  assert.deepEqual(ops("revertOriginalForm", "longRest"), []);
+  assert.deepEqual(F.console.map(c => c.slice(0, 2)), [["warn", `pentaryn-transform | long rest: no original for ${wolf.name}, resting the form`]]);
 });
 
 test("dnd5e.preShortRest on the druid with a form out: the form rests instead; the module's own sync passes", async () => {
@@ -248,34 +297,66 @@ test("dnd5e.restCompleted (short) on a Wild Shape form: the druid gets a silent 
 
 /* ── the GM sweep of spent forms ──────────────────────────────────────────── */
 
-test("sweepSpentForms: GM only; deletes unplaced transformed copies older than 10 s; reschedules the young", async () => {
+test("sweepSpentForms: GM only; deletes unplaced transformed copies first seen over 10 s ago; reschedules the young", async () => {
   game.actors.clear();
   game.scenes.clear();
   F.calls.length = 0;
   const now = Date.now();
   const mk = (id, created, extra = {}) => F.W.add(F.W.makeActor({ id, name: id, flags: { dnd5e: { originalActor: IDS.talo } }, _stats: { createdTime: created }, ...extra }));
-  mk("oldSpent00000001", now - 20_000);
-  mk("youngForm0000001", now - 4_000);
+  mk("oldSpent00000001", now - 60_000);
   mk("placedForm000001", now - 60_000);
   F.W.add(F.W.makeActor({ id: "plainActor000001", name: "plain", _stats: { createdTime: 0 } }));
   game.scenes.set("scn", F.W.makeScene({ id: "scn", tokens: [{ id: "t1", actorId: "placedForm000001" }, { id: "t2" }] }));
+  await sight(6_001);
+  mk("youngForm0000001", now - 60_000);                    // createdTime is ignored (EC-6)
+  await sight(4_000);                                      // first seen 10.001 s and 4 s ago
   F.become({ userId: IDS.player });
   await T.sweepSpentForms();
   assert.deepEqual(ops("Actor.deleteDocuments"), [], "not the GM");
   F.become({ userId: IDS.gm });
-  await T.sweepSpentForms();
+  const job = T.sweepSpentForms();
+  await settle();                                          // each spent form is claimed first (transform-core-async-2)
+  await job;
   assert.deepEqual(ops("Actor.deleteDocuments").map(c => c.ids), [["oldSpent00000001"]]);
   F.calls.length = 0;
   // Tick in steps: node's mock tick sets Date.now() to the end time before running due timers.
-  mock.timers.tick(3_000);                                 // the ready sweep (3 s): young is 7 s old, rescheduled
+  mock.timers.tick(2_250);                                 // 3 s in (the claim settled for 750 ms of them)
   await flush();
   mock.timers.tick(3_499);
   await flush();
   assert.deepEqual(ops("Actor.deleteDocuments"), [], "young: rechecked at 10 s - age + 500 ms (6.5 s)");
   mock.timers.tick(1);
-  await flush();
+  await settle();
   assert.deepEqual(ops("Actor.deleteDocuments").map(c => c.ids), [["youngForm0000001"]]);
   game.scenes.clear();
+});
+
+test("[declared] EC-6 the age guard counts from when this GM tab first saw the form, not the server's createdTime", async () => {
+  game.actors.clear();
+  game.scenes.clear();
+  F.calls.length = 0;
+  F.become({ userId: IDS.gm });
+  const sweep = async () => { const job = T.sweepSpentForms(); await settle(); await job; };   // settle: 750 ms
+  const mk = () => F.W.add(F.W.makeActor({ id: "skewedForm000001", name: "skewed", flags: { dnd5e: { originalActor: IDS.talo } }, _stats: { createdTime: Date.now() - 3_600_000 } }));
+  mk();                                                    // an hour old by the server's clock (a skewed GM clock)
+  await sweep();                                           // first sight at t0
+  mock.timers.tick(250);
+  await sweep();                                           // t0 + 1 s
+  assert.deepEqual(ops("Actor.deleteDocuments"), [], "EC-6: first seen 1 s ago, so not swept");
+  mock.timers.tick(8_749);                                 // t0 + 10.499 s
+  await flush();
+  assert.deepEqual(ops("Actor.deleteDocuments"), []);
+  mock.timers.tick(1);
+  await settle();
+  assert.deepEqual(ops("Actor.deleteDocuments").map(c => c.ids), [["skewedForm000001"]], "rechecked 10 s after first sight + 500 ms");
+  F.calls.length = 0;
+  mk();                                                    // the same id again is a new sighting
+  await sweep();
+  assert.deepEqual(ops("Actor.deleteDocuments"), [], "EC-6: a deleted form's first sighting is not reused");
+  mock.timers.tick(20_000);                                // drain the recheck
+  await settle();
+  game.actors.clear();
+  F.calls.length = 0;
 });
 
 test("sweepSpentForms: a world with no transformed copy never walks scene tokens", async () => {
@@ -297,19 +378,21 @@ test("scheduleSweep: token traffic schedules one 3 s sweep that is never pushed 
   game.actors.clear();
   F.calls.length = 0;
   F.W.add(F.W.makeActor({ id: "spent00000000001", flags: { dnd5e: { originalActor: IDS.talo } }, _stats: { createdTime: Date.now() - 60_000 } }));
-  Hooks.callAll("updateToken", {}, {}, {}, "u");
+  await sight();
+  Hooks.callAll("updateToken", {}, { actorId: "x" }, {}, "u");
   mock.timers.tick(2_000);
   Hooks.callAll("deleteToken", {}, {}, "u");                // must not push the sweep back
   mock.timers.tick(1_000);
-  await flush();
-  assert.equal(ops("Actor.deleteDocuments").length, 1, "swept 3 s after the first update");
+  await settle();
+  assert.equal(ops("Actor.deleteDocuments").length, 1, "swept 3 s after the first update (and its claim)");
   F.W.add(F.W.makeActor({ id: "spent00000000002", flags: { dnd5e: { originalActor: IDS.talo } }, _stats: { createdTime: Date.now() - 60_000 } }));
   const form = F.W.add(F.W.makeActor({ id: "revertedForm0001", flags: { dnd5e: { originalActor: IDS.talo, isPolymorphed: false } }, _stats: { createdTime: Date.now() - 60_000 } }));
-  Hooks.callAll("updateToken", {}, {}, {}, "u");             // 3 s pending
+  await sight();
+  Hooks.callAll("updateToken", {}, { actorId: "x" }, {}, "u");   // 3 s pending
   Hooks.callAll("updateActor", form, { flags: { dnd5e: { isPolymorphed: false } } }, {}, "u");   // earlier: 1.5 s
   Hooks.callAll("updateActor", form, { name: "x" }, {}, "u"); // no dnd5e flags: ignored
   mock.timers.tick(1_500);
-  await flush();
+  await settle();
   assert.equal(ops("Actor.deleteDocuments").length, 2);
   assert.deepEqual(ops("Actor.deleteDocuments")[1].ids, ["spent00000000002", "revertedForm0001"]);
   mock.timers.tick(5_000);
@@ -317,13 +400,37 @@ test("scheduleSweep: token traffic schedules one 3 s sweep that is never pushed 
   assert.equal(ops("Actor.deleteDocuments").length, 2, "the replaced 3 s timer was cleared");
 });
 
+test("[declared] perf-1 updateToken schedules a sweep only for an actor, link, delta or dnd5e flag change; a drag, light, hidden or elevation change schedules nothing", async () => {
+  game.actors.clear();
+  F.calls.length = 0;
+  F.W.add(F.W.makeActor({ id: "spent00000000003", flags: { dnd5e: { originalActor: IDS.talo } }, _stats: { createdTime: Date.now() - 60_000 } }));
+  await sight();
+  for (const changes of [{ x: 100, y: 200 }, { light: { dim: 10 } }, { hidden: true }, { elevation: 5 }, { flags: { other: { a: 1 } } }]) {
+    Hooks.callAll("updateToken", {}, changes, {}, "u");
+  }
+  mock.timers.tick(10_000);
+  await settle();
+  assert.deepEqual(ops("Actor.deleteDocuments"), [], "no sweep for irrelevant token changes");
+  for (const changes of [{ actorId: "x" }, { actorLink: false }, { delta: { name: "y" } }, { flags: { dnd5e: { z: 1 } } }]) {
+    F.calls.length = 0;
+    const fresh = !game.actors.get("spent00000000003");    // swept last round: young again (EC-6)
+    F.W.add(F.W.makeActor({ id: "spent00000000003", flags: { dnd5e: { originalActor: IDS.talo } }, _stats: { createdTime: Date.now() - 60_000 } }));
+    if (fresh) await sight();
+    Hooks.callAll("updateToken", {}, changes, {}, "u");
+    mock.timers.tick(3_000);
+    await settle();
+    assert.equal(ops("Actor.deleteDocuments").length, 1, `swept after ${JSON.stringify(changes)}`);
+  }
+});
+
 test("scheduleSweep: a polymorphed form update, or a player's client, schedules nothing; a failing sweep warns", async () => {
   game.actors.clear();
   F.calls.length = 0;
   const live = F.W.add(F.W.makeActor({ id: "liveForm00000001", flags: { dnd5e: { originalActor: IDS.talo, isPolymorphed: true } }, _stats: { createdTime: -60_000 } }));
+  await sight();
   Hooks.callAll("updateActor", live, { flags: { dnd5e: { x: 1 } } }, {}, "u");
   F.become({ userId: IDS.player });
-  Hooks.callAll("updateToken", {}, {}, {}, "u");
+  Hooks.callAll("updateToken", {}, { actorId: "x" }, {}, "u");
   F.become({ userId: IDS.gm });
   mock.timers.tick(10_000);
   await flush();
@@ -331,9 +438,31 @@ test("scheduleSweep: a polymorphed form update, or a player's client, schedules 
   const real = Actor.implementation.deleteDocuments;
   Actor.implementation.deleteDocuments = async () => { throw new Error("db"); };
   game.scenes.clear();
-  Hooks.callAll("updateToken", {}, {}, {}, "u");
+  Hooks.callAll("updateToken", {}, { actorId: "x" }, {}, "u");
   mock.timers.tick(3_000);
-  await flush();
+  await settle();
   Actor.implementation.deleteDocuments = real;
   assert.deepEqual(F.console.filter(c => c[1].includes("sweep")).map(c => c.slice(0, 2)), [["warn", "pentaryn-transform | sweep failed"]]);
+});
+
+test("[declared] EC-4 a hot re-import past ready still gets its first sweep, 3 s after install, with no ready hook left waiting", async () => {
+  game.actors.clear();
+  game.scenes.clear();
+  F.calls.length = 0;
+  F.become({ userId: IDS.gm });
+  assert.equal(game.ready, true, "ready has already fired");
+  F.W.add(F.W.makeActor({ id: "spentHotReimport", flags: { dnd5e: { originalActor: IDS.talo } }, _stats: { createdTime: Date.now() - 60_000 } }));
+  await sight();
+  const { hookRegistry } = await import("../lib/hooks.mjs");
+  const reg = hookRegistry(MODULE, { error() {}, warn() {} });
+  const sweep = await import("../sweep.mjs?ec4");
+  sweep.install(reg);
+  assert.deepEqual(reg.ids().filter(r => r.name === "ready"), [], "no ready hook that would never fire");
+  mock.timers.tick(2_999);
+  await flush();
+  assert.deepEqual(ops("Actor.deleteDocuments"), [], "not before 3 s");
+  mock.timers.tick(1);
+  await settle();
+  assert.deepEqual(ops("Actor.deleteDocuments").map(c => c.ids), [["spentHotReimport"]]);
+  reg.offAll();
 });

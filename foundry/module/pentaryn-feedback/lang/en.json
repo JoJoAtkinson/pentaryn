@@ -23,13 +23,17 @@
       "Attach": {
         "Title": "What gets attached",
         "User": "Your name and role ({name})",
+        "World": "The world, game system and Foundry versions",
         "Scene": "The scene you are viewing: {name}",
         "NoScene": "No scene is being viewed",
+        "Tokens": "{controlled} selected and {targeted} targeted tokens (names and hit points)",
+        "Combat": "The combat round and turn, if a fight is running",
         "Actions": "{n} recent actions",
         "Errors": "{n} recent errors",
         "Chat": "{n} of your own chat messages (roll names and totals only)",
         "Windows": "{n} open windows",
         "Modules": "{n} module versions",
+        "Client": "Your browser, window size, language and time zone",
         "Never": "Never attached: other players' chat, whisper text, setting values, or anything typed into a form."
       }
     },

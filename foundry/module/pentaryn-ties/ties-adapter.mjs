@@ -256,7 +256,7 @@ export function serial(actorId, fn) {
 
 /**
  * Change one field of one edge — read and write inside the actor's queue. Returns the edited
- * entry, or null when the edge is gone.
+ * entry, or null when the edge is gone or the write was refused (R8: write answers false).
  */
 export function editTie(actor, targetId, field, value) {
   if (!actor || !targetId) return Promise.resolve(null);
@@ -265,8 +265,7 @@ export function editTie(actor, targetId, field, value) {
     const entry = list.find(t => t.id === targetId);
     if (!entry) return null;
     entry[field] = value;
-    await write(actor, list);
-    return entry;
+    return (await write(actor, list)) ? entry : null;
   });
 }
 
@@ -281,10 +280,16 @@ export async function write(actor, list, { render = false } = {}) {
   // Players reach this now. An update to an actor they don't own is refused by the server
   // anyway — catching it here turns a console stack trace into a quiet no-op.
   if (!actor.isOwner) return false;
-  await actor.update(
-    { [`flags.${MODULE}.${FLAG}`]: toStored(Array.isArray(list) ? list : []) },
-    { render }
-  );
+  try {
+    await actor.update(
+      { [`flags.${MODULE}.${FLAG}`]: toStored(Array.isArray(list) ? list : []) },
+      { render }
+    );
+  } catch (err) {
+    // A refused update (R8) — the server said no, or a preUpdate hook threw. Answer false, never throw.
+    log.warn(`${actor.name}: ties write refused`, err);
+    return false;
+  }
   return true;
 }
 
@@ -324,9 +329,10 @@ export async function setTie(actor, targetActor, { word = "", notes, stance = 0,
   return wrote || mirrored;
 }
 
-/** Set just the notes on an existing edge. No-op if the edge isn't there. */
+/** Set just the notes on an existing edge. False if the edge isn't there or the write was refused. */
 export async function setNotes(actor, targetId, notes = "") {
   if (!actor || !targetId) return false;
+  // read and write inside the actor's queue (ties-ui-ACC-3); a refused write answers false (M11)
   return !!(await editTie(actor, targetId, "notes", clampNotes(notes)));
 }
 
@@ -379,9 +385,14 @@ export async function migrateLegacy() {
     if (!Array.isArray(legacy) || !legacy.length) continue;
     const current = actor.flags?.[MODULE]?.[FLAG];
     if (!Array.isArray(current) || !current.length) {
-      await actor.setFlag(MODULE, FLAG, toStored(legacy.filter(t => typeof t?.id === "string")));
-      await actor.unsetFlag(LEGACY_SCOPE, FLAG);
-      moved++;
+      // One actor's refusal (R8) is logged and the loop carries on with the rest.
+      try {
+        await actor.setFlag(MODULE, FLAG, toStored(legacy.filter(t => typeof t?.id === "string")));
+        await actor.unsetFlag(LEGACY_SCOPE, FLAG);
+        moved++;
+      } catch (err) {
+        log.warn(`${actor.name}: legacy ties migration refused — left for the next load`, err);
+      }
     } else {
       // Module data already exists. Copying would clobber it and unsetting would destroy the
       // legacy rows, so do NEITHER — leave both in place and say so loudly.

@@ -15,7 +15,7 @@
  * It is safe to import when the module has not been built — `available()` just stays false.
  */
 
-import {register, resolveConfig, analyze, lintOnly, runEngine, stampOf, FLAG_SCOPE} from "./walls-core.mjs";
+import {register, resolveConfig, analyze, lintOnly, runEngine, stampOf, historyOf, runKey, FLAG_SCOPE} from "./walls-core.mjs";
 
 let mod = null;
 let loadError = null;
@@ -28,7 +28,10 @@ export async function load(url) {
     const target = url ?? here;
     let bytes;
     if (typeof fetch === "function" && String(target).startsWith("http")) {
-      bytes = await (await fetch(target)).arrayBuffer();
+      const res = await fetch(target);
+      // A 404 page is HTML, which instantiate() would report as a CompileError (walls-rob-10).
+      if (!res.ok) throw new Error(`fetch ${target} → HTTP ${res.status}`);
+      bytes = await res.arrayBuffer();
     } else {
       const {readFile} = await import("node:fs/promises");
       bytes = await readFile(new URL(target));
@@ -73,10 +76,24 @@ function marshal(walls) {
  */
 const usesLevels = walls => walls.some(w => (w.levels ?? []).length);
 
+/**
+ * Tolerances lib.rs hard-codes rather than takes over the ABI (walls-EXT-1). A run that overrides
+ * one goes to js, as a Levels scene does, so the card's echoed config is the one that ran.
+ */
+const NOT_IN_ABI = ["weldEps", "pinEps"];
+const overridesAbi = opts => NOT_IN_ABI.some(k => opts?.[k] !== undefined);
+
+/** False when the compiled engine cannot reproduce js for these walls and opts. */
+export const accepts = (walls, opts = {}) => !usesLevels(walls) && !overridesAbi(opts);
+
 export function runWasm(walls, opts = {}) {
-  if (usesLevels(walls)) return runEngine(walls, opts);   // a direct caller; the glue never gets here
+  if (!accepts(walls, opts)) return runEngine(walls, opts);   // a direct caller; the glue never gets here
+  // lib.rs counts its one empty pass where js counts none; with no walls the results are otherwise
+  // identical by construction, so js answers and the card and compare() agree (walls-edge-6).
+  if (walls.length === 0) return runEngine(walls, opts);
   if (!mod) throw new Error(`wasm backend not loaded${loadError ? `: ${loadError.message}` : ""}`);
   const cfg = resolveConfig(opts);
+  const runId = runKey(opts.runId);
   const input = marshal(walls);
 
   const ptr = mod.alloc_in(input.length);
@@ -88,6 +105,8 @@ export function runWasm(walls, opts = {}) {
 
   const out = new Int32Array(mod.memory.buffer, mod.out_ptr(), len);
   const [nc, nu, nr, iterations, nComp] = out;
+  // lib.rs reports iter_cap + 1 when the cap ran out; refuse the partial result as js does (walls-rob-1).
+  if (iterations > cfg.iterCap) throw new Error(`wall-autocomplete: hit the ${cfg.iterCap}-iteration cap; nothing was committed.`);
 
   let p = 5;
   const creates = [];
@@ -95,16 +114,18 @@ export function runWasm(walls, opts = {}) {
     creates.push({c: [out[p], out[p + 1], out[p + 2], out[p + 3]],
                   light: out[p + 4], sight: out[p + 5], sound: out[p + 6], move: out[p + 7],
                   door: 0, ds: 0, dir: 0, levels: [],
-                  flags: {[FLAG_SCOPE]: {generated: true, run: opts.runId ?? "run"}}});
+                  flags: {[FLAG_SCOPE]: {generated: true, run: runId}}});
   }
   const updates = [];
   for (let i = 0; i < nu; i++, p += 5) {
     const w = walls[out[p]];
     // priorC comes from the input wall — the compiled side never needs to carry it, but
-    // without it a trim or weld on the wasm path could not be undone at all.
+    // without it a trim or weld on the wasm path could not be undone at all. Same per-run shape as
+    // the js engine: `moves.<run>`, never the creating `run` (walls-edge-2).
+    const known = w && Object.hasOwn(historyOf(w).moves, runId);
     updates.push({_id: w?._id ?? w?.id, c: [out[p + 1], out[p + 2], out[p + 3], out[p + 4]],
-                  flags: {[FLAG_SCOPE]: {run: opts.runId ?? "run", rule: "X1",
-                                         priorC: w ? [...w.c] : null}}});
+                  flags: {[FLAG_SCOPE]: {rule: "X1",
+                                         ...(known ? {} : {moves: {[runId]: w ? [...w.c] : null}})}}});
   }
   p += nr * 2;   // positions only; reasons come from JS below, and only if there are any
   const components = [];
@@ -148,5 +169,5 @@ register({
   name: "wasm",
   run: runWasm,
   available: () => mod !== null,
-  accepts: walls => !usesLevels(walls)
+  accepts
 });

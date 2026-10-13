@@ -65,7 +65,35 @@
   },
   {
     "kind": "on",
+    "name": "updateNote"
+  },
+  {
+    "kind": "on",
     "name": "deleteNote"
+  },
+  {
+    "kind": "on",
+    "name": "createAmbientLight"
+  },
+  {
+    "kind": "on",
+    "name": "updateAmbientLight"
+  },
+  {
+    "kind": "on",
+    "name": "deleteAmbientLight"
+  },
+  {
+    "kind": "on",
+    "name": "createTile"
+  },
+  {
+    "kind": "on",
+    "name": "updateTile"
+  },
+  {
+    "kind": "on",
+    "name": "deleteTile"
   },
   {
     "kind": "on",

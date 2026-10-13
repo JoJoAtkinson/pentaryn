@@ -39,7 +39,7 @@ test("not the active GM: effect and hp hooks schedule no timer and never sync", 
   globalThis.setTimeout = (...a) => { timers++; return realSetTimeout(...a); };
   const gob = makeActor(F, { id: "actorGob00000001", name: "Goblin", type: "npc" });
   let synced = 0;
-  gob.getActiveTokens = () => { synced++; return []; };
+  gob.getDependentTokens = () => { synced++; return []; };
   try {
     F.become({ userId: PLAYER });
     Hooks.callAll("createActiveEffect", { flags: {}, parent: gob });
@@ -57,10 +57,50 @@ test("not the active GM: effect and hp hooks schedule no timer and never sync", 
 test("the active GM still queues one debounced sync per actor", async () => {
   const gob = makeActor(F, { id: "actorGob00000002", name: "Goblin", type: "npc" });
   let synced = 0;
-  gob.getActiveTokens = () => { synced++; return []; };
+  gob.getDependentTokens = () => { synced++; return []; };
   Hooks.callAll("createActiveEffect", { flags: {}, parent: gob });
   Hooks.callAll("deleteActiveEffect", { flags: {}, parent: gob });
   mock.timers.tick(200);
   await flush();
   assert.equal(synced, 1);
+});
+
+// dropbin-perf-1 [declared]: refreshToken fires every frame a token animates, and each one asked Item Piles
+// isValidItemPile / isItemPileEmpty for every corpse. The answer is cached on the Token (_pdWantsEye) and
+// recomputed only on the document-change paths (drawToken, updateToken, updateActor/item hooks, canvasReady).
+test("dropbin-perf-1: refreshToken reuses the cached eye answer; updateToken recomputes it", async () => {
+  const api = game.itempiles.API;
+  const real = api.isValidItemPile;
+  let asks = 0;
+  api.isValidItemPile = doc => { asks++; return real(doc); };
+  try {
+    const doc = { name: "Dead Wolf", flags: { [MOD]: { corpse: true } }, isSecret: false, parent: canvas.scene, getSize: () => ({ width: 100, height: 100 }) };
+    const token = { document: doc, destroyed: false, effects: { zIndex: 1 }, addChild(c) { c.parent = this; return c; } };
+    doc.object = token;
+    F.piles.add(doc);
+    Hooks.callAll("drawToken", token);
+    await flush();
+    Hooks.callAll("drawToken", token);
+    assert.equal(token._pdWantsEye, true);
+    asks = 0;
+    for (let i = 0; i < 20; i++) Hooks.callAll("refreshToken", token, { refreshPosition: true });
+    assert.equal(asks, 0, "no Item Piles query per refresh");
+    assert.equal(token.pdLootEye.visible, true);
+    F.piles.delete(doc);                                         // looted: no longer a pile
+    Hooks.callAll("updateToken", doc, {});
+    assert.equal(asks, 1, "the document change re-asks once");
+    assert.equal(token._pdWantsEye, false);
+    assert.equal(token.pdLootEye.visible, false);
+    Hooks.callAll("refreshToken", token, {});
+    assert.equal(asks, 1);
+    assert.equal(token.pdLootEye.visible, false, "a refresh keeps it hidden");
+    const fresh = { document: { ...doc, object: null }, destroyed: false, effects: { zIndex: 1 }, addChild(c) { c.parent = this; return c; } };
+    F.piles.add(fresh.document);
+    Hooks.callAll("refreshToken", fresh, {});
+    Hooks.callAll("refreshToken", fresh, {});
+    assert.equal(asks, 2, "a token refreshed before it was drawn asks once, then caches");
+    assert.equal(fresh.pdLootEye.visible, true);
+  } finally {
+    api.isValidItemPile = real;
+  }
 });

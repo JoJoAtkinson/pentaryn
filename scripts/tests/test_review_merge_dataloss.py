@@ -15,45 +15,26 @@ folder (conftest.two_hosts) or FakeRclone over it.
 from __future__ import annotations
 
 import json
-import os
 import shutil
 import subprocess
-import time
+from functools import partial
 
 import pytest
 
 from bundle_fakes import make_module
-from cloud_fakes import FakeRclone
+from cloud_fakes import FakeRclone, bundle_names, make_edit
+from cloud_fakes import age as _age
+from cloud_fakes import worlds as _worlds
 from scripts.foundry import bundles, cloud, storage
 from scripts.foundry.storage import RcloneStorage
 
 DAY = 86400
 
 
-# ── helpers (local copies, so this file stands alone) ─────────────────────────
+# ── helpers (shared, from cloud_fakes — M14) ──────────────────────────────────
 
-_bump = [0]
-
-
-def _edit(root, text):
-    f = root / "Data/worlds/w/journal.txt"
-    f.write_text(text)
-    _bump[0] += 5
-    t = time.time() + _bump[0]
-    os.utime(f, (t, t))
-
-
-def _worlds(c, sub="world-backups"):
-    return sorted(p.name for p in (c / sub).iterdir() if p.name.endswith(".tar.gz"))
-
-
-def _bundle_names(c):
-    return sorted(p.name for p in (c / "bundles").iterdir() if p.name.endswith(".tar.gz"))
-
-
-def _age(p, days):
-    t = time.time() - days * DAY
-    os.utime(p, (t, t))
+_edit = make_edit(step=5)
+_bundle_names = partial(bundle_names, tars_only=True)
 
 
 def _rclone(two_hosts, monkeypatch) -> tuple[FakeRclone, RcloneStorage]:

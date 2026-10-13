@@ -108,6 +108,28 @@ test("the bug button opens the dialog, Bug selected, with the help text on each 
   assert.equal(ReportDialog.current, null);
 });
 
+test("feedback-EXT-7: 'What gets attached' has one row per report section, the two rings included", async () => {
+  const { ATTACH_ROWS } = await import("../dialog.mjs");
+  const { LIST_SECTIONS, OBJECT_SECTIONS } = await import("../feedback-core.mjs");
+  assert.ok(Array.isArray(ATTACH_ROWS), "dialog.mjs exports ATTACH_ROWS");
+  const rows = ATTACH_ROWS.map(r => r.section);
+  assert.equal(new Set(rows).size, rows.length, "one row per section");
+  assert.deepEqual(new Set(rows), new Set([...OBJECT_SECTIONS, ...LIST_SECTIONS, "actions", "errors"]),
+    "a new report section needs its own attach row");
+  await api.open();
+  await settle();
+  const app = F.rendered.at(-1);
+  const items = [...app.html.matchAll(/<li>(.*?)<\/li>/g)].map(m => m[1]);
+  assert.equal(items.length, ATTACH_ROWS.length);
+  for (const line of [
+    "The world, game system and Foundry versions",
+    "0 selected and 0 targeted tokens (names and hit points)",
+    "The combat round and turn, if a fight is running",
+    "Your browser, window size, language and time zone",
+  ]) assert.ok(items.includes(line), `missing attach row: ${line}`);
+  await app.close();
+});
+
 /* ── /bug ────────────────────────────────────────────────────────────── */
 
 test("/bug <text> opens the dialog pre-filled and is not posted; other chat passes", async () => {
@@ -181,6 +203,51 @@ test("two open() calls racing the first render share one dialog and keep both dr
   await app.close();
 });
 
+test("feedback-async-1: opening while the previous dialog is closing keeps the new dialog's instances entry", async () => {
+  // Foundry's close is async (the minimise animation): `rendered` goes false at once, but the
+  // instances entry is deleted and _onClose runs only when it finishes. The stub closes at once, so
+  // model Foundry here: render registers in foundry.applications.instances, close waits on a gate.
+  const Base = Object.getPrototypeOf(ReportDialog);
+  const { render, close } = Base.prototype;
+  let release;
+  const gate = new Promise(r => { release = r; });
+  Base.prototype.render = async function (...args) {
+    const out = await render.apply(this, args);
+    foundry.applications.instances.set(this.id, this);
+    return out;
+  };
+  Base.prototype.close = async function () {
+    this.rendered = false;
+    await gate;
+    foundry.applications.instances.delete(this.id);
+    this._onClose?.({});
+    return this;
+  };
+  try {
+    await api.open({ text: "first" });
+    const first = ReportDialog.current;
+    const closing = first.close();                     // Escape: the old dialog starts closing
+    const opening = api.open({ text: "second" });      // the bug button, mid-animation
+    await settle();
+    release();
+    await Promise.all([closing, opening]);
+    await settle();
+    const second = ReportDialog.current;
+    assert.ok(second && second !== first, "a new dialog once the old one has closed");
+    assert.ok(second.rendered);
+    assert.match(second.html, />second<\/textarea>/);
+    assert.equal(foundry.applications.instances.get(DIALOG_ID), second,
+      "the old close must not delete the new dialog's instances entry (Escape closes it)");
+    await second.close();
+    assert.equal(foundry.applications.instances.has(DIALOG_ID), false);
+    assert.equal(ReportDialog.current, null);
+  } finally {
+    Base.prototype.render = render;
+    Base.prototype.close = close;
+    foundry.applications.instances.delete(DIALOG_ID);
+  }
+});
+
 /* ── the recorder ────────────────────────────────────────────────────── */
 
 test("recorder: scene, tool (only on change), tab, control, own target", () => {
@@ -233,6 +300,27 @@ test("recorder: windows — render throttled per id for 2 s, close recorded, noi
   ]);
 });
 
+test("feedback-EC-5: a window with a null id throttles on its class name, not a shared empty key", () => {
+  mock.timers.tick(LIMITS.renderThrottleMs);
+  const n = clearRings();
+  class IdlessPanelA {}
+  class IdlessPanelB {}
+  const a = Object.assign(new IdlessPanelA(), { id: null, title: "A" });
+  const b = Object.assign(new IdlessPanelB(), { id: null, title: "B" });
+  F.fire("renderApplicationV2", a);
+  F.fire("renderApplicationV2", b);                     // another class: its own key, recorded
+  F.fire("renderApplicationV2", a);                     // same class inside 2 s: throttled
+  F.fire("closeApplicationV2", a);
+  F.fire("renderApplicationV2", a);                     // close cleared the class key: recorded
+  const got = actionsOf().slice(n).map(({ t, ...rest }) => rest);
+  assert.deepEqual(got, [
+    { kind: "app", op: "render", cls: "IdlessPanelA", id: "", title: "A" },
+    { kind: "app", op: "render", cls: "IdlessPanelB", id: "", title: "B" },
+    { kind: "app", op: "close", cls: "IdlessPanelA", id: "", title: "A" },
+    { kind: "app", op: "render", cls: "IdlessPanelA", id: "", title: "A" },
+  ]);
+});
+
 test("recorder: the user's own document changes (keys only), never another user's", async () => {
   const n = clearRings();
   const caven = game.actors.get(IDS.caven);
@@ -274,6 +362,24 @@ test("recorder: notifications are recorded and still shown (wrapMethod on Notifi
   assert.deepEqual(out, { message: "The door is locked token=abcdefghijklmnop", type: "warning" }, "the original runs and returns");
   assert.ok(F.calls.slice(shown).some(c => c.op === "notify"));
   assert.deepEqual(actionsOf().slice(n).map(({ t, ...rest }) => rest), [{ kind: "notify", level: "warning", text: "The door is locked token=[redacted]" }]);
+});
+
+test("feedback-M9: notify with no type reaches the original with exactly the caller's arguments; recorded as info", () => {
+  const n = clearRings();
+  const shown = F.calls.length;
+  ui.notifications.notify("Nothing to loot");
+  const call = F.calls.slice(shown).find(c => c.op === "notify");
+  assert.equal(call.argc, 1, "the wrap must not invent a type argument — core applies its own default");
+  assert.equal(call.level, "info");
+  assert.deepEqual(actionsOf().slice(n).map(({ t, ...rest }) => rest), [{ kind: "notify", level: "info", text: "Nothing to loot" }]);
+});
+
+test("feedback-M2: the recorder's own failure is redacted like every other error", () => {
+  const level = { toString() { throw new Error("cannot label token=abcdefghijklmnop"); } };
+  ui.notifications.notify("hello", level);
+  const own = errorsOf().at(-1);
+  assert.equal(own.source, "recorder");
+  assert.equal(own.message, "cannot label token=[redacted]");
 });
 
 test("recorder: a body click on a [data-action] element (capture phase), never an input value; plain clicks ignored", () => {
@@ -402,6 +508,15 @@ test("submit refuses empty text without writing anything (and says so); dryRun b
   assert.equal(dry.dryRun, true);
   assert.equal(dry.report.text, "dry");
   assert.equal(F.calls.slice(before).filter(c => c.op === "update" || c.op === "query").length, 0);
+});
+
+test("feedback-rob-2: submit(null), submit(draft, null) and ingest(null) answer a fail(), never throw", async () => {
+  assert.deepEqual(await api.submit(null), { ok: false, code: "BAD_ARGS", reason: "the report text is empty" });
+  assert.deepEqual(await api.submit({ text: "   " }, null), { ok: false, code: "BAD_ARGS", reason: "the report text is empty" });
+  assert.equal((await api.ingest(null)).code, "NOT_FOUND");
+  F.become({ userId: IDS.player });
+  assert.deepEqual(await api.ingest(null), { ok: false, code: "NOT_GM", reason: "only the active GM files reports" });
+  F.become({ userId: IDS.gm });
 });
 
 test("a failed queue write tells the player and leaves nothing half-done", async () => {

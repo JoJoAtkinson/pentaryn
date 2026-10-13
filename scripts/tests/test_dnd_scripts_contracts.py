@@ -11,6 +11,7 @@ from __future__ import annotations
 import dataclasses
 import importlib.util
 import json
+import re
 import string
 import sys
 from pathlib import Path
@@ -52,12 +53,8 @@ def test_tools_without_annotations(runners):
 
 # scripts/mcp/README.md: every tool declares these five keys and this file fails if one is missing.
 REQUIRED_ANNOTATIONS = {"title", "readOnlyHint", "destructiveHint", "idempotentHint", "openWorldHint"}
-# KNOWN gap (final review py-mcp ext-1), recorded for Joe: the feedback_reports.py tools
-# carry no `title`. Adding one changes tools/list, so it is not made here.
-KNOWN_MISSING_ANNOTATIONS: dict[str, list[str]] = {
-    "feedback_list": ["title"], "feedback_next": ["title"],
-    "feedback_get": ["title"], "feedback_resolve": ["title"],
-}
+# py-mcp-ext-1 [declared]: the feedback_reports.py tools now carry a `title` too, so no gaps.
+KNOWN_MISSING_ANNOTATIONS: dict[str, list[str]] = {}
 
 
 @pytest.mark.repo
@@ -65,6 +62,16 @@ def test_every_tool_declares_the_five_annotation_keys(runners):
     gaps = {n: sorted(REQUIRED_ANNOTATIONS - (r.tool.annotations or {}).keys())
             for n, r in runners.items()}
     assert {n: miss for n, miss in gaps.items() if miss} == KNOWN_MISSING_ANNOTATIONS
+
+
+@pytest.mark.repo
+@pytest.mark.parametrize("name, title", [
+    ("feedback_list", "List feedback reports"), ("feedback_next", "Next feedback report"),
+    ("feedback_get", "Get a feedback report"), ("feedback_resolve", "Resolve a feedback report"),
+])
+def test_py_mcp_ext_1_feedback_tools_have_titles(runners, name, title):
+    """py-mcp-ext-1: the feedback_* tools declare a title beside their shared hints."""
+    assert (runners[name].tool.annotations or {}).get("title") == title
 
 
 @pytest.mark.repo
@@ -107,6 +114,22 @@ def test_error_channels(tmp_path, monkeypatch):
     with pytest.raises(ValueError):
         lore.get_npc("")
 
+
+
+# py-mcp-MNT-9 [declared]: the README's Raise row names every in-process tool, by its module
+# stem or its own name (feedback_reports was left out); combat_action_upsert is the {ok:false} row.
+OK_FALSE_TOOLS = {"combat_action_upsert"}
+
+
+@pytest.mark.repo
+def test_py_mcp_mnt_9_readme_raise_row_names_every_in_process_tool(runners):
+    readme = (REPO_ROOT / "scripts/mcp/README.md").read_text(encoding="utf-8")
+    row = next(line for line in readme.splitlines() if line.startswith("| **Raise**"))
+    named = set(re.findall(r"`([^`]+)`", row))
+    missing = sorted(n for n, r in runners.items()
+                     if r.handler is not None and n not in OK_FALSE_TOOLS
+                     and n not in named and r.script_path.stem not in named)
+    assert missing == []
 
 # ── -49: subprocess argument mapping ─────────────────────────────────────────
 

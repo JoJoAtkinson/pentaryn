@@ -106,6 +106,17 @@ export async function setup({ user = null, users = null, modules = [], worldTime
     }
   };
 
+  /* FilePicker.browse (wildcard-art-compendium): a `{ wildcard: true }` browse lists
+     F.wildcardFiles.get(target) in server order; the server refuses a user without FILES_BROWSE */
+  F.wildcardFiles = new Map();
+  F.foundry.applications.apps = { ...(F.foundry.applications.apps ?? {}), FilePicker: { implementation: {
+    browse: async (source, target, options = {}) => {
+      F.calls.push({ op: "browse", source, target, options: F.plain(options), user: game.user.id });
+      if (!game.user.isGM && !game.user.can("FILES_BROWSE")) throw new Error("You do not have permission to browse files");
+      return { target, dirs: [], files: options.wildcard ? [...(F.wildcardFiles.get(target) ?? [])] : [] };
+    }
+  } } };
+
   /* game extras */
   F.game.time = { worldTime };
   F.game.combat = null;
@@ -315,7 +326,7 @@ function makeWorldBuilders(F) {
         const images = await source.getTokenImages();
         src = images[Math.floor(Math.random() * images.length)];
       }
-      d.prototypeToken = { texture: { src } };
+      d.prototypeToken = { randomImg: !!p.randomImg, texture: { src } };
     }
     if (host.isToken) {
       // An unlinked token's actor is transformed in place: no dnd5e.transformActor, no new world actor.
@@ -326,8 +337,11 @@ function makeWorldBuilders(F) {
       });
       form.token = host.token;
       form._tokens = host._tokens;
+      // dnd5e writes the prototype's image onto the token in place; preUpdateToken fires first.
+      const swap = d.prototypeToken ? { texture: { src: d.prototypeToken.texture.src } } : null;
+      if (swap) F.Hooks.call("preUpdateToken", host.token, swap, {}, game.user.id);
       host.token.actor = form;
-      if (d.prototypeToken) host.token.texture = { ...(host.token.texture ?? {}), src: d.prototypeToken.texture.src };
+      if (swap) host.token.texture = { ...(host.token.texture ?? {}), src: swap.texture.src };
       return form;
     }
     if (F.Hooks.call("dnd5e.transformActor", host, source, d, settings, options) === false) return null;
@@ -370,18 +384,21 @@ function makeWorldBuilders(F) {
    * Beast sources (compendium-like: fromUuid finds them, game.actors does not hold them). With
    * `prototypeToken`, getTokenImages() and clone() as core has them: a wildcard lists
    * `F.tokenImages.get(uuid)` for a user who may browse files (or owns the beast), else core's error
-   * toast and []; clone() (keepId) is the same beast with the changes merged over it.
+   * toast and []; clone() (keepId) is the same beast with the changes merged over it. With `pack`
+   * (a beast straight from a compendium, as seen live): getTokenImages() answers the literal wildcard
+   * path and clone() leaves the prototype token as it was (wildcard-art-compendium).
    */
-  function beast(id, name, { items = [], img = `${id}.webp`, effects = [], system = {}, prototypeToken = null } = {}) {
+  function beast(id, name, { items = [], img = `${id}.webp`, effects = [], system = {}, prototypeToken = null, pack = null } = {}) {
     const b = makeActor({ id, name, img, type: "npc", items, effects, system, ...(prototypeToken ? { isOwner: false } : {}) });
     b.collection = null;
+    if (pack) Object.defineProperty(b, "pack", { value: pack, enumerable: false });
     if (prototypeToken) {
       const hide = (k, v) => Object.defineProperty(b, k, { value: v, enumerable: false, writable: true });
       hide("prototypeToken", prototypeToken);
       hide("getTokenImages", async function () {
         F.calls.push({ op: "getTokenImages", actor: this.id, user: game.user.id });
         const p = this.prototypeToken;
-        if (!p.randomImg) return [p.texture.src];
+        if (!p.randomImg || this.pack) return [p.texture.src];
         if (!game.user.can("FILES_BROWSE") && !this.isOwner) {
           F.calls.push({ op: "notify", level: "error", message: "Error retrieving wildcard tokens" });
           return [];
@@ -391,7 +408,7 @@ function makeWorldBuilders(F) {
       hide("clone", function (data = {}, context = {}) {
         F.calls.push({ op: "clone", actor: this.id, data: F.plain(data), context: F.plain(context) });
         const c = Object.create(this);
-        const p = data.prototypeToken ?? {};
+        const p = this.pack ? {} : data.prototypeToken ?? {};
         Object.defineProperty(c, "prototypeToken", { value: {
           ...this.prototypeToken, ...p, texture: { ...this.prototypeToken.texture, ...(p.texture ?? {}) }
         }, enumerable: false });

@@ -1,5 +1,6 @@
 { "allow": [
   { "from": "character-adapter.mjs", "to": "packs-adapter.mjs", "why": "character builder resolves items through the pack lookup (adapter stack)" },
   { "from": "actor-patch-adapter.mjs", "to": "packs-adapter.mjs", "why": "patch addItems resolves items through the pack lookup (adapter stack)" },
-  { "from": "scene-adapter.mjs", "to": "sight-adapter.mjs", "why": "the scene model's sight pass is core's collision test (adapter stack); los stays its own file because the per-file surface golden pins it" }
+  { "from": "scene-adapter.mjs", "to": "sight-adapter.mjs", "why": "the scene model's sight pass is core's collision test (adapter stack); los stays its own file because the per-file surface golden pins it" },
+  { "from": "crops-adapter.mjs", "to": "scene-adapter.mjs", "why": "crops box the scene model's own token footprint and art (footprintRect, tokenImg, EYE) so hex crops match the gather (EXT-12)" }
 ] }

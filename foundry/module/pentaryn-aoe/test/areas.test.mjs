@@ -40,7 +40,7 @@ test("preCreateRegion: a template region becomes owned by everyone (on the creat
 });
 
 test("createRegion by this client: ownership fixed, handle created at the centre and attached (golden/create-handle.json)", async () => {
-  const s = W.scene({ id: "CreateScene00001", levels: [{ id: "lvlGround0000001", elevation: { base: 10 } }] });
+  const s = W.scene({ id: "CreateScene00001", grid: { size: 100, distance: 5 }, levels: [{ id: "lvlGround0000001", elevation: { base: 10 } }] });
   F.canvas.scene = s;
   const r = W.region(s, template({
     id: "regionCircle0001", name: "Fireball area", levels: ["lvlGround0000001"],
@@ -168,6 +168,17 @@ test("handleFor: the attached handle, else a token flagged with the region, else
   W.token(s, { id: "creature00000001" });
   assert.equal(A.handleFor(r), flagged, "attached to a creature: fall back to the flag");
   assert.equal(A.handleFor({ id: "x" }), null);
+});
+
+test("aoe-mnt-7 handleFor reads the attachment through attachedTokenId: a bare id string on the live region finds the handle", () => {
+  const s = W.scene({ id: "FindScene0000007" });
+  const h = W.token(s, { id: "attachedTok00007", flags: { [MODULE]: { handle: true } } });
+  const bare = { id: "regionFind000007", parent: s, attachment: { token: h.id } };
+  assert.equal(A.handleFor(bare), h, "a string attachment with no _source still finds the handle");
+  const live = { id: "regionFind000008", parent: s, attachment: { token: h } };
+  assert.equal(A.handleFor(live), h, "a live token document attachment finds the handle");
+  const src = { id: "regionFind000009", parent: s, attachment: { token: null }, _source: { attachment: { token: h.id } } };
+  assert.equal(A.handleFor(src), h, "the source string finds the handle");
 });
 
 test("areasFor / spellAreas: by activity, by spell item; one scene or all; empty without an id", () => {
@@ -536,4 +547,20 @@ test("-7 two GM sessions at ready create one handle actor (D-A6)", async () => {
   const creates = ops("create");
   assert.equal(creates[0]?.data._id, "pentarynAoeHndl0");
   assert.equal(F.game.actors.filter(a => a.flags?.[MODULE]?.handleActor).length, 1);
+});
+
+test("[declared] aoe-mnt-10: one HANDLE_NAME and one HANDLE_SYSTEM feed the actor, its prototype and the repairs", async () => {
+  const { readFileSync } = await import("node:fs");
+  const src = readFileSync(new URL("../areas.mjs", import.meta.url), "utf8");
+  assert.equal(src.split('"Area handle"').length - 1, 1, "the handle name is written once");
+  assert.equal(src.match(/size"?: "tiny"/g)?.length, 1, "the handle size is written once");
+  assert.equal(A.HANDLE_NAME, "Area handle");
+  const data = A.handleActorData(null);
+  assert.equal(data.name, A.HANDLE_NAME);
+  assert.equal(data.prototypeToken.name, A.HANDLE_NAME);
+  for (const [path, value] of Object.entries(A.HANDLE_SYSTEM)) assert.equal(F.foundry.utils.getProperty(data, path), value, path);
+  // golden key order kept: hp before movement, attributes before traits
+  assert.deepEqual(JSON.stringify(data.system), JSON.stringify({ attributes: { hp: { value: 0, max: 0 }, movement: { hover: true } }, traits: { size: "tiny" } }));
+  // an actor built from the data needs no repair
+  assert.deepEqual(A.handleActorRepairs({ _source: structuredClone(data) }), {});
 });

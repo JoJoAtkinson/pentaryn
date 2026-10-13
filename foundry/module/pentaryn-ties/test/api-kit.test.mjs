@@ -59,6 +59,48 @@ test("S9 / B11: published through the kit — module.api is canonical, the alias
   assert.deepEqual(game.pentaryn.namespaces(), ["ties"]);
 });
 
+/** A call's outcome as one comparable value: what it answered, or the code/message it threw. */
+async function outcome(fn, args) {
+  try {
+    return { ok: await fn(...args) };
+  } catch (err) {
+    return { threw: err?.code ?? err?.message ?? String(err) };
+  }
+}
+
+test("ext-5: every read param that takes an id is marked resolve: false in the manifest", () => {
+  // api.mjs resolves these by hand (resolving(fn, n)); the manifest must say so, or describe() lies
+  const REF_TYPE = MANIFEST.rows.find(r => r.path === "read").params[0].type;
+  const unmarked = [];
+  for (const row of MANIFEST.rows) {
+    if (row.writes) continue;
+    row.params.forEach((p, i) => { if (p.type === REF_TYPE && p.resolve !== false) unmarked.push(`${row.path}#${i}`); });
+  }
+  assert.deepEqual(unmarked, []);
+});
+
+test("ext-5: every resolve: false position answers the same for the actor's id as for the Actor", async () => {
+  const actor = game.actors.get("zzPc000000000001");
+  assert.ok(actor, "fixture actor");
+  const get = path => path.split(".").reduce((o, k) => o?.[k], T());
+  let checked = 0;
+  for (const row of MANIFEST.rows) {
+    const positions = row.params.flatMap((p, i) => (p.resolve === false ? [i] : []));
+    if (!positions.length) continue;
+    const fn = get(row.path);
+    const n = row.params.filter(p => !p.optional).length;
+    const base = Array.from({ length: n }, () => actor);
+    const want = await outcome(fn, base);
+    for (const i of positions) {
+      const args = base.slice();
+      args[i] = actor.id;
+      assert.deepEqual(await outcome(fn, args), want, `${row.path}: param ${i} given the id`);
+      checked++;
+    }
+  }
+  assert.ok(checked >= 14, `checked ${checked} positions`);
+});
+
 test("uninstall(): no ties hook and no document listener is left", () => {
   document.removeEventListener = function (type, fn, capture) {
     const i = this.listeners.findIndex(l => l.type === type && l.fn === fn && l.capture === (capture === true));

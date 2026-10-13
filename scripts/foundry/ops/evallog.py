@@ -5,7 +5,7 @@ that keeps being reached through `eval-js` earns a typed tool — and the monthl
 used to be ad-hoc Python. This is that review, repeatable: `make foundry-eval-report`.
 
 Three kinds of file under `foundry/logs/` (or `$PENTARYN_MCP_LOG_DIR` when the servers
-are pointed elsewhere), told apart by shape, not by name:
+are pointed elsewhere), picked by name (LOG_GLOBS); any other file there is not read:
 
     eval*.jsonl             one line per eval-js call: {ts, purpose, script, ok, phase,
                             ms, error?, client?}. `eval.jsonl` (to 2026-10) and the
@@ -15,7 +15,8 @@ are pointed elsewhere), told apart by shape, not by name:
                             per kind, never mixed.
     dnd-scripts-YYYY-MM.jsonl  the dnd-scripts server's log: {ts, server, tool, mode, …}.
 
-A line with a `tool` key is a tool line; any other object is an eval line. Read-only:
+Within those files a line's kind is told by shape, not by file: a line with a `tool` key
+is a tool line; any other object is an eval line. Read-only:
 nothing here writes, and nothing touches a running server.
 """
 
@@ -36,6 +37,8 @@ _DISCOVERY = re.compile(
 _PENTARYN_TOOLS = ("pentaryn-read", "pentaryn-write")
 _MONTHLY = re.compile(r"-(\d{4}-\d{2})\.jsonl$")
 TOP = 10
+# The files the report reads, by name; `log_files` globs exactly these.
+LOG_GLOBS = ("eval*.jsonl", "mcp-*.jsonl", "dnd-scripts-*.jsonl")
 
 
 def _pct(values: list[float], q: float) -> float | None:
@@ -127,8 +130,7 @@ def summarise(lines: Iterable[str], since: str | None = None) -> dict:
 def log_files(log_dir: Path, since: str | None = None) -> list[Path]:
     """The files the report reads. A monthly file wholly before `since`'s month is left
     unread (its lines would all be filtered); `eval.jsonl` has no month and is always read."""
-    files = sorted({*log_dir.glob("eval*.jsonl"), *log_dir.glob("mcp-*.jsonl"),
-                    *log_dir.glob("dnd-scripts-*.jsonl")})
+    files = sorted({f for pattern in LOG_GLOBS for f in log_dir.glob(pattern)})
     if since:
         month = since[:7]
         files = [f for f in files

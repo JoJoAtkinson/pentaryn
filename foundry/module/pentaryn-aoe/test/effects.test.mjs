@@ -133,6 +133,17 @@ test("selfApply: an unidentified item is named by itself, not its effect; the to
   assert.deepEqual([m.flags[MODULE].effectsApplied.names, m.flags[MODULE].effectsApplied.actorName], [["Murky potion"], "Cav"]);
 });
 
+test("R2-selfApply: selfApply accepts a message id like cardEffects and pendingFor; an unknown id → null", async () => {
+  clearCopies();
+  const m = card({ targets: selfTarget, id: "msgSelfById00001" });
+  const r = await E.selfApply(m.id, { force: true });
+  assert.deepEqual(r, { reason: "targeted-self", actor: caven.uuid, effects: [armorFx.id] });
+  assert.equal(m.flags[MODULE].effectsApplied.auto, true);
+  assert.equal(await E.selfApply("noSuchMessage000", { force: true }), null);
+  assert.equal(await E.selfApply("noSuchMessage000"), null);
+  clearCopies();
+});
+
 test("selfApply → null: setting off (unless forced), no effects, no reason, not owner and not GM, in flight, lost claim", async () => {
   await game.settings.set(MODULE, "autoApplySelf", false);
   assert.equal(await E.selfApply(card({ targets: selfTarget })), null);

@@ -7,11 +7,24 @@
 import {SOLID} from "./engine.mjs";
 import {FIXTURES, kindOf} from "./corpus.mjs";
 
+/**
+ * Merge an update's flags into a wall's, as Foundry's update does: per scope, key by key, and the
+ * `moves` run history merged run by run (walls-edge-2) — an update never drops an earlier run's entry.
+ */
+export function mergeFlags(a = {}, b = {}) {
+  const out = {...a};
+  for (const [scope, f] of Object.entries(b ?? {})) {
+    const prev = a?.[scope] ?? {};
+    out[scope] = {...prev, ...f, ...((prev.moves || f?.moves) ? {moves: {...prev.moves, ...f?.moves}} : {})};
+  }
+  return out;
+}
+
 /** Fold an engine result back into a wall list, as Foundry would after committing. */
 export function applied(walls, res) {
   const out = walls.map(x => {
     const u = res.updates.find(u => u._id === x._id);
-    return u ? {...x, c: u.c, flags: u.flags} : x;
+    return u ? {...x, c: u.c, flags: mergeFlags(x.flags, u.flags)} : x;
   });
   let n = 0;
   for (const c of res.creates) out.push({_id: `gen${++n}`, ...SOLID, ...c});

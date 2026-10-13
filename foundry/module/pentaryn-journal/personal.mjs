@@ -21,6 +21,7 @@ import { MODULE, QUERY, claimWinner, isMine, isPersonal, validateEnsure } from "
 import { setting } from "./settings.mjs";
 import { flagPath, readFlag } from "./lib/flags.mjs";
 import { relayed } from "./lib/queries.mjs";
+import { codedError } from "./lib/errors.mjs";
 
 const OWN = () => CONST.DOCUMENT_OWNERSHIP_LEVELS;
 /** A player-facing warning toast (not a console line). */
@@ -82,17 +83,21 @@ function ensureFor(user) {
   return p;
 }
 
-/** GM: a journal for every player, and any journal a player made at the root moved into the folder. */
+/**
+ * GM: a journal for every player, and any journal a player made at the root moved into the folder.
+ * Each player goes through relayEnsure's claim, so with two GM tabs only one creates (journal-async-1);
+ * the folder exists before any losing tab moves on, as the winner makes it before the journal.
+ */
 async function ensureAll() {
   if (!game.user.isGM) return null;
   const players = game.users.filter(u => !u.isGM);
   for (const u of players) {
-    try { await ensureFor(u); } catch (err) { ctx.log.warn(`ensure failed for ${u.name}`, err); }
+    try { await relayEnsure(u); } catch (err) { ctx.log.warn(`ensure failed for ${u.name}`, err); }
   }
   const stray = atRootJournals();
   if (stray.length) {
-    const folder = await ensureFolder();
-    await JournalEntry.updateDocuments(stray.map(j => ({ _id: j.id, folder: folder.id })));
+    const folder = await ensureFolder();   // undefined when a preCreate hook vetoed it: leave them (journal-rob-5)
+    if (folder?.id) await JournalEntry.updateDocuments(stray.map(j => ({ _id: j.id, folder: folder.id })));
   }
   return report();
 }
@@ -110,6 +115,8 @@ function report() {
 
 /** How long the player waits for the GM's answer to the ensure query. */
 const QUERY_TIMEOUT_MS = 8_000;
+/** After the GM's answer, how long the player waits for the journal's broadcast to land. */
+const ARRIVE_WAIT_MS = 3_000;
 
 /** Client side: the current user's journal, creating it (or asking the GM to) the first time. */
 let inflight = null;
@@ -127,8 +134,9 @@ async function ensurePersonalJournal() {
     }
     const gm = game.users.activeGM;
     if (!gm) { toast(game.i18n.localize("PENTARYN_JOURNAL.notify.noGM")); return null; }
+    let reply;
     try {
-      await gm.query(QUERY, {}, { timeout: QUERY_TIMEOUT_MS });
+      reply = await gm.query(QUERY, {}, { timeout: QUERY_TIMEOUT_MS });
     } catch (err) {
       ctx.log.warn("ensure query failed", err);
       toast(/timed? ?out/i.test(err?.message ?? "")
@@ -136,9 +144,16 @@ async function ensurePersonalJournal() {
         : game.i18n.localize("PENTARYN_JOURNAL.notify.failed"));
       return null;
     }
-    // The createJournalEntry broadcast normally lands before the query reply; allow a second if not.
-    for (let i = 0; i < 10 && !personal(user); i++) await new Promise(r => setTimeout(r, 100));
-    return personal(user);
+    // The createJournalEntry broadcast normally lands before the query reply; allow 3 s if not, and
+    // say so rather than return a silent null when it never comes (journal-rob-2).
+    const arrived = () => personal(user) ?? (reply?.entryId ? game.journal.get(reply.entryId) : null) ?? null;
+    for (let i = 0; i < ARRIVE_WAIT_MS / 100 && !arrived(); i++) await new Promise(r => setTimeout(r, 100));
+    const j = arrived();
+    if (!j) {
+      ctx.log.warn("ensure: the GM answered but the journal did not arrive", { entryId: reply?.entryId ?? null });
+      toast(game.i18n.localize("PENTARYN_JOURNAL.notify.failed"));
+    }
+    return j;
   })().finally(() => { inflight = null; });
   return inflight;
 }
@@ -156,26 +171,29 @@ const LOSER_WAIT_MS = 7_000;
 const POLL_MS = 50;
 
 /**
- * The query reaches every tab of the active GM's account (the MCP bridge tab and a GM browser tab
- * are both activeGM.isSelf), and both would look before either create lands. So, when there is a
+ * The query — and ready's ensureAll and the createUser hook (journal-async-1) — reaches every tab of
+ * the active GM's account (the MCP bridge tab and a GM browser tab are both activeGM.isSelf), and
+ * both would look before either create lands. So, when there is a
  * journal to make, each tab stamps its socket id on the sender's User; the first stamp in the
  * server's order wins (core.claimWinner) and runs ensureFor. The loser does not answer early — the
  * server keeps the first answer — it waits for the winner's journal to arrive and answers with that.
  * Each tab removes its own stamp when it is done. With one tab this is one extra User update.
+ * Stamps are server time (game.time.serverTime), not Date.now(): the tabs may run on machines whose
+ * clocks disagree, and a fast clock would read another tab's fresh stamp as stale (journal-EC-4).
  */
 async function relayEnsure(user) {
   const me = game.socket?.id ?? null;
   if (!me || !user?.id || user.isGM || personal(user)) return ensureFor(user);   // nothing to race for
   const mine = flagPath(MODULE, `${CLAIM}.${me}`);
   try {
-    await user.update({ [mine]: Date.now() });
+    await user.update({ [mine]: game.time.serverTime });
   } catch (err) {
     // e.g. an Assistant GM who may not update Users: answer as before rather than not at all
     ctx?.log.warn("ensure (relay): could not stamp the claim — answering without it", err);
     return ensureFor(user);
   }
   try {
-    if (claimWinner(readFlag(user, MODULE, CLAIM), me, Date.now(), CLAIM_STALE_MS)) return await ensureFor(user);
+    if (claimWinner(readFlag(user, MODULE, CLAIM), me, game.time.serverTime, CLAIM_STALE_MS)) return await ensureFor(user);
     ctx?.log.debug("ensure (relay): another GM tab claimed it — waiting for its journal", { user: user.id });
     return await waitForPersonal(user);
   } finally {
@@ -206,6 +224,8 @@ async function waitForPersonal(user) {
 export function registerRelay() {
   CONFIG.queries[QUERY] = relayed(async (_data, { user } = {}) => {
     const j = await relayEnsure(user);
+    // a vetoed create resolves to undefined: name the reason rather than a TypeError (journal-rob-5)
+    if (!j) throw codedError("NOT_CREATED", "the journal could not be created");
     ctx?.log.info("ensure (relay)", { uuid: j.uuid, ids: [j.id], by: game.user.id, for: user?.id ?? null });
     return { entryId: j.id };
   });
@@ -221,10 +241,10 @@ export function install(reg, context) {
 
   reg.on("createUser", user => {
     if (!game.user.isGM || !game.users.activeGM?.isSelf || user.isGM) return;
-    ensureFor(user).catch(err => ctx.log.warn(`ensure failed for ${user.name}`, err));
+    relayEnsure(user).catch(err => ctx.log.warn(`ensure failed for ${user.name}`, err));   // one tab creates (journal-async-1)
   }, { label: "createUser: ensure (active GM)" });
 
-  ctx.expose({ personal, personalsOf, ensurePersonalJournal, ensureFor, ensureAll, report, findFolder });
+  ctx.expose({ personal, personalsOf, ensurePersonalJournal, ensureFor, ensureAll, report });
 }
 
 export function uninstall() {

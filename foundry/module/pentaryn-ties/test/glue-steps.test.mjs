@@ -9,6 +9,9 @@
  *
  * Here: the root is frozen, one actor's legacy-ties migration throws, `Macro.create` throws, a pinned
  * card restores, and `game.socket.on` throws (both registrations warn). Frozen once committed.
+ *
+ * R8 [declared] (defect wave 2, 2026-10-12): the migration no longer fails the step — it warns once
+ * for the refused actor and carries on, so its line is that warning, not "ready step failed".
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -44,7 +47,7 @@ test("console: one line per failed step, texts byte-identical (the sync socket h
       "pentaryn-ties | reverse-side relay not registered",
       "pentaryn-ties | study conduit not registered",
       "pentaryn-ties | ready step failed: publish api",
-      "pentaryn-ties | ready step failed: migrate legacy flags",
+      "pentaryn-ties | ZZ Caven: legacy ties migration refused — left for the next load",
       "pentaryn-ties | ready step failed: create macro",
     ]
   );

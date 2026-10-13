@@ -1,8 +1,9 @@
 /**
  * Pure rules added after the S4 split (wave 3): the flat-roll miss verdict (ties-13), the fact-key
  * and flag-name grammar the GM-side files used to spell by hand (ties-14), the concealment clamp
- * (ties-9), the first-name rule the roster and the inspect window share (ties-15) and the Personal
- * category test the review panel and the Attributes tab share (ties-ui-EXT-6).
+ * (ties-9), the first-name rule the roster and the inspect window share (ties-15), the kind
+ * study's pass rung (ext-7) and the Personal category test the review panel and the Attributes tab
+ * share (ties-ui-EXT-6).
  *
  * NOT re-exported by the known-core.mjs barrel: that barrel's export list is pinned
  * (test/golden/known-core-exports.json) so a console macro that imports it never loses a name. Import
@@ -12,6 +13,12 @@
  */
 
 import { MEMBER_FACT } from "./attributes.mjs";
+
+/**
+ * Did this kind-study tier pass — `Number(tier) >= 15`, STUDY_RUNGS' lowest success rung (ext-7)?
+ * Defined in core/shared.mjs so core/prose.mjs can read it without an import cycle; this is its home.
+ */
+export { kindPassed } from "./shared.mjs";
 
 /**
  * Did this rolled, flat pass/fail row (lore, attribute lore) MISS?
