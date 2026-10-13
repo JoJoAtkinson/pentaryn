@@ -951,3 +951,30 @@ def test_job_size_survives_a_bundle_dropped_mid_sum_ec_8(tmp_path, monkeypatch):
     monkeypatch.setattr(type(job.staging), "is_file", lambda self: True)
     assert cloud._job_size(job) == (f"{cloud._mb(1_000_000)} + 2 bundle(s) "
                                     f"{cloud._mb(2_000_000)}")
+
+
+def _spawn_with_fake_popen(monkeypatch):
+    """Run the real `_spawn_uploader` without starting a process or caffeinate."""
+    class FakeProc:
+        pid = 4242
+    monkeypatch.setattr(cloud.subprocess, "Popen", lambda *a, **k: FakeProc())
+    monkeypatch.setattr(cloud.shutil, "which", lambda name: None)
+    return cloud._spawn_uploader()
+
+
+def test_upload_log_is_not_rotated_under_a_running_uploader_py_cloud_ac_3(
+        two_hosts, held, monkeypatch):
+    """Review py-cloud-ac-3: `_spawn_uploader` unlinked an over-2 MB upload.log even
+    while a running uploader still wrote to it, so that uploader's output went to an
+    unlinked inode nobody could read. Rotation now waits for the upload lock to be free;
+    the next spawn rotates it."""
+    with two_hosts.use("mac"):
+        logfile = cloud.tmp_dir() / uploadq.LOG_FILE
+        logfile.write_bytes(b"old progress\n" + b"x" * 2_100_000)
+        h = held(uploadq.UPLOAD_LOCK)
+        assert _spawn_with_fake_popen(monkeypatch) == 4242
+        assert logfile.read_bytes().startswith(b"old progress\n")   # kept
+        h.release()
+        _spawn_with_fake_popen(monkeypatch)
+        assert not logfile.read_bytes().startswith(b"old progress\n")  # rotated now
+        assert logfile.stat().st_size < 1000

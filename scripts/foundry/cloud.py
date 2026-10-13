@@ -1861,11 +1861,14 @@ def _size_or_zero(p: Path) -> int:
 def _spawn_uploader() -> int:
     """Start `upload-pending` detached (own session, no terminal), its output appended to
     .pentaryn-tmp/upload.log. On a Mac, `caffeinate -i -w` keeps idle sleep away while it
-    runs (closing the lid still sleeps). Returns its pid."""
+    runs (closing the lid still sleeps). Returns its pid. An over-2 MB log is rotated
+    only while no uploader runs — one still writing it would lose its output to the
+    unlinked file; the next spawn rotates it instead."""
     from scripts.foundry.ops import config as cfg
     logfile = tmp_dir() / uploadq.LOG_FILE
     try:
-        if logfile.stat().st_size > 2_000_000:
+        if (logfile.stat().st_size > 2_000_000
+                and not uploadq.busy(uploadq.UPLOAD_LOCK)):
             logfile.unlink()
     except OSError:
         pass
