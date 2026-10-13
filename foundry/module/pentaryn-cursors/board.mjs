@@ -203,7 +203,9 @@ function clear() {
 export function install(reg, ctx) {
   log = ctx.log;
   installed = true;
-  ctx.expose({ refresh, current: () => current, snapshot });
+  // api.refresh() is gated like every other entry point: a no-op answering null (the system arrow)
+  // while uninstalled, so it cannot re-apply a glyph to a board uninstall() cleared.
+  ctx.expose({ refresh: () => (installed ? refresh() : null), current: () => current, snapshot });
 
   // Raw handlers (guard: false): a throw stays Foundry's `Error thrown in hooked function` report.
   reg.on("getSceneControlButtons", (controls) => {

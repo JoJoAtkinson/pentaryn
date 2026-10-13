@@ -36,7 +36,7 @@ Canonical: `game.modules.get("pentaryn-cursors").api`; `game.pentaryn.cursors` i
 published synchronously at `ready` (`pentaryn-cursors.ready` fires with it). Ask it what it offers:
 `game.pentaryn.cursors.describe()` (offline: `test/golden/describe.json`).
 
-- `current()` — the key on `#board` now, or `null`. `refresh()` — recompute and apply; returns the key.
+- `current()` — the key on `#board` now, or `null`. `refresh()` — recompute and apply; returns the key (`null`, writing nothing, after `uninstall()`).
 - `keys` — the frozen `KEYS` table. `keyFor({control, tool, templatesActive})` — pure, ignores the setting; no state (or `null`) gives `null`.
 - `status()` — one read-only diagnosis of a wrong cursor:
   `{ enabled, key, control, tool, placementActive, boardCursor, dataset, imageSet, expected }`.
