@@ -9,10 +9,11 @@
       "params": [
         {
           "name": "user",
-          "type": "User",
+          "kind": "user",
+          "type": "User|id|exact name",
           "optional": true,
-          "resolve": false,
-          "doc": "default: the calling user"
+          "resolve": "self",
+          "doc": "a User, an id or an exact name (never a substring); default: the calling user"
         }
       ],
       "returns": "JournalEntry | null",
@@ -21,6 +22,10 @@
       "query": false,
       "sideEffects": [],
       "nullWhen": "the user has no personal journal yet",
+      "throws": [
+        "NOT_FOUND",
+        "AMBIGUOUS"
+      ],
       "legacy": true,
       "doc": "The user's personal journal (the oldest one flagged {kind: 'personal', userId})."
     },
@@ -94,10 +99,11 @@
         },
         {
           "name": "user",
-          "type": "User",
+          "kind": "user",
+          "type": "User|id|exact name",
           "optional": true,
-          "resolve": false,
-          "doc": "default: the calling user"
+          "resolve": "self",
+          "doc": "a User, an id or an exact name (never a substring); default: the calling user"
         }
       ],
       "returns": "boolean",
@@ -105,6 +111,10 @@
       "writes": false,
       "query": false,
       "sideEffects": [],
+      "throws": [
+        "NOT_FOUND",
+        "AMBIGUOUS"
+      ],
       "legacy": true,
       "doc": "Whether that user gets the bar on that journal (observer and not owner; a GM only with gmButton)."
     },
@@ -113,8 +123,10 @@
       "params": [
         {
           "name": "user",
-          "type": "User",
-          "resolve": false
+          "kind": "user",
+          "type": "User|id|exact name",
+          "resolve": "self",
+          "doc": "a User, an id or an exact name (never a substring)"
         }
       ],
       "returns": "Promise<JournalEntry>",
@@ -127,8 +139,12 @@
         "flags.pentaryn-journal.kind",
         "flags.pentaryn-journal.userId"
       ],
+      "throws": [
+        "NOT_FOUND",
+        "AMBIGUOUS"
+      ],
       "legacy": true,
-      "doc": "GM: find or create that player's journal. Rejects with a plain Error: 'GM only' on a player client, 'no such user', or 'a GM does not get a journal through the relay'."
+      "doc": "GM: find or create that player's journal. Rejects with a plain Error: 'GM only' on a player client, 'no such user', or 'a GM does not get a journal through the relay'; a string matching no user (or two) rejects NOT_FOUND (AMBIGUOUS)."
     },
     {
       "path": "ensureAll",
@@ -144,7 +160,7 @@
       ],
       "nullWhen": "called by a player",
       "legacy": true,
-      "doc": "GM: a journal for every player, and journals at the root moved into the folder. Returns report()."
+      "doc": "GM: a journal for every player, and journals at the root moved into the folder (left there if the folder's create is vetoed). Returns report()."
     },
     {
       "path": "report",
