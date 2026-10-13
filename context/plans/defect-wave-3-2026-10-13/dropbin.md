@@ -32,12 +32,14 @@ Piles must be active. Reload the world after the deploy (no restart needed).
 4. Pass: `game.pentaryn.dropbin.list(3, {brief: true})` shows exactly one new row after N: `reason:
    "drop"`, `itemName: "ZZ Coil"`, `quantity: 2`, `sceneName: "ZZ dropbin W3"`, `pileUuid` = the
    existing pile's token uuid; no `delete` row for `ZZ Coil`; the counter is N + 1.
-5. Guard: delete a `ZZ Flask`-named item from the sheet by hand (create a second one first), then
-   within 2 s drop 1 of a stack of 2 `ZZ Flask` onto the pile: both rows stay (`delete`, then `drop`).
+5. Guard: give `ZZ Hero` two items both named `ZZ Torch` (loot): A at quantity 1, B at quantity 2.
+   Delete A from the sheet, then within 2 s (the merge window; quickest from the console) drop 1 of
+   B onto the existing pile. Pass: two rows, `delete` `ZZ Torch` then `drop` `ZZ Torch`; the hand
+   delete is not swallowed.
 
 **Item 2 — the base actor is clean after its last corpse token goes.**
 
-1. Create an NPC `ZZ Vey` (hp 0/30 → set later), **Link Actor Data** on, ownership default None.
+1. Create an NPC `ZZ Vey` (max HP 30), **Link Actor Data** on, ownership default None.
    Place two `ZZ Vey` tokens on `ZZ dropbin W3` at full HP.
 2. Set `ZZ Vey` HP to 0. Pass: both tokens become corpse piles (eye badge, Dead overlay);
    `game.actors.getName("ZZ Vey").flags["pentaryn-dropbin"]` has `corpse: true, dead: true`.
