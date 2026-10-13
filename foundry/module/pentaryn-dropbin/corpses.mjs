@@ -179,10 +179,10 @@ async function unobserveBase(actor, { released = false } = {}) {
   if (!actor || !ourCorpse(actor)) return;
   const del = () => new foundry.data.operators.ForcedDeletion();
   const saved = revivedOwnership(actor.flags[MODULE].ownership) ?? { default: CONST.DOCUMENT_OWNERSHIP_LEVELS.NONE };
-  const ourDead = actor.flags[MODULE].dead === true;
+  // Dead first: while the corpse flag is still on, a failed removal is retried by the next ready sweep.
+  if (released && actor.flags[MODULE].dead === true && actor.statuses?.has("dead")) await actor.toggleStatusEffect("dead", { active: false });
   await actor.update({ [`flags.${MODULE}.corpse`]: del(), [`flags.${MODULE}.ownership`]: del(), [`flags.${MODULE}.dead`]: del(),
     ownership: saved, ...(released && isPileFlagged(actor) ? { "flags.item-piles.data.enabled": false } : {}) });
-  if (released && ourDead && actor.statuses?.has("dead")) await actor.toggleStatusEffect("dead", { active: false });
 }
 
 /** A corpse's actor: a linked corpse's base actor, or an unlinked corpse's synthetic actor. */

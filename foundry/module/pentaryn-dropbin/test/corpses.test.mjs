@@ -475,6 +475,29 @@ test("wave-3 item 2: a Dead the GM set before death stays on the base actor; the
   assert.deepEqual(actor.flags[MOD] ?? {}, {});
 });
 
+test("wave-3 item 2: a Dead removal that fails leaves the actor our corpse, so the next release run finishes it", async () => {
+  const [tok] = linkedNpc();
+  const actor = tok.actor, api = F.game.itempiles.API, toggle = actor.toggleStatusEffect;
+  await syncAsItemPiles(actor);
+  actor.toggleStatusEffect = async () => { throw new Error("socket gone"); };
+  const warns = [], { warn, log } = console;
+  Object.assign(console, { warn: (...a) => warns.push(a.map(String).join(" ")), log: () => {} });
+  try {
+    deleteToken(tok);
+    await flushAll();
+    assert.equal(actor.flags[MOD].corpse, true, "still ours: the release is retried, not lost");
+    assert.equal(actor.statuses.has("dead"), true);
+    actor.toggleStatusEffect = toggle;
+    // the next release run (the ready sweep runs the same releaseBases; ready fires once per file here)
+    Hooks.callAll("deleteToken", tok, {}, GM);
+    await flushAll();
+  } finally { Object.assign(console, { warn, log }); actor.toggleStatusEffect = toggle; }
+  assert.equal(warns.filter(w => w.includes("corpse")).length, 1, "one warning, for the failed removal");
+  assert.equal(actor.statuses.has("dead"), false, "the Dead dropbin added is gone on the retry");
+  assert.equal(api.isValidItemPile(actor), false);
+  assert.deepEqual(actor.flags[MOD] ?? {}, {});
+});
+
 test("wave-3 item 2: a revival leaves no dropbin flag on the base actor (Dead goes by the revival itself)", async () => {
   const [tok] = linkedNpc();
   await syncAsItemPiles(tok.actor);
