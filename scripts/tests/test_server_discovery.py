@@ -684,7 +684,7 @@ def test_py_mcp_mnt_7_comments_match_the_code():
     assert "dnd_pass" not in src
     assert "(build_timeline_*) via MCP `notifications/progress`" in src
     assert "~10s in srd5_2" not in src
-    assert "Waits for running and queued calls" in src
+    assert "Waits for running calls only; queued ones are\n        # dropped" in src
     assert "DND_MCP_TOOL_TIMEOUT\n        # (default 60s)" in src
     assert "in-process handlers are bounded only by their own locks" in src
     assert "SQLite's per-connection locking" in src
@@ -1062,3 +1062,53 @@ def test_py_mcp_ac_5_unhashable_id_still_replies(monkeypatch):
     assert sent == [{"jsonrpc": "2.0", "id": [1],
                      "result": {"content": [{"type": "text", "text": "ok"}]}}]
     assert server._pending_calls == {}
+
+
+# ---------------------------------------------------------------------------
+# py-mcp-perf-1: stdin EOF finishes running calls but drops queued ones
+# ---------------------------------------------------------------------------
+
+def test_py_mcp_perf_1_eof_drops_queued_calls(monkeypatch):
+    """py-mcp-perf-1: on stdin EOF the server waited for every queued call too, so a
+    full queue could hold shutdown for minutes running work no client would read. Now
+    the running call still finishes and replies (no reply cut off mid-write) and the
+    queued one never runs."""
+    started, gate, ran = server.threading.Event(), server.threading.Event(), []
+
+    def slow(**kw):
+        ran.append(kw["n"])
+        if kw["n"] == 1:
+            started.set()
+            assert gate.wait(5)
+        return f"done {kw['n']}"
+
+    def call(i):
+        return {"jsonrpc": "2.0", "id": i, "method": "tools/call",
+                "params": {"name": "probe", "arguments": {"n": i}}}
+
+    def feed():
+        yield call(1)
+        assert started.wait(5)       # call 1 is running; call 2 queues behind it
+        yield call(2)
+        server.threading.Timer(0.2, gate.set).start()   # call 1 ends during shutdown
+        yield None
+
+    sent = []
+    frames = feed()
+    runner = _runner(slow)
+    monkeypatch.setattr(server, "discover_tools", lambda **kw: server.DiscoveryResult(
+        tools=(runner,), skipped=()))
+    monkeypatch.setattr(server, "_DEFAULT_MAX_WORKERS", 1)
+    monkeypatch.setattr(server, "_read_message", lambda: next(frames))
+    monkeypatch.setattr(server, "_write_message", sent.append)
+    monkeypatch.setattr(server, "_inflight_slots", server.threading.Semaphore(4))
+    monkeypatch.setattr(sys, "argv", ["server.py"])
+    monkeypatch.delenv("PENTARYN_MCP_LOG_DIR", raising=False)
+    try:
+        assert server.main() == 0
+    finally:
+        gate.set()
+
+    assert ran == [1]
+    assert sent == [{"jsonrpc": "2.0", "id": 1,
+                     "result": {"content": [{"type": "text", "text": "done 1"}]}}]

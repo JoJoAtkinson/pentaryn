@@ -59,6 +59,8 @@ server busy — is logged too, with `mode: "rejected"`, the tool name as given, 
 A call the client cancels (`notifications/cancelled`) while it is still queued never runs:
 it frees its slot and logs one `rejected` line with `error: "Cancelled by the client before
 it ran"`. A call already running when cancelled finishes and logs normally, but sends no reply.
+When the client disconnects (stdin EOF), running calls finish, reply and log; calls still
+queued are dropped without running or logging, since no one is left to read them.
 Argument values longer than 2 KB (after JSON encoding) are truncated with a marker. There is
 no `client` field — a stdio server never learns who called it. Unset, nothing is written; a
 log write that fails goes to stderr and never fails the call. `make foundry-eval-report`

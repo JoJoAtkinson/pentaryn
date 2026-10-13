@@ -891,12 +891,13 @@ def main() -> int:
     try:
         return _serve_loop(tools, runner_by_name, executor)
     finally:
-        # On stdin EOF, finish in-flight tool calls before exiting so we don't
-        # truncate a response mid-write. Waits for running and queued calls (up to
-        # _INFLIGHT_LIMIT); each subprocess call is capped by DND_MCP_TOOL_TIMEOUT
+        # On stdin EOF, finish running tool calls before exiting so we don't
+        # truncate a response mid-write. Waits for running calls only; queued ones are
+        # dropped, since no client is left to read their replies (py-mcp-perf-1). Each
+        # subprocess call is capped by DND_MCP_TOOL_TIMEOUT
         # (default 60s), and in-process handlers are bounded only by their own locks
         # (each flock gives up after the same DND_MCP_TOOL_TIMEOUT; a thread cannot be killed).
-        executor.shutdown(wait=True)
+        executor.shutdown(wait=True, cancel_futures=True)
 
 
 def _serve_loop(
