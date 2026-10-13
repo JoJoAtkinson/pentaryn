@@ -137,6 +137,11 @@ tie wires are removed and their queued repaints cancelled, and the cards come do
 `popups.teardown()`, called from `overlay.uninstall`). The pinned-cards memo is NOT rewritten, so a hot
 re-import brings the same pinned cards back once instead of drawing a second set. ties-ui-M8.
 
+Fixed (declared, no table-visible change): `TieDialog._renderHTML` is split into private builders —
+`#sourcePickerHTML`, `#targetPickerHTML`, `#statusHTML`, `#fieldsHTML` and `#mirrorBoxHTML`. The
+dialog's markup is byte-identical in every state (pinned per state in `app-tie-dialog-states-html`).
+ties-ui-M12.
+
 ## 0.19.4 (2026-10-10, usability run, Area 7 re-run)
 
 - **The inspect window's Share switches are the table's PCs only** (`tablePCs`): each player's
