@@ -7,6 +7,7 @@ pins the corrected wording so a later edit cannot quietly put the wrong expectat
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -54,3 +55,20 @@ def test_attunement_ext_8_detail_lists_only_missing_hooks():
     assert "names all four hooks" not in step
     assert "detail is `null`" in step
     assert "only the missing hooks" in step
+
+
+def test_py_cloud_every_cited_test_is_in_the_file_it_names():
+    """PERF-1 and M4 cited the wrong file; their tests live in test_review_fixes.py."""
+    text = _read("py-cloud.md")
+    cites = re.findall(r"`(test_\w+\.py)::(\w+)(\*?)`", text)
+    assert cites
+    missing = []
+    for file, name, glob in cites:
+        path = ROOT / "scripts/tests" / file
+        src = path.read_text(encoding="utf-8") if path.exists() else ""
+        if f"def {name}" + ("" if glob else "(") not in src:
+            missing.append(f"{file}::{name}{glob}")
+    assert missing == []
+    rows = {ln.split("|")[1].strip(): ln for ln in text.splitlines() if ln.startswith("| ")}
+    assert "`test_review_fixes.py::test_perf1_rebuilding_one_bundle_hashes_only_that_folder`" in rows["PERF-1"]
+    assert "`test_review_fixes.py::test_m4_rebuilder_rebuilt_is_optional" in rows["M4"]
