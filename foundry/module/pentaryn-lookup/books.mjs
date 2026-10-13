@@ -14,8 +14,8 @@ import {
   searchBooks, sortMonsters, embeddedTableUuids, groupListUuids, spellListRows, NAME_SOURCES, groupNames,
 } from "./lookup-core.mjs";
 import {
-  clearBookCache, featureTexts, findSpell, loadBooks, packSummary, readDocument, readIndex, readPageDoc, readTable, spellRegistry,
-  worldInfo,
+  clearBookCache, featureTexts, findSpell, loadBooks, packSummary, readDocument, readIndex, readPageDoc, readTable, spellCounterparts,
+  spellRegistry, worldInfo,
 } from "./packs-adapter.mjs";
 
 /** The entry's log (ctx.log), set by install(). */
@@ -94,7 +94,8 @@ const knownSpellLists = () => knownLists(spellRegistry(), err => log?.debug("spe
 
 /**
  * Is a spell on a class's list (or a subclass's: `{type: "subclass"}`)?
- * → `{spell, uuid, level, list, onList}`; `onList` null when the list is unknown.
+ * → `{spell, uuid, level, list, onList}`; `onList` null when the list is unknown. A 2014 spell whose
+ * 2024 counterpart is on the list answers true and adds `listedAs`, that counterpart's uuid.
  */
 async function onList(spell, cls, opts = {}) {
   const { type = "class" } = opts ?? {};
@@ -110,7 +111,11 @@ async function onList(spell, cls, opts = {}) {
   // the options are read only for the unknown-list hint, never on a found list (LKM-12)
   if (!list) return { spell: doc.name, uuid: doc.uuid, level: doc.system.level, ...ed, list: `${type}:${cls}`, onList: null,
     hint: `no such list; known: ${knownSpellLists().join(", ")}` };
-  return { spell: doc.name, uuid: doc.uuid, level: doc.system.level, ...ed, list: `${type}:${cls}`, onList: list.has(doc) };
+  // the registry holds the 2024 copies and has() matches by uuid: a 2014 spell is on the list when
+  // its 2024 counterpart is, and the answer names the copy it matched (lookup-2014-uuid)
+  const listedAs = !list.has(doc) && ed.edition ? (await spellCounterparts(doc, log)).find(u => list.has(u)) : null;
+  return { spell: doc.name, uuid: doc.uuid, level: doc.system.level, ...ed, list: `${type}:${cls}`,
+    onList: !!listedAs || list.has(doc), ...(listedAs ? { listedAs } : {}) };
 }
 
 /** The names on a class list, optionally one spell level: `spellList("cleric", {level: 3})`. */

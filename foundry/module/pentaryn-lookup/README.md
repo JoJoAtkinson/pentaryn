@@ -69,7 +69,7 @@ remaining checks still run (R4).
 | `monsters({ size, type, cr, minCr, maxCr, name, limit, packs })` | `{ count, shown, monsters: [{ name, cr, size, type, uuid, pack }], hint?, warning? }` |
 | `names(kind)` | `{ classes, subclasses: { <class>: [] }, species, backgrounds, feats: { origin, general, … } }`, or one key |
 | `packs()` | `{ world, foundry, system, packs: [{ id, present, label?, type?, entries?, edition? }] }` |
-| `onList(spell, cls, { type })` | `{ spell, uuid, level, edition?, list, onList: true \| false \| null, hint? }` \| `{ notFound, spell, hint }` |
+| `onList(spell, cls, { type })` | `{ spell, uuid, level, edition?, list, onList: true \| false \| null, listedAs?, hint? }` \| `{ notFound, spell, hint }` |
 | `spellList(cls, { type, level })` | `{ list, count, spells: [{ name, level, uuid, edition? }] }` \| `{ error, known }` |
 | `toPlainText(html)` | string |
 | `selftest()` | `{ ok, passed, failed, checks: [{ label, ok, detail }] }` |
@@ -79,7 +79,8 @@ remaining checks still run (R4).
 through the kit's actor resolver. A UUID of something that is not a page (a JournalEntry) answers
 empty `text` plus a `warning` saying so, and echoes that UUID as its `uuid` (never a made-up page UUID). `page()` appends embedded roll tables as `tables` (`{ tables:
 false }` skips them). `onList`'s `spell` is a spell name or an Item UUID; a UUID of anything that
-is not a spell Item answers `{ notFound, spell, hint }` naming what it is. `monsters`' `cr` is a
+is not a spell Item answers `{ notFound, spell, hint }` naming what it is. A 2014 SRD spell is on a list when its 2024
+counterpart (same identifier, else same name) is; the answer adds `listedAs`, that counterpart's uuid. `monsters`' `cr` is a
 value (`"1/4"`, `3`, `"CR 3"`) or a range split by `-`, an en/em dash or ` to ` (`"1/2-2"`,
 `"CR 1/2 to 2"`); a `cr` it cannot read filters nothing and answers
 `warning: "cr not understood: <cr> — use '3', '1/4' or '1/2-2'"`. `monsters` lists each name

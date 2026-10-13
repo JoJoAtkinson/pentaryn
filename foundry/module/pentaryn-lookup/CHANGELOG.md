@@ -70,6 +70,11 @@
   packs lack (lookup-edge-7).
 - `SPELL_PACKS` and `OWNED_SPELL_PREFIX` each name the other in their comment, and a core-seams
   test pins `SPELL_PACKS[0]` to the owned book; no runtime change (EXT-6).
+- [declared] `onList(<2014 SRD spell uuid>, cls)` answers `onList: true` when the spell's 2024
+  counterpart (same `system.identifier`, else same name, in the PHB or 2024 SRD spell pack) is on
+  the list — dnd5e's registry holds the 2024 copies and matches by uuid, so it answered `false`.
+  The answer still names the 2014 spell and adds `listedAs`, the counterpart's uuid
+  (lookup-2014-uuid).
 
 ## 0.3.0 — 2026-10-10
 
