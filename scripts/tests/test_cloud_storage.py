@@ -456,3 +456,82 @@ def test_ls_must_exist_raises_on_a_missing_folder_and_plain_ls_stays_empty(st):
     with pytest.raises(StorageError):
         st.ls("nowhere", must_exist=True)                   # a fresh listing
     assert st.ls("nowhere") == []
+
+
+# ── the shared .partial: losing the rename race to the other host (py-cloud-ac-2) ──
+
+OTHER = b"the other host's archive of the same files " * 50
+
+
+def _lose_the_rename(st, monkeypatch, cloud_dir, rel):
+    """Between our `.partial` landing and our rename, the other host (same name, same
+    `.partial` path) overwrites the partial and renames it first: our rename then finds
+    no `.partial`. `rel` ends up holding the other host's file."""
+    part, final = cloud_dir / f"{rel}{storage.PARTIAL}", cloud_dir / rel
+    real_replace = os.replace
+
+    def other_host_wins():
+        part.write_bytes(OTHER)
+        real_replace(part, final)
+
+    if isinstance(st, FolderStorage):
+        def racing(src, dst, *a, **kw):
+            if Path(src) == part and part.exists():
+                other_host_wins()
+            return real_replace(src, dst, *a, **kw)
+        monkeypatch.setattr(storage.os, "replace", racing)
+    else:
+        inner = st.runner
+
+        def racing(argv, **kw):
+            if argv[1] == "moveto" and part.exists():
+                other_host_wins()
+            return inner(argv, **kw)
+        st.runner = racing
+
+
+def test_losing_the_rename_race_in_bundles_is_superseded(st, tmp_path, cloud_dir, monkeypatch):
+    """py-cloud-ac-2: both hosts upload a bundle through the same `<rel>.partial`; the one
+    whose rename comes second finds no partial. The name is there (the other host's
+    same-name upload), so it is Superseded, not a plain StorageError — and nothing of the
+    other host's is deleted."""
+    rel = "bundles/module-maps-abc.tar.gz"
+    _lose_the_rename(st, monkeypatch, cloud_dir, rel)
+    with pytest.raises(storage.Superseded):
+        st.upload(_src(tmp_path), rel)
+    assert (cloud_dir / rel).read_bytes() == OTHER
+
+
+def test_losing_the_rename_outside_bundles_stays_a_storage_error(st, tmp_path, cloud_dir,
+                                                                 monkeypatch):
+    """py-cloud-ac-2: only CONTENT_ADDRESSED folders treat the other writer's file as ours."""
+    rel = "world-backups/w.tar.gz"
+    _lose_the_rename(st, monkeypatch, cloud_dir, rel)
+    with pytest.raises(StorageError) as info:
+        st.upload(_src(tmp_path), rel)
+    assert not isinstance(info.value, storage.Superseded)
+
+
+def test_a_failed_rename_in_bundles_with_nothing_there_stays_a_storage_error(
+        st, tmp_path, cloud_dir, monkeypatch):
+    """py-cloud-ac-2: a rename that fails and leaves no file under the name is a failure."""
+    rel = "bundles/module-maps-abc.tar.gz"
+    part = cloud_dir / f"{rel}{storage.PARTIAL}"
+    real_replace = os.replace
+    if isinstance(st, FolderStorage):
+        def racing(src, dst, *a, **kw):
+            if Path(src) == part:
+                part.unlink()                           # vanished, nobody's file landed
+            return real_replace(src, dst, *a, **kw)
+        monkeypatch.setattr(storage.os, "replace", racing)
+    else:
+        inner = st.runner
+
+        def racing(argv, **kw):
+            if argv[1] == "moveto":
+                part.unlink(missing_ok=True)
+            return inner(argv, **kw)
+        st.runner = racing
+    with pytest.raises(StorageError) as info:
+        st.upload(_src(tmp_path), rel)
+    assert not isinstance(info.value, storage.Superseded)
