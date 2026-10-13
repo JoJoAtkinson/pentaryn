@@ -707,6 +707,14 @@
       "label": "createChatMessage"
     },
     {
+      "name": "preDeleteChatMessage",
+      "label": "preDeleteChatMessage"
+    },
+    {
+      "name": "deleteChatMessage",
+      "label": "deleteChatMessage"
+    },
+    {
       "name": "updateChatMessage",
       "label": "updateChatMessage"
     },

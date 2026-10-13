@@ -111,3 +111,30 @@ test("aoe-vanish-1 a write refused while the card is still there is still logged
   assert.ok(lines().includes(`error: ${MODULE} | mutate`), "a real failure is still an error");
   assert.equal(game.messages.has(msg.id), true);
 });
+
+test("aoe-vanish-1 (live check) a delete asked for while the first monster save posts, its server round trip still pending: the next goblin is not rolled", async () => {
+  const msg = card("dmgVanishPending");
+  const real = msg.delete;
+  // As live: preDeleteChatMessage runs at once on the deleting client; the card leaves
+  // game.messages only when the server answers, after the save loop's next check.
+  msg.delete = function (options = {}) {
+    msg.delete = real;
+    F.Hooks.call("preDeleteChatMessage", this, options, game.user.id);
+    return new Promise(res => setTimeout(() => res(real.call(this, options)), 100));
+  };
+  const roll = ctx.g1.rollSavingThrow;
+  ctx.g1.rollSavingThrow = async function (...args) {
+    ctx.g1.rollSavingThrow = roll;
+    const rolled = await roll.apply(this, args);
+    msg.delete();   // not awaited: a createChatMessage hook cannot wait for the server
+    return rolled;
+  };
+  reset();
+  F.Hooks.callAll("createChatMessage", msg, {}, msg.author);
+  await advance(1000);
+  await flush(8);
+  assert.equal(game.messages.has(msg.id), false);
+  assert.deepEqual(noise(), []);
+  assert.deepEqual(ops("rollSavingThrow").map(c => c.actor), [G1], "the goblin after the deletion is not rolled");
+  assert.deepEqual(ops("create").filter(c => c.data?.type === "request"), [], "no request card for a gone tray");
+});

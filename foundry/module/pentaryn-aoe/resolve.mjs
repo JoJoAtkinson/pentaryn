@@ -52,10 +52,18 @@ function enqueue(messageId, task) {
 }
 
 /**
+ * aoe-vanish-1 (live check): a delete this client has asked for but the server has not confirmed
+ * yet. The card is still in game.messages for that round trip, so without this the save loop rolled
+ * the next monster's save after the GM had already deleted the card. Filled by preDeleteChatMessage
+ * (it runs only on the client that deletes), emptied by deleteChatMessage.
+ */
+const deleting = new Set();
+
+/**
  * aoe-vanish-1: the card was deleted (a write to it was refused because it is gone, or it has left
  * game.messages). That is the GM cancelling, not an error.
  */
-const vanished = (messageId, err = null) => !game.messages.has(messageId) || doesNotExist(err);
+const vanished = (messageId, err = null) => deleting.has(messageId) || !game.messages.has(messageId) || doesNotExist(err);
 
 /** Run fn(resolution) → resolution for one message, one at a time, then write it back. */
 export function mutate(messageId, fn) {
@@ -557,6 +565,11 @@ export function install(reg, ctx) {
     return resolve(message);
   }), { guard: false, label: "createChatMessage" });
 
+  // aoe-vanish-1: a card this client is deleting counts as gone before the server confirms it.
+  // Never vetoes (returns nothing).
+  reg.on("preDeleteChatMessage", message => { deleting.add(message.id); }, { guard: false, label: "preDeleteChatMessage" });
+  reg.on("deleteChatMessage", message => { deleting.delete(message.id); }, { guard: false, label: "deleteChatMessage" });
+
   // A request result attached after creation (dnd5e's own #handleRequest setFlag path).
   reg.on("updateChatMessage", reg.guardSwallowAsync("updateChatMessage", async (message, changes) => {
     if (!game.users.activeGM?.isSelf) return;
@@ -570,6 +583,7 @@ export function install(reg, ctx) {
 /** The request handler goes with the hooks; the registry unwinds the hooks. */
 export function uninstall() {
   if (CONFIG.DND5E?.requests?.[REQUEST_HANDLER]) delete CONFIG.DND5E.requests[REQUEST_HANDLER];
+  deleting.clear();
 }
 
 // Test seam (characterisation checkpoint): tests import this through test/fixtures/seams.mjs only,

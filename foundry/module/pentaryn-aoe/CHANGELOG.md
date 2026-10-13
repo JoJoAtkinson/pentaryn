@@ -10,8 +10,12 @@
   players' request card. Now `resolve()` stops quietly once the card is gone (a `resolve: card
   deleted` trace), rolls no more saves, posts no request card, supersedes no older tray and applies
   nothing; a queued resolution write to a card deleted in flight returns null without logging. A
-  write refused while the card still exists is still an error. Pinned by
-  `test/vanished-card.test.mjs`.
+  write refused while the card still exists is still an error. A delete this client has asked for
+  counts as gone at once (`preDeleteChatMessage`), not when the server confirms it: the FIX-W3 live
+  check deleted the card from the first goblin save's `createChatMessage` hook and the next
+  goblin's save was still rolled during that round trip. Two hooks are new
+  (`preDeleteChatMessage`, `deleteChatMessage`): goldens hooks and describe change only by them.
+  Pinned by `test/vanished-card.test.mjs`.
 - **A placed area shows in the dark, and its handle is named after the caster's token**
   (declared, AO-3-handle-dark): a handle had no light and no sight, so in darkness the caster
   could not see the area they had just placed, and the handle (the name dnd5e's chip shows) was

@@ -42,7 +42,7 @@ test("setup registers the feature hooks in Part order: areas, resolve, tray, att
   assert.deepEqual(atSetup.map(h => `${h.kind} ${h.name}`), [
     "on preCreateRegion", "on createRegion", "on deleteRegion", "on preCreateCombatant", "on targetToken", "on preMoveToken",
     "on dnd5e.renderChatMessage", "on deleteActiveEffect", "on canvasReady",
-    "on dnd5e.postUseActivity", "on createChatMessage", "on updateChatMessage",
+    "on dnd5e.postUseActivity", "on createChatMessage", "on preDeleteChatMessage", "on deleteChatMessage", "on updateChatMessage",
     "on dnd5e.renderChatMessage",
     "on dnd5e.postRollAttack",
     "on createChatMessage", "on dnd5e.renderChatMessage", "on preCreateActiveEffect",

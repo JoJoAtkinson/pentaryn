@@ -57,6 +57,14 @@
   },
   {
     "kind": "on",
+    "name": "preDeleteChatMessage"
+  },
+  {
+    "kind": "on",
+    "name": "deleteChatMessage"
+  },
+  {
+    "kind": "on",
     "name": "updateChatMessage"
   },
   {

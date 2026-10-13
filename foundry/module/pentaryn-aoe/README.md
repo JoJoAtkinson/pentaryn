@@ -175,6 +175,8 @@ pass `activeGM.isSelf` and `userId === game.user.id`.
   { scope })` — each candidate stamps its socket id, waits 750 ms, and only the last writer acts.
   A card deleted during the wait means nobody acts; a card deleted after it, while `resolve` is
   still running, is a clean cancel: no more saves, no request card, no apply, nothing logged.
+  A card this client is deleting counts as gone from `preDeleteChatMessage` on, before the
+  server confirms it; a delete from another tab counts once it lands.
 - **Player save matching** (`matchSave`, on the save message): a save that answers a waiting
   row is claimed the same way, so one tab fills the row. A save that answers no open tray is not
   claimed (no flag write on every save).
