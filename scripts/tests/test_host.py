@@ -71,6 +71,16 @@ def test_default_host_off_the_mac_is_the_sanitised_short_hostname(monkeypatch):
     assert host.host_is_default()
 
 
+@pytest.mark.parametrize("hostname", ["mac", "MAC.local", "Mac.tailnet.ts.net", "-mac-"])
+def test_a_non_mac_hostname_sanitising_to_mac_is_not_the_primary_ec7(monkeypatch, hostname):
+    """EC-7: only macOS is tagged `mac` by default; a Linux box named `mac` gets `h-mac`."""
+    monkeypatch.delenv("PENTARYN_HOST")
+    monkeypatch.delenv("PENTARYN_PRIMARY_HOST")
+    monkeypatch.setattr(host.platform, "system", lambda: "Linux")
+    monkeypatch.setattr(host.socket, "gethostname", lambda: hostname)
+    assert (host.host_name(), host.role()) == ("h-mac", "alt")
+
+
 def test_the_mac_with_no_configuration_is_still_the_primary(monkeypatch):
     """Existing Mac behaviour is unchanged by default: tunnel and updater still run."""
     monkeypatch.delenv("PENTARYN_HOST")

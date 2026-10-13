@@ -166,6 +166,9 @@ def host_is_default() -> bool:
 def host_name() -> str:
     """PENTARYN_HOST, else `mac` on macOS, else the sanitised short hostname.
 
+    A non-macOS hostname that sanitises to `mac` (or to a reserved word) is prefixed
+    `h-` — only macOS is tagged `mac`, and so the primary, by default.
+
     The macOS default is `mac` — the default PENTARYN_PRIMARY_HOST — so the Mac with no
     env file is the primary exactly as before (tunnel and updater unchanged), and its
     snapshots are tagged `-mac`.
@@ -185,6 +188,8 @@ def host_name() -> str:
     if is_mac():
         return DEFAULT_PRIMARY
     fallback = sanitize(socket.gethostname().split(".")[0]) or "host"
+    if fallback == DEFAULT_PRIMARY:  # only macOS is ever `mac` by default (EC-7)
+        return validate_host(f"h-{fallback}")
     try:
         return validate_host(fallback)
     except HostError:
