@@ -329,3 +329,16 @@ def test_a_corrupt_lock_is_that_modules_problem_not_a_traceback(tmp_path, capsys
     assert "✓ pentaryn-good" in captured.out
     assert vendor.check(good) == []                         # the rest were still synced
     assert (bad / "lib/kit.lock.json").read_text() == "{not json\n"   # the corrupt lock is left alone
+
+
+def test_a_null_pentaryn_flag_is_no_tier_not_a_traceback(tmp_path):
+    """py-blueprint-MAINT-7: `"flags": {"pentaryn": null}` reads as "no tier" (default full),
+    the way conformance.Module.flags reads it — not an AttributeError out of sync."""
+    d = tmp_path / "pentaryn-nullflag"
+    d.mkdir()
+    (d / "module.json").write_text(json.dumps({
+        "id": "pentaryn-nullflag", "relationships": {}, "flags": {"pentaryn": None}}) + "\n")
+    kit = vendor.load_kit()
+    assert vendor.plan(d)["files"] == vendor.closure(kit["tiers"]["full"], kit)
+    vendor.sync(d)
+    assert vendor.check(d) == []

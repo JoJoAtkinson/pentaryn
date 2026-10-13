@@ -149,7 +149,7 @@ def plan(module_dir: Path, tier: str | None = None, extra: list[str] | None = No
     lock = read_lock(module_dir)
 
     # an explicit tier wins; else the existing lock; else the manifest's tier (default full)
-    manifest_tier = (manifest.get("flags") or {}).get("pentaryn", {}).get("tier")
+    manifest_tier = ((manifest.get("flags") or {}).get("pentaryn") or {}).get("tier")  # py-blueprint-MAINT-7
     if tier is None and lock and lock.get("files"):
         base = list(lock["files"])
         lock_tier = lock.get("tier") or manifest_tier
