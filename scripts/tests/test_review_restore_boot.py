@@ -20,48 +20,20 @@ import time
 import pytest
 
 from bundle_fakes import make_module
-from cloud_fakes import FakeRclone
+from cloud_fakes import FakeRclone, make_edit
+from cloud_fakes import bundle_names as _bundle_names
+from cloud_fakes import install as _install
+from cloud_fakes import names as _names
+from cloud_fakes import newest as _newest
 from scripts.foundry import boot, bootstate, bundles, cloud, storage
 from scripts.foundry.storage import RcloneStorage
 
 DAY = 86400
-_tick = [0]
 
 
-# ── helpers (copied, not imported, from test_cloud_snapshots so each file stands alone) ──
+# ── helpers (shared, from cloud_fakes — M14) ──────────────────────────────────
 
-def _edit(root, text):
-    f = root / "Data/worlds/w/journal.txt"
-    f.write_text(text)
-    _tick[0] += 7                   # a fresh int-second mtime: a new world digest
-    t = time.time() + _tick[0]
-    os.utime(f, (t, t))
-
-
-def _install(root, *, system: str | None = "5.12"):
-    mods = root / "Data/modules"
-    make_module(mods, "maps", version="2.0.0", packs=2,
-                extra={"art/big.webp": b"map art " * 512})
-    make_module(mods, "tools", version="1.1", packs=1)
-    if system:
-        d = root / "Data/systems/dnd5e"
-        d.mkdir(parents=True, exist_ok=True)
-        (d / "system.json").write_text(json.dumps({"id": "dnd5e", "version": system}))
-        (d / "dnd5e.mjs").write_text("export const dnd5e = 1;\n")
-    return root
-
-
-def _names(cloud_dir, sub="world-backups"):
-    return sorted(p.name for p in (cloud_dir / sub).iterdir()
-                  if not p.name.endswith(cloud.PARENT_SUFFIX))
-
-
-def _newest(cloud_dir, suffix="-mac.tar.gz"):
-    return [n for n in _names(cloud_dir) if n.endswith(suffix)][-1]
-
-
-def _bundle_names(cloud_dir):
-    return sorted(p.name for p in (cloud_dir / "bundles").iterdir())
+_edit = make_edit(step=7)           # a fresh int-second mtime: a new world digest
 
 
 def _manifests(cloud_dir):

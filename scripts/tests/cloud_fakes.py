@@ -5,6 +5,12 @@
 and ``cat --count N`` (binary, the first N bytes) — against a temp folder. ``fake:<path>`` maps to ``<base>/<path>``; anything else is a local
 path. It records every argv and refuses any argv carrying ``--config`` or a token-ish flag or value, so a
 flag change is a visible test diff and a leak is a test failure.
+
+The cloud tests' shared helpers live here too, once (M14): :func:`install` /
+:func:`install_system` (deterministic module and system content), :func:`make_edit` (a
+world edit with a fresh mtime; one per test file, each with its own counter), and the
+cloud-folder readers :func:`worlds`, :func:`names`, :func:`newest`, :func:`bundle_names`,
+:func:`sidecar` and :func:`age`. Test files import them under their old ``_`` names.
 """
 
 from __future__ import annotations
@@ -16,6 +22,9 @@ import subprocess
 import time
 from datetime import datetime, timezone
 from pathlib import Path
+
+from bundle_fakes import make_module
+from scripts.foundry import cloud
 
 # Flags that take a value, so the parser can skip the value with the flag.
 _VALUE_FLAGS = {"--retries", "--low-level-retries", "--contimeout", "--timeout",
@@ -168,3 +177,75 @@ class FakeRclone:
     def _mkdir(self, argv, pos, _in):
         self._path(pos[0]).mkdir(parents=True, exist_ok=True)
         return self._done(argv, 0)
+
+
+# -- shared cloud-test helpers (M14) ------------------------------------------
+
+DAY = 86400
+
+
+def install_system(root, version, body="export const dnd5e = 1;\n"):
+    """A tiny dnd5e system folder at ``version``."""
+    d = root / "Data/systems/dnd5e"
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "system.json").write_text(json.dumps({"id": "dnd5e", "version": version}))
+    (d / "dnd5e.mjs").write_text(body)
+    return d
+
+
+def install(root, *, maps_extra: bytes = b"map art " * 512, system: str | None = "5.12"):
+    """Real module content: a map pack with two LevelDB packs, a small tool, a system.
+    Deterministic bytes, so two hosts installing it get the same fingerprints."""
+    mods = root / "Data/modules"
+    make_module(mods, "maps", version="2.0.0", packs=2, extra={"art/big.webp": maps_extra})
+    make_module(mods, "tools", version="1.1", packs=1)
+    if system:
+        install_system(root, system)
+    return root
+
+
+def make_edit(step: int = 5):
+    """An ``edit(root, text="edit")`` that rewrites the world's journal with a fresh mtime.
+
+    Each call moves the mtime ``step`` seconds further on, so the digest (int mtime) never
+    repeats a previous state. Each caller gets its own counter, as each file's copy had."""
+    bump = [0]
+
+    def edit(root, text="edit"):
+        f = root / "Data/worlds/w/journal.txt"
+        f.write_text(text)
+        bump[0] += step
+        t = time.time() + bump[0]
+        os.utime(f, (t, t))
+
+    return edit
+
+
+def worlds(c, sub="world-backups"):
+    """The ``.tar.gz`` snapshots in a cloud subfolder."""
+    return sorted(p.name for p in (c / sub).iterdir() if p.name.endswith(".tar.gz"))
+
+
+def names(c, sub="world-backups"):
+    """The files in a cloud subfolder, without the `.parent` lineage sidecars."""
+    return sorted(p.name for p in (c / sub).iterdir()
+                  if not p.name.endswith(cloud.PARENT_SUFFIX))
+
+
+def newest(c, suffix="-mac.tar.gz"):
+    return [n for n in names(c) if n.endswith(suffix)][-1]
+
+
+def bundle_names(c, *, tars_only: bool = False):
+    return sorted(p.name for p in (c / "bundles").iterdir()
+                  if not tars_only or p.name.endswith(".tar.gz"))
+
+
+def sidecar(c, name, sub="world-backups"):
+    return json.loads((c / sub / f"{name}{cloud.PARENT_SUFFIX}").read_text())
+
+
+def age(p, days):
+    """Backdate ``p`` by ``days``."""
+    t = time.time() - days * DAY
+    os.utime(p, (t, t))

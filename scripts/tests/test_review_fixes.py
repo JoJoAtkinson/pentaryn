@@ -11,40 +11,24 @@ from __future__ import annotations
 import json
 import os
 import time
+from functools import partial
 from pathlib import Path
 
 import pytest
 
 from bundle_fakes import make_module
+from cloud_fakes import install, make_edit
+from cloud_fakes import bundle_names as _bundle_names
+from cloud_fakes import worlds as _names
 from scripts.foundry import cloud, storage
 
 DAY = 86400
 
 
-def _install(root):
-    mods = root / "Data/modules"
-    make_module(mods, "maps", version="2.0.0", packs=2, extra={"art/big.webp": b"map art " * 512})
-    make_module(mods, "tools", version="1.1", packs=1)
-    return root
+_install = partial(install, system=None)
 
 
-_bump = [0]
-
-
-def _edit(root, text):
-    f = root / "Data/worlds/w/journal.txt"
-    f.write_text(text)
-    _bump[0] += 5
-    t = time.time() + _bump[0]
-    os.utime(f, (t, t))
-
-
-def _names(c, sub="world-backups"):
-    return sorted(p.name for p in (c / sub).iterdir() if p.name.endswith(".tar.gz"))
-
-
-def _bundle_names(c):
-    return sorted(p.name for p in (c / "bundles").iterdir())
+_edit = make_edit(step=5)
 
 
 # ── DL3: promotion copies the sidecar first, loudly, and repairs it later ────

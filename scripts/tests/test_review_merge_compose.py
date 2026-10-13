@@ -11,27 +11,18 @@ folder (conftest.two_hosts), the uploader runs in-process.
 
 from __future__ import annotations
 
-import os
-import time
 
 import pytest
 
 from bundle_fakes import foundry_launch, make_leveldb_pack
+from cloud_fakes import make_edit
 from scripts.foundry import bootstate, bundles, cloud, uploadq
 from scripts.foundry import host as host_mod
 
 
-# ── helpers (local copies, so this file stands alone) ─────────────────────────
+# ── helpers (shared, from cloud_fakes — M14) ──────────────────────────────────
 
-_bump = [0]
-
-
-def _edit(data_root, text):
-    f = data_root / "Data/worlds/w/journal.txt"
-    f.write_text(text)
-    _bump[0] += 7
-    t = time.time() + _bump[0]
-    os.utime(f, (t, t))
+_edit = make_edit(step=7)
 
 
 def _tool(data_root, body="// v1\n"):

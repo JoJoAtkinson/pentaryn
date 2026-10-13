@@ -18,6 +18,7 @@ import time
 import pytest
 
 from cloud_fakes import FakeRclone
+from cloud_fakes import sidecar as _sidecar
 from scripts.foundry import bootstate, bundles, cloud, storage, uploadq
 from scripts.foundry.storage import RcloneStorage
 
@@ -492,10 +493,6 @@ def _bundles(cloud_dir):
 def _tools_bundle(cloud_dir):
     [n] = [n for n in _bundles(cloud_dir) if n.startswith("module@tools@")]
     return n
-
-
-def _sidecar(cloud_dir, name):
-    return json.loads((cloud_dir / "world-backups" / f"{name}.parent").read_text())
 
 
 def _local_hash(root):

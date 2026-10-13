@@ -15,18 +15,19 @@ import time
 
 import pytest
 
-from cloud_fakes import FakeRclone
+from cloud_fakes import FakeRclone, make_edit
+from cloud_fakes import age as _age
+from cloud_fakes import bundle_names as _bundle_names
+from cloud_fakes import install as _install
+from cloud_fakes import install_system as _system
+from cloud_fakes import names as _names
+from cloud_fakes import newest as _newest
+from cloud_fakes import sidecar as _sidecar
 from scripts.foundry import bootstate, cloud, storage
 from scripts.foundry.cloud import Snapshot, parse_snapshot
 from scripts.foundry.storage import Entry, RcloneStorage
 
 DAY = 86400
-
-
-def _names(cloud_dir, sub="world-backups"):
-    """The files in a cloud subfolder, without the `.parent` lineage sidecars."""
-    return sorted(p.name for p in (cloud_dir / sub).iterdir()
-                  if not p.name.endswith(cloud.PARENT_SUFFIX))
 
 
 def _sidecars(cloud_dir, sub="world-backups"):
@@ -46,16 +47,8 @@ def _stamp(age_days: float) -> str:
     return time.strftime("%Y-%m-%d-%H%M%S", time.gmtime(time.time() - age_days * DAY))
 
 
-_bump = [0]
-
-
-def _edit(data_root, text="edit"):
-    f = data_root / "Data/worlds/w/journal.txt"
-    f.write_text(text)
-    # A new second every call, so the digest (int mtime) cannot repeat a previous state.
-    _bump[0] += 5
-    t = time.time() + _bump[0]
-    os.utime(f, (t, t))
+# A new second every call, so the digest (int mtime) cannot repeat a previous state.
+_edit = make_edit(step=5)
 
 
 # ── the parser (§3) ─────────────────────────────────────────────────────────
@@ -303,10 +296,6 @@ def test_an_empty_tree_is_not_archived(two_hosts, capsys):
 
 
 # ── lineage sidecars ────────────────────────────────────────────────────────
-
-def _sidecar(cloud_dir, name, sub="world-backups"):
-    return json.loads((cloud_dir / sub / f"{name}{cloud.PARENT_SUFFIX}").read_text())
-
 
 def _lineage(cloud_dir, name, sub="world-backups"):
     """The sidecar's lineage keys — without the bundle manifest it also carries."""
@@ -928,31 +917,8 @@ from bundle_fakes import foundry_launch, make_module  # noqa: E402
 from scripts.foundry import bundles  # noqa: E402
 
 
-def _install(root, *, maps_extra: bytes = b"map art " * 512, system: str | None = "5.12"):
-    """Real module content: a map pack with two LevelDB packs, a small tool, a system.
-    Deterministic bytes, so two hosts installing it get the same fingerprints."""
-    mods = root / "Data/modules"
-    make_module(mods, "maps", version="2.0.0", packs=2, extra={"art/big.webp": maps_extra})
-    make_module(mods, "tools", version="1.1", packs=1)
-    if system:
-        _system(root, system)
-    return root
-
-
-def _system(root, version, body="export const dnd5e = 1;\n"):
-    d = root / "Data/systems/dnd5e"
-    d.mkdir(parents=True, exist_ok=True)
-    (d / "system.json").write_text(json.dumps({"id": "dnd5e", "version": version}))
-    (d / "dnd5e.mjs").write_text(body)
-    return d
-
-
 def _packs(root):
     return sorted(p.parent for p in (root / "Data/modules").glob("*/packs/*/CURRENT"))
-
-
-def _bundle_names(cloud_dir):
-    return sorted(p.name for p in (cloud_dir / "bundles").iterdir())
 
 
 def _uploads(monkeypatch):
@@ -1019,10 +985,6 @@ def _first_member(tar_path):
     with tarfile.open(tar_path) as tar:
         first = tar.next()
         return first.name, json.loads(tar.extractfile(first).read())
-
-
-def _newest(cloud_dir, suffix="-mac.tar.gz"):
-    return [n for n in _names(cloud_dir) if n.endswith(suffix)][-1]
 
 
 def test_bundled_backup_uploads_a_world_tar_every_bundle_and_the_manifest(two_hosts,
@@ -1637,11 +1599,6 @@ def test_updater_world_restore_does_not_need_the_system_bundle(two_hosts):
 def _disk(monkeypatch, free):
     monkeypatch.setattr(cloud.shutil, "disk_usage",
                         lambda p: shutil._ntuple_diskusage(10**12, 10**12 - free, free))
-
-
-def _age(path, days):
-    t = time.time() - days * DAY
-    os.utime(path, (t, t))
 
 
 def _bundle(kind, id, fp="0123456789abcdef", version="1"):
