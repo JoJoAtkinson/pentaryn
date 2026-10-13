@@ -3,7 +3,7 @@
  * describe() reports it, and buildApi() refuses to load when it and api.mjs drift apart.
  *
  * Every row keeps today's published signature (`legacy: true`): positional documents, not refs;
- * booleans, counts, or false/null for a refusal. `chain.*` is also published as
+ * booleans, counts, null or a notification for a refusal. `chain.*` is also published as
  * `game.pentaryn.chain` (an alias; the same frozen object).
  */
 
@@ -39,7 +39,7 @@ export const MANIFEST = Object.freeze({
     },
     {
       path: "resetSight",
-      params: [{ name: "opts", optional: true, type: "{ force?: boolean }", doc: "force: run again although sightReset is 1; null = omitted" }],
+      params: [{ name: "opts", optional: true, type: "{ force?: boolean }", doc: "force: run again although sightReset is 1" }],
       returns: "Promise<{ prototypes, tokens } | null>",
       gm: true, writes: true, legacy: true,
       nullWhen: "not the active GM, not dnd5e 6+, dnd5e senseVisionSync off, or already done without force",
@@ -86,7 +86,7 @@ export const MANIFEST = Object.freeze({
       returns: "Promise<boolean> hooded now",
       gm: false, writes: true, legacy: true,
       sideEffects: ["Item update (flags.pentaryn-senses.hooded)", "ChatMessage"],
-      doc: "Lower or raise a hooded lantern's hood (bright 0 / dim 5 while lowered; owner only, a non-owner is warned); one chat line.",
+      doc: "Lower or raise a hooded lantern's hood (bright 0 / dim 5 while lowered); one chat line.",
     },
     {
       path: "light.profileFor",
@@ -116,7 +116,7 @@ export const MANIFEST = Object.freeze({
     {
       path: "light.onMe",
       params: [ITEM],
-      returns: "Promise<boolean>",
+      returns: "Promise<boolean> | notification",
       gm: false, writes: true, legacy: true,
       sideEffects: ["Item update (flags.pentaryn-senses.lightCast)"],
       doc: "Cast the Light on the caster's own token on the viewed scene (a controlled one first).",
@@ -135,8 +135,7 @@ export const MANIFEST = Object.freeze({
       gm: true, writes: true, legacy: true,
       doc: "Active GM: bring the world in line with one Light item's flag now (queued behind any running reconcile). "
         + "Resolves to what it did (restored / removed counts, the token lit, a square created, another Light released, "
-        + "this cast cleared); null off the active GM; undefined when it failed (warned). Safe in two GM tabs: a "
-        + "square is created with a fixed id (keepId), so the second tab's create is refused, and one tab whispers 'Gone'.",
+        + "this cast cleared); null off the active GM; undefined when it failed (warned).",
     },
     {
       path: "light.status",
@@ -166,7 +165,7 @@ export const MANIFEST = Object.freeze({
       params: [],
       returns: "Promise<number> documents written",
       gm: false, writes: true, legacy: true,
-      doc: "syncLight's plan for every world actor, written as one Actor batch for the prototypes, then one Token batch per scene. Runs at ready on the writer's client.",
+      doc: "syncLight for every world actor, one after another. Runs at ready on the writer's client.",
     },
     {
       path: "chain.link",
@@ -202,7 +201,7 @@ export const MANIFEST = Object.freeze({
       path: "inspect",
       params: [
         { name: "ref", kind: "token", type: "Token|Actor|uuid|id|exact name", resolve: false, doc: "a token (id, uuid, exact name, document, placeable), else an actor" },
-        { name: "opts", optional: true, type: "{ sceneId?, base?, as? }", doc: "scene scope; base: the world actor; as: answer as that user; null = omitted" },
+        { name: "opts", optional: true, type: "{ sceneId?, base?, as? }", doc: "scene scope; base: the world actor; as: answer as that user" },
       ],
       returns: "{ token: { id, light, itemLight, itemLightPrior, spellLight: { source, prior (dotted keys) } | null } | null, "
         + "actor: { id, carried, carriers, hooded, lightingItem } | null, "
@@ -220,8 +219,6 @@ export const MANIFEST = Object.freeze({
     writes: [
       `flags.${MODULE}.itemLight`, `flags.${MODULE}.itemLightPrior`, `flags.${MODULE}.spellLight`,
       `flags.${MODULE}.lightCast`, `flags.${MODULE}.lit`, `flags.${MODULE}.hooded`, `flags.${MODULE}.chain`,
-      `flags.${MODULE}.claims`,   // on a Light item: which GM tab whispers "Gone" for a cast (senses-ac-1)
-      `flags.${MODULE}.lightToggle`,   // on the torch activity setupLight adds (senses-EXT-6)
     ],
     // `light` on an item is also written by pentaryn-transform (the Starry form).
     reads: [`flags.${MODULE}.light`, `flags.${MODULE}.lightItem`, `flags.${MODULE}.lightToggle`],

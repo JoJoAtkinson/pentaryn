@@ -100,8 +100,7 @@ test("Token HUD (GM): Break chain on either end; Chain to <target> with exactly 
   // anchor end, jQuery-style element
   const ha = tokenHUD(tok(ID.tStake));
   F.fire("renderTokenHUD", ha.app, [ha.element]);
-  // [declared senses-edge-3] a button's tip is in data-tooltip-text (plain text), not data-tooltip
-  out.anchorEnd = ha.col.children.map(c => c.dataset.tooltipText);
+  out.anchorEnd = ha.col.children.map(c => c.dataset.tooltip);
   // click Break chain
   const mark = F.calls.length;
   const ev = h.col.querySelector(".ps-chain-btn").click();

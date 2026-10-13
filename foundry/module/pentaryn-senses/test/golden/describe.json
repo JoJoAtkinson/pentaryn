@@ -46,7 +46,7 @@
           "name": "opts",
           "optional": true,
           "type": "{ force?: boolean }",
-          "doc": "force: run again although sightReset is 1; null = omitted"
+          "doc": "force: run again although sightReset is 1"
         }
       ],
       "returns": "Promise<{ prototypes, tokens } | null>",
@@ -154,7 +154,7 @@
         "ChatMessage"
       ],
       "legacy": true,
-      "doc": "Lower or raise a hooded lantern's hood (bright 0 / dim 5 while lowered; owner only, a non-owner is warned); one chat line."
+      "doc": "Lower or raise a hooded lantern's hood (bright 0 / dim 5 while lowered); one chat line."
     },
     {
       "path": "light.profileFor",
@@ -209,7 +209,7 @@
           "doc": "the Item (a clone from a use hook is resolved to the live one)"
         }
       ],
-      "returns": "Promise<boolean>",
+      "returns": "Promise<boolean> | notification",
       "gm": false,
       "writes": true,
       "query": false,
@@ -251,7 +251,7 @@
       "query": false,
       "sideEffects": [],
       "legacy": true,
-      "doc": "Active GM: bring the world in line with one Light item's flag now (queued behind any running reconcile). Resolves to what it did (restored / removed counts, the token lit, a square created, another Light released, this cast cleared); null off the active GM; undefined when it failed (warned). Safe in two GM tabs: a square is created with a fixed id (keepId), so the second tab's create is refused, and one tab whispers 'Gone'."
+      "doc": "Active GM: bring the world in line with one Light item's flag now (queued behind any running reconcile). Resolves to what it did (restored / removed counts, the token lit, a square created, another Light released, this cast cleared); null off the active GM; undefined when it failed (warned)."
     },
     {
       "path": "light.status",
@@ -306,7 +306,7 @@
       "query": false,
       "sideEffects": [],
       "legacy": true,
-      "doc": "syncLight's plan for every world actor, written as one Actor batch for the prototypes, then one Token batch per scene. Runs at ready on the writer's client."
+      "doc": "syncLight for every world actor, one after another. Runs at ready on the writer's client."
     },
     {
       "path": "chain.link",
@@ -394,7 +394,7 @@
           "name": "opts",
           "optional": true,
           "type": "{ sceneId?, base?, as? }",
-          "doc": "scene scope; base: the world actor; as: answer as that user; null = omitted"
+          "doc": "scene scope; base: the world actor; as: answer as that user"
         }
       ],
       "returns": "{ token: { id, light, itemLight, itemLightPrior, spellLight: { source, prior (dotted keys) } | null } | null, actor: { id, carried, carriers, hooded, lightingItem } | null, chain: { anchor, chainedHere } | null, lightSpells: { item, cast, litBy: uuid[] }[] }",
@@ -565,9 +565,7 @@
       "flags.pentaryn-senses.lightCast",
       "flags.pentaryn-senses.lit",
       "flags.pentaryn-senses.hooded",
-      "flags.pentaryn-senses.chain",
-      "flags.pentaryn-senses.claims",
-      "flags.pentaryn-senses.lightToggle"
+      "flags.pentaryn-senses.chain"
     ],
     "reads": [
       "flags.pentaryn-senses.light",

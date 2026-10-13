@@ -34,7 +34,7 @@
                         "type": "button",
                         "data": {
                           "psLight": "me",
-                          "tooltipText": "On me"
+                          "tooltip": "On me"
                         },
                         "attrs": {
                           "aria-label": "On me"
@@ -52,7 +52,7 @@
                         "type": "button",
                         "data": {
                           "psLight": "pick",
-                          "tooltipText": "Pick a target"
+                          "tooltip": "Pick a target"
                         },
                         "attrs": {
                           "aria-label": "Pick a target"
@@ -70,7 +70,7 @@
                         "type": "button",
                         "data": {
                           "psLight": "end",
-                          "tooltipText": "End light"
+                          "tooltip": "End light"
                         },
                         "attrs": {
                           "aria-label": "End light"
@@ -128,7 +128,7 @@
                         "type": "button",
                         "data": {
                           "psLight": "me",
-                          "tooltipText": "On me"
+                          "tooltip": "On me"
                         },
                         "attrs": {
                           "aria-label": "On me"
@@ -146,7 +146,7 @@
                         "type": "button",
                         "data": {
                           "psLight": "pick",
-                          "tooltipText": "Pick a target"
+                          "tooltip": "Pick a target"
                         },
                         "attrs": {
                           "aria-label": "Pick a target"
@@ -164,7 +164,7 @@
                         "type": "button",
                         "data": {
                           "psLight": "end",
-                          "tooltipText": "End light"
+                          "tooltip": "End light"
                         },
                         "attrs": {
                           "aria-label": "End light"

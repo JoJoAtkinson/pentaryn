@@ -17,6 +17,7 @@
  */
 
 import { FLAGS, MODULE } from "./ids.mjs";
+export { MODULE };
 
 /** A light that gives nothing. Written when a carried or spell light ends with nothing before it. */
 export const DARK = Object.freeze({
@@ -51,12 +52,6 @@ export const LIGHT_PROFILES = Object.freeze({
   // A bullseye's cone would follow token rotation, which players never set: omnidirectional for now.
   "lantern-bullseye": Object.freeze({ bright: 60, dim: 120, angle: 360, color: "#ffc266", alpha: 0.35, luminosity: 0.5, ...PLAIN, animation: flame(1, 1) })
 });
-
-/**
- * The LIGHT_PROFILES keys setupLight() and the torch-on-create hook give a "Light" activity
- * (senses-EXT-4). Lamps, lanterns and candles ship with their own, so today only the torch.
- */
-export const ACTIVITY_PROFILES = Object.freeze(["torch"]);
 
 /** Other spellings of the same item, by slugged name. */
 const ALIASES = Object.freeze({
@@ -272,23 +267,6 @@ export function planSpellLight({ desired = null, existing = [] } = {}) {
 }
 
 /**
- * The `_id` a Light square is created with (`keepId`): 16 hex characters from the Light item's uuid
- * and the square's spot. Both tabs of the active GM (the MCP bridge and a browser) reconcile, so both
- * send the same create; the server takes one and refuses the other ("already exists"), and the
- * Light never gets a twin square (senses-ac-1). The spot is in the id so a recast to a new square
- * never reuses the id of the square it replaces, which the other tab may still be deleting.
- */
-export function squareId(source, scene, x, y) {
-  const key = `${str(source)}|${str(scene)}|${Math.round(x)}|${Math.round(y)}`;
-  const fnv = seed => {
-    let h = seed;
-    for (let i = 0; i < key.length; i++) h = Math.imul(h ^ key.charCodeAt(i), 0x01000193);
-    return (h >>> 0).toString(16).padStart(8, "0");
-  };
-  return fnv(0x811c9dc5) + fnv(0x050c5d1f);
-}
-
-/**
  * The token update that hands its light to the spell. `current` is the token's light right now.
  * A token already lit by another caster keeps the first `prior`, so ending either restores the
  * light it had before any spell.
@@ -337,20 +315,16 @@ export function torchActivityData(name = "Light") {
  * itemLightPrior and comes back when the carried light goes, not DARK. Foundry's helpers come in:
  * `flatten` = foundry.utils.flattenObject, `clone` = foundry.utils.deepClone, and `del` is what
  * clears the prior — `_del` on v14, else a null VALUE on the plain key (not "-=").
- * [declared senses-edge-4] `normalise` turns a profile into what Foundry stores (LightData: unknown
- * keys dropped, colours lower-cased). The "already applied" check compares the profile's own keys as
- * stored, so a hand-authored shard light converges; the write still sends the raw `light`.
  */
-export function itemLightUpdate(doc, light, { flatten, clone: copy, del = null, normalise = v => v }) {
+export function itemLightUpdate(doc, light, { flatten, clone: copy, del = null }) {
   if (doc.flags?.[MODULE]?.spellLight) return null; // the Light cantrip owns this token's light until it ends
   const lit = doc.flags?.[MODULE]?.itemLight === true;
   const PRIOR = FLAGS.itemLightPrior;
   if (light) {
     const own = doc.light?.toObject?.() ?? doc.light ?? {};
     const current = flatten(own);
-    const stored = flatten(normalise(light));
-    const want = Object.keys(flatten(light)).filter(k => k in stored);
-    const same = want.every(k => current[k] === stored[k]);
+    const want = flatten(light);
+    const same = Object.entries(want).every(([k, v]) => current[k] === v);
     if (same && lit) return null;
     const u = { light, [FLAGS.itemLight]: true };
     if (!lit && ((Number(own.bright) || 0) > 0 || (Number(own.dim) || 0) > 0)) u[PRIOR] = copy(own);

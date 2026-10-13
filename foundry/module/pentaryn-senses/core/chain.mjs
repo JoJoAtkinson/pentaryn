@@ -9,6 +9,7 @@
 
 import { MODULE } from "./ids.mjs";
 
+export { MODULE };
 export const CHAIN_FLAG = "chain";
 
 /** The chain flag on a token document (or plain {flags}), sanitised, or null. Never throws. */
