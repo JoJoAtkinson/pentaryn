@@ -87,3 +87,33 @@ def test_ext2_missing_node_is_a_clear_not_ok_payload(monkeypatch, tmp_path):
     text = out["errors"][0]["text"]
     assert out["errors"][0]["type"] == "fatal"
     assert "Node.js not found" in text and "PATH" in text
+
+
+# ── _smoke_one: the reason reaches the report ────────────────────────────────
+
+def test_ext2_missing_node_reaches_the_report_errors(monkeypatch, tmp_path):
+    """The Node.js message must survive to_json(), which drops the client's errors."""
+    from scripts.foundry.update import admin as admin_mod
+    from scripts.foundry.update.admin import Status
+
+    class _Healthy:
+        def launch_world(self, world):
+            pass
+
+        def wait_for_world(self, world, timeout=0):
+            return Status(active=True, version="14.369", world=world,
+                          system="dnd5e", system_version="5.1.0")
+
+    _smoke_js(monkeypatch, tmp_path)
+    monkeypatch.setattr(smoke, "BASELINE_PATH", tmp_path / "baseline.json")
+    monkeypatch.setattr(admin_mod, "error_log_since", lambda offset, day=None: "")
+    monkeypatch.setattr(host, "node", lambda: "node")
+    monkeypatch.setattr(smoke.shutil, "which", lambda name: None)
+    world = {"id": "alpha", "system_version": "5.1.0", "core_version": "14.369"}
+    result = smoke._smoke_one(_Healthy(), world, policy={}, touched=set(),
+                              error_offset=0, log_day=None)
+
+    assert result.ok is False
+    errors = result.to_json()["errors"]
+    assert any("Node.js not found" in e for e in errors)
+    assert errors[-1] == "client: game.ready never became true"

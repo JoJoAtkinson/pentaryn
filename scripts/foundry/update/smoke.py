@@ -268,6 +268,12 @@ def _smoke_one(fa: FoundryAdmin, world: dict, *, policy: dict, touched: set[str]
     if not client.get("gameReady"):
         # Whatever the baseline says, a world that never becomes ready is a failure.
         result.client_ok = False
+        # Say WHY first: a fatal (no Node.js, auth failed, smoke.mjs crashed) lives only
+        # in the client payload, which to_json() trims to a summary — copy its text into
+        # the errors the report and the notification show (EXT-2).
+        for err in client.get("errors", []):
+            if err.get("type") == "fatal" and err.get("text"):
+                result.errors.append(f"client: {err['text'][:500]}")
         result.errors.append("client: game.ready never became true")
     if client.get("note"):
         result.notes.append(client["note"])
