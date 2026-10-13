@@ -389,8 +389,10 @@ iterate `game.actors`/`game.scenes`/`canvas.tokens.placeables`, and carry a `// 
 comment (C49). World-wide reactions run on one client (`isActiveGM()`, `claimDocument` for two GM
 sessions), with batched writes. A rebuild several hooks trigger uses `foundry.utils.debounce` (or
 another trailing variant) so the last change is not lost; `coalesce` is leading-edge and suits
-idempotent reads whose callers can share the in-flight result (kit-perf-3). Who runs what, and why,
-is §5.9.
+idempotent reads whose callers can share the in-flight result (kit-perf-3). `settingReader` stays
+uncached so a hot-patched client still reads live values, and Foundry builds a Setting on every
+client-scope `get`: a hot hook caches a client-scope read at the call site and invalidates that
+cache from the row's `onChange` (kit-perf-4). Who runs what, and why, is §5.9.
 
 ### 5.6 Patches and `foundry/adjustments.yml`
 

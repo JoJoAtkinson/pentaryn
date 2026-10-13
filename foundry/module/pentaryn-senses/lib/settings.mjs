@@ -89,6 +89,10 @@ export function defineSettings(moduleId, SETTINGS, { i18nRoot, labels = DEFAULT_
 /**
  * `setting(key)`: the live value; the row's default when the setting is unregistered or unreadable
  * (a hot-patched client, a read before `init`); `undefined` for a key the table does not have.
+ *
+ * Deliberately uncached, so a hot-patched client still reads live values. Foundry builds a Setting
+ * on every client-scope `get`, so a hot path (a hook in §5.5's list) caches a client-scope read at
+ * the call site and invalidates that cache from the row's `onChange` (kit-perf-4).
  */
 export function settingReader(moduleId, SETTINGS, { g = globalThis } = {}) {
   const rows = new Map(SETTINGS.map(r => [r.key, r]));

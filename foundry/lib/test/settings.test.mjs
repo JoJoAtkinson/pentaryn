@@ -1,5 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { SETTING_PASSTHROUGH, defineKeybindings, defineSettings, serialStore, settingReader, settingsSnapshot } from "../settings.mjs";
 
 function fakeGame({ isGM = true, activeSelf = true } = {}) {
@@ -212,4 +214,31 @@ test("AC-6: the serialStore JSDoc and the README row document the non-atomic mul
     assert.match(text, /torn/, `${where}: a failure can leave a torn pair`);
     assert.match(text, /counter key first/, `${where}: list the counter key first`);
   }
+});
+
+// kit-perf-4 (final review 2026-10-12): Foundry builds a Setting on every client-scope
+// game.settings.get, and settingReader calls get each time. Ruling: settingReader stays uncached so
+// a hot-patched client still reads live values; the settingReader JSDoc, the README settings.mjs row
+// and blueprint §5.5 tell callers to cache a hot client-scope read at the call site and invalidate it
+// from the row's onChange.
+test("kit-perf-4: settingReader stays uncached; JSDoc, README and blueprint §5.5 say cache hot client reads at the call site, invalidate from onChange", () => {
+  const read = p => readFileSync(fileURLToPath(new URL(p, import.meta.url)), "utf8");
+  const src = read("../settings.mjs");
+  const doc = src.slice(0, src.indexOf("export function settingReader")).split("/**").pop();
+  const row = read("../README.md").split("\n").find(l => l.startsWith("| `settings.mjs` |"));
+  assert.ok(row, "README.md has no settings.mjs row");
+  const bp = read("../../../context/foundry/addon-blueprint.md");
+  const s55 = bp.slice(bp.indexOf("### 5.5 Performance"), bp.indexOf("### 5.6"));
+  for (const [where, text] of [["settingReader JSDoc", doc], ["README settings.mjs row", row], ["blueprint §5.5", s55]]) {
+    for (const needle of ["client-scope", "call site", "onChange", "uncached", "kit-perf-4"]) {
+      assert.ok(text.includes(needle), `${where} does not mention "${needle}"`);
+    }
+  }
+  // and the reader really is uncached: a changed value is read live on the next call
+  const g = fakeGame();
+  defineSettings("m", [{ key: "k", scope: "client", type: Number, default: 1, doc: "x" }], { g });
+  const setting = settingReader("m", [{ key: "k", default: 1 }], { g });
+  assert.equal(setting("k"), 1);
+  g.game.settings.set("m", "k", 2);
+  assert.equal(setting("k"), 2, "settingReader now caches — revisit kit-perf-4's docs");
 });
