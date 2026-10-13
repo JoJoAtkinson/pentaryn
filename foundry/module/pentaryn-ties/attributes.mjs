@@ -234,13 +234,18 @@ async function saveRegistry(list) {
 }
 
 /**
- * **Every registry write runs one at a time.** Each write reads the whole list, changes it, and
- * writes the whole list back; the local value only updates when the server answers. Two writes in
- * flight together (a field save then a "Reviewed" click, two lore fields in quick succession, a
- * panel save racing Claude's `A.update`) would each read the old list and the second would
- * silently undo the first. The read happens INSIDE the queued function, after the previous write
- * has landed. ⚠ Never call a serialised function from inside another one — it would wait on
- * itself. `fn` is run even if the previous write threw, and its own result/throw is returned.
+ * **Every registry write from this client runs one at a time.** Each write reads the whole list,
+ * changes it, and writes the whole list back; the local value only updates when the server answers.
+ * Two writes in flight together on one client (a field save then a "Reviewed" click, two lore fields
+ * in quick succession) would each read the old list and the second would silently undo the first.
+ * The read happens INSIDE the queued function, after the previous write has landed. ⚠ Never call a
+ * serialised function from inside another one — it would wait on itself. `fn` is run even if the
+ * previous write threw, and its own result/throw is returned.
+ *
+ * ⚠ The queue is an in-memory chain: it protects writes from one client only (ties-core-U2). A
+ * Review-panel save in the GM's browser racing Claude's `A.update` in the bridge tab is still a
+ * read-modify-write of the whole setting with a one-round-trip window and no server-side merge, so
+ * the second write wins. A world setting cannot be claimed or compare-and-set written; no redesign.
  */
 let writeChain = Promise.resolve();
 function serial(fn) {

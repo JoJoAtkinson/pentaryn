@@ -135,6 +135,13 @@ two **Ties Web** hotbar macros. The macro is created with the fixed id `pentaryn
 `keepId`; v14 does not refuse a world document whose id exists, so the later tab's create replaces the
 record with the same data and one macro results. Pinned by `test/review-macro-race.test.mjs`. ties-core-U1.
 
+Documented (declared, no table-visible change): the attribute registry and the knowledge/belief
+stores queue writes **per tab**, not across the two GM tabs. A Review-panel save in the GM's browser
+racing an `A.update` from the bridge tab rewrites the whole setting and the second write wins; a
+setting cannot be claimed, so no redesign. The comments in `attributes.mjs` and `settings.mjs` and the
+README's "who writes" section no longer say otherwise. Pinned by `test/review-queue-per-tab.test.mjs`.
+ties-core-U2.
+
 ## 0.19.4 (2026-10-10, usability run, Area 7 re-run)
 
 - **The inspect window's Share switches are the table's PCs only** (`tablePCs`): each player's

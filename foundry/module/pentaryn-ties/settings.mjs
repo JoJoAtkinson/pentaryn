@@ -203,8 +203,13 @@ function registerClientState({ key, scope, config, type, default: value }) {
  * cascade, a share and a GM grant can land together) and attribute-lore beliefs. Each is ONE
  * serialStore for the module (C58), made on first use — its queue needs Foundry's Semaphore, which a
  * bare-node import of this file does not have. A queued write reads the setting INSIDE the queue,
- * so the second of two writes sees the first. ⚠ Never await one queued write from inside another
- * on the same store: it would wait on itself.
+ * so the second of two writes from this client sees the first. ⚠ Never await one queued write from
+ * inside another on the same store: it would wait on itself.
+ *
+ * ⚠ The queue protects writes from one client only (ties-core-U2). Two GM tabs (the MCP bridge and a
+ * browser) each have their own queue: two writes landing together from different tabs are each a
+ * read-modify-write of the whole setting with a one-round-trip window and no server-side merge, so
+ * the second write wins. A world setting cannot be claimed or compare-and-set written; no redesign.
  */
 const stores = {};
 export const knowledgeStore = () => (stores.knowledge ??= serialStore(MODULE, KNOWLEDGE_SETTING));

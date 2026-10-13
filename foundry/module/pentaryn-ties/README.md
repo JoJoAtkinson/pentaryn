@@ -138,7 +138,9 @@ bridge tab and a browser), and both are the active GM, so the conduit **stakes a
 (`stakeAndConfirm` in `study/claim.mjs`: write a token, wait 250 ms, read it back) and only the winning
 tab rolls. The relay needs no claim: it only fills blanks or removes one row, so a second application changes nothing. The
 stub card and the tempo bubble are posted by the client that made the gesture. World-setting stores
-are GM-written; the registry queues its writes one at a time.
+are GM-written; the registry and the knowledge/belief stores queue their writes one at a time,
+**per tab** only. Two GM tabs writing the same setting at once (a Review-panel save racing a bridge
+`A.update`) each rewrite the whole value, and the second write wins — a setting cannot be claimed.
 
 ## Extending
 
