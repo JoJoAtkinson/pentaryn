@@ -106,6 +106,18 @@ test("the relay row runs for any sender but only on the active GM's client", asy
   F.become({ userId: gm.id });
 });
 
+test("feedback-async-2: the relay checks its sender — only that user or a GM may ask; no ctx keeps the old path", async () => {
+  const q = CONFIG.queries[`${MODULE}.ingest`];
+  const player2 = game.users.get(IDS.player2);
+  assert.ok(player2 && !player2.isGM, "fixture has a second player");
+  assert.deepEqual(await q({ userId: IDS.player }, { user: player2 }),
+    { ok: false, code: "REFUSED", reason: "only that user or a GM may ask to file their queue" });
+  assert.equal((await q({ userId: IDS.player }, { user: player })).ok, true, "the user themselves");
+  assert.equal((await q({ userId: IDS.player }, { user: gm })).ok, true, "a GM");
+  assert.equal((await q({ userId: IDS.player })).ok, true, "no ctx (the bridge's socket path)");
+  assert.equal((await api.ingest({ userId: IDS.player })).ok, true, "a local call");
+});
+
 test("a payload cannot file as someone else: the user comes from the queue's owner", async () => {
   const forged = queuedReport("forgedforged0001", { text: "I am the GM", user: { id: gm.id, name: "Gamemaster", isGM: true, role: 4 } });
   await player.update({ [`flags.${MODULE}.queue.${forged.id}`]: forged });

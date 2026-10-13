@@ -67,7 +67,7 @@ export const MANIFEST = Object.freeze({
       returns: "{ ok: true, filed, refused, done } | { ok: false, code, reason }",
       gm: false, writes: true, query: true, relay: true,
       sideEffects: [QUEUE, FILE],
-      doc: "Active GM only (any sender may ask): write every report waiting on that user's queue to its file and "
+      doc: "Active GM only (that user or a GM may ask; another player gets REFUSED): write every report waiting on that user's queue to its file and "
         + "delete it from the flag. Idempotent — a report already on disk is never overwritten.",
     },
     {

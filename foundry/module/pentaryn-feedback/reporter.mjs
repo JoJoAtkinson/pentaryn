@@ -262,14 +262,17 @@ export function install(reg, ctx) {
    * the sender is waiting for; `done` lists those filed — by this run, by another run that got
    * there first (on disk), or by the other GM tab (gone from the queue, and not refused here).
    *
-   * No sender check: the kit's registerQueries does not pass core's `{ user }` context through to
-   * the API method, and none is needed — the queue is the User document's own flag, which the
-   * server lets only that user or a GM write, and the filed `user` comes from that document. A
-   * stranger's request can only make the GM file what that user already queued (which updateUser
-   * does anyway).
+   * `sender` is core's query context (kit 1.2.0 forwards it to relay rows): a non-GM sender may only
+   * ask for their own queue (feedback-async-2). No context (the bridge's socket path, or a local
+   * call) is not checked — the queue is the User document's own flag, which the server lets only
+   * that user or a GM write, and the filed `user` comes from that document.
    */
-  async function ingest({ userId, ids = [] } = {}) {
+  async function ingest({ userId, ids = [] } = {}, sender) {
     if (!isActiveGM()) return fail("NOT_GM", "only the active GM files reports");
+    const from = sender?.user;
+    if (from && !from.isGM && from.id !== userId) {
+      return fail("REFUSED", "only that user or a GM may ask to file their queue");
+    }
     const user = g.game.users.get(userId);
     if (!user) return fail("NOT_FOUND", `user ${userId}`);
     try {
