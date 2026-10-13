@@ -222,12 +222,8 @@ function paintWires() {
     if (card.pinned) {
       // leash: screen pixels back into canvas space, so the wire tracks the card as the
       // map is panned and zoomed underneath it
-      let from;
-      try {
-        from = canvas.stage.toLocal({ x: card.screen.x, y: card.screen.y });
-      } catch {
-        continue;
-      }
+      const from = log.swallow("overlay: pinned card off-stage", () => canvas.stage.toLocal({ x: card.screen.x, y: card.screen.y }), null);
+      if (!from) continue;
       strokeLine(g, from, to, card.colour, 0.5, width);
       continue;
     }

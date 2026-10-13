@@ -255,12 +255,8 @@ export class AttributeReview extends ApplicationV2 {
     // the same walk, keeping the actors too: the personal-clue rows need them (ties-27)
     const actors = new Map();
     for (const actor of game.actors?.contents ?? []) {
-      let ids = [];
-      try {
-        ids = attributeIdsOf(actor, kindActorOf);
-      } catch {
-        continue;
-      }
+      const ids = log.swallow("review: carrier ids unreadable", () => attributeIdsOf(actor, kindActorOf), null);
+      if (!ids) continue;
       for (const id of ids) {
         if (!map.has(id)) map.set(id, []);
         map.get(id).push(actor.name);

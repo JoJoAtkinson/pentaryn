@@ -152,6 +152,12 @@ Fixed (declared, console only): a pinned-cards save the server refuses, or a Loo
 draw, now logs `pentaryn-ties | could not save pinned cards` (warning) or `pentaryn-ties | look window`
 (error) instead of an unprefixed unhandled rejection. Nothing on screen changes. ties-ui-rob-5.
 
+Fixed (declared, console only): six silent fallbacks now leave a debug line (with
+`CONFIG.debug["pentaryn-ties"] = true`) through `log.swallow` — the review panel's and the personal-clue
+carrier walks (`carrier ids unreadable`), a carrier's unreadable lore, a pinned card's leash off-stage
+and a card's screen point off-stage. Each keeps its old fallback, so nothing on screen changes.
+ties-ui-rob-6.
+
 ## 0.19.4 (2026-10-10, usability run, Area 7 re-run)
 
 - **The inspect window's Share switches are the table's PCs only** (`tablePCs`): each player's

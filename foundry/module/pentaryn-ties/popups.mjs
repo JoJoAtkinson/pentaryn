@@ -86,12 +86,14 @@ function layer() {
 
 /** Canvas coordinates → screen pixels. Foundry's board fills the window, so fixed positioning lands. */
 function toScreen(x, y) {
-  try {
-    const p = canvas.stage.toGlobal({ x, y });
-    return { x: p.x, y: p.y };
-  } catch {
-    return { x: 0, y: 0 };
-  }
+  return log.swallow(
+    "popups: canvas point off-stage",
+    () => {
+      const p = canvas.stage.toGlobal({ x, y });
+      return { x: p.x, y: p.y };
+    },
+    { x: 0, y: 0 }
+  );
 }
 
 /* -------------------------------------------- */

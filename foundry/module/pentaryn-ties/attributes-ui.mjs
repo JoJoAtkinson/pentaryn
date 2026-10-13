@@ -46,6 +46,9 @@ import { grantedRegion } from "./known-ui.mjs";
 import { kindActorOf, attrLoreStateFor, releaseHeldAttribute } from "./study.mjs";
 import { grantsForEntry, GRANTED_FLAG, HELP_SCALE, CARRIED_SCALE, helpFor, rollableLore, LORE_FLAG } from "./known-core.mjs";
 import { esc, bindRowToggle, makeOpenState } from "./core/html.mjs";
+import { makeLog } from "./lib/log.mjs";
+
+const log = makeLog(MODULE);
 
 /** The help-scale labels (literal keys, so the i18n gate sees each one). */
 const HELP_LABEL = Object.freeze({
@@ -307,25 +310,16 @@ export function personalCluesHTML(entry, carriersOf = null) {
   // the review panel already built id → carrying actors for this render; pass it in (ties-27)
   const carriers = carriersOf
     ? carriersOf(entry.id)
-    : (game.actors?.contents ?? []).filter(a => {
-        try {
-          return attributeIdsOf(a, kindActorOf).includes(entry.id);
-        } catch {
-          return false;
-        }
-      });
+    : (game.actors?.contents ?? []).filter(a =>
+        log.swallow("attributes: carrier ids unreadable", () => attributeIdsOf(a, kindActorOf).includes(entry.id), false)
+      );
   if (!carriers.length) return "";
   const skill = k => {
     const label = CONFIG.DND5E?.skills?.[k]?.label;
     return label ? game.i18n.localize(label) : k;
   };
   const lines = carriers.map(a => {
-    let rows = [];
-    try {
-      rows = rollableLore(a.getFlag(MODULE, LORE_FLAG));
-    } catch {
-      rows = [];
-    }
+    const rows = log.swallow("attributes: carrier lore unreadable", () => rollableLore(a.getFlag(MODULE, LORE_FLAG)), []);
     const list = rows.length
       ? rows.map(r => `${r.label} (${skill(r.skill)} ${r.dc})`).join(", ")
       : _loc("PENTARYN_TIES.attributes.cluesNone");
@@ -343,12 +337,8 @@ export function personalCluesHTML(entry, carriersOf = null) {
 function carrierMap() {
   const map = new Map();
   for (const a of game.actors?.contents ?? []) {
-    let ids;
-    try {
-      ids = new Set(attributeIdsOf(a, kindActorOf));
-    } catch {
-      continue;
-    }
+    const ids = log.swallow("attributes: carrier ids unreadable", () => new Set(attributeIdsOf(a, kindActorOf)), null);
+    if (!ids) continue;
     for (const id of ids) {
       if (!map.has(id)) map.set(id, []);
       map.get(id).push(a);
