@@ -47,6 +47,10 @@ test("list(n, {brief: true}): the nine keys in order, no item source; list(n) un
   assert.deepEqual(api.list(1, {}), api.list(1));
 });
 
+test("dropbin-R2: list(n, null) is list(n), not a destructuring TypeError", () => {
+  assert.deepEqual(api.list(1, null), api.list(1));
+});
+
 test("restoreResult: coded refusals, no toasts; success returns the item and actor", async () => {
   const from = F.calls.length;
   F.become({ userId: PLAYER });

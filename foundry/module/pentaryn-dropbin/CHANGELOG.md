@@ -143,6 +143,8 @@ Declared changes:
 - dropbin-M5: `corpses.isDead` always returns a boolean, as the manifest says: a missing actor (or
   one with no `statuses`) is `false`; it returned `undefined`. The live golden reads `isDead(null)`
   under `golden.declared.isDeadNull` now (`"false"`; was `"undefined"` in `golden.shared.isDead`).
+- dropbin-R2: `list(n, null)` is `list(n)`; it threw a destructuring TypeError. Only `null` opts
+  changes: `undefined`, `{}` and `{ brief }` give the same answer as before.
 
 Added: `list(n, { brief })`, `restoreResult`, `inspect`, `selftest` (items-journal-28).
 - A restore another module refuses (a `preCreateItem` veto) is `{ ok: false, reason: "not-created" }`

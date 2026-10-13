@@ -172,7 +172,8 @@ function registerCapture(reg) {
 
 const all = () => readLog();
 /** The last n entries, newest first; `{brief: true}` drops the item sources (items-journal-28). */
-function list(n = 20, { brief = false } = {}) {
+function list(n = 20, opts) {
+  const brief = !!opts?.brief;
   const out = listLast(readLog(), n);
   return brief ? out.map(briefOf) : out;
 }
