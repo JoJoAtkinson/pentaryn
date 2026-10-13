@@ -35,7 +35,7 @@ import {
   knowledgeTree,
   grantKnowledge,
   brokenAncestry,
-  repairAncestry,
+  repairAllAncestry,
   authorEntry,
   markLearned
 } from "./attributes.mjs";
@@ -856,11 +856,14 @@ export function bindAttributes(root, actor, rerender = () => {}, viewerArg = nul
     });
   }
 
-  box.querySelector("[data-action='attr-repair']")?.addEventListener("click", async () => {
-    // repair = re-link each broken membership, which materialises what it already implied
-    for (const { id, missing } of brokenAncestry(actor, resolver)) if (missing) await repairAncestry(actor, id);
+  // double-quoted so the test DOM (fixtures/dom.mjs) binds it too
+  const repair = box.querySelector('[data-action="attr-repair"]');
+  // repair = re-link every broken membership in one update, which materialises what it already
+  // implied; disabled while it runs so a double-click cannot queue a second pass (ties-ui-ACC-4)
+  repair?.addEventListener("click", () => guardClick("attr-repair", repair, async () => {
+    await repairAllAncestry(actor, resolver);
     rerender();
-  });
+  }, CLICK));
 }
 
 /**

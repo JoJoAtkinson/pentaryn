@@ -26,6 +26,10 @@ Added: `inspect(ref, { as })` (the dossier), `selftest()`, `attributes.effective
 (with the kind pointer), `attributes.tree/branch/describeId`, `study.factStatus/shareFact/forgetFact`,
 `study.identified`.
 
+Fixed (declared): the Attributes tab's ancestry **Fix it** button links every missing parent in one
+save (`repairAllAncestry` in `attributes.mjs`) instead of one save per broken membership, is greyed
+out while it works so a double-click cannot run it twice, and repaints the tab once. ties-ui-ACC-4.
+
 Fixed (declared): a player's **Remove** on the Ties tab now removes the tie in both directions, as its
 confirm says — the active GM's client removes the NPC's row back (relay action `remove-reverse`; the
 sender must own their character and have removed their own side). ties-ui-E3.

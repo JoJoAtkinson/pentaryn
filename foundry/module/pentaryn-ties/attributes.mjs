@@ -1017,6 +1017,37 @@ export function brokenAncestry(actor, kindResolver = null) {
 export const repairAncestry = (actor, ref) => linkAttribute(actor, ref);
 
 /**
+ * Repair **every** broken carrier at once — the sheet's Fix it button (ties-ui-ACC-4). The same
+ * result as `repairAncestry` on each `{ id, missing }` row of `brokenAncestry`, written in **one**
+ * update (one round trip, one render) instead of one per row. Dangling rows are left alone: no
+ * ancestor can be added for an id whose entry is gone.
+ *
+ * → `{ok:true, actorId, added:[…], unsuppressed:[…]}` (both empty = nothing broken, nothing written) |
+ *   `{ok:false, reason:"notGM"|"invalid"|"writeFailed"}`
+ */
+export async function repairAllAncestry(actor, kindResolver = null) {
+  if (!game.user?.isGM) return fail("notGM");
+  const subject = subjectOf(actor);
+  if (!subject) return fail("invalid");
+  const reg = registry();
+  const wanted = new Set();
+  for (const { id, missing } of brokenAncestry(actor, kindResolver)) {
+    if (missing) for (const x of withAncestors(id, reg)) wanted.add(x);
+  }
+  const authored = flagList(subject, ATTRIBUTES_FLAG);
+  const off = flagList(subject, ATTRIBUTES_OFF_FLAG);
+  const derived = derivedFor(subject, kindResolver);
+  const unsuppressed = off.filter(x => wanted.has(x));
+  const added = [...wanted].filter(x => !authored.includes(x) && !derived.includes(x));
+  const wrote = await writeLinks(subject, {
+    authored: added.length ? [...authored, ...added] : null,
+    off: unsuppressed.length ? off.filter(x => !wanted.has(x)) : null
+  });
+  if (!wrote) return fail("writeFailed");
+  return { ok: true, actorId: subject.id, added, unsuppressed };
+}
+
+/**
  * Re-parenting leaves every existing carrier holding the OLD ancestry — not *invalid* (they carry
  * an extra ancestor, not a missing one), so the validator will never see it. This finds them so
  * the GM can be offered a sweep. Never automatic: re-shaping the world is an authoring act, and
