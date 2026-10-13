@@ -22,7 +22,7 @@
 
 import {
   MODULE, DIR, FILE, DEDUPE_MS, MIRROR_DEBOUNCE_MS, isEntryShape, isPlausibleSender, makeEntry, normaliseDeltas, listLast, findEntry, searchLog,
-  briefOf, shouldCaptureDelete, restoreTarget, pileScene, resolvePile, isActiveGMSelf, movedSourceId,
+  briefOf, shouldCaptureDelete, restoreTarget, pileScene, resolvePile, isActiveGMSelf, takeMoved, rememberTransfer,
 } from "./dropbin-core.mjs";
 import { readLog, appendLedger, clearLog } from "./settings.mjs";
 import { dropHook, preTransferHook, actorClassType, isValidItemPile } from "./piles.mjs";
@@ -129,12 +129,13 @@ function baseEntry(reason, actor, item, quantity, scene = canvas?.scene) {
 /* ------------------------------------------------------------------- capture */
 
 /**
- * The last Item Piles transfer this client ran off a character (wave 3, dropbin item 1): its actor,
- * when, and the items it moved as `{_id, name, type, quantity}`. A drop onto an existing pile gives
- * the item a new id on the pile; movedSourceId finds its id on the character here, so the drop row
- * still takes the place of the delete row the transfer wrote.
+ * The recent Item Piles transfers this client ran (wave 3, dropbin item 1), newest last: each its
+ * source actor, when, and the items it moved as `{_id, name, type, quantity}` (rememberTransfer keeps
+ * those younger than DEDUPE_MS). A drop onto an existing pile gives the item a new id on the pile;
+ * takeMoved finds its id on the character here, from that actor's own transfer even when another
+ * actor's ran in between, and takes it out so it never matches a later drop.
  */
-let lastTransfer = null;
+let transfers = [];
 
 function registerCapture(reg) {
   const DROP = dropHook();
@@ -145,8 +146,8 @@ function registerCapture(reg) {
     reg.on(PRE_TRANSFER, (source, sourceUpdates) => {
       try {
         const deltas = Array.isArray(sourceUpdates?.itemDeltas) ? sourceUpdates.itemDeltas : [];
-        lastTransfer = { actorId: source?.id ?? null, t: Date.now(), moved: deltas.map(d => ({
-          _id: d?.item?._id ?? null, name: d?.item?.name, type: d?.item?.type, quantity: Math.abs(d?.quantity ?? 0) })) };
+        transfers = rememberTransfer(transfers, { actorId: source?.id ?? null, t: Date.now(), moved: deltas.map(d => ({
+          _id: d?.item?._id ?? null, name: d?.item?.name, type: d?.item?.type, quantity: Math.abs(d?.quantity ?? 0) })) }, DEDUPE_MS);
       } catch (err) {
         console.warn(`${MODULE} | transfer capture failed`, err);
       }
@@ -171,7 +172,9 @@ function registerCapture(reg) {
           e.x = position?.x ?? null;
           e.y = position?.y ?? null;
           e.pileUuid = pile.uuid;
-          const sourceId = movedSourceId(lastTransfer, { actorId: actor?.id ?? null, item: obj, quantity: e.quantity, now: e.t });
+          const taken = takeMoved(transfers, { actorId: actor?.id ?? null, item: obj, quantity: e.quantity, now: e.t });
+          transfers = taken.transfers;
+          const sourceId = taken.id;
           submit(e, sourceId ? { sourceId } : undefined);
         }
       } catch (err) {
@@ -301,10 +304,10 @@ export function install(reg, ctx) {
   }, "ledger ready");
 }
 
-/** Forget the relay and the last transfer; a mirror still pending is written now rather than dropped. */
+/** Forget the relay and the recent transfers; a mirror still pending is written now rather than dropped. */
 export function uninstall() {
   resetSocket();
-  lastTransfer = null;
+  transfers = [];
   if (mirrorPending) {
     cancelMirror();
     void writeMirror(readLog());

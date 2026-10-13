@@ -151,3 +151,74 @@ test("wave-3 item 1 movedSourceId: the transfer's item by id, else by name, type
   assert.equal(at({ _id: "new", name: "Coil", type: "loot" }, 2, { now: 1000 + core.DEDUPE_MS }), null, "a stale transfer");
   assert.equal(core.movedSourceId(null, { actorId: "ann", item: { _id: "a1" }, quantity: 1, now: 1 }), null, "no transfer");
 });
+
+// Wave 3 dropbin item 1, verifier repair: the transfer match must never hide the drop item's own-id
+// match (FIX-3), must not be used twice, and must not be lost to another actor's transfer in between.
+const cal = makeActor(F, { id: "actorCal00000001", name: "Cal" }, {
+  items: ["1", "2", "3", "4"].map(k => ({ id: `itemVial000000${k}0`, _id: `itemVial000000${k}0`, name: "Vial", type: "loot", system: { quantity: 1 } })),
+});
+const corpse = { documentName: "Actor", id: "actorCorpse00001", name: "Goblin" };
+
+/** Item Piles' _dropItems onto empty ground: no transfer; the item is removed, the hook keeps its own id. */
+async function dropOnGround(actor, id) {
+  const src = actor.items.get(id).toObject();
+  await actor.items.get(id).delete();
+  await settle();
+  Hooks.callAll("item-piles-dropItem", { actor }, { tokenUuid: pile.uuid, actorUuid: "Actor.defaultPile00001" },
+    [{ ...src, system: { quantity: 1 } }], { x: 7, y: 8 });
+  await settle();
+}
+
+test("wave-3 item 1: a drop onto a pile, then a same-named drop onto the ground within 2 s, is one row each", async () => {
+  const before = game.pentaryn.dropbin.all().length;
+  await quiet(async () => {
+    await dropOnPile(cal, "itemVial00000010", "pileItemNew00010");
+    await dropOnGround(cal, "itemVial00000020");
+  });
+  const added = game.pentaryn.dropbin.all().slice(before);
+  assert.deepEqual(added.map(e => [e.reason, e.itemName, e.sceneName]), [["drop", "Vial", "Bag"], ["drop", "Vial", "Vault"]]);
+});
+
+test("wave-3 item 1: another actor's transfer between the pre-transfer hook and the drop does not lose the match", async () => {
+  const before = game.pentaryn.dropbin.all().length;
+  await quiet(async () => {
+    const src = cal.items.get("itemVial00000030").toObject();
+    Hooks.call("item-piles-preTransferItems", cal, { itemDeltas: [{ item: src, quantity: -1 }], itemsToDelete: [src._id] },
+      pileActor, { itemsToCreate: [{ ...src, _id: "pileItemNew00030" }] }, false);
+    // a player loots a corpse in between: a transfer off another actor
+    Hooks.call("item-piles-preTransferItems", corpse, { itemDeltas: [{ item: { _id: "itemLoot00000001", name: "Dagger", type: "weapon" }, quantity: -1 }] },
+      cal, {}, false);
+    await cal.items.get("itemVial00000030").delete();
+    await settle();
+    Hooks.callAll("item-piles-dropItem", { actor: cal }, oldPile.uuid, [{ item: { ...src, _id: "pileItemNew00030" }, quantity: 1 }], { x: 5, y: 6 });
+    await settle();
+  });
+  const added = game.pentaryn.dropbin.all().slice(before);
+  assert.deepEqual(added.map(e => [e.reason, e.itemName, e.sceneName]), [["drop", "Vial", "Bag"]]);
+});
+
+test("wave-3 item 1 takeMoved: newest of this actor's transfers, the match taken out; rememberTransfer prunes", () => {
+  const t1 = { actorId: "ann", t: 1000, moved: [{ _id: "a1", name: "Rope", type: "loot", quantity: 1 }] };
+  const t2 = { actorId: "bob", t: 1100, moved: [{ _id: "b1", name: "Rope", type: "loot", quantity: 1 }] };
+  const list = core.rememberTransfer(core.rememberTransfer([], t1), t2);
+  const q = { actorId: "ann", item: { _id: "new", name: "Rope", type: "loot" }, quantity: 1, now: 1500 };
+  const r = core.takeMoved(list, q);
+  assert.equal(r.id, "a1", "ann's own transfer, past bob's newer one");
+  assert.equal(core.takeMoved(r.transfers, q).id, null, "taken: never matches a second drop");
+  assert.equal(list[0].moved.length, 1, "never mutates its input");
+  assert.equal(core.movedSourceId(list, q), "a1");
+  const late = core.rememberTransfer(list, { actorId: "cy", t: 1000 + core.DEDUPE_MS, moved: [] });
+  assert.deepEqual(late.map(x => x.actorId), ["bob", "cy"], "a transfer DEDUPE_MS older is dropped");
+  let many = [];
+  for (let i = 0; i < core.TRANSFERS_KEPT + 5; i++) many = core.rememberTransfer(many, { actorId: "x", t: i, moved: [] });
+  assert.equal(many.length, core.TRANSFERS_KEPT);
+});
+
+test("wave-3 item 1 dropReplacesTail: the tail may match the drop item's own id or the transfer's id", () => {
+  const del = { t: 0, reason: "delete", itemName: "Vial", fromActorId: "a", quantity: 1, item: { _id: "own" } };
+  const drop = { t: 500, reason: "drop", itemName: "Vial", fromActorId: "a", quantity: 1, item: { _id: "own" } };
+  assert.equal(core.dropReplacesTail([del], drop, core.DEDUPE_MS, "stale"), true, "a wrong sourceId never hides the own id");
+  assert.equal(core.dropReplacesTail([del], { ...drop, item: { _id: "new" } }, core.DEDUPE_MS, "own"), true, "the transfer's id");
+  assert.equal(core.dropReplacesTail([del], { ...drop, item: { _id: "new" } }, core.DEDUPE_MS, "other"), false, "neither");
+  assert.equal(core.appendEntry([{ n: 1, ...del }], 1, drop, core.DEDUPE_MS, { sourceId: "stale" }).log.length, 1);
+});
