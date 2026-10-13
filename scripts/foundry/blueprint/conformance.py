@@ -1353,6 +1353,14 @@ def c49(m):
     return ok() if not found else ("warn", found)
 
 
+def _block_after(code: str, close: int) -> tuple[int, str | None]:
+    """(q, block) after the `)` at `close` that ends a parameter list or loop header: `q` is the
+    first non-space offset after it, `block` the `{…}` that starts there (braces included), or None
+    when something else does (an expression body, a single statement)."""
+    q = close + 1 + len(re.match(r"\s*", code[close + 1:]).group(0))
+    return q, (code[q:match_paren(code, q) + 1] if code[q:q + 1] == "{" else None)
+
+
 def ready_bodies(src) -> list[tuple[bool, int, int]]:
     """(is_async, open brace, close brace) of every `ready` handler body in one file: an inline
     `Hooks.once("ready", () => {…})`, or a named one — `Hooks.once("ready", onReady)` plus
@@ -1367,10 +1375,11 @@ def ready_bodies(src) -> list[tuple[bool, int, int]]:
     for rm in re.finditer(r"(?:Hooks|reg)\.once\(\s*\x01(\d+)\x01\s*,\s*([A-Za-z_$][\w$]*)\s*\)", code):
         if src.strings[int(rm.group(1))].value != "ready":
             continue
-        fm = re.search(rf"(async\s+)?function\s+{re.escape(rm.group(2))}\s*\([^)]*\)\s*\{{", code)
+        fm = re.search(rf"(async\s+)?function\s+{re.escape(rm.group(2))}\s*\(", code)
         if fm:
-            s = fm.end() - 1
-            out.append((bool(fm.group(1)), s, match_paren(code, s)))
+            s, body = _block_after(code, match_paren(code, fm.end() - 1))
+            if body:
+                out.append((bool(fm.group(1)), s, s + len(body) - 1))
     return out
 
 
@@ -1388,9 +1397,9 @@ def on_ready_bodies(src) -> list[tuple[bool, int, int]]:
 def _enclosing_function(code: str, i: int) -> tuple[str, bool, int] | None:
     """(name, is_async, body open) of the innermost `function NAME(…) {…}` holding offset `i`."""
     best = None
-    for fm in re.finditer(r"(async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\([^)]*\)\s*\{", code):
-        s = fm.end() - 1
-        if s < i < match_paren(code, s) and (best is None or s > best[2]):
+    for fm in re.finditer(r"(async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(", code):
+        s, body = _block_after(code, match_paren(code, fm.end() - 1))
+        if body and s < i < s + len(body) - 1 and (best is None or s > best[2]):
             best = (fm.group(2), bool(fm.group(1)), s)
     return best
 
@@ -1597,11 +1606,7 @@ def handler_at(code: str, pos: int, *, _depth: int = 0) -> tuple[bool, str | Non
     p = pos + (am.end() if am else 0)
     fm = re.match(r"function\b\s*\*?\s*[\w$]*\s*", code[p:])
     if fm and code[p + fm.end():p + fm.end() + 1] == "(":
-        close = match_paren(code, p + fm.end())
-        q = close + 1 + len(re.match(r"\s*", code[close + 1:]).group(0))
-        if code[q:q + 1] == "{":
-            return is_async, code[q:match_paren(code, q) + 1], None
-        return is_async, None, None
+        return is_async, _block_after(code, match_paren(code, p + fm.end()))[1], None
     if code[p:p + 1] == "(":
         close = match_paren(code, p)
         ar = re.match(r"\s*=>\s*", code[close + 1:])
@@ -1615,10 +1620,7 @@ def handler_at(code: str, pos: int, *, _depth: int = 0) -> tuple[bool, str | Non
         name = re.escape(im.group(1))
         dm = re.search(rf"(?<![\w$.])(async\s+)?function\s*\*?\s*{name}\s*\(", code)
         if dm:
-            close = match_paren(code, dm.end() - 1)
-            q = close + 1 + len(re.match(r"\s*", code[close + 1:]).group(0))
-            body = code[q:match_paren(code, q) + 1] if code[q:q + 1] == "{" else None
-            return bool(dm.group(1)), body, None
+            return bool(dm.group(1)), _block_after(code, match_paren(code, dm.end() - 1))[1], None
         dm = re.search(rf"(?<![\w$.])(?:const|let|var)\s+{name}\s*=\s*", code)
         if dm:
             return handler_at(code, dm.end(), _depth=1)
@@ -1649,10 +1651,9 @@ def _with_called(code: str, body: str, more: tuple[str, ...] = ()) -> str:
             dm = re.search(rf"(?<![\w$.])(?:async\s+)?function\s*{re.escape(name)}\s*\(", src)
             if not dm:
                 continue
-            close = match_paren(src, dm.end() - 1)
-            q = close + 1 + len(re.match(r"\s*", src[close + 1:]).group(0))
-            if src[q:q + 1] == "{":
-                extra.append(src[q:match_paren(src, q) + 1])
+            _, block = _block_after(src, match_paren(src, dm.end() - 1))
+            if block:
+                extra.append(block)
             break
     return "\n".join([body, *extra])
 
@@ -1870,12 +1871,8 @@ def _awaited_call(body: str, i: int) -> str | None:
 def loop_bodies(code: str) -> list[tuple[int, str]]:
     out = []
     for mm in re.finditer(r"(?<![\w$.])(?:for(?:\s+await)?|while)\s*\(", code):
-        close = match_paren(code, mm.end() - 1)
-        q = close + 1 + len(re.match(r"\s*", code[close + 1:]).group(0))
-        if code[q:q + 1] == "{":
-            out.append((mm.start(), code[q:match_paren(code, q) + 1]))
-        else:
-            out.append((mm.start(), code[q:_expr_end(code, q) + 1]))
+        q, block = _block_after(code, match_paren(code, mm.end() - 1))
+        out.append((mm.start(), block if block is not None else code[q:_expr_end(code, q) + 1]))
     for mm in re.finditer(r"(?<![\w$.])do\s*(?=\{)", code):                   # do { … } while (…)
         out.append((mm.start(), code[mm.end():match_paren(code, mm.end()) + 1]))
     for mm in re.finditer(r"\.(?:forEach|map)\(\s*(?=async\b)", code):

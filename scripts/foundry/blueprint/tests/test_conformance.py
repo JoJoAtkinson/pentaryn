@@ -894,6 +894,36 @@ def test_c50_follows_a_named_publisher_called_from_another_files_ready_body(tmp_
     assert status(conformance.score_dir(d), "C50") == "fail"
 
 
+@pytest.mark.parametrize("code,close,want", [
+    ("f(a) {x}", 3, (5, "{x}")),
+    ("f(a)\n  { y; }", 3, (7, "{ y; }")),
+    ("f(a) => 1", 3, (5, None)),
+    ("for (x) y();", 6, (8, None)),
+])
+def test_py_blueprint_maint_4_block_after(code, close, want):
+    """py-blueprint-MAINT-4: one helper finds the `{…}` after a parameter list or loop header."""
+    assert conformance._block_after(code, close) == want
+
+
+def test_py_blueprint_maint_4_ready_handler_with_parens_in_its_parameters(tmp_path):
+    """py-blueprint-MAINT-4: a named ready handler (and a named publisher) whose parameter list
+    holds a call — `function onReady(o = defaults()) {…}` — is found by the shared _block_after,
+    not missed by the old `\\([^)]*\\)` regex."""
+    d = tmp_path / "pentaryn-reg"
+    body = ('import { publishNamespace } from "./lib/publish.mjs";\nconst api = {};\n'
+            'function defaults() { return {}; }\n'
+            'function onReady(o = defaults()) {\n  publishNamespace("reg", api, { moduleId: "pentaryn-reg" });\n}\n'
+            'export function install(reg) { reg.once("ready", onReady); }\n')
+    write(d, {"module.json": json.dumps({"id": "pentaryn-reg", "esmodules": ["reg.mjs"]}), "reg.mjs": body})
+    assert status(conformance.score_dir(d), "C50") == "pass"
+    named = ('import { publishNamespace } from "./lib/publish.mjs";\nconst api = {};\n'
+             'function defaults() { return {}; }\n'
+             'export function publish(o = defaults()) {\n  publishNamespace("reg", api, { moduleId: "pentaryn-reg" });\n}\n'
+             'export function install(reg, ctx) { ctx.onReady(() => { publish(); }); }\n')
+    (d / "reg.mjs").write_text(named)
+    assert status(conformance.score_dir(d), "C50") == "pass"
+
+
 # ── C62: a Document param the kit does not resolve names its string forms (FX item 5) ────────
 # The bridge (pentaryn-call.ts needsDoc) refuses a call that fills such a param with BAD_ARGS
 # "eval-js only" unless its `type` names uuid / id / name / string; senses.inspect's ref
