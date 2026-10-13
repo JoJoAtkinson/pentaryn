@@ -4,6 +4,7 @@
     ./.venv/bin/python scripts/foundry/blueprint/new_module.py <short> --title "Pentaryn <Title>"
         [--description "…"] [--namespace <ns>] [--css-prefix <px->] [--tier small|full] [--kit a,b]
         [--[no-]dnd5e] [--out DIR] [--install] [--docs] [--docs-root DIR] [--check] [--force]
+        [--no-run] [--modules-root DIR] [--app-root DIR]
 
 What it does, in order:
   1. validates <short> (^[a-z][a-z0-9]{1,15}$, not reserved) and refuses a namespace, module id or

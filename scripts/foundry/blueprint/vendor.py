@@ -5,8 +5,8 @@ Modules cannot import across module directories (the imports gate fails a `../` 
 module, scripts/foundry/ops/modules.py), so shared code is VENDORED: one canonical file in
 foundry/lib, a byte-identical copy in each module's lib/, and this gate proving identity by sha256.
 
-    vendor.py sync  <module…|--all> [--tier small|full] [--kit a,b] [--root DIR]
-    vendor.py check <module…|--all> [--root DIR] [--json]
+    vendor.py sync  <module…|--all> [--tier small|full] [--kit a,b] [--root DIR] [--lib DIR]
+    vendor.py check <module…|--all> [--root DIR] [--lib DIR] [--json]
 
 `--all` means every module that already HAS a lib/kit.lock.json — the migrated ones. `sync --all`
 skips a module without a lock (listed, never written): adopting the kit is a per-module step,
