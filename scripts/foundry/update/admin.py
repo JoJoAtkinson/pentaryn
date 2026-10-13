@@ -56,6 +56,7 @@ directly: ``loginAsUser`` (the smoke test's GM login) and the world deactivate â
 from __future__ import annotations
 
 import json
+import re
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -711,15 +712,25 @@ def error_log_offset(day: str | None = None) -> int:
 
 
 def error_log_since(offset: int, day: str | None = None) -> str:
-    """New error-log bytes since ``offset``. A run crossing midnight rolls over to a
-    new file, in which case the whole new file is new."""
+    """New error-log bytes since ``offset`` in ``day``'s file. A run crossing midnight
+    rolls over to a new file, so every later ``error.<date>.log`` up to today is new in
+    full and is appended after the start day's tail (ROB-9)."""
+    day = day or time.strftime("%Y-%m-%d")
+    today = time.strftime("%Y-%m-%d")
+    out = ""
     p = error_log_path(day)
-    if not p.exists():
-        return ""
-    with p.open("r", encoding="utf-8", errors="replace") as fh:
-        if p.stat().st_size >= offset:
-            fh.seek(offset)
-        return fh.read()
+    if p.exists():
+        with p.open("r", encoding="utf-8", errors="replace") as fh:
+            if p.stat().st_size >= offset:
+                fh.seek(offset)
+            out = fh.read()
+    # ISO dates sort as strings; anything that is not a date is ignored.
+    later = sorted(f for f in LOGS_DIR.glob("error.*.log")
+                   if re.fullmatch(r"\d{4}-\d{2}-\d{2}", f.name[6:-4])
+                   and day < f.name[6:-4] <= today)
+    for f in later:
+        out += f.read_text(encoding="utf-8", errors="replace")
+    return out
 
 
 def read_options() -> dict:

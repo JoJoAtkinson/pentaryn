@@ -99,7 +99,9 @@ def run_all(fa: FoundryAdmin, worlds: list[dict], *, policy: dict,
             results.append(_smoke_one(fa, world, policy=policy, touched=touched,
                                       error_offset=error_offset, log_day=log_day))
         # Each world's launch appends to the same log; advance the mark so the next
-        # world is not blamed for the previous one's output.
+        # world is not blamed for the previous one's output. The mark moves to today's
+        # file, so a run past midnight does not re-read the new day's file (ROB-9).
+        log_day = time.strftime("%Y-%m-%d")
         error_offset = admin_mod.error_log_offset(log_day)
     return results
 
