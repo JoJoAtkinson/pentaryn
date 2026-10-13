@@ -211,17 +211,19 @@ async function importOnce({ path, dryRun, only, force, timeout, unmanagedItems }
         // UPDATE — never recreate. `hp.value`, `img` and `prototypeToken.texture` are withheld.
         await actor.update(toUpdatePayload(data), { render: false });
       } else {
-        // CREATE under the slug's own id (importer-AC-2): another GM tab creating the same slug at the
-        // same moment asks for the same id, and the server refuses whichever comes second.
+        // CREATE under the slug's own id (importer-AC-2): another GM tab creating the same slug asks for
+        // the same id. Foundry 14.369's server does NOT refuse a keepId create over a world Actor that
+        // already holds the id — it silently replaces it — so look first: the other tab's create
+        // broadcast has put its actor in game.actors, and that actor is never overwritten.
         const id = idForSlug(slug);
-        try {
-          actor = await ActorClass.create({ ...toCreatePayload(data), _id: id }, { keepId: true, renderSheet: false });
-        } catch (cause) {
-          if (foundry.utils.getProperty(game.actors.get(id) ?? {}, `flags.${FLAG_SCOPE}.slug`) === slug) {
-            throw new Error("created concurrently by another GM tab — re-run", { cause });
+        const holder = game.actors.get(id);
+        if (holder) {
+          if (foundry.utils.getProperty(holder, `flags.${FLAG_SCOPE}.slug`) === slug) {
+            throw new Error("created concurrently by another GM tab — re-run");
           }
-          throw cause;
+          throw new Error(`id ${id} is already held by Actor "${holder.name}" — not overwritten`);
         }
+        actor = await ActorClass.create({ ...toCreatePayload(data), _id: id }, { keepId: true, renderSheet: false });
         if (!actor) throw new Error("Actor.create returned nothing");
         bySlug.set(slug, actor);                 // a later entry with the same slug updates it
       }

@@ -558,8 +558,9 @@ const ID_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456
 
 /**
  * The `_id` a NEW actor is created with (importer-AC-2): 16 characters of [A-Za-z0-9], a pure
- * function of the slug, so two GM tabs creating the same slug at once ask for the same id and the
- * server refuses the second (`keepId`) instead of storing a duplicate. Sixteen independently seeded
+ * function of the slug, so two GM tabs creating the same slug ask for the same id and at most one
+ * actor per slug can exist. Foundry 14's server replaces a world document on a `keepId` create over a
+ * held id, so `importActors` looks in game.actors first and never overwrites the holder. Sixteen independently seeded
  * FNV-1a lanes, each finished with murmur3's fmix32, one base-62 character per lane. Never change it:
  * the ids of actors already imported would stop matching (they are still found by slug).
  * @param {string} slug

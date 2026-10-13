@@ -1,5 +1,16 @@
 # Changelog — Pentaryn Importer (`pentaryn-importer`)
 
+## Unreleased — FIX-3 live-check fix (2026-10-13)
+
+- **[declared] A new actor's slug id is looked up before the create, never overwritten**
+  (`importer-AC-2` live): Foundry 14.369's server does not refuse a `keepId` create over an `_id` a
+  world Actor already holds — it silently replaces that actor — so the "server refuses the second
+  create" guard below never fired live and a second tab overwrote the first. `importActors` now checks
+  `game.actors.get(idForSlug(slug))` first: held by an actor with that slug → `failed[]`
+  "created concurrently by another GM tab — re-run"; held by any other actor → `failed[]`
+  `id <id> is already held by Actor "<name>" — not overwritten`; no create is sent either way. The
+  write-test stub now replaces on a held id, as Foundry 14 does.
+
 ## 1.1.1 — 2026-10-11 (live-check fix)
 
 - **[declared] Every `PentarynAbort` carries a kit code** (`err.code`, lib/errors.mjs): `NOT_FOUND`

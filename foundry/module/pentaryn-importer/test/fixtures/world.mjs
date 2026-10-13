@@ -15,17 +15,20 @@
  *   regenIds        activity `_id`s are regenerated instead of honoured (contract U7)
  *   stripAction     action names whose flags.pentaryn.action is stripped on create
  *   failCreate      slugs whose Actor.create throws a plain Error (a per-actor failure)
- *   raceCreate      slugs another GM tab creates first, between our slug index and our create
- *                   (importer-AC-2): its copy lands with the same `_id` when keepId is asked for
+ *   raceCreate      slugs another GM tab creates while this run is under way (importer-AC-2): its
+ *                   copy (slug flag, `_id` = idForSlug) lands in game.actors — the create broadcast —
+ *                   when this run sends its first Actor.create, i.e. after our slug index was built
  *   failItems       slugs whose createEmbeddedDocuments throws a plain Error (a per-actor failure
  *                   after the Actor itself was written — importer-R6)
  *
- * Actor.create honours `data._id` under `{keepId: true}` and rejects an `_id` already in game.actors,
- * as Foundry's server does.
+ * Actor.create honours `data._id` under `{keepId: true}`. An `_id` already in game.actors is silently
+ * REPLACED (no error, no delete), as Foundry 14.369's server does for a world document — it checks
+ * duplicate ids only inside embedded collections (FIX-3 live probe, importer-AC-2).
  *
  * Every write lands in F.calls in order, so a test pins effects, not returns.
  */
 import { makeDoc, StubCollection } from "../kit/foundry-stub.mjs";
+import { idForSlug } from "../../importer-core.mjs";
 
 /** Foundry common/data/data.mjs PrototypeToken's accepted keys (the importer's header comment). */
 const TOKEN_KEYS = new Set([
@@ -126,10 +129,13 @@ export function makeWorld(F, knobs = {}) {
     static async create(data, options) {
       F.calls.push({ op: "Actor.create", data: F.plain(data), options: F.plain(options) });
       const slug = data?.flags?.pentaryn?.slug;
+      for (const other of [...K.raceCreate]) {                       // the other tab's create lands
+        K.raceCreate.delete(other);
+        makeActor({ name: `${other.toUpperCase()} (other tab)`, type: "npc", flags: { pentaryn: { slug: other } } }, { id: idForSlug(other) });
+      }
       if (K.failCreate.has(slug)) throw new Error(`Actor validation errors: ${slug}`);
       const id = options?.keepId ? data._id : null;
-      if (K.raceCreate.has(slug)) makeActor(data, { id });           // the other tab got there first
-      if (id && F.game.actors.get(id)) throw new Error(`An Actor with _id [${id}] already exists in the database`);
+      if (id && F.game.actors.get(id)) F.calls.push({ op: "Actor.replace", id });   // Foundry 14: no error
       return makeActor(data, { id });
     }
   }

@@ -40,9 +40,13 @@ One GM tab only; ZZ scratch docs only; delete everything ZZ afterwards. Never to
   one toast and `game.actors` gains no ZZ actor.
 - **R3** — `game.pentaryn.import({dryRun:true, only:'skeleton'})` rejects with BAD_ARGS naming
   `only`, and no "Import done" toast.
-- **AC-2** — pre-create `Actor.create({name:'ZZ race', type:'npc', _id: idForSlug('zz-race')}, {keepId:true})`
+- **AC-2** — (as revised by the FIX-3 forward fix) pre-create `Actor.create({name:'ZZ race', type:'npc', _id: idForSlug('zz-race')}, {keepId:true})`
   without the slug flag, import a ZZ actors.json with slug `zz-race`: expect
-  `failed:[{slug:'zz-race', error contains 'another GM tab'}]` and exactly one Actor with that id.
+  `failed:[{slug:'zz-race', error contains 'already held by Actor "ZZ race"'}]`, the pre-created actor
+  untouched (name, biography, createdTime). Then simulate the other tab: a two-entry import
+  (`zz-a`, `zz-race2`) with a one-shot `createActor` hook that, on `zz-a`, creates `ZZ other tab` at
+  `idForSlug('zz-race2')` with the slug flag: expect `failed:[{slug:'zz-race2', error contains
+  'another GM tab'}]` and that actor untouched, exactly one Actor with that id.
   Then a plain ZZ import creates its actor with `id === idForSlug(slug)`. Delete the ZZ actors.
 - **M3** — `game.pentaryn.importer.selftest()` returns `ok:true` listing the four gate-key checks,
   details equal to module.json `flags.pentaryn`.
