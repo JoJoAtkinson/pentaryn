@@ -4,15 +4,46 @@
 why, which commits, and how to confirm it live. History only. To operate the importer, read
 `foundry/module/pentaryn-importer/README.md`.
 
-Branch `wave3/importer-2026-10-13`, from `e392ba56`. Gate: `make foundry-importer-check` (121 node
-tests, kit identical, conformance 100 % with 45/45 fail-class rules). Both fixes are declared
+Branch `wave3/importer-2026-10-13`, from `e392ba56`. Gate: `make foundry-importer-check` (124 node
+tests after the FIX-W3 repair, kit identical, conformance 100 % with 45/45 fail-class rules). Both fixes are declared
 behaviour changes. Joe approved them on 2026-10-13 ("fix all small bugs found live"). Both close
 the importer line of the wave-2 record's "Still open" list.
 
 | item | defect | what changed (plain words) | commits | test |
 |---|---|---|---|---|
 | 1 | On the update path, Foundry drops an invalid change (such as a blank name) without throwing. The importer still counted the actor as updated and stamped its new content hash, so the change was never retried | When `update()` comes back empty, the importer repeats Foundry's own dry run. If that throws (or a pre-update hook vetoed the change), the actor fails with "update refused by Foundry — <reason>": no Item writes and no hash stamp, so the next run retries it. A real no-op (nothing changed) still counts as updated | `cf6d9fba` | `test/update-refused.test.mjs` (blank name failed, untouched, retried; no-op still updated) |
-| 2 | Two GM tabs sending a create for the same new NPC in the same instant both passed the look-first check. Foundry replaced the first actor with the second, both tabs wrote Items and stamped, and the actor held the later tab's data | Exactly one tab creates the actor. The server finishes the first create before it starts the second, so the second tab gets the first tab's create before its own reply. A new feature, `create-watch.mjs`, listens for that only while the create is in flight. The second tab then stands down, waits up to 10 s for the first tab's hash stamp and takes the update path (skipped when the file is the same). The first tab re-reads the live actor before checking it. If the other tab's actor was already there before the create (the look-first case), the tab now joins it the same way instead of failing "re-run" | `81f0202d`, `52f715a9` (whitespace) | `test/concurrent-create.test.mjs` (same instant, second tab joins and Items are written once; the winner's file differs, so the joining tab updates; this tab lands first and passes the readback; look-first joins as update) |
+| 2 | Two GM tabs sending a create for the same new NPC in the same instant both passed the look-first check. Foundry replaced the first actor with the second, both tabs wrote Items and stamped, and the actor held the later tab's data | Exactly one tab creates the actor. The server finishes the first create before it starts the second, so the second tab gets the first tab's create before its own reply. A new feature, `create-watch.mjs`, listens for that only while the create is in flight. The second tab then stands down, waits up to 10 s for the first tab's hash stamp and takes the update path, always rewriting the actor and its Items (see the repair below). The first tab checks the live actor after its Item write and, if the other tab's replace swapped it, writes the actor and Items again on the live one before checking it. If the other tab's actor was already there before the create (the look-first case), the tab now joins it the same way instead of failing "re-run", and skips when the file is the same | `81f0202d`, `52f715a9` (whitespace), FIX-W3 repair commit | `test/concurrent-create.test.mjs` (same instant, second tab joins and rewrites the Items after the winner, never alongside; the winner's Items wiped by our replace are written again; the winner's file differs, so the joining tab updates; this tab lands first and passes the readback; the other tab's replace after our Items neither aborts the run nor loses the Items; the create watch is removed after a create and a throwing create; look-first joins as update) |
+
+### FIX-W3 verifier repair (item 2)
+
+The wave-3 verifier found two orderings the first item-2 commit got wrong (repro tests in its
+scratch clone, now ported as fixture knobs `raceWiped` and `raceAfterItems`):
+
+- **Items lost, actor stamped as current.** Server order: the other tab's create, its Items create,
+  this tab's create (a replace, which wipes those Items), the other tab's stamp. This tab joined,
+  saw the stamp equal its own hash and skipped, leaving an actor with no Items and a current hash, so
+  later runs skipped it too. It needs this tab's latency to exceed the other's by more than its Item
+  prep time (one tab over the tunnel, one local). Fix: a join whose own create was sent (`replaced`)
+  never skips; after the stamp, the other tab's last write, it rewrites the actor and its Items
+  (`replaceItems` deletes the managed Items and recreates them, so it is idempotent). A look-first
+  join sent no create and still skips on the same hash.
+- **The first tab aborted the run.** When the other tab's replace was handled after this tab's
+  Items create, the re-read live actor had no Items and `assertItemsAddressable` threw the
+  whole-run `PentarynAssertionError`. Fix: after its Item write, the tab compares
+  `game.actors.get(id)` with the instance it wrote to (Foundry's client `collection.set`s a new
+  instance for every create broadcast, client/data/client-backend.mjs `#handleCreateDocuments`); if
+  replaced, it updates the live actor and rewrites its Items, at most twice, then reads back with no
+  await in between. A third replace fails the actor unstamped, so the next run retries it.
+
+Whichever tab writes last leaves the actor, its Items and the stamp together: the second tab only
+writes after the first tab's stamp, and the first tab's rewrite comes before its stamp.
+
+This stays detect-and-compensate. Foundry 14 has no create-if-absent for a world Actor (a `keepId`
+create over a held id replaces it), so the replacing create is still sent and the transient
+server-side replace still happens; the compensation makes the end state right. A true claim would
+need a lock document (an embedded `keepId` create, which the server does refuse on a duplicate id).
+That was not built. Also unguarded, as before: if the first tab's write of one actor takes more
+than the 10 s join wait, the joining tab writes alongside it.
 
 Goldens: none changed. `hooks.json` still pins `once:ready` only: the create watch registers on
 the module's hook registry only during a create and removes the listener when the create resolves.
@@ -55,7 +86,7 @@ scenes.
       Repeat with the hook also setting `flags.pentaryn.contentHash` to the file's hash. Expect `skipped:['zz-join']` at once.
    3. *Same instant (a second GM tab is allowed for this step).* In both tabs, schedule `game.pentaryn.import({path, only:['zz-same']})` for the same wall-clock instant (`setTimeout(…, T - Date.now())`). Expect:
       - exactly one actor at `idForSlug('zz-same')`;
-      - one tab reports `created:['zz-same']`, and the other reports `skipped:['zz-same']` (same file) with a "joining it as an update" console line;
+      - one tab reports `created:['zz-same']`, and the other reports `updated:['zz-same']` (a replacing join never skips) with a "joining it as an update" console line;
       - the loot Item present once;
       - one stamp.
 
