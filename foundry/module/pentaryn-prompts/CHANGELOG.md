@@ -101,6 +101,10 @@ cssPrefix `pp-`, afterSync). Each **[declared]** change goes to the live check.
   `cropImages` in `gather.mjs` — the same `cropMaxPerCall` / `cropLongSidePx` reads and the same
   upload under `pentaryn-prompts-crops/<call>/`. `gather` still crops its encounters in id order,
   `crops` the ones asked for in the order asked. No behaviour change.
+- **[declared] `renderGather` is shorter** (prompts-core-M9): the `<overview>` block is a private
+  `renderOverview` and the "which encounters hold this built thing" query is one private `homesOf`
+  in `core/gather-text.mjs` (neither exported), used by the Shared-with line, the Built line and a
+  shared built's `shared=`. The gather text is byte-identical. No behaviour change.
 - `ensureMarkers` repairs every drifted actor in one batch update. A hot re-import after
   `uninstall()` re-wires and republishes at once.
 - Console only (DP9): a core token API that throws warns once; swallowed failures log at debug
