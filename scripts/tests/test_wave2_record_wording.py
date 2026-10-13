@@ -29,3 +29,14 @@ def test_kit_names_ext_3_expects_three_toasted_labels():
     step = " ".join(_step(_read("kit.md"), "- **names-ext-3**", "- Every other item").split())
     assert "the toast count is 3" in step
     assert "toast count is 2" not in step
+
+
+def test_ties_ui_e4_steps_match_the_declared_toggle():
+    """A second press on the same face closes the card, so two quick presses end with none open."""
+    block = _step(_read("ties-ui.md"), "**ties-ui-E4**", "**ties-ui-rob-7**")
+    lines = [ln for ln in block.splitlines() if ln[:2] in ("1.", "2.", "3.")]
+    step1 = lines[0]
+    assert "twice" in step1
+    assert "exactly one card is open" not in step1
+    assert "never more than one card is open" in step1
+    assert "no card is open afterwards" in step1

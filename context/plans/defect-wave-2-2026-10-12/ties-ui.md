@@ -134,8 +134,8 @@ Use only ZZ-prefixed scratch documents: `ZZ Tie PC`, `ZZ Tie NPC`, `ZZ Tie Ghost
 3. Click Reset. Expect: the row is removed from the beliefs flag.
 
 **ties-ui-E4**
-1. Hover ZZ Tie NPC's token and press 9 twice within about 100 ms. Expect: exactly one card is open.
-2. Press 9 a third time. Expect: the card closes.
+1. Hover ZZ Tie NPC's token and press 9 twice within about 100 ms. Expect: never more than one card is open, and no card is open afterwards (the second press on the same face closes the card the first one opened).
+2. Press 9 once. Expect: exactly one card opens. Press 9 again. Expect: the card closes.
 
 **ties-ui-rob-7**
 1. On ZZ Name Leak as GM, stub the GM-side inspect handler to throw (eval), then click the inspect eye on ZZ Tie NPC's HUD. Expect: the button re-enables, the toast reads "That didn't go through — see the console.", and the console error line starts with `pentaryn-ties`.
