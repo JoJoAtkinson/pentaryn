@@ -350,7 +350,8 @@ function savePinned() {
         const box = r.el.getBoundingClientRect();
         return { sourceId: r.sourceId, tieId: r.tieId, x: Math.round(box.left), y: Math.round(box.top) };
       });
-    game.settings.set(MODULE, PIN_SETTING, keep);
+    // not awaited: the save is a memo, and a rejection lands here with the prefix, not unhandled
+    game.settings.set(MODULE, PIN_SETTING, keep).catch(err => log.warn(`could not save pinned cards`, err));
   } catch (err) {
     log.warn(`could not save pinned cards`, err);
   }

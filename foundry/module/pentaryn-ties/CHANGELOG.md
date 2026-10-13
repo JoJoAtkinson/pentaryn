@@ -148,6 +148,10 @@ and in-place summary rebinds, and the mystery-man portrait seven files spelled o
 the tie dialog or say it is unavailable" try/catch once in `editor.mjs` (`openTieDialog`). Markup and
 behaviour unchanged. ties-ui-M14.
 
+Fixed (declared, console only): a pinned-cards save the server refuses, or a Look window that fails to
+draw, now logs `pentaryn-ties | could not save pinned cards` (warning) or `pentaryn-ties | look window`
+(error) instead of an unprefixed unhandled rejection. Nothing on screen changes. ties-ui-rob-5.
+
 ## 0.19.4 (2026-10-10, usability run, Area 7 re-run)
 
 - **The inspect window's Share switches are the table's PCs only** (`tablePCs`): each player's

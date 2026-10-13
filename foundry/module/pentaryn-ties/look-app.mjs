@@ -108,13 +108,14 @@ export class LookWindow extends ApplicationV2 {
     const existing = open.get(key);
     if (existing) {
       if (existing.minimized) existing.maximize?.();
-      existing.render({ force: true });
+      existing.render({ force: true }).catch(err => log.error(`look window`, err));
       existing.bringToFront?.();
       return existing;
     }
     const win = new LookWindow(character, subject);
     open.set(key, win);
-    win.render({ force: true });
+    // not awaited: a failed render is logged with the prefix rather than left unhandled
+    win.render({ force: true }).catch(err => log.error(`look window`, err));
     return win;
   }
 
