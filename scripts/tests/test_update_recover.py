@@ -193,3 +193,27 @@ def test_m14_no_stale_path_copies_in_inventory_or_recover():
     assert not hasattr(inventory, "MODULES_DIR")
     assert not hasattr(inventory, "SYSTEMS_DIR")
     assert not hasattr(recover, "FOUNDRY_DATA")
+
+
+# ── M17: the core Recovery's target is 'core', like every other record ──────
+
+def test_m17_recover_core_target_is_core(tmp_path):
+    rec = recover.recover_core("13.351", None, bundle=tmp_path / "missing.tar.gz")
+    assert rec.kind == "core"
+    assert rec.target == "core"
+    assert rec.to_json()["target"] == "core"
+
+
+def test_m17_history_reads_old_and_new_core_targets(tmp_path):
+    import json
+
+    from scripts.foundry.update import escalate
+
+    def write(name, target):
+        (tmp_path / name).write_text(json.dumps(
+            {"recoveries": [{"kind": "core", "target": target}]}), encoding="utf-8")
+
+    write("2026-08-21-old.json", "foundry")      # report history from before M17
+    assert escalate.history(tmp_path) == {"core": "rolled_back"}
+    write("2026-10-12-new.json", "core")
+    assert escalate.history(tmp_path) == {"core": "rolled_back"}

@@ -152,7 +152,7 @@ def recover_system(fa: FoundryAdmin, system_id: str, previous_version: str,
 def recover_core(previous_version: str, world_snapshot: "cloud.Snapshot | Path | None",
                  bundle: Path | None = None) -> Recovery:
     """Roll the core back: the whole app payload, plus the world data it migrated."""
-    rec = Recovery(kind="core", target="foundry")
+    rec = Recovery(kind="core", target="core")
     bundle = bundle or newest_core_bundle()
     if not bundle or not bundle.exists():
         rec.error = "no core rollback bundle on disk — cannot restore the app"

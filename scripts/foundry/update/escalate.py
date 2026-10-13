@@ -295,6 +295,7 @@ def history(report_dir: Path = REPORT_DIR, *, last: int = 8) -> dict[str, str]:
         found: dict[str, str] = {}
         for r in rec.get("recoveries") or []:
             if isinstance(r, dict):
+                # Reports before M17 wrote the core target as "foundry".
                 found[{"foundry": "core"}.get(r.get("target"), r.get("target"))] = "rolled_back"
         for a in rec.get("applied") or []:
             if isinstance(a, dict):
