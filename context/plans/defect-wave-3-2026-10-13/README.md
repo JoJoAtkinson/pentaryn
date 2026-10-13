@@ -177,3 +177,63 @@ file it is Joe's call. The throwaway world was deleted.
 
 Foundry is up on world `pentaryn` with one GM tab (Gamemaster) answering `get-world-info`. Main is
 pushed. Rollback copies of the live modules are in `.state/live-rollback/FIX-W3/`.
+
+## Follow-up (wave 3b)
+
+Joe approved four follow-ups on 2026-10-13. Detail per item in [`backup-move.md`](backup-move.md)
+and [`upstream-w3b.md`](upstream-w3b.md).
+
+### Backup move
+
+- **Where backups live now:** `foundry-up` takes the pre-launch backup (boot → `foundry-backup-safe`
+  → `foundry-assets-safe` → start) and `foundry-down` takes the shutdown backup (background;
+  `WAIT=1` blocks). `vtt-up` / `vtt-down` only wrap the tunnel around them, so no double backup.
+  The updater never ran `vtt-up` (it starts/stops Foundry itself and only calls `tunnel-up` /
+  `tunnel-down`), so it gains no backup; a test pins that.
+- Branch `wave3/backup-move-2026-10-13` (`132d525b`), merged as `4aa981d7`. Tests `*_wave3b` in
+  `scripts/tests/test_make_targets.py`. Use-doc: [`context/foundry/ops.md`](../../foundry/ops.md) §2.
+- **Restart proof:** `make foundry-down WAIT=1` made exactly one shutdown snapshot
+  (`world-2026-10-13-125431-fvtt14.369-mac`, 16.6 MB; it replaced `110333` inside the 5-day window).
+  `make foundry-up FROM=local` then ran the pre-launch backup once, which digest-skipped
+  ("no change since the last snapshot"); `make foundry-cloud` was unchanged (mac: 1, newest 125431).
+- **Open:** `make login` starts Foundry without a pre-launch backup (Joe decides). The 5-day
+  replace rule means the first start after a Saturday updater run can replace the pre-update
+  restore point; worth a separate look.
+
+### Walls removal
+
+- Removed in `83543ac4`, branch `wave3/walls-remove-2026-10-13` (`7d2be3cc`), merged as `1e408f3d`.
+- Exact recoverable copy: `origin/archive/pentaryn-walls` (`f9f155bd`, remote only); its
+  `foundry/module/pentaryn-walls` tree matches the parent of `83543ac4`.
+- How to bring it back: [`context/foundry/retired.md`](../../foundry/retired.md) (`git revert 83543ac4`
+  applies cleanly; seven tests to delete once un-retired).
+- A leftover untracked wasm build cache in the main checkout was moved to
+  `~/.Trash/pentaryn-walls-wasm-build-cache-2026-10-13`.
+
+### Foundry 14.369 "first token change" bug
+
+- **Ours, not Foundry's.** The MCP tab is hidden, so token animation never runs and `tok.x/y` keep
+  the old position while `_source` and the server hold the new one. Fixed in the use-doc
+  (`d8748a7c`, `context/foundry/README.md`): read `tokenDoc._source.x/y` or the server, or update
+  with `{animate:false}`; no throwaway first move.
+- Separate, genuinely Foundry's: `scene.view()` can resolve while `canvas.loading`, and a token
+  update then throws `Cannot read properties of undefined (reading 'OBJECTS')`. Re-confirmed 3/3 in
+  a clean dnd5e-only world. Draft issue written, **not posted**.
+
+### Argon
+
+- Proved in a clean world with only dnd5e 6.0.6, enhancedcombathud 5.0.1 and
+  enhancedcombathud-dnd5e 5.2.2 (neither needs other modules):
+  - **createItem/deleteItem hook throws on a world Item** after the HUD has been opened and
+    released (`item.parent === this._actor` with both null). 3/3. Draft for
+    theripper93/enhancedcombathud.
+  - **Special-action chat cards use the actor name, not the token name** (Dash/Disengage/Hide on a
+    renamed unlinked token). Draft for theripper93/enhancedcombathud-dnd5e.
+  - **HUD disabling after a grid change:** not reproduced (0/10); most likely `openCombatStart`
+    closing it when combat ended. Not reported.
+- **Issue links: none yet.** Posting public issues under Joe's GitHub account needs his direct yes.
+  Drafts (AI disclosure, each repo's template) are in [`upstream-w3b.md`](upstream-w3b.md); on
+  "post them": `gh issue create -R <repo> --title "<title>" --body-file <draft>` for
+  foundryvtt/foundryvtt, theripper93/enhancedcombathud and theripper93/enhancedcombathud-dnd5e.
+- Scratch world `zz-argon-repro` deleted; ZZ scene and actor in pentaryn deleted; no real PCs or
+  campaign scenes touched.
