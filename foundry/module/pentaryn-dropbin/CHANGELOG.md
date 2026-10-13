@@ -136,6 +136,8 @@ Declared changes:
 - dropbin-M12: `socketlib-adapter.mjs` is the only file that touches `socketlib`; the ledger's
   hot-reimport branch asks the adapter's `socketlibPresent()` (was a direct `globalThis.socketlib`
   probe). No behaviour change.
+- dropbin-EXT-7: `i18n-shim.mjs` exports `LITERAL`, and a test asserts it names exactly the keys of
+  `LEGACY_KEYS` (a legacy key with no literal word would have filled `undefined`). No behaviour change.
 
 Added: `list(n, { brief })`, `restoreResult`, `inspect`, `selftest` (items-journal-28).
 - A restore another module refuses (a `preCreateItem` veto) is `{ ok: false, reason: "not-created" }`
