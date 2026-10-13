@@ -45,7 +45,7 @@ from scripts.foundry import bootstate, cloud
 from scripts.foundry import host as host_mod
 from scripts.foundry.update import admin as admin_mod
 from scripts.foundry.update.admin import APP_PAYLOAD, FoundryAdmin
-from scripts.foundry.update.state import CORE_ROLLBACK_DIR, SYSTEM_ASIDE_DIR
+from scripts.foundry.update.state import CORE_ROLLBACK_DIR, SYSTEM_ASIDE_DIR, _pid_alive
 
 
 @dataclass
@@ -362,9 +362,4 @@ def tunnel_running(repo_root: Path) -> bool:
         pid = int(pid_file.read_text().strip())
     except (OSError, ValueError):
         return False
-    try:
-        import os
-        os.kill(pid, 0)
-        return True
-    except (ProcessLookupError, PermissionError, ValueError):
-        return False
+    return _pid_alive(pid)
