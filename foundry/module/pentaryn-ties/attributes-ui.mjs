@@ -56,7 +56,7 @@ import {
   LORE_DC_MAX,
   LORE_DC_DEFAULT
 } from "./known-core.mjs";
-import { esc, bindRowToggle, makeOpenState, guardClick, skillOptionsHTML, skillLabelOf } from "./core/html.mjs";
+import { esc, bindRowToggle, makeOpenState, guardClick, skillOptionsHTML, skillLabelOf, gmBadge } from "./core/html.mjs";
 import { isPersonalEntry } from "./core/rules.mjs";
 import { makeLog } from "./lib/log.mjs";
 
@@ -601,7 +601,7 @@ function grantControl(character) {
   return `<div class="pt-add-bar pt-attr-add pt-grant-control" data-character="${esc(character.id)}">
     <div class="pt-inbound-head">
       <span class="pt-inbound-title">${esc(_loc("PENTARYN_TIES.attributes.grantHeading"))}</span>
-      <span class="pt-gm-badge"><i class="fa-solid fa-eye-slash" aria-hidden="true"></i> ${esc(_loc("PENTARYN_TIES.gmOnly"))}</span>
+      ${gmBadge()}
     </div>
     <input type="search" class="pt-attr-search pt-grant-search"
            placeholder="${esc(_loc("PENTARYN_TIES.attributes.grantPlaceholder"))}"

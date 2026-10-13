@@ -20,7 +20,7 @@
 import { MODULE, STANCES, NOTES_MAX, clampStance, clampStrength, stanceOf } from "./ties-core.mjs";
 import { read, inbound, presentActorIds, editTie, removeTie, stanceLabel } from "./ties-adapter.mjs";
 import { authoringHTML, bindAuthoring } from "./authoring-ui.mjs";
-import { esc, bindRowToggle, bindSummary, makeOpenState, notesPreview, notesProse, wordCell, bindNotesAutosave, replaceSummary, keyLabel, FALLBACK_ART } from "./core/html.mjs";
+import { esc, bindRowToggle, bindSummary, makeOpenState, notesPreview, notesProse, wordCell, bindNotesAutosave, replaceSummary, keyLabel, FALLBACK_ART, gmBadge } from "./core/html.mjs";
 import { makeLog } from "./lib/log.mjs";
 
 const log = makeLog(MODULE);
@@ -179,7 +179,7 @@ function theirSide(reply) {
   return `<div class="pt-their-side">
     <div class="pt-their-head">
       <span class="pt-their-title">${esc(_loc("PENTARYN_TIES.reply.heading", { name: reply.name }))}</span>
-      <span class="pt-gm-badge"><i class="fa-solid fa-eye-slash" aria-hidden="true"></i> ${esc(_loc("PENTARYN_TIES.gmOnly"))}</span>
+      ${gmBadge()}
     </div>
     <div class="pt-their-line">${word}${stanceChip(reply.stance, { labelled: !!reply.word })}${pips(
       reply.strength,
@@ -353,7 +353,7 @@ export function buildHTML(actor) {
   const inboundSection = orphans.length
     ? `<div class="pt-inbound-head">
         <span class="pt-inbound-title">${esc(_loc("PENTARYN_TIES.inbound.heading"))}</span>
-        <span class="pt-gm-badge"><i class="fa-solid fa-eye-slash" aria-hidden="true"></i> ${esc(_loc("PENTARYN_TIES.gmOnly"))}</span>
+        ${gmBadge()}
       </div>
       <p class="pt-inbound-hint">${esc(_loc("PENTARYN_TIES.inbound.hint"))}</p>
       <ul class="pt-list pt-list-inbound">

@@ -32,10 +32,7 @@ import { MODULE } from "./ties-core.mjs";
 import { LORE_FLAG, KIND_OF_FLAG, STUDY_TIERS_FLAG } from "./known-core.mjs";
 import { loreEditorHTML, bindLoreEditor } from "./lore-ui.mjs";
 import { beliefs, deliver, reset, kindActorOf, setKindOf, writeLoreRows } from "./study.mjs";
-import { esc } from "./core/html.mjs";
-
-const gmBadge = () =>
-  `<span class="pt-gm-badge"><i class="fa-solid fa-eye-slash" aria-hidden="true"></i> ${esc(_loc("PENTARYN_TIES.gmOnly"))}</span>`;
+import { esc, gmBadge } from "./core/html.mjs";
 
 /**
  * The kind dropdown.

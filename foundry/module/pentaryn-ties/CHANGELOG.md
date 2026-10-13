@@ -206,6 +206,10 @@ hard-coding it: the dice bench's odds list is the positive `STUDY_RUNGS`, lowest
 (the composed study, the Share switch's "click tells them the rest") is `Math.max(...STUDY_RUNGS)`; the
 pass line is `STUDY_BASE_DC`. Same numbers today. ties-ui-EXT-13.
 
+Changed (declared, no table-visible change): the "GM only" badge is written once, as `gmBadge()` in
+`core/html.mjs`; the authoring section, the two mutual-pair panels and the told-count line call it.
+Markup byte-identical. ties-ui-EXT-15.
+
 ## 0.19.4 (2026-10-10, usability run, Area 7 re-run)
 
 - **The inspect window's Share switches are the table's PCs only** (`tablePCs`): each player's

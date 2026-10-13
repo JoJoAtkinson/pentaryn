@@ -22,6 +22,14 @@ export const FALLBACK_ART = "icons/svg/mystery-man.svg";
  */
 export const keyLabel = code => String(code ?? "").replace(/^Digit/, "").replace(/^Key/, "") || "?";
 
+/**
+ * The "GM only" badge: an eye-slash and the localized `PENTARYN_TIES.gmOnly`, on a section only a GM
+ * is drawn. Authoring, the two mutual-pair panels and the told-count line each pasted this markup
+ * (ties-ui-EXT-15); it reads `game.i18n` only when called.
+ */
+export const gmBadge = () =>
+  `<span class="pt-gm-badge"><i class="fa-solid fa-eye-slash" aria-hidden="true"></i> ${esc(globalThis.game?.i18n?.localize?.("PENTARYN_TIES.gmOnly") ?? "PENTARYN_TIES.gmOnly")}</span>`;
+
 /* ── skills (ties-ui-EXT-8) ──────────────────────────────────────────────── */
 /*
  * The world's skill list, read off CONFIG at call time rather than hardcoded, so a GM's homebrew skill
