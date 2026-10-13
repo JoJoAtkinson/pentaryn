@@ -857,6 +857,23 @@ def test_assets_member_whose_name_normalises_to_nothing_refuses_the_pack(
                                if manifest.exists() else {})
 
 
+
+def test_assets_corrupt_zip_is_a_problem_and_the_manifest_still_records_the_rest(
+        two_hosts, monkeypatch, tmp_path, capsys):
+    """R7: a pack that is not a valid zip is named and skipped; the packs unpacked in the
+    same run stay in the manifest, so the next start does not re-download them."""
+    monkeypatch.setattr(cloud, "MANIFEST", tmp_path / "manifest.json")
+    _rclone_cloud(two_hosts, monkeypatch)
+    _zip(two_hosts.cloud / "assets/tokens-01.zip", {"a.png": b"1"})
+    (two_hosts.cloud / "assets/tokens-02.zip").write_bytes(b"not a zip at all " * 8)
+    with two_hosts.use("mac"):
+        assert cloud.unpack_assets() == 1
+    assert "tokens-02.zip: could not be unpacked" in capsys.readouterr().err
+    packs = json.loads((tmp_path / "manifest.json").read_text())["packs"]
+    assert "tokens-01" in packs and "tokens-02" not in packs
+    assert not (two_hosts.data["mac"] / "Data/assets/tokens/tokens-02").exists()
+
+
 # ── the updater's rollback point (§9) ───────────────────────────────────────
 
 def test_rollback_point_is_the_based_on_snapshot_then_own_newest(two_hosts):

@@ -477,6 +477,8 @@ Restore `.safety` copies and `major-release/` are never offered as "newer".
 - **Filenames kebab-case at extraction only** — never rename inside an extracted pack. A folder
   whose name kebabs to nothing (e.g. `地图/`) is dropped from the path; a *file* whose name kebabs
   to nothing, or two members that kebab to the same path, refuse the whole pack with a message.
+- **A zip that will not open** (corrupt or truncated upload) is named and skipped; the packs
+  unpacked in the same run are still recorded, and the run exits 1. Replace it with a good zip (it was never recorded, so the same name is fine).
 - **Backup and restore hard-refuse while Foundry is running.** (The background *upload* of an
   already-built tar does not care: it reads only the tar.)
 - **Art never goes in git.** OneDrive holds the bytes; `foundry/assets-manifest.json` holds the

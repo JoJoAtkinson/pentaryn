@@ -666,7 +666,11 @@ def unpack_assets(dry_run: bool = False, if_reachable: bool = False) -> int:
                     f"append-only — add {kind}-{int(num) + 1:02d}.zip instead, or delete "
                     f"{dest} to force a re-extract.")
                 continue
-            count = _extract_pack(zp, e.name, pack, dest, problems)
+            try:
+                count = _extract_pack(zp, e.name, pack, dest, problems)
+            except (zipfile.BadZipFile, OSError) as exc:
+                problems.append(f"{e.name}: could not be unpacked: {exc}")
+                continue
             if count is None:
                 log(f"✗ {e.name} refused")
                 continue
