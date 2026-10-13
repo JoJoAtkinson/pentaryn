@@ -1463,9 +1463,20 @@ export function allAttributeIds(kindResolver = null) {
  * exists, whatever the typed title looked like.
  */
 export function searchAttributes(query, kindResolver = null) {
+  return searchCandidates(query, attributeCandidates(kindResolver));
+}
+
+/**
+ * The autocomplete's candidate rows — the world walk `searchAttributes` makes on every call.
+ * The GM autocompletes gather this once per focus and hand it to `searchCandidates` on each
+ * (debounced) keystroke, rather than walking every actor per letter typed (ties-ui-perf-6).
+ */
+export const attributeCandidates = (kindResolver = null) => allAttributeIds(kindResolver).map(describeAttribute);
+
+/** `searchAttributes` over candidate rows already gathered; the rows are never reordered. */
+export function searchCandidates(query, rows) {
   const q = String(query ?? "").trim().toLowerCase();
-  const rows = allAttributeIds(kindResolver).map(describeAttribute);
-  const matches = (q ? rows.filter(r => r.title.toLowerCase().includes(q) || r.id.toLowerCase().includes(q)) : rows)
+  const matches = (q ? rows.filter(r => r.title.toLowerCase().includes(q) || r.id.toLowerCase().includes(q)) : [...rows])
     .sort(
       (a, b) =>
         Number(b.title.toLowerCase().startsWith(q)) - Number(a.title.toLowerCase().startsWith(q)) ||

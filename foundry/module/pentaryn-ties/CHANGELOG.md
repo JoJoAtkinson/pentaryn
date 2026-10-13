@@ -26,6 +26,12 @@ Added: `inspect(ref, { as })` (the dossier), `selftest()`, `attributes.effective
 (with the kind pointer), `attributes.tree/branch/describeId`, `study.factStatus/shareFact/forgetFact`,
 `study.identified`.
 
+Fixed (declared): the Attributes tab's two GM autocompletes (add an attribute, tell a character)
+repaint once the GM pauses typing (120 ms) instead of on every keystroke, and gather the world's
+attribute ids once per focus instead of walking every actor per letter; focus still paints at once.
+New `attributes.mjs` helpers `attributeCandidates` / `searchCandidates`; `attributes.search` is
+unchanged. ties-ui-perf-6.
+
 Fixed (declared): the tie wires find each card's source token from one pass over the scene's
 tokens per frame instead of one scan per card; the wires drawn are unchanged. ties-ui-perf-4.
 

@@ -30,7 +30,8 @@ import {
   deleteAttribute,
   linkAttribute,
   unlinkAttribute,
-  searchAttributes,
+  attributeCandidates,
+  searchCandidates,
   knownWorld,
   knowledgeTree,
   grantKnowledge,
@@ -952,8 +953,10 @@ function bindGrant(box, rerender) {
   const character = game.actors?.get(wrap.dataset.character);
   if (!character) return;
 
+  // the world-derived candidates, gathered once per focus (ties-ui-perf-6)
+  let candidates = null;
   const paint = () => {
-    const { matches, canCreate } = searchAttributes(input.value, resolver);
+    const { matches, canCreate } = searchCandidates(input.value, (candidates ??= attributeCandidates(resolver)));
     /*
      * ⚠ Only attributes they actually **know** are filtered out — never the ones they FAILED.
      *
@@ -1001,8 +1004,19 @@ function bindGrant(box, rerender) {
       });
     }
   };
-  input.addEventListener("input", paint);
-  input.addEventListener("focus", paint);
+  bindPaintEvents(input, paint, () => (candidates = null));
+}
+
+/**
+ * Focus paints at once from a fresh candidate list; typing repaints once the GM pauses (120 ms),
+ * reusing that list — one world walk per focus, not one per keystroke (ties-ui-perf-6).
+ */
+function bindPaintEvents(input, paint, refresh) {
+  input.addEventListener("input", foundry.utils.debounce(paint, 120));
+  input.addEventListener("focus", () => {
+    refresh();
+    paint();
+  });
 }
 
 /** The autocomplete: one list of registry entries and every derived id present in the world. */
@@ -1013,8 +1027,10 @@ function bindSearch(box, actor, rerender) {
 
   const carried = new Set(attributeIdsOf(actor, resolver));
 
+  // the world-derived candidates, gathered once per focus (ties-ui-perf-6)
+  let candidates = null;
   const paint = () => {
-    const { matches, canCreate, collidesWith } = searchAttributes(input.value, resolver);
+    const { matches, canCreate, collidesWith } = searchCandidates(input.value, (candidates ??= attributeCandidates(resolver)));
     const rows = matches
       .filter(m => !carried.has(m.id))
       .slice(0, 12)
@@ -1062,6 +1078,5 @@ function bindSearch(box, actor, rerender) {
     }
   };
 
-  input.addEventListener("input", paint);
-  input.addEventListener("focus", paint);
+  bindPaintEvents(input, paint, () => (candidates = null));
 }
