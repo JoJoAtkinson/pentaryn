@@ -12,9 +12,14 @@
   importer item 2): the tab whose create lands second sees the other tab's `createActor` broadcast
   before its own response (new feature `create-watch.mjs`, a listener held only for the create's
   round trip), stands down, waits up to 10 s for the winner's content-hash stamp and takes the update
-  path (skipped on the same hash). The tab that landed first re-reads the live actor before its
-  readback. The look-first case (the id already held by the other tab's actor) joins the same way
-  instead of failing "created concurrently by another GM tab — re-run". test/concurrent-create.test.mjs.
+  path. Its own create replaced the winner's actor and may have wiped Items the winner wrote before
+  it, so this join never skips on the stamp: it rewrites the actor and its Items. The tab that landed
+  first checks the live instance after its Item write; if the other tab's replace swapped it, the
+  actor and its Items are written again on the live one (at most twice) before the readback, so a
+  replace handled after its Items no longer aborts the run with a readback assertion. The look-first
+  case (the id already held by the other tab's actor, no create sent) joins the same way, skipping on
+  the same hash, instead of failing "created concurrently by another GM tab — re-run".
+  test/concurrent-create.test.mjs.
 
 ## Unreleased — FIX-3 live-check fix (2026-10-13)
 

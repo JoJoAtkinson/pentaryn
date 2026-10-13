@@ -165,11 +165,16 @@ id a world Actor already holds — it silently replaces that actor — so:
   overwritten`. One held by the other tab's actor (same slug) is **joined**.
 - two creates sent in the same instant both pass that look. The server answers the first tab before
   it handles the second, so the tab whose create lands second has the other tab's `createActor`
-  broadcast before its own response (the create watch sees it) and **joins**. The first tab re-reads
-  the live actor before its readback, since the second create swapped the instance.
+  broadcast before its own response (the create watch sees it) and **joins**. The first tab checks
+  the live actor after its Item write: when the second create swapped the instance (before or after
+  those Items reached the server), it writes the actor and its Items again on the live one, at most
+  twice, before its readback.
 
 Joining: wait (polling every 250 ms, up to 10 s) for the other tab's content-hash stamp, then take
-the update path: skipped when the stamped hash is this file's, else updated. With no stamp in 10 s
+the update path. A look-first join (no create sent) is skipped when the stamped hash is this file's,
+else updated. A same-instant join is always updated: its own create replaced the other tab's actor
+and may have wiped Items written before it, while that tab's stamp can still land afterwards, so the
+stamp says nothing about the live Items. With no stamp in 10 s
 (the other tab failed or stopped) the joining tab updates the actor itself. Only a joined actor that
 is deleted while waiting fails the slug ("deleted by another GM tab while this run waited for it —
 re-run"). Actors already in the world keep their random ids and are found by slug as before. Two

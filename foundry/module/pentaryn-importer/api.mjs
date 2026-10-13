@@ -54,6 +54,9 @@ let running = false;
 /** The ctx of the published API: its `exposed.watchCreates` comes from create-watch.mjs (wave-3 importer 2). */
 let CTX = null;
 
+/** How many times one actor is written again after another GM tab replaced it mid-write (wave-3 importer 2). */
+const MAX_REWRITES = 2;
+
 /**
  * Import (upsert) the NPC Actors described by `actors.json`.
  *
@@ -211,6 +214,7 @@ async function importOnce({ path, dryRun, only, force, timeout, unmanagedItems }
 
       let actor = existing;
       let joined = false;                        // another GM tab created it; this run updates it
+      let replaced = false;                      // ...and this run's own create replaced that tab's actor
       if (actor) {
         // UPDATE — never recreate. `hp.value`, `img` and `prototypeToken.texture` are withheld. A change
         // Foundry refuses (it resolves undefined, no throw) fails this actor: no Items, no stamp.
@@ -218,11 +222,15 @@ async function importOnce({ path, dryRun, only, force, timeout, unmanagedItems }
       } else {
         // CREATE under the slug's own id (importer-AC-2) — or join another GM tab's create of the same
         // slug, then take the update path (wave-3 importer 2). See createOrJoin.
-        ({ actor, joined } = await createOrJoin(ActorClass, { ...toCreatePayload(data), _id: idForSlug(slug) }, slug,
+        ({ actor, joined, replaced } = await createOrJoin(ActorClass, { ...toCreatePayload(data), _id: idForSlug(slug) }, slug,
           CTX?.exposed?.watchCreates ?? null));
         bySlug.set(slug, actor);                 // a later entry with the same slug updates it
         if (joined) {
-          if (!force && incomingHash && (storedHash(actor) === incomingHash)) {
+          // Skip on a matching stamp only when this run sent no create. After a same-instant join our
+          // replace may have wiped Items the other tab wrote before it, and that tab's stamp can still
+          // land afterwards on our replacement — so the stamp says nothing about the live Items.
+          // Rewriting is safe: the other tab has finished (we waited for its stamp, its last write).
+          if (!replaced && !force && incomingHash && (storedHash(actor) === incomingHash)) {
             skipped.push(slug);
             log.info(`skip   ${slug} — created by another GM tab with this contentHash (${incomingHash.slice(0, 20)}…)`);
             continue;
@@ -231,17 +239,31 @@ async function importOnce({ path, dryRun, only, force, timeout, unmanagedItems }
         }
       }
 
-      const itemResult = await replaceItems(actor, items, unmanagedItems, slug);
+      let itemResult = await replaceItems(actor, items, unmanagedItems, slug);
+
+      // Another GM tab's same-instant create may have replaced the instance in game.actors since ours
+      // resolved (wave-3 importer 2) — before or after the Items above reached the server. A replace
+      // handled after them wiped them, so the actor and its Items are written again on the live
+      // instance (that tab joins and waits for our stamp before it writes). Bounded: a third replace
+      // fails this actor, unstamped, so the next run retries it.
+      for (let rewrites = 0; ; rewrites++) {
+        const live = game.actors.get(actor.id);
+        if (!live || live === actor) break;
+        if (rewrites >= MAX_REWRITES) {
+          throw new Error(`replaced by another GM tab ${rewrites + 1} times while it was written — re-run`);
+        }
+        log.warn(`${slug}: another GM tab replaced this actor while it was written — writing it again on the live actor`);
+        actor = live;
+        await updateActor(actor, toUpdatePayload(data), ActorClass);
+        itemResult = await replaceItems(actor, items, unmanagedItems, slug);
+      }
+
       if (itemResult.unmanaged.length) {
         log.warn(
           `${slug}: left ${itemResult.unmanaged.length} hand-added Item(s) in place `
           + `(${itemResult.unmanaged.join(", ")}). Pass unmanagedItems:"delete" to remove them.`
         );
       }
-
-      // Another GM tab's same-instant create may have replaced the instance in game.actors since ours
-      // resolved (wave-3 importer 2): read back the live one. Writes are routed by id, so they landed there.
-      actor = game.actors.get(actor.id) ?? actor;
 
       // Re-prepare before reading anything back (§8.2 rule 1). `reset()` → `_initialize()` →
       // `_safePrepareData()`, which repopulates every `.labels` we are about to assert on.

@@ -550,16 +550,21 @@ const JOIN_POLL_MS = 250;
  *   - two creates in the same instant both pass the look. The server handles them one at a time and
  *     answers the first tab before it handles the second, so the tab whose create lands SECOND has
  *     the first tab's `createActor` broadcast before its own response. That tab saw a foreign
- *     instance of the id arrive before its own, so it stands down and joins. Its replace has
- *     put its own (normally identical) data in place; the first tab writes the Items and the stamp.
+ *     instance of the id arrive before its own, so it joins (`replaced: true`). Its replace has put
+ *     its own data in place and may have wiped Items the first tab wrote before it — the server
+ *     can handle the first tab's Items create before this tab's create when this tab's latency is
+ *     higher — while the first tab's stamp may still land afterwards. So a replacing join never
+ *     skips on the stamp: it waits for it, then rewrites the actor and its Items (api.mjs).
  *   - the first tab sees nothing at once; the second tab's replace swaps the instance in its
- *     game.actors a moment later. The caller therefore re-reads `game.actors.get(id)` before its
- *     readback (api.mjs), and its writes, routed by id, land on the live actor.
+ *     game.actors a moment later, possibly after its Items were written. The caller therefore
+ *     checks the live instance after its Item write and, if it was replaced, writes the actor and
+ *     its Items again on the live one before its readback (api.mjs).
  *
- * Joining = wait for the other tab's content-hash stamp, then let the caller take the update path
- * (skip when the stamped hash is the incoming one). No stamp within JOIN_WAIT_MS (the other tab failed
- * or stopped) → the joining tab updates the actor itself. So exactly one actor results and the
- * second tab's write is an update.
+ * Joining = wait for the other tab's content-hash stamp (its last write), then let the caller take
+ * the update path. A look-first join (no create sent) skips when the stamped hash is the incoming
+ * one; a replacing join does not. No stamp within JOIN_WAIT_MS (the other tab failed or stopped) →
+ * the joining tab updates the actor itself. So exactly one actor results, the second tab's write is
+ * an update, and whichever tab writes last leaves the Items and the stamp together.
  *
  * The `createActor` watch is create-watch.mjs's `watchCreates`, live only for the create's round
  * trip. Without it (the feature not installed) the same-instant case is not detected.
@@ -568,7 +573,8 @@ const JOIN_POLL_MS = 250;
  * @param {object} payload  the create payload, `_id` = idForSlug(slug)
  * @param {string} slug
  * @param {((id: string) => {seen: Actor[], stop: () => void})|null} watchCreates
- * @returns {Promise<{actor: Actor, joined: boolean}>}
+ * @returns {Promise<{actor: Actor, joined: boolean, replaced: boolean}>}  `replaced`: this tab's own
+ *   create was handled after the other tab's, so it replaced that tab's actor
  * @throws {Error} a per-actor failure: the id is held by an actor without this slug, or the joined
  *   actor was deleted while waiting
  */
@@ -580,7 +586,7 @@ async function createOrJoin(ActorClass, payload, slug, watchCreates) {
       throw new Error(`id ${id} is already held by Actor "${holder.name}" — not overwritten`);
     }
     log.warn(`${slug}: another GM tab created this actor during the run — joining it as an update`);
-    return { actor: await awaitStamp(id, slug), joined: true };
+    return { actor: await awaitStamp(id, slug), joined: true, replaced: false };
   }
   const { seen, stop } = watchCreates?.(id) ?? { seen: [], stop: () => {} };   // instances of the id, in arrival order
   let actor;
@@ -593,9 +599,9 @@ async function createOrJoin(ActorClass, payload, slug, watchCreates) {
   // Second only if a foreign instance arrived BEFORE our own: one that arrives after it is the other
   // tab's replace of ours, and that tab is the one standing down.
   const ours = seen.indexOf(actor);
-  if (!seen.slice(0, ours < 0 ? seen.length : ours).some(doc => doc !== actor)) return { actor, joined: false };
+  if (!seen.slice(0, ours < 0 ? seen.length : ours).some(doc => doc !== actor)) return { actor, joined: false, replaced: false };
   log.warn(`${slug}: another GM tab created this actor in the same instant — joining it as an update`);
-  return { actor: await awaitStamp(id, slug), joined: true };
+  return { actor: await awaitStamp(id, slug), joined: true, replaced: true };
 }
 
 /**

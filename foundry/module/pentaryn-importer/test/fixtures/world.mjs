@@ -28,6 +28,14 @@
  *   raceAfter       slugs another GM tab creates in the same instant but the server processes SECOND:
  *                   its replace lands right after our create resolves (a new instance under the same
  *                   id, the old one now stale), and that tab then stands down (writes nothing more)
+ *   raceWiped       slug → { hash, items }: another GM tab creates the same slug in the same instant,
+ *                   and the server handles its create AND its Items create before ours (this tab's
+ *                   latency is higher): both broadcasts reach us before our response, our keepId create
+ *                   then replaces that actor and wipes its Items, and 500 ms later its stamp `hash`
+ *                   lands on our replacement (wave-3 importer 2, FIX-W3 verifier)
+ *   raceAfterItems  slugs another GM tab creates in the same instant whose create the server handles
+ *                   after OUR first Items create: the replace (no Items) swaps the instance right after
+ *                   that write; that tab then writes nothing more
  *   noopUpdate      slugs whose actor.update resolves undefined because the diff is empty (Foundry's
  *                   client drops a no-op update: no request, no hook — wave-3 importer item 1); the
  *                   content-hash stamp is still a real change
@@ -90,7 +98,7 @@ function tokenOf(data) {
 }
 
 export function makeWorld(F, knobs = {}) {
-  const K = { dropTypes: new Set(), regenIds: false, stripAction: new Set(), failCreate: new Set(), raceCreate: new Set(), failItems: new Set(), noopUpdate: new Set(), raceSame: new Map(), raceAfter: new Set(), ...knobs };
+  const K = { dropTypes: new Set(), regenIds: false, stripAction: new Set(), failCreate: new Set(), raceCreate: new Set(), failItems: new Set(), noopUpdate: new Set(), raceSame: new Map(), raceAfter: new Set(), raceWiped: new Map(), raceAfterItems: new Set(), ...knobs };
   let seq = 0;
 
   function makeItem(actor, data) {
@@ -160,6 +168,12 @@ export function makeWorld(F, knobs = {}) {
         actor.items.set(item.id, item);
         made.push(item);
       }
+      const replaceWith = actor.raceAfterItems;
+      if (replaceWith) {                                              // the other tab's replace, handled after these Items
+        delete actor.raceAfterItems;
+        F.calls.push({ op: "Actor.replace", id: actor.id, by: "other tab" });
+        F.fire("createActor", makeActor({ ...replaceWith, name: `${replaceWith.name} (other tab)` }, { id: actor.id }), {}, F.game.user?.id);
+      }
       return made;
     });
     hidden(actor, "deleteEmbeddedDocuments", async (type, ids, options) => {
@@ -198,8 +212,20 @@ export function makeWorld(F, knobs = {}) {
           await theirs.update({ flags: { pentaryn: { contentHash: same.hash } } }, { render: false });
         }, 500);
       }
+      const wiped = K.raceWiped.get(slug);
+      if (wiped && id) {                                              // theirs first, with its Items; then our replace
+        K.raceWiped.delete(slug);
+        F.fire("createActor", makeActor({ ...clone(data), name: `${data.name} (other tab)` }, { id, items: wiped.items }), {}, F.game.user?.id);
+        setTimeout(async () => {                                      // its stamp, after our replace wiped its Items
+          await F.game.actors.get(id).update({ flags: { pentaryn: { contentHash: wiped.hash } } }, { render: false });
+        }, 500);
+      }
       if (id && F.game.actors.get(id)) F.calls.push({ op: "Actor.replace", id });   // Foundry 14: no error
       const made = makeActor(data, { id });
+      if (id && K.raceAfterItems.has(slug)) {
+        K.raceAfterItems.delete(slug);
+        hidden(made, "raceAfterItems", clone(data));
+      }
       F.fire("createActor", made, F.plain(options), F.game.user?.id);   // our own response fires it too
       if (id && K.raceAfter.has(slug)) {                              // theirs second: replaces ours right after
         K.raceAfter.delete(slug);

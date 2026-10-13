@@ -8,10 +8,13 @@
 // the later one replaced the earlier, so one actor held the later tab's data while both tabs wrote
 // Items and stamped. Exactly one tab now creates: the server orders the two creates, so the tab whose
 // create lands second has the other tab's create broadcast before its own response and stands down —
-// it waits for the winner's content-hash stamp and then takes the update path (skip on an unchanged
-// hash). The tab that landed first re-reads the live actor before its readback (the replace swapped
-// the instance). A slug that appears after the run's index (the look-first case) joins the same way
-// instead of failing "re-run". If no stamp comes within the wait, the joining tab updates it itself.
+// it waits for the winner's content-hash stamp and then takes the update path. Its own create was a
+// replace that may have wiped the winner's Items, so it never skips on that stamp: it rewrites the
+// actor and its Items. The tab that landed first checks the live actor after its Item write; if the
+// other tab's replace swapped the instance, it writes the actor and Items again on the live one before
+// its readback. A slug that appears after the run's index (the look-first case) joins without
+// sending a create, and skips on an unchanged hash. If no stamp comes within the wait, the joining
+// tab updates it itself.
 import { mock, test } from "node:test";
 import assert from "node:assert/strict";
 import { installFoundry } from "./kit/foundry-stub.mjs";
@@ -95,6 +98,8 @@ async function quietImport() {
     W.K.raceCreate.clear();
     W.K.raceSame.clear();
     W.K.raceAfter.clear();
+    W.K.raceWiped.clear();
+    W.K.raceAfterItems.clear();
   }
 }
 
@@ -130,11 +135,69 @@ test("wave-3 importer 2: two creates in the same instant — the tab landing sec
   assert.equal(game.actors.filter(a => a.flags.pentaryn?.slug === "vex").length, 1, "exactly one actor");
   assert.deepEqual(result.failed, []);
   assert.deepEqual(result.created, [], "only the other tab created it");
-  assert.deepEqual(result.skipped, ["vex"], "joined as an update: the winner stamped the same hash, so nothing to rewrite");
+  assert.deepEqual(result.updated, ["vex"], "joined as an update; a replacing join never skips on the winner's stamp");
   const live = game.actors.get(id);
-  assert.equal(live.items.size ?? live.items.length, 1, "the Items were written once, not by both tabs");
+  assert.equal(live.items.size ?? live.items.length, 1, "the managed Item replaced, not doubled");
   assert.equal(live.flags.pentaryn.contentHash, "sha256:vex");
-  assert.equal(F.calls.slice(from).filter(c => c.op === "createEmbeddedDocuments").length, 1, "only the winner wrote Items");
+  const itemWrites = F.calls.slice(from).filter(c => c.op === "createEmbeddedDocuments" || c.op === "deleteEmbeddedDocuments");
+  assert.deepEqual(itemWrites.map(c => c.op), ["createEmbeddedDocuments", "deleteEmbeddedDocuments", "createEmbeddedDocuments"],
+    "the winner wrote its Items first; this tab rewrote them only after the winner's stamp, never alongside");
+});
+
+test("wave-3 importer 2 (FIX-W3): same instant, the winner's create AND Items land before our replace, its stamp after — the actor keeps its Items", async () => {
+  const id = core.idForSlug("zog");
+  W.K.raceWiped.set("zog", { hash: "sha256:zog", items: [loot] });  // our replace wipes them; the stamp lands on ours
+  body = manifestOfActors([npcWithItem("zog")]);
+  const result = await quietImport();
+
+  assert.equal(game.actors.filter(a => a.flags.pentaryn?.slug === "zog").length, 1, "exactly one actor");
+  assert.deepEqual(result.failed, []);
+  assert.deepEqual(result.skipped, [], "never skipped on a stamp that says nothing about the live Items");
+  assert.deepEqual(result.updated, ["zog"]);
+  const live = game.actors.get(id);
+  assert.equal(live.items.size ?? live.items.length, 1, "the Items our replace wiped are written again, once");
+  assert.equal(live.flags.pentaryn.contentHash, "sha256:zog");
+});
+
+test("wave-3 importer 2 (FIX-W3): this tab lands first, the other tab's replace is handled after our Items — no abort, Items rewritten, the run goes on", async () => {
+  const id = core.idForSlug("yok");
+  W.K.raceAfterItems.add("yok");
+  body = manifestOfActors([npcWithItem("yok"), npcWithItem("after-yok")]);
+  const result = await quietImport();
+
+  assert.deepEqual(result.failed, []);
+  assert.deepEqual(result.created, ["yok", "after-yok"], "the actor after it is still imported");
+  assert.equal(game.actors.filter(a => a.flags.pentaryn?.slug === "yok").length, 1, "exactly one actor");
+  const live = game.actors.get(id);
+  assert.equal(live.items.size ?? live.items.length, 1, "Items on the live (replacing) actor, once");
+  assert.equal(live.name, "YOK", "the actor itself written again on the live instance");
+  assert.equal(live.flags.pentaryn.contentHash, "sha256:yok", "stamped on the live actor");
+});
+
+test("wave-3 importer 2 (FIX-W3): the create watch is registered only for the create's round trip — removed after a create and after a create that throws", async () => {
+  const before = F.listeners("createActor");
+  const during = [];
+  const Base = getDocumentClass("Actor");
+  const keep = globalThis.getDocumentClass;
+  class Probe extends Base {
+    static async create(...args) {
+      during.push(F.listeners("createActor"));
+      return super.create(...args);
+    }
+  }
+  globalThis.getDocumentClass = name => (name === "Actor" ? Probe : null);
+  try {
+    W.K.failCreate.add("hooky-bad");
+    body = manifestOfActors([npc("hooky"), npc("hooky-bad")]);
+    const result = await quietImport();
+    assert.deepEqual(result.created, ["hooky"]);
+    assert.equal(result.failed.length, 1);
+  } finally {
+    globalThis.getDocumentClass = keep;
+    W.K.failCreate.delete("hooky-bad");
+  }
+  assert.deepEqual(during, [before + 1, before + 1], "one watch while each create is in flight");
+  assert.equal(F.listeners("createActor"), before, "no watch left behind, the throwing create included");
 });
 
 test("wave-3 importer 2: same instant, the winner's file differs — the joining tab updates the winner's actor", async () => {
