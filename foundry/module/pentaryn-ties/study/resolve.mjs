@@ -34,6 +34,7 @@ import {
 } from "../known-core.mjs";
 import { CONCEAL_FLAG, concealFor } from "../core/rules.mjs";
 import { attackItems, composeStudyPayload } from "./compose.mjs";
+import { skillLabelOf } from "./shared.mjs";
 import { readFlag } from "../lib/flags.mjs";
 import { setting } from "../settings.mjs";
 
@@ -132,7 +133,7 @@ export function resolveFact(spec) {
     // row deleted or blanked mid-gesture stops resolving here, and the caller refuses.
     const row = rollableLore(readFlag(subject, MODULE, LORE_FLAG)).find(r => r.id === spec?.factId);
     if (!row) return null;
-    const label = CONFIG.DND5E?.skills?.[row.skill]?.label ?? row.skill;
+    const label = skillLabelOf(row.skill);
     const factKey = loreFactKey(subject.id, row.id);
     return {
       ns: "lore",
@@ -157,11 +158,7 @@ export function resolveFact(spec) {
       dc: row.dc,
       hold: holdResolved(row.hold, holdDefault()),
       row,
-      grade: async total => {
-        const out = loreOutcome(row, total);
-        if (!out) return null;
-        return { text: out.text, silent: out.silent, tier: null, pass: out.pass };
-      }
+      grade: loreGrade(row)
     };
   }
 
@@ -180,7 +177,7 @@ export function resolveFact(spec) {
     const row = rollableLore(attributeLore(attrId)).find(r => r.id === spec?.factId);
     if (!row) return null;
     const entry = describeAttribute(attrId);
-    const label = CONFIG.DND5E?.skills?.[row.skill]?.label ?? row.skill;
+    const label = skillLabelOf(row.skill);
     const factKey = attrFactKey(attrId, row.id);
     return {
       ns: "attr",
@@ -201,16 +198,22 @@ export function resolveFact(spec) {
       dc: row.dc,
       hold: holdResolved(row.hold, holdDefault()),
       row,
-      grade: async total => {
-        const out = loreOutcome(row, total);
-        if (!out) return null;
-        return { text: out.text, silent: out.silent, tier: null, pass: out.pass };
-      }
+      grade: loreGrade(row)
     };
   }
 
   return null;
 }
+
+/**
+ * Grade → prose for a flat row (an individual's lore, an attribute's lore): one closure for both
+ * branches (M8). `null` means no roll happened and nothing may be spent.
+ */
+const loreGrade = row => async total => {
+  const out = loreOutcome(row, total);
+  if (!out) return null;
+  return { text: out.text, silent: out.silent, tier: null, pass: out.pass };
+};
 
 export const studiedOf = actor => readStudied(readFlag(actor, MODULE, STUDIED_FLAG));
 export const beliefsOf = actor => readBeliefs(readFlag(actor, MODULE, BELIEFS_FLAG));
@@ -260,7 +263,7 @@ export const studyHoldFor = kind => holdResolved(readFlag(kind, MODULE, STUDY_HO
 /** Which skill this kind is studied with, and its localized name for the provenance header. */
 export function studySkillFor(kind) {
   const skill = studySkill(kind?.system?.details?.type?.value ?? null);
-  return { skill, label: CONFIG.DND5E?.skills?.[skill]?.label ?? skill };
+  return { skill, label: skillLabelOf(skill) };
 }
 
 /**

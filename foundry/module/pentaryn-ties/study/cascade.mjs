@@ -38,7 +38,7 @@ import {
   stackingRule,
   studySkillFor
 } from "./resolve.mjs";
-import { esc, INSPECT, log } from "./shared.mjs";
+import { esc, INSPECT, log, skillLabelOf } from "./shared.mjs";
 import { send } from "../socket-adapter.mjs";
 import { announceTempo } from "./tempo.mjs";
 import { readFlag } from "../lib/flags.mjs";
@@ -309,7 +309,7 @@ async function rollRung(character, subject, step) {
     skill: entry.skill,
     dc: identDcOf(subject, step.roll, entry),
     name: entry.title,
-    skillLabel: CONFIG.DND5E?.skills?.[entry.skill]?.label ?? entry.skill,
+    skillLabel: skillLabelOf(entry.skill),
     silentRoll: true // chat-less: N rungs must not print N cards
   };
   const mode = combineAdvantage(step.advantage ? 1 : 0, 0, stackingRule());

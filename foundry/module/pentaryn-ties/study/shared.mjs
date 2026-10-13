@@ -2,7 +2,7 @@
  * The conduit's private plumbing the study/ files read: the one logger, the three socket action
  * names (STUDY, INSPECT, BUBBLE), the attack-line cap (ATTACK_LINES_MAX), the situational-bonus
  * bounds (SITUATIONAL_MIN/MAX) and their clamp (clampSituational), the token a card names a creature by
- * (cardToken/cardName), and an `esc` re-export. NOT re-exported by the study.mjs barrel
+ * (cardToken/cardName), a skill's label (skillLabelOf), and an `esc` re-export. NOT re-exported by the study.mjs barrel
  * except SITUATIONAL_MIN/MAX, which it always exported.
  *
  * Split out of study.mjs (S4b, ties-35).
@@ -27,6 +27,9 @@ export const SITUATIONAL_MAX = 100;
 
 /** The situational bonus, rounded and clamped — one copy for the request and the handler. */
 export const clampSituational = v => Math.max(SITUATIONAL_MIN, Math.min(SITUATIONAL_MAX, Math.round(Number(v) || 0)));
+
+/** A dnd5e skill's localized name, or the raw key when the system does not know it — one copy (M8). */
+export const skillLabelOf = skill => CONFIG.DND5E?.skills?.[skill]?.label ?? skill;
 
 /**
  * The token a chat card names `actor` by: an unlinked token's own document, else the first token

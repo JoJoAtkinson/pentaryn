@@ -22,3 +22,12 @@ test("M7: the kind descriptor reads the offset flag once for offset and dc", () 
   const kind = r.slice(r.indexOf('if (ns === "kind")'), r.indexOf("grade: async total"));
   assert.equal(count(kind, /readFlag\(kind, MODULE, STUDY_OFFSET_FLAG\)/g), 1);
 });
+
+test("M8: one skill-label lookup and one flat-row grade closure across study/", () => {
+  for (const f of ["resolve.mjs", "cascade.mjs", "request.mjs", "apply.mjs", "share.mjs", "gate.mjs", "authoring.mjs"])
+    assert.equal(count(src(`study/${f}`), /CONFIG\.DND5E\?\.skills\?\.\[/g), 0, `${f} pastes the skill-label lookup`);
+  assert.equal(count(src("study/shared.mjs"), /CONFIG\.DND5E\?\.skills\?\.\[/g), 1, "skillLabelOf is the one copy");
+  const r = src("study/resolve.mjs");
+  assert.equal(count(r, /loreOutcome\(row, total\)/g), 1, "the lore and attr branches share loreGrade");
+  assert.equal(count(r, /grade: loreGrade\(row\)/g), 2);
+});

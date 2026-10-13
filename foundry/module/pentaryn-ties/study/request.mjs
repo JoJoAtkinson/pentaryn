@@ -11,7 +11,7 @@ import { mayWrite } from "../settings.mjs";
 import { attrFactKey, LORE_FLAG, loreFactKey, loreOfferable, rollableLore } from "../known-core.mjs";
 import { applyStudy } from "./apply.mjs";
 import { kindActorOf, studiedOf, studyStateFor } from "./resolve.mjs";
-import { clampSituational, esc, log, SITUATIONAL_MAX, SITUATIONAL_MIN, STUDY } from "./shared.mjs";
+import { clampSituational, esc, log, SITUATIONAL_MAX, SITUATIONAL_MIN, skillLabelOf, STUDY } from "./shared.mjs";
 import { send } from "../socket-adapter.mjs";
 import { readFlag } from "../lib/flags.mjs";
 
@@ -140,7 +140,7 @@ export function attrLoreStateFor(character, subject, attrId) {
       label: row.label,
       dc: row.dc,
       skill: row.skill,
-      skillLabel: CONFIG.DND5E?.skills?.[row.skill]?.label ?? row.skill,
+      skillLabel: skillLabelOf(row.skill),
       spent: !!spent[key],
       available: !spent[key],
       gmOnline: !!game.users?.activeGM
@@ -247,7 +247,7 @@ export function loreStateFor(character, subject) {
       label: row.label,
       dc: row.dc,
       skill: row.skill,
-      skillLabel: CONFIG.DND5E?.skills?.[row.skill]?.label ?? row.skill,
+      skillLabel: skillLabelOf(row.skill),
       spent: !!spent[key],
       available: !spent[key],
       gmOnline: !!game.users?.activeGM

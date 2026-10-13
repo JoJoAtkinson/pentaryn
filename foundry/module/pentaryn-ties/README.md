@@ -148,7 +148,7 @@ are GM-written; the registry queues its writes one at a time.
   downstream — `study/apply.mjs` (`readBelief`, `putBelief`, `applyPlayerWrites`), `study/claim.mjs`
   (`claimFact`, `releaseFact`), `study/gate.mjs` (`promptDeliver`, `deliverFact`, `rowMissed`, the
   parsed-key test in `pending`), `study/share.mjs`, and `study/authoring.mjs`'s `beliefs`. The kept
-  list is the seam note at `study/resolve.mjs:68`; a new place that tests `fact.ns` goes there too.
+  list is the seam note at `study/resolve.mjs:69`; a new place that tests `fact.ns` goes there too.
 
 ## Pitfalls
 
