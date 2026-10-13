@@ -25,6 +25,10 @@
 // `]`), `**` is anything, `?` one character other than `.`; `[` and `]` are literal. So
 // `stash.chest[*]` covers `stash.chest[2]` but not `stash.chest[0].name` (that is
 // `stash.chest[*].*`), and `purseHome` covers only `purseHome` itself (`purseHome.**` the rest).
+// A key holding `.`, `[` or `]` prints JSON-quoted in brackets — ties' `attributes.lookup` setting
+// is `surface.d1["attributes.lookup"]` — and globs treat `"` as literal: that spelling or
+// `surface.d1.**` covers it, `surface.d1.*` does not (LG-E7). `.**` is everything below, a
+// bracketed segment as much as a dotted one: `stash.chest.**` covers `stash.chest[2]`.
 // A glob that matched nothing is named.
 import { readFileSync, realpathSync } from "node:fs";
 import { pathToFileURL } from "node:url";
@@ -42,7 +46,9 @@ export function diffPaths(a, b, path = "") {
   const isObj = x => x !== null && typeof x === "object";
   if (!isObj(a) || !isObj(b) || Array.isArray(a) !== Array.isArray(b)) return [[path || "(root)", a, b]];
   const keys = [...new Set([...Object.keys(a), ...Object.keys(b)])].sort();
-  return keys.flatMap(k => diffPaths(a[k], b[k], Array.isArray(a) ? `${path}[${k}]` : (path ? `${path}.${k}` : k)));
+  // A key holding `.`, `[` or `]` prints JSON-quoted in brackets, so it never reads as nested segments (LG-E7).
+  const seg = k => Array.isArray(a) ? `[${k}]` : /[.[\]]/.test(k) ? `[${JSON.stringify(k)}]` : (path ? `.${k}` : k);
+  return keys.flatMap(k => diffPaths(a[k], b[k], `${path}${seg(k)}`));
 }
 
 /** A path glob → RegExp (see the header). */
@@ -50,10 +56,12 @@ export function globToRegExp(glob) {
   let re = "";
   for (let i = 0; i < glob.length; i++) {
     const c = glob[i];
-    if (c === "*" && glob[i + 1] === "*") { re += ".*"; i++; }
+    // `.**` is everything below, a bracketed segment (`[2]`, `["a.b"]`) as much as a dotted one
+    if (c === "." && glob[i + 1] === "*" && glob[i + 2] === "*") { re += "(?:\\.|(?=\\[)).*"; i += 2; }
+    else if (c === "*" && glob[i + 1] === "*") { re += ".*"; i++; }
     else if (c === "*") re += "[^.\\[\\]]*";
     else if (c === "?") re += "[^.]";
-    else re += c.replace(/[.+^${}()|[\]\\]/g, "\\$&");
+    else re += c.replace(/[.+^${}()|[\]\\]/g, "\\$&");   // `"`, `[`, `]` and the rest are literal
   }
   return new RegExp(`^${re}$`);
 }

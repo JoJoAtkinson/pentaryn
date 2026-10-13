@@ -17,8 +17,8 @@
 // What it exercises (the real glue): a ZZ scratch scene (padding 0, grid 100, no Levels) holding
 // the five D1 walls (two windows, a window, a door, a hint); preview({sceneId, backend}) for js
 // and, when loaded, wasm; run({sceneId, backend: "js"}) twice; undo({sceneId}). The GM whisper
-// cards it posts are captured, compared with the time stripped, and deleted. The scene (and its
-// walls) is deleted at the end.
+// cards it posts (this GM's own messages only) are captured, compared with the time stripped,
+// and deleted. The scene (and its walls) is deleted at the end.
 // Wave 2 live plan: context/plans/addon-blueprint-2026-10/wave-2-live-plan.md.
 
 const N = 5;
@@ -42,10 +42,16 @@ const strip = v => Array.isArray(v) ? v.map(strip)
   : v;
 const norm = v => { let s = JSON.stringify(strip(v) ?? null); for (const [id, l] of ids) s = s.split(id).join(`<${l}>`); return JSON.parse(s); };
 const caught = e => ({ threw: true, name: e?.name ?? null, ctor: e?.constructor?.name ?? null, message: String(e?.message ?? e) });
+/** Cleanup: run one step; a failure becomes a `NOT ` string diff.mjs fails on, and the next step still runs (LG-R8). */
+const safely = async (name, fn) => { try { await fn(); } catch (e) { out.cleanup[`${name}CleanupError`] = `NOT done: ${e?.message ?? e}`; } };
 const probe = async fn => { try { return await fn(); } catch (e) { return caught(e); } };
 const keysOf = o => Object.keys(o ?? {}).sort();
-/** One macrotask through a MessageChannel: unlike setTimeout it is not throttled in a hidden tab (J20). */
-const tick = () => new Promise(r => { const c = new MessageChannel(); c.port1.onmessage = () => { c.port1.close(); r(); }; c.port2.postMessage(0); });
+/** One macrotask through a shared MessageChannel: unlike setTimeout it is not throttled in a hidden tab (J20). One channel per golden; each message wakes the oldest waiting tick (perf-1). ref/unref exist only in Node (the offline tests), where an idle listening port would hold the process open. */
+const tickQ = [];
+const tickChan = new MessageChannel();
+tickChan.port1.onmessage = () => { tickQ.shift()?.(); if (!tickQ.length) tickChan.port1.unref?.(); };
+tickChan.port1.unref?.();
+const tick = () => new Promise(r => { tickQ.push(r); tickChan.port1.ref?.(); tickChan.port2.postMessage(0); });
 /** Live only: poll until pred() holds or ms passes. */
 const settle = async (pred, ms = 3000) => {
   const t0 = performance.now();
@@ -99,7 +105,8 @@ const sceneWalls = scene => scene.walls.map(w => {
 }).sort((a, b) => JSON.stringify(a.c).localeCompare(JSON.stringify(b.c)));
 
 const chats = [];
-const hookId = Hooks.on("createChatMessage", m => chats.push(m.id));
+// only this GM's own messages: a player's card posted mid-run is never captured or deleted (LG-AC-1)
+const hookId = Hooks.on("createChatMessage", (m, opts, userId) => { if (userId === game.user.id) chats.push(m.id); });
 const lastCard = async n0 => { await settle(() => chats.length > n0, 2000); return chats.length > n0 ? card(game.messages.get(chats.at(-1))) : null; };
 let scene = null;
 try {
@@ -157,13 +164,13 @@ try {
   Hooks.off("createChatMessage", hookId);
   await tick();
   const mine = chats.filter(id => game.messages.has(id));
-  if (mine.length) await ChatMessage.deleteDocuments(mine);
-  if (scene && game.scenes.get(scene.id)) await scene.delete();
-  out.cleanup = {
+  if (mine.length) await safely("chat", () => ChatMessage.deleteDocuments(mine));
+  if (scene && game.scenes.get(scene.id)) await safely("scene", () => scene.delete());
+  Object.assign(out.cleanup, {
     chatDeleted: mine.length,
     chatLeft: chats.filter(id => game.messages.has(id)).length,
     zzScenesLeft: game.scenes.filter(s => s.name.startsWith("ZZ ")).length
-  };
+  });
 }
 out.golden = norm(out.golden);
 // a string, not the object: the eval bridge truncates nested results at a fixed depth

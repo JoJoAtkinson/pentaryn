@@ -36,10 +36,16 @@ const strip = v => Array.isArray(v) ? v.map(strip)
   : v;
 const norm = v => { let s = JSON.stringify(strip(v) ?? null); for (const [id, l] of ids) s = s.split(id).join(`<${l}>`); return JSON.parse(s); };
 const caught = e => ({ threw: true, name: e?.name ?? null, ctor: e?.constructor?.name ?? null, message: String(e?.message ?? e) });
+/** Cleanup: run one step; a failure becomes a `NOT ` string diff.mjs fails on, and the next step still runs (LG-R8). */
+const safely = async (name, fn) => { try { await fn(); } catch (e) { out.cleanup[`${name}CleanupError`] = `NOT done: ${e?.message ?? e}`; } };
 const probe = async fn => { try { return await fn(); } catch (e) { return caught(e); } };
 const keysOf = o => Object.keys(o ?? {}).sort();
-/** One macrotask through a MessageChannel: unlike setTimeout it is not throttled in a hidden tab (J20). */
-const tick = () => new Promise(r => { const c = new MessageChannel(); c.port1.onmessage = () => { c.port1.close(); r(); }; c.port2.postMessage(0); });
+/** One macrotask through a shared MessageChannel: unlike setTimeout it is not throttled in a hidden tab (J20). One channel per golden; each message wakes the oldest waiting tick (perf-1). ref/unref exist only in Node (the offline tests), where an idle listening port would hold the process open. */
+const tickQ = [];
+const tickChan = new MessageChannel();
+tickChan.port1.onmessage = () => { tickQ.shift()?.(); if (!tickQ.length) tickChan.port1.unref?.(); };
+tickChan.port1.unref?.();
+const tick = () => new Promise(r => { tickQ.push(r); tickChan.port1.ref?.(); tickChan.port2.postMessage(0); });
 /** Wait ms of wall time, yielding with tick() (a hidden tab clamps setTimeout to 1 s or more). */
 const sleep = async ms => { const t0 = performance.now(); while (performance.now() - t0 < ms) await tick(); };
 
@@ -159,25 +165,25 @@ try {
 } catch (e) {
   S.error = caught(e);
 } finally {
-  if (combat && game.combats.get(combat.id)) await combat.delete();
+  if (combat && game.combats.get(combat.id)) await safely("combat", () => combat.delete());
   for (const [id, was] of saved.combats ?? []) {
     const c = game.combats.get(id);
-    if (c && !!c.active !== was) await c.update({ active: was });
+    if (c && !!c.active !== was) await safely("combatActive", () => c.update({ active: was }));
   }
   if ("policy" in saved) {
-    if (game.settings.get(MOD, "ghostPolicy") !== saved.policy) await game.settings.set(MOD, "ghostPolicy", saved.policy);
-    if (game.settings.get(MOD, "ghostPolicyLast") !== saved.last) await game.settings.set(MOD, "ghostPolicyLast", saved.last);
-    if (game.settings.get(MOD, "ghost") !== saved.ghost) await game.settings.set(MOD, "ghost", saved.ghost);
+    if (game.settings.get(MOD, "ghostPolicy") !== saved.policy) await safely("ghostPolicy", () => game.settings.set(MOD, "ghostPolicy", saved.policy));
+    if (game.settings.get(MOD, "ghostPolicyLast") !== saved.last) await safely("ghostPolicyLast", () => game.settings.set(MOD, "ghostPolicyLast", saved.last));
+    if (game.settings.get(MOD, "ghost") !== saved.ghost) await safely("ghost", () => game.settings.set(MOD, "ghost", saved.ghost));
   }
-  if (scene && game.scenes.get(scene.id)) await scene.delete();
-  if (actor && game.actors.get(actor.id)) await actor.delete();
-  out.cleanup = {
+  if (scene && game.scenes.get(scene.id)) await safely("scene", () => scene.delete());
+  if (actor && game.actors.get(actor.id)) await safely("actor", () => actor.delete());
+  Object.assign(out.cleanup, {
     settingsRestored: "policy" in saved ? (game.settings.get(MOD, "ghostPolicy") === saved.policy
       && game.settings.get(MOD, "ghostPolicyLast") === saved.last && game.settings.get(MOD, "ghost") === saved.ghost) : null,
     zzLeft: game.actors.filter(a => a.name.startsWith("ZZ ")).length + game.scenes.filter(s => s.name.startsWith("ZZ ")).length
       + game.combats.filter(c => c.scene?.name?.startsWith?.("ZZ ")).length,
     combatsActiveRestored: (saved.combats ?? []).every(([id, was]) => !game.combats.get(id) || !!game.combats.get(id).active === was)
-  };
+  });
 }
 out.golden = norm(out.golden);
 // a string, not the object: the eval bridge truncates nested results at a fixed depth

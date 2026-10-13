@@ -1,6 +1,7 @@
 // Live golden — pentaryn-ties. Body of an async function for the foundry `eval-js` MCP tool
 // (paste the file as `script`, timeoutMs 60000). GM client only. Returns a JSON string of
-// { module, golden, timings, cleanup }: `golden` is deterministic (ids normalised, timestamps
+// { module, golden, timings, cleanup } (or { module, skipped } when the attribute registry is
+// empty): `golden` is deterministic (ids normalised, timestamps
 // dropped), `timings` are medians of N runs (performance.now) — the performance baseline.
 //
 // What it exercises (the real glue, no stubs):
@@ -34,8 +35,14 @@ const strip = v => Array.isArray(v) ? v.map(strip)
   : v;
 const norm = v => { let s = JSON.stringify(strip(v) ?? null); for (const [id, l] of ids) s = s.split(id).join(`<${l}>`); return JSON.parse(s); };
 const caught = e => ({ threw: true, name: e?.name ?? null, ctor: e?.constructor?.name ?? null, message: String(e?.message ?? e) });
-/** One macrotask through a MessageChannel: unlike setTimeout it is not throttled in a hidden tab (J20). */
-const tick = () => new Promise(r => { const c = new MessageChannel(); c.port1.onmessage = () => { c.port1.close(); r(); }; c.port2.postMessage(0); });
+/** Cleanup: run one step; a failure becomes a `NOT ` string diff.mjs fails on, and the next step still runs (LG-R8). */
+const safely = async (name, fn) => { try { await fn(); } catch (e) { out.cleanup[`${name}CleanupError`] = `NOT done: ${e?.message ?? e}`; } };
+/** One macrotask through a shared MessageChannel: unlike setTimeout it is not throttled in a hidden tab (J20). One channel per golden; each message wakes the oldest waiting tick (perf-1). ref/unref exist only in Node (the offline tests), where an idle listening port would hold the process open. */
+const tickQ = [];
+const tickChan = new MessageChannel();
+tickChan.port1.onmessage = () => { tickQ.shift()?.(); if (!tickQ.length) tickChan.port1.unref?.(); };
+tickChan.port1.unref?.();
+const tick = () => new Promise(r => { tickQ.push(r); tickChan.port1.ref?.(); tickChan.port2.postMessage(0); });
 /** Live only: poll until pred() holds or ms passes. */
 const settle = async (pred, ms = 3000) => {
   const t0 = performance.now();
@@ -68,6 +75,8 @@ try {
   const reg = T.attributes.list();
   const entry = [...reg].sort((a, b) => a.id.localeCompare(b.id))[0];
   out.golden.registry = { count: reg.length, picked: entry ? { id: entry.id, title: entry.title, category: entry.category, parent: entry.parent ?? null } : null };
+  // an empty registry has nothing to link: skip before the ZZ actor exists (LG-E6)
+  if (!entry) { out.skipped = "attribute registry is empty"; return JSON.stringify(out); }
 
   actor = await Actor.create({ name: "ZZ Golden Ties Subject", type: "npc", system: { traits: { size: "med" }, details: { type: { value: "humanoid" } } } });
   tag(actor.id, "actor");
@@ -98,8 +107,8 @@ try {
 } catch (e) {
   out.golden.error = caught(e);
 } finally {
-  if (actor && game.actors.get(actor.id)) await actor.delete();
-  out.cleanup = { zzActorsLeft: game.actors.filter(a => a.name.startsWith("ZZ ")).length };
+  if (actor && game.actors.get(actor.id)) await safely("actor", () => actor.delete());
+  out.cleanup.zzActorsLeft = game.actors.filter(a => a.name.startsWith("ZZ ")).length;
 }
 out.golden = norm(out.golden);
 // a string, not the object: the eval bridge truncates nested results at a fixed depth

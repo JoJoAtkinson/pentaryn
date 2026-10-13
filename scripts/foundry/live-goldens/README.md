@@ -15,19 +15,36 @@ and can leave a spy installed.
 ```sh
 node scripts/foundry/live-goldens/diff.mjs before.json after.json
 node scripts/foundry/live-goldens/diff.mjs --declared declared.txt before.json after.json
+node scripts/foundry/live-goldens/diff.mjs --declared scripts/foundry/live-goldens/noise/pings.txt \
+  before/pings.json after/pings.json
 ```
 
 Exit 0 when `golden.shared` is equal (or every difference is declared) and both cleanups are clean,
 1 otherwise, 2 on bad input. A run that `skipped` (either side) prints `skipped: <reason>` and
 exits 2, as does a `golden` that is not an object — a skip never diffs as identical.
 `--declared` takes one path glob per line (`#` comments) or a JSON array: `*` stays inside one segment, `**` crosses segments, `[` `]` are literal — so
-`stash.chest[*]`, `stash.chest[*].*` and `purseHome` each cover only what they spell. A glob that
+`stash.chest[*]`, `stash.chest[*].*` and `purseHome` each cover only what they spell. A key holding
+`.`, `[` or `]` prints JSON-quoted in brackets (ties' setting key is `surface.d1["attributes.lookup"]`)
+and `"` is literal in a glob, so that exact spelling or `surface.d1.**` covers it but `surface.d1.*`
+does not (`.**` is everything below, a bracketed segment as much as a dotted one). A glob that
 matched nothing is named. Keep the globs to what the wave's plan declares.
+Pings is always diffed with `--declared noise/pings.txt` (the third command): that file holds the
+known run-to-run noise below as a glob, so a clean pings diff exits 0 without a hand-written file.
+When a wave also declares pings changes, copy its glob into that wave's file (`--declared` takes one
+file). It declares a difference, so a key goes in only with its own row in the noise table.
 
 **Cleanup keys.** `diff.mjs` judges a `cleanup` by its top-level key names only. Report leftovers
 as `<thing>Left: <count>` (fails above 0) and restores as `<thing>Restored: <boolean>` (fails when
 `false`); a top-level string containing `REFUSED` or `NOT ` also fails. Any other key — nested
-objects included — is printed but never judged.
+objects included — is printed but never judged. Every awaited step in a `finally` runs through the
+preamble's `safely(name, fn)`: a refused delete or restore is recorded as
+`<name>CleanupError: "NOT done: <why>"` and the next step still runs, so one failure never leaves
+the remaining ZZ documents behind (`scripts/tests/test_live_goldens_cleanup_safely.py`). Delete
+each document type in one batch — collect the ids still in the world, then one
+`Actor.deleteDocuments(ids)` / `ChatMessage.deleteDocuments(ids)` / `JournalEntry.deleteDocuments(ids)`
+inside one `safely` step — never one awaited `doc.delete()` per id
+(`scripts/tests/test_live_goldens_cleanup_batch.py`); a refused batch is reported whole. Add to
+`out.cleanup` in `finally` (`Object.assign`), never replace it, or those keys are lost.
 
 ## Known run-to-run noise
 
@@ -35,7 +52,7 @@ Two runs of the same code can differ here; it is not a regression.
 
 | Golden | Path | Why | Status |
 |---|---|---|---|
-| pings | `ping.settingArrayReplacedByFlush` | true in one run only — ring state / cache timing, not code (W5L) | **live noise** |
+| pings | `ping.settingArrayReplacedByFlush` | true in one run only — ring state / cache timing, not code (W5L) | **live noise** — declared in `noise/pings.txt`; diff pings with `--declared noise/pings.txt` |
 | senses | `inspectCarrier.lightSpells[0].litBy[0]`, `lightStatus.litBy[0].id` | the scratch AmbientLight id | normalised in the golden (W4L follow-up); seen only against an older golden |
 | importer | `root.keysInPublishOrder` | other modules' publish order | gone: the golden sorts `root.keys`, `publishOrder` sits outside `golden` (W4L follow-up) |
 
@@ -45,9 +62,17 @@ The GM tab running a golden is often hidden or the screen locked: the browser st
 `requestAnimationFrame` and clamps `setTimeout`/`setInterval` to a second or more, so a wait on
 either decides nothing and timings stretch. Await the document operation or hook itself; when a
 golden must wait out wall time (a module's own debounce or claim window), use the `tick()` /
-`sleep()` / `settle()` helpers the goldens already carry (a `MessageChannel` macrotask plus
-`performance.now()`, not throttled in a hidden tab). The same holds for one-off probes run by
+`sleep()` / `settle()` helpers the goldens already carry (a macrotask through one shared
+`MessageChannel`, whose messages wake waiting ticks oldest first, plus `performance.now()`; not
+throttled in a hidden tab, and no new channel per tick; the port is ref'd in Node only while a
+tick waits, so the offline tests can exit). The same holds for one-off probes run by
 `eval-js`. Copy the helper preamble from an existing golden; only `DROP` and `settle` may differ
 (`scripts/tests/test_live_goldens_preamble.py` checks this). `settle()` comes in two forms: most
 goldens return as soon as `pred()` holds; `creatures` and `senses` then sleep a further 1.2 s for a
 module that debounces a second write after the first. Copy the form that matches the module.
+
+The toast spy (`toasts`, `spied`, `takeToasts`) comes in two forms as well: `transform` records a
+toast raised with `{ localize: true }` as its localised text, while `attunement`, `dropbin`,
+`journal` and `riders` record the raw message (their recorded toasts sit in their goldens, so they
+stay). New goldens copy transform's toast spy; `names` keeps its own info-only spy. The same
+preamble test pins these.

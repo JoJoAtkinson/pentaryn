@@ -57,10 +57,16 @@ const tagLitBy = (status, inspect) => {
   for (const id of idsIn) if (id && !ids.has(id)) tag(id, `lit-${n++}`);
 };
 const caught = e => ({ threw: true, name: e?.name ?? null, ctor: e?.constructor?.name ?? null, message: String(e?.message ?? e) });
+/** Cleanup: run one step; a failure becomes a `NOT ` string diff.mjs fails on, and the next step still runs (LG-R8). */
+const safely = async (name, fn) => { try { await fn(); } catch (e) { out.cleanup[`${name}CleanupError`] = `NOT done: ${e?.message ?? e}`; } };
 const probe = async fn => { try { return await fn(); } catch (e) { return caught(e); } };
 const keysOf = o => Object.keys(o ?? {}).sort();
-/** One macrotask through a MessageChannel: unlike setTimeout it is not throttled in a hidden tab (J20). */
-const tick = () => new Promise(r => { const c = new MessageChannel(); c.port1.onmessage = () => { c.port1.close(); r(); }; c.port2.postMessage(0); });
+/** One macrotask through a shared MessageChannel: unlike setTimeout it is not throttled in a hidden tab (J20). One channel per golden; each message wakes the oldest waiting tick (perf-1). ref/unref exist only in Node (the offline tests), where an idle listening port would hold the process open. */
+const tickQ = [];
+const tickChan = new MessageChannel();
+tickChan.port1.onmessage = () => { tickQ.shift()?.(); if (!tickQ.length) tickChan.port1.unref?.(); };
+tickChan.port1.unref?.();
+const tick = () => new Promise(r => { tickQ.push(r); tickChan.port1.ref?.(); tickChan.port2.postMessage(0); });
 /** Wait ms of wall time, yielding with tick() (a hidden tab clamps setTimeout to 1 s or more). */
 const sleep = async ms => { const t0 = performance.now(); while (performance.now() - t0 < ms) await tick(); };
 /** Poll until pred() holds or ms passes; then a quiet 1.2 s so a trailing debounced sync lands too. */
@@ -217,11 +223,12 @@ try {
 } finally {
   await sleep(1500);                                                      // trailing carried-light / reconcile timers
   const zzActors = new Set([carrier?.id, target?.id].filter(Boolean));
-  const mine = game.messages.filter(m => !msgsBefore.has(m.id) && zzActors.has(m.speaker?.actor));
-  out.cleanup.chatDeleted = mine.length;
-  for (const m of mine) await m.delete();
-  if (scene && game.scenes.get(scene.id)) await scene.delete();
-  for (const a of [carrier, target]) if (a && game.actors.get(a.id)) await a.delete();
+  const chatIds = game.messages.filter(m => !msgsBefore.has(m.id) && zzActors.has(m.speaker?.actor)).map(m => m.id);
+  out.cleanup.chatDeleted = chatIds.length;
+  if (chatIds.length) await safely("chat", () => ChatMessage.deleteDocuments(chatIds));
+  if (scene && game.scenes.get(scene.id)) await safely("scene", () => scene.delete());
+  const actorIds = [carrier, target].filter(a => a && game.actors.get(a.id)).map(a => a.id);
+  if (actorIds.length) await safely("actors", () => Actor.deleteDocuments(actorIds));
   out.cleanup.zzLeft = game.actors.filter(a => a.name.startsWith("ZZ ")).length + game.scenes.filter(s => s.name.startsWith("ZZ ")).length;
   out.cleanup.zzMessagesLeft = game.messages.filter(m => !msgsBefore.has(m.id) && zzActors.has(m.speaker?.actor)).length;
 }

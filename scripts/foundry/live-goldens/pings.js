@@ -1,6 +1,7 @@
 // Live golden — pentaryn-pings. Body of an async function for the foundry `eval-js` MCP tool
 // (paste the file as `script`, timeoutMs 60000). GM client only. Returns a JSON string of
-// { module, golden, timings, cleanup }: `golden` is deterministic (ids normalised, timestamps
+// { module, golden, timings, cleanup } (or { module, skipped } when game.pentaryn.pings or its
+// settings are missing): `golden` is deterministic (ids normalised, timestamps
 // dropped), `timings` are medians of N runs (performance.now) — the performance baseline.
 //
 // What it exercises (the real glue, no stubs): the patched ControlsLayer#handlePing on the GM's
@@ -46,8 +47,14 @@ const strip = v => Array.isArray(v) ? v.map(strip)
   : v;
 const norm = v => { let s = JSON.stringify(strip(v) ?? null); for (const [id, l] of ids) s = s.split(id).join(`<${l}>`); return JSON.parse(s); };
 const caught = e => ({ threw: true, name: e?.name ?? null, ctor: e?.constructor?.name ?? null, message: String(e?.message ?? e) });
-/** One macrotask through a MessageChannel: unlike setTimeout it is not throttled in a hidden tab (J20). */
-const tick = () => new Promise(r => { const c = new MessageChannel(); c.port1.onmessage = () => { c.port1.close(); r(); }; c.port2.postMessage(0); });
+/** Cleanup: run one step; a failure becomes a `NOT ` string diff.mjs fails on, and the next step still runs (LG-R8). */
+const safely = async (name, fn) => { try { await fn(); } catch (e) { out.cleanup[`${name}CleanupError`] = `NOT done: ${e?.message ?? e}`; } };
+/** One macrotask through a shared MessageChannel: unlike setTimeout it is not throttled in a hidden tab (J20). One channel per golden; each message wakes the oldest waiting tick (perf-1). ref/unref exist only in Node (the offline tests), where an idle listening port would hold the process open. */
+const tickQ = [];
+const tickChan = new MessageChannel();
+tickChan.port1.onmessage = () => { tickQ.shift()?.(); if (!tickQ.length) tickChan.port1.unref?.(); };
+tickChan.port1.unref?.();
+const tick = () => new Promise(r => { tickQ.push(r); tickChan.port1.ref?.(); tickChan.port2.postMessage(0); });
 /** Wait ms of wall time, yielding with tick() (a hidden tab clamps setTimeout to 1 s or more). */
 const sleep = async ms => { const t0 = performance.now(); while (performance.now() - t0 < ms) await tick(); };
 /** Live only: poll until pred() holds or ms passes. */
@@ -58,7 +65,7 @@ const settle = async (pred, ms = 3000) => {
 };
 
 const out = { module: "pings", golden: {}, timings: {}, cleanup: {} };
-const API = game.pentaryn.pings;
+const API = game.pentaryn?.pings;
 const MOD = "pentaryn-pings";
 let scene = null;
 // The stored Setting document, not game.settings.get: get returns the cached array the module's
@@ -71,8 +78,14 @@ const storedLog = () => {
   const parsed = typeof v === "string" ? JSON.parse(v) : (v ?? []);
   return Array.isArray(parsed) ? foundry.utils.deepClone(parsed) : [];
 };
-// before the first ping
-const savedLog = storedLog();
+// before the first ping; module disabled (no API, or its log setting unregistered): skip before any
+// write, as walls.js does (LG-R4)
+let savedLog = null;
+if (API) { try { savedLog = storedLog(); } catch { savedLog = null; } }
+if (!API || !savedLog) {
+  out.skipped = "pentaryn-pings API is missing";
+  return JSON.stringify(out);
+}
 /** Put the saved log back, in the store, the settings cache and the module's buffer (hot patch). → true when exact. */
 async function restorePingLog() {
   try {
@@ -137,8 +150,8 @@ try {
 } catch (e) {
   out.golden.error = caught(e);
 } finally {
-  if (scene && game.scenes.get(scene.id)) await scene.delete();
-  out.cleanup = { zzScenesLeft: game.scenes.filter(s => s.name.startsWith("ZZ ")).length };
+  if (scene && game.scenes.get(scene.id)) await safely("scene", () => scene.delete());
+  out.cleanup.zzScenesLeft = game.scenes.filter(s => s.name.startsWith("ZZ ")).length;
   out.cleanup.pingLogRestored = await restorePingLog();
   // scratch records in the store or in the cache (the module's buffer re-reads the cache)
   out.cleanup.pingScratchLeft = scene ? Math.max(storedLog().filter(r => r.sceneId === scene.id).length, (game.settings.get(MOD, "log") ?? []).filter(r => r.sceneId === scene.id).length) : 0;

@@ -13,7 +13,9 @@
 // Side effects, all undone in `finally`: the world setting gmButton is switched on and restored;
 // the GM's personal journal gains pages (deleted), and is created first if the GM had none
 // (then deleted, with the Player Journals folder if this run created it); the ZZ source
-// journals are deleted; sheets this run opened are closed. A player's journal is only read:
+// journals are deleted; sheets this run opened are closed (only sheets of those journals: an app
+// with no document is never closed, LG-E5). gmJournal is null on a normal run when the GM had no
+// personal journal and J.add did not create one. A player's journal is only read:
 // ensure() is called only for a player who already has one.
 // Wave 2 live plan: context/plans/addon-blueprint-2026-10/wave-2-live-plan.md.
 
@@ -40,11 +42,17 @@ const norm = v => { let s = JSON.stringify(strip(v) ?? null); for (const [id, l]
 /** A text with every tagged id replaced by its label, so a hash of it compares across runs. */
 const idsOut = text => { let s = String(text); for (const [id, l] of ids) s = s.split(id).join(`<${l}>`); return s; };
 const caught = e => ({ threw: true, name: e?.name ?? null, ctor: e?.constructor?.name ?? null, message: String(e?.message ?? e) });
+/** Cleanup: run one step; a failure becomes a `NOT ` string diff.mjs fails on, and the next step still runs (LG-R8). */
+const safely = async (name, fn) => { try { await fn(); } catch (e) { out.cleanup[`${name}CleanupError`] = `NOT done: ${e?.message ?? e}`; } };
 const probe = async fn => { try { return await fn(); } catch (e) { return caught(e); } };
 const keysOf = o => Object.keys(o ?? {}).sort();
 const fnv = s => { let h = 0x811c9dc5; s = String(s ?? ""); for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193); } return (h >>> 0).toString(16).padStart(8, "0"); };
-/** One macrotask through a MessageChannel: unlike setTimeout it is not throttled in a hidden tab (J20). */
-const tick = () => new Promise(r => { const c = new MessageChannel(); c.port1.onmessage = () => { c.port1.close(); r(); }; c.port2.postMessage(0); });
+/** One macrotask through a shared MessageChannel: unlike setTimeout it is not throttled in a hidden tab (J20). One channel per golden; each message wakes the oldest waiting tick (perf-1). ref/unref exist only in Node (the offline tests), where an idle listening port would hold the process open. */
+const tickQ = [];
+const tickChan = new MessageChannel();
+tickChan.port1.onmessage = () => { tickQ.shift()?.(); if (!tickQ.length) tickChan.port1.unref?.(); };
+tickChan.port1.unref?.();
+const tick = () => new Promise(r => { tickQ.push(r); tickChan.port1.ref?.(); tickChan.port2.postMessage(0); });
 /** Wait ms of wall time, yielding with tick() (a hidden tab clamps setTimeout to 1 s or more). */
 const sleep = async ms => { const t0 = performance.now(); while (performance.now() - t0 < ms) await tick(); };
 
@@ -192,30 +200,36 @@ try {
   S.error = caught(e);
 } finally {
   for (const [lvl, s] of Object.entries(spied)) { if (s.own) notes[lvl] = s.fn; else delete notes[lvl]; }
-  if ("gmButton" in saved && game.settings.get(MOD, "gmButton") !== saved.gmButton) await game.settings.set(MOD, "gmButton", saved.gmButton);
+  if ("gmButton" in saved && game.settings.get(MOD, "gmButton") !== saved.gmButton) await safely("gmButton", () => game.settings.set(MOD, "gmButton", saved.gmButton));
   for (const app of [...foundry.applications.instances.values()]) {
-    if (app.rendered && !openedBefore.has(app.id) && [src?.id, owned?.id, gmJournal?.id].includes(app.document?.id)) await app.close();
+    // LG-E5: an app with no document must never match the null src/owned/gmJournal ids
+    const id = app.document?.id;
+    if (app.rendered && id && !openedBefore.has(app.id) && [src?.id, owned?.id, gmJournal?.id].includes(id)) await safely("sheet", () => app.close());
   }
   let pagesDeleted = 0;
   if (gmJournal && game.journal.get(gmJournal.id)) {
-    if (createdGmJournal) await gmJournal.delete();
+    if (createdGmJournal) await safely("gmJournal", () => gmJournal.delete());
     else {
       const mine = gmJournal.pages.contents.filter(p => !pagesBefore.has(p.id)).map(p => p.id);
-      if (mine.length) await gmJournal.deleteEmbeddedDocuments("JournalEntryPage", mine);
+      if (mine.length) await safely("gmJournalPages", () => gmJournal.deleteEmbeddedDocuments("JournalEntryPage", mine));
       pagesDeleted = mine.length;
     }
   }
-  if (createdFolder && game.folders.get(createdFolder) && !game.folders.get(createdFolder).contents.length) await game.folders.get(createdFolder).delete();
-  for (const j of [src, owned]) if (j && game.journal.get(j.id)) await j.delete();
-  out.cleanup = {
+  if (createdFolder && game.folders.get(createdFolder) && !game.folders.get(createdFolder).contents.length) await safely("folder", () => game.folders.get(createdFolder).delete());
+  const journalIds = [src, owned].filter(j => j && game.journal.get(j.id)).map(j => j.id);
+  if (journalIds.length) await safely("journals", () => JournalEntry.deleteDocuments(journalIds));
+  const gmJournalPagesNow = gmJournal && game.journal.get(gmJournal.id) ? game.journal.get(gmJournal.id).pages.size : null;
+  Object.assign(out.cleanup, {
     gmButtonRestored: "gmButton" in saved ? game.settings.get(MOD, "gmButton") === saved.gmButton : null,
     toastsRestored: ["info", "warn", "error"].every(l => ui.notifications[l] === spied[l].fn),
     gmJournal: createdGmJournal ? "created and deleted" : `kept, ${pagesDeleted} page(s) removed`,
-    gmJournalPagesNow: gmJournal && game.journal.get(gmJournal.id) ? game.journal.get(gmJournal.id).pages.size : null,
+    gmJournalPagesNow,
     gmJournalPagesBefore: pagesBefore.size,
+    // judged by diff.mjs: pages this run added and did not remove (0 when the journal was created and deleted)
+    gmJournalPagesLeft: Math.max(0, (gmJournalPagesNow ?? 0) - pagesBefore.size),
     folder: createdFolder ? (game.folders.get(createdFolder) ? "created, NOT deleted (not empty)" : "created and deleted") : "untouched",
     zzJournalsLeft: game.journal.filter(j => j.name.startsWith("ZZ ")).length
-  };
+  });
 }
 out.golden = norm(out.golden);
 // a string, not the object: the eval bridge truncates nested results at a fixed depth

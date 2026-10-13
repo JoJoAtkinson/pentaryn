@@ -40,11 +40,17 @@ const strip = v => Array.isArray(v) ? v.map(strip)
   : v;
 const norm = v => { let s = JSON.stringify(strip(v) ?? null); for (const [id, l] of ids) s = s.split(id).join(`<${l}>`); return JSON.parse(s); };
 const caught = e => ({ threw: true, name: e?.name ?? null, ctor: e?.constructor?.name ?? null, message: String(e?.message ?? e) });
+/** Cleanup: run one step; a failure becomes a `NOT ` string diff.mjs fails on, and the next step still runs (LG-R8). */
+const safely = async (name, fn) => { try { await fn(); } catch (e) { out.cleanup[`${name}CleanupError`] = `NOT done: ${e?.message ?? e}`; } };
 const probe = async fn => { try { return await fn(); } catch (e) { return caught(e); } };
 const keysOf = o => Object.keys(o ?? {}).sort();
 const fnv = s => { let h = 0x811c9dc5; s = String(s ?? ""); for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193); } return (h >>> 0).toString(16).padStart(8, "0"); };
-/** One macrotask through a MessageChannel: unlike setTimeout it is not throttled in a hidden tab (J20). */
-const tick = () => new Promise(r => { const c = new MessageChannel(); c.port1.onmessage = () => { c.port1.close(); r(); }; c.port2.postMessage(0); });
+/** One macrotask through a shared MessageChannel: unlike setTimeout it is not throttled in a hidden tab (J20). One channel per golden; each message wakes the oldest waiting tick (perf-1). ref/unref exist only in Node (the offline tests), where an idle listening port would hold the process open. */
+const tickQ = [];
+const tickChan = new MessageChannel();
+tickChan.port1.onmessage = () => { tickQ.shift()?.(); if (!tickQ.length) tickChan.port1.unref?.(); };
+tickChan.port1.unref?.();
+const tick = () => new Promise(r => { tickQ.push(r); tickChan.port1.ref?.(); tickChan.port2.postMessage(0); });
 /** Wait ms of wall time, yielding with tick() (a hidden tab clamps setTimeout to 1 s or more). */
 const sleep = async ms => { const t0 = performance.now(); while (performance.now() - t0 < ms) await tick(); };
 /** Live only: poll until pred() holds or ms passes (the capture hook does not await the write). */
@@ -185,20 +191,22 @@ try {
     const prefixSame = JSON.stringify(now.slice(0, saved.log.length).map(e => e.n)) === JSON.stringify(saved.log.map(e => e.n));
     if (!extra.length) putBack = "nothing to put back";
     else if (prefixSame && extra.every(e => (e.itemName ?? "").startsWith("ZZ ") && e.fromActorId === actor?.id)) {
-      await game.settings.set(MOD, "log", saved.log);
-      await game.settings.set(MOD, "counter", saved.counter);
-      putBack = (await B?.export?.()) ? "restored, mirror rewritten" : "restored, mirror NOT rewritten (run export() by hand)";
+      await safely("ledgerLog", () => game.settings.set(MOD, "log", saved.log));
+      await safely("ledgerCounter", () => game.settings.set(MOD, "counter", saved.counter));
+      let mirrored = false;
+      await safely("mirror", async () => { mirrored = await B?.export?.(); });
+      putBack = mirrored ? "restored, mirror rewritten" : "restored, mirror NOT rewritten (run export() by hand)";
     } else putBack = `REFUSED: the ledger holds ${extra.length} entr(ies) that are not this run's alone — review by hand`;
   }
   for (const [lvl, s] of Object.entries(spied)) { if (s.own) notes[lvl] = s.fn; else delete notes[lvl]; }
-  if (actor && game.actors.get(actor.id)) await actor.delete();
-  out.cleanup = {
+  if (actor && game.actors.get(actor.id)) await safely("actor", () => actor.delete());
+  Object.assign(out.cleanup, {
     ledger: putBack,
     ledgerSizeNow: readLog().length, ledgerSizeBefore: saved.log?.length ?? null,
     counterNow: game.settings.get(MOD, "counter"), counterBefore: saved.counter ?? null,
     toastsRestored: ["info", "warn", "error"].every(l => ui.notifications[l] === spied[l].fn),
     zzActorsLeft: game.actors.filter(a => a.name.startsWith("ZZ ")).length
-  };
+  });
 }
 out.golden = norm(out.golden);
 // a string, not the object: the eval bridge truncates nested results at a fixed depth

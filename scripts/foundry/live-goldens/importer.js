@@ -35,6 +35,8 @@ const strip = v => Array.isArray(v) ? v.map(strip)
   : v;
 const norm = v => { let s = JSON.stringify(strip(v) ?? null); for (const [id, l] of ids) s = s.split(id).join(`<${l}>`); return JSON.parse(s); };
 const caught = e => ({ threw: true, name: e?.name ?? null, ctor: e?.constructor?.name ?? null, message: String(e?.message ?? e) });
+/** Cleanup: run one step; a failure becomes a `NOT ` string diff.mjs fails on, and the next step still runs (LG-R8). */
+const safely = async (name, fn) => { try { await fn(); } catch (e) { out.cleanup[`${name}CleanupError`] = `NOT done: ${e?.message ?? e}`; } };
 
 const out = { module: "importer", golden: {}, timings: {}, cleanup: {} };
 const P = game.pentaryn;
@@ -111,8 +113,8 @@ try {
 } finally {
   globalThis.fetch = realFetch;
   const left = scratch.filter(a => game.actors.get(a.id)).map(a => a.id);
-  if (left.length) await Actor.deleteDocuments(left);
-  out.cleanup = { zzActorsLeft: game.actors.filter(a => a.name.startsWith("ZZ Golden")).length, fetchRestored: globalThis.fetch === realFetch };
+  if (left.length) await safely("actors", () => Actor.deleteDocuments(left));
+  Object.assign(out.cleanup, { zzActorsLeft: game.actors.filter(a => a.name.startsWith("ZZ Golden")).length, fetchRestored: globalThis.fetch === realFetch });
 }
 out.timings.rootKeys = await timeIt(() => Object.keys(game.pentaryn).sort(), 9, 1000);
 // a string, not the object: the eval bridge truncates nested results at a fixed depth

@@ -46,16 +46,25 @@ const strip = v => Array.isArray(v) ? v.map(strip)
   : v;
 const norm = v => { let s = JSON.stringify(strip(v) ?? null); for (const [id, l] of ids) s = s.split(id).join(`<${l}>`); return JSON.parse(s); };
 const caught = e => ({ threw: true, name: e?.name ?? null, ctor: e?.constructor?.name ?? null, message: String(e?.message ?? e) });
+/** Cleanup: run one step; a failure becomes a `NOT ` string diff.mjs fails on, and the next step still runs (LG-R8). */
+const safely = async (name, fn) => { try { await fn(); } catch (e) { out.cleanup[`${name}CleanupError`] = `NOT done: ${e?.message ?? e}`; } };
 const probe = async fn => { try { return await fn(); } catch (e) { return caught(e); } };
+/** Map an array; keep anything else (a caught `{threw, name, message}`, a "no x" string) as-is (LG-R7). */
+const mapOr = (v, f) => Array.isArray(v) ? v.map(f) : (v ?? "undefined");
 const keysOf = o => Object.keys(o ?? {}).sort();
-/** One macrotask through a MessageChannel: unlike setTimeout it is not throttled in a hidden tab (J20). */
-const tick = () => new Promise(r => { const c = new MessageChannel(); c.port1.onmessage = () => { c.port1.close(); r(); }; c.port2.postMessage(0); });
+/** One macrotask through a shared MessageChannel: unlike setTimeout it is not throttled in a hidden tab (J20). One channel per golden; each message wakes the oldest waiting tick (perf-1). ref/unref exist only in Node (the offline tests), where an idle listening port would hold the process open. */
+const tickQ = [];
+const tickChan = new MessageChannel();
+tickChan.port1.onmessage = () => { tickQ.shift()?.(); if (!tickQ.length) tickChan.port1.unref?.(); };
+tickChan.port1.unref?.();
+const tick = () => new Promise(r => { tickQ.push(r); tickChan.port1.ref?.(); tickChan.port2.postMessage(0); });
 /** Wait ms of wall time, yielding with tick() (a hidden tab clamps setTimeout to 1 s or more). */
 const sleep = async ms => { const t0 = performance.now(); while (performance.now() - t0 < ms) await tick(); };
 
 const MOD = "pentaryn-portals";
 const LEGACY = ["snapshot", "cardFor", "teleportParty", "lookAt", "open", "redraw", "spreadArrival"];
 const ADDED = ["inspect", "destinations", "link", "unlink", "badges"];
+const SETTINGS = ["teleportDefault", "spreadArrivals", "confirmPartyTeleport"];
 const setting = k => { try { return game.settings.get(MOD, k); } catch { return "unregistered"; } };
 const pos = t => (t?.threw ? t : { x: t?.x ?? null, y: t?.y ?? null });
 
@@ -67,7 +76,7 @@ out.env = {
   world: game.world.id, foundry: game.version, system: `${game.system.id} ${game.system.version}`,
   manifestVersion: mod?.version ?? null, active: !!mod?.active, apiVersion: P?.version ?? null,
   players: game.users.filter(u => !u.isGM && u.active).map(u => u.name),
-  settings: { teleportDefault: setting("teleportDefault"), spreadArrivals: setting("spreadArrivals"), confirmPartyTeleport: setting("confirmPartyTeleport") },
+  settings: Object.fromEntries(SETTINGS.map(k => [k, setting(k)])),
   aoeHandleActor: !!realHandleActor
 };
 const S = out.golden.shared, D = out.golden.declared;
@@ -103,7 +112,7 @@ try {
     partySelection: Array.isArray(party) ? party.map(r => r.id) : party,
     leaderOf: ["wolf", "hawk", "guard", "stray"].map(id => call("leaderOf", records.find(r => r.id === id), [pcA, pcB])),
     partyPreview: Array.isArray(party) ? call("partyPreview", party) : party,
-    followersOf: (call("followersOf", [pcA], records) ?? []).map?.(r => r.id) ?? null,
+    followersOf: mapOr(call("followersOf", [pcA], records), r => r.id),
     ringSpots: call("ringSpots", 500, 500, 100, 10, { occupied: (x, y) => x === 600 && y === 500 }),
     ringBlocked: call("ringSpots", 500, 500, 100, 4, { blocked: call("wallBlocker", [[550, 0, 550, 1000]]) }),
     assignSpots: Array.isArray(party) ? call("assignSpots", call("ringSpots", 500, 500, 100, party.length + 8), party) : party,
@@ -172,17 +181,17 @@ try {
   // ── after-only rows (-32): read on A/B, link/unlink on the scratch regions ───
   if (typeof P.destinations === "function") {
     const card = d => d && !d.threw ? { name: d.name, scene: d.scene, card: d.card, revealed: d.revealed, choice: d.choice } : d;
-    D.destinations = (await probe(() => P.destinations(door.uuid)))?.map?.(card) ?? "threw";
+    D.destinations = mapOr(await probe(() => P.destinations(door.uuid)), card);
     D.inspectDoor = await probe(() => P.inspect(door.uuid));
     D.inspectActor = await probe(() => P.inspect(actor)) ?? "undefined";
     D.inspectMissing = await probe(() => P.inspect("ZZ no such region zzz"));
     D.linkDry = await probe(() => P.link(door.uuid, { to: bare.uuid, dryRun: true }));
     D.linkReal = await probe(() => P.link(door.uuid, { to: bare.uuid }));
-    D.afterLink = (await probe(() => P.destinations(door.uuid)))?.map?.(d => d.name) ?? "threw";
+    D.afterLink = mapOr(await probe(() => P.destinations(door.uuid)), d => d.name);
     D.linkAgain = await probe(() => P.link(door.uuid, { to: bare.uuid }));
     D.unlinkDry = await probe(() => P.unlink(door.uuid, { to: bare.uuid, dryRun: true }));
     D.unlinkReal = await probe(() => P.unlink(door.uuid, { to: bare.uuid }));
-    D.afterUnlink = (await probe(() => P.destinations(door.uuid)))?.map?.(d => d.name) ?? "threw";
+    D.afterUnlink = mapOr(await probe(() => P.destinations(door.uuid)), d => d.name);
     const bd = await probe(() => P.badges());
     D.badges = Array.isArray(bd) ? { isArray: true } : bd;
   } else D.destinations = "absent";
@@ -197,14 +206,14 @@ try {
   S.error = caught(e);
 } finally {
   await sleep(300);                                                       // D-P3's 50 ms region-hook debounce
-  if (sceneA && game.scenes.get(sceneA.id)) await sceneA.delete();
-  if (sceneB && game.scenes.get(sceneB.id)) await sceneB.delete();
-  if (actor && game.actors.get(actor.id)) await actor.delete();
-  if (ghostActor && game.actors.get(ghostActor.id)) await ghostActor.delete();
-  out.cleanup = {
+  if (sceneA && game.scenes.get(sceneA.id)) await safely("sceneA", () => sceneA.delete());
+  if (sceneB && game.scenes.get(sceneB.id)) await safely("sceneB", () => sceneB.delete());
+  if (actor && game.actors.get(actor.id)) await safely("actor", () => actor.delete());
+  if (ghostActor && game.actors.get(ghostActor.id)) await safely("ghostActor", () => ghostActor.delete());
+  Object.assign(out.cleanup, {
     zzLeft: game.actors.filter(a => a.name.startsWith("ZZ ")).length + game.scenes.filter(s => s.name.startsWith("ZZ ")).length,
-    settingsRestored: JSON.stringify({ teleportDefault: setting("teleportDefault"), spreadArrivals: setting("spreadArrivals"), confirmPartyTeleport: setting("confirmPartyTeleport") }) === JSON.stringify(out.env.settings)
-  };
+    settingsRestored: JSON.stringify(Object.fromEntries(SETTINGS.map(k => [k, setting(k)]))) === JSON.stringify(out.env.settings)
+  });
 }
 out.golden = norm(out.golden);
 // a string, not the object: the eval bridge truncates nested results at a fixed depth

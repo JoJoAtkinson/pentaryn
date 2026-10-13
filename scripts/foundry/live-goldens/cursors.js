@@ -1,6 +1,7 @@
 // Live golden — pentaryn-cursors. Body of an async function for the foundry `eval-js` MCP tool
 // (paste the file as `script`, timeoutMs 60000). GM client only. Returns a JSON string of
-// { module, golden, timings, cleanup }: `golden` is deterministic (ids normalised, timestamps
+// { module, golden, timings, cleanup } (or { module, skipped } when game.pentaryn.cursors is
+// missing): `golden` is deterministic (ids normalised, timestamps
 // dropped), `timings` are medians of N runs (performance.now) — the performance baseline.
 //
 // What it exercises (the real glue, no stubs): the GM's own scene controls are switched through
@@ -30,8 +31,14 @@ const strip = v => Array.isArray(v) ? v.map(strip)
   : v;
 const norm = v => { let s = JSON.stringify(strip(v) ?? null); for (const [id, l] of ids) s = s.split(id).join(`<${l}>`); return JSON.parse(s); };
 const caught = e => ({ threw: true, name: e?.name ?? null, ctor: e?.constructor?.name ?? null, message: String(e?.message ?? e) });
-/** One macrotask through a MessageChannel: unlike setTimeout it is not throttled in a hidden tab (J20). */
-const tick = () => new Promise(r => { const c = new MessageChannel(); c.port1.onmessage = () => { c.port1.close(); r(); }; c.port2.postMessage(0); });
+/** Cleanup: run one step; a failure becomes a `NOT ` string diff.mjs fails on, and the next step still runs (LG-R8). */
+const safely = async (name, fn) => { try { await fn(); } catch (e) { out.cleanup[`${name}CleanupError`] = `NOT done: ${e?.message ?? e}`; } };
+/** One macrotask through a shared MessageChannel: unlike setTimeout it is not throttled in a hidden tab (J20). One channel per golden; each message wakes the oldest waiting tick (perf-1). ref/unref exist only in Node (the offline tests), where an idle listening port would hold the process open. */
+const tickQ = [];
+const tickChan = new MessageChannel();
+tickChan.port1.onmessage = () => { tickQ.shift()?.(); if (!tickQ.length) tickChan.port1.unref?.(); };
+tickChan.port1.unref?.();
+const tick = () => new Promise(r => { tickQ.push(r); tickChan.port1.ref?.(); tickChan.port2.postMessage(0); });
 /** Wait ms of wall time, yielding with tick() (a hidden tab clamps setTimeout to 1 s or more). */
 const sleep = async ms => { const t0 = performance.now(); while (performance.now() - t0 < ms) await tick(); };
 /** Live only: poll until pred() holds or ms passes. */
@@ -42,7 +49,12 @@ const settle = async (pred, ms = 3000) => {
 };
 
 const out = { module: "cursors", golden: {}, timings: {}, cleanup: {} };
-const API = game.pentaryn.cursors;
+const API = game.pentaryn?.cursors;
+// module disabled: skip before any control switch, as walls.js does (LG-R4)
+if (!API) {
+  out.skipped = "pentaryn-cursors API is missing";
+  return JSON.stringify(out);
+}
 const VARS = ["--cursor-default", "--cursor-default-down", "--cursor-pointer", "--cursor-pointer-down"];
 const TOOLS = [["tokens", "select"], ["tokens", "target"], ["tokens", "ruler"], ["notes", "journal"], ["drawings", "rect"]];
 const start = { control: ui.controls?.control?.name, tool: ui.controls?.tool?.name };
@@ -52,7 +64,7 @@ const read = () => {
   return {
     control: ui.controls?.control?.name ?? null,
     tool: ui.controls?.tool?.name ?? null,
-    current: API.current(),
+    current: API?.current?.() ?? null,
     dataset: el?.dataset?.pentarynCursor ?? null,
     styleCursor: el?.style?.cursor ?? null,
     vars: Object.fromEntries(VARS.map(v => [v, el?.style?.getPropertyValue(v) || null]))
@@ -87,8 +99,12 @@ try {
 } catch (e) {
   out.golden.error = caught(e);
 } finally {
-  try { await ui.controls.activate({ control: start.control ?? "tokens", tool: start.tool ?? "select" }); await sleep(60); } catch { /* best effort */ }
-  out.cleanup = { restored: read(), wanted: start };
+  await safely("tool", async () => { await ui.controls.activate({ control: start.control ?? "tokens", tool: start.tool ?? "select" }); await sleep(60); });
+  const restored = read();
+  Object.assign(out.cleanup, {
+    toolRestored: restored.control === (start.control ?? "tokens") && restored.tool === (start.tool ?? "select"),
+    restored, wanted: start
+  });
 }
 out.golden = norm(out.golden);
 // a string, not the object: the eval bridge truncates nested results at a fixed depth
