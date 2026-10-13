@@ -1315,29 +1315,16 @@ def c48(m):
 
 @rule("C49", "warn+manual", "world iteration inside hot-hook handlers")
 def c49(m):
+    # the shared listeners() (§5.9 below): .once, ctx.reg, the kit's guard wrappers and named
+    # handlers (function or const arrow) are seen exactly as C60 sees them
     found = []
-    for rel, src in m.files.items():
-        code = src.code
-        for mm in re.finditer(r"(?:Hooks|reg)\.on\(\s*\x01(\d+)\x01\s*,\s*", code):
-            name = src.strings[int(mm.group(1))].value
-            if not is_hot_hook(name):
-                continue
-            after = code[mm.end():]
-            body = ""
-            fn = re.match(r"(?:async\s*)?(?:function\s*\w*\s*)?\([^)]*\)\s*(?:=>)?\s*\{|(?:async\s*)?\w+\s*=>\s*\{", after)
-            if fn:
-                s = mm.end() + fn.end() - 1
-                body = code[s:match_paren(code, s) + 1]
-            else:
-                ident = re.match(r"([A-Za-z_$][\w$]*)", after)
-                if ident:
-                    dm = re.search(rf"function\s+{re.escape(ident.group(1))}\s*\([^)]*\)\s*\{{", code)
-                    if dm:
-                        body = code[dm.end() - 1:match_paren(code, dm.end() - 1) + 1]
-            n = len(WORLD_ITER.findall(body))
-            if n:
-                hot = "// hot:" in m.raw.get(rel, "")
-                found.append(f"{rel}:{src.line_of(mm.start())} {name} ×{n}{'' if hot else ' (no // hot: comment)'}")
+    for ls in listeners(m):
+        if not is_hot_hook(ls.name):
+            continue
+        n = len(WORLD_ITER.findall(ls.body or ""))
+        if n:
+            hot = "// hot:" in m.raw.get(ls.rel, "")
+            found.append(f"{ls.rel}:{ls.line} {ls.name} ×{n}{'' if hot else ' (no // hot: comment)'}")
     return ok() if not found else ("warn", found)
 
 

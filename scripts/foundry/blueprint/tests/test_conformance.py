@@ -1104,3 +1104,27 @@ def test_pyb_e4_c38_skips_the_module_itself_when_its_folder_name_differs_from_it
     write(root / "two-checkout", {"module.json": json.dumps({**man, "id": "pentaryn-two"})})
     c38 = next(r for r in conformance.score_dir(one)["results"] if r["id"] == "C38")
     assert c38["status"] == "fail" and c38["detail"] == ["pone- also declared by pentaryn-two"], c38
+
+
+@pytest.mark.parametrize("code,line", [
+    ('Hooks.once("refreshToken", () => { for (const a of game.actors) a; });', 1),
+    ('ctx.reg.on("refreshToken", (t) => { for (const a of game.actors) a; });', 1),
+    ('reg.on("refreshToken", reg.guard("paint", (t) => { for (const a of game.actors) a; }));', 1),
+    ('const paint = (t) => { for (const a of game.actors) a; };\nreg.on("refreshToken", paint);', 2),
+    ('reg.on("refreshToken", paint);\nfunction paint(t) { for (const a of game.actors) a; }', 1),
+])
+def test_py_blueprint_ext_3_c49_sees_every_listener_shape(tmp_path, code, line):
+    """py-blueprint-EXT-3: C49 reads the shared listeners() (HOOK_REG + handler_at), so `.once`,
+    `ctx.reg`, the kit's guard wrappers and const-arrow named handlers are seen, as C60 sees them."""
+    r = res(one(tmp_path, code), "C49")
+    assert r["status"] == "warn" and r["detail"] == [f"a.mjs:{line} refreshToken ×1 (no // hot: comment)"], r
+
+
+def test_py_blueprint_ext_3_c49_keeps_the_hot_comment_and_count(tmp_path):
+    """py-blueprint-EXT-3: the `// hot:` comment silences the note, ×N counts every world walk,
+    and a non-hot hook is never flagged."""
+    code = ('// hot: per-frame walk is bounded\n'
+            'reg.on("refreshTile", (t) => { game.actors; game.scenes; canvas.tokens.placeables; });\n'
+            'reg.on("updateActor", (a) => { for (const x of game.actors) x; });\n')
+    r = res(one(tmp_path, code), "C49")
+    assert r["status"] == "warn" and r["detail"] == ["a.mjs:2 refreshTile ×3"], r
