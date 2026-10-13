@@ -99,6 +99,11 @@ Declared changes:
   object) is one console warning (`pentaryn-dropbin | malformed ledger entry ignored`) and resolves
   null; it is never appended. One entry that fails to append rejects only its own caller, and the
   rest of its coalesced batch is still written; it rejected the whole batch before.
+- DB-AC-3: a relayed ledger entry whose `userId` is not an existing user, or names a player who
+  does not own the actor it left (when that actor still exists), is refused: one console warning
+  (`pentaryn-dropbin | ledger entry refused: …`), resolves null, never appended. Any client could
+  append an entry in another user's name before. socketlib gives the relay no sender, so this is a
+  plausibility check; forging past it needs the console.
 
 Added: `list(n, { brief })`, `restoreResult`, `inspect`, `selftest` (items-journal-28).
 - A restore another module refuses (a `preCreateItem` veto) is `{ ok: false, reason: "not-created" }`

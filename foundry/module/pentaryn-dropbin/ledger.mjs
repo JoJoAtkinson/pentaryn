@@ -21,7 +21,7 @@
  */
 
 import {
-  MODULE, DIR, FILE, DEDUPE_MS, MIRROR_DEBOUNCE_MS, isEntryShape, makeEntry, normaliseDeltas, listLast, findEntry, searchLog,
+  MODULE, DIR, FILE, DEDUPE_MS, MIRROR_DEBOUNCE_MS, isEntryShape, isPlausibleSender, makeEntry, normaliseDeltas, listLast, findEntry, searchLog,
   briefOf, shouldCaptureDelete, restoreTarget, pileScene, isActiveGMSelf,
 } from "./dropbin-core.mjs";
 import { readLog, appendLedger, clearLog } from "./settings.mjs";
@@ -82,7 +82,8 @@ function drainPreReady() {
  * Append one entry. GM-only — everything else routes here through socketlib.
  * De-dupes, because Item Piles hooks can fire on more than one client. Before `ready` the entry is
  * held and recorded at ready (DB-AC-2); settings.set is never called before ready. A malformed entry
- * (isEntryShape) resolves null with one console warning and is never appended (dropbin-R10).
+ * (isEntryShape) resolves null with one console warning and is never appended (dropbin-R10); so is
+ * one whose userId is not an existing GM or the owner of its still-existing actor (DB-AC-3).
  */
 async function recordAsGM(entry) {
   if (!isEntryShape(entry)) {
@@ -91,6 +92,10 @@ async function recordAsGM(entry) {
   }
   if (!game.ready) return new Promise((resolve, reject) => preReady.push({ entry, resolve, reject }));
   if (!game.user.isGM) return null;
+  if (!isPlausibleSender(entry, { users: game.users, actors: game.actors })) {
+    console.warn(`${MODULE} | ledger entry refused: its user is unknown, or neither a GM nor the actor's owner`, entry);
+    return null;
+  }
   const { n, duplicate } = await appendLedger(entry, DEDUPE_MS);
   if (duplicate) return n;
   mirrorSoon();

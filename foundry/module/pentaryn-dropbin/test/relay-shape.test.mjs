@@ -4,7 +4,7 @@
 // drain() catches per entry, so one failing append rejects only its own caller.
 import { mock, test } from "node:test";
 import assert from "node:assert/strict";
-import { dropbinWorld } from "./fixtures/world.mjs";
+import { dropbinWorld, GM } from "./fixtures/world.mjs";
 
 mock.timers.enable({ apis: ["setTimeout"] });
 
@@ -39,7 +39,7 @@ async function quiet(fn) {
   console.warn = (...a) => warns.push(a);
   try { return { out: await fn(), warns }; } finally { [console.log, console.warn] = keep; }
 }
-const entry = (itemName, t = 0) => ({ t, reason: "drop", itemName, fromActorId: "a", fromActorName: "Ann", quantity: 1, item: null });
+const entry = (itemName, t = 0) => ({ t, reason: "drop", itemName, userId: GM, fromActorId: "a", fromActorName: "Ann", quantity: 1, item: null });
 
 test("dropbin-R10: each malformed relayed entry resolves null with one prefixed warning and writes nothing", async () => {
   await settle(handlers.record(entry("Seed")));

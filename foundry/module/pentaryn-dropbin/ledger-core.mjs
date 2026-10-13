@@ -43,6 +43,19 @@ export const isEntryShape = e =>
   && typeof e.t === "number" && typeof e.quantity === "number" && (e.item === null || typeof e.item === "object");
 
 /**
+ * The relayed entry's sender is plausible (DB-AC-3): socketlib hands the relay no sender id, so
+ * `entry.userId` must name an existing user who is a GM or owns the actor `entry.fromActorId` —
+ * the ownership test only when that actor still exists. Forging past it needs the console.
+ */
+export function isPlausibleSender(entry, { users, actors }) {
+  const user = typeof entry?.userId === "string" ? users?.get(entry.userId) : null;
+  if (!user) return false;
+  if (user.isGM) return true;
+  const actor = entry.fromActorId ? actors?.get(entry.fromActorId) : null;
+  return !actor || actor.testUserPermission(user, "OWNER") === true;
+}
+
+/**
  * Append `entry` as number `counter + 1`, or recognise it as a repeat of the tail. Never mutates
  * its inputs. @returns {{ log, counter, n, duplicate }} — on a duplicate the log and counter are
  * the ones passed in and `n` is the tail's number.

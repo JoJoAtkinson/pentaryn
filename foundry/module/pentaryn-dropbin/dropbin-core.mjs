@@ -12,14 +12,14 @@
 
 import { MODULE, LOOTABLE_TYPES, lootAllState, showEye, eyePlacement } from "./loot-core.mjs";
 import {
-  DIR, FILE, DEDUPE_MS, MIRROR_DEBOUNCE_MS, ledgerKB, dedupeKey, duplicateOfTail, appendEntry, isEntryShape, makeEntry, normaliseDeltas, listLast, findEntry,
+  DIR, FILE, DEDUPE_MS, MIRROR_DEBOUNCE_MS, ledgerKB, dedupeKey, duplicateOfTail, appendEntry, isEntryShape, isPlausibleSender, makeEntry, normaliseDeltas, listLast, findEntry,
   briefOf, searchLog, shouldCaptureDelete, restoreTarget, pileScene,
 } from "./ledger-core.mjs";
 
 // Imported, then exported by name (not `export … from`), so the import-graph tools see both files.
 export {
   MODULE, LOOTABLE_TYPES, lootAllState, showEye, eyePlacement,
-  DIR, FILE, DEDUPE_MS, MIRROR_DEBOUNCE_MS, ledgerKB, dedupeKey, duplicateOfTail, appendEntry, isEntryShape, makeEntry, normaliseDeltas, listLast, findEntry,
+  DIR, FILE, DEDUPE_MS, MIRROR_DEBOUNCE_MS, ledgerKB, dedupeKey, duplicateOfTail, appendEntry, isEntryShape, isPlausibleSender, makeEntry, normaliseDeltas, listLast, findEntry,
   briefOf, searchLog, shouldCaptureDelete, restoreTarget, pileScene,
 };
 

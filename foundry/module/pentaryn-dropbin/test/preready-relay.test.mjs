@@ -3,7 +3,7 @@
 // ready, in arrival order, through appendLedger; the relay's promise resolves with its ledger number.
 import { mock, test } from "node:test";
 import assert from "node:assert/strict";
-import { dropbinWorld } from "./fixtures/world.mjs";
+import { dropbinWorld, GM } from "./fixtures/world.mjs";
 
 mock.timers.enable({ apis: ["setTimeout"] });
 
@@ -19,7 +19,7 @@ F.fire("socketlib.ready");
 const flush = async () => {
   for (let i = 0; i < 50; i++) await Promise.resolve();
 };
-const entry = itemName => ({ t: 0, reason: "delete", itemName, fromActorId: "a", fromActorName: "Ann", quantity: 1, item: null });   // makeEntry always writes item (dropbin-R10 checks it)
+const entry = itemName => ({ t: 0, reason: "delete", itemName, userId: GM, fromActorId: "a", fromActorName: "Ann", quantity: 1, item: null });   // makeEntry always writes item and userId (dropbin-R10, DB-AC-3 check them)
 const writes = () => F.calls.filter(c => c.op === "settings.set");
 
 test("DB-AC-2: a relayed entry before ready writes nothing, then is recorded at ready in arrival order", async () => {
