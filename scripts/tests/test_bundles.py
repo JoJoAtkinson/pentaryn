@@ -644,6 +644,22 @@ def test_perf2_extract_refuses_a_member_missing_from_the_names_it_was_given(
     assert not ex.exists() or not any(ex.iterdir())
 
 
+def test_perf2_extract_refuses_a_stream_that_ends_before_the_names_it_was_given(
+        fake_data, tmp_path):
+    """PERF-2: a tar cut short after verify exactly on a member boundary streams out
+    quietly; extract compares what it saw with the checked names and refuses it before
+    the swap, so the folder in place stays whole."""
+    existing = make_module(fake_data / "Data/modules", "alpha")
+    tar = _evil_tar(tmp_path / f"module@alpha@1@{FP}.tar.gz", ["alpha/ok.txt"])
+    with pytest.raises(ValueError, match="alpha/gone"):
+        bundles.extract(tar, "module", "alpha", fake_data,
+                        members=["alpha/ok.txt", "alpha/gone"])
+    assert (existing / "module.json").exists()
+    assert not (fake_data / "Data/modules/alpha/ok.txt").exists()
+    ex = fake_data / bundles.TMP_DIRNAME / bundles.EXTRACT
+    assert not ex.exists() or not any(ex.iterdir())
+
+
 def test_extract_into_missing_root(fake_data, tmp_path, mod):
     tar = bundles.build(_local(mod, kind="system"), tmp_path / "staging")
     assert tar.name.startswith("system@alpha@")

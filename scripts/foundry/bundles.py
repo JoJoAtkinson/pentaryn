@@ -509,10 +509,11 @@ def extract(tar: Path, kind: str, id: str, data_root: Path, *,
     Every member is checked to be `<id>` or under `<id>/` before anything is written:
     `members` — the names verify() returned for this tar — are checked as given, else
     the tar is read once for its names. The tar is then extracted in one streaming pass
-    (filter='data'), refusing any member not among those names, to
-    .pentaryn-tmp/extract/<id>; the folder in place, if any, is moved aside, the new one
-    renamed in, and the old one removed — on a failed swap the old one is put back. The staging area is left clean either way. With
-    `seed_cache`, the cache learns the extracted folder's fingerprint from the tar's name,
+    (filter='data') to .pentaryn-tmp/extract/<id>, refusing any member not among those
+    names and a stream that ends before all of them (a tar cut short after verify); the
+    folder in place, if any, is moved aside, the new one renamed in, and the old one
+    removed — on a failed swap the old one is put back. The staging area is left clean
+    either way. With `seed_cache`, the cache learns the extracted folder's fingerprint from the tar's name,
     so the next backup does not hash what it just downloaded."""
     tar, data_root = Path(tar), Path(data_root)
     _check_id(kind, id)
@@ -523,13 +524,14 @@ def extract(tar: Path, kind: str, id: str, data_root: Path, *,
     staged, aside = exdir / id, exdir / f".old-{id}"
     names = read_all(tar) if members is None else list(members)
     _check_members(tar.name, id, names)
-    allowed = set(names)
+    allowed, seen = set(names), set()
 
     def checked(tf: tarfile.TarFile):
         for m in tf:
             if m.name not in allowed:
                 raise ValueError(f"{tar.name}: member {m.name!r} was not in it when it was "
                                  f"checked — refused")
+            seen.add(m.name)
             yield m
 
     with tarfile.open(tar, "r|gz") as tf:
@@ -539,6 +541,10 @@ def extract(tar: Path, kind: str, id: str, data_root: Path, *,
                     shutil.rmtree(leftover)
             exdir.mkdir(parents=True, exist_ok=True)
             tf.extractall(exdir, members=checked(tf), filter="data")
+            if seen != allowed:                  # the stream ended short (cut after verify)
+                missing = sorted(allowed - seen)
+                raise ValueError(f"{tar.name}: ended before {len(missing)} checked "
+                                 f"member(s), e.g. {missing[0]!r} — refused")
             if not staged.is_dir():
                 raise ValueError(f"{tar.name}: holds no {id}/ folder")
             dest.parent.mkdir(parents=True, exist_ok=True)
