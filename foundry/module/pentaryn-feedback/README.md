@@ -42,12 +42,12 @@ Ask it: `game.pentaryn.feedback.describe()` (offline: `test/golden/describe.json
 | `selftest()` | — | — | `{ ok, checks }` — published, bug button present, recorder installed, each console wrap (error, warn) present exactly when `captureConsole` is on |
 | `open({ category, text })` | — | — | opens the dialog pre-filled |
 | `submit({ category, text }, { dryRun })` | — | own User flag | `{ ok, id, status: "filed" \| "queued" }` / `fail` |
-| `ingest({ userId, ids })` | active GM | report files, the user's flag | `{ ok, filed, refused, done }` — the relay query |
+| `ingest({ userId, ids })` | active GM | report files, the user's flag | `{ ok, filed, refused, done }` — the relay query; a non-GM sender asking for someone else's queue gets `fail("REFUSED", …)` |
 | `list({ status, limit })` | yes | — | `{ reports: [{ id, t, category, status, user, world, text60 }], count }`, oldest first; report files are fetched up to 6 at a time (`LIMITS.readsInFlight`); a report file that cannot be read or is not a JSON object is skipped with a console warning |
 | `get({ id })` | yes | — | the report; `id` may be a unique prefix; throws `NOT_FOUND` / `AMBIGUOUS` / `BAD_ARGS` |
 | `resolve({ id, status, note, force, dryRun })` | yes | the report file | `{ ok, id, status, history }` / `fail("REFUSED", …)` |
 
-Queries: `pentaryn-feedback.ingest` (relay: any sender, the active GM runs it) and `inspect`,
+Queries: `pentaryn-feedback.ingest` (relay: that user or a GM may send it, the active GM runs it) and `inspect`,
 `list`, `get`, `resolve` (GM sender). Status rules (`nextStatus` in core): open → triaged; any →
 resolved / wontfix; the same status adds a note; back to open, or resolved → triaged, needs `force`.
 
@@ -150,9 +150,10 @@ wraps stay in place after `uninstall()` and record nothing until the next instal
   (errors and recorded free text redacted; their own text and names only clipped). Acceptable at this table; never put a secret in a report field.
 - A queued report rides on the User document every client receives: the queue is capped at 5
   (oldest dropped, the player is told) and each report at 256 KB.
-- The kit's `registerQueries` (1.1.0) passes no sender to a row's implementation (its inner
-  handler drops core's ctx; `guarded`/`relayed` do pass it), which is why the identity comes
-  from the queue's User document, not from the query.
+- The kit's `registerQueries` (1.2.0) passes core's ctx to a relay row's implementation, so
+  `ingest` refuses a non-GM sender asking for another user's queue. A call with no ctx (the
+  bridge's socket path, or a local call) is not checked, and the filed identity still comes from
+  the queue's User document, never from the query.
 - `lib/` and `test/kit/` are vendored: edit `foundry/lib/`, then `vendor.py sync`.
 - `module.json` is read at Foundry startup: a change needs a restart.
 

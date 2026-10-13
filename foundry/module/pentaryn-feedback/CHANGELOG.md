@@ -92,6 +92,12 @@
   is kept, and every skipped path logs one `pentaryn-feedback | report file … skipped` warning;
   `count` counts only the readable reports. `inspect`'s remaining null case (the folder listing
   itself failing) also warns now.
+- **[declared] The `ingest` relay checks its sender** (feedback-async-2): kit 1.2.0 forwards core's
+  query ctx to relay rows, so a non-GM player asking to file another user's queue now gets
+  `fail("REFUSED", "only that user or a GM may ask to file their queue")`. The user themselves, a
+  GM, and a call with no ctx (the bridge's socket path, a local call) behave as before. The
+  manifest doc says so (describe() golden updated for that string); the README pitfall naming kit
+  1.1.0 is rewritten for 1.2.0.
 
 ## 0.1.2 — 2026-10-11 (live-check fix)
 
