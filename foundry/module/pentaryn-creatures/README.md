@@ -74,7 +74,8 @@ they are looking at.
 - **Nothing is stored.** The list is computed from the scene every time it draws. It redraws on
   token create and delete, on token updates that change its name, image, hiding, actor (id, link
   or delta) or flags (not on a move), on scene change (`canvasReady`), on actor
-  ownership/name/image changes, and on the user's character change. A dismissed, killed or deleted summon simply stops being there.
+  ownership/name/image changes, and on the user's character change — at most 60 ms after the
+  first such change, however much token traffic follows (a burst draws once). A dismissed, killed or deleted summon simply stops being there.
 - **Over the Combat HUD (U-6-12):** while Argon's HUD is up it covers the hotbar, so the strip
   floats 8 px above the HUD's action bar, left-aligned with it, and drops back above the hotbar
   when the HUD closes. It looks twice a second, only while the strip is up, `floatOverHud` is on
@@ -97,13 +98,18 @@ Also `game.modules.get("pentaryn-creatures").api`; published at `ready`, frozen,
 `describe()`, `version`, `contract`, `settings()`, `trace()`, `uninstall()`.
 
 - `list(user?, scene?)` → `{ id, name, img, rank }[]`: the strip's entries for a user (default this
-  client's) on a scene (default the viewed one). Run it as the GM with a player's `User` to check
-  what they'd see. `[]` without a scene.
+  client's) on a scene (default the viewed one); `null` counts as omitted. Either may be a document
+  or its id, uuid or exact name. Run it as the GM with a player's `User` (or user id) to check what they'd see. `[]` without
+  a scene.
 - `render()`: force a redraw of this client's strip.
-- `isCreature(tokenDoc)` → boolean: would this token get the light?
+- `isCreature(tokenDoc)` → boolean: would this token get the light? A Token placeable answers through
+  its document (the same answer); `null`/`undefined` answer `false`.
 - `syncScene(scene, ids?)` → `Promise<number>`, `syncAll()` → `Promise<number>`: active GM client
-  only (0 elsewhere). Re-run the light pass; resolves to how many tokens were written. `ids` may be
-  an array, a Set, one id or token documents (`[]` = none; omitted = every token).
+  only (0 elsewhere). Re-run the light pass; resolves to how many tokens were written. `scene` may be
+  a document or its id, uuid or exact name; a missing or unknown one rejects `BAD_ARGS` / `NOT_FOUND`
+  on every client. `ids` may be
+  an array, a Set, one id or token documents (`[]` = none; omitted = every token). `syncAll` keeps
+  going past a scene whose write fails (one console warning, `light sync failed on <scene>`).
 - `ownerSees(token)` → boolean: would the override show this token to me? A placeable or its
   TokenDocument (a document with no placeable on the viewed scene: `false`).
 - `patchedWith()` → `"libWrapper"`, `"direct"` or `null` (the getter was not found; see the console).

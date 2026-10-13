@@ -4,7 +4,8 @@
  * Four rows, in the order they have always been registered. Every row carries full literal label
  * keys (`PENTARYN_CREATURES.settings.<key>.name/hint`), so the i18n gate proves each one. A row's
  * onChange calls whatever a feature registered for that key with onSettingChange(); the features do
- * that during their synchronous install, before `init`. Every read is live through setting(), so
+ * that during their synchronous install, before `init`, and the entry's uninstall() clears them with
+ * clearSettingHandlers() (creatures-edge-1). Every read is live through setting(), so
  * no row needs a reload.
  */
 
@@ -17,6 +18,11 @@ const handlers = {};
 /** Route a setting's onChange to `fn` (one handler per key; a later call replaces it). */
 export function onSettingChange(key, fn) {
   handlers[key] = fn;
+}
+
+/** Forget every routed handler (the entry's uninstall; a re-import registers them again). */
+export function clearSettingHandlers() {
+  for (const key of Object.keys(handlers)) delete handlers[key];
 }
 
 /** A row's onChange: calls the handler registered for `key` at change time, if any. */

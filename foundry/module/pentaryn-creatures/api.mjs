@@ -64,12 +64,24 @@ function inspect(ctx, doc, opts = {}) {
 export function buildApiFor(ctx) {
   const x = ctx.exposed;
   return buildApi(MANIFEST, {
-    list: (user, scene) => x.list(user, scene),
+    // a string user/scene (id, uuid or exact name — what the bridge sends) resolves first; documents pass through;
+    // null counts as omitted (this client's user, the viewed scene)
+    list: (user, scene) => x.list(
+      typeof user === "string" ? resolveRef(user, "user") : user ?? undefined,
+      typeof scene === "string" ? resolveRef(scene, "scene") : scene ?? undefined,
+    ),
     render: () => x.render(),
-    // ids at the boundary: an array, a Set (copied), one id or token documents → a Set; null/undefined = all
-    syncScene: (scene, ids) => x.syncScene(scene, ids == null ? null : toIdSet(ids)),
+    // the scene (a Scene, or its id, uuid or exact name) resolves first, on every client: a missing one rejects
+    // NOT_FOUND / BAD_ARGS (creatures-rob-4). ids at the boundary: an array, a Set (copied), one id or token
+    // documents → a Set; null/undefined = all
+    syncScene: async (scene, ids) => x.syncScene(resolveRef(scene, "scene"), ids == null ? null : toIdSet(ids)),
     syncAll: () => x.syncAll(),
-    isCreature: (tokenDoc) => isPlayerCreature(summarize(tokenDoc)),
+    // a Token placeable answers through its document (token-level flags live there); null/undefined → false
+    // (creatures-rob-5)
+    isCreature: (tokenDoc) => {
+      const doc = tokenDoc?.document ?? tokenDoc;
+      return doc ? isPlayerCreature(summarize(doc)) : false;
+    },
     // a TokenDocument answers for its placeable on the viewed scene (a document off-canvas: false)
     ownerSees: (token) => x.ownerSees(token?.object ?? token),
     patchedWith: () => x.patchedWith(),

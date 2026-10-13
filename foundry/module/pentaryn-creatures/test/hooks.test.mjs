@@ -79,6 +79,25 @@ test("uninstall() leaves no hook, no strip, no dock poll, no wrap and no queued 
   assert.deepEqual([W.D.byId, W.D.queries, W.writes], [[], [], []], "no timer fires afterwards");
 });
 
+test("creatures-edge-1 [declared]: after uninstall() a setting change reaches no feature — showStrip draws no strip, arms no dock poll", async () => {
+  F.game.modules.set("enhancedcombathud", { id: "enhancedcombathud", active: true });
+  W.D.byId.length = 0;
+  W.D.queries.length = 0;
+  W.flags = [];
+  await F.game.settings.set(MODULE, "showStrip", false);
+  await F.game.settings.set(MODULE, "showStrip", true);
+  await F.game.settings.set(MODULE, "floatOverHud", false);
+  await F.game.settings.set(MODULE, "floatOverHud", true);
+  F.canvas.ready = true;
+  await F.game.settings.set(MODULE, "ownerSees", false);
+  await F.game.settings.set(MODULE, "ownerSees", true);
+  mock.timers.tick(2000);
+  await drain();
+  assert.deepEqual([W.D.byId, W.D.queries, W.flags, W.writes], [[], [], [], []], "no render, no dock poll, no refresh");
+  assert.equal(W.strip(), null, "the strip stays off");
+  F.game.modules.delete("enhancedcombathud");
+});
+
 test("hot patch: after uninstall(), re-importing the entry re-wires hooks, the wrap, the strip and a new API", async () => {
   const before = F.hooks.length;
   await import("../creatures.mjs?v=2");
@@ -95,6 +114,14 @@ test("hot patch: after uninstall(), re-importing the entry re-wires hooks, the w
   mock.timers.tick(60);
   await drain();
   assert.ok(W.strip(), "the strip is drawn again");
+  await F.game.settings.set(MODULE, "showStrip", false);
+  mock.timers.tick(60);
+  await drain();
+  assert.equal(W.strip(), null, "creatures-edge-1: the re-import re-registers the setting handlers");
+  await F.game.settings.set(MODULE, "showStrip", true);
+  mock.timers.tick(60);
+  await drain();
+  assert.ok(W.strip());
   api2.uninstall();
   assert.deepEqual(F.listeners(), {});
 });

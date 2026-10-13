@@ -9,13 +9,13 @@
       "params": [
         {
           "name": "user",
-          "type": "User",
+          "type": "User | uuid | id | exact name",
           "optional": true,
           "doc": "default: this client's user"
         },
         {
           "name": "scene",
-          "type": "Scene",
+          "type": "Scene | uuid | id | exact name",
           "optional": true,
           "doc": "default: the viewed scene"
         }
@@ -44,7 +44,7 @@
       "params": [
         {
           "name": "scene",
-          "type": "Scene"
+          "type": "Scene | uuid | id | exact name"
         },
         {
           "name": "ids",
@@ -61,8 +61,12 @@
         "token light.bright/light.dim",
         "flags.pentaryn-creatures.light"
       ],
+      "throws": [
+        "NOT_FOUND",
+        "BAD_ARGS"
+      ],
       "legacy": true,
-      "doc": "Bring one scene's creature lights in line now; resolves to how many tokens were written. Active GM client only (0 elsewhere)."
+      "doc": "Bring one scene's creature lights in line now; resolves to how many tokens were written. Active GM client only (0 elsewhere). A missing or unknown scene rejects NOT_FOUND / BAD_ARGS on every client."
     },
     {
       "path": "syncAll",
@@ -76,14 +80,15 @@
         "flags.pentaryn-creatures.light"
       ],
       "legacy": true,
-      "doc": "syncScene over every scene; resolves to how many tokens were written. Active GM client only (0 elsewhere)."
+      "doc": "syncScene over every scene; a scene whose write fails is one console warning naming it and the rest still sync. Resolves to how many tokens were written. Active GM client only (0 elsewhere)."
     },
     {
       "path": "isCreature",
       "params": [
         {
           "name": "tokenDoc",
-          "type": "TokenDocument"
+          "type": "TokenDocument | Token placeable",
+          "doc": "a placeable answers through its document"
         }
       ],
       "returns": "boolean",
@@ -92,7 +97,7 @@
       "query": false,
       "sideEffects": [],
       "legacy": true,
-      "doc": "Does this token get the creature light: a player-owned npc that is not an Item Piles pile or an aoe area handle? Never a PC or its Wild Shape form."
+      "doc": "Does this token get the creature light: a player-owned npc that is not an Item Piles pile or an aoe area handle? Never a PC or its Wild Shape form. null/undefined answer false."
     },
     {
       "path": "ownerSees",

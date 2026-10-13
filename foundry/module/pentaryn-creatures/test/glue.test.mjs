@@ -199,7 +199,7 @@ test("oracle: isCreature and list() agree with the verbatim legacy summarize (fi
   assert.deepEqual(api().list(rook, alpha), entries);
   assert.deepEqual(entries.map(e => [e.id, e.rank]), [["tPC", 0], ["tEye", 2], ["tImp", 2], ["tTorch", 2]]);
   assert.deepEqual(api().list(F.game.user, W.scene(GAMMA)), [], "GM owns nothing as a character; empty scene");
-  assert.deepEqual(api().list(rook, null), [], "no scene");
+  assert.deepEqual(api().list(rook, null), api().list(rook), "[declared] creatures-rob-2: null scene = the viewed scene");
 });
 
 test("transform-creatures-26 [declared]: a fixed window — queues at 0/50/100/150/190 flush once, at 200; a queue at 250 flushes at 450", async () => {
@@ -328,7 +328,7 @@ test("a token whose light was set to 0 by hand is flagged false and never relit"
   assert.equal(eye.flags[MODULE].light, false);
 });
 
-test("failure texts: a failed queued write names the scene; a failed setting-driven sync does not", async () => {
+test("failure texts: a failed queued write names the scene; creatures-rob-3 [declared]: a failed setting-driven sync names it too", async () => {
   reset("tImp");
   W.failWrite.push(new Error("db down"));
   F.fire("createToken", W.tok("tImp"), {}, GM);
@@ -338,8 +338,31 @@ test("failure texts: a failed queued write names the scene; a failed setting-dri
   W.failWrite.push(new Error("db down again"));
   await F.game.settings.set(MODULE, "lightRadius", 5);
   await drain();
-  assert.deepEqual(W.lines(), [["warn", `${MODULE} | light sync failed`, "Error: db down again"]]);
+  assert.deepEqual(W.lines(), [["warn", `${MODULE} | light sync failed on Alpha`, "Error: db down again"]]);
   writes();
+  await tick(200);
+  writes();
+});
+
+test("creatures-rob-3 [declared]: syncAll isolates scenes — a rejected write is one warn naming the scene, later scenes still sync, the count covers the rest", async () => {
+  W.failWrite.push(new Error("db down"));
+  await F.game.settings.set(MODULE, "lightRadius", 2);
+  await drain();
+  assert.deepEqual(W.lines(), [["warn", `${MODULE} | light sync failed on Alpha`, "Error: db down"]]);
+  assert.deepEqual(writes().map(w => w.scene), [ALPHA, BETA], "Beta still synced after Alpha's write rejected");
+  assert.deepEqual(W.tok("tImpB").flags[MODULE].light, { bright: 2, dim: 2 });
+  reset("tImpB");
+  W.failWrite.push(new Error("db down again"));
+  assert.equal(await api().syncAll(), 1, "Alpha's write failed; Beta's one token was written");
+  assert.deepEqual(W.lines(), [["warn", `${MODULE} | light sync failed on Alpha`, "Error: db down again"]]);
+  assert.deepEqual(writes().map(w => w.scene), [ALPHA, BETA]);
+  await F.game.settings.set(MODULE, "lightRadius", 5);
+  await drain();
+  assert.deepEqual(writes(), [
+    { scene: ALPHA, type: "Token", updates: [lit("tImp")], argc: 3 },
+    { scene: BETA, type: "Token", updates: [lit("tImpB")], argc: 3 },
+  ], "relit at 5 everywhere");
+  assert.deepEqual(W.lines(), []);
   await tick(200);
   writes();
 });
@@ -398,4 +421,29 @@ test("controlToken with no strip on the page does nothing", () => {
   assert.equal(W.strip(), null);
   F.fire("controlToken", W.p("tImp"), true);
   assert.equal(W.strip(), null);
+});
+
+test("creatures-edge-1 [declared]: after uninstall() a lightRadius change writes no token; a re-import re-registers it", async () => {
+  await tick(200);
+  writes();
+  const live = api();
+  live.uninstall();
+  W.reads.length = 0;
+  await F.game.settings.set(MODULE, "lightRadius", 0);
+  await drain();
+  await F.game.settings.set(MODULE, "lightRadius", 7);
+  await drain();
+  await tick(2000);
+  assert.deepEqual(writes(), [], "no syncAll after uninstall");
+  assert.equal(W.passes(), 0);
+
+  await import("../creatures.mjs?v=2");
+  assert.notEqual(api(), live);
+  await tick(200);
+  writes();
+  await F.game.settings.set(MODULE, "lightRadius", 5);
+  await drain();
+  assert.ok(writes().length > 0, "the re-imported entry's handler runs syncAll");
+  await tick(200);
+  api().uninstall();
 });

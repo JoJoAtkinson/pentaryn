@@ -20,8 +20,8 @@ export const MANIFEST = Object.freeze({
     {
       path: "list",
       params: [
-        { name: "user", type: "User", optional: true, doc: "default: this client's user" },
-        { name: "scene", type: "Scene", optional: true, doc: "default: the viewed scene" },
+        { name: "user", type: "User | uuid | id | exact name", optional: true, doc: "default: this client's user" },
+        { name: "scene", type: "Scene | uuid | id | exact name", optional: true, doc: "default: the viewed scene" },
       ],
       returns: "{ id, name, img, rank }[]",
       gm: false, writes: false, legacy: true,
@@ -39,15 +39,15 @@ export const MANIFEST = Object.freeze({
     {
       path: "syncScene",
       params: [
-        { name: "scene", type: "Scene" },
+        { name: "scene", type: "Scene | uuid | id | exact name" },
         { name: "ids", type: "string[] | Set<string> | string | TokenDocument[]", optional: true,
           doc: "only these tokens (ids or documents; [] means none); default every token" },
       ],
       returns: "Promise<number>",
-      gm: true, writes: true, legacy: true,
+      gm: true, writes: true, legacy: true, throws: ["NOT_FOUND", "BAD_ARGS"],
       sideEffects: ["token light.bright/light.dim", "flags.pentaryn-creatures.light"],
       doc: "Bring one scene's creature lights in line now; resolves to how many tokens were written. Active GM "
-        + "client only (0 elsewhere).",
+        + "client only (0 elsewhere). A missing or unknown scene rejects NOT_FOUND / BAD_ARGS on every client.",
     },
     {
       path: "syncAll",
@@ -55,15 +55,16 @@ export const MANIFEST = Object.freeze({
       returns: "Promise<number>",
       gm: true, writes: true, legacy: true,
       sideEffects: ["token light.bright/light.dim", "flags.pentaryn-creatures.light"],
-      doc: "syncScene over every scene; resolves to how many tokens were written. Active GM client only (0 elsewhere).",
+      doc: "syncScene over every scene; a scene whose write fails is one console warning naming it and the rest "
+        + "still sync. Resolves to how many tokens were written. Active GM client only (0 elsewhere).",
     },
     {
       path: "isCreature",
-      params: [{ name: "tokenDoc", type: "TokenDocument" }],
+      params: [{ name: "tokenDoc", type: "TokenDocument | Token placeable", doc: "a placeable answers through its document" }],
       returns: "boolean",
       gm: false, writes: false, legacy: true,
       doc: "Does this token get the creature light: a player-owned npc that is not an Item Piles pile or an "
-        + "aoe area handle? Never a PC or its Wild Shape form.",
+        + "aoe area handle? Never a PC or its Wild Shape form. null/undefined answer false.",
     },
     {
       path: "ownerSees",

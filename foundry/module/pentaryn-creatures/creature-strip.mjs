@@ -1,5 +1,5 @@
 /**
- * Pentaryn Creatures — FEATURE: when the "Your creatures" strip redraws. Every trigger schedules
+ * Pentaryn Creatures — FEATURE: when the "Your creatures" strip redraws. The first trigger schedules
  * one render 60 ms later (a burst renders once); the drawing itself is strip.mjs.
  */
 
@@ -8,15 +8,17 @@ import { forget, list, markControlled, placeStrip, remove, render } from "./stri
 
 let log = null;
 /**
- * Render 60 ms from now; a later call pushes it back. A render failure is one console line. The
- * timers are read at call time (tests mock them).
+ * Render at most 60 ms after the first trigger, never pushed back by later ones: other modules
+ * write token flags constantly in combat, and a debounce let that traffic postpone the redraw
+ * indefinitely (creatures-edge-3). A render failure is one console line. The timers are read at
+ * call time (tests mock them).
  */
 const renderer = makeCoalescer(60, () => {
   try { render(); } catch (err) { log.warn("strip render failed", err); }
 }, {
   setTimeout: (fn, ms) => setTimeout(fn, ms),
   clearTimeout: id => clearTimeout(id),
-  mode: "debounce",
+  mode: "window",
 });
 
 function scheduleRender() {

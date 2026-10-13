@@ -63,10 +63,15 @@ export async function syncScene(scene, ids = null) {
   return updates.length;
 }
 
-/** Every scene, in order. Returns how many tokens were written. */
+/**
+ * Every scene, in order, each isolated like the queued flush: a scene whose write rejects is one
+ * warn naming it, and the pass carries on (creatures-rob-3). Returns how many tokens were written.
+ */
 export async function syncAll() {
   let n = 0;
-  for (const scene of game.scenes) n += await syncScene(scene);
+  for (const scene of game.scenes) {
+    n += await syncScene(scene).catch(err => (log.warn(`light sync failed on ${scene.name}`, err), 0));
+  }
   return n;
 }
 

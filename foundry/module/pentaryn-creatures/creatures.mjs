@@ -5,7 +5,7 @@
  * own, their own tokens stay drawn on their screen, and a "Your creatures" strip above the hotbar.
  * What each does at the table: README "What the player sees".
  *
- * Files, in load order:
+ * Files (core first, then the features, then the API):
  *   creatures-core.mjs   PURE constants and rules: the light, owner-sees, strip order, dock, seams
  *   settings.mjs         SETTINGS (lightRadius, ownerSees, floatOverHud, showStrip), setting()
  *   tokens-adapter.mjs   TokenDocument → plain summary (reads aoe / Item Piles / dnd5e flags)
@@ -29,7 +29,7 @@
  */
 
 import { MODULE, NS } from "./creatures-core.mjs";
-import { onSettingChange, registerSettings, setting } from "./settings.mjs";
+import { clearSettingHandlers, onSettingChange, registerSettings, setting } from "./settings.mjs";
 import { buildApiFor } from "./api.mjs";
 import { hookRegistry } from "./lib/hooks.mjs";
 import { makeLog } from "./lib/log.mjs";
@@ -58,9 +58,10 @@ const ctx = {
   uninstall,
 };
 
-/** Remove every hook, the wrap, the strip and the light queue (hot patch: then re-import). */
+/** Remove every hook, setting handler, the wrap, the strip and the light queue (hot patch: then re-import). */
 function uninstall() {
   for (const feature of [...FEATURES].reverse()) feature.uninstall();
+  clearSettingHandlers();
   reg.offAll();
 }
 
