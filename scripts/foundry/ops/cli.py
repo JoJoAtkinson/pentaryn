@@ -85,13 +85,15 @@ def build_parser() -> argparse.ArgumentParser:
     add("verify", "Assert the staged actors.json is not served publicly.")
 
     # ── modules ──
-    # Derived, not hardcoded: adding a ModuleSpec is enough to make it syncable, and
-    # `syncable=False` on the spec (the importer) keeps it out (EXT-6).
-    names = sorted(k for k, s in cfg.MODULES.items() if s.syncable)
+    # Derived, not hardcoded: adding a ModuleSpec is enough to make it checkable and
+    # syncable. Every registered name parses for module-sync too: `syncable=False` on the
+    # spec (the importer) is refused by `modules.sync()` with a ✗ line naming
+    # importer-install, which an argparse "invalid choice" never reached (EXT-6, wave 3).
+    names = sorted(cfg.MODULES)
     mcheck = add("module-check", "Prove a module's sources before it can reach Foundry.")
     # `importer` is checkable but not syncable: the actor pipeline stages it, and a
     # `module-sync importer` would put a second copy where Foundry loads modules from.
-    mcheck.add_argument("module", nargs="?", choices=sorted(cfg.MODULES))
+    mcheck.add_argument("module", nargs="?", choices=names)
     mcheck.add_argument("--all", action="store_true",
                         help="every registered module; keeps going past a failure")
     mcheck.add_argument("--json", action="store_true",
