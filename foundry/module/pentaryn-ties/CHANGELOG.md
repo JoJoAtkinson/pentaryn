@@ -221,6 +221,11 @@ actor still get one each). TiesEditor, AttributeReview, the Look window and the 
 fronted (the ties editor used to front without re-rendering). `edit`, `study.preview` and
 `attributes.openReview` return the window (or `null`), not a promise. ties-ui-EXT-16.
 
+Fixed (declared): a sheet re-render that rebuilds only the tab body no longer stacks another click
+listener on each surviving Ties/Known/Attributes nav link. The link is bound once (`data-pt-bound`) and
+finds its section at click time (`:scope > [data-tab=id]`); a fresh section under a surviving link is
+only repainted (and re-activated if that tab was open). ties-ui-E9.
+
 ## 0.19.4 (2026-10-10, usability run, Area 7 re-run)
 
 - **The inspect window's Share switches are the table's PCs only** (`tablePCs`): each player's

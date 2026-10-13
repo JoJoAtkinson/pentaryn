@@ -22,7 +22,7 @@ const TAB = "ties";
 /*
  * dnd5e 5.x actor sheets are ApplicationV2 with nav.tabs[data-group=primary] and a
  * div.tab-body of section.tab[data-tab]. We append one of each and activate it by hand
- * (see activate() in injectOneTab — not changeTab). Everything here is best-effort: if the
+ * (see activateTab() — not changeTab). Everything here is best-effort: if the
  * markup moves, we bail silently and the header button still opens the editor.
  */
 
@@ -159,42 +159,54 @@ function injectOneTab(app, root, nav, body, actor, spec) {
   };
   paint();
 
-  /**
-   * Activate our tab by hand rather than through `app.changeTab()`.
-   *
-   * changeTab() RETURNS EARLY when `tabGroups[group]` already equals the tab and `force` is unset.
-   * That bites exactly when it matters: the GM is on the Ties tab, something re-renders the sheet,
-   * dnd5e rebuilds the DOM and activates nothing (it does not know "ties"), and the early return
-   * means our re-activation silently does nothing — leaving a BLANK sheet body.
-   *
-   * The deactivate sweep is deliberately over-broad — every `[data-tab]` in the nav and both
-   * body shapes — which is also what makes a SECOND injected tab safe: switching to Known
-   * clears Ties by the same line that clears Features, with no list of our own tabs to keep
-   * in step.
+  /*
+   * Bind the link ONCE (ties-ui-E9). A body-only re-render leaves the link (already bound) and
+   * drops the section, so we land here with a fresh section: that only needs the repaint above.
+   * The handler therefore must not close over `section` — it finds the live one at click time.
    */
-  const activate = () => {
-    root
-      .querySelectorAll('nav.tabs [data-tab], .tab-body > [data-tab], .sheet-body > [data-tab]')
-      .forEach(el => el.classList.remove("active"));
-    link.classList.add("active");
-    section.classList.add("active");
-    if (app.tabGroups) app.tabGroups.primary = spec.id;
-    // dnd5e mirrors the active tab onto the root element as `tab-<name>`
-    root.classList.forEach(c => {
-      if (c.startsWith("tab-")) root.classList.remove(c);
+  if (link.dataset.ptBound !== "1") {
+    link.addEventListener("click", ev => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      activateTab(app, root, link, spec.id);
     });
-    root.classList.add(`tab-${spec.id}`);
-  };
-
-  link.addEventListener("click", ev => {
-    ev.preventDefault();
-    ev.stopPropagation();
-    activate();
-  });
-  link.dataset.ptBound = "1";
+    link.dataset.ptBound = "1";
+  }
 
   // restore ourselves after a re-render that happened while this tab was open
-  if (app.tabGroups?.primary === spec.id) activate();
+  if (app.tabGroups?.primary === spec.id) activateTab(app, root, link, spec.id);
+}
+
+/**
+ * Activate one of our tabs by hand rather than through `app.changeTab()`.
+ *
+ * changeTab() RETURNS EARLY when `tabGroups[group]` already equals the tab and `force` is unset.
+ * That bites exactly when it matters: the GM is on the Ties tab, something re-renders the sheet,
+ * dnd5e rebuilds the DOM and activates nothing (it does not know "ties"), and the early return
+ * means our re-activation silently does nothing — leaving a BLANK sheet body.
+ *
+ * The deactivate sweep is deliberately over-broad — every `[data-tab]` in the nav and both
+ * body shapes — which is also what makes a SECOND injected tab safe: switching to Known
+ * clears Ties by the same line that clears Features, with no list of our own tabs to keep
+ * in step.
+ *
+ * The section is looked up now, not remembered: a re-render may have replaced it since the
+ * link was bound (ties-ui-E9).
+ */
+function activateTab(app, root, link, id) {
+  const body = root.querySelector("div.tab-body") ?? root.querySelector(".sheet-body");
+  const section = body?.querySelector(`:scope > [data-tab="${id}"]`);
+  root
+    .querySelectorAll('nav.tabs [data-tab], .tab-body > [data-tab], .sheet-body > [data-tab]')
+    .forEach(el => el.classList.remove("active"));
+  link.classList.add("active");
+  section?.classList.add("active");
+  if (app.tabGroups) app.tabGroups.primary = id;
+  // dnd5e mirrors the active tab onto the root element as `tab-<name>`
+  root.classList.forEach(c => {
+    if (c.startsWith("tab-")) root.classList.remove(c);
+  });
+  root.classList.add(`tab-${id}`);
 }
 
 /** Header button — the robust host, independent of the sheet's tab markup. */
