@@ -7,6 +7,7 @@
       "api-manifest.mjs",
       "combat-core.mjs",
       "lib/api.mjs",
+      "lib/errors.mjs",
       "lib/patch.mjs",
       "lib/publish.mjs",
       "lib/resolve.mjs",
@@ -324,6 +325,7 @@
     "counting.mjs",
     "api.mjs",
     "lib/resolve.mjs",
+    "lib/errors.mjs",
     "lib/api.mjs",
     "api-manifest.mjs"
   ]

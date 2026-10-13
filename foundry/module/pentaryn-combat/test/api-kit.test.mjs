@@ -83,6 +83,14 @@ test("inspect as a player without OBSERVER: identity only", () => {
   } finally { w.testUserPermission = was; }
 });
 
+test("inspect with a null or non-object opts throws the coded BAD_ARGS, never a TypeError (wave 3, combat-1)", () => {
+  for (const bad of [null, 5, "as"]) {
+    assert.throws(() => api.inspect(cast.fighter, bad), err => err?.code === "BAD_ARGS" && /^BAD_ARGS: /.test(err.message) && !(err instanceof TypeError), String(bad));
+  }
+  assert.deepEqual(api.inspect(cast.fighter, undefined), api.inspect(cast.fighter), "omitted still reads as {}");
+  assert.deepEqual(api.inspect(cast.fighter, {}), api.inspect(cast.fighter));
+});
+
 test("coversMultiattack: the Multiattack item id for a form or NPC with 2+ parsed swings; null otherwise", () => {
   const ma = api.multiattack(cast.wolf);
   assert.equal(api.coversMultiattack(cast.wolf), ma && ma.total >= 2 && ma.source !== "flag" ? ma.source : null);
