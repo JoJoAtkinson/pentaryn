@@ -237,6 +237,21 @@ def test_core_version_from_package_json(monkeypatch, tmp_path):
     assert host.core_version() == "unknown"
 
 
+@pytest.mark.parametrize("pkg", [
+    {"version": "15.0-beta"},
+    {"version": "v15"},
+    {"version": "15.400", "release": {"generation": "15-beta", "build": 1}},
+])
+def test_a_non_numeric_core_version_reads_as_unknown_ext_3(monkeypatch, tmp_path, pkg):
+    """EXT-3: `fvtt15.0-beta-mac` parses as core 15.0, host `beta-mac`. Only a version
+    the snapshot-name parser reads back whole is stamped; anything else is "unknown"."""
+    app = tmp_path / "app"
+    app.mkdir()
+    (app / "package.json").write_text(json.dumps(pkg))
+    monkeypatch.setenv("FOUNDRY_APP_ROOT", str(app))
+    assert host.core_version() == "unknown"
+
+
 # ── process control ──────────────────────────────────────────────────────────
 
 @pytest.fixture

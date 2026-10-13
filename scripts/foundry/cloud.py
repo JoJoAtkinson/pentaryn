@@ -1020,6 +1020,11 @@ def _build(st: Storage, reason: str, *, safety: bool = False,
         if name not in taken:
             break
         when += timedelta(seconds=1)
+    back = parse_snapshot(Entry(name, 0, 0.0))
+    if back is None or back.host != me:
+        die(f"snapshot name {name} would not read back as this machine's "
+            f"(host {me!r}, core {core!r}; it parses as host "
+            f"{back.host if back else None!r}) — nothing was built")
 
     tmp = tmp_dir() / name
     missing = sorted((loc for loc in inv.values() if loc.name not in have),

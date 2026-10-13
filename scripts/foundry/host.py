@@ -286,16 +286,18 @@ def core_version() -> str:
     """The installed Foundry version from the app's package.json — no server needed.
 
     `release.generation`.`release.build` (14.369), as the snapshot names have always
-    carried it; "unknown" when the app cannot be read."""
+    carried it; "unknown" when the app cannot be read or the version is not all digits
+    and dots — the snapshot-name parser reads `fvtt15.0-beta-mac` as host `beta-mac`."""
     try:
         pkg = json.loads(app_package_json().read_text(encoding="utf-8"))
         rel = pkg.get("release") or {}
         if rel.get("generation") is not None and rel.get("build") is not None:
-            return f"{rel['generation']}.{rel['build']}"
-        ver = pkg.get("version")
-        return str(ver) if ver else "unknown"
+            ver = f"{rel['generation']}.{rel['build']}"
+        else:
+            ver = str(pkg.get("version") or "")
     except (OSError, ValueError, AttributeError):
         return "unknown"
+    return ver if re.fullmatch(r"[0-9.]+", ver) else "unknown"
 
 
 # ── process control ──────────────────────────────────────────────────────────

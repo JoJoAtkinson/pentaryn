@@ -256,6 +256,20 @@ def test_a_crashed_build_leaves_nothing_queued(two_hosts, spawned, monkeypatch):
         assert len(uploadq.pending()) == 1
 
 
+def test_a_name_that_does_not_round_trip_is_refused_ext_3(two_hosts, spawned, monkeypatch,
+                                                           capsys):
+    """EXT-3: a snapshot name must parse back with this host's tag — a core version like
+    `15.0-beta` would make `fvtt15.0-beta-mac` read as host `beta-mac`."""
+    monkeypatch.setattr(cloud, "core_version", lambda: "15.0-beta")
+    with two_hosts.use("mac"):
+        with pytest.raises(SystemExit):
+            cloud.backup("shutdown", background=True)
+        assert uploadq.pending() == [] and spawned == []
+        assert not list(uploadq.tmp_dir().glob("world-*"))
+    err = capsys.readouterr().err
+    assert "15.0-beta" in err and "beta-mac" in err
+
+
 # ── the lock: no duplicates, no corrupt record ──────────────────────────────
 
 def test_a_second_uploader_waits_and_uploads_nothing_twice(two_hosts, spawned, held,
