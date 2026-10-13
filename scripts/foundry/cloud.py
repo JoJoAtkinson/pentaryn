@@ -88,6 +88,7 @@ import tempfile
 import time
 import zipfile
 import zlib
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
@@ -1572,14 +1573,31 @@ def _mark(st: Storage, skip: frozenset[str] = frozenset()
     out: set[str] = _queued_bundles()
     seen: set[str] = set()
     for folder in (WORLD_BACKUPS, MAJOR_RELEASES):
-        for s in snapshots(st, folder, fresh=True, must_exist=True):
-            if s.host is None or s.rel in skip:
-                continue
-            seen.add(s.rel)
-            m = _snapshot_manifest(st, s)
+        todo = [s for s in snapshots(st, folder, fresh=True, must_exist=True)
+                if s.host is not None and s.rel not in skip]
+        seen |= {s.rel for s in todo}
+        for m in _read_pooled(lambda s: _snapshot_manifest(st, s), todo):
             if m is not None:
                 out |= bundles.manifest_names(m)
     return out, seen
+
+
+# Sidecar reads in flight at once (PERF-3): each is one small `rclone cat`, so ~25 of them
+# one after another made the restore listing, status and GC's mark slow.
+SIDECAR_READERS = 4
+
+
+def _read_pooled(read, items: list) -> list:
+    """`read` over `items` through a small thread pool, results in the items' order. The
+    first item (in order) whose read raises raises here, as a serial loop's would; reads
+    not yet started are cancelled."""
+    if len(items) < 2:
+        return [read(i) for i in items]
+    pool = ThreadPoolExecutor(max_workers=SIDECAR_READERS)
+    try:
+        return list(pool.map(read, items))
+    finally:
+        pool.shutdown(wait=True, cancel_futures=True)
 
 
 def _queued_bundles() -> set[str]:
@@ -2650,8 +2668,10 @@ def _snapshot_kind(st: Storage, s: Snapshot) -> str:
 
 def _print_listing(snaps: list[Snapshot], st: Storage | None = None) -> None:
     """One row per snapshot; with `st`, a full/bundled column after the host."""
-    for s in by_mtime(snaps):
-        kind = f"{_snapshot_kind(st, s):<7} " if st is not None else ""
+    rows = by_mtime(snaps)
+    kinds = (_read_pooled(lambda s: f"{_snapshot_kind(st, s):<7} ", rows)
+             if st is not None else [""] * len(rows))
+    for s, kind in zip(rows, kinds):
         print(f"      {s.name:<58} {s.host_label:<9} {kind}{_utc(s.mtime)}  "
               f"{s.core or '?':<8} {_mb(s.size):>9}")
 

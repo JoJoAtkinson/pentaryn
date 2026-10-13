@@ -2264,3 +2264,73 @@ def test_updater_world_restore_holds_both_queue_locks_py_cloud_ac_1(two_hosts, m
         _edit(mac, "migrated by a bad update")
         recover._restore_world_tar(snap, recover.Recovery(kind="system", target="dnd5e"))
     assert held == {uploadq.BUILD_LOCK: True, uploadq.UPLOAD_LOCK: True}
+
+
+# ── PERF-3: sidecars are read through a small pool, used in the existing order ──
+
+def _paired_sidecar_reads(monkeypatch):
+    """FolderStorage.read_text makes each sidecar read wait (up to 2 s) for a second one
+    to be in flight; returns the list of reads that waited alone — non-empty when the
+    sidecars were read one after another."""
+    import threading
+    real = storage.FolderStorage.read_text
+    gate = threading.Barrier(2, timeout=2)
+    alone: list[str] = []
+
+    def paired(self, rel):
+        if rel.endswith(cloud.PARENT_SUFFIX):
+            try:
+                gate.wait()
+            except threading.BrokenBarrierError:
+                alone.append(rel)
+        return real(self, rel)
+    monkeypatch.setattr(storage.FolderStorage, "read_text", paired)
+    return alone
+
+
+def test_perf3_gc_mark_reads_sidecars_concurrently(two_hosts, monkeypatch):
+    """PERF-3: the GC mark (and status's bundle line) read ~25 sidecars one by one."""
+    c = two_hosts.cloud
+    want = set()
+    for i in range(4):
+        b = _bundle("module", f"m{i}")
+        want.add(b)
+        _hand_snapshot(c, f"world-{_stamp(i + 1)}-fvtt14.369-boss.tar.gz",
+                       sidecar=_bundled_sidecar({f"m{i}": b}))
+    alone = _paired_sidecar_reads(monkeypatch)
+    assert cloud.referenced_bundles(cloud.store()) == want
+    assert alone == []
+
+
+def test_perf3_restore_listing_reads_sidecars_concurrently_in_the_existing_order(
+        two_hosts, monkeypatch, capsys):
+    """PERF-3: the restore listing read each row's sidecar serially; rows still print
+    oldest first, each with its own kind."""
+    c = two_hosts.cloud
+    names = []
+    for i in range(4):
+        name = f"world-{_stamp(4 - i)}-fvtt14.369-boss.tar.gz"
+        side = _bundled_sidecar({f"m{i}": _bundle("module", f"m{i}")})
+        if i % 2:
+            del side["bundled"]
+        _hand_snapshot(c, name, age_days=4 - i, sidecar=side)
+        names.append(name)
+    alone = _paired_sidecar_reads(monkeypatch)
+    capsys.readouterr()
+    assert cloud.restore(None) == 0
+    rows = [line.split() for line in capsys.readouterr().out.splitlines()
+            if line.strip().startswith("world-")]
+    assert [r[0] for r in rows] == names
+    assert [r[2] for r in rows] == ["bundled", "full", "bundled", "full"]
+    assert alone == []
+
+
+def test_perf3_an_unreadable_sidecar_still_fails_the_pooled_mark(two_hosts, monkeypatch):
+    """PERF-3: a StorageError from any one read still propagates out of the mark."""
+    c = two_hosts.cloud
+    names = [f"world-{_stamp(i + 1)}-fvtt14.369-boss.tar.gz" for i in range(5)]
+    for i, n in enumerate(names):
+        _hand_snapshot(c, n, sidecar=_bundled_sidecar({f"a{i}": _bundle("module", f"a{i}")}))
+    _unreadable(monkeypatch, names[3])
+    with pytest.raises(storage.StorageError, match="I/O error"):
+        cloud.referenced_bundles(cloud.store())
