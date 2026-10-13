@@ -18,6 +18,15 @@ const ops = (...names) => F.calls.filter(c => names.includes(c.op));
 const flush = async (n = 6) => { for (let i = 0; i < n; i++) await new Promise(r => setImmediate(r)); };
 // An automatic ending claims its write for one tab first (transform-core-async-2): the claim settles in 750 ms.
 const settle = async () => { await flush(); mock.timers.tick(750); await flush(); };
+// EC-6: the sweep ages a form from this GM tab's first sight of it. sight() lets a sweep see the
+// forms now, drops the recheck it schedules, and lets `ms` pass.
+const SA = await import("../sweep-adapter.mjs");
+async function sight(ms = 10_001) {
+  F.become({ userId: IDS.gm });
+  await SA.sweepSpentForms();
+  SA.cancelSweep();
+  mock.timers.tick(ms);
+}
 
 async function shifted(opts) {
   game.actors.clear();
@@ -288,17 +297,19 @@ test("dnd5e.restCompleted (short) on a Wild Shape form: the druid gets a silent 
 
 /* ── the GM sweep of spent forms ──────────────────────────────────────────── */
 
-test("sweepSpentForms: GM only; deletes unplaced transformed copies older than 10 s; reschedules the young", async () => {
+test("sweepSpentForms: GM only; deletes unplaced transformed copies first seen over 10 s ago; reschedules the young", async () => {
   game.actors.clear();
   game.scenes.clear();
   F.calls.length = 0;
   const now = Date.now();
   const mk = (id, created, extra = {}) => F.W.add(F.W.makeActor({ id, name: id, flags: { dnd5e: { originalActor: IDS.talo } }, _stats: { createdTime: created }, ...extra }));
-  mk("oldSpent00000001", now - 20_000);
-  mk("youngForm0000001", now - 4_000);
+  mk("oldSpent00000001", now - 60_000);
   mk("placedForm000001", now - 60_000);
   F.W.add(F.W.makeActor({ id: "plainActor000001", name: "plain", _stats: { createdTime: 0 } }));
   game.scenes.set("scn", F.W.makeScene({ id: "scn", tokens: [{ id: "t1", actorId: "placedForm000001" }, { id: "t2" }] }));
+  await sight(6_001);
+  mk("youngForm0000001", now - 60_000);                    // createdTime is ignored (EC-6)
+  await sight(4_000);                                      // first seen 10.001 s and 4 s ago
   F.become({ userId: IDS.player });
   await T.sweepSpentForms();
   assert.deepEqual(ops("Actor.deleteDocuments"), [], "not the GM");
@@ -320,6 +331,34 @@ test("sweepSpentForms: GM only; deletes unplaced transformed copies older than 1
   game.scenes.clear();
 });
 
+test("[declared] EC-6 the age guard counts from when this GM tab first saw the form, not the server's createdTime", async () => {
+  game.actors.clear();
+  game.scenes.clear();
+  F.calls.length = 0;
+  F.become({ userId: IDS.gm });
+  const sweep = async () => { const job = T.sweepSpentForms(); await settle(); await job; };   // settle: 750 ms
+  const mk = () => F.W.add(F.W.makeActor({ id: "skewedForm000001", name: "skewed", flags: { dnd5e: { originalActor: IDS.talo } }, _stats: { createdTime: Date.now() - 3_600_000 } }));
+  mk();                                                    // an hour old by the server's clock (a skewed GM clock)
+  await sweep();                                           // first sight at t0
+  mock.timers.tick(250);
+  await sweep();                                           // t0 + 1 s
+  assert.deepEqual(ops("Actor.deleteDocuments"), [], "EC-6: first seen 1 s ago, so not swept");
+  mock.timers.tick(8_749);                                 // t0 + 10.499 s
+  await flush();
+  assert.deepEqual(ops("Actor.deleteDocuments"), []);
+  mock.timers.tick(1);
+  await settle();
+  assert.deepEqual(ops("Actor.deleteDocuments").map(c => c.ids), [["skewedForm000001"]], "rechecked 10 s after first sight + 500 ms");
+  F.calls.length = 0;
+  mk();                                                    // the same id again is a new sighting
+  await sweep();
+  assert.deepEqual(ops("Actor.deleteDocuments"), [], "EC-6: a deleted form's first sighting is not reused");
+  mock.timers.tick(20_000);                                // drain the recheck
+  await settle();
+  game.actors.clear();
+  F.calls.length = 0;
+});
+
 test("sweepSpentForms: a world with no transformed copy never walks scene tokens", async () => {
   game.actors.clear();
   game.scenes.clear();
@@ -339,6 +378,7 @@ test("scheduleSweep: token traffic schedules one 3 s sweep that is never pushed 
   game.actors.clear();
   F.calls.length = 0;
   F.W.add(F.W.makeActor({ id: "spent00000000001", flags: { dnd5e: { originalActor: IDS.talo } }, _stats: { createdTime: Date.now() - 60_000 } }));
+  await sight();
   Hooks.callAll("updateToken", {}, { actorId: "x" }, {}, "u");
   mock.timers.tick(2_000);
   Hooks.callAll("deleteToken", {}, {}, "u");                // must not push the sweep back
@@ -347,6 +387,7 @@ test("scheduleSweep: token traffic schedules one 3 s sweep that is never pushed 
   assert.equal(ops("Actor.deleteDocuments").length, 1, "swept 3 s after the first update (and its claim)");
   F.W.add(F.W.makeActor({ id: "spent00000000002", flags: { dnd5e: { originalActor: IDS.talo } }, _stats: { createdTime: Date.now() - 60_000 } }));
   const form = F.W.add(F.W.makeActor({ id: "revertedForm0001", flags: { dnd5e: { originalActor: IDS.talo, isPolymorphed: false } }, _stats: { createdTime: Date.now() - 60_000 } }));
+  await sight();
   Hooks.callAll("updateToken", {}, { actorId: "x" }, {}, "u");   // 3 s pending
   Hooks.callAll("updateActor", form, { flags: { dnd5e: { isPolymorphed: false } } }, {}, "u");   // earlier: 1.5 s
   Hooks.callAll("updateActor", form, { name: "x" }, {}, "u"); // no dnd5e flags: ignored
@@ -363,6 +404,7 @@ test("[declared] perf-1 updateToken schedules a sweep only for an actor, link, d
   game.actors.clear();
   F.calls.length = 0;
   F.W.add(F.W.makeActor({ id: "spent00000000003", flags: { dnd5e: { originalActor: IDS.talo } }, _stats: { createdTime: Date.now() - 60_000 } }));
+  await sight();
   for (const changes of [{ x: 100, y: 200 }, { light: { dim: 10 } }, { hidden: true }, { elevation: 5 }, { flags: { other: { a: 1 } } }]) {
     Hooks.callAll("updateToken", {}, changes, {}, "u");
   }
@@ -371,7 +413,9 @@ test("[declared] perf-1 updateToken schedules a sweep only for an actor, link, d
   assert.deepEqual(ops("Actor.deleteDocuments"), [], "no sweep for irrelevant token changes");
   for (const changes of [{ actorId: "x" }, { actorLink: false }, { delta: { name: "y" } }, { flags: { dnd5e: { z: 1 } } }]) {
     F.calls.length = 0;
+    const fresh = !game.actors.get("spent00000000003");    // swept last round: young again (EC-6)
     F.W.add(F.W.makeActor({ id: "spent00000000003", flags: { dnd5e: { originalActor: IDS.talo } }, _stats: { createdTime: Date.now() - 60_000 } }));
+    if (fresh) await sight();
     Hooks.callAll("updateToken", {}, changes, {}, "u");
     mock.timers.tick(3_000);
     await settle();
@@ -383,6 +427,7 @@ test("scheduleSweep: a polymorphed form update, or a player's client, schedules 
   game.actors.clear();
   F.calls.length = 0;
   const live = F.W.add(F.W.makeActor({ id: "liveForm00000001", flags: { dnd5e: { originalActor: IDS.talo, isPolymorphed: true } }, _stats: { createdTime: -60_000 } }));
+  await sight();
   Hooks.callAll("updateActor", live, { flags: { dnd5e: { x: 1 } } }, {}, "u");
   F.become({ userId: IDS.player });
   Hooks.callAll("updateToken", {}, { actorId: "x" }, {}, "u");
@@ -407,6 +452,7 @@ test("[declared] EC-4 a hot re-import past ready still gets its first sweep, 3 s
   F.become({ userId: IDS.gm });
   assert.equal(game.ready, true, "ready has already fired");
   F.W.add(F.W.makeActor({ id: "spentHotReimport", flags: { dnd5e: { originalActor: IDS.talo } }, _stats: { createdTime: Date.now() - 60_000 } }));
+  await sight();
   const { hookRegistry } = await import("../lib/hooks.mjs");
   const reg = hookRegistry(MODULE, { error() {}, warn() {} });
   const sweep = await import("../sweep.mjs?ec4");

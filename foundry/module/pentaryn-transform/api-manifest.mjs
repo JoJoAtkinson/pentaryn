@@ -75,8 +75,8 @@ export const MANIFEST = Object.freeze({
       path: "sweepSpentForms", legacy: true, params: [],
       returns: "Promise<void>", gm: true, writes: true, sideEffects: ["deletes spent form actors", `${CLAIMS}.sweep`],
       doc: "Active GM only: delete transformed copies (flags.dnd5e.originalActor) with no token on any scene and "
-        + "older than 10 s; younger ones are checked again when old enough. Each form is claimed first, so with "
-        + "two tabs of the GM open only one deletes it. Runs by itself after token traffic.",
+        + "first seen by this tab over 10 s ago; younger ones are checked again when old enough. Each form is "
+        + "claimed first, so with two tabs of the GM open only one deletes it. Runs by itself after token traffic.",
     },
     {
       path: "inspect",

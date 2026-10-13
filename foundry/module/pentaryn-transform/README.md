@@ -160,7 +160,8 @@ rest hooks, core document hooks and Argon's render hooks (`test/golden/hooks.jso
   is deleted or changes its actor, link, delta or `flags.dnd5e` (one timer, never pushed back; a drag,
   light, hidden or elevation change schedules nothing), 1.5 s after a form loses `isPolymorphed` (a player's
   revert), and 3 s after ready (or after a hot re-import past ready); it deletes transformed copies
-  with no token on any scene that are over 10 s old.
+  with no token on any scene that this GM tab first saw over 10 s ago (its own clock, not the
+  server's `createdTime`, so a fast GM clock cannot sweep a form mid-swap). [declared] EC-6
 
 ## Extending
 

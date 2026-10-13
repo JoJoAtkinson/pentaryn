@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+- **The sweep ages a spent form from when this GM tab first saw it (EC-6, defect wave 2).**
+  sweep-adapter.mjs compared the GM client's `Date.now()` with the server's `_stats.createdTime`, so a
+  GM clock running fast could sweep a form still mid-swap. Each sweep now records the first time it
+  sees a form (a module Map; an entry drops when this tab deletes the form, or at the next sweep once
+  it is gone) and a form is spent only 10 s after that sighting. Forms already out at ready are swept
+  ~10 s later than before ([declared]; test "EC-6" in lifecycle.test.mjs; no new strings or hooks).
 - **Return on an unlinked token's form names the token, not the base actor (EC-5, defect wave 2).**
   form-picker.mjs `ReturnButton` labelled and pictured the button from the `originalActor` flag,
   which for an unlinked token is the base actor every copy shares, so a renamed token read "Return

@@ -13,6 +13,7 @@ mock.timers.enable({ apis: ["setTimeout", "Date"], now: 0 });
 const F = await setup({ modules: ["pentaryn-senses"] });
 const T = await import("../transform.mjs");
 const S = await import("../starry-adapter.mjs");
+const SA = await import("../sweep-adapter.mjs");
 await import("../hud.mjs");
 F.fire("init");
 F.fire("ready");
@@ -142,6 +143,9 @@ test("transform-core-async-2: the sweep deletes only the spent forms this tab cl
   mk("spentMine0000001");
   const theirs = mk("spentTheirs00001");
   theirs.flags[MODULE] = { claims: { sweep: OTHER } };
+  await SA.sweepSpentForms();                    // EC-6: first sight; spent once 10 s have passed
+  SA.cancelSweep();
+  mock.timers.tick(10_001);
   F.calls.length = 0;
   const job = T.sweepSpentForms();
   await settle();
