@@ -245,7 +245,7 @@
       "book": "Player's Handbook",
       "journal": "Appendix C: Rules Glossary",
       "page": "Appendix C: Rules Glossary",
-      "uuid": "Compendium.dnd-players-handbook.content.JournalEntry.docGloss.JournalEntryPage.docGloss",
+      "uuid": "Compendium.dnd-players-handbook.content.JournalEntry.docGloss",
       "text": "",
       "warning": "Compendium.dnd-players-handbook.content.JournalEntry.docGloss is a JournalEntry, not a JournalEntryPage — pass a page UUID from search()"
     }
@@ -283,7 +283,7 @@
           "uuid": "Compendium.dnd-players-handbook.tables.RollTable.tblMinor",
           "rows": [
             "1-20 While attuned, you gain darkvision .",
-            "21"
+            "21 A single row"
           ]
         },
         {
@@ -1003,6 +1003,50 @@
         {
           "id": "dnd-dungeon-masters-guide.actors",
           "present": false
+        },
+        {
+          "id": "dnd-players-handbook.spells",
+          "present": true,
+          "label": "PHB Spells",
+          "type": "Item",
+          "entries": 2,
+          "edition": "2024"
+        },
+        {
+          "id": "dnd5e.spells24",
+          "present": true,
+          "label": "SRD 5.2 Spells",
+          "type": "Item",
+          "entries": 2,
+          "edition": "2024"
+        },
+        {
+          "id": "dnd5e.spells",
+          "present": false
+        },
+        {
+          "id": "dnd-players-handbook.classes",
+          "present": true,
+          "label": "PHB Classes",
+          "type": "Item",
+          "entries": 6,
+          "edition": "2024"
+        },
+        {
+          "id": "dnd-players-handbook.origins",
+          "present": true,
+          "label": "PHB Origins",
+          "type": "Item",
+          "entries": 3,
+          "edition": "2024"
+        },
+        {
+          "id": "dnd-players-handbook.feats",
+          "present": true,
+          "label": "PHB Feats",
+          "type": "Item",
+          "entries": 4,
+          "edition": "2024"
         }
       ]
     }

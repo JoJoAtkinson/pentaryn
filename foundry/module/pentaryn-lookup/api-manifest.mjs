@@ -15,7 +15,8 @@
 
 import { CONTRACT, MODULE, NS, VERSION } from "./lookup-core.mjs";
 
-const BOOKS = "'rules' (PHB, DMG, 2024 SRD; default) | 'monsters' | 'all' | '2014' | pack id[]";
+const BOOKS = "'rules' (PHB, DMG, 2024 SRD; default) | 'monsters' | 'all' | '2014' | pack id | pack id[] "
+  + "(an unknown word answers the rules set with a warning; [] is the default)";
 
 export const MANIFEST = Object.freeze({
   module: MODULE,
@@ -49,7 +50,7 @@ export const MANIFEST = Object.freeze({
       gm: false, writes: false, legacy: true, query: true,
       args: d => [d.ref, d],
       doc: "One page as plain text, with its embedded roll tables. Page past maxChars with offset = nextOffset. "
-        + "A UUID that is not a page (a JournalEntry) answers empty text with a warning.",
+        + "A UUID that is not a page (a JournalEntry) answers empty text with a warning, and its uuid echoed as given.",
     },
     {
       path: "monster",
@@ -67,9 +68,10 @@ export const MANIFEST = Object.freeze({
     {
       path: "monsters",
       params: [
-        { name: "q", type: "{ size?, type?, cr? ('1/4', 3, '1/2-2'), minCr?, maxCr?, name?, limit? (40, max 200), packs? }", optional: true },
+        { name: "q", type: "{ size?, type?, cr? ('1/4', 3, '1/2-2', 'CR 1/2 to 2'; unreadable answers unfiltered with a warning), minCr?, maxCr?, name?, limit? (40, max 200), "
+          + "packs? (pack id | pack id[]; [] is the default; anything else answers the default packs with a warning) }", optional: true },
       ],
-      returns: "{ count, shown, monsters: [{ name, cr, size, type, uuid, pack }], hint? }",
+      returns: "{ count, shown, monsters: [{ name, cr, size, type, uuid, pack }], hint?, warning? }",
       gm: false, writes: false, legacy: true, query: true,
       args: d => [d],
       doc: "NPCs by size, type and CR from the Monster Manual then the 2024 SRD, one per name, lowest CR first. "
@@ -99,11 +101,11 @@ export const MANIFEST = Object.freeze({
         { name: "cls", type: "class (or subclass) identifier, e.g. 'wizard'" },
         { name: "opts", type: "{ type?: 'class' | 'subclass' }", optional: true },
       ],
-      returns: "{ spell, uuid, level, list, onList: true | false } | { spell, uuid, level, list, onList: null, hint } "
+      returns: "{ spell, uuid, level, edition?, list, onList: true | false } | { spell, uuid, level, edition?, list, onList: null, hint } "
         + "| { notFound, spell, hint }",
       gm: false, writes: false, legacy: true, query: true,
       args: d => [d.spell, d.cls, { type: d.type ?? "class" }],
-      doc: "Is a spell on a class's (or subclass's) list, from dnd5e's spell-list registry.",
+      doc: "Is a spell on a class's (or subclass's) list, from dnd5e's spell-list registry. A 2014 spell carries edition: '2014'.",
     },
     {
       path: "spellList",
@@ -111,10 +113,10 @@ export const MANIFEST = Object.freeze({
         { name: "cls", type: "class (or subclass) identifier" },
         { name: "opts", type: "{ type?: 'class' | 'subclass', level? }", optional: true },
       ],
-      returns: "{ list, count, spells: [{ name, level, uuid }] } | { error, known }",
+      returns: "{ list, count, spells: [{ name, level, uuid, edition? }] } | { error, known }",
       gm: false, writes: false, legacy: true, query: true,
       args: d => [d.cls, { type: d.type ?? "class", level: d.level ?? null }],
-      doc: "The spells on a list, one per name (the PHB's copy first), by level then name.",
+      doc: "The spells on a list, one per name (the PHB's copy first), by level then name. A 2014 row carries edition: '2014'.",
     },
     {
       path: "toPlainText",

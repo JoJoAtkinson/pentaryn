@@ -37,7 +37,9 @@ eval-js route over `page.text.content` has five traps that all fail **silently**
 
 **Defaults.** PHB + DMG + 2024 SRD; Monster Manual text is opt-in (`books: "monsters"` or
 `"all"`). The 2014 SRD is searched only when asked (`books: "2014"`) and its hits carry
-`edition: "2014"`. Five hits, ~240-character snippets, an 8 KB payload ceiling; `total` reports
+`edition: "2014"`, as do an `onList` answer and `spellList` rows from the 2014 spell pack. `books` also takes one pack id (`"dnd5e.content24"`) or an array of them; an
+unknown word answers the rules set with a `warning`. `monsters({ packs })` takes a pack id or an
+array; anything else answers the default packs with a `warning`. Five hits, ~240-character snippets, an 8 KB payload ceiling; `total` reports
 every matching page. One hit per page, with `matches: n`. World journals are out of scope
 (`find_lore`, `search-journals`).
 
@@ -54,26 +56,35 @@ n/a — no settings.
 Canonical: `game.modules.get("pentaryn-lookup").api`; `game.pentaryn.rules` is the same frozen
 object. Ask it: `game.pentaryn.rules.describe()` (offline: `test/golden/describe.json`). Every
 lookup is a **legacy** row: a miss is an answer object (`{error}`, `{notFound, …, hint}`), never a
-throw. None is GM-only, none writes.
+throw; a `null` options argument answers exactly as an omitted one (R1), and a malformed `books` / `packs` value (e.g. `monsters({ packs: 5 })`) answers the default set with a `warning` (R5); an empty `books: []` / `packs: []` is the same as omitting it (lookup-edge-6). None is GM-only, none writes. A pack whose read fails answers as if it were not installed
+(`search`/`page` name it in `warning: "skipped missing pack(s): …"`), traced at debug with the pack
+id; a `selftest()` check that throws is recorded as failed with the error as its `detail`, and the
+remaining checks still run (R4).
 
 | Method | Returns |
 |---|---|
 | `search(query, { books, limit, snippet, regex })` | `{ query, books, total, shown, hits: [{ book, journal, page, uuid, matches, snippet, edition? }], note?, truncated?, warning? }` \| `{ error }` |
 | `page(ref, { books, maxChars, offset, raw, tables })` | `{ book, journal, page, uuid, text, edition?, truncated?, totalChars?, nextOffset?, warning?, tables? }` \| `{ journal, page, uuid, raw }` \| `{ notFound, name, closest, hint }` \| `{ error }` |
 | `monster(name, { text })` | `{ name, pack, uuid, cr, ac, hp, size, type, features, warning? }` (+ `languages`, `speed`, feature `text` with `text: true`) \| `{ notFound, name, searched, hint }` \| `{ error }` |
-| `monsters({ size, type, cr, minCr, maxCr, name, limit, packs })` | `{ count, shown, monsters: [{ name, cr, size, type, uuid, pack }], hint? }` |
+| `monsters({ size, type, cr, minCr, maxCr, name, limit, packs })` | `{ count, shown, monsters: [{ name, cr, size, type, uuid, pack }], hint?, warning? }` |
 | `names(kind)` | `{ classes, subclasses: { <class>: [] }, species, backgrounds, feats: { origin, general, … } }`, or one key |
 | `packs()` | `{ world, foundry, system, packs: [{ id, present, label?, type?, entries?, edition? }] }` |
-| `onList(spell, cls, { type })` | `{ spell, uuid, level, list, onList: true \| false \| null, hint? }` \| `{ notFound, spell, hint }` |
-| `spellList(cls, { type, level })` | `{ list, count, spells: [{ name, level, uuid }] }` \| `{ error, known }` |
+| `onList(spell, cls, { type })` | `{ spell, uuid, level, edition?, list, onList: true \| false \| null, hint? }` \| `{ notFound, spell, hint }` |
+| `spellList(cls, { type, level })` | `{ list, count, spells: [{ name, level, uuid, edition? }] }` \| `{ error, known }` |
 | `toPlainText(html)` | string |
 | `selftest()` | `{ ok, passed, failed, checks: [{ label, ok, detail }] }` |
 | `LIMITS` | the limits table, a frozen copy (data, not a method) |
 
 `page`'s `ref` is a page UUID or a page **name** (exact, then substring) — it is never run
 through the kit's actor resolver. A UUID of something that is not a page (a JournalEntry) answers
-empty `text` plus a `warning` saying so. `page()` appends embedded roll tables as `tables` (`{ tables:
-false }` skips them). Kit members: `describe()`, `version`, `contract`, `settings()`, `trace()`,
+empty `text` plus a `warning` saying so, and echoes that UUID as its `uuid` (never a made-up page UUID). `page()` appends embedded roll tables as `tables` (`{ tables:
+false }` skips them). `onList`'s `spell` is a spell name or an Item UUID; a UUID of anything that
+is not a spell Item answers `{ notFound, spell, hint }` naming what it is. `monsters`' `cr` is a
+value (`"1/4"`, `3`, `"CR 3"`) or a range split by `-`, an en/em dash or ` to ` (`"1/2-2"`,
+`"CR 1/2 to 2"`); a `cr` it cannot read filters nothing and answers
+`warning: "cr not understood: <cr> — use '3', '1/4' or '1/2-2'"`. `monsters` lists each name
+once, from the first pack that has it (the MM before the SRD): a creature the MM has but the filter
+drops is not answered from the SRD's copy (lookup-edge-7). Kit members: `describe()`, `version`, `contract`, `settings()`, `trace()`,
 `uninstall()`.
 
 **Queries (GM only):** `pentaryn-lookup.search`, `.page`, `.monster`, `.monsters`, `.names`,
@@ -113,7 +124,8 @@ answer the same read, so the first answer is right.
 2. Any Foundry read it needs → a function in `packs-adapter.mjs` (plain data out). A pack id
    it reads goes in one of core's tables (`BOOKSETS`, `MONSTER_PACKS`, `MONSTER_LIST_PACKS`,
    `SPELL_PACKS`, `NAME_SOURCES`), never inline in `books.mjs`; so do the index fields it reads
-   (`NAME_SOURCES`, `MONSTER_INDEX_FIELDS`).
+   (`NAME_SOURCES`, `MONSTER_INDEX_FIELDS`). `packs()` lists `KNOWN_PACKS`, derived from all five,
+   so a pack added to any of them shows up in the probe.
 3. A thin method in `books.mjs`, added to `install()`'s `impl`.
 4. A row in `api-manifest.mjs`: `returns`, `doc`, `legacy: true` only if the answer is an
    `{error}`/`{notFound}` object, and `query: true` + an `args` mapper if the bridge should call it.

@@ -50,14 +50,21 @@ test("core.groupListUuids: one group per pack, owned first, the rest in registry
   assert.deepEqual(core.groupListUuids(new Set()), []);
 });
 
-test("core.spellListRows equals the oracle at every level filter, reading each pack once with system.level", async () => {
+// EXT-5 [declared]: core adds `edition` to a row whose pack is in EDITIONS (the 2014 pack's Bless)
+const stamped = rows => rows.map(r => {
+  const ed = core.EDITIONS[/^Compendium\.([^.]+\.[^.]+)\./.exec(r.uuid)?.[1]];
+  return ed ? { ...r, edition: ed } : r;
+});
+
+test("core.spellListRows equals the oracle (plus EXT-5's edition) at every level filter, reading each pack once with system.level", async () => {
   for (const level of LEVELS) {
     reads.length = 0;
-    const want = await oracle.spellListSpells(UUIDS, readIndex, level);
+    const want = stamped(await oracle.spellListSpells(UUIDS, readIndex, level));
     const groups = core.groupListUuids(new Set(UUIDS));
     const indexes = new Map();
     for (const [id] of groups) indexes.set(id, await readIndex(id, ["system.level"]));
     assert.deepEqual(core.spellListRows(groups, indexes, level), want, `level ${level}`);
+    if (level === null) assert.equal(want.find(r => r.name === "Bless").edition, "2014");
     assert.deepEqual(reads.slice(reads.length / 2), reads.slice(0, reads.length / 2), "same reads, same order");
   }
 });

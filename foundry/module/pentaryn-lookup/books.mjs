@@ -9,8 +9,8 @@
  */
 
 import {
-  BOOKSETS, EDITIONS, MONSTER_PACKS, findPage, foundFromDoc, nonPageWarning, knownLists, listFor as listForIn, matchMonster,
-  MONSTER_INDEX_FIELDS, missingPackError, monsterDigest, monsterQuery, monsterRow, pageMonsters, pickByName, renderPage, renderTable, resolveBookIds,
+  EDITIONS, KNOWN_PACKS, MONSTER_PACKS, findPage, foundFromDoc, nonPageWarning, knownLists, listFor, matchMonster,
+  MONSTER_INDEX_FIELDS, missingPackError, monsterDigest, monsterQuery, monsterRow, pageMonsters, pickByName, renderPage, renderTable, resolveBooks,
   searchBooks, sortMonsters, embeddedTableUuids, groupListUuids, spellListRows, NAME_SOURCES, groupNames,
 } from "./lookup-core.mjs";
 import {
@@ -35,16 +35,18 @@ export function uninstall() {
 
 /** Full-text search across the owned books. */
 async function search(query, opts = {}) {
-  const ids = resolveBookIds(opts.books);
-  const { books, missing } = await loadBooks(ids);
-  if (!books.length) return missingPackError(missing);
+  opts ??= {};
+  const { ids, warning } = resolveBooks(opts.books);
+  const { books, missing } = await loadBooks(ids, log);
+  if (!books.length) return withWarning(missingPackError(missing), warning);
   const result = searchBooks(books, query, opts);
-  if (missing.length) result.warning = `skipped missing pack(s): ${missing.join(", ")}`;
-  return result;
+  const skipped = missing.length ? `skipped missing pack(s): ${missing.join(", ")}` : null;
+  return withWarning(result, [warning, skipped].filter(Boolean).join("; "));
 }
 
 /** One page, by UUID or by name. */
 async function page(ref, opts = {}) {
+  opts ??= {};
   const raw = String(ref ?? "").trim();
   if (!raw) return { error: "page(ref) needs a UUID or a page name" };
 
@@ -52,16 +54,22 @@ async function page(ref, opts = {}) {
   if (raw.startsWith("Compendium.")) {
     const read = await readPageDoc(raw, log);
     if (!read) return { error: `no document at ${raw}` };
-    const found = foundFromDoc(read);
+    const found = foundFromDoc({ ...read, uuid: raw });
     const out = renderPage(found, opts);
     const warning = nonPageWarning(raw, read.documentName);
     return withTables(warning ? { ...out, warning } : out, found, opts);
   }
 
-  const { books, missing } = await loadBooks(resolveBookIds(opts.books));
-  if (!books.length) return missingPackError(missing);
+  const { ids, warning } = resolveBooks(opts.books);
+  const { books, missing } = await loadBooks(ids, log);
+  if (!books.length) return withWarning(missingPackError(missing), warning);
   const found = findPage(books, raw);
-  return withTables(renderPage(found, opts), found, opts);
+  return withWarning(await withTables(renderPage(found, opts), found, opts), warning);
+}
+
+/** `out` with `warning` added when there is one (R5: a misread `books` / `packs` says so). */
+function withWarning(out, warning) {
+  return warning && out ? { ...out, warning } : out;
 }
 
 /** Append the page's embedded roll tables (`tables: false` to skip). */
@@ -80,33 +88,41 @@ async function withTables(out, found, opts) {
 
 // ── spell lists (dnd5e's registry; the "Class Spell Lists" pages are empty shells) ──
 
-const listFor = (type, identifier) => listForIn(spellRegistry(), type, identifier,
+const spellListFor = (type, identifier) => listFor(spellRegistry(), type, identifier,
   err => log?.debug("spell-list registry read failed", { type, identifier }, err));
-const known = () => knownLists(spellRegistry(), err => log?.debug("spell-list options read failed", err));
+const knownSpellLists = () => knownLists(spellRegistry(), err => log?.debug("spell-list options read failed", err));
 
 /**
  * Is a spell on a class's list (or a subclass's: `{type: "subclass"}`)?
  * → `{spell, uuid, level, list, onList}`; `onList` null when the list is unknown.
  */
-async function onList(spell, cls, { type = "class" } = {}) {
+async function onList(spell, cls, opts = {}) {
+  const { type = "class" } = opts ?? {};
   const doc = await findSpell(spell, log);
   if (!doc) return { notFound: true, spell, hint: "spell names are the book's English names" };
-  const list = listFor(type, cls);
-  const lists = known();
-  if (!list) return { spell: doc.name, uuid: doc.uuid, level: doc.system.level, list: `${type}:${cls}`, onList: null,
-    hint: `no such list; known: ${lists.join(", ")}` };
-  return { spell: doc.name, uuid: doc.uuid, level: doc.system.level, list: `${type}:${cls}`, onList: list.has(doc) };
+  // a uuid can resolve to any document: only a spell Item has a level and a list (lookup-edge-3)
+  if (doc.type !== "spell" || !doc.system) {
+    return { notFound: true, spell, hint: `${spell} is a ${doc.documentName}, not a spell Item` };
+  }
+  const list = spellListFor(type, cls);
+  // a spell from a 2014 pack says so, as a 2014 search hit does (EXT-5)
+  const ed = EDITIONS[doc.pack] ? { edition: EDITIONS[doc.pack] } : {};
+  // the options are read only for the unknown-list hint, never on a found list (LKM-12)
+  if (!list) return { spell: doc.name, uuid: doc.uuid, level: doc.system.level, ...ed, list: `${type}:${cls}`, onList: null,
+    hint: `no such list; known: ${knownSpellLists().join(", ")}` };
+  return { spell: doc.name, uuid: doc.uuid, level: doc.system.level, ...ed, list: `${type}:${cls}`, onList: list.has(doc) };
 }
 
 /** The names on a class list, optionally one spell level: `spellList("cleric", {level: 3})`. */
-async function spellList(cls, { type = "class", level = null } = {}) {
-  const list = listFor(type, cls);
-  if (!list) return { error: `no ${type} list "${cls}"`, known: known() };
+async function spellList(cls, opts = {}) {
+  const { type = "class", level = null } = opts ?? {};
+  const list = spellListFor(type, cls);
+  if (!list) return { error: `no ${type} list "${cls}"`, known: knownSpellLists() };
   // the registry holds a uuid per contributing pack (PHB and the 2024 SRD both list Aid):
   // read levels from each pack's index, keep one entry per name, the owned book first
   const groups = groupListUuids(list.uuids);
   const indexes = new Map();
-  for (const [id] of groups) indexes.set(id, await readIndex(id, ["system.level"]));
+  for (const [id] of groups) indexes.set(id, await readIndex(id, ["system.level"], log));
   const out = spellListRows(groups, indexes, level);
   return { list: `${type}:${cls}`, count: out.length, spells: out };
 }
@@ -118,16 +134,22 @@ async function spellList(cls, { type = "class", level = null } = {}) {
  * as plain text — one call instead of a digest and a second read of the items.
  */
 async function monster(name, opts = {}) {
+  opts ??= {};
   const wanted = String(name ?? "").trim();
   if (!wanted) return { error: "monster(name) needs a name" };
-  const tried = [];
+  const indexes = [];
   for (const packId of MONSTER_PACKS) {
-    const idx = await readIndex(packId);
-    if (!idx) continue;
-    tried.push(packId);
-    const entry = pickByName(idx, wanted);
+    const idx = await readIndex(packId, null, log);
+    if (idx) indexes.push([packId, idx]);
+  }
+  const tried = indexes.map(([packId]) => packId);
+  // exact across every pack first, then substring: a later pack's exact name beats an earlier
+  // pack's substring hit (R6)
+  for (const substring of [false, true]) for (const [packId, idx] of indexes) {
+    const entry = pickByName(idx, wanted, { substring });
     if (!entry) continue;
-    const actor = await readDocument(packId, entry._id);
+    const actor = await readDocument(packId, entry._id, log);
+    if (!actor) continue;
     const out = monsterDigest({
       name: actor.name, id: actor.id, packId, system: actor.system,
       items: actor.items.map(i => ({ name: i.name, type: i.type })),
@@ -145,24 +167,27 @@ async function monster(name, opts = {}) {
 
 /**
  * Monsters by size, type and CR, from the Monster Manual first, then the 2024 SRD (one entry per
- * name). `monsters({size: "large", type: "construct", cr: "5-8"})`; `cr` is a value ("1/4", 3) or a
- * range ("1/2-2"); `name` a substring; `limit` (default 40). → `{count, monsters: [{name, cr, size,
+ * name, the MM's: a creature the MM has is answered from the MM or not at all; a later pack adds only
+ * names the earlier packs lack). `monsters({size: "large", type: "construct", cr: "5-8"})`; `cr` is a value ("1/4", 3) or a
+ * range ("1/2-2", "CR 1/2 to 2"), an unreadable one filters nothing and warns; `name` a substring; `limit` (default 40). → `{count, monsters: [{name, cr, size,
  * type, uuid, pack}]}`, lowest CR first. Picks candidates without guessing from memory.
  */
 async function monsters(q = {}) {
-  const query = monsterQuery(q);
-  const seen = new Set(), out = [];
+  const query = monsterQuery(q ?? {});
+  // a name an earlier pack has is that pack's, filtered in or out — never a later pack's copy
+  const earlier = new Set(), seen = new Set(), out = [];
   for (const id of query.packIds) {
-    const idx = await readIndex(id, [...MONSTER_INDEX_FIELDS]);
+    const idx = await readIndex(id, [...MONSTER_INDEX_FIELDS], log);
     if (!idx) continue;
     for (const e of idx) {
-      if (!matchMonster(e, query)) continue;
+      if (earlier.has(e.name) || !matchMonster(e, query)) continue;
       if (seen.has(e.name)) continue;
       seen.add(e.name);
       out.push(monsterRow(e, id));
     }
+    for (const e of idx) earlier.add(e.name);
   }
-  return pageMonsters(sortMonsters(out), query.limit);
+  return withWarning(pageMonsters(sortMonsters(out), query.limit), query.warning);
 }
 
 /**
@@ -172,16 +197,15 @@ async function monsters(q = {}) {
  */
 async function names(kind = null) {
   const indexes = {};
-  for (const [key, { pack, fields }] of Object.entries(NAME_SOURCES)) indexes[key] = (await readIndex(pack, [...fields])) ?? [];
+  for (const [key, { pack, fields }] of Object.entries(NAME_SOURCES)) indexes[key] = (await readIndex(pack, [...fields], log)) ?? [];
   return groupNames(indexes, kind);
 }
 
 /** What is actually installed. Answers the usual session-opening probe in one call. */
 async function packs() {
-  const known = [...new Set([...BOOKSETS.all, ...BOOKSETS["2014"], ...MONSTER_PACKS])];
   const rows = [];
-  for (const id of known) {
-    const p = await packSummary(id);
+  for (const id of KNOWN_PACKS) {
+    const p = await packSummary(id, log);
     if (!p) { rows.push({ id, present: false }); continue; }
     rows.push({ id, present: true, label: p.label,
                 type: p.type, entries: p.entries,

@@ -102,6 +102,7 @@ test("legacy API over the input table (golden/legacy-api.json)", async () => {
   assert.equal(out["monster zzz"].notFound, true);
   assert.equal(out["onList Fireball wizard"].onList, true);
   assert.equal(out["onList Fireball nope"].onList, null);
+  assert.equal(out["page by JournalEntry uuid (warning since DL4)"].uuid, ENTRY_UUID);   // LKM-11: echoed, not fabricated
 });
 
 test("selftest() against the stub: { ok, passed, failed, labels } pinned", async () => {
@@ -151,4 +152,19 @@ test("prompts-lookup-4 [declared DL3]: onList with dnd5e.registry undefined answ
 
 test("enrichStub fixture sanity", async () => {
   assert.equal(await enrichStub()("[[/attack]]", {}), "+4");
+});
+
+// R1 [declared] (re-lands reverted b01c8309): every opts/q param is optional in api-manifest, so a
+// `null` opts answers exactly as an omitted one — it no longer throws a TypeError.
+test("R1 [declared]: null opts answers exactly as omitted opts", async () => {
+  const pairs = [
+    [() => rules.search("cover", null), () => rules.search("cover")],
+    [() => rules.page("Study", null), () => rules.page("Study")],
+    [() => rules.page(PAGE_UUID, null), () => rules.page(PAGE_UUID)],
+    [() => rules.monster("Goblin", null), () => rules.monster("Goblin")],
+    [() => rules.monsters(null), () => rules.monsters()],
+    [() => rules.onList("Fireball", "wizard", null), () => rules.onList("Fireball", "wizard")],
+    [() => rules.spellList("wizard", null), () => rules.spellList("wizard")],
+  ];
+  for (const [withNull, omitted] of pairs) assert.deepEqual(await withNull(), await omitted());
 });

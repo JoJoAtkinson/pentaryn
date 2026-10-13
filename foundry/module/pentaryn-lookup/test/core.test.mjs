@@ -28,7 +28,7 @@ const HTML_TABLE = [
   ["<p>a</p><p>b</p>", "a b"],
   ["@UUID[Compendium.x]{Cover}", "Cover"],
   ["&amp;Reference[prone]", "prone"],
-  ["[[/r 2d6]]", "r 2d6"],
+  ["[[/r 2d6]]", "2d6"],
   ["A &mdash; B &#39;c&#39;", "A — B 'c'"],
   ["<script>x</script>y", "y"],
   ["@Embed[Compendium.p.RollTable.t rollable]{T}", "@Embed[Compendium.p.RollTable.t rollable]{T}"],
@@ -76,6 +76,18 @@ test("enrichers: inline rolls degrade to readable words", () => {
   const s = toPlainText(PAGES.enrichers);
   has(s, "save dex 15");
   lacks(s, "[[");
+});
+
+// lookup-edge-2: a labelled inline roll reduces to its label (the formula is dropped, like a @UUID
+// target), and a bare roll command loses its "/r " — "[[/r 4d6kh3]]" reads "4d6kh3", not "r 4d6kh3".
+test("lookup-edge-2: [[...]]{Label} keeps only the label; bare [[/r ...]] keeps only the formula", () => {
+  eq(toPlainText(`<p>Roll [[/r 4d6kh3]]{ability scores} now.</p>`), "Roll ability scores now.");
+  eq(toPlainText(`<p>Deal [[2d6]]{fire damage}.</p>`), "Deal fire damage.");
+  eq(toPlainText(`<p>Roll [[/r 4d6kh3]] six times.</p>`), "Roll 4d6kh3 six times.");
+  eq(toPlainText(`<p>Roll [[/roll 1d20]] and [[3d6]].</p>`), "Roll 1d20 and 3d6.");
+  eq(toPlainText(`<p>Make a [[/save dex 15]].</p>`), "Make a save dex 15.");
+  const s = toPlainText(`<p>[[/r 1d4]]{a}, [[/gmr 1d8]]{b}</p>`);
+  lacks(s, "{"); lacks(s, "}"); lacks(s, "1d4"); eq(s, "a, b");
 });
 
 test("enrichers: HTML-escaped ampersand form is handled", () => {

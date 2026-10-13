@@ -36,21 +36,37 @@ export const BOOKSETS = {
   all: [...RULES_BOOKS, ...MONSTER_BOOKS],
   "2014": ["dnd5e.rules"],
 };
-export const EDITIONS = { "dnd5e.rules": "2014" };
+export const EDITIONS = { "dnd5e.rules": "2014", "dnd5e.spells": "2014" };
 export const MONSTER_PACKS = ["dnd-monster-manual.actors", "dnd5e.actors24",
                               "dnd-players-handbook.actors", "dnd-dungeon-masters-guide.actors"];
 
 /** Where monsters() lists from when no `packs` is given: the Monster Manual, then the 2024 SRD. */
 export const MONSTER_LIST_PACKS = Object.freeze(["dnd-monster-manual.actors", "dnd5e.actors24"]);
 
-/** Where onList() looks a spell up by name: the PHB first, then the 2024 SRD, then the 2014 SRD. */
+/**
+ * Where onList() looks a spell up by name: the PHB first, then the 2024 SRD, then the 2014 SRD.
+ * The first entry must stay the pack OWNED_SPELL_PREFIX names (core-seams pins it, EXT-6).
+ */
 export const SPELL_PACKS = ["dnd-players-handbook.spells", "dnd5e.spells24", "dnd5e.spells"];
 
-/** `opts.books` → pack ids: an array as given, a BOOKSETS name, else the rules set. */
+/**
+ * `opts.books` → `{ids, warning?}`: an array as given, a BOOKSETS name its set, any other string with a
+ * dot one pack id; anything else is the rules set with a warning, so a typo is not answered silently (R5).
+ * An empty array is absent: the rules set (lookup-edge-6).
+ */
+export function resolveBooks(books) {
+  if (!books || (Array.isArray(books) && !books.length)) return { ids: BOOKSETS.rules };
+  if (Array.isArray(books)) return { ids: books };
+  const s = String(books);
+  if (Object.hasOwn(BOOKSETS, s)) return { ids: BOOKSETS[s] };
+  if (typeof books === "string" && s.includes(".")) return { ids: [s] };
+  return { ids: BOOKSETS.rules,
+           warning: `books ignored: expected ${Object.keys(BOOKSETS).map(k => `'${k}'`).join(", ")}, a pack id or an array` };
+}
+
+/** `opts.books` → pack ids (resolveBooks without its warning). */
 export function resolveBookIds(books) {
-  if (!books) return BOOKSETS.rules;
-  if (Array.isArray(books)) return books;
-  return BOOKSETS[String(books)] ?? BOOKSETS.rules;
+  return resolveBooks(books).ids;
 }
 
 export function missingPackError(missing) {
@@ -87,8 +103,10 @@ const ENRICHERS = [
   [/&(?:amp;)?[A-Za-z]+\[[^\]]*\]\{([^}]*)\}/g, "$1"],
   // &Reference[Half Cover] -> Half Cover
   [/&(?:amp;)?[A-Za-z]+\[([^\]]*)\]/g, "$1"],
-  // [[/save dex 15]] -> save dex 15   [[3d6]] -> 3d6
-  [/\[\[\/?([^\]]*)\]\]/g, "$1"],
+  // [[/r 4d6kh3]]{Label} / [[2d6]]{Label} -> Label   (the formula is dropped, like a UUID target)
+  [/\[\[[^\]]*\]\]\{([^}]*)\}/g, "$1"],
+  // [[/r 4d6kh3]] -> 4d6kh3   [[/save dex 15]] -> save dex 15   [[3d6]] -> 3d6
+  [/\[\[(?:\/(?:r|roll|gmr|gmroll|br|broll|blindroll|sr|selfroll|pr|publicroll)\s+|\/)?([^\]]*)\]\]/g, "$1"],
 ];
 
 const ENTITIES = {
@@ -256,13 +274,16 @@ export function toBook(id, label, edition, docs) {
  * One document read by UUID → the `{ book, doc, page }` renderPage takes. `parent` is the page's
  * journal entry; a document with no parent (a JournalEntry, Actor, Item UUID) stands as its own.
  */
-export function foundFromDoc({ id, name, html, pack, parent, packLabel, edition = EDITIONS[pack] }) {
+export function foundFromDoc({ documentName, uuid, id, name, html, pack, parent, packLabel, edition = EDITIONS[pack] }) {
   const p = parent ?? { id, name };
-  return {
+  const found = {
     book: { id: pack, label: packLabel ?? pack, edition },
     doc: { id: p.id, name: p.name },
     page: { id, name, html: html ?? "" },
   };
+  // Not a page: answer the caller's uuid, never a fabricated `…JournalEntryPage.<id>` (LKM-11).
+  if (uuid && documentName !== "JournalEntryPage") found.uuid = uuid;
+  return found;
 }
 
 /**
@@ -311,7 +332,7 @@ export function findPage(books, name) {
 export function renderPage(found, opts = {}) {
   if (!found || found.error || found.notFound) return found;
   const { book, doc, page } = found;
-  const uuid = pageUuid(book.id, doc.id, page.id);
+  const uuid = found.uuid ?? pageUuid(book.id, doc.id, page.id);
   if (opts.raw) return { journal: doc.name, page: page.name, uuid, raw: page.html ?? "" };
 
   const full = page.text ?? toPlainText(page.html);
@@ -347,7 +368,8 @@ export function renderTable(t) {
   const rows = (t.results ?? []).map(r => {
     const [lo, hi] = r.range ?? [];
     const span = lo === hi ? `${lo}` : `${lo}-${hi}`;
-    const text = toPlainText(r.description ?? r.text ?? r.name ?? "");
+    // v14 document results keep their label in `name` with `description` "" (lookup-edge-1)
+    const text = toPlainText(r.description || r.name || r.text || "");
     return `${span} ${text}`.trim();
   });
   return { name: t.name, formula: t.formula ?? "", uuid: t.uuid, rows };
@@ -417,24 +439,34 @@ export function crNum(v) {
   return Number.isFinite(n) ? n : null;
 }
 
+/** A CR range: "-", en-dash, em-dash or " to " between two values, each with an optional "CR". */
+const CR_RANGE = /^\s*(?:cr\s*)?([\d/.]+)(?:\s*[-\u2013\u2014]\s*|\s+to\s+)(?:cr\s*)?([\d/.]+)\s*$/i;
+
 /**
- * `monsters(q)`'s options → `{ size, type, lo, hi, name, limit, packIds }`. `cr` is a value ("1/4", 3)
- * or a range ("1/2-2"); `minCr`/`maxCr` override either end; `limit` defaults to 40, max 200.
+ * `monsters(q)`'s options → `{ size, type, lo, hi, name, limit, packIds, warning? }`. `cr` is a value
+ * ("1/4", 3, "CR 3") or a range ("1/2-2", "1/2 to 2"); a `cr` that names no bound filters nothing and
+ * warns (lookup-edge-5). `minCr`/`maxCr` override either end; `limit` defaults to 40, max 200.
  */
 export function monsterQuery(q = {}) {
   const size = q.size ? SIZE_KEYS[String(q.size).toLowerCase()] ?? String(q.size).toLowerCase() : null;
   const type = q.type ? String(q.type).toLowerCase() : null;
-  let lo = null, hi = null;
+  let lo = null, hi = null, crWarning = null;
   if (q.cr !== undefined && q.cr !== null && q.cr !== "") {
-    const m = /^\s*([\d/.]+)\s*-\s*([\d/.]+)\s*$/.exec(String(q.cr));
-    if (m) { lo = crNum(m[1]); hi = crNum(m[2]); } else { lo = hi = crNum(q.cr); }
+    const m = CR_RANGE.exec(String(q.cr));
+    if (m) { lo = crNum(m[1]); hi = crNum(m[2]); } else { lo = hi = crNum(String(q.cr).replace(/^\s*cr\s*/i, "")); }
+    if (lo === null && hi === null) crWarning = `cr not understood: ${q.cr} — use '3', '1/4' or '1/2-2'`;
   }
   if (q.minCr !== undefined) lo = crNum(q.minCr);
   if (q.maxCr !== undefined) hi = crNum(q.maxCr);
   const name = q.name ? String(q.name).toLowerCase() : null;
   const limit = Math.max(1, Math.min(Number(q.limit) || 40, 200));
-  const packIds = q.packs ?? [...MONSTER_LIST_PACKS];
-  return { size, type, lo, hi, name, limit, packIds };
+  // R5: a string is one pack id (not its characters); a number or object is ignored, with a warning.
+  // lookup-edge-6: an empty array is absent — the default list, not 0.
+  const packs = Array.isArray(q.packs) && !q.packs.length ? null : q.packs ?? null;
+  const usable = packs === null || typeof packs === "string" || Array.isArray(packs);
+  const packIds = typeof packs === "string" ? [packs] : Array.isArray(packs) ? packs : [...MONSTER_LIST_PACKS];
+  const warning = [usable ? null : "packs ignored: expected a pack id or an array", crWarning].filter(Boolean).join("; ");
+  return { size, type, lo, hi, name, limit, packIds, ...(warning ? { warning } : {}) };
 }
 
 /** The index fields matchMonster and monsterRow read (getIndex({fields})). */
@@ -493,7 +525,10 @@ export function knownLists(registry, onError = null) {
   catch (err) { onError?.(err); return []; }
 }
 
-/** The owned book's spell packs sort before any other contributor (the 2024 SRD lists Aid too). */
+/**
+ * The owned book's spell packs sort before any other contributor (the 2024 SRD lists Aid too).
+ * Must name the pack SPELL_PACKS[0] is (core-seams pins it, EXT-6).
+ */
 export const OWNED_SPELL_PREFIX = "dnd-players-handbook";
 
 /**
@@ -517,7 +552,7 @@ export function groupListUuids(uuids) {
  * groupListUuids' groups plus each pack's index (`packId → index with .get(docId)`, or null when the
  * pack is absent) → `[{name, level, uuid}]`: one row per name, the first pack's wins; `level` (when
  * not null) keeps that spell level only; ordered by level, then name. A uuid the index lacks keeps
- * the uuid as its name and a null level.
+ * the uuid as its name and a null level. A row from a pack in EDITIONS carries its `edition` (EXT-5).
  */
 export function spellListRows(groups, indexes, level = null) {
   const seen = new Set(), out = [];
@@ -529,7 +564,7 @@ export function spellListRows(groups, indexes, level = null) {
       if (seen.has(name)) continue;
       if (level !== null && lvl !== Number(level)) continue;
       seen.add(name);
-      out.push({ name, level: lvl, uuid: u });
+      out.push(EDITIONS[id] ? { name, level: lvl, uuid: u, edition: EDITIONS[id] } : { name, level: lvl, uuid: u });
     }
   }
   out.sort((a, b) => ((a.level ?? 0) - (b.level ?? 0)) || String(a.name).localeCompare(String(b.name)));
@@ -543,6 +578,16 @@ export const NAME_SOURCES = Object.freeze({
   origins: { pack: "dnd-players-handbook.origins", fields: ["type", "system.type.value"] },
   feats: { pack: "dnd-players-handbook.feats", fields: ["type", "system.type.value", "system.type.subtype"] },
 });
+
+/**
+ * Every pack a lookup reads, for packs(): the books, the 2014 SRD, the monster packs, the spell
+ * packs onList/spellList read, then the PHB name packs names() reads — unique, in that order (EXT-3).
+ * Derived, so a pack added to any of those tables cannot drop out of the session-opening probe.
+ */
+export const KNOWN_PACKS = Object.freeze([...new Set([
+  ...BOOKSETS.all, ...BOOKSETS["2014"], ...MONSTER_PACKS, ...SPELL_PACKS,
+  ...Object.values(NAME_SOURCES).map(s => s.pack),
+])]);
 
 /** `names(kind)` words → the part of the answer they pick (case-insensitive). */
 export const NAME_PARTS = Object.freeze({

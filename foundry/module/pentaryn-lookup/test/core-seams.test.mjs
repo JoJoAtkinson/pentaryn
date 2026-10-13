@@ -6,6 +6,7 @@ import assert from "node:assert/strict";
 import * as core from "../lookup-core.mjs";
 import * as oracle from "./fixtures/legacy-monsters.mjs";
 import { manifestOf } from "./kit/harness.mjs";
+import { readFileSync } from "node:fs";
 
 const CR_INPUTS = ["1/4", 0.25, "3", 3, "", null, undefined, "x", " 1 / 2 ", "1/8"];
 const CR_WANT = [0.25, 0.25, 3, 3, null, null, null, null, 0.5, 0.125];
@@ -67,7 +68,12 @@ test("core.crNum and SIZE_KEYS equal the oracle", () => {
 });
 
 test("core.monsterQuery equals the oracle over the query table", () => {
-  for (const q of QUERIES) assert.deepEqual(core.monsterQuery(q), oracle.monsterQuery(q), JSON.stringify(q));
+  // [declared] lookup-edge-5: an unparseable cr ("x") adds a warning; everything else is unchanged.
+  for (const q of QUERIES) {
+    const want = oracle.monsterQuery(q);
+    if (q.cr === "x") want.warning = "cr not understood: x — use '3', '1/4' or '1/2-2'";
+    assert.deepEqual(core.monsterQuery(q), want, JSON.stringify(q));
+  }
   assert.deepEqual(core.monsterQuery(), oracle.monsterQuery());
 });
 
@@ -157,6 +163,19 @@ test("foundFromDoc: a parentless JournalEntry stands as its own journal, with em
   assert.equal("edition" in out, false);
 });
 
+test("foundFromDoc: a non-page uuid is echoed verbatim, never a fabricated page uuid (LKM-11)", () => {
+  for (const [documentName, uuid] of [["JournalEntry", "Compendium.p.c.JournalEntry.d"], ["Actor", "Compendium.p.a.Actor.x"],
+                                      ["Item", "Compendium.p.i.Item.y"]]) {
+    const f = core.foundFromDoc({ documentName, uuid, id: uuid.split(".").pop(), name: "N", html: "", pack: "p.c", parent: null });
+    assert.equal(core.renderPage(f).uuid, uuid, documentName);
+    assert.equal(core.renderPage(f, { raw: true }).uuid, uuid, `${documentName} raw`);
+  }
+  // a page still answers its canonical pageUuid(), whatever the caller passed
+  const pg = core.foundFromDoc({ documentName: "JournalEntryPage", uuid: "Compendium.p.c.JournalEntryPage.g", id: "g", name: "G",
+    html: "", pack: "p.c", parent: { id: "d", name: "D" } });
+  assert.equal(core.renderPage(pg).uuid, "Compendium.p.c.JournalEntry.d.JournalEntryPage.g");
+});
+
 test("foundFromDoc: the 2014 pack's edition comes from EDITIONS", () => {
   const out = core.renderPage(core.foundFromDoc({ id: "g", name: "G", html: "x", pack: "dnd5e.rules", parent: { id: "d", name: "D" }, packLabel: "SRD" }));
   assert.equal(out.edition, "2014");
@@ -202,4 +221,16 @@ test("nonPageWarning: none for a page; the documented text for any other kind", 
   assert.equal(core.nonPageWarning("Compendium.p.c.JournalEntry.d", "JournalEntry"),
     "Compendium.p.c.JournalEntry.d is a JournalEntry, not a JournalEntryPage — pass a page UUID from search()");
   assert.match(core.nonPageWarning("Compendium.p.a.Actor.x", "Actor"), /is a Actor, not a JournalEntryPage/);
+});
+
+// ── EXT-6: the preferred spell pack is named in two places; they must agree ──
+
+test("SPELL_PACKS[0] is the owned book OWNED_SPELL_PREFIX names, and each constant cross-links the other (EXT-6)", () => {
+  assert.ok(core.SPELL_PACKS[0].startsWith(core.OWNED_SPELL_PREFIX),
+    `${core.SPELL_PACKS[0]} does not start with ${core.OWNED_SPELL_PREFIX}`);
+  const src = readFileSync(new URL("../lookup-core.mjs", import.meta.url), "utf8");
+  const docs = {};
+  for (const m of src.matchAll(/\/\*\*((?:(?!\*\/)[\s\S])*)\*\/\s*export const (\w+)/g)) docs[m[2]] = m[1];
+  assert.match(docs.SPELL_PACKS ?? "", /OWNED_SPELL_PREFIX/);
+  assert.match(docs.OWNED_SPELL_PREFIX ?? "", /SPELL_PACKS/);
 });

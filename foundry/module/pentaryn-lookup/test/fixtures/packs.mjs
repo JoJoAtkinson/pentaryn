@@ -142,7 +142,7 @@ const srdIndex = [
 // ── spells and the dnd5e registry ──────────────────────────────────────────────
 
 const SP = "dnd-players-handbook.spells";
-const spell = (packId, id, name, level) => ({ documentName: "Item", id, name, uuid: `Compendium.${packId}.Item.${id}`, system: { level } });
+const spell = (packId, id, name, level) => ({ documentName: "Item", type: "spell", id, name, uuid: `Compendium.${packId}.Item.${id}`, system: { level } });
 const phbSpells = [spell(SP, "spFireball", "Fireball", 3), spell(SP, "spAid", "Aid", 2)];
 const srdSpells = [spell("dnd5e.spells24", "spAid24", "Aid", 2), spell("dnd5e.spells24", "spLight24", "Light", 0)];
 const spellIndex = docs => docs.map(d => ({ _id: d.id, name: d.name, system: { level: d.system.level } }));

@@ -114,6 +114,37 @@ test("a registry that throws inside forType: onList answers onList:null as befor
   }
 });
 
+// LKM-12 [declared]: onList reads the registry's options only for the unknown-list hint. A found list
+// never touches options, so a throwing options getter leaves no trace; an unknown list traces the
+// forType read, then the options read (for the hint), in that order.
+test("LKM-12: onList reads registry options only when the list is unknown", async () => {
+  const saved = globalThis.dnd5e;
+  let reads = 0;
+  const lists = saved.registry.spellLists;
+  globalThis.dnd5e = { registry: { spellLists: {
+    forType: (type, id) => lists.forType(type, id),
+    get options() { reads++; throw new Error("moved"); },
+  } } };
+  try {
+    const found = await capture(true, () => rules.onList("Fireball", "wizard"));
+    assert.equal(found.out.onList, true);
+    assert.equal(reads, 0, "a found list never reads options");
+    assert.deepEqual(found.lines, []);
+
+    globalThis.dnd5e.registry.spellLists.forType = () => { throw new Error("moved"); };
+    const unknown = await capture(true, () => rules.onList("Fireball", "wizard"));
+    assert.equal(unknown.out.onList, null);
+    assert.equal(unknown.out.hint, "no such list; known: ");
+    assert.equal(reads, 1);
+    assert.deepEqual(unknown.lines.map(l => l[1]), [
+      "pentaryn-lookup | spell-list registry read failed",
+      "pentaryn-lookup | spell-list options read failed",
+    ]);
+  } finally {
+    globalThis.dnd5e = saved;
+  }
+});
+
 test("world fixture is the shared one", () => {
   assert.ok(world.packs.get("dnd-players-handbook.content"));
 });
