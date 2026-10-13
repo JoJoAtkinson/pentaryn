@@ -268,6 +268,13 @@ ok("141 Pole Strike closed before attacking", !poleStrikeOpen({ turn: freshTurn(
 const sneak = riderByKey("sneak-attack");
 check("150 rider table keys", TURN_RIDERS.map(r => r.key), ["sneak-attack", "frenzy", "colossus-slayer", "divine-strike"]);
 ok("151 table frozen", Object.isFrozen(TURN_RIDERS) && Object.isFrozen(TURN_RIDERS[0]));
+// combat-core-EXT-9: riderEligibility branches on `needs`, and anything it doesn't know falls through to the
+// plain-weapon branch — a typo ("finese-or-ranged") would offer Sneak Attack on every swing. The table is
+// static data, so the guard is this fixture, not a throw.
+const RIDER_NEEDS = ["finesse-or-ranged", "strength", "weapon"];
+const badNeeds = table => table.filter(r => !RIDER_NEEDS.includes(r.needs)).map(r => `${r.key}:${r.needs}`);
+check("151a every rider's needs is a known branch (combat-core-EXT-9)", badNeeds(TURN_RIDERS), []);
+check("151b the guard catches a typo (combat-core-EXT-9)", badNeeds([...TURN_RIDERS, { key: "typo", needs: "finese-or-ranged" }]), ["typo:finese-or-ranged"]);
 check("152 ridersFor rogue", ridersFor(["sneak-attack", "expertise"]).map(r => r.key), ["sneak-attack"]);
 check("153 ridersFor none", ridersFor([]), []);
 check("154 rapier with advantage → offer + auto",
