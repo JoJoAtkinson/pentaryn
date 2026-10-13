@@ -112,7 +112,6 @@ The table is generated from each `module.json`, the module's code and its
 | The Argon Combat HUD misbehaves — a button missing or doubled, wrong pips, a tooltip that sticks or eats a click, the HUD on the wrong token; every Argon hook and patch by module and order | [`argon.md`](argon.md) |
 | One-click Sneak Attack, off-hand damage with no ability mod | [`attack-activities.md`](attack-activities.md) |
 | Spell circles you can't move/delete, "damage isn't rolled", monster saves off an area — `pentaryn-aoe` | [`aoe.md`](aoe.md) |
-| An addon Joe retired and removed (walls, `pentaryn-walls`) — what it did, its archive branch, how to bring it back | [`retired.md`](retired.md) |
 | Attunement — the sidebar slots, over-cap warnings, "why is this item doing nothing" | [`../../foundry/module/pentaryn-attunement/README.md`](../../foundry/module/pentaryn-attunement/README.md) |
 | Player journal — "Add to my journal" on eye readables, a personal journal missing or duplicated | [`../../foundry/module/pentaryn-journal/README.md`](../../foundry/module/pentaryn-journal/README.md) |
 | "My cursor is wrong / stuck as an arrow" — map cursor per scene tool (target, ruler, spell area, journal pin, drawing); `game.pentaryn.cursors.status()` | [`../../foundry/module/pentaryn-cursors/README.md`](../../foundry/module/pentaryn-cursors/README.md) |
@@ -120,6 +119,7 @@ The table is generated from each `module.json`, the module's code and its
 | Wild Shape / Starry Form / Return / Change Form / a form left in the sidebar — `pentaryn-transform` | [`../../foundry/module/pentaryn-transform/README.md`](../../foundry/module/pentaryn-transform/README.md) |
 | Lights on tokens — carried items, torches/lanterns (flame and hood buttons), the Light cantrip ("Where does the light go?"), the Broken glow, token chains (`pentaryn-senses`) | [`../../foundry/module/pentaryn-senses/README.md`](../../foundry/module/pentaryn-senses/README.md) |
 | Table-feedback modules — ghost movement, creature strip, Loot all, portals follow | [`../../foundry/module/pentaryn-movement/README.md`](../../foundry/module/pentaryn-movement/README.md), [`-creatures`](../../foundry/module/pentaryn-creatures/README.md), [`-dropbin`](../../foundry/module/pentaryn-dropbin/README.md), [`-portals`](../../foundry/module/pentaryn-portals/README.md), [`-senses`](../../foundry/module/pentaryn-senses/README.md) |
+| An addon Joe retired and removed (walls, `pentaryn-walls`) — what it did, its archive branch, how to bring it back | [`retired.md`](retired.md) |
 | Finding one battlemap out of ~1,750 | [`map-library.md`](map-library.md) |
 | The unattended Saturday updater — before touching it | [`automated-updates.md`](automated-updates.md) |
 | Running the updater as an operator — commands, setup, retention | [`../../automation/README.md`](../../automation/README.md) |
