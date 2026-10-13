@@ -17,7 +17,7 @@ const APP = { name: "app", type: "ItemPileInventoryApp", resolve: false, doc: "a
 const N = { name: "n", type: "number|string", doc: "the ledger number" };
 
 // What a corpse conversion writes (dropbin-EXT-2): sync runs either one, revive runs sync.
-const CORPSE_FLAGS = ["flags.pentaryn-dropbin.corpse", "flags.pentaryn-dropbin.sight", "flags.pentaryn-dropbin.ownership"];
+const CORPSE_FLAGS = ["flags.pentaryn-dropbin.corpse", "flags.pentaryn-dropbin.sight", "flags.pentaryn-dropbin.ownership", "flags.pentaryn-dropbin.dead"];
 const TO_CORPSE_WRITES = ["Item Piles pile flags", ...CORPSE_FLAGS, "delta.ownership", "actor ownership (linked)", "sight.enabled", "ActiveEffect (Dead)", "flags.core.overlay"];
 const FROM_CORPSE_WRITES = ["Item Piles pile flags", ...CORPSE_FLAGS, "delta.ownership", "actor ownership (linked)", "sight.enabled", "ActiveEffect (Lootable, removed)"];
 const SYNC_WRITES = [...new Set([...TO_CORPSE_WRITES, ...FROM_CORPSE_WRITES])];
@@ -117,7 +117,7 @@ export const MANIFEST = Object.freeze({
   ],
   flags: {
     writes: ["flags.pentaryn-dropbin.corpse", "flags.pentaryn-dropbin.sight", "flags.pentaryn-dropbin.ownership",
-      "flags.item-piles.data.lockedSound"],
+      "flags.pentaryn-dropbin.dead", "flags.item-piles.data.lockedSound", "flags.item-piles.data.enabled"],
     reads: ["flags.item-piles.data"],
   },
 });

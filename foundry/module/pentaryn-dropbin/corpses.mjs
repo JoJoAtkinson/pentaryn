@@ -33,7 +33,7 @@
  *     char sheet"): see sheetGuard. The loot window is only Item Piles' own, distance-checked.
  */
 
-import { MODULE, showEye, eyePlacement, needsRedraw, isActiveGMSelf, isOurCorpse as ourCorpse, hasNoLoot as noLoot } from "./dropbin-core.mjs";
+import { MODULE, showEye, eyePlacement, needsRedraw, isActiveGMSelf, isOurCorpse as ourCorpse, hasNoLoot as noLoot, isPileFlagged } from "./dropbin-core.mjs";
 import { api as itemPilesApi, isValidItemPile, isItemPileEmpty, turnTokensIntoItemPiles, revertTokensFromItemPiles } from "./piles.mjs";
 
 const OBSERVER = CONST.DOCUMENT_OWNERSHIP_LEVELS.OBSERVER;
@@ -159,19 +159,30 @@ async function repairCorpses(tokenDocs) {
  * dropbin-EC-3: a linked corpse's players observe its base actor (Item Piles needs OBSERVER to render
  * the loot window). The base actor's map is saved in its own `corpse`/`ownership` flags at the first
  * death only: a second token of the same actor, or a re-pile, finds it already ours and keeps it.
+ * `dead` (wave 3, item 2): true when the actor had no Dead yet, so the Dead toCorpses adds next is
+ * ours to take away when the actor's last corpse token goes (releaseBases); a GM's Dead is not.
  */
 async function observeBase(actor) {
   if (!actor || ourCorpse(actor)) return;
-  await actor.update({ [`flags.${MODULE}.corpse`]: true,
+  await actor.update({ [`flags.${MODULE}.corpse`]: true, [`flags.${MODULE}.dead`]: !actor.statuses?.has("dead"),
     [`flags.${MODULE}.ownership`]: foundry.utils.deepClone(actor.ownership ?? null), "ownership.default": OBSERVER });
 }
 
-/** Revival: the base actor's saved map written back whole (missing: players back to NONE), our flags gone. */
-async function unobserveBase(actor) {
+/**
+ * Revival: the base actor's saved map written back whole (missing: players back to NONE), our flags gone.
+ * `released` (wave 3, item 2: its last corpse token was deleted, not revived): also what dropbin set on
+ * the base actor through Item Piles — the pile flag goes off (`enabled: false`, as Item Piles' own revert
+ * writes; Item Piles writes it on a linked token's actor) — and the Dead dropbin added. Otherwise the
+ * actor's next token is born a dead pile that dropbin does not manage.
+ */
+async function unobserveBase(actor, { released = false } = {}) {
   if (!actor || !ourCorpse(actor)) return;
   const del = () => new foundry.data.operators.ForcedDeletion();
   const saved = revivedOwnership(actor.flags[MODULE].ownership) ?? { default: CONST.DOCUMENT_OWNERSHIP_LEVELS.NONE };
-  await actor.update({ [`flags.${MODULE}.corpse`]: del(), [`flags.${MODULE}.ownership`]: del(), ownership: saved });
+  const ourDead = actor.flags[MODULE].dead === true;
+  await actor.update({ [`flags.${MODULE}.corpse`]: del(), [`flags.${MODULE}.ownership`]: del(), [`flags.${MODULE}.dead`]: del(),
+    ownership: saved, ...(released && isPileFlagged(actor) ? { "flags.item-piles.data.enabled": false } : {}) });
+  if (released && ourDead && actor.statuses?.has("dead")) await actor.toggleStatusEffect("dead", { active: false });
 }
 
 /** A corpse's actor: a linked corpse's base actor, or an unlinked corpse's synthetic actor. */
@@ -200,14 +211,15 @@ const onLiveScene = t => !!t?.parent && !!game.scenes?.has(t.parent.id) && !!t.p
  * dropbin-EC-3: a linked corpse's base actor stays observed while any token of it is still our corpse.
  * Deleting that token (or its scene) is not a revival, so nothing put the saved map back: players kept
  * OBSERVER, and the sheet veto, on an NPC whose next token is a living creature. The active GM writes
- * the map back once no corpse token of the actor is left (deleteToken, deleteScene, and every ready).
+ * the map back once no corpse token of the actor is left (deleteToken, deleteScene, and every ready),
+ * and turns off the pile and the Dead dropbin set on the actor (wave 3, item 2; see unobserveBase).
  */
 async function releaseBases(actors) {
   for (const actor of actors) {
     try {
       if (!ourCorpse(actor)) continue;
       if ((actor.getDependentTokens?.({ concreteOnly: true }) ?? []).some(t => ourCorpse(t) && onLiveScene(t))) continue;
-      await unobserveBase(actor);
+      await unobserveBase(actor, { released: true });
     } catch (err) {
       console.warn(`${MODULE} | corpse: could not give back ${actor?.name}'s ownership`, err);
     }

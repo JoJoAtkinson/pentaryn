@@ -11,6 +11,11 @@ Declared changes:
   that one transfer — by `_id`, else name, type and quantity (`movedSourceId`) — and takes the delete
   row's place. A hand delete is never in a transfer, so a same-named hand delete keeps its row
   (dropbin-EC-2).
+- A linked corpse whose last token (or scene) is deleted no longer leaves its base actor a dead
+  pile. Item Piles writes its pile flag on a linked token's actor too; the release that gives back
+  the ownership map now also writes `flags.item-piles.data.enabled: false` (as Item Piles' own
+  revert) and removes Dead when dropbin added it (new actor flag `flags.pentaryn-dropbin.dead`,
+  saved at the first death). A Dead the GM set before the death stays.
 
 ## Unreleased — 2026-10-13 (defect wave 2 live check, FIX-3)
 

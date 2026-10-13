@@ -42,7 +42,9 @@ the dnd5e 6 rarity keys).
   actor's own `corpse`/`ownership` flags and written back on revival (dropbin-EC-3), or by the
   active GM once the actor's last corpse token (or its scene) is deleted, checked again at every
   `ready`. Its Actors
-  sidebar row stays hidden from players (it is a pile actor). `inspect`'s `saved.ownership` is the
+  sidebar row stays hidden from players (it is a pile actor). That release also turns off the pile
+  Item Piles wrote on the base actor and takes away the Dead dropbin added (a Dead the GM set before
+  the death stays), so the actor's next token is not born a dead pile dropbin does not manage. `inspect`'s `saved.ownership` is the
   token's delta map; a linked corpse's lives on the actor. Sight is off on a corpse and restored on
   revival.
   A body that is already our corpse pile but lost its OBSERVER map (an unlinked token) or its
@@ -117,7 +119,8 @@ itemName, itemType, quantity, sceneId, sceneName, x, y, pileUuid, item}`.
 | `Data/assets/drop-bin/drop-log.json` | the mirror, ~2 s after a burst; `export()` at once | the recording GM |
 | token `flags.pentaryn-dropbin.corpse`, `.sight`, `.ownership` | our corpse, its sight and pre-death delta ownership | active GM |
 | token `delta.ownership`, `sight.enabled`; Item Piles pile flags | while a corpse | active GM |
-| linked NPC actor `flags.pentaryn-dropbin.corpse`, `.ownership`; `ownership.default` | a linked corpse: its pre-death map, players OBSERVER | active GM |
+| linked NPC actor `flags.pentaryn-dropbin.corpse`, `.ownership`, `.dead`; `ownership.default` | a linked corpse: its pre-death map, players OBSERVER, whether its Dead is ours | active GM |
+| linked NPC actor `flags.item-piles.data.enabled` (false), its Dead removed | when its last corpse token (or that scene) goes: the pile Item Piles wrote on the actor turned off, and Dead only if dropbin added it | active GM |
 | actor/token `flags.item-piles.data.lockedSound`; pile `sight.enabled`; Note `global` | ready backfills | active GM |
 | ActiveEffect Dead (`flags.core.overlay`) | the corpse overlay | active GM |
 | `system.attunement` on items Item Piles creates | the repair (`preCreateItem`, in memory before the create) | the creating client |
