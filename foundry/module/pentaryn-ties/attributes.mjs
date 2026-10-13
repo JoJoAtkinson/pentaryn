@@ -210,20 +210,88 @@ export const attributeById = id => {
   return entry ? structuredClone(entry) : null;
 };
 
+/*
+ * **The version stamp (ties-ui-ACC-6).** The queue below keeps ONE tab's writes apart; it cannot
+ * see another GM tab's (the MCP bridge's). The registry is a world setting — no document flags to
+ * claim, no `_id` to keep — so every write appends one stamp element `{ stamp: "registry", rev,
+ * by }`: `rev` is the stored rev + 1, `by` this tab's socket id. `readRegistry` drops it (it has
+ * no id), so no reader ever sees it as an entry.
+ *
+ * After a write settles the writer re-reads, and keeps watching the setting: a stamp from another
+ * tab whose `rev` is no newer than ours was built without our write and has landed on top of it.
+ * The writer then re-applies its own change ONCE onto the fresh registry (`replay`). A write built
+ * on ours carries a higher rev and ends the watch. Every writer passes its replay to
+ * `saveRegistry` — one pattern for the review panel, the API and the bridge.
+ */
+const STAMP = "registry";
+const isStamp = x => !!x && typeof x === "object" && x.stamp === STAMP;
+
+/** The stored registry's stamp → `{ rev, by }` (`{ rev: 0, by: null }` before the first stamped write). */
+export function registryStamp(raw = setting(REGISTRY_SETTING)) {
+  const s = Array.isArray(raw) ? raw.find(isStamp) : null;
+  return { rev: Number.isInteger(s?.rev) && s.rev > 0 ? s.rev : 0, by: typeof s?.by === "string" ? s.by : null };
+}
+
+const socketId = () => game.socket?.id ?? null;
+let ownWrites = []; // `{ rev, replay }` — our writes no other tab has been seen building on yet
+let watchHook = null;
+let replaying = false; // a replay's own write is never replayed again: once
+
+function watchOwn(rev, replay) {
+  ownWrites.push({ rev, replay });
+  if (watchHook === null) {
+    watchHook = Hooks.on("updateSetting", s => {
+      if (s?.key === `${MODULE}.${REGISTRY_SETTING}`) checkLanded();
+    });
+  }
+  checkLanded();
+}
+
+/** Did another tab's write land on top of ours? Re-apply what it dropped, once. */
+function checkLanded() {
+  if (!ownWrites.length) return;
+  const s = registryStamp();
+  if (s.by === socketId()) return; // ours is still on top
+  const clobbered = ownWrites.filter(w => w.rev >= s.rev);
+  ownWrites = [];
+  Hooks.off("updateSetting", watchHook);
+  watchHook = null;
+  for (const w of clobbered) {
+    serial(async () => {
+      replaying = true;
+      try {
+        return await w.replay();
+      } finally {
+        replaying = false;
+      }
+    }).catch(err => log.warn(`attribute registry re-apply failed`, err));
+  }
+}
+
+/** The review panel's hook for a re-apply that found its field moved by someone else. */
+const conflictListeners = new Set();
+export function onRegistryConflict(fn) {
+  conflictListeners.add(fn);
+  return () => conflictListeners.delete(fn);
+}
+
 /**
  * GM-only. The server would refuse a player anyway; refusing here keeps the message honest.
  * Never throws: a refused or failed write comes back `false`, and the caller turns that into
- * `{ ok: false, reason: "writeFailed" }`.
+ * `{ ok: false, reason: "writeFailed" }`. `replay` re-applies this write's change onto a fresh
+ * registry if another tab's write lands on top of it (see the version stamp above).
  */
-async function saveRegistry(list) {
+async function saveRegistry(list, replay = null) {
   if (!game.user?.isGM) return false;
+  const rev = registryStamp().rev + 1;
   try {
-    await game.settings.set(MODULE, REGISTRY_SETTING, readRegistry(list));
-    return true;
+    await game.settings.set(MODULE, REGISTRY_SETTING, [...readRegistry(list), { stamp: STAMP, rev, by: socketId() }]);
   } catch (err) {
     log.warn(`attribute registry write failed`, err);
     return false;
   }
+  if (replay && !replaying) watchOwn(rev, replay);
+  return true;
 }
 
 /**
@@ -353,7 +421,8 @@ async function createNow(title, opts) {
   });
   if (!entry) return fail("empty");
   list.push(entry);
-  if (!(await saveRegistry(list))) return fail("writeFailed");
+  // re-applied if a write from another tab lands on top (it is refused then if the name is taken)
+  if (!(await saveRegistry(list, () => createNow(title, opts)))) return fail("writeFailed");
   return { ok: true, entry };
 }
 
@@ -385,19 +454,21 @@ export async function ensureAttribute(title, opts = {}) {
  * and held to the same unique-name rule. → `{ok:true, entry}` | `{ok:false, reason:"notGM"|
  * "collision"|"invalid"|"writeFailed", existing?}`.
  */
-export const authorEntry = ({ id, title, category, icon }) =>
-  serial(async () => {
-    if (!game.user?.isGM) return fail("notGM");
-    const list = registry();
-    if (list.some(e => e.id === id)) return fail("collision", { existing: list.find(e => e.id === id) });
-    const clash = nameCollision(title, list, { exceptId: id });
-    if (clash) return fail("collision", { existing: clash });
-    const entry = clampAttribute({ id, title, category, icon, lore: [], ...stampNew() });
-    if (!entry) return fail("invalid");
-    list.push(entry);
-    if (!(await saveRegistry(list))) return fail("writeFailed");
-    return { ok: true, entry };
-  });
+export const authorEntry = spec => serial(() => authorNow(spec));
+
+async function authorNow(spec) {
+  const { id, title, category, icon } = spec;
+  if (!game.user?.isGM) return fail("notGM");
+  const list = registry();
+  if (list.some(e => e.id === id)) return fail("collision", { existing: list.find(e => e.id === id) });
+  const clash = nameCollision(title, list, { exceptId: id });
+  if (clash) return fail("collision", { existing: clash });
+  const entry = clampAttribute({ id, title, category, icon, lore: [], ...stampNew() });
+  if (!entry) return fail("invalid");
+  list.push(entry);
+  if (!(await saveRegistry(list, () => authorNow(spec)))) return fail("writeFailed");
+  return { ok: true, entry };
+}
 
 /**
  * One-shot repair for entries authored against the two icon paths that 404 (see `CATEGORY_ICONS`).
@@ -418,7 +489,7 @@ async function repairIconsNow() {
     entry.icon = better;
     fixed++;
   }
-  if (fixed) await saveRegistry(list);
+  if (fixed) await saveRegistry(list, repairIconsNow);
   return fixed;
 }
 
@@ -551,9 +622,26 @@ async function commitNow(ref, patch, { review = false } = {}) {
     merged.reviewedAt = list[i].reviewedAt;
     merged.touched = list[i].touched;
   } else merged.touched = clampTouched([...list[i].touched, ...diff]);
+  const before = Object.fromEntries(diff.map(k => [k, list[i][k]]));
   list[i] = merged;
-  if (!(await saveRegistry(list))) return fail("writeFailed");
+  if (!(await saveRegistry(list, () => reapplyNow(id, diff, before, merged, review)))) return fail("writeFailed");
   return { ok: true, entry: merged, changed: diff }; // diff is non-empty here: the empty case returned above
+}
+
+/**
+ * ties-ui-ACC-6: another tab's write landed on top of `commitNow`'s. Each field it changed is put
+ * back if the fresh registry still holds the value it overwrote; a field the other tab ALSO moved
+ * is theirs now — it is left alone and reported, so the review window flags the row stale.
+ */
+async function reapplyNow(id, fields, before, mine, review) {
+  const e = registry().find(x => x.id === id);
+  if (!e) return fail("notFound");
+  const eq = (a, b) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
+  const moved = fields.filter(k => !eq(e[k], before[k]) && !eq(e[k], mine[k]));
+  if (moved.length) for (const fn of conflictListeners) fn({ id, fields: moved });
+  const redo = fields.filter(k => eq(e[k], before[k]));
+  if (!redo.length) return { ok: true, entry: e, unchanged: true };
+  return commitNow(id, Object.fromEntries(redo.map(k => [k, mine[k]])), { review });
 }
 
 /* -------------------------------------------- */
@@ -586,10 +674,16 @@ async function setReviewedNow(ref, on) {
   if (i < 0) return fail("notFound");
   // signing off records what the content said, so the panel can show what changes after it;
   // withdrawing keeps the old snapshot — "what changed since the last sign-off" is still useful
+  const signed = snapshotOf(list[i]);
   list[i] = on
-    ? { ...list[i], reviewedAt: Date.now(), touched: [], reviewedSnapshot: snapshotOf(list[i]) }
+    ? { ...list[i], reviewedAt: Date.now(), touched: [], reviewedSnapshot: signed }
     : { ...list[i], reviewedAt: null };
-  if (!(await saveRegistry(list))) return fail("writeFailed");
+  // re-applied only onto the content it signed: a sign-off never covers text Joe has not seen
+  const replay = () => {
+    const now = registry().find(e => e.id === list[i].id);
+    return now && JSON.stringify(snapshotOf(now)) === JSON.stringify(signed) ? setReviewedNow(now.id, on) : null;
+  };
+  if (!(await saveRegistry(list, replay))) return fail("writeFailed");
   return { ok: true, entry: list[i] };
 }
 
@@ -686,7 +780,7 @@ async function deleteNow(ref) {
   if (!r.id) return missed(r);
   const entry = list.find(e => e.id === r.id);
   if (!entry) return fail("notFound");
-  if (!(await saveRegistry(list.filter(e => e.id !== entry.id)))) return fail("writeFailed");
+  if (!(await saveRegistry(list.filter(e => e.id !== entry.id), () => deleteNow(entry.id)))) return fail("writeFailed");
   return { ok: true, entry };
 }
 

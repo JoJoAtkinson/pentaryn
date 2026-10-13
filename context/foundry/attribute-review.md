@@ -102,6 +102,11 @@ return A.list().sort((a, b) => (b.modifiedAt ?? 0) - (a.modifiedAt ?? 0)).slice(
   defers while Joe has a text field focused (not the search box), so your write cannot eat his draft. If you change an entry whose row he has
   open meanwhile, that row shows **"Changed by Claude — click to reload"**, and a save of a field
   you changed is **refused** rather than written over your change.
+- **Writes from two GM tabs** (the bridge and Joe's) are caught by a version stamp: every registry
+  write stores `{ stamp: "registry", rev, by }` as one extra element of the setting (readers drop
+  it). A write that lands on top of another tab's without having seen it makes the overwritten
+  tab re-apply its own change once; if both changed the **same field** the later one stands and
+  Joe's open row gets the reload banner.
 - **Rows keep their place** while he works. Order is recomputed on open, on a sort change, after
   Reviewed/Unreview, and from the **Re-sort** button; an entry you create appears at the top.
 - A panel edit that would rename onto another entry's name is refused (same rule as `A.update`)

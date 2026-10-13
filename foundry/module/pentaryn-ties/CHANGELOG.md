@@ -26,6 +26,11 @@ Added: `inspect(ref, { as })` (the dossier), `selftest()`, `attributes.effective
 (with the kind pointer), `attributes.tree/branch/describeId`, `study.factStatus/shareFact/forgetFact`,
 `study.identified`.
 
+Fixed (declared): a save in the Attribute Review is no longer lost under a write from another GM
+tab (the bridge) that was already on its way. Every registry write stores a version stamp
+`{ rev, by }`; a tab whose write was overwritten by one that never saw it re-applies its own change
+once, and if both changed the same field the review row is flagged for reload. ties-ui-ACC-6.
+
 Fixed (declared): the Attributes tab's ancestry **Fix it** button links every missing parent in one
 save (`repairAllAncestry` in `attributes.mjs`) instead of one save per broken membership, is greyed
 out while it works so a double-click cannot run it twice, and repaints the tab once. ties-ui-ACC-4.

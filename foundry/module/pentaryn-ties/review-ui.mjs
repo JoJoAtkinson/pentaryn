@@ -23,7 +23,10 @@
  * (`this.order`); it is recomputed on open, on a sort change, after Reviewed/Unreview, and from
  * the Re-sort button. A refresh held back while Joe types is checked against what each open row
  * was drawn from (`this.base`): a row Claude changed underneath gets a reload banner, and a field
- * whose stored value moved is refused rather than saved over Claude's change.
+ * whose stored value moved is refused rather than saved over Claude's change. A write from another
+ * GM tab still in flight when Joe saved is caught by the registry's version stamp (attributes.mjs):
+ * his field is re-applied on top of it, or — if that tab moved the same field — the row is flagged
+ * stale (ties-ui-ACC-6).
  *
  * The ticked boxes live in a user flag (`attrSelected`) so Claude can read them with
  * `game.pentaryn.ties.attributes.selected()` — see context/foundry/attribute-review.md.
@@ -42,7 +45,8 @@ import {
   reviewAttribute,
   unreviewAttribute,
   selectionIds,
-  selectAttributes
+  selectAttributes,
+  onRegistryConflict
 } from "./attributes.mjs";
 import { kindActorOf } from "./study.mjs";
 import { isPersonalEntry } from "./core/rules.mjs";
@@ -248,10 +252,17 @@ export class AttributeReview extends ApplicationV2 {
         }
       ]
     ]);
+    // another tab's write landed on top of a save and moved the same field: Joe must see it
+    this.offConflict?.();
+    this.offConflict = onRegistryConflict(({ id }) => {
+      if (this.base.has(id)) this.flagStale(id);
+    });
   }
 
   async _onClose(options) {
     this.live.stop();
+    this.offConflict?.();
+    this.offConflict = null;
     return super._onClose?.(options);
   }
 

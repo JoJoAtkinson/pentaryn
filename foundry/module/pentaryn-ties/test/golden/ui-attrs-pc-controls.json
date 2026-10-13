@@ -661,6 +661,11 @@
                 "title"
               ],
               "reviewedSnapshot": null
+            },
+            {
+              "stamp": "registry",
+              "rev": 1,
+              "by": "socket-gm-1"
             }
           ]
         },
@@ -746,6 +751,11 @@
                 "icon"
               ],
               "reviewedSnapshot": null
+            },
+            {
+              "stamp": "registry",
+              "rev": 2,
+              "by": "socket-gm-1"
             }
           ]
         },
@@ -832,6 +842,11 @@
                 "whenKnown"
               ],
               "reviewedSnapshot": null
+            },
+            {
+              "stamp": "registry",
+              "rev": 3,
+              "by": "socket-gm-1"
             }
           ]
         },
@@ -919,6 +934,11 @@
                 "whenCarried"
               ],
               "reviewedSnapshot": null
+            },
+            {
+              "stamp": "registry",
+              "rev": 4,
+              "by": "socket-gm-1"
             }
           ]
         },
@@ -1007,6 +1027,11 @@
                 "secret"
               ],
               "reviewedSnapshot": null
+            },
+            {
+              "stamp": "registry",
+              "rev": 5,
+              "by": "socket-gm-1"
             }
           ]
         },
@@ -1097,6 +1122,11 @@
                 "skill"
               ],
               "reviewedSnapshot": null
+            },
+            {
+              "stamp": "registry",
+              "rev": 6,
+              "by": "socket-gm-1"
             }
           ]
         },
@@ -1187,6 +1217,11 @@
                 "dc"
               ],
               "reviewedSnapshot": null
+            },
+            {
+              "stamp": "registry",
+              "rev": 7,
+              "by": "socket-gm-1"
             }
           ]
         },
@@ -1278,6 +1313,11 @@
                 "reveal"
               ],
               "reviewedSnapshot": null
+            },
+            {
+              "stamp": "registry",
+              "rev": 8,
+              "by": "socket-gm-1"
             }
           ]
         },
@@ -1370,6 +1410,11 @@
                 "miss"
               ],
               "reviewedSnapshot": null
+            },
+            {
+              "stamp": "registry",
+              "rev": 9,
+              "by": "socket-gm-1"
             }
           ]
         },
@@ -1613,6 +1658,11 @@
                 "miss"
               ],
               "reviewedSnapshot": null
+            },
+            {
+              "stamp": "registry",
+              "rev": 10,
+              "by": "socket-gm-1"
             }
           ]
         },
@@ -1709,6 +1759,11 @@
                 "miss"
               ],
               "reviewedSnapshot": null
+            },
+            {
+              "stamp": "registry",
+              "rev": 11,
+              "by": "socket-gm-1"
             }
           ]
         },
@@ -1806,6 +1861,11 @@
                 "miss"
               ],
               "reviewedSnapshot": null
+            },
+            {
+              "stamp": "registry",
+              "rev": 12,
+              "by": "socket-gm-1"
             }
           ]
         },
@@ -1904,6 +1964,11 @@
                 "miss"
               ],
               "reviewedSnapshot": null
+            },
+            {
+              "stamp": "registry",
+              "rev": 13,
+              "by": "socket-gm-1"
             }
           ]
         },
@@ -2004,6 +2069,11 @@
                 "miss"
               ],
               "reviewedSnapshot": null
+            },
+            {
+              "stamp": "registry",
+              "rev": 14,
+              "by": "socket-gm-1"
             }
           ]
         },
@@ -2104,6 +2174,11 @@
                 "miss"
               ],
               "reviewedSnapshot": null
+            },
+            {
+              "stamp": "registry",
+              "rev": 15,
+              "by": "socket-gm-1"
             }
           ]
         },
@@ -2205,6 +2280,11 @@
                 "miss"
               ],
               "reviewedSnapshot": null
+            },
+            {
+              "stamp": "registry",
+              "rev": 16,
+              "by": "socket-gm-1"
             }
           ]
         },
@@ -2307,6 +2387,11 @@
                 "miss"
               ],
               "reviewedSnapshot": null
+            },
+            {
+              "stamp": "registry",
+              "rev": 17,
+              "by": "socket-gm-1"
             }
           ]
         },
@@ -2433,6 +2518,11 @@
                 "miss"
               ],
               "reviewedSnapshot": null
+            },
+            {
+              "stamp": "registry",
+              "rev": 18,
+              "by": "socket-gm-1"
             }
           ]
         },
@@ -2535,6 +2625,11 @@
                 "miss"
               ],
               "reviewedSnapshot": null
+            },
+            {
+              "stamp": "registry",
+              "rev": 19,
+              "by": "socket-gm-1"
             }
           ]
         },
@@ -2637,6 +2732,11 @@
                 "miss"
               ],
               "reviewedSnapshot": null
+            },
+            {
+              "stamp": "registry",
+              "rev": 20,
+              "by": "socket-gm-1"
             }
           ]
         },
@@ -2740,6 +2840,11 @@
                 "miss"
               ],
               "reviewedSnapshot": null
+            },
+            {
+              "stamp": "registry",
+              "rev": 21,
+              "by": "socket-gm-1"
             }
           ]
         },
@@ -2842,6 +2947,11 @@
                 "miss"
               ],
               "reviewedSnapshot": null
+            },
+            {
+              "stamp": "registry",
+              "rev": 22,
+              "by": "socket-gm-1"
             }
           ]
         },
@@ -2944,6 +3054,11 @@
                 "miss"
               ],
               "reviewedSnapshot": null
+            },
+            {
+              "stamp": "registry",
+              "rev": 23,
+              "by": "socket-gm-1"
             }
           ]
         },
