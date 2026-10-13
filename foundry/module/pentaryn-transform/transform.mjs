@@ -7,6 +7,7 @@
 //   patches.mjs            the core v14 _preUpdateOperation unwrap (wrapMethod)
 //   wiring.mjs             the one log / hook registry / ctx both entries share
 //   wildshape-adapter.mjs  shift, revert, lookups, chat, the bonus-action mark, who runs what
+//   form-image-adapter.mjs the form's token image (wildcard art, the formImage relay) and trait text
 //   sweep-adapter.mjs      the active GM's sweep of spent forms
 //   bodyswap.mjs, wildshape.mjs, sweep.mjs   features installed here, in this order
 //   hud.mjs (esmodules[1]) installs starry.mjs and hud-panels.mjs (with starry-adapter.mjs,

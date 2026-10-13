@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+- **wildshape-adapter.mjs is back under the 500-line adapter cap (EXT-8, defect wave 2).** The
+  wildcard-art block (`formImage`, `formImageFor`, the wildcard listing, `wildcardFormImage`,
+  `shiftSource`) and `traitsHtml` moved, unchanged, to the new `form-image-adapter.mjs`, which
+  wildshape-adapter.mjs imports (a new test/graph-allow.json edge) and api.mjs serves the
+  `formImage` relay row from. No behaviour change; golden/console-texts.json names the new file for
+  the five moved log lines ([declared]; test "EXT-8" in findings.test.mjs; no new strings or hooks).
 - **The sweep ages a spent form from when this GM tab first saw it (EC-6, defect wave 2).**
   sweep-adapter.mjs compared the GM client's `Date.now()` with the server's `_stats.createdTime`, so a
   GM clock running fast could sweep a form still mid-swap. Each sweep now records the first time it

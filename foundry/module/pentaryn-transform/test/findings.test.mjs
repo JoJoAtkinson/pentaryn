@@ -384,6 +384,26 @@ test("EXT-8 [declared] transform-core.mjs exports MODULE and no `MODULE as MODUL
   }
 });
 
+/* ── EXT-8 (wave 2) the wildcard-art block lives in form-image-adapter.mjs ── */
+
+test("EXT-8 [declared] wildshape-adapter.mjs is back under the 500-line adapter cap: the wildcard-art block moved to form-image-adapter.mjs, which it imports", async () => {
+  const { readFileSync } = await import("node:fs");
+  const read = f => readFileSync(new URL(`../${f}`, import.meta.url), "utf8");
+  const ws = read("wildshape-adapter.mjs");
+  assert.ok(ws.split("\n").length <= 500, `EXT-8: wildshape-adapter.mjs has ${ws.split("\n").length} lines (cap 500)`);
+  const FI = await import("../form-image-adapter.mjs");
+  for (const name of ["formImage", "formImageFor", "wildcardFormImage", "shiftSource"]) {
+    assert.equal(typeof FI[name], "function", `EXT-8: form-image-adapter exports ${name}`);
+  }
+  for (const name of ["hasWildcardToken", "wildcardFiles", "formImage", "formImageFor", "wildcardFormImage", "shiftSource"]) {
+    assert.doesNotMatch(ws, new RegExp(`function ${name}\\(`), `EXT-8: ${name} is no longer defined in wildshape-adapter.mjs`);
+  }
+  assert.match(ws, /from "\.\/form-image-adapter\.mjs"/, "EXT-8: wildshape-adapter imports the block");
+  assert.match(read("api.mjs"), /\bformImageFor\b[^;]*from "\.\/form-image-adapter\.mjs"/, "EXT-8: the relay row comes from form-image-adapter");
+  const allow = JSON.parse(read("test/graph-allow.json")).allow;
+  assert.ok(allow.some(e => e.from === "wildshape-adapter.mjs" && e.to === "form-image-adapter.mjs"), "EXT-8: the adapter edge is allowed and explained");
+});
+
 /* ── M1 patches.mjs's GLUE comment names both importers ──────────────────── */
 
 test("M1 [declared] patches.mjs's GLUE comment names both importers: the entry (installPatches) and wiring.mjs (removePatches)", async () => {

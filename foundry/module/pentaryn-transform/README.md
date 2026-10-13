@@ -208,7 +208,7 @@ rest hooks, core document hooks and Argon's render hooks (`test/golden/hooks.jso
 | `wiring.mjs` | the one log / hook registry / ctx both entries share |
 | `transform-core.mjs`, `core/*.mjs` | pure rules (wildshape, hud, starry, bodyswap) behind the barrel |
 | `settings.mjs`, `patches.mjs` | the keybinding and outside settings reads; the core patch |
-| `wildshape-adapter.mjs`, `sweep-adapter.mjs`, `starry-adapter.mjs`, `claim-adapter.mjs`, `argon.mjs` | adapters (documents, the runner and the one-tab claim, Argon) |
+| `wildshape-adapter.mjs`, `form-image-adapter.mjs`, `sweep-adapter.mjs`, `starry-adapter.mjs`, `claim-adapter.mjs`, `argon.mjs` | adapters (documents, the form's token image and trait text, the runner and the one-tab claim, Argon) |
 | `form-picker.mjs`, `starry-dialog.mjs` | UI: the Argon components; the constellation dialog |
 | `bodyswap.mjs`, `wildshape.mjs`, `sweep.mjs`, `starry.mjs`, `hud-panels.mjs` | features: `install(reg, ctx)` / `uninstall()` |
 | `api-manifest.mjs`, `api.mjs` | the published API |
