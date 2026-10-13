@@ -20,6 +20,10 @@
   case (the id already held by the other tab's actor, no create sent) joins the same way, skipping on
   the same hash, instead of failing "created concurrently by another GM tab — re-run".
   test/concurrent-create.test.mjs.
+- **The join wait is 10 s of wall clock** (FIX-W3 live check): it was counted in 250 ms polls, and
+  Chrome clamps a hidden tab's timers to about 1 s, so in the MCP bridge tab the wait took 40 s. It
+  now also ends when 10 s have passed on the clock, and the "no content hash" line gives the real
+  wait. test/concurrent-create.test.mjs (a clamped-timer run).
 
 ## Unreleased — FIX-3 live-check fix (2026-10-13)
 

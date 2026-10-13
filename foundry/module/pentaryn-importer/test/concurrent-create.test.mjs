@@ -125,6 +125,43 @@ test("importer-AC-2 / wave-3 2: a new slug created by another GM tab after the i
   assert.equal(game.actors.get(core.idForSlug("yan"))?.flags.pentaryn.slug, "yan", "created under the slug id");
 });
 
+test("wave-3 importer 2 (FIX-W3 live): the join wait is 10 s of wall clock even when a hidden tab's timers are clamped to 1 s", async () => {
+  // Live, the MCP bridge tab is hidden and Chrome ran each 250 ms poll after ~1 s, so the wait counted
+  // in polls took 40 s. Here each 250 ms poll moves the clock 1 s, as it did live.
+  body = manifestOfActors([npc("yop"), npc("zug")]);
+  W.K.raceCreate.add("zug");                       // the other tab's actor, never stamped
+  const realNow = Date.now;
+  let clock = realNow();
+  Date.now = () => clock;
+  const warns = [];
+  const keep = { log: console.log, warn: console.warn, error: console.error, group: console.group, groupEnd: console.groupEnd, table: console.table, info: console.info };
+  for (const k of Object.keys(keep)) console[k] = () => {};
+  console.warn = (...a) => { warns.push(a.map(String).join(" ")); };
+  let polls = 0;
+  let result;
+  try {
+    const run = game.pentaryn.import();
+    let done = false;
+    run.then(() => { done = true; }, () => { done = true; });
+    for (let i = 0; i < 200 && !done; i++) {
+      await new Promise(resolve => setImmediate(resolve));
+      if (done) break;
+      clock += 1000;
+      mock.timers.tick(250);
+      polls++;
+    }
+    result = await run;
+  } finally {
+    Date.now = realNow;
+    Object.assign(console, keep);
+    W.K.raceCreate.clear();
+  }
+  assert.deepEqual(result.failed, []);
+  assert.deepEqual(result.updated, ["zug"], "the unstamped actor is updated here after the wait");
+  assert.ok(polls <= 12, `the wait ends after ~10 s of wall clock, not 40 polls (took ${polls})`);
+  assert.ok(warns.some(w => /zug: no content hash from the other GM tab after 10000 ms/.test(w)), warns.join("\n"));
+});
+
 test("wave-3 importer 2: two creates in the same instant — the tab landing second stands down and joins; one actor, Items once", async () => {
   const id = core.idForSlug("vex");
   W.K.raceSame.set("vex", { hash: "sha256:vex", items: [loot] });   // the other tab, same file

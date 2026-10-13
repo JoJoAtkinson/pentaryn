@@ -51,6 +51,15 @@ the module's hook registry only during a create and removes the listener when th
 Not changed: an id held by an actor *without* the slug is still refused and never overwritten.
 If two tabs update the same existing actor at once, nothing guards it (README).
 
+### FIX-W3 live-check fix (join wait)
+
+The live check of step 2b found the look-first join waited 40 s, not 10 s. The wait counted 40 polls
+of 250 ms, and Chrome clamps a hidden tab's timers to about 1 s (measured in the MCP bridge tab:
+8 polls took 7.6 s). `awaitStamp` now also ends when 10 s have passed on the clock, and its "no
+content hash" line gives the real wait. Not a declared behaviour change: the 10 s was always the
+intent. Test: `test/concurrent-create.test.mjs` runs the join with each poll moving the clock 1 s
+(fails with 40 polls on the old code, passes with 10). Gate: 125 node tests.
+
 ## Deploy
 
 `make foundry-importer-install`, then reload the GM tab. `module.json` is unchanged, so no restart

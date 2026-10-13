@@ -170,7 +170,7 @@ id a world Actor already holds — it silently replaces that actor — so:
   those Items reached the server), it writes the actor and its Items again on the live one, at most
   twice, before its readback.
 
-Joining: wait (polling every 250 ms, up to 10 s) for the other tab's content-hash stamp, then take
+Joining: wait (polling every 250 ms, up to 10 s of wall clock, which also holds in a hidden tab whose timers Chrome clamps to 1 s) for the other tab's content-hash stamp, then take
 the update path. A look-first join (no create sent) is skipped when the stamped hash is this file's,
 else updated. A same-instant join is always updated: its own create replaced the other tab's actor
 and may have wiped Items written before it, while that tab's stamp can still land afterwards, so the

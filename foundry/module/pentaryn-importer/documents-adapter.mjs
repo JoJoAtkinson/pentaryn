@@ -606,17 +606,23 @@ async function createOrJoin(ActorClass, payload, slug, watchCreates) {
 
 /**
  * Wait for the creating tab's content-hash stamp on actor `id`, up to JOIN_WAIT_MS.
+ *
+ * The wait ends on the wall clock as well as the poll count. Chrome clamps a hidden tab's timers
+ * to at least 1 s, and the MCP bridge tab is hidden, so 40 polls of 250 ms took 40 s there (FIX-W3
+ * live check, 2026-10-13). Whichever runs out first ends the wait.
  * @param {string} id
  * @param {string} slug
  * @returns {Promise<Actor>} the live actor, stamped or not
  */
 async function awaitStamp(id, slug) {
+  const start = Date.now();
   for (let waited = 0; ; waited += JOIN_POLL_MS) {
     const live = game.actors.get(id);
     if (!live) throw new Error("deleted by another GM tab while this run waited for it — re-run");
     if (storedHash(live)) return live;
-    if (waited >= JOIN_WAIT_MS) {
-      log.warn(`${slug}: no content hash from the other GM tab after ${JOIN_WAIT_MS} ms — updating it here`);
+    const elapsed = Math.max(waited, Date.now() - start);
+    if (elapsed >= JOIN_WAIT_MS) {
+      log.warn(`${slug}: no content hash from the other GM tab after ${elapsed} ms — updating it here`);
       return live;
     }
     await new Promise(resolve => setTimeout(resolve, JOIN_POLL_MS));
