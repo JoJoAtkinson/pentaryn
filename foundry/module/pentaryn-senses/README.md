@@ -26,6 +26,9 @@ strongest (largest dim, then bright) wins. A light set by hand (a rune glow) is 
 carried light covering it keeps it aside and gives it back when the carried light goes. A token
 that changes body (Wild Shape, polymorph, and back) takes the carried lights of the actor it now
 shows: a beast form carries none, so a druid's starlight or torch does not come along.
+A hand-authored `flags.pentaryn-senses.light` takes LightData keys (`bright`, `dim`, `color`,
+`animation`, …) with lowercase `#rrggbb` colours; the sync compares it as Foundry stores it
+(unknown keys dropped, colours lower-cased), so either form is applied once and then left alone.
 
 **Torches, lamps, lanterns, candles.** A **flame button** on the inventory row (grey unlit, orange
 lit) lights or puts out the item and posts one chat line in the user's chat mode (a GM on "GM only"
@@ -51,7 +54,8 @@ prompt asks **Where does the light go?** — **On me** (your token on the viewed
 glow follows it, through portals too), **Pick a target** (crosshair: click a token or a square;
 right-click or Esc cancels; an open Combat HUD panel closes first), **Not now**. The chat card keeps
 **On me · Pick a target · End light** as icons in its action row. Casting again moves the light;
-**End light** is also on a lit token's HUD for the caster and the GM. If the lit creature is
+**End light** is also on a lit token's HUD for the caster and the GM (if the spell's item is gone,
+only the active GM sees it, since only that GM can put the light out). If the lit creature is
 deleted the light ends and the caster gets a whisper; a GM who deletes a Light square by hand ends
 it, one who drags it moves it. Two casters on one token: the newer wins. The cast notice names the
 token only if you could see its nameplate.
@@ -84,9 +88,9 @@ Also `game.modules.get("pentaryn-senses").api`. Kit members: `describe()`, `vers
 
 | Call | Does |
 |---|---|
-| `inspect(ref, {sceneId?, base?, as?})` | why a token is lit as it is: its light and owner flag, the carried light and every carrier, its chain, the Light cantrips. Read-only; a player without OBSERVER gets no `actor`/`lightSpells` |
+| `inspect(ref, {sceneId?, base?, as?})` | why a token is lit as it is: its light and owner flag, the carried light and every carrier, its chain, the Light cantrips. Read-only; a player without OBSERVER gets no `actor`/`lightSpells`. `opts` optional, null = omitted |
 | `syncLight(actor)` · `syncAll()` · `carriedLight(actor)` | carried lights: sync one actor / the world; what an actor's items give |
-| `resetSight({force})` | rerun the darkvision reset → `{prototypes, tokens}` or null |
+| `resetSight({force})` | rerun the darkvision reset → `{prototypes, tokens}` or null. `opts` optional, null = omitted |
 | `light.cast(item, {token} \| {x, y})` · `.end(item)` · `.onMe(item)` · `.pick()` · `.prompt(item)` | the Light cantrip |
 | `light.status(itemRef)` → `{cast, litBy}` · `light.reconcile(uuid)` → summary · `light.recent()` | what a Light does now; force a reconcile; the last 20 summaries |
 | `light.toggle(item)` · `.hood(item)` · `.profileFor(item)` · `.setup()` (= `setupLight()`) · `.sweep()` | lit items; give every Torch its Light activity; the GM ready sweep |
@@ -130,13 +134,21 @@ third-party reads (rows pending in the adjustments batch): the light-animation s
 Carried lights: the active GM's client, or any GM while none is active. The Light reconcile, the
 torch-on-create hook, the sweep and the darkvision reset: the active GM only. Chains: any GM.
 Players write only their own items (cast, toggle, hood). Two tabs on the GM account both run the
-active-GM paths; the carried-light, torch and reset writes are idempotent, the Light reconcile's
-square creation is not (see the wave-3 report).
+active-GM paths; the carried-light, torch and reset writes are idempotent. The Light reconcile is
+too (senses-ac-1): a Light square is created with an id fixed by its Light and its spot (`keepId`),
+so the server refuses the second tab's create; the "Gone" whisper goes from the tab that wins that
+cast's claim (`flags.pentaryn-senses.claims.gone.<at>` on the Light item); a delete the other tab
+made first (a square, an old summon token) counts as done.
 
 ## Extending
 
 - **A light source:** a `LIGHT_PROFILES` row (and an `ALIASES` spelling) in `core/light.mjs`, plus a
-  row in `test/light-core.test.mjs`.
+  row in `test/light-core.test.mjs`. If the item ships without a way to light it (as the torch does),
+  add its key to `ACTIVITY_PROFILES` there too, so `setupLight()` and the on-create hook give it the
+  "Light" activity, and to the expected list in `test/activity-profiles.test.mjs`.
+- **A Light action** (prompt button, spell-card button): a row in `LIGHT_ACTIONS` in `light-ui.mjs`
+  (`dialog` / `card` say where it shows; `handler` names light.mjs's action), its label in
+  `lang/en.json`, and the expected table in `test/light-actions.test.mjs`.
 - **A feature:** a file exporting `install(reg, ctx)` / `uninstall()`, added to `FEATURES` in
   `senses.mjs`; hooks through `reg.on`, shared state through `ctx.expose`.
 - **An API method:** a row in `api-manifest.mjs`, the function exposed by its feature, the binding
@@ -156,11 +168,12 @@ square creation is not (see the wave-3 report).
 | File | Role |
 |---|---|
 | `senses.mjs` | entry: wiring only |
-| `senses-core.mjs` | pure barrel: constants; re-exports `core/` (`ids`, `util`, `chain`, `light`, `migrate`, `glow`, `inspect`) |
+| `senses-core.mjs` | pure barrel: constants; re-exports `core/` (`ids`, `util`, `hud-dom`, `chain`, `light`, `migrate`, `glow`, `inspect`) |
 | `settings.mjs` | `SETTINGS` and the setting readers |
 | `api-manifest.mjs`, `api.mjs` | API rows; their bindings, `inspect`, `light.status` |
 | `carried.mjs`, `light.mjs`, `chain.mjs`, `glow.mjs`, `migrate.mjs` | features |
-| `light-ui.mjs` | UI: prompt, pick, spell card, inventory row, Token HUD |
+| `light-ui.mjs` | UI: prompt, pick, spell card (both from one `LIGHT_ACTIONS` table), inventory row, Token HUD |
+| `core/hud-dom.mjs` | the one Token HUD button builder (`rootOf`, `hudColumn`, `hudButton`) and tip rule (`setTip`) that `chain.mjs` and `light-ui.mjs` share |
 | `light-adapter.mjs`, `argon.mjs` | adapters: documents → plain data; `ui.ARGON` |
 | `lib/` | vendored kit — never edited here |
 

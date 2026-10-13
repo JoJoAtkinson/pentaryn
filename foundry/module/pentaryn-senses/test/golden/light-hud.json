@@ -5,7 +5,7 @@
       "class": "control-icon ps-chain-btn",
       "type": "button",
       "data": {
-        "tooltip": "Break chain"
+        "tooltipText": "Break chain"
       },
       "attrs": {
         "aria-label": "Break chain"
@@ -17,7 +17,7 @@
       "class": "control-icon ps-light-end",
       "type": "button",
       "data": {
-        "tooltip": "End light"
+        "tooltipText": "End light"
       },
       "attrs": {
         "aria-label": "End light"

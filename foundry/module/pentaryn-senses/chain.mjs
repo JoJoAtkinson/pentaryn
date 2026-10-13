@@ -21,9 +21,10 @@
  */
 
 import {
-  MODULE, FLAGS, readChain, chainPairs, linksTouching, chainThickness, resolveTokenRef, linkSpriteSpecs, unsetPath,
+  MODULE, FLAGS, readChain, chainPairs, linksTouching, chainThickness, resolveTokenRef, linkSpriteSpecs, unsetPath, hudColumn, hudButton,
 } from "./senses-core.mjs";
 import { isAnyGM } from "./lib/election.mjs";
+import { makeLog } from "./lib/log.mjs";
 
 const TEX = `modules/${MODULE}/assets/chain-link.webp`;
 const TILE_H = 96; // px height of the source tile
@@ -34,7 +35,10 @@ const state = { layer: null, tex: null, loading: null, queued: 0, hooks: [], reg
 /** The sprites on the layer, per pair (finding -20): updated in place, rebuilt for a new layer or texture. */
 const drawn = { layer: null, tex: null, sprites: new Map() };
 
-const warn = (label, err) => console.warn(`${MODULE} | chain ${label}`, err);
+/** The kit log: the entry's ctx.log once installed (senses-R6). */
+let log = makeLog(MODULE);
+
+const warn = (label, err) => log.warn(`chain ${label}`, err);
 
 /* -------------------------------------------- */
 /*  Data                                        */
@@ -111,7 +115,7 @@ function texture() {
       .then(tex => {
         state.tex = tex ?? null;
         if (tex?.baseTexture) tex.baseTexture.wrapMode = PIXI.WRAP_MODES.REPEAT;
-        if (!tex) console.warn(`${MODULE} | chain texture missing: ${TEX}`);
+        if (!tex) log.warn(`chain texture missing: ${TEX}`);
       })
       .catch(e => warn("texture", e))
       .finally(() => {
@@ -250,32 +254,20 @@ export function paint(pairs) {
 /*  Token HUD — GM only                         */
 /* -------------------------------------------- */
 
-function hudButton(col, cls, icon, tip, onClick) {
-  const btn = document.createElement("button");
-  btn.type = "button";
-  btn.className = `control-icon ${cls}`;
-  btn.dataset.tooltip = tip;
-  btn.setAttribute("aria-label", tip);
-  btn.innerHTML = `<i class="${icon}"></i>`;
-  btn.addEventListener("click", ev => {
-    ev.preventDefault();
-    ev.stopPropagation();
-    Promise.resolve(onClick()).catch(e => warn("hud click", e));
-  });
-  col.appendChild(btn);
-}
+/** One chain HUD button (core/hud-dom.mjs); a failed click logs `chain hud click`. */
+const chainButton = (col, icon, tip, onClick) =>
+  hudButton(col, { cls: "ps-chain-btn", icon, tip, onClick, onError: e => warn("hud click", e) });
 
 function injectHUD(app, element) {
   if (!isAnyGM()) return;
   const doc = app?.object?.document ?? app?.document ?? null;
   if (!doc?.id || !doc.parent) return;
-  const root = element instanceof HTMLElement ? element : element?.[0];
-  const col = root?.querySelector(".col.right") ?? root?.querySelector(".right");
-  if (!col || col.querySelector(".ps-chain-btn")) return;
+  const col = hudColumn(element, "ps-chain-btn");
+  if (!col) return;
 
   const touching = linksTouching(chainPairs(doc.parent.tokens.contents), doc.id);
   if (touching.length || readChain(doc)) {
-    hudButton(col, "ps-chain-btn", "fa-solid fa-link-slash", _loc("PENTARYN_SENSES.Chain.Break"), async () => {
+    chainButton(col, "fa-solid fa-link-slash", _loc("PENTARYN_SENSES.Chain.Break"), async () => {
       const n = await breakChain(doc);
       if (n) ui.notifications.info(_loc("PENTARYN_SENSES.Chain.Breaks", { name: doc.name }));
       app.render?.();
@@ -285,7 +277,7 @@ function injectHUD(app, element) {
   const targets = [...(game.user.targets ?? [])].filter(t => t?.document?.id !== doc.id && t?.document?.parent === doc.parent);
   if (targets.length !== 1) return;
   const anchor = targets[0].document;
-  hudButton(col, "ps-chain-btn", "fa-solid fa-link", _loc("PENTARYN_SENSES.Chain.LinkTo", { anchor: anchor.name }), async () => {
+  chainButton(col, "fa-solid fa-link", _loc("PENTARYN_SENSES.Chain.LinkTo", { anchor: anchor.name }), async () => {
     if (await link(doc, anchor)) ui.notifications.info(_loc("PENTARYN_SENSES.Chain.Linked", { name: doc.name, anchor: anchor.name }));
     app.render?.();
   });
@@ -314,6 +306,7 @@ const exposed = { link, break: breakChain, links, repaint: schedule };
 /** FEATURE: called synchronously by the entry, at import. */
 export function install(reg, ctx) {
   state.reg = reg;
+  log = ctx.log;
   ctx.expose({ chain: exposed });
 
   on("canvasTearDown", () => {
