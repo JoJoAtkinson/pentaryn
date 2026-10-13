@@ -158,6 +158,12 @@ carrier walks (`carrier ids unreadable`), a carrier's unreadable lore, a pinned 
 and a card's screen point off-stage. Each keeps its old fallback, so nothing on screen changes.
 ties-ui-rob-6.
 
+Fixed (declared): the inspect eye, Study, Lore, Mark as learned, Tell them and Release buttons run
+through one `guardClick` (`core/html.mjs`) — disabled while their write runs, and enabled again when it
+ends. A write that throws now logs `pentaryn-ties | <action>` (error) and shows "That didn't go through
+— see the console." instead of leaving the button dead with an unprefixed unhandled rejection. The HUD
+eye is no longer left disabled after a finished inspection. ties-ui-rob-7.
+
 ## 0.19.4 (2026-10-10, usability run, Area 7 re-run)
 
 - **The inspect window's Share switches are the table's PCs only** (`tablePCs`): each player's

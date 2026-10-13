@@ -70,8 +70,8 @@ test("settings and keybindings: every name/hint/choice key is in the language fi
   assert.equal(keys.length, 24); // 5 settings × name+hint, 2 choices, 6 keybindings × name+hint
 });
 
-test("the language file: 536 flat keys (473 + 60 from ties-44 + 3 from ties-ui-rob-4), every value a string", () => {
-  assert.equal(Object.keys(LANG).length, 536);
+test("the language file: 537 flat keys (473 + 60 from ties-44 + 3 from ties-ui-rob-4 + 1 from ties-ui-rob-7), every value a string", () => {
+  assert.equal(Object.keys(LANG).length, 537);
   assert.ok(Object.values(LANG).every(v => typeof v === "string"));
   assert.ok(Object.keys(LANG).every(k => k.startsWith("PENTARYN_TIES.")));
   assert.equal(F.utilsSource === "foundry" || process.env.PENTARYN_TEST_SHIMS === "1", true);

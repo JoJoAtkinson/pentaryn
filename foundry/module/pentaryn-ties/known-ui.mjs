@@ -40,7 +40,7 @@ import {
 } from "./known-core.mjs";
 import { studyStateFor, requestStudy, kindDialog, loreStateFor, requestLore, kindActorOf, grantKind as releaseKind } from "./study.mjs";
 import { attributeIdsOf, registry as registryOf } from "./attributes.mjs";
-import { esc, bindRowToggle, bindSummary, makeOpenState, notesPreview, notesProse, bindNotesAutosave, replaceSummary, keyLabel, FALLBACK_ART } from "./core/html.mjs";
+import { esc, bindRowToggle, bindSummary, makeOpenState, notesPreview, notesProse, bindNotesAutosave, replaceSummary, keyLabel, FALLBACK_ART, guardClick } from "./core/html.mjs";
 import { makeLog } from "./lib/log.mjs";
 import { categoriesFor, categoryLabel, readKnown, hideKnown, addKnown, setKnownField, notebookActor } from "./known-data.mjs";
 
@@ -58,6 +58,8 @@ export {
 } from "./known-data.mjs";
 
 const log = makeLog(MODULE);
+/** A click whose write throws: the console line and the toast (ties-ui-rob-7). */
+const CLICK = { log, notify: () => ui.notifications?.error(_loc("PENTARYN_TIES.notify.clickFailed")) };
 
 /**
  * The tab id, exported so the entry point and the "open this entry" path cannot drift apart:
@@ -635,12 +637,14 @@ export function bindKnown(root, actor, rerender = () => {}) {
    * spent. A repaint conditional on the answer would be the answer.
    */
   root.querySelectorAll('[data-action="study"]').forEach(btn => {
-    btn.addEventListener("click", async () => {
+    btn.addEventListener("click", () => {
       const subject = game.actors?.get(btn.dataset.id);
       if (!subject) return;
-      btn.disabled = true; // one gesture, one roll — a double-click must not queue two
-      await requestStudy(actor, subject);
-      rerender();
+      // one gesture, one roll — disabled while it runs, so a double-click cannot queue two
+      return guardClick("study", btn, async () => {
+        await requestStudy(actor, subject);
+        rerender();
+      }, CLICK);
     });
   });
 
@@ -650,12 +654,14 @@ export function bindKnown(root, actor, rerender = () => {}) {
    * this client looking identical — one fewer row on offer, nothing else.
    */
   root.querySelectorAll('[data-action="lore"]').forEach(btn => {
-    btn.addEventListener("click", async () => {
+    btn.addEventListener("click", () => {
       const subject = game.actors?.get(btn.dataset.id);
       if (!subject) return;
-      btn.disabled = true; // one gesture, one roll — a double-click must not queue two
-      await requestLore(actor, subject, btn.dataset.lore);
-      rerender();
+      // one gesture, one roll — disabled while it runs, so a double-click cannot queue two
+      return guardClick("lore", btn, async () => {
+        await requestLore(actor, subject, btn.dataset.lore);
+        rerender();
+      }, CLICK);
     });
   });
 

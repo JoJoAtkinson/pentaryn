@@ -37,7 +37,7 @@
       "preventDefault",
       "stopPropagation"
     ],
-    "disabled": true,
+    "disabled": false,
     "calls": [
       {
         "op": "ChatMessage.create",

@@ -13,9 +13,12 @@ import { openPreview } from "./preview-app.mjs";
 import { openLook } from "./look-app.mjs";
 import { AttributeReview, openReview } from "./review-ui.mjs";
 import { inspect } from "./study.mjs";
+import { guardClick } from "./core/html.mjs";
 import { makeLog } from "./lib/log.mjs";
 
 const log = makeLog(MODULE);
+/** A click whose write throws: the console line and the toast (ties-ui-rob-7). */
+const CLICK = { log, notify: () => ui.notifications?.error(_loc("PENTARYN_TIES.notify.clickFailed")) };
 
 /**
  * The Token HUD button — the discoverable half of the pair.
@@ -84,13 +87,15 @@ function injectTieHUD(app, element) {
     eye.dataset.tooltip = game.i18n.format("PENTARYN_TIES.known.inspect.tip", { name: token.name });
     eye.setAttribute("aria-label", look);
     eye.innerHTML = '<i class="fa-solid fa-eye"></i>';
-    eye.addEventListener("click", async ev => {
+    eye.addEventListener("click", ev => {
       ev.preventDefault();
       ev.stopPropagation();
-      eye.disabled = true; // one gesture, one cascade — a double-click must not queue two
-      const subject = token.actor ?? game.actors.get(token.document.actorId);
-      if (!game.user?.isGM) openLook(who, subject); // the player's page opens before the dice
-      await inspect(who, subject);
+      // one gesture, one cascade — the eye is disabled while it runs, so a double-click cannot queue two
+      return guardClick("inspect", eye, async () => {
+        const subject = token.actor ?? game.actors.get(token.document.actorId);
+        if (!game.user?.isGM) openLook(who, subject); // the player's page opens before the dice
+        await inspect(who, subject);
+      }, CLICK);
     });
     col.appendChild(eye);
   }

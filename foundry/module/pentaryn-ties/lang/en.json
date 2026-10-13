@@ -53,7 +53,8 @@
       "noTieHere": "Nothing recorded between you and them.",
       "alreadyPinned": "{name}'s card is already up — you dragged it, so it closes with its ✕.",
       "allUp": "{name}: every card is already up — the rest are pinned.",
-      "dialogUnavailable": "The tie dialog could not be opened — see the console."
+      "dialogUnavailable": "The tie dialog could not be opened — see the console.",
+      "clickFailed": "That didn't go through — see the console."
     },
     "worn": {
       "hudTooltip": "Worn — mark who is inside this body tonight (GM only)",

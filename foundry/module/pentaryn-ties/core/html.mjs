@@ -115,6 +115,25 @@ export function bindNotesAutosave(textarea, save, { ms = 700 } = {}) {
 }
 
 /**
+ * An async click that writes: hold `btn` disabled while `fn` runs — a double-click must not queue a
+ * second write — and enable it again in `finally`, so a write that throws does not leave a dead
+ * button. A throw goes to `log.error(op, err)` and `notify(op, err)` (the caller's toast); the
+ * handlers used to await with no catch and lost both (ties-ui-rob-7). Pure: the caller hands in its
+ * logger and toast.
+ */
+export async function guardClick(op, btn, fn, { log, notify } = {}) {
+  btn.disabled = true;
+  try {
+    await fn();
+  } catch (err) {
+    log?.error(op, err);
+    notify?.(op, err);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+/**
  * Swap a row's `.pt-summary` for fresh markup in place — a full repaint would tear the caret out of
  * the textarea still being typed in — and hand the new node to `rebind`. Returns it, or null when the
  * row has no summary.

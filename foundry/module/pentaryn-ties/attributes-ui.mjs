@@ -45,10 +45,12 @@ import { grantedRegion } from "./known-ui.mjs";
 // facts are handed over by the GM via "Mark as learned", never rolled for from the player's side.
 import { kindActorOf, attrLoreStateFor, releaseHeldAttribute } from "./study.mjs";
 import { grantsForEntry, GRANTED_FLAG, HELP_SCALE, CARRIED_SCALE, helpFor, rollableLore, LORE_FLAG } from "./known-core.mjs";
-import { esc, bindRowToggle, makeOpenState } from "./core/html.mjs";
+import { esc, bindRowToggle, makeOpenState, guardClick } from "./core/html.mjs";
 import { makeLog } from "./lib/log.mjs";
 
 const log = makeLog(MODULE);
+/** A click whose write throws: the console line and the toast (ties-ui-rob-7). */
+const CLICK = { log, notify: () => ui.notifications?.error(_loc("PENTARYN_TIES.notify.clickFailed")) };
 
 /** The help-scale labels (literal keys, so the i18n gate sees each one). */
 const HELP_LABEL = Object.freeze({
@@ -728,16 +730,17 @@ export function bindAttributes(root, actor, rerender = () => {}, viewerArg = nul
    */
   // double-quoted so the test DOM (fixtures/dom.mjs) binds it too and the goldens press it for real
   for (const btn of box.querySelectorAll('[data-action="attr-learned"]')) {
-    btn.addEventListener("click", async () => {
+    btn.addEventListener("click", () => {
       if (!game.user?.isGM || !viewer) return;
-      btn.disabled = true;
-      const attrId = btn.dataset.attr;
-      const loreId = btn.dataset.lore;
-      const row = (describeAttribute(attrId)?.lore ?? []).find(r => r.id === loreId);
-      if (row && (await markLearned(viewer, attrId, [loreId])).ok) {
-        ui.notifications.info(_loc("PENTARYN_TIES.attributes.learnedDone", { label: row.label, who: viewer.name }));
-      }
-      rerender();
+      return guardClick("attr-learned", btn, async () => {
+        const attrId = btn.dataset.attr;
+        const loreId = btn.dataset.lore;
+        const row = (describeAttribute(attrId)?.lore ?? []).find(r => r.id === loreId);
+        if (row && (await markLearned(viewer, attrId, [loreId])).ok) {
+          ui.notifications.info(_loc("PENTARYN_TIES.attributes.learnedDone", { label: row.label, who: viewer.name }));
+        }
+        rerender();
+      }, CLICK);
     });
   }
 
@@ -822,24 +825,27 @@ export function bindAttributes(root, actor, rerender = () => {}, viewerArg = nul
    */
   bindWorldTree(box);
 
-  for (const btn of box.querySelectorAll("[data-action='tell-one']")) {
-    btn.addEventListener("click", async () => {
+  // double-quoted so the test DOM binds them too
+  for (const btn of box.querySelectorAll('[data-action="tell-one"]')) {
+    btn.addEventListener("click", () => {
       const who = game.actors?.get(btn.closest(".pt-world")?.dataset.character ?? "");
       if (!who) return;
-      btn.disabled = true;
-      await grantKnowledge(who, btn.dataset.id);
-      rerender();
+      return guardClick("tell-one", btn, async () => {
+        await grantKnowledge(who, btn.dataset.id);
+        rerender();
+      }, CLICK);
     });
   }
 
-  for (const btn of box.querySelectorAll("[data-action='release-one']")) {
-    btn.addEventListener("click", async () => {
+  for (const btn of box.querySelectorAll('[data-action="release-one"]')) {
+    btn.addEventListener("click", () => {
       const who = game.actors?.get(btn.closest(".pt-world")?.dataset.character ?? "");
       if (!who) return;
-      btn.disabled = true;
-      const freed = await releaseHeldAttribute(who, btn.dataset.id);
-      if (!freed) ui.notifications?.warn(_loc("PENTARYN_TIES.attributes.releaseNone"));
-      rerender();
+      return guardClick("release-one", btn, async () => {
+        const freed = await releaseHeldAttribute(who, btn.dataset.id);
+        if (!freed) ui.notifications?.warn(_loc("PENTARYN_TIES.attributes.releaseNone"));
+        rerender();
+      }, CLICK);
     });
   }
 
