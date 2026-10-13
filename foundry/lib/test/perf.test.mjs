@@ -1,5 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { coalesce, memo, perFrame } from "../perf.mjs";
 
 test("memo caches per key, honours ttl and max, and clears", () => {
@@ -15,6 +17,30 @@ test("memo caches per key, honours ttl and max, and clears", () => {
   assert.equal(f.size(), 2);
   f.clear();
   assert.equal(f.size(), 0);
+});
+
+// kit-perf-2 (final review 2026-10-12): memo holds its keys strongly in a Map and evicts in
+// insertion order (FIFO), default max 500. Ruling: no code change until a consumer exists — the
+// memo JSDoc and the README perf.mjs row must say callers key by a string (uuid/id) via keyFn,
+// never by a placeable, and that eviction is FIFO with a max of 500.
+test("kit-perf-2: memo's JSDoc and the README perf.mjs row say key by a string via keyFn, never a placeable; FIFO, max 500", () => {
+  const src = readFileSync(fileURLToPath(new URL("../perf.mjs", import.meta.url)), "utf8");
+  const doc = src.slice(0, src.indexOf("export function memo")).split("/**").pop();
+  const readme = readFileSync(fileURLToPath(new URL("../README.md", import.meta.url)), "utf8");
+  const row = readme.split("\n").find(l => l.startsWith("| `perf.mjs` |"));
+  assert.ok(row, "README.md has no perf.mjs row");
+  for (const [where, text] of [["memo JSDoc", doc], ["README perf.mjs row", row]]) {
+    for (const needle of ["string", "keyFn", "never a placeable", "FIFO", "500"]) {
+      assert.ok(text.includes(needle), `${where} does not mention "${needle}"`);
+    }
+  }
+  // and the documented behaviour is the real one: FIFO by first insertion — a hit does not refresh
+  let runs = 0;
+  const f = memo(k => (runs++, k), undefined, { max: 2 });
+  f("a"); f("b"); f("a"); f("c");
+  assert.equal(runs, 3);
+  f("a");
+  assert.equal(runs, 4, "a hit refreshed 'a' — eviction is no longer FIFO; fix the docs");
 });
 
 test("coalesce shares the in-flight promise, then starts fresh", async () => {

@@ -9,8 +9,13 @@
  */
 
 /**
+ * Key by a string: pass a keyFn that returns a uuid or id, never a placeable — the cache is a
+ * plain Map, so an object key is held strongly and outlives a canvas redraw. Eviction is FIFO
+ * (oldest first insertion; a hit does not refresh it) once more than `max` keys are held,
+ * default max 500. (1.2.0 kit-perf-2)
+ *
  * @param {Function} fn
- * @param {(...args) => *} [keyFn]  default: the first argument
+ * @param {(...args) => *} [keyFn]  default: the first argument — pass one returning a string
  * @param {{ ttlMs?: number, max?: number, now?: () => number }} [opts]
  */
 export function memo(fn, keyFn = (...args) => args[0], { ttlMs = Infinity, max = 500, now = () => Date.now() } = {}) {
