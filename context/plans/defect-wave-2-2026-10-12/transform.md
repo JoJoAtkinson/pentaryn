@@ -83,3 +83,24 @@ GM tab only, ZZ scratch docs only (create them, delete them after). No restart n
 9. **Chalice (EC-2, lens-rerun).** ZZ Druid in Starry Form (Chalice) casts Cure Wounds from a slot:
    the Chalice button pulses. Swap to Archer and back: no pulse. Cast again, then advance one
    combat round: the pulse ends.
+
+## FIX-3 forward fix (2026-10-13)
+
+The FIX-2 live check failed items 1, 6, 7 and 9. One forward fix, branch
+`fix2/transform-live-2026-10-13` (merges 61b1bd9e and 42c9cae6), every change [declared]:
+
+| item | live failure | cause | fix | commits |
+|---|---|---|---|---|
+| 1 | A 0 HP auto-revert of a Bloodied form posted no return line ("_id [dnd5ebloodied000] already exists") | the revert copied the form's dnd5e Bloodied back with `keepId` while dnd5e was creating its own on the druid from the mirrored HP | `carriedConditions` leaves Bloodied to dnd5e, like exhaustion | 8e4ae4f7, 81d370b6 |
+| 6 | A linked form had no Argon pips in combat (`maxActions` null) | the combatant keeps the druid's actorId, so `form.inCombat` is false | the Action/Bonus/Reaction/Special panels of a linked form count it in combat while the viewed combat seats its token, wrapping pentaryn-combat's own Action-panel override | 8e4ae4f7, 81d370b6, 2df99b5f, cc6de518 |
+| 7 | An unlinked druid's revert item kept the base actor's portrait | `metaFor` read `host.img` | an unlinked druid's name and image come from its token | 8e4ae4f7, 81d370b6 |
+| 9 | A Starry swap to Archer and back left the Chalice pulsing | the non-recursive Starry update reaches the hook as one ForcedReplacement, which `flattenObject` keeps as a leaf | the Chalice offer reads the effect's own constellation after the update | 8e4ae4f7, 81d370b6 |
+
+Live re-check (GM tab, ZZ scratch scene, druid and combat, all deleted afterwards): item 1 passes
+(20 then 0 HP, and 99 straight to 0: one revert, one return line, no claim flag, no console error).
+Item 6 passes with pentaryn-combat enabled: after a new round, a Wild Shape on the druid's turn shows
+pips on all four panels of the form, with the Bonus pip used. The pentaryn-combat-disabled variant
+was not run, because switching a module off changes the world's module configuration; the
+"EC-4: with pentaryn-combat absent" unit test covers it. Item 7 passes: "Return to ZZ Thornback"
+with icons/svg/cowled.svg. Item 9 passes: the pulse comes on, ends after Archer and back, and ends
+again after a combat round.
