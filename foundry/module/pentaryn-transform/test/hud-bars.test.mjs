@@ -566,6 +566,64 @@ test("EC-2: a Chalice offer ends when the constellation changes — swap to the 
   assert.equal(lit(), false, "EC-2: the offer must not survive a change of constellation");
 });
 
+test("[declared] FIX-3 live item 9 (EC-2): a constellation change written non-recursively (flags as one v14 ForcedReplacement) ends the offer", async () => {
+  const { talo } = fresh();
+  await S.assumeStarry(talo, "chalice");
+  ui.ARGON._actor = talo;
+  const p = A.panel("DND5E.BonusAction", [slot()]);
+  fire(p, talo);
+  await flush();
+  const lit = () => p._buttons.some(b => b.element.classList.contains("ptf-chalice-ready"));
+  Hooks.callAll("dnd5e.postUseActivity", talo.items.get(IDS.cure).system.activities.get("cw1"), {}, {});
+  assert.equal(lit(), true);
+  // applyStarry's update({ ... }, { diff: false, recursive: false }): core v14 hands updateActiveEffect
+  // the whole flags object wrapped in one ForcedReplacement, which flattenObject keeps as a leaf.
+  const effect = talo.effects.get(S.STARRY_EFFECT_ID);
+  effect.flags[MODULE].starry.constellation = "archer";
+  const flags = new F.Ops.ForcedReplacement(foundry.utils.deepClone(effect.flags));
+  Hooks.callAll("updateActiveEffect", effect, { _id: effect.id, flags }, { diff: false, recursive: false }, IDS.gm);
+  effect.flags[MODULE].starry.constellation = "chalice";
+  Hooks.callAll("updateActiveEffect", effect, { _id: effect.id, flags: new F.Ops.ForcedReplacement(foundry.utils.deepClone(effect.flags)) },
+    { diff: false, recursive: false }, IDS.gm);
+  fire(p, talo);
+  await flush();
+  assert.equal(lit(), false, "EC-2: a swap to the Archer and back leaves the Chalice dark");
+});
+
+test("[declared] FIX-3 live item 6 (EC-4): a linked druid's form whose token holds the combat seat gets Argon's in-combat pips", async () => {
+  const { talo } = fresh({ revertItem: true });
+  const wolf = await T.shift(talo, "p1");
+  const tokenId = talo._tokens[0].id;
+  // dnd5e swaps the token onto the form; the combatant keeps the druid's actorId, so wolf.inCombat is false.
+  const seat = { tokenId, actorId: talo.id, token: { id: tokenId, actorId: wolf.id } };
+  const combat = { id: "c1", started: true, round: 1, turn: 0, combatant: seat, combatants: new StubCollection() };
+  combat.combatants.set("cb1", seat);
+  game.combats.set("c1", combat);
+  F.game.combat = combat;
+  wolf._tokens = talo._tokens;
+  T.markBonusUsed(wolf);
+  ui.ARGON._actor = wolf;
+  ui.ARGON._token = { id: tokenId };
+  const argonPips = p => Object.defineProperty(p, "actor", { get: () => ui.ARGON._actor, configurable: true });
+  const panels = ["DND5E.Action", "DND5E.BonusAction", "DND5E.Reaction", "DND5E.Special"].map(l => argonPips(A.panel(l, [slot()])));
+  // Argon's dnd5e panels: maxActions = actor.inCombat ? 1 : null (on the class, not the instance).
+  for (const p of panels) Object.setPrototypeOf(p, { get maxActions() { return this.actor?.inCombat ? 1 : null; } });
+  for (const p of panels) fire(p, wolf);
+  await flush();
+  assert.deepEqual(panels.map(p => p.maxActions), [1, 1, 1, 1], "the form's token is in the viewed combat");
+  const bonus = panels[1];
+  assert.equal(bonus.isActionUsed, true, "the HUD Wild Shape's Bonus Action shows used");
+  assert.ok(bonus.actionUse >= 2, "pips settled after the count changed");
+  // Combat over: back to Argon's own answer.
+  F.game.combat = null;
+  assert.deepEqual(panels.map(p => p.maxActions), [null, null, null, null]);
+  // Not a form, or another panel (Legendary): untouched.
+  const plain = argonPips(A.panel("DND5E.LegendaryAction.Label", [slot()]));
+  fire(plain, wolf);
+  assert.equal(Object.hasOwn(plain, "maxActions"), false);
+  game.combats.clear();
+});
+
 test("Chalice: not in the Chalice constellation → nothing; another actor's offer is not painted on this HUD; a failure warns", async () => {
   const { talo } = fresh();
   await S.assumeStarry(talo, "archer");

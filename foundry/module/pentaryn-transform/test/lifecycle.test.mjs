@@ -63,6 +63,29 @@ test("updateActor: a Wild Shape form at 0 HP reverts (zeroHP line) on the runner
   assert.equal(ops("revertOriginalForm").length, 1, "the form is gone: exists() stops a second revert");
 });
 
+test("[declared] FIX-3 live item 1: a form at 0 HP carrying dnd5e's Bloodied reverts with one return line; Bloodied is not copied back", async () => {
+  const { talo, wolf } = await shifted();
+  await wolf.createEmbeddedDocuments("ActiveEffect", [{ _id: "dnd5ebloodied000", name: "Bloodied", statuses: ["bloodied"] }]);
+  // dnd5e puts its own Bloodied on the druid while the revert mirrors the HP; that create is still
+  // on its way to the server when the carry reads the druid's effects, so a keepId copy collides there.
+  const create = talo.createEmbeddedDocuments;
+  talo.createEmbeddedDocuments = async (type, list, options) => {
+    const dup = list.find(d => d._id === "dnd5ebloodied000");
+    if (dup) throw new Error(`The _id [${dup._id}] already exists within the parent collection: Actor [${talo.id}] effects`);
+    return create(type, list, options);
+  };
+  F.calls.length = 0;
+  F.chat.length = 0;
+  F.console.length = 0;
+  wolf.system.attributes.hp.value = 0;
+  Hooks.callAll("updateActor", wolf, { system: { attributes: { hp: { value: 0 } } } }, {}, "u");
+  await settle();
+  assert.equal(ops("revertOriginalForm").length, 1);
+  assert.deepEqual(lines(), ["Talo drops to 0 HP and returns to normal form."]);
+  assert.deepEqual(F.console.map(c => c.slice(0, 2)), [], "no 'auto-revert failed'");
+  talo.createEmbeddedDocuments = create;
+});
+
 test("updateActor at 0 HP: a Polymorph form is left to dnd5e", async () => {
   const { wolf } = await shifted();
   wolf.flags.dnd5e.transformOptions = { preset: "polymorph" };
