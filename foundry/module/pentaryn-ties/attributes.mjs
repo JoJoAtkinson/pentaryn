@@ -52,6 +52,7 @@ import {
   readLore,
   withAncestors,
   ancestorsOf,
+  indexRegistry,
   wouldCycle,
   KNOWLEDGE_SETTING,
   readKnowledge,
@@ -1052,13 +1053,14 @@ export function brokenAncestry(actor, kindResolver = null) {
   // the resolver is injected, never imported — `study.mjs` imports THIS file, so reaching back
   // for `kindActorOf` would close a cycle
   const has = new Set(attributeIdsOf(actor, kindResolver));
+  const index = indexRegistry(reg); // one index per call, not one per carried id (ties-core-U5)
   const bad = [];
   for (const id of has) {
     if (!live.has(id) && !derivedNamespace(id)) {
       bad.push({ id, missing: null, dangling: true });
       continue;
     }
-    for (const parent of ancestorsOf(id, reg)) {
+    for (const parent of ancestorsOf(id, index)) {
       if (!has.has(parent)) bad.push({ id, missing: parent });
     }
   }
@@ -1078,12 +1080,13 @@ export function staleCarriers(ref) {
   const reg = registry();
   const id = resolveAttrRef(ref, reg).id;
   if (!id) return [];
-  const wanted = new Set(withAncestors(id, reg));
+  const index = indexRegistry(reg); // one index per sweep, not one per actor link (ties-core-U5)
+  const wanted = new Set(withAncestors(id, index));
   const out = [];
   for (const actor of game.actors?.contents ?? []) {
     const authored = flagList(actor, ATTRIBUTES_FLAG);
     if (!authored.includes(id)) continue;
-    const extra = authored.filter(x => !wanted.has(x) && ancestorsOf(x, reg).length === 0 && x !== id);
+    const extra = authored.filter(x => !wanted.has(x) && ancestorsOf(x, index).length === 0 && x !== id);
     const missing = [...wanted].filter(x => !authored.includes(x));
     if (extra.length || missing.length) out.push({ actor, extra, missing });
   }

@@ -154,6 +154,10 @@ it ran in every viewer's sheet; it now goes to `data-tooltip-text`. Icon and col
 Pinned by `test/review-mark-tip-text.test.mjs`; the `canvas-item-marks` and `declared-b6-unescaped`
 goldens' dataset key is now `tooltipText`. ties-core-U4.
 
+Fixed (declared, no table-visible change): the broken-ancestry check (`brokenAncestry`) and the
+re-parenting sweep (`staleCarriers`) index the registry once per call instead of once per id they
+check; same rows. Pinned by `test/review-ancestry-index.test.mjs`. ties-core-U5.
+
 ## 0.19.4 (2026-10-10, usability run, Area 7 re-run)
 
 - **The inspect window's Share switches are the table's PCs only** (`tablePCs`): each player's
