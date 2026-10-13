@@ -682,7 +682,7 @@ def sync(name: str) -> int:
     """Prove the sources, then copy the module into Foundry's Data/modules."""
     spec = cfg.MODULES[name]
     if not spec.syncable:
-        # the CLI never offers it; this guards a direct call (EXT-6)
+        # the CLI parses every registered name, so this is the refusal it reaches (EXT-6)
         _say(f"✗ {name} is not synced by module-sync — the actor pipeline installs it; "
              "use `importer-install`")
         return FAIL

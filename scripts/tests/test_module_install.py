@@ -489,16 +489,30 @@ def test_syncable_is_a_spec_field_and_the_importer_row_is_off_ext_6():
     assert all(s.syncable for k, s in cfg.MODULES.items() if k != "importer")
 
 
-def test_module_sync_choices_come_from_the_spec_not_the_key_ext_6(monkeypatch):
+def test_module_sync_choices_are_every_registered_module_ext_6(monkeypatch):
+    """Defect wave 3: the choices used to leave the non-syncable ones out, so
+    `module-sync importer` died at argparse ("invalid choice") and never reached
+    sync()'s own refusal. Every registered name parses; sync() decides (spec.syncable)."""
     from scripts.foundry.ops import cli
     monkeypatch.setitem(cfg.MODULES, "zz", cfg.ModuleSpec("pentaryn-zz", check="parse",
                                                           syncable=False))
     sub = next(a for a in cli.build_parser()._subparsers._actions if getattr(a, "choices", None))
     choices = next(a.choices for a in sub.choices["module-sync"]._actions if a.dest == "module")
-    assert "zz" not in choices and "importer" not in choices
-    assert "ties" in choices
+    assert "zz" in choices and "importer" in choices and "ties" in choices
     check = next(a.choices for a in sub.choices["module-check"]._actions if a.dest == "module")
     assert "zz" in check and "importer" in check, "module-check still checks every module"
+
+
+def test_cli_module_sync_importer_reaches_the_coded_refusal_ext_6(monkeypatch, capsys):
+    """`python -m scripts.foundry.ops module-sync importer` (and `make foundry-importer-sync`)
+    gets the ✗ line pointing to importer-install and exit 1, not an argparse usage error."""
+    from scripts.foundry.ops import cli
+    monkeypatch.setattr(modules, "check", lambda name: pytest.fail("a refused sync runs no gates"))
+    monkeypatch.setattr(modules, "install", lambda *a, **k: pytest.fail("a refused sync installs nothing"))
+    assert cli.main(["module-sync", "importer"]) == 1
+    out = capsys.readouterr()
+    assert "✗ importer is not synced by module-sync" in out.out
+    assert "importer-install" in out.out and "invalid choice" not in out.err
 
 
 def test_sync_refuses_a_non_syncable_spec_ext_6(module, monkeypatch, capsys):

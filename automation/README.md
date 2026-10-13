@@ -35,7 +35,7 @@ written, and the notification still fires.
 
 ```bash
 make foundry-admin-push        # secret → Infisical + login keychain
-make foundry-down              # server configuration needs no world active
+make foundry-down              # server configuration needs no world active (also takes the shutdown snapshot, uploaded in the background)
 make foundry-admin-configure   # tell Foundry to use it, and turn UPnP off
 make vtt-update-install        # build the notifier, install both launchd jobs
 python -m scripts.foundry.update.cli notify --demo   # approve the permission prompt

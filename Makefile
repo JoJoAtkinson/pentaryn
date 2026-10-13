@@ -101,10 +101,8 @@ vtt-up: vtt-lock-check foundry-boot foundry-backup-safe foundry-assets-safe foun
 	@echo "  ▸ local:    $(FOUNDRY_URL)"
 	@echo "  ▸ teardown: make vtt-down"
 
-# The shutdown snapshot's tar is built here (Foundry stopped); its upload runs in the
-# background and `make foundry-cloud` shows it. WAIT=1: upload before returning, as before.
+# The shutdown snapshot comes from foundry-down (below), once: vtt-down does not take a second.
 vtt-down: vtt-lock-check tunnel-down foundry-down
-	@$(MAKE) --no-print-directory foundry-backup REASON=shutdown $(if $(WAIT),,BACKGROUND=1)
 	@echo "  ▸ all down"
 
 # Start the app, launch the world, and land in it as GM — no dropdown, no password.
@@ -128,7 +126,12 @@ foundry-boot:
 	@cd $(ROOT) && $(PY) -m scripts.foundry.boot choose $(if $(FROM),--from $(FROM),)
 # PENTARYN_BOOT_DONE: foundry-boot already ran, so service.up() does not ask again.
 foundry-up: foundry-boot ; @export PENTARYN_BOOT_DONE=1; $(OPS) up
-foundry-down:    ; @$(OPS) down
+# Stop the app, then the shutdown snapshot: its tar is built here (Foundry stopped), its upload
+# runs in the background and `make foundry-cloud` shows it. WAIT=1: upload before returning.
+# So every stop backs up — vtt-down, and a restart (foundry-down then foundry-up) — once.
+foundry-down:
+	@$(OPS) down
+	@$(MAKE) --no-print-directory foundry-backup REASON=shutdown $(if $(WAIT),,BACKGROUND=1)
 tunnel-up:       ; @$(OPS) tunnel-up
 tunnel-down:     ; @$(OPS) tunnel-down
 tunnel-logs:     ; @$(OPS) tunnel-logs
@@ -188,8 +191,8 @@ foundry-import:     ; @$(OPS) import
 foundry-clean:      ; @$(OPS) clean
 foundry-clean-only: ; @$(OPS) clean-only
 foundry-verify:     ; @$(OPS) verify
-# The importer's code alone (module-check + install, nothing staged): module-sync refuses it, and
-# foundry-sync stages actors.json with it. There is no foundry-importer-sync.
+# The importer's code alone (module-check + install, nothing staged). foundry-sync stages actors.json
+# with it; foundry-importer-sync (the foundry-%-sync pattern below) only prints module-sync's refusal.
 foundry-importer-install: ; @$(OPS) importer-install
 
 # ─── Foundry ⇄ OneDrive ─────────────────────────────────────────────────
@@ -207,7 +210,7 @@ foundry-assets:
 foundry-assets-safe:
 	@cd $(ROOT) && $(PY) -m scripts.foundry.cloud assets --if-reachable
 
-# BACKGROUND=1 (what vtt-down passes): build the tar, upload it from a detached process.
+# BACKGROUND=1 (what foundry-down passes, so vtt-down too): build the tar, upload it from a detached process.
 foundry-backup:
 	@cd $(ROOT) && $(PY) -m scripts.foundry.cloud backup --reason $(or $(REASON),manual)$(if $(BACKGROUND), --background,)
 
@@ -266,7 +269,17 @@ foundry-module-new:
 	@$(if $(M),,$(error M=<short> is required))$(if $(TITLE),,$(error TITLE="Pentaryn <Title>" is required))
 	@$(OPS) module-new $(M) --title "$(TITLE)" --tier $(if $(TIER),$(TIER),full) $(ARGS)
 # Regenerate the Module APIs table in context/foundry/README.md (check-context fails when stale).
-foundry-module-index: ; @$(OPS) module-index
+# `--check` (or CHECK=1) only reports a stale table. GNU make reads `--check` as its own
+# --check-symlink-times (-L, by unambiguous prefix), so it reaches us only as an L among MAKEFLAGS'
+# short flags. MAKEFLAGS has no one shape (make 3.81: `L`, `nL`, ` --no-print-directory -sL`,
+# `L -- M=x`, a bare `WORLD=x` with no flags at all; 4.x: `L --no-print-directory -- M=x`), so:
+# drop the command-line assignments (they are exactly MAKEOVERRIDES), then look for the L in the
+# short-flag words alone — the first word when it has no dash, and every single-dash word. Long
+# options (--x, --x=y, the bare --) and option arguments (`-I Lib` -> `I Lib`) never count.
+MAKEFLAGS_NO_VARS = $(subst $(MAKEOVERRIDES),,$(MAKEFLAGS))
+MAKE_SHORT_FLAGS = $(filter-out -%,$(firstword $(MAKEFLAGS_NO_VARS))) $(filter-out --%,$(filter -%,$(MAKEFLAGS_NO_VARS)))
+INDEX_CHECK = $(if $(or $(CHECK),$(findstring L,$(MAKE_SHORT_FLAGS))),--check,)
+foundry-module-index: ; @$(OPS) module-index $(INDEX_CHECK)
 # Score against rules C01–C62: every module, or M=<short>; MD=1 for the markdown table.
 foundry-conformance: ; @$(OPS) module-conformance $(if $(M),--module $(M),) $(if $(MD),--markdown,)
 

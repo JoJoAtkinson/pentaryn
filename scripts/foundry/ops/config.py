@@ -120,8 +120,9 @@ class ModuleSpec:
       module.json in the Wave 7 batch; the tuple remains only as a fallback.
 
     `syncable` decides whether `module-sync` may install the module. False keeps it
-    checkable (`module-check`) but out of `module-sync`'s choices, and `modules.sync()`
-    refuses it — the importer, which the actor pipeline installs (EXT-6).
+    checkable (`module-check`); `module-sync <it>` parses, and `modules.sync()` refuses it
+    with a ✗ line naming importer-install — the importer, which the actor pipeline
+    installs (EXT-6).
     """
 
     #: every gate a spec may name — see `modules._CHECKS`
@@ -298,8 +299,8 @@ MODULES = {
         # suite drives the recorder, the queue/relay delivery and the dialog markup in node.
         check=ALL_GATES,
     ),
-    # The actor pipeline stages this one, not module-sync, so it is not in the CLI's
-    # module list — but the static gates are free and it is real code, so it gets them.
+    # The actor pipeline stages this one, not module-sync (which refuses it by name) —
+    # but the static gates are free and it is real code, so it gets them.
     # node-test: test/run.mjs (the blueprint's fixed body) runs the characterisation suites
     # (importer guide step 1.11, items-journal-2; C39).
     "importer": ModuleSpec("pentaryn-importer", check=ALL_GATES, syncable=False),

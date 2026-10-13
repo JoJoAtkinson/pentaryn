@@ -47,7 +47,7 @@ answered, never the value.
 | `make foundry-bundles` | Every local module/system with its fingerprint and size, whether its bundle is in the cloud, then the unreferenced cloud bundles — see [`ops.md`](../../context/foundry/ops.md) §3 |
 | `make foundry-bundles-gc` | List the bundles no retained snapshot references that are older than 7 days; `YES=1` deletes them (every uploading backup runs this sweep anyway) |
 | `make login` | Pick a campaign and a user from an arrow-key menu, land in the world logged in — no dropdown, no password. Alias: `make vtt-login`. Needs the admin password configured; see [`ops.md`](../../context/foundry/ops.md) §2 |
-| `make vtt-down` | Stop both, build the shutdown snapshot — the world (~45 MB) and any module/system bundle the cloud lacks — and upload it in the background (`make foundry-cloud` shows it; `WAIT=1` waits for the upload) |
+| `make vtt-down` | Stop both, build the shutdown snapshot — the world (~45 MB) and any module/system bundle the cloud lacks — and upload it in the background (`make foundry-cloud` shows it; `WAIT=1` waits for the upload). The snapshot is `make foundry-down`'s, so stopping the app alone (or a restart) backs up too, once |
 | `make vtt` | Status of Foundry, tunnel, and public reachability |
 | `make tunnel-setup` | **One-time** — cloudflared login, create tunnel, route DNS |
 | `make tunnel-logs` | Tail the tunnel log |
@@ -63,7 +63,7 @@ answered, never the value.
 | `make foundry-modules-check` | Every registered module, keeps going past a failure; `JSON=1` for `module-check --all --json` |
 | `make foundry-module-new M=<short> TITLE="Pentaryn <Title>"` | Generate a module from the blueprint (`ops module-new` → `blueprint/new_module.py`; `TIER=small`, `ARGS=…`) |
 | `make foundry-conformance [M=<short>] [MD=1]` · `foundry-lib-check` · `foundry-lib-vendor [M=]` | Blueprint scorer, the shared kit's suite, re-vendor the kit (playbook: `context/foundry/addon-blueprint.md`) |
-| `make foundry-module-index` | Regenerate the Module APIs table in `context/foundry/README.md` (`make check-context` fails when it is stale) |
+| `make foundry-module-index` | Regenerate the Module APIs table in `context/foundry/README.md` (`make check-context` fails when it is stale). `--check` (or `CHECK=1`) only reports whether it is current and writes nothing |
 | `make test` | The Python suites (`pytest -q`; `-m 'not repo'` skips the tests that read live repo state) |
 
 Players connect to **<https://vtt.atjoseph.com>**. `cloudflared` runs from a

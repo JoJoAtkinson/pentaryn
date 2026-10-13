@@ -37,7 +37,7 @@ Where this one and `foundry-vtt.md` overlap — the actors import pipeline and i
 | Get **yourself** into the world, no dropdown, no typed password | `make login` — §2's login box |
 | Know if anything's running | `make vtt` — Foundry, tunnel pid, and public reachability, three separate probes |
 | Add art (tokens/maps/tiles/portraits/audio) | Drop `<kind>-<nn>.zip` in `OneDrive/DnD/foundry/assets/`, then `make foundry-assets` (or just `make vtt-up`) |
-| Snapshot the world right now | `make vtt-down` first, then `make foundry-backup` — it **refuses** while the server is up |
+| Snapshot the world right now | `make foundry-down` (or `make vtt-down`) — every stop takes the shutdown snapshot itself, in the background (`WAIT=1` waits). With the server already stopped, `make foundry-backup`; it **refuses** while the server is up |
 | Roll back a broken world | `make foundry-restore` to list, `make foundry-restore SNAP=<name>` to do it. Never silent — see §3 |
 | Boot BOSS (the alt) from the Mac's latest world | `make vtt-up` on BOSS → Enter at the boot question (§3). `FROM=latest` without asking, `FROM=local` to keep BOSS's own |
 | Keep the local world when the cloud is newer | `k` at the boot question (remembered until something newer appears), or `make vtt-up FROM=local` |
@@ -165,7 +165,7 @@ pack (`pentaryn-seafoot-maps.scenes` is unlocked in both worlds).
 
 ```
 make vtt-up      foundry-boot → foundry-backup-safe → foundry-assets-safe → foundry-up → tunnel-up
-make vtt-down    tunnel-down → foundry-down → foundry-backup REASON=shutdown BACKGROUND=1   (WAIT=1: no BACKGROUND)
+make vtt-down    tunnel-down → foundry-down   (foundry-down: ops down → foundry-backup REASON=shutdown BACKGROUND=1; WAIT=1: no BACKGROUND)
 make vtt         status only (alias: vtt-status)
 ```
 
@@ -180,14 +180,20 @@ The order is not arbitrary. Each step needs the previous one's state:
 | 4 | `tunnel-up` | **Last, because this is the step that makes `Data/` public** (§6). Primary host only — on the alt it prints why and exits 0, so Foundry is up with no tunnel. Refuses early if `~/.cloudflared/cert.pem` is missing or the named tunnel doesn't exist → `make tunnel-setup` |
 
 `vtt-down` reverses it exactly: close the public surface first, stop the app, *then* snapshot —
-because the snapshot is the step that requires "stopped".
+because the snapshot is the step that requires "stopped". The snapshot belongs to `foundry-down`
+itself (defect wave 3, 2026-10-13), so **every stop backs up**: `make vtt-down`, `make foundry-down`
+alone, and a restart (`make foundry-down` then `make foundry-up`, or `vtt-down` then `vtt-up`) each take
+exactly one shutdown snapshot — `vtt-down` does not take a second. `foundry-up` takes no backup of its
+own. `vtt-up`'s pre-launch backup (`foundry-backup-safe`) adds none either: while the shutdown upload is
+still running it skips ("that upload holds this world"); once that upload is done it digest-skips the
+unchanged world.
 
-**The upload runs in the background.** `vtt-down` builds the tar while Foundry is stopped (that
+**The upload runs in the background.** `foundry-down` (and so `vtt-down`) builds the tar while Foundry is stopped (that
 part needs "stopped", so it finishes before the command returns — the world tar and a tar of any
 module/system bundle the cloud lacks), then hands the upload (~45 MB + those bundles) to a
 detached process and prints one line: the name, `make foundry-cloud` for progress, and *don't
 sleep the laptop until it finishes* (on the Mac `caffeinate` holds off idle sleep while it runs,
-but closing the lid still sleeps). `make vtt-down WAIT=1` is the old blocking behaviour. The
+but closing the lid still sleeps). `make vtt-down WAIT=1` / `make foundry-down WAIT=1` is the blocking behaviour. The
 queue, the locks and the status file live in `FOUNDRY_DATA/.pentaryn-tmp/`
 ([`uploadq.py`](../../scripts/foundry/uploadq.py)); the uploader's own output is `upload.log`
 there, and each upload adds `cloud-upload` lines (queued, uploading, done/failed) to
@@ -204,7 +210,7 @@ there, and each upload adds `cloud-upload` lines (queued, uploading, done/failed
 
 | Target | Does |
 | ------ | ---- |
-| `make foundry-up` / `foundry-down` | App only (plus the boot choice before `foundry-up`). Via `host.py`: `foundry-down` is `osascript quit`, falling back to `pkill` on the Mac; `PENTARYN_STOP_CMD` on BOSS (hooks get 30s: a hung stop hook is forced, a hung start hook fails naming the hook) |
+| `make foundry-up` / `foundry-down` | The app (plus the boot choice before `foundry-up`, and the background shutdown snapshot after `foundry-down` — `WAIT=1` waits; Foundry already down still snapshots, digest-skipping an unchanged world). Via `host.py`: `foundry-down` is `osascript quit`, falling back to `pkill` on the Mac; `PENTARYN_STOP_CMD` on BOSS (hooks get 30s: a hung stop hook is forced, a hung start hook fails naming the hook) |
 | `make foundry-boot` | The boot choice alone — `FROM=` to decide it |
 | `make tunnel-up` / `tunnel-down` | Tunnel only. `tunnel-up` starts cloudflared detached, writes the pidfile, and checks it survived 3 s. The pidfile is trusted only while its pid is alive **and** `ps` names it cloudflared; otherwise both commands delete it (`▸ stale pidfile removed`) and never signal that process |
 | `make tunnel-logs` | Last 40 lines of the cloudflared log |
