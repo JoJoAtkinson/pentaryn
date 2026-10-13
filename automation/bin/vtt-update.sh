@@ -147,10 +147,11 @@ RC=$?
 
 if [ "$RC" -eq 143 ] || [ "$RC" -eq 137 ]; then
   echo "  ✗ run exceeded ${RUN_TIMEOUT}s and was terminated" >> "$LOG"
-  # The kill skipped every except/finally in Python: status still says "running", the
-  # entry state was not restored, the lock is still held and nobody was told. The 06:12
-  # watchdog only catches that if the kill landed before it ran. So clean up here, every
-  # time: mark the status, restore service, release the dead lock, notify.
+  # TERM ends the run's claude -p / node children and unwinds its finally blocks (lock
+  # released, AC-6), but no except block ran: status still says "running", the entry
+  # state was not restored and nobody was told (a KILL leaves the lock held, too). The
+  # 06:12 watchdog only catches that if the kill landed before it ran. So clean up here,
+  # every time: mark the status, restore service, release a dead lock, notify.
   run_with_timeout 900 "$PY" -m scripts.foundry.update.cli killed --after "$RUN_TIMEOUT" >> "$LOG" 2>&1
 fi
 

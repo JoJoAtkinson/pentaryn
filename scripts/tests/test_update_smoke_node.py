@@ -65,7 +65,7 @@ def test_ext2_run_browser_resolves_node_at_call_time(monkeypatch, tmp_path):
         stdout = '{"ok": true, "errors": []}'
         stderr = ""
 
-    monkeypatch.setattr(smoke.subprocess, "run",
+    monkeypatch.setattr(smoke.children, "run",
                         lambda cmd, **k: seen.append(cmd) or _Proc())
     out = smoke.run_browser(_Admin(), "alpha", dwell=1, ignores=[])
     assert out == {"ok": True, "errors": []}
@@ -80,7 +80,7 @@ def test_ext2_missing_node_is_a_clear_not_ok_payload(monkeypatch, tmp_path):
     def no_spawn(*a, **k):
         raise FileNotFoundError(2, "No such file or directory", "node")
 
-    monkeypatch.setattr(smoke.subprocess, "run", no_spawn)
+    monkeypatch.setattr(smoke.children, "run", no_spawn)
     out = smoke.run_browser(_Admin(), "alpha", dwell=1, ignores=[])
     assert out["ok"] is False
     assert len(out["errors"]) == 1

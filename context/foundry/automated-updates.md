@@ -104,6 +104,7 @@ Both installed and loaded. `launchctl list | grep pentaryn.vtt`.
 | `scripts/foundry/update/recover.py` | The failure-class recovery matrix + backup artefacts. The world rollback point is this host's based-on snapshot (else its own newest), downloaded to temp before extracting. |
 | `scripts/foundry/update/report.py` | Scrubbing, LLM prose, plain fallback, git commit/push. |
 | `scripts/foundry/update/state.py` | mkdir lock, run status file, entry state. |
+| `scripts/foundry/update/children.py` | Registry of the run's `claude -p` / `node` children; on SIGTERM `cli run` terminates them and exits 143 through its `finally` blocks (AC-6). |
 | `scripts/foundry/update/notify.py` | The three notification classes. Prints instead of posting off the Mac. |
 | `scripts/foundry/update/cli.py` | `scan` `run` `status` `notify` `admin-configure` `recover-service`. |
 | `scripts/foundry/admin_password.py` | The admin secret: env → Infisical → macOS keychain. |
@@ -402,7 +403,10 @@ the cost line adds "+ up to $X unreported".
 (`escalate.wrapper_timeout()`) — not a flat three hours, which put the kill (07:06) after
 the 06:12 watchdog with nothing left to notice it. `max_minutes` is clamped to 90 so the
 backstop always fires before the lock is old enough to read as stale (3 h); a clamp is
-listed in the run's `ceiling_reasons`. And whoever kills the run now cleans
+listed in the run's `ceiling_reasons`. The kill is SIGTERM, then SIGKILL ten seconds
+later; on the TERM, `cli run` terminates every `claude -p` and `node` smoke child it
+registered (`children.py`) and exits 143 through its `finally` blocks, so nothing is
+orphaned and the lock is released (AC-6). And whoever kills the run now cleans
 up after it: on a 143/137 exit the wrapper runs `cli killed`, which marks the status
 `failed`/`killed`, restores service from the entry state, removes the lock if its owner is
 dead (`make vtt-up` refuses while it exists) and notifies. The watchdog stays quiet about

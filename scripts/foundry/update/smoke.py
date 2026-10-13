@@ -36,7 +36,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from scripts.foundry import host
-from scripts.foundry.update import admin as admin_mod
+from scripts.foundry.update import admin as admin_mod, children
 from scripts.foundry.update.admin import FoundryAdmin, Timeout
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -326,8 +326,8 @@ def run_browser(fa: FoundryAdmin, world: str, *, dwell: int,
         cmd += ["--ignore", pattern]
 
     try:
-        proc = subprocess.run(cmd, capture_output=True, text=True,
-                              timeout=dwell + 600)
+        # Registered, so a SIGTERM'd run terminates it rather than orphaning it (AC-6).
+        proc = children.run(cmd, timeout=dwell + 600)
     except (subprocess.TimeoutExpired, OSError) as exc:
         return {"ok": False, "errors": [{"type": "fatal",
                                          "text": f"browser smoke test failed to run: {exc}"}]}

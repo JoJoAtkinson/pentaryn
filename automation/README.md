@@ -260,9 +260,11 @@ inside the update cannot report. It distinguishes four states from
   its report (and so never sent its own notification). It notifies as a failure. A failed
   run that did write its report already told you, so the watchdog stays quiet.
 * **killed by the backstop** — `vtt-update.sh` kills a run still going after 130 minutes
-  (90 + escalation's 40) and then cleans up itself — status marked, service restored,
-  the dead run's lock removed so `make vtt-up` works, "update run killed" notification —
-  because that kill can land after 06:12. The watchdog says nothing more about it.
+  (90 + escalation's 40; SIGTERM, then SIGKILL ten seconds later — on the TERM the run
+  ends its own `claude -p` and browser smoke children and releases its lock) and then
+  cleans up itself — status marked, service restored, a dead run's lock removed so
+  `make vtt-up` works, "update run killed" notification — because that kill can land
+  after 06:12. The watchdog says nothing more about it.
 * **never fired** — usually the Mac was powered off. launchd catches up a *sleeping*
   Mac, not a powered-off one; nothing can fix that from here, so it just tells you.
 
